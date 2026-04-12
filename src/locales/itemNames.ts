@@ -182,10 +182,74 @@ export const MATERIAL_NAMES_EN: Record<string, string> = {
   "tile-terracotta":    "Vintage Floor Tile",
 };
 
+export const BRAND_NAMES_EN: Record<string, string> = {
+  // Material brands
+  "水性内墙漆":   "Water-Based Paint",
+  "进口乳胶漆":   "Latex Paint",
+  "净味乳胶漆":   "Low-VOC Paint",
+  "立邦":         "Interior Paint",
+  "釉面砖":       "Glazed Tile",
+  "强化复合地板": "Laminate Flooring",
+  "全抛釉砖":     "Full-Polish Tile",
+  "通体砖":       "Through-Body Tile",
+  "实木复合地板": "Engineered Hardwood",
+  "竹木地板":     "Bamboo Flooring",
+  "LED轨道灯":    "LED Track",
+  "北欧吊灯":     "Nordic Pendant",
+  "水晶吊灯":     "Crystal Light",
+  "和纸纸灯":     "Paper Lantern",
+  "线型灯具":     "Linear Light",
+  "复古钨丝灯":   "Vintage Filament",
+  // Furniture brands
+  "北欧家居":     "Nordic Living",
+  "功能沙发":     "Function Sofa",
+  "现代家居":     "Modern Living",
+  "日式家居":     "Japan Style",
+  "实木家居":     "Solid Wood",
+  "品牌家居":     "Premium Home",
+  "板式家居":     "Panel Furniture",
+  "北欧灯具":     "Nordic Lighting",
+  "国产灯具":     "Domestic Lighting",
+  "绿植优选":     "Plant Studio",
+  "地毯工坊":     "Rug Studio",
+  "东方织造":     "Oriental Textile",
+  "艺术工坊":     "Art Workshop",
+  "文房四宝":     "Study Arts",
+  "定制衣柜":     "Custom Wardrobe",
+  "设计师家具":   "Designer Furniture",
+  "定制橱柜":     "Custom Cabinet",
+  "对开门冰箱":   "French Door Fridge",
+  "家用冰箱":     "Home Fridge",
+  "侧吸油烟机":   "Side-Draft Hood",
+  "厨房水槽":     "Kitchen Sink",
+  "卫浴洁具":     "Bathroom Fixtures",
+  "日式洁具":     "Japanese Fixtures",
+  "整体淋浴房":   "Shower Enclosure",
+  "乐歌":         "Adjustable Desk",
+  "西昊":         "Ergonomic Chair",
+  "园艺优选":     "Garden Select",
+  "景观石材":     "Landscape Stone",
+  "景观木业":     "Landscape Wood",
+  "景观五金":     "Landscape Hardware",
+  "户外生活":     "Outdoor Living",
+  "水景专家":     "Water Feature",
+  "景观建构":     "Landscape Build",
+  "户外运动":     "Outdoor Sports",
+  "宠物":         "Pet",
+  "宠物用品":     "Pet Supplies",
+  "散养":         "Free-Range",
+  "农场":         "Farm",
+  "自定义":       "Custom",
+};
+
 export function getFurnitureNameEn(id: string): string | undefined {
   return FURNITURE_NAMES_EN[id];
 }
 
 export function getMaterialNameEn(id: string): string | undefined {
   return MATERIAL_NAMES_EN[id];
+}
+
+export function getBrandNameEn(brand: string): string {
+  return BRAND_NAMES_EN[brand] ?? brand;
 }

@@ -5,7 +5,7 @@ import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, getRoomArea } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale } from "@/lib/i18n";
-import { getFurnitureNameEn, getMaterialNameEn } from "@/locales/itemNames";
+import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 
 
 function ScoreBar({ score, color }: { score: number; color: string }) {

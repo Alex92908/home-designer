@@ -6,7 +6,7 @@ import { MATERIALS } from "@/lib/data";
 import { FURNITURE, getFurnitureForRoom, FURNITURE_CATEGORIES, getCustomFurniture } from "@/lib/furniture";
 import { MaterialItem, FurnitureItem } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
-import { getFurnitureNameEn, getMaterialNameEn } from "@/locales/itemNames";
+import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 
 // ─── Material card ─────────────────────────────────────────
 function MatCard({ item }: { item: MaterialItem }) {
@@ -16,6 +16,7 @@ function MatCard({ item }: { item: MaterialItem }) {
   const isSelected = roomMaterials[item.category]?.id === item.id;
   const locale = useLocale();
   const displayName = locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name;
+  const displayBrand = locale === "en" ? getBrandNameEn(item.brand) : item.brand;
 
   return (
     <button
@@ -35,7 +36,7 @@ function MatCard({ item }: { item: MaterialItem }) {
       />
       <span className="text-[11px] font-semibold text-gray-800 leading-tight line-clamp-1">{displayName}</span>
       <div className="flex items-center justify-between gap-1">
-        <span className="text-[9px] text-gray-400">{item.brand}</span>
+        <span className="text-[9px] text-gray-400">{displayBrand}</span>
         <span className="text-[9px] font-bold text-blue-600">¥{item.price.toLocaleString()}{item.unit.includes("㎡") ? "/㎡" : ""}</span>
       </div>
       {isSelected && (
@@ -55,6 +56,7 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
   const isPlaced = placedItems.some((p) => p.furnitureId === item.id);
   const locale = useLocale();
   const displayName = locale === "en" ? (getFurnitureNameEn(item.id) ?? item.name) : item.name;
+  const displayBrand = locale === "en" ? getBrandNameEn(item.brand) : item.brand;
 
   return (
     <button
@@ -78,7 +80,7 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
       </div>
       <span className="text-[11px] font-semibold text-gray-800 leading-tight line-clamp-1">{displayName}</span>
       <div className="flex items-center justify-between gap-1">
-        <span className="text-[9px] text-gray-400">{item.brand}</span>
+        <span className="text-[9px] text-gray-400">{displayBrand}</span>
         <span className="text-[9px] font-bold text-blue-600">¥{item.price.toLocaleString()}</span>
       </div>
       <div className="text-[9px] text-gray-400">{item.width}×{item.depth}cm</div>

@@ -6,7 +6,7 @@ import { ROOM_DEFS, getRoomArea, RoomType } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { generatePdf } from "@/lib/exportPdf";
 import { useT, useLocale } from "@/lib/i18n";
-import { getFurnitureNameEn, getMaterialNameEn } from "@/locales/itemNames";
+import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 
 function ScoreBar({ val, color }: { val: number; color: string }) {
   return (
@@ -258,7 +258,7 @@ export default function ExportModal() {
                           return (
                             <tr key={placed.instanceId} className="border-b border-gray-50 hover:bg-gray-50">
                               <td className="py-2 text-xs font-medium text-gray-800">{f.icon} {displayName}</td>
-                              <td className="py-2 text-xs text-gray-400">{f.brand}</td>
+                              <td className="py-2 text-xs text-gray-400">{locale === "en" ? getBrandNameEn(f.brand) : f.brand}</td>
                               <td className="py-2 text-right text-xs font-bold text-gray-800">¥{f.price.toLocaleString()}</td>
                             </tr>
                           );
