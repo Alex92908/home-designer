@@ -105,7 +105,9 @@ export default function RightPanel() {
       <div className="px-4 py-3 border-b border-gray-100 shrink-0">
         <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
           <span>{t.budgetLimit}</span>
-          <span className="font-bold text-gray-700">¥{(budget / 10000).toFixed(0)}万</span>
+          <span className="font-bold text-gray-700">
+            {locale === "en" ? `¥${budget.toLocaleString()}` : `¥${(budget / 10000).toFixed(0)}万`}
+          </span>
         </div>
         <input
           type="range" min={30000} max={500000} step={10000} value={budget}
