@@ -821,15 +821,15 @@ export default function FloorPlan() {
             <div className="flex gap-1 ml-auto">
               <button onClick={() => rotateItem(selectedItem.instanceId)}
                 className="px-2 py-1 bg-blue-600/80 hover:bg-blue-600 text-white text-[11px] font-semibold rounded-lg transition-colors">
-                ↻ 旋转
+                ↻ {t.fpRotateItem}
               </button>
               <button onClick={() => copyToClipboard([selectedItem.instanceId])}
                 className="px-2 py-1 bg-emerald-600/80 hover:bg-emerald-600 text-white text-[11px] font-semibold rounded-lg transition-colors">
-                ⧉ 复制
+                ⧉ {t.fpCopyItem}
               </button>
               <button onClick={() => removeItem(selectedItem.instanceId)}
                 className="px-2 py-1 bg-red-600/80 hover:bg-red-600 text-white text-[11px] font-semibold rounded-lg transition-colors">
-                ✕ 删除
+                ✕ {t.fpDeleteItem}
               </button>
             </div>
           </div>
@@ -838,7 +838,7 @@ export default function FloorPlan() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <div className="flex justify-between mb-1">
-                <span className="text-[10px] text-gray-400">宽度</span>
+                <span className="text-[10px] text-gray-400">{t.fpWidth}</span>
                 <span className="text-[10px] text-gray-300 font-mono">
                   {(selectedFurniture.width * (selectedItem.scaleW ?? 1) / 100).toFixed(2)}m
                 </span>
@@ -862,7 +862,7 @@ export default function FloorPlan() {
             </div>
             <div>
               <div className="flex justify-between mb-1">
-                <span className="text-[10px] text-gray-400">深度</span>
+                <span className="text-[10px] text-gray-400">{t.fpDepth}</span>
                 <span className="text-[10px] text-gray-300 font-mono">
                   {(selectedFurniture.depth * (selectedItem.scaleD ?? 1) / 100).toFixed(2)}m
                 </span>
@@ -887,9 +887,9 @@ export default function FloorPlan() {
           </div>
           <div className="flex justify-between items-center">
             <button onClick={() => resizeItem(selectedItem.instanceId, 1, 1)}
-              className="text-[10px] text-gray-500 hover:text-gray-300 underline">重置尺寸</button>
+              className="text-[10px] text-gray-500 hover:text-gray-300 underline">{t.fpResetSize}</button>
             <span className="text-[10px] text-gray-600">
-              原始: {(selectedFurniture.width / 100).toFixed(2)}m × {(selectedFurniture.depth / 100).toFixed(2)}m
+              {t.fpOriginal} {(selectedFurniture.width / 100).toFixed(2)}m × {(selectedFurniture.depth / 100).toFixed(2)}m
             </span>
           </div>
         </div>
@@ -897,13 +897,13 @@ export default function FloorPlan() {
 
       {/* Legend */}
       <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-gray-600 justify-center">
-        <span>🔵 拖动移位</span>
-        <span>⇧+点击多选</span>
-        <span>↻ 旋转90°</span>
-        <span>⧉ 复制</span>
-        <span>Del 删除</span>
-        <span>🪟 编辑窗户/门</span>
-        <span>每格=1m</span>
+        <span>{t.fpLegendDrag}</span>
+        <span>{t.fpLegendMulti}</span>
+        <span>{t.fpLegendRotate}</span>
+        <span>{t.fpLegendCopy}</span>
+        <span>{t.fpLegendDelete}</span>
+        <span>{t.fpLegendEdit}</span>
+        <span>{t.fpLegendGrid}</span>
       </div>
     </div>
   );

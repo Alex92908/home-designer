@@ -5,6 +5,7 @@ import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS, DEFAULT_ENABLED } from "@/lib/store";
 import { getFurnitureById } from "@/lib/furniture";
+import { useT, useLocale } from "@/lib/i18n";
 
 // ─── Constants ─────────────────────────────────────────────
 const WALL     = 14;   // wall thickness cm
@@ -41,10 +42,10 @@ function WindowStrip({ room, x, y, w, d }: { room: RoomType; x: number; y: numbe
 }
 
 const CUSTOM_SLOTS: RoomType[] = ["custom1","custom2","custom3","custom4","custom5"];
-const ROOM_GROUPS = [
-  { label: "室内常用", rooms: ["living","master","bedroom","bedroom2","bedroom3","kitchen","bathroom","bathroom2","dining","study","study2","closet","balcony","balcony2"] as RoomType[] },
-  { label: "特色空间", rooms: ["yard","garage","gym","cinema"] as RoomType[] },
-  { label: "自定义",   rooms: CUSTOM_SLOTS },
+const ROOM_GROUP_ROOMS = [
+  { key: "allGroupIndoor",   rooms: ["living","master","bedroom","bedroom2","bedroom3","kitchen","bathroom","bathroom2","dining","study","study2","closet","balcony","balcony2"] as RoomType[] },
+  { key: "allGroupSpecial",  rooms: ["yard","garage","gym","cinema"] as RoomType[] },
+  { key: "allGroupCustom",   rooms: CUSTOM_SLOTS },
 ];
 const CUSTOM_ICONS = ["🔲","🏠","🛖","🏰","🏗️","🎯","🎲","🎪","⭐","💎","🌈","🔑"];
 
@@ -54,10 +55,11 @@ function CustomRoomForm({ room, onDone }: { room: RoomType; onDone: () => void }
   const meta = useDesignerStore(s => s.customRoomMeta[room]);
   const [name, setName] = useState(meta?.name ?? "");
   const [icon, setIcon] = useState(meta?.icon ?? "🔲");
+  const t = useT();
   return (
     <div className="px-3 pb-3 bg-blue-50 flex flex-col gap-2">
       <input value={name} onChange={e => setName(e.target.value)}
-        placeholder="房间名称" maxLength={12}
+        placeholder={t.allRoomNamePlaceholder} maxLength={12}
         className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-blue-400 bg-white" />
       <div className="flex flex-wrap gap-1">
         {CUSTOM_ICONS.map(ic => (
@@ -71,9 +73,9 @@ function CustomRoomForm({ room, onDone }: { room: RoomType; onDone: () => void }
         <button onClick={() => { if (name.trim()) { setCustomRoomMeta(room, name.trim(), icon); onDone(); } }}
           disabled={!name.trim()}
           className="flex-1 py-1 bg-blue-600 text-white text-xs font-bold rounded-xl disabled:opacity-40">
-          确认
+          {t.allConfirm}
         </button>
-        <button onClick={onDone} className="px-2 text-xs text-gray-400 hover:text-gray-600">取消</button>
+        <button onClick={onDone} className="px-2 text-xs text-gray-400 hover:text-gray-600">{t.allCancel}</button>
       </div>
     </div>
   );
@@ -93,6 +95,8 @@ function RoomPanel() {
   const copyRoom            = useDesignerStore(s => s.copyRoom);
   const pasteRoom           = useDesignerStore(s => s.pasteRoom);
   const roomClipboard       = useDesignerStore(s => s.roomClipboard);
+  const t      = useT();
+  const locale = useLocale();
   const [expanded,    setExpanded]    = useState<RoomType | null>(null);
   const [naming,      setNaming]      = useState<RoomType | null>(null);
   const [renamingRoom, setRenamingRoom] = useState<RoomType | null>(null);
@@ -104,7 +108,8 @@ function RoomPanel() {
   const getRoomLabel = (room: RoomType) => {
     const meta = customRoomMeta[room];
     const def  = ROOM_DEFS[room];
-    return { name: meta?.name ?? def.name, icon: meta?.icon ?? def.icon };
+    const baseName = meta?.name ?? (locale === "en" ? (t.roomNames[room] ?? def.name) : def.name);
+    return { name: baseName, icon: meta?.icon ?? def.icon };
   };
 
   const startRename = (room: RoomType) => {
@@ -126,8 +131,8 @@ function RoomPanel() {
   return (
     <aside className="w-56 shrink-0 h-full bg-white border-r border-gray-200 flex flex-col overflow-hidden">
       <div className="px-3 pt-3 pb-2 border-b border-gray-100 shrink-0">
-        <div className="text-xs font-black text-gray-800">🏗️ 房间管理</div>
-        <div className="text-[10px] text-gray-400 mt-0.5">{enabledRooms.length} 个房间 · 拖动移位 · 拉角改大小</div>
+        <div className="text-xs font-black text-gray-800">{t.allRoomMgmt}</div>
+        <div className="text-[10px] text-gray-400 mt-0.5">{t.allRoomCount(enabledRooms.length)}</div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -193,11 +198,11 @@ function RoomPanel() {
 
                 {isExp && naming !== room && (
                   <div className="px-3 pb-2.5 bg-gray-50 flex flex-col gap-2">
-                    <div className="text-[10px] text-gray-500 font-bold">调整尺寸（米）</div>
+                    <div className="text-[10px] text-gray-500 font-bold">{t.allResizeDims}</div>
                     <div className="flex gap-2">
                       {[
-                        { label: "宽", val: dims.width,  min: 1.6, set: (v: number) => updateRoomDimension(room, Math.round(v*100), dims.depth) },
-                        { label: "深", val: dims.depth,  min: 1.2, set: (v: number) => updateRoomDimension(room, dims.width, Math.round(v*100)) },
+                        { label: t.allWidthLabel, val: dims.width,  min: 1.6, set: (v: number) => updateRoomDimension(room, Math.round(v*100), dims.depth) },
+                        { label: t.allDepthLabel, val: dims.depth,  min: 1.2, set: (v: number) => updateRoomDimension(room, dims.width, Math.round(v*100)) },
                       ].map(({ label, val, min, set }) => (
                         <div key={label} className="flex flex-col gap-0.5 flex-1">
                           <label className="text-[9px] text-gray-400">{label} m</label>
@@ -217,12 +222,13 @@ function RoomPanel() {
         </div>
 
         {/* ── Addable rooms by group ── */}
-        {ROOM_GROUPS.map(group => {
+        {ROOM_GROUP_ROOMS.map(group => {
           const addable = group.rooms.filter(r => !enabledRooms.includes(r));
           if (!addable.length) return null;
+          const groupLabel = t[group.key as keyof typeof t] as string;
           return (
-            <div key={group.label} className="px-2.5 pt-3 pb-1">
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">＋ {group.label}</div>
+            <div key={group.key} className="px-2.5 pt-3 pb-1">
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">＋ {groupLabel}</div>
               <div className="flex flex-col gap-1">
                 {addable.map(room => {
                   const { name, icon } = getRoomLabel(room);
@@ -244,7 +250,7 @@ function RoomPanel() {
       <div className="p-3 border-t border-gray-100 shrink-0">
         <button onClick={resetLayout}
           className="w-full py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
-          ↺ 重置布局
+          {t.allResetLayout}
         </button>
       </div>
     </aside>
@@ -255,6 +261,8 @@ function RoomPanel() {
 export default function FloorPlanAll() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+  const t      = useT();
+  const locale = useLocale();
 
   const rooms               = useDesignerStore(s => s.rooms);
   const activeRoom          = useDesignerStore(s => s.activeRoom);
@@ -277,7 +285,8 @@ export default function FloorPlanAll() {
   const getRoomLabel = (room: RoomType) => {
     const meta = customRoomMeta[room];
     const def  = ROOM_DEFS[room];
-    return { name: meta?.name ?? def.name, icon: meta?.icon ?? def.icon };
+    const baseName = meta?.name ?? (locale === "en" ? (t.roomNames[room] ?? def.name) : def.name);
+    return { name: baseName, icon: meta?.icon ?? def.icon };
   };
 
   const svgRef  = useRef<SVGSVGElement>(null);
@@ -371,26 +380,26 @@ export default function FloorPlanAll() {
         {/* Subheader */}
         <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-gray-800">🏠 全局平面图</span>
+            <span className="text-xs font-bold text-gray-800">{t.allTitle}</span>
             <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-              {configuredCount}/{ALL_ROOMS.length} 已配置
+              {configuredCount}/{ALL_ROOMS.length} {t.allConfigured}
             </span>
             {mounted && totalAllCost > 0 && (
-              <span className="text-xs font-bold text-blue-600">全屋 ¥{totalAllCost.toLocaleString()}</span>
+              <span className="text-xs font-bold text-blue-600">{t.allTotal} ¥{totalAllCost.toLocaleString()}</span>
             )}
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-gray-400 hidden lg:block">
-              拖动移位 · 拉角改大小 · ↩左上角撤回 · ↻右上角旋转 · 点击进入编辑
+              {t.allHint}
             </span>
             {roomClipboard && (
               <button
                 onClick={pasteAsNewRoom}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-emerald-400 text-emerald-600 hover:bg-emerald-50 bg-white transition-all"
-                title={`粘贴「${roomClipboard.name}」为新房间`}
+                title={`${t.allPasteRoom} (${roomClipboard.name})`}
               >
                 <span>📋</span>
-                <span>粘贴为新房间</span>
+                <span>{t.allPasteRoom}</span>
                 <span className="text-[10px] text-emerald-400">({roomClipboard.name})</span>
               </button>
             )}
