@@ -7,6 +7,7 @@ import { FURNITURE, getFurnitureForRoom, FURNITURE_CATEGORIES, getCustomFurnitur
 import { MaterialItem, FurnitureItem } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
+import { formatUnitPrice, formatPrice } from "@/lib/currency";
 
 // ─── Material card ─────────────────────────────────────────
 function MatCard({ item }: { item: MaterialItem }) {
@@ -37,7 +38,7 @@ function MatCard({ item }: { item: MaterialItem }) {
       <span className="text-[11px] font-semibold text-gray-800 leading-tight line-clamp-1">{displayName}</span>
       <div className="flex items-center justify-between gap-1">
         <span className="text-[9px] text-gray-400">{displayBrand}</span>
-        <span className="text-[9px] font-bold text-blue-600">¥{item.price.toLocaleString()}{item.unit.includes("㎡") ? "/㎡" : ""}</span>
+        <span className="text-[9px] font-bold text-blue-600">{formatUnitPrice(item.price, locale)}{item.unit.includes("㎡") ? "/㎡" : ""}</span>
       </div>
       {isSelected && (
         <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
@@ -81,7 +82,7 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
       <span className="text-[11px] font-semibold text-gray-800 leading-tight line-clamp-1">{displayName}</span>
       <div className="flex items-center justify-between gap-1">
         <span className="text-[9px] text-gray-400">{displayBrand}</span>
-        <span className="text-[9px] font-bold text-blue-600">¥{item.price.toLocaleString()}</span>
+        <span className="text-[9px] font-bold text-blue-600">{formatPrice(item.price, locale)}</span>
       </div>
       <div className="text-[9px] text-gray-400">{item.width}×{item.depth}cm</div>
       {isPlaced && (

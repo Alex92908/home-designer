@@ -7,6 +7,7 @@ import { getFurnitureById } from "@/lib/furniture";
 import { generatePdf } from "@/lib/exportPdf";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
+import { formatPrice } from "@/lib/currency";
 
 function ScoreBar({ val, color }: { val: number; color: string }) {
   return (
@@ -23,6 +24,7 @@ function ScoreBar({ val, color }: { val: number; color: string }) {
 function RoomCostRow({ room, cost }: { room: RoomType; cost: number }) {
   const def = ROOM_DEFS[room];
   const t = useT();
+  const locale = useLocale();
   const setActiveRoom = useDesignerStore(s => s.setActiveRoom);
   const setViewMode   = useDesignerStore(s => s.setViewMode);
   if (cost === 0) return null;
@@ -30,7 +32,7 @@ function RoomCostRow({ room, cost }: { room: RoomType; cost: number }) {
     <tr className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer"
       onClick={() => { setActiveRoom(room); setViewMode("2d"); }}>
       <td className="py-1.5 text-xs font-medium text-gray-800">{def.icon} {t.roomNames[room] ?? def.name}</td>
-      <td className="py-1.5 text-right text-xs font-bold text-gray-700">¥{cost.toLocaleString()}</td>
+      <td className="py-1.5 text-right text-xs font-bold text-gray-700">{formatPrice(cost, locale)}</td>
     </tr>
   );
 }
@@ -157,7 +159,7 @@ export default function ExportModal() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-black">¥{totalAllCost.toLocaleString()}</div>
+              <div className="text-3xl font-black">{formatPrice(totalAllCost, locale)}</div>
               <div className="text-xs text-blue-200">{t.exportTotal}</div>
             </div>
           </div>
@@ -231,7 +233,7 @@ export default function ExportModal() {
                               </td>
                               <td className="py-2.5 text-right text-xs text-gray-500">{qtyStr}</td>
                               <td className="py-2.5 text-right text-xs font-bold text-gray-800">
-                                ¥{(item.price * qty).toLocaleString()}
+                                {formatPrice(item.price * qty, locale)}
                               </td>
                             </tr>
                           );
@@ -259,7 +261,7 @@ export default function ExportModal() {
                             <tr key={placed.instanceId} className="border-b border-gray-50 hover:bg-gray-50">
                               <td className="py-2 text-xs font-medium text-gray-800">{f.icon} {displayName}</td>
                               <td className="py-2 text-xs text-gray-400">{locale === "en" ? getBrandNameEn(f.brand) : f.brand}</td>
-                              <td className="py-2 text-right text-xs font-bold text-gray-800">¥{f.price.toLocaleString()}</td>
+                              <td className="py-2 text-right text-xs font-bold text-gray-800">{formatPrice(f.price, locale)}</td>
                             </tr>
                           );
                         })}
@@ -269,7 +271,7 @@ export default function ExportModal() {
 
                   <div className="flex justify-between items-center py-2 border-t border-gray-200 mb-4">
                     <span className="text-sm font-bold text-gray-700">{t.roomNames[activeRoom] ?? def.name}{t.exportRoomTotal}</span>
-                    <span className="text-xl font-black text-blue-600">¥{currentRoomCost.toLocaleString()}</span>
+                    <span className="text-xl font-black text-blue-600">{formatPrice(currentRoomCost, locale)}</span>
                   </div>
 
                   {/* Lead capture */}
@@ -310,7 +312,7 @@ export default function ExportModal() {
               {/* Budget vs cost bar */}
               <div className="mb-4">
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-gray-500">{t.exportBudgetLabel} ¥{budget.toLocaleString()}</span>
+                  <span className="text-gray-500">{t.exportBudgetLabel} {formatPrice(budget, locale)}</span>
                   <span className={totalAllCost > budget ? "text-red-500 font-bold" : "text-green-600 font-bold"}>
                     {totalAllCost > budget ? t.exportOverBudget : t.exportUnderBudget}
                   </span>
@@ -339,7 +341,7 @@ export default function ExportModal() {
 
               <div className="flex justify-between items-center py-2 border-t border-gray-200">
                 <span className="text-sm font-bold text-gray-700">{t.exportAllTotal}</span>
-                <span className="text-xl font-black text-blue-600">¥{totalAllCost.toLocaleString()}</span>
+                <span className="text-xl font-black text-blue-600">{formatPrice(totalAllCost, locale)}</span>
               </div>
 
               {/* Exterior summary */}

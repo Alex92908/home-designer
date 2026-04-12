@@ -6,6 +6,7 @@ import { ROOM_DEFS, getRoomArea } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
+import { formatPrice } from "@/lib/currency";
 
 
 function ScoreBar({ score, color }: { score: number; color: string }) {
@@ -60,14 +61,14 @@ export default function RightPanel() {
           💰 {t.roomNames[activeRoom] ?? def.name} · {t.budgetTitle}
         </div>
         <div className={`text-3xl font-black mb-0.5 ${isOverBudget ? "text-red-600" : "text-white"}`}>
-          ¥{totalCost.toLocaleString()}
+          {formatPrice(totalCost, locale)}
         </div>
         <div className={`text-xs ${isOverBudget ? "text-red-400" : "text-blue-200"}`}>
           {totalItems} {t.budgetItems} · {t.budgetArea} {area.floor}㎡
         </div>
         {isOverBudget && (
           <div className="mt-2 text-xs text-red-600 font-semibold bg-red-100 rounded-lg px-2 py-1">
-            ⚠️ {t.overBudget} ¥{(totalCost - budget).toLocaleString()}
+            ⚠️ {t.overBudget} {formatPrice(totalCost - budget, locale)}
           </div>
         )}
       </div>
@@ -106,7 +107,7 @@ export default function RightPanel() {
         <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
           <span>{t.budgetLimit}</span>
           <span className="font-bold text-gray-700">
-            {locale === "en" ? `¥${budget.toLocaleString()}` : `¥${(budget / 10000).toFixed(0)}万`}
+            {locale === "en" ? formatPrice(budget, locale) : `¥${(budget / 10000).toFixed(0)}万`}
           </span>
         </div>
         <input
@@ -121,8 +122,8 @@ export default function RightPanel() {
           />
         </div>
         <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-          <span>¥{totalCost.toLocaleString()}</span>
-          <span>¥{budget.toLocaleString()}</span>
+          <span>{formatPrice(totalCost, locale)}</span>
+          <span>{formatPrice(budget, locale)}</span>
         </div>
       </div>
 
@@ -149,7 +150,7 @@ export default function RightPanel() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[11px] font-bold text-gray-700">¥{total.toLocaleString()}</span>
+                    <span className="text-[11px] font-bold text-gray-700">{formatPrice(total, locale)}</span>
                     <button
                       onClick={() => removeMaterial(item.category)}
                       className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 text-xs transition-all"
@@ -189,7 +190,7 @@ export default function RightPanel() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[11px] font-bold text-gray-700">¥{f.price.toLocaleString()}</span>
+                    <span className="text-[11px] font-bold text-gray-700">{formatPrice(f.price, locale)}</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); removeItem(placed.instanceId); }}
                       className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 text-xs transition-all"

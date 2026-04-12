@@ -6,6 +6,7 @@ import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS, DEFAULT_ENABLED } from "@/lib/store";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale } from "@/lib/i18n";
+import { formatPrice } from "@/lib/currency";
 
 // ─── Constants ─────────────────────────────────────────────
 const WALL     = 14;   // wall thickness cm
@@ -385,7 +386,7 @@ export default function FloorPlanAll() {
               {configuredCount}/{ALL_ROOMS.length} {t.allConfigured}
             </span>
             {mounted && totalAllCost > 0 && (
-              <span className="text-xs font-bold text-blue-600">{t.allTotal} ¥{totalAllCost.toLocaleString()}</span>
+              <span className="text-xs font-bold text-blue-600">{t.allTotal} {formatPrice(totalAllCost, locale)}</span>
             )}
           </div>
           <div className="flex items-center gap-2">
