@@ -2,6 +2,7 @@
 
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS } from "@/lib/types";
+import { useT, useLocaleStore } from "@/lib/i18n";
 
 export default function TopBar() {
   const activeRoom       = useDesignerStore((s) => s.activeRoom);
@@ -13,6 +14,9 @@ export default function TopBar() {
   const enabledRooms     = useDesignerStore((s) => s.enabledRooms);
   const customRoomMeta   = useDesignerStore((s) => s.customRoomMeta);
   const roomClipboard    = useDesignerStore((s) => s.roomClipboard);
+  const t                = useT();
+  const locale           = useLocaleStore((s) => s.locale);
+  const setLocale        = useLocaleStore((s) => s.setLocale);
 
   const openExport = () => window.dispatchEvent(new Event("openExport"));
 
@@ -21,8 +25,8 @@ export default function TopBar() {
       {/* Logo */}
       <div className="flex items-center gap-2 mr-1 shrink-0">
         <span className="text-xl">🏠</span>
-        <span className="font-black text-gray-900 text-sm tracking-tight">装修配置器</span>
-        <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded-full">Pro</span>
+        <span className="font-black text-gray-900 text-sm tracking-tight">{t.appName}</span>
+        <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded-full">{t.appTagline}</span>
       </div>
 
       {/* Room selector */}
@@ -47,7 +51,7 @@ export default function TopBar() {
                 `}
               >
                 <span>{icon}</span>
-                <span>{name}</span>
+                <span>{t.roomNames[r] ?? name}</span>
                 {hasContent && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 ml-0.5 shrink-0" />}
               </button>
             </div>
@@ -57,18 +61,13 @@ export default function TopBar() {
 
       {/* View mode toggle */}
       <div className="flex items-center bg-gray-100 rounded-xl p-1 gap-0.5 shrink-0">
-        {([
-          { mode: "3d" as const,       icon: "🎨", label: "效果图" },
-          { mode: "2d" as const,       icon: "📐", label: "平面图" },
-          { mode: "all" as const,      icon: "🗺️", label: "全局" },
-          { mode: "exterior" as const, icon: "🏠", label: "外观" },
-        ]).map(({ mode, icon, label }) => (
+        {(["3d","2d","all","exterior"] as const).map((mode) => (
           <button key={mode} onClick={() => setViewMode(mode)}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
               viewMode === mode ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
             }`}>
-            <span>{icon}</span>
-            <span>{label}</span>
+            <span>{t.viewIcons[mode]}</span>
+            <span>{t.viewModes[mode]}</span>
           </button>
         ))}
       </div>
@@ -77,9 +76,9 @@ export default function TopBar() {
       {scores.dominantStyle && (
         <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-100 shrink-0">
           <span>✨</span>
-          <span>{scores.dominantStyle}风</span>
+          <span>{t.styleTags[scores.dominantStyle] ?? scores.dominantStyle}</span>
           <span className="text-blue-300">·</span>
-          <span>{scores.style}分</span>
+          <span>{scores.style}</span>
         </div>
       )}
 
@@ -94,24 +93,30 @@ export default function TopBar() {
 
       {/* Hint */}
       <span className="text-[11px] text-gray-400 hidden lg:block shrink-0">
-        {viewMode === "3d"       ? "🖱️ 拖拽旋转 · 滚轮缩放"
-         : viewMode === "all"    ? "🏠 全局视图 · 左侧面板重命名/复制/粘贴"
-         : viewMode === "exterior" ? "🌿 拖拽旋转 · 右侧调整风格院子"
-         : "点击切换房间 · 全局视图可管理房间"}
+        {t.hints[viewMode]}
       </span>
+
+      {/* Language toggle */}
+      <button
+        onClick={() => setLocale(locale === "zh" ? "en" : "zh")}
+        className="flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 text-[11px] text-gray-500 hover:border-blue-300 hover:text-blue-600 transition-colors shrink-0 font-semibold"
+        title="Switch language / 切换语言"
+      >
+        {locale === "zh" ? "🌐 EN" : "🌐 中"}
+      </button>
 
       {/* Save/Export buttons */}
       <div className="flex items-center gap-1.5 shrink-0 ml-1">
         <div className="flex items-center gap-1 text-[10px] text-gray-400 hidden md:flex">
           <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-          已自动保存
+          {t.autoSaved}
         </div>
         <button
           onClick={openExport}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors shrink-0"
         >
           <span>📄</span>
-          <span>导出方案</span>
+          <span>{t.exportPlan}</span>
         </button>
       </div>
     </header>

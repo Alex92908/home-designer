@@ -5,6 +5,8 @@ import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, WindowConfig } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { PlacedItem } from "@/lib/types";
+import { useT, useLocale } from "@/lib/i18n";
+import { getFurnitureNameEn } from "@/locales/itemNames";
 
 // ─── helpers ──────────────────────────────────────────────
 
@@ -290,6 +292,8 @@ export default function FloorPlan() {
   const setDoorPos      = useDesignerStore((s) => s.setDoorPos);
   const setRoomHasDoor  = useDesignerStore((s) => s.setRoomHasDoor);
   const setDoorWall     = useDesignerStore((s) => s.setDoorWall);
+  const t      = useT();
+  const locale = useLocale();
 
   // ── Use store roomDimensions (respects global plan edits) ──
   const roomDimensions  = useDesignerStore((s) => s.roomDimensions[activeRoom]);
@@ -533,7 +537,7 @@ export default function FloorPlan() {
         {/* Row 1: room info + action buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[11px] text-gray-500 font-mono flex-1 min-w-0 truncate">
-            {def.name} · {(roomW / 100).toFixed(1)}m × {(roomD / 100).toFixed(1)}m · 层高 {(def.height / 100).toFixed(1)}m
+            {t.roomNames[activeRoom] ?? def.name} · {(roomW / 100).toFixed(1)}m × {(roomD / 100).toFixed(1)}m · {t.fpCeilingLabel} {(def.height / 100).toFixed(1)}m
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
             {/* Zoom controls */}
@@ -541,13 +545,13 @@ export default function FloorPlan() {
               <button onClick={() => setZoomLevel(p => Math.max(0.3, p * 0.8))} className="px-1.5 py-0.5 text-gray-400 hover:text-white hover:bg-gray-700 text-xs">−</button>
               <span className="text-[10px] text-gray-500 px-1 font-mono min-w-[32px] text-center">{Math.round(zoomLevel * 100)}%</span>
               <button onClick={() => setZoomLevel(p => Math.min(5, p * 1.25))} className="px-1.5 py-0.5 text-gray-400 hover:text-white hover:bg-gray-700 text-xs">+</button>
-              <button onClick={() => setZoomLevel(1)} className="px-1.5 py-0.5 text-gray-400 hover:text-white hover:bg-gray-700 text-[9px] border-l border-gray-700">重置</button>
+              <button onClick={() => setZoomLevel(1)} className="px-1.5 py-0.5 text-gray-400 hover:text-white hover:bg-gray-700 text-[9px] border-l border-gray-700">{t.fpZoomReset}</button>
             </div>
             {/* Undo */}
             <button
               onClick={undoFurniture}
               disabled={furnitureHistoryLen === 0}
-              title={furnitureHistoryLen > 0 ? `撤回上一步（还可撤回 ${furnitureHistoryLen} 步）` : "暂无可撤回操作"}
+              title={t.fpUndoTitle(furnitureHistoryLen)}
               className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all border ${
                 furnitureHistoryLen > 0
                   ? "border-orange-400 text-orange-500 hover:bg-orange-900/30 bg-transparent"
@@ -555,7 +559,7 @@ export default function FloorPlan() {
               }`}
             >
               <span>↩</span>
-              <span>撤回</span>
+              <span>{t.fpUndo}</span>
               {furnitureHistoryLen > 0 && <span className="bg-orange-900/50 text-orange-400 text-[9px] px-1 rounded-full">{furnitureHistoryLen}</span>}
             </button>
             {/* Paste */}
@@ -564,17 +568,17 @@ export default function FloorPlan() {
                 onClick={pasteFromClipboard}
                 className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border border-emerald-500 text-emerald-400 hover:bg-emerald-900/30 bg-transparent transition-all"
               >
-                📋 粘贴({clipboardLen})
+                📋 {t.fpPaste}({clipboardLen})
               </button>
             )}
             {/* Rotate room */}
             <button
               onClick={() => { pushLayoutHistory(); rotateRoom(activeRoom); setZoomLevel(1); }}
-              title="旋转房间90°（家具/门/窗一起旋转）"
+              title={t.fpRotateTitle}
               className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border border-emerald-500 text-emerald-400 hover:bg-emerald-900/30 bg-transparent transition-all"
             >
               <span>↻</span>
-              <span>旋转</span>
+              <span>{t.fpRotate}</span>
             </button>
             {/* Window/door edit toggle */}
             <button
@@ -583,7 +587,7 @@ export default function FloorPlan() {
                 editWindows ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-400 hover:bg-gray-600"
               }`}
             >
-              {editWindows ? "🪟 完成编辑" : "🪟 编辑窗/门"}
+              {editWindows ? t.fpEditDone : t.fpEditStart}
             </button>
           </div>
         </div>
@@ -591,7 +595,7 @@ export default function FloorPlan() {
         {editWindows && (
           <div className="flex flex-wrap gap-1 items-center pl-1">
             {(["back","front","left","right"] as const).map(wall => {
-              const labels = { back:"背墙", front:"前墙", left:"左墙", right:"右墙" };
+              const labels = t.fpWallLabels;
               const wallLen = (wall === "back" || wall === "front") ? roomW : roomD;
               if (wallLen <= 100) return null;
               return (
@@ -603,9 +607,9 @@ export default function FloorPlan() {
             })}
             {hasDoor && (
               <div className="flex items-center gap-0.5 ml-1">
-                <span className="text-[10px] text-gray-500 mr-0.5">门朝向:</span>
+                <span className="text-[10px] text-gray-500 mr-0.5">{t.fpDoorLabel}</span>
                 {(["bottom","top","left","right"] as DoorWall[]).map(w => {
-                  const labels: Record<DoorWall, string> = { bottom:"下", top:"上", left:"左", right:"右" };
+                  const labels = t.fpDoorDirs as Record<DoorWall, string>;
                   return (
                     <button key={w} onClick={() => { setDoorWall(activeRoom, w); setDoorPos(activeRoom, 0); }}
                       className={`text-[10px] px-1.5 py-0.5 rounded font-semibold transition-colors ${
@@ -810,7 +814,7 @@ export default function FloorPlan() {
         <div className="mt-3 flex flex-col gap-2 bg-gray-800/80 rounded-xl px-4 py-3 border border-gray-700/50 backdrop-blur max-w-lg w-full">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md shrink-0 border border-white/20" style={{ background: selectedFurniture.color }} />
-            <span className="text-xs font-semibold text-gray-200">{selectedFurniture.name}</span>
+            <span className="text-xs font-semibold text-gray-200">{locale === "en" ? (getFurnitureNameEn(selectedFurniture.id) ?? selectedFurniture.name) : selectedFurniture.name}</span>
             <span className="text-xs text-gray-500">
               {(selectedItem.x / 100).toFixed(1)}m, {(selectedItem.z / 100).toFixed(1)}m · {selectedItem.rotation}°
             </span>

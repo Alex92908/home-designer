@@ -9,6 +9,7 @@ import ExportModal from "@/components/ExportModal";
 import FloorPlan from "@/components/FloorPlan";
 import FloorPlanAll from "@/components/FloorPlanAll";
 import { useDesignerStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 
 const RoomCanvas = dynamic(() => import("@/components/RoomCanvas"), {
   ssr: false,
@@ -30,6 +31,7 @@ const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
 
 export default function Home() {
   const viewMode = useDesignerStore((s) => s.viewMode);
+  const t = useT();
   const isAll      = viewMode === "all";
   const isExterior = viewMode === "exterior";
   const is3d       = viewMode === "3d";
@@ -51,7 +53,7 @@ export default function Home() {
       </div>
       <ExportModal />
       <footer className="h-6 bg-white border-t border-gray-100 flex items-center justify-center shrink-0">
-        <span className="text-[10px] text-gray-400">仅供设计参考，不构成施工建议，效果仅为示意，请以实际施工及专业建议为准</span>
+        <span className="text-[10px] text-gray-400">{t.disclaimer}</span>
       </footer>
     </div>
   );

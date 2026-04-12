@@ -2,6 +2,7 @@
 
 import { useDesignerStore } from "@/lib/store";
 import type { RoofStyle, WallMaterialType } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 // ─── Presets ────────────────────────────────────────────────
 const PRESETS: {
@@ -58,6 +59,7 @@ function ColorSwatch({ label, value, onChange }: { label: string; value: string;
 export default function ExteriorPanel() {
   const exterior    = useDesignerStore(s => s.exterior);
   const setExterior = useDesignerStore(s => s.setExterior);
+  const t = useT();
 
   const applyPreset = (p: typeof PRESETS[0]) => {
     setExterior({
@@ -74,19 +76,16 @@ export default function ExteriorPanel() {
     <aside className="w-64 shrink-0 h-full bg-white border-l border-gray-200 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-3 pb-2 border-b border-gray-100 shrink-0">
-        <div className="text-xs font-black text-gray-800">🏠 外观设计</div>
+        <div className="text-xs font-black text-gray-800">{t.extTitle}</div>
         <div className="text-[10px] text-gray-400 mt-0.5">
-          {exterior.floors} 层 · {exterior.roofStyle === "flat" ? "平屋顶" :
-           exterior.roofStyle === "gable" ? "两坡顶" :
-           exterior.roofStyle === "hip"   ? "四坡顶" :
-           exterior.roofStyle === "mansard" ? "法式顶" : "中式顶"}
+          {exterior.floors} {t.extFloorUnit} · {t.extRoofLabels[exterior.roofStyle] ?? exterior.roofStyle}
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {/* ── Style presets ── */}
         <div className="px-3 pt-3">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">风格预设</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t.extPresets}</div>
           <div className="grid grid-cols-2 gap-1.5">
             {PRESETS.map(p => (
               <button key={p.id} onClick={() => applyPreset(p)}
@@ -101,7 +100,7 @@ export default function ExteriorPanel() {
                   <div className="w-3"   style={{ background: p.accentColor }} />
                 </div>
                 <span className="text-sm leading-none">{p.icon}</span>
-                <span className="text-[10px] font-semibold text-gray-700 leading-tight">{p.label}</span>
+                <span className="text-[10px] font-semibold text-gray-700 leading-tight">{t.extPresetLabels[p.id] ?? p.label}</span>
                 {exterior.preset === p.id && (
                   <div className="absolute top-1 right-1 w-3.5 h-3.5 bg-blue-500 rounded-full flex items-center justify-center">
                     <span className="text-white text-[7px]">✓</span>
@@ -114,13 +113,13 @@ export default function ExteriorPanel() {
 
         {/* ── Floors ── */}
         <div className="px-3 pt-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">楼层数</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t.extFloors}</div>
           <div className="flex items-center gap-2">
             <button onClick={() => setExterior({ preset: "custom", floors: Math.max(1, exterior.floors - 1) })}
               className="w-8 h-8 rounded-xl border border-gray-200 text-gray-600 font-bold hover:border-blue-400 hover:text-blue-600 transition-colors">−</button>
             <div className="flex-1 text-center">
               <span className="text-2xl font-black text-gray-800">{exterior.floors}</span>
-              <span className="text-xs text-gray-400 ml-1">层</span>
+              <span className="text-xs text-gray-400 ml-1">{t.extFloorUnit}</span>
             </div>
             <button onClick={() => setExterior({ preset: "custom", floors: Math.min(6, exterior.floors + 1) })}
               className="w-8 h-8 rounded-xl border border-gray-200 text-gray-600 font-bold hover:border-blue-400 hover:text-blue-600 transition-colors">＋</button>
@@ -137,7 +136,7 @@ export default function ExteriorPanel() {
 
         {/* ── Roof style ── */}
         <div className="px-3 pt-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">屋顶形式</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t.extRoofStyle}</div>
           <div className="flex flex-col gap-1">
             {ROOF_STYLES.map(r => (
               <button key={r.id}
@@ -148,8 +147,8 @@ export default function ExteriorPanel() {
                     : "border-gray-100 hover:border-gray-200 bg-gray-50"
                 }`}>
                 <span className="text-lg w-6 text-center">{r.icon}</span>
-                <span className="flex-1 text-xs font-semibold text-gray-700">{r.label}</span>
-                <span className="text-[10px] text-gray-400">{r.desc}</span>
+                <span className="flex-1 text-xs font-semibold text-gray-700">{t.extRoofLabels[r.id] ?? r.label}</span>
+                <span className="text-[10px] text-gray-400">{t.extRoofDescs[r.id] ?? r.desc}</span>
               </button>
             ))}
           </div>
@@ -157,7 +156,7 @@ export default function ExteriorPanel() {
 
         {/* ── Wall material ── */}
         <div className="px-3 pt-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">外墙材质</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t.extWallMaterial}</div>
           <div className="grid grid-cols-5 gap-1">
             {WALL_MATERIALS.map(m => (
               <button key={m.id} onClick={() => setExterior({ preset: "custom", wallMaterial: m.id })}
@@ -168,7 +167,7 @@ export default function ExteriorPanel() {
                     : "border-transparent hover:border-gray-200"
                 }`}>
                 <div className="w-7 h-7 rounded-lg border border-gray-200" style={{ background: m.color }} />
-                <span className="text-[9px] text-gray-600 font-medium">{m.label}</span>
+                <span className="text-[9px] text-gray-600 font-medium">{t.extWallLabels[m.id] ?? m.label}</span>
               </button>
             ))}
           </div>
@@ -176,18 +175,18 @@ export default function ExteriorPanel() {
 
         {/* ── Colors ── */}
         <div className="px-3 pt-4 flex flex-col gap-3">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">颜色调整</div>
-          <ColorSwatch label="外墙颜色" value={exterior.wallColor}
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{t.extColors}</div>
+          <ColorSwatch label={t.extWallColor} value={exterior.wallColor}
             onChange={v => setExterior({ preset: "custom", wallColor: v })} />
-          <ColorSwatch label="屋顶颜色" value={exterior.roofColor}
+          <ColorSwatch label={t.extRoofColor} value={exterior.roofColor}
             onChange={v => setExterior({ preset: "custom", roofColor: v })} />
-          <ColorSwatch label="门窗线条" value={exterior.accentColor}
+          <ColorSwatch label={t.extAccentColor} value={exterior.accentColor}
             onChange={v => setExterior({ preset: "custom", accentColor: v })} />
         </div>
 
         {/* ── Yard presets ── */}
         <div className="px-3 pt-4 pb-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">院子景观</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t.extYardPreset}</div>
           <div className="grid grid-cols-2 gap-1.5">
             {YARD_PRESETS.map(y => (
               <button key={y.id}
@@ -198,8 +197,8 @@ export default function ExteriorPanel() {
                     : "border-transparent bg-gray-50 hover:border-gray-200"
                 }`}>
                 <span className="text-xl">{y.icon}</span>
-                <span className="text-[10px] font-semibold text-gray-700">{y.label}</span>
-                <span className="text-[9px] text-gray-400">{y.desc}</span>
+                <span className="text-[10px] font-semibold text-gray-700">{t.extYardLabels[y.id] ?? y.label}</span>
+                <span className="text-[9px] text-gray-400">{t.extYardDescs[y.id] ?? y.desc}</span>
               </button>
             ))}
           </div>

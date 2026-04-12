@@ -5,6 +5,8 @@ import { useDesignerStore } from "@/lib/store";
 import { MATERIALS } from "@/lib/data";
 import { FURNITURE, getFurnitureForRoom, FURNITURE_CATEGORIES, getCustomFurniture } from "@/lib/furniture";
 import { MaterialItem, FurnitureItem } from "@/lib/types";
+import { useT, useLocale } from "@/lib/i18n";
+import { getFurnitureNameEn, getMaterialNameEn } from "@/locales/itemNames";
 
 // ─── Material card ─────────────────────────────────────────
 function MatCard({ item }: { item: MaterialItem }) {
@@ -12,6 +14,8 @@ function MatCard({ item }: { item: MaterialItem }) {
   const activeRoom = useDesignerStore((s) => s.activeRoom);
   const roomMaterials = useDesignerStore((s) => s.rooms[activeRoom].materials);
   const isSelected = roomMaterials[item.category]?.id === item.id;
+  const locale = useLocale();
+  const displayName = locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name;
 
   return (
     <button
@@ -29,7 +33,7 @@ function MatCard({ item }: { item: MaterialItem }) {
         className="w-full h-9 rounded-lg"
         style={{ background: item.texture ?? item.color }}
       />
-      <span className="text-[11px] font-semibold text-gray-800 leading-tight line-clamp-1">{item.name}</span>
+      <span className="text-[11px] font-semibold text-gray-800 leading-tight line-clamp-1">{displayName}</span>
       <div className="flex items-center justify-between gap-1">
         <span className="text-[9px] text-gray-400">{item.brand}</span>
         <span className="text-[9px] font-bold text-blue-600">¥{item.price.toLocaleString()}{item.unit.includes("㎡") ? "/㎡" : ""}</span>
@@ -49,6 +53,8 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
   const activeRoom = useDesignerStore((s) => s.activeRoom);
   const placedItems = useDesignerStore((s) => s.rooms[activeRoom].placedItems);
   const isPlaced = placedItems.some((p) => p.furnitureId === item.id);
+  const locale = useLocale();
+  const displayName = locale === "en" ? (getFurnitureNameEn(item.id) ?? item.name) : item.name;
 
   return (
     <button
@@ -61,7 +67,7 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
           : "border-transparent bg-white/70 hover:border-gray-200"
         }
       `}
-      title={`点击放置 · ${item.name}\n${item.description}`}
+      title={`${displayName}`}
     >
       {/* Color preview with icon */}
       <div
@@ -70,7 +76,7 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
       >
         <span style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.3))" }}>{item.icon}</span>
       </div>
-      <span className="text-[11px] font-semibold text-gray-800 leading-tight line-clamp-1">{item.name}</span>
+      <span className="text-[11px] font-semibold text-gray-800 leading-tight line-clamp-1">{displayName}</span>
       <div className="flex items-center justify-between gap-1">
         <span className="text-[9px] text-gray-400">{item.brand}</span>
         <span className="text-[9px] font-bold text-blue-600">¥{item.price.toLocaleString()}</span>
@@ -86,21 +92,22 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
 }
 
 // ─── Materials tab content ─────────────────────────────────
-const MATERIAL_SECTIONS: Array<{ label: string; icon: string; category: MaterialItem["category"]; rooms?: string[] }> = [
-  { label: "墙面",     icon: "🪟", category: "wall" },
-  { label: "地板",     icon: "🟫", category: "floor" },
-  { label: "灯具",     icon: "💡", category: "light" },
-  { label: "地砖",     icon: "🔲", category: "tile",  rooms: ["kitchen", "bathroom"] },
+const MATERIAL_SECTIONS: Array<{ key: string; icon: string; category: MaterialItem["category"]; rooms?: string[] }> = [
+  { key: "wall",  icon: "🪟", category: "wall" },
+  { key: "floor", icon: "🟫", category: "floor" },
+  { key: "light", icon: "💡", category: "light" },
+  { key: "tile",  icon: "🔲", category: "tile",  rooms: ["kitchen", "bathroom"] },
 ];
 
 function MaterialsTab() {
   const activeRoom = useDesignerStore((s) => s.activeRoom);
   const roomMaterials = useDesignerStore((s) => s.rooms[activeRoom].materials);
   const removeMaterial = useDesignerStore((s) => s.removeMaterial);
+  const t = useT();
 
   return (
     <div className="flex flex-col gap-4 px-3 py-3">
-      {MATERIAL_SECTIONS.map(({ label, icon, category, rooms }) => {
+      {MATERIAL_SECTIONS.map(({ key, icon, category, rooms }) => {
         if (rooms && !rooms.includes(activeRoom)) return null;
         const items = MATERIALS.filter((m) => m.category === category);
         const selected = roomMaterials[category];
@@ -108,14 +115,14 @@ function MaterialsTab() {
           <div key={category}>
             <div className="flex items-center justify-between mb-1.5 px-0.5">
               <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                {icon} {label}
+                {icon} {t.materialSections[key]}
               </span>
               {selected && (
                 <button
                   onClick={() => removeMaterial(category)}
                   className="text-[9px] text-gray-400 hover:text-red-400 transition-colors"
                 >
-                  清除
+                  {t.clear}
                 </button>
               )}
             </div>
@@ -138,6 +145,7 @@ function CustomFurnitureForm({ onClose }: { onClose: () => void }) {
   const activeRoom         = useDesignerStore(s => s.activeRoom);
   const addCustomFurniture = useDesignerStore(s => s.addCustomFurniture);
   const placeFurniture     = useDesignerStore(s => s.placeFurniture);
+  const t = useT();
 
   const [name,  setName]  = useState("");
   const [width, setWidth] = useState(80);
@@ -151,7 +159,7 @@ function CustomFurnitureForm({ onClose }: { onClose: () => void }) {
     const item: FurnitureItem = {
       id:           `custom_${Date.now()}`,
       name:         name.trim(),
-      brand:        "自定义",
+      brand:        t.customForm.defaultBrand,
       price,
       unit:         "元/件",
       category:     "storage",
@@ -161,7 +169,7 @@ function CustomFurnitureForm({ onClose }: { onClose: () => void }) {
       depth,
       height:       80,
       tags:         [],
-      description:  "自定义家具",
+      description:  t.customForm.defaultDesc,
       icon,
     };
     addCustomFurniture(item);
@@ -171,31 +179,31 @@ function CustomFurnitureForm({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex flex-col gap-2">
-      <div className="text-[11px] font-bold text-blue-700">✏️ 自定义家具</div>
+      <div className="text-[11px] font-bold text-blue-700">{t.customForm.title}</div>
       <input
         value={name} onChange={e => setName(e.target.value)}
-        placeholder="家具名称"
+        placeholder={t.customForm.namePlaceholder}
         className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-blue-400 bg-white"
       />
       <div className="flex gap-2">
         <div className="flex flex-col gap-0.5 flex-1">
-          <label className="text-[9px] text-gray-400">宽 cm</label>
+          <label className="text-[9px] text-gray-400">{t.customForm.widthLabel}</label>
           <input type="number" min={10} max={600} value={width} onChange={e => setWidth(+e.target.value)}
             className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-blue-400 bg-white" />
         </div>
         <div className="flex flex-col gap-0.5 flex-1">
-          <label className="text-[9px] text-gray-400">深 cm</label>
+          <label className="text-[9px] text-gray-400">{t.customForm.depthLabel}</label>
           <input type="number" min={10} max={600} value={depth} onChange={e => setDepth(+e.target.value)}
             className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-blue-400 bg-white" />
         </div>
         <div className="flex flex-col gap-0.5 flex-1">
-          <label className="text-[9px] text-gray-400">价格¥</label>
+          <label className="text-[9px] text-gray-400">{t.customForm.priceLabel}</label>
           <input type="number" min={0} value={price} onChange={e => setPrice(+e.target.value)}
             className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-blue-400 bg-white" />
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <label className="text-[9px] text-gray-400 shrink-0">颜色</label>
+        <label className="text-[9px] text-gray-400 shrink-0">{t.customForm.colorLabel}</label>
         <input type="color" value={color} onChange={e => setColor(e.target.value)}
           className="w-7 h-7 rounded border border-gray-200 cursor-pointer shrink-0" />
         <div className="flex flex-wrap gap-1">
@@ -211,11 +219,11 @@ function CustomFurnitureForm({ onClose }: { onClose: () => void }) {
         <button onClick={handleAdd}
           className="flex-1 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 disabled:opacity-40"
           disabled={!name.trim()}>
-          放入平面图
+          {t.customForm.addBtn}
         </button>
         <button onClick={onClose}
           className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-xl">
-          取消
+          {t.customForm.cancelBtn}
         </button>
       </div>
     </div>
@@ -228,6 +236,7 @@ function FurnitureTab() {
   const customFurniture = useDesignerStore((s) => s.customFurniture);
   const [showForm, setShowForm] = useState(false);
   const [allRooms, setAllRooms] = useState(false);
+  const t = useT();
 
   const roomFurniture = allRooms ? [...FURNITURE, ...getCustomFurniture()] : getFurnitureForRoom(activeRoom);
   // Include any custom furniture (all rooms)
@@ -249,24 +258,24 @@ function FurnitureTab() {
           className={`flex-1 py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
             allRooms ? "bg-blue-600 text-white border-blue-600" : "text-gray-500 border-gray-200 hover:border-blue-300"
           }`}>
-          {allRooms ? "🔓 全品类" : "🔒 本房间"}
+          {allRooms ? t.allCategories : t.thisRoom}
         </button>
         {!showForm && (
           <button onClick={() => setShowForm(true)}
             className="flex-1 py-1.5 border border-dashed border-gray-200 rounded-xl text-xs text-gray-400 hover:border-blue-300 hover:text-blue-500 transition-colors font-semibold">
-            ＋ 自定义
+            {t.customFurnitureBtn}
           </button>
         )}
       </div>
       {showForm && <CustomFurnitureForm onClose={() => setShowForm(false)} />}
 
       {groups.length === 0 ? (
-        <div className="text-xs text-gray-400 text-center py-6">该房间暂无家具可选</div>
+        <div className="text-xs text-gray-400 text-center py-6">{t.noFurnitureForRoom}</div>
       ) : (
-        groups.map(({ id, label, icon, items }) => (
+        groups.map(({ id, icon, items }) => (
           <div key={id}>
             <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 px-0.5">
-              {icon} {label}
+              {icon} {t.furnitureCats[id] ?? id}
             </div>
             <div className="grid grid-cols-2 gap-1.5">
               {items.map((item) => (
@@ -283,6 +292,7 @@ function FurnitureTab() {
 // ─── Main LeftPanel ────────────────────────────────────────
 export default function LeftPanel() {
   const [tab, setTab] = useState<"materials" | "furniture">("materials");
+  const t = useT();
 
   return (
     <aside className="w-64 shrink-0 h-full bg-gray-50/90 border-r border-gray-200 flex flex-col overflow-hidden">
@@ -296,7 +306,7 @@ export default function LeftPanel() {
               : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          🎨 材料
+          {t.tabMaterials}
         </button>
         <button
           onClick={() => setTab("furniture")}
@@ -306,7 +316,7 @@ export default function LeftPanel() {
               : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          🪑 家具
+          {t.tabFurniture}
         </button>
       </div>
 
@@ -317,7 +327,7 @@ export default function LeftPanel() {
 
       {/* Hint */}
       <div className="px-3 py-2 text-[10px] text-gray-400 border-t border-gray-100 shrink-0">
-        {tab === "furniture" ? "点击家具→自动放入平面图" : "点击材料→应用到当前房间"}
+        {tab === "furniture" ? t.furnitureHint : t.matHint}
       </div>
     </aside>
   );
