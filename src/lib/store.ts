@@ -247,6 +247,7 @@ interface DesignerStore {
 
   // Persistence
   resetAll: () => void;
+  loadFromShare: (snapshot: import("./share").ShareSnapshot) => void;
 
   // Derived
   currentRoom: () => RoomState;
@@ -696,6 +697,29 @@ export const useDesignerStore = create<DesignerStore>()(
         roomDoorWall: { ...DEFAULT_ROOM_DOOR_WALL },
         layoutHistory: [],
       }),
+
+      loadFromShare: (snapshot) => {
+        const mergedRooms = { ...initialRooms };
+        for (const [room, rs] of Object.entries(snapshot.rooms)) {
+          if (rs) mergedRooms[room as RoomType] = rs as RoomState;
+        }
+        set({
+          rooms: mergedRooms,
+          enabledRooms: snapshot.enabledRooms,
+          budget: snapshot.budget,
+          exterior: { ...initialExterior, ...(snapshot.exterior as Partial<typeof initialExterior>) },
+          customRoomMeta: snapshot.customRoomMeta ?? {},
+          roomDimensions: { ...DEFAULT_ROOM_DIMENSIONS, ...(snapshot.roomDimensions ?? {}) },
+          activeRoom: snapshot.enabledRooms[0] ?? "living",
+          selectedInstanceId: null,
+          selectedInstanceIds: [],
+          furnitureHistory: [],
+          clipboard: [],
+          roomClipboard: null,
+          scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
+          layoutHistory: [],
+        });
+      },
 
       currentRoom: () => {
         const { activeRoom, rooms } = get();

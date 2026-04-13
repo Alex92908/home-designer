@@ -1,15 +1,18 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect } from "react";
 import LeftPanel from "@/components/LeftPanel";
 import RightPanel from "@/components/RightPanel";
 import ExteriorPanel from "@/components/ExteriorPanel";
 import TopBar from "@/components/TopBar";
 import ExportModal from "@/components/ExportModal";
+import ShareModal from "@/components/ShareModal";
 import FloorPlan from "@/components/FloorPlan";
 import FloorPlanAll from "@/components/FloorPlanAll";
 import { useDesignerStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
+import { decodeShare } from "@/lib/share";
 
 const RoomCanvas = dynamic(() => import("@/components/RoomCanvas"), {
   ssr: false,
@@ -30,8 +33,24 @@ const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
 });
 
 export default function Home() {
-  const viewMode = useDesignerStore((s) => s.viewMode);
+  const viewMode       = useDesignerStore((s) => s.viewMode);
+  const loadFromShare  = useDesignerStore((s) => s.loadFromShare);
   const t = useT();
+
+  // Load shared plan from URL ?share= param (runs once after hydration)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const encoded = params.get("share");
+    if (!encoded) return;
+    const snapshot = decodeShare(encoded);
+    if (snapshot) {
+      loadFromShare(snapshot);
+      // Clean URL without reloading
+      const url = new URL(window.location.href);
+      url.searchParams.delete("share");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [loadFromShare]);
   const isAll      = viewMode === "all";
   const isExterior = viewMode === "exterior";
   const is3d       = viewMode === "3d";
@@ -52,6 +71,7 @@ export default function Home() {
         {isExterior && <ExteriorPanel />}
       </div>
       <ExportModal />
+      <ShareModal />
       <footer className="h-6 bg-white border-t border-gray-100 flex items-center justify-center shrink-0">
         <span className="text-[10px] text-gray-400">{t.disclaimer}</span>
       </footer>

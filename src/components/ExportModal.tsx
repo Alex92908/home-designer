@@ -40,7 +40,7 @@ function RoomCostRow({ room, cost }: { room: RoomType; cost: number }) {
 export default function ExportModal() {
   const [open, setOpen]           = useState(false);
   const [tab, setTab]             = useState<"current" | "all" | "data">("current");
-  const [phone, setPhone]         = useState("");
+  const [email, setEmail]         = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [exporting, setExporting] = useState(false);
   const t = useT();
@@ -84,19 +84,26 @@ export default function ExportModal() {
 
   if (!open) return null;
 
-  const close = () => { setOpen(false); setSubmitted(false); setPhone(""); };
+  const close = () => { setOpen(false); setSubmitted(false); setEmail(""); };
 
   const handleExportPdf = async () => {
-    if (!phone || phone.length < 11) return;
+    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!isValidEmail) return;
     setExporting(true);
+    // Submit email in background
+    fetch("/api/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, source: "export-modal" }),
+    }).catch(() => {});
     await new Promise(r => setTimeout(r, 300));
-    generatePdf({ room: activeRoom, items: materialItems, totalCost: currentRoomCost, scores, phone });
+    generatePdf({ room: activeRoom, items: materialItems, totalCost: currentRoomCost, scores, phone: email });
     setSubmitted(true);
     setExporting(false);
   };
 
   const handleQuickView = () => {
-    generatePdf({ room: activeRoom, items: materialItems, totalCost: currentRoomCost, scores, phone: "访客" });
+    generatePdf({ room: activeRoom, items: materialItems, totalCost: currentRoomCost, scores, phone: "guest" });
   };
 
   // ─── Save/load JSON ───────────────────────────────────────
@@ -280,12 +287,12 @@ export default function ExportModal() {
                       <div className="text-sm font-semibold text-gray-800 mb-1">{t.exportPdfTitle}</div>
                       <div className="text-xs text-gray-500 mb-3">{t.exportPdfDesc}</div>
                       <div className="flex gap-2">
-                        <input type="tel" value={phone}
-                          onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                        <input type="email" value={email}
+                          onChange={e => setEmail(e.target.value)}
                           placeholder={t.exportPhonePlaceholder}
                           className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400 bg-white" />
                         <button onClick={handleExportPdf}
-                          disabled={phone.length < 11 || exporting}
+                          disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || exporting}
                           className="px-4 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
                           {exporting ? t.exportDownloading : t.exportDownloadPdf}
                         </button>
@@ -295,9 +302,25 @@ export default function ExportModal() {
                       </button>
                     </div>
                   ) : (
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-                      <div className="text-green-700 font-bold mb-1">{t.exportSuccess}</div>
-                      <div className="text-sm text-green-600">{t.exportConsultContact} {phone}</div>
+                    <div className="flex flex-col gap-3">
+                      <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                        <div className="text-green-700 font-bold mb-1">{t.exportSuccess}</div>
+                        <div className="text-sm text-green-600">{t.exportConsultContact} {email}</div>
+                      </div>
+                      {/* Designer CTA */}
+                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-100 flex items-start gap-3">
+                        <div className="text-2xl shrink-0">🏡</div>
+                        <div>
+                          <div className="text-sm font-bold text-gray-800 mb-0.5">{t.shareDesignerTitle}</div>
+                          <div className="text-xs text-gray-500 mb-2">{t.shareDesignerDesc}</div>
+                          <button
+                            onClick={() => { close(); window.dispatchEvent(new CustomEvent("openShare")); }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors"
+                          >
+                            {t.shareDesignerBtn}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </>

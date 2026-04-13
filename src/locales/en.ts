@@ -199,6 +199,23 @@ export const en: Translations = {
   extYardLabels: { minimal: "Minimal", garden: "Garden", pool: "Pool", full: "Luxury" },
   extYardDescs: { minimal: "Path + planters", garden: "Beds + fountain", pool: "Pool + palms", full: "Pool + pergola + fountain" },
 
+  // ── ShareModal ───────────────────────────────────────────
+  shareTitle: "📤 Share Your Plan",
+  shareSubtitle: "Send a link to friends or your designer",
+  shareLinkLabel: "Share Link",
+  shareCopyBtn: "Copy Link",
+  shareCopied: "✓ Copied!",
+  shareUrlNote: "Anyone with this link can view and restore your full design",
+  shareEmailTitle: "📧 Stay in the Loop",
+  shareEmailDesc: "Get notified about new features and design inspiration",
+  shareEmailPlaceholder: "your@email.com",
+  shareEmailBtn: "Subscribe",
+  shareEmailSuccess: "You're subscribed!",
+  shareEmailSuccessDesc: "We'll send you design tips and updates — no spam.",
+  shareDesignerTitle: "Talk to a Designer",
+  shareDesignerDesc: "Share your plan with a professional for a free estimate",
+  shareDesignerBtn: "Contact a Designer →",
+
   // ── Footer ───────────────────────────────────────────────
   disclaimer: "For design reference only. Not construction advice. Actual results may vary — consult a professional.",
 
