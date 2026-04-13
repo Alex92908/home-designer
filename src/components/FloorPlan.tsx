@@ -52,6 +52,7 @@ interface PlacedItemSVGProps {
 
 function PlacedItemSVG({ placed, scale, isSelected, onPointerDown }: PlacedItemSVGProps) {
   const furniture = getFurnitureById(placed.furnitureId);
+  const locale = useLocale();
   if (!furniture) return null;
 
   const sw = placed.scaleW ?? 1;
@@ -61,6 +62,7 @@ function PlacedItemSVG({ placed, scale, isSelected, onPointerDown }: PlacedItemS
   const w = furniture.width * sw * scale;
   const d = furniture.depth * sd * scale;
   const fontSize = Math.min(w, d) * 0.55;
+  const displayName = locale === "en" ? (getFurnitureNameEn(furniture.id) ?? furniture.name) : furniture.name;
 
   return (
     <g
@@ -85,7 +87,7 @@ function PlacedItemSVG({ placed, scale, isSelected, onPointerDown }: PlacedItemS
         <text x={0} y={d / 2 - 5} textAnchor="middle" dominantBaseline="middle"
           fontSize={8} fill="white" fillOpacity={0.9}
           style={{ userSelect: "none", pointerEvents: "none" }}>
-          {furniture.name.length > 7 ? furniture.name.slice(0, 7) + "…" : furniture.name}
+          {displayName.length > 8 ? displayName.slice(0, 8) + "…" : displayName}
         </text>
       )}
       {isSelected && (
