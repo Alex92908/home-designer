@@ -101,7 +101,7 @@ export default function ShareModal() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-500 px-6 py-5 text-white">
+        <div className="px-6 py-5 text-white" style={{ background: "linear-gradient(160deg, #007AFF 0%, #5856D6 100%)" }}>
           <div className="text-xl font-black mb-0.5">{t.shareTitle}</div>
           <div className="text-sm text-indigo-100">{t.shareSubtitle}</div>
         </div>
@@ -118,11 +118,8 @@ export default function ShareModal() {
               />
               <button
                 onClick={handleCopy}
-                className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                  copied
-                    ? "bg-green-500 text-white"
-                    : "bg-indigo-600 hover:bg-indigo-700 text-white"
-                }`}
+                className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap text-white"
+                style={{ background: copied ? "#34C759" : "var(--ds-primary)" }}
               >
                 {copied ? t.shareCopied : t.shareCopyBtn}
               </button>
@@ -135,22 +132,23 @@ export default function ShareModal() {
 
           {/* Email capture */}
           {!submitted ? (
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-              <div className="text-sm font-bold text-gray-800 mb-1">{t.shareEmailTitle}</div>
-              <div className="text-xs text-gray-500 mb-3">{t.shareEmailDesc}</div>
+            <div className="rounded-xl p-4" style={{ background: "var(--ds-primary-soft)", border: "1px solid #CCE4FF" }}>
+              <div className="text-sm font-semibold mb-1" style={{ color: "var(--ds-text)" }}>{t.shareEmailTitle}</div>
+              <div className="text-xs mb-3" style={{ color: "var(--ds-text-2)" }}>{t.shareEmailDesc}</div>
               <div className="flex gap-2">
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder={t.shareEmailPlaceholder}
-                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-400 bg-white"
+                  className="flex-1 rounded-xl px-3 py-2.5 text-sm outline-none bg-white"
+                  style={{ border: "1px solid var(--ds-border)" }}
                   onKeyDown={e => e.key === "Enter" && handleSubscribe()}
                 />
                 <button
                   onClick={handleSubscribe}
                   disabled={!email || loading}
-                  className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-40 whitespace-nowrap"
+                  className="ds-btn-primary px-4 py-2.5 disabled:opacity-40 whitespace-nowrap"
                 >
                   {loading ? "..." : t.shareEmailBtn}
                 </button>

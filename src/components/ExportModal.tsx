@@ -157,11 +157,11 @@ export default function ExportModal() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-500 px-6 py-4 text-white">
+        <div className="px-6 py-4 text-white" style={{ background: "linear-gradient(160deg, #007AFF 0%, #5856D6 100%)" }}>
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xl font-black">{t.exportModalTitle}</div>
-              <div className="text-sm text-blue-100 mt-0.5">
+              <div className="text-sm text-white/70 mt-0.5">
                 {totalRooms > 0 ? `${t.exportConfigured} ${totalRooms} ${t.exportRooms}` : t.exportNotConfigured} · {new Date().toLocaleDateString(locale === "en" ? "en-US" : "zh-CN")}
               </div>
             </div>
@@ -175,7 +175,7 @@ export default function ExportModal() {
             {(["current","all","data"] as const).map((tabKey) => (
               <button key={tabKey} onClick={() => setTab(tabKey)}
                 className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  tab === tabKey ? "bg-white text-blue-700" : "text-blue-100 hover:bg-white/20"
+                  tab === tabKey ? "bg-white text-[#007AFF]" : "text-white/70 hover:bg-white/20"
                 }`}>{tabKey === "current" ? t.exportTabCurrent : tabKey === "all" ? t.exportTabAll : t.exportTabData}</button>
             ))}
           </div>
@@ -193,7 +193,7 @@ export default function ExportModal() {
                   {/* Scores */}
                   {scores.dominantStyle && (
                     <div className="bg-blue-50 rounded-xl p-3 mb-4 border border-blue-100">
-                      <div className="text-xs font-bold text-blue-700 mb-2">{t.exportDomStyle}{t.styleTags[scores.dominantStyle] ?? scores.dominantStyle}</div>
+                      <div className="text-xs font-bold text-[#007AFF] mb-2">{t.exportDomStyle}{t.styleTags[scores.dominantStyle] ?? scores.dominantStyle}</div>
                       <div className="grid grid-cols-3 gap-3">
                         {[
                           { label: t.scoreStyle, val:scores.style, color:"#3B82F6" },
@@ -278,7 +278,7 @@ export default function ExportModal() {
 
                   <div className="flex justify-between items-center py-2 border-t border-gray-200 mb-4">
                     <span className="text-sm font-bold text-gray-700">{t.roomNames[activeRoom] ?? def.name}{t.exportRoomTotal}</span>
-                    <span className="text-xl font-black text-blue-600">{formatPrice(currentRoomCost, locale)}</span>
+                    <span className="text-xl font-black text-[#007AFF]">{formatPrice(currentRoomCost, locale)}</span>
                   </div>
 
                   {/* Lead capture */}
@@ -290,10 +290,10 @@ export default function ExportModal() {
                         <input type="email" value={email}
                           onChange={e => setEmail(e.target.value)}
                           placeholder={t.exportPhonePlaceholder}
-                          className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400 bg-white" />
+                          className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#007AFF] bg-white" />
                         <button onClick={handleExportPdf}
                           disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || exporting}
-                          className="px-4 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
+                          className="px-4 py-2.5 bg-[#007AFF] text-white text-sm font-bold rounded-xl hover:bg-[#0071E3] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
                           {exporting ? t.exportDownloading : t.exportDownloadPdf}
                         </button>
                       </div>
@@ -364,7 +364,7 @@ export default function ExportModal() {
 
               <div className="flex justify-between items-center py-2 border-t border-gray-200">
                 <span className="text-sm font-bold text-gray-700">{t.exportAllTotal}</span>
-                <span className="text-xl font-black text-blue-600">{formatPrice(totalAllCost, locale)}</span>
+                <span className="text-xl font-black text-[#007AFF]">{formatPrice(totalAllCost, locale)}</span>
               </div>
 
               {/* Exterior summary */}
@@ -387,7 +387,7 @@ export default function ExportModal() {
                 <div className="text-sm font-bold text-gray-800 mb-1">{t.saveTitle}</div>
                 <div className="text-xs text-gray-500 mb-3">{t.saveDesc}</div>
                 <button onClick={handleSaveJson}
-                  className="w-full py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors">
+                  className="w-full py-2.5 bg-[#007AFF] text-white text-sm font-bold rounded-xl hover:bg-[#0071E3] transition-colors">
                   {t.saveBtn}
                 </button>
               </div>
