@@ -6,7 +6,6 @@ import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS, DEFAULT_ENABLED } from "@/lib/store";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale } from "@/lib/i18n";
-import { formatPrice } from "@/lib/currency";
 
 // ─── Constants ─────────────────────────────────────────────
 const WALL     = 14;   // wall thickness cm
@@ -302,26 +301,6 @@ export default function FloorPlanAll() {
   const vbY2 = visibleRooms.length ? Math.max(...visibleRooms.map(r => roomLayout[r].y + roomDimensions[r].depth)) + pad + 60 : 600;
   const viewBox = `${vbX1} ${vbY1} ${vbX2 - vbX1} ${vbY2 - vbY1}`;
 
-  // Per-room cost helper (reused for SVG labels + breakdown panel)
-  const calcRoomCost = (r: RoomType) => {
-    const { materials, placedItems } = rooms[r];
-    const def = ROOM_DEFS[r];
-    const dims = roomDimensions[r];
-    const floorM2 = (dims.width * dims.depth) / 10000;
-    const wallM2  = (2 * (dims.width + dims.depth) * def.height) / 10000;
-    let c = 0;
-    if (materials.wall)    c += materials.wall.price    * wallM2;
-    if (materials.floor)   c += materials.floor.price   * floorM2;
-    if (materials.ceiling) c += materials.ceiling.price * floorM2;
-    if (materials.tile)    c += materials.tile.price    * floorM2;
-    if (materials.light)   c += materials.light.price   * (materials.light.id === "light-spot" ? 8 : 1);
-    placedItems.forEach(p => { const f = getFurnitureById(p.furnitureId); if (f) c += f.price; });
-    return c;
-  };
-
-  // Total all-room cost
-  const totalAllCost = ALL_ROOMS.reduce((sum, r) => sum + calcRoomCost(r), 0);
-
   const configuredCount = ALL_ROOMS.filter(r =>
     Object.keys(rooms[r].materials).length > 0 || rooms[r].placedItems.length > 0
   ).length;
@@ -381,37 +360,23 @@ export default function FloorPlanAll() {
 
       {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden bg-gray-100">
-        {/* Subheader */}
-        <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-100 shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-gray-800">{t.allTitle}</span>
-            <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-              {configuredCount}/{ALL_ROOMS.length} {t.allConfigured}
-            </span>
-            {mounted && totalAllCost > 0 && (
-              <span className="text-xs font-black" style={{ color: "#007AFF" }}>
-                {t.allTotal} {formatPrice(totalAllCost, locale)}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {roomClipboard && (
-              <button
-                onClick={pasteAsNewRoom}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
-                style={{ border: "1px solid #007AFF", color: "#007AFF", background: "white" }}
-                title={`${t.allPasteRoom} (${roomClipboard.name})`}
-              >
-                <span>📋</span>
-                <span>{t.allPasteRoom}</span>
-                <span className="text-[10px] opacity-60">({roomClipboard.name})</span>
-              </button>
-            )}
-          </div>
+        {/* Subheader — minimal, costs live in RightPanelAll */}
+        <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-100 shrink-0">
+          <span className="text-xs font-bold text-gray-800">{t.allTitle}</span>
+          <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+            {configuredCount}/{ALL_ROOMS.length} {t.allConfigured}
+          </span>
+          <span className="text-[10px] text-gray-400 hidden lg:block">{t.allHint}</span>
+          {roomClipboard && (
+            <button
+              onClick={pasteAsNewRoom}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all ml-auto"
+              style={{ border: "1px solid #007AFF", color: "#007AFF", background: "white" }}
+            >
+              📋 {t.allPasteRoom} ({roomClipboard.name})
+            </button>
+          )}
         </div>
-
-        {/* Canvas + Cost breakdown panel */}
-        <div className="flex-1 flex overflow-hidden">
 
         {/* SVG canvas */}
         <div className="flex-1 overflow-auto flex items-start justify-center p-4">
@@ -518,23 +483,6 @@ export default function FloorPlanAll() {
                     fontFamily="system-ui, sans-serif"
                     style={{ pointerEvents: "none", userSelect: "none" }}
                   >{(w/100).toFixed(1)}×{(d/100).toFixed(1)}m</text>
-                  {/* Room cost label */}
-                  {mounted && (() => {
-                    const cost = calcRoomCost(room);
-                    if (cost === 0) return null;
-                    const priceStr = formatPrice(cost, locale);
-                    const priceFs = dimFs * 0.95;
-                    return (
-                      <text x={cx} y={cy + nameFs*3.4}
-                        textAnchor="middle" dominantBaseline="middle"
-                        fontSize={priceFs}
-                        fontWeight="700"
-                        fill={isActive ? "#1D4ED8" : "#007AFF"}
-                        fontFamily="system-ui, sans-serif"
-                        style={{ pointerEvents: "none", userSelect: "none" }}
-                      >{priceStr}</text>
-                    );
-                  })()}
 
                   {/* Drag/tap hit rect */}
                   <rect
@@ -619,80 +567,6 @@ export default function FloorPlanAll() {
             </g>
           </svg>
         </div>
-
-        {/* ── Cost breakdown panel ── */}
-        {mounted && totalAllCost > 0 && (
-          <div
-            className="shrink-0 overflow-y-auto flex flex-col"
-            style={{
-              width: 200,
-              borderLeft: "1px solid var(--ds-border)",
-              background: "var(--ds-surface)",
-            }}
-          >
-            {/* Panel header */}
-            <div className="px-3 pt-3 pb-2 shrink-0" style={{ borderBottom: "1px solid var(--ds-border-soft)" }}>
-              <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--ds-text-3)" }}>
-                💰 {locale === "en" ? "Cost by Room" : "各房间费用"}
-              </div>
-              <div className="text-lg font-black mt-0.5" style={{ color: "#007AFF" }}>
-                {formatPrice(totalAllCost, locale)}
-              </div>
-            </div>
-
-            {/* Per-room rows */}
-            <div className="flex-1 px-2 py-2 flex flex-col gap-1">
-              {enabledRooms
-                .map(r => ({ r, cost: calcRoomCost(r), ...getRoomLabel(r) }))
-                .filter(x => x.cost > 0)
-                .sort((a, b) => b.cost - a.cost)
-                .map(({ r, cost, name, icon }) => {
-                  const pct = Math.round((cost / totalAllCost) * 100);
-                  const isActive = r === activeRoom;
-                  return (
-                    <button
-                      key={r}
-                      onClick={() => { setActiveRoom(r); setViewMode("2d"); }}
-                      className="flex flex-col gap-0.5 p-1.5 rounded-lg text-left transition-all"
-                      style={isActive
-                        ? { background: "#E8F1FF" }
-                        : { background: "transparent" }
-                      }
-                    >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="flex items-center gap-1 text-[11px] font-semibold truncate" style={{ color: "var(--ds-text)" }}>
-                          <span>{icon}</span>
-                          <span className="truncate">{name}</span>
-                        </span>
-                        <span className="text-[10px] font-bold shrink-0" style={{ color: "#007AFF" }}>
-                          {pct}%
-                        </span>
-                      </div>
-                      {/* Bar */}
-                      <div className="h-1 rounded-full w-full" style={{ background: "var(--ds-bg)" }}>
-                        <div className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%`, background: isActive ? "#007AFF" : "#60AEFF" }} />
-                      </div>
-                      <div className="text-[10px]" style={{ color: "var(--ds-text-3)" }}>
-                        {formatPrice(cost, locale)}
-                      </div>
-                    </button>
-                  );
-                })}
-            </div>
-
-            {/* Unconfigured rooms note */}
-            {configuredCount < enabledRooms.length && (
-              <div className="px-3 py-2 text-[9px] shrink-0" style={{ color: "var(--ds-text-3)", borderTop: "1px solid var(--ds-border-soft)" }}>
-                {locale === "en"
-                  ? `${enabledRooms.length - configuredCount} room(s) not yet configured`
-                  : `${enabledRooms.length - configuredCount} 个房间暂未配置`}
-              </div>
-            )}
-          </div>
-        )}
-
-        </div>{/* end canvas + cost panel row */}
       </div>
     </div>
   );

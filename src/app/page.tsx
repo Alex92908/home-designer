@@ -7,6 +7,7 @@ import RightPanel from "@/components/RightPanel";
 import ExteriorPanel from "@/components/ExteriorPanel";
 import TopBar from "@/components/TopBar";
 import RoomSidebar from "@/components/RoomSidebar";
+import RightPanelAll from "@/components/RightPanelAll";
 import ExportModal from "@/components/ExportModal";
 import ShareModal from "@/components/ShareModal";
 import FloorPlan from "@/components/FloorPlan";
@@ -71,6 +72,7 @@ export default function Home() {
           {is2d       && <FloorPlan />}
         </main>
         {!isAll && !isExterior && <RightPanel />}
+        {isAll && <RightPanelAll />}
         {isExterior && <ExteriorPanel />}
       </div>
       <ExportModal />
