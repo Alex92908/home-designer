@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, getRoomArea, RoomType } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
-import { generatePdf } from "@/lib/exportPdf";
+import { generatePdf, generateAllRoomsPdf } from "@/lib/exportPdf";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 import { formatPrice } from "@/lib/currency";
@@ -90,20 +90,23 @@ export default function ExportModal() {
     const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!isValidEmail) return;
     setExporting(true);
-    // Submit email in background
     fetch("/api/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, source: "export-modal" }),
     }).catch(() => {});
     await new Promise(r => setTimeout(r, 300));
-    generatePdf({ room: activeRoom, items: materialItems, totalCost: currentRoomCost, scores, phone: email });
+    generatePdf({ room: activeRoom, items: materialItems, totalCost: currentRoomCost, scores, phone: email, locale });
     setSubmitted(true);
     setExporting(false);
   };
 
   const handleQuickView = () => {
-    generatePdf({ room: activeRoom, items: materialItems, totalCost: currentRoomCost, scores, phone: "guest" });
+    generatePdf({ room: activeRoom, items: materialItems, totalCost: currentRoomCost, scores, phone: "guest", locale });
+  };
+
+  const handleExportAllPdf = () => {
+    generateAllRoomsPdf({ roomCosts, totalCost: totalAllCost, budget, phone: "guest" });
   };
 
   // ─── Save/load JSON ───────────────────────────────────────
@@ -366,6 +369,17 @@ export default function ExportModal() {
                 <span className="text-sm font-bold text-gray-700">{t.exportAllTotal}</span>
                 <span className="text-xl font-black text-[#007AFF]">{formatPrice(totalAllCost, locale)}</span>
               </div>
+
+              {/* Export all-rooms PDF */}
+              {totalRooms > 0 && (
+                <button
+                  onClick={handleExportAllPdf}
+                  className="w-full mt-3 py-2.5 text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                  style={{ background: "#007AFF", color: "#fff" }}
+                >
+                  📄 {locale === "en" ? "Export Whole House Quote (PDF)" : "导出全屋报价单 (PDF)"}
+                </button>
+              )}
 
               {/* Exterior summary */}
               <div className="mt-3 bg-gray-50 rounded-xl px-3 py-2 flex items-center gap-3">
