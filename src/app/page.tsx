@@ -6,6 +6,7 @@ import LeftPanel from "@/components/LeftPanel";
 import RightPanel from "@/components/RightPanel";
 import ExteriorPanel from "@/components/ExteriorPanel";
 import TopBar from "@/components/TopBar";
+import RoomSidebar from "@/components/RoomSidebar";
 import ExportModal from "@/components/ExportModal";
 import ShareModal from "@/components/ShareModal";
 import FloorPlan from "@/components/FloorPlan";
@@ -60,6 +61,8 @@ export default function Home() {
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
       <TopBar />
       <div className="flex flex-1 overflow-hidden">
+        {/* Room sidebar — always visible except all/exterior views */}
+        {!isAll && !isExterior && <RoomSidebar />}
         {!isAll && !isExterior && <LeftPanel />}
         <main className="flex-1 relative overflow-hidden">
           {is3d       && <RoomCanvas />}
