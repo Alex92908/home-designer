@@ -54,20 +54,33 @@ export default function RightPanel() {
   const totalItems = materialItems.length + placedItems.length;
 
   return (
-    <aside className="w-72 shrink-0 h-full overflow-y-auto bg-white border-l border-gray-200 flex flex-col">
+    <aside
+      className="w-72 shrink-0 h-full overflow-y-auto flex flex-col"
+      style={{ background: "var(--ds-surface)", borderLeft: "1px solid var(--ds-border)" }}
+    >
       {/* Budget header */}
-      <div className={`p-4 shrink-0 ${isOverBudget ? "bg-red-50" : "bg-gradient-to-br from-blue-600 to-indigo-500"}`}>
-        <div className={`text-xs font-semibold mb-1 ${isOverBudget ? "text-red-600" : "text-blue-100"}`}>
+      <div
+        className="p-4 shrink-0"
+        style={
+          isOverBudget
+            ? { background: "var(--ds-danger-soft)", borderBottom: "1px solid #FECACA" }
+            : {
+                background: "linear-gradient(135deg, #7C3AED 0%, #EA580C 100%)",
+                borderBottom: "none",
+              }
+        }
+      >
+        <div className="text-xs font-semibold mb-1" style={{ color: isOverBudget ? "var(--ds-danger)" : "rgba(255,255,255,0.75)" }}>
           💰 {t.roomNames[activeRoom] ?? def.name} · {t.budgetTitle}
         </div>
-        <div className={`text-3xl font-black mb-0.5 ${isOverBudget ? "text-red-600" : "text-white"}`}>
+        <div className="text-3xl font-black mb-0.5" style={{ color: isOverBudget ? "var(--ds-danger)" : "#fff" }}>
           {formatPrice(totalCost, locale)}
         </div>
-        <div className={`text-xs ${isOverBudget ? "text-red-400" : "text-blue-200"}`}>
+        <div className="text-xs" style={{ color: isOverBudget ? "#F87171" : "rgba(255,255,255,0.6)" }}>
           {totalItems} {t.budgetItems} · {t.budgetArea} {area.floor}㎡
         </div>
         {isOverBudget && (
-          <div className="mt-2 text-xs text-red-600 font-semibold bg-red-100 rounded-lg px-2 py-1">
+          <div className="mt-2 text-xs font-semibold rounded-lg px-2 py-1" style={{ background: "#FEE2E2", color: "var(--ds-danger)" }}>
             ⚠️ {t.overBudget} {formatPrice(totalCost - budget, locale)}
           </div>
         )}
@@ -75,27 +88,26 @@ export default function RightPanel() {
 
       {/* Score */}
       {totalItems >= 2 && (
-        <div className="px-4 py-3 border-b border-gray-100 shrink-0">
-          <div className="text-[11px] font-bold text-gray-500 mb-2">{t.scoreTitle}</div>
+        <div className="px-4 py-3 shrink-0" style={{ borderBottom: "1px solid var(--ds-border-soft)" }}>
+          <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--ds-text-3)" }}>{t.scoreTitle}</div>
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-[11px] text-gray-600">
-              <span className="w-14 shrink-0">{t.scoreStyle}</span>
-              <ScoreBar score={scores.style} color="#3B82F6" />
-              <span className="w-7 text-right font-bold text-blue-600">{scores.style}</span>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-gray-600">
-              <span className="w-14 shrink-0">{t.scoreSpace}</span>
-              <ScoreBar score={scores.space} color="#10B981" />
-              <span className="w-7 text-right font-bold text-emerald-600">{scores.space}</span>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-gray-600">
-              <span className="w-14 shrink-0">{t.scoreLight}</span>
-              <ScoreBar score={scores.light} color="#F59E0B" />
-              <span className="w-7 text-right font-bold text-amber-500">{scores.light}</span>
-            </div>
+            {[
+              { label: t.scoreStyle, val: scores.style, color: "var(--ds-primary)" },
+              { label: t.scoreSpace, val: scores.space,  color: "var(--ds-success)" },
+              { label: t.scoreLight, val: scores.light,  color: "#F59E0B" },
+            ].map(({ label, val, color }) => (
+              <div key={label} className="flex items-center gap-2 text-[11px]" style={{ color: "var(--ds-text-2)" }}>
+                <span className="w-14 shrink-0">{label}</span>
+                <ScoreBar score={val} color={color} />
+                <span className="w-7 text-right font-bold" style={{ color }}>{val}</span>
+              </div>
+            ))}
           </div>
           {scores.dominantStyle && (
-            <div className="mt-2 inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+            <div
+              className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ background: "var(--ds-primary-soft)", color: "var(--ds-primary-text)" }}
+            >
               {t.dominantStyle}{t.styleTags[scores.dominantStyle] ?? scores.dominantStyle}
             </div>
           )}
@@ -103,25 +115,29 @@ export default function RightPanel() {
       )}
 
       {/* Budget slider */}
-      <div className="px-4 py-3 border-b border-gray-100 shrink-0">
-        <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
+      <div className="px-4 py-3 shrink-0" style={{ borderBottom: "1px solid var(--ds-border-soft)" }}>
+        <div className="flex items-center justify-between text-[11px] mb-1" style={{ color: "var(--ds-text-2)" }}>
           <span>{t.budgetLimit}</span>
-          <span className="font-bold text-gray-700">
+          <span className="font-bold" style={{ color: "var(--ds-text)" }}>
             {locale === "en" ? formatPrice(budget, locale) : `¥${(budget / 10000).toFixed(0)}万`}
           </span>
         </div>
         <input
           type="range" min={30000} max={500000} step={10000} value={budget}
           onChange={(e) => setBudget(Number(e.target.value))}
-          className="w-full h-1.5 accent-blue-500"
+          className="w-full h-1.5"
+          style={{ accentColor: "var(--ds-primary)" }}
         />
-        <div className="mt-1.5 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+        <div className="mt-1.5 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--ds-bg)" }}>
           <div
-            className={`h-full rounded-full transition-all duration-500 ${isOverBudget ? "bg-red-500" : "bg-blue-500"}`}
-            style={{ width: `${budgetPercent}%` }}
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${budgetPercent}%`,
+              background: isOverBudget ? "var(--ds-danger)" : "var(--ds-primary)",
+            }}
           />
         </div>
-        <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+        <div className="flex justify-between text-[10px] mt-1" style={{ color: "var(--ds-text-3)" }}>
           <span>{formatPrice(totalCost, locale)}</span>
           <span>{formatPrice(budget, locale)}</span>
         </div>
@@ -129,31 +145,36 @@ export default function RightPanel() {
 
       {/* Materials */}
       {materialItems.length > 0 && (
-        <div className="px-4 py-3 border-b border-gray-100">
-          <div className="text-[11px] font-bold text-gray-500 mb-2">{t.sectionMaterials}</div>
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--ds-border-soft)" }}>
+          <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--ds-text-3)" }}>{t.sectionMaterials}</div>
           <div className="flex flex-col gap-2">
             {(materialItems as NonNullable<typeof materials.wall>[]).map((item) => {
               const qty = item.category === "wall" ? area.wall
                        : item.category === "floor" ? area.floor
-                       : item.id === "light-spot" ? 8
-                       : 1;
+                       : item.id === "light-spot" ? 8 : 1;
               const total = item.price * qty;
               return (
                 <div key={item.id} className="flex items-start justify-between gap-2 group">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-5 h-5 rounded-md shrink-0 border border-gray-200" style={{ background: item.texture ?? item.color }} />
+                    <div
+                      className="w-5 h-5 rounded-md shrink-0"
+                      style={{ background: item.texture ?? item.color, border: "1px solid var(--ds-border)" }}
+                    />
                     <div className="min-w-0">
-                      <div className="text-[11px] font-medium text-gray-800 truncate">{item.name}</div>
-                      <div className="text-[9px] text-gray-400">
-                        {item.category === "wall" || item.category === "floor" || item.category === "tile" ? `${qty}㎡` : item.id === "light-spot" ? "×8个" : "×1件"}
+                      <div className="text-[11px] font-medium truncate" style={{ color: "var(--ds-text)" }}>{item.name}</div>
+                      <div className="text-[9px]" style={{ color: "var(--ds-text-3)" }}>
+                        {item.category === "wall" || item.category === "floor" || item.category === "tile" ? `${qty}㎡` : item.id === "light-spot" ? "×8" : "×1"}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[11px] font-bold text-gray-700">{formatPrice(total, locale)}</span>
+                    <span className="text-[11px] font-bold" style={{ color: "var(--ds-text)" }}>{formatPrice(total, locale)}</span>
                     <button
                       onClick={() => removeMaterial(item.category)}
-                      className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 text-xs transition-all"
+                      className="opacity-0 group-hover:opacity-100 text-xs transition-all"
+                      style={{ color: "var(--ds-text-3)" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "var(--ds-danger)")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "var(--ds-text-3)")}
                     >✕</button>
                   </div>
                 </div>
@@ -166,8 +187,8 @@ export default function RightPanel() {
       {/* Furniture */}
       {placedItems.length > 0 && (
         <div className="px-4 py-3 flex-1">
-          <div className="text-[11px] font-bold text-gray-500 mb-2">{t.sectionFurniture} ({placedItems.length})</div>
-          <div className="flex flex-col gap-2">
+          <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--ds-text-3)" }}>{t.sectionFurniture} ({placedItems.length})</div>
+          <div className="flex flex-col gap-1.5">
             {placedItems.map((placed) => {
               const f = getFurnitureById(placed.furnitureId);
               if (!f) return null;
@@ -175,7 +196,12 @@ export default function RightPanel() {
               return (
                 <div
                   key={placed.instanceId}
-                  className={`flex items-center justify-between gap-2 p-1.5 rounded-lg cursor-pointer group transition-colors ${isSelected ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50"}`}
+                  className="flex items-center justify-between gap-2 p-1.5 rounded-lg cursor-pointer group transition-all"
+                  style={
+                    isSelected
+                      ? { background: "var(--ds-primary-soft)", border: "1px solid #DDD6FE" }
+                      : { border: "1px solid transparent" }
+                  }
                   onClick={() => selectInstance(isSelected ? null : placed.instanceId)}
                 >
                   <div className="flex items-center gap-2 min-w-0">
@@ -183,17 +209,22 @@ export default function RightPanel() {
                       <span style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.4))" }}>{f.icon}</span>
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[11px] font-medium text-gray-800 truncate">{locale === "en" ? (getFurnitureNameEn(f.id) ?? f.name) : f.name}</div>
-                      <div className="text-[9px] text-gray-400">
+                      <div className="text-[11px] font-medium truncate" style={{ color: "var(--ds-text)" }}>
+                        {locale === "en" ? (getFurnitureNameEn(f.id) ?? f.name) : f.name}
+                      </div>
+                      <div className="text-[9px]" style={{ color: "var(--ds-text-3)" }}>
                         {(placed.x / 100).toFixed(1)}m, {(placed.z / 100).toFixed(1)}m · {placed.rotation}°
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[11px] font-bold text-gray-700">{formatPrice(f.price, locale)}</span>
+                    <span className="text-[11px] font-bold" style={{ color: "var(--ds-text)" }}>{formatPrice(f.price, locale)}</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); removeItem(placed.instanceId); }}
-                      className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 text-xs transition-all"
+                      className="opacity-0 group-hover:opacity-100 text-xs transition-all"
+                      style={{ color: "var(--ds-text-3)" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "var(--ds-danger)")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "var(--ds-text-3)")}
                     >✕</button>
                   </div>
                 </div>
@@ -205,30 +236,34 @@ export default function RightPanel() {
 
       {/* Empty state */}
       {totalItems === 0 && (
-        <div className="flex-1 flex items-center justify-center text-xs text-gray-400 px-4 text-center whitespace-pre-line">
+        <div className="flex-1 flex items-center justify-center text-xs px-4 text-center whitespace-pre-line" style={{ color: "var(--ds-text-3)" }}>
           {t.emptyState}
         </div>
       )}
 
       {/* AI suggestion */}
       {aiSuggestion && (
-        <div className="mx-4 mb-3 p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100 shrink-0">
-          <div className="text-[11px] font-bold text-blue-700 mb-1">{t.aiTitle}</div>
-          <div className="text-[11px] text-blue-600 leading-relaxed">{aiSuggestion}</div>
+        <div
+          className="mx-4 mb-3 p-3 rounded-xl shrink-0"
+          style={{ background: "var(--ds-primary-soft)", border: "1px solid #DDD6FE" }}
+        >
+          <div className="text-[11px] font-bold mb-1" style={{ color: "var(--ds-primary-text)" }}>{t.aiTitle}</div>
+          <div className="text-[11px] leading-relaxed" style={{ color: "var(--ds-primary-text)" }}>{aiSuggestion}</div>
         </div>
       )}
 
       {/* Export buttons */}
-      <div className="p-4 border-t border-gray-100 space-y-2 shrink-0">
+      <div className="p-4 space-y-2 shrink-0" style={{ borderTop: "1px solid var(--ds-border-soft)" }}>
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("openExport"))}
-          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors"
+          className="ds-btn-primary w-full py-2.5 text-sm"
         >
           {t.exportQuote}
         </button>
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("openShare"))}
-          className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition-colors"
+          className="w-full py-2 text-sm font-semibold rounded-xl transition-all"
+          style={{ background: "var(--ds-bg)", color: "var(--ds-text-2)", border: "1px solid var(--ds-border)" }}
         >
           {t.sharePlan}
         </button>

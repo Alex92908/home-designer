@@ -21,51 +21,110 @@ export default function TopBar() {
   const openExport = () => window.dispatchEvent(new Event("openExport"));
 
   return (
-    <header className="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 shrink-0">
+    <header
+      className="h-14 flex items-center px-4 gap-3 shrink-0"
+      style={{
+        background: "var(--ds-surface)",
+        borderBottom: "1px solid var(--ds-border)",
+        boxShadow: "0 1px 0 var(--ds-border-soft), var(--ds-shadow-sm)",
+      }}
+    >
       {/* Logo */}
-      <div className="flex items-center gap-2 mr-1 shrink-0">
-        <span className="text-xl">🏠</span>
-        <span className="font-black text-gray-900 text-sm tracking-tight">{t.appName}</span>
-        <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded-full">{t.appTagline}</span>
+      <div className="flex items-center gap-2 mr-2 shrink-0">
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-sm shrink-0"
+          style={{ background: "linear-gradient(135deg, #7C3AED 0%, #EA580C 100%)" }}
+        >
+          🏠
+        </div>
+        <span
+          className="font-black text-sm tracking-tight"
+          style={{ color: "var(--ds-text)" }}
+        >
+          {t.appName}
+        </span>
+        <span
+          className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+          style={{
+            background: "var(--ds-primary-soft)",
+            color: "var(--ds-primary-text)",
+            letterSpacing: "0.04em",
+          }}
+        >
+          {t.appTagline}
+        </span>
       </div>
 
       {/* Room selector */}
-      <div className="flex items-center gap-0.5 bg-gray-100 rounded-xl p-1 overflow-x-auto" style={{ maxWidth: "min(520px, 40vw)" }}>
+      <div
+        className="flex items-center gap-0.5 p-1 rounded-xl overflow-x-auto shrink"
+        style={{
+          background: "var(--ds-bg)",
+          border: "1px solid var(--ds-border)",
+          maxWidth: "min(520px, 40vw)",
+        }}
+      >
         {enabledRooms.map((r) => {
-          const def  = ROOM_DEFS[r];
-          const meta = customRoomMeta[r];
-          const name = meta?.name ?? def.name;
-          const icon = meta?.icon ?? def.icon;
+          const def     = ROOM_DEFS[r];
+          const meta    = customRoomMeta[r];
+          const name    = meta?.name ?? def.name;
+          const icon    = meta?.icon ?? def.icon;
           const isActive = activeRoom === r && viewMode !== "all" && viewMode !== "exterior";
           const hasContent =
             Object.keys(rooms[r].materials).length > 0 ||
             rooms[r].placedItems.length > 0;
 
           return (
-            <div key={r}>
-              <button
-                onClick={() => { setActiveRoom(r); if (viewMode === "all" || viewMode === "exterior") setViewMode("2d"); }}
-                className={`
-                  flex items-center gap-0.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150
-                  ${isActive ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}
-                `}
-              >
-                <span>{icon}</span>
-                <span>{t.roomNames[r] ?? name}</span>
-                {hasContent && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 ml-0.5 shrink-0" />}
-              </button>
-            </div>
+            <button
+              key={r}
+              onClick={() => {
+                setActiveRoom(r);
+                if (viewMode === "all" || viewMode === "exterior") setViewMode("2d");
+              }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150"
+              style={
+                isActive
+                  ? {
+                      background: "var(--ds-surface)",
+                      color: "var(--ds-text)",
+                      boxShadow: "var(--ds-shadow-sm)",
+                    }
+                  : { color: "var(--ds-text-3)" }
+              }
+            >
+              <span>{icon}</span>
+              <span>{t.roomNames[r] ?? name}</span>
+              {hasContent && (
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ background: "var(--ds-primary)" }}
+                />
+              )}
+            </button>
           );
         })}
       </div>
 
       {/* View mode toggle */}
-      <div className="flex items-center bg-gray-100 rounded-xl p-1 gap-0.5 shrink-0">
-        {(["3d","2d","all","exterior"] as const).map((mode) => (
-          <button key={mode} onClick={() => setViewMode(mode)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-              viewMode === mode ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
-            }`}>
+      <div
+        className="flex items-center p-1 rounded-xl gap-0.5 shrink-0"
+        style={{ background: "var(--ds-bg)", border: "1px solid var(--ds-border)" }}
+      >
+        {(["3d", "2d", "all", "exterior"] as const).map((mode) => (
+          <button
+            key={mode}
+            onClick={() => setViewMode(mode)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150"
+            style={
+              viewMode === mode
+                ? {
+                    background: "var(--ds-surface)",
+                    color: "var(--ds-text)",
+                    boxShadow: "var(--ds-shadow-sm)",
+                  }
+                : { color: "var(--ds-text-3)" }
+            }
+          >
             <span>{t.viewIcons[mode]}</span>
             <span>{t.viewModes[mode]}</span>
           </button>
@@ -74,16 +133,30 @@ export default function TopBar() {
 
       {/* Style badge */}
       {scores.dominantStyle && (
-        <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-100 shrink-0">
+        <div
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full shrink-0"
+          style={{
+            background: "var(--ds-primary-soft)",
+            color: "var(--ds-primary-text)",
+            border: "1px solid #DDD6FE",
+          }}
+        >
           <span>✨</span>
           <span>{t.styleTags[scores.dominantStyle] ?? scores.dominantStyle}</span>
-          <span className="text-blue-300">·</span>
+          <span style={{ color: "#C4B5FD" }}>·</span>
           <span>{scores.style}</span>
         </div>
       )}
 
       {roomClipboard && (
-        <div className="flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg shrink-0">
+        <div
+          className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg shrink-0"
+          style={{
+            background: "var(--ds-success-soft)",
+            color: "var(--ds-success)",
+            border: "1px solid #A7F3D0",
+          }}
+        >
           <span>📋</span>
           <span>{roomClipboard.name}</span>
         </div>
@@ -92,29 +165,37 @@ export default function TopBar() {
       <div className="flex-1" />
 
       {/* Hint */}
-      <span className="text-[11px] text-gray-400 hidden lg:block shrink-0">
+      <span
+        className="text-[11px] hidden lg:block shrink-0"
+        style={{ color: "var(--ds-text-3)" }}
+      >
         {t.hints[viewMode]}
       </span>
 
       {/* Language toggle */}
       <button
         onClick={() => setLocale(locale === "zh" ? "en" : "zh")}
-        className="flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 text-[11px] text-gray-500 hover:border-blue-300 hover:text-blue-600 transition-colors shrink-0 font-semibold"
+        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all shrink-0"
+        style={{
+          border: "1px solid var(--ds-border)",
+          color: "var(--ds-text-2)",
+          background: "var(--ds-surface)",
+        }}
         title="Switch language / 切换语言"
       >
         {locale === "zh" ? "🌐 EN" : "🌐 中"}
       </button>
 
-      {/* Save/Export buttons */}
-      <div className="flex items-center gap-1.5 shrink-0 ml-1">
-        <div className="flex items-center gap-1 text-[10px] text-gray-400 hidden md:flex">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+      {/* Save/Export */}
+      <div className="flex items-center gap-2 shrink-0">
+        <div
+          className="flex items-center gap-1 text-[10px] font-medium hidden md:flex"
+          style={{ color: "var(--ds-text-3)" }}
+        >
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--ds-success)" }} />
           {t.autoSaved}
         </div>
-        <button
-          onClick={openExport}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors shrink-0"
-        >
+        <button onClick={openExport} className="ds-btn-primary flex items-center gap-1.5">
           <span>📄</span>
           <span>{t.exportPlan}</span>
         </button>

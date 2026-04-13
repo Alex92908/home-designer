@@ -1,26 +1,103 @@
 @import "tailwindcss";
 
+/* ── Design tokens ─────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Primary: violet (distinctive, premium) */
+  --ds-primary:       #7C3AED;
+  --ds-primary-hover: #6D28D9;
+  --ds-primary-soft:  #EDE9FE;
+  --ds-primary-text:  #5B21B6;
+
+  /* Accent: warm orange (home/warmth) */
+  --ds-accent:        #EA580C;
+  --ds-accent-soft:   #FFF7ED;
+
+  /* Surfaces */
+  --ds-bg:            #F7F6F3;   /* warm cream — not cold white */
+  --ds-surface:       #FFFFFF;
+  --ds-surface-2:     #FAFAF8;
+  --ds-border:        #E8E5E0;
+  --ds-border-soft:   #F0EDE8;
+
+  /* Text */
+  --ds-text:          #1C1917;
+  --ds-text-2:        #57534E;
+  --ds-text-3:        #A8A29E;
+
+  /* Semantic */
+  --ds-success:       #059669;
+  --ds-success-soft:  #ECFDF5;
+  --ds-danger:        #DC2626;
+  --ds-danger-soft:   #FEF2F2;
+
+  /* Shadows */
+  --ds-shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --ds-shadow:    0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --ds-shadow-lg: 0 12px 32px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ── Base ──────────────────────────────────────────────────── */
+html { background: var(--ds-bg); }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ds-bg);
+  color: var(--ds-text);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+               "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--ds-border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ds-text-3); }
+
+/* ── Selection ─────────────────────────────────────────────── */
+::selection { background: var(--ds-primary-soft); color: var(--ds-primary-text); }
+
+/* ── Animations ────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.animate-fade-up  { animation: fadeUp  0.2s ease both; }
+.animate-scale-in { animation: scaleIn 0.15s ease both; }
+
+/* ── ds-card ───────────────────────────────────────────────── */
+.ds-card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 14px;
+  box-shadow: var(--ds-shadow-sm);
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.ds-card:hover { box-shadow: var(--ds-shadow); }
+
+/* ── ds-btn-primary ────────────────────────────────────────── */
+.ds-btn-primary {
+  background: var(--ds-primary);
+  color: #fff;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.875rem;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  box-shadow: 0 1px 2px rgba(124,58,237,0.3);
+}
+.ds-btn-primary:hover {
+  background: var(--ds-primary-hover);
+  box-shadow: 0 3px 8px rgba(124,58,237,0.35);
+  transform: translateY(-1px);
+}
+.ds-btn-primary:active { transform: translateY(0); }

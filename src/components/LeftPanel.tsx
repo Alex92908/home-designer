@@ -22,26 +22,39 @@ function MatCard({ item }: { item: MaterialItem }) {
   return (
     <button
       onClick={() => setMaterial(item)}
-      className={`
-        relative flex flex-col gap-1 p-2 rounded-xl border-2 text-left
-        transition-all duration-200 hover:scale-[1.03] hover:shadow-md
-        ${isSelected
-          ? "border-blue-500 bg-blue-50 shadow-blue-200 shadow-md"
-          : "border-transparent bg-white/70 hover:border-gray-200"
-        }
-      `}
+      className="relative flex flex-col gap-1 p-2 rounded-xl text-left transition-all duration-200 hover:scale-[1.02]"
+      style={
+        isSelected
+          ? {
+              border: "2px solid var(--ds-primary)",
+              background: "var(--ds-primary-soft)",
+              boxShadow: "0 0 0 3px rgba(124,58,237,0.1)",
+            }
+          : {
+              border: "2px solid transparent",
+              background: "var(--ds-surface)",
+              boxShadow: "var(--ds-shadow-sm)",
+            }
+      }
     >
       <div
         className="w-full h-9 rounded-lg"
         style={{ background: item.texture ?? item.color }}
       />
-      <span className="text-[11px] font-semibold text-gray-800 leading-tight line-clamp-1">{displayName}</span>
+      <span className="text-[11px] font-semibold leading-tight line-clamp-1" style={{ color: "var(--ds-text)" }}>
+        {displayName}
+      </span>
       <div className="flex items-center justify-between gap-1">
-        <span className="text-[9px] text-gray-400">{displayBrand}</span>
-        <span className="text-[9px] font-bold text-blue-600">{formatUnitPrice(item.price, locale)}{item.unit.includes("㎡") ? "/㎡" : ""}</span>
+        <span className="text-[9px]" style={{ color: "var(--ds-text-3)" }}>{displayBrand}</span>
+        <span className="text-[9px] font-bold" style={{ color: "var(--ds-primary)" }}>
+          {formatUnitPrice(item.price, locale)}{item.unit.includes("㎡") ? "/㎡" : ""}
+        </span>
       </div>
       {isSelected && (
-        <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+        <div
+          className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center"
+          style={{ background: "var(--ds-primary)" }}
+        >
           <span className="text-white text-[8px]">✓</span>
         </div>
       )}
@@ -62,31 +75,43 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
   return (
     <button
       onClick={() => placeFurniture(item.id)}
-      className={`
-        relative flex flex-col gap-1 p-2 rounded-xl border-2 text-left
-        transition-all duration-200 hover:scale-[1.03] hover:shadow-md
-        ${isPlaced
-          ? "border-emerald-500 bg-emerald-50 shadow-emerald-100 shadow-sm"
-          : "border-transparent bg-white/70 hover:border-gray-200"
-        }
-      `}
-      title={`${displayName}`}
+      className="relative flex flex-col gap-1 p-2 rounded-xl text-left transition-all duration-200 hover:scale-[1.02]"
+      style={
+        isPlaced
+          ? {
+              border: "2px solid #059669",
+              background: "var(--ds-success-soft)",
+              boxShadow: "0 0 0 3px rgba(5,150,105,0.1)",
+            }
+          : {
+              border: "2px solid transparent",
+              background: "var(--ds-surface)",
+              boxShadow: "var(--ds-shadow-sm)",
+            }
+      }
+      title={displayName}
     >
-      {/* Color preview with icon */}
       <div
         className="w-full h-9 rounded-lg flex items-center justify-center text-lg"
         style={{ background: item.color }}
       >
         <span style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.3))" }}>{item.icon}</span>
       </div>
-      <span className="text-[11px] font-semibold text-gray-800 leading-tight line-clamp-1">{displayName}</span>
+      <span className="text-[11px] font-semibold leading-tight line-clamp-1" style={{ color: "var(--ds-text)" }}>
+        {displayName}
+      </span>
       <div className="flex items-center justify-between gap-1">
-        <span className="text-[9px] text-gray-400">{displayBrand}</span>
-        <span className="text-[9px] font-bold text-blue-600">{formatPrice(item.price, locale)}</span>
+        <span className="text-[9px]" style={{ color: "var(--ds-text-3)" }}>{displayBrand}</span>
+        <span className="text-[9px] font-bold" style={{ color: "var(--ds-primary)" }}>
+          {formatPrice(item.price, locale)}
+        </span>
       </div>
-      <div className="text-[9px] text-gray-400">{item.width}×{item.depth}cm</div>
+      <div className="text-[9px]" style={{ color: "var(--ds-text-3)" }}>{item.width}×{item.depth}cm</div>
       {isPlaced && (
-        <div className="absolute top-1 right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
+        <div
+          className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center"
+          style={{ background: "var(--ds-success)" }}
+        >
           <span className="text-white text-[8px]">✓</span>
         </div>
       )}
@@ -117,13 +142,16 @@ function MaterialsTab() {
         return (
           <div key={category}>
             <div className="flex items-center justify-between mb-1.5 px-0.5">
-              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--ds-text-3)" }}>
                 {icon} {t.materialSections[key]}
               </span>
               {selected && (
                 <button
                   onClick={() => removeMaterial(category)}
-                  className="text-[9px] text-gray-400 hover:text-red-400 transition-colors"
+                  className="text-[9px] transition-colors"
+                  style={{ color: "var(--ds-text-3)" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "var(--ds-danger)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "var(--ds-text-3)")}
                 >
                   {t.clear}
                 </button>
@@ -181,51 +209,53 @@ function CustomFurnitureForm({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex flex-col gap-2">
-      <div className="text-[11px] font-bold text-blue-700">{t.customForm.title}</div>
+    <div
+      className="rounded-xl p-3 flex flex-col gap-2"
+      style={{ background: "var(--ds-primary-soft)", border: "1px solid #DDD6FE" }}
+    >
+      <div className="text-[11px] font-bold" style={{ color: "var(--ds-primary-text)" }}>{t.customForm.title}</div>
       <input
         value={name} onChange={e => setName(e.target.value)}
         placeholder={t.customForm.namePlaceholder}
-        className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-blue-400 bg-white"
+        className="rounded-lg px-2 py-1.5 text-xs outline-none bg-white"
+        style={{ border: "1px solid var(--ds-border)" }}
       />
       <div className="flex gap-2">
-        <div className="flex flex-col gap-0.5 flex-1">
-          <label className="text-[9px] text-gray-400">{t.customForm.widthLabel}</label>
-          <input type="number" min={10} max={600} value={width} onChange={e => setWidth(+e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-blue-400 bg-white" />
-        </div>
-        <div className="flex flex-col gap-0.5 flex-1">
-          <label className="text-[9px] text-gray-400">{t.customForm.depthLabel}</label>
-          <input type="number" min={10} max={600} value={depth} onChange={e => setDepth(+e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-blue-400 bg-white" />
-        </div>
-        <div className="flex flex-col gap-0.5 flex-1">
-          <label className="text-[9px] text-gray-400">{t.customForm.priceLabel}</label>
-          <input type="number" min={0} value={price} onChange={e => setPrice(+e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-blue-400 bg-white" />
-        </div>
+        {[
+          { label: t.customForm.widthLabel, val: width, set: setWidth },
+          { label: t.customForm.depthLabel, val: depth, set: setDepth },
+          { label: t.customForm.priceLabel, val: price, set: setPrice },
+        ].map(({ label, val, set }) => (
+          <div key={label} className="flex flex-col gap-0.5 flex-1">
+            <label className="text-[9px]" style={{ color: "var(--ds-text-3)" }}>{label}</label>
+            <input type="number" min={0} max={600} value={val} onChange={e => set(+e.target.value)}
+              className="rounded-lg px-2 py-1 text-xs outline-none bg-white"
+              style={{ border: "1px solid var(--ds-border)" }} />
+          </div>
+        ))}
       </div>
       <div className="flex items-center gap-2">
-        <label className="text-[9px] text-gray-400 shrink-0">{t.customForm.colorLabel}</label>
+        <label className="text-[9px] shrink-0" style={{ color: "var(--ds-text-3)" }}>{t.customForm.colorLabel}</label>
         <input type="color" value={color} onChange={e => setColor(e.target.value)}
-          className="w-7 h-7 rounded border border-gray-200 cursor-pointer shrink-0" />
+          className="w-7 h-7 rounded cursor-pointer shrink-0"
+          style={{ border: "1px solid var(--ds-border)" }} />
         <div className="flex flex-wrap gap-1">
           {QUICK_ICONS.map(ic => (
             <button key={ic} onClick={() => setIcon(ic)}
-              className={`text-sm rounded p-0.5 transition-colors ${icon === ic ? "bg-blue-200" : "hover:bg-gray-200"}`}>
+              className="text-sm rounded p-0.5 transition-colors"
+              style={{ background: icon === ic ? "#DDD6FE" : "transparent" }}>
               {ic}
             </button>
           ))}
         </div>
       </div>
       <div className="flex gap-2">
-        <button onClick={handleAdd}
-          className="flex-1 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 disabled:opacity-40"
-          disabled={!name.trim()}>
+        <button onClick={handleAdd} className="ds-btn-primary flex-1 py-1.5 disabled:opacity-40" disabled={!name.trim()}>
           {t.customForm.addBtn}
         </button>
         <button onClick={onClose}
-          className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-xl">
+          className="px-3 py-1.5 text-xs rounded-xl transition-colors"
+          style={{ border: "1px solid var(--ds-border)", color: "var(--ds-text-2)" }}>
           {t.customForm.cancelBtn}
         </button>
       </div>
@@ -257,15 +287,23 @@ function FurnitureTab() {
     <div className="flex flex-col gap-4 px-3 py-3">
       {/* All-rooms toggle + custom form */}
       <div className="flex gap-2 items-center">
-        <button onClick={() => setAllRooms(v => !v)}
-          className={`flex-1 py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
-            allRooms ? "bg-blue-600 text-white border-blue-600" : "text-gray-500 border-gray-200 hover:border-blue-300"
-          }`}>
+        <button
+          onClick={() => setAllRooms(v => !v)}
+          className="flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all"
+          style={
+            allRooms
+              ? { background: "var(--ds-primary)", color: "#fff", border: "1px solid var(--ds-primary)" }
+              : { background: "var(--ds-surface)", color: "var(--ds-text-2)", border: "1px solid var(--ds-border)" }
+          }
+        >
           {allRooms ? t.allCategories : t.thisRoom}
         </button>
         {!showForm && (
-          <button onClick={() => setShowForm(true)}
-            className="flex-1 py-1.5 border border-dashed border-gray-200 rounded-xl text-xs text-gray-400 hover:border-blue-300 hover:text-blue-500 transition-colors font-semibold">
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all"
+            style={{ border: "1px dashed var(--ds-border)", color: "var(--ds-text-3)", background: "transparent" }}
+          >
             {t.customFurnitureBtn}
           </button>
         )}
@@ -277,7 +315,7 @@ function FurnitureTab() {
       ) : (
         groups.map(({ id, icon, items }) => (
           <div key={id}>
-            <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 px-0.5">
+            <div className="text-[10px] font-bold uppercase tracking-widest mb-1.5 px-0.5" style={{ color: "var(--ds-text-3)" }}>
               {icon} {t.furnitureCats[id] ?? id}
             </div>
             <div className="grid grid-cols-2 gap-1.5">
@@ -298,29 +336,34 @@ export default function LeftPanel() {
   const t = useT();
 
   return (
-    <aside className="w-64 shrink-0 h-full bg-gray-50/90 border-r border-gray-200 flex flex-col overflow-hidden">
+    <aside
+      className="w-64 shrink-0 h-full flex flex-col overflow-hidden"
+      style={{ background: "var(--ds-bg)", borderRight: "1px solid var(--ds-border)" }}
+    >
       {/* Tab switcher */}
-      <div className="px-3 pt-3 pb-0 flex gap-1 border-b border-gray-200 shrink-0">
-        <button
-          onClick={() => setTab("materials")}
-          className={`flex-1 py-1.5 text-xs font-bold rounded-t-lg transition-colors ${
-            tab === "materials"
-              ? "bg-white text-blue-600 border-b-2 border-blue-500"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          {t.tabMaterials}
-        </button>
-        <button
-          onClick={() => setTab("furniture")}
-          className={`flex-1 py-1.5 text-xs font-bold rounded-t-lg transition-colors ${
-            tab === "furniture"
-              ? "bg-white text-blue-600 border-b-2 border-blue-500"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          {t.tabFurniture}
-        </button>
+      <div
+        className="px-3 pt-3 pb-0 flex gap-0.5 shrink-0"
+        style={{ borderBottom: "1px solid var(--ds-border)" }}
+      >
+        {(["materials", "furniture"] as const).map((key) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className="flex-1 py-1.5 text-xs font-bold rounded-t-lg transition-all"
+            style={
+              tab === key
+                ? {
+                    background: "var(--ds-surface)",
+                    color: "var(--ds-primary)",
+                    borderBottom: "2px solid var(--ds-primary)",
+                    marginBottom: "-1px",
+                  }
+                : { color: "var(--ds-text-3)" }
+            }
+          >
+            {key === "materials" ? t.tabMaterials : t.tabFurniture}
+          </button>
+        ))}
       </div>
 
       {/* Tab content */}
@@ -329,7 +372,10 @@ export default function LeftPanel() {
       </div>
 
       {/* Hint */}
-      <div className="px-3 py-2 text-[10px] text-gray-400 border-t border-gray-100 shrink-0">
+      <div
+        className="px-3 py-2 text-[10px] shrink-0"
+        style={{ borderTop: "1px solid var(--ds-border-soft)", color: "var(--ds-text-3)" }}
+      >
         {tab === "furniture" ? t.furnitureHint : t.matHint}
       </div>
     </aside>
