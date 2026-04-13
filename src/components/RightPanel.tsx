@@ -63,9 +63,9 @@ export default function RightPanel() {
         className="p-4 shrink-0"
         style={
           isOverBudget
-            ? { background: "var(--ds-danger-soft)", borderBottom: "1px solid #FECACA" }
+            ? { background: "var(--ds-danger-soft)", borderBottom: "1px solid #FFCDD2" }
             : {
-                background: "linear-gradient(135deg, #7C3AED 0%, #EA580C 100%)",
+                background: "linear-gradient(160deg, #007AFF 0%, #5856D6 100%)",
                 borderBottom: "none",
               }
         }
@@ -92,7 +92,7 @@ export default function RightPanel() {
           <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--ds-text-3)" }}>{t.scoreTitle}</div>
           <div className="flex flex-col gap-2">
             {[
-              { label: t.scoreStyle, val: scores.style, color: "var(--ds-primary)" },
+              { label: t.scoreStyle, val: scores.style, color: "#007AFF" },
               { label: t.scoreSpace, val: scores.space,  color: "var(--ds-success)" },
               { label: t.scoreLight, val: scores.light,  color: "#F59E0B" },
             ].map(({ label, val, color }) => (

@@ -1,103 +1,83 @@
 @import "tailwindcss";
 
-/* ── Design tokens ─────────────────────────────────────────── */
+/* ── Design tokens — Apple + YouTube inspired ──────────────── */
 :root {
-  /* Primary: violet (distinctive, premium) */
-  --ds-primary:       #7C3AED;
-  --ds-primary-hover: #6D28D9;
-  --ds-primary-soft:  #EDE9FE;
-  --ds-primary-text:  #5B21B6;
+  /* Primary: Apple Blue */
+  --ds-primary:       #007AFF;
+  --ds-primary-hover: #0071E3;
+  --ds-primary-soft:  #E8F1FF;
+  --ds-primary-text:  #0055B3;
 
-  /* Accent: warm orange (home/warmth) */
-  --ds-accent:        #EA580C;
-  --ds-accent-soft:   #FFF7ED;
-
-  /* Surfaces */
-  --ds-bg:            #F7F6F3;   /* warm cream — not cold white */
+  /* Surfaces — Apple-style */
+  --ds-bg:            #F5F5F7;
   --ds-surface:       #FFFFFF;
-  --ds-surface-2:     #FAFAF8;
-  --ds-border:        #E8E5E0;
-  --ds-border-soft:   #F0EDE8;
+  --ds-surface-2:     #F9F9F9;
+  --ds-border:        #D2D2D7;
+  --ds-border-soft:   #E8E8ED;
 
-  /* Text */
-  --ds-text:          #1C1917;
-  --ds-text-2:        #57534E;
-  --ds-text-3:        #A8A29E;
+  /* Text — Apple hierarchy */
+  --ds-text:          #1D1D1F;
+  --ds-text-2:        #6E6E73;
+  --ds-text-3:        #AEAEB2;
 
   /* Semantic */
-  --ds-success:       #059669;
-  --ds-success-soft:  #ECFDF5;
-  --ds-danger:        #DC2626;
-  --ds-danger-soft:   #FEF2F2;
+  --ds-success:       #34C759;   /* Apple green */
+  --ds-success-soft:  #F0FFF4;
+  --ds-danger:        #FF3B30;   /* Apple red */
+  --ds-danger-soft:   #FFF5F5;
+  --ds-warning:       #FF9500;   /* Apple orange */
 
-  /* Shadows */
+  /* Shadows — ultra-subtle, Apple-style */
   --ds-shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --ds-shadow:    0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-  --ds-shadow-lg: 0 12px 32px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
+  --ds-shadow:    0 4px 16px rgba(0,0,0,0.08);
+  --ds-shadow-lg: 0 8px 30px rgba(0,0,0,0.1);
 }
 
 /* ── Base ──────────────────────────────────────────────────── */
-html { background: var(--ds-bg); }
-
-body {
+html, body {
   background: var(--ds-bg);
   color: var(--ds-text);
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
-               "Segoe UI", system-ui, sans-serif;
+               "SF Pro Display", "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Scrollbar ─────────────────────────────────────────────── */
+/* ── Scrollbar — thin, YouTube/Apple-style ─────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--ds-border); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--ds-text-3); }
 
 /* ── Selection ─────────────────────────────────────────────── */
-::selection { background: var(--ds-primary-soft); color: var(--ds-primary-text); }
+::selection { background: #CCE4FF; color: var(--ds-primary-text); }
 
-/* ── Animations ────────────────────────────────────────────── */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to   { opacity: 1; transform: scale(1); }
-}
-@keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position:  200% 0; }
+/* ── Focus ring — Apple-style ──────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--ds-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-.animate-fade-up  { animation: fadeUp  0.2s ease both; }
-.animate-scale-in { animation: scaleIn 0.15s ease both; }
-
-/* ── ds-card ───────────────────────────────────────────────── */
-.ds-card {
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
-  border-radius: 14px;
-  box-shadow: var(--ds-shadow-sm);
-  transition: box-shadow 0.15s, border-color 0.15s;
-}
-.ds-card:hover { box-shadow: var(--ds-shadow); }
-
-/* ── ds-btn-primary ────────────────────────────────────────── */
+/* ── ds-btn-primary — Apple filled button ──────────────────── */
 .ds-btn-primary {
   background: var(--ds-primary);
   color: #fff;
   border-radius: 10px;
-  font-weight: 700;
-  font-size: 0.75rem;
-  padding: 0.4rem 0.875rem;
-  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
-  box-shadow: 0 1px 2px rgba(124,58,237,0.3);
+  font-weight: 600;
+  font-size: 0.8125rem;   /* 13px — Apple standard */
+  padding: 0.45rem 1rem;
+  transition: background 0.15s, opacity 0.15s, transform 0.1s;
+  border: none;
+  letter-spacing: -0.01em;
 }
-.ds-btn-primary:hover {
-  background: var(--ds-primary-hover);
-  box-shadow: 0 3px 8px rgba(124,58,237,0.35);
-  transform: translateY(-1px);
+.ds-btn-primary:hover  { background: var(--ds-primary-hover); }
+.ds-btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+
+/* ── ds-card ────────────────────────────────────────────────── */
+.ds-card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border-soft);
+  border-radius: 12px;
+  box-shadow: var(--ds-shadow-sm);
 }
-.ds-btn-primary:active { transform: translateY(0); }

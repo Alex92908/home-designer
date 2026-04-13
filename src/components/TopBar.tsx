@@ -32,23 +32,22 @@ export default function TopBar() {
       {/* Logo */}
       <div className="flex items-center gap-2 mr-2 shrink-0">
         <div
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-sm shrink-0"
-          style={{ background: "linear-gradient(135deg, #7C3AED 0%, #EA580C 100%)" }}
+          className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0"
+          style={{ background: "var(--ds-primary)" }}
         >
           🏠
         </div>
         <span
-          className="font-black text-sm tracking-tight"
-          style={{ color: "var(--ds-text)" }}
+          className="font-semibold text-sm tracking-tight"
+          style={{ color: "var(--ds-text)", letterSpacing: "-0.02em" }}
         >
           {t.appName}
         </span>
         <span
-          className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+          className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
           style={{
             background: "var(--ds-primary-soft)",
-            color: "var(--ds-primary-text)",
-            letterSpacing: "0.04em",
+            color: "var(--ds-primary)",
           }}
         >
           {t.appTagline}
