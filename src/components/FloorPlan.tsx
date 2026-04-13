@@ -539,53 +539,70 @@ export default function FloorPlan() {
           <span className="text-[11px] text-gray-500 font-mono flex-1 min-w-0 truncate">
             {t.roomNames[activeRoom] ?? def.name} · {(roomW / 100).toFixed(1)}m × {(roomD / 100).toFixed(1)}m · {t.fpCeilingLabel} {(def.height / 100).toFixed(1)}m
           </span>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {/* Zoom controls */}
-            <div className="flex items-center gap-0.5 border border-gray-700 rounded-lg overflow-hidden">
-              <button onClick={() => setZoomLevel(p => Math.max(0.3, p * 0.8))} className="px-1.5 py-0.5 text-gray-400 hover:text-white hover:bg-gray-700 text-xs">−</button>
-              <span className="text-[10px] text-gray-500 px-1 font-mono min-w-[32px] text-center">{Math.round(zoomLevel * 100)}%</span>
-              <button onClick={() => setZoomLevel(p => Math.min(5, p * 1.25))} className="px-1.5 py-0.5 text-gray-400 hover:text-white hover:bg-gray-700 text-xs">+</button>
-              <button onClick={() => setZoomLevel(1)} className="px-1.5 py-0.5 text-gray-400 hover:text-white hover:bg-gray-700 text-[9px] border-l border-gray-700">{t.fpZoomReset}</button>
+            <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)" }}>
+              <button onClick={() => setZoomLevel(p => Math.max(0.3, p * 0.8))} className="px-1.5 py-1 text-gray-400 hover:text-white text-xs transition-colors" style={{ minWidth: 22 }}>−</button>
+              <span className="text-[10px] text-gray-400 px-1.5 font-mono min-w-[34px] text-center" style={{ borderLeft: "1px solid rgba(255,255,255,0.1)", borderRight: "1px solid rgba(255,255,255,0.1)" }}>{Math.round(zoomLevel * 100)}%</span>
+              <button onClick={() => setZoomLevel(p => Math.min(5, p * 1.25))} className="px-1.5 py-1 text-gray-400 hover:text-white text-xs transition-colors" style={{ minWidth: 22 }}>+</button>
+              <button onClick={() => setZoomLevel(1)} className="px-2 py-1 text-gray-500 hover:text-white text-[9px] transition-colors" style={{ borderLeft: "1px solid rgba(255,255,255,0.1)" }}>{t.fpZoomReset}</button>
             </div>
+
+            {/* Divider */}
+            <div className="w-px h-4 mx-0.5" style={{ background: "rgba(255,255,255,0.12)" }} />
+
             {/* Undo */}
             <button
               onClick={undoFurniture}
               disabled={furnitureHistoryLen === 0}
               title={t.fpUndoTitle(furnitureHistoryLen)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all border ${
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all"
+              style={
                 furnitureHistoryLen > 0
-                  ? "border-orange-400 text-orange-500 hover:bg-orange-900/30 bg-transparent"
-                  : "border-gray-700 text-gray-600 bg-transparent cursor-not-allowed"
-              }`}
+                  ? { background: "#007AFF", color: "#fff" }
+                  : { background: "transparent", color: "rgba(255,255,255,0.2)", cursor: "not-allowed" }
+              }
             >
               <span>↩</span>
               <span>{t.fpUndo}</span>
-              {furnitureHistoryLen > 0 && <span className="bg-orange-900/50 text-orange-400 text-[9px] px-1 rounded-full">{furnitureHistoryLen}</span>}
+              {furnitureHistoryLen > 0 && (
+                <span className="text-[9px] px-1 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }}>{furnitureHistoryLen}</span>
+              )}
             </button>
+
             {/* Paste */}
             {clipboardLen > 0 && (
               <button
                 onClick={pasteFromClipboard}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border border-emerald-500 text-emerald-400 hover:bg-emerald-900/30 bg-transparent transition-all"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all"
+                style={{ background: "#007AFF", color: "#fff" }}
               >
                 📋 {t.fpPaste}({clipboardLen})
               </button>
             )}
+
             {/* Rotate room */}
             <button
               onClick={() => { pushLayoutHistory(); rotateRoom(activeRoom); setZoomLevel(1); }}
               title={t.fpRotateTitle}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border border-emerald-500 text-emerald-400 hover:bg-emerald-900/30 bg-transparent transition-all"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all"
+              style={{ color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", background: "transparent" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#fff"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.7)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
             >
               <span>↻</span>
               <span>{t.fpRotate}</span>
             </button>
+
             {/* Window/door edit toggle */}
             <button
               onClick={() => setEditWindows(v => !v)}
-              className={`text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-colors ${
-                editWindows ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-400 hover:bg-gray-600"
-              }`}
+              className="text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all"
+              style={
+                editWindows
+                  ? { background: "#007AFF", color: "#fff" }
+                  : { color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", background: "transparent" }
+              }
             >
               {editWindows ? t.fpEditDone : t.fpEditStart}
             </button>
@@ -600,7 +617,11 @@ export default function FloorPlan() {
               if (wallLen <= 100) return null;
               return (
                 <button key={wall} onClick={() => handleAddWindow(wall)}
-                  className="text-[10px] px-2 py-1 rounded-lg bg-cyan-800 text-cyan-200 hover:bg-cyan-700">
+                  className="text-[10px] px-2 py-1 rounded-lg font-semibold transition-all"
+                  style={{ background: "rgba(0,122,255,0.2)", color: "#60AEFF", border: "1px solid rgba(0,122,255,0.3)" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,122,255,0.35)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,122,255,0.2)"; }}
+                >
                   +{labels[wall]}窗
                 </button>
               );
@@ -612,9 +633,11 @@ export default function FloorPlan() {
                   const labels = t.fpDoorDirs as Record<DoorWall, string>;
                   return (
                     <button key={w} onClick={() => { setDoorWall(activeRoom, w); setDoorPos(activeRoom, 0); }}
-                      className={`text-[10px] px-1.5 py-0.5 rounded font-semibold transition-colors ${
-                        doorWall === w ? "bg-amber-500 text-white" : "bg-gray-700 text-gray-400 hover:bg-gray-600"
-                      }`}>
+                      className="text-[10px] px-1.5 py-0.5 rounded font-semibold transition-all"
+                      style={doorWall === w
+                        ? { background: "#007AFF", color: "#fff" }
+                        : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }
+                      }>
                       {labels[w]}
                     </button>
                   );
@@ -824,7 +847,11 @@ export default function FloorPlan() {
                 ↻ {t.fpRotateItem}
               </button>
               <button onClick={() => copyToClipboard([selectedItem.instanceId])}
-                className="px-2 py-1 bg-emerald-600/80 hover:bg-emerald-600 text-white text-[11px] font-semibold rounded-lg transition-colors">
+                className="px-2 py-1 text-white text-[11px] font-semibold rounded-lg transition-all"
+                style={{ background: "rgba(0,122,255,0.7)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#007AFF"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,122,255,0.7)"; }}
+              >
                 ⧉ {t.fpCopyItem}
               </button>
               <button onClick={() => removeItem(selectedItem.instanceId)}
