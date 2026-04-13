@@ -1,6 +1,6 @@
 export const zh = {
   // ── App / TopBar ─────────────────────────────────────────
-  appName: "装修配置器",
+  appName: "家居设计师",
   appTagline: "Pro",
   viewModes: { "3d": "效果图", "2d": "平面图", all: "全局", exterior: "外观" } as Record<string, string>,
   viewIcons: { "3d": "🎨", "2d": "📐", all: "🗺️", exterior: "🏠" } as Record<string, string>,

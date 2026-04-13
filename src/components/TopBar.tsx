@@ -56,11 +56,13 @@ export default function TopBar() {
 
       {/* Room selector */}
       <div
-        className="flex items-center gap-0.5 p-1 rounded-xl overflow-x-auto shrink"
+        className="flex items-center gap-0.5 p-1 rounded-xl overflow-x-auto"
         style={{
           background: "var(--ds-bg)",
           border: "1px solid var(--ds-border)",
-          maxWidth: "min(520px, 40vw)",
+          flex: "1 1 0",
+          minWidth: 0,
+          maxWidth: 640,
         }}
       >
         {enabledRooms.map((r) => {
@@ -160,16 +162,6 @@ export default function TopBar() {
           <span>{roomClipboard.name}</span>
         </div>
       )}
-
-      <div className="flex-1" />
-
-      {/* Hint */}
-      <span
-        className="text-[11px] hidden lg:block shrink-0"
-        style={{ color: "var(--ds-text-3)" }}
-      >
-        {t.hints[viewMode]}
-      </span>
 
       {/* Language toggle */}
       <button
