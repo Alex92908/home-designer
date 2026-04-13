@@ -75,11 +75,13 @@ export default function TopBar() {
         <div
           className="hidden md:flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full shrink-0"
           style={{ background: "#E8F1FF", color: "#0055B3", border: "1px solid #CCE4FF" }}
+          title={`${t.scoreStyle}: ${scores.style}/100`}
         >
           <span>✨</span>
           <span>{t.styleTags[scores.dominantStyle] ?? scores.dominantStyle}</span>
           <span style={{ color: "#C4B5FD" }}>·</span>
-          <span>{scores.style}</span>
+          <span style={{ color: "#007AFF" }}>{scores.style}</span>
+          <span style={{ color: "#C4B5FD", fontSize: 9, fontWeight: 400 }}>/100</span>
         </div>
       )}
 
