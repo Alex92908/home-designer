@@ -61,17 +61,17 @@ html, body {
 
 /* ── ds-btn-primary — Apple filled button ──────────────────── */
 .ds-btn-primary {
-  background: var(--ds-primary);
+  background: #007AFF;
   color: #fff;
   border-radius: 10px;
   font-weight: 600;
-  font-size: 0.8125rem;   /* 13px — Apple standard */
+  font-size: 0.8125rem;
   padding: 0.45rem 1rem;
   transition: background 0.15s, opacity 0.15s, transform 0.1s;
   border: none;
   letter-spacing: -0.01em;
 }
-.ds-btn-primary:hover  { background: var(--ds-primary-hover); }
+.ds-btn-primary:hover  { background: #0071E3; }
 .ds-btn-primary:active { opacity: 0.85; transform: scale(0.98); }
 
 /* ── ds-card ────────────────────────────────────────────────── */

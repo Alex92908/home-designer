@@ -26,9 +26,9 @@ function MatCard({ item }: { item: MaterialItem }) {
       style={
         isSelected
           ? {
-              border: "2px solid var(--ds-primary)",
-              background: "var(--ds-primary-soft)",
-              boxShadow: "0 0 0 3px rgba(124,58,237,0.1)",
+              border: "2px solid #007AFF",
+              background: "#E8F1FF",
+              boxShadow: "0 0 0 3px rgba(0,122,255,0.12)",
             }
           : {
               border: "2px solid transparent",
@@ -46,14 +46,14 @@ function MatCard({ item }: { item: MaterialItem }) {
       </span>
       <div className="flex items-center justify-between gap-1">
         <span className="text-[9px]" style={{ color: "var(--ds-text-3)" }}>{displayBrand}</span>
-        <span className="text-[9px] font-bold" style={{ color: "var(--ds-primary)" }}>
+        <span className="text-[9px] font-bold" style={{ color: "#007AFF" }}>
           {formatUnitPrice(item.price, locale)}{item.unit.includes("㎡") ? "/㎡" : ""}
         </span>
       </div>
       {isSelected && (
         <div
           className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center"
-          style={{ background: "var(--ds-primary)" }}
+          style={{ background: "#007AFF" }}
         >
           <span className="text-white text-[8px]">✓</span>
         </div>
@@ -102,7 +102,7 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
       </span>
       <div className="flex items-center justify-between gap-1">
         <span className="text-[9px]" style={{ color: "var(--ds-text-3)" }}>{displayBrand}</span>
-        <span className="text-[9px] font-bold" style={{ color: "var(--ds-primary)" }}>
+        <span className="text-[9px] font-bold" style={{ color: "#007AFF" }}>
           {formatPrice(item.price, locale)}
         </span>
       </div>
@@ -211,9 +211,9 @@ function CustomFurnitureForm({ onClose }: { onClose: () => void }) {
   return (
     <div
       className="rounded-xl p-3 flex flex-col gap-2"
-      style={{ background: "var(--ds-primary-soft)", border: "1px solid #DDD6FE" }}
+      style={{ background: "#E8F1FF", border: "1px solid #CCE4FF" }}
     >
-      <div className="text-[11px] font-bold" style={{ color: "var(--ds-primary-text)" }}>{t.customForm.title}</div>
+      <div className="text-[11px] font-bold" style={{ color: "#0055B3" }}>{t.customForm.title}</div>
       <input
         value={name} onChange={e => setName(e.target.value)}
         placeholder={t.customForm.namePlaceholder}
@@ -292,7 +292,7 @@ function FurnitureTab() {
           className="flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all"
           style={
             allRooms
-              ? { background: "var(--ds-primary)", color: "#fff", border: "1px solid var(--ds-primary)" }
+              ? { background: "#007AFF", color: "#fff", border: "1px solid #007AFF" }
               : { background: "var(--ds-surface)", color: "var(--ds-text-2)", border: "1px solid var(--ds-border)" }
           }
         >
@@ -354,8 +354,8 @@ export default function LeftPanel() {
               tab === key
                 ? {
                     background: "var(--ds-surface)",
-                    color: "var(--ds-primary)",
-                    borderBottom: "2px solid var(--ds-primary)",
+                    color: "#007AFF",
+                    borderBottom: "2px solid #007AFF",
                     marginBottom: "-1px",
                   }
                 : { color: "var(--ds-text-3)" }

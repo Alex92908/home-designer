@@ -132,7 +132,7 @@ export default function ShareModal() {
 
           {/* Email capture */}
           {!submitted ? (
-            <div className="rounded-xl p-4" style={{ background: "var(--ds-primary-soft)", border: "1px solid #CCE4FF" }}>
+            <div className="rounded-xl p-4" style={{ background: "#E8F1FF", border: "1px solid #CCE4FF" }}>
               <div className="text-sm font-semibold mb-1" style={{ color: "var(--ds-text)" }}>{t.shareEmailTitle}</div>
               <div className="text-xs mb-3" style={{ color: "var(--ds-text-2)" }}>{t.shareEmailDesc}</div>
               <div className="flex gap-2">

@@ -33,7 +33,7 @@ export default function TopBar() {
       <div className="flex items-center gap-2 mr-2 shrink-0">
         <div
           className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0"
-          style={{ background: "var(--ds-primary)" }}
+          style={{ background: "#007AFF" }}
         >
           🏠
         </div>
@@ -46,8 +46,8 @@ export default function TopBar() {
         <span
           className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
           style={{
-            background: "var(--ds-primary-soft)",
-            color: "var(--ds-primary)",
+            background: "#E8F1FF",
+            color: "#007AFF",
           }}
         >
           {t.appTagline}
@@ -96,7 +96,7 @@ export default function TopBar() {
               {hasContent && (
                 <span
                   className="w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{ background: "var(--ds-primary)" }}
+                  style={{ background: "#007AFF" }}
                 />
               )}
             </button>
@@ -135,9 +135,9 @@ export default function TopBar() {
         <div
           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full shrink-0"
           style={{
-            background: "var(--ds-primary-soft)",
-            color: "var(--ds-primary-text)",
-            border: "1px solid #DDD6FE",
+            background: "#E8F1FF",
+            color: "#0055B3",
+            border: "1px solid #CCE4FF",
           }}
         >
           <span>✨</span>

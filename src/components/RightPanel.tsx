@@ -106,7 +106,7 @@ export default function RightPanel() {
           {scores.dominantStyle && (
             <div
               className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ background: "var(--ds-primary-soft)", color: "var(--ds-primary-text)" }}
+              style={{ background: "#E8F1FF", color: "#0055B3" }}
             >
               {t.dominantStyle}{t.styleTags[scores.dominantStyle] ?? scores.dominantStyle}
             </div>
@@ -126,14 +126,14 @@ export default function RightPanel() {
           type="range" min={30000} max={500000} step={10000} value={budget}
           onChange={(e) => setBudget(Number(e.target.value))}
           className="w-full h-1.5"
-          style={{ accentColor: "var(--ds-primary)" }}
+          style={{ accentColor: "#007AFF" }}
         />
         <div className="mt-1.5 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--ds-bg)" }}>
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{
               width: `${budgetPercent}%`,
-              background: isOverBudget ? "var(--ds-danger)" : "var(--ds-primary)",
+              background: isOverBudget ? "#FF3B30" : "#007AFF",
             }}
           />
         </div>
@@ -199,7 +199,7 @@ export default function RightPanel() {
                   className="flex items-center justify-between gap-2 p-1.5 rounded-lg cursor-pointer group transition-all"
                   style={
                     isSelected
-                      ? { background: "var(--ds-primary-soft)", border: "1px solid #DDD6FE" }
+                      ? { background: "#E8F1FF", border: "1px solid #CCE4FF" }
                       : { border: "1px solid transparent" }
                   }
                   onClick={() => selectInstance(isSelected ? null : placed.instanceId)}
@@ -245,10 +245,10 @@ export default function RightPanel() {
       {aiSuggestion && (
         <div
           className="mx-4 mb-3 p-3 rounded-xl shrink-0"
-          style={{ background: "var(--ds-primary-soft)", border: "1px solid #DDD6FE" }}
+          style={{ background: "#E8F1FF", border: "1px solid #CCE4FF" }}
         >
-          <div className="text-[11px] font-bold mb-1" style={{ color: "var(--ds-primary-text)" }}>{t.aiTitle}</div>
-          <div className="text-[11px] leading-relaxed" style={{ color: "var(--ds-primary-text)" }}>{aiSuggestion}</div>
+          <div className="text-[11px] font-bold mb-1" style={{ color: "#0055B3" }}>{t.aiTitle}</div>
+          <div className="text-[11px] leading-relaxed" style={{ color: "#0055B3" }}>{aiSuggestion}</div>
         </div>
       )}
 
