@@ -50,6 +50,27 @@ interface PlacedItemSVGProps {
   onPointerDown: (e: React.PointerEvent<SVGGElement>) => void;
 }
 
+/** Split a display name into at most 2 lines that fit within `maxPx` pixels at font-size 8. */
+function splitNameLines(name: string, maxPx: number): [string] | [string, string] {
+  // Approx char width: CJK ≈ 8px, ASCII ≈ 5px at font-size 8
+  const charW = (ch: string) => /[\u4e00-\u9fff\u3000-\u303f]/.test(ch) ? 8 : 5;
+  const textW = (s: string) => s.split("").reduce((a, c) => a + charW(c), 0);
+
+  if (textW(name) <= maxPx) return [name];
+
+  // For English: try to break at a space near the midpoint
+  const mid = Math.ceil(name.length / 2);
+  let splitAt = mid;
+  const spaceLeft  = name.lastIndexOf(" ", mid);
+  const spaceRight = name.indexOf(" ", mid);
+  if (spaceLeft  > 0) splitAt = spaceLeft;
+  else if (spaceRight > 0) splitAt = spaceRight;
+
+  const line1 = name.slice(0, splitAt).trim();
+  const line2 = name.slice(splitAt).trim();
+  return [line1, line2];
+}
+
 function PlacedItemSVG({ placed, scale, isSelected, onPointerDown }: PlacedItemSVGProps) {
   const furniture = getFurnitureById(placed.furnitureId);
   const locale = useLocale();
@@ -63,6 +84,10 @@ function PlacedItemSVG({ placed, scale, isSelected, onPointerDown }: PlacedItemS
   const d = furniture.depth * sd * scale;
   const fontSize = Math.min(w, d) * 0.55;
   const displayName = locale === "en" ? (getFurnitureNameEn(furniture.id) ?? furniture.name) : furniture.name;
+
+  const LABEL_SIZE = 8;
+  const LINE_H = 9;
+  const nameLines = w > 30 && d > 22 ? splitNameLines(displayName, w - 6) : null;
 
   return (
     <g
@@ -83,13 +108,18 @@ function PlacedItemSVG({ placed, scale, isSelected, onPointerDown }: PlacedItemS
           {furniture.icon}
         </text>
       )}
-      {w > 45 && d > 25 && (
-        <text x={0} y={d / 2 - 5} textAnchor="middle" dominantBaseline="middle"
-          fontSize={8} fill="white" fillOpacity={0.9}
-          style={{ userSelect: "none", pointerEvents: "none" }}>
-          {displayName.length > 8 ? displayName.slice(0, 8) + "…" : displayName}
-        </text>
-      )}
+      {nameLines && (() => {
+        const totalH = nameLines.length * LINE_H;
+        const baseY = d / 2 - 3 - totalH;
+        return nameLines.map((line, i) => (
+          <text key={i} x={0} y={baseY + i * LINE_H + LINE_H / 2}
+            textAnchor="middle" dominantBaseline="middle"
+            fontSize={LABEL_SIZE} fill="white" fillOpacity={0.9}
+            style={{ userSelect: "none", pointerEvents: "none" }}>
+            {line}
+          </text>
+        ));
+      })()}
       {isSelected && (
         <>
           <rect x={-w / 2}    y={-d / 2}    width={8} height={8} rx={2} fill="#3B82F6" opacity={0.9} />
