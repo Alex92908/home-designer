@@ -48,45 +48,28 @@ jobs:
             -i "${{ secrets.ALI_OSS_KEY_ID }}" \
             -k "${{ secrets.ALI_OSS_KEY_SECRET }}"
 
-      # ── 7. Upload to OSS bucket ───────────────────────────────
-      - name: Upload static files to OSS
+      # ── 7. Upload non-HTML files (ossutil auto-detects their MIME types) ──
+      - name: Upload static assets to OSS
         run: |
           ./ossutil64 cp -r -f out/ oss://${{ secrets.ALI_OSS_BUCKET }}/
 
-      # ── 8. Fix MIME types (critical: without this browser downloads HTML) ──
-      - name: Fix Content-Type for HTML files
+      # ── 8. Re-upload HTML with explicit Content-Type (critical) ──────────
+      # Without this, OSS serves HTML as application/octet-stream → download
+      - name: Fix HTML Content-Type
         run: |
-          ./ossutil64 set-meta -r \
-            oss://${{ secrets.ALI_OSS_BUCKET }}/ \
-            "Content-Type:text/html;charset=utf-8" \
-            --include "*.html" --update
+          find out -name "*.html" -type f | while IFS= read -r f; do
+            key="${f#out/}"
+            ./ossutil64 cp -f "$f" \
+              "oss://${{ secrets.ALI_OSS_BUCKET }}/$key" \
+              --meta "Content-Type:text/html;charset=utf-8#Cache-Control:no-cache"
+          done
 
-      - name: Fix Content-Type for JS files
+      # ── 9. Long cache for hashed JS/CSS ──────────────────────────────────
+      - name: Set long cache for _next/static assets
         run: |
           ./ossutil64 set-meta -r \
-            oss://${{ secrets.ALI_OSS_BUCKET }}/ \
-            "Content-Type:application/javascript" \
-            --include "*.js" --update
-
-      - name: Fix Content-Type for CSS files
-        run: |
-          ./ossutil64 set-meta -r \
-            oss://${{ secrets.ALI_OSS_BUCKET }}/ \
-            "Content-Type:text/css" \
-            --include "*.css" --update
-
-      # ── 9. Set cache headers ──────────────────────────────────
-      - name: Set cache headers for static assets
-        run: |
-          # Long cache for hashed assets
-          ./ossutil64 set-meta -r \
-            oss://${{ secrets.ALI_OSS_BUCKET }}/_next/static/ \
-            "Cache-Control:public, max-age=31536000, immutable" --update
-          # No-cache for HTML (always fresh)
-          ./ossutil64 set-meta -r \
-            oss://${{ secrets.ALI_OSS_BUCKET }}/ \
-            "Cache-Control:no-cache, no-store, must-revalidate" \
-            --include "*.html" --update || true
+            "oss://${{ secrets.ALI_OSS_BUCKET }}/_next/static/" \
+            "Cache-Control:public, max-age=31536000, immutable" --update || true
 
       - name: Done
         run: |
