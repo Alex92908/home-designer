@@ -11,7 +11,7 @@ export const zh = {
     "2d": "点击切换房间 · 全局视图可管理房间",
   } as Record<string, string>,
   autoSaved: "已自动保存",
-  exportPlan: "导出方案",
+  exportPlan: "导入 / 导出",
 
   // ── LeftPanel ────────────────────────────────────────────
   tabMaterials: "🎨 材料",
@@ -52,7 +52,7 @@ export const zh = {
   sectionFurniture: "🪑 家具",
   emptyState: "从左侧选择材料和家具\n方案自动生成",
   aiTitle: "🤖 AI 风格建议",
-  exportQuote: "📄 导出报价单",
+  exportQuote: "📁 导入 / 导出方案",
   sharePlan: "📤 分享方案",
   aiSuggestions: {
     北欧: "北欧搭配协调！可补充绿植和天然麻布抱枕，保持简约温暖基调。",

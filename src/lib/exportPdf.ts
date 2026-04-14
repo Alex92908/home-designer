@@ -1,271 +1,533 @@
-import { jsPDF } from "jspdf";
-import { MaterialItem, RoomType, getRoomArea, ROOM_DEFS } from "./types";
-import { getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
+/**
+ * HTML-based PDF export — uses window.print() instead of jsPDF.
+ * Advantages: native font support (Chinese/emoji), richer layout,
+ * no font-embedding needed.
+ */
 
-// ─── Single-room export ───────────────────────────────────────
+import { MaterialItem, RoomType, getRoomArea, ROOM_DEFS, PlacedItem } from "./types";
+import { getFurnitureById } from "./furniture";
+import { getMaterialNameEn, getBrandNameEn, getFurnitureNameEn } from "@/locales/itemNames";
+import { formatPrice } from "./currency";
+
+// ─── Helpers ──────────────────────────────────────────────────
+
+const ROOM_NAMES_ZH: Partial<Record<RoomType, string>> = {
+  living:"客厅", master:"主卧", bedroom:"次卧", bedroom2:"次卧2", bedroom3:"次卧3",
+  kitchen:"厨房", bathroom:"卫生间", bathroom2:"卫生间2", dining:"餐厅",
+  study:"书房", study2:"书房2", closet:"衣帽间", balcony:"阳台", balcony2:"阳台2",
+  yard:"院子", garage:"车库", gym:"健身房", cinema:"影音室",
+};
+const ROOM_NAMES_EN: Partial<Record<RoomType, string>> = {
+  living:"Living Room", master:"Master Bedroom", bedroom:"Bedroom 1",
+  bedroom2:"Bedroom 2", bedroom3:"Bedroom 3", kitchen:"Kitchen",
+  bathroom:"Bathroom", bathroom2:"Bathroom 2", dining:"Dining Room",
+  study:"Study", study2:"Study 2", closet:"Walk-in Closet",
+  balcony:"Balcony", balcony2:"Balcony 2", yard:"Yard",
+  garage:"Garage", gym:"Gym", cinema:"Home Cinema",
+};
+const CAT_ZH: Record<string,string> = {
+  wall:"墙面", floor:"地板", ceiling:"吊顶", light:"灯光", tile:"瓷砖",
+};
+const CAT_EN: Record<string,string> = {
+  wall:"Wall", floor:"Floor", ceiling:"Ceiling", light:"Lighting", tile:"Tile",
+};
+
+function roomName(room: RoomType, locale: string): string {
+  return (locale === "en" ? ROOM_NAMES_EN[room] : ROOM_NAMES_ZH[room])
+    ?? ROOM_DEFS[room].name;
+}
+function matName(item: MaterialItem, locale: string): string {
+  return locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name;
+}
+function brandName(b: string, locale: string): string {
+  return locale === "en" ? (getBrandNameEn(b) ?? b) : b;
+}
+function furnitureName(id: string, zhName: string, locale: string): string {
+  return locale === "en" ? (getFurnitureNameEn(id) ?? zhName) : zhName;
+}
+function catLabel(cat: string, locale: string): string {
+  return locale === "en" ? (CAT_EN[cat] ?? cat) : (CAT_ZH[cat] ?? cat);
+}
+function fmtPrice(v: number, locale: string): string {
+  return formatPrice(v, locale);
+}
+
+// ─── Shared print window opener ───────────────────────────────
+// Blob URL + Google Noto Sans SC solves Chrome's CJK print-rendering bug:
+// system fonts (PingFang SC, YaHei) render fine on screen but disappear in
+// Chrome's PDF renderer. A web font loaded via <link> gets properly embedded.
+
+const FONT_LINK = `
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap">`;
+
+// Auto-print fires only after all fonts (including Noto SC) are ready
+const AUTO_PRINT = `<script>
+  document.fonts.ready.then(function(){setTimeout(function(){window.print();},300);});
+<\/script>`;
+
+function printHtml(html: string): void {
+  const enriched = html
+    .replace("<head>", `<head>${FONT_LINK}`)
+    .replace("</body>", `${AUTO_PRINT}</body>`);
+  const blob = new Blob([enriched], { type: "text/html;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const w    = window.open(url, "_blank", "width=900,height=700");
+  if (!w) { alert("Please allow pop-ups to export PDF."); return; }
+  setTimeout(() => URL.revokeObjectURL(url), 120_000);
+}
+
+// ─── Shared base CSS ──────────────────────────────────────────
+
+const BASE_CSS = `
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+         color: #1d1d1f; font-size: 13px; background: #fff; }
+  @media print {
+    @page { margin: 12mm 14mm; size: A4; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
+  .header { background: linear-gradient(135deg,#007AFF,#5856D6); color:#fff; padding:24px 28px; }
+  .header h1 { font-size:22px; font-weight:800; margin-bottom:4px; }
+  .header .meta { font-size:11px; opacity:.8; margin-top:2px; }
+  .header .total { font-size:28px; font-weight:900; }
+  .header .total-label { font-size:10px; opacity:.7; margin-top:2px; }
+  .body { padding:20px 28px; }
+  .section-title { font-size:10px; font-weight:700; text-transform:uppercase;
+                   letter-spacing:.08em; color:#8e8e93; margin:18px 0 8px; }
+  table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+  th { background:#007AFF; color:#fff; font-size:11px; font-weight:700;
+       padding:6px 8px; text-align:left; }
+  th:last-child, td:last-child { text-align:right; }
+  td { padding:7px 8px; font-size:12px; border-bottom:1px solid #f0f0f5; }
+  tr:nth-child(even) td { background:#fafafe; }
+  .swatch { display:inline-block; width:12px; height:12px; border-radius:3px;
+            border:1px solid rgba(0,0,0,.12); vertical-align:middle; margin-right:6px; }
+  .total-row { display:flex; justify-content:flex-end; align-items:center;
+               gap:12px; padding:10px 0; border-top:2px solid #007AFF; margin-top:4px; }
+  .total-row .label { font-size:13px; font-weight:700; color:#1d1d1f; }
+  .total-row .amount { font-size:20px; font-weight:900; color:#007AFF; }
+  .notes { background:#f5f5f7; border-radius:8px; padding:12px 16px; margin-top:20px; }
+  .notes p { font-size:10px; color:#6e6e73; line-height:1.7; }
+  .footer { margin-top:24px; padding-top:10px; border-top:1px solid #e8e8ed;
+            display:flex; justify-content:space-between; font-size:10px; color:#aeaeb2; }
+  .room-header { background:#f0f6ff; border-left:3px solid #007AFF;
+                 padding:6px 10px; margin:14px 0 6px; font-weight:700; font-size:13px; }
+  .room-subtotal { text-align:right; font-size:12px; font-weight:700;
+                   color:#007AFF; padding:4px 8px 10px; }
+  .budget-bar-wrap { margin:12px 0 16px; }
+  .budget-meta { display:flex; justify-content:space-between; font-size:11px;
+                 color:#6e6e73; margin-bottom:5px; }
+  .budget-meta .status { font-weight:700; }
+  .budget-meta .status.ok { color:#34c759; }
+  .budget-meta .status.over { color:#ff3b30; }
+  .bar-bg { background:#e8e8ed; border-radius:4px; height:7px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:4px; }
+  .tab-toggle { display:flex; gap:0; margin-bottom:20px; border:1px solid #007AFF; border-radius:8px; overflow:hidden; }
+  .tab-toggle button { flex:1; padding:8px; font-size:12px; font-weight:600; cursor:pointer;
+                       background:#fff; color:#007AFF; border:none; }
+  .tab-toggle button.active { background:#007AFF; color:#fff; }
+  .print-btn { display:block; margin:0 auto 16px; padding:10px 32px;
+               background:#007AFF; color:#fff; border:none; border-radius:10px;
+               font-size:14px; font-weight:700; cursor:pointer; }
+`;
+
+// ─── Single-room PDF ──────────────────────────────────────────
 
 export interface ExportData {
   room: RoomType;
-  items: MaterialItem[];
+  items: MaterialItem[];           // material items
+  placedItems: PlacedItem[];       // furniture
   totalCost: number;
   scores: { style: number; space: number; light: number; dominantStyle: string };
   phone: string;
-  locale?: string;
-}
-
-// jsPDF ships with Helvetica which only covers Latin-1.
-// Always use English names to avoid garbled characters.
-function safeItemName(item: MaterialItem): string {
-  return getMaterialNameEn(item.id) ?? item.name.replace(/[\u4e00-\u9fff\u3000-\u303f]+/g, "?");
-}
-function safeBrand(brand: string): string {
-  return getBrandNameEn(brand) ?? brand.replace(/[\u4e00-\u9fff\u3000-\u303f]+/g, "?");
-}
-function safeRoomName(room: RoomType): string {
-  const map: Partial<Record<RoomType, string>> = {
-    living: "Living Room", master: "Master Bedroom", bedroom: "Bedroom 1",
-    bedroom2: "Bedroom 2", bedroom3: "Bedroom 3", kitchen: "Kitchen",
-    bathroom: "Bathroom", bathroom2: "Bathroom 2", dining: "Dining Room",
-    study: "Study", study2: "Study 2", closet: "Walk-in Closet",
-    balcony: "Balcony", balcony2: "Balcony 2", yard: "Yard",
-    garage: "Garage", gym: "Gym", cinema: "Home Cinema",
-  };
-  return map[room] ?? ROOM_DEFS[room].name;
-}
-
-const BLUE  = [37, 99, 235] as [number,number,number];
-const DARK  = [17, 24, 39]  as [number,number,number];
-const GRAY  = [107, 114, 128] as [number,number,number];
-const LIGHT = [243, 244, 246] as [number,number,number];
-const WHITE = [255, 255, 255] as [number,number,number];
-const margin = 16;
-const pageW  = 210;
-const pageH  = 297;
-
-function drawHeader(doc: jsPDF, title: string, subtitle: string, contact: string, totalStr: string, totalLabel: string) {
-  doc.setFillColor(...BLUE);
-  doc.rect(0, 0, pageW, 42, "F");
-  doc.setTextColor(...WHITE);
-  doc.setFontSize(20); doc.setFont("helvetica", "bold");
-  doc.text(title, margin, 15);
-  doc.setFontSize(10); doc.setFont("helvetica", "normal");
-  doc.text(subtitle, margin, 24);
-  doc.text(`Contact: ${contact}`, margin, 32);
-  doc.setFontSize(22); doc.setFont("helvetica", "bold");
-  doc.text(totalStr, pageW - margin, 20, { align: "right" });
-  doc.setFontSize(9); doc.setFont("helvetica", "normal");
-  doc.text(totalLabel, pageW - margin, 29, { align: "right" });
-}
-
-function drawFooter(doc: jsPDF, date: string) {
-  doc.setFillColor(...BLUE);
-  doc.rect(0, pageH - 14, pageW, 14, "F");
-  doc.setTextColor(...WHITE);
-  doc.setFontSize(8);
-  doc.text("Home Designer  |  homedesigner.app", margin, pageH - 6);
-  doc.text(date, pageW - margin, pageH - 6, { align: "right" });
-}
-
-function drawNotes(doc: jsPDF, y: number) {
-  doc.setFillColor(...LIGHT);
-  doc.roundedRect(margin, y, pageW - margin * 2, 28, 3, 3, "F");
-  doc.setTextColor(...GRAY);
-  doc.setFontSize(7.5); doc.setFont("helvetica", "normal");
-  [
-    "* This quote covers materials only. Labor costs are estimated at 30-50% of materials.",
-    "* Prices may vary by region and supplier. Final quote to be confirmed with contractor.",
-    "* This document is generated by Home Designer for reference purposes only.",
-  ].forEach((note, i) => doc.text(note, margin + 4, y + 6 + i * 7));
+  locale: string;
 }
 
 export function generatePdf(data: ExportData): void {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const area = getRoomArea(data.room);
-  const roomName = safeRoomName(data.room);
-  const date = new Date().toLocaleDateString("en-US");
+  const { room, items, placedItems, totalCost, scores, phone, locale } = data;
+  const area = getRoomArea(room);
+  const isEn = locale === "en";
+  const date = new Date().toLocaleDateString(isEn ? "en-US" : "zh-CN");
+  const title = isEn ? "Decoration Quote" : "装修报价单";
+  const rName = roomName(room, locale);
 
-  drawHeader(
-    doc,
-    "Decoration Quote",
-    `Room: ${roomName}  |  Date: ${date}`,
-    data.phone || "N/A",
-    `CNY ${data.totalCost.toLocaleString()}`,
-    "Total Estimate"
-  );
-
-  let y = 54;
-
-  // Scores
-  if (data.scores.dominantStyle) {
-    doc.setFillColor(...LIGHT);
-    doc.roundedRect(margin, y - 4, pageW - margin * 2, 28, 3, 3, "F");
-    doc.setTextColor(...DARK);
-    doc.setFontSize(10); doc.setFont("helvetica", "bold");
-    doc.text(`Style: ${data.scores.dominantStyle}`, margin + 6, y + 4);
-    const barW = 40;
-    const startX = margin + 55;
-    [
-      { label: "Harmony", val: data.scores.style },
-      { label: "Space",   val: data.scores.space },
-      { label: "Lighting",val: data.scores.light },
-    ].forEach((s, i) => {
-      const bx = startX + i * 52;
-      doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(...GRAY);
-      doc.text(s.label, bx, y + 1);
-      doc.setFillColor(209, 213, 219);
-      doc.roundedRect(bx, y + 3, barW, 3, 1, 1, "F");
-      doc.setFillColor(...BLUE);
-      doc.roundedRect(bx, y + 3, (barW * s.val) / 100, 3, 1, 1, "F");
-      doc.setTextColor(...DARK); doc.setFontSize(9);
-      doc.text(`${s.val}`, bx + barW + 2, y + 6);
-    });
-    y += 34;
-  }
-
-  // Table header
-  doc.setFillColor(...BLUE);
-  doc.rect(margin, y, pageW - margin * 2, 8, "F");
-  doc.setTextColor(...WHITE); doc.setFontSize(9); doc.setFont("helvetica", "bold");
-  doc.text("Item",        margin + 11, y + 5.5);
-  doc.text("Brand",       margin + 72, y + 5.5);
-  doc.text("Unit Price",  margin + 108, y + 5.5);
-  doc.text("Qty",         margin + 137, y + 5.5);
-  doc.text("Subtotal",    pageW - margin - 3, y + 5.5, { align: "right" });
-  y += 8;
-
-  // Table rows
-  data.items.forEach((item, idx) => {
+  // Materials rows
+  let matRows = "";
+  let matTotal = 0;
+  items.forEach(item => {
     const qty = item.category === "wall" ? area.wall
               : item.category === "floor" ? area.floor
               : item.id === "light-spot" ? 8 : 1;
     const qtyStr = ["wall","floor","tile"].includes(item.category)
-      ? `${qty} sqm` : item.id === "light-spot" ? "x8" : "x1";
-    const subtotal = item.price * qty;
-
-    if (idx % 2 === 0) { doc.setFillColor(249, 250, 251); doc.rect(margin, y, pageW - margin * 2, 9, "F"); }
-
-    // color swatch
-    try {
-      const hex = item.color.replace("#", "");
-      doc.setFillColor(parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16));
-    } catch { doc.setFillColor(200,200,200); }
-    doc.roundedRect(margin + 3, y + 2, 5, 5, 1, 1, "F");
-
-    doc.setTextColor(...DARK); doc.setFontSize(8.5); doc.setFont("helvetica", "normal");
-    doc.text(safeItemName(item), margin + 11, y + 6);
-    doc.setTextColor(...GRAY);
-    doc.text(safeBrand(item.brand), margin + 72, y + 6);
-    doc.setTextColor(...DARK);
-    doc.text(`CNY ${item.price.toLocaleString()}`, margin + 108, y + 6);
-    doc.text(qtyStr, margin + 137, y + 6);
-    doc.setFont("helvetica", "bold");
-    doc.text(`CNY ${subtotal.toLocaleString()}`, pageW - margin - 3, y + 6, { align: "right" });
-    y += 9;
+      ? `${qty}㎡` : item.id === "light-spot" ? "×8" : "×1";
+    const sub = item.price * qty;
+    matTotal += sub;
+    const cat = catLabel(item.category, locale);
+    const name = matName(item, locale);
+    const brand = brandName(item.brand, locale);
+    matRows += `<tr>
+      <td>${cat}</td>
+      <td><span class="swatch" style="background:${item.color}"></span>${name}</td>
+      <td>${brand}</td>
+      <td>${fmtPrice(item.price, locale)}</td>
+      <td>${qtyStr}</td>
+      <td><b>${fmtPrice(sub, locale)}</b></td>
+    </tr>`;
   });
 
-  // Total row
-  y += 3;
-  doc.setDrawColor(...BLUE); doc.setLineWidth(0.4);
-  doc.line(margin, y, pageW - margin, y);
-  y += 5;
-  doc.setFontSize(11); doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
-  doc.text("Total:", pageW - margin - 38, y);
-  doc.setTextColor(...BLUE);
-  doc.text(`CNY ${data.totalCost.toLocaleString()}`, pageW - margin - 3, y, { align: "right" });
-  y += 14;
+  // Furniture rows
+  let furRows = "";
+  let furTotal = 0;
+  placedItems.forEach(p => {
+    const f = getFurnitureById(p.furnitureId);
+    if (!f) return;
+    furTotal += f.price;
+    const name = furnitureName(f.id, f.name, locale);
+    const brand = brandName(f.brand, locale);
+    furRows += `<tr>
+      <td style="font-size:16px;width:28px">${f.icon}</td>
+      <td>${name}</td>
+      <td>${brand}</td>
+      <td colspan="2">&nbsp;</td>
+      <td><b>${fmtPrice(f.price, locale)}</b></td>
+    </tr>`;
+  });
 
-  drawNotes(doc, y);
-  drawFooter(doc, date);
+  const scoreSection = scores.dominantStyle ? `
+    <div class="section-title">${isEn ? "Design Score" : "方案评分"}</div>
+    <table>
+      <tr>
+        <td style="width:120px"><b>${isEn?"Style":"风格"}: ${scores.dominantStyle}</b></td>
+        <td>
+          ${[[isEn?"Harmony":"风格协调", scores.style, "#007AFF"],
+             [isEn?"Space":"空间感", scores.space, "#34c759"],
+             [isEn?"Lighting":"采光", scores.light, "#f59e0b"]]
+            .map(([l,v,c])=>`
+              <span style="font-size:11px;color:#6e6e73;margin-right:4px">${l}</span>
+              <span style="display:inline-block;width:80px;height:6px;background:#e8e8ed;border-radius:3px;vertical-align:middle;margin-right:2px">
+                <span style="display:inline-block;width:${v}%;height:100%;background:${c};border-radius:3px"></span>
+              </span>
+              <b style="font-size:11px;color:${c};margin-right:12px">${v}</b>
+            `).join("")}
+        </td>
+      </tr>
+    </table>` : "";
 
-  doc.save(`Quote_${roomName.replace(/\s+/g, "_")}_${date.replace(/\//g, "-")}.pdf`);
+  const html = `<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <title>${title} - ${rName}</title>
+    <style>${BASE_CSS}</style>
+  </head><body>
+    <button class="print-btn no-print" onclick="window.print()">
+      ${isEn ? "📄 Save as PDF" : "📄 保存为 PDF"}
+    </button>
+    <div class="header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <h1>${title}</h1>
+          <div class="meta">${isEn?"Room":"房间"}: ${rName} &nbsp;|&nbsp; ${isEn?"Date":"日期"}: ${date}</div>
+          <div class="meta">${isEn?"Contact":"联系人"}: ${phone || "N/A"}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="total">${fmtPrice(totalCost, locale)}</div>
+          <div class="total-label">${isEn?"Total Estimate":"合计估价"}</div>
+        </div>
+      </div>
+    </div>
+    <div class="body">
+      ${scoreSection}
+      ${items.length > 0 ? `
+        <div class="section-title">${isEn?"Materials":"材料明细"}</div>
+        <table>
+          <thead><tr>
+            <th>${isEn?"Category":"类别"}</th>
+            <th>${isEn?"Material":"材料"}</th>
+            <th>${isEn?"Brand":"品牌"}</th>
+            <th>${isEn?"Unit Price":"单价"}</th>
+            <th>${isEn?"Qty":"数量"}</th>
+            <th>${isEn?"Subtotal":"小计"}</th>
+          </tr></thead>
+          <tbody>${matRows}</tbody>
+        </table>` : ""}
+      ${placedItems.length > 0 ? `
+        <div class="section-title">${isEn?"Furniture":"家具清单"} (${placedItems.length})</div>
+        <table>
+          <thead><tr>
+            <th></th>
+            <th>${isEn?"Item":"品名"}</th>
+            <th>${isEn?"Brand":"品牌"}</th>
+            <th colspan="2"></th>
+            <th>${isEn?"Price":"单价"}</th>
+          </tr></thead>
+          <tbody>${furRows}</tbody>
+        </table>` : ""}
+      <div class="total-row">
+        <span class="label">${rName} ${isEn?"Total":"合计"}</span>
+        <span class="amount">${fmtPrice(totalCost, locale)}</span>
+      </div>
+      <div class="notes">
+        <p>* ${isEn?"This quote covers materials and furniture only. Labor costs are estimated at 30–50% of materials."
+                  :"本报价仅包含材料及家具费用，人工费约为材料费的30–50%。"}</p>
+        <p>* ${isEn?"Prices may vary by region and supplier. Final quote to be confirmed with contractor."
+                  :"实际价格因地区和供应商不同而异，最终报价以施工方确认为准。"}</p>
+      </div>
+      <div class="footer">
+        <span>${isEn?"Home Designer":"家居设计师"} · homedesigner.app</span>
+        <span>${date}</span>
+      </div>
+    </div>
+  </body></html>`;
+
+  printHtml(html);
 }
 
-// ─── All-rooms export ─────────────────────────────────────────
+// ─── All-rooms PDF ────────────────────────────────────────────
+
+export interface RoomDetail {
+  room: RoomType;
+  cost: number;
+  materials: MaterialItem[];
+  placedItems: PlacedItem[];
+}
 
 export interface AllRoomsExportData {
-  roomCosts: Array<{ room: RoomType; cost: number }>;
+  roomDetails: RoomDetail[];
   totalCost: number;
   budget: number;
-  phone: string;
+  locale: string;
+  phone?: string;
 }
 
-export function generateAllRoomsPdf(data: AllRoomsExportData): void {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const date = new Date().toLocaleDateString("en-US");
-  const configured = data.roomCosts.filter(r => r.cost > 0);
+export function generateAllRoomsPdf(data: AllRoomsExportData, groupBy: "room" | "material"): void {
+  const { roomDetails, totalCost, budget, locale, phone } = data;
+  const isEn = locale === "en";
+  const date = new Date().toLocaleDateString(isEn ? "en-US" : "zh-CN");
+  const configured = roomDetails.filter(r => r.cost > 0);
+  const overBudget = totalCost > budget;
+  const budgetPct = Math.min(100, (totalCost / budget) * 100);
 
-  drawHeader(
-    doc,
-    "Whole House Quote",
-    `${configured.length} room(s) configured  |  Date: ${date}`,
-    data.phone || "N/A",
-    `CNY ${data.totalCost.toLocaleString()}`,
-    "Total Estimate"
-  );
+  const headerHtml = `
+    <div class="header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <h1>${isEn ? "Whole House Quote" : "全屋装修报价单"}</h1>
+          <div class="meta">${configured.length} ${isEn?"room(s) configured":"个房间已配置"} &nbsp;|&nbsp; ${isEn?"Date":"日期"}: ${date}</div>
+          <div class="meta">${isEn?"Contact":"联系人"}: ${phone || (isEn?"N/A":"访客")}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="total">${fmtPrice(totalCost, locale)}</div>
+          <div class="total-label">${isEn?"Total Estimate":"全屋合计"}</div>
+        </div>
+      </div>
+    </div>`;
 
-  let y = 54;
+  const budgetHtml = `
+    <div class="budget-bar-wrap">
+      <div class="budget-meta">
+        <span>${isEn?"Budget":"预算"}: ${fmtPrice(budget, locale)}</span>
+        <span class="status ${overBudget?"over":"ok"}">${overBudget?(isEn?"OVER BUDGET":"超出预算"):(isEn?"WITHIN BUDGET":"未超预算")}</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-fill" style="width:${budgetPct}%;background:${overBudget?"#ff3b30":"#34c759"}"></div>
+      </div>
+    </div>`;
 
-  // Budget bar
-  const budgetPct = Math.min(100, (data.totalCost / data.budget) * 100);
-  const overBudget = data.totalCost > data.budget;
-  doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(...GRAY);
-  doc.text(`Budget: CNY ${data.budget.toLocaleString()}`, margin, y);
-  doc.setTextColor(overBudget ? 239 : 22, overBudget ? 68 : 163, overBudget ? 68 : 74);
-  doc.text(overBudget ? "OVER BUDGET" : "WITHIN BUDGET", pageW - margin, y, { align: "right" });
-  y += 4;
-  doc.setFillColor(229, 231, 235);
-  doc.roundedRect(margin, y, pageW - margin * 2, 4, 2, 2, "F");
-  doc.setFillColor(overBudget ? 239 : 34, overBudget ? 68 : 197, overBudget ? 68 : 94);
-  doc.roundedRect(margin, y, ((pageW - margin * 2) * budgetPct) / 100, 4, 2, 2, "F");
-  y += 10;
+  // ── By-room view ──
+  const byRoomHtml = configured
+    .sort((a,b) => b.cost - a.cost)
+    .map(({ room, cost, materials, placedItems }) => {
+      const area = getRoomArea(room);
+      const rn = roomName(room, locale);
+      const def = ROOM_DEFS[room];
+      const pct = Math.round((cost / totalCost) * 100);
 
-  // Room table header
-  doc.setFillColor(...BLUE);
-  doc.rect(margin, y, pageW - margin * 2, 8, "F");
-  doc.setTextColor(...WHITE); doc.setFontSize(9); doc.setFont("helvetica", "bold");
-  doc.text("Room",  margin + 4, y + 5.5);
-  doc.text("Cost",  pageW - margin - 3, y + 5.5, { align: "right" });
-  doc.text("Share", pageW - margin - 28, y + 5.5, { align: "right" });
-  y += 8;
+      let rows = "";
+      materials.forEach(item => {
+        const qty = item.category === "wall" ? area.wall
+                  : item.category === "floor" ? area.floor
+                  : item.id === "light-spot" ? 8 : 1;
+        const qtyStr = ["wall","floor","tile"].includes(item.category) ? `${qty}㎡`
+                     : item.id === "light-spot" ? "×8" : "×1";
+        rows += `<tr>
+          <td>${catLabel(item.category, locale)}</td>
+          <td><span class="swatch" style="background:${item.color}"></span>${matName(item, locale)}</td>
+          <td>${brandName(item.brand, locale)}</td>
+          <td>${fmtPrice(item.price, locale)}</td>
+          <td>${qtyStr}</td>
+          <td><b>${fmtPrice(item.price * qty, locale)}</b></td>
+        </tr>`;
+      });
+      placedItems.forEach(p => {
+        const f = getFurnitureById(p.furnitureId);
+        if (!f) return;
+        rows += `<tr>
+          <td style="font-size:15px">${f.icon}</td>
+          <td>${furnitureName(f.id, f.name, locale)}</td>
+          <td>${brandName(f.brand, locale)}</td>
+          <td>${fmtPrice(f.price, locale)}</td>
+          <td>×1</td>
+          <td><b>${fmtPrice(f.price, locale)}</b></td>
+        </tr>`;
+      });
 
-  // Rows
-  configured
-    .sort((a, b) => b.cost - a.cost)
-    .forEach((r, idx) => {
-      if (idx % 2 === 0) { doc.setFillColor(249, 250, 251); doc.rect(margin, y, pageW - margin * 2, 9, "F"); }
-      const pct = Math.round((r.cost / data.totalCost) * 100);
-      const barMaxW = 60;
+      return `
+        <div class="room-header">
+          ${def.icon} ${rn}
+          <span style="font-size:11px;font-weight:400;color:#6e6e73;margin-left:8px">${pct}% · ${fmtPrice(cost, locale)}</span>
+        </div>
+        ${rows ? `<table>
+          <thead><tr>
+            <th>${isEn?"Cat.":"类别"}</th><th>${isEn?"Item":"材料/家具"}</th>
+            <th>${isEn?"Brand":"品牌"}</th><th>${isEn?"Unit":"单价"}</th>
+            <th>${isEn?"Qty":"数量"}</th><th>${isEn?"Sub":"小计"}</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>` : `<p style="font-size:11px;color:#aeaeb2;padding:4px 10px">${isEn?"(no items yet)":"（暂无配置）"}</p>`}`;
+    }).join("");
 
-      doc.setTextColor(...DARK); doc.setFontSize(9); doc.setFont("helvetica", "normal");
-      doc.text(safeRoomName(r.room), margin + 4, y + 6);
+  // ── By-material view (采购清单) ──
+  // Aggregate same material across rooms
+  const matMap = new Map<string, { item: MaterialItem; rooms: Array<{name:string;qty:number;sub:number}> }>();
+  const furMap = new Map<string, { f: ReturnType<typeof getFurnitureById>; count: number; rooms: string[] }>();
 
-      // mini proportion bar
-      doc.setFillColor(209, 213, 219);
-      doc.roundedRect(margin + 55, y + 3, barMaxW, 3, 1, 1, "F");
-      doc.setFillColor(...BLUE);
-      doc.roundedRect(margin + 55, y + 3, (barMaxW * pct) / 100, 3, 1, 1, "F");
-
-      doc.setTextColor(...GRAY);
-      doc.text(`${pct}%`, pageW - margin - 28, y + 6, { align: "right" });
-      doc.setFont("helvetica", "bold"); doc.setTextColor(...DARK);
-      doc.text(`CNY ${r.cost.toLocaleString()}`, pageW - margin - 3, y + 6, { align: "right" });
-      y += 9;
+  configured.forEach(({ room, materials, placedItems }) => {
+    const area = getRoomArea(room);
+    const rn = roomName(room, locale);
+    Object.values(materials).filter(Boolean).forEach(item => {
+      if (!item) return;
+      const qty = item.category === "wall" ? area.wall
+                : item.category === "floor" ? area.floor
+                : item.id === "light-spot" ? 8 : 1;
+      if (!matMap.has(item.id)) matMap.set(item.id, { item, rooms: [] });
+      matMap.get(item.id)!.rooms.push({ name: rn, qty, sub: item.price * qty });
     });
+    placedItems.forEach(p => {
+      const f = getFurnitureById(p.furnitureId);
+      if (!f) return;
+      if (!furMap.has(f.id)) furMap.set(f.id, { f, count: 0, rooms: [] });
+      const entry = furMap.get(f.id)!;
+      entry.count++;
+      if (!entry.rooms.includes(rn)) entry.rooms.push(rn);
+    });
+  });
 
-  // Total
-  y += 3;
-  doc.setDrawColor(...BLUE); doc.setLineWidth(0.4);
-  doc.line(margin, y, pageW - margin, y);
-  y += 5;
-  doc.setFontSize(12); doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK); doc.text("Total:", pageW - margin - 38, y);
-  doc.setTextColor(...BLUE);
-  doc.text(`CNY ${data.totalCost.toLocaleString()}`, pageW - margin - 3, y, { align: "right" });
-  y += 14;
+  let byMatHtml = "";
+  // Group by category
+  const catOrder = ["floor","wall","tile","ceiling","light"] as const;
+  catOrder.forEach(cat => {
+    const items = [...matMap.values()].filter(e => e.item.category === cat);
+    if (!items.length) return;
+    byMatHtml += `<div class="section-title">${catLabel(cat, locale)}</div><table>
+      <thead><tr>
+        <th>${isEn?"Material":"材料"}</th><th>${isEn?"Brand":"品牌"}</th>
+        <th>${isEn?"Rooms":"房间"}</th><th>${isEn?"Total Qty":"合计用量"}</th>
+        <th>${isEn?"Unit":"单价"}</th><th>${isEn?"Subtotal":"小计"}</th>
+      </tr></thead><tbody>`;
+    items.forEach(({ item, rooms }) => {
+      const totalQty = rooms.reduce((s,r)=>s+r.qty,0);
+      const totalSub = rooms.reduce((s,r)=>s+r.sub,0);
+      const qtyStr = ["wall","floor","tile"].includes(item.category) ? `${totalQty.toFixed(1)}㎡`
+                   : item.id === "light-spot" ? "×8" : "×1";
+      const roomList = rooms.map(r => `${r.name}(${r.qty.toFixed(0)}㎡)`).join("、");
+      byMatHtml += `<tr>
+        <td><span class="swatch" style="background:${item.color}"></span>${matName(item, locale)}</td>
+        <td>${brandName(item.brand, locale)}</td>
+        <td style="font-size:10px;color:#6e6e73">${roomList}</td>
+        <td>${qtyStr}</td>
+        <td>${fmtPrice(item.price, locale)}</td>
+        <td><b>${fmtPrice(totalSub, locale)}</b></td>
+      </tr>`;
+    });
+    byMatHtml += `</tbody></table>`;
+  });
 
-  drawNotes(doc, y);
-  drawFooter(doc, date);
+  // Furniture section
+  if (furMap.size > 0) {
+    byMatHtml += `<div class="section-title">${isEn?"Furniture":"家具汇总"}</div><table>
+      <thead><tr>
+        <th></th><th>${isEn?"Item":"品名"}</th><th>${isEn?"Brand":"品牌"}</th>
+        <th>${isEn?"Rooms":"房间"}</th><th>${isEn?"Qty":"数量"}</th><th>${isEn?"Total":"合计"}</th>
+      </tr></thead><tbody>`;
+    [...furMap.values()].forEach(({ f, count, rooms }) => {
+      if (!f) return;
+      byMatHtml += `<tr>
+        <td style="font-size:15px">${f.icon}</td>
+        <td>${furnitureName(f.id, f.name, locale)}</td>
+        <td>${brandName(f.brand, locale)}</td>
+        <td style="font-size:10px;color:#6e6e73">${rooms.join("、")}</td>
+        <td>×${count}</td>
+        <td><b>${fmtPrice(f.price * count, locale)}</b></td>
+      </tr>`;
+    });
+    byMatHtml += `</tbody></table>`;
+  }
 
-  doc.save(`WholeHouseQuote_${date.replace(/\//g, "-")}.pdf`);
+  const html = `<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <title>${isEn?"Whole House Quote":"全屋报价单"}</title>
+    <style>
+      ${BASE_CSS}
+      .view { display:none }
+      .view.active { display:block }
+    </style>
+  </head><body>
+    <!-- Toggle & print buttons (hidden when printing) -->
+    <div class="no-print" style="display:flex;gap:8px;padding:12px 28px;background:#f5f5f7;align-items:center">
+      <div class="tab-toggle">
+        <button id="btn-room" class="active" onclick="showView('room')">
+          ${isEn?"By Room":"按房间"}
+        </button>
+        <button id="btn-mat" onclick="showView('mat')">
+          ${isEn?"By Material (Shopping List)":"按材料（采购清单）"}
+        </button>
+      </div>
+      <button class="print-btn" style="margin:0" onclick="window.print()">
+        📄 ${isEn?"Save as PDF":"保存为 PDF"}
+      </button>
+    </div>
+
+    ${headerHtml}
+    <div class="body">
+      ${budgetHtml}
+
+      <!-- By-room view -->
+      <div id="view-room" class="view active">
+        ${byRoomHtml}
+      </div>
+
+      <!-- By-material view -->
+      <div id="view-mat" class="view">
+        ${byMatHtml}
+      </div>
+
+      <div class="total-row">
+        <span class="label">${isEn?"Grand Total":"全屋合计"}</span>
+        <span class="amount">${fmtPrice(totalCost, locale)}</span>
+      </div>
+      <div class="notes">
+        <p>* ${isEn?"This quote covers materials and furniture only. Labor costs are estimated at 30–50% of materials."
+                  :"本报价仅包含材料及家具费用，人工费约为材料费的30–50%。"}</p>
+        <p>* ${isEn?"Prices may vary by region and supplier."
+                  :"实际价格因地区和供应商不同而异，最终以施工方报价为准。"}</p>
+      </div>
+      <div class="footer">
+        <span>${isEn?"Home Designer":"家居设计师"} · homedesigner.app</span>
+        <span>${date}</span>
+      </div>
+    </div>
+
+    <script>
+      function showView(v) {
+        document.getElementById('view-room').className = 'view' + (v==='room'?' active':'');
+        document.getElementById('view-mat').className  = 'view' + (v==='mat' ?' active':'');
+        document.getElementById('btn-room').className = v==='room'?'active':'';
+        document.getElementById('btn-mat').className  = v==='mat' ?'active':'';
+      }
+    </script>
+  </body></html>`;
+
+  printHtml(html);
 }

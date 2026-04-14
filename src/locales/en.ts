@@ -13,7 +13,7 @@ export const en: Translations = {
     "2d": "Click room to switch · Use Overview to manage rooms",
   },
   autoSaved: "Auto-saved",
-  exportPlan: "Export Plan",
+  exportPlan: "Import / Export",
 
   // ── LeftPanel ────────────────────────────────────────────
   tabMaterials: "🎨 Materials",
@@ -54,7 +54,7 @@ export const en: Translations = {
   sectionFurniture: "🪑 Furniture",
   emptyState: "Select materials & furniture on the left\nYour quote will appear here",
   aiTitle: "🤖 AI Style Tips",
-  exportQuote: "📄 Export Quote",
+  exportQuote: "📁 Import / Export",
   sharePlan: "📤 Share Plan",
   aiSuggestions: {
     北欧: "Great Nordic balance! Add some houseplants and natural linen cushions to keep it warm and minimal.",

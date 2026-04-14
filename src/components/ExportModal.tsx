@@ -46,13 +46,14 @@ export default function ExportModal() {
   const t = useT();
   const locale = useLocale();
 
-  const activeRoom     = useDesignerStore(s => s.activeRoom);
-  const rooms          = useDesignerStore(s => s.rooms);
-  const enabledRooms   = useDesignerStore(s => s.enabledRooms);
-  const scores         = useDesignerStore(s => s.scores);
-  const exterior       = useDesignerStore(s => s.exterior);
-  const budget         = useDesignerStore(s => s.budget);
-  const resetAll       = useDesignerStore(s => s.resetAll);
+  const activeRoom      = useDesignerStore(s => s.activeRoom);
+  const rooms           = useDesignerStore(s => s.rooms);
+  const enabledRooms    = useDesignerStore(s => s.enabledRooms);
+  const scores          = useDesignerStore(s => s.scores);
+  const exterior        = useDesignerStore(s => s.exterior);
+  const budget          = useDesignerStore(s => s.budget);
+  const resetAll        = useDesignerStore(s => s.resetAll);
+  const roomDimensions  = useDesignerStore(s => s.roomDimensions);
 
   const roomState  = rooms[activeRoom];
   const def        = ROOM_DEFS[activeRoom];
@@ -96,23 +97,49 @@ export default function ExportModal() {
       body: JSON.stringify({ email, source: "export-modal" }),
     }).catch(() => {});
     await new Promise(r => setTimeout(r, 300));
-    generatePdf({ room: activeRoom, items: materialItems, totalCost: currentRoomCost, scores, phone: email, locale });
+    generatePdf({ room: activeRoom, items: materialItems, placedItems, totalCost: currentRoomCost, scores, phone: email, locale });
     setSubmitted(true);
     setExporting(false);
   };
 
   const handleQuickView = () => {
-    generatePdf({ room: activeRoom, items: materialItems, totalCost: currentRoomCost, scores, phone: "guest", locale });
+    generatePdf({ room: activeRoom, items: materialItems, placedItems, totalCost: currentRoomCost, scores, phone: "guest", locale });
   };
 
   const handleExportAllPdf = () => {
-    generateAllRoomsPdf({ roomCosts, totalCost: totalAllCost, budget, phone: "guest" });
+    const roomDetails = enabledRooms.map(r => ({
+      room: r,
+      cost: roomCosts.find(x => x.room === r)?.cost ?? 0,
+      materials: Object.values(rooms[r].materials).filter(Boolean) as NonNullable<typeof rooms[typeof r]["materials"]["wall"]>[],
+      placedItems: rooms[r].placedItems,
+    }));
+    generateAllRoomsPdf({ roomDetails, totalCost: totalAllCost, budget, locale, phone: "guest" }, "room");
   };
 
   // ─── Save/load JSON ───────────────────────────────────────
+  // Coordinate convention in exported JSON:
+  //   x, z = TOP-LEFT corner of the furniture item (cm from room's back-left corner)
+  //   rotation, scaleW, scaleD unchanged
+  // Internally the store uses CENTER coordinates; we convert on save/load.
+
   const handleSaveJson = () => {
+    // Convert placed items: center → top-left
+    const exportRooms = Object.fromEntries(
+      Object.entries(rooms).map(([roomId, roomState]) => {
+        const convertedItems = roomState.placedItems.map(p => {
+          const f = getFurnitureById(p.furnitureId);
+          if (!f) return p;
+          const hw = (f.width  * (p.scaleW ?? 1)) / 2;
+          const hd = (f.depth  * (p.scaleD ?? 1)) / 2;
+          return { ...p, x: p.x - hw, z: p.z - hd };
+        });
+        return [roomId, { ...roomState, placedItems: convertedItems }];
+      })
+    );
     const data = {
-      rooms,
+      _coordSystem: "top-left",  // marker so importer knows which convention
+      rooms: exportRooms,
+      roomDimensions,
       enabledRooms,
       exterior,
       budget,
@@ -127,6 +154,20 @@ export default function ExportModal() {
     URL.revokeObjectURL(url);
   };
 
+  const handleLoadDemo = async () => {
+    if (!window.confirm(locale === "en"
+      ? "Load the demo plan? This will replace your current design."
+      : "载入样板方案？这将替换当前设计。")) return;
+    try {
+      const res = await fetch("/demo-plan.json");
+      const data = await res.json();
+      localStorage.setItem("home-designer-v1", JSON.stringify({ state: data, version: 0 }));
+      window.location.reload();
+    } catch {
+      alert(locale === "en" ? "Failed to load demo." : "样板加载失败，请重试。");
+    }
+  };
+
   const handleLoadJson = () => {
     const input = document.createElement("input");
     input.type  = "file";
@@ -139,6 +180,18 @@ export default function ExportModal() {
         try {
           const data = JSON.parse(ev.target?.result as string);
           if (data.rooms && data.enabledRooms) {
+            // Convert top-left → center if file was saved with new convention
+            if (data._coordSystem === "top-left") {
+              Object.values(data.rooms as Record<string, { placedItems: Array<{furnitureId:string;x:number;z:number;scaleW?:number;scaleD?:number}> }>).forEach(roomState => {
+                roomState.placedItems = roomState.placedItems.map(p => {
+                  const f = getFurnitureById(p.furnitureId);
+                  if (!f) return p;
+                  const hw = (f.width  * (p.scaleW ?? 1)) / 2;
+                  const hd = (f.depth  * (p.scaleD ?? 1)) / 2;
+                  return { ...p, x: p.x + hw, z: p.z + hd };
+                });
+              });
+            }
             localStorage.setItem("home-designer-v1", JSON.stringify({ state: data, version: 0 }));
             window.location.reload();
           } else {
@@ -397,6 +450,23 @@ export default function ExportModal() {
           {/* ── Data management tab ── */}
           {tab === "data" && (
             <div className="flex flex-col gap-3">
+              {/* Demo plan loader */}
+              <div className="rounded-xl p-4 border" style={{ background: "linear-gradient(135deg,#f0f6ff,#e8f4ff)", borderColor: "#BFD7FF" }}>
+                <div className="text-sm font-bold text-gray-800 mb-1">
+                  🏠 {locale === "en" ? "Load Sample Plan" : "载入样板方案"}
+                </div>
+                <div className="text-xs text-gray-500 mb-3">
+                  {locale === "en"
+                    ? "Load a fully furnished 8-room Nordic-modern demo with materials, furniture, and budget preset."
+                    : "载入一套完整样板：8个房间、北欧现代风格、材料+家具全配置，可直接体验所有功能。"}
+                </div>
+                <button onClick={handleLoadDemo}
+                  className="w-full py-2.5 text-white text-sm font-bold rounded-xl transition-colors"
+                  style={{ background: "#007AFF" }}>
+                  ✨ {locale === "en" ? "Load Demo Plan" : "载入样板方案"}
+                </button>
+              </div>
+
               <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
                 <div className="text-sm font-bold text-gray-800 mb-1">{t.saveTitle}</div>
                 <div className="text-xs text-gray-500 mb-3">{t.saveDesc}</div>

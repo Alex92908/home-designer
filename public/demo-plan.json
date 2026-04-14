@@ -1,0 +1,173 @@
+{
+  "_note": "Center coordinates (x/z = furniture center in cm). Room dims: living 500x420, master 400x360, bedroom 320x300, dining 380x320, kitchen 360x280, bathroom 260x220, study 320x290, balcony 420x160",
+  "enabledRooms": ["living", "master", "bedroom", "dining", "kitchen", "bathroom", "study", "balcony"],
+  "budget": 400000,
+  "exterior": {
+    "preset": "modern_villa",
+    "roofStyle": "gable",
+    "roofColor": "#4A4A4A",
+    "wallMaterial": "render",
+    "wallColor": "#F0EDE8",
+    "accentColor": "#5B7FA6",
+    "floors": 2,
+    "yardPreset": "garden"
+  },
+  "rooms": {
+    "living": {
+      "_layout": "TV back wall z=0, sofa center z=210, coffee table z=120, rug z=140. Room 500w x 420d.",
+      "materials": {
+        "wall":  { "id":"wall-beige",       "name":"温柔奶茶色",    "brand":"进口乳胶漆",   "price":42,  "unit":"元/㎡","category":"wall",  "color":"#E8D5B7","tags":["北欧","轻奢","日式"],"description":"温暖奶茶色调" },
+        "floor": { "id":"floor-herringbone","name":"鱼骨纹拼花地板","brand":"强化复合地板","price":450, "unit":"元/㎡","category":"floor", "color":"#B89060","texture":"repeating-linear-gradient(45deg,#B89060 0px,#B89060 10px,#C8A882 10px,#C8A882 20px)","tags":["轻奢","现代"],"description":"经典鱼骨纹" },
+        "light": { "id":"light-spot",       "name":"无主灯轨道射灯","brand":"LED轨道灯",   "price":180, "unit":"元/个","category":"light", "color":"#FFD700","tags":["现代","轻奢","工业风"],"description":"无主灯方案" }
+      },
+      "placedItems": [
+        { "instanceId":"l1","furnitureId":"tvunit-float-white", "x":250,"z":19,  "rotation":0,  "scaleW":1,"scaleD":1 },
+        { "instanceId":"l2","furnitureId":"sofa-nordic-blue",   "x":250,"z":210, "rotation":180,"scaleW":1,"scaleD":1 },
+        { "instanceId":"l3","furnitureId":"coffee-marble-rect", "x":250,"z":120, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"l4","furnitureId":"rug-nordic-geo",     "x":250,"z":150, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"l5","furnitureId":"sideboard-walnut",   "x":430,"z":19,  "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"l6","furnitureId":"lamp-arc-gold",      "x":35, "z":180, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"l7","furnitureId":"plant-monstera",     "x":467,"z":387, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"l8","furnitureId":"plant-rubber-tree",  "x":33, "z":393, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"l9","furnitureId":"artwork-abstract",   "x":250,"z":2,   "rotation":0,"scaleW":1,"scaleD":1 }
+      ]
+    },
+    "master": {
+      "_layout": "Bed against back wall centered. Wardrobes front wall. Room 400w x 360d.",
+      "materials": {
+        "wall":  { "id":"wall-warm-pink",    "name":"莫兰迪粉",      "brand":"进口乳胶漆",   "price":42,  "unit":"元/㎡","category":"wall",  "color":"#D4A8A8","tags":["北欧","轻奢"],"description":"温柔莫兰迪" },
+        "floor": { "id":"floor-herringbone", "name":"鱼骨纹拼花地板","brand":"强化复合地板","price":450, "unit":"元/㎡","category":"floor", "color":"#B89060","texture":"repeating-linear-gradient(45deg,#B89060 0px,#B89060 10px,#C8A882 10px,#C8A882 20px)","tags":["轻奢","现代"],"description":"经典鱼骨纹" },
+        "light": { "id":"light-pendant-nordic","name":"北欧球形吊灯","brand":"北欧吊灯",    "price":880, "unit":"元/件","category":"light", "color":"#FFF5E0","tags":["北欧","现代"],"description":"玻璃球形，简约高级" }
+      },
+      "placedItems": [
+        { "instanceId":"m1","furnitureId":"bed-fabric-beige",      "x":200,"z":110,"rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"m2","furnitureId":"nightstand-oak",        "x":75, "z":21, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"m3","furnitureId":"nightstand-oak",        "x":325,"z":21, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"m4","furnitureId":"wardrobe-solid-walnut", "x":200,"z":330,"rotation":180,"scaleW":1,"scaleD":1 },
+        { "instanceId":"m5","furnitureId":"dresser-nordic-white",  "x":350,"z":130,"rotation":270,"scaleW":1,"scaleD":1 },
+        { "instanceId":"m6","furnitureId":"rug-modern-gray",       "x":200,"z":165,"rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"m7","furnitureId":"lamp-arc-gold",         "x":28, "z":180,"rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"m8","furnitureId":"plant-sansevieria",     "x":382,"z":15, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"m9","furnitureId":"artwork-abstract",      "x":200,"z":2,  "rotation":0,"scaleW":1,"scaleD":1 }
+      ]
+    },
+    "bedroom": {
+      "_layout": "Bed back wall centered. Wardrobe front wall. Desk+chair right side. Bookshelves front-left. Room 320w x 300d.",
+      "materials": {
+        "wall":  { "id":"wall-sage",  "name":"莫兰迪绿",    "brand":"进口乳胶漆","price":45, "unit":"元/㎡","category":"wall",  "color":"#8FAF8F","tags":["北欧","日式"],"description":"低饱和绿，自然清新" },
+        "floor": { "id":"floor-bamboo","name":"碳化竹地板", "brand":"竹木地板",  "price":220,"unit":"元/㎡","category":"floor", "color":"#A0874A","tags":["日式","中式"],"description":"环保竹材，温暖自然" },
+        "light": { "id":"light-pendant-nordic","name":"北欧球形吊灯","brand":"北欧吊灯","price":880,"unit":"元/件","category":"light","color":"#FFF5E0","tags":["北欧","现代"],"description":"玻璃球形，简约高级" }
+      },
+      "placedItems": [
+        { "instanceId":"b1","furnitureId":"bed-wood-nordic",      "x":160,"z":105,"rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"b2","furnitureId":"nightstand-white",     "x":35, "z":20, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"b3","furnitureId":"nightstand-white",     "x":285,"z":20, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"b4","furnitureId":"wardrobe-slide-white", "x":160,"z":270,"rotation":180,"scaleW":1,"scaleD":1 },
+        { "instanceId":"b5","furnitureId":"desk-nordic-oak",      "x":250,"z":182,"rotation":270,"scaleW":1,"scaleD":1 },
+        { "instanceId":"b6","furnitureId":"chair-ergonomic",      "x":220,"z":182,"rotation":270,"scaleW":1,"scaleD":1 },
+        { "instanceId":"b7","furnitureId":"bookshelf-open-white", "x":50, "z":255,"rotation":180,"scaleW":1,"scaleD":1 },
+        { "instanceId":"b8","furnitureId":"plant-sansevieria",    "x":15, "z":15, "rotation":0,"scaleW":1,"scaleD":1 }
+      ]
+    },
+    "dining": {
+      "_layout": "Round table centered. 6 chairs around table. Sideboard top-left. Room 380w x 320d.",
+      "materials": {
+        "wall":  { "id":"wall-beige","name":"温柔奶茶色","brand":"进口乳胶漆","price":42,"unit":"元/㎡","category":"wall","color":"#E8D5B7","tags":["北欧","轻奢","日式"],"description":"温暖奶茶色调" },
+        "floor": { "id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木" },
+        "light": { "id":"light-chandelier","name":"水晶吊灯","brand":"水晶吊灯","price":3200,"unit":"元/件","category":"light","color":"#FFFACD","tags":["轻奢","中式"],"description":"水晶折射，奢华氛围" }
+      },
+      "placedItems": [
+        { "instanceId":"d1", "furnitureId":"dining-marble-round","x":190,"z":150,"rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"d2", "furnitureId":"chair-nordic-oak",   "x":190,"z":62, "rotation":0,  "scaleW":1,"scaleD":1 },
+        { "instanceId":"d3", "furnitureId":"chair-nordic-oak",   "x":190,"z":238,"rotation":180,"scaleW":1,"scaleD":1 },
+        { "instanceId":"d4", "furnitureId":"chair-nordic-oak",   "x":108,"z":120,"rotation":90, "scaleW":1,"scaleD":1 },
+        { "instanceId":"d5", "furnitureId":"chair-nordic-oak",   "x":272,"z":120,"rotation":270,"scaleW":1,"scaleD":1 },
+        { "instanceId":"d6", "furnitureId":"chair-nordic-oak",   "x":108,"z":170,"rotation":90, "scaleW":1,"scaleD":1 },
+        { "instanceId":"d7", "furnitureId":"chair-nordic-oak",   "x":272,"z":170,"rotation":270,"scaleW":1,"scaleD":1 },
+        { "instanceId":"d8", "furnitureId":"sideboard-walnut",   "x":60, "z":19, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"d9", "furnitureId":"plant-rubber-tree",  "x":343,"z":27, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"d10","furnitureId":"artwork-abstract",   "x":190,"z":2,  "rotation":0,"scaleW":1,"scaleD":1 }
+      ]
+    },
+    "kitchen": {
+      "_layout": "Cabinets + sink along back wall (z=0). Fridge right corner. Room 360w x 280d.",
+      "materials": {
+        "wall":  { "id":"wall-tile-metro","name":"地铁砖（浴室/厨房）","brand":"全抛釉砖","price":95,"unit":"元/㎡","category":"wall","color":"#FAFAFA","texture":"repeating-linear-gradient(0deg,#E0E0E0 0px,#E0E0E0 1px,#FAFAFA 1px,#FAFAFA 8px)","tags":["现代","工业风"],"description":"经典白色地铁砖" },
+        "floor": { "id":"floor-white-tile","name":"白色抛光砖","brand":"全抛釉砖","price":150,"unit":"元/㎡","category":"floor","color":"#F0EFEB","tags":["现代","北欧"],"description":"大块白砖" },
+        "tile":  { "id":"tile-white-marble","name":"白色大理石瓷砖","brand":"釉面砖","price":220,"unit":"元/㎡","category":"tile","color":"#F5F3EF","tags":["轻奢","现代"],"description":"通体大理石" },
+        "light": { "id":"light-spot","name":"无主灯轨道射灯","brand":"LED轨道灯","price":180,"unit":"元/个","category":"light","color":"#FFD700","tags":["现代","轻奢","工业风"],"description":"无主灯方案" }
+      },
+      "placedItems": [
+        { "instanceId":"k1","furnitureId":"cabinet-lower-gray", "x":130,"z":30, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"k2","furnitureId":"fridge-french-door", "x":315,"z":35, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"k3","furnitureId":"sink-double-steel",  "x":80, "z":22, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"k4","furnitureId":"hood-side-black",    "x":175,"z":26, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"k5","furnitureId":"cabinet-upper-white","x":60, "z":17, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"k6","furnitureId":"plant-sansevieria",  "x":335,"z":250,"rotation":0,"scaleW":1,"scaleD":1 }
+      ]
+    },
+    "bathroom": {
+      "_layout": "Vanity top-left, toilet top-right, shower bottom-left. Room 260w x 220d.",
+      "materials": {
+        "wall":  { "id":"wall-tile-white","name":"白色大理石纹砖","brand":"釉面砖","price":180,"unit":"元/㎡","category":"wall","color":"#EFEFEF","texture":"repeating-linear-gradient(45deg,#e0e0e0 0px,#e0e0e0 1px,#EFEFEF 0px,#EFEFEF 50%)","tags":["轻奢","现代"],"description":"天然大理石纹" },
+        "floor": { "id":"floor-hex-white","name":"白色六角砖","brand":"全抛釉砖","price":180,"unit":"元/㎡","category":"floor","color":"#F5F5F5","texture":"repeating-linear-gradient(30deg,#E0E0E0 0,#E0E0E0 1px,#F5F5F5 0,#F5F5F5 50%)","tags":["现代","北欧"],"description":"六角砖首选" },
+        "tile":  { "id":"tile-gray-stone","name":"灰色石纹砖","brand":"全抛釉砖","price":180,"unit":"元/㎡","category":"tile","color":"#B0B0B0","tags":["现代","工业风"],"description":"低调沉稳" },
+        "light": { "id":"light-spot","name":"无主灯轨道射灯","brand":"LED轨道灯","price":180,"unit":"元/个","category":"light","color":"#FFD700","tags":["现代","轻奢","工业风"],"description":"无主灯方案" }
+      },
+      "placedItems": [
+        { "instanceId":"ba1","furnitureId":"vanity-single-white","x":40, "z":25, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"ba2","furnitureId":"toilet-wallhung",    "x":220,"z":27, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"ba3","furnitureId":"shower-walkin",      "x":90, "z":170,"rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"ba4","furnitureId":"plant-sansevieria",  "x":240,"z":190,"rotation":0,"scaleW":1,"scaleD":1 }
+      ]
+    },
+    "study": {
+      "_layout": "Desk back wall centered. Bookshelves flanking desk. Chair in front. Room 320w x 290d.",
+      "materials": {
+        "wall":  { "id":"wall-gray",   "name":"高级灰墙漆",   "brand":"净味乳胶漆",   "price":38, "unit":"元/㎡","category":"wall",  "color":"#9E9E9E","tags":["现代","工业风","轻奢"],"description":"高级灰，百搭且耐看" },
+        "floor": { "id":"floor-walnut","name":"胡桃木深色地板","brand":"实木复合地板","price":380,"unit":"元/㎡","category":"floor", "color":"#6B4423","tags":["轻奢","中式"],"description":"深色胡桃，沉稳大气" },
+        "light": { "id":"light-spot",  "name":"无主灯轨道射灯","brand":"LED轨道灯",   "price":180,"unit":"元/个","category":"light", "color":"#FFD700","tags":["现代","轻奢","工业风"],"description":"无主灯方案" }
+      },
+      "placedItems": [
+        { "instanceId":"s1","furnitureId":"desk-standing",          "x":160,"z":36, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"s2","furnitureId":"chair-ergonomic",        "x":160,"z":140,"rotation":180,"scaleW":1,"scaleD":1 },
+        { "instanceId":"s3","furnitureId":"bookshelf-solid-walnut", "x":15, "z":120,"rotation":90, "scaleW":1,"scaleD":1 },
+        { "instanceId":"s4","furnitureId":"bookshelf-open-white",   "x":305,"z":100,"rotation":270,"scaleW":1,"scaleD":1 },
+        { "instanceId":"s5","furnitureId":"lamp-arc-gold",          "x":293,"z":140,"rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"s6","furnitureId":"plant-rubber-tree",      "x":33, "z":262,"rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"s7","furnitureId":"artwork-inkwash",        "x":160,"z":2,  "rotation":0,"scaleW":1,"scaleD":1 }
+      ]
+    },
+    "balcony": {
+      "_layout": "Sofa centered against back wall. Plants along left and right walls. Room 420w x 160d.",
+      "materials": {
+        "wall":  { "id":"wall-white",          "name":"哑光白墙漆",  "brand":"水性内墙漆","price":35, "unit":"元/㎡","category":"wall",  "color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白" },
+        "floor": { "id":"floor-concrete",      "name":"水泥灰地砖",  "brand":"通体砖",   "price":120,"unit":"元/㎡","category":"floor", "color":"#888888","tags":["工业风","现代"],"description":"工业水泥质感" },
+        "light": { "id":"light-japanese-paper","name":"和纸纸质吊灯","brand":"和纸纸灯", "price":420,"unit":"元/件","category":"light", "color":"#FFF0C0","tags":["日式","北欧"],"description":"柔和漫射光" }
+      },
+      "placedItems": [
+        { "instanceId":"bal1","furnitureId":"sofa-japanese",    "x":210,"z":42, "rotation":180,"scaleW":1,"scaleD":1 },
+        { "instanceId":"bal2","furnitureId":"plant-balcony-pot","x":30, "z":15, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"bal3","furnitureId":"plant-balcony-pot","x":30, "z":60, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"bal4","furnitureId":"plant-balcony-pot","x":30, "z":105,"rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"bal5","furnitureId":"plant-monstera",   "x":387,"z":35, "rotation":0,"scaleW":1,"scaleD":1 },
+        { "instanceId":"bal6","furnitureId":"plant-balcony-pot","x":390,"z":120,"rotation":0,"scaleW":1,"scaleD":1 }
+      ]
+    },
+    "bedroom2":  { "materials":{}, "placedItems":[] },
+    "bedroom3":  { "materials":{}, "placedItems":[] },
+    "bathroom2": { "materials":{}, "placedItems":[] },
+    "study2":    { "materials":{}, "placedItems":[] },
+    "closet":    { "materials":{}, "placedItems":[] },
+    "balcony2":  { "materials":{}, "placedItems":[] },
+    "yard":      { "materials":{}, "placedItems":[] },
+    "garage":    { "materials":{}, "placedItems":[] },
+    "gym":       { "materials":{}, "placedItems":[] },
+    "cinema":    { "materials":{}, "placedItems":[] },
+    "custom1":   { "materials":{}, "placedItems":[] },
+    "custom2":   { "materials":{}, "placedItems":[] },
+    "custom3":   { "materials":{}, "placedItems":[] },
+    "custom4":   { "materials":{}, "placedItems":[] },
+    "custom5":   { "materials":{}, "placedItems":[] }
+  }
+}
