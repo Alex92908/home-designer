@@ -32,23 +32,21 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE: https://home-designer-lovat.vercel.app
 
-      # ── 5. Install coscmd (Tencent COS CLI) ───────────────────
-      - name: Install coscmd
-        run: pip install coscmd
+      # ── 5. Install Tencent COS Python SDK ────────────────────
+      - name: Install cos-python-sdk-v5
+        run: pip install cos-python-sdk-v5
 
-      # ── 6. Configure coscmd ───────────────────────────────────
-      - name: Configure coscmd
-        run: |
-          coscmd config \
-            -a ${{ secrets.TENCENT_SECRET_ID }} \
-            -s ${{ secrets.TENCENT_SECRET_KEY }} \
-            -b ${{ secrets.TENCENT_COS_BUCKET }} \
-            -r ap-hongkong
-
-      # ── 7. Upload to COS ──────────────────────────────────────
-      # coscmd uses Python mimetypes → HTML gets text/html automatically
+      # ── 6. Upload with explicit Content-Type per file ─────────
+      # coscmd is unreliable with MIME types on Ubuntu;
+      # this script uses the official SDK and sets Content-Type explicitly.
       - name: Upload static files to COS
-        run: coscmd upload -r out/ /
+        run: python3 scripts/upload-cos.py
+        env:
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
+          TENCENT_COS_BUCKET: ${{ secrets.TENCENT_COS_BUCKET }}
+          COS_REGION: ap-hongkong
+          OUT_DIR: out
 
       - name: Done
         run: |
