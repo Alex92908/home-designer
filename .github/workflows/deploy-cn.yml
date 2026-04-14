@@ -1,9 +1,9 @@
-name: Deploy to Alibaba Cloud OSS (HK · China accessible)
+name: Deploy to Tencent Cloud COS (HK · China accessible)
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:   # allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -30,48 +30,27 @@ jobs:
       - name: Build static export
         run: npm run build:static
         env:
-          # Subscribe API stays on Vercel; from China it'll fail silently
-          # (the core design app is 100% client-side and works without it)
           NEXT_PUBLIC_API_BASE: https://home-designer-lovat.vercel.app
 
-      # ── 5. Install ossutil CLI ────────────────────────────────
-      - name: Install ossutil
-        run: |
-          wget -q https://gosspublic.alicdn.com/ossutil/1.7.17/ossutil64 -O ossutil64
-          chmod +x ossutil64
+      # ── 5. Install coscmd (Tencent COS CLI) ───────────────────
+      - name: Install coscmd
+        run: pip install coscmd
 
-      # ── 6. Configure ossutil ──────────────────────────────────
-      - name: Configure ossutil
+      # ── 6. Configure coscmd ───────────────────────────────────
+      - name: Configure coscmd
         run: |
-          ./ossutil64 config \
-            -e oss-cn-hongkong.aliyuncs.com \
-            -i "${{ secrets.ALI_OSS_KEY_ID }}" \
-            -k "${{ secrets.ALI_OSS_KEY_SECRET }}"
+          coscmd config \
+            -a ${{ secrets.TENCENT_SECRET_ID }} \
+            -s ${{ secrets.TENCENT_SECRET_KEY }} \
+            -b ${{ secrets.TENCENT_COS_BUCKET }} \
+            -r ap-hongkong
 
-      # ── 7. Upload non-HTML files (ossutil auto-detects their MIME types) ──
-      - name: Upload static assets to OSS
-        run: |
-          ./ossutil64 cp -r -f out/ oss://${{ secrets.ALI_OSS_BUCKET }}/
-
-      # ── 8. Re-upload HTML with explicit Content-Type (critical) ──────────
-      # Without this, OSS serves HTML as application/octet-stream → download
-      - name: Fix HTML Content-Type
-        run: |
-          find out -name "*.html" -type f | while IFS= read -r f; do
-            key="${f#out/}"
-            ./ossutil64 cp -f "$f" \
-              "oss://${{ secrets.ALI_OSS_BUCKET }}/$key" \
-              --meta "Content-Type:text/html;charset=utf-8#Cache-Control:no-cache"
-          done
-
-      # ── 9. Long cache for hashed JS/CSS ──────────────────────────────────
-      - name: Set long cache for _next/static assets
-        run: |
-          ./ossutil64 set-meta -r \
-            "oss://${{ secrets.ALI_OSS_BUCKET }}/_next/static/" \
-            "Cache-Control:public, max-age=31536000, immutable" --update || true
+      # ── 7. Upload to COS ──────────────────────────────────────
+      # coscmd uses Python mimetypes → HTML gets text/html automatically
+      - name: Upload static files to COS
+        run: coscmd upload -r out/ /
 
       - name: Done
         run: |
-          echo "✅ Deployed to https://${{ secrets.ALI_OSS_BUCKET }}.oss-cn-hongkong.aliyuncs.com"
-          echo "   (or your custom CDN domain if configured)"
+          echo "✅ Deployed!"
+          echo "   Website: https://${{ secrets.TENCENT_COS_BUCKET }}.cos-website.ap-hongkong.myqcloud.com"
