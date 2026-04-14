@@ -91,7 +91,8 @@ export default function ExportModal() {
     const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!isValidEmail) return;
     setExporting(true);
-    fetch("/api/subscribe", {
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
+    fetch(`${apiBase}/api/subscribe`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, source: "export-modal" }),

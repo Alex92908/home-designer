@@ -1,0 +1,71 @@
+name: Deploy to Alibaba Cloud OSS (HK · China accessible)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # allow manual trigger from GitHub Actions UI
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ── 1. Checkout ───────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Node setup ─────────────────────────────────────────
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # ── 3. Install deps ───────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 4. Static export → ./out/ ─────────────────────────────
+      - name: Build static export
+        run: npm run build:static
+        env:
+          # Subscribe API stays on Vercel; from China it'll fail silently
+          # (the core design app is 100% client-side and works without it)
+          NEXT_PUBLIC_API_BASE: https://home-designer-lovat.vercel.app
+
+      # ── 5. Install ossutil CLI ────────────────────────────────
+      - name: Install ossutil
+        run: |
+          wget -q https://gosspublic.alicdn.com/ossutil/1.7.17/ossutil64 -O ossutil64
+          chmod +x ossutil64
+
+      # ── 6. Configure ossutil ──────────────────────────────────
+      - name: Configure ossutil
+        run: |
+          ./ossutil64 config \
+            -e oss-cn-hongkong.aliyuncs.com \
+            -i "${{ secrets.ALI_OSS_KEY_ID }}" \
+            -k "${{ secrets.ALI_OSS_KEY_SECRET }}"
+
+      # ── 7. Upload to OSS bucket ───────────────────────────────
+      - name: Upload static files to OSS
+        run: |
+          ./ossutil64 cp -r -f out/ oss://${{ secrets.ALI_OSS_BUCKET }}/
+
+      # ── 8. Set correct MIME types & cache headers ─────────────
+      - name: Set cache headers for static assets
+        run: |
+          # Long cache for hashed assets
+          ./ossutil64 set-meta -r \
+            oss://${{ secrets.ALI_OSS_BUCKET }}/_next/static/ \
+            "Cache-Control:public, max-age=31536000, immutable" --update
+          # No-cache for HTML (always fresh)
+          ./ossutil64 set-meta \
+            oss://${{ secrets.ALI_OSS_BUCKET }}/index.html \
+            "Cache-Control:no-cache, no-store, must-revalidate" --update || true
+
+      - name: Done
+        run: |
+          echo "✅ Deployed to https://${{ secrets.ALI_OSS_BUCKET }}.oss-cn-hongkong.aliyuncs.com"
+          echo "   (or your custom CDN domain if configured)"

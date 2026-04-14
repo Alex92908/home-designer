@@ -84,7 +84,8 @@ export default function ShareModal() {
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
     setLoading(true);
     try {
-      await fetch("/api/subscribe", {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
+      await fetch(`${apiBase}/api/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, source: "share-modal" }),
