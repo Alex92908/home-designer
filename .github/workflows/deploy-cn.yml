@@ -53,7 +53,29 @@ jobs:
         run: |
           ./ossutil64 cp -r -f out/ oss://${{ secrets.ALI_OSS_BUCKET }}/
 
-      # ── 8. Set correct MIME types & cache headers ─────────────
+      # ── 8. Fix MIME types (critical: without this browser downloads HTML) ──
+      - name: Fix Content-Type for HTML files
+        run: |
+          ./ossutil64 set-meta -r \
+            oss://${{ secrets.ALI_OSS_BUCKET }}/ \
+            "Content-Type:text/html;charset=utf-8" \
+            --include "*.html" --update
+
+      - name: Fix Content-Type for JS files
+        run: |
+          ./ossutil64 set-meta -r \
+            oss://${{ secrets.ALI_OSS_BUCKET }}/ \
+            "Content-Type:application/javascript" \
+            --include "*.js" --update
+
+      - name: Fix Content-Type for CSS files
+        run: |
+          ./ossutil64 set-meta -r \
+            oss://${{ secrets.ALI_OSS_BUCKET }}/ \
+            "Content-Type:text/css" \
+            --include "*.css" --update
+
+      # ── 9. Set cache headers ──────────────────────────────────
       - name: Set cache headers for static assets
         run: |
           # Long cache for hashed assets
@@ -61,9 +83,10 @@ jobs:
             oss://${{ secrets.ALI_OSS_BUCKET }}/_next/static/ \
             "Cache-Control:public, max-age=31536000, immutable" --update
           # No-cache for HTML (always fresh)
-          ./ossutil64 set-meta \
-            oss://${{ secrets.ALI_OSS_BUCKET }}/index.html \
-            "Cache-Control:no-cache, no-store, must-revalidate" --update || true
+          ./ossutil64 set-meta -r \
+            oss://${{ secrets.ALI_OSS_BUCKET }}/ \
+            "Cache-Control:no-cache, no-store, must-revalidate" \
+            --include "*.html" --update || true
 
       - name: Done
         run: |
