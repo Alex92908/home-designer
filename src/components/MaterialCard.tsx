@@ -4,12 +4,16 @@
 
 import { MaterialItem } from "@/lib/types";
 import { useDesignerStore } from "@/lib/store";
+import { useLocale } from "@/lib/i18n";
+import { getMaterialNameEn } from "@/locales/itemNames";
 
 export default function MaterialCard({ item }: { item: MaterialItem }) {
   const setMaterial = useDesignerStore((s) => s.setMaterial);
   const activeRoom = useDesignerStore((s) => s.activeRoom);
   const roomMaterials = useDesignerStore((s) => s.rooms[activeRoom].materials);
   const isSelected = roomMaterials[item.category]?.id === item.id;
+  const locale = useLocale();
+  const displayName = locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name;
 
   return (
     <button
@@ -24,7 +28,7 @@ export default function MaterialCard({ item }: { item: MaterialItem }) {
       `}
     >
       <div className="w-full h-10 rounded-lg" style={{ background: item.texture ?? item.color }} />
-      <span className="text-xs font-semibold text-gray-800 leading-tight line-clamp-1">{item.name}</span>
+      <span className="text-xs font-semibold text-gray-800 leading-tight line-clamp-1">{displayName}</span>
       <div className="flex items-center justify-between gap-1">
         <span className="text-[10px] text-gray-400">{item.brand}</span>
         <span className="text-[10px] font-bold text-blue-600">¥{item.price.toLocaleString()}</span>

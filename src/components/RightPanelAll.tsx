@@ -5,7 +5,7 @@ import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, getRoomArea } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale } from "@/lib/i18n";
-import { getFurnitureNameEn } from "@/locales/itemNames";
+import { getFurnitureNameEn, getMaterialNameEn } from "@/locales/itemNames";
 import { formatPrice } from "@/lib/currency";
 
 // Compute cost for one room (mirrors store totalCost logic but for any room)
@@ -201,7 +201,7 @@ export default function RightPanelAll() {
                               <div key={item.id} className="flex items-center gap-2">
                                 <div className="w-4 h-4 rounded shrink-0"
                                   style={{ background: item.texture ?? item.color, border: "1px solid var(--ds-border)" }} />
-                                <span className="flex-1 text-[10px] truncate" style={{ color: "var(--ds-text)" }}>{item.name}</span>
+                                <span className="flex-1 text-[10px] truncate" style={{ color: "var(--ds-text)" }}>{locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name}</span>
                                 <span className="text-[9px]" style={{ color: "var(--ds-text-3)" }}>
                                   {item.category === "wall" || item.category === "floor" || item.category === "tile" ? `${qty}㎡` : item.id === "light-spot" ? "×8" : "×1"}
                                 </span>

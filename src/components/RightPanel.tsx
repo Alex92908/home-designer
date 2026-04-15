@@ -161,7 +161,7 @@ export default function RightPanel() {
                       style={{ background: item.texture ?? item.color, border: "1px solid var(--ds-border)" }}
                     />
                     <div className="min-w-0">
-                      <div className="text-[11px] font-medium truncate" style={{ color: "var(--ds-text)" }}>{item.name}</div>
+                      <div className="text-[11px] font-medium truncate" style={{ color: "var(--ds-text)" }}>{locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name}</div>
                       <div className="text-[9px]" style={{ color: "var(--ds-text-3)" }}>
                         {item.category === "wall" || item.category === "floor" || item.category === "tile" ? `${qty}㎡` : item.id === "light-spot" ? "×8" : "×1"}
                       </div>

@@ -135,6 +135,7 @@ export const en: Translations = {
   fpEditDone: "🪟 Done Editing",
   fpEditStart: "🪟 Edit Windows/Door",
   fpWallLabels: { back: "Back", front: "Front", left: "Left", right: "Right" },
+  fpWindowWord: " Win",
   fpDoorLabel: "Door:",
   fpDoorDirs: { bottom: "↓", top: "↑", left: "←", right: "→" },
   fpRotateItem: "Rotate",

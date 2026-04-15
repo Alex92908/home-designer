@@ -133,6 +133,7 @@ export const zh = {
   fpEditDone: "🪟 完成编辑",
   fpEditStart: "🪟 编辑窗/门",
   fpWallLabels: { back: "背墙", front: "前墙", left: "左墙", right: "右墙" } as Record<string, string>,
+  fpWindowWord: "窗",
   fpDoorLabel: "门朝向:",
   fpDoorDirs: { bottom: "下", top: "上", left: "左", right: "右" } as Record<string, string>,
   fpRotateItem: "旋转",

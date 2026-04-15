@@ -654,7 +654,7 @@ export default function FloorPlan() {
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,122,255,0.35)"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,122,255,0.2)"; }}
                 >
-                  +{labels[wall]}窗
+                  +{labels[wall]}{t.fpWindowWord}
                 </button>
               );
             })}
