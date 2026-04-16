@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, Component, ReactNode } from "react";
+import { useRef, useEffect, useMemo, Component, ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import * as THREE from "three";
@@ -8,6 +8,7 @@ import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
+import { getFloorTexture, getWallTexture, floorTileSize, wallTileSize } from "@/lib/textures";
 
 // ─── Error boundary ───────────────────────────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -52,15 +53,52 @@ function CameraController({ W, D, H }: { W: number; D: number; H: number }) {
 function RoomShell({
   W, D, H,
   wallColor, floorColor,
+  wallId, floorId,
   windows,
 }: {
   W: number; D: number; H: number;
   wallColor: string; floorColor: string;
+  wallId: string; floorId: string;
   windows: WindowConfig[];
 }) {
   const skirtColor = shade(wallColor, -18);
-  const floorMat = { color: floorColor, roughness: 0.55, metalness: 0.08 };
-  const wallMat = { color: wallColor, roughness: 0.82, metalness: 0.0 };
+
+  // ── PBR textures ──────────────────────────────────────────────────────
+  // useMemo so we only rebuild when material ID or room size changes.
+  // Texture objects are generated once (cached), clone avoids repeat-state sharing.
+  const floorTex = useMemo(() => {
+    const base = getFloorTexture(floorId);
+    if (!base) return null;
+    const t = base.clone();
+    const [us, vs] = floorTileSize(floorId);
+    t.repeat.set(W / us, D / vs);
+    t.needsUpdate = true;
+    return t;
+  }, [floorId, W, D]);
+
+  const wallTex = useMemo(() => {
+    const base = getWallTexture(wallId);
+    if (!base) return null;
+    const t = base.clone();
+    const [us, vs] = wallTileSize(wallId);
+    t.repeat.set(W / us, H / vs);
+    t.needsUpdate = true;
+    return t;
+  }, [wallId, W, H]);
+
+  const sideTex = useMemo(() => {
+    const base = getWallTexture(wallId);
+    if (!base) return null;
+    const t = base.clone();
+    const [us, vs] = wallTileSize(wallId);
+    t.repeat.set(D / us, H / vs);
+    t.needsUpdate = true;
+    return t;
+  }, [wallId, D, H]);
+
+  const floorMat = { color: floorColor, roughness: 0.55, metalness: 0.08, ...(floorTex ? { map: floorTex } : {}) };
+  const wallMat  = { color: wallColor,  roughness: 0.82, metalness: 0.0,  ...(wallTex  ? { map: wallTex  } : {}) };
+  const sideMatProps = { color: wallColor, roughness: 0.82, metalness: 0.0, ...(sideTex  ? { map: sideTex  } : {}) };
 
   return (
     <>
@@ -79,13 +117,13 @@ function RoomShell({
       {/* Left wall */}
       <mesh position={[-W / 2, H / 2, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
         <planeGeometry args={[D, H]} />
-        <meshStandardMaterial {...wallMat} side={THREE.FrontSide} />
+        <meshStandardMaterial {...sideMatProps} side={THREE.FrontSide} />
       </mesh>
 
       {/* Right wall */}
       <mesh position={[W / 2, H / 2, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
         <planeGeometry args={[D, H]} />
-        <meshStandardMaterial {...wallMat} side={THREE.FrontSide} />
+        <meshStandardMaterial {...sideMatProps} side={THREE.FrontSide} />
       </mesh>
 
       {/* Ceiling */}
@@ -937,10 +975,12 @@ function Scene({ isIOS }: { isIOS: boolean }) {
   const D = (roomDimensions?.depth  ?? def.depth)  / 100;
   const H = def.height / 100;
 
-  const wallColor = roomState.materials.wall?.color ?? def.defaultWallColor;
+  const wallColor  = roomState.materials.wall?.color  ?? def.defaultWallColor;
   const floorColor = roomState.materials.floor?.color ?? def.defaultFloorColor;
+  const wallId     = roomState.materials.wall?.id     ?? "";
+  const floorId    = roomState.materials.floor?.id    ?? "";
   const lightColor = roomState.materials.light?.color ?? "#FFE8A0";
-  const lightId = roomState.materials.light?.id ?? "";
+  const lightId    = roomState.materials.light?.id    ?? "";
 
   return (
     <>
@@ -973,6 +1013,8 @@ function Scene({ isIOS }: { isIOS: boolean }) {
         W={W} D={D} H={H}
         wallColor={wallColor}
         floorColor={floorColor}
+        wallId={wallId}
+        floorId={floorId}
         windows={roomWindows}
       />
 
