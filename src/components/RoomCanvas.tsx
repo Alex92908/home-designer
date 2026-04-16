@@ -925,7 +925,7 @@ function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def
 
 // ─── Main Scene ────────────────────────────────────────────
 
-function Scene() {
+function Scene({ isIOS }: { isIOS: boolean }) {
   const activeRoom    = useDesignerStore((s) => s.activeRoom);
   const roomState     = useDesignerStore((s) => s.rooms[activeRoom]);
   const roomWindows   = useDesignerStore((s) => s.roomWindows?.[activeRoom] ?? []);
@@ -946,8 +946,9 @@ function Scene() {
     <>
       <CameraController W={W} D={D} H={H} />
 
-      {/* Environment for reflections */}
-      <Environment preset="apartment" />
+      {/* Environment — skip on iOS: PMREMGenerator.fromScene is broken on iPhone Metal
+          (three.js bug #25888). Compensate with stronger ambient + fill lights. */}
+      {!isIOS && <Environment preset="apartment" />}
 
       {/* Main directional light with shadows */}
       <directionalLight
@@ -963,8 +964,9 @@ function Scene() {
       />
       {/* Fill light */}
       <directionalLight position={[-W * 0.8, H * 1.5, -D * 0.5]} intensity={0.5} />
-      {/* Ambient */}
-      <ambientLight intensity={0.7} />
+      {/* Ambient — brighter on iOS to compensate for missing Environment IBL */}
+      <ambientLight intensity={isIOS ? 1.8 : 0.7} />
+      {isIOS && <directionalLight position={[-3, 4, 3]} intensity={0.8} />}
 
       {/* Room geometry */}
       <RoomShell
@@ -987,12 +989,30 @@ function Scene() {
 
 // ─── Export ────────────────────────────────────────────────
 
+// Detect iOS synchronously — safe here because RoomCanvas is loaded with ssr:false
+// Fixes three.js bug #25888: PMREMGenerator.fromScene returns black envMap on iPhone (Metal WebGL)
+function detectIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
 export default function RoomCanvas() {
+  const isIOS = detectIOS();
+
   return (
     <div className="w-full h-full">
       <ErrorBoundary>
         <Canvas
-          gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.1 }}
+          gl={{
+            // iOS: antialias causes pipeline issues (Safari ignores it anyway)
+            antialias: !isIOS,
+            // iOS Metal GLSL compiler fails on ACESFilmicToneMapping → use Linear
+            toneMapping: isIOS ? THREE.LinearToneMapping : THREE.ACESFilmicToneMapping,
+            toneMappingExposure: 1.1,
+          }}
           dpr={[1, 2]}
           shadows={{ type: THREE.PCFShadowMap }}
           camera={{ position: [0, 1.4, 6], fov: 58, near: 0.1, far: 80 }}
@@ -1006,7 +1026,7 @@ export default function RoomCanvas() {
             maxPolarAngle={Math.PI * 0.52}
             target={[0, 0.6, 0]}
           />
-          <Scene />
+          <Scene isIOS={isIOS} />
         </Canvas>
       </ErrorBoundary>
     </div>
