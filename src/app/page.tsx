@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import LeftPanel from "@/components/LeftPanel";
 import RightPanel from "@/components/RightPanel";
 import ExteriorPanel from "@/components/ExteriorPanel";
@@ -34,10 +34,58 @@ const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
   ),
 });
 
+// ─── Panel toggle tab button ──────────────────────────────
+function PanelToggle({
+  side,
+  open,
+  onClick,
+}: {
+  side: "left" | "right";
+  open: boolean;
+  onClick: () => void;
+}) {
+  // Chevron direction: when left panel is open → show ◀ (collapse), closed → ▶ (expand)
+  const chevron =
+    side === "left"
+      ? open ? "◀" : "▶"
+      : open ? "▶" : "◀";
+
+  const posClass =
+    side === "left"
+      ? "left-0 rounded-r-xl"
+      : "right-0 rounded-l-xl";
+
+  return (
+    <button
+      onClick={onClick}
+      className={`absolute top-1/2 -translate-y-1/2 z-20 flex items-center justify-center
+        w-5 h-12 text-[11px] font-bold transition-all active:scale-95 select-none ${posClass}`}
+      style={{
+        background: "rgba(30,30,50,0.72)",
+        color: "rgba(255,255,255,0.85)",
+        backdropFilter: "blur(6px)",
+        border: "1px solid rgba(255,255,255,0.12)",
+      }}
+      title={open ? "收起" : "展开"}
+    >
+      {chevron}
+    </button>
+  );
+}
+
 export default function Home() {
-  const viewMode       = useDesignerStore((s) => s.viewMode);
-  const loadFromShare  = useDesignerStore((s) => s.loadFromShare);
+  const viewMode      = useDesignerStore((s) => s.viewMode);
+  const loadFromShare = useDesignerStore((s) => s.loadFromShare);
   const t = useT();
+
+  const [leftOpen,  setLeftOpen]  = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
+
+  const isAll      = viewMode === "all";
+  const isExterior = viewMode === "exterior";
+
+  // Panels only apply to room / 2d views
+  const showPanels = !isAll && !isExterior;
 
   // Load shared plan from URL ?share= param (runs once after hydration)
   useEffect(() => {
@@ -47,32 +95,56 @@ export default function Home() {
     const snapshot = decodeShare(encoded);
     if (snapshot) {
       loadFromShare(snapshot);
-      // Clean URL without reloading
       const url = new URL(window.location.href);
       url.searchParams.delete("share");
       window.history.replaceState({}, "", url.toString());
     }
   }, [loadFromShare]);
-  const isAll      = viewMode === "all";
-  const isExterior = viewMode === "exterior";
-  const is3d       = viewMode === "3d";
-  const is2d       = viewMode === "2d";
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
       <TopBar />
       <div className="flex flex-1 overflow-hidden">
-        {/* Room sidebar — always visible except all/exterior views */}
-        {!isAll && !isExterior && <RoomSidebar />}
-        {!isAll && !isExterior && <LeftPanel />}
+
+        {/* Room sidebar — always visible in room/2d views */}
+        {showPanels && <RoomSidebar />}
+
+        {/* Left panel with collapse */}
+        {showPanels && (
+          <div
+            className="shrink-0 h-full overflow-hidden transition-all duration-300"
+            style={{ width: leftOpen ? 256 : 0 }}
+          >
+            <LeftPanel />
+          </div>
+        )}
+
+        {/* Main canvas + toggle buttons */}
         <main className="flex-1 relative overflow-hidden">
-          {is3d       && <RoomCanvas />}
-          {isExterior && <HouseCanvas />}
-          {isAll      && <FloorPlanAll />}
-          {is2d       && <FloorPlan />}
+          {showPanels && (
+            <PanelToggle side="left" open={leftOpen} onClick={() => setLeftOpen(v => !v)} />
+          )}
+          {showPanels && (
+            <PanelToggle side="right" open={rightOpen} onClick={() => setRightOpen(v => !v)} />
+          )}
+
+          {viewMode === "3d"       && <RoomCanvas />}
+          {isExterior              && <HouseCanvas />}
+          {isAll                   && <FloorPlanAll />}
+          {viewMode === "2d"       && <FloorPlan />}
         </main>
-        {!isAll && !isExterior && <RightPanel />}
-        {isAll && <RightPanelAll />}
+
+        {/* Right panel with collapse */}
+        {showPanels && (
+          <div
+            className="shrink-0 h-full overflow-hidden transition-all duration-300"
+            style={{ width: rightOpen ? 288 : 0 }}
+          >
+            <RightPanel />
+          </div>
+        )}
+
+        {isAll      && <RightPanelAll />}
         {isExterior && <ExteriorPanel />}
       </div>
       <ExportModal />
