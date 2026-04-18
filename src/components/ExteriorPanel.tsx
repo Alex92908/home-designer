@@ -61,6 +61,9 @@ export default function ExteriorPanel() {
   const setExterior = useDesignerStore(s => s.setExterior);
   const t = useT();
 
+  const hasMovedOutdoor = Object.keys(exterior.outdoorPositions ?? {}).length > 0;
+  const resetOutdoorPositions = () => setExterior({ outdoorPositions: {} });
+
   const applyPreset = (p: typeof PRESETS[0]) => {
     setExterior({
       preset: p.id,
@@ -202,6 +205,25 @@ export default function ExteriorPanel() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* ── Drag hint + reset ── */}
+        <div className="mx-3 mt-3 px-3 py-2.5 rounded-xl" style={{ background: "#EBF5FF", border: "1px solid #CCE4FF" }}>
+          <div className="text-[10px] font-bold mb-0.5" style={{ color: "#0055B3" }}>
+            🖱️ {t.extDragHint ?? "Drag outdoor elements to reposition"}
+          </div>
+          <div className="text-[9px]" style={{ color: "#3B82C4" }}>
+            {t.extDragDesc ?? "Hover pool / pergola / kitchen / fountain to grab & move"}
+          </div>
+          {hasMovedOutdoor && (
+            <button
+              onClick={resetOutdoorPositions}
+              className="mt-1.5 text-[9px] font-semibold px-2 py-0.5 rounded-md transition-all"
+              style={{ background: "#DBEAFE", color: "#1D4ED8", border: "1px solid #93C5FD" }}
+            >
+              ↺ {t.extResetPositions ?? "Reset positions"}
+            </button>
+          )}
         </div>
 
         {/* ── Parking & Driveway ── */}

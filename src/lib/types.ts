@@ -40,6 +40,8 @@ export interface ExteriorSettings {
   floors: number;        // 1–6
   yardPreset: "minimal" | "garden" | "pool" | "full";
   showParking?: boolean;
+  /** Saved positions for draggable outdoor elements (pool, pergola, etc.) */
+  outdoorPositions?: Record<string, { x: number; z: number }>;
 }
 
 export type StyleTag = "现代" | "北欧" | "中式" | "日式" | "轻奢" | "工业风";

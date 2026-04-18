@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useEffect } from "react";
+import { useRef, useMemo, useEffect, useState } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import * as THREE from "three";
@@ -260,7 +260,7 @@ function Foundation({ W, D, color }: { W: number; D: number; color: string }) {
 }
 
 // ─── Tree variations ─────────────────────────────────────────
-function Tree({ x, z, type = "round", scale = 1 }: { x: number; z: number; type?: "round" | "pine" | "palm"; scale?: number }) {
+function Tree({ x, z, type = "round", scale = 1 }: { x: number; z: number; type?: "round" | "pine" | "palm" | "cypress"; scale?: number }) {
   const s = scale;
   if (type === "pine") {
     return (
@@ -301,6 +301,38 @@ function Tree({ x, z, type = "round", scale = 1 }: { x: number; z: number; type?
             </mesh>
           );
         })}
+      </group>
+    );
+  }
+  if (type === "cypress") {
+    // Italian Cypress — very tall, very narrow, columnar dark green
+    return (
+      <group position={[x, 0, z]} scale={[s, s, s]}>
+        {/* Trunk */}
+        <mesh position={[0, 0.5, 0]} castShadow>
+          <cylinderGeometry args={[0.08, 0.12, 1.0, 6]} />
+          <meshStandardMaterial color="#3A2210" roughness={0.9} />
+        </mesh>
+        {/* Lower tier */}
+        <mesh position={[0, 1.5, 0]} castShadow>
+          <coneGeometry args={[0.38, 2.0, 7]} />
+          <meshStandardMaterial color="#1A4A20" roughness={0.9} />
+        </mesh>
+        {/* Mid tier */}
+        <mesh position={[0, 2.8, 0]} castShadow>
+          <coneGeometry args={[0.26, 2.0, 7]} />
+          <meshStandardMaterial color="#1C5224" roughness={0.9} />
+        </mesh>
+        {/* Top tier */}
+        <mesh position={[0, 4.1, 0]} castShadow>
+          <coneGeometry args={[0.14, 1.6, 6]} />
+          <meshStandardMaterial color="#1E5826" roughness={0.9} />
+        </mesh>
+        {/* Tip */}
+        <mesh position={[0, 5.1, 0]} castShadow>
+          <coneGeometry args={[0.06, 0.7, 5]} />
+          <meshStandardMaterial color="#1A4820" roughness={0.9} />
+        </mesh>
       </group>
     );
   }
@@ -397,10 +429,119 @@ function GardenPath({ W, D }: { W: number; D: number }) {
   );
 }
 
+// ─── Draggable outdoor element wrapper ──────────────────────
+/**
+ * Wraps an outdoor element (Pool, Pergola, etc.) so it can be dragged to any
+ * position on the ground plane. Position is persisted in the store.
+ *
+ * Uses raw DOM pointermove listeners on the canvas for reliable world-space
+ * dragging regardless of which child mesh the cursor is over.
+ */
+function DraggableGroup({
+  posKey, defaultX, defaultZ, hitW = 8, hitD = 8, orbitRef, children,
+}: {
+  posKey: string;
+  defaultX: number;
+  defaultZ: number;
+  hitW?: number;
+  hitD?: number;
+  orbitRef: React.MutableRefObject<any>;
+  children: React.ReactNode;
+}) {
+  const { gl, camera } = useThree();
+  const setOutdoorPosition = useDesignerStore(s => s.setOutdoorPosition);
+  const savedPos = useDesignerStore(s => s.exterior.outdoorPositions?.[posKey]);
+  const pos = savedPos ?? { x: defaultX, z: defaultZ };
+
+  const isDragging = useRef(false);
+  const [hovered, setHovered] = useState(false);
+  const groundPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+
+    const onMove = (e: PointerEvent) => {
+      if (!isDragging.current) return;
+      const rect = canvas.getBoundingClientRect();
+      const ndc = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera(ndc, camera);
+      const hit = new THREE.Vector3();
+      if (ray.ray.intersectPlane(groundPlane, hit)) {
+        setOutdoorPosition(posKey, { x: hit.x, z: hit.z });
+      }
+    };
+
+    const onUp = () => {
+      if (!isDragging.current) return;
+      isDragging.current = false;
+      if (orbitRef.current) orbitRef.current.enabled = true;
+      canvas.style.cursor = "default";
+    };
+
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerup", onUp);
+    return () => {
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gl, camera, posKey]);
+
+  return (
+    <group position={[pos.x, 0, pos.z]}>
+      {/* Invisible hit surface — catches pointer events so drag starts even on empty ground around element */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          isDragging.current = true;
+          if (orbitRef.current) orbitRef.current.enabled = false;
+          gl.domElement.style.cursor = "grabbing";
+        }}
+        onPointerEnter={() => { setHovered(true); gl.domElement.style.cursor = "grab"; }}
+        onPointerLeave={() => { if (!isDragging.current) { setHovered(false); gl.domElement.style.cursor = "default"; } }}
+      >
+        <planeGeometry args={[hitW, hitD]} />
+        <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} depthWrite={false} />
+      </mesh>
+
+      {/* Hover ring indicator */}
+      {hovered && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]}>
+          <ringGeometry args={[Math.max(hitW, hitD) / 2 + 0.1, Math.max(hitW, hitD) / 2 + 0.55, 48]} />
+          <meshBasicMaterial color="#007AFF" transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} />
+        </mesh>
+      )}
+
+      {/* Drag arrows (4 directional) shown on hover */}
+      {hovered && ([-Math.PI / 2, 0, Math.PI / 2, Math.PI] as number[]).map((angle, i) => (
+        <mesh
+          key={i}
+          rotation={[-Math.PI / 2, 0, angle]}
+          position={[
+            Math.sin(angle) * (Math.max(hitW, hitD) / 2 + 1.1),
+            0.1,
+            Math.cos(angle) * (Math.max(hitW, hitD) / 2 + 1.1),
+          ]}
+        >
+          <coneGeometry args={[0.28, 0.6, 3]} />
+          <meshBasicMaterial color="#007AFF" transparent opacity={0.7} />
+        </mesh>
+      ))}
+
+      {children}
+    </group>
+  );
+}
+
 // ─── Swimming pool ───────────────────────────────────────────
 function AnimatedWater({ w, d }: { w: number; d: number }) {
   const matRef = useRef<THREE.MeshPhysicalMaterial>(null);
-  useFrame((_, dt) => {
+  useFrame(() => {
     if (matRef.current) {
       // subtle shimmer: oscillate emissiveIntensity
       matRef.current.emissiveIntensity = 0.08 + 0.06 * Math.sin(Date.now() * 0.002);
@@ -411,86 +552,370 @@ function AnimatedWater({ w, d }: { w: number; d: number }) {
       <boxGeometry args={[w, 0.22, d]} />
       <meshPhysicalMaterial
         ref={matRef}
-        color="#18A8D8"
-        emissive="#006090"
+        color="#0AACCC"
+        emissive="#005580"
         emissiveIntensity={0.08}
         transparent
-        opacity={0.90}
-        roughness={0.02}
+        opacity={0.92}
+        roughness={0.01}
         metalness={0.0}
-        envMapIntensity={2.5}
-        transmission={0.08}
+        envMapIntensity={3.5}
+        transmission={0.06}
       />
     </mesh>
   );
 }
 
-function Pool({ x, z, w = 5, d = 3 }: { x: number; z: number; w?: number; d?: number }) {
+// Luxury infinity-edge pool with travertine deck, spa, loungers, cabana
+function Pool({ x, z, w = 9, d = 5 }: { x: number; z: number; w?: number; d?: number }) {
+  // Travertine deck tiles
+  const deckTiles = useMemo(() => {
+    const tiles: { tx: number; tz: number }[] = [];
+    const deckW = w + 3.0;
+    const deckD = d + 3.0;
+    const tileSize = 0.9;
+    const cols = Math.ceil(deckW / tileSize);
+    const rows = Math.ceil(deckD / tileSize);
+    for (let ci = 0; ci < cols; ci++) {
+      for (let ri = 0; ri < rows; ri++) {
+        const tx = -deckW / 2 + ci * tileSize + tileSize / 2;
+        const tz = -deckD / 2 + ri * tileSize + tileSize / 2;
+        // Skip over pool area
+        if (Math.abs(tx) < w / 2 + 0.1 && Math.abs(tz) < d / 2 + 0.1) continue;
+        tiles.push({ tx, tz });
+      }
+    }
+    return tiles;
+  }, [w, d]);
+
   return (
     <group position={[x, 0, z]}>
-      {/* Pool shell */}
-      <mesh position={[0, -0.35, 0]} castShadow receiveShadow>
-        <boxGeometry args={[w + 0.6, 0.7, d + 0.6]} />
-        <meshStandardMaterial color="#D8D0C0" roughness={0.8} />
+      {/* ── Travertine deck ── */}
+      {deckTiles.map((t, i) => (
+        <mesh key={i} position={[t.tx, -0.02, t.tz]} receiveShadow>
+          <boxGeometry args={[0.86, 0.04, 0.86]} />
+          <meshStandardMaterial color="#EDE8D8" roughness={0.75} metalness={0.02} />
+        </mesh>
+      ))}
+
+      {/* ── Pool shell (travertine coping surround) ── */}
+      <mesh position={[0, -0.3, 0]} castShadow receiveShadow>
+        <boxGeometry args={[w + 0.7, 0.6, d + 0.7]} />
+        <meshStandardMaterial color="#E2DDD0" roughness={0.7} />
       </mesh>
-      {/* Pool interior (slightly inset) */}
-      <mesh position={[0, -0.05, 0]}>
-        <boxGeometry args={[w - 0.02, 0.6, d - 0.02]} />
-        <meshStandardMaterial color="#A8D8E8" roughness={0.3} />
+
+      {/* ── Pool interior walls (blue plaster) ── */}
+      <mesh position={[0, -0.06, 0]}>
+        <boxGeometry args={[w - 0.05, 0.55, d - 0.05]} />
+        <meshStandardMaterial color="#85C8E0" roughness={0.25} />
       </mesh>
-      {/* Animated water surface */}
-      <AnimatedWater w={w - 0.1} d={d - 0.1} />
-      {/* Coping tiles (rim) */}
-      {[
-        { pos: [0, 0.01, -(d / 2 + 0.25)] as [number,number,number], args: [w + 0.6, 0.08, 0.5] as [number,number,number] },
-        { pos: [0, 0.01,  (d / 2 + 0.25)] as [number,number,number], args: [w + 0.6, 0.08, 0.5] as [number,number,number] },
-        { pos: [-(w / 2 + 0.25), 0.01, 0] as [number,number,number], args: [0.5, 0.08, d] as [number,number,number] },
-        { pos: [ (w / 2 + 0.25), 0.01, 0] as [number,number,number], args: [0.5, 0.08, d] as [number,number,number] },
-      ].map((t, i) => (
+
+      {/* ── Water surface ── */}
+      <AnimatedWater w={w - 0.15} d={d - 0.15} />
+
+      {/* ── Infinity edge: +z side overflow lip (slightly lower) ── */}
+      <mesh position={[0, -0.06, d / 2 + 0.18]} castShadow>
+        <boxGeometry args={[w + 0.7, 0.04, 0.36]} />
+        <meshStandardMaterial color="#C8C2B0" roughness={0.6} />
+      </mesh>
+      {/* Infinity wall below — dark, suggests water cascade */}
+      <mesh position={[0, -0.55, d / 2 + 0.36]}>
+        <boxGeometry args={[w + 0.7, 0.6, 0.12]} />
+        <meshStandardMaterial color="#1A3A50" roughness={0.4} metalness={0.15} />
+      </mesh>
+      {/* Thin water sheet on infinity wall */}
+      <mesh position={[0, -0.4, d / 2 + 0.43]}>
+        <boxGeometry args={[w + 0.5, 0.45, 0.03]} />
+        <meshPhysicalMaterial color="#0AACCC" transparent opacity={0.45} roughness={0.01} envMapIntensity={2.0} />
+      </mesh>
+
+      {/* ── Coping tiles (rim) — travertine ── */}
+      {([
+        { pos: [0, 0.02, -(d / 2 + 0.3)] as [number,number,number], args: [w + 0.8, 0.06, 0.55] as [number,number,number] },
+        { pos: [0, 0.02,  (d / 2 + 0.3)] as [number,number,number], args: [w + 0.8, 0.06, 0.55] as [number,number,number] },
+        { pos: [-(w / 2 + 0.3), 0.02, 0] as [number,number,number], args: [0.55, 0.06, d] as [number,number,number] },
+        { pos: [ (w / 2 + 0.3), 0.02, 0] as [number,number,number], args: [0.55, 0.06, d] as [number,number,number] },
+      ] as { pos: [number,number,number]; args: [number,number,number] }[]).map((t, i) => (
         <mesh key={i} position={t.pos} receiveShadow>
           <boxGeometry args={t.args} />
-          <meshStandardMaterial color="#F0EAD8" roughness={0.6} metalness={0.05} />
+          <meshStandardMaterial color="#F0EAD8" roughness={0.55} metalness={0.05} />
         </mesh>
       ))}
-      {/* Lane lines */}
-      {[-d / 4, 0, d / 4].map((lz, i) => (
-        <mesh key={i} position={[0, -0.19, lz]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[w - 0.4, 0.1]} />
-          <meshStandardMaterial color="#FFFFFF" transparent opacity={0.35} />
+
+      {/* ── Spa / hot tub (adjacent corner, slightly elevated) ── */}
+      <group position={[w / 2 + 1.8, 0.15, -(d / 2 + 0.5)]}>
+        {/* Spa shell */}
+        <mesh position={[0, -0.1, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[1.35, 1.45, 0.55, 18]} />
+          <meshStandardMaterial color="#E2DDD0" roughness={0.7} />
+        </mesh>
+        {/* Spa water */}
+        <mesh position={[0, 0.15, 0]}>
+          <cylinderGeometry args={[1.2, 1.2, 0.1, 18]} />
+          <meshPhysicalMaterial color="#30C8E0" transparent opacity={0.88} roughness={0.01} envMapIntensity={3.0} />
+        </mesh>
+        {/* Jets bubbles hint */}
+        {[0, 72, 144, 216, 288].map((deg, i) => {
+          const r = (deg * Math.PI) / 180;
+          return (
+            <mesh key={i} position={[Math.cos(r) * 0.75, 0.22, Math.sin(r) * 0.75]}>
+              <sphereGeometry args={[0.07, 6, 5]} />
+              <meshStandardMaterial color="#AAEEFF" transparent opacity={0.6} roughness={0.05} />
+            </mesh>
+          );
+        })}
+      </group>
+
+      {/* ── Lounger pairs with side tables and umbrellas ── */}
+      {/* Pair A — far side of pool */}
+      {([-1.0, 1.0] as number[]).map((lz, i) => (
+        <group key={i} position={[w / 2 + 2.6, 0, lz * 1.6]}>
+          {/* Lounger frame */}
+          <mesh position={[0, -0.38, 0]} castShadow>
+            <boxGeometry args={[2.1, 0.08, 0.72]} />
+            <meshStandardMaterial color="#F5EDD8" roughness={0.75} />
+          </mesh>
+          {/* Cushion */}
+          <mesh position={[0, -0.31, 0]}>
+            <boxGeometry args={[2.0, 0.06, 0.62]} />
+            <meshStandardMaterial color="#FFFFF0" roughness={0.9} />
+          </mesh>
+          {/* Backrest raised */}
+          <mesh position={[-0.7, -0.22, 0]} rotation={[0, 0, -0.35]} castShadow>
+            <boxGeometry args={[0.65, 0.06, 0.62]} />
+            <meshStandardMaterial color="#F5EDD8" roughness={0.75} />
+          </mesh>
+        </group>
+      ))}
+      {/* Side table A */}
+      <mesh position={[w / 2 + 2.6, -0.32, 0]} castShadow>
+        <cylinderGeometry args={[0.28, 0.28, 0.06, 10]} />
+        <meshStandardMaterial color="#C8C0A8" roughness={0.6} metalness={0.1} />
+      </mesh>
+      {/* Umbrella A */}
+      <group position={[w / 2 + 2.6, 0, 0]}>
+        <mesh position={[0, 0.5, 0]} castShadow>
+          <cylinderGeometry args={[0.04, 0.04, 2.0, 6]} />
+          <meshStandardMaterial color="#D8D0B8" roughness={0.8} />
+        </mesh>
+        <mesh position={[0, 1.45, 0]} rotation={[0.15, 0, 0]} castShadow>
+          <coneGeometry args={[1.4, 0.5, 16, 1, true]} />
+          <meshStandardMaterial color="#F8F4E8" roughness={0.9} side={THREE.DoubleSide} />
+        </mesh>
+      </group>
+
+      {/* Pair B — near side of pool */}
+      {([-1.0, 1.0] as number[]).map((lz, i) => (
+        <group key={i} position={[-(w / 2 + 2.6), 0, lz * 1.6]}>
+          <mesh position={[0, -0.38, 0]} castShadow>
+            <boxGeometry args={[2.1, 0.08, 0.72]} />
+            <meshStandardMaterial color="#F5EDD8" roughness={0.75} />
+          </mesh>
+          <mesh position={[0, -0.31, 0]}>
+            <boxGeometry args={[2.0, 0.06, 0.62]} />
+            <meshStandardMaterial color="#FFFFF0" roughness={0.9} />
+          </mesh>
+          <mesh position={[0.7, -0.22, 0]} rotation={[0, 0, 0.35]} castShadow>
+            <boxGeometry args={[0.65, 0.06, 0.62]} />
+            <meshStandardMaterial color="#F5EDD8" roughness={0.75} />
+          </mesh>
+        </group>
+      ))}
+      {/* Side table B */}
+      <mesh position={[-(w / 2 + 2.6), -0.32, 0]} castShadow>
+        <cylinderGeometry args={[0.28, 0.28, 0.06, 10]} />
+        <meshStandardMaterial color="#C8C0A8" roughness={0.6} metalness={0.1} />
+      </mesh>
+      {/* Umbrella B */}
+      <group position={[-(w / 2 + 2.6), 0, 0]}>
+        <mesh position={[0, 0.5, 0]} castShadow>
+          <cylinderGeometry args={[0.04, 0.04, 2.0, 6]} />
+          <meshStandardMaterial color="#D8D0B8" roughness={0.8} />
+        </mesh>
+        <mesh position={[0, 1.45, 0]} rotation={[-0.15, 0, 0]} castShadow>
+          <coneGeometry args={[1.4, 0.5, 16, 1, true]} />
+          <meshStandardMaterial color="#F8F4E8" roughness={0.9} side={THREE.DoubleSide} />
+        </mesh>
+      </group>
+
+      {/* ── Pool cabana / pool house ── */}
+      <group position={[0, 0, -(d / 2 + 4.5)]}>
+        {/* Flat roof slab */}
+        <mesh position={[0, 2.6, 0]} castShadow receiveShadow>
+          <boxGeometry args={[5.5, 0.18, 3.2]} />
+          <meshStandardMaterial color="#E8E2D0" roughness={0.8} />
+        </mesh>
+        {/* 4 slim columns */}
+        {([ [-2.3, -1.3], [2.3, -1.3], [-2.3, 1.3], [2.3, 1.3] ] as [number,number][]).map(([cx, cz], i) => (
+          <mesh key={i} position={[cx, 1.3, cz]} castShadow>
+            <cylinderGeometry args={[0.1, 0.1, 2.6, 10]} />
+            <meshStandardMaterial color="#F0EAD8" roughness={0.7} />
+          </mesh>
+        ))}
+        {/* Curtain panels (translucent vertical planes) */}
+        {([ [-1.0, 0], [1.0, 0] ] as [number,number][]).map(([cx, cz], i) => (
+          <mesh key={i} position={[cx, 1.3, cz]}>
+            <boxGeometry args={[1.2, 2.4, 0.04]} />
+            <meshStandardMaterial color="#FFFFF8" transparent opacity={0.35} roughness={0.9} side={THREE.DoubleSide} />
+          </mesh>
+        ))}
+        {/* Floor slab */}
+        <mesh position={[0, 0.02, 0]} receiveShadow>
+          <boxGeometry args={[5.3, 0.04, 3.0]} />
+          <meshStandardMaterial color="#EDE8D8" roughness={0.75} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+// ─── Pergola (replaces Gazebo) ───────────────────────────────
+function Pergola({ x, z }: { x: number; z: number }) {
+  // Rectangular 5×4 elegant pergola with open crossing-beam roof
+  const pW = 5.0;
+  const pD = 4.0;
+  const colH = 2.8;
+
+  const columns: [number, number][] = [
+    [-pW / 2, -pD / 2], [pW / 2, -pD / 2],
+    [-pW / 2,  pD / 2], [pW / 2,  pD / 2],
+    [0, -pD / 2], [0, pD / 2], // extra mid columns
+  ];
+
+  // Longitudinal beams (along X)
+  const longBeams: number[] = [-pD / 2, 0, pD / 2];
+  // Cross beams (along Z)
+  const crossBeams: number[] = [-pW / 2, -pW / 4, 0, pW / 4, pW / 2];
+
+  return (
+    <group position={[x, 0, z]}>
+      {/* Stone floor */}
+      <mesh position={[0, 0.03, 0]} receiveShadow>
+        <boxGeometry args={[pW + 0.3, 0.06, pD + 0.3]} />
+        <meshStandardMaterial color="#D8D2C2" roughness={0.9} />
+      </mesh>
+
+      {/* Columns */}
+      {columns.map(([cx, cz], i) => (
+        <mesh key={i} position={[cx, colH / 2, cz]} castShadow>
+          <cylinderGeometry args={[0.12, 0.14, colH, 10]} />
+          <meshStandardMaterial color="#F0EAD8" roughness={0.7} />
         </mesh>
       ))}
-      {/* Poolside loungers */}
-      {[-d / 2 - 0.7, d / 2 + 0.7].map((lz, i) => (
-        <mesh key={i} position={[w / 2 + 1.2, -0.38, lz]} castShadow>
-          <boxGeometry args={[1.9, 0.12, 0.65]} />
-          <meshStandardMaterial color="#F5EDD8" roughness={0.8} />
+
+      {/* Longitudinal beams (parallel to X axis) */}
+      {longBeams.map((bz, i) => (
+        <mesh key={i} position={[0, colH + 0.1, bz]} castShadow>
+          <boxGeometry args={[pW + 0.4, 0.14, 0.16]} />
+          <meshStandardMaterial color="#E8E2D0" roughness={0.75} />
+        </mesh>
+      ))}
+
+      {/* Cross beams (parallel to Z axis, sit on top of long beams) */}
+      {crossBeams.map((bx, i) => (
+        <mesh key={i} position={[bx, colH + 0.22, 0]} castShadow>
+          <boxGeometry args={[0.12, 0.12, pD + 0.2]} />
+          <meshStandardMaterial color="#E8E2D0" roughness={0.75} />
+        </mesh>
+      ))}
+
+      {/* Dining table — dark stone slab */}
+      <mesh position={[0, 0.78, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2.6, 0.1, 1.2]} />
+        <meshStandardMaterial color="#3A3A3A" roughness={0.5} metalness={0.1} />
+      </mesh>
+      {/* Table legs */}
+      {([ [-1.1, -0.45], [1.1, -0.45], [-1.1, 0.45], [1.1, 0.45] ] as [number,number][]).map(([tx, tz], i) => (
+        <mesh key={i} position={[tx, 0.36, tz]} castShadow>
+          <boxGeometry args={[0.08, 0.72, 0.08]} />
+          <meshStandardMaterial color="#2A2A2A" roughness={0.6} />
+        </mesh>
+      ))}
+
+      {/* 6 chairs (simple boxes) */}
+      {([ [-1.35,0], [1.35,0], [-0.5,-0.75], [0.5,-0.75], [-0.5,0.75], [0.5,0.75] ] as [number,number][]).map(([cx, cz], i) => (
+        <group key={i} position={[cx, 0.46, cz]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.48, 0.08, 0.48]} />
+            <meshStandardMaterial color="#D8D0B8" roughness={0.85} />
+          </mesh>
+          <mesh position={[0, 0.3, -0.18]} castShadow>
+            <boxGeometry args={[0.44, 0.55, 0.06]} />
+            <meshStandardMaterial color="#D8D0B8" roughness={0.85} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Climbing plant hints — green mesh on sides */}
+      {([ [0, -pD / 2 - 0.05], [0, pD / 2 + 0.05] ] as [number,number][]).map(([gx, gz], i) => (
+        <mesh key={i} position={[gx, colH * 0.55, gz]}>
+          <boxGeometry args={[pW, colH * 0.9, 0.05]} />
+          <meshStandardMaterial color="#2E7030" transparent opacity={0.22} roughness={1.0} side={THREE.DoubleSide} />
         </mesh>
       ))}
     </group>
   );
 }
 
-// ─── Gazebo ─────────────────────────────────────────────────
-function Gazebo({ x, z }: { x: number; z: number }) {
+// ─── Outdoor Kitchen ─────────────────────────────────────────
+function OutdoorKitchen({ x, z }: { x: number; z: number }) {
   return (
     <group position={[x, 0, z]}>
-      {/* Floor */}
-      <mesh position={[0, 0.06, 0]} receiveShadow>
-        <boxGeometry args={[3.5, 0.12, 3.5]} />
-        <meshStandardMaterial color="#C8A870" roughness={0.9} />
+      {/* L-shape counter — long arm */}
+      <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
+        <boxGeometry args={[3.2, 1.0, 0.85]} />
+        <meshStandardMaterial color="#555555" roughness={0.7} />
       </mesh>
-      {/* Posts */}
-      {[[-1.4, -1.4],[1.4,-1.4],[1.4,1.4],[-1.4,1.4]].map(([px, pz], i) => (
-        <mesh key={i} position={[px, 1.2, pz]} castShadow>
-          <cylinderGeometry args={[0.1, 0.1, 2.4, 7]} />
-          <meshStandardMaterial color="#B08040" roughness={0.85} />
+      {/* Marble top — long arm */}
+      <mesh position={[0, 1.02, 0]} castShadow>
+        <boxGeometry args={[3.2, 0.06, 0.85]} />
+        <meshStandardMaterial color="#E8E8E0" roughness={0.35} metalness={0.05} />
+      </mesh>
+
+      {/* L-shape counter — short arm */}
+      <mesh position={[1.4, 0.5, 0.8]} castShadow receiveShadow>
+        <boxGeometry args={[0.85, 1.0, 1.65]} />
+        <meshStandardMaterial color="#555555" roughness={0.7} />
+      </mesh>
+      {/* Marble top — short arm */}
+      <mesh position={[1.4, 1.02, 0.8]} castShadow>
+        <boxGeometry args={[0.85, 0.06, 1.65]} />
+        <meshStandardMaterial color="#E8E8E0" roughness={0.35} metalness={0.05} />
+      </mesh>
+
+      {/* Built-in grill grate */}
+      {([-0.5, 0, 0.5] as number[]).map((gx, i) => (
+        <mesh key={i} position={[gx, 1.07, 0]} castShadow>
+          <boxGeometry args={[0.22, 0.04, 0.55]} />
+          <meshStandardMaterial color="#444444" roughness={0.5} metalness={0.6} />
         </mesh>
       ))}
-      {/* Roof */}
-      <mesh position={[0, 2.6, 0]} castShadow>
-        <coneGeometry args={[2.4, 1.0, 8]} />
-        <meshStandardMaterial color="#8B4020" roughness={0.9} />
+      {([-0.18, 0.18] as number[]).map((gz, i) => (
+        <mesh key={i} position={[0, 1.07, gz]} castShadow>
+          <boxGeometry args={[1.0, 0.04, 0.04]} />
+          <meshStandardMaterial color="#444444" roughness={0.5} metalness={0.6} />
+        </mesh>
+      ))}
+
+      {/* Small overhead pergola — 2 posts */}
+      {([ [-1.4, 0], [1.4, 0] ] as [number,number][]).map(([px, pz], i) => (
+        <mesh key={i} position={[px, 1.35, pz - 0.5]} castShadow>
+          <cylinderGeometry args={[0.08, 0.08, 1.7, 8]} />
+          <meshStandardMaterial color="#C8C0A8" roughness={0.75} />
+        </mesh>
+      ))}
+      {/* Pergola beam */}
+      <mesh position={[0, 2.22, -0.5]} castShadow>
+        <boxGeometry args={[3.0, 0.12, 0.14]} />
+        <meshStandardMaterial color="#D8D0B8" roughness={0.75} />
       </mesh>
+      {/* Cross slats */}
+      {([-0.9, 0, 0.9] as number[]).map((bx, i) => (
+        <mesh key={i} position={[bx, 2.3, -0.5]} castShadow>
+          <boxGeometry args={[0.08, 0.08, 1.1]} />
+          <meshStandardMaterial color="#D8D0B8" roughness={0.75} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -563,64 +988,151 @@ function Car({ x, z, color = "#2255AA" }: { x: number; z: number; color?: string
   );
 }
 
-// ─── Driveway + Parking ───────────────────────────────────────
+// ─── Circular luxury driveway ────────────────────────────────
 function DrivewayAndParking({ W, D }: { W: number; D: number }) {
-  const driveW = 5.5;
-  const driveLen = 9.0;
-  const parkW = 6.5;
-  const parkD = 5.8;
-  const zFront = D / 2; // front of house
+  const zFront = D / 2;
+  const circleZ = zFront + 11.0; // center of circular driveway
+  const outerR = 5.5;
+  const innerR = 3.2;
+  const roadW = outerR - innerR; // ~2.3 wide road
+  const SEGS = 36;
+
+  // Build ring road as arc segments
+  const ringSegments = useMemo(() => {
+    const segs: { pos: [number,number,number]; rot: number; w: number; len: number }[] = [];
+    for (let i = 0; i < SEGS; i++) {
+      const a0 = (i / SEGS) * Math.PI * 2;
+      const a1 = ((i + 1) / SEGS) * Math.PI * 2;
+      const midA = (a0 + a1) / 2;
+      const midR = (outerR + innerR) / 2;
+      segs.push({
+        pos: [Math.cos(midA) * midR, -0.492, circleZ + Math.sin(midA) * midR],
+        rot: midA + Math.PI / 2,
+        w: roadW - 0.05,
+        len: (2 * Math.PI * midR) / SEGS + 0.05,
+      });
+    }
+    return segs;
+  }, [circleZ]);
+
+  // Paver grid on island (just a disc)
+  const islandPavers = useMemo(() => {
+    const pvs: { px: number; pz: number }[] = [];
+    const step = 0.55;
+    for (let xi = -Math.ceil(innerR / step); xi <= Math.ceil(innerR / step); xi++) {
+      for (let zi = -Math.ceil(innerR / step); zi <= Math.ceil(innerR / step); zi++) {
+        const px = xi * step, pz = zi * step;
+        if (px * px + pz * pz < (innerR - 0.3) * (innerR - 0.3)) pvs.push({ px, pz });
+      }
+    }
+    return pvs;
+  }, []);
+
+  const carportX = outerR + 5.0;
+  const carportZ = circleZ;
 
   return (
     <group>
-      {/* Driveway slab */}
-      <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -0.492, zFront + driveLen / 2]} receiveShadow>
-        <planeGeometry args={[driveW, driveLen]} />
-        <meshStandardMaterial color="#787878" roughness={0.92} />
+      {/* ── Straight approach from house to circle ── */}
+      <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -0.492, zFront + 5.5]} receiveShadow>
+        <planeGeometry args={[4.2, 11.0]} />
+        <meshStandardMaterial color="#B8A888" roughness={0.88} />
       </mesh>
-      {/* Center dashed line */}
-      {Array.from({ length: 5 }).map((_, i) => (
-        <mesh key={i} rotation={[-Math.PI/2, 0, 0]}
-          position={[0, -0.490, zFront + 1.2 + i * 1.6]}>
-          <planeGeometry args={[0.1, 0.8]} />
-          <meshStandardMaterial color="#DDDDDD" opacity={0.55} transparent />
+
+      {/* ── Ring road segments ── */}
+      {ringSegments.map((seg, i) => (
+        <mesh key={i} rotation={[-Math.PI/2, seg.rot, 0]} position={seg.pos} receiveShadow>
+          <planeGeometry args={[seg.w, seg.len]} />
+          <meshStandardMaterial color="#B8A888" roughness={0.88} />
         </mesh>
       ))}
-      {/* Parking area slab */}
-      <mesh rotation={[-Math.PI/2, 0, 0]}
-        position={[0, -0.491, zFront + driveLen + parkD / 2]} receiveShadow>
-        <planeGeometry args={[parkW, parkD]} />
-        <meshStandardMaterial color="#696969" roughness={0.95} />
+
+      {/* ── Center island: grass ── */}
+      <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -0.494, circleZ]} receiveShadow>
+        <circleGeometry args={[innerR - 0.15, 32]} />
+        <meshStandardMaterial color="#5CBF40" roughness={0.98} />
       </mesh>
-      {/* Parking spot lines (3 spots) */}
-      {[-parkW/2, -parkW/6, parkW/6, parkW/2].map((lx, i) => (
-        <mesh key={i} rotation={[-Math.PI/2, 0, 0]}
-          position={[lx, -0.489, zFront + driveLen + parkD / 2]}>
-          <planeGeometry args={[0.08, parkD]} />
-          <meshStandardMaterial color="white" opacity={0.65} transparent />
+
+      {/* ── Center island ornamental tree / topiary ── */}
+      <group position={[0, 0, circleZ]}>
+        <mesh position={[0, 0.6, 0]} castShadow>
+          <cylinderGeometry args={[0.12, 0.16, 1.2, 8]} />
+          <meshStandardMaterial color="#5A3A1A" roughness={0.9} />
         </mesh>
-      ))}
-      {/* Front/back boundary lines */}
-      {[0, parkD].map((dz, i) => (
-        <mesh key={i} rotation={[-Math.PI/2, 0, 0]}
-          position={[0, -0.489, zFront + driveLen + dz]}>
-          <planeGeometry args={[parkW, 0.08]} />
-          <meshStandardMaterial color="white" opacity={0.65} transparent />
+        <mesh position={[0, 2.0, 0]} castShadow>
+          <sphereGeometry args={[1.05, 10, 8]} />
+          <meshStandardMaterial color="#2E7020" roughness={0.9} />
         </mesh>
-      ))}
-      {/* 2 parked cars */}
-      <Car x={-parkW/6 + (parkW/6)/2} z={zFront + driveLen + parkD/2} color="#3366BB" />
-      <Car x={ parkW/6 + (parkW/6)/2} z={zFront + driveLen + parkD/2} color="#AA3322" />
+      </group>
+
+      {/* ── Bollard lights along approach ── */}
+      {([-1.5, 1.5] as number[]).map((bx, side) =>
+        [2.0, 5.0, 8.0].map((bz, j) => (
+          <group key={`${side}-${j}`} position={[bx, 0, zFront + bz]}>
+            <mesh position={[0, 0.3, 0]} castShadow>
+              <cylinderGeometry args={[0.07, 0.09, 0.6, 8]} />
+              <meshStandardMaterial color="#C8C0A0" roughness={0.6} metalness={0.3} />
+            </mesh>
+            <mesh position={[0, 0.64, 0]}>
+              <sphereGeometry args={[0.1, 8, 7]} />
+              <meshStandardMaterial color="#FFFFDD" emissive="#FFFFAA" emissiveIntensity={0.6} roughness={0.3} />
+            </mesh>
+          </group>
+        ))
+      )}
+
+      {/* ── Bollard lights around ring ── */}
+      {Array.from({ length: 12 }).map((_, i) => {
+        const a = (i / 12) * Math.PI * 2;
+        return (
+          <group key={i} position={[Math.cos(a) * (outerR + 0.5), 0, circleZ + Math.sin(a) * (outerR + 0.5)]}>
+            <mesh position={[0, 0.3, 0]} castShadow>
+              <cylinderGeometry args={[0.07, 0.09, 0.6, 8]} />
+              <meshStandardMaterial color="#C8C0A0" roughness={0.6} metalness={0.3} />
+            </mesh>
+            <mesh position={[0, 0.64, 0]}>
+              <sphereGeometry args={[0.1, 8, 7]} />
+              <meshStandardMaterial color="#FFFFDD" emissive="#FFFFAA" emissiveIntensity={0.6} roughness={0.3} />
+            </mesh>
+          </group>
+        );
+      })}
+
+      {/* ── Carport with 4 columns + flat roof ── */}
+      <group position={[carportX, 0, carportZ]}>
+        {/* Flat roof slab */}
+        <mesh position={[0, 2.6, 0]} castShadow receiveShadow>
+          <boxGeometry args={[6.5, 0.18, 5.5]} />
+          <meshStandardMaterial color="#D8D2C0" roughness={0.8} />
+        </mesh>
+        {/* 4 columns */}
+        {([ [-2.8, -2.2], [2.8, -2.2], [-2.8, 2.2], [2.8, 2.2] ] as [number,number][]).map(([cx, cz], i) => (
+          <mesh key={i} position={[cx, 1.3, cz]} castShadow>
+            <cylinderGeometry args={[0.14, 0.14, 2.6, 10]} />
+            <meshStandardMaterial color="#F0EAD8" roughness={0.7} />
+          </mesh>
+        ))}
+        {/* Ground slab */}
+        <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -0.492, 0]} receiveShadow>
+          <planeGeometry args={[6.2, 5.2]} />
+          <meshStandardMaterial color="#B8A888" roughness={0.88} />
+        </mesh>
+        {/* 2 parked cars */}
+        <Car x={-1.8} z={0} color="#E8E8E8" />
+        <Car x={ 1.8} z={0} color="#1A1A2E" />
+        {/* 3rd car nearby outside */}
+        <Car x={0} z={carportZ + 4.0 - carportZ} color="#8B4513" />
+      </group>
     </group>
   );
 }
 
 // ─── Yard presets ─────────────────────────────────────────────
-function YardElements({ W, D, yardPreset, parking = false }: {
-  W: number; D: number; yardPreset: string; parking?: boolean
+function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
+  W: number; D: number; yardPreset: string; parking?: boolean;
+  orbitRef: React.MutableRefObject<any>;
 }) {
-  const xOff = W / 2 + 4.5;  // right side
-  const zOff = -(D / 2 + 5); // front
+  const xOff = W / 2 + 7.5;   // right side (more room for luxury pool)
 
   if (yardPreset === "minimal") {
     return (
@@ -639,15 +1151,20 @@ function YardElements({ W, D, yardPreset, parking = false }: {
   if (yardPreset === "garden") {
     return (
       <>
-        {/* Corner trees */}
+        {/* Corner trees + Italian cypress at corners */}
         <Tree x={-(W / 2 + 2.5)} z={-(D / 2 + 1.5)} scale={1.2} />
         <Tree x={  W / 2 + 2.5}  z={-(D / 2 + 1.5)} scale={1.0} type="pine" />
         <Tree x={-(W / 2 + 3.0)} z={  D / 2 + 2.0}  scale={0.9} />
         <Tree x={  W / 2 + 3.5}  z={  D / 2 + 2.0}  scale={1.1} type="pine" />
         <Tree x={0}               z={  D / 2 + 5.0}  scale={1.3} />
+        {/* Italian cypress at estate corners */}
+        <Tree x={-(W / 2 + 5.5)} z={-(D / 2 + 2.0)} type="cypress" scale={1.0} />
+        <Tree x={  W / 2 + 5.5}  z={-(D / 2 + 2.0)} type="cypress" scale={1.0} />
+        <Tree x={-(W / 2 + 5.5)} z={  D / 2 + 2.5}  type="cypress" scale={0.9} />
+        <Tree x={  W / 2 + 5.5}  z={  D / 2 + 2.5}  type="cypress" scale={0.9} />
         {/* Hedges along sides */}
-        {[-D/4, 0, D/4].map((z, i) => (
-          <Bush key={i} x={-(W / 2 + 1.2)} z={z} scale={0.9} />
+        {[-D/4, 0, D/4].map((hz, i) => (
+          <Bush key={i} x={-(W / 2 + 1.2)} z={hz} scale={0.9} />
         ))}
         {/* Flower beds */}
         <FlowerBed x={-(W / 2 - 0.5)} z={-(D / 2 + 2.0)} w={3} d={0.9} />
@@ -656,7 +1173,10 @@ function YardElements({ W, D, yardPreset, parking = false }: {
         {/* Lawn */}
         <Lawn x={0} z={D / 2 + 5} w={W + 4} d={4} />
         <GardenPath W={W} D={D} />
-        <Fountain x={0} z={-(D / 2 + 6.5)} />
+        {/* Draggable fountain */}
+        <DraggableGroup posKey="fountain" defaultX={0} defaultZ={-(D / 2 + 6.5)} hitW={5} hitD={5} orbitRef={orbitRef}>
+          <Fountain x={0} z={0} />
+        </DraggableGroup>
         {parking && <DrivewayAndParking W={W} D={D} />}
       </>
     );
@@ -665,21 +1185,27 @@ function YardElements({ W, D, yardPreset, parking = false }: {
   if (yardPreset === "pool") {
     return (
       <>
-        <Pool x={xOff} z={0} w={5} d={3} />
-        {/* Poolside loungers (as simple boxes) */}
-        {[-0.8, 0.8].map((lz, i) => (
-          <mesh key={i} position={[xOff + 3.5, -0.35, lz]} castShadow>
-            <boxGeometry args={[1.8, 0.15, 0.6]} />
-            <meshStandardMaterial color="#F0E0C0" roughness={0.8} />
-          </mesh>
-        ))}
+        {/* Draggable luxury pool */}
+        <DraggableGroup posKey="pool" defaultX={xOff} defaultZ={0} hitW={16} hitD={13} orbitRef={orbitRef}>
+          <Pool x={0} z={0} w={9} d={5} />
+          {/* Italian cypress flanking pool — static relative to pool */}
+          <Tree x={-1.5} z={-(5 / 2 + 3.5)} type="cypress" scale={1.1} />
+          <Tree x={ 1.5} z={-(5 / 2 + 3.5)} type="cypress" scale={1.1} />
+          <Tree x={-1.5} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
+          <Tree x={ 1.5} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
+        </DraggableGroup>
+        {/* Palm trees near scene */}
         <Tree x={-(W / 2 + 2.5)} z={-(D / 2 + 1.5)} scale={1.1} />
         <Tree x={  W / 2 + 2.5}  z={-(D / 2 + 1.5)} type="palm" scale={1.0} />
-        <Tree x={  xOff + 4.0}   z={-2.5}            type="palm" scale={0.9} />
-        <Tree x={  xOff + 4.0}   z={ 2.5}            type="palm" scale={0.9} />
-        <Bush x={xOff - 0.5}  z={-2.2} scale={0.8} />
-        <Bush x={xOff - 0.5}  z={ 2.2} scale={0.8} />
-        <Lawn x={xOff + 0.5} z={0} w={7} d={8} />
+        <Tree x={xOff + 9.5}   z={-3.5} type="palm" scale={0.9} />
+        <Tree x={xOff + 9.5}   z={ 3.5} type="palm" scale={0.9} />
+        {/* Draggable outdoor kitchen */}
+        <DraggableGroup posKey="outdoor_kitchen" defaultX={xOff - 3.0} defaultZ={-(5 / 2 + 6.5)} hitW={8} hitD={6} orbitRef={orbitRef}>
+          <OutdoorKitchen x={0} z={0} />
+        </DraggableGroup>
+        <Bush x={xOff - 0.8} z={-3.5} scale={0.8} />
+        <Bush x={xOff - 0.8} z={ 3.5} scale={0.8} />
+        <Lawn x={xOff + 1.0} z={0} w={10} d={12} />
         <GardenPath W={W} D={D} />
         <FlowerBed x={-(W / 2 + 1.5)} z={D / 2 + 1.5} w={3} d={0.8} />
         {parking && <DrivewayAndParking W={W} D={D} />}
@@ -690,42 +1216,59 @@ function YardElements({ W, D, yardPreset, parking = false }: {
   if (yardPreset === "full") {
     return (
       <>
-        {/* Trees */}
+        {/* Broad tree planting */}
         <Tree x={-(W / 2 + 2.5)} z={-(D / 2 + 1.5)} scale={1.2} />
         <Tree x={  W / 2 + 2.5}  z={-(D / 2 + 1.5)} type="pine"  scale={1.0} />
-        <Tree x={-(W / 2 + 4.0)} z={  0}             scale={1.1} />
-        <Tree x={  W / 2 + 4.0}  z={  0}             type="pine"  scale={1.0} />
-        <Tree x={-(W / 2 + 3.0)} z={  D / 2 + 2.5}  scale={0.9} />
-        <Tree x={  W / 2 + 3.0}  z={  D / 2 + 2.5}  scale={1.0} />
+        <Tree x={-(W / 2 + 4.5)} z={  0}             scale={1.1} />
+        <Tree x={  W / 2 + 4.5}  z={  0}             type="pine"  scale={1.0} />
+        <Tree x={-(W / 2 + 3.5)} z={  D / 2 + 2.5}  scale={0.9} />
+        <Tree x={  W / 2 + 3.5}  z={  D / 2 + 2.5}  scale={1.0} />
         <Tree x={0}               z={  D / 2 + 7.0}  scale={1.3} />
-        <Tree x={xOff + 4.5}      z={-3.0}            type="palm"  scale={0.9} />
-        <Tree x={xOff + 4.5}      z={ 3.0}            type="palm"  scale={0.9} />
-        {/* Pool */}
-        <Pool x={xOff} z={0} w={5} d={3} />
-        {/* Gazebo */}
-        <Gazebo x={-(xOff)} z={D / 2 + 5} />
-        {/* Fountain */}
-        <Fountain x={0} z={-(D / 2 + 7.0)} />
+        <Tree x={xOff + 9.5}      z={-4.0} type="palm"  scale={0.9} />
+        <Tree x={xOff + 9.5}      z={ 4.0} type="palm"  scale={0.9} />
+        {/* Italian cypress avenue along driveway */}
+        {parking && ([8.0, 12.0, 16.0] as number[]).map((cz, i) => (
+          <>
+            <Tree key={`ca-${i}`} x={-2.8} z={D / 2 + cz} type="cypress" scale={1.0} />
+            <Tree key={`cb-${i}`} x={ 2.8} z={D / 2 + cz} type="cypress" scale={1.0} />
+          </>
+        ))}
+        {/* Italian cypress at estate corners */}
+        <Tree x={-(W / 2 + 6.0)} z={-(D / 2 + 2.5)} type="cypress" scale={1.1} />
+        <Tree x={  W / 2 + 6.0}  z={-(D / 2 + 2.5)} type="cypress" scale={1.1} />
+        {/* Draggable luxury pool */}
+        <DraggableGroup posKey="pool" defaultX={xOff} defaultZ={0} hitW={16} hitD={13} orbitRef={orbitRef}>
+          <Pool x={0} z={0} w={9} d={5} />
+          <Tree x={-1.5} z={-(5 / 2 + 3.5)} type="cypress" scale={1.05} />
+          <Tree x={ 1.5} z={-(5 / 2 + 3.5)} type="cypress" scale={1.05} />
+          <Tree x={-1.5} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
+          <Tree x={ 1.5} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
+        </DraggableGroup>
+        {/* Draggable pergola */}
+        <DraggableGroup posKey="pergola" defaultX={-(xOff - 2)} defaultZ={D / 2 + 5} hitW={10} hitD={9} orbitRef={orbitRef}>
+          <Pergola x={0} z={0} />
+        </DraggableGroup>
+        {/* Draggable fountain */}
+        <DraggableGroup posKey="fountain" defaultX={0} defaultZ={-(D / 2 + 7.0)} hitW={5} hitD={5} orbitRef={orbitRef}>
+          <Fountain x={0} z={0} />
+        </DraggableGroup>
+        {/* Draggable outdoor kitchen */}
+        <DraggableGroup posKey="outdoor_kitchen" defaultX={xOff - 3.0} defaultZ={-(5 / 2 + 7.0)} hitW={8} hitD={6} orbitRef={orbitRef}>
+          <OutdoorKitchen x={0} z={0} />
+        </DraggableGroup>
         {/* Flower beds */}
         <FlowerBed x={-(W / 2 - 0.5)} z={-(D / 2 + 2.0)} w={2.5} d={0.9} />
         <FlowerBed x={  W / 2 - 0.5}  z={-(D / 2 + 2.0)} w={2.5} d={0.9} />
         <FlowerBed x={0}              z={  D / 2 + 2.5}   w={5} d={1.0} />
         {/* Hedges */}
-        {[-D/3, 0, D/3].map((z, i) => (
-          <Bush key={i} x={-(W / 2 + 1.4)} z={z} scale={1.0} />
+        {[-D/3, 0, D/3].map((hz, i) => (
+          <Bush key={i} x={-(W / 2 + 1.6)} z={hz} scale={1.0} />
         ))}
         {/* Lawns */}
-        <Lawn x={xOff + 0.5} z={0} w={7} d={10} />
+        <Lawn x={xOff + 1.0} z={0} w={10} d={14} />
         <Lawn x={0} z={D / 2 + 5.5} w={W + 6} d={5} />
         {/* Path */}
         <GardenPath W={W} D={D} />
-        {/* Poolside loungers */}
-        {[-0.8, 0.8].map((lz, i) => (
-          <mesh key={i} position={[xOff + 3.5, -0.35, lz]} castShadow>
-            <boxGeometry args={[1.8, 0.15, 0.6]} />
-            <meshStandardMaterial color="#F0E0C0" roughness={0.8} />
-          </mesh>
-        ))}
         {parking && <DrivewayAndParking W={W} D={D} />}
       </>
     );
@@ -767,6 +1310,7 @@ export default function HouseCanvas() {
   const exterior = useDesignerStore(s => s.exterior);
   const { W, D } = useFootprint();
   const { floors, yardPreset = "garden", showParking = false } = exterior;
+  const orbitRef = useRef<any>(null);
 
   return (
     <div className="w-full h-full">
@@ -777,6 +1321,7 @@ export default function HouseCanvas() {
       >
         <CameraRig W={W} D={D} floors={floors} />
         <OrbitControls
+          ref={orbitRef}
           enableDamping
           minPolarAngle={0.1}
           maxPolarAngle={Math.PI / 2.1}
@@ -797,7 +1342,7 @@ export default function HouseCanvas() {
 
         <Ground W={W} D={D} />
         <HouseBody W={W} D={D} settings={exterior} />
-        <YardElements W={W} D={D} yardPreset={yardPreset} parking={showParking} />
+        <YardElements W={W} D={D} yardPreset={yardPreset} parking={showParking} orbitRef={orbitRef} />
       </Canvas>
     </div>
   );

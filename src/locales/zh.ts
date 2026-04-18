@@ -207,6 +207,9 @@ export const zh = {
   extYardDescs: { minimal: "路径+花台", garden: "花圃+喷泉", pool: "泳池+棕榈", full: "泳池+凉亭+喷泉" } as Record<string, string>,
   extParking: "停车场 & 车道",
   extParkingDesc: "添加车道和停车位",
+  extDragHint: "拖动户外元素可调整位置",
+  extDragDesc: "悬停泳池/凉亭/厨房/喷泉，拖动即可移位",
+  extResetPositions: "重置位置",
 
   // ── Footer ───────────────────────────────────────────────
   disclaimer: "仅供设计参考，不构成施工建议，效果仅为示意，请以实际施工及专业建议为准",

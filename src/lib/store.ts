@@ -242,6 +242,7 @@ interface DesignerStore {
   // Exterior / house facade
   exterior: ExteriorSettings;
   setExterior: (patch: Partial<ExteriorSettings>) => void;
+  setOutdoorPosition: (key: string, pos: { x: number; z: number }) => void;
 
   // Multi-floor switching
   activeFloor: number;
@@ -714,6 +715,13 @@ export const useDesignerStore = create<DesignerStore>()(
         }
         return { exterior: newExterior, floorPlans };
       }),
+
+      setOutdoorPosition: (key, pos) => set(s => ({
+        exterior: {
+          ...s.exterior,
+          outdoorPositions: { ...(s.exterior.outdoorPositions ?? {}), [key]: pos },
+        },
+      })),
 
       setActiveFloor: (floor) => set(s => {
         let floorPlans = s.floorPlans;

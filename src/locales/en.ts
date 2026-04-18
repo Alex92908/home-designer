@@ -209,6 +209,9 @@ export const en: Translations = {
   extYardDescs: { minimal: "Path + planters", garden: "Beds + fountain", pool: "Pool + palms", full: "Pool + pergola + fountain" },
   extParking: "Parking & Driveway",
   extParkingDesc: "Add driveway and parking spots",
+  extDragHint: "Drag outdoor elements to reposition",
+  extDragDesc: "Hover pool / pergola / kitchen / fountain to grab & move",
+  extResetPositions: "Reset positions",
 
   // ── ShareModal ───────────────────────────────────────────
   shareTitle: "📤 Share Your Plan",
