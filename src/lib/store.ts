@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, ROOM_DEFS, StyleTag, getRoomArea, FurnitureItem, ExteriorSettings, WindowConfig } from "./types";
 import { FURNITURE, getFurnitureById, registerFurniture } from "./furniture";
 import { MATERIALS, STYLE_RULES } from "./data";
+import { ALL_TEMPLATES, buildTemplateRoomState, buildEmbeddedRoomState } from "./templates";
 
 // ─── Style scoring ─────────────────────────────────────────
 
@@ -179,6 +180,7 @@ interface DesignerStore {
   duplicateItems: (instanceIds: string[]) => void;
   removeItems: (instanceIds: string[]) => void;
   resizeItem: (instanceId: string, scaleW: number, scaleD: number) => void;
+  setElevation: (instanceId: string, elevationY: number) => void;
 
   // Furniture undo
   pushFurnitureHistory: () => void;
@@ -245,9 +247,13 @@ interface DesignerStore {
   pushLayoutHistory: () => void;
   undoLayout: () => void;
 
+  // Active template tracking
+  activeTemplateId: string | null;
+
   // Persistence
   resetAll: () => void;
   loadFromShare: (snapshot: import("./share").ShareSnapshot) => void;
+  loadTemplate: (templateId: string) => void;
 
   // Derived
   currentRoom: () => RoomState;
@@ -294,11 +300,17 @@ export const useDesignerStore = create<DesignerStore>()(
       roomHasDoor: { ...DEFAULT_ROOM_HAS_DOOR },
       roomDoorWall: { ...DEFAULT_ROOM_DOOR_WALL },
       layoutHistory: [],
+      activeTemplateId: null,
 
       setActiveRoom: (room) => {
-        const { rooms } = get();
+        const { rooms, activeTemplateId } = get();
         const { materials, placedItems } = rooms[room];
-        set({ activeRoom: room, selectedInstanceId: null, selectedInstanceIds: [], scores: computeScores(materials, placedItems) });
+        const computed = computeScores(materials, placedItems);
+        // Keep the template's canonical style tag while it's active
+        const dominantStyle = activeTemplateId
+          ? (ALL_TEMPLATES.find(t => t.id === activeTemplateId)?.styleTag ?? computed.dominantStyle)
+          : computed.dominantStyle;
+        set({ activeRoom: room, selectedInstanceId: null, selectedInstanceIds: [], scores: { ...computed, dominantStyle } });
       },
 
       setViewMode: (mode) => set({ viewMode: mode }),
@@ -313,7 +325,7 @@ export const useDesignerStore = create<DesignerStore>()(
           },
         };
         const { materials, placedItems } = updated[activeRoom];
-        set({ rooms: updated, scores: computeScores(materials, placedItems) });
+        set({ rooms: updated, scores: computeScores(materials, placedItems), activeTemplateId: null });
       },
 
       removeMaterial: (category) => {
@@ -416,6 +428,17 @@ export const useDesignerStore = create<DesignerStore>()(
         const updatedPlaced = rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId
             ? { ...p, scaleW: Math.max(0.3, Math.min(4, scaleW)), scaleD: Math.max(0.3, Math.min(4, scaleD)) }
+            : p
+        );
+        const updatedRooms = { ...rooms, [activeRoom]: { ...rooms[activeRoom], placedItems: updatedPlaced } };
+        set({ rooms: updatedRooms });
+      },
+
+      setElevation: (instanceId, elevationY) => {
+        const { activeRoom, rooms } = get();
+        const updatedPlaced = rooms[activeRoom].placedItems.map(p =>
+          p.instanceId === instanceId
+            ? { ...p, elevationY: Math.max(0, Math.min(300, elevationY)) }
             : p
         );
         const updatedRooms = { ...rooms, [activeRoom]: { ...rooms[activeRoom], placedItems: updatedPlaced } };
@@ -718,6 +741,35 @@ export const useDesignerStore = create<DesignerStore>()(
           roomClipboard: null,
           scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
           layoutHistory: [],
+        });
+      },
+
+      loadTemplate: (templateId) => {
+        const template = ALL_TEMPLATES.find(t => t.id === templateId);
+        if (!template) return;
+        const { rooms, enabledRooms, roomDimensions } = get();
+        const updatedRooms = { ...rooms };
+        for (const roomId of enabledRooms) {
+          const tplRoom = template.rooms[roomId];
+          if (!tplRoom) continue;
+          const dims = roomDimensions[roomId];
+          const embedded = template.embeddedRooms?.[roomId];
+          const { materials, placedItems } = embedded
+            ? buildEmbeddedRoomState(roomId, embedded, dims.width, dims.depth)
+            : buildTemplateRoomState(roomId, tplRoom, dims.width, dims.depth);
+          updatedRooms[roomId] = { materials: materials as never, placedItems: placedItems as never };
+        }
+        const firstTemplatedRoom = enabledRooms.find(r => template.rooms[r]) ?? get().activeRoom;
+        const { materials, placedItems } = updatedRooms[firstTemplatedRoom];
+        const computed = computeScores(materials as never, placedItems as never);
+        set({
+          rooms: updatedRooms,
+          activeRoom: firstTemplatedRoom,
+          activeTemplateId: templateId,
+          selectedInstanceId: null,
+          selectedInstanceIds: [],
+          furnitureHistory: [],
+          scores: { ...computed, dominantStyle: template.styleTag },
         });
       },
 

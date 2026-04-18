@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useDesignerStore } from "@/lib/store";
+import TemplatesPanel from "./TemplatesPanel";
 import { MATERIALS } from "@/lib/data";
 import { FURNITURE, getFurnitureForRoom, FURNITURE_CATEGORIES, getCustomFurniture } from "@/lib/furniture";
 import { MaterialItem, FurnitureItem } from "@/lib/types";
@@ -332,7 +333,7 @@ function FurnitureTab() {
 
 // ─── Main LeftPanel ────────────────────────────────────────
 export default function LeftPanel() {
-  const [tab, setTab] = useState<"materials" | "furniture">("materials");
+  const [tab, setTab] = useState<"materials" | "furniture" | "templates">("materials");
   const t = useT();
 
   return (
@@ -345,7 +346,7 @@ export default function LeftPanel() {
         className="px-3 pt-3 pb-0 flex gap-0.5 shrink-0"
         style={{ borderBottom: "1px solid var(--ds-border)" }}
       >
-        {(["materials", "furniture"] as const).map((key) => (
+        {(["materials", "furniture", "templates"] as const).map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -361,23 +362,27 @@ export default function LeftPanel() {
                 : { color: "var(--ds-text-3)" }
             }
           >
-            {key === "materials" ? t.tabMaterials : t.tabFurniture}
+            {key === "materials" ? t.tabMaterials : key === "furniture" ? t.tabFurniture : t.tabTemplates}
           </button>
         ))}
       </div>
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
-        {tab === "materials" ? <MaterialsTab /> : <FurnitureTab />}
+        {tab === "materials" && <MaterialsTab />}
+        {tab === "furniture" && <FurnitureTab />}
+        {tab === "templates" && <TemplatesPanel />}
       </div>
 
-      {/* Hint */}
-      <div
-        className="px-3 py-2 text-[10px] shrink-0"
-        style={{ borderTop: "1px solid var(--ds-border-soft)", color: "var(--ds-text-3)" }}
-      >
-        {tab === "furniture" ? t.furnitureHint : t.matHint}
-      </div>
+      {/* Hint — hidden on templates tab */}
+      {tab !== "templates" && (
+        <div
+          className="px-3 py-2 text-[10px] shrink-0"
+          style={{ borderTop: "1px solid var(--ds-border-soft)", color: "var(--ds-text-3)" }}
+        >
+          {tab === "furniture" ? t.furnitureHint : t.matHint}
+        </div>
+      )}
     </aside>
   );
 }

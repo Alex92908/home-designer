@@ -18,6 +18,7 @@ export const en: Translations = {
   // ── LeftPanel ────────────────────────────────────────────
   tabMaterials: "🎨 Materials",
   tabFurniture: "🪑 Furniture",
+  tabTemplates: "✨ Templates",
   matHint: "Click a material to apply to current room",
   furnitureHint: "Click furniture to place it on the floor plan",
   allCategories: "🔓 All Items",
@@ -143,6 +144,7 @@ export const en: Translations = {
   fpDeleteItem: "Delete",
   fpWidth: "Width",
   fpDepth: "Depth",
+  fpElevation: "Elevation",
   fpResetSize: "Reset Size",
   fpOriginal: "Original:",
   fpLegendDrag: "🔵 Drag to move",

@@ -91,8 +91,9 @@ function PlacedItemSVG({ placed, scale, isSelected, onPointerDown }: PlacedItemS
 
   return (
     <g
+      data-furniture="true"
       transform={`translate(${cx},${cy}) rotate(${placed.rotation})`}
-      style={{ cursor: "grab" }}
+      style={{ cursor: isSelected ? "grabbing" : "grab", touchAction: "none" }}
       onPointerDown={onPointerDown}
     >
       <rect x={-w / 2 + 2} y={-d / 2 + 2} width={w} height={d} rx={4} fill="rgba(0,0,0,0.3)" />
@@ -127,6 +128,17 @@ function PlacedItemSVG({ placed, scale, isSelected, onPointerDown }: PlacedItemS
           <rect x={-w / 2}    y={d / 2 - 8} width={8} height={8} rx={2} fill="#3B82F6" opacity={0.9} />
           <rect x={w / 2 - 8} y={d / 2 - 8} width={8} height={8} rx={2} fill="#3B82F6" opacity={0.9} />
         </>
+      )}
+      {/* Elevation badge — shown when item is lifted off floor */}
+      {(placed.elevationY ?? 0) > 0 && (
+        <g transform={`translate(${w / 2 - 2}, ${-d / 2 - 1}) rotate(${-placed.rotation})`}>
+          <rect x={-22} y={-9} width={22} height={9} rx={3} fill="#F59E0B" opacity={0.95} />
+          <text x={-11} y={-4.5} textAnchor="middle" dominantBaseline="middle"
+            fontSize={6} fill="white" fontWeight="bold"
+            style={{ userSelect: "none", pointerEvents: "none" }}>
+            ↑{placed.elevationY}cm
+          </text>
+        </g>
       )}
     </g>
   );
@@ -295,6 +307,16 @@ export default function FloorPlan() {
   const [doorDrag, setDoorDrag] = useState<DoorDrag | null>(null);
   const [editWindows, setEditWindows] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0);
+  const [isLandscape, setIsLandscape] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(orientation: landscape)");
+    const check = () => setIsLandscape(mq.matches);
+    check();
+    mq.addEventListener("change", check);
+    return () => mq.removeEventListener("change", check);
+  }, []);
+  // Ref mirror of dragState to avoid stale closures in callbacks
+  const dragStateRef = useRef<DragState | null>(null);
 
   const activeRoom           = useDesignerStore((s) => s.activeRoom);
   const roomState            = useDesignerStore((s) => s.rooms[activeRoom]);
@@ -306,6 +328,7 @@ export default function FloorPlan() {
   const duplicateItems       = useDesignerStore((s) => s.duplicateItems);
   const removeItems          = useDesignerStore((s) => s.removeItems);
   const resizeItem           = useDesignerStore((s) => s.resizeItem);
+  const setElevation         = useDesignerStore((s) => s.setElevation);
   const pushFurnitureHistory = useDesignerStore((s) => s.pushFurnitureHistory);
   const undoFurniture        = useDesignerStore((s) => s.undoFurniture);
   const rotateRoom           = useDesignerStore((s) => s.rotateRoom);
@@ -369,35 +392,84 @@ export default function FloorPlan() {
 
   const handleItemPointerDown = useCallback(
     (e: React.PointerEvent<SVGGElement>, instanceId: string) => {
-      e.stopPropagation();
       if (!svgRef.current) return;
+      try { e.preventDefault(); } catch { /* passive listener, can't prevent */ }
+      e.stopPropagation();
 
+      // Selection
+      const alreadySelected = selectedInstanceIds.includes(instanceId);
       let newSelection: string[];
       if (e.shiftKey) {
-        // Toggle this item in selection
-        newSelection = selectedInstanceIds.includes(instanceId)
+        newSelection = alreadySelected
           ? selectedInstanceIds.filter(id => id !== instanceId)
           : [...selectedInstanceIds, instanceId];
       } else {
-        // If clicking something already in selection, keep group; otherwise single-select
-        newSelection = selectedInstanceIds.includes(instanceId) ? selectedInstanceIds : [instanceId];
+        newSelection = alreadySelected ? selectedInstanceIds : [instanceId];
       }
       setSelection(newSelection);
 
-      const pt = getSVGPoint(e, svgRef.current, zoomLevel);
-      const items = newSelection
+      // Capture all values needed for drag at this moment (avoids stale closure)
+      const svg = svgRef.current;
+      const capturedZoom  = zoomLevel;
+      const capturedScale = Math.min(700 / roomW, 500 / roomD, 3.0);
+      const capturedRoomW = roomW;
+      const capturedRoomD = roomD;
+      const startPt = getSVGPoint(e, svg, capturedZoom);
+
+      const selForDrag = alreadySelected ? selectedInstanceIds : newSelection;
+      const dragItems = selForDrag
         .map(id => roomState.placedItems.find(p => p.instanceId === id))
         .filter(Boolean)
-        .map(placed => ({
-          instanceId: placed!.instanceId,
-          startX: Math.max(0, Math.min(roomW, placed!.x)),
-          startZ: Math.max(0, Math.min(roomD, placed!.z)),
+        .map(p => ({
+          instanceId:  p!.instanceId,
+          furnitureId: p!.furnitureId,
+          startX:      Math.max(0, Math.min(capturedRoomW, p!.x)),
+          startZ:      Math.max(0, Math.min(capturedRoomD, p!.z)),
+          scaleW:      p!.scaleW ?? 1,
+          scaleD:      p!.scaleD ?? 1,
+          rotation:    p!.rotation,
         }));
+
       pushFurnitureHistory();
-      setDragState({ startSvgX: pt.x, startSvgZ: pt.y, items });
-      (e.currentTarget as SVGGElement).setPointerCapture(e.pointerId);
+      const ds: DragState = {
+        startSvgX: startPt.x, startSvgZ: startPt.y,
+        items: dragItems.map(i => ({ instanceId: i.instanceId, startX: i.startX, startZ: i.startZ })),
+      };
+      dragStateRef.current = ds;
+      setDragState(ds);
+
+      // ── Window-level pointer listeners (most reliable cross-browser drag) ──
+      const onMove = (ev: PointerEvent) => {
+        ev.preventDefault();
+        const rect  = svg.getBoundingClientRect();
+        const px    = (ev.clientX - rect.left) / capturedZoom;
+        const pz    = (ev.clientY - rect.top)  / capturedZoom;
+        const dX    = (px - startPt.x) / capturedScale;
+        const dZ    = (pz - startPt.y) / capturedScale;
+        for (const item of dragItems) {
+          const furn     = getFurnitureById(item.furnitureId);
+          const r90      = item.rotation === 90 || item.rotation === 270;
+          const rawHW    = (furn?.width  ?? 100) * item.scaleW / 2;
+          const rawHD    = (furn?.depth  ?? 100) * item.scaleD / 2;
+          const halfW    = Math.min(r90 ? rawHD : rawHW, capturedRoomW / 2);
+          const halfD    = Math.min(r90 ? rawHW : rawHD, capturedRoomD / 2);
+          const newX     = Math.max(halfW, Math.min(capturedRoomW - halfW, item.startX + dX));
+          const newZ     = Math.max(halfD, Math.min(capturedRoomD - halfD, item.startZ + dZ));
+          moveItem(item.instanceId, newX, newZ);
+        }
+      };
+      const onUp = () => {
+        window.removeEventListener("pointermove",   onMove);
+        window.removeEventListener("pointerup",     onUp);
+        window.removeEventListener("pointercancel", onUp);
+        dragStateRef.current = null;
+        setDragState(null);
+      };
+      window.addEventListener("pointermove",   onMove,  { passive: false });
+      window.addEventListener("pointerup",     onUp,    { once: true });
+      window.addEventListener("pointercancel", onUp,    { once: true });
     },
-    [roomState.placedItems, setSelection, selectedInstanceIds, roomW, roomD, pushFurnitureHistory]
+    [roomState.placedItems, setSelection, selectedInstanceIds, roomW, roomD, pushFurnitureHistory, zoomLevel, moveItem]
   );
 
   // ─── Window drag ────────────────────────────────────────
@@ -433,29 +505,7 @@ export default function FloorPlan() {
     (e: React.PointerEvent<SVGSVGElement>) => {
       if (!svgRef.current) return;
 
-      // Furniture drag (multi-item)
-      if (dragState) {
-        const pt = getSVGPoint(e, svgRef.current, zoomLevel);
-        const deltaX = (pt.x - dragState.startSvgX) / scale;
-        const deltaZ = (pt.y - dragState.startSvgZ) / scale;
-        for (const item of dragState.items) {
-          const placed = roomState.placedItems.find((p) => p.instanceId === item.instanceId);
-          const furniture = getFurnitureById(placed?.furnitureId ?? "");
-          const sw = placed?.scaleW ?? 1;
-          const sd = placed?.scaleD ?? 1;
-          const rot = placed?.rotation ?? 0;
-          const rotated90 = rot === 90 || rot === 270;
-          const rawHW = (furniture?.width ?? 0) * sw / 2;
-          const rawHD = (furniture?.depth ?? 0) * sd / 2;
-          const halfW = Math.min(rotated90 ? rawHD : rawHW, roomW / 2);
-          const halfD = Math.min(rotated90 ? rawHW : rawHD, roomD / 2);
-          const newX = Math.max(halfW, Math.min(roomW - halfW, item.startX + deltaX));
-          const newZ = Math.max(halfD, Math.min(roomD - halfD, item.startZ + deltaZ));
-          moveItem(item.instanceId, newX, newZ);
-        }
-        return;
-      }
-
+      // Furniture drag is handled by window-level listeners in handleItemPointerDown.
       // Window drag
       if (winDrag) {
         const pt = getSVGPoint(e, svgRef.current, zoomLevel);
@@ -499,6 +549,7 @@ export default function FloorPlan() {
   );
 
   const handlePointerUp = useCallback(() => {
+    dragStateRef.current = null;
     setDragState(null);
     setWinDrag(null);
     setDoorDrag(null);
@@ -536,6 +587,23 @@ export default function FloorPlan() {
     return () => window.removeEventListener("keydown", handler);
   }, [selectedInstanceIds, removeItems, undoFurniture, copyToClipboard, pasteFromClipboard]);
 
+  // ─── Non-passive touchstart: prevent scroll when touching furniture ──
+  // React attaches event listeners passively on root, so e.preventDefault() in
+  // onPointerDown is silently ignored by the browser. We need a native listener
+  // directly on the SVG element with { passive: false } to actually block scroll.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const onTouchStart = (e: TouchEvent) => {
+      const target = e.target as Element | null;
+      if (target?.closest?.("[data-furniture]")) {
+        e.preventDefault();
+      }
+    };
+    svg.addEventListener("touchstart", onTouchStart, { passive: false });
+    return () => svg.removeEventListener("touchstart", onTouchStart);
+  }, []);
+
   // ─── Add window helper ───────────────────────────────────
   const handleAddWindow = (wall: "back" | "front" | "right" | "left") => {
     const wallLen = (wall === "back" || wall === "front") ? roomW : roomD;
@@ -554,8 +622,10 @@ export default function FloorPlan() {
   const selectedFurniture = selectedItem ? getFurnitureById(selectedItem.furnitureId) : null;
 
   return (
+    <div className="flex-1 h-full flex flex-col bg-[#0f1117] select-none overflow-hidden relative">
+    {/* ── Scrollable canvas area ────────────────────────────── */}
     <div
-      className="flex-1 flex flex-col items-center justify-start bg-[#0f1117] select-none overflow-auto p-4 pt-6"
+      className="flex-1 flex flex-col items-center justify-start overflow-auto p-4 pt-6 min-h-0"
       onWheel={e => {
         // Only zoom when not over an input
         if ((e.target as HTMLElement).tagName === "INPUT") return;
@@ -700,6 +770,7 @@ export default function FloorPlan() {
           style={{ display: "block", marginLeft: 30, cursor: dragState ? "grabbing" : "default" }}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
           onClick={handleSVGClick}
         >
           {/* Background */}
@@ -838,10 +909,23 @@ export default function FloorPlan() {
         </svg>
       </div>
       </div>{/* end zoom wrapper */}
+      {/* Legend — desktop only */}
+      <div className="hidden md:flex mt-2 flex-wrap items-center gap-3 text-[10px] text-gray-600 justify-center pb-2">
+        <span>{t.fpLegendDrag}</span>
+        <span>{t.fpLegendMulti}</span>
+        <span>{t.fpLegendRotate}</span>
+        <span>{t.fpLegendCopy}</span>
+        <span>{t.fpLegendDelete}</span>
+        <span>{t.fpLegendEdit}</span>
+        <span>{t.fpLegendGrid}</span>
+      </div>
+    </div>{/* ── end scrollable canvas area ── */}
 
       {/* Multi-select action bar */}
       {selectedInstanceIds.length > 1 && (
-        <div className="mt-3 flex items-center gap-2 bg-gray-800/80 rounded-xl px-4 py-2.5 border border-blue-500/40 backdrop-blur max-w-lg w-full">
+        <div className={isLandscape
+          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] w-72 bg-gray-900/98 rounded-2xl px-4 py-3 border border-blue-500/50 shadow-2xl backdrop-blur-md flex items-center gap-2"
+          : "flex items-center gap-2 bg-gray-900/95 rounded-t-xl px-4 py-3 border-t border-blue-500/40 backdrop-blur-md w-full"}>
           <span className="text-xs text-blue-300 font-semibold flex-1">已选 {selectedInstanceIds.length} 件</span>
           <button
             onClick={() => copyToClipboard(selectedInstanceIds)}
@@ -866,29 +950,40 @@ export default function FloorPlan() {
 
       {/* Selected item controls */}
       {selectedItem && selectedFurniture && (
-        <div className="mt-3 flex flex-col gap-2 bg-gray-800/80 rounded-xl px-4 py-3 border border-gray-700/50 backdrop-blur max-w-lg w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md shrink-0 border border-white/20" style={{ background: selectedFurniture.color }} />
-            <span className="text-xs font-semibold text-gray-200">{locale === "en" ? (getFurnitureNameEn(selectedFurniture.id) ?? selectedFurniture.name) : selectedFurniture.name}</span>
-            <span className="text-xs text-gray-500">
-              {(selectedItem.x / 100).toFixed(1)}m, {(selectedItem.z / 100).toFixed(1)}m · {selectedItem.rotation}°
+        <div
+          className={isLandscape
+            ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] w-80 bg-gray-900/98 rounded-2xl px-4 py-3 border border-gray-700/60 shadow-2xl backdrop-blur-md flex flex-col gap-2 overflow-y-auto"
+            : "flex flex-col gap-2 bg-gray-900/95 rounded-t-xl px-4 pt-3 border-t border-gray-700/50 backdrop-blur-md w-full"}
+          style={isLandscape
+            ? { maxHeight: "80dvh" }
+            : { paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-5 h-5 rounded-md shrink-0 border border-white/20" style={{ background: selectedFurniture.color }} />
+            <span className="text-xs font-semibold text-gray-200 truncate min-w-0 flex-1">
+              {locale === "en" ? (getFurnitureNameEn(selectedFurniture.id) ?? selectedFurniture.name) : selectedFurniture.name}
+              <span className="text-[10px] text-gray-500 font-normal ml-1">
+                {(selectedItem.x / 100).toFixed(1)},{(selectedItem.z / 100).toFixed(1)}m · {selectedItem.rotation}°
+              </span>
             </span>
-            <div className="flex gap-1 ml-auto">
+            <div className="flex gap-1 shrink-0">
               <button onClick={() => rotateItem(selectedItem.instanceId)}
-                className="px-2 py-1 bg-blue-600/80 hover:bg-blue-600 text-white text-[11px] font-semibold rounded-lg transition-colors">
+                className="px-2 py-1 bg-blue-600/80 active:bg-blue-600 text-white text-[11px] font-semibold rounded-lg">
                 ↻ {t.fpRotateItem}
               </button>
               <button onClick={() => copyToClipboard([selectedItem.instanceId])}
-                className="px-2 py-1 text-white text-[11px] font-semibold rounded-lg transition-all"
-                style={{ background: "rgba(0,122,255,0.7)" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#007AFF"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,122,255,0.7)"; }}
-              >
+                className="px-2 py-1 text-white text-[11px] font-semibold rounded-lg"
+                style={{ background: "rgba(0,122,255,0.7)" }}>
                 ⧉ {t.fpCopyItem}
               </button>
               <button onClick={() => removeItem(selectedItem.instanceId)}
-                className="px-2 py-1 bg-red-600/80 hover:bg-red-600 text-white text-[11px] font-semibold rounded-lg transition-colors">
+                className="px-2 py-1 bg-red-600/80 active:bg-red-600 text-white text-[11px] font-semibold rounded-lg">
                 ✕ {t.fpDeleteItem}
+              </button>
+              <button onClick={() => setSelection([])}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 active:text-white shrink-0"
+                style={{ background: "rgba(255,255,255,0.08)" }}>
+                ✕
               </button>
             </div>
           </div>
@@ -905,6 +1000,7 @@ export default function FloorPlan() {
               <input type="range" min={30} max={400} step={5}
                 value={Math.round((selectedItem.scaleW ?? 1) * 100)}
                 onMouseDown={() => pushFurnitureHistory()}
+                onTouchStart={() => pushFurnitureHistory()}
                 onChange={e => {
                   const newSW = parseInt(e.target.value) / 100;
                   resizeItem(selectedItem.instanceId, newSW, selectedItem.scaleD ?? 1);
@@ -917,7 +1013,7 @@ export default function FloorPlan() {
                   const cz = Math.max(hd, Math.min(roomD - hd, selectedItem.z));
                   if (cx !== selectedItem.x || cz !== selectedItem.z) moveItem(selectedItem.instanceId, cx, cz);
                 }}
-                className="w-full accent-blue-500 h-1.5" />
+                className="w-full accent-blue-500 h-2 md:h-1.5" />
             </div>
             <div>
               <div className="flex justify-between mb-1">
@@ -929,6 +1025,7 @@ export default function FloorPlan() {
               <input type="range" min={30} max={400} step={5}
                 value={Math.round((selectedItem.scaleD ?? 1) * 100)}
                 onMouseDown={() => pushFurnitureHistory()}
+                onTouchStart={() => pushFurnitureHistory()}
                 onChange={e => {
                   const newSD = parseInt(e.target.value) / 100;
                   resizeItem(selectedItem.instanceId, selectedItem.scaleW ?? 1, newSD);
@@ -941,11 +1038,36 @@ export default function FloorPlan() {
                   const cz = Math.max(hd, Math.min(roomD - hd, selectedItem.z));
                   if (cx !== selectedItem.x || cz !== selectedItem.z) moveItem(selectedItem.instanceId, cx, cz);
                 }}
-                className="w-full accent-blue-500 h-1.5" />
+                className="w-full accent-blue-500 h-2 md:h-1.5" />
             </div>
           </div>
+          {/* Elevation slider */}
+          <div>
+            <div className="flex justify-between mb-1">
+              <span className="text-[10px] text-gray-400">
+                ↕ {t.fpElevation}
+              </span>
+              <span className="text-[10px] text-gray-300 font-mono">
+                {selectedItem.elevationY ?? 0} cm
+              </span>
+            </div>
+            <input type="range" min={0} max={200} step={5}
+              value={selectedItem.elevationY ?? 0}
+              onMouseDown={() => pushFurnitureHistory()}
+              onTouchStart={() => pushFurnitureHistory()}
+              onChange={e => setElevation(selectedItem.instanceId, parseInt(e.target.value))}
+              className="w-full accent-amber-400 h-2 md:h-1.5" />
+            <div className="flex justify-between mt-0.5">
+              <span className="text-[9px] text-gray-600">0</span>
+              <span className="text-[9px] text-gray-600">50</span>
+              <span className="text-[9px] text-gray-600">100</span>
+              <span className="text-[9px] text-gray-600">150</span>
+              <span className="text-[9px] text-gray-600">200cm</span>
+            </div>
+          </div>
+
           <div className="flex justify-between items-center">
-            <button onClick={() => resizeItem(selectedItem.instanceId, 1, 1)}
+            <button onClick={() => { resizeItem(selectedItem.instanceId, 1, 1); setElevation(selectedItem.instanceId, 0); }}
               className="text-[10px] text-gray-500 hover:text-gray-300 underline">{t.fpResetSize}</button>
             <span className="text-[10px] text-gray-600">
               {t.fpOriginal} {(selectedFurniture.width / 100).toFixed(2)}m × {(selectedFurniture.depth / 100).toFixed(2)}m
@@ -954,16 +1076,6 @@ export default function FloorPlan() {
         </div>
       )}
 
-      {/* Legend */}
-      <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-gray-600 justify-center">
-        <span>{t.fpLegendDrag}</span>
-        <span>{t.fpLegendMulti}</span>
-        <span>{t.fpLegendRotate}</span>
-        <span>{t.fpLegendCopy}</span>
-        <span>{t.fpLegendDelete}</span>
-        <span>{t.fpLegendEdit}</span>
-        <span>{t.fpLegendGrid}</span>
-      </div>
     </div>
   );
 }

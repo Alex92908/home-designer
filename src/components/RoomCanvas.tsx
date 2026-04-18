@@ -131,6 +131,23 @@ function RoomShell({
         <planeGeometry args={[W, D]} />
         <meshStandardMaterial color="#F8F7F5" roughness={0.95} />
       </mesh>
+      {/* Ceiling crown molding — thin ledge where wall meets ceiling */}
+      <mesh position={[0, H - 0.04, -D / 2 + 0.04]}>
+        <boxGeometry args={[W, 0.06, 0.08]} />
+        <meshStandardMaterial color="#FAFAF8" roughness={0.85} />
+      </mesh>
+      <mesh position={[0, H - 0.04, D / 2 - 0.04]}>
+        <boxGeometry args={[W, 0.06, 0.08]} />
+        <meshStandardMaterial color="#FAFAF8" roughness={0.85} />
+      </mesh>
+      <mesh position={[-W / 2 + 0.04, H - 0.04, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[D, 0.06, 0.08]} />
+        <meshStandardMaterial color="#FAFAF8" roughness={0.85} />
+      </mesh>
+      <mesh position={[W / 2 - 0.04, H - 0.04, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[D, 0.06, 0.08]} />
+        <meshStandardMaterial color="#FAFAF8" roughness={0.85} />
+      </mesh>
 
       {/* Skirting boards */}
       <mesh position={[0, 0.06, -D / 2 + 0.02]}>
@@ -272,6 +289,71 @@ function LightFixture({ H, lightColor, lightId }: { H: number; lightColor: strin
     );
   }
 
+  // Japanese paper lantern (和紙ランプ)
+  if (lightId === "light-japanese-paper") {
+    return (
+      <group position={[0, H - 0.12, 0]}>
+        {/* Suspension cord */}
+        <mesh position={[0, 0.18, 0]}>
+          <cylinderGeometry args={[0.004, 0.004, 0.28, 4]} />
+          <meshStandardMaterial color="#777" metalness={0.3} roughness={0.6} />
+        </mesh>
+        {/* Lantern body — flattened sphere */}
+        <mesh position={[0, -0.12, 0]} scale={[1, 0.75, 1]}>
+          <sphereGeometry args={[0.32, 16, 14]} />
+          <meshStandardMaterial color="#F5EDD0" emissive="#F5EDD0" emissiveIntensity={0.18} roughness={0.92} transparent opacity={0.88} />
+        </mesh>
+        {/* Top/bottom caps */}
+        <mesh position={[0, 0.12, 0]}>
+          <cylinderGeometry args={[0.05, 0.05, 0.06, 8]} />
+          <meshStandardMaterial color="#8B6A40" roughness={0.7} />
+        </mesh>
+        <mesh position={[0, -0.36, 0]}>
+          <cylinderGeometry args={[0.05, 0.02, 0.06, 8]} />
+          <meshStandardMaterial color="#8B6A40" roughness={0.7} />
+        </mesh>
+        {/* Warm diffuse light */}
+        <pointLight position={[0, H - 0.22, 0]} intensity={7} color="#FFF0C0" distance={5} decay={2} castShadow />
+      </group>
+    );
+  }
+
+  // Industrial Edison bulb cluster (工业裸泡灯)
+  if (lightId === "light-industrial-bulb") {
+    return (
+      <group position={[0, H - 0.08, 0]}>
+        {/* Ceiling canopy */}
+        <mesh position={[0, 0.04, 0]}>
+          <cylinderGeometry args={[0.09, 0.09, 0.05, 10]} />
+          <meshStandardMaterial color="#222" metalness={0.85} roughness={0.3} />
+        </mesh>
+        {/* Three hanging cords at different heights */}
+        {([[-0.28, -0.35], [0, -0.50], [0.28, -0.38]] as [number, number][]).map(([bx, by], i) => (
+          <group key={i} position={[bx, by, 0]}>
+            <mesh position={[0, 0.15, 0]}>
+              <cylinderGeometry args={[0.003, 0.003, 0.30, 4]} />
+              <meshStandardMaterial color="#333" />
+            </mesh>
+            {/* Socket */}
+            <mesh position={[0, 0, 0]}>
+              <cylinderGeometry args={[0.028, 0.022, 0.05, 8]} />
+              <meshStandardMaterial color="#2A2A2A" metalness={0.7} roughness={0.3} />
+            </mesh>
+            {/* Edison bulb — slightly amber tinted glass */}
+            <mesh position={[0, -0.07, 0]} scale={[1, 1.3, 1]}>
+              <sphereGeometry args={[0.055, 10, 8]} />
+              <meshStandardMaterial color="#F5C060" emissive="#F5A020" emissiveIntensity={0.9} roughness={0.05} transparent opacity={0.82} />
+            </mesh>
+            {/* Filament glow */}
+            <pointLight position={[bx, H - 0.5 + Math.abs(by), 0]} intensity={2.5} color="#FF9800" distance={3} decay={2} />
+          </group>
+        ))}
+        {/* Main area light */}
+        <pointLight position={[0, H - 0.55, 0]} intensity={6} color="#FFB347" distance={5} decay={2} castShadow />
+      </group>
+    );
+  }
+
   // Default pendant
   return (
     <group position={[0, H - 0.18, 0]}>
@@ -307,7 +389,7 @@ function Sofa({ color, sc, w, d, h }: MeshProps) {
       {/* Seat */}
       <mesh position={[0, seatH / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, seatH, d]} />
-        <meshStandardMaterial color={color} roughness={0.82} />
+        <meshStandardMaterial color={color} roughness={0.92} metalness={0} />
       </mesh>
       {/* Backrest */}
       <mesh position={[0, seatH + backH / 2, -d / 2 + 0.12]} castShadow>
@@ -350,7 +432,7 @@ function CoffeeTable({ color, w, d, h }: MeshProps) {
     <group>
       <mesh position={[0, h - 0.04, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, 0.06, d]} />
-        <meshStandardMaterial color={color} roughness={0.45} metalness={0.1} />
+        <meshStandardMaterial color={color} roughness={0.55} metalness={0.03} />
       </mesh>
       {([[-w / 2 + 0.08, -d / 2 + 0.08], [w / 2 - 0.08, -d / 2 + 0.08], [-w / 2 + 0.08, d / 2 - 0.08], [w / 2 - 0.08, d / 2 - 0.08]] as [number, number][]).map(([lx, lz], i) => (
         <mesh key={i} position={[lx, h / 2 - 0.04, lz]} castShadow>
@@ -421,7 +503,7 @@ function BedMesh({ color, sc, w, d, h }: MeshProps) {
       {/* Platform */}
       <mesh position={[0, platformH / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[w + 0.04, platformH, d + 0.04]} />
-        <meshStandardMaterial color={frame} roughness={0.6} />
+        <meshStandardMaterial color={frame} roughness={0.88} />
       </mesh>
       {/* Mattress */}
       <mesh position={[0, platformH + matH / 2, 0]} castShadow receiveShadow>
@@ -443,7 +525,7 @@ function BedMesh({ color, sc, w, d, h }: MeshProps) {
       {/* Headboard */}
       <mesh position={[0, platformH + headH / 2, -d / 2]} castShadow>
         <boxGeometry args={[w + 0.04, headH, 0.12]} />
-        <meshStandardMaterial color={color} roughness={0.75} />
+        <meshStandardMaterial color={color} roughness={0.88} />
       </mesh>
       {/* Legs */}
       {([[-w / 2, -d / 2 + 0.08], [w / 2, -d / 2 + 0.08], [-w / 2, d / 2 - 0.08], [w / 2, d / 2 - 0.08]] as [number, number][]).map(([lx, lz], i) => (
@@ -539,12 +621,12 @@ function DiningChair({ color, w, d, h }: MeshProps) {
       {/* Seat */}
       <mesh position={[0, seatH, 0]} castShadow>
         <boxGeometry args={[w, 0.05, d]} />
-        <meshStandardMaterial color={color} roughness={0.75} />
+        <meshStandardMaterial color={color} roughness={0.92} metalness={0} />
       </mesh>
       {/* Back */}
       <mesh position={[0, seatH + h * 0.28, -d / 2 + 0.04]} castShadow>
         <boxGeometry args={[w, h * 0.55, 0.04]} />
-        <meshStandardMaterial color={color} roughness={0.75} />
+        <meshStandardMaterial color={color} roughness={0.92} metalness={0} />
       </mesh>
       {/* Legs */}
       {([[-w / 2 + 0.04, -d / 2 + 0.04], [w / 2 - 0.04, -d / 2 + 0.04], [-w / 2 + 0.04, d / 2 - 0.04], [w / 2 - 0.04, d / 2 - 0.04]] as [number, number][]).map(([lx, lz], i) => (
@@ -820,7 +902,7 @@ function Rug({ color, w, d }: MeshProps) {
   return (
     <mesh position={[0, 0.01, 0]} receiveShadow>
       <boxGeometry args={[w, 0.015, d]} />
-      <meshStandardMaterial color={color} roughness={0.98} />
+      <meshStandardMaterial color={color} roughness={0.98} metalness={0} />
     </mesh>
   );
 }
@@ -884,12 +966,57 @@ function Artwork({ color, w, d, h }: MeshProps) {
   );
 }
 
+// ─── Per-category material properties ─────────────────────
+function furnitureMat(category: string, color: string): { color: string; roughness: number; metalness: number; envMapIntensity?: number } {
+  switch (category) {
+    case "sofa":
+    case "dining_chair":
+    case "office_chair":
+      return { color, roughness: 0.92, metalness: 0 };                     // fabric
+    case "coffee_table":
+    case "dining_table":
+    case "desk":
+    case "nightstand":
+    case "sideboard":
+    case "bookshelf":
+    case "tv_unit":
+    case "wardrobe":
+    case "dresser":
+    case "storage":
+      return { color, roughness: 0.58, metalness: 0.02, envMapIntensity: 0.4 }; // wood
+    case "floor_lamp":
+    case "range_hood":
+      return { color, roughness: 0.28, metalness: 0.75 };                  // metal
+    case "kitchen_cabinet":
+    case "kitchen_sink":
+    case "bathroom_vanity":
+      return { color, roughness: 0.45, metalness: 0.08 };                  // painted cabinet
+    case "refrigerator":
+      return { color, roughness: 0.22, metalness: 0.55 };                  // appliance
+    case "bathtub":
+    case "toilet":
+    case "shower":
+      return { color, roughness: 0.35, metalness: 0.04 };                  // ceramic
+    case "rug":
+      return { color, roughness: 0.98, metalness: 0 };                     // carpet
+    case "plant":
+      return { color, roughness: 0.85, metalness: 0 };
+    case "artwork":
+      return { color, roughness: 0.75, metalness: 0 };
+    case "bed":
+      return { color, roughness: 0.88, metalness: 0 };                     // upholstered
+    default:
+      return { color, roughness: 0.65, metalness: 0.02 };
+  }
+}
+
 // Generic fallback
-function GenericBox({ color, w, d, h }: MeshProps) {
+function GenericBox({ color, w, d, h, category }: MeshProps & { category?: string }) {
+  const mat = furnitureMat(category ?? "", color);
   return (
     <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
       <boxGeometry args={[w, h, d]} />
-      <meshStandardMaterial color={color} roughness={0.6} />
+      <meshStandardMaterial {...mat} />
     </mesh>
   );
 }
@@ -910,7 +1037,7 @@ function FurnitureMesh({ item, w, d, h }: { item: FurnitureItem; w: number; d: n
     case "dining_chair":    return <DiningChair {...props} />;
     case "kitchen_cabinet": return <KitchenCabinet {...props} />;
     case "refrigerator":    return <Refrigerator {...props} />;
-    case "range_hood":      return <GenericBox {...props} />;
+    case "range_hood":      return <GenericBox {...props} category="range_hood" />;
     case "kitchen_sink":    return <BathroomVanity {...props} />;
     case "toilet":          return <Toilet {...props} />;
     case "bathtub":         return <Bathtub {...props} />;
@@ -925,7 +1052,7 @@ function FurnitureMesh({ item, w, d, h }: { item: FurnitureItem; w: number; d: n
     case "rug":             return <Rug {...props} />;
     case "artwork":         return <Artwork {...props} />;
     case "sideboard":       return <CoffeeTable {...props} />;
-    default:                return <GenericBox {...props} />;
+    default:                return <GenericBox {...props} category={item.category} />;
   }
 }
 
@@ -954,8 +1081,43 @@ function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def
     );
   }
 
+  // Upper kitchen cabinet: wall-mounted at ~1.3m, shallower, no counter top
+  if (item.id.includes("cabinet-upper")) {
+    const H = def.height / 100;
+    const mountY = H * 0.48;  // bottom edge ~1.3m for 2.7m room
+    const upperH = fh * 0.72; // upper cabinet is shorter than lower
+    const upperD = fd * 0.60; // shallower than lower cabinet
+    return (
+      <group position={[x3d, mountY, z3d]} rotation={[0, rotY, 0]}>
+        {/* Cabinet body */}
+        <mesh position={[0, upperH / 2, 0]} castShadow>
+          <boxGeometry args={[fw, upperH, upperD]} />
+          <meshStandardMaterial color={item.color} roughness={0.45} />
+        </mesh>
+        {/* Door dividers */}
+        {Array.from({ length: Math.max(1, Math.round(fw / 0.6)) }).map((_, i) => {
+          const n = Math.max(1, Math.round(fw / 0.6));
+          const cx = (i - (n - 1) / 2) * (fw / n);
+          return (
+            <mesh key={i} position={[cx, upperH / 2, upperD / 2 + 0.005]}>
+              <boxGeometry args={[0.012, upperH - 0.03, 0.008]} />
+              <meshStandardMaterial color={item.color} roughness={0.4} />
+            </mesh>
+          );
+        })}
+        {/* Handle */}
+        <mesh position={[0, upperH * 0.38, upperD / 2 + 0.018]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.006, 0.006, fw * 0.55, 6]} />
+          <meshStandardMaterial color="#909090" metalness={0.8} roughness={0.3} />
+        </mesh>
+      </group>
+    );
+  }
+
+  const baseY = (placed.elevationY ?? 0) / 100;
+
   return (
-    <group position={[x3d, 0, z3d]} rotation={[0, rotY, 0]}>
+    <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]}>
       <FurnitureMesh item={item} w={fw} d={fd} h={fh} />
     </group>
   );

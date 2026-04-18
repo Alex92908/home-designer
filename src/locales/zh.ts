@@ -16,6 +16,7 @@ export const zh = {
   // ── LeftPanel ────────────────────────────────────────────
   tabMaterials: "🎨 材料",
   tabFurniture: "🪑 家具",
+  tabTemplates: "✨ 样板",
   matHint: "点击材料→应用到当前房间",
   furnitureHint: "点击家具→自动放入平面图",
   allCategories: "🔓 全品类",
@@ -141,6 +142,7 @@ export const zh = {
   fpDeleteItem: "删除",
   fpWidth: "宽度",
   fpDepth: "深度",
+  fpElevation: "离地高度",
   fpResetSize: "重置尺寸",
   fpOriginal: "原始:",
   fpLegendDrag: "🔵 拖动移位",

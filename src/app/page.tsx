@@ -78,8 +78,21 @@ export default function Home() {
   const loadFromShare = useDesignerStore((s) => s.loadFromShare);
   const t = useT();
 
-  const [leftOpen,  setLeftOpen]  = useState(true);
-  const [rightOpen, setRightOpen] = useState(true);
+  // On mobile (< 768px) start with panels collapsed so the main canvas has space
+  const [leftOpen,  setLeftOpen]  = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 768 : true
+  );
+  const [rightOpen, setRightOpen] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 768 : true
+  );
+
+  // Auto-collapse panels when entering 2D / all / exterior on mobile
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setLeftOpen(false);
+      setRightOpen(false);
+    }
+  }, [viewMode]);
 
   const isAll      = viewMode === "all";
   const isExterior = viewMode === "exterior";

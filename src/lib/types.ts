@@ -97,11 +97,12 @@ export interface WindowConfig {
 export interface PlacedItem {
   instanceId: string;
   furnitureId: string;
-  x: number;         // cm from left wall (0 = left wall)
-  z: number;         // cm from back wall (0 = back wall)
-  rotation: number;  // degrees: 0, 90, 180, 270
-  scaleW?: number;   // width scale multiplier (default 1.0)
-  scaleD?: number;   // depth scale multiplier (default 1.0)
+  x: number;          // cm from left wall (0 = left wall)
+  z: number;          // cm from back wall (0 = back wall)
+  rotation: number;   // degrees: 0, 90, 180, 270
+  scaleW?: number;    // width scale multiplier (default 1.0)
+  scaleD?: number;    // depth scale multiplier (default 1.0)
+  elevationY?: number; // cm above floor (default 0 = on floor)
 }
 
 export interface RoomMaterials {

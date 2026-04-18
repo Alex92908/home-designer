@@ -328,44 +328,69 @@ function solidTile(tileColor: string, groutColor: string): THREE.CanvasTexture {
 }
 
 // ── Bamboo floor ──────────────────────────────────────────────────────────
+// Carbonized bamboo: wide planks composed of tightly-pressed thin bamboo strips.
+// Planks run horizontally (left-right), node marks add organic variation.
 function bambooFloor(baseColor: string, darkColor: string): THREE.CanvasTexture {
   const SIZE = 512;
   const [canvas, ctx] = makeCtx(SIZE);
   const rng = seededRng(21);
 
-  ctx.fillStyle = baseColor;
+  ctx.fillStyle = adjustHex(darkColor, -15);
   ctx.fillRect(0, 0, SIZE, SIZE);
 
-  const STRIP_H = 10; // thin bamboo strips
-  const strips = Math.ceil(SIZE / STRIP_H);
+  // ── Wide planks (like engineered bamboo boards) ──
+  const PLANK_H = 80;  // ~4 planks visible = realistic wide-plank bamboo
+  const planks = Math.ceil(SIZE / PLANK_H);
 
-  for (let row = 0; row < strips; row++) {
-    const y = row * STRIP_H;
-    const stripColor = lerpHex(baseColor, darkColor, rng() * 0.4);
-    ctx.fillStyle = stripColor;
-    ctx.fillRect(0, y, SIZE, STRIP_H - 1);
+  for (let row = 0; row < planks; row++) {
+    const y = row * PLANK_H;
+    const plankBase = lerpHex(baseColor, darkColor, rng() * 0.25);
+    ctx.fillStyle = plankBase;
+    ctx.fillRect(0, y + 1, SIZE, PLANK_H - 2);
 
-    // subtle bamboo node marks
-    if (rng() > 0.85) {
+    // ── Tight micro-strips within each plank (pressed bamboo strips) ──
+    const STRIP_H = 7;
+    const stripCount = Math.floor((PLANK_H - 2) / STRIP_H);
+    for (let s = 0; s < stripCount; s++) {
+      const sy = y + 1 + s * STRIP_H;
+      const sc = lerpHex(plankBase, darkColor, rng() * 0.22);
+      ctx.fillStyle = sc;
+      ctx.fillRect(0, sy, SIZE, STRIP_H - 1);
+    }
+
+    // ── Grain lines (longitudinal bamboo fibers) ──
+    for (let g = 0; g < 30; g++) {
+      const gx = rng() * SIZE;
       ctx.strokeStyle = darkColor;
-      ctx.globalAlpha = 0.18;
-      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.05 + rng() * 0.09;
+      ctx.lineWidth = 0.4 + rng() * 0.8;
       ctx.beginPath();
-      ctx.moveTo(0, y + STRIP_H / 2);
-      ctx.lineTo(SIZE, y + STRIP_H / 2 + (rng() - 0.5) * 2);
+      ctx.moveTo(gx, y + 1);
+      for (let step = 1; step <= 4; step++) {
+        ctx.lineTo(gx + (rng() - 0.5) * 3, y + 1 + (PLANK_H - 2) * (step / 4));
+      }
+      ctx.stroke();
+    }
+
+    // ── Node marks (natural bamboo culm knuckle) ──
+    if (rng() > 0.45) {
+      const nx = rng() * SIZE;
+      const ny = y + PLANK_H * 0.45 + (rng() - 0.5) * PLANK_H * 0.2;
+      ctx.strokeStyle = adjustHex(darkColor, -8);
+      ctx.globalAlpha = 0.22 + rng() * 0.12;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(Math.max(0, nx - 40), ny);
+      ctx.bezierCurveTo(nx - 15, ny + (rng() - 0.5) * 4, nx + 15, ny + (rng() - 0.5) * 4, Math.min(SIZE, nx + 40), ny);
       ctx.stroke();
     }
   }
 
-  // Vertical bamboo seams
-  for (let col = 0; col < 4; col++) {
-    ctx.strokeStyle = adjustHex(darkColor, -15);
-    ctx.globalAlpha = 0.3;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(col * SIZE / 4, 0);
-    ctx.lineTo(col * SIZE / 4, SIZE);
-    ctx.stroke();
+  // ── Plank end gaps ──
+  ctx.globalAlpha = 0.45;
+  ctx.fillStyle = adjustHex(darkColor, -25);
+  for (let row = 1; row <= planks; row++) {
+    ctx.fillRect(0, row * PLANK_H - 1, SIZE, 2);
   }
 
   ctx.globalAlpha = 1;
@@ -390,7 +415,7 @@ export function getFloorTexture(id: string): THREE.CanvasTexture | null {
     case "floor-concrete":
       return cached(id, () => concreteFloor("#888888"));
     case "floor-bamboo":
-      return cached(id, () => bambooFloor("#A0874A", "#5A4020"));
+      return cached(id, () => bambooFloor("#A8904E", "#4E3015"));
     case "floor-terracotta":
       return cached(id, () => squareTile("#C67B5C", "#8B4A35", 5, 5, 55));
     case "floor-hex-tile":
@@ -431,7 +456,7 @@ export function floorTileSize(id: string): [number, number] {
     case "floor-herringbone":
       return [1.6, 1.6];
     case "floor-bamboo":
-      return [1.2, 1.2];
+      return [1.6, 1.6];  // 4 planks × 40cm wide = ~1.6m repeat
     default:
       return [2.0, 2.0];  // wood floors: repeat every 2m
   }
