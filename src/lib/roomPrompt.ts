@@ -104,6 +104,54 @@ function parseFurnitureId(id: string): string {
   return parts.join(" ");
 }
 
+// ─── Material ID → English description ──────────────────────
+const MATERIAL_EN: Record<string, { wall?: string; floor?: string; light?: string }> = {
+  // Wall materials
+  "wall-white":       { wall: "matte white painted walls" },
+  "wall-gray":        { wall: "medium grey matte painted walls" },
+  "wall-beige":       { wall: "warm beige painted walls" },
+  "wall-green":       { wall: "sage green painted walls" },
+  "wall-tile-metro":  { wall: "white subway tile walls" },
+  "wall-tile-marble": { wall: "marble tile walls" },
+  "wall-wood":        { wall: "natural wood panel walls" },
+  "wall-concrete":    { wall: "raw concrete walls" },
+  "wall-wallpaper-floral": { wall: "floral wallpaper walls" },
+  "wall-wallpaper-geo":    { wall: "geometric pattern wallpaper" },
+  // Floor materials
+  "floor-oak":          { floor: "warm oak wood flooring" },
+  "floor-walnut":       { floor: "dark walnut hardwood flooring" },
+  "floor-light-wood":   { floor: "light wood flooring" },
+  "floor-concrete":     { floor: "concrete grey floor tiles" },
+  "floor-tile-white":   { floor: "large format white porcelain tiles" },
+  "floor-black-tile":   { floor: "matte black porcelain floor tiles" },
+  "floor-marble":       { floor: "white marble floor tiles" },
+  "floor-herringbone":  { floor: "herringbone wood parquet flooring" },
+  "floor-terrazzo":     { floor: "terrazzo floor tiles" },
+  // Lighting
+  "light-chandelier":      { light: "elegant crystal chandelier, warm glow" },
+  "light-pendant-nordic":  { light: "Nordic minimal pendant light, diffused warm light" },
+  "light-spot":            { light: "ceiling track spotlights, no main pendant, atmospheric lighting" },
+  "light-recessed":        { light: "recessed downlights, clean ceiling, warm white" },
+  "light-japanese-paper":  { light: "washi paper pendant lamp, soft diffused warm light" },
+  "light-strip":           { light: "LED strip cove lighting, indirect ambient glow" },
+  "light-industrial":      { light: "industrial bare-bulb pendant lights, warm Edison glow" },
+};
+
+function materialIdToDesc(id: string, category: "wall" | "floor" | "light"): string | null {
+  return MATERIAL_EN[id]?.[category] ?? null;
+}
+
+// Strip any remaining non-ASCII (Chinese) characters from a string
+function ensureEnglish(str: string): string {
+  // Remove CJK unicode range and fullwidth punctuation, trim commas/spaces
+  return str
+    .replace(/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]+/g, "")
+    .replace(/，/g, ", ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[\s,]+|[\s,]+$/g, "")
+    .trim();
+}
+
 // ─── Hex → English color name ─────────────────────────────
 function hexToColorName(hex: string): string {
   const map: [string, string][] = [
@@ -192,11 +240,11 @@ export interface RoomPromptInput {
   depth: number;   // cm
   height?: number; // cm
   materials: {
-    wall?:    { color: string; description?: string; name?: string };
-    floor?:   { color: string; description?: string; name?: string };
-    ceiling?: { color: string; description?: string };
-    light?:   { description?: string; name?: string; color?: string };
-    tile?:    { color: string; description?: string };
+    wall?:    { id?: string; color: string; description?: string; name?: string };
+    floor?:   { id?: string; color: string; description?: string; name?: string };
+    ceiling?: { id?: string; color: string; description?: string };
+    light?:   { id?: string; description?: string; name?: string; color?: string };
+    tile?:    { id?: string; color: string; description?: string };
   };
   placedItems: Array<{
     furnitureId: string;
@@ -235,35 +283,42 @@ export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
   // ── Wall ──
   let wallDesc = "white painted walls";
   if (materials.wall) {
-    const color = hexToColorName(materials.wall.color);
-    const mat   = materials.wall.description ?? materials.wall.name ?? "wall";
-    wallDesc = `${color} ${mat}`;
+    const matId  = (materials.wall as { id?: string }).id ?? "";
+    const fromId = materialIdToDesc(matId, "wall");
+    if (fromId) {
+      wallDesc = fromId;
+    } else {
+      const color = hexToColorName(materials.wall.color);
+      wallDesc = ensureEnglish(`${color} painted walls`);
+    }
   }
 
   // ── Floor ──
   let floorDesc = "light wood flooring";
   if (materials.floor) {
-    const color = hexToColorName(materials.floor.color);
-    const mat   = materials.floor.description ?? materials.floor.name ?? "floor";
-    floorDesc = `${color} ${mat}`;
+    const matId  = (materials.floor as { id?: string }).id ?? "";
+    const fromId = materialIdToDesc(matId, "floor");
+    if (fromId) {
+      floorDesc = fromId;
+    } else {
+      const color = hexToColorName(materials.floor.color);
+      floorDesc = ensureEnglish(`${color} flooring`);
+    }
   }
 
   // ── Lighting ──
   let lightDesc = "recessed ceiling lights, warm white ambiance";
   if (materials.light) {
-    lightDesc = materials.light.description ?? materials.light.name ?? lightDesc;
-    // Translate common Chinese lighting terms
-    lightDesc = lightDesc
-      .replace("无主灯方案", "no main ceiling light")
-      .replace("氛围感拉满", "atmospheric track spotlights")
-      .replace("轨道射灯", "track spotlights")
-      .replace("柔和漫射光", "soft diffused light")
-      .replace("和纸", "washi paper pendant lamp")
-      .replace("北欧", "Nordic")
-      .replace("吊灯", "pendant light")
-      .replace("台灯", "table lamp")
-      .replace("壁灯", "wall sconce")
-      .replace("筒灯", "recessed downlight");
+    const matId  = (materials.light as { id?: string }).id ?? "";
+    const fromId = materialIdToDesc(matId, "light");
+    if (fromId) {
+      lightDesc = fromId;
+    } else {
+      // Fallback: strip Chinese from whatever description exists
+      lightDesc = ensureEnglish(
+        materials.light.description ?? materials.light.name ?? lightDesc
+      ) || lightDesc;
+    }
   }
 
   // ── Furniture ──
