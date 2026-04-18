@@ -153,6 +153,10 @@ export const zh = {
   fpLegendEdit: "🪟 编辑窗户/门",
   fpLegendGrid: "每格=1m",
 
+  // ── Floor switching ──────────────────────────────────────
+  fpFloor: "楼层",
+  fpFloorSwitch: (n: number) => `第${n}层`,
+
   // ── FloorPlanAll ─────────────────────────────────────────
   allTitle: "🏠 全局平面图",
   allConfigured: "已配置",
@@ -199,6 +203,8 @@ export const zh = {
   extWallDescs: { render: "光滑抹灰", brick: "质朴温暖", stone: "厚重自然", wood: "温润亲切", concrete: "硬核极简" } as Record<string, string>,
   extYardLabels: { minimal: "极简", garden: "花园", pool: "泳池", full: "豪华" } as Record<string, string>,
   extYardDescs: { minimal: "路径+花台", garden: "花圃+喷泉", pool: "泳池+棕榈", full: "泳池+凉亭+喷泉" } as Record<string, string>,
+  extParking: "停车场 & 车道",
+  extParkingDesc: "添加车道和停车位",
 
   // ── Footer ───────────────────────────────────────────────
   disclaimer: "仅供设计参考，不构成施工建议，效果仅为示意，请以实际施工及专业建议为准",

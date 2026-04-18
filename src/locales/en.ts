@@ -155,6 +155,10 @@ export const en: Translations = {
   fpLegendEdit: "🪟 Edit windows/door",
   fpLegendGrid: "Grid=1m",
 
+  // ── Floor switching ──────────────────────────────────────
+  fpFloor: "Floor",
+  fpFloorSwitch: (n: number) => `Floor ${n}`,
+
   // ── FloorPlanAll ─────────────────────────────────────────
   allTitle: "🏠 Floor Plan Overview",
   allConfigured: "configured",
@@ -201,6 +205,8 @@ export const en: Translations = {
   extWallDescs: { render: "Smooth plaster", brick: "Warm rustic", stone: "Natural heavy", wood: "Warm & natural", concrete: "Raw minimal" },
   extYardLabels: { minimal: "Minimal", garden: "Garden", pool: "Pool", full: "Luxury" },
   extYardDescs: { minimal: "Path + planters", garden: "Beds + fountain", pool: "Pool + palms", full: "Pool + pergola + fountain" },
+  extParking: "Parking & Driveway",
+  extParkingDesc: "Add driveway and parking spots",
 
   // ── ShareModal ───────────────────────────────────────────
   shareTitle: "📤 Share Your Plan",

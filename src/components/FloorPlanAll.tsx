@@ -281,6 +281,11 @@ export default function FloorPlanAll() {
   const roomClipboard       = useDesignerStore(s => s.roomClipboard);
   const pasteAsNewRoom      = useDesignerStore(s => s.pasteAsNewRoom);
   const roomWindows         = useDesignerStore(s => s.roomWindows);
+  const exterior            = useDesignerStore(s => s.exterior);
+  const activeFloor         = useDesignerStore(s => s.activeFloor);
+  const setActiveFloor      = useDesignerStore(s => s.setActiveFloor);
+  const roomFloors          = useDesignerStore(s => s.roomFloors);
+  const setRoomFloor        = useDesignerStore(s => s.setRoomFloor);
 
   const getRoomLabel = (room: RoomType) => {
     const meta = customRoomMeta[room];
@@ -292,13 +297,16 @@ export default function FloorPlanAll() {
   const svgRef  = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragState | null>(null);
 
-  // Compute viewBox from active rooms
-  const visibleRooms = ALL_ROOMS.filter(r => enabledRooms.includes(r));
+  // Compute viewBox from active rooms (all enabled, for viewBox calculation)
+  const allEnabledRooms = ALL_ROOMS.filter(r => enabledRooms.includes(r));
+  // Filter by active floor
+  const visibleRooms = allEnabledRooms.filter(r => (roomFloors[r] ?? 0) === activeFloor);
   const pad = 60;
-  const vbX1 = visibleRooms.length ? Math.min(...visibleRooms.map(r => roomLayout[r].x)) - pad : 0;
-  const vbY1 = visibleRooms.length ? Math.min(...visibleRooms.map(r => roomLayout[r].y)) - pad : 0;
-  const vbX2 = visibleRooms.length ? Math.max(...visibleRooms.map(r => roomLayout[r].x + roomDimensions[r].width))  + pad : 800;
-  const vbY2 = visibleRooms.length ? Math.max(...visibleRooms.map(r => roomLayout[r].y + roomDimensions[r].depth)) + pad + 60 : 600;
+  const vbRooms = visibleRooms.length ? visibleRooms : allEnabledRooms;
+  const vbX1 = vbRooms.length ? Math.min(...vbRooms.map(r => roomLayout[r].x)) - pad : 0;
+  const vbY1 = vbRooms.length ? Math.min(...vbRooms.map(r => roomLayout[r].y)) - pad : 0;
+  const vbX2 = vbRooms.length ? Math.max(...vbRooms.map(r => roomLayout[r].x + roomDimensions[r].width))  + pad : 800;
+  const vbY2 = vbRooms.length ? Math.max(...vbRooms.map(r => roomLayout[r].y + roomDimensions[r].depth)) + pad + 60 : 600;
   const viewBox = `${vbX1} ${vbY1} ${vbX2 - vbX1} ${vbY2 - vbY1}`;
 
   const configuredCount = ALL_ROOMS.filter(r =>
@@ -367,10 +375,28 @@ export default function FloorPlanAll() {
             {configuredCount}/{ALL_ROOMS.length} {t.allConfigured}
           </span>
           <span className="text-[10px] text-gray-400 hidden lg:block">{t.allHint}</span>
+          {/* Floor selector tabs — only shown when floors > 1 */}
+          {exterior.floors > 1 && (
+            <div className="flex items-center gap-1 ml-auto">
+              <span className="text-[10px] text-gray-400 mr-1">{t.fpFloor}:</span>
+              {Array.from({ length: exterior.floors }).map((_, i) => (
+                <button key={i}
+                  onClick={() => setActiveFloor(i)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    activeFloor === i
+                      ? "bg-blue-600 text-white"
+                      : "bg-white/10 text-gray-400 hover:text-white border border-gray-200 hover:bg-blue-50 hover:border-blue-300"
+                  }`}
+                >
+                  {i + 1}F
+                </button>
+              ))}
+            </div>
+          )}
           {roomClipboard && (
             <button
               onClick={pasteAsNewRoom}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all ml-auto"
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${exterior.floors <= 1 ? "ml-auto" : ""}`}
               style={{ border: "1px solid #007AFF", color: "#007AFF", background: "white" }}
             >
               📋 {t.allPasteRoom} ({roomClipboard.name})
@@ -483,6 +509,40 @@ export default function FloorPlanAll() {
                     fontFamily="system-ui, sans-serif"
                     style={{ pointerEvents: "none", userSelect: "none" }}
                   >{(w/100).toFixed(1)}×{(d/100).toFixed(1)}m</text>
+
+                  {/* Floor indicator + up/down arrows (only shown when exterior.floors > 1) */}
+                  {exterior.floors > 1 && (
+                    <g>
+                      <text x={cx} y={cy + nameFs*3.2}
+                        textAnchor="middle" dominantBaseline="middle"
+                        fontSize={dimFs} fill="#6366F1"
+                        fontFamily="system-ui, sans-serif"
+                        style={{ pointerEvents: "none", userSelect: "none" }}
+                      >{(roomFloors[room] ?? 0) + 1}F</text>
+                      {/* Up arrow */}
+                      {(roomFloors[room] ?? 0) < exterior.floors - 1 && (
+                        <g style={{ cursor: "pointer" }}
+                          onPointerDown={e => { e.stopPropagation(); setRoomFloor(room, (roomFloors[room] ?? 0) + 1); }}>
+                          <rect x={cx + dimFs * 0.6} y={cy + nameFs*2.6} width={dimFs*1.4} height={dimFs*1.4} fill="#6366F1" opacity={0.8} rx={2} />
+                          <text x={cx + dimFs*1.3} y={cy + nameFs*3.2}
+                            textAnchor="middle" dominantBaseline="middle"
+                            fontSize={dimFs} fill="white"
+                            style={{ pointerEvents: "none", userSelect: "none" }}>▲</text>
+                        </g>
+                      )}
+                      {/* Down arrow */}
+                      {(roomFloors[room] ?? 0) > 0 && (
+                        <g style={{ cursor: "pointer" }}
+                          onPointerDown={e => { e.stopPropagation(); setRoomFloor(room, (roomFloors[room] ?? 0) - 1); }}>
+                          <rect x={cx - dimFs * 2} y={cy + nameFs*2.6} width={dimFs*1.4} height={dimFs*1.4} fill="#6366F1" opacity={0.8} rx={2} />
+                          <text x={cx - dimFs*1.3} y={cy + nameFs*3.2}
+                            textAnchor="middle" dominantBaseline="middle"
+                            fontSize={dimFs} fill="white"
+                            style={{ pointerEvents: "none", userSelect: "none" }}>▼</text>
+                        </g>
+                      )}
+                    </g>
+                  )}
 
                   {/* Drag/tap hit rect */}
                   <rect

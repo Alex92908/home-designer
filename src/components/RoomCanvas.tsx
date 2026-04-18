@@ -1150,7 +1150,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
 
       {/* Environment — skip on iOS: PMREMGenerator.fromScene is broken on iPhone Metal
           (three.js bug #25888). Compensate with stronger ambient + fill lights. */}
-      {!isIOS && <Environment preset="apartment" />}
+      {!isIOS && <Environment preset="studio" />}
 
       {/* Main directional light with shadows */}
       <directionalLight
@@ -1215,7 +1215,7 @@ export default function RoomCanvas() {
             antialias: !isIOS,
             // iOS Metal GLSL compiler fails on ACESFilmicToneMapping → use Linear
             toneMapping: isIOS ? THREE.LinearToneMapping : THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 1.1,
+            toneMappingExposure: 1.2,
           }}
           dpr={[1, 2]}
           shadows={{ type: THREE.PCFShadowMap }}

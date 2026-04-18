@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
-import { OrbitControls, Sky } from "@react-three/drei";
+import { useRef, useMemo, useEffect } from "react";
+import { Canvas, useThree, useFrame } from "@react-three/fiber";
+import { OrbitControls, Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, ExteriorSettings } from "@/lib/types";
@@ -398,24 +398,72 @@ function GardenPath({ W, D }: { W: number; D: number }) {
 }
 
 // ─── Swimming pool ───────────────────────────────────────────
+function AnimatedWater({ w, d }: { w: number; d: number }) {
+  const matRef = useRef<THREE.MeshPhysicalMaterial>(null);
+  useFrame((_, dt) => {
+    if (matRef.current) {
+      // subtle shimmer: oscillate emissiveIntensity
+      matRef.current.emissiveIntensity = 0.08 + 0.06 * Math.sin(Date.now() * 0.002);
+    }
+  });
+  return (
+    <mesh position={[0, -0.22, 0]} receiveShadow>
+      <boxGeometry args={[w, 0.22, d]} />
+      <meshPhysicalMaterial
+        ref={matRef}
+        color="#18A8D8"
+        emissive="#006090"
+        emissiveIntensity={0.08}
+        transparent
+        opacity={0.90}
+        roughness={0.02}
+        metalness={0.0}
+        envMapIntensity={2.5}
+        transmission={0.08}
+      />
+    </mesh>
+  );
+}
+
 function Pool({ x, z, w = 5, d = 3 }: { x: number; z: number; w?: number; d?: number }) {
   return (
     <group position={[x, 0, z]}>
-      {/* Rim */}
+      {/* Pool shell */}
       <mesh position={[0, -0.35, 0]} castShadow receiveShadow>
-        <boxGeometry args={[w + 0.5, 0.3, d + 0.5]} />
-        <meshStandardMaterial color="#E0D8C8" roughness={0.8} />
+        <boxGeometry args={[w + 0.6, 0.7, d + 0.6]} />
+        <meshStandardMaterial color="#D8D0C0" roughness={0.8} />
       </mesh>
-      {/* Water */}
-      <mesh position={[0, -0.38, 0]} receiveShadow>
-        <boxGeometry args={[w, 0.22, d]} />
-        <meshStandardMaterial color="#38A0D0" transparent opacity={0.85} roughness={0.05} metalness={0.1} />
+      {/* Pool interior (slightly inset) */}
+      <mesh position={[0, -0.05, 0]}>
+        <boxGeometry args={[w - 0.02, 0.6, d - 0.02]} />
+        <meshStandardMaterial color="#A8D8E8" roughness={0.3} />
       </mesh>
+      {/* Animated water surface */}
+      <AnimatedWater w={w - 0.1} d={d - 0.1} />
+      {/* Coping tiles (rim) */}
+      {[
+        { pos: [0, 0.01, -(d / 2 + 0.25)] as [number,number,number], args: [w + 0.6, 0.08, 0.5] as [number,number,number] },
+        { pos: [0, 0.01,  (d / 2 + 0.25)] as [number,number,number], args: [w + 0.6, 0.08, 0.5] as [number,number,number] },
+        { pos: [-(w / 2 + 0.25), 0.01, 0] as [number,number,number], args: [0.5, 0.08, d] as [number,number,number] },
+        { pos: [ (w / 2 + 0.25), 0.01, 0] as [number,number,number], args: [0.5, 0.08, d] as [number,number,number] },
+      ].map((t, i) => (
+        <mesh key={i} position={t.pos} receiveShadow>
+          <boxGeometry args={t.args} />
+          <meshStandardMaterial color="#F0EAD8" roughness={0.6} metalness={0.05} />
+        </mesh>
+      ))}
       {/* Lane lines */}
       {[-d / 4, 0, d / 4].map((lz, i) => (
-        <mesh key={i} position={[0, -0.27, lz]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[w - 0.3, 0.08]} />
-          <meshStandardMaterial color="#FFFFFF" transparent opacity={0.4} />
+        <mesh key={i} position={[0, -0.19, lz]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[w - 0.4, 0.1]} />
+          <meshStandardMaterial color="#FFFFFF" transparent opacity={0.35} />
+        </mesh>
+      ))}
+      {/* Poolside loungers */}
+      {[-d / 2 - 0.7, d / 2 + 0.7].map((lz, i) => (
+        <mesh key={i} position={[w / 2 + 1.2, -0.38, lz]} castShadow>
+          <boxGeometry args={[1.9, 0.12, 0.65]} />
+          <meshStandardMaterial color="#F5EDD8" roughness={0.8} />
         </mesh>
       ))}
     </group>
@@ -485,8 +533,92 @@ function Lawn({ x, z, w = 6, d = 5 }: { x: number; z: number; w?: number; d?: nu
   );
 }
 
+// ─── Car ──────────────────────────────────────────────────
+function Car({ x, z, color = "#2255AA" }: { x: number; z: number; color?: string }) {
+  return (
+    <group position={[x, 0, z]}>
+      {/* Main body */}
+      <mesh position={[0, 0.32, 0]} castShadow>
+        <boxGeometry args={[1.85, 0.62, 4.3]} />
+        <meshStandardMaterial color={color} metalness={0.55} roughness={0.38} />
+      </mesh>
+      {/* Cabin */}
+      <mesh position={[0, 0.82, 0.18]} castShadow>
+        <boxGeometry args={[1.65, 0.52, 2.1]} />
+        <meshStandardMaterial color={color} metalness={0.45} roughness={0.45} />
+      </mesh>
+      {/* Windshield (dark glass) */}
+      <mesh position={[0, 0.82, -0.9]}>
+        <boxGeometry args={[1.55, 0.44, 0.06]} />
+        <meshStandardMaterial color="#111122" metalness={0.1} roughness={0.05} transparent opacity={0.85} />
+      </mesh>
+      {/* Wheels */}
+      {([ [-0.88,-1.45], [0.88,-1.45], [-0.88,1.45], [0.88,1.45] ] as [number,number][]).map(([wx,wz],i) => (
+        <mesh key={i} position={[wx, 0.2, wz]} rotation={[0,0,Math.PI/2]} castShadow>
+          <cylinderGeometry args={[0.34, 0.34, 0.24, 14]} />
+          <meshStandardMaterial color="#1A1A1A" roughness={0.9} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// ─── Driveway + Parking ───────────────────────────────────────
+function DrivewayAndParking({ W, D }: { W: number; D: number }) {
+  const driveW = 5.5;
+  const driveLen = 9.0;
+  const parkW = 6.5;
+  const parkD = 5.8;
+  const zFront = D / 2; // front of house
+
+  return (
+    <group>
+      {/* Driveway slab */}
+      <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -0.492, zFront + driveLen / 2]} receiveShadow>
+        <planeGeometry args={[driveW, driveLen]} />
+        <meshStandardMaterial color="#787878" roughness={0.92} />
+      </mesh>
+      {/* Center dashed line */}
+      {Array.from({ length: 5 }).map((_, i) => (
+        <mesh key={i} rotation={[-Math.PI/2, 0, 0]}
+          position={[0, -0.490, zFront + 1.2 + i * 1.6]}>
+          <planeGeometry args={[0.1, 0.8]} />
+          <meshStandardMaterial color="#DDDDDD" opacity={0.55} transparent />
+        </mesh>
+      ))}
+      {/* Parking area slab */}
+      <mesh rotation={[-Math.PI/2, 0, 0]}
+        position={[0, -0.491, zFront + driveLen + parkD / 2]} receiveShadow>
+        <planeGeometry args={[parkW, parkD]} />
+        <meshStandardMaterial color="#696969" roughness={0.95} />
+      </mesh>
+      {/* Parking spot lines (3 spots) */}
+      {[-parkW/2, -parkW/6, parkW/6, parkW/2].map((lx, i) => (
+        <mesh key={i} rotation={[-Math.PI/2, 0, 0]}
+          position={[lx, -0.489, zFront + driveLen + parkD / 2]}>
+          <planeGeometry args={[0.08, parkD]} />
+          <meshStandardMaterial color="white" opacity={0.65} transparent />
+        </mesh>
+      ))}
+      {/* Front/back boundary lines */}
+      {[0, parkD].map((dz, i) => (
+        <mesh key={i} rotation={[-Math.PI/2, 0, 0]}
+          position={[0, -0.489, zFront + driveLen + dz]}>
+          <planeGeometry args={[parkW, 0.08]} />
+          <meshStandardMaterial color="white" opacity={0.65} transparent />
+        </mesh>
+      ))}
+      {/* 2 parked cars */}
+      <Car x={-parkW/6 + (parkW/6)/2} z={zFront + driveLen + parkD/2} color="#3366BB" />
+      <Car x={ parkW/6 + (parkW/6)/2} z={zFront + driveLen + parkD/2} color="#AA3322" />
+    </group>
+  );
+}
+
 // ─── Yard presets ─────────────────────────────────────────────
-function YardElements({ W, D, yardPreset }: { W: number; D: number; yardPreset: string }) {
+function YardElements({ W, D, yardPreset, parking = false }: {
+  W: number; D: number; yardPreset: string; parking?: boolean
+}) {
   const xOff = W / 2 + 4.5;  // right side
   const zOff = -(D / 2 + 5); // front
 
@@ -499,6 +631,7 @@ function YardElements({ W, D, yardPreset }: { W: number; D: number; yardPreset: 
         <Tree x={  W / 2 + 3.5}  z={  D / 2 + 1.8}  scale={0.9} />
         <GardenPath W={W} D={D} />
         <FlowerBed x={W / 2 + 1.5} z={-(D / 2 - 0.5)} w={2} d={0.8} />
+        {parking && <DrivewayAndParking W={W} D={D} />}
       </>
     );
   }
@@ -524,6 +657,7 @@ function YardElements({ W, D, yardPreset }: { W: number; D: number; yardPreset: 
         <Lawn x={0} z={D / 2 + 5} w={W + 4} d={4} />
         <GardenPath W={W} D={D} />
         <Fountain x={0} z={-(D / 2 + 6.5)} />
+        {parking && <DrivewayAndParking W={W} D={D} />}
       </>
     );
   }
@@ -548,6 +682,7 @@ function YardElements({ W, D, yardPreset }: { W: number; D: number; yardPreset: 
         <Lawn x={xOff + 0.5} z={0} w={7} d={8} />
         <GardenPath W={W} D={D} />
         <FlowerBed x={-(W / 2 + 1.5)} z={D / 2 + 1.5} w={3} d={0.8} />
+        {parking && <DrivewayAndParking W={W} D={D} />}
       </>
     );
   }
@@ -591,6 +726,7 @@ function YardElements({ W, D, yardPreset }: { W: number; D: number; yardPreset: 
             <meshStandardMaterial color="#F0E0C0" roughness={0.8} />
           </mesh>
         ))}
+        {parking && <DrivewayAndParking W={W} D={D} />}
       </>
     );
   }
@@ -630,13 +766,13 @@ function HouseBody({ W, D, settings }: { W: number; D: number; settings: Exterio
 export default function HouseCanvas() {
   const exterior = useDesignerStore(s => s.exterior);
   const { W, D } = useFootprint();
-  const { floors, yardPreset = "garden" } = exterior;
+  const { floors, yardPreset = "garden", showParking = false } = exterior;
 
   return (
     <div className="w-full h-full">
       <Canvas
         shadows={{ type: THREE.PCFShadowMap }}
-        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.1 }}
+        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }}
         camera={{ fov: 45, near: 0.1, far: 600 }}
       >
         <CameraRig W={W} D={D} floors={floors} />
@@ -648,10 +784,10 @@ export default function HouseCanvas() {
           maxDistance={120}
           target={[0, floors * FLOOR_H * 0.35, 0]}
         />
-        <Sky sunPosition={[100, 40, 100]} turbidity={4} rayleigh={0.5} />
-        <ambientLight intensity={0.7} />
+        <Environment preset="sunset" background backgroundBlurriness={0.04} />
+        <ambientLight intensity={0.25} />
         <directionalLight
-          position={[20, 30, 15]} intensity={1.4} castShadow
+          position={[20, 30, 15]} intensity={1.1} castShadow
           shadow-mapSize={[2048, 2048]}
           shadow-camera-far={180}
           shadow-camera-left={-50} shadow-camera-right={50}
@@ -661,7 +797,7 @@ export default function HouseCanvas() {
 
         <Ground W={W} D={D} />
         <HouseBody W={W} D={D} settings={exterior} />
-        <YardElements W={W} D={D} yardPreset={yardPreset} />
+        <YardElements W={W} D={D} yardPreset={yardPreset} parking={showParking} />
       </Canvas>
     </div>
   );

@@ -221,6 +221,12 @@ interface DesignerStore {
   exterior: ExteriorSettings;
   setExterior: (patch: Partial<ExteriorSettings>) => void;
 
+  // Multi-floor switching
+  activeFloor: number;
+  roomFloors: Record<string, number>;
+  setActiveFloor: (floor: number) => void;
+  setRoomFloor: (roomId: string, floor: number) => void;
+
   // Windows per room
   roomWindows: Record<RoomType, WindowConfig[]>;
   setRoomWindows: (room: RoomType, windows: WindowConfig[]) => void;
@@ -295,6 +301,8 @@ export const useDesignerStore = create<DesignerStore>()(
       customRoomMeta: {},
       customFurniture: [],
       exterior: { ...initialExterior },
+      activeFloor: 0,
+      roomFloors: {},
       roomWindows: { ...DEFAULT_ROOM_WINDOWS },
       roomDoorPos: { ...DEFAULT_ROOM_DOOR_POS },
       roomHasDoor: { ...DEFAULT_ROOM_HAS_DOOR },
@@ -613,6 +621,9 @@ export const useDesignerStore = create<DesignerStore>()(
 
       setExterior: (patch) => set(s => ({ exterior: { ...s.exterior, ...patch } })),
 
+      setActiveFloor: (floor) => set({ activeFloor: floor }),
+      setRoomFloor: (roomId, floor) => set(s => ({ roomFloors: { ...s.roomFloors, [roomId]: floor } })),
+
       setRoomWindows: (room, windows) =>
         set(s => ({ roomWindows: { ...s.roomWindows, [room]: windows } })),
 
@@ -714,6 +725,8 @@ export const useDesignerStore = create<DesignerStore>()(
         customRoomMeta: {},
         customFurniture: [],
         exterior: { ...initialExterior },
+        activeFloor: 0,
+        roomFloors: {},
         roomWindows: { ...DEFAULT_ROOM_WINDOWS },
         roomDoorPos: { ...DEFAULT_ROOM_DOOR_POS },
         roomHasDoor: { ...DEFAULT_ROOM_HAS_DOOR },
