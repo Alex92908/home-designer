@@ -54,6 +54,7 @@ export default function ExportModal() {
   const exterior        = useDesignerStore(s => s.exterior);
   const budget          = useDesignerStore(s => s.budget);
   const resetAll        = useDesignerStore(s => s.resetAll);
+  const loadFromShare   = useDesignerStore(s => s.loadFromShare);
   const roomDimensions  = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
 
   const roomState  = rooms[activeRoom];
@@ -194,8 +195,9 @@ export default function ExportModal() {
     try {
       const res = await fetch("/demo-plan.json");
       const data = await res.json();
-      localStorage.setItem("home-designer-v2", JSON.stringify({ state: data, version: 0 }));
-      window.location.reload();
+      // loadFromShare handles both old flat format { rooms, enabledRooms } and new floorPlans format
+      loadFromShare(data);
+      setOpen(false);
     } catch {
       alert(locale === "en" ? "Failed to load demo." : "样板加载失败，请重试。");
     }
