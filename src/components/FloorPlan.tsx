@@ -318,6 +318,11 @@ export default function FloorPlan() {
   // Ref mirror of dragState to avoid stale closures in callbacks
   const dragStateRef = useRef<DragState | null>(null);
 
+  // ─── Inspector drag ──────────────────────────────────────
+  const inspectorRef = useRef<HTMLDivElement>(null);
+  const [inspectorPos, setInspectorPos] = useState<{ x: number; y: number } | null>(null);
+  const inspectorDragOrigin = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
+
   const activeRoom           = useDesignerStore((s) => s.activeRoom);
   const roomState            = useDesignerStore((s) => s.rooms[activeRoom]);
   const selectedInstanceIds  = useDesignerStore((s) => s.selectedInstanceIds);
@@ -614,6 +619,35 @@ export default function FloorPlan() {
       len: wallLen * 0.4,
     });
   };
+
+  // Reset inspector position whenever selection changes
+  useEffect(() => { setInspectorPos(null); }, [selectedInstanceIds]);
+
+  // Inspector drag handler — reads current panel rect as start position
+  const handleInspectorDragStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const panel = inspectorRef.current;
+    if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+    inspectorDragOrigin.current = { px: e.clientX, py: e.clientY, x: rect.left, y: rect.top };
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    const onMove = (ev: PointerEvent) => {
+      if (!inspectorDragOrigin.current) return;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const pw = panel.offsetWidth;
+      const ph = panel.offsetHeight;
+      const nx = Math.max(0, Math.min(vw - pw, inspectorDragOrigin.current.x + ev.clientX - inspectorDragOrigin.current.px));
+      const ny = Math.max(0, Math.min(vh - ph, inspectorDragOrigin.current.y + ev.clientY - inspectorDragOrigin.current.py));
+      setInspectorPos({ x: nx, y: ny });
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      inspectorDragOrigin.current = null;
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+  }, []);
 
   // Single-item controls (show only when exactly 1 item selected)
   const selectedItem = selectedInstanceIds.length === 1
@@ -951,13 +985,27 @@ export default function FloorPlan() {
       {/* Selected item controls */}
       {selectedItem && selectedFurniture && (
         <div
-          className={isLandscape
-            ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] w-80 bg-gray-900/98 rounded-2xl px-4 py-3 border border-gray-700/60 shadow-2xl backdrop-blur-md flex flex-col gap-2 overflow-y-auto"
-            : "flex flex-col gap-2 bg-gray-900/95 rounded-t-xl px-4 pt-3 border-t border-gray-700/50 backdrop-blur-md w-full"}
-          style={isLandscape
-            ? { maxHeight: "80dvh" }
-            : { paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}
+          ref={inspectorRef}
+          className={inspectorPos
+            ? "fixed z-[200] w-80 bg-gray-900/98 rounded-2xl border border-gray-700/60 shadow-2xl backdrop-blur-md flex flex-col gap-2 overflow-y-auto"
+            : isLandscape
+              ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] w-80 bg-gray-900/98 rounded-2xl border border-gray-700/60 shadow-2xl backdrop-blur-md flex flex-col gap-2 overflow-y-auto"
+              : "flex flex-col gap-2 bg-gray-900/95 rounded-t-xl border-t border-gray-700/50 backdrop-blur-md w-full"}
+          style={inspectorPos
+            ? { left: inspectorPos.x, top: inspectorPos.y, maxHeight: "80dvh" }
+            : isLandscape
+              ? { maxHeight: "80dvh" }
+              : { paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}
         >
+          {/* Drag handle — always shown, lets user reposition panel */}
+          <div
+            onPointerDown={handleInspectorDragStart}
+            className="flex items-center justify-center h-5 shrink-0 rounded-t-2xl cursor-grab active:cursor-grabbing touch-none select-none"
+            style={{ background: "rgba(255,255,255,0.04)" }}
+          >
+            <div className="w-8 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.2)" }} />
+          </div>
+          <div className="flex flex-col gap-2 px-4 pb-3">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-5 h-5 rounded-md shrink-0 border border-white/20" style={{ background: selectedFurniture.color }} />
             <span className="text-xs font-semibold text-gray-200 truncate min-w-0 flex-1">
@@ -1073,6 +1121,7 @@ export default function FloorPlan() {
               {t.fpOriginal} {(selectedFurniture.width / 100).toFixed(2)}m × {(selectedFurniture.depth / 100).toFixed(2)}m
             </span>
           </div>
+          </div>{/* end px-4 pb-3 */}
         </div>
       )}
 
