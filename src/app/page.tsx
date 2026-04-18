@@ -12,6 +12,8 @@ import ExportModal from "@/components/ExportModal";
 import ShareModal from "@/components/ShareModal";
 import FloorPlan from "@/components/FloorPlan";
 import FloorPlanAll from "@/components/FloorPlanAll";
+import OnboardingOverlay from "@/components/OnboardingOverlay";
+import AiRenderModal from "@/components/AiRenderModal";
 import { useDesignerStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { decodeShare } from "@/lib/share";
@@ -85,6 +87,7 @@ export default function Home() {
   const [rightOpen, setRightOpen] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth >= 768 : true
   );
+  const [showAiRender, setShowAiRender] = useState(false);
 
   // Auto-collapse panels when entering 2D / all / exterior on mobile
   useEffect(() => {
@@ -145,6 +148,21 @@ export default function Home() {
           {isExterior              && <HouseCanvas />}
           {isAll                   && <FloorPlanAll />}
           {viewMode === "2d"       && <FloorPlan />}
+
+          {/* AI Render floating button — visible in 3D / Exterior views */}
+          {(viewMode === "3d" || isExterior) && (
+            <button
+              onClick={() => setShowAiRender(true)}
+              className="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-lg transition-all active:scale-95 hover:scale-105"
+              style={{
+                background: "linear-gradient(135deg, #6366f1, #818cf8)",
+                backdropFilter: "blur(6px)",
+              }}
+              title={t.aiRenderTitle}
+            >
+              {t.aiRenderBtn}
+            </button>
+          )}
         </main>
 
         {/* Right panel with collapse */}
@@ -162,6 +180,8 @@ export default function Home() {
       </div>
       <ExportModal />
       <ShareModal />
+      <AiRenderModal open={showAiRender} onClose={() => setShowAiRender(false)} />
+      <OnboardingOverlay />
       <footer className="h-6 bg-white border-t border-gray-100 flex items-center justify-center shrink-0">
         <span className="text-[10px] text-gray-400">{t.disclaimer}</span>
       </footer>

@@ -255,6 +255,21 @@ export const zh = {
   shareDesignerTitle: "联系专业设计师",
   shareDesignerDesc: "将方案发给设计师，获取免费评估报价",
   shareDesignerBtn: "联系设计师 →",
+
+  // ── AI Render ─────────────────────────────────────────────
+  aiRenderBtn: "✨ AI 渲染",
+  aiRenderTitle: "🎨 AI 效果图生成",
+  aiRenderDesc: "AI 将分析当前3D场景并生成一张照片级效果图，约需20–40秒",
+  aiRenderStyle: "渲染风格",
+  aiRenderStyles: { photo: "写实照片", watercolor: "水彩插画", sketch: "手绘线稿", magazine: "杂志封面" } as Record<string, string>,
+  aiRenderGenerate: "生成效果图",
+  aiRenderGenerating: "AI 渲染中…",
+  aiRenderResult: "生成结果",
+  aiRenderDownload: "💾 下载图片",
+  aiRenderRetry: "重新生成",
+  aiRenderClose: "关闭",
+  aiRenderError: "生成失败，请稍后重试",
+  aiRenderNoKey: "请在 .env.local 中配置 OPENAI_API_KEY",
 };
 
 export type Translations = typeof zh;

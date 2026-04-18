@@ -1419,7 +1419,12 @@ export default function HouseCanvas() {
     <div className="w-full h-full">
       <Canvas
         shadows={{ type: THREE.PCFShadowMap }}
-        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }}
+        gl={{
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.15,
+          // Required for canvas.toDataURL() (AI render screenshot)
+          preserveDrawingBuffer: true,
+        }}
         camera={{ fov: 45, near: 0.1, far: 600 }}
       >
         <CameraRig W={W} D={D} floors={floors} />

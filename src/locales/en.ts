@@ -230,6 +230,21 @@ export const en: Translations = {
   shareDesignerDesc: "Share your plan with a professional for a free estimate",
   shareDesignerBtn: "Contact a Designer →",
 
+  // ── AI Render ─────────────────────────────────────────────
+  aiRenderBtn: "✨ AI Render",
+  aiRenderTitle: "🎨 AI Render Preview",
+  aiRenderDesc: "AI will analyze the current 3D scene and generate a photorealistic render. Takes ~20–40 seconds.",
+  aiRenderStyle: "Render Style",
+  aiRenderStyles: { photo: "Photorealistic", watercolor: "Watercolor", sketch: "Hand-drawn", magazine: "Magazine" },
+  aiRenderGenerate: "Generate Render",
+  aiRenderGenerating: "AI Rendering…",
+  aiRenderResult: "Result",
+  aiRenderDownload: "💾 Download",
+  aiRenderRetry: "Regenerate",
+  aiRenderClose: "Close",
+  aiRenderError: "Generation failed, please try again",
+  aiRenderNoKey: "Please set OPENAI_API_KEY in .env.local",
+
   // ── Footer ───────────────────────────────────────────────
   disclaimer: "For design reference only. Not construction advice. Actual results may vary — consult a professional.",
 

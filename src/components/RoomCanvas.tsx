@@ -1216,6 +1216,8 @@ export default function RoomCanvas() {
             // iOS Metal GLSL compiler fails on ACESFilmicToneMapping → use Linear
             toneMapping: isIOS ? THREE.LinearToneMapping : THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.2,
+            // Required for canvas.toDataURL() (AI render screenshot)
+            preserveDrawingBuffer: true,
           }}
           dpr={[1, 2]}
           shadows={{ type: THREE.PCFShadowMap }}
