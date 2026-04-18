@@ -243,6 +243,8 @@ interface DesignerStore {
   exterior: ExteriorSettings;
   setExterior: (patch: Partial<ExteriorSettings>) => void;
   setOutdoorPosition: (key: string, pos: { x: number; z: number }) => void;
+  rotateOutdoor: (key: string) => void;
+  resetOutdoorPosition: (key: string) => void;
 
   // Multi-floor switching
   activeFloor: number;
@@ -719,9 +721,31 @@ export const useDesignerStore = create<DesignerStore>()(
       setOutdoorPosition: (key, pos) => set(s => ({
         exterior: {
           ...s.exterior,
-          outdoorPositions: { ...(s.exterior.outdoorPositions ?? {}), [key]: pos },
+          outdoorPositions: {
+            ...(s.exterior.outdoorPositions ?? {}),
+            [key]: { ...(s.exterior.outdoorPositions?.[key] ?? {}), ...pos },
+          },
         },
       })),
+
+      rotateOutdoor: (key) => set(s => {
+        const cur = s.exterior.outdoorPositions?.[key] ?? { x: 0, z: 0 };
+        return {
+          exterior: {
+            ...s.exterior,
+            outdoorPositions: {
+              ...(s.exterior.outdoorPositions ?? {}),
+              [key]: { ...cur, rot: ((cur.rot ?? 0) + 45) % 360 },
+            },
+          },
+        };
+      }),
+
+      resetOutdoorPosition: (key) => set(s => {
+        const positions = { ...(s.exterior.outdoorPositions ?? {}) };
+        delete positions[key];
+        return { exterior: { ...s.exterior, outdoorPositions: positions } };
+      }),
 
       setActiveFloor: (floor) => set(s => {
         let floorPlans = s.floorPlans;

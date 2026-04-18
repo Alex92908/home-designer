@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useEffect, useState, Fragment } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
-import { OrbitControls, Environment } from "@react-three/drei";
+import { OrbitControls, Environment, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, ExteriorSettings } from "@/lib/types";
@@ -429,39 +429,56 @@ function GardenPath({ W, D }: { W: number; D: number }) {
   );
 }
 
-// ─── Draggable outdoor element wrapper ──────────────────────
+// ─── Outdoor element interaction (furniture-like) ───────────
 /**
- * Wraps an outdoor element (Pool, Pergola, etc.) so it can be dragged to any
- * position on the ground plane. Position is persisted in the store.
- *
- * Uses raw DOM pointermove listeners on the canvas for reliable world-space
- * dragging regardless of which child mesh the cursor is over.
+ * Wraps an outdoor element so it behaves like 2D furniture:
+ * - Click → select (shows action panel with rotate / remove)
+ * - Drag → move (raw DOM pointermove + plane raycasting, no orbit conflict)
+ * - Rotate button → 45° steps
+ * - Remove button → reset to default position
+ * - Click elsewhere → deselect
  */
 function DraggableGroup({
-  posKey, defaultX, defaultZ, hitW = 8, hitD = 8, orbitRef, children,
+  posKey, label, defaultX, defaultZ, hitW = 8, hitD = 8,
+  orbitRef, selectedKey, onSelect, children,
 }: {
   posKey: string;
+  label: string;
   defaultX: number;
   defaultZ: number;
   hitW?: number;
   hitD?: number;
   orbitRef: React.MutableRefObject<any>;
+  selectedKey: string | null;
+  onSelect: (key: string | null) => void;
   children: React.ReactNode;
 }) {
   const { gl, camera } = useThree();
-  const setOutdoorPosition = useDesignerStore(s => s.setOutdoorPosition);
-  const savedPos = useDesignerStore(s => s.exterior.outdoorPositions?.[posKey]);
-  const pos = savedPos ?? { x: defaultX, z: defaultZ };
+  const setOutdoorPosition  = useDesignerStore(s => s.setOutdoorPosition);
+  const rotateOutdoor       = useDesignerStore(s => s.rotateOutdoor);
+  const resetOutdoorPosition = useDesignerStore(s => s.resetOutdoorPosition);
+  const savedState = useDesignerStore(s => s.exterior.outdoorPositions?.[posKey]);
 
+  const pos = { x: savedState?.x ?? defaultX, z: savedState?.z ?? defaultZ };
+  const rotDeg = savedState?.rot ?? 0;
+  const rotRad = rotDeg * (Math.PI / 180);
+
+  const isSelected = selectedKey === posKey;
   const isDragging = useRef(false);
+  const didDrag    = useRef(false);           // distinguish click vs drag
   const [hovered, setHovered] = useState(false);
   const groundPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
+
+  // Panel float height above element centre
+  const panelY = Math.max(hitW, hitD) * 0.35 + 2.5;
+  const ringR  = Math.max(hitW, hitD) / 2;
 
   useEffect(() => {
     const canvas = gl.domElement;
 
     const onMove = (e: PointerEvent) => {
       if (!isDragging.current) return;
+      didDrag.current = true;
       const rect = canvas.getBoundingClientRect();
       const ndc = new THREE.Vector2(
         ((e.clientX - rect.left) / rect.width) * 2 - 1,
@@ -479,59 +496,139 @@ function DraggableGroup({
       if (!isDragging.current) return;
       isDragging.current = false;
       if (orbitRef.current) orbitRef.current.enabled = true;
-      canvas.style.cursor = "default";
+      canvas.style.cursor = hovered ? "grab" : "default";
     };
 
     canvas.addEventListener("pointermove", onMove);
-    canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointerup",   onUp);
     return () => {
       canvas.removeEventListener("pointermove", onMove);
-      canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointerup",   onUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gl, camera, posKey]);
+  }, [gl, camera, posKey, hovered]);
 
   return (
-    <group position={[pos.x, 0, pos.z]}>
-      {/* Invisible hit surface — catches pointer events so drag starts even on empty ground around element */}
+    <group position={[pos.x, 0, pos.z]} rotation={[0, rotRad, 0]}>
+
+      {/* ── Hit surface (pointer events) ── */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         onPointerDown={(e) => {
           e.stopPropagation();
+          didDrag.current = false;
           isDragging.current = true;
           if (orbitRef.current) orbitRef.current.enabled = false;
           gl.domElement.style.cursor = "grabbing";
         }}
-        onPointerEnter={() => { setHovered(true); gl.domElement.style.cursor = "grab"; }}
+        onPointerUp={(e) => {
+          e.stopPropagation();
+          // Only toggle selection when it was a click (not a drag)
+          if (!didDrag.current) {
+            onSelect(isSelected ? null : posKey);
+          }
+        }}
+        onPointerEnter={() => { setHovered(true);  gl.domElement.style.cursor = "grab"; }}
         onPointerLeave={() => { if (!isDragging.current) { setHovered(false); gl.domElement.style.cursor = "default"; } }}
       >
         <planeGeometry args={[hitW, hitD]} />
         <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
 
-      {/* Hover ring indicator */}
-      {hovered && (
+      {/* ── Selection / hover ring ── */}
+      {(isSelected || hovered) && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]}>
-          <ringGeometry args={[Math.max(hitW, hitD) / 2 + 0.1, Math.max(hitW, hitD) / 2 + 0.55, 48]} />
-          <meshBasicMaterial color="#007AFF" transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} />
+          <ringGeometry args={[ringR + 0.05, ringR + 0.55, 64]} />
+          <meshBasicMaterial
+            color={isSelected ? "#007AFF" : "#60A5FA"}
+            transparent opacity={isSelected ? 0.85 : 0.45}
+            side={THREE.DoubleSide} depthWrite={false}
+          />
         </mesh>
       )}
 
-      {/* Drag arrows (4 directional) shown on hover */}
-      {hovered && ([-Math.PI / 2, 0, Math.PI / 2, Math.PI] as number[]).map((angle, i) => (
-        <mesh
-          key={i}
-          rotation={[-Math.PI / 2, 0, angle]}
-          position={[
-            Math.sin(angle) * (Math.max(hitW, hitD) / 2 + 1.1),
-            0.1,
-            Math.cos(angle) * (Math.max(hitW, hitD) / 2 + 1.1),
-          ]}
-        >
-          <coneGeometry args={[0.28, 0.6, 3]} />
-          <meshBasicMaterial color="#007AFF" transparent opacity={0.7} />
+      {/* ── Selected: solid border + fill tint ── */}
+      {isSelected && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+          <circleGeometry args={[ringR + 0.04, 64]} />
+          <meshBasicMaterial color="#007AFF" transparent opacity={0.08} side={THREE.DoubleSide} depthWrite={false} />
         </mesh>
-      ))}
+      )}
+
+      {/* ── Floating action panel (Html overlay) ── */}
+      {isSelected && (
+        <Html
+          position={[0, panelY, 0]}
+          center
+          distanceFactor={12}
+          zIndexRange={[100, 200]}
+          style={{ pointerEvents: "auto" }}
+        >
+          <div
+            onPointerDown={e => e.stopPropagation()}
+            style={{
+              background: "white",
+              borderRadius: 14,
+              padding: "6px 8px",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.22)",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              userSelect: "none",
+              whiteSpace: "nowrap",
+              border: "1px solid #E5E7EB",
+              minWidth: 0,
+            }}
+          >
+            {/* Label */}
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#374151", padding: "0 4px" }}>
+              {label}
+            </span>
+            <div style={{ width: 1, height: 16, background: "#E5E7EB", margin: "0 2px" }} />
+            {/* Rotate button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); rotateOutdoor(posKey); }}
+              style={{
+                fontSize: 15, cursor: "pointer", border: "none", background: "transparent",
+                padding: "3px 6px", borderRadius: 8, color: "#374151",
+                display: "flex", alignItems: "center", gap: 3,
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#F3F4F6")}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              title="旋转 45°"
+            >
+              ↻ <span style={{ fontSize: 10 }}>45°</span>
+            </button>
+            {/* Reset position */}
+            <button
+              onClick={(e) => { e.stopPropagation(); resetOutdoorPosition(posKey); onSelect(null); }}
+              style={{
+                fontSize: 13, cursor: "pointer", border: "none", background: "transparent",
+                padding: "3px 6px", borderRadius: 8, color: "#6B7280",
+                display: "flex", alignItems: "center",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#FEF2F2")}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              title="重置位置"
+            >
+              ↺
+            </button>
+            {/* Deselect / close */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onSelect(null); }}
+              style={{
+                fontSize: 13, cursor: "pointer", border: "none", background: "transparent",
+                padding: "3px 6px", borderRadius: 8, color: "#9CA3AF",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#111827")}
+              onMouseLeave={e => (e.currentTarget.style.color = "#9CA3AF")}
+              title="取消选中"
+            >
+              ✕
+            </button>
+          </div>
+        </Html>
+      )}
 
       {children}
     </group>
@@ -1122,9 +1219,11 @@ function DrivewayAndParking() {
 }
 
 // ─── Yard presets ─────────────────────────────────────────────
-function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
+function YardElements({ W, D, yardPreset, parking = false, orbitRef, selectedKey, onSelect }: {
   W: number; D: number; yardPreset: string; parking?: boolean;
   orbitRef: React.MutableRefObject<any>;
+  selectedKey: string | null;
+  onSelect: (key: string | null) => void;
 }) {
   const xOff = W / 2 + 7.5;   // right side (more room for luxury pool)
 
@@ -1138,7 +1237,7 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
         <GardenPath W={W} D={D} />
         <FlowerBed x={W / 2 + 1.5} z={-(D / 2 - 0.5)} w={2} d={0.8} />
         {parking && (
-          <DraggableGroup posKey="driveway" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef}>
+          <DraggableGroup posKey="driveway" label="🚗 停车场" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
             <DrivewayAndParking />
           </DraggableGroup>
         )}
@@ -1149,34 +1248,28 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
   if (yardPreset === "garden") {
     return (
       <>
-        {/* Corner trees + Italian cypress at corners */}
         <Tree x={-(W / 2 + 2.5)} z={-(D / 2 + 1.5)} scale={1.2} />
         <Tree x={  W / 2 + 2.5}  z={-(D / 2 + 1.5)} scale={1.0} type="pine" />
         <Tree x={-(W / 2 + 3.0)} z={  D / 2 + 2.0}  scale={0.9} />
         <Tree x={  W / 2 + 3.5}  z={  D / 2 + 2.0}  scale={1.1} type="pine" />
         <Tree x={0}               z={  D / 2 + 5.0}  scale={1.3} />
-        {/* Italian cypress at estate corners */}
         <Tree x={-(W / 2 + 5.5)} z={-(D / 2 + 2.0)} type="cypress" scale={1.0} />
         <Tree x={  W / 2 + 5.5}  z={-(D / 2 + 2.0)} type="cypress" scale={1.0} />
         <Tree x={-(W / 2 + 5.5)} z={  D / 2 + 2.5}  type="cypress" scale={0.9} />
         <Tree x={  W / 2 + 5.5}  z={  D / 2 + 2.5}  type="cypress" scale={0.9} />
-        {/* Hedges along sides */}
         {[-D/4, 0, D/4].map((hz, i) => (
           <Bush key={i} x={-(W / 2 + 1.2)} z={hz} scale={0.9} />
         ))}
-        {/* Flower beds */}
         <FlowerBed x={-(W / 2 - 0.5)} z={-(D / 2 + 2.0)} w={3} d={0.9} />
         <FlowerBed x={  W / 2 - 0.5}  z={-(D / 2 + 2.0)} w={3} d={0.9} />
         <FlowerBed x={0}              z={  D / 2 + 2.5}   w={4} d={1.0} />
-        {/* Lawn */}
         <Lawn x={0} z={D / 2 + 5} w={W + 4} d={4} />
         <GardenPath W={W} D={D} />
-        {/* Draggable fountain */}
-        <DraggableGroup posKey="fountain" defaultX={0} defaultZ={-(D / 2 + 6.5)} hitW={5} hitD={5} orbitRef={orbitRef}>
+        <DraggableGroup posKey="fountain" label="⛲ 喷泉" defaultX={0} defaultZ={-(D / 2 + 6.5)} hitW={5} hitD={5} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
           <Fountain x={0} z={0} />
         </DraggableGroup>
         {parking && (
-          <DraggableGroup posKey="driveway" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef}>
+          <DraggableGroup posKey="driveway" label="🚗 停车场" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
             <DrivewayAndParking />
           </DraggableGroup>
         )}
@@ -1187,22 +1280,18 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
   if (yardPreset === "pool") {
     return (
       <>
-        {/* Draggable luxury pool */}
-        <DraggableGroup posKey="pool" defaultX={xOff} defaultZ={0} hitW={16} hitD={13} orbitRef={orbitRef}>
+        <DraggableGroup posKey="pool" label="🏊 泳池" defaultX={xOff} defaultZ={0} hitW={16} hitD={13} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
           <Pool x={0} z={0} w={9} d={5} />
-          {/* Italian cypress flanking pool — static relative to pool */}
           <Tree x={-1.5} z={-(5 / 2 + 3.5)} type="cypress" scale={1.1} />
           <Tree x={ 1.5} z={-(5 / 2 + 3.5)} type="cypress" scale={1.1} />
           <Tree x={-1.5} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
           <Tree x={ 1.5} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
         </DraggableGroup>
-        {/* Palm trees near scene */}
         <Tree x={-(W / 2 + 2.5)} z={-(D / 2 + 1.5)} scale={1.1} />
         <Tree x={  W / 2 + 2.5}  z={-(D / 2 + 1.5)} type="palm" scale={1.0} />
         <Tree x={xOff + 9.5}   z={-3.5} type="palm" scale={0.9} />
         <Tree x={xOff + 9.5}   z={ 3.5} type="palm" scale={0.9} />
-        {/* Draggable outdoor kitchen */}
-        <DraggableGroup posKey="outdoor_kitchen" defaultX={xOff - 3.0} defaultZ={-(5 / 2 + 6.5)} hitW={8} hitD={6} orbitRef={orbitRef}>
+        <DraggableGroup posKey="outdoor_kitchen" label="🍳 户外厨房" defaultX={xOff - 3.0} defaultZ={-(5 / 2 + 6.5)} hitW={8} hitD={6} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
           <OutdoorKitchen x={0} z={0} />
         </DraggableGroup>
         <Bush x={xOff - 0.8} z={-3.5} scale={0.8} />
@@ -1211,7 +1300,7 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
         <GardenPath W={W} D={D} />
         <FlowerBed x={-(W / 2 + 1.5)} z={D / 2 + 1.5} w={3} d={0.8} />
         {parking && (
-          <DraggableGroup posKey="driveway" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef}>
+          <DraggableGroup posKey="driveway" label="🚗 停车场" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
             <DrivewayAndParking />
           </DraggableGroup>
         )}
@@ -1222,7 +1311,6 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
   if (yardPreset === "full") {
     return (
       <>
-        {/* Broad tree planting */}
         <Tree x={-(W / 2 + 2.5)} z={-(D / 2 + 1.5)} scale={1.2} />
         <Tree x={  W / 2 + 2.5}  z={-(D / 2 + 1.5)} type="pine"  scale={1.0} />
         <Tree x={-(W / 2 + 4.5)} z={  0}             scale={1.1} />
@@ -1232,51 +1320,41 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
         <Tree x={0}               z={  D / 2 + 7.0}  scale={1.3} />
         <Tree x={xOff + 9.5}      z={-4.0} type="palm"  scale={0.9} />
         <Tree x={xOff + 9.5}      z={ 4.0} type="palm"  scale={0.9} />
-        {/* Italian cypress avenue along driveway */}
         {parking && ([8.0, 12.0, 16.0] as number[]).map((cz, i) => (
           <Fragment key={i}>
             <Tree x={-2.8} z={D / 2 + cz} type="cypress" scale={1.0} />
             <Tree x={ 2.8} z={D / 2 + cz} type="cypress" scale={1.0} />
           </Fragment>
         ))}
-        {/* Italian cypress at estate corners */}
         <Tree x={-(W / 2 + 6.0)} z={-(D / 2 + 2.5)} type="cypress" scale={1.1} />
         <Tree x={  W / 2 + 6.0}  z={-(D / 2 + 2.5)} type="cypress" scale={1.1} />
-        {/* Draggable luxury pool */}
-        <DraggableGroup posKey="pool" defaultX={xOff} defaultZ={0} hitW={16} hitD={13} orbitRef={orbitRef}>
+        <DraggableGroup posKey="pool" label="🏊 泳池" defaultX={xOff} defaultZ={0} hitW={16} hitD={13} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
           <Pool x={0} z={0} w={9} d={5} />
           <Tree x={-1.5} z={-(5 / 2 + 3.5)} type="cypress" scale={1.05} />
           <Tree x={ 1.5} z={-(5 / 2 + 3.5)} type="cypress" scale={1.05} />
           <Tree x={-1.5} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
           <Tree x={ 1.5} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
         </DraggableGroup>
-        {/* Draggable pergola */}
-        <DraggableGroup posKey="pergola" defaultX={-(xOff - 2)} defaultZ={D / 2 + 5} hitW={10} hitD={9} orbitRef={orbitRef}>
+        <DraggableGroup posKey="pergola" label="🏛 凉亭" defaultX={-(xOff - 2)} defaultZ={D / 2 + 5} hitW={10} hitD={9} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
           <Pergola x={0} z={0} />
         </DraggableGroup>
-        {/* Draggable fountain */}
-        <DraggableGroup posKey="fountain" defaultX={0} defaultZ={-(D / 2 + 7.0)} hitW={5} hitD={5} orbitRef={orbitRef}>
+        <DraggableGroup posKey="fountain" label="⛲ 喷泉" defaultX={0} defaultZ={-(D / 2 + 7.0)} hitW={5} hitD={5} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
           <Fountain x={0} z={0} />
         </DraggableGroup>
-        {/* Draggable outdoor kitchen */}
-        <DraggableGroup posKey="outdoor_kitchen" defaultX={xOff - 3.0} defaultZ={-(5 / 2 + 7.0)} hitW={8} hitD={6} orbitRef={orbitRef}>
+        <DraggableGroup posKey="outdoor_kitchen" label="🍳 户外厨房" defaultX={xOff - 3.0} defaultZ={-(5 / 2 + 7.0)} hitW={8} hitD={6} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
           <OutdoorKitchen x={0} z={0} />
         </DraggableGroup>
-        {/* Flower beds */}
         <FlowerBed x={-(W / 2 - 0.5)} z={-(D / 2 + 2.0)} w={2.5} d={0.9} />
         <FlowerBed x={  W / 2 - 0.5}  z={-(D / 2 + 2.0)} w={2.5} d={0.9} />
         <FlowerBed x={0}              z={  D / 2 + 2.5}   w={5} d={1.0} />
-        {/* Hedges */}
         {[-D/3, 0, D/3].map((hz, i) => (
           <Bush key={i} x={-(W / 2 + 1.6)} z={hz} scale={1.0} />
         ))}
-        {/* Lawns */}
         <Lawn x={xOff + 1.0} z={0} w={10} d={14} />
         <Lawn x={0} z={D / 2 + 5.5} w={W + 6} d={5} />
-        {/* Path */}
         <GardenPath W={W} D={D} />
         {parking && (
-          <DraggableGroup posKey="driveway" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef}>
+          <DraggableGroup posKey="driveway" label="🚗 停车场" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
             <DrivewayAndParking />
           </DraggableGroup>
         )}
@@ -1315,12 +1393,27 @@ function HouseBody({ W, D, settings }: { W: number; D: number; settings: Exterio
   );
 }
 
+// ─── Deselect plane (click empty ground to clear selection) ──
+function DeselectPlane({ onDeselect }: { onDeselect: () => void }) {
+  return (
+    <mesh
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[0, -0.502, 0]}
+      onPointerDown={(e) => { e.stopPropagation(); onDeselect(); }}
+    >
+      <planeGeometry args={[2000, 2000]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
+  );
+}
+
 // ─── Main export ────────────────────────────────────────────
 export default function HouseCanvas() {
   const exterior = useDesignerStore(s => s.exterior);
   const { W, D } = useFootprint();
   const { floors, yardPreset = "garden", showParking = false } = exterior;
   const orbitRef = useRef<any>(null);
+  const [selectedOutdoorKey, setSelectedOutdoorKey] = useState<string | null>(null);
 
   return (
     <div className="w-full h-full">
@@ -1350,9 +1443,16 @@ export default function HouseCanvas() {
         />
         <directionalLight position={[-15, 20, -10]} intensity={0.4} />
 
+        {/* Click empty ground to deselect */}
+        <DeselectPlane onDeselect={() => setSelectedOutdoorKey(null)} />
         <Ground W={W} D={D} />
         <HouseBody W={W} D={D} settings={exterior} />
-        <YardElements W={W} D={D} yardPreset={yardPreset} parking={showParking} orbitRef={orbitRef} />
+        <YardElements
+          W={W} D={D} yardPreset={yardPreset} parking={showParking}
+          orbitRef={orbitRef}
+          selectedKey={selectedOutdoorKey}
+          onSelect={setSelectedOutdoorKey}
+        />
       </Canvas>
     </div>
   );
