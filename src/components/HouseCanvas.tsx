@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useEffect, useState } from "react";
+import { useRef, useMemo, useEffect, useState, Fragment } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import * as THREE from "three";
@@ -989,15 +989,16 @@ function Car({ x, z, color = "#2255AA" }: { x: number; z: number; color?: string
 }
 
 // ─── Circular luxury driveway ────────────────────────────────
-function DrivewayAndParking({ W, D }: { W: number; D: number }) {
-  const zFront = D / 2;
-  const circleZ = zFront + 11.0; // center of circular driveway
+// Renders relative to its own origin (z=0 = house-front edge).
+// Wrap in DraggableGroup at defaultZ=D/2 for world positioning.
+function DrivewayAndParking() {
+  // All z-coords are relative to house-front (z=0 here).
+  const circleZ = 11.0; // center of circular driveway, 11 m from house front
   const outerR = 5.5;
   const innerR = 3.2;
-  const roadW = outerR - innerR; // ~2.3 wide road
+  const roadW = outerR - innerR;
   const SEGS = 36;
 
-  // Build ring road as arc segments
   const ringSegments = useMemo(() => {
     const segs: { pos: [number,number,number]; rot: number; w: number; len: number }[] = [];
     for (let i = 0; i < SEGS; i++) {
@@ -1013,9 +1014,8 @@ function DrivewayAndParking({ W, D }: { W: number; D: number }) {
       });
     }
     return segs;
-  }, [circleZ]);
+  }, []);
 
-  // Paver grid on island (just a disc)
   const islandPavers = useMemo(() => {
     const pvs: { px: number; pz: number }[] = [];
     const step = 0.55;
@@ -1029,12 +1029,11 @@ function DrivewayAndParking({ W, D }: { W: number; D: number }) {
   }, []);
 
   const carportX = outerR + 5.0;
-  const carportZ = circleZ;
 
   return (
     <group>
-      {/* ── Straight approach from house to circle ── */}
-      <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -0.492, zFront + 5.5]} receiveShadow>
+      {/* ── Straight approach from origin (house front) to circle ── */}
+      <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -0.492, 5.5]} receiveShadow>
         <planeGeometry args={[4.2, 11.0]} />
         <meshStandardMaterial color="#B8A888" roughness={0.88} />
       </mesh>
@@ -1053,7 +1052,7 @@ function DrivewayAndParking({ W, D }: { W: number; D: number }) {
         <meshStandardMaterial color="#5CBF40" roughness={0.98} />
       </mesh>
 
-      {/* ── Center island ornamental tree / topiary ── */}
+      {/* ── Center island ornamental topiary ── */}
       <group position={[0, 0, circleZ]}>
         <mesh position={[0, 0.6, 0]} castShadow>
           <cylinderGeometry args={[0.12, 0.16, 1.2, 8]} />
@@ -1068,7 +1067,7 @@ function DrivewayAndParking({ W, D }: { W: number; D: number }) {
       {/* ── Bollard lights along approach ── */}
       {([-1.5, 1.5] as number[]).map((bx, side) =>
         [2.0, 5.0, 8.0].map((bz, j) => (
-          <group key={`${side}-${j}`} position={[bx, 0, zFront + bz]}>
+          <group key={`${side}-${j}`} position={[bx, 0, bz]}>
             <mesh position={[0, 0.3, 0]} castShadow>
               <cylinderGeometry args={[0.07, 0.09, 0.6, 8]} />
               <meshStandardMaterial color="#C8C0A0" roughness={0.6} metalness={0.3} />
@@ -1099,29 +1098,24 @@ function DrivewayAndParking({ W, D }: { W: number; D: number }) {
       })}
 
       {/* ── Carport with 4 columns + flat roof ── */}
-      <group position={[carportX, 0, carportZ]}>
-        {/* Flat roof slab */}
+      <group position={[carportX, 0, circleZ]}>
         <mesh position={[0, 2.6, 0]} castShadow receiveShadow>
           <boxGeometry args={[6.5, 0.18, 5.5]} />
           <meshStandardMaterial color="#D8D2C0" roughness={0.8} />
         </mesh>
-        {/* 4 columns */}
         {([ [-2.8, -2.2], [2.8, -2.2], [-2.8, 2.2], [2.8, 2.2] ] as [number,number][]).map(([cx, cz], i) => (
           <mesh key={i} position={[cx, 1.3, cz]} castShadow>
             <cylinderGeometry args={[0.14, 0.14, 2.6, 10]} />
             <meshStandardMaterial color="#F0EAD8" roughness={0.7} />
           </mesh>
         ))}
-        {/* Ground slab */}
         <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -0.492, 0]} receiveShadow>
           <planeGeometry args={[6.2, 5.2]} />
           <meshStandardMaterial color="#B8A888" roughness={0.88} />
         </mesh>
-        {/* 2 parked cars */}
         <Car x={-1.8} z={0} color="#E8E8E8" />
         <Car x={ 1.8} z={0} color="#1A1A2E" />
-        {/* 3rd car nearby outside */}
-        <Car x={0} z={carportZ + 4.0 - carportZ} color="#8B4513" />
+        <Car x={0}    z={4.0} color="#8B4513" />
       </group>
     </group>
   );
@@ -1143,7 +1137,11 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
         <Tree x={  W / 2 + 3.5}  z={  D / 2 + 1.8}  scale={0.9} />
         <GardenPath W={W} D={D} />
         <FlowerBed x={W / 2 + 1.5} z={-(D / 2 - 0.5)} w={2} d={0.8} />
-        {parking && <DrivewayAndParking W={W} D={D} />}
+        {parking && (
+          <DraggableGroup posKey="driveway" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef}>
+            <DrivewayAndParking />
+          </DraggableGroup>
+        )}
       </>
     );
   }
@@ -1177,7 +1175,11 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
         <DraggableGroup posKey="fountain" defaultX={0} defaultZ={-(D / 2 + 6.5)} hitW={5} hitD={5} orbitRef={orbitRef}>
           <Fountain x={0} z={0} />
         </DraggableGroup>
-        {parking && <DrivewayAndParking W={W} D={D} />}
+        {parking && (
+          <DraggableGroup posKey="driveway" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef}>
+            <DrivewayAndParking />
+          </DraggableGroup>
+        )}
       </>
     );
   }
@@ -1208,7 +1210,11 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
         <Lawn x={xOff + 1.0} z={0} w={10} d={12} />
         <GardenPath W={W} D={D} />
         <FlowerBed x={-(W / 2 + 1.5)} z={D / 2 + 1.5} w={3} d={0.8} />
-        {parking && <DrivewayAndParking W={W} D={D} />}
+        {parking && (
+          <DraggableGroup posKey="driveway" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef}>
+            <DrivewayAndParking />
+          </DraggableGroup>
+        )}
       </>
     );
   }
@@ -1228,10 +1234,10 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
         <Tree x={xOff + 9.5}      z={ 4.0} type="palm"  scale={0.9} />
         {/* Italian cypress avenue along driveway */}
         {parking && ([8.0, 12.0, 16.0] as number[]).map((cz, i) => (
-          <>
-            <Tree key={`ca-${i}`} x={-2.8} z={D / 2 + cz} type="cypress" scale={1.0} />
-            <Tree key={`cb-${i}`} x={ 2.8} z={D / 2 + cz} type="cypress" scale={1.0} />
-          </>
+          <Fragment key={i}>
+            <Tree x={-2.8} z={D / 2 + cz} type="cypress" scale={1.0} />
+            <Tree x={ 2.8} z={D / 2 + cz} type="cypress" scale={1.0} />
+          </Fragment>
         ))}
         {/* Italian cypress at estate corners */}
         <Tree x={-(W / 2 + 6.0)} z={-(D / 2 + 2.5)} type="cypress" scale={1.1} />
@@ -1269,7 +1275,11 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef }: {
         <Lawn x={0} z={D / 2 + 5.5} w={W + 6} d={5} />
         {/* Path */}
         <GardenPath W={W} D={D} />
-        {parking && <DrivewayAndParking W={W} D={D} />}
+        {parking && (
+          <DraggableGroup posKey="driveway" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef}>
+            <DrivewayAndParking />
+          </DraggableGroup>
+        )}
       </>
     );
   }
