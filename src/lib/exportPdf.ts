@@ -291,6 +291,7 @@ export interface RoomDetail {
   cost: number;
   materials: MaterialItem[];
   placedItems: PlacedItem[];
+  floorIndex?: number;  // which floor this room belongs to
 }
 
 export interface AllRoomsExportData {
@@ -304,6 +305,8 @@ export interface AllRoomsExportData {
 export function generateAllRoomsPdf(data: AllRoomsExportData, groupBy: "room" | "material"): void {
   const { roomDetails, totalCost, budget, locale, phone } = data;
   const isEn = locale === "en";
+  // Detect if multi-floor: any room has floorIndex > 0
+  const isMultiFloor = roomDetails.some(r => (r.floorIndex ?? 0) > 0);
   const date = new Date().toLocaleDateString(isEn ? "en-US" : "zh-CN");
   const configured = roomDetails.filter(r => r.cost > 0);
   const overBudget = totalCost > budget;
@@ -336,57 +339,79 @@ export function generateAllRoomsPdf(data: AllRoomsExportData, groupBy: "room" | 
     </div>`;
 
   // ── By-room view ──
-  const byRoomHtml = configured
-    .sort((a,b) => b.cost - a.cost)
-    .map(({ room, cost, materials, placedItems }) => {
-      const area = getRoomArea(room);
-      const rn = roomName(room, locale);
-      const def = ROOM_DEFS[room];
-      const pct = Math.round((cost / totalCost) * 100);
+  function renderRoomBlock({ room, cost, materials, placedItems }: RoomDetail): string {
+    const area = getRoomArea(room);
+    const rn = roomName(room, locale);
+    const def = ROOM_DEFS[room];
+    const pct = Math.round((cost / totalCost) * 100);
 
-      let rows = "";
-      materials.forEach(item => {
-        const qty = item.category === "wall" ? area.wall
-                  : item.category === "floor" ? area.floor
-                  : item.id === "light-spot" ? 8 : 1;
-        const qtyStr = ["wall","floor","tile"].includes(item.category) ? `${qty}㎡`
-                     : item.id === "light-spot" ? "×8" : "×1";
-        rows += `<tr>
-          <td>${catLabel(item.category, locale)}</td>
-          <td><span class="swatch" style="background:${item.color}"></span>${matName(item, locale)}</td>
-          <td>${brandName(item.brand, locale)}</td>
-          <td>${fmtPrice(item.price, locale)}</td>
-          <td>${qtyStr}</td>
-          <td><b>${fmtPrice(item.price * qty, locale)}</b></td>
-        </tr>`;
-      });
-      placedItems.forEach(p => {
-        const f = getFurnitureById(p.furnitureId);
-        if (!f) return;
-        rows += `<tr>
-          <td style="font-size:15px">${f.icon}</td>
-          <td>${furnitureName(f.id, f.name, locale)}</td>
-          <td>${brandName(f.brand, locale)}</td>
-          <td>${fmtPrice(f.price, locale)}</td>
-          <td>×1</td>
-          <td><b>${fmtPrice(f.price, locale)}</b></td>
-        </tr>`;
-      });
+    let rows = "";
+    materials.forEach(item => {
+      const qty = item.category === "wall" ? area.wall
+                : item.category === "floor" ? area.floor
+                : item.id === "light-spot" ? 8 : 1;
+      const qtyStr = ["wall","floor","tile"].includes(item.category) ? `${qty}㎡`
+                   : item.id === "light-spot" ? "×8" : "×1";
+      rows += `<tr>
+        <td>${catLabel(item.category, locale)}</td>
+        <td><span class="swatch" style="background:${item.color}"></span>${matName(item, locale)}</td>
+        <td>${brandName(item.brand, locale)}</td>
+        <td>${fmtPrice(item.price, locale)}</td>
+        <td>${qtyStr}</td>
+        <td><b>${fmtPrice(item.price * qty, locale)}</b></td>
+      </tr>`;
+    });
+    placedItems.forEach(p => {
+      const f = getFurnitureById(p.furnitureId);
+      if (!f) return;
+      rows += `<tr>
+        <td style="font-size:15px">${f.icon}</td>
+        <td>${furnitureName(f.id, f.name, locale)}</td>
+        <td>${brandName(f.brand, locale)}</td>
+        <td>${fmtPrice(f.price, locale)}</td>
+        <td>×1</td>
+        <td><b>${fmtPrice(f.price, locale)}</b></td>
+      </tr>`;
+    });
 
-      return `
-        <div class="room-header">
-          ${def.icon} ${rn}
-          <span style="font-size:11px;font-weight:400;color:#6e6e73;margin-left:8px">${pct}% · ${fmtPrice(cost, locale)}</span>
+    return `
+      <div class="room-header">
+        ${def.icon} ${rn}
+        <span style="font-size:11px;font-weight:400;color:#6e6e73;margin-left:8px">${pct}% · ${fmtPrice(cost, locale)}</span>
+      </div>
+      ${rows ? `<table>
+        <thead><tr>
+          <th>${isEn?"Cat.":"类别"}</th><th>${isEn?"Item":"材料/家具"}</th>
+          <th>${isEn?"Brand":"品牌"}</th><th>${isEn?"Unit":"单价"}</th>
+          <th>${isEn?"Qty":"数量"}</th><th>${isEn?"Sub":"小计"}</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>` : `<p style="font-size:11px;color:#aeaeb2;padding:4px 10px">${isEn?"(no items yet)":"（暂无配置）"}</p>`}`;
+  }
+
+  let byRoomHtml = "";
+  if (isMultiFloor) {
+    // Group by floor, add floor section headers
+    const floorGroups = new Map<number, RoomDetail[]>();
+    configured.forEach(rd => {
+      const fi = rd.floorIndex ?? 0;
+      if (!floorGroups.has(fi)) floorGroups.set(fi, []);
+      floorGroups.get(fi)!.push(rd);
+    });
+    [...floorGroups.entries()].sort(([a],[b]) => a - b).forEach(([fi, rooms]) => {
+      const floorLabel = isEn ? `Floor ${fi + 1}` : `第 ${fi + 1} 层`;
+      const floorCost = rooms.reduce((s, r) => s + r.cost, 0);
+      byRoomHtml += `
+        <div style="margin:24px 0 8px;padding:10px 14px;background:linear-gradient(90deg,#007AFF18,transparent);
+          border-left:4px solid #007AFF;border-radius:0 8px 8px 0;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:15px;font-weight:900;color:#007AFF">${floorLabel}</span>
+          <span style="font-size:12px;font-weight:700;color:#5856D6">${fmtPrice(floorCost, locale)}</span>
         </div>
-        ${rows ? `<table>
-          <thead><tr>
-            <th>${isEn?"Cat.":"类别"}</th><th>${isEn?"Item":"材料/家具"}</th>
-            <th>${isEn?"Brand":"品牌"}</th><th>${isEn?"Unit":"单价"}</th>
-            <th>${isEn?"Qty":"数量"}</th><th>${isEn?"Sub":"小计"}</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>` : `<p style="font-size:11px;color:#aeaeb2;padding:4px 10px">${isEn?"(no items yet)":"（暂无配置）"}</p>`}`;
-    }).join("");
+        ${rooms.sort((a,b) => b.cost - a.cost).map(renderRoomBlock).join("")}`;
+    });
+  } else {
+    byRoomHtml = configured.sort((a,b) => b.cost - a.cost).map(renderRoomBlock).join("");
+  }
 
   // ── By-material view (采购清单) ──
   // Aggregate same material across rooms

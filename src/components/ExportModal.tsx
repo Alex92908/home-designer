@@ -47,13 +47,14 @@ export default function ExportModal() {
   const locale = useLocale();
 
   const activeRoom      = useDesignerStore(s => s.activeRoom);
-  const rooms           = useDesignerStore(s => s.rooms);
-  const enabledRooms    = useDesignerStore(s => s.enabledRooms);
+  const floorPlans      = useDesignerStore(s => s.floorPlans);
+  const rooms           = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms);
+  const enabledRooms    = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
   const scores          = useDesignerStore(s => s.scores);
   const exterior        = useDesignerStore(s => s.exterior);
   const budget          = useDesignerStore(s => s.budget);
   const resetAll        = useDesignerStore(s => s.resetAll);
-  const roomDimensions  = useDesignerStore(s => s.roomDimensions);
+  const roomDimensions  = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
 
   const roomState  = rooms[activeRoom];
   const def        = ROOM_DEFS[activeRoom];
@@ -61,7 +62,7 @@ export default function ExportModal() {
   const { materials, placedItems } = roomState;
   const materialItems = Object.values(materials).filter(Boolean) as NonNullable<typeof materials.wall>[];
 
-  // All-rooms cost
+  // Current-floor room costs (for display in "all" tab)
   const roomCosts = enabledRooms.map(r => {
     const rs = rooms[r];
     const a  = getRoomArea(r);
@@ -74,7 +75,21 @@ export default function ExportModal() {
     for (const p of rs.placedItems) { const f = getFurnitureById(p.furnitureId); if (f) c += f.price; }
     return { room: r, cost: c };
   });
-  const totalAllCost = roomCosts.reduce((s, r) => s + r.cost, 0);
+  // Sum across ALL floors for totals
+  const totalAllCost = floorPlans.reduce((sum, fp) =>
+    sum + fp.enabledRooms.reduce((s2, r) => {
+      const rs = fp.rooms[r];
+      const a = getRoomArea(r);
+      let c = 0;
+      if (rs.materials.wall)    c += rs.materials.wall.price * a.wall;
+      if (rs.materials.floor)   c += rs.materials.floor.price * a.floor;
+      if (rs.materials.ceiling) c += rs.materials.ceiling.price * a.floor;
+      if (rs.materials.tile)    c += rs.materials.tile.price * a.floor;
+      if (rs.materials.light)   c += rs.materials.light.price * (rs.materials.light.id === "light-spot" ? 8 : 1);
+      for (const p of rs.placedItems) { const f = getFurnitureById(p.furnitureId); if (f) c += f.price; }
+      return s2 + c;
+    }, 0)
+  , 0);
   const currentRoomCost = roomCosts.find(r => r.room === activeRoom)?.cost ?? 0;
 
   useEffect(() => {
@@ -108,12 +123,27 @@ export default function ExportModal() {
   };
 
   const handleExportAllPdf = () => {
-    const roomDetails = enabledRooms.map(r => ({
-      room: r,
-      cost: roomCosts.find(x => x.room === r)?.cost ?? 0,
-      materials: Object.values(rooms[r].materials).filter(Boolean) as NonNullable<typeof rooms[typeof r]["materials"]["wall"]>[],
-      placedItems: rooms[r].placedItems,
-    }));
+    // Collect room details from all floors
+    const roomDetails = floorPlans.flatMap((fp, floorIndex) =>
+      fp.enabledRooms.map(r => {
+        const a = getRoomArea(r);
+        const rs = fp.rooms[r];
+        let c = 0;
+        if (rs.materials.wall)    c += rs.materials.wall.price * a.wall;
+        if (rs.materials.floor)   c += rs.materials.floor.price * a.floor;
+        if (rs.materials.ceiling) c += rs.materials.ceiling.price * a.floor;
+        if (rs.materials.tile)    c += rs.materials.tile.price * a.floor;
+        if (rs.materials.light)   c += rs.materials.light.price * (rs.materials.light.id === "light-spot" ? 8 : 1);
+        for (const p of rs.placedItems) { const f = getFurnitureById(p.furnitureId); if (f) c += f.price; }
+        return {
+          room: r,
+          cost: c,
+          materials: Object.values(rs.materials).filter(Boolean) as NonNullable<typeof rs["materials"]["wall"]>[],
+          placedItems: rs.placedItems,
+          floorIndex,
+        };
+      })
+    );
     generateAllRoomsPdf({ roomDetails, totalCost: totalAllCost, budget, locale, phone: "guest" }, "room");
   };
 
@@ -124,24 +154,26 @@ export default function ExportModal() {
   // Internally the store uses CENTER coordinates; we convert on save/load.
 
   const handleSaveJson = () => {
-    // Convert placed items: center → top-left
-    const exportRooms = Object.fromEntries(
-      Object.entries(rooms).map(([roomId, roomState]) => {
-        const convertedItems = roomState.placedItems.map(p => {
-          const f = getFurnitureById(p.furnitureId);
-          if (!f) return p;
-          const hw = (f.width  * (p.scaleW ?? 1)) / 2;
-          const hd = (f.depth  * (p.scaleD ?? 1)) / 2;
-          return { ...p, x: p.x - hw, z: p.z - hd };
-        });
-        return [roomId, { ...roomState, placedItems: convertedItems }];
-      })
-    );
+    // Convert placed items center → top-left for all floors
+    const exportFloorPlans = floorPlans.map(fp => ({
+      ...fp,
+      rooms: Object.fromEntries(
+        Object.entries(fp.rooms).map(([roomId, roomState]) => {
+          const convertedItems = roomState.placedItems.map(p => {
+            const f = getFurnitureById(p.furnitureId);
+            if (!f) return p;
+            const hw = (f.width  * (p.scaleW ?? 1)) / 2;
+            const hd = (f.depth  * (p.scaleD ?? 1)) / 2;
+            return { ...p, x: p.x - hw, z: p.z - hd };
+          });
+          return [roomId, { ...roomState, placedItems: convertedItems }];
+        })
+      ),
+    }));
     const data = {
-      _coordSystem: "top-left",  // marker so importer knows which convention
-      rooms: exportRooms,
-      roomDimensions,
-      enabledRooms,
+      _version: 2,
+      _coordSystem: "top-left",
+      floorPlans: exportFloorPlans,
       exterior,
       budget,
       savedAt: new Date().toISOString(),
@@ -162,7 +194,7 @@ export default function ExportModal() {
     try {
       const res = await fetch("/demo-plan.json");
       const data = await res.json();
-      localStorage.setItem("home-designer-v1", JSON.stringify({ state: data, version: 0 }));
+      localStorage.setItem("home-designer-v2", JSON.stringify({ state: data, version: 0 }));
       window.location.reload();
     } catch {
       alert(locale === "en" ? "Failed to load demo." : "样板加载失败，请重试。");
@@ -180,20 +212,63 @@ export default function ExportModal() {
       reader.onload = (ev) => {
         try {
           const data = JSON.parse(ev.target?.result as string);
-          if (data.rooms && data.enabledRooms) {
-            // Convert top-left → center if file was saved with new convention
-            if (data._coordSystem === "top-left") {
-              Object.values(data.rooms as Record<string, { placedItems: Array<{furnitureId:string;x:number;z:number;scaleW?:number;scaleD?:number}> }>).forEach(roomState => {
-                roomState.placedItems = roomState.placedItems.map(p => {
-                  const f = getFurnitureById(p.furnitureId);
-                  if (!f) return p;
-                  const hw = (f.width  * (p.scaleW ?? 1)) / 2;
-                  const hd = (f.depth  * (p.scaleD ?? 1)) / 2;
-                  return { ...p, x: p.x + hw, z: p.z + hd };
-                });
-              });
-            }
-            localStorage.setItem("home-designer-v1", JSON.stringify({ state: data, version: 0 }));
+          const isTopLeft = data._coordSystem === "top-left";
+
+          // Helper: convert top-left → center for a rooms map
+          const convertRooms = (roomsMap: Record<string, { placedItems: Array<{furnitureId:string;x:number;z:number;scaleW?:number;scaleD?:number}> }>) => {
+            if (!isTopLeft) return roomsMap;
+            return Object.fromEntries(
+              Object.entries(roomsMap).map(([rid, rs]) => [
+                rid,
+                {
+                  ...rs,
+                  placedItems: rs.placedItems.map(p => {
+                    const f = getFurnitureById(p.furnitureId);
+                    if (!f) return p;
+                    return { ...p, x: p.x + (f.width  * (p.scaleW ?? 1)) / 2,
+                                   z: p.z + (f.depth  * (p.scaleD ?? 1)) / 2 };
+                  }),
+                },
+              ])
+            );
+          };
+
+          // ── New format (v2): floorPlans array ──
+          if (data._version === 2 && Array.isArray(data.floorPlans)) {
+            const convertedFloorPlans = data.floorPlans.map((fp: { rooms: Record<string, { placedItems: Array<{furnitureId:string;x:number;z:number;scaleW?:number;scaleD?:number}> }> }) => ({
+              ...fp,
+              rooms: convertRooms(fp.rooms),
+            }));
+            const state = {
+              floorPlans: convertedFloorPlans,
+              exterior: data.exterior,
+              budget: data.budget,
+              activeFloor: 0,
+              activeRoom: data.floorPlans[0]?.enabledRooms?.[0] ?? "living",
+            };
+            localStorage.setItem("home-designer-v2", JSON.stringify({ state, version: 0 }));
+            window.location.reload();
+
+          // ── Legacy format (v1): single-floor rooms + enabledRooms ──
+          } else if (data.rooms && data.enabledRooms) {
+            const convertedRooms = convertRooms(data.rooms);
+            const state = {
+              floorPlans: [{
+                rooms: convertedRooms,
+                enabledRooms: data.enabledRooms,
+                roomLayout: data.roomLayout ?? {},
+                roomDimensions: data.roomDimensions ?? {},
+                roomWindows: data.roomWindows ?? {},
+                roomDoorPos: data.roomDoorPos ?? {},
+                roomHasDoor: data.roomHasDoor ?? {},
+                roomDoorWall: data.roomDoorWall ?? {},
+              }],
+              exterior: data.exterior,
+              budget: data.budget,
+              activeFloor: 0,
+              activeRoom: data.enabledRooms[0] ?? "living",
+            };
+            localStorage.setItem("home-designer-v2", JSON.stringify({ state, version: 0 }));
             window.location.reload();
           } else {
             alert(t.invalidFile);

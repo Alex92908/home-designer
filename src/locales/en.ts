@@ -118,6 +118,8 @@ export const en: Translations = {
   resetDesc: "Clear all room configurations and start over (cannot be undone)",
   resetBtn: "🗑️ Clear Everything",
   resetConfirm: "Are you sure you want to clear all configurations? This cannot be undone.",
+  clearRoomBtn: "🗑️ Clear This Room",
+  clearRoomConfirm: "Clear all materials and furniture in this room?",
   closeBtn: "Close",
   invalidFile: "Invalid file format",
   parseError: "Could not parse file",

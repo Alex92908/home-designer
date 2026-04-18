@@ -1127,9 +1127,9 @@ function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def
 
 function Scene({ isIOS }: { isIOS: boolean }) {
   const activeRoom    = useDesignerStore((s) => s.activeRoom);
-  const roomState     = useDesignerStore((s) => s.rooms[activeRoom]);
-  const roomWindows   = useDesignerStore((s) => s.roomWindows?.[activeRoom] ?? []);
-  const roomDimensions = useDesignerStore((s) => s.roomDimensions[activeRoom]);
+  const roomState     = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom]);
+  const roomWindows   = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows?.[activeRoom] ?? []);
+  const roomDimensions = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
   const def = ROOM_DEFS[activeRoom];
 
   // Use store dimensions (reflects global plan resizes), fall back to ROOM_DEFS

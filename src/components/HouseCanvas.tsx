@@ -14,9 +14,9 @@ const OV      = 0.55;
 
 // ─── Footprint ─────────────────────────────────────────────
 function useFootprint() {
-  const enabledRooms   = useDesignerStore(s => s.enabledRooms);
-  const roomLayout     = useDesignerStore(s => s.roomLayout);
-  const roomDimensions = useDesignerStore(s => s.roomDimensions);
+  const enabledRooms   = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
+  const roomLayout     = useDesignerStore(s => s.floorPlans[s.activeFloor].roomLayout);
+  const roomDimensions = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
   const indoor = enabledRooms.filter(r => !ROOM_DEFS[r].isOutdoor);
   if (!indoor.length) return { W: 8, D: 6 };
   const xs = indoor.flatMap(r => [roomLayout[r].x, roomLayout[r].x + roomDimensions[r].width]);

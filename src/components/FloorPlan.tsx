@@ -324,7 +324,7 @@ export default function FloorPlan() {
   const inspectorDragOrigin = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
 
   const activeRoom           = useDesignerStore((s) => s.activeRoom);
-  const roomState            = useDesignerStore((s) => s.rooms[activeRoom]);
+  const roomState            = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom]);
   const selectedInstanceIds  = useDesignerStore((s) => s.selectedInstanceIds);
   const moveItem             = useDesignerStore((s) => s.moveItem);
   const rotateItem           = useDesignerStore((s) => s.rotateItem);
@@ -342,13 +342,13 @@ export default function FloorPlan() {
   const copyToClipboard      = useDesignerStore((s) => s.copyToClipboard);
   const pasteFromClipboard   = useDesignerStore((s) => s.pasteFromClipboard);
   const clipboardLen         = useDesignerStore((s) => s.clipboard.length);
-  const roomWindows     = useDesignerStore((s) => s.roomWindows[activeRoom] ?? []);
+  const roomWindows     = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows[activeRoom] ?? []);
   const setRoomWindows  = useDesignerStore((s) => s.setRoomWindows);
   const addWindow       = useDesignerStore((s) => s.addWindow);
   const removeWindow    = useDesignerStore((s) => s.removeWindow);
-  const doorPosCm       = useDesignerStore((s) => s.roomDoorPos[activeRoom] ?? 0);
-  const hasDoor         = useDesignerStore((s) => s.roomHasDoor[activeRoom] ?? true);
-  const doorWall        = useDesignerStore((s) => (s.roomDoorWall[activeRoom] ?? "bottom") as DoorWall);
+  const doorPosCm       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorPos[activeRoom] ?? 0);
+  const hasDoor         = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomHasDoor[activeRoom] ?? true);
+  const doorWall        = useDesignerStore((s) => (s.floorPlans[s.activeFloor].roomDoorWall[activeRoom] ?? "bottom") as DoorWall);
   const setDoorPos      = useDesignerStore((s) => s.setDoorPos);
   const setRoomHasDoor  = useDesignerStore((s) => s.setRoomHasDoor);
   const setDoorWall     = useDesignerStore((s) => s.setDoorWall);
@@ -356,7 +356,7 @@ export default function FloorPlan() {
   const locale = useLocale();
 
   // ── Use store roomDimensions (respects global plan edits) ──
-  const roomDimensions  = useDesignerStore((s) => s.roomDimensions[activeRoom]);
+  const roomDimensions  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
   const def             = ROOM_DEFS[activeRoom];
 
   // Effective dimensions: store override if different from default, else ROOM_DEFS

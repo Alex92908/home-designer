@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useDesignerStore } from "@/lib/store";
+import type { FloorPlan } from "@/lib/types";
 import { encodeShare } from "@/lib/share";
 import { useT, useLocale } from "@/lib/i18n";
 
@@ -15,37 +16,35 @@ export default function ShareModal() {
   const t = useT();
   const locale = useLocale();
 
-  const rooms          = useDesignerStore(s => s.rooms);
-  const enabledRooms   = useDesignerStore(s => s.enabledRooms);
+  const floorPlans     = useDesignerStore(s => s.floorPlans);
+  const rooms          = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms);
+  const enabledRooms   = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
   const budget         = useDesignerStore(s => s.budget);
   const exterior       = useDesignerStore(s => s.exterior);
   const customRoomMeta = useDesignerStore(s => s.customRoomMeta);
-  const roomDimensions = useDesignerStore(s => s.roomDimensions);
 
   const buildShareUrl = useCallback(() => {
-    // Only include configured rooms to keep URL small
-    const configuredRooms = Object.fromEntries(
-      enabledRooms
-        .filter(r => {
-          const rs = rooms[r];
-          return Object.keys(rs.materials).length > 0 || rs.placedItems.length > 0;
-        })
-        .map(r => [r, rooms[r]])
-    );
+    // Encode all floorPlans (stripping empty rooms to keep URL small)
+    const compactFloorPlans = floorPlans.map(fp => ({
+      ...fp,
+      rooms: Object.fromEntries(
+        fp.enabledRooms
+          .filter(r => Object.keys(fp.rooms[r].materials).length > 0 || fp.rooms[r].placedItems.length > 0)
+          .map(r => [r, fp.rooms[r]])
+      ) as FloorPlan["rooms"],
+    }));
 
     const snapshot = {
-      rooms: configuredRooms,
-      enabledRooms,
+      floorPlans: compactFloorPlans,
       budget,
       exterior: exterior as unknown as Record<string, unknown>,
       customRoomMeta,
-      roomDimensions,
-      v: 1,
+      v: 2,
     };
 
     const encoded = encodeShare(snapshot);
     return `${window.location.origin}?share=${encoded}`;
-  }, [rooms, enabledRooms, budget, exterior, customRoomMeta, roomDimensions]);
+  }, [floorPlans, budget, exterior, customRoomMeta]);
 
   useEffect(() => {
     const handler = () => {

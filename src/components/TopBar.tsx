@@ -2,15 +2,36 @@
 
 import { useDesignerStore } from "@/lib/store";
 import { useT, useLocaleStore } from "@/lib/i18n";
+import { ROOM_DEFS } from "@/lib/types";
 
 export default function TopBar() {
-  const viewMode      = useDesignerStore((s) => s.viewMode);
-  const setViewMode   = useDesignerStore((s) => s.setViewMode);
-  const scores        = useDesignerStore((s) => s.scores);
-  const roomClipboard = useDesignerStore((s) => s.roomClipboard);
-  const t             = useT();
-  const locale        = useLocaleStore((s) => s.locale);
-  const setLocale     = useLocaleStore((s) => s.setLocale);
+  const viewMode          = useDesignerStore((s) => s.viewMode);
+  const setViewMode       = useDesignerStore((s) => s.setViewMode);
+  const scores            = useDesignerStore((s) => s.scores);
+  const roomClipboard     = useDesignerStore((s) => s.roomClipboard);
+  const activeRoom        = useDesignerStore((s) => s.activeRoom);
+  const activeFloor       = useDesignerStore((s) => s.activeFloor);
+  const exterior          = useDesignerStore((s) => s.exterior);
+  const customRoomMeta    = useDesignerStore((s) => s.customRoomMeta);
+  const furnitureHistory  = useDesignerStore((s) => s.furnitureHistory);
+  const layoutHistory     = useDesignerStore((s) => s.layoutHistory);
+  const undoFurniture     = useDesignerStore((s) => s.undoFurniture);
+  const undoLayout        = useDesignerStore((s) => s.undoLayout);
+  const t               = useT();
+  const locale          = useLocaleStore((s) => s.locale);
+  const setLocale       = useLocaleStore((s) => s.setLocale);
+
+  const canUndo = viewMode === "all"
+    ? layoutHistory.length > 0
+    : furnitureHistory.length > 0;
+  const handleUndo = viewMode === "all" ? undoLayout : undoFurniture;
+
+  // Floor context: only meaningful in room-editing views (2d / 3d)
+  const showFloorCtx = (viewMode === "2d" || viewMode === "3d") && exterior.floors > 1;
+  const roomDef      = ROOM_DEFS[activeRoom];
+  const roomMeta     = customRoomMeta[activeRoom];
+  const roomLabel    = roomMeta?.name ?? (locale === "en" ? (t.roomNames[activeRoom] ?? roomDef?.name ?? activeRoom) : (roomDef?.name ?? activeRoom));
+  const roomIcon     = roomMeta?.icon ?? roomDef?.icon ?? "🏠";
 
   const openExport = () => window.dispatchEvent(new Event("openExport"));
 
@@ -69,6 +90,39 @@ export default function TopBar() {
           </button>
         ))}
       </div>
+
+      {/* Floor + room context badge — visible in 2D/3D when multi-floor */}
+      {showFloorCtx && (
+        <div
+          className="hidden sm:flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0"
+          style={{
+            background: activeFloor === 0 ? "#DBEAFE" : "#EDE9FE",
+            color:      activeFloor === 0 ? "#1D4ED8" : "#6D28D9",
+          }}
+        >
+          <span>{activeFloor + 1}F</span>
+          <span style={{ opacity: 0.4 }}>·</span>
+          <span>{roomIcon}</span>
+          <span>{roomLabel}</span>
+        </div>
+      )}
+
+      {/* Undo button */}
+      {viewMode !== "exterior" && (
+        <button
+          onClick={handleUndo}
+          disabled={!canUndo}
+          title={viewMode === "all" ? "撤销布局操作" : "撤销家具操作"}
+          className="flex items-center justify-center w-7 h-7 rounded-lg text-sm transition-all shrink-0 disabled:opacity-30"
+          style={{
+            background: canUndo ? "var(--ds-bg)" : "transparent",
+            border: canUndo ? "1px solid var(--ds-border)" : "1px solid transparent",
+            color: "var(--ds-text-2)",
+          }}
+        >
+          ↩
+        </button>
+      )}
 
       {/* Style badge */}
       {scores.dominantStyle && (

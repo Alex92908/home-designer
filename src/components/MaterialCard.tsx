@@ -10,7 +10,7 @@ import { getMaterialNameEn } from "@/locales/itemNames";
 export default function MaterialCard({ item }: { item: MaterialItem }) {
   const setMaterial = useDesignerStore((s) => s.setMaterial);
   const activeRoom = useDesignerStore((s) => s.activeRoom);
-  const roomMaterials = useDesignerStore((s) => s.rooms[activeRoom].materials);
+  const roomMaterials = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom].materials);
   const isSelected = roomMaterials[item.category]?.id === item.id;
   const locale = useLocale();
   const displayName = locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name;

@@ -37,8 +37,10 @@ export default function RightPanelAll() {
   const t      = useT();
   const locale = useLocale();
 
-  const rooms          = useDesignerStore(s => s.rooms);
-  const enabledRooms   = useDesignerStore(s => s.enabledRooms);
+  const floorPlans     = useDesignerStore(s => s.floorPlans);
+  const activeFloor    = useDesignerStore(s => s.activeFloor);
+  const rooms          = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms);
+  const enabledRooms   = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
   const customRoomMeta = useDesignerStore(s => s.customRoomMeta);
   const budgetRaw      = useDesignerStore(s => s.budget);
   const setBudget      = useDesignerStore(s => s.setBudget);
@@ -47,14 +49,21 @@ export default function RightPanelAll() {
 
   const budget = mounted ? budgetRaw : 150000;
 
-  // Per-room costs
+  // Per-room costs for current floor (for display)
   const roomCosts = enabledRooms.map(r => {
     const area = getRoomArea(r);
     const cost = calcRoomCost(r, rooms[r].materials as never, rooms[r].placedItems, area);
     return { r, cost, area };
   });
 
-  const totalCost    = roomCosts.reduce((s, x) => s + x.cost, 0);
+  // Total cost across ALL floors
+  const totalCost = floorPlans.reduce((sum, fp) => {
+    return sum + fp.enabledRooms.reduce((s2, room) => {
+      const { materials, placedItems } = fp.rooms[room];
+      const area = getRoomArea(room);
+      return s2 + calcRoomCost(room, materials as never, placedItems, area);
+    }, 0);
+  }, 0);
   const budgetPct    = Math.min(100, (totalCost / budget) * 100);
   const isOverBudget = mounted && totalCost > budget;
   const configuredRooms = roomCosts.filter(x => x.cost > 0);
@@ -265,6 +274,17 @@ export default function RightPanelAll() {
           style={{ background: "var(--ds-bg)", color: "var(--ds-text-2)", border: "1px solid var(--ds-border)" }}
         >
           {t.sharePlan}
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm(t.resetConfirm)) {
+              useDesignerStore.getState().resetAll();
+            }
+          }}
+          className="w-full py-2 text-sm font-semibold rounded-xl transition-all"
+          style={{ background: "#FFF1F0", color: "#FF3B30", border: "1px solid #FFCDD0" }}
+        >
+          {t.resetBtn}
         </button>
       </div>
     </aside>

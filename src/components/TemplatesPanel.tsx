@@ -40,7 +40,7 @@ function getSwatches(tpl: StyleTemplate): string[] {
 export default function TemplatesPanel({ onLoaded }: Props) {
   const loadTemplate      = useDesignerStore(s => s.loadTemplate);
   const setViewMode       = useDesignerStore(s => s.setViewMode);
-  const enabledRooms      = useDesignerStore(s => s.enabledRooms);
+  const enabledRooms      = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
   const activeTemplateId  = useDesignerStore(s => s.activeTemplateId);
   const locale = useLocale();
   const [loading,    setLoading]    = useState<string | null>(null);

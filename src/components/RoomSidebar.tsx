@@ -9,8 +9,8 @@ export default function RoomSidebar() {
   const setActiveRoom  = useDesignerStore((s) => s.setActiveRoom);
   const viewMode       = useDesignerStore((s) => s.viewMode);
   const setViewMode    = useDesignerStore((s) => s.setViewMode);
-  const rooms          = useDesignerStore((s) => s.rooms);
-  const enabledRooms   = useDesignerStore((s) => s.enabledRooms);
+  const rooms          = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms);
+  const enabledRooms   = useDesignerStore((s) => s.floorPlans[s.activeFloor].enabledRooms);
   const customRoomMeta = useDesignerStore((s) => s.customRoomMeta);
   const t              = useT();
 

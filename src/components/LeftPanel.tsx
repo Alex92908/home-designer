@@ -14,7 +14,7 @@ import { formatUnitPrice, formatPrice } from "@/lib/currency";
 function MatCard({ item }: { item: MaterialItem }) {
   const setMaterial = useDesignerStore((s) => s.setMaterial);
   const activeRoom = useDesignerStore((s) => s.activeRoom);
-  const roomMaterials = useDesignerStore((s) => s.rooms[activeRoom].materials);
+  const roomMaterials = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom].materials);
   const isSelected = roomMaterials[item.category]?.id === item.id;
   const locale = useLocale();
   const displayName = locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name;
@@ -67,7 +67,7 @@ function MatCard({ item }: { item: MaterialItem }) {
 function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
   const placeFurniture = useDesignerStore((s) => s.placeFurniture);
   const activeRoom = useDesignerStore((s) => s.activeRoom);
-  const placedItems = useDesignerStore((s) => s.rooms[activeRoom].placedItems);
+  const placedItems = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom].placedItems);
   const isPlaced = placedItems.some((p) => p.furnitureId === item.id);
   const locale = useLocale();
   const displayName = locale === "en" ? (getFurnitureNameEn(item.id) ?? item.name) : item.name;
@@ -130,7 +130,7 @@ const MATERIAL_SECTIONS: Array<{ key: string; icon: string; category: MaterialIt
 
 function MaterialsTab() {
   const activeRoom = useDesignerStore((s) => s.activeRoom);
-  const roomMaterials = useDesignerStore((s) => s.rooms[activeRoom].materials);
+  const roomMaterials = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom].materials);
   const removeMaterial = useDesignerStore((s) => s.removeMaterial);
   const t = useT();
 

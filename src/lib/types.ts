@@ -156,6 +156,24 @@ export const ROOM_DEFS: Record<RoomType, RoomDef> = {
   custom5:   { width: 300, depth: 300, height: 280, name: "自定义5", icon: "🔲", defaultWallColor: "#EDE8E0", defaultFloorColor: "#C8A882", hasWindow: false, windowWall: "none", isCustom: true },
 };
 
+// ─── Room state ────────────────────────────────────────────
+export interface RoomState {
+  materials: RoomMaterials;
+  placedItems: PlacedItem[];
+}
+
+// ─── Per-floor independent floor plan ─────────────────────
+export interface FloorPlan {
+  rooms: Record<RoomType, RoomState>;
+  enabledRooms: RoomType[];
+  roomLayout: Record<RoomType, { x: number; y: number }>;
+  roomDimensions: Record<RoomType, { width: number; depth: number }>;
+  roomWindows: Record<RoomType, WindowConfig[]>;
+  roomDoorPos: Record<RoomType, number>;
+  roomHasDoor: Record<RoomType, boolean>;
+  roomDoorWall: Record<RoomType, "bottom" | "top" | "left" | "right">;
+}
+
 // For wall/floor area estimation (m²)
 export function getRoomArea(room: RoomType): { wall: number; floor: number } {
   const def = ROOM_DEFS[room];

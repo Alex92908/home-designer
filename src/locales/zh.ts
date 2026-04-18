@@ -116,6 +116,8 @@ export const zh = {
   resetDesc: "清空所有房间配置，恢复到初始状态（不可撤销）",
   resetBtn: "🗑️ 清空全部配置",
   resetConfirm: "确定要清空全部配置吗？此操作不可撤销。",
+  clearRoomBtn: "🗑️ 清空当前房间",
+  clearRoomConfirm: "确定要清空此房间的所有材料和家具吗？",
   closeBtn: "关闭",
   invalidFile: "文件格式不正确",
   parseError: "无法解析文件",

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, ROOM_DEFS, StyleTag, getRoomArea, FurnitureItem, ExteriorSettings, WindowConfig } from "./types";
+import { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, ROOM_DEFS, StyleTag, getRoomArea, FurnitureItem, ExteriorSettings, WindowConfig, RoomState, FloorPlan } from "./types";
 import { FURNITURE, getFurnitureById, registerFurniture } from "./furniture";
 import { MATERIALS, STYLE_RULES } from "./data";
 import { ALL_TEMPLATES, buildTemplateRoomState, buildEmbeddedRoomState } from "./templates";
@@ -130,10 +130,7 @@ function genId(): string {
 }
 
 // ─── Room state ────────────────────────────────────────────
-export interface RoomState {
-  materials: RoomMaterials;
-  placedItems: PlacedItem[];
-}
+export type { RoomState };
 
 function emptyRoom(): RoomState {
   return { materials: {}, placedItems: [] };
@@ -141,11 +138,38 @@ function emptyRoom(): RoomState {
 
 const ALL_ROOM_TYPES: RoomType[] = ALL_POSSIBLE_ROOMS;
 
+// ─── makeDefaultFloorPlan ─────────────────────────────────
+function makeDefaultFloorPlan(): FloorPlan {
+  return {
+    rooms: Object.fromEntries(ALL_ROOM_TYPES.map(r => [r, emptyRoom()])) as Record<RoomType, RoomState>,
+    enabledRooms: [...DEFAULT_ENABLED],
+    roomLayout: { ...DEFAULT_ROOM_LAYOUT },
+    roomDimensions: { ...DEFAULT_ROOM_DIMENSIONS },
+    roomWindows: { ...DEFAULT_ROOM_WINDOWS },
+    roomDoorPos: { ...DEFAULT_ROOM_DOOR_POS },
+    roomHasDoor: { ...DEFAULT_ROOM_HAS_DOOR },
+    roomDoorWall: { ...DEFAULT_ROOM_DOOR_WALL },
+  };
+}
+
+// ─── updateFloor helper ───────────────────────────────────
+function updateFloor(
+  get: () => DesignerStore,
+  set: (partial: Partial<DesignerStore> | ((s: DesignerStore) => Partial<DesignerStore>)) => void,
+  updater: (fp: FloorPlan) => Partial<FloorPlan>
+) {
+  const s = get();
+  const fp = s.floorPlans[s.activeFloor];
+  const updated = [...s.floorPlans];
+  updated[s.activeFloor] = { ...fp, ...updater(fp) };
+  set({ floorPlans: updated });
+}
+
 // ─── Store interface ───────────────────────────────────────
 
 interface DesignerStore {
   // State
-  rooms: Record<RoomType, RoomState>;
+  floorPlans: FloorPlan[];
   activeRoom: RoomType;
   viewMode: ViewMode;
   selectedInstanceId: string | null;
@@ -181,6 +205,7 @@ interface DesignerStore {
   removeItems: (instanceIds: string[]) => void;
   resizeItem: (instanceId: string, scaleW: number, scaleD: number) => void;
   setElevation: (instanceId: string, elevationY: number) => void;
+  clearRoom: () => void;
 
   // Furniture undo
   pushFurnitureHistory: () => void;
@@ -193,10 +218,7 @@ interface DesignerStore {
   // Budget
   setBudget: (budget: number) => void;
 
-  // Room layout (global floor plan editor)
-  roomLayout: Record<RoomType, { x: number; y: number }>;
-  roomDimensions: Record<RoomType, { width: number; depth: number }>;
-  enabledRooms: RoomType[];
+  // Room layout (per-floor floor plan editor)
   updateRoomLayout: (room: RoomType, x: number, y: number) => void;
   updateRoomDimension: (room: RoomType, width: number, depth: number) => void;
   toggleRoom: (room: RoomType) => void;
@@ -223,20 +245,14 @@ interface DesignerStore {
 
   // Multi-floor switching
   activeFloor: number;
-  roomFloors: Record<string, number>;
   setActiveFloor: (floor: number) => void;
-  setRoomFloor: (roomId: string, floor: number) => void;
 
-  // Windows per room
-  roomWindows: Record<RoomType, WindowConfig[]>;
+  // Windows per room (operate on current floor)
   setRoomWindows: (room: RoomType, windows: WindowConfig[]) => void;
   addWindow: (room: RoomType, win: WindowConfig) => void;
   removeWindow: (room: RoomType, id: string) => void;
 
-  // Door per room
-  roomDoorPos: Record<RoomType, number>;
-  roomHasDoor: Record<RoomType, boolean>;
-  roomDoorWall: Record<RoomType, "bottom" | "top" | "left" | "right">;
+  // Door per room (operate on current floor)
   setDoorPos: (room: RoomType, pos: number) => void;
   setRoomHasDoor: (room: RoomType, has: boolean) => void;
   setDoorWall: (room: RoomType, wall: "bottom" | "top" | "left" | "right") => void;
@@ -246,6 +262,7 @@ interface DesignerStore {
 
   // Layout undo history (not persisted, ephemeral)
   layoutHistory: Array<{
+    floorIndex: number;
     roomLayout: Record<RoomType, { x: number; y: number }>;
     roomDimensions: Record<RoomType, { width: number; depth: number }>;
     enabledRooms: RoomType[];
@@ -267,10 +284,6 @@ interface DesignerStore {
   isOverBudget: () => boolean;
 }
 
-const initialRooms: Record<RoomType, RoomState> = Object.fromEntries(
-  ALL_ROOM_TYPES.map(r => [r, emptyRoom()])
-) as Record<RoomType, RoomState>;
-
 const initialExterior: ExteriorSettings = {
   preset: "modern",
   roofStyle: "flat",
@@ -285,7 +298,7 @@ const initialExterior: ExteriorSettings = {
 export const useDesignerStore = create<DesignerStore>()(
   persist(
     (set, get) => ({
-      rooms: initialRooms,
+      floorPlans: [makeDefaultFloorPlan()],
       activeRoom: "living",
       viewMode: "3d",
       selectedInstanceId: null,
@@ -295,28 +308,20 @@ export const useDesignerStore = create<DesignerStore>()(
       clipboard: [],
       roomClipboard: null,
       scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
-      roomLayout: { ...DEFAULT_ROOM_LAYOUT },
-      roomDimensions: { ...DEFAULT_ROOM_DIMENSIONS },
-      enabledRooms: [...DEFAULT_ENABLED],
       customRoomMeta: {},
       customFurniture: [],
       exterior: { ...initialExterior },
       activeFloor: 0,
-      roomFloors: {},
-      roomWindows: { ...DEFAULT_ROOM_WINDOWS },
-      roomDoorPos: { ...DEFAULT_ROOM_DOOR_POS },
-      roomHasDoor: { ...DEFAULT_ROOM_HAS_DOOR },
-      roomDoorWall: { ...DEFAULT_ROOM_DOOR_WALL },
       layoutHistory: [],
       activeTemplateId: null,
 
       setActiveRoom: (room) => {
-        const { rooms, activeTemplateId } = get();
-        const { materials, placedItems } = rooms[room];
+        const s = get();
+        const fp = s.floorPlans[s.activeFloor];
+        const { materials, placedItems } = fp.rooms[room];
         const computed = computeScores(materials, placedItems);
-        // Keep the template's canonical style tag while it's active
-        const dominantStyle = activeTemplateId
-          ? (ALL_TEMPLATES.find(t => t.id === activeTemplateId)?.styleTag ?? computed.dominantStyle)
+        const dominantStyle = s.activeTemplateId
+          ? (ALL_TEMPLATES.find(t => t.id === s.activeTemplateId)?.styleTag ?? computed.dominantStyle)
           : computed.dominantStyle;
         set({ activeRoom: room, selectedInstanceId: null, selectedInstanceIds: [], scores: { ...computed, dominantStyle } });
       },
@@ -324,32 +329,41 @@ export const useDesignerStore = create<DesignerStore>()(
       setViewMode: (mode) => set({ viewMode: mode }),
 
       setMaterial: (material) => {
-        const { activeRoom, rooms } = get();
-        const updated = {
-          ...rooms,
-          [activeRoom]: {
-            ...rooms[activeRoom],
-            materials: { ...rooms[activeRoom].materials, [material.category]: material },
-          },
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const updatedRoom = {
+          ...fp.rooms[activeRoom],
+          materials: { ...fp.rooms[activeRoom].materials, [material.category]: material },
         };
-        const { materials, placedItems } = updated[activeRoom];
-        set({ rooms: updated, scores: computeScores(materials, placedItems), activeTemplateId: null });
+        const updatedRooms = { ...fp.rooms, [activeRoom]: updatedRoom };
+        const newFp = { ...fp, rooms: updatedRooms };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = newFp;
+        const { materials, placedItems } = updatedRoom;
+        set({ floorPlans, scores: computeScores(materials, placedItems), activeTemplateId: null });
       },
 
       removeMaterial: (category) => {
-        const { activeRoom, rooms } = get();
-        const updated = { ...rooms[activeRoom].materials };
-        delete updated[category];
-        const updatedRooms = { ...rooms, [activeRoom]: { ...rooms[activeRoom], materials: updated } };
-        set({ rooms: updatedRooms, scores: computeScores(updated, rooms[activeRoom].placedItems) });
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const updatedMaterials = { ...fp.rooms[activeRoom].materials };
+        delete updatedMaterials[category];
+        const updatedRoom = { ...fp.rooms[activeRoom], materials: updatedMaterials };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
+        set({ floorPlans, scores: computeScores(updatedMaterials, fp.rooms[activeRoom].placedItems) });
       },
 
       placeFurniture: (furnitureId) => {
-        const { activeRoom, rooms } = get();
+        const s = get();
+        const { activeRoom, activeFloor } = s;
         const furniture = getFurnitureById(furnitureId);
         if (!furniture) return;
+        const fp = s.floorPlans[activeFloor];
         // Push history before placing
-        set(s => ({ furnitureHistory: [...s.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...rooms[activeRoom].placedItems] }] }));
+        set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems] }] }));
 
         const def = ROOM_DEFS[activeRoom];
         const newItem: PlacedItem = {
@@ -362,40 +376,52 @@ export const useDesignerStore = create<DesignerStore>()(
           scaleD: 1,
         };
 
-        const updatedPlaced = [...rooms[activeRoom].placedItems, newItem];
-        const updatedRooms = { ...rooms, [activeRoom]: { ...rooms[activeRoom], placedItems: updatedPlaced } };
-        const { materials } = updatedRooms[activeRoom];
-        set({ rooms: updatedRooms, selectedInstanceId: newItem.instanceId, scores: computeScores(materials, updatedPlaced), viewMode: "2d" });
+        const updatedPlaced = [...fp.rooms[activeRoom].placedItems, newItem];
+        const updatedRoom = { ...fp.rooms[activeRoom], placedItems: updatedPlaced };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
+        const { materials } = updatedRoom;
+        set({ floorPlans, selectedInstanceId: newItem.instanceId, scores: computeScores(materials, updatedPlaced), viewMode: "2d" });
       },
 
       moveItem: (instanceId, x, z) => {
-        const { activeRoom, rooms } = get();
-        const updatedPlaced = rooms[activeRoom].placedItems.map(p =>
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId ? { ...p, x, z } : p
         );
-        const updatedRooms = { ...rooms, [activeRoom]: { ...rooms[activeRoom], placedItems: updatedPlaced } };
-        set({ rooms: updatedRooms });
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...fp.rooms[activeRoom], placedItems: updatedPlaced } } };
+        set({ floorPlans });
       },
 
       rotateItem: (instanceId) => {
-        const { activeRoom, rooms } = get();
-        set(s => ({ furnitureHistory: [...s.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...rooms[activeRoom].placedItems] }] }));
-        const updatedPlaced = rooms[activeRoom].placedItems.map(p =>
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems] }] }));
+        const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId ? { ...p, rotation: (p.rotation + 90) % 360 } : p
         );
-        const updatedRooms = { ...rooms, [activeRoom]: { ...rooms[activeRoom], placedItems: updatedPlaced } };
-        set({ rooms: updatedRooms });
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...fp.rooms[activeRoom], placedItems: updatedPlaced } } };
+        set({ floorPlans });
       },
 
       removeItem: (instanceId) => {
-        const { activeRoom, rooms, selectedInstanceId, selectedInstanceIds } = get();
-        set(s => ({ furnitureHistory: [...s.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...rooms[activeRoom].placedItems] }] }));
-        const updatedPlaced = rooms[activeRoom].placedItems.filter(p => p.instanceId !== instanceId);
-        const updatedRooms = { ...rooms, [activeRoom]: { ...rooms[activeRoom], placedItems: updatedPlaced } };
-        const { materials } = updatedRooms[activeRoom];
+        const s = get();
+        const { activeRoom, activeFloor, selectedInstanceId, selectedInstanceIds } = s;
+        const fp = s.floorPlans[activeFloor];
+        set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems] }] }));
+        const updatedPlaced = fp.rooms[activeRoom].placedItems.filter(p => p.instanceId !== instanceId);
+        const updatedRoom = { ...fp.rooms[activeRoom], placedItems: updatedPlaced };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
+        const { materials } = updatedRoom;
         const newIds = selectedInstanceIds.filter(id => id !== instanceId);
         set({
-          rooms: updatedRooms,
+          floorPlans,
           selectedInstanceId: selectedInstanceId === instanceId ? null : selectedInstanceId,
           selectedInstanceIds: newIds,
           scores: computeScores(materials, updatedPlaced),
@@ -407,86 +433,114 @@ export const useDesignerStore = create<DesignerStore>()(
       setSelection: (ids) => set({ selectedInstanceIds: ids, selectedInstanceId: ids[0] ?? null }),
 
       duplicateItems: (instanceIds) => {
-        const { activeRoom, rooms } = get();
-        set(s => ({ furnitureHistory: [...s.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...rooms[activeRoom].placedItems] }] }));
-        const placed = rooms[activeRoom].placedItems;
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems] }] }));
+        const placed = fp.rooms[activeRoom].placedItems;
         const copies: PlacedItem[] = instanceIds.flatMap(id => {
           const src = placed.find(p => p.instanceId === id);
           if (!src) return [];
           return [{ ...src, instanceId: genId(), x: src.x + 50, z: src.z + 50 }];
         });
         const updatedPlaced = [...placed, ...copies];
-        const updatedRooms = { ...rooms, [activeRoom]: { ...rooms[activeRoom], placedItems: updatedPlaced } };
-        const { materials } = updatedRooms[activeRoom];
+        const updatedRoom = { ...fp.rooms[activeRoom], placedItems: updatedPlaced };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
+        const { materials } = updatedRoom;
         const newIds = copies.map(c => c.instanceId);
-        set({ rooms: updatedRooms, selectedInstanceIds: newIds, selectedInstanceId: newIds[0] ?? null, scores: computeScores(materials, updatedPlaced) });
+        set({ floorPlans, selectedInstanceIds: newIds, selectedInstanceId: newIds[0] ?? null, scores: computeScores(materials, updatedPlaced) });
       },
 
       removeItems: (instanceIds) => {
-        const { activeRoom, rooms } = get();
-        set(s => ({ furnitureHistory: [...s.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...rooms[activeRoom].placedItems] }] }));
-        const updatedPlaced = rooms[activeRoom].placedItems.filter(p => !instanceIds.includes(p.instanceId));
-        const updatedRooms = { ...rooms, [activeRoom]: { ...rooms[activeRoom], placedItems: updatedPlaced } };
-        const { materials } = updatedRooms[activeRoom];
-        set({ rooms: updatedRooms, selectedInstanceIds: [], selectedInstanceId: null, scores: computeScores(materials, updatedPlaced) });
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems] }] }));
+        const updatedPlaced = fp.rooms[activeRoom].placedItems.filter(p => !instanceIds.includes(p.instanceId));
+        const updatedRoom = { ...fp.rooms[activeRoom], placedItems: updatedPlaced };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
+        const { materials } = updatedRoom;
+        set({ floorPlans, selectedInstanceIds: [], selectedInstanceId: null, scores: computeScores(materials, updatedPlaced) });
+      },
+
+      clearRoom: () => {
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems] }] }));
+        const clearedRoom = { materials: {}, placedItems: [] };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: clearedRoom } };
+        set({ floorPlans, selectedInstanceIds: [], selectedInstanceId: null, scores: computeScores({}, []), activeTemplateId: null });
       },
 
       resizeItem: (instanceId, scaleW, scaleD) => {
-        const { activeRoom, rooms } = get();
-        const updatedPlaced = rooms[activeRoom].placedItems.map(p =>
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId
             ? { ...p, scaleW: Math.max(0.3, Math.min(4, scaleW)), scaleD: Math.max(0.3, Math.min(4, scaleD)) }
             : p
         );
-        const updatedRooms = { ...rooms, [activeRoom]: { ...rooms[activeRoom], placedItems: updatedPlaced } };
-        set({ rooms: updatedRooms });
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...fp.rooms[activeRoom], placedItems: updatedPlaced } } };
+        set({ floorPlans });
       },
 
       setElevation: (instanceId, elevationY) => {
-        const { activeRoom, rooms } = get();
-        const updatedPlaced = rooms[activeRoom].placedItems.map(p =>
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId
             ? { ...p, elevationY: Math.max(0, Math.min(300, elevationY)) }
             : p
         );
-        const updatedRooms = { ...rooms, [activeRoom]: { ...rooms[activeRoom], placedItems: updatedPlaced } };
-        set({ rooms: updatedRooms });
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...fp.rooms[activeRoom], placedItems: updatedPlaced } } };
+        set({ floorPlans });
       },
 
       pushFurnitureHistory: () => {
-        const { activeRoom, rooms } = get();
-        set(s => ({
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        set(st => ({
           furnitureHistory: [
-            ...s.furnitureHistory.slice(-29),
-            { room: activeRoom, placedItems: [...rooms[activeRoom].placedItems] },
+            ...st.furnitureHistory.slice(-29),
+            { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems] },
           ],
         }));
       },
 
       undoFurniture: () => {
-        const { activeRoom } = get();
+        const { activeRoom, activeFloor } = get();
         set(s => {
-          // Find last entry for this room
           const idx = s.furnitureHistory.map(h => h.room).lastIndexOf(activeRoom);
           if (idx === -1) return {};
           const prev = s.furnitureHistory[idx];
-          const updatedRooms = {
-            ...s.rooms,
-            [activeRoom]: { ...s.rooms[activeRoom], placedItems: prev.placedItems },
-          };
+          const fp = s.floorPlans[activeFloor];
+          const updatedRoom = { ...fp.rooms[activeRoom], placedItems: prev.placedItems };
+          const floorPlans = [...s.floorPlans];
+          floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
           return {
-            rooms: updatedRooms,
+            floorPlans,
             furnitureHistory: s.furnitureHistory.filter((_, i) => i !== idx),
             selectedInstanceIds: [],
             selectedInstanceId: null,
-            scores: computeScores(updatedRooms[activeRoom].materials, prev.placedItems),
+            scores: computeScores(updatedRoom.materials, prev.placedItems),
           };
         });
       },
 
       copyToClipboard: (instanceIds) => {
-        const { activeRoom, rooms } = get();
-        const items = rooms[activeRoom].placedItems
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const items = fp.rooms[activeRoom].placedItems
           .filter(p => instanceIds.includes(p.instanceId))
           .map(p => ({
             furnitureId: p.furnitureId,
@@ -499,10 +553,11 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       pasteFromClipboard: () => {
-        const { activeRoom, rooms, clipboard } = get();
+        const s = get();
+        const { activeRoom, activeFloor, clipboard } = s;
         if (clipboard.length === 0) return;
-        // Push history before paste
-        const prevItems = rooms[activeRoom].placedItems;
+        const fp = s.floorPlans[activeFloor];
+        const prevItems = fp.rooms[activeRoom].placedItems;
         const def = ROOM_DEFS[activeRoom];
         const copies: PlacedItem[] = clipboard.map(c => ({
           instanceId: genId(),
@@ -514,60 +569,76 @@ export const useDesignerStore = create<DesignerStore>()(
           scaleD: c.scaleD,
         }));
         const updatedPlaced = [...prevItems, ...copies];
-        const updatedRooms = { ...rooms, [activeRoom]: { ...rooms[activeRoom], placedItems: updatedPlaced } };
+        const updatedRoom = { ...fp.rooms[activeRoom], placedItems: updatedPlaced };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
         const newIds = copies.map(c => c.instanceId);
-        set(s => ({
-          rooms: updatedRooms,
-          furnitureHistory: [...s.furnitureHistory.slice(-29), { room: activeRoom, placedItems: prevItems }],
+        set(st => ({
+          floorPlans,
+          furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: prevItems }],
           selectedInstanceIds: newIds,
           selectedInstanceId: newIds[0] ?? null,
-          scores: computeScores(updatedRooms[activeRoom].materials, updatedPlaced),
+          scores: computeScores(updatedRoom.materials, updatedPlaced),
           viewMode: "2d",
         }));
       },
 
       setBudget: (budget) => set({ budget }),
 
-      updateRoomLayout: (room, x, y) =>
-        set(s => ({ roomLayout: { ...s.roomLayout, [room]: { x, y } } })),
+      updateRoomLayout: (room, x, y) => {
+        updateFloor(get, set, fp => ({ roomLayout: { ...fp.roomLayout, [room]: { x, y } } }));
+      },
 
-      updateRoomDimension: (room, width, depth) =>
-        set(s => ({ roomDimensions: { ...s.roomDimensions, [room]: { width, depth } } })),
+      updateRoomDimension: (room, width, depth) => {
+        updateFloor(get, set, fp => ({ roomDimensions: { ...fp.roomDimensions, [room]: { width, depth } } }));
+      },
 
-      toggleRoom: (room) =>
-        set(s => ({
-          enabledRooms: s.enabledRooms.includes(room)
-            ? s.enabledRooms.filter(r => r !== room)
-            : [...s.enabledRooms, room],
-        })),
+      toggleRoom: (room) => {
+        updateFloor(get, set, fp => ({
+          enabledRooms: fp.enabledRooms.includes(room)
+            ? fp.enabledRooms.filter(r => r !== room)
+            : [...fp.enabledRooms, room],
+        }));
+      },
 
-      addRoom: (room) =>
-        set(s => ({
-          enabledRooms: s.enabledRooms.includes(room) ? s.enabledRooms : [...s.enabledRooms, room],
-        })),
+      addRoom: (room) => {
+        updateFloor(get, set, fp => ({
+          enabledRooms: fp.enabledRooms.includes(room) ? fp.enabledRooms : [...fp.enabledRooms, room],
+        }));
+      },
 
-      removeRoom: (room) =>
-        set(s => ({
-          enabledRooms: s.enabledRooms.filter(r => r !== room),
-          activeRoom: s.activeRoom === room
-            ? (s.enabledRooms.find(r => r !== room) ?? "living")
-            : s.activeRoom,
-        })),
+      removeRoom: (room) => {
+        const s = get();
+        const fp = s.floorPlans[s.activeFloor];
+        const newActiveRoom = s.activeRoom === room
+          ? (fp.enabledRooms.find(r => r !== room) ?? "living")
+          : s.activeRoom;
+        updateFloor(get, set, fp2 => ({
+          enabledRooms: fp2.enabledRooms.filter(r => r !== room),
+        }));
+        if (newActiveRoom !== s.activeRoom) set({ activeRoom: newActiveRoom });
+      },
 
-      resetLayout: () =>
-        set({ roomLayout: { ...DEFAULT_ROOM_LAYOUT }, roomDimensions: { ...DEFAULT_ROOM_DIMENSIONS }, enabledRooms: [...DEFAULT_ENABLED] }),
+      resetLayout: () => {
+        updateFloor(get, set, () => ({
+          roomLayout: { ...DEFAULT_ROOM_LAYOUT },
+          roomDimensions: { ...DEFAULT_ROOM_DIMENSIONS },
+          enabledRooms: [...DEFAULT_ENABLED],
+        }));
+      },
 
       setCustomRoomMeta: (room, name, icon) =>
         set(s => ({ customRoomMeta: { ...s.customRoomMeta, [room]: { name, icon } } })),
 
       copyRoom: (room) => {
-        const { rooms, customRoomMeta, roomDimensions } = get();
+        const s = get();
+        const fp = s.floorPlans[s.activeFloor];
         const def = ROOM_DEFS[room];
-        const meta = customRoomMeta[room];
-        const dim = roomDimensions[room] ?? { width: def.width, depth: def.depth };
+        const meta = s.customRoomMeta[room];
+        const dim = fp.roomDimensions[room] ?? { width: def.width, depth: def.depth };
         set({ roomClipboard: {
-          materials: { ...rooms[room].materials },
-          placedItems: [...rooms[room].placedItems],
+          materials: { ...fp.rooms[room].materials },
+          placedItems: [...fp.rooms[room].placedItems],
           name: meta?.name ?? def.name,
           icon: meta?.icon ?? def.icon,
           width: dim.width,
@@ -576,38 +647,52 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       pasteAsNewRoom: () => {
-        const { roomClipboard, enabledRooms, rooms, roomLayout, roomDimensions, customRoomMeta } = get();
+        const s = get();
+        const { roomClipboard, activeFloor } = s;
         if (!roomClipboard) return;
-        const targetRoom = ALL_POSSIBLE_ROOMS.find(r => !enabledRooms.includes(r));
+        const fp = s.floorPlans[activeFloor];
+        const targetRoom = ALL_POSSIBLE_ROOMS.find(r => !fp.enabledRooms.includes(r));
         if (!targetRoom) return;
         const newItems: PlacedItem[] = roomClipboard.placedItems.map(p => ({ ...p, instanceId: genId() }));
-        const updatedRooms = { ...rooms, [targetRoom]: { materials: { ...roomClipboard.materials }, placedItems: newItems } };
-        const lastRoom = enabledRooms[enabledRooms.length - 1];
-        const lastPos = roomLayout[lastRoom] ?? { x: 0, y: 0 };
-        const newLayout = { ...roomLayout, [targetRoom]: { x: lastPos.x + 300, y: lastPos.y } };
-        const newDimensions = { ...roomDimensions, [targetRoom]: { width: roomClipboard.width, depth: roomClipboard.depth } };
-        set(s => ({
+        const updatedRooms = { ...fp.rooms, [targetRoom]: { materials: { ...roomClipboard.materials }, placedItems: newItems } };
+        const lastRoom = fp.enabledRooms[fp.enabledRooms.length - 1];
+        const lastPos = fp.roomLayout[lastRoom] ?? { x: 0, y: 0 };
+        const newLayout = { ...fp.roomLayout, [targetRoom]: { x: lastPos.x + 300, y: lastPos.y } };
+        const newDimensions = { ...fp.roomDimensions, [targetRoom]: { width: roomClipboard.width, depth: roomClipboard.depth } };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = {
+          ...fp,
           rooms: updatedRooms,
-          enabledRooms: [...s.enabledRooms, targetRoom],
-          activeRoom: targetRoom,
-          viewMode: "2d" as const,
+          enabledRooms: [...fp.enabledRooms, targetRoom],
           roomLayout: newLayout,
           roomDimensions: newDimensions,
-          customRoomMeta: { ...customRoomMeta, [targetRoom]: { name: roomClipboard.name, icon: roomClipboard.icon } },
+        };
+        set(st => ({
+          floorPlans,
+          activeRoom: targetRoom,
+          viewMode: "2d" as const,
+          customRoomMeta: { ...st.customRoomMeta, [targetRoom]: { name: roomClipboard.name, icon: roomClipboard.icon } },
           scores: computeScores(roomClipboard.materials, newItems),
         }));
       },
 
       pasteRoom: (targetRoom) => {
-        const { rooms, roomClipboard, roomDimensions } = get();
+        const s = get();
+        const { roomClipboard, activeFloor } = s;
         if (!roomClipboard) return;
+        const fp = s.floorPlans[activeFloor];
         const newItems: PlacedItem[] = roomClipboard.placedItems.map(p => ({ ...p, instanceId: genId() }));
-        const updatedRooms = { ...rooms, [targetRoom]: { materials: { ...roomClipboard.materials }, placedItems: newItems } };
-        const newDimensions = { ...roomDimensions, [targetRoom]: { width: roomClipboard.width, depth: roomClipboard.depth } };
-        set(s => ({
-          rooms: updatedRooms,
+        const updatedRoom = { materials: { ...roomClipboard.materials }, placedItems: newItems };
+        const newDimensions = { ...fp.roomDimensions, [targetRoom]: { width: roomClipboard.width, depth: roomClipboard.depth } };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = {
+          ...fp,
+          rooms: { ...fp.rooms, [targetRoom]: updatedRoom },
           roomDimensions: newDimensions,
-          furnitureHistory: [...s.furnitureHistory.slice(-29), { room: targetRoom, placedItems: rooms[targetRoom].placedItems }],
+        };
+        set(st => ({
+          floorPlans,
+          furnitureHistory: [...st.furnitureHistory.slice(-29), { room: targetRoom, placedItems: fp.rooms[targetRoom].placedItems }],
           selectedInstanceIds: [],
           selectedInstanceId: null,
           scores: computeScores(roomClipboard.materials, newItems),
@@ -619,98 +704,132 @@ export const useDesignerStore = create<DesignerStore>()(
         set(s => ({ customFurniture: [...s.customFurniture, item] }));
       },
 
-      setExterior: (patch) => set(s => ({ exterior: { ...s.exterior, ...patch } })),
+      setExterior: (patch) => set(s => {
+        const newExterior = { ...s.exterior, ...patch };
+        let floorPlans = s.floorPlans;
+        if (patch.floors !== undefined && patch.floors > floorPlans.length) {
+          while (floorPlans.length < patch.floors) {
+            floorPlans = [...floorPlans, makeDefaultFloorPlan()];
+          }
+        }
+        return { exterior: newExterior, floorPlans };
+      }),
 
-      setActiveFloor: (floor) => set({ activeFloor: floor }),
-      setRoomFloor: (roomId, floor) => set(s => ({ roomFloors: { ...s.roomFloors, [roomId]: floor } })),
+      setActiveFloor: (floor) => set(s => {
+        let floorPlans = s.floorPlans;
+        while (floorPlans.length <= floor) {
+          floorPlans = [...floorPlans, makeDefaultFloorPlan()];
+        }
+        return { activeFloor: floor, floorPlans };
+      }),
 
-      setRoomWindows: (room, windows) =>
-        set(s => ({ roomWindows: { ...s.roomWindows, [room]: windows } })),
+      setRoomWindows: (room, windows) => {
+        updateFloor(get, set, fp => ({ roomWindows: { ...fp.roomWindows, [room]: windows } }));
+      },
 
-      addWindow: (room, win) =>
-        set(s => ({ roomWindows: { ...s.roomWindows, [room]: [...(s.roomWindows[room] ?? []), win] } })),
+      addWindow: (room, win) => {
+        updateFloor(get, set, fp => ({ roomWindows: { ...fp.roomWindows, [room]: [...(fp.roomWindows[room] ?? []), win] } }));
+      },
 
-      removeWindow: (room, id) =>
-        set(s => ({ roomWindows: { ...s.roomWindows, [room]: (s.roomWindows[room] ?? []).filter(w => w.id !== id) } })),
+      removeWindow: (room, id) => {
+        updateFloor(get, set, fp => ({ roomWindows: { ...fp.roomWindows, [room]: (fp.roomWindows[room] ?? []).filter(w => w.id !== id) } }));
+      },
 
-      setDoorPos: (room, pos) =>
-        set(s => ({ roomDoorPos: { ...s.roomDoorPos, [room]: pos } })),
+      setDoorPos: (room, pos) => {
+        updateFloor(get, set, fp => ({ roomDoorPos: { ...fp.roomDoorPos, [room]: pos } }));
+      },
 
-      setRoomHasDoor: (room, has) =>
-        set(s => ({ roomHasDoor: { ...s.roomHasDoor, [room]: has } })),
+      setRoomHasDoor: (room, has) => {
+        updateFloor(get, set, fp => ({ roomHasDoor: { ...fp.roomHasDoor, [room]: has } }));
+      },
 
-      setDoorWall: (room, wall) =>
-        set(s => ({ roomDoorWall: { ...s.roomDoorWall, [room]: wall } })),
+      setDoorWall: (room, wall) => {
+        updateFloor(get, set, fp => ({ roomDoorWall: { ...fp.roomDoorWall, [room]: wall } }));
+      },
 
-      rotateRoom: (room) =>
-        set(s => {
-          const { width: W, depth: D } = s.roomDimensions[room];
+      rotateRoom: (room) => {
+        const s = get();
+        const fp = s.floorPlans[s.activeFloor];
+        const { width: W, depth: D } = fp.roomDimensions[room];
 
-          // Transform furniture: 90° CW room rotation → new_x = D - old_z, new_z = old_x, rotation += 90
-          const newItems = s.rooms[room].placedItems.map(item => ({
-            ...item,
-            x: D - item.z,
-            z: item.x,
-            rotation: (item.rotation + 90) % 360,
-          }));
+        // Transform furniture: 90° CW room rotation → new_x = D - old_z, new_z = old_x, rotation += 90
+        const newItems = fp.rooms[room].placedItems.map(item => ({
+          ...item,
+          x: D - item.z,
+          z: item.x,
+          rotation: (item.rotation + 90) % 360,
+        }));
 
-          // Door wall remap (90° CW): bottom→left, left→top, top→right, right→bottom
-          const doorWallCW: Record<string, "bottom"|"top"|"left"|"right"> = {
-            bottom: "left", left: "top", top: "right", right: "bottom",
-          };
-          const oldDoorWall = s.roomDoorWall[room] ?? "bottom";
-          const newDoorWall = doorWallCW[oldDoorWall];
-          const oldDoorWallLen = (oldDoorWall === "bottom" || oldDoorWall === "top") ? W : D;
-          const newDoorWallLen = (newDoorWall === "bottom" || newDoorWall === "top") ? D : W;
-          const newDoorPos = (s.roomDoorPos[room] ?? 0) * (newDoorWallLen / oldDoorWallLen);
+        // Door wall remap (90° CW): bottom→left, left→top, top→right, right→bottom
+        const doorWallCW: Record<string, "bottom"|"top"|"left"|"right"> = {
+          bottom: "left", left: "top", top: "right", right: "bottom",
+        };
+        const oldDoorWall = fp.roomDoorWall[room] ?? "bottom";
+        const newDoorWall = doorWallCW[oldDoorWall];
+        const oldDoorWallLen = (oldDoorWall === "bottom" || oldDoorWall === "top") ? W : D;
+        const newDoorWallLen = (newDoorWall === "bottom" || newDoorWall === "top") ? D : W;
+        const newDoorPos = (fp.roomDoorPos[room] ?? 0) * (newDoorWallLen / oldDoorWallLen);
 
-          // Window wall remap (90° CW): back→right, right→front, front→left, left→back
-          const winWallCW: Record<string, "back"|"front"|"right"|"left"> = {
-            back: "right", right: "front", front: "left", left: "back",
-          };
-          const newWindows = (s.roomWindows[room] ?? []).map(win => {
-            const newWall = winWallCW[win.wall] ?? win.wall;
-            const oldLen = (win.wall === "back" || win.wall === "front") ? W : D;
-            const newLen = (newWall === "back" || newWall === "front") ? D : W;
-            const scale = newLen / oldLen;
-            return { ...win, wall: newWall, pos: win.pos * scale, len: win.len * scale };
-          });
+        // Window wall remap (90° CW): back→right, right→front, front→left, left→back
+        const winWallCW: Record<string, "back"|"front"|"right"|"left"> = {
+          back: "right", right: "front", front: "left", left: "back",
+        };
+        const newWindows = (fp.roomWindows[room] ?? []).map(win => {
+          const newWall = winWallCW[win.wall] ?? win.wall;
+          const oldLen = (win.wall === "back" || win.wall === "front") ? W : D;
+          const newLen = (newWall === "back" || newWall === "front") ? D : W;
+          const scale = newLen / oldLen;
+          return { ...win, wall: newWall, pos: win.pos * scale, len: win.len * scale };
+        });
 
-          return {
-            roomDimensions: { ...s.roomDimensions, [room]: { width: D, depth: W } },
-            rooms: { ...s.rooms, [room]: { ...s.rooms[room], placedItems: newItems } },
-            roomDoorWall: { ...s.roomDoorWall, [room]: newDoorWall },
-            roomDoorPos:  { ...s.roomDoorPos,  [room]: newDoorPos },
-            roomWindows:  { ...s.roomWindows,  [room]: newWindows },
-          };
-        }),
+        const floorPlans = [...s.floorPlans];
+        floorPlans[s.activeFloor] = {
+          ...fp,
+          roomDimensions: { ...fp.roomDimensions, [room]: { width: D, depth: W } },
+          rooms: { ...fp.rooms, [room]: { ...fp.rooms[room], placedItems: newItems } },
+          roomDoorWall: { ...fp.roomDoorWall, [room]: newDoorWall },
+          roomDoorPos:  { ...fp.roomDoorPos,  [room]: newDoorPos },
+          roomWindows:  { ...fp.roomWindows,  [room]: newWindows },
+        };
+        set({ floorPlans });
+      },
 
       pushLayoutHistory: () =>
-        set(s => ({
-          layoutHistory: [
-            ...s.layoutHistory.slice(-19), // keep last 20
-            {
-              roomLayout:     { ...s.roomLayout },
-              roomDimensions: { ...s.roomDimensions },
-              enabledRooms:   [...s.enabledRooms],
-            },
-          ],
-        })),
+        set(s => {
+          const fp = s.floorPlans[s.activeFloor];
+          return {
+            layoutHistory: [
+              ...s.layoutHistory.slice(-19), // keep last 20
+              {
+                floorIndex:     s.activeFloor,
+                roomLayout:     { ...fp.roomLayout },
+                roomDimensions: { ...fp.roomDimensions },
+                enabledRooms:   [...fp.enabledRooms],
+              },
+            ],
+          };
+        }),
 
       undoLayout: () =>
         set(s => {
           if (s.layoutHistory.length === 0) return {};
           const prev = s.layoutHistory[s.layoutHistory.length - 1];
-          return {
+          const floorPlans = [...s.floorPlans];
+          const fp = floorPlans[prev.floorIndex] ?? makeDefaultFloorPlan();
+          floorPlans[prev.floorIndex] = {
+            ...fp,
             roomLayout:     prev.roomLayout,
             roomDimensions: prev.roomDimensions,
             enabledRooms:   prev.enabledRooms,
-            layoutHistory:  s.layoutHistory.slice(0, -1),
+          };
+          return {
+            floorPlans,
+            layoutHistory: s.layoutHistory.slice(0, -1),
           };
         }),
 
       resetAll: () => set({
-        rooms: initialRooms,
+        floorPlans: [makeDefaultFloorPlan()],
         activeRoom: "living",
         selectedInstanceId: null,
         selectedInstanceIds: [],
@@ -719,49 +838,76 @@ export const useDesignerStore = create<DesignerStore>()(
         roomClipboard: null,
         budget: 150000,
         scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
-        roomLayout: { ...DEFAULT_ROOM_LAYOUT },
-        roomDimensions: { ...DEFAULT_ROOM_DIMENSIONS },
-        enabledRooms: [...DEFAULT_ENABLED],
         customRoomMeta: {},
         customFurniture: [],
         exterior: { ...initialExterior },
         activeFloor: 0,
-        roomFloors: {},
-        roomWindows: { ...DEFAULT_ROOM_WINDOWS },
-        roomDoorPos: { ...DEFAULT_ROOM_DOOR_POS },
-        roomHasDoor: { ...DEFAULT_ROOM_HAS_DOOR },
-        roomDoorWall: { ...DEFAULT_ROOM_DOOR_WALL },
         layoutHistory: [],
+        activeTemplateId: null,
       }),
 
       loadFromShare: (snapshot) => {
-        const mergedRooms = { ...initialRooms };
-        for (const [room, rs] of Object.entries(snapshot.rooms)) {
-          if (rs) mergedRooms[room as RoomType] = rs as RoomState;
+        const fp = makeDefaultFloorPlan();
+        if (snapshot.floorPlans && Array.isArray(snapshot.floorPlans)) {
+          // New format: floorPlans array
+          const floorPlans = (snapshot.floorPlans as FloorPlan[]).map(sfp => {
+            const merged = makeDefaultFloorPlan();
+            merged.enabledRooms = sfp.enabledRooms ?? merged.enabledRooms;
+            merged.roomLayout = { ...merged.roomLayout, ...(sfp.roomLayout ?? {}) };
+            merged.roomDimensions = { ...merged.roomDimensions, ...(sfp.roomDimensions ?? {}) };
+            for (const [room, rs] of Object.entries(sfp.rooms ?? {})) {
+              if (rs) merged.rooms[room as RoomType] = rs as RoomState;
+            }
+            return merged;
+          });
+          set({
+            floorPlans,
+            budget: snapshot.budget,
+            exterior: { ...initialExterior, ...(snapshot.exterior as Partial<typeof initialExterior>) },
+            customRoomMeta: snapshot.customRoomMeta ?? {},
+            activeRoom: floorPlans[0]?.enabledRooms[0] ?? "living",
+            selectedInstanceId: null,
+            selectedInstanceIds: [],
+            furnitureHistory: [],
+            clipboard: [],
+            roomClipboard: null,
+            scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
+            layoutHistory: [],
+            activeFloor: 0,
+          });
+        } else {
+          // Legacy format: flat rooms + enabledRooms (floor 0 only)
+          for (const [room, rs] of Object.entries(snapshot.rooms ?? {})) {
+            if (rs) fp.rooms[room as RoomType] = rs as RoomState;
+          }
+          fp.enabledRooms = snapshot.enabledRooms ?? [...DEFAULT_ENABLED];
+          fp.roomDimensions = { ...DEFAULT_ROOM_DIMENSIONS, ...(snapshot.roomDimensions ?? {}) };
+          set({
+            floorPlans: [fp],
+            budget: snapshot.budget,
+            exterior: { ...initialExterior, ...(snapshot.exterior as Partial<typeof initialExterior>) },
+            customRoomMeta: snapshot.customRoomMeta ?? {},
+            activeRoom: (snapshot.enabledRooms?.[0]) ?? "living",
+            selectedInstanceId: null,
+            selectedInstanceIds: [],
+            furnitureHistory: [],
+            clipboard: [],
+            roomClipboard: null,
+            scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
+            layoutHistory: [],
+            activeFloor: 0,
+          });
         }
-        set({
-          rooms: mergedRooms,
-          enabledRooms: snapshot.enabledRooms,
-          budget: snapshot.budget,
-          exterior: { ...initialExterior, ...(snapshot.exterior as Partial<typeof initialExterior>) },
-          customRoomMeta: snapshot.customRoomMeta ?? {},
-          roomDimensions: { ...DEFAULT_ROOM_DIMENSIONS, ...(snapshot.roomDimensions ?? {}) },
-          activeRoom: snapshot.enabledRooms[0] ?? "living",
-          selectedInstanceId: null,
-          selectedInstanceIds: [],
-          furnitureHistory: [],
-          clipboard: [],
-          roomClipboard: null,
-          scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
-          layoutHistory: [],
-        });
       },
 
       loadTemplate: (templateId) => {
         const template = ALL_TEMPLATES.find(t => t.id === templateId);
         if (!template) return;
-        const { rooms, enabledRooms, roomDimensions } = get();
-        const updatedRooms = { ...rooms };
+        const s = get();
+        const { activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const { enabledRooms, roomDimensions } = fp;
+        const updatedRooms = { ...fp.rooms };
         for (const roomId of enabledRooms) {
           const tplRoom = template.rooms[roomId];
           if (!tplRoom) continue;
@@ -772,11 +918,13 @@ export const useDesignerStore = create<DesignerStore>()(
             : buildTemplateRoomState(roomId, tplRoom, dims.width, dims.depth);
           updatedRooms[roomId] = { materials: materials as never, placedItems: placedItems as never };
         }
-        const firstTemplatedRoom = enabledRooms.find(r => template.rooms[r]) ?? get().activeRoom;
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: updatedRooms };
+        const firstTemplatedRoom = enabledRooms.find(r => template.rooms[r]) ?? s.activeRoom;
         const { materials, placedItems } = updatedRooms[firstTemplatedRoom];
         const computed = computeScores(materials as never, placedItems as never);
         set({
-          rooms: updatedRooms,
+          floorPlans,
           activeRoom: firstTemplatedRoom,
           activeTemplateId: templateId,
           selectedInstanceId: null,
@@ -787,14 +935,16 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       currentRoom: () => {
-        const { activeRoom, rooms } = get();
-        return rooms[activeRoom];
+        const s = get();
+        const fp = s.floorPlans[s.activeFloor];
+        return fp.rooms[s.activeRoom];
       },
 
       totalCost: () => {
-        const { activeRoom, rooms } = get();
-        const { materials, placedItems } = rooms[activeRoom];
-        const area = getRoomArea(activeRoom);
+        const s = get();
+        const fp = s.floorPlans[s.activeFloor];
+        const { materials, placedItems } = fp.rooms[s.activeRoom];
+        const area = getRoomArea(s.activeRoom);
         let total = 0;
 
         if (materials.wall) total += materials.wall.price * area.wall;
@@ -819,22 +969,16 @@ export const useDesignerStore = create<DesignerStore>()(
       },
     }),
     {
-      name: "home-designer-v1",
+      name: "home-designer-v2",
       partialize: (state) => ({
-        rooms: state.rooms,
+        floorPlans: state.floorPlans,
         activeRoom: state.activeRoom,
+        activeFloor: state.activeFloor,
         budget: state.budget,
         scores: state.scores,
-        roomLayout: state.roomLayout,
-        roomDimensions: state.roomDimensions,
-        enabledRooms: state.enabledRooms,
         customRoomMeta: state.customRoomMeta,
         customFurniture: state.customFurniture,
         exterior: state.exterior,
-        roomWindows: state.roomWindows,
-        roomDoorPos: state.roomDoorPos,
-        roomHasDoor: state.roomHasDoor,
-        roomDoorWall: state.roomDoorWall,
       }),
       onRehydrateStorage: () => (state) => {
         // Re-register any custom furniture after hydration
@@ -848,4 +992,4 @@ export const useDesignerStore = create<DesignerStore>()(
 
 // ─── Exports for convenience ───────────────────────────────
 export { MATERIALS, FURNITURE };
-export type { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials };
+export type { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, FloorPlan };

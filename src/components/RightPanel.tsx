@@ -27,7 +27,7 @@ export default function RightPanel() {
   const locale = useLocale();
 
   const activeRoom = useDesignerStore((s) => s.activeRoom);
-  const roomState = useDesignerStore((s) => s.rooms[activeRoom]);
+  const roomState = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom]);
   const scores = useDesignerStore((s) => s.scores);
   const totalCostRaw = useDesignerStore((s) => s.totalCost());
   const budgetRaw = useDesignerStore((s) => s.budget);
@@ -266,6 +266,17 @@ export default function RightPanel() {
           style={{ background: "var(--ds-bg)", color: "var(--ds-text-2)", border: "1px solid var(--ds-border)" }}
         >
           {t.sharePlan}
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm(t.clearRoomConfirm)) {
+              useDesignerStore.getState().clearRoom();
+            }
+          }}
+          className="w-full py-2 text-sm font-semibold rounded-xl transition-all"
+          style={{ background: "#FFF1F0", color: "#FF3B30", border: "1px solid #FFCDD0" }}
+        >
+          {t.clearRoomBtn}
         </button>
       </div>
     </aside>

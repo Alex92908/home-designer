@@ -28,19 +28,6 @@ type DragState =
   | { type: "move";   room: RoomType; sx: number; sy: number; ox: number; oy: number; hasMoved: boolean }
   | { type: "resize"; room: RoomType; sx: number; sy: number; ow: number; od: number };
 
-// ─── WindowStrip ───────────────────────────────────────────
-function WindowStrip({ room, x, y, w, d }: { room: RoomType; x: number; y: number; w: number; d: number }) {
-  const def = ROOM_DEFS[room];
-  if (def.windowWall === "none") return null;
-  const wLen = Math.min(w, d) * 0.55;
-  const cx = x + w / 2, cy = y + d / 2;
-  const p = { fill: "#BAE6FD", stroke: "#7DD3FC", strokeWidth: 3 };
-  if (def.windowWall === "back")  return <rect x={cx - wLen/2} y={y}       width={wLen} height={WALL} {...p} />;
-  if (def.windowWall === "right") return <rect x={x + w - WALL} y={cy - wLen/2} width={WALL} height={wLen} {...p} />;
-  if (def.windowWall === "left")  return <rect x={x}            y={cy - wLen/2} width={WALL} height={wLen} {...p} />;
-  return null;
-}
-
 const CUSTOM_SLOTS: RoomType[] = ["custom1","custom2","custom3","custom4","custom5"];
 const ROOM_GROUP_ROOMS = [
   { key: "allGroupIndoor",   rooms: ["living","master","bedroom","bedroom2","bedroom3","kitchen","bathroom","bathroom2","dining","study","study2","closet","balcony","balcony2"] as RoomType[] },
@@ -83,8 +70,9 @@ function CustomRoomForm({ room, onDone }: { room: RoomType; onDone: () => void }
 
 // ─── Left panel: room management ───────────────────────────
 function RoomPanel() {
-  const enabledRooms        = useDesignerStore(s => s.enabledRooms);
-  const roomDimensions      = useDesignerStore(s => s.roomDimensions);
+  const activeFloor         = useDesignerStore(s => s.activeFloor);
+  const enabledRooms        = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
+  const roomDimensions      = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
   const customRoomMeta      = useDesignerStore(s => s.customRoomMeta);
   const setCustomRoomMeta   = useDesignerStore(s => s.setCustomRoomMeta);
   const addRoom             = useDesignerStore(s => s.addRoom);
@@ -95,6 +83,8 @@ function RoomPanel() {
   const copyRoom            = useDesignerStore(s => s.copyRoom);
   const pasteRoom           = useDesignerStore(s => s.pasteRoom);
   const roomClipboard       = useDesignerStore(s => s.roomClipboard);
+  const exterior            = useDesignerStore(s => s.exterior);
+  const setExterior         = useDesignerStore(s => s.setExterior);
   const t      = useT();
   const locale = useLocale();
   const [expanded,    setExpanded]    = useState<RoomType | null>(null);
@@ -133,10 +123,27 @@ function RoomPanel() {
       <div className="px-3 pt-3 pb-2 border-b border-gray-100 shrink-0">
         <div className="text-xs font-black text-gray-800">{t.allRoomMgmt}</div>
         <div className="text-[10px] text-gray-400 mt-0.5">{t.allRoomCount(enabledRooms.length)}</div>
+        {/* Floor count control */}
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-[10px] text-gray-500 font-semibold shrink-0">{t.extFloors}:</span>
+          <div className="flex items-center gap-1 ml-auto">
+            <button
+              onClick={() => setExterior({ floors: Math.max(1, exterior.floors - 1) })}
+              className="w-5 h-5 rounded-md text-xs font-bold text-gray-500 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors"
+              disabled={exterior.floors <= 1}
+            >−</button>
+            <span className="w-5 text-center text-xs font-black text-gray-800">{exterior.floors}</span>
+            <button
+              onClick={() => setExterior({ floors: Math.min(6, exterior.floors + 1) })}
+              className="w-5 h-5 rounded-md text-xs font-bold text-gray-500 hover:text-blue-500 hover:bg-blue-50 flex items-center justify-center transition-colors"
+              disabled={exterior.floors >= 6}
+            >＋</button>
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {/* ── Active rooms ── */}
+        {/* ── Active rooms on current floor ── */}
         <div className="py-1">
           {ALL_ROOMS.filter(r => enabledRooms.includes(r)).map(room => {
             const { name, icon } = getRoomLabel(room);
@@ -163,7 +170,7 @@ function RoomPanel() {
                   ) : (
                     <span className="flex-1 text-xs font-semibold text-gray-700 truncate min-w-0">{name}</span>
                   )}
-                  {/* Hover actions — replace dimensions on hover */}
+                  {/* Hover actions */}
                   <div className="hidden group-hover/row:flex items-center gap-0.5 shrink-0">
                     <button
                       onClick={() => startRename(room)}
@@ -264,11 +271,14 @@ export default function FloorPlanAll() {
   const t      = useT();
   const locale = useLocale();
 
-  const rooms               = useDesignerStore(s => s.rooms);
+  const activeFloor         = useDesignerStore(s => s.activeFloor);
+  const setActiveFloor      = useDesignerStore(s => s.setActiveFloor);
+  const rooms               = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms);
   const activeRoom          = useDesignerStore(s => s.activeRoom);
-  const roomLayout          = useDesignerStore(s => s.roomLayout);
-  const roomDimensions      = useDesignerStore(s => s.roomDimensions);
-  const enabledRooms        = useDesignerStore(s => s.enabledRooms);
+  const roomLayout          = useDesignerStore(s => s.floorPlans[s.activeFloor].roomLayout);
+  const roomDimensions      = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
+  const enabledRooms        = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
+  const roomWindows         = useDesignerStore(s => s.floorPlans[s.activeFloor].roomWindows);
   const customRoomMeta      = useDesignerStore(s => s.customRoomMeta);
   const setActiveRoom       = useDesignerStore(s => s.setActiveRoom);
   const setViewMode         = useDesignerStore(s => s.setViewMode);
@@ -280,12 +290,7 @@ export default function FloorPlanAll() {
   const historyLen          = useDesignerStore(s => s.layoutHistory.length);
   const roomClipboard       = useDesignerStore(s => s.roomClipboard);
   const pasteAsNewRoom      = useDesignerStore(s => s.pasteAsNewRoom);
-  const roomWindows         = useDesignerStore(s => s.roomWindows);
   const exterior            = useDesignerStore(s => s.exterior);
-  const activeFloor         = useDesignerStore(s => s.activeFloor);
-  const setActiveFloor      = useDesignerStore(s => s.setActiveFloor);
-  const roomFloors          = useDesignerStore(s => s.roomFloors);
-  const setRoomFloor        = useDesignerStore(s => s.setRoomFloor);
 
   const getRoomLabel = (room: RoomType) => {
     const meta = customRoomMeta[room];
@@ -297,16 +302,13 @@ export default function FloorPlanAll() {
   const svgRef  = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragState | null>(null);
 
-  // Compute viewBox from active rooms (all enabled, for viewBox calculation)
-  const allEnabledRooms = ALL_ROOMS.filter(r => enabledRooms.includes(r));
-  // Filter by active floor
-  const visibleRooms = allEnabledRooms.filter(r => (roomFloors[r] ?? 0) === activeFloor);
+  // Compute viewBox from enabled rooms on current floor
+  const visibleRooms = ALL_ROOMS.filter(r => enabledRooms.includes(r));
   const pad = 60;
-  const vbRooms = visibleRooms.length ? visibleRooms : allEnabledRooms;
-  const vbX1 = vbRooms.length ? Math.min(...vbRooms.map(r => roomLayout[r].x)) - pad : 0;
-  const vbY1 = vbRooms.length ? Math.min(...vbRooms.map(r => roomLayout[r].y)) - pad : 0;
-  const vbX2 = vbRooms.length ? Math.max(...vbRooms.map(r => roomLayout[r].x + roomDimensions[r].width))  + pad : 800;
-  const vbY2 = vbRooms.length ? Math.max(...vbRooms.map(r => roomLayout[r].y + roomDimensions[r].depth)) + pad + 60 : 600;
+  const vbX1 = visibleRooms.length ? Math.min(...visibleRooms.map(r => roomLayout[r].x)) - pad : 0;
+  const vbY1 = visibleRooms.length ? Math.min(...visibleRooms.map(r => roomLayout[r].y)) - pad : 0;
+  const vbX2 = visibleRooms.length ? Math.max(...visibleRooms.map(r => roomLayout[r].x + roomDimensions[r].width))  + pad : 800;
+  const vbY2 = visibleRooms.length ? Math.max(...visibleRooms.map(r => roomLayout[r].y + roomDimensions[r].depth)) + pad + 60 : 600;
   const viewBox = `${vbX1} ${vbY1} ${vbX2 - vbX1} ${vbY2 - vbY1}`;
 
   const configuredCount = ALL_ROOMS.filter(r =>
@@ -320,9 +322,8 @@ export default function FloorPlanAll() {
     const pt = getSVGPoint(e, svgRef.current);
     const dx = pt.x - ds.sx, dy = pt.y - ds.sy;
     if (ds.type === "move") {
-      // Only start actually moving once pointer moves > 8 SVG units
       if (!ds.hasMoved && Math.sqrt(dx*dx + dy*dy) < 8) return;
-      if (!ds.hasMoved) pushLayoutHistory(); // push only on first real movement
+      if (!ds.hasMoved) pushLayoutHistory();
       dragRef.current = { ...ds, hasMoved: true };
       updateRoomLayout(ds.room, snap(ds.ox + dx), snap(ds.oy + dy));
     } else {
@@ -333,7 +334,6 @@ export default function FloorPlanAll() {
     }
   };
 
-  // On pointer up: if it was a tap (not dragged), navigate into room
   const handlePointerUp = () => {
     const ds = dragRef.current;
     if (ds?.type === "move" && !ds.hasMoved) {
@@ -346,7 +346,6 @@ export default function FloorPlanAll() {
   const startMove = (e: React.PointerEvent, room: RoomType) => {
     e.stopPropagation();
     if (!svgRef.current) return;
-    // Don't push history here — only push when actual movement starts (in handlePointerMove)
     svgRef.current.setPointerCapture(e.pointerId);
     const pt = getSVGPoint(e, svgRef.current);
     dragRef.current = { type: "move", room, sx: pt.x, sy: pt.y, ox: roomLayout[room].x, oy: roomLayout[room].y, hasMoved: false };
@@ -368,7 +367,7 @@ export default function FloorPlanAll() {
 
       {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden bg-gray-100">
-        {/* Subheader — minimal, costs live in RightPanelAll */}
+        {/* Subheader */}
         <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-100 shrink-0">
           <span className="text-xs font-bold text-gray-800">{t.allTitle}</span>
           <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
@@ -404,8 +403,21 @@ export default function FloorPlanAll() {
           )}
         </div>
 
+        {/* Empty floor hint */}
+        {visibleRooms.length === 0 && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">
+            <div className="text-5xl opacity-20">🏗️</div>
+            <div className="text-sm font-bold text-gray-400">
+              {activeFloor + 1}F 暂无房间
+            </div>
+            <div className="text-xs text-gray-300 max-w-48 leading-relaxed">
+              在左侧添加房间到 {activeFloor + 1}F
+            </div>
+          </div>
+        )}
+
         {/* SVG canvas */}
-        <div className="flex-1 overflow-auto flex items-start justify-center p-4">
+        {visibleRooms.length > 0 && <div className="flex-1 overflow-auto flex items-start justify-center p-4">
           <svg
             ref={svgRef}
             viewBox={viewBox}
@@ -418,7 +430,7 @@ export default function FloorPlanAll() {
             {/* Background */}
             <rect x={vbX1} y={vbY1} width={vbX2 - vbX1} height={vbY2 - vbY1} fill="#9CA3AF" />
 
-            {/* Pass 1: room bodies (walls, floors, labels, drag rects) */}
+            {/* Pass 1: room bodies */}
             {visibleRooms.map(room => {
               const def     = ROOM_DEFS[room];
               const pos     = roomLayout[room];
@@ -444,9 +456,9 @@ export default function FloorPlanAll() {
                     opacity={0.93}
                     style={{ pointerEvents: "none" }}
                   />
-                  {/* Window indicators — from actual roomWindows state */}
+                  {/* Window indicators */}
                   {(roomWindows[room] ?? []).map(win => {
-                    const s2 = w / (roomDimensions[room].width);  // scale factor for this room
+                    const s2 = w / (roomDimensions[room].width);
                     const s3 = d / (roomDimensions[room].depth);
                     if (win.wall === "back") {
                       const wx = x + win.pos * s2, ww = win.len * s2;
@@ -510,40 +522,6 @@ export default function FloorPlanAll() {
                     style={{ pointerEvents: "none", userSelect: "none" }}
                   >{(w/100).toFixed(1)}×{(d/100).toFixed(1)}m</text>
 
-                  {/* Floor indicator + up/down arrows (only shown when exterior.floors > 1) */}
-                  {exterior.floors > 1 && (
-                    <g>
-                      <text x={cx} y={cy + nameFs*3.2}
-                        textAnchor="middle" dominantBaseline="middle"
-                        fontSize={dimFs} fill="#6366F1"
-                        fontFamily="system-ui, sans-serif"
-                        style={{ pointerEvents: "none", userSelect: "none" }}
-                      >{(roomFloors[room] ?? 0) + 1}F</text>
-                      {/* Up arrow */}
-                      {(roomFloors[room] ?? 0) < exterior.floors - 1 && (
-                        <g style={{ cursor: "pointer" }}
-                          onPointerDown={e => { e.stopPropagation(); setRoomFloor(room, (roomFloors[room] ?? 0) + 1); }}>
-                          <rect x={cx + dimFs * 0.6} y={cy + nameFs*2.6} width={dimFs*1.4} height={dimFs*1.4} fill="#6366F1" opacity={0.8} rx={2} />
-                          <text x={cx + dimFs*1.3} y={cy + nameFs*3.2}
-                            textAnchor="middle" dominantBaseline="middle"
-                            fontSize={dimFs} fill="white"
-                            style={{ pointerEvents: "none", userSelect: "none" }}>▲</text>
-                        </g>
-                      )}
-                      {/* Down arrow */}
-                      {(roomFloors[room] ?? 0) > 0 && (
-                        <g style={{ cursor: "pointer" }}
-                          onPointerDown={e => { e.stopPropagation(); setRoomFloor(room, (roomFloors[room] ?? 0) - 1); }}>
-                          <rect x={cx - dimFs * 2} y={cy + nameFs*2.6} width={dimFs*1.4} height={dimFs*1.4} fill="#6366F1" opacity={0.8} rx={2} />
-                          <text x={cx - dimFs*1.3} y={cy + nameFs*3.2}
-                            textAnchor="middle" dominantBaseline="middle"
-                            fontSize={dimFs} fill="white"
-                            style={{ pointerEvents: "none", userSelect: "none" }}>▼</text>
-                        </g>
-                      )}
-                    </g>
-                  )}
-
                   {/* Drag/tap hit rect */}
                   <rect
                     x={x+WALL} y={y+WALL}
@@ -556,7 +534,7 @@ export default function FloorPlanAll() {
               );
             })}
 
-            {/* Pass 2: buttons on top of everything — never blocked by adjacent rooms */}
+            {/* Pass 2: buttons on top */}
             {visibleRooms.map(room => {
               const pos  = roomLayout[room];
               const dims = roomDimensions[room];
@@ -626,7 +604,7 @@ export default function FloorPlanAll() {
               ))}
             </g>
           </svg>
-        </div>
+        </div>}
       </div>
     </div>
   );
