@@ -8,6 +8,12 @@ import { generatePdf, generateAllRoomsPdf } from "@/lib/exportPdf";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 import { formatPrice } from "@/lib/currency";
+import {
+  generateRoomPrompt,
+  generateBatchWorkflow,
+  type GeneratedPrompt,
+  type RoomPromptInput,
+} from "@/lib/roomPrompt";
 
 function ScoreBar({ val, color }: { val: number; color: string }) {
   return (
@@ -39,7 +45,8 @@ function RoomCostRow({ room, cost }: { room: RoomType; cost: number }) {
 
 export default function ExportModal() {
   const [open, setOpen]           = useState(false);
-  const [tab, setTab]             = useState<"current" | "all" | "data">("current");
+  const [tab, setTab]             = useState<"current" | "all" | "data" | "ai">("current");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [email, setEmail]         = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -56,6 +63,7 @@ export default function ExportModal() {
   const resetAll        = useDesignerStore(s => s.resetAll);
   const loadFromShare   = useDesignerStore(s => s.loadFromShare);
   const roomDimensions  = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
+  const roomWindows     = useDesignerStore(s => s.floorPlans[s.activeFloor].roomWindows);
 
   const roomState  = rooms[activeRoom];
   const def        = ROOM_DEFS[activeRoom];
@@ -305,12 +313,17 @@ export default function ExportModal() {
             </div>
           </div>
           {/* Tabs */}
-          <div className="flex gap-1 mt-3">
-            {(["current","all","data"] as const).map((tabKey) => (
+          <div className="flex gap-1 mt-3 flex-wrap">
+            {(["current","all","data","ai"] as const).map((tabKey) => (
               <button key={tabKey} onClick={() => setTab(tabKey)}
                 className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                   tab === tabKey ? "bg-white text-[#007AFF]" : "text-white/70 hover:bg-white/20"
-                }`}>{tabKey === "current" ? t.exportTabCurrent : tabKey === "all" ? t.exportTabAll : t.exportTabData}</button>
+                }`}>
+                {tabKey === "current" ? t.exportTabCurrent
+                  : tabKey === "all"  ? t.exportTabAll
+                  : tabKey === "data" ? t.exportTabData
+                  : locale === "en" ? "🎨 AI Prompts" : "🎨 AI提示词"}
+              </button>
             ))}
           </div>
         </div>
@@ -587,6 +600,141 @@ export default function ExportModal() {
               </div>
             </div>
           )}
+
+          {/* ── AI Prompts tab ── */}
+          {tab === "ai" && (() => {
+            // Build prompts for all configured rooms
+            const prompts: GeneratedPrompt[] = enabledRooms
+              .filter(r => {
+                const rs = rooms[r];
+                return Object.keys(rs.materials).length > 0 || rs.placedItems.length > 0;
+              })
+              .map(r => {
+                const rs   = rooms[r];
+                const dims = roomDimensions[r] ?? { width: ROOM_DEFS[r].width, depth: ROOM_DEFS[r].depth };
+                const wins = roomWindows[r] ?? [];
+                const input: RoomPromptInput = {
+                  roomType:   r,
+                  width:      dims.width,
+                  depth:      dims.depth,
+                  height:     ROOM_DEFS[r].height,
+                  materials:  rs.materials as RoomPromptInput["materials"],
+                  placedItems: rs.placedItems,
+                  windows:    wins,
+                };
+                return generateRoomPrompt(input);
+              });
+
+            function copyText(text: string, key: string) {
+              navigator.clipboard.writeText(text).then(() => {
+                setCopiedKey(key);
+                setTimeout(() => setCopiedKey(null), 1800);
+              });
+            }
+
+            function downloadWorkflow() {
+              const wf = generateBatchWorkflow(prompts, { model: "sd_xl_base_1.0.safetensors" });
+              const blob = new Blob([JSON.stringify(wf, null, 2)], { type: "application/json" });
+              const url  = URL.createObjectURL(blob);
+              const a    = document.createElement("a");
+              a.href = url; a.download = "home_designer_comfyui_workflow.json"; a.click();
+              URL.revokeObjectURL(url);
+            }
+
+            if (prompts.length === 0) {
+              return (
+                <div className="text-center text-gray-400 text-sm py-8">
+                  {locale === "en"
+                    ? "Add materials or furniture to rooms to generate prompts"
+                    : "请先为房间添加材料或家具，才能生成提示词"}
+                </div>
+              );
+            }
+
+            return (
+              <div className="flex flex-col gap-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700">
+                      {locale === "en"
+                        ? `${prompts.length} rooms · copy prompts into ComfyUI / Midjourney / SD WebUI`
+                        : `${prompts.length} 个房间 · 将提示词粘贴到 ComfyUI / Midjourney / SD WebUI`}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      {locale === "en"
+                        ? "Recommended model: SDXL or FLUX.1-dev for photorealistic interiors"
+                        : "推荐模型：SDXL 或 FLUX.1-dev，效果最佳"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={downloadWorkflow}
+                    className="shrink-0 px-3 py-1.5 rounded-xl text-white text-xs font-semibold transition-all active:scale-95"
+                    style={{ background: "linear-gradient(135deg,#6366f1,#818cf8)" }}
+                  >
+                    {locale === "en" ? "⬇ ComfyUI Workflow" : "⬇ 下载ComfyUI工作流"}
+                  </button>
+                </div>
+
+                {/* Per-room prompt cards */}
+                {prompts.map((p, i) => (
+                  <div key={i} className="rounded-xl border border-gray-200 overflow-hidden">
+                    {/* Card header */}
+                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-700 capitalize">{p.roomName}</span>
+                      <button
+                        onClick={() => copyText(p.positive, `pos-${i}`)}
+                        className="text-[11px] px-2 py-0.5 rounded-lg border transition-colors"
+                        style={{
+                          borderColor: copiedKey === `pos-${i}` ? "#22c55e" : "#e5e7eb",
+                          color:       copiedKey === `pos-${i}` ? "#16a34a" : "#6b7280",
+                          background:  copiedKey === `pos-${i}` ? "#f0fdf4" : "#fff",
+                        }}
+                      >
+                        {copiedKey === `pos-${i}`
+                          ? (locale === "en" ? "✓ Copied" : "✓ 已复制")
+                          : (locale === "en" ? "Copy" : "复制")}
+                      </button>
+                    </div>
+
+                    {/* Positive prompt */}
+                    <div className="p-3">
+                      <p className="text-[10px] text-gray-400 font-medium mb-1 uppercase tracking-wider">
+                        {locale === "en" ? "Positive" : "正向提示词"}
+                      </p>
+                      <p className="text-[11px] text-gray-700 leading-relaxed font-mono break-all">
+                        {p.positive}
+                      </p>
+                    </div>
+
+                    {/* Negative prompt */}
+                    <div className="px-3 pb-3">
+                      <p className="text-[10px] text-gray-400 font-medium mb-1 uppercase tracking-wider flex items-center justify-between">
+                        <span>{locale === "en" ? "Negative" : "反向提示词"}</span>
+                        <button
+                          onClick={() => copyText(p.negative, `neg-${i}`)}
+                          className="normal-case text-[10px] px-1.5 py-0.5 rounded border border-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {copiedKey === `neg-${i}` ? "✓" : (locale === "en" ? "copy" : "复制")}
+                        </button>
+                      </p>
+                      <p className="text-[10px] text-gray-400 leading-relaxed font-mono break-all">
+                        {p.negative}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Tip box */}
+                <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100 text-[11px] text-indigo-700 leading-relaxed">
+                  <strong>{locale === "en" ? "💡 Tip" : "💡 使用方法"}</strong>
+                  {locale === "en"
+                    ? ": Download the workflow → drag into ComfyUI → change the checkpoint to your preferred model → Queue Prompt. Or paste the positive prompt directly into Midjourney with --ar 4:3."
+                    : "：下载工作流 → 拖入 ComfyUI → 修改 checkpoint 为你喜欢的模型 → Queue Prompt。也可直接将正向提示词粘贴到 Midjourney 加上 --ar 4:3。"}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         <div className="px-5 pb-4 border-t border-gray-100 pt-3 flex justify-end">

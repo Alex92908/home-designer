@@ -1,0 +1,504 @@
+/**
+ * roomPrompt.ts
+ * Converts home-designer JSON room data → Stable Diffusion / ComfyUI prompts
+ */
+
+import type { RoomType } from "./types";
+
+// ─── Furniture ID → English description ─────────────────────
+const FURNITURE_EN: Record<string, string> = {
+  // Sofa & Lounge
+  "sofa-fabric-gray":       "grey fabric three-seater sofa",
+  "sofa-leather-brown":     "brown leather L-shaped sofa",
+  "sofa-nordic-blue":       "blue velvet Nordic sofa",
+  "sofa-japanese":          "low Japanese floor sofa, legless",
+  "sofa-modular-green":     "modular green corner sofa",
+  // Coffee tables
+  "coffee-oak-round":       "round oak coffee table",
+  "coffee-marble-rect":     "rectangular marble coffee table with metal legs",
+  "coffee-glass-black":     "black metal frame glass coffee table",
+  // TV units
+  "tvunit-float-white":     "floating white TV unit",
+  "tvunit-walnut":          "solid walnut TV console",
+  "tvunit-black-stone":     "black sintered stone TV unit",
+  // Lamps
+  "lamp-arc-gold":          "gold arc floor lamp",
+  "lamp-industrial-black":  "black industrial iron floor lamp",
+  // Bookshelves
+  "bookshelf-open-white":   "white open five-shelf bookcase",
+  "bookshelf-solid-walnut": "solid walnut bookshelf",
+  // Sideboards
+  "sideboard-walnut":       "walnut entryway sideboard",
+  "sideboard-modern-black": "black metal modern side table",
+  // Plants
+  "plant-monstera":         "large monstera deliciosa plant",
+  "plant-sansevieria":      "sansevieria snake plant",
+  "plant-rubber-tree":      "rubber tree plant",
+  "plant-balcony-pot":      "long balcony planter with greenery",
+  // Rugs
+  "rug-nordic-geo":         "geometric cotton-linen Nordic rug",
+  "rug-modern-gray":        "solid grey short-pile area rug",
+  "rug-persian":            "Persian-style patterned rug",
+  // Artwork
+  "artwork-abstract":       "abstract textured wall art print",
+  "artwork-inkwash":        "Chinese ink wash landscape painting",
+  // Beds
+  "bed-fabric-beige":       "beige upholstered fabric bed with padded headboard",
+  "bed-leather-dark":       "dark brown leather platform bed",
+  "bed-wood-nordic":        "Nordic white oak bed frame",
+  "bed-tatami":             "low tatami platform bed",
+  "bed-single-white":       "white single bed",
+  // Nightstands
+  "nightstand-white":       "white modern bedside table with drawer",
+  "nightstand-oak":         "solid oak bedside table",
+  // Wardrobes
+  "wardrobe-slide-white":   "white sliding door wardrobe",
+  "wardrobe-solid-walnut":  "solid walnut hinged door wardrobe",
+  "wardrobe-open-rack":     "industrial open clothes rack",
+  // Dressers
+  "dresser-nordic-white":   "white Nordic dressing table with mirror",
+  "closet-system-white":    "custom white built-in closet storage system",
+  "closet-island-white":    "white closet center island cabinet",
+  // Dining
+  "dining-marble-round":    "round marble dining table",
+  "dining-oak-rect":        "rectangular oak dining table",
+  "dining-black-metal":     "black sintered stone dining table with metal legs",
+  "chair-nordic-oak":       "Nordic solid oak dining chair",
+  "chair-modern-gray":      "modern grey upholstered dining chair",
+  "chair-industrial-black": "black metal industrial dining chair",
+  // Kitchen
+  "cabinet-lower-white":    "white lower kitchen cabinet with quartz countertop",
+  "cabinet-lower-gray":     "matte grey lower kitchen cabinet",
+  "cabinet-upper-white":    "white upper wall cabinet",
+  "fridge-french-door":     "French door stainless steel refrigerator",
+  "fridge-single-white":    "white single-door refrigerator",
+  "hood-side-black":        "black side-draft range hood",
+  "sink-double-steel":      "double basin stainless steel kitchen sink",
+  // Bathroom
+  "toilet-smart":           "smart toilet with integrated bidet",
+  "toilet-standard":        "standard white siphon toilet",
+  "toilet-wallhung":        "wall-hung floating toilet",
+  "bathtub-freestanding":   "freestanding cast iron soaking bathtub",
+  "bathtub-builtin":        "built-in alcove bathtub",
+  "shower-enclosed":        "frameless glass enclosed shower",
+  "shower-walkin":          "open walk-in shower with glass panel",
+  "vanity-single-white":    "white single-basin bathroom vanity",
+  "vanity-double-marble":   "double-basin marble-top bathroom vanity",
+  // Study
+  "desk-nordic-oak":        "simple oak wood writing desk",
+  "desk-l-shape-white":     "white L-shaped corner desk",
+  "desk-standing":          "electric height-adjustable standing desk",
+  "chair-ergonomic":        "ergonomic office chair with lumbar support",
+  "chair-simple-fabric":    "simple fabric task chair",
+  // Outdoor / misc
+  "pet-dog":                "dog",
+  "pet-cat":                "cat",
+};
+
+// Fallback: parse ID into readable English ("bed-single-white" → "white single bed")
+function parseFurnitureId(id: string): string {
+  const known = FURNITURE_EN[id];
+  if (known) return known;
+  // Simple heuristic: split on "-", drop trailing numbers, reverse adjectives
+  const parts = id.replace(/-\d+$/, "").split("-");
+  return parts.join(" ");
+}
+
+// ─── Hex → English color name ─────────────────────────────
+function hexToColorName(hex: string): string {
+  const map: [string, string][] = [
+    ["#FFFFFF", "pure white"], ["#F5F5F5", "off-white"], ["#FAFAFA", "bright white"],
+    ["#F5F5F0", "warm white"], ["#EDE8E0", "warm cream"], ["#F0EDE8", "creamy white"],
+    ["#F2EEE6", "light beige"], ["#D4C0A0", "warm tan"],
+    ["#C8A882", "warm oak"],   ["#C8B890", "light wood"],  ["#B89060", "medium oak"],
+    ["#9E9E9E", "medium grey"],["#888888", "concrete grey"],["#C0C0C0", "light silver"],
+    ["#DCDCDC", "light grey"], ["#E8E8E8", "pale grey"],
+    ["#2A2A2A", "near-black"], ["#1A1A2E", "deep charcoal navy"],
+    ["#3A3A3A", "dark charcoal"],["#4A4A4A", "dark grey"],
+    ["#5B7FA6", "slate blue"], ["#6B8E60", "sage green"], ["#7CAF5A", "lawn green"],
+    ["#FFD700", "warm golden"],
+  ];
+  const upper = hex.toUpperCase();
+  let best = "neutral"; let bestDist = 999999;
+  const r0 = parseInt(upper.slice(1, 3), 16);
+  const g0 = parseInt(upper.slice(3, 5), 16);
+  const b0 = parseInt(upper.slice(5, 7), 16);
+  for (const [h, name] of map) {
+    const r = parseInt(h.slice(1, 3), 16);
+    const g = parseInt(h.slice(3, 5), 16);
+    const b = parseInt(h.slice(5, 7), 16);
+    const d = (r - r0) ** 2 + (g - g0) ** 2 + (b - b0) ** 2;
+    if (d < bestDist) { bestDist = d; best = name; }
+  }
+  return best;
+}
+
+// ─── Style tags → English style phrase ──────────────────────
+const STYLE_EN: Record<string, string> = {
+  "现代":  "modern contemporary",
+  "北欧":  "Scandinavian Nordic minimalist",
+  "轻奢":  "modern light luxury",
+  "日式":  "Japanese wabi-sabi zen",
+  "工业风": "industrial loft",
+  "中式":  "classic Chinese traditional",
+};
+
+function stylesToEnglish(tags: string[]): string {
+  return tags
+    .map(t => STYLE_EN[t] ?? t)
+    .join(", ") || "modern";
+}
+
+// ─── Room type → English room name ──────────────────────────
+const ROOM_TYPE_EN: Record<string, string> = {
+  living:   "living room",
+  master:   "master bedroom",
+  bedroom:  "bedroom",
+  bedroom2: "bedroom",
+  bedroom3: "bedroom",
+  kitchen:  "kitchen",
+  bathroom: "bathroom",
+  bathroom2:"bathroom",
+  dining:   "dining room",
+  study:    "study / home office",
+  study2:   "study",
+  closet:   "walk-in closet",
+  balcony:  "balcony",
+  balcony2: "balcony",
+  yard:     "garden yard",
+  garage:   "garage",
+  gym:      "home gym",
+  cinema:   "home cinema",
+};
+
+// ─── Position hint ───────────────────────────────────────────
+function posHint(x: number, z: number, roomW: number, roomD: number): string {
+  const hx = x / roomW;
+  const hz = z / roomD;
+  const h = hx < 0.33 ? "left" : hx < 0.67 ? "center" : "right";
+  const v = hz < 0.33 ? "back" : hz < 0.67 ? "middle" : "front";
+  if (h === "center" && v === "middle") return "centered";
+  if (v === "back")  return `along back wall (${h})`;
+  if (v === "front") return `near front (${h})`;
+  return `${h} side`;
+}
+
+// ─── Main prompt generator ────────────────────────────────────
+
+export interface RoomPromptInput {
+  roomType: RoomType;
+  roomName?: string;
+  width: number;   // cm
+  depth: number;   // cm
+  height?: number; // cm
+  materials: {
+    wall?:    { color: string; description?: string; name?: string };
+    floor?:   { color: string; description?: string; name?: string };
+    ceiling?: { color: string; description?: string };
+    light?:   { description?: string; name?: string; color?: string };
+    tile?:    { color: string; description?: string };
+  };
+  placedItems: Array<{
+    furnitureId: string;
+    x: number;
+    z: number;
+    rotation?: number;
+  }>;
+  windows?: Array<{ wall: string; len: number; pos: number }>;
+}
+
+export interface GeneratedPrompt {
+  roomType: string;
+  roomName: string;
+  positive: string;
+  negative: string;
+  seed: number;
+}
+
+export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
+  const {
+    roomType,
+    roomName,
+    width,
+    depth,
+    height = 280,
+    materials,
+    placedItems,
+    windows = [],
+  } = input;
+
+  const w = (width  / 100).toFixed(1);
+  const d = (depth  / 100).toFixed(1);
+  const h = (height / 100).toFixed(1);
+  const displayName = roomName ?? ROOM_TYPE_EN[roomType] ?? roomType;
+
+  // ── Wall ──
+  let wallDesc = "white painted walls";
+  if (materials.wall) {
+    const color = hexToColorName(materials.wall.color);
+    const mat   = materials.wall.description ?? materials.wall.name ?? "wall";
+    wallDesc = `${color} ${mat}`;
+  }
+
+  // ── Floor ──
+  let floorDesc = "light wood flooring";
+  if (materials.floor) {
+    const color = hexToColorName(materials.floor.color);
+    const mat   = materials.floor.description ?? materials.floor.name ?? "floor";
+    floorDesc = `${color} ${mat}`;
+  }
+
+  // ── Lighting ──
+  let lightDesc = "recessed ceiling lights, warm white ambiance";
+  if (materials.light) {
+    lightDesc = materials.light.description ?? materials.light.name ?? lightDesc;
+    // Translate common Chinese lighting terms
+    lightDesc = lightDesc
+      .replace("无主灯方案", "no main ceiling light")
+      .replace("氛围感拉满", "atmospheric track spotlights")
+      .replace("轨道射灯", "track spotlights")
+      .replace("柔和漫射光", "soft diffused light")
+      .replace("和纸", "washi paper pendant lamp")
+      .replace("北欧", "Nordic")
+      .replace("吊灯", "pendant light")
+      .replace("台灯", "table lamp")
+      .replace("壁灯", "wall sconce")
+      .replace("筒灯", "recessed downlight");
+  }
+
+  // ── Furniture ──
+  // De-duplicate by furnitureId, keep first occurrence per type
+  const seenIds = new Map<string, number>();
+  const furnitureParts: string[] = [];
+  for (const item of placedItems) {
+    const count = (seenIds.get(item.furnitureId) ?? 0) + 1;
+    seenIds.set(item.furnitureId, count);
+    const desc = parseFurnitureId(item.furnitureId);
+    const pos  = posHint(item.x, item.z, width, depth);
+    if (count === 1) {
+      furnitureParts.push(`${desc} (${pos})`);
+    }
+  }
+  // If more than one of same type, mention the count
+  for (const [id, cnt] of seenIds.entries()) {
+    if (cnt > 1) {
+      const idx = furnitureParts.findIndex(s => s.startsWith(parseFurnitureId(id)));
+      if (idx >= 0) furnitureParts[idx] = `${cnt}× ${parseFurnitureId(id)}`;
+    }
+  }
+
+  // ── Windows & natural light ──
+  let lightingNote = "";
+  if (windows.length > 0) {
+    const win = windows[0];
+    const winW = (win.len / 100).toFixed(1);
+    const wallNames: Record<string, string> = {
+      back: "back wall", front: "front wall", left: "left wall", right: "right wall"
+    };
+    const wallName = wallNames[win.wall] ?? win.wall;
+    lightingNote = `${winW}m wide window on ${wallName}, natural daylight pouring in, sun rays, soft shadows`;
+  } else {
+    lightingNote = "interior artificial lighting, warm ambiance";
+  }
+
+  // ── Style ──
+  const allTags = new Set<string>();
+  for (const mat of Object.values(materials)) {
+    if (mat && "tags" in (mat as object)) {
+      ((mat as { tags?: string[] }).tags ?? []).forEach(t => allTags.add(t));
+    }
+  }
+  const styleDesc = allTags.size > 0 ? stylesToEnglish([...allTags]) : "modern";
+
+  // ── Assemble positive prompt ──
+  const positive = [
+    // Quality prefix
+    "RAW photo, photorealistic, ultra-detailed, 8K UHD, DSLR, sharp focus",
+    // Shot
+    `professional interior design photography of a ${displayName}`,
+    // Space
+    `${w}m × ${d}m × ${h}m room`,
+    // Surfaces
+    wallDesc,
+    floorDesc,
+    // Lighting
+    lightDesc,
+    lightingNote,
+    // Furniture
+    ...(furnitureParts.length > 0 ? furnitureParts : []),
+    // Style
+    `${styleDesc} interior style`,
+    // Photography quality
+    "wide-angle lens 24mm, natural color grading, Architectural Digest quality, no people",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  // ── Negative prompt ──
+  const negative = [
+    "people, person, human, cartoon, illustration, painting, sketch, low quality",
+    "blurry, out of focus, distorted, deformed, bad anatomy, watermark",
+    "text, logo, signature, overexposed, underexposed, dark",
+    "3D render, CGI, anime, drawing",
+  ].join(", ");
+
+  return {
+    roomType: displayName,
+    roomName: displayName,
+    positive,
+    negative,
+    seed: Math.floor(Math.random() * 2 ** 31),
+  };
+}
+
+// ─── ComfyUI workflow generator ───────────────────────────────
+
+export interface ComfyWorkflowOptions {
+  model?: string;   // checkpoint name
+  width?: number;
+  height?: number;
+  steps?: number;
+  cfg?: number;
+  sampler?: string;
+}
+
+/**
+ * Generates a ComfyUI API workflow JSON for a single room prompt.
+ * Compatible with SDXL / Flux / most standard checkpoints.
+ */
+export function generateComfyWorkflow(
+  prompt: GeneratedPrompt,
+  opts: ComfyWorkflowOptions = {}
+): object {
+  const {
+    model   = "sd_xl_base_1.0.safetensors",
+    width   = 1024,
+    height  = 1024,
+    steps   = 30,
+    cfg     = 7.0,
+    sampler = "euler",
+  } = opts;
+
+  return {
+    "1": {
+      class_type: "CheckpointLoaderSimple",
+      inputs: { ckpt_name: model },
+    },
+    "2": {
+      class_type: "EmptyLatentImage",
+      inputs: { batch_size: 1, height, width },
+    },
+    "3": {
+      class_type: "CLIPTextEncode",
+      inputs: {
+        text: prompt.positive,
+        clip: ["1", 1],
+      },
+    },
+    "4": {
+      class_type: "CLIPTextEncode",
+      inputs: {
+        text: prompt.negative,
+        clip: ["1", 1],
+      },
+    },
+    "5": {
+      class_type: "KSampler",
+      inputs: {
+        seed:        prompt.seed,
+        steps,
+        cfg,
+        sampler_name: sampler,
+        scheduler:   "normal",
+        denoise:     1,
+        model:       ["1", 0],
+        positive:    ["3", 0],
+        negative:    ["4", 0],
+        latent_image:["2", 0],
+      },
+    },
+    "6": {
+      class_type: "VAEDecode",
+      inputs: { samples: ["5", 0], vae: ["1", 2] },
+    },
+    "7": {
+      class_type: "SaveImage",
+      inputs: {
+        filename_prefix: `home_${prompt.roomType.replace(/\s+/g, "_")}`,
+        images: ["6", 0],
+      },
+    },
+  };
+}
+
+/**
+ * Batch workflow: multiple rooms as a sequential batch
+ * Returns one workflow object with all rooms chained as separate KSampler nodes.
+ */
+export function generateBatchWorkflow(
+  prompts: GeneratedPrompt[],
+  opts: ComfyWorkflowOptions = {}
+): object {
+  const {
+    model   = "sd_xl_base_1.0.safetensors",
+    width   = 1024,
+    height  = 1024,
+    steps   = 30,
+    cfg     = 7.0,
+    sampler = "euler",
+  } = opts;
+
+  const nodes: Record<string, object> = {
+    "1": {
+      class_type: "CheckpointLoaderSimple",
+      inputs: { ckpt_name: model },
+    },
+  };
+
+  let nodeId = 2;
+  for (const p of prompts) {
+    const latentId  = String(nodeId++);
+    const posId     = String(nodeId++);
+    const negId     = String(nodeId++);
+    const sampleId  = String(nodeId++);
+    const decodeId  = String(nodeId++);
+    const saveId    = String(nodeId++);
+
+    nodes[latentId] = {
+      class_type: "EmptyLatentImage",
+      inputs: { batch_size: 1, height, width },
+    };
+    nodes[posId] = {
+      class_type: "CLIPTextEncode",
+      inputs: { text: p.positive, clip: ["1", 1] },
+    };
+    nodes[negId] = {
+      class_type: "CLIPTextEncode",
+      inputs: { text: p.negative, clip: ["1", 1] },
+    };
+    nodes[sampleId] = {
+      class_type: "KSampler",
+      inputs: {
+        seed: p.seed, steps, cfg,
+        sampler_name: sampler, scheduler: "normal", denoise: 1,
+        model: ["1", 0],
+        positive: [posId, 0],
+        negative: [negId, 0],
+        latent_image: [latentId, 0],
+      },
+    };
+    nodes[decodeId] = {
+      class_type: "VAEDecode",
+      inputs: { samples: [sampleId, 0], vae: ["1", 2] },
+    };
+    nodes[saveId] = {
+      class_type: "SaveImage",
+      inputs: {
+        filename_prefix: `home_${p.roomType.replace(/[\s/]+/g, "_")}`,
+        images: [decodeId, 0],
+      },
+    };
+  }
+
+  return nodes;
+}
