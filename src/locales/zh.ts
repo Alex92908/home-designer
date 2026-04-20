@@ -144,6 +144,7 @@ export const zh = {
   fpDeleteItem: "删除",
   fpWidth: "宽度",
   fpDepth: "深度",
+  fpHeight: "高度",
   fpElevation: "离地高度",
   fpResetSize: "重置尺寸",
   fpOriginal: "原始:",

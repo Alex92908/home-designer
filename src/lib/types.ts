@@ -94,7 +94,9 @@ export interface WindowConfig {
   id: string;
   wall: "back" | "front" | "right" | "left";
   pos: number;   // cm from wall start (left or top)
-  len: number;   // cm length
+  len: number;   // cm length (width along wall)
+  h?: number;    // cm height (vertical), default 150
+  sill?: number; // cm from floor to bottom of window, default 90
 }
 
 export interface PlacedItem {
@@ -105,6 +107,7 @@ export interface PlacedItem {
   rotation: number;   // degrees: 0, 90, 180, 270
   scaleW?: number;    // width scale multiplier (default 1.0)
   scaleD?: number;    // depth scale multiplier (default 1.0)
+  scaleH?: number;    // height scale multiplier (default 1.0)
   elevationY?: number; // cm above floor (default 0 = on floor)
 }
 
@@ -174,6 +177,8 @@ export interface FloorPlan {
   roomDoorPos: Record<RoomType, number>;
   roomHasDoor: Record<RoomType, boolean>;
   roomDoorWall: Record<RoomType, "bottom" | "top" | "left" | "right">;
+  roomDoorLen?: Partial<Record<RoomType, number>>; // cm, width along wall (default 80)
+  roomDoorH?: Partial<Record<RoomType, number>>;   // cm, height (default 200)
 }
 
 // For wall/floor area estimation (m²)

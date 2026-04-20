@@ -49,6 +49,31 @@ function CameraController({ W, D, H }: { W: number; D: number; H: number }) {
   return null;
 }
 
+// ─── Multi-angle capture — registers capture fn in store ─
+function CameraAndCaptureSetup() {
+  const { camera, gl, scene, controls } = useThree();
+  const setCameraAndCapture = useDesignerStore(s => s.setCameraAndCapture);
+
+  useEffect(() => {
+    setCameraAndCapture((pos, lookAt) => {
+      camera.position.set(...pos);
+      const target = new THREE.Vector3(...lookAt);
+      if (controls) {
+        (controls as THREE.EventDispatcher & { target: THREE.Vector3; update: () => void }).target.copy(target);
+        (controls as THREE.EventDispatcher & { target: THREE.Vector3; update: () => void }).update();
+      } else {
+        camera.lookAt(target);
+      }
+      gl.render(scene, camera);
+      return gl.domElement.toDataURL("image/jpeg", 0.85);
+    });
+
+    return () => setCameraAndCapture(null);
+  }, [camera, gl, scene, controls, setCameraAndCapture]);
+
+  return null;
+}
+
 // ─── Room geometry ────────────────────────────────────────
 function RoomShell({
   W, D, H,
@@ -176,8 +201,10 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   const winLen = win.len / 100;          // window length in metres
   const winPos = win.pos / 100;          // position along wall in metres
   const winCenter = winPos + winLen / 2; // centre of window along wall
-  const winH = Math.min(H * 0.52, 1.5);
-  const winY = H * 0.5;
+  // Use per-window height/sill if set; otherwise fall back to legacy computed defaults
+  const winH = win.h   !== undefined ? win.h   / 100 : Math.min(H * 0.52, 1.5);
+  const sill = win.sill !== undefined ? win.sill / 100 : 0.9;
+  const winY = Math.max(0.05, Math.min(H - winH - 0.05, sill)) + winH / 2;
   const curtainColor = "#E8DDD0";
 
   if (win.wall === "back") {
@@ -1066,9 +1093,10 @@ function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def
   const x3d = placed.x / 100 - roomW / 2;
   const z3d = placed.z / 100 - roomD / 2;
 
-  const fw = item.width / 100;
-  const fd = item.depth / 100;
-  const fh = item.height / 100;
+  // Apply per-instance scale from the floor plan (scaleW/scaleD/scaleH default to 1)
+  const fw = (item.width  * (placed.scaleW ?? 1)) / 100;
+  const fd = (item.depth  * (placed.scaleD ?? 1)) / 100;
+  const fh = (item.height * (placed.scaleH ?? 1)) / 100;
 
   const rotY = (placed.rotation * Math.PI) / 180;
 
@@ -1147,6 +1175,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
   return (
     <>
       <CameraController W={W} D={D} H={H} />
+      <CameraAndCaptureSetup />
 
       {/* Environment — skip on iOS: PMREMGenerator.fromScene is broken on iPhone Metal
           (three.js bug #25888). Compensate with stronger ambient + fill lights. */}
@@ -1225,6 +1254,7 @@ export default function RoomCanvas() {
           style={{ background: "#1a1c28" }}
         >
           <OrbitControls
+            makeDefault
             enablePan={true}
             panSpeed={0.6}
             minDistance={1.5}

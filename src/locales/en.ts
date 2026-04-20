@@ -146,6 +146,7 @@ export const en: Translations = {
   fpDeleteItem: "Delete",
   fpWidth: "Width",
   fpDepth: "Depth",
+  fpHeight: "Height",
   fpElevation: "Elevation",
   fpResetSize: "Reset Size",
   fpOriginal: "Original:",

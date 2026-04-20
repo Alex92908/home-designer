@@ -18,9 +18,9 @@ const FURNITURE_EN: Record<string, string> = {
   "coffee-marble-rect":     "rectangular marble coffee table with metal legs",
   "coffee-glass-black":     "black metal frame glass coffee table",
   // TV units
-  "tvunit-float-white":     "floating white TV unit",
-  "tvunit-walnut":          "solid walnut TV console",
-  "tvunit-black-stone":     "black sintered stone TV unit",
+  "tvunit-float-white":     "floating white TV unit with wall-mounted flat screen TV",
+  "tvunit-walnut":          "solid walnut TV console with wall-mounted flat screen TV",
+  "tvunit-black-stone":     "black sintered stone TV unit with wall-mounted flat screen TV",
   // Lamps
   "lamp-arc-gold":          "gold arc floor lamp",
   "lamp-industrial-black":  "black industrial iron floor lamp",
@@ -191,10 +191,48 @@ const STYLE_EN: Record<string, string> = {
   "中式":  "classic Chinese traditional",
 };
 
+// Style-specific atmosphere/mood — appended after main description
+const STYLE_MOOD: Record<string, string> = {
+  "现代":  "bright airy minimal atmosphere, clean lines, neutral tones",
+  "北欧":  "Scandinavian hygge atmosphere, cozy warm diffused light, functional minimalism",
+  "轻奢":  "modern light luxury atmosphere, sophisticated elegance, premium refined finishes",
+  "日式":  "zen minimalist wabi-sabi atmosphere, soft natural raking light, peaceful serene mood",
+  "工业风": "dark moody industrial loft atmosphere, high contrast, dramatic shadows, urban grit",
+  "中式":  "classic Chinese elegance, harmonious balance, warm amber light, refined traditional",
+};
+
+// Per-style extra negative terms to exclude conflicting aesthetics
+const STYLE_NEGATIVES: Record<string, string> = {
+  "现代":  "ornate, baroque, rustic, heavy wood",
+  "北欧":  "ornate, baroque, industrial, dark colors, heavy drapes",
+  "轻奢":  "ikea, plastic, budget furniture, clutter, cartoon",
+  "日式":  "western sofa, heavy curtains, bright colors, ornate decoration",
+  "工业风": "scandinavian nordic, plants, monstera, wooden legs, rattan, wicker, bohemian, bright cheerful pastel",
+  "中式":  "western contemporary, industrial, scandinavian, minimalist",
+};
+
 function stylesToEnglish(tags: string[]): string {
   return tags
     .map(t => STYLE_EN[t] ?? t)
     .join(", ") || "modern";
+}
+
+// Infer dominant style from material IDs + furniture IDs when no explicit tag is set
+function inferStyleFromRoom(
+  materials: RoomPromptInput["materials"],
+  items: RoomPromptInput["placedItems"]
+): string {
+  const matStr = Object.values(materials)
+    .map(m => (m as { id?: string } | undefined)?.id ?? "")
+    .join(" ");
+  const furStr = items.map(i => i.furnitureId).join(" ");
+  const combined = `${matStr} ${furStr}`.toLowerCase();
+
+  if (/japanese|tatami|washi/.test(combined))   return "日式";
+  if (/nordic|scandinavian/.test(combined))      return "北欧";
+  if (/industrial|concrete.*wall|wall.*concrete/.test(combined)) return "工业风";
+  if (/marble|leather.*dark|stone|gold/.test(combined))          return "轻奢";
+  return "现代";
 }
 
 // ─── Room type → English room name ──────────────────────────
@@ -345,13 +383,21 @@ export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
   // ── Windows & natural light ──
   let lightingNote = "";
   if (windows.length > 0) {
-    const win = windows[0];
-    const winW = (win.len / 100).toFixed(1);
     const wallNames: Record<string, string> = {
       back: "back wall", front: "front wall", left: "left wall", right: "right wall"
     };
-    const wallName = wallNames[win.wall] ?? win.wall;
-    lightingNote = `${winW}m wide window on ${wallName}, natural daylight pouring in, sun rays, soft shadows`;
+    if (windows.length === 1) {
+      const win = windows[0];
+      const winW = (win.len / 100).toFixed(1);
+      const wallName = wallNames[win.wall] ?? win.wall;
+      const isLarge = win.len >= 150; // ≥1.5m → treat as floor-to-ceiling
+      lightingNote = isLarge
+        ? `floor-to-ceiling ${winW}m wide window on ${wallName}, lush greenery outside, natural daylight flooding in, soft volumetric light, long shadows`
+        : `${winW}m wide window on ${wallName}, natural daylight pouring in, sun rays, soft shadows`;
+    } else {
+      // Multiple windows — panoramic feel
+      lightingNote = `floor-to-ceiling panoramic windows, lush green garden view outside, abundant natural daylight, bright airy atmosphere, soft diffused light`;
+    }
   } else {
     lightingNote = "interior artificial lighting, warm ambiance";
   }
@@ -363,14 +409,17 @@ export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
       ((mat as { tags?: string[] }).tags ?? []).forEach(t => allTags.add(t));
     }
   }
-  const styleDesc = allTags.size > 0 ? stylesToEnglish([...allTags]) : "modern";
+  const dominantStyle = allTags.size > 0 ? [...allTags][0] : inferStyleFromRoom(materials, placedItems);
+  const styleDesc  = STYLE_EN[dominantStyle]  ?? "modern contemporary";
+  const styleMood  = STYLE_MOOD[dominantStyle] ?? "clean modern atmosphere";
+  const styleNeg   = STYLE_NEGATIVES[dominantStyle] ?? "";
 
   // ── Assemble positive prompt ──
   const positive = [
     // Quality prefix
     "RAW photo, photorealistic, ultra-detailed, 8K UHD, DSLR, sharp focus",
     // Shot
-    `professional interior design photography of a ${displayName}`,
+    `professional interior design photography of a ${styleDesc} ${displayName}`,
     // Space
     `${w}m × ${d}m × ${h}m room`,
     // Surfaces
@@ -381,21 +430,24 @@ export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
     lightingNote,
     // Furniture
     ...(furnitureParts.length > 0 ? furnitureParts : []),
-    // Style
-    `${styleDesc} interior style`,
+    // Style atmosphere — the key quality driver
+    styleMood,
     // Photography quality
-    "wide-angle lens 24mm, natural color grading, Architectural Digest quality, no people",
+    "wide-angle lens 24mm, Architectural Digest editorial quality, no people",
   ]
     .filter(Boolean)
     .join(", ");
 
   // ── Negative prompt ──
+  const hasTvUnit = placedItems.some(i => i.furnitureId.startsWith("tvunit-"));
   const negative = [
     "people, person, human, cartoon, illustration, painting, sketch, low quality",
     "blurry, out of focus, distorted, deformed, bad anatomy, watermark",
-    "text, logo, signature, overexposed, underexposed, dark",
+    "text, logo, signature, overexposed, underexposed",
     "3D render, CGI, anime, drawing",
-  ].join(", ");
+    hasTvUnit ? "fireplace, fire, flame, burning, hearth" : "",
+    styleNeg,
+  ].filter(Boolean).join(", ");
 
   return {
     roomType: displayName,

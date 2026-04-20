@@ -248,16 +248,16 @@ function WindowSVG({
 type DoorWall = "bottom" | "top" | "left" | "right";
 
 function DoorSVG({
-  svgW, svgH, doorPosCm, roomWidthCm, roomDepthCm, doorWall, scale, isEditMode, onPointerDown,
+  svgW, svgH, doorPosCm, doorLenCm, roomWidthCm, roomDepthCm, doorWall, scale, isEditMode, onPointerDown,
 }: {
   svgW: number; svgH: number;
-  doorPosCm: number; roomWidthCm: number; roomDepthCm: number;
+  doorPosCm: number; doorLenCm: number; roomWidthCm: number; roomDepthCm: number;
   doorWall: DoorWall; scale: number;
   isEditMode: boolean; onPointerDown: (e: React.PointerEvent<SVGGElement>) => void;
 }) {
-  // Door width: 20% of whichever wall dimension it's on
+  // Door width: explicit cm value (clamped to wall length)
   const wallLen = (doorWall === "bottom" || doorWall === "top") ? roomWidthCm : roomDepthCm;
-  const doorW = Math.min(wallLen * 0.2, 80) * scale;
+  const doorW = Math.min(doorLenCm, wallLen) * scale;
   const pos = doorPosCm * scale;
 
   // Build path for each wall orientation
@@ -323,6 +323,10 @@ export default function FloorPlan() {
   const [inspectorPos, setInspectorPos] = useState<{ x: number; y: number } | null>(null);
   const inspectorDragOrigin = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
 
+  // ─── Window / door selection for size editing ────────────
+  const [selectedWinId, setSelectedWinId] = useState<string | null>(null);
+  const [doorSelected,  setDoorSelected]  = useState(false);
+
   const activeRoom           = useDesignerStore((s) => s.activeRoom);
   const roomState            = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom]);
   const selectedInstanceIds  = useDesignerStore((s) => s.selectedInstanceIds);
@@ -349,9 +353,14 @@ export default function FloorPlan() {
   const doorPosCm       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorPos[activeRoom] ?? 0);
   const hasDoor         = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomHasDoor[activeRoom] ?? true);
   const doorWall        = useDesignerStore((s) => (s.floorPlans[s.activeFloor].roomDoorWall[activeRoom] ?? "bottom") as DoorWall);
+  const doorLenCm       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
+  const doorHCm         = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
   const setDoorPos      = useDesignerStore((s) => s.setDoorPos);
   const setRoomHasDoor  = useDesignerStore((s) => s.setRoomHasDoor);
   const setDoorWall     = useDesignerStore((s) => s.setDoorWall);
+  const setDoorLen      = useDesignerStore((s) => s.setDoorLen);
+  const setDoorH        = useDesignerStore((s) => s.setDoorH);
+  const updateWindow    = useDesignerStore((s) => s.updateWindow);
   const t      = useT();
   const locale = useLocale();
 
@@ -365,6 +374,11 @@ export default function FloorPlan() {
 
   // Reset zoom when switching rooms
   useEffect(() => { setZoomLevel(1); }, [activeRoom]);
+
+  // Clear window/door selection when leaving edit mode or switching room
+  useEffect(() => {
+    if (!editWindows) { setSelectedWinId(null); setDoorSelected(false); }
+  }, [editWindows, activeRoom]);
 
   // Auto-clamp items that are outside bounds (e.g. after room was resized smaller)
   useEffect(() => {
@@ -545,7 +559,7 @@ export default function FloorPlan() {
         const axis = isHorizontalWall ? pt.x : pt.y;
         const delta = (axis - doorDrag.startMouse) / scale;
         const wallLen = isHorizontalWall ? roomW : roomD;
-        const doorWCm = Math.min(wallLen * 0.2, 80);
+        const doorWCm = Math.min(doorLenCm, wallLen);
         const newPos = Math.max(0, Math.min(wallLen - doorWCm, doorDrag.origPos + delta));
         setDoorPos(activeRoom, newPos);
       }
@@ -843,23 +857,35 @@ export default function FloorPlan() {
             />
           ))}
 
-          {/* Window delete buttons in edit mode */}
+          {/* Window edit/delete buttons in edit mode */}
           {editWindows && roomWindows.map(win => {
             const R = 9;
             const mid = (win.pos + win.len / 2) * scale;
             const clampX = (v: number) => Math.max(R, Math.min(svgW - R, v));
             const clampY = (v: number) => Math.max(R, Math.min(svgH - R, v));
-            let bx: number, by: number;
-            if (win.wall === "back")        { bx = clampX(mid); by = R + 4; }
-            else if (win.wall === "front")  { bx = clampX(mid); by = svgH - R - 4; }
-            else if (win.wall === "right")  { bx = svgW - R - 4; by = clampY(mid); }
-            else                            { bx = R + 4;        by = clampY(mid); }
+            const horiz = win.wall === "back" || win.wall === "front";
+            let dx: number, dy: number, sx: number, sy: number;
+            if (win.wall === "back")        { dx = clampX(mid); dy = R + 4; }
+            else if (win.wall === "front")  { dx = clampX(mid); dy = svgH - R - 4; }
+            else if (win.wall === "right")  { dx = svgW - R - 4; dy = clampY(mid); }
+            else                            { dx = R + 4;        dy = clampY(mid); }
+            // Place size-edit button beside delete, along the wall axis
+            if (horiz) { sx = clampX(dx - R * 2.2); sy = dy; }
+            else       { sx = dx;                   sy = clampY(dy - R * 2.2); }
             return (
-              <g key={`del-${win.id}`} style={{ cursor: "pointer" }}
-                onClick={(e) => { e.stopPropagation(); removeWindow(activeRoom, win.id); }}>
-                <circle cx={bx} cy={by} r={R} fill="#EF4444" opacity={0.9} />
-                <text x={bx} y={by} textAnchor="middle" dominantBaseline="middle"
-                  fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✕</text>
+              <g key={`btns-${win.id}`}>
+                <g style={{ cursor: "pointer" }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedWinId(win.id); setDoorSelected(false); }}>
+                  <circle cx={sx} cy={sy} r={R} fill="#3B82F6" opacity={selectedWinId === win.id ? 1 : 0.85} />
+                  <text x={sx} y={sy} textAnchor="middle" dominantBaseline="middle"
+                    fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✎</text>
+                </g>
+                <g style={{ cursor: "pointer" }}
+                  onClick={(e) => { e.stopPropagation(); removeWindow(activeRoom, win.id); if (selectedWinId === win.id) setSelectedWinId(null); }}>
+                  <circle cx={dx} cy={dy} r={R} fill="#EF4444" opacity={0.9} />
+                  <text x={dx} y={dy} textAnchor="middle" dominantBaseline="middle"
+                    fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✕</text>
+                </g>
               </g>
             );
           })}
@@ -869,29 +895,42 @@ export default function FloorPlan() {
             <g>
               <DoorSVG
                 svgW={svgW} svgH={svgH}
-                doorPosCm={doorPosCm} roomWidthCm={roomW} roomDepthCm={roomD}
+                doorPosCm={doorPosCm} doorLenCm={doorLenCm}
+                roomWidthCm={roomW} roomDepthCm={roomD}
                 doorWall={doorWall}
                 scale={scale}
                 isEditMode={editWindows}
                 onPointerDown={startDoorDrag}
               />
-              {/* Delete door button — positioned near door on active wall */}
+              {/* Edit/Delete door buttons — positioned near door on active wall */}
               {editWindows && (() => {
+                const R = 9;
                 const isHoriz = doorWall === "top" || doorWall === "bottom";
                 const wallLen = isHoriz ? roomW : roomD;
-                const doorWpx = Math.min(wallLen * 0.2, 80) * scale;
+                const doorWpx = Math.min(doorLenCm, wallLen) * scale;
                 const doorMid = doorPosCm * scale + doorWpx / 2;
                 let cx: number, cy: number;
                 if (doorWall === "bottom")      { cx = doorMid; cy = svgH - 14; }
                 else if (doorWall === "top")    { cx = doorMid; cy = 14; }
                 else if (doorWall === "left")   { cx = 14; cy = doorMid; }
                 else                            { cx = svgW - 14; cy = doorMid; }
+                // Size-edit button offset along the wall axis
+                const sx = isHoriz ? Math.max(R, Math.min(svgW - R, cx - R * 2.2)) : cx;
+                const sy = isHoriz ? cy : Math.max(R, Math.min(svgH - R, cy - R * 2.2));
                 return (
-                  <g style={{ cursor: "pointer" }}
-                    onClick={(e) => { e.stopPropagation(); setRoomHasDoor(activeRoom, false); }}>
-                    <circle cx={cx} cy={cy} r={9} fill="#EF4444" opacity={0.9} />
-                    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
-                      fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✕</text>
+                  <g>
+                    <g style={{ cursor: "pointer" }}
+                      onClick={(e) => { e.stopPropagation(); setDoorSelected(true); setSelectedWinId(null); }}>
+                      <circle cx={sx} cy={sy} r={R} fill="#3B82F6" opacity={doorSelected ? 1 : 0.85} />
+                      <text x={sx} y={sy} textAnchor="middle" dominantBaseline="middle"
+                        fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✎</text>
+                    </g>
+                    <g style={{ cursor: "pointer" }}
+                      onClick={(e) => { e.stopPropagation(); setRoomHasDoor(activeRoom, false); setDoorSelected(false); }}>
+                      <circle cx={cx} cy={cy} r={R} fill="#EF4444" opacity={0.9} />
+                      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
+                        fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✕</text>
+                    </g>
                   </g>
                 );
               })()}
@@ -955,6 +994,98 @@ export default function FloorPlan() {
       </div>
     </div>{/* ── end scrollable canvas area ── */}
 
+      {/* Window / door size inspector (edit mode) */}
+      {editWindows && (selectedWinId || doorSelected) && (() => {
+        const selectedWin = selectedWinId ? roomWindows.find(w => w.id === selectedWinId) ?? null : null;
+        if (doorSelected) {
+          const isHoriz = doorWall === "top" || doorWall === "bottom";
+          const wallLen = isHoriz ? roomW : roomD;
+          return (
+            <div className={isLandscape
+              ? "mt-3 mx-auto max-w-lg w-full bg-gray-800/80 rounded-xl border border-gray-700/50 backdrop-blur flex flex-col gap-2 shrink-0 px-4 py-3"
+              : "flex flex-col gap-2 bg-gray-900/95 rounded-t-xl border-t border-gray-700/50 backdrop-blur-md w-full px-4 py-3"}
+              style={!isLandscape ? { paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" } : undefined}>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-200 flex-1">🚪 {t.fpDoorLabel.replace(/:$/, "")}</span>
+                <button onClick={() => setDoorSelected(false)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 active:text-white"
+                  style={{ background: "rgba(255,255,255,0.08)" }}>✕</button>
+              </div>
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-[10px] text-gray-400">{t.fpWidth}</span>
+                  <span className="text-[10px] text-gray-300 font-mono">{(doorLenCm / 100).toFixed(2)}m</span>
+                </div>
+                <input type="range" min={50} max={Math.min(200, wallLen)} step={5}
+                  value={doorLenCm}
+                  onChange={e => setDoorLen(activeRoom, parseInt(e.target.value))}
+                  className="w-full accent-blue-500 h-2 md:h-1.5" />
+              </div>
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-[10px] text-gray-400">{t.fpHeight}</span>
+                  <span className="text-[10px] text-gray-300 font-mono">{(doorHCm / 100).toFixed(2)}m</span>
+                </div>
+                <input type="range" min={140} max={260} step={5}
+                  value={doorHCm}
+                  onChange={e => setDoorH(activeRoom, parseInt(e.target.value))}
+                  className="w-full accent-blue-500 h-2 md:h-1.5" />
+              </div>
+            </div>
+          );
+        }
+        if (!selectedWin) return null;
+        const wallLen = (selectedWin.wall === "back" || selectedWin.wall === "front") ? roomW : roomD;
+        const winH   = selectedWin.h   ?? 150;
+        const winSill = selectedWin.sill ?? 90;
+        const ceilH = def.height;
+        return (
+          <div className={isLandscape
+            ? "mt-3 mx-auto max-w-lg w-full bg-gray-800/80 rounded-xl border border-gray-700/50 backdrop-blur flex flex-col gap-2 shrink-0 px-4 py-3"
+            : "flex flex-col gap-2 bg-gray-900/95 rounded-t-xl border-t border-gray-700/50 backdrop-blur-md w-full px-4 py-3"}
+            style={!isLandscape ? { paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" } : undefined}>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-200 flex-1">🪟 {t.fpWindowWord}</span>
+              <button onClick={() => setSelectedWinId(null)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 active:text-white"
+                style={{ background: "rgba(255,255,255,0.08)" }}>✕</button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-[10px] text-gray-400">{t.fpWidth}</span>
+                  <span className="text-[10px] text-gray-300 font-mono">{(selectedWin.len / 100).toFixed(2)}m</span>
+                </div>
+                <input type="range" min={40} max={Math.max(60, wallLen - selectedWin.pos)} step={5}
+                  value={selectedWin.len}
+                  onChange={e => updateWindow(activeRoom, selectedWin.id, { len: parseInt(e.target.value) })}
+                  className="w-full accent-blue-500 h-2 md:h-1.5" />
+              </div>
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-[10px] text-gray-400">{t.fpHeight}</span>
+                  <span className="text-[10px] text-gray-300 font-mono">{(winH / 100).toFixed(2)}m</span>
+                </div>
+                <input type="range" min={40} max={Math.min(240, ceilH - winSill - 5)} step={5}
+                  value={winH}
+                  onChange={e => updateWindow(activeRoom, selectedWin.id, { h: parseInt(e.target.value) })}
+                  className="w-full accent-blue-500 h-2 md:h-1.5" />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between mb-1">
+                <span className="text-[10px] text-gray-400">↕ {t.fpElevation}</span>
+                <span className="text-[10px] text-gray-300 font-mono">{winSill} cm</span>
+              </div>
+              <input type="range" min={0} max={Math.max(0, ceilH - winH - 5)} step={5}
+                value={winSill}
+                onChange={e => updateWindow(activeRoom, selectedWin.id, { sill: parseInt(e.target.value) })}
+                className="w-full accent-amber-400 h-2 md:h-1.5" />
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Multi-select action bar */}
       {selectedInstanceIds.length > 1 && (
         <div className={isLandscape
@@ -989,12 +1120,12 @@ export default function FloorPlan() {
           className={inspectorPos
             ? "fixed z-[200] w-80 bg-gray-900/98 rounded-2xl border border-gray-700/60 shadow-2xl backdrop-blur-md flex flex-col gap-2 overflow-y-auto"
             : isLandscape
-              ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] w-80 bg-gray-900/98 rounded-2xl border border-gray-700/60 shadow-2xl backdrop-blur-md flex flex-col gap-2 overflow-y-auto"
+              ? "mt-3 mx-auto max-w-lg w-full bg-gray-800/80 rounded-xl border border-gray-700/50 backdrop-blur flex flex-col gap-2 shrink-0"
               : "flex flex-col gap-2 bg-gray-900/95 rounded-t-xl border-t border-gray-700/50 backdrop-blur-md w-full"}
           style={inspectorPos
             ? { left: inspectorPos.x, top: inspectorPos.y, maxHeight: "80dvh" }
             : isLandscape
-              ? { maxHeight: "80dvh" }
+              ? undefined
               : { paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}
         >
           {/* Drag handle — always shown, lets user reposition panel */}
@@ -1089,6 +1220,25 @@ export default function FloorPlan() {
                 className="w-full accent-blue-500 h-2 md:h-1.5" />
             </div>
           </div>
+          {/* Height slider */}
+          <div>
+            <div className="flex justify-between mb-1">
+              <span className="text-[10px] text-gray-400">↥ {t.fpHeight}</span>
+              <span className="text-[10px] text-gray-300 font-mono">
+                {(selectedFurniture.height * (selectedItem.scaleH ?? 1) / 100).toFixed(2)}m
+              </span>
+            </div>
+            <input type="range" min={30} max={400} step={5}
+              value={Math.round((selectedItem.scaleH ?? 1) * 100)}
+              onMouseDown={() => pushFurnitureHistory()}
+              onTouchStart={() => pushFurnitureHistory()}
+              onChange={e => {
+                const newSH = parseInt(e.target.value) / 100;
+                resizeItem(selectedItem.instanceId, selectedItem.scaleW ?? 1, selectedItem.scaleD ?? 1, newSH);
+              }}
+              className="w-full accent-blue-500 h-2 md:h-1.5" />
+          </div>
+
           {/* Elevation slider */}
           <div>
             <div className="flex justify-between mb-1">
@@ -1115,10 +1265,10 @@ export default function FloorPlan() {
           </div>
 
           <div className="flex justify-between items-center">
-            <button onClick={() => { resizeItem(selectedItem.instanceId, 1, 1); setElevation(selectedItem.instanceId, 0); }}
+            <button onClick={() => { resizeItem(selectedItem.instanceId, 1, 1, 1); setElevation(selectedItem.instanceId, 0); }}
               className="text-[10px] text-gray-500 hover:text-gray-300 underline">{t.fpResetSize}</button>
             <span className="text-[10px] text-gray-600">
-              {t.fpOriginal} {(selectedFurniture.width / 100).toFixed(2)}m × {(selectedFurniture.depth / 100).toFixed(2)}m
+              {t.fpOriginal} {(selectedFurniture.width / 100).toFixed(2)}m × {(selectedFurniture.depth / 100).toFixed(2)}m × {(selectedFurniture.height / 100).toFixed(2)}m
             </span>
           </div>
           </div>{/* end px-4 pb-3 */}

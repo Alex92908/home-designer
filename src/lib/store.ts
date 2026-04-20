@@ -181,7 +181,7 @@ interface DesignerStore {
   furnitureHistory: Array<{ room: RoomType; placedItems: PlacedItem[] }>;
 
   // Clipboard for cross-room copy/paste (ephemeral)
-  clipboard: Array<{ furnitureId: string; x: number; z: number; rotation: number; scaleW: number; scaleD: number }>;
+  clipboard: Array<{ furnitureId: string; x: number; z: number; rotation: number; scaleW: number; scaleD: number; scaleH: number }>;
 
   // Room-level clipboard (copy entire room config)
   roomClipboard: { materials: RoomMaterials; placedItems: PlacedItem[]; name: string; icon: string; width: number; depth: number } | null;
@@ -203,7 +203,7 @@ interface DesignerStore {
   setSelection: (ids: string[]) => void;
   duplicateItems: (instanceIds: string[]) => void;
   removeItems: (instanceIds: string[]) => void;
-  resizeItem: (instanceId: string, scaleW: number, scaleD: number) => void;
+  resizeItem: (instanceId: string, scaleW: number, scaleD: number, scaleH?: number) => void;
   setElevation: (instanceId: string, elevationY: number) => void;
   clearRoom: () => void;
 
@@ -259,6 +259,9 @@ interface DesignerStore {
   setDoorPos: (room: RoomType, pos: number) => void;
   setRoomHasDoor: (room: RoomType, has: boolean) => void;
   setDoorWall: (room: RoomType, wall: "bottom" | "top" | "left" | "right") => void;
+  setDoorLen: (room: RoomType, len: number) => void;
+  setDoorH:   (room: RoomType, h: number) => void;
+  updateWindow: (room: RoomType, id: string, patch: Partial<WindowConfig>) => void;
 
   // Room rotation (swaps width/depth in layout)
   rotateRoom: (room: RoomType) => void;
@@ -285,6 +288,10 @@ interface DesignerStore {
   currentRoom: () => RoomState;
   totalCost: () => number;
   isOverBudget: () => boolean;
+
+  // Camera-move-and-capture (ephemeral — registered by RoomCanvas, called by AiRenderModal)
+  cameraAndCapture: ((pos: [number, number, number], lookAt: [number, number, number]) => string) | null;
+  setCameraAndCapture: (fn: DesignerStore["cameraAndCapture"]) => void;
 }
 
 const initialExterior: ExteriorSettings = {
@@ -317,6 +324,8 @@ export const useDesignerStore = create<DesignerStore>()(
       activeFloor: 0,
       layoutHistory: [],
       activeTemplateId: null,
+      cameraAndCapture: null,
+      setCameraAndCapture: (fn) => set({ cameraAndCapture: fn }),
 
       setActiveRoom: (room) => {
         const s = get();
@@ -377,6 +386,7 @@ export const useDesignerStore = create<DesignerStore>()(
           rotation: 0,
           scaleW: 1,
           scaleD: 1,
+          scaleH: 1,
         };
 
         const updatedPlaced = [...fp.rooms[activeRoom].placedItems, newItem];
@@ -479,13 +489,18 @@ export const useDesignerStore = create<DesignerStore>()(
         set({ floorPlans, selectedInstanceIds: [], selectedInstanceId: null, scores: computeScores({}, []), activeTemplateId: null });
       },
 
-      resizeItem: (instanceId, scaleW, scaleD) => {
+      resizeItem: (instanceId, scaleW, scaleD, scaleH) => {
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
         const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId
-            ? { ...p, scaleW: Math.max(0.3, Math.min(4, scaleW)), scaleD: Math.max(0.3, Math.min(4, scaleD)) }
+            ? {
+                ...p,
+                scaleW: Math.max(0.3, Math.min(4, scaleW)),
+                scaleD: Math.max(0.3, Math.min(4, scaleD)),
+                scaleH: scaleH === undefined ? (p.scaleH ?? 1) : Math.max(0.3, Math.min(4, scaleH)),
+              }
             : p
         );
         const floorPlans = [...s.floorPlans];
@@ -551,6 +566,7 @@ export const useDesignerStore = create<DesignerStore>()(
             rotation: p.rotation,
             scaleW: p.scaleW ?? 1,
             scaleD: p.scaleD ?? 1,
+            scaleH: p.scaleH ?? 1,
           }));
         set({ clipboard: items });
       },
@@ -570,6 +586,7 @@ export const useDesignerStore = create<DesignerStore>()(
           rotation: c.rotation,
           scaleW: c.scaleW,
           scaleD: c.scaleD,
+          scaleH: c.scaleH,
         }));
         const updatedPlaced = [...prevItems, ...copies];
         const updatedRoom = { ...fp.rooms[activeRoom], placedItems: updatedPlaced };
@@ -777,6 +794,25 @@ export const useDesignerStore = create<DesignerStore>()(
 
       setDoorWall: (room, wall) => {
         updateFloor(get, set, fp => ({ roomDoorWall: { ...fp.roomDoorWall, [room]: wall } }));
+      },
+
+      setDoorLen: (room, len) => {
+        const v = Math.max(50, Math.min(300, len));
+        updateFloor(get, set, fp => ({ roomDoorLen: { ...(fp.roomDoorLen ?? {}), [room]: v } }));
+      },
+
+      setDoorH: (room, h) => {
+        const v = Math.max(140, Math.min(260, h));
+        updateFloor(get, set, fp => ({ roomDoorH: { ...(fp.roomDoorH ?? {}), [room]: v } }));
+      },
+
+      updateWindow: (room, id, patch) => {
+        updateFloor(get, set, fp => ({
+          roomWindows: {
+            ...fp.roomWindows,
+            [room]: (fp.roomWindows[room] ?? []).map(w => w.id === id ? { ...w, ...patch } : w),
+          },
+        }));
       },
 
       rotateRoom: (room) => {
