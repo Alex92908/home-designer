@@ -1,9 +1,20 @@
 /**
  * roomPrompt.ts
  * Converts home-designer JSON room data → Stable Diffusion / ComfyUI prompts
+ *
+ * Pipeline (2026-04 refresh):
+ *   1. Enrich each placed item with library dimensions + room-type whitelist
+ *   2. De-duplicate by furnitureId, annotate oversize/compact/stretched scale
+ *   3. Rank items by relevance: whitelist match > off-room > extreme scale
+ *   4. Token-budget truncate positive prompt to fit CLIP 75-token window
+ *   5. Window h/sill aware lighting note
  */
 
 import type { RoomType } from "./types";
+import { FURNITURE } from "./furniture";
+
+// Fast lookup by id
+const FURNITURE_BY_ID = new Map(FURNITURE.map(f => [f.id, f]));
 
 // ─── Furniture ID → English description ─────────────────────
 const FURNITURE_EN: Record<string, string> = {
@@ -39,9 +50,9 @@ const FURNITURE_EN: Record<string, string> = {
   "rug-nordic-geo":         "geometric cotton-linen Nordic rug",
   "rug-modern-gray":        "solid grey short-pile area rug",
   "rug-persian":            "Persian-style patterned rug",
-  // Artwork
-  "artwork-abstract":       "abstract textured wall art print",
-  "artwork-inkwash":        "Chinese ink wash landscape painting",
+  // Artwork — explicit "mounted on wall" anchor so Canny edges get a wall context
+  "artwork-abstract":       "abstract textured wall art print mounted on wall",
+  "artwork-inkwash":        "Chinese ink wash landscape painting mounted on wall",
   // Beds
   "bed-fabric-beige":       "beige upholstered fabric bed with padded headboard",
   "bed-leather-dark":       "dark brown leather platform bed",
@@ -127,14 +138,15 @@ const MATERIAL_EN: Record<string, { wall?: string; floor?: string; light?: strin
   "floor-marble":       { floor: "white marble floor tiles" },
   "floor-herringbone":  { floor: "herringbone wood parquet flooring" },
   "floor-terrazzo":     { floor: "terrazzo floor tiles" },
-  // Lighting
-  "light-chandelier":      { light: "elegant crystal chandelier, warm glow" },
-  "light-pendant-nordic":  { light: "Nordic minimal pendant light, diffused warm light" },
-  "light-spot":            { light: "ceiling track spotlights, no main pendant, atmospheric lighting" },
-  "light-recessed":        { light: "recessed downlights, clean ceiling, warm white" },
-  "light-japanese-paper":  { light: "washi paper pendant lamp, soft diffused warm light" },
-  "light-strip":           { light: "LED strip cove lighting, indirect ambient glow" },
-  "light-industrial":      { light: "industrial bare-bulb pendant lights, warm Edison glow" },
+  // Lighting — explicit mounting + visual cues so SD renders the fixture even
+  // when depth map flattens ceiling-mounted hardware against the plane.
+  "light-chandelier":      { light: "elegant crystal chandelier hanging from ceiling, warm glow" },
+  "light-pendant-nordic":  { light: "Nordic minimal pendant light hanging from ceiling, diffused warm light" },
+  "light-spot":            { light: "ceiling-mounted black track rail with three adjustable spotlights, no main pendant, atmospheric accent lighting" },
+  "light-recessed":        { light: "flush recessed downlights in ceiling, clean unobstructed ceiling, warm white" },
+  "light-japanese-paper":  { light: "washi paper pendant lamp hanging from ceiling, soft diffused warm light" },
+  "light-strip":           { light: "LED strip cove lighting around ceiling perimeter, indirect ambient glow" },
+  "light-industrial":      { light: "industrial bare-bulb Edison pendant lights hanging from ceiling, warm glow" },
 };
 
 function materialIdToDesc(id: string, category: "wall" | "floor" | "light"): string | null {
@@ -191,14 +203,15 @@ const STYLE_EN: Record<string, string> = {
   "中式":  "classic Chinese traditional",
 };
 
-// Style-specific atmosphere/mood — appended after main description
+// Style-specific atmosphere/mood — appended after main description.
+// Kept tight (~10 tokens) to leave room for furniture list in the prompt budget.
 const STYLE_MOOD: Record<string, string> = {
-  "现代":  "bright airy minimal atmosphere, clean lines, neutral tones",
-  "北欧":  "Scandinavian hygge atmosphere, cozy warm diffused light, functional minimalism",
-  "轻奢":  "modern light luxury atmosphere, sophisticated elegance, premium refined finishes",
-  "日式":  "zen minimalist wabi-sabi atmosphere, soft natural raking light, peaceful serene mood",
-  "工业风": "dark moody industrial loft atmosphere, high contrast, dramatic shadows, urban grit",
-  "中式":  "classic Chinese elegance, harmonious balance, warm amber light, refined traditional",
+  "现代":  "bright airy minimal mood, clean lines",
+  "北欧":  "Scandinavian hygge mood, cozy diffused light",
+  "轻奢":  "light luxury mood, sophisticated elegance, premium finishes",
+  "日式":  "zen wabi-sabi mood, soft natural light, serene",
+  "工业风": "dark moody industrial loft, dramatic shadows, urban grit",
+  "中式":  "classic Chinese elegance, warm amber light",
 };
 
 // Per-style extra negative terms to exclude conflicting aesthetics
@@ -289,8 +302,11 @@ export interface RoomPromptInput {
     x: number;
     z: number;
     rotation?: number;
+    scaleW?: number; // width scale multiplier (default 1)
+    scaleD?: number; // depth scale multiplier (default 1)
+    scaleH?: number; // height scale multiplier (default 1)
   }>;
-  windows?: Array<{ wall: string; len: number; pos: number }>;
+  windows?: Array<{ wall: string; len: number; pos: number; h?: number; sill?: number }>;
 }
 
 export interface GeneratedPrompt {
@@ -299,6 +315,64 @@ export interface GeneratedPrompt {
   positive: string;
   negative: string;
   seed: number;
+  /** Items whose library roomTypes does not include this room. Not removed — deprioritized. */
+  offRoomItems?: string[];
+  /** Items with extreme scale (<0.5 or >2.5 on any axis, or aspect ratio distortion). */
+  warpedItems?: string[];
+  /** Approx token count of positive prompt after truncation. */
+  tokenEstimate?: number;
+}
+
+// ─── Scale classification ─────────────────────────────────
+function classifyScale(sw: number, sd: number, sh: number): {
+  prefix: string;          // adjective to prepend ("", "oversized", "compact", "elongated")
+  isWarped: boolean;       // aspect ratio distorted — skip raw dimensions
+  sizeNote: string;        // "(2.4m × 1.0m)" or "" — only emitted when realistic
+} {
+  const mx = Math.max(sw, sd, sh);
+  const mn = Math.min(sw, sd, sh);
+  // Aspect distortion: scaleW vs scaleD differ > 1.5×
+  const aspectDist = Math.abs(Math.log(Math.max(sw, 0.01) / Math.max(sd, 0.01)));
+  const heightDist = Math.abs(Math.log(Math.max(sh, 0.01) / Math.max((sw + sd) / 2, 0.01)));
+  const isWarped = aspectDist > 0.5 || heightDist > 0.5 || mn < 0.5 || mx > 2.5;
+
+  let prefix = "";
+  if (isWarped) {
+    if (sw > sd * 1.8)   prefix = "elongated";
+    else if (sd > sw * 1.8) prefix = "deep";
+    else if (mx > 1.5)   prefix = "oversized";
+    else if (mn < 0.7)   prefix = "compact";
+  } else {
+    if (mx > 1.4)  prefix = "oversized";
+    else if (mn < 0.7) prefix = "compact";
+  }
+  return { prefix, isWarped, sizeNote: "" };
+}
+
+// ─── CLIP token estimate (English word count × 1.3 heuristic) ──
+function estimateTokens(text: string): number {
+  if (!text) return 0;
+  const words = text.split(/[\s,]+/).filter(Boolean).length;
+  return Math.ceil(words * 1.3);
+}
+
+// ─── Truncate prompt parts to fit CLIP 75-token window ──
+// Parts at the head of the array are kept first; tail drops when budget exceeded.
+function assemblePrompt(parts: Array<string | false | null | undefined>, maxTokens = 75): {
+  text: string; tokens: number;
+} {
+  const result: string[] = [];
+  let total = 0;
+  for (const raw of parts) {
+    if (!raw) continue;
+    const p = String(raw).trim();
+    if (!p) continue;
+    const cost = estimateTokens(p) + 1; // +1 comma separator
+    if (total + cost > maxTokens) break;
+    result.push(p);
+    total += cost;
+  }
+  return { text: result.join(", "), tokens: total };
 }
 
 export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
@@ -360,25 +434,82 @@ export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
   }
 
   // ── Furniture ──
-  // De-duplicate by furnitureId, keep first occurrence per type
-  const seenIds = new Map<string, number>();
-  const furnitureParts: string[] = [];
+  // 1) Bucket items by furnitureId; track on-room vs off-room + warped.
+  //    Items whose library roomTypes doesn't include this room → still rendered
+  //    but deprioritized (appended last so token truncation may drop them).
+  interface FurnitureBucket {
+    furnitureId: string;
+    count: number;
+    onRoom: boolean;       // roomTypes includes current roomType
+    prefixes: Set<string>; // "oversized" / "compact" / "elongated" — union across instances
+    warped: boolean;       // any instance is warped
+    items: typeof placedItems;
+  }
+  const buckets = new Map<string, FurnitureBucket>();
+  const offRoomItems: string[] = [];
+  const warpedItems:  string[] = [];
+
   for (const item of placedItems) {
-    const count = (seenIds.get(item.furnitureId) ?? 0) + 1;
-    seenIds.set(item.furnitureId, count);
-    const desc = parseFurnitureId(item.furnitureId);
-    const pos  = posHint(item.x, item.z, width, depth);
-    if (count === 1) {
-      furnitureParts.push(`${desc} (${pos})`);
+    const lib = FURNITURE_BY_ID.get(item.furnitureId);
+    const onRoom = lib ? lib.roomTypes.includes(roomType) : true;
+    const sw = item.scaleW ?? 1, sd = item.scaleD ?? 1, sh = item.scaleH ?? 1;
+    const cls = classifyScale(sw, sd, sh);
+
+    let b = buckets.get(item.furnitureId);
+    if (!b) {
+      b = {
+        furnitureId: item.furnitureId,
+        count: 0, onRoom,
+        prefixes: new Set(),
+        warped: false,
+        items: [] as typeof placedItems,
+      };
+      buckets.set(item.furnitureId, b);
     }
+    b.count += 1;
+    b.items.push(item);
+    if (cls.prefix) b.prefixes.add(cls.prefix);
+    if (cls.isWarped) b.warped = true;
+
+    if (!onRoom && !offRoomItems.includes(item.furnitureId)) offRoomItems.push(item.furnitureId);
+    if (cls.isWarped && !warpedItems.includes(item.furnitureId)) warpedItems.push(item.furnitureId);
   }
-  // If more than one of same type, mention the count
-  for (const [id, cnt] of seenIds.entries()) {
-    if (cnt > 1) {
-      const idx = furnitureParts.findIndex(s => s.startsWith(parseFurnitureId(id)));
-      if (idx >= 0) furnitureParts[idx] = `${cnt}× ${parseFurnitureId(id)}`;
+
+  // 2) Render each bucket → phrase, then rank (on-room first, non-warped next).
+  const rendered: Array<{ onRoom: boolean; warped: boolean; phrase: string }> = [];
+  for (const b of buckets.values()) {
+    const desc = parseFurnitureId(b.furnitureId);
+    // Pick a single adjective (most specific wins)
+    const adj =
+      b.prefixes.has("elongated") ? "elongated"
+      : b.prefixes.has("deep")    ? "deep"
+      : b.prefixes.has("oversized") ? "oversized"
+      : b.prefixes.has("compact") ? "compact"
+      : "";
+
+    // Position hint from the first instance (only when count == 1 and on-room)
+    let phrase: string;
+    if (b.count > 1) {
+      const qty = b.count === 2 ? "two" : b.count === 3 ? "three" : b.count === 4 ? "four" : `${b.count}×`;
+      phrase = `${qty} ${adj ? adj + " " : ""}${desc}`.trim();
+    } else if (b.onRoom && !b.warped) {
+      const first = b.items[0];
+      const pos = posHint(first.x, first.z, width, depth);
+      phrase = `${adj ? adj + " " : ""}${desc} (${pos})`.trim();
+    } else {
+      // off-room or warped singletons: skip position hint (SD can't ground it anyway)
+      phrase = `${adj ? adj + " " : ""}${desc}`.trim();
     }
+    rendered.push({ onRoom: b.onRoom, warped: b.warped, phrase });
   }
+
+  // Rank: on-room & clean first, on-room & warped, off-room & clean, off-room & warped
+  rendered.sort((a, b) => {
+    const rankA = (a.onRoom ? 0 : 2) + (a.warped ? 1 : 0);
+    const rankB = (b.onRoom ? 0 : 2) + (b.warped ? 1 : 0);
+    return rankA - rankB;
+  });
+  const furnitureParts = rendered.map(r => r.phrase);
 
   // ── Windows & natural light ──
   let lightingNote = "";
@@ -386,16 +517,31 @@ export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
     const wallNames: Record<string, string> = {
       back: "back wall", front: "front wall", left: "left wall", right: "right wall"
     };
+    // Merge windows on same wall (visual continuity)
+    const byWall = new Map<string, typeof windows>();
+    for (const w of windows) {
+      const arr = byWall.get(w.wall) ?? [];
+      arr.push(w);
+      byWall.set(w.wall, arr);
+    }
     if (windows.length === 1) {
       const win = windows[0];
       const winW = (win.len / 100).toFixed(1);
+      const sill = win.sill ?? 90;
+      const wh   = win.h    ?? 150;
       const wallName = wallNames[win.wall] ?? win.wall;
-      const isLarge = win.len >= 150; // ≥1.5m → treat as floor-to-ceiling
+      const isFloorToCeiling = sill < 40 || (sill + wh) >= (height - 40);
+      const isLarge = win.len >= 180 || isFloorToCeiling;
       lightingNote = isLarge
         ? `floor-to-ceiling ${winW}m wide window on ${wallName}, lush greenery outside, natural daylight flooding in, soft volumetric light, long shadows`
         : `${winW}m wide window on ${wallName}, natural daylight pouring in, sun rays, soft shadows`;
+    } else if (byWall.size === 1) {
+      // Multiple windows on the same wall → continuous ribbon
+      const wallName = wallNames[[...byWall.keys()][0]] ?? "";
+      const totalLen = (windows.reduce((s, w) => s + w.len, 0) / 100).toFixed(1);
+      lightingNote = `continuous ${totalLen}m ribbon of windows along ${wallName}, abundant natural daylight, bright airy atmosphere, soft diffused light`;
     } else {
-      // Multiple windows — panoramic feel
+      // Windows on multiple walls → panoramic
       lightingNote = `floor-to-ceiling panoramic windows, lush green garden view outside, abundant natural daylight, bright airy atmosphere, soft diffused light`;
     }
   } else {
@@ -415,37 +561,53 @@ export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
   const styleNeg   = STYLE_NEGATIVES[dominantStyle] ?? "";
 
   // ── Assemble positive prompt ──
-  const positive = [
-    // Quality prefix
-    "RAW photo, photorealistic, ultra-detailed, 8K UHD, DSLR, sharp focus",
-    // Shot
-    `professional interior design photography of a ${styleDesc} ${displayName}`,
-    // Space
-    `${w}m × ${d}m × ${h}m room`,
-    // Surfaces
+  // SDXL with ComfyUI CLIPTextEncode uses BREAK-chunked encoding, effectively
+  // supporting ~225 tokens (3 × 75). We target 150 tokens as the sweet spot —
+  // plenty for surfaces + atmosphere + a handful of furniture, without diluting
+  // the CFG signal.
+  //
+  // Priority ordering (head kept first, tail dropped last):
+  //   1. Quality signal + shot type + styled room name  → non-negotiable (~15 tok)
+  //   2. Room size + surfaces + lighting                → geometry + materials (~30 tok)
+  //   3. Natural light note + style mood                → atmosphere (~25 tok)
+  //   4. Furniture (on-room first, off-room/warped last)→ fills middle (~60 tok)
+  //   5. Camera / tech suffix                           → polish (~10 tok)
+  const coreHead = [
+    "RAW photo, photorealistic, ultra-detailed, 8K UHD, sharp focus",
+    `professional interior photography of ${styleDesc} ${displayName}`,
+    `${w}m × ${d}m room`,
     wallDesc,
     floorDesc,
-    // Lighting
     lightDesc,
     lightingNote,
-    // Furniture
-    ...(furnitureParts.length > 0 ? furnitureParts : []),
-    // Style atmosphere — the key quality driver
     styleMood,
-    // Photography quality
-    "wide-angle lens 24mm, Architectural Digest editorial quality, no people",
-  ]
-    .filter(Boolean)
-    .join(", ");
+  ];
+  const coreTail = [
+    "wide-angle 24mm, Architectural Digest quality, no people",
+  ];
+
+  // Budget split: head + tail always kept (they set the scene), furniture fills
+  // the remainder up to the overall 150-token chunked target.
+  const TARGET_TOTAL = 150;
+  const { text: headText, tokens: headTokens } = assemblePrompt(coreHead, 999);
+  const { text: tailText, tokens: tailTokens } = assemblePrompt(coreTail, 999);
+  const furnitureBudget = Math.max(0, TARGET_TOTAL - headTokens - tailTokens);
+  const { text: furnText, tokens: furnTokens } = assemblePrompt(furnitureParts, furnitureBudget);
+
+  const positive = [headText, furnText, tailText].filter(Boolean).join(", ");
+  const tokenEstimate = headTokens + furnTokens + tailTokens;
 
   // ── Negative prompt ──
-  const hasTvUnit = placedItems.some(i => i.furnitureId.startsWith("tvunit-"));
+  const hasTvUnit    = placedItems.some(i => i.furnitureId.startsWith("tvunit-"));
+  const hasFireplace = placedItems.some(i => i.furnitureId.startsWith("fireplace-"));
   const negative = [
     "people, person, human, cartoon, illustration, painting, sketch, low quality",
     "blurry, out of focus, distorted, deformed, bad anatomy, watermark",
     "text, logo, signature, overexposed, underexposed",
     "3D render, CGI, anime, drawing",
-    hasTvUnit ? "fireplace, fire, flame, burning, hearth" : "",
+    "stretched furniture, warped proportions, disproportionate, impossibly thin, impossibly wide",
+    "duplicate items, cloned furniture, overlapping objects",
+    hasTvUnit && !hasFireplace ? "fireplace, fire, flame, burning, hearth" : "",
     styleNeg,
   ].filter(Boolean).join(", ");
 
@@ -455,6 +617,9 @@ export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
     positive,
     negative,
     seed: Math.floor(Math.random() * 2 ** 31),
+    offRoomItems,
+    warpedItems,
+    tokenEstimate,
   };
 }
 

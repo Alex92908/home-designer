@@ -634,8 +634,38 @@ export default function FloorPlan() {
     });
   };
 
-  // Reset inspector position whenever selection changes
-  useEffect(() => { setInspectorPos(null); }, [selectedInstanceIds]);
+  // Only clear custom inspector position when the panel is actually closed
+  // (no item selected). When switching between items we keep the user's last
+  // dragged position so the panel doesn't snap back to centre every time.
+  useEffect(() => {
+    if (selectedInstanceIds.length === 0) setInspectorPos(null);
+  }, [selectedInstanceIds]);
+
+  // If the viewport shrinks (orientation flip / keyboard close), clamp any
+  // custom inspector position back into the visible area so the panel can
+  // still be reached.
+  useEffect(() => {
+    const onResize = () => {
+      setInspectorPos(prev => {
+        if (!prev) return prev;
+        const panel = inspectorRef.current;
+        if (!panel) return prev;
+        const pw = panel.offsetWidth;
+        const ph = panel.offsetHeight;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const nx = Math.max(0, Math.min(vw - pw, prev.x));
+        const ny = Math.max(0, Math.min(vh - ph, prev.y));
+        return (nx === prev.x && ny === prev.y) ? prev : { x: nx, y: ny };
+      });
+    };
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, []);
 
   // Inspector drag handler — reads current panel rect as start position
   const handleInspectorDragStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -1128,13 +1158,15 @@ export default function FloorPlan() {
               ? undefined
               : { paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}
         >
-          {/* Drag handle — always shown, lets user reposition panel */}
+          {/* Drag handle — drag to reposition, double-tap to reset to default */}
           <div
             onPointerDown={handleInspectorDragStart}
+            onDoubleClick={() => setInspectorPos(null)}
+            title={inspectorPos ? "双击复位到默认位置" : undefined}
             className="flex items-center justify-center h-5 shrink-0 rounded-t-2xl cursor-grab active:cursor-grabbing touch-none select-none"
             style={{ background: "rgba(255,255,255,0.04)" }}
           >
-            <div className="w-8 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.2)" }} />
+            <div className="w-8 h-1 rounded-full" style={{ background: inspectorPos ? "rgba(99,102,241,0.6)" : "rgba(255,255,255,0.2)" }} />
           </div>
           <div className="flex flex-col gap-2 px-4 pb-3">
           <div className="flex items-center gap-2 min-w-0">
@@ -1271,6 +1303,37 @@ export default function FloorPlan() {
               {t.fpOriginal} {(selectedFurniture.width / 100).toFixed(2)}m × {(selectedFurniture.depth / 100).toFixed(2)}m × {(selectedFurniture.height / 100).toFixed(2)}m
             </span>
           </div>
+
+          {/* ── AI-quality warnings ─────────────────────────────
+             SD/ControlNet has no training data for warped furniture or
+             cross-room placements, so flag them explicitly. */}
+          {(() => {
+            const sw = selectedItem.scaleW ?? 1;
+            const sd = selectedItem.scaleD ?? 1;
+            const sh = selectedItem.scaleH ?? 1;
+            const mx = Math.max(sw, sd, sh);
+            const mn = Math.min(sw, sd, sh);
+            const aspectDist = Math.abs(Math.log(Math.max(sw, 0.01) / Math.max(sd, 0.01)));
+            const isWarped = aspectDist > 0.5 || mn < 0.5 || mx > 2.5;
+            const isOffRoom = !selectedFurniture.roomTypes.includes(activeRoom);
+            if (!isWarped && !isOffRoom) return null;
+            return (
+              <div className="mt-1 space-y-1">
+                {isOffRoom && (
+                  <div className="text-[10px] leading-relaxed px-2 py-1.5 rounded border"
+                    style={{ background: "rgba(245,158,11,0.08)", borderColor: "rgba(245,158,11,0.3)", color: "#fbbf24" }}>
+                    ⚠ 此家具通常不放在{t.roomNames[activeRoom] ?? activeRoom}，AI 渲染时可能被降权或忽略
+                  </div>
+                )}
+                {isWarped && (
+                  <div className="text-[10px] leading-relaxed px-2 py-1.5 rounded border"
+                    style={{ background: "rgba(249,115,22,0.08)", borderColor: "rgba(249,115,22,0.3)", color: "#fb923c" }}>
+                    ⚠ 尺寸比例异常（宽/深/高差异过大或超出合理范围），AI 可能无法准确还原
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           </div>{/* end px-4 pb-3 */}
         </div>
       )}

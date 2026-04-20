@@ -19,38 +19,51 @@ interface AnglePreset {
   id: string;
   label: string;
   icon: string;
-  getPos:    (W: number, D: number, H: number) => [number, number, number];
-  getLookAt: (W: number, D: number, H: number) => [number, number, number];
+  /** Optional — custom preset sources its pose from the user's live 3D camera instead. */
+  getPos?:    (W: number, D: number, H: number) => [number, number, number];
+  getLookAt?: (W: number, D: number, H: number) => [number, number, number];
+  custom?: boolean;
 }
 
+// Angle presets — camera Z pulled back ~25% vs. prior tuning so wide items
+// (full sofas, dining tables along the back wall) fit the frame.
 const ANGLE_PRESETS: AnglePreset[] = [
   {
     id: "front-right",
     label: "右前角 45°",
     icon: "↗",
-    getPos:    (W, D, H) => [ W * 0.40,  H * 0.50,  D * 0.40],
-    getLookAt: (W, D, H) => [-W * 0.10,  H * 0.20, -D * 0.25],
+    getPos:    (W, D, H) => [ W * 0.48,  H * 0.52,  D * 0.52],
+    getLookAt: (W, D, H) => [-W * 0.10,  H * 0.20, -D * 0.30],
   },
   {
     id: "front-left",
     label: "左前角 45°",
     icon: "↖",
-    getPos:    (W, D, H) => [-W * 0.40,  H * 0.50,  D * 0.40],
-    getLookAt: (W, D, H) => [ W * 0.10,  H * 0.20, -D * 0.25],
+    getPos:    (W, D, H) => [-W * 0.48,  H * 0.52,  D * 0.52],
+    getLookAt: (W, D, H) => [ W * 0.10,  H * 0.20, -D * 0.30],
   },
   {
     id: "front-center",
     label: "正面偏右",
     icon: "→",
-    getPos:    (W, D, H) => [ W * 0.18,   H * 0.45,  D * 0.38],
-    getLookAt: (W, D, H) => [-W * 0.05,   H * 0.20, -D * 0.30],
+    getPos:    (W, D, H) => [ W * 0.20,   H * 0.48,  D * 0.50],
+    getLookAt: (W, D, H) => [-W * 0.05,   H * 0.20, -D * 0.35],
   },
   {
     id: "aerial",
     label: "鸟瞰",
     icon: "↓",
-    getPos:    (W, D, H) => [ W * 0.20,   H * 1.60,  D * 0.50],
+    getPos:    (W, D, H) => [ W * 0.20,   H * 1.75,  D * 0.55],
     getLookAt: (_W, _D, _H) => [ 0,        0,          0        ],
+  },
+  {
+    // Uses whatever camera angle the user had set in the 3D editor before
+    // opening the modal — captured at open time so presets can be clicked
+    // without losing the custom angle.
+    id: "custom",
+    label: "自定义",
+    icon: "👁",
+    custom: true,
   },
 ];
 
@@ -75,15 +88,20 @@ function downloadDataUrl(dataUrl: string, filename: string) {
 
 export default function AiRenderModal({ open, onClose }: Props) {
   // Store — grab current room data for prompt generation
-  const floorPlans        = useDesignerStore(s => s.floorPlans);
-  const activeFloor       = useDesignerStore(s => s.activeFloor);
-  const activeRoom        = useDesignerStore(s => s.activeRoom);
-  const cameraAndCapture  = useDesignerStore(s => s.cameraAndCapture);
+  const floorPlans             = useDesignerStore(s => s.floorPlans);
+  const activeFloor            = useDesignerStore(s => s.activeFloor);
+  const activeRoom             = useDesignerStore(s => s.activeRoom);
+  const cameraAndCapture       = useDesignerStore(s => s.cameraAndCapture);
+  const getCameraPose          = useDesignerStore(s => s.getCameraPose);
+  const resetWarpedInActiveRoom= useDesignerStore(s => s.resetWarpedInActiveRoom);
+
+  // Flash message after bulk-resetting warped items
+  const [warpResetToast, setWarpResetToast] = useState<string | null>(null);
 
   // Local state
   const [screenshot,     setScreenshot]     = useState<string | null>(null);
   const [comfyAvailable, setComfyAvailable] = useState<boolean | null>(null);
-  const [mode,           setMode]           = useState<Mode>("controlnet");
+  const [mode,           setMode]           = useState<Mode>("multicontrolnet");
   const [phase,          setPhase]          = useState<Phase>("idle");
   const [resultUrl,      setResultUrl]      = useState<string | null>(null);
   const [error,          setError]          = useState<string | null>(null);
@@ -93,16 +111,29 @@ export default function AiRenderModal({ open, onClose }: Props) {
   const [chainAngles,  setChainAngles]  = useState<string[]>(["front-right", "front-left"]);
   const [chainResults, setChainResults] = useState<string[]>([]);  // image URLs
   const [chainIndex,   setChainIndex]   = useState(0);             // current angle index being rendered
+  // Strict-geometry: drops IPAdapter weight so ControlNet keeps furniture
+  // intact at the cost of some style consistency between frames.
+  const [chainStrictGeometry, setChainStrictGeometry] = useState(false);
 
   const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const promptRef = useRef<string | null>(null);
+  // Camera pose the user had set in the 3D editor before opening the modal.
+  // Used by the "自定义（当前视角）" preset and to restore the camera on close
+  // so presets don't leave the 3D editor stuck at some random angle.
+  const initialCamRef = useRef<{ pos: [number,number,number]; lookAt: [number,number,number] } | null>(null);
 
   // ── Reset on close ──────────────────────────────────────────
   useEffect(() => {
     if (!open) {
       clearInterval(pollRef.current ?? undefined);
       clearInterval(timerRef.current ?? undefined);
+      // Restore user's original 3D camera so modal presets don't permanently
+      // move the editor camera.
+      const cam  = initialCamRef.current;
+      const snap = useDesignerStore.getState().cameraAndCapture;
+      if (cam && snap) snap(cam.pos, cam.lookAt);
+      initialCamRef.current = null;
       setScreenshot(null);
       setComfyAvailable(null);
       setPhase("idle");
@@ -113,9 +144,16 @@ export default function AiRenderModal({ open, onClose }: Props) {
       setChainAngles(["front-right", "front-left"]);
       setChainResults([]);
       setChainIndex(0);
+      setChainStrictGeometry(false);
+      setWarpResetToast(null);
       promptRef.current = null;
       return;
     }
+
+    // Snapshot the user's current 3D camera BEFORE we move it for any preset.
+    // This becomes the "custom" preset's source.
+    const pose = useDesignerStore.getState().getCameraPose?.();
+    if (pose) initialCamRef.current = pose;
 
     // Capture default angle preview (or fallback to raw canvas)
     const t = setTimeout(() => {
@@ -129,7 +167,9 @@ export default function AiRenderModal({ open, onClose }: Props) {
         const D = (dims?.depth  ?? 400) / 100;
         const H = 2.8;
         const preset = ANGLE_PRESETS.find(a => a.id === "front-right")!;
-        const shot = fn(preset.getPos(W, D, H), preset.getLookAt(W, D, H));
+        const shot = preset.getPos && preset.getLookAt
+          ? fn(preset.getPos(W, D, H), preset.getLookAt(W, D, H))
+          : null;
         if (shot) { setScreenshot(shot); return; }
       }
       // Fallback: snapshot current canvas view
@@ -171,8 +211,13 @@ export default function AiRenderModal({ open, onClose }: Props) {
         x:           p.x,
         z:           p.z,
         rotation:    p.rotation,
+        scaleW:      p.scaleW,
+        scaleD:      p.scaleD,
+        scaleH:      p.scaleH,
       })),
-      windows: wins.map(w => ({ wall: w.wall, len: w.len, pos: w.pos })),
+      windows: wins.map(w => ({
+        wall: w.wall, len: w.len, pos: w.pos, h: w.h, sill: w.sill,
+      })),
     };
   }
 
@@ -190,8 +235,19 @@ export default function AiRenderModal({ open, onClose }: Props) {
   // ── Capture a specific angle → returns data URL ──────────────
   function capturePreset(presetId: string): string | null {
     if (!cameraAndCapture) return null;
+    const preset = ANGLE_PRESETS.find(a => a.id === presetId);
+    if (!preset) return null;
+
+    // Custom preset → use the camera pose captured at modal open (user's
+    // freely-orbited 3D view). Falls back to live pose if not yet stashed.
+    if (preset.custom) {
+      const cam = initialCamRef.current ?? getCameraPose?.() ?? null;
+      if (!cam) return null;
+      return cameraAndCapture(cam.pos, cam.lookAt);
+    }
+
+    if (!preset.getPos || !preset.getLookAt) return null;
     const { W, D, H } = getRoomDims();
-    const preset = ANGLE_PRESETS.find(a => a.id === presetId)!;
     return cameraAndCapture(preset.getPos(W, D, H), preset.getLookAt(W, D, H));
   }
 
@@ -230,6 +286,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
     referenceImages?: string[];   // 0 = first frame, 1 = single-ref, 2-5 = multi-ref blend
     seed: number;
     roomData: ReturnType<typeof getCurrentRoomData>;
+    strictGeometry: boolean;
   }): Promise<string> {
     const res = await fetch("/api/comfyui", {
       method: "POST",
@@ -240,6 +297,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
         seed:            params.seed,
         roomData:        params.roomData,
         mode:            "ipadapter-chain",
+        strictGeometry:  params.strictGeometry,
       }),
     });
     const data = await res.json() as { promptId?: string; error?: string };
@@ -289,7 +347,15 @@ export default function AiRenderModal({ open, onClose }: Props) {
         setPhase("generating");
         const angleId = chainAngles[i];
         const preset  = ANGLE_PRESETS.find(a => a.id === angleId)!;
-        const shotUrl = cameraAndCapture(preset.getPos(W, D, H), preset.getLookAt(W, D, H));
+        const shotUrl = preset.custom
+          ? (() => {
+              const cam = initialCamRef.current ?? getCameraPose?.() ?? null;
+              return cam ? cameraAndCapture(cam.pos, cam.lookAt) : null;
+            })()
+          : preset.getPos && preset.getLookAt
+            ? cameraAndCapture(preset.getPos(W, D, H), preset.getLookAt(W, D, H))
+            : null;
+        if (!shotUrl) throw new Error(`angle_capture_failed_${angleId}`);
 
         // Reference strategy:
         //  - First frame: no refs (establishes the look)
@@ -308,6 +374,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
           referenceImages: refs,
           seed,
           roomData,
+          strictGeometry:  chainStrictGeometry,
         });
 
         resultUrls.push(imgUrl);
@@ -525,6 +592,78 @@ export default function AiRenderModal({ open, onClose }: Props) {
             </div>
           )}
 
+          {/* ── Prompt preview + data-quality warnings ── */}
+          {comfyAvailable === true && phase === "idle" && (() => {
+            const rd = getCurrentRoomData();
+            if (!rd) return null;
+            const preview = generateRoomPrompt(rd);
+            const off  = preview.offRoomItems ?? [];
+            const warp = preview.warpedItems  ?? [];
+            const tokens = preview.tokenEstimate ?? 0;
+            const tokenColor = tokens > 170 ? "#dc2626" : tokens > 140 ? "#f59e0b" : "#10b981";
+            return (
+              <details className="rounded-xl border border-gray-200 bg-gray-50">
+                <summary className="cursor-pointer px-3.5 py-2.5 text-[11px] font-medium text-gray-600 flex items-center gap-2">
+                  <span>📝 Prompt 预览</span>
+                  <span className="ml-auto flex items-center gap-2">
+                    <span style={{ color: tokenColor }}>{tokens}/150 token</span>
+                    {(off.length > 0 || warp.length > 0) && (
+                      <span className="text-amber-600">⚠ {off.length + warp.length}</span>
+                    )}
+                  </span>
+                </summary>
+                <div className="px-3.5 pb-3 pt-1 space-y-2">
+                  {off.length > 0 && (
+                    <div className="text-[10.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 leading-relaxed">
+                      <span className="font-semibold">⚠ 物品不属于本房间</span>（已被降权，可能被 token 预算截断）：
+                      <br />{off.join(", ")}
+                    </div>
+                  )}
+                  {warp.length > 0 && (
+                    <div className="text-[10.5px] text-orange-700 bg-orange-50 border border-orange-200 rounded px-2 py-1.5 leading-relaxed">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <span className="font-semibold">⚠ 尺寸比例异常 · {warp.length} 件</span>
+                          <span className="text-orange-600">（SD 可能无法还原极端压缩/拉伸的家具，强烈建议复位）</span>
+                          <div className="mt-0.5 break-words">{warp.join(", ")}</div>
+                        </div>
+                        <button
+                          onClick={e => {
+                            e.preventDefault();
+                            const n = resetWarpedInActiveRoom();
+                            setWarpResetToast(n > 0 ? `已复位 ${n} 件家具（可撤销）` : "没有需要复位的家具");
+                            setTimeout(() => setWarpResetToast(null), 2400);
+                          }}
+                          className="shrink-0 text-[10px] font-semibold text-white px-2.5 py-1 rounded-md transition-all active:scale-95"
+                          style={{ background: "linear-gradient(135deg,#ea580c,#f97316)" }}
+                        >
+                          ↻ 一键复位
+                        </button>
+                      </div>
+                      {warpResetToast && (
+                        <div className="mt-1.5 text-[10px] text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1">
+                          ✓ {warpResetToast}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-[10px] text-gray-500 mb-0.5">Positive</div>
+                    <div className="text-[10.5px] text-gray-700 leading-relaxed bg-white border border-gray-200 rounded px-2 py-1.5 font-mono break-all">
+                      {preview.positive}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-500 mb-0.5">Negative</div>
+                    <div className="text-[10.5px] text-gray-500 leading-relaxed bg-white border border-gray-200 rounded px-2 py-1.5 font-mono break-all">
+                      {preview.negative}
+                    </div>
+                  </div>
+                </div>
+              </details>
+            );
+          })()}
+
           {/* ── Angle picker (single-view modes) — single select ── */}
           {comfyAvailable === true && phase === "idle" && (mode === "controlnet" || mode === "multicontrolnet") && (
             <div>
@@ -557,7 +696,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
                 })}
               </div>
               <p className="text-[10px] text-gray-400 mt-1.5">
-                右前角 45° 或左前角 45° 综合展示墙面与地面，效果最佳
+                右前角 / 左前角 综合展示墙面与地面效果最佳；<span className="text-indigo-400">👁 自定义</span> 使用你在 3D 编辑器里的当前视角
               </p>
             </div>
           )}
@@ -600,8 +739,38 @@ export default function AiRenderModal({ open, onClose }: Props) {
                 })}
               </div>
               <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
-                按数字顺序生成。普通视角参考前一张，鸟瞰会综合前面所有视角的色彩材质（建议放最后）。单张约 3-8 分钟。
+                按数字顺序生成。普通视角参考前一张，鸟瞰会综合前面所有视角的色彩材质（建议放最后）。<span className="text-indigo-400">👁 自定义</span> 使用打开弹窗前 3D 编辑器里的视角。单张约 3-8 分钟。
               </p>
+
+              {/* Strict geometry toggle — weakens IPAdapter so ControlNet keeps furniture */}
+              <label
+                className="mt-2 flex items-start gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all border"
+                style={{
+                  borderColor: chainStrictGeometry ? "#6366f1" : "#e5e7eb",
+                  background:  chainStrictGeometry ? "#eef2ff" : "#fafafa",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={chainStrictGeometry}
+                  onChange={e => setChainStrictGeometry(e.target.checked)}
+                  className="mt-0.5 w-3.5 h-3.5 accent-indigo-500 shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-semibold"
+                    style={{ color: chainStrictGeometry ? "#4f46e5" : "#374151" }}>
+                    🔒 保留家具结构
+                    <span className="ml-1.5 text-[9px] font-normal px-1.5 py-0.5 rounded"
+                      style={{ background: "rgba(234,88,12,0.1)", color: "#c2410c" }}>
+                      实验性
+                    </span>
+                  </div>
+                  <div className="text-[10px] mt-0.5 leading-relaxed"
+                    style={{ color: chainStrictGeometry ? "#6366f1" : "#9ca3af" }}>
+                    降低 IPAdapter 权重（0.9→0.65 / 0.6→0.45），让 ControlNet 在后 30% 采样接管——衣柜、灯具等家具更不容易被风格化覆盖，代价是 4 张之间色彩/材质一致性稍弱。
+                  </div>
+                </div>
+              </label>
             </div>
           )}
 

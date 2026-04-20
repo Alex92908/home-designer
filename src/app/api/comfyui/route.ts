@@ -26,7 +26,7 @@ const DEFAULT_PROMPT = {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { screenshot, screenshots, referenceImage, referenceImages, seed, roomData, mode = "controlnet" } = await req.json() as {
+    const { screenshot, screenshots, referenceImage, referenceImages, seed, roomData, mode = "controlnet", strictGeometry = false } = await req.json() as {
       screenshot?: string;
       screenshots?: string[];     // multi-view: array of data URLs
       referenceImage?: string;    // ipadapter-chain: single previous render (legacy)
@@ -34,6 +34,8 @@ export async function POST(req: NextRequest) {
       seed?: number;              // explicit seed for chain consistency
       roomData?: RoomPromptInput;
       mode?: "controlnet" | "txt2img" | "multicontrolnet" | "ipadapter-chain";
+      /** Chain mode only: weaken IPAdapter so ControlNet can preserve furniture geometry. */
+      strictGeometry?: boolean;
     };
 
     // ── Generate SD prompt ───────────────────────────────────
@@ -118,7 +120,16 @@ export async function POST(req: NextRequest) {
         refNames.push(await uploadDataUrl(allRefs[i], `hd_ipa_ref_${i}`));
       }
 
-      const workflow = generateIPAdapterChainWorkflow(shotName, refNames, prompt);
+      // Strict geometry: drop IPAdapter weight by ~0.25 and cut it off at 70%
+      // of sampling so ControlNet reclaims the back half for detail / furniture
+      // structure. Trades some style-consistency for element accuracy.
+      const ipaOpts = strictGeometry
+        ? {
+            ipaWeight: refNames.length === 1 ? 0.65 : 0.45,
+            ipaEndAt:  0.7,
+          }
+        : {};
+      const workflow = generateIPAdapterChainWorkflow(shotName, refNames, prompt, ipaOpts);
       const submitRes = await fetch(`${COMFYUI}/prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

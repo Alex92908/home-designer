@@ -204,6 +204,8 @@ interface DesignerStore {
   duplicateItems: (instanceIds: string[]) => void;
   removeItems: (instanceIds: string[]) => void;
   resizeItem: (instanceId: string, scaleW: number, scaleD: number, scaleH?: number) => void;
+  /** Reset every warped item in the active room to scale 1,1,1.  Returns count reset. */
+  resetWarpedInActiveRoom: () => number;
   setElevation: (instanceId: string, elevationY: number) => void;
   clearRoom: () => void;
 
@@ -292,6 +294,12 @@ interface DesignerStore {
   // Camera-move-and-capture (ephemeral — registered by RoomCanvas, called by AiRenderModal)
   cameraAndCapture: ((pos: [number, number, number], lookAt: [number, number, number]) => string) | null;
   setCameraAndCapture: (fn: DesignerStore["cameraAndCapture"]) => void;
+
+  /** Returns the *current* camera pose (user's free-orbit position) without moving it.
+   *  Used so the AI render modal can remember the user's chosen 3D angle and
+   *  offer it back as the "自定义（当前视角）" preset. */
+  getCameraPose: (() => { pos: [number, number, number]; lookAt: [number, number, number] } | null) | null;
+  setGetCameraPose: (fn: DesignerStore["getCameraPose"]) => void;
 }
 
 const initialExterior: ExteriorSettings = {
@@ -326,6 +334,8 @@ export const useDesignerStore = create<DesignerStore>()(
       activeTemplateId: null,
       cameraAndCapture: null,
       setCameraAndCapture: (fn) => set({ cameraAndCapture: fn }),
+      getCameraPose: null,
+      setGetCameraPose: (fn) => set({ getCameraPose: fn }),
 
       setActiveRoom: (room) => {
         const s = get();
@@ -506,6 +516,58 @@ export const useDesignerStore = create<DesignerStore>()(
         const floorPlans = [...s.floorPlans];
         floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...fp.rooms[activeRoom], placedItems: updatedPlaced } } };
         set({ floorPlans });
+      },
+
+      /**
+       * Scan active room for warped items (extreme scale or aspect ratio
+       * distortion) and reset each to scale 1,1,1. Pushes a single history
+       * entry so the whole batch can be undone in one step.
+       *
+       * Warp criteria must stay in sync with classifyScale() in roomPrompt.ts:
+       *   - any axis < 0.5 or > 2.5
+       *   - log-ratio(scaleW / scaleD)                > 0.5 (aspect distortion)
+       *   - log-ratio(scaleH / avg(scaleW, scaleD))   > 0.5 (height distortion)
+       */
+      resetWarpedInActiveRoom: () => {
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        if (!fp) return 0;
+        const room = fp.rooms[activeRoom];
+        if (!room) return 0;
+
+        let count = 0;
+        const updatedPlaced = room.placedItems.map(p => {
+          const sw = p.scaleW ?? 1;
+          const sd = p.scaleD ?? 1;
+          const sh = p.scaleH ?? 1;
+          const mx = Math.max(sw, sd, sh);
+          const mn = Math.min(sw, sd, sh);
+          const aspectDist = Math.abs(Math.log(Math.max(sw, 0.01) / Math.max(sd, 0.01)));
+          const heightDist = Math.abs(Math.log(Math.max(sh, 0.01) / Math.max((sw + sd) / 2, 0.01)));
+          const isWarped = aspectDist > 0.5 || heightDist > 0.5 || mn < 0.5 || mx > 2.5;
+          if (!isWarped) return p;
+          count += 1;
+          return { ...p, scaleW: 1, scaleD: 1, scaleH: 1 };
+        });
+        if (count === 0) return 0;
+
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = {
+          ...fp,
+          rooms: {
+            ...fp.rooms,
+            [activeRoom]: { ...room, placedItems: updatedPlaced },
+          },
+        };
+        set(st => ({
+          floorPlans,
+          furnitureHistory: [
+            ...st.furnitureHistory.slice(-29),
+            { room: activeRoom, placedItems: [...room.placedItems] },
+          ],
+        }));
+        return count;
       },
 
       setElevation: (instanceId, elevationY) => {

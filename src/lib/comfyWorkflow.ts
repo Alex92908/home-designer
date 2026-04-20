@@ -309,6 +309,10 @@ export interface IPAdapterChainOptions extends MultiControlNetWorkflowOptions {
   ipaWeight?: number;         // 0.5–0.8 good range
   ipaWeightType?: string;     // "linear" balanced, "style and composition" stronger style bias
   ipaPreset?: string;         // IPAdapterUnifiedLoader preset
+  /** Fraction of sampling steps IPAdapter stays active. 1.0 = full run (max style
+   *  consistency, can override depth). 0.6–0.7 = style anchor in early steps only,
+   *  then ControlNet reclaims geometry for the rest — "strict geometry" mode. */
+  ipaEndAt?: number;
 }
 
 export function generateIPAdapterChainWorkflow(
@@ -334,6 +338,7 @@ export function generateIPAdapterChainWorkflow(
   if (referenceImageNames.length === 1) {
     const ipaWeight     = opts.ipaWeight     ?? 0.9;
     const ipaWeightType = opts.ipaWeightType ?? "style and composition";
+    const ipaEndAt      = opts.ipaEndAt      ?? 1.0;
 
     base["20"] = {
       class_type: "LoadImage",
@@ -349,7 +354,7 @@ export function generateIPAdapterChainWorkflow(
         weight_type:    ipaWeightType,
         combine_embeds: "concat",
         start_at:       0.0,
-        end_at:         1.0,
+        end_at:         ipaEndAt,
         embeds_scaling: "V only",
       },
     };
@@ -362,6 +367,7 @@ export function generateIPAdapterChainWorkflow(
     const refs          = referenceImageNames.slice(0, 5);   // CombineEmbeds caps at 5
     const ipaWeight     = opts.ipaWeight     ?? 0.6;
     const ipaWeightType = opts.ipaWeightType ?? "style transfer";
+    const ipaEndAt      = opts.ipaEndAt      ?? 1.0;
 
     // 30+i: LoadImage   |   40+i: IPAdapterEncoder
     refs.forEach((name, i) => {
@@ -399,7 +405,7 @@ export function generateIPAdapterChainWorkflow(
         weight:         ipaWeight,
         weight_type:    ipaWeightType,
         start_at:       0.0,
-        end_at:         1.0,
+        end_at:         ipaEndAt,
         embeds_scaling: "V only",
       },
     };
@@ -453,8 +459,14 @@ export function generateMultiControlNetWorkflow(
     height               = 1024,
     steps                = 35,
     cfg                  = 6.5,
-    depthStrength        = 0.75,
-    cannyStrength        = 0.30,
+    // ── Tuned 2026-04 for flat wall items (artwork, track lights, picture frames) ──
+    // Depth slightly reduced (0.75 → 0.70) to let Canny override for thin features
+    // that DepthAnythingV2 flattens against the wall plane.
+    depthStrength        = 0.70,
+    // Canny boosted (0.30 → 0.50) + lower thresholds (100/200 → 60/160) + longer
+    // end_percent (0.75 → 0.85) so edge hints persist into mid-generation rather
+    // than fading once denoising starts filling in.
+    cannyStrength        = 0.50,
     normalStrength       = 0.25,
   } = opts;
 
@@ -471,8 +483,10 @@ export function generateMultiControlNetWorkflow(
       inputs: { image: ["2", 0], ckpt_name: depthModel, resolution: 1024 },
     },
     "4": {
+      // Lower thresholds → detect faint/thin edges: track light rails, picture
+      // frames, shelf outlines — the items DepthAnythingV2 collapses into walls.
       class_type: "CannyEdgePreprocessor",
-      inputs: { image: ["2", 0], low_threshold: 100, high_threshold: 200, resolution: 1024 },
+      inputs: { image: ["2", 0], low_threshold: 60, high_threshold: 160, resolution: 1024 },
     },
     "5": {
       class_type: "BAE-NormalMapPreprocessor",
@@ -513,7 +527,7 @@ export function generateMultiControlNetWorkflow(
         image:         ["4",  0],   // canny
         strength:      cannyStrength,
         start_percent: 0,
-        end_percent:   0.75,
+        end_percent:   0.85,   // persist edge guidance longer — preserves thin items
       },
     },
     "14": {

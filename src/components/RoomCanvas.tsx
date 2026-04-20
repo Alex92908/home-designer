@@ -53,6 +53,7 @@ function CameraController({ W, D, H }: { W: number; D: number; H: number }) {
 function CameraAndCaptureSetup() {
   const { camera, gl, scene, controls } = useThree();
   const setCameraAndCapture = useDesignerStore(s => s.setCameraAndCapture);
+  const setGetCameraPose    = useDesignerStore(s => s.setGetCameraPose);
 
   useEffect(() => {
     setCameraAndCapture((pos, lookAt) => {
@@ -68,8 +69,23 @@ function CameraAndCaptureSetup() {
       return gl.domElement.toDataURL("image/jpeg", 0.85);
     });
 
-    return () => setCameraAndCapture(null);
-  }, [camera, gl, scene, controls, setCameraAndCapture]);
+    // Snapshot of the current camera pose — does NOT move the camera.
+    setGetCameraPose(() => {
+      const pos: [number, number, number] = [
+        camera.position.x, camera.position.y, camera.position.z,
+      ];
+      const t = (controls as (THREE.EventDispatcher & { target?: THREE.Vector3 }) | undefined)?.target;
+      const lookAt: [number, number, number] = t
+        ? [t.x, t.y, t.z]
+        : [0, 0, 0];
+      return { pos, lookAt };
+    });
+
+    return () => {
+      setCameraAndCapture(null);
+      setGetCameraPose(null);
+    };
+  }, [camera, gl, scene, controls, setCameraAndCapture, setGetCameraPose]);
 
   return null;
 }
