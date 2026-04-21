@@ -115,6 +115,14 @@ export default function AiRenderModal({ open, onClose }: Props) {
   // intact at the cost of some style consistency between frames.
   const [chainStrictGeometry, setChainStrictGeometry] = useState(false);
 
+  // Style anchor: user-uploaded reference image that locks look across ALL
+  // frames in the chain. When set, replaces (or augments) the default
+  // "previous-frame" reference behavior.
+  //   "replace" — every frame uses only the anchor as reference.
+  //   "augment" — anchor + previous frame(s), so style and geometry both carry.
+  const [anchorImage,    setAnchorImage]    = useState<string | null>(null);
+  const [anchorStrategy, setAnchorStrategy] = useState<"replace" | "augment">("replace");
+
   const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const promptRef = useRef<string | null>(null);
@@ -145,6 +153,8 @@ export default function AiRenderModal({ open, onClose }: Props) {
       setChainResults([]);
       setChainIndex(0);
       setChainStrictGeometry(false);
+      setAnchorImage(null);
+      setAnchorStrategy("replace");
       setWarpResetToast(null);
       promptRef.current = null;
       return;
@@ -268,6 +278,36 @@ export default function AiRenderModal({ open, onClose }: Props) {
     });
   }
 
+  // ── Read a File → data URL (for the style-anchor uploader) ─
+  function fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload  = () => resolve(fr.result as string);
+      fr.onerror = reject;
+      fr.readAsDataURL(file);
+    });
+  }
+
+  async function handleAnchorUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Soft size cap: 8 MB — keeps POST body manageable and prevents the
+    // /upload/image endpoint from choking.
+    if (file.size > 8 * 1024 * 1024) {
+      setError("风格参考图过大（> 8MB），请压缩后重试");
+      e.target.value = "";
+      return;
+    }
+    try {
+      const url = await fileToDataUrl(file);
+      setAnchorImage(url);
+      setError(null);
+    } catch {
+      setError("读取参考图失败");
+    }
+    e.target.value = "";
+  }
+
   // ── Fetch image URL → data URL (needed to pass as reference) ─
   async function urlToDataUrl(url: string): Promise<string> {
     const res  = await fetch(url);
@@ -358,12 +398,27 @@ export default function AiRenderModal({ open, onClose }: Props) {
         if (!shotUrl) throw new Error(`angle_capture_failed_${angleId}`);
 
         // Reference strategy:
-        //  - First frame: no refs (establishes the look)
-        //  - Aerial frame: ALL previous frames blended → style fingerprint only
-        //                   (geometry can't align between aerial vs eye-level)
-        //  - Other frames: just the previous frame (single ref, strong geom+style match)
+        //  - User-provided anchor (if any): locks style across ALL frames.
+        //      replace: anchor only — every frame looks like the anchor.
+        //      augment: anchor + previous frame(s) — anchor sets style, chain
+        //               carries geometry/color from frame to frame.
+        //  - No anchor (default chain behavior):
+        //      First frame: no refs (establishes the look)
+        //      Aerial frame: ALL previous frames blended → style fingerprint
+        //      Other frames: just the previous frame (single ref)
+        // IPAdapterCombineEmbeds caps at 5 inputs, so we trim accordingly.
         let refs: string[] = [];
-        if (i > 0) {
+        if (anchorImage) {
+          if (anchorStrategy === "replace" || i === 0) {
+            refs = [anchorImage];
+          } else {
+            // augment: anchor first, then previous frame(s) up to cap-1
+            const prev = angleId === "aerial"
+              ? resultDataUrls.slice(0, 4)
+              : resultDataUrls.length > 0 ? [resultDataUrls[resultDataUrls.length - 1]] : [];
+            refs = [anchorImage, ...prev].slice(0, 5);
+          }
+        } else if (i > 0) {
           refs = angleId === "aerial"
             ? resultDataUrls.slice(0, 5)                        // multi-ref blend
             : [resultDataUrls[resultDataUrls.length - 1]];       // single-ref
@@ -771,6 +826,93 @@ export default function AiRenderModal({ open, onClose }: Props) {
                   </div>
                 </div>
               </label>
+
+              {/* ── Style anchor image uploader ── */}
+              <div className="mt-2 px-3 py-2.5 rounded-xl border"
+                style={{
+                  borderColor: anchorImage ? "#6366f1" : "#e5e7eb",
+                  background:  anchorImage ? "#eef2ff" : "#fafafa",
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] font-semibold"
+                      style={{ color: anchorImage ? "#4f46e5" : "#374151" }}>
+                      🎨 风格参考图
+                      <span className="ml-1.5 text-[9px] font-normal px-1.5 py-0.5 rounded"
+                        style={{ background: "rgba(99,102,241,0.12)", color: "#4f46e5" }}>
+                        可选
+                      </span>
+                    </div>
+                    <div className="text-[10px] mt-0.5 leading-relaxed"
+                      style={{ color: anchorImage ? "#6366f1" : "#9ca3af" }}>
+                      上传一张你满意的室内图（任意来源）。IPAdapter 会把它的色调、材质、软装气质迁移到所有生成帧上——比默认"参考上一张"的一致性更强。
+                    </div>
+                  </div>
+                  {anchorImage && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={anchorImage} alt="锚图"
+                      className="w-14 h-14 rounded-lg object-cover border border-indigo-200 shrink-0" />
+                  )}
+                </div>
+
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="flex-1 text-center py-1.5 px-3 rounded-lg text-[11px] font-medium cursor-pointer transition-colors"
+                    style={{
+                      background: anchorImage ? "#e0e7ff" : "#6366f1",
+                      color:      anchorImage ? "#4f46e5" : "#ffffff",
+                    }}
+                  >
+                    {anchorImage ? "更换参考图" : "📁 选择图片"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAnchorUpload}
+                    />
+                  </label>
+                  {anchorImage && (
+                    <button
+                      onClick={() => setAnchorImage(null)}
+                      className="py-1.5 px-3 rounded-lg text-[11px] text-gray-500 hover:text-red-500 transition-colors border border-gray-200"
+                    >
+                      移除
+                    </button>
+                  )}
+                </div>
+
+                {/* Strategy selector — only meaningful when anchor is set */}
+                {anchorImage && (
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    {([
+                      { id: "replace", label: "仅锚图", desc: "每帧都参考锚图 · 一致性最强" },
+                      { id: "augment", label: "锚图 + 链式", desc: "锚图 + 上一张 · 兼顾风格与过渡" },
+                    ] as { id: "replace" | "augment"; label: string; desc: string }[]).map(opt => {
+                      const active = anchorStrategy === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          onClick={() => setAnchorStrategy(opt.id)}
+                          className="py-1.5 px-2 rounded-lg border text-left transition-colors"
+                          style={{
+                            borderColor: active ? "#6366f1" : "#e5e7eb",
+                            background:  active ? "#ffffff" : "transparent",
+                          }}
+                        >
+                          <div className="text-[10.5px] font-semibold"
+                            style={{ color: active ? "#4f46e5" : "#6b7280" }}>
+                            {active ? "●" : "○"} {opt.label}
+                          </div>
+                          <div className="text-[9.5px] mt-0.5"
+                            style={{ color: active ? "#6366f1" : "#9ca3af" }}>
+                            {opt.desc}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

@@ -116,26 +116,29 @@ function parseFurnitureId(id: string): string {
 }
 
 // ─── Material ID → English description ──────────────────────
+// Surface descriptors include "anchor words" (smooth flat finish, clean surface,
+// no texture) that bias SDXL away from its tendency to add concrete texture /
+// wood grain / wall art to unspecified surfaces.
 const MATERIAL_EN: Record<string, { wall?: string; floor?: string; light?: string }> = {
   // Wall materials
-  "wall-white":       { wall: "matte white painted walls" },
-  "wall-gray":        { wall: "medium grey matte painted walls" },
-  "wall-beige":       { wall: "warm beige painted walls" },
-  "wall-green":       { wall: "sage green painted walls" },
-  "wall-tile-metro":  { wall: "white subway tile walls" },
-  "wall-tile-marble": { wall: "marble tile walls" },
-  "wall-wood":        { wall: "natural wood panel walls" },
-  "wall-concrete":    { wall: "raw concrete walls" },
-  "wall-wallpaper-floral": { wall: "floral wallpaper walls" },
+  "wall-white":       { wall: "pure matte white painted walls, smooth flat finish, clean unmarked surface" },
+  "wall-gray":        { wall: "medium grey matte painted walls, smooth flat finish" },
+  "wall-beige":       { wall: "warm beige painted walls, smooth flat finish" },
+  "wall-green":       { wall: "sage green painted walls, smooth flat finish" },
+  "wall-tile-metro":  { wall: "white subway tile walls, clean grout lines" },
+  "wall-tile-marble": { wall: "polished marble tile walls, subtle veining" },
+  "wall-wood":        { wall: "natural wood panel walls, warm wood grain" },
+  "wall-concrete":    { wall: "raw polished concrete walls, industrial texture" },
+  "wall-wallpaper-floral": { wall: "floral pattern wallpaper" },
   "wall-wallpaper-geo":    { wall: "geometric pattern wallpaper" },
   // Floor materials
-  "floor-oak":          { floor: "warm oak wood flooring" },
-  "floor-walnut":       { floor: "dark walnut hardwood flooring" },
-  "floor-light-wood":   { floor: "light wood flooring" },
-  "floor-concrete":     { floor: "concrete grey floor tiles" },
-  "floor-tile-white":   { floor: "large format white porcelain tiles" },
+  "floor-oak":          { floor: "warm oak wood flooring, visible wood grain" },
+  "floor-walnut":       { floor: "dark walnut hardwood flooring, rich grain" },
+  "floor-light-wood":   { floor: "light wood flooring, pale natural grain" },
+  "floor-concrete":     { floor: "polished concrete grey floor tiles" },
+  "floor-tile-white":   { floor: "large format white porcelain floor tiles, minimal grout" },
   "floor-black-tile":   { floor: "matte black porcelain floor tiles" },
-  "floor-marble":       { floor: "white marble floor tiles" },
+  "floor-marble":       { floor: "white marble floor tiles with veining" },
   "floor-herringbone":  { floor: "herringbone wood parquet flooring" },
   "floor-terrazzo":     { floor: "terrazzo floor tiles" },
   // Lighting — explicit mounting + visual cues so SD renders the fixture even
@@ -214,14 +217,71 @@ const STYLE_MOOD: Record<string, string> = {
   "中式":  "classic Chinese elegance, warm amber light",
 };
 
-// Per-style extra negative terms to exclude conflicting aesthetics
+// Per-style extra negative terms to exclude conflicting aesthetics.
+// Each style explicitly blocks the "drift patterns" SDXL commonly leaks in:
+// concrete walls on bright styles, LED strips on traditional styles, etc.
 const STYLE_NEGATIVES: Record<string, string> = {
-  "现代":  "ornate, baroque, rustic, heavy wood",
-  "北欧":  "ornate, baroque, industrial, dark colors, heavy drapes",
-  "轻奢":  "ikea, plastic, budget furniture, clutter, cartoon",
-  "日式":  "western sofa, heavy curtains, bright colors, ornate decoration",
+  "现代":  "ornate, baroque, rustic, heavy wood, LED strip under furniture, neon lighting",
+  "北欧":  "ornate, baroque, industrial loft, concrete walls, dark moody colors, heavy drapes, LED strip under furniture, neon, leather chesterfield",
+  "轻奢":  "ikea, plastic, budget furniture, clutter, cartoon, industrial loft, concrete walls, LED strip",
+  "日式":  "western sofa, heavy curtains, bright saturated colors, ornate decoration, industrial loft, concrete walls, LED strip, neon, glossy chrome",
   "工业风": "scandinavian nordic, plants, monstera, wooden legs, rattan, wicker, bohemian, bright cheerful pastel",
-  "中式":  "western contemporary, industrial, scandinavian, minimalist",
+  "中式":  "western contemporary, industrial loft, scandinavian, minimalist, concrete walls, LED strip, neon",
+};
+
+// ─── Material-anti-drift: block surfaces the user did NOT pick ──
+// SDXL loves to replace white walls with concrete, add LED strips under beds,
+// or drop wood paneling in randomly. Build a targeted negative list based on
+// what the user actually chose, so only the chosen material survives.
+function buildMaterialAntiDrift(
+  materials: RoomPromptInput["materials"],
+): string[] {
+  const neg: string[] = [];
+  const wallId  = (materials.wall  as { id?: string } | undefined)?.id;
+  const floorId = (materials.floor as { id?: string } | undefined)?.id;
+  const lightId = (materials.light as { id?: string } | undefined)?.id;
+
+  // Wall drift blockers
+  if (wallId) {
+    if (wallId !== "wall-concrete")   neg.push("raw concrete walls, industrial concrete texture");
+    if (wallId !== "wall-wood")       neg.push("wood paneled walls, wood plank walls");
+    if (!wallId.startsWith("wall-tile")) neg.push("tiled walls in non-wet area");
+    if (!wallId.startsWith("wall-wallpaper")) neg.push("patterned wallpaper");
+  }
+
+  // Floor drift blockers (only for strong mismatches — wood vs tile)
+  if (floorId) {
+    if (floorId.startsWith("floor-concrete") === false && floorId !== "floor-black-tile") {
+      // Bright floors shouldn't get raw concrete splash
+      if (floorId.startsWith("floor-oak") || floorId.startsWith("floor-light") || floorId.startsWith("floor-marble") || floorId.startsWith("floor-tile-white")) {
+        neg.push("raw concrete floor");
+      }
+    }
+  }
+
+  // Lighting drift blockers — LED strips are the #1 offender
+  if (lightId) {
+    if (lightId !== "light-strip")      neg.push("LED strip cove lighting, neon strip, under-furniture glow");
+    if (lightId !== "light-industrial") neg.push("exposed Edison bulb fixtures");
+    if (lightId !== "light-chandelier") neg.push("crystal chandelier");
+  }
+
+  return neg;
+}
+
+// ─── Room-type default anchors (applied when not overridden elsewhere) ──
+// Kept short (~8 tokens) and appended at LOW priority in positive prompt
+// so it only influences when there's token budget left.
+const ROOM_TYPE_DEFAULTS: Record<string, { positive?: string; negative?: string }> = {
+  master:   { positive: "clean simple bedding, plain white pillowcases, minimal decor, tidy nightstand", negative: "cluttered decorative pillows, mismatched bedding, garish bedspread" },
+  bedroom:  { positive: "clean simple bedding, plain pillowcases, tidy nightstand", negative: "cluttered decorative pillows, mismatched bedding" },
+  bedroom2: { positive: "clean simple bedding, plain pillowcases, tidy nightstand", negative: "cluttered decorative pillows, mismatched bedding" },
+  bedroom3: { positive: "clean simple bedding, plain pillowcases, tidy nightstand", negative: "cluttered decorative pillows, mismatched bedding" },
+  living:   { positive: "tidy neat layout, uncluttered surfaces", negative: "cluttered coffee table, excessive throw pillows" },
+  dining:   { positive: "neatly set table, uncluttered" },
+  kitchen:  { positive: "clean uncluttered countertop", negative: "dirty dishes, food scraps, messy counter" },
+  bathroom: { positive: "clean tidy surfaces, fresh towels neatly folded", negative: "clutter, toiletry bottles scattered, water stains" },
+  study:    { positive: "organized desk, minimal clutter", negative: "messy papers, tangled cables" },
 };
 
 function stylesToEnglish(tags: string[]): string {
@@ -560,6 +620,10 @@ export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
   const styleMood  = STYLE_MOOD[dominantStyle] ?? "clean modern atmosphere";
   const styleNeg   = STYLE_NEGATIVES[dominantStyle] ?? "";
 
+  // ── Room-type anchors + material anti-drift ──
+  const roomDefaults  = ROOM_TYPE_DEFAULTS[roomType] ?? {};
+  const antiDriftNegs = buildMaterialAntiDrift(materials);
+
   // ── Assemble positive prompt ──
   // SDXL with ComfyUI CLIPTextEncode uses BREAK-chunked encoding, effectively
   // supporting ~225 tokens (3 × 75). We target 150 tokens as the sweet spot —
@@ -582,9 +646,12 @@ export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
     lightingNote,
     styleMood,
   ];
+  // Room-type positive default slots in AFTER furniture (low priority — will be
+  // dropped first if token budget is tight). It's a gentle nudge, not a demand.
   const coreTail = [
+    roomDefaults.positive ?? "",
     "wide-angle 24mm, Architectural Digest quality, no people",
-  ];
+  ].filter(Boolean);
 
   // Budget split: head + tail always kept (they set the scene), furniture fills
   // the remainder up to the overall 150-token chunked target.
@@ -609,6 +676,11 @@ export function generateRoomPrompt(input: RoomPromptInput): GeneratedPrompt {
     "duplicate items, cloned furniture, overlapping objects",
     hasTvUnit && !hasFireplace ? "fireplace, fire, flame, burning, hearth" : "",
     styleNeg,
+    // Dynamic blockers for surfaces/lights the user didn't pick — biggest
+    // single source of style drift (concrete walls, LED strips appearing
+    // uninvited, etc.)
+    ...antiDriftNegs,
+    roomDefaults.negative ?? "",
   ].filter(Boolean).join(", ");
 
   return {
