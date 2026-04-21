@@ -38,7 +38,8 @@ export const CLEARANCE_RULES: Partial<Record<FurnitureCategory, ClearanceRule>> 
   // 客厅
   sofa:          { frontAisle: 40, halo: 10, reason: "沙发前留 40cm 给茶几，侧面 10cm 不憋屈", severity: "required" },
   coffee_table:  { halo: 30, reason: "茶几四周 30cm 方便绕行", severity: "recommended" },
-  tv_unit:       { frontAisle: 250, halo: 5, reason: "电视柜距沙发建议 2.5m 以上护眼", severity: "recommended" },
+  tv_unit:       { halo: 5, reason: "电视柜前留 5cm 布线空间", severity: "recommended" },
+  // 电视柜与沙发的观看距离是关系型规则（≥2.5m），不在此处作绝对间距处理。
   bookshelf:     { frontAisle: 60, halo: 5, reason: "书柜前留 60cm 取书空间", severity: "required" },
   sideboard:     { frontAisle: 60, halo: 5, reason: "边柜前留 60cm 开抽屉", severity: "recommended" },
 
@@ -144,9 +145,61 @@ export function clearanceBBox(placed: PlacedItem, f: FurnitureItem, rule: Cleara
   };
 }
 
+// ─── Door-swing geometry ─────────────────────────────────────
+//
+// Every door needs a quadrant of clear floor to swing open. We model it
+// as a rectangle of door-width × door-width projected into the room —
+// stricter than the true quadrant arc, but zero false negatives and
+// much simpler to render/detect.
+
+export type DoorWall = "bottom" | "top" | "left" | "right";
+
+export interface DoorSwingZone {
+  /** AABB of the swing clearance in room coordinates. */
+  bbox: AABB;
+  /** Which wall the door sits on (for label placement). */
+  wall: DoorWall;
+}
+
+/** Returns the door-swing clearance zone, or null if the door length
+ *  is zero (effectively no door). */
+export function doorSwingZone(
+  wall: DoorWall,
+  doorPosCm: number,
+  doorLenCm: number,
+  roomW: number,
+  roomD: number,
+): DoorSwingZone | null {
+  if (doorLenCm <= 0) return null;
+  const L = doorLenCm;
+  let minX = 0, maxX = 0, minZ = 0, maxZ = 0;
+  if (wall === "bottom") {
+    minX = doorPosCm; maxX = doorPosCm + L;
+    minZ = roomD - L; maxZ = roomD;
+  } else if (wall === "top") {
+    minX = doorPosCm; maxX = doorPosCm + L;
+    minZ = 0;          maxZ = L;
+  } else if (wall === "left") {
+    minX = 0;          maxX = L;
+    minZ = doorPosCm; maxZ = doorPosCm + L;
+  } else {
+    minX = roomW - L; maxX = roomW;
+    minZ = doorPosCm; maxZ = doorPosCm + L;
+  }
+  return {
+    wall,
+    bbox: {
+      cx: (minX + maxX) / 2,
+      cz: (minZ + maxZ) / 2,
+      w:  maxX - minX,
+      d:  maxZ - minZ,
+    },
+  };
+}
+
 // ─── Violation detection ─────────────────────────────────────
 
-export type ViolationKind = "wall" | "overlap";
+export type ViolationKind = "wall" | "overlap" | "door";
 
 export interface Violation {
   instanceId: string;
@@ -172,6 +225,18 @@ export interface EvaluatedItem {
   violations: Violation[];
 }
 
+export interface DoorInfo {
+  hasDoor: boolean;
+  wall: DoorWall;
+  posCm: number;
+  lenCm: number;
+}
+
+export interface RoomEvaluation {
+  items: EvaluatedItem[];
+  doorSwing: DoorSwingZone | null;
+}
+
 /** Compute clearance zones + violations for every placed item in the room.
  *  Returns per-item evaluation suitable for rendering and reporting. */
 export function evaluateRoom(
@@ -179,7 +244,8 @@ export function evaluateRoom(
   getFurniture: (id: string) => FurnitureItem | undefined,
   roomW: number,
   roomD: number,
-): EvaluatedItem[] {
+  door?: DoorInfo,
+): RoomEvaluation {
   const items = placedItems
     .map(p => {
       const f = getFurniture(p.furnitureId);
@@ -192,8 +258,24 @@ export function evaluateRoom(
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
+  const swing = door && door.hasDoor
+    ? doorSwingZone(door.wall, door.posCm, door.lenCm, roomW, roomD)
+    : null;
+
   const evaluated: EvaluatedItem[] = items.map(it => {
     const violations: Violation[] = [];
+
+    // Door-swing: anything whose footprint intrudes the swing area blocks the door.
+    if (swing && overlaps(swing.bbox, it.bbox, 1)) {
+      violations.push({
+        instanceId: it.placed.instanceId,
+        furnitureName: it.f.name,
+        kind: "door",
+        required: 0,
+        reason: "阻挡门开合，门可能撞到家具",
+        severity: "required",
+      });
+    }
     if (it.rule && it.zone && it.rule.reason) {
       const sev = it.rule.severity ?? "recommended";
 
@@ -245,5 +327,5 @@ export function evaluateRoom(
     };
   });
 
-  return evaluated;
+  return { items: evaluated, doorSwing: swing };
 }

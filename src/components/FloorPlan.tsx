@@ -7,7 +7,7 @@ import { getFurnitureById } from "@/lib/furniture";
 import { PlacedItem } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn } from "@/locales/itemNames";
-import { evaluateRoom, type EvaluatedItem } from "@/lib/clearance";
+import { evaluateRoom, type EvaluatedItem, type DoorWall as ClearanceDoorWall } from "@/lib/clearance";
 
 // ─── helpers ──────────────────────────────────────────────
 
@@ -418,10 +418,15 @@ export default function FloorPlan() {
   const svgH = roomD * scale;
 
   // ── Clearance evaluation (ergonomic aisle / furniture-fit check) ──
-  const evaluated: EvaluatedItem[] = useMemo(
-    () => evaluateRoom(roomState.placedItems, getFurnitureById, roomW, roomD),
-    [roomState.placedItems, roomW, roomD]
+  const evaluation = useMemo(
+    () => evaluateRoom(
+      roomState.placedItems, getFurnitureById, roomW, roomD,
+      hasDoor ? { hasDoor, wall: doorWall as ClearanceDoorWall, posCm: doorPosCm, lenCm: doorLenCm } : undefined,
+    ),
+    [roomState.placedItems, roomW, roomD, hasDoor, doorWall, doorPosCm, doorLenCm]
   );
+  const evaluated: EvaluatedItem[] = evaluation.items;
+  const doorSwing = evaluation.doorSwing;
   const violatingIds = useMemo(() => {
     const m = new Map<string, "required" | "recommended">();
     for (const e of evaluated) {
@@ -988,6 +993,39 @@ export default function FloorPlan() {
             <text x={0} y={-5} textAnchor="middle" dominantBaseline="middle" fontSize={7} fill="#4488AA">N</text>
             <line x1={0} y1={-9} x2={0} y2={-4} stroke="#4488AA" strokeWidth={1.5} />
           </g>
+
+          {/* Door-swing zone — always shown when door exists */}
+          {doorSwing && (() => {
+            const { bbox, wall } = doorSwing;
+            const x = (bbox.cx - bbox.w / 2) * scale;
+            const y = (bbox.cz - bbox.d / 2) * scale;
+            const w = bbox.w * scale;
+            const h = bbox.d * scale;
+            const blocked = evaluated.some(e => e.violations.some(v => v.kind === "door"));
+            const color = blocked ? "#EF4444" : "#10B981";
+            // Quadrant arc hinted via SVG arc in the correct corner.
+            // Hinge corner is the one closest to a room corner along the wall.
+            let hingeX = x, hingeY = y;
+            let sweepX = x + w, sweepY = y + h;
+            if (wall === "bottom")      { hingeX = x;       hingeY = y + h; sweepX = x + w; sweepY = y; }
+            else if (wall === "top")    { hingeX = x;       hingeY = y;     sweepX = x + w; sweepY = y + h; }
+            else if (wall === "left")   { hingeX = x;       hingeY = y;     sweepX = x + w; sweepY = y + h; }
+            else                        { hingeX = x + w;   hingeY = y;     sweepX = x;     sweepY = y + h; }
+            const r = Math.min(w, h);
+            return (
+              <g style={{ pointerEvents: "none" }}>
+                <rect x={x} y={y} width={w} height={h}
+                  fill={color} fillOpacity={0.10}
+                  stroke={color} strokeOpacity={0.55} strokeWidth={1}
+                  strokeDasharray="4 3" rx={2} />
+                {/* 90° arc from hinge — visual hint of swing direction */}
+                <path
+                  d={`M ${hingeX + (sweepX - hingeX)} ${hingeY} A ${r} ${r} 0 0 ${wall === "bottom" || wall === "right" ? 1 : 0} ${hingeX} ${hingeY + (sweepY - hingeY)}`}
+                  fill="none" stroke={color} strokeOpacity={0.6} strokeWidth={1} strokeDasharray="2 2"
+                />
+              </g>
+            );
+          })()}
 
           {/* Clearance zones — show for (a) selected items and (b) any item with violations */}
           {evaluated.map(({ placed, zone, violations }) => {

@@ -57,6 +57,7 @@ export const zh = {
   clearanceOverlap: "与",
   clearanceOverlapSuffix: "的预留空间冲突",
   clearanceWall: "的预留空间超出房间，少",
+  clearanceDoorBlocked: "家具位于门开合区域，会阻挡开门",
   emptyState: "从左侧选择材料和家具\n方案自动生成",
   aiTitle: "🤖 AI 风格建议",
   exportQuote: "📁 导入 / 导出方案",

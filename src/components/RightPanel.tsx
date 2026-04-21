@@ -52,17 +52,25 @@ export default function RightPanel() {
   const roomDims = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
   const roomW = roomDims?.width ?? def.width;
   const roomD = roomDims?.depth ?? def.depth;
-  const evaluated = useMemo(
-    () => evaluateRoom(placedItems, getFurnitureById, roomW, roomD),
-    [placedItems, roomW, roomD]
+  const hasDoor   = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomHasDoor[activeRoom] ?? true);
+  const doorWall  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorWall[activeRoom] ?? "bottom");
+  const doorPosCm = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorPos[activeRoom] ?? 0);
+  const doorLenCm = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
+  const evaluation = useMemo(
+    () => evaluateRoom(
+      placedItems, getFurnitureById, roomW, roomD,
+      hasDoor ? { hasDoor, wall: doorWall as "bottom" | "top" | "left" | "right", posCm: doorPosCm, lenCm: doorLenCm } : undefined,
+    ),
+    [placedItems, roomW, roomD, hasDoor, doorWall, doorPosCm, doorLenCm]
   );
+  const evaluated = evaluation.items;
   const violations = useMemo(
     () => evaluated.flatMap(e => e.violations),
     [evaluated]
   );
   const hasRuleItems = useMemo(
-    () => evaluated.some(e => e.zone !== null),
-    [evaluated]
+    () => evaluated.some(e => e.zone !== null) || evaluation.doorSwing !== null,
+    [evaluated, evaluation.doorSwing]
   );
 
   const budgetPercent = Math.min(100, (totalCost / budget) * 100);
@@ -208,11 +216,15 @@ export default function RightPanel() {
                     <div className="text-[10px] leading-snug mt-0.5" style={{ color: "var(--ds-text-2)" }}>
                       {v.kind === "overlap"
                         ? `${t.clearanceOverlap}「${oName ?? ""}」${t.clearanceOverlapSuffix}`
-                        : `${t.clearanceWall} ${v.required}cm`}
+                        : v.kind === "door"
+                          ? t.clearanceDoorBlocked
+                          : `${t.clearanceWall} ${v.required}cm`}
                     </div>
-                    <div className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3)" }}>
-                      {v.reason}
-                    </div>
+                    {v.kind !== "door" && (
+                      <div className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3)" }}>
+                        {v.reason}
+                      </div>
+                    )}
                   </div>
                 );
               })}
