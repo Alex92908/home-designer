@@ -427,6 +427,7 @@ export default function FloorPlan() {
   );
   const evaluated: EvaluatedItem[] = evaluation.items;
   const doorSwing = evaluation.doorSwing;
+  const links = evaluation.links;
   const violatingIds = useMemo(() => {
     const m = new Map<string, "required" | "recommended">();
     for (const e of evaluated) {
@@ -1067,6 +1068,33 @@ export default function FloorPlan() {
               onPointerDown={(e) => handleItemPointerDown(e, placed.instanceId)}
             />
           ))}
+
+          {/* Relational links (e.g. TV ↔ sofa viewing distance) */}
+          {links.map((link, i) => {
+            const a = roomState.placedItems.find(p => p.instanceId === link.fromInstanceId);
+            const b = roomState.placedItems.find(p => p.instanceId === link.toInstanceId);
+            if (!a || !b) return null;
+            const x1 = a.x * scale, y1 = a.z * scale;
+            const x2 = b.x * scale, y2 = b.z * scale;
+            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+            const color = link.violates
+              ? (link.severity === "required" ? "#EF4444" : "#F59E0B")
+              : "#60A5FA";
+            const label = `${(link.distanceCm / 100).toFixed(1)}m`;
+            return (
+              <g key={`link-${i}`} style={{ pointerEvents: "none" }}>
+                <line x1={x1} y1={y1} x2={x2} y2={y2}
+                  stroke={color} strokeOpacity={0.7} strokeWidth={1.5}
+                  strokeDasharray="5 4" />
+                <rect x={mx - 18} y={my - 8} width={36} height={16} rx={8}
+                  fill={color} fillOpacity={0.95} />
+                <text x={mx} y={my} textAnchor="middle" dominantBaseline="middle"
+                  fontSize={10} fill="white" fontWeight="bold">
+                  {label}
+                </text>
+              </g>
+            );
+          })}
 
           {/* Empty state */}
           {roomState.placedItems.length === 0 && (

@@ -197,9 +197,56 @@ export function doorSwingZone(
   };
 }
 
+// ─── Relational rules (跨家具关系校验) ───────────────────────
+//
+// Some装修常识 is not about a single piece — it's about how two pieces
+// relate. E.g. "sofa must be 2.5-4m from the TV" (viewing distance),
+// "kitchen sink/stove/fridge form a triangle with each leg 120-270cm"
+// (work triangle), "desk should be within 2m of a window" (daylight).
+//
+// These rules can't be expressed as halos. We model them as pairwise
+// (or triple) constraints evaluated over placed items.
+
+export interface DistanceRangeRule {
+  kind: "distanceRange";
+  /** First category in the pair. */
+  a: FurnitureCategory;
+  /** Second category in the pair. Must differ from `a`. */
+  b: FurnitureCategory;
+  /** Min center-to-center distance (cm). 0 = no lower bound. */
+  minCm: number;
+  /** Max center-to-center distance (cm). Infinity = no upper bound. */
+  maxCm: number;
+  /** If true, emit violation when nearest b is outside [min, max]. If
+   *  false, only emit when BOTH categories are present AND specifically
+   *  the pair violates — used for triangle-type rules. */
+  requiresBoth: boolean;
+  /** Message shown when distance < minCm. */
+  tooCloseReason: string;
+  /** Message shown when distance > maxCm. */
+  tooFarReason: string;
+  severity: ClearanceSeverity;
+}
+
+export type RelationalRule = DistanceRangeRule;
+
+export const RELATIONAL_RULES: RelationalRule[] = [
+  {
+    kind: "distanceRange",
+    a: "tv_unit",
+    b: "sofa",
+    minCm: 250,
+    maxCm: 400,
+    requiresBoth: true,
+    tooCloseReason: "电视离沙发太近（建议 ≥2.5m），长时间观看伤眼",
+    tooFarReason: "电视离沙发太远（建议 ≤4m），屏幕看不清",
+    severity: "recommended",
+  },
+];
+
 // ─── Violation detection ─────────────────────────────────────
 
-export type ViolationKind = "wall" | "overlap" | "door";
+export type ViolationKind = "wall" | "overlap" | "door" | "relational";
 
 export interface Violation {
   instanceId: string;
@@ -232,9 +279,22 @@ export interface DoorInfo {
   lenCm: number;
 }
 
+/** A visual link between two items (e.g. TV ↔ sofa viewing distance).
+ *  Rendered as a dotted line with a distance label. */
+export interface RelationalLink {
+  fromInstanceId: string;
+  toInstanceId: string;
+  distanceCm: number;
+  severity: ClearanceSeverity;
+  /** true if this link currently violates its rule (shown red/amber),
+   *  false if it's informational (shown green/muted). */
+  violates: boolean;
+}
+
 export interface RoomEvaluation {
   items: EvaluatedItem[];
   doorSwing: DoorSwingZone | null;
+  links: RelationalLink[];
 }
 
 /** Compute clearance zones + violations for every placed item in the room.
@@ -327,5 +387,54 @@ export function evaluateRoom(
     };
   });
 
-  return { items: evaluated, doorSwing: swing };
+  // ── Relational rules: pairwise distance checks between categories ──
+  const links: RelationalLink[] = [];
+  for (const rule of RELATIONAL_RULES) {
+    if (rule.kind !== "distanceRange") continue;
+    const as = items.filter(i => i.f.category === rule.a);
+    const bs = items.filter(i => i.f.category === rule.b);
+    if (as.length === 0 || bs.length === 0) {
+      if (rule.requiresBoth) continue;
+      continue;
+    }
+    // For each `a` item, find nearest `b` and evaluate.
+    for (const ai of as) {
+      let nearest: typeof bs[number] | null = null;
+      let nearestD = Infinity;
+      for (const bi of bs) {
+        const dx = ai.bbox.cx - bi.bbox.cx;
+        const dz = ai.bbox.cz - bi.bbox.cz;
+        const d = Math.sqrt(dx * dx + dz * dz);
+        if (d < nearestD) { nearestD = d; nearest = bi; }
+      }
+      if (!nearest) continue;
+      const tooClose = nearestD < rule.minCm;
+      const tooFar   = nearestD > rule.maxCm;
+      const violates = tooClose || tooFar;
+      links.push({
+        fromInstanceId: ai.placed.instanceId,
+        toInstanceId: nearest.placed.instanceId,
+        distanceCm: Math.round(nearestD),
+        severity: rule.severity,
+        violates,
+      });
+      if (violates) {
+        const targetEval = evaluated.find(e => e.placed.instanceId === ai.placed.instanceId);
+        if (targetEval) {
+          targetEval.violations.push({
+            instanceId: ai.placed.instanceId,
+            furnitureName: ai.f.name,
+            kind: "relational",
+            otherId: nearest.placed.instanceId,
+            otherName: nearest.f.name,
+            required: tooClose ? rule.minCm : rule.maxCm,
+            reason: tooClose ? rule.tooCloseReason : rule.tooFarReason,
+            severity: rule.severity,
+          });
+        }
+      }
+    }
+  }
+
+  return { items: evaluated, doorSwing: swing, links };
 }
