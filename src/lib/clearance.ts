@@ -231,6 +231,7 @@ export interface DistanceRangeRule {
 export type RelationalRule = DistanceRangeRule;
 
 export const RELATIONAL_RULES: RelationalRule[] = [
+  // ── 客厅：电视-沙发观看距离 ──
   {
     kind: "distanceRange",
     a: "tv_unit",
@@ -240,6 +241,43 @@ export const RELATIONAL_RULES: RelationalRule[] = [
     requiresBoth: true,
     tooCloseReason: "电视离沙发太近（建议 ≥2.5m），长时间观看伤眼",
     tooFarReason: "电视离沙发太远（建议 ≤4m），屏幕看不清",
+    severity: "recommended",
+  },
+
+  // ── 厨房工作三角：水槽-灶台-冰箱，每段 120-270cm ──
+  // 经典 fitted kitchen 规则。range_hood 代指灶台（本项目里油烟机与灶
+  // 台成对出现、位置一致，用 range_hood 作为灶台位置锚点）。
+  {
+    kind: "distanceRange",
+    a: "kitchen_sink",
+    b: "range_hood",
+    minCm: 120,
+    maxCm: 270,
+    requiresBoth: true,
+    tooCloseReason: "水槽与灶台过近（建议 ≥1.2m），操作时互相干扰且烫伤风险高",
+    tooFarReason: "水槽与灶台过远（建议 ≤2.7m），来回端水走动太多",
+    severity: "recommended",
+  },
+  {
+    kind: "distanceRange",
+    a: "kitchen_sink",
+    b: "refrigerator",
+    minCm: 120,
+    maxCm: 270,
+    requiresBoth: true,
+    tooCloseReason: "水槽与冰箱过近（建议 ≥1.2m），开冰箱门易被水溅到",
+    tooFarReason: "水槽与冰箱过远（建议 ≤2.7m），洗切食材动线过长",
+    severity: "recommended",
+  },
+  {
+    kind: "distanceRange",
+    a: "refrigerator",
+    b: "range_hood",
+    minCm: 120,
+    maxCm: 270,
+    requiresBoth: true,
+    tooCloseReason: "冰箱与灶台过近（建议 ≥1.2m），高温影响冰箱制冷且有安全隐患",
+    tooFarReason: "冰箱与灶台过远（建议 ≤2.7m），取食材-下锅动线过长",
     severity: "recommended",
   },
 ];
