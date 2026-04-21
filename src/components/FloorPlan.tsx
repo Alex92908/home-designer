@@ -422,8 +422,9 @@ export default function FloorPlan() {
     () => evaluateRoom(
       roomState.placedItems, getFurnitureById, roomW, roomD,
       hasDoor ? { hasDoor, wall: doorWall as ClearanceDoorWall, posCm: doorPosCm, lenCm: doorLenCm } : undefined,
+      roomWindows,
     ),
-    [roomState.placedItems, roomW, roomD, hasDoor, doorWall, doorPosCm, doorLenCm]
+    [roomState.placedItems, roomW, roomD, hasDoor, doorWall, doorPosCm, doorLenCm, roomWindows]
   );
   const evaluated: EvaluatedItem[] = evaluation.items;
   const doorSwing = evaluation.doorSwing;

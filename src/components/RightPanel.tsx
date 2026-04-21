@@ -56,12 +56,14 @@ export default function RightPanel() {
   const doorWall  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorWall[activeRoom] ?? "bottom");
   const doorPosCm = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorPos[activeRoom] ?? 0);
   const doorLenCm = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
+  const roomWindows = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows[activeRoom] ?? []);
   const evaluation = useMemo(
     () => evaluateRoom(
       placedItems, getFurnitureById, roomW, roomD,
       hasDoor ? { hasDoor, wall: doorWall as "bottom" | "top" | "left" | "right", posCm: doorPosCm, lenCm: doorLenCm } : undefined,
+      roomWindows,
     ),
-    [placedItems, roomW, roomD, hasDoor, doorWall, doorPosCm, doorLenCm]
+    [placedItems, roomW, roomD, hasDoor, doorWall, doorPosCm, doorLenCm, roomWindows]
   );
   const evaluated = evaluation.items;
   const violations = useMemo(
@@ -218,11 +220,13 @@ export default function RightPanel() {
                         ? `${t.clearanceOverlap}「${oName ?? ""}」${t.clearanceOverlapSuffix}`
                         : v.kind === "door"
                           ? t.clearanceDoorBlocked
-                          : v.kind === "relational"
-                            ? v.reason
-                            : `${t.clearanceWall} ${v.required}cm`}
+                          : v.kind === "window"
+                            ? t.clearanceWindowBlocked
+                            : v.kind === "relational"
+                              ? v.reason
+                              : `${t.clearanceWall} ${v.required}cm`}
                     </div>
-                    {v.kind !== "door" && v.kind !== "relational" && (
+                    {v.kind !== "door" && v.kind !== "relational" && v.kind !== "window" && (
                       <div className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3)" }}>
                         {v.reason}
                       </div>

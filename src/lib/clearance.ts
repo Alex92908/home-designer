@@ -10,7 +10,7 @@
 // ranges). Values are intentionally on the lighter side of "recommended"
 // to avoid false positives in typical 小户型.
 
-import type { FurnitureCategory, FurnitureItem, PlacedItem } from "./types";
+import type { FurnitureCategory, FurnitureItem, PlacedItem, WindowConfig } from "./types";
 
 export type ClearanceSeverity = "required" | "recommended";
 
@@ -284,7 +284,7 @@ export const RELATIONAL_RULES: RelationalRule[] = [
 
 // ─── Violation detection ─────────────────────────────────────
 
-export type ViolationKind = "wall" | "overlap" | "door" | "relational";
+export type ViolationKind = "wall" | "overlap" | "door" | "relational" | "window";
 
 export interface Violation {
   instanceId: string;
@@ -337,12 +337,49 @@ export interface RoomEvaluation {
 
 /** Compute clearance zones + violations for every placed item in the room.
  *  Returns per-item evaluation suitable for rendering and reporting. */
+/** How far a piece can sit from the wall and still count as "blocking" a
+ *  window (cm). Furniture pressed against the wall with top above the
+ *  sill definitely blocks; furniture a bit in front still blocks because
+ *  its mass casts shadow and blocks airflow. */
+const WINDOW_BLOCK_DEPTH_CM = 40;
+
+/** Build a thin AABB along the wall where the window sits — used to test
+ *  whether any furniture occupies the strip in front of the window. */
+function windowStripBBox(
+  win: WindowConfig,
+  roomW: number,
+  roomD: number,
+): AABB {
+  const D = WINDOW_BLOCK_DEPTH_CM;
+  let minX = 0, maxX = 0, minZ = 0, maxZ = 0;
+  if (win.wall === "back") {
+    minX = win.pos; maxX = win.pos + win.len;
+    minZ = 0;       maxZ = D;
+  } else if (win.wall === "front") {
+    minX = win.pos; maxX = win.pos + win.len;
+    minZ = roomD - D; maxZ = roomD;
+  } else if (win.wall === "left") {
+    minX = 0;       maxX = D;
+    minZ = win.pos; maxZ = win.pos + win.len;
+  } else {
+    minX = roomW - D; maxX = roomW;
+    minZ = win.pos;    maxZ = win.pos + win.len;
+  }
+  return {
+    cx: (minX + maxX) / 2,
+    cz: (minZ + maxZ) / 2,
+    w:  maxX - minX,
+    d:  maxZ - minZ,
+  };
+}
+
 export function evaluateRoom(
   placedItems: PlacedItem[],
   getFurniture: (id: string) => FurnitureItem | undefined,
   roomW: number,
   roomD: number,
   door?: DoorInfo,
+  windows: WindowConfig[] = [],
 ): RoomEvaluation {
   const items = placedItems
     .map(p => {
@@ -373,6 +410,28 @@ export function evaluateRoom(
         reason: "阻挡门开合，门可能撞到家具",
         severity: "required",
       });
+    }
+
+    // Window-block: furniture tall enough to rise above the sill AND
+    // sitting inside the window strip → blocks daylight / airflow.
+    const fElev   = it.placed.elevationY ?? 0;
+    const fScaleH = it.placed.scaleH ?? 1;
+    const fTop    = fElev + it.f.height * fScaleH;
+    for (const win of windows) {
+      const sill = win.sill ?? 90;
+      if (fTop <= sill) continue;
+      const strip = windowStripBBox(win, roomW, roomD);
+      if (overlaps(strip, it.bbox, 1)) {
+        violations.push({
+          instanceId: it.placed.instanceId,
+          furnitureName: it.f.name,
+          kind: "window",
+          required: 0,
+          reason: "家具高于窗台且位于窗前，遮挡采光与通风",
+          severity: "required",
+        });
+        break;
+      }
     }
     if (it.rule && it.zone && it.rule.reason) {
       const sev = it.rule.severity ?? "recommended";

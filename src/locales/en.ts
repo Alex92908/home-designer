@@ -60,6 +60,7 @@ export const en: Translations = {
   clearanceOverlapSuffix: "'s required clearance",
   clearanceWall: "'s clearance extends past the wall by",
   clearanceDoorBlocked: "sits in the door swing path — the door will hit it",
+  clearanceWindowBlocked: "taller than the sill and in front of a window — blocks daylight & airflow",
   emptyState: "Select materials & furniture on the left\nYour quote will appear here",
   aiTitle: "🤖 AI Style Tips",
   exportQuote: "📁 Import / Export",
