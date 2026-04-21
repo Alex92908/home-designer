@@ -228,7 +228,17 @@ export interface DistanceRangeRule {
   severity: ClearanceSeverity;
 }
 
-export type RelationalRule = DistanceRangeRule;
+/** "Category X must have a window within maxCm". Used for rules like
+ *  "desk should be within 2m of a window for daylight". */
+export interface NeedsWindowRule {
+  kind: "needsWindow";
+  category: FurnitureCategory;
+  maxCm: number;
+  reason: string;
+  severity: ClearanceSeverity;
+}
+
+export type RelationalRule = DistanceRangeRule | NeedsWindowRule;
 
 export const RELATIONAL_RULES: RelationalRule[] = [
   // ── 客厅：电视-沙发观看距离 ──
@@ -280,6 +290,15 @@ export const RELATIONAL_RULES: RelationalRule[] = [
     tooFarReason: "冰箱与灶台过远（建议 ≤2.7m），取食材-下锅动线过长",
     severity: "recommended",
   },
+
+  // ── 书房：书桌距窗户 ≤2m（采光） ──
+  {
+    kind: "needsWindow",
+    category: "desk",
+    maxCm: 200,
+    reason: "书桌距窗户过远（建议 ≤2m），白天读写需开灯，长期用眼疲劳",
+    severity: "recommended",
+  },
 ];
 
 // ─── Violation detection ─────────────────────────────────────
@@ -317,16 +336,30 @@ export interface DoorInfo {
   lenCm: number;
 }
 
-/** A visual link between two items (e.g. TV ↔ sofa viewing distance).
- *  Rendered as a dotted line with a distance label. */
+/** A visual link between two points (e.g. TV ↔ sofa viewing distance,
+ *  or desk ↔ nearest window). Rendered as a dotted line with a distance
+ *  label. Endpoints are either furniture instances or fixed room points
+ *  (window midpoints). */
 export interface RelationalLink {
   fromInstanceId: string;
-  toInstanceId: string;
+  /** Target furniture instance ID — null if the target is a window. */
+  toInstanceId: string | null;
+  /** If target is a window, its midpoint in room coords; null otherwise. */
+  toPoint?: { x: number; z: number };
   distanceCm: number;
   severity: ClearanceSeverity;
   /** true if this link currently violates its rule (shown red/amber),
    *  false if it's informational (shown green/muted). */
   violates: boolean;
+}
+
+/** Midpoint of a window in room coordinates. */
+function windowMidpoint(win: WindowConfig, roomW: number, roomD: number): { x: number; z: number } {
+  const mid = win.pos + win.len / 2;
+  if (win.wall === "back")       return { x: mid,     z: 0 };
+  if (win.wall === "front")      return { x: mid,     z: roomD };
+  if (win.wall === "left")       return { x: 0,       z: mid };
+  /* right */                    return { x: roomW,   z: mid };
 }
 
 export interface RoomEvaluation {
@@ -487,6 +520,46 @@ export function evaluateRoom(
   // ── Relational rules: pairwise distance checks between categories ──
   const links: RelationalLink[] = [];
   for (const rule of RELATIONAL_RULES) {
+    if (rule.kind === "needsWindow") {
+      if (windows.length === 0) continue;
+      const targets = items.filter(i => i.f.category === rule.category);
+      for (const ti of targets) {
+        let nearest: WindowConfig | null = null;
+        let nearestD = Infinity;
+        let nearestPt = { x: 0, z: 0 };
+        for (const win of windows) {
+          const mid = windowMidpoint(win, roomW, roomD);
+          const dx = ti.bbox.cx - mid.x;
+          const dz = ti.bbox.cz - mid.z;
+          const d = Math.sqrt(dx * dx + dz * dz);
+          if (d < nearestD) { nearestD = d; nearest = win; nearestPt = mid; }
+        }
+        if (!nearest) continue;
+        const violates = nearestD > rule.maxCm;
+        links.push({
+          fromInstanceId: ti.placed.instanceId,
+          toInstanceId: null,
+          toPoint: nearestPt,
+          distanceCm: Math.round(nearestD),
+          severity: rule.severity,
+          violates,
+        });
+        if (violates) {
+          const targetEval = evaluated.find(e => e.placed.instanceId === ti.placed.instanceId);
+          if (targetEval) {
+            targetEval.violations.push({
+              instanceId: ti.placed.instanceId,
+              furnitureName: ti.f.name,
+              kind: "relational",
+              required: rule.maxCm,
+              reason: rule.reason,
+              severity: rule.severity,
+            });
+          }
+        }
+      }
+      continue;
+    }
     if (rule.kind !== "distanceRange") continue;
     const as = items.filter(i => i.f.category === rule.a);
     const bs = items.filter(i => i.f.category === rule.b);

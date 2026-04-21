@@ -1070,13 +1070,21 @@ export default function FloorPlan() {
             />
           ))}
 
-          {/* Relational links (e.g. TV ↔ sofa viewing distance) */}
+          {/* Relational links (e.g. TV ↔ sofa viewing distance, desk ↔ window) */}
           {links.map((link, i) => {
             const a = roomState.placedItems.find(p => p.instanceId === link.fromInstanceId);
-            const b = roomState.placedItems.find(p => p.instanceId === link.toInstanceId);
-            if (!a || !b) return null;
+            if (!a) return null;
+            let x2: number, y2: number;
+            if (link.toInstanceId) {
+              const b = roomState.placedItems.find(p => p.instanceId === link.toInstanceId);
+              if (!b) return null;
+              x2 = b.x * scale; y2 = b.z * scale;
+            } else if (link.toPoint) {
+              x2 = link.toPoint.x * scale; y2 = link.toPoint.z * scale;
+            } else {
+              return null;
+            }
             const x1 = a.x * scale, y1 = a.z * scale;
-            const x2 = b.x * scale, y2 = b.z * scale;
             const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
             const color = link.violates
               ? (link.severity === "required" ? "#EF4444" : "#F59E0B")
