@@ -222,11 +222,13 @@ export default function RightPanel() {
                           ? t.clearanceDoorBlocked
                           : v.kind === "window"
                             ? t.clearanceWindowBlocked
-                            : v.kind === "relational"
+                            : v.kind === "hugWall"
                               ? v.reason
-                              : `${t.clearanceWall} ${v.required}cm`}
+                              : v.kind === "relational"
+                                ? v.reason
+                                : `${t.clearanceWall} ${v.required}cm`}
                     </div>
-                    {v.kind !== "door" && v.kind !== "relational" && v.kind !== "window" && (
+                    {v.kind !== "door" && v.kind !== "relational" && v.kind !== "window" && v.kind !== "hugWall" && (
                       <div className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3)" }}>
                         {v.reason}
                       </div>

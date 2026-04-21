@@ -27,6 +27,14 @@ export interface ClearanceRule {
   backAisle?: number;
   /** Human-readable reason, shown in violation panel. */
   reason: string;
+  /** If set, the item's footprint should be within this many cm of at
+   *  least one wall. Used for pieces that are unsafe or visually awkward
+   *  when standing free in the middle of the room: wardrobes can topple,
+   *  beds need a headboard wall, fridges need rear ventilation clearance
+   *  from the wall but must still back up to one, etc. */
+  hugWall?: number;
+  /** Message when hug-wall is violated. Falls back to `reason`. */
+  hugWallReason?: string;
   /** "required" shows red; "recommended" shows amber. */
   severity?: ClearanceSeverity;
 }
@@ -38,37 +46,36 @@ export const CLEARANCE_RULES: Partial<Record<FurnitureCategory, ClearanceRule>> 
   // 客厅
   sofa:          { frontAisle: 40, halo: 10, reason: "沙发前留 40cm 给茶几，侧面 10cm 不憋屈", severity: "required" },
   coffee_table:  { halo: 30, reason: "茶几四周 30cm 方便绕行", severity: "recommended" },
-  tv_unit:       { halo: 5, reason: "电视柜前留 5cm 布线空间", severity: "recommended" },
-  // 电视柜与沙发的观看距离是关系型规则（≥2.5m），不在此处作绝对间距处理。
-  bookshelf:     { frontAisle: 60, halo: 5, reason: "书柜前留 60cm 取书空间", severity: "required" },
-  sideboard:     { frontAisle: 60, halo: 5, reason: "边柜前留 60cm 开抽屉", severity: "recommended" },
+  tv_unit:       { halo: 5, hugWall: 20, hugWallReason: "电视柜建议贴墙，便于走线+避免跌倒", reason: "电视柜前留 5cm 布线空间", severity: "recommended" },
+  bookshelf:     { frontAisle: 60, halo: 5, hugWall: 15, hugWallReason: "书柜独立摆放有倾倒风险，建议贴墙或打膨胀螺丝固定", reason: "书柜前留 60cm 取书空间", severity: "required" },
+  sideboard:     { frontAisle: 60, halo: 5, hugWall: 20, hugWallReason: "边柜建议贴墙，节省空间且更稳", reason: "边柜前留 60cm 开抽屉", severity: "recommended" },
 
   // 卧室
-  bed:           { halo: 60, reason: "床两侧/床尾留 60cm 过道+铺床", severity: "required" },
+  bed:           { halo: 60, hugWall: 20, hugWallReason: "床头建议靠墙，有靠背更安心（风水与功能兼顾）", reason: "床两侧/床尾留 60cm 过道+铺床", severity: "required" },
   nightstand:    { halo: 5, reason: "床头柜紧贴床，预留 5cm 调整空间", severity: "recommended" },
-  wardrobe:      { frontAisle: 75, halo: 5, reason: "衣柜前留 75cm 开门+站人", severity: "required" },
-  dresser:       { frontAisle: 75, halo: 5, reason: "梳妆台前留 75cm 坐凳", severity: "required" },
+  wardrobe:      { frontAisle: 75, halo: 5, hugWall: 10, hugWallReason: "衣柜独立摆放易倾倒（危险！），必须贴墙或打膨胀螺丝", reason: "衣柜前留 75cm 开门+站人", severity: "required" },
+  dresser:       { frontAisle: 75, halo: 5, hugWall: 20, hugWallReason: "梳妆台建议贴墙，镜面更稳定", reason: "梳妆台前留 75cm 坐凳", severity: "required" },
 
   // 餐厅
   dining_table:  { halo: 75, reason: "餐桌四周 75cm 拉开椅子+走动", severity: "required" },
   dining_chair:  { halo: 0, reason: "", severity: "recommended" }, // 椅子跟随桌子，不单独校验
 
   // 厨房
-  kitchen_cabinet: { frontAisle: 90, halo: 0, reason: "橱柜前留 90cm 操作+开门", severity: "required" },
-  refrigerator:    { frontAisle: 90, halo: 5, reason: "冰箱前留 90cm 开门取物+散热", severity: "required" },
-  range_hood:      { halo: 0, reason: "", severity: "recommended" },
-  kitchen_sink:    { frontAisle: 80, halo: 0, reason: "水槽前留 80cm 洗涮站位", severity: "required" },
+  kitchen_cabinet: { frontAisle: 90, halo: 0, hugWall: 5,  hugWallReason: "橱柜须贴墙安装", reason: "橱柜前留 90cm 操作+开门", severity: "required" },
+  refrigerator:    { frontAisle: 90, halo: 5, hugWall: 20, hugWallReason: "冰箱建议贴墙（散热留 5-10cm），独立摆放浪费空间", reason: "冰箱前留 90cm 开门取物+散热", severity: "required" },
+  range_hood:      { halo: 0, hugWall: 5, hugWallReason: "油烟机须贴墙（与灶台对齐）", reason: "", severity: "recommended" },
+  kitchen_sink:    { frontAisle: 80, halo: 0, hugWall: 5, hugWallReason: "水槽须嵌入橱柜、贴墙安装", reason: "水槽前留 80cm 洗涮站位", severity: "required" },
 
   // 卫生间
-  toilet:           { frontAisle: 50, halo: 20, reason: "马桶前留 50cm，两侧 20cm", severity: "required" },
+  toilet:           { frontAisle: 50, halo: 20, hugWall: 10, hugWallReason: "马桶须贴墙（下水管位置固定）", reason: "马桶前留 50cm，两侧 20cm", severity: "required" },
   bathtub:          { frontAisle: 60, halo: 5, reason: "浴缸前留 60cm 进出+擦身", severity: "required" },
   shower:           { frontAisle: 60, halo: 5, reason: "淋浴房前留 60cm 进出", severity: "required" },
-  bathroom_vanity:  { frontAisle: 75, halo: 5, reason: "洗手台前留 75cm 弯腰+站立", severity: "required" },
+  bathroom_vanity:  { frontAisle: 75, halo: 5, hugWall: 10, hugWallReason: "洗手台须贴墙（上下水管位置固定）", reason: "洗手台前留 75cm 弯腰+站立", severity: "required" },
 
   // 书房
   desk:          { frontAisle: 75, halo: 5, reason: "书桌前留 75cm 椅子+坐位", severity: "required" },
   office_chair:  { halo: 0, reason: "", severity: "recommended" },
-  storage:       { frontAisle: 60, halo: 5, reason: "储物柜前留 60cm 开门", severity: "recommended" },
+  storage:       { frontAisle: 60, halo: 5, hugWall: 20, hugWallReason: "储物柜建议贴墙，节省空间+更稳", reason: "储物柜前留 60cm 开门", severity: "recommended" },
 };
 
 // ─── Geometry helpers ────────────────────────────────────────
@@ -303,7 +310,7 @@ export const RELATIONAL_RULES: RelationalRule[] = [
 
 // ─── Violation detection ─────────────────────────────────────
 
-export type ViolationKind = "wall" | "overlap" | "door" | "relational" | "window";
+export type ViolationKind = "wall" | "overlap" | "door" | "relational" | "window" | "hugWall";
 
 export interface Violation {
   instanceId: string;
@@ -466,6 +473,27 @@ export function evaluateRoom(
         break;
       }
     }
+    // Hug-wall: certain pieces (wardrobe, bed, fridge, toilet…) must sit
+    // close to at least one wall. Compute min distance from item bbox to
+    // any of the 4 walls; violation if min > threshold.
+    if (it.rule?.hugWall != null) {
+      const minX = it.bbox.cx - it.bbox.w / 2;
+      const maxX = it.bbox.cx + it.bbox.w / 2;
+      const minZ = it.bbox.cz - it.bbox.d / 2;
+      const maxZ = it.bbox.cz + it.bbox.d / 2;
+      const distToWall = Math.min(minX, minZ, roomW - maxX, roomD - maxZ);
+      if (distToWall > it.rule.hugWall) {
+        violations.push({
+          instanceId: it.placed.instanceId,
+          furnitureName: it.f.name,
+          kind: "hugWall",
+          required: Math.round(distToWall),
+          reason: it.rule.hugWallReason ?? it.rule.reason,
+          severity: it.rule.severity ?? "recommended",
+        });
+      }
+    }
+
     if (it.rule && it.zone && it.rule.reason) {
       const sev = it.rule.severity ?? "recommended";
 
