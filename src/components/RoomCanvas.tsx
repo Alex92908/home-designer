@@ -2,7 +2,8 @@
 
 import { useRef, useEffect, useMemo, Component, ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Environment } from "@react-three/drei";
+import { OrbitControls, Environment, useGLTF } from "@react-three/drei";
+import { Suspense } from "react";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig } from "@/lib/types";
@@ -1108,6 +1109,53 @@ function FurnitureMesh({ item, w, d, h }: { item: FurnitureItem; w: number; d: n
 
 // ─── Placed item in 3D ─────────────────────────────────────
 
+// ─── glTF-backed furniture (Step 2) ─────────────────────────
+// Renders a real 3D asset from .glb/.gltf. Scaled to match the item's
+// declared footprint (width/depth/height in cm) so clearance rules +
+// spatial reasoning still apply even when geometry comes from an asset.
+// Errors during load fall back to the procedural mesh via <Suspense> +
+// <ErrorBoundary> in the parent.
+
+function GltfFurniture({
+  url, scale, rotation, yOffset, w, d, h,
+}: { url: string; scale?: number; rotation?: number; yOffset?: number; w: number; d: number; h: number }) {
+  const { scene } = useGLTF(url) as unknown as { scene: THREE.Object3D };
+
+  // Clone so multiple instances don't share transforms or materials.
+  const cloned = useMemo(() => {
+    const c = scene.clone(true);
+    c.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
+    // Measure the asset's native bounding box so we can scale to our
+    // declared furniture size (width/depth/height in meters).
+    const box = new THREE.Box3().setFromObject(c);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    // Safety: if any dim is zero (broken model), skip auto-scale.
+    if (size.x > 0 && size.y > 0 && size.z > 0) {
+      const sx = w / size.x;
+      const sy = h / size.y;
+      const sz = d / size.z;
+      const baseScale = Math.min(sx, sy, sz);
+      c.scale.setScalar(baseScale * (scale ?? 1));
+    } else if (scale) {
+      c.scale.setScalar(scale);
+    }
+    return c;
+  }, [scene, w, d, h, scale]);
+
+  return (
+    <group rotation={[0, rotation ?? 0, 0]} position={[0, yOffset ?? 0, 0]}>
+      <primitive object={cloned} />
+    </group>
+  );
+}
+
 function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def: RoomDef; roomW: number; roomD: number }) {
   const item = getFurnitureById(placed.furnitureId);
   if (!item) return null;
@@ -1167,11 +1215,56 @@ function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def
 
   const baseY = (placed.elevationY ?? 0) / 100;
 
+  // If the furniture item has a real 3D asset, render it; else fall
+  // back to procedural box mesh. Suspense handles async glb load; if
+  // loading throws (404, CORS, malformed) the ErrorBoundary higher up
+  // catches it — for safety we also wrap in our own fallback.
+  if (item.model3d?.url) {
+    return (
+      <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]}>
+        <Suspense fallback={<FurnitureMesh item={item} w={fw} d={fd} h={fh} />}>
+          <GltfFurnitureWithFallback
+            item={item}
+            w={fw} d={fd} h={fh}
+          />
+        </Suspense>
+      </group>
+    );
+  }
+
   return (
     <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]}>
       <FurnitureMesh item={item} w={fw} d={fd} h={fh} />
     </group>
   );
+}
+
+/** Inner wrapper: catches GLTF load errors (404/malformed) and falls
+ *  back to procedural geometry instead of crashing the scene. */
+class GltfFurnitureWithFallback extends Component<
+  { item: FurnitureItem; w: number; d: number; h: number },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err: Error) {
+    console.warn(`[GltfFurniture] ${this.props.item.id}: ${err.message}`);
+  }
+  render() {
+    const { item, w, d, h } = this.props;
+    if (this.state.failed || !item.model3d) {
+      return <FurnitureMesh item={item} w={w} d={d} h={h} />;
+    }
+    return (
+      <GltfFurniture
+        url={item.model3d.url}
+        scale={item.model3d.scale}
+        rotation={item.model3d.rotation}
+        yOffset={item.model3d.yOffset}
+        w={w} d={d} h={h}
+      />
+    );
+  }
 }
 
 // ─── Main Scene ────────────────────────────────────────────

@@ -88,6 +88,23 @@ export interface FurnitureItem {
   tags: StyleTag[];
   description: string;
   icon: string;    // emoji for floor plan
+  /** Optional glTF/GLB model path. When set, 3D view renders the real
+   *  asset instead of the procedural box mesh. Path is relative to the
+   *  site root (e.g. "/models/sofa/nordic-3seat.glb"). See
+   *  docs/3d-assets.md for the expected coordinate conventions. */
+  model3d?: {
+    /** Absolute URL or site-root-relative path to a .glb / .gltf file. */
+    url: string;
+    /** Extra uniform scale multiplier (default 1). Use when the asset's
+     *  exported size doesn't match the declared width/depth/height. */
+    scale?: number;
+    /** Extra Y-axis rotation in radians (default 0). Use when the
+     *  asset's forward vector doesn't match this project's +Z-front. */
+    rotation?: number;
+    /** Y offset in meters to push the model up/down from floor level.
+     *  Use when the asset's pivot isn't at the base. */
+    yOffset?: number;
+  };
 }
 
 export interface WindowConfig {
