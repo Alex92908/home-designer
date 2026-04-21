@@ -9,6 +9,7 @@ import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
 import { getFloorTexture, getWallTexture, floorTileSize, wallTileSize } from "@/lib/textures";
+import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap } from "@/lib/furnitureTextures";
 
 // ─── Error boundary ───────────────────────────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -410,27 +411,31 @@ function Sofa({ color, sc, w, d, h }: MeshProps) {
   const backH = h * 0.55;
   const armW = Math.min(w * 0.09, 0.24);
   const seatsN = Math.max(1, Math.round(w / 0.85));
+  const fabricA = useMemo(() => { const t = fabricMap(color).clone(); t.repeat.set(w * 3, d * 3); t.needsUpdate = true; return t; }, [color, w, d]);
+  const fabricB = useMemo(() => { const t = fabricMap(back).clone(); t.repeat.set(w * 3, 2); t.needsUpdate = true; return t; }, [back, w]);
+  const fabricC = useMemo(() => { const t = fabricMap(cushion).clone(); t.repeat.set(2, 2); t.needsUpdate = true; return t; }, [cushion]);
+  const fabricN = useMemo(() => { const t = fabricNormal().clone(); t.repeat.set(6, 6); t.needsUpdate = true; return t; }, []);
 
   return (
     <group position={[0, 0, 0]}>
       {/* Seat */}
       <mesh position={[0, seatH / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, seatH, d]} />
-        <meshStandardMaterial color={color} roughness={0.92} metalness={0} />
+        <meshStandardMaterial color={color} map={fabricA} normalMap={fabricN} normalScale={new THREE.Vector2(0.35, 0.35)} roughness={0.92} metalness={0} />
       </mesh>
       {/* Backrest */}
       <mesh position={[0, seatH + backH / 2, -d / 2 + 0.12]} castShadow>
         <boxGeometry args={[w, backH, d * 0.22]} />
-        <meshStandardMaterial color={back} roughness={0.78} />
+        <meshStandardMaterial color={back} map={fabricB} normalMap={fabricN} normalScale={new THREE.Vector2(0.3, 0.3)} roughness={0.82} />
       </mesh>
       {/* Arms */}
       <mesh position={[-w / 2 + armW / 2, seatH + h * 0.15, 0]} castShadow>
         <boxGeometry args={[armW, h * 0.32, d]} />
-        <meshStandardMaterial color={arm} roughness={0.78} />
+        <meshStandardMaterial color={arm} map={fabricB} normalMap={fabricN} normalScale={new THREE.Vector2(0.3, 0.3)} roughness={0.82} />
       </mesh>
       <mesh position={[w / 2 - armW / 2, seatH + h * 0.15, 0]} castShadow>
         <boxGeometry args={[armW, h * 0.32, d]} />
-        <meshStandardMaterial color={arm} roughness={0.78} />
+        <meshStandardMaterial color={arm} map={fabricB} normalMap={fabricN} normalScale={new THREE.Vector2(0.3, 0.3)} roughness={0.82} />
       </mesh>
       {/* Cushions */}
       {Array.from({ length: seatsN }).map((_, i) => {
@@ -438,7 +443,7 @@ function Sofa({ color, sc, w, d, h }: MeshProps) {
         return (
           <mesh key={i} position={[cx, seatH + 0.055, d * 0.05]} castShadow>
             <boxGeometry args={[(w - armW * 2) / seatsN - 0.04, 0.1, d * 0.72]} />
-            <meshStandardMaterial color={cushion} roughness={0.88} />
+            <meshStandardMaterial color={cushion} map={fabricC} normalMap={fabricN} normalScale={new THREE.Vector2(0.25, 0.25)} roughness={0.88} />
           </mesh>
         );
       })}
@@ -455,11 +460,12 @@ function Sofa({ color, sc, w, d, h }: MeshProps) {
 
 function CoffeeTable({ color, w, d, h }: MeshProps) {
   const leg = shade(color, -20);
+  const wood = useMemo(() => { const t = woodMap(color, "horizontal").clone(); t.repeat.set(Math.max(1, w * 0.8), Math.max(1, d * 0.8)); t.needsUpdate = true; return t; }, [color, w, d]);
   return (
     <group>
       <mesh position={[0, h - 0.04, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, 0.06, d]} />
-        <meshStandardMaterial color={color} roughness={0.55} metalness={0.03} />
+        <meshStandardMaterial color={color} map={wood} roughness={0.55} metalness={0.03} />
       </mesh>
       {([[-w / 2 + 0.08, -d / 2 + 0.08], [w / 2 - 0.08, -d / 2 + 0.08], [-w / 2 + 0.08, d / 2 - 0.08], [w / 2 - 0.08, d / 2 - 0.08]] as [number, number][]).map(([lx, lz], i) => (
         <mesh key={i} position={[lx, h / 2 - 0.04, lz]} castShadow>
@@ -475,12 +481,13 @@ function TvUnit({ color, sc, w, d, h }: MeshProps) {
   const leg = shade(color, -20);
   const handle = "#B0B0B0";
   const bodyH = h * 0.45;
+  const wood = useMemo(() => { const t = woodMap(color, "horizontal").clone(); t.repeat.set(Math.max(1, w * 0.9), 1); t.needsUpdate = true; return t; }, [color, w]);
   return (
     <group>
       {/* Body */}
       <mesh position={[0, bodyH / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, bodyH, d]} />
-        <meshStandardMaterial color={color} roughness={0.5} />
+        <meshStandardMaterial color={color} map={wood} roughness={0.5} />
       </mesh>
       {/* Divider */}
       <mesh position={[0, bodyH / 2, 0]}>
@@ -524,13 +531,17 @@ function BedMesh({ color, sc, w, d, h }: MeshProps) {
   const headH = h * 0.85;
   const matH = h * 0.25;
   const platformH = h * 0.18;
+  const frameWood = useMemo(() => { const t = woodMap(frame, "horizontal").clone(); t.repeat.set(Math.max(1, w * 0.6), 1); t.needsUpdate = true; return t; }, [frame, w]);
+  const duvetTex = useMemo(() => { const t = fabricMap(duvet).clone(); t.repeat.set(Math.max(1, w * 2), Math.max(1, d * 1.5)); t.needsUpdate = true; return t; }, [duvet, w, d]);
+  const headboardTex = useMemo(() => { const t = fabricMap(color).clone(); t.repeat.set(Math.max(1, w * 1.6), 2); t.needsUpdate = true; return t; }, [color, w]);
+  const fabricN = useMemo(() => { const t = fabricNormal().clone(); t.repeat.set(8, 8); t.needsUpdate = true; return t; }, []);
 
   return (
     <group>
       {/* Platform */}
       <mesh position={[0, platformH / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[w + 0.04, platformH, d + 0.04]} />
-        <meshStandardMaterial color={frame} roughness={0.88} />
+        <meshStandardMaterial color={frame} map={frameWood} roughness={0.72} />
       </mesh>
       {/* Mattress */}
       <mesh position={[0, platformH + matH / 2, 0]} castShadow receiveShadow>
@@ -540,7 +551,7 @@ function BedMesh({ color, sc, w, d, h }: MeshProps) {
       {/* Duvet */}
       <mesh position={[0, platformH + matH + 0.04, d * 0.1]} castShadow>
         <boxGeometry args={[w * 0.97, 0.09, d * 0.65]} />
-        <meshStandardMaterial color={duvet} roughness={0.92} />
+        <meshStandardMaterial color={duvet} map={duvetTex} normalMap={fabricN} normalScale={new THREE.Vector2(0.3, 0.3)} roughness={0.92} />
       </mesh>
       {/* Pillows */}
       {([-w * 0.22, w * 0.22] as const).map((px, i) => (
@@ -552,7 +563,7 @@ function BedMesh({ color, sc, w, d, h }: MeshProps) {
       {/* Headboard */}
       <mesh position={[0, platformH + headH / 2, -d / 2]} castShadow>
         <boxGeometry args={[w + 0.04, headH, 0.12]} />
-        <meshStandardMaterial color={color} roughness={0.88} />
+        <meshStandardMaterial color={color} map={headboardTex} normalMap={fabricN} normalScale={new THREE.Vector2(0.35, 0.35)} roughness={0.84} />
       </mesh>
       {/* Legs */}
       {([[-w / 2, -d / 2 + 0.08], [w / 2, -d / 2 + 0.08], [-w / 2, d / 2 - 0.08], [w / 2, d / 2 - 0.08]] as [number, number][]).map(([lx, lz], i) => (
@@ -566,11 +577,12 @@ function BedMesh({ color, sc, w, d, h }: MeshProps) {
 }
 
 function Nightstand({ color, w, d, h }: MeshProps) {
+  const wood = useMemo(() => { const t = woodMap(color, "vertical").clone(); t.repeat.set(Math.max(1, w * 2), Math.max(1, h * 2)); t.needsUpdate = true; return t; }, [color, w, h]);
   return (
     <group>
       <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, h, d]} />
-        <meshStandardMaterial color={color} roughness={0.55} />
+        <meshStandardMaterial color={color} map={wood} roughness={0.55} />
       </mesh>
       {/* Drawer */}
       <mesh position={[0, h * 0.28, d / 2 + 0.005]}>
@@ -598,11 +610,12 @@ function Nightstand({ color, w, d, h }: MeshProps) {
 function Wardrobe({ color, sc, w, d, h }: MeshProps) {
   const door = shade(color, -8);
   const handle = "#B8B8B8";
+  const wood = useMemo(() => { const t = woodMap(color, "vertical").clone(); t.repeat.set(Math.max(1, w * 1.2), Math.max(1, h * 1.2)); t.needsUpdate = true; return t; }, [color, w, h]);
   return (
     <group>
       <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, h, d]} />
-        <meshStandardMaterial color={color} roughness={0.5} />
+        <meshStandardMaterial color={color} map={wood} roughness={0.5} />
       </mesh>
       {/* Door lines */}
       {[-1, 0, 1].map(dx => (
@@ -624,11 +637,12 @@ function Wardrobe({ color, sc, w, d, h }: MeshProps) {
 
 function DiningTable({ color, w, d, h }: MeshProps) {
   const leg = shade(color, -22);
+  const wood = useMemo(() => { const t = woodMap(color, "horizontal").clone(); t.repeat.set(Math.max(1, w * 0.8), Math.max(1, d * 0.8)); t.needsUpdate = true; return t; }, [color, w, d]);
   return (
     <group>
       <mesh position={[0, h - 0.04, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, 0.06, d]} />
-        <meshStandardMaterial color={color} roughness={0.45} metalness={0.05} />
+        <meshStandardMaterial color={color} map={wood} roughness={0.45} metalness={0.05} />
       </mesh>
       {([[-w / 2 + 0.1, -d / 2 + 0.1], [w / 2 - 0.1, -d / 2 + 0.1], [-w / 2 + 0.1, d / 2 - 0.1], [w / 2 - 0.1, d / 2 - 0.1]] as [number, number][]).map(([lx, lz], i) => (
         <mesh key={i} position={[lx, (h - 0.06) / 2, lz]} castShadow>
@@ -678,10 +692,16 @@ function KitchenCabinet({ color, w, d, h }: MeshProps) {
         <meshStandardMaterial color={color} roughness={0.5} />
       </mesh>
       {/* Counter top */}
-      <mesh position={[0, h - counterH / 2, 0]}>
-        <boxGeometry args={[w + 0.02, counterH, d + 0.04]} />
-        <meshStandardMaterial color="#E8E0D8" roughness={0.25} metalness={0.1} />
-      </mesh>
+      {(() => {
+        const marble = marbleMap("#E8E0D8");
+        const mt = marble.clone(); mt.repeat.set(Math.max(1, w * 0.6), 1); mt.needsUpdate = true;
+        return (
+          <mesh position={[0, h - counterH / 2, 0]}>
+            <boxGeometry args={[w + 0.02, counterH, d + 0.04]} />
+            <meshStandardMaterial color="#E8E0D8" map={mt} roughness={0.25} metalness={0.1} />
+          </mesh>
+        );
+      })()}
       {/* Door lines */}
       {Array.from({ length: Math.round(w / 0.6) }).map((_, i) => {
         const n = Math.round(w / 0.6);
@@ -703,11 +723,12 @@ function KitchenCabinet({ color, w, d, h }: MeshProps) {
 }
 
 function Refrigerator({ color, w, d, h }: MeshProps) {
+  const metal = useMemo(() => { const t = brushedMetalMap(color).clone(); t.repeat.set(1, Math.max(1, h * 0.8)); t.needsUpdate = true; return t; }, [color, h]);
   return (
     <group>
       <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, h, d]} />
-        <meshStandardMaterial color={color} roughness={0.35} metalness={0.25} />
+        <meshStandardMaterial color={color} map={metal} roughness={0.4} metalness={0.55} />
       </mesh>
       {/* Door line */}
       <mesh position={[0, h * 0.35, d / 2 + 0.005]}>
@@ -833,11 +854,12 @@ function BathroomVanity({ color, sc, w, d, h }: MeshProps) {
 
 function Desk({ color, w, d, h }: MeshProps) {
   const leg = shade(color, -22);
+  const wood = useMemo(() => { const t = woodMap(color, "horizontal").clone(); t.repeat.set(Math.max(1, w * 0.8), Math.max(1, d * 0.8)); t.needsUpdate = true; return t; }, [color, w, d]);
   return (
     <group>
       <mesh position={[0, h - 0.04, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, 0.05, d]} />
-        <meshStandardMaterial color={color} roughness={0.45} />
+        <meshStandardMaterial color={color} map={wood} roughness={0.45} />
       </mesh>
       {([[-w / 2 + 0.05, -d / 2 + 0.05], [w / 2 - 0.05, -d / 2 + 0.05], [-w / 2 + 0.05, d / 2 - 0.05], [w / 2 - 0.05, d / 2 - 0.05]] as [number, number][]).map(([lx, lz], i) => (
         <mesh key={i} position={[lx, (h - 0.05) / 2, lz]} castShadow>
@@ -852,21 +874,22 @@ function Desk({ color, w, d, h }: MeshProps) {
 function Bookshelf({ color, w, d, h }: MeshProps) {
   const back = shade(color, -12);
   const shelfCount = Math.max(2, Math.floor(h / 0.38));
+  const wood = useMemo(() => { const t = woodMap(color, "vertical").clone(); t.repeat.set(Math.max(1, w * 1.2), Math.max(1, h * 1.2)); t.needsUpdate = true; return t; }, [color, w, h]);
   return (
     <group>
       {/* Sides */}
       <mesh position={[-w / 2 + 0.02, h / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[0.03, h, d]} />
-        <meshStandardMaterial color={color} roughness={0.5} />
+        <meshStandardMaterial color={color} map={wood} roughness={0.5} />
       </mesh>
       <mesh position={[w / 2 - 0.02, h / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[0.03, h, d]} />
-        <meshStandardMaterial color={color} roughness={0.5} />
+        <meshStandardMaterial color={color} map={wood} roughness={0.5} />
       </mesh>
       {/* Back */}
       <mesh position={[0, h / 2, -d / 2 + 0.01]}>
         <boxGeometry args={[w, h, 0.02]} />
-        <meshStandardMaterial color={back} roughness={0.6} />
+        <meshStandardMaterial color={back} map={wood} roughness={0.6} />
       </mesh>
       {/* Shelves */}
       {Array.from({ length: shelfCount + 1 }).map((_, i) => {
@@ -874,7 +897,7 @@ function Bookshelf({ color, w, d, h }: MeshProps) {
         return (
           <mesh key={i} position={[0, y, 0]} castShadow>
             <boxGeometry args={[w - 0.04, 0.025, d]} />
-            <meshStandardMaterial color={color} roughness={0.5} />
+            <meshStandardMaterial color={color} map={wood} roughness={0.5} />
           </mesh>
         );
       })}
@@ -1179,7 +1202,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
 
       {/* Environment — skip on iOS: PMREMGenerator.fromScene is broken on iPhone Metal
           (three.js bug #25888). Compensate with stronger ambient + fill lights. */}
-      {!isIOS && <Environment preset="studio" />}
+      {!isIOS && <Environment preset="apartment" />}
 
       {/* Main directional light with shadows */}
       <directionalLight
