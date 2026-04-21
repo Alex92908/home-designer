@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, getRoomArea } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 import { formatPrice } from "@/lib/currency";
+import { evaluateRoom } from "@/lib/clearance";
 
 
 function ScoreBar({ score, color }: { score: number; color: string }) {
@@ -46,6 +47,23 @@ export default function RightPanel() {
   const def = ROOM_DEFS[activeRoom];
   const area = getRoomArea(activeRoom);
   const { materials, placedItems } = roomState;
+
+  // ── Clearance evaluation for the active room ──
+  const roomDims = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
+  const roomW = roomDims?.width ?? def.width;
+  const roomD = roomDims?.depth ?? def.depth;
+  const evaluated = useMemo(
+    () => evaluateRoom(placedItems, getFurnitureById, roomW, roomD),
+    [placedItems, roomW, roomD]
+  );
+  const violations = useMemo(
+    () => evaluated.flatMap(e => e.violations),
+    [evaluated]
+  );
+  const hasRuleItems = useMemo(
+    () => evaluated.some(e => e.zone !== null),
+    [evaluated]
+  );
 
   const budgetPercent = Math.min(100, (totalCost / budget) * 100);
   const aiSuggestion = t.aiSuggestions[scores.dominantStyle] ?? null;
@@ -142,6 +160,66 @@ export default function RightPanel() {
           <span>{formatPrice(budget, locale)}</span>
         </div>
       </div>
+
+      {/* Clearance / ergonomic check */}
+      {hasRuleItems && (
+        <div className="px-4 py-3 shrink-0" style={{ borderBottom: "1px solid var(--ds-border-soft)" }}>
+          <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--ds-text-3)" }}>
+            {t.sectionClearance}
+            {violations.length > 0 && (
+              <span
+                className="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold"
+                style={{
+                  background: violations.some(v => v.severity === "required") ? "#FEE2E2" : "#FEF3C7",
+                  color: violations.some(v => v.severity === "required") ? "var(--ds-danger)" : "#92400E",
+                }}
+              >
+                {violations.length}
+              </span>
+            )}
+          </div>
+          {violations.length === 0 ? (
+            <div className="text-[11px]" style={{ color: "var(--ds-success)" }}>{t.clearanceOk}</div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {violations.map((v, i) => {
+                const isRed = v.severity === "required";
+                const fName = locale === "en" ? (getFurnitureNameEn(
+                  evaluated.find(e => e.placed.instanceId === v.instanceId)?.f.id ?? ""
+                ) ?? v.furnitureName) : v.furnitureName;
+                const oName = v.otherName && locale === "en"
+                  ? (getFurnitureNameEn(
+                      evaluated.find(e => e.placed.instanceId === v.otherId)?.f.id ?? ""
+                    ) ?? v.otherName)
+                  : v.otherName;
+                return (
+                  <div
+                    key={i}
+                    className="p-2 rounded-lg cursor-pointer transition-all"
+                    style={{
+                      background: isRed ? "#FFF5F5" : "#FFFBEB",
+                      border: `1px solid ${isRed ? "#FECACA" : "#FDE68A"}`,
+                    }}
+                    onClick={() => selectInstance(v.instanceId)}
+                  >
+                    <div className="text-[11px] font-semibold" style={{ color: isRed ? "var(--ds-danger)" : "#92400E" }}>
+                      {isRed ? "⚠️" : "💡"} {fName}
+                    </div>
+                    <div className="text-[10px] leading-snug mt-0.5" style={{ color: "var(--ds-text-2)" }}>
+                      {v.kind === "overlap"
+                        ? `${t.clearanceOverlap}「${oName ?? ""}」${t.clearanceOverlapSuffix}`
+                        : `${t.clearanceWall} ${v.required}cm`}
+                    </div>
+                    <div className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3)" }}>
+                      {v.reason}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Materials */}
       {materialItems.length > 0 && (

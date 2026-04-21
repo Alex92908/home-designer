@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, WindowConfig } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { PlacedItem } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn } from "@/locales/itemNames";
+import { evaluateRoom, type EvaluatedItem } from "@/lib/clearance";
 
 // ─── helpers ──────────────────────────────────────────────
 
@@ -47,6 +48,8 @@ interface PlacedItemSVGProps {
   placed: PlacedItem;
   scale: number;
   isSelected: boolean;
+  hasViolation?: boolean;
+  violationSeverity?: "required" | "recommended";
   onPointerDown: (e: React.PointerEvent<SVGGElement>) => void;
 }
 
@@ -71,7 +74,7 @@ function splitNameLines(name: string, maxPx: number): [string] | [string, string
   return [line1, line2];
 }
 
-function PlacedItemSVG({ placed, scale, isSelected, onPointerDown }: PlacedItemSVGProps) {
+function PlacedItemSVG({ placed, scale, isSelected, hasViolation, violationSeverity, onPointerDown }: PlacedItemSVGProps) {
   const furniture = getFurnitureById(placed.furnitureId);
   const locale = useLocale();
   if (!furniture) return null;
@@ -97,11 +100,21 @@ function PlacedItemSVG({ placed, scale, isSelected, onPointerDown }: PlacedItemS
       onPointerDown={onPointerDown}
     >
       <rect x={-w / 2 + 2} y={-d / 2 + 2} width={w} height={d} rx={4} fill="rgba(0,0,0,0.3)" />
+      {hasViolation && (
+        <rect
+          x={-w / 2 - 3} y={-d / 2 - 3} width={w + 6} height={d + 6} rx={6}
+          fill="none"
+          stroke={violationSeverity === "required" ? "#EF4444" : "#F59E0B"}
+          strokeWidth={2}
+          strokeDasharray="4 3"
+          style={{ pointerEvents: "none" }}
+        />
+      )}
       <rect
         x={-w / 2} y={-d / 2} width={w} height={d} rx={4}
         fill={furniture.color} fillOpacity={0.85}
-        stroke={isSelected ? "#60A5FA" : "rgba(255,255,255,0.35)"}
-        strokeWidth={isSelected ? 2.5 : 1}
+        stroke={isSelected ? "#60A5FA" : hasViolation ? (violationSeverity === "required" ? "#EF4444" : "#F59E0B") : "rgba(255,255,255,0.35)"}
+        strokeWidth={isSelected ? 2.5 : hasViolation ? 1.8 : 1}
       />
       {fontSize > 5 && (
         <text x={0} y={d > 30 ? -3 : 0} textAnchor="middle" dominantBaseline="middle"
@@ -403,6 +416,21 @@ export default function FloorPlan() {
   const scale = Math.min(700 / roomW, 500 / roomD, 3.0);
   const svgW = roomW * scale;
   const svgH = roomD * scale;
+
+  // ── Clearance evaluation (ergonomic aisle / furniture-fit check) ──
+  const evaluated: EvaluatedItem[] = useMemo(
+    () => evaluateRoom(roomState.placedItems, getFurnitureById, roomW, roomD),
+    [roomState.placedItems, roomW, roomD]
+  );
+  const violatingIds = useMemo(() => {
+    const m = new Map<string, "required" | "recommended">();
+    for (const e of evaluated) {
+      if (e.violations.length === 0) continue;
+      const worst = e.violations.some(v => v.severity === "required") ? "required" : "recommended";
+      m.set(e.placed.instanceId, worst);
+    }
+    return m;
+  }, [evaluated]);
 
   const gridXCount = Math.floor(roomW / 100);
   const gridZCount = Math.floor(roomD / 100);
@@ -961,6 +989,34 @@ export default function FloorPlan() {
             <line x1={0} y1={-9} x2={0} y2={-4} stroke="#4488AA" strokeWidth={1.5} />
           </g>
 
+          {/* Clearance zones — show for (a) selected items and (b) any item with violations */}
+          {evaluated.map(({ placed, zone, violations }) => {
+            if (!zone) return null;
+            const isSel = selectedInstanceIds.includes(placed.instanceId);
+            const hasViol = violations.length > 0;
+            if (!isSel && !hasViol) return null;
+            const color = hasViol
+              ? (violations.some(v => v.severity === "required") ? "#EF4444" : "#F59E0B")
+              : "#60A5FA";
+            return (
+              <rect
+                key={`clear-${placed.instanceId}`}
+                x={(zone.cx - zone.w / 2) * scale}
+                y={(zone.cz - zone.d / 2) * scale}
+                width={zone.w * scale}
+                height={zone.d * scale}
+                fill={color}
+                fillOpacity={hasViol ? 0.14 : 0.08}
+                stroke={color}
+                strokeOpacity={hasViol ? 0.7 : 0.45}
+                strokeWidth={1}
+                strokeDasharray="3 3"
+                rx={3}
+                style={{ pointerEvents: "none" }}
+              />
+            );
+          })}
+
           {/* Placed furniture */}
           {roomState.placedItems.map((placed) => (
             <PlacedItemSVG
@@ -968,6 +1024,8 @@ export default function FloorPlan() {
               placed={placed}
               scale={scale}
               isSelected={selectedInstanceIds.includes(placed.instanceId)}
+              hasViolation={violatingIds.has(placed.instanceId)}
+              violationSeverity={violatingIds.get(placed.instanceId)}
               onPointerDown={(e) => handleItemPointerDown(e, placed.instanceId)}
             />
           ))}
