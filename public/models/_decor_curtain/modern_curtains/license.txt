@@ -1,0 +1,11 @@
+Model Information:
+* title:	Modern Curtains
+* source:	https://sketchfab.com/3d-models/modern-curtains-7fd201f840c3489b82709e168119c11f
+* author:	Ren Viro Store (https://sketchfab.com/renviros)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Modern Curtains" (https://sketchfab.com/3d-models/modern-curtains-7fd201f840c3489b82709e168119c11f) by Ren Viro Store (https://sketchfab.com/renviros) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

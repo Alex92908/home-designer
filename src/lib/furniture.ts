@@ -521,6 +521,45 @@ export const FURNITURE: FurnitureItem[] = [
   { id: "artwork-degas",                name: "德加《舞蹈课》",         brand: "艺术工坊", price: 1280, unit: "元/件", category: "artwork", roomTypes: ["living", "study"], color: "#B8A890", width: 90,  depth: 5, height: 100, tags: ["现代", "轻奢"], description: "印象派人物画", icon: "🖼️", imageUrl: "/artworks/degas_dance_class.jpg" },
   { id: "artwork-red-fuji",             name: "葛饰北斎《赤富士》",      brand: "文房四宝", price: 980,  unit: "元/件", category: "artwork", roomTypes: ["living", "study"], color: "#B84A3E", width: 100, depth: 5, height: 70, tags: ["日式"], description: "富嶽三十六景", icon: "🖼️", imageUrl: "/artworks/hokusai_red_fuji.jpg" },
 
+  // ─── 窗帘 Curtain — CC-BY-4.0 Sketchfab ─────────────────
+  // 作为独立的装饰类别，可像艺术品一样自由拖放到墙边窗户内侧。
+  // 宽度/高度按"落地窗帘 1.8×2.4m"目标尺寸缩放；深度保留少量厚度
+  // 以便墙面碰撞检测。
+  {
+    id: "curtain-modern-gray",
+    name: "现代灰色窗帘",
+    brand: "Ren Viro Store",
+    price: 580,
+    unit: "元/件",
+    category: "curtain",
+    roomTypes: ["living", "master", "bedroom", "bedroom2", "bedroom3", "study", "dining"],
+    color: "#7A7B82",
+    width: 180,
+    depth: 18,
+    height: 240,
+    tags: ["现代", "北欧"],
+    description: "简约落地帘，柔和褶皱",
+    icon: "🪟",
+    model3d: { url: "/models/_decor_curtain/modern_curtains/scene.gltf" },
+  },
+  {
+    id: "curtain-brown-sheer",
+    name: "布艺+纱帘双层窗帘（棕）",
+    brand: "whitewashstudio",
+    price: 880,
+    unit: "元/件",
+    category: "curtain",
+    roomTypes: ["living", "master", "bedroom", "bedroom2", "bedroom3", "study", "dining"],
+    color: "#6B4C32",
+    width: 200,
+    depth: 24,
+    height: 240,
+    tags: ["轻奢", "现代"],
+    description: "外层遮光布艺+内层轻纱",
+    icon: "🪟",
+    model3d: { url: "/models/_decor_curtain/brown_curtain_with_shear/scene.gltf" },
+  },
+
   // ─── 床 Bed ───────────────────────────────────────────
   {
     id: "bed-fabric-beige",
@@ -1292,6 +1331,44 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"horse",        name:"马",         brand:"散养",     price:0,    unit:"-",     category:"livestock",         roomTypes:["yard"],                     color:"#906040", width:150, depth:250, height:160, tags:[], description:"驰骋原野",       icon:"🐴" },
   { id:"chicken-coop", name:"鸡舍",       brand:"农场",     price:1200, unit:"元/座", category:"livestock",         roomTypes:["yard"],                     color:"#C8A060", width:160, depth:120, height:140, tags:[], description:"鸡鸭棚舍",       icon:"🏚️" },
   { id:"barn",         name:"牲畜棚",     brand:"农场",     price:8800, unit:"元/座", category:"livestock",         roomTypes:["yard"],                     color:"#C06030", width:400, depth:300, height:300, tags:[], description:"大型牲畜棚",     icon:"🏚️" },
+
+  // ─── 外墙装饰 Exterior wall decor ──────────────────────
+  // roomTypes 留空（`getFurnitureForRoom` 不会返回它们），
+  // RightPanel 的专用 section 单独列出。width/depth/height 单位 cm。
+  // imageUrl 指向 `/public/decor/*.svg` 或 `/public/artworks/*.jpg`，
+  // 在 3D 里用 meshBasicMaterial + 贴图渲染（不受室外光照影响，
+  // 颜色永远正确）。没有 imageUrl 的是程序化盒子。
+
+  // 灯具类 — 程序化
+  { id:"wall-lamp-modern",  name:"外墙壁灯（现代）", brand:"照明", price:380,  unit:"元/盏", category:"exterior_wall_decor", roomTypes:[], color:"#2A2A2A", width:15, depth:18, height:25, tags:["现代"], description:"金属壁挂LED射灯",     icon:"💡" },
+  { id:"wall-lamp-lantern", name:"中式灯笼",       brand:"照明", price:280,  unit:"元/盏", category:"exterior_wall_decor", roomTypes:[], color:"#C03A20", width:25, depth:25, height:35, tags:["中式"], description:"红色宫灯",             icon:"🏮" },
+  { id:"light-strip-warm",  name:"暖白灯条",       brand:"照明", price:220,  unit:"元/条", category:"exterior_wall_decor", roomTypes:[], color:"#FFE8A8", width:200, depth:2, height:3,  tags:["现代"], description:"LED 窗沿灯带（暖光）", icon:"✨" },
+  { id:"light-strip-rgb",   name:"RGB 灯带",      brand:"照明", price:380,  unit:"元/条", category:"exterior_wall_decor", roomTypes:[], color:"#60D0FF", width:200, depth:2, height:3,  tags:["现代"], description:"可变色LED氛围灯带",    icon:"💠" },
+
+  // 装饰物 / 带图片
+  { id:"mural-great-wave",    name:"壁画《神奈川冲浪里》", brand:"艺术工坊", price:1280, unit:"元/幅", category:"exterior_wall_decor", roomTypes:[], color:"#2A5080", width:120, depth:5, height:80, tags:["日式"], description:"外墙可防水装饰画", icon:"🌊", imageUrl:"/artworks/hokusai_great_wave.jpg" },
+  { id:"mural-red-fuji",      name:"壁画《赤富士》",       brand:"艺术工坊", price:1080, unit:"元/幅", category:"exterior_wall_decor", roomTypes:[], color:"#B84A3E", width:100, depth:5, height:70, tags:["日式","中式"], description:"外墙装饰", icon:"🗻", imageUrl:"/artworks/hokusai_red_fuji.jpg" },
+  { id:"mural-wheatfield",    name:"壁画《麦田与柏树》",   brand:"艺术工坊", price:1380, unit:"元/幅", category:"exterior_wall_decor", roomTypes:[], color:"#A8BB80", width:110, depth:5, height:85, tags:["现代"], description:"梵高后印象派外墙版", icon:"🌾", imageUrl:"/artworks/vangogh_wheatfield_cypresses.jpg" },
+  { id:"mural-inkwash",       name:"壁画《谿山行旅》",     brand:"文房四宝", price:1500, unit:"元/幅", category:"exterior_wall_decor", roomTypes:[], color:"#3A3628", width:80, depth:5, height:150, tags:["中式"], description:"山水水墨外墙画", icon:"🎴", imageUrl:"/artworks/fankuan_travelers_mountains.jpg" },
+
+  // 对联 — 两幅 SVG（左右各挂一条）
+  { id:"couplet-spring",      name:"春联（春回大地）",     brand:"文房四宝", price:180, unit:"元/条", category:"exterior_wall_decor", roomTypes:[], color:"#C82020", width:20, depth:2, height:180, tags:["中式"], description:"红底金字春联", icon:"🧧", imageUrl:"/decor/couplet_spring.svg" },
+  { id:"couplet-prosperity",  name:"春联（万事如意）",     brand:"文房四宝", price:180, unit:"元/条", category:"exterior_wall_decor", roomTypes:[], color:"#A81818", width:20, depth:2, height:180, tags:["中式"], description:"红底金字春联", icon:"🧧", imageUrl:"/decor/couplet_prosperity.svg" },
+
+  // 饰带 — 横贴
+  { id:"border-meander",      name:"回形饰带",            brand:"装饰",   price:320, unit:"元/条", category:"exterior_wall_decor", roomTypes:[], color:"#7A3518", width:300, depth:2, height:10, tags:["中式"], description:"希腊/中式回字纹", icon:"➰", imageUrl:"/decor/border_meander.svg" },
+  { id:"border-floral",       name:"花饰带",              brand:"装饰",   price:380, unit:"元/条", category:"exterior_wall_decor", roomTypes:[], color:"#F0EADB", width:300, depth:2, height:10, tags:["现代","轻奢"], description:"奶油色花卉饰带", icon:"🌸", imageUrl:"/decor/border_floral.svg" },
+
+  // 门牌 / 姓氏
+  { id:"house-number",        name:"门牌号（888）",       brand:"五金",   price:120, unit:"元/块", category:"exterior_wall_decor", roomTypes:[], color:"#D0D2D4", width:40, depth:2, height:15, tags:["现代"], description:"拉丝不锈钢数字牌", icon:"🔢", imageUrl:"/decor/house_number.svg" },
+  { id:"nameplate-family",    name:"姓氏门牌（之家）",     brand:"定制",   price:350, unit:"元/块", category:"exterior_wall_decor", roomTypes:[], color:"#D4A85A", width:45, depth:2, height:15, tags:["中式"], description:"黄铜刻字家门牌", icon:"🏷️", imageUrl:"/decor/nameplate_family.svg" },
+
+  // 盒子类 — 程序化
+  { id:"mailbox-modern",      name:"现代信箱",             brand:"五金",   price:580, unit:"元/个", category:"exterior_wall_decor", roomTypes:[], color:"#4A4A4A", width:35, depth:12, height:45, tags:["现代"], description:"壁挂式不锈钢信箱", icon:"📬" },
+  { id:"ac-condenser",        name:"空调外机",             brand:"美的",   price:1280,unit:"元/台", category:"exterior_wall_decor", roomTypes:[], color:"#E8E8E8", width:85, depth:35, height:55, tags:[],       description:"分体式空调室外机", icon:"🌬️" },
+
+  // 爬藤 — 半透绿叶贴图
+  { id:"climbing-vine",       name:"爬藤（常春藤）",       brand:"园艺",   price:480, unit:"元/片", category:"exterior_wall_decor", roomTypes:[], color:"#2D5A2A", width:120, depth:4, height:200, tags:["中式"], description:"绿色墙面攀爬植物", icon:"🌿", imageUrl:"/decor/ivy.svg" },
 ];
 
 // Helper: get furniture by ID
@@ -1345,6 +1422,8 @@ export const FURNITURE_CATEGORIES: Array<{
   { id: "plant",             label: "绿植",     icon: "🌿" },
   { id: "rug",               label: "地毯",     icon: "🟫" },
   { id: "artwork",           label: "装饰画",   icon: "🖼️" },
+  { id: "curtain",           label: "窗帘",     icon: "🪟" },
+  { id: "exterior_wall_decor", label: "外墙装饰", icon: "🏮" },
   { id: "outdoor_plant",     label: "户外植物", icon: "🌳" },
   { id: "outdoor_hardscape", label: "硬景观",   icon: "🪨" },
   { id: "outdoor_water",     label: "水景",     icon: "💧" },

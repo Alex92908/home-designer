@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, getRoomArea } from "@/lib/types";
-import { getFurnitureById } from "@/lib/furniture";
+import type { RoomType, ExteriorWall, ExteriorWallDecorItem } from "@/lib/types";
+import { FURNITURE, getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 import { formatPrice } from "@/lib/currency";
@@ -403,6 +404,149 @@ export default function RightPanel() {
           {t.clearRoomBtn}
         </button>
       </div>
+
+      {/* Exterior decor for this room's outside walls */}
+      <ExteriorDecorSection activeRoom={activeRoom} />
     </aside>
+  );
+}
+
+// ─── Per-room exterior decor picker + editor ────────────────
+const EXTERIOR_WALL_OPTIONS: Array<{ id: ExteriorWall; label: string }> = [
+  { id: "front", label: "前（+Z）" },
+  { id: "back",  label: "后（-Z）" },
+  { id: "left",  label: "左（-X）" },
+  { id: "right", label: "右（+X）" },
+];
+
+const EMPTY_EXT_DECOR: ExteriorWallDecorItem[] = [];
+
+function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
+  const decorRaw = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[activeRoom]?.exteriorDecor);
+  const decor = decorRaw ?? EMPTY_EXT_DECOR;
+  const selectedId = useDesignerStore(s => s.selectedExteriorDecorId);
+  const setSelected = useDesignerStore(s => s.setSelectedExteriorDecor);
+  const addItem = useDesignerStore(s => s.addRoomExteriorDecor);
+  const removeItem = useDesignerStore(s => s.removeRoomExteriorDecor);
+  const updateItem = useDesignerStore(s => s.updateRoomExteriorDecor);
+
+  const [pickerWall, setPickerWall] = useState<ExteriorWall>("front");
+  const decorItems = FURNITURE.filter(f => f.category === "exterior_wall_decor");
+  const selected = decor.find(d => d.instanceId === selectedId);
+  const selectedItem = selected ? getFurnitureById(selected.furnitureId) : null;
+
+  return (
+    <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+      <div className="text-[11px] font-black text-gray-800 mb-2">🏮 外墙装饰（{ROOM_DEFS[activeRoom].name}）</div>
+
+      {/* Wall picker for placement */}
+      <div className="mb-2 p-2 rounded-xl bg-gray-50 border border-gray-100">
+        <div className="text-[9px] text-gray-500 mb-1">放到哪面外墙：</div>
+        <div className="flex gap-1">
+          {EXTERIOR_WALL_OPTIONS.map(w => (
+            <button key={w.id}
+              onClick={() => setPickerWall(w.id)}
+              className={`flex-1 text-[10px] py-1 rounded-md transition-all ${
+                pickerWall === w.id ? "bg-blue-500 text-white font-semibold" : "bg-white text-gray-600 border border-gray-200"
+              }`}>
+              {w.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Library — click to place */}
+      <div className="grid grid-cols-3 gap-1.5 mb-3">
+        {decorItems.map(it => (
+          <button key={it.id}
+            onClick={() => addItem(activeRoom, it.id, pickerWall)}
+            className="flex flex-col items-center gap-0.5 py-1.5 rounded-xl border border-gray-200 bg-white hover:border-blue-400 transition-all"
+            title={`${it.name} — ${it.price}${it.unit}`}>
+            <span className="text-lg">{it.icon}</span>
+            <span className="text-[9px] text-gray-700 font-semibold leading-tight text-center px-0.5">{it.name}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Placed list */}
+      {decor.length > 0 && (
+        <div className="mb-2">
+          <div className="text-[9px] text-gray-500 mb-1">已放置 ({decor.length})</div>
+          <div className="flex flex-col gap-1">
+            {decor.map(d => {
+              const item = getFurnitureById(d.furnitureId);
+              const wallLabel = EXTERIOR_WALL_OPTIONS.find(w => w.id === d.wall)?.label ?? d.wall;
+              return (
+                <div key={d.instanceId}
+                  className={`flex items-center gap-2 p-1.5 rounded-lg border cursor-pointer transition-all ${
+                    selectedId === d.instanceId ? "border-green-500 bg-green-50" : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                  onClick={() => setSelected(d.instanceId)}>
+                  <span className="text-base">{item?.icon ?? "⬜"}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] font-semibold text-gray-700 truncate">{item?.name ?? d.furnitureId}</div>
+                    <div className="text-[9px] text-gray-400">{wallLabel}</div>
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); removeItem(activeRoom, d.instanceId); }}
+                    className="text-red-400 hover:text-red-600 text-sm">🗑️</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Selected editor */}
+      {selected && selectedItem && (
+        <div className="p-2 rounded-xl bg-green-50 border border-green-200">
+          <div className="text-[10px] font-bold text-green-700 mb-2">编辑：{selectedItem.name}</div>
+          <div className="flex flex-col gap-2">
+            <div>
+              <div className="text-[9px] text-gray-500 mb-0.5">墙面</div>
+              <div className="flex gap-1">
+                {EXTERIOR_WALL_OPTIONS.map(w => (
+                  <button key={w.id}
+                    onClick={() => updateItem(activeRoom, selected.instanceId, { wall: w.id })}
+                    className={`flex-1 text-[9px] py-1 rounded-md transition-all ${
+                      selected.wall === w.id ? "bg-green-600 text-white font-semibold" : "bg-white text-gray-600 border border-gray-200"
+                    }`}>
+                    {w.label.slice(0, 1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <ExtSliderRow label="水平 u" value={selected.u} min={0.04} max={0.96} step={0.01}
+              onChange={v => updateItem(activeRoom, selected.instanceId, { u: v })} />
+            <ExtSliderRow label="垂直 v" value={selected.v} min={0.04} max={0.96} step={0.01}
+              onChange={v => updateItem(activeRoom, selected.instanceId, { v: v })} />
+            <ExtSliderRow label="宽度 ×" value={selected.scaleW ?? 1} min={0.3} max={3} step={0.05}
+              onChange={v => updateItem(activeRoom, selected.instanceId, { scaleW: v })} />
+            <ExtSliderRow label="高度 ×" value={selected.scaleH ?? 1} min={0.3} max={3} step={0.05}
+              onChange={v => updateItem(activeRoom, selected.instanceId, { scaleH: v })} />
+            <ExtSliderRow label="旋转°" value={selected.rotation ?? 0} min={-180} max={180} step={5}
+              onChange={v => updateItem(activeRoom, selected.instanceId, { rotation: v })} />
+          </div>
+          <div className="mt-2 text-[9px] text-gray-500 italic">
+            3D 视图里可直接拖拽装饰物到位置。
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExtSliderRow({ label, value, min, max, step, onChange }: {
+  label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void;
+}) {
+  return (
+    <div>
+      <div className="flex justify-between items-center text-[9px] text-gray-500 mb-0.5">
+        <span>{label}</span>
+        <span className="font-mono">{value.toFixed(2)}</span>
+      </div>
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(parseFloat(e.target.value))}
+        className="w-full accent-green-500 h-1" />
+    </div>
   );
 }

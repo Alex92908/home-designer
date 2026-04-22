@@ -44,6 +44,28 @@ export interface ExteriorSettings {
   outdoorPositions?: Record<string, { x: number; z: number; rot?: number; hidden?: boolean }>;
 }
 
+/** A decor item pinned to the OUTSIDE face of a room wall. Stored inside
+ *  the owning room (see `RoomState.exteriorDecor`). Walls match the
+ *  windows naming: back = -Z, front = +Z (room view convention), left =
+ *  -X, right = +X. Normalized u/v coords span the wall rectangle (0 =
+ *  left/bottom, 1 = right/top as viewed from outside). */
+export type ExteriorWall = WallSide; // = "back" | "front" | "left" | "right"
+
+export interface ExteriorWallDecorItem {
+  instanceId: string;
+  furnitureId: string;
+  wall: ExteriorWall;
+  /** 0 = left edge, 1 = right edge (viewed from outside). */
+  u: number;
+  /** 0 = floor, 1 = ceiling of the room's height. */
+  v: number;
+  /** Width/height scale multipliers (default 1). */
+  scaleW?: number;
+  scaleH?: number;
+  /** In-plane rotation in degrees (0 = upright). */
+  rotation?: number;
+}
+
 export type StyleTag = "现代" | "北欧" | "中式" | "日式" | "轻奢" | "工业风";
 
 export type MaterialCategory = "wall" | "floor" | "ceiling" | "light" | "tile";
@@ -55,7 +77,7 @@ export type FurnitureCategory =
   | "kitchen_cabinet" | "refrigerator" | "range_hood" | "kitchen_sink"
   | "toilet" | "bathtub" | "shower" | "bathroom_vanity"
   | "desk" | "office_chair" | "storage"
-  | "plant" | "rug" | "artwork" | "floor_lamp"
+  | "plant" | "rug" | "artwork" | "floor_lamp" | "curtain" | "exterior_wall_decor"
   | "outdoor_plant" | "outdoor_hardscape" | "outdoor_water" | "outdoor_structure"
   | "pet" | "livestock";
 
@@ -127,7 +149,9 @@ export type WindowStyle =
   | "sliding"   // 推拉窗（中间一条竖轨，国内最常见）
   | "casement"  // 平开窗（单整块玻璃，向外开）
   | "fixed"     // 固定观景窗（无分隔）
-  | "louvered"; // 百叶窗（水平条）
+  | "louvered"  // 百叶窗（水平条）
+  | "security"  // 防盗窗（铁艺栏栅，不可开启）
+  | "wooden";   // 木窗（复古/中式/乡村风）
 
 export interface PlacedItem {
   instanceId: string;
@@ -213,6 +237,11 @@ export const ROOM_DEFS: Record<RoomType, RoomDef> = {
 export interface RoomState {
   materials: RoomMaterials;
   placedItems: PlacedItem[];
+  /** Decor pinned to the OUTSIDE face of this room's walls (外墙装饰：
+   *  壁灯、门牌、信箱、爬藤…). Visible in RoomCanvas when the camera
+   *  orbits outside the room, and in HouseCanvas on the corresponding
+   *  house-perimeter segment. */
+  exteriorDecor?: ExteriorWallDecorItem[];
 }
 
 // ─── Per-floor independent floor plan ─────────────────────

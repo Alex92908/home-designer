@@ -1,0 +1,11 @@
+Model Information:
+* title:	Modern Window 3D Model | Archviz | PBR Textures
+* source:	https://sketchfab.com/3d-models/modern-window-3d-model-archviz-pbr-textures-9e83021cb5064f808991c622cee5bbde
+* author:	sanjaysinghfazilka (https://sketchfab.com/sanjaysinghfazilka)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Modern Window 3D Model | Archviz | PBR Textures" (https://sketchfab.com/3d-models/modern-window-3d-model-archviz-pbr-textures-9e83021cb5064f808991c622cee5bbde) by sanjaysinghfazilka (https://sketchfab.com/sanjaysinghfazilka) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

@@ -100,6 +100,21 @@
 | Legion Single Sink Vanity | allenbranch | 2.2k | 单盆浴室柜 | <https://sketchfab.com/3d-models/750dfa5fab444c28baf30e063d2b56d3> |
 | Laufen Kartell 24" 2-Drawer Vanity | usbathstore | 3.6k | （未使用，备选） | <https://sketchfab.com/3d-models/4a6a3be47e1143c38c3cbadcdaac86ea> |
 
+**窗户风格变体（新增）**
+
+| 模型 | 作者 | 面数 | 对应项目窗户 style | 链接 |
+|---|---|---|---|---|
+| Modern Window 3D Model \| Archviz \| PBR Textures | sanjaysinghfazilka | — | sliding / fixed（默认；Z-up 资产，`upAxis:"z"` 修正） | <https://sketchfab.com/3d-models/modern-window-3d-model-archviz-pbr-textures-9e83021cb5064f808991c622cee5bbde> |
+| Wooden Window | adventurer (ahmagh2e) | — | wooden（木窗） | <https://sketchfab.com/3d-models/wooden-window-df1861ed87184c34acba78530bd2152f> |
+| Window Blinds Low poly | AHMED KCHIKICH (inven2000) | — | louvered（百叶窗） | <https://sketchfab.com/3d-models/window-blinds-low-poly-3d-model-642df0acc18f45d2af8eaa698bdccff7> |
+
+**窗帘（curtain 装饰类别）**
+
+| 模型 | 作者 | 面数 | 对应项目家具 | 链接 |
+|---|---|---|---|---|
+| Modern Curtains | Ren Viro Store (renviros) | — | 现代灰色窗帘 | <https://sketchfab.com/3d-models/modern-curtains-7fd201f840c3489b82709e168119c11f> |
+| Brown Modern Curtain with Shear Window Screen | Marc Sawyer (whitewashstudio) | — | 布艺+纱帘双层窗帘 | <https://sketchfab.com/3d-models/brown-modern-curtain-with-shear-window-screen-8b9aa20a7d5443668699c60a43be74c0> |
+
 **建筑构件（窗 + 门）**
 
 | 模型 | 作者 | 面数 | 用途 | 链接 |

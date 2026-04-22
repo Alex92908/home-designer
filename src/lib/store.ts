@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, ROOM_DEFS, StyleTag, getRoomArea, FurnitureItem, ExteriorSettings, WindowConfig, RoomState, FloorPlan } from "./types";
+import { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, ROOM_DEFS, StyleTag, getRoomArea, FurnitureItem, ExteriorSettings, WindowConfig, RoomState, FloorPlan, ExteriorWallDecorItem, ExteriorWall, WallSide } from "./types";
 import { FURNITURE, getFurnitureById, registerFurniture } from "./furniture";
 import { MATERIALS, STYLE_RULES } from "./data";
 import { ALL_TEMPLATES, buildTemplateRoomState, buildEmbeddedRoomState } from "./templates";
@@ -270,6 +270,14 @@ interface DesignerStore {
   setOutdoorPosition: (key: string, pos: { x: number; z: number }) => void;
   rotateOutdoor: (key: string) => void;
   resetOutdoorPosition: (key: string) => void;
+
+  // Exterior wall decor — per room (lights/mailboxes/vines on the
+  // outside face of the owning room's walls)
+  addRoomExteriorDecor: (room: RoomType, furnitureId: string, wall: ExteriorWall) => void;
+  removeRoomExteriorDecor: (room: RoomType, instanceId: string) => void;
+  updateRoomExteriorDecor: (room: RoomType, instanceId: string, patch: Partial<ExteriorWallDecorItem>) => void;
+  selectedExteriorDecorId: string | null;
+  setSelectedExteriorDecor: (instanceId: string | null) => void;
 
   // Multi-floor switching
   activeFloor: number;
@@ -934,6 +942,55 @@ export const useDesignerStore = create<DesignerStore>()(
         const positions = { ...(s.exterior.outdoorPositions ?? {}) };
         delete positions[key];
         return { exterior: { ...s.exterior, outdoorPositions: positions } };
+      }),
+
+      // Per-room exterior decor — pinned to the outside face of a
+      // specific room's walls. New items spawn centered on the chosen
+      // wall (u=0.5, v=0.5).
+      selectedExteriorDecorId: null,
+      setSelectedExteriorDecor: (instanceId) => set({ selectedExteriorDecorId: instanceId }),
+      addRoomExteriorDecor: (room, furnitureId, wall) => set(s => {
+        const plan = s.floorPlans[s.activeFloor];
+        const roomState = plan.rooms[room];
+        const newItem: ExteriorWallDecorItem = {
+          instanceId: `ed_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          furnitureId,
+          wall,
+          u: 0.5,
+          v: 0.5,
+        };
+        const existing = roomState.exteriorDecor ?? [];
+        const updatedRoom = { ...roomState, exteriorDecor: [...existing, newItem] };
+        const updatedRooms = { ...plan.rooms, [room]: updatedRoom };
+        const updatedPlan = { ...plan, rooms: updatedRooms };
+        const updatedPlans = s.floorPlans.map((p, i) => i === s.activeFloor ? updatedPlan : p);
+        return { floorPlans: updatedPlans, selectedExteriorDecorId: newItem.instanceId };
+      }),
+      removeRoomExteriorDecor: (room, instanceId) => set(s => {
+        const plan = s.floorPlans[s.activeFloor];
+        const roomState = plan.rooms[room];
+        const existing = roomState.exteriorDecor ?? [];
+        const updatedRoom = { ...roomState, exteriorDecor: existing.filter(d => d.instanceId !== instanceId) };
+        const updatedRooms = { ...plan.rooms, [room]: updatedRoom };
+        const updatedPlan = { ...plan, rooms: updatedRooms };
+        const updatedPlans = s.floorPlans.map((p, i) => i === s.activeFloor ? updatedPlan : p);
+        return {
+          floorPlans: updatedPlans,
+          selectedExteriorDecorId: s.selectedExteriorDecorId === instanceId ? null : s.selectedExteriorDecorId,
+        };
+      }),
+      updateRoomExteriorDecor: (room, instanceId, patch) => set(s => {
+        const plan = s.floorPlans[s.activeFloor];
+        const roomState = plan.rooms[room];
+        const existing = roomState.exteriorDecor ?? [];
+        const updatedRoom = {
+          ...roomState,
+          exteriorDecor: existing.map(d => d.instanceId === instanceId ? { ...d, ...patch } : d),
+        };
+        const updatedRooms = { ...plan.rooms, [room]: updatedRoom };
+        const updatedPlan = { ...plan, rooms: updatedRooms };
+        const updatedPlans = s.floorPlans.map((p, i) => i === s.activeFloor ? updatedPlan : p);
+        return { floorPlans: updatedPlans };
       }),
 
       setActiveFloor: (floor) => set(s => {

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="2400" viewBox="0 0 200 1200" preserveAspectRatio="xMidYMid meet">
+  <rect width="200" height="1200" fill="#C82020"/>
+  <rect x="8" y="8" width="184" height="1184" fill="none" stroke="#F0D070" stroke-width="3"/>
+  <g font-family="serif" font-size="130" text-anchor="middle" fill="#F8E090" font-weight="bold">
+    <text x="100" y="150">春</text>
+    <text x="100" y="320">回</text>
+    <text x="100" y="490">大</text>
+    <text x="100" y="660">地</text>
+    <text x="100" y="830">千</text>
+    <text x="100" y="1000">山</text>
+    <text x="100" y="1170">秀</text>
+  </g>
+</svg>

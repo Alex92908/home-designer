@@ -4,6 +4,10 @@ import { useDesignerStore } from "@/lib/store";
 import type { RoofStyle, WallMaterialType } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
+// NOTE: Exterior wall decor (壁灯/门牌/信箱/爬藤…) lives per-room and is
+// edited via RightPanel while in room view, not here. See
+// `src/components/RightPanel.tsx::ExteriorDecorSection`.
+
 // ─── Presets ────────────────────────────────────────────────
 const PRESETS: {
   id: string; label: string; icon: string;

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="2400" viewBox="0 0 200 1200" preserveAspectRatio="xMidYMid meet">
+  <rect width="200" height="1200" fill="#A81818"/>
+  <rect x="8" y="8" width="184" height="1184" fill="none" stroke="#F0D070" stroke-width="3"/>
+  <g font-family="serif" font-size="130" text-anchor="middle" fill="#F8E090" font-weight="bold">
+    <text x="100" y="150">万</text>
+    <text x="100" y="320">事</text>
+    <text x="100" y="490">如</text>
+    <text x="100" y="660">意</text>
+    <text x="100" y="830">福</text>
+    <text x="100" y="1000">满</text>
+    <text x="100" y="1170">门</text>
+  </g>
+</svg>

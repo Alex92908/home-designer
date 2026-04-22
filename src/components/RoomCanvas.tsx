@@ -1,14 +1,14 @@
 "use client";
 
 import { useRef, useEffect, useMemo, useState, Component, ReactNode } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { OrbitControls, Environment, useGLTF } from "@react-three/drei";
 import { EffectComposer, N8AO, Bloom, Vignette, SMAA } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import { Suspense } from "react";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
-import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType } from "@/lib/types";
+import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
 import { getFloorTexture, getWallTexture, floorTileSize, wallTileSize } from "@/lib/textures";
@@ -289,7 +289,7 @@ function RoomShell({
   // Segments are inside a group with the correct rotation + translation,
   // so each segment just positions at its local center within that group.
   function WallWithHoles({
-    side, wallLenM, groupPos, groupRot, upperMat, lowerSide,
+    side, wallLenM, groupPos, groupRot, upperMat, lowerSide, opacity = 1,
   }: {
     side: { color: string; id: string };
     wallLenM: number;
@@ -297,6 +297,9 @@ function RoomShell({
     groupRot?: [number, number, number];
     upperMat: ReturnType<typeof wallMatFor>;
     lowerSide: "back" | "front" | "left" | "right";
+    /** 0 = don't render, 0.5 = frosted glass, 1 = solid. Applied uniformly
+     *  to every segment (upper, lower, all pieces around holes). */
+    opacity?: number;
   }) {
     const holes = holesForWall(lowerSide, wallLenM);
     const segments = splitWallAroundHoles(wallLenM, H, holes);
@@ -314,7 +317,17 @@ function RoomShell({
                 receiveShadow
               >
                 <planeGeometry args={[s.w, s.h]} />
-                <meshStandardMaterial {...mat} side={THREE.FrontSide} />
+                {/* DoubleSide: when the camera orbits outside the room,
+                    the exterior face of the wall must still render so the
+                    wall acts as an opaque shell — otherwise the interior
+                    shows through every wall and opening a door makes no
+                    visual difference. Cost is negligible for flat planes. */}
+                <meshStandardMaterial
+                  {...mat}
+                  side={THREE.DoubleSide}
+                  transparent={opacity < 1}
+                  opacity={opacity}
+                />
               </mesh>
             );
           })
@@ -356,21 +369,21 @@ function RoomShell({
       />
 
       {/* Front wall — user-controllable opacity (0 = cut away, 0.5 =
-          frosted glass, 1 = solid). DoubleSide so it renders from any
-          camera angle. */}
+          frosted glass, 1 = solid). Uses WallWithHoles so doors/windows
+          on the front wall are cut out at any opacity. Without the cut,
+          a solid front wall would block the view of an open door's
+          interior. The plane's default normal is +Z (outward), which is
+          correct for the front wall at z=+D/2 — no rotation needed. */}
       {frontWallOpacity > 0 && (() => {
         const sF = resolveSide(wallFront);
-        const mat = wallMatFor(sF.color, sF.id, W, H);
         return (
-          <mesh position={[0, H / 2, D / 2]} receiveShadow>
-            <planeGeometry args={[W, H]} />
-            <meshStandardMaterial
-              {...mat}
-              side={THREE.DoubleSide}
-              transparent={frontWallOpacity < 1}
-              opacity={frontWallOpacity}
-            />
-          </mesh>
+          <WallWithHoles
+            side={sF} wallLenM={W}
+            groupPos={[0, H / 2, D / 2]}
+            upperMat={wallMatFor(sF.color, sF.id, W, H)}
+            lowerSide="front"
+            opacity={frontWallOpacity}
+          />
         );
       })()}
 
@@ -456,39 +469,111 @@ function RoomShell({
 // casement pose that didn't close via auto-transform. Switched to
 // AleixoAlonso's `residential_window` (closed-state, 2.8k faces, CC-BY).
 const ENABLE_GLTF_WINDOW = true;
-const ARCH_WINDOW_URL = "/models/_arch_window/residential_window/residential_window.gltf";
+// Default arch window — sanjaysinghfazilka's PBR archviz window
+// (CC-BY-4.0). The glTF ships with nested matrices (base.fbx + model)
+// that cancel out to identity, so the composed world bbox is already
+// Y-up (1.91 × 1.81 × 0.24m) and no axis fix is needed.
+const ARCH_WINDOW_URL = "/models/_arch_window/modern_window_archviz/scene.gltf";
+// 防盗窗（铁艺栏栅）— CC-BY by 4000z, 203 meshes. Used only for "security".
+// NOTE: `animated_window_systems` (CC-BY-NC) is deliberately NOT used here;
+// the project may go commercial and NC licenses forbid that.
+const IRON_BAR_WINDOW_URL = "/models/_arch_window/iron_bar_window/iron_bar_window.gltf";
+// 百叶窗 — CC-BY by AHMED KCHIKICH, low-poly. Replaces the procedural
+// slat grid for the "louvered" style.
+const BLINDS_WINDOW_URL = "/models/_arch_window/window_blinds/scene.gltf";
+// 木窗 — CC-BY by ahmagh2e. Used for the "wooden" style (复古/中式/乡村).
+const WOODEN_WINDOW_URL = "/models/_arch_window/wooden_window/scene.gltf";
 
-function GltfArchWindow({ winLen, winH }: { winLen: number; winH: number }) {
-  const { scene } = useGLTF(ARCH_WINDOW_URL) as unknown as { scene: THREE.Object3D };
+/** Per-asset loader hints. Orientation is now auto-detected inside
+ *  `GltfArchWindow` (Z→X axis swap when the raw bbox suggests the
+ *  window-width is along Z), so the spec currently carries only the URL. */
+type GltfWindowSpec = { url: string };
+
+/** Map a WindowStyle to the glTF to render, or null to fall back to
+ *  procedural. Casement remains procedural because its single-pane look
+ *  is easier to drive with the swing-open animation. */
+function gltfSpecForStyle(style: import("@/lib/types").WindowStyle): GltfWindowSpec | null {
+  switch (style) {
+    // Sliding + louvered must stay procedural: the real glTFs are one
+    // combined mesh, so we can't slide only the inner sash (sliding) or
+    // tilt individual slats (louvered). Procedural meshes give us the
+    // split geometry we need for convincing animation.
+    case "sliding":
+    case "louvered":
+      return null;
+    case "fixed":
+      return { url: ARCH_WINDOW_URL };
+    case "security":
+      return { url: IRON_BAR_WINDOW_URL };
+    case "wooden":
+      return { url: WOODEN_WINDOW_URL };
+    case "casement":
+      return null;
+  }
+}
+
+function GltfArchWindow({
+  winLen, winH, url,
+}: { winLen: number; winH: number; url: string }) {
+  const { scene } = useGLTF(url) as unknown as { scene: THREE.Object3D };
   const cloned = useMemo(() => {
-    const c = scene.clone(true);
+    const inner = scene.clone(true);
     // Strip SketchUp helper nodes that aren't meshes (cameras, scenes)
     // — these get exported as empties at huge offsets (88m, 135m away)
     // and pollute the bounding-box measurement below.
     const toRemove: THREE.Object3D[] = [];
-    c.traverse(obj => {
+    inner.traverse(obj => {
       if (/^skp_camera/i.test(obj.name || "") || /^(ID\d+|Scene_)/i.test(obj.name || "")) {
         toRemove.push(obj);
       }
     });
     for (const o of toRemove) o.parent?.remove(o);
 
-    c.traverse(obj => {
+    inner.traverse(obj => {
       const m = obj as THREE.Mesh;
       if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; }
     });
+
+    // Wrap in an outer group so we can apply corrective transforms
+    // (axis swaps) without disturbing the inner scene's own transforms.
+    const c = new THREE.Group();
+    c.add(inner);
+
+    // === Measure native bbox ===
     c.updateMatrixWorld(true);
+    const rawBox = new THREE.Box3().setFromObject(c);
+    const rawSize = new THREE.Vector3();
+    rawBox.getSize(rawSize);
+
+    // Auto-orient: the "window width" axis should be X (horizontal in
+    // the wall). Most assets export this correctly, but some (like
+    // `window_blinds` 10.7 × 198 × 209 and `iron_bar_window` 12 × 23 × 49)
+    // put the window-width along Z instead — causing the visible content
+    // to get compressed onto the thin depth axis. Detect this by
+    // comparing X-extent vs Z-extent among the two "horizontal" axes:
+    // whichever is larger is the intended width axis. If Z is larger,
+    // rotate the inner -90° around Y so world-Z → world-X.
+    if (rawSize.z > rawSize.x) {
+      inner.rotation.y = -Math.PI / 2;
+      c.updateMatrixWorld(true);
+    }
+
     const box = new THREE.Box3().setFromObject(c);
     const size = new THREE.Vector3();
     box.getSize(size);
     // eslint-disable-next-line no-console
-    console.log(`[GltfArchWindow] native size after cleanup: ${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m, target ${winLen.toFixed(2)}×${winH.toFixed(2)}m`);
+    console.log(`[GltfArchWindow] ${url} native ${rawSize.x.toFixed(2)}×${rawSize.y.toFixed(2)}×${rawSize.z.toFixed(2)} → oriented ${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m, target ${winLen.toFixed(2)}×${winH.toFixed(2)}m`);
     if (size.x > 0 && size.y > 0 && size.z > 0) {
-      // Scale X,Y to match declared window rectangle; Z (depth into wall)
-      // stays proportional to X so the frame doesn't flatten.
+      // Scale X→winLen, Y→winH. For depth (Z) preserve the x/z ratio
+      // by default but clamp so the final frame is never thicker than
+      // MAX_DEPTH. Without this clamp, assets with exaggerated native
+      // depth get turned into multi-metre slabs that punch through the
+      // wall horizontally.
+      const MAX_DEPTH = 0.2;
       const sx = winLen / size.x;
       const sy = winH / size.y;
-      const sz = sx; // preserve original x:z ratio on the depth axis
+      let sz = sx;
+      if (size.z * sz > MAX_DEPTH) sz = MAX_DEPTH / size.z;
       c.scale.set(sx, sy, sz);
       c.updateMatrixWorld(true);
       // Re-center XY on origin, keep Z so the frame straddles the wall plane
@@ -498,7 +583,7 @@ function GltfArchWindow({ winLen, winH }: { winLen: number; winH: number }) {
       c.position.z -= (box2.min.z + box2.max.z) / 2;
     }
     return c;
-  }, [scene, winLen, winH]);
+  }, [scene, winLen, winH, url]);
 
   return <primitive object={cloned} />;
 }
@@ -533,26 +618,44 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   const winY = Math.max(0.05, Math.min(H - winH - 0.05, sill)) + winH / 2;
   const isOpen = useDesignerStore(s => !!s.windowOpenByWinId[win.id]);
   const toggleWinOpen = useDesignerStore(s => s.toggleWindowOpen);
-  // Animation ref for open/close angle
+  // Animation refs:
+  //  - sashRef: sliding (translate), casement + wooden (rotate around hinge)
+  //  - slatRefs: louvered (per-slat X rotation for blinds tilt)
   const sashRef = useRef<THREE.Group>(null);
   const sashAngleRef = useRef(0);
+  const slatRefs = useRef<Array<THREE.Mesh | null>>([]);
+  const slatAngleRef = useRef(-0.25); // starting tilt for horizontal slats
   useFrame((_, delta) => {
-    // Fixed / louvered don't open. Sliding and casement animate.
     const style = win.style ?? "sliding";
-    if (style === "fixed" || style === "louvered") return;
-    // Casement: swing 45° outward. Sliding: slide half-width left.
-    const target = isOpen
-      ? (style === "sliding" ? -winLen / 2 : -Math.PI / 4)
-      : 0;
-    const speed = style === "sliding" ? 2.2 : 3.8;
-    const current = sashAngleRef.current;
-    const diff = target - current;
-    if (Math.abs(diff) > 0.002) {
-      const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
-      sashAngleRef.current = current + step;
-      if (sashRef.current) {
-        if (style === "sliding") sashRef.current.position.x = sashAngleRef.current;
-        else sashRef.current.rotation.y = sashAngleRef.current;
+    if (style === "sliding" || style === "casement" || style === "wooden") {
+      // Sliding: translate half-window-width. Casement + wooden: swing
+      // 45° outward around the hinge (left edge).
+      const target = isOpen
+        ? (style === "sliding" ? -winLen / 2 : -Math.PI / 4)
+        : 0;
+      const speed = style === "sliding" ? 2.2 : 3.8;
+      const current = sashAngleRef.current;
+      const diff = target - current;
+      if (Math.abs(diff) > 0.002) {
+        const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
+        sashAngleRef.current = current + step;
+        if (sashRef.current) {
+          if (style === "sliding") sashRef.current.position.x = sashAngleRef.current;
+          else sashRef.current.rotation.y = sashAngleRef.current;
+        }
+      }
+    } else if (style === "louvered") {
+      // Blinds tilt: closed (= privacy) tilts slats nearly vertical,
+      // open tilts them back to the slightly-down horizontal default.
+      const target = isOpen ? -Math.PI / 2 + 0.08 : -0.25;
+      const current = slatAngleRef.current;
+      const diff = target - current;
+      if (Math.abs(diff) > 0.002) {
+        const step = Math.sign(diff) * Math.min(Math.abs(diff), 3.5 * delta);
+        slatAngleRef.current = current + step;
+        for (const r of slatRefs.current) {
+          if (r) r.rotation.x = slatAngleRef.current;
+        }
       }
     }
   });
@@ -612,13 +715,22 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
       case "casement":
         return null; // single integral pane, no mullion
       case "louvered": {
-        // Horizontal slats
+        // Horizontal slats. Each slat gets its own ref so useFrame can
+        // tilt them in unison (simulating blinds open/close). Slats are
+        // centered on their horizontal axis, so rotating each mesh's
+        // rotation.x pivots around its own center — exactly how a real
+        // blind slat moves.
         const slatCount = Math.max(4, Math.floor(winH / 0.12));
         const slatH = winH / slatCount;
         return Array.from({ length: slatCount }).map((_, i) => {
           const y = -winH / 2 + slatH / 2 + i * slatH;
           return (
-            <mesh key={`slat-${i}`} position={[0, y, WALL_OFFSET + 0.008]} rotation={[-0.25, 0, 0]}>
+            <mesh
+              key={`slat-${i}`}
+              ref={r => { slatRefs.current[i] = r; }}
+              position={[0, y, WALL_OFFSET + 0.008]}
+              rotation={[slatAngleRef.current, 0, 0]}
+            >
               <boxGeometry args={[winLen - 0.04, slatH * 0.55, 0.015]} />
               <meshStandardMaterial color="#E8E8E4" roughness={0.6} />
             </mesh>
@@ -632,8 +744,8 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
     <>
       {frameBars}
       {/* Sash — glass + mullions that animate on open/close. Clicking any
-          part toggles. Fixed/louvered windows don't animate but still show
-          toggle state in store for consistency. */}
+          part toggles. Fixed/louvered/security windows don't animate but
+          still show toggle state in store for consistency. */}
       <group
         ref={sashRef}
         onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}
@@ -644,15 +756,36 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
     </>
   );
 
-  // Wraps the frame either in a glTF (when ENABLE_GLTF_WINDOW and the
-  // asset loads successfully) or just renders procedural. Rotation group
-  // is provided by the caller for left/right walls.
-  const windowFrameJSX = ENABLE_GLTF_WINDOW ? (
+  // Pick a glTF for this style (or null → use procedural-only). For
+  // openable styles (sliding/casement) we wrap the glTF inside `sashRef`
+  // so clicking it actually animates. Fixed + security render glTF
+  // statically without a sash.
+  const gltfSpec = ENABLE_GLTF_WINDOW ? gltfSpecForStyle(style) : null;
+  const gltfContent = gltfSpec ? (
     <ArchWindowFallback fallback={proceduralBackFrame}>
       <Suspense fallback={proceduralBackFrame}>
-        <GltfArchWindow winLen={winLen} winH={winH} />
+        <GltfArchWindow winLen={winLen} winH={winH} url={gltfSpec.url} />
       </Suspense>
     </ArchWindowFallback>
+  ) : null;
+
+  const animatesOpen = style === "sliding" || style === "casement" || style === "wooden";
+  const windowFrameJSX = gltfContent ? (
+    animatesOpen ? (
+      // The glTF already includes its own outer frame — wrap only in sash
+      // group so click toggles the open/close animation.
+      <group
+        ref={sashRef}
+        onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}
+      >
+        {gltfContent}
+      </group>
+    ) : (
+      // Fixed / security: static glTF + click toggles (noop animation).
+      <group onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}>
+        {gltfContent}
+      </group>
+    )
   ) : proceduralBackFrame;
 
   if (win.wall === "back") {
@@ -2320,6 +2453,9 @@ function Scene({ isIOS }: { isIOS: boolean }) {
         <PlacedItemMesh key={placed.instanceId} placed={placed} def={def} roomW={W} roomD={D} />
       ))}
 
+      {/* Exterior decor on the OUTSIDE faces of this room's walls */}
+      <RoomExteriorDecorLayer room={activeRoom} W={W} D={D} H={H} />
+
       {/* Post-processing — skip on iOS (Metal compiler issues with complex fragment shaders).
           Wrapped in <PostFX/> which defers mounting until the WebGL context
           is fully ready. Without this, @react-three/postprocessing 3.0.4
@@ -2329,6 +2465,440 @@ function Scene({ isIOS }: { isIOS: boolean }) {
       {!isIOS && <PostFX />}
     </>
   );
+}
+
+// ─── Per-room exterior decor ───────────────────────────────
+// Renders items from RoomState.exteriorDecor on the OUTSIDE face of
+// this room's 4 walls. The user is normally looking at the room from
+// inside (dollhouse view), but when they orbit around to the outside,
+// the decor on the outer wall face becomes visible — e.g. wall lamps,
+// mailboxes, house numbers.
+// Convention matches HouseCanvas: each wall is wrapped in a group whose
+//   local +X = right when viewed from OUTSIDE the wall
+//   local +Y = up
+//   local +Z = outward (away from room interior)
+const EMPTY_ROOM_DECOR: ExteriorWallDecorItem[] = [];
+
+function RoomExteriorDecorLayer({ room, W, D, H }: {
+  room: import("@/lib/types").RoomType; W: number; D: number; H: number;
+}) {
+  const decorRaw = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.exteriorDecor);
+  const decor = decorRaw ?? EMPTY_ROOM_DECOR;
+  const selectedId = useDesignerStore(s => s.selectedExteriorDecorId);
+  const setSelected = useDesignerStore(s => s.setSelectedExteriorDecor);
+  const updateDecor = useDesignerStore(s => s.updateRoomExteriorDecor);
+  const { controls } = useThree();
+  const draggingIdRef = useRef<string | null>(null);
+
+  const DECOR_OFFSET = 0.025;
+  const wallSpecs: Array<{
+    wall: ExteriorWallTSType; position: [number, number, number];
+    rotation: [number, number, number]; wallW: number; wallH: number;
+  }> = [
+    { wall: "back",  position: [0, H / 2, -(D / 2) - DECOR_OFFSET], rotation: [0, Math.PI, 0],     wallW: W, wallH: H },
+    { wall: "front", position: [0, H / 2,  (D / 2) + DECOR_OFFSET], rotation: [0, 0, 0],           wallW: W, wallH: H },
+    { wall: "left",  position: [-(W / 2) - DECOR_OFFSET, H / 2, 0], rotation: [0, -Math.PI / 2, 0], wallW: D, wallH: H },
+    { wall: "right", position: [ (W / 2) + DECOR_OFFSET, H / 2, 0], rotation: [0,  Math.PI / 2, 0], wallW: D, wallH: H },
+  ];
+
+  return (
+    <>
+      {wallSpecs.map(spec => {
+        const items = decor.filter(d => d.wall === spec.wall);
+        if (items.length === 0) return null;
+        return (
+          <RoomDecorWallFrame
+            key={spec.wall}
+            room={room}
+            spec={spec}
+            items={items}
+            selectedId={selectedId}
+            setSelected={setSelected}
+            updateDecor={updateDecor}
+            draggingIdRef={draggingIdRef}
+            controls={controls as unknown as { enabled: boolean } | null}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+type ExteriorWallTSType = import("@/lib/types").ExteriorWall;
+
+function RoomDecorWallFrame({
+  room, spec, items, selectedId, setSelected, updateDecor, draggingIdRef, controls,
+}: {
+  room: import("@/lib/types").RoomType;
+  spec: { wall: ExteriorWallTSType; position: [number, number, number]; rotation: [number, number, number]; wallW: number; wallH: number };
+  items: ExteriorWallDecorItem[];
+  selectedId: string | null;
+  setSelected: (id: string | null) => void;
+  updateDecor: (room: import("@/lib/types").RoomType, id: string, patch: Partial<ExteriorWallDecorItem>) => void;
+  draggingIdRef: React.MutableRefObject<string | null>;
+  controls: { enabled: boolean } | null;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const onDragMove = (e: any) => {
+    const id = draggingIdRef.current;
+    if (!id || !groupRef.current) return;
+    const worldPt = e.point as THREE.Vector3;
+    const local = groupRef.current.worldToLocal(worldPt.clone());
+    const u = local.x / spec.wallW + 0.5;
+    const v = local.y / spec.wallH + 0.5;
+    updateDecor(room, id, {
+      u: Math.max(0.04, Math.min(0.96, u)),
+      v: Math.max(0.04, Math.min(0.96, v)),
+    });
+  };
+  const onDragEnd = () => {
+    if (draggingIdRef.current) {
+      draggingIdRef.current = null;
+      if (controls) controls.enabled = true;
+    }
+  };
+
+  return (
+    <group ref={groupRef} position={spec.position} rotation={spec.rotation}>
+      <mesh
+        position={[0, 0, 0.002]}
+        onPointerMove={onDragMove}
+        onPointerUp={onDragEnd}
+        onPointerLeave={onDragEnd}
+      >
+        <planeGeometry args={[spec.wallW, spec.wallH]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      {items.map(d => (
+        <ExteriorDecorItem
+          key={d.instanceId}
+          decor={d}
+          wallW={spec.wallW}
+          wallH={spec.wallH}
+          selected={selectedId === d.instanceId}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            setSelected(d.instanceId);
+            draggingIdRef.current = d.instanceId;
+            if (controls) controls.enabled = false;
+          }}
+        />
+      ))}
+    </group>
+  );
+}
+
+/** Shared renderer for a single exterior decor item. Handles three modes:
+ *  - image (imageUrl set) → meshBasicMaterial with texture, unlit so
+ *    colors always read correctly even at night-time ambient
+ *  - light strip (id starts with "light-strip-") → emissive box,
+ *    thin and bright
+ *  - default → colored box with standard PBR material
+ *  Called from both RoomCanvas and HouseCanvas. */
+function ExteriorDecorItem({
+  decor, wallW, wallH, selected, onPointerDown,
+}: {
+  decor: ExteriorWallDecorItem;
+  wallW: number; wallH: number;
+  selected: boolean;
+  onPointerDown: (e: any) => void;
+}) {
+  const item = getFurnitureById(decor.furnitureId);
+  // Canvas-generated texture (text decor: couplets / plates / borders /
+  // ivy). Synchronous via useMemo — available on first render.
+  const canvasTex = useMemo(
+    () => (item ? makeCanvasDecorTexture(item) : null),
+    [item]
+  );
+  useEffect(() => () => { canvasTex?.dispose(); }, [canvasTex]);
+  if (!item) return null;
+
+  const w = (item.width / 100) * (decor.scaleW ?? 1);
+  const h = (item.height / 100) * (decor.scaleH ?? 1);
+  const dep = item.depth / 100;
+  const isLightStrip = item.id.startsWith("light-strip-");
+  const isVine = item.id === "climbing-vine";
+  const hasImage = !!item.imageUrl;
+  // Pick rendering mode:
+  //   - canvasTex present → draw it on a plane (couplet, plate, border, ivy)
+  //   - else hasImage (imageUrl) and no canvasTex → suspense-load the JPG
+  //   - else isLightStrip → emissive box
+  //   - else → colored box
+
+  return (
+    <group
+      position={[(decor.u - 0.5) * wallW, (decor.v - 0.5) * wallH, 0.01]}
+      rotation={[0, 0, ((decor.rotation ?? 0) * Math.PI) / 180]}
+      onPointerDown={onPointerDown}
+    >
+      {canvasTex ? (
+        <mesh position={[0, 0, 0.005]}>
+          <planeGeometry args={[w, h]} />
+          <meshBasicMaterial
+            map={canvasTex}
+            transparent={isVine}
+            alphaTest={isVine ? 0.1 : 0}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      ) : hasImage ? (
+        // URL-based texture — drei/r3f useLoader w/ Suspense, so the
+        // plane only mounts once the image is ready. Fallback shows the
+        // item's color so there's still something visible while loading.
+        <Suspense fallback={
+          <mesh position={[0, 0, 0.005]}>
+            <planeGeometry args={[w, h]} />
+            <meshBasicMaterial color={item.color} side={THREE.DoubleSide} />
+          </mesh>
+        }>
+          <MuralPlane url={item.imageUrl!} w={w} h={h} />
+        </Suspense>
+      ) : isLightStrip ? (
+        <mesh position={[0, 0, dep / 2]}>
+          <boxGeometry args={[w, h, Math.max(0.01, dep)]} />
+          <meshStandardMaterial
+            color={item.color}
+            emissive={item.color}
+            emissiveIntensity={1.5}
+            roughness={0.3}
+          />
+        </mesh>
+      ) : (
+        <mesh position={[0, 0, dep / 2]} castShadow>
+          <boxGeometry args={[w, h, Math.max(0.02, dep)]} />
+          <meshStandardMaterial color={item.color} roughness={0.55} metalness={0.25} />
+        </mesh>
+      )}
+      {selected && (
+        // Frame-only outline (no filled box in front of the decor). Four
+        // thin bars around the edge so the decor behind stays visible
+        // regardless of transparency / depth-write quirks.
+        <>
+          <mesh position={[0, h / 2 + 0.015, 0.01]}>
+            <boxGeometry args={[w + 0.04, 0.02, 0.01]} />
+            <meshBasicMaterial color="#22C55E" />
+          </mesh>
+          <mesh position={[0, -h / 2 - 0.015, 0.01]}>
+            <boxGeometry args={[w + 0.04, 0.02, 0.01]} />
+            <meshBasicMaterial color="#22C55E" />
+          </mesh>
+          <mesh position={[-w / 2 - 0.015, 0, 0.01]}>
+            <boxGeometry args={[0.02, h, 0.01]} />
+            <meshBasicMaterial color="#22C55E" />
+          </mesh>
+          <mesh position={[w / 2 + 0.015, 0, 0.01]}>
+            <boxGeometry args={[0.02, h, 0.01]} />
+            <meshBasicMaterial color="#22C55E" />
+          </mesh>
+        </>
+      )}
+    </group>
+  );
+}
+
+/** Suspense-based mural texture plane. Uses r3f's useLoader which
+ *  caches textures globally by URL and integrates with React Suspense,
+ *  so the mesh only mounts once the JPG is loaded — no black flash, no
+ *  useEffect timing gotchas. */
+function MuralPlane({ url, w, h }: { url: string; w: number; h: number }) {
+  const tex = useLoader(THREE.TextureLoader, url);
+  useMemo(() => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    tex.needsUpdate = true;
+  }, [tex]);
+  return (
+    <mesh position={[0, 0, 0.005]}>
+      <planeGeometry args={[w, h]} />
+      <meshBasicMaterial map={tex} side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
+/** Generate a decor texture by drawing on a 2D canvas. Returns null if
+ *  this item isn't one of the text-based decor types. Shared between
+ *  RoomCanvas and HouseCanvas. */
+function makeCanvasDecorTexture(item: FurnitureItem): THREE.CanvasTexture | null {
+  const c = document.createElement("canvas");
+  const ctx = c.getContext("2d");
+  if (!ctx) return null;
+
+  const drawCouplet = (chars: string[], bgColor: string) => {
+    const W = 256, H = 1536;
+    c.width = W; c.height = H;
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, W, H);
+    // Gold border
+    ctx.strokeStyle = "#F0D070";
+    ctx.lineWidth = 6;
+    ctx.strokeRect(10, 10, W - 20, H - 20);
+    // Characters stacked vertically
+    ctx.fillStyle = "#F8E090";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold ${W * 0.68}px "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif`;
+    const slotH = H / chars.length;
+    chars.forEach((ch, i) => {
+      ctx.fillText(ch, W / 2, slotH * (i + 0.5));
+    });
+  };
+
+  const drawPlate = (text: string, bgGrad: string[], textColor: string) => {
+    const W = 800, H = 320;
+    c.width = W; c.height = H;
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, bgGrad[0]);
+    grad.addColorStop(0.5, bgGrad[1]);
+    grad.addColorStop(1, bgGrad[2]);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "#484A4C";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(12, 12, W - 24, H - 24);
+    ctx.fillStyle = textColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    // Size depends on length
+    const fontSize = text.length <= 3 ? H * 0.75 : H * 0.55;
+    ctx.font = `bold ${fontSize}px "Arial Black", "Heiti SC", "Microsoft YaHei", sans-serif`;
+    ctx.fillText(text, W / 2, H / 2 + 6);
+  };
+
+  const drawMeander = () => {
+    const W = 1200, H = 100;
+    c.width = W; c.height = H;
+    ctx.fillStyle = "#7A3518";
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "#D4A030";
+    ctx.lineWidth = 4;
+    // Top/bottom edge lines
+    ctx.beginPath();
+    ctx.moveTo(0, 5); ctx.lineTo(W, 5);
+    ctx.moveTo(0, H - 5); ctx.lineTo(W, H - 5);
+    ctx.stroke();
+    // Repeating meander "Greek key" pattern
+    for (let x = 0; x < W; x += 100) {
+      ctx.beginPath();
+      ctx.moveTo(x + 10, 30);
+      ctx.lineTo(x + 90, 30);
+      ctx.lineTo(x + 90, 50);
+      ctx.lineTo(x + 30, 50);
+      ctx.lineTo(x + 30, 70);
+      ctx.lineTo(x + 70, 70);
+      ctx.lineTo(x + 70, 10);
+      ctx.stroke();
+    }
+  };
+  const drawFloral = () => {
+    const W = 1200, H = 100;
+    c.width = W; c.height = H;
+    ctx.fillStyle = "#F0EADB";
+    ctx.fillRect(0, 0, W, H);
+    // Edge lines
+    ctx.strokeStyle = "#8A4A18";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 5); ctx.lineTo(W, 5);
+    ctx.moveTo(0, H - 5); ctx.lineTo(W, H - 5);
+    ctx.stroke();
+    // Repeating flower + wave
+    for (let x = 0; x < W; x += 120) {
+      // Vine wave
+      ctx.beginPath();
+      ctx.moveTo(x + 20, 50);
+      ctx.quadraticCurveTo(x + 40, 25, x + 60, 50);
+      ctx.quadraticCurveTo(x + 80, 75, x + 100, 50);
+      ctx.stroke();
+      // Flower
+      ctx.fillStyle = "#B87030";
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.arc(x + 60, 50, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#8A4A18";
+      ctx.beginPath();
+      ctx.arc(x + 60, 50, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  };
+  const drawIvy = () => {
+    const W = 400, H = 600;
+    c.width = W; c.height = H;
+    // Brown wall showing through gaps
+    ctx.fillStyle = "#5A4028";
+    ctx.fillRect(0, 0, W, H);
+    // Leaf tile
+    const drawLeaf = (cx: number, cy: number, color: string, alpha: number, size = 22) => {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+      ctx.strokeStyle = "#1A3A18";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - size);
+      ctx.quadraticCurveTo(cx - size, cy - size * 0.5, cx - size * 0.6, cy + size * 0.5);
+      ctx.quadraticCurveTo(cx, cy + size, cx + size * 0.6, cy + size * 0.5);
+      ctx.quadraticCurveTo(cx + size, cy - size * 0.5, cx, cy - size);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - size);
+      ctx.lineTo(cx, cy + size);
+      ctx.stroke();
+      ctx.restore();
+    };
+    // Two offset rows of leaves covering the plane
+    for (let y = 0; y < H; y += 50) {
+      for (let x = 0; x < W; x += 40) {
+        const offsetX = (Math.floor(y / 50) % 2 === 0) ? 0 : 20;
+        drawLeaf(x + offsetX, y, "#2D5A2A", 0.95);
+      }
+    }
+    for (let y = 25; y < H; y += 50) {
+      for (let x = 20; x < W; x += 40) {
+        drawLeaf(x, y, "#3A7030", 0.85, 20);
+      }
+    }
+    // Brown vines
+    ctx.strokeStyle = "#4A3020";
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.7;
+    [50, 200, 350].forEach(startX => {
+      ctx.beginPath();
+      ctx.moveTo(startX, 0);
+      for (let y = 0; y <= H; y += 30) {
+        const wobble = Math.sin(y / 40) * 20;
+        ctx.lineTo(startX + wobble, y);
+      }
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+  };
+
+  if (item.id === "couplet-spring") {
+    drawCouplet(["春", "回", "大", "地", "千", "山", "秀"], "#C82020");
+  } else if (item.id === "couplet-prosperity") {
+    drawCouplet(["万", "事", "如", "意", "福", "满", "门"], "#A81818");
+  } else if (item.id === "house-number") {
+    drawPlate("888", ["#D0D2D4", "#E8EAEC", "#A8ABAE"], "#1A1C1E");
+  } else if (item.id === "nameplate-family") {
+    drawPlate("之家", ["#D4A85A", "#F0C878", "#8A6528"], "#3A2410");
+  } else if (item.id === "border-meander") {
+    drawMeander();
+  } else if (item.id === "border-floral") {
+    drawFloral();
+  } else if (item.id === "climbing-vine") {
+    drawIvy();
+  } else {
+    return null;
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  tex.needsUpdate = true;
+  return tex;
 }
 
 function PostFX() {

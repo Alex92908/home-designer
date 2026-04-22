@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="300" viewBox="0 0 450 150" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#D4A85A"/>
+      <stop offset="50%" stop-color="#F0C878"/>
+      <stop offset="100%" stop-color="#8A6528"/>
+    </linearGradient>
+  </defs>
+  <rect width="450" height="150" fill="url(#brass)"/>
+  <rect x="8" y="8" width="434" height="134" fill="none" stroke="#5A3A10" stroke-width="3"/>
+  <text x="225" y="108" font-family="serif" font-size="88" text-anchor="middle"
+        fill="#3A2410" font-weight="bold">之家</text>
+</svg>

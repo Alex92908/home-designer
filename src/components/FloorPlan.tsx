@@ -1248,12 +1248,14 @@ export default function FloorPlan() {
             {/* Window style selector */}
             <div>
               <div className="text-[10px] text-gray-400 mb-1">款式</div>
-              <div className="grid grid-cols-4 gap-1">
+              <div className="grid grid-cols-3 gap-1">
                 {([
                   { key: "sliding",  label: "推拉窗" },
                   { key: "casement", label: "平开窗" },
                   { key: "fixed",    label: "固定观景" },
                   { key: "louvered", label: "百叶窗" },
+                  { key: "security", label: "防盗窗" },
+                  { key: "wooden",   label: "木窗" },
                 ] as const).map(s => {
                   const active = (selectedWin.style ?? "sliding") === s.key;
                   return (

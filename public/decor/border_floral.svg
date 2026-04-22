@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="200" viewBox="0 0 1200 100" preserveAspectRatio="none">
+  <rect width="1200" height="100" fill="#F0EADB"/>
+  <g fill="#B87030">
+    <pattern id="flor" x="0" y="0" width="120" height="100" patternUnits="userSpaceOnUse">
+      <circle cx="60" cy="50" r="18" opacity="0.6"/>
+      <circle cx="60" cy="50" r="10" fill="#8A4A18"/>
+      <path d="M 20 50 Q 40 25 60 50 Q 80 75 100 50" stroke="#8A4A18" stroke-width="2" fill="none"/>
+    </pattern>
+    <rect x="0" y="0" width="1200" height="100" fill="url(#flor)"/>
+  </g>
+  <line x1="0" y1="5" x2="1200" y2="5" stroke="#8A4A18" stroke-width="2"/>
+  <line x1="0" y1="95" x2="1200" y2="95" stroke="#8A4A18" stroke-width="2"/>
+</svg>

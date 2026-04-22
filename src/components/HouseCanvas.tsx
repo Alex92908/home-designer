@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useMemo, useEffect, useState, Fragment } from "react";
-import { Canvas, useThree, useFrame } from "@react-three/fiber";
+import { useRef, useMemo, useEffect, useState, Fragment, Suspense, type ReactElement } from "react";
+import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
 import { OrbitControls, Environment, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
-import { ROOM_DEFS, ExteriorSettings } from "@/lib/types";
+import { ROOM_DEFS, ExteriorSettings, ExteriorWall } from "@/lib/types";
+import { getFurnitureById } from "@/lib/furniture";
 
 // ─── Constants ─────────────────────────────────────────────
 const FLOOR_H = 2.8;
@@ -247,6 +248,431 @@ function FloorShell({ floorIndex, W, D, settings, totalFloors }: {
       )}
     </group>
   );
+}
+
+// ─── Exterior wall decor (per-room) ─────────────────────────
+// Each room's RoomState may carry an `exteriorDecor` array pinning items
+// (wall lights, mailboxes, numbers, vines…) to the OUTSIDE face of one
+// of its 4 walls. In HouseCanvas we aggregate decor from every enabled
+// room on every floor, and translate each item's local (u, v) into
+// world coords using that room's layout + dimensions. In RoomCanvas the
+// same data is rendered at room-local coords (see RoomExteriorDecorLayer
+// there).
+//
+// Convention: decor wall names match WindowConfig (back = -Z, front = +Z
+// in ROOM-local coords; left = -X, right = +X). Each decor sits on the
+// OUTSIDE face of that wall, normal = outward from the room.
+
+const DECOR_OFFSET = 0.025; // push decor this far off the wall surface
+
+/** Shared with RoomCanvas — renders an exterior decor item. Handles three
+ *  visual modes: textured image (has imageUrl), emissive light strip
+ *  (id starts with "light-strip-"), or plain colored box. */
+function DecorMesh({
+  furnitureId, scaleW = 1, scaleH = 1, rotation = 0, selected, onSelect, onDragStart,
+}: {
+  furnitureId: string; scaleW?: number; scaleH?: number; rotation?: number;
+  selected: boolean;
+  onSelect: () => void;
+  onDragStart: (e: any) => void;
+}) {
+  const item = getFurnitureById(furnitureId);
+  const canvasTex = useMemo(
+    () => (item ? makeHouseCanvasDecorTexture(item) : null),
+    [item]
+  );
+  useEffect(() => () => { canvasTex?.dispose(); }, [canvasTex]);
+  if (!item) return null;
+  const w = (item.width / 100) * scaleW;
+  const h = (item.height / 100) * scaleH;
+  const d = item.depth / 100;
+  const isLightStrip = item.id.startsWith("light-strip-");
+  const isVine = item.id === "climbing-vine";
+  const hasImage = !!item.imageUrl;
+
+  return (
+    <group
+      rotation={[0, 0, (rotation * Math.PI) / 180]}
+      onPointerDown={(e) => { e.stopPropagation(); onSelect(); onDragStart(e); }}
+    >
+      {canvasTex ? (
+        <mesh position={[0, 0, 0.005]}>
+          <planeGeometry args={[w, h]} />
+          <meshBasicMaterial
+            map={canvasTex}
+            transparent={isVine}
+            alphaTest={isVine ? 0.1 : 0}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      ) : hasImage ? (
+        <Suspense fallback={
+          <mesh position={[0, 0, 0.005]}>
+            <planeGeometry args={[w, h]} />
+            <meshBasicMaterial color={item.color} side={THREE.DoubleSide} />
+          </mesh>
+        }>
+          <HouseMuralPlane url={item.imageUrl!} w={w} h={h} />
+        </Suspense>
+      ) : isLightStrip ? (
+        <mesh position={[0, 0, d / 2]}>
+          <boxGeometry args={[w, h, Math.max(0.01, d)]} />
+          <meshStandardMaterial
+            color={item.color}
+            emissive={item.color}
+            emissiveIntensity={1.5}
+            roughness={0.3}
+          />
+        </mesh>
+      ) : (
+        <mesh position={[0, 0, d / 2]} castShadow>
+          <boxGeometry args={[w, h, Math.max(0.02, d)]} />
+          <meshStandardMaterial color={item.color} roughness={0.55} metalness={0.3} />
+        </mesh>
+      )}
+      {selected && (
+        <>
+          <mesh position={[0, h / 2 + 0.015, 0.01]}>
+            <boxGeometry args={[w + 0.04, 0.02, 0.01]} />
+            <meshBasicMaterial color="#22C55E" />
+          </mesh>
+          <mesh position={[0, -h / 2 - 0.015, 0.01]}>
+            <boxGeometry args={[w + 0.04, 0.02, 0.01]} />
+            <meshBasicMaterial color="#22C55E" />
+          </mesh>
+          <mesh position={[-w / 2 - 0.015, 0, 0.01]}>
+            <boxGeometry args={[0.02, h, 0.01]} />
+            <meshBasicMaterial color="#22C55E" />
+          </mesh>
+          <mesh position={[w / 2 + 0.015, 0, 0.01]}>
+            <boxGeometry args={[0.02, h, 0.01]} />
+            <meshBasicMaterial color="#22C55E" />
+          </mesh>
+        </>
+      )}
+    </group>
+  );
+}
+
+/** Suspense-loaded mural plane — the same pattern as RoomCanvas's
+ *  MuralPlane: useLoader caches by URL globally and the mesh mounts only
+ *  once the image is ready, so murals show reliably on add (no async
+ *  setState timing quirks). */
+function HouseMuralPlane({ url, w, h }: { url: string; w: number; h: number }) {
+  const tex = useLoader(THREE.TextureLoader, url);
+  useMemo(() => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    tex.needsUpdate = true;
+  }, [tex]);
+  return (
+    <mesh position={[0, 0, 0.005]}>
+      <planeGeometry args={[w, h]} />
+      <meshBasicMaterial map={tex} side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
+function makeHouseCanvasDecorTexture(item: import("@/lib/types").FurnitureItem): THREE.CanvasTexture | null {
+  const c = document.createElement("canvas");
+  const ctx = c.getContext("2d");
+  if (!ctx) return null;
+
+  const drawCouplet = (chars: string[], bgColor: string) => {
+    const W = 256, H = 1536;
+    c.width = W; c.height = H;
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "#F0D070";
+    ctx.lineWidth = 6;
+    ctx.strokeRect(10, 10, W - 20, H - 20);
+    ctx.fillStyle = "#F8E090";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold ${W * 0.68}px "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif`;
+    const slotH = H / chars.length;
+    chars.forEach((ch, i) => ctx.fillText(ch, W / 2, slotH * (i + 0.5)));
+  };
+  const drawPlate = (text: string, bg: string[], textColor: string) => {
+    const W = 800, H = 320;
+    c.width = W; c.height = H;
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, bg[0]); grad.addColorStop(0.5, bg[1]); grad.addColorStop(1, bg[2]);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "#484A4C"; ctx.lineWidth = 8;
+    ctx.strokeRect(12, 12, W - 24, H - 24);
+    ctx.fillStyle = textColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const fs = text.length <= 3 ? H * 0.75 : H * 0.55;
+    ctx.font = `bold ${fs}px "Arial Black", "Heiti SC", "Microsoft YaHei", sans-serif`;
+    ctx.fillText(text, W / 2, H / 2 + 6);
+  };
+
+  const drawMeander = () => {
+    const W = 1200, H = 100;
+    c.width = W; c.height = H;
+    ctx.fillStyle = "#7A3518"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "#D4A030"; ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, 5); ctx.lineTo(W, 5);
+    ctx.moveTo(0, H - 5); ctx.lineTo(W, H - 5);
+    ctx.stroke();
+    for (let x = 0; x < W; x += 100) {
+      ctx.beginPath();
+      ctx.moveTo(x + 10, 30); ctx.lineTo(x + 90, 30);
+      ctx.lineTo(x + 90, 50); ctx.lineTo(x + 30, 50);
+      ctx.lineTo(x + 30, 70); ctx.lineTo(x + 70, 70);
+      ctx.lineTo(x + 70, 10);
+      ctx.stroke();
+    }
+  };
+  const drawFloral = () => {
+    const W = 1200, H = 100;
+    c.width = W; c.height = H;
+    ctx.fillStyle = "#F0EADB"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "#8A4A18"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 5); ctx.lineTo(W, 5);
+    ctx.moveTo(0, H - 5); ctx.lineTo(W, H - 5);
+    ctx.stroke();
+    for (let x = 0; x < W; x += 120) {
+      ctx.beginPath();
+      ctx.moveTo(x + 20, 50);
+      ctx.quadraticCurveTo(x + 40, 25, x + 60, 50);
+      ctx.quadraticCurveTo(x + 80, 75, x + 100, 50);
+      ctx.stroke();
+      ctx.fillStyle = "#B87030"; ctx.globalAlpha = 0.6;
+      ctx.beginPath(); ctx.arc(x + 60, 50, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#8A4A18";
+      ctx.beginPath(); ctx.arc(x + 60, 50, 10, 0, Math.PI * 2); ctx.fill();
+    }
+  };
+  const drawIvy = () => {
+    const W = 400, H = 600;
+    c.width = W; c.height = H;
+    ctx.fillStyle = "#5A4028"; ctx.fillRect(0, 0, W, H);
+    const leaf = (cx: number, cy: number, color: string, alpha: number, size = 22) => {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+      ctx.strokeStyle = "#1A3A18"; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - size);
+      ctx.quadraticCurveTo(cx - size, cy - size * 0.5, cx - size * 0.6, cy + size * 0.5);
+      ctx.quadraticCurveTo(cx, cy + size, cx + size * 0.6, cy + size * 0.5);
+      ctx.quadraticCurveTo(cx + size, cy - size * 0.5, cx, cy - size);
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, cy - size); ctx.lineTo(cx, cy + size); ctx.stroke();
+      ctx.restore();
+    };
+    for (let y = 0; y < H; y += 50) {
+      for (let x = 0; x < W; x += 40) {
+        const ox = (Math.floor(y / 50) % 2 === 0) ? 0 : 20;
+        leaf(x + ox, y, "#2D5A2A", 0.95);
+      }
+    }
+    for (let y = 25; y < H; y += 50) {
+      for (let x = 20; x < W; x += 40) leaf(x, y, "#3A7030", 0.85, 20);
+    }
+    ctx.strokeStyle = "#4A3020"; ctx.lineWidth = 3; ctx.globalAlpha = 0.7;
+    [50, 200, 350].forEach(sx => {
+      ctx.beginPath(); ctx.moveTo(sx, 0);
+      for (let y = 0; y <= H; y += 30) ctx.lineTo(sx + Math.sin(y / 40) * 20, y);
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+  };
+
+  if (item.id === "couplet-spring")        drawCouplet(["春","回","大","地","千","山","秀"], "#C82020");
+  else if (item.id === "couplet-prosperity") drawCouplet(["万","事","如","意","福","满","门"], "#A81818");
+  else if (item.id === "house-number")     drawPlate("888", ["#D0D2D4","#E8EAEC","#A8ABAE"], "#1A1C1E");
+  else if (item.id === "nameplate-family") drawPlate("之家", ["#D4A85A","#F0C878","#8A6528"], "#3A2410");
+  else if (item.id === "border-meander")   drawMeander();
+  else if (item.id === "border-floral")    drawFloral();
+  else if (item.id === "climbing-vine")    drawIvy();
+  else return null;
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/** Compute the world-space transform for one room's exterior wall
+ *  surface. Input is the room's world-centered X/Z (meters) + room
+ *  dimensions + room height + which wall.
+ *
+ *  The returned frame is oriented so that inside the frame:
+ *    local +X = "right" when standing outside the wall looking at it
+ *    local +Y = up
+ *    local +Z = outward normal (away from the room interior)
+ */
+function roomWallFrame(
+  roomCx: number, roomCz: number, roomW: number, roomD: number, roomH: number,
+  wall: import("@/lib/types").ExteriorWall,
+): { position: [number, number, number]; rotation: [number, number, number]; wallW: number; wallH: number } {
+  const y = roomH / 2;
+  const off = DECOR_OFFSET;
+  switch (wall) {
+    case "back":  return { position: [roomCx, y, roomCz - roomD / 2 - off], rotation: [0, Math.PI, 0],     wallW: roomW, wallH: roomH };
+    case "front": return { position: [roomCx, y, roomCz + roomD / 2 + off], rotation: [0, 0, 0],           wallW: roomW, wallH: roomH };
+    case "left":  return { position: [roomCx - roomW / 2 - off, y, roomCz], rotation: [0, -Math.PI / 2, 0], wallW: roomD, wallH: roomH };
+    case "right": return { position: [roomCx + roomW / 2 + off, y, roomCz], rotation: [0,  Math.PI / 2, 0], wallW: roomD, wallH: roomH };
+  }
+}
+
+function WallFrame({
+  decorRoom, wall, roomCx, roomCz, roomW, roomD, roomH, yOffset,
+  items, selectedId, setSelected, draggingIdRef, orbitRef, updateDecor,
+}: {
+  /** Owning room — needed so updateDecor knows where to patch. */
+  decorRoom: import("@/lib/types").RoomType;
+  wall: import("@/lib/types").ExteriorWall;
+  roomCx: number; roomCz: number; roomW: number; roomD: number; roomH: number;
+  /** World Y offset for multi-floor stacking. */
+  yOffset: number;
+  items: Array<import("@/lib/types").ExteriorWallDecorItem>;
+  selectedId: string | null;
+  setSelected: (id: string | null) => void;
+  draggingIdRef: React.MutableRefObject<string | null>;
+  orbitRef: React.MutableRefObject<any>;
+  updateDecor: (room: import("@/lib/types").RoomType, id: string, patch: Partial<import("@/lib/types").ExteriorWallDecorItem>) => void;
+}) {
+  const { position, rotation, wallW, wallH } = roomWallFrame(roomCx, roomCz, roomW, roomD, roomH, wall);
+  const groupRef = useRef<THREE.Group>(null);
+
+  const onDragMove = (e: any) => {
+    const id = draggingIdRef.current;
+    if (!id || !groupRef.current) return;
+    const worldPt = e.point as THREE.Vector3;
+    const local = groupRef.current.worldToLocal(worldPt.clone());
+    const u = local.x / wallW + 0.5;
+    const v = local.y / wallH + 0.5;
+    const clampedU = Math.max(0.04, Math.min(0.96, u));
+    const clampedV = Math.max(0.04, Math.min(0.96, v));
+    updateDecor(decorRoom, id, { u: clampedU, v: clampedV });
+  };
+  const onDragEnd = () => {
+    if (draggingIdRef.current) {
+      draggingIdRef.current = null;
+      if (orbitRef.current) orbitRef.current.enabled = true;
+    }
+  };
+
+  // Apply yOffset on top of roomWallFrame's Y (which is roomH/2 for this
+  // floor's slice). The whole frame group's final world Y = yOffset + roomH/2.
+  const finalPosition: [number, number, number] = [position[0], position[1] + yOffset, position[2]];
+
+  return (
+    <group ref={groupRef} position={finalPosition} rotation={rotation}>
+      {/* Invisible drag plane */}
+      <mesh
+        position={[0, 0, 0.002]}
+        onPointerMove={onDragMove}
+        onPointerUp={onDragEnd}
+        onPointerLeave={onDragEnd}
+      >
+        <planeGeometry args={[wallW, wallH]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      {items.map(d => (
+        <group
+          key={d.instanceId}
+          position={[(d.u - 0.5) * wallW, (d.v - 0.5) * wallH, 0.01]}
+        >
+          <DecorMesh
+            furnitureId={d.furnitureId}
+            scaleW={d.scaleW}
+            scaleH={d.scaleH}
+            rotation={d.rotation}
+            selected={selectedId === d.instanceId}
+            onSelect={() => setSelected(d.instanceId)}
+            onDragStart={() => {
+              draggingIdRef.current = d.instanceId;
+              if (orbitRef.current) orbitRef.current.enabled = false;
+            }}
+          />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** Aggregator: walks every enabled room on every floor, computes its
+ *  world-centered X/Z (via roomLayout + roomDimensions), and renders a
+ *  WallFrame per decor'd wall. The room's world center is derived the
+ *  same way as `useFootprint` computes the house bbox — rooms layout
+ *  in cm with Y-down screen coords → world: (layout.x - minX) - W*50
+ *  shifts the cm-origin to house center. */
+function WallDecorLayer({
+  W, D, orbitRef,
+}: {
+  W: number; D: number;
+  orbitRef: React.MutableRefObject<any>;
+}) {
+  const floorPlans = useDesignerStore(s => s.floorPlans);
+  const selectedId = useDesignerStore(s => s.selectedExteriorDecorId);
+  const setSelected = useDesignerStore(s => s.setSelectedExteriorDecor);
+  const updateDecor = useDesignerStore(s => s.updateRoomExteriorDecor);
+  const draggingIdRef = useRef<string | null>(null);
+
+  const frames: ReactElement[] = [];
+  floorPlans.forEach((plan, floorIdx) => {
+    const indoor = plan.enabledRooms.filter(r => !ROOM_DEFS[r].isOutdoor);
+    if (indoor.length === 0) return;
+    const xs = indoor.flatMap(r => [plan.roomLayout[r].x, plan.roomLayout[r].x + plan.roomDimensions[r].width]);
+    const zs = indoor.flatMap(r => [plan.roomLayout[r].y, plan.roomLayout[r].y + plan.roomDimensions[r].depth]);
+    const minX = Math.min(...xs), minZ = Math.min(...zs);
+    const planW_m = (Math.max(...xs) - minX) / 100;
+    const planD_m = (Math.max(...zs) - minZ) / 100;
+    for (const room of indoor) {
+      const decor = plan.rooms[room]?.exteriorDecor;
+      if (!decor || decor.length === 0) continue;
+      const dims = plan.roomDimensions[room];
+      const lay = plan.roomLayout[room];
+      // Room world center (meters), relative to the whole-house footprint
+      // centered at world origin.
+      const roomCx = ((lay.x + dims.width / 2) - minX) / 100 - planW_m / 2;
+      const roomCz = ((lay.y + dims.depth / 2) - minZ) / 100 - planD_m / 2;
+      const roomW  = dims.width / 100;
+      const roomD  = dims.depth / 100;
+      // Use ROOM_DEFS height for the storey's interior height. HouseCanvas
+      // itself stacks floors via FLOOR_H; we match that so the decor
+      // aligns with its floor slab.
+      const roomH  = FLOOR_H;
+      const yOff   = floorIdx * FLOOR_H;
+      const walls: import("@/lib/types").ExteriorWall[] = ["front", "back", "left", "right"];
+      for (const wall of walls) {
+        const items = decor.filter(d => d.wall === wall);
+        if (items.length === 0) continue;
+        frames.push(
+          <WallFrame
+            key={`${floorIdx}-${room}-${wall}`}
+            decorRoom={room}
+            wall={wall}
+            roomCx={roomCx} roomCz={roomCz}
+            roomW={roomW} roomD={roomD} roomH={roomH}
+            yOffset={yOff}
+            items={items}
+            selectedId={selectedId}
+            setSelected={setSelected}
+            draggingIdRef={draggingIdRef}
+            orbitRef={orbitRef}
+            updateDecor={updateDecor}
+          />
+        );
+      }
+    }
+  });
+
+  // `W`, `D` parameters are unused at the moment (kept for call-site
+  // backward compatibility).
+  void W; void D;
+  return <>{frames}</>;
 }
 
 // ─── Foundation ─────────────────────────────────────────────
@@ -1449,9 +1875,13 @@ export default function HouseCanvas() {
         <directionalLight position={[-15, 20, -10]} intensity={0.4} />
 
         {/* Click empty ground to deselect */}
-        <DeselectPlane onDeselect={() => setSelectedOutdoorKey(null)} />
+        <DeselectPlane onDeselect={() => {
+          setSelectedOutdoorKey(null);
+          useDesignerStore.getState().setSelectedExteriorDecor(null);
+        }} />
         <Ground W={W} D={D} />
         <HouseBody W={W} D={D} settings={exterior} />
+        <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />
         <YardElements
           W={W} D={D} yardPreset={yardPreset} parking={showParking}
           orbitRef={orbitRef}
