@@ -375,7 +375,7 @@ function RoomShell({
       })()}
 
       {/* Door panel (3D, inside the wall's door hole) */}
-      {hasDoor && doorWall !== "bottom" && (
+      {hasDoor && (
         <RoomDoor3D
           W={W} D={D} H={H}
           doorWall={doorWall}
@@ -874,6 +874,16 @@ function RoomDoor3D({
       groupRot = [0, 0, 0];
       hingeOffset = 1;
       break;
+    case "bottom": // front wall (z = +D/2) — normally hidden wall but
+      // door itself should still render so it's visible in dollhouse.
+      // Rotate 180° around Y so door faces room interior (-Z).
+      // Position: door's LEFT edge (from outside) at world X = -W/2 + doorPos.
+      // With rotation π, local +X → world -X, so group origin sits at the
+      // door's right edge in world: -W/2 + doorPos + doorW.
+      groupPos = [-W / 2 + doorPos + doorW, 0, D / 2 - 0.02];
+      groupRot = [0, Math.PI, 0];
+      hingeOffset = 1;
+      break;
     case "left":
       groupPos = [-W / 2 + 0.02, 0, doorPos - D / 2];
       groupRot = [0, Math.PI / 2, 0];
@@ -884,9 +894,7 @@ function RoomDoor3D({
       groupRot = [0, -Math.PI / 2, 0];
       hingeOffset = 1;
       break;
-    case "bottom":
     default:
-      // Front wall isn't rendered in dollhouse view. Skip.
       return null;
   }
 
