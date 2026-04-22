@@ -77,7 +77,10 @@ const ASSETS = [
 
   // ── Architectural (room shell replacements, not placeable furniture) ─
   { uid: "7c34cb1c99544017a03119b566718399", slug: "window_modern",           category: "_arch_window",    author: "JeanLescano" },
-  { uid: "720c98140848429c985fbd7c77eac70e", slug: "interior_wooden_door",    category: "_arch_door",      author: "joshtmc" },
+  // Swapped: joshtmc's `interior_wooden_door` zip kept downloading corrupted
+  // (truncated). Using keam.wf's low-poly game-ready door instead — 3.8k
+  // faces, much smaller file.
+  { uid: "f5c93a53f5e245c78ce4bbdd6130c4f9", slug: "wooden_door_lowpoly",     category: "_arch_door",      author: "keam.wf" },
 ];
 
 const API = "https://api.sketchfab.com/v3";

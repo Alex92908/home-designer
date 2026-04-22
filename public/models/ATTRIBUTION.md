@@ -100,6 +100,27 @@
 | Legion Single Sink Vanity | allenbranch | 2.2k | 单盆浴室柜 | <https://sketchfab.com/3d-models/750dfa5fab444c28baf30e063d2b56d3> |
 | Laufen Kartell 24" 2-Drawer Vanity | usbathstore | 3.6k | （未使用，备选） | <https://sketchfab.com/3d-models/4a6a3be47e1143c38c3cbadcdaac86ea> |
 
+**建筑构件（窗 + 门）**
+
+| 模型 | 作者 | 面数 | 用途 | 链接 |
+|---|---|---|---|---|
+| Window (modern) | JeanLescano | 9.6k | （建模为"已打开"展开状态，暂未启用）| <https://sketchfab.com/3d-models/7c34cb1c99544017a03119b566718399> |
+| Wooden Door \| Low-Poly | keam.wf | 3.8k | 3D 室内门（可点击开关）| <https://sketchfab.com/3d-models/f5c93a53f5e245c78ce4bbdd6130c4f9> |
+
+## 公共领域挂画（Wikimedia Commons）
+
+全部艺术品已过版权保护期（作者逝世 > 70 年 OR 作品 > 500 年），无需
+署名。保留记录仅出于溯源。图片通过 `scripts/download-artworks.mjs`
+从 commons.wikimedia.org 下载到 `public/artworks/`。
+
+| 文件 | 作品 | 作者 | 年代 |
+|---|---|---|---|
+| `mondrian_composition.jpg` | Composition II with Red, Blue and Yellow | Piet Mondrian | 1930 |
+| `monet_impression_sunrise.jpg` | Impression, Sunrise | Claude Monet | 1872 |
+| `vangogh_wheatfield_cypresses.jpg` | Wheat Field with Cypresses | Vincent van Gogh | 1889 |
+| `fankuan_travelers_mountains.jpg` | 谿山行旅图 | 范宽 / Fan Kuan | 北宋 c. 1000 |
+| `hokusai_great_wave.jpg` | 神奈川冲浪里 | 葛飾北斎 / Hokusai | 1831 |
+
 ### Sketchfab 下载步骤（一次设置）
 
 1. 注册免费账号 <https://sketchfab.com/signup>

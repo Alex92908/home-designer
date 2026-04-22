@@ -88,6 +88,10 @@ export interface FurnitureItem {
   tags: StyleTag[];
   description: string;
   icon: string;    // emoji for floor plan
+  /** For the `artwork` category: URL of a public-domain painting image
+   *  (JPG/PNG) to texture the front face of the artwork in 3D. Stored in
+   *  public/artworks/ and downloaded via scripts/download-artworks.mjs. */
+  imageUrl?: string;
   /** Optional glTF/GLB model path. When set, 3D view renders the real
    *  asset instead of the procedural box mesh. Path is relative to the
    *  site root (e.g. "/models/sofa/nordic-3seat.glb"). See

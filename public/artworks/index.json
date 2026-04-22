@@ -1,0 +1,51 @@
+[
+  {
+    "slug": "mondrian_composition",
+    "title": "Composition II with Red, Blue and Yellow",
+    "artist": "Piet Mondrian (1930)",
+    "url": "/artworks/mondrian_composition.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Piet_Mondriaan%2C_1930_-_Mondrian_Composition_II_in_Red%2C_Blue%2C_and_Yellow.jpg?width=1024"
+  },
+  {
+    "slug": "monet_impression_sunrise",
+    "title": "Impression, Sunrise",
+    "artist": "Claude Monet (1872)",
+    "url": "/artworks/monet_impression_sunrise.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Monet_-_Impression%2C_Sunrise.jpg?width=1024"
+  },
+  {
+    "slug": "vangogh_wheatfield_cypresses",
+    "title": "Wheat Field with Cypresses",
+    "artist": "Vincent van Gogh (1889)",
+    "url": "/artworks/vangogh_wheatfield_cypresses.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Vincent_van_Gogh_-_Wheat_Field_with_Cypresses_-_Google_Art_Project.jpg?width=1024"
+  },
+  {
+    "slug": "hammershoi_interior",
+    "title": "Interior with Young Man Reading",
+    "artist": "Vilhelm Hammershøi (1898)",
+    "url": "/artworks/hammershoi_interior.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Vilhelm_Hammersh%C3%B8i_-_Interior_with_Young_Man_Reading_-_Google_Art_Project.jpg?width=1024"
+  },
+  {
+    "slug": "shenzhou_lofty_mount_lu",
+    "title": "庐山高图（传）",
+    "artist": "沈周 / Shen Zhou (Ming, 1467)",
+    "url": "/artworks/shenzhou_lofty_mount_lu.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Shen_Zhou_-_Lofty_Mount_Lu.jpg?width=768"
+  },
+  {
+    "slug": "fankuan_travelers_mountains",
+    "title": "谿山行旅图",
+    "artist": "范宽 / Fan Kuan (北宋, c. 1000)",
+    "url": "/artworks/fankuan_travelers_mountains.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Fan_Kuan_-_Travelers_Among_Mountains_and_Streams_-_Google_Art_Project.jpg?width=512"
+  },
+  {
+    "slug": "hokusai_great_wave",
+    "title": "神奈川冲浪里",
+    "artist": "葛飾北斎 / Hokusai (1831)",
+    "url": "/artworks/hokusai_great_wave.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/The_Great_Wave_off_Kanagawa.jpg?width=1024"
+  }
+]

@@ -1490,22 +1490,52 @@ function Storage({ color, w, d, h }: MeshProps) {
   );
 }
 
-function Artwork({ color, w, d, h }: MeshProps) {
-  // Render at wall height (eye level)
+function Artwork({ color, w, h, imageUrl }: MeshProps & { imageUrl?: string }) {
+  // If an image is provided, load it as a texture and apply to the front
+  // face; otherwise fall back to the original solid-color canvas.
+  const tex = useArtworkTexture(imageUrl);
   return (
     <group>
-      {/* Canvas */}
+      {/* Dark wood frame (behind + around) */}
       <mesh position={[0, 0, 0]} castShadow>
-        <boxGeometry args={[w, h, 0.03]} />
-        <meshStandardMaterial color={color} roughness={0.7} />
+        <boxGeometry args={[w + 0.04, h + 0.04, 0.025]} />
+        <meshStandardMaterial color="#3A2A1E" roughness={0.65} />
       </mesh>
-      {/* Frame */}
-      <mesh position={[0, 0, 0.02]}>
-        <boxGeometry args={[w + 0.04, h + 0.04, 0.02]} />
-        <meshStandardMaterial color="#5A4A3A" roughness={0.6} />
+      {/* Canvas — textured if imageUrl, solid color otherwise */}
+      <mesh position={[0, 0, 0.015]} castShadow>
+        <planeGeometry args={[w, h]} />
+        {tex ? (
+          <meshStandardMaterial map={tex} roughness={0.78} metalness={0} />
+        ) : (
+          <meshStandardMaterial color={color} roughness={0.78} />
+        )}
       </mesh>
     </group>
   );
+}
+
+// Lazy-loaded texture with error fallback (returns null if load fails).
+function useArtworkTexture(url: string | undefined): THREE.Texture | null {
+  const [tex, setTex] = useState<THREE.Texture | null>(null);
+  useEffect(() => {
+    if (!url) { setTex(null); return; }
+    const loader = new THREE.TextureLoader();
+    let cancelled = false;
+    loader.load(
+      url,
+      t => {
+        if (cancelled) return;
+        // sRGB color space for artwork photos so colors render true
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = 8;
+        setTex(t);
+      },
+      undefined,
+      err => console.warn(`[Artwork] failed to load ${url}:`, err)
+    );
+    return () => { cancelled = true; };
+  }, [url]);
+  return tex;
 }
 
 // ─── Per-category material properties ─────────────────────
@@ -1592,7 +1622,7 @@ function FurnitureMesh({ item, w, d, h }: { item: FurnitureItem; w: number; d: n
     case "floor_lamp":      return <FloorLamp {...props} />;
     case "plant":           return <Plant {...props} />;
     case "rug":             return <Rug {...props} />;
-    case "artwork":         return <Artwork {...props} />;
+    case "artwork":         return <Artwork {...props} imageUrl={item.imageUrl} />;
     case "sideboard":       return <CoffeeTable {...props} />;
     default:                return <GenericBox {...props} category={item.category} />;
   }
@@ -1916,6 +1946,13 @@ export default function RoomCanvas() {
             toneMappingExposure: 1.2,
             // Required for canvas.toDataURL() (AI render screenshot)
             preserveDrawingBuffer: true,
+            // Explicit attrs — r3f 9.x + React 19 sometimes throws
+            // "reading 'alpha'" when deriving defaults from a not-yet-ready
+            // context. Setting these up-front dodges that race.
+            alpha: true,
+            stencil: false,
+            depth: true,
+            powerPreference: "default",
           }}
           dpr={[1, 2]}
           shadows={{ type: THREE.PCFShadowMap }}
