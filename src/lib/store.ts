@@ -1221,18 +1221,51 @@ export const useDesignerStore = create<DesignerStore>()(
         const fp = s.floorPlans[activeFloor];
         const { enabledRooms, roomDimensions } = fp;
         const updatedRooms = { ...fp.rooms };
+        // Template can now also drive windows and door style per room —
+        // these live OUTSIDE RoomState (on the floor plan), so we collect
+        // patches and apply them alongside the per-room rooms update.
+        const windowsPatch: Record<string, import("./types").WindowConfig[]> = {};
+        const doorStylePatch: Partial<Record<RoomType, import("./types").DoorStyle>> = {};
+        const doorWallPatch: Partial<Record<RoomType, "bottom" | "top" | "left" | "right">> = {};
+        const doorPosPatch: Partial<Record<RoomType, number>> = {};
+        const doorLenPatch: Partial<Record<RoomType, number>> = {};
         for (const roomId of enabledRooms) {
           const tplRoom = template.rooms[roomId];
           if (!tplRoom) continue;
           const dims = roomDimensions[roomId];
           const embedded = template.embeddedRooms?.[roomId];
-          const { materials, placedItems } = embedded
+          const built = embedded
             ? buildEmbeddedRoomState(roomId, embedded, dims.width, dims.depth)
             : buildTemplateRoomState(roomId, tplRoom, dims.width, dims.depth);
-          updatedRooms[roomId] = { materials: materials as never, placedItems: placedItems as never };
+          const { materials, placedItems } = built;
+          // Optional fields only present on embedded rooms
+          const windows = (built as { windows?: import("./types").WindowConfig[] }).windows ?? [];
+          const doorStyle = (built as { doorStyle?: import("./types").DoorStyle }).doorStyle;
+          const doorWall = (built as { doorWall?: "bottom" | "top" | "left" | "right" }).doorWall;
+          const doorPos = (built as { doorPos?: number }).doorPos;
+          const doorLen = (built as { doorLen?: number }).doorLen;
+          const exteriorDecor = (built as { exteriorDecor?: import("./types").ExteriorWallDecorItem[] }).exteriorDecor ?? [];
+          updatedRooms[roomId] = {
+            materials: materials as never,
+            placedItems: placedItems as never,
+            ...(exteriorDecor.length > 0 ? { exteriorDecor } : {}),
+          };
+          if (windows.length > 0) windowsPatch[roomId] = windows;
+          if (doorStyle) doorStylePatch[roomId] = doorStyle;
+          if (doorWall) doorWallPatch[roomId] = doorWall;
+          if (doorPos !== undefined) doorPosPatch[roomId] = doorPos;
+          if (doorLen !== undefined) doorLenPatch[roomId] = doorLen;
         }
         const floorPlans = [...s.floorPlans];
-        floorPlans[activeFloor] = { ...fp, rooms: updatedRooms };
+        floorPlans[activeFloor] = {
+          ...fp,
+          rooms: updatedRooms,
+          roomWindows: { ...fp.roomWindows, ...windowsPatch },
+          roomDoorStyle: { ...(fp.roomDoorStyle ?? {}), ...doorStylePatch },
+          roomDoorWall: { ...fp.roomDoorWall, ...doorWallPatch },
+          roomDoorPos:  { ...fp.roomDoorPos,  ...doorPosPatch },
+          roomDoorLen:  { ...(fp.roomDoorLen ?? {}), ...doorLenPatch },
+        };
         const firstTemplatedRoom = enabledRooms.find(r => template.rooms[r]) ?? s.activeRoom;
         const { materials, placedItems } = updatedRooms[firstTemplatedRoom];
         const computed = computeScores(materials as never, placedItems as never);
