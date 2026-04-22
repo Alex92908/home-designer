@@ -988,23 +988,36 @@ function RoomDoor3D({
         <group ref={panelRef} position={[0, 0, 0.01]}>
           {doorStyle === "wood_panel" ? (
             ENABLE_GLTF_DOOR ? (
-              <GltfDoorFallback
-                fallback={
-                  <ProceduralWoodDoor
-                    doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
-                    onClick={() => toggleDoorOpen(activeRoom)}
-                  />
-                }
-              >
-                <Suspense fallback={
-                  <ProceduralWoodDoor
-                    doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
-                    onClick={() => toggleDoorOpen(activeRoom)}
-                  />
-                }>
-                  <GltfDoorPanel doorW={doorW} doorH={doorH} onClick={() => toggleDoorOpen(activeRoom)} />
-                </Suspense>
-              </GltfDoorFallback>
+              <>
+                <GltfDoorFallback
+                  fallback={
+                    <ProceduralWoodDoor
+                      doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
+                      onClick={() => toggleDoorOpen(activeRoom)}
+                    />
+                  }
+                >
+                  <Suspense fallback={
+                    <ProceduralWoodDoor
+                      doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
+                      onClick={() => toggleDoorOpen(activeRoom)}
+                    />
+                  }>
+                    <GltfDoorPanel doorW={doorW} doorH={doorH} onClick={() => toggleDoorOpen(activeRoom)} />
+                  </Suspense>
+                </GltfDoorFallback>
+                {/* Extra handle on both faces of the door so it's always
+                    visible regardless of which way the glTF asset was
+                    exported. Two small spheres + short stem. */}
+                <mesh position={[doorW - 0.1, doorH * 0.45, 0.035]}>
+                  <sphereGeometry args={[0.032, 14, 14]} />
+                  <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.25} />
+                </mesh>
+                <mesh position={[doorW - 0.1, doorH * 0.45, -0.035]}>
+                  <sphereGeometry args={[0.032, 14, 14]} />
+                  <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.25} />
+                </mesh>
+              </>
             ) : (
               <ProceduralWoodDoor
                 doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
