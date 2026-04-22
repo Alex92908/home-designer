@@ -607,6 +607,27 @@ class ArchWindowFallback extends Component<
   }
 }
 
+/** Catches failures from drei's <Environment> — most commonly a network
+ *  error fetching the Poly Haven HDR (e.g. `lebombo_1k.hdr` for the
+ *  "apartment" preset) from the CDN. Without this wrapper such a fetch
+ *  failure bubbles up and crashes the entire Canvas. On failure we just
+ *  render nothing and let the ambient + directional lights carry the
+ *  scene — not as pretty as IBL but everything stays visible. */
+class EnvironmentFallback extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err: Error) {
+    console.warn(`[Environment] HDR fetch failed, rendering without IBL: ${err.message}`);
+  }
+  render() {
+    if (this.state.failed) return null;
+    return this.props.children;
+  }
+}
+
 // ─── Parameterized window (back / right / left walls) ────────
 function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number; H: number }) {
   const winLen = win.len / 100;          // window length in metres
@@ -2517,8 +2538,18 @@ function Scene({ isIOS }: { isIOS: boolean }) {
       <CameraAndCaptureSetup />
 
       {/* Environment — skip on iOS: PMREMGenerator.fromScene is broken on iPhone Metal
-          (three.js bug #25888). Compensate with stronger ambient + fill lights. */}
-      {!isIOS && <Environment preset="apartment" />}
+          (three.js bug #25888). Compensate with stronger ambient + fill lights.
+          Also wrapped in ErrorBoundary+Suspense so a CDN failure on the
+          Poly Haven HDR (lebombo_1k.hdr fetched by drei's "apartment"
+          preset) gracefully degrades to no-IBL instead of crashing the
+          whole Canvas. */}
+      {!isIOS && (
+        <EnvironmentFallback>
+          <Suspense fallback={null}>
+            <Environment preset="apartment" />
+          </Suspense>
+        </EnvironmentFallback>
+      )}
 
       {/* Main directional light with shadows */}
       <directionalLight

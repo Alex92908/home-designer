@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useEffect, useState, Fragment, Suspense, type ReactElement } from "react";
+import { useRef, useMemo, useEffect, useState, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
 import { OrbitControls, Environment, Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -673,6 +673,25 @@ function WallDecorLayer({
   // backward compatibility).
   void W; void D;
   return <>{frames}</>;
+}
+
+/** Catches failures from drei's <Environment> — most commonly a CDN
+ *  fetch error on the Poly Haven HDR used by presets like "sunset" /
+ *  "apartment". Without this, a network failure crashes the whole
+ *  Canvas; with it, we gracefully degrade to ambient + directional. */
+class HouseEnvironmentFallback extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err: Error) {
+    console.warn(`[HouseCanvas.Environment] HDR fetch failed: ${err.message}`);
+  }
+  render() {
+    if (this.state.failed) return null;
+    return this.props.children;
+  }
 }
 
 // ─── Foundation ─────────────────────────────────────────────
@@ -1863,8 +1882,14 @@ export default function HouseCanvas() {
           maxDistance={120}
           target={[0, floors * FLOOR_H * 0.35, 0]}
         />
-        <Environment preset="sunset" background backgroundBlurriness={0.04} />
-        <ambientLight intensity={0.25} />
+        {/* HDR environment from Poly Haven CDN — wrapped to keep the scene
+            usable if the CDN fetch fails (falls back to plain ambient). */}
+        <HouseEnvironmentFallback>
+          <Suspense fallback={null}>
+            <Environment preset="sunset" background backgroundBlurriness={0.04} />
+          </Suspense>
+        </HouseEnvironmentFallback>
+        <ambientLight intensity={0.45} />
         <directionalLight
           position={[20, 30, 15]} intensity={1.1} castShadow
           shadow-mapSize={[2048, 2048]}
