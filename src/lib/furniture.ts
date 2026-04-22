@@ -180,6 +180,7 @@ export const FURNITURE: FurnitureItem[] = [
     description: "原木质感，温馨耐用",
     icon: "📺",
     model3d: { url: "/models/tv_unit/modern_wooden_cabinet/modern_wooden_cabinet_1k.gltf" },
+    imageUrl: "/artworks/hokusai_great_wave.jpg",
   },
   {
     id: "tvunit-black-stone",
@@ -196,6 +197,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢", "工业风"],
     description: "岩板台面，高级质感",
     icon: "📺",
+    imageUrl: "/artworks/monet_impression_sunrise.jpg",
   },
 
   // ─── 落地灯 Floor Lamp ─────────────────────────────────

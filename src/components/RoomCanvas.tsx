@@ -430,14 +430,12 @@ function RoomShell({
 }
 
 // ─── glTF window (real 3D asset, replaces procedural frame/glass/mullion) ─
-// Currently disabled: the only CC-BY window asset we found
-// (`window_modern` from Sketchfab) is modelled in an "opened 47cm"
-// casement pose and doesn't close cleanly via auto-transform. Keep the
-// code path and component for when a better asset becomes available —
-// flip this flag back to true once /models/_arch_window/ contains a
-// flat/closed-state window.
-const ENABLE_GLTF_WINDOW = false;
-const ARCH_WINDOW_URL = "/models/_arch_window/window_modern/window_modern.gltf";
+// Enabled when a closed-state window asset is available. Previous attempt
+// (`window_modern` by JeanLescano) was a SketchUp-exported "opened 47cm"
+// casement pose that didn't close via auto-transform. Switched to
+// AleixoAlonso's `residential_window` (closed-state, 2.8k faces, CC-BY).
+const ENABLE_GLTF_WINDOW = true;
+const ARCH_WINDOW_URL = "/models/_arch_window/residential_window/residential_window.gltf";
 
 function GltfArchWindow({ winLen, winH }: { winLen: number; winH: number }) {
   const { scene } = useGLTF(ARCH_WINDOW_URL) as unknown as { scene: THREE.Object3D };
@@ -681,6 +679,87 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   return null;
 }
 
+// ─── glTF door panel (for wood_panel style) ─────────────────
+// Loads keam.wf's wooden_door_lowpoly (CC-BY, 3.8k faces) and positions
+// it with the left edge at local X=0 so the parent group can rotate
+// around that hinge. Falls back to caller's procedural panel on load
+// failure (via <Suspense fallback> at the call site).
+const WOODEN_DOOR_URL = "/models/_arch_door/wooden_door_lowpoly/wooden_door_lowpoly.gltf";
+
+function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number; onClick: () => void }) {
+  const { scene } = useGLTF(WOODEN_DOOR_URL) as unknown as { scene: THREE.Object3D };
+  const cloned = useMemo(() => {
+    const c = scene.clone(true);
+    c.traverse(obj => {
+      const m = obj as THREE.Mesh;
+      if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; }
+    });
+    c.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(c);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    if (size.x > 0 && size.y > 0 && size.z > 0) {
+      // Fit X to doorW, Y to doorH, keep Z proportional to X
+      const sx = doorW / size.x;
+      const sy = doorH / size.y;
+      c.scale.set(sx, sy, sx);
+      c.updateMatrixWorld(true);
+      const box2 = new THREE.Box3().setFromObject(c);
+      // Base at Y=0, X centered → then shift right so left edge sits at
+      // the hinge (local X=0).
+      c.position.x -= (box2.min.x + box2.max.x) / 2;
+      c.position.y -= box2.min.y;
+      c.position.z -= (box2.min.z + box2.max.z) / 2;
+      c.position.x += doorW / 2;
+    }
+    return c;
+  }, [scene, doorW, doorH]);
+
+  return (
+    <group onClick={(e) => { e.stopPropagation(); onClick(); }}>
+      <primitive object={cloned} />
+    </group>
+  );
+}
+
+// Enable DRACO-less caching for this asset
+// (useGLTF.preload would help on route prefetch but not required here)
+
+class GltfDoorFallback extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err: Error) {
+    console.warn(`[GltfDoorPanel] fallback: ${err.message}`);
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
+/** 3-blade ceiling fan that spins continuously. */
+function CeilingFanBlades() {
+  const bladesRef = useRef<THREE.Group>(null);
+  useFrame((_, delta) => {
+    if (bladesRef.current) bladesRef.current.rotation.y += delta * 3.5; // ~35 RPM-ish
+  });
+  return (
+    <group ref={bladesRef} position={[0, 0, 0]}>
+      {[0, 1, 2].map(i => {
+        const angle = (i / 3) * Math.PI * 2;
+        return (
+          <mesh key={i} position={[Math.cos(angle) * 0.38, 0, Math.sin(angle) * 0.38]} rotation={[0, -angle, -0.08]}>
+            <boxGeometry args={[0.6, 0.01, 0.1]} />
+            <meshStandardMaterial color="#C8A882" roughness={0.6} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
 // ─── Interior door (3D) with click-to-open animation ────────
 // Renders a door panel inside the wall's door hole. The panel is hinged
 // on its left edge (opens inward 90°). Click toggles open/closed; a
@@ -838,44 +917,77 @@ function RoomDoor3D({
           </mesh>
         </group>
       ) : (
-        // Default: wood_panel or frosted_glass (single hinged door)
+        // Default: wood_panel uses real glTF; frosted_glass uses procedural
+        // (it's a glass-look tinted box — glTF wouldn't match semantics).
         <group ref={panelRef} position={[0, 0, 0.01]}>
-          <mesh
-            position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]}
-            onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
-            castShadow
-            receiveShadow
-          >
-            <boxGeometry args={[doorW - 0.02, doorH - 0.02, 0.035]} />
-            <meshStandardMaterial
-              color={doorStyle === "frosted_glass" ? "#D8E0E8" : "#C79A6A"}
-              roughness={doorStyle === "frosted_glass" ? 0.35 : 0.55}
-              metalness={0.02}
-              transparent={doorStyle === "frosted_glass"}
-              opacity={doorStyle === "frosted_glass" ? 0.85 : 1}
-            />
-          </mesh>
-          {/* Wood panel inset lines (only for wood_panel) */}
-          {doorStyle === "wood_panel" && (
+          {doorStyle === "wood_panel" ? (
+            <GltfDoorFallback
+              fallback={
+                <ProceduralWoodDoor
+                  doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
+                  onClick={() => toggleDoorOpen(activeRoom)}
+                />
+              }
+            >
+              <Suspense fallback={
+                <ProceduralWoodDoor
+                  doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
+                  onClick={() => toggleDoorOpen(activeRoom)}
+                />
+              }>
+                <GltfDoorPanel doorW={doorW} doorH={doorH} onClick={() => toggleDoorOpen(activeRoom)} />
+              </Suspense>
+            </GltfDoorFallback>
+          ) : (
+            // frosted_glass — procedural glass panel
             <>
-              <mesh position={[doorW / 2, doorH * 0.72, 0.003]}>
-                <planeGeometry args={[doorW * 0.62, doorH * 0.26]} />
-                <meshStandardMaterial color="#B0824E" roughness={0.7} />
+              <mesh
+                position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]}
+                onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
+                castShadow receiveShadow
+              >
+                <boxGeometry args={[doorW - 0.02, doorH - 0.02, 0.035]} />
+                <meshStandardMaterial color="#D8E0E8" roughness={0.35} metalness={0.02} transparent opacity={0.85} />
               </mesh>
-              <mesh position={[doorW / 2, doorH * 0.35, 0.003]}>
-                <planeGeometry args={[doorW * 0.62, doorH * 0.32]} />
-                <meshStandardMaterial color="#B0824E" roughness={0.7} />
+              <mesh position={[doorW - 0.1, doorH * 0.45, 0.02]}>
+                <sphereGeometry args={[0.03, 12, 12]} />
+                <meshStandardMaterial color="#A8A8A8" metalness={0.85} roughness={0.25} />
               </mesh>
             </>
           )}
-          {/* Handle (door knob) */}
-          <mesh position={[doorW - 0.1, doorH * 0.45, 0.02]}>
-            <sphereGeometry args={[0.03, 12, 12]} />
-            <meshStandardMaterial color="#A8A8A8" metalness={0.85} roughness={0.25} />
-          </mesh>
         </group>
       )}
     </group>
+  );
+}
+
+/** Procedural wood-panel door — used as fallback when glTF fails. */
+function ProceduralWoodDoor({
+  doorW, doorH, hingeOffset, onClick,
+}: { doorW: number; doorH: number; hingeOffset: number; onClick: () => void }) {
+  return (
+    <>
+      <mesh
+        position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]}
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        castShadow receiveShadow
+      >
+        <boxGeometry args={[doorW - 0.02, doorH - 0.02, 0.035]} />
+        <meshStandardMaterial color="#C79A6A" roughness={0.55} metalness={0.02} />
+      </mesh>
+      <mesh position={[doorW / 2, doorH * 0.72, 0.003]}>
+        <planeGeometry args={[doorW * 0.62, doorH * 0.26]} />
+        <meshStandardMaterial color="#B0824E" roughness={0.7} />
+      </mesh>
+      <mesh position={[doorW / 2, doorH * 0.35, 0.003]}>
+        <planeGeometry args={[doorW * 0.62, doorH * 0.32]} />
+        <meshStandardMaterial color="#B0824E" roughness={0.7} />
+      </mesh>
+      <mesh position={[doorW - 0.1, doorH * 0.45, 0.02]}>
+        <sphereGeometry args={[0.03, 12, 12]} />
+        <meshStandardMaterial color="#A8A8A8" metalness={0.85} roughness={0.25} />
+      </mesh>
+    </>
   );
 }
 
@@ -1005,6 +1117,32 @@ function LightFixture({ H, lightColor, lightId }: { H: number; lightColor: strin
     );
   }
 
+  // Ceiling fan with rotating blades (+ embedded light)
+  if (lightId === "light-ceiling-fan") {
+    return (
+      <group position={[0, H - 0.35, 0]}>
+        {/* Mount rod from ceiling */}
+        <mesh position={[0, 0.25, 0]}>
+          <cylinderGeometry args={[0.015, 0.015, 0.28, 6]} />
+          <meshStandardMaterial color="#E0E0E0" metalness={0.3} roughness={0.5} />
+        </mesh>
+        {/* Motor housing */}
+        <mesh position={[0, 0.05, 0]}>
+          <cylinderGeometry args={[0.09, 0.12, 0.12, 16]} />
+          <meshStandardMaterial color="#D8D8D8" roughness={0.45} metalness={0.12} />
+        </mesh>
+        {/* Rotating blade assembly */}
+        <CeilingFanBlades />
+        {/* Light below motor */}
+        <mesh position={[0, -0.06, 0]}>
+          <sphereGeometry args={[0.08, 14, 12]} />
+          <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={0.55} roughness={0.25} transparent opacity={0.85} />
+        </mesh>
+        <pointLight position={[0, -0.06, 0]} intensity={6} color={lightColor} distance={4.5} decay={2} castShadow />
+      </group>
+    );
+  }
+
   // Default pendant — bulb hangs ~35cm below ceiling, cord connects
   // bulb top to a canopy plate mounted on the ceiling.
   const DROP = 0.45;  // distance from ceiling to bulb center
@@ -1114,11 +1252,13 @@ function CoffeeTable({ color, w, d, h }: MeshProps) {
   );
 }
 
-function TvUnit({ color, sc, w, d, h }: MeshProps) {
+function TvUnit({ color, sc, w, d, h, imageUrl }: MeshProps & { imageUrl?: string }) {
   const leg = shade(color, -20);
   const handle = "#B0B0B0";
   const bodyH = h * 0.45;
   const wood = useMemo(() => { const t = woodMap(color, "horizontal").clone(); t.repeat.set(Math.max(1, w * 0.9), 1); t.needsUpdate = true; return t; }, [color, w]);
+  // Screen content texture — if imageUrl set, display it as if powered on
+  const screenTex = useArtworkTexture(imageUrl);
   return (
     <group>
       {/* Body */}
@@ -1147,14 +1287,19 @@ function TvUnit({ color, sc, w, d, h }: MeshProps) {
           </mesh>
         ))
       )}
-      {/* TV screen */}
+      {/* TV screen — black bezel + screen. Screen either displays
+          imageUrl as if powered on, or a neutral off-state color. */}
       <mesh position={[0, bodyH + h * 0.5, -d * 0.05]} castShadow>
         <boxGeometry args={[w * 0.85, h * 0.9, 0.055]} />
         <meshStandardMaterial color="#0A0C12" metalness={0.3} roughness={0.5} />
       </mesh>
-      <mesh position={[0, bodyH + h * 0.5, -d * 0.05 + 0.03]}>
-        <boxGeometry args={[w * 0.81, h * 0.85, 0.01]} />
-        <meshStandardMaterial color="#0A1520" metalness={0.1} roughness={0.05} transparent opacity={0.9} />
+      <mesh position={[0, bodyH + h * 0.5, -d * 0.05 + 0.031]}>
+        <planeGeometry args={[w * 0.81, h * 0.85]} />
+        {screenTex ? (
+          <meshStandardMaterial map={screenTex} emissive="#FFFFFF" emissiveMap={screenTex} emissiveIntensity={0.55} roughness={0.25} />
+        ) : (
+          <meshStandardMaterial color="#0A1520" metalness={0.1} roughness={0.05} transparent opacity={0.9} />
+        )}
       </mesh>
     </group>
   );
@@ -1745,7 +1890,7 @@ function FurnitureMesh({ item, w, d, h }: { item: FurnitureItem; w: number; d: n
   switch (item.category) {
     case "sofa":             return <Sofa {...props} />;
     case "coffee_table":    return <CoffeeTable {...props} />;
-    case "tv_unit":         return <TvUnit {...props} />;
+    case "tv_unit":         return <TvUnit {...props} imageUrl={item.imageUrl} />;
     case "bed":             return <BedMesh {...props} />;
     case "nightstand":      return <Nightstand {...props} />;
     case "wardrobe":        return <Wardrobe {...props} />;

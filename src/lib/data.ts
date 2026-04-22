@@ -291,6 +291,17 @@ export const MATERIALS: MaterialItem[] = [
     tags: ["工业风"],
     description: "爱迪生灯泡，复古情怀",
   },
+  {
+    id: "light-ceiling-fan",
+    name: "吊扇（带灯）",
+    brand: "家用电器",
+    price: 680,
+    unit: "元/件",
+    category: "light",
+    color: "#E8DDD0",
+    tags: ["现代", "日式"],
+    description: "3 叶吊扇 + 集成灯，点击可开关",
+  },
 
   // ─── 地砖（卫生间/厨房专用）Tile ─────────────────────────
   {

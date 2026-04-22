@@ -77,6 +77,12 @@ const ASSETS = [
 
   // ── Architectural (room shell replacements, not placeable furniture) ─
   { uid: "7c34cb1c99544017a03119b566718399", slug: "window_modern",           category: "_arch_window",    author: "JeanLescano" },
+  // Try #2: SketchUp "exploded open" model didn't work. AleixoAlonso's
+  // Residential Window is a purpose-built closed-state residential window.
+  { uid: "ae11104237314463a61251fd46ded4b4", slug: "residential_window",      category: "_arch_window",    author: "AleixoAlonso" },
+
+  // ── Small items / 小物件 ────────────────────────────
+  { uid: "226e34b1a7b3470cb0ba095af68af90c", slug: "simple_ceiling_fan",      category: "ceiling_fan",     author: "Blender3D" },
   // Swapped: joshtmc's `interior_wooden_door` zip kept downloading corrupted
   // (truncated). Using keam.wf's low-poly game-ready door instead — 3.8k
   // faces, much smaller file.
