@@ -37,24 +37,30 @@ const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
 });
 
 // ─── Panel toggle tab button ──────────────────────────────
-/** Toggle for front-wall visibility in 3D (lets user see artwork placed
- *  on the front wall which is normally cut away in dollhouse view). */
+/** Cycles front-wall opacity: 0 → 0.5 → 1 → 0. Lets user see artwork
+ *  placed on the front wall, which is cut away in the default dollhouse
+ *  view. "0.5" is a frosted-glass look, "1" is a normal solid wall. */
 function FrontWallToggle() {
-  const visible = useDesignerStore(s => s.frontWallVisible);
-  const setVisible = useDesignerStore(s => s.setFrontWallVisible);
+  const opacity = useDesignerStore(s => s.frontWallOpacity);
+  const setOpacity = useDesignerStore(s => s.setFrontWallOpacity);
+  const label = opacity === 0 ? "🏠 前墙：隐藏" : opacity === 0.5 ? "🏠 前墙：半透" : "🏠 前墙：实墙";
+  const next = opacity === 0 ? 0.5 : opacity === 0.5 ? 1 : 0;
+  const bg = opacity === 0 ? "rgba(30,30,50,0.72)"
+           : opacity === 0.5 ? "rgba(59,130,246,0.9)"
+           : "rgba(16,185,129,0.9)";
   return (
     <button
-      onClick={() => setVisible(!visible)}
+      onClick={() => setOpacity(next)}
       className="absolute bottom-4 left-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-lg transition-all active:scale-95"
       style={{
-        background: visible ? "rgba(16,185,129,0.9)" : "rgba(30,30,50,0.72)",
+        background: bg,
         color: "white",
         backdropFilter: "blur(6px)",
         border: "1px solid rgba(255,255,255,0.12)",
       }}
-      title="显示/隐藏前墙（影响挂画/电视等放在前墙上的物件是否可见）"
+      title="切换前墙显示（隐藏→半透→实墙→隐藏）"
     >
-      {visible ? "🏠 前墙已显示" : "🏠 显示前墙"}
+      {label}
     </button>
   );
 }

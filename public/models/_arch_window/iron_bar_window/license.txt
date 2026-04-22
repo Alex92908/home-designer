@@ -1,0 +1,11 @@
+Model Information:
+* title:	Iron Bar Window-10
+* source:	https://sketchfab.com/3d-models/iron-bar-window-10-df07c3995d04421abf65fe2a379d36b0
+* author:	4000z (https://sketchfab.com/4000z)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Iron Bar Window-10" (https://sketchfab.com/3d-models/iron-bar-window-10-df07c3995d04421abf65fe2a379d36b0) by 4000z (https://sketchfab.com/4000z) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

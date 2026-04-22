@@ -187,10 +187,11 @@ interface DesignerStore {
   windowOpenByWinId: Record<string, boolean>;
   toggleWindowOpen: (winId: string) => void;
 
-  // Front wall visible in 3D dollhouse view (lets user see artwork / TV
-  // etc. that were placed on the front wall). Default off (cutaway view).
-  frontWallVisible: boolean;
-  setFrontWallVisible: (v: boolean) => void;
+  // Front wall opacity in 3D dollhouse view. 0 = cut away (default, so
+  // you can see into the room), 0.5 = frosted glass, 1.0 = fully opaque.
+  // User cycles through these three via the floating toggle.
+  frontWallOpacity: 0 | 0.5 | 1;
+  setFrontWallOpacity: (o: 0 | 0.5 | 1) => void;
 
   // Furniture undo history (ephemeral, not persisted)
   furnitureHistory: Array<{ room: RoomType; placedItems: PlacedItem[] }>;
@@ -346,8 +347,8 @@ export const useDesignerStore = create<DesignerStore>()(
       toggleWindowOpen: (winId) => set(st => ({
         windowOpenByWinId: { ...st.windowOpenByWinId, [winId]: !st.windowOpenByWinId[winId] },
       })),
-      frontWallVisible: false,
-      setFrontWallVisible: (v) => set({ frontWallVisible: v }),
+      frontWallOpacity: 0,
+      setFrontWallOpacity: (o) => set({ frontWallOpacity: o }),
       budget: 150000,
       furnitureHistory: [],
       clipboard: [],

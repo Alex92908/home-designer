@@ -104,8 +104,16 @@
 
 | 模型 | 作者 | 面数 | 用途 | 链接 |
 |---|---|---|---|---|
-| Window (modern) | JeanLescano | 9.6k | （建模为"已打开"展开状态，暂未启用）| <https://sketchfab.com/3d-models/7c34cb1c99544017a03119b566718399> |
-| Wooden Door \| Low-Poly | keam.wf | 3.8k | 3D 室内门（可点击开关）| <https://sketchfab.com/3d-models/f5c93a53f5e245c78ce4bbdd6130c4f9> |
+| Window (modern) | JeanLescano | 9.6k | （"已打开"建模状态，未启用）| <https://sketchfab.com/3d-models/7c34cb1c99544017a03119b566718399> |
+| Residential Window | AleixoAlonso | 2.8k | 默认 3D 窗户（闭合状态） | <https://sketchfab.com/3d-models/ae11104237314463a61251fd46ded4b4> |
+| Iron Bar Window-10 | 4000z | 203 meshes | （备选，工业/防盗风格） | <https://sketchfab.com/3d-models/df07c3995d04421abf65fe2a379d36b0> |
+| Door with frame | witnessk | 6 meshes | 默认 3D 门（含框 + 把手 + 可点击开关）| <https://sketchfab.com/3d-models/2f2f149f3ec44d658a02c1f924dfa449> |
+| Door | hoschu | 1 mesh | （备选，极简单门）| <https://sketchfab.com/3d-models/adf292f437f24151918a3b16ecef52d2> |
+| Wooden Door \| Low-Poly | keam.wf | 3.8k | （初版已替换）| <https://sketchfab.com/3d-models/f5c93a53f5e245c78ce4bbdd6130c4f9> |
+
+> ⚠️ **NC 资产提醒**：Sketchfab 的 `animated_window_systems` (makinwhat)
+> 虽然有内置开合动画很诱人，但许可是 **CC-BY-NC-4.0（禁商用）**。项目
+> 若未来商用绝对不能启用此资产。目前未接入。
 
 ## 公共领域挂画（Wikimedia Commons）
 

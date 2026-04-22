@@ -132,7 +132,7 @@ function RoomShell({
   ceiling,
   hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle,
   activeRoom,
-  frontWallVisible,
+  frontWallOpacity,
 }: {
   W: number; D: number; H: number;
   wallColor: string; floorColor: string;
@@ -150,7 +150,7 @@ function RoomShell({
   doorHCm: number;
   doorStyle: import("@/lib/types").DoorStyle;
   activeRoom: RoomType;
-  frontWallVisible: boolean;
+  frontWallOpacity: number;
 }) {
   const skirtColor = shade(wallColor, -18);
   const splitH = wallLower ? Math.max(0.2, Math.min(H - 0.2, (wallSplitCm ?? 110) / 100)) : 0;
@@ -355,18 +355,21 @@ function RoomShell({
         lowerSide="right"
       />
 
-      {/* Front wall — normally cut away in dollhouse view. Rendered as
-          semi-transparent when user enables "show front wall" so artworks
-          hung on it become visible. DoubleSide + higher opacity so the
-          wall renders from any camera angle (dollhouse from above OR
-          orbit camera from outside the front face). */}
-      {frontWallVisible && (() => {
+      {/* Front wall — user-controllable opacity (0 = cut away, 0.5 =
+          frosted glass, 1 = solid). DoubleSide so it renders from any
+          camera angle. */}
+      {frontWallOpacity > 0 && (() => {
         const sF = resolveSide(wallFront);
         const mat = wallMatFor(sF.color, sF.id, W, H);
         return (
           <mesh position={[0, H / 2, D / 2]} receiveShadow>
             <planeGeometry args={[W, H]} />
-            <meshStandardMaterial {...mat} side={THREE.DoubleSide} transparent opacity={0.5} />
+            <meshStandardMaterial
+              {...mat}
+              side={THREE.DoubleSide}
+              transparent={frontWallOpacity < 1}
+              opacity={frontWallOpacity}
+            />
           </mesh>
         );
       })()}
@@ -731,12 +734,12 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
 }
 
 // ─── glTF door panel (for wood_panel style) ─────────────────
-// DISABLED: keam.wf's wooden_door_lowpoly gets distorted by non-uniform
-// auto-scale (shows as plank-stack, not a door). Until we find a better
-// asset with known XYZ conventions, use procedural. Flip back to true
-// after fixing auto-scale OR sourcing a cleaner model.
-const ENABLE_GLTF_DOOR = false;
-const WOODEN_DOOR_URL = "/models/_arch_door/wooden_door_lowpoly/wooden_door_lowpoly.gltf";
+// Uses witnessk's `door_with_frame` (CC-BY, 6 meshes — includes panel +
+// frame + handle, a complete door unit). Uniform scale by height (not
+// non-uniform XYZ fit — that distorted the earlier keam.wf asset into a
+// "plank stack").
+const ENABLE_GLTF_DOOR = true;
+const WOODEN_DOOR_URL = "/models/_arch_door/door_with_frame/door_with_frame.gltf";
 
 function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number; onClick: () => void }) {
   const { scene } = useGLTF(WOODEN_DOOR_URL) as unknown as { scene: THREE.Object3D };
@@ -750,15 +753,18 @@ function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number
     const box = new THREE.Box3().setFromObject(c);
     const size = new THREE.Vector3();
     box.getSize(size);
+    // eslint-disable-next-line no-console
+    console.log(`[GltfDoorPanel] native ${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m target ${doorW.toFixed(2)}×${doorH.toFixed(2)}m`);
     if (size.x > 0 && size.y > 0 && size.z > 0) {
-      // Fit X to doorW, Y to doorH, keep Z proportional to X
-      const sx = doorW / size.x;
-      const sy = doorH / size.y;
-      c.scale.set(sx, sy, sx);
+      // Uniform scale by height. This preserves the door's natural
+      // width:height:depth ratio instead of stretching it to match our
+      // doorW × doorH (which distorts). Slight width mismatch is
+      // acceptable — a 75cm real door rendered as ~72cm is fine.
+      const s = doorH / size.y;
+      c.scale.setScalar(s);
       c.updateMatrixWorld(true);
       const box2 = new THREE.Box3().setFromObject(c);
-      // Base at Y=0, X centered → then shift right so left edge sits at
-      // the hinge (local X=0).
+      // Base at Y=0, X-centered, then shift right so left edge = hinge
       c.position.x -= (box2.min.x + box2.max.x) / 2;
       c.position.y -= box2.min.y;
       c.position.z -= (box2.min.z + box2.max.z) / 2;
@@ -2199,7 +2205,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
   const doorLenCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
   const doorHCm    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
   const doorStyle  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? "wood_panel");
-  const frontWallVisible = useDesignerStore((s) => s.frontWallVisible);
+  const frontWallOpacity = useDesignerStore((s) => s.frontWallOpacity);
   const def = ROOM_DEFS[activeRoom];
 
   // Use store dimensions (reflects global plan resizes), fall back to ROOM_DEFS
@@ -2263,7 +2269,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
         doorStyle={doorStyle}
         activeRoom={activeRoom}
         ceiling={roomState.materials.ceiling}
-        frontWallVisible={frontWallVisible}
+        frontWallOpacity={frontWallOpacity}
       />
 
       {/* Light fixture */}
