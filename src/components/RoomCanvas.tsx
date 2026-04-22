@@ -357,14 +357,16 @@ function RoomShell({
 
       {/* Front wall — normally cut away in dollhouse view. Rendered as
           semi-transparent when user enables "show front wall" so artworks
-          hung on it become visible. */}
+          hung on it become visible. DoubleSide + higher opacity so the
+          wall renders from any camera angle (dollhouse from above OR
+          orbit camera from outside the front face). */}
       {frontWallVisible && (() => {
         const sF = resolveSide(wallFront);
         const mat = wallMatFor(sF.color, sF.id, W, H);
         return (
-          <mesh position={[0, H / 2, D / 2]} rotation={[0, Math.PI, 0]} receiveShadow>
+          <mesh position={[0, H / 2, D / 2]} receiveShadow>
             <planeGeometry args={[W, H]} />
-            <meshStandardMaterial {...mat} side={THREE.FrontSide} transparent opacity={0.28} />
+            <meshStandardMaterial {...mat} side={THREE.DoubleSide} transparent opacity={0.5} />
           </mesh>
         );
       })()}
@@ -1838,21 +1840,25 @@ function Storage({ color, w, d, h }: MeshProps) {
 }
 
 function Artwork({ color, w, h, imageUrl }: MeshProps & { imageUrl?: string }) {
-  // If an image is provided, load it as a texture and apply to the front
-  // face; otherwise fall back to the original solid-color canvas.
+  // Paintings are small on a wall and often end up in dim ambient light,
+  // making them read as "dark blobs". Use self-lit emissive for the
+  // canvas so the painting is always visible at full colour regardless
+  // of room lighting — sacrifices realistic shading for legibility,
+  // which is the right trade-off in an interior-design decision tool.
   const tex = useArtworkTexture(imageUrl);
   return (
     <group>
-      {/* Dark wood frame (behind + around) */}
+      {/* Dark wood frame */}
       <mesh position={[0, 0, 0]} castShadow>
         <boxGeometry args={[w + 0.04, h + 0.04, 0.025]} />
         <meshStandardMaterial color="#3A2A1E" roughness={0.65} />
       </mesh>
-      {/* Canvas — textured if imageUrl, solid color otherwise */}
+      {/* Canvas — unlit when we have an image (colors guaranteed correct),
+          standard-shaded otherwise so the color still fits room lighting. */}
       <mesh position={[0, 0, 0.015]} castShadow>
         <planeGeometry args={[w, h]} />
         {tex ? (
-          <meshStandardMaterial map={tex} roughness={0.78} metalness={0} />
+          <meshBasicMaterial map={tex} toneMapped={true} />
         ) : (
           <meshStandardMaterial color={color} roughness={0.78} />
         )}
@@ -2056,10 +2062,38 @@ function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def
 
   const rotY = (placed.rotation * Math.PI) / 180;
 
-  // Artwork special case: mount on back wall
+  // Artwork special case: mount on the wall nearest to the 2D placement.
+  // Rotate so the image faces the room interior. Eye-level height at
+  // 52% of room height (~1.45m in a 2.8m room).
   if (item.category === "artwork") {
+    const xCm = placed.x;
+    const zCm = placed.z;
+    const wallW = roomW * 100;
+    const wallD = roomD * 100;
+    const distBack  = zCm;               // 0 = flush with back wall
+    const distFront = wallD - zCm;
+    const distLeft  = xCm;
+    const distRight = wallW - xCm;
+    const minDist = Math.min(distBack, distFront, distLeft, distRight);
+    const y = def.height / 100 * 0.52;
+    const GAP = 0.04;
+    let position: [number, number, number];
+    let rotation: [number, number, number];
+    if (minDist === distBack) {
+      position = [x3d, y, -roomD / 2 + GAP];
+      rotation = [0, 0, 0];              // faces +Z
+    } else if (minDist === distFront) {
+      position = [x3d, y, roomD / 2 - GAP];
+      rotation = [0, Math.PI, 0];        // faces -Z
+    } else if (minDist === distLeft) {
+      position = [-roomW / 2 + GAP, y, placed.z / 100 - roomD / 2];
+      rotation = [0, Math.PI / 2, 0];    // faces +X
+    } else {
+      position = [roomW / 2 - GAP, y, placed.z / 100 - roomD / 2];
+      rotation = [0, -Math.PI / 2, 0];   // faces -X
+    }
     return (
-      <group position={[x3d, def.height / 100 * 0.52, -roomD / 2 + 0.04]} rotation={[0, 0, 0]}>
+      <group position={position} rotation={rotation}>
         <FurnitureMesh item={item} w={fw} d={fd} h={fh} />
       </group>
     );
