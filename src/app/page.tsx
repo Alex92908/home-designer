@@ -37,6 +37,28 @@ const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
 });
 
 // ─── Panel toggle tab button ──────────────────────────────
+/** Toggle for front-wall visibility in 3D (lets user see artwork placed
+ *  on the front wall which is normally cut away in dollhouse view). */
+function FrontWallToggle() {
+  const visible = useDesignerStore(s => s.frontWallVisible);
+  const setVisible = useDesignerStore(s => s.setFrontWallVisible);
+  return (
+    <button
+      onClick={() => setVisible(!visible)}
+      className="absolute bottom-4 left-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-lg transition-all active:scale-95"
+      style={{
+        background: visible ? "rgba(16,185,129,0.9)" : "rgba(30,30,50,0.72)",
+        color: "white",
+        backdropFilter: "blur(6px)",
+        border: "1px solid rgba(255,255,255,0.12)",
+      }}
+      title="显示/隐藏前墙（影响挂画/电视等放在前墙上的物件是否可见）"
+    >
+      {visible ? "🏠 前墙已显示" : "🏠 显示前墙"}
+    </button>
+  );
+}
+
 function PanelToggle({
   side,
   open,
@@ -80,18 +102,25 @@ export default function Home() {
   const loadFromShare = useDesignerStore((s) => s.loadFromShare);
   const t = useT();
 
-  // On mobile (< 768px) start with panels collapsed so the main canvas has space
-  const [leftOpen,  setLeftOpen]  = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth >= 768 : true
-  );
-  const [rightOpen, setRightOpen] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth >= 768 : true
-  );
+  // Panels start OPEN on both server and client to avoid hydration
+  // mismatch (server can't know window.innerWidth). A useEffect after
+  // mount collapses them on mobile — a one-frame visual flash but no
+  // React warning.
+  const [leftOpen,  setLeftOpen]  = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
   const [showAiRender, setShowAiRender] = useState(false);
 
-  // Auto-collapse panels when entering 2D / all / exterior on mobile
+  // After mount, collapse panels on mobile viewports
   useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth < 768) {
+    if (window.innerWidth < 768) {
+      setLeftOpen(false);
+      setRightOpen(false);
+    }
+  }, []);
+
+  // Auto-collapse panels when switching to 2D / all / exterior on mobile
+  useEffect(() => {
+    if (window.innerWidth < 768) {
       setLeftOpen(false);
       setRightOpen(false);
     }
@@ -163,6 +192,9 @@ export default function Home() {
               {t.aiRenderBtn}
             </button>
           )}
+
+          {/* Front wall toggle — in 3D only */}
+          {viewMode === "3d" && <FrontWallToggle />}
         </main>
 
         {/* Right panel with collapse */}

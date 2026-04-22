@@ -132,6 +132,7 @@ function RoomShell({
   ceiling,
   hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle,
   activeRoom,
+  frontWallVisible,
 }: {
   W: number; D: number; H: number;
   wallColor: string; floorColor: string;
@@ -149,6 +150,7 @@ function RoomShell({
   doorHCm: number;
   doorStyle: import("@/lib/types").DoorStyle;
   activeRoom: RoomType;
+  frontWallVisible: boolean;
 }) {
   const skirtColor = shade(wallColor, -18);
   const splitH = wallLower ? Math.max(0.2, Math.min(H - 0.2, (wallSplitCm ?? 110) / 100)) : 0;
@@ -353,6 +355,20 @@ function RoomShell({
         lowerSide="right"
       />
 
+      {/* Front wall — normally cut away in dollhouse view. Rendered as
+          semi-transparent when user enables "show front wall" so artworks
+          hung on it become visible. */}
+      {frontWallVisible && (() => {
+        const sF = resolveSide(wallFront);
+        const mat = wallMatFor(sF.color, sF.id, W, H);
+        return (
+          <mesh position={[0, H / 2, D / 2]} rotation={[0, Math.PI, 0]} receiveShadow>
+            <planeGeometry args={[W, H]} />
+            <meshStandardMaterial {...mat} side={THREE.FrontSide} transparent opacity={0.28} />
+          </mesh>
+        );
+      })()}
+
       {/* Door panel (3D, inside the wall's door hole) */}
       {hasDoor && doorWall !== "bottom" && (
         <RoomDoor3D
@@ -510,6 +526,31 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   const winH = win.h   !== undefined ? win.h   / 100 : Math.min(H * 0.52, 1.5);
   const sill = win.sill !== undefined ? win.sill / 100 : 0.9;
   const winY = Math.max(0.05, Math.min(H - winH - 0.05, sill)) + winH / 2;
+  const isOpen = useDesignerStore(s => !!s.windowOpenByWinId[win.id]);
+  const toggleWinOpen = useDesignerStore(s => s.toggleWindowOpen);
+  // Animation ref for open/close angle
+  const sashRef = useRef<THREE.Group>(null);
+  const sashAngleRef = useRef(0);
+  useFrame((_, delta) => {
+    // Fixed / louvered don't open. Sliding and casement animate.
+    const style = win.style ?? "sliding";
+    if (style === "fixed" || style === "louvered") return;
+    // Casement: swing 45° outward. Sliding: slide half-width left.
+    const target = isOpen
+      ? (style === "sliding" ? -winLen / 2 : -Math.PI / 4)
+      : 0;
+    const speed = style === "sliding" ? 2.2 : 3.8;
+    const current = sashAngleRef.current;
+    const diff = target - current;
+    if (Math.abs(diff) > 0.002) {
+      const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
+      sashAngleRef.current = current + step;
+      if (sashRef.current) {
+        if (style === "sliding") sashRef.current.position.x = sashAngleRef.current;
+        else sashRef.current.rotation.y = sashAngleRef.current;
+      }
+    }
+  });
 
   // Flat window — thin frame + glass, flush with wall. Interior mullion
   // depends on window style. Style defaults to "sliding" (国内推拉窗).
@@ -585,8 +626,16 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   const proceduralBackFrame = (
     <>
       {frameBars}
-      {style !== "louvered" && glass}
-      {mullions}
+      {/* Sash — glass + mullions that animate on open/close. Clicking any
+          part toggles. Fixed/louvered windows don't animate but still show
+          toggle state in store for consistency. */}
+      <group
+        ref={sashRef}
+        onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}
+      >
+        {style !== "louvered" && glass}
+        {mullions}
+      </group>
     </>
   );
 
@@ -680,10 +729,11 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
 }
 
 // ─── glTF door panel (for wood_panel style) ─────────────────
-// Loads keam.wf's wooden_door_lowpoly (CC-BY, 3.8k faces) and positions
-// it with the left edge at local X=0 so the parent group can rotate
-// around that hinge. Falls back to caller's procedural panel on load
-// failure (via <Suspense fallback> at the call site).
+// DISABLED: keam.wf's wooden_door_lowpoly gets distorted by non-uniform
+// auto-scale (shows as plank-stack, not a door). Until we find a better
+// asset with known XYZ conventions, use procedural. Flip back to true
+// after fixing auto-scale OR sourcing a cleaner model.
+const ENABLE_GLTF_DOOR = false;
 const WOODEN_DOOR_URL = "/models/_arch_door/wooden_door_lowpoly/wooden_door_lowpoly.gltf";
 
 function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number; onClick: () => void }) {
@@ -921,23 +971,30 @@ function RoomDoor3D({
         // (it's a glass-look tinted box — glTF wouldn't match semantics).
         <group ref={panelRef} position={[0, 0, 0.01]}>
           {doorStyle === "wood_panel" ? (
-            <GltfDoorFallback
-              fallback={
-                <ProceduralWoodDoor
-                  doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
-                  onClick={() => toggleDoorOpen(activeRoom)}
-                />
-              }
-            >
-              <Suspense fallback={
-                <ProceduralWoodDoor
-                  doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
-                  onClick={() => toggleDoorOpen(activeRoom)}
-                />
-              }>
-                <GltfDoorPanel doorW={doorW} doorH={doorH} onClick={() => toggleDoorOpen(activeRoom)} />
-              </Suspense>
-            </GltfDoorFallback>
+            ENABLE_GLTF_DOOR ? (
+              <GltfDoorFallback
+                fallback={
+                  <ProceduralWoodDoor
+                    doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
+                    onClick={() => toggleDoorOpen(activeRoom)}
+                  />
+                }
+              >
+                <Suspense fallback={
+                  <ProceduralWoodDoor
+                    doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
+                    onClick={() => toggleDoorOpen(activeRoom)}
+                  />
+                }>
+                  <GltfDoorPanel doorW={doorW} doorH={doorH} onClick={() => toggleDoorOpen(activeRoom)} />
+                </Suspense>
+              </GltfDoorFallback>
+            ) : (
+              <ProceduralWoodDoor
+                doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
+                onClick={() => toggleDoorOpen(activeRoom)}
+              />
+            )
           ) : (
             // frosted_glass — procedural glass panel
             <>
@@ -2108,6 +2165,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
   const doorLenCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
   const doorHCm    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
   const doorStyle  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? "wood_panel");
+  const frontWallVisible = useDesignerStore((s) => s.frontWallVisible);
   const def = ROOM_DEFS[activeRoom];
 
   // Use store dimensions (reflects global plan resizes), fall back to ROOM_DEFS
@@ -2171,6 +2229,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
         doorStyle={doorStyle}
         activeRoom={activeRoom}
         ceiling={roomState.materials.ceiling}
+        frontWallVisible={frontWallVisible}
       />
 
       {/* Light fixture */}

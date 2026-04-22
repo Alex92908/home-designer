@@ -182,6 +182,16 @@ interface DesignerStore {
   doorOpenByRoom: Partial<Record<RoomType, boolean>>;
   toggleDoorOpen: (room: RoomType) => void;
 
+  // Window open/close state per window instance (ephemeral, not persisted).
+  // Keyed by WindowConfig.id so each window in a room opens independently.
+  windowOpenByWinId: Record<string, boolean>;
+  toggleWindowOpen: (winId: string) => void;
+
+  // Front wall visible in 3D dollhouse view (lets user see artwork / TV
+  // etc. that were placed on the front wall). Default off (cutaway view).
+  frontWallVisible: boolean;
+  setFrontWallVisible: (v: boolean) => void;
+
   // Furniture undo history (ephemeral, not persisted)
   furnitureHistory: Array<{ room: RoomType; placedItems: PlacedItem[] }>;
 
@@ -332,6 +342,12 @@ export const useDesignerStore = create<DesignerStore>()(
       toggleDoorOpen: (room) => set(st => ({
         doorOpenByRoom: { ...st.doorOpenByRoom, [room]: !st.doorOpenByRoom[room] },
       })),
+      windowOpenByWinId: {},
+      toggleWindowOpen: (winId) => set(st => ({
+        windowOpenByWinId: { ...st.windowOpenByWinId, [winId]: !st.windowOpenByWinId[winId] },
+      })),
+      frontWallVisible: false,
+      setFrontWallVisible: (v) => set({ frontWallVisible: v }),
       budget: 150000,
       furnitureHistory: [],
       clipboard: [],
