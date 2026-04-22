@@ -373,6 +373,8 @@ export default function FloorPlan() {
   const setDoorWall     = useDesignerStore((s) => s.setDoorWall);
   const setDoorLen      = useDesignerStore((s) => s.setDoorLen);
   const setDoorH        = useDesignerStore((s) => s.setDoorH);
+  const setDoorStyle    = useDesignerStore((s) => s.setDoorStyle);
+  const doorStyle       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? "wood_panel");
   const updateWindow    = useDesignerStore((s) => s.updateWindow);
   const t      = useT();
   const locale = useLocale();
@@ -1164,6 +1166,34 @@ export default function FloorPlan() {
                   onChange={e => setDoorH(activeRoom, parseInt(e.target.value))}
                   className="w-full accent-blue-500 h-2 md:h-1.5" />
               </div>
+              {/* Door style selector */}
+              <div>
+                <div className="text-[10px] text-gray-400 mb-1">款式</div>
+                <div className="grid grid-cols-4 gap-1">
+                  {([
+                    { key: "wood_panel",    label: "实木" },
+                    { key: "frosted_glass", label: "磨砂玻璃" },
+                    { key: "sliding_barn",  label: "推拉谷仓" },
+                    { key: "french_double", label: "法式对开" },
+                  ] as const).map(s => {
+                    const active = doorStyle === s.key;
+                    return (
+                      <button
+                        key={s.key}
+                        onClick={() => setDoorStyle(activeRoom, s.key)}
+                        className="text-[10px] py-1.5 rounded-md transition-all"
+                        style={
+                          active
+                            ? { background: "#3B82F6", color: "white", fontWeight: 600 }
+                            : { background: "rgba(255,255,255,0.08)", color: "#C0C0C8", border: "1px solid rgba(255,255,255,0.12)" }
+                        }
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           );
         }
@@ -1214,6 +1244,34 @@ export default function FloorPlan() {
                 value={winSill}
                 onChange={e => updateWindow(activeRoom, selectedWin.id, { sill: parseInt(e.target.value) })}
                 className="w-full accent-amber-400 h-2 md:h-1.5" />
+            </div>
+            {/* Window style selector */}
+            <div>
+              <div className="text-[10px] text-gray-400 mb-1">款式</div>
+              <div className="grid grid-cols-4 gap-1">
+                {([
+                  { key: "sliding",  label: "推拉窗" },
+                  { key: "casement", label: "平开窗" },
+                  { key: "fixed",    label: "固定观景" },
+                  { key: "louvered", label: "百叶窗" },
+                ] as const).map(s => {
+                  const active = (selectedWin.style ?? "sliding") === s.key;
+                  return (
+                    <button
+                      key={s.key}
+                      onClick={() => updateWindow(activeRoom, selectedWin.id, { style: s.key })}
+                      className="text-[10px] py-1.5 rounded-md transition-all"
+                      style={
+                        active
+                          ? { background: "#3B82F6", color: "white", fontWeight: 600 }
+                          : { background: "rgba(255,255,255,0.08)", color: "#C0C0C8", border: "1px solid rgba(255,255,255,0.12)" }
+                      }
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         );

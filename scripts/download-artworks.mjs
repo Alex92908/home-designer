@@ -58,6 +58,17 @@ const ARTWORKS = [
     artist: "葛飾北斎 / Hokusai (1831)",
     url: wmFile("The_Great_Wave_off_Kanagawa.jpg"),
   },
+  // 第二批扩充 —— 都是过版权保护期的公版作品
+  { slug: "klimt_the_kiss",              title: "吻",              artist: "Gustav Klimt (1907)",      url: wmFile("The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg") },
+  { slug: "kandinsky_composition_viii",  title: "Composition VIII", artist: "Wassily Kandinsky (1923)", url: wmFile("Vassily_Kandinsky,_1923_-_Composition_8,_huile_sur_toile,_140_cm_x_201_cm,_Musée_Guggenheim,_New_York.jpg") },
+  { slug: "friedrich_wanderer",          title: "雾海之上的漫游者",  artist: "Caspar David Friedrich (1818)", url: wmFile("Caspar_David_Friedrich_-_Wanderer_above_the_Sea_of_Fog.jpg") },
+  { slug: "turner_fighting_temeraire",   title: "战舰无畏号的末日",  artist: "J.M.W. Turner (1839)",    url: wmFile("Turner,_J._M._W._-_The_Fighting_Téméraire_tugged_to_her_last_Berth_to_be_broken.jpg") },
+  { slug: "seurat_grande_jatte",         title: "大碗岛星期日午后",  artist: "Georges Seurat (1884)",    url: wmFile("A_Sunday_on_La_Grande_Jatte,_Georges_Seurat,_1884.jpg") },
+  { slug: "monet_water_lilies",          title: "睡莲",            artist: "Claude Monet (1919)",     url: wmFile("Claude_Monet_-_Water_Lilies_-_1919.jpg") },
+  { slug: "vermeer_pearl_earring",       title: "戴珍珠耳环的少女",  artist: "Johannes Vermeer (1665)", url: wmFile("1665_Girl_with_a_Pearl_Earring.jpg") },
+  { slug: "leonardo_mona_lisa",          title: "蒙娜丽莎",        artist: "Leonardo da Vinci (1503)", url: wmFile("Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg") },
+  { slug: "degas_dance_class",           title: "舞蹈课",          artist: "Edgar Degas (1874)",      url: wmFile("Edgar_Degas_-_The_Ballet_Class_-_Google_Art_Project.jpg") },
+  { slug: "hokusai_red_fuji",            title: "赤富士",          artist: "葛飾北斎 / Hokusai (1830)", url: wmFile("Red_Fuji_southern_wind_clear_morning.jpg") },
 ];
 
 const ROOT = path.resolve(process.cwd(), "public", "artworks");

@@ -275,6 +275,7 @@ interface DesignerStore {
   setDoorWall: (room: RoomType, wall: "bottom" | "top" | "left" | "right") => void;
   setDoorLen: (room: RoomType, len: number) => void;
   setDoorH:   (room: RoomType, h: number) => void;
+  setDoorStyle: (room: RoomType, style: import("./types").DoorStyle) => void;
   updateWindow: (room: RoomType, id: string, patch: Partial<WindowConfig>) => void;
 
   // Room rotation (swaps width/depth in layout)
@@ -958,6 +959,10 @@ export const useDesignerStore = create<DesignerStore>()(
       setDoorH: (room, h) => {
         const v = Math.max(140, Math.min(260, h));
         updateFloor(get, set, fp => ({ roomDoorH: { ...(fp.roomDoorH ?? {}), [room]: v } }));
+      },
+
+      setDoorStyle: (room, style) => {
+        updateFloor(get, set, fp => ({ roomDoorStyle: { ...(fp.roomDoorStyle ?? {}), [room]: style } }));
       },
 
       updateWindow: (room, id, patch) => {

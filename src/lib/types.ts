@@ -118,7 +118,16 @@ export interface WindowConfig {
   len: number;   // cm length (width along wall)
   h?: number;    // cm height (vertical), default 150
   sill?: number; // cm from floor to bottom of window, default 90
+  /** Visual style. Default "sliding" (国内推拉窗) if unset. */
+  style?: WindowStyle;
 }
+
+/** Window visual styles. */
+export type WindowStyle =
+  | "sliding"   // 推拉窗（中间一条竖轨，国内最常见）
+  | "casement"  // 平开窗（单整块玻璃，向外开）
+  | "fixed"     // 固定观景窗（无分隔）
+  | "louvered"; // 百叶窗（水平条）
 
 export interface PlacedItem {
   instanceId: string;
@@ -218,7 +227,17 @@ export interface FloorPlan {
   roomDoorWall: Record<RoomType, "bottom" | "top" | "left" | "right">;
   roomDoorLen?: Partial<Record<RoomType, number>>; // cm, width along wall (default 80)
   roomDoorH?: Partial<Record<RoomType, number>>;   // cm, height (default 200)
+  /** Per-room door style. Default "wood_panel" if unset. */
+  roomDoorStyle?: Partial<Record<RoomType, DoorStyle>>;
 }
+
+/** Interior-door visual styles. Each variant is rendered differently by
+ *  RoomDoor3D and listed in the door style picker (2D edit mode). */
+export type DoorStyle =
+  | "wood_panel"     // 实木门板（默认，带面板线条）
+  | "frosted_glass"  // 磨砂玻璃木框门
+  | "sliding_barn"   // 谷仓推拉门
+  | "french_double"; // 法式对开玻璃门
 
 // For wall/floor area estimation (m²)
 export function getRoomArea(room: RoomType): { wall: number; floor: number } {

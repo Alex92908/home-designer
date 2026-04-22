@@ -130,7 +130,7 @@ function RoomShell({
   wallBack, wallFront, wallLeft, wallRight,
   wallLower, wallSplitCm,
   ceiling,
-  hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm,
+  hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle,
   activeRoom,
 }: {
   W: number; D: number; H: number;
@@ -147,6 +147,7 @@ function RoomShell({
   doorPosCm: number;
   doorLenCm: number;
   doorHCm: number;
+  doorStyle: import("@/lib/types").DoorStyle;
   activeRoom: RoomType;
 }) {
   const skirtColor = shade(wallColor, -18);
@@ -361,6 +362,7 @@ function RoomShell({
           doorLenCm={doorLenCm}
           doorHCm={doorHCm}
           activeRoom={activeRoom}
+          doorStyle={doorStyle}
         />
       )}
 
@@ -511,14 +513,14 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   const sill = win.sill !== undefined ? win.sill / 100 : 0.9;
   const winY = Math.max(0.05, Math.min(H - winH - 0.05, sill)) + winH / 2;
 
-  // Flat window — a thin frame around a glass pane, sitting flush with
-  // the wall. No sill, no curtains, no rail sticking into the room.
-  // Like a picture frame: top-down projection stays clean.
-  const FRAME_THIN = 0.025;   // 2.5cm frame (picture-frame thickness)
-  const WALL_OFFSET = 0.015;  // frame sits 1.5cm forward of wall surface
-  const proceduralBackFrame = (
+  // Flat window — thin frame + glass, flush with wall. Interior mullion
+  // depends on window style. Style defaults to "sliding" (国内推拉窗).
+  const FRAME_THIN = 0.025;
+  const WALL_OFFSET = 0.015;
+  const style = win.style ?? "sliding";
+
+  const frameBars = (
     <>
-      {/* Frame — 4 thin bars forming a rectangle (like picture frame) */}
       <mesh position={[0, winH / 2 + FRAME_THIN / 2, WALL_OFFSET]} castShadow>
         <boxGeometry args={[winLen + FRAME_THIN * 2, FRAME_THIN, 0.02]} />
         <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
@@ -535,11 +537,58 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
         <boxGeometry args={[FRAME_THIN, winH, 0.02]} />
         <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
       </mesh>
-      {/* Glass pane — thin, slightly forward of wall, semi-transparent */}
-      <mesh position={[0, 0, WALL_OFFSET + 0.002]}>
-        <planeGeometry args={[winLen, winH]} />
-        <meshPhysicalMaterial color="#BED3E8" transmission={0.7} roughness={0.08} metalness={0} thickness={0.01} ior={1.45} transparent opacity={0.5} side={THREE.DoubleSide} />
-      </mesh>
+    </>
+  );
+
+  const glass = (
+    <mesh position={[0, 0, WALL_OFFSET + 0.002]}>
+      <planeGeometry args={[winLen, winH]} />
+      <meshPhysicalMaterial color="#BED3E8" transmission={0.7} roughness={0.08} metalness={0} thickness={0.01} ior={1.45} transparent opacity={0.5} side={THREE.DoubleSide} />
+    </mesh>
+  );
+
+  // Style-specific mullion geometry
+  const mullions = (() => {
+    switch (style) {
+      case "fixed":
+        return null;
+      case "sliding": {
+        // One or two vertical rails (3-panel if >1.8m wide)
+        const panels = winLen > 1.8 ? 3 : 2;
+        return Array.from({ length: panels - 1 }).map((_, i) => {
+          const x = -winLen / 2 + (winLen / panels) * (i + 1);
+          return (
+            <mesh key={`rail-${i}`} position={[x, 0, WALL_OFFSET + 0.006]}>
+              <boxGeometry args={[0.03, winH, 0.018]} />
+              <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
+            </mesh>
+          );
+        });
+      }
+      case "casement":
+        return null; // single integral pane, no mullion
+      case "louvered": {
+        // Horizontal slats
+        const slatCount = Math.max(4, Math.floor(winH / 0.12));
+        const slatH = winH / slatCount;
+        return Array.from({ length: slatCount }).map((_, i) => {
+          const y = -winH / 2 + slatH / 2 + i * slatH;
+          return (
+            <mesh key={`slat-${i}`} position={[0, y, WALL_OFFSET + 0.008]} rotation={[-0.25, 0, 0]}>
+              <boxGeometry args={[winLen - 0.04, slatH * 0.55, 0.015]} />
+              <meshStandardMaterial color="#E8E8E4" roughness={0.6} />
+            </mesh>
+          );
+        });
+      }
+    }
+  })();
+
+  const proceduralBackFrame = (
+    <>
+      {frameBars}
+      {style !== "louvered" && glass}
+      {mullions}
     </>
   );
 
@@ -640,27 +689,34 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
 function RoomDoor3D({
   W, D, H,
   doorWall, doorPosCm, doorLenCm, doorHCm,
-  activeRoom,
+  activeRoom, doorStyle,
 }: {
   W: number; D: number; H: number;
   doorWall: "bottom" | "top" | "left" | "right";
   doorPosCm: number; doorLenCm: number; doorHCm: number;
   activeRoom: RoomType;
+  doorStyle: import("@/lib/types").DoorStyle;
 }) {
   const isOpen = useDesignerStore(s => !!s.doorOpenByRoom[activeRoom]);
   const toggleDoorOpen = useDesignerStore(s => s.toggleDoorOpen);
   const panelRef = useRef<THREE.Group>(null);
-  // Animated angle, smoothed each frame toward the target.
-  const angleRef = useRef(0);
+  // Animated value, smoothed each frame toward the target.
+  // For hinged doors: used as rotation angle (0 → -π/2).
+  // For sliding doors: used as translation distance (0 → -doorW).
+  const animRef = useRef(0);
   useFrame((_, delta) => {
-    const target = isOpen ? -Math.PI / 2 : 0; // swing inward 90°
-    const speed = 5.5; // rad/s
-    const current = angleRef.current;
+    const isSliding = doorStyle === "sliding_barn";
+    const target = isOpen ? (isSliding ? -(doorLenCm / 100) : -Math.PI / 2) : 0;
+    const speed = isSliding ? 2.4 : 5.5;
+    const current = animRef.current;
     const diff = target - current;
     if (Math.abs(diff) > 0.002) {
       const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
-      angleRef.current = current + step;
-      if (panelRef.current) panelRef.current.rotation.y = angleRef.current;
+      animRef.current = current + step;
+      if (panelRef.current) {
+        if (isSliding) panelRef.current.position.x = animRef.current;
+        else panelRef.current.rotation.y = animRef.current;
+      }
     }
   });
 
@@ -714,22 +770,111 @@ function RoomDoor3D({
       </mesh>
 
       {/* Door panel (rotates around hinge at local X=0) */}
-      <group ref={panelRef} position={[0, 0, 0.01]}>
-        <mesh
-          position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]}
-          onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
-          castShadow
-          receiveShadow
-        >
-          <boxGeometry args={[doorW - 0.02, doorH - 0.02, 0.035]} />
-          <meshStandardMaterial color="#C79A6A" roughness={0.55} metalness={0.02} />
-        </mesh>
-        {/* Handle (door knob / lever) */}
-        <mesh position={[doorW - 0.1, doorH * 0.45, 0.02]}>
-          <sphereGeometry args={[0.03, 12, 12]} />
-          <meshStandardMaterial color="#A8A8A8" metalness={0.85} roughness={0.25} />
-        </mesh>
-      </group>
+      {doorStyle === "sliding_barn" ? (
+        // Sliding barn door: slides left (no swing). panelRef unused for rotation;
+        // instead translate via useFrame (we already drive angleRef — reuse as
+        // slide ratio 0→1 mapped to translation).
+        <group ref={panelRef} position={[0, 0, 0.01]}>
+          {/* Top slide rail (doesn't move) */}
+          <mesh position={[doorW, doorH + 0.08, 0]}>
+            <boxGeometry args={[doorW * 2.1, 0.06, 0.04]} />
+            <meshStandardMaterial color="#2A2A2A" metalness={0.6} roughness={0.4} />
+          </mesh>
+          {/* Sliding panel */}
+          <mesh
+            position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]}
+            onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
+            castShadow receiveShadow
+          >
+            <boxGeometry args={[doorW - 0.02, doorH - 0.02, 0.04]} />
+            <meshStandardMaterial color="#7A5438" roughness={0.85} />
+          </mesh>
+          {/* Barn door: 3 horizontal planks + iron strap */}
+          {[0.25, 0.5, 0.75].map((r, i) => (
+            <mesh key={i} position={[doorW / 2, doorH * r, 0.005]}>
+              <boxGeometry args={[doorW - 0.04, 0.015, 0.008]} />
+              <meshStandardMaterial color="#5C3E28" roughness={0.9} />
+            </mesh>
+          ))}
+          {/* Handle: long iron bar */}
+          <mesh position={[doorW - 0.12, doorH * 0.45, 0.03]}>
+            <boxGeometry args={[0.14, 0.03, 0.015]} />
+            <meshStandardMaterial color="#2A2A2A" metalness={0.8} roughness={0.35} />
+          </mesh>
+        </group>
+      ) : doorStyle === "french_double" ? (
+        // French double: two glass panels hinged from each outer edge.
+        <group ref={panelRef} position={[0, 0, 0.01]}>
+          {/* Left panel (hinged at x=0) */}
+          <group
+            onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
+          >
+            <mesh position={[doorW / 4, doorH / 2, -0.02]} castShadow>
+              <boxGeometry args={[doorW / 2 - 0.01, doorH - 0.02, 0.025]} />
+              <meshStandardMaterial color="#F0F0F0" roughness={0.5} />
+            </mesh>
+            <mesh position={[doorW / 4, doorH / 2, -0.005]}>
+              <planeGeometry args={[doorW / 2 - 0.1, doorH - 0.15]} />
+              <meshPhysicalMaterial color="#C8D8E5" transmission={0.75} roughness={0.05} thickness={0.02} transparent opacity={0.6} />
+            </mesh>
+          </group>
+          {/* Right panel */}
+          <mesh position={[doorW * 0.75, doorH / 2, -0.02]} castShadow>
+            <boxGeometry args={[doorW / 2 - 0.01, doorH - 0.02, 0.025]} />
+            <meshStandardMaterial color="#F0F0F0" roughness={0.5} />
+          </mesh>
+          <mesh position={[doorW * 0.75, doorH / 2, -0.005]}>
+            <planeGeometry args={[doorW / 2 - 0.1, doorH - 0.15]} />
+            <meshPhysicalMaterial color="#C8D8E5" transmission={0.75} roughness={0.05} thickness={0.02} transparent opacity={0.6} />
+          </mesh>
+          {/* Two knobs at center */}
+          <mesh position={[doorW / 2 - 0.04, doorH * 0.45, 0.02]}>
+            <sphereGeometry args={[0.02, 10, 10]} />
+            <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.2} />
+          </mesh>
+          <mesh position={[doorW / 2 + 0.04, doorH * 0.45, 0.02]}>
+            <sphereGeometry args={[0.02, 10, 10]} />
+            <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.2} />
+          </mesh>
+        </group>
+      ) : (
+        // Default: wood_panel or frosted_glass (single hinged door)
+        <group ref={panelRef} position={[0, 0, 0.01]}>
+          <mesh
+            position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]}
+            onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
+            castShadow
+            receiveShadow
+          >
+            <boxGeometry args={[doorW - 0.02, doorH - 0.02, 0.035]} />
+            <meshStandardMaterial
+              color={doorStyle === "frosted_glass" ? "#D8E0E8" : "#C79A6A"}
+              roughness={doorStyle === "frosted_glass" ? 0.35 : 0.55}
+              metalness={0.02}
+              transparent={doorStyle === "frosted_glass"}
+              opacity={doorStyle === "frosted_glass" ? 0.85 : 1}
+            />
+          </mesh>
+          {/* Wood panel inset lines (only for wood_panel) */}
+          {doorStyle === "wood_panel" && (
+            <>
+              <mesh position={[doorW / 2, doorH * 0.72, 0.003]}>
+                <planeGeometry args={[doorW * 0.62, doorH * 0.26]} />
+                <meshStandardMaterial color="#B0824E" roughness={0.7} />
+              </mesh>
+              <mesh position={[doorW / 2, doorH * 0.35, 0.003]}>
+                <planeGeometry args={[doorW * 0.62, doorH * 0.32]} />
+                <meshStandardMaterial color="#B0824E" roughness={0.7} />
+              </mesh>
+            </>
+          )}
+          {/* Handle (door knob) */}
+          <mesh position={[doorW - 0.1, doorH * 0.45, 0.02]}>
+            <sphereGeometry args={[0.03, 12, 12]} />
+            <meshStandardMaterial color="#A8A8A8" metalness={0.85} roughness={0.25} />
+          </mesh>
+        </group>
+      )}
     </group>
   );
 }
@@ -1817,6 +1962,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
   const doorPosCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorPos[activeRoom] ?? 0);
   const doorLenCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
   const doorHCm    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
+  const doorStyle  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? "wood_panel");
   const def = ROOM_DEFS[activeRoom];
 
   // Use store dimensions (reflects global plan resizes), fall back to ROOM_DEFS
@@ -1877,6 +2023,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
         doorPosCm={doorPosCm}
         doorLenCm={doorLenCm}
         doorHCm={doorHCm}
+        doorStyle={doorStyle}
         activeRoom={activeRoom}
         ceiling={roomState.materials.ceiling}
       />

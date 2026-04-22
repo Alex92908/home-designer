@@ -21,20 +21,6 @@
     "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Vincent_van_Gogh_-_Wheat_Field_with_Cypresses_-_Google_Art_Project.jpg?width=1024"
   },
   {
-    "slug": "hammershoi_interior",
-    "title": "Interior with Young Man Reading",
-    "artist": "Vilhelm Hammershøi (1898)",
-    "url": "/artworks/hammershoi_interior.jpg",
-    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Vilhelm_Hammersh%C3%B8i_-_Interior_with_Young_Man_Reading_-_Google_Art_Project.jpg?width=1024"
-  },
-  {
-    "slug": "shenzhou_lofty_mount_lu",
-    "title": "庐山高图（传）",
-    "artist": "沈周 / Shen Zhou (Ming, 1467)",
-    "url": "/artworks/shenzhou_lofty_mount_lu.jpg",
-    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Shen_Zhou_-_Lofty_Mount_Lu.jpg?width=768"
-  },
-  {
     "slug": "fankuan_travelers_mountains",
     "title": "谿山行旅图",
     "artist": "范宽 / Fan Kuan (北宋, c. 1000)",
@@ -47,5 +33,75 @@
     "artist": "葛飾北斎 / Hokusai (1831)",
     "url": "/artworks/hokusai_great_wave.jpg",
     "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/The_Great_Wave_off_Kanagawa.jpg?width=1024"
+  },
+  {
+    "slug": "klimt_the_kiss",
+    "title": "吻",
+    "artist": "Gustav Klimt (1907)",
+    "url": "/artworks/klimt_the_kiss.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg?width=1024"
+  },
+  {
+    "slug": "kandinsky_composition_viii",
+    "title": "Composition VIII",
+    "artist": "Wassily Kandinsky (1923)",
+    "url": "/artworks/kandinsky_composition_viii.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Vassily_Kandinsky%2C_1923_-_Composition_8%2C_huile_sur_toile%2C_140_cm_x_201_cm%2C_Mus%C3%A9e_Guggenheim%2C_New_York.jpg?width=1024"
+  },
+  {
+    "slug": "friedrich_wanderer",
+    "title": "雾海之上的漫游者",
+    "artist": "Caspar David Friedrich (1818)",
+    "url": "/artworks/friedrich_wanderer.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Caspar_David_Friedrich_-_Wanderer_above_the_Sea_of_Fog.jpg?width=1024"
+  },
+  {
+    "slug": "turner_fighting_temeraire",
+    "title": "战舰无畏号的末日",
+    "artist": "J.M.W. Turner (1839)",
+    "url": "/artworks/turner_fighting_temeraire.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Turner%2C_J._M._W._-_The_Fighting_T%C3%A9m%C3%A9raire_tugged_to_her_last_Berth_to_be_broken.jpg?width=1024"
+  },
+  {
+    "slug": "seurat_grande_jatte",
+    "title": "大碗岛星期日午后",
+    "artist": "Georges Seurat (1884)",
+    "url": "/artworks/seurat_grande_jatte.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/A_Sunday_on_La_Grande_Jatte%2C_Georges_Seurat%2C_1884.jpg?width=1024"
+  },
+  {
+    "slug": "monet_water_lilies",
+    "title": "睡莲",
+    "artist": "Claude Monet (1919)",
+    "url": "/artworks/monet_water_lilies.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Claude_Monet_-_Water_Lilies_-_1919.jpg?width=1024"
+  },
+  {
+    "slug": "vermeer_pearl_earring",
+    "title": "戴珍珠耳环的少女",
+    "artist": "Johannes Vermeer (1665)",
+    "url": "/artworks/vermeer_pearl_earring.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/1665_Girl_with_a_Pearl_Earring.jpg?width=1024"
+  },
+  {
+    "slug": "leonardo_mona_lisa",
+    "title": "蒙娜丽莎",
+    "artist": "Leonardo da Vinci (1503)",
+    "url": "/artworks/leonardo_mona_lisa.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg?width=1024"
+  },
+  {
+    "slug": "degas_dance_class",
+    "title": "舞蹈课",
+    "artist": "Edgar Degas (1874)",
+    "url": "/artworks/degas_dance_class.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Edgar_Degas_-_The_Ballet_Class_-_Google_Art_Project.jpg?width=1024"
+  },
+  {
+    "slug": "hokusai_red_fuji",
+    "title": "赤富士",
+    "artist": "葛飾北斎 / Hokusai (1830)",
+    "url": "/artworks/hokusai_red_fuji.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Red_Fuji_southern_wind_clear_morning.jpg?width=1024"
   }
 ]

@@ -509,6 +509,15 @@ export const FURNITURE: FurnitureItem[] = [
     icon: "🖼️",
     imageUrl: "/artworks/hokusai_great_wave.jpg",
   },
+  // ── 2025-04 扩充 —— 13 张公版名画全接入 ──
+  { id: "artwork-klimt-kiss",           name: "克林姆《吻》",          brand: "艺术工坊", price: 1680, unit: "元/件", category: "artwork", roomTypes: ["master", "living"], color: "#D4A32E", width: 80,  depth: 5, height: 90, tags: ["轻奢", "现代"], description: "金箔装饰艺术", icon: "🖼️", imageUrl: "/artworks/klimt_the_kiss.jpg" },
+  { id: "artwork-kandinsky",            name: "康定斯基《Composition VIII》", brand: "艺术工坊", price: 1380, unit: "元/件", category: "artwork", roomTypes: ["living", "study"], color: "#E8E4D8", width: 120, depth: 5, height: 80, tags: ["现代"], description: "抽象派几何构图", icon: "🖼️", imageUrl: "/artworks/kandinsky_composition_viii.jpg" },
+  { id: "artwork-turner",               name: "透纳《无畏号的末日》",    brand: "艺术工坊", price: 1480, unit: "元/件", category: "artwork", roomTypes: ["living", "study"], color: "#C8A070", width: 120, depth: 5, height: 80, tags: ["轻奢", "现代"], description: "浪漫主义海景", icon: "🖼️", imageUrl: "/artworks/turner_fighting_temeraire.jpg" },
+  { id: "artwork-seurat",               name: "修拉《大碗岛午后》",      brand: "艺术工坊", price: 1280, unit: "元/件", category: "artwork", roomTypes: ["living", "dining"], color: "#9BAF7A", width: 110, depth: 5, height: 75, tags: ["现代"], description: "点彩派代表作", icon: "🖼️", imageUrl: "/artworks/seurat_grande_jatte.jpg" },
+  { id: "artwork-vermeer",              name: "维米尔《戴珍珠耳环的少女》", brand: "艺术工坊", price: 1580, unit: "元/件", category: "artwork", roomTypes: ["master", "study"], color: "#3A4A6E", width: 65,  depth: 5, height: 80, tags: ["轻奢"], description: "荷兰黄金时代肖像", icon: "🖼️", imageUrl: "/artworks/vermeer_pearl_earring.jpg" },
+  { id: "artwork-mona-lisa",            name: "达芬奇《蒙娜丽莎》",     brand: "艺术工坊", price: 1880, unit: "元/件", category: "artwork", roomTypes: ["living", "study", "master"], color: "#6B5A3A", width: 60,  depth: 5, height: 85, tags: ["轻奢", "中式"], description: "文艺复兴最知名肖像", icon: "🖼️", imageUrl: "/artworks/leonardo_mona_lisa.jpg" },
+  { id: "artwork-degas",                name: "德加《舞蹈课》",         brand: "艺术工坊", price: 1280, unit: "元/件", category: "artwork", roomTypes: ["living", "study"], color: "#B8A890", width: 90,  depth: 5, height: 100, tags: ["现代", "轻奢"], description: "印象派人物画", icon: "🖼️", imageUrl: "/artworks/degas_dance_class.jpg" },
+  { id: "artwork-red-fuji",             name: "葛饰北斎《赤富士》",      brand: "文房四宝", price: 980,  unit: "元/件", category: "artwork", roomTypes: ["living", "study"], color: "#B84A3E", width: 100, depth: 5, height: 70, tags: ["日式"], description: "富嶽三十六景", icon: "🖼️", imageUrl: "/artworks/hokusai_red_fuji.jpg" },
 
   // ─── 床 Bed ───────────────────────────────────────────
   {
