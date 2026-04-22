@@ -186,6 +186,11 @@ interface DesignerStore {
   // Keyed by WindowConfig.id so each window in a room opens independently.
   windowOpenByWinId: Record<string, boolean>;
   toggleWindowOpen: (winId: string) => void;
+  /** Open/close state for curtain instances — toggled by clicking the
+   *  curtain mesh in 3D. When open, the curtain glTF is animated to
+   *  gather sideways (scale.x ~0.4), revealing the window behind. */
+  curtainOpenByInstanceId: Record<string, boolean>;
+  toggleCurtainOpen: (instanceId: string) => void;
 
   // Front wall opacity in 3D dollhouse view. 0 = cut away (default, so
   // you can see into the room), 0.5 = frosted glass, 1.0 = fully opaque.
@@ -350,6 +355,13 @@ export const useDesignerStore = create<DesignerStore>()(
       doorOpenByRoom: {},
       toggleDoorOpen: (room) => set(st => ({
         doorOpenByRoom: { ...st.doorOpenByRoom, [room]: !st.doorOpenByRoom[room] },
+      })),
+      curtainOpenByInstanceId: {},
+      toggleCurtainOpen: (instanceId) => set(st => ({
+        curtainOpenByInstanceId: {
+          ...st.curtainOpenByInstanceId,
+          [instanceId]: !st.curtainOpenByInstanceId[instanceId],
+        },
       })),
       windowOpenByWinId: {},
       toggleWindowOpen: (winId) => set(st => ({

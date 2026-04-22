@@ -798,7 +798,7 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
         <directionalLight
           position={[0, 0.3, -0.5]}
           target-position={[0, -1.5, 2]}
-          intensity={1.6}
+          intensity={0.8}
           color="#FFF2D0"
           castShadow
           shadow-mapSize={[1024, 1024]}
@@ -825,7 +825,7 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
         <directionalLight
           position={[0.5, 0.3, 0]}
           target-position={[-2, -1.5, 0]}
-          intensity={1.6}
+          intensity={0.8}
           color="#FFF2D0"
           castShadow
           shadow-mapSize={[1024, 1024]}
@@ -849,7 +849,7 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
         <directionalLight
           position={[-0.5, 0.3, 0]}
           target-position={[2, -1.5, 0]}
-          intensity={1.6}
+          intensity={0.8}
           color="#FFF2D0"
           castShadow
           shadow-mapSize={[1024, 1024]}
@@ -2318,6 +2318,20 @@ function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def
   // loading throws (404, CORS, malformed) the ErrorBoundary higher up
   // catches it — for safety we also wrap in our own fallback.
   if (item.model3d?.url) {
+    // Curtains get a click-to-toggle "open/close" wrapper: when open,
+    // the curtain glTF is animated to compress horizontally (gather to
+    // one side, revealing the window behind).
+    if (item.category === "curtain") {
+      return (
+        <CurtainInstance
+          instanceId={placed.instanceId}
+          position={[x3d, baseY, z3d]}
+          rotation={[0, rotY, 0]}
+          item={item}
+          w={fw} d={fd} h={fh}
+        />
+      );
+    }
     return (
       <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]}>
         <Suspense fallback={<FurnitureMesh item={item} w={fw} d={fd} h={fh} />}>
@@ -2339,6 +2353,110 @@ function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def
 
 /** Inner wrapper: catches GLTF load errors (404/malformed) and falls
  *  back to procedural geometry instead of crashing the scene. */
+/** Curtain glTF loader that scrubs the asset of non-curtain geometry.
+ *  Sketchfab curtain assets are often packaged with a "Wall" backing
+ *  mesh (white, emissive) so the preview thumbnail looks like a real
+ *  room scene. That wall ends up rendering inside our room as a glowing
+ *  white slab — fine viewed from outside (hidden by the real wall) but
+ *  from inside looking out it floods the view. We strip any mesh whose
+ *  name contains "Wall" and force emissive off on all remaining
+ *  materials so backlight doesn't blow them out either. */
+function CurtainGltf({ item, w, d, h }: { item: FurnitureItem; w: number; d: number; h: number }) {
+  const url = item.model3d!.url;
+  const { scene } = useGLTF(url) as unknown as { scene: THREE.Object3D };
+  const cloned = useMemo(() => {
+    const c = scene.clone(true);
+    // 1) Drop the bundled "Wall" backdrop
+    const toRemove: THREE.Object3D[] = [];
+    c.traverse(obj => {
+      if (obj.name && /wall/i.test(obj.name)) toRemove.push(obj);
+    });
+    for (const o of toRemove) o.parent?.remove(o);
+    // 2) Kill emissive on every remaining material (Sketchfab often sets
+    // emissive white so the asset pops against dark previews — wrong for
+    // a real scene with its own lighting)
+    c.traverse(obj => {
+      const m = obj as THREE.Mesh;
+      if (!m.isMesh) return;
+      m.castShadow = true;
+      m.receiveShadow = true;
+      const mats = Array.isArray(m.material) ? m.material : [m.material];
+      for (const mat of mats) {
+        const sm = mat as THREE.MeshStandardMaterial;
+        if (sm) {
+          if (sm.emissive) sm.emissive.set("#000000");
+          if ("emissiveIntensity" in sm) sm.emissiveIntensity = 0;
+          if (sm.emissiveMap) sm.emissiveMap = null;
+          sm.needsUpdate = true;
+        }
+      }
+    });
+    // 3) Scale + center exactly like GltfFurniture does
+    c.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(c);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    if (size.x > 0 && size.y > 0 && size.z > 0) {
+      c.scale.set(w / size.x, h / size.y, d / size.z);
+      c.updateMatrixWorld(true);
+      const box2 = new THREE.Box3().setFromObject(c);
+      c.position.x -= (box2.min.x + box2.max.x) / 2;
+      c.position.z -= (box2.min.z + box2.max.z) / 2;
+      c.position.y -= box2.min.y;
+    }
+    return c;
+  }, [scene, w, d, h]);
+  return <primitive object={cloned} />;
+}
+
+/** Wraps a curtain placement with open/close animation. Clicking the
+ *  curtain mesh toggles the store flag `curtainOpenByInstanceId[id]`;
+ *  useFrame smoothly animates the inner group's scale.x between 1 (closed,
+ *  covers full width) and 0.35 (open, gathered to the hinge side) and
+ *  offsets its position so the "gather" stays at the left edge — like
+ *  real curtains pulled aside. */
+function CurtainInstance({
+  instanceId, position, rotation, item, w, d, h,
+}: {
+  instanceId: string;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  item: FurnitureItem;
+  w: number; d: number; h: number;
+}) {
+  const isOpen = useDesignerStore(s => !!s.curtainOpenByInstanceId[instanceId]);
+  const toggle = useDesignerStore(s => s.toggleCurtainOpen);
+  const innerRef = useRef<THREE.Group>(null);
+  const openRef = useRef(0);
+  useFrame((_, delta) => {
+    const target = isOpen ? 1 : 0;
+    const cur = openRef.current;
+    const diff = target - cur;
+    if (Math.abs(diff) < 0.005) return;
+    const step = Math.sign(diff) * Math.min(Math.abs(diff), 2 * delta);
+    openRef.current = cur + step;
+    const g = innerRef.current;
+    if (!g) return;
+    const scaleX = 1 - openRef.current * 0.65;
+    g.scale.x = scaleX;
+    g.position.x = -(w / 2) * (1 - scaleX);
+  });
+
+  return (
+    <group
+      position={position}
+      rotation={rotation}
+      onClick={(e) => { e.stopPropagation(); toggle(instanceId); }}
+    >
+      <group ref={innerRef}>
+        <Suspense fallback={<FurnitureMesh item={item} w={w} d={d} h={h} />}>
+          <CurtainGltf item={item} w={w} d={d} h={h} />
+        </Suspense>
+      </group>
+    </group>
+  );
+}
+
 class GltfFurnitureWithFallback extends Component<
   { item: FurnitureItem; w: number; d: number; h: number },
   { failed: boolean }
