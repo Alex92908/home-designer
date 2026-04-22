@@ -1025,19 +1025,38 @@ function RoomDoor3D({
               />
             )
           ) : (
-            // frosted_glass — procedural glass panel
+            // frosted_glass — aluminum frame + semi-transparent glass panel
             <>
+              {/* Aluminum frame around the edge — makes the door outline
+                  clearly visible even when glass is semi-transparent */}
+              <mesh position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]} castShadow receiveShadow>
+                <boxGeometry args={[doorW - 0.02, doorH - 0.02, 0.035]} />
+                <meshStandardMaterial color="#A8AEB4" metalness={0.7} roughness={0.3} />
+              </mesh>
+              {/* Glass inset — slightly smaller than frame, semi-transparent */}
               <mesh
                 position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]}
                 onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
-                castShadow receiveShadow
               >
-                <boxGeometry args={[doorW - 0.02, doorH - 0.02, 0.035]} />
-                <meshStandardMaterial color="#D8E0E8" roughness={0.35} metalness={0.02} transparent opacity={0.85} />
+                <boxGeometry args={[doorW - 0.12, doorH - 0.15, 0.04]} />
+                <meshPhysicalMaterial color="#D8E0E8" transmission={0.65} roughness={0.4} thickness={0.03} ior={1.45} transparent opacity={0.75} />
               </mesh>
-              <mesh position={[doorW - 0.1, doorH * 0.45, 0.02]}>
-                <sphereGeometry args={[0.03, 12, 12]} />
-                <meshStandardMaterial color="#A8A8A8" metalness={0.85} roughness={0.25} />
+              {/* Lever-style handle on both faces */}
+              <mesh position={[doorW - 0.12, doorH * 0.45, 0.03]}>
+                <boxGeometry args={[0.08, 0.018, 0.02]} />
+                <meshStandardMaterial color="#9A9A9E" metalness={0.85} roughness={0.25} />
+              </mesh>
+              <mesh position={[doorW - 0.08, doorH * 0.45, 0.025]}>
+                <cylinderGeometry args={[0.018, 0.018, 0.02, 10]} />
+                <meshStandardMaterial color="#9A9A9E" metalness={0.85} roughness={0.25} />
+              </mesh>
+              <mesh position={[doorW - 0.12, doorH * 0.45, -0.05]}>
+                <boxGeometry args={[0.08, 0.018, 0.02]} />
+                <meshStandardMaterial color="#9A9A9E" metalness={0.85} roughness={0.25} />
+              </mesh>
+              <mesh position={[doorW - 0.08, doorH * 0.45, -0.045]}>
+                <cylinderGeometry args={[0.018, 0.018, 0.02, 10]} />
+                <meshStandardMaterial color="#9A9A9E" metalness={0.85} roughness={0.25} />
               </mesh>
             </>
           )}
