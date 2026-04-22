@@ -1,0 +1,11 @@
+Model Information:
+* title:	Japanese futon/bed
+* source:	https://sketchfab.com/3d-models/japanese-futonbed-0d5590d1d2184aa98797c3d6382afd7e
+* author:	nicolas_solo (https://sketchfab.com/nicolas_solo)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Japanese futon/bed" (https://sketchfab.com/3d-models/japanese-futonbed-0d5590d1d2184aa98797c3d6382afd7e) by nicolas_solo (https://sketchfab.com/nicolas_solo) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

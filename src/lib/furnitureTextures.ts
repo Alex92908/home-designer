@@ -206,6 +206,149 @@ export function brushedMetalMap(color: string): THREE.CanvasTexture {
   });
 }
 
+// ─── Wall paint (default wall texture) ─────────────────────────────
+// Micro-noise albedo + very subtle normal map. Together they break up
+// the "plastic sheet" look of pure-flat wall colors — visible on close
+// inspection but doesn't fight the user's chosen wall color.
+
+export function paintAlbedo(color: string): THREE.CanvasTexture {
+  return cached(`paint-${color}`, () => {
+    const SIZE = 512;
+    const [canvas, ctx] = makeCtx(SIZE);
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    const r = rng(seedFor(color));
+    // Low-freq blobs (roller pass variation) — draw as soft radial gradients
+    for (let i = 0; i < 60; i++) {
+      const cx = r() * SIZE;
+      const cy = r() * SIZE;
+      const rad = 40 + r() * 120;
+      const shift = Math.floor((r() - 0.5) * 16);
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+      grad.addColorStop(0, shade(color, shift));
+      grad.addColorStop(1, `${shade(color, 0)}00`);
+      ctx.fillStyle = grad;
+      ctx.globalAlpha = 0.35;
+      ctx.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
+    }
+    ctx.globalAlpha = 1;
+    // High-freq per-pixel grain (paint micro-texture)
+    const img = ctx.getImageData(0, 0, SIZE, SIZE);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const n = (r() - 0.5) * 14;
+      img.data[i]     = Math.max(0, Math.min(255, img.data[i]     + n));
+      img.data[i + 1] = Math.max(0, Math.min(255, img.data[i + 1] + n));
+      img.data[i + 2] = Math.max(0, Math.min(255, img.data[i + 2] + n));
+    }
+    ctx.putImageData(img, 0, 0);
+    return new THREE.CanvasTexture(canvas);
+  });
+}
+
+export function paintNormal(): THREE.CanvasTexture {
+  return cached("paint-normal", () => {
+    const SIZE = 512;
+    const [canvas, ctx] = makeCtx(SIZE);
+    const r = rng(12345);
+    const img = ctx.createImageData(SIZE, SIZE);
+    // Orange-peel finish: small-scale bumps. We generate XY perturbations
+    // that are correlated locally (via pseudo-noise) for a proper orange
+    // peel look rather than just per-pixel static.
+    for (let y = 0; y < SIZE; y++) {
+      for (let x = 0; x < SIZE; x++) {
+        const i = (y * SIZE + x) * 4;
+        // Multi-octave pseudo-noise
+        const n1 = Math.sin(x * 0.15 + r() * 0.3) * Math.cos(y * 0.14 + r() * 0.3);
+        const n2 = Math.sin(x * 0.4) * Math.cos(y * 0.45);
+        const nx = (n1 * 0.7 + n2 * 0.3) * 40;
+        const ny = (Math.sin(y * 0.15) * Math.cos(x * 0.14) * 0.7 + Math.sin(y * 0.4) * Math.cos(x * 0.45) * 0.3) * 40;
+        img.data[i]     = 128 + Math.floor(nx);
+        img.data[i + 1] = 128 + Math.floor(ny);
+        img.data[i + 2] = 240 + Math.floor(r() * 15);
+        img.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return new THREE.CanvasTexture(canvas);
+  });
+}
+
+// ─── Default floor (wood planks) ────────────────────────────────────
+// Used when the user hasn't picked a floor material. Warm wood planks
+// tinted from the room's declared floorColor. Plank runs along the
+// texture's horizontal axis; caller should orient repeat so planks
+// run along the room's long side.
+
+export function defaultFloorPlanks(color: string): THREE.CanvasTexture {
+  return cached(`floor-default-${color}`, () => {
+    const SIZE = 1024;
+    const [canvas, ctx] = makeCtx(SIZE);
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    const r = rng(seedFor(color));
+    const PLANKS = 6;            // planks per tile
+    const PLANK_H = SIZE / PLANKS;
+    const dark = shade(color, -35);
+    const midDark = shade(color, -18);
+    const light = shade(color, 12);
+
+    for (let i = 0; i < PLANKS; i++) {
+      const y = i * PLANK_H;
+      // Random plank base shade
+      const shift = Math.floor((r() - 0.5) * 24);
+      ctx.fillStyle = shade(color, shift);
+      ctx.fillRect(0, y, SIZE, PLANK_H);
+      // Grain lines running along the plank
+      for (let g = 0; g < 30; g++) {
+        const gy = y + r() * PLANK_H;
+        ctx.strokeStyle = r() > 0.6 ? midDark : light;
+        ctx.globalAlpha = 0.06 + r() * 0.18;
+        ctx.lineWidth = 0.5 + r() * 1.2;
+        ctx.beginPath();
+        ctx.moveTo(0, gy);
+        // Slight wavy grain
+        for (let x = 0; x < SIZE; x += 80) {
+          ctx.lineTo(x, gy + (r() - 0.5) * 3);
+        }
+        ctx.stroke();
+      }
+      // Occasional knot
+      if (r() > 0.7) {
+        const kx = r() * SIZE;
+        const ky = y + r() * PLANK_H;
+        const kr = 3 + r() * 8;
+        ctx.globalAlpha = 0.4;
+        const kg = ctx.createRadialGradient(kx, ky, 0.5, kx, ky, kr);
+        kg.addColorStop(0, dark);
+        kg.addColorStop(1, color);
+        ctx.fillStyle = kg;
+        ctx.beginPath();
+        ctx.ellipse(kx, ky, kr, kr * 0.5, r() * Math.PI, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    // Plank gap lines between rows
+    ctx.fillStyle = dark;
+    for (let i = 1; i < PLANKS; i++) {
+      const y = i * PLANK_H;
+      ctx.globalAlpha = 0.6;
+      ctx.fillRect(0, y - 0.5, SIZE, 1.2);
+    }
+    // Stagger the seams (shifted vertical gaps at 1/3 and 2/3)
+    ctx.globalAlpha = 0.55;
+    for (let i = 0; i < PLANKS; i++) {
+      const y = i * PLANK_H;
+      const offsets = i % 2 === 0 ? [SIZE * 0.33] : [SIZE * 0.66];
+      for (const x of offsets) {
+        ctx.fillRect(x - 0.5, y, 1.2, PLANK_H);
+      }
+    }
+    ctx.globalAlpha = 1;
+    return new THREE.CanvasTexture(canvas);
+  });
+}
+
 // ─── Marble / stone (countertops, bathroom) ─────────────────────────
 export function marbleMap(color: string): THREE.CanvasTexture {
   return cached(`marble-${color}`, () => {

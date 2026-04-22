@@ -1,0 +1,11 @@
+Model Information:
+* title:	Antique Wooden Wardrobe
+* source:	https://sketchfab.com/3d-models/antique-wooden-wardrobe-a3c221e5504d40a8ba019f8f1bf5ab0e
+* author:	Kuutti Siitonen (https://sketchfab.com/kuuttisiitonen)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Antique Wooden Wardrobe" (https://sketchfab.com/3d-models/antique-wooden-wardrobe-a3c221e5504d40a8ba019f8f1bf5ab0e) by Kuutti Siitonen (https://sketchfab.com/kuuttisiitonen) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

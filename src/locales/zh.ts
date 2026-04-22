@@ -24,7 +24,7 @@ export const zh = {
   customFurnitureBtn: "＋ 自定义",
   noFurnitureForRoom: "该房间暂无家具可选",
   clear: "清除",
-  materialSections: { wall: "墙面", floor: "地板", light: "灯具", tile: "地砖" } as Record<string, string>,
+  materialSections: { wall: "墙面", floor: "地板", ceiling: "天花板", light: "灯具", tile: "地砖" } as Record<string, string>,
   customForm: {
     title: "✏️ 自定义家具",
     namePlaceholder: "家具名称",
@@ -58,6 +58,8 @@ export const zh = {
   clearanceOverlapSuffix: "的预留空间冲突",
   clearanceWall: "的预留空间超出房间，少",
   clearanceDoorBlocked: "家具位于门开合区域，会阻挡开门",
+  autoDecorate: "一键装饰",
+  autoDecorateHint: "自动添加地毯/植物/挂画/落地灯，让房间看起来有人住",
   clearanceWindowBlocked: "家具高于窗台且位于窗前，遮挡采光与通风",
   emptyState: "从左侧选择材料和家具\n方案自动生成",
   aiTitle: "🤖 AI 风格建议",

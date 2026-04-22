@@ -128,12 +128,30 @@ export interface PlacedItem {
   elevationY?: number; // cm above floor (default 0 = on floor)
 }
 
+/** Which of the 4 walls an override applies to. Dollhouse view hides
+ *  `front` but we still track the data for 2D plan + future views. */
+export type WallSide = "back" | "front" | "left" | "right";
+
 export interface RoomMaterials {
+  /** Default wall material — applied to any side without an override. */
   wall?: MaterialItem;
   floor?: MaterialItem;
   ceiling?: MaterialItem;
   light?: MaterialItem;
   tile?: MaterialItem;
+  /** Optional lower-wall material (墙裙/护墙板). When set, walls render
+   *  as two stacked bands: lower band from floor to `wallSplitHeight`
+   *  uses this material; upper band uses the per-side wall material. */
+  wallLower?: MaterialItem;
+  /** Height in cm where upper and lower wall materials meet. Default
+   *  110cm (chair-rail height). Only used when `wallLower` is set. */
+  wallSplitHeight?: number;
+  /** Per-side wall material overrides (沙发/床头背景墙). Any side without
+   *  an override falls back to `wall`. Allows 4-color walls in one room. */
+  wallBack?: MaterialItem;
+  wallFront?: MaterialItem;
+  wallLeft?: MaterialItem;
+  wallRight?: MaterialItem;
 }
 
 export interface RoomDef {

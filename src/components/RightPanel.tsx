@@ -78,7 +78,21 @@ export default function RightPanel() {
   const budgetPercent = Math.min(100, (totalCost / budget) * 100);
   const aiSuggestion = t.aiSuggestions[scores.dominantStyle] ?? null;
 
-  const materialItems = Object.values(materials).filter(Boolean) as typeof materials.wall[];
+  // Collect unique MaterialItem values. `materials` now also holds scalar
+  // fields (wallSplitHeight) and can contain the same MaterialItem under
+  // multiple keys (e.g. wall=X, wallBack=X when user sets both). Filter
+  // to real items and dedupe by id.
+  const materialItems = (() => {
+    const seen = new Set<string>();
+    const out: NonNullable<typeof materials.wall>[] = [];
+    for (const v of Object.values(materials)) {
+      if (!v || typeof v !== "object" || !("id" in v)) continue;
+      if (seen.has(v.id)) continue;
+      seen.add(v.id);
+      out.push(v as NonNullable<typeof materials.wall>);
+    }
+    return out;
+  })();
   const totalItems = materialItems.length + placedItems.length;
 
   return (
@@ -352,6 +366,18 @@ export default function RightPanel() {
 
       {/* Export buttons */}
       <div className="p-4 space-y-2 shrink-0" style={{ borderTop: "1px solid var(--ds-border-soft)" }}>
+        <button
+          onClick={() => useDesignerStore.getState().autoDecorate()}
+          className="w-full py-2 text-sm font-semibold rounded-xl transition-all"
+          style={{
+            background: "linear-gradient(135deg, #FDE68A 0%, #FCA5A5 100%)",
+            color: "#7C2D12",
+            border: "1px solid #FDE68A",
+          }}
+          title={t.autoDecorateHint}
+        >
+          ✨ {t.autoDecorate}
+        </button>
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("openExport"))}
           className="ds-btn-primary w-full py-2.5 text-sm"

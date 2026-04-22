@@ -177,6 +177,11 @@ interface DesignerStore {
   budget: number;
   scores: StyleScore;
 
+  // Door open/close state per room (ephemeral UI state, not persisted).
+  // Used by 3D view to animate doors swinging open on click.
+  doorOpenByRoom: Partial<Record<RoomType, boolean>>;
+  toggleDoorOpen: (room: RoomType) => void;
+
   // Furniture undo history (ephemeral, not persisted)
   furnitureHistory: Array<{ room: RoomType; placedItems: PlacedItem[] }>;
 
@@ -193,6 +198,12 @@ interface DesignerStore {
   // Material actions
   setMaterial: (material: MaterialItem) => void;
   removeMaterial: (category: keyof RoomMaterials) => void;
+  /** Set a per-side wall override. side="back"|"front"|"left"|"right". */
+  setWallSide: (side: "back" | "front" | "left" | "right", material: MaterialItem | undefined) => void;
+  /** Set the lower-wall (护墙板/墙裙) material. Pass undefined to clear. */
+  setWallLower: (material: MaterialItem | undefined) => void;
+  /** Set where upper/lower split happens (cm from floor). Default 110. */
+  setWallSplitHeight: (cm: number) => void;
 
   // Furniture placement actions
   placeFurniture: (furnitureId: string) => void;
@@ -206,6 +217,9 @@ interface DesignerStore {
   resizeItem: (instanceId: string, scaleW: number, scaleD: number, scaleH?: number) => void;
   setElevation: (instanceId: string, elevationY: number) => void;
   clearRoom: () => void;
+  /** Auto-fill the active room with decorative items (rug, plants, art,
+   *  lamp) at sensible positions. Skips any decoration already placed. */
+  autoDecorate: () => void;
 
   // Furniture undo
   pushFurnitureHistory: () => void;
@@ -313,6 +327,10 @@ export const useDesignerStore = create<DesignerStore>()(
       viewMode: "3d",
       selectedInstanceId: null,
       selectedInstanceIds: [],
+      doorOpenByRoom: {},
+      toggleDoorOpen: (room) => set(st => ({
+        doorOpenByRoom: { ...st.doorOpenByRoom, [room]: !st.doorOpenByRoom[room] },
+      })),
       budget: 150000,
       furnitureHistory: [],
       clipboard: [],
@@ -366,6 +384,52 @@ export const useDesignerStore = create<DesignerStore>()(
         const floorPlans = [...s.floorPlans];
         floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
         set({ floorPlans, scores: computeScores(updatedMaterials, fp.rooms[activeRoom].placedItems) });
+      },
+
+      setWallSide: (side, material) => {
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const key = side === "back" ? "wallBack" : side === "front" ? "wallFront" : side === "left" ? "wallLeft" : "wallRight";
+        const updatedMaterials = { ...fp.rooms[activeRoom].materials };
+        if (material) updatedMaterials[key] = material;
+        else delete updatedMaterials[key];
+        const updatedRoom = { ...fp.rooms[activeRoom], materials: updatedMaterials };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
+        set({ floorPlans, scores: computeScores(updatedMaterials, fp.rooms[activeRoom].placedItems) });
+      },
+
+      setWallLower: (material) => {
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const updatedMaterials = { ...fp.rooms[activeRoom].materials };
+        if (material) {
+          updatedMaterials.wallLower = material;
+          // Default split at chair-rail height (110cm) if user hasn't set one.
+          if (updatedMaterials.wallSplitHeight === undefined) {
+            updatedMaterials.wallSplitHeight = 110;
+          }
+        } else {
+          delete updatedMaterials.wallLower;
+        }
+        const updatedRoom = { ...fp.rooms[activeRoom], materials: updatedMaterials };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
+        set({ floorPlans, scores: computeScores(updatedMaterials, fp.rooms[activeRoom].placedItems) });
+      },
+
+      setWallSplitHeight: (cm) => {
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const clamped = Math.max(30, Math.min(200, Math.round(cm)));
+        const updatedMaterials = { ...fp.rooms[activeRoom].materials, wallSplitHeight: clamped };
+        const updatedRoom = { ...fp.rooms[activeRoom], materials: updatedMaterials };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
+        set({ floorPlans });
       },
 
       placeFurniture: (furnitureId) => {
@@ -487,6 +551,96 @@ export const useDesignerStore = create<DesignerStore>()(
         const floorPlans = [...s.floorPlans];
         floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: clearedRoom } };
         set({ floorPlans, selectedInstanceIds: [], selectedInstanceId: null, scores: computeScores({}, []), activeTemplateId: null });
+      },
+
+      autoDecorate: () => {
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const def = ROOM_DEFS[activeRoom];
+        const dims = fp.roomDimensions[activeRoom] ?? { width: def.width, depth: def.depth };
+        const existing = fp.rooms[activeRoom].placedItems;
+
+        // Room-type-aware decoration kit. Each entry is a furnitureId + a
+        // position picker that returns (x,z) in cm from back-left corner.
+        // Positions are chosen to stay clear of walls and typical center-
+        // placed furniture. Skip any category already present in the room.
+        const existingCats = new Set(
+          existing
+            .map(p => getFurnitureById(p.furnitureId)?.category)
+            .filter(Boolean)
+        );
+
+        const DECOR_PLAN: Record<string, Array<{ id: string; pos: (w: number, d: number) => { x: number; z: number; rot?: number } }>> = {
+          living: [
+            { id: "rug-nordic-geo",    pos: (w, d) => ({ x: w / 2,        z: d * 0.65 }) },
+            { id: "plant-monstera",    pos: (w, d) => ({ x: w - 40,       z: 40 }) },
+            { id: "plant-rubber-tree", pos: (_, d) => ({ x: 40,           z: d - 40 }) },
+            { id: "artwork-abstract",  pos: (w)    => ({ x: w / 2,        z: 10 }) },
+            { id: "lamp-arc-gold",     pos: (_, d) => ({ x: 40,           z: d * 0.4 }) },
+          ],
+          master: [
+            { id: "rug-modern-gray",   pos: (w, d) => ({ x: w / 2,        z: d * 0.7 }) },
+            { id: "plant-sansevieria", pos: (_, d) => ({ x: 35,           z: d - 35 }) },
+            { id: "lamp-arc-gold",     pos: (w, d) => ({ x: w - 40,       z: d * 0.4 }) },
+            { id: "artwork-inkwash",   pos: (w)    => ({ x: w / 2,        z: 10 }) },
+          ],
+          bedroom: [
+            { id: "rug-modern-gray",   pos: (w, d) => ({ x: w / 2,        z: d * 0.65 }) },
+            { id: "plant-sansevieria", pos: (_, d) => ({ x: 35,           z: d - 35 }) },
+          ],
+          bedroom2: [
+            { id: "rug-modern-gray",   pos: (w, d) => ({ x: w / 2,        z: d * 0.65 }) },
+            { id: "plant-sansevieria", pos: (_, d) => ({ x: 35,           z: d - 35 }) },
+          ],
+          bedroom3: [
+            { id: "rug-modern-gray",   pos: (w, d) => ({ x: w / 2,        z: d * 0.65 }) },
+            { id: "plant-sansevieria", pos: (_, d) => ({ x: 35,           z: d - 35 }) },
+          ],
+          dining: [
+            { id: "plant-monstera",    pos: (_, d) => ({ x: 40,           z: d - 40 }) },
+            { id: "rug-persian",       pos: (w, d) => ({ x: w / 2,        z: d / 2 }) },
+            { id: "artwork-inkwash",   pos: (w)    => ({ x: w / 2,        z: 10 }) },
+          ],
+          study: [
+            { id: "plant-rubber-tree", pos: (w, d) => ({ x: w - 40,       z: d - 40 }) },
+            { id: "lamp-industrial-black", pos: (_, d) => ({ x: 40,        z: d - 40 }) },
+            { id: "rug-nordic-geo",    pos: (w, d) => ({ x: w / 2,        z: d * 0.55 }) },
+          ],
+          study2: [
+            { id: "plant-rubber-tree", pos: (w, d) => ({ x: w - 40,       z: d - 40 }) },
+            { id: "rug-nordic-geo",    pos: (w, d) => ({ x: w / 2,        z: d * 0.55 }) },
+          ],
+        };
+
+        const plan = DECOR_PLAN[activeRoom as keyof typeof DECOR_PLAN];
+        if (!plan) return; // kitchen / bathroom / etc. — skip auto-decorate
+
+        set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...existing] }] }));
+
+        const toAdd: PlacedItem[] = [];
+        for (const entry of plan) {
+          const f = getFurnitureById(entry.id);
+          if (!f) continue;
+          // Don't add if this category already exists in the room (except
+          // plants — a room can happily have several plants).
+          if (f.category !== "plant" && existingCats.has(f.category)) continue;
+          const { x, z, rot } = entry.pos(dims.width, dims.depth);
+          toAdd.push({
+            instanceId: genId(),
+            furnitureId: entry.id,
+            x, z,
+            rotation: rot ?? 0,
+            scaleW: 1, scaleD: 1, scaleH: 1,
+          });
+        }
+
+        if (toAdd.length === 0) return;
+        const updatedPlaced = [...existing, ...toAdd];
+        const updatedRoom = { ...fp.rooms[activeRoom], placedItems: updatedPlaced };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
+        set({ floorPlans, scores: computeScores(updatedRoom.materials, updatedPlaced) });
       },
 
       resizeItem: (instanceId, scaleW, scaleD, scaleH) => {

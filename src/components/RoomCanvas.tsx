@@ -1,16 +1,18 @@
 "use client";
 
-import { useRef, useEffect, useMemo, Component, ReactNode } from "react";
+import { useRef, useEffect, useMemo, useState, Component, ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Environment, useGLTF } from "@react-three/drei";
+import { EffectComposer, N8AO, Bloom, Vignette, SMAA } from "@react-three/postprocessing";
+import { BlendFunction } from "postprocessing";
 import { Suspense } from "react";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
-import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig } from "@/lib/types";
+import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
 import { getFloorTexture, getWallTexture, floorTileSize, wallTileSize } from "@/lib/textures";
-import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap } from "@/lib/furnitureTextures";
+import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 
 // ─── Error boundary ───────────────────────────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -77,22 +79,80 @@ function CameraAndCaptureSetup() {
 }
 
 // ─── Room geometry ────────────────────────────────────────
+// ─── Wall hole-cutting algorithm ─────────────────────────────
+/** Subtract a list of non-overlapping rectangular holes from a wall and
+ *  return the rectangles that tile the remaining area. Used so a wall
+ *  with a window or door actually has a hole in it instead of rendering
+ *  the window on top of a solid plane. */
+interface Rect { x: number; y: number; w: number; h: number }
+function splitWallAroundHoles(wallW: number, wallH: number, holes: Rect[]): Rect[] {
+  const sorted = [...holes].sort((a, b) => a.x - b.x);
+  const out: Rect[] = [];
+  let cursorX = 0;
+  for (const hole of sorted) {
+    const hx = Math.max(0, hole.x);
+    const hx2 = Math.min(wallW, hole.x + hole.w);
+    if (hx2 <= cursorX) continue; // past-ended, fully before cursor
+    if (hx > cursorX) {
+      // Full-height strip between cursor and hole's left edge
+      out.push({ x: cursorX, y: 0, w: hx - cursorX, h: wallH });
+    }
+    const hy = Math.max(0, hole.y);
+    const hy2 = Math.min(wallH, hole.y + hole.h);
+    // Strip below hole
+    if (hy > 0) out.push({ x: Math.max(cursorX, hx), y: 0, w: hx2 - Math.max(cursorX, hx), h: hy });
+    // Strip above hole
+    if (hy2 < wallH) out.push({ x: Math.max(cursorX, hx), y: hy2, w: hx2 - Math.max(cursorX, hx), h: wallH - hy2 });
+    cursorX = Math.max(cursorX, hx2);
+  }
+  if (cursorX < wallW) {
+    out.push({ x: cursorX, y: 0, w: wallW - cursorX, h: wallH });
+  }
+  return out;
+}
+
+/** If wainscot is set, split a segment at the split height into 2. */
+function splitAtWainscot(seg: Rect, splitH: number, enabled: boolean): Array<Rect & { band: "upper" | "lower" }> {
+  if (!enabled || seg.y >= splitH || seg.y + seg.h <= splitH) {
+    return [{ ...seg, band: seg.y >= splitH ? "upper" : "lower" }];
+  }
+  return [
+    { x: seg.x, y: seg.y, w: seg.w, h: splitH - seg.y, band: "lower" },
+    { x: seg.x, y: splitH, w: seg.w, h: (seg.y + seg.h) - splitH, band: "upper" },
+  ];
+}
+
 function RoomShell({
   W, D, H,
   wallColor, floorColor,
   wallId, floorId,
   windows,
+  wallBack, wallFront, wallLeft, wallRight,
+  wallLower, wallSplitCm,
+  ceiling,
+  hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm,
+  activeRoom,
 }: {
   W: number; D: number; H: number;
   wallColor: string; floorColor: string;
   wallId: string; floorId: string;
   windows: WindowConfig[];
+  wallBack?: MaterialItem; wallFront?: MaterialItem;
+  wallLeft?: MaterialItem; wallRight?: MaterialItem;
+  wallLower?: MaterialItem;
+  wallSplitCm?: number;
+  ceiling?: MaterialItem;
+  hasDoor: boolean;
+  doorWall: "bottom" | "top" | "left" | "right";
+  doorPosCm: number;
+  doorLenCm: number;
+  doorHCm: number;
+  activeRoom: RoomType;
 }) {
   const skirtColor = shade(wallColor, -18);
+  const splitH = wallLower ? Math.max(0.2, Math.min(H - 0.2, (wallSplitCm ?? 110) / 100)) : 0;
 
-  // ── PBR textures ──────────────────────────────────────────────────────
-  // useMemo so we only rebuild when material ID or room size changes.
-  // Texture objects are generated once (cached), clone avoids repeat-state sharing.
+  // ── Floor textures ─────────────────────────────────────────────────
   const floorTex = useMemo(() => {
     const base = getFloorTexture(floorId);
     if (!base) return null;
@@ -103,29 +163,162 @@ function RoomShell({
     return t;
   }, [floorId, W, D]);
 
-  const wallTex = useMemo(() => {
-    const base = getWallTexture(wallId);
-    if (!base) return null;
-    const t = base.clone();
-    const [us, vs] = wallTileSize(wallId);
-    t.repeat.set(W / us, H / vs);
+  const defaultFloorTex = useMemo(() => {
+    if (floorTex) return null;
+    const t = defaultFloorPlanks(floorColor).clone();
+    t.repeat.set(W / 1.5, D / 1.5);
     t.needsUpdate = true;
     return t;
-  }, [wallId, W, H]);
+  }, [floorColor, W, D, floorTex]);
 
-  const sideTex = useMemo(() => {
-    const base = getWallTexture(wallId);
-    if (!base) return null;
-    const t = base.clone();
-    const [us, vs] = wallTileSize(wallId);
-    t.repeat.set(D / us, H / vs);
+  const floorMat = {
+    color: floorColor,
+    roughness: 0.6,
+    metalness: 0.04,
+    ...(floorTex ? { map: floorTex } : defaultFloorTex ? { map: defaultFloorTex } : {}),
+  };
+
+  // ── Wall material builder (per-side, per-band) ─────────────────────
+  // Each wall side can have its own MaterialItem override. If none, fall
+  // back to `wall` default (color/wallId). Bands (upper/lower) share the
+  // same per-side material for albedo + paint/normal fallback texture.
+  const paintNormalTex = useMemo(() => {
+    const t = paintNormal().clone();
+    t.repeat.set(10, 10);
     t.needsUpdate = true;
     return t;
-  }, [wallId, D, H]);
+  }, []);
 
-  const floorMat = { color: floorColor, roughness: 0.55, metalness: 0.08, ...(floorTex ? { map: floorTex } : {}) };
-  const wallMat  = { color: wallColor,  roughness: 0.82, metalness: 0.0,  ...(wallTex  ? { map: wallTex  } : {}) };
-  const sideMatProps = { color: wallColor, roughness: 0.82, metalness: 0.0, ...(sideTex  ? { map: sideTex  } : {}) };
+  // Resolve the (possibly overridden) color + id for a given wall side.
+  const resolveSide = (override?: MaterialItem) => ({
+    color: override?.color ?? wallColor,
+    id:    override?.id    ?? wallId,
+  });
+
+  // Return the material props for one wall (or a band of it), given the
+  // resolved color/id + the side's length (along the floor) + the band's
+  // height. Falls through to procedural paint texture if the material id
+  // has no registered PBR texture.
+  function wallMatFor(color: string, id: string, lenM: number, bandH: number) {
+    const tiled = (() => {
+      const base = getWallTexture(id);
+      if (!base) return null;
+      const t = base.clone();
+      const [us, vs] = wallTileSize(id);
+      t.repeat.set(lenM / us, bandH / vs);
+      t.needsUpdate = true;
+      return t;
+    })();
+    const paintTex = tiled ? null : (() => {
+      const t = paintAlbedo(color).clone();
+      t.repeat.set(lenM * 2, bandH * 2);
+      t.needsUpdate = true;
+      return t;
+    })();
+    return {
+      color,
+      roughness: 0.88,
+      metalness: 0.0,
+      ...(tiled ? { map: tiled } : paintTex ? { map: paintTex } : {}),
+      ...(!tiled ? { normalMap: paintNormalTex, normalScale: new THREE.Vector2(0.12, 0.12) } : {}),
+    };
+  }
+
+  // Ceiling material — supports user-picked texture, otherwise off-white.
+  const ceilingColor = ceiling?.color ?? "#F8F7F5";
+  const ceilingId    = ceiling?.id    ?? "";
+  const ceilingTex = useMemo(() => {
+    const base = getWallTexture(ceilingId);
+    if (!base) return null;
+    const t = base.clone();
+    const [us, vs] = wallTileSize(ceilingId);
+    t.repeat.set(W / us, D / vs);
+    t.needsUpdate = true;
+    return t;
+  }, [ceilingId, W, D]);
+
+  // ── Per-side resolutions ──
+  // Front wall isn't rendered (dollhouse cutaway) but wallFront is tracked
+  // in state for the 2D plan layer and potential future first-person view.
+  const sB = resolveSide(wallBack);
+  const sL = resolveSide(wallLeft);
+  const sR = resolveSide(wallRight);
+  const lower = wallLower ? { color: wallLower.color, id: wallLower.id } : null;
+
+  // Build the list of rectangular holes (in wall-local cm coordinates:
+  // x from left end of wall, y from floor) for a given wall side.
+  // Pulls windows and — if applicable — the door.
+  function holesForWall(side: "back" | "front" | "left" | "right", wallLenM: number): Rect[] {
+    const holes: Rect[] = [];
+    for (const w of windows) {
+      if (w.wall !== side) continue;
+      const sillM  = (w.sill ?? 90) / 100;
+      const winHM  = (w.h   ?? Math.min(H * 52, 150)) / 100;
+      holes.push({
+        x: w.pos / 100,
+        y: sillM,
+        w: w.len / 100,
+        h: Math.min(winHM, H - sillM - 0.05),
+      });
+    }
+    // Door wall naming differs: "top"=back, "bottom"=front, left/right match
+    const doorSideMap: Record<string, "back" | "front" | "left" | "right"> = {
+      top: "back", bottom: "front", left: "left", right: "right",
+    };
+    if (hasDoor && doorSideMap[doorWall] === side) {
+      holes.push({
+        x: doorPosCm / 100,
+        y: 0,
+        w: doorLenCm / 100,
+        h: doorHCm / 100,
+      });
+    }
+    // Clamp all holes to wall bounds
+    return holes.map(h => ({
+      x: Math.max(0, Math.min(wallLenM, h.x)),
+      y: Math.max(0, Math.min(H, h.y)),
+      w: Math.min(wallLenM - h.x, h.w),
+      h: Math.min(H - h.y, h.h),
+    })).filter(h => h.w > 0.01 && h.h > 0.01);
+  }
+
+  // Render one wall's segments. Wall-local x ∈ [0, wallLenM], y ∈ [0, H].
+  // Segments are inside a group with the correct rotation + translation,
+  // so each segment just positions at its local center within that group.
+  function WallWithHoles({
+    side, wallLenM, groupPos, groupRot, upperMat, lowerSide,
+  }: {
+    side: { color: string; id: string };
+    wallLenM: number;
+    groupPos: [number, number, number];
+    groupRot?: [number, number, number];
+    upperMat: ReturnType<typeof wallMatFor>;
+    lowerSide: "back" | "front" | "left" | "right";
+  }) {
+    const holes = holesForWall(lowerSide, wallLenM);
+    const segments = splitWallAroundHoles(wallLenM, H, holes);
+    const lowerMat = lower ? wallMatFor(lower.color, lower.id, wallLenM, splitH) : null;
+
+    return (
+      <group position={groupPos} rotation={groupRot}>
+        {segments.flatMap((seg, si) =>
+          splitAtWainscot(seg, splitH, !!lower).map((s, bi) => {
+            const mat = s.band === "lower" && lowerMat ? lowerMat : upperMat;
+            return (
+              <mesh
+                key={`${si}-${bi}`}
+                position={[s.x + s.w / 2 - wallLenM / 2, s.y + s.h / 2 - H / 2, 0]}
+                receiveShadow
+              >
+                <planeGeometry args={[s.w, s.h]} />
+                <meshStandardMaterial {...mat} side={THREE.FrontSide} />
+              </mesh>
+            );
+          })
+        )}
+      </group>
+    );
+  }
 
   return (
     <>
@@ -135,28 +328,64 @@ function RoomShell({
         <meshStandardMaterial {...floorMat} />
       </mesh>
 
-      {/* Back wall */}
-      <mesh position={[0, H / 2, -D / 2]} receiveShadow>
-        <planeGeometry args={[W, H]} />
-        <meshStandardMaterial {...wallMat} side={THREE.FrontSide} />
-      </mesh>
+      {/* Back wall — with hole-cutouts for windows/door */}
+      <WallWithHoles
+        side={sB} wallLenM={W}
+        groupPos={[0, H / 2, -D / 2]}
+        upperMat={wallMatFor(sB.color, sB.id, W, H)}
+        lowerSide="back"
+      />
 
       {/* Left wall */}
-      <mesh position={[-W / 2, H / 2, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[D, H]} />
-        <meshStandardMaterial {...sideMatProps} side={THREE.FrontSide} />
-      </mesh>
+      <WallWithHoles
+        side={sL} wallLenM={D}
+        groupPos={[-W / 2, H / 2, 0]} groupRot={[0, Math.PI / 2, 0]}
+        upperMat={wallMatFor(sL.color, sL.id, D, H)}
+        lowerSide="left"
+      />
 
       {/* Right wall */}
-      <mesh position={[W / 2, H / 2, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[D, H]} />
-        <meshStandardMaterial {...sideMatProps} side={THREE.FrontSide} />
-      </mesh>
+      <WallWithHoles
+        side={sR} wallLenM={D}
+        groupPos={[W / 2, H / 2, 0]} groupRot={[0, -Math.PI / 2, 0]}
+        upperMat={wallMatFor(sR.color, sR.id, D, H)}
+        lowerSide="right"
+      />
 
-      {/* Ceiling */}
+      {/* Door panel (3D, inside the wall's door hole) */}
+      {hasDoor && doorWall !== "bottom" && (
+        <RoomDoor3D
+          W={W} D={D} H={H}
+          doorWall={doorWall}
+          doorPosCm={doorPosCm}
+          doorLenCm={doorLenCm}
+          doorHCm={doorHCm}
+          activeRoom={activeRoom}
+        />
+      )}
+
+      {/* Chair rail — thin horizontal trim at the split line (if any) */}
+      {lower && (
+        <>
+          <mesh position={[0, splitH, -D / 2 + 0.015]}>
+            <boxGeometry args={[W, 0.03, 0.03]} />
+            <meshStandardMaterial color="#FAFAF8" roughness={0.7} />
+          </mesh>
+          <mesh position={[-W / 2 + 0.015, splitH, 0]} rotation={[0, Math.PI / 2, 0]}>
+            <boxGeometry args={[D, 0.03, 0.03]} />
+            <meshStandardMaterial color="#FAFAF8" roughness={0.7} />
+          </mesh>
+          <mesh position={[W / 2 - 0.015, splitH, 0]} rotation={[0, Math.PI / 2, 0]}>
+            <boxGeometry args={[D, 0.03, 0.03]} />
+            <meshStandardMaterial color="#FAFAF8" roughness={0.7} />
+          </mesh>
+        </>
+      )}
+
+      {/* Ceiling — respects user-picked material, falls back to off-white */}
       <mesh position={[0, H, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[W, D]} />
-        <meshStandardMaterial color="#F8F7F5" roughness={0.95} />
+        <meshStandardMaterial color={ceilingColor} roughness={0.95} {...(ceilingTex ? { map: ceilingTex } : {})} />
       </mesh>
       {/* Ceiling crown molding — thin ledge where wall meets ceiling */}
       <mesh position={[0, H - 0.04, -D / 2 + 0.04]}>
@@ -198,6 +427,80 @@ function RoomShell({
   );
 }
 
+// ─── glTF window (real 3D asset, replaces procedural frame/glass/mullion) ─
+// Currently disabled: the only CC-BY window asset we found
+// (`window_modern` from Sketchfab) is modelled in an "opened 47cm"
+// casement pose and doesn't close cleanly via auto-transform. Keep the
+// code path and component for when a better asset becomes available —
+// flip this flag back to true once /models/_arch_window/ contains a
+// flat/closed-state window.
+const ENABLE_GLTF_WINDOW = false;
+const ARCH_WINDOW_URL = "/models/_arch_window/window_modern/window_modern.gltf";
+
+function GltfArchWindow({ winLen, winH }: { winLen: number; winH: number }) {
+  const { scene } = useGLTF(ARCH_WINDOW_URL) as unknown as { scene: THREE.Object3D };
+  const cloned = useMemo(() => {
+    const c = scene.clone(true);
+    // Strip SketchUp helper nodes that aren't meshes (cameras, scenes)
+    // — these get exported as empties at huge offsets (88m, 135m away)
+    // and pollute the bounding-box measurement below.
+    const toRemove: THREE.Object3D[] = [];
+    c.traverse(obj => {
+      if (/^skp_camera/i.test(obj.name || "") || /^(ID\d+|Scene_)/i.test(obj.name || "")) {
+        toRemove.push(obj);
+      }
+    });
+    for (const o of toRemove) o.parent?.remove(o);
+
+    c.traverse(obj => {
+      const m = obj as THREE.Mesh;
+      if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; }
+    });
+    c.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(c);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    // eslint-disable-next-line no-console
+    console.log(`[GltfArchWindow] native size after cleanup: ${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m, target ${winLen.toFixed(2)}×${winH.toFixed(2)}m`);
+    if (size.x > 0 && size.y > 0 && size.z > 0) {
+      // Scale X,Y to match declared window rectangle; Z (depth into wall)
+      // stays proportional to X so the frame doesn't flatten.
+      const sx = winLen / size.x;
+      const sy = winH / size.y;
+      const sz = sx; // preserve original x:z ratio on the depth axis
+      c.scale.set(sx, sy, sz);
+      c.updateMatrixWorld(true);
+      // Re-center XY on origin, keep Z so the frame straddles the wall plane
+      const box2 = new THREE.Box3().setFromObject(c);
+      c.position.x -= (box2.min.x + box2.max.x) / 2;
+      c.position.y -= (box2.min.y + box2.max.y) / 2;
+      c.position.z -= (box2.min.z + box2.max.z) / 2;
+    }
+    return c;
+  }, [scene, winLen, winH]);
+
+  return <primitive object={cloned} />;
+}
+
+/** ErrorBoundary wrapper: if the glTF 404s or fails to parse, render
+ *  the provided `fallback` instead. Combined with <Suspense fallback>
+ *  in the tree, this gives us: glTF → procedural on both load failure
+ *  and still-loading states. */
+class ArchWindowFallback extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err: Error) {
+    console.warn(`[GltfArchWindow] load failed — falling back to procedural: ${err.message}`);
+  }
+  render() {
+    if (this.state.failed) return this.props.fallback;
+    return this.props.children;
+  }
+}
+
 // ─── Parameterized window (back / right / left walls) ────────
 function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number; H: number }) {
   const winLen = win.len / 100;          // window length in metres
@@ -207,35 +510,97 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   const winH = win.h   !== undefined ? win.h   / 100 : Math.min(H * 0.52, 1.5);
   const sill = win.sill !== undefined ? win.sill / 100 : 0.9;
   const winY = Math.max(0.05, Math.min(H - winH - 0.05, sill)) + winH / 2;
-  const curtainColor = "#E8DDD0";
+
+  // Flat window — a thin frame around a glass pane, sitting flush with
+  // the wall. No sill, no curtains, no rail sticking into the room.
+  // Like a picture frame: top-down projection stays clean.
+  const FRAME_THIN = 0.025;   // 2.5cm frame (picture-frame thickness)
+  const WALL_OFFSET = 0.015;  // frame sits 1.5cm forward of wall surface
+  const proceduralBackFrame = (
+    <>
+      {/* Frame — 4 thin bars forming a rectangle (like picture frame) */}
+      <mesh position={[0, winH / 2 + FRAME_THIN / 2, WALL_OFFSET]} castShadow>
+        <boxGeometry args={[winLen + FRAME_THIN * 2, FRAME_THIN, 0.02]} />
+        <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
+      </mesh>
+      <mesh position={[0, -winH / 2 - FRAME_THIN / 2, WALL_OFFSET]} castShadow>
+        <boxGeometry args={[winLen + FRAME_THIN * 2, FRAME_THIN, 0.02]} />
+        <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
+      </mesh>
+      <mesh position={[-winLen / 2 - FRAME_THIN / 2, 0, WALL_OFFSET]} castShadow>
+        <boxGeometry args={[FRAME_THIN, winH, 0.02]} />
+        <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
+      </mesh>
+      <mesh position={[winLen / 2 + FRAME_THIN / 2, 0, WALL_OFFSET]} castShadow>
+        <boxGeometry args={[FRAME_THIN, winH, 0.02]} />
+        <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
+      </mesh>
+      {/* Glass pane — thin, slightly forward of wall, semi-transparent */}
+      <mesh position={[0, 0, WALL_OFFSET + 0.002]}>
+        <planeGeometry args={[winLen, winH]} />
+        <meshPhysicalMaterial color="#BED3E8" transmission={0.7} roughness={0.08} metalness={0} thickness={0.01} ior={1.45} transparent opacity={0.5} side={THREE.DoubleSide} />
+      </mesh>
+    </>
+  );
+
+  // Wraps the frame either in a glTF (when ENABLE_GLTF_WINDOW and the
+  // asset loads successfully) or just renders procedural. Rotation group
+  // is provided by the caller for left/right walls.
+  const windowFrameJSX = ENABLE_GLTF_WINDOW ? (
+    <ArchWindowFallback fallback={proceduralBackFrame}>
+      <Suspense fallback={proceduralBackFrame}>
+        <GltfArchWindow winLen={winLen} winH={winH} />
+      </Suspense>
+    </ArchWindowFallback>
+  ) : proceduralBackFrame;
 
   if (win.wall === "back") {
     // back wall: X axis runs from -W/2 to W/2, window pos is from left (0) to right (W)
     const xc = winCenter - W / 2;
     return (
-      <group position={[xc, winY, -D / 2 + 0.03]}>
-        <mesh><boxGeometry args={[winLen + 0.08, winH + 0.08, 0.06]} /><meshStandardMaterial color="#FFFFFF" roughness={0.4} /></mesh>
-        <mesh position={[0, 0, 0.03]}><boxGeometry args={[winLen, winH, 0.02]} /><meshStandardMaterial color="#A8CCE8" transparent opacity={0.4} roughness={0.05} metalness={0.1} /></mesh>
-        <mesh position={[0, 0, 0.04]}><boxGeometry args={[winLen + 0.04, 0.04, 0.03]} /><meshStandardMaterial color="#FFFFFF" roughness={0.4} /></mesh>
-        <mesh position={[0, 0, 0.04]}><boxGeometry args={[0.04, winH + 0.04, 0.03]} /><meshStandardMaterial color="#FFFFFF" roughness={0.4} /></mesh>
-        <mesh position={[-(winLen / 2 + 0.1), 0, 0.02]}><boxGeometry args={[0.16, winH + 0.3, 0.04]} /><meshStandardMaterial color={curtainColor} roughness={0.9} /></mesh>
-        <mesh position={[ winLen / 2 + 0.1,  0, 0.02]}><boxGeometry args={[0.16, winH + 0.3, 0.04]} /><meshStandardMaterial color={curtainColor} roughness={0.9} /></mesh>
-        <pointLight position={[0, 0, 0.5]} intensity={5} color="#FFF4E0" distance={4} decay={2} />
+      <group position={[xc, winY, -D / 2]}>
+        {windowFrameJSX}
+        {/* Directional "sunlight" aimed INTO the room from outside */}
+        <directionalLight
+          position={[0, 0.3, -0.5]}
+          target-position={[0, -1.5, 2]}
+          intensity={1.6}
+          color="#FFF2D0"
+          castShadow
+          shadow-mapSize={[1024, 1024]}
+          shadow-camera-left={-winLen}
+          shadow-camera-right={winLen}
+          shadow-camera-top={winH}
+          shadow-camera-bottom={-winH}
+          shadow-bias={-0.001}
+        />
       </group>
     );
   }
 
   if (win.wall === "right") {
-    // right wall: Z axis runs from -D/2 to D/2, window pos from front (0→near camera) to back (D)
     const zc = winCenter - D / 2;
+    // Right-wall orientation: rotate the shared glTF/procedural frame by
+    // 90° around Y so its local X axis aligns with room Z. Emissive plane
+    // stays in its original orientation (aligned to the wall's inside face).
     return (
-      <group position={[W / 2 - 0.03, winY, zc]}>
-        <mesh><boxGeometry args={[0.06, winH + 0.08, winLen + 0.08]} /><meshStandardMaterial color="#FFFFFF" roughness={0.4} /></mesh>
-        <mesh position={[-0.02, 0, 0]}><boxGeometry args={[0.02, winH, winLen]} /><meshStandardMaterial color="#A8CCE8" transparent opacity={0.4} roughness={0.05} metalness={0.1} /></mesh>
-        <mesh position={[-0.02, 0, 0]}><boxGeometry args={[0.03, 0.04, winLen]} /><meshStandardMaterial color="#FFFFFF" roughness={0.4} /></mesh>
-        <mesh position={[-0.015, 0, -(winLen / 2 + 0.1)]}><boxGeometry args={[0.04, winH + 0.3, 0.16]} /><meshStandardMaterial color={curtainColor} roughness={0.9} /></mesh>
-        <mesh position={[-0.015, 0,  winLen / 2 + 0.1]}><boxGeometry args={[0.04, winH + 0.3, 0.16]} /><meshStandardMaterial color={curtainColor} roughness={0.9} /></mesh>
-        <pointLight position={[-0.5, 0, 0]} intensity={6} color="#FFF4E0" distance={4} decay={2} />
+      <group position={[W / 2, winY, zc]}>
+        <group rotation={[0, -Math.PI / 2, 0]}>
+          {windowFrameJSX}
+        </group>
+        <directionalLight
+          position={[0.5, 0.3, 0]}
+          target-position={[-2, -1.5, 0]}
+          intensity={1.6}
+          color="#FFF2D0"
+          castShadow
+          shadow-mapSize={[1024, 1024]}
+          shadow-camera-left={-winLen}
+          shadow-camera-right={winLen}
+          shadow-camera-top={winH}
+          shadow-camera-bottom={-winH}
+          shadow-bias={-0.001}
+        />
       </group>
     );
   }
@@ -243,18 +608,130 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   if (win.wall === "left") {
     const zc = winCenter - D / 2;
     return (
-      <group position={[-W / 2 + 0.03, winY, zc]}>
-        <mesh><boxGeometry args={[0.06, winH + 0.08, winLen + 0.08]} /><meshStandardMaterial color="#FFFFFF" roughness={0.4} /></mesh>
-        <mesh position={[0.02, 0, 0]}><boxGeometry args={[0.02, winH, winLen]} /><meshStandardMaterial color="#A8CCE8" transparent opacity={0.4} roughness={0.05} metalness={0.1} /></mesh>
-        <mesh position={[0.02, 0, 0]}><boxGeometry args={[0.03, 0.04, winLen]} /><meshStandardMaterial color="#FFFFFF" roughness={0.4} /></mesh>
-        <mesh position={[0.015, 0, -(winLen / 2 + 0.1)]}><boxGeometry args={[0.04, winH + 0.3, 0.16]} /><meshStandardMaterial color={curtainColor} roughness={0.9} /></mesh>
-        <mesh position={[0.015, 0,  winLen / 2 + 0.1]}><boxGeometry args={[0.04, winH + 0.3, 0.16]} /><meshStandardMaterial color={curtainColor} roughness={0.9} /></mesh>
-        <pointLight position={[0.5, 0, 0]} intensity={6} color="#FFF4E0" distance={4} decay={2} />
+      <group position={[-W / 2, winY, zc]}>
+        <group rotation={[0, Math.PI / 2, 0]}>
+          {windowFrameJSX}
+        </group>
+        <directionalLight
+          position={[-0.5, 0.3, 0]}
+          target-position={[2, -1.5, 0]}
+          intensity={1.6}
+          color="#FFF2D0"
+          castShadow
+          shadow-mapSize={[1024, 1024]}
+          shadow-camera-left={-winLen}
+          shadow-camera-right={winLen}
+          shadow-camera-top={winH}
+          shadow-camera-bottom={-winH}
+          shadow-bias={-0.001}
+        />
       </group>
     );
   }
 
   return null;
+}
+
+// ─── Interior door (3D) with click-to-open animation ────────
+// Renders a door panel inside the wall's door hole. The panel is hinged
+// on its left edge (opens inward 90°). Click toggles open/closed; a
+// useFrame interpolation gives a ~350ms ease. Open state is per-room
+// ephemeral state in the store (doorOpenByRoom).
+function RoomDoor3D({
+  W, D, H,
+  doorWall, doorPosCm, doorLenCm, doorHCm,
+  activeRoom,
+}: {
+  W: number; D: number; H: number;
+  doorWall: "bottom" | "top" | "left" | "right";
+  doorPosCm: number; doorLenCm: number; doorHCm: number;
+  activeRoom: RoomType;
+}) {
+  const isOpen = useDesignerStore(s => !!s.doorOpenByRoom[activeRoom]);
+  const toggleDoorOpen = useDesignerStore(s => s.toggleDoorOpen);
+  const panelRef = useRef<THREE.Group>(null);
+  // Animated angle, smoothed each frame toward the target.
+  const angleRef = useRef(0);
+  useFrame((_, delta) => {
+    const target = isOpen ? -Math.PI / 2 : 0; // swing inward 90°
+    const speed = 5.5; // rad/s
+    const current = angleRef.current;
+    const diff = target - current;
+    if (Math.abs(diff) > 0.002) {
+      const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
+      angleRef.current = current + step;
+      if (panelRef.current) panelRef.current.rotation.y = angleRef.current;
+    }
+  });
+
+  const doorW = doorLenCm / 100;
+  const doorH = doorHCm / 100;
+  const doorPos = doorPosCm / 100;
+  const frameT = 0.04; // frame thickness
+
+  // Group positioning: put a parent group at the hinge line (inner-room
+  // side of the wall, at the door's left edge). All internal pieces are
+  // positioned relative to the hinge so rotating the group swings the door.
+  let groupPos: [number, number, number];
+  let groupRot: [number, number, number];
+  let hingeOffset: number; // direction the panel extends in local +X when closed
+  switch (doorWall) {
+    case "top": // back wall (z = -D/2)
+      groupPos = [doorPos - W / 2, 0, -D / 2 + 0.02];
+      groupRot = [0, 0, 0];
+      hingeOffset = 1;
+      break;
+    case "left":
+      groupPos = [-W / 2 + 0.02, 0, doorPos - D / 2];
+      groupRot = [0, Math.PI / 2, 0];
+      hingeOffset = 1;
+      break;
+    case "right":
+      groupPos = [W / 2 - 0.02, 0, -(doorPos - D / 2) - doorW];
+      groupRot = [0, -Math.PI / 2, 0];
+      hingeOffset = 1;
+      break;
+    case "bottom":
+    default:
+      // Front wall isn't rendered in dollhouse view. Skip.
+      return null;
+  }
+
+  return (
+    <group position={groupPos} rotation={groupRot}>
+      {/* Door frame (stays fixed, inside the wall hole) */}
+      <mesh position={[doorW / 2, doorH + frameT / 2, 0]}>
+        <boxGeometry args={[doorW + frameT * 2, frameT, 0.05]} />
+        <meshStandardMaterial color="#F0EEEA" roughness={0.6} />
+      </mesh>
+      <mesh position={[-frameT / 2, doorH / 2, 0]}>
+        <boxGeometry args={[frameT, doorH, 0.05]} />
+        <meshStandardMaterial color="#F0EEEA" roughness={0.6} />
+      </mesh>
+      <mesh position={[doorW + frameT / 2, doorH / 2, 0]}>
+        <boxGeometry args={[frameT, doorH, 0.05]} />
+        <meshStandardMaterial color="#F0EEEA" roughness={0.6} />
+      </mesh>
+
+      {/* Door panel (rotates around hinge at local X=0) */}
+      <group ref={panelRef} position={[0, 0, 0.01]}>
+        <mesh
+          position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]}
+          onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[doorW - 0.02, doorH - 0.02, 0.035]} />
+          <meshStandardMaterial color="#C79A6A" roughness={0.55} metalness={0.02} />
+        </mesh>
+        {/* Handle (door knob / lever) */}
+        <mesh position={[doorW - 0.1, doorH * 0.45, 0.02]}>
+          <sphereGeometry args={[0.03, 12, 12]} />
+          <meshStandardMaterial color="#A8A8A8" metalness={0.85} roughness={0.25} />
+        </mesh>
+      </group>
+    </group>
+  );
 }
 
 // ─── Light fixture ─────────────────────────────────────────
@@ -383,18 +860,32 @@ function LightFixture({ H, lightColor, lightId }: { H: number; lightColor: strin
     );
   }
 
-  // Default pendant
+  // Default pendant — bulb hangs ~35cm below ceiling, cord connects
+  // bulb top to a canopy plate mounted on the ceiling.
+  const DROP = 0.45;  // distance from ceiling to bulb center
+  const R    = 0.14;  // bulb radius
+  const cordTop   = DROP;           // attaches to ceiling in group coords
+  const cordBot   = R;              // attaches to top of bulb
+  const cordLen   = cordTop - cordBot;
+  const cordY     = (cordTop + cordBot) / 2;
   return (
-    <group position={[0, H - 0.18, 0]}>
+    <group position={[0, H - DROP, 0]}>
+      {/* Ceiling canopy (mounting plate) */}
+      <mesh position={[0, DROP, 0]}>
+        <cylinderGeometry args={[0.05, 0.05, 0.015, 12]} />
+        <meshStandardMaterial color="#E0E0E0" metalness={0.3} roughness={0.6} />
+      </mesh>
+      {/* Cord */}
+      <mesh position={[0, cordY, 0]}>
+        <cylinderGeometry args={[0.006, 0.006, cordLen, 6]} />
+        <meshStandardMaterial color="#8A8A8A" metalness={0.4} roughness={0.5} />
+      </mesh>
+      {/* Bulb (frosted glass, emissive) */}
       <mesh>
-        <sphereGeometry args={[0.14, 16, 16]} />
-        <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={0.4} roughness={0.15} transparent opacity={0.9} />
+        <sphereGeometry args={[R, 20, 20]} />
+        <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={0.9} roughness={0.15} transparent opacity={0.85} />
       </mesh>
-      <mesh position={[0, 0.22, 0]}>
-        <cylinderGeometry args={[0.008, 0.008, 0.32, 6]} />
-        <meshStandardMaterial color="#BBB" metalness={0.8} />
-      </mesh>
-      <pointLight position={[0, H - 0.25, 0]} intensity={8} color={lightColor} distance={4.5} decay={2} castShadow />
+      <pointLight position={[0, 0, 0]} intensity={8} color={lightColor} distance={4.8} decay={2} castShadow />
     </group>
   );
 }
@@ -1136,13 +1627,30 @@ function GltfFurniture({
     const box = new THREE.Box3().setFromObject(c);
     const size = new THREE.Vector3();
     box.getSize(size);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    // eslint-disable-next-line no-console
+    console.log(`[GltfFurniture] ${url} native=${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m target=${w.toFixed(2)}×${h.toFixed(2)}×${d.toFixed(2)}m center=(${center.x.toFixed(2)},${center.y.toFixed(2)},${center.z.toFixed(2)})`);
     // Safety: if any dim is zero (broken model), skip auto-scale.
     if (size.x > 0 && size.y > 0 && size.z > 0) {
-      const sx = w / size.x;
-      const sy = h / size.y;
-      const sz = d / size.z;
-      const baseScale = Math.min(sx, sy, sz);
-      c.scale.setScalar(baseScale * (scale ?? 1));
+      // Non-uniform fit: scale each axis independently to match the
+      // declared W×D×H (respecting the per-instance scaleW/scaleD/scaleH
+      // the caller rolled into w/d/h). Some aspect distortion on models
+      // whose native proportions don't match the declared furniture, but
+      // that's preferable to a wardrobe bursting through the ceiling.
+      // The `scale` prop from furniture.ts stacks on top as a final
+      // uniform trim if needed per-asset.
+      const sx = (w / size.x) * (scale ?? 1);
+      const sy = (h / size.y) * (scale ?? 1);
+      const sz = (d / size.z) * (scale ?? 1);
+      c.scale.set(sx, sy, sz);
+      // Re-measure after scale, then shift so base is at Y=0 and
+      // footprint is centered on X/Z origin (matches procedural-box convention).
+      c.updateMatrixWorld(true);
+      const box2 = new THREE.Box3().setFromObject(c);
+      c.position.x -= (box2.min.x + box2.max.x) / 2;
+      c.position.z -= (box2.min.z + box2.max.z) / 2;
+      c.position.y -= box2.min.y;
     } else if (scale) {
       c.scale.setScalar(scale);
     }
@@ -1274,6 +1782,11 @@ function Scene({ isIOS }: { isIOS: boolean }) {
   const roomState     = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom]);
   const roomWindows   = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows?.[activeRoom] ?? []);
   const roomDimensions = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
+  const hasDoor    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomHasDoor[activeRoom] ?? true);
+  const doorWall   = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorWall[activeRoom] ?? "bottom");
+  const doorPosCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorPos[activeRoom] ?? 0);
+  const doorLenCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
+  const doorHCm    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
   const def = ROOM_DEFS[activeRoom];
 
   // Use store dimensions (reflects global plan resizes), fall back to ROOM_DEFS
@@ -1323,6 +1836,19 @@ function Scene({ isIOS }: { isIOS: boolean }) {
         wallId={wallId}
         floorId={floorId}
         windows={roomWindows}
+        wallBack={roomState.materials.wallBack}
+        wallFront={roomState.materials.wallFront}
+        wallLeft={roomState.materials.wallLeft}
+        wallRight={roomState.materials.wallRight}
+        wallLower={roomState.materials.wallLower}
+        wallSplitCm={roomState.materials.wallSplitHeight}
+        hasDoor={hasDoor}
+        doorWall={doorWall}
+        doorPosCm={doorPosCm}
+        doorLenCm={doorLenCm}
+        doorHCm={doorHCm}
+        activeRoom={activeRoom}
+        ceiling={roomState.materials.ceiling}
       />
 
       {/* Light fixture */}
@@ -1332,7 +1858,34 @@ function Scene({ isIOS }: { isIOS: boolean }) {
       {roomState.placedItems.map((placed) => (
         <PlacedItemMesh key={placed.instanceId} placed={placed} def={def} roomW={W} roomD={D} />
       ))}
+
+      {/* Post-processing — skip on iOS (Metal compiler issues with complex fragment shaders).
+          Wrapped in <PostFX/> which defers mounting until the WebGL context
+          is fully ready. Without this, @react-three/postprocessing 3.0.4
+          throws "Cannot read properties of null (reading 'alpha')" on the
+          first render because its effect constructors try to read
+          gl.getContextAttributes() before Canvas has finished init. */}
+      {!isIOS && <PostFX />}
     </>
+  );
+}
+
+function PostFX() {
+  const { gl } = useThree();
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    // Wait one frame for Canvas to fully wire up the WebGL context.
+    const id = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  if (!ready || !gl) return null;
+  return (
+    <EffectComposer multisampling={0}>
+      <N8AO aoRadius={0.35} intensity={2.6} distanceFalloff={0.8} quality="medium" />
+      <Bloom intensity={0.18} luminanceThreshold={1.05} luminanceSmoothing={0.85} mipmapBlur />
+      <Vignette offset={0.3} darkness={0.45} blendFunction={BlendFunction.NORMAL} />
+      <SMAA />
+    </EffectComposer>
   );
 }
 
@@ -1367,7 +1920,7 @@ export default function RoomCanvas() {
           dpr={[1, 2]}
           shadows={{ type: THREE.PCFShadowMap }}
           camera={{ position: [0, 1.4, 6], fov: 58, near: 0.1, far: 80 }}
-          style={{ background: "#1a1c28" }}
+          style={{ background: "linear-gradient(180deg, #E9EEF3 0%, #D4DEE8 55%, #C8D5E0 100%)" }}
         >
           <OrbitControls
             makeDefault

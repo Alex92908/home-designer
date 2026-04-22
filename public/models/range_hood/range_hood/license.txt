@@ -1,0 +1,11 @@
+Model Information:
+* title:	Range Hood (Kitchen Hood)
+* source:	https://sketchfab.com/3d-models/range-hood-kitchen-hood-e846cb48e88446808af55976ff76b1da
+* author:	govindu94 (https://sketchfab.com/govindu94)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Range Hood (Kitchen Hood)" (https://sketchfab.com/3d-models/range-hood-kitchen-hood-e846cb48e88446808af55976ff76b1da) by govindu94 (https://sketchfab.com/govindu94) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

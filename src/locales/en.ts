@@ -26,7 +26,7 @@ export const en: Translations = {
   customFurnitureBtn: "＋ Custom",
   noFurnitureForRoom: "No furniture available for this room",
   clear: "Clear",
-  materialSections: { wall: "Wall", floor: "Floor", light: "Lighting", tile: "Tile" },
+  materialSections: { wall: "Wall", floor: "Floor", ceiling: "Ceiling", light: "Lighting", tile: "Tile" },
   customForm: {
     title: "✏️ Custom Furniture",
     namePlaceholder: "Item name",
@@ -60,6 +60,8 @@ export const en: Translations = {
   clearanceOverlapSuffix: "'s required clearance",
   clearanceWall: "'s clearance extends past the wall by",
   clearanceDoorBlocked: "sits in the door swing path — the door will hit it",
+  autoDecorate: "Auto-decorate",
+  autoDecorateHint: "Add rug, plants, artwork, floor lamp — make the room feel lived-in",
   clearanceWindowBlocked: "taller than the sill and in front of a window — blocks daylight & airflow",
   emptyState: "Select materials & furniture on the left\nYour quote will appear here",
   aiTitle: "🤖 AI Style Tips",

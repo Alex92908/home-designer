@@ -18,6 +18,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "现代"],
     description: "轻盈布艺，简约舒适",
     icon: "🛋️",
+    model3d: { url: "/models/sofa/sofa_03/sofa_03_1k.gltf" },
   },
   {
     id: "sofa-leather-brown",
@@ -35,6 +36,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "头层牛皮，功能电动沙发",
     icon: "🛋️",
+    model3d: { url: "/models/sofa/sofa_02/sofa_02_1k.gltf" },
   },
   {
     id: "sofa-nordic-blue",
@@ -52,6 +54,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "轻奢"],
     description: "天鹅绒质感，撞色显眼",
     icon: "🛋️",
+    model3d: { url: "/models/sofa/Sofa_01/Sofa_01_1k.gltf" },
   },
   {
     id: "sofa-japanese",
@@ -104,6 +107,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "日式", "现代"],
     description: "天然橡木，圆形无尖角",
     icon: "⭕",
+    model3d: { url: "/models/coffee_table/coffee_table_round_01/coffee_table_round_01_1k.gltf" },
   },
   {
     id: "coffee-marble-rect",
@@ -121,6 +125,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "天然大理石面，金属腿",
     icon: "⬜",
+    model3d: { url: "/models/coffee_table/modern_coffee_table_01/modern_coffee_table_01_1k.gltf" },
   },
   {
     id: "coffee-glass-black",
@@ -137,6 +142,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "工业风"],
     description: "钢化玻璃面，黑色铁架",
     icon: "⬛",
+    model3d: { url: "/models/coffee_table/industrial_coffee_table/industrial_coffee_table_1k.gltf" },
   },
 
   // ─── 电视柜 TV Unit ────────────────────────────────────
@@ -173,6 +179,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["日式", "中式"],
     description: "原木质感，温馨耐用",
     icon: "📺",
+    model3d: { url: "/models/tv_unit/modern_wooden_cabinet/modern_wooden_cabinet_1k.gltf" },
   },
   {
     id: "tvunit-black-stone",
@@ -242,6 +249,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "五层开放式，收纳展示两用",
     icon: "📚",
+    model3d: { url: "/models/bookshelf/steel_frame_shelves_01/steel_frame_shelves_01_1k.gltf" },
   },
   {
     id: "bookshelf-solid-walnut",
@@ -258,6 +266,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["日式", "中式"],
     description: "实木框架，经久耐用",
     icon: "📚",
+    model3d: { url: "/models/bookshelf/wooden_bookshelf_worn/wooden_bookshelf_worn_1k.gltf" },
   },
 
   // ─── 边柜/玄关柜 Sideboard ─────────────────────────────
@@ -276,6 +285,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["日式", "中式"],
     description: "玄关收纳，温润自然",
     icon: "🗄️",
+    model3d: { url: "/models/sideboard/vintage_cabinet_01/vintage_cabinet_01_1k.gltf" },
   },
   {
     id: "sideboard-modern-black",
@@ -292,6 +302,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "工业风"],
     description: "黑色金属，工业感十足",
     icon: "🗄️",
+    model3d: { url: "/models/sideboard/painted_wooden_cabinet_02/painted_wooden_cabinet_02_1k.gltf" },
   },
 
   // ─── 绿植 Plant ───────────────────────────────────────
@@ -461,6 +472,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "现代"],
     description: "软包靠背，舒适减压",
     icon: "🛏️",
+    model3d: { url: "/models/bed/bed_07/bed_07.gltf" },
   },
   {
     id: "bed-leather-dark",
@@ -478,6 +490,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "头层牛皮，沉稳大气",
     icon: "🛏️",
+    model3d: { url: "/models/bed/dark_modern_bed/dark_modern_bed.gltf" },
   },
   {
     id: "bed-wood-nordic",
@@ -512,6 +525,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["日式"],
     description: "低矮设计，禅意空间感",
     icon: "🛏️",
+    model3d: { url: "/models/bed/japanese_futon_bed/japanese_futon_bed.gltf" },
   },
   {
     id: "bed-single-white",
@@ -547,6 +561,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "简约抽屉，实用收纳",
     icon: "🗃️",
+    model3d: { url: "/models/nightstand/side_table_01/side_table_01_1k.gltf" },
   },
   {
     id: "nightstand-oak",
@@ -563,6 +578,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "日式"],
     description: "原木质感，温馨自然",
     icon: "🗃️",
+    model3d: { url: "/models/nightstand/ClassicNightstand_01/ClassicNightstand_01_1k.gltf" },
   },
 
   // ─── 衣柜 Wardrobe ────────────────────────────────────
@@ -582,6 +598,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "滑轨推拉，节省开门空间",
     icon: "🚪",
+    model3d: { url: "/models/wardrobe/wardrobe_dylanheyes/wardrobe_dylanheyes.gltf" },
   },
   {
     id: "wardrobe-solid-walnut",
@@ -599,6 +616,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["中式", "日式"],
     description: "实木框架，传统榫卯",
     icon: "🚪",
+    model3d: { url: "/models/wardrobe/antique_wooden_wardrobe/antique_wooden_wardrobe.gltf" },
   },
   {
     id: "wardrobe-open-rack",
@@ -687,6 +705,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "圆台面，无尖角更安全",
     icon: "⭕",
+    model3d: { url: "/models/dining_table/round_wooden_table_01/round_wooden_table_01_1k.gltf" },
   },
   {
     id: "dining-oak-rect",
@@ -703,6 +722,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "日式", "现代"],
     description: "实木桌面，耐用经典",
     icon: "⬜",
+    model3d: { url: "/models/dining_table/WoodenTable_02/WoodenTable_02_1k.gltf" },
   },
   {
     id: "dining-black-metal",
@@ -737,6 +757,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "日式"],
     description: "白橡木实木椅，经典耐用",
     icon: "🪑",
+    model3d: { url: "/models/dining_chair/dining_chair_02/dining_chair_02_1k.gltf" },
   },
   {
     id: "chair-modern-gray",
@@ -788,6 +809,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "整体橱柜下柜，石英石台面",
     icon: "🍳",
+    model3d: { url: "/models/kitchen_cabinet/modular_kitchen_cabinets/modular_kitchen_cabinets.gltf" },
   },
   {
     id: "cabinet-lower-gray",
@@ -805,6 +827,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "哑光灰门板，高级质感",
     icon: "🍳",
+    model3d: { url: "/models/kitchen_cabinet/cabinet_base_drawers/cabinet_base_drawers.gltf" },
   },
   {
     id: "cabinet-upper-white",
@@ -821,6 +844,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "上柜悬挂，增大收纳空间",
     icon: "🍳",
+    model3d: { url: "/models/kitchen_cabinet/kitchen_cabinet_library/kitchen_cabinet_library.gltf" },
   },
 
   // ─── 冰箱 Refrigerator ────────────────────────────────
@@ -839,6 +863,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "对开门大容量，变频节能",
     icon: "🧊",
+    model3d: { url: "/models/refrigerator/french_door_fridge/french_door_fridge.gltf" },
   },
   {
     id: "fridge-single-white",
@@ -855,6 +880,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "小户型适用，静音节能",
     icon: "🧊",
+    model3d: { url: "/models/refrigerator/modern_fridge_drawer/modern_fridge_drawer.gltf" },
   },
 
   // ─── 油烟机 Range Hood ────────────────────────────────
@@ -873,6 +899,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "侧吸大吸力，静音高效",
     icon: "🌬️",
+    model3d: { url: "/models/range_hood/range_hood/range_hood.gltf" },
   },
 
   // ─── 厨房水槽 Kitchen Sink ────────────────────────────
@@ -891,6 +918,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "304不锈钢，双槽分区",
     icon: "🚿",
+    model3d: { url: "/models/kitchen_sink/double_sink/double_sink.gltf" },
   },
 
   // ─── 马桶 Toilet ──────────────────────────────────────
@@ -909,6 +937,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "智能冲洗，加热座圈",
     icon: "🚽",
+    model3d: { url: "/models/toilet/curved_modern_wc/curved_modern_wc.gltf" },
   },
   {
     id: "toilet-standard",
@@ -925,6 +954,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "虹吸静音，冲洗干净",
     icon: "🚽",
+    model3d: { url: "/models/toilet/modern_toilet/modern_toilet.gltf" },
   },
   {
     id: "toilet-wallhung",
@@ -941,6 +971,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "悬浮设计，清洁方便",
     icon: "🚽",
+    model3d: { url: "/models/toilet/simple_toilet/simple_toilet.gltf" },
   },
 
   // ─── 浴缸 Bathtub ─────────────────────────────────────
@@ -959,6 +990,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "铸铁独立浴缸，保温佳",
     icon: "🛁",
+    model3d: { url: "/models/bathtub/simple_bathtub/simple_bathtub.gltf" },
   },
   {
     id: "bathtub-builtin",
@@ -975,6 +1007,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "靠墙嵌入，节省空间",
     icon: "🛁",
+    model3d: { url: "/models/bathtub/bathtub_3ddomino/bathtub_3ddomino.gltf" },
   },
 
   // ─── 淋浴 Shower ──────────────────────────────────────
@@ -993,6 +1026,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "钢化玻璃，干湿分离",
     icon: "🚿",
+    model3d: { url: "/models/shower/corner_shower/corner_shower.gltf" },
   },
   {
     id: "shower-walkin",
@@ -1028,6 +1062,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "陶瓷盆+浴室柜，防潮板材",
     icon: "🪥",
+    model3d: { url: "/models/bathroom_vanity/legion_vanity_sink/legion_vanity_sink.gltf" },
   },
   {
     id: "vanity-double-marble",
@@ -1079,6 +1114,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "L型大桌面，工作娱乐两用",
     icon: "🖥️",
+    model3d: { url: "/models/desk/metal_office_desk/metal_office_desk_1k.gltf" },
   },
   {
     id: "desk-standing",

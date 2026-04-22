@@ -1,0 +1,11 @@
+Model Information:
+* title:	Curved Modern WC CC Open
+* source:	https://sketchfab.com/3d-models/curved-modern-wc-cc-open-de07cccdb657428cadc06f6bb96a551d
+* author:	attilakozma (https://sketchfab.com/attilakozma)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Curved Modern WC CC Open" (https://sketchfab.com/3d-models/curved-modern-wc-cc-open-de07cccdb657428cadc06f6bb96a551d) by attilakozma (https://sketchfab.com/attilakozma) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

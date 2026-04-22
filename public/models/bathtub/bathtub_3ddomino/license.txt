@@ -1,0 +1,11 @@
+Model Information:
+* title:	Bathtub
+* source:	https://sketchfab.com/3d-models/bathtub-c00db576ea8b41a882ae2137a2e8da53
+* author:	3DDomino (https://sketchfab.com/3DDomino)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Bathtub" (https://sketchfab.com/3d-models/bathtub-c00db576ea8b41a882ae2137a2e8da53) by 3DDomino (https://sketchfab.com/3DDomino) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

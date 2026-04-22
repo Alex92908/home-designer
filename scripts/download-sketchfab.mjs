@@ -1,0 +1,184 @@
+#!/usr/bin/env node
+/**
+ * Download CC-BY Sketchfab glTF models into public/models/.
+ *
+ * Setup (one-time):
+ *   1. Sign up at https://sketchfab.com/signup (free)
+ *   2. Get API token at https://sketchfab.com/settings/password
+ *   3. Put it in .env.local:  SKETCHFAB_TOKEN=xxxxxxxxxxxx
+ *
+ * Usage:
+ *   node scripts/download-sketchfab.mjs
+ *
+ * CC-BY means you MUST credit the author. Each asset downloaded here
+ * is already registered in public/models/ATTRIBUTION.md — keep that
+ * file up to date and show its CC-BY section in your product's credits
+ * page.
+ */
+
+import fs from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import path from "node:path";
+import { pipeline } from "node:stream/promises";
+import { execSync } from "node:child_process";
+
+// ── Load .env.local if present ─────────────────────────────────
+async function loadEnv() {
+  try {
+    const text = await fs.readFile(path.resolve(process.cwd(), ".env.local"), "utf8");
+    for (const line of text.split("\n")) {
+      const m = line.match(/^([A-Z_]+)\s*=\s*(.+?)\s*$/);
+      if (m) process.env[m[1]] = process.env[m[1]] || m[2].replace(/^['"]|['"]$/g, "");
+    }
+  } catch { /* no .env.local, that's fine */ }
+}
+
+// ── Assets (uid + category + author for attribution) ───────────
+const ASSETS = [
+  // ── Beds ─────────────────────────────────────────────
+  { uid: "95e58eda71e8438fbf0be4169fefef86", slug: "bed_07",                  category: "bed",             author: "DoaaSheha" },
+  { uid: "0d5590d1d2184aa98797c3d6382afd7e", slug: "japanese_futon_bed",      category: "bed",             author: "nicolas_solo" },
+  { uid: "d3aeb724e09c44af96ef09cd20885220", slug: "dark_modern_bed",         category: "bed",             author: "renviros" },
+
+  // ── Wardrobes ────────────────────────────────────────
+  { uid: "a3c221e5504d40a8ba019f8f1bf5ab0e", slug: "antique_wooden_wardrobe", category: "wardrobe",        author: "kuuttisiitonen" },
+  { uid: "a977729fff9d4bfdad487a59495436f5", slug: "wardrobe_dylanheyes",     category: "wardrobe",        author: "dylanheyes" },
+
+  // ── Kitchen: refrigerators ───────────────────────────
+  { uid: "ebe62ed6dd9b446a9c9b7d7d6a8086e7", slug: "french_door_fridge",      category: "refrigerator",    author: "Smokahontas" },
+  { uid: "5436bb89a0d8400f80abc23992049f53", slug: "modern_fridge_drawer",    category: "refrigerator",    author: "Jimmy_Johansson" },
+
+  // ── Kitchen: cabinets ────────────────────────────────
+  { uid: "4b765920f7c34676acda91c0bfd87abd", slug: "modular_kitchen_cabinets", category: "kitchen_cabinet", author: "sauti" },
+  { uid: "e77dc1c101c3483a834b2a9dbe2b9754", slug: "cabinet_base_drawers",     category: "kitchen_cabinet", author: "oliver.apin" },
+  { uid: "d02a064357e748f88851d609647c278e", slug: "kitchen_cabinet_library",  category: "kitchen_cabinet", author: "ahmagh2e" },
+
+  // ── Kitchen: range hood ──────────────────────────────
+  { uid: "e846cb48e88446808af55976ff76b1da", slug: "range_hood",              category: "range_hood",      author: "govindu94" },
+
+  // ── Kitchen: sink ────────────────────────────────────
+  { uid: "0fc7c56aa9374b9c8ac548ccc02ff4cb", slug: "double_sink",             category: "kitchen_sink",    author: "Patricklab" },
+
+  // ── Bathroom: toilets ────────────────────────────────
+  { uid: "54821ef3bbd7457a9a1fbc1cc4d5f042", slug: "modern_toilet",           category: "toilet",          author: "madexc" },
+  { uid: "de07cccdb657428cadc06f6bb96a551d", slug: "curved_modern_wc",        category: "toilet",          author: "attilakozma" },
+  { uid: "530889235b64423da5f387588686b33e", slug: "simple_toilet",           category: "toilet",          author: "1_floki_1" },
+
+  // ── Bathroom: bathtubs ───────────────────────────────
+  { uid: "4f0df513307e4d8b958345570f6cf5b0", slug: "simple_bathtub",          category: "bathtub",         author: "neverfollow81" },
+  { uid: "c00db576ea8b41a882ae2137a2e8da53", slug: "bathtub_3ddomino",        category: "bathtub",         author: "3DDomino" },
+
+  // ── Bathroom: shower ─────────────────────────────────
+  { uid: "c48c05b0877a4ebf89ca92615519640c", slug: "corner_shower",           category: "shower",          author: "allenbranch" },
+
+  // ── Bathroom: vanity ─────────────────────────────────
+  { uid: "750dfa5fab444c28baf30e063d2b56d3", slug: "legion_vanity_sink",      category: "bathroom_vanity", author: "allenbranch" },
+  { uid: "4a6a3be47e1143c38c3cbadcdaac86ea", slug: "laufen_kartell_vanity",   category: "bathroom_vanity", author: "usbathstore" },
+
+  // ── Architectural (room shell replacements, not placeable furniture) ─
+  { uid: "7c34cb1c99544017a03119b566718399", slug: "window_modern",           category: "_arch_window",    author: "JeanLescano" },
+  { uid: "720c98140848429c985fbd7c77eac70e", slug: "interior_wooden_door",    category: "_arch_door",      author: "joshtmc" },
+];
+
+const API = "https://api.sketchfab.com/v3";
+const ROOT = path.resolve(process.cwd(), "public", "models");
+
+async function authedJSON(url, token) {
+  const res = await fetch(url, { headers: { Authorization: `Token ${token}` } });
+  if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
+  return res.json();
+}
+
+async function downloadFile(url, dest) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
+  await fs.mkdir(path.dirname(dest), { recursive: true });
+  await pipeline(res.body, createWriteStream(dest));
+  return (await fs.stat(dest)).size;
+}
+
+function humanSize(b) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 ** 2) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / 1024 ** 2).toFixed(2)} MB`;
+}
+
+async function downloadAsset({ uid, slug, category, author }, token) {
+  const targetDir = path.join(ROOT, category, slug);
+  const canonicalGltf = path.join(targetDir, `${slug}.gltf`);
+
+  // Resume: if the canonical .gltf already exists, skip completely.
+  // Handles script restarts after network interruptions.
+  try {
+    const stat = await fs.stat(canonicalGltf);
+    if (stat.size > 0) {
+      console.log(`⏭  ${slug} — already present (${humanSize(stat.size)}), skipping.`);
+      return { slug, category, author, mainGltf: `${slug}.gltf`, skipped: true };
+    }
+  } catch { /* doesn't exist — proceed */ }
+
+  console.log(`\n📦 ${slug} by ${author} → public/models/${category}/${slug}`);
+
+  // Request the download URL (CC-BY)
+  const dl = await authedJSON(`${API}/models/${uid}/download`, token);
+  // Response has url for various formats: { gltf: { url, size, expires }, source, usdz, ... }
+  const gltf = dl.gltf;
+  if (!gltf?.url) {
+    throw new Error(`No gltf download for ${uid}. Available: ${Object.keys(dl).join(", ")}`);
+  }
+
+  const zipPath = path.join(ROOT, category, `${slug}.zip`);
+  const size = await downloadFile(gltf.url, zipPath);
+  console.log(`   · zip ${humanSize(size)} downloaded`);
+
+  // Unzip into target dir (already declared at the top of the function)
+  await fs.mkdir(targetDir, { recursive: true });
+  execSync(`unzip -o -q "${zipPath}" -d "${targetDir}"`);
+  await fs.unlink(zipPath);
+  console.log(`   · unzipped to ${path.relative(process.cwd(), targetDir)}`);
+
+  // Find the main .gltf file (at root of extracted zip, not nested) and
+  // rename to <slug>.gltf so paths in furniture.ts are predictable.
+  const entries = await fs.readdir(targetDir);
+  const originalGltf = entries.find(f => f.endsWith(".gltf"));
+  if (!originalGltf) {
+    console.warn(`   ⚠ no top-level .gltf found. Files: ${entries.slice(0, 6).join(", ")}`);
+    return { slug, category, author, mainGltf: null };
+  }
+  const canonicalName = `${slug}.gltf`;
+  if (originalGltf !== canonicalName) {
+    await fs.rename(path.join(targetDir, originalGltf), path.join(targetDir, canonicalName));
+    console.log(`   · renamed ${originalGltf} → ${canonicalName}`);
+  }
+  return { slug, category, author, mainGltf: canonicalName };
+}
+
+async function main() {
+  await loadEnv();
+  const token = process.env.SKETCHFAB_TOKEN;
+  if (!token) {
+    console.error("Missing SKETCHFAB_TOKEN. See script header for setup steps.");
+    process.exit(1);
+  }
+
+  const results = [];
+  for (const a of ASSETS) {
+    try {
+      results.push(await downloadAsset(a, token));
+    } catch (err) {
+      console.error(`✗ ${a.slug}: ${err.message}`);
+    }
+  }
+
+  console.log(`\n✅ Done. ${results.length}/${ASSETS.length} assets downloaded.`);
+  console.log(`\nRemember: each of these is CC-BY. Make sure public/models/ATTRIBUTION.md`);
+  console.log(`contains the author, and your product shows a credits page.\n`);
+  console.log(`Wire into src/lib/furniture.ts:`);
+  for (const r of results) {
+    if (!r.mainGltf) continue;
+    const url = `/models/${r.category}/${r.slug}/${r.mainGltf}`;
+    console.log(`  model3d: { url: "${url}" },  // ${r.slug} by ${r.author}`);
+  }
+}
+
+main().catch(err => { console.error(err); process.exit(1); });

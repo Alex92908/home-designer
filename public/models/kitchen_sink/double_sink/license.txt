@@ -1,0 +1,11 @@
+Model Information:
+* title:	Double_Sink
+* source:	https://sketchfab.com/3d-models/double-sink-0fc7c56aa9374b9c8ac548ccc02ff4cb
+* author:	Patricklab (https://sketchfab.com/Patricklab)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Double_Sink" (https://sketchfab.com/3d-models/double-sink-0fc7c56aa9374b9c8ac548ccc02ff4cb) by Patricklab (https://sketchfab.com/Patricklab) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
