@@ -1090,13 +1090,21 @@ export default function FloorPlan() {
               "drain": "#6B7280",
             };
             const color = colorMap[conn.kind] ?? "#999";
+            // Manhattan (L-shape) routing: pipe/wire takes a horizontal
+            // and a vertical leg via one elbow, mirroring how real conduit
+            // and water pipes follow walls. Pick whichever leg is longer
+            // first so the elbow lands on the longer axis.
+            const x1 = a.x * scale, y1 = a.z * scale;
+            const x2 = b.x * scale, y2 = b.z * scale;
+            const dx = Math.abs(x2 - x1), dy = Math.abs(y2 - y1);
+            const cornerX = dx > dy ? x2 : x1;
+            const cornerY = dx > dy ? y1 : y2;
+            const points = `${x1},${y1} ${cornerX},${cornerY} ${x2},${y2}`;
             return (
               <g key={conn.id}>
-                {/* Wide invisible hit area for clicking to delete */}
-                <line
-                  x1={a.x * scale} y1={a.z * scale}
-                  x2={b.x * scale} y2={b.z * scale}
-                  stroke="transparent" strokeWidth={12}
+                <polyline
+                  points={points}
+                  fill="none" stroke="transparent" strokeWidth={12}
                   style={{ cursor: "pointer" }}
                   onPointerDown={(e) => {
                     e.stopPropagation();
@@ -1105,13 +1113,11 @@ export default function FloorPlan() {
                     }
                   }}
                 />
-                {/* Visible line */}
-                <line
-                  x1={a.x * scale} y1={a.z * scale}
-                  x2={b.x * scale} y2={b.z * scale}
-                  stroke={color} strokeWidth={3}
+                <polyline
+                  points={points}
+                  fill="none" stroke={color} strokeWidth={3}
                   strokeDasharray={conn.kind === "wire" ? "0" : "6 3"}
-                  strokeLinecap="round"
+                  strokeLinecap="round" strokeLinejoin="round"
                   style={{ pointerEvents: "none" }}
                 />
               </g>
@@ -1124,6 +1130,24 @@ export default function FloorPlan() {
               wouldn't update when state changes). */}
           <RoutingFromHighlight
             placedItems={roomState.placedItems}
+            scale={scale}
+          />
+
+          {/* Routing preview line — when in routing mode and a from-endpoint
+              is set, follow the cursor with a faint dashed L-line that
+              snaps to the nearest valid fixture if the cursor is within
+              30px of one. Visual confirmation of "what would be drawn". */}
+          <RoutingPreview
+            placedItems={roomState.placedItems}
+            scale={scale}
+            svgRef={svgRef}
+          />
+
+          {/* Routing validation overlay — red ring around any fixture
+              missing a required hookup. Tooltip on hover via <title>. */}
+          <RoutingIssueOverlay
+            placedItems={roomState.placedItems}
+            connections={roomState.connections ?? []}
             scale={scale}
           />
 
@@ -1604,5 +1628,119 @@ function RoutingFromHighlight({
       strokeDasharray="3 2"
       style={{ pointerEvents: "none" }}
     />
+  );
+}
+
+function RoutingPreview({
+  placedItems, scale, svgRef,
+}: {
+  placedItems: import("@/lib/types").PlacedItem[];
+  scale: number;
+  svgRef: React.RefObject<SVGSVGElement | null>;
+}) {
+  const fromId = useDesignerStore(s => s.routingFrom);
+  const mode = useDesignerStore(s => s.routingMode);
+  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+
+  // Track cursor in SVG coords while routing-from is set
+  useEffect(() => {
+    if (!fromId || !mode) { setCursor(null); return; }
+    const svg = svgRef.current;
+    if (!svg) return;
+    const onMove = (e: PointerEvent) => {
+      const pt = svg.createSVGPoint();
+      pt.x = e.clientX; pt.y = e.clientY;
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return;
+      const inv = ctm.inverse();
+      const local = pt.matrixTransform(inv);
+      setCursor({ x: local.x, y: local.y });
+    };
+    svg.addEventListener("pointermove", onMove);
+    return () => svg.removeEventListener("pointermove", onMove);
+  }, [fromId, mode, svgRef]);
+
+  if (!fromId || !cursor) return null;
+  const a = placedItems.find(p => p.instanceId === fromId);
+  if (!a) return null;
+
+  // Snap target: if cursor within 30 SVG-units of a non-from item, snap.
+  const SNAP = 30;
+  let snapped: { x: number; y: number; id: string } | null = null;
+  let bestD = SNAP;
+  for (const p of placedItems) {
+    if (p.instanceId === fromId) continue;
+    const px = p.x * scale, py = p.z * scale;
+    const d = Math.hypot(cursor.x - px, cursor.y - py);
+    if (d < bestD) { bestD = d; snapped = { x: px, y: py, id: p.instanceId }; }
+  }
+
+  const x1 = a.x * scale, y1 = a.z * scale;
+  const x2 = snapped ? snapped.x : cursor.x;
+  const y2 = snapped ? snapped.y : cursor.y;
+  const dx = Math.abs(x2 - x1), dy = Math.abs(y2 - y1);
+  const cornerX = dx > dy ? x2 : x1;
+  const cornerY = dx > dy ? y1 : y2;
+  const colorMap: Record<string, string> = {
+    "wire": "#FACC15", "cold-water": "#3B82F6",
+    "hot-water": "#EF4444", "drain": "#6B7280",
+  };
+  const color = colorMap[mode!] ?? "#999";
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      <polyline
+        points={`${x1},${y1} ${cornerX},${cornerY} ${x2},${y2}`}
+        fill="none" stroke={color} strokeWidth={2}
+        strokeDasharray="4 3" opacity={0.7}
+      />
+      {snapped && (
+        <circle cx={snapped.x} cy={snapped.y} r={10}
+          fill="none" stroke={color} strokeWidth={2}
+        />
+      )}
+    </g>
+  );
+}
+
+function RoutingIssueOverlay({
+  placedItems, connections, scale,
+}: {
+  placedItems: import("@/lib/types").PlacedItem[];
+  connections: import("@/lib/types").RoutingConnection[];
+  scale: number;
+}) {
+  const issues = useMemo(() => {
+    // Lazy import to avoid circular concerns
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { validateRouting } = require("@/lib/routingValidation") as typeof import("@/lib/routingValidation");
+    return validateRouting(placedItems, connections);
+  }, [placedItems, connections]);
+  if (issues.length === 0) return null;
+
+  // Group issues by instanceId for deduped circles + concatenated tooltip
+  const grouped = new Map<string, string[]>();
+  for (const i of issues) {
+    if (!grouped.has(i.instanceId)) grouped.set(i.instanceId, []);
+    grouped.get(i.instanceId)!.push(i.message);
+  }
+
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      {[...grouped.entries()].map(([id, msgs]) => {
+        const p = placedItems.find(p => p.instanceId === id);
+        if (!p) return null;
+        return (
+          <g key={id}>
+            <circle
+              cx={p.x * scale} cy={p.z * scale} r={18}
+              fill="none" stroke="#EF4444" strokeWidth={2}
+              strokeDasharray="3 2" opacity={0.85}
+            >
+              <title>{msgs.join("\n")}</title>
+            </circle>
+          </g>
+        );
+      })}
+    </g>
   );
 }

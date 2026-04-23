@@ -1457,7 +1457,8 @@ export const useDesignerStore = create<DesignerStore>()(
       totalCost: () => {
         const s = get();
         const fp = s.floorPlans[s.activeFloor];
-        const { materials, placedItems } = fp.rooms[s.activeRoom];
+        const room = fp.rooms[s.activeRoom];
+        const { materials, placedItems } = room;
         const area = getRoomArea(s.activeRoom);
         let total = 0;
 
@@ -1472,6 +1473,15 @@ export const useDesignerStore = create<DesignerStore>()(
         for (const placed of placedItems) {
           const f = getFurnitureById(placed.furnitureId);
           if (f) total += f.price;
+        }
+
+        // Routing cost — sum of (manhattan length × per-meter price) for
+        // every connection in this room.
+        const conns = room.connections ?? [];
+        if (conns.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { routingCost } = require("./routingValidation") as typeof import("./routingValidation");
+          total += routingCost(placedItems, conns);
         }
 
         return total;

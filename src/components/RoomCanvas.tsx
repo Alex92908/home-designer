@@ -339,7 +339,10 @@ function RoomShell({
     const holes = holesForWall(lowerSide, wallLenM);
     const segments = splitWallAroundHoles(wallLenM, H, holes);
     const lowerMat = lower ? wallMatFor(lower.color, lower.id, wallLenM, splitH) : null;
-    const extOff = extOffsetSign * 0.012;
+    // Gap between interior and exterior wall planes — keep tiny so the
+    // sandwich isn't visible at window/door cut edges (was 12mm which
+    // showed as a white strip when viewing the wall obliquely).
+    const extOff = extOffsetSign * 0.003;
 
     return (
       <group position={groupPos} rotation={groupRot}>
@@ -738,10 +741,13 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   useFrame((_, delta) => {
     const style = win.style ?? "sliding";
     if (style === "sliding" || style === "casement" || style === "wooden") {
-      // Sliding: translate half-window-width. Casement + wooden: swing
-      // 45° outward around the hinge (left edge).
+      // Sliding: shift the sash to the right HALF of the opening AND
+      // shrink to half-width — simulates "two panels overlapping" so
+      // the glass never sticks out past the wall hole. Casement + wooden:
+      // swing 45° outward around the hinge.
+      const slideTarget = winLen / 4;  // sash center ends at right-quarter
       const target = isOpen
-        ? (style === "sliding" ? -winLen / 2 : -Math.PI / 4)
+        ? (style === "sliding" ? slideTarget : -Math.PI / 4)
         : 0;
       const speed = style === "sliding" ? 2.2 : 3.8;
       const current = sashAngleRef.current;
@@ -750,8 +756,16 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
         const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
         sashAngleRef.current = current + step;
         if (sashRef.current) {
-          if (style === "sliding") sashRef.current.position.x = sashAngleRef.current;
-          else sashRef.current.rotation.y = sashAngleRef.current;
+          if (style === "sliding") {
+            // Position + scale combined so sash stays inside opening:
+            // at fully-open (x = winLen/4), scale.x = 0.5 (half width).
+            const x = sashAngleRef.current;
+            const t = Math.min(1, Math.abs(x) / slideTarget);
+            sashRef.current.position.x = x;
+            sashRef.current.scale.x = 1 - t * 0.5;
+          } else {
+            sashRef.current.rotation.y = sashAngleRef.current;
+          }
         }
       }
     } else if (style === "louvered") {
@@ -776,22 +790,31 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   const WALL_OFFSET = 0.015;
   const style = win.style ?? "sliding";
 
+  // Window frame jambs — INSET into the wall hole (covering the cut
+  // edge from inside) instead of protruding outward. Previous design
+  // extended each jamb FRAME_THIN/2 (12.5mm) past the hole boundary,
+  // which from oblique angles read as "the window pokes out of the
+  // wall". Now the frame fully fits inside the wall cutout.
   const frameBars = (
     <>
-      <mesh position={[0, winH / 2 + FRAME_THIN / 2, WALL_OFFSET]} castShadow>
-        <boxGeometry args={[winLen + FRAME_THIN * 2, FRAME_THIN, 0.02]} />
+      {/* Top */}
+      <mesh position={[0, winH / 2 - FRAME_THIN / 2, WALL_OFFSET]} castShadow>
+        <boxGeometry args={[winLen, FRAME_THIN, 0.02]} />
         <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
       </mesh>
-      <mesh position={[0, -winH / 2 - FRAME_THIN / 2, WALL_OFFSET]} castShadow>
-        <boxGeometry args={[winLen + FRAME_THIN * 2, FRAME_THIN, 0.02]} />
+      {/* Bottom */}
+      <mesh position={[0, -winH / 2 + FRAME_THIN / 2, WALL_OFFSET]} castShadow>
+        <boxGeometry args={[winLen, FRAME_THIN, 0.02]} />
         <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
       </mesh>
-      <mesh position={[-winLen / 2 - FRAME_THIN / 2, 0, WALL_OFFSET]} castShadow>
-        <boxGeometry args={[FRAME_THIN, winH, 0.02]} />
+      {/* Left jamb */}
+      <mesh position={[-winLen / 2 + FRAME_THIN / 2, 0, WALL_OFFSET]} castShadow>
+        <boxGeometry args={[FRAME_THIN, winH - FRAME_THIN * 2, 0.02]} />
         <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
       </mesh>
-      <mesh position={[winLen / 2 + FRAME_THIN / 2, 0, WALL_OFFSET]} castShadow>
-        <boxGeometry args={[FRAME_THIN, winH, 0.02]} />
+      {/* Right jamb */}
+      <mesh position={[winLen / 2 - FRAME_THIN / 2, 0, WALL_OFFSET]} castShadow>
+        <boxGeometry args={[FRAME_THIN, winH - FRAME_THIN * 2, 0.02]} />
         <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
       </mesh>
     </>
@@ -2874,9 +2897,15 @@ function CurtainGltf({ item, w, d, h }: { item: FurnitureItem; w: number; d: num
       if (obj.name && /wall/i.test(obj.name)) toRemove.push(obj);
     });
     for (const o of toRemove) o.parent?.remove(o);
-    // 2) Kill emissive on every remaining material (Sketchfab often sets
-    // emissive white so the asset pops against dark previews — wrong for
-    // a real scene with its own lighting)
+    // 2) Kill emissive AND force opaque on every remaining material.
+    //
+    //  - emissive: Sketchfab often sets emissive white so the asset pops
+    //    against dark previews — wrong for a real scene with its own lighting.
+    //  - opacity / transparency: the source glTFs ship with a translucent
+    //    sheer/tulle layer for cinematic preview look. In a real room
+    //    that lets the camera see THROUGH the curtain from outside, which
+    //    defeats the curtain's job of blocking view. Force all materials
+    //    fully opaque so the curtain actually obstructs.
     c.traverse(obj => {
       const m = obj as THREE.Mesh;
       if (!m.isMesh) return;
@@ -2889,6 +2918,12 @@ function CurtainGltf({ item, w, d, h }: { item: FurnitureItem; w: number; d: num
           if (sm.emissive) sm.emissive.set("#000000");
           if ("emissiveIntensity" in sm) sm.emissiveIntensity = 0;
           if (sm.emissiveMap) sm.emissiveMap = null;
+          sm.transparent = false;
+          sm.opacity = 1;
+          sm.alphaTest = 0;
+          if ("alphaMap" in sm) sm.alphaMap = null;
+          sm.depthWrite = true;
+          sm.side = THREE.DoubleSide;  // visible from both sides of the room
           sm.needsUpdate = true;
         }
       }
@@ -2939,7 +2974,10 @@ function CurtainInstance({
     openRef.current = cur + step;
     const g = innerRef.current;
     if (!g) return;
-    const scaleX = 1 - openRef.current * 0.65;
+    // Open state: gather curtain to ~55% width (was 35% — too thin,
+    // looked like a paper sliver). Still clearly "opened" but visually
+    // believable as a bunched fabric.
+    const scaleX = 1 - openRef.current * 0.45;
     g.scale.x = scaleX;
     g.position.x = -(w / 2) * (1 - scaleX);
   });
@@ -3119,6 +3157,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
 
       {/* Exterior decor on the OUTSIDE faces of this room's walls */}
       <RoomExteriorDecorLayer room={activeRoom} W={W} D={D} H={H} />
+      <RoutingLinesLayer room={activeRoom} W={W} D={D} H={H} />
 
       {/* Post-processing — skip on iOS (Metal compiler issues with complex fragment shaders).
           Wrapped in <PostFX/> which defers mounting until the WebGL context
@@ -3142,6 +3181,70 @@ function Scene({ isIOS }: { isIOS: boolean }) {
 //   local +Y = up
 //   local +Z = outward (away from room interior)
 const EMPTY_ROOM_DECOR: ExteriorWallDecorItem[] = [];
+const EMPTY_CONNS: import("@/lib/types").RoutingConnection[] = [];
+
+/** 3D pipe/wire visualization. Wires hug the ceiling (one band below
+ *  the slab), water lines hug the floor. Each connection becomes a
+ *  4-segment polyline: down/up from fixture A → across at ceiling/floor
+ *  → down/up to fixture B (i.e. the L-shape from the 2D plan, projected
+ *  vertically off the wall). */
+function RoutingLinesLayer({ room, W, D, H }: {
+  room: import("@/lib/types").RoomType; W: number; D: number; H: number;
+}) {
+  const conns  = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.connections) ?? EMPTY_CONNS;
+  const placed = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.placedItems) ?? [];
+  if (conns.length === 0) return null;
+  // Wire band Y position (just below the ceiling), pipe band (just above the floor)
+  const Y_WIRE = H - 0.08;
+  const Y_PIPE = 0.04;
+  const colors: Record<string, string> = {
+    "wire": "#FACC15",
+    "cold-water": "#3B82F6",
+    "hot-water": "#EF4444",
+    "drain": "#6B7280",
+  };
+  return (
+    <group>
+      {conns.map(c => {
+        const a = placed.find(p => p.instanceId === c.from);
+        const b = placed.find(p => p.instanceId === c.to);
+        if (!a || !b) return null;
+        // Convert room-local (cm, origin top-left) to world (m, origin center)
+        const ax = (a.x / 100) - W / 2, az = (a.z / 100) - D / 2;
+        const bx = (b.x / 100) - W / 2, bz = (b.z / 100) - D / 2;
+        const isWire = c.kind === "wire";
+        const Y = isWire ? Y_WIRE : Y_PIPE;
+        // 4 vertices: A, A-on-band, B-on-band-elbow, B
+        // Manhattan choice (matches 2D)
+        const dx = Math.abs(bx - ax), dz = Math.abs(bz - az);
+        const cornerX = dx > dz ? bx : ax;
+        const cornerZ = dx > dz ? az : bz;
+        const pts: [number, number, number][] = [
+          [ax, 0.05, az],            // start (just above floor)
+          [ax, Y, az],                // up to band
+          [cornerX, Y, cornerZ],      // across band
+          [bx, Y, bz],                // to B's column
+          [bx, 0.05, bz],             // down to floor at B
+        ];
+        const positions = new Float32Array(pts.flat());
+        return (
+          <line key={c.id}>
+            <bufferGeometry>
+              <bufferAttribute
+                attach="attributes-position"
+                args={[positions, 3]}
+                count={pts.length}
+                array={positions}
+                itemSize={3}
+              />
+            </bufferGeometry>
+            <lineBasicMaterial color={colors[c.kind] ?? "#999"} linewidth={2} />
+          </line>
+        );
+      })}
+    </group>
+  );
+}
 
 function RoomExteriorDecorLayer({ room, W, D, H }: {
   room: import("@/lib/types").RoomType; W: number; D: number; H: number;
