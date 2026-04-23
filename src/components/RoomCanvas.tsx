@@ -2551,23 +2551,42 @@ function Scene({ isIOS }: { isIOS: boolean }) {
         </EnvironmentFallback>
       )}
 
-      {/* Main directional light with shadows */}
+      {/* Sky + ground bounce — hemisphere light gives a soft top-down
+          gradient (cool sky above, warm beige ground below) that lifts
+          shadowed wall faces without washing them out. Much gentler than
+          cranking ambient, keeps color separation between lit/shaded
+          surfaces. */}
+      <hemisphereLight args={["#BFD4E8", "#C8B088", isIOS ? 1.1 : 0.55]} />
+
+      {/* Main "sun" directional — slightly warm tint so sunlight reads as
+          natural daylight (ACES tonemapping darkens cool whites into
+          blues). Intensity dialed back from 1.6 → 1.2 to avoid
+          blown-out highlights with bloom. Shadow bias bumped to
+          reduce peter-panning on low-contrast materials. */}
       <directionalLight
         position={[W * 0.5, H * 2.2, D * 0.8]}
-        intensity={1.6}
+        intensity={1.2}
+        color="#FFF4E0"
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-W}
         shadow-camera-right={W}
         shadow-camera-top={D}
         shadow-camera-bottom={-D}
-        shadow-bias={-0.001}
+        shadow-bias={-0.0008}
+        shadow-normalBias={0.04}
       />
-      {/* Fill light */}
-      <directionalLight position={[-W * 0.8, H * 1.5, -D * 0.5]} intensity={0.5} />
-      {/* Ambient — brighter on iOS to compensate for missing Environment IBL */}
-      <ambientLight intensity={isIOS ? 1.8 : 0.7} />
-      {isIOS && <directionalLight position={[-3, 4, 3]} intensity={0.8} />}
+      {/* Cool fill from the opposite side — bluish to balance the warm sun */}
+      <directionalLight
+        position={[-W * 0.8, H * 1.5, -D * 0.5]}
+        intensity={0.35}
+        color="#D8E4F4"
+      />
+      {/* Low ambient — the hemisphere light does most of the sky work now;
+          ambient just stops pure-black crevices. Extra-bright on iOS
+          because Environment IBL is disabled (Metal bug). */}
+      <ambientLight intensity={isIOS ? 1.4 : 0.3} />
+      {isIOS && <directionalLight position={[-3, 4, 3]} intensity={0.6} />}
 
       {/* Room geometry */}
       <RoomShell
@@ -3105,7 +3124,7 @@ export default function RoomCanvas() {
             powerPreference: "default",
           }}
           dpr={[1, 2]}
-          shadows={{ type: THREE.PCFShadowMap }}
+          shadows={{ type: THREE.PCFSoftShadowMap }}
           camera={{ position: [0, 1.4, 6], fov: 58, near: 0.1, far: 80 }}
           style={{ background: "linear-gradient(180deg, #E9EEF3 0%, #D4DEE8 55%, #C8D5E0 100%)" }}
         >

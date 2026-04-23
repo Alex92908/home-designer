@@ -1863,7 +1863,7 @@ export default function HouseCanvas() {
   return (
     <div className="w-full h-full">
       <Canvas
-        shadows={{ type: THREE.PCFShadowMap }}
+        shadows={{ type: THREE.PCFSoftShadowMap }}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 1.15,
@@ -1889,15 +1889,24 @@ export default function HouseCanvas() {
             <Environment preset="sunset" background backgroundBlurriness={0.04} />
           </Suspense>
         </HouseEnvironmentFallback>
-        <ambientLight intensity={0.45} />
+        {/* Sky + ground bounce: exterior needs a stronger hemisphere
+            because the house catches light from all sides, not just
+            one sun. Sky tint biased slightly warm (sunset) to match the
+            preset environment. */}
+        <hemisphereLight args={["#DCE4EE", "#8A7A60", 0.6]} />
+        <ambientLight intensity={0.25} />
+        {/* Warm afternoon sun */}
         <directionalLight
-          position={[20, 30, 15]} intensity={1.1} castShadow
+          position={[20, 30, 15]} intensity={1.3} color="#FFEDD0" castShadow
           shadow-mapSize={[2048, 2048]}
           shadow-camera-far={180}
           shadow-camera-left={-50} shadow-camera-right={50}
           shadow-camera-top={50} shadow-camera-bottom={-50}
+          shadow-bias={-0.0008}
+          shadow-normalBias={0.04}
         />
-        <directionalLight position={[-15, 20, -10]} intensity={0.4} />
+        {/* Cool sky fill from opposite side */}
+        <directionalLight position={[-15, 20, -10]} intensity={0.35} color="#C8D4E8" />
 
         {/* Click empty ground to deselect */}
         <DeselectPlane onDeselect={() => {
