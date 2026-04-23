@@ -1332,6 +1332,29 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"chicken-coop", name:"鸡舍",       brand:"农场",     price:1200, unit:"元/座", category:"livestock",         roomTypes:["yard"],                     color:"#C8A060", width:160, depth:120, height:140, tags:[], description:"鸡鸭棚舍",       icon:"🏚️" },
   { id:"barn",         name:"牲畜棚",     brand:"农场",     price:8800, unit:"元/座", category:"livestock",         roomTypes:["yard"],                     color:"#C06030", width:400, depth:300, height:300, tags:[], description:"大型牲畜棚",     icon:"🏚️" },
 
+  // ─── 卫浴补全 Bathroom accessories ────────────────────────
+  { id:"toilet-squat",       name:"蹲坑",         brand:"陶瓷", price:380,  unit:"元/件", category:"toilet",         roomTypes:["bathroom","bathroom2"], color:"#F5F5F5", width:60, depth:80, height:15, tags:[],      description:"传统蹲便器",   icon:"🚽" },
+  { id:"mirror-cabinet",     name:"镜柜",         brand:"五金", price:780,  unit:"元/件", category:"bathroom_vanity", roomTypes:["bathroom","bathroom2"], color:"#E8E8E8", width:80, depth:18, height:80, tags:["现代"], description:"带镜储物柜",   icon:"🪞" },
+  { id:"shower-head",        name:"淋浴花洒（手持+顶喷）", brand:"五金", price:680, unit:"元/套", category:"bath_accessory", roomTypes:["bathroom","bathroom2"], color:"#C8C8C8", width:25, depth:15, height:120, tags:["现代"], description:"花洒龙头一体套装", icon:"🚿" },
+  { id:"faucet-basin",       name:"面盆龙头",     brand:"五金", price:280,  unit:"元/件", category:"bath_accessory", roomTypes:["bathroom","bathroom2","kitchen"], color:"#C8C8C8", width:8,  depth:18, height:22,  tags:[],      description:"单把混水龙头", icon:"🚰" },
+  { id:"floor-drain",        name:"地漏",         brand:"五金", price:80,   unit:"元/个", category:"plumbing",       roomTypes:["bathroom","bathroom2","kitchen","balcony","balcony2"], color:"#A8A8A8", width:10, depth:10, height:2, tags:[], description:"方形不锈钢地漏", icon:"🔳" },
+
+  // ─── 强弱电 Electrical fixtures ────────────────────────
+  { id:"outlet-2pin",        name:"五孔插座",     brand:"电工", price:25,   unit:"元/个", category:"electrical",     roomTypes:["living","master","bedroom","bedroom2","bedroom3","kitchen","study","dining","closet","balcony","bathroom","bathroom2"], color:"#F8F8F8", width:9, depth:3, height:9, tags:[], description:"标准 86 型", icon:"🔌" },
+  { id:"outlet-usb",         name:"带USB插座",     brand:"电工", price:58,   unit:"元/个", category:"electrical",     roomTypes:["living","master","bedroom","study"], color:"#F8F8F8", width:9, depth:3, height:9, tags:["现代"], description:"五孔+2×USB-A",icon:"🔌" },
+  { id:"switch-single",      name:"单开开关",     brand:"电工", price:20,   unit:"元/个", category:"electrical",     roomTypes:["living","master","bedroom","bedroom2","bedroom3","kitchen","study","dining","closet","balcony","bathroom","bathroom2"], color:"#F8F8F8", width:9, depth:3, height:9, tags:[], description:"86 型单路", icon:"💡" },
+  { id:"switch-double",      name:"双开开关",     brand:"电工", price:30,   unit:"元/个", category:"electrical",     roomTypes:["living","master","bedroom","kitchen","study"], color:"#F8F8F8", width:9, depth:3, height:9, tags:[], description:"86 型双路", icon:"💡" },
+  { id:"breaker-panel",      name:"强电箱",       brand:"电工", price:480,  unit:"元/座", category:"electrical",     roomTypes:["living","closet"], color:"#E0E0E0", width:35, depth:10, height:28, tags:[], description:"家用配电箱（16 回路）", icon:"⚡" },
+  { id:"weak-panel",         name:"弱电箱",       brand:"电工", price:280,  unit:"元/座", category:"electrical",     roomTypes:["living","closet","study"], color:"#E0E0E0", width:30, depth:10, height:22, tags:[], description:"网络/TV 集中箱", icon:"📡" },
+  { id:"network-jack",       name:"网线口",       brand:"电工", price:18,   unit:"元/个", category:"electrical",     roomTypes:["living","master","bedroom","study"], color:"#F8F8F8", width:9, depth:3, height:9, tags:[], description:"RJ45", icon:"🔗" },
+  { id:"tv-jack",            name:"TV 口",        brand:"电工", price:18,   unit:"元/个", category:"electrical",     roomTypes:["living","master","bedroom"], color:"#F8F8F8", width:9, depth:3, height:9, tags:[], description:"同轴有线电视", icon:"📺" },
+
+  // ─── 给排水 Plumbing points ────────────────────────────
+  { id:"water-supply-cold",  name:"给水口（冷）", brand:"五金", price:35,   unit:"元/个", category:"plumbing",       roomTypes:["bathroom","bathroom2","kitchen","balcony","balcony2"], color:"#3080C0", width:6, depth:8, height:6, tags:[], description:"DN15 冷水进水点", icon:"🔵" },
+  { id:"water-supply-hot",   name:"给水口（热）", brand:"五金", price:35,   unit:"元/个", category:"plumbing",       roomTypes:["bathroom","bathroom2","kitchen"], color:"#C03030", width:6, depth:8, height:6, tags:[], description:"DN15 热水进水点", icon:"🔴" },
+  { id:"drain-point",        name:"下水口",       brand:"五金", price:45,   unit:"元/个", category:"plumbing",       roomTypes:["bathroom","bathroom2","kitchen","balcony","balcony2"], color:"#4A4A4A", width:12, depth:12, height:3, tags:[], description:"DN50 排水口", icon:"⚫" },
+  { id:"exhaust-vent",       name:"排风口",       brand:"五金", price:120,  unit:"元/个", category:"plumbing",       roomTypes:["bathroom","bathroom2","kitchen"], color:"#E0E0E0", width:20, depth:8, height:20, tags:[], description:"集成排风格栅", icon:"🌬️" },
+
   // ─── 外墙装饰 Exterior wall decor ──────────────────────
   // roomTypes 留空（`getFurnitureForRoom` 不会返回它们），
   // RightPanel 的专用 section 单独列出。width/depth/height 单位 cm。
@@ -1424,6 +1447,9 @@ export const FURNITURE_CATEGORIES: Array<{
   { id: "artwork",           label: "装饰画",   icon: "🖼️" },
   { id: "curtain",           label: "窗帘",     icon: "🪟" },
   { id: "exterior_wall_decor", label: "外墙装饰", icon: "🏮" },
+  { id: "bath_accessory",    label: "卫浴配件", icon: "🚿" },
+  { id: "electrical",        label: "强弱电",   icon: "🔌" },
+  { id: "plumbing",          label: "给排水",   icon: "🚰" },
   { id: "outdoor_plant",     label: "户外植物", icon: "🌳" },
   { id: "outdoor_hardscape", label: "硬景观",   icon: "🪨" },
   { id: "outdoor_water",     label: "水景",     icon: "💧" },

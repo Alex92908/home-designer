@@ -43,6 +43,19 @@ function shade(hex: string, pct: number): string {
 }
 
 // ─── Camera controller (auto-fit room) ───────────────────
+/** Applies a per-room tone-mapping exposure override to the renderer.
+ *  Lives inside the Canvas so it can reach the WebGL renderer; reacts
+ *  to store changes. Default 1.2 if the user hasn't touched the slider. */
+function ExposureController() {
+  const { gl } = useThree();
+  const activeRoom = useDesignerStore(s => s.activeRoom);
+  const exposure = useDesignerStore(s => s.roomExposureByRoom[activeRoom] ?? 1.2);
+  useEffect(() => {
+    if (gl) gl.toneMappingExposure = exposure;
+  }, [gl, exposure]);
+  return null;
+}
+
 function CameraController({ W, D, H }: { W: number; D: number; H: number }) {
   const { camera } = useThree();
   useEffect(() => {
@@ -1329,14 +1342,15 @@ function ProceduralWoodDoor({
 // ─── Light fixture ─────────────────────────────────────────
 function LightFixture({ H, lightColor, lightId, lightX = 0, lightZ = 0 }: {
   H: number; lightColor: string; lightId: string;
-  /** Ceiling-plane offset in meters from room center. Lets users
-   *  reposition the fixture (asymmetric track lighting, off-center
-   *  chandelier above a dining table, etc.). The whole fixture renders
-   *  inside an offset group so the existing hard-coded [0, H-*, 0]
-   *  positions still work relative to the new center. */
   lightX?: number; lightZ?: number;
 }) {
   const ref = useRef<THREE.Mesh>(null);
+  const activeRoom = useDesignerStore(s => s.activeRoom);
+  const isOn = useDesignerStore(s => s.lightsOnByRoom[activeRoom] !== false);
+  const toggle = useDesignerStore(s => s.toggleRoomLights);
+  const brightness = useDesignerStore(s => s.lightBrightnessByRoom[activeRoom] ?? 1);
+  const colorOverride = useDesignerStore(s => s.lightColorByRoom[activeRoom]);
+  const finalColor = colorOverride ?? lightColor;
   useFrame((_, delta) => {
     if (ref.current && lightId === "light-chandelier") {
       ref.current.rotation.y += delta * 0.15;
@@ -1344,16 +1358,40 @@ function LightFixture({ H, lightColor, lightId, lightX = 0, lightZ = 0 }: {
   });
   return (
     <group position={[lightX, 0, lightZ]}>
-      <LightFixtureInner H={H} lightColor={lightColor} lightId={lightId} chandelierRef={ref} />
+      {/* Invisible hit proxy — a big sphere just below the ceiling that
+          captures clicks for turning the light on/off. The fixture
+          geometry itself is small (cones, bars) and hard to hit
+          accurately; this wraps the whole area so clicking "near the
+          light" works. Not visible (opacity 0), doesn't receive shadows. */}
+      <mesh
+        position={[0, H - 0.35, 0]}
+        onClick={(e) => { e.stopPropagation(); toggle(activeRoom); }}
+        onPointerOver={(e) => { (e.object as THREE.Mesh).userData.hover = true; }}
+      >
+        <sphereGeometry args={[0.6, 12, 8]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      <LightFixtureInner
+        H={H} lightColor={finalColor} lightId={lightId}
+        chandelierRef={ref} isOn={isOn} brightness={brightness}
+      />
     </group>
   );
 }
 
-function LightFixtureInner({ H, lightColor, lightId, chandelierRef }: {
+function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, brightness = 1 }: {
   H: number; lightColor: string; lightId: string;
   chandelierRef: React.RefObject<THREE.Mesh | null>;
+  /** When false, every emissive material and spot/point light in the
+   *  fixture gets multiplied by 0. */
+  isOn: boolean;
+  /** Global multiplier applied to BOTH emissiveIntensity and pointLight
+   *  intensity. User-controlled in RightPanel (0.3–2.0). */
+  brightness?: number;
 }) {
   const ref = chandelierRef;
+  const em = isOn ? brightness : 0;
+  const bm = isOn ? brightness : 0;
 
   if (lightId === "light-spot") {
     return (
@@ -1368,7 +1406,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef }: {
               <cylinderGeometry args={[0.04, 0.07, 0.14, 8]} />
               <meshStandardMaterial color="#111" metalness={0.9} roughness={0.2} />
             </mesh>
-            <spotLight position={[x, H - 0.22, 0]} target-position={[x, 0, 0]} intensity={6} angle={0.35} penumbra={0.4} color="#FFF2D8" castShadow shadow-mapSize={[512, 512]} />
+            <spotLight visible={isOn} position={[x, H - 0.22, 0]} target-position={[x, 0, 0]} intensity={6 * bm} angle={0.35} penumbra={0.4} color="#FFF2D8" castShadow shadow-mapSize={[512, 512]} />
           </group>
         ))}
       </group>
@@ -1380,13 +1418,13 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef }: {
       <group position={[0, H - 0.15, 0]}>
         <mesh ref={ref}>
           <sphereGeometry args={[0.28, 20, 20]} />
-          <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={0.6} roughness={0.1} metalness={0.2} transparent opacity={0.88} />
+          <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={0.6 * em} roughness={0.1} metalness={0.2} transparent opacity={0.88} />
         </mesh>
         <mesh position={[0, 0.25, 0]}>
           <cylinderGeometry args={[0.015, 0.015, 0.4, 6]} />
           <meshStandardMaterial color="#AAA" metalness={0.9} roughness={0.2} />
         </mesh>
-        <pointLight position={[0, H - 0.22, 0]} intensity={10} color={lightColor} distance={5} decay={2} castShadow />
+        <pointLight visible={isOn} position={[0, H - 0.22, 0]} intensity={10 * bm} color={lightColor} distance={5} decay={2} castShadow />
       </group>
     );
   }
@@ -1402,7 +1440,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef }: {
           <cylinderGeometry args={[0.005, 0.005, 0.28, 4]} />
           <meshStandardMaterial color="#AAA" metalness={0.9} />
         </mesh>
-        <pointLight position={[0, H - 0.25, 0]} intensity={9} color={lightColor} distance={5} decay={2} castShadow />
+        <pointLight visible={isOn} position={[0, H - 0.25, 0]} intensity={9 * bm} color={lightColor} distance={5} decay={2} castShadow />
       </group>
     );
   }
@@ -1419,7 +1457,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef }: {
         {/* Lantern body — flattened sphere */}
         <mesh position={[0, -0.12, 0]} scale={[1, 0.75, 1]}>
           <sphereGeometry args={[0.32, 16, 14]} />
-          <meshStandardMaterial color="#F5EDD0" emissive="#F5EDD0" emissiveIntensity={0.18} roughness={0.92} transparent opacity={0.88} />
+          <meshStandardMaterial color="#F5EDD0" emissive="#F5EDD0" emissiveIntensity={0.18 * em} roughness={0.92} transparent opacity={0.88} />
         </mesh>
         {/* Top/bottom caps */}
         <mesh position={[0, 0.12, 0]}>
@@ -1431,7 +1469,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef }: {
           <meshStandardMaterial color="#8B6A40" roughness={0.7} />
         </mesh>
         {/* Warm diffuse light */}
-        <pointLight position={[0, H - 0.22, 0]} intensity={7} color="#FFF0C0" distance={5} decay={2} castShadow />
+        <pointLight visible={isOn} position={[0, H - 0.22, 0]} intensity={7 * bm} color="#FFF0C0" distance={5} decay={2} castShadow />
       </group>
     );
   }
@@ -1460,14 +1498,14 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef }: {
             {/* Edison bulb — slightly amber tinted glass */}
             <mesh position={[0, -0.07, 0]} scale={[1, 1.3, 1]}>
               <sphereGeometry args={[0.055, 10, 8]} />
-              <meshStandardMaterial color="#F5C060" emissive="#F5A020" emissiveIntensity={0.9} roughness={0.05} transparent opacity={0.82} />
+              <meshStandardMaterial color="#F5C060" emissive="#F5A020" emissiveIntensity={0.9 * em} roughness={0.05} transparent opacity={0.82} />
             </mesh>
             {/* Filament glow */}
-            <pointLight position={[bx, H - 0.5 + Math.abs(by), 0]} intensity={2.5} color="#FF9800" distance={3} decay={2} />
+            <pointLight visible={isOn} position={[bx, H - 0.5 + Math.abs(by), 0]} intensity={2.5 * bm} color="#FF9800" distance={3} decay={2} />
           </group>
         ))}
         {/* Main area light */}
-        <pointLight position={[0, H - 0.55, 0]} intensity={6} color="#FFB347" distance={5} decay={2} castShadow />
+        <pointLight visible={isOn} position={[0, H - 0.55, 0]} intensity={6 * bm} color="#FFB347" distance={5} decay={2} castShadow />
       </group>
     );
   }
@@ -1491,9 +1529,158 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef }: {
         {/* Light below motor */}
         <mesh position={[0, -0.06, 0]}>
           <sphereGeometry args={[0.08, 14, 12]} />
-          <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={0.55} roughness={0.25} transparent opacity={0.85} />
+          <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={0.55 * em} roughness={0.25} transparent opacity={0.85} />
         </mesh>
-        <pointLight position={[0, -0.06, 0]} intensity={6} color={lightColor} distance={4.5} decay={2} castShadow />
+        <pointLight visible={isOn} position={[0, -0.06, 0]} intensity={6 * bm} color={lightColor} distance={4.5} decay={2} castShadow />
+      </group>
+    );
+  }
+
+  // Modern ring pendant — LED ring + thin suspension cords
+  if (lightId === "light-ring-modern") {
+    return (
+      <group position={[0, H - 0.18, 0]}>
+        {/* Canopy */}
+        <mesh position={[0, 0.15, 0]}>
+          <cylinderGeometry args={[0.06, 0.06, 0.03, 12]} />
+          <meshStandardMaterial color="#2A2A2A" metalness={0.75} roughness={0.3} />
+        </mesh>
+        {/* Three suspension cords */}
+        {[0, 120, 240].map(deg => {
+          const rad = (deg * Math.PI) / 180;
+          return (
+            <mesh key={deg} position={[Math.cos(rad) * 0.25, 0.02, Math.sin(rad) * 0.25]}>
+              <cylinderGeometry args={[0.002, 0.002, 0.26, 4]} />
+              <meshStandardMaterial color="#333" />
+            </mesh>
+          );
+        })}
+        {/* LED ring (emissive torus) */}
+        <mesh position={[0, -0.12, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.32, 0.025, 16, 40]} />
+          <meshStandardMaterial
+            color={lightColor} emissive={lightColor}
+            emissiveIntensity={0.9 * em} roughness={0.2} metalness={0.1}
+          />
+        </mesh>
+        <pointLight visible={isOn} position={[0, -0.12, 0]} intensity={9 * bm} color={lightColor} distance={5} decay={2} castShadow />
+      </group>
+    );
+  }
+
+  // Crystal chandelier — multi-tier with dangling "crystals" (small spheres)
+  if (lightId === "light-crystal-chandelier") {
+    const crystalPositions: Array<[number, number, number]> = [];
+    for (let ring = 0; ring < 2; ring++) {
+      const r = 0.18 + ring * 0.12;
+      const y = -0.1 - ring * 0.08;
+      const count = 10 + ring * 4;
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2;
+        crystalPositions.push([Math.cos(a) * r, y, Math.sin(a) * r]);
+      }
+    }
+    return (
+      <group position={[0, H - 0.25, 0]}>
+        {/* Canopy cord */}
+        <mesh position={[0, 0.2, 0]}>
+          <cylinderGeometry args={[0.008, 0.008, 0.4, 6]} />
+          <meshStandardMaterial color="#C8A060" metalness={0.75} roughness={0.3} />
+        </mesh>
+        {/* Central hub */}
+        <mesh position={[0, -0.02, 0]} ref={ref}>
+          <cylinderGeometry args={[0.08, 0.05, 0.12, 12]} />
+          <meshStandardMaterial color="#D4A862" metalness={0.85} roughness={0.25} />
+        </mesh>
+        {/* Crystal drops */}
+        {crystalPositions.map((p, i) => (
+          <mesh key={i} position={p}>
+            <octahedronGeometry args={[0.025, 0]} />
+            <meshPhysicalMaterial
+              color="#F8F4E0" transmission={0.7} roughness={0.05}
+              thickness={0.02} ior={1.52} transparent opacity={0.85}
+              emissive={lightColor} emissiveIntensity={0.3 * em}
+            />
+          </mesh>
+        ))}
+        <pointLight visible={isOn} position={[0, -0.1, 0]} intensity={12 * bm} color={lightColor} distance={6} decay={2} castShadow />
+      </group>
+    );
+  }
+
+  // Magnetic track light — recessed channel + 4 spot heads along it
+  if (lightId === "light-magnetic-track") {
+    return (
+      <group position={[0, H - 0.04, 0]}>
+        {/* Recessed channel (dark inset) */}
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[1.6, 0.04, 0.08]} />
+          <meshStandardMaterial color="#1A1A1A" metalness={0.8} roughness={0.2} />
+        </mesh>
+        {/* 4 spot heads */}
+        {[-0.6, -0.2, 0.2, 0.6].map((x, i) => (
+          <group key={i} position={[x, -0.04, 0]}>
+            <mesh>
+              <cylinderGeometry args={[0.035, 0.05, 0.09, 10]} />
+              <meshStandardMaterial color="#2A2A2A" metalness={0.9} roughness={0.2} />
+            </mesh>
+            <mesh position={[0, -0.045, 0]}>
+              <cylinderGeometry args={[0.035, 0.035, 0.01, 10]} />
+              <meshStandardMaterial
+                color={lightColor} emissive={lightColor}
+                emissiveIntensity={1.2 * em} roughness={0.15}
+              />
+            </mesh>
+            <spotLight visible={isOn} position={[x, -0.08, 0]} target-position={[x, 0, 0]} intensity={4 * bm} angle={0.4} penumbra={0.5} color={lightColor} castShadow shadow-mapSize={[512, 512]} />
+          </group>
+        ))}
+      </group>
+    );
+  }
+
+  // Smart main panel — large square LED panel flush with ceiling
+  if (lightId === "light-smart-panel") {
+    return (
+      <group position={[0, H - 0.03, 0]}>
+        {/* Aluminum frame */}
+        <mesh>
+          <boxGeometry args={[0.9, 0.04, 0.9]} />
+          <meshStandardMaterial color="#D8D8D8" metalness={0.5} roughness={0.4} />
+        </mesh>
+        {/* Diffuser panel (emissive) */}
+        <mesh position={[0, -0.021, 0]}>
+          <boxGeometry args={[0.82, 0.005, 0.82]} />
+          <meshStandardMaterial
+            color={lightColor} emissive={lightColor}
+            emissiveIntensity={0.8 * em} roughness={0.4} opacity={0.92} transparent
+          />
+        </mesh>
+        <pointLight visible={isOn} position={[0, -0.06, 0]} intensity={11 * bm} color={lightColor} distance={6} decay={2} castShadow />
+      </group>
+    );
+  }
+
+  // Recessed downlights — 4 cans arranged in a 2×2 grid, emitting cones
+  if (lightId === "light-recessed") {
+    const positions: Array<[number, number]> = [[-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]];
+    return (
+      <group position={[0, H - 0.01, 0]}>
+        {positions.map(([x, z], i) => (
+          <group key={i} position={[x, 0, z]}>
+            <mesh>
+              <cylinderGeometry args={[0.045, 0.055, 0.02, 14]} />
+              <meshStandardMaterial color="#E8E8E8" metalness={0.2} roughness={0.55} />
+            </mesh>
+            <mesh position={[0, -0.013, 0]}>
+              <cylinderGeometry args={[0.04, 0.04, 0.005, 14]} />
+              <meshStandardMaterial
+                color={lightColor} emissive={lightColor}
+                emissiveIntensity={1.0 * em} roughness={0.2}
+              />
+            </mesh>
+            <spotLight visible={isOn} position={[x, -0.03, z]} target-position={[x, 0, z]} intensity={3 * bm} angle={0.5} penumbra={0.6} color={lightColor} castShadow shadow-mapSize={[512, 512]} />
+          </group>
+        ))}
       </group>
     );
   }
@@ -1521,9 +1708,9 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef }: {
       {/* Bulb (frosted glass, emissive) */}
       <mesh>
         <sphereGeometry args={[R, 20, 20]} />
-        <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={0.9} roughness={0.15} transparent opacity={0.85} />
+        <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={0.9 * em} roughness={0.15} transparent opacity={0.85} />
       </mesh>
-      <pointLight position={[0, 0, 0]} intensity={8} color={lightColor} distance={4.8} decay={2} castShadow />
+      <pointLight visible={isOn} position={[0, 0, 0]} intensity={8 * bm} color={lightColor} distance={4.8} decay={2} castShadow />
     </group>
   );
 }
@@ -2094,9 +2281,21 @@ function Rug({ color, w, d }: MeshProps) {
   );
 }
 
-function FloorLamp({ color, w, d, h }: MeshProps) {
+function FloorLamp({ color, w, d, h, instanceId }: MeshProps & { instanceId?: string }) {
+  // Per-instance on/off — clicking the shade toggles this specific lamp.
+  // Without instanceId (e.g. in template previews), lamp stays always-on.
+  const off = useDesignerStore(s => instanceId ? s.fixtureOffById[instanceId] : false);
+  const toggle = useDesignerStore(s => s.toggleFixture);
+  const activeRoom = useDesignerStore(s => s.activeRoom);
+  const brightness = useDesignerStore(s => s.lightBrightnessByRoom[activeRoom] ?? 1);
+  const mul = off ? 0 : brightness;
+  const clickable = (e: any) => {
+    if (!instanceId) return;
+    e.stopPropagation();
+    toggle(instanceId);
+  };
   return (
-    <group>
+    <group onClick={clickable}>
       {/* Base */}
       <mesh position={[0, 0.05, 0]} castShadow>
         <cylinderGeometry args={[w * 0.35, w * 0.4, 0.06, 10]} />
@@ -2107,12 +2306,18 @@ function FloorLamp({ color, w, d, h }: MeshProps) {
         <cylinderGeometry args={[0.018, 0.018, h - 0.3, 6]} />
         <meshStandardMaterial color={color} metalness={0.7} roughness={0.35} />
       </mesh>
-      {/* Shade */}
+      {/* Shade — emissive when on */}
       <mesh position={[0, h - 0.12, 0]} castShadow>
         <cylinderGeometry args={[w * 0.42, w * 0.28, h * 0.25, 10]} />
-        <meshStandardMaterial color="#F5EED8" roughness={0.82} transparent opacity={0.88} />
+        <meshStandardMaterial
+          color="#F5EED8"
+          emissive="#FFE8B0"
+          emissiveIntensity={0.3 * mul}
+          roughness={0.82}
+          transparent opacity={0.88}
+        />
       </mesh>
-      <pointLight position={[0, h - 0.18, 0]} intensity={4} color="#FFF0D0" distance={3} decay={2} />
+      <pointLight visible={mul > 0} position={[0, h - 0.18, 0]} intensity={4 * mul} color="#FFF0D0" distance={3} decay={2} />
     </group>
   );
 }
@@ -2244,7 +2449,7 @@ function GenericBox({ color, w, d, h, category }: MeshProps & { category?: strin
 
 // ─── Placed furniture mesh dispatcher ─────────────────────
 
-function FurnitureMesh({ item, w, d, h }: { item: FurnitureItem; w: number; d: number; h: number }) {
+function FurnitureMesh({ item, w, d, h, instanceId }: { item: FurnitureItem; w: number; d: number; h: number; instanceId?: string }) {
   const props: MeshProps = { color: item.color, sc: item.secondaryColor, w, d, h };
   switch (item.category) {
     case "sofa":             return <Sofa {...props} />;
@@ -2268,13 +2473,187 @@ function FurnitureMesh({ item, w, d, h }: { item: FurnitureItem; w: number; d: n
     case "bookshelf":       return <Bookshelf {...props} />;
     case "office_chair":    return <DiningChair {...props} />;
     case "storage":         return <Storage {...props} />;
-    case "floor_lamp":      return <FloorLamp {...props} />;
+    case "floor_lamp":      return <FloorLamp {...props} instanceId={instanceId} />;
     case "plant":           return <Plant {...props} />;
     case "rug":             return <Rug {...props} />;
     case "artwork":         return <Artwork {...props} imageUrl={item.imageUrl} />;
     case "sideboard":       return <CoffeeTable {...props} />;
+    case "bath_accessory":  return <BathAccessory item={item} w={w} d={d} h={h} />;
+    case "electrical":      return <ElectricalFixture item={item} w={w} d={d} h={h} />;
+    case "plumbing":        return <PlumbingFixture item={item} w={w} d={d} h={h} />;
     default:                return <GenericBox {...props} category={item.category} />;
   }
+}
+
+// ─── Bath accessories (shower head / basin faucet) ─────────
+function BathAccessory({ item, w, d, h }: { item: FurnitureItem; w: number; d: number; h: number }) {
+  if (item.id === "shower-head") {
+    // Wall-mounted rail + handheld + overhead shower
+    return (
+      <group>
+        {/* Vertical rail */}
+        <mesh position={[0, h / 2, d * 0.3]} castShadow>
+          <cylinderGeometry args={[0.015, 0.015, h * 0.9, 10]} />
+          <meshStandardMaterial color="#C8C8C8" metalness={0.85} roughness={0.2} />
+        </mesh>
+        {/* Handheld head */}
+        <mesh position={[w * 0.2, h * 0.3, d * 0.3]} rotation={[0, 0, 0.4]}>
+          <cylinderGeometry args={[0.025, 0.035, h * 0.18, 10]} />
+          <meshStandardMaterial color="#C8C8C8" metalness={0.8} roughness={0.25} />
+        </mesh>
+        {/* Overhead rainfall */}
+        <mesh position={[0, h * 0.95, d * 0.3]} rotation={[Math.PI, 0, 0]}>
+          <cylinderGeometry args={[w * 0.4, w * 0.38, 0.025, 14]} />
+          <meshStandardMaterial color="#C8C8C8" metalness={0.85} roughness={0.2} />
+        </mesh>
+      </group>
+    );
+  }
+  // Basin faucet: arched spout + lever
+  return (
+    <group>
+      <mesh position={[0, 0.02, 0]} castShadow>
+        <cylinderGeometry args={[w * 0.4, w * 0.4, 0.04, 12]} />
+        <meshStandardMaterial color={item.color} metalness={0.85} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, h * 0.45, 0]}>
+        <cylinderGeometry args={[0.012, 0.015, h * 0.9, 10]} />
+        <meshStandardMaterial color={item.color} metalness={0.85} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, h * 0.92, d * 0.15]}>
+        <boxGeometry args={[0.03, 0.02, d * 0.3]} />
+        <meshStandardMaterial color={item.color} metalness={0.85} roughness={0.2} />
+      </mesh>
+      {/* Lever */}
+      <mesh position={[w * 0.22, h * 0.48, 0]} rotation={[0, 0, 0.3]}>
+        <boxGeometry args={[w * 0.35, 0.02, 0.02]} />
+        <meshStandardMaterial color={item.color} metalness={0.85} roughness={0.25} />
+      </mesh>
+    </group>
+  );
+}
+
+// ─── Electrical point fixtures (outlets / switches / panels / jacks) ──
+function ElectricalFixture({ item, w, d, h }: { item: FurnitureItem; w: number; d: number; h: number }) {
+  const isPanel = item.id === "breaker-panel" || item.id === "weak-panel";
+  const isSwitch = item.id.startsWith("switch-");
+  if (isPanel) {
+    return (
+      <group>
+        <mesh position={[0, h / 2, d / 2]} castShadow>
+          <boxGeometry args={[w, h, d]} />
+          <meshStandardMaterial color="#E0E0E0" roughness={0.5} metalness={0.2} />
+        </mesh>
+        {/* Door with hinge line */}
+        <mesh position={[0, h / 2, d + 0.002]}>
+          <boxGeometry args={[w * 0.95, h * 0.95, 0.005]} />
+          <meshStandardMaterial color="#D8D8D8" roughness={0.55} />
+        </mesh>
+        {/* Label plate */}
+        <mesh position={[0, h * 0.85, d + 0.005]}>
+          <boxGeometry args={[w * 0.3, h * 0.1, 0.002]} />
+          <meshStandardMaterial color={item.id === "breaker-panel" ? "#F0B020" : "#3080E0"} roughness={0.4} />
+        </mesh>
+      </group>
+    );
+  }
+  // 86-型 outlet/switch/jack face plate
+  return (
+    <group>
+      {/* Face plate */}
+      <mesh position={[0, h / 2, d / 2 + 0.005]}>
+        <boxGeometry args={[w, h, Math.max(0.01, d)]} />
+        <meshStandardMaterial color="#F8F8F8" roughness={0.45} />
+      </mesh>
+      {/* Inset frame */}
+      <mesh position={[0, h / 2, d + 0.003]}>
+        <boxGeometry args={[w * 0.85, h * 0.85, 0.002]} />
+        <meshStandardMaterial color="#E8E8E8" roughness={0.55} />
+      </mesh>
+      {/* Content: 5-hole outlet / rocker switch / jack */}
+      {isSwitch ? (
+        <mesh position={[0, h / 2, d + 0.006]}>
+          <boxGeometry args={[w * 0.6, h * 0.5, 0.004]} />
+          <meshStandardMaterial color="#FDFDFD" roughness={0.3} />
+        </mesh>
+      ) : item.id === "outlet-2pin" || item.id === "outlet-usb" ? (
+        <>
+          {/* 5 pinholes */}
+          {[[-w * 0.22, h * 0.35], [-w * 0.05, h * 0.35], [w * 0.1, h * 0.42], [w * 0.1, h * 0.28], [w * 0.22, h * 0.35]]
+            .map((p, i) => (
+              <mesh key={i} position={[p[0], p[1], d + 0.006]}>
+                <boxGeometry args={[w * 0.04, h * 0.05, 0.003]} />
+                <meshStandardMaterial color="#333" />
+              </mesh>
+            ))}
+          {item.id === "outlet-usb" && (
+            <mesh position={[0, h * 0.7, d + 0.006]}>
+              <boxGeometry args={[w * 0.45, h * 0.06, 0.003]} />
+              <meshStandardMaterial color="#2A2A2A" />
+            </mesh>
+          )}
+        </>
+      ) : (
+        // Jack (network/TV)
+        <mesh position={[0, h / 2, d + 0.006]}>
+          <boxGeometry args={[w * 0.4, h * 0.25, 0.005]} />
+          <meshStandardMaterial color="#222" />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+// ─── Plumbing point fixtures (supply / drain / vent) ──────────
+function PlumbingFixture({ item, w, d, h }: { item: FurnitureItem; w: number; d: number; h: number }) {
+  if (item.id === "drain-point" || item.id === "floor-drain") {
+    // Floor drain — metal grate
+    return (
+      <group>
+        <mesh position={[0, h / 2, d / 2]} castShadow>
+          <cylinderGeometry args={[w * 0.5, w * 0.5, h, 16]} />
+          <meshStandardMaterial color="#4A4A4A" metalness={0.6} roughness={0.4} />
+        </mesh>
+        {/* Grate slots */}
+        {[-0.3, -0.1, 0.1, 0.3].map(off => (
+          <mesh key={off} position={[w * off, h + 0.001, d / 2]}>
+            <boxGeometry args={[w * 0.08, 0.002, d * 0.7]} />
+            <meshStandardMaterial color="#2A2A2A" />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  if (item.id === "exhaust-vent") {
+    return (
+      <group>
+        <mesh position={[0, h / 2, d / 2]} castShadow>
+          <boxGeometry args={[w, h, d]} />
+          <meshStandardMaterial color={item.color} roughness={0.6} />
+        </mesh>
+        {/* Grille slats */}
+        {[-0.35, -0.15, 0.05, 0.25, 0.45].map((yy, i) => (
+          <mesh key={i} position={[0, h * (0.1 + yy + 0.45), d + 0.002]}>
+            <boxGeometry args={[w * 0.8, h * 0.06, 0.003]} />
+            <meshStandardMaterial color="#888" roughness={0.5} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  // Water supply (cold/hot) — small color-coded pipe stub with flange
+  return (
+    <group>
+      <mesh position={[0, h / 2, d * 0.3]}>
+        <cylinderGeometry args={[w * 0.35, w * 0.35, h * 0.8, 14]} />
+        <meshStandardMaterial color={item.color} metalness={0.6} roughness={0.35} />
+      </mesh>
+      <mesh position={[0, h / 2, d * 0.7]}>
+        <cylinderGeometry args={[w * 0.5, w * 0.5, 0.015, 16]} />
+        <meshStandardMaterial color="#C8C8C8" metalness={0.85} roughness={0.3} />
+      </mesh>
+    </group>
+  );
 }
 
 // ─── Placed item in 3D ─────────────────────────────────────
@@ -2390,7 +2769,7 @@ function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def
     }
     return (
       <group position={position} rotation={rotation}>
-        <FurnitureMesh item={item} w={fw} d={fd} h={fh} />
+        <FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} />
       </group>
     );
   }
@@ -2457,7 +2836,7 @@ function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def
     }
     return (
       <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]}>
-        <Suspense fallback={<FurnitureMesh item={item} w={fw} d={fd} h={fh} />}>
+        <Suspense fallback={<FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} />}>
           <GltfFurnitureWithFallback
             item={item}
             w={fw} d={fd} h={fh}
@@ -2469,7 +2848,7 @@ function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def
 
   return (
     <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]}>
-      <FurnitureMesh item={item} w={fw} d={fd} h={fh} />
+      <FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} />
     </group>
   );
 }
@@ -2572,7 +2951,7 @@ function CurtainInstance({
       onClick={(e) => { e.stopPropagation(); toggle(instanceId); }}
     >
       <group ref={innerRef}>
-        <Suspense fallback={<FurnitureMesh item={item} w={w} d={d} h={h} />}>
+        <Suspense fallback={<FurnitureMesh item={item} w={w} d={d} h={h} instanceId={instanceId} />}>
           <CurtainGltf item={item} w={w} d={d} h={h} />
         </Suspense>
       </group>
@@ -2640,6 +3019,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
     <>
       <CameraController W={W} D={D} H={H} />
       <CameraAndCaptureSetup />
+      <ExposureController />
 
       {/* Environment — skip on iOS: PMREMGenerator.fromScene is broken on iPhone Metal
           (three.js bug #25888). Compensate with stronger ambient + fill lights.
@@ -2910,13 +3290,23 @@ function ExteriorDecorItem({
   //   - else hasImage (imageUrl) and no canvasTex → suspense-load the JPG (murals)
   //   - else isLightStrip → emissive box
   //   - else → colored box
-  const detailed = DetailedDecor({ item, w, h, d: dep });
+  // Per-fixture on/off for exterior wall lights. Non-lights pass
+  // isOn=true (harmless). Brightness inherits from the owning room
+  // (kept room-wide so it behaves as a "dimmer for all lights").
+  const activeRoomForLights = useDesignerStore(s => s.activeRoom);
+  const fixtureOff = useDesignerStore(s => s.fixtureOffById[decor.instanceId]);
+  const brightnessForDecor = useDesignerStore(s => s.lightBrightnessByRoom[activeRoomForLights] ?? 1);
+  const toggleFixture = useDesignerStore(s => s.toggleFixture);
+  const isOnForDecor = !fixtureOff;
+  const detailed = DetailedDecor({ item, w, h, d: dep, isOn: isOnForDecor, brightness: brightnessForDecor });
+  const isLightFixture = item.id === "wall-lamp-lantern" || item.id === "wall-lamp-modern" || item.id.startsWith("light-strip-");
 
   return (
     <group
       position={[(decor.u - 0.5) * wallW, (decor.v - 0.5) * wallH, 0.01]}
       rotation={[0, 0, ((decor.rotation ?? 0) * Math.PI) / 180]}
       onPointerDown={onPointerDown}
+      onClick={isLightFixture ? (e) => { e.stopPropagation(); toggleFixture(decor.instanceId); } : undefined}
     >
       {detailed ? detailed : canvasTex ? (
         <mesh position={[0, 0, 0.005]}>

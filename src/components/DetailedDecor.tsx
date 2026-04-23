@@ -16,14 +16,20 @@ import type { FurnitureItem } from "@/lib/types";
  *  Coord system inside: origin at decor's center-bottom on the wall
  *  surface, +Z = outward from wall (into the viewer's space when looking
  *  at the outside of the wall). */
-export function DetailedDecor({ item, w, h, d }: {
+export function DetailedDecor({ item, w, h, d, isOn = true, brightness = 1 }: {
   item: FurnitureItem; w: number; h: number; d: number;
+  /** For LIGHT decor (lanterns, wall lamps, light strips) — respects
+   *  the owning room's light on/off + brightness slider so "turn off
+   *  lights" kills ALL the room's emission, not just the ceiling one. */
+  isOn?: boolean;
+  brightness?: number;
 }): React.JSX.Element | null {
+  const lightMul = isOn ? brightness : 0;
   switch (item.id) {
-    case "wall-lamp-lantern":    return <ChineseLantern w={w} h={h} d={d} />;
-    case "wall-lamp-modern":     return <ModernWallLamp w={w} h={h} d={d} />;
-    case "light-strip-warm":     return <LightStrip w={w} h={h} d={d} color="#FFE8A8" />;
-    case "light-strip-rgb":      return <LightStrip w={w} h={h} d={d} color="#60D0FF" />;
+    case "wall-lamp-lantern":    return <ChineseLantern w={w} h={h} d={d} lightMul={lightMul} />;
+    case "wall-lamp-modern":     return <ModernWallLamp w={w} h={h} d={d} lightMul={lightMul} />;
+    case "light-strip-warm":     return <LightStrip w={w} h={h} d={d} color="#FFE8A8" lightMul={lightMul} />;
+    case "light-strip-rgb":      return <LightStrip w={w} h={h} d={d} color="#60D0FF" lightMul={lightMul} />;
     case "mailbox-modern":       return <Mailbox w={w} h={h} d={d} />;
     case "ac-condenser":         return <AcCondenser w={w} h={h} d={d} />;
     case "climbing-vine":        return <ClimbingVine w={w} h={h} d={d} />;
@@ -39,7 +45,7 @@ export function DetailedDecor({ item, w, h, d }: {
 // Cylindrical flattened body (like a ellipsoid), wooden top/bottom caps,
 // gold ring accents, hanging rope from above the wall, warm emissive
 // light inside so it glows from within.
-function ChineseLantern({ w, h, d }: { w: number; h: number; d: number }) {
+function ChineseLantern({ w, h, d, lightMul = 1 }: { w: number; h: number; d: number; lightMul?: number }) {
   // h drives overall scale. Typical lantern: 1.4× as tall as wide.
   const bodyR  = Math.min(w, d) * 0.9;
   const bodyH  = h * 0.62;
@@ -52,7 +58,7 @@ function ChineseLantern({ w, h, d }: { w: number; h: number; d: number }) {
         <meshStandardMaterial
           color="#C82020"
           emissive="#601010"
-          emissiveIntensity={0.4}
+          emissiveIntensity={0.4 * lightMul}
           roughness={0.78}
         />
       </mesh>
@@ -87,10 +93,11 @@ function ChineseLantern({ w, h, d }: { w: number; h: number; d: number }) {
         <meshStandardMaterial color="#D4A030" metalness={0.5} roughness={0.4} />
       </mesh>
       {/* Inner glow — point light so the lantern actually illuminates
-          nearby wall surface. Low intensity so it doesn't blow out. */}
+          nearby wall surface. Off when room lights toggled off. */}
       <pointLight
+        visible={lightMul > 0}
         position={[0, bodyCY - h / 2, 0.04]}
-        intensity={0.8} color="#FFAA60"
+        intensity={0.8 * lightMul} color="#FFAA60"
         distance={1.2} decay={2}
       />
     </group>
@@ -100,7 +107,7 @@ function ChineseLantern({ w, h, d }: { w: number; h: number; d: number }) {
 // ─── Modern wall-sconce lamp (外墙壁灯) ────────────────────────
 // Metal wall bracket + downward-facing cylindrical shade + small emissive
 // bulb inside.
-function ModernWallLamp({ w, h, d }: { w: number; h: number; d: number }) {
+function ModernWallLamp({ w, h, d, lightMul = 1 }: { w: number; h: number; d: number; lightMul?: number }) {
   return (
     <group position={[0, 0, 0]}>
       {/* Wall bracket plate */}
@@ -123,13 +130,14 @@ function ModernWallLamp({ w, h, d }: { w: number; h: number; d: number }) {
         <sphereGeometry args={[w * 0.18, 10, 10]} />
         <meshStandardMaterial
           color="#FFE8B0" emissive="#FFE8B0"
-          emissiveIntensity={1.4} roughness={0.1}
+          emissiveIntensity={1.4 * lightMul} roughness={0.1}
         />
       </mesh>
-      {/* Subtle point light */}
+      {/* Subtle point light — off when room lights toggled off */}
       <pointLight
+        visible={lightMul > 0}
         position={[0, -h * 0.55, d * 0.75]}
-        intensity={0.6} color="#FFE0A0"
+        intensity={0.6 * lightMul} color="#FFE0A0"
         distance={0.8} decay={2}
       />
     </group>
@@ -139,7 +147,7 @@ function ModernWallLamp({ w, h, d }: { w: number; h: number; d: number }) {
 // ─── LED light strip (灯带) ──────────────────────────────────────
 // Row of small emissive cubes along the length — gives visible segment
 // look instead of a single uniform bar. Includes diffuse glow.
-function LightStrip({ w, h, d, color }: { w: number; h: number; d: number; color: string }) {
+function LightStrip({ w, h, d, color, lightMul = 1 }: { w: number; h: number; d: number; color: string; lightMul?: number }) {
   const segments = Math.max(12, Math.floor(w / 0.05)); // 1 every ~5cm
   const segW = w / segments * 0.85;
   return (
@@ -157,7 +165,7 @@ function LightStrip({ w, h, d, color }: { w: number; h: number; d: number; color
             <boxGeometry args={[segW, h * 0.6, 0.005]} />
             <meshStandardMaterial
               color={color} emissive={color}
-              emissiveIntensity={1.8} roughness={0.2}
+              emissiveIntensity={1.8 * lightMul} roughness={0.2}
             />
           </mesh>
         );

@@ -78,6 +78,7 @@ export type FurnitureCategory =
   | "toilet" | "bathtub" | "shower" | "bathroom_vanity"
   | "desk" | "office_chair" | "storage"
   | "plant" | "rug" | "artwork" | "floor_lamp" | "curtain" | "exterior_wall_decor"
+  | "bath_accessory" | "electrical" | "plumbing"
   | "outdoor_plant" | "outdoor_hardscape" | "outdoor_water" | "outdoor_structure"
   | "pet" | "livestock";
 

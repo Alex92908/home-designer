@@ -202,6 +202,27 @@ interface DesignerStore {
    *  hiding the slab. */
   ceilingOpacity: 0 | 0.5 | 1;
   setCeilingOpacity: (o: 0 | 0.5 | 1) => void;
+  /** Per-room light on/off toggle. Default true. When false, the ceiling
+   *  fixture + any emissive wall lamps in that room go dark (emissive
+   *  and pointLight intensity set to 0). Ambient/daylight still lights
+   *  the scene, so the room gets dimmer but remains visible. */
+  lightsOnByRoom: Partial<Record<RoomType, boolean>>;
+  toggleRoomLights: (room: RoomType) => void;
+  /** Per-fixture off state for non-ceiling lights — floor lamps,
+   *  exterior wall lamps, lanterns, light strips. Keyed by the item's
+   *  instance ID. true = off, undefined/false = on. Toggled by clicking
+   *  the individual fixture in 3D. */
+  fixtureOffById: Record<string, boolean>;
+  toggleFixture: (instanceId: string) => void;
+  /** Per-room light tuning: brightness multiplier (0.3–2.0, default 1),
+   *  color-temperature override (hex string, null = use material default),
+   *  and post-fx exposure (0.6–1.8, default 1.2). */
+  lightBrightnessByRoom: Partial<Record<RoomType, number>>;
+  lightColorByRoom: Partial<Record<RoomType, string>>;
+  roomExposureByRoom: Partial<Record<RoomType, number>>;
+  setLightBrightness: (room: RoomType, v: number) => void;
+  setLightColor: (room: RoomType, hex: string | null) => void;
+  setRoomExposure: (room: RoomType, v: number) => void;
   /** Per-room ceiling light position (cm offset from room center on the
    *  ceiling plane). {x:0, z:0} = centered. Range clamps to the room
    *  footprint in the UI. */
@@ -393,6 +414,34 @@ export const useDesignerStore = create<DesignerStore>()(
       setFrontWallOpacity: (o) => set({ frontWallOpacity: o }),
       ceilingOpacity: 0,
       setCeilingOpacity: (o) => set({ ceilingOpacity: o }),
+      lightsOnByRoom: {},
+      toggleRoomLights: (room) => set(st => ({
+        lightsOnByRoom: {
+          ...st.lightsOnByRoom,
+          [room]: st.lightsOnByRoom[room] === false ? true : false,
+        },
+      })),
+      fixtureOffById: {},
+      toggleFixture: (instanceId) => set(st => ({
+        fixtureOffById: {
+          ...st.fixtureOffById,
+          [instanceId]: !st.fixtureOffById[instanceId],
+        },
+      })),
+      lightBrightnessByRoom: {},
+      lightColorByRoom: {},
+      roomExposureByRoom: {},
+      setLightBrightness: (room, v) => set(st => ({
+        lightBrightnessByRoom: { ...st.lightBrightnessByRoom, [room]: Math.max(0.3, Math.min(2, v)) },
+      })),
+      setLightColor: (room, hex) => set(st => {
+        const next = { ...st.lightColorByRoom };
+        if (hex) next[room] = hex; else delete next[room];
+        return { lightColorByRoom: next };
+      }),
+      setRoomExposure: (room, v) => set(st => ({
+        roomExposureByRoom: { ...st.roomExposureByRoom, [room]: Math.max(0.6, Math.min(1.8, v)) },
+      })),
       lightPosByRoom: {},
       setLightPos: (room, pos) => set(st => ({
         lightPosByRoom: { ...st.lightPosByRoom, [room]: pos },

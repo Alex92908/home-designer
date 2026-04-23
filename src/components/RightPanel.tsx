@@ -301,6 +301,9 @@ export default function RightPanel() {
       {/* Ceiling light position */}
       <CeilingLightPositionSection activeRoom={activeRoom} />
 
+      {/* Light tuning (on/off, brightness, color, exposure) */}
+      <LightTuningSection activeRoom={activeRoom} />
+
       {/* Furniture */}
       {placedItems.length > 0 && (
         <div className="px-4 py-3 flex-1">
@@ -688,6 +691,87 @@ function CeilingLightPositionSection({ activeRoom }: { activeRoom: RoomType }) {
           onClick={() => setPos(activeRoom, { x: 0, z: 0 })}
           className="self-start text-[9px] text-gray-500 hover:text-gray-700 underline"
         >居中</button>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── Light tuning (on/off + brightness + color temp + exposure) ──
+function LightTuningSection({ activeRoom }: { activeRoom: RoomType }) {
+  const isOn = useDesignerStore(s => s.lightsOnByRoom[activeRoom] !== false);
+  const toggleOn = useDesignerStore(s => s.toggleRoomLights);
+  const brightness = useDesignerStore(s => s.lightBrightnessByRoom[activeRoom] ?? 1);
+  const setBrightness = useDesignerStore(s => s.setLightBrightness);
+  const color = useDesignerStore(s => s.lightColorByRoom[activeRoom]);
+  const setColor = useDesignerStore(s => s.setLightColor);
+  const exposure = useDesignerStore(s => s.roomExposureByRoom[activeRoom] ?? 1.2);
+  const setExposure = useDesignerStore(s => s.setRoomExposure);
+  // Always show — users may want to tune ambient exposure even without
+  // a specific ceiling-light material picked.
+
+  const presets: Array<{ label: string; hex: string }> = [
+    { label: "暖", hex: "#FFD090" },
+    { label: "中", hex: "#FFF2D0" },
+    { label: "白", hex: "#F8FAFF" },
+    { label: "冷", hex: "#C8E0FF" },
+  ];
+
+  return (
+    <div className="px-4 pt-3 pb-1 border-t border-gray-100">
+      <div className="text-[11px] font-black text-gray-800 mb-1.5">🔆 灯光调节</div>
+      <div className="p-2 rounded-xl bg-gray-50 border border-gray-100 flex flex-col gap-2">
+        {/* On/Off toggle */}
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-gray-500">开关</span>
+          <button
+            onClick={() => toggleOn(activeRoom)}
+            className={`text-[10px] px-2 py-0.5 rounded-full transition-all ${
+              isOn ? "bg-yellow-400 text-yellow-900 font-bold" : "bg-gray-300 text-gray-600"
+            }`}
+          >{isOn ? "💡 开" : "🌙 关"}</button>
+        </div>
+        {/* Brightness */}
+        <div>
+          <div className="flex justify-between text-[9px] text-gray-500 mb-0.5">
+            <span>亮度 ×</span><span className="font-mono">{brightness.toFixed(2)}</span>
+          </div>
+          <input type="range" min={0.3} max={2} step={0.05} value={brightness}
+            onChange={e => setBrightness(activeRoom, parseFloat(e.target.value))}
+            className="w-full accent-yellow-500 h-1" />
+        </div>
+        {/* Color temperature presets + custom */}
+        <div>
+          <div className="flex justify-between text-[9px] text-gray-500 mb-0.5">
+            <span>色温</span>
+            {color && (
+              <button onClick={() => setColor(activeRoom, null)} className="text-gray-400 hover:text-gray-700">还原</button>
+            )}
+          </div>
+          <div className="flex gap-1">
+            {presets.map(p => (
+              <button key={p.label}
+                onClick={() => setColor(activeRoom, p.hex)}
+                className={`flex-1 text-[9px] py-1 rounded-md border-2 transition-all ${
+                  color === p.hex ? "border-blue-500" : "border-transparent"
+                }`}
+                style={{ background: p.hex, color: "#333" }}
+              >{p.label}</button>
+            ))}
+            <input type="color" value={color ?? "#FFF2D0"}
+              onChange={e => setColor(activeRoom, e.target.value)}
+              className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+          </div>
+        </div>
+        {/* Scene exposure (contrast-like) */}
+        <div>
+          <div className="flex justify-between text-[9px] text-gray-500 mb-0.5">
+            <span>对比 / 曝光</span><span className="font-mono">{exposure.toFixed(2)}</span>
+          </div>
+          <input type="range" min={0.6} max={1.8} step={0.05} value={exposure}
+            onChange={e => setExposure(activeRoom, parseFloat(e.target.value))}
+            className="w-full accent-blue-500 h-1" />
+        </div>
       </div>
     </div>
   );
