@@ -197,6 +197,16 @@ interface DesignerStore {
   // User cycles through these three via the floating toggle.
   frontWallOpacity: 0 | 0.5 | 1;
   setFrontWallOpacity: (o: 0 | 0.5 | 1) => void;
+  /** Ceiling display opacity — same 0/0.5/1 cycle as front wall. Lets the
+   *  user see the ceiling lamp / skylight / 吊顶装饰 from above by
+   *  hiding the slab. */
+  ceilingOpacity: 0 | 0.5 | 1;
+  setCeilingOpacity: (o: 0 | 0.5 | 1) => void;
+  /** Per-room ceiling light position (cm offset from room center on the
+   *  ceiling plane). {x:0, z:0} = centered. Range clamps to the room
+   *  footprint in the UI. */
+  lightPosByRoom: Partial<Record<RoomType, { x: number; z: number }>>;
+  setLightPos: (room: RoomType, pos: { x: number; z: number }) => void;
 
   // Furniture undo history (ephemeral, not persisted)
   furnitureHistory: Array<{ room: RoomType; placedItems: PlacedItem[] }>;
@@ -229,6 +239,9 @@ interface DesignerStore {
   placeFurniture: (furnitureId: string) => void;
   moveItem: (instanceId: string, x: number, z: number) => void;
   rotateItem: (instanceId: string) => void;
+  /** Toggle a placed item between floor-mounted and ceiling-mounted.
+   *  Ceiling-mounted items render with their top at ceiling height. */
+  toggleItemMountCeiling: (instanceId: string) => void;
   removeItem: (instanceId: string) => void;
   selectInstance: (instanceId: string | null) => void;
   setSelection: (ids: string[]) => void;
@@ -373,6 +386,12 @@ export const useDesignerStore = create<DesignerStore>()(
       })),
       frontWallOpacity: 0,
       setFrontWallOpacity: (o) => set({ frontWallOpacity: o }),
+      ceilingOpacity: 0,
+      setCeilingOpacity: (o) => set({ ceilingOpacity: o }),
+      lightPosByRoom: {},
+      setLightPos: (room, pos) => set(st => ({
+        lightPosByRoom: { ...st.lightPosByRoom, [room]: pos },
+      })),
       budget: 150000,
       furnitureHistory: [],
       clipboard: [],
@@ -543,6 +562,18 @@ export const useDesignerStore = create<DesignerStore>()(
         set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems] }] }));
         const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId ? { ...p, rotation: (p.rotation + 90) % 360 } : p
+        );
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...fp.rooms[activeRoom], placedItems: updatedPlaced } } };
+        set({ floorPlans });
+      },
+
+      toggleItemMountCeiling: (instanceId) => {
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
+          p.instanceId === instanceId ? { ...p, mountCeiling: !p.mountCeiling } : p
         );
         const floorPlans = [...s.floorPlans];
         floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...fp.rooms[activeRoom], placedItems: updatedPlaced } } };

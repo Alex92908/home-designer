@@ -163,6 +163,10 @@ export interface PlacedItem {
   scaleD?: number;    // depth scale multiplier (default 1.0)
   scaleH?: number;    // height scale multiplier (default 1.0)
   elevationY?: number; // cm above floor (default 0 = on floor)
+  /** When true, the item is mounted to the CEILING instead of the floor.
+   *  Renderer anchors the item's TOP at ceiling (elevationY ignored).
+   *  Use for 吊灯/吊扇/吸顶装饰 etc. */
+  mountCeiling?: boolean;
 }
 
 /** Which of the 4 walls an override applies to. Dollhouse view hides

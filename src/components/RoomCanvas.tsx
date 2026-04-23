@@ -134,6 +134,7 @@ function RoomShell({
   hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle,
   activeRoom,
   frontWallOpacity,
+  ceilingOpacity,
 }: {
   W: number; D: number; H: number;
   wallColor: string; floorColor: string;
@@ -157,6 +158,7 @@ function RoomShell({
   doorStyle: import("@/lib/types").DoorStyle;
   activeRoom: RoomType;
   frontWallOpacity: number;
+  ceilingOpacity: number;
 }) {
   const skirtColor = shade(wallColor, -18);
   const splitH = wallLower ? Math.max(0.2, Math.min(H - 0.2, (wallSplitCm ?? 110) / 100)) : 0;
@@ -475,28 +477,44 @@ function RoomShell({
         </>
       )}
 
-      {/* Ceiling — respects user-picked material, falls back to off-white */}
-      <mesh position={[0, H, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[W, D]} />
-        <meshStandardMaterial color={ceilingColor} roughness={0.95} {...(ceilingTex ? { map: ceilingTex } : {})} />
-      </mesh>
-      {/* Ceiling crown molding — thin ledge where wall meets ceiling */}
-      <mesh position={[0, H - 0.04, -D / 2 + 0.04]}>
-        <boxGeometry args={[W, 0.06, 0.08]} />
-        <meshStandardMaterial color="#FAFAF8" roughness={0.85} />
-      </mesh>
-      <mesh position={[0, H - 0.04, D / 2 - 0.04]}>
-        <boxGeometry args={[W, 0.06, 0.08]} />
-        <meshStandardMaterial color="#FAFAF8" roughness={0.85} />
-      </mesh>
-      <mesh position={[-W / 2 + 0.04, H - 0.04, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <boxGeometry args={[D, 0.06, 0.08]} />
-        <meshStandardMaterial color="#FAFAF8" roughness={0.85} />
-      </mesh>
-      <mesh position={[W / 2 - 0.04, H - 0.04, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <boxGeometry args={[D, 0.06, 0.08]} />
-        <meshStandardMaterial color="#FAFAF8" roughness={0.85} />
-      </mesh>
+      {/* Ceiling — respects user-picked material. Opacity is user-toggleable
+          (0 = cut away so user can look up into the room from above,
+          0.5 = translucent "xray", 1 = solid). */}
+      {ceilingOpacity > 0 && (
+        <mesh position={[0, H, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[W, D]} />
+          <meshStandardMaterial
+            color={ceilingColor}
+            roughness={0.95}
+            side={THREE.DoubleSide}
+            transparent={ceilingOpacity < 1}
+            opacity={ceilingOpacity}
+            {...(ceilingTex ? { map: ceilingTex } : {})}
+          />
+        </mesh>
+      )}
+      {/* Ceiling crown molding — hides when ceiling is hidden so the top
+          of the room looks cleanly cut away. */}
+      {ceilingOpacity > 0 && (
+        <>
+          <mesh position={[0, H - 0.04, -D / 2 + 0.04]}>
+            <boxGeometry args={[W, 0.06, 0.08]} />
+            <meshStandardMaterial color="#FAFAF8" roughness={0.85} />
+          </mesh>
+          <mesh position={[0, H - 0.04, D / 2 - 0.04]}>
+            <boxGeometry args={[W, 0.06, 0.08]} />
+            <meshStandardMaterial color="#FAFAF8" roughness={0.85} />
+          </mesh>
+          <mesh position={[-W / 2 + 0.04, H - 0.04, 0]} rotation={[0, Math.PI / 2, 0]}>
+            <boxGeometry args={[D, 0.06, 0.08]} />
+            <meshStandardMaterial color="#FAFAF8" roughness={0.85} />
+          </mesh>
+          <mesh position={[W / 2 - 0.04, H - 0.04, 0]} rotation={[0, Math.PI / 2, 0]}>
+            <boxGeometry args={[D, 0.06, 0.08]} />
+            <meshStandardMaterial color="#FAFAF8" roughness={0.85} />
+          </mesh>
+        </>
+      )}
 
       {/* Skirting boards */}
       <mesh position={[0, 0.06, -D / 2 + 0.02]}>
@@ -1308,13 +1326,33 @@ function ProceduralWoodDoor({
 }
 
 // ─── Light fixture ─────────────────────────────────────────
-function LightFixture({ H, lightColor, lightId }: { H: number; lightColor: string; lightId: string }) {
+function LightFixture({ H, lightColor, lightId, lightX = 0, lightZ = 0 }: {
+  H: number; lightColor: string; lightId: string;
+  /** Ceiling-plane offset in meters from room center. Lets users
+   *  reposition the fixture (asymmetric track lighting, off-center
+   *  chandelier above a dining table, etc.). The whole fixture renders
+   *  inside an offset group so the existing hard-coded [0, H-*, 0]
+   *  positions still work relative to the new center. */
+  lightX?: number; lightZ?: number;
+}) {
   const ref = useRef<THREE.Mesh>(null);
   useFrame((_, delta) => {
     if (ref.current && lightId === "light-chandelier") {
       ref.current.rotation.y += delta * 0.15;
     }
   });
+  return (
+    <group position={[lightX, 0, lightZ]}>
+      <LightFixtureInner H={H} lightColor={lightColor} lightId={lightId} chandelierRef={ref} />
+    </group>
+  );
+}
+
+function LightFixtureInner({ H, lightColor, lightId, chandelierRef }: {
+  H: number; lightColor: string; lightId: string;
+  chandelierRef: React.RefObject<THREE.Mesh | null>;
+}) {
+  const ref = chandelierRef;
 
   if (lightId === "light-spot") {
     return (
@@ -2389,7 +2427,13 @@ function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def
     );
   }
 
-  const baseY = (placed.elevationY ?? 0) / 100;
+  // If the user marked this item "吸顶", anchor it so its top is at the
+  // ceiling (roomH). The mesh is modeled with base at y=0, so we shift
+  // its Y by roomH - itemH. Floor-mounted items use elevationY as before.
+  const roomH = def.height / 100;
+  const baseY = placed.mountCeiling
+    ? roomH - fh
+    : (placed.elevationY ?? 0) / 100;
 
   // If the furniture item has a real 3D asset, render it; else fall
   // back to procedural box mesh. Suspense handles async glb load; if
@@ -2575,6 +2619,8 @@ function Scene({ isIOS }: { isIOS: boolean }) {
   const doorHCm    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
   const doorStyle  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? "wood_panel");
   const frontWallOpacity = useDesignerStore((s) => s.frontWallOpacity);
+  const ceilingOpacity = useDesignerStore((s) => s.ceilingOpacity);
+  const lightPos = useDesignerStore((s) => s.lightPosByRoom[s.activeRoom]);
   const def = ROOM_DEFS[activeRoom];
 
   // Use store dimensions (reflects global plan resizes), fall back to ROOM_DEFS
@@ -2673,10 +2719,17 @@ function Scene({ isIOS }: { isIOS: boolean }) {
         activeRoom={activeRoom}
         ceiling={roomState.materials.ceiling}
         frontWallOpacity={frontWallOpacity}
+        ceilingOpacity={ceilingOpacity}
       />
 
       {/* Light fixture */}
-      <LightFixture H={H} lightColor={lightColor} lightId={lightId} />
+      <LightFixture
+        H={H}
+        lightColor={lightColor}
+        lightId={lightId}
+        lightX={(lightPos?.x ?? 0) / 100}
+        lightZ={(lightPos?.z ?? 0) / 100}
+      />
 
       {/* Placed furniture */}
       {roomState.placedItems.map((placed) => (

@@ -298,6 +298,9 @@ export default function RightPanel() {
         </div>
       )}
 
+      {/* Ceiling light position */}
+      <CeilingLightPositionSection activeRoom={activeRoom} />
+
       {/* Furniture */}
       {placedItems.length > 0 && (
         <div className="px-4 py-3 flex-1">
@@ -333,6 +336,15 @@ export default function RightPanel() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <span className="text-[11px] font-bold" style={{ color: "var(--ds-text)" }}>{formatPrice(f.price, locale)}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); useDesignerStore.getState().toggleItemMountCeiling(placed.instanceId); }}
+                      className="opacity-0 group-hover:opacity-100 text-[10px] transition-all"
+                      style={{
+                        color: placed.mountCeiling ? "var(--ds-primary, #3B82F6)" : "var(--ds-text-3)",
+                        opacity: placed.mountCeiling ? 1 : undefined,
+                      }}
+                      title={placed.mountCeiling ? "吸顶 → 点击切回落地" : "落地 → 点击吸顶"}
+                    >{placed.mountCeiling ? "📌" : "⬇️"}</button>
                     <button
                       onClick={(e) => { e.stopPropagation(); removeItem(placed.instanceId); }}
                       className="opacity-0 group-hover:opacity-100 text-xs transition-all"
@@ -636,6 +648,47 @@ function ExtSliderRow({ label, value, min, max, step, onChange }: {
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={e => onChange(parseFloat(e.target.value))}
         className="w-full accent-green-500 h-1" />
+    </div>
+  );
+}
+
+
+// ─── Ceiling light position ────────────────────────────────
+function CeilingLightPositionSection({ activeRoom }: { activeRoom: RoomType }) {
+  const pos = useDesignerStore(s => s.lightPosByRoom[activeRoom]);
+  const setPos = useDesignerStore(s => s.setLightPos);
+  const dims = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
+  const lightMat = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[activeRoom]?.materials?.light);
+  if (!lightMat) return null;   // no ceiling light set → nothing to position
+  const halfW = (dims?.width  ?? 400) / 2;
+  const halfD = (dims?.depth  ?? 360) / 2;
+  const x = pos?.x ?? 0;
+  const z = pos?.z ?? 0;
+  return (
+    <div className="px-4 pt-3 pb-1 border-t border-gray-100">
+      <div className="text-[11px] font-black text-gray-800 mb-1.5">💡 顶灯位置（{lightMat.name}）</div>
+      <div className="p-2 rounded-xl bg-gray-50 border border-gray-100 flex flex-col gap-2">
+        <div>
+          <div className="flex justify-between text-[9px] text-gray-500 mb-0.5">
+            <span>左右（X）</span><span className="font-mono">{x.toFixed(0)}cm</span>
+          </div>
+          <input type="range" min={-halfW + 30} max={halfW - 30} step={5} value={x}
+            onChange={e => setPos(activeRoom, { x: parseFloat(e.target.value), z })}
+            className="w-full accent-yellow-500 h-1" />
+        </div>
+        <div>
+          <div className="flex justify-between text-[9px] text-gray-500 mb-0.5">
+            <span>前后（Z）</span><span className="font-mono">{z.toFixed(0)}cm</span>
+          </div>
+          <input type="range" min={-halfD + 30} max={halfD - 30} step={5} value={z}
+            onChange={e => setPos(activeRoom, { x, z: parseFloat(e.target.value) })}
+            className="w-full accent-yellow-500 h-1" />
+        </div>
+        <button
+          onClick={() => setPos(activeRoom, { x: 0, z: 0 })}
+          className="self-start text-[9px] text-gray-500 hover:text-gray-700 underline"
+        >居中</button>
+      </div>
     </div>
   );
 }

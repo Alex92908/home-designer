@@ -65,6 +65,33 @@ function FrontWallToggle() {
   );
 }
 
+/** Cycles ceiling opacity — same 3-stage UX as FrontWallToggle but for
+ *  the top slab. Stacked right above the front-wall button. */
+function CeilingToggle() {
+  const opacity = useDesignerStore(s => s.ceilingOpacity);
+  const setOpacity = useDesignerStore(s => s.setCeilingOpacity);
+  const label = opacity === 0 ? "🔲 天花：隐藏" : opacity === 0.5 ? "🔲 天花：半透" : "🔲 天花：实板";
+  const next = (opacity === 0 ? 0.5 : opacity === 0.5 ? 1 : 0) as 0 | 0.5 | 1;
+  const bg = opacity === 0 ? "rgba(30,30,50,0.72)"
+           : opacity === 0.5 ? "rgba(59,130,246,0.9)"
+           : "rgba(16,185,129,0.9)";
+  return (
+    <button
+      onClick={() => setOpacity(next)}
+      className="absolute bottom-14 left-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-lg transition-all active:scale-95"
+      style={{
+        background: bg,
+        color: "white",
+        backdropFilter: "blur(6px)",
+        border: "1px solid rgba(255,255,255,0.12)",
+      }}
+      title="切换天花板显示（隐藏→半透→实板→隐藏）"
+    >
+      {label}
+    </button>
+  );
+}
+
 function PanelToggle({
   side,
   open,
@@ -199,8 +226,9 @@ export default function Home() {
             </button>
           )}
 
-          {/* Front wall toggle — in 3D only */}
+          {/* Front wall + ceiling toggles — both in 3D only */}
           {viewMode === "3d" && <FrontWallToggle />}
+          {viewMode === "3d" && <CeilingToggle />}
         </main>
 
         {/* Right panel with collapse */}
