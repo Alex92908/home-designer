@@ -198,15 +198,42 @@ export const ROUTING_PRICE_PER_M: Record<RoutingKind, number> = {
   "drain": 30,
 };
 
+/** Per-elbow penalty (元) — 90° 弯头按管种定价。 */
+export const ROUTING_ELBOW_PRICE: Record<RoutingKind, number> = {
+  "wire": 2,
+  "cold-water": 6,
+  "hot-water": 6,
+  "drain": 10,
+};
+
+/** Per-fixture-port termination fee (元, 每端口) — 卡箍/接头/过线盒。 */
+export const ROUTING_PORT_PRICE: Record<RoutingKind, number> = {
+  "wire": 3,
+  "cold-water": 8,
+  "hot-water": 8,
+  "drain": 12,
+};
+
 export function routingCost(
   placedItems: PlacedItem[],
   connections: RoutingConnection[],
 ): number {
   const t = routingTotals(placedItems, connections);
-  return Math.round(
-    t.wire * ROUTING_PRICE_PER_M.wire
+  let sum =
+      t.wire * ROUTING_PRICE_PER_M.wire
     + t["cold-water"] * ROUTING_PRICE_PER_M["cold-water"]
     + t["hot-water"] * ROUTING_PRICE_PER_M["hot-water"]
-    + t.drain * ROUTING_PRICE_PER_M.drain
-  );
+    + t.drain * ROUTING_PRICE_PER_M.drain;
+  // Per-connection extras: 1 L-shape = 1 elbow, 2 ports (from + to)
+  for (const c of connections) {
+    const a = placedItems.find(p => p.instanceId === c.from);
+    const b = placedItems.find(p => p.instanceId === c.to);
+    if (!a || !b) continue;
+    // Only count elbow if the segment actually bends (both dx & dz non-zero)
+    if (Math.abs(a.x - b.x) > 1 && Math.abs(a.z - b.z) > 1) {
+      sum += ROUTING_ELBOW_PRICE[c.kind];
+    }
+    sum += 2 * ROUTING_PORT_PRICE[c.kind];
+  }
+  return Math.round(sum);
 }

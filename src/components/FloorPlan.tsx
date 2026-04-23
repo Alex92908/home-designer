@@ -1665,14 +1665,33 @@ function RoutingPreview({
   if (!a) return null;
 
   // Snap target: if cursor within 30 SVG-units of a non-from item, snap.
+  // Port-aware: for fixtures with defined ports, snap to the nearest port
+  // point (on fixture footprint edge) rather than geometric center.
   const SNAP = 30;
   let snapped: { x: number; y: number; id: string } | null = null;
   let bestD = SNAP;
   for (const p of placedItems) {
     if (p.instanceId === fromId) continue;
-    const px = p.x * scale, py = p.z * scale;
-    const d = Math.hypot(cursor.x - px, cursor.y - py);
-    if (d < bestD) { bestD = d; snapped = { x: px, y: py, id: p.instanceId }; }
+    const furn = getFurnitureById(p.furnitureId);
+    // Candidate snap points: center + 4 footprint-edge midpoints
+    const candidates: { x: number; y: number }[] = [
+      { x: p.x * scale, y: p.z * scale },
+    ];
+    if (furn) {
+      const rot = ((p.rotation ?? 0) * Math.PI) / 180;
+      const cos = Math.cos(rot), sin = Math.sin(rot);
+      const w = furn.width / 2, d = furn.depth / 2;
+      const edges = [[0, -d], [0, d], [-w, 0], [w, 0]] as const;
+      for (const [ex, ez] of edges) {
+        const lx = ex * cos - ez * sin;
+        const lz = ex * sin + ez * cos;
+        candidates.push({ x: (p.x + lx) * scale, y: (p.z + lz) * scale });
+      }
+    }
+    for (const cand of candidates) {
+      const dd = Math.hypot(cursor.x - cand.x, cursor.y - cand.y);
+      if (dd < bestD) { bestD = dd; snapped = { x: cand.x, y: cand.y, id: p.instanceId }; }
+    }
   }
 
   const x1 = a.x * scale, y1 = a.z * scale;

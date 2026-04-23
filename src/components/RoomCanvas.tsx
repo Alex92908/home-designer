@@ -741,13 +741,14 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   useFrame((_, delta) => {
     const style = win.style ?? "sliding";
     if (style === "sliding" || style === "casement" || style === "wooden") {
-      // Sliding: shift the sash to the right HALF of the opening AND
-      // shrink to half-width — simulates "two panels overlapping" so
-      // the glass never sticks out past the wall hole. Casement + wooden:
-      // swing 45° outward around the hinge.
-      const slideTarget = winLen / 4;  // sash center ends at right-quarter
+      // Sliding (now real 2-panel): sashRef wraps the LEFT half-panel
+      // sitting at base position [-winLen/4, 0, 0]. Open = translate by
+      // +winLen/2 so left panel ends at +winLen/4, overlapping the
+      // fixed right panel. Both half-panels are winLen/2 wide so the
+      // sliding one always stays inside the wall hole.
+      // Casement + wooden: swing 45° outward around the hinge.
       const target = isOpen
-        ? (style === "sliding" ? slideTarget : -Math.PI / 4)
+        ? (style === "sliding" ? winLen / 2 : -Math.PI / 4)
         : 0;
       const speed = style === "sliding" ? 2.2 : 3.8;
       const current = sashAngleRef.current;
@@ -757,12 +758,10 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
         sashAngleRef.current = current + step;
         if (sashRef.current) {
           if (style === "sliding") {
-            // Position + scale combined so sash stays inside opening:
-            // at fully-open (x = winLen/4), scale.x = 0.5 (half width).
-            const x = sashAngleRef.current;
-            const t = Math.min(1, Math.abs(x) / slideTarget);
-            sashRef.current.position.x = x;
-            sashRef.current.scale.x = 1 - t * 0.5;
+            // sashRef is the LEFT panel group at base x=-winLen/4. Add
+            // sashAngleRef to its base — no scale change needed since
+            // each panel is only winLen/2 wide and stays in the hole.
+            sashRef.current.position.x = -winLen / 4 + sashAngleRef.current;
           } else {
             sashRef.current.rotation.y = sashAngleRef.current;
           }
@@ -873,19 +872,65 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
     }
   })();
 
+  // Procedural sliding window — TWO half-width panels overlap when open.
+  // - rightSash is fixed at +winLen/4
+  // - leftSash starts at -winLen/4 (closed, both halves visible together)
+  //   and animates to +winLen/4 (open, overlapping the right) via sashRef
+  // This is a real "两扇推拉" simulation — the moving sash never extends
+  // past the wall hole because each panel is only winLen/2 wide.
+  const halfGlassMat = (
+    <meshPhysicalMaterial
+      color="#BED3E8" transmission={0.7} roughness={0.08} metalness={0}
+      thickness={0.01} ior={1.45} transparent opacity={0.5}
+      side={THREE.DoubleSide}
+    />
+  );
+  const halfPanel = (
+    <>
+      <mesh position={[0, 0, WALL_OFFSET + 0.002]}>
+        <planeGeometry args={[winLen / 2, winH]} />
+        {halfGlassMat}
+      </mesh>
+      {/* Mid mullion of the panel (cosmetic — gives sliding window its
+          characteristic look) */}
+      <mesh position={[0, 0, WALL_OFFSET + 0.006]}>
+        <boxGeometry args={[0.022, winH - FRAME_THIN * 2, 0.018]} />
+        <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
+      </mesh>
+    </>
+  );
+
   const proceduralBackFrame = (
     <>
       {frameBars}
-      {/* Sash — glass + mullions that animate on open/close. Clicking any
-          part toggles. Fixed/louvered/security windows don't animate but
-          still show toggle state in store for consistency. */}
-      <group
-        ref={sashRef}
-        onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}
-      >
-        {style !== "louvered" && glass}
-        {mullions}
-      </group>
+      {style === "sliding" ? (
+        <>
+          {/* Fixed right panel */}
+          <group
+            position={[winLen / 4, 0, 0]}
+            onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}
+          >
+            {halfPanel}
+          </group>
+          {/* Sliding left panel — sashRef applies the open animation */}
+          <group
+            ref={sashRef}
+            position={[-winLen / 4, 0, 0]}
+            onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}
+          >
+            {halfPanel}
+          </group>
+        </>
+      ) : (
+        // Other styles: single full-width sash with style-specific mullions.
+        <group
+          ref={sashRef}
+          onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}
+        >
+          {style !== "louvered" && glass}
+          {mullions}
+        </group>
+      )}
     </>
   );
 
@@ -3194,7 +3239,6 @@ function RoutingLinesLayer({ room, W, D, H }: {
   const conns  = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.connections) ?? EMPTY_CONNS;
   const placed = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.placedItems) ?? [];
   if (conns.length === 0) return null;
-  // Wire band Y position (just below the ceiling), pipe band (just above the floor)
   const Y_WIRE = H - 0.08;
   const Y_PIPE = 0.04;
   const colors: Record<string, string> = {
@@ -3203,43 +3247,49 @@ function RoutingLinesLayer({ room, W, D, H }: {
     "hot-water": "#EF4444",
     "drain": "#6B7280",
   };
+  // Per-kind tube radius (m). Wires thinner (8mm), pipes thicker (12-18mm).
+  const radius: Record<string, number> = {
+    "wire": 0.008,
+    "cold-water": 0.012,
+    "hot-water": 0.012,
+    "drain": 0.018,
+  };
   return (
     <group>
       {conns.map(c => {
         const a = placed.find(p => p.instanceId === c.from);
         const b = placed.find(p => p.instanceId === c.to);
         if (!a || !b) return null;
-        // Convert room-local (cm, origin top-left) to world (m, origin center)
         const ax = (a.x / 100) - W / 2, az = (a.z / 100) - D / 2;
         const bx = (b.x / 100) - W / 2, bz = (b.z / 100) - D / 2;
         const isWire = c.kind === "wire";
         const Y = isWire ? Y_WIRE : Y_PIPE;
-        // 4 vertices: A, A-on-band, B-on-band-elbow, B
-        // Manhattan choice (matches 2D)
         const dx = Math.abs(bx - ax), dz = Math.abs(bz - az);
         const cornerX = dx > dz ? bx : ax;
         const cornerZ = dx > dz ? az : bz;
-        const pts: [number, number, number][] = [
-          [ax, 0.05, az],            // start (just above floor)
-          [ax, Y, az],                // up to band
-          [cornerX, Y, cornerZ],      // across band
-          [bx, Y, bz],                // to B's column
-          [bx, 0.05, bz],             // down to floor at B
+        // Build a 5-point polyline through the L-shape; convert to a
+        // CatmullRom curve and a TubeGeometry so the pipe has visible
+        // thickness (three.js native <line> is locked to 1px on WebGL).
+        const points = [
+          new THREE.Vector3(ax, 0.05, az),
+          new THREE.Vector3(ax, Y, az),
+          new THREE.Vector3(cornerX, Y, cornerZ),
+          new THREE.Vector3(bx, Y, bz),
+          new THREE.Vector3(bx, 0.05, bz),
         ];
-        const positions = new Float32Array(pts.flat());
+        const curve = new THREE.CatmullRomCurve3(points, false, "catmullrom", 0.05);
+        const r = radius[c.kind] ?? 0.01;
+        const segments = Math.max(20, Math.floor(curve.getLength() / 0.05));
+        const color = colors[c.kind] ?? "#999";
         return (
-          <line key={c.id}>
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                args={[positions, 3]}
-                count={pts.length}
-                array={positions}
-                itemSize={3}
-              />
-            </bufferGeometry>
-            <lineBasicMaterial color={colors[c.kind] ?? "#999"} linewidth={2} />
-          </line>
+          <mesh key={c.id} castShadow>
+            <tubeGeometry args={[curve, segments, r, 8, false]} />
+            <meshStandardMaterial
+              color={color}
+              metalness={isWire ? 0.6 : 0.45}
+              roughness={isWire ? 0.4 : 0.55}
+            />
+          </mesh>
         );
       })}
     </group>
