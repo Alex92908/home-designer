@@ -252,6 +252,7 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
         { wall:"right", pos:80, len:200, h:180, sill:90, style:"sliding" },
       ],
       doorStyle: "wood_panel",
+      doorWall: "bottom", doorPos: 160, doorLen: 80,
     },
     bedroom: {
       baseW: 320, baseD: 300,
@@ -414,6 +415,7 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
         { wall:"right", pos:60, len:220, h:200, sill:60, style:"fixed" },
       ],
       doorStyle: "french_double",
+      doorWall: "bottom", doorPos: 160, doorLen: 80,
     },
     bedroom: {
       baseW: 320, baseD: 300,
@@ -596,6 +598,7 @@ export const TEMPLATE_INDUSTRIAL: StyleTemplate = {
         { wall:"right", pos:80, len:180, h:150, sill:90, style:"security" },
       ],
       doorStyle: "sliding_barn",
+      doorWall: "bottom", doorPos: 160, doorLen: 80,
     },
     bedroom: {
       baseW: 320, baseD: 300,
@@ -733,6 +736,7 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
         { wall:"right", pos:80, len:200, h:180, sill:50, style:"wooden" },
       ],
       doorStyle: "sliding_barn",
+      doorWall: "bottom", doorPos: 160, doorLen: 80,
     },
     bedroom: {
       baseW: 320, baseD: 300,
@@ -871,6 +875,7 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
         { wall:"right", pos:80, len:200, h:180, sill:70, style:"wooden" },
       ],
       doorStyle: "french_double",
+      doorWall: "bottom", doorPos: 160, doorLen: 80,
     },
     bedroom: {
       baseW: 320, baseD: 300,
