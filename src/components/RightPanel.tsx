@@ -5,6 +5,7 @@ import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, getRoomArea } from "@/lib/types";
 import type { RoomType, ExteriorWall, ExteriorWallDecorItem } from "@/lib/types";
 import { FURNITURE, getFurnitureById } from "@/lib/furniture";
+import { MATERIALS } from "@/lib/data";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 import { formatPrice } from "@/lib/currency";
@@ -430,6 +431,27 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
   const removeItem = useDesignerStore(s => s.removeRoomExteriorDecor);
   const updateItem = useDesignerStore(s => s.updateRoomExteriorDecor);
 
+  // Exterior wall material for this room — per-face or room-wide default.
+  // `extColorSide` tracks which face the color picker applies to. "all"
+  // sets the default (wallExterior); a specific side writes the
+  // side-only override (wallBackExterior etc.).
+  const mats = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[activeRoom]?.materials);
+  const wallExterior        = mats?.wallExterior;
+  const wallBackExterior    = mats?.wallBackExterior;
+  const wallFrontExterior   = mats?.wallFrontExterior;
+  const wallLeftExterior    = mats?.wallLeftExterior;
+  const wallRightExterior   = mats?.wallRightExterior;
+  const setWallExterior = useDesignerStore(s => s.setWallExterior);
+  const wallMaterials = useMemo(() => MATERIALS.filter(m => m.category === "wall"), []);
+  const [extColorSide, setExtColorSide] = useState<"all" | "back" | "front" | "left" | "right">("all");
+
+  const currentExt =
+    extColorSide === "all"   ? wallExterior :
+    extColorSide === "back"  ? wallBackExterior :
+    extColorSide === "front" ? wallFrontExterior :
+    extColorSide === "left"  ? wallLeftExterior :
+                               wallRightExterior;
+
   const [pickerWall, setPickerWall] = useState<ExteriorWall>("front");
   const decorItems = FURNITURE.filter(f => f.category === "exterior_wall_decor");
   const selected = decor.find(d => d.instanceId === selectedId);
@@ -438,6 +460,73 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
   return (
     <div className="px-4 pb-4 border-t border-gray-100 pt-3">
       <div className="text-[11px] font-black text-gray-800 mb-2">🏮 外墙装饰（{ROOM_DEFS[activeRoom].name}）</div>
+
+      {/* Exterior wall material selector — per-face. "全部" sets the
+          room-wide default; a specific side writes an override that
+          takes priority over the default on that one face. */}
+      <div className="mb-2 p-2 rounded-xl bg-gray-50 border border-gray-100">
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-[9px] text-gray-500">外墙材质</div>
+          {currentExt && (
+            <button
+              onClick={() => setWallExterior(extColorSide, undefined)}
+              className="text-[9px] text-red-400 hover:text-red-600"
+              title="清除这一面的外墙色"
+            >清除</button>
+          )}
+        </div>
+        {/* Side selector for which face the color picker applies to */}
+        <div className="flex gap-1 mb-1.5">
+          {([
+            { id: "all",   label: "全部" },
+            { id: "front", label: "前" },
+            { id: "back",  label: "后" },
+            { id: "left",  label: "左" },
+            { id: "right", label: "右" },
+          ] as const).map(s => {
+            const sideMat =
+              s.id === "all" ? wallExterior :
+              s.id === "front" ? wallFrontExterior :
+              s.id === "back"  ? wallBackExterior :
+              s.id === "left"  ? wallLeftExterior :
+                                 wallRightExterior;
+            return (
+              <button
+                key={s.id}
+                onClick={() => setExtColorSide(s.id)}
+                className={`flex-1 text-[9px] py-1 rounded-md transition-all relative ${
+                  extColorSide === s.id ? "bg-blue-500 text-white font-semibold" : "bg-white text-gray-600 border border-gray-200"
+                }`}>
+                {s.label}
+                {sideMat && (
+                  <span
+                    className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full border border-white/70"
+                    style={{ background: sideMat.color }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <div className="grid grid-cols-6 gap-1">
+          {wallMaterials.slice(0, 12).map(m => (
+            <button
+              key={m.id}
+              onClick={() => setWallExterior(extColorSide, m)}
+              title={`${m.name} · ${m.color}`}
+              className={`w-6 h-6 rounded border-2 transition-all ${
+                currentExt?.id === m.id ? "border-blue-500 scale-110" : "border-gray-200 hover:border-gray-300"
+              }`}
+              style={{ background: m.color }}
+            />
+          ))}
+        </div>
+        {currentExt && (
+          <div className="text-[9px] text-gray-400 mt-1 truncate">
+            {extColorSide === "all" ? "全部外墙" : `${extColorSide === "front" ? "前" : extColorSide === "back" ? "后" : extColorSide === "left" ? "左" : "右"}外墙`}：{currentExt.name}
+          </div>
+        )}
+      </div>
 
       {/* Wall picker for placement */}
       <div className="mb-2 p-2 rounded-xl bg-gray-50 border border-gray-100">

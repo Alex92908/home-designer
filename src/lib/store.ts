@@ -220,6 +220,10 @@ interface DesignerStore {
   setWallLower: (material: MaterialItem | undefined) => void;
   /** Set where upper/lower split happens (cm from floor). Default 110. */
   setWallSplitHeight: (cm: number) => void;
+  /** Set exterior-face wall material for the active room. Pass
+   *  side="all" for the global default, or a specific side for
+   *  independent per-face color. Pass undefined material to clear. */
+  setWallExterior: (side: "all" | "back" | "front" | "left" | "right", material: MaterialItem | undefined) => void;
 
   // Furniture placement actions
   placeFurniture: (furnitureId: string) => void;
@@ -464,6 +468,27 @@ export const useDesignerStore = create<DesignerStore>()(
         const fp = s.floorPlans[activeFloor];
         const clamped = Math.max(30, Math.min(200, Math.round(cm)));
         const updatedMaterials = { ...fp.rooms[activeRoom].materials, wallSplitHeight: clamped };
+        const updatedRoom = { ...fp.rooms[activeRoom], materials: updatedMaterials };
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
+        set({ floorPlans });
+      },
+
+      setWallExterior: (side, material) => {
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        const updatedMaterials = { ...fp.rooms[activeRoom].materials };
+        const fieldMap = {
+          all:   "wallExterior",
+          back:  "wallBackExterior",
+          front: "wallFrontExterior",
+          left:  "wallLeftExterior",
+          right: "wallRightExterior",
+        } as const;
+        const key = fieldMap[side];
+        if (material) (updatedMaterials as Record<string, MaterialItem>)[key] = material;
+        else delete (updatedMaterials as Record<string, unknown>)[key];
         const updatedRoom = { ...fp.rooms[activeRoom], materials: updatedMaterials };
         const floorPlans = [...s.floorPlans];
         floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
@@ -1316,6 +1341,45 @@ export const useDesignerStore = create<DesignerStore>()(
     }),
     {
       name: "home-designer-v2",
+      // Bump this every time templates gain a new field that LoadTemplate
+      // writes into FloorPlan or RoomState. Without a version bump, users
+      // with persisted state from before the schema change get stuck
+      // showing stale (often default) values for the new field because
+      // LoadTemplate's patches merge INTO the old persisted data — old
+      // missing keys stay missing, new defaults never kick in.
+      //
+      // History:
+      //   v0 = legacy (pre-versioning)
+      //   v1 = templates now drive roomDoorPos/Len/Wall/Style,
+      //        roomWindows, and RoomState.exteriorDecor
+      version: 1,
+      migrate: (persistedState, persistedVersion) => {
+        const state = persistedState as Partial<DesignerStore> | undefined;
+        if (!state) return state as unknown as DesignerStore;
+        if (persistedVersion < 1 && state.floorPlans) {
+          // v0 → v1: wipe door/window/exterior-decor fields on every
+          // floor so the next loadTemplate call writes clean values.
+          // Preserve the rest (placedItems, materials, budget, exterior
+          // style) so user customization outside these fields survives.
+          state.floorPlans = state.floorPlans.map((fp) => ({
+            ...fp,
+            roomDoorPos:   { ...DEFAULT_ROOM_DOOR_POS },
+            roomDoorWall:  { ...DEFAULT_ROOM_DOOR_WALL },
+            roomDoorLen:   {},
+            roomDoorStyle: {},
+            roomWindows:   { ...DEFAULT_ROOM_WINDOWS },
+            rooms: Object.fromEntries(
+              Object.entries(fp.rooms).map(([roomId, room]) => [
+                roomId,
+                { ...(room as RoomState), exteriorDecor: [] },
+              ])
+            ) as unknown as typeof fp.rooms,
+          }));
+          // eslint-disable-next-line no-console
+          console.info("[home-designer] migrated persist v0 → v1 (cleared door/window/decor fields)");
+        }
+        return state as unknown as DesignerStore;
+      },
       partialize: (state) => ({
         floorPlans: state.floorPlans,
         activeRoom: state.activeRoom,

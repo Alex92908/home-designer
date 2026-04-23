@@ -189,6 +189,17 @@ export interface RoomMaterials {
   wallFront?: MaterialItem;
   wallLeft?: MaterialItem;
   wallRight?: MaterialItem;
+  /** Exterior-facing material default — applies to any outside wall
+   *  face that doesn't have an explicit per-side override below. When
+   *  unset and no per-side override exists, the outside face uses the
+   *  same material as the inside (interior color shows through). */
+  wallExterior?: MaterialItem;
+  /** Per-side EXTERIOR overrides — each face can be a different colour.
+   *  Falls back to `wallExterior`, then to the interior material. */
+  wallBackExterior?: MaterialItem;
+  wallFrontExterior?: MaterialItem;
+  wallLeftExterior?: MaterialItem;
+  wallRightExterior?: MaterialItem;
 }
 
 export interface RoomDef {

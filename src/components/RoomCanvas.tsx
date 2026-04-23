@@ -129,6 +129,7 @@ function RoomShell({
   windows,
   wallBack, wallFront, wallLeft, wallRight,
   wallLower, wallSplitCm,
+  wallExterior, wallBackExterior, wallFrontExterior, wallLeftExterior, wallRightExterior,
   ceiling,
   hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle,
   activeRoom,
@@ -142,6 +143,11 @@ function RoomShell({
   wallLeft?: MaterialItem; wallRight?: MaterialItem;
   wallLower?: MaterialItem;
   wallSplitCm?: number;
+  wallExterior?: MaterialItem;
+  wallBackExterior?: MaterialItem;
+  wallFrontExterior?: MaterialItem;
+  wallLeftExterior?: MaterialItem;
+  wallRightExterior?: MaterialItem;
   ceiling?: MaterialItem;
   hasDoor: boolean;
   doorWall: "bottom" | "top" | "left" | "right";
@@ -288,14 +294,27 @@ function RoomShell({
   // Render one wall's segments. Wall-local x ∈ [0, wallLenM], y ∈ [0, H].
   // Segments are inside a group with the correct rotation + translation,
   // so each segment just positions at its local center within that group.
+  //
+  // Two-sided material: if `extMat` is given and differs from the interior
+  // material, we render a SECOND plane per segment offset slightly toward
+  // the outdoor side. From inside the room the nearer (interior) plane
+  // occludes the exterior one; from outside the order reverses and the
+  // exterior material becomes visible.
   function WallWithHoles({
-    side, wallLenM, groupPos, groupRot, upperMat, lowerSide, opacity = 1,
+    side, wallLenM, groupPos, groupRot, upperMat, extMat, extOffsetSign = -1, lowerSide, opacity = 1,
   }: {
     side: { color: string; id: string };
     wallLenM: number;
     groupPos: [number, number, number];
     groupRot?: [number, number, number];
     upperMat: ReturnType<typeof wallMatFor>;
+    /** Material for the OUTSIDE face. When unset (or same as upperMat),
+     *  only a single DoubleSide plane is drawn (matches old behavior). */
+    extMat?: ReturnType<typeof wallMatFor>;
+    /** Sign of the frame-local Z offset that points outdoor. -1 for
+     *  back/left/right walls (outward = -Z local), +1 for the front
+     *  wall (outward = +Z local, because its frame has no flip). */
+    extOffsetSign?: 1 | -1;
     lowerSide: "back" | "front" | "left" | "right";
     /** 0 = don't render, 0.5 = frosted glass, 1 = solid. Applied uniformly
      *  to every segment (upper, lower, all pieces around holes). */
@@ -304,6 +323,7 @@ function RoomShell({
     const holes = holesForWall(lowerSide, wallLenM);
     const segments = splitWallAroundHoles(wallLenM, H, holes);
     const lowerMat = lower ? wallMatFor(lower.color, lower.id, wallLenM, splitH) : null;
+    const extOff = extOffsetSign * 0.012;
 
     return (
       <group position={groupPos} rotation={groupRot}>
@@ -311,24 +331,39 @@ function RoomShell({
           splitAtWainscot(seg, splitH, !!lower).map((s, bi) => {
             const mat = s.band === "lower" && lowerMat ? lowerMat : upperMat;
             return (
-              <mesh
-                key={`${si}-${bi}`}
-                position={[s.x + s.w / 2 - wallLenM / 2, s.y + s.h / 2 - H / 2, 0]}
-                receiveShadow
-              >
-                <planeGeometry args={[s.w, s.h]} />
-                {/* DoubleSide: when the camera orbits outside the room,
-                    the exterior face of the wall must still render so the
-                    wall acts as an opaque shell — otherwise the interior
-                    shows through every wall and opening a door makes no
-                    visual difference. Cost is negligible for flat planes. */}
-                <meshStandardMaterial
-                  {...mat}
-                  side={THREE.DoubleSide}
-                  transparent={opacity < 1}
-                  opacity={opacity}
-                />
-              </mesh>
+              <group key={`${si}-${bi}`}>
+                {/* Interior face (DoubleSide so it's still visible from
+                    outside when there's no exterior override). */}
+                <mesh
+                  position={[s.x + s.w / 2 - wallLenM / 2, s.y + s.h / 2 - H / 2, 0]}
+                  receiveShadow
+                >
+                  <planeGeometry args={[s.w, s.h]} />
+                  <meshStandardMaterial
+                    {...mat}
+                    side={THREE.DoubleSide}
+                    transparent={opacity < 1}
+                    opacity={opacity}
+                  />
+                </mesh>
+                {/* Exterior face — only drawn when user picked a distinct
+                    exterior material. Offset along outward normal so it
+                    sits just beyond the interior plane. */}
+                {extMat && (
+                  <mesh
+                    position={[s.x + s.w / 2 - wallLenM / 2, s.y + s.h / 2 - H / 2, extOff]}
+                    receiveShadow
+                  >
+                    <planeGeometry args={[s.w, s.h]} />
+                    <meshStandardMaterial
+                      {...extMat}
+                      side={THREE.DoubleSide}
+                      transparent={opacity < 1}
+                      opacity={opacity}
+                    />
+                  </mesh>
+                )}
+              </group>
             );
           })
         )}
@@ -344,11 +379,20 @@ function RoomShell({
         <meshStandardMaterial {...floorMat} />
       </mesh>
 
+      {/* Exterior material per side: use the per-face override if set,
+          else fall back to the room-wide wallExterior default. */}
+      {(() => null)()}
+
       {/* Back wall — with hole-cutouts for windows/door */}
       <WallWithHoles
         side={sB} wallLenM={W}
         groupPos={[0, H / 2, -D / 2]}
         upperMat={wallMatFor(sB.color, sB.id, W, H)}
+        extMat={(() => {
+          const e = wallBackExterior ?? wallExterior;
+          return e ? wallMatFor(e.color, e.id, W, H) : undefined;
+        })()}
+        extOffsetSign={-1}
         lowerSide="back"
       />
 
@@ -357,6 +401,11 @@ function RoomShell({
         side={sL} wallLenM={D}
         groupPos={[-W / 2, H / 2, 0]} groupRot={[0, Math.PI / 2, 0]}
         upperMat={wallMatFor(sL.color, sL.id, D, H)}
+        extMat={(() => {
+          const e = wallLeftExterior ?? wallExterior;
+          return e ? wallMatFor(e.color, e.id, D, H) : undefined;
+        })()}
+        extOffsetSign={-1}
         lowerSide="left"
       />
 
@@ -365,6 +414,11 @@ function RoomShell({
         side={sR} wallLenM={D}
         groupPos={[W / 2, H / 2, 0]} groupRot={[0, -Math.PI / 2, 0]}
         upperMat={wallMatFor(sR.color, sR.id, D, H)}
+        extMat={(() => {
+          const e = wallRightExterior ?? wallExterior;
+          return e ? wallMatFor(e.color, e.id, D, H) : undefined;
+        })()}
+        extOffsetSign={-1}
         lowerSide="right"
       />
 
@@ -376,11 +430,14 @@ function RoomShell({
           correct for the front wall at z=+D/2 — no rotation needed. */}
       {frontWallOpacity > 0 && (() => {
         const sF = resolveSide(wallFront);
+        const e = wallFrontExterior ?? wallExterior;
         return (
           <WallWithHoles
             side={sF} wallLenM={W}
             groupPos={[0, H / 2, D / 2]}
             upperMat={wallMatFor(sF.color, sF.id, W, H)}
+            extMat={e ? wallMatFor(e.color, e.id, W, H) : undefined}
+            extOffsetSign={1}
             lowerSide="front"
             opacity={frontWallOpacity}
           />
@@ -2602,6 +2659,11 @@ function Scene({ isIOS }: { isIOS: boolean }) {
         wallRight={roomState.materials.wallRight}
         wallLower={roomState.materials.wallLower}
         wallSplitCm={roomState.materials.wallSplitHeight}
+        wallExterior={roomState.materials.wallExterior}
+        wallBackExterior={roomState.materials.wallBackExterior}
+        wallFrontExterior={roomState.materials.wallFrontExterior}
+        wallLeftExterior={roomState.materials.wallLeftExterior}
+        wallRightExterior={roomState.materials.wallRightExterior}
         hasDoor={hasDoor}
         doorWall={doorWall}
         doorPosCm={doorPosCm}
