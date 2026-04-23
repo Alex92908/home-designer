@@ -104,10 +104,18 @@ export function buildEmbeddedRoomState(
     if (!f) return [];
     const sw = item.scaleW ?? 1;
     const sd = item.scaleD ?? 1;
-    const hw = (f.width  * sw) / 2;
-    const hd = (f.depth  * sd) / 2;
-    const px = Math.max(hw + 4, Math.min(userW - hw - 4, item.x * sx));
-    const pz = Math.max(hd + 4, Math.min(userD - hd - 4, item.z * sz));
+    // Rotation-aware clamp: at 90°/270° the item's width and depth swap
+    // axes in world space, so the effective half-extent along X is the
+    // depth (and along Z is the width). Without this swap, a curtain
+    // rotated 270° to hang along the right wall gets clamped by its
+    // full 90cm half-width on X and ends up pushed 90cm into the room
+    // instead of sitting flush with the wall.
+    const rot = ((item.rotation % 360) + 360) % 360;
+    const rotatedSideways = rot === 90 || rot === 270;
+    const halfX = (rotatedSideways ? f.depth * sd : f.width  * sw) / 2;
+    const halfZ = (rotatedSideways ? f.width  * sw : f.depth * sd) / 2;
+    const px = Math.max(halfX + 4, Math.min(userW - halfX - 4, item.x * sx));
+    const pz = Math.max(halfZ + 4, Math.min(userD - halfZ - 4, item.z * sz));
     return [{
       instanceId: `emb_${roomId}_${seq++}_${item.furnitureId}`,
       furnitureId: item.furnitureId,
