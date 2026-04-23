@@ -452,6 +452,20 @@ export default function FloorPlan() {
       try { e.preventDefault(); } catch { /* passive listener, can't prevent */ }
       e.stopPropagation();
 
+      // Routing-mode interception: while in routing mode, clicks on a
+      // fixture either set the connection's "from" endpoint or, if a
+      // from is already pinned, complete the connection from→this and
+      // exit routing-from state (mode stays on for chained drawing).
+      const st = useDesignerStore.getState();
+      if (st.routingMode) {
+        if (!st.routingFrom) {
+          st.setRoutingFrom(instanceId);
+        } else if (st.routingFrom !== instanceId) {
+          st.addRoutingConnection(activeRoom, st.routingFrom, instanceId, st.routingMode);
+        }
+        return; // skip selection + drag
+      }
+
       // Selection
       const alreadySelected = selectedInstanceIds.includes(instanceId);
       let newSelection: string[];
@@ -768,6 +782,9 @@ export default function FloorPlan() {
               </button>
             )}
 
+            {/* Routing mode toggle (pipes/wires) */}
+            <RoutingModeButton />
+
             {/* Rotate room */}
             <button
               onClick={() => { pushLayoutHistory(); rotateRoom(activeRoom); setZoomLevel(1); }}
@@ -1058,6 +1075,57 @@ export default function FloorPlan() {
               />
             );
           })}
+
+          {/* Pipe / wire routing connections — render UNDER furniture so
+              icons stay clickable. Color by kind (yellow=wire, blue=cold,
+              red=hot, gray=drain). Click line to delete. */}
+          {(roomState.connections ?? []).map(conn => {
+            const a = roomState.placedItems.find(p => p.instanceId === conn.from);
+            const b = roomState.placedItems.find(p => p.instanceId === conn.to);
+            if (!a || !b) return null;
+            const colorMap: Record<string, string> = {
+              "wire": "#FACC15",
+              "cold-water": "#3B82F6",
+              "hot-water": "#EF4444",
+              "drain": "#6B7280",
+            };
+            const color = colorMap[conn.kind] ?? "#999";
+            return (
+              <g key={conn.id}>
+                {/* Wide invisible hit area for clicking to delete */}
+                <line
+                  x1={a.x * scale} y1={a.z * scale}
+                  x2={b.x * scale} y2={b.z * scale}
+                  stroke="transparent" strokeWidth={12}
+                  style={{ cursor: "pointer" }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm("删除这条管线？")) {
+                      useDesignerStore.getState().removeRoutingConnection(activeRoom, conn.id);
+                    }
+                  }}
+                />
+                {/* Visible line */}
+                <line
+                  x1={a.x * scale} y1={a.z * scale}
+                  x2={b.x * scale} y2={b.z * scale}
+                  stroke={color} strokeWidth={3}
+                  strokeDasharray={conn.kind === "wire" ? "0" : "6 3"}
+                  strokeLinecap="round"
+                  style={{ pointerEvents: "none" }}
+                />
+              </g>
+            );
+          })}
+
+          {/* Routing-from indicator: highlight the chosen first endpoint.
+              Rendered via subcomponent so we can subscribe to routingFrom
+              with useDesignerStore reactively (a snapshot via getState()
+              wouldn't update when state changes). */}
+          <RoutingFromHighlight
+            placedItems={roomState.placedItems}
+            scale={scale}
+          />
 
           {/* Placed furniture */}
           {roomState.placedItems.map((placed) => (
@@ -1469,5 +1537,72 @@ export default function FloorPlan() {
       )}
 
     </div>
+  );
+}
+
+// ─── Routing mode toggle (pipes / wires) ────────────────────
+const ROUTING_KINDS: Array<{ id: import("@/lib/types").RoutingKind; label: string; color: string; emoji: string }> = [
+  { id: "wire",       label: "电线",  color: "#FACC15", emoji: "⚡" },
+  { id: "cold-water", label: "冷水",  color: "#3B82F6", emoji: "🔵" },
+  { id: "hot-water",  label: "热水",  color: "#EF4444", emoji: "🔴" },
+  { id: "drain",      label: "下水",  color: "#6B7280", emoji: "⚫" },
+];
+
+function RoutingModeButton() {
+  const mode = useDesignerStore(s => s.routingMode);
+  const setMode = useDesignerStore(s => s.setRoutingMode);
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        title="走线/走管模式：选择类型后点两个点位即连接"
+        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all"
+        style={
+          mode
+            ? { background: ROUTING_KINDS.find(k => k.id === mode)?.color ?? "#FACC15", color: "#1A1A1A" }
+            : { color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", background: "transparent" }
+        }
+      >
+        <span>🔧</span>
+        <span>{mode ? `${ROUTING_KINDS.find(k => k.id === mode)?.label}` : "走管"}</span>
+      </button>
+      {open && (
+        <div className="absolute top-full mt-1 right-0 z-20 flex flex-col gap-1 p-1 rounded-lg shadow-lg" style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.15)" }}>
+          <button
+            onClick={() => { setMode(null); setOpen(false); }}
+            className="px-2 py-1 text-[11px] text-left rounded text-gray-300 hover:bg-gray-700"
+          >❌ 退出走管</button>
+          {ROUTING_KINDS.map(k => (
+            <button key={k.id}
+              onClick={() => { setMode(k.id); setOpen(false); }}
+              className={`flex items-center gap-1.5 px-2 py-1 text-[11px] text-left rounded transition-all ${
+                mode === k.id ? "font-bold" : "text-gray-200 hover:bg-gray-700"
+              }`}
+              style={mode === k.id ? { background: k.color, color: "#1A1A1A" } : {}}
+            >
+              <span>{k.emoji}</span><span>{k.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RoutingFromHighlight({
+  placedItems, scale,
+}: { placedItems: import("@/lib/types").PlacedItem[]; scale: number }) {
+  const fromId = useDesignerStore(s => s.routingFrom);
+  if (!fromId) return null;
+  const a = placedItems.find(p => p.instanceId === fromId);
+  if (!a) return null;
+  return (
+    <circle
+      cx={a.x * scale} cy={a.z * scale} r={14}
+      fill="none" stroke="#FACC15" strokeWidth={2}
+      strokeDasharray="3 2"
+      style={{ pointerEvents: "none" }}
+    />
   );
 }

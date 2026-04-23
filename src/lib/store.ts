@@ -214,6 +214,17 @@ interface DesignerStore {
    *  the individual fixture in 3D. */
   fixtureOffById: Record<string, boolean>;
   toggleFixture: (instanceId: string) => void;
+  /** Draw-mode for the 2D plan: when set, clicking a fixture starts
+   *  or completes a routing connection of this kind. null = normal
+   *  edit mode. */
+  routingMode: import("./types").RoutingKind | null;
+  setRoutingMode: (mode: import("./types").RoutingKind | null) => void;
+  /** First clicked endpoint while in routingMode (instanceId of the
+   *  source fixture). Becomes the `from` of the new RoutingConnection. */
+  routingFrom: string | null;
+  setRoutingFrom: (id: string | null) => void;
+  addRoutingConnection: (room: RoomType, from: string, to: string, kind: import("./types").RoutingKind) => void;
+  removeRoutingConnection: (room: RoomType, connId: string) => void;
   /** Per-room light tuning: brightness multiplier (0.3–2.0, default 1),
    *  color-temperature override (hex string, null = use material default),
    *  and post-fx exposure (0.6–1.8, default 1.2). */
@@ -428,6 +439,30 @@ export const useDesignerStore = create<DesignerStore>()(
           [instanceId]: !st.fixtureOffById[instanceId],
         },
       })),
+      routingMode: null,
+      setRoutingMode: (mode) => set({ routingMode: mode, routingFrom: null }),
+      routingFrom: null,
+      setRoutingFrom: (id) => set({ routingFrom: id }),
+      addRoutingConnection: (room, from, to, kind) => set(st => {
+        const fp = st.floorPlans[st.activeFloor];
+        const existing = fp.rooms[room].connections ?? [];
+        const newConn = {
+          id: `conn_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          from, to, kind,
+        };
+        const updatedRoom = { ...fp.rooms[room], connections: [...existing, newConn] };
+        const floorPlans = [...st.floorPlans];
+        floorPlans[st.activeFloor] = { ...fp, rooms: { ...fp.rooms, [room]: updatedRoom } };
+        return { floorPlans, routingFrom: null };
+      }),
+      removeRoutingConnection: (room, connId) => set(st => {
+        const fp = st.floorPlans[st.activeFloor];
+        const existing = fp.rooms[room].connections ?? [];
+        const updatedRoom = { ...fp.rooms[room], connections: existing.filter(c => c.id !== connId) };
+        const floorPlans = [...st.floorPlans];
+        floorPlans[st.activeFloor] = { ...fp, rooms: { ...fp.rooms, [room]: updatedRoom } };
+        return { floorPlans };
+      }),
       lightBrightnessByRoom: {},
       lightColorByRoom: {},
       roomExposureByRoom: {},
@@ -1376,10 +1411,12 @@ export const useDesignerStore = create<DesignerStore>()(
           const doorPos = (built as { doorPos?: number }).doorPos;
           const doorLen = (built as { doorLen?: number }).doorLen;
           const exteriorDecor = (built as { exteriorDecor?: import("./types").ExteriorWallDecorItem[] }).exteriorDecor ?? [];
+          const connections = (built as { connections?: import("./types").RoutingConnection[] }).connections ?? [];
           updatedRooms[roomId] = {
             materials: materials as never,
             placedItems: placedItems as never,
             ...(exteriorDecor.length > 0 ? { exteriorDecor } : {}),
+            ...(connections.length > 0 ? { connections } : {}),
           };
           if (windows.length > 0) windowsPatch[roomId] = windows;
           if (doorStyle) doorStylePatch[roomId] = doorStyle;

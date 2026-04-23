@@ -3203,9 +3203,22 @@ function RoomDecorWallFrame({
   controls: { enabled: boolean } | null;
 }) {
   const groupRef = useRef<THREE.Group>(null);
+  // Track pointer-down screen position + whether threshold has been
+  // exceeded. Without this, a "click" (pointerDown + 1-2px jitter +
+  // pointerUp) nudges the decor's position slightly every time the
+  // user tries to just SELECT or TOGGLE a light. 5px threshold lets
+  // intentional drags through while ignoring click jitter.
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const pastThresholdRef = useRef(false);
   const onDragMove = (e: any) => {
     const id = draggingIdRef.current;
     if (!id || !groupRef.current) return;
+    if (!pastThresholdRef.current && pointerStartRef.current) {
+      const dx = e.clientX - pointerStartRef.current.x;
+      const dy = e.clientY - pointerStartRef.current.y;
+      if (Math.hypot(dx, dy) < 5) return;
+      pastThresholdRef.current = true;
+    }
     const worldPt = e.point as THREE.Vector3;
     const local = groupRef.current.worldToLocal(worldPt.clone());
     const u = local.x / spec.wallW + 0.5;
@@ -3218,6 +3231,8 @@ function RoomDecorWallFrame({
   const onDragEnd = () => {
     if (draggingIdRef.current) {
       draggingIdRef.current = null;
+      pointerStartRef.current = null;
+      pastThresholdRef.current = false;
       if (controls) controls.enabled = true;
     }
   };
@@ -3244,6 +3259,8 @@ function RoomDecorWallFrame({
             e.stopPropagation();
             setSelected(d.instanceId);
             draggingIdRef.current = d.instanceId;
+            pointerStartRef.current = { x: e.clientX, y: e.clientY };
+            pastThresholdRef.current = false;
             if (controls) controls.enabled = false;
           }}
         />

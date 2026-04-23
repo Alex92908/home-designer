@@ -2,7 +2,7 @@
  * Style templates: one-click full room configuration
  * Each template sets materials and furniture for all enabled rooms.
  */
-import { RoomType, StyleTag, WindowConfig, WindowStyle, DoorStyle, ExteriorWall, ExteriorWallDecorItem } from "./types";
+import { RoomType, StyleTag, WindowConfig, WindowStyle, DoorStyle, ExteriorWall, ExteriorWallDecorItem, RoutingConnection, RoutingKind } from "./types";
 import { MATERIALS } from "./data";
 import { getFurnitureById } from "./furniture";
 
@@ -54,6 +54,11 @@ export interface EmbeddedRoom {
     scaleW?: number; scaleH?: number;
     rotation?: number;
   }>;
+  /** Pre-drawn pipe / wire routing. `from` and `to` are INDEX into the
+   *  `items` array (since real instanceIds are generated at load time).
+   *  Lets templates ship with a "this is what the M&E layout looks like"
+   *  preview that the user can edit afterwards. */
+  connections?: Array<{ from: number; to: number; kind: RoutingKind }>;
 }
 
 export interface StyleTemplate {
@@ -160,6 +165,20 @@ export function buildEmbeddedRoomState(
   const doorPos = embedded.doorPos !== undefined ? Math.round(embedded.doorPos * doorScale) : undefined;
   const doorLen = embedded.doorLen !== undefined ? Math.round(embedded.doorLen * doorScale) : undefined;
 
+  // Build routing connections — resolve item-array indices to actual
+  // instanceIds generated above. Out-of-range refs are silently dropped.
+  const connections: RoutingConnection[] = (embedded.connections ?? []).flatMap((c, i) => {
+    const a = placedItems[c.from];
+    const b = placedItems[c.to];
+    if (!a || !b) return [];
+    return [{
+      id: `emb_conn_${roomId}_${i}`,
+      from: a.instanceId,
+      to: b.instanceId,
+      kind: c.kind,
+    }];
+  });
+
   return {
     materials: resolvedMaterials,
     placedItems,
@@ -169,6 +188,7 @@ export function buildEmbeddedRoomState(
     doorPos,
     doorLen,
     exteriorDecor,
+    connections,
   };
 }
 
@@ -287,20 +307,69 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
       baseW: 360, baseD: 280,
       materialIds: { wall:"wall-tile-metro", floor:"floor-white-tile" },
       items: [
+        // 0-4: appliances
         { furnitureId:"cabinet-lower-white", x:65,  z:28, rotation:0 },
         { furnitureId:"cabinet-upper-white", x:65,  z:17, rotation:0 },
         { furnitureId:"sink-double-steel",   x:175, z:22, rotation:0 },
         { furnitureId:"hood-side-black",     x:175, z:16, rotation:0 },
         { furnitureId:"fridge-french-door",  x:310, z:35, rotation:0 },
+        // 5-12: water/electrical points
+        { furnitureId:"water-supply-cold",   x:160, z:8,  rotation:0 },  // 5
+        { furnitureId:"water-supply-hot",    x:190, z:8,  rotation:0 },  // 6
+        { furnitureId:"drain-point",         x:175, z:50, rotation:0 },  // 7
+        { furnitureId:"exhaust-vent",        x:240, z:8,  rotation:0 },  // 8
+        { furnitureId:"outlet-2pin",         x:240, z:80, rotation:0 },  // 9 (counter outlet)
+        { furnitureId:"outlet-2pin",         x:280, z:8,  rotation:0 },  // 10 (fridge outlet)
+        { furnitureId:"breaker-panel",       x:330, z:250, rotation:0 }, // 11 (panel)
+        { furnitureId:"switch-single",       x:30,  z:260, rotation:0 }, // 12 (entry switch)
+      ],
+      connections: [
+        // Water supply to sink
+        { from: 5, to: 2, kind: "cold-water" },
+        { from: 6, to: 2, kind: "hot-water" },
+        // Sink → drain
+        { from: 2, to: 7, kind: "drain" },
+        // Wires from breaker to all outlets + range hood + lights
+        { from: 11, to: 9,  kind: "wire" },
+        { from: 11, to: 10, kind: "wire" },
+        { from: 11, to: 12, kind: "wire" },
+        { from: 11, to: 3,  kind: "wire" },  // panel → range hood
+        { from: 11, to: 8,  kind: "wire" },  // panel → exhaust vent
       ],
     },
     bathroom: {
       baseW: 260, baseD: 220,
       materialIds: { wall:"wall-tile-metro", floor:"floor-white-tile" },
       items: [
+        // 0-2: fixtures
         { furnitureId:"vanity-single-white", x:40,  z:25,  rotation:0 },
         { furnitureId:"toilet-smart",        x:220, z:28,  rotation:0 },
         { furnitureId:"shower-enclosed",     x:100, z:165, rotation:0 },
+        // 3-10: water/electrical
+        { furnitureId:"water-supply-cold",   x:25,  z:8,   rotation:0 }, // 3 (vanity cold)
+        { furnitureId:"water-supply-hot",    x:55,  z:8,   rotation:0 }, // 4 (vanity hot)
+        { furnitureId:"water-supply-cold",   x:215, z:8,   rotation:0 }, // 5 (toilet cold)
+        { furnitureId:"water-supply-cold",   x:80,  z:155, rotation:0 }, // 6 (shower cold)
+        { furnitureId:"water-supply-hot",    x:120, z:155, rotation:0 }, // 7 (shower hot)
+        { furnitureId:"floor-drain",         x:130, z:200, rotation:0 }, // 8
+        { furnitureId:"outlet-2pin",         x:90,  z:8,   rotation:0 }, // 9 (vanity outlet)
+        { furnitureId:"switch-single",       x:230, z:200, rotation:0 }, // 10 (door switch)
+      ],
+      connections: [
+        // Vanity water
+        { from: 3, to: 0, kind: "cold-water" },
+        { from: 4, to: 0, kind: "hot-water" },
+        // Toilet
+        { from: 5, to: 1, kind: "cold-water" },
+        // Shower
+        { from: 6, to: 2, kind: "cold-water" },
+        { from: 7, to: 2, kind: "hot-water" },
+        // Floor drain — visual marker; technically receives drain from
+        // shower + vanity overflow but kept simple as a single endpoint
+        { from: 2, to: 8, kind: "drain" },
+        { from: 0, to: 8, kind: "drain" },
+        // Wiring
+        { from: 10, to: 9, kind: "wire" },
       ],
     },
     study: {

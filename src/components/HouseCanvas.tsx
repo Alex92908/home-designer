@@ -546,10 +546,20 @@ function WallFrame({
 }) {
   const { position, rotation, wallW, wallH } = roomWallFrame(roomCx, roomCz, roomW, roomD, roomH, wall);
   const groupRef = useRef<THREE.Group>(null);
+  // 5px threshold before a pointer-down counts as a drag — prevents
+  // click jitter from nudging decor position on tap/click.
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const pastThresholdRef = useRef(false);
 
   const onDragMove = (e: any) => {
     const id = draggingIdRef.current;
     if (!id || !groupRef.current) return;
+    if (!pastThresholdRef.current && pointerStartRef.current) {
+      const dx = e.clientX - pointerStartRef.current.x;
+      const dy = e.clientY - pointerStartRef.current.y;
+      if (Math.hypot(dx, dy) < 5) return;
+      pastThresholdRef.current = true;
+    }
     const worldPt = e.point as THREE.Vector3;
     const local = groupRef.current.worldToLocal(worldPt.clone());
     const u = local.x / wallW + 0.5;
@@ -561,6 +571,8 @@ function WallFrame({
   const onDragEnd = () => {
     if (draggingIdRef.current) {
       draggingIdRef.current = null;
+      pointerStartRef.current = null;
+      pastThresholdRef.current = false;
       if (orbitRef.current) orbitRef.current.enabled = true;
     }
   };
@@ -593,8 +605,10 @@ function WallFrame({
             rotation={d.rotation}
             selected={selectedId === d.instanceId}
             onSelect={() => setSelected(d.instanceId)}
-            onDragStart={() => {
+            onDragStart={(e: any) => {
               draggingIdRef.current = d.instanceId;
+              pointerStartRef.current = { x: e.clientX, y: e.clientY };
+              pastThresholdRef.current = false;
               if (orbitRef.current) orbitRef.current.enabled = false;
             }}
           />

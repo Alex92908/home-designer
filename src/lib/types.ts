@@ -258,7 +258,23 @@ export interface RoomState {
    *  orbits outside the room, and in HouseCanvas on the corresponding
    *  house-perimeter segment. */
   exteriorDecor?: ExteriorWallDecorItem[];
+  /** Pipe/wire routing — connections between water/electrical point
+   *  fixtures placed in this room. Drawn in the 2D plan view. */
+  connections?: RoutingConnection[];
 }
+
+/** A single routing segment between two fixture instanceIds. The kind
+ *  determines color + which fixture categories are valid endpoints. */
+export interface RoutingConnection {
+  id: string;
+  /** instanceId of source PlacedItem */
+  from: string;
+  /** instanceId of destination PlacedItem */
+  to: string;
+  kind: RoutingKind;
+}
+
+export type RoutingKind = "wire" | "cold-water" | "hot-water" | "drain";
 
 // ─── Per-floor independent floor plan ─────────────────────
 export interface FloorPlan {
