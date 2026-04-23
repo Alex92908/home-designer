@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, ExteriorSettings, ExteriorWall } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
+import { DetailedDecor } from "./DetailedDecor";
 
 // ─── Constants ─────────────────────────────────────────────
 const FLOOR_H = 2.8;
@@ -289,13 +290,14 @@ function DecorMesh({
   const isLightStrip = item.id.startsWith("light-strip-");
   const isVine = item.id === "climbing-vine";
   const hasImage = !!item.imageUrl;
+  const detailed = DetailedDecor({ item, w, h, d });
 
   return (
     <group
       rotation={[0, 0, (rotation * Math.PI) / 180]}
       onPointerDown={(e) => { e.stopPropagation(); onSelect(); onDragStart(e); }}
     >
-      {canvasTex ? (
+      {detailed ? detailed : canvasTex ? (
         <mesh position={[0, 0, 0.005]}>
           <planeGeometry args={[w, h]} />
           <meshBasicMaterial

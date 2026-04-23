@@ -11,6 +11,7 @@ import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
+import { DetailedDecor } from "./DetailedDecor";
 import { getFloorTexture, getWallTexture, floorTileSize, wallTileSize } from "@/lib/textures";
 import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 
@@ -2902,11 +2903,14 @@ function ExteriorDecorItem({
   const isLightStrip = item.id.startsWith("light-strip-");
   const isVine = item.id === "climbing-vine";
   const hasImage = !!item.imageUrl;
-  // Pick rendering mode:
-  //   - canvasTex present → draw it on a plane (couplet, plate, border, ivy)
-  //   - else hasImage (imageUrl) and no canvasTex → suspense-load the JPG
+  // Pick rendering mode (first match wins):
+  //   - DetailedDecor returns real 3D geometry for specific items
+  //     (lantern/mailbox/AC/vine/borders/plates/strips/wall lamps)
+  //   - else canvasTex present → draw it on a plane (couplets)
+  //   - else hasImage (imageUrl) and no canvasTex → suspense-load the JPG (murals)
   //   - else isLightStrip → emissive box
   //   - else → colored box
+  const detailed = DetailedDecor({ item, w, h, d: dep });
 
   return (
     <group
@@ -2914,7 +2918,7 @@ function ExteriorDecorItem({
       rotation={[0, 0, ((decor.rotation ?? 0) * Math.PI) / 180]}
       onPointerDown={onPointerDown}
     >
-      {canvasTex ? (
+      {detailed ? detailed : canvasTex ? (
         <mesh position={[0, 0, 0.005]}>
           <planeGeometry args={[w, h]} />
           <meshBasicMaterial
