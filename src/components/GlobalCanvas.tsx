@@ -210,6 +210,10 @@ function Scene() {
   const activeRoom   = useDesignerStore(s => s.activeRoom);
   const setActiveRoom = useDesignerStore(s => s.setActiveRoom);
   const setViewMode  = useDesignerStore(s => s.setViewMode);
+  // 同 FloorPlanAll 一致：首次点击房间仅激活高亮，400ms 内再点同一间
+  // 才真正进入效果图，避免转场/旋转时误触。
+  const lastPickRef = useRef<{ room: RoomType; t: number } | null>(null);
+  const DOUBLE_MS = 400;
 
   const [hover, setHover] = useState<RoomType | null>(null);
 
@@ -267,7 +271,18 @@ function Scene() {
             isActive={r === activeRoom}
             isHover={r === hover}
             setHover={setHover}
-            onPick={() => { setActiveRoom(r); setViewMode("3d"); }}
+            onPick={() => {
+              const now = Date.now();
+              const last = lastPickRef.current;
+              if (last && last.room === r && now - last.t < DOUBLE_MS) {
+                setActiveRoom(r);
+                setViewMode("3d");
+                lastPickRef.current = null;
+              } else {
+                setActiveRoom(r);
+                lastPickRef.current = { room: r, t: now };
+              }
+            }}
           />
         ))}
       </group>
