@@ -6,6 +6,7 @@ import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS, DEFAULT_ENABLED } from "@/lib/store";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale } from "@/lib/i18n";
+import { FLOORPLAN_LAYOUTS } from "@/lib/floorplanLayouts";
 
 // ─── Constants ─────────────────────────────────────────────
 const WALL     = 14;   // wall thickness cm
@@ -336,7 +337,9 @@ export default function FloorPlanAll() {
   const [drawPts, setDrawPts] = useState<Array<[number, number]>>([]);
   const [drawHover, setDrawHover] = useState<{ x: number; y: number } | null>(null);
 
-  const addRoom2           = useDesignerStore(s => s.addRoom);
+  const addRoom2             = useDesignerStore(s => s.addRoom);
+  const applyFloorplanLayout = useDesignerStore(s => s.applyFloorplanLayout);
+  const [layoutPickerOpen, setLayoutPickerOpen] = useState(false);
 
   /** Commit the polygon accumulated in drawPts as a new room. Assigns the
    *  next free slot from ALL_POSSIBLE_ROOMS, sets its bbox as
@@ -543,6 +546,14 @@ export default function FloorPlanAll() {
               📋 {t.allPasteRoom} ({roomClipboard.name})
             </button>
           )}
+          <button
+            onClick={() => setLayoutPickerOpen(true)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${(!roomClipboard && exterior.floors <= 1 && !blueprint.image) ? "ml-auto" : ""}`}
+            style={{ border: "1px solid #6366F1", color: "#6366F1", background: "white" }}
+            title="从预设户型模板一键生成整屋布局"
+          >
+            🏘️ 户型
+          </button>
           {/* Blueprint tracing: upload image, adjust, toggle trace mode */}
           {!blueprint.image ? (
             <label
@@ -1005,6 +1016,77 @@ export default function FloorPlanAll() {
           </svg>
         </div>}
       </div>
+
+      {/* Layout picker modal */}
+      {layoutPickerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setLayoutPickerOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl p-5 max-w-3xl w-[92vw] max-h-[85vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center mb-3">
+              <h3 className="text-base font-black text-gray-800">户型模板 — 一键替换当前楼层布局</h3>
+              <button onClick={() => setLayoutPickerOpen(false)}
+                className="ml-auto text-gray-400 hover:text-gray-700 text-xl leading-none">✕</button>
+            </div>
+            <p className="text-[11px] text-gray-500 mb-3">
+              仅替换房间位置 / 尺寸 / 形状；已配置的材质和家具不会被清空（房间键匹配时保留）。
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {FLOORPLAN_LAYOUTS.map(layout => {
+                // Compute preview bbox for the thumbnail
+                const xs = layout.rooms.flatMap(r => [r.x, r.x + r.width]);
+                const ys = layout.rooms.flatMap(r => [r.y, r.y + r.depth]);
+                const minX = Math.min(...xs), maxX = Math.max(...xs);
+                const minY = Math.min(...ys), maxY = Math.max(...ys);
+                const pw = maxX - minX, ph = maxY - minY;
+                return (
+                  <button key={layout.id}
+                    onClick={() => {
+                      if (!window.confirm(`用"${layout.name}"替换当前楼层？`)) return;
+                      pushLayoutHistory();
+                      applyFloorplanLayout(layout.id);
+                      setLayoutPickerOpen(false);
+                    }}
+                    className="flex flex-col gap-2 p-3 rounded-xl border border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left"
+                  >
+                    <svg viewBox={`${minX - 20} ${minY - 20} ${pw + 40} ${ph + 40}`}
+                      className="w-full aspect-[5/4] bg-gray-100 rounded-lg">
+                      {layout.rooms.map((r, i) => {
+                        const isPoly = r.shape && r.shape.preset !== "rect";
+                        return isPoly ? (
+                          <polygon key={i}
+                            points={r.shape!.points.map(([x, y]) => `${r.x + x},${r.y + y}`).join(" ")}
+                            fill="#E0E7FF" stroke="#6366F1" strokeWidth={6} strokeLinejoin="round"
+                          />
+                        ) : (
+                          <rect key={i} x={r.x} y={r.y} width={r.width} height={r.depth}
+                            fill="#E0E7FF" stroke="#6366F1" strokeWidth={6} />
+                        );
+                      })}
+                      {layout.rooms.map((r, i) => (
+                        <text key={`t-${i}`} x={r.x + r.width / 2} y={r.y + r.depth / 2}
+                          textAnchor="middle" dominantBaseline="middle"
+                          fontSize={Math.min(r.width, r.depth) * 0.18}
+                          fill="#4338CA" fontFamily="system-ui" fontWeight="700">
+                          {ROOM_DEFS[r.room].icon}
+                        </text>
+                      ))}
+                    </svg>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-bold text-gray-800">{layout.name}</span>
+                      <span className="text-[10px] text-gray-500 ml-auto">{layout.rooms.length} 间</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

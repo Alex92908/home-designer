@@ -271,6 +271,12 @@ interface DesignerStore {
   setBlueprint: (patch: Partial<DesignerStore["blueprint"]>) => void;
   clearBlueprint: () => void;
 
+  /** Apply a layout-only template to the current floor: replaces
+   *  enabledRooms, roomLayout, roomDimensions, roomShapes. Keeps existing
+   *  RoomState (materials + placedItems) for rooms that appear in both
+   *  — safer than wiping customizations. */
+  applyFloorplanLayout: (layoutId: string) => void;
+
   // Room / view actions
   setActiveRoom: (room: RoomType) => void;
   setViewMode: (mode: ViewMode) => void;
@@ -1066,6 +1072,41 @@ export const useDesignerStore = create<DesignerStore>()(
 
       setBlueprint: (patch) => set(s => ({ blueprint: { ...s.blueprint, ...patch } })),
       clearBlueprint: () => set(() => ({ blueprint: { image: null, naturalW: 0, naturalH: 0, opacity: 0.4, offsetX: 0, offsetY: 0, scale: 1 } })),
+
+      applyFloorplanLayout: (layoutId) => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { FLOORPLAN_LAYOUTS } = require("./floorplanLayouts") as typeof import("./floorplanLayouts");
+        const layout = FLOORPLAN_LAYOUTS.find(l => l.id === layoutId);
+        if (!layout) return;
+        updateFloor(get, set, fp => {
+          const enabled = layout.rooms.map(r => r.room);
+          const layoutMap = { ...fp.roomLayout };
+          const dimsMap = { ...fp.roomDimensions };
+          const shapesMap: Partial<Record<RoomType, import("./roomGeometry").RoomShape>> = { ...(fp.roomShapes ?? {}) };
+          // Clear stale shapes from rooms not in this template
+          for (const key of Object.keys(shapesMap) as RoomType[]) {
+            if (!enabled.includes(key)) delete shapesMap[key];
+          }
+          for (const r of layout.rooms) {
+            layoutMap[r.room] = { x: r.x, y: r.y };
+            dimsMap[r.room]   = { width: r.width, depth: r.depth };
+            if (r.shape) {
+              shapesMap[r.room] = {
+                preset: r.shape.preset,
+                points: r.shape.points.map(p => [...p] as [number, number]),
+              };
+            } else {
+              delete shapesMap[r.room];
+            }
+          }
+          return {
+            enabledRooms: enabled,
+            roomLayout: layoutMap,
+            roomDimensions: dimsMap,
+            roomShapes: shapesMap,
+          };
+        });
+      },
 
       copyRoom: (room) => {
         const s = get();
