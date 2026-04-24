@@ -56,7 +56,8 @@ const GlobalCanvas = dynamic(() => import("@/components/GlobalCanvas"), {
 function FrontWallToggle() {
   const opacity = useDesignerStore(s => s.frontWallOpacity);
   const setOpacity = useDesignerStore(s => s.setFrontWallOpacity);
-  const label = opacity === 0 ? "🏠 前墙：隐藏" : opacity === 0.5 ? "🏠 前墙：半透" : "🏠 前墙：实墙";
+  const t = useT();
+  const label = opacity === 0 ? t.wallToggleHide : opacity === 0.5 ? t.wallToggleHalf : t.wallToggleSolid;
   const next = opacity === 0 ? 0.5 : opacity === 0.5 ? 1 : 0;
   const bg = opacity === 0 ? "rgba(30,30,50,0.72)"
            : opacity === 0.5 ? "rgba(59,130,246,0.9)"
@@ -71,7 +72,7 @@ function FrontWallToggle() {
         backdropFilter: "blur(6px)",
         border: "1px solid rgba(255,255,255,0.12)",
       }}
-      title="切换前墙显示（隐藏→半透→实墙→隐藏）"
+      title={t.wallToggleTitle}
     >
       {label}
     </button>
@@ -83,7 +84,8 @@ function FrontWallToggle() {
 function CeilingToggle() {
   const opacity = useDesignerStore(s => s.ceilingOpacity);
   const setOpacity = useDesignerStore(s => s.setCeilingOpacity);
-  const label = opacity === 0 ? "🔲 天花：隐藏" : opacity === 0.5 ? "🔲 天花：半透" : "🔲 天花：实板";
+  const t = useT();
+  const label = opacity === 0 ? t.ceilToggleHide : opacity === 0.5 ? t.ceilToggleHalf : t.ceilToggleSolid;
   const next = (opacity === 0 ? 0.5 : opacity === 0.5 ? 1 : 0) as 0 | 0.5 | 1;
   const bg = opacity === 0 ? "rgba(30,30,50,0.72)"
            : opacity === 0.5 ? "rgba(59,130,246,0.9)"
@@ -98,7 +100,7 @@ function CeilingToggle() {
         backdropFilter: "blur(6px)",
         border: "1px solid rgba(255,255,255,0.12)",
       }}
-      title="切换天花板显示（隐藏→半透→实板→隐藏）"
+      title={t.ceilToggleTitle}
     >
       {label}
     </button>

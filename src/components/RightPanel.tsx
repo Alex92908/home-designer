@@ -429,16 +429,13 @@ export default function RightPanel() {
 }
 
 // ─── Per-room exterior decor picker + editor ────────────────
-const EXTERIOR_WALL_OPTIONS: Array<{ id: ExteriorWall; label: string }> = [
-  { id: "front", label: "前（+Z）" },
-  { id: "back",  label: "后（-Z）" },
-  { id: "left",  label: "左（-X）" },
-  { id: "right", label: "右（+X）" },
-];
+const EXTERIOR_WALL_IDS: ExteriorWall[] = ["front", "back", "left", "right"];
 
 const EMPTY_EXT_DECOR: ExteriorWallDecorItem[] = [];
 
 function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
+  const t = useT();
+  const customRoomMeta = useDesignerStore(s => s.customRoomMeta);
   const decorRaw = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[activeRoom]?.exteriorDecor);
   const decor = decorRaw ?? EMPTY_EXT_DECOR;
   const selectedId = useDesignerStore(s => s.selectedExteriorDecorId);
@@ -475,30 +472,30 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
 
   return (
     <div className="px-4 pb-4 border-t border-gray-100 pt-3">
-      <div className="text-[11px] font-black text-gray-800 mb-2">🏮 外墙装饰（{ROOM_DEFS[activeRoom].name}）</div>
+      <div className="text-[11px] font-black text-gray-800 mb-2">🏮 {t.exteriorDecorTitle(customRoomMeta[activeRoom]?.name ?? t.roomNames[activeRoom] ?? ROOM_DEFS[activeRoom].name)}</div>
 
       {/* Exterior wall material selector — per-face. "全部" sets the
           room-wide default; a specific side writes an override that
           takes priority over the default on that one face. */}
       <div className="mb-2 p-2 rounded-xl bg-gray-50 border border-gray-100">
         <div className="flex items-center justify-between mb-1">
-          <div className="text-[9px] text-gray-500">外墙材质</div>
+          <div className="text-[9px] text-gray-500">{t.exteriorDecorWallMat}</div>
           {currentExt && (
             <button
               onClick={() => setWallExterior(extColorSide, undefined)}
               className="text-[9px] text-red-400 hover:text-red-600"
-              title="清除这一面的外墙色"
-            >清除</button>
+              title={t.wallClear}
+            >{t.wallClear}</button>
           )}
         </div>
         {/* Side selector for which face the color picker applies to */}
         <div className="flex gap-1 mb-1.5">
           {([
-            { id: "all",   label: "全部" },
-            { id: "front", label: "前" },
-            { id: "back",  label: "后" },
-            { id: "left",  label: "左" },
-            { id: "right", label: "右" },
+            { id: "all",   label: t.exteriorWallAll },
+            { id: "front", label: t.exteriorWalls.front },
+            { id: "back",  label: t.exteriorWalls.back },
+            { id: "left",  label: t.exteriorWalls.left },
+            { id: "right", label: t.exteriorWalls.right },
           ] as const).map(s => {
             const sideMat =
               s.id === "all" ? wallExterior :
@@ -539,22 +536,22 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
         </div>
         {currentExt && (
           <div className="text-[9px] text-gray-400 mt-1 truncate">
-            {extColorSide === "all" ? "全部外墙" : `${extColorSide === "front" ? "前" : extColorSide === "back" ? "后" : extColorSide === "left" ? "左" : "右"}外墙`}：{currentExt.name}
+            {extColorSide === "all" ? t.exteriorWallAll : t.exteriorWalls[extColorSide]}: {currentExt.name}
           </div>
         )}
       </div>
 
       {/* Wall picker for placement */}
       <div className="mb-2 p-2 rounded-xl bg-gray-50 border border-gray-100">
-        <div className="text-[9px] text-gray-500 mb-1">放到哪面外墙：</div>
+        <div className="text-[9px] text-gray-500 mb-1">{t.exteriorDecorTargetLabel}</div>
         <div className="flex gap-1">
-          {EXTERIOR_WALL_OPTIONS.map(w => (
-            <button key={w.id}
-              onClick={() => setPickerWall(w.id)}
+          {EXTERIOR_WALL_IDS.map(id => (
+            <button key={id}
+              onClick={() => setPickerWall(id)}
               className={`flex-1 text-[10px] py-1 rounded-md transition-all ${
-                pickerWall === w.id ? "bg-blue-500 text-white font-semibold" : "bg-white text-gray-600 border border-gray-200"
+                pickerWall === id ? "bg-blue-500 text-white font-semibold" : "bg-white text-gray-600 border border-gray-200"
               }`}>
-              {w.label}
+              {t.exteriorWallsDir[id]}
             </button>
           ))}
         </div>
@@ -576,11 +573,11 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
       {/* Placed list */}
       {decor.length > 0 && (
         <div className="mb-2">
-          <div className="text-[9px] text-gray-500 mb-1">已放置 ({decor.length})</div>
+          <div className="text-[9px] text-gray-500 mb-1">{t.placedCount(decor.length)}</div>
           <div className="flex flex-col gap-1">
             {decor.map(d => {
               const item = getFurnitureById(d.furnitureId);
-              const wallLabel = EXTERIOR_WALL_OPTIONS.find(w => w.id === d.wall)?.label ?? d.wall;
+              const wallLabel = t.exteriorWallsDir[d.wall] ?? d.wall;
               return (
                 <div key={d.instanceId}
                   className={`flex items-center gap-2 p-1.5 rounded-lg border cursor-pointer transition-all ${
@@ -604,35 +601,35 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
       {/* Selected editor */}
       {selected && selectedItem && (
         <div className="p-2 rounded-xl bg-green-50 border border-green-200">
-          <div className="text-[10px] font-bold text-green-700 mb-2">编辑：{selectedItem.name}</div>
+          <div className="text-[10px] font-bold text-green-700 mb-2">{t.exteriorDecorEditTitle(selectedItem.name)}</div>
           <div className="flex flex-col gap-2">
             <div>
-              <div className="text-[9px] text-gray-500 mb-0.5">墙面</div>
+              <div className="text-[9px] text-gray-500 mb-0.5">{t.exteriorDecorEditWall}</div>
               <div className="flex gap-1">
-                {EXTERIOR_WALL_OPTIONS.map(w => (
-                  <button key={w.id}
-                    onClick={() => updateItem(activeRoom, selected.instanceId, { wall: w.id })}
+                {EXTERIOR_WALL_IDS.map(id => (
+                  <button key={id}
+                    onClick={() => updateItem(activeRoom, selected.instanceId, { wall: id })}
                     className={`flex-1 text-[9px] py-1 rounded-md transition-all ${
-                      selected.wall === w.id ? "bg-green-600 text-white font-semibold" : "bg-white text-gray-600 border border-gray-200"
+                      selected.wall === id ? "bg-green-600 text-white font-semibold" : "bg-white text-gray-600 border border-gray-200"
                     }`}>
-                    {w.label.slice(0, 1)}
+                    {t.exteriorWalls[id]}
                   </button>
                 ))}
               </div>
             </div>
-            <ExtSliderRow label="水平 u" value={selected.u} min={0.04} max={0.96} step={0.01}
+            <ExtSliderRow label={t.exteriorDecorU} value={selected.u} min={0.04} max={0.96} step={0.01}
               onChange={v => updateItem(activeRoom, selected.instanceId, { u: v })} />
-            <ExtSliderRow label="垂直 v" value={selected.v} min={0.04} max={0.96} step={0.01}
+            <ExtSliderRow label={t.exteriorDecorV} value={selected.v} min={0.04} max={0.96} step={0.01}
               onChange={v => updateItem(activeRoom, selected.instanceId, { v: v })} />
-            <ExtSliderRow label="宽度 ×" value={selected.scaleW ?? 1} min={0.3} max={3} step={0.05}
+            <ExtSliderRow label={t.exteriorDecorW} value={selected.scaleW ?? 1} min={0.3} max={3} step={0.05}
               onChange={v => updateItem(activeRoom, selected.instanceId, { scaleW: v })} />
-            <ExtSliderRow label="高度 ×" value={selected.scaleH ?? 1} min={0.3} max={3} step={0.05}
+            <ExtSliderRow label={t.exteriorDecorH} value={selected.scaleH ?? 1} min={0.3} max={3} step={0.05}
               onChange={v => updateItem(activeRoom, selected.instanceId, { scaleH: v })} />
-            <ExtSliderRow label="旋转°" value={selected.rotation ?? 0} min={-180} max={180} step={5}
+            <ExtSliderRow label={t.exteriorDecorRot} value={selected.rotation ?? 0} min={-180} max={180} step={5}
               onChange={v => updateItem(activeRoom, selected.instanceId, { rotation: v })} />
           </div>
           <div className="mt-2 text-[9px] text-gray-500 italic">
-            3D 视图里可直接拖拽装饰物到位置。
+            {t.exteriorDecorDragHint}
           </div>
         </div>
       )}
@@ -663,6 +660,7 @@ function CeilingLightPositionSection({ activeRoom }: { activeRoom: RoomType }) {
   const setPos = useDesignerStore(s => s.setLightPos);
   const dims = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
   const lightMat = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[activeRoom]?.materials?.light);
+  const tL = useT();
   if (!lightMat) return null;   // no ceiling light set → nothing to position
   const halfW = (dims?.width  ?? 400) / 2;
   const halfD = (dims?.depth  ?? 360) / 2;
@@ -670,11 +668,11 @@ function CeilingLightPositionSection({ activeRoom }: { activeRoom: RoomType }) {
   const z = pos?.z ?? 0;
   return (
     <div className="px-4 pt-3 pb-1 border-t border-gray-100">
-      <div className="text-[11px] font-black text-gray-800 mb-1.5">💡 顶灯位置（{lightMat.name}）</div>
+      <div className="text-[11px] font-black text-gray-800 mb-1.5">{tL.lightPosTitleType(lightMat.name)}</div>
       <div className="p-2 rounded-xl bg-gray-50 border border-gray-100 flex flex-col gap-2">
         <div>
           <div className="flex justify-between text-[9px] text-gray-500 mb-0.5">
-            <span>左右（X）</span><span className="font-mono">{x.toFixed(0)}cm</span>
+            <span>{tL.lightAxisX}</span><span className="font-mono">{x.toFixed(0)}cm</span>
           </div>
           <input type="range" min={-halfW + 30} max={halfW - 30} step={5} value={x}
             onChange={e => setPos(activeRoom, { x: parseFloat(e.target.value), z })}
@@ -682,7 +680,7 @@ function CeilingLightPositionSection({ activeRoom }: { activeRoom: RoomType }) {
         </div>
         <div>
           <div className="flex justify-between text-[9px] text-gray-500 mb-0.5">
-            <span>前后（Z）</span><span className="font-mono">{z.toFixed(0)}cm</span>
+            <span>{tL.lightAxisZ}</span><span className="font-mono">{z.toFixed(0)}cm</span>
           </div>
           <input type="range" min={-halfD + 30} max={halfD - 30} step={5} value={z}
             onChange={e => setPos(activeRoom, { x, z: parseFloat(e.target.value) })}
@@ -691,7 +689,7 @@ function CeilingLightPositionSection({ activeRoom }: { activeRoom: RoomType }) {
         <button
           onClick={() => setPos(activeRoom, { x: 0, z: 0 })}
           className="self-start text-[9px] text-gray-500 hover:text-gray-700 underline"
-        >居中</button>
+        >{tL.lightPosCenter}</button>
       </div>
     </div>
   );
@@ -711,31 +709,32 @@ function LightTuningSection({ activeRoom }: { activeRoom: RoomType }) {
   // Always show — users may want to tune ambient exposure even without
   // a specific ceiling-light material picked.
 
-  const presets: Array<{ label: string; hex: string }> = [
-    { label: "暖", hex: "#FFD090" },
-    { label: "中", hex: "#FFF2D0" },
-    { label: "白", hex: "#F8FAFF" },
-    { label: "冷", hex: "#C8E0FF" },
+  const tL = useT();
+  const presets: Array<{ key: "warm"|"mid"|"white"|"cool"; hex: string }> = [
+    { key: "warm",  hex: "#FFD090" },
+    { key: "mid",   hex: "#FFF2D0" },
+    { key: "white", hex: "#F8FAFF" },
+    { key: "cool",  hex: "#C8E0FF" },
   ];
 
   return (
     <div className="px-4 pt-3 pb-1 border-t border-gray-100">
-      <div className="text-[11px] font-black text-gray-800 mb-1.5">🔆 灯光调节</div>
+      <div className="text-[11px] font-black text-gray-800 mb-1.5">{tL.lightTuneTitle}</div>
       <div className="p-2 rounded-xl bg-gray-50 border border-gray-100 flex flex-col gap-2">
         {/* On/Off toggle */}
         <div className="flex items-center justify-between">
-          <span className="text-[10px] text-gray-500">开关</span>
+          <span className="text-[10px] text-gray-500">{tL.lightSwitch}</span>
           <button
             onClick={() => toggleOn(activeRoom)}
             className={`text-[10px] px-2 py-0.5 rounded-full transition-all ${
               isOn ? "bg-yellow-400 text-yellow-900 font-bold" : "bg-gray-300 text-gray-600"
             }`}
-          >{isOn ? "💡 开" : "🌙 关"}</button>
+          >{isOn ? `💡 ${tL.lightOn}` : `🌙 ${tL.lightOff}`}</button>
         </div>
         {/* Brightness */}
         <div>
           <div className="flex justify-between text-[9px] text-gray-500 mb-0.5">
-            <span>亮度 ×</span><span className="font-mono">{brightness.toFixed(2)}</span>
+            <span>{tL.lightBrightness}</span><span className="font-mono">{brightness.toFixed(2)}</span>
           </div>
           <input type="range" min={0.3} max={2} step={0.05} value={brightness}
             onChange={e => setBrightness(activeRoom, parseFloat(e.target.value))}
@@ -744,20 +743,20 @@ function LightTuningSection({ activeRoom }: { activeRoom: RoomType }) {
         {/* Color temperature presets + custom */}
         <div>
           <div className="flex justify-between text-[9px] text-gray-500 mb-0.5">
-            <span>色温</span>
+            <span>{tL.lightColorTemp}</span>
             {color && (
-              <button onClick={() => setColor(activeRoom, null)} className="text-gray-400 hover:text-gray-700">还原</button>
+              <button onClick={() => setColor(activeRoom, null)} className="text-gray-400 hover:text-gray-700">{tL.lightColorCustom}</button>
             )}
           </div>
           <div className="flex gap-1">
             {presets.map(p => (
-              <button key={p.label}
+              <button key={p.key}
                 onClick={() => setColor(activeRoom, p.hex)}
                 className={`flex-1 text-[9px] py-1 rounded-md border-2 transition-all ${
                   color === p.hex ? "border-blue-500" : "border-transparent"
                 }`}
                 style={{ background: p.hex, color: "#333" }}
-              >{p.label}</button>
+              >{tL.lightColorPresets[p.key]}</button>
             ))}
             <input type="color" value={color ?? "#FFF2D0"}
               onChange={e => setColor(activeRoom, e.target.value)}
@@ -767,7 +766,7 @@ function LightTuningSection({ activeRoom }: { activeRoom: RoomType }) {
         {/* Scene exposure (contrast-like) */}
         <div>
           <div className="flex justify-between text-[9px] text-gray-500 mb-0.5">
-            <span>对比 / 曝光</span><span className="font-mono">{exposure.toFixed(2)}</span>
+            <span>{tL.exposureLabel}</span><span className="font-mono">{exposure.toFixed(2)}</span>
           </div>
           <input type="range" min={0.6} max={1.8} step={0.05} value={exposure}
             onChange={e => setExposure(activeRoom, parseFloat(e.target.value))}

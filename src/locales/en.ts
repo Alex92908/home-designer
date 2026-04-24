@@ -283,4 +283,70 @@ export const en: Translations = {
     yard: "Yard", garage: "Garage", gym: "Gym", cinema: "Home Cinema",
     custom1: "Custom 1", custom2: "Custom 2", custom3: "Custom 3", custom4: "Custom 4", custom5: "Custom 5",
   },
+
+  // ── LeftPanel wall target picker ─────────────────────────
+  wallTargetLabel: "🪟 Walls",
+  wallClear: "Clear",
+  wallTargets: {
+    all:   { label: "All",    hint: "Same material on all 4 walls" },
+    back:  { label: "Back",   hint: "Feature wall behind sofa / bed" },
+    front: { label: "Front",  hint: "Entry / hallway wall" },
+    left:  { label: "Left",   hint: "" },
+    right: { label: "Right",  hint: "" },
+    lower: { label: "Wainscot", hint: "Lower half panelling" },
+  } as Record<string, { label: string; hint: string }>,
+  wainscotHeight: "Wainscot height",
+
+  // ── RightPanel ceiling-light / light-tune / exterior-decor
+  lightPosTitle: "💡 Ceiling light position",
+  lightPosTitleType: (id: string) => `Ceiling light position (${id})`,
+  lightAxisX: "L–R (X)",
+  lightAxisZ: "F–B (Z)",
+  lightPosCenter: "Centered",
+  lightTuneTitle: "☀️ Lighting",
+  lightSwitch: "Switch",
+  lightOn: "On",
+  lightOff: "Off",
+  lightBrightness: "Brightness ×",
+  lightColorTemp: "Color temp",
+  lightColorPresets: { warm: "Warm", mid: "Neutral", white: "White", cool: "Cool" } as Record<string, string>,
+  lightColorCustom: "Custom",
+  exposureLabel: "Contrast / Exposure",
+  placedCount: (n: number) => `Placed (${n})`,
+
+  // ── Exterior decor panel ─────────────────────────────────
+  exteriorDecorTitle: (roomName: string) => `Exterior decor (${roomName})`,
+  exteriorDecorWallMat: "Exterior material",
+  exteriorWallAll: "All",
+  exteriorWalls: { front: "Front", back: "Back", left: "Left", right: "Right" } as Record<string, string>,
+  exteriorDecorTargetLabel: "Place on wall:",
+  exteriorWallsDir: {
+    front: "Front (+Z)", back: "Back (−Z)", left: "Left (−X)", right: "Right (+X)",
+  } as Record<string, string>,
+  exteriorDecorEditTitle: (name: string) => `Edit: ${name}`,
+  exteriorDecorEditWall: "Wall",
+  exteriorDecorU: "Horizontal u",
+  exteriorDecorV: "Vertical v",
+  exteriorDecorW: "Width ×",
+  exteriorDecorH: "Height ×",
+  exteriorDecorRot: "Rotation°",
+  exteriorDecorDragHint: "Tip: in 3D view you can drag decor items directly.",
+
+  // ── ExportModal "wipe everything" card ───────────────────
+  wipeTitle: "🗑 Wipe Everything",
+  wipeDesc: "Removes all rooms, blueprint, materials, furniture and lighting. Even the default 9 rooms are cleared — you'll be left with a blank page. Cannot be undone.",
+  wipeBtn: "🗑 Wipe Everything",
+  wipeConfirm: "⚠️ Confirm wipe (cannot be undone)",
+  wipeCancel: "Cancel",
+  resetConfirmInline: "⚠️ Confirm reset (cannot be undone)",
+
+  // ── FrontWallToggle / CeilingToggle (3D view bottom-left) ──
+  wallToggleHide:   "🏠 Front wall: hidden",
+  wallToggleHalf:   "🏠 Front wall: frosted",
+  wallToggleSolid:  "🏠 Front wall: solid",
+  wallToggleTitle:  "Cycle front wall (hidden → frosted → solid → hidden)",
+  ceilToggleHide:   "🔲 Ceiling: hidden",
+  ceilToggleHalf:   "🔲 Ceiling: frosted",
+  ceilToggleSolid:  "🔲 Ceiling: solid",
+  ceilToggleTitle:  "Cycle ceiling (hidden → frosted → solid → hidden)",
 };

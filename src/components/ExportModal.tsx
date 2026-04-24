@@ -597,13 +597,13 @@ export default function ExportModal() {
                       onClick={() => { resetAll(); setConfirmReset(false); close(); }}
                       className="flex-1 py-2.5 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 transition-colors"
                     >
-                      ⚠️ 确认清空（不可撤销）
+                      {t.resetConfirmInline}
                     </button>
                     <button
                       onClick={() => setConfirmReset(false)}
                       className="px-4 py-2.5 bg-white text-gray-600 text-sm font-bold rounded-xl border border-gray-200 hover:bg-gray-50"
                     >
-                      取消
+                      {t.wipeCancel}
                     </button>
                   </div>
                 ) : (
@@ -618,24 +618,21 @@ export default function ExportModal() {
 
               {/* 彻底清空 — 连房间都清光，只剩一张白纸，比"重置"更狠 */}
               <div className="bg-rose-50 rounded-xl p-4 border-2 border-rose-300">
-                <div className="text-sm font-bold text-rose-900 mb-1">🗑 彻底清空</div>
-                <div className="text-xs text-rose-700 mb-3">
-                  清除全部房间、图纸、材质、家具、灯光设置。重置后连默认的
-                  9 间房也会消失，只剩一张白纸（不可撤销）。
-                </div>
+                <div className="text-sm font-bold text-rose-900 mb-1">{t.wipeTitle}</div>
+                <div className="text-xs text-rose-700 mb-3">{t.wipeDesc}</div>
                 {confirmWipe ? (
                   <div className="flex gap-2">
                     <button
                       onClick={() => { wipeAll(); setConfirmWipe(false); close(); }}
                       className="flex-1 py-2.5 bg-rose-700 text-white text-sm font-bold rounded-xl hover:bg-rose-800 transition-colors"
                     >
-                      ⚠️ 确认彻底清空（不可撤销）
+                      {t.wipeConfirm}
                     </button>
                     <button
                       onClick={() => setConfirmWipe(false)}
                       className="px-4 py-2.5 bg-white text-gray-600 text-sm font-bold rounded-xl border border-gray-200 hover:bg-gray-50"
                     >
-                      取消
+                      {t.wipeCancel}
                     </button>
                   </div>
                 ) : (
@@ -643,7 +640,7 @@ export default function ExportModal() {
                     onClick={() => setConfirmWipe(true)}
                     className="w-full py-2.5 bg-rose-600 text-white text-sm font-bold rounded-xl hover:bg-rose-700 transition-colors"
                   >
-                    🗑 彻底清空
+                    {t.wipeBtn}
                   </button>
                 )}
               </div>

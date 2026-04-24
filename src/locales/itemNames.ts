@@ -133,6 +133,73 @@ export const FURNITURE_NAMES_EN: Record<string, string> = {
   "parrot":                 "Parrot",
   "turtle":                 "Turtle",
   "hamster":                "Hamster Cage",
+  // Artworks (extended)
+  "artwork-impression":     "Impressionist Landscape (Monet)",
+  "artwork-vangogh":        "Van Gogh — Wheatfield with Cypresses",
+  "artwork-hokusai":        "Hokusai — The Great Wave",
+  "artwork-klimt-kiss":     "Klimt — The Kiss",
+  "artwork-kandinsky":      "Kandinsky — Composition VIII",
+  "artwork-turner":         "Turner — The Fighting Temeraire",
+  "artwork-seurat":         "Seurat — La Grande Jatte",
+  "artwork-vermeer":        "Vermeer — Girl with a Pearl Earring",
+  "artwork-mona-lisa":      "Da Vinci — Mona Lisa",
+  "artwork-degas":          "Degas — The Dance Class",
+  "artwork-red-fuji":       "Hokusai — Red Fuji",
+
+  // Curtains
+  "curtain-modern-gray":    "Modern Gray Curtains",
+  "curtain-brown-sheer":    "Brown Curtain with Sheer Layer",
+
+  // Ceiling lights (extended in data.ts)
+  "light-ceiling-fan":         "Ceiling Fan with Light",
+  "light-ring-modern":         "Modern Ring Pendant",
+  "light-crystal-chandelier":  "Crystal Chandelier (Large)",
+  "light-magnetic-track":      "Magnetic Track Lighting",
+  "light-smart-panel":         "Smart Ceiling Panel",
+  "light-recessed":            "Recessed Downlights (Set)",
+
+  // Bathroom / plumbing accessories
+  "toilet-squat":             "Squat Toilet",
+  "mirror-cabinet":           "Mirror Cabinet",
+  "shower-head":              "Shower Head (Rain + Handheld)",
+  "faucet-basin":             "Basin Faucet",
+  "floor-drain":              "Floor Drain",
+  "drain-point":              "Drain Point (DN50)",
+  "exhaust-vent":             "Exhaust Vent",
+
+  // Electrical
+  "outlet-2pin":              "Standard Power Outlet",
+  "outlet-usb":               "Outlet with USB",
+  "switch-single":            "Single Switch",
+  "switch-double":            "Double Switch",
+  "breaker-panel":            "Breaker Panel",
+  "weak-panel":               "Low-Voltage Panel",
+  "network-jack":             "Network Jack (RJ45)",
+  "tv-jack":                  "TV Jack",
+
+  // Exterior wall decor — lights
+  "wall-lamp-modern":         "Modern Wall Light",
+  "wall-lamp-lantern":        "Chinese Lantern",
+  "light-strip-warm":         "Warm LED Light Strip",
+  "light-strip-rgb":          "RGB Light Strip",
+
+  // Exterior wall decor — murals
+  "mural-great-wave":         "Mural — The Great Wave",
+  "mural-red-fuji":           "Mural — Red Fuji",
+  "mural-wheatfield":         "Mural — Wheatfield & Cypresses",
+  "mural-inkwash":            "Mural — Travelers Among Mountains",
+
+  // Exterior wall decor — plaques & signage
+  "couplet-spring":           "Spring Couplet — Spring Returns",
+  "couplet-prosperity":       "Spring Couplet — All the Best",
+  "border-meander":           "Meander Border",
+  "border-floral":            "Floral Border",
+  "house-number":             "House Number (888)",
+  "nameplate-family":         "Family Nameplate",
+  "mailbox-modern":           "Modern Mailbox",
+  "ac-condenser":             "AC Outdoor Unit",
+  "climbing-vine":            "Climbing Ivy",
+
   // Livestock
   "chicken":                "Chicken",
   "rooster":                "Rooster",
@@ -176,6 +243,12 @@ export const MATERIAL_NAMES_EN: Record<string, string> = {
   "light-japanese-paper":     "Washi Paper Pendant",
   "light-linear-pendant":     "Linear Pendant Light",
   "light-industrial-bulb":    "Industrial Edison Bulb",
+  "light-ceiling-fan":        "Ceiling Fan with Light",
+  "light-ring-modern":        "Modern Ring Pendant",
+  "light-crystal-chandelier": "Crystal Chandelier (Large)",
+  "light-magnetic-track":     "Magnetic Track Lighting",
+  "light-smart-panel":        "Smart Ceiling Panel",
+  "light-recessed":           "Recessed Downlights (Set)",
   // Tile
   "tile-white-marble":  "White Marble Tile",
   "tile-gray-stone":    "Gray Stone Tile",
@@ -240,6 +313,18 @@ export const BRAND_NAMES_EN: Record<string, string> = {
   "散养":         "Free-Range",
   "农场":         "Farm",
   "自定义":       "Custom",
+
+  // Additional brands seen on new assets (lights / fixtures / plumbing / decor)
+  "照明":         "Lighting",
+  "五金":         "Hardware",
+  "陶瓷":         "Ceramic",
+  "装饰":         "Decor",
+  "定制":         "Custom-Made",
+  "美的":         "Midea",
+  "园艺":         "Garden",
+  "电工":         "Electrical",
+  "家用电器":     "Appliance",
+  "灯饰":         "Lighting",
 };
 
 export function getFurnitureNameEn(id: string): string | undefined {

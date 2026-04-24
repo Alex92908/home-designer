@@ -281,6 +281,72 @@ export const zh = {
   aiRenderClose: "关闭",
   aiRenderError: "生成失败，请稍后重试",
   aiRenderNoKey: "请在 .env.local 中配置 OPENAI_API_KEY",
+
+  // ── LeftPanel wall target picker ─────────────────────────
+  wallTargetLabel: "🪟 墙面",
+  wallClear: "清除",
+  wallTargets: {
+    all:   { label: "整屋",  hint: "四面墙统一" },
+    back:  { label: "后墙",  hint: "沙发/床头背景墙" },
+    front: { label: "前墙",  hint: "入户/走廊正对墙" },
+    left:  { label: "左墙",  hint: "" },
+    right: { label: "右墙",  hint: "" },
+    lower: { label: "墙裙",  hint: "下半段护墙板" },
+  } as Record<string, { label: string; hint: string }>,
+  wainscotHeight: "墙裙高度",
+
+  // ── RightPanel ceiling-light / light-tune / exterior-decor
+  lightPosTitle: "💡 顶灯位置",
+  lightPosTitleType: (id: string) => `顶灯位置（${id}）`,
+  lightAxisX: "左右（X）",
+  lightAxisZ: "前后（Z）",
+  lightPosCenter: "居中",
+  lightTuneTitle: "☀️ 灯光调节",
+  lightSwitch: "开关",
+  lightOn: "开",
+  lightOff: "关",
+  lightBrightness: "亮度 ×",
+  lightColorTemp: "色温",
+  lightColorPresets: { warm: "暖", mid: "中", white: "白", cool: "冷" } as Record<string, string>,
+  lightColorCustom: "自定义",
+  exposureLabel: "对比 / 曝光",
+  placedCount: (n: number) => `已放置 (${n})`,
+
+  // ── Exterior decor panel ─────────────────────────────────
+  exteriorDecorTitle: (roomName: string) => `外墙装饰（${roomName}）`,
+  exteriorDecorWallMat: "外墙材质",
+  exteriorWallAll: "全部",
+  exteriorWalls: { front: "前", back: "后", left: "左", right: "右" } as Record<string, string>,
+  exteriorDecorTargetLabel: "放到哪面外墙：",
+  exteriorWallsDir: {
+    front: "前（+Z）", back: "后（-Z）", left: "左（-X）", right: "右（+X）",
+  } as Record<string, string>,
+  exteriorDecorEditTitle: (name: string) => `编辑：${name}`,
+  exteriorDecorEditWall: "墙面",
+  exteriorDecorU: "水平 u",
+  exteriorDecorV: "垂直 v",
+  exteriorDecorW: "宽度 ×",
+  exteriorDecorH: "高度 ×",
+  exteriorDecorRot: "旋转°",
+  exteriorDecorDragHint: "3D 视图里可直接拖拽装饰物到位。",
+
+  // ── ExportModal "彻底清空" card ────────────────────────────
+  wipeTitle: "🗑 彻底清空",
+  wipeDesc: "清除全部房间、图纸、材质、家具、灯光设置。重置后连默认的 9 间房也会消失，只剩一张白纸（不可撤销）。",
+  wipeBtn: "🗑 彻底清空",
+  wipeConfirm: "⚠️ 确认彻底清空（不可撤销）",
+  wipeCancel: "取消",
+  resetConfirmInline: "⚠️ 确认清空（不可撤销）",
+
+  // ── FrontWallToggle / CeilingToggle (3D view bottom-left) ──
+  wallToggleHide:   "🏠 前墙：隐藏",
+  wallToggleHalf:   "🏠 前墙：半透",
+  wallToggleSolid:  "🏠 前墙：实墙",
+  wallToggleTitle:  "切换前墙显示（隐藏→半透→实墙→隐藏）",
+  ceilToggleHide:   "🔲 天花板：隐藏",
+  ceilToggleHalf:   "🔲 天花板：半透",
+  ceilToggleSolid:  "🔲 天花板：实板",
+  ceilToggleTitle:  "切换天花板显示（隐藏→半透→实板→隐藏）",
 };
 
 export type Translations = typeof zh;

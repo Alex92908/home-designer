@@ -199,17 +199,18 @@ function WallSection() {
   const setWallLower   = useDesignerStore((s) => s.setWallLower);
   const setWallSplitHeight = useDesignerStore((s) => s.setWallSplitHeight);
   const [target, setTarget] = useState<WallTarget>("all");
+  const t = useT();
 
   const wallItems = MATERIALS.filter(m => m.category === "wall");
   const splitH = roomMaterials.wallSplitHeight ?? 110;
 
   const TARGETS: Array<{ key: WallTarget; label: string; hint: string }> = [
-    { key: "all",   label: "整屋",   hint: "四面墙统一" },
-    { key: "back",  label: "后墙",   hint: "沙发/床头背景墙" },
-    { key: "front", label: "前墙",   hint: "入户/走廊正对墙" },
-    { key: "left",  label: "左墙",   hint: "" },
-    { key: "right", label: "右墙",   hint: "" },
-    { key: "lower", label: "墙裙",   hint: "下半段护墙板" },
+    { key: "all",   ...t.wallTargets.all },
+    { key: "back",  ...t.wallTargets.back },
+    { key: "front", ...t.wallTargets.front },
+    { key: "left",  ...t.wallTargets.left },
+    { key: "right", ...t.wallTargets.right },
+    { key: "lower", ...t.wallTargets.lower },
   ];
 
   const clearForTarget = () => {
@@ -228,7 +229,7 @@ function WallSection() {
     <div>
       <div className="flex items-center justify-between mb-1.5 px-0.5">
         <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--ds-text-3)" }}>
-          🪟 墙面
+          {t.wallTargetLabel}
         </span>
         {currentlySet && (
           <button
@@ -238,7 +239,7 @@ function WallSection() {
             onMouseEnter={e => (e.currentTarget.style.color = "var(--ds-danger)")}
             onMouseLeave={e => (e.currentTarget.style.color = "var(--ds-text-3)")}
           >
-            清除
+            {t.wallClear}
           </button>
         )}
       </div>
@@ -278,7 +279,7 @@ function WallSection() {
       {(target === "lower" || roomMaterials.wallLower) && (
         <div className="mb-2 px-1">
           <div className="flex items-center justify-between text-[10px] mb-1" style={{ color: "var(--ds-text-2)" }}>
-            <span>墙裙高度</span>
+            <span>{t.wainscotHeight}</span>
             <span className="font-bold" style={{ color: "var(--ds-text)" }}>{splitH} cm</span>
           </div>
           <input
