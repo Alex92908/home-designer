@@ -3074,11 +3074,12 @@ class GltfFurnitureWithFallback extends Component<
 }
 
 // ─── Polygon shell (for L型/凸字型 rooms) ──────────────────
-// Renders floor + walls along a CCW polygon. No windows/doors yet —
-// those still use the rectangle RoomShell. Ceiling is rendered as a
-// polygon cap at y=H, transparent when ceilingOpacity < 1.
+// Renders floor + walls along a CCW polygon. Cuts a door hole in the
+// matching edge when the room has a door configured. Windows on polygon
+// rooms are not yet supported (TODO: same split-segment approach).
 function PolygonShell({
   points, H, wallColor, floorColor, ceilingColor, ceilingOpacity,
+  door,
 }: {
   points: Array<[number, number]>; // cm, back-left origin
   H: number;                       // meters
@@ -3086,7 +3087,16 @@ function PolygonShell({
   floorColor: string;
   ceilingColor: string;
   ceilingOpacity: number;
+  /** Active door spec, or null if no door. Positions in cm. */
+  door: {
+    wall: "back" | "front" | "left" | "right";
+    posCm: number;     // offset along wall
+    lenCm: number;     // door width
+    hCm:   number;     // door height
+  } | null;
 }) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { getEdges, findEdgeForWall, polygonBounds } = require("@/lib/roomGeometry") as typeof import("@/lib/roomGeometry");
   // Bounds so we can center the polygon on the same (0,0) used by PlacedItemMesh
   const { minX, maxX, minZ, maxZ } = useMemo(() => {
     let mnX = Infinity, mnZ = Infinity, mxX = -Infinity, mxZ = -Infinity;
@@ -3115,30 +3125,61 @@ function PolygonShell({
     return s;
   }, [points, W, D]);
 
-  // Floor: lie the shape flat on the XZ plane (rotate -90° on X)
-  // Ceiling: same but at y=H
-  // Walls: one box per polygon edge
-  const walls = useMemo(() => {
-    const ws: Array<{ cx: number; cy: number; cz: number; len: number; angle: number }> = [];
-    for (let i = 0; i < points.length; i++) {
-      const [x1, z1] = points[i];
-      const [x2, z2] = points[(i + 1) % points.length];
-      const wx1 = x1 / 100 - W / 2, wz1 = z1 / 100 - D / 2;
-      const wx2 = x2 / 100 - W / 2, wz2 = z2 / 100 - D / 2;
-      const dx = wx2 - wx1, dz = wz2 - wz1;
-      const len = Math.hypot(dx, dz);
-      if (len < 1e-4) continue;
-      const cx = (wx1 + wx2) / 2;
-      const cz = (wz1 + wz2) / 2;
-      // Angle around +Y so the wall's long axis aligns with the edge.
-      // Wall box is oriented with length on X — we rotate Y by atan2(-dz, dx).
-      const angle = Math.atan2(-dz, dx);
-      ws.push({ cx, cy: H / 2, cz, len, angle });
-    }
-    return ws;
-  }, [points, W, D, H]);
-
+  // Compute polygon edges in cm, then build wall segments. If the active
+  // door lives on a given edge, that edge gets split into [left | lintel | right]
+  // with a door-sized gap; otherwise a single wall box.
   const WALL_THICK = 0.08; // 8 cm thick visual walls
+
+  const wallSegments = useMemo(() => {
+    const edges = getEdges(points);
+    const bbox = polygonBounds(points);
+    const doorHit = door
+      ? findEdgeForWall(points, door.wall, door.posCm, door.lenCm, bbox)
+      : null;
+
+    type Seg = { cx: number; cy: number; cz: number; len: number; angle: number; h: number; yBottom: number };
+    const segs: Seg[] = [];
+    for (const e of edges) {
+      // Edge in world meters (centered on room origin)
+      const wx1 = e.x1 / 100 - W / 2, wz1 = e.z1 / 100 - D / 2;
+      const wx2 = e.x2 / 100 - W / 2, wz2 = e.z2 / 100 - D / 2;
+      const dxm = wx2 - wx1, dzm = wz2 - wz1;
+      const lenM = Math.hypot(dxm, dzm);
+      // Direction angle around +Y (XZ plane)
+      const angle = Math.atan2(-dzm, dxm);
+      // Helper: place a segment given a start offset + length along the edge
+      const mkSeg = (startT: number, lenSub: number, h: number, yBottom: number) => {
+        if (lenSub <= 1e-4) return;
+        const t0 = startT / lenM;          // 0..1
+        const t1 = (startT + lenSub) / lenM;
+        const tMid = (t0 + t1) / 2;
+        segs.push({
+          cx: wx1 + dxm * tMid,
+          cy: yBottom + h / 2,
+          cz: wz1 + dzm * tMid,
+          len: lenSub,
+          angle,
+          h,
+          yBottom,
+        });
+      };
+
+      if (doorHit && doorHit.edgeIndex === e.i) {
+        const doorLenM = door!.lenCm / 100;
+        const doorHM   = door!.hCm   / 100;
+        const startM   = doorHit.startCm / 100;
+        // Left of door
+        mkSeg(0, startM, H, 0);
+        // Lintel above door
+        mkSeg(startM, doorLenM, H - doorHM, doorHM);
+        // Right of door
+        mkSeg(startM + doorLenM, lenM - startM - doorLenM, H, 0);
+      } else {
+        mkSeg(0, lenM, H, 0);
+      }
+    }
+    return segs;
+  }, [points, W, D, H, door, getEdges, findEdgeForWall, polygonBounds]);
 
   return (
     <>
@@ -3160,10 +3201,11 @@ function PolygonShell({
         />
       </mesh>
 
-      {/* Walls along each polygon edge */}
-      {walls.map((w, i) => (
+      {/* Walls — one box per polygon-edge segment. Doors split an edge into
+          [left | lintel | right] segments of different heights. */}
+      {wallSegments.map((w, i) => (
         <mesh key={i} position={[w.cx, w.cy, w.cz]} rotation={[0, w.angle, 0]} castShadow receiveShadow>
-          <boxGeometry args={[w.len, H, WALL_THICK]} />
+          <boxGeometry args={[w.len, w.h, WALL_THICK]} />
           <meshStandardMaterial color={wallColor} roughness={0.85} />
         </mesh>
       ))}
@@ -3269,6 +3311,16 @@ function Scene({ isIOS }: { isIOS: boolean }) {
           floorColor={floorColor}
           ceilingColor={roomState.materials.ceiling?.color ?? "#F5F5F5"}
           ceilingOpacity={ceilingOpacity}
+          door={hasDoor ? {
+            // Translate "bottom"/"top" (existing store) to "back/front"
+            // conventions used by the polygon edge matcher.
+            wall: doorWall === "top" ? "back"
+                : doorWall === "bottom" ? "front"
+                : doorWall,
+            posCm: doorPosCm,
+            lenCm: doorLenCm,
+            hCm: doorHCm,
+          } : null}
         />
       ) : (
         <RoomShell

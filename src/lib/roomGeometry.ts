@@ -116,6 +116,80 @@ export function pointInPolygon(pts: Array<[number, number]>, x: number, z: numbe
   return inside;
 }
 
+// ─── Edge helpers (for placing doors/windows on polygon walls) ──
+
+export type WallFacing = "back" | "front" | "left" | "right";
+
+export interface EdgeInfo {
+  /** Index into `points` of this edge's start vertex. */
+  i: number;
+  x1: number; z1: number;      // start (cm)
+  x2: number; z2: number;      // end   (cm)
+  length: number;              // cm
+  /** Inward-facing unit normal (CCW polygon). */
+  nx: number; nz: number;
+  /** Which cardinal wall this edge faces (by dominant outward-normal axis). */
+  facing: WallFacing;
+}
+
+export function getEdges(points: Array<[number, number]>): EdgeInfo[] {
+  const edges: EdgeInfo[] = [];
+  for (let i = 0; i < points.length; i++) {
+    const [x1, z1] = points[i];
+    const [x2, z2] = points[(i + 1) % points.length];
+    const dx = x2 - x1, dz = z2 - z1;
+    const length = Math.hypot(dx, dz);
+    if (length < 1e-3) continue;
+    // CCW polygon ⇒ inward normal is 90° left of direction: (-dz, dx)/len
+    const nx = -dz / length;
+    const nz =  dx / length;
+    const ox = -nx, oz = -nz;    // outward normal
+    let facing: WallFacing;
+    if (Math.abs(ox) >= Math.abs(oz)) facing = ox > 0 ? "right" : "left";
+    else                              facing = oz > 0 ? "front" : "back";
+    edges.push({ i, x1, z1, x2, z2, length, nx, nz, facing });
+  }
+  return edges;
+}
+
+/** Map the user's "back/front/left/right" door wall (cm offset along that
+ *  wall, measured from the conventional "start") onto a polygon edge +
+ *  offset along that edge. Returns null if no matching polygon edge
+ *  contains the requested span. `bbox` is the room's bounding box. */
+export function findEdgeForWall(
+  points: Array<[number, number]>,
+  wall: WallFacing,
+  posCm: number,
+  lenCm: number,
+  bbox: { maxX: number; maxZ: number },
+): { edgeIndex: number; startCm: number; edge: EdgeInfo } | null {
+  const edges = getEdges(points);
+  // Compute the world-space (x,z) of the door's "start" point given its
+  // wall-relative position (same convention as FloorPlan 2D rendering):
+  //   back:  (posCm, 0)           running +x
+  //   right: (maxX,  posCm)       running +z
+  //   front: (posCm, maxZ)        running +x
+  //   left:  (0,     posCm)       running +z
+  let wx: number, wz: number;
+  if (wall === "back")       { wx = posCm;         wz = 0; }
+  else if (wall === "front") { wx = posCm;         wz = bbox.maxZ; }
+  else if (wall === "right") { wx = bbox.maxX;     wz = posCm; }
+  else                       { wx = 0;             wz = posCm; }
+
+  const candidates = edges.filter(e => e.facing === wall);
+  for (const e of candidates) {
+    const dx = e.x2 - e.x1, dz = e.z2 - e.z1;
+    const t = ((wx - e.x1) * dx + (wz - e.z1) * dz) / e.length;
+    // Tolerance: point must be close to the edge line (within 2 cm),
+    // and the span [t, t+lenCm] must fit inside [0, length].
+    const perpDist = Math.abs((wx - e.x1) * e.nx + (wz - e.z1) * e.nz);
+    if (perpDist < 2 && t >= -1 && t + lenCm <= e.length + 1) {
+      return { edgeIndex: e.i, startCm: Math.max(0, t), edge: e };
+    }
+  }
+  return null;
+}
+
 /** Shape picker label / icon for UI. */
 export const SHAPE_PRESETS: Array<{ preset: ShapePreset; name: string; icon: string }> = [
   { preset: "rect",    name: "矩形",  icon: "▭" },
