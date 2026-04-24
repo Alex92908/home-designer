@@ -290,6 +290,9 @@ export interface FloorPlan {
   roomDoorH?: Partial<Record<RoomType, number>>;   // cm, height (default 200)
   /** Per-room door style. Default "wood_panel" if unset. */
   roomDoorStyle?: Partial<Record<RoomType, DoorStyle>>;
+  /** Per-room non-rectangular polygon override (L型/凸字型/etc).
+   *  Absent entry = rectangle fallback using roomDimensions. */
+  roomShapes?: Partial<Record<RoomType, import("./roomGeometry").RoomShape>>;
 }
 
 /** Interior-door visual styles. Each variant is rendered differently by

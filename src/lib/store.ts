@@ -305,6 +305,7 @@ interface DesignerStore {
   // Room layout (per-floor floor plan editor)
   updateRoomLayout: (room: RoomType, x: number, y: number) => void;
   updateRoomDimension: (room: RoomType, width: number, depth: number) => void;
+  setRoomShape: (room: RoomType, preset: import("./roomGeometry").ShapePreset) => void;
   toggleRoom: (room: RoomType) => void;
   addRoom: (room: RoomType) => void;
   removeRoom: (room: RoomType) => void;
@@ -955,7 +956,37 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       updateRoomDimension: (room, width, depth) => {
-        updateFloor(get, set, fp => ({ roomDimensions: { ...fp.roomDimensions, [room]: { width, depth } } }));
+        updateFloor(get, set, fp => {
+          const nextShapes = { ...(fp.roomShapes ?? {}) };
+          // If a preset shape is set, rebuild it for the new dims so the
+          // polygon scales with the bounding box.
+          const existing = nextShapes[room];
+          if (existing && existing.preset !== "rect") {
+            // Lazy import to avoid circular
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const { buildShape } = require("./roomGeometry") as typeof import("./roomGeometry");
+            nextShapes[room] = buildShape(existing.preset, width, depth);
+          }
+          return {
+            roomDimensions: { ...fp.roomDimensions, [room]: { width, depth } },
+            roomShapes: nextShapes,
+          };
+        });
+      },
+
+      setRoomShape: (room: RoomType, preset: import("./roomGeometry").ShapePreset) => {
+        updateFloor(get, set, fp => {
+          const dims = fp.roomDimensions[room];
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { buildShape } = require("./roomGeometry") as typeof import("./roomGeometry");
+          const nextShapes = { ...(fp.roomShapes ?? {}) };
+          if (preset === "rect") {
+            delete nextShapes[room];                       // clear override
+          } else {
+            nextShapes[room] = buildShape(preset, dims.width, dims.depth);
+          }
+          return { roomShapes: nextShapes };
+        });
       },
 
       toggleRoom: (room) => {

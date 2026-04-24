@@ -381,6 +381,8 @@ export default function FloorPlan() {
 
   // ── Use store roomDimensions (respects global plan edits) ──
   const roomDimensions  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
+  const roomShape       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomShapes?.[activeRoom]);
+  const setRoomShape    = useDesignerStore((s) => s.setRoomShape);
   const def             = ROOM_DEFS[activeRoom];
 
   // Effective dimensions: store override if different from default, else ROOM_DEFS
@@ -894,12 +896,41 @@ export default function FloorPlan() {
           <rect width={svgW} height={svgH}
             fill={roomState.materials.floor?.color ?? def.defaultFloorColor} opacity={0.18} />
 
-          {/* Walls */}
-          <rect x={0} y={0} width={svgW} height={svgH} fill="none"
-            stroke={roomState.materials.wall?.color ?? def.defaultWallColor}
-            strokeWidth={8} strokeOpacity={0.7} />
-          <rect x={4} y={4} width={svgW - 8} height={svgH - 8}
-            fill="none" stroke="#88AABB" strokeWidth={1} strokeOpacity={0.3} />
+          {/* Walls — rect outline for rect rooms, polygon outline for L型/凸字型.
+              For non-rect shapes we also draw a dark overlay over the bounding
+              box so the "bitten-out" region reads as outside-the-room. */}
+          {roomShape && roomShape.preset !== "rect" ? (
+            <>
+              {/* Dark mask for out-of-polygon region: use even-odd fill with
+                  an outer ring (the bounding box) and the polygon as a hole. */}
+              <path
+                d={
+                  `M 0 0 L ${svgW} 0 L ${svgW} ${svgH} L 0 ${svgH} Z ` +
+                  `M ` + roomShape.points.map(([x,z],i)=>`${x*scale} ${z*scale}${i<roomShape.points.length-1?" L ":""}`).join("") +
+                  ` Z`
+                }
+                fill="#1a1c28"
+                fillRule="evenodd"
+                style={{ pointerEvents: "none" }}
+              />
+              {/* Polygon outline */}
+              <polygon
+                points={roomShape.points.map(([x,z]) => `${x*scale},${z*scale}`).join(" ")}
+                fill="none"
+                stroke={roomState.materials.wall?.color ?? def.defaultWallColor}
+                strokeWidth={8} strokeOpacity={0.7}
+                strokeLinejoin="round"
+              />
+            </>
+          ) : (
+            <>
+              <rect x={0} y={0} width={svgW} height={svgH} fill="none"
+                stroke={roomState.materials.wall?.color ?? def.defaultWallColor}
+                strokeWidth={8} strokeOpacity={0.7} />
+              <rect x={4} y={4} width={svgW - 8} height={svgH - 8}
+                fill="none" stroke="#88AABB" strokeWidth={1} strokeOpacity={0.3} />
+            </>
+          )}
 
           {/* Windows */}
           {roomWindows.map(win => (

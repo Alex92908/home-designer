@@ -78,6 +78,8 @@ function RoomPanel() {
   const addRoom             = useDesignerStore(s => s.addRoom);
   const removeRoom          = useDesignerStore(s => s.removeRoom);
   const updateRoomDimension = useDesignerStore(s => s.updateRoomDimension);
+  const roomShapes          = useDesignerStore(s => s.floorPlans[s.activeFloor].roomShapes ?? {});
+  const setRoomShape        = useDesignerStore(s => s.setRoomShape);
   const resetLayout         = useDesignerStore(s => s.resetLayout);
   const pushLayoutHistory   = useDesignerStore(s => s.pushLayoutHistory);
   const copyRoom            = useDesignerStore(s => s.copyRoom);
@@ -221,6 +223,31 @@ function RoomPanel() {
                       ))}
                     </div>
                     <div className="text-[9px] text-gray-400">≈ {((dims.width/100)*(dims.depth/100)).toFixed(1)} ㎡</div>
+                    {/* Shape picker: 矩形 / L 型 / 凸字型 */}
+                    <div className="flex flex-col gap-1 mt-1">
+                      <div className="text-[10px] text-gray-500 font-bold">形状</div>
+                      <div className="flex gap-1">
+                        {([
+                          { preset: "rect"    as const, label: "矩形", icon: "▭" },
+                          { preset: "l-shape" as const, label: "L型",  icon: "⌐" },
+                          { preset: "convex"  as const, label: "凸字", icon: "⎍" },
+                        ]).map(({ preset, label, icon }) => {
+                          const active = (roomShapes[room]?.preset ?? "rect") === preset;
+                          return (
+                            <button key={preset}
+                              onClick={() => { pushLayoutHistory(); setRoomShape(room, preset); }}
+                              className={`flex-1 py-1 px-1 rounded-lg text-[10px] font-semibold transition-colors ${
+                                active
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-white text-gray-500 border border-gray-200 hover:border-blue-300 hover:text-blue-600"
+                              }`}
+                            >
+                              <span className="mr-0.5">{icon}</span>{label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

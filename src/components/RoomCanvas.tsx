@@ -3073,6 +3073,104 @@ class GltfFurnitureWithFallback extends Component<
   }
 }
 
+// ─── Polygon shell (for L型/凸字型 rooms) ──────────────────
+// Renders floor + walls along a CCW polygon. No windows/doors yet —
+// those still use the rectangle RoomShell. Ceiling is rendered as a
+// polygon cap at y=H, transparent when ceilingOpacity < 1.
+function PolygonShell({
+  points, H, wallColor, floorColor, ceilingColor, ceilingOpacity,
+}: {
+  points: Array<[number, number]>; // cm, back-left origin
+  H: number;                       // meters
+  wallColor: string;
+  floorColor: string;
+  ceilingColor: string;
+  ceilingOpacity: number;
+}) {
+  // Bounds so we can center the polygon on the same (0,0) used by PlacedItemMesh
+  const { minX, maxX, minZ, maxZ } = useMemo(() => {
+    let mnX = Infinity, mnZ = Infinity, mxX = -Infinity, mxZ = -Infinity;
+    for (const [x, z] of points) {
+      if (x < mnX) mnX = x; if (x > mxX) mxX = x;
+      if (z < mnZ) mnZ = z; if (z > mxZ) mxZ = z;
+    }
+    return { minX: mnX, maxX: mxX, minZ: mnZ, maxZ: mxZ };
+  }, [points]);
+  const W = (maxX - minX) / 100;
+  const D = (maxZ - minZ) / 100;
+
+  // Shape uses local 2D coords (X, Y) that we'll extrude / fill.
+  // PlacedItemMesh places items at `p.x/100 - W/2, z/100 - D/2`, so
+  // we shift polygon vertices the same way to world coords.
+  const shape = useMemo(() => {
+    const s = new THREE.Shape();
+    points.forEach(([x, z], i) => {
+      const wx = x / 100 - W / 2;
+      const wz = z / 100 - D / 2;
+      // ShapeGeometry lives in XY; we lay it flat later, so pass (wx, wz).
+      if (i === 0) s.moveTo(wx, wz);
+      else s.lineTo(wx, wz);
+    });
+    s.closePath();
+    return s;
+  }, [points, W, D]);
+
+  // Floor: lie the shape flat on the XZ plane (rotate -90° on X)
+  // Ceiling: same but at y=H
+  // Walls: one box per polygon edge
+  const walls = useMemo(() => {
+    const ws: Array<{ cx: number; cy: number; cz: number; len: number; angle: number }> = [];
+    for (let i = 0; i < points.length; i++) {
+      const [x1, z1] = points[i];
+      const [x2, z2] = points[(i + 1) % points.length];
+      const wx1 = x1 / 100 - W / 2, wz1 = z1 / 100 - D / 2;
+      const wx2 = x2 / 100 - W / 2, wz2 = z2 / 100 - D / 2;
+      const dx = wx2 - wx1, dz = wz2 - wz1;
+      const len = Math.hypot(dx, dz);
+      if (len < 1e-4) continue;
+      const cx = (wx1 + wx2) / 2;
+      const cz = (wz1 + wz2) / 2;
+      // Angle around +Y so the wall's long axis aligns with the edge.
+      // Wall box is oriented with length on X — we rotate Y by atan2(-dz, dx).
+      const angle = Math.atan2(-dz, dx);
+      ws.push({ cx, cy: H / 2, cz, len, angle });
+    }
+    return ws;
+  }, [points, W, D, H]);
+
+  const WALL_THICK = 0.08; // 8 cm thick visual walls
+
+  return (
+    <>
+      {/* Floor */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+        <shapeGeometry args={[shape]} />
+        <meshStandardMaterial color={floorColor} roughness={0.92} />
+      </mesh>
+
+      {/* Ceiling (flipped normal) */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, H, 0]}>
+        <shapeGeometry args={[shape]} />
+        <meshStandardMaterial
+          color={ceilingColor}
+          roughness={0.95}
+          transparent={ceilingOpacity < 1}
+          opacity={ceilingOpacity}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* Walls along each polygon edge */}
+      {walls.map((w, i) => (
+        <mesh key={i} position={[w.cx, w.cy, w.cz]} rotation={[0, w.angle, 0]} castShadow receiveShadow>
+          <boxGeometry args={[w.len, H, WALL_THICK]} />
+          <meshStandardMaterial color={wallColor} roughness={0.85} />
+        </mesh>
+      ))}
+    </>
+  );
+}
+
 // ─── Main Scene ────────────────────────────────────────────
 
 function Scene({ isIOS }: { isIOS: boolean }) {
@@ -3089,6 +3187,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
   const frontWallOpacity = useDesignerStore((s) => s.frontWallOpacity);
   const ceilingOpacity = useDesignerStore((s) => s.ceilingOpacity);
   const lightPos = useDesignerStore((s) => s.lightPosByRoom[s.activeRoom]);
+  const roomShape = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomShapes?.[activeRoom]);
   const def = ROOM_DEFS[activeRoom];
 
   // Use store dimensions (reflects global plan resizes), fall back to ROOM_DEFS
@@ -3160,36 +3259,48 @@ function Scene({ isIOS }: { isIOS: boolean }) {
       <ambientLight intensity={isIOS ? 1.4 : 0.3} />
       {isIOS && <directionalLight position={[-3, 4, 3]} intensity={0.6} />}
 
-      {/* Room geometry */}
-      <RoomShell
-        W={W} D={D} H={H}
-        wallColor={wallColor}
-        floorColor={floorColor}
-        wallId={wallId}
-        floorId={floorId}
-        windows={roomWindows}
-        wallBack={roomState.materials.wallBack}
-        wallFront={roomState.materials.wallFront}
-        wallLeft={roomState.materials.wallLeft}
-        wallRight={roomState.materials.wallRight}
-        wallLower={roomState.materials.wallLower}
-        wallSplitCm={roomState.materials.wallSplitHeight}
-        wallExterior={roomState.materials.wallExterior}
-        wallBackExterior={roomState.materials.wallBackExterior}
-        wallFrontExterior={roomState.materials.wallFrontExterior}
-        wallLeftExterior={roomState.materials.wallLeftExterior}
-        wallRightExterior={roomState.materials.wallRightExterior}
-        hasDoor={hasDoor}
-        doorWall={doorWall}
-        doorPosCm={doorPosCm}
-        doorLenCm={doorLenCm}
-        doorHCm={doorHCm}
-        doorStyle={doorStyle}
-        activeRoom={activeRoom}
-        ceiling={roomState.materials.ceiling}
-        frontWallOpacity={frontWallOpacity}
-        ceilingOpacity={ceilingOpacity}
-      />
+      {/* Room geometry — polygon shell when roomShape is set (L型/凸字型),
+          otherwise full-featured rectangle shell with doors/windows. */}
+      {roomShape && roomShape.preset !== "rect" ? (
+        <PolygonShell
+          points={roomShape.points}
+          H={H}
+          wallColor={wallColor}
+          floorColor={floorColor}
+          ceilingColor={roomState.materials.ceiling?.color ?? "#F5F5F5"}
+          ceilingOpacity={ceilingOpacity}
+        />
+      ) : (
+        <RoomShell
+          W={W} D={D} H={H}
+          wallColor={wallColor}
+          floorColor={floorColor}
+          wallId={wallId}
+          floorId={floorId}
+          windows={roomWindows}
+          wallBack={roomState.materials.wallBack}
+          wallFront={roomState.materials.wallFront}
+          wallLeft={roomState.materials.wallLeft}
+          wallRight={roomState.materials.wallRight}
+          wallLower={roomState.materials.wallLower}
+          wallSplitCm={roomState.materials.wallSplitHeight}
+          wallExterior={roomState.materials.wallExterior}
+          wallBackExterior={roomState.materials.wallBackExterior}
+          wallFrontExterior={roomState.materials.wallFrontExterior}
+          wallLeftExterior={roomState.materials.wallLeftExterior}
+          wallRightExterior={roomState.materials.wallRightExterior}
+          hasDoor={hasDoor}
+          doorWall={doorWall}
+          doorPosCm={doorPosCm}
+          doorLenCm={doorLenCm}
+          doorHCm={doorHCm}
+          doorStyle={doorStyle}
+          activeRoom={activeRoom}
+          ceiling={roomState.materials.ceiling}
+          frontWallOpacity={frontWallOpacity}
+          ceilingOpacity={ceilingOpacity}
+        />
+      )}
 
       {/* Light fixture */}
       <LightFixture
