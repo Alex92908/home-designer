@@ -338,8 +338,98 @@ export default function FloorPlanAll() {
   const [drawHover, setDrawHover] = useState<{ x: number; y: number } | null>(null);
 
   const addRoom2             = useDesignerStore(s => s.addRoom);
+  const setRoomShape         = useDesignerStore(s => s.setRoomShape);
   const applyFloorplanLayout = useDesignerStore(s => s.applyFloorplanLayout);
   const [layoutPickerOpen, setLayoutPickerOpen] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
+
+  /** 中文房间名 → RoomType 偏好链。分析器同名的第二间房会顺着链走
+   *  （次卧 → bedroom → bedroom2 → bedroom3；卫生间 → bathroom → bathroom2）。 */
+  const NAME_TO_TYPE_CHAIN: Record<string, RoomType[]> = {
+    客厅:    ["living"],
+    起居室:  ["living"],
+    餐厅:    ["dining"],
+    厨房:    ["kitchen"],
+    主卧:    ["master"],
+    主卧室:  ["master"],
+    卧室:    ["bedroom", "bedroom2", "bedroom3"],
+    次卧:    ["bedroom", "bedroom2", "bedroom3"],
+    次卧室:  ["bedroom", "bedroom2", "bedroom3"],
+    儿童房:  ["bedroom2", "bedroom3"],
+    客房:    ["bedroom2", "bedroom3"],
+    书房:    ["study", "study2"],
+    卫生间:  ["bathroom", "bathroom2"],
+    卫浴:    ["bathroom", "bathroom2"],
+    浴室:    ["bathroom", "bathroom2"],
+    洗手间:  ["bathroom", "bathroom2"],
+    衣帽间:  ["closet"],
+    储物间:  ["closet"],
+    储藏室:  ["closet"],
+    阳台:    ["balcony", "balcony2"],
+    玄关:    ["custom1", "custom2", "custom3", "custom4", "custom5"],
+    车库:    ["garage"],
+    健身房:  ["gym"],
+    影音室:  ["cinema"],
+    影院:    ["cinema"],
+  };
+
+  /** 点「✨ AI 解析」：调服务端路由 → GLM-4V-Flash → 批量建房 */
+  const runAnalyze = async () => {
+    if (!blueprint.image) return;
+    setAnalyzing(true);
+    setAnalyzeMsg(null);
+    try {
+      const res = await fetch("/api/analyze-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: blueprint.image }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = data.message || data.error || "识别失败";
+        setAnalyzeMsg(`❌ ${msg}`);
+        return;
+      }
+      const rooms: Array<{ name: string; bbox: [number, number, number, number]; shape?: string }> = data.rooms ?? [];
+      if (rooms.length === 0) {
+        setAnalyzeMsg("⚠️ 未识别到任何房间，换一张更清晰的图纸试试");
+        return;
+      }
+      pushLayoutHistory();
+      // Track which slots we've already taken this round
+      const used = new Set<RoomType>(enabledRooms);
+      let placed = 0;
+      for (const r of rooms) {
+        const chain = NAME_TO_TYPE_CHAIN[r.name.trim()] ?? ALL_POSSIBLE_ROOMS.filter(x => x.startsWith("custom"));
+        const slot = chain.find(t => !used.has(t))
+          ?? ALL_POSSIBLE_ROOMS.find(t => !used.has(t));
+        if (!slot) break; // 所有槽位都占满了
+        used.add(slot);
+
+        // pixel bbox → cm world coord, honoring current blueprint offset+scale
+        const [px, py, pw, ph] = r.bbox;
+        const x = Math.round(blueprint.offsetX + px * blueprint.scale);
+        const y = Math.round(blueprint.offsetY + py * blueprint.scale);
+        const w = Math.max(100, Math.round(pw * blueprint.scale));
+        const d = Math.max(100, Math.round(ph * blueprint.scale));
+
+        addRoom2(slot);
+        updateRoomLayout(slot, x, y);
+        updateRoomDimension(slot, w, d);
+        if (r.shape === "l-shape") {
+          // 模型很难给精确顶点；先套预设 L 型，用户再手动调顶点
+          setRoomShape(slot, "l-shape");
+        }
+        placed++;
+      }
+      setAnalyzeMsg(`✅ 识别 ${rooms.length} 间，生成 ${placed} 间。可用「✏️ 画房」补漏 / 拖顶点微调`);
+    } catch (e) {
+      setAnalyzeMsg(`❌ 请求失败：${String(e)}`);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   /** Commit the polygon accumulated in drawPts as a new room. Assigns the
    *  next free slot from ALL_POSSIBLE_ROOMS, sets its bbox as
@@ -591,6 +681,15 @@ export default function FloorPlanAll() {
                   </button>
                 );
               })}
+              <button
+                onClick={runAnalyze}
+                disabled={analyzing}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-wait"
+                style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)", color: "#fff" }}
+                title="调 GLM-4V 识别图纸中的房间并批量建房。先用 🔭 标尺校准比例效果更好。"
+              >
+                {analyzing ? "⏳ 识别中…" : "✨ AI 解析"}
+              </button>
               <button onClick={() => setBlueprintPanelOpen(v => !v)}
                 className="px-2 py-1 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100"
                 title="调整图纸"
@@ -651,6 +750,15 @@ export default function FloorPlanAll() {
             <div className="text-xs text-gray-300 max-w-48 leading-relaxed">
               在左侧添加房间到 {activeFloor + 1}F
             </div>
+          </div>
+        )}
+
+        {/* AI analyze result / error */}
+        {analyzeMsg && (
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-violet-50 border-b border-violet-200 shrink-0 text-[11px] text-violet-900">
+            <span>{analyzeMsg}</span>
+            <button onClick={() => setAnalyzeMsg(null)}
+              className="ml-auto text-violet-400 hover:text-violet-700">✕</button>
           </div>
         )}
 
