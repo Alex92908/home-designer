@@ -11,7 +11,7 @@ import RightPanelAll from "@/components/RightPanelAll";
 import ExportModal from "@/components/ExportModal";
 import ShareModal from "@/components/ShareModal";
 import FloorPlan from "@/components/FloorPlan";
-import FloorPlanAll from "@/components/FloorPlanAll";
+import FloorPlanAll, { RoomPanel as FloorPlanAllRoomPanel } from "@/components/FloorPlanAll";
 // import OnboardingOverlay from "@/components/OnboardingOverlay";  // TODO: enable when ready
 import AiRenderModal from "@/components/AiRenderModal";
 import { useDesignerStore } from "@/lib/store";
@@ -172,8 +172,23 @@ export default function Home() {
   const isExterior = viewMode === "exterior";
   const isGlobal3d = viewMode === "global3d";
 
-  // Panels only apply to room / 2d views
-  const showPanels = !isAll && !isExterior && !isGlobal3d;
+  // Per-side panel routing. Each side picks the component that applies to
+  // the current view (or null if that side has no panel in this view).
+  // The room-sidebar (thin icon column) is its own separate left rail that
+  // shows only in room/2d views.
+  const showRoomSidebar = !isAll && !isExterior && !isGlobal3d;
+  const leftPanel = isAll
+    ? <FloorPlanAllRoomPanel />
+    : (!isExterior && !isGlobal3d) ? <LeftPanel /> : null;
+  const leftPanelWidth = isAll ? 224 : 256; // RoomPanel is w-56 (224px)
+  const rightPanel = isAll
+    ? <RightPanelAll />
+    : isExterior ? <ExteriorPanel />
+    : isGlobal3d ? null
+    : <RightPanel />;
+  const rightPanelWidth = isExterior ? 256 : 288; // ExteriorPanel uses w-64
+  const hasLeftPanel  = leftPanel  !== null;
+  const hasRightPanel = rightPanel !== null;
 
   // Load shared plan from URL ?share= param (runs once after hydration)
   useEffect(() => {
@@ -195,24 +210,25 @@ export default function Home() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* Room sidebar — always visible in room/2d views */}
-        {showPanels && <RoomSidebar />}
+        {showRoomSidebar && <RoomSidebar />}
 
-        {/* Left panel with collapse */}
-        {showPanels && (
+        {/* Left panel with collapse — used by all views that have a left panel
+            (LeftPanel in 3D/2D, FloorPlanAll's RoomPanel in 全局). */}
+        {hasLeftPanel && (
           <div
             className="shrink-0 h-full overflow-hidden transition-all duration-300"
-            style={{ width: leftOpen ? 256 : 0 }}
+            style={{ width: leftOpen ? leftPanelWidth : 0 }}
           >
-            <LeftPanel />
+            {leftPanel}
           </div>
         )}
 
         {/* Main canvas + toggle buttons */}
         <main className="flex-1 relative overflow-hidden">
-          {showPanels && (
+          {hasLeftPanel && (
             <PanelToggle side="left" open={leftOpen} onClick={() => setLeftOpen(v => !v)} />
           )}
-          {showPanels && (
+          {hasRightPanel && (
             <PanelToggle side="right" open={rightOpen} onClick={() => setRightOpen(v => !v)} />
           )}
 
@@ -242,18 +258,16 @@ export default function Home() {
           {viewMode === "3d" && <CeilingToggle />}
         </main>
 
-        {/* Right panel with collapse */}
-        {showPanels && (
+        {/* Right panel with collapse — used by 3D/2D (RightPanel), 全局
+            (RightPanelAll), and 外观 (ExteriorPanel). */}
+        {hasRightPanel && (
           <div
             className="shrink-0 h-full overflow-hidden transition-all duration-300"
-            style={{ width: rightOpen ? 288 : 0 }}
+            style={{ width: rightOpen ? rightPanelWidth : 0 }}
           >
-            <RightPanel />
+            {rightPanel}
           </div>
         )}
-
-        {isAll      && <RightPanelAll />}
-        {isExterior && <ExteriorPanel />}
       </div>
       <ExportModal />
       <ShareModal />

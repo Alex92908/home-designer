@@ -69,7 +69,7 @@ function CustomRoomForm({ room, onDone }: { room: RoomType; onDone: () => void }
 }
 
 // ─── Left panel: room management ───────────────────────────
-function RoomPanel() {
+export function RoomPanel() {
   const activeFloor         = useDesignerStore(s => s.activeFloor);
   const enabledRooms        = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
   const roomDimensions      = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
@@ -391,9 +391,8 @@ export default function FloorPlanAll() {
 
   return (
     <div className="w-full h-full flex overflow-hidden">
-      <RoomPanel />
-
-      {/* Main area */}
+      {/* Main area — left sidebar (RoomPanel) is now rendered by page.tsx
+          in a collapsible container, matching 效果图 / 平面图 UX. */}
       <div className="flex-1 flex flex-col overflow-hidden bg-gray-100">
         {/* Subheader */}
         <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-100 shrink-0">
