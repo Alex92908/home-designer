@@ -2790,7 +2790,7 @@ function GltfFurniture({
   );
 }
 
-function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def: RoomDef; roomW: number; roomD: number }) {
+export function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def: RoomDef; roomW: number; roomD: number }) {
   const item = getFurnitureById(placed.furnitureId);
   if (!item) return null;
 

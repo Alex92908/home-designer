@@ -17,35 +17,11 @@ import { useMemo, useRef, useState, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, Html } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
-import { ROOM_DEFS, RoomType, PlacedItem } from "@/lib/types";
-import { getFurnitureById } from "@/lib/furniture";
+import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
+import { PlacedItemMesh } from "./RoomCanvas";
 
 const CM = 0.01; // cm → m
-
-/** One furniture item rendered as a colored box. */
-function FurnitureBox({ p }: { p: PlacedItem }) {
-  const f = getFurnitureById(p.furnitureId);
-  if (!f) return null;
-  const w = (f.width * (p.scaleW ?? 1)) * CM;
-  const d = (f.depth * (p.scaleD ?? 1)) * CM;
-  const h = (f.height * (p.scaleH ?? 1)) * CM;
-  const yBase = p.mountCeiling ? undefined : (p.elevationY ?? 0) * CM;
-  const y = p.mountCeiling
-    ? undefined
-    : yBase! + h / 2;
-  return (
-    <mesh
-      position={[p.x * CM, y ?? 0.5, p.z * CM]}
-      rotation={[0, (-(p.rotation ?? 0) * Math.PI) / 180, 0]}
-      castShadow
-      receiveShadow
-    >
-      <boxGeometry args={[w, h, d]} />
-      <meshStandardMaterial color={f.color} roughness={0.7} metalness={0.05} />
-    </mesh>
-  );
-}
 
 /** One room: floor + 4 walls (no ceiling) + furniture + label. */
 function RoomGroup({
@@ -106,12 +82,14 @@ function RoomGroup({
         </mesh>
       ))}
 
-      {/* Furniture as simple boxes (positions are relative to room back-left corner) */}
-      <group position={[-W / 2, 0, -D / 2]}>
+      {/* Furniture — reuse RoomCanvas PlacedItemMesh so you get real GLTF
+          models (sofa, bed, …) + procedural meshes. PlacedItemMesh
+          centers items on the room's origin using roomW/roomD (meters). */}
+      <Suspense fallback={null}>
         {state.placedItems.map(p => (
-          <FurnitureBox key={p.instanceId} p={p} />
+          <PlacedItemMesh key={p.instanceId} placed={p} def={def} roomW={W} roomD={D} />
         ))}
-      </group>
+      </Suspense>
 
       {/* Floating label */}
       <Html position={[0, WALL_H + 0.15, 0]} center distanceFactor={8} style={{ pointerEvents: "none" }}>
