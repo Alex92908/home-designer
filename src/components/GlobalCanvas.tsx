@@ -335,11 +335,15 @@ export default function GlobalCanvas() {
   }
 
   return (
-    <div className="w-full h-full relative bg-gray-200">
+    <div
+      className="w-full h-full relative"
+      // 深一档蓝灰，白墙在上面清晰可见
+      style={{ background: "linear-gradient(180deg, #7E8A9A 0%, #525B6A 55%, #353B46 100%)" }}
+    >
       <Canvas
         shadows
         camera={{ position: [12, 14, 12], fov: 45 }}
-        gl={{ antialias: true }}
+        gl={{ antialias: true, alpha: true }}
       >
         <Scene />
         <CameraFit />
