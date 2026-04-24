@@ -355,6 +355,8 @@ export default function FloorPlan() {
   const setElevation         = useDesignerStore((s) => s.setElevation);
   const pushFurnitureHistory = useDesignerStore((s) => s.pushFurnitureHistory);
   const undoFurniture        = useDesignerStore((s) => s.undoFurniture);
+  const undoLayout           = useDesignerStore((s) => s.undoLayout);
+  const layoutHistoryLen     = useDesignerStore((s) => s.layoutHistory.length);
   const rotateRoom           = useDesignerStore((s) => s.rotateRoom);
   const pushLayoutHistory    = useDesignerStore((s) => s.pushLayoutHistory);
   const furnitureHistoryLen  = useDesignerStore((s) => s.furnitureHistory.filter(h => h.room === activeRoom).length);
@@ -386,6 +388,7 @@ export default function FloorPlan() {
   const roomShape          = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomShapes?.[activeRoom]);
   const setRoomShape       = useDesignerStore((s) => s.setRoomShape);
   const updateRoomShapePoint = useDesignerStore((s) => s.updateRoomShapePoint);
+  const rectifyRoomShape     = useDesignerStore((s) => s.rectifyRoomShape);
   const def             = ROOM_DEFS[activeRoom];
 
   // Effective dimensions: store override if different from default, else ROOM_DEFS
@@ -781,22 +784,28 @@ export default function FloorPlan() {
             {/* Divider */}
             <div className="w-px h-4 mx-0.5" style={{ background: "rgba(255,255,255,0.12)" }} />
 
-            {/* Undo */}
+            {/* Undo — in edit-shape mode prefer layout undo (vertex drags
+                live in layoutHistory). Out of that mode fall back to
+                furniture undo. */}
             <button
-              onClick={undoFurniture}
-              disabled={furnitureHistoryLen === 0}
-              title={t.fpUndoTitle(furnitureHistoryLen)}
+              onClick={() => {
+                if (editShape && layoutHistoryLen > 0) undoLayout();
+                else if (furnitureHistoryLen > 0) undoFurniture();
+                else if (layoutHistoryLen > 0) undoLayout();
+              }}
+              disabled={(editShape ? layoutHistoryLen : furnitureHistoryLen) === 0}
+              title={editShape ? `撤回顶点编辑（${layoutHistoryLen}）` : t.fpUndoTitle(furnitureHistoryLen)}
               className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all"
               style={
-                furnitureHistoryLen > 0
-                  ? { background: "#007AFF", color: "#fff" }
+                (editShape ? layoutHistoryLen : furnitureHistoryLen) > 0
+                  ? { background: editShape ? "#F59E0B" : "#007AFF", color: "#fff" }
                   : { background: "transparent", color: "rgba(255,255,255,0.2)", cursor: "not-allowed" }
               }
             >
               <span>↩</span>
               <span>{t.fpUndo}</span>
-              {furnitureHistoryLen > 0 && (
-                <span className="text-[9px] px-1 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }}>{furnitureHistoryLen}</span>
+              {(editShape ? layoutHistoryLen : furnitureHistoryLen) > 0 && (
+                <span className="text-[9px] px-1 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }}>{editShape ? layoutHistoryLen : furnitureHistoryLen}</span>
               )}
             </button>
 
@@ -842,18 +851,30 @@ export default function FloorPlan() {
 
             {/* Shape edit toggle — only meaningful for non-rect rooms */}
             {roomShape && roomShape.preset !== "rect" && (
-              <button
-                onClick={() => setEditShape(v => !v)}
-                className="text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all"
-                style={
-                  editShape
-                    ? { background: "#F59E0B", color: "#fff" }
-                    : { color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", background: "transparent" }
-                }
-                title="编辑多边形顶点"
-              >
-                {editShape ? "完成顶点编辑" : "编辑形状"}
-              </button>
+              <>
+                <button
+                  onClick={() => setEditShape(v => !v)}
+                  className="text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all"
+                  style={
+                    editShape
+                      ? { background: "#F59E0B", color: "#fff" }
+                      : { color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", background: "transparent" }
+                  }
+                  title="编辑多边形顶点"
+                >
+                  {editShape ? "完成顶点编辑" : "编辑形状"}
+                </button>
+                {editShape && (
+                  <button
+                    onClick={() => { pushLayoutHistory(); rectifyRoomShape(activeRoom); }}
+                    className="text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all"
+                    style={{ border: "1px solid rgba(245,158,11,0.7)", color: "#F59E0B", background: "transparent" }}
+                    title="把所有墙边吸到水平 / 垂直（按每条边的主轴对齐 + 去重近距离点）"
+                  >
+                    📏 拉直
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -330,6 +330,10 @@ interface DesignerStore {
   updateRoomDimension: (room: RoomType, width: number, depth: number) => void;
   setRoomShape: (room: RoomType, preset: import("./roomGeometry").ShapePreset) => void;
   updateRoomShapePoint: (room: RoomType, idx: number, x: number, z: number) => void;
+  /** Snap every polygon edge to axis-aligned (horizontal or vertical),
+   *  choosing the dominant axis per edge. Useful after noisy vertex
+   *  drags produced slightly tilted walls. */
+  rectifyRoomShape: (room: RoomType) => void;
   toggleRoom: (room: RoomType) => void;
   addRoom: (room: RoomType) => void;
   removeRoom: (room: RoomType) => void;
@@ -1014,6 +1018,46 @@ export const useDesignerStore = create<DesignerStore>()(
             nextShapes[room] = buildShape(preset, dims.width, dims.depth);
           }
           return { roomShapes: nextShapes };
+        });
+      },
+
+      rectifyRoomShape: (room: RoomType) => {
+        updateFloor(get, set, fp => {
+          const cur = fp.roomShapes?.[room];
+          if (!cur || cur.points.length < 3) return {};
+          const pts = cur.points.map(p => [p[0], p[1]] as [number, number]);
+          const n = pts.length;
+          // For each edge, decide if it's dominantly horizontal or vertical,
+          // and snap the second vertex to match the first along the other axis.
+          // Two passes so drift at the closing edge gets absorbed.
+          for (let pass = 0; pass < 2; pass++) {
+            for (let i = 0; i < n; i++) {
+              const a = pts[i];
+              const b = pts[(i + 1) % n];
+              const dx = Math.abs(b[0] - a[0]);
+              const dz = Math.abs(b[1] - a[1]);
+              if (dx >= dz) {
+                // horizontal edge — average Z and assign to both
+                const avg = Math.round((a[1] + b[1]) / 2 / 10) * 10;
+                a[1] = avg; b[1] = avg;
+              } else {
+                const avg = Math.round((a[0] + b[0]) / 2 / 10) * 10;
+                a[0] = avg; b[0] = avg;
+              }
+            }
+          }
+          // Drop near-duplicate consecutive vertices (< 5cm apart)
+          const cleaned: Array<[number, number]> = [];
+          for (let i = 0; i < n; i++) {
+            const p = pts[i], prev = cleaned[cleaned.length - 1];
+            if (!prev || Math.hypot(p[0] - prev[0], p[1] - prev[1]) > 5) cleaned.push(p);
+          }
+          return {
+            roomShapes: {
+              ...(fp.roomShapes ?? {}),
+              [room]: { preset: "custom", points: cleaned },
+            },
+          };
         });
       },
 
