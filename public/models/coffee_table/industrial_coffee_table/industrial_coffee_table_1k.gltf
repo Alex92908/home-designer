@@ -7,39 +7,114 @@
     {
       "type": "SCALAR",
       "componentType": 5123,
-      "count": 123900
+      "count": 123900,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 0
     },
     {
       "type": "VEC3",
-      "componentType": 5126,
+      "componentType": 5120,
+      "count": 33975,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 1
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
       "count": 33975,
       "max": [
-        0.3925403654575348,
-        0.3789639472961426,
-        1.668930025289228e-7
+        32767,
+        31911,
+        26879
       ],
       "min": [
-        -0.38572409749031067,
-        -0.37896424531936646,
-        -0.638421893119812
-      ]
-    },
-    {
-      "type": "VEC3",
-      "componentType": 5126,
-      "count": 33975
+        -32767,
+        -31911,
+        -26879
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 2
     },
     {
       "type": "VEC2",
-      "componentType": 5126,
-      "count": 33975
+      "componentType": 5123,
+      "count": 33975,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 3
     }
   ],
   "bufferViews": [
     {
-      "buffer": 0,
+      "buffer": 1,
       "byteOffset": 0,
-      "byteLength": 123317
+      "byteLength": 247800,
+      "target": 34963,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 0,
+          "byteLength": 48367,
+          "mode": "TRIANGLES",
+          "byteStride": 2,
+          "count": 123900
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 247800,
+      "byteLength": 135900,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 48368,
+          "byteLength": 24732,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 33975
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 383700,
+      "byteLength": 271800,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 73100,
+          "byteLength": 118682,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 33975
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 655500,
+      "byteLength": 135900,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 191784,
+          "byteLength": 87821,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 33975
+        }
+      }
     }
   ],
   "samplers": [
@@ -84,7 +159,15 @@
   "buffers": [
     {
       "uri": "industrial_coffee_table.bin",
-      "byteLength": 123317
+      "byteLength": 279608
+    },
+    {
+      "byteLength": 791400,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "fallback": true
+        }
+      }
     }
   ],
   "materials": [
@@ -110,23 +193,13 @@
       "primitives": [
         {
           "attributes": {
-            "POSITION": 1,
-            "NORMAL": 2,
+            "NORMAL": 1,
+            "POSITION": 2,
             "TEXCOORD_0": 3
           },
           "mode": 4,
           "material": 0,
-          "indices": 0,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 0,
-              "attributes": {
-                "POSITION": 0,
-                "NORMAL": 1,
-                "TEXCOORD_0": 2
-              }
-            }
-          }
+          "indices": 0
         }
       ]
     }
@@ -134,11 +207,21 @@
   "nodes": [
     {
       "name": "industrial_coffee_table",
+      "translation": [
+        0.0034081339836120605,
+        0.3192161750532397,
+        0.0000020992500355303236
+      ],
       "rotation": [
-        0.7071068286895752,
+        0.7071068286895689,
         0,
         0,
-        0.7071068286895752
+        0.7071067336835231
+      ],
+      "scale": [
+        0.38913223147392273,
+        0.38913228375728787,
+        0.38913228375728787
       ],
       "mesh": 0
     }
@@ -153,9 +236,11 @@
   ],
   "scene": 0,
   "extensionsUsed": [
-    "KHR_draco_mesh_compression"
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
   ],
   "extensionsRequired": [
-    "KHR_draco_mesh_compression"
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
   ]
 }

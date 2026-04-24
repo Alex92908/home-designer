@@ -7,74 +7,208 @@
     {
       "type": "SCALAR",
       "componentType": 5123,
-      "count": 14058
+      "count": 14058,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 0
     },
     {
       "type": "VEC3",
-      "componentType": 5126,
+      "componentType": 5120,
       "count": 7240,
-      "max": [
-        0.6005420684814453,
-        0.3674314022064209,
-        0.6017131805419922
-      ],
-      "min": [
-        -0.597504734992981,
-        -0.00019758939743041992,
-        -0.5973209142684937
-      ]
-    },
-    {
-      "type": "VEC3",
-      "componentType": 5126,
-      "count": 7240
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 1
     },
     {
       "type": "VEC2",
       "componentType": 5126,
-      "count": 7240
+      "count": 7240,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 2
     },
     {
       "type": "SCALAR",
       "componentType": 5123,
-      "count": 26877
+      "count": 26877,
+      "normalized": false,
+      "byteOffset": 28116,
+      "bufferView": 0
     },
     {
       "type": "VEC3",
-      "componentType": 5126,
+      "componentType": 5120,
       "count": 17825,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 3
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 7240,
       "max": [
-        0.4494684934616089,
-        0.36905208230018616,
-        0.6023358702659607
+        32751,
+        9997,
+        32731
       ],
       "min": [
-        -0.5985692739486694,
-        0.0669964849948883,
-        -0.4451645016670227
-      ]
+        -32695,
+        -10085,
+        -32767
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 4
     },
     {
       "type": "VEC3",
-      "componentType": 5126,
-      "count": 17825
+      "componentType": 5122,
+      "count": 17825,
+      "max": [
+        24498,
+        10085,
+        32767
+      ],
+      "min": [
+        -32751,
+        -6416,
+        -24454
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 5
     },
     {
       "type": "VEC2",
-      "componentType": 5126,
-      "count": 17825
+      "componentType": 5123,
+      "count": 17825,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 6
     }
   ],
   "bufferViews": [
     {
-      "buffer": 0,
+      "buffer": 1,
       "byteOffset": 0,
-      "byteLength": 20378
+      "byteLength": 81870,
+      "target": 34963,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 0,
+          "byteLength": 13740,
+          "mode": "TRIANGLES",
+          "byteStride": 2,
+          "count": 40935
+        }
+      }
     },
     {
-      "buffer": 0,
-      "byteOffset": 20378,
-      "byteLength": 54963
+      "buffer": 1,
+      "byteOffset": 81872,
+      "byteLength": 28960,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 13740,
+          "byteLength": 8054,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 7240
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 110832,
+      "byteLength": 57920,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 21796,
+          "byteLength": 25756,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 7240
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 168752,
+      "byteLength": 71300,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 47552,
+          "byteLength": 27778,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 17825
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 240052,
+      "byteLength": 57920,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 75332,
+          "byteLength": 23750,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 7240
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 297972,
+      "byteLength": 142600,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 99084,
+          "byteLength": 67807,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 17825
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 440572,
+      "byteLength": 71300,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 166892,
+          "byteLength": 47893,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 17825
+        }
+      }
     }
   ],
   "samplers": [
@@ -146,7 +280,15 @@
   "buffers": [
     {
       "uri": "modern_coffee_table_02.bin",
-      "byteLength": 75341
+      "byteLength": 214788
+    },
+    {
+      "byteLength": 511872,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "fallback": true
+        }
+      }
     }
   ],
   "materials": [
@@ -189,43 +331,23 @@
       "primitives": [
         {
           "attributes": {
-            "POSITION": 1,
-            "NORMAL": 2,
-            "TEXCOORD_0": 3
+            "NORMAL": 1,
+            "TEXCOORD_0": 2,
+            "POSITION": 5
           },
           "mode": 4,
           "material": 0,
-          "indices": 0,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 0,
-              "attributes": {
-                "POSITION": 0,
-                "NORMAL": 1,
-                "TEXCOORD_0": 2
-              }
-            }
-          }
+          "indices": 0
         },
         {
           "attributes": {
-            "POSITION": 5,
-            "NORMAL": 6,
+            "NORMAL": 4,
+            "POSITION": 6,
             "TEXCOORD_0": 7
           },
           "mode": 4,
           "material": 1,
-          "indices": 4,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 1,
-              "attributes": {
-                "POSITION": 0,
-                "NORMAL": 1,
-                "TEXCOORD_0": 2
-              }
-            }
-          }
+          "indices": 3
         }
       ]
     }
@@ -233,6 +355,16 @@
   "nodes": [
     {
       "name": "modern_coffee_table_02",
+      "translation": [
+        0.001004338264465332,
+        0.18443511426448822,
+        0.0025202929973602295
+      ],
+      "scale": [
+        0.5998412072658539,
+        0.5998412072658539,
+        0.5998412072658539
+      ],
       "mesh": 0
     }
   ],
@@ -246,9 +378,11 @@
   ],
   "scene": 0,
   "extensionsUsed": [
-    "KHR_draco_mesh_compression"
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
   ],
   "extensionsRequired": [
-    "KHR_draco_mesh_compression"
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
   ]
 }
