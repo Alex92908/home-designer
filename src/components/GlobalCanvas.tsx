@@ -14,6 +14,7 @@
  */
 
 import { useMemo, useRef, useState, Suspense } from "react";
+import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, Html } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
@@ -74,6 +75,7 @@ function RoomGroup({
   const def = ROOM_DEFS[room];
   const dims = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions[room]);
   const state = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]);
+  const shape = useDesignerStore(s => s.floorPlans[s.activeFloor].roomShapes?.[room]);
   const label = useDesignerStore(s => s.customRoomMeta[room]?.name) ?? def.name;
   const icon = useDesignerStore(s => s.customRoomMeta[room]?.icon) ?? def.icon;
 
@@ -86,7 +88,50 @@ function RoomGroup({
   const floorColor = state.materials.floor?.color ?? def.defaultFloorColor;
   const wallColor  = state.materials.wall?.color  ?? def.defaultWallColor;
 
-  // Center of the room, in world coords
+  // Polygon points (cm, room-local back-left origin). Rect fallback when
+  // no shape override is set.
+  const polyPts: Array<[number, number]> =
+    shape && shape.preset !== "rect"
+      ? shape.points
+      : [[0, 0], [dims.width, 0], [dims.width, dims.depth], [0, dims.depth]];
+
+  // THREE.Shape for the floor — convert each cm point to meters, and
+  // center on room's world origin (subtract W/2, D/2).
+  const floorShape = useMemo(() => {
+    const s = new THREE.Shape();
+    polyPts.forEach(([px, pz], i) => {
+      const wx = px * CM - W / 2;
+      const wz = pz * CM - D / 2;
+      i === 0 ? s.moveTo(wx, wz) : s.lineTo(wx, wz);
+    });
+    s.closePath();
+    return s;
+    // polyPts reference is stable as long as shape/dims don't change, but
+    // we still include them as deps to be safe.
+  }, [polyPts, W, D]);
+
+  // Polygon edge segments → wall boxes
+  const wallBoxes = useMemo(() => {
+    const ws: Array<{ cx: number; cz: number; len: number; angle: number }> = [];
+    for (let i = 0; i < polyPts.length; i++) {
+      const [x1, z1] = polyPts[i];
+      const [x2, z2] = polyPts[(i + 1) % polyPts.length];
+      const wx1 = x1 * CM - W / 2, wz1 = z1 * CM - D / 2;
+      const wx2 = x2 * CM - W / 2, wz2 = z2 * CM - D / 2;
+      const dx = wx2 - wx1, dz = wz2 - wz1;
+      const len = Math.hypot(dx, dz);
+      if (len < 0.01) continue;
+      ws.push({
+        cx: (wx1 + wx2) / 2,
+        cz: (wz1 + wz2) / 2,
+        len,
+        angle: Math.atan2(-dz, dx),
+      });
+    }
+    return ws;
+  }, [polyPts, W, D]);
+
+  // Center of the room's bounding box, in world coords
   const cx = originX + W / 2;
   const cz = originZ + D / 2;
 
@@ -96,24 +141,19 @@ function RoomGroup({
       onPointerOut={() => setHover(null)}
       onClick={(e) => { e.stopPropagation(); onPick(); }}
     >
-      {/* Floor */}
+      {/* Floor (polygon-aware) */}
       <mesh position={[0, 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[W, D]} />
+        <shapeGeometry args={[floorShape]} />
         <meshStandardMaterial
           color={isActive ? "#BAE6FD" : (isHover ? "#DBEAFE" : floorColor)}
           roughness={0.9}
         />
       </mesh>
 
-      {/* 4 walls (no ceiling) */}
-      {[
-        { pos: [0, WALL_H / 2, -D / 2 + WALL / 2] as const, size: [W, WALL_H, WALL] as const }, // back
-        { pos: [0, WALL_H / 2,  D / 2 - WALL / 2] as const, size: [W, WALL_H, WALL] as const }, // front
-        { pos: [-W / 2 + WALL / 2, WALL_H / 2, 0] as const, size: [WALL, WALL_H, D] as const }, // left
-        { pos: [ W / 2 - WALL / 2, WALL_H / 2, 0] as const, size: [WALL, WALL_H, D] as const }, // right
-      ].map((w, i) => (
-        <mesh key={i} position={w.pos} castShadow receiveShadow>
-          <boxGeometry args={w.size} />
+      {/* Walls — one box per polygon edge (4 for rect, 6 for L型, 8 for 凸字) */}
+      {wallBoxes.map((w, i) => (
+        <mesh key={i} position={[w.cx, WALL_H / 2, w.cz]} rotation={[0, w.angle, 0]} castShadow receiveShadow>
+          <boxGeometry args={[w.len, WALL_H, WALL]} />
           <meshStandardMaterial color={wallColor} roughness={0.85} />
         </mesh>
       ))}

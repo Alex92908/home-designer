@@ -1861,8 +1861,69 @@ function HouseBody({ W, D, settings }: { W: number; D: number; settings: Exterio
         ))
       )}
       <group position={[0, totalH, 0]}>
-        <RoofSwitch W={W} D={D} roofStyle={roofStyle} roofColor={roofColor} />
+        {hasPolygonRoom && roofStyle === "flat"
+          ? <PolygonFlatRoof color={roofColor} />
+          : <RoofSwitch W={W} D={D} roofStyle={roofStyle} roofColor={roofColor} />}
       </group>
+    </group>
+  );
+}
+
+/** Flat roof that follows the (per-room) polygon footprint so L 型 房间的
+ *  缺角在屋顶上也是镂空的。Per-room slabs overlap where rooms are adjacent
+ *  — same visual strategy as PolygonHouseShell's floors. Non-flat roof
+ *  styles (gable/hip/mansard/chinese) still use the bbox approximation
+ *  (acceptable: those are already stylized). */
+function PolygonFlatRoof({ color }: { color: string }) {
+  const activeFloor    = useDesignerStore(s => s.activeFloor);
+  const enabledRooms   = useDesignerStore(s => s.floorPlans[activeFloor].enabledRooms);
+  const roomLayout     = useDesignerStore(s => s.floorPlans[activeFloor].roomLayout);
+  const roomDimensions = useDesignerStore(s => s.floorPlans[activeFloor].roomDimensions);
+  const roomShapes     = useDesignerStore(s => s.floorPlans[activeFloor].roomShapes);
+
+  const { minX, minZ, W: houseW, D: houseD } = useMemo(() => {
+    const indoor = enabledRooms.filter(r => !ROOM_DEFS[r].isOutdoor);
+    if (!indoor.length) return { minX: 0, minZ: 0, W: 8, D: 6 };
+    const xs = indoor.flatMap(r => [roomLayout[r].x, roomLayout[r].x + roomDimensions[r].width]);
+    const zs = indoor.flatMap(r => [roomLayout[r].y, roomLayout[r].y + roomDimensions[r].depth]);
+    return {
+      minX: Math.min(...xs), minZ: Math.min(...zs),
+      W: (Math.max(...xs) - Math.min(...xs)) / 100,
+      D: (Math.max(...zs) - Math.min(...zs)) / 100,
+    };
+  }, [enabledRooms, roomLayout, roomDimensions]);
+
+  const slabs = useMemo(() => {
+    const out: Array<{ shape: THREE.Shape }> = [];
+    for (const room of enabledRooms) {
+      if (ROOM_DEFS[room].isOutdoor) continue;
+      const dims = roomDimensions[room];
+      const lay  = roomLayout[room];
+      const s = roomShapes?.[room];
+      const cmPts: Array<[number, number]> =
+        s && s.preset !== "rect"
+          ? s.points
+          : [[0, 0], [dims.width, 0], [dims.width, dims.depth], [0, dims.depth]];
+      const shp = new THREE.Shape();
+      cmPts.forEach(([lx, lz], i) => {
+        const wx = (lay.x + lx - minX) / 100 - houseW / 2;
+        const wz = (lay.y + lz - minZ) / 100 - houseD / 2;
+        i === 0 ? shp.moveTo(wx, wz) : shp.lineTo(wx, wz);
+      });
+      shp.closePath();
+      out.push({ shape: shp });
+    }
+    return out;
+  }, [enabledRooms, roomLayout, roomDimensions, roomShapes, minX, minZ, houseW, houseD]);
+
+  return (
+    <group>
+      {slabs.map(({ shape }, i) => (
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.11, 0]} castShadow receiveShadow>
+          <shapeGeometry args={[shape]} />
+          <meshStandardMaterial color={color} roughness={0.9} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
     </group>
   );
 }

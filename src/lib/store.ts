@@ -252,7 +252,7 @@ interface DesignerStore {
   clipboard: Array<{ furnitureId: string; x: number; z: number; rotation: number; scaleW: number; scaleD: number; scaleH: number }>;
 
   // Room-level clipboard (copy entire room config)
-  roomClipboard: { materials: RoomMaterials; placedItems: PlacedItem[]; name: string; icon: string; width: number; depth: number } | null;
+  roomClipboard: { materials: RoomMaterials; placedItems: PlacedItem[]; name: string; icon: string; width: number; depth: number; shape?: import("./roomGeometry").RoomShape } | null;
 
   // Room / view actions
   setActiveRoom: (room: RoomType) => void;
@@ -1024,9 +1024,14 @@ export const useDesignerStore = create<DesignerStore>()(
         const newActiveRoom = s.activeRoom === room
           ? (fp.enabledRooms.find(r => r !== room) ?? "living")
           : s.activeRoom;
-        updateFloor(get, set, fp2 => ({
-          enabledRooms: fp2.enabledRooms.filter(r => r !== room),
-        }));
+        updateFloor(get, set, fp2 => {
+          const nextShapes = fp2.roomShapes ? { ...fp2.roomShapes } : undefined;
+          if (nextShapes) delete nextShapes[room];
+          return {
+            enabledRooms: fp2.enabledRooms.filter(r => r !== room),
+            roomShapes: nextShapes,
+          };
+        });
         if (newActiveRoom !== s.activeRoom) set({ activeRoom: newActiveRoom });
       },
 
@@ -1054,6 +1059,9 @@ export const useDesignerStore = create<DesignerStore>()(
           icon: meta?.icon ?? def.icon,
           width: dim.width,
           depth: dim.depth,
+          shape: fp.roomShapes?.[room]
+            ? { preset: fp.roomShapes[room]!.preset, points: fp.roomShapes[room]!.points.map(p => [...p] as [number, number]) }
+            : undefined,
         }});
       },
 
@@ -1070,6 +1078,10 @@ export const useDesignerStore = create<DesignerStore>()(
         const lastPos = fp.roomLayout[lastRoom] ?? { x: 0, y: 0 };
         const newLayout = { ...fp.roomLayout, [targetRoom]: { x: lastPos.x + 300, y: lastPos.y } };
         const newDimensions = { ...fp.roomDimensions, [targetRoom]: { width: roomClipboard.width, depth: roomClipboard.depth } };
+        // Copy shape (L型/凸字/custom) too if present
+        const newShapes = roomClipboard.shape
+          ? { ...(fp.roomShapes ?? {}), [targetRoom]: { preset: roomClipboard.shape.preset, points: roomClipboard.shape.points.map(p => [...p] as [number, number]) } }
+          : fp.roomShapes;
         const floorPlans = [...s.floorPlans];
         floorPlans[activeFloor] = {
           ...fp,
@@ -1077,6 +1089,7 @@ export const useDesignerStore = create<DesignerStore>()(
           enabledRooms: [...fp.enabledRooms, targetRoom],
           roomLayout: newLayout,
           roomDimensions: newDimensions,
+          roomShapes: newShapes,
         };
         set(st => ({
           floorPlans,
@@ -1095,11 +1108,19 @@ export const useDesignerStore = create<DesignerStore>()(
         const newItems: PlacedItem[] = roomClipboard.placedItems.map(p => ({ ...p, instanceId: genId() }));
         const updatedRoom = { materials: { ...roomClipboard.materials }, placedItems: newItems };
         const newDimensions = { ...fp.roomDimensions, [targetRoom]: { width: roomClipboard.width, depth: roomClipboard.depth } };
+        // Carry shape override with paste (clear it if clipboard was rect-shaped)
+        const nextShapes = { ...(fp.roomShapes ?? {}) };
+        if (roomClipboard.shape) {
+          nextShapes[targetRoom] = { preset: roomClipboard.shape.preset, points: roomClipboard.shape.points.map(p => [...p] as [number, number]) };
+        } else {
+          delete nextShapes[targetRoom];
+        }
         const floorPlans = [...s.floorPlans];
         floorPlans[activeFloor] = {
           ...fp,
           rooms: { ...fp.rooms, [targetRoom]: updatedRoom },
           roomDimensions: newDimensions,
+          roomShapes: nextShapes,
         };
         set(st => ({
           floorPlans,
