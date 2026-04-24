@@ -1,5 +1,9 @@
 "use client";
 
+// Side-effect import: kicks off preload of the most common 3D assets
+// 150ms after mount, so by the time the user opens 3D/全局/外观 views
+// many GLTFs are already warm in the HTTP cache.
+import "@/lib/preload";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import LeftPanel from "@/components/LeftPanel";
