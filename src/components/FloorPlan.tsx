@@ -388,6 +388,7 @@ export default function FloorPlan() {
   const roomShape          = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomShapes?.[activeRoom]);
   const setRoomShape       = useDesignerStore((s) => s.setRoomShape);
   const updateRoomShapePoint = useDesignerStore((s) => s.updateRoomShapePoint);
+  const deleteRoomShapePoint = useDesignerStore((s) => s.deleteRoomShapePoint);
   const rectifyRoomShape     = useDesignerStore((s) => s.rectifyRoomShape);
   const def             = ROOM_DEFS[activeRoom];
 
@@ -756,7 +757,7 @@ export default function FloorPlan() {
     <div className="flex-1 h-full flex flex-col bg-[#0f1117] select-none overflow-hidden relative">
     {/* ── Scrollable canvas area ────────────────────────────── */}
     <div
-      className="flex-1 flex flex-col items-center justify-start overflow-auto p-4 pt-6 min-h-0"
+      className="flex-1 flex flex-col items-center justify-start overflow-auto p-4 pt-10 min-h-0"
       onWheel={e => {
         // Only zoom when not over an input
         if ((e.target as HTMLElement).tagName === "INPUT") return;
@@ -860,7 +861,7 @@ export default function FloorPlan() {
                       ? { background: "#F59E0B", color: "#fff" }
                       : { color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", background: "transparent" }
                   }
-                  title="编辑多边形顶点"
+                  title="编辑多边形顶点（拖拽移动；右键 / Alt+点击 删除）"
                 >
                   {editShape ? "完成顶点编辑" : "编辑形状"}
                 </button>
@@ -994,8 +995,23 @@ export default function FloorPlan() {
                   cx={vx * scale} cy={vz * scale} r={9}
                   fill="#F59E0B" stroke="#fff" strokeWidth={2}
                   style={{ cursor: "grab" }}
+                  onContextMenu={(e) => {
+                    // Right-click to delete vertex (keep ≥3)
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (roomShape.points.length <= 3) return;
+                    pushLayoutHistory();
+                    deleteRoomShapePoint(activeRoom, i);
+                  }}
                   onPointerDown={(e) => {
                     e.stopPropagation();
+                    // Alt+click (or Shift+click) deletes the vertex
+                    if (e.altKey || e.shiftKey) {
+                      if (roomShape.points.length <= 3) return;
+                      pushLayoutHistory();
+                      deleteRoomShapePoint(activeRoom, i);
+                      return;
+                    }
                     const svg = svgRef.current;
                     if (!svg) return;
                     pushLayoutHistory();

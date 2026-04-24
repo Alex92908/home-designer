@@ -330,6 +330,9 @@ interface DesignerStore {
   updateRoomDimension: (room: RoomType, width: number, depth: number) => void;
   setRoomShape: (room: RoomType, preset: import("./roomGeometry").ShapePreset) => void;
   updateRoomShapePoint: (room: RoomType, idx: number, x: number, z: number) => void;
+  /** Remove a vertex from a room's polygon. No-op if the shape would end
+   *  up with fewer than 3 points. Switches preset to "custom". */
+  deleteRoomShapePoint: (room: RoomType, idx: number) => void;
   /** Snap every polygon edge to axis-aligned (horizontal or vertical),
    *  choosing the dominant axis per edge. Useful after noisy vertex
    *  drags produced slightly tilted walls. */
@@ -1066,6 +1069,17 @@ export const useDesignerStore = create<DesignerStore>()(
           const cur = fp.roomShapes?.[room];
           if (!cur) return {};
           const nextPts = cur.points.map((p, i) => (i === idx ? [x, z] : p)) as Array<[number, number]>;
+          return {
+            roomShapes: { ...fp.roomShapes, [room]: { preset: "custom", points: nextPts } },
+          };
+        });
+      },
+
+      deleteRoomShapePoint: (room: RoomType, idx: number) => {
+        updateFloor(get, set, fp => {
+          const cur = fp.roomShapes?.[room];
+          if (!cur || cur.points.length <= 3) return {};   // keep ≥3
+          const nextPts = cur.points.filter((_, i) => i !== idx);
           return {
             roomShapes: { ...fp.roomShapes, [room]: { preset: "custom", points: nextPts } },
           };
