@@ -19,11 +19,47 @@ import { OrbitControls, Environment, Html } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
-import { PlacedItemMesh, LightFixture } from "./RoomCanvas";
+import { PlacedItemMesh } from "./RoomCanvas";
 
 const CM = 0.01; // cm → m
 
 /** One room: floor + 4 walls (no ceiling) + furniture + label. */
+/** Lightweight per-room light for global view. Reads the same
+ *  on/off + brightness + color state as LightFixture (so the per-fixture
+ *  toggle still works), but renders only a single non-shadow pointLight
+ *  + an emissive sphere — no shadow maps = no MAX_TEXTURE_IMAGE_UNITS
+ *  blowup when multiplied across many rooms. */
+function GlobalRoomLight({ room, H, color }: { room: RoomType; H: number; color: string }) {
+  const isOn = useDesignerStore(s => s.lightsOnByRoom[room] !== false);
+  const brightness = useDesignerStore(s => s.lightBrightnessByRoom[room] ?? 1);
+  const colorOverride = useDesignerStore(s => s.lightColorByRoom[room]);
+  const toggle = useDesignerStore(s => s.toggleRoomLights);
+  const finalColor = colorOverride ?? color;
+  const mul = isOn ? brightness : 0;
+  return (
+    <group position={[0, H - 0.25, 0]}>
+      <mesh onClick={(e) => { e.stopPropagation(); toggle(room); }}>
+        <sphereGeometry args={[0.12, 12, 8]} />
+        <meshStandardMaterial
+          color={finalColor}
+          emissive={finalColor}
+          emissiveIntensity={0.9 * mul}
+          roughness={0.3}
+          transparent
+          opacity={0.85}
+        />
+      </mesh>
+      <pointLight
+        visible={mul > 0}
+        intensity={5 * mul}
+        color={finalColor}
+        distance={5}
+        decay={2}
+      />
+    </group>
+  );
+}
+
 function RoomGroup({
   room, originX, originZ, onPick, isActive, isHover, setHover,
 }: {
@@ -92,15 +128,15 @@ function RoomGroup({
         ))}
       </Suspense>
 
-      {/* Ceiling light (hung below the truncated wall top so it stays visible).
-          Passing `room` so on/off + brightness track per-room state, not activeRoom. */}
-      <LightFixture
-        H={WALL_H}
-        lightColor={state.materials.light?.color ?? "#FFE8A0"}
-        lightId={state.materials.light?.id ?? ""}
-        lightX={0}
-        lightZ={0}
+      {/* Cheap per-room light: emissive bulb + single non-shadow pointLight.
+          The full LightFixture with shadow-casting spots/points would blow
+          past MAX_TEXTURE_IMAGE_UNITS=16 once multiplied across all rooms
+          (WebGL shader compile fails). The single-room 3D view still uses
+          the full fixture; global view gets this simplified stand-in. */}
+      <GlobalRoomLight
         room={room}
+        H={WALL_H}
+        color={state.materials.light?.color ?? "#FFE8A0"}
       />
 
       {/* Floating label */}
