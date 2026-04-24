@@ -1,79 +1,126 @@
 {
-  "asset": {
-    "generator": "glTF-Transform v4.3.0",
-    "version": "2.0",
-    "extras": {
-      "author": "Smokahontas (https://sketchfab.com/Smokahontas)",
-      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
-      "source": "https://sketchfab.com/3d-models/french-door-refrigerator-stainless-ebe62ed6dd9b446a9c9b7d7d6a8086e7",
-      "title": "French Door Refrigerator - Stainless"
-    }
-  },
   "accessors": [
     {
-      "type": "SCALAR",
-      "componentType": 5123,
-      "count": 486
-    },
-    {
-      "type": "VEC3",
-      "componentType": 5126,
-      "count": 254
-    },
-    {
-      "type": "VEC3",
+      "bufferView": 2,
       "componentType": 5126,
       "count": 254,
       "max": [
         43.182098388671875,
-        83.49356079101562,
+        83.49356079101563,
         26.847320556640625
       ],
       "min": [
         -43.182098388671875,
-        -78.81460571289062,
+        -78.81460571289063,
         22.74444580078125
-      ]
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC4",
+      "bufferView": 2,
+      "byteOffset": 3048,
       "componentType": 5126,
-      "count": 254
+      "count": 254,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 3,
       "componentType": 5126,
-      "count": 254
+      "count": 254,
+      "max": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -0.00037949191755615175,
+        -1.0,
+        -1.0,
+        1.0
+      ],
+      "type": "VEC4"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
       "componentType": 5126,
-      "count": 254
+      "count": 254,
+      "max": [
+        1.0,
+        0.9986718893051147
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 2032,
       "componentType": 5126,
-      "count": 254
+      "count": 254,
+      "max": [
+        1.0,
+        0.9986718893051147
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 4064,
       "componentType": 5126,
-      "count": 254
+      "count": 254,
+      "max": [
+        1.0,
+        0.9986718893051147
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "SCALAR",
-      "componentType": 5123,
-      "count": 780
-    },
-    {
-      "type": "VEC3",
+      "bufferView": 1,
+      "byteOffset": 6096,
       "componentType": 5126,
-      "count": 440
+      "count": 254,
+      "max": [
+        1.0,
+        0.9986718893051147
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC3",
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 486,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 6096,
       "componentType": 5126,
-      "count": 440,
+      "count": 437,
       "max": [
         42.69825744628906,
         83.46648406982422,
@@ -83,45 +130,115 @@
         -42.69825744628906,
         -29.969144821166992,
         19.248891830444336
-      ]
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC4",
+      "bufferView": 2,
+      "byteOffset": 11340,
       "componentType": 5126,
-      "count": 440
+      "count": 437,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 3,
+      "byteOffset": 4064,
       "componentType": 5126,
-      "count": 440
+      "count": 437,
+      "max": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -0.43965157866477966,
+        -1.0,
+        -1.0,
+        1.0
+      ],
+      "type": "VEC4"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 8128,
       "componentType": 5126,
-      "count": 440
+      "count": 437,
+      "max": [
+        0.9873871803283691,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 11624,
       "componentType": 5126,
-      "count": 440
+      "count": 437,
+      "max": [
+        0.9873871803283691,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 15120,
       "componentType": 5126,
-      "count": 440
+      "count": 437,
+      "max": [
+        0.9873871803283691,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "SCALAR",
-      "componentType": 5123,
-      "count": 96
-    },
-    {
-      "type": "VEC3",
+      "bufferView": 1,
+      "byteOffset": 18616,
       "componentType": 5126,
-      "count": 64
+      "count": 437,
+      "max": [
+        0.9873871803283691,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 1944,
+      "componentType": 5125,
+      "count": 780,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 16584,
       "componentType": 5126,
       "count": 64,
       "max": [
@@ -133,97 +250,237 @@
         -41.798885345458984,
         -74.5604248046875,
         19.232133865356445
-      ]
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC4",
+      "bufferView": 2,
+      "byteOffset": 17352,
       "componentType": 5126,
-      "count": 64
+      "count": 64,
+      "max": [
+        1.0,
+        1.0,
+        0.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        0.0
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 3,
+      "byteOffset": 11056,
       "componentType": 5126,
-      "count": 64
+      "count": 64,
+      "max": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0,
+        -1.0,
+        1.0
+      ],
+      "type": "VEC4"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 22112,
       "componentType": 5126,
-      "count": 64
+      "count": 64,
+      "max": [
+        0.8588290810585022,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 22624,
       "componentType": 5126,
-      "count": 64
+      "count": 64,
+      "max": [
+        0.8588290810585022,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 23136,
       "componentType": 5126,
-      "count": 64
+      "count": 64,
+      "max": [
+        0.8588290810585022,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "SCALAR",
-      "componentType": 5123,
-      "count": 150
-    },
-    {
-      "type": "VEC3",
+      "bufferView": 1,
+      "byteOffset": 23648,
       "componentType": 5126,
-      "count": 86
+      "count": 64,
+      "max": [
+        0.8588290810585022,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 5064,
+      "componentType": 5125,
+      "count": 96,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 18120,
       "componentType": 5126,
-      "count": 86,
+      "count": 83,
       "max": [
         42.74073028564453,
-        83.49356079101562,
+        83.49356079101563,
         22.565242767333984
       ],
       "min": [
         -42.74073028564453,
         -78.7071304321289,
         -22.565242767333984
-      ]
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC4",
+      "bufferView": 2,
+      "byteOffset": 19116,
       "componentType": 5126,
-      "count": 86
+      "count": 83,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 3,
+      "byteOffset": 12080,
       "componentType": 5126,
-      "count": 86
+      "count": 83,
+      "max": [
+        1.0,
+        3.6533251659420785e-06,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -2.989240499573498e-07,
+        -0.31730401515960693,
+        -1.0,
+        1.0
+      ],
+      "type": "VEC4"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 24160,
       "componentType": 5126,
-      "count": 86
+      "count": 83,
+      "max": [
+        1.0,
+        0.9477450251579285
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 24824,
       "componentType": 5126,
-      "count": 86
+      "count": 83,
+      "max": [
+        1.0,
+        0.9477450251579285
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 25488,
       "componentType": 5126,
-      "count": 86
+      "count": 83,
+      "max": [
+        1.0,
+        0.9477450251579285
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "SCALAR",
-      "componentType": 5123,
-      "count": 3156
-    },
-    {
-      "type": "VEC3",
+      "bufferView": 1,
+      "byteOffset": 26152,
       "componentType": 5126,
-      "count": 1226
+      "count": 83,
+      "max": [
+        1.0,
+        0.9477450251579285
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 5448,
+      "componentType": 5125,
+      "count": 150,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 20112,
       "componentType": 5126,
-      "count": 1226,
+      "count": 1214,
       "max": [
         39.2900276184082,
         78.70268249511719,
@@ -231,47 +488,117 @@
       ],
       "min": [
         -38.99980926513672,
-        -80.13381958007812,
+        -80.13381958007813,
         -21.17414665222168
-      ]
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC4",
+      "bufferView": 2,
+      "byteOffset": 34680,
       "componentType": 5126,
-      "count": 1226
+      "count": 1214,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 3,
+      "byteOffset": 13408,
       "componentType": 5126,
-      "count": 1226
+      "count": 1214,
+      "max": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -0.8090164065361023,
+        -1.0,
+        -1.0,
+        1.0
+      ],
+      "type": "VEC4"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 26816,
       "componentType": 5126,
-      "count": 1226
+      "count": 1214,
+      "max": [
+        0.9994527697563171,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 36528,
       "componentType": 5126,
-      "count": 1226
+      "count": 1214,
+      "max": [
+        0.9994527697563171,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 46240,
       "componentType": 5126,
-      "count": 1226
+      "count": 1214,
+      "max": [
+        0.9994527697563171,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "SCALAR",
-      "componentType": 5123,
-      "count": 30
-    },
-    {
-      "type": "VEC3",
+      "bufferView": 1,
+      "byteOffset": 55952,
       "componentType": 5126,
-      "count": 20
+      "count": 1214,
+      "max": [
+        0.9994527697563171,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 6048,
+      "componentType": 5125,
+      "count": 3156,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 49248,
       "componentType": 5126,
       "count": 20,
       "max": [
@@ -283,64 +610,514 @@
         -37.912723541259766,
         -70.99813842773438,
         -24.141376495361328
-      ]
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC4",
+      "bufferView": 2,
+      "byteOffset": 49488,
       "componentType": 5126,
-      "count": 20
+      "count": 20,
+      "max": [
+        1.0,
+        1.0,
+        0.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 3,
+      "byteOffset": 32832,
       "componentType": 5126,
-      "count": 20
+      "count": 20,
+      "max": [
+        1.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0,
+        -1.0,
+        1.0
+      ],
+      "type": "VEC4"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 65664,
       "componentType": 5126,
-      "count": 20
+      "count": 20,
+      "max": [
+        1.0,
+        0.8834338188171387
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 65824,
       "componentType": 5126,
-      "count": 20
+      "count": 20,
+      "max": [
+        1.0,
+        0.8834338188171387
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 65984,
       "componentType": 5126,
-      "count": 20
+      "count": 20,
+      "max": [
+        1.0,
+        0.8834338188171387
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 66144,
+      "componentType": 5126,
+      "count": 20,
+      "max": [
+        1.0,
+        0.8834338188171387
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 18672,
+      "componentType": 5125,
+      "count": 30,
+      "type": "SCALAR"
     }
   ],
+  "asset": {
+    "extras": {
+      "author": "Smokahontas (https://sketchfab.com/Smokahontas)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/french-door-refrigerator-stainless-ebe62ed6dd9b446a9c9b7d7d6a8086e7",
+      "title": "French Door Refrigerator - Stainless"
+    },
+    "generator": "Sketchfab-12.67.0",
+    "version": "2.0"
+  },
   "bufferViews": [
     {
       "buffer": 0,
-      "byteOffset": 0,
-      "byteLength": 3906
+      "byteLength": 18792,
+      "name": "floatBufferViews",
+      "target": 34963
     },
     {
       "buffer": 0,
-      "byteOffset": 3906,
-      "byteLength": 4941
+      "byteLength": 66304,
+      "byteOffset": 18792,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
     },
     {
       "buffer": 0,
-      "byteOffset": 8847,
-      "byteLength": 1142
+      "byteLength": 49728,
+      "byteOffset": 85096,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
     },
     {
       "buffer": 0,
-      "byteOffset": 9989,
-      "byteLength": 1384
+      "byteLength": 33152,
+      "byteOffset": 134824,
+      "byteStride": 16,
+      "name": "floatBufferViews",
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 167976,
+      "uri": "scene.bin"
+    }
+  ],
+  "images": [
+    {
+      "uri": "textures/Fridge_Stainless_baseColor.png"
     },
     {
-      "buffer": 0,
-      "byteOffset": 11373,
-      "byteLength": 13042
+      "uri": "textures/Fridge_Stainless_metallicRoughness.png"
     },
     {
-      "buffer": 0,
-      "byteOffset": 24415,
-      "byteLength": 607
+      "uri": "textures/Fridge_Stainless_normal.png"
+    },
+    {
+      "uri": "textures/Fridge_Plastic_baseColor.png"
+    },
+    {
+      "uri": "textures/Fridge_Plastic_metallicRoughness.png"
+    },
+    {
+      "uri": "textures/Fridge_Plastic_normal.png"
+    },
+    {
+      "uri": "textures/Fridge_Gasket_baseColor.png"
+    },
+    {
+      "uri": "textures/Fridge_Gasket_metallicRoughness.png"
+    },
+    {
+      "uri": "textures/Fridge_Gasket_normal.png"
+    },
+    {
+      "uri": "textures/Fridge_Body_baseColor.png"
+    },
+    {
+      "uri": "textures/Fridge_Body_metallicRoughness.png"
+    },
+    {
+      "uri": "textures/Fridge_Body_normal.png"
+    },
+    {
+      "uri": "textures/Fridge_Brushed_baseColor.png"
+    },
+    {
+      "uri": "textures/Fridge_Brushed_metallicRoughness.png"
+    },
+    {
+      "uri": "textures/Fridge_Brushed_normal.png"
+    },
+    {
+      "uri": "textures/Fridge_Radiator_baseColor.png"
+    },
+    {
+      "uri": "textures/Fridge_Radiator_metallicRoughness.png"
+    },
+    {
+      "uri": "textures/Fridge_Radiator_normal.png"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "Fridge_Stainless",
+      "normalTexture": {
+        "index": 2
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 1
+        }
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "Fridge_Plastic",
+      "normalTexture": {
+        "index": 5
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 3
+        },
+        "metallicRoughnessTexture": {
+          "index": 4
+        }
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "Fridge_Gasket",
+      "normalTexture": {
+        "index": 8
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 6
+        },
+        "metallicRoughnessTexture": {
+          "index": 7
+        }
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "Fridge_Body",
+      "normalTexture": {
+        "index": 11
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 9
+        },
+        "metallicRoughnessTexture": {
+          "index": 10
+        }
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "Fridge_Brushed",
+      "normalTexture": {
+        "index": 14
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 12
+        },
+        "metallicRoughnessTexture": {
+          "index": 13
+        }
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "Fridge_Radiator",
+      "normalTexture": {
+        "index": 17
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 15
+        },
+        "metallicRoughnessTexture": {
+          "index": 16
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "pCube17_Fridge_Stainless_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TANGENT": 2,
+            "TEXCOORD_0": 3,
+            "TEXCOORD_1": 4,
+            "TEXCOORD_2": 5,
+            "TEXCOORD_3": 6
+          },
+          "indices": 7,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "pCube17_Fridge_Plastic_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 9,
+            "POSITION": 8,
+            "TANGENT": 10,
+            "TEXCOORD_0": 11,
+            "TEXCOORD_1": 12,
+            "TEXCOORD_2": 13,
+            "TEXCOORD_3": 14
+          },
+          "indices": 15,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "pCube17_Fridge_Gasket_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 17,
+            "POSITION": 16,
+            "TANGENT": 18,
+            "TEXCOORD_0": 19,
+            "TEXCOORD_1": 20,
+            "TEXCOORD_2": 21,
+            "TEXCOORD_3": 22
+          },
+          "indices": 23,
+          "material": 2,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "pCube17_Fridge_Body_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 25,
+            "POSITION": 24,
+            "TANGENT": 26,
+            "TEXCOORD_0": 27,
+            "TEXCOORD_1": 28,
+            "TEXCOORD_2": 29,
+            "TEXCOORD_3": 30
+          },
+          "indices": 31,
+          "material": 3,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "pCube17_Fridge_Brushed_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 33,
+            "POSITION": 32,
+            "TANGENT": 34,
+            "TEXCOORD_0": 35,
+            "TEXCOORD_1": 36,
+            "TEXCOORD_2": 37,
+            "TEXCOORD_3": 38
+          },
+          "indices": 39,
+          "material": 4,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "pCube17_Fridge_Radiator_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 41,
+            "POSITION": 40,
+            "TANGENT": 42,
+            "TEXCOORD_0": 43,
+            "TEXCOORD_1": 44,
+            "TEXCOORD_2": 45,
+            "TEXCOORD_3": 46
+          },
+          "indices": 47,
+          "material": 5,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        1.1111111640930176,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.467162394588257e-16,
+        -1.1111111640930176,
+        0.0,
+        0.0,
+        1.1111111640930176,
+        2.467162394588257e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2
+      ],
+      "matrix": [
+        0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.009999999776482582,
+        0.0,
+        0.0,
+        -0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "e6e91f4b705b441c97a4fa05f2dac34d.fbx"
+    },
+    {
+      "children": [
+        3
+      ],
+      "name": "RootNode"
+    },
+    {
+      "children": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "name": "pCube17"
+    },
+    {
+      "mesh": 0,
+      "name": "pCube17_Fridge_Stainless_0"
+    },
+    {
+      "mesh": 1,
+      "name": "pCube17_Fridge_Plastic_0"
+    },
+    {
+      "mesh": 2,
+      "name": "pCube17_Fridge_Gasket_0"
+    },
+    {
+      "mesh": 3,
+      "name": "pCube17_Fridge_Body_0"
+    },
+    {
+      "mesh": 4,
+      "name": "pCube17_Fridge_Brushed_0"
+    },
+    {
+      "mesh": 5,
+      "name": "pCube17_Fridge_Radiator_0"
     }
   ],
   "samplers": [
@@ -363,529 +1140,7 @@
       "wrapT": 33071
     }
   ],
-  "textures": [
-    {
-      "source": 0,
-      "sampler": 0
-    },
-    {
-      "source": 2,
-      "sampler": 1
-    },
-    {
-      "source": 1,
-      "sampler": 0
-    },
-    {
-      "source": 3,
-      "sampler": 0
-    },
-    {
-      "source": 5,
-      "sampler": 0
-    },
-    {
-      "source": 4,
-      "sampler": 0
-    },
-    {
-      "source": 6,
-      "sampler": 0
-    },
-    {
-      "source": 8,
-      "sampler": 0
-    },
-    {
-      "source": 7,
-      "sampler": 0
-    },
-    {
-      "source": 9,
-      "sampler": 0
-    },
-    {
-      "source": 11,
-      "sampler": 2
-    },
-    {
-      "source": 10,
-      "sampler": 0
-    },
-    {
-      "source": 12,
-      "sampler": 0
-    },
-    {
-      "source": 14,
-      "sampler": 0
-    },
-    {
-      "source": 13,
-      "sampler": 0
-    },
-    {
-      "source": 15,
-      "sampler": 0
-    },
-    {
-      "source": 17,
-      "sampler": 0
-    },
-    {
-      "source": 16,
-      "sampler": 0
-    }
-  ],
-  "images": [
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Stainless_baseColor.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Stainless_metallicRoughness.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Stainless_normal.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Plastic_baseColor.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Plastic_metallicRoughness.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Plastic_normal.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Gasket_baseColor.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Gasket_metallicRoughness.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Gasket_normal.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Body_baseColor.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Body_metallicRoughness.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Body_normal.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Brushed_baseColor.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Brushed_metallicRoughness.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Brushed_normal.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Radiator_baseColor.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Radiator_metallicRoughness.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/Fridge_Radiator_normal.png"
-    }
-  ],
-  "buffers": [
-    {
-      "uri": "scene.bin",
-      "byteLength": 25022
-    }
-  ],
-  "materials": [
-    {
-      "name": "Fridge_Stainless",
-      "doubleSided": true,
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 0
-        },
-        "metallicRoughnessTexture": {
-          "index": 2
-        }
-      },
-      "normalTexture": {
-        "index": 1
-      }
-    },
-    {
-      "name": "Fridge_Plastic",
-      "doubleSided": true,
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 3
-        },
-        "metallicRoughnessTexture": {
-          "index": 5
-        }
-      },
-      "normalTexture": {
-        "index": 4
-      }
-    },
-    {
-      "name": "Fridge_Gasket",
-      "doubleSided": true,
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 6
-        },
-        "metallicRoughnessTexture": {
-          "index": 8
-        }
-      },
-      "normalTexture": {
-        "index": 7
-      }
-    },
-    {
-      "name": "Fridge_Body",
-      "doubleSided": true,
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 9
-        },
-        "metallicRoughnessTexture": {
-          "index": 11
-        }
-      },
-      "normalTexture": {
-        "index": 10
-      }
-    },
-    {
-      "name": "Fridge_Brushed",
-      "doubleSided": true,
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 12
-        },
-        "metallicRoughnessTexture": {
-          "index": 14
-        }
-      },
-      "normalTexture": {
-        "index": 13
-      }
-    },
-    {
-      "name": "Fridge_Radiator",
-      "doubleSided": true,
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 15
-        },
-        "metallicRoughnessTexture": {
-          "index": 17
-        }
-      },
-      "normalTexture": {
-        "index": 16
-      }
-    }
-  ],
-  "meshes": [
-    {
-      "name": "pCube17_Fridge_Stainless_0",
-      "primitives": [
-        {
-          "attributes": {
-            "NORMAL": 1,
-            "POSITION": 2,
-            "TANGENT": 3,
-            "TEXCOORD_0": 4,
-            "TEXCOORD_1": 5,
-            "TEXCOORD_2": 6,
-            "TEXCOORD_3": 7
-          },
-          "mode": 4,
-          "material": 0,
-          "indices": 0,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 0,
-              "attributes": {
-                "NORMAL": 0,
-                "POSITION": 1,
-                "TANGENT": 2,
-                "TEXCOORD_0": 3,
-                "TEXCOORD_1": 4,
-                "TEXCOORD_2": 5,
-                "TEXCOORD_3": 6
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "pCube17_Fridge_Plastic_0",
-      "primitives": [
-        {
-          "attributes": {
-            "NORMAL": 9,
-            "POSITION": 10,
-            "TANGENT": 11,
-            "TEXCOORD_0": 12,
-            "TEXCOORD_1": 13,
-            "TEXCOORD_2": 14,
-            "TEXCOORD_3": 15
-          },
-          "mode": 4,
-          "material": 1,
-          "indices": 8,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 1,
-              "attributes": {
-                "NORMAL": 0,
-                "POSITION": 1,
-                "TANGENT": 2,
-                "TEXCOORD_0": 3,
-                "TEXCOORD_1": 4,
-                "TEXCOORD_2": 5,
-                "TEXCOORD_3": 6
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "pCube17_Fridge_Gasket_0",
-      "primitives": [
-        {
-          "attributes": {
-            "NORMAL": 17,
-            "POSITION": 18,
-            "TANGENT": 19,
-            "TEXCOORD_0": 20,
-            "TEXCOORD_1": 21,
-            "TEXCOORD_2": 22,
-            "TEXCOORD_3": 23
-          },
-          "mode": 4,
-          "material": 2,
-          "indices": 16,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 2,
-              "attributes": {
-                "NORMAL": 0,
-                "POSITION": 1,
-                "TANGENT": 2,
-                "TEXCOORD_0": 3,
-                "TEXCOORD_1": 4,
-                "TEXCOORD_2": 5,
-                "TEXCOORD_3": 6
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "pCube17_Fridge_Body_0",
-      "primitives": [
-        {
-          "attributes": {
-            "NORMAL": 25,
-            "POSITION": 26,
-            "TANGENT": 27,
-            "TEXCOORD_0": 28,
-            "TEXCOORD_1": 29,
-            "TEXCOORD_2": 30,
-            "TEXCOORD_3": 31
-          },
-          "mode": 4,
-          "material": 3,
-          "indices": 24,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 3,
-              "attributes": {
-                "NORMAL": 0,
-                "POSITION": 1,
-                "TANGENT": 2,
-                "TEXCOORD_0": 3,
-                "TEXCOORD_1": 4,
-                "TEXCOORD_2": 5,
-                "TEXCOORD_3": 6
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "pCube17_Fridge_Brushed_0",
-      "primitives": [
-        {
-          "attributes": {
-            "NORMAL": 33,
-            "POSITION": 34,
-            "TANGENT": 35,
-            "TEXCOORD_0": 36,
-            "TEXCOORD_1": 37,
-            "TEXCOORD_2": 38,
-            "TEXCOORD_3": 39
-          },
-          "mode": 4,
-          "material": 4,
-          "indices": 32,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 4,
-              "attributes": {
-                "NORMAL": 0,
-                "POSITION": 1,
-                "TANGENT": 2,
-                "TEXCOORD_0": 3,
-                "TEXCOORD_1": 4,
-                "TEXCOORD_2": 5,
-                "TEXCOORD_3": 6
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "pCube17_Fridge_Radiator_0",
-      "primitives": [
-        {
-          "attributes": {
-            "NORMAL": 41,
-            "POSITION": 42,
-            "TANGENT": 43,
-            "TEXCOORD_0": 44,
-            "TEXCOORD_1": 45,
-            "TEXCOORD_2": 46,
-            "TEXCOORD_3": 47
-          },
-          "mode": 4,
-          "material": 5,
-          "indices": 40,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 5,
-              "attributes": {
-                "NORMAL": 0,
-                "POSITION": 1,
-                "TANGENT": 2,
-                "TEXCOORD_0": 3,
-                "TEXCOORD_1": 4,
-                "TEXCOORD_2": 5,
-                "TEXCOORD_3": 6
-              }
-            }
-          }
-        }
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "name": "Sketchfab_model",
-      "rotation": [
-        -0.7071067811865475,
-        0,
-        0,
-        0.7071067811865476
-      ],
-      "scale": [
-        1.1111111640930176,
-        1.1111111640930176,
-        1.1111111640930176
-      ],
-      "children": [
-        1
-      ]
-    },
-    {
-      "name": "e6e91f4b705b441c97a4fa05f2dac34d.fbx",
-      "rotation": [
-        0.7071067811865475,
-        0,
-        0,
-        0.7071067811865476
-      ],
-      "scale": [
-        0.009999999776482582,
-        0.009999999776482582,
-        0.009999999776482582
-      ],
-      "children": [
-        2
-      ]
-    },
-    {
-      "name": "RootNode",
-      "children": [
-        3
-      ]
-    },
-    {
-      "name": "pCube17",
-      "children": [
-        4,
-        5,
-        6,
-        7,
-        8,
-        9
-      ]
-    },
-    {
-      "name": "pCube17_Fridge_Stainless_0",
-      "mesh": 0
-    },
-    {
-      "name": "pCube17_Fridge_Plastic_0",
-      "mesh": 1
-    },
-    {
-      "name": "pCube17_Fridge_Gasket_0",
-      "mesh": 2
-    },
-    {
-      "name": "pCube17_Fridge_Body_0",
-      "mesh": 3
-    },
-    {
-      "name": "pCube17_Fridge_Brushed_0",
-      "mesh": 4
-    },
-    {
-      "name": "pCube17_Fridge_Radiator_0",
-      "mesh": 5
-    }
-  ],
+  "scene": 0,
   "scenes": [
     {
       "name": "Sketchfab_Scene",
@@ -894,11 +1149,78 @@
       ]
     }
   ],
-  "scene": 0,
-  "extensionsUsed": [
-    "KHR_draco_mesh_compression"
-  ],
-  "extensionsRequired": [
-    "KHR_draco_mesh_compression"
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 1,
+      "source": 2
+    },
+    {
+      "sampler": 0,
+      "source": 3
+    },
+    {
+      "sampler": 0,
+      "source": 4
+    },
+    {
+      "sampler": 0,
+      "source": 5
+    },
+    {
+      "sampler": 0,
+      "source": 6
+    },
+    {
+      "sampler": 0,
+      "source": 7
+    },
+    {
+      "sampler": 0,
+      "source": 8
+    },
+    {
+      "sampler": 0,
+      "source": 9
+    },
+    {
+      "sampler": 0,
+      "source": 10
+    },
+    {
+      "sampler": 2,
+      "source": 11
+    },
+    {
+      "sampler": 0,
+      "source": 12
+    },
+    {
+      "sampler": 0,
+      "source": 13
+    },
+    {
+      "sampler": 0,
+      "source": 14
+    },
+    {
+      "sampler": 0,
+      "source": 15
+    },
+    {
+      "sampler": 0,
+      "source": 16
+    },
+    {
+      "sampler": 0,
+      "source": 17
+    }
   ]
 }

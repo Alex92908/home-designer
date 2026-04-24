@@ -155,9 +155,15 @@ export default function Home() {
   const [leftOpen,  setLeftOpen]  = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [showAiRender, setShowAiRender] = useState(false);
+  // zustand persist 在客户端水合时会用 localStorage 里的值覆盖 initial
+  // state（比如 activeRoom / viewMode / floorPlans），和 SSR 渲出来的
+  // 默认值不一致 → React 报 hydration mismatch（移动端 Chrome 尤其
+  // 敏感）。等第一次 useEffect 跑完再渲染真正依赖 store 的内容。
+  const [mounted, setMounted] = useState(false);
 
-  // After mount, collapse panels on mobile viewports
+  // After mount, collapse panels on mobile viewports + flip mounted flag.
   useEffect(() => {
+    setMounted(true);
     if (window.innerWidth < 768) {
       setLeftOpen(false);
       setRightOpen(false);
@@ -207,6 +213,18 @@ export default function Home() {
       window.history.replaceState({}, "", url.toString());
     }
   }, [loadFromShare]);
+
+  // Server render / pre-hydration: 只渲骨架（背景 + footer 占位）避免
+  // zustand persist 水合后状态跳变触发 hydration mismatch。
+  if (!mounted) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-50 overflow-hidden" suppressHydrationWarning>
+        <div className="flex-1 flex items-center justify-center text-[11px] text-gray-300">
+          加载中…
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">

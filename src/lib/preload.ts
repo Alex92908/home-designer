@@ -9,12 +9,6 @@
  */
 import { useGLTF } from "@react-three/drei";
 
-// Point DRACOLoader at self-hosted decoder files (public/draco/*). drei's
-// default is https://www.gstatic.com/draco/v1/decoders/ — that CDN is
-// occasionally slow/blocked from mainland China. The decoder is ~340KB
-// (wasm) + 700KB (js fallback), cached aggressively by the browser.
-useGLTF.setDecoderPath("/draco/");
-
 // One representative GLTF per common furniture category. Deliberately small
 // list — preloading too many will saturate the network and hurt TTFB.
 const HOT_URLS = [
@@ -32,17 +26,28 @@ const HOT_URLS = [
 
   // Windows/doors (highest-reuse assets — every room typically has one)
   "/models/_arch_window/modern_window_archviz/scene.gltf",
-  "/models/_arch_door/door_with_frame/scene.gltf",
+  "/models/_arch_door/door_with_frame/door_with_frame.gltf",
 ];
 
-// Fire preload on module import. Safe to call multiple times — useGLTF
-// dedupes by URL and it's a no-op if already cached.
+// All client-only side effects. Gate on window so SSR / hydration pass
+// doesn't trigger drei internals that might touch browser-only APIs.
 if (typeof window !== "undefined") {
+  // Point DRACOLoader at self-hosted decoder files (public/draco/*).
+  // drei default = gstatic CDN, sometimes slow/blocked from mainland China.
+  try { useGLTF.setDecoderPath("/draco/"); } catch { /* noop */ }
+
   // Small defer so the initial document/CSS get priority on the network
   // queue. 150ms ≈ one LCP frame on mid-range hardware.
   setTimeout(() => {
     for (const url of HOT_URLS) {
-      try { useGLTF.preload(url); } catch { /* ignore — preload best-effort */ }
+      try {
+        // useGLTF.preload returns a thenable that rejects on 404 etc.
+        // Chain .catch so it doesn't surface as unhandled rejection.
+        const p = useGLTF.preload(url) as unknown as Promise<unknown> | undefined;
+        if (p && typeof (p as Promise<unknown>).catch === "function") {
+          (p as Promise<unknown>).catch(() => { /* best-effort */ });
+        }
+      } catch { /* best-effort */ }
     }
   }, 150);
 }

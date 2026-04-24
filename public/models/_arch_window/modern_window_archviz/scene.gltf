@@ -1,27 +1,7 @@
 {
-  "asset": {
-    "generator": "glTF-Transform v4.3.0",
-    "version": "2.0",
-    "extras": {
-      "author": "sanjaysinghfazilka (https://sketchfab.com/sanjaysinghfazilka)",
-      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
-      "source": "https://sketchfab.com/3d-models/modern-window-3d-model-archviz-pbr-textures-9e83021cb5064f808991c622cee5bbde",
-      "title": "Modern Window 3D Model | Archviz | PBR Textures"
-    }
-  },
   "accessors": [
     {
-      "type": "SCALAR",
-      "componentType": 5123,
-      "count": 111816
-    },
-    {
-      "type": "VEC3",
-      "componentType": 5126,
-      "count": 20724
-    },
-    {
-      "type": "VEC3",
+      "bufferView": 2,
       "componentType": 5126,
       "count": 20724,
       "max": [
@@ -32,83 +12,139 @@
       "min": [
         -0.953790009021759,
         -0.11760807037353516,
-        0
-      ]
+        0.0
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC4",
+      "bufferView": 2,
+      "byteOffset": 248688,
       "componentType": 5126,
-      "count": 20724
+      "count": 20724,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 3,
       "componentType": 5126,
-      "count": 20724
+      "count": 20724,
+      "max": [
+        0.9976792335510254,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -0.9987344741821289,
+        -0.9999964833259583,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 20724,
+      "max": [
+        0.9996510148048401,
+        0.99897700548172
+      ],
+      "min": [
+        0.0003490000090096146,
+        0.0003490000090096146
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 111816,
+      "type": "SCALAR"
     }
   ],
+  "asset": {
+    "extras": {
+      "author": "sanjaysinghfazilka (https://sketchfab.com/sanjaysinghfazilka)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/modern-window-3d-model-archviz-pbr-textures-9e83021cb5064f808991c622cee5bbde",
+      "title": "Modern Window 3D Model | Archviz | PBR Textures"
+    },
+    "generator": "Sketchfab-16.74.0",
+    "version": "2.0"
+  },
   "bufferViews": [
     {
       "buffer": 0,
-      "byteOffset": 0,
-      "byteLength": 155498
-    }
-  ],
-  "samplers": [
-    {
-      "magFilter": 9729,
-      "minFilter": 9987,
-      "wrapS": 10497,
-      "wrapT": 10497
-    }
-  ],
-  "textures": [
-    {
-      "source": 0,
-      "sampler": 0
+      "byteLength": 447264,
+      "name": "floatBufferViews",
+      "target": 34963
     },
     {
-      "source": 2,
-      "sampler": 0
+      "buffer": 0,
+      "byteLength": 165792,
+      "byteOffset": 447264,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
     },
     {
-      "source": 1,
-      "sampler": 0
-    }
-  ],
-  "images": [
-    {
-      "mimeType": "image/png",
-      "uri": "textures/model_baseColor.png"
+      "buffer": 0,
+      "byteLength": 497376,
+      "byteOffset": 613056,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
     },
     {
-      "mimeType": "image/png",
-      "uri": "textures/model_metallicRoughness.png"
-    },
-    {
-      "mimeType": "image/png",
-      "uri": "textures/model_normal.png"
+      "buffer": 0,
+      "byteLength": 331584,
+      "byteOffset": 1110432,
+      "byteStride": 16,
+      "name": "floatBufferViews",
+      "target": 34962
     }
   ],
   "buffers": [
     {
-      "uri": "scene.bin",
-      "byteLength": 155498
+      "byteLength": 1442016,
+      "uri": "scene.bin"
+    }
+  ],
+  "images": [
+    {
+      "uri": "textures/model_baseColor.png"
+    },
+    {
+      "uri": "textures/model_metallicRoughness.png"
+    },
+    {
+      "uri": "textures/model_normal.png"
     }
   ],
   "materials": [
     {
-      "name": "model",
       "doubleSided": true,
+      "name": "model",
+      "normalTexture": {
+        "index": 2
+      },
       "pbrMetallicRoughness": {
         "baseColorTexture": {
           "index": 0
         },
         "metallicRoughnessTexture": {
-          "index": 2
+          "index": 1
         }
-      },
-      "normalTexture": {
-        "index": 1
       }
     }
   ],
@@ -119,86 +155,110 @@
         {
           "attributes": {
             "NORMAL": 1,
-            "POSITION": 2,
-            "TANGENT": 3,
-            "TEXCOORD_0": 4
+            "POSITION": 0,
+            "TANGENT": 2,
+            "TEXCOORD_0": 3
           },
-          "mode": 4,
+          "indices": 4,
           "material": 0,
-          "indices": 0,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 0,
-              "attributes": {
-                "NORMAL": 0,
-                "POSITION": 1,
-                "TANGENT": 2,
-                "TEXCOORD_0": 3
-              }
-            }
-          }
+          "mode": 4
         }
       ]
     }
   ],
   "nodes": [
     {
-      "name": "Sketchfab_model",
-      "rotation": [
-        -0.7071067811865475,
-        0,
-        0,
-        0.7071067811865476
-      ],
       "children": [
         1
-      ]
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
     },
     {
-      "name": "base.fbx",
-      "rotation": [
-        0.7071067811865475,
-        0,
-        0,
-        0.7071067811865476
-      ],
-      "scale": [
-        0.009999999776482582,
-        0.009999999776482582,
-        0.009999999776482582
-      ],
       "children": [
         2
-      ]
+      ],
+      "matrix": [
+        0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.009999999776482582,
+        0.0,
+        0.0,
+        -0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "base.fbx"
     },
     {
-      "name": "RootNode",
       "children": [
         3
-      ]
+      ],
+      "name": "RootNode"
     },
     {
-      "name": "model",
-      "rotation": [
-        -0.7071067966408575,
-        0,
-        0,
-        0.7071067657322372
-      ],
-      "scale": [
-        100,
-        100,
-        100
-      ],
       "children": [
         4
-      ]
+      ],
+      "matrix": [
+        100.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -4.371139006309477e-06,
+        -99.9999999999999,
+        0.0,
+        0.0,
+        99.9999999999999,
+        -4.371139006309477e-06,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "model"
     },
     {
-      "name": "model_model_0",
-      "mesh": 0
+      "mesh": 0,
+      "name": "model_model_0"
     }
   ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "scene": 0,
   "scenes": [
     {
       "name": "Sketchfab_Scene",
@@ -207,11 +267,18 @@
       ]
     }
   ],
-  "scene": 0,
-  "extensionsUsed": [
-    "KHR_draco_mesh_compression"
-  ],
-  "extensionsRequired": [
-    "KHR_draco_mesh_compression"
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 0,
+      "source": 2
+    }
   ]
 }

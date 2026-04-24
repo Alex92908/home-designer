@@ -1,27 +1,7 @@
 {
-  "asset": {
-    "generator": "glTF-Transform v4.3.0",
-    "version": "2.0",
-    "extras": {
-      "author": "dylanheyes (https://sketchfab.com/dylanheyes)",
-      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
-      "source": "https://sketchfab.com/3d-models/wardrobe-a977729fff9d4bfdad487a59495436f5",
-      "title": "Wardrobe"
-    }
-  },
   "accessors": [
     {
-      "type": "SCALAR",
-      "componentType": 5123,
-      "count": 17280
-    },
-    {
-      "type": "VEC3",
-      "componentType": 5126,
-      "count": 2988
-    },
-    {
-      "type": "VEC3",
+      "bufferView": 2,
       "componentType": 5126,
       "count": 2988,
       "max": [
@@ -33,125 +13,217 @@
         -0.8209031224250793,
         -21.209205627441406,
         -12.766883850097656
-      ]
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 2,
+      "byteOffset": 35856,
       "componentType": 5126,
-      "count": 2988
+      "count": 2988,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "SCALAR",
-      "componentType": 5123,
-      "count": 348
-    },
-    {
-      "type": "VEC3",
+      "bufferView": 1,
       "componentType": 5126,
-      "count": 218
+      "count": 2988,
+      "max": [
+        0.6944633722305298,
+        0.6938570141792297
+      ],
+      "min": [
+        0.5606292486190796,
+        0.3098725378513336
+      ],
+      "type": "VEC2"
     },
     {
-      "type": "VEC3",
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 17280,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 71712,
       "componentType": 5126,
-      "count": 218,
+      "count": 210,
       "max": [
         -0.8050671219825745,
         27.451210021972656,
-        25.500015258789062
+        25.500015258789063
       ],
       "min": [
         -21.495201110839844,
         -64.42779541015625,
         -25.499980926513672
-      ]
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC4",
+      "bufferView": 2,
+      "byteOffset": 74232,
       "componentType": 5126,
-      "count": 218
+      "count": 210,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 3,
       "componentType": 5126,
-      "count": 218
+      "count": 210,
+      "max": [
+        9.667811582403374e-07,
+        3.020586063939845e-06,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.5594723663525656e-06,
+        -1.0,
+        -7.657716878384235e-07,
+        -1.0
+      ],
+      "type": "VEC4"
     },
     {
-      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 23904,
       "componentType": 5126,
-      "count": 218
+      "count": 210,
+      "max": [
+        1.2480359077453613,
+        1.6564446687698364
+      ],
+      "min": [
+        -0.7215758562088013,
+        -0.4984474182128906
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 25584,
+      "componentType": 5126,
+      "count": 210,
+      "max": [
+        1.2480359077453613,
+        1.6564446687698364
+      ],
+      "min": [
+        -0.7215758562088013,
+        -0.4984474182128906
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 69120,
+      "componentType": 5125,
+      "count": 348,
+      "type": "SCALAR"
     }
   ],
+  "asset": {
+    "extras": {
+      "author": "dylanheyes (https://sketchfab.com/dylanheyes)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/wardrobe-a977729fff9d4bfdad487a59495436f5",
+      "title": "Wardrobe"
+    },
+    "generator": "Sketchfab-13.46.0",
+    "version": "2.0"
+  },
   "bufferViews": [
     {
       "buffer": 0,
-      "byteOffset": 0,
-      "byteLength": 17248
+      "byteLength": 70512,
+      "name": "floatBufferViews",
+      "target": 34963
     },
     {
       "buffer": 0,
-      "byteOffset": 17248,
-      "byteLength": 1756
-    }
-  ],
-  "samplers": [
-    {
-      "magFilter": 9729,
-      "minFilter": 9987,
-      "wrapS": 10497,
-      "wrapT": 10497
-    }
-  ],
-  "textures": [
-    {
-      "source": 0,
-      "sampler": 0
+      "byteLength": 27264,
+      "byteOffset": 70512,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
     },
     {
-      "source": 1,
-      "sampler": 0
-    }
-  ],
-  "images": [
-    {
-      "mimeType": "image/jpeg",
-      "uri": "textures/DoorKnobs_baseColor.jpeg"
+      "buffer": 0,
+      "byteLength": 76752,
+      "byteOffset": 97776,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
     },
     {
-      "mimeType": "image/png",
-      "uri": "textures/WardrobeMaterial_normal.png"
+      "buffer": 0,
+      "byteLength": 3360,
+      "byteOffset": 174528,
+      "byteStride": 16,
+      "name": "floatBufferViews",
+      "target": 34962
     }
   ],
   "buffers": [
     {
-      "uri": "scene.bin",
-      "byteLength": 19004
+      "byteLength": 177888,
+      "uri": "scene.bin"
+    }
+  ],
+  "images": [
+    {
+      "uri": "textures/DoorKnobs_baseColor.jpeg"
+    },
+    {
+      "uri": "textures/WardrobeMaterial_normal.png"
     }
   ],
   "materials": [
     {
-      "name": "DoorKnobs",
       "doubleSided": true,
+      "name": "DoorKnobs",
       "pbrMetallicRoughness": {
-        "roughnessFactor": 0.8211145618000169,
-        "metallicFactor": 0,
         "baseColorTexture": {
           "index": 0
-        }
+        },
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.8211145618000169
       }
     },
     {
-      "name": "WardrobeMaterial",
       "doubleSided": true,
-      "pbrMetallicRoughness": {
-        "roughnessFactor": 0.8211145618000169,
-        "metallicFactor": 0,
-        "baseColorTexture": {
-          "index": 0
-        }
-      },
+      "name": "WardrobeMaterial",
       "normalTexture": {
         "index": 1,
         "texCoord": 1
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.8211145618000169
       }
     }
   ],
@@ -162,22 +234,12 @@
         {
           "attributes": {
             "NORMAL": 1,
-            "POSITION": 2,
-            "TEXCOORD_0": 3
+            "POSITION": 0,
+            "TEXCOORD_0": 2
           },
-          "mode": 4,
+          "indices": 3,
           "material": 0,
-          "indices": 0,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 0,
-              "attributes": {
-                "NORMAL": 0,
-                "POSITION": 1,
-                "TEXCOORD_0": 2
-              }
-            }
-          }
+          "mode": 4
         }
       ]
     },
@@ -187,162 +249,196 @@
         {
           "attributes": {
             "NORMAL": 5,
-            "POSITION": 6,
-            "TANGENT": 7,
-            "TEXCOORD_0": 8,
-            "TEXCOORD_1": 9
+            "POSITION": 4,
+            "TANGENT": 6,
+            "TEXCOORD_0": 7,
+            "TEXCOORD_1": 8
           },
-          "mode": 4,
+          "indices": 9,
           "material": 1,
-          "indices": 4,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 1,
-              "attributes": {
-                "NORMAL": 0,
-                "POSITION": 1,
-                "TANGENT": 2,
-                "TEXCOORD_0": 3,
-                "TEXCOORD_1": 4
-              }
-            }
-          }
+          "mode": 4
         }
       ]
     }
   ],
   "nodes": [
     {
-      "name": "Sketchfab_model",
-      "rotation": [
-        -0.00032350407547399593,
-        0.7071067071843636,
-        -0.7071067071843633,
-        0.00032350407547399604
-      ],
       "children": [
         1
-      ]
+      ],
+      "matrix": [
+        -0.9999995827674866,
+        -0.0009150076075457036,
+        -2.0317250272088386e-19,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        0.0009150076075457036,
+        -0.9999995827674866,
+        -2.220445122808027e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
     },
     {
-      "name": "Drobe1.fbx",
-      "rotation": [
-        1,
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.009999999776482582,
-        0.009999999776482582,
-        0.009999999776482582
-      ],
       "children": [
         2
-      ]
+      ],
+      "matrix": [
+        0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Drobe1.fbx"
     },
     {
-      "name": "RootNode",
       "children": [
         3,
         6,
         8
-      ]
+      ],
+      "name": "RootNode"
     },
     {
-      "name": "Light",
-      "translation": [
-        -100.54539489746094,
-        407.6245422363281,
-        590.38623046875
-      ],
-      "rotation": [
-        -0.14401421687240262,
-        0.8840374837655857,
-        0.4427903608826672,
-        -0.04091856480178516
-      ],
-      "scale": [
-        100.00000762939456,
-        100.00000000000001,
-        100.00000000000001
-      ],
       "children": [
         4
-      ]
+      ],
+      "matrix": [
+        -95.51712256601574,
+        -29.086464616267662,
+        -5.51891281995893,
+        0.0,
+        -21.839123966993384,
+        56.63932032960517,
+        79.46722630716812,
+        0.0,
+        -19.988330425567018,
+        77.11008428097941,
+        -60.4524734727919,
+        0.0,
+        -100.54539489746094,
+        407.6245422363281,
+        590.38623046875,
+        1.0
+      ],
+      "name": "Light"
     },
     {
-      "name": "Object_4",
-      "rotation": [
-        0.7071067811865475,
-        0,
-        0,
-        0.7071067811865476
-      ],
       "children": [
         5
-      ]
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Object_4"
     },
     {
       "name": "Object_5"
     },
     {
-      "name": "Camera",
-      "translation": [
-        692.5791015625,
-        735.88916015625,
-        495.8309326171875
-      ],
-      "rotation": [
-        -0.4212608541931235,
-        0.5679254460701466,
-        0.6960933522441528,
-        -0.12431422039333555
-      ],
-      "scale": [
-        99.99999237060545,
-        100,
-        99.99999237060545
-      ],
       "children": [
         7
-      ]
+      ],
+      "matrix": [
+        -61.4170487807461,
+        -65.15580721595322,
+        -44.52713082180504,
+        0.0,
+        -30.542091224861046,
+        -32.40133246280443,
+        89.53956845019458,
+        0.0,
+        -72.76761229512618,
+        68.59207734853447,
+        -3.913898684081329e-06,
+        0.0,
+        692.5791015625,
+        735.88916015625,
+        495.8309326171875,
+        1.0
+      ],
+      "name": "Camera"
     },
     {
       "name": "Object_7"
     },
     {
-      "name": "Wardrobe",
-      "translation": [
-        0.0001519918441772461,
-        114.9520263671875,
-        255.7218780517578
-      ],
-      "rotation": [
-        -0.4999999850988349,
-        -0.5000000367568583,
-        0.5000000447034781,
-        0.49999993344082044
-      ],
-      "scale": [
-        10.000001907348633,
-        10.000001907348633,
-        10.000001907348633
-      ],
       "children": [
         9,
         10
-      ]
+      ],
+      "matrix": [
+        -1.6292071068852957e-06,
+        10.000001907348482,
+        -5.960464903864568e-07,
+        0.0,
+        4.3711407892789447e-07,
+        -5.960464193321697e-07,
+        -10.000001907348606,
+        0.0,
+        -10.00000190734849,
+        -1.6292071335306534e-06,
+        -4.371139817833613e-07,
+        0.0,
+        0.0001519918441772461,
+        114.9520263671875,
+        255.7218780517578,
+        1.0
+      ],
+      "name": "Wardrobe"
     },
     {
-      "name": "Wardrobe_DoorKnobs_0",
-      "mesh": 0
+      "mesh": 0,
+      "name": "Wardrobe_DoorKnobs_0"
     },
     {
-      "name": "Wardrobe_WardrobeMaterial_0",
-      "mesh": 1
+      "mesh": 1,
+      "name": "Wardrobe_WardrobeMaterial_0"
     }
   ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "scene": 0,
   "scenes": [
     {
       "name": "Sketchfab_Scene",
@@ -351,11 +447,14 @@
       ]
     }
   ],
-  "scene": 0,
-  "extensionsUsed": [
-    "KHR_draco_mesh_compression"
-  ],
-  "extensionsRequired": [
-    "KHR_draco_mesh_compression"
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    }
   ]
 }
