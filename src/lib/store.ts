@@ -254,6 +254,23 @@ interface DesignerStore {
   // Room-level clipboard (copy entire room config)
   roomClipboard: { materials: RoomMaterials; placedItems: PlacedItem[]; name: string; icon: string; width: number; depth: number; shape?: import("./roomGeometry").RoomShape } | null;
 
+  // Blueprint tracing (FloorPlanAll overlay): user uploads a floorplan
+  // image and positions / scales it behind the SVG so rooms can be
+  // drawn on top. `image` is a data URL (persisted across reloads).
+  // `offsetX/Y` are in cm (same units as roomLayout). `scale` is a
+  // multiplier from image native pixels to cm (1 = 1 px ≈ 1 cm).
+  blueprint: {
+    image: string | null;
+    naturalW: number;   // native pixels
+    naturalH: number;
+    opacity: number;
+    offsetX: number;    // cm, top-left in FloorPlanAll coord system
+    offsetY: number;
+    scale: number;      // cm per pixel (so rendered size = natural × scale)
+  };
+  setBlueprint: (patch: Partial<DesignerStore["blueprint"]>) => void;
+  clearBlueprint: () => void;
+
   // Room / view actions
   setActiveRoom: (room: RoomType) => void;
   setViewMode: (mode: ViewMode) => void;
@@ -487,6 +504,7 @@ export const useDesignerStore = create<DesignerStore>()(
       furnitureHistory: [],
       clipboard: [],
       roomClipboard: null,
+      blueprint: { image: null, naturalW: 0, naturalH: 0, opacity: 0.4, offsetX: 0, offsetY: 0, scale: 1 },
       scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
       customRoomMeta: {},
       customFurniture: [],
@@ -1045,6 +1063,9 @@ export const useDesignerStore = create<DesignerStore>()(
 
       setCustomRoomMeta: (room, name, icon) =>
         set(s => ({ customRoomMeta: { ...s.customRoomMeta, [room]: { name, icon } } })),
+
+      setBlueprint: (patch) => set(s => ({ blueprint: { ...s.blueprint, ...patch } })),
+      clearBlueprint: () => set(() => ({ blueprint: { image: null, naturalW: 0, naturalH: 0, opacity: 0.4, offsetX: 0, offsetY: 0, scale: 1 } })),
 
       copyRoom: (room) => {
         const s = get();
@@ -1609,6 +1630,7 @@ export const useDesignerStore = create<DesignerStore>()(
         customRoomMeta: state.customRoomMeta,
         customFurniture: state.customFurniture,
         exterior: state.exterior,
+        blueprint: state.blueprint,
       }),
       onRehydrateStorage: () => (state) => {
         // Re-register any custom furniture after hydration

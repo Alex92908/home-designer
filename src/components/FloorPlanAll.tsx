@@ -319,6 +319,35 @@ export default function FloorPlanAll() {
   const roomClipboard       = useDesignerStore(s => s.roomClipboard);
   const pasteAsNewRoom      = useDesignerStore(s => s.pasteAsNewRoom);
   const exterior            = useDesignerStore(s => s.exterior);
+  const blueprint           = useDesignerStore(s => s.blueprint);
+  const setBlueprint        = useDesignerStore(s => s.setBlueprint);
+  const clearBlueprint      = useDesignerStore(s => s.clearBlueprint);
+  const [traceMode, setTraceMode] = useState(false);
+  const [blueprintPanelOpen, setBlueprintPanelOpen] = useState(false);
+
+  // Blueprint upload: read image → extract natural size → stash as data URL
+  const handleBlueprintUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const img = new window.Image();
+      img.onload = () => {
+        setBlueprint({
+          image: dataUrl,
+          naturalW: img.naturalWidth,
+          naturalH: img.naturalHeight,
+          // Try to sensibly auto-scale: if the image is roughly A4-ish, aim
+          // for the whole-house bbox to fit inside. Fall back to 1 px = 1 cm.
+          scale: 1,
+          offsetX: 0,
+          offsetY: 0,
+        });
+        setBlueprintPanelOpen(true);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const getRoomLabel = (room: RoomType) => {
     const meta = customRoomMeta[room];
@@ -330,13 +359,21 @@ export default function FloorPlanAll() {
   const svgRef  = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragState | null>(null);
 
-  // Compute viewBox from enabled rooms on current floor
+  // Compute viewBox from enabled rooms on current floor + optional blueprint
   const visibleRooms = ALL_ROOMS.filter(r => enabledRooms.includes(r));
   const pad = 60;
-  const vbX1 = visibleRooms.length ? Math.min(...visibleRooms.map(r => roomLayout[r].x)) - pad : 0;
-  const vbY1 = visibleRooms.length ? Math.min(...visibleRooms.map(r => roomLayout[r].y)) - pad : 0;
-  const vbX2 = visibleRooms.length ? Math.max(...visibleRooms.map(r => roomLayout[r].x + roomDimensions[r].width))  + pad : 800;
-  const vbY2 = visibleRooms.length ? Math.max(...visibleRooms.map(r => roomLayout[r].y + roomDimensions[r].depth)) + pad + 60 : 600;
+  const bpW = blueprint.image ? blueprint.naturalW * blueprint.scale : 0;
+  const bpH = blueprint.image ? blueprint.naturalH * blueprint.scale : 0;
+  const roomXs = visibleRooms.map(r => [roomLayout[r].x, roomLayout[r].x + roomDimensions[r].width]).flat();
+  const roomYs = visibleRooms.map(r => [roomLayout[r].y, roomLayout[r].y + roomDimensions[r].depth]).flat();
+  const bpXs = blueprint.image ? [blueprint.offsetX, blueprint.offsetX + bpW] : [];
+  const bpYs = blueprint.image ? [blueprint.offsetY, blueprint.offsetY + bpH] : [];
+  const allXs = [...roomXs, ...bpXs];
+  const allYs = [...roomYs, ...bpYs];
+  const vbX1 = allXs.length ? Math.min(...allXs) - pad : 0;
+  const vbY1 = allYs.length ? Math.min(...allYs) - pad : 0;
+  const vbX2 = allXs.length ? Math.max(...allXs) + pad : 800;
+  const vbY2 = allYs.length ? Math.max(...allYs) + pad + 60 : 600;
   const viewBox = `${vbX1} ${vbY1} ${vbX2 - vbX1} ${vbY2 - vbY1}`;
 
   const configuredCount = ALL_ROOMS.filter(r =>
@@ -428,7 +465,79 @@ export default function FloorPlanAll() {
               📋 {t.allPasteRoom} ({roomClipboard.name})
             </button>
           )}
+          {/* Blueprint tracing: upload image, adjust, toggle trace mode */}
+          {!blueprint.image ? (
+            <label
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold cursor-pointer transition-all ${(!roomClipboard && exterior.floors <= 1) ? "ml-auto" : ""}`}
+              style={{ border: "1px dashed #9CA3AF", color: "#6B7280", background: "white" }}
+              title="上传图纸在 SVG 下垫底描图"
+            >
+              📐 上传图纸
+              <input type="file" accept="image/*" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleBlueprintUpload(f); e.currentTarget.value = ""; }}
+              />
+            </label>
+          ) : (
+            <div className={`flex items-center gap-1 ${(!roomClipboard && exterior.floors <= 1) ? "ml-auto" : ""}`}>
+              <button
+                onClick={() => setTraceMode(v => !v)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all"
+                style={traceMode
+                  ? { background: "#F59E0B", color: "#fff" }
+                  : { border: "1px solid #F59E0B", color: "#F59E0B", background: "white" }}
+                title="描图模式：拖拽图纸定位；关闭后可点击房间"
+              >
+                {traceMode ? "✋ 描图中" : "📐 描图"}
+              </button>
+              <button onClick={() => setBlueprintPanelOpen(v => !v)}
+                className="px-2 py-1 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100"
+                title="调整图纸"
+              >⚙️</button>
+              <button onClick={clearBlueprint}
+                className="px-2 py-1 rounded-xl text-xs font-bold text-gray-400 hover:text-red-500"
+                title="移除图纸"
+              >✕</button>
+            </div>
+          )}
         </div>
+
+        {/* Blueprint control popover */}
+        {blueprint.image && blueprintPanelOpen && (
+          <div className="flex items-center gap-3 px-4 py-2 bg-amber-50 border-b border-amber-200 shrink-0 flex-wrap text-[11px]">
+            <span className="font-semibold text-amber-700">图纸控件</span>
+            <label className="flex items-center gap-1.5">
+              透明度
+              <input type="range" min={0.1} max={1} step={0.05}
+                value={blueprint.opacity}
+                onChange={e => setBlueprint({ opacity: parseFloat(e.target.value) })}
+                className="w-20 accent-amber-500" />
+              <span className="font-mono w-7 text-right">{Math.round(blueprint.opacity * 100)}%</span>
+            </label>
+            <label className="flex items-center gap-1.5">
+              缩放
+              <input type="number" min={0.05} max={20} step={0.05}
+                value={blueprint.scale}
+                onChange={e => setBlueprint({ scale: Math.max(0.05, parseFloat(e.target.value) || 1) })}
+                className="w-16 px-1 py-0.5 border border-amber-300 rounded" />
+              <span className="text-gray-500">cm/px</span>
+            </label>
+            <label className="flex items-center gap-1.5">
+              X
+              <input type="number" step={10}
+                value={Math.round(blueprint.offsetX)}
+                onChange={e => setBlueprint({ offsetX: parseFloat(e.target.value) || 0 })}
+                className="w-16 px-1 py-0.5 border border-amber-300 rounded" />
+            </label>
+            <label className="flex items-center gap-1.5">
+              Y
+              <input type="number" step={10}
+                value={Math.round(blueprint.offsetY)}
+                onChange={e => setBlueprint({ offsetY: parseFloat(e.target.value) || 0 })}
+                className="w-16 px-1 py-0.5 border border-amber-300 rounded" />
+            </label>
+            <span className="text-gray-500 ml-auto">图尺寸 {blueprint.naturalW}×{blueprint.naturalH}px · 渲染 {Math.round(blueprint.naturalW * blueprint.scale)}×{Math.round(blueprint.naturalH * blueprint.scale)}cm</span>
+          </div>
+        )}
 
         {/* Empty floor hint */}
         {visibleRooms.length === 0 && (
@@ -443,8 +552,9 @@ export default function FloorPlanAll() {
           </div>
         )}
 
-        {/* SVG canvas */}
-        {visibleRooms.length > 0 && <div className="flex-1 overflow-auto flex items-start justify-center p-4">
+        {/* SVG canvas (also visible when only a blueprint is loaded so
+            users can position the trace image before adding rooms) */}
+        {(visibleRooms.length > 0 || blueprint.image) && <div className="flex-1 overflow-auto flex items-start justify-center p-4">
           <svg
             ref={svgRef}
             viewBox={viewBox}
@@ -456,6 +566,42 @@ export default function FloorPlanAll() {
           >
             {/* Background */}
             <rect x={vbX1} y={vbY1} width={vbX2 - vbX1} height={vbY2 - vbY1} fill="#9CA3AF" />
+
+            {/* Blueprint overlay — behind rooms. Draggable in trace mode. */}
+            {blueprint.image && (
+              <image
+                href={blueprint.image}
+                x={blueprint.offsetX}
+                y={blueprint.offsetY}
+                width={blueprint.naturalW * blueprint.scale}
+                height={blueprint.naturalH * blueprint.scale}
+                opacity={blueprint.opacity}
+                style={{ pointerEvents: traceMode ? "auto" : "none", cursor: traceMode ? "grab" : "default" }}
+                preserveAspectRatio="none"
+                onPointerDown={(e) => {
+                  if (!traceMode || !svgRef.current) return;
+                  e.stopPropagation();
+                  svgRef.current.setPointerCapture(e.pointerId);
+                  const startPt = getSVGPoint(e, svgRef.current);
+                  const sx0 = blueprint.offsetX, sy0 = blueprint.offsetY;
+                  const onMove = (ev: PointerEvent) => {
+                    const pt = svgRef.current!.createSVGPoint();
+                    pt.x = ev.clientX; pt.y = ev.clientY;
+                    const loc = pt.matrixTransform(svgRef.current!.getScreenCTM()!.inverse());
+                    setBlueprint({
+                      offsetX: Math.round((sx0 + loc.x - startPt.x) / 10) * 10,
+                      offsetY: Math.round((sy0 + loc.y - startPt.y) / 10) * 10,
+                    });
+                  };
+                  const onUp = () => {
+                    window.removeEventListener("pointermove", onMove);
+                    window.removeEventListener("pointerup", onUp);
+                  };
+                  window.addEventListener("pointermove", onMove);
+                  window.addEventListener("pointerup", onUp, { once: true });
+                }}
+              />
+            )}
 
             {/* Pass 1: room bodies */}
             {visibleRooms.map(room => {
