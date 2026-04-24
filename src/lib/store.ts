@@ -406,6 +406,9 @@ interface DesignerStore {
 
   // Persistence
   resetAll: () => void;
+  /** "彻底清空"：所有房间也清掉（enabledRooms 为空），剩下一张白纸。
+   *  比 resetAll 更进一步；resetAll 会恢复到默认的 9 个启用房间。 */
+  wipeAll: () => void;
   loadFromShare: (snapshot: import("./share").ShareSnapshot) => void;
   loadTemplate: (templateId: string) => void;
 
@@ -1526,6 +1529,16 @@ export const useDesignerStore = create<DesignerStore>()(
         ceilingOpacity: 0,
         blueprint: { image: null, naturalW: 0, naturalH: 0, opacity: 0.4, offsetX: 0, offsetY: 0, scale: 1 },
       }),
+
+      wipeAll: () => {
+        // 先跑 resetAll，再把所有 floorPlan 的 enabledRooms 清空 +
+        // roomShapes 清掉，只剩一张白纸
+        get().resetAll();
+        const empty = makeDefaultFloorPlan();
+        empty.enabledRooms = [];
+        empty.roomShapes = {};
+        set({ floorPlans: [empty] });
+      },
 
       loadFromShare: (snapshot) => {
         const fp = makeDefaultFloorPlan();
