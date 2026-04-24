@@ -3074,12 +3074,13 @@ class GltfFurnitureWithFallback extends Component<
 }
 
 // ─── Polygon shell (for L型/凸字型 rooms) ──────────────────
-// Renders floor + walls along a CCW polygon. Cuts a door hole in the
-// matching edge when the room has a door configured. Windows on polygon
-// rooms are not yet supported (TODO: same split-segment approach).
+// Renders floor + walls along a CCW polygon. Supports door hole cuts
+// (with animated door panel) + window hole cuts (with glass plane).
+// Multiple holes per edge are allowed; they get sorted by offset and
+// the wall between them is filled with box segments.
 function PolygonShell({
   points, H, wallColor, floorColor, ceilingColor, ceilingOpacity,
-  door,
+  door, windows, activeRoom,
 }: {
   points: Array<[number, number]>; // cm, back-left origin
   H: number;                       // meters
@@ -3087,13 +3088,13 @@ function PolygonShell({
   floorColor: string;
   ceilingColor: string;
   ceilingOpacity: number;
-  /** Active door spec, or null if no door. Positions in cm. */
   door: {
     wall: "back" | "front" | "left" | "right";
-    posCm: number;     // offset along wall
-    lenCm: number;     // door width
-    hCm:   number;     // door height
+    posCm: number; lenCm: number; hCm: number;
+    style: import("@/lib/types").DoorStyle;
   } | null;
+  windows: WindowConfig[];
+  activeRoom: RoomType;
 }) {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { getEdges, findEdgeForWall, polygonBounds } = require("@/lib/roomGeometry") as typeof import("@/lib/roomGeometry");
@@ -3130,56 +3131,113 @@ function PolygonShell({
   // with a door-sized gap; otherwise a single wall box.
   const WALL_THICK = 0.08; // 8 cm thick visual walls
 
-  const wallSegments = useMemo(() => {
+  const { wallSegments, doorPlacement, windowPlacements } = useMemo(() => {
     const edges = getEdges(points);
     const bbox = polygonBounds(points);
+
+    // ── Collect hole specs by edge ──
+    type Hole = {
+      startM: number; lenM: number;       // along edge
+      sillM:  number; topM:  number;      // vertical span (sill..top)
+      kind:   "door" | "window";
+      winId?: string;
+      doorStyle?: import("@/lib/types").DoorStyle;
+    };
+    const holesByEdge = new Map<number, Hole[]>();
     const doorHit = door
       ? findEdgeForWall(points, door.wall, door.posCm, door.lenCm, bbox)
       : null;
 
+    // Door goes into holes map + remembered so we can position the panel.
+    let doorPlace: {
+      edgeIndex: number; startM: number; lenM: number; hM: number;
+      // world-space hinge position + edge angle (for mesh placement)
+      wx: number; wz: number; angle: number;
+      style: import("@/lib/types").DoorStyle;
+    } | null = null;
+    if (door && doorHit) {
+      const startM = doorHit.startCm / 100;
+      const lenM = door.lenCm / 100;
+      const hM = door.hCm / 100;
+      const arr = holesByEdge.get(doorHit.edgeIndex) ?? [];
+      arr.push({ startM, lenM, sillM: 0, topM: hM, kind: "door", doorStyle: door.style });
+      holesByEdge.set(doorHit.edgeIndex, arr);
+      const e = edges[doorHit.edgeIndex];
+      const wx1 = e.x1 / 100 - W / 2, wz1 = e.z1 / 100 - D / 2;
+      const wx2 = e.x2 / 100 - W / 2, wz2 = e.z2 / 100 - D / 2;
+      const eLenM = Math.hypot(wx2 - wx1, wz2 - wz1);
+      const t0 = startM / eLenM;
+      doorPlace = {
+        edgeIndex: doorHit.edgeIndex, startM, lenM, hM,
+        wx: wx1 + (wx2 - wx1) * t0, wz: wz1 + (wz2 - wz1) * t0,
+        angle: Math.atan2(-(wz2 - wz1), wx2 - wx1),
+        style: door.style,
+      };
+    }
+
+    const winPlacements: Array<{
+      winId: string; edgeIndex: number;
+      wx: number; wz: number; angle: number;   // hole-start position
+      lenM: number; sillM: number; hM: number;
+    }> = [];
+    for (const w of windows) {
+      const hit = findEdgeForWall(points, w.wall, w.pos, w.len, bbox);
+      if (!hit) continue;
+      const startM = hit.startCm / 100;
+      const lenM = w.len / 100;
+      const sillM = (w.sill ?? 90) / 100;
+      const hM = (w.h ?? 150) / 100;
+      const topM = sillM + hM;
+      const arr = holesByEdge.get(hit.edgeIndex) ?? [];
+      arr.push({ startM, lenM, sillM, topM, kind: "window", winId: w.id });
+      holesByEdge.set(hit.edgeIndex, arr);
+      const e = edges[hit.edgeIndex];
+      const wx1 = e.x1 / 100 - W / 2, wz1 = e.z1 / 100 - D / 2;
+      const wx2 = e.x2 / 100 - W / 2, wz2 = e.z2 / 100 - D / 2;
+      const eLenM = Math.hypot(wx2 - wx1, wz2 - wz1);
+      const t0 = startM / eLenM;
+      winPlacements.push({
+        winId: w.id, edgeIndex: hit.edgeIndex,
+        wx: wx1 + (wx2 - wx1) * t0,
+        wz: wz1 + (wz2 - wz1) * t0,
+        angle: Math.atan2(-(wz2 - wz1), wx2 - wx1),
+        lenM, sillM, hM,
+      });
+    }
+
+    // ── Build wall segments: between/around holes ──
     type Seg = { cx: number; cy: number; cz: number; len: number; angle: number; h: number; yBottom: number };
     const segs: Seg[] = [];
     for (const e of edges) {
-      // Edge in world meters (centered on room origin)
       const wx1 = e.x1 / 100 - W / 2, wz1 = e.z1 / 100 - D / 2;
       const wx2 = e.x2 / 100 - W / 2, wz2 = e.z2 / 100 - D / 2;
       const dxm = wx2 - wx1, dzm = wz2 - wz1;
       const lenM = Math.hypot(dxm, dzm);
-      // Direction angle around +Y (XZ plane)
       const angle = Math.atan2(-dzm, dxm);
-      // Helper: place a segment given a start offset + length along the edge
-      const mkSeg = (startT: number, lenSub: number, h: number, yBottom: number) => {
-        if (lenSub <= 1e-4) return;
-        const t0 = startT / lenM;          // 0..1
-        const t1 = (startT + lenSub) / lenM;
-        const tMid = (t0 + t1) / 2;
+
+      const mkSeg = (startM: number, subLenM: number, h: number, yBottom: number) => {
+        if (subLenM <= 1e-4 || h <= 1e-4) return;
+        const tMid = (startM + subLenM / 2) / lenM;
         segs.push({
           cx: wx1 + dxm * tMid,
           cy: yBottom + h / 2,
           cz: wz1 + dzm * tMid,
-          len: lenSub,
-          angle,
-          h,
-          yBottom,
+          len: subLenM, angle, h, yBottom,
         });
       };
 
-      if (doorHit && doorHit.edgeIndex === e.i) {
-        const doorLenM = door!.lenCm / 100;
-        const doorHM   = door!.hCm   / 100;
-        const startM   = doorHit.startCm / 100;
-        // Left of door
-        mkSeg(0, startM, H, 0);
-        // Lintel above door
-        mkSeg(startM, doorLenM, H - doorHM, doorHM);
-        // Right of door
-        mkSeg(startM + doorLenM, lenM - startM - doorLenM, H, 0);
-      } else {
-        mkSeg(0, lenM, H, 0);
+      const holes = (holesByEdge.get(e.i) ?? []).slice().sort((a, b) => a.startM - b.startM);
+      let cursor = 0;
+      for (const h of holes) {
+        mkSeg(cursor, h.startM - cursor, H, 0);                     // full wall before hole
+        if (h.sillM > 0) mkSeg(h.startM, h.lenM, h.sillM, 0);       // sill under window
+        if (h.topM < H) mkSeg(h.startM, h.lenM, H - h.topM, h.topM);// lintel above
+        cursor = h.startM + h.lenM;
       }
+      mkSeg(cursor, lenM - cursor, H, 0);                           // remainder
     }
-    return segs;
-  }, [points, W, D, H, door, getEdges, findEdgeForWall, polygonBounds]);
+    return { wallSegments: segs, doorPlacement: doorPlace, windowPlacements: winPlacements };
+  }, [points, W, D, H, door, windows, getEdges, findEdgeForWall, polygonBounds]);
 
   return (
     <>
@@ -3201,15 +3259,92 @@ function PolygonShell({
         />
       </mesh>
 
-      {/* Walls — one box per polygon-edge segment. Doors split an edge into
-          [left | lintel | right] segments of different heights. */}
+      {/* Walls — one box per polygon-edge segment. Holes split edges into
+          segments of varying height (sill / lintel / above door). */}
       {wallSegments.map((w, i) => (
         <mesh key={i} position={[w.cx, w.cy, w.cz]} rotation={[0, w.angle, 0]} castShadow receiveShadow>
           <boxGeometry args={[w.len, w.h, WALL_THICK]} />
           <meshStandardMaterial color={wallColor} roughness={0.85} />
         </mesh>
       ))}
+
+      {/* Window glass — a thin plane in each window opening */}
+      {windowPlacements.map(w => {
+        // Position: hole-start + lenM/2 along edge, at mid-height of opening
+        const cx = w.wx + Math.cos(w.angle) * (w.lenM / 2);
+        const cz = w.wz - Math.sin(w.angle) * (w.lenM / 2);
+        const cy = w.sillM + w.hM / 2;
+        return (
+          <mesh key={w.winId} position={[cx, cy, cz]} rotation={[0, w.angle, 0]}>
+            <boxGeometry args={[w.lenM - 0.04, w.hM - 0.04, 0.02]} />
+            <meshPhysicalMaterial
+              color="#B8D4E8"
+              transparent opacity={0.35}
+              roughness={0.05}
+              metalness={0}
+              transmission={0.85}
+              ior={1.45}
+            />
+          </mesh>
+        );
+      })}
+
+      {/* Door panel — simple hinged wood panel at the door opening. Clicking
+          toggles the room's door-open state. */}
+      {doorPlacement && (
+        <PolygonDoorPanel
+          wx={doorPlacement.wx}
+          wz={doorPlacement.wz}
+          angle={doorPlacement.angle}
+          startM={doorPlacement.startM}
+          lenM={doorPlacement.lenM}
+          hM={doorPlacement.hM}
+          room={activeRoom}
+        />
+      )}
     </>
+  );
+}
+
+/** Minimal hinged door panel rendered inside a polygon-shell door hole.
+ *  Hinge is at the "start" end of the opening; swings inward by ~90°. */
+function PolygonDoorPanel({
+  wx, wz, angle, lenM, hM, room,
+}: {
+  wx: number; wz: number; angle: number;   // edge-start world position + edge angle
+  startM: number; lenM: number; hM: number;
+  room: RoomType;
+}) {
+  const isOpen = useDesignerStore(s => !!s.doorOpenByRoom[room]);
+  const toggleDoorOpen = useDesignerStore(s => s.toggleDoorOpen);
+  const panelRef = useRef<THREE.Group>(null);
+  const animRef = useRef(0);
+  useFrame((_, delta) => {
+    const target = isOpen ? -Math.PI / 2 : 0;
+    const diff = target - animRef.current;
+    if (Math.abs(diff) > 0.002) {
+      animRef.current += Math.sign(diff) * Math.min(Math.abs(diff), 5.5 * delta);
+      if (panelRef.current) panelRef.current.rotation.y = animRef.current;
+    }
+  });
+  // Place a group at the hinge (edge-start, on the wall inner face).
+  // Inside the group the panel extends in local +X (along edge direction)
+  // and rotation-Y swings it into the room.
+  return (
+    <group position={[wx, 0, wz]} rotation={[0, angle, 0]}>
+      <group ref={panelRef}>
+        {/* Frame (stays still) */}
+        <mesh position={[lenM / 2, hM / 2, 0]} onClick={(e) => { e.stopPropagation(); toggleDoorOpen(room); }}>
+          <boxGeometry args={[lenM - 0.02, hM - 0.02, 0.04]} />
+          <meshStandardMaterial color="#8B6F47" roughness={0.75} />
+        </mesh>
+        {/* Handle */}
+        <mesh position={[lenM - 0.12, hM * 0.5, 0.03]}>
+          <sphereGeometry args={[0.025, 10, 8]} />
+          <meshStandardMaterial color="#C0A060" metalness={0.7} roughness={0.3} />
+        </mesh>
+      </group>
+    </group>
   );
 }
 
@@ -3312,15 +3447,16 @@ function Scene({ isIOS }: { isIOS: boolean }) {
           ceilingColor={roomState.materials.ceiling?.color ?? "#F5F5F5"}
           ceilingOpacity={ceilingOpacity}
           door={hasDoor ? {
-            // Translate "bottom"/"top" (existing store) to "back/front"
-            // conventions used by the polygon edge matcher.
             wall: doorWall === "top" ? "back"
                 : doorWall === "bottom" ? "front"
                 : doorWall,
             posCm: doorPosCm,
             lenCm: doorLenCm,
             hCm: doorHCm,
+            style: doorStyle,
           } : null}
+          windows={roomWindows}
+          activeRoom={activeRoom}
         />
       ) : (
         <RoomShell
