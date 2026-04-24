@@ -7,7 +7,7 @@ import type { RoomType, ExteriorWall, ExteriorWallDecorItem } from "@/lib/types"
 import { FURNITURE, getFurnitureById } from "@/lib/furniture";
 import { MATERIALS } from "@/lib/data";
 import { useT, useLocale } from "@/lib/i18n";
-import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
+import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn, translateClearanceReason } from "@/locales/itemNames";
 import { formatPrice } from "@/lib/currency";
 import { evaluateRoom } from "@/lib/clearance";
 
@@ -240,14 +240,14 @@ export default function RightPanel() {
                           : v.kind === "window"
                             ? t.clearanceWindowBlocked
                             : v.kind === "hugWall"
-                              ? v.reason
+                              ? translateClearanceReason(v.reason, locale)
                               : v.kind === "relational"
-                                ? v.reason
+                                ? translateClearanceReason(v.reason, locale)
                                 : `${t.clearanceWall} ${v.required}cm`}
                     </div>
                     {v.kind !== "door" && v.kind !== "relational" && v.kind !== "window" && v.kind !== "hugWall" && (
                       <div className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3)" }}>
-                        {v.reason}
+                        {translateClearanceReason(v.reason, locale)}
                       </div>
                     )}
                   </div>
@@ -435,6 +435,9 @@ const EMPTY_EXT_DECOR: ExteriorWallDecorItem[] = [];
 
 function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
   const t = useT();
+  const locale = useLocale();
+  const localName = (item: { id: string; name: string }) =>
+    locale === "en" ? (getFurnitureNameEn(item.id) ?? item.name) : item.name;
   const customRoomMeta = useDesignerStore(s => s.customRoomMeta);
   const decorRaw = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[activeRoom]?.exteriorDecor);
   const decor = decorRaw ?? EMPTY_EXT_DECOR;
@@ -563,9 +566,9 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
           <button key={it.id}
             onClick={() => addItem(activeRoom, it.id, pickerWall)}
             className="flex flex-col items-center gap-0.5 py-1.5 rounded-xl border border-gray-200 bg-white hover:border-blue-400 transition-all"
-            title={`${it.name} — ${it.price}${it.unit}`}>
+            title={`${localName(it)} — ${it.price}${it.unit}`}>
             <span className="text-lg">{it.icon}</span>
-            <span className="text-[9px] text-gray-700 font-semibold leading-tight text-center px-0.5">{it.name}</span>
+            <span className="text-[9px] text-gray-700 font-semibold leading-tight text-center px-0.5">{localName(it)}</span>
           </button>
         ))}
       </div>
@@ -586,7 +589,7 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
                   onClick={() => setSelected(d.instanceId)}>
                   <span className="text-base">{item?.icon ?? "⬜"}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[10px] font-semibold text-gray-700 truncate">{item?.name ?? d.furnitureId}</div>
+                    <div className="text-[10px] font-semibold text-gray-700 truncate">{item ? localName(item) : d.furnitureId}</div>
                     <div className="text-[9px] text-gray-400">{wallLabel}</div>
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); removeItem(activeRoom, d.instanceId); }}
@@ -601,7 +604,7 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
       {/* Selected editor */}
       {selected && selectedItem && (
         <div className="p-2 rounded-xl bg-green-50 border border-green-200">
-          <div className="text-[10px] font-bold text-green-700 mb-2">{t.exteriorDecorEditTitle(selectedItem.name)}</div>
+          <div className="text-[10px] font-bold text-green-700 mb-2">{t.exteriorDecorEditTitle(localName(selectedItem))}</div>
           <div className="flex flex-col gap-2">
             <div>
               <div className="text-[9px] text-gray-500 mb-0.5">{t.exteriorDecorEditWall}</div>

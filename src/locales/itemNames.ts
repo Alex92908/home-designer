@@ -338,3 +338,48 @@ export function getMaterialNameEn(id: string): string | undefined {
 export function getBrandNameEn(brand: string): string {
   return BRAND_NAMES_EN[brand] ?? brand;
 }
+
+/** Clearance-rule rationale translations. Keyed on the exact Chinese
+ *  string from src/lib/clearance.ts. Component looks this up when
+ *  locale === "en". If an entry is missing, falls back to Chinese. */
+export const CLEARANCE_REASON_EN: Record<string, string> = {
+  "沙发前留 40cm 给茶几，侧面 10cm 不憋屈": "Leave 40cm in front for coffee table, 10cm on sides",
+  "茶几四周 30cm 方便绕行": "Leave 30cm around coffee table for walking around",
+  "电视柜建议贴墙，便于走线+避免跌倒": "TV unit should hug the wall — easier cabling, less tipping risk",
+  "电视柜前留 5cm 布线空间": "Leave 5cm behind TV unit for cabling",
+  "书柜独立摆放有倾倒风险，建议贴墙或打膨胀螺丝固定": "Free-standing bookshelf is a tipping hazard — anchor to the wall",
+  "书柜前留 60cm 取书空间": "Leave 60cm in front of bookshelf for reaching books",
+  "边柜建议贴墙，节省空间且更稳": "Sideboard should hug wall — saves space and is more stable",
+  "边柜前留 60cm 开抽屉": "Leave 60cm in front of sideboard for drawers",
+  "床头建议靠墙，有靠背更安心（风水与功能兼顾）": "Headboard should hug wall — both feng shui and safety",
+  "床两侧/床尾留 60cm 过道+铺床": "Leave 60cm around bed for walking + making the bed",
+  "床头柜紧贴床，预留 5cm 调整空间": "Nightstand right next to bed — leave 5cm slack",
+  "衣柜独立摆放易倾倒（危险！），必须贴墙或打膨胀螺丝": "Free-standing wardrobe tips over easily — must anchor to wall",
+  "衣柜前留 75cm 开门+站人": "Leave 75cm in front of wardrobe for door + standing",
+  "梳妆台建议贴墙，镜面更稳定": "Vanity should hug wall — more stable mirror",
+  "梳妆台前留 75cm 坐凳": "Leave 75cm in front of vanity for the stool",
+  "餐桌四周 75cm 拉开椅子+走动": "Leave 75cm around dining table for chairs + walking",
+  "橱柜须贴墙安装": "Kitchen cabinets must be wall-mounted",
+  "橱柜前留 90cm 操作+开门": "Leave 90cm in front of cabinets for working + doors",
+  "冰箱建议贴墙（散热留 5-10cm），独立摆放浪费空间": "Fridge should hug wall (leave 5-10cm for airflow)",
+  "冰箱前留 90cm 开门取物+散热": "Leave 90cm in front of fridge for door + ventilation",
+  "油烟机须贴墙（与灶台对齐）": "Range hood must hug the wall (aligned with cooktop)",
+  "水槽须嵌入橱柜、贴墙安装": "Sink must be flush-mounted in cabinets, against wall",
+  "水槽前留 80cm 洗涮站位": "Leave 80cm in front of sink for standing",
+  "马桶须贴墙（下水管位置固定）": "Toilet must hug wall (drain pipe is fixed)",
+  "马桶前留 50cm，两侧 20cm": "Leave 50cm in front of toilet, 20cm on sides",
+  "浴缸前留 60cm 进出+擦身": "Leave 60cm in front of bathtub for getting in/out",
+  "淋浴房前留 60cm 进出": "Leave 60cm in front of shower for access",
+  "洗手台须贴墙（上下水管位置固定）": "Vanity must hug wall (water pipes are fixed)",
+  "洗手台前留 75cm 弯腰+站立": "Leave 75cm in front of vanity for bending + standing",
+  "书桌前留 75cm 椅子+坐位": "Leave 75cm in front of desk for chair + seat",
+  "储物柜建议贴墙，节省空间+更稳": "Storage cabinet should hug wall — saves space, more stable",
+  "书桌距窗户过远（建议 ≤2m），白天读写需开灯，长期用眼疲劳": "Desk too far from window (keep ≤2m) — daytime reading needs light, causes eye strain",
+  "阻挡门开合，门可能撞到家具": "Blocks door swing — the door may hit furniture",
+  "家具高于窗台且位于窗前，遮挡采光与通风": "Furniture taller than sill blocks light and ventilation",
+};
+
+export function translateClearanceReason(zh: string, locale: string): string {
+  if (locale !== "en" || !zh) return zh;
+  return CLEARANCE_REASON_EN[zh] ?? zh;
+}
