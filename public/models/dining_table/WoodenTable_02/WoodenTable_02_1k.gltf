@@ -1,90 +1,16 @@
 {
   "asset": {
-    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "generator": "glTF-Transform v4.3.0",
     "version": "2.0"
   },
-  "scene": 0,
-  "scenes": [
-    {
-      "name": "Scene",
-      "nodes": [
-        0
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "mesh": 0,
-      "name": "WoodenTable_02"
-    }
-  ],
-  "materials": [
-    {
-      "doubleSided": true,
-      "name": "WoodenTable_02",
-      "normalTexture": {
-        "index": 0
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 1
-        },
-        "metallicRoughnessTexture": {
-          "index": 2
-        }
-      }
-    }
-  ],
-  "meshes": [
-    {
-      "name": "Mesh",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 0,
-            "NORMAL": 1,
-            "TEXCOORD_0": 2
-          },
-          "indices": 3,
-          "material": 0
-        }
-      ]
-    }
-  ],
-  "textures": [
-    {
-      "sampler": 0,
-      "source": 0
-    },
-    {
-      "sampler": 0,
-      "source": 1
-    },
-    {
-      "sampler": 0,
-      "source": 2
-    }
-  ],
-  "images": [
-    {
-      "mimeType": "image/jpeg",
-      "name": "WoodenTable_02_nor_gl",
-      "uri": "textures/WoodenTable_02_nor_gl_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "WoodenTable_02_diff",
-      "uri": "textures/WoodenTable_02_diff_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "WoodenTable_02_metallic-WoodenTable_02_roughness",
-      "uri": "textures/WoodenTable_02_arm_1k.jpg"
-    }
-  ],
   "accessors": [
     {
-      "bufferView": 0,
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 4542
+    },
+    {
+      "type": "VEC3",
       "componentType": 5126,
       "count": 1265,
       "max": [
@@ -96,60 +22,134 @@
         -0.15033823251724243,
         -3.6045939566520246e-8,
         -0.15033824741840363
-      ],
-      "type": "VEC3"
+      ]
     },
     {
-      "bufferView": 1,
+      "type": "VEC3",
       "componentType": 5126,
-      "count": 1265,
-      "type": "VEC3"
+      "count": 1265
     },
     {
-      "bufferView": 2,
+      "type": "VEC2",
       "componentType": 5126,
-      "count": 1265,
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 3,
-      "componentType": 5123,
-      "count": 4542,
-      "type": "SCALAR"
+      "count": 1265
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 15180,
-      "byteOffset": 0
-    },
-    {
-      "buffer": 0,
-      "byteLength": 15180,
-      "byteOffset": 15180
-    },
-    {
-      "buffer": 0,
-      "byteLength": 10120,
-      "byteOffset": 30360
-    },
-    {
-      "buffer": 0,
-      "byteLength": 9084,
-      "byteOffset": 40480
+      "byteOffset": 0,
+      "byteLength": 9153
     }
   ],
   "samplers": [
     {
       "magFilter": 9729,
-      "minFilter": 9987
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "textures": [
+    {
+      "source": 1,
+      "sampler": 0
+    },
+    {
+      "source": 0,
+      "sampler": 0
+    },
+    {
+      "source": 2,
+      "sampler": 0
+    }
+  ],
+  "images": [
+    {
+      "name": "WoodenTable_02_nor_gl",
+      "mimeType": "image/jpeg",
+      "uri": "textures/WoodenTable_02_nor_gl_1k.jpg"
+    },
+    {
+      "name": "WoodenTable_02_diff",
+      "mimeType": "image/jpeg",
+      "uri": "textures/WoodenTable_02_diff_1k.jpg"
+    },
+    {
+      "name": "WoodenTable_02_metallic-WoodenTable_02_roughness",
+      "mimeType": "image/jpeg",
+      "uri": "textures/WoodenTable_02_arm_1k.jpg"
     }
   ],
   "buffers": [
     {
-      "byteLength": 49564,
-      "uri": "WoodenTable_02.bin"
+      "uri": "WoodenTable_02.bin",
+      "byteLength": 9153
     }
+  ],
+  "materials": [
+    {
+      "name": "WoodenTable_02",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      },
+      "normalTexture": {
+        "index": 1
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Mesh",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1,
+            "NORMAL": 2,
+            "TEXCOORD_0": 3
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 0,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "WoodenTable_02",
+      "mesh": 0
+    }
+  ],
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "scene": 0,
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
   ]
 }

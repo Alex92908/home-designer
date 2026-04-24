@@ -1,209 +1,56 @@
 {
+  "asset": {
+    "generator": "glTF-Transform v4.3.0",
+    "version": "2.0",
+    "extras": {
+      "author": "nicolas_solo (https://sketchfab.com/nicolas_solo)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/japanese-futonbed-0d5590d1d2184aa98797c3d6382afd7e",
+      "title": "Japanese futon/bed"
+    }
+  },
   "accessors": [
     {
-      "bufferView": 2,
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 53748
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5126,
+      "count": 9422
+    },
+    {
+      "type": "VEC3",
       "componentType": 5126,
       "count": 9422,
       "max": [
         329.3229675292969,
-        616.4920043945313,
+        616.4920043945312,
         101.4247055053711
       ],
       "min": [
         -404.5369567871094,
         -488.1536865234375,
         -19.048938751220703
-      ],
-      "type": "VEC3"
+      ]
     },
     {
-      "bufferView": 2,
-      "byteOffset": 113064,
+      "type": "VEC4",
       "componentType": 5126,
-      "count": 9422,
-      "max": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "min": [
-        -1.0,
-        -1.0,
-        -1.0
-      ],
-      "type": "VEC3"
+      "count": 9422
     },
     {
-      "bufferView": 3,
+      "type": "VEC2",
       "componentType": 5126,
-      "count": 9422,
-      "max": [
-        1.0,
-        0.9999995827674866,
-        1.0,
-        1.0
-      ],
-      "min": [
-        -0.9999982714653015,
-        -0.9998792409896851,
-        -1.0,
-        -1.0
-      ],
-      "type": "VEC4"
-    },
-    {
-      "bufferView": 1,
-      "componentType": 5126,
-      "count": 9422,
-      "max": [
-        0.9899600148200989,
-        0.9907730221748352
-      ],
-      "min": [
-        0.010116999968886375,
-        0.009955000132322311
-      ],
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 0,
-      "componentType": 5125,
-      "count": 53748,
-      "type": "SCALAR"
+      "count": 9422
     }
   ],
-  "asset": {
-    "extras": {
-      "author": "nicolas_solo (https://sketchfab.com/nicolas_solo)",
-      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
-      "source": "https://sketchfab.com/3d-models/japanese-futonbed-0d5590d1d2184aa98797c3d6382afd7e",
-      "title": "Japanese futon/bed"
-    },
-    "generator": "Sketchfab-12.81.0",
-    "version": "2.0"
-  },
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 214992,
-      "name": "floatBufferViews",
-      "target": 34963
-    },
-    {
-      "buffer": 0,
-      "byteLength": 75376,
-      "byteOffset": 214992,
-      "byteStride": 8,
-      "name": "floatBufferViews",
-      "target": 34962
-    },
-    {
-      "buffer": 0,
-      "byteLength": 226128,
-      "byteOffset": 290368,
-      "byteStride": 12,
-      "name": "floatBufferViews",
-      "target": 34962
-    },
-    {
-      "buffer": 0,
-      "byteLength": 150752,
-      "byteOffset": 516496,
-      "byteStride": 16,
-      "name": "floatBufferViews",
-      "target": 34962
-    }
-  ],
-  "buffers": [
-    {
-      "byteLength": 667248,
-      "uri": "scene.bin"
-    }
-  ],
-  "images": [
-    {
-      "uri": "textures/Material_baseColor.png"
-    },
-    {
-      "uri": "textures/Material_metallicRoughness.png"
-    },
-    {
-      "uri": "textures/Material_normal.png"
-    }
-  ],
-  "materials": [
-    {
-      "doubleSided": true,
-      "name": "Material",
-      "normalTexture": {
-        "index": 2
-      },
-      "occlusionTexture": {
-        "index": 1
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 0
-        },
-        "metallicFactor": 0.0,
-        "metallicRoughnessTexture": {
-          "index": 1
-        }
-      }
-    }
-  ],
-  "meshes": [
-    {
-      "name": "Object_0",
-      "primitives": [
-        {
-          "attributes": {
-            "NORMAL": 1,
-            "POSITION": 0,
-            "TANGENT": 2,
-            "TEXCOORD_0": 3
-          },
-          "indices": 4,
-          "material": 0,
-          "mode": 4
-        }
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "children": [
-        1
-      ],
-      "matrix": [
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        2.220446049250313e-16,
-        -1.0,
-        0.0,
-        0.0,
-        1.0,
-        2.220446049250313e-16,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0
-      ],
-      "name": "Sketchfab_model"
-    },
-    {
-      "children": [
-        2
-      ],
-      "name": "futon.obj.cleaner.materialmerger.gles"
-    },
-    {
-      "mesh": 0,
-      "name": "Object_2"
+      "byteOffset": 0,
+      "byteLength": 81674
     }
   ],
   "samplers": [
@@ -214,7 +61,114 @@
       "wrapT": 10497
     }
   ],
-  "scene": 0,
+  "textures": [
+    {
+      "source": 0,
+      "sampler": 0
+    },
+    {
+      "source": 2,
+      "sampler": 0
+    },
+    {
+      "source": 1,
+      "sampler": 0
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/png",
+      "uri": "textures/Material_baseColor.png"
+    },
+    {
+      "mimeType": "image/png",
+      "uri": "textures/Material_metallicRoughness.png"
+    },
+    {
+      "mimeType": "image/png",
+      "uri": "textures/Material_normal.png"
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "scene.bin",
+      "byteLength": 81674
+    }
+  ],
+  "materials": [
+    {
+      "name": "Material",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      },
+      "normalTexture": {
+        "index": 1
+      },
+      "occlusionTexture": {
+        "index": 2
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Object_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 2,
+            "TANGENT": 3,
+            "TEXCOORD_0": 4
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 0,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "NORMAL": 0,
+                "POSITION": 1,
+                "TANGENT": 2,
+                "TEXCOORD_0": 3
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Sketchfab_model",
+      "rotation": [
+        -0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        1
+      ]
+    },
+    {
+      "name": "futon.obj.cleaner.materialmerger.gles",
+      "children": [
+        2
+      ]
+    },
+    {
+      "name": "Object_2",
+      "mesh": 0
+    }
+  ],
   "scenes": [
     {
       "name": "Sketchfab_Scene",
@@ -223,18 +177,11 @@
       ]
     }
   ],
-  "textures": [
-    {
-      "sampler": 0,
-      "source": 0
-    },
-    {
-      "sampler": 0,
-      "source": 1
-    },
-    {
-      "sampler": 0,
-      "source": 2
-    }
+  "scene": 0,
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
   ]
 }

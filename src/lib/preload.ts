@@ -9,6 +9,12 @@
  */
 import { useGLTF } from "@react-three/drei";
 
+// Point DRACOLoader at self-hosted decoder files (public/draco/*). drei's
+// default is https://www.gstatic.com/draco/v1/decoders/ — that CDN is
+// occasionally slow/blocked from mainland China. The decoder is ~340KB
+// (wasm) + 700KB (js fallback), cached aggressively by the browser.
+useGLTF.setDecoderPath("/draco/");
+
 // One representative GLTF per common furniture category. Deliberately small
 // list — preloading too many will saturate the network and hurt TTFB.
 const HOT_URLS = [

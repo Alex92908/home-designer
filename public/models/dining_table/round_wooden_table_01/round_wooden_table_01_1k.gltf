@@ -1,109 +1,16 @@
 {
   "asset": {
-    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "generator": "glTF-Transform v4.3.0",
     "version": "2.0"
   },
-  "scene": 0,
-  "scenes": [
-    {
-      "name": "Scene",
-      "nodes": [
-        0,
-        1
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "mesh": 0,
-      "name": "round_wooden_table_01"
-    },
-    {
-      "mesh": 1,
-      "name": "round_wooden_table_01_bolts"
-    }
-  ],
-  "materials": [
-    {
-      "doubleSided": true,
-      "name": "round_wooden_table_01",
-      "normalTexture": {
-        "index": 0
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 1
-        },
-        "metallicRoughnessTexture": {
-          "index": 2
-        }
-      }
-    }
-  ],
-  "meshes": [
-    {
-      "name": "Cylinder",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 0,
-            "NORMAL": 1,
-            "TEXCOORD_0": 2
-          },
-          "indices": 3,
-          "material": 0
-        }
-      ]
-    },
-    {
-      "name": "Cylinder.007",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 4,
-            "NORMAL": 5,
-            "TEXCOORD_0": 6
-          },
-          "indices": 7,
-          "material": 0
-        }
-      ]
-    }
-  ],
-  "textures": [
-    {
-      "sampler": 0,
-      "source": 0
-    },
-    {
-      "sampler": 0,
-      "source": 1
-    },
-    {
-      "sampler": 0,
-      "source": 2
-    }
-  ],
-  "images": [
-    {
-      "mimeType": "image/jpeg",
-      "name": "round_wooden_table_01_nor_gl",
-      "uri": "textures/round_wooden_table_01_nor_gl_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "round_wooden_table_01_diff",
-      "uri": "textures/round_wooden_table_01_diff_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "round_wooden_table_01_metal-round_wooden_table_01_rough",
-      "uri": "textures/round_wooden_table_01_arm_1k.jpg"
-    }
-  ],
   "accessors": [
     {
-      "bufferView": 0,
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 23784
+    },
+    {
+      "type": "VEC3",
       "componentType": 5126,
       "count": 5148,
       "max": [
@@ -115,29 +22,25 @@
         -0.6996744871139526,
         -0.0013183951377868652,
         -0.6996744275093079
-      ],
-      "type": "VEC3"
+      ]
     },
     {
-      "bufferView": 1,
+      "type": "VEC3",
       "componentType": 5126,
-      "count": 5148,
-      "type": "VEC3"
+      "count": 5148
     },
     {
-      "bufferView": 2,
+      "type": "VEC2",
       "componentType": 5126,
-      "count": 5148,
-      "type": "VEC2"
+      "count": 5148
     },
     {
-      "bufferView": 3,
+      "type": "SCALAR",
       "componentType": 5123,
-      "count": 23784,
-      "type": "SCALAR"
+      "count": 2136
     },
     {
-      "bufferView": 4,
+      "type": "VEC3",
       "componentType": 5126,
       "count": 816,
       "max": [
@@ -149,80 +52,169 @@
         -0.13578639924526215,
         0.9201406836509705,
         -0.1460239589214325
-      ],
-      "type": "VEC3"
+      ]
     },
     {
-      "bufferView": 5,
+      "type": "VEC3",
       "componentType": 5126,
-      "count": 816,
-      "type": "VEC3"
+      "count": 816
     },
     {
-      "bufferView": 6,
+      "type": "VEC2",
       "componentType": 5126,
-      "count": 816,
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 7,
-      "componentType": 5123,
-      "count": 2136,
-      "type": "SCALAR"
+      "count": 816
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 61776,
-      "byteOffset": 0
+      "byteOffset": 0,
+      "byteLength": 28988
     },
     {
       "buffer": 0,
-      "byteLength": 61776,
-      "byteOffset": 61776
-    },
-    {
-      "buffer": 0,
-      "byteLength": 41184,
-      "byteOffset": 123552
-    },
-    {
-      "buffer": 0,
-      "byteLength": 47568,
-      "byteOffset": 164736
-    },
-    {
-      "buffer": 0,
-      "byteLength": 9792,
-      "byteOffset": 212304
-    },
-    {
-      "buffer": 0,
-      "byteLength": 9792,
-      "byteOffset": 222096
-    },
-    {
-      "buffer": 0,
-      "byteLength": 6528,
-      "byteOffset": 231888
-    },
-    {
-      "buffer": 0,
-      "byteLength": 4272,
-      "byteOffset": 238416
+      "byteOffset": 28988,
+      "byteLength": 3248
     }
   ],
   "samplers": [
     {
       "magFilter": 9729,
-      "minFilter": 9987
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "textures": [
+    {
+      "source": 1,
+      "sampler": 0
+    },
+    {
+      "source": 0,
+      "sampler": 0
+    },
+    {
+      "source": 2,
+      "sampler": 0
+    }
+  ],
+  "images": [
+    {
+      "name": "round_wooden_table_01_nor_gl",
+      "mimeType": "image/jpeg",
+      "uri": "textures/round_wooden_table_01_nor_gl_1k.jpg"
+    },
+    {
+      "name": "round_wooden_table_01_diff",
+      "mimeType": "image/jpeg",
+      "uri": "textures/round_wooden_table_01_diff_1k.jpg"
+    },
+    {
+      "name": "round_wooden_table_01_metal-round_wooden_table_01_rough",
+      "mimeType": "image/jpeg",
+      "uri": "textures/round_wooden_table_01_arm_1k.jpg"
     }
   ],
   "buffers": [
     {
-      "byteLength": 242688,
-      "uri": "round_wooden_table_01.bin"
+      "uri": "round_wooden_table_01.bin",
+      "byteLength": 32236
     }
+  ],
+  "materials": [
+    {
+      "name": "round_wooden_table_01",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      },
+      "normalTexture": {
+        "index": 1
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Cylinder",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1,
+            "NORMAL": 2,
+            "TEXCOORD_0": 3
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 0,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cylinder.007",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 5,
+            "NORMAL": 6,
+            "TEXCOORD_0": 7
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 1,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "round_wooden_table_01",
+      "mesh": 0
+    },
+    {
+      "name": "round_wooden_table_01_bolts",
+      "mesh": 1
+    }
+  ],
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0,
+        1
+      ]
+    }
+  ],
+  "scene": 0,
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
   ]
 }
