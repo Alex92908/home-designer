@@ -337,8 +337,8 @@ export default function GlobalCanvas() {
   return (
     <div
       className="w-full h-full relative"
-      // 深一档蓝灰，白墙在上面清晰可见
-      style={{ background: "linear-gradient(180deg, #7E8A9A 0%, #525B6A 55%, #353B46 100%)" }}
+      // 柔和中灰蓝：白墙有反差但不刺眼
+      style={{ background: "linear-gradient(180deg, #B8C0CC 0%, #929BA8 55%, #6E7684 100%)" }}
     >
       <Canvas
         shadows

@@ -4112,9 +4112,9 @@ export default function RoomCanvas() {
           shadows={{ type: THREE.PCFSoftShadowMap }}
           camera={{ position: [0, 1.4, 6], fov: 58, near: 0.1, far: 80 }}
           style={{
-            // 深一档的中性蓝灰：白墙在浅灰背景下完全融进去（俯视图尤其
-            // 明显），这个色阶在有色墙面 + 白墙上都有足够反差。
-            background: "linear-gradient(180deg, #7E8A9A 0%, #525B6A 55%, #353B46 100%)",
+            // 柔和中灰蓝：既不让白墙融进去（原来的 #E9EEF3），也不让
+            // 白墙显得刺眼（上一版 #525B6A 太暗，墙看起来像纸片）。
+            background: "linear-gradient(180deg, #B8C0CC 0%, #929BA8 55%, #6E7684 100%)",
           }}
         >
           <OrbitControls
