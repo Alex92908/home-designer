@@ -1919,7 +1919,7 @@ function PolygonFlatRoof({ color }: { color: string }) {
   return (
     <group>
       {slabs.map(({ shape }, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.11, 0]} castShadow receiveShadow>
+        <mesh key={i} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.11, 0]} castShadow receiveShadow>
           <shapeGeometry args={[shape]} />
           <meshStandardMaterial color={color} roughness={0.9} side={THREE.DoubleSide} />
         </mesh>
@@ -2007,12 +2007,12 @@ function PolygonHouseShell({ floors, settings }: { floors: number; settings: Ext
             return (
               <mesh
                 key={`floor-${f}`}
-                rotation={[-Math.PI / 2, 0, 0]}
+                rotation={[Math.PI / 2, 0, 0]}
                 position={[0, f * FLOOR_H + 0.02, 0]}
                 receiveShadow
               >
                 <shapeGeometry args={[shp]} />
-                <meshStandardMaterial color="#D0CABB" roughness={0.95} />
+                <meshStandardMaterial color="#D0CABB" roughness={0.95} side={THREE.DoubleSide} />
               </mesh>
             );
           })}

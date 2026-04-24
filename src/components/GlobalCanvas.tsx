@@ -141,12 +141,16 @@ function RoomGroup({
       onPointerOut={() => setHover(null)}
       onClick={(e) => { e.stopPropagation(); onPick(); }}
     >
-      {/* Floor (polygon-aware) */}
-      <mesh position={[0, 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      {/* Floor (polygon-aware). Uses +π/2 X rotation so shape.y maps to
+          world.z matching wall positions — -π/2 flips Z and pokes floor
+          out past walls on L 型/凸字型 rooms. DoubleSide so back-face
+          culling doesn't hide it once we rotate the other way. */}
+      <mesh position={[0, 0.001, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
         <shapeGeometry args={[floorShape]} />
         <meshStandardMaterial
           color={isActive ? "#BAE6FD" : (isHover ? "#DBEAFE" : floorColor)}
           roughness={0.9}
+          side={THREE.DoubleSide}
         />
       </mesh>
 

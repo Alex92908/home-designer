@@ -3241,13 +3241,15 @@ function PolygonShell({
 
   return (
     <>
-      {/* Floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+      {/* Floor — use +π/2 X rotation (same as ceiling) so shape.y maps to
+          world.z, matching wall edge positions. Without this the floor
+          ends up Z-flipped relative to walls and pokes out on L 型 rooms. */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <shapeGeometry args={[shape]} />
-        <meshStandardMaterial color={floorColor} roughness={0.92} />
+        <meshStandardMaterial color={floorColor} roughness={0.92} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Ceiling (flipped normal) */}
+      {/* Ceiling */}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, H, 0]}>
         <shapeGeometry args={[shape]} />
         <meshStandardMaterial
