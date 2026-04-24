@@ -141,7 +141,7 @@ export default function RightPanelAll() {
           configuredRooms.map(({ r, cost, area }) => {
             const def      = ROOM_DEFS[r];
             const meta     = customRoomMeta[r];
-            const name     = t.roomNames[r] ?? meta?.name ?? def.name;
+            const name     = meta?.name ?? t.roomNames[r] ?? def.name;
             const icon     = meta?.icon ?? def.icon;
             const isOpen   = expanded.has(r);
             const { materials, placedItems } = rooms[r];

@@ -31,6 +31,7 @@ export default function RightPanel() {
 
   const activeRoom = useDesignerStore((s) => s.activeRoom);
   const roomState = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom]);
+  const customRoomMeta = useDesignerStore((s) => s.customRoomMeta);
   const scores = useDesignerStore((s) => s.scores);
   const totalCostRaw = useDesignerStore((s) => s.totalCost());
   const budgetRaw = useDesignerStore((s) => s.budget);
@@ -115,7 +116,7 @@ export default function RightPanel() {
         }
       >
         <div className="text-xs font-semibold mb-1" style={{ color: isOverBudget ? "var(--ds-danger)" : "rgba(255,255,255,0.75)" }}>
-          💰 {t.roomNames[activeRoom] ?? def.name} · {t.budgetTitle}
+          💰 {customRoomMeta[activeRoom]?.name ?? t.roomNames[activeRoom] ?? def.name} · {t.budgetTitle}
         </div>
         <div className="text-3xl font-black mb-0.5" style={{ color: isOverBudget ? "var(--ds-danger)" : "#fff" }}>
           {formatPrice(totalCost, locale)}

@@ -357,6 +357,7 @@ export default function FloorPlan() {
   const undoFurniture        = useDesignerStore((s) => s.undoFurniture);
   const undoLayout           = useDesignerStore((s) => s.undoLayout);
   const layoutHistoryLen     = useDesignerStore((s) => s.layoutHistory.length);
+  const customRoomMeta       = useDesignerStore((s) => s.customRoomMeta);
   const rotateRoom           = useDesignerStore((s) => s.rotateRoom);
   const pushLayoutHistory    = useDesignerStore((s) => s.pushLayoutHistory);
   const furnitureHistoryLen  = useDesignerStore((s) => s.furnitureHistory.filter(h => h.room === activeRoom).length);
@@ -771,7 +772,7 @@ export default function FloorPlan() {
         {/* Row 1: room info + action buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[11px] text-gray-500 font-mono flex-1 min-w-0 truncate">
-            {t.roomNames[activeRoom] ?? def.name} · {(roomW / 100).toFixed(1)}m × {(roomD / 100).toFixed(1)}m · {t.fpCeilingLabel} {(def.height / 100).toFixed(1)}m
+            {customRoomMeta[activeRoom]?.name ?? t.roomNames[activeRoom] ?? def.name} · {(roomW / 100).toFixed(1)}m × {(roomD / 100).toFixed(1)}m · {t.fpCeilingLabel} {(def.height / 100).toFixed(1)}m
           </span>
           <div className="flex items-center gap-1 shrink-0">
             {/* Zoom controls */}

@@ -27,7 +27,8 @@ export default function RoomSidebar() {
       {enabledRooms.map((r) => {
         const def      = ROOM_DEFS[r];
         const meta     = customRoomMeta[r];
-        const name     = t.roomNames[r] ?? meta?.name ?? def.name;
+        // User rename (meta.name) 优先；否则按 locale 的默认名 / 内置名
+        const name     = meta?.name ?? t.roomNames[r] ?? def.name;
         const icon     = meta?.icon ?? def.icon;
         const isActive = activeRoom === r && viewMode !== "all" && viewMode !== "exterior";
         const hasContent =
