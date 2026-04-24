@@ -1510,6 +1510,21 @@ export const useDesignerStore = create<DesignerStore>()(
         activeFloor: 0,
         layoutHistory: [],
         activeTemplateId: null,
+        // 清 ephemeral 交互状态：门窗开合、灯光 / 家具开关、亮度 / 色温、
+        // 窗帘开合、灯位置、墙/顶透明度、图纸描图 —— 不清会残留上一次
+        // 的用户偏好，让"重置到初始状态"名不副实。
+        doorOpenByRoom: {},
+        windowOpenByWinId: {},
+        curtainOpenByInstanceId: {},
+        lightsOnByRoom: {},
+        lightBrightnessByRoom: {},
+        lightColorByRoom: {},
+        roomExposureByRoom: {},
+        lightPosByRoom: {},
+        fixtureOffById: {},
+        frontWallOpacity: 0,
+        ceilingOpacity: 0,
+        blueprint: { image: null, naturalW: 0, naturalH: 0, opacity: 0.4, offsetX: 0, offsetY: 0, scale: 1 },
       }),
 
       loadFromShare: (snapshot) => {

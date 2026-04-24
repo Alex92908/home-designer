@@ -50,6 +50,7 @@ export default function ExportModal() {
   const [email, setEmail]         = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const t = useT();
   const locale = useLocale();
 
@@ -588,15 +589,29 @@ export default function ExportModal() {
               <div className="bg-red-50 rounded-xl p-4 border border-red-100">
                 <div className="text-sm font-bold text-gray-800 mb-1">{t.resetTitle}</div>
                 <div className="text-xs text-gray-500 mb-3">{t.resetDesc}</div>
-                <button onClick={() => {
-                  if (window.confirm(t.resetConfirm)) {
-                    resetAll();
-                    close();
-                  }
-                }}
-                  className="w-full py-2.5 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-colors">
-                  {t.resetBtn}
-                </button>
+                {confirmReset ? (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { resetAll(); setConfirmReset(false); close(); }}
+                      className="flex-1 py-2.5 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 transition-colors"
+                    >
+                      ⚠️ 确认清空（不可撤销）
+                    </button>
+                    <button
+                      onClick={() => setConfirmReset(false)}
+                      className="px-4 py-2.5 bg-white text-gray-600 text-sm font-bold rounded-xl border border-gray-200 hover:bg-gray-50"
+                    >
+                      取消
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmReset(true)}
+                    className="w-full py-2.5 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-colors"
+                  >
+                    {t.resetBtn}
+                  </button>
+                )}
               </div>
             </div>
           )}
