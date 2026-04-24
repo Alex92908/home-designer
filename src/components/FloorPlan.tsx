@@ -8,6 +8,7 @@ import { PlacedItem } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn } from "@/locales/itemNames";
 import { evaluateRoom, type EvaluatedItem, type DoorWall as ClearanceDoorWall } from "@/lib/clearance";
+import { pointInPolygon } from "@/lib/roomGeometry";
 
 // ─── helpers ──────────────────────────────────────────────
 
@@ -319,6 +320,7 @@ export default function FloorPlan() {
   const [winDrag, setWinDrag] = useState<WinDrag | null>(null);
   const [doorDrag, setDoorDrag] = useState<DoorDrag | null>(null);
   const [editWindows, setEditWindows] = useState(false);
+  const [editShape, setEditShape] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [isLandscape, setIsLandscape] = useState(false);
   useEffect(() => {
@@ -381,8 +383,9 @@ export default function FloorPlan() {
 
   // ── Use store roomDimensions (respects global plan edits) ──
   const roomDimensions  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
-  const roomShape       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomShapes?.[activeRoom]);
-  const setRoomShape    = useDesignerStore((s) => s.setRoomShape);
+  const roomShape          = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomShapes?.[activeRoom]);
+  const setRoomShape       = useDesignerStore((s) => s.setRoomShape);
+  const updateRoomShapePoint = useDesignerStore((s) => s.updateRoomShapePoint);
   const def             = ROOM_DEFS[activeRoom];
 
   // Effective dimensions: store override if different from default, else ROOM_DEFS
@@ -407,8 +410,22 @@ export default function FloorPlan() {
       const rawHD = furniture.depth  * (placed.scaleD ?? 1) / 2;
       const hw = Math.min(rot90 ? rawHD : rawHW, roomW / 2);
       const hd = Math.min(rot90 ? rawHW : rawHD, roomD / 2);
-      const cx = Math.max(hw, Math.min(roomW - hw, placed.x));
-      const cz = Math.max(hd, Math.min(roomD - hd, placed.z));
+      let cx = Math.max(hw, Math.min(roomW - hw, placed.x));
+      let cz = Math.max(hd, Math.min(roomD - hd, placed.z));
+      // If the clamped point is outside the polygon, nudge to the polygon
+      // centroid-ish fallback: try a few rings around current; otherwise
+      // fall back to bounding-box center (may still be outside, but that's
+      // a rarely-hit case when the room was just reshaped smaller).
+      if (roomShape && roomShape.preset !== "rect" && !pointInPolygon(roomShape.points, cx, cz)) {
+        let found = false;
+        for (const [px, pz] of roomShape.points) {
+          // Try a point slightly inside each vertex (toward bounds center)
+          const tx = px + (roomW / 2 - px) * 0.1;
+          const tz = pz + (roomD / 2 - pz) * 0.1;
+          if (pointInPolygon(roomShape.points, tx, tz)) { cx = tx; cz = tz; found = true; break; }
+        }
+        if (!found) continue; // give up, don't move
+      }
       if (Math.abs(cx - placed.x) > 0.5 || Math.abs(cz - placed.z) > 0.5) {
         moveItem(placed.instanceId, cx, cz);
       }
@@ -486,6 +503,8 @@ export default function FloorPlan() {
       const capturedScale = Math.min(700 / roomW, 500 / roomD, 3.0);
       const capturedRoomW = roomW;
       const capturedRoomD = roomD;
+      // Polygon override (L型/凸字型). Null = rectangular room.
+      const capturedShape = roomShape && roomShape.preset !== "rect" ? roomShape : null;
       const startPt = getSVGPoint(e, svg, capturedZoom);
 
       const selForDrag = alreadySelected ? selectedInstanceIds : newSelection;
@@ -525,8 +544,16 @@ export default function FloorPlan() {
           const rawHD    = (furn?.depth  ?? 100) * item.scaleD / 2;
           const halfW    = Math.min(r90 ? rawHD : rawHW, capturedRoomW / 2);
           const halfD    = Math.min(r90 ? rawHW : rawHD, capturedRoomD / 2);
-          const newX     = Math.max(halfW, Math.min(capturedRoomW - halfW, item.startX + dX));
-          const newZ     = Math.max(halfD, Math.min(capturedRoomD - halfD, item.startZ + dZ));
+          let newX     = Math.max(halfW, Math.min(capturedRoomW - halfW, item.startX + dX));
+          let newZ     = Math.max(halfD, Math.min(capturedRoomD - halfD, item.startZ + dZ));
+          // Polygon-shape constraint: if the new center is outside the
+          // polygon, fall back to the item's current position (i.e., refuse
+          // the move). This stops furniture from being dragged into the
+          // bitten-out region of an L-shape room.
+          if (capturedShape && !pointInPolygon(capturedShape.points, newX, newZ)) {
+            newX = item.startX;
+            newZ = item.startZ;
+          }
           moveItem(item.instanceId, newX, newZ);
         }
       };
@@ -812,6 +839,22 @@ export default function FloorPlan() {
             >
               {editWindows ? t.fpEditDone : t.fpEditStart}
             </button>
+
+            {/* Shape edit toggle — only meaningful for non-rect rooms */}
+            {roomShape && roomShape.preset !== "rect" && (
+              <button
+                onClick={() => setEditShape(v => !v)}
+                className="text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all"
+                style={
+                  editShape
+                    ? { background: "#F59E0B", color: "#fff" }
+                    : { color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", background: "transparent" }
+                }
+                title="编辑多边形顶点"
+              >
+                {editShape ? "完成顶点编辑" : "编辑形状"}
+              </button>
+            )}
           </div>
         </div>
         {/* Row 2: window/door sub-controls (only when editing) */}
@@ -921,6 +964,41 @@ export default function FloorPlan() {
                 strokeWidth={8} strokeOpacity={0.7}
                 strokeLinejoin="round"
               />
+              {/* Vertex handles — only visible in edit-shape mode. Drag to
+                  reshape. Snapping to 10cm (≈ 1px at scale≈0.1) keeps walls
+                  aligned. Switches preset to "custom" on first edit. */}
+              {editShape && roomShape.points.map(([vx, vz], i) => (
+                <circle
+                  key={`vh-${i}`}
+                  cx={vx * scale} cy={vz * scale} r={9}
+                  fill="#F59E0B" stroke="#fff" strokeWidth={2}
+                  style={{ cursor: "grab" }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    const svg = svgRef.current;
+                    if (!svg) return;
+                    pushLayoutHistory();
+                    svg.setPointerCapture(e.pointerId);
+                    const onMove = (ev: PointerEvent) => {
+                      const rect = svg.getBoundingClientRect();
+                      const px = (ev.clientX - rect.left) / zoomLevel;
+                      const pz = (ev.clientY - rect.top)  / zoomLevel;
+                      // Convert SVG-units back to cm, snap to 10 cm.
+                      const nx = Math.round((px / scale) / 10) * 10;
+                      const nz = Math.round((pz / scale) / 10) * 10;
+                      const cx = Math.max(0, Math.min(roomW, nx));
+                      const cz = Math.max(0, Math.min(roomD, nz));
+                      updateRoomShapePoint(activeRoom, i, cx, cz);
+                    };
+                    const onUp = () => {
+                      window.removeEventListener("pointermove", onMove);
+                      window.removeEventListener("pointerup", onUp);
+                    };
+                    window.addEventListener("pointermove", onMove);
+                    window.addEventListener("pointerup", onUp, { once: true });
+                  }}
+                />
+              ))}
             </>
           ) : (
             <>

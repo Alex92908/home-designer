@@ -306,6 +306,7 @@ export default function FloorPlanAll() {
   const roomDimensions      = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
   const enabledRooms        = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
   const roomWindows         = useDesignerStore(s => s.floorPlans[s.activeFloor].roomWindows);
+  const roomShapes          = useDesignerStore(s => s.floorPlans[s.activeFloor].roomShapes);
   const customRoomMeta      = useDesignerStore(s => s.customRoomMeta);
   const setActiveRoom       = useDesignerStore(s => s.setActiveRoom);
   const setViewMode         = useDesignerStore(s => s.setViewMode);
@@ -471,18 +472,40 @@ export default function FloorPlanAll() {
               const dimFs  = Math.min(w, d) * 0.068;
               const { name: roomName, icon: roomIcon } = getRoomLabel(room);
 
+              const shape = roomShapes?.[room];
+              const isPolygon = shape && shape.preset !== "rect";
+              const polyPts = isPolygon
+                ? shape!.points.map(([px, pz]) => `${x + px},${y + pz}`).join(" ")
+                : "";
               return (
                 <g key={room}>
-                  {/* Wall background */}
-                  <rect x={x} y={y} width={w} height={d} fill="#374151" rx={2} />
+                  {/* Wall background — polygon for L型/凸字型, rect otherwise */}
+                  {isPolygon ? (
+                    <polygon
+                      points={polyPts}
+                      fill="#374151"
+                      stroke="#374151" strokeWidth={WALL * 2} strokeLinejoin="round"
+                    />
+                  ) : (
+                    <rect x={x} y={y} width={w} height={d} fill="#374151" rx={2} />
+                  )}
                   {/* Floor */}
-                  <rect
-                    x={x + WALL} y={y + WALL}
-                    width={w - WALL*2} height={d - WALL*2}
-                    fill={rooms[room].materials.floor?.color ?? def.defaultFloorColor}
-                    opacity={0.93}
-                    style={{ pointerEvents: "none" }}
-                  />
+                  {isPolygon ? (
+                    <polygon
+                      points={polyPts}
+                      fill={rooms[room].materials.floor?.color ?? def.defaultFloorColor}
+                      opacity={0.93}
+                      style={{ pointerEvents: "none" }}
+                    />
+                  ) : (
+                    <rect
+                      x={x + WALL} y={y + WALL}
+                      width={w - WALL*2} height={d - WALL*2}
+                      fill={rooms[room].materials.floor?.color ?? def.defaultFloorColor}
+                      opacity={0.93}
+                      style={{ pointerEvents: "none" }}
+                    />
+                  )}
                   {/* Window indicators */}
                   {(roomWindows[room] ?? []).map(win => {
                     const s2 = w / (roomDimensions[room].width);

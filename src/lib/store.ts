@@ -306,6 +306,7 @@ interface DesignerStore {
   updateRoomLayout: (room: RoomType, x: number, y: number) => void;
   updateRoomDimension: (room: RoomType, width: number, depth: number) => void;
   setRoomShape: (room: RoomType, preset: import("./roomGeometry").ShapePreset) => void;
+  updateRoomShapePoint: (room: RoomType, idx: number, x: number, z: number) => void;
   toggleRoom: (room: RoomType) => void;
   addRoom: (room: RoomType) => void;
   removeRoom: (room: RoomType) => void;
@@ -961,7 +962,7 @@ export const useDesignerStore = create<DesignerStore>()(
           // If a preset shape is set, rebuild it for the new dims so the
           // polygon scales with the bounding box.
           const existing = nextShapes[room];
-          if (existing && existing.preset !== "rect") {
+          if (existing && existing.preset !== "rect" && existing.preset !== "custom") {
             // Lazy import to avoid circular
             // eslint-disable-next-line @typescript-eslint/no-require-imports
             const { buildShape } = require("./roomGeometry") as typeof import("./roomGeometry");
@@ -982,10 +983,24 @@ export const useDesignerStore = create<DesignerStore>()(
           const nextShapes = { ...(fp.roomShapes ?? {}) };
           if (preset === "rect") {
             delete nextShapes[room];                       // clear override
+          } else if (preset === "custom") {
+            // Not called with "custom" from the preset picker — handled via
+            // updateRoomShapePoint instead. Ignore defensively.
           } else {
             nextShapes[room] = buildShape(preset, dims.width, dims.depth);
           }
           return { roomShapes: nextShapes };
+        });
+      },
+
+      updateRoomShapePoint: (room: RoomType, idx: number, x: number, z: number) => {
+        updateFloor(get, set, fp => {
+          const cur = fp.roomShapes?.[room];
+          if (!cur) return {};
+          const nextPts = cur.points.map((p, i) => (i === idx ? [x, z] : p)) as Array<[number, number]>;
+          return {
+            roomShapes: { ...fp.roomShapes, [room]: { preset: "custom", points: nextPts } },
+          };
         });
       },
 

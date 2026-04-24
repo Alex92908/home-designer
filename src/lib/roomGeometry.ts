@@ -12,7 +12,7 @@
  * already assumes today.
  */
 
-export type ShapePreset = "rect" | "l-shape" | "convex";
+export type ShapePreset = "rect" | "l-shape" | "convex" | "custom";
 
 export interface RoomShape {
   preset: ShapePreset;
