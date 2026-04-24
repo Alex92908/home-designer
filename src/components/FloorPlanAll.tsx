@@ -551,6 +551,11 @@ export default function FloorPlanAll() {
 
   const svgRef  = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  // Room-tap tracker: first tap selects (active highlight), second tap
+  // within DOUBLE_MS actually enters the room in 2D view. Prevents accidental
+  // mode switches while moving / resizing rooms in the plan.
+  const lastRoomTapRef = useRef<{ room: RoomType; t: number } | null>(null);
+  const DOUBLE_MS = 400;
 
   // Compute viewBox from enabled rooms on current floor + optional blueprint
   const visibleRooms = ALL_ROOMS.filter(r => enabledRooms.includes(r));
@@ -595,8 +600,17 @@ export default function FloorPlanAll() {
   const handlePointerUp = () => {
     const ds = dragRef.current;
     if (ds?.type === "move" && !ds.hasMoved) {
-      setActiveRoom(ds.room);
-      setViewMode("2d");
+      // 第一次点：只设激活房间；第二次在 400ms 内点同一间房才进入 2D
+      const now = Date.now();
+      const last = lastRoomTapRef.current;
+      if (last && last.room === ds.room && now - last.t < DOUBLE_MS) {
+        setActiveRoom(ds.room);
+        setViewMode("2d");
+        lastRoomTapRef.current = null;
+      } else {
+        setActiveRoom(ds.room);
+        lastRoomTapRef.current = { room: ds.room, t: now };
+      }
     }
     dragRef.current = null;
   };
