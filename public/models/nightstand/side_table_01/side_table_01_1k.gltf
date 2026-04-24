@@ -1,90 +1,16 @@
 {
   "asset": {
-    "generator": "Khronos glTF Blender I/O v1.6.8",
+    "generator": "glTF-Transform v4.3.0",
     "version": "2.0"
   },
-  "scene": 0,
-  "scenes": [
-    {
-      "name": "Scene",
-      "nodes": [
-        0
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "mesh": 0,
-      "name": "side_table_01"
-    }
-  ],
-  "materials": [
-    {
-      "doubleSided": true,
-      "name": "side_table_01",
-      "normalTexture": {
-        "index": 0
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 1
-        },
-        "metallicRoughnessTexture": {
-          "index": 2
-        }
-      }
-    }
-  ],
-  "meshes": [
-    {
-      "name": "Cube.011",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 0,
-            "NORMAL": 1,
-            "TEXCOORD_0": 2
-          },
-          "indices": 3,
-          "material": 0
-        }
-      ]
-    }
-  ],
-  "textures": [
-    {
-      "sampler": 0,
-      "source": 0
-    },
-    {
-      "sampler": 0,
-      "source": 1
-    },
-    {
-      "sampler": 0,
-      "source": 2
-    }
-  ],
-  "images": [
-    {
-      "mimeType": "image/jpeg",
-      "name": "side_table_01_gl_normal",
-      "uri": "textures/side_table_01_nor_gl_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "side_table_01_BaseColor.png",
-      "uri": "textures/side_table_01_diff_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "side_table_01_metallic-side_table_01_roughness",
-      "uri": "textures/side_table_01_arm_1k.jpg"
-    }
-  ],
   "accessors": [
     {
-      "bufferView": 0,
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 8268
+    },
+    {
+      "type": "VEC3",
       "componentType": 5126,
       "count": 3164,
       "max": [
@@ -96,60 +22,134 @@
         -0.27500003576278687,
         -0.0023564721923321486,
         -0.22500000894069672
-      ],
-      "type": "VEC3"
+      ]
     },
     {
-      "bufferView": 1,
+      "type": "VEC3",
       "componentType": 5126,
-      "count": 3164,
-      "type": "VEC3"
+      "count": 3164
     },
     {
-      "bufferView": 2,
+      "type": "VEC2",
       "componentType": 5126,
-      "count": 3164,
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 3,
-      "componentType": 5123,
-      "count": 8268,
-      "type": "SCALAR"
+      "count": 3164
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 37968,
-      "byteOffset": 0
-    },
-    {
-      "buffer": 0,
-      "byteLength": 37968,
-      "byteOffset": 37968
-    },
-    {
-      "buffer": 0,
-      "byteLength": 25312,
-      "byteOffset": 75936
-    },
-    {
-      "buffer": 0,
-      "byteLength": 16536,
-      "byteOffset": 101248
+      "byteOffset": 0,
+      "byteLength": 13201
     }
   ],
   "samplers": [
     {
       "magFilter": 9729,
-      "minFilter": 9987
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "textures": [
+    {
+      "source": 1,
+      "sampler": 0
+    },
+    {
+      "source": 0,
+      "sampler": 0
+    },
+    {
+      "source": 2,
+      "sampler": 0
+    }
+  ],
+  "images": [
+    {
+      "name": "side_table_01_gl_normal",
+      "mimeType": "image/jpeg",
+      "uri": "textures/side_table_01_nor_gl_1k.jpg"
+    },
+    {
+      "name": "side_table_01_BaseColor.png",
+      "mimeType": "image/jpeg",
+      "uri": "textures/side_table_01_diff_1k.jpg"
+    },
+    {
+      "name": "side_table_01_metallic-side_table_01_roughness",
+      "mimeType": "image/jpeg",
+      "uri": "textures/side_table_01_arm_1k.jpg"
     }
   ],
   "buffers": [
     {
-      "byteLength": 117784,
-      "uri": "side_table_01.bin"
+      "uri": "side_table_01.bin",
+      "byteLength": 13201
     }
+  ],
+  "materials": [
+    {
+      "name": "side_table_01",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      },
+      "normalTexture": {
+        "index": 1
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Cube.011",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1,
+            "NORMAL": 2,
+            "TEXCOORD_0": 3
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 0,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "side_table_01",
+      "mesh": 0
+    }
+  ],
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "scene": 0,
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
   ]
 }

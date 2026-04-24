@@ -1,136 +1,18 @@
 {
   "asset": {
-    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "generator": "glTF-Transform v4.3.0",
     "version": "2.0"
   },
-  "scene": 0,
-  "scenes": [
-    {
-      "name": "Scene",
-      "nodes": [
-        0
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "mesh": 0,
-      "name": "sofa_03"
-    }
-  ],
-  "materials": [
-    {
-      "doubleSided": true,
-      "name": "sofa_03",
-      "normalTexture": {
-        "index": 0
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 1
-        },
-        "metallicFactor": 0,
-        "metallicRoughnessTexture": {
-          "index": 2
-        }
-      }
-    },
-    {
-      "alphaMode": "BLEND",
-      "doubleSided": true,
-      "name": "sofa_03_fringe",
-      "normalTexture": {
-        "index": 3
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 4
-        },
-        "metallicFactor": 0,
-        "metallicRoughnessTexture": {
-          "index": 5
-        }
-      }
-    }
-  ],
-  "meshes": [
-    {
-      "name": "Mesh.009",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 0,
-            "NORMAL": 1,
-            "TEXCOORD_0": 2
-          },
-          "indices": 3,
-          "material": 0
-        },
-        {
-          "attributes": {
-            "POSITION": 4,
-            "NORMAL": 5,
-            "TEXCOORD_0": 6
-          },
-          "indices": 7,
-          "material": 1
-        }
-      ]
-    }
-  ],
-  "textures": [
-    {
-      "sampler": 0,
-      "source": 0
-    },
-    {
-      "sampler": 0,
-      "source": 1
-    },
-    {
-      "sampler": 0,
-      "source": 2
-    },
-    {
-      "sampler": 0,
-      "source": 0
-    },
-    {
-      "sampler": 0,
-      "source": 3
-    },
-    {
-      "sampler": 0,
-      "source": 2
-    }
-  ],
-  "images": [
-    {
-      "mimeType": "image/jpeg",
-      "name": "sofa_03_nor_gl",
-      "uri": "textures/sofa_03_nor_gl_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "sofa_03_diff.png",
-      "uri": "textures/sofa_03_diff_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "sofa_03_rough.png",
-      "uri": "textures/sofa_03_rough_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "sofa_03_diff.png-sofa_03_opacity",
-      "uri": "textures/sofa_03_diff_1k.jpg"
-    }
-  ],
   "accessors": [
     {
-      "bufferView": 0,
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 20982
+    },
+    {
+      "type": "VEC3",
       "componentType": 5126,
-      "count": 4507,
+      "count": 4512,
       "max": [
         1.365588665008545,
         1.1188924312591553,
@@ -140,29 +22,25 @@
         -1.365588665008545,
         0.0006283945986069739,
         -0.46388354897499084
-      ],
-      "type": "VEC3"
+      ]
     },
     {
-      "bufferView": 1,
+      "type": "VEC3",
       "componentType": 5126,
-      "count": 4507,
-      "type": "VEC3"
+      "count": 4512
     },
     {
-      "bufferView": 2,
+      "type": "VEC2",
       "componentType": 5126,
-      "count": 4507,
-      "type": "VEC2"
+      "count": 4512
     },
     {
-      "bufferView": 3,
+      "type": "SCALAR",
       "componentType": 5123,
-      "count": 20982,
-      "type": "SCALAR"
+      "count": 3030
     },
     {
-      "bufferView": 4,
+      "type": "VEC3",
       "componentType": 5126,
       "count": 1148,
       "max": [
@@ -174,80 +52,186 @@
         -1.1109505891799927,
         0.4996996223926544,
         -0.3475067615509033
-      ],
-      "type": "VEC3"
+      ]
     },
     {
-      "bufferView": 5,
+      "type": "VEC3",
       "componentType": 5126,
-      "count": 1148,
-      "type": "VEC3"
+      "count": 1148
     },
     {
-      "bufferView": 6,
+      "type": "VEC2",
       "componentType": 5126,
-      "count": 1148,
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 7,
-      "componentType": 5123,
-      "count": 3030,
-      "type": "SCALAR"
+      "count": 1148
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 54084,
-      "byteOffset": 0
+      "byteOffset": 0,
+      "byteLength": 30755
     },
     {
       "buffer": 0,
-      "byteLength": 54084,
-      "byteOffset": 54084
-    },
-    {
-      "buffer": 0,
-      "byteLength": 36056,
-      "byteOffset": 108168
-    },
-    {
-      "buffer": 0,
-      "byteLength": 41964,
-      "byteOffset": 144224
-    },
-    {
-      "buffer": 0,
-      "byteLength": 13776,
-      "byteOffset": 186188
-    },
-    {
-      "buffer": 0,
-      "byteLength": 13776,
-      "byteOffset": 199964
-    },
-    {
-      "buffer": 0,
-      "byteLength": 9184,
-      "byteOffset": 213740
-    },
-    {
-      "buffer": 0,
-      "byteLength": 6060,
-      "byteOffset": 222924
+      "byteOffset": 30755,
+      "byteLength": 10005
     }
   ],
   "samplers": [
     {
       "magFilter": 9729,
-      "minFilter": 9987
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "textures": [
+    {
+      "source": 1,
+      "sampler": 0
+    },
+    {
+      "source": 0,
+      "sampler": 0
+    },
+    {
+      "source": 2,
+      "sampler": 0
+    },
+    {
+      "source": 3,
+      "sampler": 0
+    }
+  ],
+  "images": [
+    {
+      "name": "sofa_03_nor_gl",
+      "mimeType": "image/jpeg",
+      "uri": "textures/sofa_03_nor_gl_1k.jpg"
+    },
+    {
+      "name": "sofa_03_diff.png",
+      "mimeType": "image/jpeg",
+      "uri": "textures/sofa_03_diff_1k.jpg"
+    },
+    {
+      "name": "sofa_03_rough.png",
+      "mimeType": "image/jpeg",
+      "uri": "textures/sofa_03_rough_1k.jpg"
+    },
+    {
+      "name": "sofa_03_diff.png-sofa_03_opacity",
+      "mimeType": "image/jpeg",
+      "uri": "textures/sofa_03_diff_1k.jpg"
     }
   ],
   "buffers": [
     {
-      "byteLength": 228984,
-      "uri": "sofa_03.bin"
+      "uri": "sofa_03.bin",
+      "byteLength": 40760
     }
+  ],
+  "materials": [
+    {
+      "name": "sofa_03",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      },
+      "normalTexture": {
+        "index": 1
+      }
+    },
+    {
+      "name": "sofa_03_fringe",
+      "alphaMode": "BLEND",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 3
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      },
+      "normalTexture": {
+        "index": 1
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Mesh.009",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1,
+            "NORMAL": 2,
+            "TEXCOORD_0": 3
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 0,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        },
+        {
+          "attributes": {
+            "POSITION": 5,
+            "NORMAL": 6,
+            "TEXCOORD_0": 7
+          },
+          "mode": 4,
+          "material": 1,
+          "indices": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 1,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "sofa_03",
+      "mesh": 0
+    }
+  ],
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "scene": 0,
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
   ]
 }

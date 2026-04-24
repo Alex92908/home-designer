@@ -1,119 +1,16 @@
 {
   "asset": {
-    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "generator": "glTF-Transform v4.3.0",
     "version": "2.0"
   },
-  "scene": 0,
-  "scenes": [
-    {
-      "name": "Scene",
-      "nodes": [
-        0,
-        1
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "mesh": 0,
-      "name": "sofa_02_Base",
-      "translation": [
-        0.00026735191931948066,
-        0.00020578503608703613,
-        0.03126468509435654
-      ]
-    },
-    {
-      "mesh": 1,
-      "name": "sofa_02_Seat",
-      "translation": [
-        0.00026735191931948066,
-        0.00020578503608703613,
-        0.03126468509435654
-      ]
-    }
-  ],
-  "materials": [
-    {
-      "doubleSided": true,
-      "name": "sofa_02",
-      "normalTexture": {
-        "index": 0
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 1
-        },
-        "metallicRoughnessTexture": {
-          "index": 2
-        }
-      }
-    }
-  ],
-  "meshes": [
-    {
-      "name": "Plane.001",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 0,
-            "NORMAL": 1,
-            "TEXCOORD_0": 2
-          },
-          "indices": 3,
-          "material": 0
-        }
-      ]
-    },
-    {
-      "name": "Mesh.007",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 4,
-            "NORMAL": 5,
-            "TEXCOORD_0": 6
-          },
-          "indices": 7,
-          "material": 0
-        }
-      ]
-    }
-  ],
-  "textures": [
-    {
-      "sampler": 0,
-      "source": 0
-    },
-    {
-      "sampler": 0,
-      "source": 1
-    },
-    {
-      "sampler": 0,
-      "source": 2
-    }
-  ],
-  "images": [
-    {
-      "mimeType": "image/jpeg",
-      "name": "sofa_02_nor_gl",
-      "uri": "textures/sofa_02_nor_gl_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "sofa_02_diff",
-      "uri": "textures/sofa_02_diff_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "sofa_02_metallic-sofa_02_roughness",
-      "uri": "textures/sofa_02_arm_1k.jpg"
-    }
-  ],
   "accessors": [
     {
-      "bufferView": 0,
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 7032
+    },
+    {
+      "type": "VEC3",
       "componentType": 5126,
       "count": 1616,
       "max": [
@@ -125,29 +22,25 @@
         -0.9035837054252625,
         -5.960464477539063e-8,
         -0.5089631676673889
-      ],
-      "type": "VEC3"
+      ]
     },
     {
-      "bufferView": 1,
+      "type": "VEC3",
       "componentType": 5126,
-      "count": 1616,
-      "type": "VEC3"
+      "count": 1616
     },
     {
-      "bufferView": 2,
+      "type": "VEC2",
       "componentType": 5126,
-      "count": 1616,
-      "type": "VEC2"
+      "count": 1616
     },
     {
-      "bufferView": 3,
+      "type": "SCALAR",
       "componentType": 5123,
-      "count": 7032,
-      "type": "SCALAR"
+      "count": 1152
     },
     {
-      "bufferView": 4,
+      "type": "VEC3",
       "componentType": 5126,
       "count": 212,
       "max": [
@@ -159,80 +52,179 @@
         -0.7062357068061829,
         0.24655179679393768,
         -0.2188045084476471
-      ],
-      "type": "VEC3"
+      ]
     },
     {
-      "bufferView": 5,
+      "type": "VEC3",
       "componentType": 5126,
-      "count": 212,
-      "type": "VEC3"
+      "count": 212
     },
     {
-      "bufferView": 6,
+      "type": "VEC2",
       "componentType": 5126,
-      "count": 212,
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 7,
-      "componentType": 5123,
-      "count": 1152,
-      "type": "SCALAR"
+      "count": 212
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 19392,
-      "byteOffset": 0
+      "byteOffset": 0,
+      "byteLength": 12650
     },
     {
       "buffer": 0,
-      "byteLength": 19392,
-      "byteOffset": 19392
-    },
-    {
-      "buffer": 0,
-      "byteLength": 12928,
-      "byteOffset": 38784
-    },
-    {
-      "buffer": 0,
-      "byteLength": 14064,
-      "byteOffset": 51712
-    },
-    {
-      "buffer": 0,
-      "byteLength": 2544,
-      "byteOffset": 65776
-    },
-    {
-      "buffer": 0,
-      "byteLength": 2544,
-      "byteOffset": 68320
-    },
-    {
-      "buffer": 0,
-      "byteLength": 1696,
-      "byteOffset": 70864
-    },
-    {
-      "buffer": 0,
-      "byteLength": 2304,
-      "byteOffset": 72560
+      "byteOffset": 12650,
+      "byteLength": 2110
     }
   ],
   "samplers": [
     {
       "magFilter": 9729,
-      "minFilter": 9987
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "textures": [
+    {
+      "source": 1,
+      "sampler": 0
+    },
+    {
+      "source": 0,
+      "sampler": 0
+    },
+    {
+      "source": 2,
+      "sampler": 0
+    }
+  ],
+  "images": [
+    {
+      "name": "sofa_02_nor_gl",
+      "mimeType": "image/jpeg",
+      "uri": "textures/sofa_02_nor_gl_1k.jpg"
+    },
+    {
+      "name": "sofa_02_diff",
+      "mimeType": "image/jpeg",
+      "uri": "textures/sofa_02_diff_1k.jpg"
+    },
+    {
+      "name": "sofa_02_metallic-sofa_02_roughness",
+      "mimeType": "image/jpeg",
+      "uri": "textures/sofa_02_arm_1k.jpg"
     }
   ],
   "buffers": [
     {
-      "byteLength": 74864,
-      "uri": "sofa_02.bin"
+      "uri": "sofa_02.bin",
+      "byteLength": 14760
     }
+  ],
+  "materials": [
+    {
+      "name": "sofa_02",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      },
+      "normalTexture": {
+        "index": 1
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Plane.001",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1,
+            "NORMAL": 2,
+            "TEXCOORD_0": 3
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 0,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mesh.007",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 5,
+            "NORMAL": 6,
+            "TEXCOORD_0": 7
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 1,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "sofa_02_Base",
+      "translation": [
+        0.00026735191931948066,
+        0.00020578503608703613,
+        0.03126468509435654
+      ],
+      "mesh": 0
+    },
+    {
+      "name": "sofa_02_Seat",
+      "translation": [
+        0.00026735191931948066,
+        0.00020578503608703613,
+        0.03126468509435654
+      ],
+      "mesh": 1
+    }
+  ],
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0,
+        1
+      ]
+    }
+  ],
+  "scene": 0,
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
   ]
 }
