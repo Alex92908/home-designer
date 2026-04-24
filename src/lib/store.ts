@@ -1600,7 +1600,18 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
-        const { enabledRooms, roomDimensions } = fp;
+        // 彻底清空后 enabledRooms 为空，风格模板本来没东西可套。
+        // 这里自举：把模板定义过的所有房间启用（使用默认尺寸 / 布局），
+        // 这样风格模板也能在"白纸"状态下一键重建整屋。
+        const templateRoomIds = Object.keys(template.rooms) as RoomType[];
+        let enabledRooms = fp.enabledRooms;
+        let roomDimensions = fp.roomDimensions;
+        let roomLayout = fp.roomLayout;
+        if (enabledRooms.length === 0 && templateRoomIds.length > 0) {
+          enabledRooms = templateRoomIds;
+          roomDimensions = { ...DEFAULT_ROOM_DIMENSIONS };
+          roomLayout = { ...DEFAULT_ROOM_LAYOUT };
+        }
         const updatedRooms = { ...fp.rooms };
         // Template can now also drive windows and door style per room —
         // these live OUTSIDE RoomState (on the floor plan), so we collect
@@ -1642,6 +1653,9 @@ export const useDesignerStore = create<DesignerStore>()(
         const floorPlans = [...s.floorPlans];
         floorPlans[activeFloor] = {
           ...fp,
+          enabledRooms,          // 自举启用的房间会写回来
+          roomLayout,
+          roomDimensions,
           rooms: updatedRooms,
           roomWindows: { ...fp.roomWindows, ...windowsPatch },
           roomDoorStyle: { ...(fp.roomDoorStyle ?? {}), ...doorStylePatch },
