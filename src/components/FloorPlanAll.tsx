@@ -344,6 +344,28 @@ export default function FloorPlanAll() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
 
+  // In-app replacement for window.prompt/confirm/alert (blocked in some
+  // Next.js runtime contexts). `dialog` holds the currently open dialog
+  // plus its resolve callback; we render it inline at the bottom of the
+  // component and resolve the promise on confirm/cancel.
+  type DialogState =
+    | { type: "prompt";  title: string; defaultValue: string; resolve: (v: string | null) => void }
+    | { type: "confirm"; title: string; resolve: (v: boolean) => void }
+    | { type: "alert";   title: string; resolve: () => void }
+    | null;
+  const [dialog, setDialog] = useState<DialogState>(null);
+  const [dialogInput, setDialogInput] = useState("");
+
+  const promptDialog = (title: string, defaultValue = ""): Promise<string | null> =>
+    new Promise(resolve => {
+      setDialogInput(defaultValue);
+      setDialog({ type: "prompt", title, defaultValue, resolve });
+    });
+  const confirmDialog = (title: string): Promise<boolean> =>
+    new Promise(resolve => setDialog({ type: "confirm", title, resolve }));
+  const alertDialog = (title: string): Promise<void> =>
+    new Promise(resolve => setDialog({ type: "alert", title, resolve }));
+
   /** 中文房间名 → RoomType 偏好链。分析器同名的第二间房会顺着链走
    *  （次卧 → bedroom → bedroom2 → bedroom3；卫生间 → bathroom → bathroom2）。 */
   const NAME_TO_TYPE_CHAIN: Record<string, RoomType[]> = {
@@ -446,7 +468,7 @@ export default function FloorPlanAll() {
 
     const freeSlot = ALL_POSSIBLE_ROOMS.find(r => !enabledRooms.includes(r));
     if (!freeSlot) {
-      window.alert("没有可用房间槽了（室内+阳台+自定义 20+ 个已全部占用）");
+      void alertDialog("没有可用房间槽了（室内+阳台+自定义 20+ 个已全部占用）");
       return;
     }
 
@@ -819,21 +841,20 @@ export default function FloorPlanAll() {
                   const dxx = p.x - rulerPt.x, dyy = p.y - rulerPt.y;
                   const svgDist = Math.hypot(dxx, dyy); // current cm
                   if (svgDist < 1) { setRulerPt(null); return; }
-                  const input = window.prompt("这两点之间的真实距离（米）?", "3.6");
-                  if (input) {
-                    const realM = parseFloat(input);
-                    if (isFinite(realM) && realM > 0) {
-                      const realCm = realM * 100;
-                      const k = realCm / svgDist;
-                      // Update blueprint scale so svg-distance between the
-                      // two clicked points becomes realCm. scale is in cm/px.
-                      if (blueprint.image) {
-                        setBlueprint({ scale: blueprint.scale * k });
+                  promptDialog("这两点之间的真实距离（米）?", "3.6").then(input => {
+                    if (input) {
+                      const realM = parseFloat(input);
+                      if (isFinite(realM) && realM > 0) {
+                        const realCm = realM * 100;
+                        const k = realCm / svgDist;
+                        if (blueprint.image) {
+                          setBlueprint({ scale: blueprint.scale * k });
+                        }
                       }
                     }
-                  }
-                  setRulerPt(null);
-                  setTool("browse");
+                    setRulerPt(null);
+                    setTool("browse");
+                  });
                 }
               } else if (tool === "draw") {
                 const p = getSVGPoint(e, svgRef.current);
@@ -1125,6 +1146,54 @@ export default function FloorPlanAll() {
         </div>}
       </div>
 
+      {/* In-app dialog (prompt/confirm/alert replacement) */}
+      {dialog && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
+          onClick={() => {
+            if (dialog.type === "prompt")  { dialog.resolve(null); setDialog(null); }
+            if (dialog.type === "confirm") { dialog.resolve(false); setDialog(null); }
+            if (dialog.type === "alert")   { dialog.resolve(); setDialog(null); }
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl p-5 w-[92vw] max-w-sm"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="text-sm font-bold text-gray-800 mb-3">{dialog.title}</div>
+            {dialog.type === "prompt" && (
+              <input
+                autoFocus
+                value={dialogInput}
+                onChange={e => setDialogInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") { dialog.resolve(dialogInput); setDialog(null); }
+                  if (e.key === "Escape") { dialog.resolve(null); setDialog(null); }
+                }}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 mb-3"
+              />
+            )}
+            <div className="flex gap-2 justify-end">
+              {(dialog.type === "prompt" || dialog.type === "confirm") && (
+                <button onClick={() => {
+                  if (dialog.type === "prompt")  dialog.resolve(null);
+                  if (dialog.type === "confirm") dialog.resolve(false);
+                  setDialog(null);
+                }}
+                  className="px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-100 rounded-lg"
+                >取消</button>
+              )}
+              <button onClick={() => {
+                if (dialog.type === "prompt")  dialog.resolve(dialogInput);
+                if (dialog.type === "confirm") dialog.resolve(true);
+                if (dialog.type === "alert")   dialog.resolve();
+                setDialog(null);
+              }}
+                className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              >确定</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Layout picker modal */}
       {layoutPickerOpen && (
         <div
@@ -1154,10 +1223,12 @@ export default function FloorPlanAll() {
                 return (
                   <button key={layout.id}
                     onClick={() => {
-                      if (!window.confirm(`用"${layout.name}"替换当前楼层？`)) return;
-                      pushLayoutHistory();
-                      applyFloorplanLayout(layout.id);
-                      setLayoutPickerOpen(false);
+                      confirmDialog(`用"${layout.name}"替换当前楼层？`).then(ok => {
+                        if (!ok) return;
+                        pushLayoutHistory();
+                        applyFloorplanLayout(layout.id);
+                        setLayoutPickerOpen(false);
+                      });
                     }}
                     className="flex flex-col gap-2 p-3 rounded-xl border border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left"
                   >
