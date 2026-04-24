@@ -78,7 +78,7 @@ function RoomPanel() {
   const addRoom             = useDesignerStore(s => s.addRoom);
   const removeRoom          = useDesignerStore(s => s.removeRoom);
   const updateRoomDimension = useDesignerStore(s => s.updateRoomDimension);
-  const roomShapes          = useDesignerStore(s => s.floorPlans[s.activeFloor].roomShapes ?? {});
+  const roomShapes          = useDesignerStore(s => s.floorPlans[s.activeFloor].roomShapes);
   const setRoomShape        = useDesignerStore(s => s.setRoomShape);
   const resetLayout         = useDesignerStore(s => s.resetLayout);
   const pushLayoutHistory   = useDesignerStore(s => s.pushLayoutHistory);
@@ -232,7 +232,7 @@ function RoomPanel() {
                           { preset: "l-shape" as const, label: "L型",  icon: "⌐" },
                           { preset: "convex"  as const, label: "凸字", icon: "⎍" },
                         ]).map(({ preset, label, icon }) => {
-                          const active = (roomShapes[room]?.preset ?? "rect") === preset;
+                          const active = (roomShapes?.[room]?.preset ?? "rect") === preset;
                           return (
                             <button key={preset}
                               onClick={() => { pushLayoutHistory(); setRoomShape(room, preset); }}
