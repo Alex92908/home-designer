@@ -1841,15 +1841,145 @@ function Ground({ W, D }: { W: number; D: number }) {
 function HouseBody({ W, D, settings }: { W: number; D: number; settings: ExteriorSettings }) {
   const { floors, roofStyle, roofColor, accentColor } = settings;
   const totalH = floors * FLOOR_H;
+  // Check: does any indoor room have a non-rect polygon shape? If so, we
+  // bypass the bbox-based FloorShell and render per-room polygon walls
+  // so L型/凸字型 notches show up correctly on the exterior.
+  const activeFloor    = useDesignerStore(s => s.activeFloor);
+  const enabledRooms   = useDesignerStore(s => s.floorPlans[activeFloor].enabledRooms);
+  const roomShapes     = useDesignerStore(s => s.floorPlans[activeFloor].roomShapes);
+  const hasPolygonRoom = enabledRooms.some(r =>
+    !ROOM_DEFS[r].isOutdoor && roomShapes?.[r] && roomShapes[r]!.preset !== "rect"
+  );
   return (
     <group>
       <Foundation W={W} D={D} color={accentColor} />
-      {Array.from({ length: floors }).map((_, i) => (
-        <FloorShell key={i} floorIndex={i} W={W} D={D} settings={settings} totalFloors={floors} />
-      ))}
+      {hasPolygonRoom ? (
+        <PolygonHouseShell floors={floors} settings={settings} />
+      ) : (
+        Array.from({ length: floors }).map((_, i) => (
+          <FloorShell key={i} floorIndex={i} W={W} D={D} settings={settings} totalFloors={floors} />
+        ))
+      )}
       <group position={[0, totalH, 0]}>
         <RoofSwitch W={W} D={D} roofStyle={roofStyle} roofColor={roofColor} />
       </group>
+    </group>
+  );
+}
+
+/** Renders the house exterior by iterating every indoor room and drawing
+ *  walls along that room's polygon edges (rect rooms → 4 walls; L/convex
+ *  → N walls along the polygon). Floors get a polygon floor slab each.
+ *  Inter-room shared walls end up coinciding geometrically, which is
+ *  visually fine (z-fighting mitigated by a tiny +0.002 m wall thickness
+ *  offset between neighbors; box thickness WT handles most of it anyway).
+ *
+ *  Coords: uses the same "house centered on world origin" convention as
+ *  FloorShell — computed from roomLayout + roomDimensions bounds. */
+function PolygonHouseShell({ floors, settings }: { floors: number; settings: ExteriorSettings }) {
+  const { wallColor } = settings;
+  const activeFloor    = useDesignerStore(s => s.activeFloor);
+  const enabledRooms   = useDesignerStore(s => s.floorPlans[activeFloor].enabledRooms);
+  const roomLayout     = useDesignerStore(s => s.floorPlans[activeFloor].roomLayout);
+  const roomDimensions = useDesignerStore(s => s.floorPlans[activeFloor].roomDimensions);
+  const roomShapes     = useDesignerStore(s => s.floorPlans[activeFloor].roomShapes);
+
+  const { minX, minZ, W: houseW, D: houseD } = useMemo(() => {
+    const indoor = enabledRooms.filter(r => !ROOM_DEFS[r].isOutdoor);
+    if (!indoor.length) return { minX: 0, minZ: 0, W: 8, D: 6 };
+    const xs = indoor.flatMap(r => [roomLayout[r].x, roomLayout[r].x + roomDimensions[r].width]);
+    const zs = indoor.flatMap(r => [roomLayout[r].y, roomLayout[r].y + roomDimensions[r].depth]);
+    return {
+      minX: Math.min(...xs), minZ: Math.min(...zs),
+      W: (Math.max(...xs) - Math.min(...xs)) / 100,
+      D: (Math.max(...zs) - Math.min(...zs)) / 100,
+    };
+  }, [enabledRooms, roomLayout, roomDimensions]);
+
+  // Per-room polygon points (use rect fallback when no shape is set)
+  const roomPolys = useMemo(() => {
+    const result: Array<{
+      room: import("@/lib/types").RoomType;
+      // world-space edge segments (cm → meters, centered)
+      edges: Array<{ x1: number; z1: number; x2: number; z2: number }>;
+      // polygon in world meters for the floor slab
+      shapePoints: Array<[number, number]>;
+    }> = [];
+    for (const room of enabledRooms) {
+      if (ROOM_DEFS[room].isOutdoor) continue;
+      const dims = roomDimensions[room];
+      const lay  = roomLayout[room];
+      const shape = roomShapes?.[room];
+      // cm polygon (room-local, origin = back-left)
+      const cmPts: Array<[number, number]> =
+        shape && shape.preset !== "rect"
+          ? shape.points
+          : [[0, 0], [dims.width, 0], [dims.width, dims.depth], [0, dims.depth]];
+      // Convert to world meters (house centered on origin)
+      const toWorld = ([lx, lz]: [number, number]): [number, number] => [
+        (lay.x + lx - minX) / 100 - houseW / 2,
+        (lay.y + lz - minZ) / 100 - houseD / 2,
+      ];
+      const worldPts = cmPts.map(toWorld);
+      const edges: Array<{ x1: number; z1: number; x2: number; z2: number }> = [];
+      for (let i = 0; i < worldPts.length; i++) {
+        const [x1, z1] = worldPts[i];
+        const [x2, z2] = worldPts[(i + 1) % worldPts.length];
+        edges.push({ x1, z1, x2, z2 });
+      }
+      result.push({ room, edges, shapePoints: worldPts });
+    }
+    return result;
+  }, [enabledRooms, roomLayout, roomDimensions, roomShapes, minX, minZ, houseW, houseD]);
+
+  return (
+    <group>
+      {roomPolys.map(({ room, edges, shapePoints }) => (
+        <group key={room}>
+          {/* Floor slabs — one per storey */}
+          {Array.from({ length: floors }).map((_, f) => {
+            const shp = new THREE.Shape();
+            shapePoints.forEach(([x, z], i) => {
+              i === 0 ? shp.moveTo(x, z) : shp.lineTo(x, z);
+            });
+            shp.closePath();
+            return (
+              <mesh
+                key={`floor-${f}`}
+                rotation={[-Math.PI / 2, 0, 0]}
+                position={[0, f * FLOOR_H + 0.02, 0]}
+                receiveShadow
+              >
+                <shapeGeometry args={[shp]} />
+                <meshStandardMaterial color="#D0CABB" roughness={0.95} />
+              </mesh>
+            );
+          })}
+          {/* Walls along each polygon edge, per floor */}
+          {Array.from({ length: floors }).map((_, f) => (
+            <group key={`walls-${f}`} position={[0, f * FLOOR_H, 0]}>
+              {edges.map(({ x1, z1, x2, z2 }, i) => {
+                const dx = x2 - x1, dz = z2 - z1;
+                const lenM = Math.hypot(dx, dz);
+                if (lenM < 0.01) return null;
+                const cx = (x1 + x2) / 2, cz = (z1 + z2) / 2;
+                const angle = Math.atan2(-dz, dx);
+                return (
+                  <mesh
+                    key={i}
+                    position={[cx, FLOOR_H / 2, cz]}
+                    rotation={[0, angle, 0]}
+                    castShadow receiveShadow
+                  >
+                    <boxGeometry args={[lenM, FLOOR_H, WT]} />
+                    <meshStandardMaterial color={wallColor} roughness={0.85} />
+                  </mesh>
+                );
+              })}
+            </group>
+          ))}
+        </group>
+      ))}
     </group>
   );
 }
