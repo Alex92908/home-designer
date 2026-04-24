@@ -74,7 +74,7 @@ export default function TopBar() {
         className="flex items-center p-1 rounded-xl gap-0.5 shrink-0"
         style={{ background: "var(--ds-bg)", border: "1px solid var(--ds-border)" }}
       >
-        {(["3d", "2d", "all", "exterior", "global3d"] as const).map((mode) => (
+        {(["3d", "2d", "all", "global3d", "exterior"] as const).map((mode) => (
           <button
             key={mode}
             onClick={() => setViewMode(mode)}

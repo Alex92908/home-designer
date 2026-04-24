@@ -19,7 +19,7 @@ import { OrbitControls, Environment, Html } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
-import { PlacedItemMesh } from "./RoomCanvas";
+import { PlacedItemMesh, LightFixture } from "./RoomCanvas";
 
 const CM = 0.01; // cm → m
 
@@ -84,12 +84,24 @@ function RoomGroup({
 
       {/* Furniture — reuse RoomCanvas PlacedItemMesh so you get real GLTF
           models (sofa, bed, …) + procedural meshes. PlacedItemMesh
-          centers items on the room's origin using roomW/roomD (meters). */}
+          centers items on the room's origin using roomW/roomD (meters).
+          `room={room}` ensures per-room light dimmer reads the right id. */}
       <Suspense fallback={null}>
         {state.placedItems.map(p => (
-          <PlacedItemMesh key={p.instanceId} placed={p} def={def} roomW={W} roomD={D} />
+          <PlacedItemMesh key={p.instanceId} placed={p} def={def} roomW={W} roomD={D} room={room} />
         ))}
       </Suspense>
+
+      {/* Ceiling light (hung below the truncated wall top so it stays visible).
+          Passing `room` so on/off + brightness track per-room state, not activeRoom. */}
+      <LightFixture
+        H={WALL_H}
+        lightColor={state.materials.light?.color ?? "#FFE8A0"}
+        lightId={state.materials.light?.id ?? ""}
+        lightX={0}
+        lightZ={0}
+        room={room}
+      />
 
       {/* Floating label */}
       <Html position={[0, WALL_H + 0.15, 0]} center distanceFactor={8} style={{ pointerEvents: "none" }}>

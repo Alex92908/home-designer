@@ -1408,16 +1408,20 @@ function ProceduralWoodDoor({
 }
 
 // ─── Light fixture ─────────────────────────────────────────
-function LightFixture({ H, lightColor, lightId, lightX = 0, lightZ = 0 }: {
+export function LightFixture({ H, lightColor, lightId, lightX = 0, lightZ = 0, room }: {
   H: number; lightColor: string; lightId: string;
   lightX?: number; lightZ?: number;
+  /** When provided (e.g. by GlobalCanvas), light state is read from THIS
+   *  room id rather than the store's activeRoom. */
+  room?: RoomType;
 }) {
   const ref = useRef<THREE.Mesh>(null);
   const activeRoom = useDesignerStore(s => s.activeRoom);
-  const isOn = useDesignerStore(s => s.lightsOnByRoom[activeRoom] !== false);
+  const roomId = room ?? activeRoom;
+  const isOn = useDesignerStore(s => s.lightsOnByRoom[roomId] !== false);
   const toggle = useDesignerStore(s => s.toggleRoomLights);
-  const brightness = useDesignerStore(s => s.lightBrightnessByRoom[activeRoom] ?? 1);
-  const colorOverride = useDesignerStore(s => s.lightColorByRoom[activeRoom]);
+  const brightness = useDesignerStore(s => s.lightBrightnessByRoom[roomId] ?? 1);
+  const colorOverride = useDesignerStore(s => s.lightColorByRoom[roomId]);
   const finalColor = colorOverride ?? lightColor;
   useFrame((_, delta) => {
     if (ref.current && lightId === "light-chandelier") {
@@ -1433,7 +1437,7 @@ function LightFixture({ H, lightColor, lightId, lightX = 0, lightZ = 0 }: {
           light" works. Not visible (opacity 0), doesn't receive shadows. */}
       <mesh
         position={[0, H - 0.35, 0]}
-        onClick={(e) => { e.stopPropagation(); toggle(activeRoom); }}
+        onClick={(e) => { e.stopPropagation(); toggle(roomId); }}
         onPointerOver={(e) => { (e.object as THREE.Mesh).userData.hover = true; }}
       >
         <sphereGeometry args={[0.6, 12, 8]} />
@@ -2349,13 +2353,14 @@ function Rug({ color, w, d }: MeshProps) {
   );
 }
 
-function FloorLamp({ color, w, d, h, instanceId }: MeshProps & { instanceId?: string }) {
+function FloorLamp({ color, w, d, h, instanceId, room }: MeshProps & { instanceId?: string; room?: RoomType }) {
   // Per-instance on/off — clicking the shade toggles this specific lamp.
   // Without instanceId (e.g. in template previews), lamp stays always-on.
   const off = useDesignerStore(s => instanceId ? s.fixtureOffById[instanceId] : false);
   const toggle = useDesignerStore(s => s.toggleFixture);
   const activeRoom = useDesignerStore(s => s.activeRoom);
-  const brightness = useDesignerStore(s => s.lightBrightnessByRoom[activeRoom] ?? 1);
+  const roomId = room ?? activeRoom;
+  const brightness = useDesignerStore(s => s.lightBrightnessByRoom[roomId] ?? 1);
   const mul = off ? 0 : brightness;
   const clickable = (e: any) => {
     if (!instanceId) return;
@@ -2517,7 +2522,7 @@ function GenericBox({ color, w, d, h, category }: MeshProps & { category?: strin
 
 // ─── Placed furniture mesh dispatcher ─────────────────────
 
-function FurnitureMesh({ item, w, d, h, instanceId }: { item: FurnitureItem; w: number; d: number; h: number; instanceId?: string }) {
+function FurnitureMesh({ item, w, d, h, instanceId, room }: { item: FurnitureItem; w: number; d: number; h: number; instanceId?: string; room?: RoomType }) {
   const props: MeshProps = { color: item.color, sc: item.secondaryColor, w, d, h };
   switch (item.category) {
     case "sofa":             return <Sofa {...props} />;
@@ -2541,7 +2546,7 @@ function FurnitureMesh({ item, w, d, h, instanceId }: { item: FurnitureItem; w: 
     case "bookshelf":       return <Bookshelf {...props} />;
     case "office_chair":    return <DiningChair {...props} />;
     case "storage":         return <Storage {...props} />;
-    case "floor_lamp":      return <FloorLamp {...props} instanceId={instanceId} />;
+    case "floor_lamp":      return <FloorLamp {...props} instanceId={instanceId} room={room} />;
     case "plant":           return <Plant {...props} />;
     case "rug":             return <Rug {...props} />;
     case "artwork":         return <Artwork {...props} imageUrl={item.imageUrl} />;
@@ -2790,7 +2795,7 @@ function GltfFurniture({
   );
 }
 
-export function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedItem; def: RoomDef; roomW: number; roomD: number }) {
+export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: PlacedItem; def: RoomDef; roomW: number; roomD: number; room?: RoomType }) {
   const item = getFurnitureById(placed.furnitureId);
   if (!item) return null;
 
@@ -2837,7 +2842,7 @@ export function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedIt
     }
     return (
       <group position={position} rotation={rotation}>
-        <FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} />
+        <FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} room={room} />
       </group>
     );
   }
@@ -2904,7 +2909,7 @@ export function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedIt
     }
     return (
       <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]}>
-        <Suspense fallback={<FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} />}>
+        <Suspense fallback={<FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} room={room} />}>
           <GltfFurnitureWithFallback
             item={item}
             w={fw} d={fd} h={fh}
@@ -2916,7 +2921,7 @@ export function PlacedItemMesh({ placed, def, roomW, roomD }: { placed: PlacedIt
 
   return (
     <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]}>
-      <FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} />
+      <FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} room={room} />
     </group>
   );
 }
