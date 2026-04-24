@@ -25,7 +25,7 @@ export type RoomType =
   | "custom4"    // 自定义4
   | "custom5";   // 自定义5
 
-export type ViewMode = "2d" | "3d" | "all" | "exterior";
+export type ViewMode = "2d" | "3d" | "all" | "exterior" | "global3d";
 
 export type RoofStyle = "flat" | "gable" | "hip" | "mansard" | "chinese";
 export type WallMaterialType = "render" | "brick" | "stone" | "wood" | "concrete";

@@ -2,8 +2,8 @@ export const zh = {
   // ── App / TopBar ─────────────────────────────────────────
   appName: "家居设计师",
   appTagline: "Pro",
-  viewModes: { "3d": "效果图", "2d": "平面图", all: "全局", exterior: "外观" } as Record<string, string>,
-  viewIcons: { "3d": "🎨", "2d": "📐", all: "🗺️", exterior: "🏠" } as Record<string, string>,
+  viewModes: { "3d": "效果图", "2d": "平面图", all: "全局", exterior: "外观", global3d: "全局3D" } as Record<string, string>,
+  viewIcons: { "3d": "🎨", "2d": "📐", all: "🗺️", exterior: "🏠", global3d: "🏘️" } as Record<string, string>,
   hints: {
     "3d": "🖱️ 拖拽旋转 · 滚轮缩放",
     all: "🏠 全局视图 · 左侧面板重命名/复制/粘贴",

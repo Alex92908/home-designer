@@ -4,8 +4,8 @@ export const en: Translations = {
   // ── App / TopBar ─────────────────────────────────────────
   appName: "Home Designer",
   appTagline: "Pro",
-  viewModes: { "3d": "3D View", "2d": "Floor Plan", all: "Overview", exterior: "Exterior" },
-  viewIcons: { "3d": "🎨", "2d": "📐", all: "🗺️", exterior: "🏠" },
+  viewModes: { "3d": "3D View", "2d": "Floor Plan", all: "Overview", exterior: "Exterior", global3d: "Global 3D" },
+  viewIcons: { "3d": "🎨", "2d": "📐", all: "🗺️", exterior: "🏠", global3d: "🏘️" },
   hints: {
     "3d": "🖱️ Drag to rotate · Scroll to zoom",
     all: "🏠 Overview · Rename / copy / paste rooms in left panel",

@@ -1,0 +1,285 @@
+"use client";
+
+/**
+ * GlobalCanvas — "全局 3D 视图"：在同一个 3D 场景中并置所有房间。
+ *
+ * 与 RoomCanvas 的区别：
+ *  - 没有天花板，所以能从上方俯瞰看到每间房的内部。
+ *  - 每间房按 `roomLayout` 在地板平面上拼贴，保留非正方形尺寸。
+ *  - 家具使用简化的彩色 box（color 取自 FurnitureItem.color），
+ *    避免在大场景里加载大量 GLTF 造成卡顿。
+ *  - 鼠标悬停 / 点击：单击某间房 → 切到 3D 单房间视图。
+ *
+ * L 型 / 凸字型房间暂未支持（仍按矩形渲染）——留给下一轮的多边形数据模型。
+ */
+
+import { useMemo, useRef, useState, Suspense } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, Environment, Html } from "@react-three/drei";
+import { useDesignerStore } from "@/lib/store";
+import { ROOM_DEFS, RoomType, PlacedItem } from "@/lib/types";
+import { getFurnitureById } from "@/lib/furniture";
+import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
+
+const CM = 0.01; // cm → m
+
+/** One furniture item rendered as a colored box. */
+function FurnitureBox({ p }: { p: PlacedItem }) {
+  const f = getFurnitureById(p.furnitureId);
+  if (!f) return null;
+  const w = (f.width * (p.scaleW ?? 1)) * CM;
+  const d = (f.depth * (p.scaleD ?? 1)) * CM;
+  const h = (f.height * (p.scaleH ?? 1)) * CM;
+  const yBase = p.mountCeiling ? undefined : (p.elevationY ?? 0) * CM;
+  const y = p.mountCeiling
+    ? undefined
+    : yBase! + h / 2;
+  return (
+    <mesh
+      position={[p.x * CM, y ?? 0.5, p.z * CM]}
+      rotation={[0, (-(p.rotation ?? 0) * Math.PI) / 180, 0]}
+      castShadow
+      receiveShadow
+    >
+      <boxGeometry args={[w, h, d]} />
+      <meshStandardMaterial color={f.color} roughness={0.7} metalness={0.05} />
+    </mesh>
+  );
+}
+
+/** One room: floor + 4 walls (no ceiling) + furniture + label. */
+function RoomGroup({
+  room, originX, originZ, onPick, isActive, isHover, setHover,
+}: {
+  room: RoomType;
+  originX: number;   // meters, world coord of back-left corner
+  originZ: number;
+  onPick: () => void;
+  isActive: boolean;
+  isHover: boolean;
+  setHover: (r: RoomType | null) => void;
+}) {
+  const def = ROOM_DEFS[room];
+  const dims = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions[room]);
+  const state = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]);
+  const label = useDesignerStore(s => s.customRoomMeta[room]?.name) ?? def.name;
+  const icon = useDesignerStore(s => s.customRoomMeta[room]?.icon) ?? def.icon;
+
+  const W = dims.width * CM;
+  const D = dims.depth * CM;
+  const H = def.height * CM;
+  const WALL = 0.08; // 8cm thick visual wall
+  const WALL_H = H * 0.55; // shorter walls so we can peek in from above
+
+  const floorColor = state.materials.floor?.color ?? def.defaultFloorColor;
+  const wallColor  = state.materials.wall?.color  ?? def.defaultWallColor;
+
+  // Center of the room, in world coords
+  const cx = originX + W / 2;
+  const cz = originZ + D / 2;
+
+  return (
+    <group position={[cx, 0, cz]}
+      onPointerOver={(e) => { e.stopPropagation(); setHover(room); }}
+      onPointerOut={() => setHover(null)}
+      onClick={(e) => { e.stopPropagation(); onPick(); }}
+    >
+      {/* Floor */}
+      <mesh position={[0, 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[W, D]} />
+        <meshStandardMaterial
+          color={isActive ? "#BAE6FD" : (isHover ? "#DBEAFE" : floorColor)}
+          roughness={0.9}
+        />
+      </mesh>
+
+      {/* 4 walls (no ceiling) */}
+      {[
+        { pos: [0, WALL_H / 2, -D / 2 + WALL / 2] as const, size: [W, WALL_H, WALL] as const }, // back
+        { pos: [0, WALL_H / 2,  D / 2 - WALL / 2] as const, size: [W, WALL_H, WALL] as const }, // front
+        { pos: [-W / 2 + WALL / 2, WALL_H / 2, 0] as const, size: [WALL, WALL_H, D] as const }, // left
+        { pos: [ W / 2 - WALL / 2, WALL_H / 2, 0] as const, size: [WALL, WALL_H, D] as const }, // right
+      ].map((w, i) => (
+        <mesh key={i} position={w.pos} castShadow receiveShadow>
+          <boxGeometry args={w.size} />
+          <meshStandardMaterial color={wallColor} roughness={0.85} />
+        </mesh>
+      ))}
+
+      {/* Furniture as simple boxes (positions are relative to room back-left corner) */}
+      <group position={[-W / 2, 0, -D / 2]}>
+        {state.placedItems.map(p => (
+          <FurnitureBox key={p.instanceId} p={p} />
+        ))}
+      </group>
+
+      {/* Floating label */}
+      <Html position={[0, WALL_H + 0.15, 0]} center distanceFactor={8} style={{ pointerEvents: "none" }}>
+        <div style={{
+          background: isActive ? "#1D4ED8" : "rgba(31,41,55,0.82)",
+          color: "white",
+          padding: "2px 8px",
+          borderRadius: 6,
+          fontSize: 11,
+          fontWeight: 700,
+          whiteSpace: "nowrap",
+          fontFamily: "system-ui, sans-serif",
+          boxShadow: isHover ? "0 0 0 2px #60A5FA" : undefined,
+        }}>
+          {icon} {label}
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function Scene() {
+  const enabledRooms = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
+  const layout       = useDesignerStore(s => s.floorPlans[s.activeFloor].roomLayout);
+  const dims         = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
+  const activeRoom   = useDesignerStore(s => s.activeRoom);
+  const setActiveRoom = useDesignerStore(s => s.setActiveRoom);
+  const setViewMode  = useDesignerStore(s => s.setViewMode);
+
+  const [hover, setHover] = useState<RoomType | null>(null);
+
+  // Compute bounding box of all rooms, then shift so the cluster is
+  // centered on the world origin.
+  const visible = ALL_POSSIBLE_ROOMS.filter(r => enabledRooms.includes(r));
+  const { cx, cz, extent } = useMemo(() => {
+    if (!visible.length) return { cx: 0, cz: 0, extent: 10 };
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const r of visible) {
+      const l = layout[r]; const d = dims[r];
+      minX = Math.min(minX, l.x);
+      minY = Math.min(minY, l.y);
+      maxX = Math.max(maxX, l.x + d.width);
+      maxY = Math.max(maxY, l.y + d.depth);
+    }
+    return {
+      cx: ((minX + maxX) / 2) * CM,
+      cz: ((minY + maxY) / 2) * CM,
+      extent: Math.max(maxX - minX, maxY - minY) * CM,
+    };
+  }, [visible, layout, dims]);
+
+  return (
+    <>
+      <color attach="background" args={["#E5E7EB"]} />
+      {/* Lighting */}
+      <ambientLight intensity={0.6} />
+      <hemisphereLight args={["#E0E7FF", "#A1A1AA", 0.5]} />
+      <directionalLight
+        position={[extent * 0.6, extent * 1.2, extent * 0.6]}
+        intensity={1.1}
+        castShadow
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+        shadow-camera-left={-extent}
+        shadow-camera-right={extent}
+        shadow-camera-top={extent}
+        shadow-camera-bottom={-extent}
+      />
+
+      {/* Ground plane (context for shadows) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+        <planeGeometry args={[extent * 3, extent * 3]} />
+        <meshStandardMaterial color="#D4D4D8" roughness={1} />
+      </mesh>
+
+      {/* Rooms — shifted so cluster centroid is at origin */}
+      <group position={[-cx, 0, -cz]}>
+        {visible.map(r => (
+          <RoomGroup
+            key={r} room={r}
+            originX={layout[r].x * CM}
+            originZ={layout[r].y * CM}
+            isActive={r === activeRoom}
+            isHover={r === hover}
+            setHover={setHover}
+            onPick={() => { setActiveRoom(r); setViewMode("3d"); }}
+          />
+        ))}
+      </group>
+
+      <Suspense fallback={null}>
+        <Environment preset="city" background={false} />
+      </Suspense>
+    </>
+  );
+}
+
+/** Camera controller: fit view to room cluster on first render. */
+function CameraFit() {
+  const enabledRooms = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
+  const layout       = useDesignerStore(s => s.floorPlans[s.activeFloor].roomLayout);
+  const dims         = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
+  const controls = useRef<React.ComponentRef<typeof OrbitControls>>(null);
+  const fittedRef = useRef(false);
+
+  useFrame(({ camera }) => {
+    if (fittedRef.current) return;
+    const visible = ALL_POSSIBLE_ROOMS.filter(r => enabledRooms.includes(r));
+    if (!visible.length) return;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const r of visible) {
+      const l = layout[r]; const d = dims[r];
+      minX = Math.min(minX, l.x);
+      minY = Math.min(minY, l.y);
+      maxX = Math.max(maxX, l.x + d.width);
+      maxY = Math.max(maxY, l.y + d.depth);
+    }
+    const extent = Math.max(maxX - minX, maxY - minY) * CM;
+    if (!isFinite(extent) || extent <= 0) return;
+    camera.position.set(extent * 0.9, extent * 1.1, extent * 0.9);
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
+    controls.current?.update();
+    fittedRef.current = true;
+  });
+
+  return (
+    <OrbitControls
+      ref={controls}
+      enableDamping
+      dampingFactor={0.08}
+      minDistance={2}
+      maxDistance={80}
+      maxPolarAngle={Math.PI / 2.05}
+      target={[0, 0, 0]}
+    />
+  );
+}
+
+export default function GlobalCanvas() {
+  const enabledRooms = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
+
+  if (enabledRooms.length === 0) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-100">
+        <div className="text-5xl opacity-20">🏗️</div>
+        <div className="text-sm font-bold text-gray-400">暂无房间</div>
+        <div className="text-xs text-gray-300">先在「全局」视图中添加房间</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full relative bg-gray-200">
+      <Canvas
+        shadows
+        camera={{ position: [12, 14, 12], fov: 45 }}
+        gl={{ antialias: true }}
+      >
+        <Scene />
+        <CameraFit />
+      </Canvas>
+
+      {/* Hint overlay */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-[11px] font-bold shadow"
+        style={{ background: "rgba(255,255,255,0.92)", color: "#374151" }}>
+        🏘️ 全局 3D · 点击房间进入详细视图
+      </div>
+    </div>
+  );
+}

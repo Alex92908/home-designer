@@ -36,6 +36,15 @@ const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
   ),
 });
 
+const GlobalCanvas = dynamic(() => import("@/components/GlobalCanvas"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center bg-gray-200 w-full h-full">
+      <div className="text-gray-400 text-sm animate-pulse">加载全局 3D...</div>
+    </div>
+  ),
+});
+
 // ─── Panel toggle tab button ──────────────────────────────
 /** Cycles front-wall opacity: 0 → 0.5 → 1 → 0. Lets user see artwork
  *  placed on the front wall, which is cut away in the default dollhouse
@@ -161,9 +170,10 @@ export default function Home() {
 
   const isAll      = viewMode === "all";
   const isExterior = viewMode === "exterior";
+  const isGlobal3d = viewMode === "global3d";
 
   // Panels only apply to room / 2d views
-  const showPanels = !isAll && !isExterior;
+  const showPanels = !isAll && !isExterior && !isGlobal3d;
 
   // Load shared plan from URL ?share= param (runs once after hydration)
   useEffect(() => {
@@ -209,6 +219,7 @@ export default function Home() {
           {viewMode === "3d"       && <RoomCanvas />}
           {isExterior              && <HouseCanvas />}
           {isAll                   && <FloorPlanAll />}
+          {isGlobal3d              && <GlobalCanvas />}
           {viewMode === "2d"       && <FloorPlan />}
 
           {/* AI Render floating button */}
