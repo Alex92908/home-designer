@@ -20,6 +20,19 @@ const nextConfig: NextConfig = {
     "10.0.0.0/8",
     "192.168.56.143",
   ],
+  // 3D 素材走强缓存（生产环境）：GLB/GLTF/BIN/textures 都是 hash-naming
+  // 友好的静态内容，给 immutable 1 年缓存能显著缩短二次访问 + 跨页切
+  // 换时的加载时间（首次仍然要下）。次要收益：减少 CDN 回源。
+  async headers() {
+    return [
+      {
+        source: "/models/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+    ];
+  },
   ...(isStaticExport && {
     output: "export",
     distDir: "out",

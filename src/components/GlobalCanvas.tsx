@@ -13,7 +13,7 @@
  * L 型 / 凸字型房间暂未支持（仍按矩形渲染）——留给下一轮的多边形数据模型。
  */
 
-import { useMemo, useRef, useState, Suspense } from "react";
+import { useMemo, useRef, useState, useEffect, Suspense } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, Html } from "@react-three/drei";
@@ -62,7 +62,7 @@ function GlobalRoomLight({ room, H, color }: { room: RoomType; H: number; color:
 }
 
 function RoomGroup({
-  room, originX, originZ, onPick, isActive, isHover, setHover,
+  room, originX, originZ, onPick, isActive, isHover, setHover, showFurniture,
 }: {
   room: RoomType;
   originX: number;   // meters, world coord of back-left corner
@@ -71,6 +71,9 @@ function RoomGroup({
   isActive: boolean;
   isHover: boolean;
   setHover: (r: RoomType | null) => void;
+  /** When false, skip rendering placedItems (家具). Used to progressively
+   *  fill the scene: active room's furniture first frame, others later. */
+  showFurniture: boolean;
 }) {
   const def = ROOM_DEFS[room];
   const dims = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions[room]);
@@ -162,15 +165,14 @@ function RoomGroup({
         </mesh>
       ))}
 
-      {/* Furniture — reuse RoomCanvas PlacedItemMesh so you get real GLTF
-          models (sofa, bed, …) + procedural meshes. PlacedItemMesh
-          centers items on the room's origin using roomW/roomD (meters).
-          `room={room}` ensures per-room light dimmer reads the right id. */}
-      <Suspense fallback={null}>
-        {state.placedItems.map(p => (
-          <PlacedItemMesh key={p.instanceId} placed={p} def={def} roomW={W} roomD={D} room={room} />
-        ))}
-      </Suspense>
+      {/* Furniture — reuse RoomCanvas PlacedItemMesh (其自身已包每个 GLTF
+          一层 Suspense + 程序化 fallback)。不再套外层 Suspense，让已加载
+          完的家具立即出现而不被慢的那件拖住 —— 上一版外层 Suspense 只
+          要有 1 件没加载好，整间房全部 gone。
+          showFurniture=false 时直接跳过（用于首帧只渲染激活房间家具）。*/}
+      {showFurniture && state.placedItems.map(p => (
+        <PlacedItemMesh key={p.instanceId} placed={p} def={def} roomW={W} roomD={D} room={room} />
+      ))}
 
       {/* Cheap per-room light: emissive bulb + single non-shadow pointLight.
           The full LightFixture with shadow-casting spots/points would blow
@@ -216,6 +218,14 @@ function Scene() {
   const DOUBLE_MS = 400;
 
   const [hover, setHover] = useState<RoomType | null>(null);
+  // 渲染优先级：首帧只给激活房间装家具，其它房间先出墙体 + 地板，
+  // 1 秒后（或 idle）再加载家具 —— 避免并发下载 10+ 个 GLTF 把
+  // 主线程卡成 PPT。
+  const [renderAllFurniture, setRenderAllFurniture] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setRenderAllFurniture(true), 900);
+    return () => clearTimeout(t);
+  }, []);
 
   // Compute bounding box of all rooms, then shift so the cluster is
   // centered on the world origin.
@@ -271,6 +281,7 @@ function Scene() {
             isActive={r === activeRoom}
             isHover={r === hover}
             setHover={setHover}
+            showFurniture={r === activeRoom || renderAllFurniture}
             onPick={() => {
               const now = Date.now();
               const last = lastPickRef.current;
@@ -367,7 +378,7 @@ export default function GlobalCanvas() {
       {/* Hint overlay */}
       <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-[11px] font-bold shadow"
         style={{ background: "rgba(255,255,255,0.92)", color: "#374151" }}>
-        🏘️ 全局 3D · 点击房间进入详细视图
+        🏘️ 全局 3D · 双击房间进入详细视图
       </div>
     </div>
   );
