@@ -74,21 +74,28 @@ export default function TopBar() {
         className="flex items-center p-1 rounded-xl gap-0.5 shrink-0"
         style={{ background: "var(--ds-bg)", border: "1px solid var(--ds-border)" }}
       >
-        {(["3d", "2d", "all", "global3d", "exterior"] as const).map((mode) => (
-          <button
-            key={mode}
-            onClick={() => setViewMode(mode)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150"
-            style={
-              viewMode === mode
-                ? { background: "var(--ds-surface)", color: "var(--ds-text)", boxShadow: "var(--ds-shadow-sm)" }
-                : { color: "var(--ds-text-3)" }
-            }
-          >
-            <span>{t.viewIcons[mode]}</span>
-            <span className="hidden sm:block">{t.viewModes[mode]}</span>
-          </button>
-        ))}
+        {(["3d", "2d", "all", "global3d", "exterior"] as const).map((mode) => {
+          // 「全局」和「全局 3D」需要双击才切换 —— 它们会整体替换主视图，
+          // 单击进入容易误触，尤其是从效果图拖到顶栏按钮时。
+          const needsDouble = mode === "all" || mode === "global3d";
+          return (
+            <button
+              key={mode}
+              onClick={needsDouble ? undefined : () => setViewMode(mode)}
+              onDoubleClick={needsDouble ? () => setViewMode(mode) : undefined}
+              title={needsDouble ? "双击进入" : undefined}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150"
+              style={
+                viewMode === mode
+                  ? { background: "var(--ds-surface)", color: "var(--ds-text)", boxShadow: "var(--ds-shadow-sm)" }
+                  : { color: "var(--ds-text-3)" }
+              }
+            >
+              <span>{t.viewIcons[mode]}</span>
+              <span className="hidden sm:block">{t.viewModes[mode]}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Floor + room context badge — visible in 2D/3D when multi-floor */}
