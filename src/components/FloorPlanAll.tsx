@@ -17,7 +17,7 @@ const ALL_ROOMS = ALL_POSSIBLE_ROOMS;
 
 function snap(v: number) { return Math.round(v / SNAP) * SNAP; }
 
-function getSVGPoint(e: React.PointerEvent, svg: SVGSVGElement) {
+function getSVGPoint(e: { clientX: number; clientY: number }, svg: SVGSVGElement) {
   const pt = svg.createSVGPoint();
   pt.x = e.clientX; pt.y = e.clientY;
   return pt.matrixTransform(svg.getScreenCTM()!.inverse());
@@ -322,8 +322,86 @@ export default function FloorPlanAll() {
   const blueprint           = useDesignerStore(s => s.blueprint);
   const setBlueprint        = useDesignerStore(s => s.setBlueprint);
   const clearBlueprint      = useDesignerStore(s => s.clearBlueprint);
-  const [traceMode, setTraceMode] = useState(false);
+  // Unified tool state for the All/blueprint canvas:
+  //   "browse" — normal (drag rooms, click to edit)
+  //   "trace"  — drag the blueprint image to reposition
+  //   "ruler"  — click two points → prompt real distance → auto-set scale
+  //   "draw"   — click corners to define a new room polygon
+  const [tool, setTool] = useState<"browse" | "trace" | "ruler" | "draw">("browse");
+  const traceMode = tool === "trace";
   const [blueprintPanelOpen, setBlueprintPanelOpen] = useState(false);
+  // Ruler: first-clicked point waiting for the second click
+  const [rulerPt, setRulerPt] = useState<{ x: number; y: number } | null>(null);
+  // Draw: accumulating polygon vertices (SVG coords, cm)
+  const [drawPts, setDrawPts] = useState<Array<[number, number]>>([]);
+  const [drawHover, setDrawHover] = useState<{ x: number; y: number } | null>(null);
+
+  const addRoom2           = useDesignerStore(s => s.addRoom);
+
+  /** Commit the polygon accumulated in drawPts as a new room. Assigns the
+   *  next free slot from ALL_POSSIBLE_ROOMS, sets its bbox as
+   *  width/depth + layout, and stores a non-rect shape when the polygon
+   *  isn't an axis-aligned rectangle. */
+  const commitDrawnRoom = () => {
+    if (drawPts.length < 3) return;
+    const xs = drawPts.map(p => p[0]);
+    const ys = drawPts.map(p => p[1]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const width = Math.max(100, maxX - minX);
+    const depth = Math.max(100, maxY - minY);
+
+    const freeSlot = ALL_POSSIBLE_ROOMS.find(r => !enabledRooms.includes(r));
+    if (!freeSlot) {
+      window.alert("没有可用房间槽了（室内+阳台+自定义 20+ 个已全部占用）");
+      return;
+    }
+
+    // Detect: is it an axis-aligned rectangle? (4 corners at bbox corners)
+    const isRect = drawPts.length === 4 &&
+      drawPts.every(([x, y]) =>
+        (x === minX || x === maxX) && (y === minY || y === maxY)
+      );
+
+    pushLayoutHistory();
+    addRoom2(freeSlot);
+    updateRoomLayout(freeSlot, minX, minY);
+    updateRoomDimension(freeSlot, width, depth);
+    if (!isRect) {
+      // Write the raw polygon as a "custom" shape, points translated to
+      // room-local cm (back-left origin).
+      useDesignerStore.setState(s => {
+        const fp = s.floorPlans[s.activeFloor];
+        const newShapes = { ...(fp.roomShapes ?? {}) };
+        newShapes[freeSlot] = {
+          preset: "custom",
+          points: drawPts.map(([x, y]) => [x - minX, y - minY] as [number, number]),
+        };
+        const plans = [...s.floorPlans];
+        plans[s.activeFloor] = { ...fp, roomShapes: newShapes };
+        return { floorPlans: plans };
+      });
+    }
+    setDrawPts([]);
+    setDrawHover(null);
+    setTool("browse");
+    setActiveRoom(freeSlot);
+  };
+
+  // Keyboard: Enter = commit draw, Escape = cancel current tool
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (tool === "draw") {
+        if (e.key === "Enter") { e.preventDefault(); commitDrawnRoom(); }
+        if (e.key === "Escape") { setTool("browse"); setDrawPts([]); setDrawHover(null); }
+        if (e.key === "Backspace" && drawPts.length > 0) { e.preventDefault(); setDrawPts(pts => pts.slice(0, -1)); }
+      }
+      if (tool === "ruler" && e.key === "Escape") { setTool("browse"); setRulerPt(null); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool, drawPts]);
 
   // Blueprint upload: read image → extract natural size → stash as data URL
   const handleBlueprintUpload = (file: File) => {
@@ -479,21 +557,34 @@ export default function FloorPlanAll() {
             </label>
           ) : (
             <div className={`flex items-center gap-1 ${(!roomClipboard && exterior.floors <= 1) ? "ml-auto" : ""}`}>
-              <button
-                onClick={() => setTraceMode(v => !v)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all"
-                style={traceMode
-                  ? { background: "#F59E0B", color: "#fff" }
-                  : { border: "1px solid #F59E0B", color: "#F59E0B", background: "white" }}
-                title="描图模式：拖拽图纸定位；关闭后可点击房间"
-              >
-                {traceMode ? "✋ 描图中" : "📐 描图"}
-              </button>
+              {/* Tool picker: trace / ruler / draw. Click same tool again to exit. */}
+              {([
+                { id: "trace" as const, label: "描图", icon: "📐", color: "#F59E0B", title: "描图：拖拽图纸定位" },
+                { id: "ruler" as const, label: "标尺", icon: "🔭", color: "#0EA5E9", title: "标尺：点两点输入真实距离，自动算比例" },
+                { id: "draw"  as const, label: "画房", icon: "✏️", color: "#10B981", title: "画房：沿图纸点角新建房间，Enter 完成 / Esc 取消" },
+              ]).map(({ id, label, icon, color, title }) => {
+                const active = tool === id;
+                return (
+                  <button key={id}
+                    onClick={() => {
+                      setTool(active ? "browse" : id);
+                      setRulerPt(null); setDrawPts([]); setDrawHover(null);
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all"
+                    style={active
+                      ? { background: color, color: "#fff" }
+                      : { border: `1px solid ${color}`, color, background: "white" }}
+                    title={title}
+                  >
+                    <span>{icon}</span><span>{label}</span>
+                  </button>
+                );
+              })}
               <button onClick={() => setBlueprintPanelOpen(v => !v)}
                 className="px-2 py-1 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100"
                 title="调整图纸"
               >⚙️</button>
-              <button onClick={clearBlueprint}
+              <button onClick={() => { clearBlueprint(); setTool("browse"); }}
                 className="px-2 py-1 rounded-xl text-xs font-bold text-gray-400 hover:text-red-500"
                 title="移除图纸"
               >✕</button>
@@ -552,17 +643,93 @@ export default function FloorPlanAll() {
           </div>
         )}
 
+        {/* Tool hint bar */}
+        {(tool === "ruler" || tool === "draw") && (
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-sky-50 border-b border-sky-200 shrink-0 text-[11px]">
+            {tool === "ruler" && (
+              <span>🔭 <b>标尺：</b>{rulerPt ? "再点第二个点" : "在图纸上点第一个点"}；Esc 取消</span>
+            )}
+            {tool === "draw" && (
+              <>
+                <span>✏️ <b>画房：</b>沿图纸点角（≥3 点）；
+                  <b>Enter</b> 或双击 完成，<b>Backspace</b> 撤销上一点，<b>Esc</b> 取消</span>
+                <span className="ml-auto font-mono">{drawPts.length} 点</span>
+                {drawPts.length >= 3 && (
+                  <button onClick={commitDrawnRoom}
+                    className="px-2 py-0.5 rounded bg-emerald-500 text-white font-bold"
+                  >✓ 完成</button>
+                )}
+                <button onClick={() => { setTool("browse"); setDrawPts([]); setDrawHover(null); }}
+                  className="px-2 py-0.5 rounded border border-gray-300 text-gray-500"
+                >取消</button>
+              </>
+            )}
+          </div>
+        )}
+
         {/* SVG canvas (also visible when only a blueprint is loaded so
             users can position the trace image before adding rooms) */}
         {(visibleRooms.length > 0 || blueprint.image) && <div className="flex-1 overflow-auto flex items-start justify-center p-4">
           <svg
             ref={svgRef}
             viewBox={viewBox}
-            style={{ width: "100%", maxWidth: 580, display: "block", flexShrink: 0, touchAction: "none" }}
+            style={{
+              width: "100%", maxWidth: 580, display: "block", flexShrink: 0, touchAction: "none",
+              cursor: tool === "ruler" || tool === "draw" ? "crosshair" : "default",
+            }}
             preserveAspectRatio="xMidYMin meet"
-            onPointerMove={handlePointerMove}
+            onPointerMove={(e) => {
+              handlePointerMove(e);
+              if ((tool === "ruler" && rulerPt) || tool === "draw") {
+                const p = getSVGPoint(e, svgRef.current!);
+                setDrawHover({ x: p.x, y: p.y });
+              }
+            }}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
+            onClick={(e) => {
+              if (!svgRef.current) return;
+              // Intercept clicks for ruler / draw tools (rooms handle their own
+              // clicks via pointerdown on their hit rects, so this only fires
+              // when clicking the canvas background / blueprint).
+              if (tool === "ruler") {
+                const p = getSVGPoint(e, svgRef.current);
+                if (!rulerPt) {
+                  setRulerPt({ x: p.x, y: p.y });
+                } else {
+                  const dxx = p.x - rulerPt.x, dyy = p.y - rulerPt.y;
+                  const svgDist = Math.hypot(dxx, dyy); // current cm
+                  if (svgDist < 1) { setRulerPt(null); return; }
+                  const input = window.prompt("这两点之间的真实距离（米）?", "3.6");
+                  if (input) {
+                    const realM = parseFloat(input);
+                    if (isFinite(realM) && realM > 0) {
+                      const realCm = realM * 100;
+                      const k = realCm / svgDist;
+                      // Update blueprint scale so svg-distance between the
+                      // two clicked points becomes realCm. scale is in cm/px.
+                      if (blueprint.image) {
+                        setBlueprint({ scale: blueprint.scale * k });
+                      }
+                    }
+                  }
+                  setRulerPt(null);
+                  setTool("browse");
+                }
+              } else if (tool === "draw") {
+                const p = getSVGPoint(e, svgRef.current);
+                // Snap to 10cm
+                const sx = Math.round(p.x / 10) * 10;
+                const sy = Math.round(p.y / 10) * 10;
+                setDrawPts(pts => [...pts, [sx, sy]]);
+              }
+            }}
+            onDoubleClick={(e) => {
+              if (tool === "draw" && drawPts.length >= 3) {
+                e.preventDefault();
+                commitDrawnRoom();
+              }
+            }}
           >
             {/* Background */}
             <rect x={vbX1} y={vbY1} width={vbX2 - vbX1} height={vbY2 - vbY1} fill="#9CA3AF" />
@@ -777,6 +944,43 @@ export default function FloorPlanAll() {
                 </g>
               );
             })}
+
+            {/* Ruler tool overlay: first point + rubber-band line */}
+            {tool === "ruler" && rulerPt && (
+              <g style={{ pointerEvents: "none" }}>
+                <circle cx={rulerPt.x} cy={rulerPt.y} r={6} fill="#0EA5E9" />
+                {drawHover && (
+                  <>
+                    <line x1={rulerPt.x} y1={rulerPt.y} x2={drawHover.x} y2={drawHover.y}
+                      stroke="#0EA5E9" strokeWidth={3} strokeDasharray="6 4" />
+                    <circle cx={drawHover.x} cy={drawHover.y} r={4} fill="#fff" stroke="#0EA5E9" strokeWidth={2} />
+                    <text x={(rulerPt.x + drawHover.x) / 2} y={(rulerPt.y + drawHover.y) / 2 - 10}
+                      textAnchor="middle" fontSize={16} fontWeight={700} fill="#0EA5E9"
+                      paintOrder="stroke" stroke="white" strokeWidth={4} strokeLinejoin="round">
+                      {(Math.hypot(drawHover.x - rulerPt.x, drawHover.y - rulerPt.y) / 100).toFixed(2)}m
+                    </text>
+                  </>
+                )}
+              </g>
+            )}
+
+            {/* Draw tool overlay: accumulated polygon + rubber-band line */}
+            {tool === "draw" && drawPts.length > 0 && (
+              <g style={{ pointerEvents: "none" }}>
+                <polyline
+                  points={drawPts.map(([x, y]) => `${x},${y}`).join(" ") +
+                    (drawHover ? ` ${drawHover.x},${drawHover.y}` : "")}
+                  fill="rgba(16,185,129,0.15)"
+                  stroke="#10B981" strokeWidth={3} strokeLinejoin="round" strokeDasharray="0"
+                />
+                {drawPts.map(([x, y], i) => (
+                  <circle key={i} cx={x} cy={y} r={6} fill="#10B981" stroke="white" strokeWidth={2} />
+                ))}
+                {drawHover && (
+                  <circle cx={drawHover.x} cy={drawHover.y} r={4} fill="#fff" stroke="#10B981" strokeWidth={2} />
+                )}
+              </g>
+            )}
 
             {/* Compass */}
             <g transform={`translate(${vbX2 - 60}, ${vbY2 - 80})`}>
