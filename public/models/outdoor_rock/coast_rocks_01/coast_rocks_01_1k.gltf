@@ -8,17 +8,16 @@
       "type": "SCALAR",
       "componentType": 5125,
       "count": 2039808,
-      "normalized": false,
-      "byteOffset": 0,
-      "bufferView": 0
+      "bufferView": 0,
+      "byteOffset": 0
     },
     {
       "type": "VEC3",
       "componentType": 5120,
       "count": 348785,
       "normalized": true,
-      "byteOffset": 0,
-      "bufferView": 1
+      "bufferView": 1,
+      "byteOffset": 0
     },
     {
       "type": "VEC3",
@@ -35,86 +34,31 @@
         -23414
       ],
       "normalized": true,
-      "byteOffset": 0,
-      "bufferView": 2
+      "bufferView": 1,
+      "byteOffset": 4
     },
     {
       "type": "VEC2",
       "componentType": 5123,
       "count": 348785,
       "normalized": true,
-      "byteOffset": 0,
-      "bufferView": 3
+      "bufferView": 1,
+      "byteOffset": 12
     }
   ],
   "bufferViews": [
     {
-      "buffer": 1,
+      "buffer": 0,
       "byteOffset": 0,
       "byteLength": 8159232,
-      "target": 34963,
-      "extensions": {
-        "EXT_meshopt_compression": {
-          "buffer": 0,
-          "byteOffset": 0,
-          "byteLength": 788626,
-          "mode": "TRIANGLES",
-          "byteStride": 4,
-          "count": 2039808
-        }
-      }
+      "target": 34963
     },
     {
-      "buffer": 1,
+      "buffer": 0,
       "byteOffset": 8159232,
-      "byteLength": 1395140,
-      "target": 34962,
-      "byteStride": 4,
-      "extensions": {
-        "EXT_meshopt_compression": {
-          "buffer": 0,
-          "byteOffset": 788628,
-          "byteLength": 665064,
-          "mode": "ATTRIBUTES",
-          "filter": "OCTAHEDRAL",
-          "byteStride": 4,
-          "count": 348785
-        }
-      }
-    },
-    {
-      "buffer": 1,
-      "byteOffset": 9554372,
-      "byteLength": 2790280,
-      "target": 34962,
-      "byteStride": 8,
-      "extensions": {
-        "EXT_meshopt_compression": {
-          "buffer": 0,
-          "byteOffset": 1453692,
-          "byteLength": 1286845,
-          "mode": "ATTRIBUTES",
-          "byteStride": 8,
-          "count": 348785
-        }
-      }
-    },
-    {
-      "buffer": 1,
-      "byteOffset": 12344652,
-      "byteLength": 1395140,
-      "target": 34962,
-      "byteStride": 4,
-      "extensions": {
-        "EXT_meshopt_compression": {
-          "buffer": 0,
-          "byteOffset": 2740540,
-          "byteLength": 893029,
-          "mode": "ATTRIBUTES",
-          "byteStride": 4,
-          "count": 348785
-        }
-      }
+      "byteLength": 5580560,
+      "byteStride": 16,
+      "target": 34962
     }
   ],
   "samplers": [
@@ -159,15 +103,7 @@
   "buffers": [
     {
       "uri": "coast_rocks_01.bin",
-      "byteLength": 3633572
-    },
-    {
-      "byteLength": 13739792,
-      "extensions": {
-        "EXT_meshopt_compression": {
-          "fallback": true
-        }
-      }
+      "byteLength": 13739792
     }
   ],
   "materials": [
@@ -231,11 +167,9 @@
   ],
   "scene": 0,
   "extensionsUsed": [
-    "EXT_meshopt_compression",
     "KHR_mesh_quantization"
   ],
   "extensionsRequired": [
-    "EXT_meshopt_compression",
     "KHR_mesh_quantization"
   ]
 }
