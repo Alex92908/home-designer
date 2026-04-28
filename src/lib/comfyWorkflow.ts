@@ -6,17 +6,6 @@
 
 import type { GeneratedPrompt } from "./roomPrompt";
 
-export interface ControlNetWorkflowOptions {
-  model?: string;
-  controlnetModel?: string;
-  depthModel?: string;
-  width?: number;
-  height?: number;
-  steps?: number;
-  cfg?: number;
-  controlnetStrength?: number;
-}
-
 export interface Img2ImgWorkflowOptions {
   model?: string;
   width?: number;
@@ -130,77 +119,112 @@ export function generateMultiViewControlNetWorkflow(
 }
 
 /**
- * ControlNet Depth workflow.
- * - Extracts depth map from input screenshot via DepthAnythingV2
- * - Uses depth map to guide spatial structure in txt2img generation
- * - Requires: comfyui_controlnet_aux plugin, ControlNet SDXL depth model
+ * Dual ControlNet workflow — Depth + Canny from the same screenshot.
+ *
+ * Research-backed optimal weights (2024):
+ *   Depth  → 0.80, end_percent 1.0  — locks spatial structure (near/far, volumes)
+ *   Canny  → 0.50, end_percent 0.75 — sharpens architectural edges (mullions, slats, tiles)
+ *
+ * This replaces the old single-depth workflow. The Canny pass captures the
+ * wood-soffit slat rhythm, travertine tile joints, and pool coping lines we
+ * added to the 3D scene — exactly the detail needed for photorealistic renders.
+ *
+ * Requires: comfyui_controlnet_aux (DepthAnythingV2Preprocessor + CannyEdgePreprocessor),
+ *           two ControlNet model files (can be the same file for both channels).
  */
+export interface ControlNetWorkflowOptions {
+  model?: string;
+  /** ControlNet model for the depth channel (SDXL depth model) */
+  depthControlnetModel?: string;
+  /** ControlNet model for the canny channel (SDXL canny/lineart model) */
+  cannyControlnetModel?: string;
+  /** Kept for back-compat; maps to depthControlnetModel if depthControlnetModel not set */
+  controlnetModel?: string;
+  depthModel?: string;
+  width?: number;
+  height?: number;
+  steps?: number;
+  cfg?: number;
+  depthStrength?: number;
+  cannyStrength?: number;
+}
+
 export function generateControlNetWorkflow(
   imageName: string,
   prompt: GeneratedPrompt,
   opts: ControlNetWorkflowOptions = {}
 ): Record<string, unknown> {
   const {
-    model              = "RealVisXL_V5.0_fp16.safetensors",
-    controlnetModel    = "diffusion_pytorch_model.safetensors",
-    depthModel         = "depth_anything_v2_vits.pth",
-    width              = 1024,
-    height             = 1024,
-    steps              = 35,
-    cfg                = 6.5,
-    controlnetStrength = 0.85,
+    model                = "RealVisXL_V5.0_fp16.safetensors",
+    depthControlnetModel = opts.controlnetModel ?? "diffusion_pytorch_model.safetensors",
+    cannyControlnetModel = opts.controlnetModel ?? "diffusion_pytorch_model.safetensors",
+    depthModel           = "depth_anything_v2_vits.pth",
+    width                = 1024,
+    height               = 1024,
+    steps                = 35,
+    cfg                  = 6.5,
+    depthStrength        = 0.80,
+    cannyStrength        = 0.50,
   } = opts;
 
   return {
-    "1": {
-      class_type: "CheckpointLoaderSimple",
-      inputs: { ckpt_name: model },
-    },
-    "2": {
-      class_type: "LoadImage",
-      inputs: { image: imageName, upload: "image" },
-    },
+    // ── Backbone ──────────────────────────────────────────────────────────
+    "1": { class_type: "CheckpointLoaderSimple", inputs: { ckpt_name: model } },
+
+    // ── Input image ───────────────────────────────────────────────────────
+    "2": { class_type: "LoadImage", inputs: { image: imageName, upload: "image" } },
+
+    // ── Preprocessors — both from the same source image ───────────────────
     "3": {
       class_type: "DepthAnythingV2Preprocessor",
-      inputs: {
-        image:     ["2", 0],
-        ckpt_name: depthModel,
-        resolution: 1024,
-      },
+      inputs: { image: ["2", 0], ckpt_name: depthModel, resolution: 1024 },
     },
     "4": {
-      class_type: "PreviewImage",
-      inputs: { images: ["3", 0] },
+      // Canny thresholds tuned for architectural schematic lines:
+      // low=80 catches soffit slat edges; high=180 keeps mullion/tile joints sharp
+      class_type: "CannyEdgePreprocessor",
+      inputs: { image: ["2", 0], low_threshold: 80, high_threshold: 180, resolution: 1024 },
     },
-    "5": {
-      class_type: "ControlNetLoader",
-      inputs: { control_net_name: controlnetModel },
-    },
-    "6": {
-      class_type: "CLIPTextEncode",
-      inputs: { text: prompt.positive, clip: ["1", 1] },
-    },
-    "7": {
-      class_type: "CLIPTextEncode",
-      inputs: { text: prompt.negative, clip: ["1", 1] },
-    },
-    "8": {
+
+    // ── ControlNet model loaders ──────────────────────────────────────────
+    "5": { class_type: "ControlNetLoader", inputs: { control_net_name: depthControlnetModel } },
+    "6": { class_type: "ControlNetLoader", inputs: { control_net_name: cannyControlnetModel } },
+
+    // ── Text conditioning ─────────────────────────────────────────────────
+    "7": { class_type: "CLIPTextEncode", inputs: { text: prompt.positive, clip: ["1", 1] } },
+    "8": { class_type: "CLIPTextEncode", inputs: { text: prompt.negative,  clip: ["1", 1] } },
+
+    // ── Latent canvas ─────────────────────────────────────────────────────
+    "9": { class_type: "EmptyLatentImage", inputs: { batch_size: 1, height, width } },
+
+    // ── ControlNet apply — chained: depth first, canny on top ─────────────
+    "10": {
       class_type: "ControlNetApplyAdvanced",
       inputs: {
-        positive:      ["6", 0],
-        negative:      ["7", 0],
+        positive:      ["7", 0],
+        negative:      ["8", 0],
         control_net:   ["5", 0],
-        image:         ["3", 0],
-        strength:      controlnetStrength,
+        image:         ["3", 0],   // depth map
+        strength:      depthStrength,
         start_percent: 0,
-        end_percent:   0.85,
+        end_percent:   1.0,        // depth guides the full pass
       },
     },
-    "9": {
-      class_type: "EmptyLatentImage",
-      inputs: { batch_size: 1, height, width },
+    "11": {
+      class_type: "ControlNetApplyAdvanced",
+      inputs: {
+        positive:      ["10", 0],
+        negative:      ["10", 1],
+        control_net:   ["6", 0],
+        image:         ["4", 0],   // canny edge map
+        strength:      cannyStrength,
+        start_percent: 0,
+        end_percent:   0.75,       // edge detail only needed in early–mid diffusion
+      },
     },
-    "10": {
+
+    // ── Sampling ──────────────────────────────────────────────────────────
+    "12": {
       class_type: "KSampler",
       inputs: {
         seed:         prompt.seed,
@@ -209,21 +233,18 @@ export function generateControlNetWorkflow(
         sampler_name: "dpmpp_2m",
         scheduler:    "karras",
         denoise:      1.0,
-        model:        ["1", 0],
-        positive:     ["8", 0],
-        negative:     ["8", 1],
-        latent_image: ["9", 0],
+        model:        ["1",  0],
+        positive:     ["11", 0],
+        negative:     ["11", 1],
+        latent_image: ["9",  0],
       },
     },
-    "11": {
-      class_type: "VAEDecode",
-      inputs: { samples: ["10", 0], vae: ["1", 2] },
-    },
-    "12": {
+    "13": { class_type: "VAEDecode",  inputs: { samples: ["12", 0], vae: ["1", 2] } },
+    "14": {
       class_type: "SaveImage",
       inputs: {
         filename_prefix: `controlnet_${prompt.roomType.replace(/[\s/]+/g, "_")}`,
-        images: ["11", 0],
+        images: ["13", 0],
       },
     },
   };
@@ -453,9 +474,9 @@ export function generateMultiControlNetWorkflow(
     height               = 1024,
     steps                = 35,
     cfg                  = 6.5,
-    depthStrength        = 0.75,
-    cannyStrength        = 0.30,
-    normalStrength       = 0.25,
+    depthStrength        = 0.80,   // ↑ was 0.75 — stronger spatial lock
+    cannyStrength        = 0.50,   // ↑ was 0.30 — match single-CN canny weight
+    normalStrength       = 0.20,   // ↓ was 0.25 — normals less reliable on schematic 3D
   } = opts;
 
   return {

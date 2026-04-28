@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateControlNetWorkflow, generateMultiViewControlNetWorkflow, generateTxt2ImgWorkflow, generateMultiControlNetWorkflow, generateIPAdapterChainWorkflow } from "@/lib/comfyWorkflow";
-import { generateRoomPrompt, type RoomPromptInput } from "@/lib/roomPrompt";
+import { generateRoomPrompt, type RoomPromptInput, type GeneratedPrompt } from "@/lib/roomPrompt";
 
 const COMFYUI = "http://localhost:8188";
 
@@ -32,12 +32,22 @@ export async function POST(req: NextRequest) {
       referenceImage?: string;    // ipadapter-chain: single previous render (legacy)
       referenceImages?: string[]; // ipadapter-chain: 1-5 previous renders for multi-ref blend
       seed?: number;              // explicit seed for chain consistency
-      roomData?: RoomPromptInput;
+      // roomData may be either raw RoomPromptInput (legacy interior path) OR a
+      // pre-built GeneratedPrompt sent by AiRenderModal.getActivePrompt() for the
+      // exterior view.  Detect by presence of the `positive` string field.
+      roomData?: RoomPromptInput | GeneratedPrompt;
       mode?: "controlnet" | "txt2img" | "multicontrolnet" | "ipadapter-chain";
     };
 
-    // ── Generate SD prompt ───────────────────────────────────
-    const basePrompt = roomData ? generateRoomPrompt(roomData) : DEFAULT_PROMPT;
+    // ── Generate SD prompt ────────────────────────────────────────────────
+    // roomData may already be a GeneratedPrompt (from AiRenderModal.getActivePrompt()
+    // for exterior views).  Detect by presence of the `positive` string field and
+    // skip generateRoomPrompt in that case to avoid re-processing already-built prompts.
+    const basePrompt: GeneratedPrompt = roomData
+      ? (typeof (roomData as GeneratedPrompt).positive === "string"
+          ? (roomData as GeneratedPrompt)
+          : generateRoomPrompt(roomData as RoomPromptInput))
+      : DEFAULT_PROMPT;
     // Lock seed across chain renders for visual consistency
     const prompt = typeof seed === "number" ? { ...basePrompt, seed } : basePrompt;
 
