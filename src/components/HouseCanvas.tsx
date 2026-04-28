@@ -3035,28 +3035,18 @@ function EntryPath({ W, D }: { W: number; D: number }) {
 }
 
 function Ground({ W, D }: { W: number; D: number }) {
-  const yardSize = Math.max(W, D) * 2.0;
-  const sizeX = W + yardSize * 2;
-  const sizeZ = D + yardSize * 2;
-  const lawnSize = Math.max(W, D) * 2.2;
+  // Single large plane — no seam between "far" and "near" zones.
+  // Sized to fill the camera frustum; PBR texture loads async via Suspense.
+  const size = Math.max(W, D) * 7 + 40;
   return (
-    <>
-      {/* Far ground — muted neutral, no warm-tan cast that looks like dirt */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.501, 0]} receiveShadow>
-        <planeGeometry args={[sizeX, sizeZ, 1, 1]} />
-        <meshStandardMaterial color="#6B7858" roughness={1.0} />
+    <Suspense fallback={
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.500, 0]} receiveShadow>
+        <planeGeometry args={[size, size]} />
+        <meshStandardMaterial color="#3E6020" roughness={0.96} />
       </mesh>
-      {/* Inset lawn — PBR grass texture. Fallback uses a deep natural green
-          close to the textured target so the colour-swap on load is subtle. */}
-      <Suspense fallback={
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.499, 0]} receiveShadow>
-          <planeGeometry args={[lawnSize, lawnSize, 1, 1]} />
-          <meshStandardMaterial color="#4A6E28" roughness={0.95} />
-        </mesh>
-      }>
-        <GrassGroundTextured size={lawnSize} />
-      </Suspense>
-    </>
+    }>
+      <GrassGroundTextured size={size} />
+    </Suspense>
   );
 }
 
@@ -3593,12 +3583,7 @@ function VillaYard({ W, D }: { W: number; D: number }) {
 
   return (
     <group position={[0, 0, 0]}>
-      {/* ── Green lawn (sides + foreground) ── */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.496, D / 2 + lawnTotalD / 2 - 1.5]} receiveShadow>
-        <planeGeometry args={[W * 3.5, lawnTotalD]} />
-        <meshStandardMaterial color="#3D6125" roughness={0.97} metalness={0.0} envMapIntensity={0.30} />
-      </mesh>
+      {/* Lawn comes from the main Ground component — no duplicate mesh here */}
 
       {/* ── Travertine terrace — individual 600×900 mm tiles with visible seam lines.
           The tile joints give ControlNet Canny strong ground-plane line conditioning,
@@ -3906,12 +3891,6 @@ export default function HouseCanvas() {
         }} />
         <Ground W={W} D={D} />
         <EntryPath W={W} D={D} />
-        {/* Grass blade carpet — thin tapered instances for lawn depth.
-            Count kept low on mobile; radius covers the inset lawn area. */}
-        <GrassCarpet W={W} D={D} count={1800} radius={Math.max(W, D) * 2.0} />
-        {/* Distant tree ring — cheap conifer cones at the horizon edge,
-            masks the abrupt ground cutoff and adds scenic depth. */}
-        <DistantTreeRing radius={Math.max(W, D) * 3.5 + 18} count={28} />
         <HouseBody W={W} D={D} settings={exterior} />
         <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />
         {/* User-drawn yardPlan items (院子图 editor). Structural prefabs compose
