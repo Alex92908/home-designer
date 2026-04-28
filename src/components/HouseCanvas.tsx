@@ -36,6 +36,32 @@ function useFootprint() {
   };
 }
 
+// ─── Exterior capture — registers capture fn in store ──────
+// Same pattern as RoomCanvas.CameraAndCaptureSetup, but mounted inside
+// HouseCanvas so the AI render modal can grab exterior angle shots.
+function ExteriorCaptureSetup() {
+  const { camera, gl, scene, controls } = useThree();
+  const setCameraAndCapture = useDesignerStore(s => s.setCameraAndCapture);
+
+  useEffect(() => {
+    setCameraAndCapture((pos, lookAt) => {
+      camera.position.set(...pos);
+      const target = new THREE.Vector3(...lookAt);
+      if (controls) {
+        (controls as THREE.EventDispatcher & { target: THREE.Vector3; update: () => void }).target.copy(target);
+        (controls as THREE.EventDispatcher & { target: THREE.Vector3; update: () => void }).update();
+      } else {
+        camera.lookAt(target);
+      }
+      gl.render(scene, camera);
+      return gl.domElement.toDataURL("image/jpeg", 0.88);
+    });
+    return () => setCameraAndCapture(null);
+  }, [camera, gl, scene, controls, setCameraAndCapture]);
+
+  return null;
+}
+
 // ─── Camera ────────────────────────────────────────────────
 // Eye-level perspective — mirrors RoomCanvas style so the exterior feels
 // like a natural continuation of the interior room view, not a toy diorama.
@@ -3806,6 +3832,7 @@ export default function HouseCanvas() {
         dpr={[1, 2]}
       >
         <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />
+        <ExteriorCaptureSetup />
         <CameraRig W={W} D={D} floors={floors} />
         <OrbitControls
           ref={orbitRef}

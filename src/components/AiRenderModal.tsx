@@ -52,6 +52,35 @@ const ANGLE_PRESETS: AnglePreset[] = [
   },
 ];
 
+// Exterior-specific angle presets — positions scale with house footprint (metres).
+// The diag factor mimics the CameraRig default in HouseCanvas so shots feel consistent.
+const EXTERIOR_ANGLE_PRESETS: AnglePreset[] = [
+  {
+    id: "front-right",
+    icon: "↗",
+    getPos:    (W, D, H) => { const d = Math.sqrt(W*W+D*D); return [d*0.85, H*0.70, d*1.30]; },
+    getLookAt: (_W, _D, H) => [0, H*0.35, 0],
+  },
+  {
+    id: "front-left",
+    icon: "↖",
+    getPos:    (W, D, H) => { const d = Math.sqrt(W*W+D*D); return [-d*0.75, H*0.70, d*1.35]; },
+    getLookAt: (_W, _D, H) => [0, H*0.35, 0],
+  },
+  {
+    id: "front-center",
+    icon: "→",
+    getPos:    (W, D, H) => { const d = Math.sqrt(W*W+D*D); return [d*0.12, H*0.65, d*1.55]; },
+    getLookAt: (_W, _D, H) => [0, H*0.35, 0],
+  },
+  {
+    id: "aerial",
+    icon: "↓",
+    getPos:    (W, D, H) => { const d = Math.sqrt(W*W+D*D); return [d*0.35, H*3.20, d*0.90]; },
+    getLookAt: () => [0, 0, 0],
+  },
+];
+
 // ─── Helper: download JSON file ──────────────────────────────
 function downloadJson(data: unknown, filename: string) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -148,13 +177,26 @@ export default function AiRenderModal({ open, onClose }: Props) {
       const store = useDesignerStore.getState();
       const fn = store.cameraAndCapture;
       if (fn) {
-        const fp   = store.floorPlans[store.activeFloor];
-        const dims = fp?.roomDimensions?.[store.activeRoom];
-        const W = (dims?.width  ?? 500) / 100;
-        const D = (dims?.depth  ?? 400) / 100;
-        const H = 2.8;
-        const preset = ANGLE_PRESETS.find(a => a.id === "front-right")!;
-        const shot = fn(preset.getPos(W, D, H), preset.getLookAt(W, D, H));
+        const fp     = store.floorPlans[store.activeFloor];
+        const isExt  = store.viewMode === "exterior" || store.viewMode === "global3d";
+        let W: number, D: number, H: number;
+        if (isExt) {
+          if (fp && fp.enabledRooms && fp.enabledRooms.length > 0) {
+            const xs = fp.enabledRooms.flatMap(r => [fp.roomLayout[r]?.x ?? 0, (fp.roomLayout[r]?.x ?? 0) + (fp.roomDimensions[r]?.width ?? 0)]);
+            const zs = fp.enabledRooms.flatMap(r => [fp.roomLayout[r]?.y ?? 0, (fp.roomLayout[r]?.y ?? 0) + (fp.roomDimensions[r]?.depth ?? 0)]);
+            W = Math.max(4, (Math.max(...xs) - Math.min(...xs)) / 100);
+            D = Math.max(3, (Math.max(...zs) - Math.min(...zs)) / 100);
+          } else { W = 10; D = 8; }
+          H = store.exterior.floors * 2.8;
+        } else {
+          const dims = fp?.roomDimensions?.[store.activeRoom];
+          W = (dims?.width  ?? 500) / 100;
+          D = (dims?.depth  ?? 400) / 100;
+          H = 2.8;
+        }
+        const presets = isExt ? EXTERIOR_ANGLE_PRESETS : ANGLE_PRESETS;
+        const preset  = presets.find(a => a.id === "front-right")!;
+        const shot    = fn(preset.getPos(W, D, H), preset.getLookAt(W, D, H));
         if (shot) { setScreenshot(shot); return; }
       }
       // Fallback: snapshot current canvas view
@@ -179,13 +221,9 @@ export default function AiRenderModal({ open, onClose }: Props) {
   // ── Capture all angle previews when modal opens ─────────────
   useEffect(() => {
     if (!open || !cameraAndCapture) return;
-    const fp   = useDesignerStore.getState().floorPlans[useDesignerStore.getState().activeFloor];
-    const dims = fp?.roomDimensions?.[useDesignerStore.getState().activeRoom];
-    const W = (dims?.width  ?? 500) / 100;
-    const D = (dims?.depth  ?? 400) / 100;
-    const H = 2.8;
+    const { W, D, H } = getActiveDims();
     const previews: Record<string, string> = {};
-    for (const preset of ANGLE_PRESETS) {
+    for (const preset of getActivePresets()) {
       const shot = cameraAndCapture(preset.getPos(W, D, H), preset.getLookAt(W, D, H));
       if (shot) previews[preset.id] = shot;
     }
@@ -250,7 +288,10 @@ export default function AiRenderModal({ open, onClose }: Props) {
     return roomData ? generateRoomPrompt(roomData) : getExteriorPrompt();
   }
 
-  // ── Get room dimensions in meters ──────────────────────────
+  // ── View mode flag ──────────────────────────────────────────
+  const isExteriorView = viewMode === "exterior" || viewMode === "global3d";
+
+  // ── Get room OR house dimensions in meters ──────────────────
   function getRoomDims() {
     const fp   = floorPlans[activeFloor];
     const dims = fp?.roomDimensions?.[activeRoom];
@@ -261,11 +302,40 @@ export default function AiRenderModal({ open, onClose }: Props) {
     };
   }
 
+  /** Returns camera-space dimensions appropriate for the current view.
+   *  Exterior/global3d → house footprint + total building height.
+   *  Interior rooms    → active room dimensions. */
+  function getActiveDims(): { W: number; D: number; H: number } {
+    if (isExteriorView) {
+      const fp = floorPlans[activeFloor];
+      if (fp && fp.enabledRooms && fp.enabledRooms.length > 0) {
+        const xs = fp.enabledRooms.flatMap(r => [
+          fp.roomLayout[r]?.x ?? 0,
+          (fp.roomLayout[r]?.x ?? 0) + (fp.roomDimensions[r]?.width ?? 0),
+        ]);
+        const zs = fp.enabledRooms.flatMap(r => [
+          fp.roomLayout[r]?.y ?? 0,
+          (fp.roomLayout[r]?.y ?? 0) + (fp.roomDimensions[r]?.depth ?? 0),
+        ]);
+        const W = Math.max(4, (Math.max(...xs) - Math.min(...xs)) / 100);
+        const D = Math.max(3, (Math.max(...zs) - Math.min(...zs)) / 100);
+        return { W, D, H: exterior.floors * 2.8 };
+      }
+      return { W: 10, D: 8, H: exterior.floors * 2.8 };
+    }
+    return getRoomDims();
+  }
+
+  /** Returns the correct angle preset array for the current view. */
+  function getActivePresets() {
+    return isExteriorView ? EXTERIOR_ANGLE_PRESETS : ANGLE_PRESETS;
+  }
+
   // ── Capture a specific angle → returns data URL ──────────────
   function capturePreset(presetId: string): string | null {
     if (!cameraAndCapture) return null;
-    const { W, D, H } = getRoomDims();
-    const preset = ANGLE_PRESETS.find(a => a.id === presetId)!;
+    const { W, D, H } = getActiveDims();
+    const preset = getActivePresets().find(a => a.id === presetId)!;
     return cameraAndCapture(preset.getPos(W, D, H), preset.getLookAt(W, D, H));
   }
 
@@ -345,7 +415,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
   // ── Start chain rendering: render selected angles sequentially ─
   async function startChainRender() {
     if (!cameraAndCapture) return;
-    const { W, D, H } = getRoomDims();
+    const { W, D, H } = getActiveDims();
     const promptData  = getActivePrompt();
     const seed        = Math.floor(Math.random() * 2 ** 31);
 
@@ -364,7 +434,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
         setChainIndex(i);
         setPhase("generating");
         const angleId = chainAngles[i];
-        const preset  = ANGLE_PRESETS.find(a => a.id === angleId)!;
+        const preset  = getActivePresets().find(a => a.id === angleId)!;
         const shotUrl = cameraAndCapture(preset.getPos(W, D, H), preset.getLookAt(W, D, H));
 
         // Reference strategy:
@@ -801,7 +871,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
                 {t.airAngleLabel}
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {ANGLE_PRESETS.map(preset => {
+                {getActivePresets().map(preset => {
                   const active  = selectedAngle === preset.id;
                   const preview = anglePreviews[preset.id];
                   return (
@@ -849,7 +919,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {ANGLE_PRESETS.map(preset => {
+                {getActivePresets().map(preset => {
                   const active  = chainAngles.includes(preset.id);
                   const order   = chainAngles.indexOf(preset.id) + 1;
                   const preview = anglePreviews[preset.id];
@@ -970,7 +1040,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {chainResults.map((url, i) => {
-                  const preset = ANGLE_PRESETS.find(p => p.id === chainAngles[i]);
+                  const preset = getActivePresets().find(p => p.id === chainAngles[i]);
                   return (
                     <div key={i} className="relative">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
