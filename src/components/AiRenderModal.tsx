@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { generateRoomPrompt } from "@/lib/roomPrompt";
+import { generateExteriorPrompt } from "@/lib/sceneToPrompt";
 import { generateControlNetWorkflow, generateTxt2ImgWorkflow } from "@/lib/comfyWorkflow";
 import { useT } from "@/lib/i18n";
 
@@ -76,6 +77,9 @@ export default function AiRenderModal({ open, onClose }: Props) {
   const activeFloor       = useDesignerStore(s => s.activeFloor);
   const activeRoom        = useDesignerStore(s => s.activeRoom);
   const cameraAndCapture  = useDesignerStore(s => s.cameraAndCapture);
+  // Exterior scene data — used when generating prompts for the 3D exterior view
+  const exterior          = useDesignerStore(s => s.exterior);
+  const viewMode          = useDesignerStore(s => s.viewMode);
 
   // Local state
   const [screenshot,     setScreenshot]     = useState<string | null>(null);
@@ -173,6 +177,37 @@ export default function AiRenderModal({ open, onClose }: Props) {
     };
   }
 
+  /**
+   * Get a prompt for the exterior / yard scene.
+   * Called automatically when viewMode is "exterior" or "global3d".
+   * Wraps generateExteriorPrompt (sceneToPrompt.ts) to match the same
+   * { positive, negative, seed } shape that generateControlNetWorkflow expects.
+   */
+  function getExteriorPrompt() {
+    const fp       = floorPlans[activeFloor];
+    const yardItems = fp?.yardPlan?.items ?? [];
+    const result   = generateExteriorPrompt({
+      exterior,
+      yardItems,
+      sunHour: 14, // midday default — can be wired to the sun slider later
+    });
+    return {
+      roomType: "exterior" as const,
+      roomName: "exterior",
+      positive: result.positive,
+      negative: result.negative,
+      seed:     Math.floor(Math.random() * 2 ** 31),
+    };
+  }
+
+  /** Returns the right prompt for the active view (interior room OR exterior). */
+  function getActivePrompt() {
+    const isExteriorView = viewMode === "exterior" || viewMode === "global3d";
+    if (isExteriorView) return getExteriorPrompt();
+    const roomData = getCurrentRoomData();
+    return roomData ? generateRoomPrompt(roomData) : getExteriorPrompt();
+  }
+
   // ── Get room dimensions in meters ──────────────────────────
   function getRoomDims() {
     const fp   = floorPlans[activeFloor];
@@ -226,7 +261,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
     screenshot: string;
     referenceImages?: string[];   // 0 = first frame, 1 = single-ref, 2-5 = multi-ref blend
     seed: number;
-    roomData: ReturnType<typeof getCurrentRoomData>;
+    promptData: ReturnType<typeof getActivePrompt>;
   }): Promise<string> {
     const res = await fetch("/api/comfyui", {
       method: "POST",
@@ -235,7 +270,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
         screenshot:      params.screenshot,
         referenceImages: params.referenceImages,
         seed:            params.seed,
-        roomData:        params.roomData,
+        roomData:        params.promptData,
         mode:            "ipadapter-chain",
       }),
     });
@@ -267,7 +302,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
   async function startChainRender() {
     if (!cameraAndCapture) return;
     const { W, D, H } = getRoomDims();
-    const roomData    = getCurrentRoomData();
+    const promptData  = getActivePrompt();
     const seed        = Math.floor(Math.random() * 2 ** 31);
 
     setPhase("submitting");
@@ -304,7 +339,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
           screenshot:      shotUrl,
           referenceImages: refs,
           seed,
-          roomData,
+          promptData,
         });
 
         resultUrls.push(imgUrl);
@@ -339,12 +374,12 @@ export default function AiRenderModal({ open, onClose }: Props) {
     setElapsed(0);
 
     try {
-      const roomData = getCurrentRoomData();
+      const promptData = getActivePrompt();
 
       // For controlnet / multicontrolnet: capture the selected angle
       const needsCapture = (mode === "controlnet" || mode === "multicontrolnet") && cameraAndCapture;
       const capturedShot = needsCapture ? capturePreset(selectedAngle) : null;
-      const body = { screenshot: capturedShot ?? screenshot, roomData, mode };
+      const body = { screenshot: capturedShot ?? screenshot, roomData: promptData, mode };
 
       const res = await fetch("/api/comfyui", {
         method: "POST",
@@ -405,16 +440,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
 
   // ── Download workflow for offline use ────────────────────────
   function downloadWorkflow(wfMode: "controlnet" | "txt2img") {
-    const roomData = getCurrentRoomData();
-    const prompt   = roomData
-      ? generateRoomPrompt(roomData)
-      : {
-          roomType: "living room",
-          roomName: "living room",
-          positive: "RAW photo, photorealistic, ultra-detailed 8K, professional interior design photography, modern living room, wide-angle lens, no people",
-          negative: "people, cartoon, low quality, blurry, 3D render",
-          seed:     Math.floor(Math.random() * 2 ** 31),
-        };
+    const prompt = getActivePrompt();
 
     const workflow = wfMode === "controlnet"
       ? generateControlNetWorkflow("your_screenshot.png", prompt)

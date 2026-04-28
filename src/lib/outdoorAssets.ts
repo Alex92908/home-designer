@@ -195,10 +195,15 @@ export function getOutdoorAssetByKind(kind: string): OutdoorAsset | undefined {
  *  at apply time by the caller). The cleanest preset has at most ~12
  *  items: 2-3 zones + 2-4 prefabs + 1-2 hero trees + a sprinkle of
  *  legacy singletons for boundary / garnish. */
-import type { YardItem } from "./types";
+import type { YardItem, YardSingleton, YardPrefab, YardZone } from "./types";
 import { rectZone } from "./outdoorZones";
 
-export type YardPresetItem = Omit<YardItem, "id">;
+// Distributive Omit — preserves the discriminated union so all variant-specific
+// fields (zoneKind, prefabKind, kind…) remain visible to TypeScript.
+export type YardPresetItem =
+  | Omit<YardSingleton, "id">
+  | Omit<YardPrefab,    "id">
+  | Omit<YardZone,      "id">;
 
 export interface YardPreset {
   id: string;
