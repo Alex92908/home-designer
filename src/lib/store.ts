@@ -466,6 +466,11 @@ interface DesignerStore {
   /** Extra SD prompt keywords extracted from user's reference image */
   promptAdditions: string;
   setPromptAdditions: (s: string) => void;
+
+  /** IP-Adapter style reference weight — 0.3 (subtle) to 1.0 (dominant).
+   *  Only active when referenceImageDataUrl is set. */
+  ipAdapterWeight: number;
+  setIpAdapterWeight: (w: number) => void;
 }
 
 const initialExterior: ExteriorSettings = {
@@ -589,6 +594,8 @@ export const useDesignerStore = create<DesignerStore>()(
       setReferenceImageDataUrl: (url) => set({ referenceImageDataUrl: url }),
       promptAdditions: "",
       setPromptAdditions: (s) => set({ promptAdditions: s }),
+      ipAdapterWeight: 0.75,
+      setIpAdapterWeight: (w) => set({ ipAdapterWeight: w }),
 
       setActiveRoom: (room) => {
         const s = get();

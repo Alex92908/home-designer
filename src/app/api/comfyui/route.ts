@@ -26,7 +26,7 @@ const DEFAULT_PROMPT = {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { screenshot, screenshots, referenceImage, referenceImages, seed, roomData, mode = "controlnet", model } = await req.json() as {
+    const { screenshot, screenshots, referenceImage, referenceImages, seed, roomData, mode = "controlnet", model, ipAdapterWeight } = await req.json() as {
       screenshot?: string;
       screenshots?: string[];     // multi-view: array of data URLs
       referenceImage?: string;    // ipadapter-chain: single previous render (legacy)
@@ -38,9 +38,13 @@ export async function POST(req: NextRequest) {
       roomData?: RoomPromptInput | GeneratedPrompt;
       mode?: "controlnet" | "txt2img" | "multicontrolnet" | "ipadapter-chain" | "hires4k";
       model?: string;             // SD checkpoint filename (must exist in ComfyUI/models/checkpoints/)
+      ipAdapterWeight?: number;   // 0.3–1.0 style reference strength for ipadapter-chain
     };
-    // Workflow opts shared across all modes — injected only when caller provides a model
-    const workflowOpts = model ? { model } : {};
+    // Workflow opts shared across all modes
+    const workflowOpts = {
+      ...(model            ? { model }                         : {}),
+      ...(ipAdapterWeight  ? { ipaWeight: ipAdapterWeight }    : {}),
+    };
 
     // ── Generate SD prompt ────────────────────────────────────────────────
     // roomData may already be a GeneratedPrompt (from AiRenderModal.getActivePrompt()

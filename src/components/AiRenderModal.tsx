@@ -88,6 +88,8 @@ export default function AiRenderModal({ open, onClose }: Props) {
   const referenceImageDataUrl  = useDesignerStore(s => s.referenceImageDataUrl);
   const setReferenceImageDataUrl = useDesignerStore(s => s.setReferenceImageDataUrl);
   const promptAdditions        = useDesignerStore(s => s.promptAdditions);
+  const ipAdapterWeight        = useDesignerStore(s => s.ipAdapterWeight);
+  const setIpAdapterWeight     = useDesignerStore(s => s.setIpAdapterWeight);
 
   // Local state
   const [screenshot,     setScreenshot]     = useState<string | null>(null);
@@ -102,7 +104,15 @@ export default function AiRenderModal({ open, onClose }: Props) {
   const [chainAngles,  setChainAngles]  = useState<string[]>(["front-right", "front-left"]);
   const [chainResults, setChainResults] = useState<string[]>([]);  // image URLs
   const [chainIndex,   setChainIndex]   = useState(0);             // current angle index being rendered
-  const [importOpen,   setImportOpen]   = useState(false);
+  const [importOpen,      setImportOpen]      = useState(false);
+  // Prompt editor
+  const [promptEditorOpen, setPromptEditorOpen] = useState(false);
+  const [editPositive,     setEditPositive]     = useState<string | null>(null); // null = auto-generated
+  const [editNegative,     setEditNegative]     = useState<string | null>(null);
+  // Angle preview thumbnails (captured from Three.js on open)
+  const [anglePreviews, setAnglePreviews] = useState<Record<string, string>>({});
+  // Post-render feedback
+  const [retouchFeedback, setRetouchFeedback] = useState("");
 
   const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -123,6 +133,11 @@ export default function AiRenderModal({ open, onClose }: Props) {
       setChainAngles(["front-right", "front-left"]);
       setChainResults([]);
       setChainIndex(0);
+      setPromptEditorOpen(false);
+      setEditPositive(null);
+      setEditNegative(null);
+      setRetouchFeedback("");
+      setAnglePreviews({});
       promptRef.current = null;
       return;
     }
@@ -159,6 +174,23 @@ export default function AiRenderModal({ open, onClose }: Props) {
       .catch(() => setComfyAvailable(false));
 
     return () => clearTimeout(t);
+  }, [open]);
+
+  // ── Capture all angle previews when modal opens ─────────────
+  useEffect(() => {
+    if (!open || !cameraAndCapture) return;
+    const fp   = useDesignerStore.getState().floorPlans[useDesignerStore.getState().activeFloor];
+    const dims = fp?.roomDimensions?.[useDesignerStore.getState().activeRoom];
+    const W = (dims?.width  ?? 500) / 100;
+    const D = (dims?.depth  ?? 400) / 100;
+    const H = 2.8;
+    const previews: Record<string, string> = {};
+    for (const preset of ANGLE_PRESETS) {
+      const shot = cameraAndCapture(preset.getPos(W, D, H), preset.getLookAt(W, D, H));
+      if (shot) previews[preset.id] = shot;
+    }
+    setAnglePreviews(previews);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // ── Get current room data for prompt generation ─────────────
@@ -283,6 +315,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
         roomData:        params.promptData,
         mode:            "ipadapter-chain",
         model:           sdModel,
+        ipAdapterWeight: referenceImageDataUrl ? ipAdapterWeight : undefined,
       }),
     });
     const data = await res.json() as { promptId?: string; error?: string };
@@ -385,17 +418,24 @@ export default function AiRenderModal({ open, onClose }: Props) {
     setElapsed(0);
 
     try {
-      const promptData = getActivePrompt();
+      const basePrompt = getActivePrompt();
+      // Apply custom prompt edits if user changed them
+      const promptData = {
+        ...basePrompt,
+        positive: editPositive !== null ? editPositive : basePrompt.positive,
+        negative: editNegative !== null ? editNegative : basePrompt.negative,
+      };
 
       // For controlnet / multicontrolnet: capture the selected angle
       const needsCapture = (mode === "controlnet" || mode === "multicontrolnet") && cameraAndCapture;
       const capturedShot = needsCapture ? capturePreset(selectedAngle) : null;
       const body = {
-        screenshot:     capturedShot ?? screenshot,
-        roomData:       promptData,
+        screenshot:       capturedShot ?? screenshot,
+        roomData:         promptData,
         mode,
-        model:          sdModel,
-        referenceImage: referenceImageDataUrl ?? undefined,
+        model:            sdModel,
+        referenceImage:   referenceImageDataUrl ?? undefined,
+        ipAdapterWeight:  referenceImageDataUrl ? ipAdapterWeight : undefined,
       };
 
       const res = await fetch("/api/comfyui", {
@@ -657,7 +697,104 @@ export default function AiRenderModal({ open, onClose }: Props) {
             </div>
           )}
 
-          {/* ── Angle picker (single-view modes) — single select ── */}
+          {/* ── Prompt editor — collapsible ── */}
+          {comfyAvailable === true && phase === "idle" && (() => {
+            const live = getActivePrompt();
+            const pos  = editPositive !== null ? editPositive : live.positive;
+            const neg  = editNegative !== null ? editNegative : live.negative;
+            const customised = editPositive !== null || editNegative !== null;
+            return (
+              <div>
+                <button
+                  className="w-full flex items-center justify-between text-left"
+                  onClick={() => {
+                    // Populate editor with live prompt on first open
+                    if (!promptEditorOpen) {
+                      if (editPositive === null) setEditPositive(live.positive);
+                      if (editNegative === null) setEditNegative(live.negative);
+                    }
+                    setPromptEditorOpen(v => !v);
+                  }}
+                >
+                  <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">
+                    ✏️ 提示词编辑
+                    {customised && (
+                      <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                        style={{ background: "#fef3c7", color: "#92400e" }}>已自定义</span>
+                    )}
+                  </p>
+                  <span className="text-gray-400 text-xs">{promptEditorOpen ? "▲" : "▼"}</span>
+                </button>
+                {promptEditorOpen && (
+                  <div className="mt-2 flex flex-col gap-2">
+                    <div>
+                      <p className="text-[10px] text-gray-400 mb-1 flex items-center justify-between">
+                        <span>正向提示词</span>
+                        {editPositive !== null && (
+                          <button className="text-indigo-400 text-[9px]" onClick={() => setEditPositive(null)}>
+                            ↺ 恢复自动
+                          </button>
+                        )}
+                      </p>
+                      <textarea
+                        value={pos}
+                        onChange={e => setEditPositive(e.target.value)}
+                        rows={4}
+                        className="w-full text-[11px] rounded-lg border border-gray-200 px-2.5 py-2 resize-y outline-none focus:border-indigo-300 font-mono leading-relaxed"
+                        style={{ color: "#374151" }}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 mb-1 flex items-center justify-between">
+                        <span>负向提示词</span>
+                        {editNegative !== null && (
+                          <button className="text-indigo-400 text-[9px]" onClick={() => setEditNegative(null)}>
+                            ↺ 恢复自动
+                          </button>
+                        )}
+                      </p>
+                      <textarea
+                        value={neg}
+                        onChange={e => setEditNegative(e.target.value)}
+                        rows={3}
+                        className="w-full text-[11px] rounded-lg border border-gray-200 px-2.5 py-2 resize-y outline-none focus:border-indigo-300 font-mono leading-relaxed"
+                        style={{ color: "#374151" }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* ── IP-Adapter weight slider (when reference image is set) ── */}
+          {comfyAvailable === true && phase === "idle" && referenceImageDataUrl && (
+            <div className="px-3 py-2.5 rounded-xl border" style={{ background: "#eef2ff", borderColor: "#c7d2fe" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <img src={referenceImageDataUrl} className="w-8 h-8 rounded object-cover shrink-0" alt="参考图" />
+                <div className="flex-1">
+                  <p className="text-[11px] font-semibold text-indigo-700">风格参考强度</p>
+                  <p className="text-[9px] text-indigo-400">数值越高，渲染结果越接近参考图风格</p>
+                </div>
+                <span className="text-sm font-bold text-indigo-600 shrink-0 w-8 text-right">
+                  {Math.round(ipAdapterWeight * 100)}%
+                </span>
+              </div>
+              <input
+                type="range" min={0.3} max={1.0} step={0.05}
+                value={ipAdapterWeight}
+                onChange={e => setIpAdapterWeight(parseFloat(e.target.value))}
+                className="w-full accent-indigo-500"
+              />
+              <div className="flex justify-between text-[9px] text-indigo-300 mt-0.5">
+                <span>30% 微妙</span>
+                <span>75% 均衡</span>
+                <span>100% 主导</span>
+              </div>
+            </div>
+          )}
+
+          {/* ── Angle picker (single-view modes) — thumbnail grid ── */}
           {comfyAvailable === true && phase === "idle" && (mode === "controlnet" || mode === "multicontrolnet") && (
             <div>
               <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2">
@@ -665,36 +802,42 @@ export default function AiRenderModal({ open, onClose }: Props) {
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {ANGLE_PRESETS.map(preset => {
-                  const active = selectedAngle === preset.id;
+                  const active  = selectedAngle === preset.id;
+                  const preview = anglePreviews[preset.id];
                   return (
                     <button
                       key={preset.id}
                       onClick={() => handleSelectAngle(preset.id)}
-                      className="py-3 px-3 rounded-xl border text-left transition-all relative"
+                      className="rounded-xl border overflow-hidden text-left transition-all relative"
                       style={{
                         borderColor: active ? "#6366f1" : "#e5e7eb",
-                        background:  active ? "#eef2ff" : "#fafafa",
+                        borderWidth:  active ? 2 : 1,
                       }}
                     >
-                      {active && (
-                        <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full"
-                          style={{ background: "#6366f1" }} />
-                      )}
-                      <div className="text-xs font-semibold"
-                        style={{ color: active ? "#4f46e5" : "#374151" }}>
-                        {preset.icon} {t.airAngles[preset.id]}
+                      {/* Live thumbnail */}
+                      {preview
+                        ? <img src={preview} className="w-full object-cover" style={{ height: 72 }} alt={preset.id} />
+                        : <div className="w-full flex items-center justify-center text-2xl"
+                            style={{ height: 72, background: "#f3f4f6" }}>{preset.icon}</div>
+                      }
+                      {/* Label bar */}
+                      <div className="px-2 py-1.5 flex items-center gap-1.5"
+                        style={{ background: active ? "#eef2ff" : "#fafafa" }}>
+                        {active && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "#6366f1" }} />}
+                        <span className="text-[11px] font-semibold"
+                          style={{ color: active ? "#4f46e5" : "#374151" }}>
+                          {preset.icon} {t.airAngles[preset.id]}
+                        </span>
                       </div>
                     </button>
                   );
                 })}
               </div>
-              <p className="text-[10px] text-gray-400 mt-1.5">
-                {t.airAngleHint}
-              </p>
+              <p className="text-[10px] text-gray-400 mt-1.5">{t.airAngleHint}</p>
             </div>
           )}
 
-          {/* ── Chain mode angle picker (multi-select, max 4) ── */}
+          {/* ── Chain mode angle picker (multi-select, max 4) — thumbnail grid ── */}
           {comfyAvailable === true && phase === "idle" && mode === "ipadapter-chain" && (
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -707,25 +850,35 @@ export default function AiRenderModal({ open, onClose }: Props) {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {ANGLE_PRESETS.map(preset => {
-                  const active = chainAngles.includes(preset.id);
-                  const order  = chainAngles.indexOf(preset.id) + 1;
+                  const active  = chainAngles.includes(preset.id);
+                  const order   = chainAngles.indexOf(preset.id) + 1;
+                  const preview = anglePreviews[preset.id];
                   return (
                     <button
                       key={preset.id}
                       onClick={() => toggleChainAngle(preset.id)}
-                      className="py-3 px-3 rounded-xl border text-left transition-all relative"
+                      className="rounded-xl border overflow-hidden text-left transition-all relative"
                       style={{
                         borderColor: active ? "#6366f1" : "#e5e7eb",
-                        background:  active ? "#eef2ff" : "#fafafa",
+                        borderWidth:  active ? 2 : 1,
                       }}
                     >
+                      {/* Order badge */}
                       {active && (
-                        <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full text-[10px] flex items-center justify-center text-white font-bold"
+                        <span className="absolute top-1.5 right-1.5 z-10 w-5 h-5 rounded-full text-[10px] flex items-center justify-center text-white font-bold shadow"
                           style={{ background: "#6366f1" }}>{order}</span>
                       )}
-                      <div className="text-xs font-semibold"
-                        style={{ color: active ? "#4f46e5" : "#374151" }}>
-                        {preset.icon} {t.airAngles[preset.id]}
+                      {/* Thumbnail */}
+                      {preview
+                        ? <img src={preview} className="w-full object-cover" style={{ height: 72 }} alt={preset.id} />
+                        : <div className="w-full flex items-center justify-center text-2xl"
+                            style={{ height: 72, background: "#f3f4f6" }}>{preset.icon}</div>
+                      }
+                      <div className="px-2 py-1.5" style={{ background: active ? "#eef2ff" : "#fafafa" }}>
+                        <span className="text-[11px] font-semibold"
+                          style={{ color: active ? "#4f46e5" : "#374151" }}>
+                          {preset.icon} {t.airAngles[preset.id]}
+                        </span>
                       </div>
                     </button>
                   );
@@ -831,6 +984,52 @@ export default function AiRenderModal({ open, onClose }: Props) {
                 })}
               </div>
               <p className="text-[10px] text-gray-400 mt-1.5 text-center">{t.airResultDone(timeStr)}</p>
+            </div>
+          )}
+
+          {/* ── Post-render feedback / retouch ── */}
+          {phase === "done" && (
+            <div className="rounded-xl border border-gray-100 overflow-hidden">
+              <div className="px-3 py-2 flex items-center gap-1.5" style={{ background: "#f8fafc" }}>
+                <span className="text-sm">🔧</span>
+                <p className="text-[11px] font-semibold text-gray-600">哪里不满意？</p>
+              </div>
+              <div className="p-3 flex flex-col gap-2">
+                <div className="flex gap-1.5 flex-wrap">
+                  {["泳池太小", "树木太少", "屋顶颜色太深", "玻璃太多", "光线太暗", "增加植栽"].map(hint => (
+                    <button key={hint}
+                      onClick={() => setRetouchFeedback(v => v ? `${v}, ${hint}` : hint)}
+                      className="text-[10px] px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 transition-colors">
+                      + {hint}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={retouchFeedback}
+                  onChange={e => setRetouchFeedback(e.target.value)}
+                  placeholder="描述想修改的地方，例如：「泳池形状改成矩形」「增加更多松树」"
+                  rows={2}
+                  className="w-full text-[11px] rounded-lg border border-gray-200 px-2.5 py-2 resize-none outline-none focus:border-indigo-300"
+                />
+                <button
+                  disabled={!retouchFeedback.trim()}
+                  onClick={() => {
+                    // Append feedback to positive prompt and re-render
+                    const live = getActivePrompt();
+                    const basePos = editPositive !== null ? editPositive : live.positive;
+                    setEditPositive(`${basePos}, ${retouchFeedback.trim()}`);
+                    setRetouchFeedback("");
+                    setPhase("idle");
+                    setResultUrl(null);
+                    setChainResults([]);
+                    // Small delay so state updates before render kicks off
+                    setTimeout(() => startRender(), 50);
+                  }}
+                  className="py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: "linear-gradient(135deg,#6366f1,#818cf8)", color: "white" }}>
+                  ✨ 微调重渲
+                </button>
+              </div>
             </div>
           )}
 
