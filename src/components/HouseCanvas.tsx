@@ -7,6 +7,7 @@ import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA } from 
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
+import { getSunPosition3D, formatHour as sunFormatHour } from "@/lib/sunAnalysis";
 import { ROOM_DEFS, ExteriorSettings, ExteriorWall, isYardPrefab, isYardZone } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { getOutdoorAssetByKind } from "@/lib/outdoorAssets";
@@ -3418,21 +3419,9 @@ function DeselectPlane({ onDeselect }: { onDeselect: () => void }) {
 }
 
 // ─── Sun Analysis: continuous time-of-day with real-time shadow ──────────────
-// Replaces the old static 3-preset system.  Drag the time slider and watch
-// shadows sweep across the building — the "wow" feature.
-
-/** Simplified solar position for 31°N latitude (Shanghai / Hangzhou).
- *  East = -X, West = +X, South = +Z in our Three.js scene convention. */
-function getSunPos(hour: number): [number, number, number] {
-  const t  = Math.max(0, Math.min(1, (hour - 6) / 13)); // 0=6am dawn, 1=7pm dusk
-  const el = Math.sin(t * Math.PI);                      // elevation 0→1→0 arc
-  const az = t * Math.PI;                                // azimuth east→south→west
-  const R  = 45;
-  const x  = -Math.cos(az) * R * 0.80;  // E = -X, W = +X
-  const y  = Math.max(el * 62, 0.8);
-  const z  = 14 + Math.sin(az) * 7;     // mild south bias
-  return [x, y, z];
-}
+// getSunPosition3D (SunCalc-based) is imported from @/lib/sunAnalysis.
+// The slider drives sunHour in the global store so AiRenderModal can
+// read the same value when building the exterior render prompt.
 
 type SkyPhase = "night" | "dawn" | "day" | "dusk";
 
@@ -3728,9 +3717,11 @@ export default function HouseCanvas() {
   const { floors }    = exterior;
   const orbitRef      = useRef<any>(null);
   const [selectedOutdoorKey, setSelectedOutdoorKey] = useState<string | null>(null);
-  // Sun analysis: continuous hour 0–24. Default 10:30 AM (morning, long shadows).
-  const [sunHour, setSunHour] = useState<number>(10.5);
-  const sunPos = getSunPos(sunHour);
+  // Sun analysis — read from global store so AiRenderModal + YardPlan share the value
+  const sunHour     = useDesignerStore(s => s.sunHour);
+  const setSunHour  = useDesignerStore(s => s.setSunHour);
+  const siteLatLng  = useDesignerStore(s => s.siteLatLng);
+  const sunPos = getSunPosition3D(sunHour, siteLatLng);
   const theme  = getSkyTheme(sunHour);
   const skyHex = _rgbHex(theme.skyRgb);
 
@@ -3760,7 +3751,7 @@ export default function HouseCanvas() {
           minWidth: 62, fontWeight: 700, letterSpacing: "0.03em",
           opacity: 0.92,
         }}>
-          {_formatHour(sunHour)}
+          {sunFormatHour(sunHour)}
         </span>
 
         {/* Gradient track + invisible range input */}

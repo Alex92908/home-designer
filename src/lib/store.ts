@@ -443,6 +443,17 @@ interface DesignerStore {
   // Camera-move-and-capture (ephemeral — registered by RoomCanvas, called by AiRenderModal)
   cameraAndCapture: ((pos: [number, number, number], lookAt: [number, number, number]) => string) | null;
   setCameraAndCapture: (fn: DesignerStore["cameraAndCapture"]) => void;
+
+  // ── Sun analysis — shared across HouseCanvas (3D lighting) + AiRenderModal (prompt) ──
+  /** Current slider hour 0–24. Drives real-time sun position in 3D and
+   *  the lighting descriptor in the exterior AI render prompt. */
+  sunHour: number;
+  setSunHour: (h: number) => void;
+
+  /** Project geographic location — used by SunCalc for accurate solar geometry.
+   *  Default: Shanghai (31.23°N, 121.47°E). User can override in settings. */
+  siteLatLng: { lat: number; lng: number };
+  setSiteLatLng: (ll: { lat: number; lng: number }) => void;
 }
 
 const initialExterior: ExteriorSettings = {
@@ -554,6 +565,11 @@ export const useDesignerStore = create<DesignerStore>()(
       activeTemplateId: null,
       cameraAndCapture: null,
       setCameraAndCapture: (fn) => set({ cameraAndCapture: fn }),
+
+      sunHour: 10.5,
+      setSunHour: (h) => set({ sunHour: h }),
+      siteLatLng: { lat: 31.23, lng: 121.47 }, // Shanghai default
+      setSiteLatLng: (ll) => set({ siteLatLng: ll }),
 
       setActiveRoom: (room) => {
         const s = get();

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateControlNetWorkflow, generateMultiViewControlNetWorkflow, generateTxt2ImgWorkflow, generateMultiControlNetWorkflow, generateIPAdapterChainWorkflow } from "@/lib/comfyWorkflow";
+import { generateControlNetWorkflow, generateMultiViewControlNetWorkflow, generateTxt2ImgWorkflow, generateMultiControlNetWorkflow, generateIPAdapterChainWorkflow, generateHiResWorkflow } from "@/lib/comfyWorkflow";
 import { generateRoomPrompt, type RoomPromptInput, type GeneratedPrompt } from "@/lib/roomPrompt";
 
 const COMFYUI = "http://localhost:8188";
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       // pre-built GeneratedPrompt sent by AiRenderModal.getActivePrompt() for the
       // exterior view.  Detect by presence of the `positive` string field.
       roomData?: RoomPromptInput | GeneratedPrompt;
-      mode?: "controlnet" | "txt2img" | "multicontrolnet" | "ipadapter-chain";
+      mode?: "controlnet" | "txt2img" | "multicontrolnet" | "ipadapter-chain" | "hires4k";
     };
 
     // ── Generate SD prompt ────────────────────────────────────────────────
@@ -67,6 +67,38 @@ export async function POST(req: NextRequest) {
       }
       const { prompt_id } = await submitRes.json() as { prompt_id: string };
       return NextResponse.json({ promptId: prompt_id });
+    }
+
+    // ── hires4k: dual ControlNet + ESRGAN 4× + HiResFix detail pass ──────────
+    if (mode === "hires4k") {
+      const src = screenshot ?? screenshots?.[0];
+      if (!src) return NextResponse.json({ error: "missing_screenshot" }, { status: 400 });
+
+      const base64Data = src.replace(/^data:image\/\w+;base64,/, "");
+      const buffer     = Buffer.from(base64Data, "base64");
+      const formData   = new FormData();
+      formData.append("image", new Blob([buffer], { type: "image/png" }), "hd_hires_src.png");
+      formData.append("overwrite", "true");
+
+      const uploadRes = await fetch(`${COMFYUI}/upload/image`, {
+        method: "POST", body: formData, signal: AbortSignal.timeout(10000),
+      });
+      if (!uploadRes.ok) return NextResponse.json({ error: "upload_failed" }, { status: 502 });
+      const { name } = await uploadRes.json() as { name: string };
+
+      const workflow  = generateHiResWorkflow(name, prompt);
+      const submitRes = await fetch(`${COMFYUI}/prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: workflow, client_id: "home-designer" }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!submitRes.ok) {
+        const text = await submitRes.text();
+        return NextResponse.json({ error: "submit_failed", detail: text }, { status: 502 });
+      }
+      const { prompt_id } = await submitRes.json() as { prompt_id: string };
+      return NextResponse.json({ promptId: prompt_id, imageName: name });
     }
 
     // ── multicontrolnet: same upload flow, different workflow ─

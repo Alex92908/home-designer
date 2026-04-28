@@ -24,6 +24,7 @@ import * as THREE from "three";
 import type { YardPrefab, PrefabKind } from "@/lib/types";
 import { getPrefabDef, resolveParams } from "@/lib/outdoorPrefabs";
 import { getOutdoorTexture, outdoorTileSize } from "@/lib/textures";
+import { poissonRect } from "@/lib/poissonDisc";
 // Structural prefabs reuse the existing detailed Pool/Pergola/OutdoorKitchen
 // /Fountain implementations from HouseCanvas. The import is technically
 // circular (HouseCanvas imports PrefabMesh from here), but it works fine
@@ -224,6 +225,7 @@ function FarmBoxMesh({ params, rot }: {
   const BED_W = 1.6, BED_D = 0.8, BED_H = 0.55;
   const GAP = pathBetween ? 0.7 : 0.20;
 
+  // ── Bed layout ─────────────────────────────────────────────────────
   const beds = useMemo(() => {
     const out: Array<{ x: number; z: number }> = [];
     const cols = Math.min(bedCount, 2);
@@ -241,43 +243,61 @@ function FarmBoxMesh({ params, rot }: {
     return out;
   }, [bedCount, bedShape, GAP, BED_W, BED_D]);
 
+  // ── Poisson-disc crop points per bed ───────────────────────────────
+  // Instead of a fixed 4×2 grid, Bridson sampling fills each bed with
+  // naturally spaced plants — no two within minDist of each other.
+  // Seed is stable per bed index so layout is deterministic across renders.
+  const cropPtsPerBed = useMemo(
+    () => beds.map((_, i) =>
+      poissonRect(
+        BED_W / 2 - 0.12,   // half-width margin
+        BED_D / 2 - 0.12,   // half-depth margin
+        cropMix === "veggies" ? 0.18 : 0.14,  // tighter for herbs
+        i * 17 + 5,          // deterministic per-bed seed
+      )
+    ),
+    [beds, BED_W, BED_D, cropMix],
+  );
+
   const cropColor: Record<typeof cropMix, [string, string, string]> = {
-    herbs:   ["#7C9F4A", "#9CB85F", "#6F8E3F"],   // sage / rosemary tones
-    veggies: ["#3F7A2F", "#6FA050", "#85B068"],   // leafy greens
-    mixed:   ["#7C9F4A", "#9F7AA8", "#85B068"],   // greens + lavender purple
+    herbs:   ["#7C9F4A", "#9CB85F", "#6F8E3F"],
+    veggies: ["#3F7A2F", "#6FA050", "#85B068"],
+    mixed:   ["#7C9F4A", "#9F7AA8", "#85B068"],
   };
   const palette = cropColor[cropMix];
 
   return (
     <group rotation={[0, rot, 0]}>
-      {beds.map((b, i) => (
+      {beds.map((b, i) => {
+        const pts = cropPtsPerBed[i];
+        return (
         <group key={i} position={[b.x, 0, b.z]}>
-          {/* Wood box walls (4 thin planks for visible top edge) */}
+          {/* Wood box walls */}
           <mesh position={[0, BED_H / 2 - 0.5, 0]} castShadow receiveShadow>
             <boxGeometry args={[BED_W, BED_H, BED_D]} />
             <meshStandardMaterial color="#7A5530" roughness={0.85} />
           </mesh>
-          {/* Soil (dark, slightly recessed top) */}
+          {/* Soil */}
           <mesh position={[0, BED_H / 2 - 0.5 + 0.27, 0]} receiveShadow>
             <boxGeometry args={[BED_W - 0.10, 0.06, BED_D - 0.10]} />
             <meshStandardMaterial color="#3A2F22" roughness={0.95} />
           </mesh>
-          {/* Crops — random tufts in a 4×2 grid */}
-          {Array.from({ length: 8 }).map((_, k) => {
-            const cx = (k % 4 - 1.5) * (BED_W * 0.22);
-            const cz = (Math.floor(k / 4) - 0.5) * (BED_D * 0.4);
-            const color = palette[k % 3];
-            const h = 0.18 + ((k * 7) % 3) * 0.05;
+          {/* Poisson-disc crop tufts — naturally distributed, never overlapping */}
+          {pts.map((pt, k) => {
+            // Deterministic per-point variation from seed
+            const rng = ((i * 31 + k * 13) % 97) / 97;
+            const color = palette[k % palette.length];
+            const h     = 0.15 + rng * 0.10;
+            const r     = 0.08 + rng * 0.04;
             return (
-              <group key={k} position={[cx, BED_H / 2 - 0.5 + 0.3, cz]}>
+              <group key={k} position={[pt.x, BED_H / 2 - 0.5 + 0.30, pt.z]}>
                 <mesh castShadow>
-                  <sphereGeometry args={[0.10 + ((k * 13) % 3) * 0.02, 8, 6]} />
+                  <sphereGeometry args={[r, 7, 5]} />
                   <meshStandardMaterial color={color} roughness={0.95} />
                 </mesh>
-                {/* Lavender / herb spike vertical accents */}
                 {cropMix !== "veggies" && (
                   <mesh position={[0, h * 0.5, 0]} castShadow>
-                    <coneGeometry args={[0.04, h, 5]} />
+                    <coneGeometry args={[0.035, h, 5]} />
                     <meshStandardMaterial color="#9F7AA8" roughness={0.95} />
                   </mesh>
                 )}
@@ -285,7 +305,8 @@ function FarmBoxMesh({ params, rot }: {
             );
           })}
         </group>
-      ))}
+        );
+      })}
 
       {/* Stainless cable border posts (only if pathBetween — implies formal layout) */}
       {pathBetween && [-1, 1].flatMap(sx =>

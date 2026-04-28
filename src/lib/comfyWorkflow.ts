@@ -656,3 +656,123 @@ export function generateImg2ImgWorkflow(
     },
   };
 }
+
+// ─── HiResFix — 4K upscale ───────────────────────────────────────────────────
+/**
+ * 4K HiResFix workflow: generate at 1024×1024 then upscale 4× with
+ * ESRGAN + a second KSampler pass (denoise=0.40) that adds photographic
+ * micro-detail at the higher resolution.
+ *
+ * Total output: 4096×4096 — on par with the reference photo in the brief.
+ *
+ * Requires: comfyui-esrgan (4x_ESRGAN_RealSRGAN.pth in models/upscale_models/)
+ * The upscale model name is configurable via opts.upscaleModel.
+ *
+ * Chain:
+ *   1→5   : Backbone + text + latent (same as controlnet workflow)
+ *   6→8   : ControlNet depth+canny (reuse same nodes as generateControlNetWorkflow)
+ *   20    : KSampler #1 — base 1024 generation
+ *   21    : VAEDecode → 1024 image
+ *   22    : ImageUpscaleWithModel → 4096 image (ESRGAN 4×)
+ *   23    : VAEEncode → 4096 latent
+ *   24    : KSampler #2 — detail pass (denoise=0.40, fewer steps)
+ *   25    : VAEDecode → 4096 final
+ *   26    : SaveImage at 4K
+ */
+export interface HiResWorkflowOptions extends ControlNetWorkflowOptions {
+  upscaleModel?: string;
+  hiResSteps?:   number;
+  hiResDenoise?: number;
+}
+
+export function generateHiResWorkflow(
+  imageName: string,
+  prompt: GeneratedPrompt,
+  opts: HiResWorkflowOptions = {}
+): Record<string, unknown> {
+  const {
+    model                = "RealVisXL_V5.0_fp16.safetensors",
+    depthControlnetModel = opts.controlnetModel ?? "diffusion_pytorch_model.safetensors",
+    cannyControlnetModel = opts.controlnetModel ?? "diffusion_pytorch_model.safetensors",
+    depthModel           = "depth_anything_v2_vits.pth",
+    width                = 1024,
+    height               = 1024,
+    steps                = 35,
+    cfg                  = 6.5,
+    depthStrength        = 0.80,
+    cannyStrength        = 0.50,
+    upscaleModel         = "4x_ESRGAN_RealSRGAN.pth",
+    hiResSteps           = 20,
+    hiResDenoise         = 0.40,
+  } = opts;
+
+  return {
+    // ── Backbone ──────────────────────────────────────────────────────────────
+    "1": { class_type: "CheckpointLoaderSimple", inputs: { ckpt_name: model } },
+
+    // ── Input image (3D scene screenshot) ─────────────────────────────────────
+    "2": { class_type: "LoadImage", inputs: { image: imageName, upload: "image" } },
+
+    // ── Preprocessors ─────────────────────────────────────────────────────────
+    "3": { class_type: "DepthAnythingV2Preprocessor",
+      inputs: { image: ["2", 0], ckpt_name: depthModel, resolution: 1024 } },
+    "4": { class_type: "CannyEdgePreprocessor",
+      inputs: { image: ["2", 0], low_threshold: 80, high_threshold: 180, resolution: 1024 } },
+
+    // ── ControlNet loaders ────────────────────────────────────────────────────
+    "5": { class_type: "ControlNetLoader", inputs: { control_net_name: depthControlnetModel } },
+    "6": { class_type: "ControlNetLoader", inputs: { control_net_name: cannyControlnetModel } },
+
+    // ── Text conditioning ─────────────────────────────────────────────────────
+    "7": { class_type: "CLIPTextEncode", inputs: { text: prompt.positive, clip: ["1", 1] } },
+    "8": { class_type: "CLIPTextEncode", inputs: { text: prompt.negative,  clip: ["1", 1] } },
+
+    // ── Latent canvas (1024) ─────────────────────────────────────────────────
+    "9": { class_type: "EmptyLatentImage", inputs: { batch_size: 1, height, width } },
+
+    // ── ControlNet chain ──────────────────────────────────────────────────────
+    "10": { class_type: "ControlNetApplyAdvanced", inputs: {
+      positive: ["7", 0], negative: ["8", 0],
+      control_net: ["5", 0], image: ["3", 0],
+      strength: depthStrength, start_percent: 0, end_percent: 1.0,
+    }},
+    "11": { class_type: "ControlNetApplyAdvanced", inputs: {
+      positive: ["10", 0], negative: ["10", 1],
+      control_net: ["6", 0], image: ["4", 0],
+      strength: cannyStrength, start_percent: 0, end_percent: 0.75,
+    }},
+
+    // ── KSampler #1 — base 1024×1024 generation ───────────────────────────────
+    "20": { class_type: "KSampler", inputs: {
+      seed: prompt.seed, steps, cfg,
+      sampler_name: "dpmpp_2m", scheduler: "karras", denoise: 1.0,
+      model: ["1", 0], positive: ["11", 0], negative: ["11", 1],
+      latent_image: ["9", 0],
+    }},
+
+    // ── Decode 1024 → pixel space ─────────────────────────────────────────────
+    "21": { class_type: "VAEDecode", inputs: { samples: ["20", 0], vae: ["1", 2] } },
+
+    // ── ESRGAN 4× upscale → 4096 pixel image ─────────────────────────────────
+    "22": { class_type: "UpscaleModelLoader",     inputs: { model_name: upscaleModel } },
+    "23": { class_type: "ImageUpscaleWithModel",  inputs: { upscale_model: ["22", 0], image: ["21", 0] } },
+
+    // ── Encode back to latent for detail pass ─────────────────────────────────
+    "24": { class_type: "VAEEncode", inputs: { pixels: ["23", 0], vae: ["1", 2] } },
+
+    // ── KSampler #2 — HiResFix detail at 4096 (low denoise = preserve structure) ──
+    "25": { class_type: "KSampler", inputs: {
+      seed: (prompt.seed + 1) % (2 ** 31), steps: hiResSteps, cfg,
+      sampler_name: "dpmpp_2m", scheduler: "karras", denoise: hiResDenoise,
+      model: ["1", 0], positive: ["11", 0], negative: ["11", 1],
+      latent_image: ["24", 0],
+    }},
+
+    // ── Decode + save at 4K ───────────────────────────────────────────────────
+    "26": { class_type: "VAEDecode",  inputs: { samples: ["25", 0], vae: ["1", 2] } },
+    "27": { class_type: "SaveImage",  inputs: {
+      filename_prefix: `hires4k_${prompt.roomType.replace(/[\s/]+/g, "_")}`,
+      images: ["26", 0],
+    }},
+  };
+}

@@ -58,6 +58,14 @@ export interface OutdoorAsset {
   customGroundAlign?: boolean;
   /** Author credit shown in About page when customGltfPath is used. */
   customAuthor?: string;
+
+  // ── Purchase metadata (for the "Get Quote" feature) ──────────────────────
+  /** Retail price in CNY (¥). Shown in the quote sheet. */
+  estimatedPriceCNY?: number;
+  /** Brand name (e.g. "Kettal", "B&B Italia Outdoor"). */
+  brand?: string;
+  /** Purchase / product page URL for the "Buy" button in the quote sheet. */
+  purchaseUrl?: string;
 }
 
 export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
@@ -151,36 +159,73 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
   { kind: "furniture.chaiseLounger", label: "躺椅",     icon: "🛋", category: "furniture",
     glb: "", scale: 1, radiusCm: 110, color: "#D4C4A0",
     customGltfPath: "/models/outdoor_furniture/sun_lounger/sun_lounger.gltf",
-    customTargetHeightM: 0.85, customGroundAlign: true, customAuthor: "Sketchfab CC-BY" },
+    customTargetHeightM: 0.85, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
+    brand: "Kettal", estimatedPriceCNY: 12800,
+    purchaseUrl: "https://www.kettal.com/en/products/outdoor-lounge/chaise-lounges" },
   { kind: "furniture.outdoorSofa",   label: "户外沙发", icon: "🛋", category: "furniture",
     glb: "", scale: 1, radiusCm: 160, color: "#C8C0A8",
     customGltfPath: "/models/outdoor_furniture/outdoor_sofa/outdoor_sofa.gltf",
-    customTargetHeightM: 0.90, customGroundAlign: true, customAuthor: "Sketchfab CC-BY" },
+    customTargetHeightM: 0.90, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
+    brand: "Dedon", estimatedPriceCNY: 28000,
+    purchaseUrl: "https://www.dedon.de/en/outdoor-sofas" },
   { kind: "furniture.parasol",       label: "遮阳伞",   icon: "⛱", category: "furniture",
     glb: "", scale: 1, radiusCm: 200, color: "#F5EDD8",
     customGltfPath: "/models/outdoor_furniture/garden_parasol/garden_parasol.gltf",
-    customTargetHeightM: 2.60, customGroundAlign: true, customAuthor: "Sketchfab CC-BY" },
+    customTargetHeightM: 2.60, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
+    brand: "Jardinico", estimatedPriceCNY: 9800,
+    purchaseUrl: "https://www.jardinico.com/products/parasols" },
   { kind: "furniture.coffeeTable",   label: "户外茶几", icon: "🪵", category: "furniture",
     glb: "", scale: 1, radiusCm: 65,  color: "#A8A0A0",
     customGltfPath: "/models/outdoor_furniture/garden_coffee_table/garden_coffee_table.gltf",
-    customTargetHeightM: 0.45, customGroundAlign: true, customAuthor: "Sketchfab CC-BY" },
+    customTargetHeightM: 0.45, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
+    brand: "Tribu", estimatedPriceCNY: 6800,
+    purchaseUrl: "https://www.tribuliving.com/collections/outdoor-tables" },
   { kind: "furniture.diningSet",     label: "户外餐桌", icon: "🍽", category: "furniture",
     glb: "", scale: 1, radiusCm: 180, color: "#C8B8A0",
     customGltfPath: "/models/outdoor_furniture/outdoor_dining_set/outdoor_dining_set.gltf",
-    customTargetHeightM: 0.75, customGroundAlign: true, customAuthor: "Sketchfab CC-BY" },
+    customTargetHeightM: 0.75, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
+    brand: "Gloster", estimatedPriceCNY: 38000,
+    purchaseUrl: "https://www.gloster.com/dining-sets" },
   { kind: "furniture.fireplace",     label: "户外壁炉", icon: "🔥", category: "furniture",
     glb: "", scale: 1, radiusCm: 90,  color: "#787068",
     customGltfPath: "/models/outdoor_furniture/outdoor_fireplace/outdoor_fireplace.gltf",
-    customTargetHeightM: 1.10, customGroundAlign: true, customAuthor: "Sketchfab CC-BY" },
+    customTargetHeightM: 1.10, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
+    brand: "EcoSmart Fire", estimatedPriceCNY: 22000,
+    purchaseUrl: "https://www.ecosmartfire.com/outdoor-fireplaces" },
   { kind: "furniture.planter",       label: "花盆",     icon: "🌺", category: "furniture",
     glb: "", scale: 1, radiusCm: 55,  color: "#C8A882",
     customGltfPath: "/models/outdoor_furniture/large_planter/large_planter.gltf",
-    customTargetHeightM: 0.65, customGroundAlign: true, customAuthor: "Sketchfab CC-BY" },
+    customTargetHeightM: 0.65, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
+    brand: "Vondom", estimatedPriceCNY: 3200,
+    purchaseUrl: "https://www.vondom.com/products/planters" },
   { kind: "furniture.swimmingLounger",label: "泳池躺椅",icon: "🏖", category: "furniture",
     glb: "", scale: 1, radiusCm: 110, color: "#E8E0C8",
     customGltfPath: "/models/outdoor_furniture/pool_lounger/pool_lounger.gltf",
-    customTargetHeightM: 0.75, customGroundAlign: true, customAuthor: "Sketchfab CC-BY" },
+    customTargetHeightM: 0.75, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
+    brand: "Unopiù", estimatedPriceCNY: 8800,
+    purchaseUrl: "https://www.unopiu.com/en/pool-loungers" },
 ];
+
+// ─── Prefab purchase catalog ──────────────────────────────────────────────────
+/** Purchase metadata for compound prefabs (pool, pergola, etc.).
+ *  Keyed by PrefabKind. */
+export const PREFAB_PURCHASE: Record<string, {
+  label: string;
+  brand: string;
+  estimatedPriceCNY: number;
+  purchaseUrl: string;
+}> = {
+  pool:            { label: "无边际泳池",   brand: "Compass Pools",   estimatedPriceCNY: 280000, purchaseUrl: "https://www.compasspools.com" },
+  social_island:   { label: "社交岛 + 火坑", brand: "Extremis",        estimatedPriceCNY: 68000,  purchaseUrl: "https://www.extremis.com" },
+  pergola_classic: { label: "钢木廊架",      brand: "Unopiù",          estimatedPriceCNY: 45000,  purchaseUrl: "https://www.unopiu.com/en/pergolas" },
+  outdoor_kitchen: { label: "户外厨房",      brand: "Higold",          estimatedPriceCNY: 58000,  purchaseUrl: "https://www.higold.com/outdoor-kitchen" },
+  fountain:        { label: "石材喷泉",      brand: "Serena & Lily",   estimatedPriceCNY: 12000,  purchaseUrl: "https://www.serenaandlily.com/fountains" },
+  farm_box:        { label: "高床菜箱",      brand: "Vego Garden",     estimatedPriceCNY: 3800,   purchaseUrl: "https://www.vegogarden.com" },
+  porte_cochere:   { label: "混凝土车棚",    brand: "自建",             estimatedPriceCNY: 95000,  purchaseUrl: "" },
+  slat_wall:       { label: "竖板隐私屏",    brand: "Toja Grid",       estimatedPriceCNY: 8800,   purchaseUrl: "https://www.tojagrid.com" },
+  fence_segment:   { label: "现代木栅栏",    brand: "Trex",            estimatedPriceCNY: 4200,   purchaseUrl: "https://www.trex.com/fencing" },
+  parking_area:    { label: "砾石停车位",    brand: "自建",             estimatedPriceCNY: 18000,  purchaseUrl: "" },
+};
 
 export function getOutdoorAssetByKind(kind: string): OutdoorAsset | undefined {
   return OUTDOOR_ASSET_LIBRARY.find(a => a.kind === kind);

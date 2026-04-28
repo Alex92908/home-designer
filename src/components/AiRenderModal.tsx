@@ -12,7 +12,7 @@ interface Props {
   onClose: () => void;
 }
 
-type Mode = "controlnet" | "txt2img" | "multicontrolnet" | "ipadapter-chain";
+type Mode = "controlnet" | "txt2img" | "multicontrolnet" | "ipadapter-chain" | "hires4k";
 type Phase = "idle" | "submitting" | "generating" | "done" | "error";
 
 const POLL_INTERVAL = 2500; // ms
@@ -80,6 +80,8 @@ export default function AiRenderModal({ open, onClose }: Props) {
   // Exterior scene data — used when generating prompts for the 3D exterior view
   const exterior          = useDesignerStore(s => s.exterior);
   const viewMode          = useDesignerStore(s => s.viewMode);
+  const sunHour           = useDesignerStore(s => s.sunHour);
+  const siteLatLng        = useDesignerStore(s => s.siteLatLng);
 
   // Local state
   const [screenshot,     setScreenshot]     = useState<string | null>(null);
@@ -189,7 +191,8 @@ export default function AiRenderModal({ open, onClose }: Props) {
     const result   = generateExteriorPrompt({
       exterior,
       yardItems,
-      sunHour: 14, // midday default — can be wired to the sun slider later
+      sunHour,     // live from the global sun slider
+      styleTag: siteLatLng.lat > 28 && siteLatLng.lat < 35 ? "contemporary" : undefined,
     });
     return {
       roomType: "exterior" as const,

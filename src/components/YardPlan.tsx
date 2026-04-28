@@ -24,6 +24,9 @@ import { PREFAB_REGISTRY, getPrefabDef } from "@/lib/outdoorPrefabs";
 import { ZONE_STYLES, polygonCentroid } from "@/lib/outdoorZones";
 import { evaluateYardPlan, violationsByItem } from "@/lib/outdoorClearance";
 import { useLocale } from "@/lib/i18n";
+import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
+import { getShadowPolygon } from "@/lib/sunAnalysis";
+import { getOutdoorAssetByKind as _getAsset, PREFAB_PURCHASE } from "@/lib/outdoorAssets";
 
 // ─── Constants ─────────────────────────────────────────────
 // World window the SVG renders (cm, centred on origin)
@@ -468,6 +471,22 @@ export default function YardPlan() {
   const requiredCount = violations.filter(v => v.severity === "required").length;
   const recommendedCount = violations.length - requiredCount;
 
+  // Sun analysis — shared with HouseCanvas and AiRenderModal via store
+  const sunHour    = useDesignerStore(s => s.sunHour);
+  const siteLatLng = useDesignerStore(s => s.siteLatLng);
+
+  // Shadow polygon — recalculated when sun hour or house size changes
+  const houseWcm = footprint.maxX - footprint.minX;
+  const houseDcm = footprint.maxZ - footprint.minZ;
+  const houseHm  = 2 * 2.8; // 2-floor default height in metres
+  const shadowPoly = useMemo(
+    () => getShadowPolygon(sunHour, siteLatLng, houseWcm, houseDcm, houseHm),
+    [sunHour, siteLatLng, houseWcm, houseDcm, houseHm],
+  );
+
+  // Quote sheet modal
+  const [showQuote, setShowQuote] = useState(false);
+
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedId, _setSelectedId] = useState<string | null>(null);
   const setSelectedId = (id: string | null) => {
@@ -535,13 +554,39 @@ export default function YardPlan() {
   };
 
   // ── Selected-item move (via SVG pointermove on the document) ──
+  // Integrates two algorithms from the design doc:
+  //   1. Smart Snap-to-Wall (磁吸): when dragging within 50cm of a house wall
+  //      edge, the item snaps to the wall face + 30cm clearance gap.
+  //   2. House Clearance Guard (避让): if the item lands inside the house
+  //      bounding box, it is nudged outward to the nearest safe edge.
+  // Shift key bypasses both (free move for manual fine-tuning).
+  const houseWm = (footprint.maxX - footprint.minX) / 100;
+  const houseDm = (footprint.maxZ - footprint.minZ) / 100;
   useEffect(() => {
     if (!drag) return;
     const onMove = (ev: PointerEvent) => {
       const { x, z } = svgPtToWorld(ev.clientX, ev.clientY);
-      // Snap to grid (Shift held = free move)
-      const nx = ev.shiftKey ? Math.round(x - drag.offsetX) : Math.round((x - drag.offsetX) / SNAP_CM) * SNAP_CM;
-      const nz = ev.shiftKey ? Math.round(z - drag.offsetZ) : Math.round((z - drag.offsetZ) / SNAP_CM) * SNAP_CM;
+      let nx = Math.round(x - drag.offsetX);
+      let nz = Math.round(z - drag.offsetZ);
+
+      if (!ev.shiftKey) {
+        // Grid snap first
+        nx = Math.round(nx / SNAP_CM) * SNAP_CM;
+        nz = Math.round(nz / SNAP_CM) * SNAP_CM;
+
+        // 1. Snap-to-wall (磁吸) — pulls item to house wall face when nearby
+        const snapped = snapToHouseWall(nx, nz, houseWm, houseDm, 50);
+        nx = snapped.x;
+        nz = snapped.z;
+
+        // 2. Clearance guard (避让) — prevent placing inside house footprint
+        const clearance = checkHouseClearance(nx, nz, houseWm, houseDm, 20);
+        if (!clearance.ok) {
+          nx += clearance.nudgeX;
+          nz += clearance.nudgeZ;
+        }
+      }
+
       updateYardItem(drag.id, { x: nx, z: nz });
     };
     const onUp = () => setDrag(null);
@@ -551,7 +596,7 @@ export default function YardPlan() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [drag, updateYardItem]);
+  }, [drag, updateYardItem, houseWm, houseDm]);
 
   // Keyboard: Delete key removes selected item
   useEffect(() => {
@@ -651,7 +696,104 @@ export default function YardPlan() {
             清空
           </button>
         )}
+        {/* Auto-route button — appears when parking_area + items exist */}
+        {yardItems.some(it => isYardPrefab(it) && (it as import("@/lib/types").YardPrefab).prefabKind === "parking_area") && (
+          <button
+            onClick={() => {
+              // Find parking area centre
+              const parking = yardItems.find(it => isYardPrefab(it) && (it as import("@/lib/types").YardPrefab).prefabKind === "parking_area") as import("@/lib/types").YardPrefab;
+              if (!parking) return;
+              // Front door position: front face of house (minZ), centred X
+              const doorX = (footprint.minX + footprint.maxX) / 2;
+              const doorZ = footprint.minZ;
+              // Simple L-shaped path: from parking to door via an elbow point
+              const pathPts: Array<{x: number; z: number}> = [];
+              const steps = Math.max(2, Math.round(Math.abs(parking.z - doorZ) / 120));
+              for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                pathPts.push({
+                  x: parking.x + (doorX - parking.x) * Math.min(1, t * 1.4),
+                  z: parking.z + (doorZ - parking.z) * t,
+                });
+              }
+              pathPts.forEach((pt, idx) => {
+                const id = `y-path-${Date.now()}-${idx}`;
+                addYardItem({ id, type: "singleton", kind: "feature.pathStone", x: Math.round(pt.x / 25) * 25, z: Math.round(pt.z / 25) * 25, scale: 1.0 });
+              });
+            }}
+            className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0"
+            style={{ background: "rgba(34,197,94,0.15)", color: "#86EFAC", border: "1px solid rgba(34,197,94,0.3)" }}>
+            🛤 自动铺路
+          </button>
+        )}
+        {/* Quote sheet */}
+        {yardItems.length > 0 && (
+          <button
+            onClick={() => setShowQuote(true)}
+            className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0"
+            style={{ background: "rgba(251,191,36,0.15)", color: "#FCD34D", border: "1px solid rgba(251,191,36,0.3)" }}>
+            💰 获取报价
+          </button>
+        )}
       </div>
+
+      {/* ── Quote Sheet Modal ── */}
+      {showQuote && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
+          onClick={e => { if (e.target === e.currentTarget) setShowQuote(false); }}>
+          <div className="bg-[#13161E] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            style={{ width: "min(640px,95vw)", maxHeight: "80vh", border: "1px solid rgba(255,255,255,0.10)" }}>
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+              <h2 className="text-white font-bold text-base">💰 采购报价单</h2>
+              <button onClick={() => setShowQuote(false)} className="text-white/50 hover:text-white text-xl">✕</button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-4 space-y-2">
+              {(() => {
+                const rows: Array<{label: string; brand: string; price: number; url: string}> = [];
+                for (const item of yardItems) {
+                  if (isYardSingleton(item)) {
+                    const asset = _getAsset(item.kind);
+                    if (asset?.estimatedPriceCNY) rows.push({ label: asset.label, brand: asset.brand ?? "—", price: asset.estimatedPriceCNY, url: asset.purchaseUrl ?? "" });
+                  } else if (isYardPrefab(item)) {
+                    const p = PREFAB_PURCHASE[(item as import("@/lib/types").YardPrefab).prefabKind];
+                    if (p) rows.push({ label: p.label, brand: p.brand, price: p.estimatedPriceCNY, url: p.purchaseUrl });
+                  }
+                }
+                if (rows.length === 0) return <p className="text-white/40 text-sm text-center py-8">当前设计中没有可报价的元素</p>;
+                const total = rows.reduce((s, r) => s + r.price, 0);
+                return (
+                  <>
+                    {rows.map((r, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-2 rounded-lg"
+                        style={{ background: "rgba(255,255,255,0.05)" }}>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm font-medium truncate">{r.label}</p>
+                          <p className="text-white/40 text-xs">{r.brand}</p>
+                        </div>
+                        <p className="text-amber-300 font-bold text-sm shrink-0">¥{r.price.toLocaleString()}</p>
+                        {r.url && (
+                          <a href={r.url} target="_blank" rel="noopener noreferrer"
+                            className="text-xs px-2 py-1 rounded shrink-0"
+                            style={{ background: "rgba(251,191,36,0.15)", color: "#FCD34D", border: "1px solid rgba(251,191,36,0.3)" }}>
+                            购买 →
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                    <div className="flex justify-between items-center px-4 py-3 mt-2 rounded-lg"
+                      style={{ background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.25)" }}>
+                      <span className="text-white font-bold">预估总价</span>
+                      <span className="text-amber-300 font-bold text-lg">¥{total.toLocaleString()}</span>
+                    </div>
+                    <p className="text-white/30 text-[10px] text-center pt-1">价格为市场参考价，实际以供应商报价为准</p>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Canvas area ── */}
       <div className="flex-1 flex items-center justify-center overflow-auto p-4 min-h-0">
@@ -699,6 +841,38 @@ export default function YardPlan() {
             <line x1={500 / CM_PER_PX} y1={-3} x2={500 / CM_PER_PX} y2={3} stroke={INK} strokeWidth={1.2} />
             <text x={500 / CM_PER_PX / 2} y={14} textAnchor="middle" fontSize={9} fill={INK}>5.00 m</text>
           </g>
+
+          {/* ── Sun shadow overlay — semi-transparent dark polygon showing
+              where the house casts shadow at the current sun hour.
+              Rendered ABOVE the grid but BELOW the house footprint so the
+              house silhouette always reads clearly on top. ── */}
+          {shadowPoly && (() => {
+            const pts = shadowPoly
+              .map(([sx, sz]) => `${SVG_PX / 2 + sx / CM_PER_PX},${SVG_PX / 2 + sz / CM_PER_PX}`)
+              .join(" ");
+            const cx = shadowPoly.reduce((s, [sx]) => s + sx, 0) / shadowPoly.length;
+            const cz = shadowPoly.reduce((s, [, sz]) => s + sz, 0) / shadowPoly.length;
+            return (
+              <g style={{ pointerEvents: "none" }}>
+                <polygon
+                  points={pts}
+                  fill="rgba(20,14,0,0.38)"
+                  stroke="rgba(255,180,0,0.22)"
+                  strokeWidth={1}
+                  strokeDasharray="5 3"
+                />
+                <text
+                  x={SVG_PX / 2 + cx / CM_PER_PX}
+                  y={SVG_PX / 2 + cz / CM_PER_PX}
+                  textAnchor="middle" dominantBaseline="middle"
+                  fontSize={8} fill="rgba(255,200,80,0.65)"
+                  fontFamily="ui-monospace, Menlo, monospace"
+                  letterSpacing="0.08em">
+                  ☽ 阴影区
+                </text>
+              </g>
+            );
+          })()}
 
           {/* House footprint — per-room polygons with hatching overlay */}
           {(() => {
