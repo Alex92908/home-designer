@@ -2988,16 +2988,17 @@ function usePbrSet(dir: string, asset: string, repeat: [number, number]): {
 // PBR-textured grass ground — loads the aerial_grass_rock PolyHaven set.
 // In Suspense so the flat-color fallback shows while textures fetch.
 function GrassGroundTextured({ size }: { size: number }) {
-  const rep: [number, number] = [size * 1.8, size * 1.8];
+  const rep: [number, number] = [size * 1.4, size * 1.4];
   const grass = usePbrSet("ground", "aerial_grass_rock", rep);
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.499, 0]} receiveShadow>
       <planeGeometry args={[size, size, 6, 6]} />
       <meshStandardMaterial
         {...grass}
-        roughness={0.92}
+        color="#4A6E28"       // desaturate & deepen the PolyHaven texture — removes neon cast
+        roughness={0.94}
         metalness={0.0}
-        envMapIntensity={0.4}
+        envMapIntensity={0.30}
       />
     </mesh>
   );
@@ -3040,17 +3041,17 @@ function Ground({ W, D }: { W: number; D: number }) {
   const lawnSize = Math.max(W, D) * 2.2;
   return (
     <>
-      {/* Far ground — neutral tone, fades into horizon */}
+      {/* Far ground — muted neutral, no warm-tan cast that looks like dirt */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.501, 0]} receiveShadow>
         <planeGeometry args={[sizeX, sizeZ, 1, 1]} />
-        <meshStandardMaterial color="#BDB8A8" roughness={1.0} />
+        <meshStandardMaterial color="#6B7858" roughness={1.0} />
       </mesh>
-      {/* Inset lawn — PBR grass texture. Suspense boundary falls back to
-          flat sage while the texture loads over the network. */}
+      {/* Inset lawn — PBR grass texture. Fallback uses a deep natural green
+          close to the textured target so the colour-swap on load is subtle. */}
       <Suspense fallback={
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.499, 0]} receiveShadow>
           <planeGeometry args={[lawnSize, lawnSize, 1, 1]} />
-          <meshStandardMaterial color="#9DAD8C" roughness={1.0} />
+          <meshStandardMaterial color="#4A6E28" roughness={0.95} />
         </mesh>
       }>
         <GrassGroundTextured size={lawnSize} />
@@ -3103,9 +3104,9 @@ function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: num
       dummy.scale.set(s, s, s);
       dummy.updateMatrix();
       mesh.setMatrixAt(placed, dummy.matrix);
-      // Color variation: lighter / darker greens
-      const tint = 0.55 + Math.random() * 0.35;
-      const col = new THREE.Color(0.30 * tint + 0.10, 0.55 * tint, 0.18 * tint);
+      // Colour variation: muted natural lawn greens, avoiding neon
+      const tint = 0.50 + Math.random() * 0.40;
+      const col = new THREE.Color(0.16 * tint + 0.06, 0.38 * tint + 0.04, 0.10 * tint);
       mesh.setColorAt(placed, col);
       placed++;
     }
@@ -3596,7 +3597,7 @@ function VillaYard({ W, D }: { W: number; D: number }) {
       <mesh rotation={[-Math.PI / 2, 0, 0]}
         position={[0, -0.496, D / 2 + lawnTotalD / 2 - 1.5]} receiveShadow>
         <planeGeometry args={[W * 3.5, lawnTotalD]} />
-        <meshStandardMaterial color="#548A38" roughness={0.96} metalness={0.0} envMapIntensity={0.55} />
+        <meshStandardMaterial color="#3D6125" roughness={0.97} metalness={0.0} envMapIntensity={0.30} />
       </mesh>
 
       {/* ── Travertine terrace — individual 600×900 mm tiles with visible seam lines.
@@ -3905,6 +3906,12 @@ export default function HouseCanvas() {
         }} />
         <Ground W={W} D={D} />
         <EntryPath W={W} D={D} />
+        {/* Grass blade carpet — thin tapered instances for lawn depth.
+            Count kept low on mobile; radius covers the inset lawn area. */}
+        <GrassCarpet W={W} D={D} count={1800} radius={Math.max(W, D) * 2.0} />
+        {/* Distant tree ring — cheap conifer cones at the horizon edge,
+            masks the abrupt ground cutoff and adds scenic depth. */}
+        <DistantTreeRing radius={Math.max(W, D) * 3.5 + 18} count={28} />
         <HouseBody W={W} D={D} settings={exterior} />
         <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />
         {/* User-drawn yardPlan items (院子图 editor). Structural prefabs compose
