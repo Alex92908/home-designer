@@ -416,20 +416,24 @@ function WallFace({ width, height, color, accentColor, wallMaterial = "render", 
 function FloorShell({ floorIndex, W, D, settings, totalFloors }: {
   floorIndex: number; W: number; D: number; settings: ExteriorSettings; totalFloors: number;
 }) {
-  const { wallColor, accentColor, wallMaterial, roofStyle } = settings;
+  const { wallColor, accentColor, wallMaterial, roofStyle, preset } = settings;
   const H = FLOOR_H;
-  const isGround = floorIndex === 0;
-  const isModern  = roofStyle === "flat";
-  // Modern flat-roof style: bigger windows and glass curtain walls
-  const winCountFront = isModern
+  const isGround  = floorIndex === 0;
+  const isFlatRoof = roofStyle === "flat";
+  // Full glass curtain wall: ONLY "modern" or "minimalist" + flat roof.
+  // Contemporary / industrial / mediterranean flat-roof → solid walls with big windows,
+  // so the detected wallColor and accentColor (wood tones etc.) actually show.
+  const isModern = isFlatRoof && (preset === "modern" || preset === "minimalist");
+  // All flat-roof styles get the larger window grid (contemporary still has big openings)
+  const winCountFront = isFlatRoof
     ? Math.max(2, Math.floor(W / 1.8))
     : Math.max(1, Math.floor(W / 2.6) - (isGround ? 1 : 0));
-  const winCountSide  = isModern
+  const winCountSide  = isFlatRoof
     ? Math.max(1, Math.floor(D / 1.8))
     : Math.max(1, Math.floor(D / 2.6));
 
-  // Slab band color — exposed white concrete between floors (modernist)
-  const slabColor = isModern ? "#F2EDE8" : "#C8C0B0";
+  // Slab band color — light concrete for all flat-roof styles
+  const slabColor = isFlatRoof ? "#F2EDE8" : "#C8C0B0";
 
   return (
     <group position={[0, floorIndex * H, 0]}>
@@ -472,6 +476,36 @@ function FloorShell({ floorIndex, W, D, settings, totalFloors }: {
           <meshStandardMaterial color={slabColor} roughness={isModern ? 0.70 : 0.80} envMapIntensity={isModern ? 0.4 : 0.1} />
         </mesh>
       )}
+      {/* Contemporary wood cladding — vertical timber slats on front wall upper section.
+          Applied only when preset=contemporary + flat roof + NOT full glass curtain wall.
+          Uses accentColor so imported reference photo's wood tone (e.g. #D9570E) shows. */}
+      {!isModern && isFlatRoof && preset === "contemporary" && floorIndex > 0 && (() => {
+        const SLAT_W = 0.08, SLAT_GAP = 0.018, SLAT_T = 0.038;
+        const step   = SLAT_W + SLAT_GAP;
+        const panelW = W * 0.40;                           // cladding spans ~40% of wall width (right side)
+        const panelH = H * 0.68;
+        const offsetX = W * 0.22;                          // right-biased
+        const numSlats = Math.floor(panelW / step);
+        const startX = offsetX - (numSlats * step) / 2 + SLAT_W / 2;
+        const warm1 = accentColor;
+        const warm2 = accentColor;                         // slight variation handled by roughness
+        return (
+          <group position={[0, 0, -(D / 2 - WT / 2 - SLAT_T)]}>
+            {Array.from({ length: numSlats }).map((_, i) => (
+              <mesh key={i} position={[startX + i * step, panelH / 2 - H / 2 + H * 0.15, 0]} castShadow>
+                <boxGeometry args={[SLAT_W, panelH, SLAT_T]} />
+                <meshStandardMaterial
+                  color={i % 2 === 0 ? warm1 : warm2}
+                  roughness={0.38 + (i % 3) * 0.04}
+                  metalness={0.0}
+                  envMapIntensity={0.55}
+                />
+              </mesh>
+            ))}
+          </group>
+        );
+      })()}
+
       {/* Glass balcony railing on front face — modern style upper floors only */}
       {isModern && floorIndex > 0 && (
         <group position={[0, 0.28 + 0.55, -(D / 2 + 0.02)]}>
@@ -3627,48 +3661,25 @@ function VillaYard({ W, D }: { W: number; D: number }) {
         </mesh>
       ))}
 
-      {/* ── Pool shell — organic shape: rectangle body + one semicircular far end.
-          The curved end gives Canny/Depth a distinctive organic line that distinguishes
-          a luxury pool from a plain rectangle. ── */}
+      {/* ── Pool shell — clean rectangular luxury pool (matches contemporary reference photos) ── */}
       {(() => {
         const poolDepth = 0.56;
         const shellY    = -0.28;
-        // Straight rectangular body (full length — the semicircle overlaps at the end)
         return (
-          <group>
-            <mesh position={[0, shellY, pz]} receiveShadow castShadow>
-              <boxGeometry args={[pw + 0.36, poolDepth, pd + 0.36]} />
-              <meshStandardMaterial color="#D8CEBC" roughness={0.70} />
-            </mesh>
-            {/* Semicircular rounded far end — half-cylinder radius = (pw+0.36)/2 */}
-            <mesh position={[0, shellY, pz + pd / 2 + 0.18]}
-              rotation={[Math.PI / 2, 0, 0]} castShadow>
-              <cylinderGeometry args={[(pw + 0.36) / 2, (pw + 0.36) / 2, poolDepth, 28, 1, false, 0, Math.PI]} />
-              <meshStandardMaterial color="#D8CEBC" roughness={0.70} />
-            </mesh>
-          </group>
+          <mesh position={[0, shellY, pz]} receiveShadow castShadow>
+            <boxGeometry args={[pw + 0.36, poolDepth, pd + 0.36]} />
+            <meshStandardMaterial color="#D8CEBC" roughness={0.70} />
+          </mesh>
         );
       })()}
 
-      {/* ── Pool interior (turquoise plaster) — matching organic rounded far end ── */}
-      {(() => {
-        const iy = -0.05, depth = 0.50;
-        return (
-          <group>
-            <mesh position={[0, iy, pz]}>
-              <boxGeometry args={[pw, depth, pd]} />
-              <meshStandardMaterial color="#0E6B7A" roughness={0.15} metalness={0.0} />
-            </mesh>
-            {/* Semicircular interior end */}
-            <mesh position={[0, iy, pz + pd / 2]} rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[pw / 2, pw / 2, depth, 28, 1, false, 0, Math.PI]} />
-              <meshStandardMaterial color="#0E6B7A" roughness={0.15} metalness={0.0} />
-            </mesh>
-          </group>
-        );
-      })()}
+      {/* ── Pool interior (turquoise plaster) ── */}
+      <mesh position={[0, -0.05, pz]}>
+        <boxGeometry args={[pw, 0.50, pd]} />
+        <meshStandardMaterial color="#0E6B7A" roughness={0.15} metalness={0.0} />
+      </mesh>
 
-      {/* ── Water surface ── */}
+      {/* ── Water surface — clean rectangle ── */}
       <mesh position={[0, 0.03, pz]}>
         <boxGeometry args={[pw - 0.04, 0.06, pd - 0.04]} />
         <meshPhysicalMaterial
@@ -3681,14 +3692,9 @@ function VillaYard({ W, D }: { W: number; D: number }) {
           envMapIntensity={8.0}
         />
       </mesh>
-      {/* Water rounded end */}
-      <mesh position={[0, 0.03, pz + pd / 2 - 0.02]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[(pw - 0.04) / 2, (pw - 0.04) / 2, 0.06, 28, 1, false, 0, Math.PI]} />
-        <meshPhysicalMaterial color="#38B4D8" transmission={0.62} roughness={0.01} ior={1.33} metalness={0.0} thickness={1.4} envMapIntensity={8.0} />
-      </mesh>
 
-      {/* ── Coping edge strips (3 straight sides — no coping on rounded end) ── */}
-      {([[-1,0],[1,0],[0,-1]] as [number,number][]).map(([sx, sz], i) => {
+      {/* ── Coping edge strips — all 4 sides of rectangular pool ── */}
+      {([[-1,0],[1,0],[0,-1],[0,1]] as [number,number][]).map(([sx, sz], i) => {
         const horiz = sz === 0;
         const len = horiz ? pd + 0.5 : pw + 0.5;
         return (
@@ -3700,11 +3706,6 @@ function VillaYard({ W, D }: { W: number; D: number }) {
           </mesh>
         );
       })}
-      {/* Curved coping on rounded end */}
-      <mesh position={[0, 0.04, pz + pd / 2 + 0.22]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[(pw + 0.5) / 2, (pw + 0.5) / 2, 0.06, 28, 1, false, 0, Math.PI]} />
-        <meshStandardMaterial color="#F2EAD8" roughness={0.62} />
-      </mesh>
 
       {/* ── Sun loungers — 4 along pool near edge, like reference photos ── */}
       {([-0.60, -0.20, 0.20, 0.60] as number[]).map((xFrac, i) => {
