@@ -2988,17 +2988,16 @@ function usePbrSet(dir: string, asset: string, repeat: [number, number]): {
 // PBR-textured grass ground — loads the aerial_grass_rock PolyHaven set.
 // In Suspense so the flat-color fallback shows while textures fetch.
 function GrassGroundTextured({ size }: { size: number }) {
-  const rep: [number, number] = [size * 1.4, size * 1.4];
-  const grass = usePbrSet("ground", "aerial_grass_rock", rep);
+  // Solid-colour lawn — no tiling seams, no repeat-count artifacts.
+  // Shadow from the building still shows naturally on this surface.
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.499, 0]} receiveShadow>
-      <planeGeometry args={[size, size, 6, 6]} />
+      <planeGeometry args={[size, size]} />
       <meshStandardMaterial
-        {...grass}
-        color="#4A6E28"       // desaturate & deepen the PolyHaven texture — removes neon cast
-        roughness={0.94}
+        color="#3A5E1C"
+        roughness={0.97}
         metalness={0.0}
-        envMapIntensity={0.30}
+        envMapIntensity={0.18}
       />
     </mesh>
   );
