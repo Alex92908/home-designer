@@ -3394,48 +3394,113 @@ function DeselectPlane({ onDeselect }: { onDeselect: () => void }) {
   );
 }
 
-// ─── Time-of-day presets — drive sun position/colour, ambient, fog ─────
-type TimeOfDay = "day" | "sunset" | "night";
-const TOD_PRESETS: Record<TimeOfDay, {
-  sunPos:  [number, number, number];
-  sunColor: string;
-  sunIntensity: number;
-  fillColor: string;
-  fillIntensity: number;
-  hemiSky: string;
-  hemiGround: string;
-  hemiIntensity: number;
-  ambient: number;
-  fogColor: string;
-  fogNear: number;
-  fogFar:  number;
-  exposure: number;
-  hdr: string;
-}> = {
-  // PBR-quality presets — close-up eye-level camera, matching RoomCanvas
-  // lighting feel. Higher ambient so shadows aren't pitch-black on close faces.
-  day: {
-    sunPos: [30, 45, 20], sunColor: "#FFF8F0", sunIntensity: 2.4,
-    fillColor: "#C8E0F8", fillIntensity: 0.55,
-    hemiSky: "#C8DDEF", hemiGround: "#A8A070", hemiIntensity: 0.65,
-    ambient: 0.35, fogColor: "#4E8FCC", fogNear: 28, fogFar: 90,
-    exposure: 1.05, hdr: "/hdr/potsdamer_platz_1k.hdr",
-  },
-  sunset: {
-    sunPos: [28, 12, 10], sunColor: "#F8B850", sunIntensity: 2.4,
-    fillColor: "#8898C0", fillIntensity: 0.42,
-    hemiSky: "#D87850", hemiGround: "#583820", hemiIntensity: 0.60,
-    ambient: 0.30, fogColor: "#C0A880", fogNear: 80, fogFar: 280,
-    exposure: 1.12, hdr: "/hdr/venice_sunset_1k.hdr",
-  },
-  night: {
-    sunPos: [-12, 22, -8], sunColor: "#B8C4D8", sunIntensity: 0.5,
-    fillColor: "#3A4258", fillIntensity: 0.25,
-    hemiSky: "#252D3F", hemiGround: "#10131C", hemiIntensity: 0.35,
-    ambient: 0.22, fogColor: "#181C28", fogNear: 80, fogFar: 250,
-    exposure: 0.85, hdr: "/hdr/venice_sunset_1k.hdr",
-  },
-};
+// ─── Sun Analysis: continuous time-of-day with real-time shadow ──────────────
+// Replaces the old static 3-preset system.  Drag the time slider and watch
+// shadows sweep across the building — the "wow" feature.
+
+/** Simplified solar position for 31°N latitude (Shanghai / Hangzhou).
+ *  East = -X, West = +X, South = +Z in our Three.js scene convention. */
+function getSunPos(hour: number): [number, number, number] {
+  const t  = Math.max(0, Math.min(1, (hour - 6) / 13)); // 0=6am dawn, 1=7pm dusk
+  const el = Math.sin(t * Math.PI);                      // elevation 0→1→0 arc
+  const az = t * Math.PI;                                // azimuth east→south→west
+  const R  = 45;
+  const x  = -Math.cos(az) * R * 0.80;  // E = -X, W = +X
+  const y  = Math.max(el * 62, 0.8);
+  const z  = 14 + Math.sin(az) * 7;     // mild south bias
+  return [x, y, z];
+}
+
+type SkyPhase = "night" | "dawn" | "day" | "dusk";
+
+interface SkyTheme {
+  phase:        SkyPhase;
+  sunColor:     string;  sunIntensity: number;
+  fillColor:    string;  fillIntensity: number;
+  hemiSky:      string;  hemiGround: string; hemiIntensity: number;
+  ambient:      number;
+  fogColor:     string;  fogNear: number; fogFar: number;
+  exposure:     number;
+  hdr:          string;
+  skyRgb:       [number, number, number];
+}
+
+function _lerpRgb(
+  a: [number, number, number],
+  b: [number, number, number],
+  t: number,
+): [number, number, number] {
+  const s = Math.max(0, Math.min(1, t));
+  return [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s];
+}
+function _rgbHex(c: [number, number, number]) {
+  return "#" + c.map(v => Math.max(0, Math.min(255, v | 0)).toString(16).padStart(2, "0")).join("");
+}
+
+function getSkyTheme(hour: number): SkyTheme {
+  const t    = Math.max(0, Math.min(1, (hour - 6) / 13));
+  const elev = Math.sin(t * Math.PI);
+
+  if (hour < 5.5 || hour > 19.5) return {
+    phase: "night",
+    sunColor: "#B8C4D8", sunIntensity: 0.45,
+    fillColor: "#3A4258", fillIntensity: 0.22,
+    hemiSky: "#252D3F", hemiGround: "#10131C", hemiIntensity: 0.32,
+    ambient: 0.20, fogColor: "#181C28", fogNear: 80, fogFar: 240,
+    exposure: 0.82, hdr: "/hdr/venice_sunset_1k.hdr",
+    skyRgb: [10, 15, 30],
+  };
+
+  if (hour < 8) {
+    const p: number = (hour - 5.5) / 2.5;
+    return {
+      phase: "dawn",
+      sunColor: "#F8C870", sunIntensity: 0.8 + elev * 1.4,
+      fillColor: "#9090C8", fillIntensity: 0.32,
+      hemiSky: "#D07050", hemiGround: "#503020", hemiIntensity: 0.50,
+      ambient: 0.22 + elev * 0.10,
+      fogColor: "#C08060", fogNear: 35, fogFar: 150,
+      exposure: 0.92 + p * 0.12,
+      hdr: "/hdr/venice_sunset_1k.hdr",
+      skyRgb: _lerpRgb([20, 10, 40], [130, 185, 220], p),
+    };
+  }
+
+  if (hour > 17) {
+    const p: number = (hour - 17) / 2.5;
+    return {
+      phase: "dusk",
+      sunColor: "#F89830", sunIntensity: 0.7 + elev * 1.6,
+      fillColor: "#8898C0", fillIntensity: 0.38,
+      hemiSky: "#C86040", hemiGround: "#503020", hemiIntensity: 0.55,
+      ambient: 0.26 + elev * 0.08,
+      fogColor: "#C08050", fogNear: 50, fogFar: 200,
+      exposure: 1.06 + (1 - elev) * 0.06,
+      hdr: "/hdr/venice_sunset_1k.hdr",
+      skyRgb: _lerpRgb([78, 145, 216], [20, 15, 40], p),
+    };
+  }
+
+  // Daytime 8–17: elevation drives colour saturation
+  return {
+    phase: "day",
+    sunColor: "#FFF8F0", sunIntensity: 1.6 + elev * 0.9,
+    fillColor: "#C8E0F8", fillIntensity: 0.45 + elev * 0.12,
+    hemiSky: "#C8DDEF", hemiGround: "#A8A070", hemiIntensity: 0.58 + elev * 0.10,
+    ambient: 0.28 + elev * 0.10,
+    fogColor: "#4E8FCC", fogNear: 28, fogFar: 90,
+    exposure: 1.02 + elev * 0.08,
+    hdr: "/hdr/potsdamer_platz_1k.hdr",
+    skyRgb: _lerpRgb([130, 185, 220], [60, 130, 200], elev),
+  };
+}
+
+function _formatHour(h: number) {
+  const hh   = Math.floor(h);
+  const mm   = Math.round((h - hh) * 60);
+  const ampm = hh < 12 ? "AM" : "PM";
+  return `${hh % 12 || 12}:${mm.toString().padStart(2, "0")} ${ampm}`;
+}
 
 // ─── Villa yard: lawn + terrace + pool + loungers (modern preset) ────────────
 function VillaYard({ W, D }: { W: number; D: number }) {
@@ -3553,34 +3618,84 @@ export default function HouseCanvas() {
   const { floors } = exterior;
   const orbitRef = useRef<any>(null);
   const [selectedOutdoorKey, setSelectedOutdoorKey] = useState<string | null>(null);
-  const [tod, setTod] = useState<TimeOfDay>("day");
-  const tp = TOD_PRESETS[tod];
+  // Sun analysis: continuous hour 0–24. Default 10:30 AM (morning, long shadows).
+  const [sunHour, setSunHour] = useState<number>(10.5);
+  const sunPos = getSunPos(sunHour);
+  const theme  = getSkyTheme(sunHour);
+  const skyHex = _rgbHex(theme.skyRgb);
 
   return (
     <div className="w-full h-full relative">
-      {/* Time-of-day picker — top-right floating */}
-      <div className="absolute top-3 right-3 z-10 flex rounded-full shadow-lg overflow-hidden"
-        style={{ background: "rgba(20,20,28,0.7)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)" }}>
-        {([
-          { id: "day"    as const, icon: "☀️", label: "Day"    },
-          { id: "sunset" as const, icon: "🌇", label: "Sunset" },
-          { id: "night"  as const, icon: "🌙", label: "Night"  },
-        ]).map(o => (
-          <button key={o.id} onClick={() => setTod(o.id)}
-            className="px-3 py-1.5 text-[11px] font-semibold transition-colors"
-            style={tod === o.id
-              ? { background: "rgba(99,102,241,0.85)", color: "#fff" }
-              : { background: "transparent", color: "rgba(255,255,255,0.65)" }}
-          >
-            {o.icon} {o.label}
-          </button>
-        ))}
+      {/* ── Sun Analysis Slider ── bottom-centre, draggable 0-24h ── */}
+      <div
+        className="absolute bottom-4 left-1/2 z-10 flex items-center gap-3 select-none"
+        style={{
+          transform: "translateX(-50%)",
+          background: "rgba(8,10,20,0.80)",
+          backdropFilter: "blur(14px)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          borderRadius: 28,
+          padding: "8px 18px",
+          boxShadow: "0 4px 28px rgba(0,0,0,0.45)",
+        }}
+      >
+        {/* Phase icon — updates as you drag */}
+        <span style={{ fontSize: 15, lineHeight: 1 }}>
+          {theme.phase === "night" ? "🌙" : theme.phase === "dawn" ? "🌅" : theme.phase === "dusk" ? "🌇" : "☀️"}
+        </span>
+
+        {/* Time readout */}
+        <span style={{
+          color: "#fff", fontSize: 12, fontFamily: "monospace",
+          minWidth: 62, fontWeight: 700, letterSpacing: "0.03em",
+          opacity: 0.92,
+        }}>
+          {_formatHour(sunHour)}
+        </span>
+
+        {/* Gradient track + invisible range input */}
+        <div style={{ position: "relative", width: 200, height: 20, display: "flex", alignItems: "center" }}>
+          {/* Colour gradient representing the day arc */}
+          <div style={{
+            position: "absolute", left: 0, right: 0, top: "50%", transform: "translateY(-50%)",
+            height: 5, borderRadius: 3,
+            background: "linear-gradient(to right, #0A0F1E 0%, #1A0C28 8%, #D87850 22%, #87CEEB 42%, #4E8FCC 55%, #87CEEB 68%, #C86840 82%, #1A0C28 92%, #0A0F1E 100%)",
+          }} />
+          {/* Sun thumb dot */}
+          <div style={{
+            position: "absolute",
+            left: `${(sunHour / 24) * 100}%`,
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 14, height: 14,
+            borderRadius: "50%",
+            background: theme.phase === "night" ? "#B0C0FF" : "#F8C04A",
+            boxShadow: `0 0 8px 2px ${theme.phase === "night" ? "#B0C0FF55" : "#F8C04A88"}`,
+            pointerEvents: "none",
+            transition: "background 0.4s, box-shadow 0.4s",
+          }} />
+          {/* Transparent range input — captures all drag events */}
+          <input
+            type="range" min={0} max={24} step={0.25} value={sunHour}
+            onChange={e => setSunHour(Number(e.target.value))}
+            style={{
+              position: "absolute", inset: 0, width: "100%", height: "100%",
+              opacity: 0, cursor: "ew-resize", margin: 0, padding: 0,
+            }}
+            aria-label="Time of day"
+          />
+        </div>
+
+        {/* Label */}
+        <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          SHADOW
+        </span>
       </div>
       <Canvas
         shadows={{ type: THREE.PCFSoftShadowMap }}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: tp.exposure,
+          toneMappingExposure: theme.exposure,
           // Required for canvas.toDataURL() (AI render screenshot)
           preserveDrawingBuffer: true,
           antialias: false, // SMAA effect handles AA below
@@ -3588,7 +3703,7 @@ export default function HouseCanvas() {
         camera={{ fov: 58, near: 0.1, far: 300 }}
         dpr={[1, 2]}
       >
-        <fog attach="fog" args={[tp.fogColor, tp.fogNear, tp.fogFar]} />
+        <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />
         <CameraRig W={W} D={D} floors={floors} />
         <OrbitControls
           ref={orbitRef}
@@ -3606,39 +3721,39 @@ export default function HouseCanvas() {
             backgroundBlurriness softens the HDR to remove distracting detail
             while keeping the sky colour/gradient. Night mode keeps a dark
             sphere instead since the night HDR is just a coloured gradient. */}
-        {/* Day mode: deep blue sky sphere — consistent from any camera angle */}
-        {tod === "day" && (
+        {/* Sky sphere — colour interpolates continuously with sun position */}
+        {theme.phase !== "night" && (
           <>
-            <color attach="background" args={["#4E8FCC"]} />
+            <color attach="background" args={[skyHex]} />
             <mesh scale={[260, 260, 260]}>
               <sphereGeometry args={[1, 32, 20]} />
-              <meshBasicMaterial color="#4E8FCC" side={THREE.BackSide} depthWrite={false} fog={false} />
+              <meshBasicMaterial color={skyHex} side={THREE.BackSide} depthWrite={false} fog={false} />
             </mesh>
           </>
         )}
         <HouseEnvironmentFallback>
           <Suspense fallback={null}>
             <Environment
-              files={tp.hdr}
-              background={tod === "sunset"}
-              backgroundBlurriness={tod === "sunset" ? 0.04 : 0.06}
-              backgroundIntensity={tod === "day" ? 0.50 : tod === "sunset" ? 0.90 : 0.75}
+              files={theme.hdr}
+              background={false}
+              backgroundBlurriness={0.06}
+              backgroundIntensity={theme.phase === "day" ? 0.50 : 0.75}
             />
           </Suspense>
         </HouseEnvironmentFallback>
-        {/* Night sky sphere — only shown when HDR is not used as background */}
-        {tod === "night" && (
+        {/* Night sky sphere */}
+        {theme.phase === "night" && (
           <mesh scale={[280, 280, 280]}>
             <sphereGeometry args={[1, 32, 24]} />
-            <meshBasicMaterial color="#111828" side={THREE.BackSide} depthWrite={false} />
+            <meshBasicMaterial color="#0A0F1E" side={THREE.BackSide} depthWrite={false} />
           </mesh>
         )}
-        {/* Hemisphere light — sky/ground bounce, same setup as RoomCanvas */}
-        <hemisphereLight args={[tp.hemiSky, tp.hemiGround, tp.hemiIntensity]} />
-        <ambientLight intensity={tp.ambient} />
-        {/* Primary sun — high-res shadows, tighter frustum for close-up camera */}
+        {/* Hemisphere light — sky/ground bounce */}
+        <hemisphereLight args={[theme.hemiSky, theme.hemiGround, theme.hemiIntensity]} />
+        <ambientLight intensity={theme.ambient} />
+        {/* Primary sun — position updates every render frame as slider moves */}
         <directionalLight
-          position={tp.sunPos} intensity={tp.sunIntensity} color={tp.sunColor} castShadow
+          position={sunPos} intensity={theme.sunIntensity} color={theme.sunColor} castShadow
           shadow-mapSize={[2048, 2048]}
           shadow-camera-far={100}
           shadow-camera-left={-30} shadow-camera-right={30}
@@ -3646,8 +3761,12 @@ export default function HouseCanvas() {
           shadow-bias={-0.0008}
           shadow-normalBias={0.04}
         />
-        {/* Sky fill from opposite side */}
-        <directionalLight position={[-15, 20, -10]} intensity={tp.fillIntensity} color={tp.fillColor} />
+        {/* Sky fill from opposite side (fill tracks opposite of sun) */}
+        <directionalLight
+          position={[-sunPos[0] * 0.4, 20, -sunPos[2] * 0.4]}
+          intensity={theme.fillIntensity}
+          color={theme.fillColor}
+        />
 
         {/* Click empty ground to deselect */}
         <DeselectPlane onDeselect={() => {
@@ -3674,17 +3793,17 @@ export default function HouseCanvas() {
             blendFunction={BlendFunction.MULTIPLY}
             samples={28}
             radius={6}
-            intensity={tod === "night" ? 48 : 35}
+            intensity={theme.phase === "night" ? 48 : 35}
             luminanceInfluence={0.6}
             worldDistanceThreshold={1.5}
             worldDistanceFalloff={3.0}
             worldProximityThreshold={0.5}
             worldProximityFalloff={1.0}
           />
-          {/* Bloom — keep threshold high so only bright emissives/sky glow */}
+          {/* Bloom — subtle sun glow for day, stronger for night lamps */}
           <Bloom
-            intensity={tod === "night" ? 0.55 : tod === "sunset" ? 0.28 : 0.14}
-            luminanceThreshold={tod === "night" ? 0.92 : 0.88}
+            intensity={theme.phase === "night" ? 0.55 : theme.phase === "dusk" ? 0.32 : 0.14}
+            luminanceThreshold={theme.phase === "night" ? 0.92 : 0.88}
             luminanceSmoothing={0.30}
             mipmapBlur
           />
