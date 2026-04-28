@@ -67,12 +67,35 @@ function FlatRoof({ W, D, color }: { W: number; D: number; color: string }) {
         <boxGeometry args={[slabW, 0.30, slabD]} />
         <meshStandardMaterial color={color} roughness={0.72} metalness={0.01} envMapIntensity={0.35} />
       </mesh>
-      {/* Wood soffit — thick walnut panels visible under the cantilever overhang */}
-      <mesh position={[0, -0.225, 0]} receiveShadow>
-        <boxGeometry args={[slabW - 0.02, 0.22, slabD - 0.02]} />
-        <meshStandardMaterial color="#8B5A2B" roughness={0.42} metalness={0.0} envMapIntensity={0.55}
-          emissive="#2A1200" emissiveIntensity={0.08} />
-      </mesh>
+      {/* Wood soffit — individual walnut slats (horizontal rhythm) running along X axis.
+          Slats are visible under the cantilever overhang and give Canny strong parallel
+          edge lines that guide SDXL to reproduce the correct roof soffit character. */}
+      {(() => {
+        const SLAT_W   = 0.090;   // 9 cm slat face width (Z direction)
+        const SLAT_GAP = 0.022;   // 2.2 cm shadow gap between slats
+        const SLAT_T   = 0.048;   // 4.8 cm slat thickness (Y direction)
+        const step     = SLAT_W + SLAT_GAP;
+        const numSlats = Math.floor((slabD - 0.04) / step);
+        const totalSpan = numSlats * step - SLAT_GAP;
+        const startZ   = -totalSpan / 2 + SLAT_W / 2;
+        return Array.from({ length: numSlats }).map((_, i) => {
+          // Alternate very slightly between two warm tones for natural variation
+          const warm = i % 3 === 0 ? "#7A4E22" : i % 3 === 1 ? "#8B5A2B" : "#96622F";
+          return (
+            <mesh key={i} position={[0, -0.21, startZ + i * step]} receiveShadow castShadow>
+              <boxGeometry args={[slabW - 0.06, SLAT_T, SLAT_W]} />
+              <meshStandardMaterial
+                color={warm}
+                roughness={0.38}
+                metalness={0.0}
+                envMapIntensity={0.65}
+                emissive="#1E0A00"
+                emissiveIntensity={0.09}
+              />
+            </mesh>
+          );
+        });
+      })()}
       {/* Dark fascia boards on all 4 edges (thin aluminum-look) */}
       {([
         { pos: [0, 0.05, -(slabD / 2)], args: [slabW + 0.02, 0.42, 0.05] as [number,number,number] },
@@ -3527,33 +3550,110 @@ function VillaYard({ W, D }: { W: number; D: number }) {
         <meshStandardMaterial color="#548A38" roughness={0.96} metalness={0.0} envMapIntensity={0.55} />
       </mesh>
 
-      {/* ── Travertine terrace between building and pool ── */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.493, D / 2 + terrD / 2]} receiveShadow>
-        <planeGeometry args={[W + 1.0, terrD]} />
-        <meshStandardMaterial color="#E5D9C4" roughness={0.86} metalness={0.0} />
-      </mesh>
+      {/* ── Travertine terrace — individual 600×900 mm tiles with visible seam lines.
+          The tile joints give ControlNet Canny strong ground-plane line conditioning,
+          guiding SDXL to reproduce travertine paving rather than a plain slab. ── */}
+      {(() => {
+        const TW = 0.60, TD = 0.90, GAP = 0.013;
+        const deckW  = W + 1.0;
+        const cols   = Math.ceil(deckW / (TW + GAP)) + 1;
+        const rows   = Math.ceil(terrD / (TD + GAP)) + 1;
+        const startX = -(cols * (TW + GAP)) / 2 + TW / 2;
+        const startZ = D / 2 + TD / 2;
+        return Array.from({ length: cols }).flatMap((_, c) =>
+          Array.from({ length: rows }).map((_, r) => {
+            const brightness = ((c + r) % 2 === 0) ? "#E8DBC8" : "#EDE2D0";
+            return (
+              <mesh key={`tr-${c}-${r}`}
+                rotation={[-Math.PI / 2, 0, 0]}
+                position={[startX + c * (TW + GAP), -0.490, startZ + r * (TD + GAP)]}
+                receiveShadow>
+                <planeGeometry args={[TW, TD]} />
+                <meshStandardMaterial color={brightness} roughness={0.80} metalness={0.02} />
+              </mesh>
+            );
+          })
+        );
+      })()}
 
-      {/* ── Pool surround deck (travertine stone tiles) ── */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.492, pz]} receiveShadow>
-        <planeGeometry args={[pw + deckSide * 2 + 0.5, pd + deckSide * 2]} />
-        <meshStandardMaterial color="#EDE2CE" roughness={0.84} metalness={0.0} />
-      </mesh>
+      {/* ── Pool surround deck — same 600×900 tiles, slightly warmer tone ── */}
+      {(() => {
+        const TW = 0.60, TD = 0.90, GAP = 0.013;
+        const dW = pw + deckSide * 2 + 0.5;
+        const dD = pd + deckSide * 2;
+        const cols   = Math.ceil(dW / (TW + GAP)) + 1;
+        const rows   = Math.ceil(dD / (TD + GAP)) + 1;
+        const startX = -(cols * (TW + GAP)) / 2 + TW / 2;
+        const startZ = pz - dD / 2 + TD / 2;
+        return Array.from({ length: cols }).flatMap((_, c) =>
+          Array.from({ length: rows }).map((_, r) => {
+            const brightness = ((c + r) % 2 === 0) ? "#EDE0C8" : "#F2E8D5";
+            return (
+              <mesh key={`pd-${c}-${r}`}
+                rotation={[-Math.PI / 2, 0, 0]}
+                position={[startX + c * (TW + GAP), -0.488, startZ + r * (TD + GAP)]}
+                receiveShadow>
+                <planeGeometry args={[TW, TD]} />
+                <meshStandardMaterial color={brightness} roughness={0.78} metalness={0.02} />
+              </mesh>
+            );
+          })
+        );
+      })()}
 
-      {/* ── Pool shell (coping surround) ── */}
-      <mesh position={[0, -0.28, pz]} receiveShadow castShadow>
-        <boxGeometry args={[pw + 0.36, 0.56, pd + 0.36]} />
-        <meshStandardMaterial color="#D8CEBC" roughness={0.70} />
-      </mesh>
+      {/* ── Entry steps — 3 shallow stone steps descending from terrace to pool level.
+          Strong horizontal shadow lines for Canny conditioning. ── */}
+      {[0, 1, 2].map(s => (
+        <mesh key={`step-${s}`}
+          position={[0, -0.12 + s * 0.06, D / 2 + terrD + s * 0.32]}
+          castShadow receiveShadow>
+          <boxGeometry args={[pw * 0.55, 0.07, 0.30]} />
+          <meshStandardMaterial color="#D8CEBC" roughness={0.72} metalness={0.04} />
+        </mesh>
+      ))}
 
-      {/* ── Pool interior (bright turquoise plaster) ── */}
-      <mesh position={[0, -0.05, pz]}>
-        <boxGeometry args={[pw, 0.50, pd]} />
-        <meshStandardMaterial color="#0E6B7A" roughness={0.15} metalness={0.0} />
-      </mesh>
+      {/* ── Pool shell — organic shape: rectangle body + one semicircular far end.
+          The curved end gives Canny/Depth a distinctive organic line that distinguishes
+          a luxury pool from a plain rectangle. ── */}
+      {(() => {
+        const poolDepth = 0.56;
+        const shellY    = -0.28;
+        // Straight rectangular body (full length — the semicircle overlaps at the end)
+        return (
+          <group>
+            <mesh position={[0, shellY, pz]} receiveShadow castShadow>
+              <boxGeometry args={[pw + 0.36, poolDepth, pd + 0.36]} />
+              <meshStandardMaterial color="#D8CEBC" roughness={0.70} />
+            </mesh>
+            {/* Semicircular rounded far end — half-cylinder radius = (pw+0.36)/2 */}
+            <mesh position={[0, shellY, pz + pd / 2 + 0.18]}
+              rotation={[Math.PI / 2, 0, 0]} castShadow>
+              <cylinderGeometry args={[(pw + 0.36) / 2, (pw + 0.36) / 2, poolDepth, 28, 1, false, 0, Math.PI]} />
+              <meshStandardMaterial color="#D8CEBC" roughness={0.70} />
+            </mesh>
+          </group>
+        );
+      })()}
 
-      {/* ── Water surface — bright turquoise like reference photos ── */}
+      {/* ── Pool interior (turquoise plaster) — matching organic rounded far end ── */}
+      {(() => {
+        const iy = -0.05, depth = 0.50;
+        return (
+          <group>
+            <mesh position={[0, iy, pz]}>
+              <boxGeometry args={[pw, depth, pd]} />
+              <meshStandardMaterial color="#0E6B7A" roughness={0.15} metalness={0.0} />
+            </mesh>
+            {/* Semicircular interior end */}
+            <mesh position={[0, iy, pz + pd / 2]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[pw / 2, pw / 2, depth, 28, 1, false, 0, Math.PI]} />
+              <meshStandardMaterial color="#0E6B7A" roughness={0.15} metalness={0.0} />
+            </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── Water surface ── */}
       <mesh position={[0, 0.03, pz]}>
         <boxGeometry args={[pw - 0.04, 0.06, pd - 0.04]} />
         <meshPhysicalMaterial
@@ -3566,9 +3666,14 @@ function VillaYard({ W, D }: { W: number; D: number }) {
           envMapIntensity={8.0}
         />
       </mesh>
+      {/* Water rounded end */}
+      <mesh position={[0, 0.03, pz + pd / 2 - 0.02]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[(pw - 0.04) / 2, (pw - 0.04) / 2, 0.06, 28, 1, false, 0, Math.PI]} />
+        <meshPhysicalMaterial color="#38B4D8" transmission={0.62} roughness={0.01} ior={1.33} metalness={0.0} thickness={1.4} envMapIntensity={8.0} />
+      </mesh>
 
-      {/* ── Coping edge strips (4 sides) ── */}
-      {([[-1,0],[1,0],[0,-1],[0,1]] as [number,number][]).map(([sx, sz], i) => {
+      {/* ── Coping edge strips (3 straight sides — no coping on rounded end) ── */}
+      {([[-1,0],[1,0],[0,-1]] as [number,number][]).map(([sx, sz], i) => {
         const horiz = sz === 0;
         const len = horiz ? pd + 0.5 : pw + 0.5;
         return (
@@ -3580,6 +3685,11 @@ function VillaYard({ W, D }: { W: number; D: number }) {
           </mesh>
         );
       })}
+      {/* Curved coping on rounded end */}
+      <mesh position={[0, 0.04, pz + pd / 2 + 0.22]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[(pw + 0.5) / 2, (pw + 0.5) / 2, 0.06, 28, 1, false, 0, Math.PI]} />
+        <meshStandardMaterial color="#F2EAD8" roughness={0.62} />
+      </mesh>
 
       {/* ── Sun loungers — 4 along pool near edge, like reference photos ── */}
       {([-0.60, -0.20, 0.20, 0.60] as number[]).map((xFrac, i) => {
@@ -3613,10 +3723,10 @@ function VillaYard({ W, D }: { W: number; D: number }) {
 
 // ─── Main export ────────────────────────────────────────────
 export default function HouseCanvas() {
-  const exterior = useDesignerStore(s => s.exterior);
-  const { W, D } = useFootprint();
-  const { floors } = exterior;
-  const orbitRef = useRef<any>(null);
+  const exterior      = useDesignerStore(s => s.exterior);
+  const { W, D }      = useFootprint();
+  const { floors }    = exterior;
+  const orbitRef      = useRef<any>(null);
   const [selectedOutdoorKey, setSelectedOutdoorKey] = useState<string | null>(null);
   // Sun analysis: continuous hour 0–24. Default 10:30 AM (morning, long shadows).
   const [sunHour, setSunHour] = useState<number>(10.5);
@@ -3691,6 +3801,7 @@ export default function HouseCanvas() {
           SHADOW
         </span>
       </div>
+
       <Canvas
         shadows={{ type: THREE.PCFSoftShadowMap }}
         gl={{
