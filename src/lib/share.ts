@@ -1,4 +1,4 @@
-import type { RoomType } from "./types";
+import type { RoomType, FurnitureItem } from "./types";
 import type { RoomState, FloorPlan } from "./store";
 
 export interface ShareSnapshot {
@@ -10,6 +10,9 @@ export interface ShareSnapshot {
   budget: number;
   exterior: Record<string, unknown>;
   customRoomMeta: Partial<Record<RoomType, { name: string; icon: string }>>;
+  customFurniture?: FurnitureItem[];
+  scores?: { style: number; space: number; light: number; dominantStyle: string };
+  blueprint?: { image: string | null; naturalW: number; naturalH: number; opacity: number; offsetX: number; offsetY: number; scale: number };
   roomDimensions?: Partial<Record<RoomType, { width: number; depth: number }>>;
   v: number; // schema version
 }

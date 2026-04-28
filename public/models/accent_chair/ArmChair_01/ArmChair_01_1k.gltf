@@ -15,7 +15,7 @@
     {
       "type": "VEC3",
       "componentType": 5120,
-      "count": 3759,
+      "count": 3744,
       "normalized": true,
       "byteOffset": 0,
       "bufferView": 1
@@ -23,7 +23,7 @@
     {
       "type": "VEC2",
       "componentType": 5126,
-      "count": 3759,
+      "count": 3744,
       "normalized": false,
       "byteOffset": 0,
       "bufferView": 2
@@ -31,7 +31,7 @@
     {
       "type": "VEC3",
       "componentType": 5122,
-      "count": 3759,
+      "count": 3744,
       "max": [
         26103,
         32767,
@@ -57,7 +57,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 6323,
+          "byteLength": 6293,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 16875
@@ -67,52 +67,52 @@
     {
       "buffer": 1,
       "byteOffset": 33752,
-      "byteLength": 15036,
+      "byteLength": 14976,
       "target": 34962,
       "byteStride": 4,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 6324,
-          "byteLength": 7588,
+          "byteOffset": 6296,
+          "byteLength": 7526,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
-          "count": 3759
+          "count": 3744
         }
       }
     },
     {
       "buffer": 1,
-      "byteOffset": 48788,
-      "byteLength": 30072,
+      "byteOffset": 48728,
+      "byteLength": 29952,
       "target": 34962,
       "byteStride": 8,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 13912,
-          "byteLength": 20656,
+          "byteOffset": 13824,
+          "byteLength": 20599,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
-          "count": 3759
+          "count": 3744
         }
       }
     },
     {
       "buffer": 1,
-      "byteOffset": 78860,
-      "byteLength": 30072,
+      "byteOffset": 78680,
+      "byteLength": 29952,
       "target": 34962,
       "byteStride": 8,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 34568,
-          "byteLength": 18363,
+          "byteOffset": 34424,
+          "byteLength": 18230,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
-          "count": 3759
+          "count": 3744
         }
       }
     }
@@ -159,10 +159,10 @@
   "buffers": [
     {
       "uri": "ArmChair_01.bin",
-      "byteLength": 52932
+      "byteLength": 52656
     },
     {
-      "byteLength": 108932,
+      "byteLength": 108632,
       "extensions": {
         "EXT_meshopt_compression": {
           "fallback": true

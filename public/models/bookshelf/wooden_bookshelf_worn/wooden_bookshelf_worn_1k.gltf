@@ -15,7 +15,7 @@
     {
       "type": "VEC3",
       "componentType": 5120,
-      "count": 6479,
+      "count": 6477,
       "normalized": true,
       "byteOffset": 0,
       "bufferView": 1
@@ -23,7 +23,7 @@
     {
       "type": "VEC3",
       "componentType": 5122,
-      "count": 6479,
+      "count": 6477,
       "max": [
         21818,
         32767,
@@ -41,7 +41,7 @@
     {
       "type": "VEC2",
       "componentType": 5123,
-      "count": 6479,
+      "count": 6477,
       "normalized": true,
       "byteOffset": 0,
       "bufferView": 3
@@ -57,7 +57,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 11219,
+          "byteLength": 11276,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 30318
@@ -67,52 +67,52 @@
     {
       "buffer": 1,
       "byteOffset": 60636,
-      "byteLength": 25916,
+      "byteLength": 25908,
       "target": 34962,
       "byteStride": 4,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 11220,
-          "byteLength": 10496,
+          "byteOffset": 11276,
+          "byteLength": 10452,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
-          "count": 6479
+          "count": 6477
         }
       }
     },
     {
       "buffer": 1,
-      "byteOffset": 86552,
-      "byteLength": 51832,
+      "byteOffset": 86544,
+      "byteLength": 51816,
       "target": 34962,
       "byteStride": 8,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 21716,
-          "byteLength": 24037,
+          "byteOffset": 21728,
+          "byteLength": 24006,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
-          "count": 6479
+          "count": 6477
         }
       }
     },
     {
       "buffer": 1,
-      "byteOffset": 138384,
-      "byteLength": 25916,
+      "byteOffset": 138360,
+      "byteLength": 25908,
       "target": 34962,
       "byteStride": 4,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 45756,
-          "byteLength": 16677,
+          "byteOffset": 45736,
+          "byteLength": 16824,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
-          "count": 6479
+          "count": 6477
         }
       }
     }
@@ -159,10 +159,10 @@
   "buffers": [
     {
       "uri": "wooden_bookshelf_worn.bin",
-      "byteLength": 62436
+      "byteLength": 62560
     },
     {
-      "byteLength": 164300,
+      "byteLength": 164268,
       "extensions": {
         "EXT_meshopt_compression": {
           "fallback": true

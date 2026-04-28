@@ -377,7 +377,30 @@ export const CLEARANCE_REASON_EN: Record<string, string> = {
   "书桌距窗户过远（建议 ≤2m），白天读写需开灯，长期用眼疲劳": "Desk too far from window (keep ≤2m) — daytime reading needs light, causes eye strain",
   "阻挡门开合，门可能撞到家具": "Blocks door swing — the door may hit furniture",
   "家具高于窗台且位于窗前，遮挡采光与通风": "Furniture taller than sill blocks light and ventilation",
+
+  // ── Relational distance rules ──
+  "电视离沙发太近（建议 ≥2.5m），长时间观看伤眼": "TV too close to sofa (keep ≥2.5m) — strains eyes over time",
+  "电视离沙发太远（建议 ≤4m），屏幕看不清": "TV too far from sofa (keep ≤4m) — screen hard to read",
+  "水槽与灶台过近（建议 ≥1.2m），操作时互相干扰且烫伤风险高": "Sink too close to cooktop (keep ≥1.2m) — workflows collide, burn risk",
+  "水槽与灶台过远（建议 ≤2.7m），来回端水走动太多": "Sink too far from cooktop (keep ≤2.7m) — too much walking with water",
+  "水槽与冰箱过近（建议 ≥1.2m），开冰箱门易被水溅到": "Sink too close to fridge (keep ≥1.2m) — fridge door gets splashed",
+  "水槽与冰箱过远（建议 ≤2.7m），洗切食材动线过长": "Sink too far from fridge (keep ≤2.7m) — wash/prep flow too long",
+  "冰箱与灶台过近（建议 ≥1.2m），高温影响冰箱制冷且有安全隐患": "Fridge too close to cooktop (keep ≥1.2m) — heat hurts cooling, safety risk",
+  "冰箱与灶台过远（建议 ≤2.7m），取食材-下锅动线过长": "Fridge too far from cooktop (keep ≤2.7m) — fetch-to-cook flow too long",
 };
+
+/** Floor-plan layout template name translations. Keyed by layout `id`. */
+export const FLOORPLAN_LAYOUT_NAMES_EN: Record<string, string> = {
+  "studio-45":              "Studio 45㎡",
+  "2br-south-north-85":     "2-Bed Through-Ventilated 85㎡",
+  "3br-2lr-110":            "3-Bed 2-Living 110㎡",
+  "l-shaped-living-95":     "L-shape 2-Bed Living 95㎡",
+  "big-flat-with-study-150":"Large Flat with Study 150㎡",
+};
+
+export function getLayoutNameEn(id: string): string | undefined {
+  return FLOORPLAN_LAYOUT_NAMES_EN[id];
+}
 
 export function translateClearanceReason(zh: string, locale: string): string {
   if (locale !== "en" || !zh) return zh;

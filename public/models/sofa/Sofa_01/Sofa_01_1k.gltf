@@ -57,7 +57,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 4691,
+          "byteLength": 4696,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 12303
@@ -73,8 +73,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 4692,
-          "byteLength": 5205,
+          "byteOffset": 4696,
+          "byteLength": 5255,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -91,8 +91,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 9900,
-          "byteLength": 15691,
+          "byteOffset": 9952,
+          "byteLength": 15883,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 2708
@@ -108,8 +108,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 25592,
-          "byteLength": 12887,
+          "byteOffset": 25836,
+          "byteLength": 12909,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 2708
@@ -159,7 +159,7 @@
   "buffers": [
     {
       "uri": "Sofa_01.bin",
-      "byteLength": 38480
+      "byteLength": 38748
     },
     {
       "byteLength": 78768,

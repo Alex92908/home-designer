@@ -57,7 +57,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 1721,
+          "byteLength": 1676,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 4542
@@ -73,8 +73,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 1724,
-          "byteLength": 2166,
+          "byteOffset": 1676,
+          "byteLength": 2191,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -91,8 +91,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 3892,
-          "byteLength": 6883,
+          "byteOffset": 3868,
+          "byteLength": 6896,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 1265
@@ -108,8 +108,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 10776,
-          "byteLength": 4500,
+          "byteOffset": 10764,
+          "byteLength": 4499,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
           "count": 1265
@@ -159,7 +159,7 @@
   "buffers": [
     {
       "uri": "WoodenTable_02.bin",
-      "byteLength": 15276
+      "byteLength": 15264
     },
     {
       "byteLength": 29324,

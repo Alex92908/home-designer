@@ -57,7 +57,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 6898,
+          "byteLength": 6909,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 18444
@@ -73,8 +73,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 6900,
-          "byteLength": 7364,
+          "byteOffset": 6912,
+          "byteLength": 7461,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -91,8 +91,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 14264,
-          "byteLength": 21112,
+          "byteOffset": 14376,
+          "byteLength": 21170,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 4203
@@ -108,8 +108,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 35376,
-          "byteLength": 13076,
+          "byteOffset": 35548,
+          "byteLength": 13084,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
           "count": 4203
@@ -159,7 +159,7 @@
   "buffers": [
     {
       "uri": "mid_century_lounge_chair.bin",
-      "byteLength": 48452
+      "byteLength": 48632
     },
     {
       "byteLength": 104136,

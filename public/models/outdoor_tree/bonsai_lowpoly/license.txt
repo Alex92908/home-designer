@@ -1,0 +1,11 @@
+Model Information:
+* title:	Low-poly Bonsai Tree
+* source:	https://sketchfab.com/3d-models/low-poly-bonsai-tree-40cf5dc6c7854745a5e9c3615d076d06
+* author:	AlicePandaArt (https://sketchfab.com/AlicePandaArt)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Low-poly Bonsai Tree" (https://sketchfab.com/3d-models/low-poly-bonsai-tree-40cf5dc6c7854745a5e9c3615d076d06) by AlicePandaArt (https://sketchfab.com/AlicePandaArt) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

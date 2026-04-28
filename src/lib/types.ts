@@ -25,7 +25,103 @@ export type RoomType =
   | "custom4"    // 自定义4
   | "custom5";   // 自定义5
 
-export type ViewMode = "2d" | "3d" | "all" | "exterior" | "global3d";
+export type ViewMode = "2d" | "3d" | "all" | "exterior" | "global3d" | "yard2d";
+
+/** Outdoor yard plan — analogous to FloorPlan but for the property surrounds.
+ *  User draws this 2D and the Exterior 3D view auto-generates from it.
+ *
+ *  v2 schema (2026-04): YardItem is now a discriminated union so a single
+ *  `items[]` array can mix three kinds of "things on the property":
+ *    - "singleton" — a single asset (tree, rock, lamp, etc.) — original v1
+ *    - "prefab"    — a compound spatial block (social island, farm box…)
+ *    - "zone"      — a polygon paving region with a narrative role
+ *
+ *  Old saves stored items WITHOUT the `type` field. The store layer fills
+ *  `type: "singleton"` on read so old data continues to render correctly. */
+export type YardItem = YardSingleton | YardPrefab | YardZone;
+
+interface YardCommonFields {
+  id: string;
+  /** World position in cm, origin = house center on the ground plane.
+   *  For prefab/zone, this is the prefab's pivot / zone's centroid. */
+  x: number;
+  z: number;
+  /** Y rotation in radians. */
+  rot?: number;
+  /** Uniform scale multiplier (default 1). */
+  scale?: number;
+}
+
+export interface YardSingleton extends YardCommonFields {
+  type?: "singleton";   // optional for back-compat with v1 saves
+  /** Asset key from the outdoor library (e.g. "tree.olive", "feature.firepit"). */
+  kind: string;
+}
+
+export interface YardPrefab extends YardCommonFields {
+  type: "prefab";
+  /** Prefab kind from PREFAB_REGISTRY (see src/lib/outdoorPrefabs.ts). */
+  prefabKind: PrefabKind;
+  /** Prefab-specific parameters. Each PrefabKind has its own schema. */
+  params?: Record<string, unknown>;
+}
+
+export interface YardZone extends YardCommonFields {
+  type: "zone";
+  /** Narrative role of this zone (drives default paving + plant rules). */
+  zoneKind: ZoneKind;
+  /** Polygon vertices in cm, RELATIVE TO the zone's (x, z) origin. */
+  polygon: Array<[number, number]>;
+  /** Override the default paving material id for this zoneKind. */
+  pavingMaterialId?: string;
+}
+
+export type PrefabKind =
+  | "social_island"
+  | "farm_box"
+  | "porte_cochere"
+  | "slat_wall"
+  // Structural — wraps the existing Pool/Pergola/OutdoorKitchen/Fountain
+  // implementations so the user can DRAG these onto the YardPlan instead
+  // of selecting via ExteriorSettings.yardPreset (which auto-places them
+  // at fixed coordinates and can't be moved).
+  | "pool"
+  | "pergola_classic"
+  | "outdoor_kitchen"
+  | "fountain"
+  // Boundary / hardscape — replaces the legacy perimeter toggle + showParking toggle
+  | "fence_segment"
+  | "parking_area";
+
+export type ZoneKind =
+  | "social"     // 社交核心环 — patio + outdoor kitchen + fire feature
+  | "private"    // 私密休闲环 — pergola, meditation, tea
+  | "utility"    // 功能配套环 — driveway, entry, service
+  | "agro"       // 抬高床菜园 / edible landscape
+  | "lawn";      // 自然铺草，柔过渡
+
+/** Type guards. Items persisted under v1 have no `type` field — those are
+ *  treated as singletons. Use these in renderers / actions instead of
+ *  switching on `(item as any).type` directly. */
+export function isYardSingleton(it: YardItem): it is YardSingleton {
+  return it.type === undefined || it.type === "singleton";
+}
+export function isYardPrefab(it: YardItem): it is YardPrefab {
+  return it.type === "prefab";
+}
+export function isYardZone(it: YardItem): it is YardZone {
+  return it.type === "zone";
+}
+
+export interface YardPlan {
+  /** Free-form items — singletons, prefabs, zones (all in one array, see
+   *  YardItem union). Render order = array order; zones first looks best. */
+  items: YardItem[];
+  /** Reserved for v3: explicit path / lawn polygon overrides not derived
+   *  from a Zone. Most usage should go through `items` with type:"zone". */
+  groundPolygons?: Array<{ id: string; kind: "lawn" | "paving" | "water"; points: Array<[number, number]> }>;
+  paths?: Array<{ id: string; points: Array<[number, number]>; widthCm: number; material: string }>;
+}
 
 export type RoofStyle = "flat" | "gable" | "hip" | "mansard" | "chinese";
 export type WallMaterialType = "render" | "brick" | "stone" | "wood" | "concrete";
@@ -42,6 +138,20 @@ export interface ExteriorSettings {
   showParking?: boolean;
   /** Saved state for draggable outdoor elements (pool, pergola, etc.) */
   outdoorPositions?: Record<string, { x: number; z: number; rot?: number; hidden?: boolean }>;
+  /** Whether to render the perimeter slat fence around the property.
+   *  Default true. Set false for fully open lots or when the user has
+   *  drawn explicit boundary slat_wall prefabs in the yardPlan. */
+  showPerimeterFence?: boolean;
+  /** Distance multiplier for the perimeter fence — 1.1 means the fence
+   *  sits 10% beyond the house bounding box. Bigger = larger garden,
+   *  smaller = tight courtyard. Default 1.1. Range typically 0.6 - 2.5. */
+  fenceInsetMultiplier?: number;
+  /** Pilotis (架空层) height in metres. >0 lifts the entire house off
+   *  the ground by this amount and renders 4 corner concrete columns
+   *  to support the structure. Use for: tropical stilt houses, Le
+   *  Corbusier modernist pilotis, raised Chinese platforms, traditional
+   *  raised tea houses. Default 0 (slab on grade). Sane range 0 - 4m. */
+  pilotisHeightM?: number;
 }
 
 /** A decor item pinned to the OUTSIDE face of a room wall. Stored inside
@@ -143,6 +253,26 @@ export interface WindowConfig {
   sill?: number; // cm from floor to bottom of window, default 90
   /** Visual style. Default "sliding" (国内推拉窗) if unset. */
   style?: WindowStyle;
+  /** Polygon-room only: explicit polygon edge index. When set, the renderer
+   *  binds this window to that exact edge and `pos` is interpreted as the
+   *  offset along that edge (cm from the edge's start vertex). Required for
+   *  inner-corner walls of L / convex shapes that cannot be addressed by
+   *  the bbox-projected (wall, pos) tuple. */
+  edgeIndex?: number;
+}
+
+/** Multi-door support. Same shape as WindowConfig but with door-specific
+ *  fields (style + height). A room can have any number of doors, each
+ *  bound either to a cardinal wall (rect rooms) or an explicit polygon
+ *  edge (L / convex). */
+export interface DoorConfig {
+  id: string;
+  wall: "back" | "front" | "right" | "left";
+  pos: number;   // cm offset from wall / edge start
+  len: number;   // cm width along wall (default 80)
+  h?: number;    // cm height (default 200)
+  style?: DoorStyle;
+  edgeIndex?: number;
 }
 
 /** Window visual styles. */
@@ -290,9 +420,20 @@ export interface FloorPlan {
   roomDoorH?: Partial<Record<RoomType, number>>;   // cm, height (default 200)
   /** Per-room door style. Default "wood_panel" if unset. */
   roomDoorStyle?: Partial<Record<RoomType, DoorStyle>>;
+  /** Polygon-room only: explicit polygon edge index for the legacy door.
+   *  Required for inner-corner walls of L / convex shapes. */
+  roomDoorEdgeIdx?: Partial<Record<RoomType, number>>;
+  /** Multi-door array. New schema — supersedes the legacy single
+   *  roomDoorWall/Pos/Len fields when present. Old saves are migrated
+   *  on read by `getRoomDoors()` in [@/lib/store]. */
+  roomDoors?: Partial<Record<RoomType, DoorConfig[]>>;
   /** Per-room non-rectangular polygon override (L型/凸字型/etc).
    *  Absent entry = rectangle fallback using roomDimensions. */
   roomShapes?: Partial<Record<RoomType, import("./roomGeometry").RoomShape>>;
+  /** Outdoor yard plan for THIS floor (only floor 0 is rendered in 3D
+   *  exterior view; others are reserved for future "ground vs roof deck"
+   *  distinction). Drawn by user in the 院子图 (yard2d) view. */
+  yardPlan?: YardPlan;
 }
 
 /** Interior-door visual styles. Each variant is rendered differently by

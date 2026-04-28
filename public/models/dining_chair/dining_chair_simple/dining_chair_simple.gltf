@@ -1,0 +1,429 @@
+{
+  "asset": {
+    "generator": "glTF-Transform v4.3.0",
+    "version": "2.0",
+    "extras": {
+      "author": "subhashssimon (https://sketchfab.com/subhashssimon)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/wooden-dining-chair-c0571d2314e744b0aa73e1f208352a92",
+      "title": "Wooden Dining Chair"
+    }
+  },
+  "accessors": [
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 121152,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 24383,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 1
+    },
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 76800,
+      "normalized": false,
+      "byteOffset": 242304,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 15284,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 2
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 24383,
+      "max": [
+        25199,
+        32767,
+        23186
+      ],
+      "min": [
+        -25199,
+        -32767,
+        -23186
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 3
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 24383,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 4
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 15284,
+      "max": [
+        31575,
+        20794,
+        32767
+      ],
+      "min": [
+        -31575,
+        -20794,
+        -32767
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 5
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 15284,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 6
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 1,
+      "byteOffset": 0,
+      "byteLength": 395904,
+      "target": 34963,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 0,
+          "byteLength": 73257,
+          "mode": "TRIANGLES",
+          "byteStride": 2,
+          "count": 197952
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 395904,
+      "byteLength": 97532,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 73260,
+          "byteLength": 35314,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 24383
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 493436,
+      "byteLength": 61136,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 108576,
+          "byteLength": 23034,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 15284
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 554572,
+      "byteLength": 195064,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 131612,
+          "byteLength": 98247,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 24383
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 749636,
+      "byteLength": 97532,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 229860,
+          "byteLength": 66517,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 24383
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 847168,
+      "byteLength": 122272,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 296380,
+          "byteLength": 65259,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 15284
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 969440,
+      "byteLength": 61136,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 361640,
+          "byteLength": 42271,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 15284
+        }
+      }
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "textures": [
+    {
+      "source": 0,
+      "sampler": 0
+    },
+    {
+      "source": 1,
+      "sampler": 0
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/png",
+      "uri": "textures/Material.010_baseColor.png"
+    },
+    {
+      "mimeType": "image/png",
+      "uri": "textures/Material.011_baseColor.png"
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "scene.bin",
+      "byteLength": 403912
+    },
+    {
+      "byteLength": 1030576,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "fallback": true
+        }
+      }
+    }
+  ],
+  "materials": [
+    {
+      "name": "Material.010",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "roughnessFactor": 0.290909,
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 0
+        }
+      }
+    },
+    {
+      "name": "Material.011",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "roughnessFactor": 0.5118760982312776,
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 1
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Object_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 4,
+            "TEXCOORD_0": 5
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 0
+        }
+      ]
+    },
+    {
+      "name": "Object_1",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 3,
+            "POSITION": 6,
+            "TEXCOORD_0": 7
+          },
+          "mode": 4,
+          "material": 1,
+          "indices": 2
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Sketchfab_model",
+      "rotation": [
+        -0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "scale": [
+        0.9909458160400391,
+        0.9909458160400391,
+        0.9909458160400391
+      ],
+      "children": [
+        1
+      ]
+    },
+    {
+      "name": "root",
+      "children": [
+        2
+      ]
+    },
+    {
+      "name": "GLTF_SceneRootNode",
+      "rotation": [
+        0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        3
+      ]
+    },
+    {
+      "name": "Wooden Dining Chair.001_2",
+      "children": [
+        4,
+        6
+      ]
+    },
+    {
+      "name": "Cylinder.001_0",
+      "translation": [
+        0,
+        0,
+        0.22744692862033844
+      ],
+      "children": [
+        5
+      ]
+    },
+    {
+      "name": "Object_5",
+      "translation": [
+        -0.000007167458534240723,
+        0.31879364664200693,
+        -0.2457159012556076
+      ],
+      "scale": [
+        0.3208767253672704,
+        0.3208767253672704,
+        0.3208767253672704
+      ],
+      "mesh": 0
+    },
+    {
+      "name": "Cylinder.002_1",
+      "translation": [
+        0,
+        0,
+        0.22744692862033844
+      ],
+      "children": [
+        7
+      ]
+    },
+    {
+      "name": "Object_7",
+      "translation": [
+        -0.0000069141387939453125,
+        0.5832978785037994,
+        -0.2423507273197174
+      ],
+      "scale": [
+        0.25370433926582336,
+        0.25370433926582336,
+        0.25370433926582336
+      ],
+      "mesh": 1
+    }
+  ],
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "scene": 0,
+  "extensionsUsed": [
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
+  ],
+  "extensionsRequired": [
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
+  ]
+}

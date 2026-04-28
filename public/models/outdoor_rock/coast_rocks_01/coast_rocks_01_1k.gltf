@@ -1,0 +1,241 @@
+{
+  "asset": {
+    "generator": "glTF-Transform v4.3.0",
+    "version": "2.0"
+  },
+  "accessors": [
+    {
+      "type": "SCALAR",
+      "componentType": 5125,
+      "count": 2039808,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 348785,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 1
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 348785,
+      "max": [
+        32767,
+        1812,
+        23414
+      ],
+      "min": [
+        -32767,
+        -1812,
+        -23414
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 2
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 348785,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 3
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 1,
+      "byteOffset": 0,
+      "byteLength": 8159232,
+      "target": 34963,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 0,
+          "byteLength": 788626,
+          "mode": "TRIANGLES",
+          "byteStride": 4,
+          "count": 2039808
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 8159232,
+      "byteLength": 1395140,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 788628,
+          "byteLength": 665064,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 348785
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 9554372,
+      "byteLength": 2790280,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 1453692,
+          "byteLength": 1286845,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 348785
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 12344652,
+      "byteLength": 1395140,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 2740540,
+          "byteLength": 893029,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 348785
+        }
+      }
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "textures": [
+    {
+      "source": 1,
+      "sampler": 0
+    },
+    {
+      "source": 0,
+      "sampler": 0
+    },
+    {
+      "source": 2,
+      "sampler": 0
+    }
+  ],
+  "images": [
+    {
+      "name": "coast_rocks_01_nor_gl",
+      "mimeType": "image/jpeg",
+      "uri": "textures/coast_rocks_01_nor_gl_1k.jpg"
+    },
+    {
+      "name": "coast_rocks_01_diff",
+      "mimeType": "image/jpeg",
+      "uri": "textures/coast_rocks_01_diff_1k.jpg"
+    },
+    {
+      "name": "coast_rocks_01_rough",
+      "mimeType": "image/jpeg",
+      "uri": "textures/coast_rocks_01_arm_1k.jpg"
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "coast_rocks_01.bin",
+      "byteLength": 3633572
+    },
+    {
+      "byteLength": 13739792,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "fallback": true
+        }
+      }
+    }
+  ],
+  "materials": [
+    {
+      "name": "coast_rocks_01",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      },
+      "normalTexture": {
+        "index": 1
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Plane.002",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 2,
+            "TEXCOORD_0": 3
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 0
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "coast_rocks_01",
+      "translation": [
+        -2.398160934448242,
+        -0.33391624689102173,
+        -5.634321689605713
+      ],
+      "scale": [
+        29.753446578979492,
+        29.753446578979492,
+        29.753446578979492
+      ],
+      "mesh": 0
+    }
+  ],
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "scene": 0,
+  "extensionsUsed": [
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
+  ],
+  "extensionsRequired": [
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
+  ]
+}

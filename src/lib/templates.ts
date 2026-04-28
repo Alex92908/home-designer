@@ -2,7 +2,7 @@
  * Style templates: one-click full room configuration
  * Each template sets materials and furniture for all enabled rooms.
  */
-import { RoomType, StyleTag, WindowConfig, WindowStyle, DoorStyle, ExteriorWall, ExteriorWallDecorItem, RoutingConnection, RoutingKind } from "./types";
+import { RoomType, StyleTag, WindowConfig, WindowStyle, DoorStyle, ExteriorWall, ExteriorWallDecorItem, RoutingConnection, RoutingKind, ExteriorSettings } from "./types";
 import { MATERIALS } from "./data";
 import { getFurnitureById } from "./furniture";
 
@@ -73,6 +73,8 @@ export interface StyleTemplate {
   rooms: Partial<Record<RoomType, TemplateRoom>>;
   /** Optional: hand-crafted layouts override procedural placement */
   embeddedRooms?: Partial<Record<RoomType, EmbeddedRoom>>;
+  /** Optional: exterior settings applied when this template is loaded */
+  exterior?: Partial<ExteriorSettings>;
 }
 
 function mat(id: string) {
@@ -1009,7 +1011,175 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
   },
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Template 6: 豪华现代别墅 — matches the white-render + pool villa reference
+// ─────────────────────────────────────────────────────────────────────────────
+export const TEMPLATE_MODERN_VILLA: StyleTemplate = {
+  id: "modern-villa",
+  name: "豪华现代别墅",
+  nameEn: "Luxury Modern Villa",
+  emoji: "🏛",
+  description: "纯白外立面，落地玻璃，泳池庭院，两层平屋顶",
+  descriptionEn: "White render facade, floor-to-ceiling glass, pool courtyard, 2-storey flat roof",
+  accent: "#1A1A1A",
+  styleTag: "现代",
+  exterior: {
+    preset: "modern",
+    roofStyle: "flat",
+    roofColor: "#2A2A2A",
+    wallMaterial: "render",
+    wallColor: "#F4F2EE",
+    accentColor: "#1A1A1A",
+    floors: 2,
+    yardPreset: "pool",
+    showPerimeterFence: false,
+  },
+  rooms: {
+    living: {
+      materialIds: { wall: "wall-white", floor: "floor-oak", light: "light-chandelier" },
+      furnitureIds: ["sofa-modular-gray","coffee-marble-rect","tvunit-float-white","rug-nordic-geo","lamp-arc-gold","plant-monstera","artwork-abstract"],
+    },
+    master: {
+      materialIds: { wall: "wall-white", floor: "floor-oak", light: "light-chandelier" },
+      furnitureIds: ["bed-platform-white","nightstand-white","nightstand-white","wardrobe-slide-white","dresser-nordic-white"],
+    },
+    bedroom: {
+      materialIds: { wall: "wall-white", floor: "floor-oak" },
+      furnitureIds: ["bed-fabric-beige","nightstand-white","wardrobe-slide-white"],
+    },
+    dining: {
+      materialIds: { wall: "wall-white", floor: "floor-oak", light: "light-chandelier" },
+      furnitureIds: ["dining-marble-round","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray"],
+    },
+    kitchen: {
+      materialIds: { wall: "wall-tile-white", floor: "floor-white-tile" },
+      furnitureIds: ["cabinet-lower-white","cabinet-upper-white","fridge-french-door","sink-double-steel","hood-side-black"],
+    },
+    bathroom: {
+      materialIds: { wall: "wall-tile-white", floor: "floor-white-tile" },
+      furnitureIds: ["toilet-wallhung","vanity-double-marble","bathtub-freestanding"],
+    },
+    study: {
+      materialIds: { wall: "wall-white", floor: "floor-oak" },
+      furnitureIds: ["desk-l-shape-white","chair-ergonomic","bookshelf-solid-walnut"],
+    },
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Template 7: 白墙胡桃木别墅 — ref 2 style: white render + prominent walnut soffit
+// ─────────────────────────────────────────────────────────────────────────────
+export const TEMPLATE_WALNUT_VILLA: StyleTemplate = {
+  id: "walnut-villa",
+  name: "白墙木底板别墅",
+  nameEn: "White Wall + Walnut Soffit Villa",
+  emoji: "🏡",
+  description: "纯白外墙+胡桃木深挑底板，超大落地玻璃，石材铺地泳池",
+  descriptionEn: "White render + walnut soffit overhang, floor-to-ceiling glass, travertine pool deck",
+  accent: "#6B3E1A",
+  styleTag: "现代",
+  exterior: {
+    preset: "modern",
+    roofStyle: "flat",
+    roofColor: "#1E1E1E",
+    wallMaterial: "render",
+    wallColor: "#F6F4F0",
+    accentColor: "#1C1C1C",
+    floors: 2,
+    yardPreset: "pool",
+    showPerimeterFence: false,
+  },
+  rooms: {
+    living: {
+      materialIds: { wall: "wall-white", floor: "floor-walnut", light: "light-chandelier" },
+      furnitureIds: ["sofa-modular-gray","coffee-marble-rect","tvunit-float-white","rug-nordic-geo","lamp-arc-gold","plant-monstera"],
+    },
+    master: {
+      materialIds: { wall: "wall-white", floor: "floor-walnut", light: "light-chandelier" },
+      furnitureIds: ["bed-platform-white","nightstand-white","nightstand-white","wardrobe-slide-white"],
+    },
+    bedroom: {
+      materialIds: { wall: "wall-white", floor: "floor-walnut" },
+      furnitureIds: ["bed-fabric-beige","nightstand-white","wardrobe-slide-white"],
+    },
+    dining: {
+      materialIds: { wall: "wall-white", floor: "floor-walnut", light: "light-chandelier" },
+      furnitureIds: ["dining-marble-round","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray"],
+    },
+    kitchen: {
+      materialIds: { wall: "wall-tile-white", floor: "floor-white-tile" },
+      furnitureIds: ["cabinet-lower-white","cabinet-upper-white","fridge-french-door","sink-double-steel","hood-side-black"],
+    },
+    bathroom: {
+      materialIds: { wall: "wall-tile-white", floor: "floor-white-tile" },
+      furnitureIds: ["toilet-wallhung","vanity-double-marble","bathtub-freestanding"],
+    },
+    study: {
+      materialIds: { wall: "wall-white", floor: "floor-walnut" },
+      furnitureIds: ["desk-l-shape-white","chair-ergonomic","bookshelf-solid-walnut"],
+    },
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Template 8: 石材+木板别墅 — ref 3 style: gray stone cladding + orange wood soffit
+// ─────────────────────────────────────────────────────────────────────────────
+export const TEMPLATE_STONE_VILLA: StyleTemplate = {
+  id: "stone-villa",
+  name: "石材+木板现代别墅",
+  nameEn: "Stone Cladding + Wood Soffit Villa",
+  emoji: "🪨",
+  description: "灰色石材外墙+橙木挑板，落地玻璃，大草坪+泳池",
+  descriptionEn: "Gray stone cladding + warm wood soffit, floor-to-ceiling glass, lawn + pool courtyard",
+  accent: "#4A5568",
+  styleTag: "现代",
+  exterior: {
+    preset: "modern",
+    roofStyle: "flat",
+    roofColor: "#2C2C2C",
+    wallMaterial: "stone",
+    wallColor: "#7A8290",
+    accentColor: "#1A1A1A",
+    floors: 2,
+    yardPreset: "pool",
+    showPerimeterFence: false,
+  },
+  rooms: {
+    living: {
+      materialIds: { wall: "wall-beige", floor: "floor-walnut", light: "light-chandelier" },
+      furnitureIds: ["sofa-leather-brown","coffee-marble-rect","tvunit-walnut","rug-persian","lamp-arc-gold","plant-monstera"],
+    },
+    master: {
+      materialIds: { wall: "wall-beige", floor: "floor-walnut", light: "light-chandelier" },
+      furnitureIds: ["bed-leather-dark","nightstand-oak","nightstand-oak","wardrobe-solid-walnut"],
+    },
+    bedroom: {
+      materialIds: { wall: "wall-beige", floor: "floor-walnut" },
+      furnitureIds: ["bed-fabric-beige","nightstand-white","wardrobe-slide-white"],
+    },
+    dining: {
+      materialIds: { wall: "wall-beige", floor: "floor-walnut", light: "light-chandelier" },
+      furnitureIds: ["dining-marble-round","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray"],
+    },
+    kitchen: {
+      materialIds: { wall: "wall-tile-white", floor: "floor-white-tile" },
+      furnitureIds: ["cabinet-lower-gray","cabinet-upper-white","fridge-french-door","sink-double-steel","hood-side-black"],
+    },
+    bathroom: {
+      materialIds: { wall: "wall-tile-white", floor: "floor-white-tile" },
+      furnitureIds: ["toilet-wallhung","vanity-double-marble","bathtub-freestanding"],
+    },
+    study: {
+      materialIds: { wall: "wall-beige", floor: "floor-walnut" },
+      furnitureIds: ["desk-l-shape-white","chair-ergonomic","bookshelf-solid-walnut"],
+    },
+  },
+};
+
 export const ALL_TEMPLATES: StyleTemplate[] = [
+  TEMPLATE_MODERN_VILLA,
+  TEMPLATE_WALNUT_VILLA,
+  TEMPLATE_STONE_VILLA,
   TEMPLATE_NORDIC,
   TEMPLATE_LUXURY,
   TEMPLATE_INDUSTRIAL,

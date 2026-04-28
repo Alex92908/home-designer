@@ -6,7 +6,7 @@ import { ROOM_DEFS, getRoomArea } from "@/lib/types";
 import type { RoomType, ExteriorWall, ExteriorWallDecorItem } from "@/lib/types";
 import { FURNITURE, getFurnitureById } from "@/lib/furniture";
 import { MATERIALS } from "@/lib/data";
-import { useT, useLocale } from "@/lib/i18n";
+import { useT, useLocale, useMaterialName } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn, translateClearanceReason } from "@/locales/itemNames";
 import { formatPrice } from "@/lib/currency";
 import { evaluateRoom } from "@/lib/clearance";
@@ -664,6 +664,7 @@ function CeilingLightPositionSection({ activeRoom }: { activeRoom: RoomType }) {
   const dims = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
   const lightMat = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[activeRoom]?.materials?.light);
   const tL = useT();
+  const localizedLightName = useMaterialName(lightMat?.id ?? "", lightMat?.name ?? "");
   if (!lightMat) return null;   // no ceiling light set → nothing to position
   const halfW = (dims?.width  ?? 400) / 2;
   const halfD = (dims?.depth  ?? 360) / 2;
@@ -671,7 +672,7 @@ function CeilingLightPositionSection({ activeRoom }: { activeRoom: RoomType }) {
   const z = pos?.z ?? 0;
   return (
     <div className="px-4 pt-3 pb-1 border-t border-gray-100">
-      <div className="text-[11px] font-black text-gray-800 mb-1.5">{tL.lightPosTitleType(lightMat.name)}</div>
+      <div className="text-[11px] font-black text-gray-800 mb-1.5">{tL.lightPosTitleType(localizedLightName)}</div>
       <div className="p-2 rounded-xl bg-gray-50 border border-gray-100 flex flex-col gap-2">
         <div>
           <div className="flex justify-between text-[9px] text-gray-500 mb-0.5">

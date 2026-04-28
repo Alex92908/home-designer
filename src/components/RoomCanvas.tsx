@@ -3080,7 +3080,7 @@ class GltfFurnitureWithFallback extends Component<
 // the wall between them is filled with box segments.
 function PolygonShell({
   points, H, wallColor, floorColor, ceilingColor, ceilingOpacity,
-  door, windows, activeRoom,
+  doors, windows, activeRoom,
 }: {
   points: Array<[number, number]>; // cm, back-left origin
   H: number;                       // meters
@@ -3088,11 +3088,12 @@ function PolygonShell({
   floorColor: string;
   ceilingColor: string;
   ceilingOpacity: number;
-  door: {
+  doors: Array<{
     wall: "back" | "front" | "left" | "right";
     posCm: number; lenCm: number; hCm: number;
     style: import("@/lib/types").DoorStyle;
-  } | null;
+    edgeIndex?: number;
+  }>;
   windows: WindowConfig[];
   activeRoom: RoomType;
 }) {
@@ -3131,7 +3132,7 @@ function PolygonShell({
   // with a door-sized gap; otherwise a single wall box.
   const WALL_THICK = 0.08; // 8 cm thick visual walls
 
-  const { wallSegments, doorPlacement, windowPlacements } = useMemo(() => {
+  const { wallSegments, doorPlacements, windowPlacements } = useMemo(() => {
     const edges = getEdges(points);
     const bbox = polygonBounds(points);
 
@@ -3144,35 +3145,34 @@ function PolygonShell({
       doorStyle?: import("@/lib/types").DoorStyle;
     };
     const holesByEdge = new Map<number, Hole[]>();
-    const doorHit = door
-      ? findEdgeForWall(points, door.wall, door.posCm, door.lenCm, bbox)
-      : null;
 
-    // Door goes into holes map + remembered so we can position the panel.
-    let doorPlace: {
+    // Multi-door: each door punches its own hole + records its placement.
+    type DoorPlacement = {
       edgeIndex: number; startM: number; lenM: number; hM: number;
-      // world-space hinge position + edge angle (for mesh placement)
       wx: number; wz: number; angle: number;
       style: import("@/lib/types").DoorStyle;
-    } | null = null;
-    if (door && doorHit) {
-      const startM = doorHit.startCm / 100;
-      const lenM = door.lenCm / 100;
-      const hM = door.hCm / 100;
-      const arr = holesByEdge.get(doorHit.edgeIndex) ?? [];
-      arr.push({ startM, lenM, sillM: 0, topM: hM, kind: "door", doorStyle: door.style });
-      holesByEdge.set(doorHit.edgeIndex, arr);
-      const e = edges[doorHit.edgeIndex];
+    };
+    const doorPlacements: DoorPlacement[] = [];
+    for (const d of (doors ?? [])) {
+      const hit = findEdgeForWall(points, d.wall, d.posCm, d.lenCm, bbox, d.edgeIndex);
+      if (!hit) continue;
+      const startM = hit.startCm / 100;
+      const lenM = d.lenCm / 100;
+      const hM = d.hCm / 100;
+      const arr = holesByEdge.get(hit.edgeIndex) ?? [];
+      arr.push({ startM, lenM, sillM: 0, topM: hM, kind: "door", doorStyle: d.style });
+      holesByEdge.set(hit.edgeIndex, arr);
+      const e = edges[hit.edgeIndex];
       const wx1 = e.x1 / 100 - W / 2, wz1 = e.z1 / 100 - D / 2;
       const wx2 = e.x2 / 100 - W / 2, wz2 = e.z2 / 100 - D / 2;
       const eLenM = Math.hypot(wx2 - wx1, wz2 - wz1);
       const t0 = startM / eLenM;
-      doorPlace = {
-        edgeIndex: doorHit.edgeIndex, startM, lenM, hM,
+      doorPlacements.push({
+        edgeIndex: hit.edgeIndex, startM, lenM, hM,
         wx: wx1 + (wx2 - wx1) * t0, wz: wz1 + (wz2 - wz1) * t0,
         angle: Math.atan2(-(wz2 - wz1), wx2 - wx1),
-        style: door.style,
-      };
+        style: d.style,
+      });
     }
 
     const winPlacements: Array<{
@@ -3181,7 +3181,7 @@ function PolygonShell({
       lenM: number; sillM: number; hM: number;
     }> = [];
     for (const w of windows) {
-      const hit = findEdgeForWall(points, w.wall, w.pos, w.len, bbox);
+      const hit = findEdgeForWall(points, w.wall, w.pos, w.len, bbox, w.edgeIndex);
       if (!hit) continue;
       const startM = hit.startCm / 100;
       const lenM = w.len / 100;
@@ -3236,8 +3236,8 @@ function PolygonShell({
       }
       mkSeg(cursor, lenM - cursor, H, 0);                           // remainder
     }
-    return { wallSegments: segs, doorPlacement: doorPlace, windowPlacements: winPlacements };
-  }, [points, W, D, H, door, windows, getEdges, findEdgeForWall, polygonBounds]);
+    return { wallSegments: segs, doorPlacements, windowPlacements: winPlacements };
+  }, [points, W, D, H, doors, windows, getEdges, findEdgeForWall, polygonBounds]);
 
   return (
     <>
@@ -3291,19 +3291,19 @@ function PolygonShell({
         );
       })}
 
-      {/* Door panel — simple hinged wood panel at the door opening. Clicking
-          toggles the room's door-open state. */}
-      {doorPlacement && (
-        <PolygonDoorPanel
-          wx={doorPlacement.wx}
-          wz={doorPlacement.wz}
-          angle={doorPlacement.angle}
-          startM={doorPlacement.startM}
-          lenM={doorPlacement.lenM}
-          hM={doorPlacement.hM}
+      {/* Door panels — one per door. Clicking toggles the room's
+          door-open state (shared across all doors of this room). */}
+      {doorPlacements.map((dp, i) => (
+        <PolygonDoorPanel key={i}
+          wx={dp.wx}
+          wz={dp.wz}
+          angle={dp.angle}
+          startM={dp.startM}
+          lenM={dp.lenM}
+          hM={dp.hM}
           room={activeRoom}
         />
-      )}
+      ))}
     </>
   );
 }
@@ -3363,6 +3363,26 @@ function Scene({ isIOS }: { isIOS: boolean }) {
   const doorLenCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
   const doorHCm    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
   const doorStyle  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? "wood_panel");
+  const doorEdgeIdx = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorEdgeIdx?.[activeRoom]);
+  // Select the raw doors array — stable reference if unchanged.
+  const roomDoorsArr = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoors?.[activeRoom]);
+  // Compute the effective door list with legacy fallback. useMemo keeps
+  // the array reference stable across re-renders to avoid infinite loops.
+  const allDoors = useMemo(() => {
+    if (roomDoorsArr && roomDoorsArr.length > 0) return roomDoorsArr;
+    if (!hasDoor) return [];
+    const wall: "back" | "front" | "left" | "right" =
+      doorWall === "top" ? "back" : doorWall === "bottom" ? "front" : doorWall;
+    return [{
+      id: `${activeRoom}-legacy-door`,
+      wall,
+      pos: doorPosCm,
+      len: doorLenCm,
+      h: doorHCm,
+      style: doorStyle,
+      edgeIndex: doorEdgeIdx,
+    }];
+  }, [roomDoorsArr, hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle, doorEdgeIdx, activeRoom]);
   const frontWallOpacity = useDesignerStore((s) => s.frontWallOpacity);
   const ceilingOpacity = useDesignerStore((s) => s.ceilingOpacity);
   const lightPos = useDesignerStore((s) => s.lightPosByRoom[s.activeRoom]);
@@ -3389,14 +3409,12 @@ function Scene({ isIOS }: { isIOS: boolean }) {
 
       {/* Environment — skip on iOS: PMREMGenerator.fromScene is broken on iPhone Metal
           (three.js bug #25888). Compensate with stronger ambient + fill lights.
-          Also wrapped in ErrorBoundary+Suspense so a CDN failure on the
-          Poly Haven HDR (lebombo_1k.hdr fetched by drei's "apartment"
-          preset) gracefully degrades to no-IBL instead of crashing the
-          whole Canvas. */}
+          HDR served from /public/hdr to avoid the polyhaven CDN being
+          flaky in some networks. ErrorBoundary still wraps for safety. */}
       {!isIOS && (
         <EnvironmentFallback>
           <Suspense fallback={null}>
-            <Environment preset="apartment" />
+            <Environment files="/hdr/lebombo_1k.hdr" />
           </Suspense>
         </EnvironmentFallback>
       )}
@@ -3448,15 +3466,14 @@ function Scene({ isIOS }: { isIOS: boolean }) {
           floorColor={floorColor}
           ceilingColor={roomState.materials.ceiling?.color ?? "#F5F5F5"}
           ceilingOpacity={ceilingOpacity}
-          door={hasDoor ? {
-            wall: doorWall === "top" ? "back"
-                : doorWall === "bottom" ? "front"
-                : doorWall,
-            posCm: doorPosCm,
-            lenCm: doorLenCm,
-            hCm: doorHCm,
-            style: doorStyle,
-          } : null}
+          doors={allDoors.map(d => ({
+            wall: d.wall,
+            posCm: d.pos,
+            lenCm: d.len,
+            hCm: d.h ?? 200,
+            style: d.style ?? "wood_panel",
+            edgeIndex: d.edgeIndex,
+          }))}
           windows={roomWindows}
           activeRoom={activeRoom}
         />

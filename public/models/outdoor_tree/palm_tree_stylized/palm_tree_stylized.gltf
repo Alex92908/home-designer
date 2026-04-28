@@ -1,0 +1,436 @@
+{
+  "asset": {
+    "generator": "glTF-Transform v4.3.0",
+    "version": "2.0",
+    "extras": {
+      "author": "ilyu.ziya (https://sketchfab.com/andhikaardia)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/stylized-palm-tree-92d1b08141ed40eb84e13674fa0cc942",
+      "title": "Stylized Palm Tree"
+    }
+  },
+  "accessors": [
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 1524,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 372,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 1
+    },
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 13536,
+      "normalized": false,
+      "byteOffset": 3048,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 4213,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 2
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 372,
+      "max": [
+        7876,
+        8016,
+        32767
+      ],
+      "min": [
+        -7876,
+        -8016,
+        -32767
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 3
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 372,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 4
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 4213,
+      "max": [
+        10173,
+        17254,
+        32767
+      ],
+      "min": [
+        -10173,
+        -17254,
+        -32767
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 5
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 4213,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 6
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 1,
+      "byteOffset": 0,
+      "byteLength": 30120,
+      "target": 34963,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 0,
+          "byteLength": 5515,
+          "mode": "TRIANGLES",
+          "byteStride": 2,
+          "count": 15060
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 30120,
+      "byteLength": 1488,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 5516,
+          "byteLength": 560,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 372
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 31608,
+      "byteLength": 16852,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 6076,
+          "byteLength": 7348,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 4213
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 48460,
+      "byteLength": 2976,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 13424,
+          "byteLength": 2041,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 372
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 51436,
+      "byteLength": 1488,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 15468,
+          "byteLength": 1288,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 372
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 52924,
+      "byteLength": 33704,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 16756,
+          "byteLength": 21207,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 4213
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 86628,
+      "byteLength": 16852,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 37964,
+          "byteLength": 15300,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 4213
+        }
+      }
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "textures": [
+    {
+      "source": 0,
+      "sampler": 0
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/png",
+      "uri": "textures/Material.001_diffuse.png"
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "scene.bin",
+      "byteLength": 53264
+    },
+    {
+      "byteLength": 103480,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "fallback": true
+        }
+      }
+    }
+  ],
+  "materials": [
+    {
+      "name": "Material.001",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {},
+      "extensions": {
+        "KHR_materials_pbrSpecularGlossiness": {
+          "diffuseFactor": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "specularFactor": [
+            0,
+            0,
+            0
+          ],
+          "glossinessFactor": 0.11508351571538346,
+          "diffuseTexture": {
+            "index": 0
+          }
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Object_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 4,
+            "TEXCOORD_0": 5
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 0
+        }
+      ]
+    },
+    {
+      "name": "Object_1",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 3,
+            "POSITION": 6,
+            "TEXCOORD_0": 7
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 2
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Sketchfab_model",
+      "rotation": [
+        -0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        1
+      ]
+    },
+    {
+      "name": "root",
+      "children": [
+        2
+      ]
+    },
+    {
+      "name": "GLTF_SceneRootNode",
+      "rotation": [
+        0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        3,
+        5
+      ]
+    },
+    {
+      "name": "Cylinder.001_0",
+      "translation": [
+        -1.0624682903289795,
+        -0.007054328918457031,
+        -2.100569248199463
+      ],
+      "rotation": [
+        0,
+        0.9094021480721137,
+        0,
+        0.41591794032215695
+      ],
+      "scale": [
+        0.20796848833560946,
+        1.9705584049224854,
+        0.20796848833560946
+      ],
+      "children": [
+        4
+      ]
+    },
+    {
+      "name": "Object_4",
+      "translation": [
+        -3.3546169996261597,
+        1.8876827601343393,
+        -2.013091564178467
+      ],
+      "scale": [
+        7.706742763519287,
+        7.706742763519287,
+        7.706742763519287
+      ],
+      "mesh": 0
+    },
+    {
+      "name": "Plane.001_1",
+      "translation": [
+        -1.9551331996917725,
+        7.399949073791504,
+        -0.40644776821136475
+      ],
+      "rotation": [
+        0.3701270270747579,
+        -0.008424232823318497,
+        -0.007692904311520307,
+        0.9289111019647649
+      ],
+      "scale": [
+        2.3405091762542725,
+        0.7317258715629577,
+        0.7317259311676024
+      ],
+      "children": [
+        6
+      ]
+    },
+    {
+      "name": "Object_6",
+      "translation": [
+        -0.11667567491531372,
+        0.38135814666748047,
+        -0.28678417205810547
+      ],
+      "scale": [
+        6.574374675750732,
+        6.574374675750732,
+        6.574374675750732
+      ],
+      "mesh": 1
+    }
+  ],
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "scene": 0,
+  "extensionsUsed": [
+    "EXT_meshopt_compression",
+    "KHR_materials_pbrSpecularGlossiness",
+    "KHR_mesh_quantization"
+  ],
+  "extensionsRequired": [
+    "EXT_meshopt_compression",
+    "KHR_materials_pbrSpecularGlossiness",
+    "KHR_mesh_quantization"
+  ]
+}

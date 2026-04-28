@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { generateRoomPrompt } from "@/lib/roomPrompt";
 import { generateControlNetWorkflow, generateTxt2ImgWorkflow } from "@/lib/comfyWorkflow";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   open: boolean;
@@ -17,7 +18,6 @@ const POLL_INTERVAL = 2500; // ms
 
 interface AnglePreset {
   id: string;
-  label: string;
   icon: string;
   getPos:    (W: number, D: number, H: number) => [number, number, number];
   getLookAt: (W: number, D: number, H: number) => [number, number, number];
@@ -26,28 +26,24 @@ interface AnglePreset {
 const ANGLE_PRESETS: AnglePreset[] = [
   {
     id: "front-right",
-    label: "右前角 45°",
     icon: "↗",
     getPos:    (W, D, H) => [ W * 0.40,  H * 0.50,  D * 0.40],
     getLookAt: (W, D, H) => [-W * 0.10,  H * 0.20, -D * 0.25],
   },
   {
     id: "front-left",
-    label: "左前角 45°",
     icon: "↖",
     getPos:    (W, D, H) => [-W * 0.40,  H * 0.50,  D * 0.40],
     getLookAt: (W, D, H) => [ W * 0.10,  H * 0.20, -D * 0.25],
   },
   {
     id: "front-center",
-    label: "正面偏右",
     icon: "→",
     getPos:    (W, D, H) => [ W * 0.18,   H * 0.45,  D * 0.38],
     getLookAt: (W, D, H) => [-W * 0.05,   H * 0.20, -D * 0.30],
   },
   {
     id: "aerial",
-    label: "鸟瞰",
     icon: "↓",
     getPos:    (W, D, H) => [ W * 0.20,   H * 1.60,  D * 0.50],
     getLookAt: (_W, _D, _H) => [ 0,        0,          0        ],
@@ -74,6 +70,7 @@ function downloadDataUrl(dataUrl: string, filename: string) {
 }
 
 export default function AiRenderModal({ open, onClose }: Props) {
+  const t = useT();
   // Store — grab current room data for prompt generation
   const floorPlans        = useDesignerStore(s => s.floorPlans);
   const activeFloor       = useDesignerStore(s => s.activeFloor);
@@ -324,7 +321,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
     } catch (err) {
       clearInterval(timerRef.current ?? undefined);
       const msg = err instanceof Error ? err.message : String(err);
-      setError(`链式渲染失败：${msg}`);
+      setError(t.airErrChain(msg));
       setPhase("error");
     }
   }
@@ -382,13 +379,13 @@ export default function AiRenderModal({ open, onClose }: Props) {
         } else if (sdata.status === "error") {
           clearInterval(pollRef.current ?? undefined);
           clearInterval(timerRef.current ?? undefined);
-          setError("ComfyUI 任务出错，请检查 ComfyUI 控制台");
+          setError(t.airErrComfyTask);
           setPhase("error");
         }
       }, POLL_INTERVAL);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setError(`提交失败：${msg}`);
+      setError(t.airErrSubmit(msg));
       setPhase("error");
     }
   }
@@ -447,21 +444,21 @@ export default function AiRenderModal({ open, onClose }: Props) {
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-base">🎨</span>
-            <h2 className="text-sm font-bold text-gray-800">AI 效果图生成</h2>
+            <h2 className="text-sm font-bold text-gray-800">{t.airModalTitle}</h2>
             {comfyAvailable === true && (
               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium"
                 style={{ background: "#d1fae5", color: "#065f46" }}>
-                ComfyUI ● 本地
+                {t.airBadgeLocal}
               </span>
             )}
             {comfyAvailable === false && (
               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium"
                 style={{ background: "#fee2e2", color: "#991b1b" }}>
-                ComfyUI 未运行
+                {t.airBadgeOffline}
               </span>
             )}
             {comfyAvailable === null && (
-              <span className="text-[10px] text-gray-400">检测中…</span>
+              <span className="text-[10px] text-gray-400">{t.airBadgeChecking}</span>
             )}
           </div>
           <button
@@ -481,9 +478,8 @@ export default function AiRenderModal({ open, onClose }: Props) {
               <span className="text-base shrink-0 mt-0.5">📐</span>
               <p className="text-[11px] text-amber-700 leading-relaxed">
                 {cameraAndCapture
-                  ? <><span className="font-semibold">已自动定位到所选角度</span>，可直接点击生成</>
-                  : <><span className="font-semibold">建议先调整3D视角再生成</span>
-                    ：将相机旋转至 <span className="font-semibold">45° 左右俯角</span>，确保地面和墙面同时可见，ControlNet 深度图效果最佳。</>
+                  ? <><span className="font-semibold">{t.airTipAuto}</span>{t.airTipAutoSuffix}</>
+                  : <><span className="font-semibold">{t.airTipManual}</span>{t.airTipManualSuffix}</>
                 }
               </p>
             </div>
@@ -493,14 +489,14 @@ export default function AiRenderModal({ open, onClose }: Props) {
           {comfyAvailable === true && phase === "idle" && (
             <div>
               <p className="text-[11px] font-medium text-gray-400 mb-2 uppercase tracking-wider">
-                渲染模式
+                {t.airModeLabel}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {([
-                  { id: "controlnet",       icon: "✦",  title: "ControlNet",  desc: "深度图空间控制" },
-                  { id: "multicontrolnet",  icon: "✦✦", title: "多重控制",    desc: "深度+边缘+法线" },
-                  { id: "ipadapter-chain",  icon: "⛓",  title: "链式多视角",  desc: "多角度一致生成" },
-                  { id: "txt2img",          icon: "✎",  title: "文生图",      desc: "纯 prompt" },
+                  { id: "controlnet",       icon: "✦",  title: t.airModes.controlnet.title,        desc: t.airModes.controlnet.desc },
+                  { id: "multicontrolnet",  icon: "✦✦", title: t.airModes.multicontrolnet.title,   desc: t.airModes.multicontrolnet.desc },
+                  { id: "ipadapter-chain",  icon: "⛓",  title: t.airModes["ipadapter-chain"].title, desc: t.airModes["ipadapter-chain"].desc },
+                  { id: "txt2img",          icon: "✎",  title: t.airModes.txt2img.title,           desc: t.airModes.txt2img.desc },
                 ] as { id: Mode; icon: string; title: string; desc: string }[]).map(m => (
                   <button
                     key={m.id}
@@ -529,7 +525,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
           {comfyAvailable === true && phase === "idle" && (mode === "controlnet" || mode === "multicontrolnet") && (
             <div>
               <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2">
-                拍摄角度
+                {t.airAngleLabel}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {ANGLE_PRESETS.map(preset => {
@@ -550,14 +546,14 @@ export default function AiRenderModal({ open, onClose }: Props) {
                       )}
                       <div className="text-xs font-semibold"
                         style={{ color: active ? "#4f46e5" : "#374151" }}>
-                        {preset.icon} {preset.label}
+                        {preset.icon} {t.airAngles[preset.id]}
                       </div>
                     </button>
                   );
                 })}
               </div>
               <p className="text-[10px] text-gray-400 mt-1.5">
-                右前角 45° 或左前角 45° 综合展示墙面与地面，效果最佳
+                {t.airAngleHint}
               </p>
             </div>
           )}
@@ -567,10 +563,10 @@ export default function AiRenderModal({ open, onClose }: Props) {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">
-                  拍摄角度 <span className="normal-case text-gray-300">（最多 4 个）</span>
+                  {t.airAngleLabel} <span className="normal-case text-gray-300">{t.airChainAngleSuffix}</span>
                 </p>
                 <span className="text-[10px] text-indigo-400 font-medium">
-                  已选 {chainAngles.length} / 4
+                  {t.airChainAngleSelected(chainAngles.length)}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -593,14 +589,14 @@ export default function AiRenderModal({ open, onClose }: Props) {
                       )}
                       <div className="text-xs font-semibold"
                         style={{ color: active ? "#4f46e5" : "#374151" }}>
-                        {preset.icon} {preset.label}
+                        {preset.icon} {t.airAngles[preset.id]}
                       </div>
                     </button>
                   );
                 })}
               </div>
               <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
-                按数字顺序生成。普通视角参考前一张，鸟瞰会综合前面所有视角的色彩材质（建议放最后）。单张约 3-8 分钟。
+                {t.airChainAngleHint}
               </p>
             </div>
           )}
@@ -609,13 +605,13 @@ export default function AiRenderModal({ open, onClose }: Props) {
           {screenshot && phase !== "done" && (
             <div>
               <p className="text-[11px] font-medium text-gray-400 mb-1.5 uppercase tracking-wider">
-                当前3D截图
+                {t.airScreenshotLabel}
               </p>
               <img
                 src={screenshot}
                 className="w-full rounded-xl object-cover border border-gray-100"
                 style={{ maxHeight: 200 }}
-                alt="3D截图"
+                alt={t.airScreenshotAlt}
               />
             </div>
           )}
@@ -626,15 +622,15 @@ export default function AiRenderModal({ open, onClose }: Props) {
               <div className="w-12 h-12 rounded-full border-4 border-indigo-100 border-t-indigo-500 animate-spin" />
               <p className="text-sm font-medium text-gray-700">
                 {mode === "ipadapter-chain"
-                  ? `链式渲染中… 第 ${chainIndex + 1} / ${chainAngles.length} 张`
-                  : phase === "submitting" ? "正在提交任务…" : "ComfyUI 渲染中…"}
+                  ? t.airProgressChain(chainIndex + 1, chainAngles.length)
+                  : phase === "submitting" ? t.airProgressSubmit : t.airProgressGen}
               </p>
               {phase === "generating" && (
                 <p className="text-xs text-gray-400">
-                  已用时 {timeStr}
+                  {t.airProgressElapsed(timeStr)}
                   {mode === "ipadapter-chain"
-                    ? `，约需 ${chainAngles.length * 5} 分钟`
-                    : `，约需 ${mode === "multicontrolnet" ? "40–70 秒" : "25–45 秒"}`}
+                    ? t.airEtaChain(chainAngles.length * 5)
+                    : (mode === "multicontrolnet" ? t.airEtaMulti : t.airEtaSingle)}
                 </p>
               )}
               {/* Chain gallery while in progress */}
@@ -642,7 +638,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
                 <div className="grid grid-cols-2 gap-2 w-full mt-2">
                   {chainResults.map((url, i) => (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img key={i} src={url} alt={`已完成 ${i+1}`}
+                    <img key={i} src={url} alt={t.airChainDoneAlt(i + 1)}
                       className="w-full rounded-lg shadow-sm border border-gray-100" />
                   ))}
                 </div>
@@ -663,16 +659,16 @@ export default function AiRenderModal({ open, onClose }: Props) {
           {phase === "done" && resultUrl && mode !== "ipadapter-chain" && (
             <div>
               <p className="text-[11px] font-medium text-gray-400 mb-1.5 uppercase tracking-wider">
-                生成结果
+                {t.airResultLabel}
               </p>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={resultUrl}
                 className="w-full rounded-xl object-cover shadow-lg"
-                alt="AI效果图"
+                alt={t.airResultAlt}
               />
               <p className="text-[10px] text-gray-400 mt-1.5 text-center">
-                渲染完成 · 用时 {timeStr}
+                {t.airResultDone(timeStr)}
               </p>
             </div>
           )}
@@ -681,7 +677,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
           {phase === "done" && mode === "ipadapter-chain" && chainResults.length > 0 && (
             <div>
               <p className="text-[11px] font-medium text-gray-400 mb-1.5 uppercase tracking-wider">
-                链式生成结果 · {chainResults.length} 张
+                {t.airChainResultLabel(chainResults.length)}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {chainResults.map((url, i) => {
@@ -689,23 +685,23 @@ export default function AiRenderModal({ open, onClose }: Props) {
                   return (
                     <div key={i} className="relative">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} className="w-full rounded-xl object-cover shadow-md" alt={`视角 ${i+1}`} />
+                      <img src={url} className="w-full rounded-xl object-cover shadow-md" alt={t.airChainAngleAlt(i + 1)} />
                       <span className="absolute bottom-1.5 left-1.5 text-[10px] px-2 py-0.5 rounded-full text-white font-medium"
                         style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}>
-                        {preset?.icon} {preset?.label}
+                        {preset?.icon} {preset ? t.airAngles[preset.id] : ""}
                       </span>
                     </div>
                   );
                 })}
               </div>
-              <p className="text-[10px] text-gray-400 mt-1.5 text-center">渲染完成 · 用时 {timeStr}</p>
+              <p className="text-[10px] text-gray-400 mt-1.5 text-center">{t.airResultDone(timeStr)}</p>
             </div>
           )}
 
           {/* Error */}
           {(phase === "error" || error) && (
             <div className="bg-red-50 text-red-600 text-xs rounded-xl px-4 py-3 leading-relaxed">
-              ⚠️ {error ?? "渲染失败，请检查 ComfyUI 是否正常运行"}
+              ⚠️ {error ?? t.airErrGeneric}
             </div>
           )}
 
@@ -713,21 +709,21 @@ export default function AiRenderModal({ open, onClose }: Props) {
           {comfyAvailable === false && (
             <div className="flex flex-col gap-3">
               <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs text-amber-700 leading-relaxed">
-                <p className="font-semibold mb-1">ComfyUI 未在本机运行</p>
-                <p>可下载工作流 JSON，在安装了 ComfyUI 的电脑上手动运行。</p>
+                <p className="font-semibold mb-1">{t.airNoComfyTitle}</p>
+                <p>{t.airNoComfyDesc}</p>
               </div>
 
               {/* Download 3D screenshot */}
               {screenshot && (
                 <div>
                   <p className="text-[11px] font-medium text-gray-400 mb-1.5 uppercase tracking-wider">
-                    第一步：下载3D截图
+                    {t.airStep1Label}
                   </p>
                   <button
                     onClick={() => downloadDataUrl(screenshot, `hd_screenshot_${Date.now()}.jpg`)}
                     className="w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors font-medium flex items-center justify-center gap-2"
                   >
-                    📷 下载当前3D截图
+                    {t.airStep1Btn}
                   </button>
                 </div>
               )}
@@ -735,34 +731,34 @@ export default function AiRenderModal({ open, onClose }: Props) {
               {/* Download workflows */}
               <div>
                 <p className="text-[11px] font-medium text-gray-400 mb-1.5 uppercase tracking-wider">
-                  第二步：下载工作流
+                  {t.airStep2Label}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => downloadWorkflow("controlnet")}
                     className="py-3 px-3 rounded-xl border border-indigo-200 text-left hover:bg-indigo-50 transition-colors"
                   >
-                    <div className="text-xs font-semibold text-indigo-700">✦ ControlNet 工作流</div>
-                    <div className="text-[10px] text-indigo-400 mt-0.5">精准空间 · 推荐</div>
+                    <div className="text-xs font-semibold text-indigo-700">{t.airWfCNTitle}</div>
+                    <div className="text-[10px] text-indigo-400 mt-0.5">{t.airWfCNDesc}</div>
                   </button>
                   <button
                     onClick={() => downloadWorkflow("txt2img")}
                     className="py-3 px-3 rounded-xl border border-gray-200 text-left hover:bg-gray-50 transition-colors"
                   >
-                    <div className="text-xs font-semibold text-gray-700">✎ 文生图工作流</div>
-                    <div className="text-[10px] text-gray-400 mt-0.5">纯 prompt · 无需截图</div>
+                    <div className="text-xs font-semibold text-gray-700">{t.airWfT2ITitle}</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5">{t.airWfT2IDesc}</div>
                   </button>
                 </div>
               </div>
 
               {/* Instructions */}
               <div className="bg-gray-50 rounded-xl px-4 py-3 text-[11px] text-gray-500 leading-relaxed">
-                <p className="font-medium text-gray-600 mb-1">使用方法</p>
+                <p className="font-medium text-gray-600 mb-1">{t.airHowToTitle}</p>
                 <ol className="list-decimal list-inside space-y-0.5">
-                  <li>打开 ComfyUI → 菜单 → 文件 → 打开 → 选择下载的工作流 JSON</li>
-                  <li>找到 <strong>LoadImage</strong> 节点 → 上传刚才下载的截图</li>
-                  <li>点击 <strong>Queue Prompt</strong> 开始生成</li>
-                  <li>结果保存在 ComfyUI/output/ 目录</li>
+                  <li>{t.airHowTo1}</li>
+                  <li>{t.airHowTo2Pre}<strong>LoadImage</strong>{t.airHowTo2Post}</li>
+                  <li>{t.airHowTo3Pre}<strong>Queue Prompt</strong>{t.airHowTo3Post}</li>
+                  <li>{t.airHowTo4}</li>
                 </ol>
               </div>
             </div>
@@ -772,7 +768,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
           {comfyAvailable === null && !screenshot && (
             <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
               <div className="w-4 h-4 rounded-full border-2 border-gray-200 border-t-gray-400 animate-spin" />
-              正在检测 ComfyUI 状态…
+              {t.airChecking}
             </div>
           )}
         </div>
@@ -788,7 +784,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
                 }}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium"
               >
-                重新生成
+                {t.airBtnRetry}
               </button>
               <button
                 onClick={async () => {
@@ -812,7 +808,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
                 className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold transition-all active:scale-95"
                 style={{ background: "linear-gradient(135deg,#6366f1,#818cf8)" }}
               >
-                💾 {mode === "ipadapter-chain" ? `下载 ${chainResults.length} 张` : "下载效果图"}
+                💾 {mode === "ipadapter-chain" ? t.airBtnDownloadChain(chainResults.length) : t.airBtnDownloadSingle}
               </button>
             </>
           ) : (
@@ -822,7 +818,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
                 disabled={busy}
                 className="py-2.5 px-5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium disabled:opacity-30"
               >
-                关闭
+                {t.airBtnClose}
               </button>
               {comfyAvailable === true && (
                 <button
@@ -835,10 +831,10 @@ export default function AiRenderModal({ open, onClose }: Props) {
                   className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ background: "linear-gradient(135deg,#6366f1,#818cf8)" }}
                 >
-                  {phase === "submitting" ? "截取角度中…" :
-                   phase === "generating" ? "渲染中…" :
-                   mode === "ipadapter-chain" ? `⛓ 链式生成 ${chainAngles.length} 张` :
-                   "✨ 生成效果图"}
+                  {phase === "submitting" ? t.airBtnSubmitting :
+                   phase === "generating" ? t.airBtnGenerating :
+                   mode === "ipadapter-chain" ? t.airBtnChainStart(chainAngles.length) :
+                   t.airBtnGenerate}
                 </button>
               )}
             </>

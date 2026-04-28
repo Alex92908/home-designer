@@ -16,37 +16,35 @@ import ExportModal from "@/components/ExportModal";
 import ShareModal from "@/components/ShareModal";
 import FloorPlan from "@/components/FloorPlan";
 import FloorPlanAll, { RoomPanel as FloorPlanAllRoomPanel } from "@/components/FloorPlanAll";
+import YardPlan, { YardPlanLibrary, YardPlanInspector } from "@/components/YardPlan";
 // import OnboardingOverlay from "@/components/OnboardingOverlay";  // TODO: enable when ready
 import AiRenderModal from "@/components/AiRenderModal";
 import { useDesignerStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { decodeShare } from "@/lib/share";
 
+function CanvasLoading({ bg, msgKey }: { bg: string; msgKey: "loading3dScene" | "loadingExteriorScene" | "global3dLoading" }) {
+  const t = useT();
+  return (
+    <div className={`flex-1 flex items-center justify-center w-full h-full ${bg}`}>
+      <div className="text-gray-400 text-sm animate-pulse">{t[msgKey]}</div>
+    </div>
+  );
+}
+
 const RoomCanvas = dynamic(() => import("@/components/RoomCanvas"), {
   ssr: false,
-  loading: () => (
-    <div className="flex-1 flex items-center justify-center bg-gray-900 w-full h-full">
-      <div className="text-gray-400 text-sm animate-pulse">加载3D场景...</div>
-    </div>
-  ),
+  loading: () => <CanvasLoading bg="bg-gray-900" msgKey="loading3dScene" />,
 });
 
 const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
   ssr: false,
-  loading: () => (
-    <div className="flex-1 flex items-center justify-center bg-gray-900 w-full h-full">
-      <div className="text-gray-400 text-sm animate-pulse">加载外观场景...</div>
-    </div>
-  ),
+  loading: () => <CanvasLoading bg="bg-gray-900" msgKey="loadingExteriorScene" />,
 });
 
 const GlobalCanvas = dynamic(() => import("@/components/GlobalCanvas"), {
   ssr: false,
-  loading: () => (
-    <div className="flex-1 flex items-center justify-center bg-gray-200 w-full h-full">
-      <div className="text-gray-400 text-sm animate-pulse">加载全局 3D...</div>
-    </div>
-  ),
+  loading: () => <CanvasLoading bg="bg-gray-200" msgKey="global3dLoading" />,
 });
 
 // ─── Panel toggle tab button ──────────────────────────────
@@ -183,19 +181,22 @@ export default function Home() {
   const isAll      = viewMode === "all";
   const isExterior = viewMode === "exterior";
   const isGlobal3d = viewMode === "global3d";
+  const isYard2d   = viewMode === "yard2d";
 
   // Per-side panel routing. Each side picks the component that applies to
   // the current view (or null if that side has no panel in this view).
   // The room-sidebar (thin icon column) is its own separate left rail that
   // shows only in room/2d views.
-  const showRoomSidebar = !isAll && !isExterior && !isGlobal3d;
+  const showRoomSidebar = !isAll && !isExterior && !isGlobal3d && !isYard2d;
   const leftPanel = isAll
     ? <FloorPlanAllRoomPanel />
+    : isYard2d ? <YardPlanLibrary />
     : (!isExterior && !isGlobal3d) ? <LeftPanel /> : null;
-  const leftPanelWidth = isAll ? 224 : 256; // RoomPanel is w-56 (224px)
+  const leftPanelWidth = isAll ? 224 : (isYard2d ? 240 : 256); // RoomPanel w-56
   const rightPanel = isAll
     ? <RightPanelAll />
     : isExterior ? <ExteriorPanel />
+    : isYard2d   ? <YardPlanInspector />
     : isGlobal3d ? null
     : <RightPanel />;
   const rightPanelWidth = isExterior ? 256 : 288; // ExteriorPanel uses w-64
@@ -260,6 +261,7 @@ export default function Home() {
           {isExterior              && <HouseCanvas />}
           {isAll                   && <FloorPlanAll />}
           {isGlobal3d              && <GlobalCanvas />}
+          {isYard2d                && <YardPlan />}
           {viewMode === "2d"       && <FloorPlan />}
 
           {/* AI Render floating button */}

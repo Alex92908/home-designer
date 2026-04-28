@@ -383,10 +383,33 @@ interface DesignerStore {
   setDoorPos: (room: RoomType, pos: number) => void;
   setRoomHasDoor: (room: RoomType, has: boolean) => void;
   setDoorWall: (room: RoomType, wall: "bottom" | "top" | "left" | "right") => void;
+  setDoorEdgeIdx: (room: RoomType, edgeIdx: number | null) => void;
+
+  // ── Yard plan (outdoor 2D editor) ──
+  // Items in the yard plan are stored on the active floor's `yardPlan.items`
+  // array. The exterior 3D view auto-renders these. v2 schema (2026-04):
+  // items can be singletons, prefabs, or zones — see YardItem union.
+  addYardItem:    (item: import("./types").YardItem) => void;
+  removeYardItem: (id: string) => void;
+  /** Patch is a structural subset — only fields shared across the union
+   *  are statically typeable. Renderers / inspectors that touch
+   *  prefab.params should pass `{ params: { … } }`; the value gets
+   *  shallow-merged at the call site. */
+  updateYardItem: (
+    id: string,
+    patch: { x?: number; z?: number; rot?: number; scale?: number; params?: Record<string, unknown> },
+  ) => void;
   setDoorLen: (room: RoomType, len: number) => void;
   setDoorH:   (room: RoomType, h: number) => void;
   setDoorStyle: (room: RoomType, style: import("./types").DoorStyle) => void;
   updateWindow: (room: RoomType, id: string, patch: Partial<WindowConfig>) => void;
+
+  // Multi-door (new schema). Doors per room are an array; the legacy
+  // single-door fields are kept for backward compat and migrated on
+  // first add via getDoorsForRoom().
+  addDoor:    (room: RoomType, door: import("./types").DoorConfig) => void;
+  removeDoor: (room: RoomType, id: string) => void;
+  updateDoor: (room: RoomType, id: string, patch: Partial<import("./types").DoorConfig>) => void;
 
   // Room rotation (swaps width/depth in layout)
   rotateRoom: (room: RoomType) => void;
@@ -425,12 +448,13 @@ interface DesignerStore {
 const initialExterior: ExteriorSettings = {
   preset: "modern",
   roofStyle: "flat",
-  roofColor: "#3A3A3A",
+  roofColor: "#2A2A2A",
   wallMaterial: "render",
-  wallColor: "#F2EEE6",
-  accentColor: "#2A2A2A",
-  floors: 1,
-  yardPreset: "garden",
+  wallColor: "#F4F2EE",
+  accentColor: "#1A1A1A",
+  floors: 2,
+  yardPreset: "pool",
+  showPerimeterFence: false,
 };
 
 export const useDesignerStore = create<DesignerStore>()(
@@ -1393,6 +1417,58 @@ export const useDesignerStore = create<DesignerStore>()(
         updateFloor(get, set, fp => ({ roomDoorWall: { ...fp.roomDoorWall, [room]: wall } }));
       },
 
+      setDoorEdgeIdx: (room, edgeIdx) => {
+        updateFloor(get, set, fp => {
+          const next = { ...(fp.roomDoorEdgeIdx ?? {}) };
+          if (edgeIdx == null) delete next[room];
+          else next[room] = edgeIdx;
+          return { roomDoorEdgeIdx: next };
+        });
+      },
+
+      addYardItem: (item) => {
+        updateFloor(get, set, fp => {
+          const cur = fp.yardPlan?.items ?? [];
+          return { yardPlan: { ...(fp.yardPlan ?? { items: [] }), items: [...cur, item] } };
+        });
+      },
+      removeYardItem: (id) => {
+        updateFloor(get, set, fp => {
+          const cur = fp.yardPlan?.items ?? [];
+          return { yardPlan: { ...(fp.yardPlan ?? { items: [] }), items: cur.filter(i => i.id !== id) } };
+        });
+      },
+      updateYardItem: (id, patch) => {
+        updateFloor(get, set, fp => {
+          const cur = fp.yardPlan?.items ?? [];
+          return {
+            yardPlan: {
+              ...(fp.yardPlan ?? { items: [] }),
+              items: cur.map(i => i.id === id ? { ...i, ...patch } : i),
+            },
+          };
+        });
+      },
+
+      addDoor: (room, door) => {
+        updateFloor(get, set, fp => {
+          const cur = fp.roomDoors?.[room] ?? [];
+          return { roomDoors: { ...(fp.roomDoors ?? {}), [room]: [...cur, door] } };
+        });
+      },
+      removeDoor: (room, id) => {
+        updateFloor(get, set, fp => {
+          const cur = fp.roomDoors?.[room] ?? [];
+          return { roomDoors: { ...(fp.roomDoors ?? {}), [room]: cur.filter(d => d.id !== id) } };
+        });
+      },
+      updateDoor: (room, id, patch) => {
+        updateFloor(get, set, fp => {
+          const cur = fp.roomDoors?.[room] ?? [];
+          return { roomDoors: { ...(fp.roomDoors ?? {}), [room]: cur.map(d => d.id === id ? { ...d, ...patch } : d) } };
+        });
+      },
+
       setDoorLen: (room, len) => {
         const v = Math.max(50, Math.min(300, len));
         updateFloor(get, set, fp => ({ roomDoorLen: { ...(fp.roomDoorLen ?? {}), [room]: v } }));
@@ -1541,6 +1617,15 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       loadFromShare: (snapshot) => {
+        // Re-register custom furniture into the runtime FURNITURE map BEFORE
+        // we set placedItems — otherwise placeFurniture lookups for those
+        // ids will return undefined while React renders.
+        const customFurniture = snapshot.customFurniture ?? [];
+        customFurniture.forEach(item => registerFurniture(item));
+
+        const defaultBlueprint = { image: null, naturalW: 0, naturalH: 0, opacity: 0.4, offsetX: 0, offsetY: 0, scale: 1 };
+        const defaultScores    = { style: 0, space: 0, light: 0, dominantStyle: "" };
+
         const fp = makeDefaultFloorPlan();
         if (snapshot.floorPlans && Array.isArray(snapshot.floorPlans)) {
           // New format: floorPlans array
@@ -1559,13 +1644,15 @@ export const useDesignerStore = create<DesignerStore>()(
             budget: snapshot.budget,
             exterior: { ...initialExterior, ...(snapshot.exterior as Partial<typeof initialExterior>) },
             customRoomMeta: snapshot.customRoomMeta ?? {},
+            customFurniture,
+            blueprint: { ...defaultBlueprint, ...(snapshot.blueprint ?? {}) },
             activeRoom: floorPlans[0]?.enabledRooms[0] ?? "living",
             selectedInstanceId: null,
             selectedInstanceIds: [],
             furnitureHistory: [],
             clipboard: [],
             roomClipboard: null,
-            scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
+            scores: snapshot.scores ?? defaultScores,
             layoutHistory: [],
             activeFloor: 0,
           });
@@ -1581,13 +1668,15 @@ export const useDesignerStore = create<DesignerStore>()(
             budget: snapshot.budget,
             exterior: { ...initialExterior, ...(snapshot.exterior as Partial<typeof initialExterior>) },
             customRoomMeta: snapshot.customRoomMeta ?? {},
+            customFurniture,
+            blueprint: { ...defaultBlueprint, ...(snapshot.blueprint ?? {}) },
             activeRoom: (snapshot.enabledRooms?.[0]) ?? "living",
             selectedInstanceId: null,
             selectedInstanceIds: [],
             furnitureHistory: [],
             clipboard: [],
             roomClipboard: null,
-            scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
+            scores: snapshot.scores ?? defaultScores,
             layoutHistory: [],
             activeFloor: 0,
           });
@@ -1666,6 +1755,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const firstTemplatedRoom = enabledRooms.find(r => template.rooms[r]) ?? s.activeRoom;
         const { materials, placedItems } = updatedRooms[firstTemplatedRoom];
         const computed = computeScores(materials as never, placedItems as never);
+        const exteriorPatch = template.exterior ? { exterior: { ...s.exterior, ...template.exterior } } : {};
         set({
           floorPlans,
           activeRoom: firstTemplatedRoom,
@@ -1674,6 +1764,7 @@ export const useDesignerStore = create<DesignerStore>()(
           selectedInstanceIds: [],
           furnitureHistory: [],
           scores: { ...computed, dominantStyle: template.styleTag },
+          ...exteriorPatch,
         });
       },
 
@@ -1786,3 +1877,28 @@ export const useDesignerStore = create<DesignerStore>()(
 // ─── Exports for convenience ───────────────────────────────
 export { MATERIALS, FURNITURE };
 export type { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, FloorPlan };
+
+/** Read all doors for a room, transparently migrating legacy single-door
+ *  storage (roomHasDoor + roomDoorWall + roomDoorPos + …) into the new
+ *  roomDoors[] schema. UI / 3D / clearance code should use this rather
+ *  than touching the legacy fields directly. */
+export function getDoorsForRoom(fp: FloorPlan, room: RoomType): import("./types").DoorConfig[] {
+  const arr = fp.roomDoors?.[room];
+  if (arr && arr.length > 0) return arr;
+  // Legacy single door fallback
+  const hasDoor = fp.roomHasDoor?.[room];
+  if (!hasDoor) return [];
+  // Map legacy doorWall ("bottom"/"top") to new wall facing ("front"/"back")
+  const w = fp.roomDoorWall?.[room] ?? "bottom";
+  const wall: "back" | "front" | "left" | "right" =
+    w === "top" ? "back" : w === "bottom" ? "front" : w;
+  return [{
+    id: `${room}-legacy-door`,
+    wall,
+    pos: fp.roomDoorPos?.[room] ?? 0,
+    len: fp.roomDoorLen?.[room] ?? 80,
+    h:   fp.roomDoorH?.[room]   ?? 200,
+    style: fp.roomDoorStyle?.[room],
+    edgeIndex: fp.roomDoorEdgeIdx?.[room],
+  }];
+}

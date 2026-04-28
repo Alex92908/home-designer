@@ -6,7 +6,13 @@ import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS, DEFAULT_ENABLED } from "@/lib/store";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale } from "@/lib/i18n";
-import { FLOORPLAN_LAYOUTS } from "@/lib/floorplanLayouts";
+import { FLOORPLAN_LAYOUTS, type FloorplanLayout } from "@/lib/floorplanLayouts";
+import { getLayoutNameEn } from "@/locales/itemNames";
+
+function localizeLayoutName(layout: FloorplanLayout, locale: string): string {
+  if (locale === "en") return getLayoutNameEn(layout.id) ?? layout.name;
+  return layout.name;
+}
 
 // ─── Constants ─────────────────────────────────────────────
 const WALL     = 14;   // wall thickness cm
@@ -178,16 +184,16 @@ export function RoomPanel() {
                     <button
                       onClick={() => startRename(room)}
                       className="text-[11px] text-gray-400 hover:text-gray-700 px-0.5 leading-none"
-                      title="重命名">✏️</button>
+                      title={t.fpRenameTitle}>✏️</button>
                     <button
                       onClick={() => copyRoom(room)}
                       className="text-[11px] text-gray-400 hover:text-blue-600 px-0.5 leading-none"
-                      title="复制房间配置">⧉</button>
+                      title={t.fpCopyRoomTitle}>⧉</button>
                     {roomClipboard && (
                       <button
                         onClick={() => pasteRoom(room)}
                         className="text-[11px] text-emerald-500 hover:text-emerald-700 px-0.5 leading-none"
-                        title="粘贴配置">📋</button>
+                        title={t.fpPasteRoomTitle}>📋</button>
                     )}
                   </div>
                   <span className="text-[10px] text-gray-400 shrink-0 group-hover/row:hidden">
@@ -199,7 +205,7 @@ export function RoomPanel() {
                   </button>
                   <button onClick={() => { pushLayoutHistory(); removeRoom(room); setExpanded(null); setRenamingRoom(null); }}
                     className="text-[11px] text-gray-300 hover:text-red-400 transition-colors w-4 text-center font-bold shrink-0"
-                    title="移除房间">✕</button>
+                    title={t.fpRemoveRoomTitle}>✕</button>
                 </div>
 
                 {naming === room && (
@@ -226,12 +232,12 @@ export function RoomPanel() {
                     <div className="text-[9px] text-gray-400">≈ {((dims.width/100)*(dims.depth/100)).toFixed(1)} ㎡</div>
                     {/* Shape picker: 矩形 / L 型 / 凸字型 */}
                     <div className="flex flex-col gap-1 mt-1">
-                      <div className="text-[10px] text-gray-500 font-bold">形状</div>
+                      <div className="text-[10px] text-gray-500 font-bold">{t.fpShapeLabel}</div>
                       <div className="flex gap-1">
                         {([
-                          { preset: "rect"    as const, label: "矩形", icon: "▭" },
-                          { preset: "l-shape" as const, label: "L型",  icon: "⌐" },
-                          { preset: "convex"  as const, label: "凸字", icon: "⎍" },
+                          { preset: "rect"    as const, label: t.fpShapeRect,   icon: "▭" },
+                          { preset: "l-shape" as const, label: t.fpShapeL,      icon: "⌐" },
+                          { preset: "convex"  as const, label: t.fpShapeConvex, icon: "⎍" },
                         ]).map(({ preset, label, icon }) => {
                           const active = (roomShapes?.[room]?.preset ?? "rect") === preset;
                           return (
@@ -314,6 +320,7 @@ export default function FloorPlanAll() {
   const updateRoomLayout    = useDesignerStore(s => s.updateRoomLayout);
   const updateRoomDimension = useDesignerStore(s => s.updateRoomDimension);
   const rotateRoom          = useDesignerStore(s => s.rotateRoom);
+  const removeRoom          = useDesignerStore(s => s.removeRoom);
   const pushLayoutHistory   = useDesignerStore(s => s.pushLayoutHistory);
   const undoLayout          = useDesignerStore(s => s.undoLayout);
   const historyLen          = useDesignerStore(s => s.layoutHistory.length);
@@ -343,6 +350,9 @@ export default function FloorPlanAll() {
   const [layoutPickerOpen, setLayoutPickerOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
+  // Page-level zoom for the overview canvas. Same UX as FloorPlan: − / % / +
+  // / reset, plus Ctrl/Cmd-wheel pinch zoom on the canvas wrapper.
+  const [zoomLevel, setZoomLevel] = useState(1.0);
 
   // In-app replacement for window.prompt/confirm/alert (blocked in some
   // Next.js runtime contexts). `dialog` holds the currently open dialog
@@ -409,13 +419,13 @@ export default function FloorPlanAll() {
       });
       const data = await res.json();
       if (!res.ok) {
-        const msg = data.message || data.error || "识别失败";
+        const msg = data.message || data.error || t.fpRecognizeFailed;
         setAnalyzeMsg(`❌ ${msg}`);
         return;
       }
       const rooms: Array<{ name: string; bbox: [number, number, number, number]; shape?: string }> = data.rooms ?? [];
       if (rooms.length === 0) {
-        setAnalyzeMsg("⚠️ 未识别到任何房间，换一张更清晰的图纸试试");
+        setAnalyzeMsg(t.fpAnalyzeNoRooms);
         return;
       }
       pushLayoutHistory();
@@ -445,9 +455,9 @@ export default function FloorPlanAll() {
         }
         placed++;
       }
-      setAnalyzeMsg(`✅ 识别 ${rooms.length} 间，生成 ${placed} 间。可用「✏️ 画房」补漏 / 拖顶点微调`);
+      setAnalyzeMsg(t.fpAnalyzeOk(rooms.length, placed));
     } catch (e) {
-      setAnalyzeMsg(`❌ 请求失败：${String(e)}`);
+      setAnalyzeMsg(t.fpAnalyzeErr(String(e)));
     } finally {
       setAnalyzing(false);
     }
@@ -468,7 +478,7 @@ export default function FloorPlanAll() {
 
     const freeSlot = ALL_POSSIBLE_ROOMS.find(r => !enabledRooms.includes(r));
     if (!freeSlot) {
-      void alertDialog("没有可用房间槽了（室内+阳台+自定义 20+ 个已全部占用）");
+      void alertDialog(t.fpNoRoomSlot);
       return;
     }
 
@@ -645,6 +655,21 @@ export default function FloorPlanAll() {
             {configuredCount}/{ALL_ROOMS.length} {t.allConfigured}
           </span>
           <span className="text-[10px] text-gray-400 hidden lg:block">{t.allHint}</span>
+          {/* Toolbar undo — page-level layout undo, easier to find than the
+              tiny per-room ↩ corner button when bulk-adding rooms via Layouts
+              / AI Analyze. */}
+          <button
+            onClick={() => { if (historyLen > 0) undoLayout(); }}
+            disabled={historyLen === 0}
+            title={t.fpOverviewUndoTitle(historyLen)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            style={{ border: "1px solid #F97316", color: "#F97316", background: "white" }}
+          >
+            {t.fpOverviewUndoBtn}
+            {historyLen > 0 && (
+              <span className="text-[9px] px-1 rounded-full bg-orange-100">{historyLen}</span>
+            )}
+          </button>
           {/* Floor selector tabs — only shown when floors > 1 */}
           {exterior.floors > 1 && (
             <div className="flex items-center gap-1 ml-auto">
@@ -676,18 +701,18 @@ export default function FloorPlanAll() {
             onClick={() => setLayoutPickerOpen(true)}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${(!roomClipboard && exterior.floors <= 1 && !blueprint.image) ? "ml-auto" : ""}`}
             style={{ border: "1px solid #6366F1", color: "#6366F1", background: "white" }}
-            title="从预设户型模板一键生成整屋布局"
+            title={t.fpHouseTemplateTitle}
           >
-            🏘️ 户型
+            {t.fpHouseTemplateBtn}
           </button>
           {/* Blueprint tracing: upload image, adjust, toggle trace mode */}
           {!blueprint.image ? (
             <label
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold cursor-pointer transition-all ${(!roomClipboard && exterior.floors <= 1) ? "ml-auto" : ""}`}
               style={{ border: "1px dashed #9CA3AF", color: "#6B7280", background: "white" }}
-              title="上传图纸在 SVG 下垫底描图"
+              title={t.fpUploadBlueprintTitle}
             >
-              📐 上传图纸
+              {t.fpUploadBlueprintBtn}
               <input type="file" accept="image/*" className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleBlueprintUpload(f); e.currentTarget.value = ""; }}
               />
@@ -696,9 +721,9 @@ export default function FloorPlanAll() {
             <div className={`flex items-center gap-1 ${(!roomClipboard && exterior.floors <= 1) ? "ml-auto" : ""}`}>
               {/* Tool picker: trace / ruler / draw. Click same tool again to exit. */}
               {([
-                { id: "trace" as const, label: "描图", icon: "📐", color: "#F59E0B", title: "描图：拖拽图纸定位" },
-                { id: "ruler" as const, label: "标尺", icon: "🔭", color: "#0EA5E9", title: "标尺：点两点输入真实距离，自动算比例" },
-                { id: "draw"  as const, label: "画房", icon: "✏️", color: "#10B981", title: "画房：沿图纸点角新建房间，Enter 完成 / Esc 取消" },
+                { id: "trace" as const, label: t.fpToolTrace, icon: "📐", color: "#F59E0B", title: t.fpToolTraceTitle },
+                { id: "ruler" as const, label: t.fpToolRuler, icon: "🔭", color: "#0EA5E9", title: t.fpToolRulerTitle },
+                { id: "draw"  as const, label: t.fpToolDraw,  icon: "✏️", color: "#10B981", title: t.fpToolDrawTitle },
               ]).map(({ id, label, icon, color, title }) => {
                 const active = tool === id;
                 return (
@@ -722,17 +747,17 @@ export default function FloorPlanAll() {
                 disabled={analyzing}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-wait"
                 style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)", color: "#fff" }}
-                title="调 GLM-4V 识别图纸中的房间并批量建房。先用 🔭 标尺校准比例效果更好。"
+                title={t.fpAiAnalyzeTitle}
               >
-                {analyzing ? "⏳ 识别中…" : "✨ AI 解析"}
+                {analyzing ? t.fpAiAnalyzeBusy : t.fpAiAnalyzeBtn}
               </button>
               <button onClick={() => setBlueprintPanelOpen(v => !v)}
                 className="px-2 py-1 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100"
-                title="调整图纸"
+                title={t.fpBlueprintAdjustTitle}
               >⚙️</button>
               <button onClick={() => { clearBlueprint(); setTool("browse"); }}
                 className="px-2 py-1 rounded-xl text-xs font-bold text-gray-400 hover:text-red-500"
-                title="移除图纸"
+                title={t.fpBlueprintRemoveTitle}
               >✕</button>
             </div>
           )}
@@ -741,9 +766,9 @@ export default function FloorPlanAll() {
         {/* Blueprint control popover */}
         {blueprint.image && blueprintPanelOpen && (
           <div className="flex items-center gap-3 px-4 py-2 bg-amber-50 border-b border-amber-200 shrink-0 flex-wrap text-[11px]">
-            <span className="font-semibold text-amber-700">图纸控件</span>
+            <span className="font-semibold text-amber-700">{t.fpBpControlsLabel}</span>
             <label className="flex items-center gap-1.5">
-              透明度
+              {t.fpBpOpacity}
               <input type="range" min={0.1} max={1} step={0.05}
                 value={blueprint.opacity}
                 onChange={e => setBlueprint({ opacity: parseFloat(e.target.value) })}
@@ -751,7 +776,7 @@ export default function FloorPlanAll() {
               <span className="font-mono w-7 text-right">{Math.round(blueprint.opacity * 100)}%</span>
             </label>
             <label className="flex items-center gap-1.5">
-              缩放
+              {t.fpBpScale}
               <input type="number" min={0.05} max={20} step={0.05}
                 value={blueprint.scale}
                 onChange={e => setBlueprint({ scale: Math.max(0.05, parseFloat(e.target.value) || 1) })}
@@ -772,7 +797,7 @@ export default function FloorPlanAll() {
                 onChange={e => setBlueprint({ offsetY: parseFloat(e.target.value) || 0 })}
                 className="w-16 px-1 py-0.5 border border-amber-300 rounded" />
             </label>
-            <span className="text-gray-500 ml-auto">图尺寸 {blueprint.naturalW}×{blueprint.naturalH}px · 渲染 {Math.round(blueprint.naturalW * blueprint.scale)}×{Math.round(blueprint.naturalH * blueprint.scale)}cm</span>
+            <span className="text-gray-500 ml-auto">{t.fpBpDimensions(blueprint.naturalW, blueprint.naturalH, Math.round(blueprint.naturalW * blueprint.scale), Math.round(blueprint.naturalH * blueprint.scale))}</span>
           </div>
         )}
 
@@ -781,10 +806,10 @@ export default function FloorPlanAll() {
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">
             <div className="text-5xl opacity-20">🏗️</div>
             <div className="text-sm font-bold text-gray-400">
-              {activeFloor + 1}F 暂无房间
+              {t.fpFloorEmpty(activeFloor + 1)}
             </div>
             <div className="text-xs text-gray-300 max-w-48 leading-relaxed">
-              在左侧添加房间到 {activeFloor + 1}F
+              {t.fpFloorEmptyHint(activeFloor + 1)}
             </div>
           </div>
         )}
@@ -802,21 +827,21 @@ export default function FloorPlanAll() {
         {(tool === "ruler" || tool === "draw") && (
           <div className="flex items-center gap-2 px-4 py-1.5 bg-sky-50 border-b border-sky-200 shrink-0 text-[11px]">
             {tool === "ruler" && (
-              <span>🔭 <b>标尺：</b>{rulerPt ? "再点第二个点" : "在图纸上点第一个点"}；Esc 取消</span>
+              <span><b>{t.fpRulerLabel}</b>{rulerPt ? t.fpRulerHintSecond : t.fpRulerHintFirst}{t.fpRulerCancel}</span>
             )}
             {tool === "draw" && (
               <>
-                <span>✏️ <b>画房：</b>沿图纸点角（≥3 点）；
-                  <b>Enter</b> 或双击 完成，<b>Backspace</b> 撤销上一点，<b>Esc</b> 取消</span>
-                <span className="ml-auto font-mono">{drawPts.length} 点</span>
+                <span><b>{t.fpDrawLabel}</b>{t.fpDrawHint}
+                  <b>Enter</b> {t.fpDrawHintEnter}<b>Backspace</b> {t.fpDrawHintBack}<b>Esc</b> {t.fpDrawHintEsc}</span>
+                <span className="ml-auto font-mono">{t.fpDrawPtCount(drawPts.length)}</span>
                 {drawPts.length >= 3 && (
                   <button onClick={commitDrawnRoom}
                     className="px-2 py-0.5 rounded bg-emerald-500 text-white font-bold"
-                  >✓ 完成</button>
+                  >{t.fpDrawDone}</button>
                 )}
                 <button onClick={() => { setTool("browse"); setDrawPts([]); setDrawHover(null); }}
                   className="px-2 py-0.5 rounded border border-gray-300 text-gray-500"
-                >取消</button>
+                >{t.fpCancel}</button>
               </>
             )}
           </div>
@@ -824,7 +849,17 @@ export default function FloorPlanAll() {
 
         {/* SVG canvas (also visible when only a blueprint is loaded so
             users can position the trace image before adding rooms) */}
-        {(visibleRooms.length > 0 || blueprint.image) && <div className="flex-1 overflow-auto flex items-start justify-center p-4">
+        {(visibleRooms.length > 0 || blueprint.image) && <div
+          className="flex-1 overflow-auto flex items-start justify-center p-4 relative"
+          onWheel={(e) => {
+            // Ctrl/Cmd + wheel = pinch zoom (matches FloorPlan UX)
+            if (!(e.ctrlKey || e.metaKey)) return;
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+            setZoomLevel(prev => Math.max(0.3, Math.min(5, prev * delta)));
+          }}
+        >
+          <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: "top center", width: "100%", display: "flex", justifyContent: "center" }}>
           <svg
             ref={svgRef}
             viewBox={viewBox}
@@ -855,7 +890,7 @@ export default function FloorPlanAll() {
                   const dxx = p.x - rulerPt.x, dyy = p.y - rulerPt.y;
                   const svgDist = Math.hypot(dxx, dyy); // current cm
                   if (svgDist < 1) { setRulerPt(null); return; }
-                  promptDialog("这两点之间的真实距离（米）?", "3.6").then(input => {
+                  promptDialog(t.fpAskRealDistance, "3.6").then(input => {
                     if (input) {
                       const realM = parseFloat(input);
                       if (isFinite(realM) && realM > 0) {
@@ -1095,6 +1130,26 @@ export default function FloorPlanAll() {
                       fontSize={HANDLE * 0.72} fill="white"
                       style={{ pointerEvents: "none", userSelect: "none" }}>↻</text>
                   </g>
+
+                  {/* Delete — bottom-left */}
+                  <g style={{ cursor: "pointer" }}
+                    onPointerDown={e => {
+                      e.stopPropagation();
+                      const roomName = customRoomMeta[room]?.name ?? t.roomNames[room] ?? ROOM_DEFS[room].name;
+                      void confirmDialog(t.fpRoomDeleteConfirm(roomName)).then(ok => {
+                        if (!ok) return;
+                        pushLayoutHistory();
+                        removeRoom(room);
+                      });
+                    }}>
+                    <rect x={x + WALL} y={y + d - WALL - HANDLE}
+                      width={HANDLE} height={HANDLE}
+                      fill="#EF4444" opacity={0.82} rx={4} />
+                    <text x={x + WALL + HANDLE/2} y={y + d - WALL - HANDLE/2}
+                      textAnchor="middle" dominantBaseline="middle"
+                      fontSize={HANDLE * 0.7} fill="white" fontWeight="bold"
+                      style={{ pointerEvents: "none", userSelect: "none" }}>✕</text>
+                  </g>
                 </g>
               );
             })}
@@ -1157,6 +1212,19 @@ export default function FloorPlanAll() {
               ))}
             </g>
           </svg>
+          </div>
+          {/* Zoom controls — floating bottom-right of canvas, mirrors FloorPlan */}
+          <div className="absolute bottom-3 right-3 flex items-center rounded-xl shadow-md bg-white border border-gray-200 overflow-hidden">
+            <button onClick={() => setZoomLevel(p => Math.max(0.3, p * 0.8))}
+              className="px-2 py-1 text-gray-500 hover:text-gray-800 hover:bg-gray-50 text-sm font-bold"
+              style={{ minWidth: 28 }}>−</button>
+            <span className="text-[10px] text-gray-500 px-2 font-mono min-w-[40px] text-center border-x border-gray-200">{Math.round(zoomLevel * 100)}%</span>
+            <button onClick={() => setZoomLevel(p => Math.min(5, p * 1.25))}
+              className="px-2 py-1 text-gray-500 hover:text-gray-800 hover:bg-gray-50 text-sm font-bold"
+              style={{ minWidth: 28 }}>＋</button>
+            <button onClick={() => setZoomLevel(1)}
+              className="px-2 py-1 text-gray-400 hover:text-gray-700 text-[10px] border-l border-gray-200">{t.fpZoomReset}</button>
+          </div>
         </div>}
       </div>
 
@@ -1193,7 +1261,7 @@ export default function FloorPlanAll() {
                   setDialog(null);
                 }}
                   className="px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-100 rounded-lg"
-                >取消</button>
+                >{t.fpCancel}</button>
               )}
               <button onClick={() => {
                 if (dialog.type === "prompt")  dialog.resolve(dialogInput);
@@ -1202,7 +1270,7 @@ export default function FloorPlanAll() {
                 setDialog(null);
               }}
                 className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-              >确定</button>
+              >{t.fpConfirm}</button>
             </div>
           </div>
         </div>
@@ -1219,12 +1287,12 @@ export default function FloorPlanAll() {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center mb-3">
-              <h3 className="text-base font-black text-gray-800">户型模板 — 一键替换当前楼层布局</h3>
+              <h3 className="text-base font-black text-gray-800">{t.fpHouseTemplateModalTitle}</h3>
               <button onClick={() => setLayoutPickerOpen(false)}
                 className="ml-auto text-gray-400 hover:text-gray-700 text-xl leading-none">✕</button>
             </div>
             <p className="text-[11px] text-gray-500 mb-3">
-              仅替换房间位置 / 尺寸 / 形状；已配置的材质和家具不会被清空（房间键匹配时保留）。
+              {t.fpHouseTemplateDesc}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {FLOORPLAN_LAYOUTS.map(layout => {
@@ -1237,7 +1305,7 @@ export default function FloorPlanAll() {
                 return (
                   <button key={layout.id}
                     onClick={() => {
-                      confirmDialog(`用"${layout.name}"替换当前楼层？`).then(ok => {
+                      confirmDialog(t.fpHouseTemplateConfirm(localizeLayoutName(layout, locale))).then(ok => {
                         if (!ok) return;
                         pushLayoutHistory();
                         applyFloorplanLayout(layout.id);
@@ -1270,8 +1338,8 @@ export default function FloorPlanAll() {
                       ))}
                     </svg>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-bold text-gray-800">{layout.name}</span>
-                      <span className="text-[10px] text-gray-500 ml-auto">{layout.rooms.length} 间</span>
+                      <span className="text-sm font-bold text-gray-800">{localizeLayoutName(layout, locale)}</span>
+                      <span className="text-[10px] text-gray-500 ml-auto">{t.fpRoomCount(layout.rooms.length)}</span>
                     </div>
                   </button>
                 );

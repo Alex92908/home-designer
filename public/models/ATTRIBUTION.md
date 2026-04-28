@@ -130,6 +130,25 @@
 > 虽然有内置开合动画很诱人，但许可是 **CC-BY-NC-4.0（禁商用）**。项目
 > 若未来商用绝对不能启用此资产。目前未接入。
 
+**户外景观（hero 树木 + 灌木，2026-04 新增）**
+
+| 模型 | 作者 | 对应项目 kind | 链接 |
+|---|---|---|---|
+| Olive tree (old) | massive-graphisme | tree.olive | <https://sketchfab.com/3d-models/6328df8a0f214143a880a72b86db2ab4> |
+| Olive tree | Apostolos Vainopoulos (tolikas91) | tree.olive (备选) | <https://sketchfab.com/3d-models/df3d3ab0cbd44b02ba08fccbc87bd35d> |
+| Palm Tree (Stylized) | ilyu.ziya | tree.palm | <https://sketchfab.com/3d-models/92d1b08141ed40eb84e13674fa0cc942> |
+| Palm Tree Low Poly | Connor_Appleton | tree.palm (备选) | <https://sketchfab.com/3d-models/6198f5dd302644a2bc5e1d31fef46fb0> |
+| Cypress Tree Low Poly | Alan Zimmerman (nenjo) | tree.cypress | <https://sketchfab.com/3d-models/2c596282c551468ea6c6a129405e6b68> |
+| Sugar Maple (Acer saccharum) | atrodler | tree.maple (备选) | <https://sketchfab.com/3d-models/4b27adcf92f644bdabf8ecc6c5bef399> |
+| Japanese Maple Tree | OliverMatheGames | tree.maple | <https://sketchfab.com/3d-models/b6eb627413ed40fdb8b0a1e1c9038fa9> |
+| Bonsai (Low-poly) | Alice Ursu (AlicePandaArt) | tree.bonsai | <https://sketchfab.com/3d-models/40cf5dc6c7854745a5e9c3615d076d06> |
+| Boxwood | shortpaca | plant.bushSmall | <https://sketchfab.com/3d-models/f0efd57011404e1b9ff14e89f7ecb305> |
+| Hedge | 1-3D.com | plant.bushLarge | <https://sketchfab.com/3d-models/f2006b1a3af9442987963da054283ad7> |
+
+> ℹ️ **降级机制**：当对应 GLTF 文件未下载时，渲染器自动 fallback 到
+> Kenney 低面 GLB（technical-drawing 风格化），不会崩。运行
+> `node scripts/download-sketchfab.mjs` 一次性把上述户外模型拉下来。
+
 ## 公共领域挂画（Wikimedia Commons）
 
 全部艺术品已过版权保护期（作者逝世 > 70 年 OR 作品 > 500 年），无需

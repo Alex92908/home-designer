@@ -15,7 +15,7 @@
     {
       "type": "VEC3",
       "componentType": 5120,
-      "count": 33975,
+      "count": 33972,
       "normalized": true,
       "byteOffset": 0,
       "bufferView": 1
@@ -23,7 +23,7 @@
     {
       "type": "VEC3",
       "componentType": 5122,
-      "count": 33975,
+      "count": 33972,
       "max": [
         32767,
         31911,
@@ -41,7 +41,7 @@
     {
       "type": "VEC2",
       "componentType": 5123,
-      "count": 33975,
+      "count": 33972,
       "normalized": true,
       "byteOffset": 0,
       "bufferView": 3
@@ -57,7 +57,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 48367,
+          "byteLength": 48335,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 123900
@@ -67,52 +67,52 @@
     {
       "buffer": 1,
       "byteOffset": 247800,
-      "byteLength": 135900,
+      "byteLength": 135888,
       "target": 34962,
       "byteStride": 4,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 48368,
-          "byteLength": 24732,
+          "byteOffset": 48336,
+          "byteLength": 24333,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
-          "count": 33975
+          "count": 33972
         }
       }
     },
     {
       "buffer": 1,
-      "byteOffset": 383700,
-      "byteLength": 271800,
+      "byteOffset": 383688,
+      "byteLength": 271776,
       "target": 34962,
       "byteStride": 8,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 73100,
-          "byteLength": 118682,
+          "byteOffset": 72672,
+          "byteLength": 118043,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
-          "count": 33975
+          "count": 33972
         }
       }
     },
     {
       "buffer": 1,
-      "byteOffset": 655500,
-      "byteLength": 135900,
+      "byteOffset": 655464,
+      "byteLength": 135888,
       "target": 34962,
       "byteStride": 4,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 191784,
-          "byteLength": 87821,
+          "byteOffset": 190716,
+          "byteLength": 87438,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
-          "count": 33975
+          "count": 33972
         }
       }
     }
@@ -159,10 +159,10 @@
   "buffers": [
     {
       "uri": "industrial_coffee_table.bin",
-      "byteLength": 279608
+      "byteLength": 278156
     },
     {
-      "byteLength": 791400,
+      "byteLength": 791352,
       "extensions": {
         "EXT_meshopt_compression": {
           "fallback": true
@@ -213,15 +213,15 @@
         0.0000020992500355303236
       ],
       "rotation": [
-        0.7071068286895689,
+        0.7071068286895688,
         0,
         0,
         0.7071067336835231
       ],
       "scale": [
         0.38913223147392273,
-        0.38913228375728787,
-        0.38913228375728787
+        0.3891322837572879,
+        0.3891322837572879
       ],
       "mesh": 0
     }

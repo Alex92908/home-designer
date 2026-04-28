@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .claude/settings.local.json
+
+# Source zip archives — large download packages, not deployed
+public/models/**/*.zip

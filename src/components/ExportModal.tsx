@@ -62,6 +62,9 @@ export default function ExportModal() {
   const scores          = useDesignerStore(s => s.scores);
   const exterior        = useDesignerStore(s => s.exterior);
   const budget          = useDesignerStore(s => s.budget);
+  const customRoomMeta  = useDesignerStore(s => s.customRoomMeta);
+  const customFurniture = useDesignerStore(s => s.customFurniture);
+  const blueprint       = useDesignerStore(s => s.blueprint);
   const resetAll        = useDesignerStore(s => s.resetAll);
   const wipeAll         = useDesignerStore(s => s.wipeAll);
   const loadFromShare   = useDesignerStore(s => s.loadFromShare);
@@ -188,13 +191,21 @@ export default function ExportModal() {
       floorPlans: exportFloorPlans,
       exterior,
       budget,
+      customRoomMeta,
+      customFurniture,
+      scores,
+      blueprint,
       savedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
     a.href     = url;
-    a.download = `装修方案_${new Date().toLocaleDateString("zh-CN").replace(/\//g, "-")}.json`;
+    {
+      const stem  = locale === "en" ? "home-design" : "装修方案";
+      const stamp = new Date().toLocaleDateString(locale === "en" ? "en-CA" : "zh-CN").replace(/\//g, "-");
+      a.download  = `${stem}_${stamp}.json`;
+    }
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -246,6 +257,17 @@ export default function ExportModal() {
             );
           };
 
+          // Fields shared between v2 and legacy paths. Optional in older
+          // exports — fall back to current persisted values so loading an
+          // old file doesn't clobber what the user already has.
+          const persisted = JSON.parse(localStorage.getItem("home-designer-v2") || '{"state":{}}').state ?? {};
+          const extraState = {
+            customRoomMeta:  data.customRoomMeta  ?? persisted.customRoomMeta  ?? {},
+            customFurniture: data.customFurniture ?? persisted.customFurniture ?? [],
+            scores:          data.scores          ?? persisted.scores          ?? { style: 0, space: 0, light: 0, dominantStyle: "" },
+            blueprint:       data.blueprint       ?? persisted.blueprint       ?? { image: null, naturalW: 0, naturalH: 0, opacity: 0.4, offsetX: 0, offsetY: 0, scale: 1 },
+          };
+
           // ── New format (v2): floorPlans array ──
           if (data._version === 2 && Array.isArray(data.floorPlans)) {
             const convertedFloorPlans = data.floorPlans.map((fp: { rooms: Record<string, { placedItems: Array<{furnitureId:string;x:number;z:number;scaleW?:number;scaleD?:number}> }> }) => ({
@@ -258,6 +280,7 @@ export default function ExportModal() {
               budget: data.budget,
               activeFloor: 0,
               activeRoom: data.floorPlans[0]?.enabledRooms?.[0] ?? "living",
+              ...extraState,
             };
             localStorage.setItem("home-designer-v2", JSON.stringify({ state, version: 0 }));
             window.location.reload();
@@ -280,6 +303,7 @@ export default function ExportModal() {
               budget: data.budget,
               activeFloor: 0,
               activeRoom: data.enabledRooms[0] ?? "living",
+              ...extraState,
             };
             localStorage.setItem("home-designer-v2", JSON.stringify({ state, version: 0 }));
             window.location.reload();

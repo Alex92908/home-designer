@@ -1,0 +1,1201 @@
+"use client";
+
+/**
+ * YardPlan — outdoor 2D editor.
+ *
+ * The "FloorPlan" of the yard: user drops trees / plants / fences / features
+ * onto a 2D top-down view of the property, and the Exterior 3D auto-renders
+ * them as Kenney Nature Kit GLB assets in matching positions.
+ *
+ * Layout mirrors FloorPlan / FloorPlanAll:
+ *   • Left rail (YardPlanLibrary)  — categorised draggable asset thumbnails.
+ *   • Main canvas (this default)   — SVG top-down with house bounds + items.
+ *
+ * Coordinate system: world centimetres, origin = house geometric centre on
+ * the ground plane. Same as the 3D Exterior view's PlacedItem coords. The
+ * SVG zooms to fit a fixed property window (default 30m × 30m).
+ */
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDesignerStore } from "@/lib/store";
+import { ROOM_DEFS, type YardItem, type YardZone, type PrefabKind, isYardSingleton, isYardPrefab, isYardZone } from "@/lib/types";
+import { OUTDOOR_ASSET_LIBRARY, OUTDOOR_CATEGORIES, getOutdoorAssetByKind, YARD_PRESETS, type OutdoorCategory } from "@/lib/outdoorAssets";
+import { PREFAB_REGISTRY, getPrefabDef } from "@/lib/outdoorPrefabs";
+import { ZONE_STYLES, polygonCentroid } from "@/lib/outdoorZones";
+import { evaluateYardPlan, violationsByItem } from "@/lib/outdoorClearance";
+import { useLocale } from "@/lib/i18n";
+
+// ─── Constants ─────────────────────────────────────────────
+// World window the SVG renders (cm, centred on origin)
+const WIN_HALF_CM = 1500; // 30m × 30m visible area
+const SVG_PX = 720;       // logical SVG pixel dimensions
+const CM_PER_PX = (WIN_HALF_CM * 2) / SVG_PX;
+const SNAP_CM = 25;       // snap drag positions to 25cm grid
+
+// ─── Top-down asset symbols — TWO palette sets ─────────────────
+// FloorPlan's actual design pattern is LIGHT chrome (white sidebar /
+// toolbar / right panel) + DARK canvas (#0f1117 black SVG editing area).
+// So we keep TWO palettes:
+//   - INK / INK_LIGHT / FILL_LIGHT   → used INSIDE the SVG (dark canvas
+//     background) — these stay light so they're legible on black.
+//   - For chrome text (sidebar labels, tab buttons, card titles, headers)
+//     we use explicit Tailwind text-gray-{500..900} classes — never the
+//     constants below.
+const INK = "#E8E8EC";                       // SVG glyph stroke — near-white
+const INK_LIGHT = "rgba(232,232,236,0.45)";  // SVG secondary — soft white
+const FILL_LIGHT = "rgba(255,255,255,0.08)"; // SVG fill — translucent white on dark
+const SEL_INK = "#60AEFF";                   // selection accent — FloorPlan's soft blue
+
+function AssetGlyph({ asset, r, selected = false }: {
+  asset: { category: OutdoorCategory; color: string; kind: string };
+  r: number;
+  selected?: boolean;
+}) {
+  const stroke = selected ? SEL_INK : INK;
+  const sw = selected ? r * 0.08 : r * 0.045;
+
+  if (asset.category === "tree") {
+    // Standard landscape architect tree: double circle with radial spokes
+    return (
+      <g>
+        <circle r={r} fill={FILL_LIGHT} stroke={stroke} strokeWidth={sw} />
+        <circle r={r * 0.55} fill="none" stroke={stroke} strokeWidth={sw * 0.7} />
+        {Array.from({ length: 8 }).map((_, i) => {
+          const a = (i / 8) * Math.PI * 2;
+          return <line key={i}
+            x1={Math.cos(a) * r * 0.55} y1={Math.sin(a) * r * 0.55}
+            x2={Math.cos(a) * r}        y2={Math.sin(a) * r}
+            stroke={stroke} strokeWidth={sw * 0.5} />;
+        })}
+        <circle r={r * 0.10} fill={stroke} />
+      </g>
+    );
+  }
+  if (asset.category === "plant") {
+    // Small cluster of unfilled circles (low planting symbol)
+    const pts: Array<[number, number]> = [
+      [0, 0], [r * 0.55, 0.1], [-r * 0.55, 0.1], [0, r * 0.55], [0, -r * 0.55],
+    ];
+    return (
+      <g>
+        {pts.map(([px, py], i) => (
+          <circle key={i} cx={px} cy={py} r={r * 0.30}
+            fill={FILL_LIGHT} stroke={stroke} strokeWidth={sw * 0.7} />
+        ))}
+      </g>
+    );
+  }
+  if (asset.category === "rock") {
+    // Irregular pentagon, paper fill + ink outline
+    const verts: string = [0, 1, 2, 3, 4].map(i => {
+      const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      const rr = r * (0.78 + 0.18 * Math.sin(i * 1.7));
+      return `${Math.cos(a) * rr},${Math.sin(a) * rr}`;
+    }).join(" ");
+    return (
+      <g>
+        <polygon points={verts} fill={FILL_LIGHT} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
+        <line x1={-r * 0.4} y1={-r * 0.1} x2={r * 0.3} y2={r * 0.2}
+          stroke={INK_LIGHT} strokeWidth={sw * 0.7} strokeLinecap="round" />
+      </g>
+    );
+  }
+  if (asset.category === "furniture") {
+    // Furniture symbol — filled rounded rectangle with item-specific sub-label
+    const furnitureLabelMap: Record<string, string> = {
+      "furniture.chaiseLounger":   "躺椅",
+      "furniture.swimmingLounger": "泳池",
+      "furniture.outdoorSofa":     "沙发",
+      "furniture.parasol":         "伞",
+      "furniture.coffeeTable":     "茶几",
+      "furniture.diningSet":       "餐桌",
+      "furniture.fireplace":       "壁炉",
+      "furniture.planter":         "花盆",
+    };
+    const sub = furnitureLabelMap[asset.kind] ?? "家具";
+    return (
+      <g>
+        <rect x={-r * 0.85} y={-r * 0.75} width={r * 1.70} height={r * 1.50}
+          rx={r * 0.18} fill="rgba(255,220,170,0.10)" stroke={stroke} strokeWidth={sw} />
+        <text textAnchor="middle" dominantBaseline="middle"
+          fontSize={r * 0.52} fill={stroke} fontFamily="PingFang SC, Helvetica, sans-serif" fontWeight={600}
+          style={{ userSelect: "none", pointerEvents: "none" }}>{sub}</text>
+      </g>
+    );
+  }
+  // feature — rectangle outline with sub-icon
+  const featureLabelMap: Record<string, string> = {
+    "feature.fence":      "FNC",
+    "feature.fenceGate":  "GTE",
+    "feature.bridgeWood": "BR",
+    "feature.campfire":   "FP",
+    "feature.tent":       "TNT",
+    "feature.pathStone":  "PVR",
+    "feature.signPost":   "SGN",
+    "feature.canoe":      "BT",
+    "feature.cropCarrot": "VEG",
+    "feature.cropPumpkin":"VEG",
+    "feature.cropMelon":  "VEG",
+    "feature.cropCorn":   "VEG",
+    "feature.cropBamboo": "BMB",
+    "feature.cropDirt":   "BED",
+  };
+  const sub = featureLabelMap[asset.kind] ?? "■";
+  return (
+    <g>
+      <rect x={-r * 0.85} y={-r * 0.7} width={r * 1.7} height={r * 1.4}
+        rx={r * 0.10} fill={FILL_LIGHT} stroke={stroke} strokeWidth={sw} />
+      <text textAnchor="middle" dominantBaseline="middle"
+        fontSize={r * 0.55} fill={stroke} fontFamily="ui-monospace, Menlo, monospace" fontWeight={700}
+        style={{ userSelect: "none", pointerEvents: "none" }}>{sub}</text>
+    </g>
+  );
+}
+
+/** Prefab glyph — color-coded dashed bounding rectangle, mirrors the
+ *  way FloorPlan colours its furniture by category. Pool=blue, kitchen
+ *  =orange, pergola=amber, etc. Fill is barely visible so it doesn't
+ *  fight the dark canvas. Chinese label is the primary readout, monogram
+ *  tag is a small secondary in the corner. */
+const PREFAB_PALETTE: Record<PrefabKind, { stroke: string; fill: string }> = {
+  pool:            { stroke: "#60AEFF", fill: "rgba(96,174,255,0.08)" },   // soft blue (water)
+  pergola_classic: { stroke: "#FCD34D", fill: "rgba(252,211,77,0.08)" },   // amber (timber + sun)
+  outdoor_kitchen: { stroke: "#FB923C", fill: "rgba(251,146,60,0.08)" },   // orange (heat / grill)
+  fountain:        { stroke: "#A78BFA", fill: "rgba(167,139,250,0.08)" },  // violet (decorative)
+  social_island:   { stroke: "#F87171", fill: "rgba(248,113,113,0.08)" },  // coral (gathering)
+  farm_box:        { stroke: "#86EFAC", fill: "rgba(134,239,172,0.08)" },  // mint (planting)
+  porte_cochere:   { stroke: "#9CA3AF", fill: "rgba(156,163,175,0.10)" },  // grey (utility)
+  slat_wall:       { stroke: "#D1D5DB", fill: "rgba(209,213,219,0.06)" },  // light grey (boundary)
+  fence_segment:   { stroke: "#A8845A", fill: "rgba(168,132,90,0.10)" },  // warm wood (fence)
+  parking_area:    { stroke: "#94A3B8", fill: "rgba(148,163,184,0.10)" }, // slate (concrete)
+};
+
+function PrefabGlyph({ kind, footprintPx, selected = false }: {
+  kind: PrefabKind;
+  footprintPx: { w: number; d: number };
+  selected?: boolean;
+}) {
+  const def = getPrefabDef(kind);
+  if (!def) return null;
+  const palette = PREFAB_PALETTE[kind] ?? { stroke: INK, fill: "rgba(255,255,255,0.06)" };
+  const stroke = selected ? SEL_INK : palette.stroke;
+  const sw = selected ? 1.8 : 1.1;
+  const halfW = footprintPx.w / 2;
+  const halfD = footprintPx.d / 2;
+  // Smaller monogram, primary readout is the Chinese label
+  const tagSize = Math.min(9, footprintPx.d * 0.22);
+  const labelSize = Math.min(11, footprintPx.d * 0.28);
+  return (
+    <g>
+      {/* Translucent envelope — coloured per prefab category */}
+      <rect x={-halfW} y={-halfD} width={footprintPx.w} height={footprintPx.d}
+        fill={palette.fill}
+        stroke={stroke} strokeWidth={sw} strokeDasharray="6 4" rx={4} />
+      {/* Chinese label — primary readout */}
+      <text x={0} y={0} textAnchor="middle" dominantBaseline="middle"
+        fontSize={labelSize} fontWeight={600} fill={stroke}
+        style={{ userSelect: "none", pointerEvents: "none" }}>
+        {def.label}
+      </text>
+      {/* Monogram tag — small secondary in top-left corner */}
+      <text x={-halfW + 4} y={-halfD + tagSize + 2} textAnchor="start" dominantBaseline="middle"
+        fontSize={tagSize} fontFamily="ui-monospace, Menlo, monospace"
+        fontWeight={700} fill={stroke} opacity={0.7}
+        style={{ userSelect: "none", pointerEvents: "none" }}>
+        {def.glyphTag}
+      </text>
+    </g>
+  );
+}
+
+/** Zone glyph — semi-transparent fill polygon + zone-kind label.
+ *  Drawn UNDER prefabs and singletons so they don't obscure smaller items. */
+function ZoneGlyph({ zone, polygonPx, selected = false }: {
+  zone: YardZone;
+  polygonPx: Array<[number, number]>;
+  selected?: boolean;
+}) {
+  const style = ZONE_STYLES[zone.zoneKind];
+  const ptsAttr = polygonPx.map(p => p.join(",")).join(" ");
+  const [cxLocal, czLocal] = polygonCentroid(polygonPx);
+  return (
+    <g>
+      <polygon points={ptsAttr}
+        fill={style.planFill}
+        stroke={selected ? SEL_INK : style.planStroke}
+        strokeWidth={selected ? 1.6 : 1.0}
+        strokeDasharray="4 3" />
+      <text x={cxLocal} y={czLocal} textAnchor="middle" dominantBaseline="middle"
+        fontSize={10} fontWeight={600}
+        fill={style.planStroke} letterSpacing="0.06em"
+        style={{ userSelect: "none", pointerEvents: "none" }}>
+        {style.label}
+      </text>
+    </g>
+  );
+}
+
+/** A single violation row in the inspector panel. */
+function ViolationCard({ v, locale }: { v: import("@/lib/outdoorClearance").OutdoorViolation; locale: string }) {
+  const isReq = v.severity === "required";
+  return (
+    <div className="text-[10px] px-2 py-1.5 mb-1 rounded leading-snug"
+      style={{
+        background: isReq ? "#FEF2F2" : "#FFFBEB",
+        border: `1px solid ${isReq ? "#FCA5A5" : "#FCD34D"}`,
+        color: isReq ? "#991B1B" : "#92400E",
+      }}>
+      <div className="font-medium">{locale === "en" ? v.reasonEn : v.reasonZh}</div>
+      {v.requiredM != null && v.actualM != null && (
+        <div className="font-mono opacity-70 mt-0.5">
+          {locale === "en" ? "actual" : "实际"} {v.actualM.toFixed(1)} m
+          {" / "}
+          {locale === "en" ? "rule" : "规则"} {v.requiredM} m
+        </div>
+      )}
+    </div>
+  );
+}
+
+function darkenHex(hex: string, by: number): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const r = Math.max(0, Math.round(((n >> 16) & 0xff) * (1 - by)));
+  const g = Math.max(0, Math.round(((n >>  8) & 0xff) * (1 - by)));
+  const b = Math.max(0, Math.round(( n        & 0xff) * (1 - by)));
+  return `#${[r, g, b].map(v => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+// ─── Library (left rail) ───────────────────────────────────
+// Dark theme matching FloorPlan's 材料 / 家具 / 样板 sidebar pattern.
+// 4 tab categories total: 样板 (templates) / BLOCKS (prefabs) / individual
+// asset categories. The 样板 tab moved here from the toolbar so it's
+// discoverable in the same place as FloorPlan's 样板.
+type LibraryTab = OutdoorCategory | "prefab" | "template";
+export function YardPlanLibrary() {
+  const [tab, setTab] = useState<LibraryTab>("template");
+  const items = (tab === "prefab" || tab === "template") ? null
+    : OUTDOOR_ASSET_LIBRARY.filter(a => a.category === tab);
+
+  // Tab labels — Chinese to match the rest of the app
+  const tabLabels: Record<LibraryTab, string> = {
+    template: "样板", prefab: "组件", tree: "树木", plant: "花卉", rock: "山石", feature: "设施", furniture: "家具",
+  };
+  const allTabs: LibraryTab[] = ["template", "prefab", ...OUTDOOR_CATEGORIES.map(c => c.id)];
+
+  // Apply preset action — needs store hooks at component scope
+  const activeFloor    = useDesignerStore(s => s.activeFloor);
+  const yardItems      = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const addYardItem    = useDesignerStore(s => s.addYardItem);
+  const removeYardItem = useDesignerStore(s => s.removeYardItem);
+  const applyPreset = (p: import("@/lib/outdoorAssets").YardPreset) => {
+    if (yardItems.length > 0 && !window.confirm(`替换当前 ${yardItems.length} 个元素为「${p.label}」？`)) return;
+    for (const it of [...yardItems]) removeYardItem(it.id);
+    const stamp = Date.now().toString(36);
+    p.items.forEach((it, i) => {
+      addYardItem({ ...it, id: `${p.id}-${stamp}-${i}` } as YardItem);
+    });
+  };
+
+  return (
+    <aside className="h-full flex flex-col bg-white" style={{ borderRight: "1px solid #E5E7EB" }}>
+      {/* Heading + Tabs — FloorPlan-style: white bg, gray heading, blue active tab */}
+      <div className="px-3 pt-3 pb-2 shrink-0" style={{ borderBottom: "1px solid #E5E7EB" }}>
+        <div className="text-[10px] tracking-widest font-semibold mb-2 text-gray-400" style={{ letterSpacing: "0.12em" }}>
+          LANDSCAPE LIBRARY
+        </div>
+        <div className="flex gap-1 flex-wrap">
+          {allTabs.map(c => (
+            <button key={c}
+              onClick={() => setTab(c)}
+              className="flex-1 py-1 text-[11px] font-semibold tracking-wide transition-colors"
+              style={tab === c
+                ? { color: "#007AFF", borderBottom: `2px solid #007AFF` }
+                : { color: "#9CA3AF", borderBottom: "2px solid transparent" }}
+            >
+              {tabLabels[c]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Templates grid — light cards on white sidebar */}
+      {tab === "template" && (
+        <div className="flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-2">
+          {YARD_PRESETS.map(p => (
+            <button key={p.id}
+              onClick={() => applyPreset(p)}
+              className="group flex flex-col items-center gap-1 px-1 py-3 rounded-xl border transition-colors text-center bg-gray-50 border-gray-100 hover:bg-blue-50 hover:border-blue-300"
+              title={p.desc}
+            >
+              <span className="text-2xl leading-none">{p.icon}</span>
+              <span className="text-[11px] font-bold mt-1 text-gray-700">{p.label}</span>
+              <span className="text-[9px] leading-tight text-gray-400 px-0.5">{p.desc}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Prefabs grid — light card with dark canvas glyph thumbnail */}
+      {tab === "prefab" && (
+        <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1.5">
+          {PREFAB_REGISTRY.map(p => (
+            <button key={p.kind}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/yard-prefab", p.kind);
+                e.dataTransfer.effectAllowed = "copy";
+              }}
+              className="group flex items-center gap-3 px-2 py-2 rounded-xl border transition-colors cursor-grab active:cursor-grabbing text-left bg-gray-50 border-gray-100 hover:bg-blue-50 hover:border-blue-300"
+              title={p.desc}
+            >
+              {/* Glyph rendered against a small dark inset (mirror of canvas) */}
+              <svg viewBox="-32 -22 64 44" width="56" height="38" style={{ background: "#1A1D26", borderRadius: 4 }}>
+                <PrefabGlyph kind={p.kind} footprintPx={{ w: 50, d: 32 }} />
+              </svg>
+              <div className="flex flex-col flex-1 min-w-0">
+                <div className="text-[11px] font-bold text-gray-700">{p.label}</div>
+                <div className="text-[9px] truncate text-gray-400">{p.desc}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Singleton asset grid — light cards */}
+      {tab !== "prefab" && tab !== "template" && items && (
+        <div className="flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-1.5">
+          {items.map(asset => (
+            <button key={asset.kind}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/yard-asset", asset.kind);
+                e.dataTransfer.effectAllowed = "copy";
+              }}
+              className="group flex flex-col items-center gap-1 px-1 py-2 rounded-xl border transition-colors cursor-grab active:cursor-grabbing bg-gray-50 border-gray-100 hover:bg-blue-50 hover:border-blue-300"
+              title={asset.label}
+            >
+              {/* Mini dark inset so the light SVG glyphs are visible */}
+              <svg viewBox="-32 -32 64 64" width="44" height="44" style={{ background: "#1A1D26", borderRadius: 4 }}>
+                <AssetGlyph asset={asset} r={26} />
+              </svg>
+              <div className="text-[10px] text-center font-medium text-gray-700">{asset.label}</div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="px-3 py-2 text-[10px] text-gray-400 shrink-0" style={{ borderTop: "1px solid #E5E7EB" }}>
+        Drag onto plan · 3D auto-renders in Exterior view
+      </div>
+    </aside>
+  );
+}
+
+// ─── House footprint + per-room polygons ──────────────────
+// Returns each indoor room as a polygon in centred world cm — same coord
+// system the 3D Exterior uses. Lets us draw a proper architectural plan
+// (filled rectangles per room) instead of one anonymous bounding box.
+function useHouseRooms() {
+  const activeFloor    = useDesignerStore(s => s.activeFloor);
+  const enabledRooms   = useDesignerStore(s => s.floorPlans[activeFloor].enabledRooms);
+  const roomLayout     = useDesignerStore(s => s.floorPlans[activeFloor].roomLayout);
+  const roomDimensions = useDesignerStore(s => s.floorPlans[activeFloor].roomDimensions);
+  const roomShapes     = useDesignerStore(s => s.floorPlans[activeFloor].roomShapes);
+  return useMemo(() => {
+    const indoor = enabledRooms.filter(r => !ROOM_DEFS[r].isOutdoor);
+    if (!indoor.length) return { rooms: [], bbox: { minX: -200, maxX: 200, minZ: -200, maxZ: 200 } };
+    const xs = indoor.flatMap(r => [roomLayout[r].x, roomLayout[r].x + roomDimensions[r].width]);
+    const zs = indoor.flatMap(r => [roomLayout[r].y, roomLayout[r].y + roomDimensions[r].depth]);
+    const bMinX = Math.min(...xs), bMaxX = Math.max(...xs);
+    const bMinZ = Math.min(...zs), bMaxZ = Math.max(...zs);
+    const cx = (bMinX + bMaxX) / 2, cz = (bMinZ + bMaxZ) / 2;
+    const rooms = indoor.map(room => {
+      const lay = roomLayout[room];
+      const dims = roomDimensions[room];
+      const shape = roomShapes?.[room];
+      // Per-room local cm polygon (rect fallback)
+      const localPts: Array<[number, number]> = shape && shape.preset !== "rect"
+        ? shape.points
+        : [[0, 0], [dims.width, 0], [dims.width, dims.depth], [0, dims.depth]];
+      // Convert to centered world cm
+      const worldPts = localPts.map(([lx, lz]) => [lay.x + lx - cx, lay.y + lz - cz] as [number, number]);
+      return { room, points: worldPts };
+    });
+    return {
+      rooms,
+      bbox: { minX: bMinX - cx, maxX: bMaxX - cx, minZ: bMinZ - cz, maxZ: bMaxZ - cz },
+    };
+  }, [enabledRooms, roomLayout, roomDimensions, roomShapes]);
+}
+
+// ─── Main canvas ───────────────────────────────────────────
+// Stable empty-array singleton so the zustand selector returns the same
+// reference when no items exist — otherwise `?? []` allocates a new array
+// per call and triggers React's "getSnapshot should be cached" loop.
+const EMPTY_YARD_ITEMS: YardItem[] = [];
+
+// ─── Selection coordination (right panel reads, canvas writes) ─────
+// Module-scope mini-store so YardPlan (canvas) and YardPlanInspector
+// (right rail) can share without lifting state into a parent component.
+const selListeners = new Set<() => void>();
+let _selectedId: string | null = null;
+function setSharedSelectedId(id: string | null) {
+  _selectedId = id;
+  selListeners.forEach(l => l());
+}
+export function useSharedSelectedYardId() {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const fn = () => force(n => n + 1);
+    selListeners.add(fn);
+    return () => { selListeners.delete(fn); };
+  }, []);
+  return _selectedId;
+}
+
+export default function YardPlan() {
+  const activeFloor = useDesignerStore(s => s.activeFloor);
+  const yardItems   = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const addYardItem = useDesignerStore(s => s.addYardItem);
+  const removeYardItem = useDesignerStore(s => s.removeYardItem);
+  const updateYardItem = useDesignerStore(s => s.updateYardItem);
+  const { rooms: houseRooms, bbox: footprint } = useHouseRooms();
+  // Outdoor smart-suggestions: evaluated whenever items / footprint change
+  const violations = useMemo(() => evaluateYardPlan(yardItems, footprint), [yardItems, footprint]);
+  const violationMap = useMemo(() => violationsByItem(violations), [violations]);
+  const requiredCount = violations.filter(v => v.severity === "required").length;
+  const recommendedCount = violations.length - requiredCount;
+
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [selectedId, _setSelectedId] = useState<string | null>(null);
+  const setSelectedId = (id: string | null) => {
+    _setSelectedId(id);
+    setSharedSelectedId(id);
+  };
+  const [drag, setDrag] = useState<{ id: string; offsetX: number; offsetZ: number } | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1.0);
+  // Guard so DnD-drop doesn't double-fire as a click-deselect
+  const justDroppedRef = useRef(false);
+
+  // Zoom-aware viewBox parameters
+  const vbSize   = SVG_PX / zoomLevel;
+  const vbOrigin = (SVG_PX - vbSize) / 2;
+
+  // Convert screen point → world cm (centred origin). Accounts for viewBox zoom.
+  const svgPtToWorld = (clientX: number, clientY: number): { x: number; z: number } => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, z: 0 };
+    const rect = svg.getBoundingClientRect();
+    const px = vbOrigin + ((clientX - rect.left) / rect.width)  * vbSize;
+    const py = vbOrigin + ((clientY - rect.top)  / rect.height) * vbSize;
+    return {
+      x: (px - SVG_PX / 2) * CM_PER_PX,
+      z: (py - SVG_PX / 2) * CM_PER_PX,
+    };
+  };
+
+  const handleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
+    e.preventDefault();
+    const factor = e.deltaY > 0 ? 1 / 1.15 : 1.15;
+    setZoomLevel(z => Math.max(0.5, Math.min(4, z * factor)));
+  };
+
+  // ── Drag-from-library drop ──
+  // Two distinct payloads: "text/yard-asset" for singletons, "text/yard-prefab"
+  // for compound prefabs. We dispatch on whichever is present.
+  const handleDrop = (e: React.DragEvent<SVGSVGElement>) => {
+    e.preventDefault();
+    const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+    const id = `y-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    const prefabKind = e.dataTransfer.getData("text/yard-prefab");
+    const assetKind  = e.dataTransfer.getData("text/yard-asset");
+    if (prefabKind) {
+      addYardItem({
+        id,
+        type: "prefab",
+        prefabKind: prefabKind as PrefabKind,
+        x: Math.round(x), z: Math.round(z),
+        rot: 0, scale: 1,
+      });
+    } else if (assetKind) {
+      addYardItem({
+        id, type: "singleton",
+        kind: assetKind,
+        x: Math.round(x), z: Math.round(z),
+        rot: 0, scale: 1,
+      });
+    } else {
+      return;
+    }
+    setSelectedId(id);
+    justDroppedRef.current = true;
+    setTimeout(() => { justDroppedRef.current = false; }, 0);
+  };
+
+  // ── Selected-item move (via SVG pointermove on the document) ──
+  useEffect(() => {
+    if (!drag) return;
+    const onMove = (ev: PointerEvent) => {
+      const { x, z } = svgPtToWorld(ev.clientX, ev.clientY);
+      // Snap to grid (Shift held = free move)
+      const nx = ev.shiftKey ? Math.round(x - drag.offsetX) : Math.round((x - drag.offsetX) / SNAP_CM) * SNAP_CM;
+      const nz = ev.shiftKey ? Math.round(z - drag.offsetZ) : Math.round((z - drag.offsetZ) / SNAP_CM) * SNAP_CM;
+      updateYardItem(drag.id, { x: nx, z: nz });
+    };
+    const onUp = () => setDrag(null);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [drag, updateYardItem]);
+
+  // Keyboard: Delete key removes selected item
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      if (!selectedId) return;
+      if (ev.key === "Delete" || ev.key === "Backspace") {
+        const t = ev.target as HTMLElement;
+        if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+        removeYardItem(selectedId);
+        setSelectedId(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId, removeYardItem]);
+
+  const houseW = Math.round((footprint.maxX - footprint.minX) / 100 * 10) / 10;
+  const houseD = Math.round((footprint.maxZ - footprint.minZ) / 100 * 10) / 10;
+  const selectedItem = selectedId ? yardItems.find(i => i.id === selectedId) : null;
+
+  return (
+    <div className="flex-1 h-full flex flex-col bg-[#0f1117] select-none overflow-hidden relative">
+      {/* ── Header bar — 3-column layout matching FloorPlan ── */}
+      <div className="flex items-center gap-2 px-4 h-11 shrink-0"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        {/* Left: info text */}
+        <span className="text-[11px] text-gray-500 font-mono flex-1 min-w-0 truncate">
+          院子图 · 地块 30 × 30 m · 房屋 {houseW}m × {houseD}m · {yardItems.length} 元素
+        </span>
+        {/* Center: zoom controls */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button
+            onClick={() => setZoomLevel(z => Math.max(0.5, z / 1.25))}
+            className="w-6 h-6 flex items-center justify-center text-[13px] font-mono rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+            −
+          </button>
+          <button
+            onClick={() => setZoomLevel(1)}
+            className="px-2 h-6 text-[11px] font-mono rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors min-w-[44px] text-center">
+            {Math.round(zoomLevel * 100)}%
+          </button>
+          <button
+            onClick={() => setZoomLevel(z => Math.min(4, z * 1.25))}
+            className="w-6 h-6 flex items-center justify-center text-[13px] font-mono rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+            +
+          </button>
+        </div>
+        {/* Right: contextual actions when item selected */}
+        {selectedItem && (
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => updateYardItem(selectedItem.id, { rot: (selectedItem.rot ?? 0) + Math.PI / 2 })}
+              className="px-2 h-7 text-[11px] font-semibold rounded transition-colors"
+              style={{ background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.12)" }}>
+              ↻ 旋转
+            </button>
+            <button
+              onClick={() => {
+                const id = `y-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+                addYardItem({ ...selectedItem, id, x: selectedItem.x + 100, z: selectedItem.z + 100 });
+                setSelectedId(id);
+              }}
+              className="px-2 h-7 text-[11px] font-semibold rounded transition-colors"
+              style={{ background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.12)" }}>
+              ⧉ 复制
+            </button>
+            <button
+              onClick={() => { removeYardItem(selectedItem.id); setSelectedId(null); }}
+              className="px-2 h-7 text-[11px] font-semibold rounded transition-colors"
+              style={{ background: "rgba(220,38,38,0.15)", color: "#FCA5A5", border: "1px solid rgba(220,38,38,0.3)" }}>
+              ✕ 删除
+            </button>
+          </div>
+        )}
+        {/* Violation badges */}
+        {requiredCount > 0 && (
+          <span className="px-2 py-0.5 text-[10px] font-bold rounded shrink-0"
+            style={{ background: "rgba(220,38,38,0.18)", color: "#FCA5A5", border: "1px solid rgba(220,38,38,0.4)" }}>
+            ⚠ {requiredCount} 必须
+          </span>
+        )}
+        {recommendedCount > 0 && (
+          <span className="px-2 py-0.5 text-[10px] font-bold rounded shrink-0"
+            style={{ background: "rgba(245,158,11,0.18)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.4)" }}>
+            ⚠ {recommendedCount} 建议
+          </span>
+        )}
+        {yardItems.length > 0 && (
+          <button
+            onClick={() => {
+              if (!window.confirm(`清除全部 ${yardItems.length} 个元素？`)) return;
+              for (const it of [...yardItems]) removeYardItem(it.id);
+              setSelectedId(null);
+            }}
+            className="px-2 h-7 text-[11px] font-semibold rounded-lg transition-all shrink-0"
+            style={{ background: "rgba(220,38,38,0.18)", color: "#FCA5A5", border: "1px solid rgba(220,38,38,0.4)" }}>
+            清空
+          </button>
+        )}
+      </div>
+
+      {/* ── Canvas area ── */}
+      <div className="flex-1 flex items-center justify-center overflow-auto p-4 min-h-0">
+        <svg
+          ref={svgRef}
+          viewBox={`${vbOrigin} ${vbOrigin} ${vbSize} ${vbSize}`}
+          width="100%"
+          style={{ maxWidth: 720, display: "block", background: "transparent" }}
+          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
+          onDrop={handleDrop}
+          onWheel={handleWheel}
+          onClick={(e) => {
+            if (justDroppedRef.current) return;
+            // Click on empty SVG → deselect
+            if (e.target === svgRef.current) setSelectedId(null);
+          }}
+        >
+          {/* Drafting grid — DARK theme, faint white lines */}
+          <defs>
+            <pattern id="yard-grid-minor" width={SVG_PX / 30} height={SVG_PX / 30} patternUnits="userSpaceOnUse">
+              <path d={`M ${SVG_PX / 30} 0 L 0 0 0 ${SVG_PX / 30}`} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={0.5} />
+            </pattern>
+            <pattern id="yard-grid-major" width={SVG_PX / 6} height={SVG_PX / 6} patternUnits="userSpaceOnUse">
+              <path d={`M ${SVG_PX / 6} 0 L 0 0 0 ${SVG_PX / 6}`} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth={0.8} />
+            </pattern>
+            <pattern id="house-hatch" width={5} height={5} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1={0} y1={0} x2={0} y2={5} stroke={INK} strokeWidth={0.4} strokeOpacity={0.40} />
+            </pattern>
+          </defs>
+          <rect width={SVG_PX} height={SVG_PX} fill="url(#yard-grid-minor)" />
+          <rect width={SVG_PX} height={SVG_PX} fill="url(#yard-grid-major)" />
+
+          {/* Compass — minimal, dark version */}
+          <g transform={`translate(${SVG_PX - 32}, 30)`} style={{ pointerEvents: "none" }}>
+            <circle r={14} fill="rgba(255,255,255,0.06)" stroke={INK} strokeWidth={0.8} />
+            <line x1={0} y1={-10} x2={0} y2={10} stroke={INK} strokeWidth={0.6} />
+            <line x1={-10} y1={0} x2={10} y2={0} stroke={INK_LIGHT} strokeWidth={0.4} />
+            <path d="M 0 -10 L 3 -3 L 0 -5 L -3 -3 Z" fill={INK} />
+            <text y={-16} textAnchor="middle" fontSize={8} fill={INK} fontWeight={700}>N</text>
+          </g>
+          {/* Scale bar */}
+          <g transform={`translate(20, ${SVG_PX - 24})`} style={{ pointerEvents: "none" }}>
+            <line x1={0} y1={0} x2={500 / CM_PER_PX} y2={0} stroke={INK} strokeWidth={1.2} />
+            <line x1={0} y1={-3} x2={0} y2={3} stroke={INK} strokeWidth={1.2} />
+            <line x1={500 / CM_PER_PX} y1={-3} x2={500 / CM_PER_PX} y2={3} stroke={INK} strokeWidth={1.2} />
+            <text x={500 / CM_PER_PX / 2} y={14} textAnchor="middle" fontSize={9} fill={INK}>5.00 m</text>
+          </g>
+
+          {/* House footprint — per-room polygons with hatching overlay */}
+          {(() => {
+            const toSvg = ([x, z]: [number, number]): [number, number] => [
+              SVG_PX / 2 + x / CM_PER_PX,
+              SVG_PX / 2 + z / CM_PER_PX,
+            ];
+            const cxBox = SVG_PX / 2 + (footprint.minX + footprint.maxX) / 2 / CM_PER_PX;
+            const cyBox = SVG_PX / 2 + (footprint.minZ + footprint.maxZ) / 2 / CM_PER_PX;
+            return (
+              <g style={{ pointerEvents: "none" }}>
+                {/* Subtle drop shadow */}
+                <rect
+                  x={SVG_PX / 2 + footprint.minX / CM_PER_PX + 4}
+                  y={SVG_PX / 2 + footprint.minZ / CM_PER_PX + 4}
+                  width={(footprint.maxX - footprint.minX) / CM_PER_PX}
+                  height={(footprint.maxZ - footprint.minZ) / CM_PER_PX}
+                  fill="rgba(0,0,0,0.4)" rx={2}
+                />
+                {/* Per-room slabs — soft white surface + hatch overlay */}
+                {houseRooms.map(({ room, points }) => {
+                  const ptsAttr = points.map(toSvg).map(p => p.join(",")).join(" ");
+                  return (
+                    <g key={room}>
+                      <polygon points={ptsAttr} fill="rgba(255,255,255,0.10)" />
+                      <polygon points={ptsAttr} fill="url(#house-hatch)" />
+                      <polygon points={ptsAttr} fill="none" stroke={INK} strokeWidth={0.6} />
+                    </g>
+                  );
+                })}
+                {/* Thick outer wall outline */}
+                <rect
+                  x={SVG_PX / 2 + footprint.minX / CM_PER_PX}
+                  y={SVG_PX / 2 + footprint.minZ / CM_PER_PX}
+                  width={(footprint.maxX - footprint.minX) / CM_PER_PX}
+                  height={(footprint.maxZ - footprint.minZ) / CM_PER_PX}
+                  fill="none" stroke={INK} strokeWidth={2.2} strokeLinejoin="round"
+                />
+                {/* Label — technical drawing typography */}
+                <text x={cxBox} y={cyBox - 3} textAnchor="middle" fontSize={9}
+                  fill={INK} fontFamily="ui-monospace, Menlo, monospace" fontWeight={700} letterSpacing="0.15em">HOUSE</text>
+                <text x={cxBox} y={cyBox + 10} textAnchor="middle" fontSize={8}
+                  fill={INK_LIGHT} fontFamily="ui-monospace, Menlo, monospace">
+                  {Math.round((footprint.maxX - footprint.minX) / 100 * 10) / 10} × {Math.round((footprint.maxZ - footprint.minZ) / 100 * 10) / 10} m
+                </text>
+              </g>
+            );
+          })()}
+
+          {/* Zones — drawn UNDER everything else (paving) */}
+          {yardItems.filter(isYardZone).map(zone => {
+            const sx = SVG_PX / 2 + zone.x / CM_PER_PX;
+            const sz = SVG_PX / 2 + zone.z / CM_PER_PX;
+            const polyPx = zone.polygon.map(([px, pz]) => [px / CM_PER_PX, pz / CM_PER_PX] as [number, number]);
+            const isSel = selectedId === zone.id;
+            return (
+              <g key={zone.id}
+                transform={`translate(${sx} ${sz}) rotate(${((zone.rot ?? 0) * 180) / Math.PI})`}
+                style={{ cursor: drag?.id === zone.id ? "grabbing" : "grab" }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setSelectedId(zone.id);
+                  const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+                  setDrag({ id: zone.id, offsetX: x - zone.x, offsetZ: z - zone.z });
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ZoneGlyph zone={zone} polygonPx={polyPx} selected={isSel} />
+              </g>
+            );
+          })}
+
+          {/* Prefabs — drawn ABOVE zones, below singletons */}
+          {yardItems.filter(isYardPrefab).map(prefab => {
+            const def = getPrefabDef(prefab.prefabKind);
+            if (!def) return null;
+            const sx = SVG_PX / 2 + prefab.x / CM_PER_PX;
+            const sz = SVG_PX / 2 + prefab.z / CM_PER_PX;
+            const fpPx = {
+              w: def.defaultFootprintCm.w / CM_PER_PX,
+              d: def.defaultFootprintCm.d / CM_PER_PX,
+            };
+            const isSel = selectedId === prefab.id;
+            return (
+              <g key={prefab.id}
+                transform={`translate(${sx} ${sz}) rotate(${((prefab.rot ?? 0) * 180) / Math.PI})`}
+                style={{ cursor: drag?.id === prefab.id ? "grabbing" : "grab" }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setSelectedId(prefab.id);
+                  const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+                  setDrag({ id: prefab.id, offsetX: x - prefab.x, offsetZ: z - prefab.z });
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <PrefabGlyph kind={prefab.prefabKind} footprintPx={fpPx} selected={isSel} />
+                {isSel && (
+                  <g style={{ pointerEvents: "auto" }}>
+                    <g transform={`translate(${fpPx.w / 2 + 10} ${-fpPx.d / 2 - 10})`}
+                      style={{ cursor: "pointer" }}
+                      onPointerDown={(e) => { e.stopPropagation(); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeYardItem(prefab.id);
+                        setSelectedId(null);
+                      }}
+                    >
+                      <circle r={9} fill="#EF4444" stroke="#fff" strokeWidth={1.5} />
+                      <text textAnchor="middle" dominantBaseline="middle"
+                        fontSize={11} fill="white" fontWeight="bold"
+                        style={{ pointerEvents: "none" }}>✕</text>
+                    </g>
+                  </g>
+                )}
+              </g>
+            );
+          })}
+
+          {/* Yard items — architectural top-down glyphs (no emoji).
+              Filter to singletons only — prefabs/zones are rendered above. */}
+          {yardItems.filter(isYardSingleton).map(item => {
+            const asset = getOutdoorAssetByKind(item.kind);
+            if (!asset) return null;
+            const sx = SVG_PX / 2 + item.x / CM_PER_PX;
+            const sz = SVG_PX / 2 + item.z / CM_PER_PX;
+            const r = Math.max(8, asset.radiusCm / CM_PER_PX);
+            const isSel = selectedId === item.id;
+            const itemViolations = violationMap.get(item.id) ?? [];
+            const hasRequired = itemViolations.some(v => v.severity === "required");
+            const hasIssue = itemViolations.length > 0;
+            return (
+              <g key={item.id}
+                transform={`translate(${sx} ${sz}) rotate(${((item.rot ?? 0) * 180) / Math.PI})`}
+                style={{ cursor: drag?.id === item.id ? "grabbing" : "grab" }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setSelectedId(item.id);
+                  const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+                  setDrag({ id: item.id, offsetX: x - item.x, offsetZ: z - item.z });
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Warning halo — red ring for required, amber for recommended */}
+                {hasIssue && (
+                  <circle r={r + 4} fill="none"
+                    stroke={hasRequired ? "#DC2626" : "#D97706"}
+                    strokeWidth={1.6}
+                    strokeDasharray="3 2"
+                    opacity={0.85} />
+                )}
+                <AssetGlyph asset={asset} r={r} selected={isSel} />
+                {isSel && (
+                  <g style={{ pointerEvents: "auto" }}>
+                    {/* Delete handle (top-right) */}
+                    <g transform={`translate(${r + 10} ${-r - 10})`}
+                      style={{ cursor: "pointer" }}
+                      onPointerDown={(e) => { e.stopPropagation(); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeYardItem(item.id);
+                        setSelectedId(null);
+                      }}
+                    >
+                      <circle r={9} fill="#EF4444" stroke="#fff" strokeWidth={1.5} />
+                      <text textAnchor="middle" dominantBaseline="middle"
+                        fontSize={11} fill="white" fontWeight="bold"
+                        style={{ pointerEvents: "none" }}>✕</text>
+                    </g>
+                    {/* Rotate handle (bottom-right) */}
+                    <g transform={`translate(${r + 10} ${r + 10})`}
+                      style={{ cursor: "grab" }}
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        const startRot = item.rot ?? 0;
+                        const start = svgPtToWorld(e.clientX, e.clientY);
+                        const baseAng = Math.atan2(start.z - item.z, start.x - item.x);
+                        const onMove = (ev: PointerEvent) => {
+                          const cur = svgPtToWorld(ev.clientX, ev.clientY);
+                          const ang = Math.atan2(cur.z - item.z, cur.x - item.x);
+                          updateYardItem(item.id, { rot: startRot + (ang - baseAng) });
+                        };
+                        const onUp = () => {
+                          window.removeEventListener("pointermove", onMove);
+                          window.removeEventListener("pointerup", onUp);
+                        };
+                        window.addEventListener("pointermove", onMove);
+                        window.addEventListener("pointerup", onUp);
+                      }}
+                    >
+                      <circle r={9} fill="#6366F1" stroke="#fff" strokeWidth={1.5} />
+                      <text textAnchor="middle" dominantBaseline="middle"
+                        fontSize={11} fill="white" fontWeight="bold"
+                        style={{ pointerEvents: "none" }}>↻</text>
+                    </g>
+                  </g>
+                )}
+              </g>
+            );
+          })}
+
+          {/* Empty hint */}
+          {yardItems.length === 0 && (
+            <text x={SVG_PX / 2} y={SVG_PX / 2 + 100} textAnchor="middle"
+              fontSize={10} fill={INK_LIGHT} fontFamily="ui-monospace, Menlo, monospace"
+              style={{ pointerEvents: "none" }} letterSpacing="0.1em">
+              DRAG ELEMENTS FROM LIBRARY →
+            </text>
+          )}
+        </svg>
+      </div>
+
+      <div className="px-4 py-1.5 text-[10px] shrink-0 flex items-center gap-4"
+        style={{ background: "rgba(255,255,255,0.04)", borderTop: "1px solid rgba(255,255,255,0.08)", color: "#9CA3AF" }}>
+        <span>SHEET 30 × 30 m</span>
+        <span>·</span>
+        <span>GRID 1 m</span>
+        <span>·</span>
+        <span>SNAP {SNAP_CM} cm</span>
+        <span className="ml-auto">SHIFT = free move</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Right rail: inspector for the selected yard item ──────
+export function YardPlanInspector() {
+  const selectedId = useSharedSelectedYardId();
+  const activeFloor = useDesignerStore(s => s.activeFloor);
+  const items      = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const updateYardItem = useDesignerStore(s => s.updateYardItem);
+  const removeYardItem = useDesignerStore(s => s.removeYardItem);
+  const addYardItem    = useDesignerStore(s => s.addYardItem);
+  const { bbox: footprint } = useHouseRooms();
+  const locale = useLocale();
+
+  // Smart suggestions — same evaluator as the canvas overlay
+  const violations = useMemo(() => evaluateYardPlan(items, footprint), [items, footprint]);
+  const item = selectedId ? items.find(i => i.id === selectedId) : null;
+  // Asset lookup only makes sense for singletons; prefabs / zones get
+  // their own descriptor below.
+  const asset = item && isYardSingleton(item) ? getOutdoorAssetByKind(item.kind) : null;
+  const itemViolations = useMemo(
+    () => item ? violations.filter(v => v.itemId === item.id || v.otherId === item.id) : [],
+    [violations, item]
+  );
+
+  // Prefab / Zone inspector — minimal: label + position + delete. The
+  // common-fields inspector below handles X/Z/scale/rot for everyone.
+  if (item && isYardPrefab(item)) {
+    const def = getPrefabDef(item.prefabKind);
+    return (
+      <aside className="h-full flex flex-col" style={{ background: "var(--ds-surface)", borderLeft: "1px solid var(--ds-border)" }}>
+        <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid var(--ds-border)" }}>
+          <svg viewBox="-32 -22 64 44" width="44" height="32">
+            <PrefabGlyph kind={item.prefabKind} footprintPx={{ w: 50, d: 32 }} />
+          </svg>
+          <div>
+            <div className="text-xs font-bold" style={{ color: "var(--ds-text)" }}>{def?.label ?? item.prefabKind}</div>
+            <div className="text-[10px]" style={{ color: "var(--ds-text-3)" }}>PREFAB · {item.prefabKind}</div>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-[11px]">
+          <section>
+            <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>位置 (m)</div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex items-center gap-1">
+                <span className="text-gray-400 w-3">X</span>
+                <input type="number" step={0.25}
+                  value={(item.x / 100).toFixed(2)}
+                  onChange={e => updateYardItem(item.id, { x: Math.round(parseFloat(e.target.value) * 100) })}
+                  className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
+              </label>
+              <label className="flex items-center gap-1">
+                <span className="text-gray-400 w-3">Z</span>
+                <input type="number" step={0.25}
+                  value={(item.z / 100).toFixed(2)}
+                  onChange={e => updateYardItem(item.id, { z: Math.round(parseFloat(e.target.value) * 100) })}
+                  className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
+              </label>
+            </div>
+          </section>
+          <section>
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-semibold" style={{ color: "var(--ds-text-2)" }}>旋转</span>
+              <span className="font-mono text-gray-500">{Math.round(((item.rot ?? 0) * 180 / Math.PI + 360) % 360)}°</span>
+            </div>
+            <input type="range" min={0} max={360} step={5}
+              value={Math.round(((item.rot ?? 0) * 180 / Math.PI + 360) % 360)}
+              onChange={e => updateYardItem(item.id, { rot: parseFloat(e.target.value) * Math.PI / 180 })}
+              className="w-full accent-indigo-500" />
+          </section>
+          <section>
+            <button onClick={() => { removeYardItem(item.id); setSharedSelectedId(null); }}
+              className="w-full py-2 rounded-lg text-[12px] font-semibold transition-colors border"
+              style={{ background: "white", borderColor: "#FCA5A5", color: "#DC2626" }}>
+              ✕ 删除
+            </button>
+          </section>
+        </div>
+      </aside>
+    );
+  }
+  if (item && isYardZone(item)) {
+    const style = ZONE_STYLES[item.zoneKind];
+    return (
+      <aside className="h-full flex flex-col" style={{ background: "var(--ds-surface)", borderLeft: "1px solid var(--ds-border)" }}>
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--ds-border)" }}>
+          <div className="text-xs font-bold" style={{ color: "var(--ds-text)" }}>{style.label}</div>
+          <div className="text-[10px]" style={{ color: "var(--ds-text-3)" }}>ZONE · {item.zoneKind}</div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-[11px]">
+          <div className="text-[11px]" style={{ color: "var(--ds-text-2)" }}>{style.desc}</div>
+          <section>
+            <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>位置 (m)</div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex items-center gap-1">
+                <span className="text-gray-400 w-3">X</span>
+                <input type="number" step={0.25}
+                  value={(item.x / 100).toFixed(2)}
+                  onChange={e => updateYardItem(item.id, { x: Math.round(parseFloat(e.target.value) * 100) })}
+                  className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
+              </label>
+              <label className="flex items-center gap-1">
+                <span className="text-gray-400 w-3">Z</span>
+                <input type="number" step={0.25}
+                  value={(item.z / 100).toFixed(2)}
+                  onChange={e => updateYardItem(item.id, { z: Math.round(parseFloat(e.target.value) * 100) })}
+                  className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
+              </label>
+            </div>
+          </section>
+          <section>
+            <button onClick={() => { removeYardItem(item.id); setSharedSelectedId(null); }}
+              className="w-full py-2 rounded-lg text-[12px] font-semibold transition-colors border"
+              style={{ background: "white", borderColor: "#FCA5A5", color: "#DC2626" }}>
+              ✕ 删除
+            </button>
+          </section>
+        </div>
+      </aside>
+    );
+  }
+
+  if (!item || !asset) {
+    // No selection — show global smart-suggestions summary instead of empty
+    const requiredV = violations.filter(v => v.severity === "required");
+    const recommendedV = violations.filter(v => v.severity === "recommended");
+    return (
+      <aside className="h-full flex flex-col bg-white" style={{ borderLeft: "1px solid #E5E7EB" }}>
+        <div className="px-4 py-3 text-[10px] font-semibold tracking-widest text-gray-500" style={{ borderBottom: "1px solid #E5E7EB", letterSpacing: "0.12em" }}>
+          {locale === "en" ? `SMART SUGGESTIONS${violations.length > 0 ? ` (${violations.length})` : ""}` : `智能建议${violations.length > 0 ? `（${violations.length}）` : ""}`}
+        </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {violations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center gap-2 py-12">
+              <div className="text-3xl text-green-500">✓</div>
+              <div className="text-[11px] text-gray-700">
+                {locale === "en" ? "No issues found" : "未发现问题"}
+              </div>
+              <div className="text-[10px] text-gray-400">
+                {locale === "en" ? "Click an element to see its details, or drop new ones from the left." : "点选元素查看属性，或从左侧拖入新元素"}
+              </div>
+            </div>
+          ) : (
+            <>
+              {requiredV.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-bold mb-1" style={{ color: "#B91C1C" }}>
+                    ⚠ {requiredV.length} {locale === "en" ? "REQUIRED" : "必须修改"}
+                  </div>
+                  {requiredV.map((v, i) => (
+                    <ViolationCard key={i} v={v} locale={locale} />
+                  ))}
+                </div>
+              )}
+              {recommendedV.length > 0 && (
+                <div className="mt-3">
+                  <div className="text-[10px] font-bold mb-1" style={{ color: "#B45309" }}>
+                    ⚠ {recommendedV.length} {locale === "en" ? "RECOMMENDED" : "建议调整"}
+                  </div>
+                  {recommendedV.map((v, i) => (
+                    <ViolationCard key={i} v={v} locale={locale} />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </aside>
+    );
+  }
+
+  const scale = item.scale ?? 1;
+  const rot   = item.rot ?? 0;
+  const rotDeg = Math.round((rot * 180 / Math.PI + 360) % 360);
+
+  return (
+    <aside className="h-full flex flex-col" style={{ background: "var(--ds-surface)", borderLeft: "1px solid var(--ds-border)" }}>
+      <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid var(--ds-border)" }}>
+        <svg viewBox="-32 -32 64 64" width="36" height="36">
+          <AssetGlyph asset={asset} r={26} />
+        </svg>
+        <div>
+          <div className="text-xs font-bold" style={{ color: "var(--ds-text)" }}>{asset.label}</div>
+          <div className="text-[10px]" style={{ color: "var(--ds-text-3)" }}>{asset.kind}</div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-[11px]">
+        {/* Smart-suggestions for this specific item */}
+        {itemViolations.length > 0 && (
+          <section>
+            <div className="text-[10px] font-bold mb-1.5 tracking-widest" style={{ color: "#B45309", letterSpacing: "0.1em" }}>
+              ⚠ {itemViolations.length} {locale === "en" ? "ISSUES" : "项问题"}
+            </div>
+            {itemViolations.map((v, i) => <ViolationCard key={i} v={v} locale={locale} />)}
+          </section>
+        )}
+        {/* Position */}
+        <section>
+          <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>位置 (m)</div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex items-center gap-1">
+              <span className="text-gray-400 w-3">X</span>
+              <input type="number" step={0.25}
+                value={(item.x / 100).toFixed(2)}
+                onChange={e => updateYardItem(item.id, { x: Math.round(parseFloat(e.target.value) * 100) })}
+                className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
+            </label>
+            <label className="flex items-center gap-1">
+              <span className="text-gray-400 w-3">Z</span>
+              <input type="number" step={0.25}
+                value={(item.z / 100).toFixed(2)}
+                onChange={e => updateYardItem(item.id, { z: Math.round(parseFloat(e.target.value) * 100) })}
+                className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
+            </label>
+          </div>
+        </section>
+
+        {/* Scale slider */}
+        <section>
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-semibold" style={{ color: "var(--ds-text-2)" }}>缩放</span>
+            <span className="font-mono text-gray-500">{scale.toFixed(2)}×</span>
+          </div>
+          <input type="range" min={0.4} max={2.5} step={0.05}
+            value={scale}
+            onChange={e => updateYardItem(item.id, { scale: parseFloat(e.target.value) })}
+            className="w-full accent-indigo-500" />
+        </section>
+
+        {/* Rotation slider */}
+        <section>
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-semibold" style={{ color: "var(--ds-text-2)" }}>旋转</span>
+            <span className="font-mono text-gray-500">{rotDeg}°</span>
+          </div>
+          <input type="range" min={0} max={360} step={5}
+            value={rotDeg}
+            onChange={e => updateYardItem(item.id, { rot: parseFloat(e.target.value) * Math.PI / 180 })}
+            className="w-full accent-indigo-500" />
+        </section>
+
+        {/* Actions */}
+        <section className="space-y-2">
+          <button
+            onClick={() => {
+              const id = `y-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+              addYardItem({
+                ...item,
+                id,
+                x: item.x + 100, // offset 1m so the copy is visible
+                z: item.z + 100,
+              });
+              setSharedSelectedId(id);
+            }}
+            className="w-full py-2 rounded-lg text-[12px] font-semibold transition-colors border"
+            style={{ background: "white", borderColor: "#6366F1", color: "#6366F1" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#EEF2FF"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "white"; }}
+          >
+            ⧉ 复制
+          </button>
+          <button
+            onClick={() => {
+              removeYardItem(item.id);
+              setSharedSelectedId(null);
+            }}
+            className="w-full py-2 rounded-lg text-[12px] font-semibold transition-colors border"
+            style={{ background: "white", borderColor: "#FCA5A5", color: "#DC2626" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "white"; }}
+          >
+            ✕ 删除
+          </button>
+        </section>
+      </div>
+    </aside>
+  );
+}

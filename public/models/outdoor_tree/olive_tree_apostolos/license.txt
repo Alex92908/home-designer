@@ -1,0 +1,11 @@
+Model Information:
+* title:	Olive tree
+* source:	https://sketchfab.com/3d-models/olive-tree-df3d3ab0cbd44b02ba08fccbc87bd35d
+* author:	Apostolos Vainopoulos (https://sketchfab.com/tolikas91)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Olive tree" (https://sketchfab.com/3d-models/olive-tree-df3d3ab0cbd44b02ba08fccbc87bd35d) by Apostolos Vainopoulos (https://sketchfab.com/tolikas91) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

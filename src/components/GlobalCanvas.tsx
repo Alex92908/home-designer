@@ -21,6 +21,7 @@ import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
 import { PlacedItemMesh } from "./RoomCanvas";
+import { useT } from "@/lib/i18n";
 
 const CM = 0.01; // cm → m
 
@@ -76,10 +77,11 @@ function RoomGroup({
   showFurniture: boolean;
 }) {
   const def = ROOM_DEFS[room];
+  const t = useT();
   const dims = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions[room]);
   const state = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]);
   const shape = useDesignerStore(s => s.floorPlans[s.activeFloor].roomShapes?.[room]);
-  const label = useDesignerStore(s => s.customRoomMeta[room]?.name) ?? def.name;
+  const label = useDesignerStore(s => s.customRoomMeta[room]?.name) ?? t.roomNames[room] ?? def.name;
   const icon = useDesignerStore(s => s.customRoomMeta[room]?.icon) ?? def.icon;
 
   const W = dims.width * CM;
@@ -299,7 +301,7 @@ function Scene() {
       </group>
 
       <Suspense fallback={null}>
-        <Environment preset="city" background={false} />
+        <Environment files="/hdr/potsdamer_platz_1k.hdr" background={false} />
       </Suspense>
     </>
   );
@@ -349,13 +351,14 @@ function CameraFit() {
 
 export default function GlobalCanvas() {
   const enabledRooms = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
+  const t = useT();
 
   if (enabledRooms.length === 0) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-100">
         <div className="text-5xl opacity-20">🏗️</div>
-        <div className="text-sm font-bold text-gray-400">暂无房间</div>
-        <div className="text-xs text-gray-300">先在「全局」视图中添加房间</div>
+        <div className="text-sm font-bold text-gray-400">{t.global3dEmpty}</div>
+        <div className="text-xs text-gray-300">{t.global3dEmptyHint}</div>
       </div>
     );
   }
@@ -378,7 +381,7 @@ export default function GlobalCanvas() {
       {/* Hint overlay */}
       <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-[11px] font-bold shadow"
         style={{ background: "rgba(255,255,255,0.92)", color: "#374151" }}>
-        🏘️ 全局 3D · 双击房间进入详细视图
+        {t.global3dHint}
       </div>
     </div>
   );

@@ -39,7 +39,11 @@ function hexRGB(hex: string): [number, number, number] {
 function adjustHex(hex: string, amt: number): string {
   const [r, g, b] = hexRGB(hex);
   const clamp = (v: number) => Math.max(0, Math.min(255, v));
-  const toHex = (v: number) => clamp(v).toString(16).padStart(2, "0");
+  // Round AFTER clamp so non-integer `amt` values (e.g. tint * rng()) don't
+  // produce "58.873e25fe…" hex strings. The indoor textures pass these to
+  // ctx.fillStyle which silently ignores bad colors, but addColorStop
+  // throws — so always emit integer channels here.
+  const toHex = (v: number) => Math.round(clamp(v)).toString(16).padStart(2, "0");
   return `#${toHex(r + amt)}${toHex(g + amt)}${toHex(b + amt)}`;
 }
 
@@ -397,6 +401,254 @@ function bambooFloor(baseColor: string, darkColor: string): THREE.CanvasTexture 
   return new THREE.CanvasTexture(canvas);
 }
 
+// ── Outdoor: travertine slab paving ───────────────────────────────────────
+// Large-format limestone slabs with subtle cloudy veining and tight
+// tooled joints. Reads as the "建筑师 spec" floor — natural stone,
+// muted warm-grey, expensive-looking without being shiny.
+function travertineSlab(): THREE.CanvasTexture {
+  const SIZE = 512;
+  const [canvas, ctx] = makeCtx(SIZE);
+  const rng = seededRng(101);
+  const SLAB = 256;             // 2×2 large slabs per tile (~1.5m each in world)
+  const G = 4;
+  const base = "#D8CDB8";
+  const dark = "#A8917A";
+
+  // Joint colour
+  ctx.fillStyle = "#7E6F58";
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 2; col++) {
+      const sx = col * SLAB, sy = row * SLAB;
+      const slabBase = lerpHex(base, dark, rng() * 0.18);
+      ctx.fillStyle = slabBase;
+      ctx.fillRect(sx + G, sy + G, SLAB - G * 2, SLAB - G * 2);
+
+      // Cloudy patches — broad soft regions
+      for (let p = 0; p < 5; p++) {
+        const cx = sx + G + rng() * (SLAB - G * 2);
+        const cy = sy + G + rng() * (SLAB - G * 2);
+        const r  = 30 + rng() * 50;
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+        grad.addColorStop(0, lerpHex(slabBase, dark, 0.25));
+        grad.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = 0.35;
+        ctx.fillRect(sx + G, sy + G, SLAB - G * 2, SLAB - G * 2);
+      }
+      ctx.globalAlpha = 1;
+
+      // Pin-prick pores (travertine signature)
+      for (let i = 0; i < 200; i++) {
+        const px = sx + G + rng() * (SLAB - G * 2);
+        const py = sy + G + rng() * (SLAB - G * 2);
+        ctx.fillStyle = adjustHex(slabBase, -25);
+        ctx.globalAlpha = 0.18 + rng() * 0.22;
+        ctx.beginPath();
+        ctx.arc(px, py, 0.6 + rng() * 1.0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // Subtle drift veins
+      for (let v = 0; v < 2; v++) {
+        ctx.strokeStyle = adjustHex(slabBase, -15);
+        ctx.globalAlpha = 0.10 + rng() * 0.10;
+        ctx.lineWidth = 0.6 + rng() * 0.6;
+        ctx.beginPath();
+        const sx2 = sx + G + rng() * (SLAB - G * 2);
+        const sy2 = sy + G;
+        ctx.moveTo(sx2, sy2);
+        ctx.bezierCurveTo(
+          sx2 + (rng() - 0.5) * 60, sy + SLAB * 0.4,
+          sx2 + (rng() - 0.5) * 80, sy + SLAB * 0.7,
+          sx2 + (rng() - 0.5) * 30, sy + SLAB - G,
+        );
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+  return new THREE.CanvasTexture(canvas);
+}
+
+// ── Outdoor: polished concrete ────────────────────────────────────────────
+// Continuous troweled concrete, narrow control joints every ~1.5m.
+// Low chroma cool grey, faint mottling. The driveway / porte-cochère floor.
+function polishedConcrete(): THREE.CanvasTexture {
+  const SIZE = 512;
+  const [canvas, ctx] = makeCtx(SIZE);
+  const rng = seededRng(202);
+  const base = "#A8A8A4";
+
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Soft mottling with 2 cloud layers
+  for (let pass = 0; pass < 2; pass++) {
+    for (let p = 0; p < 28; p++) {
+      const cx = rng() * SIZE, cy = rng() * SIZE, r = 40 + rng() * 90;
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      const tint = pass === 0 ? -10 : 10;
+      grad.addColorStop(0, adjustHex(base, tint));
+      grad.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = grad;
+      ctx.globalAlpha = 0.18;
+      ctx.fillRect(0, 0, SIZE, SIZE);
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Aggregate dots (polish-ground concrete shows tiny stones)
+  for (let i = 0; i < 1500; i++) {
+    const x = rng() * SIZE, y = rng() * SIZE;
+    ctx.fillStyle = adjustHex(base, (rng() - 0.4) * 30);
+    ctx.globalAlpha = 0.10 + rng() * 0.18;
+    ctx.beginPath();
+    ctx.arc(x, y, 0.3 + rng() * 0.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Control joints — every quarter (one tile = 6m, joints every 1.5m)
+  ctx.fillStyle = adjustHex(base, -28);
+  for (const fx of [SIZE / 4, SIZE / 2, (SIZE * 3) / 4]) {
+    ctx.fillRect(fx - 0.5, 0, 1, SIZE);
+    ctx.fillRect(0, fx - 0.5, SIZE, 1);
+  }
+
+  return new THREE.CanvasTexture(canvas);
+}
+
+// ── Outdoor: ipe / teak deck ─────────────────────────────────────────────
+// Long narrow planks, dark warm wood, visible plank ends. The pergola /
+// private retreat floor.
+function woodDeckTeak(): THREE.CanvasTexture {
+  const SIZE = 512;
+  const [canvas, ctx] = makeCtx(SIZE);
+  const rng = seededRng(303);
+  const PLANK_H = 36;     // ~10 planks in 1.6m repeat ≈ 16cm wide planks
+  const baseColor = "#7A5530";
+  const darkColor = "#3F2810";
+
+  ctx.fillStyle = adjustHex(darkColor, -10);
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  const planks = Math.ceil(SIZE / PLANK_H);
+  for (let row = 0; row < planks; row++) {
+    const y = row * PLANK_H;
+    const plankColor = lerpHex(baseColor, darkColor, rng() * 0.32);
+    ctx.fillStyle = plankColor;
+    ctx.fillRect(0, y + 1, SIZE, PLANK_H - 2);
+
+    // Heavy longitudinal grain
+    for (let g = 0; g < 18; g++) {
+      const gx = rng() * SIZE;
+      ctx.strokeStyle = darkColor;
+      ctx.globalAlpha = 0.08 + rng() * 0.14;
+      ctx.lineWidth = 0.5 + rng() * 1.2;
+      ctx.beginPath();
+      ctx.moveTo(gx, y + 1);
+      for (let s = 1; s <= 6; s++) {
+        ctx.lineTo(gx + (rng() - 0.5) * 4, y + 1 + (PLANK_H - 2) * (s / 6));
+      }
+      ctx.stroke();
+    }
+
+    // Plank-end butt joint every ~1.6m (== full SIZE here)
+    if (rng() > 0.45) {
+      const jx = rng() * SIZE;
+      ctx.strokeStyle = adjustHex(darkColor, -8);
+      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(jx, y + 1);
+      ctx.lineTo(jx, y + PLANK_H - 1);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Plank gap shadows (horizontal lines between rows)
+  ctx.fillStyle = "#1B0F05";
+  for (let row = 1; row < planks + 1; row++) {
+    ctx.globalAlpha = 0.55;
+    ctx.fillRect(0, row * PLANK_H - 1, SIZE, 2);
+  }
+  ctx.globalAlpha = 1;
+
+  return new THREE.CanvasTexture(canvas);
+}
+
+// ── Outdoor: crushed gravel ──────────────────────────────────────────────
+// Round-ish 1-2cm pebbles. The agro / decomposed-granite path under raised beds.
+function crushedGravel(): THREE.CanvasTexture {
+  const SIZE = 512;
+  const [canvas, ctx] = makeCtx(SIZE);
+  const rng = seededRng(404);
+  const baseDark = "#7A6A52";
+
+  ctx.fillStyle = baseDark;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Pebbles
+  for (let i = 0; i < 1200; i++) {
+    const x = rng() * SIZE, y = rng() * SIZE;
+    const r = 2 + rng() * 5;
+    const tone = lerpHex("#C8B698", "#7A6A52", rng());
+    ctx.fillStyle = tone;
+    ctx.globalAlpha = 0.7 + rng() * 0.3;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    // Shadow on bottom-right of each pebble
+    ctx.fillStyle = "#3A2F22";
+    ctx.globalAlpha = 0.18;
+    ctx.beginPath();
+    ctx.arc(x + r * 0.25, y + r * 0.30, r * 0.85, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  return new THREE.CanvasTexture(canvas);
+}
+
+// ── Outdoor: lawn turf ────────────────────────────────────────────────────
+// Mottled green carpet with tiny brighter speckles — reads as mowed grass
+// from a distance, not the awkward instanced-blade carpet.
+function lawnTurf(): THREE.CanvasTexture {
+  const SIZE = 512;
+  const [canvas, ctx] = makeCtx(SIZE);
+  const rng = seededRng(505);
+  const base = "#5C8A3F";
+
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Soft mottles
+  for (let p = 0; p < 50; p++) {
+    const cx = rng() * SIZE, cy = rng() * SIZE, r = 20 + rng() * 50;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    const tint = (rng() - 0.5) * 25;
+    grad.addColorStop(0, adjustHex(base, tint));
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.globalAlpha = 0.30;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+  }
+  ctx.globalAlpha = 1;
+
+  // Bright fine speckles (highlight blades)
+  for (let i = 0; i < 6000; i++) {
+    const x = rng() * SIZE, y = rng() * SIZE;
+    ctx.fillStyle = adjustHex(base, 12 + rng() * 14);
+    ctx.globalAlpha = 0.10 + rng() * 0.14;
+    ctx.fillRect(x, y, 0.7, 0.7);
+  }
+  ctx.globalAlpha = 1;
+  return new THREE.CanvasTexture(canvas);
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────
 
 /** Returns a texture for the given material ID, or null for solid-color materials. */
@@ -472,6 +724,48 @@ export function wallTileSize(id: string): [number, number] {
       return [2.0, 2.4];
     case "wall-emerald-tile":
       return [1.8, 1.8];
+    default:
+      return [2.0, 2.0];
+  }
+}
+
+// ── Outdoor texture API ───────────────────────────────────────────────────
+// Decoupled from getFloorTexture so the indoor floor picker isn't polluted
+// with outdoor-only paving options. Use these from ZoneRenderer / Ground.
+
+/** Returns a procedural canvas texture for an outdoor paving material id.
+ *  Returns null for unknown ids — callers should fall back to flat color. */
+export function getOutdoorTexture(id: string): THREE.CanvasTexture | null {
+  switch (id) {
+    case "outdoor-travertine":
+      return cached(id, () => travertineSlab());
+    case "outdoor-polished-concrete":
+      return cached(id, () => polishedConcrete());
+    case "outdoor-wood-deck":
+      return cached(id, () => woodDeckTeak());
+    case "outdoor-crushed-gravel":
+      return cached(id, () => crushedGravel());
+    case "outdoor-lawn-turf":
+      return cached(id, () => lawnTurf());
+    default:
+      return null;
+  }
+}
+
+/** Real-world tile size in metres for outdoor materials. Multiply your
+ *  surface dimensions by this to compute the texture repeat count. */
+export function outdoorTileSize(id: string): [number, number] {
+  switch (id) {
+    case "outdoor-travertine":
+      return [3.0, 3.0];   // 2×2 large slabs ≈ 3m × 3m repeat
+    case "outdoor-polished-concrete":
+      return [6.0, 6.0];   // bigger repeat — joints every 1.5m within tile
+    case "outdoor-wood-deck":
+      return [1.6, 1.6];   // ~10 planks × 16cm wide
+    case "outdoor-crushed-gravel":
+      return [1.0, 1.0];
+    case "outdoor-lawn-turf":
+      return [2.0, 2.0];
     default:
       return [2.0, 2.0];
   }

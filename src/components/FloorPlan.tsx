@@ -8,7 +8,7 @@ import { PlacedItem } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn } from "@/locales/itemNames";
 import { evaluateRoom, type EvaluatedItem, type DoorWall as ClearanceDoorWall } from "@/lib/clearance";
-import { pointInPolygon } from "@/lib/roomGeometry";
+import { pointInPolygon, getEdges } from "@/lib/roomGeometry";
 
 // ─── helpers ──────────────────────────────────────────────
 
@@ -161,10 +161,14 @@ function PlacedItemSVG({ placed, scale, isSelected, hasViolation, violationSever
 // ─── Window segment rendered on wall edge ─────────────────
 
 function WindowSVG({
-  win, svgW, svgH, scale, isEditMode,
+  win, svgW, svgH, scale, isEditMode, polygonEdge,
   onMoveDown, onStartDown, onEndDown,
 }: {
   win: WindowConfig; svgW: number; svgH: number; scale: number; isEditMode: boolean;
+  /** Resolved polygon edge if win.edgeIndex is set on a polygon room.
+   *  When present, the window is drawn along this edge instead of on the
+   *  bbox perimeter — necessary for L / convex inner-corner walls. */
+  polygonEdge?: { x1: number; z1: number; x2: number; z2: number; length: number };
   onMoveDown: (e: React.PointerEvent<SVGRectElement>) => void;
   onStartDown: (e: React.PointerEvent<SVGRectElement>) => void;
   onEndDown: (e: React.PointerEvent<SVGRectElement>) => void;
@@ -173,6 +177,37 @@ function WindowSVG({
   const handleSz = 8;
   const color = "#60C0F0";
   const handleColor = "#2080C0";
+
+  // Polygon edge-bound: render along the actual edge.
+  if (polygonEdge) {
+    const e = polygonEdge;
+    const ux = (e.x2 - e.x1) / e.length;
+    const uz = (e.z2 - e.z1) / e.length;
+    const t1 = win.pos;
+    const t2 = win.pos + win.len;
+    const sx = (e.x1 + ux * t1) * scale;
+    const sy = (e.z1 + uz * t1) * scale;
+    const ex = (e.x1 + ux * t2) * scale;
+    const ey = (e.z1 + uz * t2) * scale;
+    const angleDeg = Math.atan2(ey - sy, ex - sx) * 180 / Math.PI;
+    const widthPx = Math.hypot(ex - sx, ey - sy);
+    return (
+      <g transform={`translate(${sx} ${sy}) rotate(${angleDeg})`}>
+        <rect x={0} y={-thick / 2} width={widthPx} height={thick}
+          fill={color} opacity={0.8} rx={2}
+          style={{ cursor: isEditMode ? "move" : "default" }}
+          onPointerDown={isEditMode ? onMoveDown : undefined} />
+        {isEditMode && (
+          <>
+            <rect x={-handleSz / 2} y={-handleSz / 2} width={handleSz} height={handleSz}
+              fill={handleColor} rx={2} style={{ cursor: "move" }} onPointerDown={onStartDown} />
+            <rect x={widthPx - handleSz / 2} y={-handleSz / 2} width={handleSz} height={handleSz}
+              fill={handleColor} rx={2} style={{ cursor: "move" }} onPointerDown={onEndDown} />
+          </>
+        )}
+      </g>
+    );
+  }
 
   if (win.wall === "back") {
     const x1 = win.pos * scale;
@@ -262,13 +297,44 @@ function WindowSVG({
 type DoorWall = "bottom" | "top" | "left" | "right";
 
 function DoorSVG({
-  svgW, svgH, doorPosCm, doorLenCm, roomWidthCm, roomDepthCm, doorWall, scale, isEditMode, onPointerDown,
+  svgW, svgH, doorPosCm, doorLenCm, roomWidthCm, roomDepthCm, doorWall, scale, isEditMode, onPointerDown, polygonEdge,
 }: {
   svgW: number; svgH: number;
   doorPosCm: number; doorLenCm: number; roomWidthCm: number; roomDepthCm: number;
   doorWall: DoorWall; scale: number;
   isEditMode: boolean; onPointerDown: (e: React.PointerEvent<SVGGElement>) => void;
+  /** Polygon edge geometry. When set, the door is drawn along that edge
+   *  rather than on the bbox perimeter — needed for L / convex inner walls. */
+  polygonEdge?: { x1: number; z1: number; x2: number; z2: number; length: number; nx: number; nz: number };
 }) {
+  // Polygon edge-bound: render along the actual edge with the swing arc
+  // pointing inward (room interior).
+  if (polygonEdge) {
+    const e = polygonEdge;
+    const ux = (e.x2 - e.x1) / e.length;
+    const uz = (e.z2 - e.z1) / e.length;
+    const t1 = doorPosCm;
+    const doorWcm = Math.min(doorLenCm, e.length);
+    const sx = (e.x1 + ux * t1) * scale;
+    const sy = (e.z1 + uz * t1) * scale;
+    const angleDeg = Math.atan2(uz, ux) * 180 / Math.PI;
+    const widthPx = doorWcm * scale;
+    // Inward normal: e.nx, e.nz already point into the room
+    return (
+      <g
+        transform={`translate(${sx} ${sy}) rotate(${angleDeg})`}
+        style={{ cursor: isEditMode ? "move" : "default" }}
+        onPointerDown={isEditMode ? onPointerDown : undefined}
+      >
+        <rect x={0} y={-5} width={widthPx} height={10} fill="#1E2030" />
+        <path d={`M0,0 A${widthPx},${widthPx} 0 0,${e.nz < 0 ? 1 : 0} ${widthPx},${(e.nz < 0 ? -widthPx : widthPx)}`}
+              fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />
+        <line x1={0} y1={0} x2={widthPx} y2={(e.nz < 0 ? -widthPx : widthPx)}
+              stroke="#5A6070" strokeWidth={1.5} />
+        {isEditMode && <rect x={-4} y={-7} width={widthPx + 8} height={14} fill="#F59E0B" opacity={0.35} rx={3} style={{ pointerEvents: "none" }} />}
+      </g>
+    );
+  }
   // Door width: explicit cm value (clamped to wall length)
   const wallLen = (doorWall === "bottom" || doorWall === "top") ? roomWidthCm : roomDepthCm;
   const doorW = Math.min(doorLenCm, wallLen) * scale;
@@ -341,6 +407,7 @@ export default function FloorPlan() {
   // ─── Window / door selection for size editing ────────────
   const [selectedWinId, setSelectedWinId] = useState<string | null>(null);
   const [doorSelected,  setDoorSelected]  = useState(false);
+  const [selectedDoorId, setSelectedDoorId] = useState<string | null>(null);
 
   const activeRoom           = useDesignerStore((s) => s.activeRoom);
   const roomState            = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom]);
@@ -380,7 +447,31 @@ export default function FloorPlan() {
   const setDoorH        = useDesignerStore((s) => s.setDoorH);
   const setDoorStyle    = useDesignerStore((s) => s.setDoorStyle);
   const doorStyle       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? "wood_panel");
+  const doorEdgeIdx     = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorEdgeIdx?.[activeRoom]);
+  const roomDoorsArr    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoors?.[activeRoom]);
+  const addDoor         = useDesignerStore((s) => s.addDoor);
+  const removeDoor      = useDesignerStore((s) => s.removeDoor);
+  const updateDoor      = useDesignerStore((s) => s.updateDoor);
   const updateWindow    = useDesignerStore((s) => s.updateWindow);
+
+  // Multi-door: prefer roomDoors[], fall back to legacy single-door fields.
+  // Stable reference via useMemo to avoid render loops.
+  const allDoors = useMemo(() => {
+    if (roomDoorsArr && roomDoorsArr.length > 0) return roomDoorsArr;
+    if (!hasDoor) return [];
+    const wall: "back" | "front" | "left" | "right" =
+      doorWall === "top" ? "back" : doorWall === "bottom" ? "front" : doorWall;
+    return [{
+      id: `${activeRoom}-legacy-door`,
+      wall,
+      pos: doorPosCm,
+      len: doorLenCm,
+      h: doorHCm,
+      style: doorStyle,
+      edgeIndex: doorEdgeIdx,
+    }];
+  }, [roomDoorsArr, hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle, doorEdgeIdx, activeRoom]);
+
   const t      = useT();
   const locale = useLocale();
 
@@ -591,16 +682,15 @@ export default function FloorPlan() {
 
   // ─── Door drag ───────────────────────────────────────────
 
+  // NOTE: door dragging not yet supported in the new multi-door model;
+  // users can delete + re-add to reposition. The id arg is accepted for
+  // forward compat with the per-door pointer handler.
   const startDoorDrag = useCallback(
-    (e: React.PointerEvent<SVGGElement>) => {
-      e.stopPropagation();
-      if (!svgRef.current) return;
-      const pt = getSVGPoint(e, svgRef.current, zoomLevel);
-      const axis = (doorWall === "top" || doorWall === "bottom") ? pt.x : pt.y;
-      setDoorDrag({ startMouse: axis, origPos: doorPosCm });
-      (e.currentTarget as SVGGElement).setPointerCapture(e.pointerId);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (_e: React.PointerEvent<SVGGElement>, _doorId?: string) => {
+      // no-op
     },
-    [doorPosCm, doorWall]
+    []
   );
 
   // ─── Combined pointer move ───────────────────────────────
@@ -708,7 +798,8 @@ export default function FloorPlan() {
     return () => svg.removeEventListener("touchstart", onTouchStart);
   }, []);
 
-  // ─── Add window helper ───────────────────────────────────
+  // ─── Add window helpers ──────────────────────────────────
+  // Cardinal-wall add (rect rooms): centered on the bbox wall.
   const handleAddWindow = (wall: "back" | "front" | "right" | "left") => {
     const wallLen = (wall === "back" || wall === "front") ? roomW : roomD;
     addWindow(activeRoom, {
@@ -716,6 +807,51 @@ export default function FloorPlan() {
       wall,
       pos: wallLen * 0.25,
       len: wallLen * 0.4,
+    });
+  };
+
+  // Per-edge add (polygon rooms): place a window centered on a SPECIFIC
+  // polygon edge. We bind via `edgeIndex` so inner-corner edges that the
+  // cardinal (wall, pos) projection can't reach also work. `pos` is
+  // edge-local: cm from the edge's start vertex.
+  const handleAddWindowOnEdge = (edge: ReturnType<typeof getEdges>[number]) => {
+    const len = Math.min(160, Math.max(60, edge.length * 0.5));
+    const pos = Math.max(0, (edge.length - len) / 2); // centered along edge
+    addWindow(activeRoom, {
+      id: `${activeRoom}-w${Date.now()}`,
+      wall: edge.facing,
+      pos,
+      len,
+      edgeIndex: edge.i,
+    });
+  };
+
+  // Per-edge add door (polygon rooms). Doors live in roomDoors[].
+  const handleAddDoorOnEdge = (edge: ReturnType<typeof getEdges>[number]) => {
+    const dl = Math.min(120, Math.max(60, doorLenCm ?? 80));
+    const pos = Math.max(0, (edge.length - dl) / 2); // centered
+    addDoor(activeRoom, {
+      id: `${activeRoom}-d${Date.now()}`,
+      wall: edge.facing,
+      pos,
+      len: dl,
+      h: doorHCm ?? 200,
+      style: doorStyle ?? "wood_panel",
+      edgeIndex: edge.i,
+    });
+  };
+
+  // Cardinal-wall add door (rect rooms).
+  const handleAddDoorCardinal = (cardinal: "back" | "front" | "left" | "right") => {
+    const dl = doorLenCm ?? 80;
+    const wallLen = (cardinal === "back" || cardinal === "front") ? roomW : roomD;
+    addDoor(activeRoom, {
+      id: `${activeRoom}-d${Date.now()}`,
+      wall: cardinal,
+      pos: Math.max(0, (wallLen - dl) / 2),
+      len: dl,
+      h: doorHCm ?? 200,
+      style: doorStyle ?? "wood_panel",
     });
   };
 
@@ -796,7 +932,7 @@ export default function FloorPlan() {
                 else if (layoutHistoryLen > 0) undoLayout();
               }}
               disabled={(editShape ? layoutHistoryLen : furnitureHistoryLen) === 0}
-              title={editShape ? `撤回顶点编辑（${layoutHistoryLen}）` : t.fpUndoTitle(furnitureHistoryLen)}
+              title={editShape ? t.fpShapeEditUndoTitle(layoutHistoryLen) : t.fpUndoTitle(furnitureHistoryLen)}
               className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all"
               style={
                 (editShape ? layoutHistoryLen : furnitureHistoryLen) > 0
@@ -862,18 +998,18 @@ export default function FloorPlan() {
                       ? { background: "#F59E0B", color: "#fff" }
                       : { color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", background: "transparent" }
                   }
-                  title="编辑多边形顶点（拖拽移动；右键 / Alt+点击 删除）"
+                  title={t.fpShapeEditTitle}
                 >
-                  {editShape ? "完成顶点编辑" : "编辑形状"}
+                  {editShape ? t.fpShapeEditDone : t.fpShapeEditStart}
                 </button>
                 {editShape && (
                   <button
                     onClick={() => { pushLayoutHistory(); rectifyRoomShape(activeRoom); }}
                     className="text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all"
                     style={{ border: "1px solid rgba(245,158,11,0.7)", color: "#F59E0B", background: "transparent" }}
-                    title="把所有墙边吸到水平 / 垂直（按每条边的主轴对齐 + 去重近距离点）"
+                    title={t.fpShapeStraightenTitle}
                   >
-                    📏 拉直
+                    {t.fpShapeStraightenBtn}
                   </button>
                 )}
               </>
@@ -883,45 +1019,98 @@ export default function FloorPlan() {
         {/* Row 2: window/door sub-controls (only when editing) */}
         {editWindows && (
           <div className="flex flex-wrap gap-1 items-center pl-1">
-            {(["back","front","left","right"] as const).map(wall => {
-              const labels = t.fpWallLabels;
-              const wallLen = (wall === "back" || wall === "front") ? roomW : roomD;
-              if (wallLen <= 100) return null;
-              return (
-                <button key={wall} onClick={() => handleAddWindow(wall)}
-                  className="text-[10px] px-2 py-1 rounded-lg font-semibold transition-all"
-                  style={{ background: "rgba(0,122,255,0.2)", color: "#60AEFF", border: "1px solid rgba(0,122,255,0.3)" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,122,255,0.35)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,122,255,0.2)"; }}
-                >
-                  +{labels[wall]}{t.fpWindowWord}
-                </button>
-              );
-            })}
-            {hasDoor && (
-              <div className="flex items-center gap-0.5 ml-1">
-                <span className="text-[10px] text-gray-500 mr-0.5">{t.fpDoorLabel}</span>
-                {(["bottom","top","left","right"] as DoorWall[]).map(w => {
-                  const labels = t.fpDoorDirs as Record<DoorWall, string>;
+            {(() => {
+              // Polygon rooms: one button per actual edge — every straight
+              // segment of the L / convex outline is an installable wall.
+              // Otherwise (rect rooms): the legacy 4 cardinal buttons.
+              if (roomShape && roomShape.preset !== "rect") {
+                const labels = t.fpWallLabels;
+                const edges = getEdges(roomShape.points)
+                  .filter(e => e.length > 40); // skip only tiny stub edges (<40cm)
+                // Number duplicates per facing (e.g. two "back" edges → #1, #2)
+                const seen: Record<string, number> = { back: 0, front: 0, left: 0, right: 0 };
+                return edges.map(e => {
+                  seen[e.facing] += 1;
+                  const sameFacingCount = edges.filter(x => x.facing === e.facing).length;
+                  const idx = seen[e.facing];
+                  const showIdx = sameFacingCount > 1;
                   return (
-                    <button key={w} onClick={() => { setDoorWall(activeRoom, w); setDoorPos(activeRoom, 0); }}
+                    <button key={`${e.facing}-${e.i}`} onClick={() => handleAddWindowOnEdge(e)}
+                      className="text-[10px] px-2 py-1 rounded-lg font-semibold transition-all"
+                      style={{ background: "rgba(0,122,255,0.2)", color: "#60AEFF", border: "1px solid rgba(0,122,255,0.3)" }}
+                      onMouseEnter={ev => { (ev.currentTarget as HTMLButtonElement).style.background = "rgba(0,122,255,0.35)"; }}
+                      onMouseLeave={ev => { (ev.currentTarget as HTMLButtonElement).style.background = "rgba(0,122,255,0.2)"; }}
+                      title={`${(e.length / 100).toFixed(2)}m`}
+                    >
+                      +{labels[e.facing]}{showIdx ? `${idx}` : ""}{t.fpWindowWord}
+                      <span className="ml-1 opacity-60 font-mono">{(e.length / 100).toFixed(1)}m</span>
+                    </button>
+                  );
+                });
+              }
+              return (["back","front","left","right"] as const).map(wall => {
+                const labels = t.fpWallLabels;
+                const wallLen = (wall === "back" || wall === "front") ? roomW : roomD;
+                if (wallLen <= 100) return null;
+                return (
+                  <button key={wall} onClick={() => handleAddWindow(wall)}
+                    className="text-[10px] px-2 py-1 rounded-lg font-semibold transition-all"
+                    style={{ background: "rgba(0,122,255,0.2)", color: "#60AEFF", border: "1px solid rgba(0,122,255,0.3)" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,122,255,0.35)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,122,255,0.2)"; }}
+                  >
+                    +{labels[wall]}{t.fpWindowWord}
+                  </button>
+                );
+              });
+            })()}
+            {/* Add-door buttons. Multi-door: each click adds a new door
+                bound to the chosen edge (polygon) or cardinal wall (rect). */}
+            <div className="flex items-center gap-0.5 ml-1">
+              <span className="text-[10px] text-gray-500 mr-0.5">+{t.fpDoorLabel}</span>
+              {(() => {
+                if (roomShape && roomShape.preset !== "rect") {
+                  const edges = getEdges(roomShape.points)
+                    .filter(e => e.length >= (doorLenCm ?? 80));
+                  const seen: Record<string, number> = { back: 0, front: 0, left: 0, right: 0 };
+                  return edges.map(e => {
+                    seen[e.facing] += 1;
+                    const sameFacingCount = edges.filter(x => x.facing === e.facing).length;
+                    const idx = seen[e.facing];
+                    const showIdx = sameFacingCount > 1;
+                    const labels = t.fpWallLabels;
+                    return (
+                      <button key={`door-${e.facing}-${e.i}`}
+                        onClick={() => handleAddDoorOnEdge(e)}
+                        className="text-[10px] px-1.5 py-0.5 rounded font-semibold transition-all"
+                        style={{ background: "rgba(124,58,237,0.2)", color: "#A78BFA", border: "1px solid rgba(124,58,237,0.3)" }}
+                        title={`${(e.length / 100).toFixed(2)}m`}
+                      >
+                        {labels[e.facing]}{showIdx ? `${idx}` : ""}
+                      </button>
+                    );
+                  });
+                }
+                return (["back","front","left","right"] as const).map(w => {
+                  const labels = t.fpWallLabels;
+                  const wallLen = (w === "back" || w === "front") ? roomW : roomD;
+                  if (wallLen <= 100) return null;
+                  return (
+                    <button key={`door-${w}`} onClick={() => handleAddDoorCardinal(w)}
                       className="text-[10px] px-1.5 py-0.5 rounded font-semibold transition-all"
-                      style={doorWall === w
-                        ? { background: "#007AFF", color: "#fff" }
-                        : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }
-                      }>
+                      style={{ background: "rgba(124,58,237,0.2)", color: "#A78BFA", border: "1px solid rgba(124,58,237,0.3)" }}>
                       {labels[w]}
                     </button>
                   );
-                })}
-              </div>
-            )}
+                });
+              })()}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Zoomable SVG container */}
-      <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: "top center" }}>
+      {/* Zoomable SVG container — top padding so canvas doesn't crowd the toolbar */}
+      <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: "top center", marginTop: 28 }}>
       <div className="relative" style={{ width: svgW + 60, height: svgH + 60 }}>
         {/* Left dimension */}
         <div className="absolute text-[10px] text-gray-600 font-mono"
@@ -967,8 +1156,10 @@ export default function FloorPlan() {
               box so the "bitten-out" region reads as outside-the-room. */}
           {roomShape && roomShape.preset !== "rect" ? (
             <>
-              {/* Dark mask for out-of-polygon region: use even-odd fill with
-                  an outer ring (the bounding box) and the polygon as a hole. */}
+              {/* Light tint for out-of-polygon region: even-odd fill with the
+                  polygon as a hole. Kept semi-transparent so the floor / grid
+                  still read through — the polygon outline below is the
+                  authoritative shape indicator. */}
               <path
                 d={
                   `M 0 0 L ${svgW} 0 L ${svgW} ${svgH} L 0 ${svgH} Z ` +
@@ -976,6 +1167,7 @@ export default function FloorPlan() {
                   ` Z`
                 }
                 fill="#1a1c28"
+                fillOpacity={0.35}
                 fillRule="evenodd"
                 style={{ pointerEvents: "none" }}
               />
@@ -1049,28 +1241,77 @@ export default function FloorPlan() {
           )}
 
           {/* Windows */}
-          {roomWindows.map(win => (
-            <WindowSVG key={win.id} win={win} svgW={svgW} svgH={svgH} scale={scale}
-              isEditMode={editWindows}
-              onMoveDown={(e) => startWinDrag(e, win, "move")}
-              onStartDown={(e) => startWinDrag(e, win, "start")}
-              onEndDown={(e) => startWinDrag(e, win, "end")}
-            />
-          ))}
+          {roomWindows.map(win => {
+            // Resolve polygon edge for inner-edge windows
+            let polygonEdge: { x1: number; z1: number; x2: number; z2: number; length: number } | undefined;
+            if (win.edgeIndex != null && roomShape && roomShape.preset !== "rect") {
+              const edges = getEdges(roomShape.points);
+              const e = edges.find(x => x.i === win.edgeIndex);
+              if (e) polygonEdge = { x1: e.x1, z1: e.z1, x2: e.x2, z2: e.z2, length: e.length };
+            }
+            return (
+              <WindowSVG key={win.id} win={win} svgW={svgW} svgH={svgH} scale={scale}
+                isEditMode={editWindows}
+                polygonEdge={polygonEdge}
+                onMoveDown={(e) => startWinDrag(e, win, "move")}
+                onStartDown={(e) => startWinDrag(e, win, "start")}
+                onEndDown={(e) => startWinDrag(e, win, "end")}
+              />
+            );
+          })}
 
           {/* Window edit/delete buttons in edit mode */}
           {editWindows && roomWindows.map(win => {
             const R = 9;
-            const mid = (win.pos + win.len / 2) * scale;
             const clampX = (v: number) => Math.max(R, Math.min(svgW - R, v));
             const clampY = (v: number) => Math.max(R, Math.min(svgH - R, v));
-            const horiz = win.wall === "back" || win.wall === "front";
             let dx: number, dy: number, sx: number, sy: number;
+
+            // Polygon-bound window: place buttons at the window midpoint on
+            // the actual edge, offset slightly into the room interior.
+            if (win.edgeIndex != null && roomShape && roomShape.preset !== "rect") {
+              const edges = getEdges(roomShape.points);
+              const e = edges.find(x => x.i === win.edgeIndex);
+              if (e) {
+                const ux = (e.x2 - e.x1) / e.length;
+                const uz = (e.z2 - e.z1) / e.length;
+                const tMid = win.pos + win.len / 2;
+                const mx = (e.x1 + ux * tMid) * scale;
+                const my = (e.z1 + uz * tMid) * scale;
+                // Inward normal in scale-pixels (15px nudge into room)
+                const inX = e.nx * 15;
+                const inY = e.nz * 15;
+                dx = clampX(mx + inX);
+                dy = clampY(my + inY);
+                // Edit button: along the edge direction, ~22px before delete
+                sx = clampX(dx - ux * 22);
+                sy = clampY(dy - uz * 22);
+                return (
+                  <g key={`btns-${win.id}`}>
+                    <g style={{ cursor: "pointer" }}
+                      onClick={(ev) => { ev.stopPropagation(); setSelectedWinId(win.id); setDoorSelected(false); }}>
+                      <circle cx={sx} cy={sy} r={R} fill="#3B82F6" opacity={selectedWinId === win.id ? 1 : 0.85} />
+                      <text x={sx} y={sy} textAnchor="middle" dominantBaseline="middle"
+                        fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✎</text>
+                    </g>
+                    <g style={{ cursor: "pointer" }}
+                      onClick={(ev) => { ev.stopPropagation(); removeWindow(activeRoom, win.id); if (selectedWinId === win.id) setSelectedWinId(null); }}>
+                      <circle cx={dx} cy={dy} r={R} fill="#EF4444" opacity={0.9} />
+                      <text x={dx} y={dy} textAnchor="middle" dominantBaseline="middle"
+                        fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✕</text>
+                    </g>
+                  </g>
+                );
+              }
+            }
+
+            // Cardinal-bound window (rect rooms): old bbox-edge layout
+            const mid = (win.pos + win.len / 2) * scale;
+            const horiz = win.wall === "back" || win.wall === "front";
             if (win.wall === "back")        { dx = clampX(mid); dy = R + 4; }
             else if (win.wall === "front")  { dx = clampX(mid); dy = svgH - R - 4; }
             else if (win.wall === "right")  { dx = svgW - R - 4; dy = clampY(mid); }
             else                            { dx = R + 4;        dy = clampY(mid); }
-            // Place size-edit button beside delete, along the wall axis
             if (horiz) { sx = clampX(dx - R * 2.2); sy = dy; }
             else       { sx = dx;                   sy = clampY(dy - R * 2.2); }
             return (
@@ -1091,52 +1332,85 @@ export default function FloorPlan() {
             );
           })}
 
-          {/* Door (draggable/deletable in edit mode) */}
-          {hasDoor ? (
-            <g>
-              <DoorSVG
-                svgW={svgW} svgH={svgH}
-                doorPosCm={doorPosCm} doorLenCm={doorLenCm}
-                roomWidthCm={roomW} roomDepthCm={roomD}
-                doorWall={doorWall}
-                scale={scale}
-                isEditMode={editWindows}
-                onPointerDown={startDoorDrag}
-              />
-              {/* Edit/Delete door buttons — positioned near door on active wall */}
-              {editWindows && (() => {
-                const R = 9;
-                const isHoriz = doorWall === "top" || doorWall === "bottom";
-                const wallLen = isHoriz ? roomW : roomD;
-                const doorWpx = Math.min(doorLenCm, wallLen) * scale;
-                const doorMid = doorPosCm * scale + doorWpx / 2;
-                let cx: number, cy: number;
-                if (doorWall === "bottom")      { cx = doorMid; cy = svgH - 14; }
-                else if (doorWall === "top")    { cx = doorMid; cy = 14; }
-                else if (doorWall === "left")   { cx = 14; cy = doorMid; }
-                else                            { cx = svgW - 14; cy = doorMid; }
-                // Size-edit button offset along the wall axis
-                const sx = isHoriz ? Math.max(R, Math.min(svgW - R, cx - R * 2.2)) : cx;
-                const sy = isHoriz ? cy : Math.max(R, Math.min(svgH - R, cy - R * 2.2));
-                return (
-                  <g>
-                    <g style={{ cursor: "pointer" }}
-                      onClick={(e) => { e.stopPropagation(); setDoorSelected(true); setSelectedWinId(null); }}>
-                      <circle cx={sx} cy={sy} r={R} fill="#3B82F6" opacity={doorSelected ? 1 : 0.85} />
-                      <text x={sx} y={sy} textAnchor="middle" dominantBaseline="middle"
-                        fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✎</text>
+          {/* Doors — multi-door, each rendered with cardinal or polygon-edge geometry */}
+          {allDoors.map(d => {
+            // Resolve polygon edge for inner-edge doors
+            let polygonEdge: { x1: number; z1: number; x2: number; z2: number; length: number; nx: number; nz: number } | undefined;
+            if (d.edgeIndex != null && roomShape && roomShape.preset !== "rect") {
+              const edges = getEdges(roomShape.points);
+              const e = edges.find(x => x.i === d.edgeIndex);
+              if (e) polygonEdge = { x1: e.x1, z1: e.z1, x2: e.x2, z2: e.z2, length: e.length, nx: e.nx, nz: e.nz };
+            }
+            // Cardinal-wall coord (DoorWall enum) for legacy DoorSVG path
+            const cardinalDoorWall: DoorWall =
+              d.wall === "back" ? "top" : d.wall === "front" ? "bottom" : d.wall;
+            return (
+              <g key={d.id}>
+                <DoorSVG
+                  svgW={svgW} svgH={svgH}
+                  doorPosCm={d.pos} doorLenCm={d.len}
+                  roomWidthCm={roomW} roomDepthCm={roomD}
+                  doorWall={cardinalDoorWall}
+                  scale={scale}
+                  isEditMode={editWindows}
+                  polygonEdge={polygonEdge}
+                  onPointerDown={editWindows ? (e) => startDoorDrag(e, d.id) : (() => {})}
+                />
+                {/* Per-door delete/edit buttons */}
+                {editWindows && (() => {
+                  const R = 9;
+                  const clampX = (v: number) => Math.max(R, Math.min(svgW - R, v));
+                  const clampY = (v: number) => Math.max(R, Math.min(svgH - R, v));
+                  let dx: number, dy: number, sx: number, sy: number;
+                  if (polygonEdge) {
+                    const ux = (polygonEdge.x2 - polygonEdge.x1) / polygonEdge.length;
+                    const uz = (polygonEdge.z2 - polygonEdge.z1) / polygonEdge.length;
+                    const tMid = d.pos + d.len / 2;
+                    const mx = (polygonEdge.x1 + ux * tMid) * scale;
+                    const my = (polygonEdge.z1 + uz * tMid) * scale;
+                    dx = clampX(mx + polygonEdge.nx * 15);
+                    dy = clampY(my + polygonEdge.nz * 15);
+                    sx = clampX(dx - ux * 22);
+                    sy = clampY(dy - uz * 22);
+                  } else {
+                    const isHoriz = cardinalDoorWall === "top" || cardinalDoorWall === "bottom";
+                    const wallLen = isHoriz ? roomW : roomD;
+                    const doorWpx = Math.min(d.len, wallLen) * scale;
+                    const doorMid = d.pos * scale + doorWpx / 2;
+                    if (cardinalDoorWall === "bottom")      { dx = doorMid; dy = svgH - 14; }
+                    else if (cardinalDoorWall === "top")    { dx = doorMid; dy = 14; }
+                    else if (cardinalDoorWall === "left")   { dx = 14; dy = doorMid; }
+                    else                                    { dx = svgW - 14; dy = doorMid; }
+                    sx = isHoriz ? clampX(dx - R * 2.2) : dx;
+                    sy = isHoriz ? dy : clampY(dy - R * 2.2);
+                  }
+                  const isLegacy = d.id === `${activeRoom}-legacy-door`;
+                  return (
+                    <g>
+                      <g style={{ cursor: "pointer" }}
+                        onClick={(ev) => { ev.stopPropagation(); setDoorSelected(true); setSelectedWinId(null); setSelectedDoorId(d.id); }}>
+                        <circle cx={sx} cy={sy} r={R} fill="#3B82F6" opacity={(doorSelected && selectedDoorId === d.id) ? 1 : 0.85} />
+                        <text x={sx} y={sy} textAnchor="middle" dominantBaseline="middle"
+                          fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✎</text>
+                      </g>
+                      <g style={{ cursor: "pointer" }}
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          if (isLegacy) setRoomHasDoor(activeRoom, false);
+                          else removeDoor(activeRoom, d.id);
+                          setDoorSelected(false);
+                        }}>
+                        <circle cx={dx} cy={dy} r={R} fill="#EF4444" opacity={0.9} />
+                        <text x={dx} y={dy} textAnchor="middle" dominantBaseline="middle"
+                          fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✕</text>
+                      </g>
                     </g>
-                    <g style={{ cursor: "pointer" }}
-                      onClick={(e) => { e.stopPropagation(); setRoomHasDoor(activeRoom, false); setDoorSelected(false); }}>
-                      <circle cx={cx} cy={cy} r={R} fill="#EF4444" opacity={0.9} />
-                      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
-                        fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✕</text>
-                    </g>
-                  </g>
-                );
-              })()}
-            </g>
-          ) : (
+                  );
+                })()}
+              </g>
+            );
+          })}
+          {false && (
             /* No door — show "add door" button in edit mode, near active wall */
             editWindows && (() => {
               let bx: number, by: number;
@@ -1149,7 +1423,7 @@ export default function FloorPlan() {
                   onClick={(e) => { e.stopPropagation(); setRoomHasDoor(activeRoom, true); }}>
                   <rect x={bx} y={by} width={60} height={18} fill="#10B981" opacity={0.85} rx={4} />
                   <text x={bx + 30} y={by + 9} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={10} fill="white" style={{ pointerEvents: "none" }}>＋添加门</text>
+                    fontSize={10} fill="white" style={{ pointerEvents: "none" }}>{t.fpAddDoorBtn}</text>
                 </g>
               );
             })()
@@ -1255,7 +1529,7 @@ export default function FloorPlan() {
                   style={{ cursor: "pointer" }}
                   onPointerDown={(e) => {
                     e.stopPropagation();
-                    if (window.confirm("删除这条管线？")) {
+                    if (window.confirm(t.fpDeletePipeConfirm)) {
                       useDesignerStore.getState().removeRoutingConnection(activeRoom, conn.id);
                     }
                   }}
@@ -1350,7 +1624,7 @@ export default function FloorPlan() {
           {roomState.placedItems.length === 0 && (
             <text x={svgW / 2} y={svgH / 2} textAnchor="middle" dominantBaseline="middle"
               fontSize={12} fill="#3A4055">
-              从左侧选择家具，点击即可放置
+              {t.fpFurnitureHint}
             </text>
           )}
         </svg>
@@ -1372,8 +1646,31 @@ export default function FloorPlan() {
       {editWindows && (selectedWinId || doorSelected) && (() => {
         const selectedWin = selectedWinId ? roomWindows.find(w => w.id === selectedWinId) ?? null : null;
         if (doorSelected) {
-          const isHoriz = doorWall === "top" || doorWall === "bottom";
-          const wallLen = isHoriz ? roomW : roomD;
+          const sel = allDoors.find(d => d.id === selectedDoorId) ?? allDoors[0];
+          if (!sel) return null;
+          const isLegacy = sel.id === `${activeRoom}-legacy-door`;
+          // Wall length: edge length for polygon-edge doors, bbox wall otherwise
+          let wallLen: number;
+          if (sel.edgeIndex != null && roomShape && roomShape.preset !== "rect") {
+            const edges = getEdges(roomShape.points);
+            const e = edges.find(x => x.i === sel.edgeIndex);
+            wallLen = e ? e.length : ((sel.wall === "back" || sel.wall === "front") ? roomW : roomD);
+          } else {
+            wallLen = (sel.wall === "back" || sel.wall === "front") ? roomW : roomD;
+          }
+          const dLen = sel.len;
+          const dH   = sel.h ?? 200;
+          const dStyle = sel.style ?? "wood_panel";
+          const patchDoor = (patch: Partial<typeof sel>) => {
+            if (isLegacy) {
+              // Migrate legacy single-door to roomDoors[] on first edit
+              if (patch.len   != null) setDoorLen(activeRoom, patch.len);
+              if (patch.h     != null) setDoorH(activeRoom, patch.h);
+              if (patch.style != null) setDoorStyle(activeRoom, patch.style);
+            } else {
+              updateDoor(activeRoom, sel.id, patch);
+            }
+          };
           return (
             <div className={isLandscape
               ? "mt-3 mx-auto max-w-lg w-full bg-gray-800/80 rounded-xl border border-gray-700/50 backdrop-blur flex flex-col gap-2 shrink-0 px-4 py-3"
@@ -1388,38 +1685,38 @@ export default function FloorPlan() {
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="text-[10px] text-gray-400">{t.fpWidth}</span>
-                  <span className="text-[10px] text-gray-300 font-mono">{(doorLenCm / 100).toFixed(2)}m</span>
+                  <span className="text-[10px] text-gray-300 font-mono">{(dLen / 100).toFixed(2)}m</span>
                 </div>
                 <input type="range" min={50} max={Math.min(200, wallLen)} step={5}
-                  value={doorLenCm}
-                  onChange={e => setDoorLen(activeRoom, parseInt(e.target.value))}
+                  value={dLen}
+                  onChange={e => patchDoor({ len: parseInt(e.target.value) })}
                   className="w-full accent-blue-500 h-2 md:h-1.5" />
               </div>
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="text-[10px] text-gray-400">{t.fpHeight}</span>
-                  <span className="text-[10px] text-gray-300 font-mono">{(doorHCm / 100).toFixed(2)}m</span>
+                  <span className="text-[10px] text-gray-300 font-mono">{(dH / 100).toFixed(2)}m</span>
                 </div>
                 <input type="range" min={140} max={260} step={5}
-                  value={doorHCm}
-                  onChange={e => setDoorH(activeRoom, parseInt(e.target.value))}
+                  value={dH}
+                  onChange={e => patchDoor({ h: parseInt(e.target.value) })}
                   className="w-full accent-blue-500 h-2 md:h-1.5" />
               </div>
               {/* Door style selector */}
               <div>
-                <div className="text-[10px] text-gray-400 mb-1">款式</div>
+                <div className="text-[10px] text-gray-400 mb-1">{t.fpStyleLabel}</div>
                 <div className="grid grid-cols-4 gap-1">
                   {([
-                    { key: "wood_panel",    label: "实木" },
-                    { key: "frosted_glass", label: "磨砂玻璃" },
-                    { key: "sliding_barn",  label: "推拉谷仓" },
-                    { key: "french_double", label: "法式对开" },
+                    { key: "wood_panel",    label: t.fpDoorStyleWood },
+                    { key: "frosted_glass", label: t.fpDoorStyleFrosted },
+                    { key: "sliding_barn",  label: t.fpDoorStyleBarn },
+                    { key: "french_double", label: t.fpDoorStyleFrench },
                   ] as const).map(s => {
-                    const active = doorStyle === s.key;
+                    const active = dStyle === s.key;
                     return (
                       <button
                         key={s.key}
-                        onClick={() => setDoorStyle(activeRoom, s.key)}
+                        onClick={() => patchDoor({ style: s.key })}
                         className="text-[10px] py-1.5 rounded-md transition-all"
                         style={
                           active
@@ -1437,7 +1734,16 @@ export default function FloorPlan() {
           );
         }
         if (!selectedWin) return null;
-        const wallLen = (selectedWin.wall === "back" || selectedWin.wall === "front") ? roomW : roomD;
+        // For polygon-bound windows (edgeIndex set), the slider range is the
+        // length of THAT edge. For cardinal-bound windows it's the bbox wall.
+        let wallLen: number;
+        if (selectedWin.edgeIndex != null && roomShape && roomShape.preset !== "rect") {
+          const edges = getEdges(roomShape.points);
+          const e = edges.find(x => x.i === selectedWin.edgeIndex);
+          wallLen = e ? e.length : ((selectedWin.wall === "back" || selectedWin.wall === "front") ? roomW : roomD);
+        } else {
+          wallLen = (selectedWin.wall === "back" || selectedWin.wall === "front") ? roomW : roomD;
+        }
         const winH   = selectedWin.h   ?? 150;
         const winSill = selectedWin.sill ?? 90;
         const ceilH = def.height;
@@ -1486,15 +1792,15 @@ export default function FloorPlan() {
             </div>
             {/* Window style selector */}
             <div>
-              <div className="text-[10px] text-gray-400 mb-1">款式</div>
+              <div className="text-[10px] text-gray-400 mb-1">{t.fpStyleLabel}</div>
               <div className="grid grid-cols-3 gap-1">
                 {([
-                  { key: "sliding",  label: "推拉窗" },
-                  { key: "casement", label: "平开窗" },
-                  { key: "fixed",    label: "固定观景" },
-                  { key: "louvered", label: "百叶窗" },
-                  { key: "security", label: "防盗窗" },
-                  { key: "wooden",   label: "木窗" },
+                  { key: "sliding",  label: t.fpWindowStyleSliding },
+                  { key: "casement", label: t.fpWindowStyleCasement },
+                  { key: "fixed",    label: t.fpWindowStyleFixed },
+                  { key: "louvered", label: t.fpWindowStyleLouvered },
+                  { key: "security", label: t.fpWindowStyleSecurity },
+                  { key: "wooden",   label: t.fpWindowStyleWooden },
                 ] as const).map(s => {
                   const active = (selectedWin.style ?? "sliding") === s.key;
                   return (
@@ -1523,24 +1829,24 @@ export default function FloorPlan() {
         <div className={isLandscape
           ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] w-72 bg-gray-900/98 rounded-2xl px-4 py-3 border border-blue-500/50 shadow-2xl backdrop-blur-md flex items-center gap-2"
           : "flex items-center gap-2 bg-gray-900/95 rounded-t-xl px-4 py-3 border-t border-blue-500/40 backdrop-blur-md w-full"}>
-          <span className="text-xs text-blue-300 font-semibold flex-1">已选 {selectedInstanceIds.length} 件</span>
+          <span className="text-xs text-blue-300 font-semibold flex-1">{t.fpMultiSelected(selectedInstanceIds.length)}</span>
           <button
             onClick={() => copyToClipboard(selectedInstanceIds)}
             className="px-2.5 py-1 bg-blue-600/80 hover:bg-blue-600 text-white text-[11px] font-semibold rounded-lg transition-colors"
           >
-            ⧉ 复制
+            {t.fpMultiCopy}
           </button>
           <button
             onClick={() => removeItems(selectedInstanceIds)}
             className="px-2.5 py-1 bg-red-600/80 hover:bg-red-600 text-white text-[11px] font-semibold rounded-lg transition-colors"
           >
-            ✕ 删除
+            {t.fpMultiDelete}
           </button>
           <button
             onClick={() => setSelection([])}
             className="px-2.5 py-1 bg-gray-600/80 hover:bg-gray-600 text-gray-200 text-[11px] font-semibold rounded-lg transition-colors"
           >
-            取消
+            {t.fpMultiCancel}
           </button>
         </div>
       )}
@@ -1712,22 +2018,28 @@ export default function FloorPlan() {
 }
 
 // ─── Routing mode toggle (pipes / wires) ────────────────────
-const ROUTING_KINDS: Array<{ id: import("@/lib/types").RoutingKind; label: string; color: string; emoji: string }> = [
-  { id: "wire",       label: "电线",  color: "#FACC15", emoji: "⚡" },
-  { id: "cold-water", label: "冷水",  color: "#3B82F6", emoji: "🔵" },
-  { id: "hot-water",  label: "热水",  color: "#EF4444", emoji: "🔴" },
-  { id: "drain",      label: "下水",  color: "#6B7280", emoji: "⚫" },
+const ROUTING_KINDS: Array<{ id: import("@/lib/types").RoutingKind; color: string; emoji: string }> = [
+  { id: "wire",       color: "#FACC15", emoji: "⚡" },
+  { id: "cold-water", color: "#3B82F6", emoji: "🔵" },
+  { id: "hot-water",  color: "#EF4444", emoji: "🔴" },
+  { id: "drain",      color: "#6B7280", emoji: "⚫" },
 ];
 
 function RoutingModeButton() {
   const mode = useDesignerStore(s => s.routingMode);
   const setMode = useDesignerStore(s => s.setRoutingMode);
   const [open, setOpen] = useState(false);
+  const t = useT();
+  const labelFor = (id: import("@/lib/types").RoutingKind) =>
+    id === "wire" ? t.fpRoutingWire :
+    id === "cold-water" ? t.fpRoutingCold :
+    id === "hot-water" ? t.fpRoutingHot :
+    t.fpRoutingDrain;
   return (
     <div className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        title="走线/走管模式：选择类型后点两个点位即连接"
+        title={t.fpRoutingMenuTitle}
         className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all"
         style={
           mode
@@ -1736,14 +2048,14 @@ function RoutingModeButton() {
         }
       >
         <span>🔧</span>
-        <span>{mode ? `${ROUTING_KINDS.find(k => k.id === mode)?.label}` : "走管"}</span>
+        <span>{mode ? labelFor(mode) : t.fpRoutingDefault}</span>
       </button>
       {open && (
         <div className="absolute top-full mt-1 right-0 z-20 flex flex-col gap-1 p-1 rounded-lg shadow-lg" style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.15)" }}>
           <button
             onClick={() => { setMode(null); setOpen(false); }}
             className="px-2 py-1 text-[11px] text-left rounded text-gray-300 hover:bg-gray-700"
-          >❌ 退出走管</button>
+          >{t.fpRoutingExit}</button>
           {ROUTING_KINDS.map(k => (
             <button key={k.id}
               onClick={() => { setMode(k.id); setOpen(false); }}
@@ -1752,7 +2064,7 @@ function RoutingModeButton() {
               }`}
               style={mode === k.id ? { background: k.color, color: "#1A1A1A" } : {}}
             >
-              <span>{k.emoji}</span><span>{k.label}</span>
+              <span>{k.emoji}</span><span>{labelFor(k.id)}</span>
             </button>
           ))}
         </div>

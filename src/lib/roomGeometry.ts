@@ -162,10 +162,25 @@ export function findEdgeForWall(
   posCm: number,
   lenCm: number,
   bbox: { maxX: number; maxZ: number },
+  edgeIndexHint?: number,
 ): { edgeIndex: number; startCm: number; edge: EdgeInfo } | null {
   const edges = getEdges(points);
-  // Compute the world-space (x,z) of the door's "start" point given its
-  // wall-relative position (same convention as FloorPlan 2D rendering):
+
+  // Explicit hint path: caller knows exactly which polygon edge owns this
+  // hole, and `posCm` is already in edge-local coords (cm from edge start).
+  // Used for inner-corner walls of L / convex rooms that the cardinal
+  // bbox-projection scheme below can't reach.
+  if (edgeIndexHint != null) {
+    const e = edges.find(x => x.i === edgeIndexHint);
+    if (e && posCm >= -1 && posCm + lenCm <= e.length + 1) {
+      return { edgeIndex: e.i, startCm: Math.max(0, posCm), edge: e };
+    }
+    // Fall through to legacy lookup if the hint is stale (e.g. polygon was
+    // edited and the indexed edge no longer exists / is too short).
+  }
+
+  // Legacy: project the (wall, posCm) tuple to a world point on the bbox
+  // perimeter, then find the polygon edge whose line passes through it.
   //   back:  (posCm, 0)           running +x
   //   right: (maxX,  posCm)       running +z
   //   front: (posCm, maxZ)        running +x
@@ -180,8 +195,6 @@ export function findEdgeForWall(
   for (const e of candidates) {
     const dx = e.x2 - e.x1, dz = e.z2 - e.z1;
     const t = ((wx - e.x1) * dx + (wz - e.z1) * dz) / e.length;
-    // Tolerance: point must be close to the edge line (within 2 cm),
-    // and the span [t, t+lenCm] must fit inside [0, length].
     const perpDist = Math.abs((wx - e.x1) * e.nx + (wz - e.z1) * e.nz);
     if (perpDist < 2 && t >= -1 && t + lenCm <= e.length + 1) {
       return { edgeIndex: e.i, startCm: Math.max(0, t), edge: e };

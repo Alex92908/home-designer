@@ -286,6 +286,20 @@ export default function RightPanelAll() {
         >
           {t.resetBtn}
         </button>
+        {/* Wipe Everything — destructive: removes default rooms too. Two-step
+            confirm via two native dialogs (title + final confirm) so accidental
+            taps can't nuke the workspace. */}
+        <button
+          onClick={() => {
+            if (!window.confirm(`${t.wipeTitle}\n\n${t.wipeDesc}`)) return;
+            if (!window.confirm(t.wipeConfirm)) return;
+            useDesignerStore.getState().wipeAll();
+          }}
+          className="w-full py-2 text-sm font-bold rounded-xl transition-all"
+          style={{ background: "#E11D48", color: "#fff", border: "1px solid #BE123C" }}
+        >
+          {t.wipeBtn}
+        </button>
       </div>
     </aside>
   );

@@ -141,7 +141,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 1059,
+          "byteLength": 1052,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 2898
@@ -157,8 +157,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 1060,
-          "byteLength": 721,
+          "byteOffset": 1052,
+          "byteLength": 716,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -175,8 +175,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 1784,
-          "byteLength": 606,
+          "byteOffset": 1768,
+          "byteLength": 602,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -193,8 +193,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 2392,
-          "byteLength": 323,
+          "byteOffset": 2372,
+          "byteLength": 322,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -211,8 +211,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 2716,
-          "byteLength": 2337,
+          "byteOffset": 2696,
+          "byteLength": 2340,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 548
@@ -228,8 +228,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 5056,
-          "byteLength": 1912,
+          "byteOffset": 5036,
+          "byteLength": 1911,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
           "count": 548
@@ -245,8 +245,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 6968,
-          "byteLength": 1327,
+          "byteOffset": 6948,
+          "byteLength": 1336,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 324
@@ -262,8 +262,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 8296,
-          "byteLength": 1045,
+          "byteOffset": 8284,
+          "byteLength": 1051,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
           "count": 324
@@ -279,8 +279,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 9344,
-          "byteLength": 789,
+          "byteOffset": 9336,
+          "byteLength": 805,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 176
@@ -296,8 +296,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 10136,
-          "byteLength": 581,
+          "byteOffset": 10144,
+          "byteLength": 583,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
           "count": 176
@@ -347,7 +347,7 @@
   "buffers": [
     {
       "uri": "painted_wooden_cabinet_02.bin",
-      "byteLength": 10720
+      "byteLength": 10728
     },
     {
       "byteLength": 22564,
@@ -460,14 +460,14 @@
       ],
       "rotation": [
         0,
-        0.04012662995534695,
+        0.04012662995534696,
         0,
         0.9991946024516078
       ],
       "scale": [
-        0.41275954251715813,
+        0.4127595425171581,
         0.41275954246520996,
-        0.41275954251715813
+        0.4127595425171581
       ],
       "mesh": 2
     }

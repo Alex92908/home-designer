@@ -99,7 +99,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 9036,
+          "byteLength": 8950,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 24012
@@ -115,8 +115,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 9036,
-          "byteLength": 8137,
+          "byteOffset": 8952,
+          "byteLength": 8143,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -133,8 +133,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 17176,
-          "byteLength": 2113,
+          "byteOffset": 17096,
+          "byteLength": 2114,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -151,8 +151,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 19292,
-          "byteLength": 21645,
+          "byteOffset": 19212,
+          "byteLength": 21748,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 4512
@@ -168,8 +168,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 40940,
-          "byteLength": 14088,
+          "byteOffset": 40960,
+          "byteLength": 14126,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
           "count": 4512
@@ -185,8 +185,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 55028,
-          "byteLength": 5625,
+          "byteOffset": 55088,
+          "byteLength": 5630,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 1148
@@ -202,8 +202,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 60656,
-          "byteLength": 4471,
+          "byteOffset": 60720,
+          "byteLength": 4476,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
           "count": 1148
@@ -262,7 +262,7 @@
   "buffers": [
     {
       "uri": "sofa_03.bin",
-      "byteLength": 65128
+      "byteLength": 65196
     },
     {
       "byteLength": 138584,

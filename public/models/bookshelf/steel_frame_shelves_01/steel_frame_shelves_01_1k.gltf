@@ -57,7 +57,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 4693,
+          "byteLength": 4698,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 13044
@@ -73,8 +73,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 4696,
-          "byteLength": 6398,
+          "byteOffset": 4700,
+          "byteLength": 6432,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -91,8 +91,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 11096,
-          "byteLength": 14164,
+          "byteOffset": 11132,
+          "byteLength": 14196,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 3632
@@ -108,8 +108,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 25260,
-          "byteLength": 10542,
+          "byteOffset": 25328,
+          "byteLength": 10477,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
           "count": 3632
@@ -159,7 +159,7 @@
   "buffers": [
     {
       "uri": "steel_frame_shelves_01.bin",
-      "byteLength": 35804
+      "byteLength": 35808
     },
     {
       "byteLength": 84200,

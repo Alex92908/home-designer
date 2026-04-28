@@ -57,7 +57,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 2164,
+          "byteLength": 2146,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 6006
@@ -73,8 +73,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 2164,
-          "byteLength": 3231,
+          "byteOffset": 2148,
+          "byteLength": 3225,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -91,8 +91,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 5396,
-          "byteLength": 8319,
+          "byteOffset": 5376,
+          "byteLength": 8287,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 1773
@@ -108,8 +108,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 13716,
-          "byteLength": 5749,
+          "byteOffset": 13664,
+          "byteLength": 5730,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
           "count": 1773
@@ -159,7 +159,7 @@
   "buffers": [
     {
       "uri": "ClassicNightstand_01.bin",
-      "byteLength": 19468
+      "byteLength": 19396
     },
     {
       "byteLength": 40380,

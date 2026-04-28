@@ -113,7 +113,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 6234,
+          "byteLength": 6281,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 17628
@@ -129,8 +129,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 6236,
-          "byteLength": 5640,
+          "byteOffset": 6284,
+          "byteLength": 5637,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -147,7 +147,7 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 11876,
+          "byteOffset": 11924,
           "byteLength": 227,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
@@ -165,7 +165,7 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 12104,
+          "byteOffset": 12152,
           "byteLength": 195,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
@@ -183,7 +183,7 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 12300,
+          "byteOffset": 12348,
           "byteLength": 1546,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
@@ -200,8 +200,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 13848,
-          "byteLength": 10440,
+          "byteOffset": 13896,
+          "byteLength": 10105,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 2988
@@ -217,8 +217,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 24288,
-          "byteLength": 8870,
+          "byteOffset": 24004,
+          "byteLength": 8838,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
           "count": 2988
@@ -234,7 +234,7 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 33160,
+          "byteOffset": 32844,
           "byteLength": 1029,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
@@ -274,7 +274,7 @@
   "buffers": [
     {
       "uri": "scene.bin",
-      "byteLength": 34192
+      "byteLength": 33876
     },
     {
       "byteLength": 88296,
@@ -337,8 +337,8 @@
             "NORMAL": 3,
             "TANGENT": 4,
             "TEXCOORD_0": 5,
-            "POSITION": 8,
-            "TEXCOORD_1": 5
+            "TEXCOORD_1": 5,
+            "POSITION": 8
           },
           "mode": 4,
           "material": 1,

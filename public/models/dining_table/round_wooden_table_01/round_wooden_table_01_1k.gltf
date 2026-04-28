@@ -15,7 +15,7 @@
     {
       "type": "VEC3",
       "componentType": 5120,
-      "count": 5148,
+      "count": 5128,
       "normalized": true,
       "byteOffset": 0,
       "bufferView": 1
@@ -39,7 +39,7 @@
     {
       "type": "VEC3",
       "componentType": 5122,
-      "count": 5148,
+      "count": 5128,
       "max": [
         32767,
         23534,
@@ -57,7 +57,7 @@
     {
       "type": "VEC2",
       "componentType": 5123,
-      "count": 5148,
+      "count": 5128,
       "normalized": true,
       "byteOffset": 0,
       "bufferView": 4
@@ -99,7 +99,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 9705,
+          "byteLength": 9700,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 25920
@@ -109,32 +109,32 @@
     {
       "buffer": 1,
       "byteOffset": 51840,
-      "byteLength": 20592,
+      "byteLength": 20512,
       "target": 34962,
       "byteStride": 4,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 9708,
-          "byteLength": 9336,
+          "byteOffset": 9700,
+          "byteLength": 9347,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
-          "count": 5148
+          "count": 5128
         }
       }
     },
     {
       "buffer": 1,
-      "byteOffset": 72432,
+      "byteOffset": 72352,
       "byteLength": 3264,
       "target": 34962,
       "byteStride": 4,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 19044,
-          "byteLength": 832,
+          "byteOffset": 19048,
+          "byteLength": 839,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -144,49 +144,49 @@
     },
     {
       "buffer": 1,
-      "byteOffset": 75696,
-      "byteLength": 41184,
+      "byteOffset": 75616,
+      "byteLength": 41024,
       "target": 34962,
       "byteStride": 8,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 19876,
-          "byteLength": 23207,
+          "byteOffset": 19888,
+          "byteLength": 23070,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
-          "count": 5148
+          "count": 5128
         }
       }
     },
     {
       "buffer": 1,
-      "byteOffset": 116880,
-      "byteLength": 20592,
+      "byteOffset": 116640,
+      "byteLength": 20512,
       "target": 34962,
       "byteStride": 4,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 43084,
-          "byteLength": 14539,
+          "byteOffset": 42960,
+          "byteLength": 14391,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
-          "count": 5148
+          "count": 5128
         }
       }
     },
     {
       "buffer": 1,
-      "byteOffset": 137472,
+      "byteOffset": 137152,
       "byteLength": 6528,
       "target": 34962,
       "byteStride": 8,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 57624,
-          "byteLength": 3183,
+          "byteOffset": 57352,
+          "byteLength": 3258,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 816
@@ -195,15 +195,15 @@
     },
     {
       "buffer": 1,
-      "byteOffset": 144000,
+      "byteOffset": 143680,
       "byteLength": 3264,
       "target": 34962,
       "byteStride": 4,
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 60808,
-          "byteLength": 2218,
+          "byteOffset": 60612,
+          "byteLength": 2231,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
           "count": 816
@@ -253,10 +253,10 @@
   "buffers": [
     {
       "uri": "round_wooden_table_01.bin",
-      "byteLength": 63028
+      "byteLength": 62844
     },
     {
-      "byteLength": 147264,
+      "byteLength": 146944,
       "extensions": {
         "EXT_meshopt_compression": {
           "fallback": true

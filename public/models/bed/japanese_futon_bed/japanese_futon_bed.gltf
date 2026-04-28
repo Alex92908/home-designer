@@ -71,7 +71,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 0,
-          "byteLength": 19272,
+          "byteLength": 19601,
           "mode": "TRIANGLES",
           "byteStride": 2,
           "count": 53748
@@ -87,8 +87,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 19272,
-          "byteLength": 15782,
+          "byteOffset": 19604,
+          "byteLength": 14851,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -105,8 +105,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 35056,
-          "byteLength": 13369,
+          "byteOffset": 34456,
+          "byteLength": 12924,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,
@@ -123,8 +123,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 48428,
-          "byteLength": 41142,
+          "byteOffset": 47380,
+          "byteLength": 40393,
           "mode": "ATTRIBUTES",
           "byteStride": 8,
           "count": 9422
@@ -140,8 +140,8 @@
       "extensions": {
         "EXT_meshopt_compression": {
           "buffer": 0,
-          "byteOffset": 89572,
-          "byteLength": 22783,
+          "byteOffset": 87776,
+          "byteLength": 20783,
           "mode": "ATTRIBUTES",
           "byteStride": 4,
           "count": 9422
@@ -188,7 +188,7 @@
   "buffers": [
     {
       "uri": "scene.bin",
-      "byteLength": 112356
+      "byteLength": 108560
     },
     {
       "byteLength": 295936,

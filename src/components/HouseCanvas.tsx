@@ -2,17 +2,23 @@
 
 import { useRef, useMemo, useEffect, useState, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, Html } from "@react-three/drei";
+import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky } from "@react-three/drei";
+import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA } from "@react-three/postprocessing";
+import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
-import { ROOM_DEFS, ExteriorSettings, ExteriorWall } from "@/lib/types";
+import { ROOM_DEFS, ExteriorSettings, ExteriorWall, isYardPrefab, isYardZone } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
+import { getOutdoorAssetByKind } from "@/lib/outdoorAssets";
 import { DetailedDecor } from "./DetailedDecor";
+import { PrefabMesh } from "./PrefabRenderer";
+import { ZoneMesh } from "./ZoneRenderer";
 
 // ─── Constants ─────────────────────────────────────────────
 const FLOOR_H = 2.8;
 const WT      = 0.24;
-const OV      = 0.55;
+const OV      = 0.55;   // overhang for pitched roofs
+const FLAT_OV = 1.4;    // deep cantilever overhang for modern flat roof
 
 // ─── Footprint ─────────────────────────────────────────────
 function useFootprint() {
@@ -30,13 +36,21 @@ function useFootprint() {
 }
 
 // ─── Camera ────────────────────────────────────────────────
+// Eye-level perspective — mirrors RoomCanvas style so the exterior feels
+// like a natural continuation of the interior room view, not a toy diorama.
 function CameraRig({ W, D, floors }: { W: number; D: number; floors: number }) {
   const { camera } = useThree();
   useEffect(() => {
     const h    = floors * FLOOR_H;
-    const dist = (Math.max(W, D) + h) * 1.55;
-    camera.position.set(dist * 0.85, dist * 0.55, dist * 0.95);
-    camera.lookAt(0, h * 0.35, 0);
+    // Wide diagonal view — shows pool foreground + full building height,
+    // like the luxury villa reference shots (angled from front-left).
+    const diag = Math.sqrt(W * W + D * D);
+    const dist = diag * 1.55 + 4;
+    // Low diagonal view — pool fills foreground, full building visible
+    camera.position.set(dist * 0.52, Math.max(h * 0.65, 3.5), dist * 1.30);
+    (camera as THREE.PerspectiveCamera).fov = 52;
+    (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+    (camera as THREE.PerspectiveCamera).lookAt(0, h * 0.38, 0);
   }, [W, D, floors]);
   return null;
 }
@@ -44,24 +58,44 @@ function CameraRig({ W, D, floors }: { W: number; D: number; floors: number }) {
 // ─── Roof styles ────────────────────────────────────────────
 
 function FlatRoof({ W, D, color }: { W: number; D: number; color: string }) {
+  const ov = FLAT_OV;
+  const slabW = W + ov * 2, slabD = D + ov * 2;
   return (
     <group>
-      <mesh castShadow>
-        <boxGeometry args={[W + OV * 2, 0.22, D + OV * 2]} />
-        <meshStandardMaterial color={color} roughness={0.9} />
+      {/* Main roof slab — thick for the modernist look */}
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[slabW, 0.30, slabD]} />
+        <meshStandardMaterial color={color} roughness={0.72} metalness={0.01} envMapIntensity={0.35} />
       </mesh>
-      {[
-        { pos: [0, 0.28, -(D / 2 + OV)], args: [W + OV * 2 + WT, 0.35, WT] as [number,number,number] },
-        { pos: [0, 0.28,  (D / 2 + OV)], args: [W + OV * 2 + WT, 0.35, WT] as [number,number,number] },
-        { pos: [-(W / 2 + OV), 0.28, 0], args: [WT, 0.35, D + OV * 2] as [number,number,number] },
-        { pos: [ (W / 2 + OV), 0.28, 0], args: [WT, 0.35, D + OV * 2] as [number,number,number] },
-      ].map((p, i) => (
-        <mesh key={i} position={p.pos as [number,number,number]} castShadow>
+      {/* Wood soffit — thick walnut panels visible under the cantilever overhang */}
+      <mesh position={[0, -0.225, 0]} receiveShadow>
+        <boxGeometry args={[slabW - 0.02, 0.22, slabD - 0.02]} />
+        <meshStandardMaterial color="#8B5A2B" roughness={0.42} metalness={0.0} envMapIntensity={0.55}
+          emissive="#2A1200" emissiveIntensity={0.08} />
+      </mesh>
+      {/* Dark fascia boards on all 4 edges (thin aluminum-look) */}
+      {([
+        { pos: [0, 0.05, -(slabD / 2)], args: [slabW + 0.02, 0.42, 0.05] as [number,number,number] },
+        { pos: [0, 0.05,  (slabD / 2)], args: [slabW + 0.02, 0.42, 0.05] as [number,number,number] },
+        { pos: [-(slabW / 2), 0.05, 0], args: [0.05, 0.42, slabD] as [number,number,number] },
+        { pos: [ (slabW / 2), 0.05, 0], args: [0.05, 0.42, slabD] as [number,number,number] },
+      ] as Array<{ pos: [number,number,number]; args: [number,number,number] }>).map((p, i) => (
+        <mesh key={i} position={p.pos} castShadow>
           <boxGeometry args={p.args} />
-          <meshStandardMaterial color={color} roughness={0.85} />
+          <meshStandardMaterial color="#1C1C1C" roughness={0.40} metalness={0.55} />
         </mesh>
       ))}
     </group>
+  );
+}
+
+function GableRoofMesh({ geo, color }: { geo: THREE.BufferGeometry; color: string }) {
+  const { map, normalMap, roughnessMap } = usePbrSet("roof", "roof_07", [4, 3]);
+  return (
+    <mesh geometry={geo} castShadow>
+      <meshStandardMaterial map={map} normalMap={normalMap} roughnessMap={roughnessMap}
+        color={color} roughness={0.80} metalness={0.02} envMapIntensity={0.30} side={THREE.DoubleSide} />
+    </mesh>
   );
 }
 
@@ -78,8 +112,22 @@ function GableRoof({ W, D, color }: { W: number; D: number; color: string }) {
     return g;
   }, [W, D]);
   return (
+    <Suspense fallback={
+      <mesh geometry={geo} castShadow>
+        <meshStandardMaterial color={color} roughness={0.80} envMapIntensity={0.25} side={THREE.DoubleSide} />
+      </mesh>
+    }>
+      <GableRoofMesh geo={geo} color={color} />
+    </Suspense>
+  );
+}
+
+function HipRoofMesh({ geo, color }: { geo: THREE.BufferGeometry; color: string }) {
+  const { map, normalMap, roughnessMap } = usePbrSet("roof", "roof_07", [4, 3]);
+  return (
     <mesh geometry={geo} castShadow>
-      <meshStandardMaterial color={color} roughness={0.85} side={THREE.DoubleSide} />
+      <meshStandardMaterial map={map} normalMap={normalMap} roughnessMap={roughnessMap}
+        color={color} roughness={0.80} metalness={0.02} envMapIntensity={0.28} side={THREE.DoubleSide} />
     </mesh>
   );
 }
@@ -102,9 +150,13 @@ function HipRoof({ W, D, color, upturn = 0 }: { W: number; D: number; color: str
     return g;
   }, [W, D, upturn]);
   return (
-    <mesh geometry={geo} castShadow>
-      <meshStandardMaterial color={color} roughness={0.85} side={THREE.DoubleSide} />
-    </mesh>
+    <Suspense fallback={
+      <mesh geometry={geo} castShadow>
+        <meshStandardMaterial color={color} roughness={0.82} envMapIntensity={0.25} side={THREE.DoubleSide} />
+      </mesh>
+    }>
+      <HipRoofMesh geo={geo} color={color} />
+    </Suspense>
   );
 }
 
@@ -167,10 +219,108 @@ function RoofSwitch({ W, D, roofStyle, roofColor }: { W: number; D: number; roof
 }
 
 // ─── Wall face ──────────────────────────────────────────────
-function WallFace({ width, height, color, accentColor, hasDoor = false, winCount }: {
-  width: number; height: number; color: string; accentColor: string;
-  hasDoor?: boolean; winCount: number;
+// PBR wall body — loads concrete_wall_007 (smooth plaster / bare concrete).
+// All instances use the same fixed repeat so shared-texture mutation is idempotent.
+function WallBodyTextured({ width, height, color, wallMaterial }: {
+  width: number; height: number; color: string;
+  wallMaterial: import("@/lib/types").WallMaterialType;
 }) {
+  const WALL_REPEAT: [number, number] = [2.0, 1.5];
+  const { map, normalMap, roughnessMap } = usePbrSet("wall", "concrete_wall_007", WALL_REPEAT);
+  // Render = smooth painted plaster — no coarse texture, just a clean surface.
+  // Concrete = exposed bare concrete — apply the full PBR texture.
+  const useTexture = wallMaterial === "concrete";
+  const normalStr  = wallMaterial === "concrete" ? 1.0 : 0.35;
+  const roughness  = wallMaterial === "concrete" ? 0.72 : wallMaterial === "render" ? 0.76 : wallMaterial === "wood" ? 0.82 : wallMaterial === "brick" ? 0.88 : 0.84;
+  const envMap     = wallMaterial === "render" ? 0.55 : wallMaterial === "concrete" ? 0.45 : 0.18;
+  return (
+    <mesh receiveShadow castShadow>
+      <boxGeometry args={[width, height, WT]} />
+      <meshStandardMaterial
+        map={useTexture ? map : undefined}
+        normalMap={useTexture ? normalMap : undefined}
+        roughnessMap={useTexture ? roughnessMap : undefined}
+        normalScale={new THREE.Vector2(normalStr, normalStr)}
+        color={color}
+        roughness={roughness}
+        metalness={0.0}
+        envMapIntensity={envMap}
+      />
+    </mesh>
+  );
+}
+
+function WallFace({ width, height, color, accentColor, wallMaterial = "render", hasDoor = false, winCount, glassFacade = false, glassFlip = false }: {
+  width: number; height: number; color: string; accentColor: string;
+  wallMaterial?: import("@/lib/types").WallMaterialType;
+  hasDoor?: boolean; winCount: number;
+  glassFacade?: boolean;
+  /** flip=true: glass protrudes toward local -Z (for walls rotated 180°, so glass faces outward) */
+  glassFlip?: boolean;
+}) {
+  const frameColor = glassFacade ? "#1A1A1A" : accentColor;
+  // glassFlip: back wall (rotation=PI) needs glass on local -Z so it appears on the exterior
+  const glassZ = glassFlip ? -(WT / 2 + 0.01) : (WT / 2 + 0.01);
+  const glassDir = glassFlip ? -1 : 1;
+
+  if (glassFacade) {
+    const glassH   = height * 0.87;
+    const margin   = (height - glassH) / 2;
+    const panelCount = winCount;
+    const totalGlassW = width * 0.84;
+    const mullionW    = 0.055;
+    const panelW  = (totalGlassW - (panelCount - 1) * mullionW) / panelCount;
+    const startX  = -totalGlassW / 2 + panelW / 2;
+    // Interior warm plane — simulates lit interior visible through glass
+    const interiorColor = glassFlip ? "#F2EAD8" : color;
+
+    return (
+      <group>
+        {/* Wall body — for glassFlip walls, warm interior tone shows through glass */}
+        <Suspense fallback={
+          <mesh receiveShadow castShadow>
+            <boxGeometry args={[width, height, WT]} />
+            <meshStandardMaterial color={interiorColor} roughness={0.80} metalness={0.0} />
+          </mesh>
+        }>
+          <WallBodyTextured width={width} height={height} color={interiorColor} wallMaterial={glassFlip ? "render" : (wallMaterial ?? "render")} />
+        </Suspense>
+        {/* Curtain wall: glass panels + thin aluminum mullions */}
+        {Array.from({ length: panelCount }).map((_, i) => {
+          const x = startX + i * (panelW + mullionW);
+          const isSlider = hasDoor && i === Math.floor(panelCount / 2);
+          return (
+            <group key={i} position={[x, 0, glassZ]}>
+              {/* Outer frame (thin aluminum) */}
+              <mesh>
+                <boxGeometry args={[panelW + mullionW, glassH + 0.04, 0.07]} />
+                <meshStandardMaterial color={frameColor} roughness={0.28} metalness={0.72} envMapIntensity={1.5} />
+              </mesh>
+              {/* Glass — warm emissive simulates interior lighting glow */}
+              <mesh position={[0, 0, glassDir * 0.04]}>
+                <boxGeometry args={[panelW - 0.02, glassH - 0.02, 0.04]} />
+                <meshPhysicalMaterial color="#CBE8F5" transmission={0.84} ior={1.52} roughness={0.02} metalness={0.0} thickness={0.10} envMapIntensity={4.0} emissive="#FFF0CC" emissiveIntensity={0.12} side={THREE.DoubleSide} />
+              </mesh>
+              {isSlider && (
+                <mesh position={[0, -glassH * 0.18, glassDir * 0.06]}>
+                  <boxGeometry args={[panelW - 0.01, 0.04, 0.03]} />
+                  <meshStandardMaterial color={frameColor} roughness={0.3} metalness={0.7} />
+                </mesh>
+              )}
+            </group>
+          );
+        })}
+        {hasDoor && (
+          <mesh position={[0, -height / 2 + margin * 0.4, glassZ]}>
+            <boxGeometry args={[width * 0.16 * 0.5, margin * 0.8, 0.03]} />
+            <meshStandardMaterial color={color} roughness={0.75} />
+          </mesh>
+        )}
+      </group>
+    );
+  }
+
+  // ── Standard punched-window mode (non-flat roofs) ──────────────
   const winW = 1.05, winH = 1.25, winY = height * 0.58;
   const doorW = 1.0, doorH = 2.15;
   const halfW = width / 2;
@@ -185,14 +335,18 @@ function WallFace({ width, height, color, accentColor, hasDoor = false, winCount
   }
   return (
     <group>
-      <mesh receiveShadow castShadow>
-        <boxGeometry args={[width, height, WT]} />
-        <meshStandardMaterial color={color} roughness={0.9} />
-      </mesh>
+      <Suspense fallback={
+        <mesh receiveShadow castShadow>
+          <boxGeometry args={[width, height, WT]} />
+          <meshStandardMaterial color={color} roughness={0.82} metalness={0.0} />
+        </mesh>
+      }>
+        <WallBodyTextured width={width} height={height} color={color} wallMaterial={wallMaterial ?? "render"} />
+      </Suspense>
       {windowXs.map((x, i) => (
         <group key={i} position={[x, winY - height / 2, WT / 2 + 0.01]}>
           <mesh><boxGeometry args={[winW + 0.12, winH + 0.12, 0.06]} /><meshStandardMaterial color={accentColor} roughness={0.7} /></mesh>
-          <mesh position={[0, 0, 0.04]}><boxGeometry args={[winW, winH, 0.04]} /><meshStandardMaterial color="#A8CDE8" transparent opacity={0.65} roughness={0.05} metalness={0.15} /></mesh>
+          <mesh position={[0, 0, 0.04]}><boxGeometry args={[winW, winH, 0.04]} /><meshPhysicalMaterial color="#C8E8F8" transmission={0.90} ior={1.52} roughness={0.02} metalness={0.0} thickness={0.08} envMapIntensity={3.5} /></mesh>
           <mesh position={[0, 0, 0.05]}><boxGeometry args={[winW + 0.04, 0.04, 0.03]} /><meshStandardMaterial color={accentColor} roughness={0.7} /></mesh>
           <mesh position={[0, 0, 0.05]}><boxGeometry args={[0.04, winH + 0.04, 0.03]} /><meshStandardMaterial color={accentColor} roughness={0.7} /></mesh>
         </group>
@@ -212,40 +366,86 @@ function WallFace({ width, height, color, accentColor, hasDoor = false, winCount
 function FloorShell({ floorIndex, W, D, settings, totalFloors }: {
   floorIndex: number; W: number; D: number; settings: ExteriorSettings; totalFloors: number;
 }) {
-  const { wallColor, accentColor } = settings;
+  const { wallColor, accentColor, wallMaterial, roofStyle } = settings;
   const H = FLOOR_H;
   const isGround = floorIndex === 0;
-  const winCountFront = Math.max(1, Math.floor(W / 2.6) - (isGround ? 1 : 0));
-  const winCountSide  = Math.max(1, Math.floor(D / 2.6));
+  const isModern  = roofStyle === "flat";
+  // Modern flat-roof style: bigger windows and glass curtain walls
+  const winCountFront = isModern
+    ? Math.max(2, Math.floor(W / 1.8))
+    : Math.max(1, Math.floor(W / 2.6) - (isGround ? 1 : 0));
+  const winCountSide  = isModern
+    ? Math.max(1, Math.floor(D / 1.8))
+    : Math.max(1, Math.floor(D / 2.6));
+
+  // Slab band color — exposed white concrete between floors (modernist)
+  const slabColor = isModern ? "#F2EDE8" : "#C8C0B0";
+
   return (
     <group position={[0, floorIndex * H, 0]}>
+      {/* Floor slab */}
       <mesh receiveShadow position={[0, 0, 0]}>
         <boxGeometry args={[W, 0.18, D]} />
         <meshStandardMaterial color="#D0CABB" roughness={0.95} />
       </mesh>
+      {/* Front wall */}
       <group position={[0, H / 2, -(D / 2 - WT / 2)]}>
-        <WallFace width={W} height={H} color={wallColor} accentColor={accentColor} hasDoor={isGround} winCount={winCountFront} />
+        <WallFace width={W} height={H} color={wallColor} accentColor={accentColor} wallMaterial={wallMaterial}
+          hasDoor={isGround} winCount={winCountFront} glassFacade={isModern} />
       </group>
+      {/* Back wall */}
       <group position={[0, H / 2, D / 2 - WT / 2]} rotation={[0, Math.PI, 0]}>
-        <WallFace width={W} height={H} color={wallColor} accentColor={accentColor} winCount={winCountFront} />
+        <WallFace width={W} height={H} color={wallColor} accentColor={accentColor} wallMaterial={wallMaterial}
+          winCount={winCountFront} glassFacade={isModern} glassFlip={isModern} />
       </group>
+      {/* Left side wall */}
       <group position={[-(W / 2 - WT / 2), H / 2, 0]} rotation={[0, -Math.PI / 2, 0]}>
-        <WallFace width={D} height={H} color={wallColor} accentColor={accentColor} winCount={winCountSide} />
+        <WallFace width={D} height={H} color={wallColor} accentColor={accentColor} wallMaterial={wallMaterial}
+          winCount={winCountSide} glassFacade={isModern} />
       </group>
+      {/* Right side wall */}
       <group position={[W / 2 - WT / 2, H / 2, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <WallFace width={D} height={H} color={wallColor} accentColor={accentColor} winCount={winCountSide} />
+        <WallFace width={D} height={H} color={wallColor} accentColor={accentColor} wallMaterial={wallMaterial}
+          winCount={winCountSide} glassFacade={isModern} />
       </group>
+      {/* Exposed slab band between floors — thicker & more prominent for modern style */}
       {floorIndex < totalFloors - 1 && (
-        <mesh position={[0, H, 0]}>
-          <boxGeometry args={[W, 0.18, D]} />
-          <meshStandardMaterial color="#C8C0B0" roughness={0.95} />
+        <mesh position={[0, H, 0]} castShadow receiveShadow>
+          <boxGeometry args={[W + (isModern ? 0.10 : 0), isModern ? 0.28 : 0.18, D + (isModern ? 0.10 : 0)]} />
+          <meshStandardMaterial color={slabColor} roughness={isModern ? 0.70 : 0.95} envMapIntensity={isModern ? 0.4 : 0.1} />
         </mesh>
       )}
+      {/* Slab band at base of upper floors */}
       {floorIndex > 0 && (
-        <mesh position={[0, 0.09, 0]}>
-          <boxGeometry args={[W + 0.04, 0.22, D + 0.04]} />
-          <meshStandardMaterial color={accentColor} roughness={0.8} />
+        <mesh position={[0, 0.09, 0]} castShadow>
+          <boxGeometry args={[W + (isModern ? 0.10 : 0.04), isModern ? 0.28 : 0.22, D + (isModern ? 0.10 : 0.04)]} />
+          <meshStandardMaterial color={slabColor} roughness={isModern ? 0.70 : 0.80} envMapIntensity={isModern ? 0.4 : 0.1} />
         </mesh>
+      )}
+      {/* Glass balcony railing on front face — modern style upper floors only */}
+      {isModern && floorIndex > 0 && (
+        <group position={[0, 0.28 + 0.55, -(D / 2 + 0.02)]}>
+          {/* Glass panel */}
+          <mesh>
+            <boxGeometry args={[W - 0.12, 1.05, 0.012]} />
+            <meshPhysicalMaterial color="#C0DCF0" transmission={0.78} ior={1.52} roughness={0.04} metalness={0.0} envMapIntensity={2.5} />
+          </mesh>
+          {/* Top handrail — dark anodized aluminum */}
+          <mesh position={[0, 0.525, 0.010]}>
+            <boxGeometry args={[W - 0.10, 0.045, 0.045]} />
+            <meshStandardMaterial color="#1A1A1A" roughness={0.20} metalness={0.82} envMapIntensity={2.0} />
+          </mesh>
+          {/* Vertical posts every ~2m */}
+          {Array.from({ length: Math.ceil(W / 2) + 1 }).map((_, pi) => {
+            const px = -W / 2 + 0.06 + pi * (W / Math.ceil(W / 2));
+            return (
+              <mesh key={pi} position={[px, 0, 0.02]}>
+                <boxGeometry args={[0.025, 1.10, 0.025]} />
+                <meshStandardMaterial color="#1A1A1A" roughness={0.20} metalness={0.82} />
+              </mesh>
+            );
+          })}
+        </group>
       )}
     </group>
   );
@@ -721,26 +921,731 @@ function Foundation({ W, D, color }: { W: number; D: number; color: string }) {
 }
 
 // ─── Tree variations ─────────────────────────────────────────
-function Tree({ x, z, type = "round", scale = 1 }: { x: number; z: number; type?: "round" | "pine" | "palm" | "cypress"; scale?: number }) {
+// Deterministic 0..1 hash from (x,z) so each tree gets a stable random
+// look across re-renders without needing useMemo per instance.
+function treeHash(x: number, z: number, salt = 0): number {
+  const v = Math.sin(x * 12.9898 + z * 78.233 + salt * 31.7) * 43758.5453;
+  return v - Math.floor(v);
+}
+
+/** Map our high-level tree archetype → Kenney Nature Kit GLB filename.
+ *  All assets share a unified stylized low-poly art direction so the whole
+ *  yard reads as one cohesive scene (not the previous mix of procedural
+ *  cones + PBR concrete that read amateur). */
+const KENNEY_TREE_MAP: Record<string, string> = {
+  round:   "tree_oak",
+  pine:    "tree_pineDefaultA",
+  palm:    "tree_palmTall",
+  cypress: "tree_pineTallA",
+  olive:   "tree_default",
+  topiary: "tree_blocks",
+  boxwood: "plant_bushLarge",
+};
+
+/** Kenney models are authored ~1 unit per game-tile (~0.4m), so a raw
+ *  oak comes out only ~1m tall. Our scene is in real meters with a 2.8m
+ *  storey height, so we scale 3-5x to get realistic tree heights (3-5m
+ *  for canopy trees, 4-7m for tall conifers). */
+const KENNEY_TREE_BASE_SCALE: Record<string, number> = {
+  tree_oak:          4.5,
+  tree_pineDefaultA: 5.0,
+  tree_palmTall:     5.5,
+  tree_pineTallA:    6.0,
+  tree_default:      4.0,
+  tree_blocks:       3.5,
+  plant_bushLarge:   2.0,
+};
+
+function KenneyAsset({ name, scale = 1, rotY = 0 }: { name: string; scale?: number; rotY?: number }) {
+  const { scene } = useGLTF(`/models/kenney_nature/${name}.glb`);
+  useMemo(() => {
+    scene.traverse(o => {
+      if ((o as THREE.Mesh).isMesh) {
+        (o as THREE.Mesh).castShadow = true;
+        (o as THREE.Mesh).receiveShadow = true;
+      }
+    });
+  }, [scene]);
+  return <Clone object={scene} scale={scale} rotation={[0, rotY, 0]} />;
+}
+
+// ─── Technical-drawing Kenney asset ─────────────────────────────────
+// Loads the same Kenney GLB but overrides ALL materials with a flat-shaded
+// single colour from the technical-drawing palette, and adds a back-face
+// outline overlay (classic toon trick). This is what makes the same
+// underlying low-poly geometry read as "architectural model" rather than
+// "Minecraft tree". One outline pass per asset = no global postprocessing
+// changes required.
+//
+// `colorOverride` lets the caller force a specific palette colour (for
+// hero trees that should pop). When undefined, picks the technical
+// default for the asset's category.
+const TECH_OUTLINE_COLOR = "#1F1F1F";
+const TECH_OUTLINE_SCALE = 1.035;
+
+function TechKenneyAsset({
+  glbName, scale = 1, rotY = 0, colorOverride,
+}: {
+  glbName: string;
+  scale?: number;
+  rotY?: number;
+  colorOverride?: string;
+}) {
+  const { scene } = useGLTF(`/models/kenney_nature/${glbName}.glb`);
+
+  // Build two scene clones: one with the flat-shaded fill material, one
+  // with the back-face outline material. We must clone both because each
+  // clone gets its own materials — sharing would tint everything together.
+  const { fill, outline } = useMemo(() => {
+    const fillRoot = scene.clone(true);
+    const outlineRoot = scene.clone(true);
+
+    fillRoot.traverse(o => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh && m.geometry) {
+        m.castShadow = true;
+        m.receiveShadow = true;
+        m.material = new THREE.MeshStandardMaterial({
+          color: colorOverride ?? "#8FA386",
+          roughness: 0.95,
+          metalness: 0,
+          flatShading: true,
+        });
+      }
+    });
+    outlineRoot.traverse(o => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh && m.geometry) {
+        m.castShadow = false;
+        m.receiveShadow = false;
+        m.material = new THREE.MeshBasicMaterial({
+          color: TECH_OUTLINE_COLOR,
+          side: THREE.BackSide,
+        });
+      }
+    });
+
+    return { fill: fillRoot, outline: outlineRoot };
+  }, [scene, colorOverride]);
+
+  return (
+    <group scale={scale} rotation={[0, rotY, 0]}>
+      <primitive object={fill} />
+      <primitive object={outline} scale={[TECH_OUTLINE_SCALE, TECH_OUTLINE_SCALE, TECH_OUTLINE_SCALE]} />
+    </group>
+  );
+}
+
+// ─── Real PBR asset (Sketchfab) ───────────────────────────────────
+// Used when an OutdoorAsset has customGltfPath set. Loads the real GLTF
+// and renders WITHOUT the technical-drawing material override — the
+// asset's own PBR materials carry the visual fidelity.
+//
+// CRITICAL: auto-normalises the model to a target real-world height
+// using its bounding box. Sketchfab models come in arbitrary units
+// (cm, m, inches, blender 1u=1m, blender 1u=1cm) — without this
+// auto-norm, an "olive tree" can be 200m tall AND no per-asset scale
+// number will fit. We measure once on first load and cache.
+const _bboxCache = new Map<string, { height: number; minY: number }>();
+
+function PbrSketchfabAsset({
+  gltfPath, targetHeightM, userScale = 1, rotY = 0, groundAlign = true,
+}: {
+  gltfPath: string;
+  /** Auto-normalise model height to this many metres. When set,
+   *  overrides any raw scale calculation. */
+  targetHeightM?: number;
+  /** Multiplier on TOP of the auto-normalised scale (for jitter / hero
+   *  emphasis). Default 1.0 — i.e. exactly the target height. */
+  userScale?: number;
+  rotY?: number;
+  /** Translate the model so its bottom sits at y=0. Default true. */
+  groundAlign?: boolean;
+}) {
+  const { scene } = useGLTF(gltfPath);
+
+  // Compute (or read cached) bounding box. Done once per gltfPath —
+  // model geometry doesn't change, so neither does its native size.
+  const { autoScale, yOffset } = useMemo(() => {
+    let bbox = _bboxCache.get(gltfPath);
+    if (!bbox) {
+      const box = new THREE.Box3().setFromObject(scene);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      bbox = { height: size.y || 1, minY: box.min.y };
+      _bboxCache.set(gltfPath, bbox);
+    }
+    const auto = targetHeightM != null && bbox.height > 0
+      ? targetHeightM / bbox.height
+      : 1;
+    // After scaling, the bottom of the model sits at minY * autoScale.
+    // To put it on the ground (y=0), offset by -minY * autoScale.
+    const off = groundAlign ? -bbox.minY * auto : 0;
+    return { autoScale: auto, yOffset: off };
+    // gltfPath is the cache key; targetHeightM/groundAlign are config.
+    // scene reference is stable per gltfPath via useGLTF cache.
+  }, [gltfPath, targetHeightM, groundAlign]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useMemo(() => {
+    scene.traverse(o => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) {
+        m.castShadow = true;
+        m.receiveShadow = true;
+      }
+    });
+  }, [scene]);
+
+  const finalScale = autoScale * userScale;
+  return (
+    <group position={[0, yOffset * userScale, 0]} rotation={[0, rotY, 0]}>
+      <Clone object={scene} scale={finalScale} />
+    </group>
+  );
+}
+
+// ─── HEAD-check cache for Sketchfab GLB availability ─────────────
+// We can't synchronously know if a file exists. The naive approach
+// (let useGLTF try and 404) makes the Next.js dev overlay scream every
+// render. So we HEAD-fetch once per path on first use, cache the
+// result, and only show the PBR component if the file is confirmed
+// present. While pending we render the styled-Kenney fallback; when
+// the HEAD resolves to 200 the component re-renders and swaps in.
+const _gltfAvailable = new Map<string, boolean>();
+const _gltfPending = new Map<string, Promise<boolean>>();
+const _gltfWaiters = new Map<string, Set<() => void>>();
+
+function useGltfAvailable(path: string | undefined): boolean {
+  // Hook order must be stable across renders — call useState + useEffect
+  // unconditionally, branch INSIDE them.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!path) return;
+    if (_gltfAvailable.has(path)) return;     // already known
+    if (!_gltfPending.has(path)) {
+      const p = fetch(path, { method: "HEAD" })
+        .then(r => { _gltfAvailable.set(path, r.ok); return r.ok; })
+        .catch(() => { _gltfAvailable.set(path, false); return false; });
+      _gltfPending.set(path, p);
+      p.then(() => {
+        const set = _gltfWaiters.get(path);
+        if (set) { set.forEach(fn => fn()); set.clear(); }
+      });
+    }
+    // Subscribe this component's force-render to the eventual resolve.
+    let set = _gltfWaiters.get(path);
+    if (!set) { set = new Set(); _gltfWaiters.set(path, set); }
+    const fn = () => setTick(n => n + 1);
+    set.add(fn);
+    return () => { set!.delete(fn); };
+  }, [path]);
+  if (!path) return false;
+  return _gltfAvailable.get(path) ?? false;   // pending → false
+}
+
+// Restricted technical-drawing palette. Architects pick 3-5 muted tones,
+// not 30. These map asset.kind → fill colour.
+function techColorForAsset(kind: string, category: string): string {
+  if (category === "tree") {
+    if (kind.includes("cypress") || kind.includes("pine"))    return "#4F6B47";
+    if (kind.includes("olive"))                                return "#7A8A6E";
+    if (kind.includes("palm"))                                 return "#5C7A52";
+    if (kind.includes("maple"))                                return "#A86C5C";  // muted terracotta
+    if (kind.includes("bonsai"))                               return "#4A5A40";
+    return "#5B7754";  // default broadleaf
+  }
+  if (category === "plant") {
+    if (kind.includes("flower"))                               return "#C8A8B8";  // muted mauve, all flowers
+    if (kind.includes("bush"))                                 return "#6B8266";
+    if (kind.includes("cactus"))                               return "#7A8E5C";
+    if (kind.includes("grass"))                                return "#7C8A5A";
+    return "#7A8A6E";
+  }
+  if (category === "rock") {
+    if (kind.includes("tall") || kind.includes("stoneTall"))   return "#7E7C75";
+    return "#9A9A92";
+  }
+  // feature
+  if (kind.includes("crop"))                                   return "#7C8A5A";
+  if (kind.includes("campfire"))                               return "#3F2D1E";
+  if (kind.includes("fence"))                                  return "#7A6E58";
+  return "#A8A39A";
+}
+
+/** Render every YardItem the user dropped on the 院子图 editor.
+ *  v2 dispatch: zones first (so paving sits under everything), then
+ *  singleton primitives (legacy), then prefabs (compound blocks on top). */
+const EMPTY_YARD_ITEMS_3D: import("@/lib/types").YardItem[] = [];
+function YardPlanItems3D() {
+  const activeFloor = useDesignerStore(s => s.activeFloor);
+  const items = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.items ?? EMPTY_YARD_ITEMS_3D);
+
+  // Render order matters for visual layering:
+  //   zones (paving) → singletons → prefabs (often the largest mass)
+  const zones    = items.filter(isYardZone);
+  const prefabs  = items.filter(isYardPrefab);
+  const singles  = items.filter(it => !isYardZone(it) && !isYardPrefab(it));
+
+  return (
+    <group>
+      {/* ── Zones — flat polygon paving that all other items sit on ── */}
+      {zones.map(z => <ZoneMesh key={z.id} zone={z} />)}
+
+      {/* ── Prefabs — compound spatial blocks ── */}
+      {prefabs.map(p => <PrefabMesh key={p.id} prefab={p} />)}
+
+      {/* ── Singletons — load the actual Kenney GLB through the technical
+            -drawing wrapper (flat-shaded fill + back-face outline). The
+            same low-poly mesh that previously read as "Minecraft toy" now
+            reads as "architectural model" because (a) the geometry is
+            real, not a primitive cap, and (b) the flat-shaded muted fill
+            + black outline is the canonical Vectorworks / SketchUp Style
+            Builder vocabulary. Suspense fallback is a tiny grey post so
+            users see SOMETHING during GLB load. ── */}
+      {singles.map(it => (
+        <SingletonItem key={it.id} item={it as import("@/lib/types").YardSingleton} />
+      ))}
+    </group>
+  );
+}
+
+// ─── Procedural outdoor furniture — photo-quality PBR materials ─────────────
+// Used as fallback when the Sketchfab GLTF isn't downloaded yet. The geometry
+// is accurate in scale and proportion; materials are crafted to read as luxury
+// outdoor pieces under ACES filmic tonemapping + HDR IBL.
+function ProceduralFurnitureMesh({ kind }: { kind: string }) {
+  if (kind === "furniture.chaiseLounger" || kind === "furniture.swimmingLounger") {
+    // Teak-framed lounger with thick ecru cushion + adjustable backrest
+    const isPool = kind === "furniture.swimmingLounger";
+    const cushionColor = isPool ? "#F0EDE0" : "#F5F0E8";
+    return (
+      <group>
+        {/* Teak frame base */}
+        <mesh position={[0, 0.14, 0]} castShadow receiveShadow>
+          <boxGeometry args={[2.05, 0.07, 0.76]} />
+          <meshStandardMaterial color="#7A5C38" roughness={0.75} metalness={0.0} />
+        </mesh>
+        {/* Four legs */}
+        {([-0.88, 0.88] as number[]).flatMap(lx =>
+          ([-0.28, 0.28] as number[]).map((lz, j) => (
+            <mesh key={`${lx}${lz}`} position={[lx, 0.06, lz]} castShadow>
+              <boxGeometry args={[0.06, 0.12, 0.06]} />
+              <meshStandardMaterial color="#6A4C28" roughness={0.8} />
+            </mesh>
+          ))
+        )}
+        {/* Thick cushion */}
+        <mesh position={[0, 0.225, 0]} castShadow>
+          <boxGeometry args={[1.88, 0.09, 0.64]} />
+          <meshStandardMaterial color={cushionColor} roughness={0.88} metalness={0.0} />
+        </mesh>
+        {/* Adjustable backrest (raised ~35°) */}
+        <mesh position={[-0.60, 0.34, 0]} rotation={[0, 0, 0.60]} castShadow>
+          <boxGeometry args={[0.68, 0.07, 0.64]} />
+          <meshStandardMaterial color="#7A5C38" roughness={0.75} />
+        </mesh>
+        <mesh position={[-0.60, 0.40, 0]} rotation={[0, 0, 0.60]} castShadow>
+          <boxGeometry args={[0.60, 0.07, 0.56]} />
+          <meshStandardMaterial color={cushionColor} roughness={0.88} />
+        </mesh>
+        {/* Headrest pillow */}
+        <mesh position={[-0.93, 0.50, 0]} castShadow>
+          <boxGeometry args={[0.28, 0.07, 0.44]} />
+          <meshStandardMaterial color={cushionColor} roughness={0.90} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (kind === "furniture.outdoorSofa") {
+    // 3-seat outdoor sectional — powder-coated aluminium frame + thick cushions
+    return (
+      <group>
+        {/* Base frame */}
+        <mesh position={[0, 0.18, 0]} castShadow receiveShadow>
+          <boxGeometry args={[2.40, 0.36, 0.90]} />
+          <meshStandardMaterial color="#3A3A3A" roughness={0.35} metalness={0.70} />
+        </mesh>
+        {/* Seat cushion */}
+        <mesh position={[0, 0.42, 0]} castShadow>
+          <boxGeometry args={[2.20, 0.14, 0.72]} />
+          <meshStandardMaterial color="#E8E2D4" roughness={0.86} metalness={0.0} />
+        </mesh>
+        {/* Backrest frame */}
+        <mesh position={[0, 0.72, -0.35]} castShadow receiveShadow>
+          <boxGeometry args={[2.40, 0.58, 0.12]} />
+          <meshStandardMaterial color="#3A3A3A" roughness={0.35} metalness={0.70} />
+        </mesh>
+        {/* Back cushion */}
+        <mesh position={[0, 0.70, -0.28]} castShadow>
+          <boxGeometry args={[2.20, 0.50, 0.14]} />
+          <meshStandardMaterial color="#E8E2D4" roughness={0.86} metalness={0.0} />
+        </mesh>
+        {/* Armrests */}
+        {([-1.14, 1.14] as number[]).map((ax, i) => (
+          <mesh key={i} position={[ax, 0.55, -0.04]} castShadow>
+            <boxGeometry args={[0.12, 0.26, 0.82]} />
+            <meshStandardMaterial color="#3A3A3A" roughness={0.35} metalness={0.70} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  if (kind === "furniture.parasol") {
+    // Market-style canvas parasol — octagonal canopy, aluminium pole
+    return (
+      <group>
+        {/* Base weight */}
+        <mesh position={[0, 0.08, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.28, 0.32, 0.16, 12]} />
+          <meshStandardMaterial color="#484848" roughness={0.5} metalness={0.6} />
+        </mesh>
+        {/* Pole */}
+        <mesh position={[0, 1.38, 0]} castShadow>
+          <cylinderGeometry args={[0.025, 0.025, 2.76, 8]} />
+          <meshStandardMaterial color="#B0B0B0" roughness={0.25} metalness={0.85} />
+        </mesh>
+        {/* Hub */}
+        <mesh position={[0, 2.55, 0]}>
+          <sphereGeometry args={[0.06, 8, 6]} />
+          <meshStandardMaterial color="#909090" roughness={0.3} metalness={0.8} />
+        </mesh>
+        {/* 8 ribs */}
+        {Array.from({ length: 8 }).map((_, i) => {
+          const a = (i / 8) * Math.PI * 2;
+          const rx = Math.cos(a) * 1.55, rz = Math.sin(a) * 1.55;
+          const mx = rx / 2, mz = rz / 2;
+          const len = Math.sqrt(rx*rx + 1.1*1.1 + rz*rz);
+          const angleX = Math.atan2(1.1, Math.sqrt(rx*rx+rz*rz));
+          return (
+            <mesh key={i} position={[mx, 2.55 - 0.55, mz]}
+              rotation={[-angleX * (Math.cos(a) > 0 ? 1 : -1) * 0.5, a + Math.PI / 2, angleX * 0.5]}
+              castShadow>
+              <cylinderGeometry args={[0.012, 0.012, 1.72, 4]} />
+              <meshStandardMaterial color="#909090" roughness={0.3} metalness={0.8} />
+            </mesh>
+          );
+        })}
+        {/* Canvas canopy — ecru with slight translucency */}
+        <mesh position={[0, 2.46, 0]} rotation={[Math.PI * 0.04, 0, 0]} castShadow>
+          <coneGeometry args={[1.72, 0.46, 8, 1, true]} />
+          <meshStandardMaterial color="#F2ECD8" roughness={0.92} metalness={0.0} side={THREE.DoubleSide} />
+        </mesh>
+        <mesh position={[0, 2.22, 0]}>
+          <coneGeometry args={[1.68, 0.05, 8, 1, false]} />
+          <meshStandardMaterial color="#F2ECD8" roughness={0.92} metalness={0.0} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (kind === "furniture.coffeeTable") {
+    // Stone-topped coffee table — marble-look top + brushed steel legs
+    return (
+      <group>
+        {/* Marble-look tabletop */}
+        <mesh position={[0, 0.44, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.10, 0.05, 0.65]} />
+          <meshStandardMaterial color="#E8E4DC" roughness={0.18} metalness={0.08} envMapIntensity={1.2} />
+        </mesh>
+        {/* Apron */}
+        <mesh position={[0, 0.38, 0]} castShadow>
+          <boxGeometry args={[1.00, 0.04, 0.55]} />
+          <meshStandardMaterial color="#C0BCBA" roughness={0.4} metalness={0.5} />
+        </mesh>
+        {/* 4 legs */}
+        {([-0.42, 0.42] as number[]).flatMap(lx =>
+          ([-0.22, 0.22] as number[]).map((lz, j) => (
+            <mesh key={`${lx}${lz}`} position={[lx, 0.20, lz]} castShadow>
+              <cylinderGeometry args={[0.025, 0.025, 0.40, 8]} />
+              <meshStandardMaterial color="#B8B4B0" roughness={0.2} metalness={0.85} />
+            </mesh>
+          ))
+        )}
+      </group>
+    );
+  }
+
+  if (kind === "furniture.diningSet") {
+    // Outdoor dining set — 4-seat rattan table + chairs
+    return (
+      <group>
+        {/* Dining table */}
+        <mesh position={[0, 0.74, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.60, 0.05, 0.90]} />
+          <meshStandardMaterial color="#E2DDD0" roughness={0.55} metalness={0.05} envMapIntensity={0.8} />
+        </mesh>
+        {/* Table legs */}
+        {([-0.65, 0.65] as number[]).flatMap(lx =>
+          ([-0.35, 0.35] as number[]).map((lz) => (
+            <mesh key={`${lx}${lz}`} position={[lx, 0.36, lz]} castShadow>
+              <cylinderGeometry args={[0.028, 0.028, 0.72, 8]} />
+              <meshStandardMaterial color="#5A5048" roughness={0.6} metalness={0.3} />
+            </mesh>
+          ))
+        )}
+        {/* 4 chairs — 2 each side, slightly outside table */}
+        {([[-0.58, -0.68], [0.58, -0.68], [-0.58, 0.68], [0.58, 0.68]] as [number,number][]).map(([cx, cz], i) => (
+          <group key={i} position={[cx, 0, cz]} rotation={[0, cz > 0 ? Math.PI : 0, 0]}>
+            {/* Seat */}
+            <mesh position={[0, 0.44, 0]} castShadow>
+              <boxGeometry args={[0.46, 0.06, 0.42]} />
+              <meshStandardMaterial color="#D8C8A8" roughness={0.80} />
+            </mesh>
+            {/* Seat cushion */}
+            <mesh position={[0, 0.51, 0.02]}>
+              <boxGeometry args={[0.40, 0.05, 0.36]} />
+              <meshStandardMaterial color="#F0EAD8" roughness={0.88} />
+            </mesh>
+            {/* Backrest */}
+            <mesh position={[0, 0.74, -0.18]} castShadow>
+              <boxGeometry args={[0.44, 0.42, 0.06]} />
+              <meshStandardMaterial color="#D8C8A8" roughness={0.80} />
+            </mesh>
+            {/* Legs */}
+            {([-0.18, 0.18] as number[]).flatMap(lx =>
+              ([-0.16, 0.16] as number[]).map(lz => (
+                <mesh key={`${lx}${lz}`} position={[lx, 0.22, lz]} castShadow>
+                  <cylinderGeometry args={[0.015, 0.015, 0.44, 6]} />
+                  <meshStandardMaterial color="#5A5048" roughness={0.6} metalness={0.3} />
+                </mesh>
+              ))
+            )}
+          </group>
+        ))}
+      </group>
+    );
+  }
+
+  if (kind === "furniture.fireplace") {
+    // Bioethanol outdoor fireplace — black steel cube with glass front + flame
+    return (
+      <group>
+        {/* Steel body */}
+        <mesh position={[0, 0.50, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.90, 1.00, 0.35]} />
+          <meshStandardMaterial color="#1E1E1E" roughness={0.20} metalness={0.85} />
+        </mesh>
+        {/* Glass front panel */}
+        <mesh position={[0, 0.55, 0.18]}>
+          <boxGeometry args={[0.72, 0.52, 0.01]} />
+          <meshPhysicalMaterial color="#88CCEE" transparent opacity={0.28} roughness={0.0} metalness={0.0} envMapIntensity={3.0} />
+        </mesh>
+        {/* Flame glow */}
+        <mesh position={[0, 0.48, 0.12]}>
+          <planeGeometry args={[0.30, 0.28]} />
+          <meshStandardMaterial color="#FF7820" emissive="#FF5810" emissiveIntensity={2.5} transparent opacity={0.7} side={THREE.DoubleSide} />
+        </mesh>
+        {/* Base plinth */}
+        <mesh position={[0, 0.05, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.00, 0.10, 0.45]} />
+          <meshStandardMaterial color="#1E1E1E" roughness={0.20} metalness={0.85} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (kind === "furniture.planter") {
+    // Tall concrete/ceramic planter with tropical plant inside
+    return (
+      <group>
+        {/* Pot body */}
+        <mesh position={[0, 0.32, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.28, 0.22, 0.64, 14]} />
+          <meshStandardMaterial color="#B0A898" roughness={0.88} metalness={0.0} />
+        </mesh>
+        {/* Soil top */}
+        <mesh position={[0, 0.64, 0]}>
+          <cylinderGeometry args={[0.26, 0.26, 0.02, 14]} />
+          <meshStandardMaterial color="#5A4030" roughness={1.0} />
+        </mesh>
+        {/* Plant stem */}
+        <mesh position={[0, 0.90, 0]} castShadow>
+          <cylinderGeometry args={[0.025, 0.03, 0.52, 6]} />
+          <meshStandardMaterial color="#4A6030" roughness={0.9} />
+        </mesh>
+        {/* Leaf cluster */}
+        {Array.from({ length: 7 }).map((_, i) => {
+          const a = (i / 7) * Math.PI * 2;
+          const tilt = 0.7 + Math.random() * 0.5;
+          return (
+            <mesh key={i} position={[Math.cos(a) * 0.18, 1.10 + i * 0.04, Math.sin(a) * 0.18]}
+              rotation={[tilt, a, 0]} castShadow>
+              <planeGeometry args={[0.32, 0.10]} />
+              <meshStandardMaterial color="#3A6830" roughness={0.85} side={THREE.DoubleSide} />
+            </mesh>
+          );
+        })}
+      </group>
+    );
+  }
+
+  // Generic fallback for unknown furniture kinds
+  return (
+    <mesh position={[0, 0.3, 0]} castShadow>
+      <boxGeometry args={[0.8, 0.6, 0.8]} />
+      <meshStandardMaterial color="#C0B8A8" roughness={0.7} metalness={0.1} />
+    </mesh>
+  );
+}
+
+// One yard singleton — pulled out as its own component so we can call
+// useGltfAvailable (a hook) without violating the rules of hooks
+// (would otherwise be inside .map). HEAD-checks the customGltfPath; if
+// the file is present, render PBR. If 404 / missing / pending, render
+// the styled-Kenney fallback. No ErrorBoundary needed — we never
+// attempt to load a known-missing file.
+function SingletonItem({ item: it }: { item: import("@/lib/types").YardSingleton }) {
+  const asset = getOutdoorAssetByKind(it.kind);
+  // ALWAYS call hooks unconditionally — pass undefined when not applicable
+  const sketchfabReady = useGltfAvailable(asset?.customGltfPath);
+  if (!asset) return null;
+  const wx  = it.x / 100;
+  const wz  = it.z / 100;
+  const s   = it.scale ?? 1;
+  const rot = it.rot ?? 0;
+  const h1 = treeHash(it.x, it.z, 1);
+  const h2 = treeHash(it.x, it.z, 7);
+  // Furniture: no organic tilt/jitter — placed items should be perfectly upright
+  const isFurniture = asset.category === "furniture";
+  const tilt = isFurniture ? 0 : (h1 - 0.5) * 0.04;
+  const yawJitter = isFurniture ? 0 : (h2 - 0.5) * 0.4;
+  const sJitter = isFurniture ? 1 : (0.92 + h1 * 0.16);
+  const kenneyScale = asset.scale * s * sJitter;
+  const sketchfabUserScale = s * sJitter;
+  const fillColor = techColorForAsset(it.kind, asset.category);
+
+  // Only render if a real PBR model is confirmed present.
+  // No Kenney fallback, no procedural fallback — fake geometry is worse than nothing.
+  if (!asset.customGltfPath) return null;
+
+  return (
+    <group position={[wx, -0.5, wz]} rotation={[tilt, rot + yawJitter, 0]}>
+      <Suspense fallback={null}>
+        {sketchfabReady ? (
+          <PbrSketchfabAsset
+            key={`pbr:${asset.customGltfPath}`}
+            gltfPath={asset.customGltfPath}
+            targetHeightM={asset.customTargetHeightM}
+            userScale={isFurniture ? s : sketchfabUserScale}
+            groundAlign={asset.customGroundAlign ?? true}
+          />
+        ) : null}
+      </Suspense>
+    </group>
+  );
+}
+
+function Tree({ x, z, type = "round", scale = 1 }: {
+  x: number; z: number;
+  type?: "round" | "pine" | "palm" | "cypress" | "olive" | "topiary" | "boxwood";
+  scale?: number;
+}) {
   const s = scale;
-  if (type === "pine") {
+  // Per-tree deterministic variation — adds organic asymmetry without
+  // making every tree visibly different (formal landscapes need rhythm).
+  const h1 = treeHash(x, z, 0);
+  const h2 = treeHash(x, z, 1);
+  const h3 = treeHash(x, z, 2);
+
+  // SketchUp Free aesthetic: flat-shaded technical preview geometry.
+  // Kenney GLBs read as "kids' game" not "design tool" — disabled in
+  // favor of the simple procedural variants below (muted colors, clean
+  // silhouettes, no textures).
+  void KENNEY_TREE_MAP; void KENNEY_TREE_BASE_SCALE; // keep refs alive
+
+  if (type === "olive") {
+    // Olive — silvery-green sparse foliage on a gnarled trunk. Signature
+    // Mediterranean / luxury villa tree.
+    const trunkH = 1.4 + h1 * 0.3;
+    const foliageY = trunkH + 0.6;
+    return (
+      <group position={[x, 0, z]} scale={[s, s, s]} rotation={[0, h2 * Math.PI * 2, 0]}>
+        {/* Gnarled multi-segment trunk */}
+        <mesh position={[0, trunkH * 0.45, 0]} castShadow>
+          <cylinderGeometry args={[0.18, 0.28, trunkH, 8]} />
+          <meshStandardMaterial color="#7A6450" roughness={0.95} />
+        </mesh>
+        <mesh position={[0.05, trunkH * 0.85, 0.04]} rotation={[0.1, 0, 0.15]} castShadow>
+          <cylinderGeometry args={[0.14, 0.18, 0.5, 7]} />
+          <meshStandardMaterial color="#7A6450" roughness={0.95} />
+        </mesh>
+        {/* Sparse silvery-green canopy — multiple overlapping spheres */}
+        {[
+          [0, 0, 0, 0.95],
+          [0.55, 0.05, 0.2, 0.7],
+          [-0.5, -0.05, -0.15, 0.75],
+          [0.15, 0.2, -0.4, 0.6],
+          [-0.2, 0.15, 0.45, 0.65],
+        ].map(([dx, dy, dz, r], i) => (
+          <mesh key={i} position={[dx, foliageY + (dy as number), dz as number]} castShadow>
+            <sphereGeometry args={[r as number, 11, 9]} />
+            <meshStandardMaterial color={i % 2 === 0 ? "#8FA078" : "#9FB088"} roughness={0.95} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  if (type === "topiary") {
+    // Perfectly clipped sphere on a tidy short trunk. Formal entryway.
     return (
       <group position={[x, 0, z]} scale={[s, s, s]}>
+        <mesh position={[0, 0.4, 0]} castShadow>
+          <cylinderGeometry args={[0.08, 0.10, 0.8, 8]} />
+          <meshStandardMaterial color="#5A4028" roughness={0.95} />
+        </mesh>
+        <mesh position={[0, 1.45, 0]} castShadow>
+          <sphereGeometry args={[0.65, 16, 14]} />
+          <meshStandardMaterial color="#2E5C26" roughness={0.95} />
+        </mesh>
+        {/* Inner shadow tone for depth */}
+        <mesh position={[0, 1.45, 0]} castShadow>
+          <sphereGeometry args={[0.55, 12, 10]} />
+          <meshStandardMaterial color="#1F4818" roughness={0.95} transparent opacity={0.3} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (type === "boxwood") {
+    // Formal cuboid hedge — used in repeated rows along driveways / borders.
+    return (
+      <group position={[x, 0, z]} scale={[s, s, s]}>
+        <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.9, 0.8, 0.9]} />
+          <meshStandardMaterial color="#2C5A22" roughness={0.95} />
+        </mesh>
+        {/* Top tone for soft highlight */}
+        <mesh position={[0, 0.81, 0]} castShadow>
+          <boxGeometry args={[0.85, 0.04, 0.85]} />
+          <meshStandardMaterial color="#3A6E2C" roughness={0.95} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (type === "pine") {
+    // Slightly less uniform: jitter trunk + foliage colours per instance.
+    const tint = (base: number) => `hsl(125, 40%, ${base + h1 * 4}%)`;
+    return (
+      <group position={[x, 0, z]} scale={[s, s, s]} rotation={[0, h2 * Math.PI * 2, 0]}>
         <mesh position={[0, 0.7, 0]} castShadow>
           <cylinderGeometry args={[0.1, 0.15, 1.4, 7]} />
           <meshStandardMaterial color="#5A3A1A" roughness={0.9} />
         </mesh>
         <mesh position={[0, 2.8, 0]} castShadow>
           <coneGeometry args={[1.0, 2.2, 8]} />
-          <meshStandardMaterial color="#1A5030" roughness={0.9} />
+          <meshStandardMaterial color={tint(22)} roughness={0.9} />
         </mesh>
         <mesh position={[0, 2.1, 0]} castShadow>
           <coneGeometry args={[1.3, 1.6, 8]} />
-          <meshStandardMaterial color="#1E6038" roughness={0.9} />
+          <meshStandardMaterial color={tint(26)} roughness={0.9} />
         </mesh>
         <mesh position={[0, 1.5, 0]} castShadow>
           <coneGeometry args={[1.5, 1.2, 8]} />
-          <meshStandardMaterial color="#227040" roughness={0.9} />
+          <meshStandardMaterial color={tint(30)} roughness={0.9} />
         </mesh>
       </group>
     );
@@ -797,17 +1702,27 @@ function Tree({ x, z, type = "round", scale = 1 }: { x: number; z: number; type?
       </group>
     );
   }
-  // default round
+  // default round — organic deciduous canopy via overlapping spheres
+  const greenTone = 26 + h1 * 6;        // 26..32 lightness
+  const trunkH    = 1.5 + h2 * 0.3;
   return (
-    <group position={[x, 0, z]} scale={[s, s, s]}>
-      <mesh position={[0, 0.8, 0]} castShadow>
-        <cylinderGeometry args={[0.12, 0.18, 1.6, 7]} />
-        <meshStandardMaterial color="#6B4A28" roughness={0.9} />
+    <group position={[x, 0, z]} scale={[s, s, s]} rotation={[0, h3 * Math.PI * 2, 0]}>
+      <mesh position={[0, trunkH * 0.5, 0]} castShadow>
+        <cylinderGeometry args={[0.13, 0.20, trunkH, 8]} />
+        <meshStandardMaterial color="#6B4A28" roughness={0.95} />
       </mesh>
-      <mesh position={[0, 2.5, 0]} castShadow>
-        <sphereGeometry args={[1.0, 8, 7]} />
-        <meshStandardMaterial color="#2E7020" roughness={0.9} />
-      </mesh>
+      {/* Layered canopy — 4 spheres at slight offsets for organic silhouette */}
+      {[
+        [0,    2.5,  0,    1.05, greenTone],
+        [0.55, 2.45, 0.20, 0.70, greenTone - 2],
+        [-0.45,2.50,-0.30, 0.75, greenTone + 2],
+        [0.10, 2.95, 0.05, 0.65, greenTone + 4],
+      ].map(([dx, dy, dz, r, l], i) => (
+        <mesh key={i} position={[dx as number, dy as number, dz as number]} castShadow>
+          <sphereGeometry args={[r as number, 12, 9]} />
+          <meshStandardMaterial color={`hsl(120, 35%, ${l}%)`} roughness={0.9} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -817,11 +1732,11 @@ function Bush({ x, z, scale = 1 }: { x: number; z: number; scale?: number }) {
   return (
     <group position={[x, 0, z]} scale={[scale, scale, scale]}>
       <mesh position={[0, 0.4, 0]} castShadow>
-        <sphereGeometry args={[0.55, 7, 6]} />
+        <sphereGeometry args={[0.55, 11, 8]} />
         <meshStandardMaterial color="#3A8030" roughness={0.95} />
       </mesh>
       <mesh position={[0.4, 0.35, 0.2]} castShadow>
-        <sphereGeometry args={[0.4, 7, 6]} />
+        <sphereGeometry args={[0.4, 10, 7]} />
         <meshStandardMaterial color="#3E8838" roughness={0.95} />
       </mesh>
     </group>
@@ -1096,36 +2011,86 @@ function DraggableGroup({
   );
 }
 
-// ─── Swimming pool ───────────────────────────────────────────
-function AnimatedWater({ w, d }: { w: number; d: number }) {
-  const matRef = useRef<THREE.MeshPhysicalMaterial>(null);
-  useFrame(() => {
-    if (matRef.current) {
-      // subtle shimmer: oscillate emissiveIntensity
-      matRef.current.emissiveIntensity = 0.08 + 0.06 * Math.sin(Date.now() * 0.002);
+// ─── Swimming pool water ─────────────────────────────────────
+// Uses drei's MeshReflectorMaterial (real-time mirror reflection of the
+// scene, plus distortion + blur for a wet-glass look) layered on top of a
+// turquoise pool floor. The whole thing sits ~22cm below the coping so
+// the surface lines up with the infinity-edge lip.
+export function AnimatedWater({ w, d }: { w: number; d: number }) {
+  const surfaceRef = useRef<THREE.Mesh>(null);
+  // Procedural ripple normal map — generated once via canvas. Cheap, no
+  // network request, and animates by sliding the offset each frame.
+  const rippleNormal = useMemo(() => {
+    const SIZE = 256;
+    const c = document.createElement("canvas");
+    c.width = c.height = SIZE;
+    const ctx = c.getContext("2d")!;
+    const img = ctx.createImageData(SIZE, SIZE);
+    for (let y = 0; y < SIZE; y++) {
+      for (let x = 0; x < SIZE; x++) {
+        // Two interfering sine waves → soft cellular pattern
+        const a = Math.sin(x * 0.18) * Math.cos(y * 0.21);
+        const b = Math.sin((x + y) * 0.10) * 0.7;
+        const v = (a + b) * 0.4 + 0.5;
+        const i = (y * SIZE + x) * 4;
+        // Encode as a tangent-space normal: flat (0.5, 0.5, 1.0) plus tiny xy
+        img.data[i + 0] = Math.min(255, Math.max(0, 128 + v * 30));
+        img.data[i + 1] = Math.min(255, Math.max(0, 128 + (1 - v) * 30));
+        img.data[i + 2] = 255;
+        img.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(w / 1.5, d / 1.5);
+    tex.anisotropy = 4;
+    return tex;
+  }, [w, d]);
+
+  useFrame((_, delta) => {
+    // Drift the normal map in the +X / +Z direction to fake water flow
+    rippleNormal.offset.x += delta * 0.04;
+    rippleNormal.offset.y += delta * 0.025;
+    if (surfaceRef.current) {
+      // Tiny vertical bob so the surface isn't dead-still
+      surfaceRef.current.position.y = -0.12 + Math.sin(Date.now() * 0.0011) * 0.003;
     }
   });
+
   return (
-    <mesh position={[0, -0.22, 0]} receiveShadow>
-      <boxGeometry args={[w, 0.22, d]} />
-      <meshPhysicalMaterial
-        ref={matRef}
-        color="#0AACCC"
-        emissive="#005580"
-        emissiveIntensity={0.08}
-        transparent
-        opacity={0.92}
-        roughness={0.01}
-        metalness={0.0}
-        envMapIntensity={3.5}
-        transmission={0.06}
-      />
-    </mesh>
+    <group>
+      {/* Pool bottom — turquoise tile, lit by sun + sky to give that
+          unmistakable 'lit pool' colour through the water surface */}
+      <mesh position={[0, -0.42, 0]} receiveShadow>
+        <boxGeometry args={[w + 0.02, 0.04, d + 0.02]} />
+        <meshStandardMaterial color="#3FBFD9" roughness={0.35} metalness={0.05} />
+      </mesh>
+      {/* Reflective water surface */}
+      <mesh ref={surfaceRef} position={[0, -0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[w, d, 1, 1]} />
+        <MeshReflectorMaterial
+          blur={[160, 80]}
+          resolution={512}
+          mixBlur={0.7}
+          mixStrength={1.2}
+          mirror={0.55}
+          mixContrast={1.1}
+          roughness={0.08}
+          metalness={0.1}
+          color="#5DC8E0"
+          normalMap={rippleNormal}
+          normalScale={new THREE.Vector2(0.18, 0.18)}
+          transparent
+          opacity={0.92}
+        />
+      </mesh>
+    </group>
   );
 }
 
 // Luxury infinity-edge pool with travertine deck, spa, loungers, cabana
-function Pool({ x, z, w = 9, d = 5 }: { x: number; z: number; w?: number; d?: number }) {
+export function Pool({ x, z, w = 9, d = 5 }: { x: number; z: number; w?: number; d?: number }) {
   // Travertine deck tiles
   const deckTiles = useMemo(() => {
     const tiles: { tx: number; tz: number }[] = [];
@@ -1328,54 +2293,104 @@ function Pool({ x, z, w = 9, d = 5 }: { x: number; z: number; w?: number; d?: nu
 }
 
 // ─── Pergola (replaces Gazebo) ───────────────────────────────
-function Pergola({ x, z }: { x: number; z: number }) {
-  // Rectangular 5×4 elegant pergola with open crossing-beam roof
+export function Pergola({ x, z }: { x: number; z: number }) {
+  // Architect-grade pergola: dark steel / aluminium frame on slim columns,
+  // closely-spaced overhead slats (rhythmic shadow), integrated LED strip
+  // along long beams, teak deck floor. Replaces the all-white-cream colour
+  // scheme that read as cake topper.
   const pW = 5.0;
   const pD = 4.0;
   const colH = 2.8;
 
+  // Wood-deck flooring texture for the platform — matches private zone
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { getOutdoorTexture, outdoorTileSize } = require("@/lib/textures") as typeof import("@/lib/textures");
+  const deckTex = useMemo(() => {
+    const src = getOutdoorTexture("outdoor-wood-deck");
+    if (!src) return null;
+    const t = src.clone();
+    const [tw, th] = outdoorTileSize("outdoor-wood-deck");
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set((pW + 0.3) / tw, (pD + 0.3) / th);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    t.needsUpdate = true;
+    return t;
+  }, [pW, pD]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Only 4 corner columns (no mid columns — opens up the space). Slim
+  // 8cm-square anodised aluminium feels modern.
   const columns: [number, number][] = [
     [-pW / 2, -pD / 2], [pW / 2, -pD / 2],
     [-pW / 2,  pD / 2], [pW / 2,  pD / 2],
-    [0, -pD / 2], [0, pD / 2], // extra mid columns
   ];
 
-  // Longitudinal beams (along X)
-  const longBeams: number[] = [-pD / 2, 0, pD / 2];
-  // Cross beams (along Z)
-  const crossBeams: number[] = [-pW / 2, -pW / 4, 0, pW / 4, pW / 2];
+  // Longitudinal beams (along X) — fewer, deeper for rhythm
+  const longBeams: number[] = [-pD / 2, pD / 2];
+  // Slats (along Z) — many, narrow, evenly spaced for that signature
+  // banded sunset shadow on the deck below
+  const SLAT_COUNT = 22;
+  const slatPitch = pW / SLAT_COUNT;
+  const STEEL = "#3A3F45";
+  const STEEL_HI = "#52585F";
+  const TEAK = "#5A3F1E";
 
   return (
     <group position={[x, 0, z]}>
-      {/* Stone floor */}
-      <mesh position={[0, 0.03, 0]} receiveShadow>
-        <boxGeometry args={[pW + 0.3, 0.06, pD + 0.3]} />
-        <meshStandardMaterial color="#D8D2C2" roughness={0.9} />
+      {/* Teak deck floor */}
+      <mesh position={[0, 0.04, 0]} receiveShadow>
+        <boxGeometry args={[pW + 0.3, 0.08, pD + 0.3]} />
+        {deckTex
+          ? <meshStandardMaterial map={deckTex} color="#FFFFFF" roughness={0.85} />
+          : <meshStandardMaterial color={TEAK} roughness={0.85} />}
       </mesh>
+      {/* Subtle stone curb edging the deck */}
+      {([
+        [-pW / 2 - 0.18, 0, 0, 0.10, 0.08, pD + 0.46],
+        [ pW / 2 + 0.18, 0, 0, 0.10, 0.08, pD + 0.46],
+        [0, 0, -pD / 2 - 0.18, pW + 0.46, 0.08, 0.10],
+        [0, 0,  pD / 2 + 0.18, pW + 0.46, 0.08, 0.10],
+      ] as [number,number,number,number,number,number][]).map((c, i) => (
+        <mesh key={i} position={[c[0], 0.04, c[2]]} receiveShadow>
+          <boxGeometry args={[c[3], c[4], c[5]]} />
+          <meshStandardMaterial color="#9C9A92" roughness={0.85} />
+        </mesh>
+      ))}
 
-      {/* Columns */}
+      {/* Columns — slim square anodised aluminium */}
       {columns.map(([cx, cz], i) => (
-        <mesh key={i} position={[cx, colH / 2, cz]} castShadow>
-          <cylinderGeometry args={[0.12, 0.14, colH, 10]} />
-          <meshStandardMaterial color="#F0EAD8" roughness={0.7} />
+        <mesh key={i} position={[cx, colH / 2, cz]} castShadow receiveShadow>
+          <boxGeometry args={[0.10, colH, 0.10]} />
+          <meshStandardMaterial color={STEEL} roughness={0.45} metalness={0.65} />
         </mesh>
       ))}
 
-      {/* Longitudinal beams (parallel to X axis) */}
+      {/* Longitudinal beams — deeper, dark steel */}
       {longBeams.map((bz, i) => (
-        <mesh key={i} position={[0, colH + 0.1, bz]} castShadow>
-          <boxGeometry args={[pW + 0.4, 0.14, 0.16]} />
-          <meshStandardMaterial color="#E8E2D0" roughness={0.75} />
+        <mesh key={i} position={[0, colH + 0.12, bz]} castShadow>
+          <boxGeometry args={[pW + 0.30, 0.22, 0.10]} />
+          <meshStandardMaterial color={STEEL} roughness={0.5} metalness={0.55} />
         </mesh>
       ))}
 
-      {/* Cross beams (parallel to Z axis, sit on top of long beams) */}
-      {crossBeams.map((bx, i) => (
-        <mesh key={i} position={[bx, colH + 0.22, 0]} castShadow>
-          <boxGeometry args={[0.12, 0.12, pD + 0.2]} />
-          <meshStandardMaterial color="#E8E2D0" roughness={0.75} />
+      {/* LED strip — emissive thin plane under each long beam */}
+      {longBeams.map((bz, i) => (
+        <mesh key={`led-${i}`} position={[0, colH + 0.005, bz]}>
+          <boxGeometry args={[pW + 0.20, 0.02, 0.04]} />
+          <meshStandardMaterial color="#FFE8B0" emissive="#FFE8B0" emissiveIntensity={0.9} />
         </mesh>
       ))}
+
+      {/* Roof slats — closely spaced for the signature shadow rhythm */}
+      {Array.from({ length: SLAT_COUNT }).map((_, i) => {
+        const bx = -pW / 2 + slatPitch * (i + 0.5);
+        return (
+          <mesh key={i} position={[bx, colH + 0.27, 0]} castShadow>
+            <boxGeometry args={[0.06, 0.04, pD + 0.05]} />
+            <meshStandardMaterial color={STEEL_HI} roughness={0.5} metalness={0.55} />
+          </mesh>
+        );
+      })}
 
       {/* Dining table — dark stone slab */}
       <mesh position={[0, 0.78, 0]} castShadow receiveShadow>
@@ -1390,33 +2405,30 @@ function Pergola({ x, z }: { x: number; z: number }) {
         </mesh>
       ))}
 
-      {/* 6 chairs (simple boxes) */}
+      {/* 6 chairs — wicker / charcoal matching the dark frame */}
       {([ [-1.35,0], [1.35,0], [-0.5,-0.75], [0.5,-0.75], [-0.5,0.75], [0.5,0.75] ] as [number,number][]).map(([cx, cz], i) => (
         <group key={i} position={[cx, 0.46, cz]}>
           <mesh castShadow>
             <boxGeometry args={[0.48, 0.08, 0.48]} />
-            <meshStandardMaterial color="#D8D0B8" roughness={0.85} />
+            <meshStandardMaterial color="#4A4540" roughness={0.95} />
           </mesh>
           <mesh position={[0, 0.3, -0.18]} castShadow>
             <boxGeometry args={[0.44, 0.55, 0.06]} />
-            <meshStandardMaterial color="#D8D0B8" roughness={0.85} />
+            <meshStandardMaterial color="#4A4540" roughness={0.95} />
+          </mesh>
+          {/* Cream cushion on seat */}
+          <mesh position={[0, 0.06, 0]} castShadow>
+            <boxGeometry args={[0.42, 0.04, 0.42]} />
+            <meshStandardMaterial color="#E8DDC9" roughness={0.92} />
           </mesh>
         </group>
-      ))}
-
-      {/* Climbing plant hints — green mesh on sides */}
-      {([ [0, -pD / 2 - 0.05], [0, pD / 2 + 0.05] ] as [number,number][]).map(([gx, gz], i) => (
-        <mesh key={i} position={[gx, colH * 0.55, gz]}>
-          <boxGeometry args={[pW, colH * 0.9, 0.05]} />
-          <meshStandardMaterial color="#2E7030" transparent opacity={0.22} roughness={1.0} side={THREE.DoubleSide} />
-        </mesh>
       ))}
     </group>
   );
 }
 
 // ─── Outdoor Kitchen ─────────────────────────────────────────
-function OutdoorKitchen({ x, z }: { x: number; z: number }) {
+export function OutdoorKitchen({ x, z }: { x: number; z: number }) {
   return (
     <group position={[x, 0, z]}>
       {/* L-shape counter — long arm */}
@@ -1479,7 +2491,7 @@ function OutdoorKitchen({ x, z }: { x: number; z: number }) {
 }
 
 // ─── Fountain ────────────────────────────────────────────────
-function Fountain({ x, z }: { x: number; z: number }) {
+export function Fountain({ x, z }: { x: number; z: number }) {
   return (
     <group position={[x, 0, z]}>
       {/* Basin */}
@@ -1593,14 +2605,14 @@ function DrivewayAndParking() {
       {/* ── Straight approach from origin (house front) to circle ── */}
       <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -0.492, 5.5]} receiveShadow>
         <planeGeometry args={[4.2, 11.0]} />
-        <meshStandardMaterial color="#B8A888" roughness={0.88} />
+        <meshStandardMaterial color="#C9C2B5" roughness={0.85} />
       </mesh>
 
       {/* ── Ring road segments ── */}
       {ringSegments.map((seg, i) => (
         <mesh key={i} rotation={[-Math.PI/2, seg.rot, 0]} position={seg.pos} receiveShadow>
           <planeGeometry args={[seg.w, seg.len]} />
-          <meshStandardMaterial color="#B8A888" roughness={0.88} />
+          <meshStandardMaterial color="#C9C2B5" roughness={0.85} />
         </mesh>
       ))}
 
@@ -1680,12 +2692,32 @@ function DrivewayAndParking() {
 }
 
 // ─── Yard presets ─────────────────────────────────────────────
+// LEGACY: kept for back-compat with the ExteriorSettings.yardPreset
+// dropdown. NEW preferred path = drag Pool / Pergola / etc as Prefab
+// items in the YardPlan editor (BLOCKS library tab). When the user has
+// any structural prefab in their yardPlan.items, this whole legacy
+// function returns null to avoid double-rendering them.
 function YardElements({ W, D, yardPreset, parking = false, orbitRef, selectedKey, onSelect }: {
   W: number; D: number; yardPreset: string; parking?: boolean;
   orbitRef: React.MutableRefObject<any>;
   selectedKey: string | null;
   onSelect: (key: string | null) => void;
 }) {
+  // Skip the entire legacy auto-place when user-driven yardPlan already
+  // contains a structural prefab (pool / pergola_classic / outdoor_kitchen
+  // / fountain). The user explicitly chose to compose the structures via
+  // the YardPlan editor — respect that and don't shadow them.
+  const activeFloor = useDesignerStore(s => s.activeFloor);
+  const yardItems = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.items);
+  const hasUserStructure = useMemo(() => {
+    if (!yardItems) return false;
+    return yardItems.some(it =>
+      it.type === "prefab" &&
+      ["pool", "pergola_classic", "outdoor_kitchen", "fountain"].includes(it.prefabKind)
+    );
+  }, [yardItems]);
+  if (hasUserStructure) return null;
+
   const xOff = W / 2 + 7.5;   // right side (more room for luxury pool)
 
   if (yardPreset === "minimal") {
@@ -1772,29 +2804,47 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef, selectedKey
   if (yardPreset === "full") {
     return (
       <>
-        <Tree x={-(W / 2 + 2.5)} z={-(D / 2 + 1.5)} scale={1.2} />
-        <Tree x={  W / 2 + 2.5}  z={-(D / 2 + 1.5)} type="pine"  scale={1.0} />
-        <Tree x={-(W / 2 + 4.5)} z={  0}             scale={1.1} />
-        <Tree x={  W / 2 + 4.5}  z={  0}             type="pine"  scale={1.0} />
+        {/* Symmetrical olive trees flanking the front entrance — Mediterranean villa signature */}
+        <Tree x={-(W / 2 + 2.5)} z={-(D / 2 + 1.5)} type="olive"   scale={1.15} />
+        <Tree x={  W / 2 + 2.5}  z={-(D / 2 + 1.5)} type="olive"   scale={1.15} />
+        {/* Cypress pillars further out — formal sentinels */}
+        <Tree x={-(W / 2 + 6.0)} z={-(D / 2 + 2.5)} type="cypress" scale={1.1} />
+        <Tree x={  W / 2 + 6.0}  z={-(D / 2 + 2.5)} type="cypress" scale={1.1} />
+        {/* Side garden round trees */}
+        <Tree x={-(W / 2 + 4.5)} z={  0}             scale={1.05} />
+        <Tree x={  W / 2 + 4.5}  z={  0}             scale={1.0} />
         <Tree x={-(W / 2 + 3.5)} z={  D / 2 + 2.5}  scale={0.9} />
         <Tree x={  W / 2 + 3.5}  z={  D / 2 + 2.5}  scale={1.0} />
+        {/* Centerpiece tree behind fountain */}
         <Tree x={0}               z={  D / 2 + 7.0}  scale={1.3} />
+        {/* Palm pair near pool — tropical accent */}
         <Tree x={xOff + 9.5}      z={-4.0} type="palm"  scale={0.9} />
         <Tree x={xOff + 9.5}      z={ 4.0} type="palm"  scale={0.9} />
+        {/* Driveway: cypress columns + boxwood hedge along the edges */}
         {parking && ([8.0, 12.0, 16.0] as number[]).map((cz, i) => (
           <Fragment key={i}>
             <Tree x={-2.8} z={D / 2 + cz} type="cypress" scale={1.0} />
             <Tree x={ 2.8} z={D / 2 + cz} type="cypress" scale={1.0} />
           </Fragment>
         ))}
-        <Tree x={-(W / 2 + 6.0)} z={-(D / 2 + 2.5)} type="cypress" scale={1.1} />
-        <Tree x={  W / 2 + 6.0}  z={-(D / 2 + 2.5)} type="cypress" scale={1.1} />
+        {parking && ([6.0, 10.0, 14.0, 18.0] as number[]).map((cz, i) => (
+          <Fragment key={`bx-${i}`}>
+            <Tree x={-3.6} z={D / 2 + cz} type="boxwood" scale={0.7} />
+            <Tree x={ 3.6} z={D / 2 + cz} type="boxwood" scale={0.7} />
+          </Fragment>
+        ))}
         <DraggableGroup posKey="pool" label="🏊 泳池" defaultX={xOff} defaultZ={0} hitW={16} hitD={13} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
           <Pool x={0} z={0} w={9} d={5} />
-          <Tree x={-1.5} z={-(5 / 2 + 3.5)} type="cypress" scale={1.05} />
-          <Tree x={ 1.5} z={-(5 / 2 + 3.5)} type="cypress" scale={1.05} />
-          <Tree x={-1.5} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
-          <Tree x={ 1.5} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
+          {/* Topiary spheres — formal pool corners */}
+          <Tree x={-4.0} z={-(5 / 2 + 0.8)} type="topiary" scale={1.1} />
+          <Tree x={ 4.0} z={-(5 / 2 + 0.8)} type="topiary" scale={1.1} />
+          <Tree x={-4.0} z={ 5 / 2 + 0.8}  type="topiary" scale={1.1} />
+          <Tree x={ 4.0} z={ 5 / 2 + 0.8}  type="topiary" scale={1.1} />
+          {/* Cypress backdrop */}
+          <Tree x={-1.8} z={-(5 / 2 + 3.5)} type="cypress" scale={1.05} />
+          <Tree x={ 1.8} z={-(5 / 2 + 3.5)} type="cypress" scale={1.05} />
+          <Tree x={-1.8} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
+          <Tree x={ 1.8} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
         </DraggableGroup>
         <DraggableGroup posKey="pergola" label="🏛 凉亭" defaultX={-(xOff - 2)} defaultZ={D / 2 + 5} hitW={10} hitD={9} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
           <Pergola x={0} z={0} />
@@ -1827,13 +2877,260 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef, selectedKey
 }
 
 // ─── Ground ─────────────────────────────────────────────────
+// ─── PBR texture set loader ─────────────────────────────────
+// Maps a /public/textures/<dir>/<asset>_{diff,nor_gl,arm}_1k.jpg PolyHaven
+// triple to a configured material props object. `repeat` tiles the texture
+// over the surface — pass the world dimensions in meters for natural scale.
+function usePbrSet(dir: string, asset: string, repeat: [number, number]): {
+  map: THREE.Texture; normalMap: THREE.Texture; aoMap: THREE.Texture; roughnessMap: THREE.Texture;
+} {
+  const base = `/textures/${dir}/${asset}`;
+  const [diff, nor, arm] = useLoader(THREE.TextureLoader, [
+    `${base}_diff_1k.jpg`,
+    `${base}_nor_gl_1k.jpg`,
+    `${base}_arm_1k.jpg`,
+  ]);
+  return useMemo(() => {
+    for (const t of [diff, nor, arm]) {
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(repeat[0], repeat[1]);
+      t.anisotropy = 8;
+    }
+    diff.colorSpace = THREE.SRGBColorSpace;
+    return { map: diff, normalMap: nor, aoMap: arm, roughnessMap: arm };
+  }, [diff, nor, arm, repeat]);
+}
+
+// PBR-textured grass ground — loads the aerial_grass_rock PolyHaven set.
+// In Suspense so the flat-color fallback shows while textures fetch.
+function GrassGroundTextured({ size }: { size: number }) {
+  const rep: [number, number] = [size * 1.8, size * 1.8];
+  const grass = usePbrSet("ground", "aerial_grass_rock", rep);
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.499, 0]} receiveShadow>
+      <planeGeometry args={[size, size, 6, 6]} />
+      <meshStandardMaterial
+        {...grass}
+        roughness={0.92}
+        metalness={0.0}
+        envMapIntensity={0.4}
+      />
+    </mesh>
+  );
+}
+
+// Cobblestone entry path — always shown as a visual anchor connecting
+// the front door to the property edge. Uses cobblestone_05 PBR texture.
+function EntryPathTextured({ W, D }: { W: number; D: number }) {
+  const { map, normalMap, roughnessMap } = usePbrSet("driveway", "cobblestone_05", [2, 5]);
+  const pathLen = D * 0.5 + 4.5;
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.498, D / 2 + pathLen / 2 - 0.1]} receiveShadow>
+        <planeGeometry args={[1.5, pathLen]} />
+        <meshStandardMaterial map={map} normalMap={normalMap} roughnessMap={roughnessMap}
+          color="#D8D0C0" roughness={0.88} metalness={0.0} />
+      </mesh>
+    </group>
+  );
+}
+
+function EntryPath({ W, D }: { W: number; D: number }) {
+  const pathLen = D * 0.5 + 4.5;
+  return (
+    <Suspense fallback={
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.498, D / 2 + pathLen / 2 - 0.1]} receiveShadow>
+        <planeGeometry args={[1.5, pathLen]} />
+        <meshStandardMaterial color="#C8BEA8" roughness={0.9} />
+      </mesh>
+    }>
+      <EntryPathTextured W={W} D={D} />
+    </Suspense>
+  );
+}
+
 function Ground({ W, D }: { W: number; D: number }) {
   const yardSize = Math.max(W, D) * 2.0;
+  const sizeX = W + yardSize * 2;
+  const sizeZ = D + yardSize * 2;
+  const lawnSize = Math.max(W, D) * 2.2;
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.501, 0]} receiveShadow>
-      <planeGeometry args={[W + yardSize * 2, D + yardSize * 2]} />
-      <meshStandardMaterial color="#5A9040" roughness={0.95} />
-    </mesh>
+    <>
+      {/* Far ground — neutral tone, fades into horizon */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.501, 0]} receiveShadow>
+        <planeGeometry args={[sizeX, sizeZ, 1, 1]} />
+        <meshStandardMaterial color="#BDB8A8" roughness={1.0} />
+      </mesh>
+      {/* Inset lawn — PBR grass texture. Suspense boundary falls back to
+          flat sage while the texture loads over the network. */}
+      <Suspense fallback={
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.499, 0]} receiveShadow>
+          <planeGeometry args={[lawnSize, lawnSize, 1, 1]} />
+          <meshStandardMaterial color="#9DAD8C" roughness={1.0} />
+        </mesh>
+      }>
+        <GrassGroundTextured size={lawnSize} />
+      </Suspense>
+    </>
+  );
+}
+
+// ─── Instanced grass-blade carpet ────────────────────────────
+// Scatters thousands of thin tapered triangles across the lawn. Skips
+// blades that fall inside the house footprint or pool footprint so they
+// don't poke through hard surfaces.
+function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: number; radius: number }) {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const geom = useMemo(() => {
+    // 2-tri tapered blade: rectangular base narrowing to a point
+    const g = new THREE.BufferGeometry();
+    const verts = new Float32Array([
+      // base-left, base-right, tip
+      -0.025, 0,    0,
+       0.025, 0,    0,
+       0,     0.18, 0,
+    ]);
+    g.setAttribute("position", new THREE.BufferAttribute(verts, 3));
+    g.setIndex([0, 1, 2]);
+    g.computeVertexNormals();
+    return g;
+  }, []);
+
+  useEffect(() => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    const dummy = new THREE.Object3D();
+    const halfW = W / 2 + 0.5;
+    const halfD = D / 2 + 0.5;
+    let placed = 0;
+    let attempts = 0;
+    while (placed < count && attempts < count * 4) {
+      attempts++;
+      // Sample within a ring around the house
+      const r = Math.sqrt(Math.random()) * radius;
+      const a = Math.random() * Math.PI * 2;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      // Skip house footprint (with margin)
+      if (Math.abs(x) < halfW && Math.abs(z) < halfD) continue;
+      dummy.position.set(x, -0.49, z);
+      dummy.rotation.y = Math.random() * Math.PI * 2;
+      const s = 0.7 + Math.random() * 0.7;
+      dummy.scale.set(s, s, s);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(placed, dummy.matrix);
+      // Color variation: lighter / darker greens
+      const tint = 0.55 + Math.random() * 0.35;
+      const col = new THREE.Color(0.30 * tint + 0.10, 0.55 * tint, 0.18 * tint);
+      mesh.setColorAt(placed, col);
+      placed++;
+    }
+    mesh.count = placed;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, [count, radius, W, D]);
+
+  return (
+    <instancedMesh ref={meshRef} args={[geom, undefined, count]} castShadow={false} receiveShadow>
+      <meshStandardMaterial vertexColors side={THREE.DoubleSide} roughness={1.0} />
+    </instancedMesh>
+  );
+}
+
+// ─── Distant tree ring (skybox horizon mask) ─────────────────
+// Cheap low-detail conifer cones placed in a wide circle around the
+// property, well past the lawn edge. Hides the abrupt end of the ground
+// plane and adds depth to the horizon.
+function DistantTreeRing({ radius, count }: { radius: number; count: number }) {
+  const trees = useMemo(() => {
+    const out: { x: number; z: number; h: number; tint: number }[] = [];
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 + Math.random() * 0.06;
+      const r = radius + Math.random() * radius * 0.18;
+      out.push({
+        x: Math.cos(a) * r,
+        z: Math.sin(a) * r,
+        h: 4 + Math.random() * 5,
+        tint: 0.6 + Math.random() * 0.35,
+      });
+    }
+    return out;
+  }, [radius, count]);
+  return (
+    <group>
+      {trees.map((t, i) => (
+        <group key={i} position={[t.x, 0, t.z]}>
+          {/* Trunk */}
+          <mesh position={[0, t.h * 0.18, 0]} castShadow>
+            <cylinderGeometry args={[0.18, 0.25, t.h * 0.36, 5]} />
+            <meshStandardMaterial color="#3a2812" roughness={0.95} />
+          </mesh>
+          {/* Foliage cone */}
+          <mesh position={[0, t.h * 0.65, 0]} castShadow>
+            <coneGeometry args={[t.h * 0.42, t.h * 0.95, 7]} />
+            <meshStandardMaterial color={new THREE.Color(30 * t.tint / 255, 80 * t.tint / 255, 40 * t.tint / 255)} roughness={0.95} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// ─── Slat fence (technical-preview perimeter line) ───────────
+// Plain monochrome posts + horizontal rails, low-fi but legible — reads
+// as a site-plan boundary line, not a real fence model.
+function SlatFence({ W, D, insetX, insetZ }: { W: number; D: number; insetX: number; insetZ: number }) {
+  const halfX = insetX;
+  const halfZ = insetZ;
+  const POST_SPACING = 2.5;
+  const FENCE_H = 1.4;
+  const FENCE_COLOR = "#8C8678";   // muted khaki
+  const POST_COLOR = "#5C5648";
+  const drivewayGap = 3.0;
+
+  const sides: Array<{ key: string; cx: number; cz: number; len: number; angle: number; gap?: boolean }> = [
+    { key: "front", cx: 0,        cz:  halfZ, len: halfX * 2, angle: 0,            gap: true },
+    { key: "back",  cx: 0,        cz: -halfZ, len: halfX * 2, angle: 0 },
+    { key: "left",  cx: -halfX,   cz: 0,      len: halfZ * 2, angle: Math.PI / 2 },
+    { key: "right", cx:  halfX,   cz: 0,      len: halfZ * 2, angle: Math.PI / 2 },
+  ];
+
+  return (
+    <group>
+      {sides.map(side => {
+        const halfLen = side.len / 2;
+        const posts: number[] = [];
+        for (let t = -halfLen; t <= halfLen + 0.001; t += POST_SPACING) {
+          if (side.gap && Math.abs(t) < drivewayGap) continue;
+          posts.push(t);
+        }
+        // Top + middle rails; punched by driveway gap on the front side
+        const railRows = [FENCE_H * 0.85, FENCE_H * 0.45].map(yLocal => {
+          if (!side.gap) return [{ cx: 0, len: side.len, y: yLocal }];
+          const segLen = halfLen - drivewayGap;
+          return [
+            { cx: -(drivewayGap + segLen / 2), len: segLen, y: yLocal },
+            { cx:   drivewayGap + segLen / 2, len: segLen, y: yLocal },
+          ];
+        });
+        return (
+          <group key={side.key} position={[side.cx, -0.5, side.cz]} rotation={[0, side.angle, 0]}>
+            {posts.map((t, i) => (
+              <mesh key={`p-${i}`} position={[t, FENCE_H / 2, 0]} castShadow>
+                <boxGeometry args={[0.08, FENCE_H, 0.08]} />
+                <meshStandardMaterial color={POST_COLOR} roughness={0.85} />
+              </mesh>
+            ))}
+            {railRows.flat().map((r, i) => (
+              <mesh key={`r-${i}`} position={[r.cx, r.y, 0]} castShadow>
+                <boxGeometry args={[r.len, 0.06, 0.05]} />
+                <meshStandardMaterial color={FENCE_COLOR} roughness={0.9} />
+              </mesh>
+            ))}
+          </group>
+        );
+      })}
+    </group>
   );
 }
 
@@ -1841,6 +3138,10 @@ function Ground({ W, D }: { W: number; D: number }) {
 function HouseBody({ W, D, settings }: { W: number; D: number; settings: ExteriorSettings }) {
   const { floors, roofStyle, roofColor, accentColor } = settings;
   const totalH = floors * FLOOR_H;
+  // 架空层 (pilotis) — lift the entire house body by this many metres.
+  // Default 0 = slab on grade. >0 = stilted / modernist pilotis / Chinese
+  // raised platform. Adds 4 corner support columns automatically.
+  const pilotisH = Math.max(0, settings.pilotisHeightM ?? 0);
   // Check: does any indoor room have a non-rect polygon shape? If so, we
   // bypass the bbox-based FloorShell and render per-room polygon walls
   // so L型/凸字型 notches show up correctly on the exterior.
@@ -1850,20 +3151,54 @@ function HouseBody({ W, D, settings }: { W: number; D: number; settings: Exterio
   const hasPolygonRoom = enabledRooms.some(r =>
     !ROOM_DEFS[r].isOutdoor && roomShapes?.[r] && roomShapes[r]!.preset !== "rect"
   );
+
+  // Corner column positions (4 corners of the house bbox) — only rendered
+  // when pilotisH > 0. Slim 30×30cm concrete columns matching the
+  // technical-drawing palette.
+  const columnPositions: [number, number][] = [
+    [-(W / 2 - 0.2), -(D / 2 - 0.2)],
+    [ (W / 2 - 0.2), -(D / 2 - 0.2)],
+    [-(W / 2 - 0.2),  (D / 2 - 0.2)],
+    [ (W / 2 - 0.2),  (D / 2 - 0.2)],
+  ];
+
   return (
     <group>
-      <Foundation W={W} D={D} color={accentColor} />
-      {hasPolygonRoom ? (
-        <PolygonHouseShell floors={floors} settings={settings} />
-      ) : (
-        Array.from({ length: floors }).map((_, i) => (
-          <FloorShell key={i} floorIndex={i} W={W} D={D} settings={settings} totalFloors={floors} />
-        ))
+      {/* Foundation only when NOT pilotis — pilotis means the house
+          floats and there's no foundation slab. */}
+      {pilotisH === 0 && <Foundation W={W} D={D} color={accentColor} />}
+
+      {/* Pilotis support columns — only when lifted */}
+      {pilotisH > 0 && columnPositions.map(([cx, cz], i) => (
+        <mesh key={`pillar-${i}`} position={[cx, pilotisH / 2, cz]} castShadow receiveShadow>
+          <boxGeometry args={[0.30, pilotisH, 0.30]} />
+          <meshStandardMaterial color="#C8C5BE" roughness={0.85} />
+        </mesh>
+      ))}
+      {/* Floor slab UNDER the lifted house — visual ceiling for the
+          pilotis space below. Travertine-cream so it matches the deck
+          aesthetic of social Prefabs. */}
+      {pilotisH > 0 && (
+        <mesh position={[0, pilotisH - 0.05, 0]} castShadow receiveShadow>
+          <boxGeometry args={[W + 0.4, 0.10, D + 0.4]} />
+          <meshStandardMaterial color="#D8D0C0" roughness={0.85} />
+        </mesh>
       )}
-      <group position={[0, totalH, 0]}>
-        {hasPolygonRoom && roofStyle === "flat"
-          ? <PolygonFlatRoof color={roofColor} />
-          : <RoofSwitch W={W} D={D} roofStyle={roofStyle} roofColor={roofColor} />}
+
+      {/* Lift the entire house body (walls + floors + roof) by pilotisH */}
+      <group position={[0, pilotisH, 0]}>
+        {hasPolygonRoom ? (
+          <PolygonHouseShell floors={floors} settings={settings} />
+        ) : (
+          Array.from({ length: floors }).map((_, i) => (
+            <FloorShell key={i} floorIndex={i} W={W} D={D} settings={settings} totalFloors={floors} />
+          ))
+        )}
+        <group position={[0, totalH, 0]}>
+          {hasPolygonRoom && roofStyle === "flat"
+            ? <PolygonFlatRoof color={roofColor} />
+            : <RoofSwitch W={W} D={D} roofStyle={roofStyle} roofColor={roofColor} />}
+        </group>
       </group>
     </group>
   );
@@ -2059,61 +3394,260 @@ function DeselectPlane({ onDeselect }: { onDeselect: () => void }) {
   );
 }
 
+// ─── Time-of-day presets — drive sun position/colour, ambient, fog ─────
+type TimeOfDay = "day" | "sunset" | "night";
+const TOD_PRESETS: Record<TimeOfDay, {
+  sunPos:  [number, number, number];
+  sunColor: string;
+  sunIntensity: number;
+  fillColor: string;
+  fillIntensity: number;
+  hemiSky: string;
+  hemiGround: string;
+  hemiIntensity: number;
+  ambient: number;
+  fogColor: string;
+  fogNear: number;
+  fogFar:  number;
+  exposure: number;
+  hdr: string;
+}> = {
+  // PBR-quality presets — close-up eye-level camera, matching RoomCanvas
+  // lighting feel. Higher ambient so shadows aren't pitch-black on close faces.
+  day: {
+    sunPos: [30, 45, 20], sunColor: "#FFF8F0", sunIntensity: 2.4,
+    fillColor: "#C8E0F8", fillIntensity: 0.55,
+    hemiSky: "#C8DDEF", hemiGround: "#A8A070", hemiIntensity: 0.65,
+    ambient: 0.35, fogColor: "#4E8FCC", fogNear: 28, fogFar: 90,
+    exposure: 1.05, hdr: "/hdr/potsdamer_platz_1k.hdr",
+  },
+  sunset: {
+    sunPos: [28, 12, 10], sunColor: "#F8B850", sunIntensity: 2.4,
+    fillColor: "#8898C0", fillIntensity: 0.42,
+    hemiSky: "#D87850", hemiGround: "#583820", hemiIntensity: 0.60,
+    ambient: 0.30, fogColor: "#C0A880", fogNear: 80, fogFar: 280,
+    exposure: 1.12, hdr: "/hdr/venice_sunset_1k.hdr",
+  },
+  night: {
+    sunPos: [-12, 22, -8], sunColor: "#B8C4D8", sunIntensity: 0.5,
+    fillColor: "#3A4258", fillIntensity: 0.25,
+    hemiSky: "#252D3F", hemiGround: "#10131C", hemiIntensity: 0.35,
+    ambient: 0.22, fogColor: "#181C28", fogNear: 80, fogFar: 250,
+    exposure: 0.85, hdr: "/hdr/venice_sunset_1k.hdr",
+  },
+};
+
+// ─── Villa yard: lawn + terrace + pool + loungers (modern preset) ────────────
+function VillaYard({ W, D }: { W: number; D: number }) {
+  // Pool dimensions — wide & long, like the luxury villa reference photos
+  const pw  = Math.min(W * 0.88, 9.5);   // pool width ≈ 88% of building width
+  const pd  = Math.max(pw * 1.9, 11.0);  // pool length — long rectangular
+  const gap = 0.65;                       // terrace gap between building face and pool start
+  const deckSide = 2.2;                   // wide travertine deck on near side for loungers
+  const poolBackZ  = D / 2 + gap;        // where pool starts (back edge, closest to building)
+  const pz  = poolBackZ + pd / 2;        // pool center
+
+  // Terrace dimensions
+  const terrD = gap + 0.4;              // stone patio depth
+
+  // Lawn extends wide on both sides and beyond pool
+  const lawnTotalD = terrD + pd + deckSide + 6;
+
+  return (
+    <group position={[0, 0, 0]}>
+      {/* ── Green lawn (sides + foreground) ── */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, -0.496, D / 2 + lawnTotalD / 2 - 1.5]} receiveShadow>
+        <planeGeometry args={[W * 3.5, lawnTotalD]} />
+        <meshStandardMaterial color="#548A38" roughness={0.96} metalness={0.0} envMapIntensity={0.55} />
+      </mesh>
+
+      {/* ── Travertine terrace between building and pool ── */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, -0.493, D / 2 + terrD / 2]} receiveShadow>
+        <planeGeometry args={[W + 1.0, terrD]} />
+        <meshStandardMaterial color="#E5D9C4" roughness={0.86} metalness={0.0} />
+      </mesh>
+
+      {/* ── Pool surround deck (travertine stone tiles) ── */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, -0.492, pz]} receiveShadow>
+        <planeGeometry args={[pw + deckSide * 2 + 0.5, pd + deckSide * 2]} />
+        <meshStandardMaterial color="#EDE2CE" roughness={0.84} metalness={0.0} />
+      </mesh>
+
+      {/* ── Pool shell (coping surround) ── */}
+      <mesh position={[0, -0.28, pz]} receiveShadow castShadow>
+        <boxGeometry args={[pw + 0.36, 0.56, pd + 0.36]} />
+        <meshStandardMaterial color="#D8CEBC" roughness={0.70} />
+      </mesh>
+
+      {/* ── Pool interior (bright turquoise plaster) ── */}
+      <mesh position={[0, -0.05, pz]}>
+        <boxGeometry args={[pw, 0.50, pd]} />
+        <meshStandardMaterial color="#0E6B7A" roughness={0.15} metalness={0.0} />
+      </mesh>
+
+      {/* ── Water surface — bright turquoise like reference photos ── */}
+      <mesh position={[0, 0.03, pz]}>
+        <boxGeometry args={[pw - 0.04, 0.06, pd - 0.04]} />
+        <meshPhysicalMaterial
+          color="#38B4D8"
+          transmission={0.62}
+          roughness={0.01}
+          ior={1.33}
+          metalness={0.0}
+          thickness={1.4}
+          envMapIntensity={8.0}
+        />
+      </mesh>
+
+      {/* ── Coping edge strips (4 sides) ── */}
+      {([[-1,0],[1,0],[0,-1],[0,1]] as [number,number][]).map(([sx, sz], i) => {
+        const horiz = sz === 0;
+        const len = horiz ? pd + 0.5 : pw + 0.5;
+        return (
+          <mesh key={i}
+            position={[sx*(pw/2+0.22), 0.04, pz + sz*(pd/2+0.22)]}
+            castShadow receiveShadow>
+            <boxGeometry args={horiz ? [0.35,0.06,len] : [len,0.06,0.35]} />
+            <meshStandardMaterial color="#F2EAD8" roughness={0.62} />
+          </mesh>
+        );
+      })}
+
+      {/* ── Sun loungers — 4 along pool near edge, like reference photos ── */}
+      {([-0.60, -0.20, 0.20, 0.60] as number[]).map((xFrac, i) => {
+        const lx = xFrac * pw;
+        const lz = pz + pd / 2 + deckSide * 0.45;
+        return (
+          <group key={i} position={[lx, 0, lz]}>
+            {/* Frame */}
+            <mesh position={[0, 0.20, 0]} castShadow>
+              <boxGeometry args={[0.60, 0.05, 1.80]} />
+              <meshStandardMaterial color="#B8A878" roughness={0.78} metalness={0.08} />
+            </mesh>
+            {/* Cushion */}
+            <mesh position={[0, 0.25, 0]}>
+              <boxGeometry args={[0.52, 0.08, 1.65]} />
+              <meshStandardMaterial color="#F5EFDF" roughness={0.90} />
+            </mesh>
+            {/* Legs */}
+            {([-0.7, 0.7] as number[]).map((lzOff, j) => (
+              <mesh key={j} position={[0, 0.10, lzOff]} castShadow>
+                <boxGeometry args={[0.52, 0.20, 0.04]} />
+                <meshStandardMaterial color="#C0A868" roughness={0.80} metalness={0.06} />
+              </mesh>
+            ))}
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 // ─── Main export ────────────────────────────────────────────
 export default function HouseCanvas() {
   const exterior = useDesignerStore(s => s.exterior);
   const { W, D } = useFootprint();
-  const { floors, yardPreset = "garden", showParking = false } = exterior;
+  const { floors } = exterior;
   const orbitRef = useRef<any>(null);
   const [selectedOutdoorKey, setSelectedOutdoorKey] = useState<string | null>(null);
+  const [tod, setTod] = useState<TimeOfDay>("day");
+  const tp = TOD_PRESETS[tod];
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full relative">
+      {/* Time-of-day picker — top-right floating */}
+      <div className="absolute top-3 right-3 z-10 flex rounded-full shadow-lg overflow-hidden"
+        style={{ background: "rgba(20,20,28,0.7)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)" }}>
+        {([
+          { id: "day"    as const, icon: "☀️", label: "Day"    },
+          { id: "sunset" as const, icon: "🌇", label: "Sunset" },
+          { id: "night"  as const, icon: "🌙", label: "Night"  },
+        ]).map(o => (
+          <button key={o.id} onClick={() => setTod(o.id)}
+            className="px-3 py-1.5 text-[11px] font-semibold transition-colors"
+            style={tod === o.id
+              ? { background: "rgba(99,102,241,0.85)", color: "#fff" }
+              : { background: "transparent", color: "rgba(255,255,255,0.65)" }}
+          >
+            {o.icon} {o.label}
+          </button>
+        ))}
+      </div>
       <Canvas
         shadows={{ type: THREE.PCFSoftShadowMap }}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.15,
+          toneMappingExposure: tp.exposure,
           // Required for canvas.toDataURL() (AI render screenshot)
           preserveDrawingBuffer: true,
+          antialias: false, // SMAA effect handles AA below
         }}
-        camera={{ fov: 45, near: 0.1, far: 600 }}
+        camera={{ fov: 58, near: 0.1, far: 300 }}
+        dpr={[1, 2]}
       >
+        <fog attach="fog" args={[tp.fogColor, tp.fogNear, tp.fogFar]} />
         <CameraRig W={W} D={D} floors={floors} />
         <OrbitControls
           ref={orbitRef}
+          makeDefault
           enableDamping
-          minPolarAngle={0.1}
+          dampingFactor={0.08}
+          minPolarAngle={0}
           maxPolarAngle={Math.PI / 2.1}
-          minDistance={3}
-          maxDistance={120}
+          minDistance={2}
+          maxDistance={50}
+          panSpeed={0.6}
           target={[0, floors * FLOOR_H * 0.35, 0]}
         />
-        {/* HDR environment from Poly Haven CDN — wrapped to keep the scene
-            usable if the CDN fetch fails (falls back to plain ambient). */}
+        {/* HDR as both IBL lighting AND photorealistic sky background.
+            backgroundBlurriness softens the HDR to remove distracting detail
+            while keeping the sky colour/gradient. Night mode keeps a dark
+            sphere instead since the night HDR is just a coloured gradient. */}
+        {/* Day mode: deep blue sky sphere — consistent from any camera angle */}
+        {tod === "day" && (
+          <>
+            <color attach="background" args={["#4E8FCC"]} />
+            <mesh scale={[260, 260, 260]}>
+              <sphereGeometry args={[1, 32, 20]} />
+              <meshBasicMaterial color="#4E8FCC" side={THREE.BackSide} depthWrite={false} fog={false} />
+            </mesh>
+          </>
+        )}
         <HouseEnvironmentFallback>
           <Suspense fallback={null}>
-            <Environment preset="sunset" background backgroundBlurriness={0.04} />
+            <Environment
+              files={tp.hdr}
+              background={tod === "sunset"}
+              backgroundBlurriness={tod === "sunset" ? 0.04 : 0.06}
+              backgroundIntensity={tod === "day" ? 0.50 : tod === "sunset" ? 0.90 : 0.75}
+            />
           </Suspense>
         </HouseEnvironmentFallback>
-        {/* Sky + ground bounce: exterior needs a stronger hemisphere
-            because the house catches light from all sides, not just
-            one sun. Sky tint biased slightly warm (sunset) to match the
-            preset environment. */}
-        <hemisphereLight args={["#DCE4EE", "#8A7A60", 0.6]} />
-        <ambientLight intensity={0.25} />
-        {/* Warm afternoon sun */}
+        {/* Night sky sphere — only shown when HDR is not used as background */}
+        {tod === "night" && (
+          <mesh scale={[280, 280, 280]}>
+            <sphereGeometry args={[1, 32, 24]} />
+            <meshBasicMaterial color="#111828" side={THREE.BackSide} depthWrite={false} />
+          </mesh>
+        )}
+        {/* Hemisphere light — sky/ground bounce, same setup as RoomCanvas */}
+        <hemisphereLight args={[tp.hemiSky, tp.hemiGround, tp.hemiIntensity]} />
+        <ambientLight intensity={tp.ambient} />
+        {/* Primary sun — high-res shadows, tighter frustum for close-up camera */}
         <directionalLight
-          position={[20, 30, 15]} intensity={1.3} color="#FFEDD0" castShadow
+          position={tp.sunPos} intensity={tp.sunIntensity} color={tp.sunColor} castShadow
           shadow-mapSize={[2048, 2048]}
-          shadow-camera-far={180}
-          shadow-camera-left={-50} shadow-camera-right={50}
-          shadow-camera-top={50} shadow-camera-bottom={-50}
+          shadow-camera-far={100}
+          shadow-camera-left={-30} shadow-camera-right={30}
+          shadow-camera-top={30} shadow-camera-bottom={-30}
           shadow-bias={-0.0008}
           shadow-normalBias={0.04}
         />
-        {/* Cool sky fill from opposite side */}
-        <directionalLight position={[-15, 20, -10]} intensity={0.35} color="#C8D4E8" />
+        {/* Sky fill from opposite side */}
+        <directionalLight position={[-15, 20, -10]} intensity={tp.fillIntensity} color={tp.fillColor} />
 
         {/* Click empty ground to deselect */}
         <DeselectPlane onDeselect={() => {
@@ -2121,14 +3655,42 @@ export default function HouseCanvas() {
           useDesignerStore.getState().setSelectedExteriorDecor(null);
         }} />
         <Ground W={W} D={D} />
+        <EntryPath W={W} D={D} />
         <HouseBody W={W} D={D} settings={exterior} />
         <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />
-        <YardElements
-          W={W} D={D} yardPreset={yardPreset} parking={showParking}
-          orbitRef={orbitRef}
-          selectedKey={selectedOutdoorKey}
-          onSelect={setSelectedOutdoorKey}
-        />
+        {/* User-drawn yardPlan items (院子图 editor). Structural prefabs compose
+            on top of the ambient landscape above. */}
+        <YardPlanItems3D />
+        {/* Modern villa yard: lawn + terrace + pool + loungers */}
+        {exterior.roofStyle === "flat" && <VillaYard W={W} D={D} />}
+
+        {/* ── Postprocessing — photorealistic architectural visualization ──
+           SSAO: deep contact shadows ground objects convincingly.
+           Bloom: subtle sun/sky glow for day/sunset; stronger for night lamps.
+           BrightnessContrast: slight contrast lift for that "rendered" punch.
+           SMAA: temporal anti-aliasing for clean edges. */}
+        <EffectComposer multisampling={0} enableNormalPass>
+          <SSAO
+            blendFunction={BlendFunction.MULTIPLY}
+            samples={28}
+            radius={6}
+            intensity={tod === "night" ? 48 : 35}
+            luminanceInfluence={0.6}
+            worldDistanceThreshold={1.5}
+            worldDistanceFalloff={3.0}
+            worldProximityThreshold={0.5}
+            worldProximityFalloff={1.0}
+          />
+          {/* Bloom — keep threshold high so only bright emissives/sky glow */}
+          <Bloom
+            intensity={tod === "night" ? 0.55 : tod === "sunset" ? 0.28 : 0.14}
+            luminanceThreshold={tod === "night" ? 0.92 : 0.88}
+            luminanceSmoothing={0.30}
+            mipmapBlur
+          />
+          <BrightnessContrast brightness={0.02} contrast={0.10} />
+          <SMAA />
+        </EffectComposer>
       </Canvas>
     </div>
   );

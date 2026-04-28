@@ -1,0 +1,11 @@
+Model Information:
+* title:	Wooden Dining Chair
+* source:	https://sketchfab.com/3d-models/wooden-dining-chair-c0571d2314e744b0aa73e1f208352a92
+* author:	subhashssimon (https://sketchfab.com/subhashssimon)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Wooden Dining Chair" (https://sketchfab.com/3d-models/wooden-dining-chair-c0571d2314e744b0aa73e1f208352a92) by subhashssimon (https://sketchfab.com/subhashssimon) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

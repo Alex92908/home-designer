@@ -1,0 +1,290 @@
+{
+  "asset": {
+    "generator": "glTF-Transform v4.3.0",
+    "version": "2.0",
+    "extras": {
+      "author": "AlicePandaArt (https://sketchfab.com/AlicePandaArt)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/low-poly-bonsai-tree-40cf5dc6c7854745a5e9c3615d076d06",
+      "title": "Low-poly Bonsai Tree"
+    }
+  },
+  "accessors": [
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 1974,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 1922,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 1
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 1922,
+      "max": [
+        32767,
+        28019,
+        20362
+      ],
+      "min": [
+        -32767,
+        -28019,
+        -20362
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 2
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 1922,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 3
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 1922,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 4
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 1,
+      "byteOffset": 0,
+      "byteLength": 3948,
+      "target": 34963,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 0,
+          "byteLength": 675,
+          "mode": "TRIANGLES",
+          "byteStride": 2,
+          "count": 1974
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 3948,
+      "byteLength": 7688,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 676,
+          "byteLength": 2350,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 1922
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 11636,
+      "byteLength": 15376,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 3028,
+          "byteLength": 11451,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 1922
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 27012,
+      "byteLength": 7688,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 14480,
+          "byteLength": 5928,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 1922
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 34700,
+      "byteLength": 7688,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 20408,
+          "byteLength": 157,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 1922
+        }
+      }
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "textures": [
+    {
+      "source": 0,
+      "sampler": 0
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/png",
+      "uri": "textures/Scene_-_Root_baseColor.png"
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "scene.bin",
+      "byteLength": 20568
+    },
+    {
+      "byteLength": 42388,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "fallback": true
+        }
+      }
+    }
+  ],
+  "materials": [
+    {
+      "name": "Scene_-_Root",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 0
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Bonsai.Tree.000__0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 2,
+            "TEXCOORD_0": 3,
+            "TEXCOORD_1": 4,
+            "TEXCOORD_2": 4,
+            "TEXCOORD_3": 4,
+            "TEXCOORD_4": 4,
+            "TEXCOORD_5": 4,
+            "TEXCOORD_6": 4,
+            "TEXCOORD_7": 4
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 0
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Sketchfab_model",
+      "rotation": [
+        -0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        1
+      ]
+    },
+    {
+      "name": "fb92c07c23224b1ebb8e041f907ca2ee.fbx",
+      "rotation": [
+        0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        2
+      ]
+    },
+    {
+      "name": "RootNode",
+      "children": [
+        3
+      ]
+    },
+    {
+      "name": "Bonsai.Tree.000",
+      "children": [
+        4
+      ]
+    },
+    {
+      "name": "Bonsai.Tree.000__0",
+      "translation": [
+        1.3276503086090088,
+        3.4874413253342684,
+        -0.6754218935966492
+      ],
+      "scale": [
+        4.078490495681763,
+        4.078490495681763,
+        4.078490495681763
+      ],
+      "mesh": 0
+    }
+  ],
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "scene": 0,
+  "extensionsUsed": [
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
+  ],
+  "extensionsRequired": [
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
+  ]
+}

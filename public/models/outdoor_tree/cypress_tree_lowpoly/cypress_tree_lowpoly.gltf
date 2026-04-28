@@ -1,0 +1,361 @@
+{
+  "asset": {
+    "generator": "glTF-Transform v4.3.0",
+    "version": "2.0",
+    "extras": {
+      "author": "Alan Zimmerman (https://sketchfab.com/nenjo)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/cypress-tree-low-poly-2c596282c551468ea6c6a129405e6b68",
+      "title": "Cypress Tree - Low Poly"
+    }
+  },
+  "accessors": [
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 5295,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 4953,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 1
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 4953,
+      "max": [
+        27751,
+        24771,
+        32767
+      ],
+      "min": [
+        -27751,
+        -24771,
+        -32767
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 2
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 4953,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 3
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 1,
+      "byteOffset": 0,
+      "byteLength": 10590,
+      "target": 34963,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 0,
+          "byteLength": 1782,
+          "mode": "TRIANGLES",
+          "byteStride": 2,
+          "count": 5295
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 10592,
+      "byteLength": 19812,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 1784,
+          "byteLength": 5961,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 4953
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 30404,
+      "byteLength": 39624,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 7748,
+          "byteLength": 28954,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 4953
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 70028,
+      "byteLength": 19812,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 36704,
+          "byteLength": 18138,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 4953
+        }
+      }
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "textures": [
+    {
+      "source": 0,
+      "sampler": 0
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/jpeg",
+      "uri": "textures/mat.tree-cypress_baseColor.jpeg"
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "scene.bin",
+      "byteLength": 54844
+    },
+    {
+      "byteLength": 89840,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "fallback": true
+        }
+      }
+    }
+  ],
+  "materials": [
+    {
+      "name": "mat.tree-cypress",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "roughnessFactor": 0.4224466463414634,
+        "metallicFactor": 0.37366615853658536,
+        "baseColorTexture": {
+          "index": 0
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "tree_mat.tree-cypress_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 2,
+            "TEXCOORD_0": 3
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 0
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Sketchfab_model",
+      "rotation": [
+        -0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        1
+      ]
+    },
+    {
+      "name": "4e76df842f8447c0aed43f48628db32b.fbx",
+      "rotation": [
+        0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        2
+      ]
+    },
+    {
+      "name": "RootNode",
+      "children": [
+        3,
+        6,
+        8,
+        11
+      ]
+    },
+    {
+      "name": "Sun",
+      "scale": [
+        100,
+        100,
+        100
+      ],
+      "children": [
+        4
+      ]
+    },
+    {
+      "name": "Object_4",
+      "rotation": [
+        0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        5
+      ]
+    },
+    {
+      "name": "Object_5"
+    },
+    {
+      "name": "tree",
+      "rotation": [
+        -0.7071068387877038,
+        0,
+        0,
+        0.7071067235853866
+      ],
+      "scale": [
+        100,
+        100.00000000000001,
+        100.00000000000001
+      ],
+      "children": [
+        7
+      ]
+    },
+    {
+      "name": "tree_mat.tree-cypress_0",
+      "translation": [
+        -1.601170301437378,
+        2.976826786994934,
+        7.50965928286314
+      ],
+      "scale": [
+        7.590497501194477,
+        7.590497501194477,
+        7.590497501194477
+      ],
+      "mesh": 0
+    },
+    {
+      "name": "Lamp",
+      "translation": [
+        407.6245422363281,
+        590.38623046875,
+        -100.54539489746094
+      ],
+      "rotation": [
+        0.1690757056862664,
+        0.755880374520583,
+        -0.2721713326537732,
+        0.5709474851882469
+      ],
+      "scale": [
+        100.00000762939455,
+        100,
+        99.99999999999999
+      ],
+      "children": [
+        9
+      ]
+    },
+    {
+      "name": "Object_9",
+      "rotation": [
+        0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        10
+      ]
+    },
+    {
+      "name": "Object_10"
+    },
+    {
+      "name": "Camera",
+      "translation": [
+        748.1131591796875,
+        534.3665161132812,
+        650.7639770507812
+      ],
+      "rotation": [
+        -0.21061137103817415,
+        0.9052400710330732,
+        -0.08928162597006073,
+        0.35806711025951404
+      ],
+      "scale": [
+        100.00000000000003,
+        100,
+        100.00000000000004
+      ],
+      "children": [
+        12
+      ]
+    },
+    {
+      "name": "Object_12"
+    }
+  ],
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "scene": 0,
+  "extensionsUsed": [
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
+  ],
+  "extensionsRequired": [
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
+  ]
+}

@@ -81,12 +81,84 @@ const ASSETS = [
   // Residential Window is a purpose-built closed-state residential window.
   { uid: "ae11104237314463a61251fd46ded4b4", slug: "residential_window",      category: "_arch_window",    author: "AleixoAlonso" },
 
+  // ── Pending: need verified CC-BY + glTF-downloadable UIDs ──────
+  //
+  // HOW TO FIND A WORKING UID:
+  //   1. Go to https://sketchfab.com/search?type=models&downloadable=true&license=cc-by
+  //   2. Open a model page → check license badge says "CC Attribution" (NOT "CC Attribution-NonCommercial")
+  //   3. Click Download → if glTF appears in the list → COPY the 32-char hex from the URL
+  //   4. Uncomment the line below and paste uid + author
+  //
+  // TV units
+  // { uid: "REPLACE", slug: "tv_stand",         category: "tv_unit",      author: "Author" },
+  //
+  // Desks
+  // { uid: "REPLACE", slug: "computer_desk",    category: "desk",         author: "Author" },
+  //
+  // Dining chairs (extra)
+  // { uid: "REPLACE", slug: "dining_chair_b",   category: "dining_chair", author: "Author" },
+  //
+  // Accent / lounge chairs
+  // { uid: "REPLACE", slug: "accent_chair",     category: "accent_chair", author: "Author" },
+  //
+  // Floor lamps
+  // { uid: "REPLACE", slug: "floor_lamp",       category: "floor_lamp",   author: "Author" },
+  //
+  // Office chairs
+  // { uid: "REPLACE", slug: "office_chair",     category: "office_chair", author: "Author" },
+  //
+  // Dresser
+  // { uid: "REPLACE", slug: "dresser",          category: "dresser",      author: "Author" },
+  //
+  // Indoor plants
+  // { uid: "REPLACE", slug: "potted_plant",     category: "plant",        author: "Author" },
+  //
+  // Rugs / Carpets
+  // { uid: "REPLACE", slug: "rug",              category: "rug",          author: "Author" },
+
   // ── Small items / 小物件 ────────────────────────────
   { uid: "226e34b1a7b3470cb0ba095af68af90c", slug: "simple_ceiling_fan",      category: "ceiling_fan",     author: "Blender3D" },
   // Swapped: joshtmc's `interior_wooden_door` zip kept downloading corrupted
   // (truncated). Using keam.wf's low-poly game-ready door instead — 3.8k
   // faces, much smaller file.
   { uid: "f5c93a53f5e245c78ce4bbdd6130c4f9", slug: "wooden_door_lowpoly",     category: "_arch_door",      author: "keam.wf" },
+
+  // ── Outdoor / Landscape — hero models for the 院子 ────────
+  // Picked CC-BY downloadable models from sketchfab.com that are real
+  // foliage geometry (not low-poly box trees). Bigger files than Kenney
+  // — but only used as HERO assets (1-3 per scene) so total bundle stays
+  // sane. The generic singleton rendering still falls back to Kenney.
+  { uid: "df3d3ab0cbd44b02ba08fccbc87bd35d", slug: "olive_tree_apostolos",   category: "outdoor_tree",    author: "Apostolos Vainopoulos" },
+  { uid: "6328df8a0f214143a880a72b86db2ab4", slug: "old_olive_tree",         category: "outdoor_tree",    author: "massive-graphisme" },
+  { uid: "6198f5dd302644a2bc5e1d31fef46fb0", slug: "palm_tree_lowpoly",      category: "outdoor_tree",    author: "Connor_Appleton" },
+  { uid: "92d1b08141ed40eb84e13674fa0cc942", slug: "palm_tree_stylized",     category: "outdoor_tree",    author: "ilyu.ziya" },
+  { uid: "2c596282c551468ea6c6a129405e6b68", slug: "cypress_tree_lowpoly",   category: "outdoor_tree",    author: "Alan Zimmerman" },
+  { uid: "4b27adcf92f644bdabf8ecc6c5bef399", slug: "maple_sugar_lowpoly",    category: "outdoor_tree",    author: "atrodler" },
+  { uid: "b6eb627413ed40fdb8b0a1e1c9038fa9", slug: "japanese_maple",         category: "outdoor_tree",    author: "OliverMatheGames" },
+  { uid: "40cf5dc6c7854745a5e9c3615d076d06", slug: "bonsai_lowpoly",         category: "outdoor_tree",    author: "Alice Ursu" },
+  { uid: "f0efd57011404e1b9ff14e89f7ecb305", slug: "boxwood_bush",           category: "outdoor_plant",   author: "shortpaca" },
+  { uid: "f2006b1a3af9442987963da054283ad7", slug: "hedge_generic",          category: "outdoor_plant",   author: "1-3D.com" },
+
+  // ── Outdoor Furniture — need verified CC-BY + glTF UIDs ──────────
+  // All 8 below failed (no gltf download available on those models).
+  // Use the HOW TO FIND A WORKING UID guide above to replace them.
+  //   "sun lounger outdoor"  → target: rattan/teak with cushion
+  //   "outdoor sofa patio"   → target: sectional with cushions
+  //   "patio umbrella"       → target: canvas market parasol on pole
+  //   "garden table outdoor" → target: stone/metal coffee table
+  //   "outdoor dining set"   → target: 4-6 chairs around table
+  //   "bio ethanol fireplace"→ target: modern black rectangular unit
+  //   "ceramic planter large"→ target: tall ceramic/concrete pot
+  //   "pool chaise"          → target: adjustable recline, white frame
+  //
+  // { uid: "REPLACE", slug: "sun_lounger",         category: "outdoor_furniture", author: "Author" },
+  // { uid: "REPLACE", slug: "outdoor_sofa",        category: "outdoor_furniture", author: "Author" },
+  // { uid: "REPLACE", slug: "garden_parasol",      category: "outdoor_furniture", author: "Author" },
+  // { uid: "REPLACE", slug: "garden_coffee_table", category: "outdoor_furniture", author: "Author" },
+  // { uid: "REPLACE", slug: "outdoor_dining_set",  category: "outdoor_furniture", author: "Author" },
+  // { uid: "REPLACE", slug: "outdoor_fireplace",   category: "outdoor_furniture", author: "Author" },
+  // { uid: "REPLACE", slug: "large_planter",       category: "outdoor_furniture", author: "Author" },
+  // { uid: "REPLACE", slug: "pool_lounger",        category: "outdoor_furniture", author: "Author" },
 ];
 
 const API = "https://api.sketchfab.com/v3";

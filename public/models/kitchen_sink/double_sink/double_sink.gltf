@@ -106,7 +106,7 @@
         "EXT_meshopt_compression": {
           "buffer": 0,
           "byteOffset": 31908,
-          "byteLength": 24635,
+          "byteLength": 24633,
           "mode": "ATTRIBUTES",
           "filter": "OCTAHEDRAL",
           "byteStride": 4,

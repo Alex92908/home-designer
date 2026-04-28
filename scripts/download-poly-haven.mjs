@@ -59,8 +59,22 @@ const ASSETS = [
   { slug: "vintage_cabinet_01",        category: "sideboard" },
 
   // ── Round 2: armchairs (new use case, map to accent) ──
-  { slug: "modern_arm_chair_01",       category: "accent_chair" }, // will need new cat
+  { slug: "modern_arm_chair_01",       category: "accent_chair" },
   { slug: "ArmChair_01",               category: "accent_chair" },
+
+  // ── Round 4: outdoor landscape — shrubs, rocks, plants ───────
+  { slug: "shrub_01",               category: "outdoor_shrub" },
+  { slug: "shrub_02",               category: "outdoor_shrub" },
+  { slug: "shrub_03",               category: "outdoor_shrub" },
+  { slug: "shrub_04",               category: "outdoor_shrub" },
+  { slug: "boulder_01",             category: "outdoor_rock"  },
+  { slug: "coast_rocks_01",         category: "outdoor_rock"  },
+  { slug: "crystalline_iceplant",   category: "outdoor_plant" },
+  { slug: "cheiridopsis_succulent", category: "outdoor_plant" },
+  { slug: "anthurium_botany_01",    category: "outdoor_plant" },
+  { slug: "calathea_orbifolia_01",  category: "outdoor_plant" },
+  { slug: "dandelion_01",           category: "outdoor_plant" },
+  { slug: "celandine_01",           category: "outdoor_plant" },
 ];
 
 // ── CLI flags ──────────────────────────────────────────────────

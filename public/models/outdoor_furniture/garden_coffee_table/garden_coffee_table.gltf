@@ -1,0 +1,1381 @@
+{
+  "asset": {
+    "generator": "glTF-Transform v4.3.0",
+    "version": "2.0",
+    "extras": {
+      "author": "Gian.Luca (https://sketchfab.com/Gian.Luca)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/coffee-table-for-exteriors-04346631ca1e4c66b93586ada9756110",
+      "title": "Coffee Table for exteriors"
+    }
+  },
+  "accessors": [
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 720,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 440,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 1
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5126,
+      "count": 440,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 2
+    },
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 61071,
+      "normalized": false,
+      "byteOffset": 1440,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 50683,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 3
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5126,
+      "count": 50683,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 4
+    },
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 2034,
+      "normalized": false,
+      "byteOffset": 123582,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 1192,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 5
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5126,
+      "count": 1192,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 6
+    },
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 1080,
+      "normalized": false,
+      "byteOffset": 127650,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 376,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 7
+    },
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 654,
+      "normalized": false,
+      "byteOffset": 129810,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 226,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 8
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5126,
+      "count": 226,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 9
+    },
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 102,
+      "normalized": false,
+      "byteOffset": 131118,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 36,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 10
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5126,
+      "count": 36,
+      "normalized": false,
+      "byteOffset": 0,
+      "bufferView": 11
+    },
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 6,
+      "normalized": false,
+      "byteOffset": 131322,
+      "bufferView": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5120,
+      "count": 4,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 12
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 440,
+      "max": [
+        30331,
+        32767,
+        812
+      ],
+      "min": [
+        -30331,
+        -32767,
+        -812
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 13
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 440,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 14
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 50683,
+      "max": [
+        29327,
+        32767,
+        10573
+      ],
+      "min": [
+        -29327,
+        -32767,
+        -10573
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 15
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 50683,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 16
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 1192,
+      "max": [
+        32767,
+        30675,
+        10805
+      ],
+      "min": [
+        -32767,
+        -30675,
+        -10805
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 17
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 1192,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 18
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 376,
+      "max": [
+        32767,
+        22426,
+        3836
+      ],
+      "min": [
+        -32767,
+        -22426,
+        -3836
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 19
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 376,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 20
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 226,
+      "max": [
+        20818,
+        32767,
+        5476
+      ],
+      "min": [
+        -20818,
+        -32767,
+        -5476
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 21
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 226,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 22
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 36,
+      "max": [
+        24418,
+        32767,
+        236
+      ],
+      "min": [
+        -24418,
+        -32767,
+        -236
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 23
+    },
+    {
+      "type": "VEC2",
+      "componentType": 5123,
+      "count": 36,
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 24
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5122,
+      "count": 4,
+      "max": [
+        32343,
+        32767,
+        0
+      ],
+      "min": [
+        -32343,
+        -32767,
+        0
+      ],
+      "normalized": true,
+      "byteOffset": 0,
+      "bufferView": 25
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 1,
+      "byteOffset": 0,
+      "byteLength": 131334,
+      "target": 34963,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 0,
+          "byteLength": 22062,
+          "mode": "TRIANGLES",
+          "byteStride": 2,
+          "count": 65667
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 131336,
+      "byteLength": 1760,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 22064,
+          "byteLength": 375,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 440
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 133096,
+      "byteLength": 3520,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 22440,
+          "byteLength": 2823,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 440
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 136616,
+      "byteLength": 202732,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 25264,
+          "byteLength": 71543,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 50683
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 339348,
+      "byteLength": 405464,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 96808,
+          "byteLength": 322066,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 50683
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 744812,
+      "byteLength": 4768,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 418876,
+          "byteLength": 968,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 1192
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 749580,
+      "byteLength": 9536,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 419844,
+          "byteLength": 7857,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 1192
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 759116,
+      "byteLength": 1504,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 427704,
+          "byteLength": 178,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 376
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 760620,
+      "byteLength": 904,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 427884,
+          "byteLength": 199,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 226
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 761524,
+      "byteLength": 1808,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 428084,
+          "byteLength": 1542,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 226
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 763332,
+      "byteLength": 144,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 429628,
+          "byteLength": 56,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 36
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 763476,
+      "byteLength": 288,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 429684,
+          "byteLength": 199,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 36
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 763764,
+      "byteLength": 16,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 429884,
+          "byteLength": 37,
+          "mode": "ATTRIBUTES",
+          "filter": "OCTAHEDRAL",
+          "byteStride": 4,
+          "count": 4
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 763780,
+      "byteLength": 3520,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 429924,
+          "byteLength": 1701,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 440
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 767300,
+      "byteLength": 1760,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 431628,
+          "byteLength": 61,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 440
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 769060,
+      "byteLength": 405464,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 431692,
+          "byteLength": 251586,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 50683
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 1174524,
+      "byteLength": 202732,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 683280,
+          "byteLength": 3201,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 50683
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 1377256,
+      "byteLength": 9536,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 686484,
+          "byteLength": 4790,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 1192
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 1386792,
+      "byteLength": 4768,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 691276,
+          "byteLength": 109,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 1192
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 1391560,
+      "byteLength": 3008,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 691388,
+          "byteLength": 1425,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 376
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 1394568,
+      "byteLength": 1504,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 692816,
+          "byteLength": 57,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 376
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 1396072,
+      "byteLength": 1808,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 692876,
+          "byteLength": 809,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 226
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 1397880,
+      "byteLength": 904,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 693688,
+          "byteLength": 49,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 226
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 1398784,
+      "byteLength": 288,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 693740,
+          "byteLength": 167,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 36
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 1399072,
+      "byteLength": 144,
+      "target": 34962,
+      "byteStride": 4,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 693908,
+          "byteLength": 37,
+          "mode": "ATTRIBUTES",
+          "byteStride": 4,
+          "count": 36
+        }
+      }
+    },
+    {
+      "buffer": 1,
+      "byteOffset": 1399216,
+      "byteLength": 32,
+      "target": 34962,
+      "byteStride": 8,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 693948,
+          "byteLength": 62,
+          "mode": "ATTRIBUTES",
+          "byteStride": 8,
+          "count": 4
+        }
+      }
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "textures": [
+    {
+      "source": 0,
+      "sampler": 0
+    },
+    {
+      "source": 1,
+      "sampler": 0
+    },
+    {
+      "source": 2,
+      "sampler": 0
+    },
+    {
+      "source": 3,
+      "sampler": 0
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/jpeg",
+      "uri": "textures/vray_Material88_baseColor.jpeg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "uri": "textures/vray_toalhas_baseColor.jpeg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "uri": "textures/vray_Magazine02_baseColor.jpeg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "uri": "textures/vray_Magazine01_baseColor.jpeg"
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "scene.bin",
+      "byteLength": 694012
+    },
+    {
+      "byteLength": 1399248,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "fallback": true
+        }
+      }
+    }
+  ],
+  "materials": [
+    {
+      "name": "vray_Material88",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "roughnessFactor": 0.6,
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 0
+        }
+      }
+    },
+    {
+      "name": "vray_toalhas",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "roughnessFactor": 0.6,
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 1
+        }
+      }
+    },
+    {
+      "name": "vray_Color_000",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "roughnessFactor": 0.6,
+        "metallicFactor": 0
+      }
+    },
+    {
+      "name": "vray_Magazine02",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "roughnessFactor": 0.6,
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 2
+        }
+      }
+    },
+    {
+      "name": "vray_Magazine01",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "roughnessFactor": 0.6,
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 3
+        }
+      }
+    },
+    {
+      "name": "Material_959",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "roughnessFactor": 0.6,
+        "metallicFactor": 0
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Group_014_vray Material88_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "TEXCOORD_0": 2,
+            "POSITION": 19,
+            "TEXCOORD_1": 20
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 0
+        }
+      ]
+    },
+    {
+      "name": "toalha_005_vray toalhas_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 4,
+            "TEXCOORD_0": 5,
+            "POSITION": 21,
+            "TEXCOORD_1": 22
+          },
+          "mode": 4,
+          "material": 1,
+          "indices": 3
+        }
+      ]
+    },
+    {
+      "name": "toalha_003_vray toalhas_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 4,
+            "TEXCOORD_0": 5,
+            "POSITION": 21,
+            "TEXCOORD_1": 22
+          },
+          "mode": 4,
+          "material": 1,
+          "indices": 3
+        }
+      ]
+    },
+    {
+      "name": "toalha_001_vray toalhas_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 4,
+            "TEXCOORD_0": 5,
+            "POSITION": 21,
+            "TEXCOORD_1": 22
+          },
+          "mode": 4,
+          "material": 1,
+          "indices": 3
+        }
+      ]
+    },
+    {
+      "name": "mesa centro  rustica, rustic coffee table#1_001_vray Material88_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 7,
+            "TEXCOORD_0": 8,
+            "POSITION": 23,
+            "TEXCOORD_1": 24
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 6
+        }
+      ]
+    },
+    {
+      "name": "Group#375_001_vray Color_000_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 10,
+            "POSITION": 25,
+            "TEXCOORD_0": 26,
+            "TEXCOORD_1": 26
+          },
+          "mode": 4,
+          "material": 2,
+          "indices": 9
+        }
+      ]
+    },
+    {
+      "name": "Group#375_001_vray Magazine02_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 12,
+            "TEXCOORD_0": 13,
+            "POSITION": 27,
+            "TEXCOORD_1": 28
+          },
+          "mode": 4,
+          "material": 3,
+          "indices": 11
+        }
+      ]
+    },
+    {
+      "name": "Group#375_001_vray Magazine01_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 15,
+            "TEXCOORD_0": 16,
+            "POSITION": 29,
+            "TEXCOORD_1": 30
+          },
+          "mode": 4,
+          "material": 4,
+          "indices": 14
+        }
+      ]
+    },
+    {
+      "name": "Rectangle001_Material #959_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 18,
+            "POSITION": 31
+          },
+          "mode": 4,
+          "material": 5,
+          "indices": 17
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Sketchfab_model",
+      "rotation": [
+        -0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        1
+      ]
+    },
+    {
+      "name": "a7aef82398ad4dd0a0cbc44301292840.fbx",
+      "rotation": [
+        0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        2
+      ]
+    },
+    {
+      "name": "RootNode",
+      "children": [
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        17
+      ]
+    },
+    {
+      "name": "Group_014",
+      "translation": [
+        0.3024139404296875,
+        0.04051578789949417,
+        -0.2562255859375
+      ],
+      "rotation": [
+        -0.5000000109280728,
+        0.4999999890719269,
+        0.49999998907192683,
+        0.5000000109280729
+      ],
+      "scale": [
+        0.8700000047683717,
+        0.8700000047683717,
+        0.9656999707221985
+      ],
+      "children": [
+        4
+      ]
+    },
+    {
+      "name": "Group_014_vray Material88_0",
+      "translation": [
+        -0.2945132050663233,
+        0.3476000130176544,
+        0.008611000142991543
+      ],
+      "scale": [
+        0.3476000130176544,
+        0.3476000130176544,
+        0.3476000130176544
+      ],
+      "mesh": 0
+    },
+    {
+      "name": "toalha_005",
+      "translation": [
+        0.0947113037109375,
+        0.055704861879348755,
+        -0.0443420335650444
+      ],
+      "rotation": [
+        -3.680834112420066e-7,
+        0.7071067811864518,
+        0.7071067811864518,
+        3.6808341132860223e-7
+      ],
+      "scale": [
+        1.092419981956482,
+        1,
+        0.8304595947265625
+      ],
+      "children": [
+        6
+      ]
+    },
+    {
+      "name": "toalha_005_vray toalhas_0",
+      "translation": [
+        0.1479446291923523,
+        0.16530221700668335,
+        0.05333251878619194
+      ],
+      "scale": [
+        0.16530221700668335,
+        0.16530221700668335,
+        0.16530221700668335
+      ],
+      "mesh": 1
+    },
+    {
+      "name": "toalha_003",
+      "translation": [
+        -0.2474822998046875,
+        0.08221253752708435,
+        -0.026947014033794403
+      ],
+      "rotation": [
+        -0.5000000407301695,
+        -0.4999999592698273,
+        -0.49999995926982715,
+        0.5000000407301696
+      ],
+      "scale": [
+        0.9999999999999999,
+        1.092419981956482,
+        1
+      ],
+      "children": [
+        8
+      ]
+    },
+    {
+      "name": "toalha_003_vray toalhas_0",
+      "translation": [
+        0.1479446291923523,
+        0.16530221700668335,
+        0.05333251878619194
+      ],
+      "scale": [
+        0.16530221700668335,
+        0.16530221700668335,
+        0.16530221700668335
+      ],
+      "mesh": 2
+    },
+    {
+      "name": "toalha_001",
+      "translation": [
+        -0.2500762939453125,
+        0.05438312143087387,
+        -0.026947014033794403
+      ],
+      "rotation": [
+        0.5245860553394575,
+        0.47414077946479927,
+        0.5245859698735675,
+        -0.4741408567121259
+      ],
+      "scale": [
+        0.9999999999999999,
+        1.0914654731750486,
+        0.6492366790771484
+      ],
+      "children": [
+        10
+      ]
+    },
+    {
+      "name": "toalha_001_vray toalhas_0",
+      "translation": [
+        0.1479446291923523,
+        0.16530221700668335,
+        0.05333251878619194
+      ],
+      "scale": [
+        0.16530221700668335,
+        0.16530221700668335,
+        0.16530221700668335
+      ],
+      "mesh": 3
+    },
+    {
+      "name": "mesa centro  rustica, rustic coffee table#1_001",
+      "translation": [
+        0.5671539306640625,
+        -0.0010624229907989502,
+        0.982452392578125
+      ],
+      "rotation": [
+        -0.5000000109280726,
+        0.4999999890719272,
+        0.4999999890719272,
+        0.5000000109280726
+      ],
+      "scale": [
+        0.6460620164871216,
+        0.6873000264167787,
+        0.8315642476081848
+      ],
+      "children": [
+        12
+      ]
+    },
+    {
+      "name": "mesa centro  rustica, rustic coffee table#1_001_vray Material88_0",
+      "translation": [
+        1.5206864476203918,
+        0.8252099603414536,
+        0.1550000011920929
+      ],
+      "scale": [
+        0.4699999690055847,
+        0.4699999690055847,
+        0.4699999690055847
+      ],
+      "mesh": 4
+    },
+    {
+      "name": "Group#375_001",
+      "translation": [
+        -0.1527252197265625,
+        0.25672250986099243,
+        -0.0596008226275444
+      ],
+      "rotation": [
+        0.40681303055018175,
+        0.5783624799159924,
+        0.5783624799159927,
+        -0.4068130305501817
+      ],
+      "scale": [
+        1.4999999999999998,
+        1.4999999999999998,
+        1.5
+      ],
+      "children": [
+        14,
+        15,
+        16
+      ]
+    },
+    {
+      "name": "Group#375_001_vray Color_000_0",
+      "translation": [
+        0.006118066608905792,
+        0.09575800965193704,
+        0.01637420430779448
+      ],
+      "scale": [
+        0.13990972191095352,
+        0.13990972191095352,
+        0.13990972191095352
+      ],
+      "mesh": 5
+    },
+    {
+      "name": "Group#375_001_vray Magazine02_0",
+      "translation": [
+        -0.05446586129255593,
+        0.09575800965193704,
+        0.01674780494067818
+      ],
+      "scale": [
+        0.09575803210373923,
+        0.09575803210373923,
+        0.09575803210373923
+      ],
+      "mesh": 6
+    },
+    {
+      "name": "Group#375_001_vray Magazine01_0",
+      "translation": [
+        0.0739371592644602,
+        0.0957580180291433,
+        0.003082896815612912
+      ],
+      "scale": [
+        0.09575802372653297,
+        0.09575802372653297,
+        0.09575802372653297
+      ],
+      "mesh": 7
+    },
+    {
+      "name": "Rectangle001",
+      "translation": [
+        -0.0475536584854126,
+        0,
+        -0.0570250004529953
+      ],
+      "rotation": [
+        -0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ],
+      "children": [
+        18
+      ]
+    },
+    {
+      "name": "Rectangle001_Material #959_0",
+      "scale": [
+        1.582109808921814,
+        1.582109808921814,
+        1.582109808921814
+      ],
+      "mesh": 8
+    }
+  ],
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "scene": 0,
+  "extensionsUsed": [
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
+  ],
+  "extensionsRequired": [
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization"
+  ]
+}
