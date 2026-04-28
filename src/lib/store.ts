@@ -454,6 +454,11 @@ interface DesignerStore {
    *  Default: Shanghai (31.23°N, 121.47°E). User can override in settings. */
   siteLatLng: { lat: number; lng: number };
   setSiteLatLng: (ll: { lat: number; lng: number }) => void;
+
+  /** Active Stable Diffusion checkpoint filename (must exist in ComfyUI models/checkpoints/).
+   *  Drives the CheckpointLoaderSimple node in every workflow. */
+  sdModel: string;
+  setSdModel: (m: string) => void;
 }
 
 const initialExterior: ExteriorSettings = {
@@ -570,6 +575,8 @@ export const useDesignerStore = create<DesignerStore>()(
       setSunHour: (h) => set({ sunHour: h }),
       siteLatLng: { lat: 31.23, lng: 121.47 }, // Shanghai default
       setSiteLatLng: (ll) => set({ siteLatLng: ll }),
+      sdModel: "RealVisXL_V5.0_fp16.safetensors",
+      setSdModel: (m) => set({ sdModel: m }),
 
       setActiveRoom: (room) => {
         const s = get();

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { generateRoomPrompt } from "@/lib/roomPrompt";
 import { generateExteriorPrompt } from "@/lib/sceneToPrompt";
-import { generateControlNetWorkflow, generateTxt2ImgWorkflow } from "@/lib/comfyWorkflow";
+import { generateControlNetWorkflow, generateTxt2ImgWorkflow, SD_MODELS } from "@/lib/comfyWorkflow";
 import { useT } from "@/lib/i18n";
 
 interface Props {
@@ -82,6 +82,8 @@ export default function AiRenderModal({ open, onClose }: Props) {
   const viewMode          = useDesignerStore(s => s.viewMode);
   const sunHour           = useDesignerStore(s => s.sunHour);
   const siteLatLng        = useDesignerStore(s => s.siteLatLng);
+  const sdModel           = useDesignerStore(s => s.sdModel);
+  const setSdModel        = useDesignerStore(s => s.setSdModel);
 
   // Local state
   const [screenshot,     setScreenshot]     = useState<string | null>(null);
@@ -275,6 +277,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
         seed:            params.seed,
         roomData:        params.promptData,
         mode:            "ipadapter-chain",
+        model:           sdModel,
       }),
     });
     const data = await res.json() as { promptId?: string; error?: string };
@@ -382,7 +385,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
       // For controlnet / multicontrolnet: capture the selected angle
       const needsCapture = (mode === "controlnet" || mode === "multicontrolnet") && cameraAndCapture;
       const capturedShot = needsCapture ? capturePreset(selectedAngle) : null;
-      const body = { screenshot: capturedShot ?? screenshot, roomData: promptData, mode };
+      const body = { screenshot: capturedShot ?? screenshot, roomData: promptData, mode, model: sdModel };
 
       const res = await fetch("/api/comfyui", {
         method: "POST",
@@ -446,8 +449,8 @@ export default function AiRenderModal({ open, onClose }: Props) {
     const prompt = getActivePrompt();
 
     const workflow = wfMode === "controlnet"
-      ? generateControlNetWorkflow("your_screenshot.png", prompt)
-      : generateTxt2ImgWorkflow(prompt);
+      ? generateControlNetWorkflow("your_screenshot.png", prompt, { model: sdModel })
+      : generateTxt2ImgWorkflow(prompt, { model: sdModel });
 
     downloadJson(workflow, `home_designer_${wfMode}_workflow.json`);
   }
@@ -547,6 +550,77 @@ export default function AiRenderModal({ open, onClose }: Props) {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* ── Model picker ── */}
+          {comfyAvailable === true && phase === "idle" && (
+            <div>
+              <p className="text-[11px] font-medium text-gray-400 mb-2 uppercase tracking-wider">
+                模型 · SD Checkpoint
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {SD_MODELS.map(m => {
+                  const active = sdModel === m.id;
+                  const isRecommended = m.tags.includes("recommended");
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => setSdModel(m.id)}
+                      className="flex items-start gap-3 py-2.5 px-3 rounded-xl border text-left transition-all"
+                      style={{
+                        borderColor: active ? "#6366f1" : "#e5e7eb",
+                        background:  active ? "#eef2ff" : "#fafafa",
+                      }}
+                    >
+                      {/* Active indicator */}
+                      <span className="mt-0.5 w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center"
+                        style={{
+                          borderColor: active ? "#6366f1" : "#d1d5db",
+                          background:  active ? "#6366f1" : "transparent",
+                        }}>
+                        {active && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-semibold"
+                            style={{ color: active ? "#4f46e5" : "#374151" }}>
+                            {m.labelZh}
+                          </span>
+                          <span className="text-[9px] font-mono opacity-50">{m.label}</span>
+                          {isRecommended && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                              style={{ background: "#fef3c7", color: "#92400e" }}>
+                              推荐
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] mt-0.5 leading-snug"
+                          style={{ color: active ? "#6366f1" : "#9ca3af" }}>
+                          {m.descZh}
+                        </p>
+                        <p className="text-[9px] font-mono mt-0.5 truncate"
+                          style={{ color: active ? "#818cf8" : "#d1d5db" }}>
+                          {m.id}
+                        </p>
+                      </div>
+                      <a
+                        href={m.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-[9px] px-1.5 py-1 rounded shrink-0 mt-0.5 hover:opacity-80 transition-opacity"
+                        style={{ background: "#f3f4f6", color: "#6b7280" }}
+                        title="下载模型">
+                        ↗ 下载
+                      </a>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1.5 leading-snug">
+                模型文件放入 <span className="font-mono">ComfyUI/models/checkpoints/</span> 后即可选用
+              </p>
             </div>
           )}
 

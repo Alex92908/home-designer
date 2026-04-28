@@ -26,7 +26,7 @@ const DEFAULT_PROMPT = {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { screenshot, screenshots, referenceImage, referenceImages, seed, roomData, mode = "controlnet" } = await req.json() as {
+    const { screenshot, screenshots, referenceImage, referenceImages, seed, roomData, mode = "controlnet", model } = await req.json() as {
       screenshot?: string;
       screenshots?: string[];     // multi-view: array of data URLs
       referenceImage?: string;    // ipadapter-chain: single previous render (legacy)
@@ -37,7 +37,10 @@ export async function POST(req: NextRequest) {
       // exterior view.  Detect by presence of the `positive` string field.
       roomData?: RoomPromptInput | GeneratedPrompt;
       mode?: "controlnet" | "txt2img" | "multicontrolnet" | "ipadapter-chain" | "hires4k";
+      model?: string;             // SD checkpoint filename (must exist in ComfyUI/models/checkpoints/)
     };
+    // Workflow opts shared across all modes — injected only when caller provides a model
+    const workflowOpts = model ? { model } : {};
 
     // ── Generate SD prompt ────────────────────────────────────────────────
     // roomData may already be a GeneratedPrompt (from AiRenderModal.getActivePrompt()
@@ -53,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     // ── txt2img: skip image upload, submit directly ──────────
     if (mode === "txt2img") {
-      const workflow = generateTxt2ImgWorkflow(prompt);
+      const workflow = generateTxt2ImgWorkflow(prompt, workflowOpts);
       const submitRes = await fetch(`${COMFYUI}/prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -86,7 +89,7 @@ export async function POST(req: NextRequest) {
       if (!uploadRes.ok) return NextResponse.json({ error: "upload_failed" }, { status: 502 });
       const { name } = await uploadRes.json() as { name: string };
 
-      const workflow  = generateHiResWorkflow(name, prompt);
+      const workflow  = generateHiResWorkflow(name, prompt, workflowOpts);
       const submitRes = await fetch(`${COMFYUI}/prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118,7 +121,7 @@ export async function POST(req: NextRequest) {
       if (!uploadRes.ok) return NextResponse.json({ error: "upload_failed" }, { status: 502 });
       const { name } = await uploadRes.json() as { name: string };
 
-      const workflow = generateMultiControlNetWorkflow(name, prompt);
+      const workflow = generateMultiControlNetWorkflow(name, prompt, workflowOpts);
       const submitRes = await fetch(`${COMFYUI}/prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -160,7 +163,7 @@ export async function POST(req: NextRequest) {
         refNames.push(await uploadDataUrl(allRefs[i], `hd_ipa_ref_${i}`));
       }
 
-      const workflow = generateIPAdapterChainWorkflow(shotName, refNames, prompt);
+      const workflow = generateIPAdapterChainWorkflow(shotName, refNames, prompt, workflowOpts);
       const submitRes = await fetch(`${COMFYUI}/prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -204,8 +207,8 @@ export async function POST(req: NextRequest) {
 
     // Build single-view or multi-view ControlNet workflow
     const workflow = imageNames.length === 1
-      ? generateControlNetWorkflow(imageNames[0], prompt)
-      : generateMultiViewControlNetWorkflow(imageNames, prompt);
+      ? generateControlNetWorkflow(imageNames[0], prompt, workflowOpts)
+      : generateMultiViewControlNetWorkflow(imageNames, prompt, workflowOpts);
 
     const submitRes = await fetch(`${COMFYUI}/prompt`, {
       method: "POST",

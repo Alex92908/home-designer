@@ -6,6 +6,68 @@
 
 import type { GeneratedPrompt } from "./roomPrompt";
 
+// ─── Model catalogue ──────────────────────────────────────────────────────────
+// Each entry corresponds to a .safetensors file that must exist under
+// ComfyUI/models/checkpoints/.  The filename is sent verbatim to the
+// CheckpointLoaderSimple node — no path prefix needed.
+export interface SdModelEntry {
+  id:       string;    // filename, used as identifier
+  label:    string;    // short human label
+  labelZh:  string;    // Chinese label shown in the UI
+  desc:     string;    // one-line English description
+  descZh:   string;    // one-line Chinese description
+  tags:     string[];  // e.g. ["exterior", "interior", "photorealistic"]
+  downloadUrl: string; // CivitAI or HuggingFace model page
+}
+
+export const SD_MODELS: SdModelEntry[] = [
+  {
+    id:       "JuggernautXL_v9Rdphoto2Lightning.safetensors",
+    label:    "Juggernaut XL v9",
+    labelZh:  "猛犸 XL v9",
+    desc:     "Best photorealistic architecture — sharp materials, lighting",
+    descZh:   "建筑照片级最强 · 木材/玻璃/石材纹理极佳",
+    tags:     ["exterior", "interior", "photorealistic", "recommended"],
+    downloadUrl: "https://civitai.com/models/133005/juggernaut-xl",
+  },
+  {
+    id:       "RealVisXL_V5.0_fp16.safetensors",
+    label:    "RealVisXL V5",
+    labelZh:  "真实视觉 XL V5",
+    desc:     "Balanced photo-realism, good interior detail",
+    descZh:   "室内外均衡 · 细节丰富",
+    tags:     ["exterior", "interior", "photorealistic"],
+    downloadUrl: "https://civitai.com/models/139562/realvisxl-v50",
+  },
+  {
+    id:       "dreamshaperXL_v21TurboDPMSDE.safetensors",
+    label:    "DreamShaper XL Turbo",
+    labelZh:  "梦境塑造 XL Turbo",
+    desc:     "Artistic renders, faster inference, painterly quality",
+    descZh:   "艺术渲染风 · 速度快",
+    tags:     ["exterior", "artistic"],
+    downloadUrl: "https://civitai.com/models/112902/dreamshaper-xl",
+  },
+  {
+    id:       "architectureExteriorSDXL_v1.safetensors",
+    label:    "Architecture Exterior SDXL",
+    labelZh:  "建筑外观 SDXL",
+    desc:     "Fine-tuned specifically on luxury residential exteriors",
+    descZh:   "专门针对豪华住宅外观微调 · 最接近参考图效果",
+    tags:     ["exterior", "photorealistic", "recommended"],
+    downloadUrl: "https://civitai.com/search/models?query=architecture+exterior+sdxl",
+  },
+  {
+    id:       "sd_xl_base_1.0.safetensors",
+    label:    "SDXL Base 1.0",
+    labelZh:  "SDXL 基础模型",
+    desc:     "Baseline SDXL — use when fine-tuned models aren't available",
+    descZh:   "基础版 · 无特化 · 兜底选项",
+    tags:     ["general"],
+    downloadUrl: "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0",
+  },
+];
+
 export interface Img2ImgWorkflowOptions {
   model?: string;
   width?: number;
