@@ -33,7 +33,9 @@ export default function TopBar() {
   const roomLabel    = roomMeta?.name ?? (locale === "en" ? (t.roomNames[activeRoom] ?? roomDef?.name ?? activeRoom) : (roomDef?.name ?? activeRoom));
   const roomIcon     = roomMeta?.icon ?? roomDef?.icon ?? "🏠";
 
-  const openExport = () => window.dispatchEvent(new Event("openExport"));
+  const openExport   = () => window.dispatchEvent(new Event("openExport"));
+  const openAiRender = () => window.dispatchEvent(new Event("openAiRender"));
+  const openImport   = () => window.dispatchEvent(new Event("openImport"));
 
   return (
     <header
@@ -162,7 +164,7 @@ export default function TopBar() {
         {locale === "zh" ? "🌐 EN" : "🌐 中"}
       </button>
 
-      {/* Auto-save + Export */}
+      {/* Auto-save + AI actions + Export */}
       <div className="flex items-center gap-2 shrink-0">
         <div
           className="hidden lg:flex items-center gap-1 text-[10px] font-medium"
@@ -171,6 +173,29 @@ export default function TopBar() {
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--ds-success)" }} />
           {t.autoSaved}
         </div>
+
+        {/* Import reference photo */}
+        <button
+          onClick={openImport}
+          className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
+          style={{
+            border: "1px dashed #6366f1",
+            color: "#4f46e5",
+            background: "#eef2ff",
+          }}
+          title="上传参考图，AI 自动识别建筑风格">
+          📷 <span className="hidden md:inline">导入参考图</span>
+        </button>
+
+        {/* AI render */}
+        <button
+          onClick={openAiRender}
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all"
+          style={{ background: "linear-gradient(135deg,#6366f1,#818cf8)" }}
+          title="AI 渲染效果图">
+          🎨 <span className="hidden md:inline">AI 渲染</span>
+        </button>
+
         <button onClick={openExport} className="ds-btn-primary flex items-center gap-1.5">
           <span>📄</span>
           <span>{t.exportPlan}</span>

@@ -19,6 +19,7 @@ import FloorPlanAll, { RoomPanel as FloorPlanAllRoomPanel } from "@/components/F
 import YardPlan, { YardPlanLibrary, YardPlanInspector } from "@/components/YardPlan";
 // import OnboardingOverlay from "@/components/OnboardingOverlay";  // TODO: enable when ready
 import AiRenderModal from "@/components/AiRenderModal";
+import ImageImportModal from "@/components/ImageImportModal";
 import { useDesignerStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { decodeShare } from "@/lib/share";
@@ -154,7 +155,8 @@ export default function Home() {
   // React warning.
   const [leftOpen,  setLeftOpen]  = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
-  const [showAiRender, setShowAiRender] = useState(false);
+  const [showAiRender,  setShowAiRender]  = useState(false);
+  const [showImport,    setShowImport]    = useState(false);
   // zustand persist 在客户端水合时会用 localStorage 里的值覆盖 initial
   // state（比如 activeRoom / viewMode / floorPlans），和 SSR 渲出来的
   // 默认值不一致 → React 报 hydration mismatch（移动端 Chrome 尤其
@@ -202,6 +204,18 @@ export default function Home() {
   const rightPanelWidth = isExterior ? 256 : 288; // ExteriorPanel uses w-64
   const hasLeftPanel  = leftPanel  !== null;
   const hasRightPanel = rightPanel !== null;
+
+  // Listen for TopBar-dispatched events (same pattern as openExport)
+  useEffect(() => {
+    const onAiRender = () => setShowAiRender(true);
+    const onImport   = () => setShowImport(true);
+    window.addEventListener("openAiRender", onAiRender);
+    window.addEventListener("openImport",   onImport);
+    return () => {
+      window.removeEventListener("openAiRender", onAiRender);
+      window.removeEventListener("openImport",   onImport);
+    };
+  }, []);
 
   // Load shared plan from URL ?share= param (runs once after hydration)
   useEffect(() => {
@@ -264,11 +278,24 @@ export default function Home() {
           {isYard2d                && <YardPlan />}
           {viewMode === "2d"       && <FloorPlan />}
 
-          {/* AI Render floating button */}
-          {(viewMode === "3d" || isExterior) && (
+          {/* AI Render + Import floating buttons — visible in all canvas views */}
+          <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2 items-end">
+            <button
+              onClick={() => setShowImport(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-lg transition-all active:scale-95 hover:scale-105"
+              style={{
+                background: "rgba(255,255,255,0.92)",
+                backdropFilter: "blur(8px)",
+                border: "1px dashed #6366f1",
+                color: "#4f46e5",
+              }}
+              title="从参考图片导入设计风格"
+            >
+              📷 导入参考图
+            </button>
             <button
               onClick={() => setShowAiRender(true)}
-              className="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-lg transition-all active:scale-95 hover:scale-105"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-lg transition-all active:scale-95 hover:scale-105"
               style={{
                 background: "linear-gradient(135deg, #6366f1, #818cf8)",
                 backdropFilter: "blur(6px)",
@@ -277,7 +304,7 @@ export default function Home() {
             >
               {t.aiRenderBtn}
             </button>
-          )}
+          </div>
 
           {/* Front wall + ceiling toggles — both in 3D only */}
           {viewMode === "3d" && <FrontWallToggle />}
@@ -297,7 +324,8 @@ export default function Home() {
       </div>
       <ExportModal />
       <ShareModal />
-      <AiRenderModal open={showAiRender} onClose={() => setShowAiRender(false)} />
+      <ImageImportModal open={showImport}   onClose={() => setShowImport(false)} />
+      <AiRenderModal    open={showAiRender} onClose={() => setShowAiRender(false)} />
       {/* <OnboardingOverlay /> */}
       <footer className="h-6 bg-white border-t border-gray-100 flex items-center justify-center shrink-0">
         <span className="text-[10px] text-gray-400">{t.disclaimer}</span>
