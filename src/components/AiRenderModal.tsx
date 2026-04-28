@@ -6,6 +6,7 @@ import { generateRoomPrompt } from "@/lib/roomPrompt";
 import { generateExteriorPrompt } from "@/lib/sceneToPrompt";
 import { generateControlNetWorkflow, generateTxt2ImgWorkflow, SD_MODELS } from "@/lib/comfyWorkflow";
 import { useT } from "@/lib/i18n";
+import ImageImportModal from "@/components/ImageImportModal";
 
 interface Props {
   open: boolean;
@@ -82,8 +83,11 @@ export default function AiRenderModal({ open, onClose }: Props) {
   const viewMode          = useDesignerStore(s => s.viewMode);
   const sunHour           = useDesignerStore(s => s.sunHour);
   const siteLatLng        = useDesignerStore(s => s.siteLatLng);
-  const sdModel           = useDesignerStore(s => s.sdModel);
-  const setSdModel        = useDesignerStore(s => s.setSdModel);
+  const sdModel                = useDesignerStore(s => s.sdModel);
+  const setSdModel             = useDesignerStore(s => s.setSdModel);
+  const referenceImageDataUrl  = useDesignerStore(s => s.referenceImageDataUrl);
+  const setReferenceImageDataUrl = useDesignerStore(s => s.setReferenceImageDataUrl);
+  const promptAdditions        = useDesignerStore(s => s.promptAdditions);
 
   // Local state
   const [screenshot,     setScreenshot]     = useState<string | null>(null);
@@ -98,6 +102,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
   const [chainAngles,  setChainAngles]  = useState<string[]>(["front-right", "front-left"]);
   const [chainResults, setChainResults] = useState<string[]>([]);  // image URLs
   const [chainIndex,   setChainIndex]   = useState(0);             // current angle index being rendered
+  const [importOpen,   setImportOpen]   = useState(false);
 
   const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -199,7 +204,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
     return {
       roomType: "exterior" as const,
       roomName: "exterior",
-      positive: result.positive,
+      positive: [result.positive, promptAdditions].filter(Boolean).join(", "),
       negative: result.negative,
       seed:     Math.floor(Math.random() * 2 ** 31),
     };
@@ -385,7 +390,13 @@ export default function AiRenderModal({ open, onClose }: Props) {
       // For controlnet / multicontrolnet: capture the selected angle
       const needsCapture = (mode === "controlnet" || mode === "multicontrolnet") && cameraAndCapture;
       const capturedShot = needsCapture ? capturePreset(selectedAngle) : null;
-      const body = { screenshot: capturedShot ?? screenshot, roomData: promptData, mode, model: sdModel };
+      const body = {
+        screenshot:     capturedShot ?? screenshot,
+        roomData:       promptData,
+        mode,
+        model:          sdModel,
+        referenceImage: referenceImageDataUrl ?? undefined,
+      };
 
       const res = await fetch("/api/comfyui", {
         method: "POST",
@@ -463,6 +474,8 @@ export default function AiRenderModal({ open, onClose }: Props) {
   const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 
   return (
+    <>
+    <ImageImportModal open={importOpen} onClose={() => setImportOpen(false)} />
     <div
       className="fixed inset-0 z-[8888] flex items-end sm:items-center justify-center p-0 sm:p-4"
       style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
@@ -492,6 +505,13 @@ export default function AiRenderModal({ open, onClose }: Props) {
             {comfyAvailable === null && (
               <span className="text-[10px] text-gray-400">{t.airBadgeChecking}</span>
             )}
+            {referenceImageDataUrl && (
+              <div className="flex items-center gap-1.5 ml-2">
+                <img src={referenceImageDataUrl} className="w-6 h-6 rounded object-cover" alt="参考图" />
+                <span className="text-[10px] text-indigo-600 font-medium">风格参考已锁定</span>
+                <button onClick={() => setReferenceImageDataUrl(null)} className="text-gray-400 text-xs hover:text-gray-600">✕</button>
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -502,6 +522,19 @@ export default function AiRenderModal({ open, onClose }: Props) {
 
         {/* ── Body ───────────────────────────────────────────── */}
         <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-4">
+
+          {/* Import from photo banner */}
+          {phase === "idle" && (
+            <button onClick={() => setImportOpen(true)}
+              className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border text-left transition-all"
+              style={{ border: "1px dashed #6366f1", background: "#eef2ff" }}>
+              <span>📷</span>
+              <div>
+                <p className="text-xs font-semibold text-indigo-700">从参考图片导入设计风格</p>
+                <p className="text-[10px] text-indigo-400">上传建筑照片，AI 自动识别风格 · 材质 · 配色</p>
+              </div>
+            </button>
+          )}
 
           {/* Camera angle tip */}
           {phase === "idle" && comfyAvailable === true && (mode === "controlnet" || mode === "multicontrolnet") && (
@@ -945,5 +978,6 @@ export default function AiRenderModal({ open, onClose }: Props) {
         </div>
       </div>
     </div>
+    </>
   );
 }

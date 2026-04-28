@@ -459,6 +459,13 @@ interface DesignerStore {
    *  Drives the CheckpointLoaderSimple node in every workflow. */
   sdModel: string;
   setSdModel: (m: string) => void;
+
+  /** Reference image data URL for IP-Adapter style anchoring */
+  referenceImageDataUrl: string | null;
+  setReferenceImageDataUrl: (url: string | null) => void;
+  /** Extra SD prompt keywords extracted from user's reference image */
+  promptAdditions: string;
+  setPromptAdditions: (s: string) => void;
 }
 
 const initialExterior: ExteriorSettings = {
@@ -577,6 +584,11 @@ export const useDesignerStore = create<DesignerStore>()(
       setSiteLatLng: (ll) => set({ siteLatLng: ll }),
       sdModel: "RealVisXL_V5.0_fp16.safetensors",
       setSdModel: (m) => set({ sdModel: m }),
+
+      referenceImageDataUrl: null,
+      setReferenceImageDataUrl: (url) => set({ referenceImageDataUrl: url }),
+      promptAdditions: "",
+      setPromptAdditions: (s) => set({ promptAdditions: s }),
 
       setActiveRoom: (room) => {
         const s = get();
