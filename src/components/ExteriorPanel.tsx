@@ -226,16 +226,6 @@ export default function ExteriorPanel() {
           </div>
         </div>
 
-        {/* Fence & parking are now draggable prefabs in the 院子图 editor */}
-        <div className="mx-3 mt-3 mb-4 px-3 py-2.5 rounded-xl"
-             style={{ background: "#F0F4FF", border: "1px solid #C0CCF0" }}>
-          <div className="text-[10px] font-bold mb-1" style={{ color: "#2A3F8F" }}>
-            🚧 围栏 · 🚗 停车区
-          </div>
-          <div className="text-[10px] leading-relaxed" style={{ color: "#4A5FA8" }}>
-            围栏段和停车区已移至 <b>院子图</b> 编辑器，可自由拖拽放置。
-          </div>
-        </div>
       </div>
     </aside>
   );
