@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
+// ZhipuAI (智谱) GLM-4V — used when Anthropic key is not configured
+const ZHIPUAI_API_KEY = process.env.ZHIPUAI_API_KEY;
+const ZHIPUAI_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+
 interface AnalysisResult {
   preset: "modern" | "contemporary" | "mediterranean" | "industrial" | "minimalist";
   roofStyle: "flat" | "gable" | "hip" | "mansard" | "chinese";
@@ -41,8 +45,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "missing_image" }, { status: 400 });
     }
 
-    if (!ANTHROPIC_API_KEY) {
-      console.warn("ANTHROPIC_API_KEY not set — returning fallback");
+    if (!ANTHROPIC_API_KEY && !ZHIPUAI_API_KEY) {
+      console.warn("No vision API key configured — returning fallback");
       return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
     }
 
@@ -54,6 +58,7 @@ export async function POST(req: NextRequest) {
     const mediaType = base64Match[1] as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
     const base64Data = base64Match[2];
 
+    const systemPrompt = "You are an architectural design analyzer. Extract the design parameters from this building photo as JSON. Be precise about colors (output as hex). Only output valid JSON, no markdown.";
     const userPrompt = `Analyze this architectural/building photo and return ONLY a valid JSON object with these exact fields:
 
 {
@@ -73,89 +78,124 @@ export async function POST(req: NextRequest) {
 
 Be precise about colors — extract the actual dominant colors you see. Output ONLY the JSON object, no markdown, no explanation.`;
 
-    const response = await fetch(ANTHROPIC_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-opus-4-5",
-        max_tokens: 1024,
-        system: "You are an architectural design analyzer. Extract the design parameters from this building photo as JSON. Be precise about colors (output as hex). Only output valid JSON, no markdown.",
-        messages: [
-          {
+    let rawText: string;
+
+    // ── Anthropic Claude (preferred) ─────────────────────────────────────
+    if (ANTHROPIC_API_KEY) {
+      const response = await fetch(ANTHROPIC_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-opus-4-5",
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: [{
             role: "user",
             content: [
-              {
-                type: "image",
-                source: {
-                  type: "base64",
-                  media_type: mediaType,
-                  data: base64Data,
-                },
-              },
-              {
-                type: "text",
-                text: userPrompt,
-              },
+              { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
+              { type: "text", text: userPrompt },
             ],
-          },
-        ],
-      }),
-    });
+          }],
+        }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Anthropic API error:", response.status, errorText);
-      return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Anthropic API error:", response.status, errorText);
+        // Fall through to ZhipuAI if key is also available, otherwise return fallback
+        if (!ZHIPUAI_API_KEY) {
+          return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
+        }
+      } else {
+        const apiResponse = await response.json() as { content: Array<{ type: string; text: string }> };
+        const textContent = apiResponse.content.find(c => c.type === "text");
+        if (!textContent) return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
+        rawText = textContent.text;
+        // Jump straight to parse
+        return parseAndRespond(rawText);
+      }
     }
 
-    const apiResponse = await response.json() as {
-      content: Array<{ type: string; text: string }>;
-    };
+    // ── ZhipuAI GLM-4V (fallback / primary when Anthropic not set) ───────
+    {
+      const zhipuResponse = await fetch(ZHIPUAI_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${ZHIPUAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "glm-4v",
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image_url", image_url: { url: `data:${mediaType};base64,${base64Data}` } },
+              { type: "text", text: `${systemPrompt}\n\n${userPrompt}` },
+            ],
+          }],
+          max_tokens: 1024,
+          temperature: 0.1,
+        }),
+      });
 
-    const textContent = apiResponse.content.find(c => c.type === "text");
-    if (!textContent) {
-      return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
+      if (!zhipuResponse.ok) {
+        const errorText = await zhipuResponse.text();
+        console.error("ZhipuAI API error:", zhipuResponse.status, errorText);
+        return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
+      }
+
+      const zhipuData = await zhipuResponse.json() as {
+        choices: Array<{ message: { content: string } }>;
+      };
+      rawText = zhipuData.choices?.[0]?.message?.content ?? "";
+      if (!rawText) return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
     }
 
-    // Parse JSON from the response
-    let parsed: Partial<AnalysisResult>;
-    try {
-      // Strip any potential markdown code fences if Claude adds them despite instructions
-      const cleaned = textContent.text.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
-      parsed = JSON.parse(cleaned) as Partial<AnalysisResult>;
-    } catch (parseError) {
-      console.error("Failed to parse Claude response:", textContent.text, parseError);
-      return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
-    }
+    return parseAndRespond(rawText);
 
-    // Merge with fallback for any missing fields, and validate enum values
-    const validPresets = ["modern", "contemporary", "mediterranean", "industrial", "minimalist"];
-    const validRoofStyles = ["flat", "gable", "hip", "mansard", "chinese"];
-    const validWallMaterials = ["render", "brick", "stone", "wood", "concrete"];
-    const validYardPresets = ["pool", "garden", "minimal", "full"];
-
-    const result: AnalysisResult = {
-      preset: validPresets.includes(parsed.preset ?? "") ? parsed.preset! : FALLBACK.preset,
-      roofStyle: validRoofStyles.includes(parsed.roofStyle ?? "") ? parsed.roofStyle! : FALLBACK.roofStyle,
-      roofColor: /^#[0-9a-fA-F]{6}$/.test(parsed.roofColor ?? "") ? parsed.roofColor! : FALLBACK.roofColor,
-      wallMaterial: validWallMaterials.includes(parsed.wallMaterial ?? "") ? parsed.wallMaterial! : FALLBACK.wallMaterial,
-      wallColor: /^#[0-9a-fA-F]{6}$/.test(parsed.wallColor ?? "") ? parsed.wallColor! : FALLBACK.wallColor,
-      accentColor: /^#[0-9a-fA-F]{6}$/.test(parsed.accentColor ?? "") ? parsed.accentColor! : FALLBACK.accentColor,
-      floors: ([1, 2, 3] as number[]).includes(parsed.floors ?? 0) ? parsed.floors! : FALLBACK.floors,
-      yardPreset: validYardPresets.includes(parsed.yardPreset ?? "") ? parsed.yardPreset! : FALLBACK.yardPreset,
-      showPerimeterFence: typeof parsed.showPerimeterFence === "boolean" ? parsed.showPerimeterFence : FALLBACK.showPerimeterFence,
-      detectedFeatures: Array.isArray(parsed.detectedFeatures) ? parsed.detectedFeatures : [],
-      promptAdditions: typeof parsed.promptAdditions === "string" ? parsed.promptAdditions : "",
-      confidence: typeof parsed.confidence === "number" ? Math.max(0, Math.min(1, parsed.confidence)) : 0.5,
-    };
-
-    return NextResponse.json(result);
   } catch (err) {
     console.error("analyze-exterior error:", err);
     return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
   }
+}
+
+// ── Shared JSON parse + validate helper ─────────────────────────────────────
+function parseAndRespond(raw: string): ReturnType<typeof NextResponse.json> {
+  const validPresets       = ["modern", "contemporary", "mediterranean", "industrial", "minimalist"];
+  const validRoofStyles    = ["flat", "gable", "hip", "mansard", "chinese"];
+  const validWallMaterials = ["render", "brick", "stone", "wood", "concrete"];
+  const validYardPresets   = ["pool", "garden", "minimal", "full"];
+
+  let parsed: Partial<AnalysisResult>;
+  try {
+    const cleaned = raw
+      .replace(/^```(?:json)?\n?/m, "")
+      .replace(/\n?```$/m, "")
+      .trim();
+    parsed = JSON.parse(cleaned) as Partial<AnalysisResult>;
+  } catch (parseError) {
+    console.error("Failed to parse vision response:", raw.slice(0, 200), parseError);
+    return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
+  }
+
+  const result: AnalysisResult = {
+    preset:             validPresets.includes(parsed.preset ?? "")           ? parsed.preset!            : FALLBACK.preset,
+    roofStyle:          validRoofStyles.includes(parsed.roofStyle ?? "")     ? parsed.roofStyle!         : FALLBACK.roofStyle,
+    roofColor:          /^#[0-9a-fA-F]{6}$/.test(parsed.roofColor ?? "")    ? parsed.roofColor!         : FALLBACK.roofColor,
+    wallMaterial:       validWallMaterials.includes(parsed.wallMaterial ?? "") ? parsed.wallMaterial!    : FALLBACK.wallMaterial,
+    wallColor:          /^#[0-9a-fA-F]{6}$/.test(parsed.wallColor ?? "")    ? parsed.wallColor!         : FALLBACK.wallColor,
+    accentColor:        /^#[0-9a-fA-F]{6}$/.test(parsed.accentColor ?? "")  ? parsed.accentColor!       : FALLBACK.accentColor,
+    floors:             ([1, 2, 3] as number[]).includes(parsed.floors ?? 0) ? parsed.floors!            : FALLBACK.floors,
+    yardPreset:         validYardPresets.includes(parsed.yardPreset ?? "")   ? parsed.yardPreset!        : FALLBACK.yardPreset,
+    showPerimeterFence: typeof parsed.showPerimeterFence === "boolean"        ? parsed.showPerimeterFence : FALLBACK.showPerimeterFence,
+    detectedFeatures:   Array.isArray(parsed.detectedFeatures)               ? parsed.detectedFeatures   : [],
+    promptAdditions:    typeof parsed.promptAdditions === "string"            ? parsed.promptAdditions    : "",
+    confidence:         typeof parsed.confidence === "number"                 ? Math.max(0, Math.min(1, parsed.confidence)) : 0.5,
+  };
+
+  return NextResponse.json(result);
 }
