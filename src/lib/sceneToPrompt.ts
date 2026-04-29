@@ -51,6 +51,7 @@ const PREFAB_DESC: Record<PrefabKind, string> = {
   slat_wall:        "vertical timber slat privacy screen",
   fence_segment:    "modern timber slat fence",
   parking_area:     "paved parking area with driveway",
+  glb_model:        "custom architectural element",
 };
 
 // ─── Outdoor singleton descriptors ────────────────────────────────

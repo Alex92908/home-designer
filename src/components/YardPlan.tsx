@@ -171,6 +171,7 @@ const PREFAB_PALETTE: Record<PrefabKind, { stroke: string; fill: string }> = {
   slat_wall:       { stroke: "#D1D5DB", fill: "rgba(209,213,219,0.06)" },  // light grey (boundary)
   fence_segment:   { stroke: "#A8845A", fill: "rgba(168,132,90,0.10)" },  // warm wood (fence)
   parking_area:    { stroke: "#94A3B8", fill: "rgba(148,163,184,0.10)" }, // slate (concrete)
+  glb_model:       { stroke: "#818CF8", fill: "rgba(129,140,248,0.10)" }, // indigo (AI-generated)
 };
 
 function PrefabGlyph({ kind, footprintPx, selected = false }: {

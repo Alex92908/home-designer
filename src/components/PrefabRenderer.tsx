@@ -25,6 +25,7 @@ import type { YardPrefab, PrefabKind } from "@/lib/types";
 import { getPrefabDef, resolveParams } from "@/lib/outdoorPrefabs";
 import { getOutdoorTexture, outdoorTileSize } from "@/lib/textures";
 import { poissonRect } from "@/lib/poissonDisc";
+import { GlbPrefabMesh } from "./GlbPrefabMesh";
 // Structural prefabs reuse the existing detailed Pool/Pergola/OutdoorKitchen
 // /Fountain implementations from HouseCanvas. The import is technically
 // circular (HouseCanvas imports PrefabMesh from here), but it works fine
@@ -575,6 +576,23 @@ export function PrefabMesh({ prefab }: { prefab: YardPrefab }) {
     );
   }
 
+  // ─── AI-generated GLB model ────────────────────────────────────
+  // "Transformer decomposition": each villa part (pool, pergola, gate…)
+  // is a separately generated GLB, loaded here as its own node.
+  // partColor overrides all mesh colours; nodeOverrides targets by name.
+  if (prefab.prefabKind === "glb_model") {
+    if (!prefab.glbSrc) return null;
+    const scale = prefab.scale ?? 1;
+    return (
+      <group position={[wx, -0.5, wz]} rotation={[0, rot, 0]} scale={[scale, scale, scale]}>
+        <GlbPrefabMesh
+          src={prefab.glbSrc}
+          partColor={prefab.partColor}
+        />
+      </group>
+    );
+  }
+
   // ─── Structural prefabs ── delegate to the existing detailed
   // Pool / Pergola / OutdoorKitchen / Fountain components imported
   // from HouseCanvas. They take (x, z) in world metres and draw
@@ -595,4 +613,5 @@ export const RENDERED_PREFAB_KINDS: PrefabKind[] = [
   "social_island", "farm_box", "porte_cochere", "slat_wall",
   "pool", "pergola_classic", "outdoor_kitchen", "fountain",
   "fence_segment", "parking_area",
+  "glb_model",
 ];
