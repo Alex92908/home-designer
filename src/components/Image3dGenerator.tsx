@@ -59,8 +59,8 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
 
   // ── Generate ─────────────────────────────────────────────────────
   const generate = useCallback(async () => {
-    if (!activeImage) { setErrorMsg("请先上传参考图片"); return; }
-    if (!partHint.trim()) { setErrorMsg("请输入要生成的零件名称"); return; }
+    if (!activeImage) { setErrorMsg("请先上传参考图片"); setState("error"); return; }
+    if (!partHint.trim()) { setErrorMsg("请选择或输入零件类型"); setState("error"); return; }
     setState("generating");
     setErrorMsg("");
     setPreviewGlb(null);
@@ -229,7 +229,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
       {/* Generate button */}
       <button
         onClick={generate}
-        disabled={state === "generating" || !activeImage}
+        disabled={state === "generating"}
         style={{
           width: "100%", padding: "10px 0",
           background: state === "generating" ? "#9CA3AF" : "#2563EB",
