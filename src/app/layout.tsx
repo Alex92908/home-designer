@@ -1,17 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// next/font/google (Geist) conflicts with Turbopack in Next.js 16 —
+// resolves @vercel/turbopack-next/internal/font/google/font which doesn't
+// exist in the build cache. Use system font stack instead: visually
+// identical on macOS/iOS (SF Pro) and near-identical on Windows (Segoe UI).
+// No network request, no build error, faster TTFB.
 
 export const metadata: Metadata = {
   title: "装修配置器 — 像攒电脑一样装修",
@@ -24,10 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         {children}
         <Analytics />

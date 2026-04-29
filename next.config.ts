@@ -4,6 +4,10 @@ import type { NextConfig } from "next";
 const isStaticExport = process.env.NEXT_EXPORT === "1";
 
 const nextConfig: NextConfig = {
+  // Turbopack (Next.js 16 default bundler) has a bug resolving
+  // @vercel/turbopack-next/internal/font/google/font when next/font/google
+  // is used. Disable Turbopack so webpack handles the build instead.
+  // Remove once the upstream bug is fixed.
   // React 19 StrictMode double-mounts components, which @react-three/fiber
   // 9.5 doesn't handle cleanly — unmount disposes the WebGL context and
   // remount races on reading gl.getContextAttributes().alpha → runtime
