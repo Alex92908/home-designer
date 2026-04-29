@@ -444,6 +444,12 @@ interface DesignerStore {
   cameraAndCapture: ((pos: [number, number, number], lookAt: [number, number, number]) => string) | null;
   setCameraAndCapture: (fn: DesignerStore["cameraAndCapture"]) => void;
 
+  // Global flag — any component can set this to true to open AiRenderModal.
+  // page.tsx watches it and opens the modal, then resets the flag.
+  aiRenderRequested: boolean;
+  requestAiRender: () => void;
+  clearAiRenderRequest: () => void;
+
   // ── Sun analysis — shared across HouseCanvas (3D lighting) + AiRenderModal (prompt) ──
   /** Current slider hour 0–24. Drives real-time sun position in 3D and
    *  the lighting descriptor in the exterior AI render prompt. */
@@ -582,6 +588,10 @@ export const useDesignerStore = create<DesignerStore>()(
       activeTemplateId: null,
       cameraAndCapture: null,
       setCameraAndCapture: (fn) => set({ cameraAndCapture: fn }),
+
+      aiRenderRequested: false,
+      requestAiRender:   () => set({ aiRenderRequested: true }),
+      clearAiRenderRequest: () => set({ aiRenderRequested: false }),
 
       sunHour: 10.5,
       setSunHour: (h) => set({ sunHour: h }),

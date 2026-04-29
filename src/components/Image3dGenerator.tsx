@@ -34,8 +34,9 @@ const PART_PRESETS = [
 type GenState = "idle" | "generating" | "done" | "error";
 
 export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
-  const referenceImage = useDesignerStore(s => s.referenceImageDataUrl);
-  const addYardItem    = useDesignerStore(s => s.addYardItem);
+  const referenceImage   = useDesignerStore(s => s.referenceImageDataUrl);
+  const addYardItem      = useDesignerStore(s => s.addYardItem);
+  const requestAiRender  = useDesignerStore(s => s.requestAiRender);
 
   const [uploadedImg, setUploadedImg]   = useState<string | null>(null);
   const [partHint, setPartHint]         = useState("");
@@ -89,7 +90,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
   }, [activeImage, partHint, partLabel]);
 
   // ── Add to yard ───────────────────────────────────────────────────
-  const addToScene = useCallback(() => {
+  const addToScene = useCallback((andRender = false) => {
     if (!previewGlb) return;
     const prefab: YardPrefab = {
       id:          `glb_${Date.now()}`,
@@ -106,8 +107,12 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
     addYardItem(prefab);
     setState("idle");
     setPreviewGlb(null);
+    if (andRender) {
+      // Give R3F one frame to mount the new GLB before the modal captures
+      setTimeout(() => requestAiRender(), 300);
+    }
     onClose?.();
-  }, [previewGlb, partColor, partLabel, partHint, addYardItem, onClose]);
+  }, [previewGlb, partColor, partLabel, partHint, addYardItem, requestAiRender, onClose]);
 
   return (
     <div style={{
@@ -266,17 +271,30 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
               fontSize: 12, marginBottom: 8,
             }}
           />
-          <button
-            onClick={addToScene}
-            style={{
-              width: "100%", padding: "8px 0",
-              background: "#16A34A", color: "#fff",
-              border: "none", borderRadius: 8,
-              fontSize: 13, fontWeight: 600, cursor: "pointer",
-            }}
-          >
-            ➕ 加入场景（可拖拽放置）
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => addToScene(false)}
+              style={{
+                flex: 1, padding: "8px 0",
+                background: "#16A34A", color: "#fff",
+                border: "none", borderRadius: 8,
+                fontSize: 12, fontWeight: 600, cursor: "pointer",
+              }}
+            >
+              ➕ 加入场景
+            </button>
+            <button
+              onClick={() => addToScene(true)}
+              style={{
+                flex: 1, padding: "8px 0",
+                background: "#7C3AED", color: "#fff",
+                border: "none", borderRadius: 8,
+                fontSize: 12, fontWeight: 600, cursor: "pointer",
+              }}
+            >
+              🎨 加入并渲染整体
+            </button>
+          </div>
         </div>
       )}
 

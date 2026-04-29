@@ -145,8 +145,10 @@ function PanelToggle({
 }
 
 export default function Home() {
-  const viewMode      = useDesignerStore((s) => s.viewMode);
-  const loadFromShare = useDesignerStore((s) => s.loadFromShare);
+  const viewMode           = useDesignerStore((s) => s.viewMode);
+  const loadFromShare      = useDesignerStore((s) => s.loadFromShare);
+  const aiRenderRequested  = useDesignerStore((s) => s.aiRenderRequested);
+  const clearAiRenderRequest = useDesignerStore((s) => s.clearAiRenderRequest);
   const t = useT();
 
   // Panels start OPEN on both server and client to avoid hydration
@@ -179,6 +181,15 @@ export default function Home() {
       setRightOpen(false);
     }
   }, [viewMode]);
+
+  // When any component calls requestAiRender() (e.g. Image3dGenerator after
+  // adding a GLB part), open AiRenderModal and clear the flag.
+  useEffect(() => {
+    if (aiRenderRequested) {
+      setShowAiRender(true);
+      clearAiRenderRequest();
+    }
+  }, [aiRenderRequested, clearAiRenderRequest]);
 
   const isAll      = viewMode === "all";
   const isExterior = viewMode === "exterior";
