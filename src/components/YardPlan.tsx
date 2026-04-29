@@ -26,6 +26,7 @@ import { evaluateYardPlan, violationsByItem } from "@/lib/outdoorClearance";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
 import { Image3dGenerator } from "./Image3dGenerator";
+import { VillaDecomposer } from "./VillaDecomposer";
 import { getShadowPolygon } from "@/lib/sunAnalysis";
 import { getOutdoorAssetByKind as _getAsset, PREFAB_PURCHASE } from "@/lib/outdoorAssets";
 
@@ -280,7 +281,8 @@ function darkenHex(hex: string, by: number): string {
 type LibraryTab = OutdoorCategory | "prefab" | "template";
 export function YardPlanLibrary() {
   const [tab, setTab] = useState<LibraryTab>("template");
-  const [show3dGen, setShow3dGen] = useState(false);
+  const [show3dGen, setShow3dGen]           = useState(false);
+  const [showVillaDecompose, setShowVillaDecompose] = useState(false);
   const items = (tab === "prefab" || tab === "template") ? null
     : OUTDOOR_ASSET_LIBRARY.filter(a => a.category === tab);
 
@@ -347,7 +349,21 @@ export function YardPlanLibrary() {
       {tab === "prefab" && (
         <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1.5">
 
-          {/* ── AI 3D 生成入口 ──────────────────────────────────── */}
+          {/* ── 整图拆解入口（主推） ─────────────────────────────── */}
+          <button
+            onClick={() => setShowVillaDecompose(true)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
+            style={{ background: "linear-gradient(135deg,#FDF4FF,#EEF2FF)", border: "1px solid #DDD6FE" }}
+          >
+            <span style={{ fontSize: 22 }}>🏗</span>
+            <div className="flex flex-col flex-1 min-w-0">
+              <div className="text-[11px] font-bold" style={{ color: "#7C3AED" }}>整图拆解 → 3D组件集合</div>
+              <div className="text-[9px]" style={{ color: "#8B5CF6" }}>一张别墅图 → AI识别元素 → 批量生成零件</div>
+            </div>
+            <span style={{ color: "#A78BFA", fontSize: 14 }}>›</span>
+          </button>
+
+          {/* ── 单零件生成入口 ────────────────────────────────────── */}
           <button
             onClick={() => setShow3dGen(true)}
             className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
@@ -355,13 +371,26 @@ export function YardPlanLibrary() {
           >
             <span style={{ fontSize: 22 }}>🤖</span>
             <div className="flex flex-col flex-1 min-w-0">
-              <div className="text-[11px] font-bold" style={{ color: "#4338CA" }}>AI 生成 3D 零件</div>
-              <div className="text-[9px]" style={{ color: "#6366F1" }}>上传参考图 → TripoSR 生成 GLB → 拖入场景</div>
+              <div className="text-[11px] font-bold" style={{ color: "#4338CA" }}>AI 生成单个零件</div>
+              <div className="text-[9px]" style={{ color: "#6366F1" }}>选部位 → TripoSR → GLB → 拖入场景</div>
             </div>
             <span style={{ color: "#818CF8", fontSize: 14 }}>›</span>
           </button>
 
-          {/* Overlay panel */}
+          {/* Overlay: 整图拆解 */}
+          {showVillaDecompose && (
+            <div style={{
+              position: "fixed", inset: 0, zIndex: 9999,
+              background: "rgba(0,0,0,0.50)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+              onClick={(e) => { if (e.target === e.currentTarget) setShowVillaDecompose(false); }}
+            >
+              <VillaDecomposer onClose={() => setShowVillaDecompose(false)} />
+            </div>
+          )}
+
+          {/* Overlay: 单零件 */}
           {show3dGen && (
             <div style={{
               position: "fixed", inset: 0, zIndex: 9999,
