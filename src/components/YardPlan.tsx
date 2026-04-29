@@ -25,6 +25,7 @@ import { ZONE_STYLES, polygonCentroid } from "@/lib/outdoorZones";
 import { evaluateYardPlan, violationsByItem } from "@/lib/outdoorClearance";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
+import { Image3dGenerator } from "./Image3dGenerator";
 import { getShadowPolygon } from "@/lib/sunAnalysis";
 import { getOutdoorAssetByKind as _getAsset, PREFAB_PURCHASE } from "@/lib/outdoorAssets";
 
@@ -279,6 +280,7 @@ function darkenHex(hex: string, by: number): string {
 type LibraryTab = OutdoorCategory | "prefab" | "template";
 export function YardPlanLibrary() {
   const [tab, setTab] = useState<LibraryTab>("template");
+  const [show3dGen, setShow3dGen] = useState(false);
   const items = (tab === "prefab" || tab === "template") ? null
     : OUTDOOR_ASSET_LIBRARY.filter(a => a.category === tab);
 
@@ -344,6 +346,34 @@ export function YardPlanLibrary() {
       {/* Prefabs grid — light card with dark canvas glyph thumbnail */}
       {tab === "prefab" && (
         <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1.5">
+
+          {/* ── AI 3D 生成入口 ──────────────────────────────────── */}
+          <button
+            onClick={() => setShow3dGen(true)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
+            style={{ background: "linear-gradient(135deg,#EEF2FF,#F0FDF4)", border: "1px solid #C7D2FE" }}
+          >
+            <span style={{ fontSize: 22 }}>🤖</span>
+            <div className="flex flex-col flex-1 min-w-0">
+              <div className="text-[11px] font-bold" style={{ color: "#4338CA" }}>AI 生成 3D 零件</div>
+              <div className="text-[9px]" style={{ color: "#6366F1" }}>上传参考图 → TripoSR 生成 GLB → 拖入场景</div>
+            </div>
+            <span style={{ color: "#818CF8", fontSize: 14 }}>›</span>
+          </button>
+
+          {/* Overlay panel */}
+          {show3dGen && (
+            <div style={{
+              position: "fixed", inset: 0, zIndex: 9999,
+              background: "rgba(0,0,0,0.45)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+              onClick={(e) => { if (e.target === e.currentTarget) setShow3dGen(false); }}
+            >
+              <Image3dGenerator onClose={() => setShow3dGen(false)} />
+            </div>
+          )}
+
           {PREFAB_REGISTRY.map(p => (
             <button key={p.kind}
               draggable
