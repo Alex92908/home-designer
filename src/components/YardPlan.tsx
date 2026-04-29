@@ -26,7 +26,7 @@ import { evaluateYardPlan, violationsByItem } from "@/lib/outdoorClearance";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
 import { Image3dGenerator } from "./Image3dGenerator";
-import { VillaDecomposer } from "./VillaDecomposer";
+import { VillaTo3D } from "./VillaTo3D";
 import { getShadowPolygon } from "@/lib/sunAnalysis";
 import { getOutdoorAssetByKind as _getAsset, PREFAB_PURCHASE } from "@/lib/outdoorAssets";
 
@@ -377,7 +377,7 @@ export function YardPlanLibrary() {
             <span style={{ color: "#818CF8", fontSize: 14 }}>›</span>
           </button>
 
-          {/* Overlay: 整图拆解 */}
+          {/* Overlay: 整图→完整3D→拆解 (Trellis pipeline) */}
           {showVillaDecompose && (
             <div style={{
               position: "fixed", inset: 0, zIndex: 9999,
@@ -386,7 +386,7 @@ export function YardPlanLibrary() {
             }}
               onClick={(e) => { if (e.target === e.currentTarget) setShowVillaDecompose(false); }}
             >
-              <VillaDecomposer onClose={() => setShowVillaDecompose(false)} />
+              <VillaTo3D onClose={() => setShowVillaDecompose(false)} />
             </div>
           )}
 
