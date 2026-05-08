@@ -43,6 +43,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
   const [state, setState]               = useState<GenState>("idle");
   const [errorMsg, setErrorMsg]         = useState("");
   const [previewGlb, setPreviewGlb]     = useState<string | null>(null);
+  const [savedGlbUrl, setSavedGlbUrl]   = useState<string | null>(null);
   const [partColor, setPartColor]       = useState("#D4B896");
   const [partLabel, setPartLabel]       = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -80,6 +81,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
       }
       const src = json.glbUrl ?? json.glbBase64!;
       setPreviewGlb(src);
+      if (json.glbUrl) setSavedGlbUrl(json.glbUrl);
       setState("done");
       // Pre-fill label from hint
       if (!partLabel) setPartLabel(partHint);
@@ -271,7 +273,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
               fontSize: 12, marginBottom: 8,
             }}
           />
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
             <button
               onClick={() => addToScene(false)}
               style={{
@@ -292,7 +294,37 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
                 fontSize: 12, fontWeight: 600, cursor: "pointer",
               }}
             >
-              🎨 加入并渲染整体
+              🎨 加入并渲染
+            </button>
+          </div>
+
+          {/* 本地保存 + 下载 */}
+          <div style={{
+            borderTop: "1px solid #BBF7D0", paddingTop: 8,
+            display: "flex", gap: 6, alignItems: "center",
+          }}>
+            {savedGlbUrl && (
+              <div style={{ flex: 1, fontSize: 9, color: "#15803D", fontFamily: "monospace",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                title={`public${savedGlbUrl}`}>
+                💾 public{savedGlbUrl}
+              </div>
+            )}
+            <button
+              onClick={() => {
+                const a = document.createElement("a");
+                a.href = savedGlbUrl ?? previewGlb!;
+                a.download = `sf3d_${partLabel || partHint}_${Date.now()}.glb`;
+                a.click();
+              }}
+              style={{
+                padding: "5px 12px", borderRadius: 6,
+                border: "1px solid #16A34A", background: "#fff",
+                color: "#16A34A", fontSize: 10, fontWeight: 700, cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              ⬇ 下载 GLB
             </button>
           </div>
         </div>

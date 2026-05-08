@@ -52,17 +52,29 @@ const SEG_EMOJI: Record<string, string> = {
 };
 
 // ─── Component ────────────────────────────────────────────────────
-export function VillaTo3D({ onClose }: { onClose?: () => void }) {
+export function VillaTo3D({
+  onClose,
+  apiPath = "/api/trellis",
+  version = "v1",
+}: {
+  onClose?: () => void;
+  apiPath?: string;
+  version?: "v1" | "v2" | "sf3d";
+}) {
   const referenceImageDataUrl = useDesignerStore(s => s.referenceImageDataUrl);
   const addYardItem           = useDesignerStore(s => s.addYardItem);
   const requestAiRender       = useDesignerStore(s => s.requestAiRender);
 
-  const [uploadedImg, setUploadedImg] = useState<string | null>(null);
-  const [stage, setStage]             = useState<Stage>("upload");
-  const [error, setError]             = useState("");
-  const [fullGlb, setFullGlb]         = useState<string | null>(null);
-  const [parts, setParts]             = useState<SegmentedPart[]>([]);
-  const [selected, setSelected]       = useState<Set<number>>(new Set());
+  const [uploadedImg, setUploadedImg]   = useState<string | null>(null);
+  const [stage, setStage]               = useState<Stage>("upload");
+  const [error, setError]               = useState("");
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const [fullGlb, setFullGlb]           = useState<string | null>(null);
+  const [savedGlbUrl, setSavedGlbUrl]   = useState<string | null>(null);
+  const [parts, setParts]               = useState<SegmentedPart[]>([]);
+  const [selected, setSelected]         = useState<Set<number>>(new Set());
+  // Scale slider for "set as main building" — user adjusts until model looks right
+  const [buildingScale, setBuildingScale] = useState(1.0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const activeImage = uploadedImg ?? referenceImageDataUrl ?? null;
@@ -80,27 +92,44 @@ export function VillaTo3D({ onClose }: { onClose?: () => void }) {
   const run = useCallback(async () => {
     if (!activeImage) { setError("请先上传别墅图片"); return; }
     setError("");
+    setQuotaExceeded(false);
 
     // ── Step 1: Trellis → full scene GLB ──────────────────────────
     setStage("generating_full");
     let glbB64: string;
     try {
-      const res  = await fetch("/api/trellis", {
+      const res  = await fetch(apiPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageBase64: activeImage }),
       });
-      const json = await res.json() as { glbBase64?: string; glbUrl?: string; error?: string };
+      const json = await res.json() as {
+        glbBase64?: string; glbUrl?: string; error?: string; quotaExceeded?: boolean;
+      };
+      if (res.status === 429 && json.quotaExceeded) {
+        setQuotaExceeded(true);
+        setError("今日 GPU 配额已用完");
+        setStage("upload");
+        return;
+      }
       if (!res.ok || (!json.glbBase64 && !json.glbUrl)) throw new Error(json.error ?? "Trellis 调用失败");
       glbB64 = json.glbBase64 ?? `data:model/gltf-binary;base64,${json.glbUrl}`;
       setFullGlb(glbB64);
+      if (json.glbUrl) setSavedGlbUrl(json.glbUrl);
     } catch (err) {
       setError(`整体3D生成失败: ${err instanceof Error ? err.message : String(err)}`);
       setStage("upload");
       return;
     }
 
-    // ── Step 2: GLB segmentation ──────────────────────────────────
+    // ── Step 2: GLB segmentation (skipped for SF3D — single-object model) ──
+    if (version === "sf3d") {
+      setParts([{ label: "sf3d model", chinese: "SF3D生成模型", seg: "wall", faceCount: 0, glbBase64: glbB64 }]);
+      setSelected(new Set([0]));
+      setStage("selecting");
+      return;
+    }
+
     setStage("segmenting");
     try {
       const res  = await fetch("/api/glb-segment", {
@@ -115,15 +144,17 @@ export function VillaTo3D({ onClose }: { onClose?: () => void }) {
       setStage("selecting");
     } catch (err) {
       setError(`分割失败: ${err instanceof Error ? err.message : String(err)}`);
-      // Still allow using the full model even if segmentation failed
       setParts([{ label: "complete villa", chinese: "完整别墅", seg: "wall", faceCount: 0, glbBase64: glbB64 }]);
       setSelected(new Set([0]));
       setStage("selecting");
     }
-  }, [activeImage]);
+  }, [activeImage, version]);
 
   // ── Add selected parts to scene ─────────────────────────────────
-  const addToScene = useCallback((andRender: boolean) => {
+  // asMainBuilding=true → single GLB at origin (0,0), user-set scale
+  //                        Used for the full TRELLIS villa model
+  // asMainBuilding=false → tile parts offset from each other (legacy)
+  const addToScene = useCallback((andRender: boolean, asMainBuilding = false) => {
     const chosen = parts.filter((_, i) => selected.has(i));
     if (!chosen.length) return;
 
@@ -132,10 +163,12 @@ export function VillaTo3D({ onClose }: { onClose?: () => void }) {
         id:         `glb_${Date.now()}_${i}`,
         type:       "prefab",
         prefabKind: "glb_model",
-        x:          (i % 3) * 400 + 150,
-        z:          Math.floor(i / 3) * 400 + 200,
+        // Main building → center of the yard (house origin)
+        // Parts → spread out so they don't overlap
+        x:          asMainBuilding ? 0   : (i % 3) * 400 + 150,
+        z:          asMainBuilding ? 0   : Math.floor(i / 3) * 400 + 200,
         rot:        0,
-        scale:      1,
+        scale:      asMainBuilding ? buildingScale : 1,
         glbSrc:     p.glbBase64,
         partLabel:  p.chinese,
       };
@@ -145,7 +178,7 @@ export function VillaTo3D({ onClose }: { onClose?: () => void }) {
     setStage("done");
     if (andRender) setTimeout(() => requestAiRender(), 400);
     setTimeout(() => onClose?.(), andRender ? 100 : 600);
-  }, [parts, selected, addYardItem, requestAiRender, onClose]);
+  }, [parts, selected, buildingScale, addYardItem, requestAiRender, onClose]);
 
   // ── Progress step bar ───────────────────────────────────────────
   const stageOrder: Stage[] = ["upload", "generating_full", "segmenting", "selecting", "done"];
@@ -163,9 +196,18 @@ export function VillaTo3D({ onClose }: { onClose?: () => void }) {
         <div>
           <div style={{ fontWeight: 700, fontSize: 15 }}>
             🏗 整图 → 完整3D → 拆解零件
+            {version === "v2" && (
+              <span style={{
+                marginLeft: 8, fontSize: 10,
+                background: "#7C3AED", color: "#fff",
+                borderRadius: 4, padding: "1px 6px", verticalAlign: "middle",
+              }}>TRELLIS 2.0</span>
+            )}
           </div>
           <div style={{ fontSize: 10, color: "#888", marginTop: 3 }}>
-            Trellis（微软开源）生成整体场景 → 几何分割 → 独立可编辑零件
+            {version === "v2"
+              ? "TRELLIS 2.0（微软最新）1024分辨率 · 更精细纹理 · 几何分割 → 独立零件"
+              : "Trellis（微软开源）生成整体场景 → 几何分割 → 独立可编辑零件"}
           </div>
         </div>
         {onClose && (
@@ -230,15 +272,63 @@ export function VillaTo3D({ onClose }: { onClose?: () => void }) {
           )}
           <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
 
-          {error && <div style={{ color: "#DC2626", fontSize: 11, marginBottom: 10 }}>⚠ {error}</div>}
+          {error && !quotaExceeded && (
+            <div style={{ color: "#DC2626", fontSize: 11, marginBottom: 10 }}>⚠ {error}</div>
+          )}
 
-          <button onClick={run} disabled={!activeImage} style={{
+          {/* Quota exceeded — offer fast mode or Pro upgrade */}
+          {quotaExceeded && (
+            <div style={{
+              background: "#FFF7ED", border: "1px solid #FED7AA",
+              borderRadius: 10, padding: "12px 14px", marginBottom: 12,
+            }}>
+              <div style={{ fontWeight: 700, fontSize: 12, color: "#92400E", marginBottom: 6 }}>
+                ⚠️ HuggingFace 今日免费 GPU 配额已用完
+              </div>
+              <div style={{ fontSize: 11, color: "#78350F", lineHeight: 1.7, marginBottom: 10 }}>
+                每日限额 120 GPU 秒，image_to_3d 单步约需 120s。<br />
+                选项：
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <button
+                  onClick={() => run()}
+                  disabled={!activeImage}
+                  style={{
+                    padding: "8px 0", borderRadius: 8,
+                    background: "#D97706", color: "#fff",
+                    border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                  }}
+                >
+                  🔄 重试生成
+                </button>
+                <a
+                  href="https://huggingface.co/subscribe/pro"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "block", textAlign: "center",
+                    padding: "7px 0", borderRadius: 8,
+                    border: "1px solid #D97706", color: "#92400E",
+                    fontSize: 11, fontWeight: 600, textDecoration: "none",
+                  }}
+                >
+                  🚀 升级 HF Pro（$9/月）获得更多配额
+                </a>
+                <div style={{ fontSize: 10, color: "#9CA3AF", textAlign: "center" }}>
+                  或等待明日 UTC 00:00 配额重置后再试
+                </div>
+              </div>
+            </div>
+          )}
+
+          <button onClick={() => run()} disabled={!activeImage} style={{
             width: "100%", padding: "11px 0",
             background: !activeImage ? "#9CA3AF" : "linear-gradient(135deg,#7C3AED,#4F46E5)",
             color: "#fff", border: "none", borderRadius: 10,
             fontSize: 14, fontWeight: 700, cursor: !activeImage ? "not-allowed" : "pointer",
+            marginBottom: 6,
           }}>
-            🚀 开始生成（约 2-3 分钟）
+            🚀 生成3D（12步全质量）
           </button>
 
           <div style={{ fontSize: 10, color: "#9CA3AF", textAlign: "center", marginTop: 8 }}>
@@ -251,11 +341,13 @@ export function VillaTo3D({ onClose }: { onClose?: () => void }) {
       {stage === "generating_full" && (
         <div style={{ textAlign: "center", padding: "30px 0" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>⚙️</div>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Trellis 生成完整3D场景中…</div>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>
+            {version === "v2" ? "TRELLIS 2.0 生成完整3D场景中…" : "Trellis 生成完整3D场景中…"}
+          </div>
           <div style={{ color: "#666", fontSize: 12, lineHeight: 1.7 }}>
             分析建筑结构、材质、空间关系<br />
             生成带纹理的完整别墅 mesh<br />
-            预计 60-120 秒
+            {version === "v2" ? "预计 90-180 秒（1024分辨率更慢）" : "预计 60-120 秒"}
           </div>
           <div style={{ marginTop: 20, height: 4, background: "#E5E7EB", borderRadius: 2, overflow: "hidden" }}>
             <div style={{
@@ -323,7 +415,8 @@ export function VillaTo3D({ onClose }: { onClose?: () => void }) {
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 8 }}>
+          {/* ── 普通加入 ── */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
             <button onClick={() => addToScene(false)} disabled={selected.size === 0} style={{
               flex: 1, padding: "10px 0",
               background: selected.size === 0 ? "#9CA3AF" : "#16A34A",
@@ -341,16 +434,114 @@ export function VillaTo3D({ onClose }: { onClose?: () => void }) {
               🎨 加入并渲染
             </button>
           </div>
+
+          {/* ── 设为主建筑（居中+缩放） ── */}
+          <div style={{
+            border: "1px solid #C4B5FD", borderRadius: 10,
+            padding: "12px 14px", background: "#FAF5FF",
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#5B21B6", marginBottom: 8 }}>
+              🏠 设为主建筑（居中放置在院子中心）
+            </div>
+            <div style={{ fontSize: 11, color: "#6D28D9", marginBottom: 8 }}>
+              缩放比例：<b>{buildingScale.toFixed(1)}×</b>
+            </div>
+            <input
+              type="range" min={0.1} max={5} step={0.05}
+              value={buildingScale}
+              onChange={e => setBuildingScale(Number(e.target.value))}
+              style={{ width: "100%", marginBottom: 10, accentColor: "#7C3AED" }}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => addToScene(false, true)}
+                disabled={selected.size === 0}
+                style={{
+                  flex: 1, padding: "9px 0", borderRadius: 8, border: "none",
+                  background: selected.size === 0 ? "#9CA3AF" : "#5B21B6",
+                  color: "#fff", fontSize: 12, fontWeight: 700,
+                  cursor: selected.size === 0 ? "not-allowed" : "pointer",
+                }}
+              >
+                🏠 设为主建筑
+              </button>
+              <button
+                onClick={() => addToScene(true, true)}
+                disabled={selected.size === 0}
+                style={{
+                  flex: 1, padding: "9px 0", borderRadius: 8, border: "none",
+                  background: selected.size === 0 ? "#9CA3AF" : "#7C3AED",
+                  color: "#fff", fontSize: 12, fontWeight: 700,
+                  cursor: selected.size === 0 ? "not-allowed" : "pointer",
+                }}
+              >
+                🎨 设为主建筑+渲染
+              </button>
+            </div>
+          </div>
         </>
       )}
 
       {/* ── STAGE: done ──────────────────────────────────────────── */}
       {stage === "done" && (
-        <div style={{ textAlign: "center", padding: "30px 0" }}>
-          <div style={{ fontSize: 48 }}>✅</div>
-          <div style={{ fontWeight: 700, fontSize: 15, marginTop: 12 }}>已加入场景！</div>
-          <div style={{ color: "#666", fontSize: 12, marginTop: 8 }}>
+        <div style={{ textAlign: "center", padding: "24px 0" }}>
+          <div style={{ fontSize: 44 }}>✅</div>
+          <div style={{ fontWeight: 700, fontSize: 15, marginTop: 10 }}>已加入场景！</div>
+          <div style={{ color: "#666", fontSize: 12, marginTop: 6 }}>
             各零件为独立拖拽节点，可分别调整位置/颜色
+          </div>
+
+          {/* ── 本地保存提示 + 下载按钮 ── */}
+          <div style={{
+            marginTop: 20, padding: "12px 16px", borderRadius: 12,
+            background: "#F0FDF4", border: "1px solid #86EFAC",
+            textAlign: "left",
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#166534", marginBottom: 6 }}>
+              💾 GLB 已自动保存到项目本地
+            </div>
+            {savedGlbUrl && (
+              <div style={{
+                fontSize: 10, color: "#15803D", fontFamily: "monospace",
+                wordBreak: "break-all", marginBottom: 10,
+                background: "#DCFCE7", borderRadius: 6, padding: "4px 8px",
+              }}>
+                public{savedGlbUrl}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8 }}>
+              {/* 下载完整 GLB */}
+              {fullGlb && (
+                <button
+                  onClick={() => {
+                    const a = document.createElement("a");
+                    a.href = fullGlb!;
+                    a.download = `trellis${version === "v2" ? "2" : ""}_villa_${Date.now()}.glb`;
+                    a.click();
+                  }}
+                  style={{
+                    flex: 1, padding: "7px 0", borderRadius: 8, border: "none",
+                    background: "#16A34A", color: "#fff",
+                    fontSize: 11, fontWeight: 700, cursor: "pointer",
+                  }}
+                >
+                  ⬇ 下载完整 GLB
+                </button>
+              )}
+              {/* 在新标签预览（如果已保存到 public） */}
+              {savedGlbUrl && (
+                <button
+                  onClick={() => window.open(savedGlbUrl!, "_blank")}
+                  style={{
+                    flex: 1, padding: "7px 0", borderRadius: 8,
+                    border: "1px solid #16A34A", background: "transparent",
+                    color: "#16A34A", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                  }}
+                >
+                  🔗 在线预览
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

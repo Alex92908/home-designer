@@ -7,6 +7,9 @@ import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA } from 
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
+import { hasWebGPUSupport } from "@/lib/webgpuRenderer";
+import { HouseStairs } from "./StairGeometry";
+import { SSGIPostProcessing } from "./SSGIPostProcessing";
 import { getSunPosition3D, formatHour as sunFormatHour } from "@/lib/sunAnalysis";
 import { ROOM_DEFS, ExteriorSettings, ExteriorWall, isYardPrefab, isYardZone } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
@@ -19,7 +22,111 @@ import { ZoneMesh } from "./ZoneRenderer";
 const FLOOR_H = 2.8;
 const WT      = 0.24;
 const OV      = 0.55;   // overhang for pitched roofs
-const FLAT_OV = 1.4;    // deep cantilever overhang for modern flat roof
+const FLAT_OV = 1.6;    // deep cantilever overhang for modern flat roof
+
+// ─── Glass interior canvas texture ──────────────────────────────────────────
+// Industry-standard approach for architectural visualization: bake the
+// "warm interior visible through glass" look into a canvas texture.
+// Created once as a module singleton — reused across all glass panels.
+// Version token — bump this to force texture regeneration after canvas changes
+const GLASS_TEX_VERSION = 8;
+let _glassTex: THREE.CanvasTexture | null = null;
+let _glassTexVersion = 0;
+
+function getGlassInteriorTex(): THREE.CanvasTexture {
+  if (_glassTex && _glassTexVersion === GLASS_TEX_VERSION) return _glassTex;
+  if (_glassTex) { _glassTex.dispose(); _glassTex = null; }
+
+  const W = 512, H = 1024;
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const g = cv.getContext("2d")!;
+
+  // ① Reference photo interior: nearly WHITE cream ceiling, light warm walls, mid-tone floor.
+  //    Key insight: the reference is a DAYLIT room — wall color is OFF-WHITE / light taupe,
+  //    not saturated amber. Furniture silhouettes are dark against the bright walls.
+  //    Emissive will be LOW (0.85) so this looks like natural light, not a lamp.
+  const room = g.createLinearGradient(0, 0, 0, H);
+  room.addColorStop(0.00, "#FDFAF5"); // near-white ceiling (recessed wash)
+  room.addColorStop(0.10, "#F7F0E4"); // warm white upper zone
+  room.addColorStop(0.28, "#EDE2CE"); // cream wall — lit upper zone
+  room.addColorStop(0.50, "#E2D4BA"); // warm beige / taupe — main wall
+  room.addColorStop(0.65, "#C8B898"); // warm sand — lower lit zone
+  room.addColorStop(0.78, "#907055"); // furniture / lower shadow zone
+  room.addColorStop(1.00, "#503018"); // dark walnut floor
+  g.fillStyle = room;
+  g.fillRect(0, 0, W, H);
+
+  // ② Recessed ceiling LED downlights — soft warm wash, not a single hot spot
+  const glow1 = g.createRadialGradient(W / 2, H * 0.05, 5, W / 2, H * 0.05, W * 0.90);
+  glow1.addColorStop(0,    "rgba(255,240,215,0.92)");
+  glow1.addColorStop(0.22, "rgba(255,225,190,0.65)");
+  glow1.addColorStop(0.55, "rgba(248,215,175,0.30)");
+  glow1.addColorStop(1,    "rgba(240,210,170,0.00)");
+  g.fillStyle = glow1;
+  g.fillRect(0, 0, W, H * 0.72);
+
+  // ③ Second ceiling fixture — subtle fill, warm neutral
+  const glow2 = g.createRadialGradient(W * 0.62, H * 0.10, 3, W * 0.62, H * 0.10, W * 0.40);
+  glow2.addColorStop(0,    "rgba(255,242,220,0.75)");
+  glow2.addColorStop(0.40, "rgba(250,228,200,0.35)");
+  glow2.addColorStop(1,    "rgba(245,220,190,0.00)");
+  g.fillStyle = glow2;
+  g.fillRect(0, 0, W, H * 0.55);
+
+  // ④ Sheer ivory curtain drapes — soft vertical waves
+  for (let cx = 18; cx < W - 12; cx += 28) {
+    const primary = cx % 56 < 28;
+    g.strokeStyle = `rgba(255,250,240,${primary ? 0.55 : 0.30})`;
+    g.lineWidth = primary ? 8 : 4.5;
+    g.beginPath();
+    g.moveTo(cx, H * 0.12);
+    for (let y = H * 0.12; y < H * 0.88; y += 8) {
+      g.lineTo(cx + Math.sin(y * 0.10 + cx * 0.05) * 5, y);
+    }
+    g.stroke();
+  }
+
+  // ⑤ Furniture dark zone — sofa / table silhouette near floor
+  const furn = g.createLinearGradient(0, H * 0.62, 0, H);
+  furn.addColorStop(0,    "rgba(60,40,20,0.00)");
+  furn.addColorStop(0.12, "rgba(60,40,20,0.42)");
+  furn.addColorStop(0.48, "rgba(48,30,14,0.68)");
+  furn.addColorStop(1,    "rgba(36,22,10,0.85)");
+  g.fillStyle = furn;
+  g.fillRect(0, H * 0.62, W, H * 0.38);
+
+  // ⑥ Warm table-top / coffee table highlight (horizontal amber strip)
+  const tbl = g.createLinearGradient(0, H * 0.68, 0, H * 0.75);
+  tbl.addColorStop(0,   "rgba(220,180,100,0.00)");
+  tbl.addColorStop(0.3, "rgba(220,180,100,0.55)");
+  tbl.addColorStop(0.7, "rgba(220,180,100,0.55)");
+  tbl.addColorStop(1,   "rgba(220,180,100,0.00)");
+  g.fillStyle = tbl;
+  g.fillRect(W * 0.08, H * 0.68, W * 0.84, H * 0.075);
+
+  // ⑦ Additional warm highlight at ceiling edge — LED cove lighting effect
+  const coveLight = g.createLinearGradient(0, 0, 0, H * 0.08);
+  coveLight.addColorStop(0, "rgba(255,240,200,0.80)");
+  coveLight.addColorStop(1, "rgba(255,235,195,0.00)");
+  g.fillStyle = coveLight;
+  g.fillRect(0, 0, W, H * 0.08);
+
+  // ⑧ Soft diagonal warm highlight — natural daylight entering from left
+  const spec = g.createLinearGradient(0, H * 0.05, W * 0.45, H * 0.55);
+  spec.addColorStop(0,    "rgba(255,248,235,0.00)");
+  spec.addColorStop(0.28, "rgba(255,248,235,0.22)");
+  spec.addColorStop(0.52, "rgba(255,242,225,0.32)");
+  spec.addColorStop(0.72, "rgba(255,238,215,0.12)");
+  spec.addColorStop(1,    "rgba(255,235,210,0.00)");
+  g.fillStyle = spec;
+  g.fillRect(0, 0, W, H);
+
+  _glassTex = new THREE.CanvasTexture(cv);
+  _glassTex.needsUpdate = true;
+  _glassTexVersion = GLASS_TEX_VERSION;
+  return _glassTex;
+}
 
 // ─── Footprint ─────────────────────────────────────────────
 function useFootprint() {
@@ -34,6 +141,45 @@ function useFootprint() {
     W: Math.max(4, (Math.max(...xs) - Math.min(...xs)) / 100),
     D: Math.max(3, (Math.max(...zs) - Math.min(...zs)) / 100),
   };
+}
+
+/** Returns an array of { x, z, W, D } box specs for the building footprint. */
+function useFootprintVolumes(W: number, D: number, settings: ExteriorSettings) {
+  const shape = settings.footprintShape ?? "rect";
+  const wr    = settings.wingRatio ?? 0.5;
+
+  if (shape === "rect") return [{ x: 0, z: 0, W, D }];
+
+  if (shape === "L") {
+    const w1 = W, d1 = D * (1 - wr);
+    const w2 = W * wr, d2 = D;
+    return [
+      { x: 0,           z: -(D - d1) / 2, W: w1, D: d1 },
+      { x: -(W - w2)/2, z: (D - d2) / 2,  W: w2, D: d2 - d1 },
+    ];
+  }
+
+  if (shape === "U") {
+    const wingD = D * wr;
+    const mainD = D * (1 - wr);
+    const wingW = W * 0.35;
+    return [
+      { x: 0,              z: (D - mainD)/2,  W, D: mainD },
+      { x: -(W - wingW)/2, z: -(D - wingD)/2, W: wingW, D: wingD },
+      { x:  (W - wingW)/2, z: -(D - wingD)/2, W: wingW, D: wingD },
+    ];
+  }
+
+  if (shape === "T") {
+    const stemW = W * wr;
+    const stemD = D * 0.55;
+    return [
+      { x: 0, z:  (D - stemD) / 2, W, D: D - stemD },
+      { x: 0, z: -(D - stemD) / 2, W: stemW, D: stemD },
+    ];
+  }
+
+  return [{ x: 0, z: 0, W, D }];
 }
 
 // ─── Exterior capture — registers capture fn in store ──────
@@ -65,20 +211,78 @@ function ExteriorCaptureSetup() {
 // ─── Camera ────────────────────────────────────────────────
 // Eye-level perspective — mirrors RoomCanvas style so the exterior feels
 // like a natural continuation of the interior room view, not a toy diorama.
-function CameraRig({ W, D, floors }: { W: number; D: number; floors: number }) {
+function CameraRig({ W, D, floors, buildingType }: {
+  W: number; D: number; floors: number; buildingType?: string;
+}) {
   const { camera } = useThree();
-  useEffect(() => {
+  // Use a ref to track whether we've done the one-time initialisation.
+  // We rely on useFrame (not useEffect) so the code runs AFTER OrbitControls
+  // has registered itself as `controls` in the R3F store via makeDefault.
+  // Without this, OrbitControls would initialise from the default camera pos
+  // [0,0,5] and override whatever useEffect set on the next render cycle.
+  const initialized = useRef(false);
+
+  useFrame(({ controls }) => {
+    if (initialized.current) return;
+
     const h    = floors * FLOOR_H;
-    // Wide diagonal view — shows pool foreground + full building height,
-    // like the luxury villa reference shots (angled from front-left).
-    const diag = Math.sqrt(W * W + D * D);
-    const dist = diag * 1.55 + 4;
-    // Low diagonal view — pool fills foreground, full building visible
-    camera.position.set(dist * 0.52, Math.max(h * 0.65, 3.5), dist * 1.30);
-    (camera as THREE.PerspectiveCamera).fov = 52;
-    (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
-    (camera as THREE.PerspectiveCamera).lookAt(0, h * 0.38, 0);
-  }, [W, D, floors]);
+    const isRichVilla = buildingType === "rich-glass-villa";
+
+    if (isRichVilla) {
+      // Luxury villa architectural perspective.
+      // CRITICAL: The front glass curtain wall FACES SOUTH (−Z direction).
+      // Camera must be on the SOUTH side (negative Z) to see the glass facade.
+      const BAY_CAM  = 1.50;
+      const MAIN_W_C = W + BAY_CAM * 4;
+      const EXT_W_C  = BAY_CAM * 3;
+      const visWidth = MAIN_W_C + EXT_W_C;
+      const fDist    = visWidth * 1.28 + 8;
+
+      const camX = -fDist * 0.14;
+      const camY = 1.6;
+      const camZ = -fDist;
+      const tgtX = EXT_W_C * 0.25;
+      const tgtY = 4.5;
+      const tgtZ = -3;
+
+      camera.position.set(camX, camY, camZ);
+      (camera as THREE.PerspectiveCamera).fov = 55;
+      (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+
+      // CRITICAL: push the same target into OrbitControls so it doesn't
+      // fight with our camera position on subsequent frames.
+      if (controls) {
+        const ctrl = controls as any;
+        ctrl.target.set(tgtX, tgtY, tgtZ);
+        ctrl.update();   // recalculates internal spherical coords from new pos+target
+      } else {
+        // OrbitControls not yet registered — retry next frame
+        return;
+      }
+    } else {
+      const diag = Math.sqrt(W * W + D * D);
+      const dist = diag * 1.65 + 5;
+      camera.position.set(-dist * 0.32, Math.max(h * 0.85, 5.5), dist * 1.15);
+      (camera as THREE.PerspectiveCamera).fov = 45;
+      (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+
+      if (controls) {
+        const ctrl = controls as any;
+        ctrl.target.set(0, h * 0.35, 0);
+        ctrl.update();
+      } else {
+        return;
+      }
+    }
+
+    initialized.current = true;
+  });
+
+  // Re-initialise if building params change
+  useEffect(() => {
+    initialized.current = false;
+  }, [W, D, floors, buildingType]);
+
   return null;
 }
 
@@ -271,20 +475,41 @@ function RoofSwitch({ W, D, roofStyle, roofColor }: { W: number; D: number; roof
 // ─── Wall face ──────────────────────────────────────────────
 // PBR wall body — loads concrete_wall_007 (smooth plaster / bare concrete).
 // All instances use the same fixed repeat so shared-texture mutation is idempotent.
-function WallBodyTextured({ width, height, color, wallMaterial }: {
+/** Single-zone wall slab. Handles glass specially via meshPhysicalMaterial. */
+function WallSlab({ width, height, color, wallMaterial, yOffset = 0 }: {
   width: number; height: number; color: string;
   wallMaterial: import("@/lib/types").WallMaterialType;
+  yOffset?: number;
 }) {
   const WALL_REPEAT: [number, number] = [2.0, 1.5];
   const { map, normalMap, roughnessMap } = usePbrSet("wall", "concrete_wall_007", WALL_REPEAT);
-  // Render = smooth painted plaster — no coarse texture, just a clean surface.
-  // Concrete = exposed bare concrete — apply the full PBR texture.
   const useTexture = wallMaterial === "concrete";
   const normalStr  = wallMaterial === "concrete" ? 1.0 : 0.35;
   const roughness  = wallMaterial === "concrete" ? 0.72 : wallMaterial === "render" ? 0.76 : wallMaterial === "wood" ? 0.82 : wallMaterial === "brick" ? 0.88 : 0.84;
   const envMap     = wallMaterial === "render" ? 0.55 : wallMaterial === "concrete" ? 0.45 : 0.18;
+
+  if (wallMaterial === "glass") {
+    return (
+      <mesh position={[0, yOffset, 0]} receiveShadow castShadow>
+        <boxGeometry args={[width, height, WT * 0.5]} />
+        <meshPhysicalMaterial
+          color="#CBE8F5"
+          transmission={0.82}
+          ior={1.52}
+          roughness={0.04}
+          metalness={0.05}
+          thickness={0.12}
+          envMapIntensity={4.0}
+          emissive="#FFF4CC"
+          emissiveIntensity={0.08}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    );
+  }
+
   return (
-    <mesh receiveShadow castShadow>
+    <mesh position={[0, yOffset, 0]} receiveShadow castShadow>
       <boxGeometry args={[width, height, WT]} />
       <meshStandardMaterial
         map={useTexture ? map : undefined}
@@ -300,14 +525,259 @@ function WallBodyTextured({ width, height, color, wallMaterial }: {
   );
 }
 
-function WallFace({ width, height, color, accentColor, wallMaterial = "render", hasDoor = false, winCount, glassFacade = false, glassFlip = false }: {
+/**
+ * Renders a wall body — either a single material or multiple stacked zones.
+ * When `zones` has 2+ entries the wall is split bottom→top, e.g.
+ * brick (40%) + glass (60%).
+ */
+function WallBodyTextured({ width, height, color, wallMaterial, zones }: {
+  width: number; height: number; color: string;
+  wallMaterial: import("@/lib/types").WallMaterialType;
+  zones?: import("@/lib/types").WallZone[];
+}) {
+  if (zones && zones.length >= 2) {
+    // Split-zone rendering: stack from bottom (-height/2) to top
+    let cumFrac = 0;
+    return (
+      <group>
+        {zones.map((zone, i) => {
+          const zH = height * zone.heightFraction;
+          const yOff = -height / 2 + cumFrac * height + zH / 2;
+          cumFrac += zone.heightFraction;
+          return (
+            <WallSlab
+              key={i}
+              width={width}
+              height={zH}
+              color={zone.color}
+              wallMaterial={zone.material}
+              yOffset={yOff}
+            />
+          );
+        })}
+      </group>
+    );
+  }
+  // Single zone fallback
+  return <WallSlab width={width} height={height} color={color} wallMaterial={wallMaterial} />;
+}
+
+// ─── Component-based segmented facade ──────────────────────
+/**
+ * Renders a wall face as independent typed strips (glass curtain, solid, window, door, column).
+ * This is the new component-by-component facade builder.
+ */
+function SegmentedWallFace({ width, height, facade, accentColor, flip = false }: {
+  width: number; height: number;
+  facade: import("@/lib/types").FloorFacade;
+  accentColor: string;
+  /** When true, glass/protrusions go toward local -Z (back wall rotated 180°) */
+  flip?: boolean;
+}) {
+  const { segments } = facade;
+  const totalFrac = segments.reduce((s, seg) => s + seg.widthFraction, 0) || 1;
+  let cumFrac = 0;
+  // For flipped walls (back wall), glass protrudes toward -Z so it faces outward
+  const zDir = flip ? -1 : 1;
+
+  return (
+    <group>
+      {segments.map((seg) => {
+        const segW = (seg.widthFraction / totalFrac) * width;
+        const x = -width / 2 + (cumFrac / totalFrac) * width + segW / 2;
+        cumFrac += seg.widthFraction;
+        const frameColor = seg.frameColor ?? "#1A1A1A";
+        const segColor = seg.color ?? accentColor;
+        const mat = seg.material ?? "render";
+
+        if (seg.type === "glass") {
+          // ── CANVAS-TEXTURE GLASS PANELS ─────────────────────────────────
+          // Industry-standard approach: baked interior look on opaque plane.
+          // No transparency sorting issues. Warm interior always visible.
+          const tex = getGlassInteriorTex();
+          const panels = seg.panelCount ?? Math.max(2, Math.round(segW / 1.2));
+          const mullionW = 0.095;   // dark aluminum vertical mullion width
+          const hRailH   = 0.045;   // horizontal rail between panels (if needed)
+          const glassH   = height * 0.975;
+          const totalGlassW = segW * 0.99;
+          const panelW = (totalGlassW - (panels - 1) * mullionW) / panels;
+          const startPX = -(totalGlassW / 2) + panelW / 2;
+          const extZ = zDir * (WT / 2 + 0.006);  // glass sits just proud of wall
+          return (
+            <group key={seg.id} position={[x, 0, 0]}>
+              {/* Structural wall body behind glass */}
+              <mesh receiveShadow castShadow>
+                <boxGeometry args={[segW, height, WT]} />
+                <meshStandardMaterial color="#1C2028" roughness={0.85} />
+              </mesh>
+              {Array.from({ length: panels }).map((_, pi) => {
+                const px = startPX + pi * (panelW + mullionW);
+                return (
+                  <group key={pi} position={[px, 0, extZ]}>
+                    {/* ① Dark aluminum frame — slightly wider/taller than glass */}
+                    <mesh castShadow>
+                      <boxGeometry args={[panelW + mullionW, glassH + 0.06, 0.055]} />
+                      <meshStandardMaterial
+                        color={frameColor}
+                        roughness={0.16} metalness={0.90} envMapIntensity={2.5}
+                      />
+                    </mesh>
+                    {/* ② Canvas-textured glass panel — warm interior baked in + subtle emissive glow */}
+                    <mesh position={[0, 0, zDir * 0.034]} castShadow>
+                      <boxGeometry args={[panelW - 0.008, glassH - 0.008, 0.004]} />
+                      <meshStandardMaterial
+                        map={tex}
+                        roughness={0.06}
+                        metalness={0.05}
+                        envMapIntensity={0.6}
+                        emissive="#D8A84A"
+                        emissiveIntensity={0.38}
+                        side={THREE.DoubleSide}
+                      />
+                    </mesh>
+                    {/* ③ Glass surface sheen — thin reflective overlay on top of texture */}
+                    <mesh position={[0, 0, zDir * 0.044]}>
+                      <boxGeometry args={[panelW - 0.008, glassH - 0.008, 0.002]} />
+                      <meshStandardMaterial
+                        color="#D8EEF8"
+                        roughness={0.02}
+                        metalness={0.45}
+                        envMapIntensity={3.0}
+                        transparent opacity={0.18}
+                        depthWrite={false}
+                        side={THREE.DoubleSide}
+                      />
+                    </mesh>
+                    {/* ④ Horizontal mid-rail (sliding door handle zone) */}
+                    <mesh position={[0, -glassH * 0.22, zDir * 0.038]}>
+                      <boxGeometry args={[panelW + mullionW, hRailH, 0.028]} />
+                      <meshStandardMaterial
+                        color={frameColor} roughness={0.18} metalness={0.85}
+                      />
+                    </mesh>
+                  </group>
+                );
+              })}
+            </group>
+          );
+        }
+
+        if (seg.type === "column") {
+          return (
+            <group key={seg.id} position={[x, 0, 0]}>
+              <WallSlab width={segW} height={height} color={segColor} wallMaterial={mat} />
+            </group>
+          );
+        }
+
+        if (seg.type === "window") {
+          const winH = Math.min(height * 0.58, 1.6);
+          const winW = segW * 0.72;
+          const winY = height * 0.08;
+          return (
+            <group key={seg.id} position={[x, 0, 0]}>
+              <WallSlab width={segW} height={height} color={segColor} wallMaterial={mat} />
+              <group position={[0, winY, zDir * (WT / 2 + 0.01)]}>
+                <mesh>
+                  <boxGeometry args={[winW + 0.10, winH + 0.10, 0.065]} />
+                  <meshStandardMaterial color={frameColor} roughness={0.25} metalness={0.68} envMapIntensity={1.4} />
+                </mesh>
+                <mesh position={[0, 0, 0.042]}>
+                  <boxGeometry args={[winW, winH, 0.042]} />
+                  <meshPhysicalMaterial color="#C8E8F8" transmission={0.90} ior={1.52} roughness={0.02} metalness={0.0} thickness={0.08} envMapIntensity={3.8} emissive="#FFF4CC" emissiveIntensity={0.06} side={THREE.DoubleSide} />
+                </mesh>
+                {/* Horizontal divider rail */}
+                <mesh position={[0, 0, 0.052]}>
+                  <boxGeometry args={[winW + 0.02, 0.038, 0.025]} />
+                  <meshStandardMaterial color={frameColor} roughness={0.25} metalness={0.68} />
+                </mesh>
+              </group>
+            </group>
+          );
+        }
+
+        if (seg.type === "door") {
+          const doorH = Math.min(2.35, height * 0.86);
+          const doorW = Math.min(segW * 0.68, 1.50);
+          return (
+            <group key={seg.id} position={[x, 0, 0]}>
+              <WallSlab width={segW} height={height} color={segColor} wallMaterial={mat} />
+              {/* Door surround */}
+              <group position={[0, doorH / 2 - height / 2, zDir * (WT / 2 + 0.01)]}>
+                {/* Frame */}
+                <mesh castShadow>
+                  <boxGeometry args={[doorW + 0.16, doorH + 0.10, 0.065]} />
+                  <meshStandardMaterial color={frameColor} roughness={0.22} metalness={0.72} envMapIntensity={1.6} />
+                </mesh>
+                {/* Glass sidelight panels — makes entrance feel transparent/inviting */}
+                <mesh position={[0, 0, 0.038]}>
+                  <boxGeometry args={[doorW, doorH, 0.030]} />
+                  <meshPhysicalMaterial
+                    color="#C8E8F8" transmission={0.78} ior={1.50}
+                    roughness={0.010} metalness={0.0} thickness={0.06}
+                    envMapIntensity={4.0} emissive="#2848A8" emissiveIntensity={0.12}
+                    side={THREE.DoubleSide}
+                  />
+                </mesh>
+                {/* Horizontal door rail */}
+                <mesh position={[0, -doorH * 0.28, 0.055]}>
+                  <boxGeometry args={[doorW + 0.04, 0.04, 0.025]} />
+                  <meshStandardMaterial color={frameColor} roughness={0.22} metalness={0.72} />
+                </mesh>
+                {/* Centre vertical mullion */}
+                <mesh position={[0, 0, 0.058]}>
+                  <boxGeometry args={[0.04, doorH, 0.025]} />
+                  <meshStandardMaterial color={frameColor} roughness={0.22} metalness={0.72} />
+                </mesh>
+                {/* Pull handles */}
+                {[-1, 1].map((side, hi) => (
+                  <mesh key={hi} position={[side * doorW * 0.20, -doorH * 0.10, 0.075]}>
+                    <boxGeometry args={[0.028, 0.18, 0.028]} />
+                    <meshStandardMaterial color="#D0C8A8" roughness={0.16} metalness={0.88} />
+                  </mesh>
+                ))}
+              </group>
+              {/* Slim entrance canopy above door */}
+              <mesh position={[0, height / 2 - 0.08, WT / 2 + 0.55]} castShadow>
+                <boxGeometry args={[segW + 0.20, 0.06, 1.10]} />
+                <meshStandardMaterial color={frameColor} roughness={0.18} metalness={0.80} />
+              </mesh>
+            </group>
+          );
+        }
+
+        // "solid" — default
+        return (
+          <group key={seg.id} position={[x, 0, 0]}>
+            <WallSlab width={segW} height={height} color={segColor} wallMaterial={mat} />
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+function WallFace({ width, height, color, accentColor, wallMaterial = "render", hasDoor = false, winCount, glassFacade = false, glassFlip = false, zones, facade }: {
   width: number; height: number; color: string; accentColor: string;
   wallMaterial?: import("@/lib/types").WallMaterialType;
   hasDoor?: boolean; winCount: number;
   glassFacade?: boolean;
   /** flip=true: glass protrudes toward local -Z (for walls rotated 180°, so glass faces outward) */
   glassFlip?: boolean;
+  /** Optional split-zone override for this specific wall face. */
+  zones?: import("@/lib/types").WallZone[];
+  /** Component-based facade — overrides everything else when set. */
+  facade?: import("@/lib/types").FloorFacade;
 }) {
+  // Component facade takes priority over all other rendering modes
+  if (facade && facade.segments.length > 0) {
+    return <SegmentedWallFace width={width} height={height} facade={facade} accentColor={accentColor} flip={glassFlip} />;
+  }
+  // If zones are present and the top zone is glass, treat as glass facade automatically
+  const hasGlassZone = zones && zones.some(z => z.material === "glass");
+  if (!glassFacade && hasGlassZone) {
+    glassFacade = zones![zones!.length - 1].material === "glass";
+  }
   const frameColor = glassFacade ? "#1A1A1A" : accentColor;
   // glassFlip: back wall (rotation=PI) needs glass on local -Z so it appears on the exterior
   const glassZ = glassFlip ? -(WT / 2 + 0.01) : (WT / 2 + 0.01);
@@ -391,7 +861,7 @@ function WallFace({ width, height, color, accentColor, wallMaterial = "render", 
           <meshStandardMaterial color={color} roughness={0.82} metalness={0.0} />
         </mesh>
       }>
-        <WallBodyTextured width={width} height={height} color={color} wallMaterial={wallMaterial ?? "render"} />
+        <WallBodyTextured width={width} height={height} color={color} wallMaterial={wallMaterial ?? "render"} zones={zones} />
       </Suspense>
       {windowXs.map((x, i) => (
         <group key={i} position={[x, winY - height / 2, WT / 2 + 0.01]}>
@@ -417,6 +887,29 @@ function FloorShell({ floorIndex, W, D, settings, totalFloors }: {
   floorIndex: number; W: number; D: number; settings: ExteriorSettings; totalFloors: number;
 }) {
   const { wallColor, accentColor, wallMaterial, roofStyle, preset } = settings;
+  const fm  = settings.faceMaterials ?? {};
+  const fmt = settings.faceMaterialTypes ?? {};
+  const fz  = settings.faceZones ?? {};
+  const globalZones = settings.wallZones;
+  const frontColor    = fm.front  ?? wallColor;
+  const backColor     = fm.back   ?? wallColor;
+  const leftColor     = fm.left   ?? wallColor;
+  const rightColor    = fm.right  ?? wallColor;
+  const frontMat      = fmt.front ?? wallMaterial;
+  const backMat       = fmt.back  ?? wallMaterial;
+  const leftMat       = fmt.left  ?? wallMaterial;
+  const rightMat      = fmt.right ?? wallMaterial;
+  // Per-face zones fall back to global zones
+  const frontZones = fz.front ?? globalZones;
+  const backZones  = fz.back  ?? globalZones;
+  const leftZones  = fz.left  ?? globalZones;
+  const rightZones = fz.right ?? globalZones;
+  // Component-based facade per face per floor
+  const ff = settings.facades;
+  const frontFacade = ff?.front?.[floorIndex];
+  const backFacade  = ff?.back?.[floorIndex];
+  const leftFacade  = ff?.left?.[floorIndex];
+  const rightFacade = ff?.right?.[floorIndex];
   const H = FLOOR_H;
   const isGround  = floorIndex === 0;
   const isFlatRoof = roofStyle === "flat";
@@ -444,38 +937,55 @@ function FloorShell({ floorIndex, W, D, settings, totalFloors }: {
       </mesh>
       {/* Front wall */}
       <group position={[0, H / 2, -(D / 2 - WT / 2)]}>
-        <WallFace width={W} height={H} color={wallColor} accentColor={accentColor} wallMaterial={wallMaterial}
-          hasDoor={isGround} winCount={winCountFront} glassFacade={isModern} />
+        <WallFace width={W} height={H} color={frontColor} accentColor={accentColor} wallMaterial={frontMat}
+          hasDoor={isGround} winCount={winCountFront} glassFacade={isModern} zones={frontZones}
+          facade={frontFacade} />
       </group>
       {/* Back wall */}
       <group position={[0, H / 2, D / 2 - WT / 2]} rotation={[0, Math.PI, 0]}>
-        <WallFace width={W} height={H} color={wallColor} accentColor={accentColor} wallMaterial={wallMaterial}
-          winCount={winCountFront} glassFacade={isModern} glassFlip={isModern} />
+        <WallFace width={W} height={H} color={backColor} accentColor={accentColor} wallMaterial={backMat}
+          winCount={winCountFront} glassFacade={isModern} glassFlip={isModern} zones={backZones}
+          facade={backFacade} />
       </group>
       {/* Left side wall */}
       <group position={[-(W / 2 - WT / 2), H / 2, 0]} rotation={[0, -Math.PI / 2, 0]}>
-        <WallFace width={D} height={H} color={wallColor} accentColor={accentColor} wallMaterial={wallMaterial}
-          winCount={winCountSide} glassFacade={isModern} />
+        <WallFace width={D} height={H} color={leftColor} accentColor={accentColor} wallMaterial={leftMat}
+          winCount={winCountSide} glassFacade={isModern} zones={leftZones}
+          facade={leftFacade} />
       </group>
       {/* Right side wall */}
       <group position={[W / 2 - WT / 2, H / 2, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <WallFace width={D} height={H} color={wallColor} accentColor={accentColor} wallMaterial={wallMaterial}
-          winCount={winCountSide} glassFacade={isModern} />
+        <WallFace width={D} height={H} color={rightColor} accentColor={accentColor} wallMaterial={rightMat}
+          winCount={winCountSide} glassFacade={isModern} zones={rightZones}
+          facade={rightFacade} />
       </group>
-      {/* Exposed slab band between floors — thicker & more prominent for modern style */}
-      {floorIndex < totalFloors - 1 && (
-        <mesh position={[0, H, 0]} castShadow receiveShadow>
-          <boxGeometry args={[W + (isModern ? 0.10 : 0), isModern ? 0.28 : 0.18, D + (isModern ? 0.10 : 0)]} />
-          <meshStandardMaterial color={slabColor} roughness={isModern ? 0.70 : 0.95} envMapIntensity={isModern ? 0.4 : 0.1} />
-        </mesh>
-      )}
-      {/* Slab band at base of upper floors */}
-      {floorIndex > 0 && (
-        <mesh position={[0, 0.09, 0]} castShadow>
-          <boxGeometry args={[W + (isModern ? 0.10 : 0.04), isModern ? 0.28 : 0.22, D + (isModern ? 0.10 : 0.04)]} />
-          <meshStandardMaterial color={slabColor} roughness={isModern ? 0.70 : 0.80} envMapIntensity={isModern ? 0.4 : 0.1} />
-        </mesh>
-      )}
+      {/* Exposed slab band between floors */}
+      {(() => {
+        // Use prominent slab style when facade is active OR preset is modern
+        const hasFacade = !!(ff?.front?.length || ff?.back?.length || ff?.left?.length || ff?.right?.length);
+        const slabStyle = isModern || hasFacade;
+        const slabW = W + (slabStyle ? 0.18 : 0);
+        const slabD = D + (slabStyle ? 0.18 : 0);
+        const slabH = slabStyle ? 0.44 : 0.18;   // thicker slab band: prominent horizontal layering like ref
+        const slabC = slabStyle ? "#F0EDE6" : slabColor;  // bright white-cream
+        const slabR = slabStyle ? 0.65 : 0.95;
+        return (
+          <>
+            {floorIndex < totalFloors - 1 && (
+              <mesh position={[0, H, 0]} castShadow receiveShadow>
+                <boxGeometry args={[slabW, slabH, slabD]} />
+                <meshStandardMaterial color={slabC} roughness={slabR} metalness={0.02} envMapIntensity={slabStyle ? 0.5 : 0.1} />
+              </mesh>
+            )}
+            {floorIndex > 0 && (
+              <mesh position={[0, 0.16, 0]} castShadow>
+                <boxGeometry args={[slabW, slabStyle ? 0.32 : 0.22, slabD]} />
+                <meshStandardMaterial color={slabC} roughness={slabR} metalness={0.02} envMapIntensity={slabStyle ? 0.5 : 0.1} />
+              </mesh>
+            )}
+          </>
+        );
+      })()}
       {/* Contemporary wood cladding — vertical timber slats on front wall upper section.
           Applied only when preset=contemporary + flat roof + NOT full glass curtain wall.
           Uses accentColor so imported reference photo's wood tone (e.g. #D9570E) shows. */}
@@ -506,8 +1016,8 @@ function FloorShell({ floorIndex, W, D, settings, totalFloors }: {
         );
       })()}
 
-      {/* Glass balcony railing on front face — modern style upper floors only */}
-      {isModern && floorIndex > 0 && (
+      {/* Glass balcony railing on front face — modern style OR component facade, upper floors */}
+      {(isModern || !!(ff?.front?.length)) && floorIndex > 0 && (
         <group position={[0, 0.28 + 0.55, -(D / 2 + 0.02)]}>
           {/* Glass panel */}
           <mesh>
@@ -994,6 +1504,23 @@ class HouseEnvironmentFallback extends Component<
   }
 }
 
+/** Wraps a single yard singleton (GLB model) so a corrupt / missing .bin
+ *  file silently renders nothing instead of crashing the whole Canvas. */
+class SingletonErrorBoundary extends Component<
+  { id: string; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err: Error) {
+    console.warn(`[HouseCanvas.SingletonItem id=${this.props.id}] GLB load error — hiding item: ${err.message}`);
+  }
+  render() {
+    if (this.state.failed) return null;
+    return this.props.children;
+  }
+}
+
 // ─── Foundation ─────────────────────────────────────────────
 function Foundation({ W, D, color }: { W: number; D: number; color: string }) {
   return (
@@ -1287,8 +1814,63 @@ function YardPlanItems3D() {
             Builder vocabulary. Suspense fallback is a tiny grey post so
             users see SOMETHING during GLB load. ── */}
       {singles.map(it => (
-        <SingletonItem key={it.id} item={it as import("@/lib/types").YardSingleton} />
+        <SingletonErrorBoundary key={it.id} id={it.id}>
+          <SingletonItem item={it as import("@/lib/types").YardSingleton} />
+        </SingletonErrorBoundary>
       ))}
+    </group>
+  );
+}
+
+// ─── Yard path strips (walkways / driveways) ─────────────────────────────────
+// Renders each path as a flat extruded strip following a polyline.
+// Points are in world-cm, Y is ground level (0).
+const EMPTY_YARD_PATHS_3D: NonNullable<import("@/lib/types").YardPlan["paths"]> = [];
+function YardPathItems3D() {
+  const activeFloor = useDesignerStore(s => s.activeFloor);
+  const paths = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.paths ?? EMPTY_YARD_PATHS_3D);
+
+  return (
+    <group>
+      {paths.map(path => {
+        if (path.points.length < 2) return null;
+        const halfW = (path.widthCm / 100) / 2;
+        const H = 0.04; // flat slab height
+        // Build quads between consecutive points
+        const quads: React.ReactElement[] = [];
+        for (let i = 0; i < path.points.length - 1; i++) {
+          const [ax, az] = path.points[i];
+          const [bx, bz] = path.points[i + 1];
+          const dx = bx - ax, dz = bz - az;
+          const len = Math.sqrt(dx * dx + dz * dz) / 100; // metres
+          const angle = Math.atan2(dz, dx);
+          const mx = (ax + bx) / 200;  // world metres
+          const mz = (az + bz) / 200;
+          quads.push(
+            <mesh key={i} position={[mx, H / 2, mz]} rotation={[0, -angle, 0]} receiveShadow>
+              <boxGeometry args={[len, H, halfW * 2]} />
+              <meshStandardMaterial
+                color={path.material === "stone" ? "#C8BFAF" : "#D4C8A8"}
+                roughness={0.88} metalness={0.0}
+              />
+            </mesh>
+          );
+          // Rounded cap at each vertex
+          if (i === 0) quads.push(
+            <mesh key={`cap-${i}`} position={[ax / 100, H / 2, az / 100]} receiveShadow>
+              <cylinderGeometry args={[halfW, halfW, H, 12]} />
+              <meshStandardMaterial color="#C8BFAF" roughness={0.88} />
+            </mesh>
+          );
+          quads.push(
+            <mesh key={`cap-e-${i}`} position={[bx / 100, H / 2, bz / 100]} receiveShadow>
+              <cylinderGeometry args={[halfW, halfW, H, 12]} />
+              <meshStandardMaterial color="#C8BFAF" roughness={0.88} />
+            </mesh>
+          );
+        }
+        return <group key={path.id}>{quads}</group>;
+      })}
     </group>
   );
 }
@@ -1606,7 +2188,7 @@ function SingletonItem({ item: it }: { item: import("@/lib/types").YardSingleton
 
   return (
     <group position={[wx, -0.5, wz]} rotation={[tilt, rot + yawJitter, 0]}>
-      <Suspense fallback={null}>
+      <Suspense fallback={isFurniture ? <ProceduralFurnitureMesh kind={it.kind} /> : null}>
         {sketchfabReady ? (
           <PbrSketchfabAsset
             key={`pbr:${asset.customGltfPath}`}
@@ -1615,7 +2197,9 @@ function SingletonItem({ item: it }: { item: import("@/lib/types").YardSingleton
             userScale={isFurniture ? s : sketchfabUserScale}
             groundAlign={asset.customGroundAlign ?? true}
           />
-        ) : null}
+        ) : (
+          isFurniture ? <ProceduralFurnitureMesh kind={it.kind} /> : null
+        )}
       </Suspense>
     </group>
   );
@@ -3265,8 +3849,842 @@ function SlatFence({ W, D, insetX, insetZ }: { W: number; D: number; insetX: num
   );
 }
 
+// ─── GLB Villa Building — Loads villa_pbr.glb PBR model ─────────────────────
+// Used when buildingType === "rich-glass-villa" and the file is present.
+// The model is centred at origin, scaled so its longest dimension equals W*1.6.
+
+function GlbVillaMesh({ W, D }: { W: number; D: number }) {
+  const { scene } = useGLTF("/models/villa_pbr.glb");
+  const cloned = useMemo(() => {
+    const c = scene.clone(true);
+    // Compute bounding box and auto-scale + centre
+    const box = new THREE.Box3().setFromObject(c);
+    const size = box.getSize(new THREE.Vector3());
+    const targetW = W * 1.58;          // target world width ≈ main block + wings
+    const scale = targetW / Math.max(size.x, size.z, 0.01);
+    c.scale.setScalar(scale);
+    // After scaling, shift so bottom sits on y=0 and model is centred in XZ
+    const scaledBox = new THREE.Box3().setFromObject(c);
+    const scaledCentre = scaledBox.getCenter(new THREE.Vector3());
+    c.position.set(-scaledCentre.x, -scaledBox.min.y, -scaledCentre.z);
+
+    // ── Fix PBR materials ──
+    // Boost envMapIntensity so the IBL from <Environment> activates reflections.
+    // Also ensure texture color space is correct for Three.js r152+.
+    c.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      o.castShadow = true;
+      o.receiveShadow = true;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach((m: THREE.Material) => {
+        if (m instanceof THREE.MeshStandardMaterial || m instanceof THREE.MeshPhysicalMaterial) {
+          m.envMapIntensity = 2.2;
+          // Fix color-space for all map textures so colors don't look washed/clay
+          const texMaps: (THREE.Texture | null)[] = [
+            m.map, m.emissiveMap, (m as THREE.MeshPhysicalMaterial).sheenColorMap ?? null,
+          ];
+          texMaps.forEach(t => {
+            if (t) t.colorSpace = THREE.SRGBColorSpace;
+          });
+          m.needsUpdate = true;
+        }
+      });
+    });
+
+    return c;
+  }, [scene, W, D]);
+  return <primitive object={cloned} castShadow receiveShadow />;
+}
+
+function GlbVillaBuilding({ W, D }: { W: number; D: number }) {
+  return (
+    <Suspense fallback={
+      // While GLB loads, show a simple placeholder so the scene isn't blank
+      <mesh position={[0, 3, 0]}>
+        <boxGeometry args={[W * 1.5, 6, D]} />
+        <meshStandardMaterial color="#F0EDE8" roughness={0.7} wireframe />
+      </mesh>
+    }>
+      <GlbVillaMesh W={W} D={D} />
+    </Suspense>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ARCHITECTURAL BUILDING KIT — Procedural Volume & Material System
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Design philosophy: a building is built up in 6 layers (from macro → micro):
+//   Site → Volume → Plate → Bay → Face → Detail
+//
+// Every geometric element is a deterministic React component — no Math.random()
+// in render paths (so React StrictMode double-invoke is safe).
+// Textures are canvas-baked module singletons (generated once, shared by all meshes).
+//
+// Inspired by:
+//  • Metabolism (Kurokawa / Tange) — buildings as assemblies of interchangeable pods
+//  • Le Corbusier's Modulor — 1.5 m structural bay grid governs all proportions
+//  • CSG (Constructive Solid Geometry) — boolean union/difference of volumes
+//  • Curtain Wall systems — column grid → floor plate → mullion unit → glass infill
+// ───────────────────────────────────────────────────────────────────────────────
+
+// ─── Procedural Material Textures (module singletons) ────────────────────────
+// All generated from HTML Canvas — no external files needed.
+// Deterministic (no Math.random in the render path) for React StrictMode safety.
+
+let _STONE_TEX: THREE.CanvasTexture | null = null;
+/** Travertine limestone — warm cream with horizontal strata bands */
+function getStoneTex(): THREE.CanvasTexture {
+  if (_STONE_TEX) return _STONE_TEX;
+  const S = 512;
+  const cv = document.createElement("canvas"); cv.width = S; cv.height = S;
+  const g = cv.getContext("2d")!;
+  // warm travertine base
+  g.fillStyle = "#E4DDD0"; g.fillRect(0, 0, S, S);
+  // horizontal strata bands — deterministic widths
+  const bands = [8,14,6,18,10,5,16,9,12,7,15,11,8,17,6,13,10,9,14,7];
+  let y = 0, bi = 0;
+  while (y < S) {
+    const lh = bands[bi % bands.length]; bi++;
+    const alpha = 0.04 + (bi * 0.037 % 0.10);
+    g.fillStyle = `rgba(148,132,108,${alpha})`; g.fillRect(0, y, S, lh * 0.4);
+    y += lh;
+  }
+  // pore / void inclusions (halton-ish sequence)
+  const hx=[0.10,0.60,0.35,0.85,0.22,0.72,0.48,0.98,0.12,0.62,0.37,0.87,0.25,0.75,0.50,0.05,0.55,0.30,0.80,0.18,0.68,0.43,0.93,0.07,0.57,0.32,0.82,0.20,0.70,0.45];
+  const hy=[0.08,0.58,0.33,0.83,0.21,0.71,0.46,0.96,0.13,0.63,0.38,0.88,0.26,0.76,0.51,0.04,0.54,0.29,0.79,0.17,0.67,0.42,0.92,0.06,0.56,0.31,0.81,0.19,0.69,0.44];
+  hx.forEach((xf, i) => {
+    g.fillStyle = "rgba(110,98,80,0.07)";
+    g.beginPath(); g.ellipse(xf*S, hy[i]*S, 1+hy[i]*4, 0.6, 0, 0, Math.PI*2); g.fill();
+  });
+  _STONE_TEX = new THREE.CanvasTexture(cv);
+  _STONE_TEX.wrapS = _STONE_TEX.wrapT = THREE.RepeatWrapping;
+  return _STONE_TEX;
+}
+
+let _WOOD_TEX: THREE.CanvasTexture | null = null;
+/** Ipe/teak hardwood — dark brown with longitudinal grain */
+function getWoodTex(): THREE.CanvasTexture {
+  if (_WOOD_TEX) return _WOOD_TEX;
+  const W = 128, H = 512;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const g = cv.getContext("2d")!;
+  // base — warm dark teak gradient across width
+  const grad = g.createLinearGradient(0, 0, W, 0);
+  grad.addColorStop(0.0, "#5A3010"); grad.addColorStop(0.35, "#7A4820");
+  grad.addColorStop(0.65, "#6B3E18"); grad.addColorStop(1.0, "#522C0E");
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  // longitudinal grain — sin-wave based, fully deterministic
+  for (let x = 0; x < W; x++) {
+    const v = Math.sin(x * 0.78) * 0.5 + Math.sin(x * 2.14) * 0.25 + Math.sin(x * 5.33) * 0.12;
+    if (Math.abs(v) < 0.42) {
+      const a = 0.05 + Math.abs(v) * 0.14;
+      g.strokeStyle = `rgba(22,8,2,${a})`; g.lineWidth = 0.5;
+      g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke();
+    }
+  }
+  // sapwood lighter streak at edge
+  g.strokeStyle = "rgba(180,130,80,0.06)"; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(W*0.82, 0); g.lineTo(W*0.84, H); g.stroke();
+  _WOOD_TEX = new THREE.CanvasTexture(cv);
+  _WOOD_TEX.wrapS = _WOOD_TEX.wrapT = THREE.RepeatWrapping;
+  return _WOOD_TEX;
+}
+
+let _CONCRETE_TEX: THREE.CanvasTexture | null = null;
+/** Board-form concrete — off-white with subtle vertical form-board seams */
+function getConcreteTex(): THREE.CanvasTexture {
+  if (_CONCRETE_TEX) return _CONCRETE_TEX;
+  const S = 512;
+  const cv = document.createElement("canvas"); cv.width = S; cv.height = S;
+  const g = cv.getContext("2d")!;
+  g.fillStyle = "#EAE6DC"; g.fillRect(0, 0, S, S);
+  // form-board vertical seams (fixed positions)
+  [48, 138, 215, 298, 375, 442].forEach(x => {
+    g.strokeStyle = "rgba(172,165,150,0.16)"; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(x, 0); g.lineTo(x+1.5, S); g.stroke();
+  });
+  // aggregate speckle — halton positions
+  const hx=[0.10,0.60,0.35,0.85,0.22,0.72,0.48,0.98,0.12,0.62,0.37,0.87,0.25,0.75,0.50,0.05,0.55,0.30,0.80,0.18,0.68,0.43,0.93,0.07,0.57,0.32,0.82,0.20,0.70,0.45,0.15,0.65,0.40,0.90,0.28,0.78];
+  const hy=[0.08,0.58,0.33,0.83,0.21,0.71,0.46,0.96,0.13,0.63,0.38,0.88,0.26,0.76,0.51,0.04,0.54,0.29,0.79,0.17,0.67,0.42,0.92,0.06,0.56,0.31,0.81,0.19,0.69,0.44,0.11,0.61,0.36,0.86,0.23,0.73];
+  hx.forEach((xf, i) => {
+    g.fillStyle = `rgba(158,150,136,0.07)`;
+    g.beginPath(); g.arc(xf*S, hy[i%hy.length]*S, 0.8+hy[i%hy.length]*2.5, 0, Math.PI*2); g.fill();
+  });
+  _CONCRETE_TEX = new THREE.CanvasTexture(cv);
+  _CONCRETE_TEX.wrapS = _CONCRETE_TEX.wrapT = THREE.RepeatWrapping;
+  return _CONCRETE_TEX;
+}
+
+// ─── Kit-of-Parts Components ──────────────────────────────────────────────────
+
+/** Horizontal concrete floor/roof plate */
+function ConcreteSlab({ W, D, T = 0.28, color = "#ECEAE2", repeat = 4 }: {
+  W: number; D: number; T?: number; color?: string; repeat?: number;
+}) {
+  const tex = getConcreteTex();
+  tex.repeat.set(repeat, repeat);
+  return (
+    <mesh castShadow receiveShadow>
+      <boxGeometry args={[W, T, D]} />
+      <meshStandardMaterial map={tex} color={color} roughness={0.78} metalness={0.02} envMapIntensity={0.4} />
+    </mesh>
+  );
+}
+
+/** Stone travertine plinth / base cladding */
+function StoneCladding({ W, H, D = WT, repeat = 2 }: { W: number; H: number; D?: number; repeat?: number }) {
+  const tex = getStoneTex();
+  tex.repeat.set(repeat, repeat * (H / W));
+  return (
+    <mesh castShadow receiveShadow>
+      <boxGeometry args={[W, H, D]} />
+      <meshStandardMaterial map={tex} color="#E0D8C8" roughness={0.82} metalness={0.0} envMapIntensity={0.3} />
+    </mesh>
+  );
+}
+
+/** Round steel column — used under cantilever to support deep overhangs */
+function SteelColumn({ H, radius = 0.055 }: { H: number; radius?: number }) {
+  return (
+    <mesh position={[0, H / 2, 0]} castShadow receiveShadow>
+      <cylinderGeometry args={[radius, radius, H, 16]} />
+      <meshStandardMaterial color="#2A2A2E" roughness={0.18} metalness={0.92} envMapIntensity={2.5} />
+    </mesh>
+  );
+}
+
+/** Wood soffit slat panel — visible underside of a cantilever roof
+ *  Slats run along Z (depth direction). `W` = total width, `D` = total depth. */
+function WoodSoffit({ W, D, T = 0.042 }: { W: number; D: number; T?: number }) {
+  const woodTex = getWoodTex();
+  const SLAT_W   = 0.175;  // wide ipe deck board — reference shows ~18cm face width
+  const SLAT_GAP = 0.018;
+  const step     = SLAT_W + SLAT_GAP;
+  const count    = Math.floor(D / step);
+  const startZ   = -(count * step) / 2 + SLAT_W / 2;
+  return (
+    <group>
+      {Array.from({ length: count }).map((_, i) => {
+        const shade = i % 3 === 0 ? "#8B4E1A" : i % 3 === 1 ? "#9C5E28" : "#8A5018";
+        return (
+          <mesh key={i} position={[0, 0, startZ + i * step]} castShadow receiveShadow>
+            <boxGeometry args={[W - 0.04, T, SLAT_W]} />
+            <meshStandardMaterial map={woodTex} color={shade} roughness={0.30} metalness={0.0}
+              envMapIntensity={0.8} emissive="#7A3C10" emissiveIntensity={0.12} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+/** White concrete fascia band wrapping a slab edge (matches reference: bright white slab edges) */
+function FasciaBand({ W, D, H = 0.38, color = "#F2F0EA" }: {
+  W: number; D: number; H?: number; color?: string;
+}) {
+  const edges: Array<{p:[number,number,number]; a:[number,number,number]}> = [
+    { p: [0, 0, -D/2], a: [W+0.02, H, 0.060] },
+    { p: [0, 0,  D/2], a: [W+0.02, H, 0.060] },
+    { p: [-W/2, 0, 0], a: [0.060, H, D] },
+    { p: [ W/2, 0, 0], a: [0.060, H, D] },
+  ];
+  return (
+    <group>
+      {edges.map((e, i) => (
+        <mesh key={i} position={e.p} castShadow>
+          <boxGeometry args={e.a} />
+          <meshStandardMaterial color={color} roughness={0.62} metalness={0.02} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// ─── Rich Glass Villa Building — Custom multi-volume architecture ────────────
+// Composes the above kit-of-parts into a 3-volume luxury villa.
+// Volume layout (seen from above, camera at +Z):
+//   ┌──────┬────────────────────┬──────┐
+//   │ LEFT │   MAIN BLOCK (2F)  │RIGHT │
+//   │ WING │  glass curtain     │ WING │
+//   │  1F  │  wall front+sides  │  1F  │
+//   └──────┴────────────────────┴──────┘
+//        pool / terrace at front (−Z)
+
+
+/** Reusable glass curtain wall — dark aluminum frames + TRUE transmission glass.
+ *  NO opaque backing here; the actual interior room geometry behind is visible
+ *  through the transmission. */
+function GlassCurtainWallFace({
+  W, H, panelCount, flip = false, glassOpacity = 0.45,
+}: { W: number; H: number; panelCount?: number; flip?: boolean; glassOpacity?: number }) {
+  const panels   = panelCount ?? Math.max(2, Math.round(W / 1.35));
+  const mullionW = 0.095;
+  const glassH   = H * 0.978;
+  const panelW   = (W * 0.99 - (panels - 1) * mullionW) / panels;
+  const startPX  = -(W * 0.99 / 2) + panelW / 2;
+  const zDir     = flip ? 1 : -1;
+  const extZ     = zDir * (WT / 2 + 0.006);
+  const frame    = "#181A1E";   // near-black anodized aluminum
+
+  return (
+    <group>
+      {/* NOTE: No spandrel/backing slab here — the building interior room geometry
+          (RichGlassInterior) provides back walls visible through transmission glass. */}
+
+      {/* ── Head rail (top) + Sill rail (bottom) — run full wall width ── */}
+      <group position={[0, 0, extZ]}>
+        <mesh castShadow position={[0, glassH / 2 + 0.04, 0]}>
+          <boxGeometry args={[W, 0.08, 0.062]} />
+          <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
+        </mesh>
+        <mesh castShadow position={[0, -(glassH / 2 + 0.04), 0]}>
+          <boxGeometry args={[W, 0.08, 0.062]} />
+          <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
+        </mesh>
+        {/* Mid rail (horizontal divide running full width) */}
+        <mesh castShadow position={[0, -glassH * 0.22, 0]}>
+          <boxGeometry args={[W, 0.042, 0.040]} />
+          <meshStandardMaterial color={frame} roughness={0.14} metalness={0.90} />
+        </mesh>
+      </group>
+
+      {/* ── Per-panel: vertical mullion + glass only (NO solid box frame) ── */}
+      {Array.from({ length: panels }).map((_, pi) => {
+        const px = startPX + pi * (panelW + mullionW);
+        const isFirst = pi === 0;
+        return (
+          <group key={pi} position={[px, 0, extZ]}>
+            {/* Vertical mullion on the RIGHT edge of this panel */}
+            <mesh castShadow position={[panelW / 2 + mullionW / 4, 0, 0]}>
+              <boxGeometry args={[mullionW / 2, glassH + 0.08, 0.060]} />
+              <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
+            </mesh>
+            {/* Left edge mullion — only for first panel */}
+            {isFirst && (
+              <mesh castShadow position={[-(panelW / 2 + mullionW / 4), 0, 0]}>
+                <boxGeometry args={[mullionW / 2, glassH + 0.08, 0.060]} />
+                <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} />
+              </mesh>
+            )}
+            {/* GLASS — low-reflection architectural glass; interior visible, no env-map muddiness */}
+            <mesh position={[0, 0, zDir * 0.025]} renderOrder={10}>
+              <boxGeometry args={[panelW - 0.004, glassH, 0.008]} />
+              <meshStandardMaterial
+                color="#C8E0EA"
+                transparent
+                opacity={glassOpacity}
+                depthWrite={false}
+                roughness={0.06}
+                metalness={0.04}
+                envMapIntensity={0.35}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/** Interior rooms for RichGlassVillaBuilding — visible through transmission glass.
+ *  Provides the warm cream walls / dark wood floors / furniture silhouettes seen
+ *  through the curtain wall, exactly like the reference photo. */
+function RichGlassInterior({
+  W, D, GF_H, UF_H, SLAB_T,
+}: { W: number; D: number; GF_H: number; UF_H: number; SLAB_T: number }) {
+  const wallC  = "#EDE6D8";   // warm cream interior wall
+  const ceilC  = "#F3EEE4";   // bright warm ceiling
+  const floorC = "#4A3018";   // dark walnut floor
+  const tableC = "#2A1A08";   // dark walnut table
+  const chairC = "#3E2810";   // dark chair
+  const sofaC  = "#9A8870";   // beige sofa
+
+  // Interior geometry Z range: front glass is at -(D/2), back wall is at +(D/2).
+  // Structural concrete back wall center is at D/2 - WT/2 = D/2 - 0.12.
+  // Keep all interior surfaces 1m+ away from structural walls to avoid z-fighting.
+  // Interior room spans from zFront (just inside front glass) to zBack (1m inside back).
+  const zFront = -(D / 2 - 0.35);    // 0.35m south from center, just inside glass
+  const zBack  =  (D / 2 - WT - 0.20);  // just 0.20m inside the structural back wall's south face
+  const roomD  = zBack - zFront;      // room depth (all interior surfaces span this)
+  const roomCZ = (zFront + zBack) / 2; // center Z of room
+
+  return (
+    <group>
+
+      {/* ══ GROUND FLOOR INTERIOR ══════════════════════════════ */}
+      <group position={[0, GF_H / 2, 0]}>
+        {/* BACK WALL — primary warm surface, clearly 1m inside structural back wall */}
+        <mesh position={[0, 0, zBack]}>
+          <boxGeometry args={[W * 0.92, GF_H - 0.06, 0.22]} />
+          <meshStandardMaterial color={wallC} roughness={0.82}
+            emissive="#F0D8A8" emissiveIntensity={0.42} />
+        </mesh>
+
+        {/* Floor — dark walnut parquet */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -(GF_H / 2 - 0.04), roomCZ]}>
+          <planeGeometry args={[W * 0.92, roomD]} />
+          <meshStandardMaterial color={floorC} roughness={0.55} />
+        </mesh>
+
+        {/* Ceiling — bright warm recessed LEDs */}
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, GF_H / 2 - 0.05, roomCZ]}>
+          <planeGeometry args={[W * 0.92, roomD]} />
+          <meshStandardMaterial color={ceilC}
+            emissive="#F5E880" emissiveIntensity={0.18} roughness={0.94} side={THREE.DoubleSide} />
+        </mesh>
+
+        {/* Side walls — emissive warm fill */}
+        <mesh position={[-(W * 0.46), 0, roomCZ]}>
+          <boxGeometry args={[0.14, GF_H - 0.06, roomD]} />
+          <meshStandardMaterial color={wallC} roughness={0.82} emissive="#D8B060" emissiveIntensity={0.06} />
+        </mesh>
+        <mesh position={[ (W * 0.46), 0, roomCZ]}>
+          <boxGeometry args={[0.14, GF_H - 0.06, roomD]} />
+          <meshStandardMaterial color={wallC} roughness={0.82} emissive="#D8B060" emissiveIntensity={0.06} />
+        </mesh>
+
+        {/* Dining table — clearly visible from glass */}
+        <mesh position={[W * 0.08, -(GF_H / 2) + 0.42, roomCZ + roomD * 0.15]}>
+          <boxGeometry args={[3.0, 0.08, 1.1]} />
+          <meshStandardMaterial color={tableC} roughness={0.40} />
+        </mesh>
+        {/* Dining chairs — 3 each side */}
+        {([-0.90, 0, 0.90] as number[]).map((x, i) => (
+          <mesh key={`cn${i}`} position={[W * 0.08 + x, -(GF_H / 2) + 0.28, roomCZ + roomD * 0.22]}>
+            <boxGeometry args={[0.48, 0.46, 0.48]} />
+            <meshStandardMaterial color={chairC} roughness={0.58} />
+          </mesh>
+        ))}
+        {([-0.90, 0, 0.90] as number[]).map((x, i) => (
+          <mesh key={`cs${i}`} position={[W * 0.08 + x, -(GF_H / 2) + 0.28, roomCZ + roomD * 0.08]}>
+            <boxGeometry args={[0.48, 0.46, 0.48]} />
+            <meshStandardMaterial color={chairC} roughness={0.58} />
+          </mesh>
+        ))}
+        {/* Living area sofa */}
+        <mesh position={[-W * 0.22, -(GF_H / 2) + 0.32, zFront + roomD * 0.30]}>
+          <boxGeometry args={[2.4, 0.60, 0.90]} />
+          <meshStandardMaterial color={sofaC} roughness={0.82} />
+        </mesh>
+        {/* Coffee table */}
+        <mesh position={[-W * 0.22, -(GF_H / 2) + 0.20, zFront + roomD * 0.42]}>
+          <boxGeometry args={[1.1, 0.06, 0.55]} />
+          <meshStandardMaterial color={tableC} roughness={0.42} />
+        </mesh>
+        {/* Pendant lamp above dining — glowing sphere */}
+        <mesh position={[W * 0.08, GF_H / 2 - 0.55, roomCZ + roomD * 0.15]}>
+          <sphereGeometry args={[0.15, 12, 8]} />
+          <meshStandardMaterial color="#FFDF80" emissive="#FFD040"
+            emissiveIntensity={2.0} roughness={0.50} />
+        </mesh>
+      </group>
+
+      {/* ══ UPPER FLOOR INTERIOR ═══════════════════════════════ */}
+      <group position={[0, GF_H + SLAB_T + UF_H / 2, 0]}>
+        {/* Back wall — bright warm */}
+        <mesh position={[0, 0, zBack]}>
+          <boxGeometry args={[W * 0.92, UF_H - 0.06, 0.22]} />
+          <meshStandardMaterial color={wallC} roughness={0.82}
+            emissive="#F0E0C0" emissiveIntensity={0.22} />
+        </mesh>
+        {/* Floor */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -(UF_H / 2 - 0.04), roomCZ]}>
+          <planeGeometry args={[W * 0.92, roomD]} />
+          <meshStandardMaterial color={floorC} roughness={0.55} />
+        </mesh>
+        {/* Ceiling — bright warm */}
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, UF_H / 2 - 0.05, roomCZ]}>
+          <planeGeometry args={[W * 0.92, roomD]} />
+          <meshStandardMaterial color={ceilC}
+            emissive="#F0E060" emissiveIntensity={0.06} roughness={0.94} side={THREE.DoubleSide} />
+        </mesh>
+        {/* Side walls */}
+        <mesh position={[-(W * 0.46), 0, roomCZ]}>
+          <boxGeometry args={[0.14, UF_H - 0.06, roomD]} />
+          <meshStandardMaterial color={wallC} roughness={0.82} emissive="#D8B060" emissiveIntensity={0.06} />
+        </mesh>
+        <mesh position={[ (W * 0.46), 0, roomCZ]}>
+          <boxGeometry args={[0.14, UF_H - 0.06, roomD]} />
+          <meshStandardMaterial color={wallC} roughness={0.82} emissive="#D8B060" emissiveIntensity={0.06} />
+        </mesh>
+        {/* Bedroom sofa/daybed */}
+        <mesh position={[W * 0.06, -(UF_H / 2) + 0.34, roomCZ + roomD * 0.18]}>
+          <boxGeometry args={[2.0, 0.62, 0.95]} />
+          <meshStandardMaterial color={sofaC} roughness={0.80} />
+        </mesh>
+        {/* Desk */}
+        <mesh position={[-W * 0.28, -(UF_H / 2) + 0.40, roomCZ + roomD * 0.15]}>
+          <boxGeometry args={[1.4, 0.06, 0.75]} />
+          <meshStandardMaterial color={tableC} roughness={0.40} />
+        </mesh>
+      </group>
+
+    </group>
+  );
+}
+
+/** Wing face — solid white stucco + horizontal window band + optional wood cladding accent */
+function WingFaceWall({
+  W, H, woodAccent = true, windowBand = true,
+}: { W: number; H: number; woodAccent?: boolean; windowBand?: boolean }) {
+  const wallColor  = "#F4F2EE";
+  const woodDark   = "#7A4E22";
+  const woodMid    = "#8B5A2B";
+  const frameColor = "#1A1A1A";
+  const winH  = H * 0.42;
+  const winY  = H * 0.05;     // slightly above floor
+  const winW  = W * 0.64;
+  const woodW = W * 0.36;
+  const woodX = W / 2 - woodW / 2;   // right-side accent panel
+  return (
+    <group>
+      {/* Base white wall */}
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[W, H, WT]} />
+        <meshStandardMaterial color={wallColor} roughness={0.72} metalness={0.01} />
+      </mesh>
+      {/* Wood cladding accent panel */}
+      {woodAccent && (() => {
+        const SLAT_W = 0.088; const SLAT_GAP = 0.018; const SLAT_T = 0.040;
+        const step = SLAT_W + SLAT_GAP;
+        const numSlats = Math.floor(woodW / step);
+        const startX = woodX - woodW / 2 + SLAT_W / 2;
+        return (
+          <group position={[0, 0, WT / 2 + SLAT_T / 2]}>
+            {Array.from({ length: numSlats }).map((_, i) => (
+              <mesh key={i} position={[startX + i * step, 0, 0]} castShadow>
+                <boxGeometry args={[SLAT_W, H - 0.04, SLAT_T]} />
+                <meshStandardMaterial
+                  color={i % 3 === 0 ? woodDark : i % 3 === 1 ? woodMid : "#96622F"}
+                  roughness={0.38} metalness={0.0} envMapIntensity={0.55}
+                />
+              </mesh>
+            ))}
+          </group>
+        );
+      })()}
+      {/* Horizontal window band */}
+      {windowBand && (
+        <group position={[-(W - winW) / 2 * 0.5, winY, WT / 2 + 0.008]}>
+          {/* Frame */}
+          <mesh castShadow>
+            <boxGeometry args={[winW + 0.10, winH + 0.10, 0.065]} />
+            <meshStandardMaterial color={frameColor} roughness={0.25} metalness={0.68} />
+          </mesh>
+          {/* Glass */}
+          <mesh position={[0, 0, 0.038]}>
+            <boxGeometry args={[winW, winH, 0.030]} />
+            <meshStandardMaterial
+              color="#D0EAF8" roughness={0.04} metalness={0.08}
+              emissive="#C8A030" emissiveIntensity={0.22}
+              transparent opacity={0.82} depthWrite={false}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+          {/* Vertical dividers */}
+          {[-winW * 0.28, 0, winW * 0.28].map((dx, i) => (
+            <mesh key={i} position={[dx, 0, 0.055]}>
+              <boxGeometry args={[0.038, winH + 0.08, 0.022]} />
+              <meshStandardMaterial color={frameColor} roughness={0.25} metalness={0.68} />
+            </mesh>
+          ))}
+        </group>
+      )}
+    </group>
+  );
+}
+
+/** Upper-floor glass balustrade — slim steel posts + frameless glass panels */
+function GlassBalustrade({ W, side = "front" }: { W: number; side?: "front" | "side" }) {
+  const postH   = 1.08;
+  const postSpacing = 1.80;
+  const numPosts = Math.max(2, Math.round(W / postSpacing));
+  const actualSpacing = W / (numPosts - 1);
+  const posts = Array.from({ length: numPosts }, (_, i) => -W / 2 + i * actualSpacing);
+  return (
+    <group>
+      {/* Steel posts */}
+      {posts.map((px, i) => (
+        <mesh key={i} position={[px, postH / 2, 0]} castShadow>
+          <boxGeometry args={[0.038, postH, 0.038]} />
+          <meshStandardMaterial color="#C8C8D0" roughness={0.22} metalness={0.78} />
+        </mesh>
+      ))}
+      {/* Frameless glass panel (one slab) */}
+      <mesh position={[0, postH * 0.52, 0]}>
+        <boxGeometry args={[W - 0.04, postH * 0.78, 0.012]} />
+        <meshStandardMaterial color="#C8E8F8" roughness={0.02} metalness={0.10}
+          transparent opacity={0.28} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Top rail */}
+      <mesh position={[0, postH + 0.025, 0]} castShadow>
+        <boxGeometry args={[W + 0.04, 0.048, 0.060]} />
+        <meshStandardMaterial color="#D0D0D8" roughness={0.18} metalness={0.82} />
+      </mesh>
+    </group>
+  );
+}
+
+/**
+ * RichGlassVillaBuilding — reference-matched contemporary luxury villa.
+ *
+ * Object-by-object analysis of reference photo → procedural components:
+ *
+ *  ① Wide 2-story glass curtain wall main block (GlassCurtainWallFace × 4 faces)
+ *  ② Massive 4 m front roof cantilever with wood soffit (WoodSoffit + ConcreteSlab)
+ *  ③ Bright white 52 cm thick interfloor slab band projecting 55 cm forward (ConcreteSlab)
+ *  ④ Glass balustrade on upper balcony projecting 1.8 m in front (GlassBalustrade)
+ *  ⑤ Right-side single-storey step-down wing, wood-clad (WingFaceWall)
+ *  ⑥ Slim round steel columns at glazing line (SteelColumn)
+ *  ⑦ Stone plinth at grade (StoneCladding)
+ *  ⑧ Dark anodized steel fascia on roof edges (FasciaBand)
+ *
+ * Plan layout — L+Z footprint (camera at –Z, looking north):
+ *
+ *  ┌─ L_ARM_W ─┬──────────── MAIN_W - L_ARM_W ───────────────┐  ← +Z rear
+ *  │  L-ARM    │  (open — back wall only covers right portion) │
+ *  │  (rear    │                                               │
+ *  │  extn)    │                                               │
+ *  ├───────────┴──────── MAIN BLOCK (2F glass) ───────────────┼── EXT_W ──┐
+ *  │                                                           │  Z-WING   │
+ *  └───────────────────────────────────────────────────────────┴───────────┘  ← –Z front
+ *                         terrace (–Z, camera)
+ */
+/**
+ * RichGlassVillaBuilding — floor-plan-driven luxury villa.
+ *
+ * Uses the ACTUAL W×D from useFootprint() — no fake extra bays.
+ * Each exterior face is declared independently (world-space approach):
+ *
+ *  SOUTH face (−Z, front):
+ *    GF = open covered loggia (no front wall, just columns)  ← reference photo
+ *    UF = glass curtain wall
+ *  NORTH face (+Z, back): solid concrete wall
+ *  EAST  face (+X):       solid concrete wall
+ *  WEST  face (−X):       GF concrete / UF wood cladding
+ *
+ *  2F can cover a different (smaller) footprint than 1F — controlled by
+ *  UF_W and UF_D props (default = same as W, D).
+ */
+function RichGlassVillaBuilding({ W, D, settings }: {
+  W: number; D: number; settings: ExteriorSettings;
+}) {
+  // ── Heights ─────────────────────────────────────────────────
+  const GF_H    = 3.10;   // ground floor clear height
+  const SLAB_T  = 0.50;   // interfloor slab thickness (white band)
+  const UF_H    = 3.10;   // upper floor clear height
+  const TOTAL_H = GF_H + SLAB_T + UF_H;
+
+  // ── 2F footprint — typically same width, slightly less depth ─
+  // (garage + rear utility rooms only on 1F in the reference plan)
+  const UF_W    = W;              // full width on 2F
+  const UF_D    = D * 0.72;       // ~72% depth — 2F doesn't cover rear (garage) zone
+  const UF_ZOFF = (UF_D - D) / 2; // offset so 2F south face aligns with 1F south face
+
+  // ── Face coordinates (building centered at world origin) ────
+  // 1F box
+  const zS1 = -D / 2;   // south face of GF
+  const zN1 = +D / 2;   // north face of GF
+  const xE  = +W / 2;   // east face
+  const xW  = -W / 2;   // west face
+  // 2F box (south face = same as GF, north face set back)
+  const zS2 = zS1;                  // 2F south aligns with 1F south
+  const zN2 = zS2 + UF_D;           // 2F north face (set back from 1F north)
+
+  // ── Materials ────────────────────────────────────────────────
+  const wallC  = "#F0EDE6";   // warm off-white concrete
+  const slabC  = "#F6F3EE";   // bright white slab
+  const woodC  = "#8B6340";   // warm walnut cladding
+
+  // ── Slab ─────────────────────────────────────────────────────
+  const SLAB_PF = 0.55;       // interfloor slab projects south beyond glass
+  const SLAB_PS = 0.30;       // east/west side projection
+
+  // ── Roof ─────────────────────────────────────────────────────
+  const OV_FRONT = 2.20;      // large south cantilever
+  const OV_SIDE  = 0.40;
+  const OV_BACK  = 0.40;
+  const ROOF_T   = 0.28;
+  const roofW    = W + OV_SIDE * 2;
+  const roofD    = D + OV_FRONT + OV_BACK;
+
+  // ── Panels ───────────────────────────────────────────────────
+  const frontPanels = Math.max(5, Math.round(W / 1.5));
+  const sidePanels  = Math.max(3, Math.round(UF_D / 1.5));
+
+  // ── Columns along south GF edge ─────────────────────────────
+  const numCols = Math.max(4, Math.round(W / 3.0));
+  const colXs   = Array.from({ length: numCols }, (_, i) =>
+    xW + (W / (numCols - 1)) * i
+  );
+
+  return (
+    <group>
+
+      {/* ════════════════════════════════════════════════════
+          GROUND PLANE / SLAB AT GRADE
+          ════════════════════════════════════════════════ */}
+      <mesh position={[0, 0.04, 0]} receiveShadow>
+        <boxGeometry args={[W + 0.20, 0.08, D + 0.20]} />
+        <meshStandardMaterial color="#E0D8C8" roughness={0.88} />
+      </mesh>
+
+      {/* ════════════════════════════════════════════════════
+          SOUTH FACE (−Z)
+          GF = OPEN loggia (no wall — matches reference photo)
+          UF = Glass curtain wall
+          ════════════════════════════════════════════════ */}
+
+      {/* GF south: slim 60 cm concrete base (threshold step only) */}
+      <mesh position={[0, 0.30, zS1 + WT / 2]} castShadow receiveShadow>
+        <boxGeometry args={[W, 0.60, WT]} />
+        <meshStandardMaterial color={wallC} roughness={0.78} />
+      </mesh>
+
+      {/* UF south: GLASS curtain wall — the signature facade element */}
+      <group position={[0, GF_H + SLAB_T + UF_H / 2, zS2 + WT / 2]}>
+        <GlassCurtainWallFace W={UF_W} H={UF_H} panelCount={frontPanels} />
+      </group>
+
+      {/* ════════════════════════════════════════════════════
+          NORTH FACE (+Z) — solid concrete back wall, both floors
+          ════════════════════════════════════════════════ */}
+      {/* GF north */}
+      <mesh position={[0, GF_H / 2, zN1 - WT / 2]} castShadow receiveShadow>
+        <boxGeometry args={[W, GF_H, WT]} />
+        <meshStandardMaterial map={getConcreteTex()} color={wallC} roughness={0.74} />
+      </mesh>
+      {/* UF north (shorter depth) */}
+      <mesh position={[0, GF_H + SLAB_T + UF_H / 2, zN2 - WT / 2]} castShadow receiveShadow>
+        <boxGeometry args={[UF_W, UF_H, WT]} />
+        <meshStandardMaterial map={getConcreteTex()} color={wallC} roughness={0.74} />
+      </mesh>
+
+      {/* ════════════════════════════════════════════════════
+          EAST FACE (+X) — concrete both floors
+          ════════════════════════════════════════════════ */}
+      {/* GF east */}
+      <mesh position={[xE - WT / 2, GF_H / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[WT, GF_H, D]} />
+        <meshStandardMaterial map={getConcreteTex()} color={wallC} roughness={0.74} />
+      </mesh>
+      {/* UF east */}
+      <mesh position={[xE - WT / 2, GF_H + SLAB_T + UF_H / 2, UF_ZOFF / 2]} castShadow receiveShadow>
+        <boxGeometry args={[WT, UF_H, UF_D]} />
+        <meshStandardMaterial map={getConcreteTex()} color={wallC} roughness={0.74} />
+      </mesh>
+
+      {/* ════════════════════════════════════════════════════
+          WEST FACE (−X) — GF concrete / UF wood cladding
+          (Left rear wood wing from reference photo)
+          ════════════════════════════════════════════════ */}
+      {/* GF west */}
+      <mesh position={[xW + WT / 2, GF_H / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[WT, GF_H, D]} />
+        <meshStandardMaterial map={getConcreteTex()} color={wallC} roughness={0.74} />
+      </mesh>
+      {/* UF west: horizontal wood plank cladding */}
+      {(() => {
+        const PLANK_H = 0.12;
+        const PLANK_G = 0.018;
+        const step    = PLANK_H + PLANK_G;
+        const num     = Math.floor(UF_H / step);
+        return Array.from({ length: num }, (_, i) => (
+          <mesh key={i}
+            position={[xW + WT / 2 + 0.008, GF_H + SLAB_T + i * step + PLANK_H / 2, UF_ZOFF / 2]}
+            castShadow receiveShadow>
+            <boxGeometry args={[0.016, PLANK_H, UF_D - 0.04]} />
+            <meshStandardMaterial color={woodC} roughness={0.62} />
+          </mesh>
+        ));
+      })()}
+      {/* UF west backing (behind planks) */}
+      <mesh position={[xW + WT / 2, GF_H + SLAB_T + UF_H / 2, UF_ZOFF / 2]} castShadow receiveShadow>
+        <boxGeometry args={[WT, UF_H, UF_D]} />
+        <meshStandardMaterial color="#7A5530" roughness={0.85} />
+      </mesh>
+
+      {/* ════════════════════════════════════════════════════
+          INTERFLOOR SLAB — white band, projects south + sides
+          ════════════════════════════════════════════════ */}
+      <group position={[0, GF_H + SLAB_T / 2, -SLAB_PF / 2]}>
+        <ConcreteSlab
+          W={W + SLAB_PS * 2}
+          D={D + SLAB_PF}
+          T={SLAB_T}
+          color={slabC}
+          repeat={6}
+        />
+        {/* Dark shadow reveal line at slab underside */}
+        <mesh position={[0, -SLAB_T / 2 + 0.010, 0]} receiveShadow>
+          <boxGeometry args={[W + SLAB_PS * 2, 0.020, D + SLAB_PF]} />
+          <meshStandardMaterial color="#1E1E1E" roughness={0.55} />
+        </mesh>
+      </group>
+
+      {/* ════════════════════════════════════════════════════
+          COLUMNS — slim steel, south GF edge, support slab
+          ════════════════════════════════════════════════ */}
+      {colXs.map((cx, i) => (
+        <group key={i} position={[cx, 0, zS1 + 0.12]}>
+          <SteelColumn H={GF_H + SLAB_T + 0.05} radius={0.062} />
+        </group>
+      ))}
+
+      {/* ════════════════════════════════════════════════════
+          INTERIOR — warm fill visible through UF glass
+          ════════════════════════════════════════════════ */}
+      <RichGlassInterior W={UF_W} D={UF_D} GF_H={GF_H} UF_H={UF_H} SLAB_T={SLAB_T} />
+      {/* Interior lights — upper floor only (GF is open loggia) */}
+      <pointLight position={[0,             GF_H + SLAB_T + UF_H * 0.65, UF_ZOFF / 2       ]} color="#FFF8F0" intensity={22} distance={UF_W * 2.2} decay={1.1} />
+      <pointLight position={[UF_W * 0.30,  GF_H + SLAB_T + UF_H * 0.65, UF_ZOFF / 2 + 0.5 ]} color="#FFF4E8" intensity={14} distance={UF_W * 1.2} decay={1.2} />
+      <pointLight position={[-UF_W * 0.30, GF_H + SLAB_T + UF_H * 0.65, UF_ZOFF / 2 + 0.5 ]} color="#FFF4E8" intensity={14} distance={UF_W * 1.2} decay={1.2} />
+
+      {/* ════════════════════════════════════════════════════
+          ROOF — large flat slab, south cantilever, wood soffit
+          ════════════════════════════════════════════════ */}
+      <group position={[0, TOTAL_H + ROOF_T / 2, (OV_BACK - OV_FRONT) / 2]}>
+        {/* White concrete slab */}
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[roofW, ROOF_T, roofD]} />
+          <meshStandardMaterial color="#F3F1EB" roughness={0.72} metalness={0.01} />
+        </mesh>
+        {/* Dark membrane on top */}
+        <mesh position={[0, ROOF_T / 2 + 0.010, 0]}>
+          <boxGeometry args={[roofW - 0.04, 0.018, roofD - 0.04]} />
+          <meshStandardMaterial color="#2A2A2C" roughness={0.92} />
+        </mesh>
+        {/* Wood soffit on underside — visible from terrace/pool */}
+        <group position={[0, -ROOF_T / 2 - 0.042 / 2, 0]}>
+          <WoodSoffit W={roofW - 0.06} D={roofD - 0.06} T={0.042} />
+        </group>
+        {/* White fascia band */}
+        <FasciaBand W={roofW} D={roofD} H={0.26} />
+      </group>
+
+      {/* ════════════════════════════════════════════════════
+          FRONT TERRACE — travertine stone at grade
+          ════════════════════════════════════════════════ */}
+      <mesh position={[0, 0.06, zS1 - 1.20]} receiveShadow>
+        <boxGeometry args={[W + 0.60, 0.12, 2.40]} />
+        <meshStandardMaterial color="#E8DFC8" roughness={0.74} />
+      </mesh>
+
+    </group>
+  );
+}
+
 // ─── House body ──────────────────────────────────────────────
 function HouseBody({ W, D, settings }: { W: number; D: number; settings: ExteriorSettings }) {
+  // ── Rich Glass Villa shortcut ──────────────────────────────────────────
+  // When buildingType is set, bypass the generic floor-shell system entirely
+  // and render the specialized multi-volume building component.
+  if ((settings as ExteriorSettings & { buildingType?: string }).buildingType === "rich-glass-villa") {
+    return <RichGlassVillaBuilding W={W} D={D} settings={settings} />;
+  }
+
   const { floors, roofStyle, roofColor, accentColor } = settings;
   const totalH = floors * FLOOR_H;
   // 架空层 (pilotis) — lift the entire house body by this many metres.
@@ -3282,6 +4700,9 @@ function HouseBody({ W, D, settings }: { W: number; D: number; settings: Exterio
   const hasPolygonRoom = enabledRooms.some(r =>
     !ROOM_DEFS[r].isOutdoor && roomShapes?.[r] && roomShapes[r]!.preset !== "rect"
   );
+
+  // Footprint volumes — composite boxes for L/U/T shapes
+  const footprintVolumes = useFootprintVolumes(W, D, settings);
 
   // Corner column positions (4 corners of the house bbox) — only rendered
   // when pilotisH > 0. Slim 30×30cm concrete columns matching the
@@ -3321,9 +4742,13 @@ function HouseBody({ W, D, settings }: { W: number; D: number; settings: Exterio
         {hasPolygonRoom ? (
           <PolygonHouseShell floors={floors} settings={settings} />
         ) : (
-          Array.from({ length: floors }).map((_, i) => (
-            <FloorShell key={i} floorIndex={i} W={W} D={D} settings={settings} totalFloors={floors} />
-          ))
+          footprintVolumes.flatMap((vol, vi) =>
+            Array.from({ length: floors }).map((_, fi) => (
+              <group key={`${vi}-${fi}`} position={[vol.x, 0, vol.z]}>
+                <FloorShell floorIndex={fi} W={vol.W} D={vol.D} settings={settings} totalFloors={floors} />
+              </group>
+            ))
+          )
         )}
         <group position={[0, totalH, 0]}>
           {hasPolygonRoom && roofStyle === "flat"
@@ -3622,159 +5047,193 @@ function _formatHour(h: number) {
 }
 
 // ─── Villa yard: lawn + terrace + pool + loungers (modern preset) ────────────
-function VillaYard({ W, D }: { W: number; D: number }) {
-  // Pool dimensions — wide & long, like the luxury villa reference photos
-  const pw  = Math.min(W * 0.88, 9.5);   // pool width ≈ 88% of building width
-  const pd  = Math.max(pw * 1.9, 11.0);  // pool length — long rectangular
-  const gap = 0.65;                       // terrace gap between building face and pool start
-  const deckSide = 2.2;                   // wide travertine deck on near side for loungers
-  const poolBackZ  = D / 2 + gap;        // where pool starts (back edge, closest to building)
-  const pz  = poolBackZ + pd / 2;        // pool center
+function VillaYard({ W, D, overrideW, xOff = 0 }: {
+  W: number; D: number;
+  overrideW?: number;   // for rich-glass-villa — use expanded visual width
+  xOff?: number;        // x-offset to centre pool under main block
+}) {
+  const effW = overrideW ?? W;
 
-  // Terrace dimensions
-  const terrD = gap + 0.4;              // stone patio depth
+  // ── Pool in FRONT of building (−Z, between camera and glass facade) ──────
+  // Reference photo: pool is between viewer and building, terrace closest to building.
+  const pw       = Math.min(effW * 0.62, 10.0);  // pool width ~62% of building — matches reference photo
+  const pd       = Math.max(pw * 1.65, 14.5);   // pool length toward camera
+  const gap      = 0.55;                         // gap between building front glass and terrace
+  const deckSide = 2.4;                          // travertine deck border around pool
+  const terrD    = 1.8;                          // stone terrace depth between building and pool
 
-  // Lawn extends wide on both sides and beyond pool
-  const lawnTotalD = terrD + pd + deckSide + 6;
+  // All Z values NEGATIVE — pool is south of building (toward camera)
+  // Building front glass is at z = -(D/2). Terrace starts just beyond that.
+  const terrFrontZ = -(D / 2 + gap);             // terrace front edge (south face, touching building)
+  const terrBackZ  = terrFrontZ - terrD;         // terrace far edge (toward camera)
+  const poolBuildZ = terrBackZ - 0.20;           // pool north edge (closest to building)
+  const pz         = poolBuildZ - pd / 2;        // pool center Z
+  const poolFarZ   = pz - pd / 2;               // pool south edge (closest to camera)
+  const loungerZ   = poolFarZ - deckSide * 0.5; // loungers south of pool
 
   return (
-    <group position={[0, 0, 0]}>
-      {/* Lawn comes from the main Ground component — no duplicate mesh here */}
+    <group position={[xOff, 0, 0]}>
 
-      {/* ── Travertine terrace — individual 600×900 mm tiles with visible seam lines.
-          The tile joints give ControlNet Canny strong ground-plane line conditioning,
-          guiding SDXL to reproduce travertine paving rather than a plain slab. ── */}
+      {/* ── Travertine terrace — stone patio between building glass and pool ── */}
       {(() => {
-        const TW = 0.60, TD = 0.90, GAP = 0.013;
-        const deckW  = W + 1.0;
-        const cols   = Math.ceil(deckW / (TW + GAP)) + 1;
-        const rows   = Math.ceil(terrD / (TD + GAP)) + 1;
-        const startX = -(cols * (TW + GAP)) / 2 + TW / 2;
-        const startZ = D / 2 + TD / 2;
+        const TW = 0.60, TD = 0.90, GAP = 0.012;
+        const deckW = effW + 1.2;
+        const cols  = Math.ceil(deckW / (TW + GAP)) + 1;
+        const rows  = Math.ceil(terrD  / (TD + GAP)) + 1;
+        const x0    = -(cols * (TW + GAP)) / 2 + TW / 2;
+        // startZ: northernmost tile centre (closest to building, most negative Z goes further out)
+        const z0    = terrFrontZ - TD / 2;
         return Array.from({ length: cols }).flatMap((_, c) =>
           Array.from({ length: rows }).map((_, r) => {
-            const brightness = ((c + r) % 2 === 0) ? "#E8DBC8" : "#EDE2D0";
+            const bright = ((c + r) % 2 === 0) ? "#EAE0CC" : "#EFE5D4";
             return (
               <mesh key={`tr-${c}-${r}`}
                 rotation={[-Math.PI / 2, 0, 0]}
-                position={[startX + c * (TW + GAP), -0.490, startZ + r * (TD + GAP)]}
+                position={[x0 + c * (TW + GAP), -0.490, z0 - r * (TD + GAP)]}
                 receiveShadow>
                 <planeGeometry args={[TW, TD]} />
-                <meshStandardMaterial color={brightness} roughness={0.80} metalness={0.02} />
+                <meshStandardMaterial color={bright} roughness={0.80} metalness={0.02} />
               </mesh>
             );
           })
         );
       })()}
 
-      {/* ── Pool surround deck — same 600×900 tiles, slightly warmer tone ── */}
-      {(() => {
-        const TW = 0.60, TD = 0.90, GAP = 0.013;
-        const dW = pw + deckSide * 2 + 0.5;
-        const dD = pd + deckSide * 2;
-        const cols   = Math.ceil(dW / (TW + GAP)) + 1;
-        const rows   = Math.ceil(dD / (TD + GAP)) + 1;
-        const startX = -(cols * (TW + GAP)) / 2 + TW / 2;
-        const startZ = pz - dD / 2 + TD / 2;
-        return Array.from({ length: cols }).flatMap((_, c) =>
-          Array.from({ length: rows }).map((_, r) => {
-            const brightness = ((c + r) % 2 === 0) ? "#EDE0C8" : "#F2E8D5";
-            return (
-              <mesh key={`pd-${c}-${r}`}
-                rotation={[-Math.PI / 2, 0, 0]}
-                position={[startX + c * (TW + GAP), -0.488, startZ + r * (TD + GAP)]}
-                receiveShadow>
-                <planeGeometry args={[TW, TD]} />
-                <meshStandardMaterial color={brightness} roughness={0.78} metalness={0.02} />
-              </mesh>
-            );
-          })
-        );
-      })()}
-
-      {/* ── Entry steps — 3 shallow stone steps descending from terrace to pool level.
-          Strong horizontal shadow lines for Canny conditioning. ── */}
-      {[0, 1, 2].map(s => (
+      {/* ── Entry steps — 2 risers stepping from terrace down to pool deck ── */}
+      {[0, 1].map(s => (
         <mesh key={`step-${s}`}
-          position={[0, -0.12 + s * 0.06, D / 2 + terrD + s * 0.32]}
+          position={[0, -s * 0.12, terrBackZ - 0.20 - s * 0.38]}
           castShadow receiveShadow>
-          <boxGeometry args={[pw * 0.55, 0.07, 0.30]} />
-          <meshStandardMaterial color="#D8CEBC" roughness={0.72} metalness={0.04} />
+          <boxGeometry args={[effW * 0.55, 0.13, 0.38]} />
+          <meshStandardMaterial color="#D8CEBC" roughness={0.70} metalness={0.04} />
         </mesh>
       ))}
 
-      {/* ── Pool shell — clean rectangular luxury pool (matches contemporary reference photos) ── */}
+      {/* ── Pool surround deck — large travertine platform around the pool ── */}
       {(() => {
-        const poolDepth = 0.56;
-        const shellY    = -0.28;
-        return (
-          <mesh position={[0, shellY, pz]} receiveShadow castShadow>
-            <boxGeometry args={[pw + 0.36, poolDepth, pd + 0.36]} />
-            <meshStandardMaterial color="#D8CEBC" roughness={0.70} />
-          </mesh>
+        const TW = 0.60, TD = 0.90, GAP = 0.012;
+        const dW = pw + deckSide * 2 + 0.4;
+        const dD = pd + deckSide * 2;
+        const cols  = Math.ceil(dW / (TW + GAP)) + 1;
+        const rows  = Math.ceil(dD / (TD + GAP)) + 1;
+        const x0    = -(cols * (TW + GAP)) / 2 + TW / 2;
+        const z0    = poolBuildZ + TD / 2;  // start just north of pool
+        return Array.from({ length: cols }).flatMap((_, c) =>
+          Array.from({ length: rows }).map((_, r) => {
+            const bright = ((c + r) % 2 === 0) ? "#EDE0C6" : "#F3E8D2";
+            return (
+              <mesh key={`pd-${c}-${r}`}
+                rotation={[-Math.PI / 2, 0, 0]}
+                position={[x0 + c * (TW + GAP), -0.488, z0 - r * (TD + GAP)]}
+                receiveShadow>
+                <planeGeometry args={[TW, TD]} />
+                <meshStandardMaterial color={bright} roughness={0.78} metalness={0.02} />
+              </mesh>
+            );
+          })
         );
       })()}
 
-      {/* ── Pool interior (turquoise plaster) ── */}
-      <mesh position={[0, -0.05, pz]}>
-        <boxGeometry args={[pw, 0.50, pd]} />
-        <meshStandardMaterial color="#0E6B7A" roughness={0.15} metalness={0.0} />
+      {/* ── Pool shell — concrete basin ── */}
+      <mesh position={[0, -0.30, pz]} receiveShadow castShadow>
+        <boxGeometry args={[pw + 0.38, 0.60, pd + 0.38]} />
+        <meshStandardMaterial color="#D4CABC" roughness={0.70} />
       </mesh>
 
-      {/* ── Water surface — clean rectangle ── */}
-      <mesh position={[0, 0.03, pz]}>
-        <boxGeometry args={[pw - 0.04, 0.06, pd - 0.04]} />
-        <meshPhysicalMaterial
-          color="#38B4D8"
-          transmission={0.62}
-          roughness={0.01}
-          ior={1.33}
-          metalness={0.0}
-          thickness={1.4}
-          envMapIntensity={8.0}
-        />
-      </mesh>
+      {/* ── Pool water — animated ripple reflector surface ── */}
+      {/* AnimatedWater provides its own turquoise bottom + animated reflective surface */}
+      <group position={[0, 0.08, pz]}>
+        <AnimatedWater w={pw - 0.06} d={pd - 0.06} />
+      </group>
 
-      {/* ── Coping edge strips — all 4 sides of rectangular pool ── */}
-      {([[-1,0],[1,0],[0,-1],[0,1]] as [number,number][]).map(([sx, sz], i) => {
+      {/* ── Pool coping — cream stone edge strips on all 4 sides ── */}
+      {/* ── Pool coping — 3 straight sides; south side handled by rounded cap ── */}
+      {([[-1,0],[1,0],[0,1]] as [number,number][]).map(([sx, sz], i) => {
         const horiz = sz === 0;
-        const len = horiz ? pd + 0.5 : pw + 0.5;
+        const len   = horiz ? pd + 0.52 : pw + 0.52;
         return (
           <mesh key={i}
-            position={[sx*(pw/2+0.22), 0.04, pz + sz*(pd/2+0.22)]}
+            position={[sx * (pw/2 + 0.24), 0.05, pz + sz * (pd/2 + 0.24)]}
             castShadow receiveShadow>
-            <boxGeometry args={horiz ? [0.35,0.06,len] : [len,0.06,0.35]} />
-            <meshStandardMaterial color="#F2EAD8" roughness={0.62} />
+            <boxGeometry args={horiz ? [0.38, 0.06, len] : [len, 0.06, 0.38]} />
+            <meshStandardMaterial color="#F0E8D8" roughness={0.60} />
           </mesh>
         );
       })}
 
-      {/* ── Sun loungers — 4 along pool near edge, like reference photos ── */}
-      {([-0.60, -0.20, 0.20, 0.60] as number[]).map((xFrac, i) => {
-        const lx = xFrac * pw;
-        const lz = pz + pd / 2 + deckSide * 0.45;
+      {/* ── Smooth rounded south cap — half-cylinder, camera-near end ── */}
+      {(() => {
+        const r  = pw / 2;
+        const capZ = poolFarZ;  // southernmost Z = pool south end
         return (
-          <group key={i} position={[lx, 0, lz]}>
-            {/* Frame */}
-            <mesh position={[0, 0.20, 0]} castShadow>
-              <boxGeometry args={[0.60, 0.05, 1.80]} />
-              <meshStandardMaterial color="#B8A878" roughness={0.78} metalness={0.08} />
+          <group position={[0, 0, capZ]}>
+            {/* Pool interior half-cylinder (turquoise plaster) */}
+            <mesh rotation={[0, Math.PI, 0]}>
+              <cylinderGeometry args={[r, r, 0.52, 40, 1, false, 0, Math.PI]} />
+              <meshStandardMaterial color="#0A6470" roughness={0.12} metalness={0.0} />
+            </mesh>
+            {/* Water surface half-disc */}
+            <mesh position={[0, 0.09, 0]} rotation={[0, Math.PI, 0]}>
+              <cylinderGeometry args={[r - 0.04, r - 0.04, 0.04, 40, 1, false, 0, Math.PI]} />
+              <meshStandardMaterial color="#5DC8E0" roughness={0.04} metalness={0.0} envMapIntensity={6.0}
+                emissive="#1A8AA0" emissiveIntensity={0.12} />
+            </mesh>
+            {/* Coping arc (cream stone) */}
+            <mesh position={[0, 0.06, 0]} rotation={[0, Math.PI, 0]}>
+              <cylinderGeometry args={[r + 0.24, r + 0.24, 0.06, 40, 1, false, 0, Math.PI]} />
+              <meshStandardMaterial color="#F0E8D8" roughness={0.60} />
+            </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── Sun loungers — 5 chairs on the BUILDING SIDE of pool (between pool + terrace) ── */}
+      {/* Reference: chairs face toward pool, backs toward building — terrace zone */}
+      {([-0.60, -0.30, 0, 0.30, 0.60] as number[]).map((xFrac, i) => {
+        const lx = xFrac * (pw - 1.0);
+        const lz = poolBuildZ + deckSide * 0.48;   // between pool north edge and terrace
+        return (
+          <group key={i} position={[lx, 0, lz]} rotation={[0, Math.PI, 0]}>
+            {/* Frame / mattress base */}
+            <mesh position={[0, 0.19, 0]} castShadow receiveShadow>
+              <boxGeometry args={[0.62, 0.06, 1.85]} />
+              <meshStandardMaterial color="#BEB080" roughness={0.75} metalness={0.10} />
             </mesh>
             {/* Cushion */}
-            <mesh position={[0, 0.25, 0]}>
-              <boxGeometry args={[0.52, 0.08, 1.65]} />
-              <meshStandardMaterial color="#F5EFDF" roughness={0.90} />
+            <mesh position={[0, 0.26, 0]}>
+              <boxGeometry args={[0.54, 0.09, 1.68]} />
+              <meshStandardMaterial color="#F6F0E4" roughness={0.88} metalness={0.0} />
             </mesh>
-            {/* Legs */}
-            {([-0.7, 0.7] as number[]).map((lzOff, j) => (
-              <mesh key={j} position={[0, 0.10, lzOff]} castShadow>
-                <boxGeometry args={[0.52, 0.20, 0.04]} />
-                <meshStandardMaterial color="#C0A868" roughness={0.80} metalness={0.06} />
-              </mesh>
-            ))}
+            {/* Reclined head section */}
+            <mesh position={[0, 0.36, 0.55]} rotation={[-0.28, 0, 0]}>
+              <boxGeometry args={[0.52, 0.07, 0.65]} />
+              <meshStandardMaterial color="#F2EBD8" roughness={0.88} />
+            </mesh>
+            {/* 4 slim aluminium legs */}
+            {([-0.26, 0.26] as number[]).flatMap(lx2 =>
+              ([-0.78, 0.78] as number[]).map((lz2, li) => (
+                <mesh key={`${lx2}-${lz2}`} position={[lx2, 0.09, lz2]} castShadow>
+                  <boxGeometry args={[0.040, 0.18, 0.040]} />
+                  <meshStandardMaterial color="#B0B0B8" roughness={0.25} metalness={0.85} />
+                </mesh>
+              ))
+            )}
           </group>
         );
       })}
+
+      {/* ── Raised spa / water feature — right side of terrace, between building and pool ── */}
+      <group position={[pw * 0.50 + 1.8, 0, (poolBuildZ + terrBackZ) / 2]}>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[2.2, 0.55, 2.2]} />
+          <meshStandardMaterial map={getStoneTex()} color="#D8D0C0" roughness={0.65} />
+        </mesh>
+        <mesh position={[0, 0.30, 0]}>
+          <boxGeometry args={[1.85, 0.08, 1.85]} />
+          <meshPhysicalMaterial color="#50C8E0" transmission={0.60} roughness={0.02} ior={1.33} thickness={0.5} envMapIntensity={6.0} />
+        </mesh>
+      </group>
+
     </group>
   );
 }
@@ -3793,6 +5252,7 @@ export default function HouseCanvas() {
   const sunPos = getSunPosition3D(sunHour, siteLatLng);
   const theme  = getSkyTheme(sunHour);
   const skyHex = _rgbHex(theme.skyRgb);
+  const isRichGlassVilla = (exterior as ExteriorSettings & { buildingType?: string }).buildingType === "rich-glass-villa";
 
   return (
     <div className="w-full h-full relative">
@@ -3869,14 +5329,29 @@ export default function HouseCanvas() {
           toneMappingExposure: theme.exposure,
           // Required for canvas.toDataURL() (AI render screenshot)
           preserveDrawingBuffer: true,
-          antialias: false, // SMAA effect handles AA below
+          antialias: false,
         }}
-        camera={{ fov: 58, near: 0.1, far: 300 }}
+        camera={(() => {
+          // Set initial camera position HERE (before OrbitControls mounts) so it
+          // never gets overridden by OrbitControls' default [0,0,5] initialisation.
+          if (isRichGlassVilla) {
+            // Camera on south side (-Z), slightly left to show west wood face
+            // Distance scales with actual building width
+            const fDist = W * 0.95 + 6;
+            return {
+              fov: 50,
+              near: 0.1,
+              far: 300,
+              position: [-W * 0.22, 4.5, -fDist] as [number, number, number],
+            };
+          }
+          return { fov: 58, near: 0.1, far: 300 };
+        })()}
         dpr={[1, 2]}
       >
         <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />
         <ExteriorCaptureSetup />
-        <CameraRig W={W} D={D} floors={floors} />
+        <CameraRig W={W} D={D} floors={floors} buildingType={(exterior as ExteriorSettings & { buildingType?: string }).buildingType} />
         <OrbitControls
           ref={orbitRef}
           makeDefault
@@ -3885,9 +5360,13 @@ export default function HouseCanvas() {
           minPolarAngle={0}
           maxPolarAngle={Math.PI / 2.1}
           minDistance={2}
-          maxDistance={50}
+          maxDistance={80}
           panSpeed={0.6}
-          target={[0, floors * FLOOR_H * 0.35, 0]}
+          target={
+            isRichGlassVilla
+              ? [-W * 0.05, 5.0, -D * 0.25] as [number, number, number]
+              : [0, floors * FLOOR_H * 0.35, 0] as [number, number, number]
+          }
         />
         {/* HDR as both IBL lighting AND photorealistic sky background.
             backgroundBlurriness softens the HDR to remove distracting detail
@@ -3945,17 +5424,39 @@ export default function HouseCanvas() {
           setSelectedOutdoorKey(null);
           useDesignerStore.getState().setSelectedExteriorDecor(null);
         }} />
-        <Ground W={W} D={D} />
-        <EntryPath W={W} D={D} />
+        {/* ── CLEAN COMPARE MODE: minimal env for rich-glass-villa ── */}
+        {!isRichGlassVilla && <Ground W={W} D={D} />}
+        {!isRichGlassVilla && <EntryPath W={W} D={D} />}
+        {/* Rich-glass-villa ground: large travertine/concrete plaza */}
+        {isRichGlassVilla && (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+            <planeGeometry args={[120, 120]} />
+            <meshStandardMaterial color="#D8D0BC" roughness={0.88} metalness={0.0} />
+          </mesh>
+        )}
         <HouseBody W={W} D={D} settings={exterior} />
-        <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />
-        {/* User-drawn yardPlan items (院子图 editor). Structural prefabs compose
-            on top of the ambient landscape above. */}
-        <YardPlanItems3D />
-        {/* Modern villa yard: lawn + terrace + pool + loungers */}
-        {exterior.roofStyle === "flat" && <VillaYard W={W} D={D} />}
+        {!isRichGlassVilla && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
+        {!isRichGlassVilla && <YardPlanItems3D />}
+        {!isRichGlassVilla && <YardPathItems3D />}
+        {/* Modern villa yard: pool + terrace + loungers — hidden for rich-glass-villa */}
+        {exterior.roofStyle === "flat" && !isRichGlassVilla && (() => {
+          const BAY_V   = 1.50;
+          const mainW_v = W + BAY_V * 4;
+          return <VillaYard
+            W={W} D={D}
+            overrideW={mainW_v}
+            xOff={0}
+          />;
+        })()}
 
-        {/* ── Postprocessing — photorealistic architectural visualization ──
+        {/* NOTE: Stairs are interior elements — not rendered in the exterior 3D
+            view. The 2D floor plan shows a stair symbol when floors > 1.
+            To see stairs in 3D, add a 楼梯间 room and view it in 室内3D. */}
+
+        {/* ── SSGI (WebGPU only) — replaces SSAO with global illumination ── */}
+        <SSGIPostProcessing />
+
+        {/* ── Postprocessing (WebGL path) — photorealistic architectural visualization ──
            SSAO: deep contact shadows ground objects convincingly.
            Bloom: subtle sun/sky glow for day/sunset; stronger for night lamps.
            BrightnessContrast: slight contrast lift for that "rendered" punch.

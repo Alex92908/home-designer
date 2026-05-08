@@ -27,6 +27,7 @@ import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
 import { Image3dGenerator } from "./Image3dGenerator";
 import { VillaTo3D } from "./VillaTo3D";
+import { GlbPbrPanel } from "./GlbPbrPanel";
 import { getShadowPolygon } from "@/lib/sunAnalysis";
 import { getOutdoorAssetByKind as _getAsset, PREFAB_PURCHASE } from "@/lib/outdoorAssets";
 
@@ -281,8 +282,12 @@ function darkenHex(hex: string, by: number): string {
 type LibraryTab = OutdoorCategory | "prefab" | "template";
 export function YardPlanLibrary() {
   const [tab, setTab] = useState<LibraryTab>("template");
-  const [show3dGen, setShow3dGen]           = useState(false);
-  const [showVillaDecompose, setShowVillaDecompose] = useState(false);
+  const [show3dGen, setShow3dGen]                     = useState(false);
+  const [showVillaDecompose, setShowVillaDecompose]   = useState(false);
+  const [showVillaDecompose2, setShowVillaDecompose2] = useState(false);
+  const [showVillaTo3D, setShowVillaTo3D]             = useState(false);
+  const [showSf3dQuick, setShowSf3dQuick]             = useState(false);
+  const [showPbrPanel, setShowPbrPanel]               = useState(false);
   const items = (tab === "prefab" || tab === "template") ? null
     : OUTDOOR_ASSET_LIBRARY.filter(a => a.category === tab);
 
@@ -349,7 +354,7 @@ export function YardPlanLibrary() {
       {tab === "prefab" && (
         <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1.5">
 
-          {/* ── 整图拆解入口（主推） ─────────────────────────────── */}
+          {/* ── 整图拆解入口 v1 (TRELLIS 1.0) ───────────── */}
           <button
             onClick={() => setShowVillaDecompose(true)}
             className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
@@ -358,12 +363,80 @@ export function YardPlanLibrary() {
             <span style={{ fontSize: 22 }}>🏗</span>
             <div className="flex flex-col flex-1 min-w-0">
               <div className="text-[11px] font-bold" style={{ color: "#7C3AED" }}>整图拆解 → 3D组件集合</div>
-              <div className="text-[9px]" style={{ color: "#8B5CF6" }}>一张别墅图 → AI识别元素 → 批量生成零件</div>
+              <div className="text-[9px]" style={{ color: "#8B5CF6" }}>Trellis 1.0 · 一张别墅图 → 批量生成零件</div>
             </div>
             <span style={{ color: "#A78BFA", fontSize: 14 }}>›</span>
           </button>
 
-          {/* ── 单零件生成入口 ────────────────────────────────────── */}
+          {/* ── 整图拆解入口 v2 (TRELLIS 2.0) ───────────── */}
+          <button
+            onClick={() => setShowVillaDecompose2(true)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
+            style={{ background: "linear-gradient(135deg,#FFF7ED,#FDF4FF)", border: "1px solid #FDBA74" }}
+          >
+            <span style={{ fontSize: 22 }}>🏗</span>
+            <div className="flex flex-col flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold" style={{ color: "#C2410C" }}>整图拆解 → 3D组件集合</span>
+                <span style={{
+                  fontSize: 9, background: "#7C3AED", color: "#fff",
+                  borderRadius: 3, padding: "0px 4px", fontWeight: 700,
+                }}>v2.0</span>
+              </div>
+              <div className="text-[9px]" style={{ color: "#EA580C" }}>TRELLIS 2.0 · 1024分辨率 · 更精细纹理</div>
+            </div>
+            <span style={{ color: "#FB923C", fontSize: 14 }}>›</span>
+          </button>
+
+          {/* ── SF3D 快速通道（L4 专用 GPU，无配额限制）──── */}
+          <button
+            onClick={() => setShowSf3dQuick(true)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
+            style={{ background: "linear-gradient(135deg,#F0FFF4,#ECFDF5)", border: "1px solid #34D399" }}
+          >
+            <span style={{ fontSize: 22 }}>⚡</span>
+            <div className="flex flex-col flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold" style={{ color: "#065F46" }}>SF3D 快速3D</span>
+                <span style={{
+                  fontSize: 9, background: "#059669", color: "#fff",
+                  borderRadius: 3, padding: "0px 5px", fontWeight: 700,
+                }}>无限制</span>
+              </div>
+              <div className="text-[9px]" style={{ color: "#047857" }}>L4专用GPU · 无每日配额 · ~10秒 · 整图生成GLB</div>
+            </div>
+            <span style={{ color: "#10B981", fontSize: 14 }}>›</span>
+          </button>
+
+          {/* ── VillaTo3D 独立入口 ────────────────────────── */}
+          <button
+            onClick={() => setShowVillaTo3D(true)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
+            style={{ background: "linear-gradient(135deg,#F0FDF4,#ECFDF5)", border: "1px solid #6EE7B7" }}
+          >
+            <span style={{ fontSize: 22 }}>🏠</span>
+            <div className="flex flex-col flex-1 min-w-0">
+              <div className="text-[11px] font-bold" style={{ color: "#065F46" }}>VillaTo3D 别墅拆解</div>
+              <div className="text-[9px]" style={{ color: "#059669" }}>上传图片 → TRELLIS 1.0 → 选零件 → 加入场景</div>
+            </div>
+            <span style={{ color: "#34D399", fontSize: 14 }}>›</span>
+          </button>
+
+          {/* ── GLB + 原图 → PBR 贴图 ─────────────────────── */}
+          <button
+            onClick={() => setShowPbrPanel(true)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
+            style={{ background: "linear-gradient(135deg,#FAF5FF,#F5F3FF)", border: "1px solid #C4B5FD" }}
+          >
+            <span style={{ fontSize: 22 }}>🎨</span>
+            <div className="flex flex-col flex-1 min-w-0">
+              <div className="text-[11px] font-bold" style={{ color: "#5B21B6" }}>GLB → PBR 贴图</div>
+              <div className="text-[9px]" style={{ color: "#7C3AED" }}>已有 GLB + 原图 → 生成法线/粗糙/金属度</div>
+            </div>
+            <span style={{ color: "#A78BFA", fontSize: 14 }}>›</span>
+          </button>
+
+          {/* ── 单零件生成入口 ────────────────────────────── */}
           <button
             onClick={() => setShow3dGen(true)}
             className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
@@ -372,34 +445,60 @@ export function YardPlanLibrary() {
             <span style={{ fontSize: 22 }}>🤖</span>
             <div className="flex flex-col flex-1 min-w-0">
               <div className="text-[11px] font-bold" style={{ color: "#4338CA" }}>AI 生成单个零件</div>
-              <div className="text-[9px]" style={{ color: "#6366F1" }}>选部位 → TripoSR → GLB → 拖入场景</div>
+              <div className="text-[9px]" style={{ color: "#6366F1" }}>选部位 → SF3D → GLB → 拖入场景</div>
             </div>
             <span style={{ color: "#818CF8", fontSize: 14 }}>›</span>
           </button>
 
-          {/* Overlay: 整图→完整3D→拆解 (Trellis pipeline) */}
+          {/* Overlays */}
           {showVillaDecompose && (
-            <div style={{
-              position: "fixed", inset: 0, zIndex: 9999,
-              background: "rgba(0,0,0,0.50)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-              onClick={(e) => { if (e.target === e.currentTarget) setShowVillaDecompose(false); }}
-            >
+            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)",
+              display:"flex", alignItems:"center", justifyContent:"center" }}
+              onClick={e => { if (e.target === e.currentTarget) setShowVillaDecompose(false); }}>
               <VillaTo3D onClose={() => setShowVillaDecompose(false)} />
             </div>
           )}
-
-          {/* Overlay: 单零件 */}
+          {showVillaDecompose2 && (
+            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.55)",
+              display:"flex", alignItems:"center", justifyContent:"center" }}
+              onClick={e => { if (e.target === e.currentTarget) setShowVillaDecompose2(false); }}>
+              <VillaTo3D
+                apiPath="/api/trellis2"
+                version="v2"
+                onClose={() => setShowVillaDecompose2(false)}
+              />
+            </div>
+          )}
+          {showSf3dQuick && (
+            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)",
+              display:"flex", alignItems:"center", justifyContent:"center" }}
+              onClick={e => { if (e.target === e.currentTarget) setShowSf3dQuick(false); }}>
+              <VillaTo3D
+                apiPath="/api/image-to-3d"
+                version="sf3d"
+                onClose={() => setShowSf3dQuick(false)}
+              />
+            </div>
+          )}
+          {showVillaTo3D && (
+            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)",
+              display:"flex", alignItems:"center", justifyContent:"center" }}
+              onClick={e => { if (e.target === e.currentTarget) setShowVillaTo3D(false); }}>
+              <VillaTo3D onClose={() => setShowVillaTo3D(false)} />
+            </div>
+          )}
           {show3dGen && (
-            <div style={{
-              position: "fixed", inset: 0, zIndex: 9999,
-              background: "rgba(0,0,0,0.45)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-              onClick={(e) => { if (e.target === e.currentTarget) setShow3dGen(false); }}
-            >
+            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.45)",
+              display:"flex", alignItems:"center", justifyContent:"center" }}
+              onClick={e => { if (e.target === e.currentTarget) setShow3dGen(false); }}>
               <Image3dGenerator onClose={() => setShow3dGen(false)} />
+            </div>
+          )}
+          {showPbrPanel && (
+            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)",
+              display:"flex", alignItems:"center", justifyContent:"center" }}
+              onClick={e => { if (e.target === e.currentTarget) setShowPbrPanel(false); }}>
+              <GlbPbrPanel onClose={() => setShowPbrPanel(false)} />
             </div>
           )}
 
@@ -498,6 +597,7 @@ function useHouseRooms() {
 // reference when no items exist — otherwise `?? []` allocates a new array
 // per call and triggers React's "getSnapshot should be cached" loop.
 const EMPTY_YARD_ITEMS: YardItem[] = [];
+const EMPTY_YARD_PATHS: NonNullable<import("@/lib/types").YardPlan["paths"]> = [];
 
 // ─── Selection coordination (right panel reads, canvas writes) ─────
 // Module-scope mini-store so YardPlan (canvas) and YardPlanInspector
@@ -521,9 +621,12 @@ export function useSharedSelectedYardId() {
 export default function YardPlan() {
   const activeFloor = useDesignerStore(s => s.activeFloor);
   const yardItems   = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const yardPaths   = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.paths ?? EMPTY_YARD_PATHS);
   const addYardItem = useDesignerStore(s => s.addYardItem);
   const removeYardItem = useDesignerStore(s => s.removeYardItem);
   const updateYardItem = useDesignerStore(s => s.updateYardItem);
+  const addYardPath    = useDesignerStore(s => s.addYardPath);
+  const removeYardPath = useDesignerStore(s => s.removeYardPath);
   const { rooms: houseRooms, bbox: footprint } = useHouseRooms();
   // Outdoor smart-suggestions: evaluated whenever items / footprint change
   const violations = useMemo(() => evaluateYardPlan(yardItems, footprint), [yardItems, footprint]);
@@ -554,6 +657,19 @@ export default function YardPlan() {
     setSharedSelectedId(id);
   };
   const [drag, setDrag] = useState<{ id: string; offsetX: number; offsetZ: number } | null>(null);
+
+  // ── Draw modes (fence / path) ──
+  const [drawMode, setDrawMode] = useState<"select" | "fence" | "path">("select");
+  const [fenceDraw, setFenceDraw] = useState<{
+    startPx: [number, number];
+    startCm: [number, number];
+  } | null>(null);
+  const [fencePreviewEnd, setFencePreviewEnd] = useState<[number, number] | null>(null);
+
+  // Path draw: accumulate polyline vertices (click-by-click), double-click to commit
+  const [pathPts, setPathPts] = useState<Array<[number, number]>>([]);   // cm world coords
+  const [pathPreview, setPathPreview] = useState<[number, number] | null>(null);
+  const [pathWidthCm, setPathWidthCm] = useState(80);  // default 80cm wide path
   const [zoomLevel, setZoomLevel] = useState(1.0);
   // Guard so DnD-drop doesn't double-fire as a click-deselect
   const justDroppedRef = useRef(false);
@@ -658,9 +774,24 @@ export default function YardPlan() {
     };
   }, [drag, updateYardItem, houseWm, houseDm]);
 
-  // Keyboard: Delete key removes selected item
+  // Keyboard: Delete key removes selected item, ESC exits draw mode
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") {
+        if (drawMode === "fence") {
+          setDrawMode("select"); setFenceDraw(null); setFencePreviewEnd(null);
+        } else if (drawMode === "path") {
+          setDrawMode("select"); setPathPts([]); setPathPreview(null);
+        }
+        return;
+      }
+      // Backspace removes last path vertex while drawing
+      if (ev.key === "Backspace" && drawMode === "path") {
+        const t = ev.target as HTMLElement;
+        if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+        setPathPts(pts => pts.slice(0, -1));
+        return;
+      }
       if (!selectedId) return;
       if (ev.key === "Delete" || ev.key === "Backspace") {
         const t = ev.target as HTMLElement;
@@ -671,7 +802,7 @@ export default function YardPlan() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedId, removeYardItem]);
+  }, [selectedId, removeYardItem, drawMode]);
 
   const houseW = Math.round((footprint.maxX - footprint.minX) / 100 * 10) / 10;
   const houseD = Math.round((footprint.maxZ - footprint.minZ) / 100 * 10) / 10;
@@ -704,8 +835,52 @@ export default function YardPlan() {
             +
           </button>
         </div>
+        {/* Fence draw mode toggle */}
+        <button
+          onClick={() => {
+            setDrawMode(m => m === "fence" ? "select" : "fence");
+            setFenceDraw(null); setFencePreviewEnd(null);
+            setPathPts([]); setPathPreview(null);
+          }}
+          className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0 transition-all"
+          style={drawMode === "fence"
+            ? { background: "rgba(168,132,90,0.30)", color: "#D4A86A", border: "1px solid rgba(168,132,90,0.6)" }
+            : { background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.12)" }
+          }>
+          🔧 围栏
+        </button>
+        {/* Path draw mode toggle */}
+        <button
+          onClick={() => {
+            setDrawMode(m => m === "path" ? "select" : "path");
+            setPathPts([]); setPathPreview(null);
+            setFenceDraw(null); setFencePreviewEnd(null);
+          }}
+          className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0 transition-all"
+          style={drawMode === "path"
+            ? { background: "rgba(59,130,246,0.25)", color: "#60A5FA", border: "1px solid rgba(59,130,246,0.5)" }
+            : { background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.12)" }
+          }>
+          🛤 路径
+        </button>
+        {/* Path width selector — only shown in path mode */}
+        {drawMode === "path" && (
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-[10px] text-blue-400">宽</span>
+            {[60, 80, 120, 180].map(w => (
+              <button key={w}
+                onClick={() => setPathWidthCm(w)}
+                className="px-1.5 h-6 text-[10px] font-bold rounded transition-all"
+                style={pathWidthCm === w
+                  ? { background: "rgba(59,130,246,0.4)", color: "#93C5FD" }
+                  : { background: "rgba(255,255,255,0.06)", color: "#6B7280" }}>
+                {w}
+              </button>
+            ))}
+          </div>
+        )}
         {/* Right: contextual actions when item selected */}
-        {selectedItem && (
+        {selectedItem && drawMode === "select" && (
           <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => updateYardItem(selectedItem.id, { rot: (selectedItem.rot ?? 0) + Math.PI / 2 })}
@@ -861,14 +1036,86 @@ export default function YardPlan() {
           ref={svgRef}
           viewBox={`${vbOrigin} ${vbOrigin} ${vbSize} ${vbSize}`}
           width="100%"
-          style={{ maxWidth: 720, display: "block", background: "transparent" }}
+          style={{ maxWidth: 720, display: "block", background: "transparent", cursor: (drawMode === "fence" || drawMode === "path") ? "crosshair" : "default" }}
           onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
           onDrop={handleDrop}
           onWheel={handleWheel}
           onClick={(e) => {
             if (justDroppedRef.current) return;
+            // Path mode: each click adds a vertex; double-click commits
+            if (drawMode === "path") {
+              e.preventDefault();
+              const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+              setPathPts(pts => [...pts, [Math.round(x / 25) * 25, Math.round(z / 25) * 25] as [number, number]]);
+              return;
+            }
             // Click on empty SVG → deselect
             if (e.target === svgRef.current) setSelectedId(null);
+          }}
+          onDoubleClick={(e) => {
+            if (drawMode === "path" && pathPts.length >= 2) {
+              e.preventDefault();
+              addYardPath({
+                id: `path-${Date.now()}`,
+                points: pathPts,
+                widthCm: pathWidthCm,
+                material: "stone",
+              });
+              setPathPts([]);
+              setPathPreview(null);
+            }
+          }}
+          onMouseDown={(e) => {
+            if (drawMode !== "fence") return;
+            e.preventDefault();
+            const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+            const svg = svgRef.current;
+            if (!svg) return;
+            const rect = svg.getBoundingClientRect();
+            const px = vbOrigin + ((e.clientX - rect.left) / rect.width) * vbSize;
+            const pz = vbOrigin + ((e.clientY - rect.top) / rect.height) * vbSize;
+            setFenceDraw({ startPx: [px, pz], startCm: [x, z] });
+            setFencePreviewEnd([x, z]);
+          }}
+          onMouseMove={(e) => {
+            if (drawMode === "fence" && fenceDraw) {
+              const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+              setFencePreviewEnd([x, z]);
+            }
+            if (drawMode === "path") {
+              const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+              setPathPreview([Math.round(x / 25) * 25, Math.round(z / 25) * 25]);
+            }
+          }}
+          onMouseUp={(e) => {
+            if (drawMode !== "fence" || !fenceDraw) return;
+            const { x: endX, z: endZ } = svgPtToWorld(e.clientX, e.clientY);
+            const [startX, startZ] = fenceDraw.startCm;
+            const dx = endX - startX;
+            const dz = endZ - startZ;
+            const lengthM = Math.sqrt(dx * dx + dz * dz) / 100;
+            if (lengthM >= 0.3) {
+              const angle = Math.atan2(dz, dx);
+              const midX = (startX + endX) / 2;
+              const midZ = (startZ + endZ) / 2;
+              addYardItem({
+                id: `fence-${Date.now()}`,
+                type: "prefab",
+                prefabKind: "fence_segment",
+                x: Math.round(midX),
+                z: Math.round(midZ),
+                rot: angle + Math.PI / 2,
+                params: { lengthM: Math.max(0.5, lengthM), heightM: 1.8 },
+              });
+            }
+            setFenceDraw(null);
+            setFencePreviewEnd(null);
+          }}
+          onMouseLeave={() => {
+            if (drawMode === "fence" && fenceDraw) {
+              setFenceDraw(null); setFencePreviewEnd(null);
+            }
+            if (drawMode === "path") setPathPreview(null);
           }}
         >
           {/* Drafting grid — DARK theme, faint white lines */}
@@ -1141,6 +1388,114 @@ export default function YardPlan() {
               DRAG ELEMENTS FROM LIBRARY →
             </text>
           )}
+
+          {/* ── Rendered yard paths (walkways) ── */}
+          {yardPaths.map(path => {
+            if (path.points.length < 2) return null;
+            const pts = path.points.map(([x, z]) => {
+              const px = SVG_PX / 2 + x / CM_PER_PX;
+              const pz = SVG_PX / 2 + z / CM_PER_PX;
+              return `${px},${pz}`;
+            }).join(" ");
+            const strokeW = Math.max(1, path.widthCm / CM_PER_PX);
+            return (
+              <g key={path.id} style={{ pointerEvents: "none" }}>
+                {/* Path body */}
+                <polyline points={pts} fill="none"
+                  stroke="rgba(180,160,120,0.60)" strokeWidth={strokeW}
+                  strokeLinecap="round" strokeLinejoin="round" />
+                {/* Path edge dashes */}
+                <polyline points={pts} fill="none"
+                  stroke="rgba(200,180,140,0.35)" strokeWidth={strokeW + 1}
+                  strokeLinecap="round" strokeLinejoin="round"
+                  strokeDasharray="4 6" />
+                {/* Delete handle on first segment midpoint */}
+                {(() => {
+                  const [ax, az] = path.points[0];
+                  const [bx, bz] = path.points[1];
+                  const mx = SVG_PX / 2 + (ax + bx) / 2 / CM_PER_PX;
+                  const mz = SVG_PX / 2 + (az + bz) / 2 / CM_PER_PX;
+                  return (
+                    <circle cx={mx} cy={mz} r={6} fill="rgba(239,68,68,0.7)" stroke="white" strokeWidth={1}
+                      style={{ pointerEvents: "all", cursor: "pointer" }}
+                      onClick={() => removeYardPath(path.id)} />
+                  );
+                })()}
+              </g>
+            );
+          })}
+
+          {/* Path draw rubber-band preview */}
+          {drawMode === "path" && (() => {
+            const allPts = pathPreview ? [...pathPts, pathPreview] : pathPts;
+            if (allPts.length < 1) return null;
+            const pts = allPts.map(([x, z]) => {
+              const px = SVG_PX / 2 + x / CM_PER_PX;
+              const pz = SVG_PX / 2 + z / CM_PER_PX;
+              return `${px},${pz}`;
+            }).join(" ");
+            const strokeW = Math.max(1, pathWidthCm / CM_PER_PX);
+            return (
+              <g style={{ pointerEvents: "none" }}>
+                <polyline points={pts} fill="none"
+                  stroke="rgba(59,130,246,0.5)" strokeWidth={strokeW}
+                  strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points={pts} fill="none"
+                  stroke="#60A5FA" strokeWidth={1.5}
+                  strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6 4" />
+                {pathPts.map(([x, z], i) => {
+                  const px = SVG_PX / 2 + x / CM_PER_PX;
+                  const pz = SVG_PX / 2 + z / CM_PER_PX;
+                  return <circle key={i} cx={px} cy={pz} r={4} fill="#60A5FA" stroke="white" strokeWidth={1.5} />;
+                })}
+                {pathPreview && (
+                  <circle
+                    cx={SVG_PX / 2 + pathPreview[0] / CM_PER_PX}
+                    cy={SVG_PX / 2 + pathPreview[1] / CM_PER_PX}
+                    r={3} fill="white" stroke="#60A5FA" strokeWidth={1.5} />
+                )}
+                <text x={SVG_PX / 2} y={SVG_PX - 20} textAnchor="middle"
+                  fontSize={9} fill="#60A5FA" fontFamily="ui-monospace, Menlo, monospace">
+                  点击添加节点 · 双击结束 · 退格撤销最后一点 · ESC 取消 ({pathPts.length} 点)
+                </text>
+              </g>
+            );
+          })()}
+
+          {/* Fence rubber-band preview line */}
+          {drawMode === "fence" && fenceDraw && fencePreviewEnd && (() => {
+            const [sx, sz] = fenceDraw.startPx;
+            const ex = SVG_PX / 2 + fencePreviewEnd[0] / CM_PER_PX;
+            const ez = SVG_PX / 2 + fencePreviewEnd[1] / CM_PER_PX;
+            const dx = fencePreviewEnd[0] - fenceDraw.startCm[0];
+            const dz = fencePreviewEnd[1] - fenceDraw.startCm[1];
+            const lenM = (Math.sqrt(dx * dx + dz * dz) / 100).toFixed(1);
+            return (
+              <g style={{ pointerEvents: "none" }}>
+                <line
+                  x1={sx} y1={sz} x2={ex} y2={ez}
+                  stroke="#A8845A" strokeWidth={2}
+                  strokeDasharray="6 3"
+                />
+                <circle cx={sx} cy={sz} r={4} fill="#A8845A" />
+                <circle cx={ex} cy={ez} r={4} fill="#A8845A" />
+                <text x={(sx + ex) / 2} y={(sz + ez) / 2 - 6}
+                  textAnchor="middle" fontSize={9}
+                  fill="#A8845A" fontFamily="ui-monospace, Menlo, monospace">
+                  {lenM} m
+                </text>
+              </g>
+            );
+          })()}
+
+          {/* Fence draw mode hint */}
+          {drawMode === "fence" && !fenceDraw && (
+            <text x={SVG_PX / 2} y={SVG_PX - 20} textAnchor="middle"
+              fontSize={9} fill="#A8845A" fontFamily="ui-monospace, Menlo, monospace"
+              style={{ pointerEvents: "none" }}>
+              点击拖拽绘制围栏 — 按 ESC 退出
+            </text>
+          )}
         </svg>
       </div>
 
@@ -1154,6 +1509,22 @@ export default function YardPlan() {
         <span className="ml-auto">SHIFT = free move</span>
       </div>
     </div>
+  );
+}
+
+// Small "go to exterior settings" button used inside YardPlanInspector header.
+// Avoids importing useDesignerStore at the top level of a sub-component.
+function YardPlanNavToExterior() {
+  const setViewMode = useDesignerStore(s => s.setViewMode);
+  return (
+    <button
+      onClick={() => setViewMode("exterior")}
+      className="text-[9px] px-2 py-0.5 rounded-full shrink-0"
+      style={{ background: "#EEF2FF", color: "#4F46E5" }}
+      title="切换到外观设置面板"
+    >
+      外观设置 →
+    </button>
   );
 }
 
@@ -1282,8 +1653,11 @@ export function YardPlanInspector() {
     const recommendedV = violations.filter(v => v.severity === "recommended");
     return (
       <aside className="h-full flex flex-col bg-white" style={{ borderLeft: "1px solid #E5E7EB" }}>
-        <div className="px-4 py-3 text-[10px] font-semibold tracking-widest text-gray-500" style={{ borderBottom: "1px solid #E5E7EB", letterSpacing: "0.12em" }}>
-          {locale === "en" ? `SMART SUGGESTIONS${violations.length > 0 ? ` (${violations.length})` : ""}` : `智能建议${violations.length > 0 ? `（${violations.length}）` : ""}`}
+        <div className="px-3 py-2.5 flex items-center gap-2" style={{ borderBottom: "1px solid #E5E7EB" }}>
+          <div className="flex-1 text-[10px] font-semibold tracking-widest text-gray-500" style={{ letterSpacing: "0.12em" }}>
+            {locale === "en" ? `SMART SUGGESTIONS${violations.length > 0 ? ` (${violations.length})` : ""}` : `智能建议${violations.length > 0 ? `（${violations.length}）` : ""}`}
+          </div>
+          <YardPlanNavToExterior />
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {violations.length === 0 ? (

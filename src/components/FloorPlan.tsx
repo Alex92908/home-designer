@@ -478,8 +478,9 @@ export default function FloorPlan() {
   // ── Use store roomDimensions (respects global plan edits) ──
   const roomDimensions  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
   const roomShape          = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomShapes?.[activeRoom]);
-  const setRoomShape       = useDesignerStore((s) => s.setRoomShape);
+  const setRoomShape         = useDesignerStore((s) => s.setRoomShape);
   const updateRoomShapePoint = useDesignerStore((s) => s.updateRoomShapePoint);
+  const insertRoomShapePoint = useDesignerStore((s) => s.insertRoomShapePoint);
   const deleteRoomShapePoint = useDesignerStore((s) => s.deleteRoomShapePoint);
   const rectifyRoomShape     = useDesignerStore((s) => s.rectifyRoomShape);
   const def             = ROOM_DEFS[activeRoom];
@@ -987,22 +988,34 @@ export default function FloorPlan() {
               {editWindows ? t.fpEditDone : t.fpEditStart}
             </button>
 
-            {/* Shape edit toggle — only meaningful for non-rect rooms */}
-            {roomShape && roomShape.preset !== "rect" && (
-              <>
-                <button
-                  onClick={() => setEditShape(v => !v)}
-                  className="text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all"
-                  style={
-                    editShape
-                      ? { background: "#F59E0B", color: "#fff" }
-                      : { color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", background: "transparent" }
+            {/* Shape edit toggle — always available; auto-initialises polygon
+                on first entry for plain rectangular rooms. */}
+            <>
+              <button
+                onClick={() => {
+                  if (!editShape) {
+                    // Entering edit mode: ensure polygon points exist.
+                    // If room is currently a plain rect (no shape override or
+                    // preset==="rect"), generate the 4-corner polygon now.
+                    if (!roomShape || roomShape.preset === "rect") {
+                      pushLayoutHistory();
+                      setRoomShape(activeRoom, "rect"); // creates editable rect points
+                    }
                   }
-                  title={t.fpShapeEditTitle}
-                >
-                  {editShape ? t.fpShapeEditDone : t.fpShapeEditStart}
-                </button>
-                {editShape && (
+                  setEditShape(v => !v);
+                }}
+                className="text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all"
+                style={
+                  editShape
+                    ? { background: "#F59E0B", color: "#fff" }
+                    : { color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", background: "transparent" }
+                }
+                title={t.fpShapeEditTitle}
+              >
+                {editShape ? t.fpShapeEditDone : t.fpShapeEditStart}
+              </button>
+              {editShape && (
+                <>
                   <button
                     onClick={() => { pushLayoutHistory(); rectifyRoomShape(activeRoom); }}
                     className="text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all"
@@ -1011,9 +1024,30 @@ export default function FloorPlan() {
                   >
                     {t.fpShapeStraightenBtn}
                   </button>
-                )}
-              </>
-            )}
+                  <button
+                    onClick={() => {
+                      pushLayoutHistory();
+                      // Reset to plain rectangle (clears all shape overrides)
+                      useDesignerStore.setState(s => {
+                        const fp = { ...s.floorPlans[s.activeFloor] };
+                        const nextShapes = { ...(fp.roomShapes ?? {}) };
+                        delete nextShapes[activeRoom];
+                        fp.roomShapes = nextShapes;
+                        const plans = [...s.floorPlans];
+                        plans[s.activeFloor] = fp;
+                        return { floorPlans: plans };
+                      });
+                      setEditShape(false);
+                    }}
+                    className="text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all"
+                    style={{ border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.5)", background: "transparent" }}
+                    title="重置为矩形"
+                  >
+                    重置
+                  </button>
+                </>
+              )}
+            </>
           </div>
         </div>
         {/* Row 2: window/door sub-controls (only when editing) */}
@@ -1151,10 +1185,10 @@ export default function FloorPlan() {
           <rect width={svgW} height={svgH}
             fill={roomState.materials.floor?.color ?? def.defaultFloorColor} opacity={0.18} />
 
-          {/* Walls — rect outline for rect rooms, polygon outline for L型/凸字型.
-              For non-rect shapes we also draw a dark overlay over the bounding
-              box so the "bitten-out" region reads as outside-the-room. */}
-          {roomShape && roomShape.preset !== "rect" ? (
+          {/* Walls — rect outline for plain rect rooms, polygon outline when a
+              shape override exists (any preset, including "rect" which now
+              carries editable polygon points when editShape is active). */}
+          {roomShape ? (
             <>
               {/* Light tint for out-of-polygon region: even-odd fill with the
                   polygon as a hole. Kept semi-transparent so the floor / grid
@@ -1182,53 +1216,68 @@ export default function FloorPlan() {
               {/* Vertex handles — only visible in edit-shape mode. Drag to
                   reshape. Snapping to 10cm (≈ 1px at scale≈0.1) keeps walls
                   aligned. Switches preset to "custom" on first edit. */}
-              {editShape && roomShape.points.map(([vx, vz], i) => (
-                <circle
-                  key={`vh-${i}`}
-                  cx={vx * scale} cy={vz * scale} r={9}
-                  fill="#F59E0B" stroke="#fff" strokeWidth={2}
-                  style={{ cursor: "grab" }}
-                  onContextMenu={(e) => {
-                    // Right-click to delete vertex (keep ≥3)
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (roomShape.points.length <= 3) return;
-                    pushLayoutHistory();
-                    deleteRoomShapePoint(activeRoom, i);
-                  }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    // Alt+click (or Shift+click) deletes the vertex
-                    if (e.altKey || e.shiftKey) {
-                      if (roomShape.points.length <= 3) return;
-                      pushLayoutHistory();
-                      deleteRoomShapePoint(activeRoom, i);
-                      return;
-                    }
-                    const svg = svgRef.current;
-                    if (!svg) return;
-                    pushLayoutHistory();
-                    svg.setPointerCapture(e.pointerId);
-                    const onMove = (ev: PointerEvent) => {
-                      const rect = svg.getBoundingClientRect();
-                      const px = (ev.clientX - rect.left) / zoomLevel;
-                      const pz = (ev.clientY - rect.top)  / zoomLevel;
-                      // Convert SVG-units back to cm, snap to 10 cm.
-                      const nx = Math.round((px / scale) / 10) * 10;
-                      const nz = Math.round((pz / scale) / 10) * 10;
-                      const cx = Math.max(0, Math.min(roomW, nx));
-                      const cz = Math.max(0, Math.min(roomD, nz));
-                      updateRoomShapePoint(activeRoom, i, cx, cz);
-                    };
-                    const onUp = () => {
-                      window.removeEventListener("pointermove", onMove);
-                      window.removeEventListener("pointerup", onUp);
-                    };
-                    window.addEventListener("pointermove", onMove);
-                    window.addEventListener("pointerup", onUp, { once: true });
-                  }}
-                />
-              ))}
+              {editShape && roomShape.points.map(([vx, vz], i) => {
+                // Edge midpoint handle between vertex i and i+1
+                const next = (i + 1) % roomShape.points.length;
+                const [nx2, nz2] = roomShape.points[next];
+                const midX = (vx + nx2) / 2;
+                const midZ = (vz + nz2) / 2;
+                return (
+                  <g key={`vh-${i}`}>
+                    {/* ── Vertex handle (amber circle) ── */}
+                    <circle
+                      cx={vx * scale} cy={vz * scale} r={9}
+                      fill="#F59E0B" stroke="#fff" strokeWidth={2}
+                      style={{ cursor: "grab" }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (roomShape.points.length <= 3) return;
+                        pushLayoutHistory();
+                        deleteRoomShapePoint(activeRoom, i);
+                      }}
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        if (e.altKey || e.shiftKey) {
+                          if (roomShape.points.length <= 3) return;
+                          pushLayoutHistory();
+                          deleteRoomShapePoint(activeRoom, i);
+                          return;
+                        }
+                        const svg = svgRef.current;
+                        if (!svg) return;
+                        pushLayoutHistory();
+                        svg.setPointerCapture(e.pointerId);
+                        const onMove = (ev: PointerEvent) => {
+                          const r = svg.getBoundingClientRect();
+                          const px = (ev.clientX - r.left) / zoomLevel;
+                          const pz = (ev.clientY - r.top)  / zoomLevel;
+                          const cx2 = Math.max(0, Math.min(roomW, Math.round((px / scale) / 10) * 10));
+                          const cz2 = Math.max(0, Math.min(roomD, Math.round((pz / scale) / 10) * 10));
+                          updateRoomShapePoint(activeRoom, i, cx2, cz2);
+                        };
+                        const onUp = () => { window.removeEventListener("pointermove", onMove); };
+                        window.addEventListener("pointermove", onMove);
+                        window.addEventListener("pointerup", onUp, { once: true });
+                      }}
+                    />
+                    {/* ── Edge midpoint handle (small diamond) — click to insert vertex ── */}
+                    <polygon
+                      points={`${midX*scale},${midZ*scale - 7} ${midX*scale+7},${midZ*scale} ${midX*scale},${midZ*scale+7} ${midX*scale-7},${midZ*scale}`}
+                      fill="#fff" stroke="#F59E0B" strokeWidth={1.5}
+                      style={{ cursor: "copy", opacity: 0.85 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        pushLayoutHistory();
+                        insertRoomShapePoint(activeRoom, i,
+                          Math.round(midX / 10) * 10,
+                          Math.round(midZ / 10) * 10,
+                        );
+                      }}
+                    />
+                  </g>
+                );
+              })}
             </>
           ) : (
             <>

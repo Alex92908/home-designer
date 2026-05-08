@@ -16,14 +16,16 @@
 import { useMemo, useRef, useState, useEffect, Suspense } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Environment, Html } from "@react-three/drei";
+import { OrbitControls, Html } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
 import { PlacedItemMesh } from "./RoomCanvas";
 import { useT } from "@/lib/i18n";
+import type { RoofStyle } from "@/lib/types";
 
-const CM = 0.01; // cm → m
+const CM = 0.01;       // cm → m
+const FLOOR_H = 2.8;  // metres per storey (matches HouseCanvas)
 
 /** One room: floor + 4 walls (no ceiling) + furniture + label. */
 /** Lightweight per-room light for global view. Reads the same
@@ -62,12 +64,193 @@ function GlobalRoomLight({ room, H, color }: { room: RoomType; H: number; color:
   );
 }
 
+/**
+ * StaircaseGeom — 3D staircase that honours the floor's stairConfig.
+ * Supports three shapes: straight, L-shaped, spiral.
+ */
+function StaircaseGeom({
+  W, D, color,
+  shape = "straight",
+  stairRotation = 0,
+}: {
+  W: number; D: number; color: string;
+  shape?: "straight" | "L-shaped" | "spiral";
+  stairRotation?: 0 | 90 | 180 | 270;
+}) {
+  const treadT  = 0.06;
+  const railH   = FLOOR_H * 0.95;
+  const railMat = <meshStandardMaterial color="#A0A0A8" roughness={0.5} />;
+  const handrailMat = <meshStandardMaterial color="#707078" metalness={0.3} roughness={0.4} />;
+
+  // Convert stairRotation degrees → radians for the Y axis
+  const rotY = (stairRotation * Math.PI) / 180;
+
+  // ── Straight run ───────────────────────────────────────────
+  function StraightRun({ runW, runD, baseY = 0, height = FLOOR_H }: {
+    runW: number; runD: number; baseY?: number; height?: number;
+  }) {
+    const STEPS = 12;
+    const treadDepth = runD / STEPS;
+    const riserH     = height / STEPS;
+    const treadW2    = runW - 0.08;
+    const treads = useMemo(() => Array.from({ length: STEPS }, (_, i) => ({
+      y: baseY + i * riserH + treadT / 2,
+      z: i * treadDepth + treadDepth / 2 - runD / 2,
+    })), [runD, riserH, treadDepth, baseY, height]); // eslint-disable-line react-hooks/exhaustive-deps
+    const rH = height * 0.95;
+    return (
+      <group>
+        {treads.map((t, i) => (
+          <mesh key={i} position={[0, t.y, t.z]} castShadow receiveShadow>
+            <boxGeometry args={[treadW2, treadT, treadDepth + 0.01]} />
+            <meshStandardMaterial color={color} roughness={0.7} />
+          </mesh>
+        ))}
+        {([-1, 1] as const).map(side => (
+          <group key={side}>
+            <mesh position={[side * (treadW2 / 2 + 0.04), baseY + rH / 2, 0]} castShadow>
+              <boxGeometry args={[0.08, rH, runD * 0.98]} />
+              {railMat}
+            </mesh>
+            <mesh position={[side * (treadW2 / 2 + 0.04), baseY + rH + 0.04, 0]}>
+              <boxGeometry args={[0.06, 0.06, runD * 0.98]} />
+              {handrailMat}
+            </mesh>
+          </group>
+        ))}
+      </group>
+    );
+  }
+
+  // ── L-shaped: two half-height runs at 90° ──────────────────
+  function LShapedRun() {
+    const halfH   = FLOOR_H / 2;
+    const run1D   = D * 0.55;   // first run depth
+    const run1W   = W;
+    const run2D   = W * 0.55;   // second run depth (perpendicular)
+    const run2W   = D;
+    // Landing platform
+    const landW   = W;
+    const landD   = D * 0.45;
+    const landY   = halfH;
+    const LSTEPS  = 6;
+    const tD1     = run1D / LSTEPS;
+    const rH1     = halfH / LSTEPS;
+    const tD2     = run2D / LSTEPS;
+    const rH2     = halfH / LSTEPS;
+    const tW1     = run1W - 0.08;
+    const tW2     = run2W - 0.08;
+    const treadMat = <meshStandardMaterial color={color} roughness={0.7} />;
+    const landMat  = <meshStandardMaterial color={color} roughness={0.8} />;
+    // Run 1: bottom half, going along Z (front to back)
+    const run1Treads = useMemo(() => Array.from({ length: LSTEPS }, (_, i) => ({
+      y: i * rH1 + treadT / 2,
+      z: i * tD1 + tD1 / 2 - run1D / 2,
+    })), []); // eslint-disable-line react-hooks/exhaustive-deps
+    // Run 2: top half, going along X (left to right), starting from back
+    const run2Treads = useMemo(() => Array.from({ length: LSTEPS }, (_, i) => ({
+      x: i * tD2 + tD2 / 2 - run2D / 2,
+      y: landY + i * rH2 + treadT / 2,
+    })), []); // eslint-disable-line react-hooks/exhaustive-deps
+    return (
+      <group>
+        {/* Run 1 — going in Z direction */}
+        {run1Treads.map((t, i) => (
+          <mesh key={`r1-${i}`} position={[0, t.y, t.z]} castShadow receiveShadow>
+            <boxGeometry args={[tW1, treadT, tD1 + 0.01]} />
+            {treadMat}
+          </mesh>
+        ))}
+        {/* Landing platform */}
+        <mesh position={[0, landY - treadT / 2, D / 2 - landD / 2]} receiveShadow>
+          <boxGeometry args={[landW - 0.1, treadT, landD]} />
+          {landMat}
+        </mesh>
+        {/* Run 2 — going in X direction */}
+        {run2Treads.map((t, i) => (
+          <mesh key={`r2-${i}`} position={[t.x, t.y, D / 2 - landD / 2]} castShadow receiveShadow>
+            <boxGeometry args={[tD2 + 0.01, treadT, tW2]} />
+            {treadMat}
+          </mesh>
+        ))}
+        {/* Side rails */}
+        <mesh position={[-(tW1 / 2 + 0.04), FLOOR_H * 0.95 / 2, 0]} castShadow>
+          <boxGeometry args={[0.08, FLOOR_H * 0.95, run1D * 0.95]} />
+          {railMat}
+        </mesh>
+        <mesh position={[tW1 / 2 + 0.04, FLOOR_H * 0.95 / 2, 0]} castShadow>
+          <boxGeometry args={[0.08, FLOOR_H * 0.95, run1D * 0.95]} />
+          {railMat}
+        </mesh>
+      </group>
+    );
+  }
+
+  // ── Spiral ─────────────────────────────────────────────────
+  function SpiralRun() {
+    const r     = Math.min(W, D) / 2 - 0.1;
+    const poleR = Math.max(0.1, r * 0.15);
+    const STEPS = 14;
+    const dTheta = (Math.PI * 1.5) / STEPS;  // 270° sweep
+    const treadLen = r - poleR - 0.05;
+
+    const spiralTreads = useMemo(() => Array.from({ length: STEPS }, (_, i) => {
+      const theta = -Math.PI / 2 + i * dTheta;
+      const riseY = (i / STEPS) * FLOOR_H;
+      const midR  = poleR + treadLen / 2;
+      return {
+        x: Math.cos(theta) * midR,
+        z: Math.sin(theta) * midR,
+        y: riseY + treadT / 2,
+        rot: theta,
+      };
+    }), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return (
+      <group>
+        {/* Center pole */}
+        <mesh position={[0, FLOOR_H / 2, 0]} castShadow>
+          <cylinderGeometry args={[poleR, poleR, FLOOR_H, 12]} />
+          <meshStandardMaterial color="#8A8890" roughness={0.6} />
+        </mesh>
+        {/* Tread slabs */}
+        {spiralTreads.map((t, i) => (
+          <mesh key={i} position={[t.x, t.y, t.z]} rotation={[0, -t.rot, 0]} castShadow receiveShadow>
+            <boxGeometry args={[treadLen, treadT, Math.min(W, D) * 0.22]} />
+            <meshStandardMaterial color={color} roughness={0.7} />
+          </mesh>
+        ))}
+        {/* Outer curved rail (approximated with thin boxes) */}
+        {spiralTreads.map((t, i) => {
+          const outerX = Math.cos(t.rot) * (r - 0.04);
+          const outerZ = Math.sin(t.rot) * (r - 0.04);
+          return (
+            <mesh key={`rail-${i}`} position={[outerX, t.y + railH * 0.5, outerZ]}>
+              <boxGeometry args={[0.06, 0.15, 0.06]} />
+              {railMat}
+            </mesh>
+          );
+        })}
+      </group>
+    );
+  }
+
+  return (
+    <group rotation={[0, rotY, 0]}>
+      {shape === "straight"  && <StraightRun runW={W} runD={D} />}
+      {shape === "L-shaped"  && <LShapedRun />}
+      {shape === "spiral"    && <SpiralRun />}
+    </group>
+  );
+}
+
 function RoomGroup({
-  room, originX, originZ, onPick, isActive, isHover, setHover, showFurniture,
+  room, originX, originZ, onPick, isActive, isHover, setHover, showFurniture, floorIndex,
 }: {
   room: RoomType;
   originX: number;   // meters, world coord of back-left corner
   originZ: number;
+  floorIndex: number;
   onPick: () => void;
   isActive: boolean;
   isHover: boolean;
@@ -81,6 +264,9 @@ function RoomGroup({
   const dims = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions[room]);
   const state = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]);
   const shape = useDesignerStore(s => s.floorPlans[s.activeFloor].roomShapes?.[room]);
+  // Read stairConfig from THIS floor (not always activeFloor) so each floor's
+  // staircase reflects that floor's shape/rotation setting.
+  const stairCfg = useDesignerStore(s => s.floorPlans[floorIndex]?.stairConfig);
   const label = useDesignerStore(s => s.customRoomMeta[room]?.name) ?? t.roomNames[room] ?? def.name;
   const icon = useDesignerStore(s => s.customRoomMeta[room]?.icon) ?? def.icon;
 
@@ -88,7 +274,7 @@ function RoomGroup({
   const D = dims.depth * CM;
   const H = def.height * CM;
   const WALL = 0.08; // 8cm thick visual wall
-  const WALL_H = H * 0.55; // shorter walls so we can peek in from above
+  const WALL_H = H * 0.40; // shorter walls so we can peek in from above
 
   const floorColor = state.materials.floor?.color ?? def.defaultFloorColor;
   const wallColor  = state.materials.wall?.color  ?? def.defaultWallColor;
@@ -139,28 +325,38 @@ function RoomGroup({
   // Center of the room's bounding box, in world coords
   const cx = originX + W / 2;
   const cz = originZ + D / 2;
+  // Vertical offset: each storey sits at floorIndex * FLOOR_H
+  const yBase = floorIndex * FLOOR_H;
+  const isStair = room === "stair";
 
   return (
-    <group position={[cx, 0, cz]}
+    <group position={[cx, yBase, cz]}
       onPointerOver={(e) => { e.stopPropagation(); setHover(room); }}
       onPointerOut={() => setHover(null)}
       onClick={(e) => { e.stopPropagation(); onPick(); }}
     >
-      {/* Floor (polygon-aware). Uses +π/2 X rotation so shape.y maps to
-          world.z matching wall positions — -π/2 flips Z and pokes floor
-          out past walls on L 型/凸字型 rooms. DoubleSide so back-face
-          culling doesn't hide it once we rotate the other way. */}
+      {/* Floor slab (polygon-aware). DoubleSide so back-face culling doesn't
+          hide it when viewed from slightly below in dollhouse mode. */}
       <mesh position={[0, 0.001, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
         <shapeGeometry args={[floorShape]} />
         <meshStandardMaterial
-          color={isActive ? "#BAE6FD" : (isHover ? "#DBEAFE" : floorColor)}
+          color={isStair ? "#C8C8D0" : (isActive ? "#BAE6FD" : (isHover ? "#DBEAFE" : floorColor))}
           roughness={0.9}
           side={THREE.DoubleSide}
         />
       </mesh>
 
-      {/* Walls — one box per polygon edge (4 for rect, 6 for L型, 8 for 凸字) */}
-      {wallBoxes.map((w, i) => (
+      {/* Stair room: draw actual staircase instead of walls */}
+      {isStair && (
+        <StaircaseGeom
+          W={W} D={D} color={wallColor}
+          shape={stairCfg?.shape ?? "straight"}
+          stairRotation={stairCfg?.rotation ?? 0}
+        />
+      )}
+
+      {/* Walls — skip for stair rooms (StaircaseGeom provides the geometry) */}
+      {!isStair && wallBoxes.map((w, i) => (
         <mesh key={i} position={[w.cx, WALL_H / 2, w.cz]} rotation={[0, w.angle, 0]} castShadow receiveShadow>
           <boxGeometry args={[w.len, WALL_H, WALL]} />
           <meshStandardMaterial color={wallColor} roughness={0.85} />
@@ -172,7 +368,8 @@ function RoomGroup({
           完的家具立即出现而不被慢的那件拖住 —— 上一版外层 Suspense 只
           要有 1 件没加载好，整间房全部 gone。
           showFurniture=false 时直接跳过（用于首帧只渲染激活房间家具）。*/}
-      {showFurniture && state.placedItems.map(p => (
+      {/* Furniture — skip for stair rooms */}
+      {showFurniture && !isStair && state.placedItems.map(p => (
         <PlacedItemMesh key={p.instanceId} placed={p} def={def} roomW={W} roomD={D} room={room} />
       ))}
 
@@ -181,16 +378,25 @@ function RoomGroup({
           past MAX_TEXTURE_IMAGE_UNITS=16 once multiplied across all rooms
           (WebGL shader compile fails). The single-room 3D view still uses
           the full fixture; global view gets this simplified stand-in. */}
-      <GlobalRoomLight
-        room={room}
-        H={WALL_H}
-        color={state.materials.light?.color ?? "#FFE8A0"}
-      />
+      {!isStair && (
+        <GlobalRoomLight
+          room={room}
+          H={WALL_H}
+          color={state.materials.light?.color ?? "#FFE8A0"}
+        />
+      )}
 
-      {/* Floating label */}
-      <Html position={[0, WALL_H + 0.15, 0]} center distanceFactor={8} style={{ pointerEvents: "none" }}>
+      {/* Floating label — stair shows floor transition arrow */}
+      <Html
+        position={[0, (isStair ? FLOOR_H * 0.6 : WALL_H + 0.15), 0]}
+        center
+        distanceFactor={8}
+        style={{ pointerEvents: "none" }}
+      >
         <div style={{
-          background: isActive ? "#1D4ED8" : "rgba(31,41,55,0.82)",
+          background: isStair
+            ? "rgba(99,102,241,0.9)"
+            : isActive ? "#1D4ED8" : "rgba(31,41,55,0.82)",
           color: "white",
           padding: "2px 8px",
           borderRadius: 6,
@@ -200,26 +406,230 @@ function RoomGroup({
           fontFamily: "system-ui, sans-serif",
           boxShadow: isHover ? "0 0 0 2px #60A5FA" : undefined,
         }}>
-          {icon} {label}
+          {isStair ? `🪜 ${label} ${floorIndex + 1}F→${floorIndex + 2}F` : `${icon} ${label}`}
         </div>
       </Html>
     </group>
   );
 }
 
-function Scene() {
-  const enabledRooms = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
-  const layout       = useDesignerStore(s => s.floorPlans[s.activeFloor].roomLayout);
-  const dims         = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
-  const activeRoom   = useDesignerStore(s => s.activeRoom);
-  const setActiveRoom = useDesignerStore(s => s.setActiveRoom);
-  const setViewMode  = useDesignerStore(s => s.setViewMode);
+// ─── Auto stair connector ────────────────────────────────────────────────────
+/**
+ * Renders a staircase between two adjacent floors even when the user hasn't
+ * manually added a "stair" room.  Placed at the front-right corner of the
+ * building footprint so it's always visible in the default camera angle.
+ *
+ * Props are in metres (already converted from cm).
+ */
+
+function AutoStairConnector({
+  footW, footD, fromY, posX, posZ, onDragStart,
+}: { footW: number; footD: number; fromY: number; posX: number; posZ: number; onDragStart: () => void }) {
+  const sw    = Math.min(footW * 0.18, 2.8);  // stair module width
+  const sd    = Math.min(footD * 0.30, 4.2);  // stair module run depth
+  const STEPS = 11;
+  const treadD = sd / STEPS;
+  const riserH = FLOOR_H / STEPS;
+  const treadT = 0.055;
+  const groupX = posX;
+  const groupZ = posZ;
+
+  const treads = useMemo(() => (
+    Array.from({ length: STEPS }, (_, i) => ({
+      // y: rising with each step, z: advancing along the run
+      y: fromY + i * riserH + treadT / 2,
+      z: -sd / 2 + i * treadD + treadD / 2,
+    }))
+  ), [fromY, sd, riserH, treadD]);
+
+  return (
+    <group position={[groupX, 0, groupZ]}
+      onPointerDown={e => { e.stopPropagation(); onDragStart(); }}
+    >
+      {/* Treads */}
+      {treads.map((t, i) => (
+        <mesh key={i} position={[0, t.y, t.z]} castShadow receiveShadow>
+          <boxGeometry args={[sw - 0.08, treadT, treadD + 0.01]} />
+          <meshStandardMaterial color="#D8D0C8" roughness={0.65} />
+        </mesh>
+      ))}
+      {/* Side walls spanning the full stair run */}
+      {([-1, 1] as const).map(side => (
+        <mesh key={side}
+          position={[side * (sw / 2 - 0.04), fromY + FLOOR_H / 2, 0]}
+          castShadow
+        >
+          <boxGeometry args={[0.07, FLOOR_H + 0.1, sd]} />
+          <meshStandardMaterial color="#B8B0A8" roughness={0.7} />
+        </mesh>
+      ))}
+      {/* Handrail top bar */}
+      {([-1, 1] as const).map(side => (
+        <mesh key={side}
+          position={[side * (sw / 2 - 0.04), fromY + FLOOR_H + 0.06, 0]}
+        >
+          <boxGeometry args={[0.05, 0.05, sd]} />
+          <meshStandardMaterial color="#888880" metalness={0.3} roughness={0.4} />
+        </mesh>
+      ))}
+      {/* Floor-slab opening indicator (dark rectangle at top of stair) */}
+      <mesh position={[0, fromY + FLOOR_H + 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[sw, sd]} />
+        <meshStandardMaterial color="#1A1A2A" opacity={0.4} transparent side={THREE.DoubleSide} />
+      </mesh>
+      {/* Drag grab surface — invisible but shows cursor */}
+      <mesh position={[0, fromY + 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[sw, sd]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
+    </group>
+  );
+}
+
+// ─── Roof ────────────────────────────────────────────────────────────────────
+/**
+ * Simple roof mesh placed on top of the building (topY = floorCount * FLOOR_H).
+ * All coordinates are in metres, centred on the footprint.
+ */
+function GlobalRoof({
+  footW, footD, topY, roofStyle, roofColor,
+}: {
+  footW: number; footD: number; topY: number;
+  roofStyle: RoofStyle; roofColor: string;
+}) {
+  const overhang = 0.5; // eave overhang in metres
+  const W = footW + overhang * 2;
+  const D = footD + overhang * 2;
+  const ridgeH = Math.min(footW, footD) * 0.35;  // how tall the pitch is
+
+  if (roofStyle === "flat") {
+    return (
+      <mesh position={[0, topY + 0.1, 0]} receiveShadow castShadow>
+        <boxGeometry args={[W, 0.2, D]} />
+        <meshStandardMaterial color={roofColor} roughness={0.8} />
+      </mesh>
+    );
+  }
+
+  if (roofStyle === "gable") {
+    // Two sloping panels + two gable triangles
+    const slope = Math.sqrt((footW / 2) ** 2 + ridgeH ** 2);
+    const ang   = Math.atan2(ridgeH, footW / 2);
+    return (
+      <group position={[0, topY, 0]}>
+        {/* Left panel */}
+        <mesh position={[-footW / 4, ridgeH / 2, 0]}
+          rotation={[0, 0, ang]} castShadow>
+          <boxGeometry args={[slope, 0.12, D]} />
+          <meshStandardMaterial color={roofColor} roughness={0.75} />
+        </mesh>
+        {/* Right panel */}
+        <mesh position={[footW / 4, ridgeH / 2, 0]}
+          rotation={[0, 0, -ang]} castShadow>
+          <boxGeometry args={[slope, 0.12, D]} />
+          <meshStandardMaterial color={roofColor} roughness={0.75} />
+        </mesh>
+        {/* Ridge beam */}
+        <mesh position={[0, ridgeH + 0.06, 0]}>
+          <boxGeometry args={[0.2, 0.12, D + 0.2]} />
+          <meshStandardMaterial color={roofColor} roughness={0.7} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (roofStyle === "hip") {
+    // Pyramid — 4 triangular faces via ConeGeometry (good enough approximation)
+    return (
+      <group position={[0, topY, 0]}>
+        <mesh position={[0, ridgeH / 2, 0]} castShadow>
+          <coneGeometry args={[Math.max(footW, footD) * 0.72, ridgeH, 4, 1]} />
+          <meshStandardMaterial color={roofColor} roughness={0.75} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (roofStyle === "chinese") {
+    // Upturned gable: main ridge + curved eaves suggested via two extra panels
+    const slope = Math.sqrt((footW / 2) ** 2 + ridgeH ** 2);
+    const ang   = Math.atan2(ridgeH, footW / 2);
+    return (
+      <group position={[0, topY, 0]}>
+        <mesh position={[-footW / 4, ridgeH / 2, 0]} rotation={[0, 0, ang + 0.08]} castShadow>
+          <boxGeometry args={[slope, 0.14, D]} />
+          <meshStandardMaterial color={roofColor} roughness={0.6} />
+        </mesh>
+        <mesh position={[footW / 4, ridgeH / 2, 0]} rotation={[0, 0, -ang - 0.08]} castShadow>
+          <boxGeometry args={[slope, 0.14, D]} />
+          <meshStandardMaterial color={roofColor} roughness={0.6} />
+        </mesh>
+        {/* Upturned corner accentuators */}
+        {([[- footW / 2, 0, -D / 2],[footW / 2, 0, -D / 2],[-footW / 2, 0, D / 2],[footW / 2, 0, D / 2]] as [number,number,number][]).map(([x,,z], i) => (
+          <mesh key={i} position={[x, 0.3, z]} rotation={[0, i * Math.PI / 2, 0.3]} castShadow>
+            <boxGeometry args={[0.6, 0.12, 0.6]} />
+            <meshStandardMaterial color={roofColor} roughness={0.5} />
+          </mesh>
+        ))}
+        {/* Ridge */}
+        <mesh position={[0, ridgeH + 0.06, 0]}>
+          <boxGeometry args={[0.25, 0.18, D * 0.7]} />
+          <meshStandardMaterial color={roofColor} roughness={0.6} />
+        </mesh>
+      </group>
+    );
+  }
+
+  // mansard / fallback — boxy top + small gable on top
+  return (
+    <group position={[0, topY, 0]}>
+      <mesh position={[0, ridgeH * 0.35, 0]} castShadow>
+        <boxGeometry args={[W * 0.9, ridgeH * 0.7, D * 0.9]} />
+        <meshStandardMaterial color={roofColor} roughness={0.8} />
+      </mesh>
+      <mesh position={[0, ridgeH * 0.7 + 0.25, 0]} castShadow>
+        <boxGeometry args={[W * 0.5, 0.5, D * 0.5]} />
+        <meshStandardMaterial color={roofColor} roughness={0.75} />
+      </mesh>
+    </group>
+  );
+}
+
+
+interface SceneProps {
+  floorVisible: boolean[];
+  showRoof: boolean;
+  showStairs: boolean;
+  stairPos: { x: number; z: number } | null;
+  setStairPos: (p: { x: number; z: number }) => void;
+}
+
+function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: SceneProps) {
+  // Read ALL floors so we can stack them in the dollhouse view.
+  const floorPlans     = useDesignerStore(s => s.floorPlans);
+  const exterior       = useDesignerStore(s => s.exterior);
+  const exteriorFloors = exterior.floors;
+  // Use activeFloor to drive the layout/dims baseline (keeps bounding-box
+  // centring consistent when the user switches floors).
+  const activeFloor    = useDesignerStore(s => s.activeFloor);
+  const layout         = useDesignerStore(s => s.floorPlans[activeFloor].roomLayout);
+  const dims           = useDesignerStore(s => s.floorPlans[activeFloor].roomDimensions);
+  const activeRoom      = useDesignerStore(s => s.activeRoom);
+  const setActiveRoom   = useDesignerStore(s => s.setActiveRoom);
+  const setViewMode     = useDesignerStore(s => s.setViewMode);
+  const setActiveFloor  = useDesignerStore(s => s.setActiveFloor);
+  const updateYardItem  = useDesignerStore(s => s.updateYardItem);
+
+  // Drag state
+  const draggingYardId = useRef<string | null>(null);
+  const draggingStair = useRef(false);
+
   // 同 FloorPlanAll 一致：首次点击房间仅激活高亮，400ms 内再点同一间
   // 才真正进入效果图，避免转场/旋转时误触。
-  const lastPickRef = useRef<{ room: RoomType; t: number } | null>(null);
+  const lastPickRef = useRef<{ room: RoomType; floorIdx: number; t: number } | null>(null);
   const DOUBLE_MS = 400;
 
-  const [hover, setHover] = useState<RoomType | null>(null);
+  const [hover, setHover] = useState<string | null>(null); // `${floorIdx}:${room}`
   // 渲染优先级：首帧只给激活房间装家具，其它房间先出墙体 + 地板，
   // 1 秒后（或 idle）再加载家具 —— 避免并发下载 10+ 个 GLTF 把
   // 主线程卡成 PPT。
@@ -229,89 +639,215 @@ function Scene() {
     return () => clearTimeout(t);
   }, []);
 
-  // Compute bounding box of all rooms, then shift so the cluster is
-  // centered on the world origin.
-  const visible = ALL_POSSIBLE_ROOMS.filter(r => enabledRooms.includes(r));
-  const { cx, cz, extent } = useMemo(() => {
-    if (!visible.length) return { cx: 0, cz: 0, extent: 10 };
+  // Bounding box from the active floor's layout (all floors share the
+  // same footprint, so this centres the stacked view correctly).
+  const enabledBase = floorPlans[activeFloor]?.enabledRooms ?? [];
+  const visibleBase = ALL_POSSIBLE_ROOMS.filter(r => enabledBase.includes(r));
+  const { cx, cz, extent, footW, footD } = useMemo(() => {
+    if (!visibleBase.length) return { cx: 0, cz: 0, extent: 10, footW: 10, footD: 10 };
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const r of visible) {
+    for (const r of visibleBase) {
       const l = layout[r]; const d = dims[r];
       minX = Math.min(minX, l.x);
       minY = Math.min(minY, l.y);
       maxX = Math.max(maxX, l.x + d.width);
       maxY = Math.max(maxY, l.y + d.depth);
     }
+    const fW = (maxX - minX) * CM;
+    const fD = (maxY - minY) * CM;
     return {
       cx: ((minX + maxX) / 2) * CM,
       cz: ((minY + maxY) / 2) * CM,
-      extent: Math.max(maxX - minX, maxY - minY) * CM,
+      extent: Math.max(fW, fD),
+      footW: fW,
+      footD: fD,
     };
-  }, [visible, layout, dims]);
+  }, [visibleBase, layout, dims]);
+
+  // Number of actual floor data entries we have (capped at exterior.floors).
+  const floorCount = Math.min(floorPlans.length, exteriorFloors);
 
   return (
     <>
-      <color attach="background" args={["#E5E7EB"]} />
-      {/* Lighting */}
-      <ambientLight intensity={0.6} />
-      <hemisphereLight args={["#E0E7FF", "#A1A1AA", 0.5]} />
+      <color attach="background" args={["#D4D8E0"]} />
+      {/* Lighting — keep it simple; no HDR to avoid blowout */}
+      <ambientLight intensity={1.2} />
+      <hemisphereLight args={["#FFFFFF", "#C8D0E0", 0.8]} />
       <directionalLight
-        position={[extent * 0.6, extent * 1.2, extent * 0.6]}
-        intensity={1.1}
+        position={[extent * 0.7, extent * 1.5 + floorCount * FLOOR_H, extent * 0.7]}
+        intensity={1.4}
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
         shadow-camera-left={-extent}
         shadow-camera-right={extent}
-        shadow-camera-top={extent}
+        shadow-camera-top={extent + floorCount * FLOOR_H}
         shadow-camera-bottom={-extent}
       />
+      {/* Fill light from opposite side */}
+      <directionalLight
+        position={[-extent * 0.5, extent * 0.8, -extent * 0.3]}
+        intensity={0.6}
+        color="#D0D8F8"
+      />
+      {/* Top-down fill so room floors are always lit */}
+      <directionalLight position={[0, 20, 0]} intensity={0.5} />
 
-      {/* Ground plane (context for shadows) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-        <planeGeometry args={[extent * 3, extent * 3]} />
-        <meshStandardMaterial color="#D4D4D8" roughness={1} />
+      {/* Ground plane — also serves as the drag surface for yard items */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, -0.01, 0]}
+        receiveShadow
+        onPointerMove={e => {
+          if (draggingYardId.current) {
+            e.stopPropagation();
+            const snap = 25;
+            const nx = Math.round(e.point.x / CM / snap) * snap;
+            const nz = Math.round(e.point.z / CM / snap) * snap;
+            updateYardItem(draggingYardId.current, { x: nx, z: nz });
+          } else if (draggingStair.current) {
+            e.stopPropagation();
+            const nx = Math.round(e.point.x * 4) / 4; // 25cm snap in metres
+            const nz = Math.round(e.point.z * 4) / 4;
+            setStairPos({ x: nx, z: nz });
+          }
+        }}
+        onPointerUp={() => { draggingYardId.current = null; draggingStair.current = false; }}
+        onPointerLeave={() => { draggingYardId.current = null; draggingStair.current = false; }}
+      >
+        <planeGeometry args={[extent * 6, extent * 6]} />
+        <meshStandardMaterial color="#C8CACF" roughness={1} />
       </mesh>
 
-      {/* Rooms — shifted so cluster centroid is at origin */}
+      {/* All floors stacked — shifted so centroid is at world origin */}
       <group position={[-cx, 0, -cz]}>
-        {visible.map(r => (
-          <RoomGroup
-            key={r} room={r}
-            originX={layout[r].x * CM}
-            originZ={layout[r].y * CM}
-            isActive={r === activeRoom}
-            isHover={r === hover}
-            setHover={setHover}
-            showFurniture={r === activeRoom || renderAllFurniture}
-            onPick={() => {
-              const now = Date.now();
-              const last = lastPickRef.current;
-              if (last && last.room === r && now - last.t < DOUBLE_MS) {
-                setActiveRoom(r);
-                setViewMode("3d");
-                lastPickRef.current = null;
-              } else {
-                setActiveRoom(r);
-                lastPickRef.current = { room: r, t: now };
-              }
-            }}
-          />
-        ))}
+        {Array.from({ length: floorCount }, (_, fi) => {
+          const fp = floorPlans[fi];
+          if (!fp) return null;
+          if (floorVisible[fi] === false) return null;
+          const fpLayout = fp.roomLayout;
+          const fpDims   = fp.roomDimensions;
+          const enabled  = fp.enabledRooms ?? [];
+          const visible  = ALL_POSSIBLE_ROOMS.filter(r => enabled.includes(r));
+          const yOff     = fi * FLOOR_H;
+
+          return (
+            <group key={fi}>
+              {/* Inter-floor concrete slab (except at ground level) */}
+              {fi > 0 && (
+                <mesh
+                  position={[cx, yOff - 0.06, cz]}
+                  receiveShadow
+                >
+                  <boxGeometry args={[extent * 1.05, 0.12, extent * 1.05]} />
+                  <meshStandardMaterial color="#B0B0B8" roughness={0.9} />
+                </mesh>
+              )}
+
+              {/* Floor label badge */}
+              <Html
+                position={[cx - extent * 0.48, yOff + 0.3, cz - extent * 0.48]}
+                style={{ pointerEvents: "none" }}
+              >
+                <div style={{
+                  background: fi === activeFloor ? "#1D4ED8" : "rgba(60,60,80,0.78)",
+                  color: "#fff",
+                  padding: "1px 7px",
+                  borderRadius: 4,
+                  fontSize: 10,
+                  fontWeight: 800,
+                  fontFamily: "system-ui,sans-serif",
+                  letterSpacing: "0.04em",
+                }}>
+                  {fi + 1}F
+                </div>
+              </Html>
+
+              {/* Rooms on this floor */}
+              {visible.map(r => {
+                const lpos = fpLayout[r];
+                const ldim = fpDims[r];
+                if (!lpos || !ldim) return null;
+                const key = `${fi}:${r}`;
+                return (
+                  <RoomGroup
+                    key={key}
+                    room={r}
+                    floorIndex={fi}
+                    originX={lpos.x * CM}
+                    originZ={lpos.y * CM}
+                    isActive={r === activeRoom && fi === activeFloor}
+                    isHover={hover === key}
+                    setHover={hov => setHover(hov ? key : null)}
+                    showFurniture={(r === activeRoom && fi === activeFloor) || renderAllFurniture}
+                    onPick={() => {
+                      const now = Date.now();
+                      const last = lastPickRef.current;
+                      if (last && last.room === r && last.floorIdx === fi && now - last.t < DOUBLE_MS) {
+                        setActiveFloor(fi);
+                        setActiveRoom(r);
+                        setViewMode("3d");
+                        lastPickRef.current = null;
+                      } else {
+                        setActiveFloor(fi);
+                        setActiveRoom(r);
+                        lastPickRef.current = { room: r, floorIdx: fi, t: now };
+                      }
+                    }}
+                  />
+                );
+              })}
+            </group>
+          );
+        })}
       </group>
 
-      <Suspense fallback={null}>
-        <Environment files="/hdr/potsdamer_platz_1k.hdr" background={false} />
-      </Suspense>
+      {/* ── Auto stair connectors ── */}
+      {/* Only render AutoStairConnector for a transition when NEITHER adjacent
+          floor already has a manual "stair" room — avoids double geometry. */}
+      {showStairs && floorCount > 1 && Array.from({ length: floorCount - 1 }, (_, fi) => {
+        // Only show stair if at least one of the two adjacent floors is visible
+        const lo = floorVisible[fi] !== false;
+        const hi = floorVisible[fi + 1] !== false;
+        if (!lo && !hi) return null;
+        // Skip if the lower or upper floor already has a manual stair room
+        const loHasStair = floorPlans[fi]?.enabledRooms?.includes("stair") ?? false;
+        const hiHasStair = floorPlans[fi + 1]?.enabledRooms?.includes("stair") ?? false;
+        if (loHasStair || hiHasStair) return null;
+        return (
+          <AutoStairConnector
+            key={fi}
+            footW={footW}
+            footD={footD}
+            fromY={fi * FLOOR_H}
+            posX={stairPos?.x ?? (footW / 2 - Math.min(footW * 0.18, 2.8) / 2 - 0.15)}
+            posZ={stairPos?.z ?? (footD / 2 - Math.min(footD * 0.30, 4.2) / 2 - 0.15)}
+            onDragStart={() => { draggingStair.current = true; }}
+          />
+        );
+      })}
+
+      {/* ── Roof ── */}
+      {showRoof && (
+        <GlobalRoof
+          footW={footW}
+          footD={footD}
+          topY={floorCount * FLOOR_H}
+          roofStyle={exterior.roofStyle}
+          roofColor={exterior.roofColor}
+        />
+      )}
+
     </>
   );
 }
 
-/** Camera controller: fit view to room cluster on first render. */
+/** Camera controller: fit view to multi-floor cluster on first render. */
 function CameraFit() {
-  const enabledRooms = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
-  const layout       = useDesignerStore(s => s.floorPlans[s.activeFloor].roomLayout);
-  const dims         = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
+  const enabledRooms   = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
+  const layout         = useDesignerStore(s => s.floorPlans[s.activeFloor].roomLayout);
+  const dims           = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
+  const exteriorFloors = useDesignerStore(s => s.exterior.floors);
   const controls = useRef<React.ComponentRef<typeof OrbitControls>>(null);
   const fittedRef = useRef(false);
 
@@ -329,10 +865,17 @@ function CameraFit() {
     }
     const extent = Math.max(maxX - minX, maxY - minY) * CM;
     if (!isFinite(extent) || extent <= 0) return;
-    camera.position.set(extent * 0.9, extent * 1.1, extent * 0.9);
-    camera.lookAt(0, 0, 0);
+    // For multi-floor views: back the camera up vertically too
+    const totalH = exteriorFloors * FLOOR_H;
+    const lookH  = totalH * 0.5;
+    const d3     = Math.max(extent, totalH) * 1.1;
+    camera.position.set(d3 * 0.85, lookH + d3 * 0.65, d3 * 0.85);
+    camera.lookAt(0, lookH, 0);
     camera.updateProjectionMatrix();
-    controls.current?.update();
+    if (controls.current) {
+      controls.current.target.set(0, lookH, 0);
+      controls.current.update();
+    }
     fittedRef.current = true;
   });
 
@@ -343,15 +886,35 @@ function CameraFit() {
       dampingFactor={0.08}
       minDistance={2}
       maxDistance={80}
-      maxPolarAngle={Math.PI / 2.05}
+      maxPolarAngle={Math.PI / 1.85}
       target={[0, 0, 0]}
     />
   );
 }
 
 export default function GlobalCanvas() {
-  const enabledRooms = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
+  const enabledRooms   = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
+  const exteriorFloors = useDesignerStore(s => s.exterior.floors);
   const t = useT();
+
+  // ── Visibility / layout state ─────────────────────────────
+  const [floorVisible, setFloorVisible] = useState<boolean[]>(() =>
+    Array(Math.max(exteriorFloors, 1)).fill(true),
+  );
+  // Sync array length when floor count changes
+  useEffect(() => {
+    setFloorVisible(prev => {
+      if (prev.length === exteriorFloors) return prev;
+      return Array.from({ length: exteriorFloors }, (_, i) => prev[i] ?? true);
+    });
+  }, [exteriorFloors]);
+
+  const [showRoof,   setShowRoof]   = useState(false); // default hidden so dollhouse interior is visible
+  const [showStairs, setShowStairs] = useState(true);
+  const [stairPos, setStairPos] = useState<{ x: number; z: number } | null>(null);
+
+  const toggleFloor = (fi: number) =>
+    setFloorVisible(prev => prev.map((v, i) => i === fi ? !v : v));
 
   if (enabledRooms.length === 0) {
     return (
@@ -363,25 +926,100 @@ export default function GlobalCanvas() {
     );
   }
 
+  const initY = 14 + exteriorFloors * FLOOR_H * 0.4;
+
   return (
     <div
       className="w-full h-full relative"
-      // 柔和中灰蓝：白墙有反差但不刺眼
-      style={{ background: "linear-gradient(180deg, #B8C0CC 0%, #929BA8 55%, #6E7684 100%)" }}
+      style={{ background: "linear-gradient(180deg, #C4CAD4 0%, #969EA8 55%, #6E7684 100%)" }}
     >
       <Canvas
         shadows
-        camera={{ position: [12, 14, 12], fov: 45 }}
+        camera={{ position: [12, initY, 12], fov: 45 }}
         gl={{ antialias: true, alpha: true }}
       >
-        <Scene />
+        <Scene
+          floorVisible={floorVisible}
+          showRoof={showRoof}
+          showStairs={showStairs}
+          stairPos={stairPos}
+          setStairPos={setStairPos}
+        />
         <CameraFit />
       </Canvas>
 
-      {/* Hint overlay */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-[11px] font-bold shadow"
+      {/* ── Hint bar ── */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold shadow pointer-events-none"
         style={{ background: "rgba(255,255,255,0.92)", color: "#374151" }}>
-        {t.global3dHint}
+        <span>{t.global3dHint}</span>
+      </div>
+
+      {/* ── Control panel (right side) ── */}
+      <div
+        className="absolute top-14 right-3 z-20 flex flex-col gap-1 select-none"
+        style={{
+          background: "rgba(255,255,255,0.92)",
+          backdropFilter: "blur(8px)",
+          border: "1px solid rgba(0,0,0,0.08)",
+          borderRadius: 14,
+          padding: "10px 8px",
+          minWidth: 96,
+          boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+        }}
+      >
+        {/* ── Floors ── */}
+        <div className="text-[9px] font-bold text-gray-400 tracking-widest mb-0.5 px-1">楼层</div>
+        {Array.from({ length: exteriorFloors }, (_, fi) => (
+          <button
+            key={fi}
+            onClick={() => toggleFloor(fi)}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-bold transition-all"
+            style={{
+              background: floorVisible[fi] !== false ? "#EFF6FF" : "#F3F4F6",
+              color:      floorVisible[fi] !== false ? "#1D4ED8" : "#9CA3AF",
+              border: `1px solid ${floorVisible[fi] !== false ? "#BFDBFE" : "#E5E7EB"}`,
+            }}
+          >
+            <span style={{ opacity: floorVisible[fi] !== false ? 1 : 0.4 }}>
+              {floorVisible[fi] !== false ? "●" : "○"}
+            </span>
+            {fi + 1}F
+          </button>
+        ))}
+
+        <div className="h-px bg-gray-200 my-1" />
+
+        {/* ── Roof ── */}
+        <button
+          onClick={() => setShowRoof(v => !v)}
+          className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-bold transition-all"
+          style={{
+            background: showRoof ? "#F0FDF4" : "#F3F4F6",
+            color:      showRoof ? "#15803D" : "#9CA3AF",
+            border: `1px solid ${showRoof ? "#BBF7D0" : "#E5E7EB"}`,
+          }}
+        >
+          <span>{showRoof ? "🏠" : "○"}</span> 屋顶
+        </button>
+
+        {/* ── Stairs ── */}
+        <button
+          onClick={() => setShowStairs(v => !v)}
+          className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-bold transition-all"
+          style={{
+            background: showStairs ? "#FFF7ED" : "#F3F4F6",
+            color:      showStairs ? "#C2410C" : "#9CA3AF",
+            border: `1px solid ${showStairs ? "#FED7AA" : "#E5E7EB"}`,
+          }}
+        >
+          <span>{showStairs ? "🪜" : "　"}</span> 楼梯
+        </button>
+
+        {showStairs && exteriorFloors > 1 && (
+          <div className="px-2 py-0.5 text-[9px] text-orange-400 leading-tight">
+            拖动楼梯可移位
+          </div>
+        )}
       </div>
     </div>
   );

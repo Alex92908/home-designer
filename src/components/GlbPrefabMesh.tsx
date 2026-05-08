@@ -23,9 +23,13 @@ import { useGLTF, Html } from "@react-three/drei";
 import * as THREE from "three";
 
 // ─── Colour applicator ────────────────────────────────────────────
-// Walks the cloned scene tree and overrides colour on every Mesh whose
-// material is MeshStandardMaterial (covers 99 % of TripoSR / SF3D output).
-// We clone() each material so we don't mutate shared instances.
+// Overrides the BASE colour tint only — ALL PBR texture maps are kept:
+//   map (albedo), normalMap, roughnessMap, metalnessMap, aoMap, emissiveMap
+//
+// THREE.js MeshStandardMaterial multiplies `color` × `map` texel, so
+// passing color=#ffffff leaves the albedo map completely unchanged, while
+// any other tint blends with it.  This means TripoAI / SF3D PBR maps
+// (roughness, normal, metalness) survive even when a tint is applied.
 function applyColorOverride(root: THREE.Object3D, hexColor: string) {
   const color = new THREE.Color(hexColor);
   root.traverse((child) => {
@@ -34,12 +38,9 @@ function applyColorOverride(root: THREE.Object3D, hexColor: string) {
     child.material = mats.map((m) => {
       if (!(m instanceof THREE.MeshStandardMaterial)) return m;
       const clone = m.clone();
-      clone.color = color;
+      clone.color.copy(color); // tint only — map/normalMap/roughnessMap etc. carried over by clone()
       return clone;
     });
-    if (!Array.isArray(child.material) && child.material.length === 1) {
-      child.material = child.material[0];
-    }
   });
 }
 

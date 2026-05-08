@@ -20,9 +20,11 @@ import YardPlan, { YardPlanLibrary, YardPlanInspector } from "@/components/YardP
 // import OnboardingOverlay from "@/components/OnboardingOverlay";  // TODO: enable when ready
 import AiRenderModal from "@/components/AiRenderModal";
 import ImageImportModal from "@/components/ImageImportModal";
+import CommandPalette from "@/components/CommandPalette";
 import { useDesignerStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { decodeShare } from "@/lib/share";
+import { decodeSnapshot } from "@/lib/shareUrl";
 
 function CanvasLoading({ bg, msgKey }: { bg: string; msgKey: "loading3dScene" | "loadingExteriorScene" | "global3dLoading" }) {
   const t = useT();
@@ -146,6 +148,7 @@ function PanelToggle({
 
 export default function Home() {
   const viewMode           = useDesignerStore((s) => s.viewMode);
+  const setViewMode        = useDesignerStore((s) => s.setViewMode);
   const loadFromShare      = useDesignerStore((s) => s.loadFromShare);
   const aiRenderRequested  = useDesignerStore((s) => s.aiRenderRequested);
   const clearAiRenderRequest = useDesignerStore((s) => s.clearAiRenderRequest);
@@ -191,28 +194,26 @@ export default function Home() {
     }
   }, [aiRenderRequested, clearAiRenderRequest]);
 
+  // Canonical view-mode groups
   const isAll      = viewMode === "all";
-  const isExterior = viewMode === "exterior";
-  const isGlobal3d = viewMode === "global3d";
   const isYard2d   = viewMode === "yard2d";
+  const isGlobal3d = viewMode === "global3d";
+  const isExterior = viewMode === "exterior" || isYard2d;
 
-  // Per-side panel routing. Each side picks the component that applies to
-  // the current view (or null if that side has no panel in this view).
-  // The room-sidebar (thin icon column) is its own separate left rail that
-  // shows only in room/2d views.
-  const showRoomSidebar = !isAll && !isExterior && !isGlobal3d && !isYard2d;
+  // Per-side panel routing.
+  const showRoomSidebar = !isAll && !isExterior && !isGlobal3d;
   const leftPanel = isAll
     ? <FloorPlanAllRoomPanel />
     : isYard2d ? <YardPlanLibrary />
-    : (!isExterior && !isGlobal3d) ? <LeftPanel /> : null;
-  const leftPanelWidth = isAll ? 224 : (isYard2d ? 240 : 256); // RoomPanel w-56
+    : (viewMode === "3d" || viewMode === "2d" || isGlobal3d) ? <LeftPanel />
+    : null;
+  const leftPanelWidth = isAll ? 224 : isYard2d ? 200 : 256;
   const rightPanel = isAll
     ? <RightPanelAll />
-    : isExterior ? <ExteriorPanel />
-    : isYard2d   ? <YardPlanInspector />
-    : isGlobal3d ? null
+    : isYard2d    ? <YardPlanInspector />
+    : isExterior  ? <ExteriorPanel />
     : <RightPanel />;
-  const rightPanelWidth = isExterior ? 256 : 288; // ExteriorPanel uses w-64
+  const rightPanelWidth = isExterior ? 256 : 288;
   const hasLeftPanel  = leftPanel  !== null;
   const hasRightPanel = rightPanel !== null;
 
@@ -241,6 +242,36 @@ export default function Home() {
       window.history.replaceState({}, "", url.toString());
     }
   }, [loadFromShare]);
+
+  // Load exterior-only view snapshot from ?loadView= (from /view page "在设计器中编辑" button)
+  const setExterior    = useDesignerStore(s => s.setExterior);
+  const setActiveFloor = useDesignerStore(s => s.setActiveFloor);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const encoded = params.get("loadView");
+    if (!encoded) return;
+    decodeSnapshot(encoded).then(data => {
+      setExterior(data.exterior);
+      setActiveFloor(0);
+      if (data.floors[0]?.yardPlan) {
+        useDesignerStore.setState(s => {
+          const plans = [...s.floorPlans];
+          plans[0] = {
+            ...plans[0],
+            yardPlan: data.floors[0].yardPlan,
+            enabledRooms: (data.floors[0].enabledRooms as never[]) ?? plans[0].enabledRooms,
+            roomLayout: (data.floors[0].roomLayout as never) ?? plans[0].roomLayout,
+            roomDimensions: (data.floors[0].roomDimensions as never) ?? plans[0].roomDimensions,
+          };
+          return { floorPlans: plans };
+        });
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.delete("loadView");
+      window.history.replaceState({}, "", url.toString());
+    }).catch(() => { /* ignore bad params */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Server render / pre-hydration: 只渲骨架（背景 + footer 占位）避免
   // zustand persist 水合后状态跳变触发 hydration mismatch。
@@ -282,12 +313,14 @@ export default function Home() {
             <PanelToggle side="right" open={rightOpen} onClick={() => setRightOpen(v => !v)} />
           )}
 
-          {viewMode === "3d"       && <RoomCanvas />}
-          {isExterior              && <HouseCanvas />}
-          {isAll                   && <FloorPlanAll />}
-          {isGlobal3d              && <GlobalCanvas />}
-          {isYard2d                && <YardPlan />}
-          {viewMode === "2d"       && <FloorPlan />}
+          {viewMode === "3d"  && <RoomCanvas />}
+          {viewMode === "2d"  && <FloorPlan />}
+          {isAll              && <FloorPlanAll />}
+          {isGlobal3d         && <GlobalCanvas />}
+          {isExterior         && (viewMode === "yard2d"
+            ? <YardPlan />
+            : <HouseCanvas />
+          )}
 
           {/* AI Render + Import floating buttons — visible in all canvas views */}
           <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2 items-end">
@@ -337,6 +370,8 @@ export default function Home() {
       <ShareModal />
       <ImageImportModal open={showImport}   onClose={() => setShowImport(false)} />
       <AiRenderModal    open={showAiRender} onClose={() => setShowAiRender(false)} />
+      {/* Command Palette — Cmd+K / Ctrl+K (borrowed from pascal editor) */}
+      <CommandPalette />
       {/* <OnboardingOverlay /> */}
       <footer className="h-6 bg-white border-t border-gray-100 flex items-center justify-center shrink-0">
         <span className="text-[10px] text-gray-400">{t.disclaimer}</span>

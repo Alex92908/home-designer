@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useMemo, useState, Component, ReactNode } from "react";
+import { useRef, useEffect, useMemo, useState, useCallback, Component, ReactNode } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { OrbitControls, Environment, useGLTF } from "@react-three/drei";
 import { EffectComposer, N8AO, Bloom, Vignette, SMAA } from "@react-three/postprocessing";
@@ -12,6 +12,7 @@ import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, E
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
 import { DetailedDecor } from "./DetailedDecor";
+import { FirstPersonControls, FirstPersonButton } from "./FirstPersonControls";
 import { getFloorTexture, getWallTexture, floorTileSize, wallTileSize } from "@/lib/textures";
 import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 
@@ -972,19 +973,14 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
     return (
       <group position={[xc, winY, -D / 2]}>
         {windowFrameJSX}
-        {/* Directional "sunlight" aimed INTO the room from outside */}
+        {/* Directional fill from window — studio Environment already handles
+            most of the interior IBL; this adds a subtle warm sun-ray effect
+            at low intensity so it reads as daylight without blowing out walls. */}
         <directionalLight
           position={[0, 0.3, -0.5]}
           target-position={[0, -1.5, 2]}
-          intensity={0.8}
+          intensity={0.35}
           color="#FFF2D0"
-          castShadow
-          shadow-mapSize={[1024, 1024]}
-          shadow-camera-left={-winLen}
-          shadow-camera-right={winLen}
-          shadow-camera-top={winH}
-          shadow-camera-bottom={-winH}
-          shadow-bias={-0.001}
         />
       </group>
     );
@@ -992,9 +988,6 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
 
   if (win.wall === "right") {
     const zc = winCenter - D / 2;
-    // Right-wall orientation: rotate the shared glTF/procedural frame by
-    // 90° around Y so its local X axis aligns with room Z. Emissive plane
-    // stays in its original orientation (aligned to the wall's inside face).
     return (
       <group position={[W / 2, winY, zc]}>
         <group rotation={[0, -Math.PI / 2, 0]}>
@@ -1003,15 +996,8 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
         <directionalLight
           position={[0.5, 0.3, 0]}
           target-position={[-2, -1.5, 0]}
-          intensity={0.8}
+          intensity={0.35}
           color="#FFF2D0"
-          castShadow
-          shadow-mapSize={[1024, 1024]}
-          shadow-camera-left={-winLen}
-          shadow-camera-right={winLen}
-          shadow-camera-top={winH}
-          shadow-camera-bottom={-winH}
-          shadow-bias={-0.001}
         />
       </group>
     );
@@ -1027,15 +1013,8 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
         <directionalLight
           position={[-0.5, 0.3, 0]}
           target-position={[2, -1.5, 0]}
-          intensity={0.8}
+          intensity={0.35}
           color="#FFF2D0"
-          castShadow
-          shadow-mapSize={[1024, 1024]}
-          shadow-camera-left={-winLen}
-          shadow-camera-right={winLen}
-          shadow-camera-top={winH}
-          shadow-camera-bottom={-winH}
-          shadow-bias={-0.001}
         />
       </group>
     );
@@ -3352,7 +3331,7 @@ function PolygonDoorPanel({
 
 // ─── Main Scene ────────────────────────────────────────────
 
-function Scene({ isIOS }: { isIOS: boolean }) {
+function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }) {
   const activeRoom    = useDesignerStore((s) => s.activeRoom);
   const roomState     = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom]);
   const roomWindows   = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows?.[activeRoom] ?? []);
@@ -3407,54 +3386,28 @@ function Scene({ isIOS }: { isIOS: boolean }) {
       <CameraAndCaptureSetup />
       <ExposureController />
 
-      {/* Environment — skip on iOS: PMREMGenerator.fromScene is broken on iPhone Metal
-          (three.js bug #25888). Compensate with stronger ambient + fill lights.
-          HDR served from /public/hdr to avoid the polyhaven CDN being
-          flaky in some networks. ErrorBoundary still wraps for safety. */}
-      {!isIOS && (
-        <EnvironmentFallback>
-          <Suspense fallback={null}>
-            <Environment files="/hdr/lebombo_1k.hdr" />
-          </Suspense>
-        </EnvironmentFallback>
-      )}
-
-      {/* Sky + ground bounce — hemisphere light gives a soft top-down
-          gradient (cool sky above, warm beige ground below) that lifts
-          shadowed wall faces without washing them out. Much gentler than
-          cranking ambient, keeps color separation between lit/shaded
-          surfaces. */}
-      <hemisphereLight args={["#BFD4E8", "#C8B088", isIOS ? 1.1 : 0.55]} />
-
-      {/* Main "sun" directional — slightly warm tint so sunlight reads as
-          natural daylight (ACES tonemapping darkens cool whites into
-          blues). Intensity dialed back from 1.6 → 1.2 to avoid
-          blown-out highlights with bloom. Shadow bias bumped to
-          reduce peter-panning on low-contrast materials. */}
+      {/* Interior lighting — NO Environment IBL (any HDR/preset blows out
+          white walls since they reflect everything). Keep it simple:
+            • One directional "sun" angled into the room from top-front-right
+              → provides directionality + a single shadow pass (1024 map)
+            • Soft fill from opposite side (no shadow, essentially free)
+            • Ambient at 0.38 stops pitch-black corners without washing out
+          Per-fixture pointLights (ceiling / pendant / floor lamps) add the
+          warm layers on top when the user has lights enabled. */}
       <directionalLight
-        position={[W * 0.5, H * 2.2, D * 0.8]}
-        intensity={1.2}
-        color="#FFF4E0"
+        position={[W * 0.5, H * 2.0, D * 0.7]}
+        intensity={0.85}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-W}
         shadow-camera-right={W}
         shadow-camera-top={D}
         shadow-camera-bottom={-D}
-        shadow-bias={-0.0008}
-        shadow-normalBias={0.04}
+        shadow-bias={-0.001}
       />
-      {/* Cool fill from the opposite side — bluish to balance the warm sun */}
-      <directionalLight
-        position={[-W * 0.8, H * 1.5, -D * 0.5]}
-        intensity={0.35}
-        color="#D8E4F4"
-      />
-      {/* Low ambient — the hemisphere light does most of the sky work now;
-          ambient just stops pure-black crevices. Extra-bright on iOS
-          because Environment IBL is disabled (Metal bug). */}
-      <ambientLight intensity={isIOS ? 1.4 : 0.3} />
-      {isIOS && <directionalLight position={[-3, 4, 3]} intensity={0.6} />}
+      <directionalLight position={[-W * 0.7, H * 1.2, -D * 0.4]} intensity={0.28} color="#D8E4F4" />
+      <ambientLight intensity={isIOS ? 0.9 : 0.38} />
+      {isIOS && <directionalLight position={[-3, 4, 3]} intensity={0.5} />}
 
       {/* Room geometry — polygon shell when roomShape is set (L型/凸字型),
           otherwise full-featured rectangle shell with doors/windows. */}
@@ -3533,7 +3486,7 @@ function Scene({ isIOS }: { isIOS: boolean }) {
           throws "Cannot read properties of null (reading 'alpha')" on the
           first render because its effect constructors try to read
           gl.getContextAttributes() before Canvas has finished init. */}
-      {!isIOS && <PostFX />}
+      {!isIOS && !firstPerson && <PostFX />}
     </>
   );
 }
@@ -4104,9 +4057,31 @@ function detectIOS(): boolean {
 
 export default function RoomCanvas() {
   const isIOS = detectIOS();
+  const [firstPerson, setFirstPerson] = useState(false);
+  const activeRoom     = useDesignerStore(s => s.activeRoom);
+  const roomDimensions = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
+
+  const exitFirstPerson = useCallback(() => setFirstPerson(false), []);
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full relative">
+      {/* First-person toggle button — hidden for now */}
+
+      {firstPerson && (
+        <div
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 rounded-full text-xs text-white/70"
+          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
+        >
+          <span>点击画面锁定鼠标</span>
+          <span>·</span>
+          <span>W/A/S/D 移动</span>
+          <span>·</span>
+          <span>Shift 加速</span>
+          <span>·</span>
+          <span>ESC 退出</span>
+        </div>
+      )}
+
       <ErrorBoundary>
         <Canvas
           gl={{
@@ -4134,16 +4109,26 @@ export default function RoomCanvas() {
             background: "linear-gradient(180deg, #B8C0CC 0%, #929BA8 55%, #6E7684 100%)",
           }}
         >
-          <OrbitControls
-            makeDefault
-            enablePan={true}
-            panSpeed={0.6}
-            minDistance={1.5}
-            maxDistance={18}
-            maxPolarAngle={Math.PI * 0.52}
-            target={[0, 0.6, 0]}
+          {!firstPerson && (
+            <OrbitControls
+              makeDefault
+              enablePan={true}
+              panSpeed={0.6}
+              minDistance={1.5}
+              maxDistance={18}
+              maxPolarAngle={Math.PI * 0.52}
+              target={[0, 0.6, 0]}
+            />
+          )}
+          {/* First-person walkthrough (W/A/S/D + mouse look) */}
+          <FirstPersonControls
+            enabled={firstPerson}
+            onExit={exitFirstPerson}
+            floorY={0}
+            roomW={roomDimensions.width  * 0.01}
+            roomD={roomDimensions.depth  * 0.01}
           />
-          <Scene isIOS={isIOS} />
+          <Scene isIOS={isIOS} firstPerson={firstPerson} />
         </Canvas>
       </ErrorBoundary>
     </div>

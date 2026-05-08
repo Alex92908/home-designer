@@ -126,12 +126,10 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
   { kind: "plant.mushroom",    label: "蘑菇",   icon: "🍄", category: "plant", glb: "mushroom_redGroup",   scale: 1.5, radiusCm: 30, color: "#D04848" },
 
   // ── Rocks ──
-  { kind: "rock.large",      label: "大岩石", icon: "🪨", category: "rock", glb: "rock_largeA",     scale: 2.5, radiusCm: 70, color: "#888888",
-    customGltfPath: "/models/outdoor_rock/boulder_01/boulder_01_1k.gltf",
-    customTargetHeightM: 0.9, customAuthor: "Poly Haven CC0" },
-  { kind: "rock.small",      label: "小岩石", icon: "🪨", category: "rock", glb: "rock_smallA",     scale: 1.8, radiusCm: 40, color: "#9C9C9C",
-    customGltfPath: "/models/outdoor_rock/coast_rocks_01/coast_rocks_01_1k.gltf",
-    customTargetHeightM: 0.4, customAuthor: "Poly Haven CC0" },
+  // NOTE: boulder_01 and coast_rocks_01 .bin files are truncated (incomplete
+  // downloads). customGltfPath removed until files are re-downloaded intact.
+  { kind: "rock.large",      label: "大岩石", icon: "🪨", category: "rock", glb: "rock_largeA",     scale: 2.5, radiusCm: 70, color: "#888888" },
+  { kind: "rock.small",      label: "小岩石", icon: "🪨", category: "rock", glb: "rock_smallA",     scale: 1.8, radiusCm: 40, color: "#9C9C9C" },
   { kind: "rock.tall",       label: "立石",   icon: "🗿", category: "rock", glb: "rock_tallA",      scale: 2.2, radiusCm: 50, color: "#7C7C7C" },
   { kind: "rock.flat",       label: "平石",   icon: "⬜", category: "rock", glb: "rock_smallFlatA", scale: 2.0, radiusCm: 60, color: "#A8A8A8" },
   { kind: "rock.stoneTall",  label: "高石",   icon: "🗻", category: "rock", glb: "stone_tallA",     scale: 2.2, radiusCm: 45, color: "#9C8C7C" },
@@ -200,7 +198,7 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
     purchaseUrl: "https://www.vondom.com/products/planters" },
   { kind: "furniture.swimmingLounger",label: "泳池躺椅",icon: "🏖", category: "furniture",
     glb: "", scale: 1, radiusCm: 110, color: "#E8E0C8",
-    customGltfPath: "/models/outdoor_furniture/pool_lounger/pool_lounger.gltf",
+    customGltfPath: "/models/outdoor_furniture/sun_lounger/sun_lounger.gltf",
     customTargetHeightM: 0.75, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
     brand: "Unopiù", estimatedPriceCNY: 8800,
     purchaseUrl: "https://www.unopiu.com/en/pool-loungers" },

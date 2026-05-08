@@ -7,6 +7,7 @@ import { ALL_POSSIBLE_ROOMS, DEFAULT_ENABLED } from "@/lib/store";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale } from "@/lib/i18n";
 import { FLOORPLAN_LAYOUTS, type FloorplanLayout } from "@/lib/floorplanLayouts";
+import { PROJECT_TEMPLATES } from "@/lib/projectTemplates";
 import { getLayoutNameEn } from "@/locales/itemNames";
 
 function localizeLayoutName(layout: FloorplanLayout, locale: string): string {
@@ -38,7 +39,7 @@ type DragState =
 const CUSTOM_SLOTS: RoomType[] = ["custom1","custom2","custom3","custom4","custom5"];
 const ROOM_GROUP_ROOMS = [
   { key: "allGroupIndoor",   rooms: ["living","master","bedroom","bedroom2","bedroom3","kitchen","bathroom","bathroom2","dining","study","study2","closet","balcony","balcony2"] as RoomType[] },
-  { key: "allGroupSpecial",  rooms: ["yard","garage","gym","cinema"] as RoomType[] },
+  { key: "allGroupSpecial",  rooms: ["stair","yard","garage","gym","cinema"] as RoomType[] },
   { key: "allGroupCustom",   rooms: CUSTOM_SLOTS },
 ];
 const CUSTOM_ICONS = ["🔲","🏠","🛖","🏰","🏗️","🎯","🎲","🎪","⭐","💎","🌈","🔑"];
@@ -85,8 +86,12 @@ export function RoomPanel() {
   const addRoom             = useDesignerStore(s => s.addRoom);
   const removeRoom          = useDesignerStore(s => s.removeRoom);
   const updateRoomDimension = useDesignerStore(s => s.updateRoomDimension);
-  const roomShapes          = useDesignerStore(s => s.floorPlans[s.activeFloor].roomShapes);
-  const setRoomShape        = useDesignerStore(s => s.setRoomShape);
+  const roomShapes              = useDesignerStore(s => s.floorPlans[s.activeFloor].roomShapes);
+  const setRoomShape            = useDesignerStore(s => s.setRoomShape);
+  const updateRoomShapePoint    = useDesignerStore(s => s.updateRoomShapePoint);
+  const insertRoomShapePoint    = useDesignerStore(s => s.insertRoomShapePoint);
+  const deleteRoomShapePoint    = useDesignerStore(s => s.deleteRoomShapePoint);
+  const rectifyRoomShape        = useDesignerStore(s => s.rectifyRoomShape);
   const resetLayout         = useDesignerStore(s => s.resetLayout);
   const pushLayoutHistory   = useDesignerStore(s => s.pushLayoutHistory);
   const copyRoom            = useDesignerStore(s => s.copyRoom);
@@ -177,7 +182,14 @@ export function RoomPanel() {
                       className="flex-1 text-xs font-semibold outline-none border-b border-blue-400 bg-transparent text-gray-700 min-w-0"
                     />
                   ) : (
-                    <span className="flex-1 text-xs font-semibold text-gray-700 truncate min-w-0">{name}</span>
+                    <div className="flex-1 flex items-center gap-1 min-w-0">
+                      <span className="text-xs font-semibold text-gray-700 truncate">{name}</span>
+                      {room === "stair" && exterior.floors > 1 && (
+                        <span className="shrink-0 text-[8px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">
+                          每层同位
+                        </span>
+                      )}
+                    </div>
                   )}
                   {/* Hover actions */}
                   <div className="hidden group-hover/row:flex items-center gap-0.5 shrink-0">
@@ -343,13 +355,59 @@ export default function FloorPlanAll() {
   // Draw: accumulating polygon vertices (SVG coords, cm)
   const [drawPts, setDrawPts] = useState<Array<[number, number]>>([]);
   const [drawHover, setDrawHover] = useState<{ x: number; y: number } | null>(null);
+  // Shape-edit mode for a specific room (vertex drag handles in the overview)
+  const [shapeEditRoom, setShapeEditRoom] = useState<RoomType | null>(null);
 
+  const updateRoomShapePoint  = useDesignerStore(s => s.updateRoomShapePoint);
+  const insertRoomShapePoint  = useDesignerStore(s => s.insertRoomShapePoint);
+  const deleteRoomShapePoint  = useDesignerStore(s => s.deleteRoomShapePoint);
   const addRoom2             = useDesignerStore(s => s.addRoom);
   const setRoomShape         = useDesignerStore(s => s.setRoomShape);
-  const applyFloorplanLayout = useDesignerStore(s => s.applyFloorplanLayout);
+  const stairConfig          = useDesignerStore(s => s.floorPlans[s.activeFloor].stairConfig);
+  // All floors data — for ghost overlay rendering
+  const allFloorPlans        = useDesignerStore(s => s.floorPlans);
+  // Which non-active floors are shown as ghost overlays (default: all visible)
+  const [ghostFloors, setGhostFloors] = useState<Set<number>>(() => new Set([0, 1, 2, 3]));
+  const setStairConfig       = useDesignerStore(s => s.setStairConfig);
+  const applyFloorplanLayout  = useDesignerStore(s => s.applyFloorplanLayout);
+  const applyProjectTemplate  = useDesignerStore(s => s.applyProjectTemplate);
+  const applyAiDesign         = useDesignerStore(s => s.applyAiDesign);
   const [layoutPickerOpen, setLayoutPickerOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
+  // AI text-to-design
+  const [aiInput, setAiInput]       = useState("");
+  const [aiLoading, setAiLoading]   = useState(false);
+  const [aiError, setAiError]       = useState<string | null>(null);
+  const [aiSummary, setAiSummary]   = useState<string | null>(null);
+
+  async function handleAiGenerate() {
+    const desc = aiInput.trim();
+    if (!desc) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiSummary(null);
+    try {
+      const res = await fetch("/api/ai-design", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ description: desc }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setAiError(data.error ?? "AI 生成失败，请重试");
+        return;
+      }
+      applyAiDesign(data);
+      setAiSummary(data.summary ?? "设计已生成！");
+      setLayoutPickerOpen(false);
+      setViewMode("exterior");
+    } catch {
+      setAiError("网络错误，请检查连接后重试");
+    } finally {
+      setAiLoading(false);
+    }
+  }
   // Page-level zoom for the overview canvas. Same UX as FloorPlan: − / % / +
   // / reset, plus Ctrl/Cmd-wheel pinch zoom on the canvas wrapper.
   const [zoomLevel, setZoomLevel] = useState(1.0);
@@ -585,7 +643,7 @@ export default function FloorPlanAll() {
   const viewBox = `${vbX1} ${vbY1} ${vbX2 - vbX1} ${vbY2 - vbY1}`;
 
   const configuredCount = ALL_ROOMS.filter(r =>
-    Object.keys(rooms[r].materials).length > 0 || rooms[r].placedItems.length > 0
+    rooms[r] && (Object.keys(rooms[r].materials).length > 0 || rooms[r].placedItems.length > 0)
   ).length;
 
   // ── Pointer handlers ──
@@ -670,22 +728,73 @@ export default function FloorPlanAll() {
               <span className="text-[9px] px-1 rounded-full bg-orange-100">{historyLen}</span>
             )}
           </button>
-          {/* Floor selector tabs — only shown when floors > 1 */}
+          {/* Floor layer controls — active floor selector + ghost overlays */}
           {exterior.floors > 1 && (
             <div className="flex items-center gap-1 ml-auto">
-              <span className="text-[10px] text-gray-400 mr-1">{t.fpFloor}:</span>
-              {Array.from({ length: exterior.floors }).map((_, i) => (
-                <button key={i}
-                  onClick={() => setActiveFloor(i)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    activeFloor === i
-                      ? "bg-blue-600 text-white"
-                      : "bg-white/10 text-gray-400 hover:text-white border border-gray-200 hover:bg-blue-50 hover:border-blue-300"
-                  }`}
-                >
-                  {i + 1}F
-                </button>
-              ))}
+              {Array.from({ length: exterior.floors }).map((_, i) => {
+                const isActive  = activeFloor === i;
+                const isGhost   = !isActive && ghostFloors.has(i);
+                // Per-floor accent colours: 1F=blue, 2F=purple, 3F=green
+                const colors = ["#2563EB", "#7C3AED", "#059669", "#D97706"];
+                const c = colors[i % colors.length];
+                return (
+                  <div key={i} className="flex items-center" style={{ gap: 0 }}>
+                    {/* Active floor button — click to switch editing floor */}
+                    <button
+                      onClick={() => setActiveFloor(i)}
+                      style={{
+                        background: isActive ? c : "white",
+                        color:      isActive ? "white" : c,
+                        border:     `1.5px solid ${c}`,
+                        borderRight: "none",
+                        borderRadius: "6px 0 0 6px",
+                        padding: "2px 8px",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        lineHeight: "18px",
+                      }}
+                    >
+                      {i + 1}F
+                    </button>
+                    {/* Eye toggle — show/hide this floor as ghost overlay */}
+                    {!isActive && (
+                      <button
+                        onClick={() => setGhostFloors(prev => {
+                          const next = new Set(prev);
+                          next.has(i) ? next.delete(i) : next.add(i);
+                          return next;
+                        })}
+                        title={isGhost ? `隐藏 ${i+1}F 叠加` : `显示 ${i+1}F 叠加`}
+                        style={{
+                          background: isGhost ? c + "22" : "white",
+                          color:      isGhost ? c : "#9CA3AF",
+                          border:     `1.5px solid ${c}`,
+                          borderLeft: "1px solid " + c + "44",
+                          borderRadius: "0 6px 6px 0",
+                          padding: "2px 5px",
+                          fontSize: 11,
+                          lineHeight: "18px",
+                        }}
+                      >
+                        {isGhost ? "👁" : "○"}
+                      </button>
+                    )}
+                    {isActive && (
+                      <span style={{
+                        background: c + "18",
+                        color: c,
+                        border: `1.5px solid ${c}`,
+                        borderLeft: "1px solid " + c + "44",
+                        borderRadius: "0 6px 6px 0",
+                        padding: "2px 5px",
+                        fontSize: 10,
+                        lineHeight: "18px",
+                        fontWeight: 600,
+                      }}>编辑</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
           {roomClipboard && (
@@ -704,6 +813,15 @@ export default function FloorPlanAll() {
             title={t.fpHouseTemplateTitle}
           >
             {t.fpHouseTemplateBtn}
+          </button>
+          {/* Quick-jump to exterior / yard — replaces the old separate yard2d tab */}
+          <button
+            onClick={() => setViewMode("exterior")}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all"
+            style={{ border: "1px solid #10B981", color: "#059669", background: "white" }}
+            title="外观 + 院子设计"
+          >
+            🏠 外观院子
           </button>
           {/* Blueprint tracing: upload image, adjust, toggle trace mode */}
           {!blueprint.image ? (
@@ -959,6 +1077,34 @@ export default function FloorPlanAll() {
               />
             )}
 
+            {/* ── Ghost floor overlays: base footprint hint (below 1F rooms) ── */}
+            {exterior.floors > 1 && Array.from({ length: exterior.floors }, (_, fi) => {
+              if (fi === activeFloor) return null;
+              if (!ghostFloors.has(fi)) return null;
+              const fp = allFloorPlans[fi];
+              if (!fp) return null;
+              const ghostRooms = (fp.enabledRooms ?? []).filter(r => !ROOM_DEFS[r].isOutdoor);
+              if (ghostRooms.length === 0) return null;
+              const ghostColors = ["#2563EB", "#7C3AED", "#059669", "#D97706"];
+              const gc = ghostColors[fi % ghostColors.length];
+              // Compute combined bounding box
+              let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+              for (const room of ghostRooms) {
+                const p = fp.roomLayout?.[room]; const d2 = fp.roomDimensions?.[room];
+                if (!p || !d2) continue;
+                minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x + d2.width); maxY = Math.max(maxY, p.y + d2.depth);
+              }
+              if (!isFinite(minX)) return null;
+              return (
+                <rect key={`ghost-base-${fi}`}
+                  x={minX} y={minY} width={maxX-minX} height={maxY-minY}
+                  fill={gc} fillOpacity={0.07}
+                  stroke={gc} strokeWidth={1} strokeOpacity={0.18} strokeDasharray="4 4"
+                  style={{ pointerEvents: "none" }} />
+              );
+            })}
+
             {/* Pass 1: room bodies */}
             {visibleRooms.map(room => {
               const def     = ROOM_DEFS[room];
@@ -974,7 +1120,9 @@ export default function FloorPlanAll() {
               const { name: roomName, icon: roomIcon } = getRoomLabel(room);
 
               const shape = roomShapes?.[room];
-              const isPolygon = shape && shape.preset !== "rect";
+              // Render as polygon for any non-rect preset, OR a rect-preset room that
+              // has been shape-initialized (points exist) and the user is actively editing it.
+              const isPolygon = shape && (shape.preset !== "rect" || shapeEditRoom === room);
               const polyPts = isPolygon
                 ? shape!.points.map(([px, pz]) => `${x + px},${y + pz}`).join(" ")
                 : "";
@@ -1041,6 +1189,175 @@ export default function FloorPlanAll() {
                     </>
                   )}
 
+                  {/* ── Stair room: multi-shape symbol ── */}
+                  {room === "stair" && (() => {
+                    const cfg = stairConfig ?? { shape: "straight", rotation: 0 };
+                    const inner = { x: x + WALL, y: y + WALL, w: w - WALL*2, d: d - WALL*2 };
+                    const { x: ix, y: iy, w: iw, d: id } = inner;
+                    const cx2 = ix + iw / 2, cy2 = iy + id / 2;
+                    const rot = cfg.rotation ?? 0;
+                    const shape = cfg.shape ?? "straight";
+                    const BROWN = "#92400E";
+
+                    // Helper: draw an arrow from (x1,y1) toward (x2,y2)
+                    function ArrowLine({ x1, y1, x2, y2 }: { x1:number; y1:number; x2:number; y2:number }) {
+                      const dx = x2-x1, dy = y2-y1;
+                      const len = Math.sqrt(dx*dx+dy*dy) || 1;
+                      const ux = dx/len, uy = dy/len;
+                      const ax = x2 - ux*12, ay = y2 - uy*12;
+                      return (
+                        <g>
+                          <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={BROWN} strokeWidth={2}/>
+                          <polygon
+                            points={`${x2},${y2} ${ax-uy*5},${ay+ux*5} ${ax+uy*5},${ay-ux*5}`}
+                            fill={BROWN}/>
+                        </g>
+                      );
+                    }
+
+                    // Wrap everything in a rotation transform centred on the stair room
+                    return (
+                      <g transform={`rotate(${rot},${cx2},${cy2})`} style={{ pointerEvents: "none" }}>
+                        {shape === "straight" && (() => {
+                          const steps = Math.max(4, Math.floor(id / 18));
+                          const stepH = id / steps;
+                          return (
+                            <g>
+                              {Array.from({ length: steps - 1 }, (_, i) => (
+                                <line key={i}
+                                  x1={ix} y1={iy + stepH*(i+1)}
+                                  x2={ix+iw} y2={iy + stepH*(i+1)}
+                                  stroke={BROWN} strokeWidth={1.5}/>
+                              ))}
+                              <ArrowLine x1={cx2} y1={iy+id-8} x2={cx2} y2={iy+10}/>
+                              {id > 60 && (
+                                <text x={cx2} y={iy+id-12}
+                                  textAnchor="middle" fontSize={Math.min(iw,20)} fill={BROWN}
+                                  fontWeight="700" fontFamily="system-ui" style={{userSelect:"none"}}>UP</text>
+                              )}
+                            </g>
+                          );
+                        })()}
+
+                        {shape === "L-shaped" && (() => {
+                          // Split the box: vertical run on the left half, horizontal run on the top half
+                          const turnRight = (cfg.turnSide ?? "right") === "right";
+                          // Vertical run: left half, full height
+                          const runW = iw * 0.45;
+                          const stepsV = Math.max(3, Math.floor(id * 0.55 / 18));
+                          const stepV = (id * 0.55) / stepsV;
+                          // Horizontal run: top portion, right half
+                          const runD = id * 0.45;
+                          const stepsH = Math.max(3, Math.floor((iw - runW) / 18));
+                          const stepH2 = (iw - runW) / stepsH;
+                          const landX = ix + (turnRight ? 0 : iw - runW);
+                          const landY = iy;
+                          const landW = runW;
+                          const landD = runD;
+                          const runStartX = turnRight ? ix + runW : ix;
+                          const runStartY = iy + runD;
+
+                          return (
+                            <g>
+                              {/* Landing rectangle */}
+                              <rect x={landX} y={landY} width={landW} height={landD}
+                                fill="none" stroke={BROWN} strokeWidth={1.2} strokeDasharray="4 3"/>
+
+                              {/* Vertical run treads */}
+                              {Array.from({ length: stepsV }, (_, i) => (
+                                <line key={`v${i}`}
+                                  x1={turnRight ? ix+runW : ix} y1={runStartY + stepV*i}
+                                  x2={turnRight ? ix+iw   : ix+iw-runW} y2={runStartY + stepV*i}
+                                  stroke={BROWN} strokeWidth={1.5}/>
+                              ))}
+
+                              {/* Horizontal run treads */}
+                              {Array.from({ length: stepsH }, (_, i) => (
+                                <line key={`h${i}`}
+                                  x1={landX + stepH2*(i+1)} y1={iy}
+                                  x2={landX + stepH2*(i+1)} y2={iy + landD}
+                                  stroke={BROWN} strokeWidth={1.5}/>
+                              ))}
+
+                              {/* Arrow: bottom of vertical run → top of horizontal run */}
+                              <ArrowLine
+                                x1={turnRight ? ix+runW+((iw-runW)/2) : ix+((iw-runW)/2)}
+                                y1={iy+id-8}
+                                x2={landX + landW/2}
+                                y2={iy + landD/2}/>
+                              {id > 80 && (
+                                <text x={turnRight ? ix+runW+(iw-runW)/2 : ix+(iw-runW)/2}
+                                  y={iy+id-12}
+                                  textAnchor="middle" fontSize={Math.min(iw*0.45,18)} fill={BROWN}
+                                  fontWeight="700" fontFamily="system-ui" style={{userSelect:"none"}}>UP</text>
+                              )}
+                            </g>
+                          );
+                        })()}
+
+                        {shape === "spiral" && (() => {
+                          const r = Math.min(iw, id) / 2 - 4;
+                          const poleR = Math.max(6, r * 0.18);
+                          const steps = Math.max(6, Math.round((cfg.risers ?? 12)));
+                          const sweepAngle = 270; // degrees visible
+                          const startDeg = -90;
+                          function polarToXY(deg: number, radius: number) {
+                            const rad = (deg * Math.PI) / 180;
+                            return { x: cx2 + Math.cos(rad)*radius, y: cy2 + Math.sin(rad)*radius };
+                          }
+                          function describeArc(deg1: number, deg2: number, radius: number) {
+                            const s = polarToXY(deg1, radius);
+                            const e = polarToXY(deg2, radius);
+                            const large = deg2 - deg1 > 180 ? 1 : 0;
+                            return `M ${s.x} ${s.y} A ${radius} ${radius} 0 ${large} 1 ${e.x} ${e.y}`;
+                          }
+
+                          return (
+                            <g>
+                              {/* Outer circle boundary */}
+                              <circle cx={cx2} cy={cy2} r={r} fill="none" stroke={BROWN} strokeWidth={1.2}/>
+                              {/* Center pole */}
+                              <circle cx={cx2} cy={cy2} r={poleR} fill={BROWN} fillOpacity={0.25} stroke={BROWN} strokeWidth={1.5}/>
+                              {/* Tread lines (radiating from pole to outer) */}
+                              {Array.from({ length: steps }, (_, i) => {
+                                const deg = startDeg + (sweepAngle / steps) * i;
+                                const inner2 = polarToXY(deg, poleR);
+                                const outer2 = polarToXY(deg, r);
+                                return (
+                                  <line key={i}
+                                    x1={inner2.x} y1={inner2.y}
+                                    x2={outer2.x} y2={outer2.y}
+                                    stroke={BROWN} strokeWidth={1.5}/>
+                                );
+                              })}
+                              {/* Sweep arc arrow */}
+                              <path d={describeArc(startDeg, startDeg+sweepAngle, r*0.6)}
+                                fill="none" stroke={BROWN} strokeWidth={2}/>
+                              {/* Arrowhead at end of sweep */}
+                              {(() => {
+                                const endDeg = startDeg + sweepAngle;
+                                const tip = polarToXY(endDeg, r*0.6);
+                                const base = polarToXY(endDeg-8, r*0.6);
+                                const perp1 = polarToXY(endDeg, r*0.6-6);
+                                const perp2 = polarToXY(endDeg, r*0.6+6);
+                                return (
+                                  <polygon
+                                    points={`${tip.x},${tip.y} ${perp1.x},${perp1.y} ${perp2.x},${perp2.y}`}
+                                    fill={BROWN}/>
+                                );
+                              })()}
+                              {id > 60 && (
+                                <text x={cx2} y={cy2 + r + 2}
+                                  textAnchor="middle" fontSize={Math.min(iw,16)} fill={BROWN}
+                                  fontWeight="700" fontFamily="system-ui" style={{userSelect:"none"}}>UP</text>
+                              )}
+                            </g>
+                          );
+                        })()}
+                      </g>
+                    );
+                  })()}
+
                   {/* Furniture icons */}
                   {rooms[room].placedItems.map(p => {
                     const f = getFurnitureById(p.furnitureId);
@@ -1081,6 +1398,120 @@ export default function FloorPlanAll() {
                     style={{ cursor: "grab" }}
                     onPointerDown={e => startMove(e, room)}
                   />
+                </g>
+              );
+            })}
+
+            {/* ── Ghost floor overlays: isometric slab — rendered ABOVE 1F rooms ── */}
+            {exterior.floors > 1 && Array.from({ length: exterior.floors }, (_, fi) => {
+              if (fi === activeFloor) return null;
+              if (!ghostFloors.has(fi)) return null;
+              const fp = allFloorPlans[fi];
+              if (!fp) return null;
+              const ghostRooms = (fp.enabledRooms ?? []).filter(r => !ROOM_DEFS[r].isOutdoor);
+              if (ghostRooms.length === 0) return null;
+              const ghostColors = ["#2563EB", "#7C3AED", "#059669", "#D97706"];
+              const gc = ghostColors[fi % ghostColors.length];
+
+              // ── Collect room rects & compute combined bounding box ──
+              type RR = { room: string; x:number; y:number; w:number; d:number };
+              const rects: RR[] = [];
+              let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+              for (const room of ghostRooms) {
+                const p = fp.roomLayout?.[room];
+                const dim = fp.roomDimensions?.[room];
+                if (!p || !dim) continue;
+                rects.push({ room, x: p.x, y: p.y, w: dim.width, d: dim.depth });
+                minX = Math.min(minX, p.x);          minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x+dim.width); maxY = Math.max(maxY, p.y+dim.depth);
+              }
+              if (rects.length === 0 || !isFinite(minX)) return null;
+
+              const BX = minX, BY = minY, BW = maxX - minX, BD = maxY - minY;
+
+              // ── Oblique projection: top face offsets (left+up) ──
+              // ISO_DX < 0 = shifts left → left wall visible
+              // ISO_DY < 0 = shifts up  → front+top clearly elevated
+              const ISO_DX = -110;
+              const ISO_DY = -300;
+
+              const svgPts = (cs: [number,number][]) => cs.map(([cx,cy]) => `${cx},${cy}`).join(" ");
+
+              // Slab corners: bottom = ground level; top = elevated
+              const bTL: [number,number] = [BX,     BY    ];
+              const bTR: [number,number] = [BX+BW,  BY    ];
+              const bBR: [number,number] = [BX+BW,  BY+BD ];
+              const bBL: [number,number] = [BX,     BY+BD ];
+              const tTL: [number,number] = [BX+ISO_DX,    BY+ISO_DY    ];
+              const tTR: [number,number] = [BX+BW+ISO_DX, BY+ISO_DY    ];
+              const tBR: [number,number] = [BX+BW+ISO_DX, BY+BD+ISO_DY ];
+              const tBL: [number,number] = [BX+ISO_DX,    BY+BD+ISO_DY ];
+
+              // Front wall center for the "NF" label
+              const fwCX = (bBL[0]+tBR[0]) / 2;
+              const fwCY = (bBL[1]+tBR[1]) / 2;
+              const fwH  = Math.sqrt(ISO_DX*ISO_DX + ISO_DY*ISO_DY); // wall height in SVG units
+              const labelBig = Math.min(BW, BD) * 0.09;
+
+              return (
+                <g key={`ghost-slab-${fi}`} style={{ pointerEvents: "none" }}>
+                  {/* ① Left side wall */}
+                  <polygon points={svgPts([bTL, tTL, tBL, bBL])}
+                    fill={gc} fillOpacity={0.22}
+                    stroke={gc} strokeWidth={2} strokeOpacity={0.70} />
+
+                  {/* ② Front wall (south side — most visible face) */}
+                  <polygon points={svgPts([bBL, tBL, tBR, bBR])}
+                    fill={gc} fillOpacity={0.30}
+                    stroke={gc} strokeWidth={2} strokeOpacity={0.80} />
+
+                  {/* ③ Top face (the elevated floor plate) */}
+                  <polygon points={svgPts([tTL, tTR, tBR, tBL])}
+                    fill={gc} fillOpacity={0.28}
+                    stroke={gc} strokeWidth={3} strokeOpacity={1.0} />
+
+                  {/* ④ Hidden back/right edges (dashed) */}
+                  <line x1={bTR[0]} y1={bTR[1]} x2={tTR[0]} y2={tTR[1]}
+                    stroke={gc} strokeWidth={1.5} strokeOpacity={0.35} strokeDasharray="6 4" />
+                  <line x1={bTL[0]} y1={bTL[1]} x2={tTL[0]} y2={tTL[1]}
+                    stroke={gc} strokeWidth={1.5} strokeOpacity={0.25} strokeDasharray="5 5" />
+
+                  {/* ⑤ Room grid on the top face */}
+                  {rects.map(({ room, x, y, w, d }) => {
+                    const rTL: [number,number] = [x+ISO_DX,   y+ISO_DY  ];
+                    const rTR: [number,number] = [x+w+ISO_DX, y+ISO_DY  ];
+                    const rBR: [number,number] = [x+w+ISO_DX, y+d+ISO_DY];
+                    const rBL: [number,number] = [x+ISO_DX,   y+d+ISO_DY];
+                    const rcx = (rTL[0]+rBR[0]) / 2;
+                    const rcy = (rTL[1]+rBR[1]) / 2;
+                    const fs  = Math.min(w, d) * 0.072;
+                    return (
+                      <g key={room}>
+                        <polygon points={svgPts([rTL, rTR, rBR, rBL])}
+                          fill="none" stroke={gc} strokeWidth={1.5} strokeOpacity={0.65} />
+                        <text x={rcx} y={rcy - fs * 0.4}
+                          textAnchor="middle" dominantBaseline="middle"
+                          fontSize={fs} fill={gc} fillOpacity={1.0} fontWeight="700"
+                          style={{ userSelect: "none" }}>
+                          {ROOM_DEFS[room as RoomType]?.name ?? room}
+                        </text>
+                        <text x={rcx} y={rcy + fs * 0.8}
+                          textAnchor="middle" dominantBaseline="middle"
+                          fontSize={fs * 0.75} fill={gc} fillOpacity={0.70}
+                          style={{ userSelect: "none" }}>
+                          {(w/100).toFixed(1)}×{(d/100).toFixed(1)}m
+                        </text>
+                      </g>
+                    );
+                  })}
+
+                  {/* ⑥ Big floor label on front wall */}
+                  <text x={fwCX} y={fwCY}
+                    textAnchor="middle" dominantBaseline="middle"
+                    fontSize={fwH * 0.28} fill={gc} fillOpacity={0.85} fontWeight="900"
+                    style={{ userSelect: "none" }}>
+                    {fi + 1}F
+                  </text>
                 </g>
               );
             })}
@@ -1150,6 +1581,119 @@ export default function FloorPlanAll() {
                       fontSize={HANDLE * 0.7} fill="white" fontWeight="bold"
                       style={{ pointerEvents: "none", userSelect: "none" }}>✕</text>
                   </g>
+
+                  {/* ── Stair shape picker (always visible when stair room is on canvas) ── */}
+                  {room === "stair" && (() => {
+                    const shapes: Array<{ key: "straight"|"L-shaped"|"spiral"; label: string }> = [
+                      { key: "straight", label: "直" },
+                      { key: "L-shaped", label: "L形" },
+                      { key: "spiral",   label: "螺旋" },
+                    ];
+                    const rotations: Array<0|90|180|270> = [0, 90, 180, 270];
+                    const cur = stairConfig ?? { shape: "straight", rotation: 0 };
+                    const btnH2 = 22, btnW2 = 36;
+                    const gap = 4;
+                    // Row 1: shape buttons, centred horizontally
+                    const row1TotalW = shapes.length * btnW2 + (shapes.length - 1) * gap;
+                    const row1X = x + w/2 - row1TotalW/2;
+                    const row1Y = y + d + 6;
+                    // Row 2: rotation buttons (only if not spiral)
+                    const rotW = 26, rotTotalW = rotations.length * rotW + (rotations.length - 1) * gap;
+                    const row2X = x + w/2 - rotTotalW/2;
+                    const row2Y = row1Y + btnH2 + gap;
+                    // Row 3: turn-side toggle (L-shaped only)
+                    const row3Y = row2Y + btnH2 + gap;
+                    return (
+                      <g>
+                        {/* Shape type buttons */}
+                        {shapes.map((s, i) => {
+                          const bx = row1X + i*(btnW2+gap);
+                          const active2 = cur.shape === s.key;
+                          return (
+                            <g key={s.key} style={{ cursor: "pointer" }}
+                              onPointerDown={e => { e.stopPropagation(); setStairConfig({ ...cur, shape: s.key }); }}>
+                              <rect x={bx} y={row1Y} width={btnW2} height={btnH2}
+                                fill={active2 ? "#D97706" : "#FBBF24"} opacity={0.92} rx={3}/>
+                              <text x={bx+btnW2/2} y={row1Y+btnH2/2}
+                                textAnchor="middle" dominantBaseline="middle"
+                                fontSize={9} fill="white" fontWeight="bold"
+                                style={{ pointerEvents:"none", userSelect:"none" }}>{s.label}</text>
+                            </g>
+                          );
+                        })}
+                        {/* Rotation buttons */}
+                        {cur.shape !== "spiral" && rotations.map((r, i) => {
+                          const bx = row2X + i*(rotW+gap);
+                          const active2 = (cur.rotation ?? 0) === r;
+                          return (
+                            <g key={r} style={{ cursor: "pointer" }}
+                              onPointerDown={e => { e.stopPropagation(); setStairConfig({ ...cur, rotation: r }); }}>
+                              <rect x={bx} y={row2Y} width={rotW} height={btnH2}
+                                fill={active2 ? "#1D4ED8" : "#93C5FD"} opacity={0.92} rx={3}/>
+                              <text x={bx+rotW/2} y={row2Y+btnH2/2}
+                                textAnchor="middle" dominantBaseline="middle"
+                                fontSize={9} fill="white" fontWeight="bold"
+                                style={{ pointerEvents:"none", userSelect:"none" }}>{r}°</text>
+                            </g>
+                          );
+                        })}
+                        {/* Turn side toggle (L-shaped only) */}
+                        {cur.shape === "L-shaped" && (() => {
+                          const sides: Array<"left"|"right"> = ["left","right"];
+                          const sideW = 38;
+                          const sideTotalW = sides.length * sideW + gap;
+                          const sideX = x + w/2 - sideTotalW/2;
+                          return sides.map((s, i) => {
+                            const bx = sideX + i*(sideW+gap);
+                            const active2 = (cur.turnSide ?? "right") === s;
+                            return (
+                              <g key={s} style={{ cursor: "pointer" }}
+                                onPointerDown={e => { e.stopPropagation(); setStairConfig({ ...cur, turnSide: s }); }}>
+                                <rect x={bx} y={row3Y} width={sideW} height={btnH2}
+                                  fill={active2 ? "#047857" : "#6EE7B7"} opacity={0.92} rx={3}/>
+                                <text x={bx+sideW/2} y={row3Y+btnH2/2}
+                                  textAnchor="middle" dominantBaseline="middle"
+                                  fontSize={9} fill="white" fontWeight="bold"
+                                  style={{ pointerEvents:"none", userSelect:"none" }}>{s==="left"?"左转":"右转"}</text>
+                              </g>
+                            );
+                          });
+                        })()}
+                      </g>
+                    );
+                  })()}
+
+                  {/* Edit shape — bottom-center (toggle vertex edit mode) */}
+                  {(() => {
+                    const isEditing = shapeEditRoom === room;
+                    const btnW = 52, btnH = HANDLE;
+                    const btnX = x + w / 2 - btnW / 2;
+                    const btnY = y + d - WALL - btnH;
+                    return (
+                      <g style={{ cursor: "pointer" }}
+                        onPointerDown={e => {
+                          e.stopPropagation();
+                          if (isEditing) {
+                            setShapeEditRoom(null);
+                          } else {
+                            // Init rect polygon if no custom shape yet
+                            if (!roomShapes?.[room] || roomShapes[room].preset === "rect") {
+                              setRoomShape(room, "rect");
+                            }
+                            setShapeEditRoom(room);
+                          }
+                        }}>
+                        <rect x={btnX} y={btnY} width={btnW} height={btnH}
+                          fill={isEditing ? "#F59E0B" : "#7C3AED"} opacity={0.88} rx={4} />
+                        <text x={btnX + btnW/2} y={btnY + btnH/2}
+                          textAnchor="middle" dominantBaseline="middle"
+                          fontSize={btnH * 0.5} fill="white" fontWeight="bold"
+                          style={{ pointerEvents: "none", userSelect: "none" }}>
+                          {isEditing ? "完成" : "编辑轮廓"}
+                        </text>
+                      </g>
+                    );
+                  })()}
                 </g>
               );
             })}
@@ -1191,6 +1735,149 @@ export default function FloorPlanAll() {
               </g>
             )}
 
+            {/* Pass 3: shape-edit vertex handles for shapeEditRoom */}
+            {shapeEditRoom && roomShapes?.[shapeEditRoom] && (() => {
+              const room = shapeEditRoom;
+              const pos  = roomLayout[room];
+              const shape = roomShapes[room]!;
+              return (
+                <g>
+                  {/* Highlight outline of the edited room */}
+                  <polygon
+                    points={shape.points.map(([px, pz]) => `${pos.x + px},${pos.y + pz}`).join(" ")}
+                    fill="none"
+                    stroke="#F59E0B" strokeWidth={3} strokeDasharray="8 4" strokeLinejoin="round"
+                    style={{ pointerEvents: "none" }}
+                  />
+                  {shape.points.map(([px, pz], i) => {
+                    const next = (i + 1) % shape.points.length;
+                    const [nx, nz] = shape.points[next];
+                    const midLocalX = (px + nx) / 2, midLocalZ = (pz + nz) / 2;
+                    const ax = pos.x + px,  ay = pos.y + pz;
+                    const mx = pos.x + midLocalX, my = pos.y + midLocalZ;
+                    return (
+                      <g key={`sv-${i}`}>
+                        {/* Vertex drag handle */}
+                        <circle cx={ax} cy={ay} r={10} fill="#F59E0B" stroke="white" strokeWidth={2.5}
+                          style={{ cursor: "move" }}
+                          onPointerDown={e => {
+                            e.stopPropagation();
+                            if (!svgRef.current) return;
+                            svgRef.current.setPointerCapture(e.pointerId);
+                            pushLayoutHistory();
+                            const onMove = (ev: PointerEvent) => {
+                              if (!svgRef.current) return;
+                              const pt2 = getSVGPoint(ev, svgRef.current);
+                              updateRoomShapePoint(room, i, pt2.x - pos.x, pt2.y - pos.y);
+                            };
+                            const onUp = () => {
+                              window.removeEventListener("pointermove", onMove);
+                              window.removeEventListener("pointerup", onUp);
+                            };
+                            window.addEventListener("pointermove", onMove);
+                            window.addEventListener("pointerup", onUp, { once: true });
+                          }}
+                          onContextMenu={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (shape.points.length <= 3) return; // keep at least a triangle
+                            pushLayoutHistory();
+                            deleteRoomShapePoint(room, i);
+                          }}
+                        />
+                        {/* Edge midpoint — insert vertex */}
+                        <polygon
+                          points={`${mx},${my - 8} ${mx + 8},${my} ${mx},${my + 8} ${mx - 8},${my}`}
+                          fill="#FDE68A" stroke="#F59E0B" strokeWidth={2}
+                          style={{ cursor: "copy" }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            pushLayoutHistory();
+                            insertRoomShapePoint(room, i, midLocalX, midLocalZ);
+                          }}
+                        />
+                      </g>
+                    );
+                  })}
+                  {/* Reset to rectangle */}
+                  {(() => {
+                    const dims = roomDimensions[room];
+                    const bx = pos.x + dims.width / 2 - 36, by = pos.y - 36;
+                    return (
+                      <g style={{ cursor: "pointer" }}
+                        onClick={e => {
+                          e.stopPropagation();
+                          pushLayoutHistory();
+                          setRoomShape(room, "rect");
+                          setShapeEditRoom(null);
+                        }}>
+                        <rect x={bx} y={by} width={72} height={26} rx={6}
+                          fill="rgba(239,68,68,0.88)" />
+                        <text x={bx + 36} y={by + 13} textAnchor="middle" dominantBaseline="middle"
+                          fontSize={13} fill="white" fontWeight="bold"
+                          style={{ pointerEvents: "none", userSelect: "none" }}>重置矩形</text>
+                      </g>
+                    );
+                  })()}
+                </g>
+              );
+            })()}
+
+            {/* ── Fallback stair symbol — clickable shortcut to add a stair room ── */}
+            {exterior.floors > 1 && visibleRooms.length > 0 && !visibleRooms.includes("stair") && (() => {
+              // Position just inside the right edge of the viewBox so it's always visible
+              const symW = 80;
+              const symD = 100;
+              const symX = vbX2 - symW - 12;
+              const symY = vbY1 + pad;
+              const steps = 8;
+              const stepH = symD / steps;
+              return (
+                <g
+                  style={{ cursor: "pointer" }}
+                  onPointerDown={e => {
+                    e.stopPropagation();
+                    pushLayoutHistory();
+                    addRoom2("stair");
+                  }}
+                >
+                  {/* Clickable background hit area */}
+                  <rect x={symX - 4} y={symY - 4} width={symW + 8} height={symD + 60}
+                    fill="transparent" />
+                  {/* Outline box */}
+                  <rect x={symX} y={symY} width={symW} height={symD}
+                    fill="rgba(253,230,138,0.35)" stroke="#B45309" strokeWidth={2.5} rx={4} />
+                  {/* Tread lines */}
+                  {Array.from({ length: steps - 1 }, (_, i) => (
+                    <line key={i}
+                      x1={symX} y1={symY + stepH * (i + 1)}
+                      x2={symX + symW} y2={symY + stepH * (i + 1)}
+                      stroke="#B45309" strokeWidth={1.5} />
+                  ))}
+                  {/* Direction arrow */}
+                  <line x1={symX + symW * 0.5} y1={symY + symD - 8}
+                    x2={symX + symW * 0.5} y2={symY + 12}
+                    stroke="#B45309" strokeWidth={2} />
+                  <polygon
+                    points={`${symX + symW * 0.5 - 6},${symY + 16} ${symX + symW * 0.5 + 6},${symY + 16} ${symX + symW * 0.5},${symY + 4}`}
+                    fill="#B45309" />
+                  {/* "+ 添加楼梯" label */}
+                  <rect x={symX} y={symY + symD + 6} width={symW} height={22}
+                    fill="#D97706" rx={4} />
+                  <text x={symX + symW / 2} y={symY + symD + 17}
+                    textAnchor="middle" dominantBaseline="middle"
+                    fontSize={13} fill="white" fontWeight="bold"
+                    fontFamily="system-ui"
+                    style={{ pointerEvents: "none", userSelect: "none" }}>+ 添加楼梯</text>
+                  <text x={symX + symW / 2} y={symY + symD + 42}
+                    textAnchor="middle" dominantBaseline="middle"
+                    fontSize={12} fill="#92400E"
+                    fontFamily="system-ui"
+                    style={{ pointerEvents: "none", userSelect: "none" }}>楼梯间</text>
+                </g>
+              );
+            })()}
+
             {/* Compass */}
             <g transform={`translate(${vbX2 - 60}, ${vbY2 - 80})`}>
               <circle r={36} fill="white" fillOpacity={0.92} stroke="#D1D5DB" strokeWidth={2} />
@@ -1213,6 +1900,68 @@ export default function FloorPlanAll() {
             </g>
           </svg>
           </div>
+          {/* ── Stair shape picker — HTML panel, always readable regardless of zoom ── */}
+          {visibleRooms.includes("stair") && (() => {
+            const cur = stairConfig ?? { shape: "straight" as const, rotation: 0 as const };
+            const shapes: Array<{ key: "straight"|"L-shaped"|"spiral"; label: string; icon: string }> = [
+              { key: "straight", label: "直线", icon: "⬆" },
+              { key: "L-shaped", label: "L形",  icon: "↱"  },
+              { key: "spiral",   label: "螺旋", icon: "🌀" },
+            ];
+            const rotations: Array<0|90|180|270> = [0, 90, 180, 270];
+            return (
+              <div className="absolute bottom-14 left-3 z-10 bg-white border border-amber-200 rounded-xl shadow-lg p-2.5 flex flex-col gap-1.5"
+                style={{ minWidth: 160 }}
+                onPointerDown={e => e.stopPropagation()}>
+                <div className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-0.5">🪜 楼梯样式</div>
+                {/* Shape row */}
+                <div className="flex gap-1">
+                  {shapes.map(s => (
+                    <button key={s.key}
+                      onClick={() => setStairConfig({ ...cur, shape: s.key })}
+                      className="flex-1 flex flex-col items-center py-1 px-0.5 rounded-lg text-[10px] font-semibold border transition-all"
+                      style={cur.shape === s.key
+                        ? { background: "#D97706", color: "#fff", borderColor: "#B45309" }
+                        : { background: "#FEF3C7", color: "#92400E", borderColor: "#FDE68A" }}>
+                      <span className="text-base leading-tight">{s.icon}</span>
+                      <span>{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+                {/* Rotation row (not for spiral) */}
+                {cur.shape !== "spiral" && (
+                  <div className="flex gap-1">
+                    {rotations.map(r => (
+                      <button key={r}
+                        onClick={() => setStairConfig({ ...cur, rotation: r })}
+                        className="flex-1 py-1 rounded text-[10px] font-bold border transition-all"
+                        style={(cur.rotation ?? 0) === r
+                          ? { background: "#1D4ED8", color: "#fff", borderColor: "#1E40AF" }
+                          : { background: "#EFF6FF", color: "#1D4ED8", borderColor: "#BFDBFE" }}>
+                        {r}°
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {/* Turn side (L-shaped only) */}
+                {cur.shape === "L-shaped" && (
+                  <div className="flex gap-1">
+                    {(["left","right"] as const).map(s => (
+                      <button key={s}
+                        onClick={() => setStairConfig({ ...cur, turnSide: s })}
+                        className="flex-1 py-1 rounded text-[10px] font-bold border transition-all"
+                        style={(cur.turnSide ?? "right") === s
+                          ? { background: "#047857", color: "#fff", borderColor: "#065F46" }
+                          : { background: "#ECFDF5", color: "#047857", borderColor: "#A7F3D0" }}>
+                        {s === "left" ? "↰ 左转" : "↱ 右转"}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Zoom controls — floating bottom-right of canvas, mirrors FloorPlan */}
           <div className="absolute bottom-3 right-3 flex items-center rounded-xl shadow-md bg-white border border-gray-200 overflow-hidden">
             <button onClick={() => setZoomLevel(p => Math.max(0.3, p * 0.8))}
@@ -1294,6 +2043,80 @@ export default function FloorPlanAll() {
             <p className="text-[11px] text-gray-500 mb-3">
               {t.fpHouseTemplateDesc}
             </p>
+
+            {/* ── AI 文字生成设计 ── */}
+            <div className="mb-4 p-3 rounded-xl" style={{ background: "linear-gradient(135deg,#EFF6FF,#F0FDF4)" }}>
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="text-sm">✨</span>
+                <span className="text-[11px] font-bold text-blue-700">AI 智能设计</span>
+                <span className="text-[9px] text-blue-400 bg-blue-50 px-2 py-0.5 rounded-full">描述需求，自动生成平面图 + 外观</span>
+              </div>
+              <div className="flex gap-2">
+                <textarea
+                  className="flex-1 text-[11px] rounded-lg border border-blue-200 bg-white px-2.5 py-1.5 resize-none outline-none focus:border-blue-400 placeholder-gray-400 text-gray-700"
+                  rows={2}
+                  placeholder={"例如：三室两厅两卫，120㎡，主卧朝南带卫生间，现代简约风，需要车库"}
+                  value={aiInput}
+                  onChange={e => setAiInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAiGenerate(); }}
+                  disabled={aiLoading}
+                />
+                <button
+                  onClick={handleAiGenerate}
+                  disabled={aiLoading || !aiInput.trim()}
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-white transition-all disabled:opacity-40"
+                  style={{ background: "linear-gradient(135deg,#3B82F6,#10B981)" }}
+                >
+                  {aiLoading ? "生成中…" : "生成"}
+                </button>
+              </div>
+              {aiError   && <p className="mt-1.5 text-[10px] text-red-500">⚠ {aiError}</p>}
+              {aiSummary && <p className="mt-1.5 text-[10px] text-green-600">✅ {aiSummary}</p>}
+              <p className="mt-1.5 text-[9px] text-gray-400">Ctrl+Enter 快速生成 · 支持中文描述</p>
+            </div>
+            <div className="border-t border-gray-200 mb-3" />
+
+            {/* ── 别墅项目模板 (multi-floor + yard) ── */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">✨ 别墅项目模板</div>
+                <div className="text-[9px] text-gray-400 bg-indigo-50 px-2 py-0.5 rounded-full">双层 + 外观 + 院子一键加载</div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                {PROJECT_TEMPLATES.map(tpl => (
+                  <button key={tpl.id}
+                    onClick={() => {
+                      confirmDialog(`加载「${tpl.name}」将替换所有楼层平面图、外观设置和院子布局，确认吗？`).then(ok => {
+                        if (!ok) return;
+                        applyProjectTemplate(tpl.id);
+                        setLayoutPickerOpen(false);
+                        setViewMode("exterior");
+                      });
+                    }}
+                    className="flex flex-col gap-1.5 p-3 rounded-xl border-2 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left"
+                    style={{ borderColor: "#C7D2FE", background: "linear-gradient(135deg,#F5F3FF,#EEF2FF)" }}
+                  >
+                    {/* Palette strip */}
+                    <div className="w-full h-4 rounded-md overflow-hidden flex gap-px">
+                      <div className="flex-1" style={{ background: tpl.palette[0] }} />
+                      <div className="w-5"   style={{ background: tpl.palette[1] }} />
+                      <div className="w-3"   style={{ background: tpl.palette[2] }} />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-lg">{tpl.emoji}</span>
+                      <div>
+                        <div className="text-[11px] font-bold text-gray-800">{tpl.name}</div>
+                        <div className="text-[9px] text-gray-500">{tpl.areaSqm}㎡ · {tpl.floorLayouts.length}层</div>
+                      </div>
+                    </div>
+                    <div className="text-[9px] text-indigo-600 leading-relaxed">{tpl.description}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="border-t border-gray-200 mb-3" />
+              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">📐 单层平面户型</div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {FLOORPLAN_LAYOUTS.map(layout => {
                 // Compute preview bbox for the thumbnail

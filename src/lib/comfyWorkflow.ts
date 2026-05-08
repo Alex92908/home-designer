@@ -719,6 +719,175 @@ export function generateImg2ImgWorkflow(
   };
 }
 
+// ─── Flux2-Klein white model → rendered image workflow ───────────────────────
+/**
+ * buildFlux2WhiteModelWorkflow
+ *
+ * Converts a white-model (白膜) screenshot into a photorealistic rendered image
+ * using the Flux-2-Klein architecture. Matches the "单角度白膜出效果图工作流（懂老师）"
+ * from the project reference materials.
+ *
+ * Node chain (ComfyUI API prompt format):
+ *   1  UNETLoader  → flux-2-klein-9b.safetensors
+ *   2  CLIPLoader  → qwen_3_8b.safetensors (flux2 type)
+ *   3  VAELoader   → flux2-vae.safetensors
+ *   4  LoadImage   → reference white-model image (uploaded by caller)
+ *   5  GetImageSize → auto-detect width/height for Flux2Scheduler
+ *   6  VAEEncode   → encode reference image to latent
+ *   7  CLIPTextEncode (positive prompt) → clip from node 2
+ *   8  CLIPTextEncode (negative prompt) → clip from node 2
+ *   9  EmptyFlux2LatentImage → w/h from GetImageSize
+ *   10 ReferenceLatent (positive) → conditioning=7, latent=6
+ *   11 ReferenceLatent (negative) → conditioning=8, latent=6
+ *   12 CFGGuider   → model=1, positive=10, negative=11, cfg=1.1
+ *   13 Flux2Scheduler → steps=4, w/h from GetImageSize
+ *   14 KSamplerSelect  → euler
+ *   15 RandomNoise
+ *   16 SamplerCustomAdvanced → noise=15, guider=12, sampler=14, sigmas=13, latent=9
+ *   17 VAEDecode   → vae=3, samples=16
+ *   18 SaveImage
+ *
+ * @param imageName   Filename returned by ComfyUI after uploading the white-model image
+ * @param prompt      Positive prompt text describing the desired rendered appearance
+ * @param negativePrompt  Optional negative prompt (defaults to generic quality excludes)
+ */
+export function buildFlux2WhiteModelWorkflow(
+  imageName: string,
+  prompt: string,
+  negativePrompt?: string,
+): Record<string, unknown> {
+  const neg = negativePrompt ??
+    "LOGO, watermark, blurry, out of focus, overexposed, underexposed, low contrast, " +
+    "noise, distorted proportions, 3D CGI look, cartoonish, AI artifacts";
+
+  return {
+    // ── Model loaders ─────────────────────────────────────────────────────────
+    "1": {
+      class_type: "UNETLoader",
+      inputs: {
+        unet_name: "flux-2-klein-9b.safetensors",
+        weight_dtype: "default",
+      },
+    },
+    "2": {
+      class_type: "CLIPLoader",
+      inputs: {
+        clip_name: "qwen_3_8b.safetensors",
+        type: "flux2",
+        device: "default",
+      },
+    },
+    "3": {
+      class_type: "VAELoader",
+      inputs: { vae_name: "flux2-vae.safetensors" },
+    },
+
+    // ── Reference image (white model) ─────────────────────────────────────────
+    "4": {
+      class_type: "LoadImage",
+      inputs: { image: imageName, upload: "image" },
+    },
+    "5": {
+      class_type: "GetImageSize",
+      inputs: { image: ["4", 0] },
+    },
+    "6": {
+      class_type: "VAEEncode",
+      inputs: { pixels: ["4", 0], vae: ["3", 0] },
+    },
+
+    // ── Text conditioning ─────────────────────────────────────────────────────
+    "7": {
+      class_type: "CLIPTextEncode",
+      inputs: { text: prompt,  clip: ["2", 0] },
+    },
+    "8": {
+      class_type: "CLIPTextEncode",
+      inputs: { text: neg, clip: ["2", 0] },
+    },
+
+    // ── Latent canvas (auto-sized from reference image) ───────────────────────
+    "9": {
+      class_type: "EmptyFlux2LatentImage",
+      inputs: {
+        width:      ["5", 0],
+        height:     ["5", 1],
+        batch_size: 1,
+      },
+    },
+
+    // ── ReferenceLatent — inject white-model latent as structural anchor ───────
+    "10": {
+      class_type: "ReferenceLatent",
+      inputs: {
+        conditioning: ["7", 0],
+        latent:       ["6", 0],
+      },
+    },
+    "11": {
+      class_type: "ReferenceLatent",
+      inputs: {
+        conditioning: ["8", 0],
+        latent:       ["6", 0],
+      },
+    },
+
+    // ── Guider ───────────────────────────────────────────────────────────────
+    "12": {
+      class_type: "CFGGuider",
+      inputs: {
+        model:    ["1", 0],
+        positive: ["10", 0],
+        negative: ["11", 0],
+        cfg:      1.1,
+      },
+    },
+
+    // ── Flux2 scheduler + sampler select ─────────────────────────────────────
+    "13": {
+      class_type: "Flux2Scheduler",
+      inputs: {
+        steps:  4,
+        width:  ["5", 0],
+        height: ["5", 1],
+      },
+    },
+    "14": {
+      class_type: "KSamplerSelect",
+      inputs: { sampler_name: "euler" },
+    },
+    "15": {
+      class_type: "RandomNoise",
+      inputs: { noise_seed: Math.floor(Math.random() * 2 ** 31) },
+    },
+
+    // ── SamplerCustomAdvanced ─────────────────────────────────────────────────
+    "16": {
+      class_type: "SamplerCustomAdvanced",
+      inputs: {
+        noise:        ["15", 0],
+        guider:       ["12", 0],
+        sampler:      ["14", 0],
+        sigmas:       ["13", 0],
+        latent_image: ["9",  0],
+      },
+    },
+
+    // ── Decode + save ─────────────────────────────────────────────────────────
+    "17": {
+      class_type: "VAEDecode",
+      inputs: { samples: ["16", 0], vae: ["3", 0] },
+    },
+    "18": {
+      class_type: "SaveImage",
+      inputs: {
+        filename_prefix: "flux2_whitemodel",
+        images: ["17", 0],
+      },
+    },
+  };
+}
+
 // ─── HiResFix — 4K upscale ───────────────────────────────────────────────────
 /**
  * 4K HiResFix workflow: generate at 1024×1024 then upscale 4× with

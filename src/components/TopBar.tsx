@@ -1,10 +1,28 @@
 "use client";
 
-import { useDesignerStore } from "@/lib/store";
+import { useEffect } from "react";
+import { useDesignerStore, useTemporalStore } from "@/lib/store";
 import { useT, useLocaleStore } from "@/lib/i18n";
 import { ROOM_DEFS } from "@/lib/types";
+import ShareButton from "./ShareButton";
+
+// Sync design state to MCP server so AI agents can query/modify it
+function useMCPSync() {
+  const exterior = useDesignerStore(s => s.exterior);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetch("/api/mcp/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exterior }),
+      }).catch(() => { /* silent — MCP sync is best-effort */ });
+    }, 1500); // debounce
+    return () => clearTimeout(timer);
+  }, [exterior]);
+}
 
 export default function TopBar() {
+  useMCPSync();
   const viewMode          = useDesignerStore((s) => s.viewMode);
   const setViewMode       = useDesignerStore((s) => s.setViewMode);
   const scores            = useDesignerStore((s) => s.scores);
@@ -21,10 +39,33 @@ export default function TopBar() {
   const locale          = useLocaleStore((s) => s.locale);
   const setLocale       = useLocaleStore((s) => s.setLocale);
 
+  // Zundo temporal undo/redo (design state: floorPlans, exterior, budget)
+  const temporalUndo     = useTemporalStore((s) => s.undo);
+  const temporalRedo     = useTemporalStore((s) => s.redo);
+  const pastCount        = useTemporalStore((s) => s.pastStates.length);
+  const futureCount      = useTemporalStore((s) => s.futureStates.length);
+
   const canUndo = viewMode === "all"
     ? layoutHistory.length > 0
     : furnitureHistory.length > 0;
   const handleUndo = viewMode === "all" ? undoLayout : undoFurniture;
+
+  // Keyboard shortcuts: Ctrl+Z = temporal undo, Ctrl+Y / Ctrl+Shift+Z = temporal redo
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (!ctrl) return;
+      if (e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        if (pastCount > 0) temporalUndo();
+      } else if (e.key === "y" || (e.key === "z" && e.shiftKey)) {
+        e.preventDefault();
+        if (futureCount > 0) temporalRedo();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [pastCount, futureCount, temporalUndo, temporalRedo]);
 
   // Floor context: only meaningful in room-editing views (2d / 3d)
   const showFloorCtx = (viewMode === "2d" || viewMode === "3d") && exterior.floors > 1;
@@ -76,21 +117,25 @@ export default function TopBar() {
         className="flex items-center p-1 rounded-xl gap-0.5 shrink-0"
         style={{ background: "var(--ds-bg)", border: "1px solid var(--ds-border)" }}
       >
-        {(["3d", "2d", "all", "global3d", "yard2d", "exterior"] as const).map((mode) => (
-          <button
-            key={mode}
-            onClick={() => setViewMode(mode)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150"
-            style={
-              viewMode === mode
-                ? { background: "var(--ds-surface)", color: "var(--ds-text)", boxShadow: "var(--ds-shadow-sm)" }
-                : { color: "var(--ds-text-3)" }
-            }
-          >
-            <span>{t.viewIcons[mode]}</span>
-            <span className="hidden sm:block">{t.viewModes[mode]}</span>
-          </button>
-        ))}
+        {/* Primary tabs — all, 平面图, 效果图, 全局3D, 外观, 院子图 */}
+        {(["all", "2d", "3d", "global3d", "exterior", "yard2d"] as const).map((mode) => {
+          const isActive = viewMode === mode;
+          return (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150"
+              style={
+                isActive
+                  ? { background: "var(--ds-surface)", color: "var(--ds-text)", boxShadow: "var(--ds-shadow-sm)" }
+                  : { color: "var(--ds-text-3)" }
+              }
+            >
+              <span>{t.viewIcons[mode]}</span>
+              <span className="hidden sm:block">{t.viewModes[mode]}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Floor + room context badge — visible in 2D/3D when multi-floor */}
@@ -109,22 +154,53 @@ export default function TopBar() {
         </div>
       )}
 
-      {/* Undo button */}
-      {viewMode !== "exterior" && (
+      {/* Undo / Redo buttons */}
+      <div className="flex items-center gap-1 shrink-0">
+        {/* Legacy per-room undo (furniture / layout) */}
+        {viewMode !== "exterior" && (
+          <button
+            onClick={handleUndo}
+            disabled={!canUndo}
+            title={viewMode === "all" ? "撤销布局操作" : "撤销家具操作"}
+            className="flex items-center justify-center w-7 h-7 rounded-lg text-sm transition-all disabled:opacity-30"
+            style={{
+              background: canUndo ? "var(--ds-bg)" : "transparent",
+              border: canUndo ? "1px solid var(--ds-border)" : "1px solid transparent",
+              color: "var(--ds-text-2)",
+            }}
+          >
+            ↩
+          </button>
+        )}
+        {/* Zundo design-state undo (Ctrl+Z) */}
         <button
-          onClick={handleUndo}
-          disabled={!canUndo}
-          title={viewMode === "all" ? "撤销布局操作" : "撤销家具操作"}
-          className="flex items-center justify-center w-7 h-7 rounded-lg text-sm transition-all shrink-0 disabled:opacity-30"
+          onClick={() => temporalUndo()}
+          disabled={pastCount === 0}
+          title={`撤销设计操作 (Ctrl+Z) · ${pastCount} 步可撤销`}
+          className="flex items-center justify-center w-7 h-7 rounded-lg text-sm transition-all disabled:opacity-30"
           style={{
-            background: canUndo ? "var(--ds-bg)" : "transparent",
-            border: canUndo ? "1px solid var(--ds-border)" : "1px solid transparent",
-            color: "var(--ds-text-2)",
+            background: pastCount > 0 ? "#EEF2FF" : "transparent",
+            border: pastCount > 0 ? "1px solid #C7D2FE" : "1px solid transparent",
+            color: "#4F46E5",
           }}
         >
           ↩
         </button>
-      )}
+        {/* Zundo design-state redo (Ctrl+Y) */}
+        <button
+          onClick={() => temporalRedo()}
+          disabled={futureCount === 0}
+          title={`重做设计操作 (Ctrl+Y) · ${futureCount} 步可重做`}
+          className="flex items-center justify-center w-7 h-7 rounded-lg text-sm transition-all disabled:opacity-30"
+          style={{
+            background: futureCount > 0 ? "#EEF2FF" : "transparent",
+            border: futureCount > 0 ? "1px solid #C7D2FE" : "1px solid transparent",
+            color: "#4F46E5",
+          }}
+        >
+          ↪
+        </button>
+      </div>
 
       {/* Style badge */}
       {scores.dominantStyle && (
@@ -153,6 +229,19 @@ export default function TopBar() {
       )}
 
       <div className="flex-1" />
+
+      {/* Command palette hint */}
+      <button
+        onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }))}
+        className="hidden md:flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] transition-all shrink-0"
+        style={{ border: "1px solid var(--ds-border)", color: "var(--ds-text-3)", background: "var(--ds-bg)" }}
+        title="命令面板 (⌘K)"
+      >
+        <span>⌘K</span>
+      </button>
+
+      {/* Share button */}
+      <ShareButton />
 
       {/* Language toggle */}
       <button
