@@ -4637,10 +4637,25 @@ function RichGlassVillaBuilding({ W, D, settings }: {
           INTERIOR — warm fill visible through UF glass
           ════════════════════════════════════════════════ */}
       <RichGlassInterior W={UF_W} D={UF_D} GF_H={GF_H} UF_H={UF_H} SLAB_T={SLAB_T} />
-      {/* Interior lights — upper floor only (GF is open loggia) */}
-      <pointLight position={[0,             GF_H + SLAB_T + UF_H * 0.65, UF_ZOFF / 2       ]} color="#FFF8F0" intensity={22} distance={UF_W * 2.2} decay={1.1} />
-      <pointLight position={[UF_W * 0.30,  GF_H + SLAB_T + UF_H * 0.65, UF_ZOFF / 2 + 0.5 ]} color="#FFF4E8" intensity={14} distance={UF_W * 1.2} decay={1.2} />
-      <pointLight position={[-UF_W * 0.30, GF_H + SLAB_T + UF_H * 0.65, UF_ZOFF / 2 + 0.5 ]} color="#FFF4E8" intensity={14} distance={UF_W * 1.2} decay={1.2} />
+      {/* Interior lights — upper floor only (GF is open loggia).
+          castShadow=true prevents light from bleeding through concrete walls.
+          distance is clamped to stay inside the UF glass box.            */}
+      <pointLight
+        position={[0, GF_H + SLAB_T + UF_H * 0.65, UF_ZOFF / 2]}
+        color="#FFF8F0" intensity={12} distance={UF_H * 1.6} decay={1.6}
+        castShadow shadow-mapSize-width={512} shadow-mapSize-height={512}
+        shadow-camera-near={0.1} shadow-camera-far={UF_H * 1.8}
+      />
+      <pointLight
+        position={[UF_W * 0.28, GF_H + SLAB_T + UF_H * 0.65, UF_ZOFF / 2 + 0.4]}
+        color="#FFF4E8" intensity={7} distance={UF_H * 1.1} decay={1.8}
+        castShadow shadow-mapSize-width={256} shadow-mapSize-height={256}
+      />
+      <pointLight
+        position={[-UF_W * 0.28, GF_H + SLAB_T + UF_H * 0.65, UF_ZOFF / 2 + 0.4]}
+        color="#FFF4E8" intensity={7} distance={UF_H * 1.1} decay={1.8}
+        castShadow shadow-mapSize-width={256} shadow-mapSize-height={256}
+      />
 
       {/* ════════════════════════════════════════════════════
           ROOF — large flat slab, south cantilever, wood soffit

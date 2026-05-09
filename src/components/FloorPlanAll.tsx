@@ -728,71 +728,26 @@ export default function FloorPlanAll() {
               <span className="text-[9px] px-1 rounded-full bg-orange-100">{historyLen}</span>
             )}
           </button>
-          {/* Floor layer controls — active floor selector + ghost overlays */}
+          {/* Floor switcher — simple active/inactive toggle */}
           {exterior.floors > 1 && (
             <div className="flex items-center gap-1 ml-auto">
               {Array.from({ length: exterior.floors }).map((_, i) => {
-                const isActive  = activeFloor === i;
-                const isGhost   = !isActive && ghostFloors.has(i);
-                // Per-floor accent colours: 1F=blue, 2F=purple, 3F=green
-                const colors = ["#2563EB", "#7C3AED", "#059669", "#D97706"];
-                const c = colors[i % colors.length];
+                const isActive = activeFloor === i;
+                const colors   = ["#2563EB", "#7C3AED", "#059669", "#D97706"];
+                const c        = colors[i % colors.length];
                 return (
-                  <div key={i} className="flex items-center" style={{ gap: 0 }}>
-                    {/* Active floor button — click to switch editing floor */}
-                    <button
-                      onClick={() => setActiveFloor(i)}
-                      style={{
-                        background: isActive ? c : "white",
-                        color:      isActive ? "white" : c,
-                        border:     `1.5px solid ${c}`,
-                        borderRight: "none",
-                        borderRadius: "6px 0 0 6px",
-                        padding: "2px 8px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        lineHeight: "18px",
-                      }}
-                    >
-                      {i + 1}F
-                    </button>
-                    {/* Eye toggle — show/hide this floor as ghost overlay */}
-                    {!isActive && (
-                      <button
-                        onClick={() => setGhostFloors(prev => {
-                          const next = new Set(prev);
-                          next.has(i) ? next.delete(i) : next.add(i);
-                          return next;
-                        })}
-                        title={isGhost ? `隐藏 ${i+1}F 叠加` : `显示 ${i+1}F 叠加`}
-                        style={{
-                          background: isGhost ? c + "22" : "white",
-                          color:      isGhost ? c : "#9CA3AF",
-                          border:     `1.5px solid ${c}`,
-                          borderLeft: "1px solid " + c + "44",
-                          borderRadius: "0 6px 6px 0",
-                          padding: "2px 5px",
-                          fontSize: 11,
-                          lineHeight: "18px",
-                        }}
-                      >
-                        {isGhost ? "👁" : "○"}
-                      </button>
-                    )}
-                    {isActive && (
-                      <span style={{
-                        background: c + "18",
-                        color: c,
-                        border: `1.5px solid ${c}`,
-                        borderLeft: "1px solid " + c + "44",
-                        borderRadius: "0 6px 6px 0",
-                        padding: "2px 5px",
-                        fontSize: 10,
-                        lineHeight: "18px",
-                        fontWeight: 600,
-                      }}>编辑</span>
-                    )}
-                  </div>
+                  <button
+                    key={i}
+                    onClick={() => setActiveFloor(i)}
+                    className="px-3 py-0.5 rounded-lg text-xs font-bold transition-all"
+                    style={{
+                      background: isActive ? c      : "white",
+                      color:      isActive ? "white" : c,
+                      border:     `1.5px solid ${c}`,
+                    }}
+                  >
+                    {i + 1}F
+                  </button>
                 );
               })}
             </div>
@@ -1077,31 +1032,61 @@ export default function FloorPlanAll() {
               />
             )}
 
-            {/* ── Ghost floor overlays: base footprint hint (below 1F rooms) ── */}
+            {/* ── Ghost floor overlays — non-active floors shown semi-transparently ── */}
             {exterior.floors > 1 && Array.from({ length: exterior.floors }, (_, fi) => {
               if (fi === activeFloor) return null;
               if (!ghostFloors.has(fi)) return null;
               const fp = allFloorPlans[fi];
               if (!fp) return null;
               const ghostRooms = (fp.enabledRooms ?? []).filter(r => !ROOM_DEFS[r].isOutdoor);
-              if (ghostRooms.length === 0) return null;
               const ghostColors = ["#2563EB", "#7C3AED", "#059669", "#D97706"];
               const gc = ghostColors[fi % ghostColors.length];
-              // Compute combined bounding box
-              let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-              for (const room of ghostRooms) {
-                const p = fp.roomLayout?.[room]; const d2 = fp.roomDimensions?.[room];
-                if (!p || !d2) continue;
-                minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
-                maxX = Math.max(maxX, p.x + d2.width); maxY = Math.max(maxY, p.y + d2.depth);
-              }
-              if (!isFinite(minX)) return null;
               return (
-                <rect key={`ghost-base-${fi}`}
-                  x={minX} y={minY} width={maxX-minX} height={maxY-minY}
-                  fill={gc} fillOpacity={0.07}
-                  stroke={gc} strokeWidth={1} strokeOpacity={0.18} strokeDasharray="4 4"
-                  style={{ pointerEvents: "none" }} />
+                <g key={`ghost-${fi}`} style={{ pointerEvents: "none" }}>
+                  {ghostRooms.map(room => {
+                    const pos  = fp.roomLayout?.[room];
+                    const dims = fp.roomDimensions?.[room];
+                    if (!pos || !dims) return null;
+                    const { x, y } = pos;
+                    const { width: w, depth: d } = dims;
+                    const shape = fp.roomShapes?.[room];
+                    const isPolygon = shape && shape.preset !== "rect";
+                    const polyPts = isPolygon
+                      ? shape!.points.map(([px, pz]) => `${x + px},${y + pz}`).join(" ")
+                      : "";
+                    return (
+                      <g key={room}>
+                        {isPolygon ? (
+                          <polygon points={polyPts}
+                            fill={gc} fillOpacity={0.12}
+                            stroke={gc} strokeWidth={1.5} strokeOpacity={0.55}
+                            strokeDasharray="6 3" />
+                        ) : (
+                          <rect x={x} y={y} width={w} height={d}
+                            fill={gc} fillOpacity={0.12}
+                            stroke={gc} strokeWidth={1.5} strokeOpacity={0.55}
+                            strokeDasharray="6 3" />
+                        )}
+                        <text
+                          x={x + w / 2} y={y + d / 2 - 8}
+                          textAnchor="middle" dominantBaseline="middle"
+                          fontSize={Math.min(w, d) * 0.075}
+                          fill={gc} fillOpacity={0.7} fontWeight="600"
+                        >
+                          {fi + 1}F·{ROOM_DEFS[room]?.name ?? room}
+                        </text>
+                        <text
+                          x={x + w / 2} y={y + d / 2 + Math.min(w, d) * 0.08}
+                          textAnchor="middle" dominantBaseline="middle"
+                          fontSize={Math.min(w, d) * 0.060}
+                          fill={gc} fillOpacity={0.55}
+                        >
+                          {(w / 100).toFixed(1)}×{(d / 100).toFixed(1)}m
+                        </text>
+                      </g>
+                    );
+                  })}
+                </g>
               );
             })}
 
@@ -1398,120 +1383,6 @@ export default function FloorPlanAll() {
                     style={{ cursor: "grab" }}
                     onPointerDown={e => startMove(e, room)}
                   />
-                </g>
-              );
-            })}
-
-            {/* ── Ghost floor overlays: isometric slab — rendered ABOVE 1F rooms ── */}
-            {exterior.floors > 1 && Array.from({ length: exterior.floors }, (_, fi) => {
-              if (fi === activeFloor) return null;
-              if (!ghostFloors.has(fi)) return null;
-              const fp = allFloorPlans[fi];
-              if (!fp) return null;
-              const ghostRooms = (fp.enabledRooms ?? []).filter(r => !ROOM_DEFS[r].isOutdoor);
-              if (ghostRooms.length === 0) return null;
-              const ghostColors = ["#2563EB", "#7C3AED", "#059669", "#D97706"];
-              const gc = ghostColors[fi % ghostColors.length];
-
-              // ── Collect room rects & compute combined bounding box ──
-              type RR = { room: string; x:number; y:number; w:number; d:number };
-              const rects: RR[] = [];
-              let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-              for (const room of ghostRooms) {
-                const p = fp.roomLayout?.[room];
-                const dim = fp.roomDimensions?.[room];
-                if (!p || !dim) continue;
-                rects.push({ room, x: p.x, y: p.y, w: dim.width, d: dim.depth });
-                minX = Math.min(minX, p.x);          minY = Math.min(minY, p.y);
-                maxX = Math.max(maxX, p.x+dim.width); maxY = Math.max(maxY, p.y+dim.depth);
-              }
-              if (rects.length === 0 || !isFinite(minX)) return null;
-
-              const BX = minX, BY = minY, BW = maxX - minX, BD = maxY - minY;
-
-              // ── Oblique projection: top face offsets (left+up) ──
-              // ISO_DX < 0 = shifts left → left wall visible
-              // ISO_DY < 0 = shifts up  → front+top clearly elevated
-              const ISO_DX = -110;
-              const ISO_DY = -300;
-
-              const svgPts = (cs: [number,number][]) => cs.map(([cx,cy]) => `${cx},${cy}`).join(" ");
-
-              // Slab corners: bottom = ground level; top = elevated
-              const bTL: [number,number] = [BX,     BY    ];
-              const bTR: [number,number] = [BX+BW,  BY    ];
-              const bBR: [number,number] = [BX+BW,  BY+BD ];
-              const bBL: [number,number] = [BX,     BY+BD ];
-              const tTL: [number,number] = [BX+ISO_DX,    BY+ISO_DY    ];
-              const tTR: [number,number] = [BX+BW+ISO_DX, BY+ISO_DY    ];
-              const tBR: [number,number] = [BX+BW+ISO_DX, BY+BD+ISO_DY ];
-              const tBL: [number,number] = [BX+ISO_DX,    BY+BD+ISO_DY ];
-
-              // Front wall center for the "NF" label
-              const fwCX = (bBL[0]+tBR[0]) / 2;
-              const fwCY = (bBL[1]+tBR[1]) / 2;
-              const fwH  = Math.sqrt(ISO_DX*ISO_DX + ISO_DY*ISO_DY); // wall height in SVG units
-              const labelBig = Math.min(BW, BD) * 0.09;
-
-              return (
-                <g key={`ghost-slab-${fi}`} style={{ pointerEvents: "none" }}>
-                  {/* ① Left side wall */}
-                  <polygon points={svgPts([bTL, tTL, tBL, bBL])}
-                    fill={gc} fillOpacity={0.22}
-                    stroke={gc} strokeWidth={2} strokeOpacity={0.70} />
-
-                  {/* ② Front wall (south side — most visible face) */}
-                  <polygon points={svgPts([bBL, tBL, tBR, bBR])}
-                    fill={gc} fillOpacity={0.30}
-                    stroke={gc} strokeWidth={2} strokeOpacity={0.80} />
-
-                  {/* ③ Top face (the elevated floor plate) */}
-                  <polygon points={svgPts([tTL, tTR, tBR, tBL])}
-                    fill={gc} fillOpacity={0.28}
-                    stroke={gc} strokeWidth={3} strokeOpacity={1.0} />
-
-                  {/* ④ Hidden back/right edges (dashed) */}
-                  <line x1={bTR[0]} y1={bTR[1]} x2={tTR[0]} y2={tTR[1]}
-                    stroke={gc} strokeWidth={1.5} strokeOpacity={0.35} strokeDasharray="6 4" />
-                  <line x1={bTL[0]} y1={bTL[1]} x2={tTL[0]} y2={tTL[1]}
-                    stroke={gc} strokeWidth={1.5} strokeOpacity={0.25} strokeDasharray="5 5" />
-
-                  {/* ⑤ Room grid on the top face */}
-                  {rects.map(({ room, x, y, w, d }) => {
-                    const rTL: [number,number] = [x+ISO_DX,   y+ISO_DY  ];
-                    const rTR: [number,number] = [x+w+ISO_DX, y+ISO_DY  ];
-                    const rBR: [number,number] = [x+w+ISO_DX, y+d+ISO_DY];
-                    const rBL: [number,number] = [x+ISO_DX,   y+d+ISO_DY];
-                    const rcx = (rTL[0]+rBR[0]) / 2;
-                    const rcy = (rTL[1]+rBR[1]) / 2;
-                    const fs  = Math.min(w, d) * 0.072;
-                    return (
-                      <g key={room}>
-                        <polygon points={svgPts([rTL, rTR, rBR, rBL])}
-                          fill="none" stroke={gc} strokeWidth={1.5} strokeOpacity={0.65} />
-                        <text x={rcx} y={rcy - fs * 0.4}
-                          textAnchor="middle" dominantBaseline="middle"
-                          fontSize={fs} fill={gc} fillOpacity={1.0} fontWeight="700"
-                          style={{ userSelect: "none" }}>
-                          {ROOM_DEFS[room as RoomType]?.name ?? room}
-                        </text>
-                        <text x={rcx} y={rcy + fs * 0.8}
-                          textAnchor="middle" dominantBaseline="middle"
-                          fontSize={fs * 0.75} fill={gc} fillOpacity={0.70}
-                          style={{ userSelect: "none" }}>
-                          {(w/100).toFixed(1)}×{(d/100).toFixed(1)}m
-                        </text>
-                      </g>
-                    );
-                  })}
-
-                  {/* ⑥ Big floor label on front wall */}
-                  <text x={fwCX} y={fwCY}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fontSize={fwH * 0.28} fill={gc} fillOpacity={0.85} fontWeight="900"
-                    style={{ userSelect: "none" }}>
-                    {fi + 1}F
-                  </text>
                 </g>
               );
             })}

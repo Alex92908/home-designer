@@ -892,29 +892,37 @@ function CameraFit() {
   );
 }
 
-export default function GlobalCanvas() {
+export interface GlobalCanvasProps {
+  /** External floor-visibility array.  When provided, the component is
+   *  "controlled" — the parent owns the state and receives toggle events. */
+  floorVisible?:   boolean[];
+  onToggleFloor?:  (fi: number) => void;
+}
+
+export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }: GlobalCanvasProps = {}) {
   const enabledRooms   = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
   const exteriorFloors = useDesignerStore(s => s.exterior.floors);
   const t = useT();
 
-  // ── Visibility / layout state ─────────────────────────────
-  const [floorVisible, setFloorVisible] = useState<boolean[]>(() =>
+  // ── Visibility / layout state (internal fallback when no props) ───────────
+  const [intVisible, setIntVisible] = useState<boolean[]>(() =>
     Array(Math.max(exteriorFloors, 1)).fill(true),
   );
-  // Sync array length when floor count changes
   useEffect(() => {
-    setFloorVisible(prev => {
+    setIntVisible(prev => {
       if (prev.length === exteriorFloors) return prev;
       return Array.from({ length: exteriorFloors }, (_, i) => prev[i] ?? true);
     });
   }, [exteriorFloors]);
 
-  const [showRoof,   setShowRoof]   = useState(false); // default hidden so dollhouse interior is visible
+  // Use external state when provided, otherwise use internal
+  const floorVisible = extVisible ?? intVisible;
+  const toggleFloor  = onToggleFloor ?? ((fi: number) =>
+    setIntVisible(prev => prev.map((v, i) => i === fi ? !v : v)));
+
+  const [showRoof,   setShowRoof]   = useState(false);
   const [showStairs, setShowStairs] = useState(true);
   const [stairPos, setStairPos] = useState<{ x: number; z: number } | null>(null);
-
-  const toggleFloor = (fi: number) =>
-    setFloorVisible(prev => prev.map((v, i) => i === fi ? !v : v));
 
   if (enabledRooms.length === 0) {
     return (

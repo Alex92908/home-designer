@@ -50,6 +50,7 @@ const GlobalCanvas = dynamic(() => import("@/components/GlobalCanvas"), {
   loading: () => <CanvasLoading bg="bg-gray-200" msgKey="global3dLoading" />,
 });
 
+
 // ─── Panel toggle tab button ──────────────────────────────
 /** Cycles front-wall opacity: 0 → 0.5 → 1 → 0. Lets user see artwork
  *  placed on the front wall, which is cut away in the default dollhouse
@@ -315,8 +316,8 @@ export default function Home() {
 
           {viewMode === "3d"  && <RoomCanvas />}
           {viewMode === "2d"  && <FloorPlan />}
-          {isAll              && <FloorPlanAll />}
-          {isGlobal3d         && <GlobalCanvas />}
+          {isAll      && <FloorPlanAll />}
+          {isGlobal3d && <GlobalCanvas />}
           {isExterior         && (viewMode === "yard2d"
             ? <YardPlan />
             : <HouseCanvas />
