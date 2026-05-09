@@ -22,7 +22,7 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
-import { ROOM_DEFS, RoomType, WindowConfig } from "@/lib/types";
+import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig } from "@/lib/types";
 
 // ── 常量 ──────────────────────────────────────────────────────
 const CM       = 0.01;   // cm → m
@@ -45,6 +45,8 @@ export interface ExteriorWallSeg {
   segEnd:   number;  // 沿墙终点
   // 该段上的窗（来自 roomWindows，已匹配 wall 方向）
   windows: WindowConfig[];
+  // 该段上的门
+  doors: DoorConfig[];
 }
 
 // ── 区间差集 ──────────────────────────────────────────────────
@@ -77,6 +79,7 @@ export function computeExteriorWalls(
   dims:         Record<string, { width: number; depth: number }>,
   winMap:       Record<string, WindowConfig[]>,
   floorIndex:   number,
+  doorMap?:     Record<string, DoorConfig[]>,
 ): ExteriorWallSeg[] {
   const rooms = enabledRooms.filter(r => !ROOM_DEFS[r]?.isOutdoor);
   const result: ExteriorWallSeg[] = [];
@@ -138,6 +141,9 @@ export function computeExteriorWalls(
       // 获取该房间该墙面的窗
       const winWall  = sideToWinWall(side);
       const roomWins = (winMap[room] ?? []).filter(w => w.wall === winWall);
+      // 门（legacy single-door 或 multi-door）
+      const allDoors  = doorMap?.[room] ?? [];
+      const roomDoors = allDoors.filter(d => d.wall === winWall);
 
       for (const [segStart, segEnd] of exterior) {
         if (segEnd - segStart < 20) continue; // 忽略太小的碎片
@@ -149,7 +155,14 @@ export function computeExteriorWalls(
           return wE > segStart && wS < segEnd;
         });
 
-        result.push({ floorIndex, room, side, roomX: rx, roomY: ry, roomW: rw, roomD: rd, segStart, segEnd, windows: segWins });
+        // 过滤落在此段内的门
+        const segDoors = roomDoors.filter(d => {
+          const dS = wallStart + (d.pos ?? 0);
+          const dE = dS + d.len;
+          return dE > segStart && dS < segEnd;
+        });
+
+        result.push({ floorIndex, room, side, roomX: rx, roomY: ry, roomW: rw, roomD: rd, segStart, segEnd, windows: segWins, doors: segDoors });
       }
     }
   }
@@ -168,37 +181,68 @@ function planToWorld(fpX: number, fpY: number, o: PlanOffset): [number, number] 
 }
 
 // ── 玻璃幕墙立面 ──────────────────────────────────────────────
-function GlassFace({ width, height, mullions = 5 }: { width: number; height: number; mullions?: number }) {
-  const panelW = width / mullions;
-  // 中横框数量 — 随楼层高度自适应（约每 1m 一根）
+/**
+ * GlassFace — 玻璃幕墙，支持大门镂空。
+ * doors: 门的位置信息，格式 { pos: 0..1 (相对于 width), w, h }
+ */
+function GlassFace({
+  width, height, mullions = 5, doors = [],
+}: {
+  width: number; height: number; mullions?: number;
+  doors?: Array<{ cx: number; w: number; h: number }>;
+}) {
+  const panelW   = width / mullions;
   const midRails = Math.max(1, Math.round(height / 1.0) - 1);
+
   return (
     <group>
-      {/* 室内暖光背景（透过玻璃可见） */}
-      <mesh position={[0, 0, -0.08]}>
+      {/* 室内暖光背景（z=+0.08，在玻璃后方，FrontSide 渲染，不会翻转） */}
+      <mesh position={[0, 0, 0.08]}>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial color="#F5E8D0" emissive="#EFD8A8" emissiveIntensity={0.35} side={THREE.DoubleSide} />
+        <meshStandardMaterial
+          color="#EED8A8" emissive="#E8C880" emissiveIntensity={0.28}
+          side={THREE.FrontSide}
+          depthWrite={false}
+        />
       </mesh>
-      {/* 玻璃面板 — 分格，每格一块 */}
+
+      {/* 玻璃面板 — 按竖向分格，跳过有门的格子底部 */}
       {Array.from({ length: mullions }, (_, i) => {
-        const px = -width / 2 + (i + 0.5) * panelW;
+        const px     = -width / 2 + (i + 0.5) * panelW;
+        const pLeft  = -width / 2 + i * panelW;
+        const pRight = pLeft + panelW;
+
+        // 检查这一格是否被门部分覆盖
+        const door = doors.find(d => d.cx - d.w / 2 < pRight && d.cx + d.w / 2 > pLeft);
+        if (door) {
+          // 门上方玻璃（transom）
+          const transomH = height - door.h;
+          if (transomH > 0.1) {
+            return (
+              <mesh key={i} position={[px, -height / 2 + door.h + transomH / 2, 0]}>
+                <planeGeometry args={[panelW * 0.96, transomH * 0.96]} />
+                <meshPhysicalMaterial color="#AACCDD" transmission={0.65} roughness={0.02} transparent opacity={0.50} side={THREE.DoubleSide} />
+              </mesh>
+            );
+          }
+          return null;
+        }
         return (
           <mesh key={i} position={[px, 0, 0]}>
             <planeGeometry args={[panelW * 0.96, height * 0.96]} />
             <meshPhysicalMaterial
               color="#AACCDD"
-              metalness={0.0}
               roughness={0.02}
               transmission={0.65}
               thickness={0.5}
               ior={1.45}
-              transparent
-              opacity={0.50}
+              transparent opacity={0.50}
               side={THREE.DoubleSide}
             />
           </mesh>
         );
       })}
+
       {/* 竖向钢竖框 */}
       {Array.from({ length: mullions + 1 }, (_, i) => {
         const px = -width / 2 + i * panelW;
@@ -209,6 +253,7 @@ function GlassFace({ width, height, mullions = 5 }: { width: number; height: num
           </mesh>
         );
       })}
+
       {/* 顶横框 + 底横框 */}
       {[-height / 2 + 0.025, height / 2 - 0.025].map((py, i) => (
         <mesh key={i} position={[0, py, 0.02]}>
@@ -216,6 +261,7 @@ function GlassFace({ width, height, mullions = 5 }: { width: number; height: num
           <meshStandardMaterial color="#1C1C1C" metalness={0.85} roughness={0.20} />
         </mesh>
       ))}
+
       {/* 中横框（等分） */}
       {Array.from({ length: midRails }, (_, i) => {
         const py = -height / 2 + ((i + 1) / (midRails + 1)) * height;
@@ -226,6 +272,47 @@ function GlassFace({ width, height, mullions = 5 }: { width: number; height: num
           </mesh>
         );
       })}
+
+      {/* 门 — 推拉玻璃门 */}
+      {doors.map((door, di) => (
+        <group key={`door-${di}`} position={[door.cx, -height / 2 + door.h / 2, 0.04]}>
+          {/* 两扇推拉门玻璃 */}
+          {[-door.w / 4, door.w / 4].map((ox, si) => (
+            <mesh key={si} position={[ox, 0, 0]}>
+              <planeGeometry args={[door.w / 2 - 0.04, door.h - 0.06]} />
+              <meshPhysicalMaterial
+                color="#88BBCC"
+                transmission={0.72}
+                roughness={0.01}
+                transparent opacity={0.45}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+          ))}
+          {/* 门框 */}
+          <mesh position={[0, 0, 0.02]}>
+            <boxGeometry args={[door.w, 0.06, 0.06]} />
+            <meshStandardMaterial color="#111" metalness={0.9} roughness={0.15} />
+          </mesh>
+          <mesh position={[0, -door.h / 2 + 0.03, 0.02]}>
+            <boxGeometry args={[door.w, 0.06, 0.06]} />
+            <meshStandardMaterial color="#111" metalness={0.9} roughness={0.15} />
+          </mesh>
+          {[-door.w / 2 + 0.03, 0, door.w / 2 - 0.03].map((bx, bi) => (
+            <mesh key={bi} position={[bx, 0, 0.02]}>
+              <boxGeometry args={[0.05, door.h, 0.06]} />
+              <meshStandardMaterial color="#111" metalness={0.9} roughness={0.15} />
+            </mesh>
+          ))}
+          {/* 门拉手 */}
+          {[-door.w / 4 + 0.08, door.w / 4 - 0.08].map((hx, hi) => (
+            <mesh key={hi} position={[hx, 0, 0.04]}>
+              <boxGeometry args={[0.025, 0.18, 0.025]} />
+              <meshStandardMaterial color="#888" metalness={0.95} roughness={0.1} />
+            </mesh>
+          ))}
+        </group>
+      ))}
     </group>
   );
 }
@@ -256,10 +343,10 @@ function ConcreteFace({
         const wy = -height / 2 + winSill + winH_m / 2;
         return (
           <group key={win.id} position={[wx, wy, 0.02]}>
-            {/* 室内暖光背底 */}
-            <mesh position={[0, 0, -0.06]}>
+            {/* 室内暖光背底（z+向：在玻璃后方，FrontSide 不会翻转） */}
+            <mesh position={[0, 0, 0.06]}>
               <planeGeometry args={[winL, winH_m]} />
-              <meshStandardMaterial color="#EED8A8" emissive="#E8C888" emissiveIntensity={0.25} />
+              <meshStandardMaterial color="#EED8A8" emissive="#E8C888" emissiveIntensity={0.25} side={THREE.FrontSide} />
             </mesh>
             {/* 玻璃 */}
             <mesh>
@@ -358,10 +445,20 @@ function WallSegment({
 
   const mullions = Math.max(3, Math.round(segLen / 1.5));
 
+  // 将门的平面图坐标（相对于 wallStart）转换为 Three.js 局部坐标
+  const doorInfos = useMemo(() => seg.doors.map(d => {
+    const dPos  = d.pos ?? 0;
+    const dLen  = d.len;
+    const dH    = (d.h ?? 200) * CM;
+    // segStart 相对 wallStart 的偏移 → 局部 X（中心在 segStart 处）
+    const localX = (dPos + dLen / 2 - seg.segStart) * CM - segLen / 2;
+    return { cx: localX, w: dLen * CM, h: dH };
+  }), [seg.doors, seg.segStart, segLen]);
+
   return (
     <group position={pos} rotation={rot}>
       {facadeType === "glass" ? (
-        <GlassFace width={segLen} height={floorHeight} mullions={mullions} />
+        <GlassFace width={segLen} height={floorHeight} mullions={mullions} doors={doorInfos} />
       ) : facadeType === "wood" ? (
         <WoodFace width={segLen} height={floorHeight} />
       ) : (
@@ -483,17 +580,42 @@ export default function FloorPlanBuilding() {
 
   // 计算所有楼层的外墙段
   const allSegs = useMemo<ExteriorWallSeg[]>(() => {
+    // wall 名映射：平面图 bottom/top/left/right → DoorConfig wall 名
+    const legacyWallMap: Record<string, DoorConfig["wall"]> = {
+      bottom: "front", top: "back", left: "left", right: "right",
+    };
+
     const result: ExteriorWallSeg[] = [];
     for (let fi = 0; fi < floorCount; fi++) {
       const fp = floorPlans[fi];
       if (!fp) continue;
       const rooms = (fp.enabledRooms ?? []).filter(r => !ROOM_DEFS[r]?.isOutdoor) as RoomType[];
+
+      // 合并新版 roomDoors + 旧版 roomDoorWall/Pos/Len
+      const mergedDoors: Record<string, DoorConfig[]> = {};
+      for (const r of rooms) {
+        const newDoors = fp.roomDoors?.[r as RoomType] ?? [];
+        if (newDoors.length > 0) {
+          mergedDoors[r] = newDoors;
+        } else if (fp.roomHasDoor?.[r as RoomType] && fp.roomDoorWall?.[r as RoomType]) {
+          const legWall = fp.roomDoorWall[r as RoomType];
+          mergedDoors[r] = [{
+            id:   `legacy-${r}`,
+            wall: legacyWallMap[legWall] ?? "front",
+            pos:  fp.roomDoorPos?.[r as RoomType] ?? 40,
+            len:  fp.roomDoorLen?.[r as RoomType] ?? 90,
+            h:    fp.roomDoorH?.[r as RoomType] ?? 210,
+          }];
+        }
+      }
+
       const segs = computeExteriorWalls(
         rooms,
         fp.roomLayout ?? {},
         fp.roomDimensions ?? {},
         fp.roomWindows ?? {},
         fi,
+        mergedDoors,
       );
       result.push(...segs);
     }
