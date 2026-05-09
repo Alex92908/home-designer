@@ -321,6 +321,41 @@ export default function ExteriorPanel() {
           <div className="mt-1.5 mb-0.5 border-t border-gray-100" />
         </div>
 
+        {/* ── 平面图驱动外观 ── */}
+        {(() => {
+          const bt = (exterior as any).buildingType;
+          const isActive = bt === "floor-plan-driven";
+          return (
+            <div className="px-3 pb-3">
+              <button
+                onClick={() => setExterior({ buildingType: isActive ? undefined : "floor-plan-driven" } as any)}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all hover:shadow-sm active:scale-[0.98]"
+                style={isActive ? {
+                  background: "linear-gradient(135deg,#EEF2FF,#E0E7FF)",
+                  border: "2px solid #6366F1",
+                  color: "#3730A3",
+                } : {
+                  background: "linear-gradient(135deg,rgba(255,255,255,0.9),rgba(249,247,255,0.7))",
+                  border: "2px solid #E5E7EB",
+                  color: "#374151",
+                }}
+              >
+                <span className="text-xl shrink-0">🏗️</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-bold truncate">平面图驱动外观</div>
+                  <div className="text-[9px] opacity-60 truncate">按真实户型自动生成外立面</div>
+                </div>
+                {isActive && (
+                  <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: "#6366F1" }}>
+                    <span className="text-white text-[8px]">✓</span>
+                  </div>
+                )}
+              </button>
+            </div>
+          );
+        })()}
+
         {/* ── Style presets ── */}
         <div className="px-3 pt-3">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t.extPresets}</div>

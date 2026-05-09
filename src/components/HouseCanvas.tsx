@@ -17,6 +17,7 @@ import { getOutdoorAssetByKind } from "@/lib/outdoorAssets";
 import { DetailedDecor } from "./DetailedDecor";
 import { PrefabMesh } from "./PrefabRenderer";
 import { ZoneMesh } from "./ZoneRenderer";
+import FloorPlanBuilding from "./FloorPlanExterior";
 
 // ─── Constants ─────────────────────────────────────────────
 const FLOOR_H = 2.8;
@@ -226,7 +227,7 @@ function CameraRig({ W, D, floors, buildingType }: {
     if (initialized.current) return;
 
     const h    = floors * FLOOR_H;
-    const isRichVilla = buildingType === "rich-glass-villa";
+    const isRichVilla = buildingType === "rich-glass-villa" || buildingType === "floor-plan-driven";
 
     if (isRichVilla) {
       // Luxury villa architectural perspective.
@@ -4696,8 +4697,12 @@ function HouseBody({ W, D, settings }: { W: number; D: number; settings: Exterio
   // ── Rich Glass Villa shortcut ──────────────────────────────────────────
   // When buildingType is set, bypass the generic floor-shell system entirely
   // and render the specialized multi-volume building component.
-  if ((settings as ExteriorSettings & { buildingType?: string }).buildingType === "rich-glass-villa") {
+  const buildingTypeHB = (settings as ExteriorSettings & { buildingType?: string }).buildingType;
+  if (buildingTypeHB === "rich-glass-villa") {
     return <RichGlassVillaBuilding W={W} D={D} settings={settings} />;
+  }
+  if (buildingTypeHB === "floor-plan-driven") {
+    return <FloorPlanBuilding />;
   }
 
   const { floors, roofStyle, roofColor, accentColor } = settings;
@@ -5267,7 +5272,8 @@ export default function HouseCanvas() {
   const sunPos = getSunPosition3D(sunHour, siteLatLng);
   const theme  = getSkyTheme(sunHour);
   const skyHex = _rgbHex(theme.skyRgb);
-  const isRichGlassVilla = (exterior as ExteriorSettings & { buildingType?: string }).buildingType === "rich-glass-villa";
+  const _buildingType    = (exterior as ExteriorSettings & { buildingType?: string }).buildingType;
+  const isRichGlassVilla = _buildingType === "rich-glass-villa" || _buildingType === "floor-plan-driven";
 
   return (
     <div className="w-full h-full relative">
@@ -5366,7 +5372,7 @@ export default function HouseCanvas() {
       >
         <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />
         <ExteriorCaptureSetup />
-        <CameraRig W={W} D={D} floors={floors} buildingType={(exterior as ExteriorSettings & { buildingType?: string }).buildingType} />
+        <CameraRig W={W} D={D} floors={floors} buildingType={_buildingType} />
         <OrbitControls
           ref={orbitRef}
           makeDefault
