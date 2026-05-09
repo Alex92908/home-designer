@@ -155,11 +155,12 @@ export function computeExteriorWalls(
           return wE > segStart && wS < segEnd;
         });
 
-        // 过滤落在此段内的门
+        // 过滤落在此段内的门（门必须完全在 segStart..segEnd 内才渲染）
         const segDoors = roomDoors.filter(d => {
           const dS = wallStart + (d.pos ?? 0);
           const dE = dS + d.len;
-          return dE > segStart && dS < segEnd;
+          // 门要在段内有重叠，且宽度合理
+          return dE > segStart + 5 && dS < segEnd - 5 && d.len >= 60;
         });
 
         result.push({ floorIndex, room, side, roomX: rx, roomY: ry, roomW: rw, roomD: rd, segStart, segEnd, windows: segWins, doors: segDoors });
@@ -445,15 +446,22 @@ function WallSegment({
 
   const mullions = Math.max(3, Math.round(segLen / 1.5));
 
-  // 将门的平面图坐标（相对于 wallStart）转换为 Three.js 局部坐标
+  // 将门的平面图坐标（相对于 wallStart）转换为 Three.js 局部 X。
+  // d.pos 是从 wallStart 起的偏移：南/北墙 wallStart = roomX，东/西墙 wallStart = roomY
+  const wallStartForDoor = (seg.side === "south" || seg.side === "north") ? seg.roomX : seg.roomY;
   const doorInfos = useMemo(() => seg.doors.map(d => {
-    const dPos  = d.pos ?? 0;
-    const dLen  = d.len;
-    const dH    = (d.h ?? 200) * CM;
-    // segStart 相对 wallStart 的偏移 → 局部 X（中心在 segStart 处）
-    const localX = (dPos + dLen / 2 - seg.segStart) * CM - segLen / 2;
-    return { cx: localX, w: dLen * CM, h: dH };
-  }), [seg.doors, seg.segStart, segLen]);
+    const dPos = d.pos ?? 0;
+    const dLen = d.len;
+    const dH   = (d.h ?? 210) * CM;
+    // 门中心在 worldX 轴上的位置 = wallStart + dPos + dLen/2
+    // 相对于 segment 中心的局部 X：
+    const rawX  = (wallStartForDoor + dPos + dLen / 2 - seg.segStart) * CM - segLen / 2;
+    const dLenM = dLen * CM;
+    // 夹住，不允许超出墙段范围
+    const localX = Math.max(-segLen / 2 + dLenM / 2, Math.min(segLen / 2 - dLenM / 2, rawX));
+    return { cx: localX, w: dLenM, h: Math.min(dH, floorHeight - 0.05) };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [seg.doors, seg.segStart, segLen, wallStartForDoor, floorHeight]);
 
   return (
     <group position={pos} rotation={rot}>
@@ -622,6 +630,12 @@ export default function FloorPlanBuilding() {
     return result;
   }, [floorPlans, floorCount]);
 
+  // 实际有墙段的最高楼层 + 1 = 真实楼层数（用于屋顶和楼板定位）
+  // 避免 exterior.floors=2 但 floorPlans[1] 没有房间时屋顶飞到天上
+  const usedFloors = allSegs.length > 0
+    ? Math.max(...allSegs.map(s => s.floorIndex)) + 1
+    : 1;
+
   // 确定每段立面类型
   function facadeFor(seg: ExteriorWallSeg): "glass" | "concrete" | "wood" {
     if (isGlassVilla) {
@@ -634,12 +648,12 @@ export default function FloorPlanBuilding() {
   return (
     <group>
       {/* 地面基座 */}
-      <mesh position={[0, 0.04, 0]} receiveShadow>
-        <boxGeometry args={[W + 0.20, 0.08, D + 0.20]} />
-        <meshStandardMaterial color="#E0D8C8" roughness={0.88} />
+      <mesh position={[0, -0.04, 0]} receiveShadow>
+        <boxGeometry args={[W + 0.30, 0.08, D + 0.30]} />
+        <meshStandardMaterial color="#D8D0BC" roughness={0.88} />
       </mesh>
 
-      {/* 外墙段 */}
+      {/* 외墙段 */}
       {allSegs.map((seg, i) => (
         <WallSegment
           key={i}
@@ -651,13 +665,13 @@ export default function FloorPlanBuilding() {
         />
       ))}
 
-      {/* 层间楼板（从第1层起） */}
-      {Array.from({ length: floorCount - 1 }, (_, fi) => (
+      {/* 层间楼板（从第1层起，用 usedFloors 不用 floorCount） */}
+      {Array.from({ length: usedFloors - 1 }, (_, fi) => (
         <SlabBand key={fi} W={W} D={D} y={(fi + 1) * (FLOOR_H + SLAB_T) - SLAB_T} />
       ))}
 
-      {/* 平屋顶 */}
-      <FlatRoof W={W} D={D} floorCount={floorCount} offset={planOffset} />
+      {/* 平屋顶 — 用 usedFloors 定位，不会飞天 */}
+      <FlatRoof W={W} D={D} floorCount={usedFloors} offset={planOffset} />
     </group>
   );
 }
