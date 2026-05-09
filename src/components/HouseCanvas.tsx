@@ -227,9 +227,29 @@ function CameraRig({ W, D, floors, buildingType }: {
     if (initialized.current) return;
 
     const h    = floors * FLOOR_H;
-    const isRichVilla = buildingType === "rich-glass-villa" || buildingType === "floor-plan-driven";
+    const isRichVilla      = buildingType === "rich-glass-villa";
+    const isFloorPlanDriven = buildingType === "floor-plan-driven";
 
-    if (isRichVilla) {
+    if (isFloorPlanDriven) {
+      // Floor-plan-driven exterior: south glass facade faces -Z.
+      // Camera: south-west, slightly elevated, looking at building centre.
+      // Use building diagonal for distance so it fits regardless of size.
+      const diag  = Math.sqrt(W * W + D * D);
+      const dist  = diag * 1.6 + 7;
+      const midH  = h / 2;
+
+      camera.position.set(-dist * 0.30, midH + dist * 0.28, -dist * 0.90);
+      (camera as THREE.PerspectiveCamera).fov = 48;
+      (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+
+      if (controls) {
+        const ctrl = controls as any;
+        ctrl.target.set(0, midH * 0.6, 0);
+        ctrl.update();
+      } else {
+        return;
+      }
+    } else if (isRichVilla) {
       // Luxury villa architectural perspective.
       // CRITICAL: The front glass curtain wall FACES SOUTH (−Z direction).
       // Camera must be on the SOUTH side (negative Z) to see the glass facade.
@@ -5355,15 +5375,21 @@ export default function HouseCanvas() {
         camera={(() => {
           // Set initial camera position HERE (before OrbitControls mounts) so it
           // never gets overridden by OrbitControls' default [0,0,5] initialisation.
-          if (isRichGlassVilla) {
+          if (_buildingType === "rich-glass-villa") {
             // Camera on south side (-Z), slightly left to show west wood face
-            // Distance scales with actual building width
             const fDist = W * 0.95 + 6;
             return {
-              fov: 50,
-              near: 0.1,
-              far: 300,
+              fov: 50, near: 0.1, far: 300,
               position: [-W * 0.22, 4.5, -fDist] as [number, number, number],
+            };
+          }
+          if (_buildingType === "floor-plan-driven") {
+            // South-west elevated view — shows glass south face and one side
+            const diag = Math.sqrt(W * W + D * D);
+            const dist = diag * 1.6 + 7;
+            return {
+              fov: 48, near: 0.1, far: 300,
+              position: [-dist * 0.30, floors * FLOOR_H * 0.5 + dist * 0.28, -dist * 0.90] as [number, number, number],
             };
           }
           return { fov: 58, near: 0.1, far: 300 };
@@ -5384,8 +5410,10 @@ export default function HouseCanvas() {
           maxDistance={80}
           panSpeed={0.6}
           target={
-            isRichGlassVilla
+            _buildingType === "rich-glass-villa"
               ? [-W * 0.05, 5.0, -D * 0.25] as [number, number, number]
+              : _buildingType === "floor-plan-driven"
+              ? [0, floors * FLOOR_H * 0.5, 0] as [number, number, number]
               : [0, floors * FLOOR_H * 0.35, 0] as [number, number, number]
           }
         />
