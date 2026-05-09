@@ -182,10 +182,6 @@ function planToWorld(fpX: number, fpY: number, o: PlanOffset): [number, number] 
 }
 
 // ── 玻璃幕墙立面 ──────────────────────────────────────────────
-/**
- * GlassFace — 玻璃幕墙，支持大门镂空。
- * doors: 门的位置信息，格式 { pos: 0..1 (相对于 width), w, h }
- */
 function GlassFace({
   width, height, mullions = 5, doors = [],
 }: {
@@ -194,50 +190,42 @@ function GlassFace({
 }) {
   const panelW   = width / mullions;
   const midRails = Math.max(1, Math.round(height / 1.0) - 1);
+  const FRAME_D  = 0.08;   // 钢框深度
 
   return (
     <group>
-      {/* 室内暖光背景（z=+0.08，在玻璃后方，FrontSide 渲染，不会翻转） */}
-      <mesh position={[0, 0, 0.08]}>
+      {/* 室内背景 — 中性暖白，极低 emissive，避免黄绿感 */}
+      <mesh position={[0, 0, FRAME_D + 0.02]}>
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial
-          color="#EED8A8" emissive="#E8C880" emissiveIntensity={0.28}
-          side={THREE.FrontSide}
-          depthWrite={false}
+          color="#F0EBE3" emissive="#FFFFFF" emissiveIntensity={0.06}
+          side={THREE.FrontSide} depthWrite={false}
         />
       </mesh>
 
-      {/* 玻璃面板 — 按竖向分格，跳过有门的格子底部 */}
+      {/* 玻璃面板 */}
       {Array.from({ length: mullions }, (_, i) => {
         const px     = -width / 2 + (i + 0.5) * panelW;
         const pLeft  = -width / 2 + i * panelW;
         const pRight = pLeft + panelW;
-
-        // 检查这一格是否被门部分覆盖
-        const door = doors.find(d => d.cx - d.w / 2 < pRight && d.cx + d.w / 2 > pLeft);
+        const door   = doors.find(d => d.cx - d.w / 2 < pRight && d.cx + d.w / 2 > pLeft);
         if (door) {
-          // 门上方玻璃（transom）
           const transomH = height - door.h;
-          if (transomH > 0.1) {
-            return (
-              <mesh key={i} position={[px, -height / 2 + door.h + transomH / 2, 0]}>
-                <planeGeometry args={[panelW * 0.96, transomH * 0.96]} />
-                <meshPhysicalMaterial color="#AACCDD" transmission={0.65} roughness={0.02} transparent opacity={0.50} side={THREE.DoubleSide} />
-              </mesh>
-            );
-          }
-          return null;
+          return transomH > 0.15 ? (
+            <mesh key={i} position={[px, -height / 2 + door.h + transomH / 2, 0]}>
+              <planeGeometry args={[panelW * 0.94, transomH * 0.90]} />
+              <meshPhysicalMaterial color="#C8DCE8" transmission={0.7} roughness={0.05} transparent opacity={0.55} side={THREE.DoubleSide} />
+            </mesh>
+          ) : null;
         }
         return (
           <mesh key={i} position={[px, 0, 0]}>
-            <planeGeometry args={[panelW * 0.96, height * 0.96]} />
+            <planeGeometry args={[panelW * 0.94, height * 0.97]} />
             <meshPhysicalMaterial
-              color="#AACCDD"
-              roughness={0.02}
-              transmission={0.65}
-              thickness={0.5}
-              ior={1.45}
-              transparent opacity={0.50}
+              color="#C0D8E8"
+              roughness={0.05} metalness={0.05}
+              transmission={0.60} thickness={0.4} ior={1.5}
+              transparent opacity={0.55}
               side={THREE.DoubleSide}
             />
           </mesh>
@@ -245,71 +233,57 @@ function GlassFace({
       })}
 
       {/* 竖向钢竖框 */}
-      {Array.from({ length: mullions + 1 }, (_, i) => {
-        const px = -width / 2 + i * panelW;
-        return (
-          <mesh key={i} position={[px, 0, 0.02]}>
-            <boxGeometry args={[0.05, height + 0.04, 0.06]} />
-            <meshStandardMaterial color="#1C1C1C" metalness={0.85} roughness={0.20} />
-          </mesh>
-        );
-      })}
-
-      {/* 顶横框 + 底横框 */}
-      {[-height / 2 + 0.025, height / 2 - 0.025].map((py, i) => (
-        <mesh key={i} position={[0, py, 0.02]}>
-          <boxGeometry args={[width + 0.04, 0.05, 0.06]} />
-          <meshStandardMaterial color="#1C1C1C" metalness={0.85} roughness={0.20} />
+      {Array.from({ length: mullions + 1 }, (_, i) => (
+        <mesh key={i} position={[-width / 2 + i * panelW, 0, 0]}>
+          <boxGeometry args={[0.06, height + 0.02, FRAME_D]} />
+          <meshStandardMaterial color="#1A1A1A" metalness={0.88} roughness={0.18} />
         </mesh>
       ))}
-
-      {/* 中横框（等分） */}
+      {/* 顶 + 底横框 */}
+      {[-height / 2, height / 2].map((py, i) => (
+        <mesh key={i} position={[0, py, 0]}>
+          <boxGeometry args={[width + 0.04, 0.06, FRAME_D]} />
+          <meshStandardMaterial color="#1A1A1A" metalness={0.88} roughness={0.18} />
+        </mesh>
+      ))}
+      {/* 中横框 */}
       {Array.from({ length: midRails }, (_, i) => {
         const py = -height / 2 + ((i + 1) / (midRails + 1)) * height;
         return (
-          <mesh key={i} position={[0, py, 0.02]}>
-            <boxGeometry args={[width + 0.04, 0.04, 0.05]} />
-            <meshStandardMaterial color="#222" metalness={0.85} roughness={0.20} />
+          <mesh key={i} position={[0, py, 0]}>
+            <boxGeometry args={[width + 0.04, 0.045, FRAME_D * 0.8]} />
+            <meshStandardMaterial color="#1A1A1A" metalness={0.88} roughness={0.18} />
           </mesh>
         );
       })}
 
-      {/* 门 — 推拉玻璃门 */}
+      {/* 推拉玻璃门 */}
       {doors.map((door, di) => (
-        <group key={`door-${di}`} position={[door.cx, -height / 2 + door.h / 2, 0.04]}>
-          {/* 两扇推拉门玻璃 */}
+        <group key={`door-${di}`} position={[door.cx, -height / 2 + door.h / 2, 0]}>
           {[-door.w / 4, door.w / 4].map((ox, si) => (
             <mesh key={si} position={[ox, 0, 0]}>
-              <planeGeometry args={[door.w / 2 - 0.04, door.h - 0.06]} />
-              <meshPhysicalMaterial
-                color="#88BBCC"
-                transmission={0.72}
-                roughness={0.01}
-                transparent opacity={0.45}
-                side={THREE.DoubleSide}
-              />
+              <planeGeometry args={[door.w / 2 - 0.05, door.h - 0.08]} />
+              <meshPhysicalMaterial color="#A8C8D8" transmission={0.68} roughness={0.03} transparent opacity={0.48} side={THREE.DoubleSide} />
             </mesh>
           ))}
           {/* 门框 */}
-          <mesh position={[0, 0, 0.02]}>
-            <boxGeometry args={[door.w, 0.06, 0.06]} />
-            <meshStandardMaterial color="#111" metalness={0.9} roughness={0.15} />
-          </mesh>
-          <mesh position={[0, -door.h / 2 + 0.03, 0.02]}>
-            <boxGeometry args={[door.w, 0.06, 0.06]} />
-            <meshStandardMaterial color="#111" metalness={0.9} roughness={0.15} />
-          </mesh>
-          {[-door.w / 2 + 0.03, 0, door.w / 2 - 0.03].map((bx, bi) => (
-            <mesh key={bi} position={[bx, 0, 0.02]}>
-              <boxGeometry args={[0.05, door.h, 0.06]} />
-              <meshStandardMaterial color="#111" metalness={0.9} roughness={0.15} />
+          {[
+            [0, door.h / 2, door.w + 0.04, 0.06, FRAME_D] as const,
+            [0, -door.h / 2, door.w + 0.04, 0.06, FRAME_D] as const,
+            [-door.w / 2, 0, 0.06, door.h, FRAME_D] as const,
+            [0, 0, 0.06, door.h, FRAME_D] as const,
+            [door.w / 2, 0, 0.06, door.h, FRAME_D] as const,
+          ].map(([bx, by, bw, bh, bd], bi) => (
+            <mesh key={bi} position={[bx, by, 0]}>
+              <boxGeometry args={[bw, bh, bd]} />
+              <meshStandardMaterial color="#111" metalness={0.92} roughness={0.12} />
             </mesh>
           ))}
-          {/* 门拉手 */}
-          {[-door.w / 4 + 0.08, door.w / 4 - 0.08].map((hx, hi) => (
-            <mesh key={hi} position={[hx, 0, 0.04]}>
-              <boxGeometry args={[0.025, 0.18, 0.025]} />
-              <meshStandardMaterial color="#888" metalness={0.95} roughness={0.1} />
+          {/* 拉手 */}
+          {[-door.w / 4 + 0.10, door.w / 4 - 0.10].map((hx, hi) => (
+            <mesh key={hi} position={[hx, 0, -0.04]}>
+              <boxGeometry args={[0.02, 0.16, 0.02]} />
+              <meshStandardMaterial color="#AAA" metalness={0.95} roughness={0.08} />
             </mesh>
           ))}
         </group>
@@ -318,23 +292,22 @@ function GlassFace({
   );
 }
 
-// ── 混凝土墙面（带冲孔窗） ─────────────────────────────────────
+// ── 混凝土实心墙（有厚度，带窗） ────────────────────────────────
 function ConcreteFace({
   width, height, wallColor = "#EEEAE2",
-  windows = [],
-  wallStart = 0,
+  windows = [], wallStart = 0,
 }: {
   width: number; height: number; wallColor?: string;
   windows?: WindowConfig[]; wallStart?: number;
 }) {
   return (
     <group>
-      {/* 墙体基底 */}
-      <mesh>
-        <planeGeometry args={[width, height]} />
-        <meshStandardMaterial color={wallColor} roughness={0.82} metalness={0.0} side={THREE.DoubleSide} />
+      {/* 实心墙体 — BoxGeometry 给墙壁厚度感和阴影 */}
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[width, height, WT]} />
+        <meshStandardMaterial color={wallColor} roughness={0.80} metalness={0.02} />
       </mesh>
-      {/* 穿孔窗 */}
+      {/* 窗洞（覆叠在墙面） */}
       {windows.map((win) => {
         const winL    = win.len / 100;
         const winH_m  = (win.h ?? 150) / 100;
@@ -343,35 +316,22 @@ function ConcreteFace({
         const wx = -width / 2 + localPos + winL / 2;
         const wy = -height / 2 + winSill + winH_m / 2;
         return (
-          <group key={win.id} position={[wx, wy, 0.02]}>
-            {/* 室内暖光背底（z+向：在玻璃后方，FrontSide 不会翻转） */}
-            <mesh position={[0, 0, 0.06]}>
-              <planeGeometry args={[winL, winH_m]} />
-              <meshStandardMaterial color="#EED8A8" emissive="#E8C888" emissiveIntensity={0.25} side={THREE.FrontSide} />
+          <group key={win.id} position={[wx, wy, -WT / 2]}>
+            {/* 窗台和窗套（深色边框） */}
+            <mesh position={[0, 0, WT / 2 + 0.01]}>
+              <boxGeometry args={[winL + 0.08, winH_m + 0.08, 0.05]} />
+              <meshStandardMaterial color="#D0CAC0" roughness={0.78} />
+            </mesh>
+            {/* 室内背景 */}
+            <mesh position={[0, 0, 0.04]}>
+              <planeGeometry args={[winL - 0.04, winH_m - 0.04]} />
+              <meshStandardMaterial color="#EAE6E0" emissive="#FFFFFF" emissiveIntensity={0.08} side={THREE.FrontSide} />
             </mesh>
             {/* 玻璃 */}
-            <mesh>
+            <mesh position={[0, 0, WT / 2]}>
               <planeGeometry args={[winL, winH_m]} />
-              <meshPhysicalMaterial
-                color="#AACCDD"
-                transmission={0.68}
-                roughness={0.04}
-                transparent opacity={0.52}
-                side={THREE.DoubleSide}
-              />
+              <meshPhysicalMaterial color="#B8D0E0" transmission={0.65} roughness={0.05} transparent opacity={0.50} side={THREE.DoubleSide} />
             </mesh>
-            {/* 铝合金窗框（四边） */}
-            {([
-              [-winL / 2,    0,          winL * 0.04, winH_m],
-              [ winL / 2,    0,          winL * 0.04, winH_m],
-              [0,           -winH_m / 2, winL,        winH_m * 0.04],
-              [0,            winH_m / 2, winL,        winH_m * 0.04],
-            ] as [number,number,number,number][]).map(([fx, fy, fw, fh], i) => (
-              <mesh key={i} position={[fx, fy, 0.01]}>
-                <planeGeometry args={[fw, fh]} />
-                <meshStandardMaterial color="#383838" roughness={0.45} metalness={0.4} />
-              </mesh>
-            ))}
           </group>
         );
       })}
@@ -482,18 +442,18 @@ function WallSegment({
 }
 
 // ── 木饰面（侧墙） ─────────────────────────────────────────────
+// 实心箱体 + 横向拼缝纹理（通过 emissive 带变化，避免 z 方向判断问题）
 function WoodFace({ width, height }: { width: number; height: number }) {
-  const planks = Math.round(height / 0.18);
+  const planks = Math.round(height / 0.15);
   const plankH = height / planks;
   return (
     <group>
       {Array.from({ length: planks }, (_, i) => (
-        <mesh key={i} position={[0, -height / 2 + (i + 0.5) * plankH, 0]}>
-          <planeGeometry args={[width, plankH * 0.88]} />
+        <mesh key={i} position={[0, -height / 2 + (i + 0.5) * plankH, 0]} castShadow receiveShadow>
+          <boxGeometry args={[width, plankH * 0.90, WT]} />
           <meshStandardMaterial
-            color={i % 2 === 0 ? "#7A5530" : "#6B4828"}
-            roughness={0.78} metalness={0}
-            side={THREE.DoubleSide}
+            color={i % 2 === 0 ? "#8B6340" : "#7A5530"}
+            roughness={0.78} metalness={0.0}
           />
         </mesh>
       ))}
@@ -542,8 +502,8 @@ function FlatRoof({
 function SlabBand({ W, D, y }: { W: number; D: number; y: number }) {
   return (
     <mesh position={[0, y + SLAB_T / 2, 0]} castShadow receiveShadow>
-      <boxGeometry args={[W + 0.10, SLAB_T, D + 0.10]} />
-      <meshStandardMaterial color="#F0EDE6" roughness={0.82} />
+      <boxGeometry args={[W + WT * 2, SLAB_T, D + WT * 2]} />
+      <meshStandardMaterial color="#E8E4DC" roughness={0.85} metalness={0.02} />
     </mesh>
   );
 }
