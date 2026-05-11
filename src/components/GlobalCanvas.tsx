@@ -84,7 +84,7 @@ export function StaircaseGeom({
   const rotY = (stairRotation * Math.PI) / 180;
 
   // ── Straight run ───────────────────────────────────────────
-  // 金属杆式楼梯：金属踏步 + 两侧斜扶手杆 + 每阶竖立栏杆
+  // 金属杆式楼梯：金属踏步 + 两侧斜扶手杆（顶端封在楼板处）+ 竖栏杆
   function StraightRun({ runW, runD, baseY = 0, height = FLOOR_H }: {
     runW: number; runD: number; baseY?: number; height?: number;
   }) {
@@ -94,34 +94,34 @@ export function StaircaseGeom({
     const treadW2    = runW - 0.08;
     const ROD_R      = 0.020;   // 扶手杆半径
     const BAL_R      = 0.013;   // 竖栏杆半径
-    const railH      = 0.90;   // 扶手竖向高度（离踏步前沿面）
+    const railH      = 0.90;   // 底部扶手离地高度
 
-    // 踏步中心坐标（用于渲染踏步本身）
+    // 踏步中心坐标
     const treads = useMemo(() => Array.from({ length: STEPS }, (_, i) => ({
-      midY:   baseY + (i + 1) * riserH - treadT / 2,  // 踏步盒子中心 y
-      midZ:   i * treadDepth + treadDepth / 2 - runD / 2, // 踏步盒子中心 z
-      topY:   baseY + (i + 1) * riserH,               // 踏步顶面 y
-      frontZ: i * treadDepth - runD / 2,              // 踏步前沿 z（竖杆所在位置）
+      midY:   baseY + (i + 1) * riserH - treadT / 2,
+      midZ:   i * treadDepth + treadDepth / 2 - runD / 2,
+      topY:   baseY + (i + 1) * riserH,
+      frontZ: i * treadDepth - runD / 2,
     })), [runD, riserH, treadDepth, baseY]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ── 扶手几何 ──
-    // 扶手是一根直圆柱，从 (z=-runD/2, y=baseY+railH) 到 (z=+runD/2, y=baseY+height+railH)
-    // 方向向量: (0, height, runD)，长度 = slopeLen
-    const slopeLen = Math.sqrt(runD * runD + height * height);
-    // Three.js CylinderGeometry 默认轴 = Y (0,1,0)。
-    // 绕 X 轴旋转 θ 后轴变为 (0, cosθ, sinθ)。
-    // 令 cosθ = height/slopeLen, sinθ = runD/slopeLen → θ = atan2(runD, height)
-    const cylRotX = Math.atan2(runD, height);
-    // 扶手中点：两端点的中点 = (0, baseY+height/2+railH, 0)
-    const railMidY = baseY + height / 2 + railH;
+    // ── 扶手几何（顶端封在 baseY+height，不超出楼板）──
+    // 起点: (z=-runD/2, y=baseY+railH)
+    // 终点: (z=+runD/2, y=baseY+height)  ← 正好是上层楼板高度
+    // 方向向量: (0, height-railH, runD)
+    const railDY  = height - railH;                           // 扶手垂直高差
+    const railLen = Math.sqrt(railDY * railDY + runD * runD); // 扶手圆柱长度
+    // 绕 X 轴旋转 θ，使圆柱轴 → (0, railDY, runD) 方向
+    const cylRotX  = Math.atan2(runD, railDY);
+    const railMidY = baseY + (railH + height) / 2;            // 扶手圆柱中心 y（两端点中点）
 
-    // ── 竖栏杆几何 ──
-    // 扶手在 z=frontZ 处的 y 值:
-    //   y_rail(z) = baseY + railH + (z + runD/2) / runD * height
-    //             = baseY + railH + i * riserH   (步骤 i 前沿处)
-    // 踏步顶面 y = baseY + (i+1) * riserH
-    // 竖杆高度 = y_rail - y_top = railH - riserH  (各阶相同)
-    const balH = railH - riserH;
+    // ── 竖栏杆高度（各阶不同，因扶手坡角略小于踏步坡角）──
+    // 扶手在步骤 i 前沿处的 y:  y_rail_i = baseY + railH + i * (railDY/STEPS)
+    // 踏步顶面 y:               y_top_i  = baseY + (i+1) * riserH
+    // 竖杆高度:                  balH_i   = y_rail_i - y_top_i
+    //                                     = railH + i*railDY/STEPS - (i+1)*riserH
+    // 靠近顶端几阶 balH<0 → 不渲染（扶手已封在楼板处，顶端无需竖杆）
+    const balHOf = (i: number) =>
+      railH + i * (railDY / STEPS) - (i + 1) * riserH;
 
     const metalMat = <meshStandardMaterial color="#7c8fa0" metalness={0.85} roughness={0.15} />;
     const treadMat = <meshStandardMaterial color="#6a7d8e" metalness={0.80} roughness={0.20} />;
@@ -136,7 +136,7 @@ export function StaircaseGeom({
           </mesh>
         ))}
 
-        {/* 两侧斜扶手杆：精确从 (baseY+railH, -runD/2) 到 (baseY+height+railH, +runD/2) */}
+        {/* 两侧斜扶手杆：起点 (baseY+railH, -runD/2)，终点 (baseY+height, +runD/2) */}
         {([-1, 1] as const).map(side => {
           const xSide = side * (treadW2 / 2 - ROD_R);
           return (
@@ -145,29 +145,29 @@ export function StaircaseGeom({
               rotation={[cylRotX, 0, 0]}
               castShadow
             >
-              <cylinderGeometry args={[ROD_R, ROD_R, slopeLen, 8]} />
+              <cylinderGeometry args={[ROD_R, ROD_R, railLen, 8]} />
               {metalMat}
             </mesh>
           );
         })}
 
-        {/* 每阶竖立栏杆：底部 = 踏步顶面，顶部 = 该 z 处扶手杆底面，高度恒为 railH-riserH */}
-        {treads.map((t, i) =>
-          ([-1, 1] as const).map(side => {
-            const xSide   = side * (treadW2 / 2 - ROD_R * 2);
-            const balBotY = t.topY;                  // 踏步顶面
-            const balCenY = balBotY + balH / 2;      // 竖杆中心
+        {/* 竖栏杆：只渲染 balH>0 的阶（顶端几阶 balH 趋近 0，自然消隐） */}
+        {treads.map((t, i) => {
+          const bH = balHOf(i);
+          if (bH <= 0.02) return null;
+          return ([-1, 1] as const).map(side => {
+            const xSide = side * (treadW2 / 2 - ROD_R * 2);
             return (
               <mesh key={`bal-${i}-${side}`}
-                position={[xSide, balCenY, t.frontZ]}
+                position={[xSide, t.topY + bH / 2, t.frontZ]}
                 castShadow
               >
-                <cylinderGeometry args={[BAL_R, BAL_R, balH, 6]} />
+                <cylinderGeometry args={[BAL_R, BAL_R, bH, 6]} />
                 {metalMat}
               </mesh>
             );
-          })
-        )}
+          });
+        })}
       </group>
     );
   }
@@ -404,13 +404,9 @@ function RoomGroup({
         </mesh>
       )}
 
-      {/* Stair room: draw actual staircase instead of walls.
-          上层楼梯整体旋转 180° → 下层楼梯顶端平台 = 上层楼梯起点，
-          形成连续 U 形折返路径（不再两层楼梯方向相同、视觉上叠在一起）。
-          匹配 FloorPlanExterior 里的相同处理。 */}
-      {/* 楼梯间：只在 fi=0（起始层）渲染楼梯几何体，上层仅留开口。
-          原先每层都渲染并对上层旋转 180°，导致两段斜扶手方向相反形成 X 形交叉。 */}
-      {isStair && floorIndex === 0 && (
+      {/* 每层楼梯间都渲染一套楼梯几何体（fi=0 → 1F→2F，fi=1 → 2F→3F …）。
+          扶手顶端已封在 baseY+FLOOR_H，不会超出上层楼板，无 X 形交叉。 */}
+      {isStair && (
         <StaircaseGeom
           W={W} D={D} color={wallColor}
           shape={stairCfg?.shape ?? "straight"}

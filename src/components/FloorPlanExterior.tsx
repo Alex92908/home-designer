@@ -1222,15 +1222,10 @@ export default function FloorPlanBuilding({
                   transparent={isXray} opacity={isXray ? 0.08 : 1} depthWrite={!isXray} />
               </mesh>
             )}
-            {/* 楼梯间：渲染实际楼梯几何体 + 上层开口处安全围栏 */}
+            {/* 楼梯间：每层都渲染一套完整楼梯（扶手封在楼板处，无 X 交叉） */}
             {isStair && (
               <group position={[cx, yBase, cz]}>
-                {/* 1F：渲染完整楼梯几何（踏步 + 栏杆），向上通往 2F */}
-                {fi === 0 && (
-                  <StaircaseGeom W={rW} D={rD} color={wallColor} shape={stairShape} stairRotation={stairRotation} />
-                )}
-                {/* 2F 及以上：只渲染楼板开口处的安全围栏，不重复渲染楼梯体 */}
-                {fi > 0 && <StairwellRailing rW={rW} rD={rD} />}
+                <StaircaseGeom W={rW} D={rD} color={wallColor} shape={stairShape} stairRotation={stairRotation} />
               </group>
             )}
             {/* 门：外观模式 + 本层有任何玻璃房间 → 跳过本层所有内部门：
