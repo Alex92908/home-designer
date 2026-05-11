@@ -87,3 +87,9 @@ html, body {
   from { opacity: 0; transform: translate(-50%, -12px); }
   to   { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* ── B4 furniture-blocked outline pulse (FloorPlan drag feedback) ─ */
+@keyframes fpBlockedPulse {
+  from { stroke-opacity: 0.4; stroke-width: 2; }
+  to   { stroke-opacity: 1;   stroke-width: 3.5; }
+}

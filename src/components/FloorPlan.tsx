@@ -25,6 +25,9 @@ interface DragState {
   startSvgX: number;
   startSvgZ: number;
   items: Array<{ instanceId: string; startX: number; startZ: number }>;
+  /** B4 视觉反馈：当前帧因为撞到障碍被拒绝完整移动的 instanceId 集合。
+   *  渲染时这些家具会有红色 outline + 抖动一下，让用户知道"挪不动"。 */
+  blockedIds?: string[];
 }
 
 // ─── Window drag state ────────────────────────────────────
@@ -51,6 +54,10 @@ interface PlacedItemSVGProps {
   placed: PlacedItem;
   scale: number;
   isSelected: boolean;
+  /** B4 视觉反馈：拖拽时被障碍卡住的家具。渲染时叠一层亮红 outline，
+   *  立即视觉反馈"挪不动了"。和 hasViolation 区分（后者是稳定的
+   *  clearance 警告，blocked 是瞬时拒绝）。 */
+  isBlocked?: boolean;
   hasViolation?: boolean;
   violationSeverity?: "required" | "recommended";
   onPointerDown: (e: React.PointerEvent<SVGGElement>) => void;
@@ -77,7 +84,7 @@ function splitNameLines(name: string, maxPx: number): [string] | [string, string
   return [line1, line2];
 }
 
-function PlacedItemSVG({ placed, scale, isSelected, hasViolation, violationSeverity, onPointerDown }: PlacedItemSVGProps) {
+function PlacedItemSVG({ placed, scale, isSelected, isBlocked, hasViolation, violationSeverity, onPointerDown }: PlacedItemSVGProps) {
   const furniture = getFurnitureById(placed.furnitureId);
   const locale = useLocale();
   if (!furniture) return null;
@@ -116,9 +123,26 @@ function PlacedItemSVG({ placed, scale, isSelected, hasViolation, violationSever
       <rect
         x={-w / 2} y={-d / 2} width={w} height={d} rx={4}
         fill={furniture.color} fillOpacity={0.85}
-        stroke={isSelected ? "#60A5FA" : hasViolation ? (violationSeverity === "required" ? "#EF4444" : "#F59E0B") : "rgba(255,255,255,0.35)"}
-        strokeWidth={isSelected ? 2.5 : hasViolation ? 1.8 : 1}
+        stroke={
+          isBlocked ? "#EF4444"
+          : isSelected ? "#60A5FA"
+          : hasViolation ? (violationSeverity === "required" ? "#EF4444" : "#F59E0B")
+          : "rgba(255,255,255,0.35)"
+        }
+        strokeWidth={isBlocked ? 3 : isSelected ? 2.5 : hasViolation ? 1.8 : 1}
       />
+      {/* B4 视觉反馈：阻塞时叠一圈亮红光晕（pulse via CSS animation） */}
+      {isBlocked && (
+        <rect
+          x={-w / 2 - 5} y={-d / 2 - 5} width={w + 10} height={d + 10} rx={7}
+          fill="none"
+          stroke="#EF4444"
+          strokeOpacity={0.85}
+          strokeWidth={2.5}
+          strokeDasharray="3 3"
+          style={{ pointerEvents: "none", animation: "fpBlockedPulse 0.4s ease-out infinite alternate" }}
+        />
+      )}
       {fontSize > 5 && (
         <text x={0} y={d > 30 ? -3 : 0} textAnchor="middle" dominantBaseline="middle"
           fontSize={Math.min(fontSize, 18)} style={{ userSelect: "none", pointerEvents: "none" }}>
@@ -669,6 +693,7 @@ export default function FloorPlan() {
         const pz    = (ev.clientY - rect.top)  / capturedZoom;
         const dX    = (px - startPt.x) / capturedScale;
         const dZ    = (pz - startPt.y) / capturedScale;
+        const blocked: string[] = [];
         for (const item of dragItems) {
           const furn     = getFurnitureById(item.furnitureId);
           const r90      = item.rotation === 90 || item.rotation === 270;
@@ -678,22 +703,37 @@ export default function FloorPlan() {
           const halfD    = Math.min(r90 ? rawHW : rawHD, capturedRoomD / 2);
           let newX     = Math.max(halfW, Math.min(capturedRoomW - halfW, item.startX + dX));
           let newZ     = Math.max(halfD, Math.min(capturedRoomD - halfD, item.startZ + dZ));
+          let didBlock = false;
           // Polygon-shape constraint (L型/凸字)
           if (capturedShape && !pointInPolygon(capturedShape.points, newX, newZ)) {
             newX = item.startX;
             newZ = item.startZ;
+            didBlock = true;
           }
           // B4: 家具相互不穿模 — axis-separated slide.
-          // 先尝试完整移动；如果撞，单 X / 单 Z 分别试一次（沿障碍滑而
-          // 不是死撞）；都失败就完全不动。
           if (overlapsAny(newX, newZ, halfW, halfD)) {
             const onlyX = !overlapsAny(newX, item.startZ, halfW, halfD);
             const onlyZ = !overlapsAny(item.startX, newZ, halfW, halfD);
             if (onlyX)      { newZ = item.startZ; }
             else if (onlyZ) { newX = item.startX; }
             else            { newX = item.startX; newZ = item.startZ; }
+            didBlock = true;
           }
+          if (didBlock) blocked.push(item.instanceId);
           moveItem(item.instanceId, newX, newZ);
+        }
+        // Surface blocked ids to render so we can draw red outlines on them.
+        // Only update state when the blocked-set actually changes — avoids
+        // 60Hz re-renders of the SVG just because the cursor moved 1 px.
+        const cur = dragStateRef.current;
+        if (cur) {
+          const sameSet = cur.blockedIds && cur.blockedIds.length === blocked.length
+            && cur.blockedIds.every((id, i) => id === blocked[i]);
+          if (!sameSet) {
+            const next = { ...cur, blockedIds: blocked };
+            dragStateRef.current = next;
+            setDragState(next);
+          }
         }
       };
       const onUp = () => {
@@ -1670,6 +1710,7 @@ export default function FloorPlan() {
               placed={placed}
               scale={scale}
               isSelected={selectedInstanceIds.includes(placed.instanceId)}
+              isBlocked={dragState?.blockedIds?.includes(placed.instanceId)}
               hasViolation={violatingIds.has(placed.instanceId)}
               violationSeverity={violatingIds.get(placed.instanceId)}
               onPointerDown={(e) => handleItemPointerDown(e, placed.instanceId)}
