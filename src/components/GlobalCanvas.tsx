@@ -126,11 +126,10 @@ export function StaircaseGeom({
 
         {/* 顶端不画额外宽阶 —— 第 12 级踏步本身的顶面已经 = 2F 楼面 */}
 
-        {/* 两侧栏杆 —— 细竖立柱沿台阶追踪高度 + 坡面顶部横杆（不用穿出楼板的长斜撑） */}
+        {/* 两侧栏杆 —— 竖立柱 + 沿坡面贯通的长斜扶手（与楼梯方向平行） */}
         {([-1, 1] as const).map(side => {
           const xSide = side * (treadW2 / 2 + 0.02);
-          // 每步台阶放一根立柱，立柱底部跟台阶面齐，顶部统一在 handrailH 处
-          const stepBalusters = treads.map(t => ({ zPos: t.z, yBot: t.y + treadT / 2 }));
+          // 每级台阶一根竖立柱，底部跟踏面齐，高度固定 handrailH
           return (
             <group key={side}>
               {/* 起步端柱 */}
@@ -143,30 +142,22 @@ export function StaircaseGeom({
                 <boxGeometry args={[0.06, newelH, 0.06]} />
                 {handrailMat}
               </mesh>
-              {/* 每级台阶一根竖立柱，高度 = handrailH，底部随台阶面 */}
-              {stepBalusters.map(({ zPos, yBot }, i) => (
-                <mesh key={`b-${i}`} position={[xSide, yBot + handrailH / 2, zPos]} castShadow>
+              {/* 竖立柱：每步一根，底部随台阶面高度爬升 */}
+              {treads.map((t, i) => (
+                <mesh key={`b-${i}`} position={[xSide, t.y + treadT / 2 + handrailH / 2, t.z]} castShadow>
                   <cylinderGeometry args={[balusterR, balusterR, handrailH, 8]} />
                   {handrailMat}
                 </mesh>
               ))}
-              {/* 斜扶手：改为跟随台阶踏面的折线扶手（沿坡面顶部），不超出楼层高度 */}
-              {stepBalusters.map(({ zPos, yBot }, i) => {
-                if (i === stepBalusters.length - 1) return null;
-                const next = stepBalusters[i + 1];
-                const midZ = (zPos + next.zPos) / 2;
-                const midY = (yBot + next.yBot) / 2 + handrailH;
-                const dz   = next.zPos - zPos;
-                const dy   = next.yBot - yBot;
-                const segLen  = Math.sqrt(dz * dz + dy * dy);
-                const segAngle = Math.atan2(dy, dz);
-                return (
-                  <mesh key={`r-${i}`} position={[xSide, midY, midZ]} rotation={[segAngle, 0, 0]} castShadow>
-                    <boxGeometry args={[0.05, 0.05, segLen + 0.01]} />
-                    {handrailMat}
-                  </mesh>
-                );
-              })}
+              {/* 斜扶手：一整根沿坡面贯通，方向与楼梯平行 */}
+              <mesh
+                position={[xSide, baseY + height / 2 + handrailH, -runD / 2 + slopeD / 2]}
+                rotation={[railAngle, 0, 0]}
+                castShadow
+              >
+                <boxGeometry args={[0.05, 0.05, railLen]} />
+                {handrailMat}
+              </mesh>
             </group>
           );
         })}
@@ -409,11 +400,13 @@ function RoomGroup({
           上层楼梯整体旋转 180° → 下层楼梯顶端平台 = 上层楼梯起点，
           形成连续 U 形折返路径（不再两层楼梯方向相同、视觉上叠在一起）。
           匹配 FloorPlanExterior 里的相同处理。 */}
-      {isStair && (
+      {/* 楼梯间：只在 fi=0（起始层）渲染楼梯几何体，上层仅留开口。
+          原先每层都渲染并对上层旋转 180°，导致两段斜扶手方向相反形成 X 形交叉。 */}
+      {isStair && floorIndex === 0 && (
         <StaircaseGeom
           W={W} D={D} color={wallColor}
           shape={stairCfg?.shape ?? "straight"}
-          stairRotation={(((stairCfg?.rotation ?? 0) + (floorIndex > 0 ? 180 : 0)) % 360) as 0 | 90 | 180 | 270}
+          stairRotation={(stairCfg?.rotation ?? 0) as 0 | 90 | 180 | 270}
         />
       )}
 
