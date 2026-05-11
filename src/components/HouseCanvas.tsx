@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useEffect, useState, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, PointerLockControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky } from "@react-three/drei";
+import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky } from "@react-three/drei";
 import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
@@ -5371,25 +5371,115 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
 
 // ─── Inside-building camera animator ───────────────────────
 /** When `active`, smoothly lerps camera + OrbitControls target inside the building. */
+/** Compact 2D AABB used for both room footprints and movement clamping.
+ *  All values in metres, world-space. */
+type AABB = { minX: number; maxX: number; minZ: number; maxZ: number };
+
+/** Virtual joystick (DOM widget, not inside Canvas). Outputs normalized
+ *  axis values in [-1, 1] on each axis (X = strafe right, Z = forward
+ *  push so +Z = up on screen = forward in WASD-equivalent terms).
+ *  Works with both touch and mouse drag. */
+function TouchJoystick({ onChange }: { onChange: (axisX: number, axisZ: number) => void }) {
+  const baseRef = useRef<HTMLDivElement>(null);
+  const [knob, setKnob] = useState({ x: 0, y: 0 });
+  const activeRef = useRef<number | null>(null);
+  const radius = 48;     // base radius px
+  const knobR = 22;
+  const onDown = (e: React.PointerEvent) => {
+    activeRef.current = e.pointerId;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    update(e);
+  };
+  const onMove = (e: React.PointerEvent) => {
+    if (activeRef.current !== e.pointerId) return;
+    update(e);
+  };
+  const onUp = (e: React.PointerEvent) => {
+    if (activeRef.current !== e.pointerId) return;
+    activeRef.current = null;
+    setKnob({ x: 0, y: 0 });
+    onChange(0, 0);
+  };
+  const update = (e: React.PointerEvent) => {
+    const rect = baseRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top  + rect.height / 2;
+    let dx = e.clientX - cx;
+    let dy = e.clientY - cy;
+    const r = Math.hypot(dx, dy);
+    if (r > radius) { dx *= radius / r; dy *= radius / r; }
+    setKnob({ x: dx, y: dy });
+    onChange(dx / radius, -dy / radius);  // y flipped: screen-up = forward
+  };
+  return (
+    <div
+      ref={baseRef}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
+      className="absolute bottom-32 left-6 z-20 select-none"
+      style={{
+        width: radius * 2, height: radius * 2,
+        borderRadius: "50%",
+        background: "rgba(0,0,0,0.32)",
+        backdropFilter: "blur(8px)",
+        border: "1px solid rgba(255,255,255,0.18)",
+        touchAction: "none",
+      }}
+    >
+      {/* Knob */}
+      <div style={{
+        position: "absolute",
+        left: radius - knobR + knob.x,
+        top: radius - knobR + knob.y,
+        width: knobR * 2,
+        height: knobR * 2,
+        borderRadius: "50%",
+        background: "rgba(255,255,255,0.55)",
+        border: "1px solid rgba(255,255,255,0.5)",
+        pointerEvents: "none",
+        transition: activeRef.current === null ? "all 0.18s" : "none",
+      }} />
+    </div>
+  );
+}
+
 /** First-person walkthrough controller. Mounts inside <Canvas>:
- *  - WASD / arrow keys move camera at ~3 m/s walking speed.
- *  - Mouse look via PointerLockControls (browser locks cursor; ESC exits).
- *  - Camera stays at eye height (1.6 m) above the current floor.
- *  - Position clamped to the building's bbox (with 0.3 m margin) so the
- *    user can't fly outside the walls. (Per-room interior wall collision
- *    is out of scope — this is a "walk freely inside the building" mode.)
- *  - When `spawnPos` changes, teleports the camera there next frame. */
+ *  - WASD / arrow keys move camera at ~3 m/s walking speed (Shift = run).
+ *  - Drag-to-look: pointerdown + drag rotates the camera (no pointer-lock,
+ *    works in iframes / mobile). Right-click or two-finger drag avoids
+ *    interfering with the WASD listener.
+ *  - Floor-snap: raycast straight down each frame, sets camera.y to
+ *    floor.y + 1.6m. Handles stairs and multi-storey houses implicitly —
+ *    walk onto stairs and the camera rides up.
+ *  - Wall collision: per-frame sweep test against room bbox edges; if
+ *    movement would cross a wall, slide along it instead.
+ *  - Mobile joystick: an external state can inject {axisX,axisZ}.
+ *  - When `spawnPos` changes, teleports the camera there. */
 function WalkthroughController({
-  active, spawnPos, bbox, onExit,
+  active, spawnPos, bbox, onExit, walls, joystick,
 }: {
   active: boolean;
   spawnPos: [number, number, number] | null;
   bbox: { minX: number; maxX: number; minZ: number; maxZ: number; minY: number; maxY: number };
   onExit: () => void;
+  /** Room footprints in world coords. Movement is blocked by any of these
+   *  rect's perimeter — when crossed, we slide. */
+  walls: AABB[];
+  /** Live touch joystick output, -1..1 on each axis. Forward = -axisZ. */
+  joystick: { axisX: number; axisZ: number };
 }) {
-  const { camera, gl } = useThree();
+  const { camera, scene } = useThree();
   const keysRef = useRef<Record<string, boolean>>({});
   const spawnedRef = useRef<string | null>(null);
+  // Yaw/pitch tracked separately for drag-look (more reliable than mutating
+  // camera.rotation directly).
+  const yawRef   = useRef(0);
+  const pitchRef = useRef(0);
+  const dragRef  = useRef<{ x: number; y: number } | null>(null);
+
   // Teleport on spawnPos change
   useEffect(() => {
     if (!active || !spawnPos) return;
@@ -5397,12 +5487,13 @@ function WalkthroughController({
     if (spawnedRef.current === key) return;
     spawnedRef.current = key;
     camera.position.set(spawnPos[0], spawnPos[1], spawnPos[2]);
-    // Look forward (slight downtilt is more natural than dead-level)
+    yawRef.current = 0;
+    pitchRef.current = 0;
     camera.lookAt(spawnPos[0], spawnPos[1] - 0.1, spawnPos[2] + 1);
   }, [active, spawnPos, camera]);
-  // When deactivated, reset spawn memo so next entry teleports again
   useEffect(() => { if (!active) spawnedRef.current = null; }, [active]);
-  // Keyboard listener
+
+  // Keyboard + drag-look + ESC listener
   useEffect(() => {
     if (!active) return;
     const onDown = (e: KeyboardEvent) => {
@@ -5410,45 +5501,143 @@ function WalkthroughController({
       keysRef.current[e.key.toLowerCase()] = true;
     };
     const onUp = (e: KeyboardEvent) => { keysRef.current[e.key.toLowerCase()] = false; };
+    const onPDown = (e: PointerEvent) => {
+      // Only initiate drag on left-click on canvas
+      if (e.button !== 0) return;
+      const target = e.target as HTMLElement;
+      if (target?.tagName === "CANVAS") {
+        dragRef.current = { x: e.clientX, y: e.clientY };
+        target.setPointerCapture?.(e.pointerId);
+      }
+    };
+    const onPMove = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const dx = e.clientX - d.x;
+      const dy = e.clientY - d.y;
+      yawRef.current   -= dx * 0.0025;
+      pitchRef.current -= dy * 0.0025;
+      pitchRef.current = Math.max(-Math.PI / 2.05, Math.min(Math.PI / 2.05, pitchRef.current));
+      dragRef.current = { x: e.clientX, y: e.clientY };
+    };
+    const onPUp = () => { dragRef.current = null; };
     window.addEventListener("keydown", onDown);
     window.addEventListener("keyup", onUp);
+    window.addEventListener("pointerdown", onPDown);
+    window.addEventListener("pointermove", onPMove);
+    window.addEventListener("pointerup", onPUp);
+    window.addEventListener("pointercancel", onPUp);
     return () => {
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
+      window.removeEventListener("pointerdown", onPDown);
+      window.removeEventListener("pointermove", onPMove);
+      window.removeEventListener("pointerup", onPUp);
+      window.removeEventListener("pointercancel", onPUp);
       keysRef.current = {};
+      dragRef.current = null;
     };
   }, [active, onExit]);
-  // Per-frame movement
-  const dir = useMemo(() => new THREE.Vector3(), []);
+
+  const fwd = useMemo(() => new THREE.Vector3(), []);
   const right = useMemo(() => new THREE.Vector3(), []);
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const downV = useMemo(() => new THREE.Vector3(0, -1, 0), []);
+
+  /** Returns true if the segment (x1,z1)→(x2,z2) crosses any wall edge
+   *  (perimeter of an AABB). Movement that crosses → blocked. Allow if
+   *  user is moving INTO a room (both endpoints inside the same rect)
+   *  or staying outside all rects. */
+  const blocksMovement = (x1: number, z1: number, x2: number, z2: number): boolean => {
+    // If either endpoint is inside a room AND the other isn't in the SAME
+    // room (i.e. they're in different rooms with a wall between, or one is
+    // outside any room), then the segment crosses a wall.
+    let curRoom = -1, newRoom = -1;
+    for (let i = 0; i < walls.length; i++) {
+      const r = walls[i];
+      if (x1 >= r.minX && x1 <= r.maxX && z1 >= r.minZ && z1 <= r.maxZ) curRoom = i;
+      if (x2 >= r.minX && x2 <= r.maxX && z2 >= r.minZ && z2 <= r.maxZ) newRoom = i;
+    }
+    if (curRoom === -1 && newRoom === -1) return false;  // both in hallway — allow
+    if (curRoom === newRoom)              return false;  // same room — allow
+    return true;                                          // crossed wall
+  };
+
   useFrame((_, delta) => {
     if (!active) return;
+
+    // ── 1. Compose movement input (keys + joystick) ──
     const keys = keysRef.current;
-    const speed = (keys.shift ? 6 : 3) * delta; // hold shift to "run"
     let dz = 0, dx = 0;
     if (keys.w || keys.arrowup)    dz += 1;
     if (keys.s || keys.arrowdown)  dz -= 1;
     if (keys.a || keys.arrowleft)  dx -= 1;
     if (keys.d || keys.arrowright) dx += 1;
-    if (dz === 0 && dx === 0) return;
-    // Forward in XZ plane (ignore camera pitch so WASD walks, doesn't fly).
-    camera.getWorldDirection(dir);
-    dir.y = 0; dir.normalize();
-    right.set(dir.z, 0, -dir.x);   // perpendicular in XZ
-    const mv = new THREE.Vector3()
-      .addScaledVector(dir, dz * speed)
-      .addScaledVector(right, dx * speed);
-    const nx = camera.position.x + mv.x;
-    const nz = camera.position.z + mv.z;
-    // Clamp to bbox (0.3m margin so we don't graze walls)
-    const m = 0.3;
-    camera.position.x = Math.min(bbox.maxX - m, Math.max(bbox.minX + m, nx));
-    camera.position.z = Math.min(bbox.maxZ - m, Math.max(bbox.minZ + m, nz));
-    // Keep eye height locked
-    camera.position.y = Math.min(bbox.maxY, Math.max(bbox.minY, camera.position.y));
+    // Joystick (-1..1 on each axis). -axisZ because forward = stick up = negative Y in screen space.
+    dx += joystick.axisX;
+    dz += -joystick.axisZ;
+
+    // ── 2. Apply yaw/pitch to camera rotation ──
+    const yaw = yawRef.current, pitch = pitchRef.current;
+    camera.rotation.order = "YXZ";
+    camera.rotation.y = yaw;
+    camera.rotation.x = pitch;
+    camera.rotation.z = 0;
+
+    if (dx === 0 && dz === 0) {
+      // Still floor-snap so y stays right even without movement
+      raycastFloor();
+      return;
+    }
+    const magnitude = Math.min(1, Math.hypot(dx, dz));
+    const speed = (keys.shift ? 6 : 3) * delta * magnitude;
+    fwd.set(-Math.sin(yaw), 0, -Math.cos(yaw));    // camera forward in XZ
+    right.set(Math.cos(yaw), 0, -Math.sin(yaw));
+    const mvX = fwd.x * dz / Math.hypot(dx, dz) * speed + right.x * dx / Math.hypot(dx, dz) * speed;
+    const mvZ = fwd.z * dz / Math.hypot(dx, dz) * speed + right.z * dx / Math.hypot(dx, dz) * speed;
+
+    // ── 3. Wall collision: try full move, then X-only, then Z-only, else block ──
+    const cx = camera.position.x, cz = camera.position.z;
+    let nx = cx + mvX, nz = cz + mvZ;
+    const m = 0.25;
+    nx = Math.min(bbox.maxX - m, Math.max(bbox.minX + m, nx));
+    nz = Math.min(bbox.maxZ - m, Math.max(bbox.minZ + m, nz));
+    if (blocksMovement(cx, cz, nx, nz)) {
+      // Try sliding on X only
+      const sx = Math.min(bbox.maxX - m, Math.max(bbox.minX + m, cx + mvX));
+      if (!blocksMovement(cx, cz, sx, cz)) { nx = sx; nz = cz; }
+      else {
+        const sz = Math.min(bbox.maxZ - m, Math.max(bbox.minZ + m, cz + mvZ));
+        if (!blocksMovement(cx, cz, cx, sz)) { nx = cx; nz = sz; }
+        else                                  { nx = cx; nz = cz; }
+      }
+    }
+    camera.position.x = nx;
+    camera.position.z = nz;
+
+    // ── 4. Floor snap: raycast straight down to find walkable surface,
+    //      set camera.y = floor.y + 1.6m. Handles stairs implicitly. ──
+    raycastFloor();
   });
-  if (!active) return null;
-  return <PointerLockControls camera={camera} domElement={gl.domElement} />;
+
+  function raycastFloor() {
+    raycaster.set(new THREE.Vector3(camera.position.x, bbox.maxY + 2, camera.position.z), downV);
+    const hits = raycaster.intersectObjects(scene.children, true);
+    // Skip degenerate hits (sky, fog plane). Look for the first opaque
+    // mesh below max ceiling height.
+    for (const h of hits) {
+      if (h.point.y < bbox.maxY + 1 && h.point.y > -1) {
+        const target = h.point.y + 1.6;
+        // Smooth y change so stair steps don't make camera jolt
+        camera.position.y += (target - camera.position.y) * Math.min(1, 12 * 0.016);
+        return;
+      }
+    }
+    // Fallback: clamp to floor 0 eye height
+    camera.position.y = Math.max(bbox.minY, Math.min(bbox.maxY, camera.position.y));
+  }
+
+  return null;
 }
 
 function InsideCameraAnimator({ active, camPos, lookAt, teleport = false }: {
@@ -5505,6 +5694,46 @@ export default function HouseCanvas() {
   const [walkthroughSpawn, setWalkthroughSpawn] = useState<[number, number, number] | null>(null);
   const [wallXray, setWallXray] = useState(false);
   const exitWalkthrough = () => { setWalkthrough(false); setWalkthroughSpawn(null); };
+
+  // Build room AABBs in world coords for collision. Reads layout/dims from
+  // store, mirrors FloorPlanBuilding's coord system (Y axis flipped to -Z).
+  const floorPlansForWalk = useDesignerStore(s => s.floorPlans);
+  const wallAABBs = useMemo<AABB[]>(() => {
+    const out: AABB[] = [];
+    // House-wide bbox so each room's local center can be world-translated.
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
+      const fp = floorPlansForWalk[fi]; if (!fp) continue;
+      for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+        const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+        if (!p || !d) continue;
+        minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x + d.width); maxY = Math.max(maxY, p.y + d.depth);
+      }
+    }
+    if (!isFinite(minX)) return out;
+    const CM_local = 0.01;
+    const Wh = (maxX - minX) * CM_local;
+    const Dh = (maxY - minY) * CM_local;
+    for (const fp of floorPlansForWalk) {
+      if (!fp) continue;
+      for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+        const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+        if (!p || !d) continue;
+        // World rect: x∈[(p.x-minX)*CM - W/2, (p.x+w-minX)*CM - W/2]
+        //             z∈[-((p.y+d-minY)*CM) + D/2, -((p.y-minY)*CM) + D/2]
+        out.push({
+          minX: (p.x - minX) * CM_local - Wh / 2,
+          maxX: (p.x + d.width - minX) * CM_local - Wh / 2,
+          minZ: -((p.y + d.depth - minY) * CM_local) + Dh / 2,
+          maxZ: -((p.y - minY) * CM_local) + Dh / 2,
+        });
+      }
+    }
+    return out;
+  }, [floorPlansForWalk]);
+  // Joystick state for touch devices — bound to a HUD widget below.
+  const [joystick, setJoystick] = useState({ axisX: 0, axisZ: 0 });
   // Sun analysis — read from global store so AiRenderModal + YardPlan share the value
   const sunHour     = useDesignerStore(s => s.sunHour);
   const setSunHour  = useDesignerStore(s => s.setSunHour);
@@ -5569,7 +5798,7 @@ export default function HouseCanvas() {
           )}
         </div>
       )}
-      {/* Walkthrough HUD: crosshair + key hints */}
+      {/* Walkthrough HUD: crosshair + key hints + touch joystick */}
       {walkthrough && (
         <>
           {/* Centre crosshair */}
@@ -5590,8 +5819,11 @@ export default function HouseCanvas() {
               letterSpacing: "0.04em",
               whiteSpace: "nowrap",
             }}>
-            🖱 点击锁定鼠标 · WASD / 方向键 走 · Shift 跑 · ESC 退出
+            🖱 拖动看 · WASD / 方向键 走 · Shift 跑 · ESC 退出
           </div>
+          {/* Touch joystick — bottom-left, only useful with finger but
+              always rendered (mouse drag also works on it). */}
+          <TouchJoystick onChange={(x, z) => setJoystick({ axisX: x, axisZ: z })} />
         </>
       )}
 
@@ -5735,6 +5967,8 @@ export default function HouseCanvas() {
             minZ: -D / 2 + 0.3, maxZ: D / 2 - 0.3,
             minY: 1.6, maxY: floors * FLOOR_H_M - 0.4,
           }}
+          walls={wallAABBs}
+          joystick={joystick}
           onExit={exitWalkthrough}
         />
         {/* HDR as both IBL lighting AND photorealistic sky background.
