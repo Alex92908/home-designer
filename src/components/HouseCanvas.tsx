@@ -5459,7 +5459,7 @@ function TouchJoystick({ onChange }: { onChange: (axisX: number, axisZ: number) 
  *  - Mobile joystick: an external state can inject {axisX,axisZ}.
  *  - When `spawnPos` changes, teleports the camera there. */
 function WalkthroughController({
-  active, spawnPos, bbox, onExit, walls, joystick,
+  active, spawnPos, bbox, onExit, walls, joystick, noClip,
 }: {
   active: boolean;
   spawnPos: [number, number, number] | null;
@@ -5470,6 +5470,9 @@ function WalkthroughController({
   walls: AABB[];
   /** Live touch joystick output, -1..1 on each axis. Forward = -axisZ. */
   joystick: { axisX: number; axisZ: number };
+  /** When true, internal wall collision is disabled (still clamps to
+   *  outer bbox so user can't fly outside the property). "Ghost mode". */
+  noClip: boolean;
 }) {
   const { camera, scene } = useThree();
   const keysRef = useRef<Record<string, boolean>>({});
@@ -5491,7 +5494,15 @@ function WalkthroughController({
     pitchRef.current = 0;
     camera.lookAt(spawnPos[0], spawnPos[1] - 0.1, spawnPos[2] + 1);
   }, [active, spawnPos, camera]);
-  useEffect(() => { if (!active) spawnedRef.current = null; }, [active]);
+  useEffect(() => {
+    if (!active) {
+      spawnedRef.current = null;
+      // Reset FOV in case user wheel-zoomed and is now exiting; otherwise
+      // re-entry would inherit the stale zoom value.
+      const cam = camera as THREE.PerspectiveCamera;
+      if (cam.isPerspectiveCamera) { cam.fov = 50; cam.updateProjectionMatrix(); }
+    }
+  }, [active, camera]);
 
   // Keyboard + drag-look + ESC listener
   useEffect(() => {
@@ -5521,12 +5532,28 @@ function WalkthroughController({
       dragRef.current = { x: e.clientX, y: e.clientY };
     };
     const onPUp = () => { dragRef.current = null; };
+    // Wheel-zoom: changes camera FOV (narrower = zoom in, wider = zoom out).
+    // FOV-based zoom is more natural than moving the camera forward (which
+    // would clip through walls). Clamped 25°–80°.
+    const onWheel = (e: WheelEvent) => {
+      const target = e.target as HTMLElement;
+      if (target?.tagName !== "CANVAS") return;
+      e.preventDefault();
+      const cam = camera as THREE.PerspectiveCamera;
+      const cur = cam.fov ?? 50;
+      const next = Math.max(25, Math.min(80, cur + (e.deltaY > 0 ? 3 : -3)));
+      if (next !== cur) {
+        cam.fov = next;
+        cam.updateProjectionMatrix();
+      }
+    };
     window.addEventListener("keydown", onDown);
     window.addEventListener("keyup", onUp);
     window.addEventListener("pointerdown", onPDown);
     window.addEventListener("pointermove", onPMove);
     window.addEventListener("pointerup", onPUp);
     window.addEventListener("pointercancel", onPUp);
+    window.addEventListener("wheel", onWheel, { passive: false });
     return () => {
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
@@ -5534,10 +5561,11 @@ function WalkthroughController({
       window.removeEventListener("pointermove", onPMove);
       window.removeEventListener("pointerup", onPUp);
       window.removeEventListener("pointercancel", onPUp);
+      window.removeEventListener("wheel", onWheel);
       keysRef.current = {};
       dragRef.current = null;
     };
-  }, [active, onExit]);
+  }, [active, onExit, camera]);
 
   const fwd = useMemo(() => new THREE.Vector3(), []);
   const right = useMemo(() => new THREE.Vector3(), []);
@@ -5602,7 +5630,7 @@ function WalkthroughController({
     const m = 0.25;
     nx = Math.min(bbox.maxX - m, Math.max(bbox.minX + m, nx));
     nz = Math.min(bbox.maxZ - m, Math.max(bbox.minZ + m, nz));
-    if (blocksMovement(cx, cz, nx, nz)) {
+    if (!noClip && blocksMovement(cx, cz, nx, nz)) {
       // Try sliding on X only
       const sx = Math.min(bbox.maxX - m, Math.max(bbox.minX + m, cx + mvX));
       if (!blocksMovement(cx, cz, sx, cz)) { nx = sx; nz = cz; }
@@ -5734,6 +5762,10 @@ export default function HouseCanvas() {
   }, [floorPlansForWalk]);
   // Joystick state for touch devices — bound to a HUD widget below.
   const [joystick, setJoystick] = useState({ axisX: 0, axisZ: 0 });
+  // "Ghost mode": disable internal wall collision so user can walk through
+  // walls. Useful when the polygon collision occasionally traps them in a
+  // weird corner, or for fly-by inspection.
+  const [walkNoClip, setWalkNoClip] = useState(false);
   // Sun analysis — read from global store so AiRenderModal + YardPlan share the value
   const sunHour     = useDesignerStore(s => s.sunHour);
   const setSunHour  = useDesignerStore(s => s.setSunHour);
@@ -5782,19 +5814,35 @@ export default function HouseCanvas() {
             {walkthrough ? "↩ 退出漫游" : "🚶 进入室内漫游"}
           </button>
           {walkthrough && (
-            <button
-              onClick={() => setWallXray(v => !v)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
-              style={{
-                background: wallXray
-                  ? "linear-gradient(135deg,rgba(168,85,247,0.92),rgba(109,40,217,0.92))"
-                  : "linear-gradient(135deg,rgba(55,65,81,0.88),rgba(31,41,55,0.88))",
-                backdropFilter: "blur(12px)",
-                border: `1px solid ${wallXray ? "rgba(216,180,254,0.5)" : "rgba(255,255,255,0.15)"}`,
-              }}
-            >
-              🔮 {wallXray ? "取消透视" : "墙体透视"}
-            </button>
+            <>
+              <button
+                onClick={() => setWallXray(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
+                style={{
+                  background: wallXray
+                    ? "linear-gradient(135deg,rgba(168,85,247,0.92),rgba(109,40,217,0.92))"
+                    : "linear-gradient(135deg,rgba(55,65,81,0.88),rgba(31,41,55,0.88))",
+                  backdropFilter: "blur(12px)",
+                  border: `1px solid ${wallXray ? "rgba(216,180,254,0.5)" : "rgba(255,255,255,0.15)"}`,
+                }}
+              >
+                🔮 {wallXray ? "取消透视" : "墙体透视"}
+              </button>
+              <button
+                onClick={() => setWalkNoClip(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
+                title="允许穿墙：忽略内墙碰撞，可直接走过房间隔墙（外墙边界仍生效）"
+                style={{
+                  background: walkNoClip
+                    ? "linear-gradient(135deg,rgba(245,158,11,0.92),rgba(217,119,6,0.92))"
+                    : "linear-gradient(135deg,rgba(55,65,81,0.88),rgba(31,41,55,0.88))",
+                  backdropFilter: "blur(12px)",
+                  border: `1px solid ${walkNoClip ? "rgba(254,215,170,0.5)" : "rgba(255,255,255,0.15)"}`,
+                }}
+              >
+                👻 {walkNoClip ? "穿墙开" : "穿墙关"}
+              </button>
+            </>
           )}
         </div>
       )}
@@ -5819,7 +5867,7 @@ export default function HouseCanvas() {
               letterSpacing: "0.04em",
               whiteSpace: "nowrap",
             }}>
-            🖱 拖动看 · WASD / 方向键 走 · Shift 跑 · ESC 退出
+            🖱 拖动看 · 滚轮缩放 · WASD / 方向键 走 · Shift 跑 · ESC 退出
           </div>
           {/* Touch joystick — bottom-left, only useful with finger but
               always rendered (mouse drag also works on it). */}
@@ -5969,6 +6017,7 @@ export default function HouseCanvas() {
           }}
           walls={wallAABBs}
           joystick={joystick}
+          noClip={walkNoClip}
           onExit={exitWalkthrough}
         />
         {/* HDR as both IBL lighting AND photorealistic sky background.
