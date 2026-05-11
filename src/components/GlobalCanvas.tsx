@@ -126,13 +126,17 @@ export function StaircaseGeom({
 
         {/* 顶端不画额外宽阶 —— 第 12 级踏步本身的顶面已经 = 2F 楼面 */}
 
-        {/* 两侧栏杆 —— 竖立柱 + 沿坡面贯通的长斜扶手（与楼梯方向平行） */}
+        {/* 两侧栏杆 —— 竖立柱高度跟随斜扶手，顶端贴合斜面；扶手一根斜杆平行楼梯坡面 */}
         {([-1, 1] as const).map(side => {
           const xSide = side * (treadW2 / 2 + 0.02);
-          // 每级台阶一根竖立柱，底部跟踏面齐，高度固定 handrailH
+          // 斜扶手在各 z 处的高度：从 (z=-runD/2, y=baseY+handrailH) 线性到
+          // (z=+runD/2, y=topStepTop+handrailH)
+          const railYatZ = (z: number) =>
+            baseY + handrailH + ((z + runD / 2) / runD) * height;
+
           return (
             <group key={side}>
-              {/* 起步端柱 */}
+              {/* 起步端柱（newelH 固定高） */}
               <mesh position={[xSide, baseY + newelH / 2, -runD / 2]} castShadow>
                 <boxGeometry args={[0.06, newelH, 0.06]} />
                 {handrailMat}
@@ -142,14 +146,19 @@ export function StaircaseGeom({
                 <boxGeometry args={[0.06, newelH, 0.06]} />
                 {handrailMat}
               </mesh>
-              {/* 竖立柱：每步一根，底部随台阶面高度爬升 */}
-              {treads.map((t, i) => (
-                <mesh key={`b-${i}`} position={[xSide, t.y + treadT / 2 + handrailH / 2, t.z]} castShadow>
-                  <cylinderGeometry args={[balusterR, balusterR, handrailH, 8]} />
-                  {handrailMat}
-                </mesh>
-              ))}
-              {/* 斜扶手：一整根沿坡面贯通，方向与楼梯平行 */}
+              {/* 每级台阶一根竖立柱，顶部刚好触到斜扶手底面，高度随台阶位置变化 */}
+              {treads.map((t, i) => {
+                const treadTopY = t.y + treadT / 2;          // 踏面顶 y
+                const rTopY     = railYatZ(t.z);              // 该位置扶手 y
+                const bH        = Math.max(0.01, rTopY - treadTopY); // 立柱高度
+                return (
+                  <mesh key={`b-${i}`} position={[xSide, treadTopY + bH / 2, t.z]} castShadow>
+                    <cylinderGeometry args={[balusterR, balusterR, bH, 8]} />
+                    {handrailMat}
+                  </mesh>
+                );
+              })}
+              {/* 斜扶手：一整根沿坡面贯通，与楼梯坡度完全平行 */}
               <mesh
                 position={[xSide, baseY + height / 2 + handrailH, -runD / 2 + slopeD / 2]}
                 rotation={[railAngle, 0, 0]}
@@ -280,9 +289,12 @@ export function StaircaseGeom({
     );
   }
 
+  // When rotated 90° or 270°, the local Z axis (running direction) maps
+  // to world X, so W and D must be swapped to keep the stair within its room.
+  const isTransposed = stairRotation === 90 || stairRotation === 270;
   return (
     <group rotation={[0, rotY, 0]}>
-      {shape === "straight"  && <StraightRun runW={W} runD={D} />}
+      {shape === "straight"  && <StraightRun runW={isTransposed ? D : W} runD={isTransposed ? W : D} />}
       {shape === "L-shaped"  && <LShapedRun />}
       {shape === "spiral"    && <SpiralRun />}
     </group>
