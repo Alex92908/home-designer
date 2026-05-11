@@ -104,11 +104,11 @@ export function StaircaseGeom({
 
     return (
       <group>
-        {/* 踏步 — 只画踏步，不加任何栏杆/斜板 */}
+        {/* 踏步 — 金属踏步，无栏杆/斜板 */}
         {treads.map((t, i) => (
           <mesh key={i} position={[0, t.y, t.z]} castShadow receiveShadow>
             <boxGeometry args={[treadW2, treadT, treadDepth + 0.01]} />
-            <meshStandardMaterial color={color} roughness={0.7} />
+            <meshStandardMaterial color="#8a9ba8" metalness={0.75} roughness={0.2} />
           </mesh>
         ))}
       </group>
