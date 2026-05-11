@@ -21,6 +21,7 @@ import { useMemo, useCallback, useState, Suspense } from "react";
 import * as THREE from "three";
 import { Html } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
+import { overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { PlacedItemMesh } from "./RoomCanvas";
@@ -155,50 +156,57 @@ function GlassCurtain({
   width: number; height: number; floorH: number;
   doors?: Array<{ cx: number; w: number; h: number }>;
 }) {
-  const cols  = Math.max(2, Math.round(width / 1.2));
+  // 现代极简玻璃幕墙 — 参照"现代玻璃幕墙别墅"模板：
+  // - 板大、压条细、深色但不死黑（深炭灰金属感）
+  // - 玻璃 transmission 高 + opacity 低 → 看得见室内
+  // - 每层只 1 根横压条（不再每行一根），落地玻璃感更强
+  const cols  = Math.max(2, Math.round(width / 1.5));   // 更大的玻璃板（1.5m/格）
   const panelW = width / cols;
   const rows  = Math.round(height / floorH);
   const rowH  = height / rows;
 
   return (
     <group>
-      {/* 玻璃格 */}
+      {/* 玻璃格 — 全幅、不留边（之前 0.93/0.94 缩进让压条看着更粗） */}
       {Array.from({ length: cols }, (_, ci) => {
         const px = -width / 2 + (ci + 0.5) * panelW;
         return Array.from({ length: rows }, (_, ri) => {
           const py = -height / 2 + (ri + 0.5) * rowH;
-          // 跳过门所在的格
           const hasDoor = doors.some(d => Math.abs(d.cx - px) < panelW / 2 + d.w / 2 && ri === 0);
           return (
             <mesh key={`${ci}-${ri}`} position={[px, py, 0]}>
-              <planeGeometry args={[panelW * 0.93, rowH * 0.94]} />
+              <planeGeometry args={[panelW * 0.985, rowH * 0.985]} />
               <meshPhysicalMaterial
-                color={hasDoor ? "#A0C8DC" : "#B8D4E4"}
-                roughness={0.04} metalness={0.05}
-                transmission={hasDoor ? 0.50 : 0.55}
-                thickness={0.3}
-                transparent opacity={hasDoor ? 0.42 : 0.52}
+                color={hasDoor ? "#F0F6FA" : "#F5FAFC"}   // 几乎无色（极淡蓝）
+                roughness={0.01} metalness={0.0}
+                transmission={hasDoor ? 0.92 : 0.96}      // 极高 transmission
+                thickness={0.04}
+                ior={1.5}
+                attenuationColor="#E8F2F8"
+                attenuationDistance={5}
+                transparent opacity={0.12}
                 side={THREE.DoubleSide}
+                {...overlayMaterialProps(2)}
               />
             </mesh>
           );
         });
       })}
 
-      {/* 竖框 */}
+      {/* 竖向压条 — 比之前细一倍 + 改深炭灰金属（不死黑） */}
       {Array.from({ length: cols + 1 }, (_, i) => (
-        <mesh key={`v${i}`} position={[-width / 2 + i * panelW, 0, 0.02]}>
-          <boxGeometry args={[0.055, height + 0.02, 0.07]} />
-          <meshStandardMaterial color="#181818" metalness={0.9} roughness={0.15} />
+        <mesh key={`v${i}`} position={[-width / 2 + i * panelW, 0, 0.015]}>
+          <boxGeometry args={[0.025, height + 0.02, 0.035]} />
+          <meshStandardMaterial color="#3A3A3C" metalness={0.85} roughness={0.25} />
         </mesh>
       ))}
-      {/* 横框 — 每层一根 */}
+      {/* 横向压条 — 每层一根（不再 rows+1 全画） */}
       {Array.from({ length: rows + 1 }, (_, i) => {
         const py = -height / 2 + i * rowH;
         return (
-          <mesh key={`h${i}`} position={[0, py, 0.02]}>
-            <boxGeometry args={[width + 0.04, 0.05, 0.07]} />
-            <meshStandardMaterial color="#181818" metalness={0.9} roughness={0.15} />
+          <mesh key={`h${i}`} position={[0, py, 0.015]}>
+            <boxGeometry args={[width + 0.04, 0.022, 0.035]} />
+            <meshStandardMaterial color="#3A3A3C" metalness={0.85} roughness={0.25} />
           </mesh>
         );
       })}
@@ -327,32 +335,24 @@ function buildFacadeBlocks(segs: ExteriorWallSeg[]): FacadeBlock[] {
 
 // ── 平屋顶 ────────────────────────────────────────────────────
 function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
-  const OV = 0.45;    // 侧悬挑
-  const OV_S = 0.85;  // 南侧悬挑（更大）
+  // 现代极简平屋顶：薄板、白净、清晰悬挑。
+  // - 板厚 0.18→0.10（薄一半，避免厚重感）
+  // - 颜色更白：#DEDAD4 → #F5F2EC（接近模板的纯白调）
+  // - 砍掉女儿墙压顶线（cartoon outline 主要来源）和深褐色木纹底，
+  //   现代极简别墅屋面就是一块光板悬挑出去。
+  const OV = 0.55;
+  const OV_S = 0.95;
   return (
     <group>
-      {/* 主屋面板 */}
-      <mesh position={[0, roofY + 0.09, -(OV_S - OV) / 2]} castShadow receiveShadow>
-        <boxGeometry args={[W + OV * 2, 0.18, D + OV_S + OV]} />
-        <meshStandardMaterial color="#DEDAD4" roughness={0.85} metalness={0.03} />
+      <mesh position={[0, roofY + 0.05, -(OV_S - OV) / 2]} castShadow receiveShadow>
+        <boxGeometry args={[W + OV * 2, 0.10, D + OV_S + OV]} />
+        <meshStandardMaterial color="#F5F2EC" roughness={0.72} metalness={0.0} />
       </mesh>
-      {/* 南侧悬挑底面（木纹） */}
-      <mesh position={[0, roofY, -D / 2 - OV_S / 2]}>
-        <planeGeometry args={[W + OV * 2, OV_S]} />
-        <meshStandardMaterial color="#8B6340" roughness={0.75} side={THREE.DoubleSide} />
+      {/* 屋顶边缘极细影线 — 仅留底面薄薄一道色，强调悬挑感 */}
+      <mesh position={[0, roofY - 0.005, -(OV_S - OV) / 2]}>
+        <boxGeometry args={[W + OV * 2 + 0.005, 0.01, D + OV_S + OV + 0.005]} />
+        <meshStandardMaterial color="#E0DDD6" roughness={0.85} />
       </mesh>
-      {/* 女儿墙（四周压顶线） */}
-      {[
-        { pos: [0, roofY + 0.26, -D/2 - OV_S + 0.1]  as [number,number,number], args: [W + OV*2, 0.14, 0.10] as [number,number,number] },
-        { pos: [0, roofY + 0.26,  D/2 + OV - 0.1]    as [number,number,number], args: [W + OV*2, 0.14, 0.10] as [number,number,number] },
-        { pos: [-(W/2+OV-0.05), roofY+0.26, 0]        as [number,number,number], args: [0.10, 0.14, D+OV_S+OV] as [number,number,number] },
-        { pos: [ (W/2+OV-0.05), roofY+0.26, 0]        as [number,number,number], args: [0.10, 0.14, D+OV_S+OV] as [number,number,number] },
-      ].map(({ pos, args }, i) => (
-        <mesh key={i} position={pos}>
-          <boxGeometry args={args} />
-          <meshStandardMaterial color="#C8C4BC" roughness={0.88} />
-        </mesh>
-      ))}
     </group>
   );
 }
@@ -1053,7 +1053,10 @@ export default function FloorPlanBuilding({
       })}
 
       {/* ── 6. 室内渲染（仅室内视角）── */}
-      {insideBuilding && interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, stairShape, stairRotation }) => {
+      {/* 室内渲染 —— 玻璃幕墙建筑的卖点是透过玻璃看到室内，所以
+          结构层（地板/墙/天花板/楼梯/门）外观模式也渲染，但 GLTF
+          家具只在 insideBuilding 时加载（否则一次性 50+ GLTF 卡死）。 */}
+      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, stairShape, stairRotation }) => {
         const wallOpacity = wallXray ? 0.13 : 1.0;
         const isXray = wallXray;
         // 走廊：无内墙、无天花板，仅地板；楼梯间：渲染楼梯几何体
@@ -1253,26 +1256,27 @@ export default function FloorPlanBuilding({
               );
             })}
 
-            {/* 家具（帘子只在室内视角渲染，避免全局视图重叠） */}
-            <group position={[cx, yBase, cz]}>
-              {!isStair && placedItems
-                .filter(p => {
-                  if (!insideBuilding) {
-                    // 外观视角：跳过帘子（帘子在全局视图会从多个房间叠在一起）
+            {/* 家具：外观模式跳过 GLTF（性能保护），只在 insideBuilding
+                时加载真实模型。如果用户想从外面看到家具，可以打开
+                walkthrough 模式（已经 insideBuilding=true）。 */}
+            {insideBuilding && (
+              <group position={[cx, yBase, cz]}>
+                {!isStair && placedItems
+                  .filter(p => {
                     const fItem = getFurnitureById(p.furnitureId);
                     if (fItem?.category === "curtain") return false;
-                  }
-                  return true;
-                })
-                .map(p => {
-                  const modP = { ...p, z: rDcm - p.z, rotation: (540 - p.rotation) % 360 };
-                  return (
-                    <Suspense key={p.instanceId} fallback={null}>
-                      <PlacedItemMesh placed={modP} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} />
-                    </Suspense>
-                  );
-                })}
-            </group>
+                    return true;
+                  })
+                  .map(p => {
+                    const modP = { ...p, z: rDcm - p.z, rotation: (540 - p.rotation) % 360 };
+                    return (
+                      <Suspense key={p.instanceId} fallback={null}>
+                        <PlacedItemMesh placed={modP} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} />
+                      </Suspense>
+                    );
+                  })}
+              </group>
+            )}
           </group>
         );
       })}
