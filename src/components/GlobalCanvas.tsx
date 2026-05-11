@@ -80,8 +80,6 @@ export function StaircaseGeom({
   const treadT  = 0.06;
   const railH   = FLOOR_H * 0.95;
   const railMat = <meshStandardMaterial color="#A0A0A8" roughness={0.5} />;
-  const handrailMat = <meshStandardMaterial color="#707078" metalness={0.3} roughness={0.4} />;
-
   // Convert stairRotation degrees → radians for the Y axis
   const rotY = (stairRotation * Math.PI) / 180;
 
@@ -104,74 +102,15 @@ export function StaircaseGeom({
       z: i * treadDepth + treadDepth / 2 - runD / 2,
     })), [runD, riserH, treadDepth, baseY, height]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const topStepTop  = baseY + STEPS * riserH;             // = 2F 楼面
-    const slopeD      = runD;                                // 斜段 = 整个跨度
-
-    // 栏杆参数
-    const balusterR  = 0.018;
-    const handrailH  = 0.92;
-    const newelH     = 1.00;
-    const railAngle  = Math.atan2(height, slopeD);
-    const railLen    = Math.sqrt(slopeD * slopeD + height * height);
-
     return (
       <group>
-        {/* 踏步 */}
+        {/* 踏步 — 只画踏步，不加任何栏杆/斜板 */}
         {treads.map((t, i) => (
           <mesh key={i} position={[0, t.y, t.z]} castShadow receiveShadow>
             <boxGeometry args={[treadW2, treadT, treadDepth + 0.01]} />
             <meshStandardMaterial color={color} roughness={0.7} />
           </mesh>
         ))}
-
-        {/* 顶端不画额外宽阶 —— 第 12 级踏步本身的顶面已经 = 2F 楼面 */}
-
-        {/* 两侧栏杆 —— 竖立柱高度跟随斜扶手，顶端贴合斜面；扶手一根斜杆平行楼梯坡面 */}
-        {([-1, 1] as const).map(side => {
-          const xSide = side * (treadW2 / 2 + 0.02);
-          // 斜扶手在各 z 处的高度：从 (z=-runD/2, y=baseY+handrailH) 线性到
-          // (z=+runD/2, y=topStepTop+handrailH)
-          const railYatZ = (z: number) =>
-            baseY + handrailH + ((z + runD / 2) / runD) * height;
-
-          return (
-            <group key={side}>
-              {/* 起步端柱（newelH 固定高） */}
-              <mesh position={[xSide, baseY + newelH / 2, -runD / 2]} castShadow>
-                <boxGeometry args={[0.06, newelH, 0.06]} />
-                {handrailMat}
-              </mesh>
-              {/* 顶端端柱 */}
-              <mesh position={[xSide, topStepTop + newelH / 2, runD / 2 - treadDepth / 2]} castShadow>
-                <boxGeometry args={[0.06, newelH, 0.06]} />
-                {handrailMat}
-              </mesh>
-              {/* 每级台阶一根竖立柱，顶部刚好触到斜扶手底面，高度随台阶位置变化 */}
-              {treads.map((t, i) => {
-                const treadTopY = t.y + treadT / 2;          // 踏面顶 y
-                const rTopY     = railYatZ(t.z);              // 该位置扶手 y
-                const bH        = Math.max(0.01, rTopY - treadTopY); // 立柱高度
-                return (
-                  <mesh key={`b-${i}`} position={[xSide, treadTopY + bH / 2, t.z]} castShadow>
-                    <cylinderGeometry args={[balusterR, balusterR, bH, 8]} />
-                    {handrailMat}
-                  </mesh>
-                );
-              })}
-              {/* 斜扶手：一整根沿坡面贯通，与楼梯坡度完全平行 */}
-              <mesh
-                position={[xSide, baseY + height / 2 + handrailH, -runD / 2 + slopeD / 2]}
-                rotation={[railAngle, 0, 0]}
-                castShadow
-              >
-                <boxGeometry args={[0.05, 0.05, railLen]} />
-                {handrailMat}
-              </mesh>
-            </group>
-          );
-        })}
-        {/* 平台前端不画栏杆 —— 那里是上楼后转身进房间/继续上一层的开口，
-            真实住宅不会装栏杆挡路 */}
       </group>
     );
   }
