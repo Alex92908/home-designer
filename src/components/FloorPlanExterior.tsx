@@ -1132,16 +1132,28 @@ export default function FloorPlanBuilding({
 
         // ── 木饰面（侧墙）──
         if (facade === "wood") {
-          const planks = Math.max(4, Math.round(FLOOR_H / 0.15));
-          const plankH = FLOOR_H / planks;
+          // 实心底板 + 凹槽线：避免单独木条之间的透光缝隙（百叶窗效果）
+          // 每 22cm 一道凹槽，3m 层高约 12 道凹槽线
+          const grooves    = Math.max(3, Math.round(FLOOR_H / 0.22));
+          const grooveStep = FLOOR_H / grooves;   // 凹槽间距
+          const grooveH    = 0.014;               // 凹槽线高度 14mm
           return (
             <group key={`wd-${bi}`} position={[px, yMid, pz]} rotation={rot}>
-              {Array.from({ length: planks }, (_, pi) => (
-                <mesh key={pi} position={[0, -FLOOR_H / 2 + (pi + 0.5) * plankH, 0]}>
-                  <boxGeometry args={[segLen, plankH * 0.88, 0.06]} />
-                  <meshStandardMaterial color={pi % 2 === 0 ? "#8B6340" : "#7A5530"} roughness={0.78} />
-                </mesh>
-              ))}
+              {/* 实心底板 */}
+              <mesh castShadow receiveShadow>
+                <boxGeometry args={[segLen, FLOOR_H, 0.06]} />
+                <meshStandardMaterial color="#8B5E3C" roughness={0.75} metalness={0.0} />
+              </mesh>
+              {/* 水平凹槽线（略深色，凸出表面 2mm 产生阴影感） */}
+              {Array.from({ length: grooves - 1 }, (_, i) => {
+                const gy = -FLOOR_H / 2 + (i + 1) * grooveStep;
+                return (
+                  <mesh key={i} position={[0, gy, 0.032]} castShadow>
+                    <boxGeometry args={[segLen + 0.01, grooveH, 0.008]} />
+                    <meshStandardMaterial color="#5C3A1E" roughness={0.88} />
+                  </mesh>
+                );
+              })}
             </group>
           );
         }
