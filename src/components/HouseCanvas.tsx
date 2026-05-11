@@ -5020,8 +5020,12 @@ function PolygonHouseShell({ floors, settings }: { floors: number; settings: Ext
     <group>
       {roomPolys.map(({ room, edges, shapePoints }) => (
         <group key={room}>
-          {/* Floor slabs — one per storey */}
+          {/* Floor slabs — one per storey.
+              楼梯井：stair 房间在第二层及以上不渲染楼板，让楼梯从下层
+              透过来。地面层照常画（楼梯基座的地面）。多层别墅这样
+              处理后，上下楼时视线不会撞到"楼板挡住的楼梯"。 */}
           {Array.from({ length: floors }).map((_, f) => {
+            if (room === "stair" && f > 0) return null;   // 上层楼板挖洞
             const shp = new THREE.Shape();
             shapePoints.forEach(([x, z], i) => {
               i === 0 ? shp.moveTo(x, z) : shp.lineTo(x, z);

@@ -620,6 +620,39 @@ export default function FloorPlan() {
           rotation:    p!.rotation,
         }));
 
+      // ── B4: 拖拽实时碰撞防穿模 ──
+      // 行业惯例：CAD/Sketchup 在拖动家具时遇到另一件家具会高亮 +
+      // 阻挡释放；clearance.ts 里的规则只是 evaluator（事后警告），不是
+      // enforcer。这里把 evaluator 升级为 enforcer：每帧检测拖动 item
+      // 的新 AABB 是否与"非拖动"家具的 AABB 相交，相交则拒绝该轴向移动
+      // （axis-separated slide：先单 X，再单 Z，都撞死才完全阻塞）。
+      const draggedIds = new Set(dragItems.map(i => i.instanceId));
+      const obstacles = roomState.placedItems
+        .filter(p => !draggedIds.has(p.instanceId))
+        .map(p => {
+          const f = getFurnitureById(p.furnitureId);
+          const r90 = p.rotation === 90 || p.rotation === 270;
+          const wW = (f?.width  ?? 100) * (p.scaleW ?? 1);
+          const wD = (f?.depth  ?? 100) * (p.scaleD ?? 1);
+          const halfW = (r90 ? wD : wW) / 2;
+          const halfD = (r90 ? wW : wD) / 2;
+          return {
+            id: p.instanceId,
+            minX: p.x - halfW, maxX: p.x + halfW,
+            minZ: p.z - halfD, maxZ: p.z + halfD,
+          };
+        });
+      /** AABB-AABB overlap test. `pad` 留 0.5cm 防"轻贴边"判定为穿模。 */
+      const overlapsAny = (cx: number, cz: number, halfW: number, halfD: number, pad = 0.5) => {
+        for (const o of obstacles) {
+          if (cx + halfW + pad > o.minX && cx - halfW - pad < o.maxX
+            && cz + halfD + pad > o.minZ && cz - halfD - pad < o.maxZ) {
+            return true;
+          }
+        }
+        return false;
+      };
+
       pushFurnitureHistory();
       const ds: DragState = {
         startSvgX: startPt.x, startSvgZ: startPt.y,
@@ -645,13 +678,20 @@ export default function FloorPlan() {
           const halfD    = Math.min(r90 ? rawHW : rawHD, capturedRoomD / 2);
           let newX     = Math.max(halfW, Math.min(capturedRoomW - halfW, item.startX + dX));
           let newZ     = Math.max(halfD, Math.min(capturedRoomD - halfD, item.startZ + dZ));
-          // Polygon-shape constraint: if the new center is outside the
-          // polygon, fall back to the item's current position (i.e., refuse
-          // the move). This stops furniture from being dragged into the
-          // bitten-out region of an L-shape room.
+          // Polygon-shape constraint (L型/凸字)
           if (capturedShape && !pointInPolygon(capturedShape.points, newX, newZ)) {
             newX = item.startX;
             newZ = item.startZ;
+          }
+          // B4: 家具相互不穿模 — axis-separated slide.
+          // 先尝试完整移动；如果撞，单 X / 单 Z 分别试一次（沿障碍滑而
+          // 不是死撞）；都失败就完全不动。
+          if (overlapsAny(newX, newZ, halfW, halfD)) {
+            const onlyX = !overlapsAny(newX, item.startZ, halfW, halfD);
+            const onlyZ = !overlapsAny(item.startX, newZ, halfW, halfD);
+            if (onlyX)      { newZ = item.startZ; }
+            else if (onlyZ) { newX = item.startX; }
+            else            { newX = item.startX; newZ = item.startZ; }
           }
           moveItem(item.instanceId, newX, newZ);
         }
