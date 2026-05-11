@@ -981,12 +981,59 @@ export default function FloorPlanBuilding({
       })}
 
       {/* ── 3. 层间楼板（室内模式下隐藏）── */}
-      {!insideBuilding && Array.from({ length: usedFloors - 1 }, (_, fi) => (
-        <mesh key={`slab-${fi}`} position={[0, (fi + 1) * (FLOOR_H + SLAB_T) - SLAB_T / 2, 0]} castShadow receiveShadow>
-          <boxGeometry args={[W + 0.30, SLAB_T, D + 0.30]} />
-          <meshStandardMaterial color="#E0DCD4" roughness={0.85} />
-        </mesh>
-      ))}
+      {/* 楼梯井贯穿楼板，用4块矩形绕开开口，避免堵住楼梯 */}
+      {!insideBuilding && (() => {
+        // 楼梯井位置（取 fi=0 的楼梯间，各层水平位置相同）
+        const stairEntry = interiorRooms.find(r => r.isStair && r.fi === 0);
+        const slabColor  = "#E0DCD4";
+        const totalW     = W + 0.30;
+        const totalD     = D + 0.30;
+        const halfW      = totalW / 2;
+        const halfD      = totalD / 2;
+
+        return Array.from({ length: usedFloors - 1 }, (_, fi) => {
+          const slabY = (fi + 1) * (FLOOR_H + SLAB_T) - SLAB_T / 2;
+
+          if (!stairEntry) {
+            // 无楼梯间：整块楼板
+            return (
+              <mesh key={`slab-${fi}`} position={[0, slabY, 0]} castShadow receiveShadow>
+                <boxGeometry args={[totalW, SLAB_T, totalD]} />
+                <meshStandardMaterial color={slabColor} roughness={0.85} />
+              </mesh>
+            );
+          }
+
+          // 有楼梯井：拆成 4 条，绕开楼梯井矩形开口
+          const { cx: scx, cz: scz, rW: srW, rD: srD } = stairEntry;
+          const fL = -halfW, fR = halfW;
+          const fN = -halfD, fS = halfD;
+          const sL = scx - srW / 2, sR = scx + srW / 2;
+          const sN = scz - srD / 2, sSouth = scz + srD / 2;
+
+          type Piece = { key: string; w: number; d: number; x: number; z: number };
+          const pieces: Piece[] = [];
+          // 北侧（楼梯井以北，全宽）
+          if (sN - fN > 0.01) pieces.push({ key: "N", w: totalW, d: sN - fN,    x: 0,            z: (fN + sN) / 2    });
+          // 南侧（楼梯井以南，全宽）
+          if (fS - sSouth > 0.01) pieces.push({ key: "S", w: totalW, d: fS - sSouth, x: 0,       z: (sSouth + fS) / 2 });
+          // 西侧（楼梯井左侧，仅楼梯井纵深范围）
+          if (sL - fL > 0.01) pieces.push({ key: "W", w: sL - fL, d: srD,      x: (fL + sL) / 2, z: scz              });
+          // 东侧（楼梯井右侧）
+          if (fR - sR > 0.01) pieces.push({ key: "E", w: fR - sR, d: srD,      x: (sR + fR) / 2,  z: scz              });
+
+          return (
+            <group key={`slab-${fi}`}>
+              {pieces.map(p => (
+                <mesh key={p.key} position={[p.x, slabY, p.z]} castShadow receiveShadow>
+                  <boxGeometry args={[p.w, SLAB_T, p.d]} />
+                  <meshStandardMaterial color={slabColor} roughness={0.85} />
+                </mesh>
+              ))}
+            </group>
+          );
+        });
+      })()}
 
       {/* ── 4. 外墙 facade overlay（基于合并块，无双框缝）── 室内模式下隐藏外墙 */}
       {!insideBuilding && facadeBlocks.map((block, bi) => {
