@@ -32,8 +32,8 @@ export default function RoomSidebar() {
         const icon     = meta?.icon ?? def.icon;
         const isActive = activeRoom === r && viewMode !== "all" && viewMode !== "exterior";
         const hasContent =
-          Object.keys(rooms[r].materials).length > 0 ||
-          rooms[r].placedItems.length > 0;
+          Object.keys(rooms[r]?.materials ?? {}).length > 0 ||
+          (rooms[r]?.placedItems?.length ?? 0) > 0;
 
         return (
           <button

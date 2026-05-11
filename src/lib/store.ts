@@ -63,7 +63,7 @@ export const ALL_POSSIBLE_ROOMS: RoomType[] = [
   "study","study2","closet","balcony","balcony2",
   "yard","garage","gym","cinema",
   "custom1","custom2","custom3","custom4","custom5",
-  "stair",
+  "stair","hallway",
 ];
 
 export const DEFAULT_ENABLED: RoomType[] = [
@@ -95,6 +95,7 @@ export const DEFAULT_ROOM_LAYOUT: Record<RoomType, { x: number; y: number }> = {
   custom4:   { x: 820,  y: 900  },
   custom5:   { x: 820,  y: 1200 },
   stair:     { x: 620,  y: 780  },
+  hallway:   { x: 380,  y: 360  },
 };
 
 export const DEFAULT_ROOM_DIMENSIONS: Record<RoomType, { width: number; depth: number }> =
@@ -1202,16 +1203,22 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       toggleRoom: (room) => {
-        updateFloor(get, set, fp => ({
-          enabledRooms: fp.enabledRooms.includes(room)
-            ? fp.enabledRooms.filter(r => r !== room)
-            : [...fp.enabledRooms, room],
-        }));
+        updateFloor(get, set, fp => {
+          const adding = !fp.enabledRooms.includes(room);
+          return {
+            enabledRooms: adding ? [...fp.enabledRooms, room] : fp.enabledRooms.filter(r => r !== room),
+            // 确保新加房间在 rooms 对象里有条目
+            rooms: adding && !fp.rooms[room]
+              ? { ...fp.rooms, [room]: { materials: {}, placedItems: [] } }
+              : fp.rooms,
+          };
+        });
       },
 
       addRoom: (room) => {
         updateFloor(get, set, fp => ({
           enabledRooms: fp.enabledRooms.includes(room) ? fp.enabledRooms : [...fp.enabledRooms, room],
+          rooms: fp.rooms[room] ? fp.rooms : { ...fp.rooms, [room]: { materials: {}, placedItems: [] } },
         }));
       },
 
@@ -1272,11 +1279,17 @@ export const useDesignerStore = create<DesignerStore>()(
               delete shapesMap[r.room];
             }
           }
+          // 确保所有启用的房间在 rooms 对象里都有条目（兼容旧存档）
+          const roomsMap = { ...fp.rooms };
+          for (const r of enabled) {
+            if (!roomsMap[r]) roomsMap[r] = { materials: {}, placedItems: [] };
+          }
           return {
             enabledRooms: enabled,
             roomLayout: layoutMap,
             roomDimensions: dimsMap,
             roomShapes: shapesMap,
+            rooms: roomsMap,
           };
         });
       },

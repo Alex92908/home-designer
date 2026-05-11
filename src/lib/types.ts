@@ -24,7 +24,8 @@ export type RoomType =
   | "custom3"    // 自定义3
   | "custom4"    // 自定义4
   | "custom5"    // 自定义5
-  | "stair";     // 楼梯间
+  | "stair"      // 楼梯间
+  | "hallway";   // 走廊/过道
 
 export type ViewMode = "2d" | "3d" | "all" | "exterior" | "global3d" | "yard2d";
 
@@ -477,6 +478,7 @@ export const ROOM_DEFS: Record<RoomType, RoomDef> = {
   custom4:   { width: 300, depth: 300, height: 280, name: "自定义4", icon: "🔲", defaultWallColor: "#EDE8E0", defaultFloorColor: "#C8A882", hasWindow: false, windowWall: "none", isCustom: true },
   custom5:   { width: 300, depth: 300, height: 280, name: "自定义5", icon: "🔲", defaultWallColor: "#EDE8E0", defaultFloorColor: "#C8A882", hasWindow: false, windowWall: "none", isCustom: true },
   stair:     { width: 260, depth: 220, height: 280, name: "楼梯间", icon: "🪜", defaultWallColor: "#F5F0E8", defaultFloorColor: "#C8B888", hasWindow: false, windowWall: "none" },
+  hallway:   { width: 120, depth: 300, height: 280, name: "走廊",   icon: "🚶", defaultWallColor: "#EDE8E0", defaultFloorColor: "#C4BAA6", hasWindow: false, windowWall: "none" },
 };
 
 // ─── Room state ────────────────────────────────────────────

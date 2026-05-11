@@ -68,7 +68,7 @@ function GlobalRoomLight({ room, H, color }: { room: RoomType; H: number; color:
  * StaircaseGeom — 3D staircase that honours the floor's stairConfig.
  * Supports three shapes: straight, L-shaped, spiral.
  */
-function StaircaseGeom({
+export function StaircaseGeom({
   W, D, color,
   shape = "straight",
   stairRotation = 0,
@@ -276,8 +276,8 @@ function RoomGroup({
   const WALL = 0.08; // 8cm thick visual wall
   const WALL_H = H * 0.40; // shorter walls so we can peek in from above
 
-  const floorColor = state.materials.floor?.color ?? def.defaultFloorColor;
-  const wallColor  = state.materials.wall?.color  ?? def.defaultWallColor;
+  const floorColor = state?.materials?.floor?.color ?? def.defaultFloorColor;
+  const wallColor  = state?.materials?.wall?.color  ?? def.defaultWallColor;
 
   // Polygon points (cm, room-local back-left origin). Rect fallback when
   // no shape override is set.
@@ -369,7 +369,7 @@ function RoomGroup({
           要有 1 件没加载好，整间房全部 gone。
           showFurniture=false 时直接跳过（用于首帧只渲染激活房间家具）。*/}
       {/* Furniture — skip for stair rooms */}
-      {showFurniture && !isStair && state.placedItems.map(p => (
+      {showFurniture && !isStair && (state?.placedItems ?? []).map(p => (
         <PlacedItemMesh key={p.instanceId} placed={p} def={def} roomW={W} roomD={D} room={room} />
       ))}
 
@@ -382,7 +382,7 @@ function RoomGroup({
         <GlobalRoomLight
           room={room}
           H={WALL_H}
-          color={state.materials.light?.color ?? "#FFE8A0"}
+          color={state?.materials?.light?.color ?? "#FFE8A0"}
         />
       )}
 

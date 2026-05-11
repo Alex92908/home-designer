@@ -52,14 +52,14 @@ export default function RightPanelAll() {
   // Per-room costs for current floor (for display)
   const roomCosts = enabledRooms.map(r => {
     const area = getRoomArea(r);
-    const cost = calcRoomCost(r, rooms[r].materials as never, rooms[r].placedItems, area);
+    const cost = calcRoomCost(r, (rooms[r]?.materials ?? {}) as never, rooms[r]?.placedItems ?? [], area);
     return { r, cost, area };
   });
 
   // Total cost across ALL floors
   const totalCost = floorPlans.reduce((sum, fp) => {
     return sum + fp.enabledRooms.reduce((s2, room) => {
-      const { materials, placedItems } = fp.rooms[room];
+      const { materials, placedItems } = fp.rooms[room] ?? { materials: {}, placedItems: [] };
       const area = getRoomArea(room);
       return s2 + calcRoomCost(room, materials as never, placedItems, area);
     }, 0);

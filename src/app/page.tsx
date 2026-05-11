@@ -4,6 +4,12 @@
 // 150ms after mount, so by the time the user opens 3D/全局/外观 views
 // many GLTFs are already warm in the HTTP cache.
 import "@/lib/preload";
+
+// Module-level flag: tracks whether we've triggered the sample-load this
+// browser session. Survives React Strict Mode's double-invocation of effects
+// (which resets useState/useRef, but NOT module-level variables).
+const _VISITED_KEY = "home-designer-visited";
+let _sampleLoadedThisSession = false;
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import LeftPanel from "@/components/LeftPanel";
@@ -25,6 +31,7 @@ import { useDesignerStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { decodeShare } from "@/lib/share";
 import { decodeSnapshot } from "@/lib/shareUrl";
+import { getSampleGlassVillaFloorPlans, SAMPLE_GLASS_VILLA_EXTERIOR } from "@/lib/sampleGlassVilla";
 
 function CanvasLoading({ bg, msgKey }: { bg: string; msgKey: "loading3dScene" | "loadingExteriorScene" | "global3dLoading" }) {
   const t = useT();
@@ -153,6 +160,11 @@ export default function Home() {
   const loadFromShare      = useDesignerStore((s) => s.loadFromShare);
   const aiRenderRequested  = useDesignerStore((s) => s.aiRenderRequested);
   const clearAiRenderRequest = useDesignerStore((s) => s.clearAiRenderRequest);
+  const activeRoom         = useDesignerStore((s) => s.activeRoom);
+  const activeFloor        = useDesignerStore((s) => s.activeFloor);
+  const setActiveFloor     = useDesignerStore((s) => s.setActiveFloor);
+  const setActiveRoom      = useDesignerStore((s) => s.setActiveRoom);
+  const floorPlans         = useDesignerStore((s) => s.floorPlans);
   const t = useT();
 
   // Panels start OPEN on both server and client to avoid hydration
@@ -170,11 +182,71 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
 
   // After mount, collapse panels on mobile viewports + flip mounted flag.
+  // On first-ever visit (no persisted state), load the glass-villa sample so
+  // new users immediately see a complete coherent design across all views.
   useEffect(() => {
     setMounted(true);
     if (window.innerWidth < 768) {
       setLeftOpen(false);
       setRightOpen(false);
+    }
+
+    // First-visit: load sample data + show a DOM-injected welcome banner.
+    // We use direct DOM injection (not React state) because zustand's
+    // useSyncExternalStore triggers synchronous re-renders that race with
+    // useState updates. Direct DOM manipulation is immune to this.
+    const isFirstVisit = !localStorage.getItem(_VISITED_KEY);
+    if (isFirstVisit && !_sampleLoadedThisSession) {
+      _sampleLoadedThisSession = true;
+      localStorage.setItem(_VISITED_KEY, "1");
+      useDesignerStore.setState(s => ({
+        floorPlans: getSampleGlassVillaFloorPlans(),
+        exterior: { ...s.exterior, ...(SAMPLE_GLASS_VILLA_EXTERIOR as Partial<typeof s.exterior>) },
+        activeFloor: 0,
+        activeRoom: "living" as const,
+        viewMode: "all" as const,
+      }));
+
+      // Inject the welcome banner directly into the DOM — synchronously inside
+      // the effect so it's guaranteed to fire on every first-visit page load.
+      if (!document.getElementById("sample-welcome-banner")) {
+        const el = document.createElement("div");
+        el.id = "sample-welcome-banner";
+        el.style.cssText = [
+          "position:fixed",
+          "top:64px",
+          "left:50%",
+          "transform:translateX(-50%)",
+          "z-index:9999",
+          "display:flex",
+          "align-items:center",
+          "gap:12px",
+          "padding:10px 16px",
+          "border-radius:16px",
+          "background:linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,58,95,0.95))",
+          "backdrop-filter:blur(14px)",
+          "border:1px solid rgba(99,102,241,0.55)",
+          "color:white",
+          "font-size:12px",
+          "font-family:inherit",
+          "box-shadow:0 8px 32px rgba(0,0,0,0.4)",
+          "min-width:260px",
+          "max-width:min(500px,calc(100vw - 32px))",
+          "animation:fadeInDown 0.5s ease",
+          "pointer-events:auto",
+        ].join(";");
+        el.innerHTML = `
+          <span style="font-size:22px;flex-shrink:0">🏡</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:12px;color:#BFDBFE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">现代玻璃幕墙别墅 · 样板已加载</div>
+            <div style="font-size:10px;color:rgba(191,219,254,0.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">依次点击标签探索 → 平面图 → 效果图 → 全局3D → 外观</div>
+          </div>
+          <button id="sample-banner-close" style="flex-shrink:0;width:20px;height:20px;border:none;background:rgba(255,255,255,0.1);border-radius:50%;color:white;font-size:9px;cursor:pointer;opacity:0.6;display:flex;align-items:center;justify-content:center">✕</button>
+        `;
+        document.body.appendChild(el);
+        document.getElementById("sample-banner-close")?.addEventListener("click", () => el.remove());
+        setTimeout(() => el.remove(), 7000);
+      }
     }
   }, []);
 
@@ -246,7 +318,6 @@ export default function Home() {
 
   // Load exterior-only view snapshot from ?loadView= (from /view page "在设计器中编辑" button)
   const setExterior    = useDesignerStore(s => s.setExterior);
-  const setActiveFloor = useDesignerStore(s => s.setActiveFloor);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const encoded = params.get("loadView");
@@ -286,6 +357,9 @@ export default function Home() {
     );
   }
 
+  // Banner is injected directly into DOM via the effect above (DOM injection
+  // is immune to React state races and Fast Refresh resets). No JSX needed here.
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
       <TopBar />
@@ -323,8 +397,9 @@ export default function Home() {
             : <HouseCanvas />
           )}
 
-          {/* AI Render + Import floating buttons — visible in all canvas views */}
-          <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2 items-end">
+          {/* AI Render + Import floating buttons — only in 3D/2D/exterior views,
+              hidden in 全局/全局3D/院子 to avoid blocking floor-plan controls */}
+          <div className={`absolute bottom-4 right-4 z-20 flex flex-col gap-2 items-end transition-opacity duration-200 ${isAll || isGlobal3d || isYard2d ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
             <button
               onClick={() => setShowImport(true)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-lg transition-all active:scale-95 hover:scale-105"
@@ -354,6 +429,35 @@ export default function Home() {
           {/* Front wall + ceiling toggles — both in 3D only */}
           {viewMode === "3d" && <FrontWallToggle />}
           {viewMode === "3d" && <CeilingToggle />}
+
+          {/* Stair navigation — shown when viewing a stair room in 3D */}
+          {viewMode === "3d" && activeRoom === "stair" && (() => {
+            const hasUp   = activeFloor < floorPlans.length - 1 && floorPlans[activeFloor + 1]?.enabledRooms?.includes("stair" as const);
+            const hasDown = activeFloor > 0 && floorPlans[activeFloor - 1]?.enabledRooms?.includes("stair" as const);
+            if (!hasUp && !hasDown) return null;
+            return (
+              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 flex gap-3">
+                {hasUp && (
+                  <button
+                    onClick={() => { setActiveFloor(activeFloor + 1); setActiveRoom("stair"); }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-xl active:scale-95 transition-all"
+                    style={{ background: "linear-gradient(135deg,rgba(30,58,138,0.92),rgba(59,130,246,0.92))", backdropFilter: "blur(12px)", border: "1px solid rgba(147,197,253,0.4)" }}
+                  >
+                    ↑ 上楼 {activeFloor + 2}F
+                  </button>
+                )}
+                {hasDown && (
+                  <button
+                    onClick={() => { setActiveFloor(activeFloor - 1); setActiveRoom("stair"); }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-xl active:scale-95 transition-all"
+                    style={{ background: "linear-gradient(135deg,rgba(30,58,138,0.92),rgba(59,130,246,0.92))", backdropFilter: "blur(12px)", border: "1px solid rgba(147,197,253,0.4)" }}
+                  >
+                    ↓ 下楼 {activeFloor}F
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </main>
 
         {/* Right panel with collapse — used by 3D/2D (RightPanel), 全局

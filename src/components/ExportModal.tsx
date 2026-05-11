@@ -79,7 +79,7 @@ export default function ExportModal() {
 
   // Current-floor room costs (for display in "all" tab)
   const roomCosts = enabledRooms.map(r => {
-    const rs = rooms[r];
+    const rs = rooms[r] ?? { materials: {}, placedItems: [] };
     const a  = getRoomArea(r);
     let c = 0;
     if (rs.materials.wall)    c += rs.materials.wall.price * a.wall;
@@ -93,7 +93,7 @@ export default function ExportModal() {
   // Sum across ALL floors for totals
   const totalAllCost = floorPlans.reduce((sum, fp) =>
     sum + fp.enabledRooms.reduce((s2, r) => {
-      const rs = fp.rooms[r];
+      const rs = fp.rooms[r] ?? { materials: {}, placedItems: [] };
       const a = getRoomArea(r);
       let c = 0;
       if (rs.materials.wall)    c += rs.materials.wall.price * a.wall;
@@ -142,7 +142,7 @@ export default function ExportModal() {
     const roomDetails = floorPlans.flatMap((fp, floorIndex) =>
       fp.enabledRooms.map(r => {
         const a = getRoomArea(r);
-        const rs = fp.rooms[r];
+        const rs = fp.rooms[r] ?? { materials: {}, placedItems: [] };
         let c = 0;
         if (rs.materials.wall)    c += rs.materials.wall.price * a.wall;
         if (rs.materials.floor)   c += rs.materials.floor.price * a.floor;

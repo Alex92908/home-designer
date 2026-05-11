@@ -29,7 +29,7 @@ export default function ShareModal() {
       ...fp,
       rooms: Object.fromEntries(
         fp.enabledRooms
-          .filter(r => Object.keys(fp.rooms[r].materials).length > 0 || fp.rooms[r].placedItems.length > 0)
+          .filter(r => fp.rooms[r] && (Object.keys(fp.rooms[r].materials).length > 0 || fp.rooms[r].placedItems.length > 0))
           .map(r => [r, fp.rooms[r]])
       ) as FloorPlan["rooms"],
     }));

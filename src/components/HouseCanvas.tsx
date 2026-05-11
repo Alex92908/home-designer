@@ -6,7 +6,15 @@ import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone
 import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
 import { useDesignerStore } from "@/lib/store";
+
+// ─── three-mesh-bvh: 全局加速射线检测 ────────────────────────────────────────
+// 替换 THREE.Mesh.raycast 为 BVH 版本，复杂场景下点击响应快 5-10×
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
 import { hasWebGPUSupport } from "@/lib/webgpuRenderer";
 import { HouseStairs } from "./StairGeometry";
 import { SSGIPostProcessing } from "./SSGIPostProcessing";
@@ -24,6 +32,97 @@ const FLOOR_H = 2.8;
 const WT      = 0.24;
 const OV      = 0.55;   // overhang for pitched roofs
 const FLAT_OV = 1.6;    // deep cantilever overhang for modern flat roof
+
+// ─── InstancedBoxes — 用一个 InstancedMesh 代替 N 个 mesh，大幅减少 draw call ─
+/**
+ * 渲染多个相同尺寸、相同材质的 Box，positions 中每项为 [x,y,z]。
+ * 可选传入每个实例的旋转四元数 (rotations)。
+ * 典型用途：柱子阵列、屋顶板条、楼板带等重复几何。
+ */
+function InstancedBoxes({
+  boxArgs, positions, color, roughness = 0.7, metalness = 0,
+  emissive, emissiveIntensity = 0,
+  envMapIntensity = 0.3,
+  castShadow = false, receiveShadow = false,
+}: {
+  boxArgs: [number, number, number];
+  positions: Array<[number, number, number]>;
+  color: string;
+  roughness?: number; metalness?: number;
+  emissive?: string; emissiveIntensity?: number;
+  envMapIntensity?: number;
+  castShadow?: boolean; receiveShadow?: boolean;
+}) {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const count = positions.length;
+  const geo = useMemo(() => new THREE.BoxGeometry(...boxArgs), [boxArgs[0], boxArgs[1], boxArgs[2]]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({
+    color, roughness, metalness,
+    emissive: emissive ?? color, emissiveIntensity,
+    envMapIntensity,
+  }), [color, roughness, metalness, emissive, emissiveIntensity, envMapIntensity]);
+
+  useEffect(() => {
+    const mesh = meshRef.current;
+    if (!mesh || count === 0) return;
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < count; i++) {
+      dummy.position.set(positions[i][0], positions[i][1], positions[i][2]);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  }, [positions, count]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (count === 0) return null;
+  return (
+    <instancedMesh ref={meshRef} args={[geo, mat, count]}
+      castShadow={castShadow} receiveShadow={receiveShadow} />
+  );
+}
+
+// ─── MergedSlats — BufferGeometryUtils.mergeGeometries 合并板条为单 mesh ─────
+/**
+ * 把 N 根相同截面的板条合并成一个 BufferGeometry，用一个 draw call 渲染。
+ * 适合屋顶木格栅、遮阳百叶等密集重复条状几何。
+ */
+function MergedSlats({
+  slatW, slatH, slatD, count, axis, spacing, offset = [0, 0, 0],
+  color, roughness = 0.5, metalness = 0,
+  castShadow = false, receiveShadow = false,
+}: {
+  slatW: number; slatH: number; slatD: number;
+  count: number; axis: "x" | "z"; spacing: number;
+  offset?: [number, number, number];
+  color: string; roughness?: number; metalness?: number;
+  castShadow?: boolean; receiveShadow?: boolean;
+}) {
+  const geo = useMemo(() => {
+    if (count <= 0) return new THREE.BufferGeometry();
+    const template = new THREE.BoxGeometry(slatW, slatH, slatD);
+    const geos: THREE.BufferGeometry[] = [];
+    const span = (count - 1) * spacing;
+    for (let i = 0; i < count; i++) {
+      const t = i * spacing - span / 2;
+      const m = new THREE.Matrix4().makeTranslation(
+        axis === "x" ? t + offset[0] : offset[0],
+        offset[1],
+        axis === "z" ? t + offset[2] : offset[2],
+      );
+      const g = template.clone();
+      g.applyMatrix4(m);
+      geos.push(g);
+    }
+    template.dispose();
+    return mergeGeometries(geos, false);
+  }, [slatW, slatH, slatD, count, axis, spacing, offset[0], offset[1], offset[2]]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <mesh geometry={geo} castShadow={castShadow} receiveShadow={receiveShadow}>
+      <meshStandardMaterial color={color} roughness={roughness} metalness={metalness} />
+    </mesh>
+  );
+}
 
 // ─── Glass interior canvas texture ──────────────────────────────────────────
 // Industry-standard approach for architectural visualization: bake the
@@ -319,34 +418,22 @@ function FlatRoof({ W, D, color }: { W: number; D: number; color: string }) {
         <boxGeometry args={[slabW, 0.30, slabD]} />
         <meshStandardMaterial color={color} roughness={0.72} metalness={0.01} envMapIntensity={0.35} />
       </mesh>
-      {/* Wood soffit — individual walnut slats (horizontal rhythm) running along X axis.
-          Slats are visible under the cantilever overhang and give Canny strong parallel
-          edge lines that guide SDXL to reproduce the correct roof soffit character. */}
+      {/* Wood soffit — 合并为单 mesh（MergedSlats），原来每根都是独立 draw call */}
       {(() => {
-        const SLAT_W   = 0.090;   // 9 cm slat face width (Z direction)
-        const SLAT_GAP = 0.022;   // 2.2 cm shadow gap between slats
-        const SLAT_T   = 0.048;   // 4.8 cm slat thickness (Y direction)
+        const SLAT_W   = 0.090;
+        const SLAT_GAP = 0.022;
+        const SLAT_T   = 0.048;
         const step     = SLAT_W + SLAT_GAP;
         const numSlats = Math.floor((slabD - 0.04) / step);
-        const totalSpan = numSlats * step - SLAT_GAP;
-        const startZ   = -totalSpan / 2 + SLAT_W / 2;
-        return Array.from({ length: numSlats }).map((_, i) => {
-          // Alternate very slightly between two warm tones for natural variation
-          const warm = i % 3 === 0 ? "#7A4E22" : i % 3 === 1 ? "#8B5A2B" : "#96622F";
-          return (
-            <mesh key={i} position={[0, -0.21, startZ + i * step]} receiveShadow castShadow>
-              <boxGeometry args={[slabW - 0.06, SLAT_T, SLAT_W]} />
-              <meshStandardMaterial
-                color={warm}
-                roughness={0.38}
-                metalness={0.0}
-                envMapIntensity={0.65}
-                emissive="#1E0A00"
-                emissiveIntensity={0.09}
-              />
-            </mesh>
-          );
-        });
+        return (
+          <MergedSlats
+            slatW={slabW - 0.06} slatH={SLAT_T} slatD={SLAT_W}
+            count={numSlats} axis="z" spacing={step}
+            offset={[0, -0.21, 0]}
+            color="#8B5A2B" roughness={0.38} metalness={0}
+            castShadow receiveShadow
+          />
+        );
       })()}
       {/* Dark fascia boards on all 4 edges (thin aluminum-look) */}
       {([
@@ -3046,53 +3133,51 @@ export function Pergola({ x, z }: { x: number; z: number }) {
         </mesh>
       ))}
 
-      {/* Columns — slim square anodised aluminium */}
-      {columns.map(([cx, cz], i) => (
-        <mesh key={i} position={[cx, colH / 2, cz]} castShadow receiveShadow>
-          <boxGeometry args={[0.10, colH, 0.10]} />
-          <meshStandardMaterial color={STEEL} roughness={0.45} metalness={0.65} />
-        </mesh>
-      ))}
+      {/* Columns — InstancedMesh，所有柱子 1 个 draw call */}
+      <InstancedBoxes
+        boxArgs={[0.10, colH, 0.10]}
+        positions={columns.map(([cx, cz]) => [cx, colH / 2, cz])}
+        color={STEEL} roughness={0.45} metalness={0.65}
+        castShadow receiveShadow
+      />
 
-      {/* Longitudinal beams — deeper, dark steel */}
-      {longBeams.map((bz, i) => (
-        <mesh key={i} position={[0, colH + 0.12, bz]} castShadow>
-          <boxGeometry args={[pW + 0.30, 0.22, 0.10]} />
-          <meshStandardMaterial color={STEEL} roughness={0.5} metalness={0.55} />
-        </mesh>
-      ))}
+      {/* Longitudinal beams — InstancedMesh */}
+      <InstancedBoxes
+        boxArgs={[pW + 0.30, 0.22, 0.10]}
+        positions={longBeams.map(bz => [0, colH + 0.12, bz])}
+        color={STEEL} roughness={0.5} metalness={0.55}
+        castShadow
+      />
 
-      {/* LED strip — emissive thin plane under each long beam */}
-      {longBeams.map((bz, i) => (
-        <mesh key={`led-${i}`} position={[0, colH + 0.005, bz]}>
-          <boxGeometry args={[pW + 0.20, 0.02, 0.04]} />
-          <meshStandardMaterial color="#FFE8B0" emissive="#FFE8B0" emissiveIntensity={0.9} />
-        </mesh>
-      ))}
+      {/* LED strips — InstancedMesh（发光色作 emissive）*/}
+      <InstancedBoxes
+        boxArgs={[pW + 0.20, 0.02, 0.04]}
+        positions={longBeams.map(bz => [0, colH + 0.005, bz])}
+        color="#FFE8B0" emissive="#FFE8B0" emissiveIntensity={0.9}
+      />
 
-      {/* Roof slats — closely spaced for the signature shadow rhythm */}
-      {Array.from({ length: SLAT_COUNT }).map((_, i) => {
-        const bx = -pW / 2 + slatPitch * (i + 0.5);
-        return (
-          <mesh key={i} position={[bx, colH + 0.27, 0]} castShadow>
-            <boxGeometry args={[0.06, 0.04, pD + 0.05]} />
-            <meshStandardMaterial color={STEEL_HI} roughness={0.5} metalness={0.55} />
-          </mesh>
-        );
-      })}
+      {/* Roof slats — MergedSlats，N 根合并为 1 个 draw call */}
+      <group position={[0, colH + 0.27, 0]}>
+        <MergedSlats
+          slatW={0.06} slatH={0.04} slatD={pD + 0.05}
+          count={SLAT_COUNT} axis="x" spacing={slatPitch}
+          color={STEEL_HI} roughness={0.5} metalness={0.55}
+          castShadow
+        />
+      </group>
 
       {/* Dining table — dark stone slab */}
       <mesh position={[0, 0.78, 0]} castShadow receiveShadow>
         <boxGeometry args={[2.6, 0.1, 1.2]} />
         <meshStandardMaterial color="#3A3A3A" roughness={0.5} metalness={0.1} />
       </mesh>
-      {/* Table legs */}
-      {([ [-1.1, -0.45], [1.1, -0.45], [-1.1, 0.45], [1.1, 0.45] ] as [number,number][]).map(([tx, tz], i) => (
-        <mesh key={i} position={[tx, 0.36, tz]} castShadow>
-          <boxGeometry args={[0.08, 0.72, 0.08]} />
-          <meshStandardMaterial color="#2A2A2A" roughness={0.6} />
-        </mesh>
-      ))}
+      {/* Table legs — InstancedMesh */}
+      <InstancedBoxes
+        boxArgs={[0.08, 0.72, 0.08]}
+        positions={[ [-1.1, 0.36, -0.45], [1.1, 0.36, -0.45], [-1.1, 0.36, 0.45], [1.1, 0.36, 0.45] ]}
+        color="#2A2A2A" roughness={0.6}
+        castShadow
+      />
 
       {/* 6 chairs — wicker / charcoal matching the dark frame */}
       {([ [-1.35,0], [1.35,0], [-0.5,-0.75], [0.5,-0.75], [-0.5,0.75], [0.5,0.75] ] as [number,number][]).map(([cx, cz], i) => (
@@ -4713,7 +4798,7 @@ function RichGlassVillaBuilding({ W, D, settings }: {
 }
 
 // ─── House body ──────────────────────────────────────────────
-function HouseBody({ W, D, settings }: { W: number; D: number; settings: ExteriorSettings }) {
+function HouseBody({ W, D, settings, insideBuilding = false, wallXray = false }: { W: number; D: number; settings: ExteriorSettings; insideBuilding?: boolean; wallXray?: boolean }) {
   // ── Rich Glass Villa shortcut ──────────────────────────────────────────
   // When buildingType is set, bypass the generic floor-shell system entirely
   // and render the specialized multi-volume building component.
@@ -4722,7 +4807,7 @@ function HouseBody({ W, D, settings }: { W: number; D: number; settings: Exterio
     return <RichGlassVillaBuilding W={W} D={D} settings={settings} />;
   }
   if (buildingTypeHB === "floor-plan-driven") {
-    return <FloorPlanBuilding />;
+    return <FloorPlanBuilding insideBuilding={insideBuilding} wallXray={wallXray} />;
   }
 
   const { floors, roofStyle, roofColor, accentColor } = settings;
@@ -4760,13 +4845,15 @@ function HouseBody({ W, D, settings }: { W: number; D: number; settings: Exterio
           floats and there's no foundation slab. */}
       {pilotisH === 0 && <Foundation W={W} D={D} color={accentColor} />}
 
-      {/* Pilotis support columns — only when lifted */}
-      {pilotisH > 0 && columnPositions.map(([cx, cz], i) => (
-        <mesh key={`pillar-${i}`} position={[cx, pilotisH / 2, cz]} castShadow receiveShadow>
-          <boxGeometry args={[0.30, pilotisH, 0.30]} />
-          <meshStandardMaterial color="#C8C5BE" roughness={0.85} />
-        </mesh>
-      ))}
+      {/* Pilotis support columns — InstancedMesh，N 根柱子 1 个 draw call */}
+      {pilotisH > 0 && (
+        <InstancedBoxes
+          boxArgs={[0.30, pilotisH, 0.30]}
+          positions={columnPositions.map(([cx, cz]) => [cx, pilotisH / 2, cz])}
+          color="#C8C5BE" roughness={0.85}
+          castShadow receiveShadow
+        />
+      )}
       {/* Floor slab UNDER the lifted house — visual ceiling for the
           pilotis space below. Travertine-cream so it matches the deck
           aesthetic of social Prefabs. */}
@@ -5278,6 +5365,44 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
   );
 }
 
+// ─── Inside-building camera animator ───────────────────────
+/** When `active`, smoothly lerps camera + OrbitControls target inside the building. */
+function InsideCameraAnimator({ active, camPos, lookAt, teleport = false }: {
+  active: boolean;
+  camPos: [number, number, number];
+  lookAt: [number, number, number];
+  teleport?: boolean;
+}) {
+  const { camera } = useThree();
+  const controls = useThree(s => s.controls) as any;
+  const camV  = useMemo(() => new THREE.Vector3(...camPos),  [camPos[0], camPos[1], camPos[2]]);
+  const lookV = useMemo(() => new THREE.Vector3(...lookAt), [lookAt[0], lookAt[1], lookAt[2]]);
+  // done=true once we've finished the transition — after that OrbitControls takes over freely
+  const done = useRef(false);
+  useEffect(() => {
+    if (!active) { done.current = false; }
+  }, [active]);
+  useFrame(() => {
+    if (!active || done.current) return;
+    if (teleport) {
+      // Instant teleport: jump on first frame, then stop animating entirely
+      camera.position.copy(camV);
+      if (controls?.target) { controls.target.copy(lookV); controls.update?.(); }
+      done.current = true;
+      return;
+    }
+    // Smooth lerp (for return-to-outside): keep going until close enough
+    camera.position.lerp(camV, 0.08);
+    if (controls?.target) { controls.target.lerp(lookV, 0.08); controls.update?.(); }
+    if (camera.position.distanceTo(camV) < 0.05) {
+      camera.position.copy(camV);
+      if (controls?.target) { controls.target.copy(lookV); controls.update?.(); }
+      done.current = true;
+    }
+  });
+  return null;
+}
+
 // ─── Main export ────────────────────────────────────────────
 export default function HouseCanvas() {
   const exterior      = useDesignerStore(s => s.exterior);
@@ -5285,6 +5410,8 @@ export default function HouseCanvas() {
   const { floors }    = exterior;
   const orbitRef      = useRef<any>(null);
   const [selectedOutdoorKey, setSelectedOutdoorKey] = useState<string | null>(null);
+  const [insideBuilding, setInsideBuilding] = useState(false);
+  const [wallXray, setWallXray] = useState(false);
   // Sun analysis — read from global store so AiRenderModal + YardPlan share the value
   const sunHour     = useDesignerStore(s => s.sunHour);
   const setSunHour  = useDesignerStore(s => s.setSunHour);
@@ -5295,8 +5422,68 @@ export default function HouseCanvas() {
   const _buildingType    = (exterior as ExteriorSettings & { buildingType?: string }).buildingType;
   const isRichGlassVilla = _buildingType === "rich-glass-villa" || _buildingType === "floor-plan-driven";
 
+  // Camera positions for inside vs outside
+  const FLOOR_H_M = 3.0;
+  // Inside: bird-eye overview from above the building, angled down so user can
+  // see the full floor plan interior and rotate from there. Avoids spawning
+  // inside furniture when rooms are tall or contain large objects.
+  const diag = Math.sqrt(W * W + D * D);
+  const insideCamPos:  [number, number, number] = [-diag * 0.55, floors * FLOOR_H_M + diag * 0.7, -diag * 0.45];
+  const insideLookAt:  [number, number, number] = [0, FLOOR_H_M * 0.4, 0];
+  const outsideCamPos: [number, number, number] = [-Math.sqrt(W*W+D*D)*0.30, floors*FLOOR_H_M*0.5+Math.sqrt(W*W+D*D)*0.28*1.6, -Math.sqrt(W*W+D*D)*1.6*0.90];
+  const outsideLookAt: [number, number, number] = [0, floors * FLOOR_H_M * 0.5, 0];
+
   return (
     <div className="w-full h-full relative">
+      {/* ── Enter / Exit building button + wall X-ray toggle ── */}
+      {isRichGlassVilla && (
+        <div className="absolute top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
+          <button
+            onClick={() => setInsideBuilding(v => !v)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
+            style={{
+              background: insideBuilding
+                ? "linear-gradient(135deg,rgba(16,185,129,0.92),rgba(5,150,105,0.92))"
+                : "linear-gradient(135deg,rgba(30,58,138,0.92),rgba(59,130,246,0.92))",
+              backdropFilter: "blur(12px)",
+              border: `1px solid ${insideBuilding ? "rgba(110,231,183,0.4)" : "rgba(147,197,253,0.4)"}`,
+            }}
+          >
+            {insideBuilding ? "↩ 退出室内" : "🚶 进入室内查看"}
+          </button>
+          {insideBuilding && (
+            <button
+              onClick={() => setWallXray(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
+              style={{
+                background: wallXray
+                  ? "linear-gradient(135deg,rgba(168,85,247,0.92),rgba(109,40,217,0.92))"
+                  : "linear-gradient(135deg,rgba(55,65,81,0.88),rgba(31,41,55,0.88))",
+                backdropFilter: "blur(12px)",
+                border: `1px solid ${wallXray ? "rgba(216,180,254,0.5)" : "rgba(255,255,255,0.15)"}`,
+              }}
+            >
+              🔮 {wallXray ? "取消透视" : "墙体透视"}
+            </button>
+          )}
+        </div>
+      )}
+      {/* Interior hint label */}
+      {insideBuilding && (
+        <div className="absolute bottom-20 left-1/2 z-10 pointer-events-none select-none px-3 py-1 rounded-full"
+          style={{
+            transform: "translateX(-50%)",
+            background: "rgba(0,0,0,0.32)",
+            backdropFilter: "blur(8px)",
+            color: "rgba(255,255,255,0.85)",
+            fontSize: 11,
+            letterSpacing: "0.05em",
+            whiteSpace: "nowrap",
+          }}>
+          🖱 拖动鼠标环顾四周 · 滚轮缩放 · 点击「退出室内」返回外观
+        </div>
+      )}
+
       {/* ── Sun Analysis Slider ── bottom-centre, draggable 0-24h ── */}
       <div
         className="absolute bottom-4 left-1/2 z-10 flex items-center gap-3 select-none"
@@ -5396,21 +5583,35 @@ export default function HouseCanvas() {
         })()}
         dpr={[1, 2]}
       >
-        <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />
+        {/* Fog disabled when inside — would darken interior surfaces */}
+        {!insideBuilding && <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />}
         <ExteriorCaptureSetup />
-        <CameraRig W={W} D={D} floors={floors} buildingType={_buildingType} />
+        {!insideBuilding && <CameraRig W={W} D={D} floors={floors} buildingType={_buildingType} />}
+        <InsideCameraAnimator
+          active={insideBuilding}
+          camPos={insideCamPos}
+          lookAt={insideLookAt}
+          teleport
+        />
+        <InsideCameraAnimator
+          active={!insideBuilding && _buildingType === "floor-plan-driven"}
+          camPos={outsideCamPos}
+          lookAt={outsideLookAt}
+        />
         <OrbitControls
           ref={orbitRef}
           makeDefault
           enableDamping
           dampingFactor={0.08}
           minPolarAngle={0}
-          maxPolarAngle={Math.PI / 2.1}
-          minDistance={2}
-          maxDistance={80}
+          maxPolarAngle={insideBuilding ? Math.PI * 0.95 : Math.PI / 2.1}
+          minDistance={insideBuilding ? 0.5 : 2}
+          maxDistance={insideBuilding ? 20 : 80}
           panSpeed={0.6}
           target={
-            _buildingType === "rich-glass-villa"
+            insideBuilding
+              ? insideLookAt
+              : _buildingType === "rich-glass-villa"
               ? [-W * 0.05, 5.0, -D * 0.25] as [number, number, number]
               : _buildingType === "floor-plan-driven"
               ? [0, floors * FLOOR_H * 0.5, 0] as [number, number, number]
@@ -5450,7 +5651,17 @@ export default function HouseCanvas() {
         )}
         {/* Hemisphere light — sky/ground bounce */}
         <hemisphereLight args={[theme.hemiSky, theme.hemiGround, theme.hemiIntensity]} />
-        <ambientLight intensity={theme.ambient} />
+        <ambientLight intensity={insideBuilding ? 0.55 : theme.ambient} />
+        {/* Interior ceiling lights — warm downlights active when camera is inside */}
+        {insideBuilding && (
+          <>
+            <pointLight position={[0,          FLOOR_H_M * 0.90, 0]}         intensity={3.5} distance={W * 2.0} decay={2} color="#FFF8E8" />
+            <pointLight position={[-W * 0.30,  FLOOR_H_M * 0.90, 0]}         intensity={2.5} distance={W * 1.5} decay={2} color="#FFFAEC" />
+            <pointLight position={[ W * 0.30,  FLOOR_H_M * 0.90, 0]}         intensity={2.5} distance={W * 1.5} decay={2} color="#FFFAEC" />
+            <pointLight position={[0,          FLOOR_H_M * 0.90, -D * 0.28]} intensity={2.2} distance={W * 1.4} decay={2} color="#FFFBF0" />
+            <pointLight position={[0,          FLOOR_H_M * 0.90,  D * 0.28]} intensity={2.2} distance={W * 1.4} decay={2} color="#FFFBF0" />
+          </>
+        )}
         {/* Primary sun — position updates every render frame as slider moves */}
         <directionalLight
           position={sunPos} intensity={theme.sunIntensity} color={theme.sunColor} castShadow
@@ -5483,7 +5694,7 @@ export default function HouseCanvas() {
             <meshStandardMaterial color="#D8D0BC" roughness={0.88} metalness={0.0} />
           </mesh>
         )}
-        <HouseBody W={W} D={D} settings={exterior} />
+        <HouseBody W={W} D={D} settings={exterior} insideBuilding={insideBuilding} wallXray={wallXray} />
         {!isRichGlassVilla && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
         {!isRichGlassVilla && <YardPlanItems3D />}
         {!isRichGlassVilla && <YardPathItems3D />}
@@ -5510,28 +5721,31 @@ export default function HouseCanvas() {
            Bloom: subtle sun/sky glow for day/sunset; stronger for night lamps.
            BrightnessContrast: slight contrast lift for that "rendered" punch.
            SMAA: temporal anti-aliasing for clean edges. */}
-        <EffectComposer multisampling={0} enableNormalPass>
-          <SSAO
-            blendFunction={BlendFunction.MULTIPLY}
-            samples={28}
-            radius={6}
-            intensity={theme.phase === "night" ? 48 : 35}
-            luminanceInfluence={0.6}
-            worldDistanceThreshold={1.5}
-            worldDistanceFalloff={3.0}
-            worldProximityThreshold={0.5}
-            worldProximityFalloff={1.0}
-          />
-          {/* Bloom — subtle sun glow for day, stronger for night lamps */}
-          <Bloom
-            intensity={theme.phase === "night" ? 0.55 : theme.phase === "dusk" ? 0.32 : 0.14}
-            luminanceThreshold={theme.phase === "night" ? 0.92 : 0.88}
-            luminanceSmoothing={0.30}
-            mipmapBlur
-          />
-          <BrightnessContrast brightness={0.02} contrast={0.10} />
-          <SMAA />
-        </EffectComposer>
+        {/* Skip heavy post-processing when inside — SSAO with empty depth buffer causes white washout */}
+        {!insideBuilding && (
+          <EffectComposer multisampling={0} enableNormalPass>
+            <SSAO
+              blendFunction={BlendFunction.MULTIPLY}
+              samples={28}
+              radius={6}
+              intensity={theme.phase === "night" ? 48 : 35}
+              luminanceInfluence={0.6}
+              worldDistanceThreshold={1.5}
+              worldDistanceFalloff={3.0}
+              worldProximityThreshold={0.5}
+              worldProximityFalloff={1.0}
+            />
+            {/* Bloom — subtle sun glow for day, stronger for night lamps */}
+            <Bloom
+              intensity={theme.phase === "night" ? 0.55 : theme.phase === "dusk" ? 0.32 : 0.14}
+              luminanceThreshold={theme.phase === "night" ? 0.92 : 0.88}
+              luminanceSmoothing={0.30}
+              mipmapBlur
+            />
+            <BrightnessContrast brightness={0.02} contrast={0.10} />
+            <SMAA />
+          </EffectComposer>
+        )}
       </Canvas>
     </div>
   );

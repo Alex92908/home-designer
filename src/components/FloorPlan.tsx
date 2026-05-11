@@ -10,6 +10,8 @@ import { getFurnitureNameEn } from "@/locales/itemNames";
 import { evaluateRoom, type EvaluatedItem, type DoorWall as ClearanceDoorWall } from "@/lib/clearance";
 import { pointInPolygon, getEdges } from "@/lib/roomGeometry";
 
+const EMPTY_WINDOWS: never[] = [];
+
 // ─── helpers ──────────────────────────────────────────────
 
 function getSVGPoint(e: React.PointerEvent, svg: SVGSVGElement, zoom = 1): { x: number; y: number } {
@@ -427,11 +429,11 @@ export default function FloorPlan() {
   const customRoomMeta       = useDesignerStore((s) => s.customRoomMeta);
   const rotateRoom           = useDesignerStore((s) => s.rotateRoom);
   const pushLayoutHistory    = useDesignerStore((s) => s.pushLayoutHistory);
-  const furnitureHistoryLen  = useDesignerStore((s) => s.furnitureHistory.filter(h => h.room === activeRoom).length);
+  const furnitureHistoryLen  = useDesignerStore((s) => s.furnitureHistory.reduce((n, h) => h.room === activeRoom ? n + 1 : n, 0));
   const copyToClipboard      = useDesignerStore((s) => s.copyToClipboard);
   const pasteFromClipboard   = useDesignerStore((s) => s.pasteFromClipboard);
   const clipboardLen         = useDesignerStore((s) => s.clipboard.length);
-  const roomWindows     = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows[activeRoom] ?? []);
+  const roomWindows     = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows[activeRoom] ?? EMPTY_WINDOWS);
   const setRoomWindows  = useDesignerStore((s) => s.setRoomWindows);
   const addWindow       = useDesignerStore((s) => s.addWindow);
   const removeWindow    = useDesignerStore((s) => s.removeWindow);

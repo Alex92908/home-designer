@@ -2776,6 +2776,15 @@ function GltfFurniture({
 
 export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: PlacedItem; def: RoomDef; roomW: number; roomD: number; room?: RoomType }) {
   const item = getFurnitureById(placed.furnitureId);
+
+  // For curtain wall-snap logic: get the windows & door wall for THIS room.
+  // We need these even before the early-return so that hooks aren't called conditionally.
+  const activeFloor = useDesignerStore(s => s.activeFloor);
+  const activeRoom  = useDesignerStore(s => s.activeRoom);
+  const roomKey = room ?? activeRoom;
+  const roomWindows = useDesignerStore(s => s.floorPlans[activeFloor]?.roomWindows?.[roomKey] ?? EMPTY_WINDOWS);
+  const doorWall    = useDesignerStore(s => s.floorPlans[activeFloor]?.roomDoorWall?.[roomKey] ?? "bottom");
+
   if (!item) return null;
 
   // Convert floor plan cm coords to 3D world units using actual room dimensions
@@ -2872,17 +2881,56 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
   // loading throws (404, CORS, malformed) the ErrorBoundary higher up
   // catches it — for safety we also wrap in our own fallback.
   if (item.model3d?.url) {
-    // Curtains get a click-to-toggle "open/close" wrapper: when open,
-    // the curtain glTF is animated to compress horizontally (gather to
-    // one side, revealing the window behind).
+    // Curtains: always hang from floor to ceiling regardless of item.height.
+    // Curtains always hang floor-to-ceiling and must be snapped to the
+    // nearest wall (they live at windows, never float in mid-room).
+    // We find the closest of the 4 walls, move the curtain flush against
+    // it (2 cm inward so it doesn't z-fight), and orient it to face the
+    // room interior.
     if (item.category === "curtain") {
+      const curtainH = roomH;
+      const halfW = roomW / 2;
+      const halfD = roomD / 2;
+
+      // Map plan-coordinate wall names to 3D snap positions + inward rotation.
+      // In 3D: back wall (plan-top)  = z = -halfD, curtain faces +Z.
+      //        front wall (plan-bot) = z = +halfD, curtain faces -Z.
+      //        left wall             = x = -halfW, curtain faces +X.
+      //        right wall            = x = +halfW, curtain faces -X.
+      type WallEntry = { name: string; dist: number; cx: number; cz: number; ry: number };
+      const wallEntries: WallEntry[] = [
+        { name: "back",  dist: Math.abs(z3d - (-halfD)), cx: x3d,        cz: -halfD + 0.02, ry: 0 },
+        { name: "front", dist: Math.abs(z3d - ( halfD)), cx: x3d,        cz:  halfD - 0.02, ry: Math.PI },
+        { name: "left",  dist: Math.abs(x3d - (-halfW)), cx: -halfW + 0.02, cz: z3d,        ry: -Math.PI / 2 },
+        { name: "right", dist: Math.abs(x3d - ( halfW)), cx:  halfW - 0.02, cz: z3d,        ry:  Math.PI / 2 },
+      ];
+
+      // Prefer walls that have windows; avoid the door wall.
+      const windowWalls = new Set<string>(roomWindows.map(w => w.wall));
+      const doorWallCanon = doorWall === "top" ? "back" : doorWall === "bottom" ? "front" : doorWall;
+
+      const ranked = [...wallEntries].sort((a, b) => {
+        // 1. Never put curtain on door wall (obstructs movement / looks wrong)
+        const aDoor = a.name === doorWallCanon ? 1 : 0;
+        const bDoor = b.name === doorWallCanon ? 1 : 0;
+        if (aDoor !== bDoor) return aDoor - bDoor;
+        // 2. Prefer walls that have windows
+        const aWin = windowWalls.has(a.name) ? 0 : 1;
+        const bWin = windowWalls.has(b.name) ? 0 : 1;
+        if (aWin !== bWin) return aWin - bWin;
+        // 3. Nearest wall as tiebreak
+        return a.dist - b.dist;
+      });
+
+      const { cx, cz, ry: autoRotY } = ranked[0];
+
       return (
         <CurtainInstance
           instanceId={placed.instanceId}
-          position={[x3d, baseY, z3d]}
-          rotation={[0, rotY, 0]}
+          position={[cx, 0, cz]}
+          rotation={[0, autoRotY, 0]}
           item={item}
-          w={fw} d={fd} h={fh}
+          w={fw} d={fd} h={curtainH}
         />
       );
     }
@@ -3334,7 +3382,7 @@ function PolygonDoorPanel({
 function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }) {
   const activeRoom    = useDesignerStore((s) => s.activeRoom);
   const roomState     = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom]);
-  const roomWindows   = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows?.[activeRoom] ?? []);
+  const roomWindows   = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows?.[activeRoom] ?? EMPTY_WINDOWS);
   const roomDimensions = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
   const hasDoor    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomHasDoor[activeRoom] ?? true);
   const doorWall   = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorWall[activeRoom] ?? "bottom");
@@ -3503,6 +3551,8 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
 //   local +Z = outward (away from room interior)
 const EMPTY_ROOM_DECOR: ExteriorWallDecorItem[] = [];
 const EMPTY_CONNS: import("@/lib/types").RoutingConnection[] = [];
+const EMPTY_WINDOWS: WindowConfig[] = [];
+const EMPTY_PLACED: PlacedItem[] = [];
 
 /** 3D pipe/wire visualization. Wires hug the ceiling (one band below
  *  the slab), water lines hug the floor. Each connection becomes a
@@ -3513,7 +3563,7 @@ function RoutingLinesLayer({ room, W, D, H }: {
   room: import("@/lib/types").RoomType; W: number; D: number; H: number;
 }) {
   const conns  = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.connections) ?? EMPTY_CONNS;
-  const placed = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.placedItems) ?? [];
+  const placed = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.placedItems ?? EMPTY_PLACED);
   if (conns.length === 0) return null;
   const Y_WIRE = H - 0.08;
   const Y_PIPE = 0.04;

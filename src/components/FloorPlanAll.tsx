@@ -39,7 +39,7 @@ type DragState =
 const CUSTOM_SLOTS: RoomType[] = ["custom1","custom2","custom3","custom4","custom5"];
 const ROOM_GROUP_ROOMS = [
   { key: "allGroupIndoor",   rooms: ["living","master","bedroom","bedroom2","bedroom3","kitchen","bathroom","bathroom2","dining","study","study2","closet","balcony","balcony2"] as RoomType[] },
-  { key: "allGroupSpecial",  rooms: ["stair","yard","garage","gym","cinema"] as RoomType[] },
+  { key: "allGroupSpecial",  rooms: ["hallway","stair","yard","garage","gym","cinema"] as RoomType[] },
   { key: "allGroupCustom",   rooms: CUSTOM_SLOTS },
 ];
 const CUSTOM_ICONS = ["🔲","🏠","🛖","🏰","🏗️","🎯","🎲","🎪","⭐","💎","🌈","🔑"];
@@ -1127,7 +1127,7 @@ export default function FloorPlanAll() {
                   {isPolygon ? (
                     <polygon
                       points={polyPts}
-                      fill={rooms[room].materials.floor?.color ?? def.defaultFloorColor}
+                      fill={(rooms[room] ?? {materials:{}}).materials?.floor?.color ?? def.defaultFloorColor}
                       opacity={0.93}
                       style={{ pointerEvents: "none" }}
                     />
@@ -1135,7 +1135,7 @@ export default function FloorPlanAll() {
                     <rect
                       x={x + WALL} y={y + WALL}
                       width={w - WALL*2} height={d - WALL*2}
-                      fill={rooms[room].materials.floor?.color ?? def.defaultFloorColor}
+                      fill={(rooms[room] ?? {materials:{}}).materials?.floor?.color ?? def.defaultFloorColor}
                       opacity={0.93}
                       style={{ pointerEvents: "none" }}
                     />
@@ -1344,7 +1344,7 @@ export default function FloorPlanAll() {
                   })()}
 
                   {/* Furniture icons */}
-                  {rooms[room].placedItems.map(p => {
+                  {(rooms[room]?.placedItems ?? []).map(p => {
                     const f = getFurnitureById(p.furnitureId);
                     if (!f) return null;
                     return (

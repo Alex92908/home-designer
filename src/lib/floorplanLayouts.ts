@@ -108,4 +108,59 @@ export const FLOORPLAN_LAYOUTS: FloorplanLayout[] = [
       { room: "balcony",  x: 260,  y: 780,  width: 800, depth: 140 },
     ],
   },
+
+  // ── 多层别墅专用楼层模版（含中央走廊）────────────────────────────────────
+  // 约定：楼梯间统一放在 x=800，确保多层对齐后开口位置一致
+  {
+    id: "villa-floor1-corridor",
+    name: "别墅一楼（带走廊）",
+    area: 82,
+    rooms: [
+      // 北区（后方服务区）y = 0 → 280
+      { room: "kitchen",  x: 0,   y: 0,   width: 360, depth: 280 },
+      { room: "bathroom", x: 360, y: 0,   width: 200, depth: 280 },
+      { room: "dining",   x: 560, y: 0,   width: 240, depth: 280 },
+      { room: "stair",    x: 800, y: 0,   width: 200, depth: 280 },
+      // 中央走廊 y = 280 → 400（120 cm）
+      { room: "hallway",  x: 0,   y: 280, width: 1000, depth: 120 },
+      // 南区（前方公共区）y = 400 → 820
+      { room: "living",   x: 0,   y: 400, width: 600, depth: 420 },
+      { room: "study",    x: 600, y: 400, width: 400, depth: 420 },
+    ],
+  },
+  {
+    id: "villa-floor2-corridor",
+    name: "别墅二楼（带走廊）",
+    area: 70,
+    rooms: [
+      // 北区（主卧套间）y = 0 → 300
+      { room: "master",    x: 0,   y: 0,   width: 400, depth: 300 },
+      { room: "closet",    x: 400, y: 0,   width: 200, depth: 300 },
+      { room: "bathroom2", x: 600, y: 0,   width: 200, depth: 300 },
+      { room: "stair",     x: 800, y: 0,   width: 200, depth: 300 },  // 同一楼梯位 x=800
+      // 中央走廊 y = 300 → 420
+      { room: "hallway",   x: 0,   y: 300, width: 1000, depth: 120 },
+      // 南区（次卧区）y = 420 → 720
+      { room: "bedroom",   x: 0,   y: 420, width: 340, depth: 300 },
+      { room: "bedroom2",  x: 340, y: 420, width: 330, depth: 300 },
+      { room: "bedroom3",  x: 670, y: 420, width: 330, depth: 300 },
+    ],
+  },
+  {
+    id: "villa-floor3-corridor",
+    name: "别墅三楼（带走廊）",
+    area: 55,
+    rooms: [
+      // 北区 y = 0 → 280
+      { room: "bathroom",  x: 0,   y: 0,   width: 260, depth: 280 },
+      { room: "study2",    x: 260, y: 0,   width: 280, depth: 280 },
+      { room: "gym",       x: 540, y: 0,   width: 260, depth: 280 },
+      { room: "stair",     x: 800, y: 0,   width: 200, depth: 280 },  // 同一楼梯位 x=800
+      // 中央走廊
+      { room: "hallway",   x: 0,   y: 280, width: 1000, depth: 120 },
+      // 南区（休闲/娱乐区）
+      { room: "cinema",    x: 0,   y: 400, width: 500, depth: 380 },
+      { room: "bedroom3",  x: 500, y: 400, width: 500, depth: 380 },
+    ],
+  },
 ];

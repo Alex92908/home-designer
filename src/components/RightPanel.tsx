@@ -8,6 +8,8 @@ import { FURNITURE, getFurnitureById } from "@/lib/furniture";
 import { MATERIALS } from "@/lib/data";
 import { useT, useLocale, useMaterialName } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn, translateClearanceReason } from "@/locales/itemNames";
+
+const EMPTY_WINDOWS: never[] = [];
 import { formatPrice } from "@/lib/currency";
 import { evaluateRoom } from "@/lib/clearance";
 
@@ -59,7 +61,7 @@ export default function RightPanel() {
   const doorWall  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorWall[activeRoom] ?? "bottom");
   const doorPosCm = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorPos[activeRoom] ?? 0);
   const doorLenCm = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
-  const roomWindows = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows[activeRoom] ?? []);
+  const roomWindows = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows[activeRoom] ?? EMPTY_WINDOWS);
   const evaluation = useMemo(
     () => evaluateRoom(
       placedItems, getFurnitureById, roomW, roomD,
