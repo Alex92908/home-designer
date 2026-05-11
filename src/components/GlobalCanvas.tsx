@@ -816,10 +816,13 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
                 //  2. fallback 用 AutoStairConnector 的位置（neither floor 有 stair
                 //     时才自动生成，位置由 stairPos state / 默认值决定）
                 const sCM = 0.01;
-                const fpBelow  = floorPlans[fi - 1];
-                const stairFromBelow = fpBelow?.enabledRooms?.includes("stair");
-                const stairFromThis  = fp.enabledRooms?.includes("stair");
-                const stairSourceFp  = stairFromBelow ? fpBelow : (stairFromThis ? fp : null);
+                // 向下搜索所有层找楼梯位置（fi-1 没有时继续往下找，支持 3 层+）
+                const stairSourceFp = (() => {
+                  for (let k = fi; k >= 0; k--) {
+                    if (floorPlans[k]?.enabledRooms?.includes("stair")) return floorPlans[k];
+                  }
+                  return null;
+                })();
                 const stairLay = stairSourceFp?.roomLayout?.["stair"] ?? null;
                 const stairDim = stairSourceFp?.roomDimensions?.["stair"] ?? null;
 
@@ -834,10 +837,8 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
                   hasShaft = true;
                 } else {
                   // AutoStairConnector fallback —— 同步它的位置/尺寸算法
-                  // (与 AutoStairConnector 内部 sw/sd 和外部默认 posX/posZ 一致)
-                  const autoLoHasStair = floorPlans[fi - 1]?.enabledRooms?.includes("stair") ?? false;
-                  const autoHiHasStair = floorPlans[fi]?.enabledRooms?.includes("stair") ?? false;
-                  if (!autoLoHasStair && !autoHiHasStair) {
+                  const anyFloorHasStair = floorPlans.some(f => f?.enabledRooms?.includes("stair"));
+                  if (!anyFloorHasStair) {
                     const autoSw = Math.min(footW * 0.18, 2.8);
                     const autoSd = Math.min(footD * 0.30, 4.2);
                     const autoPosX = stairPos?.x ?? (footW / 2 - autoSw / 2 - 0.15);

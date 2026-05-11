@@ -1180,13 +1180,11 @@ export default function FloorPlanBuilding({
         const corrCol = "#C4BAA6";
 
         // 二楼及以上：走廊地板需绕开楼梯开口
-        // 楼梯井贯穿所有楼层，开口位置应始终与一楼楼梯间对齐。
-        // 优先：一楼（fi=0）的楼梯间（最权威，因为楼梯从这里起步）
-        // 次优：本层或上一层楼梯间（用户手动在多层都放了楼梯间的情况）
+        // 从所有楼层中找楼梯间（优先 fi=0，找不到则取任意层），
+        // 楼梯井水平位置各层相同。
         const stairEntry = fi > 0
           ? (interiorRooms.find(r => r.fi === 0 && r.isStair)
-             ?? interiorRooms.find(r => r.fi === fi && r.isStair)
-             ?? interiorRooms.find(r => r.fi === fi - 1 && r.isStair))
+             ?? interiorRooms.find(r => r.isStair))
           : null;
 
         if (!stairEntry) {
