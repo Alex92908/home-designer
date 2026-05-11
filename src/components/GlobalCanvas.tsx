@@ -92,21 +92,36 @@ export function StaircaseGeom({
     const treadDepth = runD / STEPS;
     const riserH     = height / STEPS;
     const treadW2    = runW - 0.08;
-    const ROD_R      = 0.018;   // 扶手杆半径
-    const BAL_R      = 0.012;   // 竖栏杆半径
+    const ROD_R      = 0.020;   // 扶手杆半径
+    const BAL_R      = 0.013;   // 竖栏杆半径
+    const railH      = 0.90;   // 扶手竖向高度（离踏步前沿面）
 
+    // 踏步中心坐标（用于渲染踏步本身）
     const treads = useMemo(() => Array.from({ length: STEPS }, (_, i) => ({
-      y: baseY + (i + 1) * riserH - treadT / 2,
-      z: i * treadDepth + treadDepth / 2 - runD / 2,
-    })), [runD, riserH, treadDepth, baseY, height]); // eslint-disable-line react-hooks/exhaustive-deps
+      midY:   baseY + (i + 1) * riserH - treadT / 2,  // 踏步盒子中心 y
+      midZ:   i * treadDepth + treadDepth / 2 - runD / 2, // 踏步盒子中心 z
+      topY:   baseY + (i + 1) * riserH,               // 踏步顶面 y
+      frontZ: i * treadDepth - runD / 2,              // 踏步前沿 z（竖杆所在位置）
+    })), [runD, riserH, treadDepth, baseY]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // 斜扶手：从最低踏步端 → 最高踏步端，沿坡面走一根圆杆
-    const slopeAngle = Math.atan2(height, runD);
-    const slopeLen   = Math.sqrt(runD * runD + height * height);
-    const railH      = 0.90;   // 扶手离踏步面高度
-    // 扶手杆中心：平行于踏步坡面，抬高 railH * cos(angle)
-    const railOffY   = railH * Math.cos(slopeAngle);
-    const railOffZ   = -railH * Math.sin(slopeAngle); // 沿深度方向偏移
+    // ── 扶手几何 ──
+    // 扶手是一根直圆柱，从 (z=-runD/2, y=baseY+railH) 到 (z=+runD/2, y=baseY+height+railH)
+    // 方向向量: (0, height, runD)，长度 = slopeLen
+    const slopeLen = Math.sqrt(runD * runD + height * height);
+    // Three.js CylinderGeometry 默认轴 = Y (0,1,0)。
+    // 绕 X 轴旋转 θ 后轴变为 (0, cosθ, sinθ)。
+    // 令 cosθ = height/slopeLen, sinθ = runD/slopeLen → θ = atan2(runD, height)
+    const cylRotX = Math.atan2(runD, height);
+    // 扶手中点：两端点的中点 = (0, baseY+height/2+railH, 0)
+    const railMidY = baseY + height / 2 + railH;
+
+    // ── 竖栏杆几何 ──
+    // 扶手在 z=frontZ 处的 y 值:
+    //   y_rail(z) = baseY + railH + (z + runD/2) / runD * height
+    //             = baseY + railH + i * riserH   (步骤 i 前沿处)
+    // 踏步顶面 y = baseY + (i+1) * riserH
+    // 竖杆高度 = y_rail - y_top = railH - riserH  (各阶相同)
+    const balH = railH - riserH;
 
     const metalMat = <meshStandardMaterial color="#7c8fa0" metalness={0.85} roughness={0.15} />;
     const treadMat = <meshStandardMaterial color="#6a7d8e" metalness={0.80} roughness={0.20} />;
@@ -115,21 +130,19 @@ export function StaircaseGeom({
       <group>
         {/* 踏步 */}
         {treads.map((t, i) => (
-          <mesh key={i} position={[0, t.y, t.z]} castShadow receiveShadow>
+          <mesh key={i} position={[0, t.midY, t.midZ]} castShadow receiveShadow>
             <boxGeometry args={[treadW2, treadT, treadDepth]} />
             {treadMat}
           </mesh>
         ))}
 
-        {/* 两侧斜扶手杆 */}
+        {/* 两侧斜扶手杆：精确从 (baseY+railH, -runD/2) 到 (baseY+height+railH, +runD/2) */}
         {([-1, 1] as const).map(side => {
           const xSide = side * (treadW2 / 2 - ROD_R);
-          const midY  = baseY + height / 2 + railOffY;
-          const midZ  = railOffZ; // 整体偏移不大，近似为0
           return (
             <mesh key={`rail-${side}`}
-              position={[xSide, midY, midZ]}
-              rotation={[slopeAngle, 0, 0]}
+              position={[xSide, railMidY, 0]}
+              rotation={[cylRotX, 0, 0]}
               castShadow
             >
               <cylinderGeometry args={[ROD_R, ROD_R, slopeLen, 8]} />
@@ -138,27 +151,23 @@ export function StaircaseGeom({
           );
         })}
 
-        {/* 每阶竖立栏杆（连接踏步面到扶手杆） */}
-        {treads.map((t, i) => {
-          // 该阶踏步前沿处扶手杆的 y 高度
-          const stepFrontZ = t.z - treadDepth / 2; // 踏步前沿 z
-          // 竖杆从踏步顶面到扶手杆底
-          const balBaseY = t.y + treadT / 2;
-          const balTopY  = balBaseY + railH;
-          const balH     = balTopY - balBaseY;
-          return ([-1, 1] as const).map(side => {
-            const xSide = side * (treadW2 / 2 - ROD_R * 2);
+        {/* 每阶竖立栏杆：底部 = 踏步顶面，顶部 = 该 z 处扶手杆底面，高度恒为 railH-riserH */}
+        {treads.map((t, i) =>
+          ([-1, 1] as const).map(side => {
+            const xSide   = side * (treadW2 / 2 - ROD_R * 2);
+            const balBotY = t.topY;                  // 踏步顶面
+            const balCenY = balBotY + balH / 2;      // 竖杆中心
             return (
               <mesh key={`bal-${i}-${side}`}
-                position={[xSide, balBaseY + balH / 2, stepFrontZ]}
+                position={[xSide, balCenY, t.frontZ]}
                 castShadow
               >
                 <cylinderGeometry args={[BAL_R, BAL_R, balH, 6]} />
                 {metalMat}
               </mesh>
             );
-          });
-        })}
+          })
+        )}
       </group>
     );
   }
