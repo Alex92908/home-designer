@@ -1256,27 +1256,58 @@ export default function FloorPlanBuilding({
               );
             })}
 
-            {/* 家具：外观模式跳过 GLTF（性能保护），只在 insideBuilding
-                时加载真实模型。如果用户想从外面看到家具，可以打开
-                walkthrough 模式（已经 insideBuilding=true）。 */}
-            {insideBuilding && (
-              <group position={[cx, yBase, cz]}>
-                {!isStair && placedItems
-                  .filter(p => {
-                    const fItem = getFurnitureById(p.furnitureId);
-                    if (fItem?.category === "curtain") return false;
-                    return true;
-                  })
-                  .map(p => {
-                    const modP = { ...p, z: rDcm - p.z, rotation: (540 - p.rotation) % 360 };
+            {/* 家具渲染策略 — 选项 A 低 LOD:
+                • 外观模式: 用 furn.color 的彩色 box 占位（footprint =
+                  width × depth × height，几乎零开销，50 件家具仍流畅）
+                • 漫游/单房间模式: 加载真实 GLTF
+                这样玻璃幕墙别墅在外观也能透出"屋里有沙发/床/桌子"的
+                体量感，又不会因为同时 50+ GLTF 加载冻浏览器。 */}
+            <group position={[cx, yBase, cz]}>
+              {!isStair && placedItems
+                .filter(p => {
+                  const fItem = getFurnitureById(p.furnitureId);
+                  if (fItem?.category === "curtain") return false;
+                  return true;
+                })
+                .map(p => {
+                  const modP = { ...p, z: rDcm - p.z, rotation: (540 - p.rotation) % 360 };
+                  if (insideBuilding) {
                     return (
                       <Suspense key={p.instanceId} fallback={null}>
                         <PlacedItemMesh placed={modP} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} />
                       </Suspense>
                     );
-                  })}
-              </group>
-            )}
+                  }
+                  // Low-LOD: 直接 box，避免 GLTF。位置/尺寸算法和
+                  // PlacedItemMesh 内部保持一致（参考其 x3d/z3d 公式）。
+                  const fItem = getFurnitureById(p.furnitureId);
+                  if (!fItem) return null;
+                  const fw = (fItem.width  * (modP.scaleW ?? 1)) / 100;
+                  const fd = (fItem.depth  * (modP.scaleD ?? 1)) / 100;
+                  const fh = (fItem.height * (modP.scaleH ?? 1)) / 100;
+                  const x3d = modP.x / 100 - rW / 2;
+                  const z3d = modP.z / 100 - rD / 2;
+                  const baseY = modP.mountCeiling
+                    ? (FLOOR_H - fh)
+                    : (modP.elevationY ?? 0) / 100;
+                  const rotY = (modP.rotation * Math.PI) / 180;
+                  return (
+                    <mesh
+                      key={p.instanceId}
+                      position={[x3d, baseY + fh / 2, z3d]}
+                      rotation={[0, rotY, 0]}
+                      castShadow receiveShadow
+                    >
+                      <boxGeometry args={[fw, fh, fd]} />
+                      <meshStandardMaterial
+                        color={fItem.color ?? "#A8A8A8"}
+                        roughness={0.7}
+                        metalness={0.05}
+                      />
+                    </mesh>
+                  );
+                })}
+            </group>
           </group>
         );
       })}
