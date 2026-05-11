@@ -1224,11 +1224,12 @@ export default function FloorPlanBuilding({
             )}
             {/* 楼梯间：渲染实际楼梯几何体 + 上层开口处安全围栏 */}
             {isStair && (
-              // fi>0 楼梯向下偏移 SLAB_T，使上下层楼梯无缝衔接（消除楼板厚度产生的空隙）
-              <group position={[cx, yBase - (fi > 0 ? SLAB_T : 0), cz]}>
-                {/* 上层楼梯旋转 180°：一层顶端对接二层底端，形成连续路径 */}
-                <StaircaseGeom W={rW} D={rD} color={wallColor} shape={stairShape} stairRotation={((stairRotation + (fi > 0 ? 180 : 0)) % 360) as 0|90|180|270} />
-                {/* 二楼及以上楼板开口处：钢化玻璃围栏，防止跌落 */}
+              <group position={[cx, yBase, cz]}>
+                {/* 1F：渲染完整楼梯几何（踏步 + 栏杆），向上通往 2F */}
+                {fi === 0 && (
+                  <StaircaseGeom W={rW} D={rD} color={wallColor} shape={stairShape} stairRotation={stairRotation} />
+                )}
+                {/* 2F 及以上：只渲染楼板开口处的安全围栏，不重复渲染楼梯体 */}
                 {fi > 0 && <StairwellRailing rW={rW} rD={rD} />}
               </group>
             )}

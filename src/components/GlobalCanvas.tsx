@@ -126,17 +126,11 @@ export function StaircaseGeom({
 
         {/* 顶端不画额外宽阶 —— 第 12 级踏步本身的顶面已经 = 2F 楼面 */}
 
-        {/* 两侧栏杆 —— 细木立柱 + 倾斜扶手 */}
+        {/* 两侧栏杆 —— 细竖立柱沿台阶追踪高度 + 坡面顶部横杆（不用穿出楼板的长斜撑） */}
         {([-1, 1] as const).map(side => {
           const xSide = side * (treadW2 / 2 + 0.02);
-          // 沿斜梯密排的细立柱：底部追随斜线 (baseY → topStepTop)，
-          // 顶部统一 handrailH 贴斜扶手
-          const slopeBalusters = Array.from({ length: STEPS * 2 }, (_, i) => {
-            const t = (i + 0.5) / (STEPS * 2);
-            const zPos = -runD / 2 + t * slopeD;
-            const yBot = baseY + t * height;
-            return { zPos, yBot };
-          });
+          // 每步台阶放一根立柱，立柱底部跟台阶面齐，顶部统一在 handrailH 处
+          const stepBalusters = treads.map(t => ({ zPos: t.z, yBot: t.y + treadT / 2 }));
           return (
             <group key={side}>
               {/* 起步端柱 */}
@@ -144,27 +138,35 @@ export function StaircaseGeom({
                 <boxGeometry args={[0.06, newelH, 0.06]} />
                 {handrailMat}
               </mesh>
-              {/* 顶端端柱（坐在 2F 楼面） */}
+              {/* 顶端端柱 */}
               <mesh position={[xSide, topStepTop + newelH / 2, runD / 2 - treadDepth / 2]} castShadow>
                 <boxGeometry args={[0.06, newelH, 0.06]} />
                 {handrailMat}
               </mesh>
-              {/* 斜梯立柱 */}
-              {slopeBalusters.map(({ zPos, yBot }, i) => (
+              {/* 每级台阶一根竖立柱，高度 = handrailH，底部随台阶面 */}
+              {stepBalusters.map(({ zPos, yBot }, i) => (
                 <mesh key={`b-${i}`} position={[xSide, yBot + handrailH / 2, zPos]} castShadow>
                   <cylinderGeometry args={[balusterR, balusterR, handrailH, 8]} />
                   {handrailMat}
                 </mesh>
               ))}
-              {/* 斜扶手 */}
-              <mesh
-                position={[xSide, baseY + height / 2 + handrailH, -runD / 2 + slopeD / 2]}
-                rotation={[railAngle, 0, 0]}
-                castShadow
-              >
-                <boxGeometry args={[0.05, 0.05, railLen]} />
-                {handrailMat}
-              </mesh>
+              {/* 斜扶手：改为跟随台阶踏面的折线扶手（沿坡面顶部），不超出楼层高度 */}
+              {stepBalusters.map(({ zPos, yBot }, i) => {
+                if (i === stepBalusters.length - 1) return null;
+                const next = stepBalusters[i + 1];
+                const midZ = (zPos + next.zPos) / 2;
+                const midY = (yBot + next.yBot) / 2 + handrailH;
+                const dz   = next.zPos - zPos;
+                const dy   = next.yBot - yBot;
+                const segLen  = Math.sqrt(dz * dz + dy * dy);
+                const segAngle = Math.atan2(dy, dz);
+                return (
+                  <mesh key={`r-${i}`} position={[xSide, midY, midZ]} rotation={[segAngle, 0, 0]} castShadow>
+                    <boxGeometry args={[0.05, 0.05, segLen + 0.01]} />
+                    {handrailMat}
+                  </mesh>
+                );
+              })}
             </group>
           );
         })}
