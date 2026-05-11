@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useEffect, useState, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky } from "@react-three/drei";
+import { OrbitControls, PointerLockControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky } from "@react-three/drei";
 import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
@@ -4798,7 +4798,11 @@ function RichGlassVillaBuilding({ W, D, settings }: {
 }
 
 // ─── House body ──────────────────────────────────────────────
-function HouseBody({ W, D, settings, insideBuilding = false, wallXray = false }: { W: number; D: number; settings: ExteriorSettings; insideBuilding?: boolean; wallXray?: boolean }) {
+function HouseBody({ W, D, settings, insideBuilding = false, wallXray = false, onEnterRoom }: {
+  W: number; D: number; settings: ExteriorSettings;
+  insideBuilding?: boolean; wallXray?: boolean;
+  onEnterRoom?: (room: import("@/lib/types").RoomType, floorIndex: number, worldPos: [number, number, number]) => void;
+}) {
   // ── Rich Glass Villa shortcut ──────────────────────────────────────────
   // When buildingType is set, bypass the generic floor-shell system entirely
   // and render the specialized multi-volume building component.
@@ -4807,7 +4811,7 @@ function HouseBody({ W, D, settings, insideBuilding = false, wallXray = false }:
     return <RichGlassVillaBuilding W={W} D={D} settings={settings} />;
   }
   if (buildingTypeHB === "floor-plan-driven") {
-    return <FloorPlanBuilding insideBuilding={insideBuilding} wallXray={wallXray} />;
+    return <FloorPlanBuilding insideBuilding={insideBuilding} wallXray={wallXray} onEnterRoom={onEnterRoom} />;
   }
 
   const { floors, roofStyle, roofColor, accentColor } = settings;
@@ -5367,6 +5371,86 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
 
 // ─── Inside-building camera animator ───────────────────────
 /** When `active`, smoothly lerps camera + OrbitControls target inside the building. */
+/** First-person walkthrough controller. Mounts inside <Canvas>:
+ *  - WASD / arrow keys move camera at ~3 m/s walking speed.
+ *  - Mouse look via PointerLockControls (browser locks cursor; ESC exits).
+ *  - Camera stays at eye height (1.6 m) above the current floor.
+ *  - Position clamped to the building's bbox (with 0.3 m margin) so the
+ *    user can't fly outside the walls. (Per-room interior wall collision
+ *    is out of scope — this is a "walk freely inside the building" mode.)
+ *  - When `spawnPos` changes, teleports the camera there next frame. */
+function WalkthroughController({
+  active, spawnPos, bbox, onExit,
+}: {
+  active: boolean;
+  spawnPos: [number, number, number] | null;
+  bbox: { minX: number; maxX: number; minZ: number; maxZ: number; minY: number; maxY: number };
+  onExit: () => void;
+}) {
+  const { camera, gl } = useThree();
+  const keysRef = useRef<Record<string, boolean>>({});
+  const spawnedRef = useRef<string | null>(null);
+  // Teleport on spawnPos change
+  useEffect(() => {
+    if (!active || !spawnPos) return;
+    const key = spawnPos.join(",");
+    if (spawnedRef.current === key) return;
+    spawnedRef.current = key;
+    camera.position.set(spawnPos[0], spawnPos[1], spawnPos[2]);
+    // Look forward (slight downtilt is more natural than dead-level)
+    camera.lookAt(spawnPos[0], spawnPos[1] - 0.1, spawnPos[2] + 1);
+  }, [active, spawnPos, camera]);
+  // When deactivated, reset spawn memo so next entry teleports again
+  useEffect(() => { if (!active) spawnedRef.current = null; }, [active]);
+  // Keyboard listener
+  useEffect(() => {
+    if (!active) return;
+    const onDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { onExit(); return; }
+      keysRef.current[e.key.toLowerCase()] = true;
+    };
+    const onUp = (e: KeyboardEvent) => { keysRef.current[e.key.toLowerCase()] = false; };
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    return () => {
+      window.removeEventListener("keydown", onDown);
+      window.removeEventListener("keyup", onUp);
+      keysRef.current = {};
+    };
+  }, [active, onExit]);
+  // Per-frame movement
+  const dir = useMemo(() => new THREE.Vector3(), []);
+  const right = useMemo(() => new THREE.Vector3(), []);
+  useFrame((_, delta) => {
+    if (!active) return;
+    const keys = keysRef.current;
+    const speed = (keys.shift ? 6 : 3) * delta; // hold shift to "run"
+    let dz = 0, dx = 0;
+    if (keys.w || keys.arrowup)    dz += 1;
+    if (keys.s || keys.arrowdown)  dz -= 1;
+    if (keys.a || keys.arrowleft)  dx -= 1;
+    if (keys.d || keys.arrowright) dx += 1;
+    if (dz === 0 && dx === 0) return;
+    // Forward in XZ plane (ignore camera pitch so WASD walks, doesn't fly).
+    camera.getWorldDirection(dir);
+    dir.y = 0; dir.normalize();
+    right.set(dir.z, 0, -dir.x);   // perpendicular in XZ
+    const mv = new THREE.Vector3()
+      .addScaledVector(dir, dz * speed)
+      .addScaledVector(right, dx * speed);
+    const nx = camera.position.x + mv.x;
+    const nz = camera.position.z + mv.z;
+    // Clamp to bbox (0.3m margin so we don't graze walls)
+    const m = 0.3;
+    camera.position.x = Math.min(bbox.maxX - m, Math.max(bbox.minX + m, nx));
+    camera.position.z = Math.min(bbox.maxZ - m, Math.max(bbox.minZ + m, nz));
+    // Keep eye height locked
+    camera.position.y = Math.min(bbox.maxY, Math.max(bbox.minY, camera.position.y));
+  });
+  if (!active) return null;
+  return <PointerLockControls camera={camera} domElement={gl.domElement} />;
+}
+
 function InsideCameraAnimator({ active, camPos, lookAt, teleport = false }: {
   active: boolean;
   camPos: [number, number, number];
@@ -5410,8 +5494,17 @@ export default function HouseCanvas() {
   const { floors }    = exterior;
   const orbitRef      = useRef<any>(null);
   const [selectedOutdoorKey, setSelectedOutdoorKey] = useState<string | null>(null);
-  const [insideBuilding, setInsideBuilding] = useState(false);
+  // First-person walkthrough state — replaces the legacy "bird's-eye from
+  // inside" mode. Active when user clicks 「进入室内漫游」 or 「点击进入 XXX」
+  // on a room block. `walkthroughSpawn` is the camera teleport target in
+  // world coords (eye height); null = building centre at eye height.
+  // `insideBuilding` mirrors `walkthrough` so downstream fog / lighting
+  // branches still flip correctly.
+  const [walkthrough, setWalkthrough] = useState(false);
+  const insideBuilding = walkthrough;
+  const [walkthroughSpawn, setWalkthroughSpawn] = useState<[number, number, number] | null>(null);
   const [wallXray, setWallXray] = useState(false);
+  const exitWalkthrough = () => { setWalkthrough(false); setWalkthroughSpawn(null); };
   // Sun analysis — read from global store so AiRenderModal + YardPlan share the value
   const sunHour     = useDesignerStore(s => s.sunHour);
   const setSunHour  = useDesignerStore(s => s.setSunHour);
@@ -5435,23 +5528,31 @@ export default function HouseCanvas() {
 
   return (
     <div className="w-full h-full relative">
-      {/* ── Enter / Exit building button + wall X-ray toggle ── */}
+      {/* ── Enter / Exit walkthrough button + wall X-ray toggle ── */}
       {isRichGlassVilla && (
         <div className="absolute top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
           <button
-            onClick={() => setInsideBuilding(v => !v)}
+            onClick={() => {
+              if (walkthrough) { exitWalkthrough(); }
+              else {
+                // Spawn at building centre, eye height. Y picked from W/D
+                // diagonal so it works for single-storey and multi-storey alike.
+                setWalkthrough(true);
+                setWalkthroughSpawn([0, 1.6, 0]);
+              }
+            }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
             style={{
-              background: insideBuilding
+              background: walkthrough
                 ? "linear-gradient(135deg,rgba(16,185,129,0.92),rgba(5,150,105,0.92))"
                 : "linear-gradient(135deg,rgba(30,58,138,0.92),rgba(59,130,246,0.92))",
               backdropFilter: "blur(12px)",
-              border: `1px solid ${insideBuilding ? "rgba(110,231,183,0.4)" : "rgba(147,197,253,0.4)"}`,
+              border: `1px solid ${walkthrough ? "rgba(110,231,183,0.4)" : "rgba(147,197,253,0.4)"}`,
             }}
           >
-            {insideBuilding ? "↩ 退出室内" : "🚶 进入室内查看"}
+            {walkthrough ? "↩ 退出漫游" : "🚶 进入室内漫游"}
           </button>
-          {insideBuilding && (
+          {walkthrough && (
             <button
               onClick={() => setWallXray(v => !v)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
@@ -5468,20 +5569,30 @@ export default function HouseCanvas() {
           )}
         </div>
       )}
-      {/* Interior hint label */}
-      {insideBuilding && (
-        <div className="absolute bottom-20 left-1/2 z-10 pointer-events-none select-none px-3 py-1 rounded-full"
-          style={{
-            transform: "translateX(-50%)",
-            background: "rgba(0,0,0,0.32)",
-            backdropFilter: "blur(8px)",
-            color: "rgba(255,255,255,0.85)",
-            fontSize: 11,
-            letterSpacing: "0.05em",
-            whiteSpace: "nowrap",
-          }}>
-          🖱 拖动鼠标环顾四周 · 滚轮缩放 · 点击「退出室内」返回外观
-        </div>
+      {/* Walkthrough HUD: crosshair + key hints */}
+      {walkthrough && (
+        <>
+          {/* Centre crosshair */}
+          <div className="absolute top-1/2 left-1/2 z-10 pointer-events-none select-none"
+            style={{ transform: "translate(-50%, -50%)", width: 14, height: 14 }}
+          >
+            <div style={{ position: "absolute", left: 6, top: 0, width: 2, height: 14, background: "rgba(255,255,255,0.65)" }} />
+            <div style={{ position: "absolute", left: 0, top: 6, width: 14, height: 2, background: "rgba(255,255,255,0.65)" }} />
+          </div>
+          {/* Key hints */}
+          <div className="absolute bottom-20 left-1/2 z-10 pointer-events-none select-none px-3 py-1 rounded-full"
+            style={{
+              transform: "translateX(-50%)",
+              background: "rgba(0,0,0,0.42)",
+              backdropFilter: "blur(8px)",
+              color: "rgba(255,255,255,0.9)",
+              fontSize: 11,
+              letterSpacing: "0.04em",
+              whiteSpace: "nowrap",
+            }}>
+            🖱 点击锁定鼠标 · WASD / 方向键 走 · Shift 跑 · ESC 退出
+          </div>
+        </>
       )}
 
       {/* ── Sun Analysis Slider ── bottom-centre, draggable 0-24h ── */}
@@ -5586,37 +5697,45 @@ export default function HouseCanvas() {
         {/* Fog disabled when inside — would darken interior surfaces */}
         {!insideBuilding && <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />}
         <ExteriorCaptureSetup />
-        {!insideBuilding && <CameraRig W={W} D={D} floors={floors} buildingType={_buildingType} />}
+        {!walkthrough && <CameraRig W={W} D={D} floors={floors} buildingType={_buildingType} />}
         <InsideCameraAnimator
-          active={insideBuilding}
-          camPos={insideCamPos}
-          lookAt={insideLookAt}
-          teleport
-        />
-        <InsideCameraAnimator
-          active={!insideBuilding && _buildingType === "floor-plan-driven"}
+          active={!walkthrough && _buildingType === "floor-plan-driven"}
           camPos={outsideCamPos}
           lookAt={outsideLookAt}
         />
-        <OrbitControls
-          ref={orbitRef}
-          makeDefault
-          enableDamping
-          dampingFactor={0.08}
-          minPolarAngle={0}
-          maxPolarAngle={insideBuilding ? Math.PI * 0.95 : Math.PI / 2.1}
-          minDistance={insideBuilding ? 0.5 : 2}
-          maxDistance={insideBuilding ? 20 : 80}
-          panSpeed={0.6}
-          target={
-            insideBuilding
-              ? insideLookAt
-              : _buildingType === "rich-glass-villa"
-              ? [-W * 0.05, 5.0, -D * 0.25] as [number, number, number]
-              : _buildingType === "floor-plan-driven"
-              ? [0, floors * FLOOR_H * 0.5, 0] as [number, number, number]
-              : [0, floors * FLOOR_H * 0.35, 0] as [number, number, number]
-          }
+        {/* OrbitControls — disabled during first-person walkthrough so
+            PointerLockControls owns mouse + drag rotation. */}
+        {!walkthrough && (
+          <OrbitControls
+            ref={orbitRef}
+            makeDefault
+            enableDamping
+            dampingFactor={0.08}
+            minPolarAngle={0}
+            maxPolarAngle={Math.PI / 2.1}
+            minDistance={2}
+            maxDistance={80}
+            panSpeed={0.6}
+            target={
+              _buildingType === "rich-glass-villa"
+                ? [-W * 0.05, 5.0, -D * 0.25] as [number, number, number]
+                : _buildingType === "floor-plan-driven"
+                ? [0, floors * FLOOR_H * 0.5, 0] as [number, number, number]
+                : [0, floors * FLOOR_H * 0.35, 0] as [number, number, number]
+            }
+          />
+        )}
+        {/* Walkthrough = WASD + PointerLockControls. bbox is the house's
+            ground-floor footprint with floors * FLOOR_H_M ceiling cap. */}
+        <WalkthroughController
+          active={walkthrough}
+          spawnPos={walkthroughSpawn ?? [0, 1.6, 0]}
+          bbox={{
+            minX: -W / 2 + 0.3, maxX: W / 2 - 0.3,
+            minZ: -D / 2 + 0.3, maxZ: D / 2 - 0.3,
+            minY: 1.6, maxY: floors * FLOOR_H_M - 0.4,
+          }}
+          onExit={exitWalkthrough}
         />
         {/* HDR as both IBL lighting AND photorealistic sky background.
             backgroundBlurriness softens the HDR to remove distracting detail
@@ -5694,7 +5813,15 @@ export default function HouseCanvas() {
             <meshStandardMaterial color="#D8D0BC" roughness={0.88} metalness={0.0} />
           </mesh>
         )}
-        <HouseBody W={W} D={D} settings={exterior} insideBuilding={insideBuilding} wallXray={wallXray} />
+        <HouseBody
+          W={W} D={D} settings={exterior}
+          insideBuilding={insideBuilding} wallXray={wallXray}
+          onEnterRoom={(_room, _fi, worldPos) => {
+            // Teleport into walkthrough mode at the clicked room's centre.
+            setWalkthrough(true);
+            setWalkthroughSpawn(worldPos);
+          }}
+        />
         {!isRichGlassVilla && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
         {!isRichGlassVilla && <YardPlanItems3D />}
         {!isRichGlassVilla && <YardPathItems3D />}

@@ -428,7 +428,17 @@ function StairwellRailing({ rW, rD }: { rW: number; rD: number }) {
 }
 
 // ── 主组件 ────────────────────────────────────────────────────
-export default function FloorPlanBuilding({ insideBuilding = false, wallXray = false }: { insideBuilding?: boolean; wallXray?: boolean }) {
+export default function FloorPlanBuilding({
+  insideBuilding = false, wallXray = false,
+  onEnterRoom,
+}: {
+  insideBuilding?: boolean;
+  wallXray?: boolean;
+  /** When provided, clicking a room block / window enters first-person
+   *  walkthrough mode at that room's center (handled by HouseCanvas
+   *  parent), instead of switching to the single-room 3D view. */
+  onEnterRoom?: (room: RoomType, floorIndex: number, worldPos: [number, number, number]) => void;
+}) {
   const floorPlans     = useDesignerStore(s => s.floorPlans);
   const exterior       = useDesignerStore(s => s.exterior);
   const floorCount     = Math.max(exterior.floors, 1);
@@ -436,12 +446,41 @@ export default function FloorPlanBuilding({ insideBuilding = false, wallXray = f
   const setViewMode    = useDesignerStore(s => s.setViewMode);
   const setActiveFloor = useDesignerStore(s => s.setActiveFloor);
 
-  /** Click door/window on exterior → enter that room's 3D interior view */
+  /** Click door/window on exterior →
+   *  - if onEnterRoom prop given: walkthrough mode at this room's centre
+   *  - else: legacy behaviour (switch to single-room RoomCanvas view) */
   const enterRoom = useCallback((room: RoomType, floorIndex: number) => {
     setActiveFloor(floorIndex);
     setActiveRoom(room);
+    if (onEnterRoom) {
+      // Compute world-space room centre (matches the building's coord system).
+      const fp = floorPlans[floorIndex];
+      const dims = fp?.roomDimensions?.[room];
+      const lay  = fp?.roomLayout?.[room];
+      if (dims && lay) {
+        // planOffset is computed below at first render — for this callback we
+        // re-compute a fresh bounding box (cheap; happens on every click).
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (let fi = 0; fi < floorPlans.length; fi++) {
+          const f2 = floorPlans[fi]; if (!f2) continue;
+          for (const r of (f2.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+            const p = f2.roomLayout?.[r]; const d = f2.roomDimensions?.[r];
+            if (!p || !d) continue;
+            minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+            maxX = Math.max(maxX, p.x + d.width); maxY = Math.max(maxY, p.y + d.depth);
+          }
+        }
+        const W = (maxX - minX) * CM;
+        const D = (maxY - minY) * CM;
+        const cx = ((lay.x + dims.width / 2 - minX) * CM) - W / 2;
+        const cz = -(((lay.y + dims.depth / 2 - minY) * CM)) + D / 2;
+        const cy = floorIndex * FLOOR_H + 1.6;   // eye height
+        onEnterRoom(room, floorIndex, [cx, cy, cz]);
+        return;
+      }
+    }
     setViewMode("3d");
-  }, [setActiveFloor, setActiveRoom, setViewMode]);
+  }, [setActiveFloor, setActiveRoom, setViewMode, onEnterRoom, floorPlans]);
 
   /** Track which block is hovered for tooltip */
   const [hoveredRoom, setHoveredRoom] = useState<{ room: RoomType; fi: number } | null>(null);
