@@ -84,33 +84,81 @@ export function StaircaseGeom({
   const rotY = (stairRotation * Math.PI) / 180;
 
   // ── Straight run ───────────────────────────────────────────
-  // 木质直梯：踏步 + 顶端站立平台（让人能转身进房间或上下一层）+
-  // 细木栏杆（spindle balusters + handrail），不再用整面墙
+  // 金属杆式楼梯：金属踏步 + 两侧斜扶手杆 + 每阶竖立栏杆
   function StraightRun({ runW, runD, baseY = 0, height = FLOOR_H }: {
     runW: number; runD: number; baseY?: number; height?: number;
   }) {
-    const STEPS       = 12;
-    // 12 级等深踏步，最后一级顶面 = 2F 楼面 (2.8m)。
-    // 不再单独画 landing/宽阶；2F 楼板自然环绕楼梯井开口，最后一阶踩
-    // 上 = 站到 2F 楼面。
-    const treadDepth  = runD / STEPS;
-    const riserH      = height / STEPS;
-    const treadW2     = runW - 0.08;
-    // 第 i 级（i=0..11）踏步顶面 y = baseY + (i+1)*riserH
+    const STEPS      = 12;
+    const treadDepth = runD / STEPS;
+    const riserH     = height / STEPS;
+    const treadW2    = runW - 0.08;
+    const ROD_R      = 0.018;   // 扶手杆半径
+    const BAL_R      = 0.012;   // 竖栏杆半径
+
     const treads = useMemo(() => Array.from({ length: STEPS }, (_, i) => ({
       y: baseY + (i + 1) * riserH - treadT / 2,
       z: i * treadDepth + treadDepth / 2 - runD / 2,
     })), [runD, riserH, treadDepth, baseY, height]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // 斜扶手：从最低踏步端 → 最高踏步端，沿坡面走一根圆杆
+    const slopeAngle = Math.atan2(height, runD);
+    const slopeLen   = Math.sqrt(runD * runD + height * height);
+    const railH      = 0.90;   // 扶手离踏步面高度
+    // 扶手杆中心：平行于踏步坡面，抬高 railH * cos(angle)
+    const railOffY   = railH * Math.cos(slopeAngle);
+    const railOffZ   = -railH * Math.sin(slopeAngle); // 沿深度方向偏移
+
+    const metalMat = <meshStandardMaterial color="#7c8fa0" metalness={0.85} roughness={0.15} />;
+    const treadMat = <meshStandardMaterial color="#6a7d8e" metalness={0.80} roughness={0.20} />;
+
     return (
       <group>
-        {/* 踏步 — 金属踏步，无栏杆/斜板 */}
+        {/* 踏步 */}
         {treads.map((t, i) => (
           <mesh key={i} position={[0, t.y, t.z]} castShadow receiveShadow>
-            <boxGeometry args={[treadW2, treadT, treadDepth + 0.01]} />
-            <meshStandardMaterial color="#8a9ba8" metalness={0.75} roughness={0.2} />
+            <boxGeometry args={[treadW2, treadT, treadDepth]} />
+            {treadMat}
           </mesh>
         ))}
+
+        {/* 两侧斜扶手杆 */}
+        {([-1, 1] as const).map(side => {
+          const xSide = side * (treadW2 / 2 - ROD_R);
+          const midY  = baseY + height / 2 + railOffY;
+          const midZ  = railOffZ; // 整体偏移不大，近似为0
+          return (
+            <mesh key={`rail-${side}`}
+              position={[xSide, midY, midZ]}
+              rotation={[slopeAngle, 0, 0]}
+              castShadow
+            >
+              <cylinderGeometry args={[ROD_R, ROD_R, slopeLen, 8]} />
+              {metalMat}
+            </mesh>
+          );
+        })}
+
+        {/* 每阶竖立栏杆（连接踏步面到扶手杆） */}
+        {treads.map((t, i) => {
+          // 该阶踏步前沿处扶手杆的 y 高度
+          const stepFrontZ = t.z - treadDepth / 2; // 踏步前沿 z
+          // 竖杆从踏步顶面到扶手杆底
+          const balBaseY = t.y + treadT / 2;
+          const balTopY  = balBaseY + railH;
+          const balH     = balTopY - balBaseY;
+          return ([-1, 1] as const).map(side => {
+            const xSide = side * (treadW2 / 2 - ROD_R * 2);
+            return (
+              <mesh key={`bal-${i}-${side}`}
+                position={[xSide, balBaseY + balH / 2, stepFrontZ]}
+                castShadow
+              >
+                <cylinderGeometry args={[BAL_R, BAL_R, balH, 6]} />
+                {metalMat}
+              </mesh>
+            );
+          });
+        })}
       </group>
     );
   }
