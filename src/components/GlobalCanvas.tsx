@@ -86,38 +86,90 @@ export function StaircaseGeom({
   const rotY = (stairRotation * Math.PI) / 180;
 
   // ── Straight run ───────────────────────────────────────────
+  // 木质直梯：踏步 + 顶端站立平台（让人能转身进房间或上下一层）+
+  // 细木栏杆（spindle balusters + handrail），不再用整面墙
   function StraightRun({ runW, runD, baseY = 0, height = FLOOR_H }: {
     runW: number; runD: number; baseY?: number; height?: number;
   }) {
-    const STEPS = 12;
-    const treadDepth = runD / STEPS;
-    const riserH     = height / STEPS;
-    const treadW2    = runW - 0.08;
+    const STEPS       = 12;
+    // 12 级等深踏步，最后一级顶面 = 2F 楼面 (2.8m)。
+    // 不再单独画 landing/宽阶；2F 楼板自然环绕楼梯井开口，最后一阶踩
+    // 上 = 站到 2F 楼面。
+    const treadDepth  = runD / STEPS;
+    const riserH      = height / STEPS;
+    const treadW2     = runW - 0.08;
+    // 第 i 级（i=0..11）踏步顶面 y = baseY + (i+1)*riserH
     const treads = useMemo(() => Array.from({ length: STEPS }, (_, i) => ({
-      y: baseY + i * riserH + treadT / 2,
+      y: baseY + (i + 1) * riserH - treadT / 2,
       z: i * treadDepth + treadDepth / 2 - runD / 2,
     })), [runD, riserH, treadDepth, baseY, height]); // eslint-disable-line react-hooks/exhaustive-deps
-    const rH = height * 0.95;
+
+    const topStepTop  = baseY + STEPS * riserH;             // = 2F 楼面
+    const slopeD      = runD;                                // 斜段 = 整个跨度
+
+    // 栏杆参数
+    const balusterR  = 0.018;
+    const handrailH  = 0.92;
+    const newelH     = 1.00;
+    const railAngle  = Math.atan2(height, slopeD);
+    const railLen    = Math.sqrt(slopeD * slopeD + height * height);
+
     return (
       <group>
+        {/* 踏步 */}
         {treads.map((t, i) => (
           <mesh key={i} position={[0, t.y, t.z]} castShadow receiveShadow>
             <boxGeometry args={[treadW2, treadT, treadDepth + 0.01]} />
             <meshStandardMaterial color={color} roughness={0.7} />
           </mesh>
         ))}
-        {([-1, 1] as const).map(side => (
-          <group key={side}>
-            <mesh position={[side * (treadW2 / 2 + 0.04), baseY + rH / 2, 0]} castShadow>
-              <boxGeometry args={[0.08, rH, runD * 0.98]} />
-              {railMat}
-            </mesh>
-            <mesh position={[side * (treadW2 / 2 + 0.04), baseY + rH + 0.04, 0]}>
-              <boxGeometry args={[0.06, 0.06, runD * 0.98]} />
-              {handrailMat}
-            </mesh>
-          </group>
-        ))}
+
+        {/* 顶端不画额外宽阶 —— 第 12 级踏步本身的顶面已经 = 2F 楼面 */}
+
+        {/* 两侧栏杆 —— 细木立柱 + 倾斜扶手 */}
+        {([-1, 1] as const).map(side => {
+          const xSide = side * (treadW2 / 2 + 0.02);
+          // 沿斜梯密排的细立柱：底部追随斜线 (baseY → topStepTop)，
+          // 顶部统一 handrailH 贴斜扶手
+          const slopeBalusters = Array.from({ length: STEPS * 2 }, (_, i) => {
+            const t = (i + 0.5) / (STEPS * 2);
+            const zPos = -runD / 2 + t * slopeD;
+            const yBot = baseY + t * height;
+            return { zPos, yBot };
+          });
+          return (
+            <group key={side}>
+              {/* 起步端柱 */}
+              <mesh position={[xSide, baseY + newelH / 2, -runD / 2]} castShadow>
+                <boxGeometry args={[0.06, newelH, 0.06]} />
+                {handrailMat}
+              </mesh>
+              {/* 顶端端柱（坐在 2F 楼面） */}
+              <mesh position={[xSide, topStepTop + newelH / 2, runD / 2 - treadDepth / 2]} castShadow>
+                <boxGeometry args={[0.06, newelH, 0.06]} />
+                {handrailMat}
+              </mesh>
+              {/* 斜梯立柱 */}
+              {slopeBalusters.map(({ zPos, yBot }, i) => (
+                <mesh key={`b-${i}`} position={[xSide, yBot + handrailH / 2, zPos]} castShadow>
+                  <cylinderGeometry args={[balusterR, balusterR, handrailH, 8]} />
+                  {handrailMat}
+                </mesh>
+              ))}
+              {/* 斜扶手 */}
+              <mesh
+                position={[xSide, baseY + height / 2 + handrailH, -runD / 2 + slopeD / 2]}
+                rotation={[railAngle, 0, 0]}
+                castShadow
+              >
+                <boxGeometry args={[0.05, 0.05, railLen]} />
+                {handrailMat}
+              </mesh>
+            </group>
+          );
+        })}
+        {/* 平台前端不画栏杆 —— 那里是上楼后转身进房间/继续上一层的开口，
+            真实住宅不会装栏杆挡路 */}
       </group>
     );
   }
@@ -336,22 +388,30 @@ function RoomGroup({
       onClick={(e) => { e.stopPropagation(); onPick(); }}
     >
       {/* Floor slab (polygon-aware). DoubleSide so back-face culling doesn't
-          hide it when viewed from slightly below in dollhouse mode. */}
-      <mesh position={[0, 0.001, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
-        <shapeGeometry args={[floorShape]} />
-        <meshStandardMaterial
-          color={isStair ? "#C8C8D0" : (isActive ? "#BAE6FD" : (isHover ? "#DBEAFE" : floorColor))}
-          roughness={0.9}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
+          hide it when viewed from slightly below in dollhouse mode.
+          楼梯间在 fi>0 跳过：上层楼梯间是楼梯井开口，没楼板才能让下层
+          楼梯上来；楼梯本身的"顶端平台"已经在踏步级末端提供了齐平 2F
+          楼面的小平台。 */}
+      {!(isStair && floorIndex > 0) && (
+        <mesh position={[0, 0.001, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
+          <shapeGeometry args={[floorShape]} />
+          <meshStandardMaterial
+            color={isStair ? "#C8C8D0" : (isActive ? "#BAE6FD" : (isHover ? "#DBEAFE" : floorColor))}
+            roughness={0.9}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
 
-      {/* Stair room: draw actual staircase instead of walls */}
+      {/* Stair room: draw actual staircase instead of walls.
+          上层楼梯整体旋转 180° → 下层楼梯顶端平台 = 上层楼梯起点，
+          形成连续 U 形折返路径（不再两层楼梯方向相同、视觉上叠在一起）。
+          匹配 FloorPlanExterior 里的相同处理。 */}
       {isStair && (
         <StaircaseGeom
           W={W} D={D} color={wallColor}
           shape={stairCfg?.shape ?? "straight"}
-          stairRotation={stairCfg?.rotation ?? 0}
+          stairRotation={(((stairCfg?.rotation ?? 0) + (floorIndex > 0 ? 180 : 0)) % 360) as 0 | 90 | 180 | 270}
         />
       )}
 
@@ -707,8 +767,18 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
             updateYardItem(draggingYardId.current, { x: nx, z: nz });
           } else if (draggingStair.current) {
             e.stopPropagation();
-            const nx = Math.round(e.point.x * 4) / 4; // 25cm snap in metres
-            const nz = Math.round(e.point.z * 4) / 4;
+            // AutoStairConnector 渲染在 <group position={[-cx, 0, -cz]}> 内，
+            // 所以本地坐标 = 世界坐标 + (cx, cz)。之前少了这步换算，导致
+            // 拖动时楼梯整体偏移 (-cx, -cz) 看起来"飞出去"。
+            // 同时把位置限制在屋占地范围内，避免拖到屋外。
+            const localX = e.point.x + cx;
+            const localZ = e.point.z + cz;
+            const halfW  = footW / 2;
+            const halfD  = footD / 2;
+            const clampedX = Math.max(-halfW + 1, Math.min(halfW - 1, localX));
+            const clampedZ = Math.max(-halfD + 1, Math.min(halfD - 1, localZ));
+            const nx = Math.round(clampedX * 4) / 4;
+            const nz = Math.round(clampedZ * 4) / 4;
             setStairPos({ x: nx, z: nz });
           }
         }}
@@ -733,16 +803,107 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
 
           return (
             <group key={fi}>
-              {/* Inter-floor concrete slab (except at ground level) */}
-              {fi > 0 && (
-                <mesh
-                  position={[cx, yOff - 0.06, cz]}
-                  receiveShadow
-                >
-                  <boxGeometry args={[extent * 1.05, 0.12, extent * 1.05]} />
-                  <meshStandardMaterial color="#B0B0B8" roughness={0.9} />
-                </mesh>
-              )}
+              {/* Inter-floor concrete slab (except at ground level)
+                  挖空楼梯井：在楼梯位置开洞，让下层楼梯能穿上来不被这
+                  块大水泥板挡住。楼梯一般只配在下层（1F→2F 的 stair 房
+                  间在 1F），所以查"下层有没有 stair"才正确。如果本层
+                  本身也有 stair（多层连续上行），同样开洞。 */}
+              {fi > 0 && (() => {
+                const slabW = extent * 1.05;
+                const slabD = extent * 1.05;
+                const slabT = 0.12;
+                // 解析楼梯井位置和尺寸：
+                //  1. 优先用手动配置的 stair 房间（下层或本层 enabledRooms.stair）
+                //  2. fallback 用 AutoStairConnector 的位置（neither floor 有 stair
+                //     时才自动生成，位置由 stairPos state / 默认值决定）
+                const sCM = 0.01;
+                const fpBelow  = floorPlans[fi - 1];
+                const stairFromBelow = fpBelow?.enabledRooms?.includes("stair");
+                const stairFromThis  = fp.enabledRooms?.includes("stair");
+                const stairSourceFp  = stairFromBelow ? fpBelow : (stairFromThis ? fp : null);
+                const stairLay = stairSourceFp?.roomLayout?.["stair"] ?? null;
+                const stairDim = stairSourceFp?.roomDimensions?.["stair"] ?? null;
+
+                let sx: number, sz: number, sw: number, sd: number;
+                let hasShaft = false;
+                if (stairLay && stairDim) {
+                  // Manual stair room
+                  sx = (stairLay.x + stairDim.width / 2) * sCM - cx;
+                  sz = (stairLay.y + stairDim.depth / 2) * sCM - cz;
+                  sw = stairDim.width * sCM;
+                  sd = stairDim.depth * sCM;
+                  hasShaft = true;
+                } else {
+                  // AutoStairConnector fallback —— 同步它的位置/尺寸算法
+                  // (与 AutoStairConnector 内部 sw/sd 和外部默认 posX/posZ 一致)
+                  const autoLoHasStair = floorPlans[fi - 1]?.enabledRooms?.includes("stair") ?? false;
+                  const autoHiHasStair = floorPlans[fi]?.enabledRooms?.includes("stair") ?? false;
+                  if (!autoLoHasStair && !autoHiHasStair) {
+                    const autoSw = Math.min(footW * 0.18, 2.8);
+                    const autoSd = Math.min(footD * 0.30, 4.2);
+                    const autoPosX = stairPos?.x ?? (footW / 2 - autoSw / 2 - 0.15);
+                    const autoPosZ = stairPos?.z ?? (footD / 2 - autoSd / 2 - 0.15);
+                    sx = autoPosX;
+                    sz = autoPosZ;
+                    sw = autoSw;
+                    sd = autoSd;
+                    hasShaft = true;
+                  } else {
+                    sx = 0; sz = 0; sw = 0; sd = 0;
+                  }
+                }
+                if (hasShaft) {
+                  // Slab spans [cx - slabW/2, cx + slabW/2] × [cz - slabD/2, cz + slabD/2]
+                  // Hole spans [sx - sw/2, sx + sw/2] × [sz - sd/2, sz + sd/2] (slab-local coords)
+                  // 4 strips around the hole:
+                  const yMid = yOff - slabT / 2;          // slab centre y
+                  const mat = <meshStandardMaterial color="#B0B0B8" roughness={0.9} />;
+                  // Convert slab-local coords (centred at cx, cz) to world by adding cx, cz back
+                  // North strip (z > sz + sd/2): from sz+sd/2 to slabD/2
+                  const nStripD = (slabD / 2) - (sz + sd / 2);
+                  const nStripCz = cz + (sz + sd / 2) + nStripD / 2;
+                  // South strip (z < sz - sd/2)
+                  const sStripD = (sz - sd / 2) - (-slabD / 2);
+                  const sStripCz = cz + (-slabD / 2) + sStripD / 2;
+                  // East strip (x > sx + sw/2), only spans hole's z range
+                  const eStripW = (slabW / 2) - (sx + sw / 2);
+                  const eStripCx = cx + (sx + sw / 2) + eStripW / 2;
+                  // West strip (x < sx - sw/2)
+                  const wStripW = (sx - sw / 2) - (-slabW / 2);
+                  const wStripCx = cx + (-slabW / 2) + wStripW / 2;
+                  return (
+                    <group>
+                      {nStripD > 0 && (
+                        <mesh position={[cx, yMid, nStripCz]} receiveShadow>
+                          <boxGeometry args={[slabW, slabT, nStripD]} />{mat}
+                        </mesh>
+                      )}
+                      {sStripD > 0 && (
+                        <mesh position={[cx, yMid, sStripCz]} receiveShadow>
+                          <boxGeometry args={[slabW, slabT, sStripD]} />{mat}
+                        </mesh>
+                      )}
+                      {eStripW > 0 && (
+                        <mesh position={[eStripCx, yMid, cz + sz]} receiveShadow>
+                          <boxGeometry args={[eStripW, slabT, sd]} />{mat}
+                        </mesh>
+                      )}
+                      {wStripW > 0 && (
+                        <mesh position={[wStripCx, yMid, cz + sz]} receiveShadow>
+                          <boxGeometry args={[wStripW, slabT, sd]} />{mat}
+                        </mesh>
+                      )}
+                    </group>
+                  );
+                }
+                // No stair on this floor — render solid slab as before
+                return (
+                  <mesh position={[cx, yOff - 0.06, cz]} receiveShadow>
+                    <boxGeometry args={[slabW, slabT, slabD]} />
+                    <meshStandardMaterial color="#B0B0B8" roughness={0.9} />
+                  </mesh>
+                );
+              })()}
 
               {/* Floor label badge */}
               <Html

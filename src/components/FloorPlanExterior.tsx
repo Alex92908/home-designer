@@ -156,80 +156,117 @@ function GlassCurtain({
   width: number; height: number; floorH: number;
   doors?: Array<{ cx: number; w: number; h: number }>;
 }) {
-  // 现代极简玻璃幕墙 — 参照"现代玻璃幕墙别墅"模板：
-  // - 板大、压条细、深色但不死黑（深炭灰金属感）
-  // - 玻璃 transmission 高 + opacity 低 → 看得见室内
-  // - 每层只 1 根横压条（不再每行一根），落地玻璃感更强
-  const cols  = Math.max(2, Math.round(width / 1.5));   // 更大的玻璃板（1.5m/格）
+  // 完全对齐"现代玻璃幕墙别墅"模板的 GlassCurtainWallFace：
+  //  · 玻璃 #C8E0EA opacity 0.45 roughness 0.06 metalness 0.04 envMapIntensity 0.35
+  //  · 黑色阳极氧化铝压条 #181A1E，金属感强但不被环境贴图染色
+  //  · 模板原话："No spandrel/backing slab — interior room geometry provides
+  //    back walls visible through transmission glass"——所以视觉通透感来自
+  //    "玻璃 + 背后专门画的暖色奶油室内"，不是玻璃透明度本身。
+  const cols  = Math.max(2, Math.round(width / 1.35));
   const panelW = width / cols;
+  const mullionW = 0.095;
   const rows  = Math.round(height / floorH);
   const rowH  = height / rows;
+  const frame = "#181A1E";
 
   return (
     <group>
-      {/* 玻璃格 — 全幅、不留边（之前 0.93/0.94 缩进让压条看着更粗） */}
-      {Array.from({ length: cols }, (_, ci) => {
-        const px = -width / 2 + (ci + 0.5) * panelW;
-        return Array.from({ length: rows }, (_, ri) => {
-          const py = -height / 2 + (ri + 0.5) * rowH;
-          const hasDoor = doors.some(d => Math.abs(d.cx - px) < panelW / 2 + d.w / 2 && ri === 0);
-          return (
-            <mesh key={`${ci}-${ri}`} position={[px, py, 0]}>
-              <planeGeometry args={[panelW * 0.985, rowH * 0.985]} />
-              <meshPhysicalMaterial
-                color={hasDoor ? "#F0F6FA" : "#F5FAFC"}   // 几乎无色（极淡蓝）
-                roughness={0.01} metalness={0.0}
-                transmission={hasDoor ? 0.92 : 0.96}      // 极高 transmission
-                thickness={0.04}
-                ior={1.5}
-                attenuationColor="#E8F2F8"
-                attenuationDistance={5}
-                transparent opacity={0.12}
-                side={THREE.DoubleSide}
-                {...overlayMaterialProps(2)}
-              />
-            </mesh>
-          );
-        });
-      })}
-
-      {/* 竖向压条 — 比之前细一倍 + 改深炭灰金属（不死黑） */}
-      {Array.from({ length: cols + 1 }, (_, i) => (
-        <mesh key={`v${i}`} position={[-width / 2 + i * panelW, 0, 0.015]}>
-          <boxGeometry args={[0.025, height + 0.02, 0.035]} />
-          <meshStandardMaterial color="#3A3A3C" metalness={0.85} roughness={0.25} />
-        </mesh>
-      ))}
-      {/* 横向压条 — 每层一根（不再 rows+1 全画） */}
-      {Array.from({ length: rows + 1 }, (_, i) => {
-        const py = -height / 2 + i * rowH;
+      {/* 顶部 / 底部 / 中部横向压条 —— 满铺 */}
+      <mesh position={[0, height / 2 - 0.04, 0.005]}>
+        <boxGeometry args={[width, 0.08, 0.062]} />
+        <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
+      </mesh>
+      <mesh position={[0, -height / 2 + 0.04, 0.005]}>
+        <boxGeometry args={[width, 0.08, 0.062]} />
+        <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
+      </mesh>
+      {Array.from({ length: rows - 1 }, (_, i) => {
+        const py = -height / 2 + (i + 1) * rowH;
         return (
-          <mesh key={`h${i}`} position={[0, py, 0.015]}>
-            <boxGeometry args={[width + 0.04, 0.022, 0.035]} />
-            <meshStandardMaterial color="#3A3A3C" metalness={0.85} roughness={0.25} />
+          <mesh key={`mid${i}`} position={[0, py, 0.005]}>
+            <boxGeometry args={[width, 0.042, 0.040]} />
+            <meshStandardMaterial color={frame} roughness={0.14} metalness={0.90} />
           </mesh>
         );
       })}
 
-      {/* 大门 */}
+      {/* 每块面板：竖压条 + 玻璃 */}
+      {Array.from({ length: cols }, (_, ci) => {
+        const px = -width / 2 + (ci + 0.5) * panelW;
+        const isFirst = ci === 0;
+        return (
+          <group key={`c${ci}`} position={[px, 0, 0.005]}>
+            {/* 右侧竖压条 */}
+            <mesh position={[panelW / 2 + mullionW / 4, 0, 0]}>
+              <boxGeometry args={[mullionW / 2, height + 0.08, 0.060]} />
+              <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
+            </mesh>
+            {/* 第一块左侧也补一条 */}
+            {isFirst && (
+              <mesh position={[-(panelW / 2 + mullionW / 4), 0, 0]}>
+                <boxGeometry args={[mullionW / 2, height + 0.08, 0.060]} />
+                <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} />
+              </mesh>
+            )}
+            {/* 玻璃 —— 整高一片（不再按行切，避免横压条之外的多余水平缝） */}
+            {Array.from({ length: rows }, (_, ri) => {
+              const py = -height / 2 + (ri + 0.5) * rowH;
+              const hasDoor = doors.some(d => Math.abs(d.cx - px) < panelW / 2 + d.w / 2 && ri === 0);
+              return (
+                <mesh key={`p${ri}`} position={[0, py, 0.020]} renderOrder={10}>
+                  <boxGeometry args={[panelW - 0.004, rowH * 0.985, 0.008]} />
+                  <meshStandardMaterial
+                    color={hasDoor ? "#BFD8E4" : "#C8E0EA"}
+                    transparent
+                    opacity={0.32}
+                    depthWrite={false}
+                    roughness={0.06}
+                    metalness={0.04}
+                    envMapIntensity={0.35}
+                    side={THREE.DoubleSide}
+                    {...overlayMaterialProps(2)}
+                  />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })}
+
+      {/* 大门 —— 推拉式玻璃门：和玻璃幕墙同款玻璃材质，只多一道细黑
+          竖框做"门扇分隔"。之前是 #111 厚框 + 染色玻璃，从外面看像独立
+          的木门贴在幕墙上，违和。现在融在幕墙里几乎看不出来，只有竖
+          中线和地板/天花处的纤细横轨提示这里能开。 */}
       {doors.map((door, di) => (
-        <group key={`door-${di}`} position={[door.cx, -height / 2 + door.h / 2, 0.04]}>
+        <group key={`door-${di}`} position={[door.cx, -height / 2 + door.h / 2, 0.005]}>
+          {/* 两扇门玻璃 —— 和主玻璃同色同透明度 */}
           {[-door.w / 4, door.w / 4].map((ox, si) => (
-            <mesh key={si} position={[ox, 0, 0]}>
-              <planeGeometry args={[door.w / 2 - 0.04, door.h - 0.06]} />
-              <meshPhysicalMaterial color="#90B8CC" transmission={0.60} roughness={0.02} transparent opacity={0.44} side={THREE.DoubleSide} />
+            <mesh key={si} position={[ox, 0, 0.020]} renderOrder={10}>
+              <boxGeometry args={[door.w / 2 - 0.020, door.h - 0.05, 0.008]} />
+              <meshStandardMaterial
+                color="#C8E0EA"
+                transparent
+                opacity={0.45}
+                depthWrite={false}
+                roughness={0.06}
+                metalness={0.04}
+                envMapIntensity={0.35}
+                side={THREE.DoubleSide}
+                {...overlayMaterialProps(2)}
+              />
             </mesh>
           ))}
+          {/* 门框 —— 顶/底细横轨 + 左/中/右细竖框，全部用 #181A1E */}
           {[
-            [0, door.h / 2, door.w, 0.06] as const,
-            [0, -door.h / 2, door.w, 0.06] as const,
-            [-door.w / 2, 0, 0.06, door.h] as const,
-            [0, 0, 0.06, door.h] as const,
-            [door.w / 2, 0, 0.06, door.h] as const,
+            [0, door.h / 2,  door.w, 0.035] as const,
+            [0, -door.h / 2, door.w, 0.035] as const,
+            [-door.w / 2, 0, 0.035, door.h] as const,
+            [0, 0,           0.035, door.h] as const,
+            [door.w / 2, 0,  0.035, door.h] as const,
           ].map(([bx, by, bw, bh], bi) => (
-            <mesh key={bi} position={[bx, by, 0.02]}>
-              <boxGeometry args={[bw, bh, 0.07]} />
-              <meshStandardMaterial color="#111" metalness={0.92} roughness={0.12} />
+            <mesh key={bi} position={[bx, by, 0]}>
+              <boxGeometry args={[bw, bh, 0.045]} />
+              <meshStandardMaterial color="#181A1E" metalness={0.92} roughness={0.16} envMapIntensity={2.4} />
             </mesh>
           ))}
         </group>
@@ -284,6 +321,7 @@ interface FacadeBlock {
   mergedStart: number; // plan-axis start of merged span
   mergedEnd:   number;
   primaryRoom: RoomType;  // first room in the merged block (for glass click)
+  rooms: RoomType[];      // distinct rooms covered by this merged block
   doorEntries: Array<{ roomWallStart: number; d: DoorConfig; room: RoomType }>;
   winEntries:  Array<{ roomWallStart: number; w: WindowConfig; room: RoomType }>;
 }
@@ -327,7 +365,8 @@ function buildFacadeBlocks(segs: ExteriorWallSeg[]): FacadeBlock[] {
         return seg.windows.map(w => ({ roomWallStart: rws, w, room: seg.room }));
       });
       const primaryRoom = grp[0].room;
-      result.push({ floorIndex: fi, side, wallCoord: wc, mergedStart, mergedEnd, primaryRoom, doorEntries, winEntries });
+      const rooms = Array.from(new Set(grp.map(s => s.room)));
+      result.push({ floorIndex: fi, side, wallCoord: wc, mergedStart, mergedEnd, primaryRoom, rooms, doorEntries, winEntries });
     }
   }
   return result;
@@ -673,6 +712,39 @@ export default function FloorPlanBuilding({
   // 把相邻共面段合并 → 玻璃幕墙不再出现双框缝
   const facadeBlocks = useMemo(() => buildFacadeBlocks(allSegs), [allSegs]);
 
+  // 哪些房间最终会被渲染成玻璃幕墙？复刻外墙渲染那段判玻璃的逻辑
+  // （显式 override > auto-detected glass coverage > isGlassVilla 南面），
+  // 然后把这些房间收集到 Set 里。下面"房间盒子 / 低 LOD 家具 / 背景填充板"
+  // 都用这个 Set 做条件，自动判玻璃的房间也能得到暖色发光内饰，不必靠
+  // 用户手动切到"玻璃幕墙"。
+  const glassRooms = useMemo(() => {
+    const set = new Set<string>();
+    for (const block of facadeBlocks) {
+      const fp = floorPlans[block.floorIndex];
+      if (!fp) continue;
+      const styles = block.rooms.map(r => fp.roomExteriorStyle?.[r] ?? "auto");
+      const forceGlass    = styles.some(s => s === "glass");
+      const forceConcrete = !forceGlass && styles.some(s => s === "concrete");
+      const segLen = (block.mergedEnd - block.mergedStart) * CM;
+      const totalWinLen = block.winEntries.reduce((s, e) => s + e.w.len, 0);
+      const winCoverage = segLen > 0 ? (totalWinLen * CM) / segLen : 0;
+      const isSouth = block.side === "south";
+      const isGlassWall = winCoverage > 0.55 || (isGlassVilla && isSouth);
+      // 阳台默认开放：自动判玻璃（实际上半透明栏杆效果，不再像实墙包房间）
+      const hasBalcony = block.rooms.some(r => r === "balcony" || r === "balcony2");
+      let isGlass: boolean;
+      if (forceGlass) isGlass = true;
+      else if (forceConcrete) isGlass = false;
+      else if (hasBalcony) isGlass = true;
+      else if (isGlassVilla) isGlass = isGlassWall;
+      else isGlass = false;
+      if (isGlass) {
+        for (const r of block.rooms) set.add(`${block.floorIndex}:${r}`);
+      }
+    }
+    return set;
+  }, [facadeBlocks, floorPlans, isGlassVilla]);
+
   // ── 室内渲染数据（地板 + 墙面材质 + 天花板 + 家具）────────────────────────────
   const interiorRooms = useMemo(() => {
     const result: Array<{
@@ -740,10 +812,16 @@ export default function FloorPlanBuilding({
         <meshStandardMaterial color="#D0C8B4" roughness={0.90} />
       </mesh>
 
-      {/* ── 1. 每层背景填充板（消除房间间微小缝隙，视觉统一） ── */}
+      {/* ── 1. 每层背景填充板（消除房间间微小缝隙，视觉统一） ──
+              当本层有任何 "glass" 房间时跳过：这块大背景板会从内部挡住
+              玻璃幕墙后面的视线。房间盒子各自覆盖自己的足迹，房间间
+              的小缝隙可以忽略。 */}
       {Array.from({ length: usedFloors }, (_, fi) => {
         const fp = floorPlans[fi];
         if (!fp) return null;
+        const hasGlassRoom = (fp.enabledRooms ?? [])
+          .some(r => glassRooms.has(`${fi}:${r}`));
+        if (hasGlassRoom) return null;
         // 计算本层实际包围盒
         let lMinX = Infinity, lMinY = Infinity, lMaxX = -Infinity, lMaxY = -Infinity;
         for (const r of (fp.enabledRooms ?? []).filter(r => !ROOM_DEFS[r]?.isOutdoor)) {
@@ -769,11 +847,15 @@ export default function FloorPlanBuilding({
         );
       })}
 
-      {/* ── 2. 实心房间盒子（和全局3D完全对应，覆盖在背景板上形成凹凸轮廓） ── */}
+      {/* ── 2. 实心房间盒子（和全局3D完全对应，覆盖在背景板上形成凹凸轮廓） ──
+              玻璃幕墙的房间：只画楼板和天花板，省掉 4 面墙 —— 否则盒子的
+              不透明外墙面挡住了玻璃幕墙后面的视线（用户："是被内墙挡住了
+              吗"）。相邻房间的盒子会替本房间盖住共享的内墙面。 */}
       {Array.from({ length: usedFloors }, (_, fi) => {
         const fp = floorPlans[fi];
         if (!fp) return null;
         const yBase = fi * (FLOOR_H + SLAB_T);
+        if (insideBuilding) return null; // hide when inside — avoids blocking raycasting
         return (fp.enabledRooms ?? [])
           .filter(r => !ROOM_DEFS[r]?.isOutdoor)
           .map(room => {
@@ -783,7 +865,112 @@ export default function FloorPlanBuilding({
             const rD = d.depth * CM;
             const cx = (p.x + d.width / 2 - planOffset.minX) * CM - W / 2;
             const cz = -((p.y + d.depth / 2 - planOffset.minY) * CM) + D / 2;
-            if (insideBuilding) return null; // hide when inside — avoids blocking raycasting
+            // Glass-curtain room: drop the opaque box and stage a "warm
+            // emissive interior" exactly like the template's RichGlassInterior.
+            // Key trick: walls/ceiling SELF-EMIT (emissive map) so the
+            // room reads as lit-from-within through the glass — visual
+            // depth comes from emissive surfaces, NOT from glass opacity
+            // or external point lights.
+            // We use the precomputed glassRooms set (built from facadeBlocks)
+            // so auto-detected glass walls also get the emissive interior,
+            // not only the explicit "glass" UI override.
+            if (glassRooms.has(`${fi}:${room}`)) {
+              // 玻璃幕墙房间室内：5 块独立发光平面（4 墙 + 天花板）+ 地板。
+              // 之前用 BackSide 盒子，但盒子的侧墙在斜角下会产生奇怪的
+              // "立柱状"剪影（用户："2F 有几个深色立柱状物体"）。
+              // 拆成 5 块独立 plane，每块法线朝向房间内部（FrontSide 默
+              // 认即可），从玻璃外看到的就是连续的发光奶油墙面。
+              const wallC   = "#EDE6D8";
+              const ceilC   = "#F3EEE4";
+              const floorC  = "#5A3E22";
+              const emissiveW = "#F4DDB0";
+              const inset   = 0.08;
+              const iW = rW - inset * 2;
+              const iD = rD - inset * 2;
+              const wallH = FLOOR_H - 0.04;
+              const cy = yBase + FLOOR_H / 2;
+              const isLarge = iW * iD > 12;
+
+              const wallMat = (
+                <meshStandardMaterial
+                  color={wallC}
+                  roughness={0.82}
+                  metalness={0.02}
+                  emissive={emissiveW}
+                  emissiveIntensity={0.55}
+                  side={THREE.FrontSide}
+                />
+              );
+
+              return (
+                <group key={`gbox-${fi}-${room}`} position={[cx, cy, cz]}>
+                  {/* 后墙（+Z 方向，朝 -Z 即朝室内）*/}
+                  <mesh position={[0, 0,  iD / 2 - 0.005]} rotation={[0, Math.PI, 0]}>
+                    <planeGeometry args={[iW, wallH]} />
+                    {wallMat}
+                  </mesh>
+                  {/* 前墙（-Z 方向，朝 +Z 即朝室内）*/}
+                  <mesh position={[0, 0, -iD / 2 + 0.005]}>
+                    <planeGeometry args={[iW, wallH]} />
+                    {wallMat}
+                  </mesh>
+                  {/* 左墙（-X 方向，朝 +X 即朝室内）*/}
+                  <mesh position={[-iW / 2 + 0.005, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+                    <planeGeometry args={[iD, wallH]} />
+                    {wallMat}
+                  </mesh>
+                  {/* 右墙（+X 方向，朝 -X 即朝室内）*/}
+                  <mesh position={[ iW / 2 - 0.005, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+                    <planeGeometry args={[iD, wallH]} />
+                    {wallMat}
+                  </mesh>
+
+                  {/* 天花板 —— DoubleSide emissive */}
+                  <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, FLOOR_H / 2 - 0.05, 0]}>
+                    <planeGeometry args={[iW, iD]} />
+                    <meshStandardMaterial
+                      color={ceilC}
+                      emissive="#F8E89C"
+                      emissiveIntensity={0.30}
+                      roughness={0.94}
+                      side={THREE.DoubleSide}
+                    />
+                  </mesh>
+                  {/* 地板 —— 胡桃木 */}
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -FLOOR_H / 2 + 0.04, 0]} receiveShadow>
+                    <planeGeometry args={[iW, iD]} />
+                    <meshStandardMaterial color={floorC} roughness={0.55} />
+                  </mesh>
+
+                  {/* 吊灯（仅 ≥12㎡ 的房间）*/}
+                  {isLarge && (
+                    <>
+                      <mesh position={[0, FLOOR_H / 2 - 0.40, 0]}>
+                        <cylinderGeometry args={[0.008, 0.008, 0.30, 8]} />
+                        <meshStandardMaterial color="#222" roughness={0.6} />
+                      </mesh>
+                      <mesh position={[0, FLOOR_H / 2 - 0.62, 0]}>
+                        <sphereGeometry args={[0.13, 16, 10]} />
+                        <meshStandardMaterial
+                          color="#FFE0A0"
+                          emissive="#FFC966"
+                          emissiveIntensity={2.4}
+                          roughness={0.40}
+                        />
+                      </mesh>
+                    </>
+                  )}
+                </group>
+              );
+            }
+            // 本层若有任何玻璃房间：跳过 *所有* 不透明房间盒子。
+            // 否则相邻小房间（卫生间/衣帽间）的盒子会从玻璃外透出来
+            // 当"立柱"。外墙的 ConcreteFacade overlay 已经提供了非玻璃
+            // 面的可见表面，interiorRooms.map 的 BackSide 内墙处理了
+            // 从室内看，不会因为跳过这个 bulk box 失去任何东西。
+            const floorHasGlass = (fp.enabledRooms ?? [])
+              .some(r => glassRooms.has(`${fi}:${r}`));
+            if (floorHasGlass) return null;
             return (
               <mesh key={`box-${fi}-${room}`} position={[cx, yBase + FLOOR_H / 2, cz]} castShadow receiveShadow>
                 <boxGeometry args={[rW, FLOOR_H, rD]} />
@@ -811,18 +998,32 @@ export default function FloorPlanBuilding({
         // X轴翻转：south/east 的旋转使 local+X 方向反转
         const flipX   = side === "south" || side === "east";
 
-        // Facade treatment — data-driven when possible:
-        // If windows cover >55% of the wall segment, treat as glass curtain.
-        // Otherwise use concrete+punched-windows.
-        // West upper-floor gets wood cladding accent for the glass villa.
+        // Facade treatment — per-room override has highest priority, then
+        // data-driven auto:
+        //  · Any room in this merged block set to "glass"    → glass curtain
+        //  · Any room set to "concrete" (and none to glass)  → concrete facade
+        //  · Otherwise: auto — windows >55% coverage ⇒ glass, else concrete.
+        const styleFP   = floorPlans[floorIndex];
+        const blockRoomStyles = block.rooms.map(r => styleFP?.roomExteriorStyle?.[r] ?? "auto");
+        const forceGlass    = blockRoomStyles.some(s => s === "glass");
+        const forceConcrete = !forceGlass && blockRoomStyles.some(s => s === "concrete");
+
         const totalWinLen = winEntries.reduce((s, e) => s + e.w.len, 0);
         const winCoverage = segLen > 0 ? (totalWinLen * CM) / segLen : 0;
         const isGlassWall = winCoverage > 0.55 || (isGlassVilla && isSouth);
-        const facade = isGlassVilla
-          ? (isGlassWall ? "glass"
-            : side === "west" && floorIndex > 0 ? "wood"
-            : "concrete")
-          : "concrete";
+
+        let facade: "glass" | "concrete" | "wood";
+        if (forceGlass) {
+          facade = "glass";
+        } else if (forceConcrete) {
+          facade = "concrete";
+        } else if (isGlassVilla) {
+          facade = isGlassWall ? "glass"
+                 : side === "west" && floorIndex > 0 ? "wood"
+                 : "concrete";
+        } else {
+          facade = "concrete";
+        }
 
         // ── 位置 & 旋转（使用合并块中心坐标）──
         const midCoord = mergedStart + (mergedEnd - mergedStart) / 2;
@@ -872,50 +1073,12 @@ export default function FloorPlanBuilding({
         });
 
         // ── 玻璃幕墙 ──
+        // 不再有 onClick 进入房间 —— 用户在左侧房间列表/顶部漫游按钮
+        // 显式进入。3D 玻璃幕墙仅作展示。
         if (facade === "glass") {
           return (
             <group key={`gl-${bi}`} position={[px, yMid, pz]} rotation={rot}>
-              <GlassCurtain width={segLen} height={FLOOR_H} floorH={FLOOR_H} doors={doorInfos} />
-              {/* Clickable door hit-zones on glass curtain */}
-              {block.doorEntries.map((de, di) => {
-                const rawX = (de.roomWallStart + (de.d.pos ?? 0) + de.d.len / 2 - mergedStart) * CM - segLen / 2;
-                const cx   = flipX ? -rawX : rawX;
-                const dH   = Math.min((de.d.h ?? 210) * CM, FLOOR_H - 0.05);
-                return (
-                  <mesh
-                    key={`dh-${di}`}
-                    position={[cx, -FLOOR_H / 2 + dH / 2, 0.18]}
-                    onClick={(e) => { e.stopPropagation(); enterRoom(de.room, floorIndex); }}
-                    onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = "pointer"; }}
-                    onPointerOut={() => { document.body.style.cursor = "default"; }}
-                  >
-                    <boxGeometry args={[de.d.len * CM, dH, 0.01]} />
-                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-                  </mesh>
-                );
-              })}
-              {/* Clicking anywhere on the glass curtain enters the primary room */}
-              <mesh
-                position={[0, 0, 0.20]}
-                onClick={(e) => { e.stopPropagation(); enterRoom(block.primaryRoom, floorIndex); }}
-                onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = "pointer"; setHoveredRoom({ room: block.primaryRoom, fi: floorIndex }); }}
-                onPointerOut={() => { document.body.style.cursor = "default"; setHoveredRoom(null); }}
-              >
-                <planeGeometry args={[segLen, FLOOR_H]} />
-                <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-              </mesh>
-              {/* Tooltip */}
-              {hoveredRoom?.room === block.primaryRoom && hoveredRoom?.fi === floorIndex && (
-                <Html position={[0, FLOOR_H / 2 + 0.3, 0.25]} center style={{ pointerEvents: "none" }}>
-                  <div style={{
-                    background: "rgba(15,23,42,0.92)", color: "white", padding: "4px 10px",
-                    borderRadius: 8, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
-                    border: "1px solid rgba(99,102,241,0.6)", backdropFilter: "blur(8px)",
-                  }}>
-                    点击进入 {ROOM_DEFS[block.primaryRoom]?.name ?? block.primaryRoom} →
-                  </div>
-                </Html>
-              )}
+              <GlassCurtain width={segLen} height={FLOOR_H} floorH={FLOOR_H} doors={floorIndex === 0 ? doorInfos : []} />
             </group>
           );
         }
@@ -940,39 +1103,6 @@ export default function FloorPlanBuilding({
         return (
           <group key={`co-${bi}`} position={[px, yMid, pz]} rotation={rot}>
             <ConcreteFacade width={segLen} height={FLOOR_H} windows={winInfos} />
-            {/* Clickable window hit-zones on concrete facade */}
-            {block.winEntries.map((we, wi) => {
-              const rawX  = (we.roomWallStart + (we.w.pos ?? 0) + we.w.len / 2 - mergedStart) * CM - segLen / 2;
-              const lx    = flipX ? -rawX : rawX;
-              const wH    = (we.w.h ?? 150) * CM;
-              const sill  = (we.w.sill ?? 90) * CM;
-              const winKey = `${bi}-${wi}`;
-              const isHov = hoveredRoom?.room === we.room && hoveredRoom?.fi === floorIndex;
-              return (
-                <group key={`wh-${wi}`}>
-                  <mesh
-                    position={[lx, -FLOOR_H / 2 + sill + wH / 2, 0.12]}
-                    onClick={(e) => { e.stopPropagation(); enterRoom(we.room, floorIndex); }}
-                    onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = "pointer"; setHoveredRoom({ room: we.room, fi: floorIndex }); }}
-                    onPointerOut={() => { document.body.style.cursor = "default"; setHoveredRoom(null); }}
-                  >
-                    <boxGeometry args={[we.w.len * CM, wH, 0.01]} />
-                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-                  </mesh>
-                  {isHov && (
-                    <Html position={[lx, -FLOOR_H / 2 + sill + wH + 0.2, 0.15]} center style={{ pointerEvents: "none" }}>
-                      <div style={{
-                        background: "rgba(15,23,42,0.92)", color: "white", padding: "4px 10px",
-                        borderRadius: 8, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
-                        border: "1px solid rgba(99,102,241,0.6)", backdropFilter: "blur(8px)",
-                      }}>
-                        点击进入 {ROOM_DEFS[we.room]?.name ?? we.room} →
-                      </div>
-                    </Html>
-                  )}
-                </group>
-              );
-            })}
           </group>
         );
       })}
@@ -1064,8 +1194,12 @@ export default function FloorPlanBuilding({
         const effectiveDoors = doors.length > 0 ? doors : autoDoor ? [autoDoor] : [];
         return (
           <group key={`int-${fi}-${room}`}>
-            {/* 内墙面：BackSide box — 仅在室内侧可见，不会遮挡窗框/玻璃 */}
-            {!isStair && !isHallway && (
+            {/* 内墙面：BackSide box — 仅在室内侧可见，不会遮挡窗框/玻璃。
+                玻璃房间跳过 —— 这间已经在外层用 5 块独立 emissive plane
+                做了室内壳；再叠这个低 emissive 的 BackSide box 会从玻璃
+                外看到额外的"立柱"剪影（双层 BackSide 叠加 + 房间间共享
+                墙的盒侧面在斜角下露出）。 */}
+            {!isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (
               <mesh position={[cx, yBase + FLOOR_H / 2, cz]} raycast={() => null}>
                 <boxGeometry args={[rW - 0.02, FLOOR_H - 0.01, rD - 0.02]} />
                 <meshStandardMaterial color={wallColor} side={THREE.BackSide} roughness={0.80}
@@ -1098,8 +1232,10 @@ export default function FloorPlanBuilding({
                 {fi > 0 && <StairwellRailing rW={rW} rD={rD} />}
               </group>
             )}
-            {/* 门：有配置门用配置门，否则用自动门（向室内/走廊方向开） */}
-            {!isStair && effectiveDoors.map((door, di) => {
+            {/* 门：外观模式 + 本层有任何玻璃房间 → 跳过本层所有内部门：
+                非玻璃房间（主卧/书房）的门也会从邻居玻璃幕墙看进来变
+                "立柱"。门是内视角装饰，对外观无贡献，安全跳过。 */}
+            {!isStair && !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) && effectiveDoors.map((door, di) => {
               const dW  = door.len * CM;
               const dH  = (door.h ?? 200) * CM;
               const dPos = door.pos * CM;
@@ -1199,8 +1335,12 @@ export default function FloorPlanBuilding({
               );
             })}
 
-            {/* 窗框：在有窗户的墙面渲染窗框（仅室内视角，嵌在墙面内侧） */}
-            {!isStair && windows.map((win, wi) => {
+            {/* 窗框：在有窗户的墙面渲染窗框（仅室内视角，嵌在墙面内侧）
+                外观模式 + 本层有任何玻璃房间 → 跳过本层所有窗框：
+                即使是非玻璃房间（如主卧）的窗户，也可能从邻居的玻璃
+                幕墙看进来变成"立柱"。窗框是内视角装饰，对外观视角无
+                贡献，安全跳过。 */}
+            {!isStair && !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) && windows.map((win, wi) => {
               const wW   = win.len * CM;
               const wH   = (win.h    ?? 150) * CM;
               const wSill = (win.sill ?? 90)  * CM;
@@ -1260,10 +1400,13 @@ export default function FloorPlanBuilding({
                 • 外观模式: 用 furn.color 的彩色 box 占位（footprint =
                   width × depth × height，几乎零开销，50 件家具仍流畅）
                 • 漫游/单房间模式: 加载真实 GLTF
-                这样玻璃幕墙别墅在外观也能透出"屋里有沙发/床/桌子"的
-                体量感，又不会因为同时 50+ GLTF 加载冻浏览器。 */}
+                • 玻璃幕墙房间: 跳过 —— 已有模板风格的剪影家具
+                  （沙发 / 茶几 / 吊灯）在玻璃后专门画了，再叠彩色 box
+                  会乱。 */}
             <group position={[cx, yBase, cz]}>
-              {!isStair && placedItems
+              {!isStair
+                && !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`)))
+                && placedItems
                 .filter(p => {
                   const fItem = getFurnitureById(p.furnitureId);
                   if (fItem?.category === "curtain") return false;
@@ -1291,6 +1434,9 @@ export default function FloorPlanBuilding({
                     ? (FLOOR_H - fh)
                     : (modP.elevationY ?? 0) / 100;
                   const rotY = (modP.rotation * Math.PI) / 180;
+                  // 加点 emissive 让 box 在玻璃后面也看得见 — 内部光线
+                  // 经过 transparent 玻璃后会暗一截，靠 emissive 弥补。
+                  const boxColor = fItem.color ?? "#A8A8A8";
                   return (
                     <mesh
                       key={p.instanceId}
@@ -1300,7 +1446,9 @@ export default function FloorPlanBuilding({
                     >
                       <boxGeometry args={[fw, fh, fd]} />
                       <meshStandardMaterial
-                        color={fItem.color ?? "#A8A8A8"}
+                        color={boxColor}
+                        emissive={boxColor}
+                        emissiveIntensity={0.18}
                         roughness={0.7}
                         metalness={0.05}
                       />

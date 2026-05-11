@@ -461,6 +461,13 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
   const wallRightExterior   = mats?.wallRightExterior;
   const setWallExterior = useDesignerStore(s => s.setWallExterior);
   const wallMaterials = useMemo(() => MATERIALS.filter(m => m.category === "wall"), []);
+
+  // Exterior facade style — "auto" (legacy: long+windowy ⇒ glass), "glass" (force
+  // glass curtain wall), "concrete" (force opaque facade with windows).
+  const exteriorStyle = useDesignerStore(
+    s => s.floorPlans[s.activeFloor].roomExteriorStyle?.[activeRoom] ?? "auto"
+  );
+  const setRoomExteriorStyle = useDesignerStore(s => s.setRoomExteriorStyle);
   const [extColorSide, setExtColorSide] = useState<"all" | "back" | "front" | "left" | "right">("all");
 
   const currentExt =
@@ -478,6 +485,32 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
   return (
     <div className="px-4 pb-4 border-t border-gray-100 pt-3">
       <div className="text-[11px] font-black text-gray-800 mb-2">🏮 {t.exteriorDecorTitle(customRoomMeta[activeRoom]?.name ?? t.roomNames[activeRoom] ?? ROOM_DEFS[activeRoom].name)}</div>
+
+      {/* Exterior facade style — per-room override (auto / glass curtain / concrete) */}
+      <div className="mb-2 p-2 rounded-xl bg-gray-50 border border-gray-100">
+        <div className="text-[9px] text-gray-500 mb-1">
+          {locale === "en" ? "Exterior facade style" : "外墙样式"}
+        </div>
+        <div className="flex gap-1">
+          {([
+            { id: "auto",     zh: "自动",   en: "Auto" },
+            { id: "concrete", zh: "实墙",   en: "Solid" },
+            { id: "glass",    zh: "玻璃幕墙", en: "Glass" },
+          ] as const).map(opt => (
+            <button
+              key={opt.id}
+              onClick={() => setRoomExteriorStyle(activeRoom, opt.id)}
+              className={`flex-1 text-[10px] py-1.5 rounded-md transition-all ${
+                exteriorStyle === opt.id
+                  ? "bg-blue-500 text-white font-semibold"
+                  : "bg-white text-gray-600 border border-gray-200"
+              }`}
+            >
+              {locale === "en" ? opt.en : opt.zh}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Exterior wall material selector — per-face. "全部" sets the
           room-wide default; a specific side writes an override that

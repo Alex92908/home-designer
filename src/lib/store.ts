@@ -413,6 +413,7 @@ interface DesignerStore {
   setDoorLen: (room: RoomType, len: number) => void;
   setDoorH:   (room: RoomType, h: number) => void;
   setDoorStyle: (room: RoomType, style: import("./types").DoorStyle) => void;
+  setRoomExteriorStyle: (room: RoomType, style: "glass" | "concrete" | "auto") => void;
   updateWindow: (room: RoomType, id: string, patch: Partial<WindowConfig>) => void;
 
   // Multi-door (new schema). Doors per room are an array; the legacy
@@ -1666,6 +1667,12 @@ export const useDesignerStore = create<DesignerStore>()(
 
       setDoorStyle: (room, style) => {
         updateFloor(get, set, fp => ({ roomDoorStyle: { ...(fp.roomDoorStyle ?? {}), [room]: style } }));
+      },
+
+      setRoomExteriorStyle: (room, style) => {
+        updateFloor(get, set, fp => ({
+          roomExteriorStyle: { ...(fp.roomExteriorStyle ?? {}), [room]: style },
+        }));
       },
 
       updateWindow: (room, id, patch) => {

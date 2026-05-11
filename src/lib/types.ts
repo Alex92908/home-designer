@@ -532,6 +532,13 @@ export interface FloorPlan {
   /** Per-room non-rectangular polygon override (L型/凸字型/etc).
    *  Absent entry = rectangle fallback using roomDimensions. */
   roomShapes?: Partial<Record<RoomType, import("./roomGeometry").RoomShape>>;
+  /** Per-room exterior facade style override. Controls how the OUTSIDE face
+   *  of this room's exterior walls is rendered in 效果图 (FloorPlanExterior).
+   *  - "glass":    full-height glass curtain wall
+   *  - "concrete": opaque concrete facade with windows cut out
+   *  - undefined / "auto": automatic — long segments + many windows ⇒ glass,
+   *                        otherwise concrete (legacy behaviour). */
+  roomExteriorStyle?: Partial<Record<RoomType, "glass" | "concrete" | "auto">>;
   /** Outdoor yard plan for THIS floor (only floor 0 is rendered in 3D
    *  exterior view; others are reserved for future "ground vs roof deck"
    *  distinction). Drawn by user in the 院子图 (yard2d) view. */

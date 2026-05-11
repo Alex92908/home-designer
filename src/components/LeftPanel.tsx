@@ -198,8 +198,13 @@ function WallSection() {
   const setWallSide    = useDesignerStore((s) => s.setWallSide);
   const setWallLower   = useDesignerStore((s) => s.setWallLower);
   const setWallSplitHeight = useDesignerStore((s) => s.setWallSplitHeight);
+  const exteriorStyle  = useDesignerStore(
+    (s) => s.floorPlans[s.activeFloor].roomExteriorStyle?.[activeRoom] ?? "auto"
+  );
+  const setRoomExteriorStyle = useDesignerStore((s) => s.setRoomExteriorStyle);
   const [target, setTarget] = useState<WallTarget>("all");
   const t = useT();
+  const locale = useLocale();
 
   const wallItems = MATERIALS.filter(m => m.category === "wall");
   const splitH = roomMaterials.wallSplitHeight ?? 110;
@@ -227,6 +232,38 @@ function WallSection() {
 
   return (
     <div>
+      {/* 外墙样式（per-room exterior facade override）—— 决定本房间的外墙在
+          "效果图驱动外观"里被渲染成自动判定、实墙还是玻璃幕墙。同样的
+          toggle 也出现在右面板的「🏮 外墙装饰」区块。 */}
+      <div className="mb-2 p-2 rounded-xl" style={{ background: "var(--ds-surface-2)", border: "1px solid var(--ds-border-soft)" }}>
+        <div className="text-[9px] mb-1" style={{ color: "var(--ds-text-3)" }}>
+          {locale === "en" ? "Exterior facade style" : "外墙样式"}
+        </div>
+        <div className="flex gap-1">
+          {([
+            { id: "auto",     zh: "自动",     en: "Auto" },
+            { id: "concrete", zh: "实墙",     en: "Solid" },
+            { id: "glass",    zh: "玻璃幕墙", en: "Glass" },
+          ] as const).map(opt => {
+            const active = exteriorStyle === opt.id;
+            return (
+              <button
+                key={opt.id}
+                onClick={() => setRoomExteriorStyle(activeRoom, opt.id)}
+                className="flex-1 text-[10px] py-1.5 rounded-md transition-all"
+                style={
+                  active
+                    ? { background: "#007AFF", color: "white", fontWeight: 600 }
+                    : { background: "var(--ds-surface)", color: "var(--ds-text-2)", border: "1px solid var(--ds-border)" }
+                }
+              >
+                {locale === "en" ? opt.en : opt.zh}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-1.5 px-0.5">
         <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--ds-text-3)" }}>
           {t.wallTargetLabel}

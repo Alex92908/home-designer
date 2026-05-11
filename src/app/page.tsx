@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import LeftPanel from "@/components/LeftPanel";
 import RightPanel from "@/components/RightPanel";
 import ExteriorPanel from "@/components/ExteriorPanel";
+import ExteriorRoomList from "@/components/ExteriorRoomList";
 import TopBar from "@/components/TopBar";
 import RoomSidebar from "@/components/RoomSidebar";
 import RightPanelAll from "@/components/RightPanelAll";
@@ -278,9 +279,10 @@ export default function Home() {
   const leftPanel = isAll
     ? <FloorPlanAllRoomPanel />
     : isYard2d ? <YardPlanLibrary />
+    : (viewMode === "exterior") ? <ExteriorRoomList />
     : (viewMode === "3d" || viewMode === "2d" || isGlobal3d) ? <LeftPanel />
     : null;
-  const leftPanelWidth = isAll ? 224 : isYard2d ? 200 : 256;
+  const leftPanelWidth = isAll ? 224 : isYard2d ? 200 : (viewMode === "exterior") ? 232 : 256;
   const rightPanel = isAll
     ? <RightPanelAll />
     : isYard2d    ? <YardPlanInspector />
