@@ -8,6 +8,7 @@ import { BlendFunction } from "postprocessing";
 import { Suspense } from "react";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
+import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
@@ -2407,13 +2408,15 @@ function Artwork({ color, w, h, imageUrl }: MeshProps & { imageUrl?: string }) {
         <meshStandardMaterial color="#3A2A1E" roughness={0.65} />
       </mesh>
       {/* Canvas — unlit when we have an image (colors guaranteed correct),
-          standard-shaded otherwise so the color still fits room lighting. */}
-      <mesh position={[0, 0, 0.015]} castShadow>
+          standard-shaded otherwise so the color still fits room lighting.
+          polygonOffset 防 z-fight：远视角下 canvas vs frame depth precision
+          会精度抖动，光靠 0.015m 位移不够，开 GPU 级别 offset。 */}
+      <mesh position={[0, 0, 0.015 + getLayerOffset("artwork")]} castShadow>
         <planeGeometry args={[w, h]} />
         {tex ? (
-          <meshBasicMaterial map={tex} toneMapped={true} />
+          <meshBasicMaterial map={tex} toneMapped={true} {...overlayMaterialProps()} />
         ) : (
-          <meshStandardMaterial color={color} roughness={0.78} />
+          <meshStandardMaterial color={color} roughness={0.78} {...overlayMaterialProps()} />
         )}
       </mesh>
     </group>
@@ -3565,20 +3568,44 @@ function RoutingLinesLayer({ room, W, D, H }: {
   const conns  = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.connections) ?? EMPTY_CONNS;
   const placed = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.placedItems ?? EMPTY_PLACED);
   if (conns.length === 0) return null;
-  const Y_WIRE = H - 0.08;
-  const Y_PIPE = 0.04;
-  const colors: Record<string, string> = {
-    "wire": "#FACC15",
-    "cold-water": "#3B82F6",
-    "hot-water": "#EF4444",
-    "drain": "#6B7280",
+  // MEP（机电）行业惯例：不同管线走墙的不同位置 + 不同走法。
+  // 5 种管线本应分层走，全画在同高度同位置 → 视觉上一团乱。
+  //
+  //                     ↑ Y (上)
+  //   热水管 (顶天 0.15m 下)       ←  墙顶包保温
+  //   弱电（网线、TV）       ←  墙腰，与强电平行≥30cm
+  //   强电（插座、开关）     ←  墙腰下沿
+  //   冷水管                       ←  靠地脚 0.10m 上
+  //   排水（DN50/DN75）            ←  最低，地下 0.15m 走，1.5% 坡度
+  //                     ↓ Y (下，地面 0)
+  //
+  // 在 XZ 平面上各管线沿墙走，但留出 30mm 横向间距避免视觉碰撞。
+  const Y: Record<string, number> = {
+    "wire":       H - 0.20,   // 强电走墙腰：天花下方 20cm
+    "cold-water": 0.10,       // 冷水管贴地脚 10cm
+    "hot-water":  H - 0.10,   // 热水管走墙顶 10cm（避免与冷凝水互扰）
+    "drain":      -0.10,      // 排水管走"地下"（视觉上沉到地板下）
   };
-  // Per-kind tube radius (m). Wires thinner (8mm), pipes thicker (12-18mm).
+  const colors: Record<string, string> = {
+    "wire":       "#FACC15",
+    "cold-water": "#3B82F6",
+    "hot-water":  "#EF4444",
+    "drain":      "#6B7280",
+  };
+  // Per-kind tube radius (m). 行业管径：电线 PVC 套管 ~16mm、给水 PPR
+  // DN20、排水 DN50。
   const radius: Record<string, number> = {
-    "wire": 0.008,
+    "wire":       0.010,
     "cold-water": 0.012,
-    "hot-water": 0.012,
-    "drain": 0.018,
+    "hot-water":  0.013,   // 包保温层略粗
+    "drain":      0.022,
+  };
+  // 横向 offset：同一墙面多种管线时错开避免完全重合
+  const xOffset: Record<string, number> = {
+    "wire":       0.00,
+    "cold-water": -0.04,
+    "hot-water":  +0.04,
+    "drain":      0.00,
   };
   return (
     <group>
@@ -3588,25 +3615,25 @@ function RoutingLinesLayer({ room, W, D, H }: {
         if (!a || !b) return null;
         const ax = (a.x / 100) - W / 2, az = (a.z / 100) - D / 2;
         const bx = (b.x / 100) - W / 2, bz = (b.z / 100) - D / 2;
-        const isWire = c.kind === "wire";
-        const Y = isWire ? Y_WIRE : Y_PIPE;
+        const y = Y[c.kind] ?? H * 0.5;
+        const xo = xOffset[c.kind] ?? 0;
         const dx = Math.abs(bx - ax), dz = Math.abs(bz - az);
         const cornerX = dx > dz ? bx : ax;
         const cornerZ = dx > dz ? az : bz;
-        // Build a 5-point polyline through the L-shape; convert to a
-        // CatmullRom curve and a TubeGeometry so the pipe has visible
-        // thickness (three.js native <line> is locked to 1px on WebGL).
+        // 5-point L-shape polyline → CatmullRom → TubeGeometry。
+        // 加 xo 偏移让冷/热水管在 X 方向错开。
         const points = [
-          new THREE.Vector3(ax, 0.05, az),
-          new THREE.Vector3(ax, Y, az),
-          new THREE.Vector3(cornerX, Y, cornerZ),
-          new THREE.Vector3(bx, Y, bz),
-          new THREE.Vector3(bx, 0.05, bz),
+          new THREE.Vector3(ax + xo, 0.05, az),
+          new THREE.Vector3(ax + xo, y,    az),
+          new THREE.Vector3(cornerX + xo, y, cornerZ),
+          new THREE.Vector3(bx + xo, y,    bz),
+          new THREE.Vector3(bx + xo, 0.05, bz),
         ];
         const curve = new THREE.CatmullRomCurve3(points, false, "catmullrom", 0.05);
         const r = radius[c.kind] ?? 0.01;
         const segments = Math.max(20, Math.floor(curve.getLength() / 0.05));
         const color = colors[c.kind] ?? "#999";
+        const isWire = c.kind === "wire";
         return (
           <mesh key={c.id} castShadow>
             <tubeGeometry args={[curve, segments, r, 8, false]} />
@@ -3805,13 +3832,14 @@ function ExteriorDecorItem({
       onClick={isLightFixture ? (e) => { e.stopPropagation(); toggleFixture(decor.instanceId); } : undefined}
     >
       {detailed ? detailed : canvasTex ? (
-        <mesh position={[0, 0, 0.005]}>
+        <mesh position={[0, 0, 0.005 + getLayerOffset("exteriorDecor")]}>
           <planeGeometry args={[w, h]} />
           <meshBasicMaterial
             map={canvasTex}
             transparent={isVine}
             alphaTest={isVine ? 0.1 : 0}
             side={THREE.DoubleSide}
+            {...overlayMaterialProps()}
           />
         </mesh>
       ) : hasImage ? (
@@ -3819,9 +3847,9 @@ function ExteriorDecorItem({
         // plane only mounts once the image is ready. Fallback shows the
         // item's color so there's still something visible while loading.
         <Suspense fallback={
-          <mesh position={[0, 0, 0.005]}>
+          <mesh position={[0, 0, 0.005 + getLayerOffset("exteriorDecor")]}>
             <planeGeometry args={[w, h]} />
-            <meshBasicMaterial color={item.color} side={THREE.DoubleSide} />
+            <meshBasicMaterial color={item.color} side={THREE.DoubleSide} {...overlayMaterialProps()} />
           </mesh>
         }>
           <MuralPlane url={item.imageUrl!} w={w} h={h} />
@@ -3881,9 +3909,9 @@ function MuralPlane({ url, w, h }: { url: string; w: number; h: number }) {
     tex.needsUpdate = true;
   }, [tex]);
   return (
-    <mesh position={[0, 0, 0.005]}>
+    <mesh position={[0, 0, 0.005 + getLayerOffset("exteriorDecor")]}>
       <planeGeometry args={[w, h]} />
-      <meshBasicMaterial map={tex} side={THREE.DoubleSide} />
+      <meshBasicMaterial map={tex} side={THREE.DoubleSide} {...overlayMaterialProps()} />
     </mesh>
   );
 }

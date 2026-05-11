@@ -9,6 +9,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
 import { useDesignerStore } from "@/lib/store";
+import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 
 // ─── three-mesh-bvh: 全局加速射线检测 ────────────────────────────────────────
 // 替换 THREE.Mesh.raycast 为 BVH 版本，复杂场景下点击响应快 5-10×
@@ -1270,9 +1271,9 @@ function HouseMuralPlane({ url, w, h }: { url: string; w: number; h: number }) {
     tex.needsUpdate = true;
   }, [tex]);
   return (
-    <mesh position={[0, 0, 0.005]}>
+    <mesh position={[0, 0, 0.005 + getLayerOffset("exteriorDecor")]}>
       <planeGeometry args={[w, h]} />
-      <meshBasicMaterial map={tex} side={THREE.DoubleSide} />
+      <meshBasicMaterial map={tex} side={THREE.DoubleSide} {...overlayMaterialProps()} />
     </mesh>
   );
 }
