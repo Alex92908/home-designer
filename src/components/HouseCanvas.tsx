@@ -3863,6 +3863,14 @@ function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: num
     const dummy = new THREE.Object3D();
     const halfW = W / 2 + 0.5;
     const halfD = D / 2 + 0.5;
+    // Pool deck exclusion zone (glass villa south yard)
+    // Pool deck: center at pz = -D/2 - deckBW - poolL/2 - 0.80, total width & depth
+    const deckBW = 2.80;
+    const poolL  = Math.min(D * 0.70, 9.50);
+    const poolW  = Math.min(W * 0.78, 11.0);
+    const deckHalfX = (poolW + deckBW * 2) / 2 + 0.30;  // with margin
+    const deckZN    = -D / 2 - 0.80;                     // deck north edge (building side)
+    const deckZS    = -D / 2 - deckBW * 2 - poolL - 0.80;// deck south edge (far side)
     let placed = 0;
     let attempts = 0;
     while (placed < count && attempts < count * 4) {
@@ -3874,6 +3882,8 @@ function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: num
       const z = Math.sin(a) * r;
       // Skip house footprint (with margin)
       if (Math.abs(x) < halfW && Math.abs(z) < halfD) continue;
+      // Skip pool deck area so blades don't poke through travertine
+      if (Math.abs(x) < deckHalfX && z > deckZS && z < deckZN) continue;
       dummy.position.set(x, -0.49, z);
       dummy.rotation.y = Math.random() * Math.PI * 2;
       const s = 0.7 + Math.random() * 0.7;
