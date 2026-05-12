@@ -6193,96 +6193,13 @@ export default function HouseCanvas() {
             <meshStandardMaterial color="#D8D0BC" roughness={0.88} metalness={0.0} />
           </mesh>
         )}
-        {/* ── Floor-plan-driven: curated landscape trees (cypress + olive) ── */}
-        {_buildingType === "floor-plan-driven" && !insideBuilding && (
-          <>
-            {/* Flanking cypresses — formal Mediterranean sentinels at east & west */}
-            <Tree x={-(W / 2 + 2.2)} z={-D * 0.20} type="cypress" scale={1.3} />
-            <Tree x={-(W / 2 + 2.8)} z={ D * 0.25} type="cypress" scale={1.1} />
-            <Tree x={  W / 2 + 2.2}  z={-D * 0.20} type="cypress" scale={1.2} />
-            <Tree x={  W / 2 + 2.8}  z={ D * 0.25} type="cypress" scale={1.0} />
-            {/* Olive trees — silvery foliage behind building (north side) */}
-            <Tree x={-W * 0.28}       z={ D / 2 + 3.2} type="olive"   scale={1.0} />
-            <Tree x={ W * 0.28}       z={ D / 2 + 3.2} type="olive"   scale={1.15} />
-            <Tree x={0}               z={ D / 2 + 6.0} type="olive"   scale={1.3} />
-            {/* Topiary spheres flanking the south terrace (pool side) */}
-            <Tree x={-(W * 0.35 + 1.2)} z={-(D / 2 + 1.0)} type="topiary" scale={0.85} />
-            <Tree x={  W * 0.35 + 1.2}  z={-(D / 2 + 1.0)} type="topiary" scale={0.85} />
-            {/* Farther background pines for depth */}
-            <Tree x={-(W / 2 + 6.0)} z={ D * 0.10} type="pine" scale={1.4} />
-            <Tree x={  W / 2 + 6.0}  z={ D * 0.10} type="pine" scale={1.4} />
-
-            {/* ── Stone entrance landing — wider plaza at building south face ── */}
-            <mesh position={[0, -0.493, -(D / 2 + 1.2)]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-              <planeGeometry args={[Math.min(W * 0.55, 8.0), 2.4]} />
-              <meshStandardMaterial color="#DED4BE" roughness={0.72} metalness={0.02} />
-            </mesh>
-
-            {/* ── Flower beds flanking entrance — colorful seasonal borders ── */}
-            <FlowerBed x={-W * 0.20} z={-(D / 2 + 0.55)} w={2.2} d={0.70} />
-            <FlowerBed x={ W * 0.20} z={-(D / 2 + 0.55)} w={2.2} d={0.70} />
-
-            {/* ── Gate pillars at driveway entrance (fence line) ── */}
-            {([-1.85, 1.85] as number[]).map((gpx, gi) => (
-              <group key={gi} position={[gpx, 0, D / 2 + 8.8]}>
-                {/* Stone pillar */}
-                <mesh position={[0, 0.90, 0]} castShadow>
-                  <boxGeometry args={[0.42, 1.80, 0.42]} />
-                  <meshStandardMaterial color="#CCC4B4" roughness={0.82} metalness={0.04} />
-                </mesh>
-                {/* Cap stone */}
-                <mesh position={[0, 1.86, 0]} castShadow>
-                  <boxGeometry args={[0.50, 0.12, 0.50]} />
-                  <meshStandardMaterial color="#2A2E38" roughness={0.24} metalness={0.88} envMapIntensity={1.6} />
-                </mesh>
-              </group>
-            ))}
-
-            {/* ── Accent bushes along hedge flanks ── */}
-            <Bush x={-(W / 2 + 0.80)} z={-D * 0.32} scale={0.85} />
-            <Bush x={-(W / 2 + 0.80)} z={ D * 0.22} scale={0.78} />
-            <Bush x={  W / 2 + 0.80}  z={-D * 0.32} scale={0.82} />
-            <Bush x={  W / 2 + 0.80}  z={ D * 0.22} scale={0.80} />
-
-            {/* ── Box hedge borders — formal garden borders along building flanks ── */}
-            {/* West flank hedge */}
-            <mesh position={[-(W / 2 + 0.55), 0.22, D * 0.05]} castShadow receiveShadow>
-              <boxGeometry args={[0.42, 0.44, D * 0.70]} />
-              <meshStandardMaterial color="#2A5820" roughness={0.94} />
-            </mesh>
-            {/* East flank hedge */}
-            <mesh position={[W / 2 + 0.55, 0.22, D * 0.05]} castShadow receiveShadow>
-              <boxGeometry args={[0.42, 0.44, D * 0.70]} />
-              <meshStandardMaterial color="#316428" roughness={0.92} />
-            </mesh>
-            {/* North (back) hedge strip */}
-            <mesh position={[0, 0.22, D / 2 + 0.55]} castShadow receiveShadow>
-              <boxGeometry args={[W * 0.80, 0.44, 0.42]} />
-              <meshStandardMaterial color="#2C5E24" roughness={0.93} />
-            </mesh>
-
-            {/* ── Distant tree horizon ring — hides ground-plane edge ── */}
-            <DistantTreeRing radius={Math.max(W, D) * 4.0 + 22} count={52} />
-
-            {/* ── Perimeter fence — formal boundary of the plot ── */}
-            <SlatFence
-              W={W} D={D}
-              insetX={W / 2 + 9.0}
-              insetZ={D / 2 + 9.0}
-            />
-
-            {/* ── Tree uplights — ground-level accent spots below each cypress/pine ── */}
-            {/* Cypress west pair */}
-            <pointLight position={[-(W/2+2.2), 0.4, -D*0.20]} intensity={3.5} distance={7} decay={2.2} color="#FFFBE8" />
-            <pointLight position={[-(W/2+2.8), 0.4,  D*0.25]} intensity={3.0} distance={7} decay={2.2} color="#FFFBE8" />
-            {/* Cypress east pair */}
-            <pointLight position={[  W/2+2.2,  0.4, -D*0.20]} intensity={3.5} distance={7} decay={2.2} color="#FFFBE8" />
-            <pointLight position={[  W/2+2.8,  0.4,  D*0.25]} intensity={3.0} distance={7} decay={2.2} color="#FFFBE8" />
-            {/* Pine background uplights */}
-            <pointLight position={[-(W/2+6.0), 0.5,  D*0.10]} intensity={2.8} distance={9} decay={2.0} color="#F8FFEA" />
-            <pointLight position={[  W/2+6.0,  0.5,  D*0.10]} intensity={2.8} distance={9} decay={2.0} color="#F8FFEA" />
-          </>
-        )}
+        {/* 楼层驱动外观下的"自动景观"全部移除 ——
+            包括硬编码的柏树/橄榄树/松树/球形树/石头入户台/花坛/门柱/
+            绿篱/远景树环/外周栅栏/树木 uplight。
+            理由：这些元素位置/尺寸全部硬编码到建筑 W/D，用户没法在
+            floor plan / yard plan 里精确定位或换 GLB。后续应归纳到房间
+            结构（room-driven prefab + 可换 GLB），现在先去掉避免假景。
+            院子里需要的东西用户用 YardPlan 自己摆。 */}
         <HouseBody
           W={W} D={D} settings={exterior}
           insideBuilding={insideBuilding} wallXray={wallXray}
@@ -6296,16 +6213,9 @@ export default function HouseCanvas() {
         {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
         {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}
         {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPathItems3D />}
-        {/* Modern villa yard: pool + terrace + loungers */}
-        {exterior.roofStyle === "flat" && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && (() => {
-          const BAY_V   = 1.50;
-          const mainW_v = W + BAY_V * 4;
-          return <VillaYard
-            W={W} D={D}
-            overrideW={_buildingType === "floor-plan-driven" ? W : mainW_v}
-            xOff={0}
-          />;
-        })()}
+        {/* VillaYard 自动院（池 + 露台 + 躺椅）已移除 ——
+            尺寸全部锚定建筑 W/D，用户不能调整也不能换 GLB。
+            院子家具走 YardPlan（用户自由摆放）。 */}
 
         {/* NOTE: Stairs are interior elements — not rendered in the exterior 3D
             view. The 2D floor plan shows a stair symbol when floors > 1.

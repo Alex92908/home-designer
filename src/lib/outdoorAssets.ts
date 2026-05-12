@@ -114,9 +114,10 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
   { kind: "plant.flowerPurple",label: "白屈菜", icon: "💜", category: "plant", glb: "flower_purpleA",      scale: 1.5, radiusCm: 30, color: "#9F5BC8",
     customGltfPath: "/models/outdoor_plant/celandine_01/celandine_01_1k.gltf",
     customTargetHeightM: 0.25, customAuthor: "Poly Haven CC0" },
-  { kind: "plant.grass",       label: "冰草",   icon: "🌾", category: "plant", glb: "grass_large",         scale: 1.6, radiusCm: 35, color: "#7CA45A",
-    customGltfPath: "/models/outdoor_plant/crystalline_iceplant/crystalline_iceplant_1k.gltf",
-    customTargetHeightM: 0.18, customAuthor: "Poly Haven CC0" },
+  // crystalline_iceplant 的 .bin 被截断（96KB），accessor 长 29488 解不出
+  // → "Invalid typed array length"。删 customGltfPath 走程序化 fallback，
+  // 等 .bin 重新下载完整后再开。
+  { kind: "plant.grass",       label: "冰草",   icon: "🌾", category: "plant", glb: "grass_large",         scale: 1.6, radiusCm: 35, color: "#7CA45A" },
   { kind: "plant.cactus",      label: "仙人掌", icon: "🌵", category: "plant", glb: "cactus_tall",         scale: 2.5, radiusCm: 35, color: "#5A8B5A",
     customGltfPath: "/models/outdoor_plant/cheiridopsis_succulent/cheiridopsis_succulent_1k.gltf",
     customTargetHeightM: 0.22, customAuthor: "Poly Haven CC0" },
