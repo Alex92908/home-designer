@@ -821,6 +821,69 @@ function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
           </mesh>
         </group>
       ))}
+
+      {/* ── 楼梯间出入口小屋（stair penthouse）— 北侧混凝土体量 ── */}
+      {(() => {
+        const spW  = 2.10;   // east-west width
+        const spD  = 1.60;   // north-south depth
+        const spH  = 2.55;   // height above roof slab
+        const spX  = -W * 0.34;
+        const spZ  =  D * 0.26;   // north portion of roof
+        const spY  = roofSlab + 0.05 + spH / 2;
+        const bodyColor  = "#E4E0D8";  // matches concrete facade
+        const roofCapCol = "#CCCAC4";
+        // Door dims
+        const doorW = 0.82, doorH = 2.05, doorZ = spD / 2 + 0.004;
+        return (
+          <group position={[spX, spY, spZ]}>
+            {/* Main concrete body */}
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[spW, spH, spD]} />
+              <meshStandardMaterial color={bodyColor} roughness={0.86} metalness={0.03} />
+            </mesh>
+            {/* Flat roof cap — slightly darker with metal edging */}
+            <mesh position={[0, spH / 2 + 0.032, 0]}>
+              <boxGeometry args={[spW + 0.06, 0.065, spD + 0.06]} />
+              <meshStandardMaterial color={roofCapCol} roughness={0.78} metalness={0.06} />
+            </mesh>
+            {/* Cap edge flashing — dark anodized aluminium */}
+            <mesh position={[0, spH / 2 + 0.067, 0]}>
+              <boxGeometry args={[spW + 0.08, 0.014, spD + 0.08]} />
+              <meshStandardMaterial color="#2E3240" roughness={0.22} metalness={0.90} envMapIntensity={2.0} />
+            </mesh>
+            {/* Steel door — dark charcoal, south-facing */}
+            <mesh position={[0, (-spH / 2) + doorH / 2, doorZ]} castShadow>
+              <boxGeometry args={[doorW, doorH, 0.055]} />
+              <meshStandardMaterial color="#1C1E26" roughness={0.30} metalness={0.78} envMapIntensity={1.6} />
+            </mesh>
+            {/* Door frame — stainless reveal */}
+            <mesh position={[0, (-spH / 2) + doorH / 2, doorZ + 0.006]}>
+              <boxGeometry args={[doorW + 0.055, doorH + 0.055, 0.028]} />
+              <meshStandardMaterial color="#6C7280" roughness={0.25} metalness={0.82} envMapIntensity={1.8} />
+            </mesh>
+            {/* Door handle */}
+            <mesh position={[doorW / 2 - 0.09, (-spH / 2) + doorH * 0.52, doorZ + 0.044]}>
+              <boxGeometry args={[0.022, 0.12, 0.022]} />
+              <meshStandardMaterial color="#8A9BA8" roughness={0.20} metalness={0.90} />
+            </mesh>
+            {/* Small clerestory window on south face — frosted glass strip */}
+            <mesh position={[0, spH / 2 - 0.28, doorZ + 0.004]}>
+              <boxGeometry args={[spW * 0.60, 0.22, 0.018]} />
+              <meshStandardMaterial
+                color="#B8D4E0"
+                transparent opacity={0.55}
+                roughness={0.06} metalness={0.08}
+                envMapIntensity={2.5}
+              />
+            </mesh>
+            {/* Horizontal concrete joint line */}
+            <mesh position={[0, 0.02, spD / 2 + 0.002]}>
+              <boxGeometry args={[spW + 0.002, 0.012, 0.010]} />
+              <meshStandardMaterial color="#C8C4BC" roughness={0.88} />
+            </mesh>
+          </group>
+        );
+      })()}
     </group>
   );
 }

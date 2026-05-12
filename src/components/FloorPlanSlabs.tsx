@@ -221,6 +221,15 @@ function CameraFit({ floorCount }: { floorCount: number }) {
   return null;
 }
 
+// ── Seeded xorshift32 — deterministic noise, no flicker on hot-reload ────
+function xorshift32(seed: number): () => number {
+  let s = seed >>> 0 || 1;
+  return () => {
+    s ^= s << 13; s ^= s >>> 17; s ^= s << 5;
+    return (s >>> 0) / 0x100000000;
+  };
+}
+
 // ── Canvas-baked concrete tile ground ────────────────────────
 let _groundTex: THREE.CanvasTexture | null = null;
 function getGroundTex(): THREE.CanvasTexture {
@@ -229,6 +238,7 @@ function getGroundTex(): THREE.CanvasTexture {
   const cv = document.createElement("canvas");
   cv.width = S; cv.height = S;
   const g = cv.getContext("2d")!;
+  const rand = xorshift32(0xA3B1C2D4);   // fixed seed → same texture every render
   // Base concrete grey
   g.fillStyle = "#BDBAB2";
   g.fillRect(0, 0, S, S);
@@ -241,10 +251,10 @@ function getGroundTex(): THREE.CanvasTexture {
     g.beginPath(); g.moveTo(i * TW, 0); g.lineTo(i * TW, S); g.stroke();
     g.beginPath(); g.moveTo(0, i * TW); g.lineTo(S, i * TW); g.stroke();
   }
-  // Subtle noise texture via per-tile tint
+  // Subtle noise texture via per-tile tint (seeded, deterministic)
   for (let tx = 0; tx < TILES; tx++) {
     for (let ty = 0; ty < TILES; ty++) {
-      const luma = Math.floor(Math.random() * 14 - 7);
+      const luma = Math.floor(rand() * 14 - 7);
       const base = 185 + luma;
       g.fillStyle = `rgba(${base},${base-2},${base-5},0.18)`;
       g.fillRect(tx * TW + 2, ty * TW + 2, TW - 4, TW - 4);
