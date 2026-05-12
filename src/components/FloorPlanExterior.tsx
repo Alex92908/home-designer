@@ -3532,6 +3532,53 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5e-1. 北侧庭院雕塑（garden sculpture, north yard centre）──
+           Abstract polished-steel totem: stacked tapered cylinders on a
+           dark granite plinth. Reflective, catches sky light well. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const sculX = 0;
+        const sculZ = D / 2 + 1.60;   // north yard centre
+        const isNightSc = sunHour < 6 || sunHour > 20;
+        return (
+          <group position={[sculX, 0, sculZ]}>
+            {/* Granite plinth */}
+            <mesh position={[0, 0.18, 0]} castShadow receiveShadow>
+              <boxGeometry args={[0.55, 0.36, 0.55]} />
+              <meshStandardMaterial color="#1C1E24" roughness={0.22} metalness={0.38} envMapIntensity={1.5} />
+            </mesh>
+            {/* Plinth top face — polished */}
+            <mesh position={[0, 0.362, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[0.53, 0.53]} />
+              <meshStandardMaterial color="#2A2C32" roughness={0.06} metalness={0.55} envMapIntensity={3.0} />
+            </mesh>
+            {/* Lower totem element — broad */}
+            <mesh position={[0, 0.72, 0]} castShadow>
+              <cylinderGeometry args={[0.12, 0.16, 0.70, 8]} />
+              <meshStandardMaterial color="#B8C0CC" roughness={0.06} metalness={0.96} envMapIntensity={4.0} />
+            </mesh>
+            {/* Middle element — tapered inward */}
+            <mesh position={[0, 1.22, 0]} castShadow>
+              <cylinderGeometry args={[0.085, 0.12, 0.55, 8]} />
+              <meshStandardMaterial color="#C8D0D8" roughness={0.08} metalness={0.94} envMapIntensity={4.0} />
+            </mesh>
+            {/* Upper element — slender */}
+            <mesh position={[0, 1.70, 0]} castShadow>
+              <cylinderGeometry args={[0.055, 0.085, 0.60, 8]} />
+              <meshStandardMaterial color="#D4DDE5" roughness={0.06} metalness={0.96} envMapIntensity={4.5} />
+            </mesh>
+            {/* Finial sphere */}
+            <mesh position={[0, 2.03, 0]}>
+              <sphereGeometry args={[0.065, 10, 8]} />
+              <meshStandardMaterial color="#E0E8EE" roughness={0.04} metalness={0.98} envMapIntensity={5.0} />
+            </mesh>
+            {/* Night accent light at base */}
+            {isNightSc && (
+              <pointLight position={[0, 0.40, 0.35]} intensity={2.5} distance={3.0} decay={2.0} color="#E8F0FF" />
+            )}
+          </group>
+        );
+      })()}
+
       {/* ── 5e-2. 旗杆（flagpole, NE corner of boundary）──
            Stainless steel tapered pole, 8m tall. Flag represented as a
            flat rectangle with subtle drape offset at the fly end. */}
@@ -3833,6 +3880,53 @@ export default function FloorPlanBuilding({
                 )}
               </group>
             ))}
+            {/* Patio umbrella over south loungers */}
+            <group position={[0, 0, deckEdgeZ + 0.60]}>
+              {/* Centre pole — white powder-coat */}
+              <mesh position={[0, 1.20, 0]} castShadow>
+                <cylinderGeometry args={[0.030, 0.034, 2.40, 8]} />
+                <meshStandardMaterial color="#E8EAE4" roughness={0.45} metalness={0.30} />
+              </mesh>
+              {/* Canopy — 8-panel cone */}
+              <mesh position={[0, 2.40, 0]}>
+                <coneGeometry args={[1.60, 0.55, 8, 1, true]} />
+                <meshStandardMaterial
+                  color="#E8D8A0"
+                  roughness={0.82}
+                  side={THREE.DoubleSide}
+                  transparent opacity={0.92}
+                />
+              </mesh>
+              {/* Canopy top finial */}
+              <mesh position={[0, 2.70, 0]}>
+                <sphereGeometry args={[0.040, 6, 5]} />
+                <meshStandardMaterial color="#D8D0B0" roughness={0.55} />
+              </mesh>
+              {/* Ground base weight */}
+              <mesh position={[0, 0.06, 0]}>
+                <cylinderGeometry args={[0.22, 0.22, 0.12, 8]} />
+                <meshStandardMaterial color="#5A5850" roughness={0.60} metalness={0.30} />
+              </mesh>
+            </group>
+            {/* Dining area umbrella (matches patio umbrella style) */}
+            <group position={[poolW2 / 2 + deckBW2 + 1.10, 0, pz2]}>
+              <mesh position={[0, 1.20, 0]} castShadow>
+                <cylinderGeometry args={[0.030, 0.034, 2.40, 8]} />
+                <meshStandardMaterial color="#E8EAE4" roughness={0.45} metalness={0.30} />
+              </mesh>
+              <mesh position={[0, 2.40, 0]}>
+                <coneGeometry args={[1.40, 0.50, 8, 1, true]} />
+                <meshStandardMaterial color="#C8D4E0" roughness={0.82} side={THREE.DoubleSide} transparent opacity={0.90} />
+              </mesh>
+              <mesh position={[0, 2.66, 0]}>
+                <sphereGeometry args={[0.038, 6, 5]} />
+                <meshStandardMaterial color="#B0B8C4" roughness={0.55} />
+              </mesh>
+              <mesh position={[0, 0.06, 0]}>
+                <cylinderGeometry args={[0.20, 0.20, 0.12, 8]} />
+                <meshStandardMaterial color="#5A5850" roughness={0.60} metalness={0.30} />
+              </mesh>
+            </group>
             {/* Outdoor dining table (east side of pool deck) */}
             <group position={[poolW2 / 2 + deckBW2 + 1.10, 0, pz2]}>
               {/* Table top */}
