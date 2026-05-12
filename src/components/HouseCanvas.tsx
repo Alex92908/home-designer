@@ -3,8 +3,8 @@
 import { useRef, useMemo, useEffect, useState, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
 import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars } from "@react-three/drei";
-import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA } from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
+import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, ToneMapping, HueSaturation } from "@react-three/postprocessing";
+import { BlendFunction, ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
@@ -5417,6 +5417,9 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
       {([-0.60, -0.30, 0, 0.30, 0.60] as number[]).map((xFrac, i) => {
         const lx = xFrac * (pw - 1.0);
         const lz = poolBuildZ + deckSide * 0.48;   // between pool north edge and terrace
+        // Alternate towel colors for visual variety
+        const towelColors = ["#1E6CB5", "#C84040", "#3A9650", "#D49030", "#7A3090"];
+        const towelColor = towelColors[i % towelColors.length];
         return (
           <group key={i} position={[lx, 0, lz]} rotation={[0, Math.PI, 0]}>
             {/* Frame / mattress base */}
@@ -5443,9 +5446,61 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
                 </mesh>
               ))
             )}
+            {/* Rolled towel at foot of lounger — colorful hotel-style accent */}
+            <mesh position={[0, 0.325, -0.72]}>
+              <cylinderGeometry args={[0.088, 0.088, 0.46, 10]} />
+              <meshStandardMaterial color={towelColor} roughness={0.90} />
+            </mesh>
+            {/* Towel fold end cap */}
+            <mesh position={[0, 0.325, -0.72]} rotation={[Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[0.088, 10]} />
+              <meshStandardMaterial color={towelColor} roughness={0.90} />
+            </mesh>
           </group>
         );
       })}
+
+      {/* ── Potted palm — accent planting flanking the spa ── */}
+      <group position={[pw * 0.50 + 3.8, 0, (poolBuildZ + terrBackZ) / 2]}>
+        {/* Large terracotta planter */}
+        <mesh position={[0, 0.28, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.30, 0.22, 0.56, 12]} />
+          <meshStandardMaterial color="#C06840" roughness={0.78} metalness={0.02} />
+        </mesh>
+        {/* Soil top */}
+        <mesh position={[0, 0.57, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <circleGeometry args={[0.29, 12]} />
+          <meshStandardMaterial color="#4A321C" roughness={0.98} />
+        </mesh>
+        {/* Palm trunk */}
+        <mesh position={[0, 1.50, 0]} castShadow>
+          <cylinderGeometry args={[0.08, 0.13, 1.88, 7]} />
+          <meshStandardMaterial color="#9A7040" roughness={0.88} />
+        </mesh>
+        {/* 6 palm fronds radiating from top */}
+        {[0, 60, 120, 180, 240, 300].map((deg, pi) => {
+          const rad = (deg * Math.PI) / 180;
+          return (
+            <mesh key={pi}
+              position={[Math.cos(rad) * 0.60, 2.60, Math.sin(rad) * 0.60]}
+              rotation={[0.50, rad, 0]}
+              castShadow>
+              <boxGeometry args={[1.40, 0.040, 0.28]} />
+              <meshStandardMaterial color="#2A6E34" roughness={0.88} />
+            </mesh>
+          );
+        })}
+      </group>
+
+      {/* ── Floating pool ring — colorful inflatable, adds life to the pool ── */}
+      <group position={[pw * 0.25, 0.10, pz + pd * 0.20]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0.4]}>
+          <torusGeometry args={[0.55, 0.13, 10, 24]} />
+          <meshStandardMaterial color="#FF6040" roughness={0.70} metalness={0.0} />
+        </mesh>
+        {/* Shadow under ring on water */}
+        <pointLight position={[0, -0.15, 0]} intensity={0.6} distance={1.5} decay={2} color="#40B8D0" />
+      </group>
 
       {/* ── Raised spa / water feature — right side of terrace, between building and pool ── */}
       <group position={[pw * 0.50 + 1.8, 0, (poolBuildZ + terrBackZ) / 2]}>
@@ -6504,25 +6559,35 @@ export default function HouseCanvas() {
           <EffectComposer multisampling={0} enableNormalPass>
             <SSAO
               blendFunction={BlendFunction.MULTIPLY}
-              samples={28}
-              radius={6}
-              intensity={theme.phase === "night" ? 48 : 35}
-              luminanceInfluence={0.6}
-              worldDistanceThreshold={1.5}
-              worldDistanceFalloff={3.0}
-              worldProximityThreshold={0.5}
-              worldProximityFalloff={1.0}
+              samples={32}
+              radius={theme.phase === "day" ? 5 : 7}
+              intensity={theme.phase === "night" ? 52 : 38}
+              luminanceInfluence={0.55}
+              worldDistanceThreshold={1.8}
+              worldDistanceFalloff={3.5}
+              worldProximityThreshold={0.4}
+              worldProximityFalloff={1.2}
             />
-            {/* Bloom — subtle sun glow for day, stronger for night lamps */}
+            {/* Bloom — subtle warm halos for day; stronger for night emissives */}
             <Bloom
-              intensity={theme.phase === "night" ? 0.55 : theme.phase === "dusk" ? 0.32 : 0.14}
-              luminanceThreshold={theme.phase === "night" ? 0.92 : 0.88}
-              luminanceSmoothing={0.30}
+              intensity={theme.phase === "night" ? 0.70 : theme.phase === "dusk" ? 0.38 : 0.16}
+              luminanceThreshold={theme.phase === "night" ? 0.88 : 0.90}
+              luminanceSmoothing={0.40}
               mipmapBlur
             />
-            <BrightnessContrast brightness={0.02} contrast={theme.phase === "night" ? 0.18 : 0.10} />
-            {/* Vignette — subtle cinematic darkening at frame edges */}
-            <Vignette offset={0.40} darkness={theme.phase === "night" ? 0.65 : 0.45} eskil={false} />
+            {/* ACES Filmic tone mapping — industry-standard cinematic look */}
+            <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+            {/* HueSaturation — slight saturation boost for vivid architectural renders */}
+            <HueSaturation
+              saturation={theme.phase === "night" ? -0.05 : 0.08}
+              hue={0}
+            />
+            <BrightnessContrast
+              brightness={theme.phase === "night" ? 0.0 : 0.015}
+              contrast={theme.phase === "night" ? 0.15 : 0.08}
+            />
+            {/* Vignette — cinematic frame darkening */}
+            <Vignette offset={0.38} darkness={theme.phase === "night" ? 0.62 : 0.42} eskil={false} />
             <SMAA />
           </EffectComposer>
         )}
