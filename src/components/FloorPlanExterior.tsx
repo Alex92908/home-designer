@@ -5177,28 +5177,87 @@ export default function FloorPlanBuilding({
             {isNightP && (
               <pointLight position={[0, -0.20, 0]} intensity={poolGlowI * 3.0} distance={poolW * 1.4} decay={1.6} color="#40C0F0" castShadow={false} />
             )}
-            {/* Infinity overflow edge — south side of pool: black channel with
-                thin overflow lip, looks like pool extends to horizon. */}
-            <mesh position={[0, -0.015, poolL / 2 + 0.015]}>
-              <boxGeometry args={[poolW, 0.030, 0.030]} />
-              <meshStandardMaterial color="#1A2028" roughness={0.20} metalness={0.50} envMapIntensity={2.0} />
+            {/* ── Premium infinity overflow edge — enhanced detail ──
+                Black knife-edge blade, overflow gutter with water surface,
+                visible waterfall curtain cascading down the outer face,
+                catch basin at grade level with underwater LED.  */}
+
+            {/* Knife-edge overflow blade — polished black steel, very sharp */}
+            <mesh position={[0, -0.006, poolL / 2 + 0.008]}>
+              <boxGeometry args={[poolW + 0.04, 0.020, 0.022]} />
+              <meshStandardMaterial color="#0E1218" roughness={0.08} metalness={0.92} envMapIntensity={3.5} />
             </mesh>
-            {/* Infinity overflow channel — thin water-filled slot */}
-            <mesh position={[0, -0.020, poolL / 2 + 0.045]}>
-              <boxGeometry args={[poolW, 0.015, 0.060]} />
+            {/* Overflow channel floor — dark concrete, ~0.20m behind blade */}
+            <mesh position={[0, -0.048, poolL / 2 + 0.13]}>
+              <boxGeometry args={[poolW + 0.06, 0.012, 0.24]} />
+              <meshStandardMaterial color="#22262E" roughness={0.55} metalness={0.25} />
+            </mesh>
+            {/* Overflow gutter water surface — narrow cyan slot */}
+            <mesh position={[0, -0.032, poolL / 2 + 0.13]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={12}>
+              <planeGeometry args={[poolW - 0.04, 0.22]} />
               <meshStandardMaterial
-                color="#40A0C8"
-                transparent opacity={0.88}
-                roughness={0.03} metalness={0.08}
-                emissive="#2880A8" emissiveIntensity={poolGlowI * 0.6}
-                envMapIntensity={4.0}
+                color="#50B8D8" transparent opacity={0.82}
+                roughness={0.01} metalness={0.08}
+                envMapIntensity={6.0}
+                emissive="#2898B8" emissiveIntensity={poolGlowI * 0.8}
+                depthWrite={false}
               />
             </mesh>
-            {/* Overflow gutter behind lip */}
-            <mesh position={[0, -0.040, poolL / 2 + 0.10]}>
-              <boxGeometry args={[poolW, 0.050, 0.12]} />
-              <meshStandardMaterial color="#282C32" roughness={0.45} metalness={0.35} />
+            {/* Gutter outer wall — hidden concrete retaining wall */}
+            <mesh position={[0, -0.060, poolL / 2 + 0.255]}>
+              <boxGeometry args={[poolW + 0.06, 0.16, 0.035]} />
+              <meshStandardMaterial color="#282C32" roughness={0.60} metalness={0.20} />
             </mesh>
+            {/* Waterfall curtain — full-width translucent sheet cascading down outer face of blade */}
+            <mesh position={[0, -poolDp / 2 - 0.012, poolL / 2 + 0.023]} renderOrder={13}>
+              <planeGeometry args={[poolW, poolDp + 0.02]} />
+              <meshStandardMaterial
+                color="#90D0E8"
+                transparent opacity={0.44}
+                roughness={0.02} metalness={0.04}
+                emissive="#60B8D8" emissiveIntensity={poolGlowI * 0.65}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+              />
+            </mesh>
+            {/* Waterfall shimmer layer — slightly offset for depth */}
+            <mesh position={[0, -poolDp / 2 - 0.018, poolL / 2 + 0.030]} renderOrder={14}>
+              <planeGeometry args={[poolW - 0.20, poolDp * 0.70]} />
+              <meshStandardMaterial
+                color="#C0E4F0"
+                transparent opacity={0.22}
+                roughness={0.01}
+                emissive="#80C8E0" emissiveIntensity={poolGlowI * 0.5}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+              />
+            </mesh>
+            {/* Catch basin at grade — long trough below waterfall */}
+            <mesh position={[0, -poolDp - deckT - 0.02, poolL / 2 + 0.13]}>
+              <boxGeometry args={[poolW + 0.04, 0.04, 0.30]} />
+              <meshStandardMaterial color="#1A1E24" roughness={0.40} metalness={0.40} envMapIntensity={2.0} />
+            </mesh>
+            {/* Catch basin water surface */}
+            <mesh position={[0, -poolDp - deckT + 0.008, poolL / 2 + 0.13]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={12}>
+              <planeGeometry args={[poolW - 0.02, 0.26]} />
+              <meshStandardMaterial
+                color="#3898B8" transparent opacity={0.78}
+                roughness={0.01} metalness={0.10}
+                envMapIntensity={7.0}
+                emissive="#1878A0" emissiveIntensity={poolGlowI}
+                depthWrite={false}
+              />
+            </mesh>
+            {/* Catch basin LED (night) */}
+            {poolGlowI > 0.5 && (
+              <pointLight
+                position={[0, -poolDp - deckT + 0.02, poolL / 2 + 0.13]}
+                intensity={poolGlowI * 1.8}
+                distance={poolW * 0.7}
+                decay={2}
+                color="#20A8D8"
+              />
+            )}
             {/* Pool lane markings — 2 dark blue lane lines on pool floor */}
             {Array.from({ length: 2 }, (_, li) => {
               const lx = -poolW * 0.22 + li * poolW * 0.44;
