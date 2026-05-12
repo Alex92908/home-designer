@@ -3824,12 +3824,13 @@ function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: num
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const geom = useMemo(() => {
     // 2-tri tapered blade: rectangular base narrowing to a point
+    // Slightly taller (0.22m) and wider (0.030m) for lusher ground coverage
     const g = new THREE.BufferGeometry();
     const verts = new Float32Array([
       // base-left, base-right, tip
-      -0.025, 0,    0,
-       0.025, 0,    0,
-       0,     0.18, 0,
+      -0.030, 0,    0,
+       0.030, 0,    0,
+       0,     0.22, 0,
     ]);
     g.setAttribute("position", new THREE.BufferAttribute(verts, 3));
     g.setIndex([0, 1, 2]);
@@ -3860,9 +3861,14 @@ function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: num
       dummy.scale.set(s, s, s);
       dummy.updateMatrix();
       mesh.setMatrixAt(placed, dummy.matrix);
-      // Colour variation: muted natural lawn greens, avoiding neon
-      const tint = 0.50 + Math.random() * 0.40;
-      const col = new THREE.Color(0.16 * tint + 0.06, 0.38 * tint + 0.04, 0.10 * tint);
+      // Colour variation: rich natural lawn greens with subtle warm/cool shift
+      const tint = 0.45 + Math.random() * 0.50;
+      const warmth = Math.random() * 0.08; // occasional warm yellow-green blade
+      const col = new THREE.Color(
+        0.14 * tint + 0.04 + warmth * 0.5,
+        0.36 * tint + 0.06 + warmth * 0.3,
+        0.08 * tint,
+      );
       mesh.setColorAt(placed, col);
       placed++;
     }

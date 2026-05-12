@@ -303,8 +303,8 @@ function ConcreteFacade({
   // 竖向板缝：每 120cm 一道
   const vGrooveStep  = 1.20;
   const vGrooveCount = Math.max(1, Math.round(width / vGrooveStep) - 1);
-  const grooveColor  = "#BDB8B0";   // 略深于底板，形成阴影缝
-  const baseColor    = "#C8C4BC";   // 浅暖灰混凝土
+  const grooveColor  = "#B8B3AB";   // deeper groove shadow
+  const baseColor    = "#C8C4BC";   // warm-gray concrete base
 
   return (
     <group>
@@ -313,6 +313,20 @@ function ConcreteFacade({
         <boxGeometry args={[width, height, 0.08]} />
         <meshStandardMaterial color={baseColor} roughness={0.88} metalness={0.01} />
       </mesh>
+      {/* ── 竖向分板阴影面（每 vGrooveStep 一块，交替略暗，模拟预制挂板微差）── */}
+      {Array.from({ length: Math.round(width / vGrooveStep) }, (_, vi) => {
+        const panelX = -width / 2 + (vi + 0.5) * vGrooveStep;
+        if (panelX > width / 2) return null;
+        const panelW2 = Math.min(vGrooveStep - 0.020, width - Math.abs(panelX) * 2);
+        if (panelW2 <= 0) return null;
+        const shade = vi % 2 === 0 ? "#CBC7BF" : "#C3BFB7";  // subtle alternating tone
+        return (
+          <mesh key={`pnl-${vi}`} position={[panelX, 0, 0.041]}>
+            <boxGeometry args={[panelW2, height - 0.002, 0.004]} />
+            <meshStandardMaterial color={shade} roughness={0.88} metalness={0.01} />
+          </mesh>
+        );
+      })}
 
       {/* ── 水平板缝线 ── */}
       {Array.from({ length: hGrooveCount }, (_, i) => {
