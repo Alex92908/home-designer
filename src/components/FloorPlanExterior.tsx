@@ -1405,6 +1405,83 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
         );
       })()}
 
+      {/* ── 屋顶冲浪按摩浴缸（rooftop hot tub, near loungers）──
+           Sunken square hot tub with teak surround, blue water surface
+           and underwater glow. 2m × 2m, 0.65m deep. */}
+      {(() => {
+        const htX = W * 0.10;
+        const htZ = -D * 0.05;   // open east area of roof
+        const htY = roofSlab + 0.05;
+        const htW = 1.90;  // hot tub width
+        const htH = 0.65;  // depth
+        const teakW = 0.28;  // teak surround width
+        const glowI2 = nightGlow > 0.4 ? nightGlow : 0.05;
+        return (
+          <group position={[htX, htY, htZ]}>
+            {/* Teak surround deck — warm brown platform */}
+            <mesh position={[0, 0.04, 0]} castShadow receiveShadow>
+              <boxGeometry args={[htW + teakW * 2, 0.075, htW + teakW * 2]} />
+              <meshStandardMaterial color="#7A5030" roughness={0.72} metalness={0.03} />
+            </mesh>
+            {/* Teak plank grooves on surround */}
+            {Array.from({ length: 5 }, (_, pi) => (
+              <mesh key={pi} position={[0, 0.078, -htW / 2 - teakW / 2 - 0.002 + pi * ((htW + teakW * 2) / 5)]}>
+                <boxGeometry args={[htW + teakW * 2, 0.006, 0.008]} />
+                <meshStandardMaterial color="#5A3820" roughness={0.85} />
+              </mesh>
+            ))}
+            {/* Hot tub shell — white acrylic walls */}
+            <mesh position={[0, htH / 2, 0]}>
+              <boxGeometry args={[htW, htH, htW]} />
+              <meshStandardMaterial color="#E8E4E0" roughness={0.35} metalness={0.08} side={THREE.DoubleSide} />
+            </mesh>
+            {/* Dark interior tile base */}
+            <mesh position={[0, 0.035, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[htW - 0.06, htW - 0.06]} />
+              <meshStandardMaterial color="#1A2A40" roughness={0.52} metalness={0.15} />
+            </mesh>
+            {/* Water surface */}
+            <mesh position={[0, htH - 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={12}>
+              <planeGeometry args={[htW - 0.06, htW - 0.06]} />
+              <meshStandardMaterial
+                color="#2870B8"
+                transparent opacity={0.85}
+                roughness={0.02} metalness={0.10}
+                envMapIntensity={5.0}
+                emissive="#1858A0" emissiveIntensity={glowI2 * 1.2}
+                depthWrite={false}
+              />
+            </mesh>
+            {/* Jets — small white dots on interior walls */}
+            {Array.from({ length: 4 }, (_, ji) => {
+              const ang = (ji / 4) * Math.PI * 2;
+              const jx2 = Math.sin(ang) * (htW * 0.44);
+              const jz2 = Math.cos(ang) * (htW * 0.44);
+              return (
+                <mesh key={ji} position={[jx2, htH * 0.45, jz2]} rotation={[0, ang, 0]}>
+                  <cylinderGeometry args={[0.030, 0.030, 0.025, 8]} />
+                  <meshStandardMaterial color="#C8D0D8" roughness={0.25} metalness={0.80} envMapIntensity={2.0} />
+                </mesh>
+              );
+            })}
+            {/* Corner folded towel on surround */}
+            <mesh position={[htW / 2 + teakW * 0.55, 0.090, -htW / 2 - teakW * 0.55]} rotation={[0.05, 0.3, 0.05]}>
+              <boxGeometry args={[0.28, 0.040, 0.22]} />
+              <meshStandardMaterial color="#F0EBE0" roughness={0.88} />
+            </mesh>
+            {/* Underwater glow light */}
+            <pointLight
+              position={[0, 0.08, 0]}
+              intensity={nightGlow * 3.0 + 0.05}
+              distance={htW * 1.8}
+              decay={2.0}
+              color="#3080D0"
+              castShadow={false}
+            />
+          </group>
+        );
+      })()}
+
       {/* ── 屋顶 BBQ 台（rooftop BBQ station near pergola）── */}
       {(() => {
         // Placed near roof terrace sun loungers and dining set
