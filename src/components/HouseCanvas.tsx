@@ -2841,11 +2841,12 @@ export function AnimatedWater({ w, d }: { w: number; d: number }) {
 
   return (
     <group>
-      {/* Pool bottom — turquoise tile, lit by sun + sky to give that
-          unmistakable 'lit pool' colour through the water surface */}
+      {/* Pool bottom — deep turquoise mosaic tile.
+          Deeper hue (#1A9AAE) gives that "infinite pool depth" look.
+          Sun + sky + underwater LEDs light this through the water surface. */}
       <mesh position={[0, -0.42, 0]} receiveShadow>
         <boxGeometry args={[w + 0.02, 0.04, d + 0.02]} />
-        <meshStandardMaterial color="#3FBFD9" roughness={0.35} metalness={0.05} />
+        <meshStandardMaterial color="#1A9AAE" roughness={0.28} metalness={0.06} />
       </mesh>
       {/* Reflective water surface */}
       <mesh ref={surfaceRef} position={[0, -0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -5462,6 +5463,27 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
           </group>
         );
       })}
+
+      {/* ── Terrace fire bowl — accent feature, warm evening focal point ── */}
+      <group position={[-pw * 0.40, 0, terrBackZ + deckSide * 0.55]}>
+        {/* Pedestal column */}
+        <mesh position={[0, 0.28, 0]} castShadow>
+          <cylinderGeometry args={[0.04, 0.06, 0.55, 8]} />
+          <meshStandardMaterial color="#3A3840" roughness={0.28} metalness={0.82} envMapIntensity={1.8} />
+        </mesh>
+        {/* Bowl (travertine dish) */}
+        <mesh position={[0, 0.60, 0]} castShadow>
+          <cylinderGeometry args={[0.34, 0.22, 0.14, 14]} />
+          <meshStandardMaterial color="#D4CCBA" roughness={0.68} />
+        </mesh>
+        {/* Fire / embers glow */}
+        <mesh position={[0, 0.70, 0]}>
+          <sphereGeometry args={[0.14, 10, 8]} />
+          <meshStandardMaterial color="#FF9030" emissive="#FF5800" emissiveIntensity={3.5} roughness={0.9} />
+        </mesh>
+        {/* Warm fire point light — orange glow on surroundings */}
+        <pointLight position={[0, 0.82, 0]} intensity={6.5} distance={10} decay={2.0} color="#FF8020" />
+      </group>
 
       {/* ── Low terrace hedge border — formal clipped hedge along pool edge ── */}
       <mesh position={[0, 0.20, terrBackZ - 0.30]} castShadow receiveShadow>
