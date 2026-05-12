@@ -99,9 +99,8 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
     customTargetHeightM: 0.6, customAuthor: "Alice Ursu" },
 
   // ── Plants ──
-  { kind: "plant.bushLarge",   label: "大灌木", icon: "🌿", category: "plant", glb: "plant_bushLarge",     scale: 2.4, radiusCm: 60, color: "#5E8A3A",
-    customGltfPath: "/models/outdoor_shrub/shrub_01/shrub_01_1k.gltf",
-    customTargetHeightM: 1.2, customAuthor: "Poly Haven CC0" },
+  // shrub_01 .bin 截断 → 走程序化 fallback（同 crystalline_iceplant）
+  { kind: "plant.bushLarge",   label: "大灌木", icon: "🌿", category: "plant", glb: "plant_bushLarge",     scale: 2.4, radiusCm: 60, color: "#5E8A3A" },
   { kind: "plant.bushSmall",   label: "小灌木", icon: "🌱", category: "plant", glb: "plant_bushSmall",     scale: 1.8, radiusCm: 45, color: "#6B9C45",
     customGltfPath: "/models/outdoor_shrub/shrub_02/shrub_02_1k.gltf",
     customTargetHeightM: 0.6, customAuthor: "Poly Haven CC0" },
