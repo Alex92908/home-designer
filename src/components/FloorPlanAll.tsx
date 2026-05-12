@@ -40,7 +40,7 @@ type DragState =
 const CUSTOM_SLOTS: RoomType[] = ["custom1","custom2","custom3","custom4","custom5"];
 const ROOM_GROUP_ROOMS = [
   { key: "allGroupIndoor",   rooms: ["living","master","bedroom","bedroom2","bedroom3","kitchen","bathroom","bathroom2","dining","study","study2","closet","balcony","balcony2"] as RoomType[] },
-  { key: "allGroupSpecial",  rooms: ["hallway","stair","yard","garage","gym","cinema"] as RoomType[] },
+  { key: "allGroupSpecial",  rooms: ["hallway","stair","yard","garage","gym","cinema","pool","terrace","deck"] as RoomType[] },
   { key: "allGroupCustom",   rooms: CUSTOM_SLOTS },
 ];
 const CUSTOM_ICONS = ["🔲","🏠","🛖","🏰","🏗️","🎯","🎲","🎪","⭐","💎","🌈","🔑"];
