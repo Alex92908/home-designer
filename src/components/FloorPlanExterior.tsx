@@ -3582,6 +3582,136 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5f-2. 花坛 + 踏石小径（flower beds + stepping-stone path）──
+           East and west garden beds flanking the driveway, filled with layered
+           flower clusters.  A stepping-stone path runs the length of the garden. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        // Shared constants from section 5d
+        const bndS3   = -D / 2 - 11.50;
+        const bndE3   =  W / 2 + 4.50;
+        const bndW3   = -W / 2 - 4.50;
+        const gapS3   = 0.12;         // gap between hedge and wall
+        const hedgeW3 = 0.52;
+        // Garden bed occupies the strip between hedge and driveway centreline
+        const driveHalfW = 2.20;     // half width of driveway
+
+        // East bed
+        const ebX1 = driveHalfW;
+        const ebX2 = bndE3 - hedgeW3 - gapS3 * 2;
+        const bedW = ebX2 - ebX1;
+        const bedMidX_E = (ebX1 + ebX2) / 2;
+        const bedMidX_W = -(ebX1 + ebX2) / 2;
+
+        // Bed Z: from behind building terrace to north edge of pool deck
+        const poolZ3 = -D / 2 - 5.80;
+        const poolL3 = 4.80;
+        const poolDeckW3 = Math.min(W * 0.72, 10.0);
+        const deckBW3 = 0.52;
+        const bedZN = poolZ3 - poolL3 / 2 - deckBW3 - 0.10;
+        const bedZS = bndS3 + 1.50;  // well inside boundary wall
+        const bedLen = Math.abs(bedZN - bedZS);
+        const bedMidZ = (bedZN + bedZS) / 2;
+
+        // Flower palette (deterministic via panelBlindHash)
+        const flowerPalette = ["#FF4460", "#FF9922", "#FFD840", "#EE44CC", "#CC44FF", "#FFFFFF", "#FF7744"];
+        const foliagePalette = ["#2E5818", "#3A6E22", "#245414", "#1E4410", "#4A7A28"];
+
+        // Scatter N flower clusters per bed
+        const flowerCount = 18;
+
+        return (
+          <group>
+            {/* Soil base — E bed */}
+            <mesh position={[bedMidX_E, 0.012, bedMidZ]} receiveShadow>
+              <boxGeometry args={[bedW, 0.024, bedLen]} />
+              <meshStandardMaterial color="#4A3020" roughness={0.98} metalness={0.00} />
+            </mesh>
+            {/* Soil base — W bed */}
+            <mesh position={[bedMidX_W, 0.012, bedMidZ]} receiveShadow>
+              <boxGeometry args={[bedW, 0.024, bedLen]} />
+              <meshStandardMaterial color="#4A3020" roughness={0.98} metalness={0.00} />
+            </mesh>
+
+            {/* Flower clusters — east bed */}
+            {Array.from({ length: flowerCount }, (_, fi3) => {
+              const fHash = panelBlindHash(fi3 * 17 + 3, fi3 + 11);
+              const fHash2 = panelBlindHash(fi3 * 7 + 5, fi3 * 3 + 2);
+              const fHash3 = panelBlindHash(fi3 * 13 + 1, fi3 * 5 + 7);
+              const fx = bedMidX_E - bedW / 2 + 0.20 + fHash * (bedW - 0.40);
+              const fz = bedMidZ - bedLen / 2 + 0.20 + fHash2 * (bedLen - 0.40);
+              const stemH = 0.22 + fHash3 * 0.18;
+              const bloomR = 0.09 + fHash * 0.07;
+              const flowerIdx = Math.floor(fHash3 * flowerPalette.length);
+              const foliageIdx = Math.floor(fHash2 * foliagePalette.length);
+              return (
+                <group key={`fe-${fi3}`} position={[fx, 0.024, fz]}>
+                  {/* Foliage mound */}
+                  <mesh position={[0, stemH * 0.40, 0]}>
+                    <sphereGeometry args={[bloomR * 1.1, 6, 5]} />
+                    <meshStandardMaterial color={foliagePalette[foliageIdx]} roughness={0.95} />
+                  </mesh>
+                  {/* Bloom sphere */}
+                  <mesh position={[0, stemH, 0]}>
+                    <sphereGeometry args={[bloomR, 6, 5]} />
+                    <meshStandardMaterial color={flowerPalette[flowerIdx]} roughness={0.80} emissive={flowerPalette[flowerIdx]} emissiveIntensity={0.12} />
+                  </mesh>
+                </group>
+              );
+            })}
+
+            {/* Flower clusters — west bed (mirrored with different hashes) */}
+            {Array.from({ length: flowerCount }, (_, fi3) => {
+              const fHash = panelBlindHash(fi3 * 19 + 7, fi3 + 17);
+              const fHash2 = panelBlindHash(fi3 * 11 + 3, fi3 * 7 + 5);
+              const fHash3 = panelBlindHash(fi3 * 5 + 9, fi3 * 13 + 3);
+              const fx = bedMidX_W - bedW / 2 + 0.20 + fHash * (bedW - 0.40);
+              const fz = bedMidZ - bedLen / 2 + 0.20 + fHash2 * (bedLen - 0.40);
+              const stemH = 0.22 + fHash3 * 0.18;
+              const bloomR = 0.09 + fHash * 0.07;
+              const flowerIdx = Math.floor(fHash3 * flowerPalette.length);
+              const foliageIdx = Math.floor(fHash2 * foliagePalette.length);
+              return (
+                <group key={`fw-${fi3}`} position={[fx, 0.024, fz]}>
+                  <mesh position={[0, stemH * 0.40, 0]}>
+                    <sphereGeometry args={[bloomR * 1.1, 6, 5]} />
+                    <meshStandardMaterial color={foliagePalette[foliageIdx]} roughness={0.95} />
+                  </mesh>
+                  <mesh position={[0, stemH, 0]}>
+                    <sphereGeometry args={[bloomR, 6, 5]} />
+                    <meshStandardMaterial color={flowerPalette[flowerIdx]} roughness={0.80} emissive={flowerPalette[flowerIdx]} emissiveIntensity={0.12} />
+                  </mesh>
+                </group>
+              );
+            })}
+
+            {/* ── 踏石小径（stepping-stone path）──
+                 East and west side paths from entry apron to pool deck,
+                 square travertine slabs set in the lawn. */}
+            {([-driveHalfW - 0.65, driveHalfW + 0.65] as number[]).map((pathX, pathI) => {
+              const stoneSpacing = 0.72;
+              const stoneCount = Math.max(3, Math.round(bedLen / stoneSpacing));
+              return (
+                <group key={`path-${pathI}`}>
+                  {Array.from({ length: stoneCount }, (_, si) => {
+                    const sz = bedZN + si * (bedLen / (stoneCount - 1));
+                    const sHash = panelBlindHash(si * 13 + pathI * 77, si + 3);
+                    const stoneW = 0.42 + sHash * 0.08;
+                    const stoneD = 0.42 + panelBlindHash(si * 7 + pathI * 33, si) * 0.08;
+                    const rotY = (sHash - 0.5) * 0.18;  // slight random rotation
+                    return (
+                      <mesh key={si} position={[pathX, 0.016, sz]} rotation={[0, rotY, 0]} receiveShadow>
+                        <boxGeometry args={[stoneW, 0.032, stoneD]} />
+                        <meshStandardMaterial color="#D8CEB8" roughness={0.82} metalness={0.02} />
+                      </mesh>
+                    );
+                  })}
+                </group>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5g. 泳池边休闲区（pool-side loungers + outdoor dining table）── */}
       {!insideBuilding && isGlassVilla && (() => {
         const pz2  = -D / 2 - 5.80;   // pool centre Z (same as 5c)
