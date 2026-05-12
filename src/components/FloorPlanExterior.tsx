@@ -508,6 +508,50 @@ function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
         <cylinderGeometry args={[0.08, 0.10, 0.50, 8]} />
         <meshStandardMaterial color="#606468" roughness={0.60} metalness={0.30} />
       </mesh>
+
+      {/* ── 屋顶露台区域（南向，阳光充足）── */}
+      {/* 两把日光浴躺椅 — 淡米色，南向摆放，供远处视角可见 */}
+      {([[-W * 0.15, 0], [W * 0.15, 0]] as [number,number][]).map(([lx, _lz], li) => (
+        <group key={`rl-${li}`} position={[lx, roofSlab + 0.05, -D * 0.28]}>
+          {/* 躺椅框架 */}
+          <mesh position={[0, 0.19, 0]} castShadow>
+            <boxGeometry args={[0.58, 0.06, 1.75]} />
+            <meshStandardMaterial color="#B0A888" roughness={0.75} metalness={0.12} />
+          </mesh>
+          {/* 垫子 */}
+          <mesh position={[0, 0.26, 0]}>
+            <boxGeometry args={[0.50, 0.09, 1.58]} />
+            <meshStandardMaterial color="#F4EEE0" roughness={0.88} />
+          </mesh>
+          {/* 靠背（略微倾斜）*/}
+          <mesh position={[0, 0.35, 0.52]} rotation={[-0.30, 0, 0]}>
+            <boxGeometry args={[0.48, 0.07, 0.62]} />
+            <meshStandardMaterial color="#F0E8D4" roughness={0.88} />
+          </mesh>
+          {/* 4 细铝腿 */}
+          {([-0.24, 0.24] as number[]).flatMap(lx2 =>
+            ([-0.74, 0.74] as number[]).map((lz2, ki) => (
+              <mesh key={`${lx2}-${ki}`} position={[lx2, 0.09, lz2]} castShadow>
+                <boxGeometry args={[0.036, 0.18, 0.036]} />
+                <meshStandardMaterial color="#B0B0B8" roughness={0.22} metalness={0.88} />
+              </mesh>
+            ))
+          )}
+        </group>
+      ))}
+      {/* 屋顶种植箱 — 绿植对称，增加生机 */}
+      {([[-W * 0.36, -D * 0.18], [W * 0.36, -D * 0.18]] as [number,number][]).map(([px, pz], pi) => (
+        <group key={`rp-${pi}`} position={[px, roofSlab + 0.05, pz]}>
+          <mesh position={[0, 0.24, 0]} castShadow>
+            <boxGeometry args={[0.70, 0.48, 0.36]} />
+            <meshStandardMaterial color="#3A3840" roughness={0.75} metalness={0.12} />
+          </mesh>
+          <mesh position={[0, 0.70, 0]} castShadow>
+            <sphereGeometry args={[0.34, 10, 8]} />
+            <meshStandardMaterial color="#2A5820" roughness={0.94} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
