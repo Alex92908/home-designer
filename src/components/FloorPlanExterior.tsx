@@ -626,18 +626,66 @@ function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
         <boxGeometry args={[1.40, 0.70, 0.90]} />
         <meshStandardMaterial color="#B8B4AE" roughness={0.82} metalness={0.08} />
       </mesh>
-      {/* ── 太阳能热水器（北侧，倾斜面朝南）── */}
-      <group position={[W * 0.25, roofSlab + 0.20, D * 0.28]} rotation={[0.32, 0, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[1.20, 0.06, 1.60]} />
-          <meshStandardMaterial color="#2A2E3C" roughness={0.30} metalness={0.45} />
-        </mesh>
-        {/* 玻璃覆盖面 */}
-        <mesh position={[0, 0.04, 0]}>
-          <boxGeometry args={[1.18, 0.02, 1.58]} />
-          <meshStandardMaterial color="#6090A8" roughness={0.12} metalness={0.22} transparent opacity={0.65} />
-        </mesh>
-      </group>
+      {/* ── 光伏板阵列（solar PV array）— 朝南倾斜 18°，3×5 矩阵 ── */}
+      {(() => {
+        const pvCols = 5, pvRows = 3;
+        const pvW = 1.08, pvH = 1.70, pvGap = 0.06;
+        const pvTilt = 0.32;   // tilt angle (radians, ≈ 18°)
+        const arrW = pvCols * (pvW + pvGap) - pvGap;
+        const arrX = W * 0.22;
+        const arrZ = D * 0.24;
+        const arrY = roofSlab + 0.14;
+        return (
+          <group position={[arrX, arrY, arrZ]} rotation={[pvTilt, 0, 0]}>
+            {/* Racking rail (2 horizontal beams) */}
+            {[0.25, 0.75].map((frac, ri) => (
+              <mesh key={ri} position={[0, (pvH * frac - pvH / 2) * Math.cos(pvTilt) * 0.6, 0]} castShadow>
+                <boxGeometry args={[arrW + 0.12, 0.04, 0.055]} />
+                <meshStandardMaterial color="#4A5060" roughness={0.42} metalness={0.62} />
+              </mesh>
+            ))}
+            {/* PV panels grid */}
+            {Array.from({ length: pvRows }, (_, ri) =>
+              Array.from({ length: pvCols }, (_, ci) => {
+                const px = -arrW / 2 + ci * (pvW + pvGap) + pvW / 2;
+                const pz = 0;
+                void pz; void ri;
+                return (
+                  <group key={`pv-${ri}-${ci}`} position={[px, 0, 0]}>
+                    {/* Panel frame */}
+                    <mesh castShadow>
+                      <boxGeometry args={[pvW, pvH, 0.032]} />
+                      <meshStandardMaterial color="#2C3040" roughness={0.35} metalness={0.55} />
+                    </mesh>
+                    {/* Glass cell surface — dark blue-black PV cells */}
+                    <mesh position={[0, 0, 0.018]}>
+                      <boxGeometry args={[pvW - 0.04, pvH - 0.04, 0.008]} />
+                      <meshStandardMaterial
+                        color="#1A1E2E"
+                        roughness={0.08}
+                        metalness={0.18}
+                        envMapIntensity={3.0}
+                        emissive="#10182A"
+                        emissiveIntensity={0.08}
+                      />
+                    </mesh>
+                    {/* Cell grid lines — subtle horizontal dividers */}
+                    {Array.from({ length: 5 }, (_, li) => {
+                      const ly = -pvH / 2 + (li + 1) * (pvH / 6);
+                      return (
+                        <mesh key={li} position={[0, ly, 0.023]}>
+                          <boxGeometry args={[pvW - 0.05, 0.008, 0.004]} />
+                          <meshStandardMaterial color="#3A4260" roughness={0.30} metalness={0.40} />
+                        </mesh>
+                      );
+                    })}
+                  </group>
+                );
+              })
+            )}
+          </group>
+        );
+      })()}
       {/* ── 屋顶排气管（细节）── */}
       <mesh position={[W * 0.10, roofSlab + 0.25, -D * 0.10]} castShadow>
         <cylinderGeometry args={[0.08, 0.10, 0.50, 8]} />
