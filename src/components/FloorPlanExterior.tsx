@@ -1140,6 +1140,48 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
           </group>
         );
       })()}
+
+      {/* ── 屋顶 BBQ 台（rooftop BBQ station near pergola）── */}
+      {(() => {
+        // Placed east of pergola, near roof terrace sun loungers
+        const bbqX = W * 0.28;
+        const bbqZ = -D * 0.22;
+        const bbqY = roofSlab + 0.05;
+        return (
+          <group position={[bbqX, bbqY, bbqZ]}>
+            {/* Granite counter surface */}
+            <mesh position={[0, 0.90, 0]} castShadow>
+              <boxGeometry args={[0.80, 0.035, 0.52]} />
+              <meshStandardMaterial color="#1C1E24" roughness={0.15} metalness={0.35} envMapIntensity={2.2} />
+            </mesh>
+            {/* Cabinet body */}
+            <mesh position={[0, 0.45, 0]} castShadow>
+              <boxGeometry args={[0.80, 0.87, 0.50]} />
+              <meshStandardMaterial color="#2A2E38" roughness={0.50} metalness={0.38} />
+            </mesh>
+            {/* Grill lid */}
+            <mesh position={[0.15, 0.94, 0]}>
+              <boxGeometry args={[0.42, 0.04, 0.44]} />
+              <meshStandardMaterial color="#383C44" roughness={0.40} metalness={0.60} />
+            </mesh>
+            {/* Grill body */}
+            <mesh position={[0.15, 0.88, 0]} castShadow>
+              <boxGeometry args={[0.42, 0.08, 0.40]} />
+              <meshStandardMaterial color="#2C3038" roughness={0.45} metalness={0.55} />
+            </mesh>
+            {/* Smoke stack */}
+            <mesh position={[0.28, 1.02, -0.12]}>
+              <cylinderGeometry args={[0.022, 0.022, 0.20, 6]} />
+              <meshStandardMaterial color="#484C56" roughness={0.50} metalness={0.45} />
+            </mesh>
+            {/* Small propane tank (cylinder on side) */}
+            <mesh position={[-0.30, 0.28, 0]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.070, 0.070, 0.32, 10]} />
+              <meshStandardMaterial color="#60A060" roughness={0.55} metalness={0.30} />
+            </mesh>
+          </group>
+        );
+      })()}
     </group>
   );
 }
@@ -3706,6 +3748,28 @@ export default function FloorPlanBuilding({
               <boxGeometry args={[poolW, 0.050, 0.12]} />
               <meshStandardMaterial color="#282C32" roughness={0.45} metalness={0.35} />
             </mesh>
+            {/* Pool lane markings — 2 dark blue lane lines on pool floor */}
+            {Array.from({ length: 2 }, (_, li) => {
+              const lx = -poolW * 0.22 + li * poolW * 0.44;
+              return (
+                <mesh key={`lane-${li}`} position={[lx, -poolDp + 0.012, 0]}>
+                  <boxGeometry args={[0.025, 0.010, poolL - 0.10]} />
+                  <meshStandardMaterial color="#1A3060" roughness={0.55} metalness={0.05} emissive="#101840" emissiveIntensity={0.4} />
+                </mesh>
+              );
+            })}
+            {/* Cross-lane T-marks at both ends */}
+            {([-poolL / 2 + 0.80, poolL / 2 - 0.80] as number[]).flatMap((tz, ti) =>
+              Array.from({ length: 2 }, (_, li) => {
+                const lx = -poolW * 0.22 + li * poolW * 0.44;
+                return (
+                  <mesh key={`cross-${ti}-${li}`} position={[lx, -poolDp + 0.012, tz]}>
+                    <boxGeometry args={[0.25, 0.010, 0.025]} />
+                    <meshStandardMaterial color="#1A3060" roughness={0.55} metalness={0.05} />
+                  </mesh>
+                );
+              })
+            )}
             {/* Pool ladder — south-east corner, chrome steel */}
             <group position={[poolW / 2 - 0.32, 0, poolL / 2 - 0.24]}>
               {([-0.20, 0.20] as number[]).map((hx, hi) => (
