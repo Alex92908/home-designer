@@ -8004,6 +8004,64 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5g-5. 泳池旁景观大花盆（large ornamental planters on pool deck）──
+           4 tall round concrete planters flanking the lounger row, each with a
+           slender architectural plant (agave form). Pairs at both ends of the row. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const poolL_pl  = Math.min(D * 0.70, 9.50);
+        const poolW_pl  = Math.min(W * 0.78, 11.0);
+        const deckBW_pl = 2.80;
+        const deckT_pl  = 0.12;
+        const pz_pl     = -D / 2 - deckBW_pl - poolL_pl / 2 - 0.80;
+        const deckEdge  = pz_pl + poolL_pl / 2 + deckBW_pl;  // building-side deck edge
+        const planterZ  = deckEdge - 0.70;  // 0.7m toward pool, near lounger row
+        // Two planters per side: near E and W ends of pool width
+        const planterXs: number[] = [-poolW_pl * 0.38, poolW_pl * 0.38];
+        const potR = 0.28;    // outer radius
+        const potH = 0.50;    // pot height
+        const plantH = 1.20;  // agave/ornamental grass height above pot
+        return (
+          <group>
+            {planterXs.map((px, pi) => (
+              <group key={pi} position={[px, deckT_pl, planterZ]}>
+                {/* Concrete pot body — tapered cylinder */}
+                <mesh position={[0, potH / 2, 0]} castShadow receiveShadow>
+                  <cylinderGeometry args={[potR, potR * 0.76, potH, 12]} />
+                  <meshStandardMaterial color="#C0BBAE" roughness={0.72} metalness={0.06} envMapIntensity={0.4} />
+                </mesh>
+                {/* Pot rim — slightly wider band at top */}
+                <mesh position={[0, potH + 0.010, 0]} castShadow>
+                  <cylinderGeometry args={[potR + 0.012, potR, 0.022, 12]} />
+                  <meshStandardMaterial color="#B0ACA0" roughness={0.65} metalness={0.08} />
+                </mesh>
+                {/* Soil top */}
+                <mesh position={[0, potH + 0.016, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <circleGeometry args={[potR - 0.020, 10]} />
+                  <meshStandardMaterial color="#3A2818" roughness={0.98} />
+                </mesh>
+                {/* Agave-form plant — central spire + radial blades */}
+                <mesh position={[0, potH + plantH * 0.55, 0]} castShadow>
+                  <coneGeometry args={[0.055, plantH * 0.70, 6]} />
+                  <meshStandardMaterial color="#5A7A3A" roughness={0.92} />
+                </mesh>
+                {Array.from({ length: 8 }, (_, bi) => {
+                  const bAng = (bi / 8) * Math.PI * 2;
+                  const bLen = 0.38 + (bi % 3) * 0.06;
+                  const bTilt = 0.55;
+                  return (
+                    <mesh key={bi} position={[Math.cos(bAng) * 0.12, potH + 0.15 + bLen * 0.25, Math.sin(bAng) * 0.12]}
+                      rotation={[-bTilt * Math.cos(bAng + Math.PI / 2), bAng, bTilt * Math.sin(bAng + Math.PI / 2)]}>
+                      <boxGeometry args={[0.032, bLen, 0.018]} />
+                      <meshStandardMaterial color="#4A6A2E" roughness={0.92} />
+                    </mesh>
+                  );
+                })}
+              </group>
+            ))}
+          </group>
+        );
+      })()}
+
       {/* ── 5h. 室外厨房 / BBQ 台（outdoor kitchen, east terrace apron）── */}
       {!insideBuilding && isGlassVilla && (() => {
         const kitX = W / 2 + 0.85;         // east terrace apron center
