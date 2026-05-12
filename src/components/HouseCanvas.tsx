@@ -332,14 +332,14 @@ function CameraRig({ W, D, floors, buildingType }: {
 
     if (isFloorPlanDriven) {
       // Floor-plan-driven exterior: south glass facade faces -Z.
-      // Camera: south-west, slightly elevated, looking at building centre.
-      // Use building diagonal for distance so it fits regardless of size.
+      // Camera: south-west corner, elevated ~35°, showing glass south face + west side.
       const diag  = Math.sqrt(W * W + D * D);
-      const dist  = diag * 1.6 + 7;
+      const dist  = diag * 1.45 + 6;
       const midH  = h / 2;
 
-      camera.position.set(-dist * 0.30, midH + dist * 0.28, -dist * 0.90);
-      (camera as THREE.PerspectiveCamera).fov = 48;
+      // Position: slightly left (west side visible), moderately elevated
+      camera.position.set(-dist * 0.55, midH + dist * 0.32, -dist * 0.78);
+      (camera as THREE.PerspectiveCamera).fov = 46;
       (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
 
       if (controls) {
@@ -5967,12 +5967,12 @@ export default function HouseCanvas() {
             };
           }
           if (_buildingType === "floor-plan-driven") {
-            // South-west elevated view — shows glass south face and one side
+            // South-west corner view — glass south face + west side visible
             const diag = Math.sqrt(W * W + D * D);
-            const dist = diag * 1.6 + 7;
+            const dist = diag * 1.45 + 6;
             return {
-              fov: 48, near: 0.1, far: 300,
-              position: [-dist * 0.30, floors * FLOOR_H * 0.5 + dist * 0.28, -dist * 0.90] as [number, number, number],
+              fov: 46, near: 0.1, far: 300,
+              position: [-dist * 0.55, floors * FLOOR_H * 0.5 + dist * 0.32, -dist * 0.78] as [number, number, number],
             };
           }
           return { fov: 58, near: 0.1, far: 300 };
@@ -5997,7 +5997,8 @@ export default function HouseCanvas() {
             enableDamping
             dampingFactor={0.08}
             minPolarAngle={0}
-            maxPolarAngle={Math.PI / 2.1}
+            maxPolarAngle={Math.PI * 0.58}
+            rotateSpeed={1.2}
             minDistance={2}
             maxDistance={80}
             panSpeed={0.6}
@@ -6086,6 +6087,13 @@ export default function HouseCanvas() {
           color={theme.fillColor}
         />
 
+        {/* 玻璃幕墙建筑：室外补光点灯（从南面和西面打亮玻璃，增强立面质感）*/}
+        {_buildingType === "floor-plan-driven" && !insideBuilding && (
+          <>
+            <pointLight position={[0, floors * FLOOR_H * 0.6, -D * 1.2]} intensity={8} distance={D * 4 + W * 2} decay={1.5} color="#FFF8F0" />
+            <pointLight position={[-W * 0.8, floors * FLOOR_H * 0.5, -D * 0.6]} intensity={5} distance={W * 3} decay={1.8} color="#FFF4E8" />
+          </>
+        )}
         {/* Click empty ground to deselect */}
         <DeselectPlane onDeselect={() => {
           setSelectedOutdoorKey(null);
@@ -6093,7 +6101,7 @@ export default function HouseCanvas() {
         }} />
         {/* ── CLEAN COMPARE MODE: minimal env for rich-glass-villa ── */}
         {!isRichGlassVilla && <Ground W={W} D={D} />}
-        {!isRichGlassVilla && <EntryPath W={W} D={D} />}
+        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <EntryPath W={W} D={D} />}
         {/* Rich-glass-villa ground: large travertine/concrete plaza */}
         {isRichGlassVilla && (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>

@@ -276,35 +276,37 @@ function GlassCurtain({
 }
 
 
-// ── 混凝土外墙面（带横向分仓线） ─────────────────────────────────
+// ── 混凝土外墙面（纯净，无分仓线） ──────────────────────────────
 function ConcreteFacade({
   width, height, windows = [],
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
 }) {
-  const panelRows = Math.max(2, Math.round(height / 0.75));
-  const rowH = height / panelRows;
   return (
     <group>
-      {/* 横缝线 */}
-      {Array.from({ length: panelRows - 1 }, (_, i) => (
-        <mesh key={`hg-${i}`} position={[0, -height / 2 + (i + 1) * rowH, 0.01]}>
-          <boxGeometry args={[width, 0.025, 0.03]} />
-          <meshStandardMaterial color="#C8C4BA" roughness={0.92} />
-        </mesh>
-      ))}
-      {/* 窗洞 */}
       {windows.map((w, wi) => (
-        <group key={`ww-${wi}`} position={[w.localX, -height / 2 + w.winSill + w.winH / 2, 0.02]}>
-          <mesh>
-            <planeGeometry args={[w.winLen, w.winH]} />
-            <meshPhysicalMaterial color="#A8C4D8" transmission={0.55} roughness={0.06} transparent opacity={0.55} side={THREE.DoubleSide} />
+        <group key={`ww-${wi}`} position={[w.localX, -height / 2 + w.winSill + w.winH / 2, 0]}>
+          {/* 深色室内衬底（模拟从外部看到窗内的深邃感） */}
+          <mesh position={[0, 0, -0.06]}>
+            <boxGeometry args={[w.winLen - 0.02, w.winH - 0.02, 0.04]} />
+            <meshStandardMaterial color="#1A1E24" roughness={0.9} />
           </mesh>
-          {([[-w.winLen/2,0,w.winLen*0.05,w.winH],[w.winLen/2,0,w.winLen*0.05,w.winH],[0,-w.winH/2,w.winLen,w.winH*0.05],[0,w.winH/2,w.winLen,w.winH*0.05]] as [number,number,number,number][]).map(([fx,fy,fw,fh],k) => (
-            <mesh key={k} position={[fx, fy, 0.01]}>
+          {/* 玻璃（浅蓝透明，带反射）*/}
+          <mesh position={[0, 0, 0.012]}>
+            <planeGeometry args={[w.winLen - 0.04, w.winH - 0.04]} />
+            <meshPhysicalMaterial color="#B8D4E8" transmission={0.35} roughness={0.04} metalness={0.08} transparent opacity={0.72} side={THREE.FrontSide} />
+          </mesh>
+          {/* 窗框（四边）*/}
+          {([
+            [-w.winLen / 2 + 0.025, 0,              0.025, w.winH  ] as [number,number,number,number],
+            [ w.winLen / 2 - 0.025, 0,              0.025, w.winH  ] as [number,number,number,number],
+            [0,  w.winH / 2 - 0.025, w.winLen, 0.05] as [number,number,number,number],
+            [0, -w.winH / 2 + 0.025, w.winLen, 0.05] as [number,number,number,number],
+          ]).map(([fx, fy, fw, fh], k) => (
+            <mesh key={k} position={[fx, fy, 0.018]}>
               <planeGeometry args={[fw, fh]} />
-              <meshStandardMaterial color="#252525" roughness={0.5} metalness={0.4} />
+              <meshStandardMaterial color="#303842" roughness={0.4} metalness={0.55} />
             </mesh>
           ))}
         </group>
@@ -374,23 +376,44 @@ function buildFacadeBlocks(segs: ExteriorWallSeg[]): FacadeBlock[] {
 
 // ── 平屋顶 ────────────────────────────────────────────────────
 function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
-  // 现代极简平屋顶：薄板、白净、清晰悬挑。
-  // - 板厚 0.18→0.10（薄一半，避免厚重感）
-  // - 颜色更白：#DEDAD4 → #F5F2EC（接近模板的纯白调）
-  // - 砍掉女儿墙压顶线（cartoon outline 主要来源）和深褐色木纹底，
-  //   现代极简别墅屋面就是一块光板悬挑出去。
-  const OV = 0.55;
-  const OV_S = 0.95;
+  const OV = 0.45;   // 悬挑
+  const OV_S = 0.75; // 南向多悬挑
+  const PH = 0.28;   // 女儿墙高度
+  const PT = 0.12;   // 女儿墙厚度
+  const roofColor = "#F0EDE8";
+  const parapetColor = "#E8E4DE";
   return (
     <group>
+      {/* 屋面板 */}
       <mesh position={[0, roofY + 0.05, -(OV_S - OV) / 2]} castShadow receiveShadow>
         <boxGeometry args={[W + OV * 2, 0.10, D + OV_S + OV]} />
-        <meshStandardMaterial color="#F5F2EC" roughness={0.72} metalness={0.0} />
+        <meshStandardMaterial color={roofColor} roughness={0.88} />
       </mesh>
-      {/* 屋顶边缘极细影线 — 仅留底面薄薄一道色，强调悬挑感 */}
+      {/* 女儿墙 — 四边（仅建筑轮廓内，不超出悬挑）*/}
+      {/* 北边 */}
+      <mesh position={[0, roofY + 0.10 + PH / 2, D / 2]} castShadow>
+        <boxGeometry args={[W, PH, PT]} />
+        <meshStandardMaterial color={parapetColor} roughness={0.85} />
+      </mesh>
+      {/* 南边 */}
+      <mesh position={[0, roofY + 0.10 + PH / 2, -D / 2]} castShadow>
+        <boxGeometry args={[W, PH, PT]} />
+        <meshStandardMaterial color={parapetColor} roughness={0.85} />
+      </mesh>
+      {/* 东边 */}
+      <mesh position={[W / 2, roofY + 0.10 + PH / 2, 0]} castShadow>
+        <boxGeometry args={[PT, PH, D]} />
+        <meshStandardMaterial color={parapetColor} roughness={0.85} />
+      </mesh>
+      {/* 西边 */}
+      <mesh position={[-W / 2, roofY + 0.10 + PH / 2, 0]} castShadow>
+        <boxGeometry args={[PT, PH, D]} />
+        <meshStandardMaterial color={parapetColor} roughness={0.85} />
+      </mesh>
+      {/* 屋顶边缘影线 */}
       <mesh position={[0, roofY - 0.005, -(OV_S - OV) / 2]}>
         <boxGeometry args={[W + OV * 2 + 0.005, 0.01, D + OV_S + OV + 0.005]} />
-        <meshStandardMaterial color="#E0DDD6" roughness={0.85} />
+        <meshStandardMaterial color="#D8D4CE" roughness={0.85} />
       </mesh>
     </group>
   );
@@ -647,12 +670,21 @@ export default function FloorPlanBuilding({
     doorWall?: DoorConfig["wall"]
   ): WindowConfig {
     const d = calcWallDists(cx, cz, rW, rD, bounds);
-    // Sort walls by exterior-ness (smallest dist = most exterior)
+    const configuredDist = d[win.wall as keyof typeof d] ?? Infinity;
+
+    // If configured wall is on the exterior (dist < WIN_EPS) and not the door wall,
+    // keep it there — only clamp the position within the wall to avoid overflow.
+    if (configuredDist < WIN_EPS && win.wall !== doorWall) {
+      const wallLen = (win.wall === "left" || win.wall === "right") ? rDcm : rWcm;
+      const safePos = Math.max(5, Math.min(win.pos ?? 0, wallLen - (win.len ?? 80) - 5));
+      return { ...win, pos: safePos, len: Math.min(win.len, Math.round(wallLen * 0.70)) };
+    }
+
+    // Configured wall is interior or is the door wall — pick best exterior wall.
     const ranked = (["back", "front", "left", "right"] as const)
       .map(w => ({ w, dist: d[w] ?? Infinity }))
       .sort((a, b) => a.dist - b.dist);
 
-    // Pick most exterior wall that is NOT the door wall
     const target = ranked.find(({ w, dist }) => dist < WIN_EPS && w !== doorWall)
       ?? ranked.find(({ w }) => w !== doorWall)
       ?? ranked[0];
@@ -729,7 +761,7 @@ export default function FloorPlanBuilding({
       const totalWinLen = block.winEntries.reduce((s, e) => s + e.w.len, 0);
       const winCoverage = segLen > 0 ? (totalWinLen * CM) / segLen : 0;
       const isSouth = block.side === "south";
-      const isGlassWall = winCoverage > 0.55 || (isGlassVilla && isSouth);
+      const isGlassWall = winCoverage > 0.42 || (isGlassVilla && (isSouth || winCoverage > 0.28));
       // 阳台默认开放：自动判玻璃（实际上半透明栏杆效果，不再像实墙包房间）
       const hasBalcony = block.rooms.some(r => r === "balcony" || r === "balcony2");
       let isGlass: boolean;
@@ -811,6 +843,13 @@ export default function FloorPlanBuilding({
         <boxGeometry args={[W + 0.40, 0.08, D + 0.40]} />
         <meshStandardMaterial color="#D0C8B4" roughness={0.90} />
       </mesh>
+      {/* 建筑基座压脚（深色混凝土踢脚，让建筑稳稳落地）*/}
+      {!insideBuilding && (
+        <mesh position={[0, 0.18, 0]} castShadow>
+          <boxGeometry args={[W + 0.08, 0.36, D + 0.08]} />
+          <meshStandardMaterial color="#2C3038" roughness={0.82} metalness={0.08} />
+        </mesh>
+      )}
 
       {/* ── 1. 每层背景填充板（消除房间间微小缝隙，视觉统一） ──
               当本层有任何 "glass" 房间时跳过：这块大背景板会从内部挡住
@@ -880,9 +919,10 @@ export default function FloorPlanBuilding({
               // "立柱状"剪影（用户："2F 有几个深色立柱状物体"）。
               // 拆成 5 块独立 plane，每块法线朝向房间内部（FrontSide 默
               // 认即可），从玻璃外看到的就是连续的发光奶油墙面。
-              const wallC   = "#EDE6D8";
-              const ceilC   = "#F3EEE4";
-              const floorC  = "#5A3E22";
+              const wallC     = "#EDE6D8";
+              const ceilC     = "#F3EEE4";
+              const mats      = fp.rooms?.[room]?.materials;
+              const floorC    = mats?.floor?.color ?? ROOM_DEFS[room]?.defaultFloorColor ?? "#6B4C2A";
               const emissiveW = "#F4DDB0";
               const inset   = 0.08;
               const iW = rW - inset * 2;
@@ -894,10 +934,10 @@ export default function FloorPlanBuilding({
               const wallMat = (
                 <meshStandardMaterial
                   color={wallC}
-                  roughness={0.82}
+                  roughness={0.78}
                   metalness={0.02}
                   emissive={emissiveW}
-                  emissiveIntensity={0.55}
+                  emissiveIntensity={0.92}
                   side={THREE.FrontSide}
                 />
               );
@@ -930,9 +970,9 @@ export default function FloorPlanBuilding({
                     <planeGeometry args={[iW, iD]} />
                     <meshStandardMaterial
                       color={ceilC}
-                      emissive="#F8E89C"
-                      emissiveIntensity={0.30}
-                      roughness={0.94}
+                      emissive="#FFF0A0"
+                      emissiveIntensity={0.60}
+                      roughness={0.92}
                       side={THREE.DoubleSide}
                     />
                   </mesh>
@@ -945,6 +985,7 @@ export default function FloorPlanBuilding({
                   {/* 吊灯（仅 ≥12㎡ 的房间）*/}
                   {isLarge && (
                     <>
+                      <pointLight position={[0, FLOOR_H / 2 - 0.50, 0]} intensity={3.5} distance={Math.max(iW, iD) * 2.2} decay={1.8} color="#FFF8E0" />
                       <mesh position={[0, FLOOR_H / 2 - 0.40, 0]}>
                         <cylinderGeometry args={[0.008, 0.008, 0.30, 8]} />
                         <meshStandardMaterial color="#222" roughness={0.6} />
@@ -986,41 +1027,52 @@ export default function FloorPlanBuilding({
         // 楼梯井位置（取 fi=0 的楼梯间，各层水平位置相同）
         const stairEntry = interiorRooms.find(r => r.isStair && r.fi === 0);
         const slabColor  = "#E0DCD4";
-        const totalW     = W + 0.30;
-        const totalD     = D + 0.30;
-        const halfW      = totalW / 2;
-        const halfD      = totalD / 2;
 
         return Array.from({ length: usedFloors - 1 }, (_, fi) => {
           const slabY = (fi + 1) * (FLOOR_H + SLAB_T) - SLAB_T / 2;
 
+          // 用上层楼（fi+1）的实际占地范围计算楼板尺寸，支持各层不同面积
+          const upperFp = floorPlans[fi + 1];
+          let totalW = W + 0.30, totalD = D + 0.30, slabCX = 0, slabCZ = 0;
+          if (upperFp) {
+            let lMinX = Infinity, lMinY = Infinity, lMaxX = -Infinity, lMaxY = -Infinity;
+            for (const r of (upperFp.enabledRooms ?? []).filter(r2 => !ROOM_DEFS[r2]?.isOutdoor)) {
+              const p2 = upperFp.roomLayout?.[r]; const d2 = upperFp.roomDimensions?.[r];
+              if (!p2 || !d2) continue;
+              lMinX = Math.min(lMinX, p2.x); lMinY = Math.min(lMinY, p2.y);
+              lMaxX = Math.max(lMaxX, p2.x + d2.width); lMaxY = Math.max(lMaxY, p2.y + d2.depth);
+            }
+            if (isFinite(lMinX)) {
+              totalW = (lMaxX - lMinX) * CM + 0.30;
+              totalD = (lMaxY - lMinY) * CM + 0.30;
+              slabCX = ((lMinX + lMaxX) / 2 - planOffset.minX) * CM - W / 2;
+              slabCZ = -(((lMinY + lMaxY) / 2 - planOffset.minY) * CM) + D / 2;
+            }
+          }
+          const halfW = totalW / 2;
+          const halfD = totalD / 2;
+
           if (!stairEntry) {
-            // 无楼梯间：整块楼板
             return (
-              <mesh key={`slab-${fi}`} position={[0, slabY, 0]} castShadow receiveShadow>
+              <mesh key={`slab-${fi}`} position={[slabCX, slabY, slabCZ]} castShadow receiveShadow>
                 <boxGeometry args={[totalW, SLAB_T, totalD]} />
                 <meshStandardMaterial color={slabColor} roughness={0.85} />
               </mesh>
             );
           }
 
-          // 有楼梯井：拆成 4 条，绕开楼梯井矩形开口
           const { cx: scx, cz: scz, rW: srW, rD: srD } = stairEntry;
-          const fL = -halfW, fR = halfW;
-          const fN = -halfD, fS = halfD;
+          const fL = slabCX - halfW, fR = slabCX + halfW;
+          const fN = slabCZ - halfD, fS = slabCZ + halfD;
           const sL = scx - srW / 2, sR = scx + srW / 2;
           const sN = scz - srD / 2, sSouth = scz + srD / 2;
 
           type Piece = { key: string; w: number; d: number; x: number; z: number };
           const pieces: Piece[] = [];
-          // 北侧（楼梯井以北，全宽）
-          if (sN - fN > 0.01) pieces.push({ key: "N", w: totalW, d: sN - fN,    x: 0,            z: (fN + sN) / 2    });
-          // 南侧（楼梯井以南，全宽）
-          if (fS - sSouth > 0.01) pieces.push({ key: "S", w: totalW, d: fS - sSouth, x: 0,       z: (sSouth + fS) / 2 });
-          // 西侧（楼梯井左侧，仅楼梯井纵深范围）
-          if (sL - fL > 0.01) pieces.push({ key: "W", w: sL - fL, d: srD,      x: (fL + sL) / 2, z: scz              });
-          // 东侧（楼梯井右侧）
-          if (fR - sR > 0.01) pieces.push({ key: "E", w: fR - sR, d: srD,      x: (sR + fR) / 2,  z: scz              });
+          if (sN   - fN > 0.01) pieces.push({ key: "N", w: totalW, d: sN - fN,     x: slabCX,          z: (fN + sN) / 2     });
+          if (fS   - sSouth > 0.01) pieces.push({ key: "S", w: totalW, d: fS - sSouth, x: slabCX,       z: (sSouth + fS) / 2  });
+          if (sL   - fL > 0.01) pieces.push({ key: "W", w: sL - fL, d: srD,         x: (fL + sL) / 2,  z: scz               });
+          if (fR   - sR > 0.01) pieces.push({ key: "E", w: fR - sR, d: srD,         x: (sR + fR) / 2,  z: scz               });
 
           return (
             <group key={`slab-${fi}`}>
@@ -1057,7 +1109,7 @@ export default function FloorPlanBuilding({
 
         const totalWinLen = winEntries.reduce((s, e) => s + e.w.len, 0);
         const winCoverage = segLen > 0 ? (totalWinLen * CM) / segLen : 0;
-        const isGlassWall = winCoverage > 0.55 || (isGlassVilla && isSouth);
+        const isGlassWall = winCoverage > 0.42 || (isGlassVilla && (isSouth || winCoverage > 0.28));
 
         let facade: "glass" | "concrete" | "wood";
         if (forceGlass) {
@@ -1158,7 +1210,7 @@ export default function FloorPlanBuilding({
           );
         }
 
-        // ── 混凝土（含横缝线 + 窗） ──
+        // ── 混凝土（含窗） ──
         return (
           <group key={`co-${bi}`} position={[px, yMid, pz]} rotation={rot}>
             <ConcreteFacade width={segLen} height={FLOOR_H} windows={winInfos} />
@@ -1262,6 +1314,13 @@ export default function FloorPlanBuilding({
                 <meshStandardMaterial color={wallColor} side={THREE.BackSide} roughness={0.80}
                   transparent={isXray} opacity={wallOpacity} depthWrite={!isXray}
                   emissive={wallColor} emissiveIntensity={0.06} />
+              </mesh>
+            )}
+            {/* 走廊：天花板板条（顶部薄板，让走廊从室内清晰可辨）*/}
+            {isHallway && (
+              <mesh position={[cx, yBase + FLOOR_H - 0.04, cz]} raycast={() => null}>
+                <boxGeometry args={[rW, 0.08, rD]} />
+                <meshStandardMaterial color="#E8E4DC" roughness={0.88} side={THREE.DoubleSide} />
               </mesh>
             )}
             {/* 地板：楼梯间上层（fi>0）不渲染地板，保持楼梯开口畅通 */}
@@ -1483,9 +1542,10 @@ export default function FloorPlanBuilding({
                   const fh = (fItem.height * (modP.scaleH ?? 1)) / 100;
                   const x3d = modP.x / 100 - rW / 2;
                   const z3d = modP.z / 100 - rD / 2;
+                  const FLOOR_SURFACE = 0.025; // floor plane is rendered 2.5cm above yBase
                   const baseY = modP.mountCeiling
                     ? (FLOOR_H - fh)
-                    : (modP.elevationY ?? 0) / 100;
+                    : FLOOR_SURFACE + (modP.elevationY ?? 0) / 100;
                   const rotY = (modP.rotation * Math.PI) / 180;
                   // 加点 emissive 让 box 在玻璃后面也看得见 — 内部光线
                   // 经过 transparent 玻璃后会暗一截，靠 emissive 弥补。
