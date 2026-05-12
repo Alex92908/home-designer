@@ -3715,6 +3715,96 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5a-base. 建筑基部种植（foundation planting — ornamental grass + shrubs）──
+           A strip of low ornamental grasses and mounding shrubs along the
+           south and east/west faces, softening building-meets-ground transition.
+           Standard luxury exterior finish — usually boxwood, liriope, or grasses. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bedW = 0.55;    // planting bed depth from building face
+        const bedY = bedW / 2;
+        // South facade plant strip
+        const southZ = -D / 2 - bedW / 2 - 0.004;
+        const plantCount = Math.round(W / 0.65);
+        const plants: Array<{ x: number; z: number; type: number }> = [];
+        // South face
+        for (let pi = 0; pi < plantCount; pi++) {
+          const px = -W / 2 + 0.32 + pi * (W / (plantCount - 1));
+          plants.push({ x: px, z: southZ, type: pi % 3 });
+        }
+        // East face strip (partial, towards south)
+        const eastX = W / 2 + bedW / 2 + 0.004;
+        const eastCount = Math.round(D * 0.55 / 0.65);
+        for (let pi = 0; pi < eastCount; pi++) {
+          const pz = -D / 2 + 0.32 + pi * (D * 0.55 / (eastCount - 1));
+          plants.push({ x: eastX, z: pz, type: pi % 3 });
+        }
+        // West face strip (partial)
+        const westX = -W / 2 - bedW / 2 - 0.004;
+        for (let pi = 0; pi < eastCount; pi++) {
+          const pz = -D / 2 + 0.32 + pi * (D * 0.55 / (eastCount - 1));
+          plants.push({ x: westX, z: pz, type: (pi + 1) % 3 });
+        }
+        return (
+          <group>
+            {/* Dark mulch / gravel bed along south face */}
+            <mesh position={[0, 0.006, southZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[W, bedW]} />
+              <meshStandardMaterial color="#2A1E14" roughness={0.96} metalness={0.01} />
+            </mesh>
+            {/* East bed */}
+            <mesh position={[eastX, 0.006, -D / 2 + D * 0.28]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[bedW, D * 0.55]} />
+              <meshStandardMaterial color="#2A1E14" roughness={0.96} metalness={0.01} />
+            </mesh>
+            {/* West bed */}
+            <mesh position={[westX, 0.006, -D / 2 + D * 0.28]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[bedW, D * 0.55]} />
+              <meshStandardMaterial color="#2A1E14" roughness={0.96} metalness={0.01} />
+            </mesh>
+            {/* Plants: type 0 = liriope grass, type 1 = boxwood mound, type 2 = ornamental grass */}
+            {plants.map(({ x, z, type }, pi) => {
+              const pHash = (pi * 17 + 3) % 13;
+              if (type === 0) {
+                // Liriope / ground cover — low dense spheres
+                return (
+                  <mesh key={pi} position={[x, 0.10, z]} castShadow>
+                    <sphereGeometry args={[0.12 + (pHash % 3) * 0.030, 6, 5]} />
+                    <meshStandardMaterial color={pHash % 2 === 0 ? "#3A6828" : "#2E5A20"} roughness={0.96} />
+                  </mesh>
+                );
+              } else if (type === 1) {
+                // Boxwood mound
+                return (
+                  <mesh key={pi} position={[x, 0.16, z]} castShadow>
+                    <sphereGeometry args={[0.18 + (pHash % 3) * 0.040, 7, 5]} />
+                    <meshStandardMaterial color={pHash % 2 === 0 ? "#1E4A18" : "#244E1C"} roughness={0.97} />
+                  </mesh>
+                );
+              } else {
+                // Ornamental grass clump — elongated cylinder with fanned top
+                return (
+                  <group key={pi} position={[x, 0, z]}>
+                    {Array.from({ length: 5 }, (_, gi) => {
+                      const ga = (gi / 5) * Math.PI * 2;
+                      const gr = 0.05 + (pHash % 3) * 0.018;
+                      const gh = 0.32 + (pHash % 3) * 0.060;
+                      const gTiltX = Math.cos(ga) * 0.18;
+                      const gTiltZ = Math.sin(ga) * 0.18;
+                      return (
+                        <mesh key={gi} position={[gTiltX * 0.3, gh / 2, gTiltZ * 0.3]} rotation={[gTiltZ * 0.5, 0, -gTiltX * 0.5]}>
+                          <cylinderGeometry args={[0.006, 0.018, gh, 4]} />
+                          <meshStandardMaterial color="#5A7840" roughness={0.88} />
+                        </mesh>
+                      );
+                    })}
+                  </group>
+                );
+              }
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5a-screen. 东侧立面竖向金属格栅屏（vertical louvre privacy screen）──
            A full-height architectural louvre screen at the east end of the south
            facade — provides shade, privacy, and strong design character. Dark
