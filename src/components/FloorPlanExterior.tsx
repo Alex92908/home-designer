@@ -917,6 +917,31 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
           )}
         </group>
       ))}
+      {/* 躺椅之间的小边桌 — 铝合金 + 玻璃台面 */}
+      <group position={[0, roofSlab + 0.05, -D * 0.28]}>
+        {/* Table frame */}
+        <mesh position={[0, 0.38, 0]}>
+          <cylinderGeometry args={[0.28, 0.28, 0.015, 12]} />
+          <meshStandardMaterial color="#B8C0CC" roughness={0.20} metalness={0.88} envMapIntensity={2.0} />
+        </mesh>
+        {/* Pedestal */}
+        <mesh position={[0, 0.20, 0]}>
+          <cylinderGeometry args={[0.030, 0.040, 0.36, 8]} />
+          <meshStandardMaterial color="#A8B0BC" roughness={0.30} metalness={0.78} />
+        </mesh>
+        {/* Frosted glass top */}
+        <mesh position={[0, 0.392, 0]}>
+          <cylinderGeometry args={[0.265, 0.265, 0.008, 12]} />
+          <meshStandardMaterial color="#C8D8E0" transparent opacity={0.70} roughness={0.04} metalness={0.08} envMapIntensity={3.0} />
+        </mesh>
+        {/* Drinks — 2 small cylinders (glasses) */}
+        {([-0.11, 0.11] as number[]).map((gx, gi) => (
+          <mesh key={gi} position={[gx, 0.43, 0]}>
+            <cylinderGeometry args={[0.028, 0.022, 0.090, 8]} />
+            <meshStandardMaterial color="#A8C8E0" transparent opacity={0.60} roughness={0.04} metalness={0.04} envMapIntensity={2.0} />
+          </mesh>
+        ))}
+      </group>
       {/* ── 屋顶遮阳棚架（pergola）— 铝合金结构，横向遮阳板 ── */}
       {(() => {
         const pgW = Math.min(W * 0.48, 5.8);  // pergola width
