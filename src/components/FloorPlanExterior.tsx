@@ -33,6 +33,50 @@ const FLOOR_H = 3.00;   // 每层净高 m
 const SLAB_T  = 0.20;   // 层间楼板厚 m
 const TOLE    = 10;     // 外墙相邻判定容差 cm
 
+// ── Canvas-baked wood-grain texture (module singleton) ────────
+// Vertical grain lines on a warm-brown base. Deterministic using
+// seeded hash so we get repeatable grain without SSR issues.
+let _woodGrainTex: THREE.CanvasTexture | null = null;
+function getWoodGrainTex(): THREE.CanvasTexture | null {
+  if (typeof document === "undefined") return null;
+  if (_woodGrainTex) return _woodGrainTex;
+  const W = 64, H = 512;
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const g = cv.getContext("2d")!;
+  g.fillStyle = "#7A4E2A";
+  g.fillRect(0, 0, W, H);
+  // Vertical grain lines (seeded, deterministic)
+  let s = 0xABCD1234;
+  const rng = () => { s ^= s << 13; s ^= s >> 17; s ^= s << 5; return ((s >>> 0) / 0xFFFFFFFF); };
+  for (let i = 0; i < 22; i++) {
+    const gx = rng() * W;
+    const dark = rng() > 0.5;
+    g.strokeStyle = dark ? `rgba(40,20,8,${0.22 + rng() * 0.22})` : `rgba(200,140,70,${0.15 + rng() * 0.18})`;
+    g.lineWidth = 0.8 + rng() * 2.4;
+    g.beginPath();
+    for (let y = 0; y <= H; y += 6) {
+      const wave = Math.sin(y * 0.04 + i) * 2.5;
+      if (y === 0) g.moveTo(gx + wave, y); else g.lineTo(gx + wave, y);
+    }
+    g.stroke();
+  }
+  // Fine highlight streak — simulates wood sheen under finish
+  g.strokeStyle = "rgba(255,210,140,0.18)";
+  g.lineWidth = 12;
+  g.beginPath();
+  g.moveTo(W * 0.38, 0);
+  g.lineTo(W * 0.32, H);
+  g.stroke();
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(1, 2.5);
+  t.needsUpdate = true;
+  _woodGrainTex = t;
+  return t;
+}
+
 // ── 类型 ──────────────────────────────────────────────────────
 export type WallSide = "south" | "north" | "east" | "west";
 
@@ -208,25 +252,53 @@ function GlassCurtain({
                 <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} />
               </mesh>
             )}
-            {/* 玻璃 —— 整高一片（不再按行切，避免横压条之外的多余水平缝） */}
+            {/* 玻璃 + 中横档（transom bar）——每格一片玻璃，上部 62% 为主视野，
+                下部 38% 为固定扇（两者之间加细横档，与竖向幕墙语言匹配）*/}
             {Array.from({ length: rows }, (_, ri) => {
               const py = -height / 2 + (ri + 0.5) * rowH;
               const hasDoor = doors.some(d => Math.abs(d.cx - px) < panelW / 2 + d.w / 2 && ri === 0);
+              // Spandrel occupies bottom 20% of row — vision glass is above that.
+              // Split vision zone into upper 62% / lower 38% with a transom bar.
+              const spH    = Math.min(rowH * 0.200, 0.55);
+              const visH   = rowH - spH;                 // vision zone height
+              const topH   = visH * 0.62;                // upper vision pane
+              const botH   = visH * 0.38;                // lower vision pane
+              const visBot = py - rowH / 2 + spH;        // bottom of vision zone
+              const transY = visBot + botH;               // transom center Y
               return (
-                <mesh key={`p${ri}`} position={[0, py, 0.020]} renderOrder={10}>
-                  <boxGeometry args={[panelW - 0.004, rowH * 0.985, 0.008]} />
-                  <meshStandardMaterial
-                    color={hasDoor ? "#C2D6E4" : "#C8DCE8"}
-                    transparent
-                    opacity={hasDoor ? 0.48 : 0.44}
-                    depthWrite={false}
-                    roughness={0.03}
-                    metalness={0.14}
-                    envMapIntensity={2.4}
-                    side={THREE.DoubleSide}
-                    {...overlayMaterialProps(2)}
-                  />
-                </mesh>
+                <group key={`p${ri}`}>
+                  {/* Upper vision pane */}
+                  <mesh position={[0, visBot + botH + topH / 2, 0.020]} renderOrder={10}>
+                    <boxGeometry args={[panelW - 0.006, topH - 0.004, 0.008]} />
+                    <meshStandardMaterial
+                      color={hasDoor ? "#C2D6E4" : "#C8DCE8"}
+                      transparent opacity={hasDoor ? 0.48 : 0.44}
+                      depthWrite={false} roughness={0.03} metalness={0.14}
+                      envMapIntensity={2.4} side={THREE.DoubleSide}
+                      {...overlayMaterialProps(2)}
+                    />
+                  </mesh>
+                  {/* Lower vision pane (fixed / operable bottom sash) */}
+                  <mesh position={[0, visBot + botH / 2, 0.020]} renderOrder={10}>
+                    <boxGeometry args={[panelW - 0.006, botH - 0.004, 0.008]} />
+                    <meshStandardMaterial
+                      color={hasDoor ? "#BDD0DE" : "#C4D8E4"}
+                      transparent opacity={hasDoor ? 0.52 : 0.46}
+                      depthWrite={false} roughness={0.04} metalness={0.12}
+                      envMapIntensity={2.2} side={THREE.DoubleSide}
+                      {...overlayMaterialProps(2)}
+                    />
+                  </mesh>
+                  {/* Horizontal transom bar between upper and lower pane */}
+                  {!hasDoor && (
+                    <mesh position={[0, transY, 0.023]} renderOrder={8}>
+                      <boxGeometry args={[panelW - 0.006, 0.040, 0.014]} />
+                      <meshStandardMaterial
+                        color={frame} roughness={0.12} metalness={0.94} envMapIntensity={2.6}
+                      />
+                    </mesh>
+                  )}
+                </group>
               );
             })}
           </group>
@@ -303,8 +375,8 @@ function ConcreteFacade({
   // 竖向板缝：每 120cm 一道
   const vGrooveStep  = 1.20;
   const vGrooveCount = Math.max(1, Math.round(width / vGrooveStep) - 1);
-  const grooveColor  = "#BDB8B0";   // 略深于底板，形成阴影缝
-  const baseColor    = "#C8C4BC";   // 浅暖灰混凝土
+  const grooveColor  = "#B8B3AB";   // deeper groove shadow
+  const baseColor    = "#C8C4BC";   // warm-gray concrete base
 
   return (
     <group>
@@ -313,6 +385,20 @@ function ConcreteFacade({
         <boxGeometry args={[width, height, 0.08]} />
         <meshStandardMaterial color={baseColor} roughness={0.88} metalness={0.01} />
       </mesh>
+      {/* ── 竖向分板阴影面（每 vGrooveStep 一块，交替略暗，模拟预制挂板微差）── */}
+      {Array.from({ length: Math.round(width / vGrooveStep) }, (_, vi) => {
+        const panelX = -width / 2 + (vi + 0.5) * vGrooveStep;
+        if (panelX > width / 2) return null;
+        const panelW2 = Math.min(vGrooveStep - 0.020, width - Math.abs(panelX) * 2);
+        if (panelW2 <= 0) return null;
+        const shade = vi % 2 === 0 ? "#CBC7BF" : "#C3BFB7";  // subtle alternating tone
+        return (
+          <mesh key={`pnl-${vi}`} position={[panelX, 0, 0.041]}>
+            <boxGeometry args={[panelW2, height - 0.002, 0.004]} />
+            <meshStandardMaterial color={shade} roughness={0.88} metalness={0.01} />
+          </mesh>
+        );
+      })}
 
       {/* ── 水平板缝线 ── */}
       {Array.from({ length: hGrooveCount }, (_, i) => {
@@ -361,16 +447,28 @@ function ConcreteFacade({
               <meshStandardMaterial color="#2E3540" roughness={0.35} metalness={0.62} />
             </mesh>
           ))}
-          {/* 窗台板（concrete sill ledge — casts shadow below window） */}
+          {/* 窗台板 + 滴水线（drip-edge metal cap on sill） */}
           <mesh position={[0, -w.winH / 2 - 0.040, 0.055]} castShadow>
             <boxGeometry args={[w.winLen + 0.10, 0.065, 0.130]} />
             <meshStandardMaterial color="#B8B4AC" roughness={0.86} metalness={0.02} />
           </mesh>
-          {/* 窗楣（concrete lintel above window — add shadow depth） */}
+          {/* Drip-edge metal cap on sill face */}
+          <mesh position={[0, -w.winH / 2 - 0.048, 0.116]}>
+            <boxGeometry args={[w.winLen + 0.12, 0.010, 0.010]} />
+            <meshStandardMaterial color="#2A2E38" roughness={0.20} metalness={0.92} envMapIntensity={1.8} />
+          </mesh>
+          {/* 窗楣（concrete lintel above window） */}
           <mesh position={[0, w.winH / 2 + 0.030, 0.050]}>
             <boxGeometry args={[w.winLen + 0.04, 0.048, 0.095]} />
             <meshStandardMaterial color="#C0BCB4" roughness={0.88} metalness={0.01} />
           </mesh>
+          {/* 侧边窗口竖向内衬（jamb reveals — adds visual depth to the reveal） */}
+          {([-w.winLen / 2, w.winLen / 2] as number[]).map((jx, ji) => (
+            <mesh key={`jamb-${ji}`} position={[jx + (ji === 0 ? 0.040 : -0.040), 0, -0.025]}>
+              <boxGeometry args={[0.080, w.winH - 0.04, 0.090]} />
+              <meshStandardMaterial color="#BCBAB2" roughness={0.90} metalness={0.01} />
+            </mesh>
+          ))}
         </group>
       ))}
     </group>
@@ -486,23 +584,133 @@ function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
           <meshStandardMaterial color="#2E3240" roughness={0.22} metalness={0.90} envMapIntensity={2.0} />
         </mesh>
       ))}
-      {/* ── 屋顶设备箱（机房/新风系统，增加细节感）── */}
-      <mesh position={[-W * 0.28, roofSlab + 0.35, D * 0.18]} castShadow>
-        <boxGeometry args={[1.40, 0.70, 0.90]} />
-        <meshStandardMaterial color="#B8B4AE" roughness={0.82} metalness={0.08} />
-      </mesh>
-      {/* ── 太阳能热水器（北侧，倾斜面朝南）── */}
-      <group position={[W * 0.25, roofSlab + 0.20, D * 0.28]} rotation={[0.32, 0, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[1.20, 0.06, 1.60]} />
-          <meshStandardMaterial color="#2A2E3C" roughness={0.30} metalness={0.45} />
-        </mesh>
-        {/* 玻璃覆盖面 */}
-        <mesh position={[0, 0.04, 0]}>
-          <boxGeometry args={[1.18, 0.02, 1.58]} />
-          <meshStandardMaterial color="#6090A8" roughness={0.12} metalness={0.22} transparent opacity={0.65} />
-        </mesh>
-      </group>
+      {/* ── 线性天窗（linear skylight）— 南向采光，钢框 + 夹胶玻璃 ── */}
+      {(() => {
+        const slW = Math.min(W * 0.45, 5.0);  // skylight width
+        const slD = 0.90;                       // skylight depth (north-south)
+        const slY = roofSlab + 0.055;          // sits on roof slab
+        const slZ = -D * 0.18;                 // south-leaning position
+        return (
+          <group position={[0, slY, slZ]}>
+            {/* Frame curb — dark aluminum channel */}
+            <mesh position={[0, 0.045, 0]} castShadow>
+              <boxGeometry args={[slW + 0.06, 0.09, slD + 0.06]} />
+              <meshStandardMaterial color="#1E2028" roughness={0.20} metalness={0.92} envMapIntensity={2.2} />
+            </mesh>
+            {/* Glass infill — laminated glass, slight blue-green tint */}
+            <mesh position={[0, 0.094, 0]}>
+              <boxGeometry args={[slW - 0.02, 0.012, slD - 0.02]} />
+              <meshStandardMaterial
+                color="#AACCD8"
+                transparent opacity={0.58}
+                roughness={0.04} metalness={0.06}
+                envMapIntensity={3.5}
+                emissive="#60B0C8" emissiveIntensity={0.06}
+              />
+            </mesh>
+            {/* Interior glow — simulates light shaft from below */}
+            <pointLight position={[0, -0.30, 0]} intensity={2.0} distance={4.0} decay={2.0} color="#D8F0FF" />
+            {/* Longitudinal mullion dividers (3 sections) */}
+            {([-slW * 0.28, 0, slW * 0.28] as number[]).map((mx, mi) => (
+              <mesh key={mi} position={[mx, 0.094, 0]}>
+                <boxGeometry args={[0.028, 0.016, slD - 0.02]} />
+                <meshStandardMaterial color="#1E2028" roughness={0.18} metalness={0.94} envMapIntensity={2.0} />
+              </mesh>
+            ))}
+          </group>
+        );
+      })()}
+
+      {/* ── HVAC 冷凝器组（2 台并排，带风扇格栅）── */}
+      {([[-W * 0.30, D * 0.18], [-W * 0.16, D * 0.18]] as [number,number][]).map(([hvx, hvz], hi) => (
+        <group key={`hv-${hi}`} position={[hvx, roofSlab + 0.04, hvz]}>
+          {/* 机体箱 — 浅灰色蒙皮，略带金属感 */}
+          <mesh castShadow>
+            <boxGeometry args={[0.90, 0.68, 0.90]} />
+            <meshStandardMaterial color="#C4C0B8" roughness={0.70} metalness={0.18} envMapIntensity={0.8} />
+          </mesh>
+          {/* 顶部风扇圆格栅 */}
+          <mesh position={[0, 0.346, 0]}>
+            <cylinderGeometry args={[0.30, 0.30, 0.012, 16]} />
+            <meshStandardMaterial color="#888480" roughness={0.40} metalness={0.60} />
+          </mesh>
+          {/* 格栅线（叶片感）*/}
+          {Array.from({ length: 6 }, (_, gi) => {
+            const ga = (gi / 6) * Math.PI;
+            return (
+              <mesh key={gi} position={[Math.cos(ga) * 0.14, 0.352, Math.sin(ga) * 0.14]} rotation={[0, ga, 0]}>
+                <boxGeometry args={[0.56, 0.008, 0.025]} />
+                <meshStandardMaterial color="#606060" roughness={0.50} metalness={0.55} />
+              </mesh>
+            );
+          })}
+          {/* 侧面百叶（前面板） */}
+          {Array.from({ length: 6 }, (_, li) => (
+            <mesh key={li} position={[0, -0.24 + li * 0.090, 0.458]}>
+              <boxGeometry args={[0.80, 0.022, 0.045]} />
+              <meshStandardMaterial color="#AEAAA4" roughness={0.72} metalness={0.14} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+      {/* ── 光伏板阵列（solar PV array）— 朝南倾斜 18°，3×5 矩阵 ── */}
+      {(() => {
+        const pvCols = 5, pvRows = 3;
+        const pvW = 1.08, pvH = 1.70, pvGap = 0.06;
+        const pvTilt = 0.32;   // tilt angle (radians, ≈ 18°)
+        const arrW = pvCols * (pvW + pvGap) - pvGap;
+        const arrDepth = pvRows * (pvH + pvGap) - pvGap;  // total depth along tilt axis
+        const arrX = W * 0.22;
+        const arrZ = D * 0.24;
+        const arrY = roofSlab + 0.14;
+        return (
+          <group position={[arrX, arrY, arrZ]} rotation={[pvTilt, 0, 0]}>
+            {/* Racking rails — 2 horizontal aluminium beams spanning full array width */}
+            {[pvH * 0.25 - arrDepth / 2, pvH * 0.75 - arrDepth / 2 + (pvRows - 1) * (pvH + pvGap) * 0.5].map((rz, ri) => (
+              <mesh key={ri} position={[0, 0, rz]} castShadow>
+                <boxGeometry args={[arrW + 0.12, 0.04, 0.055]} />
+                <meshStandardMaterial color="#4A5060" roughness={0.42} metalness={0.62} />
+              </mesh>
+            ))}
+            {/* PV panels grid — 3 rows × 5 columns, each row offset along Z */}
+            {Array.from({ length: pvRows }, (_, ri) =>
+              Array.from({ length: pvCols }, (_, ci) => {
+                const px = -arrW / 2 + ci * (pvW + pvGap) + pvW / 2;
+                const pz = -arrDepth / 2 + ri * (pvH + pvGap) + pvH / 2;
+                return (
+                  <group key={`pv-${ri}-${ci}`} position={[px, 0, pz]}>
+                    {/* Panel frame — dark anodized aluminium */}
+                    <mesh castShadow>
+                      <boxGeometry args={[pvW, pvH, 0.032]} />
+                      <meshStandardMaterial color="#2C3040" roughness={0.35} metalness={0.55} />
+                    </mesh>
+                    {/* Glass cell surface — dark blue monocrystalline silicon */}
+                    <mesh position={[0, 0, 0.018]}>
+                      <boxGeometry args={[pvW - 0.04, pvH - 0.04, 0.008]} />
+                      <meshStandardMaterial
+                        color="#1A1E2E"
+                        roughness={0.08} metalness={0.18}
+                        envMapIntensity={3.0}
+                        emissive="#0E1422" emissiveIntensity={0.06}
+                      />
+                    </mesh>
+                    {/* Cell grid lines — 5 horizontal busbars */}
+                    {Array.from({ length: 5 }, (_, li) => {
+                      const ly = -pvH / 2 + (li + 1) * (pvH / 6);
+                      return (
+                        <mesh key={li} position={[0, ly, 0.023]}>
+                          <boxGeometry args={[pvW - 0.05, 0.008, 0.004]} />
+                          <meshStandardMaterial color="#3A4260" roughness={0.28} metalness={0.42} />
+                        </mesh>
+                      );
+                    })}
+                  </group>
+                );
+              })
+            )}
+          </group>
+        );
+      })()}
       {/* ── 屋顶排气管（细节）── */}
       <mesh position={[W * 0.10, roofSlab + 0.25, -D * 0.10]} castShadow>
         <cylinderGeometry args={[0.08, 0.10, 0.50, 8]} />
@@ -539,6 +747,52 @@ function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
           )}
         </group>
       ))}
+      {/* ── 屋顶遮阳棚架（pergola）— 铝合金结构，横向遮阳板 ── */}
+      {(() => {
+        const pgW = Math.min(W * 0.48, 5.8);  // pergola width
+        const pgD = 2.40;                       // pergola depth (N-S)
+        const pgH = 2.20;                       // height above roof slab
+        const pgY = roofSlab + 0.05;            // base Y
+        const pgZ = -D * 0.28;                  // south-leaning terrace
+        const pgX = -W * 0.13;                  // slightly west of center
+        const postColor  = "#3A3C44";
+        const louverColor = "#50545E";
+        const postW = 0.065, postD = 0.065;
+        const louverW = pgW, louverH = 0.042, louverD = 0.014;
+        const louverCount = Math.round(pgD / 0.165);
+        return (
+          <group position={[pgX, pgY, pgZ]}>
+            {/* 4 立柱 */}
+            {([ [-pgW/2+postW/2, -pgD/2+postD/2],
+                [ pgW/2-postW/2, -pgD/2+postD/2],
+                [-pgW/2+postW/2,  pgD/2-postD/2],
+                [ pgW/2-postW/2,  pgD/2-postD/2],
+            ] as [number,number][]).map(([px2, pz2], pi) => (
+              <mesh key={pi} position={[px2, pgH / 2, pz2]} castShadow>
+                <boxGeometry args={[postW, pgH, postD]} />
+                <meshStandardMaterial color={postColor} roughness={0.28} metalness={0.70} envMapIntensity={1.5} />
+              </mesh>
+            ))}
+            {/* 顶部纵梁 (2 条) */}
+            {([-pgW/2 + 0.12, pgW/2 - 0.12] as number[]).map((bx, bi) => (
+              <mesh key={bi} position={[bx, pgH + 0.04, 0]} castShadow>
+                <boxGeometry args={[0.07, 0.08, pgD + 0.12]} />
+                <meshStandardMaterial color={postColor} roughness={0.28} metalness={0.70} />
+              </mesh>
+            ))}
+            {/* 横向遮阳条（louvers）*/}
+            {Array.from({ length: louverCount }, (_, li) => {
+              const lz = -pgD / 2 + li * (pgD / (louverCount - 1));
+              return (
+                <mesh key={li} position={[0, pgH + 0.08, lz]} castShadow>
+                  <boxGeometry args={[louverW, louverH, louverD]} />
+                  <meshStandardMaterial color={louverColor} roughness={0.32} metalness={0.62} envMapIntensity={1.2} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })()}
       {/* 屋顶种植箱 — 绿植对称，增加生机 */}
       {([[-W * 0.36, -D * 0.18], [W * 0.36, -D * 0.18]] as [number,number][]).map(([px, pz], pi) => (
         <group key={`rp-${pi}`} position={[px, roofSlab + 0.05, pz]}>
@@ -644,6 +898,21 @@ export default function FloorPlanBuilding({
   const setActiveRoom  = useDesignerStore(s => s.setActiveRoom);
   const setViewMode    = useDesignerStore(s => s.setViewMode);
   const setActiveFloor = useDesignerStore(s => s.setActiveFloor);
+  const sunHour        = useDesignerStore(s => s.sunHour);
+
+  // ── Interior emissive intensity driven by time-of-day ──────────────────
+  // Night/late evening → rooms glow warm from within (high emissive).
+  // Full day → minimal emissive (interior looks lit by natural light).
+  const interiorGlowWall: number = sunHour < 6 || sunHour > 20
+    ? 1.55   // night — strong interior glow
+    : sunHour < 8 || sunHour > 18
+    ? 1.20   // dawn/dusk — moderate glow
+    : 0.92;  // day — subtle (existing default)
+  const interiorGlowCeil: number = sunHour < 6 || sunHour > 20
+    ? 0.90   // night ceiling
+    : sunHour < 8 || sunHour > 18
+    ? 0.72   // dawn/dusk ceiling
+    : 0.60;  // day ceiling
 
   /** Click door/window on exterior →
    *  - if onEnterRoom prop given: walkthrough mode at this room's centre
@@ -977,15 +1246,28 @@ export default function FloorPlanBuilding({
     <group>
       {/* 地面基座 — 浅色石灰石平台（建筑基层）*/}
       <mesh position={[0, -0.04, 0]} receiveShadow>
-        <boxGeometry args={[W + 0.40, 0.08, D + 0.40]} />
-        <meshStandardMaterial color="#D8D0C0" roughness={0.88} metalness={0.01} />
+        <boxGeometry args={[W + 0.55, 0.10, D + 0.55]} />
+        <meshStandardMaterial color="#D4CCBA" roughness={0.72} metalness={0.03} envMapIntensity={0.35} />
       </mesh>
-      {/* 建筑基座压脚（深色混凝土踢脚，让建筑稳稳落地）*/}
+      {/* 建筑基座 — 两段式：下部黑花岗岩脚踢 + 上部深色抛光石材 */}
       {!insideBuilding && (
-        <mesh position={[0, 0.18, 0]} castShadow>
-          <boxGeometry args={[W + 0.08, 0.36, D + 0.08]} />
-          <meshStandardMaterial color="#2C3038" roughness={0.82} metalness={0.08} />
-        </mesh>
+        <>
+          {/* 下段：黑色花岗岩（低粗糙度，轻微抛光反射）*/}
+          <mesh position={[0, 0.10, 0]} castShadow>
+            <boxGeometry args={[W + 0.10, 0.20, D + 0.10]} />
+            <meshStandardMaterial color="#1A1C22" roughness={0.42} metalness={0.28} envMapIntensity={1.4} />
+          </mesh>
+          {/* 上段：深灰玄武岩（稍浅，形成两段阴影层次）*/}
+          <mesh position={[0, 0.30, 0]} castShadow>
+            <boxGeometry args={[W + 0.06, 0.20, D + 0.06]} />
+            <meshStandardMaterial color="#272B33" roughness={0.55} metalness={0.18} envMapIntensity={1.0} />
+          </mesh>
+          {/* 基座顶面金属压边（薄钢条，视觉分割线）*/}
+          <mesh position={[0, 0.405, 0]}>
+            <boxGeometry args={[W + 0.07, 0.010, D + 0.07]} />
+            <meshStandardMaterial color="#3A3E48" roughness={0.18} metalness={0.92} envMapIntensity={2.0} />
+          </mesh>
+        </>
       )}
       {/* ── 入口雨棚 —— 1F 顶端向南悬挑（现代建筑标志性元素） ── */}
       {!insideBuilding && isGlassVilla && (() => {
@@ -1017,6 +1299,24 @@ export default function FloorPlanBuilding({
                 <meshStandardMaterial color="#18181E" roughness={0.28} metalness={0.88} envMapIntensity={2} />
               </mesh>
             ))}
+            {/* LED 灯带 — 雨棚底面满铺，暖白发光模拟线型灯槽 */}
+            <mesh position={[0, canopyY - canopyT / 2 - 0.004, canopyZ - 0.08]}>
+              <boxGeometry args={[canopyW * 0.88, 0.012, 0.045]} />
+              <meshStandardMaterial
+                color="#FFF8E8"
+                emissive="#FFEFA0"
+                emissiveIntensity={1.8}
+                roughness={0.6}
+              />
+            </mesh>
+            {/* 雨棚底部 LED 点光源（让灯带向下照射） */}
+            <pointLight
+              position={[0, canopyY - canopyT / 2 - 0.08, canopyZ - 0.05]}
+              intensity={3.5}
+              distance={4.0}
+              decay={1.8}
+              color="#FFF6D8"
+            />
           </group>
         );
       })()}
@@ -1047,6 +1347,25 @@ export default function FloorPlanBuilding({
           </group>
         ));
       })}
+
+      {/* ── 外立面转角柱（4 角）— 黑色阳极氧化铝方柱，给建筑立面明确边界，
+              现代玻璃幕墙建筑标配转角细节 ── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const colW   = 0.16;   // column cross-section
+        const colH   = totalH + SLAB_T + 0.06; // full building height + small overshoot
+        const colY   = colH / 2;
+        const colMat = { color: "#181A1E" as const, roughness: 0.10 as const, metalness: 0.95 as const, envMapIntensity: 2.6 as const };
+        return (
+          <>
+            {([[-W / 2, -D / 2], [W / 2, -D / 2], [-W / 2, D / 2], [W / 2, D / 2]] as [number,number][]).map(([cx2, cz2], ci) => (
+              <mesh key={ci} position={[cx2, colY, cz2]} castShadow>
+                <boxGeometry args={[colW, colH, colW]} />
+                <meshStandardMaterial {...colMat} />
+              </mesh>
+            ))}
+          </>
+        );
+      })()}
 
       {/* ── 1. 每层背景填充板（消除房间间微小缝隙，视觉统一） ──
               当本层有任何 "glass" 房间时跳过：这块大背景板会从内部挡住
@@ -1134,7 +1453,7 @@ export default function FloorPlanBuilding({
                   roughness={0.78}
                   metalness={0.02}
                   emissive={emissiveW}
-                  emissiveIntensity={0.92}
+                  emissiveIntensity={interiorGlowWall}
                   side={THREE.FrontSide}
                 />
               );
@@ -1168,7 +1487,7 @@ export default function FloorPlanBuilding({
                     <meshStandardMaterial
                       color={ceilC}
                       emissive="#FFF0A0"
-                      emissiveIntensity={0.60}
+                      emissiveIntensity={interiorGlowCeil}
                       roughness={0.92}
                       side={THREE.DoubleSide}
                     />
@@ -1179,23 +1498,52 @@ export default function FloorPlanBuilding({
                     <meshStandardMaterial color={floorC} roughness={0.55} />
                   </mesh>
 
-                  {/* 吊灯（仅 ≥12㎡ 的房间）*/}
+                  {/* 吊灯（仅 ≥12㎡ 的房间）— emissive 随时间动态增强 */}
                   {isLarge && (
                     <>
-                      <pointLight position={[0, FLOOR_H / 2 - 0.50, 0]} intensity={3.5} distance={Math.max(iW, iD) * 2.2} decay={1.8} color="#FFF8E0" />
+                      <pointLight
+                        position={[0, FLOOR_H / 2 - 0.50, 0]}
+                        intensity={interiorGlowWall > 1.20 ? 5.5 : 3.5}
+                        distance={Math.max(iW, iD) * 2.5}
+                        decay={1.8}
+                        color="#FFF4D8"
+                      />
+                      {/* Pendant cord */}
                       <mesh position={[0, FLOOR_H / 2 - 0.40, 0]}>
-                        <cylinderGeometry args={[0.008, 0.008, 0.30, 8]} />
-                        <meshStandardMaterial color="#222" roughness={0.6} />
+                        <cylinderGeometry args={[0.006, 0.006, 0.32, 6]} />
+                        <meshStandardMaterial color="#1A1A1A" roughness={0.6} />
                       </mesh>
+                      {/* Pendant globe */}
                       <mesh position={[0, FLOOR_H / 2 - 0.62, 0]}>
-                        <sphereGeometry args={[0.13, 16, 10]} />
+                        <sphereGeometry args={[0.14, 16, 10]} />
                         <meshStandardMaterial
                           color="#FFE0A0"
-                          emissive="#FFC966"
-                          emissiveIntensity={2.4}
-                          roughness={0.40}
+                          emissive="#FFC060"
+                          emissiveIntensity={interiorGlowWall > 1.20 ? 3.5 : 2.4}
+                          roughness={0.35}
                         />
                       </mesh>
+                      {/* Second smaller pendant offset for large rooms */}
+                      {Math.max(iW, iD) > 5 && (
+                        <>
+                          <pointLight
+                            position={[iW * 0.30, FLOOR_H / 2 - 0.50, iD * 0.25]}
+                            intensity={interiorGlowWall > 1.20 ? 3.5 : 2.2}
+                            distance={Math.max(iW, iD) * 1.8}
+                            decay={2.0}
+                            color="#FFF4D8"
+                          />
+                          <mesh position={[iW * 0.30, FLOOR_H / 2 - 0.56, iD * 0.25]}>
+                            <sphereGeometry args={[0.10, 12, 8]} />
+                            <meshStandardMaterial
+                              color="#FFE0A0"
+                              emissive="#FFB840"
+                              emissiveIntensity={interiorGlowWall > 1.20 ? 3.0 : 1.8}
+                              roughness={0.38}
+                            />
+                          </mesh>
+                        </>
+                      )}
                     </>
                   )}
                 </group>
@@ -1255,12 +1603,17 @@ export default function FloorPlanBuilding({
               <group key={`slab-${fi}`}>
                 <mesh position={[slabCX, slabY, slabCZ]} castShadow receiveShadow>
                   <boxGeometry args={[totalW, SLAB_T, totalD]} />
-                  <meshStandardMaterial color={slabColor} roughness={0.85} />
+                  <meshStandardMaterial color={slabColor} roughness={0.85} metalness={0.02} />
                 </mesh>
                 {/* 楼板下边缘暗线（阴影缝，增加分层感）*/}
                 <mesh position={[slabCX, slabY - SLAB_T / 2 - 0.015, slabCZ]}>
                   <boxGeometry args={[totalW + 0.01, 0.030, totalD + 0.01]} />
                   <meshStandardMaterial color="#8A8680" roughness={0.9} />
+                </mesh>
+                {/* 楼板顶面金属压边（metal flashing cap）*/}
+                <mesh position={[slabCX, slabY + SLAB_T / 2 + 0.004, slabCZ]}>
+                  <boxGeometry args={[totalW + 0.01, 0.008, totalD + 0.01]} />
+                  <meshStandardMaterial color="#3A3E48" roughness={0.28} metalness={0.82} envMapIntensity={1.8} />
                 </mesh>
               </group>
             );
@@ -1430,31 +1783,40 @@ export default function FloorPlanBuilding({
 
         // ── 木饰面（侧墙）—— 竖向木条板（charred wood / 碳化木）──
         if (facade === "wood") {
-          // 竖向木条板，每条 12cm 宽，4mm 缝隙（阴影效果）
-          const SLAT_W  = 0.120;   // 木条宽度
-          const SLAT_GAP = 0.008;  // 缝隙
-          const SLAT_T  = 0.048;   // 木条厚度
-          const slatStep = SLAT_W + SLAT_GAP;
+          const SLAT_W   = 0.118;  // 木条宽度
+          const SLAT_GAP = 0.010;  // 缝隙（稍宽，阴影更清晰）
+          const SLAT_T   = 0.052;  // 木条厚度
+          const slatStep  = SLAT_W + SLAT_GAP;
           const slatCount = Math.max(3, Math.ceil(segLen / slatStep));
-          const slatColor  = "#7A4E2A";   // 暖棕木色
-          const grooveColor2 = "#3A2010";  // 缝隙深色
+          const grooveColor2 = "#2A1508";  // 深碳化木缝隙
+          const woodTex = getWoodGrainTex();
           return (
             <group key={`wd-${bi}`} position={[px, yMid, pz]} rotation={rot}>
-              {/* 背板（保证无漏光）*/}
+              {/* 背板 — 深碳化底色 */}
               <mesh castShadow receiveShadow>
-                <boxGeometry args={[segLen, FLOOR_H, 0.02]} />
-                <meshStandardMaterial color={grooveColor2} roughness={0.92} />
+                <boxGeometry args={[segLen, FLOOR_H, 0.018]} />
+                <meshStandardMaterial color={grooveColor2} roughness={0.95} />
               </mesh>
-              {/* 竖向木条 */}
+              {/* 顶 / 底部金属压条 */}
+              {[-FLOOR_H / 2 + 0.016, FLOOR_H / 2 - 0.016].map((capY, ci) => (
+                <mesh key={`cap-${ci}`} position={[0, capY, 0.032]}>
+                  <boxGeometry args={[segLen, 0.032, 0.012]} />
+                  <meshStandardMaterial color="#1E2028" roughness={0.20} metalness={0.90} envMapIntensity={2.0} />
+                </mesh>
+              ))}
+              {/* 竖向木条 — grain texture + 3-tone colour variation */}
               {Array.from({ length: slatCount }, (_, si) => {
                 const sx = -segLen / 2 + SLAT_W / 2 + si * slatStep;
-                if (sx > segLen / 2) return null;
-                // 交替略深色营造自然木纹变化
-                const col = si % 3 === 1 ? "#8B5E3C" : si % 3 === 2 ? "#6E4226" : slatColor;
+                if (sx > segLen / 2 + 0.01) return null;
+                // 3-way alternating tone for natural wood rhythm
+                const col = si % 3 === 1 ? "#8B5C38" : si % 3 === 2 ? "#6C4022" : "#7A4E2A";
                 return (
-                  <mesh key={si} position={[sx, 0, 0.020 + SLAT_T / 2]} castShadow>
-                    <boxGeometry args={[SLAT_W, FLOOR_H - 0.04, SLAT_T]} />
-                    <meshStandardMaterial color={col} roughness={0.82} metalness={0.0} />
+                  <mesh key={si} position={[sx, 0, 0.018 + SLAT_T / 2]} castShadow>
+                    <boxGeometry args={[SLAT_W, FLOOR_H - 0.06, SLAT_T]} />
+                    {woodTex
+                      ? <meshStandardMaterial map={woodTex} color={col} roughness={0.78} metalness={0.0} />
+                      : <meshStandardMaterial color={col} roughness={0.80} metalness={0.0} />
+                    }
                   </mesh>
                 );
               })}
@@ -1466,6 +1828,29 @@ export default function FloorPlanBuilding({
         return (
           <group key={`co-${bi}`} position={[px, yMid, pz]} rotation={rot}>
             <ConcreteFacade width={segLen} height={FLOOR_H} windows={winInfos} />
+            {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部，
+                高度 0.55m（窗台 0.90m 以下，不遮窗），增加基座感与立面层次。*/}
+            {floorIndex === 0 && (
+              <group position={[0, -FLOOR_H / 2 + 0.275, 0.050]}>
+                {/* Main cladding slab */}
+                <mesh castShadow receiveShadow>
+                  <boxGeometry args={[segLen + 0.004, 0.55, 0.016]} />
+                  <meshStandardMaterial color="#D8D0BE" roughness={0.64} metalness={0.02} envMapIntensity={0.55} />
+                </mesh>
+                {/* Ashlar horizontal rustication joints — 3 stone courses */}
+                {[0.13, 0, -0.13].map((jy, ji) => (
+                  <mesh key={ji} position={[0, jy, 0.009]}>
+                    <boxGeometry args={[segLen + 0.005, 0.008, 0.006]} />
+                    <meshStandardMaterial color="#B8B0A0" roughness={0.88} />
+                  </mesh>
+                ))}
+                {/* Top edge flashing strip */}
+                <mesh position={[0, 0.278, 0.010]}>
+                  <boxGeometry args={[segLen + 0.006, 0.010, 0.012]} />
+                  <meshStandardMaterial color="#3A3E48" roughness={0.22} metalness={0.90} envMapIntensity={1.6} />
+                </mesh>
+              </group>
+            )}
           </group>
         );
       })}

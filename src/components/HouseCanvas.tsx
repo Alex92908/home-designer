@@ -2,8 +2,8 @@
 
 import { useRef, useMemo, useEffect, useState, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky } from "@react-three/drei";
-import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA } from "@react-three/postprocessing";
+import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars } from "@react-three/drei";
+import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, HueSaturation } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -2452,34 +2452,37 @@ function Tree({ x, z, type = "round", scale = 1 }: {
     );
   }
   if (type === "cypress") {
-    // Italian Cypress — very tall, very narrow, columnar dark green
+    // Italian Cypress — very tall, very narrow, columnar evergreen.
+    // Built from 6 tightly-stacked cone tiers, each narrowing toward the apex,
+    // with alternating shade tones for the side vs front facing light.
+    // hash-based height variation [5.2, 6.5] for organic rhythm in rows.
+    const cyH = 5.2 + h1 * 1.3;
+    const tiers = [
+      { y: cyH * 0.10, r: 0.34, h: cyH * 0.20, c: "#183E18" },
+      { y: cyH * 0.25, r: 0.30, h: cyH * 0.22, c: "#1A4A1C" },
+      { y: cyH * 0.40, r: 0.25, h: cyH * 0.22, c: "#1C5220" },
+      { y: cyH * 0.55, r: 0.18, h: cyH * 0.22, c: "#1E5824" },
+      { y: cyH * 0.70, r: 0.12, h: cyH * 0.18, c: "#1C5020" },
+      { y: cyH * 0.84, r: 0.06, h: cyH * 0.18, c: "#1A4C1E" },
+    ];
     return (
-      <group position={[x, 0, z]} scale={[s, s, s]}>
-        {/* Trunk */}
-        <mesh position={[0, 0.5, 0]} castShadow>
-          <cylinderGeometry args={[0.08, 0.12, 1.0, 6]} />
-          <meshStandardMaterial color="#3A2210" roughness={0.9} />
+      <group position={[x, 0, z]} scale={[s, s, s]} rotation={[0, h2 * Math.PI * 2, 0]}>
+        {/* Trunk — thin, barely visible below lowest tier */}
+        <mesh position={[0, cyH * 0.04, 0]} castShadow>
+          <cylinderGeometry args={[0.075, 0.10, cyH * 0.08, 6]} />
+          <meshStandardMaterial color="#2A1A0A" roughness={0.92} />
         </mesh>
-        {/* Lower tier */}
-        <mesh position={[0, 1.5, 0]} castShadow>
-          <coneGeometry args={[0.38, 2.0, 7]} />
-          <meshStandardMaterial color="#1A4A20" roughness={0.9} />
-        </mesh>
-        {/* Mid tier */}
-        <mesh position={[0, 2.8, 0]} castShadow>
-          <coneGeometry args={[0.26, 2.0, 7]} />
-          <meshStandardMaterial color="#1C5224" roughness={0.9} />
-        </mesh>
-        {/* Top tier */}
-        <mesh position={[0, 4.1, 0]} castShadow>
-          <coneGeometry args={[0.14, 1.6, 6]} />
-          <meshStandardMaterial color="#1E5826" roughness={0.9} />
-        </mesh>
-        {/* Tip */}
-        <mesh position={[0, 5.1, 0]} castShadow>
-          <coneGeometry args={[0.06, 0.7, 5]} />
-          <meshStandardMaterial color="#1A4820" roughness={0.9} />
-        </mesh>
+        {tiers.map((t, ti) => (
+          <mesh key={ti} position={[0, t.y, 0]} castShadow>
+            <coneGeometry args={[t.r, t.h, 8]} />
+            <meshStandardMaterial
+              color={t.c}
+              roughness={0.90}
+              // subtle envMap so the tree catches ambient sky colour
+              envMapIntensity={0.25}
+            />
+          </mesh>
+        ))}
       </group>
     );
   }
@@ -2512,13 +2515,28 @@ function Tree({ x, z, type = "round", scale = 1 }: {
 function Bush({ x, z, scale = 1 }: { x: number; z: number; scale?: number }) {
   return (
     <group position={[x, 0, z]} scale={[scale, scale, scale]}>
-      <mesh position={[0, 0.4, 0]} castShadow>
-        <sphereGeometry args={[0.55, 11, 8]} />
-        <meshStandardMaterial color="#3A8030" roughness={0.95} />
+      {/* Short woody stem */}
+      <mesh position={[0, 0.10, 0]} castShadow>
+        <cylinderGeometry args={[0.05, 0.08, 0.20, 6]} />
+        <meshStandardMaterial color="#5A3818" roughness={0.95} />
       </mesh>
-      <mesh position={[0.4, 0.35, 0.2]} castShadow>
-        <sphereGeometry args={[0.4, 10, 7]} />
-        <meshStandardMaterial color="#3E8838" roughness={0.95} />
+      {/* Main dome — three overlapping spheres for organic silhouette */}
+      <mesh position={[0, 0.44, 0]} castShadow>
+        <sphereGeometry args={[0.56, 12, 9]} />
+        <meshStandardMaterial color="#386C28" roughness={0.94} />
+      </mesh>
+      <mesh position={[0.38, 0.38, 0.20]} castShadow>
+        <sphereGeometry args={[0.40, 10, 8]} />
+        <meshStandardMaterial color="#3E7830" roughness={0.94} />
+      </mesh>
+      <mesh position={[-0.30, 0.36, -0.18]} castShadow>
+        <sphereGeometry args={[0.36, 10, 7]} />
+        <meshStandardMaterial color="#345C24" roughness={0.95} />
+      </mesh>
+      {/* Top highlight lobe — lighter tip for light-catching silhouette */}
+      <mesh position={[0.10, 0.72, 0.05]} castShadow>
+        <sphereGeometry args={[0.24, 9, 7]} />
+        <meshStandardMaterial color="#4A8838" roughness={0.93} />
       </mesh>
     </group>
   );
@@ -2841,25 +2859,26 @@ export function AnimatedWater({ w, d }: { w: number; d: number }) {
 
   return (
     <group>
-      {/* Pool bottom — turquoise tile, lit by sun + sky to give that
-          unmistakable 'lit pool' colour through the water surface */}
+      {/* Pool bottom — deep turquoise mosaic tile.
+          Deeper hue (#1A9AAE) gives that "infinite pool depth" look.
+          Sun + sky + underwater LEDs light this through the water surface. */}
       <mesh position={[0, -0.42, 0]} receiveShadow>
         <boxGeometry args={[w + 0.02, 0.04, d + 0.02]} />
-        <meshStandardMaterial color="#3FBFD9" roughness={0.35} metalness={0.05} />
+        <meshStandardMaterial color="#1A9AAE" roughness={0.28} metalness={0.06} />
       </mesh>
       {/* Reflective water surface */}
       <mesh ref={surfaceRef} position={[0, -0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[w, d, 1, 1]} />
         <MeshReflectorMaterial
-          blur={[160, 80]}
+          blur={[120, 60]}
           resolution={512}
-          mixBlur={0.7}
-          mixStrength={1.2}
-          mirror={0.55}
-          mixContrast={1.1}
-          roughness={0.08}
-          metalness={0.1}
-          color="#5DC8E0"
+          mixBlur={0.55}
+          mixStrength={1.55}
+          mirror={0.70}
+          mixContrast={1.15}
+          roughness={0.06}
+          metalness={0.12}
+          color="#5CCCE6"
           normalMap={rippleNormal}
           normalScale={new THREE.Vector2(0.18, 0.18)}
           transparent
@@ -3824,12 +3843,13 @@ function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: num
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const geom = useMemo(() => {
     // 2-tri tapered blade: rectangular base narrowing to a point
+    // Slightly taller (0.22m) and wider (0.030m) for lusher ground coverage
     const g = new THREE.BufferGeometry();
     const verts = new Float32Array([
       // base-left, base-right, tip
-      -0.025, 0,    0,
-       0.025, 0,    0,
-       0,     0.18, 0,
+      -0.030, 0,    0,
+       0.030, 0,    0,
+       0,     0.22, 0,
     ]);
     g.setAttribute("position", new THREE.BufferAttribute(verts, 3));
     g.setIndex([0, 1, 2]);
@@ -3860,9 +3880,14 @@ function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: num
       dummy.scale.set(s, s, s);
       dummy.updateMatrix();
       mesh.setMatrixAt(placed, dummy.matrix);
-      // Colour variation: muted natural lawn greens, avoiding neon
-      const tint = 0.50 + Math.random() * 0.40;
-      const col = new THREE.Color(0.16 * tint + 0.06, 0.38 * tint + 0.04, 0.10 * tint);
+      // Colour variation: rich natural lawn greens with subtle warm/cool shift
+      const tint = 0.45 + Math.random() * 0.50;
+      const warmth = Math.random() * 0.08; // occasional warm yellow-green blade
+      const col = new THREE.Color(
+        0.14 * tint + 0.04 + warmth * 0.5,
+        0.36 * tint + 0.06 + warmth * 0.3,
+        0.08 * tint,
+      );
       mesh.setColorAt(placed, col);
       placed++;
     }
@@ -3883,36 +3908,53 @@ function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: num
 // property, well past the lawn edge. Hides the abrupt end of the ground
 // plane and adds depth to the horizon.
 function DistantTreeRing({ radius, count }: { radius: number; count: number }) {
-  const trees = useMemo(() => {
-    const out: { x: number; z: number; h: number; tint: number }[] = [];
+  // Merge all tree geometry into two meshes (trunks + foliage) to halve draw calls.
+  // Uses a deterministic seed derived from (radius, count) for SSR safety.
+  const { trunkGeo, foliageGeo } = useMemo(() => {
+    const trunkGeos:   THREE.BufferGeometry[] = [];
+    const foliageGeos: THREE.BufferGeometry[] = [];
+    // Simple xorshift seeded from radius+count — no Math.random() so SSR safe
+    let seed = Math.round(radius * 100 + count * 31337);
+    const rand = () => {
+      seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5;
+      return ((seed >>> 0) / 0xFFFFFFFF);
+    };
     for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + Math.random() * 0.06;
-      const r = radius + Math.random() * radius * 0.18;
-      out.push({
-        x: Math.cos(a) * r,
-        z: Math.sin(a) * r,
-        h: 4 + Math.random() * 5,
-        tint: 0.6 + Math.random() * 0.35,
-      });
+      const a = (i / count) * Math.PI * 2 + rand() * 0.14;
+      const r = radius + rand() * radius * 0.20;
+      const h = 4.5 + rand() * 5.5;
+      const tint = 0.55 + rand() * 0.38;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+
+      // Trunk (low-poly cylinder proxy via box)
+      const tH  = h * 0.30;
+      const tg   = new THREE.CylinderGeometry(0.14, 0.22, tH, 5);
+      tg.applyMatrix4(new THREE.Matrix4().makeTranslation(x, tH / 2, z));
+      trunkGeos.push(tg);
+
+      // Foliage cone (2 stacked cones for silhouette depth)
+      const fg1 = new THREE.ConeGeometry(h * 0.38, h * 0.78, 7);
+      fg1.applyMatrix4(new THREE.Matrix4().makeTranslation(x, h * 0.65, z));
+      const fg2 = new THREE.ConeGeometry(h * 0.22, h * 0.42, 6);
+      fg2.applyMatrix4(new THREE.Matrix4().makeTranslation(x, h * 0.88, z));
+      foliageGeos.push(fg1, fg2);
+      void tint; // tint used for color below
     }
-    return out;
+    const merged = (geos: THREE.BufferGeometry[]) =>
+      geos.length > 0 ? mergeGeometries(geos, false) : new THREE.BufferGeometry();
+    return { trunkGeo: merged(trunkGeos), foliageGeo: merged(foliageGeos) };
   }, [radius, count]);
+
   return (
     <group>
-      {trees.map((t, i) => (
-        <group key={i} position={[t.x, 0, t.z]}>
-          {/* Trunk */}
-          <mesh position={[0, t.h * 0.18, 0]} castShadow>
-            <cylinderGeometry args={[0.18, 0.25, t.h * 0.36, 5]} />
-            <meshStandardMaterial color="#3a2812" roughness={0.95} />
-          </mesh>
-          {/* Foliage cone */}
-          <mesh position={[0, t.h * 0.65, 0]} castShadow>
-            <coneGeometry args={[t.h * 0.42, t.h * 0.95, 7]} />
-            <meshStandardMaterial color={new THREE.Color(30 * t.tint / 255, 80 * t.tint / 255, 40 * t.tint / 255)} roughness={0.95} />
-          </mesh>
-        </group>
-      ))}
+      <mesh geometry={trunkGeo} castShadow>
+        <meshStandardMaterial color="#3A2812" roughness={0.95} />
+      </mesh>
+      <mesh geometry={foliageGeo} castShadow>
+        {/* Muted mid-green with a touch of blue-green for atmospheric depth */}
+        <meshStandardMaterial color="#2A5A28" roughness={0.94} envMapIntensity={0.18} />
+      </mesh>
     </group>
   );
 }
@@ -5158,7 +5200,7 @@ function getSkyTheme(hour: number): SkyTheme {
       fillColor: "#9090C8", fillIntensity: 0.32,
       hemiSky: "#D07050", hemiGround: "#503020", hemiIntensity: 0.50,
       ambient: 0.22 + elev * 0.10,
-      fogColor: "#C08060", fogNear: 35, fogFar: 150,
+      fogColor: "#D89868", fogNear: 42, fogFar: 170,  // warm amber haze for dawn
       exposure: 0.92 + p * 0.12,
       hdr: "/hdr/venice_sunset_1k.hdr",
       skyRgb: _lerpRgb([20, 10, 40], [130, 185, 220], p),
@@ -5173,7 +5215,7 @@ function getSkyTheme(hour: number): SkyTheme {
       fillColor: "#8898C0", fillIntensity: 0.38,
       hemiSky: "#C86040", hemiGround: "#503020", hemiIntensity: 0.55,
       ambient: 0.26 + elev * 0.08,
-      fogColor: "#C08050", fogNear: 50, fogFar: 200,
+      fogColor: "#C87840", fogNear: 55, fogFar: 220,  // orange dusk haze
       exposure: 1.06 + (1 - elev) * 0.06,
       hdr: "/hdr/venice_sunset_1k.hdr",
       skyRgb: _lerpRgb([78, 145, 216], [20, 15, 40], p),
@@ -5187,7 +5229,7 @@ function getSkyTheme(hour: number): SkyTheme {
     fillColor: "#C8E0F8", fillIntensity: 0.45 + elev * 0.12,
     hemiSky: "#C8DDEF", hemiGround: "#A8A070", hemiIntensity: 0.58 + elev * 0.10,
     ambient: 0.28 + elev * 0.10,
-    fogColor: "#4E8FCC", fogNear: 28, fogFar: 90,
+    fogColor: "#B8CCE4", fogNear: 42, fogFar: 130,  // lighter haze matches Preetham horizon
     exposure: 1.02 + elev * 0.08,
     hdr: "/hdr/potsdamer_platz_1k.hdr",
     skyRgb: _lerpRgb([130, 185, 220], [60, 130, 200], elev),
@@ -5395,6 +5437,9 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
       {([-0.60, -0.30, 0, 0.30, 0.60] as number[]).map((xFrac, i) => {
         const lx = xFrac * (pw - 1.0);
         const lz = poolBuildZ + deckSide * 0.48;   // between pool north edge and terrace
+        // Alternate towel colors for visual variety
+        const towelColors = ["#1E6CB5", "#C84040", "#3A9650", "#D49030", "#7A3090"];
+        const towelColor = towelColors[i % towelColors.length];
         return (
           <group key={i} position={[lx, 0, lz]} rotation={[0, Math.PI, 0]}>
             {/* Frame / mattress base */}
@@ -5421,9 +5466,61 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
                 </mesh>
               ))
             )}
+            {/* Rolled towel at foot of lounger — colorful hotel-style accent */}
+            <mesh position={[0, 0.325, -0.72]}>
+              <cylinderGeometry args={[0.088, 0.088, 0.46, 10]} />
+              <meshStandardMaterial color={towelColor} roughness={0.90} />
+            </mesh>
+            {/* Towel fold end cap */}
+            <mesh position={[0, 0.325, -0.72]} rotation={[Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[0.088, 10]} />
+              <meshStandardMaterial color={towelColor} roughness={0.90} />
+            </mesh>
           </group>
         );
       })}
+
+      {/* ── Potted palm — accent planting flanking the spa ── */}
+      <group position={[pw * 0.50 + 3.8, 0, (poolBuildZ + terrBackZ) / 2]}>
+        {/* Large terracotta planter */}
+        <mesh position={[0, 0.28, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.30, 0.22, 0.56, 12]} />
+          <meshStandardMaterial color="#C06840" roughness={0.78} metalness={0.02} />
+        </mesh>
+        {/* Soil top */}
+        <mesh position={[0, 0.57, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <circleGeometry args={[0.29, 12]} />
+          <meshStandardMaterial color="#4A321C" roughness={0.98} />
+        </mesh>
+        {/* Palm trunk */}
+        <mesh position={[0, 1.50, 0]} castShadow>
+          <cylinderGeometry args={[0.08, 0.13, 1.88, 7]} />
+          <meshStandardMaterial color="#9A7040" roughness={0.88} />
+        </mesh>
+        {/* 6 palm fronds radiating from top */}
+        {[0, 60, 120, 180, 240, 300].map((deg, pi) => {
+          const rad = (deg * Math.PI) / 180;
+          return (
+            <mesh key={pi}
+              position={[Math.cos(rad) * 0.60, 2.60, Math.sin(rad) * 0.60]}
+              rotation={[0.50, rad, 0]}
+              castShadow>
+              <boxGeometry args={[1.40, 0.040, 0.28]} />
+              <meshStandardMaterial color="#2A6E34" roughness={0.88} />
+            </mesh>
+          );
+        })}
+      </group>
+
+      {/* ── Floating pool ring — colorful inflatable, adds life to the pool ── */}
+      <group position={[pw * 0.25, 0.10, pz + pd * 0.20]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0.4]}>
+          <torusGeometry args={[0.55, 0.13, 10, 24]} />
+          <meshStandardMaterial color="#FF6040" roughness={0.70} metalness={0.0} />
+        </mesh>
+        {/* Shadow under ring on water */}
+        <pointLight position={[0, -0.15, 0]} intensity={0.6} distance={1.5} decay={2} color="#40B8D0" />
+      </group>
 
       {/* ── Raised spa / water feature — right side of terrace, between building and pool ── */}
       <group position={[pw * 0.50 + 1.8, 0, (poolBuildZ + terrBackZ) / 2]}>
@@ -5435,7 +5532,141 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
           <boxGeometry args={[1.85, 0.08, 1.85]} />
           <meshPhysicalMaterial color="#50C8E0" transmission={0.60} roughness={0.02} ior={1.33} thickness={0.5} envMapIntensity={6.0} />
         </mesh>
+        {/* Spa underwater LED glow */}
+        <pointLight position={[0, 0.10, 0]} intensity={4.5} distance={5.5} decay={1.8} color="#20C0DC" />
       </group>
+
+      {/* ── Side tables between loungers (alternating) — polished concrete ── */}
+      {([0, 2] as number[]).map(i => {
+        const lx = (i - 1) * (pw - 1.0) * 0.30;  // every 2 loungers
+        const lz = poolBuildZ + deckSide * 0.48;
+        return (
+          <group key={`tbl-${i}`} position={[lx, 0, lz]}>
+            <mesh position={[0, 0.40, 0]} castShadow>
+              <cylinderGeometry args={[0.24, 0.22, 0.04, 12]} />
+              <meshStandardMaterial color="#E0DCD4" roughness={0.60} metalness={0.06} />
+            </mesh>
+            <mesh position={[0, 0.20, 0]} castShadow>
+              <cylinderGeometry args={[0.03, 0.03, 0.40, 8]} />
+              <meshStandardMaterial color="#B0B0B8" roughness={0.18} metalness={0.90} />
+            </mesh>
+          </group>
+        );
+      })}
+
+      {/* ── Terrace fire bowl — accent feature, warm evening focal point ── */}
+      <group position={[-pw * 0.40, 0, terrBackZ + deckSide * 0.55]}>
+        {/* Pedestal column */}
+        <mesh position={[0, 0.28, 0]} castShadow>
+          <cylinderGeometry args={[0.04, 0.06, 0.55, 8]} />
+          <meshStandardMaterial color="#3A3840" roughness={0.28} metalness={0.82} envMapIntensity={1.8} />
+        </mesh>
+        {/* Bowl (travertine dish) */}
+        <mesh position={[0, 0.60, 0]} castShadow>
+          <cylinderGeometry args={[0.34, 0.22, 0.14, 14]} />
+          <meshStandardMaterial color="#D4CCBA" roughness={0.68} />
+        </mesh>
+        {/* Fire / embers glow */}
+        <mesh position={[0, 0.70, 0]}>
+          <sphereGeometry args={[0.14, 10, 8]} />
+          <meshStandardMaterial color="#FF9030" emissive="#FF5800" emissiveIntensity={3.5} roughness={0.9} />
+        </mesh>
+        {/* Warm fire point light — orange glow on surroundings */}
+        <pointLight position={[0, 0.82, 0]} intensity={6.5} distance={10} decay={2.0} color="#FF8020" />
+      </group>
+
+      {/* ── Low terrace hedge border — formal clipped hedge along pool edge ── */}
+      <mesh position={[0, 0.20, terrBackZ - 0.30]} castShadow receiveShadow>
+        <boxGeometry args={[effW * 0.55, 0.40, 0.35]} />
+        <meshStandardMaterial color="#2A5820" roughness={0.94} />
+      </mesh>
+
+      {/* ── Formal boxwood hedges — long sides of pool (east + west), classic garden framing ── */}
+      {([-1, 1] as const).map((side) => {
+        const hx = side * (pw / 2 + deckSide * 0.55);
+        return (
+          <group key={side} position={[hx, 0, pz]}>
+            {/* Clipped box hedge strip */}
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[0.38, 0.65, pd + 0.30]} />
+              <meshStandardMaterial color="#2E6428" roughness={0.96} />
+            </mesh>
+            {/* Hedge top — slightly lighter for clipped flat-top effect */}
+            <mesh position={[0, 0.34, 0]} receiveShadow>
+              <boxGeometry args={[0.42, 0.05, pd + 0.32]} />
+              <meshStandardMaterial color="#367230" roughness={0.90} />
+            </mesh>
+          </group>
+        );
+      })}
+
+      {/* ── Pool wet bar — swim-up counter along east pool edge ── */}
+      {(() => {
+        const barX  = pw / 2 - 0.60;  // east side, inside pool coping
+        const barZ  = pz + pd * 0.28; // north third of pool
+        const barW  = 0.50;            // counter depth (east-west)
+        const barL  = Math.min(pw * 0.48, 3.8); // counter length
+        const barH  = 0.78;            // bar surface height above pool bottom
+        const ctrColor = "#D8D4C8";
+        const seatCount = 4;
+        return (
+          <group position={[barX, -0.25, barZ]}>
+            {/* Bar counter slab — travertine top */}
+            <mesh position={[barW / 2, barH, 0]} castShadow>
+              <boxGeometry args={[barW + 0.08, 0.08, barL]} />
+              <meshStandardMaterial color={ctrColor} roughness={0.60} metalness={0.04} envMapIntensity={0.8} />
+            </mesh>
+            {/* Counter body */}
+            <mesh position={[barW / 2, barH / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[barW, barH, barL]} />
+              <meshStandardMaterial color="#C8C4B8" roughness={0.78} />
+            </mesh>
+            {/* Submerged bar stools — concrete discs at water level */}
+            {Array.from({ length: seatCount }, (_, si) => {
+              const sz = -barL / 2 + (si + 0.5) * (barL / seatCount);
+              return (
+                <group key={si} position={[-0.55, 0.52, sz]}>
+                  {/* Stool seat */}
+                  <mesh castShadow>
+                    <cylinderGeometry args={[0.18, 0.18, 0.04, 12]} />
+                    <meshStandardMaterial color="#D0CCBC" roughness={0.68} />
+                  </mesh>
+                  {/* Stool pedestal */}
+                  <mesh position={[0, -0.24, 0]} castShadow>
+                    <cylinderGeometry args={[0.04, 0.06, 0.48, 8]} />
+                    <meshStandardMaterial color="#B8B4AC" roughness={0.55} metalness={0.22} />
+                  </mesh>
+                </group>
+              );
+            })}
+            {/* Under-counter LED bar light strip */}
+            <mesh position={[barW / 2 + 0.002, barH - 0.05, 0]}>
+              <boxGeometry args={[0.012, 0.018, barL * 0.88]} />
+              <meshStandardMaterial color="#FFF6DC" emissive="#FFE880" emissiveIntensity={2.5} />
+            </mesh>
+            <pointLight position={[barW / 2 - 0.05, barH - 0.12, 0]} intensity={3.0} distance={5.0} decay={2.0} color="#FFE090" />
+          </group>
+        );
+      })()}
+
+      {/* ── Recessed deck step lights — warm amber strips along pool coping ── */}
+      {Array.from({ length: 5 }, (_, li) => {
+        const lz = pz - pd * 0.40 + li * (pd * 0.80 / 4);
+        return (
+          <group key={li}>
+            {/* West coping light */}
+            <mesh position={[-pw / 2 - 0.18, 0.03, lz]}>
+              <boxGeometry args={[0.06, 0.018, 0.18]} />
+              <meshStandardMaterial color="#FFE8B0" emissive="#FFD860" emissiveIntensity={1.8} />
+            </mesh>
+            {/* East coping light */}
+            <mesh position={[pw / 2 + 0.18, 0.03, lz]}>
+              <boxGeometry args={[0.06, 0.018, 0.18]} />
+              <meshStandardMaterial color="#FFE8B0" emissive="#FFD860" emissiveIntensity={1.8} />
+            </mesh>
+          </group>
+        );
+      })}
 
     </group>
   );
@@ -5844,7 +6075,7 @@ export default function HouseCanvas() {
   const siteLatLng  = useDesignerStore(s => s.siteLatLng);
   const sunPos = getSunPosition3D(sunHour, siteLatLng);
   const theme  = getSkyTheme(sunHour);
-  const skyHex = _rgbHex(theme.skyRgb);
+  void _rgbHex; // skyHex no longer needed — Sky component handles gradient
   const _buildingType    = (exterior as ExteriorSettings & { buildingType?: string }).buildingType;
   const isRichGlassVilla = _buildingType === "rich-glass-villa" || _buildingType === "floor-plan-driven";
 
@@ -6018,13 +6249,15 @@ export default function HouseCanvas() {
       </div>
 
       <Canvas
-        shadows={{ type: THREE.PCFSoftShadowMap }}
+        shadows={{ type: THREE.PCFSoftShadowMap, enabled: true }}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: theme.exposure,
           // Required for canvas.toDataURL() (AI render screenshot)
           preserveDrawingBuffer: true,
           antialias: false,
+          // Pixel ratio cap — 2× delivers Retina sharpness without performance cliff
+          powerPreference: "high-performance",
         }}
         camera={(() => {
           // Set initial camera position HERE (before OrbitControls mounts) so it
@@ -6102,15 +6335,18 @@ export default function HouseCanvas() {
             backgroundBlurriness softens the HDR to remove distracting detail
             while keeping the sky colour/gradient. Night mode keeps a dark
             sphere instead since the night HDR is just a coloured gradient. */}
-        {/* Sky sphere — colour interpolates continuously with sun position */}
+        {/* Sky — physically-based Preetham atmospheric scattering (day/dawn/dusk).
+            Replaces the flat-colour sphere for a realistic gradient: deep blue
+            zenith, haze at horizon, warm glow around sun disc. */}
         {theme.phase !== "night" && (
-          <>
-            <color attach="background" args={[skyHex]} />
-            <mesh scale={[260, 260, 260]}>
-              <sphereGeometry args={[1, 32, 20]} />
-              <meshBasicMaterial color={skyHex} side={THREE.BackSide} depthWrite={false} fog={false} />
-            </mesh>
-          </>
+          <Sky
+            sunPosition={sunPos}
+            turbidity={theme.phase === "day" ? 4.5 : 9.0}
+            rayleigh={theme.phase === "day" ? 1.6 : 0.7}
+            mieCoefficient={theme.phase === "day" ? 0.005 : 0.008}
+            mieDirectionalG={0.85}
+            distance={450000}
+          />
         )}
         <HouseEnvironmentFallback>
           <Suspense fallback={null}>
@@ -6122,12 +6358,23 @@ export default function HouseCanvas() {
             />
           </Suspense>
         </HouseEnvironmentFallback>
-        {/* Night sky sphere */}
+        {/* Night sky sphere + star field */}
         {theme.phase === "night" && (
-          <mesh scale={[280, 280, 280]}>
-            <sphereGeometry args={[1, 32, 24]} />
-            <meshBasicMaterial color="#0A0F1E" side={THREE.BackSide} depthWrite={false} />
-          </mesh>
+          <>
+            <mesh scale={[280, 280, 280]}>
+              <sphereGeometry args={[1, 32, 24]} />
+              <meshBasicMaterial color="#060810" side={THREE.BackSide} depthWrite={false} />
+            </mesh>
+            {/* Procedural star field — 3500 stars, radius 180m */}
+            <Stars radius={180} depth={60} count={3500} factor={5.5} saturation={0.55} fade speed={0.6} />
+            {/* Moon — off to the side, bright white sphere */}
+            <mesh position={[-40, 55, -120]}>
+              <sphereGeometry args={[3.2, 18, 14]} />
+              <meshBasicMaterial color="#FFFEF8" />
+            </mesh>
+            {/* Moon glow point light */}
+            <pointLight position={[-40, 55, -120]} intensity={1.8} distance={300} color="#E8F0FF" decay={1} />
+          </>
         )}
         {/* Hemisphere light — sky/ground bounce */}
         <hemisphereLight args={[theme.hemiSky, theme.hemiGround, theme.hemiIntensity]} />
@@ -6147,12 +6394,12 @@ export default function HouseCanvas() {
         {/* Primary sun — position updates every render frame as slider moves */}
         <directionalLight
           position={sunPos} intensity={theme.sunIntensity} color={theme.sunColor} castShadow
-          shadow-mapSize={[2048, 2048]}
-          shadow-camera-far={100}
-          shadow-camera-left={-30} shadow-camera-right={30}
-          shadow-camera-top={30} shadow-camera-bottom={-30}
-          shadow-bias={-0.0008}
-          shadow-normalBias={0.04}
+          shadow-mapSize={[4096, 4096]}
+          shadow-camera-far={120}
+          shadow-camera-left={-35} shadow-camera-right={35}
+          shadow-camera-top={35} shadow-camera-bottom={-35}
+          shadow-bias={-0.0006}
+          shadow-normalBias={0.06}
         />
         {/* Sky fill from opposite side (fill tracks opposite of sun) */}
         <directionalLight
@@ -6195,7 +6442,7 @@ export default function HouseCanvas() {
         )}
         {/* 楼层驱动外观下的"自动景观"全部移除 ——
             包括硬编码的柏树/橄榄树/松树/球形树/石头入户台/花坛/门柱/
-            绿篱/远景树环/外周栅栏/树木 uplight。
+            绿篱/远景树环/外周栅栏/树木 uplight/喷泉/驱车 bollard 灯。
             理由：这些元素位置/尺寸全部硬编码到建筑 W/D，用户没法在
             floor plan / yard plan 里精确定位或换 GLB。后续应归纳到房间
             结构（room-driven prefab + 可换 GLB），现在先去掉避免假景。
@@ -6234,23 +6481,34 @@ export default function HouseCanvas() {
           <EffectComposer multisampling={0} enableNormalPass>
             <SSAO
               blendFunction={BlendFunction.MULTIPLY}
-              samples={28}
-              radius={6}
-              intensity={theme.phase === "night" ? 48 : 35}
-              luminanceInfluence={0.6}
-              worldDistanceThreshold={1.5}
-              worldDistanceFalloff={3.0}
-              worldProximityThreshold={0.5}
-              worldProximityFalloff={1.0}
+              samples={32}
+              radius={theme.phase === "day" ? 5 : 7}
+              intensity={theme.phase === "night" ? 52 : 38}
+              luminanceInfluence={0.55}
+              worldDistanceThreshold={1.8}
+              worldDistanceFalloff={3.5}
+              worldProximityThreshold={0.4}
+              worldProximityFalloff={1.2}
             />
-            {/* Bloom — subtle sun glow for day, stronger for night lamps */}
+            {/* Bloom — subtle warm halos for day; stronger for night emissives */}
             <Bloom
-              intensity={theme.phase === "night" ? 0.55 : theme.phase === "dusk" ? 0.32 : 0.14}
-              luminanceThreshold={theme.phase === "night" ? 0.92 : 0.88}
-              luminanceSmoothing={0.30}
+              intensity={theme.phase === "night" ? 0.70 : theme.phase === "dusk" ? 0.38 : 0.16}
+              luminanceThreshold={theme.phase === "night" ? 0.88 : 0.90}
+              luminanceSmoothing={0.40}
               mipmapBlur
             />
-            <BrightnessContrast brightness={0.02} contrast={0.10} />
+            {/* HueSaturation — slight saturation boost for vivid architectural renders
+                (tone mapping is already ACES Filmic via Canvas gl.toneMapping) */}
+            <HueSaturation
+              saturation={theme.phase === "night" ? -0.05 : 0.08}
+              hue={0}
+            />
+            <BrightnessContrast
+              brightness={theme.phase === "night" ? 0.0 : 0.015}
+              contrast={theme.phase === "night" ? 0.15 : 0.08}
+            />
+            {/* Vignette — cinematic frame darkening */}
+            <Vignette offset={0.38} darkness={theme.phase === "night" ? 0.62 : 0.42} eskil={false} />
             <SMAA />
           </EffectComposer>
         )}

@@ -8,7 +8,7 @@
 
 import { useMemo, useState, useEffect, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
@@ -171,20 +171,36 @@ function FloorSlab({ floorIndex }: { floorIndex: number }) {
   const yMid = floorIndex * GAP + SLAB_T / 2;
 
   const accent = FLOOR_ACCENT[floorIndex % FLOOR_ACCENT.length];
-  // Slightly darker shade for side faces
-  const side   = new THREE.Color(accent).multiplyScalar(0.82);
+  // Slightly darker shade for side faces; lighter tone for south/front face
+  const sideCol  = new THREE.Color(accent).multiplyScalar(0.78);
+  const frontCol = new THREE.Color(accent).multiplyScalar(0.92);
 
   return (
-    <mesh position={[cx, yMid, cz]} castShadow receiveShadow>
-      <boxGeometry args={[W3, SLAB_T, D3]} />
-      {/* BoxGeometry face order: +X, -X, +Y(top), -Y(bot), +Z, -Z */}
-      <meshStandardMaterial attach="material-0" color={side} roughness={0.75} />
-      <meshStandardMaterial attach="material-1" color={side} roughness={0.75} />
-      <meshStandardMaterial attach="material-2" map={tex}   roughness={0.65} metalness={0} />
-      <meshStandardMaterial attach="material-3" color="#C0BCB4" roughness={0.9} />
-      <meshStandardMaterial attach="material-4" color={accent} roughness={0.70} />
-      <meshStandardMaterial attach="material-5" color={side} roughness={0.75} />
-    </mesh>
+    <group position={[cx, yMid, cz]}>
+      {/* Main slab box */}
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[W3, SLAB_T, D3]} />
+        {/* BoxGeometry face order: +X, -X, +Y(top), -Y(bot), +Z, -Z */}
+        <meshStandardMaterial attach="material-0" color={sideCol}  roughness={0.55} metalness={0.18} envMapIntensity={0.8} />
+        <meshStandardMaterial attach="material-1" color={sideCol}  roughness={0.55} metalness={0.18} envMapIntensity={0.8} />
+        <meshStandardMaterial attach="material-2" map={tex}        roughness={0.60} metalness={0}    envMapIntensity={0.5} />
+        <meshStandardMaterial attach="material-3" color="#B8B4AE"  roughness={0.90} />
+        <meshStandardMaterial attach="material-4" color={frontCol} roughness={0.50} metalness={0.20} envMapIntensity={1.0} />
+        <meshStandardMaterial attach="material-5" color={sideCol}  roughness={0.55} metalness={0.18} envMapIntensity={0.8} />
+      </mesh>
+      {/* Accent rim strip — glowing edge line on top perimeter */}
+      <mesh position={[0, SLAB_T / 2 + 0.003, 0]}>
+        <boxGeometry args={[W3 + 0.004, 0.006, D3 + 0.004]} />
+        <meshStandardMaterial
+          color={accent}
+          emissive={accent}
+          emissiveIntensity={0.55}
+          roughness={0.20}
+          metalness={0.85}
+          envMapIntensity={1.5}
+        />
+      </mesh>
+    </group>
   );
 }
 
@@ -205,25 +221,85 @@ function CameraFit({ floorCount }: { floorCount: number }) {
   return null;
 }
 
+// ── Canvas-baked concrete tile ground ────────────────────────
+let _groundTex: THREE.CanvasTexture | null = null;
+function getGroundTex(): THREE.CanvasTexture {
+  if (_groundTex) return _groundTex;
+  const S = 512;
+  const cv = document.createElement("canvas");
+  cv.width = S; cv.height = S;
+  const g = cv.getContext("2d")!;
+  // Base concrete grey
+  g.fillStyle = "#BDBAB2";
+  g.fillRect(0, 0, S, S);
+  // Tile grid 4×4
+  const TILES = 4;
+  const TW = S / TILES;
+  g.strokeStyle = "rgba(100,95,88,0.35)";
+  g.lineWidth = 2;
+  for (let i = 0; i <= TILES; i++) {
+    g.beginPath(); g.moveTo(i * TW, 0); g.lineTo(i * TW, S); g.stroke();
+    g.beginPath(); g.moveTo(0, i * TW); g.lineTo(S, i * TW); g.stroke();
+  }
+  // Subtle noise texture via per-tile tint
+  for (let tx = 0; tx < TILES; tx++) {
+    for (let ty = 0; ty < TILES; ty++) {
+      const luma = Math.floor(Math.random() * 14 - 7);
+      const base = 185 + luma;
+      g.fillStyle = `rgba(${base},${base-2},${base-5},0.18)`;
+      g.fillRect(tx * TW + 2, ty * TW + 2, TW - 4, TW - 4);
+    }
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(8, 8);
+  t.needsUpdate = true;
+  _groundTex = t;
+  return t;
+}
+
 // ── Scene ─────────────────────────────────────────────────────
 function Scene({ floorCount, floorVisible }: { floorCount: number; floorVisible: boolean[] }) {
+  const groundTex = useMemo(() => (typeof document !== "undefined" ? getGroundTex() : null), []);
   return (
     <>
-      <ambientLight intensity={1.8} />
-      <directionalLight position={[10, 18, 8]} intensity={2.2} castShadow
+      {/* IBL for realistic material reflections */}
+      <Environment preset="city" />
+
+      <ambientLight intensity={1.2} />
+      {/* Key light — warm from upper-left */}
+      <directionalLight position={[10, 18, 8]} intensity={2.6} castShadow
         shadow-mapSize={[2048, 2048]} shadow-camera-far={80}
         shadow-camera-left={-20} shadow-camera-right={20}
-        shadow-camera-top={20}   shadow-camera-bottom={-20} />
-      <directionalLight position={[-6, 10, -5]} intensity={0.8} />
+        shadow-camera-top={20}   shadow-camera-bottom={-20}
+        color="#FFF8F0"
+      />
+      {/* Fill light — cool from lower-right */}
+      <directionalLight position={[-8, 6, -6]} intensity={0.9} color="#D0E4FF" />
+      {/* Rim light — back-top for edge separation */}
+      <directionalLight position={[0, 12, -18]} intensity={0.6} color="#E8F0FF" />
 
       {Array.from({ length: floorCount }, (_, fi) =>
         floorVisible[fi] && <FloorSlab key={fi} floorIndex={fi} />,
       )}
 
-      {/* Shadow receiver ground */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
-        <planeGeometry args={[100, 100]} />
-        <meshStandardMaterial color="#B8B4AC" roughness={0.92} />
+      {/* Contact shadows — soft blob shadows under each slab */}
+      <ContactShadows
+        position={[0, -0.10, 0]}
+        opacity={0.55}
+        scale={50}
+        blur={2.5}
+        far={20}
+        color="#302820"
+      />
+
+      {/* Ground plane with tiled concrete texture */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.10, 0]} receiveShadow>
+        <planeGeometry args={[120, 120]} />
+        {groundTex
+          ? <meshStandardMaterial map={groundTex} roughness={0.88} metalness={0.02} />
+          : <meshStandardMaterial color="#BDBAB2" roughness={0.90} />
+        }
       </mesh>
     </>
   );
