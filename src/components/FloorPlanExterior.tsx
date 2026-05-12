@@ -364,10 +364,12 @@ function GlassCurtain({
 
 // ── 混凝土外墙面（带板缝线条，建筑感） ──────────────────────────────
 function ConcreteFacade({
-  width, height, windows = [],
+  width, height, windows = [], windowGlow = 0,
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
+  /** Night-mode interior glow (0 = off, 0.9+ = full night). */
+  windowGlow?: number;
 }) {
   // 水平板缝：每 90cm 一道（模拟预制混凝土挂板分割）
   const hGrooveStep  = 0.90;
@@ -425,15 +427,28 @@ function ConcreteFacade({
       {/* ── 窗洞 ── */}
       {windows.map((w, wi) => (
         <group key={`ww-${wi}`} position={[w.localX, -height / 2 + w.winSill + w.winH / 2, 0]}>
-          {/* 深色室内衬底（模拟从外部看到窗内的深邃感） */}
+          {/* 室内衬底 — 白天深邃，夜间暖色发光（模拟室内灯光） */}
           <mesh position={[0, 0, -0.04]}>
             <boxGeometry args={[w.winLen - 0.02, w.winH - 0.02, 0.10]} />
-            <meshStandardMaterial color="#161A20" roughness={0.9} />
+            <meshStandardMaterial
+              color={windowGlow > 0.5 ? "#F5E8C8" : "#161A20"}
+              emissive={windowGlow > 0.5 ? "#F4D890" : "#000000"}
+              emissiveIntensity={windowGlow > 0.5 ? windowGlow * 0.95 : 0}
+              roughness={0.9}
+            />
           </mesh>
-          {/* 玻璃（浅蓝透明，带反射）*/}
+          {/* 玻璃（浅蓝透明，带反射；夜间略带暖色透射）*/}
           <mesh position={[0, 0, 0.018]}>
             <planeGeometry args={[w.winLen - 0.04, w.winH - 0.04]} />
-            <meshPhysicalMaterial color="#B8D4E8" transmission={0.35} roughness={0.04} metalness={0.08} transparent opacity={0.72} side={THREE.FrontSide} />
+            <meshPhysicalMaterial
+              color={windowGlow > 0.5 ? "#D8C8A0" : "#B8D4E8"}
+              transmission={windowGlow > 0.5 ? 0.22 : 0.35}
+              roughness={0.04} metalness={0.08}
+              transparent opacity={windowGlow > 0.5 ? 0.82 : 0.72}
+              emissive={windowGlow > 0.5 ? "#F4C860" : "#000000"}
+              emissiveIntensity={windowGlow > 0.5 ? windowGlow * 0.28 : 0}
+              side={THREE.FrontSide}
+            />
           </mesh>
           {/* 窗框 — 暗铝合金色，4 条压条 */}
           {([
@@ -1827,7 +1842,7 @@ export default function FloorPlanBuilding({
         // ── 混凝土（含窗） ──
         return (
           <group key={`co-${bi}`} position={[px, yMid, pz]} rotation={rot}>
-            <ConcreteFacade width={segLen} height={FLOOR_H} windows={winInfos} />
+            <ConcreteFacade width={segLen} height={FLOOR_H} windows={winInfos} windowGlow={interiorGlowWall} />
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部，
                 高度 0.55m（窗台 0.90m 以下，不遮窗），增加基座感与立面层次。*/}
             {floorIndex === 0 && (
@@ -1857,6 +1872,48 @@ export default function FloorPlanBuilding({
 
       {/* ── 5. 平屋顶（室内视角下隐藏） ── */}
       {!insideBuilding && <FlatRoof W={W} D={D} roofY={totalH} />}
+
+      {/* ── 5b. 建筑立面泛光灯（夜间效果）——根据 sunHour 自动调强度 ──
+               夜间：墙面泛光灯打亮外立面，池边及入口处暖光渗出。
+               白天：不发光，完全隐藏。 */}
+      {!insideBuilding && (() => {
+        // Intensity curve: 0 during full day, ramps up at dusk/dawn, max at night
+        const isNight  = sunHour < 6 || sunHour > 20;
+        const isDusk   = (!isNight) && (sunHour < 8 || sunHour > 18);
+        const uplightI = isNight ? 12 : isDusk ? 6 : 0;
+        if (uplightI === 0) return null;
+        const uplightColor = "#FFF4D8";
+        // Ground-level uplights: 4 along south facade, 2 per side
+        const uplightPositions: Array<[number, number, number]> = [
+          [-W * 0.35, -0.20, D / 2 + 0.60],
+          [-W * 0.12, -0.20, D / 2 + 0.60],
+          [ W * 0.12, -0.20, D / 2 + 0.60],
+          [ W * 0.35, -0.20, D / 2 + 0.60],
+          [-W / 2 - 0.60, -0.20, 0],
+          [ W / 2 + 0.60, -0.20, 0],
+        ];
+        return (
+          <group>
+            {uplightPositions.map(([ux, uy, uz], ui) => (
+              <group key={ui} position={[ux, uy, uz]}>
+                {/* In-ground fixture cap — small dark circle */}
+                <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                  <circleGeometry args={[0.05, 10]} />
+                  <meshStandardMaterial color="#2A2A2A" roughness={0.5} metalness={0.6} />
+                </mesh>
+                {/* Warm upward beam (point light) */}
+                <pointLight
+                  intensity={uplightI}
+                  distance={totalH * 1.6 + 2}
+                  decay={1.4}
+                  color={uplightColor}
+                  castShadow={false}
+                />
+              </group>
+            ))}
+          </group>
+        );
+      })()}
 
       {/* ── 6a. 走廊地板（铺满整层，楼梯间开口处挖空）── */}
       {insideBuilding && Array.from({ length: floorCount }, (_, fi) => {
