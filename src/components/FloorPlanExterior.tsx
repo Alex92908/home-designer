@@ -3647,35 +3647,76 @@ export default function FloorPlanBuilding({
                   </group>
                 );
               })()}
-              {showRailing && (
-                /* Railing group placed at floor base + outward ~5cm */
-                <group position={[0, -FLOOR_H / 2 + 0.005, 0.05]}>
-                  {/* Glass panel — 0.95m high, full-width */}
-                  <mesh position={[0, 0.475, 0.006]} renderOrder={11}>
-                    <boxGeometry args={[segLen - 0.06, 0.95, 0.012]} />
-                    <meshStandardMaterial
-                      color="#CCDDE8"
-                      transparent opacity={0.36}
-                      depthWrite={false}
-                      roughness={0.03} metalness={0.14}
-                      envMapIntensity={2.2}
-                      side={THREE.DoubleSide}
-                    />
-                  </mesh>
-                  {/* Top handrail — brushed steel bar */}
-                  <mesh position={[0, 0.968, 0]}>
-                    <boxGeometry args={[segLen - 0.04, 0.042, 0.042]} />
-                    <meshStandardMaterial color="#181A1E" roughness={0.10} metalness={0.95} envMapIntensity={2.6} />
-                  </mesh>
-                  {/* Vertical end-posts */}
-                  {[-segLen / 2 + 0.025, segLen / 2 - 0.025].map((ex, ei) => (
-                    <mesh key={ei} position={[ex, 0.485, 0]}>
-                      <boxGeometry args={[0.040, 0.975, 0.040]} />
-                      <meshStandardMaterial color="#181A1E" roughness={0.10} metalness={0.95} />
+              {showRailing && (() => {
+                /* Premium glass Juliet balcony railing:
+                   • Frameless tempered glass panels between steel posts
+                   • Steel bottom channel + mid rail + top handrail
+                   • LED night strip under handrail
+                   • Intermediate posts every ~1.2m */
+                const railH    = 1.05;   // railing height
+                const nPosts   = Math.max(2, Math.ceil(segLen / 1.20));
+                const postStep = (segLen - 0.08) / (nPosts - 1);
+                const isNightR = sunHour < 6 || sunHour > 20;
+                const isDuskR  = !isNightR && (sunHour < 8 || sunHour > 18);
+                const ledEmi   = isNightR ? 1.4 : isDuskR ? 0.7 : 0.0;
+                return (
+                  <group position={[0, -FLOOR_H / 2 + 0.005, 0.052]}>
+                    {/* Bottom channel — stainless steel base shoe */}
+                    <mesh position={[0, 0.020, 0]}>
+                      <boxGeometry args={[segLen - 0.04, 0.040, 0.032]} />
+                      <meshStandardMaterial color="#181A1E" roughness={0.12} metalness={0.95} envMapIntensity={2.4} />
                     </mesh>
-                  ))}
-                </group>
-              )}
+                    {/* Glass panels between posts — 2 tiers */}
+                    {/* Lower glass panel */}
+                    <mesh position={[0, railH * 0.35, 0.004]} renderOrder={11}>
+                      <boxGeometry args={[segLen - 0.06, railH * 0.62, 0.010]} />
+                      <meshStandardMaterial
+                        color="#C8DDE8" transparent opacity={0.30}
+                        depthWrite={false} roughness={0.02} metalness={0.12}
+                        envMapIntensity={2.8} side={THREE.DoubleSide}
+                      />
+                    </mesh>
+                    {/* Mid rail */}
+                    <mesh position={[0, railH * 0.58, 0]}>
+                      <boxGeometry args={[segLen - 0.06, 0.022, 0.028]} />
+                      <meshStandardMaterial color="#222630" roughness={0.12} metalness={0.94} envMapIntensity={2.4} />
+                    </mesh>
+                    {/* Vertical posts */}
+                    {Array.from({ length: nPosts }, (_, pi) => {
+                      const px2 = -segLen / 2 + 0.04 + pi * postStep;
+                      return (
+                        <mesh key={pi} position={[px2, railH / 2, 0]}>
+                          <boxGeometry args={[0.038, railH, 0.038]} />
+                          <meshStandardMaterial color="#181A1E" roughness={0.10} metalness={0.96} envMapIntensity={2.5} />
+                        </mesh>
+                      );
+                    })}
+                    {/* Top handrail — brushed stainless flat bar */}
+                    <mesh position={[0, railH + 0.010, 0]}>
+                      <boxGeometry args={[segLen - 0.04, 0.040, 0.055]} />
+                      <meshStandardMaterial color="#1C1E26" roughness={0.08} metalness={0.97} envMapIntensity={3.0} />
+                    </mesh>
+                    {/* LED strip under handrail (night glow) */}
+                    <mesh position={[0, railH - 0.006, 0.020]}>
+                      <boxGeometry args={[segLen - 0.08, 0.010, 0.008]} />
+                      <meshStandardMaterial
+                        color="#FFF8E0"
+                        emissive="#FFF4C0"
+                        emissiveIntensity={ledEmi}
+                        roughness={0.60} metalness={0.10}
+                      />
+                    </mesh>
+                    {ledEmi > 0 && (
+                      <pointLight
+                        position={[0, railH - 0.010, 0.040]}
+                        intensity={ledEmi * 0.8}
+                        distance={2.5} decay={2.0}
+                        color="#FFF4D0" castShadow={false}
+                      />
+                    )}
+                  </group>
+                );
+              })()}
             </group>
           );
         }
