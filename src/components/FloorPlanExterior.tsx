@@ -6375,6 +6375,60 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5d-0b. 车道嵌入式 LED 导向线（driveway inset LED runway lines）──
+           At dusk/night, two parallel amber LED strips run the length of the
+           motor court from gate to building steps. They act as runway approach
+           guides and add a dramatic luxury hotel quality to the arrival sequence.
+           Additional transverse LED marks every ~3m for a hotel-court grid. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const isNightRW = sunHour < 6 || sunHour > 20;
+        const isDuskRW  = !isNightRW && (sunHour < 8 || sunHour > 18);
+        if (!isNightRW && !isDuskRW) return null;  // day: invisible
+        const rwEmi    = isNightRW ? 3.5 : 1.8;
+        const rwLI     = isNightRW ? 2.0 : 0.8;
+
+        const bndS_rw  = -D / 2 - 11.50;
+        const rwGateZ  = bndS_rw + 0.40;     // just inside gate
+        const rwBuildZ = -D / 2 - 0.50;      // near building steps
+        const rwLen    = rwBuildZ - rwGateZ;
+        const rwMidZ   = (rwGateZ + rwBuildZ) / 2;
+        const rwLineOX = 1.60;  // X offset from centre for each guide line
+        const xStep    = 2.80;  // transverse marker spacing
+
+        return (
+          <group>
+            {/* Longitudinal guide lines (2, one each side of centreline) */}
+            {([-rwLineOX, rwLineOX] as number[]).map((lx, li) => (
+              <group key={li}>
+                {/* Thin emissive strip mesh */}
+                <mesh position={[lx, 0.016, rwMidZ]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <planeGeometry args={[0.024, Math.abs(rwLen)]} />
+                  <meshStandardMaterial color="#FFE860" emissive="#FFD030" emissiveIntensity={rwEmi} roughness={0.60} depthWrite={false} />
+                </mesh>
+                {/* Point lights every ~4m along the line */}
+                {Array.from({ length: Math.round(Math.abs(rwLen) / 4.0) }, (_, pi) => {
+                  const pz = rwGateZ + (pi + 0.5) * (Math.abs(rwLen) / Math.round(Math.abs(rwLen) / 4.0));
+                  return (
+                    <pointLight key={pi} position={[lx, 0.08, pz]} intensity={rwLI} distance={3.0} decay={2} color="#FFE040" />
+                  );
+                })}
+              </group>
+            ))}
+
+            {/* Transverse accent marks (short cross strips every xStep) */}
+            {Array.from({ length: Math.round(Math.abs(rwLen) / xStep) }, (_, ti) => {
+              const tz = rwGateZ + (ti + 0.5) * xStep;
+              return (
+                <mesh key={ti} position={[0, 0.017, tz]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <planeGeometry args={[rwLineOX * 2 + 0.40, 0.020]} />
+                  <meshStandardMaterial color="#FFE080" emissive="#FFD040" emissiveIntensity={rwEmi * 0.55} roughness={0.60} depthWrite={false} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5d-1. 界墙壁灯（wall-mounted lanterns along south boundary wall）──
            Traditional bracket lanterns spaced ~4m apart on the inner face of
            the south boundary wall, providing warm amber pathway lighting at
