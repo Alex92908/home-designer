@@ -888,6 +888,39 @@ export default function FloorPlanBuilding({
           <meshStandardMaterial color="#2C3038" roughness={0.82} metalness={0.08} />
         </mesh>
       )}
+      {/* ── 入口雨棚 —— 1F 顶端向南悬挑（现代建筑标志性元素） ── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        // 悬挑雨棚：在南立面 1F 顶端（y = FLOOR_H）向南伸出 2.0m
+        // 起始于建筑南面外 20cm（避开层间楼板），向外延伸 2m
+        const canopyW  = Math.min(W * 0.62, 8.0);
+        const canopyD  = 2.0;   // 向南悬挑深度
+        const canopyT  = 0.075; // 雨棚厚度（薄板）
+        const canopyY  = FLOOR_H - 0.02;  // 紧贴 1F 顶端（略低于楼板）
+        // 南立面外墙在 world-z ≈ -D/2。再向南 0.25m 开始，延伸 canopyD
+        const southFaceZ = -D / 2 - 0.20;  // 玻璃幕墙平面约在此处
+        const canopyZ    = southFaceZ - canopyD / 2;  // 雨棚中心
+        return (
+          <group>
+            {/* 雨棚板面（顶面浅色，底面深色）*/}
+            <mesh position={[0, canopyY, canopyZ]} castShadow receiveShadow>
+              <boxGeometry args={[canopyW, canopyT, canopyD]} />
+              <meshStandardMaterial color="#ECEAE4" roughness={0.82} metalness={0.02} />
+            </mesh>
+            {/* 雨棚底面暗色 */}
+            <mesh position={[0, canopyY - canopyT / 2 - 0.002, canopyZ]}>
+              <boxGeometry args={[canopyW + 0.01, 0.004, canopyD + 0.01]} />
+              <meshStandardMaterial color="#1E222C" roughness={0.90} />
+            </mesh>
+            {/* 三根细圆柱支撑（左/中/右，等间距）*/}
+            {[-canopyW / 2 + 0.15, 0, canopyW / 2 - 0.15].map((cpx, ci) => (
+              <mesh key={ci} position={[cpx, canopyY / 2, southFaceZ + 0.05]} castShadow>
+                <cylinderGeometry args={[0.055, 0.055, canopyY, 8]} />
+                <meshStandardMaterial color="#18181E" roughness={0.28} metalness={0.88} envMapIntensity={2} />
+              </mesh>
+            ))}
+          </group>
+        );
+      })()}
 
       {/* ── 1. 每层背景填充板（消除房间间微小缝隙，视觉统一） ──
               当本层有任何 "glass" 房间时跳过：这块大背景板会从内部挡住
