@@ -6745,6 +6745,123 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5g-3. 泳池边迷你吧台（poolside tiki bar / swim-up bar）──
+           Small thatched-roof bar counter on the west pool deck, 2 bar
+           stools in the water, bamboo/rattan aesthetic. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const pzBar   = -D / 2 - 5.80;
+        const poolW3  = Math.min(W * 0.72, 10.0);
+        const deckBW3 = 0.52;
+        const barX    = -poolW3 / 2 - deckBW3 - 0.55;   // west of pool
+        const barZ    = pzBar + 0.80;                     // slightly south of centre
+        const isNightBar = sunHour < 6 || sunHour > 20;
+        const isDuskBar  = !isNightBar && (sunHour < 8 || sunHour > 18);
+        const barLI = isNightBar ? 3.5 : isDuskBar ? 1.8 : 0.0;
+        return (
+          <group position={[barX, 0, barZ]} rotation={[0, Math.PI / 2, 0]}>
+            {/* ── Counter base — dark teak wood ── */}
+            <mesh position={[0, 0.50, 0]} castShadow receiveShadow>
+              <boxGeometry args={[1.80, 1.00, 0.60]} />
+              <meshStandardMaterial color="#3A2010" roughness={0.78} metalness={0.04} />
+            </mesh>
+            {/* Counter top — grey concrete with bullnose edge */}
+            <mesh position={[0, 1.015, 0.02]} castShadow>
+              <boxGeometry args={[1.80, 0.030, 0.66]} />
+              <meshStandardMaterial color="#888078" roughness={0.25} metalness={0.12} envMapIntensity={1.4} />
+            </mesh>
+            {/* Front panel — woven rattan texture approximation */}
+            <mesh position={[0, 0.50, -0.305]}>
+              <boxGeometry args={[1.78, 0.98, 0.010]} />
+              <meshStandardMaterial color="#C8A860" roughness={0.88} metalness={0.02} />
+            </mesh>
+            {/* Horizontal wicker bands */}
+            {[0.15, 0.35, 0.55, 0.75].map((hy, hi) => (
+              <mesh key={hi} position={[0, hy, -0.312]}>
+                <boxGeometry args={[1.78, 0.018, 0.008]} />
+                <meshStandardMaterial color="#A08040" roughness={0.90} />
+              </mesh>
+            ))}
+
+            {/* ── Thatched roof canopy ── */}
+            <group position={[0, 2.30, 0]}>
+              {/* Hip roof — 4 angled panels */}
+              {/* Front panel */}
+              <mesh position={[0, 0, -0.55]} rotation={[-0.35, 0, 0]} castShadow>
+                <boxGeometry args={[2.20, 0.055, 0.90]} />
+                <meshStandardMaterial color="#C8A040" roughness={0.95} metalness={0.01} />
+              </mesh>
+              {/* Back panel */}
+              <mesh position={[0, 0, 0.55]} rotation={[0.35, 0, 0]} castShadow>
+                <boxGeometry args={[2.20, 0.055, 0.90]} />
+                <meshStandardMaterial color="#C8A040" roughness={0.95} metalness={0.01} />
+              </mesh>
+              {/* Ridge beam */}
+              <mesh position={[0, 0.24, 0]}>
+                <boxGeometry args={[2.22, 0.045, 0.12]} />
+                <meshStandardMaterial color="#7A5020" roughness={0.80} metalness={0.04} />
+              </mesh>
+              {/* Thatch fringe strips */}
+              {[-0.80, -0.40, 0, 0.40, 0.80].map((fx, fi) => (
+                <mesh key={fi} position={[fx, -0.12, 0]}>
+                  <boxGeometry args={[0.04, 0.22, 1.35]} />
+                  <meshStandardMaterial color="#BF9030" roughness={0.98} metalness={0.0} />
+                </mesh>
+              ))}
+            </group>
+
+            {/* ── 4 bamboo support posts ── */}
+            {([-0.82, 0.82] as number[]).flatMap(px =>
+              ([-0.25, 0.25] as number[]).map((pz, pzi) => (
+                <mesh key={`${px}-${pzi}`} position={[px, 1.15, pz]} castShadow>
+                  <cylinderGeometry args={[0.042, 0.048, 2.30, 6]} />
+                  <meshStandardMaterial color="#8A6828" roughness={0.82} metalness={0.04} />
+                </mesh>
+              ))
+            )}
+
+            {/* ── 2 bar stools (swim-up side) ── */}
+            {([-0.38, 0.38] as number[]).map((sx, si) => (
+              <group key={si} position={[sx, 0, 0.55]}>
+                {/* Round seat */}
+                <mesh position={[0, 0.68, 0]} castShadow>
+                  <cylinderGeometry args={[0.18, 0.18, 0.045, 8]} />
+                  <meshStandardMaterial color="#C8A860" roughness={0.80} metalness={0.04} />
+                </mesh>
+                {/* Pedestal */}
+                <mesh position={[0, 0.34, 0]}>
+                  <cylinderGeometry args={[0.028, 0.028, 0.68, 6]} />
+                  <meshStandardMaterial color="#6A4018" roughness={0.78} metalness={0.04} />
+                </mesh>
+                {/* Base */}
+                <mesh position={[0, 0.025, 0]}>
+                  <cylinderGeometry args={[0.16, 0.16, 0.050, 8]} />
+                  <meshStandardMaterial color="#483010" roughness={0.80} metalness={0.04} />
+                </mesh>
+              </group>
+            ))}
+
+            {/* ── Bottles & glasses on counter ── */}
+            {[-0.55, -0.20, 0.15, 0.50].map((bx, bi) => (
+              <mesh key={bi} position={[bx, 1.055, -0.08]}>
+                <cylinderGeometry args={[0.028, 0.022, bi % 2 === 0 ? 0.28 : 0.18, 6]} />
+                <meshStandardMaterial
+                  color={bi === 0 ? "#204020" : bi === 1 ? "#A07820" : bi === 2 ? "#502010" : "#C0C0C0"}
+                  transparent opacity={0.75}
+                  roughness={0.10} metalness={0.08}
+                />
+              </mesh>
+            ))}
+
+            {/* ── Bar light (warm tungsten glow) ── */}
+            {barLI > 0 && (
+              <pointLight position={[0, 2.10, 0]}
+                intensity={barLI} distance={4.0} decay={1.8}
+                color="#FFC060" castShadow={false} />
+            )}
+          </group>
+        );
+      })()}
+
       {/* ── 5h. 室外厨房 / BBQ 台（outdoor kitchen, east terrace apron）── */}
       {!insideBuilding && isGlassVilla && (() => {
         const kitX = W / 2 + 0.85;         // east terrace apron center
