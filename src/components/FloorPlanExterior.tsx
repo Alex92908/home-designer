@@ -1357,6 +1357,93 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
         );
       })()}
 
+      {/* ── 电梯机房玻璃塔（elevator overrun glass tower）──
+           Slender glass-and-steel lift overrun penthouse, east of stair core.
+           Premium residential feature: frameless glass curtain panels on 3
+           sides, steel corner posts, aluminium cap band, interior cable drum
+           visible through glass, and cool-blue night illumination. */}
+      {(() => {
+        const epW  = 1.60;    // E-W
+        const epD  = 1.40;    // N-S
+        const epH  = 2.80;    // height above roofSlab
+        const epX  = -W * 0.34 + 1.85;    // east of stair penthouse
+        const epZ  =  D * 0.26;
+        const epY  = roofSlab + 0.05;
+        const isNightEP = nightGlow > 0;
+        const postM = { color: "#1E2028", roughness: 0.20, metalness: 0.90, envMapIntensity: 2.5 };
+        return (
+          <group position={[epX, epY, epZ]}>
+            {/* ── 4 corner steel posts ── */}
+            {([-epW / 2 + 0.04, epW / 2 - 0.04] as number[]).flatMap(px =>
+              ([-epD / 2 + 0.04, epD / 2 - 0.04] as number[]).map((pz, pzi) => (
+                <mesh key={`${px}-${pzi}`} position={[px, epH / 2, pz]} castShadow>
+                  <boxGeometry args={[0.065, epH, 0.065]} />
+                  <meshStandardMaterial {...postM} />
+                </mesh>
+              ))
+            )}
+            {/* ── Glass curtain panels — east, west, south faces ── */}
+            {/* East face */}
+            <mesh position={[epW / 2, epH / 2, 0]} {...overlayMaterialProps(1)}>
+              <boxGeometry args={[0.012, epH - 0.06, epD - 0.06]} />
+              <meshPhysicalMaterial color="#B8D0E0" transparent opacity={0.38}
+                roughness={0.03} metalness={0.06} transmission={0.40}
+                emissive="#8AB4CC" emissiveIntensity={isNightEP ? 0.22 : 0.04} side={2} />
+            </mesh>
+            {/* West face */}
+            <mesh position={[-epW / 2, epH / 2, 0]} {...overlayMaterialProps(1)}>
+              <boxGeometry args={[0.012, epH - 0.06, epD - 0.06]} />
+              <meshPhysicalMaterial color="#B8D0E0" transparent opacity={0.38}
+                roughness={0.03} metalness={0.06} transmission={0.40}
+                emissive="#8AB4CC" emissiveIntensity={isNightEP ? 0.22 : 0.04} side={2} />
+            </mesh>
+            {/* South face (glass) */}
+            <mesh position={[0, epH / 2, -epD / 2]} {...overlayMaterialProps(1)}>
+              <boxGeometry args={[epW - 0.06, epH - 0.06, 0.012]} />
+              <meshPhysicalMaterial color="#B8D0E0" transparent opacity={0.38}
+                roughness={0.03} metalness={0.06} transmission={0.40}
+                emissive="#8AB4CC" emissiveIntensity={isNightEP ? 0.22 : 0.04} side={2} />
+            </mesh>
+            {/* North face — solid steel (machine room back) */}
+            <mesh position={[0, epH / 2, epD / 2]}>
+              <boxGeometry args={[epW - 0.06, epH - 0.06, 0.055]} />
+              <meshStandardMaterial color="#24262E" roughness={0.35} metalness={0.72} />
+            </mesh>
+
+            {/* ── Interior cable drum (visible through glass) ── */}
+            <mesh position={[0, epH * 0.62, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.22, 0.22, 0.28, 10]} />
+              <meshStandardMaterial color="#303844" roughness={0.40} metalness={0.68} />
+            </mesh>
+            {/* Cable wrap lines on drum */}
+            {[0, 0.06, 0.12].map((dy, di) => (
+              <mesh key={di} position={[0, epH * 0.62 - 0.06 + dy, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <torusGeometry args={[0.23, 0.008, 4, 10]} />
+                <meshStandardMaterial color="#505870" roughness={0.30} metalness={0.72} />
+              </mesh>
+            ))}
+
+            {/* ── Aluminium top cap band ── */}
+            <mesh position={[0, epH + 0.022, 0]}>
+              <boxGeometry args={[epW + 0.04, 0.045, epD + 0.04]} />
+              <meshStandardMaterial color="#505868" roughness={0.22} metalness={0.88} envMapIntensity={2.2} />
+            </mesh>
+            {/* Cap edge angled drip */}
+            <mesh position={[0, epH + 0.046, 0]}>
+              <boxGeometry args={[epW + 0.06, 0.012, epD + 0.06]} />
+              <meshStandardMaterial color="#3E4458" roughness={0.18} metalness={0.92} envMapIntensity={2.4} />
+            </mesh>
+
+            {/* ── Night glow light ── */}
+            {isNightEP && (
+              <pointLight position={[0, epH * 0.50, 0]}
+                intensity={nightGlow * 2.5} distance={3.0} decay={2.0}
+                color="#80C0E8" castShadow={false} />
+            )}
+          </group>
+        );
+      })()}
+
       {/* ── 太阳能热水器真空管集热器（solar thermal vacuum-tube collector array）──
            Tilted south at 35° for optimal thermal gain.  Placed east quadrant
            of roof, clear of PV panels, helipad, and pergola.
