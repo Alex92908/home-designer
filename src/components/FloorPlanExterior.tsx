@@ -588,7 +588,7 @@ function buildFacadeBlocks(segs: ExteriorWallSeg[]): FacadeBlock[] {
 }
 
 // ── 平屋顶 ────────────────────────────────────────────────────
-function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
+function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY: number; nightGlow?: number }) {
   const OV = 0.45;   // 悬挑
   const OV_S = 0.75; // 南向多悬挑
   const PH = 0.30;   // 女儿墙高度
@@ -646,27 +646,29 @@ function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
         const coveY  = roofSlab + 0.05 + 0.04;  // just above slab surface, at parapet base
         const coveColor = "#E8F4FF";
         const coveEmi   = "#D0E8FF";
+        // Parapet cove light: subtle during day, bright at night
+        const coveI = 0.25 + nightGlow * 0.70;
         return (
           <group>
             {/* South inner parapet cove */}
             <mesh position={[0, coveY, D / 2 - 0.08]}>
               <boxGeometry args={[W - 0.28, coveH, coveT]} />
-              <meshStandardMaterial color={coveColor} emissive={coveEmi} emissiveIntensity={1.2} roughness={0.6} />
+              <meshStandardMaterial color={coveColor} emissive={coveEmi} emissiveIntensity={coveI} roughness={0.6} />
             </mesh>
             {/* East inner parapet cove */}
             <mesh position={[W / 2 - 0.08, coveY, 0]}>
               <boxGeometry args={[coveT, coveH, D - 0.28]} />
-              <meshStandardMaterial color={coveColor} emissive={coveEmi} emissiveIntensity={1.2} roughness={0.6} />
+              <meshStandardMaterial color={coveColor} emissive={coveEmi} emissiveIntensity={coveI} roughness={0.6} />
             </mesh>
             {/* West inner parapet cove */}
             <mesh position={[-W / 2 + 0.08, coveY, 0]}>
               <boxGeometry args={[coveT, coveH, D - 0.28]} />
-              <meshStandardMaterial color={coveColor} emissive={coveEmi} emissiveIntensity={1.2} roughness={0.6} />
+              <meshStandardMaterial color={coveColor} emissive={coveEmi} emissiveIntensity={coveI} roughness={0.6} />
             </mesh>
             {/* North inner parapet cove */}
             <mesh position={[0, coveY, -D / 2 + 0.08]}>
               <boxGeometry args={[W - 0.28, coveH, coveT]} />
-              <meshStandardMaterial color={coveColor} emissive={coveEmi} emissiveIntensity={1.2} roughness={0.6} />
+              <meshStandardMaterial color={coveColor} emissive={coveEmi} emissiveIntensity={coveI} roughness={0.6} />
             </mesh>
           </group>
         );
@@ -2423,7 +2425,7 @@ export default function FloorPlanBuilding({
       })()}
 
       {/* ── 5. 平屋顶（室内视角下隐藏） ── */}
-      {!insideBuilding && <FlatRoof W={W} D={D} roofY={totalH} />}
+      {!insideBuilding && <FlatRoof W={W} D={D} roofY={totalH} nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0} />}
 
       {/* ── 5b. 建筑立面泛光灯（夜间效果）——根据 sunHour 自动调强度 ──
                夜间：墙面泛光灯打亮外立面，池边及入口处暖光渗出。
