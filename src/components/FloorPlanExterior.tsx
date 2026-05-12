@@ -1240,9 +1240,174 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
         );
       })()}
 
+      {/* ── 屋顶浅水景观池（rooftop shallow reflecting pool）──
+           Dark slate-tiled basin 3m × 1.2m with reflective water skin.
+           Placed on east side of roof terrace, creates a mirror effect
+           reflecting the pergola and sky, glows cool blue at night. */}
+      {(() => {
+        const rpW = Math.min(W * 0.36, 3.20);   // pool width E-W
+        const rpL = 1.20;                         // pool depth N-S
+        const rpDp = 0.18;                        // water depth (shallow)
+        const rpX = W * 0.22;
+        const rpZ =  D * 0.06;                   // centre-east of roof
+        const rpY = roofSlab + 0.05;
+        return (
+          <group position={[rpX, rpY, rpZ]}>
+            {/* Basin coping rim — dark slate */}
+            <mesh position={[0, rpDp / 2, 0]} castShadow>
+              <boxGeometry args={[rpW + 0.14, rpDp + 0.04, rpL + 0.14]} />
+              <meshStandardMaterial color="#282A30" roughness={0.45} metalness={0.35} envMapIntensity={1.4} />
+            </mesh>
+            {/* Basin floor — dark basalt mosaic */}
+            <mesh position={[0, 0.008, 0]}>
+              <boxGeometry args={[rpW, 0.016, rpL]} />
+              <meshStandardMaterial color="#1A1C22" roughness={0.55} metalness={0.12} />
+            </mesh>
+            {/* Water surface — highly reflective, slight blue tint */}
+            <mesh position={[0, rpDp - 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={10}>
+              <planeGeometry args={[rpW - 0.02, rpL - 0.02]} />
+              <meshStandardMaterial
+                color="#4898C0"
+                transparent opacity={0.88}
+                depthWrite={false}
+                roughness={0.02}
+                metalness={0.15}
+                envMapIntensity={6.0}
+                emissive="#2070A0" emissiveIntensity={nightGlow * 0.6 + 0.04}
+              />
+            </mesh>
+            {/* Coping top surface edge detail — lighter cap */}
+            <mesh position={[0, rpDp + 0.022, 0]}>
+              <boxGeometry args={[rpW + 0.16, 0.014, rpL + 0.16]} />
+              <meshStandardMaterial color="#484C58" roughness={0.22} metalness={0.78} envMapIntensity={2.0} />
+            </mesh>
+            {/* Underwater fill light — cool blue, only active at night */}
+            <pointLight
+              position={[0, 0.06, 0]}
+              intensity={nightGlow * 2.0}
+              distance={rpW * 1.2}
+              decay={2.0}
+              color="#40B0D8"
+              castShadow={false}
+            />
+          </group>
+        );
+      })()}
+
+      {/* ── 屋顶休闲家具（rooftop terrace sun loungers + dining）──
+           Two teak-framed sun loungers with white cushions, a side table
+           and a 4-seat outdoor dining set under the pergola / shade sail. */}
+      {(() => {
+        const furY = roofSlab + 0.05;
+        const loungeColor = "#F0ECD8";  // off-white cushion
+        const teak = "#8B5E3C";          // teak frame
+        const metal = "#5A6070";         // dark metal legs/frames
+        // Sun lounger — simplified as reclining platform
+        function Lounger({ x, z, rotY }: { x: number; z: number; rotY: number }) {
+          return (
+            <group position={[x, furY, z]} rotation={[0, rotY, 0]}>
+              {/* Frame rail — teak */}
+              <mesh position={[0, 0.16, 0]} castShadow>
+                <boxGeometry args={[1.95, 0.040, 0.68]} />
+                <meshStandardMaterial color={teak} roughness={0.72} metalness={0.04} />
+              </mesh>
+              {/* Cushion */}
+              <mesh position={[0, 0.20, 0]} castShadow>
+                <boxGeometry args={[1.85, 0.065, 0.60]} />
+                <meshStandardMaterial color={loungeColor} roughness={0.85} />
+              </mesh>
+              {/* Head rest — slightly elevated */}
+              <mesh position={[-0.72, 0.28, 0]} rotation={[0.22, 0, 0]} castShadow>
+                <boxGeometry args={[0.48, 0.055, 0.60]} />
+                <meshStandardMaterial color={loungeColor} roughness={0.85} />
+              </mesh>
+              {/* 4 legs */}
+              {([-0.80, 0.80] as number[]).flatMap(lx => ([-0.26, 0.26] as number[]).map(lz => (
+                <mesh key={`${lx}-${lz}`} position={[lx, 0.07, lz]}>
+                  <cylinderGeometry args={[0.016, 0.016, 0.14, 6]} />
+                  <meshStandardMaterial color={metal} roughness={0.38} metalness={0.72} />
+                </mesh>
+              )))}
+            </group>
+          );
+        }
+        return (
+          <group>
+            {/* Two sun loungers, side-by-side facing south */}
+            <Lounger x={-W * 0.05} z={-D * 0.32} rotY={0} />
+            <Lounger x={-W * 0.05} z={-D * 0.16} rotY={0} />
+            {/* Side table between loungers */}
+            <group position={[-W * 0.05, furY, -D * 0.24]}>
+              <mesh position={[1.20, 0.35, 0]}>
+                <cylinderGeometry args={[0.25, 0.25, 0.016, 10]} />
+                <meshStandardMaterial color="#E0D8C8" roughness={0.35} metalness={0.10} envMapIntensity={2.0} />
+              </mesh>
+              <mesh position={[1.20, 0.16, 0]}>
+                <cylinderGeometry args={[0.020, 0.020, 0.34, 6]} />
+                <meshStandardMaterial color={metal} roughness={0.38} metalness={0.72} />
+              </mesh>
+              {/* Drinks / book on table */}
+              <mesh position={[1.20, 0.365, -0.05]}>
+                <cylinderGeometry args={[0.030, 0.025, 0.12, 8]} />
+                <meshStandardMaterial color="#80A8C0" roughness={0.30} metalness={0.20} envMapIntensity={3.0} />
+              </mesh>
+            </group>
+            {/* Rooftop dining set — 4 chairs around round table under pergola */}
+            {(() => {
+              const dtX = -W * 0.13;
+              const dtZ = -D * 0.28 + 0.40;  // inside pergola zone
+              // Round table
+              return (
+                <group position={[dtX, furY, dtZ]}>
+                  <mesh position={[0, 0.76, 0]}>
+                    <cylinderGeometry args={[0.65, 0.65, 0.020, 14]} />
+                    <meshStandardMaterial color="#E4DCcC" roughness={0.32} metalness={0.12} envMapIntensity={2.2} />
+                  </mesh>
+                  <mesh position={[0, 0.38, 0]}>
+                    <cylinderGeometry args={[0.028, 0.028, 0.74, 6]} />
+                    <meshStandardMaterial color={metal} roughness={0.36} metalness={0.72} />
+                  </mesh>
+                  {/* 4 chairs at cardinal points */}
+                  {([0, Math.PI / 2, Math.PI, -Math.PI / 2] as number[]).map((ang, ci) => {
+                    const cx3 = Math.sin(ang) * 0.85;
+                    const cz3 = Math.cos(ang) * 0.85;
+                    return (
+                      <group key={ci} position={[cx3, 0, cz3]} rotation={[0, ang, 0]}>
+                        {/* Chair seat */}
+                        <mesh position={[0, 0.46, 0]} castShadow>
+                          <boxGeometry args={[0.44, 0.040, 0.44]} />
+                          <meshStandardMaterial color={teak} roughness={0.74} metalness={0.04} />
+                        </mesh>
+                        {/* Chair back */}
+                        <mesh position={[0, 0.70, -0.20]} rotation={[-0.12, 0, 0]} castShadow>
+                          <boxGeometry args={[0.44, 0.42, 0.028]} />
+                          <meshStandardMaterial color={teak} roughness={0.72} metalness={0.04} />
+                        </mesh>
+                        {/* Seat cushion */}
+                        <mesh position={[0, 0.49, 0]}>
+                          <boxGeometry args={[0.40, 0.040, 0.40]} />
+                          <meshStandardMaterial color={loungeColor} roughness={0.88} />
+                        </mesh>
+                        {/* 4 legs */}
+                        {([-0.16, 0.16] as number[]).flatMap(lx4 => ([-0.16, 0.16] as number[]).map(lz4 => (
+                          <mesh key={`${lx4}${lz4}`} position={[lx4, 0.22, lz4]}>
+                            <cylinderGeometry args={[0.014, 0.014, 0.44, 6]} />
+                            <meshStandardMaterial color={metal} roughness={0.38} metalness={0.70} />
+                          </mesh>
+                        )))}
+                      </group>
+                    );
+                  })}
+                </group>
+              );
+            })()}
+          </group>
+        );
+      })()}
+
       {/* ── 屋顶 BBQ 台（rooftop BBQ station near pergola）── */}
       {(() => {
-        // Placed east of pergola, near roof terrace sun loungers
+        // Placed near roof terrace sun loungers and dining set
         const bbqX = W * 0.28;
         const bbqZ = -D * 0.22;
         const bbqY = roofSlab + 0.05;
