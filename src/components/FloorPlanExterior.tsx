@@ -599,6 +599,57 @@ function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
           <meshStandardMaterial color="#2E3240" roughness={0.22} metalness={0.90} envMapIntensity={2.0} />
         </mesh>
       ))}
+      {/* ── 女儿墙内侧 LED 灯槽（parapet interior cove light）——
+           现代平屋顶标配：屋顶有人使用时，女儿墙内侧 LED 提供弥散照明。
+           材质：薄铝槽 + 白色 LED 条 + 向上泛光 */}
+      {(() => {
+        const coveH  = 0.032;   // LED strip height
+        const coveT  = 0.015;   // strip depth
+        const coveY  = roofSlab + 0.05 + 0.04;  // just above slab surface, at parapet base
+        const coveColor = "#E8F4FF";
+        const coveEmi   = "#D0E8FF";
+        return (
+          <group>
+            {/* South inner parapet cove */}
+            <mesh position={[0, coveY, D / 2 - 0.08]}>
+              <boxGeometry args={[W - 0.28, coveH, coveT]} />
+              <meshStandardMaterial color={coveColor} emissive={coveEmi} emissiveIntensity={1.2} roughness={0.6} />
+            </mesh>
+            {/* East inner parapet cove */}
+            <mesh position={[W / 2 - 0.08, coveY, 0]}>
+              <boxGeometry args={[coveT, coveH, D - 0.28]} />
+              <meshStandardMaterial color={coveColor} emissive={coveEmi} emissiveIntensity={1.2} roughness={0.6} />
+            </mesh>
+            {/* West inner parapet cove */}
+            <mesh position={[-W / 2 + 0.08, coveY, 0]}>
+              <boxGeometry args={[coveT, coveH, D - 0.28]} />
+              <meshStandardMaterial color={coveColor} emissive={coveEmi} emissiveIntensity={1.2} roughness={0.6} />
+            </mesh>
+            {/* North inner parapet cove */}
+            <mesh position={[0, coveY, -D / 2 + 0.08]}>
+              <boxGeometry args={[W - 0.28, coveH, coveT]} />
+              <meshStandardMaterial color={coveColor} emissive={coveEmi} emissiveIntensity={1.2} roughness={0.6} />
+            </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── 屋顶排水口（roof drain scupper）—— 东西女儿墙各一个穿墙排水管 ── */}
+      {([[ W / 2 + 0.04, D * 0.15], [-W / 2 - 0.04, -D * 0.15]] as [number,number][]).map(([sx, sz], si) => (
+        <group key={`scupper-${si}`} position={[sx, roofSlab + 0.05 + 0.08, sz]}>
+          {/* Scupper tube */}
+          <mesh rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.042, 0.042, 0.18, 8]} />
+            <meshStandardMaterial color="#5A6070" roughness={0.55} metalness={0.45} />
+          </mesh>
+          {/* Drip lip */}
+          <mesh position={[si === 0 ? 0.092 : -0.092, -0.022, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.052, 0.052, 0.018, 8]} />
+            <meshStandardMaterial color="#484E5C" roughness={0.50} metalness={0.48} />
+          </mesh>
+        </group>
+      ))}
+
       {/* ── 线性天窗（linear skylight）— 南向采光，钢框 + 夹胶玻璃 ── */}
       {(() => {
         const slW = Math.min(W * 0.45, 5.0);  // skylight width
