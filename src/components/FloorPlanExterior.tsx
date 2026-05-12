@@ -2051,6 +2051,97 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
           </group>
         );
       })()}
+      {/* ── 屋顶冷水泳池（rooftop cold plunge pool, NE area）──
+           A sleek 2.0m × 1.2m stainless-steel cold plunge pool recessed into
+           the rooftop slab, adjacent to the hot tub for contrast therapy.
+           Glass viewing panel on south face, ladder handles, underwater LED. */}
+      {(() => {
+        const cpX  = -W * 0.22;    // NE quadrant, clear of elevator overrun
+        const cpZ  =  D * 0.12;
+        const cpY  = roofSlab + 0.05;
+        const cpW  = 2.00;   // pool width (E-W)
+        const cpD  = 1.20;   // pool depth (N-S)
+        const cpH  = 0.90;   // pool wall height
+        const wallT_cp = 0.06;
+        const isNightCP = nightGlow > 0.4;
+        const isDuskCP  = nightGlow > 0.15 && nightGlow <= 0.4;
+        const cpGlowI = isNightCP ? 1.8 : isDuskCP ? 0.7 : 0.04;
+        const cpLI    = isNightCP ? 3.0 : isDuskCP ? 1.5 : 0.0;
+
+        return (
+          <group position={[cpX, cpY, cpZ]}>
+            {/* Pool shell — dark slate grey steel */}
+            <mesh position={[0, cpH / 2, 0]} castShadow>
+              <boxGeometry args={[cpW + wallT_cp * 2, cpH + wallT_cp, cpD + wallT_cp * 2]} />
+              <meshStandardMaterial color="#282C36" roughness={0.22} metalness={0.70} envMapIntensity={2.5} />
+            </mesh>
+            {/* Interior liner — brushed stainless */}
+            <mesh position={[0, cpH / 2, 0]}>
+              <boxGeometry args={[cpW, cpH, cpD]} />
+              <meshStandardMaterial color="#8A9298" roughness={0.18} metalness={0.90} envMapIntensity={3.0} side={THREE.BackSide} />
+            </mesh>
+            {/* Water surface */}
+            <mesh position={[0, cpH - 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={12}>
+              <planeGeometry args={[cpW - 0.02, cpD - 0.02]} />
+              <meshStandardMaterial
+                color="#3888B0" transparent opacity={0.88}
+                roughness={0.01} metalness={0.08}
+                envMapIntensity={6.0}
+                emissive="#206898" emissiveIntensity={cpGlowI}
+                depthWrite={false}
+              />
+            </mesh>
+            {/* South-face glass viewing panel */}
+            <mesh position={[0, cpH * 0.46, -cpD / 2 - wallT_cp * 0.5]} renderOrder={11}>
+              <boxGeometry args={[cpW * 0.70, cpH * 0.80, 0.014]} />
+              <meshStandardMaterial
+                color="#A0D0E8" transparent opacity={0.25}
+                roughness={0.02} metalness={0.06}
+                envMapIntensity={5.0}
+                emissive="#70B8D8" emissiveIntensity={cpGlowI * 0.5}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+              />
+            </mesh>
+            {/* Top coping — polished black granite surround */}
+            {([
+              [0, cpD / 2 + wallT_cp, cpW + wallT_cp * 4, wallT_cp * 2 + 0.06],
+              [0, -cpD / 2 - wallT_cp, cpW + wallT_cp * 4, wallT_cp * 2 + 0.06],
+              [cpW / 2 + wallT_cp, 0, wallT_cp * 2 + 0.06, cpD + wallT_cp * 4 + 0.06],
+              [-cpW / 2 - wallT_cp, 0, wallT_cp * 2 + 0.06, cpD + wallT_cp * 4 + 0.06],
+            ] as [number, number, number, number][]).map(([x, z, w, d], ci) => (
+              <mesh key={ci} position={[x, cpH + wallT_cp * 0.5 + 0.006, z]}>
+                <boxGeometry args={[w, 0.018, d]} />
+                <meshStandardMaterial color="#1A1C20" roughness={0.10} metalness={0.65} envMapIntensity={3.0} />
+              </mesh>
+            ))}
+            {/* Ladder handles — 2 stainless bars on east side */}
+            {([-0.10, 0.10] as number[]).map((hx, hi) => (
+              <group key={hi} position={[cpW / 2 + wallT_cp + 0.02, 0, hx]}>
+                <mesh position={[0, cpH * 0.55, 0]}>
+                  <cylinderGeometry args={[0.016, 0.016, cpH * 1.06, 6]} />
+                  <meshStandardMaterial color="#C0C8D0" roughness={0.16} metalness={0.92} envMapIntensity={2.5} />
+                </mesh>
+                {/* Rung */}
+                <mesh position={[0, cpH * 0.28, 0]} rotation={[0, 0, Math.PI / 2]}>
+                  <cylinderGeometry args={[0.012, 0.012, 0.20, 6]} />
+                  <meshStandardMaterial color="#B8C0C8" roughness={0.18} metalness={0.90} />
+                </mesh>
+              </group>
+            ))}
+            {/* Underwater LED light */}
+            {cpLI > 0 && (
+              <pointLight position={[0, 0.15, 0]} intensity={cpLI} distance={cpW * 1.5} decay={2} color="#20A0D0" />
+            )}
+            {/* "COLD PLUNGE" label placard — small stainless plate */}
+            <mesh position={[0, cpH + 0.025, cpD / 2 + wallT_cp + 0.04]}>
+              <boxGeometry args={[0.55, 0.030, 0.018]} />
+              <meshStandardMaterial color="#9AA0A8" roughness={0.18} metalness={0.88} envMapIntensity={2.0} />
+            </mesh>
+          </group>
+        );
+      })()}
+
       {/* ── 屋顶露天酒吧台（rooftop sky bar, SE corner）──
            Polished-concrete bar counter in an L-shape, black steel base,
            5 bar stools, backbar with bottle display + wine rack, under-
