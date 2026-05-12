@@ -7662,6 +7662,123 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5j-7. 宠物围栏区（dog run / pet enclosure, east yard）──
+           Galvanised wire mesh fence run for pets: concrete base pads,
+           wire panel sections, gate, and a small kennel house with pitched roof. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const petX   =  W / 2 + 2.80;   // east yard
+        const petZ   = -D / 2 - 2.80;   // south side of east yard
+        const runW   = 3.20;             // E-W
+        const runD   = 2.20;             // N-S
+        const fenceH = 1.60;
+        return (
+          <group position={[petX, 0, petZ]}>
+            {/* ── Ground pad — concrete ── */}
+            <mesh position={[0, 0.010, 0]} receiveShadow>
+              <boxGeometry args={[runW, 0.020, runD]} />
+              <meshStandardMaterial color="#B8B4AC" roughness={0.88} metalness={0.02} />
+            </mesh>
+
+            {/* ── Fence posts at corners + every 1m ── */}
+            {(() => {
+              const posts: [number, number, number][] = [];
+              const nE = Math.ceil(runD / 1.0);
+              const nS = Math.ceil(runW / 1.0);
+              // West side
+              for (let i = 0; i <= nE; i++) posts.push([-runW / 2, fenceH / 2, -runD / 2 + i * (runD / nE)]);
+              // East side
+              for (let i = 0; i <= nE; i++) posts.push([runW / 2, fenceH / 2, -runD / 2 + i * (runD / nE)]);
+              // South side (skip corners already added)
+              for (let i = 1; i < nS; i++) posts.push([-runW / 2 + i * (runW / nS), fenceH / 2, runD / 2]);
+              // North side (skip corners)
+              for (let i = 1; i < nS; i++) posts.push([-runW / 2 + i * (runW / nS), fenceH / 2, -runD / 2]);
+              return posts.map(([px, py, pz], pi) => (
+                <mesh key={pi} position={[px, py, pz]} castShadow>
+                  <cylinderGeometry args={[0.022, 0.022, fenceH, 5]} />
+                  <meshStandardMaterial color="#9AA4A8" roughness={0.30} metalness={0.72} />
+                </mesh>
+              ));
+            })()}
+
+            {/* ── Wire mesh panels — horizontal rails only (mesh implied) ── */}
+            {[0.35, 0.75, 1.15, 1.50].map((ry, ri) => (
+              <group key={ri}>
+                {/* North rail */}
+                <mesh position={[0, ry, -runD / 2]}>
+                  <boxGeometry args={[runW, 0.010, 0.010]} />
+                  <meshStandardMaterial color="#8A9298" roughness={0.35} metalness={0.68} />
+                </mesh>
+                {/* South rail */}
+                <mesh position={[0, ry, runD / 2]}>
+                  <boxGeometry args={[runW, 0.010, 0.010]} />
+                  <meshStandardMaterial color="#8A9298" roughness={0.35} metalness={0.68} />
+                </mesh>
+                {/* East rail */}
+                <mesh position={[runW / 2, ry, 0]}>
+                  <boxGeometry args={[0.010, 0.010, runD]} />
+                  <meshStandardMaterial color="#8A9298" roughness={0.35} metalness={0.68} />
+                </mesh>
+                {/* West rail */}
+                <mesh position={[-runW / 2, ry, 0]}>
+                  <boxGeometry args={[0.010, 0.010, runD]} />
+                  <meshStandardMaterial color="#8A9298" roughness={0.35} metalness={0.68} />
+                </mesh>
+              </group>
+            ))}
+
+            {/* ── Gate (south side, centre-right) ── */}
+            <mesh position={[0.55, fenceH * 0.50, runD / 2 + 0.006]}>
+              <boxGeometry args={[0.85, fenceH, 0.012]} />
+              <meshStandardMaterial color="#7A8490" roughness={0.35} metalness={0.65} />
+            </mesh>
+            {/* Gate latch */}
+            <mesh position={[0.12, fenceH * 0.45, runD / 2 + 0.018]}>
+              <boxGeometry args={[0.050, 0.025, 0.012]} />
+              <meshStandardMaterial color="#B0B8C0" roughness={0.22} metalness={0.85} />
+            </mesh>
+
+            {/* ── Dog kennel house — north-west corner ── */}
+            <group position={[-runW * 0.30, 0, -runD * 0.28]}>
+              {/* House body */}
+              <mesh position={[0, 0.28, 0]} castShadow>
+                <boxGeometry args={[0.80, 0.55, 0.65]} />
+                <meshStandardMaterial color="#D8CCBA" roughness={0.82} metalness={0.02} />
+              </mesh>
+              {/* Pitched roof — left panel */}
+              <mesh position={[0, 0.60, -0.16]} rotation={[-0.55, 0, 0]} castShadow>
+                <boxGeometry args={[0.86, 0.040, 0.42]} />
+                <meshStandardMaterial color="#8B4020" roughness={0.75} metalness={0.04} />
+              </mesh>
+              {/* Pitched roof — right panel */}
+              <mesh position={[0, 0.60, 0.16]} rotation={[0.55, 0, 0]} castShadow>
+                <boxGeometry args={[0.86, 0.040, 0.42]} />
+                <meshStandardMaterial color="#8B4020" roughness={0.75} metalness={0.04} />
+              </mesh>
+              {/* Door opening (arch) */}
+              <mesh position={[0, 0.20, -0.328]}>
+                <boxGeometry args={[0.30, 0.38, 0.010]} />
+                <meshStandardMaterial color="#1C1410" roughness={0.90} />
+              </mesh>
+              {/* Name plate (small strip) */}
+              <mesh position={[0, 0.44, -0.330]}>
+                <boxGeometry args={[0.22, 0.045, 0.006]} />
+                <meshStandardMaterial color="#E8D8A0" roughness={0.60} metalness={0.05} />
+              </mesh>
+            </group>
+
+            {/* ── Water bowl ── */}
+            <mesh position={[0.80, 0.065, 0.60]}>
+              <cylinderGeometry args={[0.095, 0.080, 0.065, 8]} />
+              <meshStandardMaterial color="#4A6080" roughness={0.20} metalness={0.50} />
+            </mesh>
+            <mesh position={[0.80, 0.068, 0.60]}>
+              <cylinderGeometry args={[0.080, 0.080, 0.010, 8]} />
+              <meshStandardMaterial color="#60A0C0" transparent opacity={0.75} roughness={0.04} metalness={0.05} />
+            </mesh>
+          </group>
+        );
+      })()}
+
       {/* ── 5k. 雨棚玻璃顶（canopy glazing panel upgrade）── */}
       {!insideBuilding && isGlassVilla && (() => {
         const canopyW3 = Math.min(W * 0.62, 8.0);

@@ -57,8 +57,8 @@ export default function ExportModal() {
 
   const activeRoom      = useDesignerStore(s => s.activeRoom);
   const floorPlans      = useDesignerStore(s => s.floorPlans);
-  const rooms           = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms);
-  const enabledRooms    = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
+  const rooms           = useDesignerStore(s => s.floorPlans[s.activeFloor]?.rooms ?? {} as typeof s.floorPlans[0]["rooms"]);
+  const enabledRooms    = useDesignerStore(s => s.floorPlans[s.activeFloor]?.enabledRooms ?? []);
   const scores          = useDesignerStore(s => s.scores);
   const exterior        = useDesignerStore(s => s.exterior);
   const budget          = useDesignerStore(s => s.budget);
@@ -71,7 +71,7 @@ export default function ExportModal() {
   const roomDimensions  = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
   const roomWindows     = useDesignerStore(s => s.floorPlans[s.activeFloor].roomWindows);
 
-  const roomState  = rooms[activeRoom];
+  const roomState  = rooms?.[activeRoom] ?? { materials: {}, placedItems: [] };
   const def        = ROOM_DEFS[activeRoom];
   const area       = getRoomArea(activeRoom);
   const { materials, placedItems } = roomState;
