@@ -1839,11 +1839,26 @@ export default function FloorPlanBuilding({
               const sy = si * stepRise + 0.005;
               const sz = southFaceZ2 - si * stepRun - stepRun / 2;
               const sw = stepW - si * 0.12;  // slight tapering for elegance
+              const isNightStep = sunHour < 6 || sunHour > 20;
+              const isDuskStep  = !isNightStep && (sunHour < 8 || sunHour > 18);
+              const riserEmi    = isNightStep ? 1.8 : isDuskStep ? 0.9 : 0.0;
               return (
-                <mesh key={si} position={[0, sy, sz]} castShadow receiveShadow>
-                  <boxGeometry args={[sw, stepRise, stepRun]} />
-                  <meshStandardMaterial color="#D8D4CC" roughness={0.45} metalness={0.06} envMapIntensity={0.9} />
-                </mesh>
+                <group key={si}>
+                  <mesh position={[0, sy, sz]} castShadow receiveShadow>
+                    <boxGeometry args={[sw, stepRise, stepRun]} />
+                    <meshStandardMaterial color="#D8D4CC" roughness={0.45} metalness={0.06} envMapIntensity={0.9} />
+                  </mesh>
+                  {/* LED riser strip — warm amber light under each tread */}
+                  {riserEmi > 0 && (
+                    <>
+                      <mesh position={[0, sy - stepRise * 0.30, sz - stepRun / 2 - 0.005]}>
+                        <boxGeometry args={[sw - 0.08, 0.010, 0.012]} />
+                        <meshStandardMaterial color="#FFE8B0" emissive="#FFD880" emissiveIntensity={riserEmi} roughness={0.70} />
+                      </mesh>
+                      <pointLight position={[0, sy - stepRise * 0.30, sz - stepRun / 2 - 0.02]} intensity={riserEmi * 0.8} distance={sw * 0.8} decay={2.0} color="#FFE080" />
+                    </>
+                  )}
+                </group>
               );
             })}
 
@@ -3886,6 +3901,81 @@ export default function FloorPlanBuilding({
             {/* Night accent light at base */}
             {isNightSc && (
               <pointLight position={[0, 0.40, 0.35]} intensity={2.5} distance={3.0} decay={2.0} color="#E8F0FF" />
+            )}
+          </group>
+        );
+      })()}
+
+      {/* ── 5e-1b. 北庭院圆形喷泉（circular fountain in north yard）──
+           Polished granite circular basin with single vertical water jet.
+           Glowing at dusk/night with underwater LED. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const ftnX = -W * 0.28;  // slightly west to avoid sculpture
+        const ftnZ =  D / 2 + 2.00;
+        const ftnR = 0.72;   // basin radius
+        const ftnWallH = 0.22;  // basin wall height
+        const ftnWallT = 0.08;  // wall thickness
+        const jetH  = 0.55;   // water jet height above water surface
+        const isNightFtn = sunHour < 6 || sunHour > 20;
+        const isDuskFtn  = !isNightFtn && (sunHour < 8 || sunHour > 18);
+        const ftnGlowI   = isNightFtn ? 1.8 : isDuskFtn ? 0.8 : 0.04;
+        const ftnLI      = isNightFtn ? 3.0 : isDuskFtn ? 1.5 : 0.0;
+        return (
+          <group position={[ftnX, 0, ftnZ]}>
+            {/* Basin base / surround paving disc */}
+            <mesh position={[0, 0.010, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <circleGeometry args={[ftnR + 0.40, 16]} />
+              <meshStandardMaterial color="#C8C0A8" roughness={0.72} metalness={0.02} />
+            </mesh>
+            {/* Basin outer wall — dark polished granite ring */}
+            <mesh position={[0, ftnWallH / 2, 0]} castShadow>
+              <cylinderGeometry args={[ftnR, ftnR, ftnWallH, 16, 1, true]} />
+              <meshStandardMaterial color="#1C1E24" roughness={0.14} metalness={0.55} envMapIntensity={3.0} side={THREE.DoubleSide} />
+            </mesh>
+            {/* Basin coping — polished top rim */}
+            <mesh position={[0, ftnWallH + 0.012, 0]}>
+              <cylinderGeometry args={[ftnR + 0.020, ftnR + 0.020, 0.030, 16]} />
+              <meshStandardMaterial color="#2C3040" roughness={0.10} metalness={0.80} envMapIntensity={3.5} />
+            </mesh>
+            {/* Inner basin floor */}
+            <mesh position={[0, 0.010, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[ftnR - ftnWallT, 14]} />
+              <meshStandardMaterial color="#1A2028" roughness={0.45} metalness={0.25} />
+            </mesh>
+            {/* Water surface */}
+            <mesh position={[0, ftnWallH - 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={12}>
+              <circleGeometry args={[ftnR - ftnWallT - 0.01, 14]} />
+              <meshStandardMaterial
+                color="#60B8D8"
+                transparent opacity={0.82}
+                roughness={0.02} metalness={0.06}
+                envMapIntensity={5.0}
+                emissive="#3090B8" emissiveIntensity={ftnGlowI}
+                depthWrite={false}
+              />
+            </mesh>
+            {/* Central water jet — tapered cylinder */}
+            <mesh position={[0, ftnWallH + jetH / 2, 0]}>
+              <cylinderGeometry args={[0.018, 0.030, jetH, 8]} />
+              <meshStandardMaterial
+                color="#90D8F0"
+                transparent opacity={0.70}
+                roughness={0.04} metalness={0.02}
+                emissive="#60C8E8" emissiveIntensity={ftnGlowI * 0.8}
+              />
+            </mesh>
+            {/* Spray mist at top */}
+            <mesh position={[0, ftnWallH + jetH + 0.05, 0]}>
+              <sphereGeometry args={[0.065, 8, 6]} />
+              <meshStandardMaterial
+                color="#C8E8F8"
+                transparent opacity={0.55}
+                roughness={0.60} metalness={0.02}
+              />
+            </mesh>
+            {/* Underwater LED point light */}
+            {ftnLI > 0 && (
+              <pointLight position={[0, ftnWallH * 0.3, 0]} intensity={ftnLI} distance={ftnR * 2.5} decay={2.0} color="#40B8E0" castShadow={false} />
             )}
           </group>
         );
