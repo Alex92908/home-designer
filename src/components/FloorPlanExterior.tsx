@@ -691,6 +691,95 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
           <meshStandardMaterial color="#2E3240" roughness={0.22} metalness={0.90} envMapIntensity={2.0} />
         </mesh>
       ))}
+      {/* ── 女儿墙顶部玻璃护栏（parapet-top glass balustrade）──
+           Frameless glass panels on stainless-steel mini-posts sit on top of
+           the concrete parapet, extending the effective railing height to ~0.72m
+           above the parapet cap. Panels face inward (toward roof terrace).
+           Posts are square 40mm brushed steel, spaced ~1.2m on all four sides. */}
+      {(() => {
+        const parapetTopY  = roofSlab + 0.05 + PH + 0.012;  // top of parapet cap flashing
+        const glassH       = 0.42;    // glass panel height above parapet cap
+        const glassT       = 0.010;   // glass panel thickness
+        const postS        = 0.040;   // post cross-section
+        const postH        = glassH + 0.055;  // post stands above glass top rail
+        const topRailT     = 0.030;
+        const glassEmi     = nightGlow > 0.4 ? 0.10 : 0.0;
+
+        // Generate posts along N, S, E, W sides
+        function sideRailing(len: number, posX: number, posZ: number, axisX: boolean) {
+          const inset = PT / 2 + postS / 2;   // post stands on parapet top, inset from outer edge
+          const postCount = Math.max(3, Math.round(len / 1.20));
+          return Array.from({ length: postCount }, (_, pi) => {
+            const t = pi / (postCount - 1);
+            const off = -len / 2 + t * len;
+            const px = axisX ? off : posX;
+            const pz = axisX ? posZ : off;
+            return { px, pz };
+          });
+        }
+
+        const sidesData = [
+          { len: W, posX: 0,         posZ:  D / 2 - PT / 2, axisX: true  },  // north
+          { len: W, posX: 0,         posZ: -D / 2 + PT / 2, axisX: true  },  // south
+          { len: D, posX:  W / 2 - PT / 2, posZ: 0,         axisX: false },  // east
+          { len: D, posX: -W / 2 + PT / 2, posZ: 0,         axisX: false },  // west
+        ] as { len: number; posX: number; posZ: number; axisX: boolean }[];
+
+        return (
+          <group>
+            {sidesData.flatMap((side, si) => {
+              const posts = sideRailing(side.len, side.posX, side.posZ, side.axisX);
+              const glassSegCount = posts.length - 1;
+              return [
+                // Posts
+                ...posts.map(({ px, pz }, pi) => (
+                  <mesh key={`post-${si}-${pi}`} position={[px, parapetTopY + postH / 2, pz]} castShadow>
+                    <boxGeometry args={[side.axisX ? postS : postS, postH, side.axisX ? postS : postS]} />
+                    <meshStandardMaterial color="#9AA0A8" roughness={0.18} metalness={0.88} envMapIntensity={2.5} />
+                  </mesh>
+                )),
+                // Glass panels between posts
+                ...Array.from({ length: glassSegCount }, (_, gi) => {
+                  const p0 = posts[gi];
+                  const p1 = posts[gi + 1];
+                  const mx = (p0.px + p1.px) / 2;
+                  const mz = (p0.pz + p1.pz) / 2;
+                  const segLen = side.axisX
+                    ? Math.abs(p1.px - p0.px) - postS - 0.01
+                    : Math.abs(p1.pz - p0.pz) - postS - 0.01;
+                  return (
+                    <mesh key={`glass-${si}-${gi}`} position={[mx, parapetTopY + glassH / 2 + 0.01, mz]} renderOrder={12}>
+                      <boxGeometry args={side.axisX
+                        ? [segLen, glassH, glassT]
+                        : [glassT, glassH, segLen]} />
+                      <meshStandardMaterial
+                        color="#C8DCE8"
+                        transparent opacity={0.25}
+                        roughness={0.02} metalness={0.06}
+                        envMapIntensity={5.0}
+                        emissive="#A0C4DC" emissiveIntensity={glassEmi}
+                        side={THREE.DoubleSide}
+                        depthWrite={false}
+                      />
+                    </mesh>
+                  );
+                }),
+                // Top handrail
+                <mesh key={`rail-${si}`}
+                  position={[side.posX, parapetTopY + postH - topRailT / 2, side.posZ]}
+                  castShadow
+                >
+                  <boxGeometry args={side.axisX
+                    ? [side.len, topRailT, topRailT]
+                    : [topRailT, topRailT, side.len]} />
+                  <meshStandardMaterial color="#B8C0C8" roughness={0.14} metalness={0.92} envMapIntensity={3.0} />
+                </mesh>,
+              ];
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 女儿墙内侧 LED 灯槽（parapet interior cove light）——
            现代平屋顶标配：屋顶有人使用时，女儿墙内侧 LED 提供弥散照明。
            材质：薄铝槽 + 白色 LED 条 + 向上泛光 */}
