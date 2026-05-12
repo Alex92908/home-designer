@@ -6066,9 +6066,10 @@ export default function HouseCanvas() {
   // Joystick state for touch devices — bound to a HUD widget below.
   const [joystick, setJoystick] = useState({ axisX: 0, axisZ: 0 });
   // "Ghost mode": disable internal wall collision so user can walk through
-  // walls. Useful when the polygon collision occasionally traps them in a
-  // weird corner, or for fly-by inspection.
-  const [walkNoClip, setWalkNoClip] = useState(false);
+  // walls. Default ON — rooms share walls so AABB-based collision traps the
+  // player immediately when trying to move between adjacent rooms. The outer
+  // bbox clamp still prevents leaving the building footprint.
+  const [walkNoClip, setWalkNoClip] = useState(true);
   // Sun analysis — read from global store so AiRenderModal + YardPlan share the value
   const sunHour     = useDesignerStore(s => s.sunHour);
   const setSunHour  = useDesignerStore(s => s.setSunHour);
@@ -6138,7 +6139,7 @@ export default function HouseCanvas() {
               <button
                 onClick={() => setWalkNoClip(v => !v)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
-                title="允许穿墙：忽略内墙碰撞，可直接走过房间隔墙（外墙边界仍生效）"
+                title="碰撞模式：开启后内墙会阻挡移动（默认关闭，建议保持默认）"
                 style={{
                   background: walkNoClip
                     ? "linear-gradient(135deg,rgba(245,158,11,0.92),rgba(217,119,6,0.92))"
@@ -6147,7 +6148,7 @@ export default function HouseCanvas() {
                   border: `1px solid ${walkNoClip ? "rgba(254,215,170,0.5)" : "rgba(255,255,255,0.15)"}`,
                 }}
               >
-                👻 {walkNoClip ? "穿墙开" : "穿墙关"}
+                🧱 {walkNoClip ? "碰撞关" : "碰撞开"}
               </button>
             </>
           )}
@@ -6174,7 +6175,7 @@ export default function HouseCanvas() {
               letterSpacing: "0.04em",
               whiteSpace: "nowrap",
             }}>
-            🖱 拖动看 · 滚轮缩放 · WASD / 方向键 走 · Shift 跑 · ESC 退出
+            🖱 左键拖动转视角 · 滚轮缩放 · WASD / 方向键 行走 · Shift 加速 · ESC 退出
           </div>
           {/* Touch joystick — bottom-left, only useful with finger but
               always rendered (mouse drag also works on it). */}
