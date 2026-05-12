@@ -1709,6 +1709,57 @@ export default function FloorPlanBuilding({
           </mesh>
         </>
       )}
+      {/* ── 基座悬浮灯带（floating building LED gap）——
+           A continuous thin warm LED strip in the shadow gap between ground
+           and building base. Creates the "floating box" silhouette effect
+           popular in luxury contemporary architecture. Night-mode only. */}
+      {!insideBuilding && (() => {
+        const isNightFL = sunHour < 6 || sunHour > 20;
+        const isDuskFL  = !isNightFL && (sunHour < 8 || sunHour > 18);
+        const floatEmi  = isNightFL ? 3.0 : isDuskFL ? 1.5 : 0.0;
+        const floatLI   = isNightFL ? 4.5 : isDuskFL ? 2.2 : 0.0;
+        if (floatEmi === 0.0) return null;
+        const gapY   = 0.072;   // top of granite base lower section
+        const gapH   = 0.018;   // gap height
+        const gapT   = 0.015;   // strip depth
+        const bW     = W + 0.12;
+        const bD     = D + 0.12;
+        const color  = "#FFE4A0";
+        return (
+          <group position={[0, gapY, 0]}>
+            {/* South strip */}
+            <mesh position={[0, 0, -bD / 2]}>
+              <boxGeometry args={[bW, gapH, gapT]} />
+              <meshStandardMaterial color={color} emissive={color} emissiveIntensity={floatEmi} roughness={0.70} />
+            </mesh>
+            {/* North strip */}
+            <mesh position={[0, 0, bD / 2]}>
+              <boxGeometry args={[bW, gapH, gapT]} />
+              <meshStandardMaterial color={color} emissive={color} emissiveIntensity={floatEmi} roughness={0.70} />
+            </mesh>
+            {/* East strip */}
+            <mesh position={[bW / 2, 0, 0]}>
+              <boxGeometry args={[gapT, gapH, bD]} />
+              <meshStandardMaterial color={color} emissive={color} emissiveIntensity={floatEmi} roughness={0.70} />
+            </mesh>
+            {/* West strip */}
+            <mesh position={[-bW / 2, 0, 0]}>
+              <boxGeometry args={[gapT, gapH, bD]} />
+              <meshStandardMaterial color={color} emissive={color} emissiveIntensity={floatEmi} roughness={0.70} />
+            </mesh>
+            {/* Corner point lights for volumetric halo */}
+            {floatLI > 0 && ([
+              [ bW / 2, 0,  bD / 2],
+              [-bW / 2, 0,  bD / 2],
+              [ bW / 2, 0, -bD / 2],
+              [-bW / 2, 0, -bD / 2],
+            ] as [number,number,number][]).map(([lx, ly, lz], li) => (
+              <pointLight key={li} position={[lx, ly, lz]} intensity={floatLI * 0.25} distance={bW * 0.7} decay={2.2} color="#FFE880" castShadow={false} />
+            ))}
+          </group>
+        );
+      })()}
+
       {/* ── 入口雨棚 —— 1F 顶端向南悬挑（现代建筑标志性元素） ── */}
       {!insideBuilding && isGlassVilla && (() => {
         // 悬挑雨棚：在南立面 1F 顶端（y = FLOOR_H）向南伸出 2.0m
