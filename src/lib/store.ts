@@ -1986,7 +1986,8 @@ export const useDesignerStore = create<DesignerStore>()(
       totalCost: () => {
         const s = get();
         const fp = s.floorPlans[s.activeFloor];
-        const room = fp.rooms[s.activeRoom];
+        const room = fp?.rooms[s.activeRoom];
+        if (!room) return 0;
         const { materials, placedItems } = room;
         const area = getRoomArea(s.activeRoom);
         let total = 0;

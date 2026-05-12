@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { useDesignerStore } from "@/lib/store";
+
+/** Stable fallback so selectors don't create a new object on each render */
+const EMPTY_MATERIALS = {} as const;
+const EMPTY_PLACED: never[] = [];
 import TemplatesPanel from "./TemplatesPanel";
 import { MATERIALS } from "@/lib/data";
 import { FURNITURE, getFurnitureForRoom, FURNITURE_CATEGORIES, getCustomFurniture } from "@/lib/furniture";
@@ -14,7 +18,7 @@ import { formatUnitPrice, formatPrice } from "@/lib/currency";
 function MatCard({ item }: { item: MaterialItem }) {
   const setMaterial = useDesignerStore((s) => s.setMaterial);
   const activeRoom = useDesignerStore((s) => s.activeRoom);
-  const roomMaterials = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.materials ?? {});
+  const roomMaterials = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.materials ?? EMPTY_MATERIALS);
   const isSelected = roomMaterials[item.category]?.id === item.id;
   const locale = useLocale();
   const displayName = locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name;
@@ -67,7 +71,7 @@ function MatCard({ item }: { item: MaterialItem }) {
 function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
   const placeFurniture = useDesignerStore((s) => s.placeFurniture);
   const activeRoom = useDesignerStore((s) => s.activeRoom);
-  const placedItems = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.placedItems ?? []);
+  const placedItems = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.placedItems ?? EMPTY_PLACED);
   const isPlaced = placedItems.some((p) => p.furnitureId === item.id);
   const locale = useLocale();
   const displayName = locale === "en" ? (getFurnitureNameEn(item.id) ?? item.name) : item.name;
@@ -141,7 +145,7 @@ function WallMatCard({ item, target }: { item: MaterialItem; target: WallTarget 
   const setWallSide = useDesignerStore((s) => s.setWallSide);
   const setWallLower = useDesignerStore((s) => s.setWallLower);
   const activeRoom = useDesignerStore((s) => s.activeRoom);
-  const roomMaterials = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.materials ?? {});
+  const roomMaterials = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.materials ?? EMPTY_MATERIALS);
   const locale = useLocale();
   const displayName = locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name;
   const displayBrand = locale === "en" ? getBrandNameEn(item.brand) : item.brand;
@@ -193,7 +197,7 @@ function WallMatCard({ item, target }: { item: MaterialItem; target: WallTarget 
 /** Wall section with per-side + wainscot support. */
 function WallSection() {
   const activeRoom     = useDesignerStore((s) => s.activeRoom);
-  const roomMaterials  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.materials ?? {});
+  const roomMaterials  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.materials ?? EMPTY_MATERIALS);
   const removeMaterial = useDesignerStore((s) => s.removeMaterial);
   const setWallSide    = useDesignerStore((s) => s.setWallSide);
   const setWallLower   = useDesignerStore((s) => s.setWallLower);
@@ -339,7 +343,7 @@ function WallSection() {
 
 function MaterialsTab() {
   const activeRoom = useDesignerStore((s) => s.activeRoom);
-  const roomMaterials = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.materials ?? {});
+  const roomMaterials = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.materials ?? EMPTY_MATERIALS);
   const removeMaterial = useDesignerStore((s) => s.removeMaterial);
   const t = useT();
 
