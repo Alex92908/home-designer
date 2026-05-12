@@ -194,6 +194,15 @@ export function computeExteriorWalls(
 }
 
 // ── 玻璃幕墙 overlay ──────────────────────────────────────────
+// Deterministic hash — decides whether a given (col, row) panel has
+// partially lowered blinds, without calling Math.random() at render time.
+function panelBlindHash(col: number, row: number): number {
+  // Returns 0..1 — treat < 0.28 as "has blinds"
+  let h = (col * 2654435761 ^ row * 2246822519) >>> 0;
+  h ^= h >> 16; h = Math.imul(h, 0x45d9f3b); h ^= h >> 16;
+  return (h >>> 0) / 0x100000000;
+}
+
 function GlassCurtain({
   width, height, floorH, doors = [],
 }: {
@@ -298,6 +307,35 @@ function GlassCurtain({
                       />
                     </mesh>
                   )}
+                  {/* ── 百叶帘（venetian blinds）—— 28% 的面板随机部分拉下 ──
+                      位于玻璃内侧（z < 0），只遮住上部 Vision pane 的
+                      约 55%，底部留空（日常使用场景模拟）。
+                      seeded hash：不调用 Math.random(), 每帧渲染结果相同。 */}
+                  {!hasDoor && panelBlindHash(ci, ri) < 0.28 && (() => {
+                    const blindCoverage = 0.50 + panelBlindHash(ci + 17, ri + 3) * 0.25; // 50-75%
+                    const blindH  = topH * blindCoverage;
+                    const blindTop = visBot + botH + topH;       // top of vision pane
+                    const blindBot = blindTop - blindH;           // bottom of blind zone
+                    const slatCount = Math.max(3, Math.round(blindH / 0.055));
+                    const slatH = blindH / slatCount;
+                    const slatT = 0.009;
+                    const slatW = panelW - 0.022;
+                    return Array.from({ length: slatCount }, (_, sli) => {
+                      const slatY = blindBot + (sli + 0.5) * slatH;
+                      // Slight tilt: alternating 8° tilt for light-control effect
+                      const tiltAngle = 0.14 + panelBlindHash(ci + sli, ri + 11) * 0.08;
+                      return (
+                        <mesh key={`blind-${sli}`} position={[0, slatY, -0.012]} rotation={[tiltAngle, 0, 0]} renderOrder={9}>
+                          <boxGeometry args={[slatW, slatT, 0.045]} />
+                          <meshStandardMaterial
+                            color="#E8E2D4"
+                            roughness={0.70} metalness={0.03}
+                            {...overlayMaterialProps(1)}
+                          />
+                        </mesh>
+                      );
+                    });
+                  })()}
                 </group>
               );
             })}
