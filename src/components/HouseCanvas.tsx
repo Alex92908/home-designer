@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useEffect, useState, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky } from "@react-three/drei";
+import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars } from "@react-three/drei";
 import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
@@ -6125,12 +6125,23 @@ export default function HouseCanvas() {
             />
           </Suspense>
         </HouseEnvironmentFallback>
-        {/* Night sky sphere */}
+        {/* Night sky sphere + star field */}
         {theme.phase === "night" && (
-          <mesh scale={[280, 280, 280]}>
-            <sphereGeometry args={[1, 32, 24]} />
-            <meshBasicMaterial color="#0A0F1E" side={THREE.BackSide} depthWrite={false} />
-          </mesh>
+          <>
+            <mesh scale={[280, 280, 280]}>
+              <sphereGeometry args={[1, 32, 24]} />
+              <meshBasicMaterial color="#060810" side={THREE.BackSide} depthWrite={false} />
+            </mesh>
+            {/* Procedural star field — 3500 stars, radius 180m */}
+            <Stars radius={180} depth={60} count={3500} factor={5.5} saturation={0.55} fade speed={0.6} />
+            {/* Moon — off to the side, bright white sphere */}
+            <mesh position={[-40, 55, -120]}>
+              <sphereGeometry args={[3.2, 18, 14]} />
+              <meshBasicMaterial color="#FFFEF8" />
+            </mesh>
+            {/* Moon glow point light */}
+            <pointLight position={[-40, 55, -120]} intensity={1.8} distance={300} color="#E8F0FF" decay={1} />
+          </>
         )}
         {/* Hemisphere light — sky/ground bounce */}
         <hemisphereLight args={[theme.hemiSky, theme.hemiGround, theme.hemiIntensity]} />
@@ -6238,6 +6249,13 @@ export default function HouseCanvas() {
                   <boxGeometry args={[0.50, 0.12, 0.50]} />
                   <meshStandardMaterial color="#2A2E38" roughness={0.24} metalness={0.88} envMapIntensity={1.6} />
                 </mesh>
+                {/* Gate lamp — small cube lamp on top of cap */}
+                <mesh position={[0, 1.98, 0]}>
+                  <boxGeometry args={[0.16, 0.18, 0.16]} />
+                  <meshStandardMaterial color="#E8D890" emissive="#FFE060" emissiveIntensity={2.2} roughness={0.5} />
+                </mesh>
+                {/* Gate lamp point light */}
+                <pointLight position={[0, 1.98, 0]} intensity={3.5} distance={8.0} decay={2.2} color="#FFE090" />
               </group>
             ))}
 
