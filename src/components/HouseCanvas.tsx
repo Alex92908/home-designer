@@ -3789,15 +3789,20 @@ function Ground({ W, D }: { W: number; D: number }) {
   // Single large plane — no seam between "far" and "near" zones.
   // Sized to fill the camera frustum; PBR texture loads async via Suspense.
   const size = Math.max(W, D) * 7 + 40;
+  const grassRadius = Math.max(W, D) * 3.5 + 16;
   return (
-    <Suspense fallback={
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.500, 0]} receiveShadow>
-        <planeGeometry args={[size, size]} />
-        <meshStandardMaterial color="#3E6020" roughness={0.96} />
-      </mesh>
-    }>
-      <GrassGroundTextured size={size} />
-    </Suspense>
+    <>
+      <Suspense fallback={
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.500, 0]} receiveShadow>
+          <planeGeometry args={[size, size]} />
+          <meshStandardMaterial color="#3E6020" roughness={0.96} />
+        </mesh>
+      }>
+        <GrassGroundTextured size={size} />
+      </Suspense>
+      {/* Instanced grass blades around building — skips building footprint */}
+      <GrassCarpet W={W} D={D} count={2800} radius={grassRadius} />
+    </>
   );
 }
 
