@@ -215,9 +215,10 @@ function GlassCurtain({
   //  · 模板原话："No spandrel/backing slab — interior room geometry provides
   //    back walls visible through transmission glass"——所以视觉通透感来自
   //    "玻璃 + 背后专门画的暖色奶油室内"，不是玻璃透明度本身。
-  const cols  = Math.max(2, Math.round(width / 1.35));
+  // Wider panels (1.80m) match reference image's curtain wall rhythm
+  const cols  = Math.max(2, Math.round(width / 1.80));
   const panelW = width / cols;
-  const mullionW = 0.095;
+  const mullionW = 0.075;  // refined thin-frame curtain wall (reference image style)
   const rows  = Math.round(height / floorH);
   const rowH  = height / rows;
   const frame = "#181A1E";
@@ -4210,6 +4211,14 @@ export default function FloorPlanBuilding({
               slabCX = ((lMinX + lMaxX) / 2 - planOffset.minX) * CM - W / 2;
               slabCZ = -(((lMinY + lMaxY) / 2 - planOffset.minY) * CM) + D / 2;
             }
+          }
+          // Glass villa: add south cantilever so upper floor dramatically
+          // projects over the ground-floor glass facade, as in the reference image.
+          // Extend slab 1.50m further south (-Z direction) and narrow the north side.
+          if (isGlassVilla) {
+            const cantilever = 1.50;      // m of south projection beyond ground floor
+            totalD  += cantilever;
+            slabCZ  -= cantilever / 2;    // shift slab centre south to keep north edge fixed
           }
           const halfW = totalW / 2;
           const halfD = totalD / 2;
