@@ -6293,25 +6293,45 @@ export default function HouseCanvas() {
             {/* ── Gate pillars at driveway entrance (fence line) ── */}
             {([-1.85, 1.85] as number[]).map((gpx, gi) => (
               <group key={gi} position={[gpx, 0, D / 2 + 8.8]}>
-                {/* Stone pillar */}
+                {/* Stone pillar — sandstone with subtle edge reveal */}
                 <mesh position={[0, 0.90, 0]} castShadow>
                   <boxGeometry args={[0.42, 1.80, 0.42]} />
-                  <meshStandardMaterial color="#CCC4B4" roughness={0.82} metalness={0.04} />
+                  <meshStandardMaterial color="#CCC4B4" roughness={0.80} metalness={0.04} envMapIntensity={0.6} />
                 </mesh>
-                {/* Cap stone */}
+                {/* Raised plinth base */}
+                <mesh position={[0, 0.06, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.52, 0.12, 0.52]} />
+                  <meshStandardMaterial color="#C8C0B0" roughness={0.84} metalness={0.02} />
+                </mesh>
+                {/* Cap stone — dark anodized aluminum */}
                 <mesh position={[0, 1.86, 0]} castShadow>
                   <boxGeometry args={[0.50, 0.12, 0.50]} />
-                  <meshStandardMaterial color="#2A2E38" roughness={0.24} metalness={0.88} envMapIntensity={1.6} />
+                  <meshStandardMaterial color="#2A2E38" roughness={0.22} metalness={0.90} envMapIntensity={2.0} />
                 </mesh>
-                {/* Gate lamp — small cube lamp on top of cap */}
+                {/* Gate lamp — small cube lantern */}
                 <mesh position={[0, 1.98, 0]}>
                   <boxGeometry args={[0.16, 0.18, 0.16]} />
-                  <meshStandardMaterial color="#E8D890" emissive="#FFE060" emissiveIntensity={2.2} roughness={0.5} />
+                  <meshStandardMaterial color="#E8D890" emissive="#FFE060" emissiveIntensity={2.4} roughness={0.45} />
                 </mesh>
                 {/* Gate lamp point light */}
-                <pointLight position={[0, 1.98, 0]} intensity={3.5} distance={8.0} decay={2.2} color="#FFE090" />
+                <pointLight position={[0, 2.0, 0]} intensity={4.0} distance={9.0} decay={2.0} color="#FFE0A0" />
               </group>
             ))}
+
+            {/* ── Topiary trees flanking gate — formal conifer sentinels ── */}
+            <Tree x={-3.6} z={D / 2 + 8.8} type="topiary" scale={1.20} />
+            <Tree x={ 3.6} z={D / 2 + 8.8} type="topiary" scale={1.20} />
+            {/* Mid-driveway topiary pair for rhythm along the approach */}
+            <Tree x={-3.6} z={D / 2 + 4.8} type="topiary" scale={1.00} />
+            <Tree x={ 3.6} z={D / 2 + 4.8} type="topiary" scale={1.00} />
+
+            {/* ── Driveway center-line accent strip — light stone median ── */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]}
+              position={[0, -0.492, D / 2 + (D * 0.5 + 5.5) / 2 - 0.1]}
+              receiveShadow>
+              <planeGeometry args={[0.22, D * 0.5 + 5.5]} />
+              <meshStandardMaterial color="#E0DAC8" roughness={0.88} />
+            </mesh>
 
             {/* ── Accent bushes along hedge flanks ── */}
             <Bush x={-(W / 2 + 0.80)} z={-D * 0.32} scale={0.85} />

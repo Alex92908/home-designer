@@ -208,25 +208,53 @@ function GlassCurtain({
                 <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} />
               </mesh>
             )}
-            {/* 玻璃 —— 整高一片（不再按行切，避免横压条之外的多余水平缝） */}
+            {/* 玻璃 + 中横档（transom bar）——每格一片玻璃，上部 62% 为主视野，
+                下部 38% 为固定扇（两者之间加细横档，与竖向幕墙语言匹配）*/}
             {Array.from({ length: rows }, (_, ri) => {
               const py = -height / 2 + (ri + 0.5) * rowH;
               const hasDoor = doors.some(d => Math.abs(d.cx - px) < panelW / 2 + d.w / 2 && ri === 0);
+              // Spandrel occupies bottom 20% of row — vision glass is above that.
+              // Split vision zone into upper 62% / lower 38% with a transom bar.
+              const spH    = Math.min(rowH * 0.200, 0.55);
+              const visH   = rowH - spH;                 // vision zone height
+              const topH   = visH * 0.62;                // upper vision pane
+              const botH   = visH * 0.38;                // lower vision pane
+              const visBot = py - rowH / 2 + spH;        // bottom of vision zone
+              const transY = visBot + botH;               // transom center Y
               return (
-                <mesh key={`p${ri}`} position={[0, py, 0.020]} renderOrder={10}>
-                  <boxGeometry args={[panelW - 0.004, rowH * 0.985, 0.008]} />
-                  <meshStandardMaterial
-                    color={hasDoor ? "#C2D6E4" : "#C8DCE8"}
-                    transparent
-                    opacity={hasDoor ? 0.48 : 0.44}
-                    depthWrite={false}
-                    roughness={0.03}
-                    metalness={0.14}
-                    envMapIntensity={2.4}
-                    side={THREE.DoubleSide}
-                    {...overlayMaterialProps(2)}
-                  />
-                </mesh>
+                <group key={`p${ri}`}>
+                  {/* Upper vision pane */}
+                  <mesh position={[0, visBot + botH + topH / 2, 0.020]} renderOrder={10}>
+                    <boxGeometry args={[panelW - 0.006, topH - 0.004, 0.008]} />
+                    <meshStandardMaterial
+                      color={hasDoor ? "#C2D6E4" : "#C8DCE8"}
+                      transparent opacity={hasDoor ? 0.48 : 0.44}
+                      depthWrite={false} roughness={0.03} metalness={0.14}
+                      envMapIntensity={2.4} side={THREE.DoubleSide}
+                      {...overlayMaterialProps(2)}
+                    />
+                  </mesh>
+                  {/* Lower vision pane (fixed / operable bottom sash) */}
+                  <mesh position={[0, visBot + botH / 2, 0.020]} renderOrder={10}>
+                    <boxGeometry args={[panelW - 0.006, botH - 0.004, 0.008]} />
+                    <meshStandardMaterial
+                      color={hasDoor ? "#BDD0DE" : "#C4D8E4"}
+                      transparent opacity={hasDoor ? 0.52 : 0.46}
+                      depthWrite={false} roughness={0.04} metalness={0.12}
+                      envMapIntensity={2.2} side={THREE.DoubleSide}
+                      {...overlayMaterialProps(2)}
+                    />
+                  </mesh>
+                  {/* Horizontal transom bar between upper and lower pane */}
+                  {!hasDoor && (
+                    <mesh position={[0, transY, 0.023]} renderOrder={8}>
+                      <boxGeometry args={[panelW - 0.006, 0.040, 0.014]} />
+                      <meshStandardMaterial
+                        color={frame} roughness={0.12} metalness={0.94} envMapIntensity={2.6}
+                      />
+                    </mesh>
+                  )}
+                </group>
               );
             })}
           </group>
