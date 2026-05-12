@@ -4074,6 +4074,141 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5j-2. 按摩浴缸 / 水疗缸（outdoor spa / hot tub, west of pool）──
+           White acrylic shell with blue glowing water, set into a teak timber
+           surround deck. Night mode adds strong underwater LED glow. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const poolW4 = Math.min(W * 0.72, 10.0);
+        const poolZ4 = -D / 2 - 5.80;   // same Z as main pool
+        const htX    = -poolW4 / 2 - 1.80;  // west of pool deck
+        const htZ    = poolZ4 + 0.40;
+        const isNightH = sunHour < 6 || sunHour > 20;
+        const isDuskH  = !isNightH && (sunHour < 8 || sunHour > 18);
+        const waterGlowI = isNightH ? 2.0 : isDuskH ? 1.0 : 0.12;
+        const tubR  = 1.00;    // inner radius (octagonal approximated by cylinder)
+        const tubH  = 0.72;    // tub height
+        const wallT = 0.12;    // acrylic wall thickness
+        const deckT = 0.06;    // teak deck plank thickness
+        return (
+          <group position={[htX, 0, htZ]}>
+            {/* Teak surround deck (square platform) */}
+            <mesh position={[0, deckT / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[tubR * 2 + 0.72, deckT, tubR * 2 + 0.72]} />
+              <meshStandardMaterial color="#7A4E28" roughness={0.78} metalness={0.04} />
+            </mesh>
+            {/* Teak plank grooves (horizontal lines) */}
+            {Array.from({ length: 5 }, (_, di) => {
+              const dz = -(tubR + 0.30) + di * ((tubR * 2 + 0.60) / 4);
+              return (
+                <mesh key={di} position={[0, deckT + 0.001, dz]}>
+                  <boxGeometry args={[tubR * 2 + 0.70, 0.004, 0.006]} />
+                  <meshStandardMaterial color="#5A3818" roughness={0.90} metalness={0.01} />
+                </mesh>
+              );
+            })}
+            {/* Tub shell — white acrylic outer wall */}
+            <mesh position={[0, deckT + tubH / 2, 0]} castShadow>
+              <cylinderGeometry args={[tubR + wallT, tubR + wallT, tubH, 8]} />
+              <meshStandardMaterial color="#F0EDE8" roughness={0.40} metalness={0.10} envMapIntensity={1.8} />
+            </mesh>
+            {/* Inner cavity — dark grey */}
+            <mesh position={[0, deckT + tubH / 2, 0]}>
+              <cylinderGeometry args={[tubR, tubR, tubH - 0.02, 8]} />
+              <meshStandardMaterial color="#20282E" roughness={0.55} metalness={0.08} side={THREE.BackSide} />
+            </mesh>
+            {/* Water surface */}
+            <mesh position={[0, deckT + tubH - 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[tubR - 0.02, 10]} />
+              <meshStandardMaterial
+                color="#50B8D4"
+                transparent opacity={0.88}
+                roughness={0.03} metalness={0.04}
+                envMapIntensity={5.0}
+                emissive="#20A0C8" emissiveIntensity={waterGlowI}
+              />
+            </mesh>
+            {/* Top rim coping — brushed stainless */}
+            <mesh position={[0, deckT + tubH + 0.018, 0]}>
+              <cylinderGeometry args={[tubR + wallT + 0.02, tubR + wallT + 0.02, 0.040, 8]} />
+              <meshStandardMaterial color="#B8C4D0" roughness={0.18} metalness={0.90} envMapIntensity={2.5} />
+            </mesh>
+            {/* Underwater LED glow */}
+            {waterGlowI > 0.5 && (
+              <pointLight position={[0, deckT + tubH * 0.40, 0]} intensity={waterGlowI * 3.5} distance={tubR * 2.5} decay={2.0} color="#30B0E0" castShadow={false} />
+            )}
+            {/* Control panel — small box on rim */}
+            <mesh position={[tubR + wallT + 0.025, deckT + tubH + 0.040, 0]}>
+              <boxGeometry args={[0.050, 0.090, 0.160]} />
+              <meshStandardMaterial color="#2A3038" roughness={0.30} metalness={0.80} envMapIntensity={1.5} />
+            </mesh>
+            {/* Panel button strip */}
+            <mesh position={[tubR + wallT + 0.052, deckT + tubH + 0.050, 0]}>
+              <boxGeometry args={[0.010, 0.060, 0.120]} />
+              <meshStandardMaterial color="#3A5870" roughness={0.40} metalness={0.50} emissive="#2080B0" emissiveIntensity={waterGlowI * 0.5} />
+            </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── 5j-3. 电动汽车充电桩（EV charging station, west of driveway entrance）──
+           Wall-box style charger mounted on a post near the garage/gate area. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        // Place near the west boundary, at driveway level, south side
+        const bndW5   = -W / 2 - 4.50;
+        const chargeX = bndW5 + 0.40;   // just inside west boundary
+        const chargeZ = -D / 2 - 8.50;  // south end, near gate
+        const isNightEV = sunHour < 6 || sunHour > 20;
+        const isDuskEV  = !isNightEV && (sunHour < 8 || sunHour > 18);
+        const evGlow    = isNightEV ? 1.8 : isDuskEV ? 1.0 : 0.3;
+        const evLI      = isNightEV ? 2.5 : isDuskEV ? 1.2 : 0.0;
+        const postH = 1.20;
+        return (
+          <group position={[chargeX, 0, chargeZ]}>
+            {/* Post — powder-coated steel */}
+            <mesh position={[0, postH / 2, 0]} castShadow>
+              <boxGeometry args={[0.08, postH, 0.08]} />
+              <meshStandardMaterial color="#2C3240" roughness={0.45} metalness={0.70} />
+            </mesh>
+            {/* Wall-box housing */}
+            <mesh position={[0.10, postH * 0.62, 0]} castShadow>
+              <boxGeometry args={[0.22, 0.34, 0.10]} />
+              <meshStandardMaterial color="#E8ECF2" roughness={0.48} metalness={0.22} envMapIntensity={1.4} />
+            </mesh>
+            {/* EV logo / brand strip — bright LED */}
+            <mesh position={[0.218, postH * 0.70, 0]}>
+              <boxGeometry args={[0.008, 0.08, 0.06]} />
+              <meshStandardMaterial color="#00AAFF" emissive="#0088DD" emissiveIntensity={evGlow} roughness={0.20} />
+            </mesh>
+            {/* Charge indicator LEDs — green row */}
+            {Array.from({ length: 5 }, (_, li) => (
+              <mesh key={li} position={[0.218, postH * 0.58, -0.022 + li * 0.011]}>
+                <boxGeometry args={[0.006, 0.008, 0.008]} />
+                <meshStandardMaterial color="#22FF44" emissive="#00EE30" emissiveIntensity={evGlow * (li < 3 ? 1.0 : 0.2)} roughness={0.20} />
+              </mesh>
+            ))}
+            {/* Charging cable holster */}
+            <mesh position={[0.225, postH * 0.48, 0]}>
+              <cylinderGeometry args={[0.016, 0.016, 0.080, 6]} />
+              <meshStandardMaterial color="#1A1E28" roughness={0.60} metalness={0.50} />
+            </mesh>
+            {/* Cable loop */}
+            <mesh position={[0.225, postH * 0.40, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <torusGeometry args={[0.040, 0.009, 6, 10, Math.PI * 1.3]} />
+              <meshStandardMaterial color="#2C3040" roughness={0.55} metalness={0.45} />
+            </mesh>
+            {/* Base footing */}
+            <mesh position={[0, 0.025, 0]}>
+              <boxGeometry args={[0.20, 0.050, 0.20]} />
+              <meshStandardMaterial color="#3A4050" roughness={0.60} metalness={0.45} />
+            </mesh>
+            {/* Night indicator light */}
+            {evLI > 0 && (
+              <pointLight position={[0.25, postH * 0.70, 0]} intensity={evLI} distance={3.0} decay={2.2} color="#0088FF" />
+            )}
+          </group>
+        );
+      })()}
+
       {/* ── 5k. 雨棚玻璃顶（canopy glazing panel upgrade）── */}
       {!insideBuilding && isGlassVilla && (() => {
         const canopyW3 = Math.min(W * 0.62, 8.0);
