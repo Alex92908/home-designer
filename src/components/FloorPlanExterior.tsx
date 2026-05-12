@@ -1567,6 +1567,50 @@ export default function FloorPlanBuilding({
                     <meshStandardMaterial color="#80D8F0" emissive="#40C8E8" emissiveIntensity={1.4} />
                   </mesh>
                   <pointLight position={[0, wbY + 0.05, wbZ]} intensity={2.0} distance={wbW} decay={2.0} color="#40C8E8" castShadow={false} />
+                  {/* Stone coping on far (south) side of water trough */}
+                  <mesh position={[0, wbY + 0.02, wbZ - 0.30]}>
+                    <boxGeometry args={[wbW + 0.30, 0.055, 0.12]} />
+                    <meshStandardMaterial color="#D4CCBA" roughness={0.72} metalness={0.02} />
+                  </mesh>
+                </group>
+              );
+            })()}
+
+            {/* ── 入口步道路灯柱（bollard lights）—— 水景两侧 4 盏，等间距 ── */}
+            {(() => {
+              const wbW2 = Math.min(W * 0.70, 9.0);
+              const wbZ2 = southFaceZ2 + 0.28;
+              const bCount = 4;
+              const bSpacing = wbW2 / (bCount - 1);
+              const bollardH = 0.68;
+              const isNight3 = sunHour < 6 || sunHour > 20;
+              const isDusk3  = !isNight3 && (sunHour < 8 || sunHour > 18);
+              const bollardEmi = isNight3 ? 2.8 : isDusk3 ? 1.4 : 0.3;
+              const bollardLI  = isNight3 ? 3.0 : isDusk3 ? 1.5 : 0.0;
+              return (
+                <group>
+                  {Array.from({ length: bCount }, (_, bi) => {
+                    const bx = -wbW2 / 2 + bi * bSpacing;
+                    const bz = wbZ2 - 0.35;   // in front of water trough
+                    return (
+                      <group key={bi} position={[bx, 0, bz]}>
+                        {/* Bollard post — brushed steel cylinder */}
+                        <mesh position={[0, bollardH / 2, 0]} castShadow>
+                          <cylinderGeometry args={[0.038, 0.042, bollardH, 8]} />
+                          <meshStandardMaterial color="#485060" roughness={0.28} metalness={0.80} envMapIntensity={1.6} />
+                        </mesh>
+                        {/* Bollard head — wider cap with frosted diffuser */}
+                        <mesh position={[0, bollardH + 0.045, 0]}>
+                          <cylinderGeometry args={[0.066, 0.055, 0.090, 8]} />
+                          <meshStandardMaterial color="#D8E0E8" emissive="#FFF8E8" emissiveIntensity={bollardEmi} roughness={0.50} />
+                        </mesh>
+                        {/* Point light when lit */}
+                        {bollardLI > 0 && (
+                          <pointLight position={[0, bollardH + 0.06, 0]} intensity={bollardLI} distance={2.5} decay={2} color="#FFF4E0" />
+                        )}
+                      </group>
+                    );
+                  })}
                 </group>
               );
             })()}
