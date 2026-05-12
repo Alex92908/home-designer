@@ -2279,9 +2279,39 @@ export default function FloorPlanBuilding({
         if (facade === "glass") {
           // Upper floors get a Juliet balcony glass railing along the facade base
           const showRailing = floorIndex > 0 && segLen > 0.8;
+          // South-facing upper floors get external horizontal sunshade fins
+          const showSunshade = floorIndex > 0 && isSouth && segLen > 1.2;
+          const finCount2 = showSunshade ? Math.max(3, Math.round(segLen / 0.90)) : 0;
           return (
             <group key={`gl-${bi}`} position={[px, yMid, pz]} rotation={rot}>
               <GlassCurtain width={segLen} height={FLOOR_H} floorH={FLOOR_H} doors={floorIndex === 0 ? doorInfos : []} />
+              {/* External horizontal sunshade fins — upper-floor south facade detail */}
+              {showSunshade && (() => {
+                const shadeY = FLOOR_H / 2 - 0.18;   // near top of glass panel
+                const shadeD = 0.55;   // depth of each fin (projection from wall)
+                const shadeH = 0.040;  // fin thickness
+                const shadeSpacing = segLen / (finCount2 + 1);
+                const shadeMat = { color: "#2E3240" as const, roughness: 0.20 as const, metalness: 0.88 as const, envMapIntensity: 2.2 as const };
+                return (
+                  <group position={[0, shadeY, 0.040]}>
+                    {/* Continuous top rail */}
+                    <mesh position={[0, shadeH / 2, shadeD / 2]}>
+                      <boxGeometry args={[segLen - 0.04, 0.025, shadeD + 0.04]} />
+                      <meshStandardMaterial {...shadeMat} />
+                    </mesh>
+                    {/* Individual fins */}
+                    {Array.from({ length: finCount2 }, (_, fi2) => {
+                      const fx = -segLen / 2 + (fi2 + 1) * shadeSpacing;
+                      return (
+                        <mesh key={fi2} position={[fx, 0, shadeD / 2]} castShadow>
+                          <boxGeometry args={[0.028, shadeH, shadeD]} />
+                          <meshStandardMaterial {...shadeMat} />
+                        </mesh>
+                      );
+                    })}
+                  </group>
+                );
+              })()}
               {showRailing && (
                 /* Railing group placed at floor base + outward ~5cm */
                 <group position={[0, -FLOOR_H / 2 + 0.005, 0.05]}>
