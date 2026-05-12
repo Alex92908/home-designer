@@ -2383,6 +2383,53 @@ export default function FloorPlanBuilding({
                         <boxGeometry args={[0.80, 0.050, 0.50]} />
                         <meshStandardMaterial color="#B0A080" roughness={0.55} metalness={0.10} envMapIntensity={1.2} />
                       </mesh>
+                      {/* Large format artwork — abstract canvas, centred on back wall */}
+                      <group position={[-iW * 0.08, 0.20, iD / 2 - 0.038]}>
+                        {/* Canvas frame — thin dark wood */}
+                        <mesh>
+                          <boxGeometry args={[Math.min(iW * 0.42, 1.80), 1.05, 0.022]} />
+                          <meshStandardMaterial color="#2A1E14" roughness={0.80} metalness={0.04} />
+                        </mesh>
+                        {/* Canvas surface — abstract warm-on-dark art */}
+                        <mesh position={[0, 0, 0.016]}>
+                          <boxGeometry args={[Math.min(iW * 0.42, 1.80) - 0.04, 1.01, 0.006]} />
+                          <meshStandardMaterial
+                            color="#0E1018"
+                            emissive="#C85020"
+                            emissiveIntensity={interiorGlowWall * 0.25}
+                            roughness={0.95}
+                          />
+                        </mesh>
+                        {/* Art accent stripe (abstract composition) */}
+                        <mesh position={[-Math.min(iW * 0.08, 0.34), 0.12, 0.020]}>
+                          <boxGeometry args={[Math.min(iW * 0.10, 0.45), 0.70, 0.004]} />
+                          <meshStandardMaterial
+                            color="#E8A030"
+                            emissive="#D88020"
+                            emissiveIntensity={interiorGlowWall * 0.18}
+                            roughness={0.94}
+                          />
+                        </mesh>
+                      </group>
+                      {/* Floor lamp — arc lamp near sofa side */}
+                      <group position={[-iW * 0.38, -FLOOR_H / 2, iD * 0.08]}>
+                        {/* Stand */}
+                        <mesh position={[0, 0.90, 0]}>
+                          <cylinderGeometry args={[0.012, 0.016, 1.80, 6]} />
+                          <meshStandardMaterial color="#4A4850" roughness={0.28} metalness={0.78} />
+                        </mesh>
+                        {/* Shade */}
+                        <mesh position={[0.36, 1.75, 0]}>
+                          <cylinderGeometry args={[0.18, 0.10, 0.28, 8]} />
+                          <meshStandardMaterial
+                            color="#F8F0E0"
+                            emissive="#FFE8A0"
+                            emissiveIntensity={interiorGlowWall > 0.6 ? interiorGlowWall * 1.2 : 0.2}
+                            roughness={0.85}
+                            side={THREE.DoubleSide}
+                          />
+                        </mesh>
+                      </group>
                     </>
                   )}
 
