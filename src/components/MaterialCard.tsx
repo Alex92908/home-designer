@@ -3,6 +3,7 @@
 // Kept for compatibility but not actively used.
 
 import { MaterialItem } from "@/lib/types";
+const EMPTY_MATS = {} as const;
 import { useDesignerStore } from "@/lib/store";
 import { useLocale } from "@/lib/i18n";
 import { getMaterialNameEn } from "@/locales/itemNames";
@@ -10,7 +11,8 @@ import { getMaterialNameEn } from "@/locales/itemNames";
 export default function MaterialCard({ item }: { item: MaterialItem }) {
   const setMaterial = useDesignerStore((s) => s.setMaterial);
   const activeRoom = useDesignerStore((s) => s.activeRoom);
-  const roomMaterials = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom].materials);
+  const roomMaterials = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.materials ?? EMPTY_MATS);
+
   const isSelected = roomMaterials[item.category]?.id === item.id;
   const locale = useLocale();
   const displayName = locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name;

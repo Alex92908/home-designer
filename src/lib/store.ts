@@ -647,6 +647,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const updatedRoom = {
           ...fp.rooms[activeRoom],
           materials: { ...fp.rooms[activeRoom].materials, [material.category]: material },
