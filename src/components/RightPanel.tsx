@@ -32,7 +32,7 @@ export default function RightPanel() {
   const locale = useLocale();
 
   const activeRoom = useDesignerStore((s) => s.activeRoom);
-  const roomState = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom]);
+  const roomState = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom] ?? { materials: {}, placedItems: [] });
   const customRoomMeta = useDesignerStore((s) => s.customRoomMeta);
   const scores = useDesignerStore((s) => s.scores);
   const totalCostRaw = useDesignerStore((s) => s.totalCost());
@@ -54,13 +54,13 @@ export default function RightPanel() {
   const { materials, placedItems } = roomState;
 
   // ── Clearance evaluation for the active room ──
-  const roomDims = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
+  const roomDims = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDimensions?.[activeRoom]);
   const roomW = roomDims?.width ?? def.width;
   const roomD = roomDims?.depth ?? def.depth;
-  const hasDoor   = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomHasDoor[activeRoom] ?? true);
-  const doorWall  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorWall[activeRoom] ?? "bottom");
-  const doorPosCm = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorPos[activeRoom] ?? 0);
-  const doorLenCm = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
+  const hasDoor   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomHasDoor?.[activeRoom] ?? true);
+  const doorWall  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "bottom");
+  const doorPosCm = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorPos?.[activeRoom] ?? 0);
+  const doorLenCm = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorLen?.[activeRoom] ?? 80);
   const roomWindows = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows[activeRoom] ?? EMPTY_WINDOWS);
   const evaluation = useMemo(
     () => evaluateRoom(

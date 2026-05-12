@@ -5651,6 +5651,89 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5d-1. 界墙壁灯（wall-mounted lanterns along south boundary wall）──
+           Traditional bracket lanterns spaced ~4m apart on the inner face of
+           the south boundary wall, providing warm amber pathway lighting at
+           dusk and night. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bndS9   = -D / 2 - 11.50;
+        const bndW9   = -W / 2 - 4.50;
+        const bndE9   =  W / 2 + 4.50;
+        const gateW9  = Math.min(W * 0.30, 3.80);
+        const wH9     = 0.88;
+        const wallT9  = 0.18;
+        const isNightL = sunHour < 6 || sunHour > 20;
+        const isDuskL  = !isNightL && (sunHour < 8 || sunHour > 18);
+        const lampEmi  = isNightL ? 3.5 : isDuskL ? 1.8 : 0.08;
+        const lampLI   = isNightL ? 4.0 : isDuskL ? 2.0 : 0.0;
+        const lampSpacing = 4.0;
+
+        // West segment of south wall
+        const westHalfLen = Math.abs(bndW9 - (-gateW9));
+        const nWest = Math.max(1, Math.floor(westHalfLen / lampSpacing));
+        const westLamps: number[] = Array.from({ length: nWest }, (_, i) =>
+          bndW9 + (i + 1) * westHalfLen / (nWest + 1)
+        );
+        // East segment
+        const eastHalfLen = Math.abs(bndE9 - gateW9);
+        const nEast = Math.max(1, Math.floor(eastHalfLen / lampSpacing));
+        const eastLamps: number[] = Array.from({ length: nEast }, (_, i) =>
+          gateW9 + (i + 1) * eastHalfLen / (nEast + 1)
+        );
+
+        const Lantern = ({ x, facing }: { x: number; facing: number }) => (
+          <group position={[x, wH9 * 0.80, bndS9 + (facing > 0 ? -wallT9 / 2 - 0.008 : wallT9 / 2 + 0.008)]}>
+            {/* Wall bracket arm */}
+            <mesh position={[0, 0, facing * 0.085]}>
+              <boxGeometry args={[0.012, 0.012, 0.17]} />
+              <meshStandardMaterial color="#282C38" roughness={0.25} metalness={0.85} />
+            </mesh>
+            {/* Lantern body */}
+            <mesh position={[0, 0, facing * 0.175]}>
+              <boxGeometry args={[0.070, 0.120, 0.070]} />
+              <meshStandardMaterial color="#1C2028" roughness={0.28} metalness={0.80} />
+            </mesh>
+            {/* Glass pane (warm amber) */}
+            <mesh position={[0, 0, facing * 0.178]}>
+              <boxGeometry args={[0.055, 0.095, 0.055]} />
+              <meshPhysicalMaterial
+                color="#FFD070"
+                transparent opacity={0.65}
+                roughness={0.10} metalness={0.04}
+                emissive="#FFC040"
+                emissiveIntensity={lampEmi}
+                transmission={0.25}
+              />
+            </mesh>
+            {/* Cap */}
+            <mesh position={[0, 0.068, facing * 0.175]}>
+              <boxGeometry args={[0.080, 0.018, 0.080]} />
+              <meshStandardMaterial color="#1A1E28" roughness={0.22} metalness={0.88} />
+            </mesh>
+            {/* Finial */}
+            <mesh position={[0, 0.082, facing * 0.175]}>
+              <coneGeometry args={[0.012, 0.030, 4]} />
+              <meshStandardMaterial color="#303848" roughness={0.22} metalness={0.85} />
+            </mesh>
+            {lampLI > 0 && (
+              <pointLight
+                position={[0, 0, facing * 0.18]}
+                intensity={lampLI}
+                distance={5.0} decay={2.0}
+                color="#FFC050" castShadow={false}
+              />
+            )}
+          </group>
+        );
+
+        return (
+          <group>
+            {westLamps.map((lx, li) => <Lantern key={`wl-${li}`} x={lx} facing={1} />)}
+            {eastLamps.map((lx, li) => <Lantern key={`el-${li}`} x={lx} facing={1} />)}
+          </group>
+        );
+      })()}
+
       {/* ── 5d-2. 停车位标线 + 门卫岗亭（parking bay markings + security booth）──
            White painted parking bays alongside the driveway and a small
            modern security booth near the east gate pillar. */}
