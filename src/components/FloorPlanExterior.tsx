@@ -3481,6 +3481,28 @@ export default function FloorPlanBuilding({
             {isNightP && (
               <pointLight position={[0, -0.20, 0]} intensity={poolGlowI * 3.0} distance={poolW * 1.4} decay={1.6} color="#40C0F0" castShadow={false} />
             )}
+            {/* Infinity overflow edge — south side of pool: black channel with
+                thin overflow lip, looks like pool extends to horizon. */}
+            <mesh position={[0, -0.015, poolL / 2 + 0.015]}>
+              <boxGeometry args={[poolW, 0.030, 0.030]} />
+              <meshStandardMaterial color="#1A2028" roughness={0.20} metalness={0.50} envMapIntensity={2.0} />
+            </mesh>
+            {/* Infinity overflow channel — thin water-filled slot */}
+            <mesh position={[0, -0.020, poolL / 2 + 0.045]}>
+              <boxGeometry args={[poolW, 0.015, 0.060]} />
+              <meshStandardMaterial
+                color="#40A0C8"
+                transparent opacity={0.88}
+                roughness={0.03} metalness={0.08}
+                emissive="#2880A8" emissiveIntensity={poolGlowI * 0.6}
+                envMapIntensity={4.0}
+              />
+            </mesh>
+            {/* Overflow gutter behind lip */}
+            <mesh position={[0, -0.040, poolL / 2 + 0.10]}>
+              <boxGeometry args={[poolW, 0.050, 0.12]} />
+              <meshStandardMaterial color="#282C32" roughness={0.45} metalness={0.35} />
+            </mesh>
             {/* Pool ladder — south-east corner, chrome steel */}
             <group position={[poolW / 2 - 0.32, 0, poolL / 2 - 0.24]}>
               {([-0.20, 0.20] as number[]).map((hx, hi) => (
@@ -4183,6 +4205,65 @@ export default function FloorPlanBuilding({
                 </group>
               ))}
             </group>
+          </group>
+        );
+      })()}
+
+      {/* ── 5g-2. 餐桌区串灯（bistro string lights over dining area）──
+           3 catenary string lines of warm globe bulbs spanning from pool
+           deck pergola post to nearby tree, creating evening atmosphere. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const pz2b   = -D / 2 - 5.80;
+        const poolW2b = Math.min(W * 0.72, 10.0);
+        const deckBW2b = 0.52;
+        const diningX = poolW2b / 2 + deckBW2b + 1.10;
+        const diningZ = pz2b;
+        const isNightSL = sunHour < 6 || sunHour > 20;
+        const isDuskSL  = !isNightSL && (sunHour < 8 || sunHour > 18);
+        const bulbEmi = isNightSL ? 3.5 : isDuskSL ? 1.8 : 0.0;
+        const stringLI = isNightSL ? 2.5 : isDuskSL ? 1.2 : 0.0;
+
+        if (bulbEmi === 0.0) return null;  // skip in full daylight
+
+        // String line: from diningX-1.0, diningZ-1.5, h=2.8 to diningX+2.2, diningZ+1.5, h=3.0
+        const lineHeight = 2.90;
+        const globeR = 0.040;
+        const globeCount = 7;
+
+        return (
+          <group>
+            {/* Catenary string wire (thin box) — line 1 */}
+            <mesh position={[diningX + 0.60, lineHeight - 0.12, diningZ]}>
+              <boxGeometry args={[3.20, 0.005, 0.005]} />
+              <meshStandardMaterial color="#2A2A2A" roughness={0.70} metalness={0.30} />
+            </mesh>
+            {/* Globe bulbs along line */}
+            {Array.from({ length: globeCount }, (_, bi) => {
+              const t = bi / (globeCount - 1);
+              const bx = diningX - 1.00 + t * 3.20;
+              // Catenary sag — deepest in middle
+              const sag = Math.sin(t * Math.PI) * 0.14;
+              const by = lineHeight - sag;
+              return (
+                <group key={bi} position={[bx, by, diningZ]}>
+                  {/* Globe */}
+                  <mesh>
+                    <sphereGeometry args={[globeR, 8, 6]} />
+                    <meshStandardMaterial
+                      color="#FFF8E0"
+                      emissive="#FFE060"
+                      emissiveIntensity={bulbEmi}
+                      roughness={0.55}
+                      transparent opacity={0.88}
+                    />
+                  </mesh>
+                  {/* Point light per bulb */}
+                  {stringLI > 0 && (
+                    <pointLight intensity={stringLI * 0.28} distance={2.0} decay={2.5} color="#FFE080" />
+                  )}
+                </group>
+              );
+            })}
           </group>
         );
       })()}
