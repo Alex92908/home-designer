@@ -4059,6 +4059,67 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5e-0. 踏石路径太阳能灯（solar path stake lights along stepping stones）──
+           Small stake-style solar LED lights placed alongside the stepping stone
+           paths on east and west sides of the driveway. Night-mode glow. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const isNightPS = sunHour < 6 || sunHour > 20;
+        const isDuskPS  = !isNightPS && (sunHour < 8 || sunHour > 18);
+        const pEmi      = isNightPS ? 2.8 : isDuskPS ? 1.4 : 0.0;
+        const pLI       = isNightPS ? 1.2 : isDuskPS ? 0.6 : 0.0;
+        if (pEmi === 0.0) return null;
+
+        const driveHalfW3 = 2.20;
+        const bndS3b    = -D / 2 - 11.50;
+        const poolZ3b   = -D / 2 - 5.80;
+        const poolL3b   = 4.80;
+        const deckBW3b  = 0.52;
+        const bedZN3b   = poolZ3b - poolL3b / 2 - deckBW3b - 0.10;
+        const bedZS3b   = bndS3b + 1.50;
+        const bedLen3b  = Math.abs(bedZN3b - bedZS3b);
+        const stakeSpacing = 1.40;
+        const stakeCount = Math.round(bedLen3b / stakeSpacing);
+        const stakeH = 0.35;  // stake height
+        const pathX_E = driveHalfW3 + 0.70;
+        const pathX_W = -driveHalfW3 - 0.70;
+
+        return (
+          <group>
+            {Array.from({ length: stakeCount }, (_, si) => {
+              const sz = bedZN3b + si * (bedLen3b / (stakeCount - 1));
+              return (
+                <>
+                  {/* East path stake */}
+                  <group key={`pse-${si}`} position={[pathX_E, 0, sz]}>
+                    <mesh position={[0, stakeH / 2, 0]}>
+                      <cylinderGeometry args={[0.012, 0.014, stakeH, 6]} />
+                      <meshStandardMaterial color="#4A5060" roughness={0.40} metalness={0.65} />
+                    </mesh>
+                    <mesh position={[0, stakeH + 0.018, 0]}>
+                      <cylinderGeometry args={[0.022, 0.020, 0.038, 8]} />
+                      <meshStandardMaterial color="#F0F4F8" emissive="#C8E8FF" emissiveIntensity={pEmi} roughness={0.50} />
+                    </mesh>
+                    {pLI > 0 && <pointLight position={[0, stakeH + 0.022, 0]} intensity={pLI} distance={1.0} decay={2.5} color="#D0E8FF" />}
+                  </group>
+                  {/* West path stake */}
+                  <group key={`psw-${si}`} position={[pathX_W, 0, sz]}>
+                    <mesh position={[0, stakeH / 2, 0]}>
+                      <cylinderGeometry args={[0.012, 0.014, stakeH, 6]} />
+                      <meshStandardMaterial color="#4A5060" roughness={0.40} metalness={0.65} />
+                    </mesh>
+                    <mesh position={[0, stakeH + 0.018, 0]}>
+                      <cylinderGeometry args={[0.022, 0.020, 0.038, 8]} />
+                      <meshStandardMaterial color="#F0F4F8" emissive="#C8E8FF" emissiveIntensity={pEmi} roughness={0.50} />
+                    </mesh>
+                    {pLI > 0 && <pointLight position={[0, stakeH + 0.022, 0]} intensity={pLI} distance={1.0} decay={2.5} color="#D0E8FF" />}
+                  </group>
+                </>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5e-1. 北侧庭院雕塑（garden sculpture, north yard centre）──
            Abstract polished-steel totem: stacked tapered cylinders on a
            dark granite plinth. Reflective, catches sky light well. */}
