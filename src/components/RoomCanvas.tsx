@@ -7,7 +7,8 @@ import { EffectComposer, N8AO, Bloom, Vignette, SMAA } from "@react-three/postpr
 import { BlendFunction } from "postprocessing";
 import { Suspense } from "react";
 import * as THREE from "three";
-import { useDesignerStore } from "@/lib/store";
+import { useDesignerStore, RoomState } from "@/lib/store";
+const EMPTY_ROOM_STATE_RC: RoomState = { materials: {}, placedItems: [] };
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
@@ -3384,12 +3385,12 @@ function PolygonDoorPanel({
 
 function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }) {
   const activeRoom    = useDesignerStore((s) => s.activeRoom);
-  const roomState     = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom]);
-  const roomWindows   = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows?.[activeRoom] ?? EMPTY_WINDOWS);
-  const roomDimensions = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
-  const hasDoor    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomHasDoor[activeRoom] ?? true);
-  const doorWall   = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorWall[activeRoom] ?? "bottom");
-  const doorPosCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorPos[activeRoom] ?? 0);
+  const roomState     = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom] ?? EMPTY_ROOM_STATE_RC);
+  const roomWindows   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWindows?.[activeRoom] ?? EMPTY_WINDOWS);
+  const roomDimensions = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDimensions?.[activeRoom]);
+  const hasDoor    = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomHasDoor?.[activeRoom] ?? true);
+  const doorWall   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "bottom");
+  const doorPosCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorPos?.[activeRoom] ?? 0);
   const doorLenCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
   const doorHCm    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
   const doorStyle  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? "wood_panel");
