@@ -276,25 +276,27 @@ function GlassCurtain({
               const transY = visBot + botH;               // transom center Y
               return (
                 <group key={`p${ri}`}>
-                  {/* Upper vision pane */}
+                  {/* Upper vision pane — high-clarity low-iron architectural glass */}
                   <mesh position={[0, visBot + botH + topH / 2, 0.020]} renderOrder={10}>
                     <boxGeometry args={[panelW - 0.006, topH - 0.004, 0.008]} />
-                    <meshStandardMaterial
-                      color={hasDoor ? "#C2D6E4" : "#C8DCE8"}
-                      transparent opacity={hasDoor ? 0.48 : 0.44}
-                      depthWrite={false} roughness={0.03} metalness={0.14}
-                      envMapIntensity={2.4} side={THREE.DoubleSide}
+                    <meshPhysicalMaterial
+                      color={hasDoor ? "#D0E8F8" : "#CEE4F4"}
+                      transparent opacity={hasDoor ? 0.30 : 0.25}
+                      depthWrite={false} roughness={0.02} metalness={0.0}
+                      reflectivity={0.55} clearcoat={0.9} clearcoatRoughness={0.04}
+                      envMapIntensity={3.6} side={THREE.DoubleSide}
                       {...overlayMaterialProps(2)}
                     />
                   </mesh>
                   {/* Lower vision pane (fixed / operable bottom sash) */}
                   <mesh position={[0, visBot + botH / 2, 0.020]} renderOrder={10}>
                     <boxGeometry args={[panelW - 0.006, botH - 0.004, 0.008]} />
-                    <meshStandardMaterial
-                      color={hasDoor ? "#BDD0DE" : "#C4D8E4"}
-                      transparent opacity={hasDoor ? 0.52 : 0.46}
-                      depthWrite={false} roughness={0.04} metalness={0.12}
-                      envMapIntensity={2.2} side={THREE.DoubleSide}
+                    <meshPhysicalMaterial
+                      color={hasDoor ? "#CCE4F6" : "#C8E0F2"}
+                      transparent opacity={hasDoor ? 0.32 : 0.27}
+                      depthWrite={false} roughness={0.025} metalness={0.0}
+                      reflectivity={0.50} clearcoat={0.85} clearcoatRoughness={0.04}
+                      envMapIntensity={3.4} side={THREE.DoubleSide}
                       {...overlayMaterialProps(2)}
                     />
                   </mesh>
@@ -311,7 +313,7 @@ function GlassCurtain({
                       位于玻璃内侧（z < 0），只遮住上部 Vision pane 的
                       约 55%，底部留空（日常使用场景模拟）。
                       seeded hash：不调用 Math.random(), 每帧渲染结果相同。 */}
-                  {!hasDoor && panelBlindHash(ci, ri) < 0.28 && (() => {
+                  {!hasDoor && panelBlindHash(ci, ri) < 0.14 && (() => {
                     const blindCoverage = 0.50 + panelBlindHash(ci + 17, ri + 3) * 0.25; // 50-75%
                     const blindH  = topH * blindCoverage;
                     const blindTop = visBot + botH + topH;       // top of vision pane
@@ -2401,15 +2403,15 @@ export default function FloorPlanBuilding({
   // Night/late evening → rooms glow warm from within (high emissive).
   // Full day → minimal emissive (interior looks lit by natural light).
   const interiorGlowWall: number = sunHour < 6 || sunHour > 20
-    ? 1.55   // night — strong interior glow
+    ? 2.10   // night — strong warm interior glow visible through clear glass
     : sunHour < 8 || sunHour > 18
-    ? 1.20   // dawn/dusk — moderate glow
-    : 0.92;  // day — subtle (existing default)
+    ? 1.55   // dawn/dusk — warm amber glow
+    : 1.15;  // day — visible but not overpowering (more transparent glass shows this)
   const interiorGlowCeil: number = sunHour < 6 || sunHour > 20
-    ? 0.90   // night ceiling
+    ? 1.10   // night ceiling — warm downlight wash
     : sunHour < 8 || sunHour > 18
-    ? 0.72   // dawn/dusk ceiling
-    : 0.60;  // day ceiling
+    ? 0.85   // dawn/dusk ceiling
+    : 0.72;  // day ceiling — warm ambient
 
   /** Click door/window on exterior →
    *  - if onEnterRoom prop given: walkthrough mode at this room's centre
@@ -4179,6 +4181,46 @@ export default function FloorPlanBuilding({
           const halfW = totalW / 2;
           const halfD = totalD / 2;
 
+          // Wood soffit helper — horizontal teak battens on slab underside (glass villa only)
+          const WoodSoffit = ({ cx, cz, sW, sD, yBot }: { cx: number; cz: number; sW: number; sD: number; yBot: number }) => {
+            if (!isGlassVilla) return null;
+            const PLANK_W  = 0.275;   // batten width along Z (depth)
+            const PLANK_GAP = 0.013;  // gap between battens
+            const PLANK_T  = 0.022;   // batten thickness
+            const step     = PLANK_W + PLANK_GAP;
+            const count    = Math.ceil(sD / step);
+            const isNightSft = sunHour < 6 || sunHour > 20;
+            const isDuskSft  = !isNightSft && (sunHour < 8 || sunHour > 18);
+            const emi = isNightSft ? 0.18 : isDuskSft ? 0.07 : 0.0;
+            return (
+              <>
+                {/* Dark backing channel between battens */}
+                <mesh position={[cx, yBot - 0.002, cz]} receiveShadow>
+                  <boxGeometry args={[sW - 0.02, 0.005, sD - 0.02]} />
+                  <meshStandardMaterial color="#2A1A0C" roughness={0.95} />
+                </mesh>
+                {Array.from({ length: count }, (_, pi) => {
+                  const pz = cz - sD / 2 + PLANK_W / 2 + pi * step;
+                  if (pz > cz + sD / 2 + PLANK_W * 0.5) return null;
+                  const actualW = Math.min(PLANK_W, (cz + sD / 2) - (pz - PLANK_W / 2));
+                  if (actualW < 0.02) return null;
+                  // 3-tone walnut/teak variation — matches real timber ceiling boards
+                  const tone = pi % 3 === 0 ? "#6B3A1C" : pi % 3 === 1 ? "#7E4E28" : "#8C5E34";
+                  return (
+                    <mesh key={pi} position={[cx, yBot - PLANK_T / 2, pz - (PLANK_W - actualW) / 2]} receiveShadow>
+                      <boxGeometry args={[sW - 0.04, PLANK_T, actualW - 0.004]} />
+                      <meshStandardMaterial
+                        color={tone} roughness={0.38} metalness={0.05}
+                        envMapIntensity={0.85}
+                        emissive={tone} emissiveIntensity={emi}
+                      />
+                    </mesh>
+                  );
+                })}
+              </>
+            );
+          };
+
           if (!stairEntry) {
             return (
               <group key={`slab-${fi}`}>
@@ -4186,11 +4228,14 @@ export default function FloorPlanBuilding({
                   <boxGeometry args={[totalW, SLAB_T, totalD]} />
                   <meshStandardMaterial color={slabColor} roughness={0.85} metalness={0.02} />
                 </mesh>
-                {/* 楼板下边缘暗线（阴影缝，增加分层感）*/}
-                <mesh position={[slabCX, slabY - SLAB_T / 2 - 0.015, slabCZ]}>
-                  <boxGeometry args={[totalW + 0.01, 0.030, totalD + 0.01]} />
-                  <meshStandardMaterial color="#8A8680" roughness={0.9} />
-                </mesh>
+                {/* 楼板底面：玻璃别墅→实木格栅吊顶，其他→深色阴影缝 */}
+                {isGlassVilla
+                  ? <WoodSoffit cx={slabCX} cz={slabCZ} sW={totalW} sD={totalD} yBot={slabY - SLAB_T / 2} />
+                  : <mesh position={[slabCX, slabY - SLAB_T / 2 - 0.015, slabCZ]}>
+                      <boxGeometry args={[totalW + 0.01, 0.030, totalD + 0.01]} />
+                      <meshStandardMaterial color="#8A8680" roughness={0.9} />
+                    </mesh>
+                }
                 {/* 楼板顶面金属压边（metal flashing cap）*/}
                 <mesh position={[slabCX, slabY + SLAB_T / 2 + 0.004, slabCZ]}>
                   <boxGeometry args={[totalW + 0.01, 0.008, totalD + 0.01]} />
@@ -4221,11 +4266,14 @@ export default function FloorPlanBuilding({
                   <meshStandardMaterial color={slabColor} roughness={0.85} />
                 </mesh>
               ))}
-              {/* 楼板下边缘暗线（阴影缝）— deeper shadow reveal */}
-              <mesh position={[slabCX, slabY - SLAB_T / 2 - 0.015, slabCZ]}>
-                <boxGeometry args={[totalW + 0.01, 0.030, totalD + 0.01]} />
-                <meshStandardMaterial color="#7C7870" roughness={0.90} />
-              </mesh>
+              {/* 楼板底面：玻璃别墅→实木格栅吊顶，其他→深色阴影缝 */}
+              {isGlassVilla
+                ? <WoodSoffit cx={slabCX} cz={slabCZ} sW={totalW} sD={totalD} yBot={slabY - SLAB_T / 2} />
+                : <mesh position={[slabCX, slabY - SLAB_T / 2 - 0.015, slabCZ]}>
+                    <boxGeometry args={[totalW + 0.01, 0.030, totalD + 0.01]} />
+                    <meshStandardMaterial color="#7C7870" roughness={0.90} />
+                  </mesh>
+              }
               {/* 楼板顶面金属压边（metal flashing cap — modern detail）*/}
               <mesh position={[slabCX, slabY + SLAB_T / 2 + 0.004, slabCZ]}>
                 <boxGeometry args={[totalW + 0.01, 0.008, totalD + 0.01]} />
@@ -5538,61 +5586,100 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {/* ── 5c. 游泳池（outdoor swimming pool, south yard）── */}
+      {/* ── 5c. 游泳池（outdoor swimming pool, south yard）──
+           Large rectangular pool with wide travertine deck matching the
+           reference image: pool is the primary outdoor focal point.
+           Dimensions: up to 11m wide × 9m long, 2.8m deck on building side. */}
       {!insideBuilding && isGlassVilla && (() => {
-        const poolW  = Math.min(W * 0.72, 10.0);  // pool width E-W
-        const poolL  = 4.80;                        // pool length N-S
-        const poolDp = 0.55;                        // pool depth below grade
-        const pz     = -D / 2 - 5.80;              // south yard, clear of steps
-        const deckBW = 0.52;                        // deck border width
-        const deckT  = 0.09;                        // deck slab thickness
+        const poolW  = Math.min(W * 0.78, 11.0);   // pool width E-W (wider = more impressive)
+        const poolL  = Math.min(D * 0.70, 9.50);   // pool length N-S (proportional to building)
+        const poolDp = 0.55;                         // pool depth below grade
+        const deckBW = 2.80;                         // generous travertine deck on all sides
+        const deckT  = 0.12;                         // deck slab thickness
+        const pz     = -D / 2 - deckBW - poolL / 2 - 0.80;  // south yard, deck flush with building steps
         const isNightP = sunHour < 6 || sunHour > 20;
         const isDuskP  = !isNightP && (sunHour < 8 || sunHour > 18);
-        const poolGlowI = isNightP ? 2.2 : isDuskP ? 1.0 : 0.06;
+        const poolGlowI = isNightP ? 2.8 : isDuskP ? 1.2 : 0.12;
+        // Travertine / limestone colours
+        const deckBase  = "#D6CEBC";   // warm limestone base
+        const deckLight = "#E0D8C8";   // slightly lighter alternate tile tone
+        const groutC    = "#B8B0A0";   // slightly darker grout lines
+        const TILE_SIZE = 0.80;        // 80cm × 80cm large format tile
         return (
           <group position={[0, 0, pz]}>
+            {/* ── Continuous stone plaza base (deck + pool surround) ── */}
+            <mesh position={[0, deckT / 2, 0]} receiveShadow>
+              <boxGeometry args={[poolW + deckBW * 2, deckT, poolL + deckBW * 2]} />
+              <meshStandardMaterial color={deckBase} roughness={0.68} metalness={0.04} envMapIntensity={0.5} />
+            </mesh>
+            {/* Large-format tile grid — E-W grout lines */}
+            {Array.from({ length: Math.ceil((poolL + deckBW * 2) / TILE_SIZE) + 1 }, (_, gi) => {
+              const gz = -(poolL / 2 + deckBW) + gi * TILE_SIZE;
+              return (
+                <mesh key={`gl-${gi}`} position={[0, deckT + 0.002, gz]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <planeGeometry args={[poolW + deckBW * 2 - 0.02, 0.016]} />
+                  <meshStandardMaterial color={groutC} roughness={0.85} />
+                </mesh>
+              );
+            })}
+            {/* Large-format tile grid — N-S grout lines */}
+            {Array.from({ length: Math.ceil((poolW + deckBW * 2) / TILE_SIZE) + 1 }, (_, gi) => {
+              const gx = -(poolW / 2 + deckBW) + gi * TILE_SIZE;
+              return (
+                <mesh key={`gt-${gi}`} position={[gx, deckT + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <planeGeometry args={[0.016, poolL + deckBW * 2 - 0.02]} />
+                  <meshStandardMaterial color={groutC} roughness={0.85} />
+                </mesh>
+              );
+            })}
+            {/* Pool coping — raised stone lip around pool perimeter */}
+            {([
+              [0,                     -(poolL / 2 + 0.06), poolW + 0.28, 0.12],
+              [0,                      (poolL / 2 + 0.06), poolW + 0.28, 0.12],
+              [-(poolW / 2 + 0.06),    0,                  0.12,         poolL + 0.12],
+              [ (poolW / 2 + 0.06),    0,                  0.12,         poolL + 0.12],
+            ] as [number, number, number, number][]).map(([dx, dz, cw, cd], ci) => (
+              <mesh key={`cop-${ci}`} position={[dx, deckT + 0.035, dz]} castShadow receiveShadow>
+                <boxGeometry args={[cw, 0.068, cd]} />
+                <meshStandardMaterial color={deckLight} roughness={0.60} metalness={0.06} envMapIntensity={0.7} />
+              </mesh>
+            ))}
             {/* Pool shell — dark blue-grey rendered concrete */}
             <mesh position={[0, -poolDp / 2 - deckT, 0]} receiveShadow>
-              <boxGeometry args={[poolW + deckBW * 2, poolDp + deckT * 2, poolL + deckBW * 2]} />
-              <meshStandardMaterial color="#404850" roughness={0.70} metalness={0.08} />
+              <boxGeometry args={[poolW, poolDp + deckT * 2, poolL]} />
+              <meshStandardMaterial color="#2E3440" roughness={0.65} metalness={0.08} />
             </mesh>
-            {/* Pool interior tile — azure mosaic blue */}
+            {/* Pool interior — azure blue ceramic tile */}
             <mesh position={[0, -poolDp / 2, 0]}>
               <boxGeometry args={[poolW, poolDp - 0.02, poolL]} />
               <meshStandardMaterial
-                color="#2878A0"
-                emissive="#204E70"
+                color="#1E72A0"
+                emissive="#104E78"
                 emissiveIntensity={poolGlowI}
-                roughness={0.35}
-                metalness={0.10}
+                roughness={0.32}
+                metalness={0.14}
+                envMapIntensity={1.8}
               />
             </mesh>
-            {/* Water surface — semi-transparent rippled */}
-            <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={10}>
-              <planeGeometry args={[poolW, poolL]} />
-              <meshStandardMaterial
-                color="#3090C0"
-                transparent opacity={0.78}
+            {/* Water surface — ultra-clear highly reflective */}
+            <mesh position={[0, 0.010, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={10}>
+              <planeGeometry args={[poolW - 0.04, poolL - 0.04]} />
+              <meshPhysicalMaterial
+                color="#3898C8"
+                transparent opacity={0.82}
                 depthWrite={false}
-                roughness={0.04}
-                metalness={0.12}
-                envMapIntensity={4.5}
+                roughness={0.02}
+                metalness={0.08}
+                reflectivity={0.70}
+                clearcoat={0.95}
+                clearcoatRoughness={0.015}
+                envMapIntensity={5.5}
+                emissive="#1878A8"
+                emissiveIntensity={poolGlowI * 0.6}
                 side={THREE.DoubleSide}
                 {...overlayMaterialProps(2)}
               />
             </mesh>
-            {/* Pool deck — travertine pale stone on all 4 sides */}
-            {([
-              [0,                      poolL / 2 + deckBW / 2,  poolW + deckBW * 2, deckBW],
-              [0,                     -(poolL / 2 + deckBW / 2), poolW + deckBW * 2, deckBW],
-              [ poolW / 2 + deckBW / 2, 0,                       deckBW,            poolL],
-              [-(poolW / 2 + deckBW / 2), 0,                     deckBW,            poolL],
-            ] as [number, number, number, number][]).map(([dx, dz, dw, dd], di) => (
-              <mesh key={di} position={[dx, deckT / 2, dz]} receiveShadow>
-                <boxGeometry args={[dw, deckT, dd]} />
-                <meshStandardMaterial color="#D8D0BC" roughness={0.74} metalness={0.04} />
-              </mesh>
-            ))}
             {/* Underwater night glow */}
             {isNightP && (
               <pointLight position={[0, -0.20, 0]} intensity={poolGlowI * 3.0} distance={poolW * 1.4} decay={1.6} color="#40C0F0" castShadow={false} />
@@ -7839,22 +7926,29 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {/* ── 5g. 泳池边休闲区（pool-side loungers + outdoor dining table）── */}
+      {/* ── 5g. 泳池边休闲区（pool-side loungers + outdoor dining table）──
+           Matches the updated section 5c pool dimensions.
+           5 loungers in a row between pool and building (like reference image). */}
       {!insideBuilding && isGlassVilla && (() => {
-        const pz2  = -D / 2 - 5.80;   // pool centre Z (same as 5c)
-        const poolL2 = 4.80;
-        const poolW2 = Math.min(W * 0.72, 10.0);
-        const deckBW2 = 0.52;
-        const deckEdgeZ = pz2 + poolL2 / 2 + deckBW2; // south edge of pool deck
-        const deckEdgeN = pz2 - poolL2 / 2 - deckBW2; // north edge
+        // Must mirror section 5c dimensions exactly
+        const poolL2  = Math.min(D * 0.70, 9.50);
+        const poolW2  = Math.min(W * 0.78, 11.0);
+        const deckBW2 = 2.80;
+        const deckT2  = 0.12;
+        const pz2     = -D / 2 - deckBW2 - poolL2 / 2 - 0.80;
+        const deckEdgeN = pz2 - poolL2 / 2 - deckBW2; // north (building-side) edge of deck
         const loungerColor = "#EDE6D2";
         const loungerMetal = "#B0B8C4";
-        // Two extra loungers on south deck side (facing north toward building)
+        // 5 loungers between pool and building, in a row parallel to facade
+        const nLoungers = 5;
+        const loungerSpacing = Math.min(poolW2 * 0.70 / nLoungers, 1.90);
+        const loungerRowZ = deckEdgeN + 1.20;   // 1.2m from north deck edge, on the deck
+        const loungerRowX0 = -(nLoungers - 1) * loungerSpacing / 2;
         return (
           <group>
-            {/* South-side loungers (2, symmetric) */}
-            {([-poolW2 * 0.22, poolW2 * 0.22] as number[]).map((lx, li) => (
-              <group key={li} position={[lx, 0, deckEdgeZ + 0.60]}>
+            {/* North-side loungers in a row (facing pool / south) */}
+            {Array.from({ length: nLoungers }, (_, li) => (
+              <group key={li} position={[loungerRowX0 + li * loungerSpacing, deckT2, loungerRowZ]} rotation={[0, Math.PI, 0]}>
                 {/* Frame */}
                 <mesh position={[0, 0.19, 0]} castShadow>
                   <boxGeometry args={[0.55, 0.06, 1.70]} />
@@ -7881,8 +7975,8 @@ export default function FloorPlanBuilding({
                 )}
               </group>
             ))}
-            {/* Patio umbrella over south loungers */}
-            <group position={[0, 0, deckEdgeZ + 0.60]}>
+            {/* Patio umbrella over lounger row — centred */}
+            <group position={[0, deckT2, loungerRowZ + 1.10]}>
               {/* Centre pole — white powder-coat */}
               <mesh position={[0, 1.20, 0]} castShadow>
                 <cylinderGeometry args={[0.030, 0.034, 2.40, 8]} />
@@ -7909,8 +8003,8 @@ export default function FloorPlanBuilding({
                 <meshStandardMaterial color="#5A5850" roughness={0.60} metalness={0.30} />
               </mesh>
             </group>
-            {/* Dining area umbrella (matches patio umbrella style) */}
-            <group position={[poolW2 / 2 + deckBW2 + 1.10, 0, pz2]}>
+            {/* Dining area umbrella (east side of pool deck) */}
+            <group position={[poolW2 / 2 + deckBW2 * 0.5, deckT2, pz2]}>
               <mesh position={[0, 1.20, 0]} castShadow>
                 <cylinderGeometry args={[0.030, 0.034, 2.40, 8]} />
                 <meshStandardMaterial color="#E8EAE4" roughness={0.45} metalness={0.30} />
