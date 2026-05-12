@@ -8510,6 +8510,143 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5j-1c. 东侧庭院瑜伽/冥想平台（yoga/meditation deck, east yard S section）──
+           A 3.0m × 2.4m raised teak deck provides a dedicated mindfulness space
+           in the south portion of the east yard. Enclosed on 3 sides by a
+           split-bamboo privacy screen with integrated LED strip at top.
+           A rolled yoga mat, 2 meditation cushions, and a small incense holder
+           add personality. Overhead: a stretched canvas shade sail. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const ydX  =  W / 2 + 2.20;   // east yard
+        const ydZ  = -D / 2 + 2.00;   // south portion of east yard
+        const ydW  = 2.40;   // deck width (E-W)
+        const ydD  = 3.00;   // deck depth (N-S)
+        const deckH = 0.16;  // deck platform height
+        const screenH = 1.80;
+        const isNightYD = sunHour < 6 || sunHour > 20;
+        const isDuskYD  = !isNightYD && (sunHour < 8 || sunHour > 18);
+        const ledEmiYD  = isNightYD ? 2.0 : isDuskYD ? 0.9 : 0.0;
+        const ledLI     = isNightYD ? 2.5 : isDuskYD ? 1.0 : 0.0;
+
+        return (
+          <group position={[ydX, 0, ydZ]}>
+            {/* Teak deck platform */}
+            <mesh position={[0, deckH / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[ydW, deckH, ydD]} />
+              <meshStandardMaterial color="#7A4E28" roughness={0.72} metalness={0.03} />
+            </mesh>
+            {/* Deck plank grooves (N-S running) */}
+            {Array.from({ length: 6 }, (_, pi) => {
+              const px = -ydW / 2 + (pi + 0.5) * (ydW / 6);
+              return (
+                <mesh key={pi} position={[px, deckH + 0.001, 0]}>
+                  <boxGeometry args={[0.008, 0.004, ydD - 0.04]} />
+                  <meshStandardMaterial color="#5A3418" roughness={0.85} />
+                </mesh>
+              );
+            })}
+
+            {/* ── South bamboo screen (3 sides: south, west, east partial) ── */}
+            {/* South screen */}
+            {Array.from({ length: 9 }, (_, bi) => {
+              const bz = -ydD / 2 + bi * (ydD / 8);
+              return (
+                <mesh key={`bs-${bi}`} position={[0, screenH / 2, bz]} rotation={[0, Math.PI / 2, 0]}>
+                  <cylinderGeometry args={[0.022, 0.025, screenH, 6]} />
+                  <meshStandardMaterial color={bi % 2 === 0 ? "#8A7040" : "#6A5530"} roughness={0.84} metalness={0.02} />
+                </mesh>
+              );
+            })}
+            {/* West screen */}
+            {Array.from({ length: 7 }, (_, bi) => {
+              const bx2 = -ydW / 2 + bi * (ydW / 6);
+              return (
+                <mesh key={`bw-${bi}`} position={[bx2, screenH / 2, 0]} rotation={[0, 0, 0]}>
+                  <cylinderGeometry args={[0.022, 0.025, screenH, 6]} />
+                  <meshStandardMaterial color={bi % 2 === 0 ? "#8A7040" : "#6A5530"} roughness={0.84} metalness={0.02} />
+                </mesh>
+              );
+            })}
+            {/* Horizontal binding rails on each screen */}
+            {[0.40, 0.90, 1.40].map((ry, ri) => (
+              <group key={ri}>
+                <mesh position={[0, ry, -ydD / 2 + ydD / 4]}>
+                  <boxGeometry args={[0.008, 0.018, ydD / 2]} />
+                  <meshStandardMaterial color="#3A2010" roughness={0.90} />
+                </mesh>
+                <mesh position={[-ydW / 2 + ydW / 4, ry, 0]}>
+                  <boxGeometry args={[ydW / 2, 0.018, 0.008]} />
+                  <meshStandardMaterial color="#3A2010" roughness={0.90} />
+                </mesh>
+              </group>
+            ))}
+            {/* LED strip along top of south screen */}
+            {ledEmiYD > 0 && (
+              <>
+                <mesh position={[0, screenH + 0.025, -ydD / 2]}>
+                  <boxGeometry args={[ydW, 0.012, 0.016]} />
+                  <meshStandardMaterial color="#FFF8E0" emissive="#FFE880" emissiveIntensity={ledEmiYD} roughness={0.60} />
+                </mesh>
+                <pointLight position={[0, screenH + 0.06, -ydD / 2 + 0.20]} intensity={ledLI} distance={ydD} decay={2} color="#FFF4D0" />
+              </>
+            )}
+
+            {/* ── Rolled yoga mat — center of deck ── */}
+            <group position={[0, deckH + 0.016, 0.30]}>
+              <mesh rotation={[0, Math.PI / 2, 0]} castShadow>
+                <cylinderGeometry args={[0.044, 0.044, 1.72, 10]} />
+                <meshStandardMaterial color="#6080A0" roughness={0.80} metalness={0.02} />
+              </mesh>
+              {/* Tie band */}
+              <mesh position={[0, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+                <cylinderGeometry args={[0.046, 0.046, 0.06, 10, 1, true]} />
+                <meshStandardMaterial color="#2A3848" roughness={0.60} metalness={0.10} />
+              </mesh>
+            </group>
+
+            {/* ── 2 meditation cushions (zafu) ── */}
+            {([-0.40, 0.40] as number[]).map((cx, ci) => (
+              <group key={ci} position={[cx, deckH, -0.55]}>
+                <mesh position={[0, 0.06, 0]} castShadow>
+                  <cylinderGeometry args={[0.18, 0.20, 0.12, 12]} />
+                  <meshStandardMaterial color={ci === 0 ? "#4A2878" : "#6A2020"} roughness={0.88} metalness={0.01} />
+                </mesh>
+              </group>
+            ))}
+
+            {/* ── Incense holder — small wooden disc with thin stick ── */}
+            <group position={[0.60, deckH, -0.60]}>
+              <mesh position={[0, 0.018, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <circleGeometry args={[0.060, 8]} />
+                <meshStandardMaterial color="#4A2E10" roughness={0.75} metalness={0.04} />
+              </mesh>
+              {/* Incense stick */}
+              <mesh position={[0, 0.12, 0]}>
+                <cylinderGeometry args={[0.004, 0.004, 0.20, 4]} />
+                <meshStandardMaterial color="#C0A060" roughness={0.70} metalness={0.02} />
+              </mesh>
+              {/* Smoke wisp (very small emissive sphere at tip) */}
+              <mesh position={[0, 0.225, 0]}>
+                <sphereGeometry args={[0.012, 5, 4]} />
+                <meshStandardMaterial color="#E0E0E0" emissive="#C0C0C0" emissiveIntensity={0.4} transparent opacity={0.55} roughness={0.90} />
+              </mesh>
+            </group>
+
+            {/* ── Canvas shade sail — triangle, stretched between 3 posts ── */}
+            <mesh position={[0, screenH + 0.45, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={10}>
+              <planeGeometry args={[ydW + 0.30, ydD * 0.60]} />
+              <meshStandardMaterial
+                color="#F4F0E8"
+                transparent opacity={0.70}
+                roughness={0.70} metalness={0.02}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+              />
+            </mesh>
+          </group>
+        );
+      })()}
+
       {/* ── 5j-2. 按摩浴缸 / 水疗缸（outdoor spa / hot tub, west of pool）──
            White acrylic shell with blue glowing water, set into a teak timber
            surround deck. Night mode adds strong underwater LED glow. */}
