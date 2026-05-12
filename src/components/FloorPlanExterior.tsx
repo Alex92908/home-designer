@@ -9326,6 +9326,99 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5o. 入口东侧背光装饰石材立板（backlit entrance feature wall panel）──
+           A tall dark onyx/slate slab (2.4m W × 2.8m H) is mounted 50mm proud
+           of the south building face, east of the entrance canopy.
+           LED wash: top-mounted spotlights rake the stone face from above.
+           Night: subtle warm backlight bleeds from behind the panel edges,
+           and a recessed inground uplight washes the stone from below. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const stepW_fw   = Math.min(W * 0.50, 5.5);
+        const fwX        = stepW_fw / 2 + 1.50;    // east of entrance steps
+        const fwZ        = -D / 2 - 0.20 - 0.05;   // just proud of south face
+        const fwW        = 2.40;
+        const fwH        = 2.80;
+        const fwT        = 0.055;
+        const isNightFW  = sunHour < 6 || sunHour > 20;
+        const isDuskFW   = !isNightFW && (sunHour < 8 || sunHour > 18);
+        const backGlowI  = isNightFW ? 1.0 : isDuskFW ? 0.4 : 0.0;
+        const topWashI   = isNightFW ? 4.0 : isDuskFW ? 2.0 : 0.5;
+        const botWashI   = isNightFW ? 3.5 : isDuskFW ? 1.5 : 0.0;
+
+        return (
+          <group position={[fwX, 0, fwZ]}>
+            {/* Main slab — dark grey onyx look */}
+            <mesh position={[0, fwH / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[fwW, fwH, fwT]} />
+              <meshStandardMaterial
+                color="#1A1C22"
+                roughness={0.12} metalness={0.45}
+                envMapIntensity={2.5}
+              />
+            </mesh>
+            {/* Subtle veining overlay (2 lighter diagonal strips) */}
+            {([[0.3, 0.55, 0.18], [0.55, 0.82, 0.15]] as [number, number, number][]).map(([y1, y2, x1], vi) => (
+              <mesh key={vi} position={[-fwW * 0.25 + vi * fwW * 0.40, fwH * (y1 + y2) / 2, fwT / 2 + 0.001]}>
+                <boxGeometry args={[fwW * 0.12, fwH * (y2 - y1), 0.002]} />
+                <meshStandardMaterial color="#2E3044" roughness={0.10} metalness={0.60} envMapIntensity={3.0} />
+              </mesh>
+            ))}
+            {/* Backing standoff gap — bright backlit strip (visible at top/bottom edges) */}
+            {backGlowI > 0 && (
+              <>
+                {/* Top backlight bleed */}
+                <mesh position={[0, fwH + 0.018, fwT / 2 + 0.04]}>
+                  <boxGeometry args={[fwW - 0.20, 0.014, 0.050]} />
+                  <meshStandardMaterial color="#FFF8E0" emissive="#FFE880" emissiveIntensity={backGlowI * 2.0} roughness={0.60} />
+                </mesh>
+                {/* Bottom backlight bleed */}
+                <mesh position={[0, 0.018, fwT / 2 + 0.04]}>
+                  <boxGeometry args={[fwW - 0.20, 0.014, 0.050]} />
+                  <meshStandardMaterial color="#FFF8E0" emissive="#FFE880" emissiveIntensity={backGlowI * 1.5} roughness={0.60} />
+                </mesh>
+                <pointLight position={[0, fwH / 2, 0.10]} intensity={backGlowI * 1.5} distance={fwH} decay={2} color="#FFF4D0" />
+              </>
+            )}
+            {/* Top-mounted downwash spotLight */}
+            <spotLight
+              position={[0, fwH + 0.30, fwT / 2 + 0.25]}
+              target-position={[0, 1.0, 0]}
+              intensity={topWashI}
+              distance={fwH + 1.0}
+              angle={Math.PI * 0.20}
+              penumbra={0.60}
+              decay={2}
+              color="#FFF4E8"
+              castShadow={false}
+            />
+            {/* Bottom inground uplight */}
+            {botWashI > 0 && (
+              <>
+                <mesh position={[0, 0.016, fwT / 2 + 0.22]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <circleGeometry args={[0.050, 8]} />
+                  <meshStandardMaterial color="#282C34" roughness={0.38} metalness={0.78} />
+                </mesh>
+                <mesh position={[0, 0.025, fwT / 2 + 0.22]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <circleGeometry args={[0.036, 8]} />
+                  <meshStandardMaterial color="#FFF8E0" emissive="#FFE880" emissiveIntensity={botWashI * 0.6} roughness={0.55} transparent opacity={0.92} />
+                </mesh>
+                <spotLight
+                  position={[0, 0.10, fwT / 2 + 0.22]}
+                  target-position={[0, fwH * 0.6, 0]}
+                  intensity={botWashI}
+                  distance={fwH + 0.5}
+                  angle={Math.PI * 0.13}
+                  penumbra={0.45}
+                  decay={1.8}
+                  color="#FFF2D0"
+                  castShadow={false}
+                />
+              </>
+            )}
+          </group>
+        );
+      })()}
+
       {/* ── 6a. 走廊地板（铺满整层，楼梯间开口处挖空）── */}
       {insideBuilding && Array.from({ length: floorCount }, (_, fi) => {
         const fp = floorPlans[fi];
