@@ -1508,6 +1508,50 @@ export default function FloorPlanBuilding({
         <meshStandardMaterial color="#D4CCBA" roughness={0.72} metalness={0.03} envMapIntensity={0.35} />
       </mesh>
 
+      {/* ── 北面室外空调冷凝器（outdoor HVAC condensing units）—— 背面服务区 ── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const unitH = 0.90, unitW = 0.70, unitD = 0.28;
+        const unitY = unitH / 2 + 0.004;
+        const northZ = D / 2 + 0.18;
+        // 2-3 units depending on building width
+        const count = Math.min(3, Math.max(2, Math.round(W / 4.5)));
+        const spacing = Math.min(W * 0.22, 1.80);
+        const isNight4 = sunHour < 6 || sunHour > 20;
+        const isDusk4  = !isNight4 && (sunHour < 8 || sunHour > 18);
+        const fanI = isNight4 ? 0.9 : isDusk4 ? 0.7 : 0.5;
+        return (
+          <group>
+            {Array.from({ length: count }, (_, ui) => {
+              const ux = -spacing * (count - 1) / 2 + ui * spacing;
+              return (
+                <group key={ui} position={[ux, unitY, northZ]}>
+                  {/* Main casing */}
+                  <mesh castShadow>
+                    <boxGeometry args={[unitW, unitH, unitD]} />
+                    <meshStandardMaterial color="#B8B4AC" roughness={0.72} metalness={0.14} />
+                  </mesh>
+                  {/* Front grille */}
+                  <mesh position={[0, 0, -unitD / 2 - 0.005]}>
+                    <boxGeometry args={[unitW - 0.04, unitH - 0.06, 0.012]} />
+                    <meshStandardMaterial color="#989490" roughness={0.80} metalness={0.08} />
+                  </mesh>
+                  {/* Fan disc */}
+                  <mesh position={[0, 0.10, -unitD / 2 - 0.012]}>
+                    <cylinderGeometry args={[0.22, 0.22, 0.010, 12]} />
+                    <meshStandardMaterial color="#707070" emissive="#505050" emissiveIntensity={fanI} roughness={0.45} metalness={0.55} />
+                  </mesh>
+                  {/* Piping connection */}
+                  <mesh position={[unitW / 2 - 0.06, -unitH / 2 + 0.14, 0]} rotation={[0, 0, Math.PI / 2]}>
+                    <cylinderGeometry args={[0.018, 0.018, 0.40, 6]} />
+                    <meshStandardMaterial color="#888480" roughness={0.60} metalness={0.40} />
+                  </mesh>
+                </group>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 建筑周边铺装台地（perimeter paved terrace）——
               紧贴建筑基座向外延伸 1.6m，浅色石灰华板，
               分割草坪与建筑体量，并提供服务通道视觉。
