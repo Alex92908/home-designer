@@ -1507,6 +1507,48 @@ export default function FloorPlanBuilding({
         <boxGeometry args={[W + 0.55, 0.10, D + 0.55]} />
         <meshStandardMaterial color="#D4CCBA" roughness={0.72} metalness={0.03} envMapIntensity={0.35} />
       </mesh>
+
+      {/* ── 建筑周边铺装台地（perimeter paved terrace）——
+              紧贴建筑基座向外延伸 1.6m，浅色石灰华板，
+              分割草坪与建筑体量，并提供服务通道视觉。
+              南侧由入口广场覆盖，此处仅渲染东/西/北三边。 */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const apronW = 1.60;   // terrace width (building-outward)
+        const apronH = 0.005;  // almost flush with grade
+        const apronY = -0.002; // just above grass
+        const terrColor = "#D8D0BC";
+        const edgeColor = "#3A3E48";
+        return (
+          <group position={[0, apronY, 0]}>
+            {/* East terrace strip */}
+            <mesh position={[W / 2 + apronW / 2 + 0.05, 0, 0]} receiveShadow>
+              <boxGeometry args={[apronW, apronH, D + apronW * 2]} />
+              <meshStandardMaterial color={terrColor} roughness={0.68} metalness={0.02} />
+            </mesh>
+            {/* West terrace strip */}
+            <mesh position={[-W / 2 - apronW / 2 - 0.05, 0, 0]} receiveShadow>
+              <boxGeometry args={[apronW, apronH, D + apronW * 2]} />
+              <meshStandardMaterial color={terrColor} roughness={0.68} metalness={0.02} />
+            </mesh>
+            {/* North terrace strip */}
+            <mesh position={[0, 0, D / 2 + apronW / 2 + 0.05]} receiveShadow>
+              <boxGeometry args={[W + 0.10, apronH, apronW]} />
+              <meshStandardMaterial color={terrColor} roughness={0.68} metalness={0.02} />
+            </mesh>
+            {/* Terrace edge line (metal strip at grass boundary) */}
+            {[
+              { w: apronW + 0.02, d: 0.025, x:  W / 2 + apronW + 0.05, z: 0 },
+              { w: apronW + 0.02, d: 0.025, x: -W / 2 - apronW - 0.05, z: 0 },
+              { w: 0.025, d: W + apronW * 2 + 0.14, x: 0, z: D / 2 + apronW + 0.06 },
+            ].map((e, ei) => (
+              <mesh key={ei} position={[e.x, 0.008, e.z]}>
+                <boxGeometry args={[e.w, 0.016, e.d]} />
+                <meshStandardMaterial color={edgeColor} roughness={0.28} metalness={0.82} envMapIntensity={1.6} />
+              </mesh>
+            ))}
+          </group>
+        );
+      })()}
       {/* 建筑基座 — 两段式：下部黑花岗岩脚踢 + 上部深色抛光石材 */}
       {!insideBuilding && (
         <>
