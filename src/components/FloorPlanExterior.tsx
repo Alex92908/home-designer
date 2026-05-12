@@ -3901,6 +3901,150 @@ export default function FloorPlanBuilding({
 
       {!insideBuilding && <FlatRoof W={W} D={D} roofY={totalH} nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0} />}
 
+      {/* ── 5a-conservatory. 北侧温室 / 冬季花园（glass conservatory, north facade）──
+           A Victorian-style steel-and-glass conservatory attached to the north wall.
+           Width = W × 0.38, depth = 2.4m, height = 3.2m at ridge.
+           Dark anodized steel frame + laminated glass panels.
+           At night: warm amber glow from interior plants / lighting. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const cW2 = Math.min(W * 0.38, 5.0);   // conservatory width
+        const cD2 = 2.40;                        // depth (north from building wall)
+        const cH2 = 2.80;                        // wall height (eave)
+        const cRH = 0.70;                        // ridge height above eave
+        const cX2 = 0;                           // centred
+        const cZ2 = D / 2 + cD2 / 2;            // centre Z (north of building)
+        const cY2 = 0;                           // ground level
+        const frameCol = "#1E2028";
+        const glassCol2 = "#B0D4E0";
+        const glowI = interiorGlowCeil * 0.8;
+        const glowLI = interiorGlowWall > 0.5 ? 2.5 : 0.0;
+        return (
+          <group position={[cX2, cY2, cZ2]}>
+            {/* Floor slab — dark slate */}
+            <mesh position={[0, 0.020, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[cW2, cD2]} />
+              <meshStandardMaterial color="#282C34" roughness={0.52} metalness={0.12} />
+            </mesh>
+            {/* 4 corner columns */}
+            {([[-cW2/2, -cD2/2], [cW2/2, -cD2/2], [-cW2/2, cD2/2], [cW2/2, cD2/2]] as [number,number][]).map(([cx2, cz2], ci) => (
+              <mesh key={ci} position={[cx2, cH2 / 2, cz2]} castShadow>
+                <boxGeometry args={[0.045, cH2, 0.045]} />
+                <meshStandardMaterial color={frameCol} roughness={0.22} metalness={0.88} envMapIntensity={2.0} />
+              </mesh>
+            ))}
+            {/* Intermediate mullion columns — east/west walls */}
+            {([[-cW2/2, 0], [cW2/2, 0]] as [number,number][]).map(([mx, mz], mi) => (
+              <mesh key={`mid-${mi}`} position={[mx, cH2 / 2, mz]} castShadow>
+                <boxGeometry args={[0.035, cH2, 0.035]} />
+                <meshStandardMaterial color={frameCol} roughness={0.22} metalness={0.88} />
+              </mesh>
+            ))}
+            {/* Eave rail — perimeter horizontal frame at top of walls */}
+            {[
+              [0, cH2, -cD2/2, cW2 + 0.05, 0.040, 0.040],
+              [0, cH2,  cD2/2, cW2 + 0.05, 0.040, 0.040],
+              [-cW2/2, cH2, 0, 0.040, 0.040, cD2],
+              [ cW2/2, cH2, 0, 0.040, 0.040, cD2],
+            ].map(([ex, ey, ez, ew, eh, ed], ei) => (
+              <mesh key={`eave-${ei}`} position={[ex, ey, ez]}>
+                <boxGeometry args={[ew, eh, ed]} />
+                <meshStandardMaterial color={frameCol} roughness={0.22} metalness={0.88} />
+              </mesh>
+            ))}
+            {/* Ridge beam */}
+            <mesh position={[0, cH2 + cRH, 0]}>
+              <boxGeometry args={[cW2 + 0.05, 0.040, 0.040]} />
+              <meshStandardMaterial color={frameCol} roughness={0.22} metalness={0.88} />
+            </mesh>
+            {/* Glass side panels — north and south eave walls */}
+            {([-cD2/2, cD2/2] as number[]).map((gz2, gi) => (
+              <mesh key={gi} position={[0, cH2 / 2, gz2]}>
+                <boxGeometry args={[cW2 - 0.05, cH2, 0.010]} />
+                <meshStandardMaterial
+                  color={glassCol2} transparent opacity={0.45}
+                  roughness={0.04} metalness={0.08}
+                  emissive="#60C0D8" emissiveIntensity={glowI * 0.3}
+                  envMapIntensity={4.0}
+                  side={THREE.DoubleSide}
+                />
+              </mesh>
+            ))}
+            {/* Glass east/west side walls */}
+            {([-cW2/2, cW2/2] as number[]).map((gx2, gi) => (
+              <mesh key={`ew-${gi}`} position={[gx2, cH2 / 2, 0]}>
+                <boxGeometry args={[0.010, cH2, cD2 - 0.05]} />
+                <meshStandardMaterial
+                  color={glassCol2} transparent opacity={0.45}
+                  roughness={0.04} metalness={0.08}
+                  emissive="#60C0D8" emissiveIntensity={glowI * 0.3}
+                  envMapIntensity={4.0}
+                  side={THREE.DoubleSide}
+                />
+              </mesh>
+            ))}
+            {/* Pitched glass roof — two lean-to panels */}
+            {([-1, 1] as number[]).map((side, si) => {
+              const rx = side * cW2 / 4;
+              const rz = 0;
+              const tiltAngle = side * Math.atan2(cRH, cW2 / 2);
+              return (
+                <mesh key={si} position={[rx, cH2 + cRH / 2, 0]} rotation={[0, 0, tiltAngle]}>
+                  <boxGeometry args={[cW2 / 2, Math.sqrt(cRH * cRH + (cW2 / 2) * (cW2 / 2)) + 0.01, cD2 - 0.05]} />
+                  <meshStandardMaterial
+                    color="#A8CCE0"
+                    transparent opacity={0.40}
+                    roughness={0.03} metalness={0.10}
+                    emissive="#80D0E8" emissiveIntensity={glowI * 0.2}
+                    envMapIntensity={5.0}
+                    side={THREE.DoubleSide}
+                  />
+                </mesh>
+              );
+            })}
+            {/* Interior plants — visible through glass */}
+            {Array.from({ length: 6 }, (_, pi) => {
+              const px3 = -cW2 * 0.35 + pi * (cW2 * 0.70 / 5);
+              const pType = pi % 3;
+              const pHash2 = (pi * 11 + 7) % 13;
+              if (pType === 0) {
+                return (
+                  <group key={pi} position={[px3, 0, cD2 * 0.10]}>
+                    <mesh position={[0, 0.40, 0]} castShadow>
+                      <cylinderGeometry args={[0.06, 0.08, 0.40, 8]} />
+                      <meshStandardMaterial color="#2A1808" roughness={0.88} />
+                    </mesh>
+                    <mesh position={[0, 0.85, 0]}>
+                      <sphereGeometry args={[0.28, 8, 6]} />
+                      <meshStandardMaterial color={pHash2 % 2 === 0 ? "#2A6020" : "#1E5018"} roughness={0.96} />
+                    </mesh>
+                  </group>
+                );
+              } else if (pType === 1) {
+                // Tall tropical plant
+                return (
+                  <mesh key={pi} position={[px3, 0.80, 0]} castShadow>
+                    <cylinderGeometry args={[0.06, 0.10, 1.60, 6]} />
+                    <meshStandardMaterial color="#2E6828" roughness={0.94} />
+                  </mesh>
+                );
+              } else {
+                // Low spreading plant
+                return (
+                  <mesh key={pi} position={[px3, 0.20, 0]} castShadow>
+                    <sphereGeometry args={[0.24, 7, 5]} />
+                    <meshStandardMaterial color="#3A7830" roughness={0.96} />
+                  </mesh>
+                );
+              }
+            })}
+            {/* Interior grow light — warm amber */}
+            {glowLI > 0 && (
+              <pointLight position={[0, cH2 - 0.30, 0]} intensity={glowLI} distance={cW2 * 1.2} decay={2.0} color="#FFE890" castShadow={false} />
+            )}
+          </group>
+        );
+      })()}
+
       {/* ── 5b. 建筑立面泛光灯（夜间效果）——根据 sunHour 自动调强度 ──
                夜间：墙面泛光灯打亮外立面，池边及入口处暖光渗出。
                白天：不发光，完全隐藏。 */}
