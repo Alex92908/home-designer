@@ -3040,6 +3040,215 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5f. 庭院绿篱（hedge rows inside boundary wall）── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        // Boxwood-style clipped hedge rows along east/west inner boundary
+        const bndE2  =  W / 2 + 4.50;
+        const bndW2  = -W / 2 - 4.50;
+        const bndN2  =  D / 2 + 3.20;
+        const bndS2  = -D / 2 - 11.50;
+        const hedgeH = 0.90;   // hedge height
+        const hedgeW = 0.52;   // hedge width/depth
+        const gapS   = 0.32;   // gap from boundary wall face
+        const hedgeCol = "#2A5A1C";
+        const hedgeDk  = "#1E4816";
+        // East hedge: inner side of east wall, north-to-south
+        const eHedgeLen = bndN2 - bndS2 - 1.0;
+        const eHedgeZ   = (bndN2 + bndS2) / 2;
+        // West hedge similarly
+        return (
+          <group>
+            {/* East hedge row */}
+            <mesh position={[bndE2 - hedgeW / 2 - gapS, hedgeH / 2, eHedgeZ]} castShadow receiveShadow>
+              <boxGeometry args={[hedgeW, hedgeH, eHedgeLen]} />
+              <meshStandardMaterial color={hedgeCol} roughness={0.96} metalness={0.01} />
+            </mesh>
+            {/* East hedge top rounded effect — thin darker strip */}
+            <mesh position={[bndE2 - hedgeW / 2 - gapS, hedgeH + 0.06, eHedgeZ]}>
+              <boxGeometry args={[hedgeW - 0.04, 0.12, eHedgeLen - 0.04]} />
+              <meshStandardMaterial color={hedgeDk} roughness={0.97} metalness={0.01} />
+            </mesh>
+            {/* West hedge row */}
+            <mesh position={[bndW2 + hedgeW / 2 + gapS, hedgeH / 2, eHedgeZ]} castShadow receiveShadow>
+              <boxGeometry args={[hedgeW, hedgeH, eHedgeLen]} />
+              <meshStandardMaterial color={hedgeCol} roughness={0.96} metalness={0.01} />
+            </mesh>
+            <mesh position={[bndW2 + hedgeW / 2 + gapS, hedgeH + 0.06, eHedgeZ]}>
+              <boxGeometry args={[hedgeW - 0.04, 0.12, eHedgeLen - 0.04]} />
+              <meshStandardMaterial color={hedgeDk} roughness={0.97} metalness={0.01} />
+            </mesh>
+            {/* North hedge row */}
+            <mesh position={[0, hedgeH / 2, bndN2 - hedgeW / 2 - gapS]} castShadow receiveShadow>
+              <boxGeometry args={[bndE2 - bndW2 - 1.0, hedgeH, hedgeW]} />
+              <meshStandardMaterial color={hedgeCol} roughness={0.96} metalness={0.01} />
+            </mesh>
+            <mesh position={[0, hedgeH + 0.06, bndN2 - hedgeW / 2 - gapS]}>
+              <boxGeometry args={[bndE2 - bndW2 - 1.04, 0.12, hedgeW - 0.04]} />
+              <meshStandardMaterial color={hedgeDk} roughness={0.97} metalness={0.01} />
+            </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── 5g. 泳池边休闲区（pool-side loungers + outdoor dining table）── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const pz2  = -D / 2 - 5.80;   // pool centre Z (same as 5c)
+        const poolL2 = 4.80;
+        const poolW2 = Math.min(W * 0.72, 10.0);
+        const deckBW2 = 0.52;
+        const deckEdgeZ = pz2 + poolL2 / 2 + deckBW2; // south edge of pool deck
+        const deckEdgeN = pz2 - poolL2 / 2 - deckBW2; // north edge
+        const loungerColor = "#EDE6D2";
+        const loungerMetal = "#B0B8C4";
+        // Two extra loungers on south deck side (facing north toward building)
+        return (
+          <group>
+            {/* South-side loungers (2, symmetric) */}
+            {([-poolW2 * 0.22, poolW2 * 0.22] as number[]).map((lx, li) => (
+              <group key={li} position={[lx, 0, deckEdgeZ + 0.60]}>
+                {/* Frame */}
+                <mesh position={[0, 0.19, 0]} castShadow>
+                  <boxGeometry args={[0.55, 0.06, 1.70]} />
+                  <meshStandardMaterial color={loungerMetal} roughness={0.22} metalness={0.88} />
+                </mesh>
+                {/* Cushion */}
+                <mesh position={[0, 0.26, 0]}>
+                  <boxGeometry args={[0.47, 0.09, 1.54]} />
+                  <meshStandardMaterial color={loungerColor} roughness={0.88} />
+                </mesh>
+                {/* Backrest tilt */}
+                <mesh position={[0, 0.34, 0.48]} rotation={[-0.28, 0, 0]}>
+                  <boxGeometry args={[0.45, 0.07, 0.60]} />
+                  <meshStandardMaterial color={loungerColor} roughness={0.88} />
+                </mesh>
+                {/* Legs */}
+                {([-0.22, 0.22] as number[]).flatMap(lx2 =>
+                  ([-0.68, 0.68] as number[]).map((lz2, ki) => (
+                    <mesh key={`${lx2}-${ki}`} position={[lx2, 0.09, lz2]} castShadow>
+                      <boxGeometry args={[0.032, 0.18, 0.032]} />
+                      <meshStandardMaterial color={loungerMetal} roughness={0.20} metalness={0.90} />
+                    </mesh>
+                  ))
+                )}
+              </group>
+            ))}
+            {/* Outdoor dining table (east side of pool deck) */}
+            <group position={[poolW2 / 2 + deckBW2 + 1.10, 0, pz2]}>
+              {/* Table top */}
+              <mesh position={[0, 0.74, 0]} castShadow>
+                <boxGeometry args={[1.60, 0.040, 0.90]} />
+                <meshStandardMaterial color="#C8BFA8" roughness={0.60} metalness={0.08} envMapIntensity={0.9} />
+              </mesh>
+              {/* Central pedestal */}
+              <mesh position={[0, 0.40, 0]}>
+                <cylinderGeometry args={[0.038, 0.050, 0.72, 8]} />
+                <meshStandardMaterial color="#8A9098" roughness={0.30} metalness={0.72} />
+              </mesh>
+              {/* Base cross */}
+              <mesh position={[0, 0.040, 0]}>
+                <boxGeometry args={[0.80, 0.04, 0.12]} />
+                <meshStandardMaterial color="#8A9098" roughness={0.30} metalness={0.72} />
+              </mesh>
+              <mesh position={[0, 0.040, 0]} rotation={[0, Math.PI / 2, 0]}>
+                <boxGeometry args={[0.80, 0.04, 0.12]} />
+                <meshStandardMaterial color="#8A9098" roughness={0.30} metalness={0.72} />
+              </mesh>
+              {/* 4 chairs around table */}
+              {([
+                [0,      0.90,  0   ],
+                [0,     -0.90,  0   ],
+                [ 0.88,  0,     Math.PI / 2],
+                [-0.88,  0,    -Math.PI / 2],
+              ] as [number, number, number][]).map(([chx, chz, chRot], ci) => (
+                <group key={ci} position={[chx, 0, chz]} rotation={[0, chRot, 0]}>
+                  <mesh position={[0, 0.46, 0]} castShadow>
+                    <boxGeometry args={[0.44, 0.040, 0.44]} />
+                    <meshStandardMaterial color="#DDD4C0" roughness={0.82} />
+                  </mesh>
+                  <mesh position={[0, 0.82, 0.18]} rotation={[-0.15, 0, 0]}>
+                    <boxGeometry args={[0.40, 0.52, 0.030]} />
+                    <meshStandardMaterial color="#D8CEB8" roughness={0.84} />
+                  </mesh>
+                  {/* 4 legs */}
+                  {([-0.18, 0.18] as number[]).flatMap(clx =>
+                    ([-0.18, 0.18] as number[]).map((clz, cki) => (
+                      <mesh key={`${clx}-${cki}`} position={[clx, 0.22, clz]}>
+                        <boxGeometry args={[0.028, 0.44, 0.028]} />
+                        <meshStandardMaterial color="#9A9FA8" roughness={0.28} metalness={0.78} />
+                      </mesh>
+                    ))
+                  )}
+                </group>
+              ))}
+            </group>
+          </group>
+        );
+      })()}
+
+      {/* ── 5h. 室外厨房 / BBQ 台（outdoor kitchen, east terrace apron）── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const kitX = W / 2 + 0.85;         // east terrace apron center
+        const kitZ = D / 2 - 1.80;          // north-east corner of terrace
+        const isNightK = sunHour < 6 || sunHour > 20;
+        return (
+          <group position={[kitX, 0, kitZ]} rotation={[0, -Math.PI / 2, 0]}>
+            {/* Counter top — dark granite */}
+            <mesh position={[0, 0.92, 0]} castShadow receiveShadow>
+              <boxGeometry args={[2.20, 0.042, 0.72]} />
+              <meshStandardMaterial color="#1C1E24" roughness={0.18} metalness={0.38} envMapIntensity={2.0} />
+            </mesh>
+            {/* Cabinet body — white lacquer */}
+            <mesh position={[0, 0.46, 0]} castShadow receiveShadow>
+              <boxGeometry args={[2.20, 0.90, 0.70]} />
+              <meshStandardMaterial color="#E8E4DC" roughness={0.60} metalness={0.08} />
+            </mesh>
+            {/* Cabinet door lines × 3 */}
+            {([-0.68, 0, 0.68] as number[]).map((dx, di) => (
+              <mesh key={di} position={[dx, 0.46, 0.358]}>
+                <boxGeometry args={[0.60, 0.80, 0.008]} />
+                <meshStandardMaterial color="#D8D4CC" roughness={0.55} metalness={0.10} />
+              </mesh>
+            ))}
+            {/* Built-in BBQ grill — stainless */}
+            <mesh position={[-0.62, 0.94, 0.02]}>
+              <boxGeometry args={[0.58, 0.040, 0.62]} />
+              <meshStandardMaterial color="#B0B8C4" roughness={0.22} metalness={0.84} envMapIntensity={2.4} />
+            </mesh>
+            {/* Grill bars × 5 */}
+            {Array.from({ length: 5 }, (_, gi) => (
+              <mesh key={gi} position={[-0.62, 0.97, -0.22 + gi * 0.11]}>
+                <boxGeometry args={[0.50, 0.010, 0.016]} />
+                <meshStandardMaterial color="#808890" roughness={0.28} metalness={0.82} />
+              </mesh>
+            ))}
+            {/* Sink basin */}
+            <mesh position={[0.52, 0.88, 0.04]}>
+              <boxGeometry args={[0.42, 0.10, 0.54]} />
+              <meshStandardMaterial color="#4A5060" roughness={0.38} metalness={0.50} />
+            </mesh>
+            {/* Faucet */}
+            <mesh position={[0.52, 0.96, -0.22]}>
+              <boxGeometry args={[0.015, 0.12, 0.015]} />
+              <meshStandardMaterial color="#B8C4CC" roughness={0.18} metalness={0.92} />
+            </mesh>
+            <mesh position={[0.52, 1.02, -0.16]}>
+              <boxGeometry args={[0.015, 0.015, 0.12]} />
+              <meshStandardMaterial color="#B8C4CC" roughness={0.18} metalness={0.92} />
+            </mesh>
+            {/* Under-counter LED strip */}
+            <mesh position={[0, 0.925, 0.358]}>
+              <boxGeometry args={[2.10, 0.018, 0.014]} />
+              <meshStandardMaterial
+                color="#FFFDE0"
+                emissive="#FFE890"
+                emissiveIntensity={isNightK ? 2.2 : 0.3}
+                roughness={0.5}
+              />
+            </mesh>
+          </group>
+        );
+      })()}
+
       {/* ── 6a. 走廊地板（铺满整层，楼梯间开口处挖空）── */}
       {insideBuilding && Array.from({ length: floorCount }, (_, fi) => {
         const fp = floorPlans[fi];
