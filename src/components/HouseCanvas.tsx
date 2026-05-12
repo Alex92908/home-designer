@@ -3,8 +3,8 @@
 import { useRef, useMemo, useEffect, useState, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
 import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars } from "@react-three/drei";
-import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, ToneMapping, HueSaturation } from "@react-three/postprocessing";
-import { BlendFunction, ToneMappingMode } from "postprocessing";
+import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, HueSaturation } from "@react-three/postprocessing";
+import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
@@ -6162,13 +6162,15 @@ export default function HouseCanvas() {
       </div>
 
       <Canvas
-        shadows={{ type: THREE.PCFSoftShadowMap }}
+        shadows={{ type: THREE.PCFSoftShadowMap, enabled: true }}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: theme.exposure,
           // Required for canvas.toDataURL() (AI render screenshot)
           preserveDrawingBuffer: true,
           antialias: false,
+          // Pixel ratio cap — 2× delivers Retina sharpness without performance cliff
+          powerPreference: "high-performance",
         }}
         camera={(() => {
           // Set initial camera position HERE (before OrbitControls mounts) so it
@@ -6305,12 +6307,12 @@ export default function HouseCanvas() {
         {/* Primary sun — position updates every render frame as slider moves */}
         <directionalLight
           position={sunPos} intensity={theme.sunIntensity} color={theme.sunColor} castShadow
-          shadow-mapSize={[2048, 2048]}
-          shadow-camera-far={100}
-          shadow-camera-left={-30} shadow-camera-right={30}
-          shadow-camera-top={30} shadow-camera-bottom={-30}
-          shadow-bias={-0.0008}
-          shadow-normalBias={0.04}
+          shadow-mapSize={[4096, 4096]}
+          shadow-camera-far={120}
+          shadow-camera-left={-35} shadow-camera-right={35}
+          shadow-camera-top={35} shadow-camera-bottom={-35}
+          shadow-bias={-0.0006}
+          shadow-normalBias={0.06}
         />
         {/* Sky fill from opposite side (fill tracks opposite of sun) */}
         <directionalLight
@@ -6616,9 +6618,8 @@ export default function HouseCanvas() {
               luminanceSmoothing={0.40}
               mipmapBlur
             />
-            {/* ACES Filmic tone mapping — industry-standard cinematic look */}
-            <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-            {/* HueSaturation — slight saturation boost for vivid architectural renders */}
+            {/* HueSaturation — slight saturation boost for vivid architectural renders
+                (tone mapping is already ACES Filmic via Canvas gl.toneMapping) */}
             <HueSaturation
               saturation={theme.phase === "night" ? -0.05 : 0.08}
               hue={0}
