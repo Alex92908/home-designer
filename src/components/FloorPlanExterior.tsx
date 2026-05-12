@@ -2555,10 +2555,16 @@ export default function FloorPlanBuilding({
                   <meshStandardMaterial color="#1E2028" roughness={0.20} metalness={0.90} envMapIntensity={2.0} />
                 </mesh>
               ))}
-              {/* 竖向木条 — grain texture + 3-tone colour variation */}
+              {/* 竖向木条 — grain texture + 3-tone colour variation
+                  木条绕开窗洞：凡与窗洞重叠的木条跳过 */}
               {Array.from({ length: slatCount }, (_, si) => {
                 const sx = -segLen / 2 + SLAT_W / 2 + si * slatStep;
                 if (sx > segLen / 2 + 0.01) return null;
+                // Skip slats that overlap any window opening
+                const overlapsWindow = winInfos.some(w =>
+                  Math.abs(sx - w.localX) < w.winLen / 2 + SLAT_W / 2 + 0.01
+                );
+                if (overlapsWindow) return null;
                 // 3-way alternating tone for natural wood rhythm
                 const col = si % 3 === 1 ? "#8B5C38" : si % 3 === 2 ? "#6C4022" : "#7A4E2A";
                 return (
@@ -2571,6 +2577,51 @@ export default function FloorPlanBuilding({
                   </mesh>
                 );
               })}
+              {/* 木饰面窗洞 — 渲染窗玻璃 + 金属窗框 + 室内底色，
+                  与 ConcreteFacade 保持一致语言 */}
+              {winInfos.map((w, wi) => (
+                <group key={`ww-${wi}`} position={[w.localX, -FLOOR_H / 2 + w.winSill + w.winH / 2, 0]}>
+                  {/* 室内背衬（夜间暖色发光） */}
+                  <mesh position={[0, 0, -0.020]}>
+                    <boxGeometry args={[w.winLen - 0.02, w.winH - 0.02, 0.06]} />
+                    <meshStandardMaterial
+                      color={interiorGlowWall > 0.5 ? "#F5E8C8" : "#1A1410"}
+                      emissive={interiorGlowWall > 0.5 ? "#F4D890" : "#000000"}
+                      emissiveIntensity={interiorGlowWall > 0.5 ? interiorGlowWall * 0.90 : 0}
+                      roughness={0.9}
+                    />
+                  </mesh>
+                  {/* 深色铝合金窗框 */}
+                  {([
+                    [-w.winLen / 2 + 0.025, 0,               0.028, w.winH  ] as [number,number,number,number],
+                    [ w.winLen / 2 - 0.025, 0,               0.028, w.winH  ] as [number,number,number,number],
+                    [0,  w.winH / 2 - 0.025, w.winLen, 0.052] as [number,number,number,number],
+                    [0, -w.winH / 2 + 0.025, w.winLen, 0.052] as [number,number,number,number],
+                  ]).map(([fx, fy, fw, fh], k) => (
+                    <mesh key={k} position={[fx, fy, 0.022]}>
+                      <planeGeometry args={[fw, fh]} />
+                      <meshStandardMaterial color="#1E2028" roughness={0.25} metalness={0.88} envMapIntensity={2.2} />
+                    </mesh>
+                  ))}
+                  {/* 玻璃 */}
+                  <mesh position={[0, 0, 0.018]}>
+                    <planeGeometry args={[w.winLen - 0.04, w.winH - 0.04]} />
+                    <meshPhysicalMaterial
+                      color={interiorGlowWall > 0.5 ? "#D8C8A0" : "#B0C8E0"}
+                      transparent opacity={interiorGlowWall > 0.5 ? 0.80 : 0.60}
+                      roughness={0.04} metalness={0.10}
+                      emissive={interiorGlowWall > 0.5 ? "#F4C860" : "#000000"}
+                      emissiveIntensity={interiorGlowWall > 0.5 ? interiorGlowWall * 0.22 : 0}
+                      side={THREE.FrontSide}
+                    />
+                  </mesh>
+                  {/* 窗台板 */}
+                  <mesh position={[0, -w.winH / 2 - 0.030, 0.055]} castShadow>
+                    <boxGeometry args={[w.winLen + 0.08, 0.050, 0.110]} />
+                    <meshStandardMaterial color="#2A1E14" roughness={0.82} metalness={0.04} />
+                  </mesh>
+                </group>
+              ))}
             </group>
           );
         }
