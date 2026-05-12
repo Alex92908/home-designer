@@ -1349,9 +1349,9 @@ export default function FloorPlanBuilding({
             {!isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (
               <mesh position={[cx, yBase + FLOOR_H / 2, cz]} raycast={() => null}>
                 <boxGeometry args={[rW - 0.02, FLOOR_H - 0.01, rD - 0.02]} />
-                <meshStandardMaterial color={wallColor} side={THREE.BackSide} roughness={0.78}
+                <meshStandardMaterial color={wallColor} side={THREE.BackSide} roughness={0.82}
                   transparent={isXray} opacity={wallOpacity} depthWrite={!isXray}
-                  emissive={wallColor} emissiveIntensity={insideBuilding ? 0.18 : 0.06} />
+                  emissive={wallColor} emissiveIntensity={insideBuilding ? 0.22 : 0.06} />
               </mesh>
             )}
             {/* 走廊：天花板板条（顶部薄板，让走廊从室内清晰可辨）*/}
@@ -1365,7 +1365,14 @@ export default function FloorPlanBuilding({
             {!(isStair && fi > 0) && (
               <mesh position={[cx, yBase + 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
                 <planeGeometry args={[rW - 0.04, rD - 0.04]} />
-                <meshStandardMaterial color={floorColor} roughness={0.70} metalness={0.03} side={THREE.DoubleSide} />
+                {/* 室内：高光木地板（低粗糙度 + 轻微金属感，反射筒灯）*/}
+                <meshStandardMaterial
+                  color={floorColor}
+                  roughness={insideBuilding ? 0.42 : 0.70}
+                  metalness={insideBuilding ? 0.06 : 0.03}
+                  envMapIntensity={insideBuilding ? 0.55 : 0.2}
+                  side={THREE.DoubleSide}
+                />
               </mesh>
             )}
             {/* 天花板 — 走廊和楼梯间不渲染 */}
@@ -1375,6 +1382,63 @@ export default function FloorPlanBuilding({
                 <meshStandardMaterial color="#F8F6F2" roughness={0.90} side={THREE.BackSide}
                   transparent={isXray} opacity={isXray ? 0.08 : 1} depthWrite={!isXray} />
               </mesh>
+            )}
+            {/* 天花板筒灯（室内模式）—— 4 盏矩形嵌入式灯，不遮挡视线 */}
+            {insideBuilding && !isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (() => {
+              const roomArea = rW * rD;
+              const lightCount = roomArea > 12 ? 4 : roomArea > 6 ? 2 : 1;
+              const offsets: [number, number][] = lightCount === 4
+                ? [[-rW*0.26, -rD*0.26], [rW*0.26, -rD*0.26], [-rW*0.26, rD*0.26], [rW*0.26, rD*0.26]]
+                : lightCount === 2
+                ? [[-rW*0.22, 0], [rW*0.22, 0]]
+                : [[0, 0]];
+              return offsets.map(([ox, oz], li) => (
+                <group key={`clight-${li}`} position={[cx + ox, yBase + FLOOR_H - 0.02, cz + oz]}>
+                  {/* 嵌入式筒灯外壳 */}
+                  <mesh raycast={() => null}>
+                    <cylinderGeometry args={[0.08, 0.08, 0.02, 12]} />
+                    <meshStandardMaterial color="#E0E0DC" roughness={0.4} metalness={0.25} />
+                  </mesh>
+                  {/* 发光灯片 */}
+                  <mesh position={[0, -0.005, 0]} raycast={() => null}>
+                    <cylinderGeometry args={[0.065, 0.065, 0.005, 12]} />
+                    <meshStandardMaterial color="#FFFCE8" emissive="#FFF5D0" emissiveIntensity={3.5} roughness={0.3} />
+                  </mesh>
+                  {/* 点光源 */}
+                  <pointLight
+                    position={[0, -0.12, 0]}
+                    intensity={rW * rD * 0.28}
+                    distance={Math.max(rW, rD) * 2.4}
+                    decay={2}
+                    color="#FFF8E8"
+                  />
+                </group>
+              ));
+            })()}
+            {/* 踢脚线（室内模式）—— 沿四墙底部 6cm 深色条 */}
+            {insideBuilding && !isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (
+              <group position={[cx, yBase + 0.04, cz]} raycast={() => null}>
+                {/* 北墙踢脚 */ }
+                <mesh position={[0, 0,  rD / 2 - 0.01]} rotation={[0, Math.PI, 0]}>
+                  <boxGeometry args={[rW - 0.04, 0.08, 0.012]} />
+                  <meshStandardMaterial color="#9C8A70" roughness={0.75} />
+                </mesh>
+                {/* 南墙踢脚 */}
+                <mesh position={[0, 0, -rD / 2 + 0.01]}>
+                  <boxGeometry args={[rW - 0.04, 0.08, 0.012]} />
+                  <meshStandardMaterial color="#9C8A70" roughness={0.75} />
+                </mesh>
+                {/* 东墙踢脚 */}
+                <mesh position={[ rW / 2 - 0.01, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+                  <boxGeometry args={[rD - 0.04, 0.08, 0.012]} />
+                  <meshStandardMaterial color="#9C8A70" roughness={0.75} />
+                </mesh>
+                {/* 西墙踢脚 */}
+                <mesh position={[-rW / 2 + 0.01, 0, 0]} rotation={[0,  Math.PI / 2, 0]}>
+                  <boxGeometry args={[rD - 0.04, 0.08, 0.012]} />
+                  <meshStandardMaterial color="#9C8A70" roughness={0.75} />
+                </mesh>
+              </group>
             )}
             {/* 楼梯间：每层都渲染一套完整楼梯（扶手封在楼板处，无 X 交叉） */}
             {isStair && (
