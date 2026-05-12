@@ -3907,6 +3907,211 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5l. 豪华轿车停在车道上（luxury sedan parked on driveway）──
+           Stylised low-LOD sedan: body + roof cabin + windshields + 4 wheels.
+           Placed centre of driveway, ~1m north of south gate pillars. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        // Car sits on the driveway centreline (x = gateX2 from section 5d).
+        // We don't have gateX2 in scope here, so we replicate the logic:
+        const gateX2L  = 0;           // gate centred on X=0
+        const carZ     = -D / 2 - 7.80;  // between building and gate
+
+        const isNightL  = sunHour < 6 || sunHour > 20;
+        const isDuskL   = !isNightL && (sunHour < 8 || sunHour > 18);
+
+        // Car body colours — deep obsidian black
+        const bodyCol   = "#1A1C22";
+        const glassCol  = "#4A6880";
+        const wheelCol  = "#111318";
+        const rimCol    = "#B0B8C8";
+
+        // Headlights / tail lights — time-aware
+        const headEmi   = isNightL ? 5.0 : isDuskL ? 2.5 : 0.0;
+        const tailEmi   = isNightL ? 4.0 : isDuskL ? 2.0 : 0.0;
+        const headLI    = isNightL ? 6.0 : isDuskL ? 3.0 : 0.0;
+        const tailLI    = isNightL ? 2.0 : isDuskL ? 1.0 : 0.0;
+
+        // Dimensions (metres)
+        const cL = 4.60;   // car length (Z axis)
+        const cW = 1.90;   // car width  (X axis)
+        const cH = 0.52;   // body sill-to-shoulder height
+        const cG = 0.22;   // ground clearance
+        const roofH = 0.58; // roof cabin height above shoulder
+        const roofL = 2.20; // roof cabin length
+
+        return (
+          <group position={[gateX2L, 0, carZ]}>
+            {/* Main body — lower slab */}
+            <mesh position={[0, cG + cH / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[cW, cH, cL]} />
+              <meshStandardMaterial color={bodyCol} roughness={0.18} metalness={0.88} envMapIntensity={3.0} />
+            </mesh>
+            {/* Roof cabin (slightly narrower, centred longitudinally) */}
+            <mesh position={[0, cG + cH + roofH / 2, -0.10]} castShadow>
+              <boxGeometry args={[cW - 0.14, roofH, roofL]} />
+              <meshStandardMaterial color={bodyCol} roughness={0.16} metalness={0.90} envMapIntensity={3.2} />
+            </mesh>
+            {/* Windshield — front */}
+            <mesh position={[0, cG + cH + roofH * 0.42, roofL / 2 + 0.06]} rotation={[Math.PI * 0.20, 0, 0]}>
+              <boxGeometry args={[cW - 0.20, roofH * 0.80, 0.015]} />
+              <meshStandardMaterial color={glassCol} transparent opacity={0.55} roughness={0.04} metalness={0.30} envMapIntensity={4.0} />
+            </mesh>
+            {/* Rear window */}
+            <mesh position={[0, cG + cH + roofH * 0.42, -roofL / 2 - 0.06]} rotation={[-Math.PI * 0.18, 0, 0]}>
+              <boxGeometry args={[cW - 0.20, roofH * 0.78, 0.015]} />
+              <meshStandardMaterial color={glassCol} transparent opacity={0.55} roughness={0.04} metalness={0.30} envMapIntensity={4.0} />
+            </mesh>
+            {/* Side windows (left & right) */}
+            {([-1, 1] as number[]).map(sx => (
+              <mesh key={sx} position={[sx * (cW / 2 - 0.008), cG + cH + roofH * 0.50, -0.10]} rotation={[0, 0, 0]}>
+                <boxGeometry args={[0.012, roofH * 0.72, roofL - 0.30]} />
+                <meshStandardMaterial color={glassCol} transparent opacity={0.52} roughness={0.04} metalness={0.30} envMapIntensity={3.5} />
+              </mesh>
+            ))}
+            {/* Front bumper / fascia */}
+            <mesh position={[0, cG + cH * 0.40, cL / 2 + 0.04]}>
+              <boxGeometry args={[cW + 0.06, cH * 0.60, 0.09]} />
+              <meshStandardMaterial color="#202228" roughness={0.55} metalness={0.30} />
+            </mesh>
+            {/* Rear bumper */}
+            <mesh position={[0, cG + cH * 0.40, -cL / 2 - 0.04]}>
+              <boxGeometry args={[cW + 0.06, cH * 0.55, 0.09]} />
+              <meshStandardMaterial color="#202228" roughness={0.55} metalness={0.30} />
+            </mesh>
+            {/* Headlights (two narrow strips) */}
+            {([-0.55, 0.55] as number[]).map((hx, hi) => (
+              <group key={hi} position={[hx, cG + cH * 0.65, cL / 2 + 0.06]}>
+                <mesh>
+                  <boxGeometry args={[0.38, 0.07, 0.015]} />
+                  <meshStandardMaterial color="#FFFFFF" emissive="#EEEEFF" emissiveIntensity={headEmi} roughness={0.04} metalness={0.10} />
+                </mesh>
+                {headLI > 0 && <pointLight intensity={headLI} distance={8.0} decay={2.0} color="#FFF8F0" position={[0, 0, 0.2]} />}
+              </group>
+            ))}
+            {/* DRL strips just above headlights */}
+            {([-0.55, 0.55] as number[]).map((hx, hi) => (
+              <mesh key={`drl-${hi}`} position={[hx, cG + cH * 0.76, cL / 2 + 0.055]}>
+                <boxGeometry args={[0.38, 0.025, 0.012]} />
+                <meshStandardMaterial color="#E0F4FF" emissive="#C0E8FF" emissiveIntensity={isNightL || isDuskL ? 3.0 : 0.8} roughness={0.05} />
+              </mesh>
+            ))}
+            {/* Tail lights (red strips) */}
+            {([-0.55, 0.55] as number[]).map((tx, ti) => (
+              <group key={`tail-${ti}`} position={[tx, cG + cH * 0.62, -cL / 2 - 0.04]}>
+                <mesh>
+                  <boxGeometry args={[0.36, 0.065, 0.012]} />
+                  <meshStandardMaterial color="#FF2020" emissive="#FF1010" emissiveIntensity={tailEmi} roughness={0.08} metalness={0.05} />
+                </mesh>
+                {tailLI > 0 && <pointLight intensity={tailLI} distance={4.0} decay={2.5} color="#FF2020" position={[0, 0, -0.1]} />}
+              </group>
+            ))}
+            {/* Wheels (4 corners) — flat cylinders rotated to horizontal */}
+            {([
+              [ cW / 2 + 0.04, cG,  cL * 0.30],
+              [-cW / 2 - 0.04, cG,  cL * 0.30],
+              [ cW / 2 + 0.04, cG, -cL * 0.30],
+              [-cW / 2 - 0.04, cG, -cL * 0.30],
+            ] as [number,number,number][]).map(([wx, wy, wz], wi) => (
+              <group key={`wheel-${wi}`} position={[wx, wy, wz]} rotation={[0, 0, Math.PI / 2]}>
+                {/* Tyre */}
+                <mesh castShadow>
+                  <cylinderGeometry args={[0.33, 0.33, 0.24, 20]} />
+                  <meshStandardMaterial color={wheelCol} roughness={0.88} metalness={0.04} />
+                </mesh>
+                {/* Alloy rim */}
+                <mesh position={[0, 0.08, 0]}>
+                  <cylinderGeometry args={[0.24, 0.24, 0.02, 16]} />
+                  <meshStandardMaterial color={rimCol} roughness={0.18} metalness={0.92} envMapIntensity={2.5} />
+                </mesh>
+                {/* Hub cap centre */}
+                <mesh position={[0, 0.10, 0]}>
+                  <cylinderGeometry args={[0.06, 0.06, 0.015, 12]} />
+                  <meshStandardMaterial color={bodyCol} roughness={0.20} metalness={0.88} />
+                </mesh>
+                {/* 5 spoke shadow */}
+                {Array.from({ length: 5 }, (_, si) => {
+                  const a = (si / 5) * Math.PI * 2;
+                  return (
+                    <mesh key={si} position={[Math.sin(a) * 0.14, 0.09, Math.cos(a) * 0.14]}>
+                      <boxGeometry args={[0.038, 0.018, 0.12]} />
+                      <meshStandardMaterial color={rimCol} roughness={0.20} metalness={0.90} />
+                    </mesh>
+                  );
+                })}
+              </group>
+            ))}
+            {/* Side door handle strips — thin chrome bars */}
+            {([-1, 1] as number[]).map(sx => (
+              <group key={`handle-${sx}`}>
+                {/* Front door handle */}
+                <mesh position={[sx * (cW / 2 + 0.005), cG + cH * 0.75, cL * 0.17]}>
+                  <boxGeometry args={[0.012, 0.022, 0.12]} />
+                  <meshStandardMaterial color="#C8D0D8" roughness={0.12} metalness={0.96} envMapIntensity={3.0} />
+                </mesh>
+                {/* Rear door handle */}
+                <mesh position={[sx * (cW / 2 + 0.005), cG + cH * 0.75, -cL * 0.10]}>
+                  <boxGeometry args={[0.012, 0.022, 0.12]} />
+                  <meshStandardMaterial color="#C8D0D8" roughness={0.12} metalness={0.96} envMapIntensity={3.0} />
+                </mesh>
+              </group>
+            ))}
+            {/* Roof aerial — thin post */}
+            <mesh position={[-0.55, cG + cH + roofH + 0.22, -0.30]}>
+              <cylinderGeometry args={[0.008, 0.008, 0.44, 4]} />
+              <meshStandardMaterial color="#303035" roughness={0.55} metalness={0.60} />
+            </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── 5m. 外立面上打灯（ground-up facade spotlights on south face）──
+           4 in-ground uplighters wash the south facade from below.
+           Only visible / active in exterior mode. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const isNightM  = sunHour < 6 || sunHour > 20;
+        const isDuskM   = !isNightM && (sunHour < 8 || sunHour > 18);
+        const uplightEmi = isNightM ? 3.2 : isDuskM ? 1.8 : 0.5;
+        const uplightLI  = isNightM ? 8.0 : isDuskM ? 4.5 : 0.0;
+        const faceZ      = -D / 2 - 0.12;  // just south of south facade
+        const count      = 4;
+        const step       = (W - 1.20) / (count - 1);
+        return (
+          <group>
+            {Array.from({ length: count }, (_, ui) => {
+              const ux = -W / 2 + 0.60 + ui * step;
+              return (
+                <group key={ui} position={[ux, 0.01, faceZ - 0.28]}>
+                  {/* Ground housing — dark steel disc */}
+                  <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[0.090, 0.095, 0.025, 12]} />
+                    <meshStandardMaterial color="#282830" roughness={0.40} metalness={0.80} />
+                  </mesh>
+                  {/* Frosted lens — warm white emissive */}
+                  <mesh position={[0, 0.014, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[0.070, 0.070, 0.008, 12]} />
+                    <meshStandardMaterial color="#FFF8F0" emissive="#FFF4E0" emissiveIntensity={uplightEmi} roughness={0.60} />
+                  </mesh>
+                  {/* SpotLight shining up toward facade */}
+                  {uplightLI > 0 && (
+                    <spotLight
+                      position={[0, 0.02, 0]}
+                      target-position={[0, totalH * 0.60, 0.50]}
+                      intensity={uplightLI}
+                      angle={0.38}
+                      penumbra={0.55}
+                      distance={totalH + 4}
+                      decay={1.8}
+                      color="#FFF6E8"
+                      castShadow={false}
+                    />
+                  )}
+                </group>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 6a. 走廊地板（铺满整层，楼梯间开口处挖空）── */}
       {insideBuilding && Array.from({ length: floorCount }, (_, fi) => {
         const fp = floorPlans[fi];
