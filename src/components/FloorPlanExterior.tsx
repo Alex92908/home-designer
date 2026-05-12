@@ -3249,6 +3249,172 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5i. 泳池边室外淋浴（outdoor shower post near pool）── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const poolW3 = Math.min(W * 0.72, 10.0);
+        const pz3    = -D / 2 - 5.80;
+        const showerX = -poolW3 / 2 - 0.85;   // west side of pool deck
+        const showerZ = pz3 - 0.60;            // north of pool
+        const postH   = 2.30;
+        const isNightS = sunHour < 6 || sunHour > 20;
+        const isDuskS  = !isNightS && (sunHour < 8 || sunHour > 18);
+        return (
+          <group position={[showerX, 0, showerZ]}>
+            {/* Base slab — circular terrazzo */}
+            <mesh position={[0, 0.020, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[0.55, 12]} />
+              <meshStandardMaterial color="#D4CEC0" roughness={0.60} metalness={0.04} />
+            </mesh>
+            {/* Post — brushed stainless */}
+            <mesh position={[0, postH / 2, 0]} castShadow>
+              <cylinderGeometry args={[0.028, 0.032, postH, 8]} />
+              <meshStandardMaterial color="#B8C4CC" roughness={0.18} metalness={0.92} envMapIntensity={2.4} />
+            </mesh>
+            {/* Horizontal arm */}
+            <mesh position={[0.28, postH - 0.04, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.016, 0.016, 0.56, 8]} />
+              <meshStandardMaterial color="#B8C4CC" roughness={0.18} metalness={0.92} />
+            </mesh>
+            {/* Shower head — round disc */}
+            <mesh position={[0.56, postH - 0.04, 0]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.090, 0.090, 0.028, 12]} />
+              <meshStandardMaterial color="#C0C8D0" roughness={0.20} metalness={0.86} envMapIntensity={2.0} />
+            </mesh>
+            {/* Shower head perforations — small dark dots */}
+            {Array.from({ length: 6 }, (_, si) => {
+              const sa = (si / 6) * Math.PI * 2;
+              return (
+                <mesh key={si} position={[0.56 + Math.cos(sa) * 0.045, postH - 0.04 - 0.016, Math.sin(sa) * 0.045]}>
+                  <sphereGeometry args={[0.008, 4, 4]} />
+                  <meshStandardMaterial color="#2A3038" roughness={0.5} metalness={0.3} />
+                </mesh>
+              );
+            })}
+            {/* Control valve handle */}
+            <mesh position={[0.14, postH * 0.55, 0.035]}>
+              <boxGeometry args={[0.016, 0.14, 0.016]} />
+              <meshStandardMaterial color="#A8B0B8" roughness={0.22} metalness={0.88} />
+            </mesh>
+            {/* Night / dusk point light (warm glow near shower) */}
+            {(isNightS || isDuskS) && (
+              <pointLight position={[0.3, postH + 0.2, 0]} intensity={isNightS ? 1.5 : 0.8} distance={2.5} decay={2.0} color="#FFF4E0" />
+            )}
+          </group>
+        );
+      })()}
+
+      {/* ── 5j. 东侧露台篝火盆 / 火坑（outdoor fire pit, east terrace）── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const fpX = W / 2 + 0.85;
+        const fpZ = -D / 2 + 2.80;           // south part of east terrace
+        const isNightF = sunHour < 6 || sunHour > 20;
+        const isDuskF  = !isNightF && (sunHour < 8 || sunHour > 18);
+        const fireGlow = isNightF ? 1.0 : isDuskF ? 0.6 : 0.0;
+        return (
+          <group position={[fpX, 0, fpZ]} rotation={[0, -Math.PI / 4, 0]}>
+            {/* Base paving square */}
+            <mesh position={[0, 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[1.80, 1.80]} />
+              <meshStandardMaterial color="#D0C8B4" roughness={0.78} metalness={0.02} />
+            </mesh>
+            {/* Fire bowl — dark weathering steel ring */}
+            <mesh position={[0, 0.22, 0]}>
+              <cylinderGeometry args={[0.36, 0.30, 0.44, 14, 1, true]} />
+              <meshStandardMaterial color="#3A2820" roughness={0.72} metalness={0.28} side={THREE.DoubleSide} />
+            </mesh>
+            {/* Bowl base rim */}
+            <mesh position={[0, 0.010, 0]}>
+              <cylinderGeometry args={[0.32, 0.32, 0.020, 14]} />
+              <meshStandardMaterial color="#2E2018" roughness={0.68} metalness={0.32} />
+            </mesh>
+            {/* Bowl top rim */}
+            <mesh position={[0, 0.450, 0]}>
+              <torusGeometry args={[0.36, 0.022, 6, 14]} />
+              <meshStandardMaterial color="#282010" roughness={0.60} metalness={0.40} />
+            </mesh>
+            {/* Fire embers base */}
+            <mesh position={[0, 0.26, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[0.26, 12]} />
+              <meshStandardMaterial
+                color="#FF4800"
+                emissive="#FF3000"
+                emissiveIntensity={fireGlow > 0 ? 2.8 : 0.1}
+                roughness={0.95}
+              />
+            </mesh>
+            {/* Flame logs — crossed cylinders */}
+            {([0, Math.PI / 3, -Math.PI / 3] as number[]).map((fa, fi2) => (
+              <mesh key={fi2} position={[0, 0.24, 0]} rotation={[Math.PI / 2, 0, fa]} castShadow>
+                <cylinderGeometry args={[0.030, 0.038, 0.44, 6]} />
+                <meshStandardMaterial color="#2C1A10" roughness={0.90} metalness={0.02} />
+              </mesh>
+            ))}
+            {/* Flame light — orange point light at night / dusk */}
+            {fireGlow > 0 && (
+              <pointLight position={[0, 0.70, 0]} intensity={fireGlow * 8} distance={4.5} decay={1.8} color="#FF8020" castShadow={false} />
+            )}
+            {/* 4 surrounding seats — stone benches */}
+            {([0, Math.PI / 2, Math.PI, -Math.PI / 2] as number[]).map((sa, si) => (
+              <group key={si} position={[Math.sin(sa) * 0.85, 0, Math.cos(sa) * 0.85]} rotation={[0, sa, 0]}>
+                <mesh position={[0, 0.36, 0]} castShadow>
+                  <boxGeometry args={[0.44, 0.10, 0.38]} />
+                  <meshStandardMaterial color="#B8B0A0" roughness={0.84} metalness={0.03} />
+                </mesh>
+                {/* Seat legs */}
+                {([-0.16, 0.16] as number[]).map((slx, sli) => (
+                  <mesh key={sli} position={[slx, 0.16, 0]} castShadow>
+                    <boxGeometry args={[0.070, 0.32, 0.34]} />
+                    <meshStandardMaterial color="#AEA898" roughness={0.86} metalness={0.02} />
+                  </mesh>
+                ))}
+              </group>
+            ))}
+          </group>
+        );
+      })()}
+
+      {/* ── 5k. 雨棚玻璃顶（canopy glazing panel upgrade）── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const canopyW3 = Math.min(W * 0.62, 8.0);
+        const canopyD3 = 2.0;
+        const canopyY3 = FLOOR_H - 0.02;
+        const southFaceZ3 = -D / 2 - 0.20;
+        const canopyZ3 = southFaceZ3 - canopyD3 / 2;
+        // Translucent polycarbonate panel between the columns — 3 panels with thin mullions
+        const panelCount = 3;
+        const panelW3 = (canopyW3 - 0.10) / panelCount;
+        return (
+          <group>
+            {Array.from({ length: panelCount }, (_, pi) => {
+              const px3 = -canopyW3 / 2 + 0.05 + (pi + 0.5) * panelW3;
+              return (
+                <group key={pi} position={[px3, canopyY3 + 0.048, canopyZ3]}>
+                  {/* Polycarbonate glazing panel */}
+                  <mesh renderOrder={10}>
+                    <boxGeometry args={[panelW3 - 0.025, 0.010, canopyD3 - 0.04]} />
+                    <meshStandardMaterial
+                      color="#DDEEF5"
+                      transparent opacity={0.38}
+                      depthWrite={false}
+                      roughness={0.04}
+                      metalness={0.10}
+                      envMapIntensity={3.5}
+                      side={THREE.DoubleSide}
+                      {...overlayMaterialProps(2)}
+                    />
+                  </mesh>
+                  {/* Vertical mullion at right edge */}
+                  <mesh position={[panelW3 / 2 - 0.012, 0, 0]}>
+                    <boxGeometry args={[0.024, 0.020, canopyD3 - 0.04]} />
+                    <meshStandardMaterial color="#1E2028" roughness={0.20} metalness={0.90} envMapIntensity={2.2} />
+                  </mesh>
+                </group>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 6a. 走廊地板（铺满整层，楼梯间开口处挖空）── */}
       {insideBuilding && Array.from({ length: floorCount }, (_, fi) => {
         const fp = floorPlans[fi];
