@@ -2001,6 +2001,94 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 入口大型装饰花盆（entry plaza ornamental urns）——
+               台阶顶端两侧各一只黑花岗岩大盆，搭配修剪球形灌木 ── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const southFaceZ6 = -D / 2 - 0.20;
+        const stepW6 = Math.min(W * 0.50, 5.5);
+        const urnX   = stepW6 / 2 + 0.55;
+        const urnZ   = southFaceZ6 + 0.05;   // level with building face
+        const urnY   = 3 * 0.14;              // top of 3 steps
+        return (
+          <group>
+            {([-urnX, urnX] as number[]).map((ux, ui) => (
+              <group key={ui} position={[ux, urnY, urnZ]}>
+                {/* Pedestal base */}
+                <mesh position={[0, 0.06, 0]} castShadow>
+                  <boxGeometry args={[0.36, 0.12, 0.36]} />
+                  <meshStandardMaterial color="#1A1C22" roughness={0.42} metalness={0.28} envMapIntensity={1.4} />
+                </mesh>
+                {/* Urn body — tapered cylinder */}
+                <mesh position={[0, 0.40, 0]} castShadow>
+                  <cylinderGeometry args={[0.22, 0.14, 0.56, 10]} />
+                  <meshStandardMaterial color="#222428" roughness={0.40} metalness={0.30} envMapIntensity={1.2} />
+                </mesh>
+                {/* Rim flange */}
+                <mesh position={[0, 0.70, 0]}>
+                  <cylinderGeometry args={[0.25, 0.22, 0.040, 10]} />
+                  <meshStandardMaterial color="#1A1C22" roughness={0.38} metalness={0.32} />
+                </mesh>
+                {/* Soil */}
+                <mesh position={[0, 0.72, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <circleGeometry args={[0.22, 10]} />
+                  <meshStandardMaterial color="#2A1A0E" roughness={0.98} />
+                </mesh>
+                {/* Main shrub globe */}
+                <mesh position={[0, 1.04, 0]} castShadow>
+                  <sphereGeometry args={[0.26, 10, 8]} />
+                  <meshStandardMaterial color="#2A5C1E" roughness={0.96} metalness={0.01} />
+                </mesh>
+                {/* Small accent cluster */}
+                <mesh position={[ui === 0 ? 0.14 : -0.14, 0.94, 0.08]} castShadow>
+                  <sphereGeometry args={[0.16, 8, 6]} />
+                  <meshStandardMaterial color="#1E4A14" roughness={0.97} />
+                </mesh>
+              </group>
+            ))}
+          </group>
+        );
+      })()}
+
+      {/* ── 车道边缘低矮灯柱（driveway side bollards）——
+               从大门向建筑入口沿车道两侧布置，每侧 4 盏，时间感知 ── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bndS7   = -D / 2 - 11.50;
+        const gateW7  = Math.min(W * 0.30, 3.8);
+        const driveZ1 = bndS7 + 0.5;             // near gate
+        const driveZ2 = -D / 2 - 3.0;            // near building steps
+        const bollardCount = 4;
+        const bollardH7 = 0.60;
+        const bxOffset  = gateW7 + 0.45;         // lateral offset from centre line
+        const isNight7  = sunHour < 6 || sunHour > 20;
+        const isDusk7   = !isNight7 && (sunHour < 8 || sunHour > 18);
+        const bEmi7 = isNight7 ? 3.0 : isDusk7 ? 1.8 : 0.2;
+        const bLI7  = isNight7 ? 2.5 : isDusk7 ? 1.2 : 0.0;
+        return (
+          <group>
+            {Array.from({ length: bollardCount }, (_, bi) => {
+              const bz = driveZ1 + bi * (driveZ2 - driveZ1) / (bollardCount - 1);
+              return ([-bxOffset, bxOffset] as number[]).map((bx, side) => (
+                <group key={`drv-${bi}-${side}`} position={[bx, 0, bz]}>
+                  {/* Bollard post */}
+                  <mesh position={[0, bollardH7 / 2, 0]} castShadow>
+                    <cylinderGeometry args={[0.030, 0.034, bollardH7, 8]} />
+                    <meshStandardMaterial color="#3A3E48" roughness={0.30} metalness={0.78} envMapIntensity={1.4} />
+                  </mesh>
+                  {/* Bollard cap + diffuser */}
+                  <mesh position={[0, bollardH7 + 0.038, 0]}>
+                    <cylinderGeometry args={[0.058, 0.048, 0.076, 8]} />
+                    <meshStandardMaterial color="#D8E2EA" emissive="#FFF4D8" emissiveIntensity={bEmi7} roughness={0.48} />
+                  </mesh>
+                  {bLI7 > 0 && (
+                    <pointLight position={[0, bollardH7 + 0.05, 0]} intensity={bLI7} distance={2.2} decay={2.2} color="#FFF2E0" />
+                  )}
+                </group>
+              ));
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 外墙壁灯（南立面）—— 每层 2 盏，对称布置，随时间调光 ── */}
       {!insideBuilding && isGlassVilla && (() => {
         const isNight2 = sunHour < 6 || sunHour > 20;
