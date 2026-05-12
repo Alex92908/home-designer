@@ -4740,6 +4740,108 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5e-1c. 北庭院锦鲤池（koi pond, north-east garden）──
+           Oval stone-edged koi pond with lily pads and orange/white fish
+           silhouettes visible through the water. Night: blue LED glow. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const kpX = W * 0.28;
+        const kpZ = D / 2 + 2.10;
+        const kpRX = 1.10;   // pond radius X (east-west)
+        const kpRZ = 0.72;   // pond radius Z (north-south)
+        const kpDp = 0.32;   // pond depth
+        const kpY  = 0;
+        const isNightK = sunHour < 6 || sunHour > 20;
+        const isDuskK  = !isNightK && (sunHour < 8 || sunHour > 18);
+        const kpGlowI  = isNightK ? 1.6 : isDuskK ? 0.7 : 0.04;
+        const kpLI     = isNightK ? 2.8 : isDuskK ? 1.2 : 0.0;
+        return (
+          <group position={[kpX, kpY, kpZ]}>
+            {/* Paving surround disc */}
+            <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[(kpRX + 0.55) * 2, (kpRZ + 0.55) * 2]} />
+              <meshStandardMaterial color="#C8C0A8" roughness={0.74} metalness={0.02} />
+            </mesh>
+            {/* Stone coping rim — slightly elliptical approximated with a torus-like shape */}
+            <mesh position={[0, kpDp / 2, 0]}>
+              <torusGeometry args={[Math.max(kpRX, kpRZ) * 0.97, 0.09, 6, 18]} />
+              <meshStandardMaterial color="#D4CEC0" roughness={0.68} metalness={0.02} />
+            </mesh>
+            {/* Pond basin — deep dark green pool */}
+            <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[kpRX * 1.80, kpRZ * 1.80]} />
+              <meshStandardMaterial color="#1A2818" roughness={0.60} metalness={0.10} />
+            </mesh>
+            {/* Water surface — translucent dark green-blue */}
+            <mesh position={[0, kpDp - 0.022, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={12}>
+              <planeGeometry args={[kpRX * 1.78, kpRZ * 1.78]} />
+              <meshStandardMaterial
+                color="#2A6040"
+                transparent opacity={0.80}
+                roughness={0.03} metalness={0.08}
+                envMapIntensity={4.5}
+                emissive="#1A5030" emissiveIntensity={kpGlowI * 0.6}
+                depthWrite={false}
+              />
+            </mesh>
+            {/* Lily pads — 5 flat green discs floating */}
+            {([[-0.40, -0.10], [0.20, 0.15], [-0.10, 0.22], [0.42, -0.08], [-0.55, 0.08]] as [number,number][]).map(([lx, lz], li) => (
+              <mesh key={li} position={[lx, kpDp - 0.010, lz]} rotation={[-Math.PI / 2, 0, li * 0.8]}>
+                <circleGeometry args={[0.095 + (li % 3) * 0.030, 10]} />
+                <meshStandardMaterial color={li % 2 === 0 ? "#2E6820" : "#3A7828"} roughness={0.94} />
+              </mesh>
+            ))}
+            {/* Lily flowers (2) — small white/pink cones above water */}
+            {([[0.22, 0.15, "#F5E8E0"], [-0.10, 0.22, "#FFD0D0"]] as [number, number, string][]).map(([lx, lz, col], li) => (
+              <mesh key={li} position={[lx, kpDp + 0.030, lz]}>
+                <coneGeometry args={[0.030, 0.055, 6]} />
+                <meshStandardMaterial color={col} roughness={0.90} />
+              </mesh>
+            ))}
+            {/* Koi fish silhouettes — flat elongated ovals just below surface */}
+            {([[-0.20, 0.05, "#E85020", 0.40], [0.30, -0.05, "#F8F8F8", 0.30], [-0.45, -0.12, "#E87030", 0.36]] as [number,number,string,number][]).map(([fx, fz, fc, fr], fi) => (
+              <mesh key={fi} position={[fx, kpDp - 0.040, fz]} rotation={[-Math.PI / 2, 0, fi * 1.0]}>
+                <planeGeometry args={[fr, fr * 0.38]} />
+                <meshStandardMaterial color={fc} transparent opacity={0.70} roughness={0.55} />
+              </mesh>
+            ))}
+            {/* Underwater LED glow */}
+            {kpLI > 0 && (
+              <pointLight position={[0, 0.04, 0]} intensity={kpLI} distance={kpRX * 2.5} decay={2.0} color="#20A060" castShadow={false} />
+            )}
+          </group>
+        );
+      })()}
+
+      {/* ── 5e-1d. 西侧界墙爬墙月季（climbing roses on west boundary wall）──
+           Similar to bougainvillea on east wall but red/pink climbing roses
+           for variety. Adds symmetry and lush organic texture. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bndW6 = -W / 2 - 4.50;
+        const wallH6 = 0.88;
+        const wallT6 = 0.18;
+        const wallX6 = bndW6 + wallT6 / 2;
+        const vineLen6 = (D + 7.20) * 0.55;
+        const vineBottom6 = wallH6 * 0.15;
+        return (
+          <group>
+            {Array.from({ length: 20 }, (_, vi) => {
+              const vHash = (vi * 19 + 11) % 17;
+              const vy = vineBottom6 + (vi / 19) * vineLen6;
+              const vz = -D / 2 - 2.50 + (vHash % 9) * 0.60;
+              const vx = wallX6 + wallT6 / 2 + 0.01 + (vHash % 3) * 0.085;
+              const vr = 0.14 + (vHash % 4) * 0.050;
+              const vCol = vHash % 5 === 0 ? "#2A6018" : vHash % 5 === 1 ? "#C01840" : vHash % 5 === 2 ? "#D83060" : vHash % 5 === 3 ? "#E04070" : "#C83050";
+              return (
+                <mesh key={vi} position={[vx, vy, vz]}>
+                  <sphereGeometry args={[vr, 7, 5]} />
+                  <meshStandardMaterial color={vCol} roughness={0.95} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5e-2. 旗杆（flagpole, NE corner of boundary）──
            Stainless steel tapered pole, 8m tall. Flag represented as a
            flat rectangle with subtle drape offset at the fly end. */}
