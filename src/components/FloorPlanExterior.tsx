@@ -1182,6 +1182,93 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
         );
       })()}
 
+      {/* ── 太阳能热水器真空管集热器（solar thermal vacuum-tube collector array）──
+           Tilted south at 35° for optimal thermal gain.  Placed east quadrant
+           of roof, clear of PV panels, helipad, and pergola.
+           Each collector: aluminium header manifold + 12 borosilicate vacuum
+           tubes with selective absorber inner coating (deep blue). */}
+      {(() => {
+        const tcX    =  W * 0.38;         // east side of roof
+        const tcZ    =  D * 0.08;         // slightly north of centre
+        const tcY    =  roofSlab + 0.05;
+        const tilt   =  0.61;             // ≈ 35° south-facing tilt
+        const nCollectors = 2;            // two side-by-side banks
+        const tubeCount   = 12;
+        const tubeR   = 0.035;            // tube outer radius (m)
+        const tubeL   = 1.80;             // tube length (m)
+        const tubeGap = 0.065;            // centre-to-centre spacing
+        const bankW   = tubeCount * tubeGap;
+
+        return Array.from({ length: nCollectors }, (_, ci) => {
+          const bx = tcX + (ci - 0.5) * (bankW + 0.18);
+          return (
+            <group key={`stc-${ci}`} position={[bx, tcY, tcZ]} rotation={[tilt, 0, 0]}>
+              {/* ── Mounting frame — two aluminium crossbars ── */}
+              {[-tubeL * 0.28, tubeL * 0.28].map((fz, fi) => (
+                <mesh key={fi} position={[0, 0, fz]} castShadow>
+                  <boxGeometry args={[bankW + 0.08, 0.040, 0.035]} />
+                  <meshStandardMaterial color="#B0B8C0" roughness={0.28} metalness={0.75} />
+                </mesh>
+              ))}
+              {/* ── Header manifold (top connection pipe) ── */}
+              <mesh position={[0, tubeL * 0.38, 0]} castShadow>
+                <boxGeometry args={[bankW + 0.06, 0.080, 0.080]} />
+                <meshStandardMaterial color="#8892A0" roughness={0.35} metalness={0.68} />
+              </mesh>
+              {/* ── End cap covers ── */}
+              {[-bankW / 2 - 0.025, bankW / 2 + 0.025].map((ex, ei) => (
+                <mesh key={ei} position={[ex, tubeL * 0.38, 0]}>
+                  <boxGeometry args={[0.04, 0.09, 0.09]} />
+                  <meshStandardMaterial color="#606870" roughness={0.40} metalness={0.55} />
+                </mesh>
+              ))}
+              {/* ── Vacuum tubes ── */}
+              {Array.from({ length: tubeCount }, (_, ti) => {
+                const tx = -bankW / 2 + ti * tubeGap + tubeGap / 2;
+                return (
+                  <group key={`tube-${ti}`} position={[tx, 0, 0]}>
+                    {/* Outer borosilicate glass tube — pale blue-grey */}
+                    <mesh castShadow>
+                      <cylinderGeometry args={[tubeR, tubeR, tubeL, 10]} />
+                      <meshPhysicalMaterial
+                        color="#C8D8E4"
+                        transparent
+                        opacity={0.55}
+                        roughness={0.04}
+                        metalness={0.05}
+                        transmission={0.30}
+                        side={2}
+                      />
+                    </mesh>
+                    {/* Inner absorber tube — selective black/dark-blue coating */}
+                    <mesh>
+                      <cylinderGeometry args={[tubeR * 0.55, tubeR * 0.55, tubeL - 0.02, 10]} />
+                      <meshStandardMaterial
+                        color="#142030"
+                        roughness={0.18}
+                        metalness={0.55}
+                        emissive="#0A1820"
+                        emissiveIntensity={0.10}
+                      />
+                    </mesh>
+                    {/* Copper heat-pipe tip stub at top */}
+                    <mesh position={[0, tubeL / 2 - 0.015, 0]}>
+                      <cylinderGeometry args={[0.010, 0.010, 0.06, 6]} />
+                      <meshStandardMaterial color="#C87844" roughness={0.40} metalness={0.70} />
+                    </mesh>
+                  </group>
+                );
+              })}
+              {/* ── Insulated return pipe running down from manifold ── */}
+              <mesh position={[bankW / 2 - 0.03, tubeL * 0.10, -0.055]} castShadow>
+                <cylinderGeometry args={[0.022, 0.022, tubeL * 0.58, 6]} />
+                <meshStandardMaterial color="#404850" roughness={0.60} metalness={0.20} />
+              </mesh>
+            </group>
+          );
+        });
+      })()}
+
       {/* ── 屋顶直升机停机坪标志（helipad markings）──
            Painted on west-south quadrant of roof, away from HVAC / solar.
            Standard ICAO visual: white outer circle, yellow "H" lettering,
