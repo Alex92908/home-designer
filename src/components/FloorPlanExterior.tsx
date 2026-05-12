@@ -876,10 +876,10 @@ export default function FloorPlanBuilding({
 
   return (
     <group>
-      {/* 地面基座 */}
+      {/* 地面基座 — 浅色石灰石平台（建筑基层）*/}
       <mesh position={[0, -0.04, 0]} receiveShadow>
         <boxGeometry args={[W + 0.40, 0.08, D + 0.40]} />
-        <meshStandardMaterial color="#D0C8B4" roughness={0.90} />
+        <meshStandardMaterial color="#D8D0C0" roughness={0.88} metalness={0.01} />
       </mesh>
       {/* 建筑基座压脚（深色混凝土踢脚，让建筑稳稳落地）*/}
       {!insideBuilding && (
@@ -921,6 +921,33 @@ export default function FloorPlanBuilding({
           </group>
         );
       })()}
+
+      {/* ── 外墙壁灯（南立面）—— 每层 2 盏，对称布置 ── */}
+      {!insideBuilding && isGlassVilla && Array.from({ length: usedFloors }, (_, fi) => {
+        const wallY  = fi * (FLOOR_H + SLAB_T) + 2.2;  // 灯安装高度（距楼层地面2.2m）
+        const wallZ  = -D / 2 - 0.18;   // 紧贴南立面
+        const lampX1 = -W * 0.28;
+        const lampX2 =  W * 0.28;
+        const sconceColor = "#E8E0C0";
+        const lightIntensity = 2.5;
+        const lightDist = 4.0;
+        return [lampX1, lampX2].map((lx, li) => (
+          <group key={`sconce-${fi}-${li}`} position={[lx, wallY, wallZ]}>
+            {/* 壁灯托架（细矩形）*/}
+            <mesh>
+              <boxGeometry args={[0.06, 0.06, 0.14]} />
+              <meshStandardMaterial color="#282830" roughness={0.30} metalness={0.88} />
+            </mesh>
+            {/* 灯头（发光方盒）*/}
+            <mesh position={[0, 0, -0.10]}>
+              <boxGeometry args={[0.10, 0.10, 0.08]} />
+              <meshStandardMaterial color={sconceColor} emissive="#FFE4A0" emissiveIntensity={2.8} roughness={0.40} />
+            </mesh>
+            {/* 点光源 */}
+            <pointLight position={[0, -0.05, -0.22]} intensity={lightIntensity} distance={lightDist} decay={2} color="#FFF0D0" />
+          </group>
+        ));
+      })}
 
       {/* ── 1. 每层背景填充板（消除房间间微小缝隙，视觉统一） ──
               当本层有任何 "glass" 房间时跳过：这块大背景板会从内部挡住
