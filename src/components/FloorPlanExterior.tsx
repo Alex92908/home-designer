@@ -5878,6 +5878,81 @@ export default function FloorPlanBuilding({
                 </mesh>
               ))}
             </group>
+
+            {/* ── Pool entry steps — NW corner, 3 wide travertine steps ──
+                 Descend from deck level (y=deckT) down to poolDp in 3 equal risers.
+                 Solid stone blocks: visible from above (top step) and when swimming in. */}
+            {Array.from({ length: 3 }, (_, si) => {
+              const stepW  = 1.60;   // E-W width of each step
+              const stepD  = 0.36;   // N-S tread depth of each step
+              const riseH  = (deckT + poolDp) / 3;   // ≈ 0.22m per step
+              const stepsX = -poolW / 2 + stepW / 2;  // NW corner
+              const blockH = (deckT + poolDp) - si * riseH;  // solid height from pool floor
+              const yCtr   = -poolDp + blockH / 2;
+              const zCtr   = -poolL / 2 + (si + 0.5) * stepD;
+              return (
+                <mesh key={`es-${si}`} position={[stepsX, yCtr, zCtr]} castShadow>
+                  <boxGeometry args={[stepW, blockH, stepD]} />
+                  <meshStandardMaterial color={deckLight} roughness={0.62} metalness={0.06} envMapIntensity={0.6} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })()}
+
+      {/* ── 5c-2d. 泳池两侧高柏树（tall cypress trees flanking pool deck）──
+           6 tall slender Italian-cypress-style trees: 3 per side, placed at the
+           east and west ends of the pool deck. Dark green columns frame the pool
+           composition and echo the reference image silhouette. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const poolL_cy = Math.min(D * 0.70, 9.50);
+        const poolW_cy = Math.min(W * 0.78, 11.0);
+        const deckBW_cy = 2.80;
+        const pz_cy = -D / 2 - deckBW_cy - poolL_cy / 2 - 0.80;
+        // Cypress positions: 3 east (x > 0), 3 west (x < 0)
+        // Evenly spaced along pool length, just outside deck edge
+        const deckEdgeX = poolW_cy / 2 + deckBW_cy + 0.55;  // just beyond deck E edge
+        const cypressPositions: Array<[number, number]> = [
+          [ deckEdgeX, pz_cy - poolL_cy * 0.35],
+          [ deckEdgeX, pz_cy],
+          [ deckEdgeX, pz_cy + poolL_cy * 0.30],
+          [-deckEdgeX, pz_cy - poolL_cy * 0.35],
+          [-deckEdgeX, pz_cy],
+          [-deckEdgeX, pz_cy + poolL_cy * 0.30],
+        ];
+        return (
+          <group>
+            {cypressPositions.map(([tx, tz], ti) => {
+              const tHash = (ti * 7 + 3) % 5;
+              const tH = 6.50 + tHash * 0.55;   // 6.5–9m tall
+              const tR = 0.34 + tHash * 0.04;   // canopy radius at widest (≈ 0.38–0.50m)
+              const tSegments = 8;
+              return (
+                <group key={ti} position={[tx, 0, tz]}>
+                  {/* Trunk — very slender dark brown */}
+                  <mesh position={[0, tH * 0.28, 0]} castShadow>
+                    <cylinderGeometry args={[0.055, 0.075, tH * 0.56, 6]} />
+                    <meshStandardMaterial color="#4A3018" roughness={0.88} metalness={0.01} />
+                  </mesh>
+                  {/* Canopy — tall cone representing dense columnar foliage */}
+                  <mesh position={[0, tH * 0.62, 0]} castShadow>
+                    <coneGeometry args={[tR, tH * 0.75, tSegments]} />
+                    <meshStandardMaterial color="#1A4010" roughness={0.97} metalness={0.00} />
+                  </mesh>
+                  {/* Mid-section canopy — slightly wider for realistic silhouette */}
+                  <mesh position={[0, tH * 0.42, 0]}>
+                    <coneGeometry args={[tR * 1.10, tH * 0.40, tSegments]} />
+                    <meshStandardMaterial color="#1E4814" roughness={0.97} metalness={0.00} />
+                  </mesh>
+                  {/* Base foliage skirt */}
+                  <mesh position={[0, tH * 0.08, 0]}>
+                    <coneGeometry args={[tR * 0.80, tH * 0.18, tSegments]} />
+                    <meshStandardMaterial color="#162E0E" roughness={0.97} metalness={0.00} />
+                  </mesh>
+                </group>
+              );
+            })}
           </group>
         );
       })()}
