@@ -343,6 +343,9 @@ export default function FloorPlanAll() {
   const blueprint           = useDesignerStore(s => s.blueprint);
   const setBlueprint        = useDesignerStore(s => s.setBlueprint);
   const yardItems           = useDesignerStore(s => s.floorPlans[s.activeFloor].yardPlan?.items);
+  const updateYardItem      = useDesignerStore(s => s.updateYardItem);
+  // 拖动 yard 物件时记录起始状态（SVG 坐标 + 物件初始 x,z）
+  const yardDragRef         = useRef<{ id: string; sx: number; sy: number; ox: number; oz: number } | null>(null);
   const clearBlueprint      = useDesignerStore(s => s.clearBlueprint);
   // Unified tool state for the All/blueprint canvas:
   //   "browse" — normal (drag rooms, click to edit)
@@ -1026,9 +1029,30 @@ export default function FloorPlanAll() {
 
             {/* 院子物件（背景层）—— singleton/prefab/zone 都按 cm 坐标
                 以房屋中心为原点画在 SVG。原"院子图"tab 已并入这里，
-                缩小就能看到房子周围的整块院子设计。 */}
-            {yardItemSVG.length > 0 && (
-              <g style={{ pointerEvents: "none" }}>
+                缩小就能看到房子周围的整块院子设计。可直接拖动。 */}
+            {yardItemSVG.length > 0 && (() => {
+              const startYardDrag = (e: React.PointerEvent<SVGElement>, id: string, ox: number, oz: number) => {
+                if (!svgRef.current) return;
+                e.stopPropagation();
+                svgRef.current.setPointerCapture(e.pointerId);
+                const pt = getSVGPoint(e, svgRef.current);
+                yardDragRef.current = { id, sx: pt.x, sy: pt.y, ox, oz };
+              };
+              const moveYardDrag = (e: React.PointerEvent<SVGElement>) => {
+                const d = yardDragRef.current;
+                if (!d || !svgRef.current) return;
+                const pt = getSVGPoint(e, svgRef.current);
+                const nx = snap(d.ox + (pt.x - d.sx));
+                const nz = snap(d.oz + (pt.y - d.sy));
+                updateYardItem(d.id, { x: nx, z: nz });
+              };
+              const endYardDrag = () => { yardDragRef.current = null; };
+              return (
+                <g
+                  onPointerMove={moveYardDrag}
+                  onPointerUp={endYardDrag}
+                  onPointerCancel={endYardDrag}
+                >
                 {yardItemSVG.map(it => {
                   if (isYardZone(it)) {
                     // 多边形区域（社交核心区/草坪等）
@@ -1045,6 +1069,8 @@ export default function FloorPlanAll() {
                       <polygon
                         key={`yz-${it.id}`}
                         points={pts}
+                        style={{ cursor: "move", pointerEvents: "auto" }}
+                        onPointerDown={(e) => startYardDrag(e, it.id, it.x, it.z)}
                         fill={fill}
                         fillOpacity={0.18}
                         stroke={fill}
@@ -1077,7 +1103,12 @@ export default function FloorPlanAll() {
                       slat_wall: "▮", fence_segment: "▬", parking_area: "🅿",
                     };
                     return (
-                      <g key={`yp-${it.id}`} transform={`rotate(${((it.rot ?? 0) * 180 / Math.PI)} ${it.svgX} ${it.svgY})`}>
+                      <g
+                        key={`yp-${it.id}`}
+                        transform={`rotate(${((it.rot ?? 0) * 180 / Math.PI)} ${it.svgX} ${it.svgY})`}
+                        style={{ cursor: "move", pointerEvents: "auto" }}
+                        onPointerDown={(e) => startYardDrag(e, it.id, it.x, it.z)}
+                      >
                         <rect
                           x={it.svgX - w / 2}
                           y={it.svgY - h / 2}
@@ -1094,8 +1125,9 @@ export default function FloorPlanAll() {
                           y={it.svgY}
                           textAnchor="middle"
                           dominantBaseline="central"
-                          fontSize={Math.min(w, h) * 0.4}
+                          fontSize={Math.min(80, Math.min(w, h) * 0.18)}
                           fill="#1D4ED8"
+                          style={{ pointerEvents: "none" }}
                         >
                           {labelByKind[it.prefabKind] ?? "▢"}
                         </text>
@@ -1109,7 +1141,11 @@ export default function FloorPlanAll() {
                     const color = asset?.color ?? "#10B981";
                     const icon = asset?.icon ?? "•";
                     return (
-                      <g key={`ys-${it.id}`}>
+                      <g
+                        key={`ys-${it.id}`}
+                        style={{ cursor: "move", pointerEvents: "auto" }}
+                        onPointerDown={(e) => startYardDrag(e, it.id, it.x, it.z)}
+                      >
                         <circle
                           cx={it.svgX}
                           cy={it.svgY}
@@ -1125,7 +1161,8 @@ export default function FloorPlanAll() {
                           y={it.svgY}
                           textAnchor="middle"
                           dominantBaseline="central"
-                          fontSize={Math.max(r * 0.9, 18)}
+                          fontSize={Math.min(r * 0.6, 40)}
+                          style={{ pointerEvents: "none" }}
                         >
                           {icon}
                         </text>
@@ -1134,8 +1171,9 @@ export default function FloorPlanAll() {
                   }
                   return null;
                 })}
-              </g>
-            )}
+                </g>
+              );
+            })()}
 
             {/* Blueprint overlay — behind rooms. Draggable in trace mode. */}
             {blueprint.image && (
