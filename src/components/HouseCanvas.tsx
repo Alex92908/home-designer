@@ -5158,7 +5158,7 @@ function getSkyTheme(hour: number): SkyTheme {
       fillColor: "#9090C8", fillIntensity: 0.32,
       hemiSky: "#D07050", hemiGround: "#503020", hemiIntensity: 0.50,
       ambient: 0.22 + elev * 0.10,
-      fogColor: "#C08060", fogNear: 35, fogFar: 150,
+      fogColor: "#D89868", fogNear: 42, fogFar: 170,  // warm amber haze for dawn
       exposure: 0.92 + p * 0.12,
       hdr: "/hdr/venice_sunset_1k.hdr",
       skyRgb: _lerpRgb([20, 10, 40], [130, 185, 220], p),
@@ -5173,7 +5173,7 @@ function getSkyTheme(hour: number): SkyTheme {
       fillColor: "#8898C0", fillIntensity: 0.38,
       hemiSky: "#C86040", hemiGround: "#503020", hemiIntensity: 0.55,
       ambient: 0.26 + elev * 0.08,
-      fogColor: "#C08050", fogNear: 50, fogFar: 200,
+      fogColor: "#C87840", fogNear: 55, fogFar: 220,  // orange dusk haze
       exposure: 1.06 + (1 - elev) * 0.06,
       hdr: "/hdr/venice_sunset_1k.hdr",
       skyRgb: _lerpRgb([78, 145, 216], [20, 15, 40], p),
@@ -5187,7 +5187,7 @@ function getSkyTheme(hour: number): SkyTheme {
     fillColor: "#C8E0F8", fillIntensity: 0.45 + elev * 0.12,
     hemiSky: "#C8DDEF", hemiGround: "#A8A070", hemiIntensity: 0.58 + elev * 0.10,
     ambient: 0.28 + elev * 0.10,
-    fogColor: "#4E8FCC", fogNear: 28, fogFar: 90,
+    fogColor: "#B8CCE4", fogNear: 42, fogFar: 130,  // lighter haze matches Preetham horizon
     exposure: 1.02 + elev * 0.08,
     hdr: "/hdr/potsdamer_platz_1k.hdr",
     skyRgb: _lerpRgb([130, 185, 220], [60, 130, 200], elev),
@@ -6343,7 +6343,9 @@ export default function HouseCanvas() {
               luminanceSmoothing={0.30}
               mipmapBlur
             />
-            <BrightnessContrast brightness={0.02} contrast={0.10} />
+            <BrightnessContrast brightness={0.02} contrast={theme.phase === "night" ? 0.18 : 0.10} />
+            {/* Vignette — subtle cinematic darkening at frame edges */}
+            <Vignette offset={0.40} darkness={theme.phase === "night" ? 0.65 : 0.45} eskil={false} />
             <SMAA />
           </EffectComposer>
         )}
