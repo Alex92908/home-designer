@@ -6146,6 +6146,27 @@ export default function HouseCanvas() {
             {/* Farther background pines for depth */}
             <Tree x={-(W / 2 + 6.0)} z={ D * 0.10} type="pine" scale={1.4} />
             <Tree x={  W / 2 + 6.0}  z={ D * 0.10} type="pine" scale={1.4} />
+
+            {/* ── Distant tree horizon ring — hides ground-plane edge ── */}
+            <DistantTreeRing radius={Math.max(W, D) * 4.0 + 22} count={52} />
+
+            {/* ── Perimeter fence — formal boundary of the plot ── */}
+            <SlatFence
+              W={W} D={D}
+              insetX={W / 2 + 9.0}
+              insetZ={D / 2 + 9.0}
+            />
+
+            {/* ── Tree uplights — ground-level accent spots below each cypress/pine ── */}
+            {/* Cypress west pair */}
+            <pointLight position={[-(W/2+2.2), 0.4, -D*0.20]} intensity={3.5} distance={7} decay={2.2} color="#FFFBE8" />
+            <pointLight position={[-(W/2+2.8), 0.4,  D*0.25]} intensity={3.0} distance={7} decay={2.2} color="#FFFBE8" />
+            {/* Cypress east pair */}
+            <pointLight position={[  W/2+2.2,  0.4, -D*0.20]} intensity={3.5} distance={7} decay={2.2} color="#FFFBE8" />
+            <pointLight position={[  W/2+2.8,  0.4,  D*0.25]} intensity={3.0} distance={7} decay={2.2} color="#FFFBE8" />
+            {/* Pine background uplights */}
+            <pointLight position={[-(W/2+6.0), 0.5,  D*0.10]} intensity={2.8} distance={9} decay={2.0} color="#F8FFEA" />
+            <pointLight position={[  W/2+6.0,  0.5,  D*0.10]} intensity={2.8} distance={9} decay={2.0} color="#F8FFEA" />
           </>
         )}
         <HouseBody

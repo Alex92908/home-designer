@@ -216,13 +216,13 @@ function GlassCurtain({
                 <mesh key={`p${ri}`} position={[0, py, 0.020]} renderOrder={10}>
                   <boxGeometry args={[panelW - 0.004, rowH * 0.985, 0.008]} />
                   <meshStandardMaterial
-                    color={hasDoor ? "#C4D8E6" : "#D0E4EE"}
+                    color={hasDoor ? "#C2D6E4" : "#C8DCE8"}
                     transparent
-                    opacity={0.42}
+                    opacity={hasDoor ? 0.48 : 0.44}
                     depthWrite={false}
-                    roughness={0.04}
-                    metalness={0.08}
-                    envMapIntensity={1.8}
+                    roughness={0.03}
+                    metalness={0.14}
+                    envMapIntensity={2.4}
                     side={THREE.DoubleSide}
                     {...overlayMaterialProps(2)}
                   />
@@ -347,6 +347,16 @@ function ConcreteFacade({
               <meshStandardMaterial color="#2E3540" roughness={0.35} metalness={0.62} />
             </mesh>
           ))}
+          {/* 窗台板（concrete sill ledge — casts shadow below window） */}
+          <mesh position={[0, -w.winH / 2 - 0.040, 0.055]} castShadow>
+            <boxGeometry args={[w.winLen + 0.10, 0.065, 0.130]} />
+            <meshStandardMaterial color="#B8B4AC" roughness={0.86} metalness={0.02} />
+          </mesh>
+          {/* 窗楣（concrete lintel above window — add shadow depth） */}
+          <mesh position={[0, w.winH / 2 + 0.030, 0.050]}>
+            <boxGeometry args={[w.winLen + 0.04, 0.048, 0.095]} />
+            <meshStandardMaterial color="#C0BCB4" roughness={0.88} metalness={0.01} />
+          </mesh>
         </group>
       ))}
     </group>
@@ -450,6 +460,18 @@ function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
         <boxGeometry args={[W + OV * 2 + 0.005, 0.01, D + OV_S + OV + 0.005]} />
         <meshStandardMaterial color="#D8D4CE" roughness={0.85} />
       </mesh>
+      {/* 女儿墙顶面金属压盖（parapet cap flashing — dark anodized aluminum） */}
+      {[
+        { w: W + 0.02,  d: PT + 0.02, x: 0,        z:  D / 2 },
+        { w: W + 0.02,  d: PT + 0.02, x: 0,        z: -D / 2 },
+        { w: PT + 0.02, d: D + 0.02,  x:  W / 2,   z: 0 },
+        { w: PT + 0.02, d: D + 0.02,  x: -W / 2,   z: 0 },
+      ].map((c, i) => (
+        <mesh key={i} position={[c.x, roofSlab + 0.05 + PH + 0.005, c.z]}>
+          <boxGeometry args={[c.w, 0.012, c.d]} />
+          <meshStandardMaterial color="#2E3240" roughness={0.22} metalness={0.90} envMapIntensity={2.0} />
+        </mesh>
+      ))}
       {/* ── 屋顶设备箱（机房/新风系统，增加细节感）── */}
       <mesh position={[-W * 0.28, roofSlab + 0.35, D * 0.18]} castShadow>
         <boxGeometry args={[1.40, 0.70, 0.90]} />
@@ -1207,10 +1229,15 @@ export default function FloorPlanBuilding({
                   <meshStandardMaterial color={slabColor} roughness={0.85} />
                 </mesh>
               ))}
-              {/* 楼板下边缘暗线（阴影缝）*/}
+              {/* 楼板下边缘暗线（阴影缝）— deeper shadow reveal */}
               <mesh position={[slabCX, slabY - SLAB_T / 2 - 0.015, slabCZ]}>
                 <boxGeometry args={[totalW + 0.01, 0.030, totalD + 0.01]} />
-                <meshStandardMaterial color="#8A8680" roughness={0.9} />
+                <meshStandardMaterial color="#7C7870" roughness={0.90} />
+              </mesh>
+              {/* 楼板顶面金属压边（metal flashing cap — modern detail）*/}
+              <mesh position={[slabCX, slabY + SLAB_T / 2 + 0.004, slabCZ]}>
+                <boxGeometry args={[totalW + 0.01, 0.008, totalD + 0.01]} />
+                <meshStandardMaterial color="#3A3E48" roughness={0.28} metalness={0.82} envMapIntensity={1.8} />
               </mesh>
             </group>
           );
@@ -1305,9 +1332,40 @@ export default function FloorPlanBuilding({
         // 不再有 onClick 进入房间 —— 用户在左侧房间列表/顶部漫游按钮
         // 显式进入。3D 玻璃幕墙仅作展示。
         if (facade === "glass") {
+          // Upper floors get a Juliet balcony glass railing along the facade base
+          const showRailing = floorIndex > 0 && segLen > 0.8;
           return (
             <group key={`gl-${bi}`} position={[px, yMid, pz]} rotation={rot}>
               <GlassCurtain width={segLen} height={FLOOR_H} floorH={FLOOR_H} doors={floorIndex === 0 ? doorInfos : []} />
+              {showRailing && (
+                /* Railing group placed at floor base + outward ~5cm */
+                <group position={[0, -FLOOR_H / 2 + 0.005, 0.05]}>
+                  {/* Glass panel — 0.95m high, full-width */}
+                  <mesh position={[0, 0.475, 0.006]} renderOrder={11}>
+                    <boxGeometry args={[segLen - 0.06, 0.95, 0.012]} />
+                    <meshStandardMaterial
+                      color="#CCDDE8"
+                      transparent opacity={0.36}
+                      depthWrite={false}
+                      roughness={0.03} metalness={0.14}
+                      envMapIntensity={2.2}
+                      side={THREE.DoubleSide}
+                    />
+                  </mesh>
+                  {/* Top handrail — brushed steel bar */}
+                  <mesh position={[0, 0.968, 0]}>
+                    <boxGeometry args={[segLen - 0.04, 0.042, 0.042]} />
+                    <meshStandardMaterial color="#181A1E" roughness={0.10} metalness={0.95} envMapIntensity={2.6} />
+                  </mesh>
+                  {/* Vertical end-posts */}
+                  {[-segLen / 2 + 0.025, segLen / 2 - 0.025].map((ex, ei) => (
+                    <mesh key={ei} position={[ex, 0.485, 0]}>
+                      <boxGeometry args={[0.040, 0.975, 0.040]} />
+                      <meshStandardMaterial color="#181A1E" roughness={0.10} metalness={0.95} />
+                    </mesh>
+                  ))}
+                </group>
+              )}
             </group>
           );
         }
