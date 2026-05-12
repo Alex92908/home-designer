@@ -3542,7 +3542,7 @@ export default function FloorPlanBuilding({
       {/* ── 车道边缘低矮灯柱（driveway side bollards）——
                从大门向建筑入口沿车道两侧布置，每侧 4 盏，时间感知 ── */}
       {!insideBuilding && isGlassVilla && (() => {
-        const bndS7   = -D / 2 - 11.50;
+        const bndS7   = -D / 2 - 14.50;
         const gateW7  = Math.min(W * 0.30, 3.8);
         const driveZ1 = bndS7 + 0.5;             // near gate
         const driveZ2 = -D / 2 - 3.0;            // near building steps
@@ -5554,7 +5554,7 @@ export default function FloorPlanBuilding({
            A rich green lawn plane fills the site inside boundary walls.
            The central entry/driveway axis uses dark granite slabs. */}
       {!insideBuilding && isGlassVilla && (() => {
-        const bndS5   = -D / 2 - 11.50;
+        const bndS5   = -D / 2 - 14.50;
         const bndN5   =  D / 2 + 3.20;
         const bndE5   =  W / 2 + 4.50;
         const bndW5   = -W / 2 - 4.50;
@@ -6090,7 +6090,7 @@ export default function FloorPlanBuilding({
       {/* ── 5d. 场地边界矮墙 + 入口大门 ── */}
       {!insideBuilding && isGlassVilla && (() => {
         const bndN   =  D / 2 + 3.20;    // north boundary Z
-        const bndS   = -D / 2 - 11.50;   // south boundary Z (beyond pool)
+        const bndS   = -D / 2 - 14.50;   // south boundary Z (beyond pool)
         const bndE   =  W / 2 + 4.50;    // east boundary X
         const bndW   = -W / 2 - 4.50;    // west boundary X
         const wallH2 = 0.88;             // wall height
@@ -6547,7 +6547,7 @@ export default function FloorPlanBuilding({
         const rwEmi    = isNightRW ? 3.5 : 1.8;
         const rwLI     = isNightRW ? 2.0 : 0.8;
 
-        const bndS_rw  = -D / 2 - 11.50;
+        const bndS_rw  = -D / 2 - 14.50;
         const rwGateZ  = bndS_rw + 0.40;     // just inside gate
         const rwBuildZ = -D / 2 - 0.50;      // near building steps
         const rwLen    = rwBuildZ - rwGateZ;
@@ -6594,7 +6594,7 @@ export default function FloorPlanBuilding({
            the south boundary wall, providing warm amber pathway lighting at
            dusk and night. */}
       {!insideBuilding && isGlassVilla && (() => {
-        const bndS9   = -D / 2 - 11.50;
+        const bndS9   = -D / 2 - 14.50;
         const bndW9   = -W / 2 - 4.50;
         const bndE9   =  W / 2 + 4.50;
         const gateW9  = Math.min(W * 0.30, 3.80);
@@ -6676,7 +6676,7 @@ export default function FloorPlanBuilding({
            White painted parking bays alongside the driveway and a small
            modern security booth near the east gate pillar. */}
       {!insideBuilding && isGlassVilla && (() => {
-        const bndS8  = -D / 2 - 11.50;
+        const bndS8  = -D / 2 - 14.50;
         const bndE8  =  W / 2 + 4.50;
         const gateW8 = Math.min(W * 0.30, 3.80);
         const isNightB = sunHour < 6 || sunHour > 20;
@@ -6817,7 +6817,7 @@ export default function FloorPlanBuilding({
            and a stone slab path leading east to the main driveway. */}
       {!insideBuilding && isGlassVilla && (() => {
         const bndW_pg   = -W / 2 - 4.50;   // west boundary X
-        const bndS_pg   = -D / 2 - 11.50;  // south boundary Z
+        const bndS_pg   = -D / 2 - 14.50;  // south boundary Z
         const pgZ       = bndS_pg + 3.50;   // ~3.5m north of SW corner
         const pgGateW   = 1.10;             // gate opening width
         const pgPillarS = 0.22;             // pillar cross-section
@@ -6967,7 +6967,7 @@ export default function FloorPlanBuilding({
            tropical / Beverly Hills estate feel to the approach. */}
       {!insideBuilding && isGlassVilla && (() => {
         const dvHalfW3 = 2.20;
-        const gateZ3 = -D / 2 - 11.50 + 0.40;    // near gate
+        const gateZ3 = -D / 2 - 14.50 + 0.40;    // near gate
         const palmPositions: Array<[number, number]> = [
           [ dvHalfW3 + 1.20, gateZ3 + 1.20],   // east-near
           [ dvHalfW3 + 2.60, gateZ3 + 0.60],   // east-far
@@ -7032,7 +7032,7 @@ export default function FloorPlanBuilding({
         if (pEmi === 0.0) return null;
 
         const driveHalfW3 = 2.20;
-        const bndS3b    = -D / 2 - 11.50;
+        const bndS3b    = -D / 2 - 14.50;
         const poolL3b   = Math.min(D * 0.70, 9.50);
         const deckBW3b  = 2.80;
         const poolZ3b   = -D / 2 - deckBW3b - poolL3b / 2 - 0.80;
@@ -7645,7 +7645,7 @@ export default function FloorPlanBuilding({
         const bndE2  =  W / 2 + 4.50;
         const bndW2  = -W / 2 - 4.50;
         const bndN2  =  D / 2 + 3.20;
-        const bndS2  = -D / 2 - 11.50;
+        const bndS2  = -D / 2 - 14.50;
         const hedgeH = 0.90;   // hedge height
         const hedgeW = 0.52;   // hedge width/depth
         const gapS   = 0.32;   // gap from boundary wall face
@@ -7694,7 +7694,7 @@ export default function FloorPlanBuilding({
            flower clusters.  A stepping-stone path runs the length of the garden. */}
       {!insideBuilding && isGlassVilla && (() => {
         // Shared constants from section 5d
-        const bndS3   = -D / 2 - 11.50;
+        const bndS3   = -D / 2 - 14.50;
         const bndE3   =  W / 2 + 4.50;
         const bndW3   = -W / 2 - 4.50;
         const gapS3   = 0.12;         // gap between hedge and wall
@@ -9566,7 +9566,7 @@ export default function FloorPlanBuilding({
         const glowEmi   = isNightN ? 2.8 : isDuskN ? 1.4 : 0.0;
         // Posts placed along driveway from gate to building entrance
         const dvHalf = Math.min(W * 0.15, 2.20);  // half-width of driveway
-        const gateZ  = -D / 2 - 11.50 + 0.5;      // approx gate Z
+        const gateZ  = -D / 2 - 14.50 + 0.5;      // approx gate Z
         const buildZ = -D / 2 - 0.80;              // near south face
         const postCount = 3;
         const postH  = 3.20;
