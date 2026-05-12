@@ -5628,6 +5628,39 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5b-3. 建筑南侧石板过渡露台（transition terrace between building & pool deck）──
+           0.80m stone apron connecting the building south face to the pool deck.
+           Same travertine as pool deck, slightly wider than building footprint.
+           Small riser step at pool deck level (+0.12m) visible from south. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const deckBW3 = 2.80;
+        const deckT3  = 0.12;
+        const poolL3  = Math.min(D * 0.70, 9.50);
+        const poolW3  = Math.min(W * 0.78, 11.0);
+        const pz3     = -D / 2 - deckBW3 - poolL3 / 2 - 0.80;
+        const deckEdgeN3 = pz3 + poolL3 / 2 + deckBW3;   // building-side edge of pool deck
+        // Gap from deckEdgeN3 to building face: deckEdgeN3 = -D/2 - 0.80, bldgFace = -D/2
+        const terraceZ1 = -D / 2;          // building south face
+        const terraceZ2 = deckEdgeN3;      // pool deck north edge
+        const terraceLen = Math.abs(terraceZ1 - terraceZ2);  // ≈ 0.80m
+        const terraceCZ  = (terraceZ1 + terraceZ2) / 2;
+        const terraceW   = poolW3 + deckBW3 * 2;  // same as pool deck width
+        return (
+          <group>
+            {/* Stone apron slab — same travertine as pool deck */}
+            <mesh position={[0, deckT3 / 2, terraceCZ]} receiveShadow>
+              <boxGeometry args={[terraceW, deckT3, terraceLen]} />
+              <meshStandardMaterial color="#D6CEBC" roughness={0.68} metalness={0.04} envMapIntensity={0.5} />
+            </mesh>
+            {/* Step riser (south face of step up from ground to deck level) */}
+            <mesh position={[0, deckT3 / 4, deckEdgeN3]}>
+              <boxGeometry args={[terraceW, deckT3 / 2, 0.025]} />
+              <meshStandardMaterial color="#C8C0B0" roughness={0.72} metalness={0.04} />
+            </mesh>
+          </group>
+        );
+      })()}
+
       {/* ── 5c. 游泳池（outdoor swimming pool, south yard）──
            Large rectangular pool with wide travertine deck matching the
            reference image: pool is the primary outdoor focal point.
