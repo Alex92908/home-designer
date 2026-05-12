@@ -4085,6 +4085,9 @@ export default function FloorPlanBuilding({
           [ W / 2 + 3.5, -D / 2 + 1.0],   // mid-east
           [-W / 2 - 3.5, -D / 2 + 1.0],   // mid-west
         ];
+        const isNightT = sunHour < 6 || sunHour > 20;
+        const isDuskT  = !isNightT && (sunHour < 8 || sunHour > 18);
+        const treeLI   = isNightT ? 4.5 : isDuskT ? 2.2 : 0.0;
         return (
           <group>
             {treeData.map(([tx, tz], ti) => {
@@ -4116,6 +4119,16 @@ export default function FloorPlanBuilding({
                     <sphereGeometry args={[fR * 0.52, 7, 5]} />
                     <meshStandardMaterial color={gBase} roughness={0.96} metalness={0.01} />
                   </mesh>
+                  {/* Tree ground up-light — in-ground spot at trunk base */}
+                  {isNightT && (
+                    <>
+                      <mesh position={[trunkR + 0.25, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                        <circleGeometry args={[0.052, 8]} />
+                        <meshStandardMaterial color="#282830" roughness={0.45} metalness={0.65} />
+                      </mesh>
+                      <pointLight position={[trunkR + 0.25, 0.04, 0]} intensity={treeLI} distance={fY + fR + 1.5} decay={1.6} color="#FFF4D0" castShadow={false} />
+                    </>
+                  )}
                 </group>
               );
             })}
