@@ -5581,6 +5581,93 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
         <meshStandardMaterial color="#2A5820" roughness={0.94} />
       </mesh>
 
+      {/* ── Formal boxwood hedges — long sides of pool (east + west), classic garden framing ── */}
+      {([-1, 1] as const).map((side) => {
+        const hx = side * (pw / 2 + deckSide * 0.55);
+        return (
+          <group key={side} position={[hx, 0, pz]}>
+            {/* Clipped box hedge strip */}
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[0.38, 0.65, pd + 0.30]} />
+              <meshStandardMaterial color="#2E6428" roughness={0.96} />
+            </mesh>
+            {/* Hedge top — slightly lighter for clipped flat-top effect */}
+            <mesh position={[0, 0.34, 0]} receiveShadow>
+              <boxGeometry args={[0.42, 0.05, pd + 0.32]} />
+              <meshStandardMaterial color="#367230" roughness={0.90} />
+            </mesh>
+          </group>
+        );
+      })}
+
+      {/* ── Pool wet bar — swim-up counter along east pool edge ── */}
+      {(() => {
+        const barX  = pw / 2 - 0.60;  // east side, inside pool coping
+        const barZ  = pz + pd * 0.28; // north third of pool
+        const barW  = 0.50;            // counter depth (east-west)
+        const barL  = Math.min(pw * 0.48, 3.8); // counter length
+        const barH  = 0.78;            // bar surface height above pool bottom
+        const ctrColor = "#D8D4C8";
+        const seatCount = 4;
+        return (
+          <group position={[barX, -0.25, barZ]}>
+            {/* Bar counter slab — travertine top */}
+            <mesh position={[barW / 2, barH, 0]} castShadow>
+              <boxGeometry args={[barW + 0.08, 0.08, barL]} />
+              <meshStandardMaterial color={ctrColor} roughness={0.60} metalness={0.04} envMapIntensity={0.8} />
+            </mesh>
+            {/* Counter body */}
+            <mesh position={[barW / 2, barH / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[barW, barH, barL]} />
+              <meshStandardMaterial color="#C8C4B8" roughness={0.78} />
+            </mesh>
+            {/* Submerged bar stools — concrete discs at water level */}
+            {Array.from({ length: seatCount }, (_, si) => {
+              const sz = -barL / 2 + (si + 0.5) * (barL / seatCount);
+              return (
+                <group key={si} position={[-0.55, 0.52, sz]}>
+                  {/* Stool seat */}
+                  <mesh castShadow>
+                    <cylinderGeometry args={[0.18, 0.18, 0.04, 12]} />
+                    <meshStandardMaterial color="#D0CCBC" roughness={0.68} />
+                  </mesh>
+                  {/* Stool pedestal */}
+                  <mesh position={[0, -0.24, 0]} castShadow>
+                    <cylinderGeometry args={[0.04, 0.06, 0.48, 8]} />
+                    <meshStandardMaterial color="#B8B4AC" roughness={0.55} metalness={0.22} />
+                  </mesh>
+                </group>
+              );
+            })}
+            {/* Under-counter LED bar light strip */}
+            <mesh position={[barW / 2 + 0.002, barH - 0.05, 0]}>
+              <boxGeometry args={[0.012, 0.018, barL * 0.88]} />
+              <meshStandardMaterial color="#FFF6DC" emissive="#FFE880" emissiveIntensity={2.5} />
+            </mesh>
+            <pointLight position={[barW / 2 - 0.05, barH - 0.12, 0]} intensity={3.0} distance={5.0} decay={2.0} color="#FFE090" />
+          </group>
+        );
+      })()}
+
+      {/* ── Recessed deck step lights — warm amber strips along pool coping ── */}
+      {Array.from({ length: 5 }, (_, li) => {
+        const lz = pz - pd * 0.40 + li * (pd * 0.80 / 4);
+        return (
+          <group key={li}>
+            {/* West coping light */}
+            <mesh position={[-pw / 2 - 0.18, 0.03, lz]}>
+              <boxGeometry args={[0.06, 0.018, 0.18]} />
+              <meshStandardMaterial color="#FFE8B0" emissive="#FFD860" emissiveIntensity={1.8} />
+            </mesh>
+            {/* East coping light */}
+            <mesh position={[pw / 2 + 0.18, 0.03, lz]}>
+              <boxGeometry args={[0.06, 0.018, 0.18]} />
+              <meshStandardMaterial color="#FFE8B0" emissive="#FFD860" emissiveIntensity={1.8} />
+            </mesh>
+          </group>
+        );
+      })}
+
     </group>
   );
 }

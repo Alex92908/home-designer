@@ -621,61 +621,86 @@ function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
         );
       })()}
 
-      {/* ── 屋顶设备箱（机房/新风系统，增加细节感）── */}
-      <mesh position={[-W * 0.28, roofSlab + 0.35, D * 0.18]} castShadow>
-        <boxGeometry args={[1.40, 0.70, 0.90]} />
-        <meshStandardMaterial color="#B8B4AE" roughness={0.82} metalness={0.08} />
-      </mesh>
+      {/* ── HVAC 冷凝器组（2 台并排，带风扇格栅）── */}
+      {([[-W * 0.30, D * 0.18], [-W * 0.16, D * 0.18]] as [number,number][]).map(([hvx, hvz], hi) => (
+        <group key={`hv-${hi}`} position={[hvx, roofSlab + 0.04, hvz]}>
+          {/* 机体箱 — 浅灰色蒙皮，略带金属感 */}
+          <mesh castShadow>
+            <boxGeometry args={[0.90, 0.68, 0.90]} />
+            <meshStandardMaterial color="#C4C0B8" roughness={0.70} metalness={0.18} envMapIntensity={0.8} />
+          </mesh>
+          {/* 顶部风扇圆格栅 */}
+          <mesh position={[0, 0.346, 0]}>
+            <cylinderGeometry args={[0.30, 0.30, 0.012, 16]} />
+            <meshStandardMaterial color="#888480" roughness={0.40} metalness={0.60} />
+          </mesh>
+          {/* 格栅线（叶片感）*/}
+          {Array.from({ length: 6 }, (_, gi) => {
+            const ga = (gi / 6) * Math.PI;
+            return (
+              <mesh key={gi} position={[Math.cos(ga) * 0.14, 0.352, Math.sin(ga) * 0.14]} rotation={[0, ga, 0]}>
+                <boxGeometry args={[0.56, 0.008, 0.025]} />
+                <meshStandardMaterial color="#606060" roughness={0.50} metalness={0.55} />
+              </mesh>
+            );
+          })}
+          {/* 侧面百叶（前面板） */}
+          {Array.from({ length: 6 }, (_, li) => (
+            <mesh key={li} position={[0, -0.24 + li * 0.090, 0.458]}>
+              <boxGeometry args={[0.80, 0.022, 0.045]} />
+              <meshStandardMaterial color="#AEAAA4" roughness={0.72} metalness={0.14} />
+            </mesh>
+          ))}
+        </group>
+      ))}
       {/* ── 光伏板阵列（solar PV array）— 朝南倾斜 18°，3×5 矩阵 ── */}
       {(() => {
         const pvCols = 5, pvRows = 3;
         const pvW = 1.08, pvH = 1.70, pvGap = 0.06;
         const pvTilt = 0.32;   // tilt angle (radians, ≈ 18°)
         const arrW = pvCols * (pvW + pvGap) - pvGap;
+        const arrDepth = pvRows * (pvH + pvGap) - pvGap;  // total depth along tilt axis
         const arrX = W * 0.22;
         const arrZ = D * 0.24;
         const arrY = roofSlab + 0.14;
         return (
           <group position={[arrX, arrY, arrZ]} rotation={[pvTilt, 0, 0]}>
-            {/* Racking rail (2 horizontal beams) */}
-            {[0.25, 0.75].map((frac, ri) => (
-              <mesh key={ri} position={[0, (pvH * frac - pvH / 2) * Math.cos(pvTilt) * 0.6, 0]} castShadow>
+            {/* Racking rails — 2 horizontal aluminium beams spanning full array width */}
+            {[pvH * 0.25 - arrDepth / 2, pvH * 0.75 - arrDepth / 2 + (pvRows - 1) * (pvH + pvGap) * 0.5].map((rz, ri) => (
+              <mesh key={ri} position={[0, 0, rz]} castShadow>
                 <boxGeometry args={[arrW + 0.12, 0.04, 0.055]} />
                 <meshStandardMaterial color="#4A5060" roughness={0.42} metalness={0.62} />
               </mesh>
             ))}
-            {/* PV panels grid */}
+            {/* PV panels grid — 3 rows × 5 columns, each row offset along Z */}
             {Array.from({ length: pvRows }, (_, ri) =>
               Array.from({ length: pvCols }, (_, ci) => {
                 const px = -arrW / 2 + ci * (pvW + pvGap) + pvW / 2;
-                const pz = 0;
-                void pz; void ri;
+                const pz = -arrDepth / 2 + ri * (pvH + pvGap) + pvH / 2;
                 return (
-                  <group key={`pv-${ri}-${ci}`} position={[px, 0, 0]}>
-                    {/* Panel frame */}
+                  <group key={`pv-${ri}-${ci}`} position={[px, 0, pz]}>
+                    {/* Panel frame — dark anodized aluminium */}
                     <mesh castShadow>
                       <boxGeometry args={[pvW, pvH, 0.032]} />
                       <meshStandardMaterial color="#2C3040" roughness={0.35} metalness={0.55} />
                     </mesh>
-                    {/* Glass cell surface — dark blue-black PV cells */}
+                    {/* Glass cell surface — dark blue monocrystalline silicon */}
                     <mesh position={[0, 0, 0.018]}>
                       <boxGeometry args={[pvW - 0.04, pvH - 0.04, 0.008]} />
                       <meshStandardMaterial
                         color="#1A1E2E"
-                        roughness={0.08}
-                        metalness={0.18}
+                        roughness={0.08} metalness={0.18}
                         envMapIntensity={3.0}
-                        emissive="#10182A"
-                        emissiveIntensity={0.08}
+                        emissive="#0E1422" emissiveIntensity={0.06}
                       />
                     </mesh>
-                    {/* Cell grid lines — subtle horizontal dividers */}
+                    {/* Cell grid lines — 5 horizontal busbars */}
                     {Array.from({ length: 5 }, (_, li) => {
                       const ly = -pvH / 2 + (li + 1) * (pvH / 6);
                       return (
                         <mesh key={li} position={[0, ly, 0.023]}>
                           <boxGeometry args={[pvW - 0.05, 0.008, 0.004]} />
-                          <meshStandardMaterial color="#3A4260" roughness={0.30} metalness={0.40} />
+                          <meshStandardMaterial color="#3A4260" roughness={0.28} metalness={0.42} />
                         </mesh>
                       );
                     })}
@@ -722,6 +747,52 @@ function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
           )}
         </group>
       ))}
+      {/* ── 屋顶遮阳棚架（pergola）— 铝合金结构，横向遮阳板 ── */}
+      {(() => {
+        const pgW = Math.min(W * 0.48, 5.8);  // pergola width
+        const pgD = 2.40;                       // pergola depth (N-S)
+        const pgH = 2.20;                       // height above roof slab
+        const pgY = roofSlab + 0.05;            // base Y
+        const pgZ = -D * 0.28;                  // south-leaning terrace
+        const pgX = -W * 0.13;                  // slightly west of center
+        const postColor  = "#3A3C44";
+        const louverColor = "#50545E";
+        const postW = 0.065, postD = 0.065;
+        const louverW = pgW, louverH = 0.042, louverD = 0.014;
+        const louverCount = Math.round(pgD / 0.165);
+        return (
+          <group position={[pgX, pgY, pgZ]}>
+            {/* 4 立柱 */}
+            {([ [-pgW/2+postW/2, -pgD/2+postD/2],
+                [ pgW/2-postW/2, -pgD/2+postD/2],
+                [-pgW/2+postW/2,  pgD/2-postD/2],
+                [ pgW/2-postW/2,  pgD/2-postD/2],
+            ] as [number,number][]).map(([px2, pz2], pi) => (
+              <mesh key={pi} position={[px2, pgH / 2, pz2]} castShadow>
+                <boxGeometry args={[postW, pgH, postD]} />
+                <meshStandardMaterial color={postColor} roughness={0.28} metalness={0.70} envMapIntensity={1.5} />
+              </mesh>
+            ))}
+            {/* 顶部纵梁 (2 条) */}
+            {([-pgW/2 + 0.12, pgW/2 - 0.12] as number[]).map((bx, bi) => (
+              <mesh key={bi} position={[bx, pgH + 0.04, 0]} castShadow>
+                <boxGeometry args={[0.07, 0.08, pgD + 0.12]} />
+                <meshStandardMaterial color={postColor} roughness={0.28} metalness={0.70} />
+              </mesh>
+            ))}
+            {/* 横向遮阳条（louvers）*/}
+            {Array.from({ length: louverCount }, (_, li) => {
+              const lz = -pgD / 2 + li * (pgD / (louverCount - 1));
+              return (
+                <mesh key={li} position={[0, pgH + 0.08, lz]} castShadow>
+                  <boxGeometry args={[louverW, louverH, louverD]} />
+                  <meshStandardMaterial color={louverColor} roughness={0.32} metalness={0.62} envMapIntensity={1.2} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })()}
       {/* 屋顶种植箱 — 绿植对称，增加生机 */}
       {([[-W * 0.36, -D * 0.18], [W * 0.36, -D * 0.18]] as [number,number][]).map(([px, pz], pi) => (
         <group key={`rp-${pi}`} position={[px, roofSlab + 0.05, pz]}>
