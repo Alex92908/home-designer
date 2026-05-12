@@ -332,19 +332,23 @@ function CameraRig({ W, D, floors, buildingType }: {
 
     if (isFloorPlanDriven) {
       // Floor-plan-driven exterior: south glass facade faces -Z.
-      // Camera: south-west corner, elevated ~35°, showing glass south face + west side.
+      // Camera: south-west corner, lower angle so pool+terrace visible in foreground.
       const diag  = Math.sqrt(W * W + D * D);
-      const dist  = diag * 1.45 + 6;
-      const midH  = h / 2;
+      const dist  = diag * 1.15 + 5;
+      // Keep camera low enough that the pool deck (y≈0) is in the lower third of the frame.
+      const camY  = h * 0.65 + 1.8;   // ~ 1–2 floors elevation, not above the roof
+      const camZ  = -(dist * 0.78);
+      const camX  = -(dist * 0.48);
 
-      // Position: slightly left (west side visible), moderately elevated
-      camera.position.set(-dist * 0.55, midH + dist * 0.32, -dist * 0.78);
-      (camera as THREE.PerspectiveCamera).fov = 46;
+      camera.position.set(camX, camY, camZ);
+      (camera as THREE.PerspectiveCamera).fov = 52;
       (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
 
       if (controls) {
         const ctrl = controls as any;
-        ctrl.target.set(0, midH * 0.6, 0);
+        // Look at mid-height of building — this pulls the horizon line into the
+        // upper half of the frame, leaving room for pool/terrace in lower half.
+        ctrl.target.set(0, h * 0.30, 0);
         ctrl.update();
       } else {
         return;
@@ -5789,8 +5793,12 @@ export default function HouseCanvas() {
   const diag = Math.sqrt(W * W + D * D);
   const insideCamPos:  [number, number, number] = [-diag * 0.55, floors * FLOOR_H_M + diag * 0.7, -diag * 0.45];
   const insideLookAt:  [number, number, number] = [0, FLOOR_H_M * 0.4, 0];
-  const outsideCamPos: [number, number, number] = [-Math.sqrt(W*W+D*D)*0.30, floors*FLOOR_H_M*0.5+Math.sqrt(W*W+D*D)*0.28*1.6, -Math.sqrt(W*W+D*D)*1.6*0.90];
-  const outsideLookAt: [number, number, number] = [0, floors * FLOOR_H_M * 0.5, 0];
+  // Match the CameraRig low-angle position for floor-plan-driven (pool visible in fg)
+  const _fpdDist = diag * 1.15 + 5;
+  const outsideCamPos: [number, number, number] = _buildingType === "floor-plan-driven"
+    ? [-_fpdDist * 0.48, floors * FLOOR_H_M * 0.65 + 1.8, -_fpdDist * 0.78]
+    : [-Math.sqrt(W*W+D*D)*0.30, floors*FLOOR_H_M*0.5+Math.sqrt(W*W+D*D)*0.28*1.6, -Math.sqrt(W*W+D*D)*1.6*0.90];
+  const outsideLookAt: [number, number, number] = [0, floors * FLOOR_H_M * (_buildingType === "floor-plan-driven" ? 0.30 : 0.5), 0];
 
   return (
     <div className="w-full h-full relative">
@@ -5967,12 +5975,13 @@ export default function HouseCanvas() {
             };
           }
           if (_buildingType === "floor-plan-driven") {
-            // South-west corner view — glass south face + west side visible
+            // South-west corner, lower angle — shows glass south face, west side, AND pool/terrace in fg
             const diag = Math.sqrt(W * W + D * D);
-            const dist = diag * 1.45 + 6;
+            const dist = diag * 1.15 + 5;
+            const camY = floors * FLOOR_H * 0.65 + 1.8;
             return {
-              fov: 46, near: 0.1, far: 300,
-              position: [-dist * 0.55, floors * FLOOR_H * 0.5 + dist * 0.32, -dist * 0.78] as [number, number, number],
+              fov: 52, near: 0.1, far: 300,
+              position: [-dist * 0.48, camY, -dist * 0.78] as [number, number, number],
             };
           }
           return { fov: 58, near: 0.1, far: 300 };
@@ -6006,7 +6015,7 @@ export default function HouseCanvas() {
               _buildingType === "rich-glass-villa"
                 ? [-W * 0.05, 5.0, -D * 0.25] as [number, number, number]
                 : _buildingType === "floor-plan-driven"
-                ? [0, floors * FLOOR_H * 0.5, 0] as [number, number, number]
+                ? [0, floors * FLOOR_H * 0.30, 0] as [number, number, number]
                 : [0, floors * FLOOR_H * 0.35, 0] as [number, number, number]
             }
           />
