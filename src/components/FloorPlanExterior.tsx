@@ -3909,6 +3909,97 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5c-2. 泳池旁户外淋浴（pool-side outdoor shower）──
+           Stainless steel post + curved arm + rain-head showerhead.
+           Placed on north-west corner of pool deck, easy rinse before/after swimming. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const poolPosZ = -D / 2 - 5.80;  // match pool group Z from section 5c
+        const poolW2 = Math.min(W * 0.72, 10.0);
+        const poolL2 = 4.80;
+        const shX = -poolW2 / 2 - 0.80;  // west of pool, on deck
+        const shZ = poolPosZ - poolL2 / 2 - 0.40;  // north side
+        const shY = 0;
+        const postH = 2.28;
+        return (
+          <group position={[shX, shY, shZ]}>
+            {/* Floor drain disc */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.22, 0.22, 0.018, 10]} />
+              <meshStandardMaterial color="#808890" roughness={0.38} metalness={0.72} />
+            </mesh>
+            {/* Drain grate lines */}
+            {Array.from({ length: 5 }, (_, gi) => (
+              <mesh key={gi} position={[-0.16 + gi * 0.08, 0.010, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.012, 0.40]} />
+                <meshStandardMaterial color="#606870" roughness={0.45} metalness={0.65} />
+              </mesh>
+            ))}
+            {/* Vertical post */}
+            <mesh position={[0, postH / 2, 0]} castShadow>
+              <cylinderGeometry args={[0.028, 0.030, postH, 8]} />
+              <meshStandardMaterial color="#C4CCD4" roughness={0.15} metalness={0.92} envMapIntensity={2.2} />
+            </mesh>
+            {/* Horizontal arm (curves toward drain area) */}
+            <mesh position={[0.22, postH - 0.06, 0]} rotation={[0, 0, -Math.PI / 2.8]}>
+              <cylinderGeometry args={[0.022, 0.022, 0.55, 8]} />
+              <meshStandardMaterial color="#C4CCD4" roughness={0.15} metalness={0.92} envMapIntensity={2.2} />
+            </mesh>
+            {/* Rain showerhead disc */}
+            <mesh position={[0.42, postH - 0.26, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.095, 0.092, 0.022, 12]} />
+              <meshStandardMaterial color="#B0B8C0" roughness={0.18} metalness={0.90} envMapIntensity={2.4} />
+            </mesh>
+            {/* Small valve handle on post */}
+            <mesh position={[0.038, postH * 0.55, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.022, 0.014, 0.10, 6]} />
+              <meshStandardMaterial color="#A8B0B8" roughness={0.20} metalness={0.88} envMapIntensity={2.0} />
+            </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── 5c-3. 北院绿篱屏障（formal clipped hedge, north boundary inside）──
+           Dense clipped yew/boxwood hedge 1.2m tall runs along inside of north wall,
+           providing green backdrop behind the garden sculpture and fountain. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bndN3  =  D / 2 + 3.20;
+        const bndE3  =  W / 2 + 4.50;
+        const bndW3  = -W / 2 - 4.50;
+        const wallT3 = 0.18;
+        const hedgeH = 1.20;
+        const hedgeD = 0.55;
+        const hedgeY = hedgeH / 2;
+        const hedgeZ = bndN3 - wallT3 - hedgeD / 2 - 0.06;
+        const hedgeW = bndE3 - bndW3 - wallT3 * 2 - 0.20;
+        return (
+          <group>
+            {/* Main hedge body — dark forest green */}
+            <mesh position={[0, hedgeY, hedgeZ]} castShadow receiveShadow>
+              <boxGeometry args={[hedgeW, hedgeH, hedgeD]} />
+              <meshStandardMaterial color="#1E4A18" roughness={0.98} metalness={0.0} />
+            </mesh>
+            {/* Surface texture bumps — irregular lumps for clipped hedge look */}
+            {Array.from({ length: 18 }, (_, hi) => {
+              const hHash = (hi * 11 + 7) % 13;
+              const hx = -hedgeW / 2 + 0.30 + hi * (hedgeW - 0.60) / 17;
+              const hy = hedgeH * 0.72 + (hHash % 4) * 0.040;
+              const hr = 0.22 + (hHash % 3) * 0.055;
+              return (
+                <mesh key={hi} position={[hx, hy, hedgeZ]} castShadow>
+                  <sphereGeometry args={[hr, 7, 5]} />
+                  <meshStandardMaterial color={hHash % 2 === 0 ? "#224E1C" : "#1A4014"} roughness={0.98} />
+                </mesh>
+              );
+            })}
+            {/* Hedge front face lighter green accent */}
+            <mesh position={[0, hedgeY, hedgeZ - hedgeD / 2 - 0.002]} {...overlayMaterialProps(1)}>
+              <boxGeometry args={[hedgeW, hedgeH, 0.008]} />
+              <meshStandardMaterial color="#2A5820" roughness={0.97} />
+            </mesh>
+          </group>
+        );
+      })()}
+
       {/* ── 5d. 场地边界矮墙 + 入口大门 ── */}
       {!insideBuilding && isGlassVilla && (() => {
         const bndN   =  D / 2 + 3.20;    // north boundary Z
