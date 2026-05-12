@@ -4915,6 +4915,65 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5e-0a. 车道两侧棕榈树（palm trees flanking driveway entry）──
+           4 tall fan palms (2 per side) at the gate entrance, adding a
+           tropical / Beverly Hills estate feel to the approach. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const dvHalfW3 = 2.20;
+        const gateZ3 = -D / 2 - 11.50 + 0.40;    // near gate
+        const palmPositions: Array<[number, number]> = [
+          [ dvHalfW3 + 1.20, gateZ3 + 1.20],   // east-near
+          [ dvHalfW3 + 2.60, gateZ3 + 0.60],   // east-far
+          [-dvHalfW3 - 1.20, gateZ3 + 1.20],   // west-near
+          [-dvHalfW3 - 2.60, gateZ3 + 0.60],   // west-far
+        ];
+        return (
+          <group>
+            {palmPositions.map(([px, pz], pi) => {
+              const pHash3 = (pi * 11 + 5) % 7;
+              const trunkH3 = 5.50 + pHash3 * 0.55;   // 5.5–9m tall palms
+              const tiltX = (pi % 2 === 0 ? 0.06 : -0.04);  // slight lean
+              return (
+                <group key={pi} position={[px, 0, pz]}>
+                  {/* Trunk — segmented tapered cylinder */}
+                  {Array.from({ length: 7 }, (_, si) => {
+                    const segY = si * (trunkH3 / 7);
+                    const segR = 0.095 - si * 0.010;
+                    return (
+                      <mesh key={si} position={[tiltX * si * 0.12, segY + trunkH3 / 14, tiltX * si * 0.05]} castShadow>
+                        <cylinderGeometry args={[segR - 0.008, segR, trunkH3 / 7, 8]} />
+                        <meshStandardMaterial color={si % 2 === 0 ? "#806040" : "#9A7050"} roughness={0.88} metalness={0.01} />
+                      </mesh>
+                    );
+                  })}
+                  {/* Frond crown — 8 angled plumes */}
+                  {Array.from({ length: 8 }, (_, fi) => {
+                    const fAng = (fi / 8) * Math.PI * 2;
+                    const fTiltX = Math.cos(fAng) * 0.55 + tiltX * 0.3;
+                    const fTiltZ = Math.sin(fAng) * 0.55;
+                    const fLen = 1.80 + (fi % 3) * 0.25;
+                    return (
+                      <mesh key={fi} position={[fTiltX * 0.5, trunkH3 + fLen * 0.40, fTiltZ * 0.5]}
+                        rotation={[-fTiltZ * 0.55, fAng, fTiltX * 0.55]}>
+                        <boxGeometry args={[0.055, fLen, 0.30]} />
+                        <meshStandardMaterial color="#2E6818" roughness={0.90} metalness={0.02} />
+                      </mesh>
+                    );
+                  })}
+                  {/* Coconut-like fruit clusters at frond base */}
+                  {Array.from({ length: 3 }, (_, ci) => (
+                    <mesh key={ci} position={[(ci - 1) * 0.18 + tiltX * 0.4, trunkH3 + 0.22, (ci % 2) * 0.14]}>
+                      <sphereGeometry args={[0.065 + (ci % 2) * 0.020, 7, 5]} />
+                      <meshStandardMaterial color="#704820" roughness={0.82} />
+                    </mesh>
+                  ))}
+                </group>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5e-0. 踏石路径太阳能灯（solar path stake lights along stepping stones）──
            Small stake-style solar LED lights placed alongside the stepping stone
            paths on east and west sides of the driveway. Night-mode glow. */}
