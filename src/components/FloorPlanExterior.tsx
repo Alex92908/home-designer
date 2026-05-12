@@ -4129,6 +4129,61 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5c-4. 北庭院石凳（garden stone bench near fountain）──
+           A simple white marble bench with dark metal legs, placed between
+           the circular fountain and hedge for a reading / resting spot. */}
+      {!insideBuilding && isGlassVilla && (
+        <group position={[W * 0.18, 0, D / 2 + 1.80]}>
+          {/* Seat slab — white marble */}
+          <mesh position={[0, 0.44, 0]} castShadow>
+            <boxGeometry args={[1.60, 0.080, 0.50]} />
+            <meshStandardMaterial color="#EEEAE4" roughness={0.35} metalness={0.06} envMapIntensity={1.5} />
+          </mesh>
+          {/* 2 end supports */}
+          {([-0.62, 0.62] as number[]).map((sx, si) => (
+            <group key={si} position={[sx, 0, 0]}>
+              <mesh position={[0, 0.21, 0]} castShadow>
+                <boxGeometry args={[0.14, 0.42, 0.44]} />
+                <meshStandardMaterial color="#2A2E38" roughness={0.32} metalness={0.68} envMapIntensity={1.4} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      )}
+
+      {/* ── 5c-5. 东侧界墙爬藤三角梅（bougainvillea climbing east boundary wall）──
+           Vivid magenta bracts cascade down the inner face of the east wall,
+           created as overlapping sphere clusters at random heights.
+           Adds organic warmth against the hard concrete wall. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bndE5 =  W / 2 + 4.50;
+        const wallH5 = 0.88;
+        const wallT5 = 0.18;
+        const wallX5 = bndE5 - wallT5 / 2;  // inner face of east wall
+        // Vine occupies middle 60% of the east wall length
+        const vineLen = (D + 7.20) * 0.60;  // portion of east wall height covered
+        const vineBottom = wallH5 * 0.20;
+        return (
+          <group>
+            {Array.from({ length: 22 }, (_, vi) => {
+              const vHash = (vi * 17 + 5) % 23;
+              const vy = vineBottom + (vi / 21) * (vineLen);
+              const vz = -D / 2 - 3.80 + (vHash % 11) * 0.55;
+              const vx = wallX5 - wallT5 / 2 - 0.01 - (vHash % 4) * 0.080;
+              const vr = 0.16 + (vHash % 4) * 0.055;
+              // 75% magenta bougainvillea bracts, 25% green leaves
+              const vCol = vHash % 4 === 0 ? "#2A6018" : vHash % 7 < 3 ? "#CC2060" : vHash % 7 < 5 ? "#E03070" : "#D04888";
+              return (
+                <mesh key={vi} position={[vx, vy, vz]}>
+                  <sphereGeometry args={[vr, 7, 5]} />
+                  <meshStandardMaterial color={vCol} roughness={0.95} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5d. 场地边界矮墙 + 入口大门 ── */}
       {!insideBuilding && isGlassVilla && (() => {
         const bndN   =  D / 2 + 3.20;    // north boundary Z
