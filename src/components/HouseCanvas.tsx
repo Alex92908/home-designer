@@ -6101,11 +6101,14 @@ export default function HouseCanvas() {
           setSelectedOutdoorKey(null);
           useDesignerStore.getState().setSelectedExteriorDecor(null);
         }} />
-        {/* ── CLEAN COMPARE MODE: minimal env for rich-glass-villa ── */}
+        {/* ── Ground environment ── */}
+        {/* floor-plan-driven: grass ground + stone plaza for a lush look */}
+        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} />}
         {!isRichGlassVilla && <Ground W={W} D={D} />}
-        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <EntryPath W={W} D={D} />}
-        {/* Rich-glass-villa ground: large travertine/concrete plaza */}
-        {isRichGlassVilla && (
+        {/* Entry driveway path for all villa types */}
+        {<EntryPath W={W} D={D} />}
+        {/* rich-glass-villa (non-FPD): minimal stone plaza only */}
+        {isRichGlassVilla && _buildingType !== "floor-plan-driven" && (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
             <planeGeometry args={[120, 120]} />
             <meshStandardMaterial color="#D8D0BC" roughness={0.88} metalness={0.0} />
@@ -6120,16 +6123,17 @@ export default function HouseCanvas() {
             setWalkthroughSpawn(worldPos);
           }}
         />
-        {!isRichGlassVilla && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
-        {!isRichGlassVilla && <YardPlanItems3D />}
-        {!isRichGlassVilla && <YardPathItems3D />}
-        {/* Modern villa yard: pool + terrace + loungers — hidden for rich-glass-villa */}
-        {exterior.roofStyle === "flat" && !isRichGlassVilla && (() => {
+        {/* Wall decor + yard items — enabled for all building types including FPD */}
+        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
+        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}
+        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPathItems3D />}
+        {/* Modern villa yard: pool + terrace + loungers */}
+        {exterior.roofStyle === "flat" && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && (() => {
           const BAY_V   = 1.50;
           const mainW_v = W + BAY_V * 4;
           return <VillaYard
             W={W} D={D}
-            overrideW={mainW_v}
+            overrideW={_buildingType === "floor-plan-driven" ? W : mainW_v}
             xOff={0}
           />;
         })()}

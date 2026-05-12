@@ -276,37 +276,75 @@ function GlassCurtain({
 }
 
 
-// ── 混凝土外墙面（纯净，无分仓线） ──────────────────────────────
+// ── 混凝土外墙面（带板缝线条，建筑感） ──────────────────────────────
 function ConcreteFacade({
   width, height, windows = [],
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
 }) {
+  // 水平板缝：每 90cm 一道（模拟预制混凝土挂板分割）
+  const hGrooveStep  = 0.90;
+  const hGrooveCount = Math.max(1, Math.round(height / hGrooveStep) - 1);
+  // 竖向板缝：每 120cm 一道
+  const vGrooveStep  = 1.20;
+  const vGrooveCount = Math.max(1, Math.round(width / vGrooveStep) - 1);
+  const grooveColor  = "#BDB8B0";   // 略深于底板，形成阴影缝
+  const baseColor    = "#C8C4BC";   // 浅暖灰混凝土
+
   return (
     <group>
+      {/* ── 底板（整面）── */}
+      <mesh>
+        <boxGeometry args={[width, height, 0.08]} />
+        <meshStandardMaterial color={baseColor} roughness={0.88} metalness={0.01} />
+      </mesh>
+
+      {/* ── 水平板缝线 ── */}
+      {Array.from({ length: hGrooveCount }, (_, i) => {
+        const gy = -height / 2 + (i + 1) * hGrooveStep;
+        return (
+          <mesh key={`hg-${i}`} position={[0, gy, 0.042]}>
+            <boxGeometry args={[width + 0.01, 0.018, 0.006]} />
+            <meshStandardMaterial color={grooveColor} roughness={0.92} />
+          </mesh>
+        );
+      })}
+
+      {/* ── 竖向板缝线 ── */}
+      {Array.from({ length: vGrooveCount }, (_, i) => {
+        const vx = -width / 2 + (i + 1) * vGrooveStep;
+        return (
+          <mesh key={`vg-${i}`} position={[vx, 0, 0.042]}>
+            <boxGeometry args={[0.018, height + 0.01, 0.006]} />
+            <meshStandardMaterial color={grooveColor} roughness={0.92} />
+          </mesh>
+        );
+      })}
+
+      {/* ── 窗洞 ── */}
       {windows.map((w, wi) => (
         <group key={`ww-${wi}`} position={[w.localX, -height / 2 + w.winSill + w.winH / 2, 0]}>
           {/* 深色室内衬底（模拟从外部看到窗内的深邃感） */}
-          <mesh position={[0, 0, -0.06]}>
-            <boxGeometry args={[w.winLen - 0.02, w.winH - 0.02, 0.04]} />
-            <meshStandardMaterial color="#1A1E24" roughness={0.9} />
+          <mesh position={[0, 0, -0.04]}>
+            <boxGeometry args={[w.winLen - 0.02, w.winH - 0.02, 0.10]} />
+            <meshStandardMaterial color="#161A20" roughness={0.9} />
           </mesh>
           {/* 玻璃（浅蓝透明，带反射）*/}
-          <mesh position={[0, 0, 0.012]}>
+          <mesh position={[0, 0, 0.018]}>
             <planeGeometry args={[w.winLen - 0.04, w.winH - 0.04]} />
             <meshPhysicalMaterial color="#B8D4E8" transmission={0.35} roughness={0.04} metalness={0.08} transparent opacity={0.72} side={THREE.FrontSide} />
           </mesh>
-          {/* 窗框（四边）*/}
+          {/* 窗框 — 暗铝合金色，4 条压条 */}
           {([
-            [-w.winLen / 2 + 0.025, 0,              0.025, w.winH  ] as [number,number,number,number],
-            [ w.winLen / 2 - 0.025, 0,              0.025, w.winH  ] as [number,number,number,number],
-            [0,  w.winH / 2 - 0.025, w.winLen, 0.05] as [number,number,number,number],
-            [0, -w.winH / 2 + 0.025, w.winLen, 0.05] as [number,number,number,number],
+            [-w.winLen / 2 + 0.025, 0,               0.028, w.winH  ] as [number,number,number,number],
+            [ w.winLen / 2 - 0.025, 0,               0.028, w.winH  ] as [number,number,number,number],
+            [0,  w.winH / 2 - 0.025, w.winLen, 0.052] as [number,number,number,number],
+            [0, -w.winH / 2 + 0.025, w.winLen, 0.052] as [number,number,number,number],
           ]).map(([fx, fy, fw, fh], k) => (
-            <mesh key={k} position={[fx, fy, 0.018]}>
+            <mesh key={k} position={[fx, fy, 0.022]}>
               <planeGeometry args={[fw, fh]} />
-              <meshStandardMaterial color="#303842" roughness={0.4} metalness={0.55} />
+              <meshStandardMaterial color="#2E3540" roughness={0.35} metalness={0.62} />
             </mesh>
           ))}
         </group>
