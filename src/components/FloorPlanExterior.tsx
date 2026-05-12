@@ -941,6 +941,143 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
         );
       })()}
 
+      {/* ── 屋顶气象站（rooftop weather station）──
+           Professional AWS tower near north-east corner of roof.
+           Equipment: cup anemometer, wind vane, tipping bucket rain gauge,
+           solar radiation shield with temperature sensor, data logger box.
+           Mounted on a galvanised pole with equipment cross-arm. */}
+      {(() => {
+        const wsX = W * 0.42;
+        const wsZ = D * 0.35;    // north-east, away from PV array and helipad
+        const wsY = roofSlab + 0.05;
+        const poleH = 1.80;
+        return (
+          <group position={[wsX, wsY, wsZ]}>
+            {/* ── Base mounting bracket plate ── */}
+            <mesh position={[0, 0.018, 0]}>
+              <boxGeometry args={[0.16, 0.036, 0.16]} />
+              <meshStandardMaterial color="#505860" roughness={0.40} metalness={0.70} />
+            </mesh>
+            {/* ── Main galvanised pole ── */}
+            <mesh position={[0, poleH / 2 + 0.036, 0]} castShadow>
+              <cylinderGeometry args={[0.018, 0.022, poleH, 6]} />
+              <meshStandardMaterial color="#9AAAB4" roughness={0.28} metalness={0.78} />
+            </mesh>
+
+            {/* ── Equipment cross-arm (horizontal boom) ── */}
+            <mesh position={[0, poleH * 0.72, 0]}>
+              <boxGeometry args={[0.65, 0.018, 0.018]} />
+              <meshStandardMaterial color="#8A9AA4" roughness={0.30} metalness={0.75} />
+            </mesh>
+
+            {/* ── Cup anemometer (east arm tip) ── */}
+            <group position={[0.30, poleH * 0.72 + 0.15, 0]}>
+              {/* Vertical shaft */}
+              <mesh>
+                <cylinderGeometry args={[0.008, 0.008, 0.22, 6]} />
+                <meshStandardMaterial color="#606870" roughness={0.35} metalness={0.70} />
+              </mesh>
+              {/* 3 horizontal spokes + cups */}
+              {([0, 120, 240] as number[]).map((deg, ci) => {
+                const rad = (deg * Math.PI) / 180;
+                const sx = Math.cos(rad) * 0.060;
+                const sz = Math.sin(rad) * 0.060;
+                return (
+                  <group key={ci}>
+                    {/* Spoke */}
+                    <mesh position={[sx / 2, 0.055, sz / 2]} rotation={[0, -rad, 0]}>
+                      <boxGeometry args={[0.12, 0.006, 0.006]} />
+                      <meshStandardMaterial color="#707880" roughness={0.30} metalness={0.72} />
+                    </mesh>
+                    {/* Cup (truncated hemisphere approximated as half-sphere by scaling) */}
+                    <mesh position={[sx * 1.7, 0.055, sz * 1.7]}>
+                      <sphereGeometry args={[0.028, 6, 4]} />
+                      <meshStandardMaterial color="#C8D0D8" roughness={0.20} metalness={0.80} />
+                    </mesh>
+                  </group>
+                );
+              })}
+            </group>
+
+            {/* ── Wind vane (west arm tip) ── */}
+            <group position={[-0.28, poleH * 0.72 + 0.08, 0]}>
+              {/* Pivot shaft */}
+              <mesh position={[0, 0.060, 0]}>
+                <cylinderGeometry args={[0.007, 0.007, 0.12, 6]} />
+                <meshStandardMaterial color="#606870" roughness={0.35} metalness={0.70} />
+              </mesh>
+              {/* Arrow tail fin */}
+              <mesh position={[0.055, 0.120, 0]} rotation={[0, 0, 0.12]}>
+                <boxGeometry args={[0.16, 0.008, 0.05]} />
+                <meshStandardMaterial color="#D0D8E0" roughness={0.22} metalness={0.80} />
+              </mesh>
+              {/* Arrow head (small triangle) */}
+              <mesh position={[-0.044, 0.120, 0]}>
+                <coneGeometry args={[0.022, 0.055, 4]} />
+                <meshStandardMaterial color="#B0B8C4" roughness={0.22} metalness={0.80} />
+              </mesh>
+            </group>
+
+            {/* ── Tipping-bucket rain gauge (mid-pole) ── */}
+            <group position={[0.04, poleH * 0.50, 0.04]}>
+              {/* Mounting bracket stub */}
+              <mesh position={[0, 0, 0]}>
+                <boxGeometry args={[0.045, 0.010, 0.045]} />
+                <meshStandardMaterial color="#707880" roughness={0.40} metalness={0.68} />
+              </mesh>
+              {/* Gauge funnel cylinder */}
+              <mesh position={[0, 0.065, 0]}>
+                <cylinderGeometry args={[0.042, 0.055, 0.085, 10]} />
+                <meshStandardMaterial color="#E0E4E8" roughness={0.20} metalness={0.60} />
+              </mesh>
+              {/* Gauge body */}
+              <mesh position={[0, 0.018, 0]}>
+                <cylinderGeometry args={[0.032, 0.032, 0.040, 8]} />
+                <meshStandardMaterial color="#B8C0CC" roughness={0.25} metalness={0.65} />
+              </mesh>
+            </group>
+
+            {/* ── Solar radiation shield (temperature sensor housing) ── */}
+            <group position={[-0.04, poleH * 0.38, -0.04]}>
+              {/* Stack of louvred discs */}
+              {[0, 0.026, 0.052].map((dy, di) => (
+                <mesh key={di} position={[0, dy, 0]}>
+                  <cylinderGeometry args={[0.050, 0.062, 0.018, 10]} />
+                  <meshStandardMaterial color="#F0F0EC" roughness={0.35} metalness={0.25} />
+                </mesh>
+              ))}
+              {/* Sensor rod inside */}
+              <mesh position={[0, 0.035, 0]}>
+                <cylinderGeometry args={[0.005, 0.005, 0.10, 5]} />
+                <meshStandardMaterial color="#808890" roughness={0.40} metalness={0.60} />
+              </mesh>
+            </group>
+
+            {/* ── Data logger / transmitter box ── */}
+            <mesh position={[0, poleH * 0.22, 0.060]} castShadow>
+              <boxGeometry args={[0.110, 0.075, 0.060]} />
+              <meshStandardMaterial color="#2A2E38" roughness={0.50} metalness={0.45} />
+            </mesh>
+            {/* Logger status LED */}
+            <mesh position={[0.020, poleH * 0.22 + 0.020, 0.092]}>
+              <sphereGeometry args={[0.006, 5, 4]} />
+              <meshStandardMaterial
+                color="#00FF60"
+                emissive="#00FF60"
+                emissiveIntensity={nightGlow > 0 ? 2.5 : 0.40}
+                roughness={0.20} metalness={0.10}
+              />
+            </mesh>
+
+            {/* ── Cable conduit running down mast ── */}
+            <mesh position={[0.024, poleH * 0.30, 0]} rotation={[0, 0, 0]}>
+              <cylinderGeometry args={[0.007, 0.007, poleH * 0.60, 4]} />
+              <meshStandardMaterial color="#303840" roughness={0.65} metalness={0.25} />
+            </mesh>
+          </group>
+        );
+      })()}
+
       {/* ── 屋顶露台区域（南向，阳光充足）── */}
       {/* 两把日光浴躺椅 — 淡米色，南向摆放，供远处视角可见 */}
       {([[-W * 0.15, 0], [W * 0.15, 0]] as [number,number][]).map(([lx, _lz], li) => (
@@ -3539,55 +3676,170 @@ export default function FloorPlanBuilding({
                 </mesh>
               </group>
             )}
-            {/* ── 车库门（garage door）——宽门（≥ 2m）渲染为卷帘分节式车库门 ──
-                 Modern sectional panel garage door: dark brushed aluminum,
-                 4 horizontal panels with thin reveal lines. */}
+            {/* ── 车库门（garage door）——宽门（≥ 2m）渲染为高精度分节卷帘车库门 ──
+                 Modern raised-panel sectional garage door:
+                 • 8 narrow horizontal slat panels with 3D raised ridges
+                 • Top window strip — 4 frosted acrylic lite panels
+                 • Perimeter aluminium frame + side vertical tracks
+                 • Central T-handle bar + keypad box
+                 • Overhead opener motor rail unit
+                 • Bottom weather seal rubber strip
+                 • LED soffit strip at night */}
             {floorIndex === 0 && doorInfos.filter(d => d.w >= 2.0).map((d, di) => {
-              const gdW  = d.w;
-              const gdH  = Math.min(d.h, FLOOR_H * 0.85);
-              const panels = 4;
-              const panelH = gdH / panels;
-              const gdY  = -FLOOR_H / 2 + gdH / 2;
-              const gdColor  = "#2A2E38";    // dark anodized aluminum
-              const gdReveal = "#1C1E24";    // deeper groove
-              const gdSheen  = "#3A4050";    // lighter panel face
+              const gdW      = d.w;
+              const gdH      = Math.min(d.h, FLOOR_H * 0.85);
+              const gdY      = -FLOOR_H / 2 + gdH / 2;
+              const slats    = 8;
+              // Reserve top 18% for window strip
+              const winStripH = gdH * 0.18;
+              const slatZone  = gdH - winStripH;
+              const slatH     = slatZone / slats;
+              const gdColor   = "#22262E";   // dark anodized aluminium
+              const gdMid     = "#2E3340";   // mid tone slat face
+              const gdLight   = "#3A4052";   // highlight ridge
+              const gdReveal  = "#181B22";   // reveal shadow
+              const gdMetal   = { roughness: 0.20, metalness: 0.88, envMapIntensity: 2.4 };
+              const isNightGD = sunHour < 6 || sunHour > 20;
+              const isDuskGD  = !isNightGD && (sunHour < 8 || sunHour > 18);
+
               return (
                 <group key={`gd-${di}`} position={[d.cx, gdY, 0.065]}>
-                  {/* Frame — perimeter aluminum channel */}
-                  <mesh position={[0, 0, -0.008]}>
-                    <boxGeometry args={[gdW + 0.06, gdH + 0.06, 0.040]} />
-                    <meshStandardMaterial color={gdColor} roughness={0.20} metalness={0.90} envMapIntensity={2.2} />
+                  {/* ── Perimeter frame ── */}
+                  <mesh position={[0, 0, -0.010]} castShadow>
+                    <boxGeometry args={[gdW + 0.07, gdH + 0.07, 0.045]} />
+                    <meshStandardMaterial color={gdColor} {...gdMetal} />
                   </mesh>
-                  {/* Panel sections */}
-                  {Array.from({ length: panels }, (_, pi) => {
-                    const pyOffset = -gdH / 2 + (pi + 0.5) * panelH;
+
+                  {/* ── 8 slat panels (lower zone) ── */}
+                  {Array.from({ length: slats }, (_, pi) => {
+                    const pyOffset = -gdH / 2 + winStripH + (pi + 0.5) * slatH;
                     return (
-                      <group key={pi} position={[0, pyOffset, 0]}>
-                        {/* Panel face */}
-                        <mesh>
-                          <boxGeometry args={[gdW - 0.04, panelH - 0.012, 0.025]} />
-                          <meshStandardMaterial color={pi % 2 === 0 ? gdSheen : gdColor} roughness={0.22} metalness={0.86} envMapIntensity={2.0} />
+                      <group key={`slat-${pi}`} position={[0, pyOffset, 0]}>
+                        {/* Main panel face */}
+                        <mesh castShadow>
+                          <boxGeometry args={[gdW - 0.05, slatH - 0.010, 0.028]} />
+                          <meshStandardMaterial color={pi % 2 === 0 ? gdMid : gdColor} {...gdMetal} />
                         </mesh>
-                        {/* Horizontal reveal groove at panel bottom */}
-                        <mesh position={[0, -panelH / 2 + 0.004, 0.014]}>
-                          <boxGeometry args={[gdW - 0.04, 0.009, 0.010]} />
-                          <meshStandardMaterial color={gdReveal} roughness={0.30} metalness={0.85} />
+                        {/* Top raised ridge */}
+                        <mesh position={[0, slatH / 2 - 0.012, 0.018]}>
+                          <boxGeometry args={[gdW - 0.06, 0.014, 0.018]} />
+                          <meshStandardMaterial color={gdLight} roughness={0.16} metalness={0.92} envMapIntensity={2.6} />
                         </mesh>
+                        {/* Bottom shadow reveal */}
+                        <mesh position={[0, -slatH / 2 + 0.004, 0.016]}>
+                          <boxGeometry args={[gdW - 0.06, 0.008, 0.012]} />
+                          <meshStandardMaterial color={gdReveal} roughness={0.35} metalness={0.80} />
+                        </mesh>
+                        {/* 3 vertical embossed lines per slat */}
+                        {[-gdW * 0.28, 0, gdW * 0.28].map((vx, vi) => (
+                          <mesh key={vi} position={[vx, 0, 0.016]}>
+                            <boxGeometry args={[0.012, slatH - 0.018, 0.010]} />
+                            <meshStandardMaterial color={gdReveal} roughness={0.30} metalness={0.82} />
+                          </mesh>
+                        ))}
                       </group>
                     );
                   })}
-                  {/* Central door handle / pull bar */}
-                  <mesh position={[0, -gdH * 0.28, 0.020]}>
-                    <boxGeometry args={[gdW * 0.22, 0.025, 0.022]} />
+
+                  {/* ── Top window strip — 4 frosted acrylic lites ── */}
+                  {(() => {
+                    const winY = -gdH / 2 + winStripH / 2;
+                    const liteW = (gdW - 0.12) / 4;
+                    return (
+                      <group position={[0, winY, 0]}>
+                        {/* Window strip frame */}
+                        <mesh position={[0, 0, -0.002]} castShadow>
+                          <boxGeometry args={[gdW - 0.05, winStripH - 0.010, 0.030]} />
+                          <meshStandardMaterial color={gdColor} {...gdMetal} />
+                        </mesh>
+                        {/* 4 acrylic lites */}
+                        {Array.from({ length: 4 }, (_, li) => {
+                          const lx = -((gdW - 0.12) / 2) + li * liteW + liteW / 2;
+                          return (
+                            <mesh key={li} position={[lx, 0, 0.016]}>
+                              <boxGeometry args={[liteW - 0.025, winStripH - 0.030, 0.010]} />
+                              <meshPhysicalMaterial
+                                color="#C8D8E8"
+                                transparent opacity={0.42}
+                                roughness={0.12} metalness={0.05}
+                                transmission={0.25}
+                                emissive="#A8C0D8"
+                                emissiveIntensity={isNightGD ? 0.18 : 0.04}
+                              />
+                            </mesh>
+                          );
+                        })}
+                      </group>
+                    );
+                  })()}
+
+                  {/* ── Central T-handle pull bar ── */}
+                  <mesh position={[0, -gdH * 0.30, 0.024]}>
+                    <boxGeometry args={[gdW * 0.18, 0.022, 0.024]} />
+                    <meshStandardMaterial color="#C0C8D4" roughness={0.15} metalness={0.94} envMapIntensity={2.6} />
+                  </mesh>
+                  {/* Handle grip shaft */}
+                  <mesh position={[0, -gdH * 0.30 - 0.032, 0.026]}>
+                    <boxGeometry args={[0.028, 0.055, 0.022]} />
                     <meshStandardMaterial color="#B0B8C4" roughness={0.18} metalness={0.92} envMapIntensity={2.4} />
                   </mesh>
-                  {/* Door tracks (both sides) */}
-                  {([-gdW / 2 - 0.015, gdW / 2 + 0.015] as number[]).map((tx, ti) => (
-                    <mesh key={ti} position={[tx, 0, -0.020]}>
-                      <boxGeometry args={[0.030, gdH + 0.06, 0.020]} />
-                      <meshStandardMaterial color={gdColor} roughness={0.25} metalness={0.88} />
+
+                  {/* ── Keypad box (right of door) ── */}
+                  <mesh position={[gdW / 2 + 0.045, -gdH * 0.18, 0]}>
+                    <boxGeometry args={[0.060, 0.110, 0.045]} />
+                    <meshStandardMaterial color="#282C36" roughness={0.45} metalness={0.42} />
+                  </mesh>
+                  <mesh position={[gdW / 2 + 0.045, -gdH * 0.18, 0.024]}>
+                    <boxGeometry args={[0.040, 0.085, 0.006]} />
+                    <meshStandardMaterial color="#10121A" roughness={0.60} metalness={0.20}
+                      emissive="#003060" emissiveIntensity={isNightGD ? 0.80 : 0.08} />
+                  </mesh>
+
+                  {/* ── Vertical side tracks ── */}
+                  {([-gdW / 2 - 0.018, gdW / 2 + 0.018] as number[]).map((tx, ti) => (
+                    <mesh key={ti} position={[tx, gdH * 0.10, -0.022]} castShadow>
+                      <boxGeometry args={[0.032, gdH * 0.80, 0.024]} />
+                      <meshStandardMaterial color={gdColor} roughness={0.28} metalness={0.86} />
                     </mesh>
                   ))}
+
+                  {/* ── Overhead opener motor rail (above door, projecting inward) ── */}
+                  <mesh position={[0, gdH / 2 + 0.045, -0.28]} castShadow>
+                    <boxGeometry args={[0.060, 0.060, 0.55]} />
+                    <meshStandardMaterial color="#404850" roughness={0.50} metalness={0.50} />
+                  </mesh>
+                  {/* Motor head unit */}
+                  <mesh position={[0, gdH / 2 + 0.050, -0.08]}>
+                    <boxGeometry args={[0.22, 0.14, 0.28]} />
+                    <meshStandardMaterial color="#303840" roughness={0.45} metalness={0.55} />
+                  </mesh>
+                  {/* Opener light lens */}
+                  <mesh position={[0, gdH / 2 + 0.010, -0.12]}>
+                    <boxGeometry args={[0.080, 0.040, 0.060]} />
+                    <meshPhysicalMaterial
+                      color="#FFF8E0" transparent opacity={0.70}
+                      emissive="#FFF4C0"
+                      emissiveIntensity={isNightGD ? 2.5 : 0.06}
+                      roughness={0.10} metalness={0.05}
+                    />
+                  </mesh>
+
+                  {/* ── Bottom weather seal rubber strip ── */}
+                  <mesh position={[0, -gdH / 2 - 0.006, 0.012]}>
+                    <boxGeometry args={[gdW - 0.05, 0.014, 0.016]} />
+                    <meshStandardMaterial color="#101214" roughness={0.90} metalness={0.02} />
+                  </mesh>
+
+                  {/* ── LED soffit strip (night) ── */}
+                  {isNightGD && (
+                    <pointLight
+                      position={[0, -gdH * 0.45, 0.18]}
+                      intensity={isNightGD ? 3.0 : isDuskGD ? 1.5 : 0.0}
+                      distance={3.5} decay={2.0}
+                      color="#FFF4D0"
+                      castShadow={false}
+                    />
+                  )}
                 </group>
               );
             })}
