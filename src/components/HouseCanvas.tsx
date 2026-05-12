@@ -2851,15 +2851,15 @@ export function AnimatedWater({ w, d }: { w: number; d: number }) {
       <mesh ref={surfaceRef} position={[0, -0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[w, d, 1, 1]} />
         <MeshReflectorMaterial
-          blur={[160, 80]}
+          blur={[120, 60]}
           resolution={512}
-          mixBlur={0.7}
-          mixStrength={1.2}
-          mirror={0.55}
-          mixContrast={1.1}
-          roughness={0.08}
-          metalness={0.1}
-          color="#5DC8E0"
+          mixBlur={0.55}
+          mixStrength={1.55}
+          mirror={0.70}
+          mixContrast={1.15}
+          roughness={0.06}
+          metalness={0.12}
+          color="#5CCCE6"
           normalMap={rippleNormal}
           normalScale={new THREE.Vector2(0.18, 0.18)}
           transparent
@@ -5441,7 +5441,33 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
           <boxGeometry args={[1.85, 0.08, 1.85]} />
           <meshPhysicalMaterial color="#50C8E0" transmission={0.60} roughness={0.02} ior={1.33} thickness={0.5} envMapIntensity={6.0} />
         </mesh>
+        {/* Spa underwater LED glow */}
+        <pointLight position={[0, 0.10, 0]} intensity={4.5} distance={5.5} decay={1.8} color="#20C0DC" />
       </group>
+
+      {/* ── Side tables between loungers (alternating) — polished concrete ── */}
+      {([0, 2] as number[]).map(i => {
+        const lx = (i - 1) * (pw - 1.0) * 0.30;  // every 2 loungers
+        const lz = poolBuildZ + deckSide * 0.48;
+        return (
+          <group key={`tbl-${i}`} position={[lx, 0, lz]}>
+            <mesh position={[0, 0.40, 0]} castShadow>
+              <cylinderGeometry args={[0.24, 0.22, 0.04, 12]} />
+              <meshStandardMaterial color="#E0DCD4" roughness={0.60} metalness={0.06} />
+            </mesh>
+            <mesh position={[0, 0.20, 0]} castShadow>
+              <cylinderGeometry args={[0.03, 0.03, 0.40, 8]} />
+              <meshStandardMaterial color="#B0B0B8" roughness={0.18} metalness={0.90} />
+            </mesh>
+          </group>
+        );
+      })}
+
+      {/* ── Low terrace hedge border — formal clipped hedge along pool edge ── */}
+      <mesh position={[0, 0.20, terrBackZ - 0.30]} castShadow receiveShadow>
+        <boxGeometry args={[effW * 0.55, 0.40, 0.35]} />
+        <meshStandardMaterial color="#2A5820" roughness={0.94} />
+      </mesh>
 
     </group>
   );
