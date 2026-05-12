@@ -2512,13 +2512,28 @@ function Tree({ x, z, type = "round", scale = 1 }: {
 function Bush({ x, z, scale = 1 }: { x: number; z: number; scale?: number }) {
   return (
     <group position={[x, 0, z]} scale={[scale, scale, scale]}>
-      <mesh position={[0, 0.4, 0]} castShadow>
-        <sphereGeometry args={[0.55, 11, 8]} />
-        <meshStandardMaterial color="#3A8030" roughness={0.95} />
+      {/* Short woody stem */}
+      <mesh position={[0, 0.10, 0]} castShadow>
+        <cylinderGeometry args={[0.05, 0.08, 0.20, 6]} />
+        <meshStandardMaterial color="#5A3818" roughness={0.95} />
       </mesh>
-      <mesh position={[0.4, 0.35, 0.2]} castShadow>
-        <sphereGeometry args={[0.4, 10, 7]} />
-        <meshStandardMaterial color="#3E8838" roughness={0.95} />
+      {/* Main dome — three overlapping spheres for organic silhouette */}
+      <mesh position={[0, 0.44, 0]} castShadow>
+        <sphereGeometry args={[0.56, 12, 9]} />
+        <meshStandardMaterial color="#386C28" roughness={0.94} />
+      </mesh>
+      <mesh position={[0.38, 0.38, 0.20]} castShadow>
+        <sphereGeometry args={[0.40, 10, 8]} />
+        <meshStandardMaterial color="#3E7830" roughness={0.94} />
+      </mesh>
+      <mesh position={[-0.30, 0.36, -0.18]} castShadow>
+        <sphereGeometry args={[0.36, 10, 7]} />
+        <meshStandardMaterial color="#345C24" roughness={0.95} />
+      </mesh>
+      {/* Top highlight lobe — lighter tip for light-catching silhouette */}
+      <mesh position={[0.10, 0.72, 0.05]} castShadow>
+        <sphereGeometry args={[0.24, 9, 7]} />
+        <meshStandardMaterial color="#4A8838" roughness={0.93} />
       </mesh>
     </group>
   );
@@ -6332,6 +6347,76 @@ export default function HouseCanvas() {
               <planeGeometry args={[0.22, D * 0.5 + 5.5]} />
               <meshStandardMaterial color="#E0DAC8" roughness={0.88} />
             </mesh>
+
+            {/* ── Ornamental fountain — circular stone basin on driveway approach ── */}
+            {(() => {
+              const fz = D / 2 + 3.8;  // halfway between building back and gate
+              return (
+                <group position={[-3.2, 0, fz]}>
+                  {/* Stone basin outer rim */}
+                  <mesh position={[0, -0.44, 0]} castShadow receiveShadow>
+                    <cylinderGeometry args={[0.82, 0.85, 0.16, 24]} />
+                    <meshStandardMaterial color="#D4CABC" roughness={0.72} metalness={0.03} />
+                  </mesh>
+                  {/* Basin inner water surface */}
+                  <mesh position={[0, -0.36, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <circleGeometry args={[0.68, 24]} />
+                    <meshStandardMaterial
+                      color="#5BBDD0"
+                      roughness={0.06} metalness={0.0}
+                      emissive="#18A8C4" emissiveIntensity={0.15}
+                    />
+                  </mesh>
+                  {/* Central plinth column */}
+                  <mesh position={[0, -0.30, 0]} castShadow>
+                    <cylinderGeometry args={[0.07, 0.11, 0.30, 8]} />
+                    <meshStandardMaterial color="#CEBFAA" roughness={0.78} metalness={0.02} />
+                  </mesh>
+                  {/* Top bowl (upper basin) */}
+                  <mesh position={[0, -0.10, 0]} castShadow>
+                    <cylinderGeometry args={[0.30, 0.26, 0.08, 16, 1, true]} />
+                    <meshStandardMaterial color="#CEBFAA" roughness={0.76} metalness={0.02} side={THREE.FrontSide} />
+                  </mesh>
+                  {/* Water sphere — animated look via emissive */}
+                  <mesh position={[0, -0.08, 0]}>
+                    <sphereGeometry args={[0.09, 12, 10]} />
+                    <meshStandardMaterial color="#70CCE0" roughness={0.04} emissive="#38B8D4" emissiveIntensity={0.30} />
+                  </mesh>
+                  {/* Water glow */}
+                  <pointLight position={[0, -0.30, 0]} intensity={2.5} distance={4.0} decay={2.0} color="#40C0DC" />
+                </group>
+              );
+            })()}
+
+            {/* Mirror fountain on the east side */}
+            {(() => {
+              const fz = D / 2 + 3.8;
+              return (
+                <group position={[3.2, 0, fz]}>
+                  <mesh position={[0, -0.44, 0]} castShadow receiveShadow>
+                    <cylinderGeometry args={[0.82, 0.85, 0.16, 24]} />
+                    <meshStandardMaterial color="#D4CABC" roughness={0.72} metalness={0.03} />
+                  </mesh>
+                  <mesh position={[0, -0.36, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <circleGeometry args={[0.68, 24]} />
+                    <meshStandardMaterial color="#5BBDD0" roughness={0.06} emissive="#18A8C4" emissiveIntensity={0.15} />
+                  </mesh>
+                  <mesh position={[0, -0.30, 0]} castShadow>
+                    <cylinderGeometry args={[0.07, 0.11, 0.30, 8]} />
+                    <meshStandardMaterial color="#CEBFAA" roughness={0.78} metalness={0.02} />
+                  </mesh>
+                  <mesh position={[0, -0.10, 0]} castShadow>
+                    <cylinderGeometry args={[0.30, 0.26, 0.08, 16, 1, true]} />
+                    <meshStandardMaterial color="#CEBFAA" roughness={0.76} metalness={0.02} side={THREE.FrontSide} />
+                  </mesh>
+                  <mesh position={[0, -0.08, 0]}>
+                    <sphereGeometry args={[0.09, 12, 10]} />
+                    <meshStandardMaterial color="#70CCE0" roughness={0.04} emissive="#38B8D4" emissiveIntensity={0.30} />
+                  </mesh>
+                  <pointLight position={[0, -0.30, 0]} intensity={2.5} distance={4.0} decay={2.0} color="#40C0DC" />
+                </group>
+              );
+            })()}
 
             {/* ── Accent bushes along hedge flanks ── */}
             <Bush x={-(W / 2 + 0.80)} z={-D * 0.32} scale={0.85} />
