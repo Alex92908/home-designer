@@ -2653,6 +2653,58 @@ export default function FloorPlanBuilding({
                 </mesh>
               </group>
             )}
+            {/* ── 车库门（garage door）——宽门（≥ 2m）渲染为卷帘分节式车库门 ──
+                 Modern sectional panel garage door: dark brushed aluminum,
+                 4 horizontal panels with thin reveal lines. */}
+            {floorIndex === 0 && doorInfos.filter(d => d.w >= 2.0).map((d, di) => {
+              const gdW  = d.w;
+              const gdH  = Math.min(d.h, FLOOR_H * 0.85);
+              const panels = 4;
+              const panelH = gdH / panels;
+              const gdY  = -FLOOR_H / 2 + gdH / 2;
+              const gdColor  = "#2A2E38";    // dark anodized aluminum
+              const gdReveal = "#1C1E24";    // deeper groove
+              const gdSheen  = "#3A4050";    // lighter panel face
+              return (
+                <group key={`gd-${di}`} position={[d.cx, gdY, 0.065]}>
+                  {/* Frame — perimeter aluminum channel */}
+                  <mesh position={[0, 0, -0.008]}>
+                    <boxGeometry args={[gdW + 0.06, gdH + 0.06, 0.040]} />
+                    <meshStandardMaterial color={gdColor} roughness={0.20} metalness={0.90} envMapIntensity={2.2} />
+                  </mesh>
+                  {/* Panel sections */}
+                  {Array.from({ length: panels }, (_, pi) => {
+                    const pyOffset = -gdH / 2 + (pi + 0.5) * panelH;
+                    return (
+                      <group key={pi} position={[0, pyOffset, 0]}>
+                        {/* Panel face */}
+                        <mesh>
+                          <boxGeometry args={[gdW - 0.04, panelH - 0.012, 0.025]} />
+                          <meshStandardMaterial color={pi % 2 === 0 ? gdSheen : gdColor} roughness={0.22} metalness={0.86} envMapIntensity={2.0} />
+                        </mesh>
+                        {/* Horizontal reveal groove at panel bottom */}
+                        <mesh position={[0, -panelH / 2 + 0.004, 0.014]}>
+                          <boxGeometry args={[gdW - 0.04, 0.009, 0.010]} />
+                          <meshStandardMaterial color={gdReveal} roughness={0.30} metalness={0.85} />
+                        </mesh>
+                      </group>
+                    );
+                  })}
+                  {/* Central door handle / pull bar */}
+                  <mesh position={[0, -gdH * 0.28, 0.020]}>
+                    <boxGeometry args={[gdW * 0.22, 0.025, 0.022]} />
+                    <meshStandardMaterial color="#B0B8C4" roughness={0.18} metalness={0.92} envMapIntensity={2.4} />
+                  </mesh>
+                  {/* Door tracks (both sides) */}
+                  {([-gdW / 2 - 0.015, gdW / 2 + 0.015] as number[]).map((tx, ti) => (
+                    <mesh key={ti} position={[tx, 0, -0.020]}>
+                      <boxGeometry args={[0.030, gdH + 0.06, 0.020]} />
+                      <meshStandardMaterial color={gdColor} roughness={0.25} metalness={0.88} />
+                    </mesh>
+                  ))}
+                </group>
+              );
+            })}
           </group>
         );
       })}
