@@ -7206,6 +7206,172 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5j-6. 室外健身区（outdoor gym, west side of north yard）──
+           Equipment: power rack, bench press, cable tower, exercise bike,
+           battle ropes coiled on hook, rubber flooring mat. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const gymX  = -W / 2 - 3.20;    // west boundary area
+        const gymZ  =  D / 2 + 1.50;    // north yard
+        const matH  = 0.020;
+        const isNightGym = sunHour < 6 || sunHour > 20;
+        return (
+          <group position={[gymX, 0, gymZ]}>
+            {/* ── Rubber flooring mat (4m × 3m) ── */}
+            <mesh position={[0, matH / 2, 0]} receiveShadow>
+              <boxGeometry args={[4.0, matH, 3.0]} />
+              <meshStandardMaterial color="#1A1A1A" roughness={0.95} metalness={0.02} />
+            </mesh>
+            {/* Mat grid lines (3 E-W, 2 N-S) */}
+            {[-1.0, 0, 1.0].map((mz, mi) => (
+              <mesh key={`mg-${mi}`} position={[0, matH + 0.001, mz]}>
+                <boxGeometry args={[4.0, 0.002, 0.020]} />
+                <meshStandardMaterial color="#303030" roughness={0.98} />
+              </mesh>
+            ))}
+
+            {/* ── Power rack — 4 vertical uprights + 2 crossbars ── */}
+            <group position={[-1.40, 0, -0.80]}>
+              {/* 4 uprights */}
+              {([-0.50, 0.50] as number[]).flatMap(rx =>
+                ([-0.42, 0.42] as number[]).map((rz, rzi) => (
+                  <mesh key={`${rx}-${rzi}`} position={[rx, 1.10, rz]} castShadow>
+                    <boxGeometry args={[0.055, 2.20, 0.055]} />
+                    <meshStandardMaterial color="#303440" roughness={0.32} metalness={0.82} />
+                  </mesh>
+                ))
+              )}
+              {/* Top crossbar front/back */}
+              {[-0.42, 0.42].map((cz, ci) => (
+                <mesh key={ci} position={[0, 2.18, cz]} castShadow>
+                  <boxGeometry args={[1.08, 0.050, 0.050]} />
+                  <meshStandardMaterial color="#303440" roughness={0.30} metalness={0.84} />
+                </mesh>
+              ))}
+              {/* J-hooks (bar rests) */}
+              {[-0.50, 0.50].map((rx, ri) => (
+                <mesh key={ri} position={[rx, 1.55, 0]}>
+                  <boxGeometry args={[0.055, 0.060, 0.90]} />
+                  <meshStandardMaterial color="#404858" roughness={0.28} metalness={0.88} />
+                </mesh>
+              ))}
+              {/* Barbell in rack */}
+              <mesh position={[0, 1.58, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                <cylinderGeometry args={[0.028, 0.028, 1.50, 8]} />
+                <meshStandardMaterial color="#5A6070" roughness={0.25} metalness={0.88} />
+              </mesh>
+              {/* Weight plates on each end */}
+              {[-0.70, 0.70].map((bx, bi) => (
+                <mesh key={bi} position={[bx, 1.58, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                  <cylinderGeometry args={[0.22, 0.22, 0.040, 12]} />
+                  <meshStandardMaterial color="#282C38" roughness={0.35} metalness={0.80} />
+                </mesh>
+              ))}
+            </group>
+
+            {/* ── Flat bench press ── */}
+            <group position={[0.20, 0, -0.60]}>
+              {/* Frame legs */}
+              {([-0.80, 0.80] as number[]).flatMap(bx =>
+                ([-0.16, 0.16] as number[]).map((bz, bzi) => (
+                  <mesh key={`${bx}-${bzi}`} position={[bx, 0.18, bz]} castShadow>
+                    <boxGeometry args={[0.030, 0.36, 0.030]} />
+                    <meshStandardMaterial color="#404858" roughness={0.30} metalness={0.82} />
+                  </mesh>
+                ))
+              )}
+              {/* Padded seat */}
+              <mesh position={[0, 0.400, 0]} castShadow>
+                <boxGeometry args={[1.70, 0.060, 0.30]} />
+                <meshStandardMaterial color="#B04030" roughness={0.80} metalness={0.02} />
+              </mesh>
+            </group>
+
+            {/* ── Exercise bike ── */}
+            <group position={[1.40, 0, 0.40]}>
+              {/* Frame */}
+              <mesh position={[0, 0.40, 0]} castShadow>
+                <boxGeometry args={[0.55, 0.06, 0.18]} />
+                <meshStandardMaterial color="#1A1E28" roughness={0.35} metalness={0.70} />
+              </mesh>
+              {/* Wheel */}
+              <mesh position={[-0.18, 0.28, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                <torusGeometry args={[0.22, 0.035, 5, 12]} />
+                <meshStandardMaterial color="#383C4A" roughness={0.28} metalness={0.80} />
+              </mesh>
+              {/* Seat post */}
+              <mesh position={[0.18, 0.50, 0]} castShadow>
+                <cylinderGeometry args={[0.020, 0.020, 0.28, 6]} />
+                <meshStandardMaterial color="#606878" roughness={0.25} metalness={0.82} />
+              </mesh>
+              {/* Seat pad */}
+              <mesh position={[0.18, 0.66, 0]}>
+                <boxGeometry args={[0.22, 0.035, 0.12]} />
+                <meshStandardMaterial color="#202430" roughness={0.70} metalness={0.05} />
+              </mesh>
+              {/* Handlebar post */}
+              <mesh position={[-0.10, 0.80, 0]}>
+                <cylinderGeometry args={[0.018, 0.018, 0.45, 6]} />
+                <meshStandardMaterial color="#606878" roughness={0.25} metalness={0.82} />
+              </mesh>
+              {/* Handlebars */}
+              <mesh position={[-0.10, 1.02, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.014, 0.014, 0.45, 6]} />
+                <meshStandardMaterial color="#303848" roughness={0.30} metalness={0.80} />
+              </mesh>
+            </group>
+
+            {/* ── Battle ropes coiled on wall hook ── */}
+            <group position={[-1.85, 0, 1.10]}>
+              {/* Hook on wall */}
+              <mesh position={[0, 0.80, -0.06]}>
+                <boxGeometry args={[0.030, 0.12, 0.050]} />
+                <meshStandardMaterial color="#606878" roughness={0.28} metalness={0.78} />
+              </mesh>
+              {/* Coiled rope (torus loops) */}
+              {[0, 0.040, 0.080].map((dy, di) => (
+                <mesh key={di} position={[0, 0.70 - dy, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                  <torusGeometry args={[0.14, 0.022, 5, 10]} />
+                  <meshStandardMaterial color="#1A1008" roughness={0.90} metalness={0.02} />
+                </mesh>
+              ))}
+            </group>
+
+            {/* ── Dumbbell rack ── */}
+            <group position={[-0.60, 0, 1.0]}>
+              {/* Rack frame */}
+              <mesh position={[0, 0.40, 0]} castShadow>
+                <boxGeometry args={[0.90, 0.80, 0.35]} />
+                <meshStandardMaterial color="#282C38" roughness={0.38} metalness={0.72} />
+              </mesh>
+              {/* Dumbbells × 3 pairs */}
+              {[-0.28, 0, 0.28].map((dx, di) => (
+                <group key={di} position={[dx, 0.48, 0.12]}>
+                  {/* Handle */}
+                  <mesh rotation={[0, 0, Math.PI / 2]}>
+                    <cylinderGeometry args={[0.018, 0.018, 0.22, 6]} />
+                    <meshStandardMaterial color="#505868" roughness={0.28} metalness={0.80} />
+                  </mesh>
+                  {/* Heads */}
+                  {[-0.12, 0.12].map((hx, hi) => (
+                    <mesh key={hi} position={[hx, 0, 0]}>
+                      <sphereGeometry args={[0.050, 6, 4]} />
+                      <meshStandardMaterial color="#202428" roughness={0.40} metalness={0.72} />
+                    </mesh>
+                  ))}
+                </group>
+              ))}
+            </group>
+
+            {/* ── Overhead fan / mist fan (optional night light) ── */}
+            {isNightGym && (
+              <pointLight position={[0, 2.50, 0]}
+                intensity={1.8} distance={5.0} decay={1.8}
+                color="#FFF8F0" castShadow={false} />
+            )}
+          </group>
+        );
+      })()}
+
       {/* ── 5k. 雨棚玻璃顶（canopy glazing panel upgrade）── */}
       {!insideBuilding && isGlassVilla && (() => {
         const canopyW3 = Math.min(W * 0.62, 8.0);
