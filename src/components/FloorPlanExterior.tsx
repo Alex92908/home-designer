@@ -2120,6 +2120,68 @@ export default function FloorPlanBuilding({
                 </mesh>
               );
             })}
+            {/* Ornamental grass clumps along north bed */}
+            {Array.from({ length: Math.round(W / 1.6) }, (_, gi) => {
+              const gx = -W / 2 + 0.8 + gi * 1.6;
+              return (
+                <mesh key={gi} position={[gx, bedH + plantH * 0.45, D / 2 + bedW / 2 + 0.02]} castShadow>
+                  <sphereGeometry args={[0.15, 8, 6]} />
+                  <meshStandardMaterial color={gi % 3 === 0 ? "#2A5C1E" : gi % 3 === 1 ? grassColor : "#3E7030"} roughness={0.96} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })()}
+
+      {/* ── 4d. 屋顶露台玻璃栏杆（南向露台内侧，安全围护）──
+               沿女儿墙内侧布置，仅在南侧和东西短边各一段
+               材质：夹胶玻璃 + 黑色阳极氧化铝竖框 */}
+      {!insideBuilding && (() => {
+        const railY = totalH + 0.30 + 0.48;  // parapet top + railing base
+        const PH = 0.30;          // parapet height (same as FlatRoof)
+        const OV = 0.45;          // roof overhang
+        const rH  = 0.92;         // railing glass height
+        const rT  = 0.012;        // glass panel thickness
+        const postW = 0.038;      // post cross-section
+        const frameColor = "#1C1E26";
+        const terW = Math.min(W * 0.60, 7.0);  // terrace railing span (south only, centered)
+        const railZ = -D / 2 - OV + 0.20;  // inset from south parapet inner face
+        // Number of glass panels (each ~1.2m wide)
+        const panelCount = Math.max(2, Math.round(terW / 1.2));
+        const postPositions = Array.from({ length: panelCount + 1 }, (_, i) => -terW / 2 + i * (terW / panelCount));
+        return (
+          <group position={[0, railY, railZ]}>
+            {/* Glass panels */}
+            {Array.from({ length: panelCount }, (_, i) => {
+              const cx2 = -terW / 2 + (i + 0.5) * (terW / panelCount);
+              const pW  = terW / panelCount - postW - 0.008;
+              return (
+                <mesh key={i} position={[cx2, rH / 2, 0]} renderOrder={11}>
+                  <boxGeometry args={[pW, rH - 0.06, rT]} />
+                  <meshStandardMaterial
+                    color="#C8DCE8"
+                    transparent opacity={0.38}
+                    depthWrite={false}
+                    roughness={0.04} metalness={0.10}
+                    envMapIntensity={2.4}
+                    side={THREE.DoubleSide}
+                  />
+                </mesh>
+              );
+            })}
+            {/* Vertical posts */}
+            {postPositions.map((px2, pi) => (
+              <mesh key={pi} position={[px2, rH / 2, 0]} castShadow>
+                <boxGeometry args={[postW, rH, postW]} />
+                <meshStandardMaterial color={frameColor} roughness={0.12} metalness={0.92} envMapIntensity={2.2} />
+              </mesh>
+            ))}
+            {/* Top handrail */}
+            <mesh position={[0, rH + 0.018, 0]}>
+              <boxGeometry args={[terW + 0.04, 0.038, 0.060]} />
+              <meshStandardMaterial color={frameColor} roughness={0.12} metalness={0.94} envMapIntensity={2.4} />
+            </mesh>
           </group>
         );
       })()}
