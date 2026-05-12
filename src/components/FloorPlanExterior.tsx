@@ -3305,6 +3305,86 @@ export default function FloorPlanBuilding({
         });
       })()}
 
+      {/* ── 南/东/西立面水平遮阳铝合金百叶翼（brise-soleil fins）──
+           Horizontal aluminum sun-shading blades projecting from the south,
+           east and west facades. Each floor has a set of 5 fins distributed
+           across the window zone. Fins are angled 18° upward to admit diffuse
+           sky light while blocking direct overhead summer sun.
+           Material: brushed anodised aluminium with low roughness + high metal. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const finW    = W + 0.06;    // full width of south face fins
+        const finD    = 0.50;        // projection depth from face (shadow reach)
+        const finT    = 0.020;       // blade thickness
+        const finAngle = -Math.PI * 0.05;   // 9° tilt upward
+        const finsPerFloor = 4;
+        const southFaceZF = -D / 2 - 0.18;
+        const eastFaceXF  =  W / 2 + 0.18;
+        const westFaceXF  = -W / 2 - 0.18;
+
+        return (
+          <group>
+            {Array.from({ length: usedFloors }, (_, fi) => {
+              const floorBaseY = fi * (FLOOR_H + SLAB_T);
+              // Skip ground floor (fi=0) — canopy already covers south; fins start from floor 1
+              if (fi === 0) return null;
+              const windowZoneH = FLOOR_H * 0.80;
+              const finSpacing  = windowZoneH / (finsPerFloor + 1);
+
+              return (
+                <group key={`fins-fl-${fi}`}>
+                  {Array.from({ length: finsPerFloor }, (_, ni) => {
+                    const finY = floorBaseY + SLAB_T * 0.5 + (ni + 1) * finSpacing;
+                    return (
+                      <group key={ni}>
+                        {/* South facade fin */}
+                        <mesh
+                          position={[0, finY, southFaceZF - finD / 2]}
+                          rotation={[finAngle, 0, 0]}
+                          castShadow
+                        >
+                          <boxGeometry args={[finW, finT, finD]} />
+                          <meshStandardMaterial
+                            color="#B8C0CA"
+                            roughness={0.12} metalness={0.88}
+                            envMapIntensity={3.0}
+                          />
+                        </mesh>
+                        {/* East facade fin */}
+                        <mesh
+                          position={[eastFaceXF + finD / 2, finY, 0]}
+                          rotation={[finAngle, Math.PI / 2, 0]}
+                          castShadow
+                        >
+                          <boxGeometry args={[D + 0.06, finT, finD]} />
+                          <meshStandardMaterial
+                            color="#B8C0CA"
+                            roughness={0.12} metalness={0.88}
+                            envMapIntensity={3.0}
+                          />
+                        </mesh>
+                        {/* West facade fin */}
+                        <mesh
+                          position={[westFaceXF - finD / 2, finY, 0]}
+                          rotation={[finAngle, -Math.PI / 2, 0]}
+                          castShadow
+                        >
+                          <boxGeometry args={[D + 0.06, finT, finD]} />
+                          <meshStandardMaterial
+                            color="#B8C0CA"
+                            roughness={0.12} metalness={0.88}
+                            envMapIntensity={3.0}
+                          />
+                        </mesh>
+                      </group>
+                    );
+                  })}
+                </group>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 外立面转角柱（4 角）— 黑色阳极氧化铝方柱，给建筑立面明确边界，
               现代玻璃幕墙建筑标配转角细节 ── */}
       {!insideBuilding && isGlassVilla && (() => {
