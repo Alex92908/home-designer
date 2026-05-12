@@ -4545,6 +4545,85 @@ export default function FloorPlanBuilding({
         );
       })}
 
+      {/* ── 4a-extra2. 建筑基础 LED 地埋射灯（inground uplight fixtures）──
+           Small recessed inground uplights placed just outside the building
+           base on all 4 sides, spaced ~2.4m apart. At night they cast warm
+           amber beams upward, dramatically illuminating the facade and corner
+           columns. Each fixture: small dark housing flush with ground + lens
+           + spotLight aimed straight up at the wall. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const isNightUL = sunHour < 6 || sunHour > 20;
+        const isDuskUL  = !isNightUL && (sunHour < 8 || sunHour > 18);
+        const ulI  = isNightUL ? 5.0 : isDuskUL ? 2.5 : 0.0;
+        const ulEm = isNightUL ? 3.2 : isDuskUL ? 1.5 : 0.20;
+        const ulOffset = 0.32;  // m from building face
+
+        if (ulI === 0 && ulEm < 0.3) return null;
+
+        // Generate fixtures along all 4 faces
+        const spacing = 2.40;
+        const fixtures: Array<{x: number; y: number; z: number; rY: number}> = [];
+
+        // South face (negative Z)
+        const nSouth = Math.max(2, Math.round(W / spacing));
+        for (let i = 0; i < nSouth; i++) {
+          const fx = -W / 2 + (i + 0.5) * (W / nSouth);
+          fixtures.push({ x: fx, y: 0, z: -D / 2 - ulOffset, rY: 0 });
+        }
+        // North face (positive Z)
+        for (let i = 0; i < nSouth; i++) {
+          const fx = -W / 2 + (i + 0.5) * (W / nSouth);
+          fixtures.push({ x: fx, y: 0, z: D / 2 + ulOffset, rY: Math.PI });
+        }
+        // East face (positive X)
+        const nEast = Math.max(2, Math.round(D / spacing));
+        for (let i = 0; i < nEast; i++) {
+          const fz = -D / 2 + (i + 0.5) * (D / nEast);
+          fixtures.push({ x: W / 2 + ulOffset, y: 0, z: fz, rY: -Math.PI / 2 });
+        }
+        // West face (negative X)
+        for (let i = 0; i < nEast; i++) {
+          const fz = -D / 2 + (i + 0.5) * (D / nEast);
+          fixtures.push({ x: -W / 2 - ulOffset, y: 0, z: fz, rY: Math.PI / 2 });
+        }
+
+        return (
+          <group>
+            {fixtures.map((f, fi) => (
+              <group key={`ul-${fi}`} position={[f.x, f.y, f.z]}>
+                {/* Inground housing — flush dark disc */}
+                <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <circleGeometry args={[0.055, 8]} />
+                  <meshStandardMaterial color="#282C34" roughness={0.38} metalness={0.78} />
+                </mesh>
+                {/* Lens — frosted warm-white */}
+                <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <circleGeometry args={[0.038, 8]} />
+                  <meshStandardMaterial
+                    color="#FFF8E0"
+                    emissive="#FFE880" emissiveIntensity={ulEm}
+                    roughness={0.55} transparent opacity={0.92}
+                  />
+                </mesh>
+                {/* SpotLight aimed upward at wall */}
+                {ulI > 0 && (
+                  <spotLight
+                    position={[0, 0.10, 0]}
+                    intensity={ulI}
+                    distance={8.0}
+                    angle={Math.PI * 0.14}
+                    penumbra={0.55}
+                    decay={1.8}
+                    color="#FFF2D0"
+                    castShadow={false}
+                  />
+                )}
+              </group>
+            ))}
+          </group>
+        );
+      })()}
+
       {/* ── 4b. 东西立面竖向遮阳翅片（brise-soleil fins）——
                铝合金竖向矩形截面板，均匀分布于东西两侧外墙
                · 只在 isGlassVilla 楼（floor-plan-driven）下渲染
