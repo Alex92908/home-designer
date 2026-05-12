@@ -1012,19 +1012,54 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
                 </mesh>
               );
             })}
+            {/* 张拉遮阳膜（tensile shade sail）— 横跨廊架顶部，白色微透明聚酯布 */}
+            <mesh position={[0, pgH + 0.094, 0]} renderOrder={10}>
+              <boxGeometry args={[pgW - 0.10, 0.008, pgD - 0.10]} />
+              <meshStandardMaterial
+                color="#F8F4EC"
+                transparent opacity={0.52}
+                depthWrite={false}
+                roughness={0.82}
+                metalness={0.01}
+                side={THREE.DoubleSide}
+                {...overlayMaterialProps(1)}
+              />
+            </mesh>
           </group>
         );
       })()}
-      {/* 屋顶种植箱 — 绿植对称，增加生机 */}
-      {([[-W * 0.36, -D * 0.18], [W * 0.36, -D * 0.18]] as [number,number][]).map(([px, pz], pi) => (
-        <group key={`rp-${pi}`} position={[px, roofSlab + 0.05, pz]}>
-          <mesh position={[0, 0.24, 0]} castShadow>
-            <boxGeometry args={[0.70, 0.48, 0.36]} />
-            <meshStandardMaterial color="#3A3840" roughness={0.75} metalness={0.12} />
+      {/* 屋顶种植箱 — 长方形黑钢槽，搭配多株造型植物 */}
+      {([[-W * 0.36, -D * 0.18], [W * 0.36, -D * 0.18]] as [number,number][]).map(([ppx, ppz], pi) => (
+        <group key={`rp-${pi}`} position={[ppx, roofSlab + 0.05, ppz]}>
+          {/* Planter box — dark steel trough */}
+          <mesh position={[0, 0.26, 0]} castShadow>
+            <boxGeometry args={[1.20, 0.52, 0.44]} />
+            <meshStandardMaterial color="#282A32" roughness={0.55} metalness={0.42} envMapIntensity={1.4} />
           </mesh>
-          <mesh position={[0, 0.70, 0]} castShadow>
-            <sphereGeometry args={[0.34, 10, 8]} />
-            <meshStandardMaterial color="#2A5820" roughness={0.94} />
+          {/* Soil surface */}
+          <mesh position={[0, 0.525, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[1.14, 0.38]} />
+            <meshStandardMaterial color="#2A1A0E" roughness={0.98} />
+          </mesh>
+          {/* Main rounded shrub */}
+          <mesh position={[0, 0.80, 0]} castShadow>
+            <sphereGeometry args={[0.30, 10, 8]} />
+            <meshStandardMaterial color={pi === 0 ? "#2A6020" : "#224E18"} roughness={0.96} />
+          </mesh>
+          {/* Secondary cluster — offset for asymmetry */}
+          <mesh position={[0.32, 0.68, 0.05]} castShadow>
+            <sphereGeometry args={[0.22, 8, 6]} />
+            <meshStandardMaterial color="#1E4A14" roughness={0.97} />
+          </mesh>
+          {/* Small accent cluster */}
+          <mesh position={[-0.28, 0.64, -0.05]} castShadow>
+            <sphereGeometry args={[0.18, 7, 5]} />
+            <meshStandardMaterial color={pi === 0 ? "#2E6022" : "#284E1C"} roughness={0.96} />
+          </mesh>
+          {/* Tall spiky accent (ornamental grass / agave form) */}
+          <mesh position={[0.06, 0.88, 0]} castShadow>
+            <cylinderGeometry args={[0.04, 0.08, 0.52, 6]} />
+            <meshStandardMaterial color="#3A7028" roughness={0.94} />
           </mesh>
         </group>
       ))}
