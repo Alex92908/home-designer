@@ -2527,6 +2527,60 @@ export default function FloorPlanBuilding({
                           />
                         </mesh>
                       </group>
+                      {/* TV wall / media unit — opposite to artwork wall
+                          Full-width low dark console + large dark TV panel + LED backlight */}
+                      <group position={[iW * 0.18, -FLOOR_H / 2 + 0.10, -iD / 2 + 0.10]}>
+                        {/* Media console — dark walnut, low-profile */}
+                        <mesh position={[0, 0.22, 0]} castShadow>
+                          <boxGeometry args={[Math.min(iW * 0.55, 2.40), 0.44, 0.45]} />
+                          <meshStandardMaterial color="#201A14" roughness={0.55} metalness={0.08} />
+                        </mesh>
+                        {/* TV panel — ultra-thin dark screen */}
+                        <mesh position={[0, 0.44 + 0.48, 0.05]}>
+                          <boxGeometry args={[Math.min(iW * 0.50, 2.20), 0.96, 0.022]} />
+                          <meshStandardMaterial
+                            color="#0A0A0C"
+                            roughness={0.04}
+                            metalness={0.30}
+                            envMapIntensity={1.5}
+                            emissive="#1A2040"
+                            emissiveIntensity={interiorGlowWall > 0.5 ? interiorGlowWall * 0.35 : 0.05}
+                          />
+                        </mesh>
+                        {/* TV LED backlight — blue-ish glow behind panel */}
+                        <mesh position={[0, 0.44 + 0.48, -0.014]}>
+                          <boxGeometry args={[Math.min(iW * 0.50, 2.20) + 0.06, 0.96 + 0.06, 0.006]} />
+                          <meshStandardMaterial
+                            color="#3060A0"
+                            emissive="#2050C0"
+                            emissiveIntensity={interiorGlowWall > 0.5 ? interiorGlowWall * 0.55 : 0.0}
+                            roughness={0.80}
+                          />
+                        </mesh>
+                      </group>
+                      {/* Decorative side table next to sofa */}
+                      <group position={[iW * 0.22, -FLOOR_H / 2, iD * 0.10]}>
+                        {/* Side table */}
+                        <mesh position={[0, 0.48, 0]}>
+                          <cylinderGeometry args={[0.22, 0.22, 0.022, 10]} />
+                          <meshStandardMaterial color="#806040" roughness={0.50} metalness={0.12} />
+                        </mesh>
+                        <mesh position={[0, 0.24, 0]}>
+                          <cylinderGeometry args={[0.020, 0.020, 0.46, 6]} />
+                          <meshStandardMaterial color="#5A3820" roughness={0.70} metalness={0.04} />
+                        </mesh>
+                        {/* Table lamp */}
+                        <mesh position={[0, 0.68, 0]}>
+                          <cylinderGeometry args={[0.12, 0.08, 0.24, 8]} />
+                          <meshStandardMaterial
+                            color="#F0E8D8"
+                            emissive="#FFE8A0"
+                            emissiveIntensity={interiorGlowWall > 0.5 ? interiorGlowWall * 1.0 : 0.12}
+                            roughness={0.85}
+                            side={THREE.DoubleSide}
+                          />
+                        </mesh>
+                      </group>
                     </>
                   )}
 
