@@ -3215,6 +3215,84 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5b-2. 场地草坪面层 + 主入口花岗岩大道（lawn surface + main granite path）──
+           A rich green lawn plane fills the site inside boundary walls.
+           The central entry/driveway axis uses dark granite slabs. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bndS5   = -D / 2 - 11.50;
+        const bndN5   =  D / 2 + 3.20;
+        const bndE5   =  W / 2 + 4.50;
+        const bndW5   = -W / 2 - 4.50;
+        const wallT5  = 0.18;
+        // Lawn fills inside boundary minus wall thickness
+        const lawnW   = bndE5 - bndW5 - wallT5 * 2;
+        const lawnD   = bndN5 - bndS5 - wallT5 * 2;
+        const lawnMidZ = (bndN5 + bndS5) / 2;
+
+        // Driveway / main path: 5.4m wide along centre axis
+        const driveW5 = 5.40;
+        const driveZ1 = bndS5 + wallT5 + 0.05;
+        const driveZ2 = -D / 2 - 0.15;   // south face of building
+        const driveLen = driveZ2 - driveZ1;
+        const driveMidZ = (driveZ1 + driveZ2) / 2;
+
+        return (
+          <group>
+            {/* Lawn surface — two toned segments for visual richness */}
+            {/* South section (south of building) */}
+            <mesh position={[0, 0.001, lawnMidZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[lawnW, lawnD]} />
+              <meshStandardMaterial color="#3A6A28" roughness={0.95} metalness={0.00} />
+            </mesh>
+            {/* Lawn stripe pattern (slightly lighter bands for mow lines) */}
+            {Array.from({ length: Math.round(lawnD / 1.20) }, (_, li) => {
+              if (li % 2 === 0) return null;  // alternate stripes only
+              const sz = bndS5 + wallT5 + (li + 0.5) * 1.20;
+              return (
+                <mesh key={`stripe-${li}`} position={[0, 0.002, sz]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <planeGeometry args={[lawnW, 1.18]} />
+                  <meshStandardMaterial color="#426E2E" roughness={0.95} metalness={0.00} />
+                </mesh>
+              );
+            })}
+            {/* Main entry path — polished dark granite slabs */}
+            <mesh position={[0, 0.015, driveMidZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[driveW5, Math.abs(driveLen)]} />
+              <meshStandardMaterial color="#282C34" roughness={0.28} metalness={0.18} envMapIntensity={1.5} />
+            </mesh>
+            {/* Path joint lines — transverse granite joints every 0.65m */}
+            {Array.from({ length: Math.round(Math.abs(driveLen) / 0.65) - 1 }, (_, ji) => {
+              const jz = driveZ1 + (ji + 1) * 0.65;
+              return (
+                <mesh key={`pj-${ji}`} position={[0, 0.018, jz]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <planeGeometry args={[driveW5, 0.010]} />
+                  <meshStandardMaterial color="#1A1E26" roughness={0.40} metalness={0.10} />
+                </mesh>
+              );
+            })}
+            {/* Path longitudinal joints (4 evenly spaced) */}
+            {([-driveW5 * 0.28, -driveW5 * 0.07, driveW5 * 0.07, driveW5 * 0.28] as number[]).map((jx5, ji) => (
+              <mesh key={`lj-${ji}`} position={[jx5, 0.018, driveMidZ]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.010, Math.abs(driveLen)]} />
+                <meshStandardMaterial color="#1A1E26" roughness={0.40} metalness={0.10} />
+              </mesh>
+            ))}
+            {/* Lawn edging — thin dark granite border strips along path edges */}
+            {([-driveW5 / 2 - 0.04, driveW5 / 2 + 0.04] as number[]).map((ex5, ei) => (
+              <mesh key={`edge-${ei}`} position={[ex5, 0.016, driveMidZ]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.08, Math.abs(driveLen) + 0.10]} />
+                <meshStandardMaterial color="#1E2028" roughness={0.32} metalness={0.22} envMapIntensity={1.2} />
+              </mesh>
+            ))}
+            {/* Lawn colour in north yard (lighter / different shade) */}
+            <mesh position={[0, 0.003, D / 2 + 1.60]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[lawnW * 0.80, bndN5 - D / 2 - wallT5 * 2 - 0.20]} />
+              <meshStandardMaterial color="#3E7030" roughness={0.94} metalness={0.00} />
+            </mesh>
+          </group>
+        );
+      })()}
+
       {/* ── 5c. 游泳池（outdoor swimming pool, south yard）── */}
       {!insideBuilding && isGlassVilla && (() => {
         const poolW  = Math.min(W * 0.72, 10.0);  // pool width E-W
