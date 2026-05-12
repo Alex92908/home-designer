@@ -5469,6 +5469,89 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5n. 车道两侧景观灯柱（driveway flanking lamp posts）──
+           Elegant tall lamp posts lining the driveway, 3 on each side.
+           Classic lantern head style, warm amber glow at dusk/night. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const isNightN  = sunHour < 6 || sunHour > 20;
+        const isDuskN   = !isNightN && (sunHour < 8 || sunHour > 18);
+        const lampLI    = isNightN ? 6.0 : isDuskN ? 3.2 : 0.0;
+        const glowEmi   = isNightN ? 2.8 : isDuskN ? 1.4 : 0.0;
+        // Posts placed along driveway from gate to building entrance
+        const dvHalf = Math.min(W * 0.15, 2.20);  // half-width of driveway
+        const gateZ  = -D / 2 - 11.50 + 0.5;      // approx gate Z
+        const buildZ = -D / 2 - 0.80;              // near south face
+        const postCount = 3;
+        const postH  = 3.20;
+        const postPositions: Array<[number, number]> = [];
+        for (let pi = 0; pi < postCount; pi++) {
+          const t  = (pi + 0.5) / postCount;
+          const pz = gateZ + t * (buildZ - gateZ);
+          postPositions.push([ dvHalf + 0.55, pz]);
+          postPositions.push([-dvHalf - 0.55, pz]);
+        }
+        return (
+          <group>
+            {postPositions.map(([px, pz], li) => (
+              <group key={li} position={[px, 0, pz]}>
+                {/* Base plinth */}
+                <mesh position={[0, 0.10, 0]} castShadow>
+                  <boxGeometry args={[0.22, 0.20, 0.22]} />
+                  <meshStandardMaterial color="#C4C0B8" roughness={0.78} metalness={0.06} />
+                </mesh>
+                {/* Main shaft — tapered dark aluminium */}
+                <mesh position={[0, postH / 2 + 0.20, 0]} castShadow>
+                  <cylinderGeometry args={[0.025, 0.042, postH, 8]} />
+                  <meshStandardMaterial color="#2A2E38" roughness={0.32} metalness={0.72} envMapIntensity={1.4} />
+                </mesh>
+                {/* Neck collar */}
+                <mesh position={[0, postH + 0.24, 0]}>
+                  <cylinderGeometry args={[0.040, 0.028, 0.055, 8]} />
+                  <meshStandardMaterial color="#1E2028" roughness={0.28} metalness={0.80} envMapIntensity={1.6} />
+                </mesh>
+                {/* Lantern body — hexagonal housing */}
+                <mesh position={[0, postH + 0.42, 0]} castShadow>
+                  <cylinderGeometry args={[0.088, 0.088, 0.28, 6]} />
+                  <meshStandardMaterial color="#1C1E26" roughness={0.25} metalness={0.82} envMapIntensity={1.8} />
+                </mesh>
+                {/* Glass panels (6 faces, slightly transparent warm) */}
+                <mesh position={[0, postH + 0.42, 0]}>
+                  <cylinderGeometry args={[0.080, 0.080, 0.24, 6]} />
+                  <meshStandardMaterial
+                    color="#FFF0B0"
+                    transparent opacity={0.55}
+                    roughness={0.04} metalness={0.04}
+                    emissive="#FFE080" emissiveIntensity={glowEmi}
+                    side={THREE.DoubleSide}
+                  />
+                </mesh>
+                {/* Lantern cap — pyramid shape */}
+                <mesh position={[0, postH + 0.60, 0]} castShadow>
+                  <coneGeometry args={[0.096, 0.14, 6]} />
+                  <meshStandardMaterial color="#1A1C22" roughness={0.22} metalness={0.88} envMapIntensity={2.0} />
+                </mesh>
+                {/* Finial sphere */}
+                <mesh position={[0, postH + 0.72, 0]}>
+                  <sphereGeometry args={[0.022, 6, 4]} />
+                  <meshStandardMaterial color="#C0A840" roughness={0.16} metalness={0.90} envMapIntensity={3.5} />
+                </mesh>
+                {/* Point light from lantern */}
+                {lampLI > 0 && (
+                  <pointLight
+                    position={[0, postH + 0.42, 0]}
+                    intensity={lampLI}
+                    distance={7.0}
+                    decay={2.0}
+                    color="#FFE890"
+                    castShadow={false}
+                  />
+                )}
+              </group>
+            ))}
+          </group>
+        );
+      })()}
+
       {/* ── 6a. 走廊地板（铺满整层，楼梯间开口处挖空）── */}
       {insideBuilding && Array.from({ length: floorCount }, (_, fi) => {
         const fp = floorPlans[fi];
