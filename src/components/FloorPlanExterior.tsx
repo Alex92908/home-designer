@@ -744,6 +744,96 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
         </group>
       ))}
 
+      {/* ── 屋顶绿化区（intensive green roof zone + boardwalk）──
+           North-west quadrant of roof: sedum/grass carpet, mixed ornamental
+           plants, wooden boardwalk path, and planters. */}
+      {(() => {
+        const grX   = -W * 0.18;   // centre of green zone (west of skylight)
+        const grZ   =  D * 0.14;   // north half
+        const grW   = Math.min(W * 0.42, 5.50);
+        const grD   = Math.min(D * 0.38, 4.20);
+        const grY   = roofSlab + 0.05;
+        return (
+          <group position={[grX, grY, grZ]}>
+            {/* ── Green substrate (sedum carpet) ── */}
+            <mesh position={[0, 0.045, 0]} receiveShadow>
+              <boxGeometry args={[grW, 0.090, grD]} />
+              <meshStandardMaterial color="#3A6420" roughness={0.98} metalness={0.0} />
+            </mesh>
+            {/* Surface texture — lighter green patches */}
+            {Array.from({ length: 16 }, (_, gi) => {
+              const gHash = (gi * 17 + 5) % 13;
+              const gx = -grW / 2 + 0.30 + (gi % 4) * (grW - 0.60) / 3;
+              const gz = -grD / 2 + 0.30 + Math.floor(gi / 4) * (grD - 0.60) / 3;
+              return (
+                <mesh key={gi} position={[gx + (gHash - 6) * 0.08, 0.092, gz + (gHash % 4 - 2) * 0.08]}>
+                  <sphereGeometry args={[0.28 + (gHash % 3) * 0.07, 5, 3]} />
+                  <meshStandardMaterial color={gHash % 2 === 0 ? "#4A7828" : "#2E5A14"} roughness={0.98} />
+                </mesh>
+              );
+            })}
+
+            {/* ── Wooden boardwalk — 5 deck boards crossing E-W ── */}
+            {Array.from({ length: 5 }, (_, bi) => {
+              const bz = -grD / 2 + 0.35 + bi * (grD - 0.70) / 4;
+              return (
+                <mesh key={bi} position={[0, 0.115, bz]} castShadow>
+                  <boxGeometry args={[grW * 0.70, 0.028, 0.14]} />
+                  <meshStandardMaterial color="#8B6240" roughness={0.80} metalness={0.05}
+                    emissive="#4A2C10" emissiveIntensity={0.04} />
+                </mesh>
+              );
+            })}
+            {/* Boardwalk side stringers */}
+            {([-grW * 0.355, grW * 0.355] as number[]).map((sx, si) => (
+              <mesh key={si} position={[sx, 0.112, 0]} castShadow>
+                <boxGeometry args={[0.040, 0.022, grD * 0.70]} />
+                <meshStandardMaterial color="#6A4828" roughness={0.75} metalness={0.06} />
+              </mesh>
+            ))}
+
+            {/* ── Rectangular raised planter boxes at corners ── */}
+            {([[-grW * 0.38, -grD * 0.38], [grW * 0.38, -grD * 0.38]] as [number,number][]).map(([px, pz], pi) => (
+              <group key={pi} position={[px, 0.092, pz]}>
+                {/* Planter body — weathering steel */}
+                <mesh castShadow>
+                  <boxGeometry args={[0.80, 0.32, 0.44]} />
+                  <meshStandardMaterial color="#6A4830" roughness={0.65} metalness={0.38} />
+                </mesh>
+                {/* Soil surface */}
+                <mesh position={[0, 0.155, 0]}>
+                  <boxGeometry args={[0.76, 0.010, 0.40]} />
+                  <meshStandardMaterial color="#2A1A08" roughness={0.98} />
+                </mesh>
+                {/* 3 small ornamental plants */}
+                {[-0.22, 0, 0.22].map((ox, oi) => (
+                  <mesh key={oi} position={[ox, 0.30, 0]}>
+                    <sphereGeometry args={[0.14 + (oi % 2) * 0.04, 5, 4]} />
+                    <meshStandardMaterial color={oi === 1 ? "#8090A0" : "#3A5A28"} roughness={0.90} />
+                  </mesh>
+                ))}
+              </group>
+            ))}
+
+            {/* ── 4 ornamental grasses along boardwalk edge ── */}
+            {[[-grW * 0.20, 0], [grW * 0.20, 0], [0, -grD * 0.28], [0, grD * 0.28]].map(([ox, oz], oi) => (
+              <group key={oi} position={[ox as number, 0.10, oz as number]}>
+                {Array.from({ length: 7 }, (_, gi) => {
+                  const ga = (gi * Math.PI * 2) / 7;
+                  return (
+                    <mesh key={gi} position={[Math.cos(ga) * 0.08, 0.28, Math.sin(ga) * 0.08]}
+                      rotation={[Math.sin(ga) * 0.35, 0, Math.cos(ga) * 0.35]}>
+                      <boxGeometry args={[0.012, 0.55, 0.006]} />
+                      <meshStandardMaterial color="#8AAA40" roughness={0.90} />
+                    </mesh>
+                  );
+                })}
+              </group>
+            ))}
+          </group>
+        );
+      })()}
+
       {/* ── 线性天窗（linear skylight）— 南向采光，钢框 + 夹胶玻璃 ── */}
       {(() => {
         const slW = Math.min(W * 0.45, 5.0);  // skylight width
