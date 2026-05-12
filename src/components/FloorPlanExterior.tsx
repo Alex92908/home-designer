@@ -216,13 +216,13 @@ function GlassCurtain({
                 <mesh key={`p${ri}`} position={[0, py, 0.020]} renderOrder={10}>
                   <boxGeometry args={[panelW - 0.004, rowH * 0.985, 0.008]} />
                   <meshStandardMaterial
-                    color={hasDoor ? "#BFD8E4" : "#C8E0EA"}
+                    color={hasDoor ? "#C4D8E6" : "#D0E4EE"}
                     transparent
-                    opacity={0.32}
+                    opacity={0.42}
                     depthWrite={false}
-                    roughness={0.06}
-                    metalness={0.04}
-                    envMapIntensity={0.35}
+                    roughness={0.04}
+                    metalness={0.08}
+                    envMapIntensity={1.8}
                     side={THREE.DoubleSide}
                     {...overlayMaterialProps(2)}
                   />
@@ -1311,9 +1311,9 @@ export default function FloorPlanBuilding({
             {!isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (
               <mesh position={[cx, yBase + FLOOR_H / 2, cz]} raycast={() => null}>
                 <boxGeometry args={[rW - 0.02, FLOOR_H - 0.01, rD - 0.02]} />
-                <meshStandardMaterial color={wallColor} side={THREE.BackSide} roughness={0.80}
+                <meshStandardMaterial color={wallColor} side={THREE.BackSide} roughness={0.78}
                   transparent={isXray} opacity={wallOpacity} depthWrite={!isXray}
-                  emissive={wallColor} emissiveIntensity={0.06} />
+                  emissive={wallColor} emissiveIntensity={insideBuilding ? 0.18 : 0.06} />
               </mesh>
             )}
             {/* 走廊：天花板板条（顶部薄板，让走廊从室内清晰可辨）*/}

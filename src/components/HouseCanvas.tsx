@@ -6059,15 +6059,17 @@ export default function HouseCanvas() {
         )}
         {/* Hemisphere light — sky/ground bounce */}
         <hemisphereLight args={[theme.hemiSky, theme.hemiGround, theme.hemiIntensity]} />
-        <ambientLight intensity={insideBuilding ? 0.55 : theme.ambient} />
+        <ambientLight intensity={insideBuilding ? 0.82 : theme.ambient} />
         {/* Interior ceiling lights — warm downlights active when camera is inside */}
         {insideBuilding && (
           <>
-            <pointLight position={[0,          FLOOR_H_M * 0.90, 0]}         intensity={3.5} distance={W * 2.0} decay={2} color="#FFF8E8" />
-            <pointLight position={[-W * 0.30,  FLOOR_H_M * 0.90, 0]}         intensity={2.5} distance={W * 1.5} decay={2} color="#FFFAEC" />
-            <pointLight position={[ W * 0.30,  FLOOR_H_M * 0.90, 0]}         intensity={2.5} distance={W * 1.5} decay={2} color="#FFFAEC" />
-            <pointLight position={[0,          FLOOR_H_M * 0.90, -D * 0.28]} intensity={2.2} distance={W * 1.4} decay={2} color="#FFFBF0" />
-            <pointLight position={[0,          FLOOR_H_M * 0.90,  D * 0.28]} intensity={2.2} distance={W * 1.4} decay={2} color="#FFFBF0" />
+            <pointLight position={[0,          FLOOR_H_M * 0.90, 0]}         intensity={5.0} distance={W * 2.5} decay={1.8} color="#FFF8E8" />
+            <pointLight position={[-W * 0.30,  FLOOR_H_M * 0.90, 0]}         intensity={3.5} distance={W * 2.0} decay={1.8} color="#FFFAEC" />
+            <pointLight position={[ W * 0.30,  FLOOR_H_M * 0.90, 0]}         intensity={3.5} distance={W * 2.0} decay={1.8} color="#FFFAEC" />
+            <pointLight position={[0,          FLOOR_H_M * 0.90, -D * 0.28]} intensity={3.0} distance={W * 1.8} decay={1.8} color="#FFFBF0" />
+            <pointLight position={[0,          FLOOR_H_M * 0.90,  D * 0.28]} intensity={3.0} distance={W * 1.8} decay={1.8} color="#FFFBF0" />
+            {/* 地板高度补光 */}
+            <pointLight position={[0, 0.6, 0]} intensity={1.8} distance={W * 1.6} decay={2} color="#FFF4E0" />
           </>
         )}
         {/* Primary sun — position updates every render frame as slider moves */}
