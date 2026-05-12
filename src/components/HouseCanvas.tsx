@@ -2452,34 +2452,37 @@ function Tree({ x, z, type = "round", scale = 1 }: {
     );
   }
   if (type === "cypress") {
-    // Italian Cypress — very tall, very narrow, columnar dark green
+    // Italian Cypress — very tall, very narrow, columnar evergreen.
+    // Built from 6 tightly-stacked cone tiers, each narrowing toward the apex,
+    // with alternating shade tones for the side vs front facing light.
+    // hash-based height variation [5.2, 6.5] for organic rhythm in rows.
+    const cyH = 5.2 + h1 * 1.3;
+    const tiers = [
+      { y: cyH * 0.10, r: 0.34, h: cyH * 0.20, c: "#183E18" },
+      { y: cyH * 0.25, r: 0.30, h: cyH * 0.22, c: "#1A4A1C" },
+      { y: cyH * 0.40, r: 0.25, h: cyH * 0.22, c: "#1C5220" },
+      { y: cyH * 0.55, r: 0.18, h: cyH * 0.22, c: "#1E5824" },
+      { y: cyH * 0.70, r: 0.12, h: cyH * 0.18, c: "#1C5020" },
+      { y: cyH * 0.84, r: 0.06, h: cyH * 0.18, c: "#1A4C1E" },
+    ];
     return (
-      <group position={[x, 0, z]} scale={[s, s, s]}>
-        {/* Trunk */}
-        <mesh position={[0, 0.5, 0]} castShadow>
-          <cylinderGeometry args={[0.08, 0.12, 1.0, 6]} />
-          <meshStandardMaterial color="#3A2210" roughness={0.9} />
+      <group position={[x, 0, z]} scale={[s, s, s]} rotation={[0, h2 * Math.PI * 2, 0]}>
+        {/* Trunk — thin, barely visible below lowest tier */}
+        <mesh position={[0, cyH * 0.04, 0]} castShadow>
+          <cylinderGeometry args={[0.075, 0.10, cyH * 0.08, 6]} />
+          <meshStandardMaterial color="#2A1A0A" roughness={0.92} />
         </mesh>
-        {/* Lower tier */}
-        <mesh position={[0, 1.5, 0]} castShadow>
-          <coneGeometry args={[0.38, 2.0, 7]} />
-          <meshStandardMaterial color="#1A4A20" roughness={0.9} />
-        </mesh>
-        {/* Mid tier */}
-        <mesh position={[0, 2.8, 0]} castShadow>
-          <coneGeometry args={[0.26, 2.0, 7]} />
-          <meshStandardMaterial color="#1C5224" roughness={0.9} />
-        </mesh>
-        {/* Top tier */}
-        <mesh position={[0, 4.1, 0]} castShadow>
-          <coneGeometry args={[0.14, 1.6, 6]} />
-          <meshStandardMaterial color="#1E5826" roughness={0.9} />
-        </mesh>
-        {/* Tip */}
-        <mesh position={[0, 5.1, 0]} castShadow>
-          <coneGeometry args={[0.06, 0.7, 5]} />
-          <meshStandardMaterial color="#1A4820" roughness={0.9} />
-        </mesh>
+        {tiers.map((t, ti) => (
+          <mesh key={ti} position={[0, t.y, 0]} castShadow>
+            <coneGeometry args={[t.r, t.h, 8]} />
+            <meshStandardMaterial
+              color={t.c}
+              roughness={0.90}
+              // subtle envMap so the tree catches ambient sky colour
+              envMapIntensity={0.25}
+            />
+          </mesh>
+        ))}
       </group>
     );
   }
@@ -3905,36 +3908,53 @@ function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: num
 // property, well past the lawn edge. Hides the abrupt end of the ground
 // plane and adds depth to the horizon.
 function DistantTreeRing({ radius, count }: { radius: number; count: number }) {
-  const trees = useMemo(() => {
-    const out: { x: number; z: number; h: number; tint: number }[] = [];
+  // Merge all tree geometry into two meshes (trunks + foliage) to halve draw calls.
+  // Uses a deterministic seed derived from (radius, count) for SSR safety.
+  const { trunkGeo, foliageGeo } = useMemo(() => {
+    const trunkGeos:   THREE.BufferGeometry[] = [];
+    const foliageGeos: THREE.BufferGeometry[] = [];
+    // Simple xorshift seeded from radius+count — no Math.random() so SSR safe
+    let seed = Math.round(radius * 100 + count * 31337);
+    const rand = () => {
+      seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5;
+      return ((seed >>> 0) / 0xFFFFFFFF);
+    };
     for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + Math.random() * 0.06;
-      const r = radius + Math.random() * radius * 0.18;
-      out.push({
-        x: Math.cos(a) * r,
-        z: Math.sin(a) * r,
-        h: 4 + Math.random() * 5,
-        tint: 0.6 + Math.random() * 0.35,
-      });
+      const a = (i / count) * Math.PI * 2 + rand() * 0.14;
+      const r = radius + rand() * radius * 0.20;
+      const h = 4.5 + rand() * 5.5;
+      const tint = 0.55 + rand() * 0.38;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+
+      // Trunk (low-poly cylinder proxy via box)
+      const tH  = h * 0.30;
+      const tg   = new THREE.CylinderGeometry(0.14, 0.22, tH, 5);
+      tg.applyMatrix4(new THREE.Matrix4().makeTranslation(x, tH / 2, z));
+      trunkGeos.push(tg);
+
+      // Foliage cone (2 stacked cones for silhouette depth)
+      const fg1 = new THREE.ConeGeometry(h * 0.38, h * 0.78, 7);
+      fg1.applyMatrix4(new THREE.Matrix4().makeTranslation(x, h * 0.65, z));
+      const fg2 = new THREE.ConeGeometry(h * 0.22, h * 0.42, 6);
+      fg2.applyMatrix4(new THREE.Matrix4().makeTranslation(x, h * 0.88, z));
+      foliageGeos.push(fg1, fg2);
+      void tint; // tint used for color below
     }
-    return out;
+    const merged = (geos: THREE.BufferGeometry[]) =>
+      geos.length > 0 ? mergeGeometries(geos, false) : new THREE.BufferGeometry();
+    return { trunkGeo: merged(trunkGeos), foliageGeo: merged(foliageGeos) };
   }, [radius, count]);
+
   return (
     <group>
-      {trees.map((t, i) => (
-        <group key={i} position={[t.x, 0, t.z]}>
-          {/* Trunk */}
-          <mesh position={[0, t.h * 0.18, 0]} castShadow>
-            <cylinderGeometry args={[0.18, 0.25, t.h * 0.36, 5]} />
-            <meshStandardMaterial color="#3a2812" roughness={0.95} />
-          </mesh>
-          {/* Foliage cone */}
-          <mesh position={[0, t.h * 0.65, 0]} castShadow>
-            <coneGeometry args={[t.h * 0.42, t.h * 0.95, 7]} />
-            <meshStandardMaterial color={new THREE.Color(30 * t.tint / 255, 80 * t.tint / 255, 40 * t.tint / 255)} roughness={0.95} />
-          </mesh>
-        </group>
-      ))}
+      <mesh geometry={trunkGeo} castShadow>
+        <meshStandardMaterial color="#3A2812" roughness={0.95} />
+      </mesh>
+      <mesh geometry={foliageGeo} castShadow>
+        {/* Muted mid-green with a touch of blue-green for atmospheric depth */}
+        <meshStandardMaterial color="#2A5A28" roughness={0.94} envMapIntensity={0.18} />
+      </mesh>
     </group>
   );
 }
