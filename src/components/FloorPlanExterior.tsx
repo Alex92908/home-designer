@@ -5882,263 +5882,6 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {/* ── 5c-2a. 泳池设备房（pool pump / equipment shed, behind north deck）──
-           Compact 1.4m × 0.9m × 1.8m rendered concrete utility shed
-           housing filtration pump, heater, and chemical dosing unit.
-           Louvred vent slats on front + padlocked door. */}
-      {!insideBuilding && isGlassVilla && (() => {
-        const pzPool = -D / 2 - 5.80;
-        const poolL3 = 4.80;
-        const poolW3 = Math.min(W * 0.72, 10.0);
-        // Place shed to west of pool at north deck edge
-        const shedX  = -poolW3 / 2 - 1.10;
-        const shedZ  = pzPool - poolL3 / 2 - 0.65;
-        const shedW  = 1.40;
-        const shedD  = 0.90;
-        const shedH  = 1.80;
-        return (
-          <group position={[shedX, 0, shedZ]}>
-            {/* ── Main body ── */}
-            <mesh position={[0, shedH / 2, 0]} castShadow receiveShadow>
-              <boxGeometry args={[shedW, shedH, shedD]} />
-              <meshStandardMaterial color="#D4D0C8" roughness={0.82} metalness={0.04} />
-            </mesh>
-            {/* ── Flat roof slab with slight overhang ── */}
-            <mesh position={[0, shedH + 0.020, 0]} castShadow>
-              <boxGeometry args={[shedW + 0.08, 0.042, shedD + 0.08]} />
-              <meshStandardMaterial color="#B8B4AC" roughness={0.85} metalness={0.05} />
-            </mesh>
-            {/* ── South-facing door ── */}
-            <mesh position={[0.20, shedH * 0.50, -shedD / 2 - 0.005]}>
-              <boxGeometry args={[0.65, shedH * 0.92, 0.010]} />
-              <meshStandardMaterial color="#888880" roughness={0.50} metalness={0.30} />
-            </mesh>
-            {/* Door frame reveal */}
-            <mesh position={[0.20, shedH * 0.50, -shedD / 2 - 0.010]}>
-              <boxGeometry args={[0.70, shedH * 0.96, 0.008]} />
-              <meshStandardMaterial color="#404840" roughness={0.40} metalness={0.40} />
-            </mesh>
-            {/* Padlock hasp */}
-            <mesh position={[0.55, shedH * 0.50, -shedD / 2 - 0.012]}>
-              <boxGeometry args={[0.040, 0.060, 0.010]} />
-              <meshStandardMaterial color="#707880" roughness={0.28} metalness={0.80} />
-            </mesh>
-            {/* ── Louvred vent panel on west face ── */}
-            {Array.from({ length: 6 }, (_, vi) => (
-              <mesh key={vi} position={[-shedW / 2 - 0.003, shedH * 0.28 + vi * 0.090, 0]}
-                rotation={[0.25, 0, 0]}>
-                <boxGeometry args={[0.008, 0.018, shedD * 0.55]} />
-                <meshStandardMaterial color="#B0ACAC" roughness={0.55} metalness={0.20} />
-              </mesh>
-            ))}
-            {/* ── Pipe stubs exiting south wall ── */}
-            {([-0.25, 0.25] as number[]).map((px, pi) => (
-              <mesh key={pi} position={[px, shedH * 0.22, -shedD / 2 - 0.040]}>
-                <cylinderGeometry args={[0.022, 0.022, 0.080, 6]} />
-                <meshStandardMaterial color="#4A5060" roughness={0.35} metalness={0.70} />
-              </mesh>
-            ))}
-            {/* ── Warning label (small emissive strip) ── */}
-            <mesh position={[0.20, shedH * 0.18, -shedD / 2 - 0.006]}>
-              <boxGeometry args={[0.18, 0.050, 0.004]} />
-              <meshStandardMaterial color="#F0C820" roughness={0.60} metalness={0.05}
-                emissive="#F0C820" emissiveIntensity={0.25} />
-            </mesh>
-          </group>
-        );
-      })()}
-
-      {/* ── 5c-2b. 泳池跳台（pool diving board, north end of pool）──
-           Chrome-rail diving board on the north deck edge. 1m overhang
-           over the pool, non-slip white surface. */}
-      {!insideBuilding && isGlassVilla && (() => {
-        const pz2b = -D / 2 - 5.80;   // pool group centre Z
-        const poolL2b = 4.80;
-        const poolW2b = Math.min(W * 0.72, 10.0);
-        const boardX = poolW2b * 0.28;    // slightly off-centre
-        const boardZ = pz2b - poolL2b / 2 - 0.20; // at north pool edge
-        return (
-          <group position={[boardX, 0, boardZ]}>
-            {/* 2 supporting chrome posts */}
-            {([-0.22, 0.22] as number[]).map((rx, ri) => (
-              <group key={ri}>
-                {/* Vertical post */}
-                <mesh position={[rx, 0.45, -0.55]}>
-                  <cylinderGeometry args={[0.018, 0.018, 0.90, 6]} />
-                  <meshStandardMaterial color="#C4CCD4" roughness={0.18} metalness={0.92} envMapIntensity={2.4} />
-                </mesh>
-                {/* Horizontal handrail */}
-                <mesh position={[rx, 0.90, 0.10]} rotation={[Math.PI / 16, 0, 0]}>
-                  <cylinderGeometry args={[0.014, 0.014, 1.50, 6]} />
-                  <meshStandardMaterial color="#C4CCD4" roughness={0.18} metalness={0.92} envMapIntensity={2.2} />
-                </mesh>
-              </group>
-            ))}
-            {/* Board platform — non-slip white fibreglass */}
-            <mesh position={[0, 0.72, 0.30]} rotation={[-0.04, 0, 0]}>
-              <boxGeometry args={[0.44, 0.028, 1.60]} />
-              <meshStandardMaterial color="#EEEAE4" roughness={0.88} metalness={0.02} />
-            </mesh>
-            {/* Non-slip grip pattern on board */}
-            {Array.from({ length: 8 }, (_, gi) => (
-              <mesh key={gi} position={[0, 0.735, -0.30 + gi * 0.18]} rotation={[-0.04, 0, 0]}>
-                <boxGeometry args={[0.40, 0.006, 0.012]} />
-                <meshStandardMaterial color="#D8D4CC" roughness={0.92} />
-              </mesh>
-            ))}
-            {/* Fulcrum block under board */}
-            <mesh position={[0, 0.64, -0.22]}>
-              <boxGeometry args={[0.44, 0.08, 0.10]} />
-              <meshStandardMaterial color="#A0A8B0" roughness={0.45} metalness={0.55} />
-            </mesh>
-          </group>
-        );
-      })()}
-
-      {/* ── 5c-2c. 泳池东侧玻璃钢结构凉亭（pool cabana pavilion, east of pool）──
-           A slender glass-and-steel open pavilion provides poolside shade.
-           4 black steel I-beam posts, flat polycarbonate roof, rear privacy screen,
-           and a day bed / chaise lounge inside. Night: LED strip under soffit. */}
-      {!insideBuilding && isGlassVilla && (() => {
-        const poolW_cb  = Math.min(W * 0.72, 10.0);
-        const pz_cb     = -D / 2 - 5.80;
-        const deckBW_cb = 0.52;
-        // Cabana east of pool
-        const cbX   =  poolW_cb / 2 + deckBW_cb + 0.40;   // east of pool deck edge
-        const cbZ   =  pz_cb;                               // pool centre Z
-        const cbW   = 2.80;   // cabana width (E-W)
-        const cbD   = 3.60;   // cabana depth (N-S)
-        const cbH   = 2.60;   // eave height
-        const postS = 0.080;  // square post size
-        const isNightCB = sunHour < 6 || sunHour > 20;
-        const isDuskCB  = !isNightCB && (sunHour < 8 || sunHour > 18);
-        const soffitI   = isNightCB ? 3.5 : isDuskCB ? 1.8 : 0.0;
-        const soffitEm  = isNightCB ? 2.8 : isDuskCB ? 1.2 : 0.20;
-
-        return (
-          <group position={[cbX + cbW / 2, 0, cbZ]}>
-            {/* ── Deck / floor slab ── */}
-            <mesh position={[0, 0.010, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-              <planeGeometry args={[cbW, cbD]} />
-              <meshStandardMaterial color="#D0C8BC" roughness={0.60} metalness={0.04} envMapIntensity={1.2} />
-            </mesh>
-            {/* Plank lines on deck */}
-            {Array.from({ length: 6 }, (_, pi) => {
-              const pz2 = -cbD / 2 + (pi + 0.5) * (cbD / 6);
-              return (
-                <mesh key={pi} position={[0, 0.014, pz2]} rotation={[-Math.PI / 2, 0, 0]}>
-                  <planeGeometry args={[cbW - 0.04, 0.008]} />
-                  <meshStandardMaterial color="#B8B0A4" roughness={0.70} metalness={0.02} />
-                </mesh>
-              );
-            })}
-
-            {/* ── 4 corner steel posts ── */}
-            {([[-cbW/2+postS/2, -cbD/2+postS/2], [cbW/2-postS/2, -cbD/2+postS/2],
-               [-cbW/2+postS/2,  cbD/2-postS/2], [cbW/2-postS/2,  cbD/2-postS/2]] as [number,number][]).map(([px, pz2], pi) => (
-              <mesh key={pi} position={[px, cbH / 2, pz2]} castShadow>
-                <boxGeometry args={[postS, cbH, postS]} />
-                <meshStandardMaterial color="#181A1E" roughness={0.18} metalness={0.92} envMapIntensity={2.5} />
-              </mesh>
-            ))}
-
-            {/* ── Roof structure: 2 main beams + 4 purlins ── */}
-            {/* Longitudinal beams (N-S) */}
-            {([-cbW/2+postS/2, cbW/2-postS/2] as number[]).map((bx, bi) => (
-              <mesh key={bi} position={[bx, cbH + 0.050, 0]} castShadow>
-                <boxGeometry args={[0.045, 0.090, cbD]} />
-                <meshStandardMaterial color="#1E2028" roughness={0.22} metalness={0.88} envMapIntensity={2.0} />
-              </mesh>
-            ))}
-            {/* Transverse purlins */}
-            {Array.from({ length: 4 }, (_, pi) => {
-              const pz2 = -cbD / 2 + (pi + 1) * (cbD / 5);
-              return (
-                <mesh key={pi} position={[0, cbH + 0.040, pz2]} castShadow>
-                  <boxGeometry args={[cbW, 0.040, 0.040]} />
-                  <meshStandardMaterial color="#1E2028" roughness={0.22} metalness={0.88} envMapIntensity={2.0} />
-                </mesh>
-              );
-            })}
-
-            {/* ── Roof panel — polycarbonate (semi-transparent) ── */}
-            <mesh position={[0, cbH + 0.090, 0]} renderOrder={12}>
-              <boxGeometry args={[cbW - postS, 0.016, cbD - postS]} />
-              <meshStandardMaterial
-                color="#D8E8F0" transparent opacity={0.35}
-                roughness={0.04} metalness={0.08}
-                envMapIntensity={4.0}
-                side={THREE.DoubleSide}
-                depthWrite={false}
-              />
-            </mesh>
-
-            {/* ── LED soffit strip (inner face of beams) ── */}
-            <mesh position={[0, cbH - 0.012, 0]}>
-              <boxGeometry args={[cbW - postS * 2, 0.008, 0.018]} />
-              <meshStandardMaterial color="#FFF8E0" emissive="#FFEA80" emissiveIntensity={soffitEm} roughness={0.60} />
-            </mesh>
-            {soffitI > 0 && (
-              <pointLight position={[0, cbH - 0.08, 0]} intensity={soffitI} distance={3.5} decay={2} color="#FFF4D0" />
-            )}
-
-            {/* ── Rear privacy screen (west face, toward pool — slatted timber) ── */}
-            {Array.from({ length: 7 }, (_, si) => {
-              const sz = -cbD / 2 + si * (cbD / 6);
-              return (
-                <mesh key={si} position={[-cbW / 2 + 0.022, cbH * 0.44, sz]}>
-                  <boxGeometry args={[0.018, cbH * 0.88, 0.068]} />
-                  <meshStandardMaterial color="#8A5C30" roughness={0.78} metalness={0.03} />
-                </mesh>
-              );
-            })}
-
-            {/* ── Day bed / chaise lounge inside cabana ── */}
-            <group position={[0.20, 0, 0.20]}>
-              {/* Frame */}
-              <mesh position={[0, 0.36, 0]} castShadow>
-                <boxGeometry args={[0.80, 0.055, 1.90]} />
-                <meshStandardMaterial color="#5A3A1A" roughness={0.72} metalness={0.04} />
-              </mesh>
-              {/* Mattress */}
-              <mesh position={[0, 0.44, 0]}>
-                <boxGeometry args={[0.72, 0.120, 1.82]} />
-                <meshStandardMaterial color="#F0EDE4" roughness={0.88} metalness={0.01} />
-              </mesh>
-              {/* Cushion bolster */}
-              <mesh position={[0, 0.52, -0.82]}>
-                <cylinderGeometry args={[0.12, 0.12, 0.62, 10]} />
-                <meshStandardMaterial color="#E8E4DC" roughness={0.88} />
-              </mesh>
-              {/* 4 legs */}
-              {([-0.35, 0.35] as number[]).flatMap(lx => ([-0.82, 0.82] as number[]).map(lz => (
-                <mesh key={`${lx}${lz}`} position={[lx, 0.15, lz]}>
-                  <cylinderGeometry args={[0.018, 0.018, 0.28, 6]} />
-                  <meshStandardMaterial color="#3A2810" roughness={0.45} metalness={0.10} />
-                </mesh>
-              )))}
-            </group>
-
-            {/* Small side table */}
-            <group position={[-0.65, 0, 0.55]}>
-              <mesh position={[0, 0.55, 0]}>
-                <cylinderGeometry args={[0.22, 0.22, 0.018, 10]} />
-                <meshStandardMaterial color="#D0C8B8" roughness={0.30} metalness={0.12} envMapIntensity={2.0} />
-              </mesh>
-              <mesh position={[0, 0.27, 0]}>
-                <cylinderGeometry args={[0.018, 0.018, 0.52, 6]} />
-                <meshStandardMaterial color="#484858" roughness={0.35} metalness={0.72} />
-              </mesh>
-              {/* Drink glass on table */}
-              <mesh position={[0.06, 0.568, 0]}>
-                <cylinderGeometry args={[0.025, 0.020, 0.14, 8]} />
-                <meshStandardMaterial color="#A0D0E8" transparent opacity={0.70} roughness={0.05} metalness={0.05} envMapIntensity={3.0} />
-              </mesh>
-            </group>
-          </group>
-        );
-      })()}
-
       {/* ── 5c-3. 北院绿篱屏障（formal clipped hedge, north boundary inside）──
            Dense clipped yew/boxwood hedge 1.2m tall runs along inside of north wall,
            providing green backdrop behind the garden sculpture and fountain. */}
@@ -7182,9 +6925,9 @@ export default function FloorPlanBuilding({
 
         const driveHalfW3 = 2.20;
         const bndS3b    = -D / 2 - 11.50;
-        const poolZ3b   = -D / 2 - 5.80;
-        const poolL3b   = 4.80;
-        const deckBW3b  = 0.52;
+        const poolL3b   = Math.min(D * 0.70, 9.50);
+        const deckBW3b  = 2.80;
+        const poolZ3b   = -D / 2 - deckBW3b - poolL3b / 2 - 0.80;
         const bedZN3b   = poolZ3b - poolL3b / 2 - deckBW3b - 0.10;
         const bedZS3b   = bndS3b + 1.50;
         const bedLen3b  = Math.abs(bedZN3b - bedZS3b);
@@ -7859,10 +7602,10 @@ export default function FloorPlanBuilding({
         const bedMidX_W = -(ebX1 + ebX2) / 2;
 
         // Bed Z: from behind building terrace to north edge of pool deck
-        const poolZ3 = -D / 2 - 5.80;
-        const poolL3 = 4.80;
-        const poolDeckW3 = Math.min(W * 0.72, 10.0);
-        const deckBW3 = 0.52;
+        const poolL3 = Math.min(D * 0.70, 9.50);
+        const deckBW3 = 2.80;
+        const poolZ3 = -D / 2 - deckBW3 - poolL3 / 2 - 0.80;
+        const poolDeckW3 = Math.min(W * 0.78, 11.0);
         const bedZN = poolZ3 - poolL3 / 2 - deckBW3 - 0.10;
         const bedZS = bndS3 + 1.50;  // well inside boundary wall
         const bedLen = Math.abs(bedZN - bedZS);
@@ -8121,11 +7864,12 @@ export default function FloorPlanBuilding({
            3 catenary string lines of warm globe bulbs spanning from pool
            deck pergola post to nearby tree, creating evening atmosphere. */}
       {!insideBuilding && isGlassVilla && (() => {
-        const pz2b   = -D / 2 - 5.80;
-        const poolW2b = Math.min(W * 0.72, 10.0);
-        const deckBW2b = 0.52;
-        const diningX = poolW2b / 2 + deckBW2b + 1.10;
-        const diningZ = pz2b;
+        const poolL2b  = Math.min(D * 0.70, 9.50);
+        const poolW2b  = Math.min(W * 0.78, 11.0);
+        const deckBW2b = 2.80;
+        const pz2b     = -D / 2 - deckBW2b - poolL2b / 2 - 0.80;
+        const diningX  = poolW2b / 2 + deckBW2b + 1.10;
+        const diningZ  = pz2b;
         const isNightSL = sunHour < 6 || sunHour > 20;
         const isDuskSL  = !isNightSL && (sunHour < 8 || sunHour > 18);
         const bulbEmi = isNightSL ? 3.5 : isDuskSL ? 1.8 : 0.0;
@@ -8172,123 +7916,6 @@ export default function FloorPlanBuilding({
                 </group>
               );
             })}
-          </group>
-        );
-      })()}
-
-      {/* ── 5g-3. 泳池边迷你吧台（poolside tiki bar / swim-up bar）──
-           Small thatched-roof bar counter on the west pool deck, 2 bar
-           stools in the water, bamboo/rattan aesthetic. */}
-      {!insideBuilding && isGlassVilla && (() => {
-        const pzBar   = -D / 2 - 5.80;
-        const poolW3  = Math.min(W * 0.72, 10.0);
-        const deckBW3 = 0.52;
-        const barX    = -poolW3 / 2 - deckBW3 - 0.55;   // west of pool
-        const barZ    = pzBar + 0.80;                     // slightly south of centre
-        const isNightBar = sunHour < 6 || sunHour > 20;
-        const isDuskBar  = !isNightBar && (sunHour < 8 || sunHour > 18);
-        const barLI = isNightBar ? 3.5 : isDuskBar ? 1.8 : 0.0;
-        return (
-          <group position={[barX, 0, barZ]} rotation={[0, Math.PI / 2, 0]}>
-            {/* ── Counter base — dark teak wood ── */}
-            <mesh position={[0, 0.50, 0]} castShadow receiveShadow>
-              <boxGeometry args={[1.80, 1.00, 0.60]} />
-              <meshStandardMaterial color="#3A2010" roughness={0.78} metalness={0.04} />
-            </mesh>
-            {/* Counter top — grey concrete with bullnose edge */}
-            <mesh position={[0, 1.015, 0.02]} castShadow>
-              <boxGeometry args={[1.80, 0.030, 0.66]} />
-              <meshStandardMaterial color="#888078" roughness={0.25} metalness={0.12} envMapIntensity={1.4} />
-            </mesh>
-            {/* Front panel — woven rattan texture approximation */}
-            <mesh position={[0, 0.50, -0.305]}>
-              <boxGeometry args={[1.78, 0.98, 0.010]} />
-              <meshStandardMaterial color="#C8A860" roughness={0.88} metalness={0.02} />
-            </mesh>
-            {/* Horizontal wicker bands */}
-            {[0.15, 0.35, 0.55, 0.75].map((hy, hi) => (
-              <mesh key={hi} position={[0, hy, -0.312]}>
-                <boxGeometry args={[1.78, 0.018, 0.008]} />
-                <meshStandardMaterial color="#A08040" roughness={0.90} />
-              </mesh>
-            ))}
-
-            {/* ── Thatched roof canopy ── */}
-            <group position={[0, 2.30, 0]}>
-              {/* Hip roof — 4 angled panels */}
-              {/* Front panel */}
-              <mesh position={[0, 0, -0.55]} rotation={[-0.35, 0, 0]} castShadow>
-                <boxGeometry args={[2.20, 0.055, 0.90]} />
-                <meshStandardMaterial color="#C8A040" roughness={0.95} metalness={0.01} />
-              </mesh>
-              {/* Back panel */}
-              <mesh position={[0, 0, 0.55]} rotation={[0.35, 0, 0]} castShadow>
-                <boxGeometry args={[2.20, 0.055, 0.90]} />
-                <meshStandardMaterial color="#C8A040" roughness={0.95} metalness={0.01} />
-              </mesh>
-              {/* Ridge beam */}
-              <mesh position={[0, 0.24, 0]}>
-                <boxGeometry args={[2.22, 0.045, 0.12]} />
-                <meshStandardMaterial color="#7A5020" roughness={0.80} metalness={0.04} />
-              </mesh>
-              {/* Thatch fringe strips */}
-              {[-0.80, -0.40, 0, 0.40, 0.80].map((fx, fi) => (
-                <mesh key={fi} position={[fx, -0.12, 0]}>
-                  <boxGeometry args={[0.04, 0.22, 1.35]} />
-                  <meshStandardMaterial color="#BF9030" roughness={0.98} metalness={0.0} />
-                </mesh>
-              ))}
-            </group>
-
-            {/* ── 4 bamboo support posts ── */}
-            {([-0.82, 0.82] as number[]).flatMap(px =>
-              ([-0.25, 0.25] as number[]).map((pz, pzi) => (
-                <mesh key={`${px}-${pzi}`} position={[px, 1.15, pz]} castShadow>
-                  <cylinderGeometry args={[0.042, 0.048, 2.30, 6]} />
-                  <meshStandardMaterial color="#8A6828" roughness={0.82} metalness={0.04} />
-                </mesh>
-              ))
-            )}
-
-            {/* ── 2 bar stools (swim-up side) ── */}
-            {([-0.38, 0.38] as number[]).map((sx, si) => (
-              <group key={si} position={[sx, 0, 0.55]}>
-                {/* Round seat */}
-                <mesh position={[0, 0.68, 0]} castShadow>
-                  <cylinderGeometry args={[0.18, 0.18, 0.045, 8]} />
-                  <meshStandardMaterial color="#C8A860" roughness={0.80} metalness={0.04} />
-                </mesh>
-                {/* Pedestal */}
-                <mesh position={[0, 0.34, 0]}>
-                  <cylinderGeometry args={[0.028, 0.028, 0.68, 6]} />
-                  <meshStandardMaterial color="#6A4018" roughness={0.78} metalness={0.04} />
-                </mesh>
-                {/* Base */}
-                <mesh position={[0, 0.025, 0]}>
-                  <cylinderGeometry args={[0.16, 0.16, 0.050, 8]} />
-                  <meshStandardMaterial color="#483010" roughness={0.80} metalness={0.04} />
-                </mesh>
-              </group>
-            ))}
-
-            {/* ── Bottles & glasses on counter ── */}
-            {[-0.55, -0.20, 0.15, 0.50].map((bx, bi) => (
-              <mesh key={bi} position={[bx, 1.055, -0.08]}>
-                <cylinderGeometry args={[0.028, 0.022, bi % 2 === 0 ? 0.28 : 0.18, 6]} />
-                <meshStandardMaterial
-                  color={bi === 0 ? "#204020" : bi === 1 ? "#A07820" : bi === 2 ? "#502010" : "#C0C0C0"}
-                  transparent opacity={0.75}
-                  roughness={0.10} metalness={0.08}
-                />
-              </mesh>
-            ))}
-
-            {/* ── Bar light (warm tungsten glow) ── */}
-            {barLI > 0 && (
-              <pointLight position={[0, 2.10, 0]}
-                intensity={barLI} distance={4.0} decay={1.8}
-                color="#FFC060" castShadow={false} />
-            )}
           </group>
         );
       })()}
@@ -8409,10 +8036,12 @@ export default function FloorPlanBuilding({
 
       {/* ── 5i. 泳池边室外淋浴（outdoor shower post near pool）── */}
       {!insideBuilding && isGlassVilla && (() => {
-        const poolW3 = Math.min(W * 0.72, 10.0);
-        const pz3    = -D / 2 - 5.80;
-        const showerX = -poolW3 / 2 - 0.85;   // west side of pool deck
-        const showerZ = pz3 - 0.60;            // north of pool
+        const poolL3 = Math.min(D * 0.70, 9.50);
+        const poolW3 = Math.min(W * 0.78, 11.0);
+        const deckBW3i = 2.80;
+        const pz3    = -D / 2 - deckBW3i - poolL3 / 2 - 0.80;
+        const showerX = poolW3 / 2 + 0.85;   // east side of pool deck
+        const showerZ = pz3 - 0.60;           // toward south end of pool
         const postH   = 2.30;
         const isNightS = sunHour < 6 || sunHour > 20;
         const isDuskS  = !isNightS && (sunHour < 8 || sunHour > 18);
