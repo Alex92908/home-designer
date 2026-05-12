@@ -6191,48 +6191,148 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {/* ── 5e-1. 北侧庭院雕塑（garden sculpture, north yard centre）──
-           Abstract polished-steel totem: stacked tapered cylinders on a
-           dark granite plinth. Reflective, catches sky light well. */}
+      {/* ── 5e-1. 北侧庭院艺术装置（premium garden art installation, north yard）──
+           Dual polished-steel sweeping arch sculpture over a circular mirror pool.
+           Each arch is a partial torus (240° sweep) of brushed mirror steel,
+           leaning outward in a V shape. A floating torus ring caps the apex.
+           Ground: large honed black granite pad + 4 LED uplights.
+           Night: warm amber spots wash the arches, underwater LED in pool. */}
       {!insideBuilding && isGlassVilla && (() => {
         const sculX = 0;
-        const sculZ = D / 2 + 1.60;   // north yard centre
-        const isNightSc = sunHour < 6 || sunHour > 20;
+        const sculZ = D / 2 + 1.70;
+        const isNightSc  = sunHour < 6 || sunHour > 20;
+        const isDuskSc   = !isNightSc && (sunHour < 8 || sunHour > 18);
+        const archEmi    = isNightSc ? 0.18 : isDuskSc ? 0.06 : 0.0;
+        const uplightI   = isNightSc ? 4.5  : isDuskSc ? 2.0  : 0.0;
+        const poolGlowI  = isNightSc ? 1.4  : isDuskSc ? 0.6  : 0.04;
         return (
           <group position={[sculX, 0, sculZ]}>
-            {/* Granite plinth */}
-            <mesh position={[0, 0.18, 0]} castShadow receiveShadow>
-              <boxGeometry args={[0.55, 0.36, 0.55]} />
-              <meshStandardMaterial color="#1C1E24" roughness={0.22} metalness={0.38} envMapIntensity={1.5} />
+            {/* ── Ground pad — honed black granite, octagonal ── */}
+            <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <circleGeometry args={[2.40, 8]} />
+              <meshStandardMaterial color="#151618" roughness={0.18} metalness={0.42} envMapIntensity={2.5} />
             </mesh>
-            {/* Plinth top face — polished */}
-            <mesh position={[0, 0.362, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.53, 0.53]} />
-              <meshStandardMaterial color="#2A2C32" roughness={0.06} metalness={0.55} envMapIntensity={3.0} />
+            {/* Fine gravel ring around pad edge */}
+            <mesh position={[0, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <ringGeometry args={[2.40, 3.20, 20]} />
+              <meshStandardMaterial color="#A8A490" roughness={0.92} metalness={0.01} />
             </mesh>
-            {/* Lower totem element — broad */}
-            <mesh position={[0, 0.72, 0]} castShadow>
-              <cylinderGeometry args={[0.12, 0.16, 0.70, 8]} />
-              <meshStandardMaterial color="#B8C0CC" roughness={0.06} metalness={0.96} envMapIntensity={4.0} />
+
+            {/* ── Central mirror pool (circular, flush with pad) ── */}
+            <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={10}>
+              <circleGeometry args={[0.70, 20]} />
+              <meshStandardMaterial
+                color="#4890B0" roughness={0.01} metalness={0.10}
+                envMapIntensity={8.0}
+                emissive="#206080" emissiveIntensity={poolGlowI}
+                transparent opacity={0.90}
+                depthWrite={false}
+              />
             </mesh>
-            {/* Middle element — tapered inward */}
-            <mesh position={[0, 1.22, 0]} castShadow>
-              <cylinderGeometry args={[0.085, 0.12, 0.55, 8]} />
-              <meshStandardMaterial color="#C8D0D8" roughness={0.08} metalness={0.94} envMapIntensity={4.0} />
+            {/* Pool rim — thin polished steel ring */}
+            <mesh position={[0, 0.016, 0]}>
+              <cylinderGeometry args={[0.72, 0.72, 0.024, 20, 1, true]} />
+              <meshStandardMaterial color="#C0C8D2" roughness={0.08} metalness={0.92} envMapIntensity={3.5} side={THREE.DoubleSide} />
             </mesh>
-            {/* Upper element — slender */}
-            <mesh position={[0, 1.70, 0]} castShadow>
-              <cylinderGeometry args={[0.055, 0.085, 0.60, 8]} />
-              <meshStandardMaterial color="#D4DDE5" roughness={0.06} metalness={0.96} envMapIntensity={4.5} />
+
+            {/* ── Arch pair — two toroidal sweeps leaning outward ──
+                 Each arch: torus with outerRadius=1.55, tubeRadius=0.058,
+                 cut to 220° arc, tilted 12° outward and rotated 90° to stand vertical */}
+            {([
+              [Math.PI * 0.30, [-Math.PI * 0.06, 0, 0]],  // north arch leans north
+              [Math.PI * 0.30, [ Math.PI * 0.06, 0, 0]],  // south arch leans south
+            ] as [number, [number,number,number]][]).map(([tiltX, rot], ai) => {
+              const signZ = ai === 0 ? -0.30 : 0.30;  // offset along Z
+              return (
+                <group
+                  key={`arch-${ai}`}
+                  position={[0, 0, signZ]}
+                  rotation={rot}
+                >
+                  {/* Primary arch — polished mirror steel */}
+                  <mesh castShadow>
+                    <torusGeometry args={[1.45, 0.055, 14, 52, Math.PI * 1.28]} />
+                    <meshStandardMaterial
+                      color="#D0D8E0"
+                      roughness={0.04} metalness={0.97}
+                      envMapIntensity={5.5}
+                      emissive="#B0C0D0" emissiveIntensity={archEmi}
+                    />
+                  </mesh>
+                  {/* Secondary inner echo ring — brushed, slightly smaller */}
+                  <mesh>
+                    <torusGeometry args={[1.20, 0.028, 10, 48, Math.PI * 1.28]} />
+                    <meshStandardMaterial
+                      color="#A8B4BE" roughness={0.14} metalness={0.90}
+                      envMapIntensity={4.0}
+                      emissive="#8898A8" emissiveIntensity={archEmi * 0.7}
+                    />
+                  </mesh>
+                </group>
+              );
+            })}
+
+            {/* ── Apex floating ring — horizontal torus at ~2.90m height ── */}
+            <mesh position={[0, 2.88, 0]} castShadow>
+              <torusGeometry args={[0.52, 0.038, 12, 36]} />
+              <meshStandardMaterial
+                color="#E4ECF4" roughness={0.03} metalness={0.98}
+                envMapIntensity={6.0}
+                emissive="#C8D8E8" emissiveIntensity={archEmi * 1.2}
+              />
             </mesh>
-            {/* Finial sphere */}
-            <mesh position={[0, 2.03, 0]}>
-              <sphereGeometry args={[0.065, 10, 8]} />
-              <meshStandardMaterial color="#E0E8EE" roughness={0.04} metalness={0.98} envMapIntensity={5.0} />
+            {/* Slender vertical pin connecting arches to ring */}
+            <mesh position={[0, 1.85, 0]} castShadow>
+              <cylinderGeometry args={[0.022, 0.026, 2.10, 8]} />
+              <meshStandardMaterial color="#C0C8D4" roughness={0.06} metalness={0.95} envMapIntensity={4.5} />
             </mesh>
-            {/* Night accent light at base */}
-            {isNightSc && (
-              <pointLight position={[0, 0.40, 0.35]} intensity={2.5} distance={3.0} decay={2.0} color="#E8F0FF" />
+
+            {/* ── Base connector collars (where arches meet ground pad) ── */}
+            {([-1.45, 1.45] as number[]).map((bx, bi) => (
+              <group key={`collar-${bi}`}>
+                <mesh position={[bx * 0.10, 0.18, bx > 0 ? 0.28 : -0.28]} castShadow>
+                  <cylinderGeometry args={[0.062, 0.075, 0.36, 8]} />
+                  <meshStandardMaterial color="#181A20" roughness={0.22} metalness={0.55} envMapIntensity={2.0} />
+                </mesh>
+              </group>
+            ))}
+
+            {/* ── 4 LED uplights at pad corners ── */}
+            {([[-1.60, -1.60], [1.60, -1.60], [-1.60, 1.60], [1.60, 1.60]] as [number,number][]).map(([ux, uz], li) => (
+              <group key={`upl-${li}`} position={[ux, 0.014, uz]}>
+                {/* Uplight housing */}
+                <mesh>
+                  <cylinderGeometry args={[0.055, 0.065, 0.028, 8]} />
+                  <meshStandardMaterial color="#484858" roughness={0.35} metalness={0.75} />
+                </mesh>
+                {/* Lens */}
+                <mesh position={[0, 0.022, 0]}>
+                  <cylinderGeometry args={[0.042, 0.042, 0.010, 8]} />
+                  <meshStandardMaterial
+                    color="#FFFAE0" emissive="#FFE880"
+                    emissiveIntensity={isNightSc ? 2.8 : isDuskSc ? 1.2 : 0.2}
+                    roughness={0.60} transparent opacity={0.95}
+                  />
+                </mesh>
+                {uplightI > 0 && (
+                  <spotLight
+                    position={[0, 0.05, 0]}
+                    target-position={[ux * -0.6, 2.0, uz * -0.6]}
+                    intensity={uplightI}
+                    distance={5.5}
+                    angle={Math.PI * 0.16}
+                    penumbra={0.55}
+                    decay={2}
+                    color="#FFF0C8"
+                    castShadow={false}
+                  />
+                )}
+              </group>
+            ))}
+
+            {/* Pool underwater light */}
+            {uplightI > 0 && (
+              <pointLight position={[0, -0.05, 0]} intensity={uplightI * 0.5} distance={1.8} decay={2} color="#20A8E0" />
             )}
           </group>
         );
