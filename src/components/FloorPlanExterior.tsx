@@ -891,6 +891,44 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
         </group>
       ))}
 
+      {/* ── 屋顶避雷针 + 铜接地带（lightning rod + copper earthing tape）──
+           Galvanised steel rod (0.5m) at roof NW corner + two copper
+           tape strips running along parapet top to down-conductors. */}
+      {(() => {
+        const lrX = -W / 2 + 0.10;
+        const lrZ = -D / 2 + 0.10;
+        const lrY = roofSlab + 0.05 + 0.05 / 2 + 0.30;
+        return (
+          <group>
+            {/* Rod base clamp */}
+            <mesh position={[lrX, roofSlab + 0.05 + 0.020, lrZ]}>
+              <boxGeometry args={[0.055, 0.040, 0.055]} />
+              <meshStandardMaterial color="#607080" roughness={0.35} metalness={0.72} />
+            </mesh>
+            {/* Rod shaft */}
+            <mesh position={[lrX, lrY, lrZ]} castShadow>
+              <cylinderGeometry args={[0.007, 0.010, 0.60, 6]} />
+              <meshStandardMaterial color="#9AAAB4" roughness={0.25} metalness={0.82} />
+            </mesh>
+            {/* Tip ball */}
+            <mesh position={[lrX, lrY + 0.32, lrZ]}>
+              <sphereGeometry args={[0.012, 6, 4]} />
+              <meshStandardMaterial color="#C0D0D8" roughness={0.18} metalness={0.88} envMapIntensity={2.5} />
+            </mesh>
+            {/* Copper earthing tape along south parapet top */}
+            <mesh position={[0, roofSlab + 0.05 + 0.302, -D / 2 + 0.02]}>
+              <boxGeometry args={[W - 0.06, 0.006, 0.014]} />
+              <meshStandardMaterial color="#B87040" roughness={0.28} metalness={0.80} envMapIntensity={2.0} />
+            </mesh>
+            {/* Copper tape along west parapet top */}
+            <mesh position={[-W / 2 + 0.02, roofSlab + 0.05 + 0.302, 0]}>
+              <boxGeometry args={[0.014, 0.006, D - 0.06]} />
+              <meshStandardMaterial color="#B87040" roughness={0.28} metalness={0.80} envMapIntensity={2.0} />
+            </mesh>
+          </group>
+        );
+      })()}
+
       {/* ── 通信天线杆（roof communication antenna mast）── */}
       {(() => {
         const antX = -W * 0.38;
@@ -4733,6 +4771,72 @@ export default function FloorPlanBuilding({
                 </mesh>
               ))}
             </group>
+          </group>
+        );
+      })()}
+
+      {/* ── 5c-2a. 泳池设备房（pool pump / equipment shed, behind north deck）──
+           Compact 1.4m × 0.9m × 1.8m rendered concrete utility shed
+           housing filtration pump, heater, and chemical dosing unit.
+           Louvred vent slats on front + padlocked door. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const pzPool = -D / 2 - 5.80;
+        const poolL3 = 4.80;
+        const poolW3 = Math.min(W * 0.72, 10.0);
+        // Place shed to west of pool at north deck edge
+        const shedX  = -poolW3 / 2 - 1.10;
+        const shedZ  = pzPool - poolL3 / 2 - 0.65;
+        const shedW  = 1.40;
+        const shedD  = 0.90;
+        const shedH  = 1.80;
+        return (
+          <group position={[shedX, 0, shedZ]}>
+            {/* ── Main body ── */}
+            <mesh position={[0, shedH / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[shedW, shedH, shedD]} />
+              <meshStandardMaterial color="#D4D0C8" roughness={0.82} metalness={0.04} />
+            </mesh>
+            {/* ── Flat roof slab with slight overhang ── */}
+            <mesh position={[0, shedH + 0.020, 0]} castShadow>
+              <boxGeometry args={[shedW + 0.08, 0.042, shedD + 0.08]} />
+              <meshStandardMaterial color="#B8B4AC" roughness={0.85} metalness={0.05} />
+            </mesh>
+            {/* ── South-facing door ── */}
+            <mesh position={[0.20, shedH * 0.50, -shedD / 2 - 0.005]}>
+              <boxGeometry args={[0.65, shedH * 0.92, 0.010]} />
+              <meshStandardMaterial color="#888880" roughness={0.50} metalness={0.30} />
+            </mesh>
+            {/* Door frame reveal */}
+            <mesh position={[0.20, shedH * 0.50, -shedD / 2 - 0.010]}>
+              <boxGeometry args={[0.70, shedH * 0.96, 0.008]} />
+              <meshStandardMaterial color="#404840" roughness={0.40} metalness={0.40} />
+            </mesh>
+            {/* Padlock hasp */}
+            <mesh position={[0.55, shedH * 0.50, -shedD / 2 - 0.012]}>
+              <boxGeometry args={[0.040, 0.060, 0.010]} />
+              <meshStandardMaterial color="#707880" roughness={0.28} metalness={0.80} />
+            </mesh>
+            {/* ── Louvred vent panel on west face ── */}
+            {Array.from({ length: 6 }, (_, vi) => (
+              <mesh key={vi} position={[-shedW / 2 - 0.003, shedH * 0.28 + vi * 0.090, 0]}
+                rotation={[0.25, 0, 0]}>
+                <boxGeometry args={[0.008, 0.018, shedD * 0.55]} />
+                <meshStandardMaterial color="#B0ACAC" roughness={0.55} metalness={0.20} />
+              </mesh>
+            ))}
+            {/* ── Pipe stubs exiting south wall ── */}
+            {([-0.25, 0.25] as number[]).map((px, pi) => (
+              <mesh key={pi} position={[px, shedH * 0.22, -shedD / 2 - 0.040]}>
+                <cylinderGeometry args={[0.022, 0.022, 0.080, 6]} />
+                <meshStandardMaterial color="#4A5060" roughness={0.35} metalness={0.70} />
+              </mesh>
+            ))}
+            {/* ── Warning label (small emissive strip) ── */}
+            <mesh position={[0.20, shedH * 0.18, -shedD / 2 - 0.006]}>
+              <boxGeometry args={[0.18, 0.050, 0.004]} />
+              <meshStandardMaterial color="#F0C820" roughness={0.60} metalness={0.05}
+                emissive="#F0C820" emissiveIntensity={0.25} />
+            </mesh>
           </group>
         );
       })()}
