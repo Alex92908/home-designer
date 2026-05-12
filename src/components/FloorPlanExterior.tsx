@@ -2403,6 +2403,45 @@ export default function FloorPlanBuilding({
                   {/* 大房间家具剪影（仅在外观模式下渲染，通过玻璃可见）
                       不渲染 GLTF — 只是简单的几何体轮廓，给室内视觉深度
                       放在后墙（+Z）附近，从南面玻璃幕墙外看到 */}
+                  {/* Sheer curtain panels — thin semi-transparent planes hanging from
+                      ceiling, visible from outside through glass. Added to both large
+                      and medium rooms for visual layering behind the glass. */}
+                  {!insideBuilding && (
+                    <>
+                      {/* Left curtain panel (partially drawn) */}
+                      <mesh position={[-iW * 0.38, 0, -iD / 2 + 0.028]} renderOrder={8}>
+                        <boxGeometry args={[iW * 0.18, FLOOR_H * 0.92, 0.006]} />
+                        <meshStandardMaterial
+                          color="#F4F0E8"
+                          transparent opacity={0.35}
+                          depthWrite={false}
+                          roughness={0.88}
+                          side={THREE.DoubleSide}
+                          emissive="#FFF8F0"
+                          emissiveIntensity={interiorGlowWall * 0.08}
+                        />
+                      </mesh>
+                      {/* Right curtain panel (partially drawn) */}
+                      <mesh position={[iW * 0.38, 0, -iD / 2 + 0.028]} renderOrder={8}>
+                        <boxGeometry args={[iW * 0.18, FLOOR_H * 0.92, 0.006]} />
+                        <meshStandardMaterial
+                          color="#F4F0E8"
+                          transparent opacity={0.35}
+                          depthWrite={false}
+                          roughness={0.88}
+                          side={THREE.DoubleSide}
+                          emissive="#FFF8F0"
+                          emissiveIntensity={interiorGlowWall * 0.08}
+                        />
+                      </mesh>
+                      {/* Curtain rod — thin dark bar */}
+                      <mesh position={[0, FLOOR_H / 2 - 0.06, -iD / 2 + 0.030]}>
+                        <boxGeometry args={[iW - 0.04, 0.018, 0.018]} />
+                        <meshStandardMaterial color="#282830" roughness={0.28} metalness={0.72} />
+                      </mesh>
+                    </>
+                  )}
+
                   {isLarge && !insideBuilding && (
                     <>
                       {/* Bookshelf — dark walnut, against back wall */}
@@ -3245,6 +3284,50 @@ export default function FloorPlanBuilding({
             <mesh position={[-W / 2 - stoneT / 2 - 0.12 - 0.002, stoneY + stoneH / 2 + 0.006, 0]}>
               <boxGeometry args={[stoneT + 0.010, 0.012, D - 0.06]} />
               <meshStandardMaterial color="#3A3E48" roughness={0.22} metalness={0.90} envMapIntensity={1.8} />
+            </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── 5a-screen. 东侧立面竖向金属格栅屏（vertical louvre privacy screen）──
+           A full-height architectural louvre screen at the east end of the south
+           facade — provides shade, privacy, and strong design character. Dark
+           anodized aluminum blades, spaced at 120mm. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const screenX  = W / 2 + 0.14;   // just proud of east facade face
+        const screenZ  = -D / 2 + D * 0.30;  // south-east area
+        const screenH  = totalH;           // full building height
+        const screenD  = Math.min(D * 0.40, 3.80);  // depth along Z
+        const bladeW   = 0.025;  // blade thickness
+        const bladeH   = screenH + 0.08;
+        const bladeStep = 0.120;  // spacing
+        const bladeCount = Math.round(screenD / bladeStep) + 1;
+        const bladeAngle = 0.35;  // ~20° rotation for privacy
+        const bladeColor = "#2A2E38";
+        const frameColor = "#1E2028";
+        return (
+          <group position={[screenX, screenH / 2, screenZ]}>
+            {/* Top and bottom frame rails */}
+            {([-screenH / 2 + 0.020, screenH / 2 - 0.020] as number[]).map((fy, fi) => (
+              <mesh key={fi} position={[0, fy, 0]} castShadow>
+                <boxGeometry args={[0.040, 0.040, screenD]} />
+                <meshStandardMaterial color={frameColor} roughness={0.22} metalness={0.88} envMapIntensity={2.0} />
+              </mesh>
+            ))}
+            {/* Vertical louvre blades */}
+            {Array.from({ length: bladeCount }, (_, bi) => {
+              const bz = -screenD / 2 + bi * bladeStep;
+              return (
+                <mesh key={bi} position={[bladeW / 2, 0, bz]} rotation={[0, bladeAngle, 0]} castShadow>
+                  <boxGeometry args={[bladeW, bladeH, 0.095]} />
+                  <meshStandardMaterial color={bladeColor} roughness={0.24} metalness={0.82} envMapIntensity={2.5} />
+                </mesh>
+              );
+            })}
+            {/* Mounting bracket at mid-height */}
+            <mesh position={[0.025, 0, 0]}>
+              <boxGeometry args={[0.050, 0.030, screenD + 0.04]} />
+              <meshStandardMaterial color={frameColor} roughness={0.28} metalness={0.82} />
             </mesh>
           </group>
         );
