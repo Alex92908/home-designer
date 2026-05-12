@@ -7838,34 +7838,7 @@ export default function FloorPlanBuilding({
                 )}
               </group>
             ))}
-            {/* Patio umbrella over lounger row — centred */}
-            <group position={[0, deckT2, loungerRowZ + 1.10]}>
-              {/* Centre pole — white powder-coat */}
-              <mesh position={[0, 1.20, 0]} castShadow>
-                <cylinderGeometry args={[0.030, 0.034, 2.40, 8]} />
-                <meshStandardMaterial color="#E8EAE4" roughness={0.45} metalness={0.30} />
-              </mesh>
-              {/* Canopy — 8-panel cone */}
-              <mesh position={[0, 2.40, 0]}>
-                <coneGeometry args={[1.60, 0.55, 8, 1, true]} />
-                <meshStandardMaterial
-                  color="#E8D8A0"
-                  roughness={0.82}
-                  side={THREE.DoubleSide}
-                  transparent opacity={0.92}
-                />
-              </mesh>
-              {/* Canopy top finial */}
-              <mesh position={[0, 2.70, 0]}>
-                <sphereGeometry args={[0.040, 6, 5]} />
-                <meshStandardMaterial color="#D8D0B0" roughness={0.55} />
-              </mesh>
-              {/* Ground base weight */}
-              <mesh position={[0, 0.06, 0]}>
-                <cylinderGeometry args={[0.22, 0.22, 0.12, 8]} />
-                <meshStandardMaterial color="#5A5850" roughness={0.60} metalness={0.30} />
-              </mesh>
-            </group>
+            {/* Note: no umbrella over lounger row — the building cantilever provides shade */}
             {/* Dining area umbrella (east side of pool deck) */}
             <group position={[poolW2 / 2 + deckBW2 * 0.5, deckT2, pz2]}>
               <mesh position={[0, 1.20, 0]} castShadow>

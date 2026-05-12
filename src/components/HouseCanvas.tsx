@@ -5229,7 +5229,7 @@ function getSkyTheme(hour: number): SkyTheme {
     fillColor: "#C8E0F8", fillIntensity: 0.45 + elev * 0.12,
     hemiSky: "#C8DDEF", hemiGround: "#A8A070", hemiIntensity: 0.58 + elev * 0.10,
     ambient: 0.28 + elev * 0.10,
-    fogColor: "#B8CCE4", fogNear: 42, fogFar: 130,  // lighter haze matches Preetham horizon
+    fogColor: "#C0D4E8", fogNear: 55, fogFar: 210,  // clear daytime air — crisp distant view
     exposure: 1.02 + elev * 0.08,
     hdr: "/hdr/potsdamer_platz_1k.hdr",
     skyRgb: _lerpRgb([130, 185, 220], [60, 130, 200], elev),
