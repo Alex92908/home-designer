@@ -2677,6 +2677,77 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 入口雨棚两侧玻璃挡风屏（canopy side glass wind-screens）──
+           Each end of the portico is enclosed with a framed glass screen:
+           steel top/bottom rails + 3 vertical mullions + clear glass panels.
+           The screens shelter the entrance from wind while maintaining openness. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const canopyW_sw  = Math.min(W * 0.62, 8.0);
+        const canopyD_sw  = 2.0;
+        const canopyT_sw  = 0.075;
+        const canopyY_sw  = FLOOR_H - 0.02;   // top of canopy slab
+        const southFaceZ_sw = -D / 2 - 0.20;
+        const canopyZ_sw    = southFaceZ_sw - canopyD_sw / 2;
+        const isNightSW  = sunHour < 6 || sunHour > 20;
+        const isDuskSW   = !isNightSW && (sunHour < 8 || sunHour > 18);
+        const glassEmiSW = isNightSW ? 0.12 : isDuskSW ? 0.04 : 0.0;
+
+        // Screen height: ground (0) to canopy soffit
+        const screenH  = canopyY_sw - canopyT_sw / 2 - 0.04;
+        const screenD  = canopyD_sw - 0.04;          // depth of screen (Z)
+        const frameT   = 0.028;                      // steel frame thickness
+        const mullionCount = 3;
+        const panelW_sw = (screenD - frameT * (mullionCount + 1)) / mullionCount;
+
+        return (
+          <group>
+            {([-canopyW_sw / 2, canopyW_sw / 2] as number[]).map((sx, si) => (
+              <group key={`sw-${si}`} position={[sx, 0, canopyZ_sw]}>
+                {/* Top rail */}
+                <mesh position={[0, screenH + frameT / 2, 0]}>
+                  <boxGeometry args={[frameT, frameT, screenD]} />
+                  <meshStandardMaterial color="#20242C" roughness={0.22} metalness={0.90} envMapIntensity={2.5} />
+                </mesh>
+                {/* Bottom rail */}
+                <mesh position={[0, frameT / 2, 0]}>
+                  <boxGeometry args={[frameT, frameT, screenD]} />
+                  <meshStandardMaterial color="#20242C" roughness={0.22} metalness={0.90} envMapIntensity={2.5} />
+                </mesh>
+                {/* Vertical mullions */}
+                {Array.from({ length: mullionCount + 1 }, (_, mi) => {
+                  const mz = -screenD / 2 + mi * (screenD / mullionCount);
+                  return (
+                    <mesh key={mi} position={[0, screenH / 2, mz]}>
+                      <boxGeometry args={[frameT, screenH, frameT]} />
+                      <meshStandardMaterial color="#20242C" roughness={0.22} metalness={0.90} envMapIntensity={2.5} />
+                    </mesh>
+                  );
+                })}
+                {/* Glass panels between mullions */}
+                {Array.from({ length: mullionCount }, (_, pi) => {
+                  const gz = -screenD / 2 + frameT + (pi + 0.5) * panelW_sw + pi * frameT;
+                  return (
+                    <mesh key={`gp-${pi}`} position={[0, screenH / 2 + frameT, gz]} renderOrder={11}>
+                      <boxGeometry args={[0.010, screenH - frameT, panelW_sw - 0.004]} />
+                      <meshPhysicalMaterial
+                        color="#C8E8F4"
+                        transparent opacity={0.22}
+                        roughness={0.02} metalness={0.04}
+                        transmission={0.78}
+                        envMapIntensity={4.0}
+                        emissive="#90C8E0" emissiveIntensity={glassEmiSW}
+                        side={THREE.DoubleSide}
+                        depthWrite={false}
+                      />
+                    </mesh>
+                  );
+                })}
+              </group>
+            ))}
+          </group>
+        );
+      })()}
+
       {/* ── 入口台阶 + 入口广场 + 水景线 ── */}
       {!insideBuilding && isGlassVilla && (() => {
         const southFaceZ2 = -D / 2 - 0.20;
