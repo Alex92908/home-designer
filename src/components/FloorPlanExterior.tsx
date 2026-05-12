@@ -1525,12 +1525,25 @@ export default function FloorPlanBuilding({
               <boxGeometry args={[canopyW + 0.01, 0.004, canopyD + 0.01]} />
               <meshStandardMaterial color="#1E222C" roughness={0.90} />
             </mesh>
-            {/* 三根细圆柱支撑（左/中/右，等间距）*/}
+            {/* 三根方钢柱（左/中/右，等间距）—— 比圆柱更现代，与转角柱语言统一 */}
             {[-canopyW / 2 + 0.15, 0, canopyW / 2 - 0.15].map((cpx, ci) => (
-              <mesh key={ci} position={[cpx, canopyY / 2, southFaceZ + 0.05]} castShadow>
-                <cylinderGeometry args={[0.055, 0.055, canopyY, 8]} />
-                <meshStandardMaterial color="#18181E" roughness={0.28} metalness={0.88} envMapIntensity={2} />
-              </mesh>
+              <group key={ci} position={[cpx, 0, southFaceZ + 0.06]}>
+                {/* Column shaft */}
+                <mesh position={[0, canopyY / 2, 0]} castShadow>
+                  <boxGeometry args={[0.090, canopyY, 0.090]} />
+                  <meshStandardMaterial color="#18181E" roughness={0.20} metalness={0.92} envMapIntensity={2.4} />
+                </mesh>
+                {/* Base plate — wider, sits on granite plaza */}
+                <mesh position={[0, 0.020, 0]}>
+                  <boxGeometry args={[0.160, 0.040, 0.160]} />
+                  <meshStandardMaterial color="#28303C" roughness={0.28} metalness={0.80} envMapIntensity={2.0} />
+                </mesh>
+                {/* Capital plate — transitions into canopy soffit */}
+                <mesh position={[0, canopyY - 0.020, 0]}>
+                  <boxGeometry args={[0.140, 0.040, 0.140]} />
+                  <meshStandardMaterial color="#22262E" roughness={0.22} metalness={0.88} envMapIntensity={2.2} />
+                </mesh>
+              </group>
             ))}
             {/* LED 灯带 — 雨棚底面满铺，暖白发光模拟线型灯槽 */}
             <mesh position={[0, canopyY - canopyT / 2 - 0.004, canopyZ - 0.08]}>
