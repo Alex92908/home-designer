@@ -3715,19 +3715,64 @@ export default function FloorPlanBuilding({
                     <boxGeometry args={[gateW2 - 0.06, wallH2 * 1.15, 0.040]} />
                     <meshStandardMaterial color="#1C1E26" roughness={0.28} metalness={0.78} />
                   </mesh>
-                  {/* Vertical bars × 4 */}
-                  {Array.from({ length: 4 }, (_, bi) => {
-                    const bx = -gateW2 / 2 + 0.10 + bi * ((gateW2 - 0.20) / 3);
+                  {/* Vertical bars × 5 (improved with pointed finials) */}
+                  {Array.from({ length: 5 }, (_, bi) => {
+                    const bx = -gateW2 / 2 + 0.08 + bi * ((gateW2 - 0.16) / 4);
                     return (
-                      <mesh key={bi} position={[bx, wallH2 * 0.56, 0.022]}>
-                        <boxGeometry args={[0.028, wallH2 * 1.10, 0.028]} />
-                        <meshStandardMaterial color="#252830" roughness={0.30} metalness={0.72} />
-                      </mesh>
+                      <group key={bi} position={[bx, wallH2 * 0.56, 0.022]}>
+                        {/* Bar shaft */}
+                        <mesh>
+                          <boxGeometry args={[0.026, wallH2 * 1.06, 0.026]} />
+                          <meshStandardMaterial color="#252830" roughness={0.28} metalness={0.75} />
+                        </mesh>
+                        {/* Spear finial tip at top */}
+                        <mesh position={[0, wallH2 * 1.06 / 2 + 0.055, 0]}>
+                          <coneGeometry args={[0.022, 0.11, 4]} />
+                          <meshStandardMaterial color="#303440" roughness={0.22} metalness={0.82} envMapIntensity={1.8} />
+                        </mesh>
+                      </group>
                     );
                   })}
+                  {/* Horizontal decorative rail at mid-height */}
+                  <mesh position={[0, wallH2 * 0.68, 0.028]}>
+                    <boxGeometry args={[gateW2 - 0.10, 0.022, 0.022]} />
+                    <meshStandardMaterial color="#202428" roughness={0.24} metalness={0.80} />
+                  </mesh>
+                  {/* Lower horizontal rail at bottom third */}
+                  <mesh position={[0, wallH2 * 0.30, 0.028]}>
+                    <boxGeometry args={[gateW2 - 0.10, 0.022, 0.022]} />
+                    <meshStandardMaterial color="#202428" roughness={0.24} metalness={0.80} />
+                  </mesh>
                 </group>
               );
             })}
+            {/* Central gate crest / monogram — decorative medallion at gate centre */}
+            <group position={[gateX2, wallH2 * 0.80, bndS + 0.025]}>
+              {/* Crest backing disc — polished dark */}
+              <mesh>
+                <cylinderGeometry args={[0.20, 0.20, 0.012, 14]} />
+                <meshStandardMaterial color="#1A1C22" roughness={0.12} metalness={0.88} envMapIntensity={3.0} />
+              </mesh>
+              {/* Outer ring */}
+              <mesh>
+                <torusGeometry args={[0.18, 0.012, 6, 14]} />
+                <meshStandardMaterial color="#B0A040" roughness={0.18} metalness={0.90} envMapIntensity={3.5} />
+              </mesh>
+              {/* Inner decorative cross */}
+              <mesh position={[0, 0.008, 0]}>
+                <boxGeometry args={[0.22, 0.012, 0.012]} />
+                <meshStandardMaterial color="#B0A040" roughness={0.20} metalness={0.88} envMapIntensity={3.0} />
+              </mesh>
+              <mesh position={[0, 0.008, 0]}>
+                <boxGeometry args={[0.012, 0.012, 0.22]} />
+                <meshStandardMaterial color="#B0A040" roughness={0.20} metalness={0.88} envMapIntensity={3.0} />
+              </mesh>
+              {/* Centre sphere (crest boss) */}
+              <mesh position={[0, 0.012, 0]}>
+                <sphereGeometry args={[0.030, 8, 6]} />
+                <meshStandardMaterial color="#C8B060" roughness={0.14} metalness={0.92} envMapIntensity={4.0} />
+              </mesh>
+            </group>
             {/* Driveway paving strip (gate → building steps) */}
             {(() => {
               const dvW  = gateW2 * 2 + 0.50;
