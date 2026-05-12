@@ -522,6 +522,33 @@ function ConcreteFacade({
               <meshStandardMaterial color="#BCBAB2" roughness={0.90} metalness={0.01} />
             </mesh>
           ))}
+          {/* 窗台花箱（window flower box）—— 70% 的窗户下加一个铁艺花箱，带土壤和灌木
+              用确定性 hash 决定哪些窗有花箱，避免 Math.random() */}
+          {panelBlindHash(wi * 7, wi * 3 + 1) < 0.70 && (
+            <group position={[0, -w.winH / 2 - 0.095, 0.065]}>
+              {/* Box body — wrought iron / dark charcoal */}
+              <mesh castShadow>
+                <boxGeometry args={[w.winLen + 0.04, 0.18, 0.18]} />
+                <meshStandardMaterial color="#2A2C34" roughness={0.55} metalness={0.52} envMapIntensity={1.2} />
+              </mesh>
+              {/* Soil surface */}
+              <mesh position={[0, 0.095, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[w.winLen + 0.02, 0.16]} />
+                <meshStandardMaterial color="#2A1A0E" roughness={0.98} />
+              </mesh>
+              {/* Plant clumps — varying color green blobs */}
+              {Array.from({ length: Math.max(2, Math.round(w.winLen / 0.55)) }, (_, pi) => {
+                const px3 = -w.winLen / 2 + 0.28 + pi * (w.winLen / Math.max(1, Math.round(w.winLen / 0.55) - 0));
+                const greenTone = panelBlindHash(wi + pi * 5, wi * 2 + pi) < 0.5 ? "#2E6820" : "#4A8030";
+                return (
+                  <mesh key={pi} position={[px3, 0.14, 0]} castShadow>
+                    <sphereGeometry args={[0.12 + panelBlindHash(pi, wi + 3) * 0.06, 6, 5]} />
+                    <meshStandardMaterial color={greenTone} roughness={0.96} />
+                  </mesh>
+                );
+              })}
+            </group>
+          )}
         </group>
       ))}
     </group>
