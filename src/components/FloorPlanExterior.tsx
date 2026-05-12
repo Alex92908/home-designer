@@ -1706,6 +1706,10 @@ export default function FloorPlanBuilding({
         // 南立面外墙在 world-z ≈ -D/2。再向南 0.25m 开始，延伸 canopyD
         const southFaceZ = -D / 2 - 0.20;  // 玻璃幕墙平面约在此处
         const canopyZ    = southFaceZ - canopyD / 2;  // 雨棚中心
+        const isNightC = sunHour < 6 || sunHour > 20;
+        const isDuskC  = !isNightC && (sunHour < 8 || sunHour > 18);
+        const soffitEmi = isNightC ? 3.5 : isDuskC ? 2.2 : 0.8;
+        const soffitLI  = isNightC ? 5.0 : isDuskC ? 3.0 : 0.0;
         return (
           <group>
             {/* 雨棚板面（顶面浅色，底面深色）*/}
@@ -1713,11 +1717,22 @@ export default function FloorPlanBuilding({
               <boxGeometry args={[canopyW, canopyT, canopyD]} />
               <meshStandardMaterial color="#ECEAE4" roughness={0.82} metalness={0.02} />
             </mesh>
-            {/* 雨棚底面暗色 */}
+            {/* 雨棚底面暗色 (soffit — dark painted concrete) */}
             <mesh position={[0, canopyY - canopyT / 2 - 0.002, canopyZ]}>
               <boxGeometry args={[canopyW + 0.01, 0.004, canopyD + 0.01]} />
               <meshStandardMaterial color="#1E222C" roughness={0.90} />
             </mesh>
+            {/* Canopy fascia edge — aluminum C-profile on all 3 outer edges */}
+            {([
+              [0, canopyZ + canopyD / 2,  canopyW + 0.02, 0.040, 0.008],  // south edge
+              [-canopyW / 2, canopyZ, 0.008, 0.040, canopyD],             // west edge
+              [ canopyW / 2, canopyZ, 0.008, 0.040, canopyD],             // east edge
+            ] as [number, number, number, number, number][]).map(([ex, ez, ew, eh, ed], ei) => (
+              <mesh key={ei} position={[ex, canopyY + canopyT / 2 + eh / 2 - 0.001, ez]}>
+                <boxGeometry args={[ew, eh, ed]} />
+                <meshStandardMaterial color="#28303C" roughness={0.20} metalness={0.90} envMapIntensity={2.2} />
+              </mesh>
+            ))}
             {/* 三根方钢柱（左/中/右，等间距）—— 比圆柱更现代，与转角柱语言统一 */}
             {[-canopyW / 2 + 0.15, 0, canopyW / 2 - 0.15].map((cpx, ci) => (
               <group key={ci} position={[cpx, 0, southFaceZ + 0.06]}>
@@ -1738,24 +1753,39 @@ export default function FloorPlanBuilding({
                 </mesh>
               </group>
             ))}
-            {/* LED 灯带 — 雨棚底面满铺，暖白发光模拟线型灯槽 */}
-            <mesh position={[0, canopyY - canopyT / 2 - 0.004, canopyZ - 0.08]}>
-              <boxGeometry args={[canopyW * 0.88, 0.012, 0.045]} />
-              <meshStandardMaterial
-                color="#FFF8E8"
-                emissive="#FFEFA0"
-                emissiveIntensity={1.8}
-                roughness={0.6}
+            {/* 嵌入式线型灯槽 — 软体底面 3 条（时间感知发光） */}
+            {Array.from({ length: 3 }, (_, li) => {
+              const slotX = -canopyW * 0.30 + li * canopyW * 0.30;
+              return (
+                <group key={li} position={[slotX, canopyY - canopyT / 2 - 0.005, canopyZ - 0.06]}>
+                  {/* Recessed slot channel — dark recess */}
+                  <mesh position={[0, 0, 0]}>
+                    <boxGeometry args={[0.040, 0.010, canopyD * 0.72]} />
+                    <meshStandardMaterial color="#14161C" roughness={0.95} />
+                  </mesh>
+                  {/* LED strip inside slot */}
+                  <mesh position={[0, -0.003, 0]}>
+                    <boxGeometry args={[0.028, 0.006, canopyD * 0.70]} />
+                    <meshStandardMaterial
+                      color="#FFF8E0"
+                      emissive="#FFEE90"
+                      emissiveIntensity={soffitEmi}
+                      roughness={0.5}
+                    />
+                  </mesh>
+                </group>
+              );
+            })}
+            {/* 点光源（时间感知）*/}
+            {soffitLI > 0 && (
+              <pointLight
+                position={[0, canopyY - canopyT / 2 - 0.10, canopyZ - 0.05]}
+                intensity={soffitLI}
+                distance={5.5}
+                decay={1.6}
+                color="#FFF6D8"
               />
-            </mesh>
-            {/* 雨棚底部 LED 点光源（让灯带向下照射） */}
-            <pointLight
-              position={[0, canopyY - canopyT / 2 - 0.08, canopyZ - 0.05]}
-              intensity={3.5}
-              distance={4.0}
-              decay={1.8}
-              color="#FFF6D8"
-            />
+            )}
           </group>
         );
       })()}
