@@ -6276,6 +6276,152 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5j-4. 东侧界墙壁泉（wall-mounted water feature, east boundary wall）──
+           A two-tiered granite wall fountain with cascading water sheets
+           on the inner face of the east boundary wall. Night LED glow. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bndE7  =  W / 2 + 4.50;
+        const wallT7 = 0.18;
+        const ftnWallX = bndE7 - wallT7;  // inner face of east boundary
+        const ftnWZ  = D / 2 * 0.20;       // mid-south section of east wall
+        const isNightW7 = sunHour < 6 || sunHour > 20;
+        const isDuskW7  = !isNightW7 && (sunHour < 8 || sunHour > 18);
+        const wfGlow = isNightW7 ? 1.4 : isDuskW7 ? 0.6 : 0.04;
+        const wfLI   = isNightW7 ? 2.2 : isDuskW7 ? 1.0 : 0.0;
+        return (
+          <group position={[ftnWallX, 0, ftnWZ]}>
+            {/* Wall backing plate — dark polished stone */}
+            <mesh position={[-0.020, 1.00, 0]} castShadow>
+              <boxGeometry args={[0.040, 2.00, 0.90]} />
+              <meshStandardMaterial color="#1A1E26" roughness={0.18} metalness={0.70} envMapIntensity={2.5} />
+            </mesh>
+            {/* Upper tier — spout header */}
+            <mesh position={[-0.040, 1.70, 0]} castShadow>
+              <boxGeometry args={[0.10, 0.10, 0.70]} />
+              <meshStandardMaterial color="#2A2E38" roughness={0.22} metalness={0.78} envMapIntensity={2.2} />
+            </mesh>
+            {/* Upper basin */}
+            <mesh position={[-0.060, 1.22, 0]} castShadow>
+              <boxGeometry args={[0.14, 0.06, 0.72]} />
+              <meshStandardMaterial color="#282C34" roughness={0.20} metalness={0.72} envMapIntensity={2.0} />
+            </mesh>
+            {/* Water sheet — upper to lower (thin translucent panel) */}
+            <mesh position={[-0.048, 0.95, 0]}>
+              <boxGeometry args={[0.008, 0.55, 0.62]} />
+              <meshStandardMaterial
+                color="#70CCE8"
+                transparent opacity={0.62}
+                roughness={0.04} metalness={0.04}
+                emissive="#40B0D0" emissiveIntensity={wfGlow * 0.9}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+            {/* Lower collection basin */}
+            <mesh position={[-0.060, 0.58, 0]} castShadow>
+              <boxGeometry args={[0.22, 0.10, 0.90]} />
+              <meshStandardMaterial color="#282C34" roughness={0.22} metalness={0.70} envMapIntensity={2.0} />
+            </mesh>
+            {/* Water surface in lower basin */}
+            <mesh position={[-0.058, 0.64, 0]} rotation={[0, Math.PI / 2, 0]}>
+              <planeGeometry args={[0.78, 0.17]} />
+              <meshStandardMaterial
+                color="#4898B8"
+                transparent opacity={0.80}
+                roughness={0.02} metalness={0.08}
+                emissive="#2878A0" emissiveIntensity={wfGlow * 0.6}
+                envMapIntensity={5.0}
+              />
+            </mesh>
+            {/* Drainage grate at base */}
+            <mesh position={[-0.070, 0.26, 0]} rotation={[0, Math.PI / 2, 0]}>
+              <boxGeometry args={[0.70, 0.018, 0.14]} />
+              <meshStandardMaterial color="#606870" roughness={0.40} metalness={0.65} />
+            </mesh>
+            {/* Paving surround */}
+            <mesh position={[-0.15, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[0.60, 1.00]} />
+              <meshStandardMaterial color="#C8C0A8" roughness={0.74} metalness={0.02} />
+            </mesh>
+            {/* Night underwater accent light */}
+            {wfLI > 0 && (
+              <pointLight position={[-0.08, 0.62, 0]} intensity={wfLI} distance={2.5} decay={2.0} color="#40B0D0" castShadow={false} />
+            )}
+          </group>
+        );
+      })()}
+
+      {/* ── 5j-5. 室外电影屏幕（outdoor cinema screen, south yard near pool）──
+           White projection screen on a stand, with 6 deck chairs and
+           a raised projector post. Illuminated white panel at night. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const cinX  = -W * 0.22;
+        const cinZ  = -D / 2 - 3.20;   // between steps and pool
+        const scrW  = 3.20;
+        const scrH  = 1.80;
+        const isNightC = sunHour < 6 || sunHour > 20;
+        const isDuskC  = !isNightC && (sunHour < 8 || sunHour > 18);
+        const scrEmi = isNightC ? 0.80 : isDuskC ? 0.25 : 0.0;
+        if (scrEmi === 0.0) return null;  // only show at dusk/night
+        return (
+          <group position={[cinX, 0, cinZ]}>
+            {/* Screen frame posts */}
+            {([-scrW / 2, scrW / 2] as number[]).map((sx, si) => (
+              <mesh key={si} position={[sx, scrH / 2 + 0.30, 0]} castShadow>
+                <cylinderGeometry args={[0.022, 0.022, scrH + 0.60, 6]} />
+                <meshStandardMaterial color="#383C44" roughness={0.40} metalness={0.68} />
+              </mesh>
+            ))}
+            {/* Screen surface — bright white emissive at night */}
+            <mesh position={[0, scrH / 2 + 0.30, 0]}>
+              <boxGeometry args={[scrW, scrH, 0.018]} />
+              <meshStandardMaterial
+                color="#F8F8F8"
+                emissive="#F0F4FF"
+                emissiveIntensity={scrEmi}
+                roughness={0.88}
+              />
+            </mesh>
+            {/* Cross bar at top */}
+            <mesh position={[0, scrH + 0.32, 0]}>
+              <boxGeometry args={[scrW + 0.10, 0.030, 0.030]} />
+              <meshStandardMaterial color="#303440" roughness={0.35} metalness={0.72} />
+            </mesh>
+            {/* 6 deck/bean-bag chairs in 2 rows */}
+            {Array.from({ length: 6 }, (_, ci) => {
+              const row = Math.floor(ci / 3);
+              const col = ci % 3;
+              const cx2 = -1.20 + col * 1.20;
+              const cz2 = 1.10 + row * 0.90;
+              const chairColors = ["#E84040", "#4080D0", "#40B840", "#E89020", "#9040C0", "#E04060"];
+              return (
+                <group key={ci} position={[cx2, 0, cz2]}>
+                  {/* Seat/back — simplified box */}
+                  <mesh position={[0, 0.22, 0]} castShadow>
+                    <boxGeometry args={[0.48, 0.38, 0.50]} />
+                    <meshStandardMaterial color={chairColors[ci]} roughness={0.88} />
+                  </mesh>
+                </group>
+              );
+            })}
+            {/* Projector on post (behind chairs) */}
+            <group position={[0, 0, 2.50]}>
+              <mesh position={[0, 1.60, 0]} castShadow>
+                <cylinderGeometry args={[0.022, 0.025, 1.60, 6]} />
+                <meshStandardMaterial color="#383C44" roughness={0.42} metalness={0.66} />
+              </mesh>
+              <mesh position={[0, 1.62, 0]}>
+                <boxGeometry args={[0.22, 0.10, 0.30]} />
+                <meshStandardMaterial color="#1A1E26" roughness={0.30} metalness={0.72} />
+              </mesh>
+              {/* Projector lens */}
+              {isNightC && (
+                <pointLight position={[0, 1.62, -0.18]} intensity={3.0} distance={scrW * 1.4} decay={2.0} color="#F8F4FF" target-position={[cinX, scrH / 2, cinZ]} castShadow={false} />
+              )}
+            </group>
+          </group>
+        );
+      })()}
+
       {/* ── 5k. 雨棚玻璃顶（canopy glazing panel upgrade）── */}
       {!insideBuilding && isGlassVilla && (() => {
         const canopyW3 = Math.min(W * 0.62, 8.0);
