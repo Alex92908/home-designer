@@ -5607,6 +5607,150 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5c-2c. 泳池东侧玻璃钢结构凉亭（pool cabana pavilion, east of pool）──
+           A slender glass-and-steel open pavilion provides poolside shade.
+           4 black steel I-beam posts, flat polycarbonate roof, rear privacy screen,
+           and a day bed / chaise lounge inside. Night: LED strip under soffit. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const poolW_cb  = Math.min(W * 0.72, 10.0);
+        const pz_cb     = -D / 2 - 5.80;
+        const deckBW_cb = 0.52;
+        // Cabana east of pool
+        const cbX   =  poolW_cb / 2 + deckBW_cb + 0.40;   // east of pool deck edge
+        const cbZ   =  pz_cb;                               // pool centre Z
+        const cbW   = 2.80;   // cabana width (E-W)
+        const cbD   = 3.60;   // cabana depth (N-S)
+        const cbH   = 2.60;   // eave height
+        const postS = 0.080;  // square post size
+        const isNightCB = sunHour < 6 || sunHour > 20;
+        const isDuskCB  = !isNightCB && (sunHour < 8 || sunHour > 18);
+        const soffitI   = isNightCB ? 3.5 : isDuskCB ? 1.8 : 0.0;
+        const soffitEm  = isNightCB ? 2.8 : isDuskCB ? 1.2 : 0.20;
+
+        return (
+          <group position={[cbX + cbW / 2, 0, cbZ]}>
+            {/* ── Deck / floor slab ── */}
+            <mesh position={[0, 0.010, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[cbW, cbD]} />
+              <meshStandardMaterial color="#D0C8BC" roughness={0.60} metalness={0.04} envMapIntensity={1.2} />
+            </mesh>
+            {/* Plank lines on deck */}
+            {Array.from({ length: 6 }, (_, pi) => {
+              const pz2 = -cbD / 2 + (pi + 0.5) * (cbD / 6);
+              return (
+                <mesh key={pi} position={[0, 0.014, pz2]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <planeGeometry args={[cbW - 0.04, 0.008]} />
+                  <meshStandardMaterial color="#B8B0A4" roughness={0.70} metalness={0.02} />
+                </mesh>
+              );
+            })}
+
+            {/* ── 4 corner steel posts ── */}
+            {([[-cbW/2+postS/2, -cbD/2+postS/2], [cbW/2-postS/2, -cbD/2+postS/2],
+               [-cbW/2+postS/2,  cbD/2-postS/2], [cbW/2-postS/2,  cbD/2-postS/2]] as [number,number][]).map(([px, pz2], pi) => (
+              <mesh key={pi} position={[px, cbH / 2, pz2]} castShadow>
+                <boxGeometry args={[postS, cbH, postS]} />
+                <meshStandardMaterial color="#181A1E" roughness={0.18} metalness={0.92} envMapIntensity={2.5} />
+              </mesh>
+            ))}
+
+            {/* ── Roof structure: 2 main beams + 4 purlins ── */}
+            {/* Longitudinal beams (N-S) */}
+            {([-cbW/2+postS/2, cbW/2-postS/2] as number[]).map((bx, bi) => (
+              <mesh key={bi} position={[bx, cbH + 0.050, 0]} castShadow>
+                <boxGeometry args={[0.045, 0.090, cbD]} />
+                <meshStandardMaterial color="#1E2028" roughness={0.22} metalness={0.88} envMapIntensity={2.0} />
+              </mesh>
+            ))}
+            {/* Transverse purlins */}
+            {Array.from({ length: 4 }, (_, pi) => {
+              const pz2 = -cbD / 2 + (pi + 1) * (cbD / 5);
+              return (
+                <mesh key={pi} position={[0, cbH + 0.040, pz2]} castShadow>
+                  <boxGeometry args={[cbW, 0.040, 0.040]} />
+                  <meshStandardMaterial color="#1E2028" roughness={0.22} metalness={0.88} envMapIntensity={2.0} />
+                </mesh>
+              );
+            })}
+
+            {/* ── Roof panel — polycarbonate (semi-transparent) ── */}
+            <mesh position={[0, cbH + 0.090, 0]} renderOrder={12}>
+              <boxGeometry args={[cbW - postS, 0.016, cbD - postS]} />
+              <meshStandardMaterial
+                color="#D8E8F0" transparent opacity={0.35}
+                roughness={0.04} metalness={0.08}
+                envMapIntensity={4.0}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+              />
+            </mesh>
+
+            {/* ── LED soffit strip (inner face of beams) ── */}
+            <mesh position={[0, cbH - 0.012, 0]}>
+              <boxGeometry args={[cbW - postS * 2, 0.008, 0.018]} />
+              <meshStandardMaterial color="#FFF8E0" emissive="#FFEA80" emissiveIntensity={soffitEm} roughness={0.60} />
+            </mesh>
+            {soffitI > 0 && (
+              <pointLight position={[0, cbH - 0.08, 0]} intensity={soffitI} distance={3.5} decay={2} color="#FFF4D0" />
+            )}
+
+            {/* ── Rear privacy screen (west face, toward pool — slatted timber) ── */}
+            {Array.from({ length: 7 }, (_, si) => {
+              const sz = -cbD / 2 + si * (cbD / 6);
+              return (
+                <mesh key={si} position={[-cbW / 2 + 0.022, cbH * 0.44, sz]}>
+                  <boxGeometry args={[0.018, cbH * 0.88, 0.068]} />
+                  <meshStandardMaterial color="#8A5C30" roughness={0.78} metalness={0.03} />
+                </mesh>
+              );
+            })}
+
+            {/* ── Day bed / chaise lounge inside cabana ── */}
+            <group position={[0.20, 0, 0.20]}>
+              {/* Frame */}
+              <mesh position={[0, 0.36, 0]} castShadow>
+                <boxGeometry args={[0.80, 0.055, 1.90]} />
+                <meshStandardMaterial color="#5A3A1A" roughness={0.72} metalness={0.04} />
+              </mesh>
+              {/* Mattress */}
+              <mesh position={[0, 0.44, 0]}>
+                <boxGeometry args={[0.72, 0.120, 1.82]} />
+                <meshStandardMaterial color="#F0EDE4" roughness={0.88} metalness={0.01} />
+              </mesh>
+              {/* Cushion bolster */}
+              <mesh position={[0, 0.52, -0.82]}>
+                <cylinderGeometry args={[0.12, 0.12, 0.62, 10]} />
+                <meshStandardMaterial color="#E8E4DC" roughness={0.88} />
+              </mesh>
+              {/* 4 legs */}
+              {([-0.35, 0.35] as number[]).flatMap(lx => ([-0.82, 0.82] as number[]).map(lz => (
+                <mesh key={`${lx}${lz}`} position={[lx, 0.15, lz]}>
+                  <cylinderGeometry args={[0.018, 0.018, 0.28, 6]} />
+                  <meshStandardMaterial color="#3A2810" roughness={0.45} metalness={0.10} />
+                </mesh>
+              )))}
+            </group>
+
+            {/* Small side table */}
+            <group position={[-0.65, 0, 0.55]}>
+              <mesh position={[0, 0.55, 0]}>
+                <cylinderGeometry args={[0.22, 0.22, 0.018, 10]} />
+                <meshStandardMaterial color="#D0C8B8" roughness={0.30} metalness={0.12} envMapIntensity={2.0} />
+              </mesh>
+              <mesh position={[0, 0.27, 0]}>
+                <cylinderGeometry args={[0.018, 0.018, 0.52, 6]} />
+                <meshStandardMaterial color="#484858" roughness={0.35} metalness={0.72} />
+              </mesh>
+              {/* Drink glass on table */}
+              <mesh position={[0.06, 0.568, 0]}>
+                <cylinderGeometry args={[0.025, 0.020, 0.14, 8]} />
+                <meshStandardMaterial color="#A0D0E8" transparent opacity={0.70} roughness={0.05} metalness={0.05} envMapIntensity={3.0} />
+              </mesh>
+            </group>
+          </group>
+        );
+      })()}
+
       {/* ── 5c-3. 北院绿篱屏障（formal clipped hedge, north boundary inside）──
            Dense clipped yew/boxwood hedge 1.2m tall runs along inside of north wall,
            providing green backdrop behind the garden sculpture and fountain. */}
