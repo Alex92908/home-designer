@@ -6212,6 +6212,38 @@ export default function HouseCanvas() {
             <Tree x={-(W / 2 + 6.0)} z={ D * 0.10} type="pine" scale={1.4} />
             <Tree x={  W / 2 + 6.0}  z={ D * 0.10} type="pine" scale={1.4} />
 
+            {/* ── Stone entrance landing — wider plaza at building south face ── */}
+            <mesh position={[0, -0.493, -(D / 2 + 1.2)]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[Math.min(W * 0.55, 8.0), 2.4]} />
+              <meshStandardMaterial color="#DED4BE" roughness={0.72} metalness={0.02} />
+            </mesh>
+
+            {/* ── Flower beds flanking entrance — colorful seasonal borders ── */}
+            <FlowerBed x={-W * 0.20} z={-(D / 2 + 0.55)} w={2.2} d={0.70} />
+            <FlowerBed x={ W * 0.20} z={-(D / 2 + 0.55)} w={2.2} d={0.70} />
+
+            {/* ── Gate pillars at driveway entrance (fence line) ── */}
+            {([-1.85, 1.85] as number[]).map((gpx, gi) => (
+              <group key={gi} position={[gpx, 0, D / 2 + 8.8]}>
+                {/* Stone pillar */}
+                <mesh position={[0, 0.90, 0]} castShadow>
+                  <boxGeometry args={[0.42, 1.80, 0.42]} />
+                  <meshStandardMaterial color="#CCC4B4" roughness={0.82} metalness={0.04} />
+                </mesh>
+                {/* Cap stone */}
+                <mesh position={[0, 1.86, 0]} castShadow>
+                  <boxGeometry args={[0.50, 0.12, 0.50]} />
+                  <meshStandardMaterial color="#2A2E38" roughness={0.24} metalness={0.88} envMapIntensity={1.6} />
+                </mesh>
+              </group>
+            ))}
+
+            {/* ── Accent bushes along hedge flanks ── */}
+            <Bush x={-(W / 2 + 0.80)} z={-D * 0.32} scale={0.85} />
+            <Bush x={-(W / 2 + 0.80)} z={ D * 0.22} scale={0.78} />
+            <Bush x={  W / 2 + 0.80}  z={-D * 0.32} scale={0.82} />
+            <Bush x={  W / 2 + 0.80}  z={ D * 0.22} scale={0.80} />
+
             {/* ── Box hedge borders — formal garden borders along building flanks ── */}
             {/* West flank hedge */}
             <mesh position={[-(W / 2 + 0.55), 0.22, D * 0.05]} castShadow receiveShadow>
