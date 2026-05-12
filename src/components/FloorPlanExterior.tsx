@@ -1039,6 +1039,34 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
                 {...overlayMaterialProps(1)}
               />
             </mesh>
+            {/* 廊架垂挂紫藤 / 绿植（hanging wisteria vines from pergola beams）
+                Small sphere clusters hang from underside of louvers for lush effect. */}
+            {Array.from({ length: 10 }, (_, vi) => {
+              const vHash = (vi * 7 + 3) % 11;
+              const vx = -pgW * 0.40 + vi * (pgW * 0.80 / 9);
+              const vz = -pgD * 0.30 + (vHash % 3) * (pgD * 0.30);
+              const vLen = 0.22 + (vHash % 5) * 0.045;
+              const vCol = vHash % 4 === 0 ? "#9966BB" : vHash % 4 === 1 ? "#AA77CC" : vHash % 4 === 2 ? "#3A7028" : "#2E6022";
+              return (
+                <group key={`vine-${vi}`} position={[vx, pgH + 0.08, vz]}>
+                  {/* Hanging stem */}
+                  <mesh position={[0, -vLen / 2, 0]}>
+                    <cylinderGeometry args={[0.006, 0.005, vLen, 4]} />
+                    <meshStandardMaterial color="#3A2810" roughness={0.92} />
+                  </mesh>
+                  {/* Foliage/flower cluster at bottom */}
+                  <mesh position={[0, -vLen - 0.060, 0]}>
+                    <sphereGeometry args={[0.060, 7, 5]} />
+                    <meshStandardMaterial color={vCol} roughness={0.95} />
+                  </mesh>
+                  {/* Secondary cluster */}
+                  <mesh position={[0.05, -vLen - 0.038, 0.03]}>
+                    <sphereGeometry args={[0.040, 6, 4]} />
+                    <meshStandardMaterial color={vCol} roughness={0.96} />
+                  </mesh>
+                </group>
+              );
+            })}
           </group>
         );
       })()}
@@ -1137,6 +1165,64 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
               <boxGeometry args={[spW + 0.002, 0.012, 0.010]} />
               <meshStandardMaterial color="#C8C4BC" roughness={0.88} />
             </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── 屋顶直升机停机坪标志（helipad markings）──
+           Painted on west-south quadrant of roof, away from HVAC / solar.
+           Standard ICAO visual: white outer circle, yellow "H" lettering,
+           orange corner triangles, and a night-time perimeter lighting ring. */}
+      {(() => {
+        const hpR  = Math.min(W * 0.18, 2.60);  // helipad circle radius
+        const hpX  = -W * 0.28;
+        const hpZ  = -D * 0.26;
+        const hpY  = roofSlab + 0.055;           // sits on roof slab surface
+        const segments = 32;
+        return (
+          <group position={[hpX, hpY, hpZ]} rotation={[-Math.PI / 2, 0, 0]}>
+            {/* Base concrete patch — slightly lighter than roof */}
+            <mesh>
+              <circleGeometry args={[hpR + 0.10, segments]} />
+              <meshStandardMaterial color="#E8E4DE" roughness={0.88} />
+            </mesh>
+            {/* White outer border ring */}
+            <mesh position={[0, 0, 0.002]}>
+              <ringGeometry args={[hpR - 0.18, hpR, segments]} />
+              <meshStandardMaterial color="#EFEFEF" roughness={0.85} />
+            </mesh>
+            {/* Yellow infill circle */}
+            <mesh position={[0, 0, 0.003]}>
+              <circleGeometry args={[hpR - 0.18, segments]} />
+              <meshStandardMaterial color="#E8C830" roughness={0.86} />
+            </mesh>
+            {/* "H" letter — three bars: left vertical, right vertical, crossbar */}
+            {/* Left vertical */}
+            <mesh position={[-hpR * 0.26, 0, 0.006]}>
+              <planeGeometry args={[hpR * 0.16, hpR * 0.72]} />
+              <meshStandardMaterial color="#EFEFEF" roughness={0.84} />
+            </mesh>
+            {/* Right vertical */}
+            <mesh position={[ hpR * 0.26, 0, 0.006]}>
+              <planeGeometry args={[hpR * 0.16, hpR * 0.72]} />
+              <meshStandardMaterial color="#EFEFEF" roughness={0.84} />
+            </mesh>
+            {/* Crossbar */}
+            <mesh position={[0, 0, 0.006]}>
+              <planeGeometry args={[hpR * 0.52 + hpR * 0.16, hpR * 0.16]} />
+              <meshStandardMaterial color="#EFEFEF" roughness={0.84} />
+            </mesh>
+            {/* 4 corner orientation triangles (orange) at N/S/E/W */}
+            {([0, Math.PI / 2, Math.PI, -Math.PI / 2] as number[]).map((ang, ti) => {
+              const tx = Math.sin(ang) * (hpR - 0.08);
+              const ty = Math.cos(ang) * (hpR - 0.08);
+              return (
+                <mesh key={ti} position={[tx, ty, 0.005]} rotation={[0, 0, -ang]}>
+                  <planeGeometry args={[0.15, 0.24]} />
+                  <meshStandardMaterial color="#FF6020" roughness={0.85} />
+                </mesh>
+              );
+            })}
           </group>
         );
       })()}
@@ -3770,6 +3856,40 @@ export default function FloorPlanBuilding({
                 );
               })
             )}
+            {/* Pool deck pop-up jets — 3 small arcing jets from north deck edge */}
+            {Array.from({ length: 3 }, (_, ji) => {
+              const jx = -poolW * 0.22 + ji * poolW * 0.22;   // evenly spaced
+              const jetAngle = -0.52;  // radians, angled toward pool centre
+              return (
+                <group key={`jet-${ji}`} position={[jx, 0.005, -poolL / 2 - 0.12]}>
+                  {/* Nozzle housing — flush dark disc */}
+                  <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[0.038, 0.040, 0.018, 8]} />
+                    <meshStandardMaterial color="#282C34" roughness={0.38} metalness={0.75} />
+                  </mesh>
+                  {/* Water arc — angled cylinder representing jet stream */}
+                  <mesh position={[0, 0.18, 0.28]} rotation={[jetAngle, 0, 0]}>
+                    <cylinderGeometry args={[0.014, 0.022, 0.60, 6]} />
+                    <meshStandardMaterial
+                      color="#80CCE8"
+                      transparent opacity={0.72}
+                      roughness={0.05} metalness={0.05}
+                      emissive="#40B0D8" emissiveIntensity={poolGlowI * 0.55}
+                    />
+                  </mesh>
+                  {/* Splash sphere at landing point */}
+                  <mesh position={[0, 0.02, 0.68]}>
+                    <sphereGeometry args={[0.045, 8, 6]} />
+                    <meshStandardMaterial
+                      color="#90D8F0"
+                      transparent opacity={0.55}
+                      roughness={0.05}
+                      emissive="#60C0E0" emissiveIntensity={poolGlowI * 0.4}
+                    />
+                  </mesh>
+                </group>
+              );
+            })}
             {/* Pool ladder — south-east corner, chrome steel */}
             <group position={[poolW / 2 - 0.32, 0, poolL / 2 - 0.24]}>
               {([-0.20, 0.20] as number[]).map((hx, hi) => (
