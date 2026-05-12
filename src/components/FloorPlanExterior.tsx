@@ -1778,14 +1778,48 @@ export default function FloorPlanBuilding({
         const colH   = totalH + SLAB_T + 0.06; // full building height + small overshoot
         const colY   = colH / 2;
         const colMat = { color: "#181A1E" as const, roughness: 0.10 as const, metalness: 0.95 as const, envMapIntensity: 2.6 as const };
+        const camH   = totalH - 0.10;   // CCTV camera mount height (near top of building)
         return (
           <>
-            {([[-W / 2, -D / 2], [W / 2, -D / 2], [-W / 2, D / 2], [W / 2, D / 2]] as [number,number][]).map(([cx2, cz2], ci) => (
-              <mesh key={ci} position={[cx2, colY, cz2]} castShadow>
-                <boxGeometry args={[colW, colH, colW]} />
-                <meshStandardMaterial {...colMat} />
-              </mesh>
-            ))}
+            {([[-W / 2, -D / 2], [W / 2, -D / 2], [-W / 2, D / 2], [W / 2, D / 2]] as [number,number][]).map(([cx2, cz2], ci) => {
+              // Camera orientation: always points inward (toward building centre)
+              const camFaceX = cx2 > 0 ? -1 : 1;
+              const camFaceZ = cz2 > 0 ? -1 : 1;
+              const camAngleY = Math.atan2(camFaceX, camFaceZ);
+              return (
+                <group key={ci}>
+                  {/* Corner column */}
+                  <mesh position={[cx2, colY, cz2]} castShadow>
+                    <boxGeometry args={[colW, colH, colW]} />
+                    <meshStandardMaterial {...colMat} />
+                  </mesh>
+                  {/* CCTV camera bracket + dome — mounts on corner column face */}
+                  <group position={[cx2 + camFaceX * (colW / 2 + 0.04), camH, cz2 + camFaceZ * (colW / 2 + 0.04)]}
+                    rotation={[0, camAngleY, 0]}>
+                    {/* Wall bracket */}
+                    <mesh position={[0, 0, 0]}>
+                      <boxGeometry args={[0.030, 0.030, 0.080]} />
+                      <meshStandardMaterial color="#2A2C34" roughness={0.38} metalness={0.72} />
+                    </mesh>
+                    {/* Camera body */}
+                    <mesh position={[0, -0.028, 0.065]}>
+                      <boxGeometry args={[0.048, 0.036, 0.072]} />
+                      <meshStandardMaterial color="#1C1E24" roughness={0.32} metalness={0.68} />
+                    </mesh>
+                    {/* Lens ring */}
+                    <mesh position={[0, -0.028, 0.098]} rotation={[Math.PI / 2, 0, 0]}>
+                      <cylinderGeometry args={[0.013, 0.013, 0.020, 8]} />
+                      <meshStandardMaterial color="#0A0A10" roughness={0.10} metalness={0.20} />
+                    </mesh>
+                    {/* IR LED ring (tiny red emissive ring) */}
+                    <mesh position={[0, -0.028, 0.090]} rotation={[Math.PI / 2, 0, 0]}>
+                      <torusGeometry args={[0.016, 0.004, 6, 8]} />
+                      <meshStandardMaterial color="#FF2020" emissive="#FF1010" emissiveIntensity={0.9} roughness={0.6} />
+                    </mesh>
+                  </group>
+                </group>
+              );
+            })}
           </>
         );
       })()}
