@@ -416,35 +416,32 @@ function buildFacadeBlocks(segs: ExteriorWallSeg[]): FacadeBlock[] {
 function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
   const OV = 0.45;   // 悬挑
   const OV_S = 0.75; // 南向多悬挑
-  const PH = 0.28;   // 女儿墙高度
+  const PH = 0.30;   // 女儿墙高度
   const PT = 0.12;   // 女儿墙厚度
-  const roofColor = "#F0EDE8";
+  const roofColor    = "#F0EDE8";
   const parapetColor = "#E8E4DE";
+  const roofSlab     = roofY + 0.05;  // 屋面板中心Y
   return (
     <group>
       {/* 屋面板 */}
-      <mesh position={[0, roofY + 0.05, -(OV_S - OV) / 2]} castShadow receiveShadow>
+      <mesh position={[0, roofSlab, -(OV_S - OV) / 2]} castShadow receiveShadow>
         <boxGeometry args={[W + OV * 2, 0.10, D + OV_S + OV]} />
         <meshStandardMaterial color={roofColor} roughness={0.88} />
       </mesh>
-      {/* 女儿墙 — 四边（仅建筑轮廓内，不超出悬挑）*/}
-      {/* 北边 */}
-      <mesh position={[0, roofY + 0.10 + PH / 2, D / 2]} castShadow>
+      {/* 女儿墙 — 四边 */}
+      <mesh position={[0,   roofSlab + 0.05 + PH / 2,  D / 2]} castShadow>
         <boxGeometry args={[W, PH, PT]} />
         <meshStandardMaterial color={parapetColor} roughness={0.85} />
       </mesh>
-      {/* 南边 */}
-      <mesh position={[0, roofY + 0.10 + PH / 2, -D / 2]} castShadow>
+      <mesh position={[0,   roofSlab + 0.05 + PH / 2, -D / 2]} castShadow>
         <boxGeometry args={[W, PH, PT]} />
         <meshStandardMaterial color={parapetColor} roughness={0.85} />
       </mesh>
-      {/* 东边 */}
-      <mesh position={[W / 2, roofY + 0.10 + PH / 2, 0]} castShadow>
+      <mesh position={[ W / 2, roofSlab + 0.05 + PH / 2, 0]} castShadow>
         <boxGeometry args={[PT, PH, D]} />
         <meshStandardMaterial color={parapetColor} roughness={0.85} />
       </mesh>
-      {/* 西边 */}
-      <mesh position={[-W / 2, roofY + 0.10 + PH / 2, 0]} castShadow>
+      <mesh position={[-W / 2, roofSlab + 0.05 + PH / 2, 0]} castShadow>
         <boxGeometry args={[PT, PH, D]} />
         <meshStandardMaterial color={parapetColor} roughness={0.85} />
       </mesh>
@@ -452,6 +449,28 @@ function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
       <mesh position={[0, roofY - 0.005, -(OV_S - OV) / 2]}>
         <boxGeometry args={[W + OV * 2 + 0.005, 0.01, D + OV_S + OV + 0.005]} />
         <meshStandardMaterial color="#D8D4CE" roughness={0.85} />
+      </mesh>
+      {/* ── 屋顶设备箱（机房/新风系统，增加细节感）── */}
+      <mesh position={[-W * 0.28, roofSlab + 0.35, D * 0.18]} castShadow>
+        <boxGeometry args={[1.40, 0.70, 0.90]} />
+        <meshStandardMaterial color="#B8B4AE" roughness={0.82} metalness={0.08} />
+      </mesh>
+      {/* ── 太阳能热水器（北侧，倾斜面朝南）── */}
+      <group position={[W * 0.25, roofSlab + 0.20, D * 0.28]} rotation={[0.32, 0, 0]}>
+        <mesh castShadow>
+          <boxGeometry args={[1.20, 0.06, 1.60]} />
+          <meshStandardMaterial color="#2A2E3C" roughness={0.30} metalness={0.45} />
+        </mesh>
+        {/* 玻璃覆盖面 */}
+        <mesh position={[0, 0.04, 0]}>
+          <boxGeometry args={[1.18, 0.02, 1.58]} />
+          <meshStandardMaterial color="#6090A8" roughness={0.12} metalness={0.22} transparent opacity={0.65} />
+        </mesh>
+      </group>
+      {/* ── 屋顶排气管（细节）── */}
+      <mesh position={[W * 0.10, roofSlab + 0.25, -D * 0.10]} castShadow>
+        <cylinderGeometry args={[0.08, 0.10, 0.50, 8]} />
+        <meshStandardMaterial color="#606468" roughness={0.60} metalness={0.30} />
       </mesh>
     </group>
   );
