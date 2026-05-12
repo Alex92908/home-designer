@@ -7080,6 +7080,91 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5e-0c. 北庭院日式石灯笼（yukimi-style stone lanterns, north garden）──
+           6 traditional yukimi-dōrō stone lanterns scattered through the north
+           garden, near the stepping stone path, fountain and arbor.
+           Each: granite base disc, pedestal, belly (fire box), cap, finial sphere.
+           Fire box: frosted acrylic inside — warm amber glow at dusk/night. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const isNightSL = sunHour < 6 || sunHour > 20;
+        const isDuskSL  = !isNightSL && (sunHour < 8 || sunHour > 18);
+        const lEmi      = isNightSL ? 2.8 : isDuskSL ? 1.4 : 0.08;
+        const lI        = isNightSL ? 2.5 : isDuskSL ? 1.2 : 0.0;
+
+        // Fixed lantern positions in north garden (world space)
+        const lanternPositions: [number, number][] = [
+          [-W * 0.30,  D / 2 + 0.55],
+          [ W * 0.30,  D / 2 + 0.55],
+          [-W * 0.42,  D / 2 + 1.80],
+          [ W * 0.42,  D / 2 + 1.80],
+          [-W * 0.18,  D / 2 + 2.80],
+          [ W * 0.20,  D / 2 + 2.80],
+        ];
+
+        return (
+          <group>
+            {lanternPositions.map(([lx, lz], li) => (
+              <group key={li} position={[lx, 0, lz]}>
+                {/* Base slab — wide flat granite disc */}
+                <mesh position={[0, 0.018, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+                  <circleGeometry args={[0.22, 6]} />
+                  <meshStandardMaterial color="#5A5850" roughness={0.85} metalness={0.04} />
+                </mesh>
+                {/* Pedestal column */}
+                <mesh position={[0, 0.22, 0]} castShadow>
+                  <cylinderGeometry args={[0.058, 0.068, 0.38, 6]} />
+                  <meshStandardMaterial color="#6A6860" roughness={0.88} metalness={0.03} />
+                </mesh>
+                {/* Middle support disc */}
+                <mesh position={[0, 0.43, 0]}>
+                  <cylinderGeometry args={[0.12, 0.12, 0.032, 6]} />
+                  <meshStandardMaterial color="#5A5850" roughness={0.90} metalness={0.03} />
+                </mesh>
+                {/* Fire box body — hexagonal */}
+                <mesh position={[0, 0.60, 0]} castShadow>
+                  <cylinderGeometry args={[0.115, 0.115, 0.28, 6]} />
+                  <meshStandardMaterial color="#606058" roughness={0.88} metalness={0.04} />
+                </mesh>
+                {/* Fire box opening panels (frosted, glowing) */}
+                {Array.from({ length: 6 }, (_, fi) => {
+                  const fa = (fi / 6) * Math.PI * 2;
+                  return (
+                    <mesh key={fi} position={[Math.cos(fa) * 0.116, 0.60, Math.sin(fa) * 0.116]}
+                      rotation={[0, fa + Math.PI / 2, 0]}>
+                      <planeGeometry args={[0.090, 0.22]} />
+                      <meshStandardMaterial
+                        color="#FFF4D0" emissive="#FFD860" emissiveIntensity={lEmi}
+                        transparent opacity={0.55} roughness={0.30}
+                        side={THREE.DoubleSide} depthWrite={false}
+                      />
+                    </mesh>
+                  );
+                })}
+                {/* Roof cap — wide hexagonal lid */}
+                <mesh position={[0, 0.77, 0]} castShadow>
+                  <cylinderGeometry args={[0.18, 0.12, 0.10, 6]} />
+                  <meshStandardMaterial color="#5A5850" roughness={0.86} metalness={0.04} />
+                </mesh>
+                {/* Roof top flat */}
+                <mesh position={[0, 0.825, 0]}>
+                  <cylinderGeometry args={[0.175, 0.175, 0.022, 6]} />
+                  <meshStandardMaterial color="#504E48" roughness={0.88} metalness={0.04} />
+                </mesh>
+                {/* Finial sphere */}
+                <mesh position={[0, 0.870, 0]}>
+                  <sphereGeometry args={[0.034, 6, 5]} />
+                  <meshStandardMaterial color="#484640" roughness={0.85} metalness={0.06} />
+                </mesh>
+                {/* Point light from fire box */}
+                {lI > 0 && (
+                  <pointLight position={[0, 0.60, 0]} intensity={lI} distance={2.0} decay={2.5} color="#FFD070" />
+                )}
+              </group>
+            ))}
+          </group>
+        );
+      })()}
+
       {/* ── 5e-1. 北侧庭院艺术装置（premium garden art installation, north yard）──
            Dual polished-steel sweeping arch sculpture over a circular mirror pool.
            Each arch is a partial torus (240° sweep) of brushed mirror steel,
