@@ -6421,6 +6421,11 @@ export default function HouseCanvas() {
             {/* Side facade wash — east/west edges */}
             <pointLight position={[-W / 2 - 0.5, 0.2,  D * 0.10]} intensity={3.0} distance={floors * FLOOR_H + 2} decay={1.8} color="#FFF2E0" />
             <pointLight position={[ W / 2 + 0.5, 0.2, -D * 0.10]} intensity={3.0} distance={floors * FLOOR_H + 2} decay={1.8} color="#FFF2E0" />
+            {/* Pool water bounce light — cool blue fill reflected from pool surface onto
+                building south face. Approximates the real pool position (D*1.8 south). */}
+            <pointLight position={[0, 1.2, -D * 1.8]} intensity={3.5} distance={D * 4 + W * 1.5} decay={1.6} color="#4AACCC" />
+            {/* Stone deck reflected fill — warm from travertine deck between building and pool */}
+            <pointLight position={[0, 0.5, -D * 0.85]} intensity={2.2} distance={D * 2 + W} decay={2.0} color="#E8D8B0" />
           </>
         )}
         {/* Click empty ground to deselect */}
@@ -6483,33 +6488,32 @@ export default function HouseCanvas() {
             <SSAO
               blendFunction={BlendFunction.MULTIPLY}
               samples={32}
-              radius={theme.phase === "day" ? 5 : 7}
-              intensity={theme.phase === "night" ? 52 : 38}
+              radius={theme.phase === "day" ? 4 : 7}
+              intensity={theme.phase === "night" ? 52 : theme.phase === "day" ? 22 : 35}
               luminanceInfluence={0.55}
               worldDistanceThreshold={1.8}
               worldDistanceFalloff={3.5}
               worldProximityThreshold={0.4}
               worldProximityFalloff={1.2}
             />
-            {/* Bloom — subtle warm halos for day; stronger for night emissives */}
+            {/* Bloom — warm halos for pool water, glass, and night emissives */}
             <Bloom
-              intensity={theme.phase === "night" ? 0.70 : theme.phase === "dusk" ? 0.38 : 0.16}
-              luminanceThreshold={theme.phase === "night" ? 0.88 : 0.90}
-              luminanceSmoothing={0.40}
+              intensity={theme.phase === "night" ? 0.75 : theme.phase === "dusk" ? 0.44 : 0.24}
+              luminanceThreshold={theme.phase === "night" ? 0.86 : 0.87}
+              luminanceSmoothing={0.35}
               mipmapBlur
             />
-            {/* HueSaturation — slight saturation boost for vivid architectural renders
-                (tone mapping is already ACES Filmic via Canvas gl.toneMapping) */}
+            {/* HueSaturation — vivid architectural renders with rich pool/sky blues */}
             <HueSaturation
-              saturation={theme.phase === "night" ? -0.05 : 0.08}
+              saturation={theme.phase === "night" ? -0.05 : theme.phase === "day" ? 0.18 : 0.10}
               hue={0}
             />
             <BrightnessContrast
-              brightness={theme.phase === "night" ? 0.0 : 0.015}
-              contrast={theme.phase === "night" ? 0.15 : 0.08}
+              brightness={theme.phase === "night" ? 0.0 : theme.phase === "day" ? 0.005 : 0.010}
+              contrast={theme.phase === "night" ? 0.15 : theme.phase === "day" ? 0.14 : 0.10}
             />
-            {/* Vignette — cinematic frame darkening */}
-            <Vignette offset={0.38} darkness={theme.phase === "night" ? 0.62 : 0.42} eskil={false} />
+            {/* Vignette — lighter during day for clean look, dark at night */}
+            <Vignette offset={0.42} darkness={theme.phase === "night" ? 0.62 : theme.phase === "day" ? 0.28 : 0.40} eskil={false} />
             <SMAA />
           </EffectComposer>
         )}
