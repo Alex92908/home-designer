@@ -3784,6 +3784,56 @@ export default function FloorPlanBuilding({
                 <meshStandardMaterial color={capCol} roughness={0.22} metalness={0.88} envMapIntensity={1.8} />
               </mesh>
             ))}
+            {/* Intermediate wall pilasters — square piers every ~3.2m along E/W/N walls */}
+            {(() => {
+              const pilasterS  = 0.22;   // pilaster section (slightly smaller than gate pillars)
+              const pilasterH  = wallH2 + 0.18;  // slightly taller than wall
+              const pilasterCol = "#C8C4BC";
+              const pStep = 3.20;  // spacing
+              // East wall
+              const eWallLen  = bndN - bndS;
+              const eCount    = Math.max(1, Math.floor(eWallLen / pStep) - 1);
+              const eStep     = eWallLen / (eCount + 1);
+              // West wall (same count)
+              const nWallLen  = bndE - bndW;
+              const nCount    = Math.max(1, Math.floor(nWallLen / pStep) - 1);
+              const nStep     = nWallLen / (nCount + 1);
+              const pilasters: Array<[number, number, number]> = [];
+              // East wall pilasters
+              for (let i = 0; i < eCount; i++) {
+                const pz = bndS + (i + 1) * eStep;
+                pilasters.push([bndE, wallH2 / 2, pz]);
+              }
+              // West wall pilasters
+              for (let i = 0; i < eCount; i++) {
+                const pz = bndS + (i + 1) * eStep;
+                pilasters.push([bndW, wallH2 / 2, pz]);
+              }
+              // North wall pilasters
+              for (let i = 0; i < nCount; i++) {
+                const px = bndW + (i + 1) * nStep;
+                pilasters.push([px, wallH2 / 2, bndN]);
+              }
+              return (
+                <group>
+                  {pilasters.map(([ppx, ppy, ppz], pi) => (
+                    <group key={pi} position={[ppx, 0, ppz]}>
+                      {/* Pilaster body */}
+                      <mesh position={[0, pilasterH / 2, 0]} castShadow>
+                        <boxGeometry args={[pilasterS, pilasterH, pilasterS]} />
+                        <meshStandardMaterial color={pilasterCol} roughness={0.80} metalness={0.02} />
+                      </mesh>
+                      {/* Pilaster cap — dark flashing */}
+                      <mesh position={[0, pilasterH + 0.006, 0]}>
+                        <boxGeometry args={[pilasterS + 0.025, 0.014, pilasterS + 0.025]} />
+                        <meshStandardMaterial color={capCol} roughness={0.22} metalness={0.88} envMapIntensity={1.6} />
+                      </mesh>
+                    </group>
+                  ))}
+                </group>
+              );
+            })()}
+
             {/* Gate pillars — 2 at entry opening */}
             {([gateX2 - gateW2 - pillarS / 2, gateX2 + gateW2 + pillarS / 2] as number[]).map((gpx, gpi) => (
               <group key={gpi} position={[gpx, 0, bndS]}>
