@@ -1075,6 +1075,25 @@ export default function FloorPlanBuilding({
         ));
       })}
 
+      {/* ── 外立面转角柱（4 角）— 黑色阳极氧化铝方柱，给建筑立面明确边界，
+              现代玻璃幕墙建筑标配转角细节 ── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const colW   = 0.16;   // column cross-section
+        const colH   = totalH + SLAB_T + 0.06; // full building height + small overshoot
+        const colY   = colH / 2;
+        const colMat = { color: "#181A1E" as const, roughness: 0.10 as const, metalness: 0.95 as const, envMapIntensity: 2.6 as const };
+        return (
+          <>
+            {([[-W / 2, -D / 2], [W / 2, -D / 2], [-W / 2, D / 2], [W / 2, D / 2]] as [number,number][]).map(([cx2, cz2], ci) => (
+              <mesh key={ci} position={[cx2, colY, cz2]} castShadow>
+                <boxGeometry args={[colW, colH, colW]} />
+                <meshStandardMaterial {...colMat} />
+              </mesh>
+            ))}
+          </>
+        );
+      })()}
+
       {/* ── 1. 每层背景填充板（消除房间间微小缝隙，视觉统一） ──
               当本层有任何 "glass" 房间时跳过：这块大背景板会从内部挡住
               玻璃幕墙后面的视线。房间盒子各自覆盖自己的足迹，房间间
