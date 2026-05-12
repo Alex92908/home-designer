@@ -549,14 +549,27 @@ function ConcreteFacade({
                 <planeGeometry args={[w.winLen + 0.02, 0.16]} />
                 <meshStandardMaterial color="#2A1A0E" roughness={0.98} />
               </mesh>
-              {/* Plant clumps — varying color green blobs */}
+              {/* Plant foliage — green base mound */}
               {Array.from({ length: Math.max(2, Math.round(w.winLen / 0.55)) }, (_, pi) => {
                 const px3 = -w.winLen / 2 + 0.28 + pi * (w.winLen / Math.max(1, Math.round(w.winLen / 0.55) - 0));
                 const greenTone = panelBlindHash(wi + pi * 5, wi * 2 + pi) < 0.5 ? "#2E6820" : "#4A8030";
                 return (
-                  <mesh key={pi} position={[px3, 0.14, 0]} castShadow>
-                    <sphereGeometry args={[0.12 + panelBlindHash(pi, wi + 3) * 0.06, 6, 5]} />
+                  <mesh key={pi} position={[px3, 0.12, 0]} castShadow>
+                    <sphereGeometry args={[0.10 + panelBlindHash(pi, wi + 3) * 0.05, 6, 5]} />
                     <meshStandardMaterial color={greenTone} roughness={0.96} />
+                  </mesh>
+                );
+              })}
+              {/* Flower blooms — colorful dots above foliage */}
+              {Array.from({ length: Math.max(3, Math.round(w.winLen / 0.38)) }, (_, fi) => {
+                const fx3 = -w.winLen / 2 + 0.18 + fi * (w.winLen - 0.16) / Math.max(2, Math.round(w.winLen / 0.38) - 1);
+                // Deterministic flower color: geranium red, bougainvillea pink, petunia purple, white
+                const flHash = panelBlindHash(wi * 13 + fi * 7, wi + fi * 3);
+                const flColor = flHash < 0.30 ? "#E83040" : flHash < 0.55 ? "#E85090" : flHash < 0.75 ? "#9940CC" : "#F0F0F0";
+                return (
+                  <mesh key={`fl-${fi}`} position={[fx3, 0.195, 0.012]} castShadow>
+                    <sphereGeometry args={[0.040 + flHash * 0.018, 5, 4]} />
+                    <meshStandardMaterial color={flColor} roughness={0.92} emissive={flColor} emissiveIntensity={0.08} />
                   </mesh>
                 );
               })}
@@ -3905,55 +3918,6 @@ export default function FloorPlanBuilding({
                 </mesh>
               ))}
             </group>
-          </group>
-        );
-      })()}
-
-      {/* ── 5c-2. 泳池旁户外淋浴（pool-side outdoor shower）──
-           Stainless steel post + curved arm + rain-head showerhead.
-           Placed on north-west corner of pool deck, easy rinse before/after swimming. */}
-      {!insideBuilding && isGlassVilla && (() => {
-        const poolPosZ = -D / 2 - 5.80;  // match pool group Z from section 5c
-        const poolW2 = Math.min(W * 0.72, 10.0);
-        const poolL2 = 4.80;
-        const shX = -poolW2 / 2 - 0.80;  // west of pool, on deck
-        const shZ = poolPosZ - poolL2 / 2 - 0.40;  // north side
-        const shY = 0;
-        const postH = 2.28;
-        return (
-          <group position={[shX, shY, shZ]}>
-            {/* Floor drain disc */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.22, 0.22, 0.018, 10]} />
-              <meshStandardMaterial color="#808890" roughness={0.38} metalness={0.72} />
-            </mesh>
-            {/* Drain grate lines */}
-            {Array.from({ length: 5 }, (_, gi) => (
-              <mesh key={gi} position={[-0.16 + gi * 0.08, 0.010, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[0.012, 0.40]} />
-                <meshStandardMaterial color="#606870" roughness={0.45} metalness={0.65} />
-              </mesh>
-            ))}
-            {/* Vertical post */}
-            <mesh position={[0, postH / 2, 0]} castShadow>
-              <cylinderGeometry args={[0.028, 0.030, postH, 8]} />
-              <meshStandardMaterial color="#C4CCD4" roughness={0.15} metalness={0.92} envMapIntensity={2.2} />
-            </mesh>
-            {/* Horizontal arm (curves toward drain area) */}
-            <mesh position={[0.22, postH - 0.06, 0]} rotation={[0, 0, -Math.PI / 2.8]}>
-              <cylinderGeometry args={[0.022, 0.022, 0.55, 8]} />
-              <meshStandardMaterial color="#C4CCD4" roughness={0.15} metalness={0.92} envMapIntensity={2.2} />
-            </mesh>
-            {/* Rain showerhead disc */}
-            <mesh position={[0.42, postH - 0.26, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.095, 0.092, 0.022, 12]} />
-              <meshStandardMaterial color="#B0B8C0" roughness={0.18} metalness={0.90} envMapIntensity={2.4} />
-            </mesh>
-            {/* Small valve handle on post */}
-            <mesh position={[0.038, postH * 0.55, 0]} rotation={[0, 0, Math.PI / 2]}>
-              <cylinderGeometry args={[0.022, 0.014, 0.10, 6]} />
-              <meshStandardMaterial color="#A8B0B8" roughness={0.20} metalness={0.88} envMapIntensity={2.0} />
-            </mesh>
           </group>
         );
       })()}
