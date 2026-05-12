@@ -4854,6 +4854,83 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5d-2. 停车位标线 + 门卫岗亭（parking bay markings + security booth）──
+           White painted parking bays alongside the driveway and a small
+           modern security booth near the east gate pillar. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bndS8  = -D / 2 - 11.50;
+        const bndE8  =  W / 2 + 4.50;
+        const gateW8 = Math.min(W * 0.30, 3.80);
+        const isNightB = sunHour < 6 || sunHour > 20;
+        const isDuskB  = !isNightB && (sunHour < 8 || sunHour > 18);
+        // Parking bay for sedan (X=0, Z=-D/2-7.80) and SUV (X=2.55, Z=-D/2-8.10)
+        const parkZ = -D / 2 - 7.90;
+        return (
+          <group>
+            {/* White parking bay lines — 2 bays side by side */}
+            {/* Bay 1 (sedan, centred at X=0) */}
+            {([-1.15, 1.15] as number[]).map((lx, li) => (
+              <mesh key={`bl1-${li}`} position={[lx, 0.016, parkZ]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.10, 5.20]} />
+                <meshStandardMaterial color="#E8E8E8" roughness={0.82} />
+              </mesh>
+            ))}
+            {/* Bay 2 (SUV, offset east) */}
+            {([1.15, 3.70] as number[]).map((lx, li) => (
+              li === 0 ? null :
+              <mesh key={`bl2-${li}`} position={[lx, 0.016, parkZ]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.10, 5.20]} />
+                <meshStandardMaterial color="#E8E8E8" roughness={0.82} />
+              </mesh>
+            ))}
+            {/* Bay front / back markings */}
+            {[-parkZ - D / 2 - 5.30, -parkZ - D / 2 - 10.30].map((_, mi) => (
+              <mesh key={`bm-${mi}`} position={[1.80, 0.016, -D / 2 - 5.30 - mi * 5.0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[5.00, 0.10]} />
+                <meshStandardMaterial color="#E8E8E8" roughness={0.82} />
+              </mesh>
+            ))}
+            {/* Security guard booth — east side of gate, inside boundary */}
+            <group position={[gateW8 + 1.50, 0, bndS8 + 1.20]}>
+              {/* Booth floor */}
+              <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+                <planeGeometry args={[1.10, 1.10]} />
+                <meshStandardMaterial color="#C8C4BC" roughness={0.72} />
+              </mesh>
+              {/* Booth body — white painted concrete block */}
+              <mesh position={[0, 1.15, 0]} castShadow>
+                <boxGeometry args={[1.10, 2.30, 1.10]} />
+                <meshStandardMaterial color="#E8E4DC" roughness={0.80} metalness={0.02} />
+              </mesh>
+              {/* Large window — front (south facing gate) */}
+              <mesh position={[0, 1.30, -0.56]}>
+                <boxGeometry args={[0.80, 0.90, 0.012]} />
+                <meshStandardMaterial color="#B0CCD8" transparent opacity={0.50} roughness={0.04} metalness={0.08} envMapIntensity={3.0} />
+              </mesh>
+              {/* Door (east side) */}
+              <mesh position={[0.56, 0.95, 0.10]}>
+                <boxGeometry args={[0.012, 1.90, 0.60]} />
+                <meshStandardMaterial color="#A8B0B8" roughness={0.40} metalness={0.30} />
+              </mesh>
+              {/* Flat roof with small overhang */}
+              <mesh position={[0, 2.32, 0]} castShadow>
+                <boxGeometry args={[1.20, 0.075, 1.20]} />
+                <meshStandardMaterial color="#C8C4BC" roughness={0.82} />
+              </mesh>
+              {/* CCTV camera on corner */}
+              <mesh position={[0.50, 2.28, -0.50]} rotation={[0.2, -Math.PI / 4, 0]}>
+                <boxGeometry args={[0.055, 0.040, 0.080]} />
+                <meshStandardMaterial color="#282C34" roughness={0.35} metalness={0.68} />
+              </mesh>
+              {/* Interior light */}
+              {(isNightB || isDuskB) && (
+                <pointLight position={[0, 1.40, 0]} intensity={1.2} distance={2.5} decay={2.0} color="#FFE890" castShadow={false} />
+              )}
+            </group>
+          </group>
+        );
+      })()}
+
       {/* ── 5e. 庭院乔木（mature trees at site corners）── */}
       {!insideBuilding && isGlassVilla && (() => {
         const treeData: Array<[number, number]> = [
