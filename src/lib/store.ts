@@ -561,6 +561,7 @@ export const useDesignerStore = create<DesignerStore>()(
       setRoutingFrom: (id) => set({ routingFrom: id }),
       addRoutingConnection: (room, from, to, kind) => set(st => {
         const fp = st.floorPlans[st.activeFloor];
+        if (!fp?.rooms[room]) return {};
         const existing = fp.rooms[room].connections ?? [];
         const newConn = {
           id: `conn_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
@@ -573,6 +574,7 @@ export const useDesignerStore = create<DesignerStore>()(
       }),
       removeRoutingConnection: (room, connId) => set(st => {
         const fp = st.floorPlans[st.activeFloor];
+        if (!fp?.rooms[room]) return {};
         const existing = fp.rooms[room].connections ?? [];
         const updatedRoom = { ...fp.rooms[room], connections: existing.filter(c => c.id !== connId) };
         const floorPlans = [...st.floorPlans];
@@ -633,6 +635,7 @@ export const useDesignerStore = create<DesignerStore>()(
       setActiveRoom: (room) => {
         const s = get();
         const fp = s.floorPlans[s.activeFloor];
+        if (!fp?.rooms[room]) { set({ activeRoom: room, selectedInstanceId: null, selectedInstanceIds: [] }); return; }
         const { materials, placedItems } = fp.rooms[room];
         const computed = computeScores(materials, placedItems);
         const dominantStyle = s.activeTemplateId
@@ -664,6 +667,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const updatedMaterials = { ...fp.rooms[activeRoom].materials };
         delete updatedMaterials[category];
         const updatedRoom = { ...fp.rooms[activeRoom], materials: updatedMaterials };
@@ -676,6 +680,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const key = side === "back" ? "wallBack" : side === "front" ? "wallFront" : side === "left" ? "wallLeft" : "wallRight";
         const updatedMaterials = { ...fp.rooms[activeRoom].materials };
         if (material) updatedMaterials[key] = material;
@@ -690,6 +695,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const updatedMaterials = { ...fp.rooms[activeRoom].materials };
         if (material) {
           updatedMaterials.wallLower = material;
@@ -710,6 +716,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const clamped = Math.max(30, Math.min(200, Math.round(cm)));
         const updatedMaterials = { ...fp.rooms[activeRoom].materials, wallSplitHeight: clamped };
         const updatedRoom = { ...fp.rooms[activeRoom], materials: updatedMaterials };
@@ -722,6 +729,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const updatedMaterials = { ...fp.rooms[activeRoom].materials };
         const fieldMap = {
           all:   "wallExterior",
@@ -745,6 +753,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const furniture = getFurnitureById(furnitureId);
         if (!furniture) return;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         // Push history before placing
         set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems], exteriorDecor: [...(fp.rooms[activeRoom].exteriorDecor ?? [])] }] }));
 
@@ -772,6 +781,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId ? { ...p, x, z } : p
         );
@@ -784,6 +794,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems], exteriorDecor: [...(fp.rooms[activeRoom].exteriorDecor ?? [])] }] }));
         const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId ? { ...p, rotation: (p.rotation + 90) % 360 } : p
@@ -797,6 +808,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId ? { ...p, mountCeiling: !p.mountCeiling } : p
         );
@@ -809,6 +821,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor, selectedInstanceId, selectedInstanceIds } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems], exteriorDecor: [...(fp.rooms[activeRoom].exteriorDecor ?? [])] }] }));
         const updatedPlaced = fp.rooms[activeRoom].placedItems.filter(p => p.instanceId !== instanceId);
         const updatedRoom = { ...fp.rooms[activeRoom], placedItems: updatedPlaced };
@@ -832,6 +845,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems], exteriorDecor: [...(fp.rooms[activeRoom].exteriorDecor ?? [])] }] }));
         const placed = fp.rooms[activeRoom].placedItems;
         const copies: PlacedItem[] = instanceIds.flatMap(id => {
@@ -852,6 +866,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems], exteriorDecor: [...(fp.rooms[activeRoom].exteriorDecor ?? [])] }] }));
         const updatedPlaced = fp.rooms[activeRoom].placedItems.filter(p => !instanceIds.includes(p.instanceId));
         const updatedRoom = { ...fp.rooms[activeRoom], placedItems: updatedPlaced };
@@ -865,6 +880,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         set(st => ({ furnitureHistory: [...st.furnitureHistory.slice(-29), { room: activeRoom, placedItems: [...fp.rooms[activeRoom].placedItems], exteriorDecor: [...(fp.rooms[activeRoom].exteriorDecor ?? [])] }] }));
         const clearedRoom = { materials: {}, placedItems: [] };
         const floorPlans = [...s.floorPlans];
@@ -876,6 +892,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const def = ROOM_DEFS[activeRoom];
         const dims = fp.roomDimensions[activeRoom] ?? { width: def.width, depth: def.depth };
         const existing = fp.rooms[activeRoom].placedItems;
@@ -966,6 +983,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId
             ? {
@@ -985,6 +1003,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId
             ? { ...p, elevationY: Math.max(0, Math.min(300, elevationY)) }
@@ -999,6 +1018,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         set(st => ({
           furnitureHistory: [
             ...st.furnitureHistory.slice(-29),
@@ -1014,6 +1034,7 @@ export const useDesignerStore = create<DesignerStore>()(
           if (idx === -1) return {};
           const prev = s.furnitureHistory[idx];
           const fp = s.floorPlans[activeFloor];
+          if (!fp?.rooms[activeRoom]) return {};
           // Restore BOTH placedItems and exteriorDecor from the snapshot.
           // exteriorDecor is optional on older snapshots (backward compat)
           // — if absent, leave the current decor alone.
@@ -1039,6 +1060,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const s = get();
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const items = fp.rooms[activeRoom].placedItems
           .filter(p => instanceIds.includes(p.instanceId))
           .map(p => ({
@@ -1057,6 +1079,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const { activeRoom, activeFloor, clipboard } = s;
         if (clipboard.length === 0) return;
         const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
         const prevItems = fp.rooms[activeRoom].placedItems;
         const def = ROOM_DEFS[activeRoom];
         const copies: PlacedItem[] = clipboard.map(c => ({
@@ -1375,6 +1398,7 @@ export const useDesignerStore = create<DesignerStore>()(
       copyRoom: (room) => {
         const s = get();
         const fp = s.floorPlans[s.activeFloor];
+        if (!fp?.rooms[room]) return;
         const def = ROOM_DEFS[room];
         const meta = s.customRoomMeta[room];
         const dim = fp.roomDimensions[room] ?? { width: def.width, depth: def.depth };
@@ -1450,7 +1474,7 @@ export const useDesignerStore = create<DesignerStore>()(
         };
         set(st => ({
           floorPlans,
-          furnitureHistory: [...st.furnitureHistory.slice(-29), { room: targetRoom, placedItems: fp.rooms[targetRoom].placedItems }],
+          furnitureHistory: [...st.furnitureHistory.slice(-29), { room: targetRoom, placedItems: fp.rooms[targetRoom]?.placedItems ?? [] }],
           selectedInstanceIds: [],
           selectedInstanceId: null,
           scores: computeScores(roomClipboard.materials, newItems),
@@ -1510,6 +1534,7 @@ export const useDesignerStore = create<DesignerStore>()(
       addRoomExteriorDecor: (room, furnitureId, wall) => set(s => {
         const plan = s.floorPlans[s.activeFloor];
         const roomState = plan.rooms[room];
+        if (!roomState) return {};
         const newItem: ExteriorWallDecorItem = {
           instanceId: `ed_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
           furnitureId,
@@ -1536,6 +1561,7 @@ export const useDesignerStore = create<DesignerStore>()(
       removeRoomExteriorDecor: (room, instanceId) => set(s => {
         const plan = s.floorPlans[s.activeFloor];
         const roomState = plan.rooms[room];
+        if (!roomState) return {};
         const existing = roomState.exteriorDecor ?? [];
         const updatedRoom = { ...roomState, exteriorDecor: existing.filter(d => d.instanceId !== instanceId) };
         const updatedRooms = { ...plan.rooms, [room]: updatedRoom };
@@ -1553,6 +1579,7 @@ export const useDesignerStore = create<DesignerStore>()(
       updateRoomExteriorDecor: (room, instanceId, patch) => set(s => {
         const plan = s.floorPlans[s.activeFloor];
         const roomState = plan.rooms[room];
+        if (!roomState) return {};
         const existing = roomState.exteriorDecor ?? [];
         const updatedRoom = {
           ...roomState,
@@ -1693,6 +1720,7 @@ export const useDesignerStore = create<DesignerStore>()(
       rotateRoom: (room) => {
         const s = get();
         const fp = s.floorPlans[s.activeFloor];
+        if (!fp?.rooms[room]) return;
         const { width: W, depth: D } = fp.roomDimensions[room];
 
         // Transform furniture: 90° CW room rotation → new_x = D - old_z, new_z = old_x, rotation += 90
@@ -1981,7 +2009,7 @@ export const useDesignerStore = create<DesignerStore>()(
       currentRoom: () => {
         const s = get();
         const fp = s.floorPlans[s.activeFloor];
-        return fp.rooms[s.activeRoom];
+        return fp?.rooms[s.activeRoom];
       },
 
       totalCost: () => {

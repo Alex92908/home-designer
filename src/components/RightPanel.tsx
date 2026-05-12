@@ -443,7 +443,7 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
   const localName = (item: { id: string; name: string }) =>
     locale === "en" ? (getFurnitureNameEn(item.id) ?? item.name) : item.name;
   const customRoomMeta = useDesignerStore(s => s.customRoomMeta);
-  const decorRaw = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[activeRoom]?.exteriorDecor);
+  const decorRaw = useDesignerStore(s => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.exteriorDecor);
   const decor = decorRaw ?? EMPTY_EXT_DECOR;
   const selectedId = useDesignerStore(s => s.selectedExteriorDecorId);
   const setSelected = useDesignerStore(s => s.setSelectedExteriorDecor);
@@ -455,7 +455,7 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
   // `extColorSide` tracks which face the color picker applies to. "all"
   // sets the default (wallExterior); a specific side writes the
   // side-only override (wallBackExterior etc.).
-  const mats = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[activeRoom]?.materials);
+  const mats = useDesignerStore(s => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.materials);
   const wallExterior        = mats?.wallExterior;
   const wallBackExterior    = mats?.wallBackExterior;
   const wallFrontExterior   = mats?.wallFrontExterior;
@@ -699,7 +699,7 @@ function CeilingLightPositionSection({ activeRoom }: { activeRoom: RoomType }) {
   const pos = useDesignerStore(s => s.lightPosByRoom[activeRoom]);
   const setPos = useDesignerStore(s => s.setLightPos);
   const dims = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
-  const lightMat = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[activeRoom]?.materials?.light);
+  const lightMat = useDesignerStore(s => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.materials?.light);
   const tL = useT();
   const localizedLightName = useMaterialName(lightMat?.id ?? "", lightMat?.name ?? "");
   if (!lightMat) return null;   // no ceiling light set → nothing to position

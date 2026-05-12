@@ -3566,8 +3566,8 @@ const EMPTY_PLACED: PlacedItem[] = [];
 function RoutingLinesLayer({ room, W, D, H }: {
   room: import("@/lib/types").RoomType; W: number; D: number; H: number;
 }) {
-  const conns  = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.connections) ?? EMPTY_CONNS;
-  const placed = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.placedItems ?? EMPTY_PLACED);
+  const conns  = useDesignerStore(s => s.floorPlans[s.activeFloor]?.rooms[room]?.connections) ?? EMPTY_CONNS;
+  const placed = useDesignerStore(s => s.floorPlans[s.activeFloor]?.rooms[room]?.placedItems ?? EMPTY_PLACED);
   if (conns.length === 0) return null;
   // MEP（机电）行业惯例：不同管线走墙的不同位置 + 不同走法。
   // 5 种管线本应分层走，全画在同高度同位置 → 视觉上一团乱。
@@ -3653,7 +3653,7 @@ function RoutingLinesLayer({ room, W, D, H }: {
 function RoomExteriorDecorLayer({ room, W, D, H }: {
   room: import("@/lib/types").RoomType; W: number; D: number; H: number;
 }) {
-  const decorRaw = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]?.exteriorDecor);
+  const decorRaw = useDesignerStore(s => s.floorPlans[s.activeFloor]?.rooms[room]?.exteriorDecor);
   const decor = decorRaw ?? EMPTY_ROOM_DECOR;
   const selectedId = useDesignerStore(s => s.selectedExteriorDecorId);
   const setSelected = useDesignerStore(s => s.setSelectedExteriorDecor);
