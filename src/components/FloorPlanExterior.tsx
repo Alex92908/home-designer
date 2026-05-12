@@ -2057,6 +2057,35 @@ export default function FloorPlanBuilding({
                     <meshStandardMaterial color={floorC} roughness={0.55} />
                   </mesh>
 
+                  {/* 大房间家具剪影（仅在外观模式下渲染，通过玻璃可见）
+                      不渲染 GLTF — 只是简单的几何体轮廓，给室内视觉深度
+                      放在后墙（+Z）附近，从南面玻璃幕墙外看到 */}
+                  {isLarge && !insideBuilding && (
+                    <>
+                      {/* Bookshelf — dark walnut, against back wall */}
+                      <mesh position={[iW * 0.35, 0, iD / 2 - 0.22]}>
+                        <boxGeometry args={[0.90, FLOOR_H * 0.72, 0.32]} />
+                        <meshStandardMaterial color="#3A2418" roughness={0.82} metalness={0.02}
+                          emissive="#2A1A0C" emissiveIntensity={interiorGlowWall * 0.08} />
+                      </mesh>
+                      {/* Sofa — low & wide, towards centre */}
+                      <mesh position={[-iW * 0.15, -FLOOR_H / 2 + 0.52, iD * 0.10]}>
+                        <boxGeometry args={[Math.min(iW * 0.55, 2.4), 0.40, 0.88]} />
+                        <meshStandardMaterial color="#7A6850" roughness={0.90} metalness={0.01} />
+                      </mesh>
+                      {/* Sofa back cushion */}
+                      <mesh position={[-iW * 0.15, -FLOOR_H / 2 + 0.85, iD * 0.10 + 0.32]}>
+                        <boxGeometry args={[Math.min(iW * 0.55, 2.4), 0.45, 0.24]} />
+                        <meshStandardMaterial color="#6E5E4A" roughness={0.92} metalness={0.01} />
+                      </mesh>
+                      {/* Low coffee table */}
+                      <mesh position={[-iW * 0.15, -FLOOR_H / 2 + 0.40, iD * 0.10 - 0.62]}>
+                        <boxGeometry args={[0.80, 0.050, 0.50]} />
+                        <meshStandardMaterial color="#B0A080" roughness={0.55} metalness={0.10} envMapIntensity={1.2} />
+                      </mesh>
+                    </>
+                  )}
+
                   {/* 吊灯（仅 ≥12㎡ 的房间）— emissive 随时间动态增强 */}
                   {isLarge && (
                     <>
