@@ -8791,6 +8791,99 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5j-5b. 西侧界墙绿植景观墙（living green wall on west boundary）──
+           A 4m × 3m modular green wall panel system on the inner face of the
+           west boundary wall, adjacent to the outdoor gym. 10×6 grid of dark
+           powder-coated planting modules (each 0.40m × 0.50m), filled with
+           green/chartreuse moss/plant varieties. Top mist nozzle rail.
+           Night: linear LED wash at top face. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bndW_gw  = -W / 2 - 4.50;
+        const wallT_gw = 0.18;
+        const gwX      = bndW_gw + wallT_gw + 0.025;   // inner face of west wall
+        const gwZ      = D / 2 + 1.10;   // near gym
+        const gwW      = 4.00;   // horizontal extent (N-S)
+        const gwH      = 3.00;   // vertical extent
+        const gwBotY   = 0.20;   // bottom above grade
+        const mW       = 0.40;   // module width (Z axis)
+        const mH       = 0.50;   // module height
+        const cols     = Math.round(gwW / mW);
+        const rows     = Math.round(gwH / mH);
+        const isNightGW = sunHour < 6 || sunHour > 20;
+        const isDuskGW  = !isNightGW && (sunHour < 8 || sunHour > 18);
+        const ledEmi    = isNightGW ? 2.5 : isDuskGW ? 1.0 : 0.0;
+
+        // Plant colour palette — varied greens
+        const plantCols = ["#2A6020", "#3A7228", "#264C18", "#4A8030", "#1E5018", "#5C9038", "#304E20"] as const;
+
+        return (
+          <group position={[gwX, gwBotY, gwZ]}>
+            {/* Frame backing — dark powder-coated steel plate */}
+            <mesh position={[0, gwH / 2, gwW / 2]}>
+              <boxGeometry args={[0.022, gwH + 0.05, gwW + 0.06]} />
+              <meshStandardMaterial color="#1E2228" roughness={0.35} metalness={0.75} envMapIntensity={1.5} />
+            </mesh>
+            {/* Module cells */}
+            {Array.from({ length: rows }, (_, ri) =>
+              Array.from({ length: cols }, (_, ci) => {
+                const cellZ = ci * mW + mW / 2;
+                const cellY = ri * mH + mH / 2;
+                const colorIdx = (ri * cols + ci * 3 + ri * 2) % plantCols.length;
+                const plantCol = plantCols[colorIdx];
+                return (
+                  <group key={`gw-${ri}-${ci}`} position={[0, cellY, cellZ]}>
+                    {/* Module body */}
+                    <mesh position={[0.016, 0, 0]}>
+                      <boxGeometry args={[0.015, mH - 0.025, mW - 0.025]} />
+                      <meshStandardMaterial color="#282C30" roughness={0.55} metalness={0.40} />
+                    </mesh>
+                    {/* Plant face — front of module */}
+                    <mesh position={[0.026, 0, 0]}>
+                      <boxGeometry args={[0.040, mH - 0.032, mW - 0.032]} />
+                      <meshStandardMaterial color={plantCol} roughness={0.96} metalness={0.01} />
+                    </mesh>
+                    {/* Small texture bumps — 3 sphere tufts */}
+                    {[[-0.10, -0.06], [0, 0.08], [0.10, -0.04]].map(([dy, dz], bi) => (
+                      <mesh key={bi} position={[0.050, dy, dz]}>
+                        <sphereGeometry args={[mH * 0.14 + (bi * 0.01), 5, 4]} />
+                        <meshStandardMaterial color={plantCols[(colorIdx + bi + 1) % plantCols.length]} roughness={0.97} metalness={0.01} />
+                      </mesh>
+                    ))}
+                  </group>
+                );
+              })
+            )}
+            {/* Top mist nozzle rail */}
+            <mesh position={[0, gwH + 0.04, gwW / 2]}>
+              <boxGeometry args={[0.028, 0.020, gwW + 0.04]} />
+              <meshStandardMaterial color="#606870" roughness={0.35} metalness={0.70} envMapIntensity={1.8} />
+            </mesh>
+            {/* Mist nozzles — 5 small cylinders */}
+            {Array.from({ length: 5 }, (_, ni) => (
+              <mesh key={ni} position={[0.018, gwH + 0.055, ni * (gwW / 4)]}>
+                <cylinderGeometry args={[0.006, 0.006, 0.020, 5]} />
+                <meshStandardMaterial color="#808890" roughness={0.38} metalness={0.70} />
+              </mesh>
+            ))}
+            {/* LED wash strip at top */}
+            {ledEmi > 0 && (
+              <>
+                <mesh position={[-0.010, gwH + 0.085, gwW / 2]}>
+                  <boxGeometry args={[0.015, 0.012, gwW - 0.06]} />
+                  <meshStandardMaterial color="#E0FFD0" emissive="#90F060" emissiveIntensity={ledEmi} roughness={0.60} />
+                </mesh>
+                <pointLight position={[0.10, gwH + 0.10, gwW / 2]} intensity={ledEmi * 1.2} distance={gwH + 0.5} decay={2} color="#A0F070" />
+              </>
+            )}
+            {/* Drip tray at base — narrow dark channel */}
+            <mesh position={[0, -0.015, gwW / 2]}>
+              <boxGeometry args={[0.060, 0.030, gwW + 0.04]} />
+              <meshStandardMaterial color="#1E2228" roughness={0.50} metalness={0.60} />
+            </mesh>
+          </group>
+        );
+      })()}
+
       {/* ── 5j-6. 室外健身区（outdoor gym, west side of north yard）──
            Equipment: power rack, bench press, cable tower, exercise bike,
            battle ropes coiled on hook, rubber flooring mat. */}
