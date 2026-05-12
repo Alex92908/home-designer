@@ -2912,6 +2912,136 @@ export default function FloorPlanBuilding({
               </group>
             ))}
 
+            {/* ── 台阶侧翼叠水槽（stepped cascade channels）——
+                 台阶左右各一条石砌叠水槽，水流从建筑基础沿台阶逐级跌落到广场 ── */}
+            {(() => {
+              const isNightCasc  = sunHour < 6 || sunHour > 20;
+              const isDuskCasc   = !isNightCasc && (sunHour < 8 || sunHour > 18);
+              const cascW        = 0.30;  // runnel interior width
+              const wallT        = 0.06;  // stone wall thickness
+              const wallH        = 0.10;  // stone side-wall height above step tread
+              const cascOffX     = stepW / 2 + wallT + cascW / 2;  // offset from step edge
+              const waterGlowI   = isNightCasc ? 1.6 : isDuskCasc ? 0.7 : 0.05;
+              const underLightI  = isNightCasc ? 2.8 : isDuskCasc ? 1.2 : 0.0;
+
+              return (
+                <group>
+                  {([-cascOffX, cascOffX] as number[]).map((cx, ci) => (
+                    <group key={`casc-${ci}`}>
+                      {/* Per-step cascade segments */}
+                      {Array.from({ length: nSteps }, (_, si) => {
+                        const stepTopY  = (si + 1) * stepRise;  // top face of this step
+                        const stepBotY  = si * stepRise;        // bottom of this step
+                        const stepFaceZ = southFaceZ2 - si * stepRun;  // front face of step
+                        const treadZ    = stepFaceZ - stepRun / 2;
+                        const slabY     = stepBotY + 0.008;     // channel floor just above step tread
+
+                        return (
+                          <group key={si}>
+                            {/* Stone channel floor (same granite as steps) */}
+                            <mesh position={[cx, slabY, treadZ]} receiveShadow>
+                              <boxGeometry args={[cascW, 0.018, stepRun]} />
+                              <meshStandardMaterial color="#C8C4BC" roughness={0.55} metalness={0.04} />
+                            </mesh>
+                            {/* Inner side wall (toward steps) */}
+                            <mesh position={[cx + (ci === 0 ? cascW / 2 : -cascW / 2), slabY + wallH / 2, treadZ]}>
+                              <boxGeometry args={[wallT, wallH, stepRun + wallT]} />
+                              <meshStandardMaterial color="#B8B4AC" roughness={0.65} metalness={0.03} />
+                            </mesh>
+                            {/* Outer side wall */}
+                            <mesh position={[cx - (ci === 0 ? cascW / 2 : -cascW / 2), slabY + wallH / 2, treadZ]}>
+                              <boxGeometry args={[wallT, wallH, stepRun + wallT]} />
+                              <meshStandardMaterial color="#B8B4AC" roughness={0.65} metalness={0.03} />
+                            </mesh>
+                            {/* Water surface — reflective cyan-blue */}
+                            <mesh position={[cx, slabY + 0.022, treadZ]} rotation={[-Math.PI / 2, 0, 0]}>
+                              <planeGeometry args={[cascW - 0.04, stepRun - 0.02]} />
+                              <meshStandardMaterial
+                                color="#7AC8DC"
+                                transparent opacity={0.84}
+                                roughness={0.02} metalness={0.06}
+                                envMapIntensity={5.0}
+                                emissive="#28A8C4" emissiveIntensity={waterGlowI}
+                                side={THREE.DoubleSide}
+                              />
+                            </mesh>
+                            {/* Waterfall curtain at leading edge (thin angled strip) */}
+                            {si > 0 && (
+                              <mesh
+                                position={[cx, stepBotY + stepRise * 0.5, stepFaceZ + 0.008]}
+                                rotation={[Math.PI * 0.08, 0, 0]}
+                              >
+                                <planeGeometry args={[cascW - 0.06, stepRise * 0.88]} />
+                                <meshStandardMaterial
+                                  color="#A8DDF0"
+                                  transparent opacity={0.52}
+                                  roughness={0.04}
+                                  emissive="#50C0E0" emissiveIntensity={waterGlowI * 0.7}
+                                  side={THREE.DoubleSide}
+                                />
+                              </mesh>
+                            )}
+                            {/* Submerged LED strip — underwater night glow */}
+                            {underLightI > 0 && (
+                              <pointLight
+                                position={[cx, slabY + 0.01, treadZ]}
+                                intensity={underLightI * 0.6}
+                                distance={0.9}
+                                decay={2}
+                                color="#30C0E8"
+                              />
+                            )}
+                          </group>
+                        );
+                      })}
+
+                      {/* Splash pool at base — small basin where water collects */}
+                      {(() => {
+                        const poolFloorY  = -0.004;
+                        const poolZ       = southFaceZ2 - nSteps * stepRun - 0.12;
+                        const poolD       = 0.30;
+                        return (
+                          <group>
+                            {/* Basin floor */}
+                            <mesh position={[cx, poolFloorY, poolZ]} receiveShadow>
+                              <boxGeometry args={[cascW + wallT * 2, 0.022, poolD]} />
+                              <meshStandardMaterial color="#B0ACA4" roughness={0.60} metalness={0.04} />
+                            </mesh>
+                            {/* Basin front lip */}
+                            <mesh position={[cx, poolFloorY + 0.038, poolZ - poolD / 2 - 0.030]}>
+                              <boxGeometry args={[cascW + wallT * 2 + 0.04, 0.060, 0.055]} />
+                              <meshStandardMaterial color="#C4C0B8" roughness={0.55} metalness={0.03} />
+                            </mesh>
+                            {/* Water surface in basin */}
+                            <mesh position={[cx, poolFloorY + 0.028, poolZ]} rotation={[-Math.PI / 2, 0, 0]}>
+                              <planeGeometry args={[cascW - 0.02, poolD - 0.04]} />
+                              <meshStandardMaterial
+                                color="#60C0D8"
+                                transparent opacity={0.78}
+                                roughness={0.01} metalness={0.08}
+                                envMapIntensity={6.0}
+                                emissive="#20A8CC" emissiveIntensity={waterGlowI * 0.9}
+                                side={THREE.DoubleSide}
+                              />
+                            </mesh>
+                            {underLightI > 0 && (
+                              <pointLight
+                                position={[cx, poolFloorY + 0.04, poolZ]}
+                                intensity={underLightI}
+                                distance={1.2}
+                                decay={2}
+                                color="#28B8E0"
+                              />
+                            )}
+                          </group>
+                        );
+                      })()}
+                    </group>
+                  ))}
+                </group>
+              );
+            })()}
+
             {/* ── 门牌号码（house number plate）—— 东侧基座上，不锈钢底板 + LED 背光 ── */}
             {(() => {
               const plateX = stepW / 2 + 0.38;  // east of steps
