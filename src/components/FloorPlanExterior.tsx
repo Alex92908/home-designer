@@ -1977,6 +1977,90 @@ export default function FloorPlanBuilding({
         );
       })}
 
+      {/* ── 4b. 东西立面竖向遮阳翅片（brise-soleil fins）——
+               铝合金竖向矩形截面板，均匀分布于东西两侧外墙
+               · 只在 isGlassVilla 楼（floor-plan-driven）下渲染
+               · 多层：每层独立组，翅片从楼板升至楼顶
+               · 材质：深色阳极氧化铝，高金属感 */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const finColor  = "#1E2128";
+        const finW      = 0.035;  // fin thickness (E-W)
+        const finD      = 0.38;   // fin depth (N-S protrusion)
+        const finCount  = Math.max(4, Math.round(D / 0.90));  // fins per floor along N-S
+        const finSpacing = D / (finCount + 1);
+        const xEast  =  W / 2 + finD / 2 + 0.01;
+        const xWest  = -W / 2 - finD / 2 - 0.01;
+        return (
+          <group>
+            {Array.from({ length: usedFloors }, (_, fi) => {
+              const yBase = fi * (FLOOR_H + SLAB_T);
+              const fH    = FLOOR_H - 0.02;
+              return [xEast, xWest].flatMap((fx, side) =>
+                Array.from({ length: finCount }, (_, fi2) => {
+                  const fz = -D / 2 + (fi2 + 1) * finSpacing;
+                  return (
+                    <mesh key={`fin-${fi}-${side}-${fi2}`}
+                      position={[fx, yBase + fH / 2, fz]}
+                      castShadow>
+                      <boxGeometry args={[finD, fH, finW]} />
+                      <meshStandardMaterial color={finColor} roughness={0.18} metalness={0.88} envMapIntensity={2.2} />
+                    </mesh>
+                  );
+                })
+              );
+            })}
+          </group>
+        );
+      })()}
+
+      {/* ── 4c. 建筑周边绿化带（基础种植床）—— 紧贴东/西/北面建筑基座 ── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bedW = 0.45;  // planting bed width
+        const bedH = 0.12;  // raised bed height
+        const plantH = 0.55; // ornamental grass height
+        const grassColor = "#3A6A2A";
+        const bedColor  = "#8A6848";  // terracotta/earth
+        return (
+          <group>
+            {/* East bed */}
+            <mesh position={[W / 2 + bedW / 2 + 0.02, bedH / 2 + 0.002, 0]} castShadow receiveShadow>
+              <boxGeometry args={[bedW, bedH, D - 0.20]} />
+              <meshStandardMaterial color={bedColor} roughness={0.92} />
+            </mesh>
+            {/* West bed */}
+            <mesh position={[-W / 2 - bedW / 2 - 0.02, bedH / 2 + 0.002, 0]} castShadow receiveShadow>
+              <boxGeometry args={[bedW, bedH, D - 0.20]} />
+              <meshStandardMaterial color={bedColor} roughness={0.92} />
+            </mesh>
+            {/* North bed */}
+            <mesh position={[0, bedH / 2 + 0.002, D / 2 + bedW / 2 + 0.02]} castShadow receiveShadow>
+              <boxGeometry args={[W + 0.04, bedH, bedW]} />
+              <meshStandardMaterial color={bedColor} roughness={0.92} />
+            </mesh>
+            {/* Ornamental grass clumps along east bed */}
+            {Array.from({ length: Math.round(D / 1.6) }, (_, gi) => {
+              const gz = -D / 2 + 0.8 + gi * 1.6;
+              return (
+                <mesh key={gi} position={[W / 2 + bedW / 2 + 0.02, bedH + plantH / 2, gz]} castShadow>
+                  <sphereGeometry args={[0.18, 8, 6]} />
+                  <meshStandardMaterial color={grassColor} roughness={0.96} />
+                </mesh>
+              );
+            })}
+            {/* Ornamental grass clumps along west bed */}
+            {Array.from({ length: Math.round(D / 1.6) }, (_, gi) => {
+              const gz = -D / 2 + 0.8 + gi * 1.6;
+              return (
+                <mesh key={gi} position={[-W / 2 - bedW / 2 - 0.02, bedH + plantH / 2, gz]} castShadow>
+                  <sphereGeometry args={[0.18, 8, 6]} />
+                  <meshStandardMaterial color={gi % 2 === 0 ? grassColor : "#2E5820"} roughness={0.95} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5. 平屋顶（室内视角下隐藏） ── */}
       {!insideBuilding && <FlatRoof W={W} D={D} roofY={totalH} />}
 
