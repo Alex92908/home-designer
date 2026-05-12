@@ -1336,6 +1336,113 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 入口台阶 + 入口广场 + 水景线 ── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const southFaceZ2 = -D / 2 - 0.20;
+        const stepW = Math.min(W * 0.50, 5.5);  // step width
+        const nSteps = 3;
+        const stepRise = 0.14;  // each step rise (m)
+        const stepRun  = 0.38;  // each step run (m)
+        const baseY = -nSteps * stepRise;  // ground level depression (building base is at 0.40)
+        const plazaW = stepW + 2.8;
+        const plazaD = nSteps * stepRun + 0.60;
+        const plazaZ = southFaceZ2 - plazaD / 2;
+
+        return (
+          <group>
+            {/* 入口广场地面 — 深灰色抛光花岗岩 */}
+            <mesh position={[0, -0.002, plazaZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[plazaW + 0.40, plazaD + 0.20]} />
+              <meshStandardMaterial color="#28292E" roughness={0.28} metalness={0.12} envMapIntensity={1.6} />
+            </mesh>
+            {/* 广场地面刻线（格栅效果）*/}
+            {Array.from({ length: 5 }, (_, gi) => {
+              const gx = -plazaW / 2 + gi * (plazaW / 4);
+              return (
+                <mesh key={gi} position={[gx, 0.001, plazaZ]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <planeGeometry args={[0.012, plazaD + 0.22]} />
+                  <meshStandardMaterial color="#1A1B20" roughness={0.40} metalness={0.08} />
+                </mesh>
+              );
+            })}
+
+            {/* 台阶（3 级，从广场升至建筑入口）*/}
+            {Array.from({ length: nSteps }, (_, si) => {
+              const sy = si * stepRise + 0.005;
+              const sz = southFaceZ2 - si * stepRun - stepRun / 2;
+              const sw = stepW - si * 0.12;  // slight tapering for elegance
+              return (
+                <mesh key={si} position={[0, sy, sz]} castShadow receiveShadow>
+                  <boxGeometry args={[sw, stepRise, stepRun]} />
+                  <meshStandardMaterial color="#D8D4CC" roughness={0.45} metalness={0.06} envMapIntensity={0.9} />
+                </mesh>
+              );
+            })}
+
+            {/* ── 线型水景（horizontal water blade）—— 紧贴建筑基座南面，
+                 玻璃幕墙的反射映在水面上，强化建筑感 ── */}
+            {(() => {
+              const wbW   = Math.min(W * 0.70, 9.0);
+              const wbZ   = southFaceZ2 + 0.28;   // just south of the south face
+              const wbY   = 0.02;                  // water surface at ground level
+              return (
+                <group>
+                  {/* Stone trough rim (2 sides) */}
+                  {([-wbW / 2 - 0.10, wbW / 2 + 0.10] as number[]).map((rx2, ri) => (
+                    <mesh key={ri} position={[rx2, wbY + 0.02, wbZ]}>
+                      <boxGeometry args={[0.14, 0.06, 0.60]} />
+                      <meshStandardMaterial color="#D0CCBE" roughness={0.68} />
+                    </mesh>
+                  ))}
+                  {/* Trough back wall (against building) */}
+                  <mesh position={[0, wbY + 0.02, wbZ + 0.28]}>
+                    <boxGeometry args={[wbW + 0.30, 0.06, 0.10]} />
+                    <meshStandardMaterial color="#D0CCBE" roughness={0.68} />
+                  </mesh>
+                  {/* Water surface — reflective turquoise blue */}
+                  <mesh position={[0, wbY, wbZ]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <planeGeometry args={[wbW, 0.55]} />
+                    <meshStandardMaterial
+                      color="#78B8CC" roughness={0.02} metalness={0.04}
+                      envMapIntensity={6.5}
+                      emissive="#3090A8" emissiveIntensity={0.06}
+                      transparent opacity={0.90}
+                    />
+                  </mesh>
+                  {/* LED strip along water (glows at night) */}
+                  <mesh position={[0, wbY + 0.025, wbZ + 0.24]}>
+                    <boxGeometry args={[wbW, 0.012, 0.014]} />
+                    <meshStandardMaterial color="#80D8F0" emissive="#40C8E8" emissiveIntensity={1.4} />
+                  </mesh>
+                  <pointLight position={[0, wbY + 0.05, wbZ]} intensity={2.0} distance={wbW} decay={2.0} color="#40C8E8" castShadow={false} />
+                </group>
+              );
+            })()}
+
+            {/* 两侧种植槽（黑色钢制树箱 + 修剪球形灌木）*/}
+            {([-stepW / 2 - 1.0, stepW / 2 + 1.0] as number[]).map((bx, bi) => (
+              <group key={bi} position={[bx, 0.02, southFaceZ2 - 0.50]}>
+                {/* Steel planter box */}
+                <mesh position={[0, 0.22, 0]} castShadow>
+                  <boxGeometry args={[0.60, 0.44, 0.60]} />
+                  <meshStandardMaterial color="#1C1E24" roughness={0.28} metalness={0.70} envMapIntensity={1.5} />
+                </mesh>
+                {/* Soil top */}
+                <mesh position={[0, 0.455, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <planeGeometry args={[0.58, 0.58]} />
+                  <meshStandardMaterial color="#2A1A0E" roughness={0.98} />
+                </mesh>
+                {/* Clipped box topiary sphere */}
+                <mesh position={[0, 0.75, 0]} castShadow>
+                  <sphereGeometry args={[0.28, 12, 9]} />
+                  <meshStandardMaterial color="#2E6830" roughness={0.92} />
+                </mesh>
+              </group>
+            ))}
+          </group>
+        );
+      })()}
+
       {/* ── 外墙壁灯（南立面）—— 每层 2 盏，对称布置 ── */}
       {!insideBuilding && isGlassVilla && Array.from({ length: usedFloors }, (_, fi) => {
         const wallY  = fi * (FLOOR_H + SLAB_T) + 2.2;  // 灯安装高度（距楼层地面2.2m）
