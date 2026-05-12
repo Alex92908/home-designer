@@ -6423,6 +6423,27 @@ export default function HouseCanvas() {
               <meshStandardMaterial color="#E0DAC8" roughness={0.88} />
             </mesh>
 
+            {/* ── Bollard path lights — low-profile posts flanking driveway ── */}
+            {/* Two rows of 4 bollards on each side of the 2.8m driveway */}
+            {[D / 2 + 1.2, D / 2 + 3.0, D / 2 + 5.0, D / 2 + 7.2].map((bz, bi) =>
+              ([-2.2, 2.2] as number[]).map((bx, bxi) => (
+                <group key={`boll-${bi}-${bxi}`} position={[bx, 0, bz]}>
+                  {/* Bollard shaft */}
+                  <mesh position={[0, 0.30, 0]} castShadow>
+                    <cylinderGeometry args={[0.045, 0.060, 0.60, 8]} />
+                    <meshStandardMaterial color="#2A2E38" roughness={0.25} metalness={0.88} envMapIntensity={1.8} />
+                  </mesh>
+                  {/* Lens cap — glowing warm disc */}
+                  <mesh position={[0, 0.615, 0]}>
+                    <cylinderGeometry args={[0.055, 0.055, 0.025, 10]} />
+                    <meshStandardMaterial color="#FFE8B0" emissive="#FFDA60" emissiveIntensity={2.8} roughness={0.50} />
+                  </mesh>
+                  {/* Warm downward point light */}
+                  <pointLight position={[0, 0.55, 0]} intensity={1.8} distance={3.5} decay={2.2} color="#FFE090" />
+                </group>
+              ))
+            )}
+
             {/* ── Ornamental fountain — circular stone basin on driveway approach ── */}
             {(() => {
               const fz = D / 2 + 3.8;  // halfway between building back and gate

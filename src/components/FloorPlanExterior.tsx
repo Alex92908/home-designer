@@ -33,6 +33,50 @@ const FLOOR_H = 3.00;   // 每层净高 m
 const SLAB_T  = 0.20;   // 层间楼板厚 m
 const TOLE    = 10;     // 外墙相邻判定容差 cm
 
+// ── Canvas-baked wood-grain texture (module singleton) ────────
+// Vertical grain lines on a warm-brown base. Deterministic using
+// seeded hash so we get repeatable grain without SSR issues.
+let _woodGrainTex: THREE.CanvasTexture | null = null;
+function getWoodGrainTex(): THREE.CanvasTexture | null {
+  if (typeof document === "undefined") return null;
+  if (_woodGrainTex) return _woodGrainTex;
+  const W = 64, H = 512;
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const g = cv.getContext("2d")!;
+  g.fillStyle = "#7A4E2A";
+  g.fillRect(0, 0, W, H);
+  // Vertical grain lines (seeded, deterministic)
+  let s = 0xABCD1234;
+  const rng = () => { s ^= s << 13; s ^= s >> 17; s ^= s << 5; return ((s >>> 0) / 0xFFFFFFFF); };
+  for (let i = 0; i < 22; i++) {
+    const gx = rng() * W;
+    const dark = rng() > 0.5;
+    g.strokeStyle = dark ? `rgba(40,20,8,${0.22 + rng() * 0.22})` : `rgba(200,140,70,${0.15 + rng() * 0.18})`;
+    g.lineWidth = 0.8 + rng() * 2.4;
+    g.beginPath();
+    for (let y = 0; y <= H; y += 6) {
+      const wave = Math.sin(y * 0.04 + i) * 2.5;
+      if (y === 0) g.moveTo(gx + wave, y); else g.lineTo(gx + wave, y);
+    }
+    g.stroke();
+  }
+  // Fine highlight streak — simulates wood sheen under finish
+  g.strokeStyle = "rgba(255,210,140,0.18)";
+  g.lineWidth = 12;
+  g.beginPath();
+  g.moveTo(W * 0.38, 0);
+  g.lineTo(W * 0.32, H);
+  g.stroke();
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(1, 2.5);
+  t.needsUpdate = true;
+  _woodGrainTex = t;
+  return t;
+}
+
 // ── 类型 ──────────────────────────────────────────────────────
 export type WallSide = "south" | "north" | "east" | "west";
 
@@ -1620,31 +1664,40 @@ export default function FloorPlanBuilding({
 
         // ── 木饰面（侧墙）—— 竖向木条板（charred wood / 碳化木）──
         if (facade === "wood") {
-          // 竖向木条板，每条 12cm 宽，4mm 缝隙（阴影效果）
-          const SLAT_W  = 0.120;   // 木条宽度
-          const SLAT_GAP = 0.008;  // 缝隙
-          const SLAT_T  = 0.048;   // 木条厚度
-          const slatStep = SLAT_W + SLAT_GAP;
+          const SLAT_W   = 0.118;  // 木条宽度
+          const SLAT_GAP = 0.010;  // 缝隙（稍宽，阴影更清晰）
+          const SLAT_T   = 0.052;  // 木条厚度
+          const slatStep  = SLAT_W + SLAT_GAP;
           const slatCount = Math.max(3, Math.ceil(segLen / slatStep));
-          const slatColor  = "#7A4E2A";   // 暖棕木色
-          const grooveColor2 = "#3A2010";  // 缝隙深色
+          const grooveColor2 = "#2A1508";  // 深碳化木缝隙
+          const woodTex = getWoodGrainTex();
           return (
             <group key={`wd-${bi}`} position={[px, yMid, pz]} rotation={rot}>
-              {/* 背板（保证无漏光）*/}
+              {/* 背板 — 深碳化底色 */}
               <mesh castShadow receiveShadow>
-                <boxGeometry args={[segLen, FLOOR_H, 0.02]} />
-                <meshStandardMaterial color={grooveColor2} roughness={0.92} />
+                <boxGeometry args={[segLen, FLOOR_H, 0.018]} />
+                <meshStandardMaterial color={grooveColor2} roughness={0.95} />
               </mesh>
-              {/* 竖向木条 */}
+              {/* 顶 / 底部金属压条 */}
+              {[-FLOOR_H / 2 + 0.016, FLOOR_H / 2 - 0.016].map((capY, ci) => (
+                <mesh key={`cap-${ci}`} position={[0, capY, 0.032]}>
+                  <boxGeometry args={[segLen, 0.032, 0.012]} />
+                  <meshStandardMaterial color="#1E2028" roughness={0.20} metalness={0.90} envMapIntensity={2.0} />
+                </mesh>
+              ))}
+              {/* 竖向木条 — grain texture + 3-tone colour variation */}
               {Array.from({ length: slatCount }, (_, si) => {
                 const sx = -segLen / 2 + SLAT_W / 2 + si * slatStep;
-                if (sx > segLen / 2) return null;
-                // 交替略深色营造自然木纹变化
-                const col = si % 3 === 1 ? "#8B5E3C" : si % 3 === 2 ? "#6E4226" : slatColor;
+                if (sx > segLen / 2 + 0.01) return null;
+                // 3-way alternating tone for natural wood rhythm
+                const col = si % 3 === 1 ? "#8B5C38" : si % 3 === 2 ? "#6C4022" : "#7A4E2A";
                 return (
-                  <mesh key={si} position={[sx, 0, 0.020 + SLAT_T / 2]} castShadow>
-                    <boxGeometry args={[SLAT_W, FLOOR_H - 0.04, SLAT_T]} />
-                    <meshStandardMaterial color={col} roughness={0.82} metalness={0.0} />
+                  <mesh key={si} position={[sx, 0, 0.018 + SLAT_T / 2]} castShadow>
+                    <boxGeometry args={[SLAT_W, FLOOR_H - 0.06, SLAT_T]} />
+                    {woodTex
+                      ? <meshStandardMaterial map={woodTex} color={col} roughness={0.78} metalness={0.0} />
+                      : <meshStandardMaterial color={col} roughness={0.80} metalness={0.0} />
+                    }
                   </mesh>
                 );
               })}
