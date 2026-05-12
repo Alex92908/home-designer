@@ -1502,6 +1502,66 @@ export default function FloorPlanBuilding({
                 </mesh>
               </group>
             ))}
+
+            {/* ── 入口两侧毛竹列（ornamental bamboo columns，点缀于台阶外侧）──
+                 各 3 根细竹竿 + 顶部叶簇球，增加东亚现代建筑氛围 */}
+            {([-stepW / 2 - 2.4, stepW / 2 + 2.4] as number[]).map((bx, bi) => (
+              <group key={`bamboo-${bi}`} position={[bx, 0, southFaceZ2 - 0.80]}>
+                {/* 3 竹竿，错开 ~0.16m */}
+                {([[-0.08, 4.50], [0, 5.20], [0.10, 4.85]] as [number,number][]).map(([ox, bH], ci) => (
+                  <group key={ci} position={[ox, 0, 0]}>
+                    {/* Bamboo culm — tapered cylinder */}
+                    <mesh castShadow>
+                      <cylinderGeometry args={[0.026, 0.038, bH, 6]} />
+                      <meshStandardMaterial color="#7A9040" roughness={0.80} metalness={0.02} />
+                    </mesh>
+                    {/* Node rings (every ~0.40m) */}
+                    {Array.from({ length: Math.floor(bH / 0.42) }, (_, ni) => (
+                      <mesh key={ni} position={[0, -bH / 2 + (ni + 1) * 0.42, 0]}>
+                        <cylinderGeometry args={[0.030, 0.030, 0.022, 6]} />
+                        <meshStandardMaterial color="#5E7030" roughness={0.88} />
+                      </mesh>
+                    ))}
+                    {/* Leaf cluster at top */}
+                    <mesh position={[ox * 0.8, bH / 2 + 0.28, 0]} castShadow>
+                      <sphereGeometry args={[0.35, 8, 6]} />
+                      <meshStandardMaterial color="#3A6820" roughness={0.96} />
+                    </mesh>
+                  </group>
+                ))}
+              </group>
+            ))}
+
+            {/* ── 门牌号码（house number plate）—— 东侧基座上，不锈钢底板 + LED 背光 ── */}
+            {(() => {
+              const plateX = stepW / 2 + 0.38;  // east of steps
+              const plateZ = southFaceZ2 - 0.05;
+              const plateY = 1.20;
+              return (
+                <group position={[plateX, plateY, plateZ]}>
+                  {/* Stainless backing plate */}
+                  <mesh>
+                    <boxGeometry args={[0.18, 0.28, 0.018]} />
+                    <meshStandardMaterial color="#8A9BA8" roughness={0.20} metalness={0.88} envMapIntensity={2.0} />
+                  </mesh>
+                  {/* Frosted acrylic face — backlit warm white */}
+                  <mesh position={[0, 0, 0.016]}>
+                    <boxGeometry args={[0.14, 0.24, 0.008]} />
+                    <meshStandardMaterial
+                      color="#F8F4EC"
+                      emissive="#FFF0D0"
+                      emissiveIntensity={interiorGlowWall > 1.0 ? 1.4 : 0.4}
+                      roughness={0.60}
+                      transparent opacity={0.95}
+                    />
+                  </mesh>
+                  {/* Subtle point light from plate (night) */}
+                  {interiorGlowWall > 1.0 && (
+                    <pointLight position={[0, 0, 0.10]} intensity={0.8} distance={1.2} decay={2} color="#FFF4E0" />
+                  )}
+                </group>
+              );
+            })()}
           </group>
         );
       })()}
