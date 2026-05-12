@@ -6073,6 +6073,158 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5d-3. 西侧行人侧门（pedestrian side gate, west boundary wall）──
+           A single-leaf wrought-iron pedestrian gate set into the west boundary
+           wall, approx 3m north of the south-west corner. Two flanking pillars
+           (matching main gate style), a steel picket gate leaf, night lanterns,
+           and a stone slab path leading east to the main driveway. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bndW_pg   = -W / 2 - 4.50;   // west boundary X
+        const bndS_pg   = -D / 2 - 11.50;  // south boundary Z
+        const pgZ       = bndS_pg + 3.50;   // ~3.5m north of SW corner
+        const pgGateW   = 1.10;             // gate opening width
+        const pgPillarS = 0.22;             // pillar cross-section
+        const pgPillarH = 1.40;
+        const pgWallH   = 0.88;
+        const pgWallT   = 0.18;
+        const wallCol   = "#D8D4CC";
+        const capCol    = "#484C58";
+        const isNightPG = sunHour < 6 || sunHour > 20;
+        const isDuskPG  = !isNightPG && (sunHour < 8 || sunHour > 18);
+        const lampI     = isNightPG ? 3.5 : isDuskPG ? 1.8 : 0.0;
+        const lampEmi   = isNightPG ? 3.0 : isDuskPG ? 1.5 : 0.2;
+
+        // Pillar centers (gate opening is between them)
+        const pillarNZ = pgZ + pgGateW / 2 + pgPillarS / 2;
+        const pillarSZ = pgZ - pgGateW / 2 - pgPillarS / 2;
+
+        return (
+          <group>
+            {/* ── Wall gap infill sides (no mesh — gap in existing west wall) ──
+                Just add pillar pair and gate. The main west wall mesh already spans
+                full length; we overlay pillars on top to mark the opening. */}
+
+            {/* North pillar */}
+            <group position={[bndW_pg, 0, pillarNZ]}>
+              <mesh position={[0, pgPillarH / 2, 0]} castShadow>
+                <boxGeometry args={[pgPillarS, pgPillarH, pgPillarS]} />
+                <meshStandardMaterial color="#1C1E24" roughness={0.22} metalness={0.38} envMapIntensity={1.6} />
+              </mesh>
+              {/* Cap */}
+              <mesh position={[0, pgPillarH + 0.04, 0]}>
+                <boxGeometry args={[pgPillarS + 0.06, 0.06, pgPillarS + 0.06]} />
+                <meshStandardMaterial color="#141618" roughness={0.18} metalness={0.55} envMapIntensity={2.0} />
+              </mesh>
+              {/* Lantern */}
+              <group position={[0, pgPillarH + 0.10, 0]}>
+                <mesh position={[0, 0.10, 0]}>
+                  <boxGeometry args={[0.10, 0.18, 0.10]} />
+                  <meshStandardMaterial color="#1A1C22" roughness={0.25} metalness={0.80} envMapIntensity={1.8} />
+                </mesh>
+                {/* Glass pane */}
+                <mesh position={[0, 0.10, 0]} renderOrder={11}>
+                  <boxGeometry args={[0.085, 0.13, 0.085]} />
+                  <meshStandardMaterial
+                    color="#FFF4D0" emissive="#FFD860" emissiveIntensity={lampEmi}
+                    transparent opacity={0.70} roughness={0.10} metalness={0.02}
+                    side={THREE.DoubleSide} depthWrite={false}
+                  />
+                </mesh>
+                {/* Pyramid cap */}
+                <mesh position={[0, 0.205, 0]}>
+                  <coneGeometry args={[0.072, 0.10, 4]} />
+                  <meshStandardMaterial color="#141618" roughness={0.20} metalness={0.75} />
+                </mesh>
+                {lampI > 0 && (
+                  <pointLight position={[0, 0.10, 0]} intensity={lampI} distance={3.0} decay={2} color="#FFE070" />
+                )}
+              </group>
+            </group>
+
+            {/* South pillar */}
+            <group position={[bndW_pg, 0, pillarSZ]}>
+              <mesh position={[0, pgPillarH / 2, 0]} castShadow>
+                <boxGeometry args={[pgPillarS, pgPillarH, pgPillarS]} />
+                <meshStandardMaterial color="#1C1E24" roughness={0.22} metalness={0.38} envMapIntensity={1.6} />
+              </mesh>
+              <mesh position={[0, pgPillarH + 0.04, 0]}>
+                <boxGeometry args={[pgPillarS + 0.06, 0.06, pgPillarS + 0.06]} />
+                <meshStandardMaterial color="#141618" roughness={0.18} metalness={0.55} envMapIntensity={2.0} />
+              </mesh>
+              {/* Lantern (south pillar) */}
+              <group position={[0, pgPillarH + 0.10, 0]}>
+                <mesh position={[0, 0.10, 0]}>
+                  <boxGeometry args={[0.10, 0.18, 0.10]} />
+                  <meshStandardMaterial color="#1A1C22" roughness={0.25} metalness={0.80} envMapIntensity={1.8} />
+                </mesh>
+                <mesh position={[0, 0.10, 0]} renderOrder={11}>
+                  <boxGeometry args={[0.085, 0.13, 0.085]} />
+                  <meshStandardMaterial
+                    color="#FFF4D0" emissive="#FFD860" emissiveIntensity={lampEmi}
+                    transparent opacity={0.70} roughness={0.10} metalness={0.02}
+                    side={THREE.DoubleSide} depthWrite={false}
+                  />
+                </mesh>
+                <mesh position={[0, 0.205, 0]}>
+                  <coneGeometry args={[0.072, 0.10, 4]} />
+                  <meshStandardMaterial color="#141618" roughness={0.20} metalness={0.75} />
+                </mesh>
+                {lampI > 0 && (
+                  <pointLight position={[0, 0.10, 0]} intensity={lampI} distance={3.0} decay={2} color="#FFE070" />
+                )}
+              </group>
+            </group>
+
+            {/* ── Single-leaf gate (swings east, resting on E side, closed) ── */}
+            <group position={[bndW_pg + pgPillarS / 2 + pgGateW / 2, 0, pgZ]}>
+              {/* Top rail */}
+              <mesh position={[0, 1.10, 0]}>
+                <boxGeometry args={[0.030, 0.030, pgGateW - 0.04]} />
+                <meshStandardMaterial color="#28303C" roughness={0.20} metalness={0.92} envMapIntensity={2.0} />
+              </mesh>
+              {/* Bottom rail */}
+              <mesh position={[0, 0.20, 0]}>
+                <boxGeometry args={[0.030, 0.025, pgGateW - 0.04]} />
+                <meshStandardMaterial color="#28303C" roughness={0.20} metalness={0.92} envMapIntensity={2.0} />
+              </mesh>
+              {/* 5 pickets */}
+              {Array.from({ length: 5 }, (_, pi) => {
+                const pz = -(pgGateW - 0.08) / 2 + pi * ((pgGateW - 0.08) / 4);
+                return (
+                  <group key={pi} position={[0, 0, pz]}>
+                    <mesh position={[0, 0.60, 0]} castShadow>
+                      <boxGeometry args={[0.022, 1.12, 0.022]} />
+                      <meshStandardMaterial color="#303848" roughness={0.24} metalness={0.88} envMapIntensity={1.8} />
+                    </mesh>
+                    {/* Spear tip */}
+                    <mesh position={[0, 1.22, 0]}>
+                      <coneGeometry args={[0.018, 0.10, 4]} />
+                      <meshStandardMaterial color="#C8B060" roughness={0.20} metalness={0.85} envMapIntensity={2.5} />
+                    </mesh>
+                  </group>
+                );
+              })}
+              {/* Latch handle */}
+              <mesh position={[0, 0.65, (pgGateW - 0.04) / 2 - 0.06]}>
+                <boxGeometry args={[0.020, 0.12, 0.014]} />
+                <meshStandardMaterial color="#C8B060" roughness={0.25} metalness={0.80} envMapIntensity={2.0} />
+              </mesh>
+            </group>
+
+            {/* ── Stone slab path from gate east to driveway ── */}
+            {Array.from({ length: 6 }, (_, pi) => {
+              const slabX = bndW_pg + pgPillarS + 0.20 + pi * 0.64;
+              return (
+                <mesh key={`pg-slab-${pi}`} position={[slabX, 0.008, pgZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+                  <boxGeometry args={[0.50, 0.38, 0.016]} />
+                  <meshStandardMaterial color="#C4C0B4" roughness={0.68} metalness={0.02} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5e-0a. 车道两侧棕榈树（palm trees flanking driveway entry）──
            4 tall fan palms (2 per side) at the gate entrance, adding a
            tropical / Beverly Hills estate feel to the approach. */}
