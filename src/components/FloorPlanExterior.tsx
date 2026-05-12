@@ -6026,6 +6026,121 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5j-1b. 东侧庭院日式枯山水禅园（Japanese zen garden, east yard NE corner）──
+           White raked gravel, flat stepping stones, stone lantern, bamboo fence.
+           Positioned in the north-east corner of the east side yard. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const zenX  =  W / 2 + 2.20;   // east of building
+        const zenZ  =  D / 2 - 0.50;   // north-east corner of east yard
+        const zenW  = 2.80;  // garden width (X)
+        const zenD  = 2.60;  // garden depth (Z)
+        const isNightZ = sunHour < 6 || sunHour > 20;
+        const isDuskZ  = !isNightZ && (sunHour < 8 || sunHour > 18);
+        const lanternGlow = isNightZ ? 1.8 : isDuskZ ? 0.9 : 0.0;
+        return (
+          <group position={[zenX, 0, zenZ]}>
+            {/* White raked gravel base */}
+            <mesh position={[0, 0.010, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[zenW, zenD]} />
+              <meshStandardMaterial color="#ECEAE4" roughness={0.94} metalness={0.01} />
+            </mesh>
+            {/* Raking lines on gravel — subtle parallel grooves */}
+            {Array.from({ length: 10 }, (_, ri) => (
+              <mesh key={ri} position={[0, 0.012, -zenD / 2 + ri * (zenD / 9)]}>
+                <boxGeometry args={[zenW - 0.10, 0.004, 0.022]} />
+                <meshStandardMaterial color="#D8D4C8" roughness={0.96} />
+              </mesh>
+            ))}
+            {/* Bamboo fence border on two sides (west and south) */}
+            {/* West border */}
+            <mesh position={[-zenW / 2 - 0.018, 0.55, 0]}>
+              <boxGeometry args={[0.036, 1.10, zenD]} />
+              <meshStandardMaterial color="#8A7040" roughness={0.82} metalness={0.02} />
+            </mesh>
+            {Array.from({ length: Math.round(zenD / 0.10) }, (_, bi) => (
+              <mesh key={`bw-${bi}`} position={[-zenW / 2 - 0.018, -zenD / 2 + bi * 0.10 + 0.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[0.018, 0.020, zenD * 1.01, 6]} />
+                <meshStandardMaterial color={bi % 2 === 0 ? "#9A8050" : "#7A6030"} roughness={0.85} />
+              </mesh>
+            ))}
+            {/* Horizontal binding rails */}
+            {[0.22, 0.65].map((ry, ri) => (
+              <mesh key={`bwr-${ri}`} position={[-zenW / 2 - 0.018, ry, 0]}>
+                <boxGeometry args={[0.008, 0.020, zenD]} />
+                <meshStandardMaterial color="#4A3010" roughness={0.88} />
+              </mesh>
+            ))}
+            {/* 3 flat stepping stones */}
+            {([[-0.55, 0.30], [0, -0.10], [0.50, 0.45]] as [number, number][]).map(([sx, sz], si) => (
+              <mesh key={si} position={[sx, 0.020, sz]} rotation={[0, (si * 0.5), 0]} castShadow>
+                <boxGeometry args={[0.55 + (si % 2) * 0.10, 0.040, 0.45 + (si % 2) * 0.06]} />
+                <meshStandardMaterial color={si % 2 === 0 ? "#8A8278" : "#7A7068"} roughness={0.80} metalness={0.04} />
+              </mesh>
+            ))}
+            {/* Two garden rocks */}
+            {([[-0.70, -0.60, 0.22, 0.35, 0.30], [0.65, 0.55, 0.18, 0.22, 0.28]] as [number,number,number,number,number][]).map(([rx, rz, rW2, rH, rD], ri) => (
+              <mesh key={ri} position={[rx, rH / 2, rz]} rotation={[0, ri * 0.8, 0]} castShadow>
+                <boxGeometry args={[rW2, rH, rD]} />
+                <meshStandardMaterial color={ri === 0 ? "#6A6258" : "#585048"} roughness={0.86} metalness={0.06} />
+              </mesh>
+            ))}
+            {/* Stone lantern (tōrō) */}
+            <group position={[0.55, 0, -0.65]}>
+              {/* Base plinth */}
+              <mesh position={[0, 0.06, 0]}>
+                <boxGeometry args={[0.22, 0.12, 0.22]} />
+                <meshStandardMaterial color="#6A6258" roughness={0.82} metalness={0.04} />
+              </mesh>
+              {/* Post */}
+              <mesh position={[0, 0.50, 0]} castShadow>
+                <cylinderGeometry args={[0.055, 0.065, 0.78, 8]} />
+                <meshStandardMaterial color="#7A7268" roughness={0.80} metalness={0.04} />
+              </mesh>
+              {/* Cap / fire chamber */}
+              <mesh position={[0, 0.95, 0]} castShadow>
+                <boxGeometry args={[0.28, 0.28, 0.28]} />
+                <meshStandardMaterial color="#686058" roughness={0.78} metalness={0.05} />
+              </mesh>
+              {/* Glass fire chamber */}
+              <mesh position={[0, 0.95, 0]}>
+                <boxGeometry args={[0.22, 0.22, 0.22]} />
+                <meshStandardMaterial
+                  color="#FFF8C0"
+                  transparent opacity={0.60}
+                  roughness={0.10} metalness={0.02}
+                  emissive="#FFE060" emissiveIntensity={lanternGlow}
+                  side={THREE.DoubleSide}
+                />
+              </mesh>
+              {/* Roof cap */}
+              <mesh position={[0, 1.13, 0]} castShadow>
+                <cylinderGeometry args={[0.05, 0.22, 0.28, 6]} />
+                <meshStandardMaterial color="#5A5248" roughness={0.78} metalness={0.06} />
+              </mesh>
+              {/* Lantern glow point light */}
+              {lanternGlow > 0 && (
+                <pointLight position={[0, 0.95, 0]} intensity={lanternGlow * 2.5} distance={3.0} decay={2.0} color="#FFE890" castShadow={false} />
+              )}
+            </group>
+            {/* Small bamboo plant cluster */}
+            <group position={[-0.85, 0, -0.70]}>
+              {[[-0.06, 1.60], [0, 2.00], [0.07, 1.75]].map(([bx2, bH2], ci) => (
+                <group key={ci} position={[bx2, 0, 0]}>
+                  <mesh castShadow>
+                    <cylinderGeometry args={[0.016, 0.022, bH2, 6]} />
+                    <meshStandardMaterial color="#6A8838" roughness={0.82} />
+                  </mesh>
+                  <mesh position={[0, bH2 * 0.55, 0]}>
+                    <sphereGeometry args={[0.18, 6, 4]} />
+                    <meshStandardMaterial color="#2E6818" roughness={0.94} />
+                  </mesh>
+                </group>
+              ))}
+            </group>
+          </group>
+        );
+      })()}
+
       {/* ── 5j-2. 按摩浴缸 / 水疗缸（outdoor spa / hot tub, west of pool）──
            White acrylic shell with blue glowing water, set into a teak timber
            surround deck. Night mode adds strong underwater LED glow. */}
