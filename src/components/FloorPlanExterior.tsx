@@ -233,6 +233,20 @@ function GlassCurtain({
         );
       })}
 
+      {/* ── Spandrel band — dark metal panel at floor level of each row.
+          Hides the inter-floor slab and mechanical zone, as in real curtain walls.
+          Sits just in front of (z > ) the glass panels so it opaquely covers that area. */}
+      {Array.from({ length: rows }, (_, ri) => {
+        const py = -height / 2 + ri * rowH;  // bottom of this row
+        const spH = Math.min(rowH * 0.200, 0.55); // spandrel = bottom 20% of row, max 0.55m
+        return (
+          <mesh key={`spd-${ri}`} position={[0, py + spH / 2, 0.026]} renderOrder={9}>
+            <boxGeometry args={[width - 0.004, spH, 0.008]} />
+            <meshStandardMaterial color="#1A1D26" roughness={0.12} metalness={0.92} envMapIntensity={2.2} />
+          </mesh>
+        );
+      })}
+
       {/* 大门 —— 推拉式玻璃门：和玻璃幕墙同款玻璃材质，只多一道细黑
           竖框做"门扇分隔"。之前是 #111 厚框 + 染色玻璃，从外面看像独立
           的木门贴在幕墙上，违和。现在融在幕墙里几乎看不出来，只有竖
@@ -1435,7 +1449,7 @@ export default function FloorPlanBuilding({
         const wcz  = -((lcy - planOffset.minY) * CM) + D / 2;
         const yBase  = fi * (FLOOR_H + SLAB_T);
         const corrY  = yBase + 0.008;
-        const corrCol = "#C4BAA6";
+        const corrCol = "#CEC0A8";  // warm travertine hallway stone
 
         // 二楼及以上：走廊地板需绕开楼梯开口
         // 从所有楼层中找楼梯间（优先 fi=0，找不到则取任意层），
@@ -1450,7 +1464,7 @@ export default function FloorPlanBuilding({
           return (
             <mesh key={`corr-${fi}`} position={[wcx, corrY, wcz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
               <planeGeometry args={[lW + 0.1, lD + 0.1]} />
-              <meshStandardMaterial color={corrCol} roughness={0.85} metalness={0.01} />
+              <meshStandardMaterial color={corrCol} roughness={0.52} metalness={0.05} envMapIntensity={0.45} />
             </mesh>
           );
         }
@@ -1478,7 +1492,7 @@ export default function FloorPlanBuilding({
             {strips.map(s => (
               <mesh key={s.key} position={[s.x, corrY, s.z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
                 <planeGeometry args={[s.w, s.d]} />
-                <meshStandardMaterial color={corrCol} roughness={0.85} metalness={0.01} />
+                <meshStandardMaterial color={corrCol} roughness={0.52} metalness={0.05} envMapIntensity={0.45} />
               </mesh>
             ))}
           </group>
@@ -1535,7 +1549,8 @@ export default function FloorPlanBuilding({
             {!isStair && !isHallway && (
               <mesh position={[cx, yBase + FLOOR_H - 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
                 <planeGeometry args={[rW - 0.04, rD - 0.04]} />
-                <meshStandardMaterial color="#F8F6F2" roughness={0.90} side={THREE.BackSide}
+                <meshStandardMaterial color="#F5F2EE" roughness={0.88} side={THREE.BackSide}
+                  emissive="#FFFDF8" emissiveIntensity={insideBuilding ? 0.08 : 0.02}
                   transparent={isXray} opacity={isXray ? 0.08 : 1} depthWrite={!isXray} />
               </mesh>
             )}
