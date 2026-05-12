@@ -3758,25 +3758,35 @@ function GrassGroundTextured({ size }: { size: number }) {
 // Cobblestone entry path — always shown as a visual anchor connecting
 // the front door to the property edge. Uses cobblestone_05 PBR texture.
 function EntryPathTextured({ W, D }: { W: number; D: number }) {
-  const { map, normalMap, roughnessMap } = usePbrSet("driveway", "cobblestone_05", [2, 5]);
-  const pathLen = D * 0.5 + 4.5;
+  const { map, normalMap, roughnessMap } = usePbrSet("driveway", "cobblestone_05", [4, 8]);
+  const pathLen = D * 0.5 + 5.5;
+  const pathW   = 2.8;  // wider driveway — fits one car comfortably
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.498, D / 2 + pathLen / 2 - 0.1]} receiveShadow>
-        <planeGeometry args={[1.5, pathLen]} />
+      {/* Main cobblestone driveway */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.496, D / 2 + pathLen / 2 - 0.1]} receiveShadow>
+        <planeGeometry args={[pathW, pathLen]} />
         <meshStandardMaterial map={map} normalMap={normalMap} roughnessMap={roughnessMap}
-          color="#D8D0C0" roughness={0.88} metalness={0.0} />
+          color="#D0C8B8" roughness={0.85} metalness={0.01} />
       </mesh>
+      {/* Kerb / edging strips — low concrete borders */}
+      {([-pathW / 2 - 0.065, pathW / 2 + 0.065] as number[]).map((kx, ki) => (
+        <mesh key={ki} position={[kx, -0.490, D / 2 + pathLen / 2 - 0.1]} castShadow receiveShadow>
+          <boxGeometry args={[0.12, 0.045, pathLen]} />
+          <meshStandardMaterial color="#C0BAB0" roughness={0.88} />
+        </mesh>
+      ))}
     </group>
   );
 }
 
 function EntryPath({ W, D }: { W: number; D: number }) {
-  const pathLen = D * 0.5 + 4.5;
+  const pathLen = D * 0.5 + 5.5;
+  const pathW   = 2.8;
   return (
     <Suspense fallback={
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.498, D / 2 + pathLen / 2 - 0.1]} receiveShadow>
-        <planeGeometry args={[1.5, pathLen]} />
+        <planeGeometry args={[pathW, pathLen]} />
         <meshStandardMaterial color="#C8BEA8" roughness={0.9} />
       </mesh>
     }>
@@ -5290,6 +5300,10 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
       <group position={[0, 0.08, pz]}>
         <AnimatedWater w={pw - 0.06} d={pd - 0.06} />
       </group>
+      {/* ── Pool underwater glow — turquoise point lights simulate submerged LEDs ── */}
+      <pointLight position={[0,            -0.10, pz]} intensity={7.0} distance={pw * 1.8 + 5} decay={1.6} color="#20C8DC" />
+      <pointLight position={[pw * 0.35,    -0.10, pz + pd * 0.28]} intensity={4.5} distance={pw * 1.4} decay={1.8} color="#18B4CC" />
+      <pointLight position={[-pw * 0.35,   -0.10, pz - pd * 0.28]} intensity={4.5} distance={pw * 1.4} decay={1.8} color="#18B4CC" />
 
       {/* ── Pool coping — cream stone edge strips on all 4 sides ── */}
       {/* ── Pool coping — 3 straight sides; south side handled by rounded cap ── */}
@@ -5328,6 +5342,50 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
               <cylinderGeometry args={[r + 0.24, r + 0.24, 0.06, 40, 1, false, 0, Math.PI]} />
               <meshStandardMaterial color="#F0E8D8" roughness={0.60} />
             </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── Modern steel pergola — shades the terrace between building and pool ── */}
+      {(() => {
+        const pgW   = effW * 0.72;   // pergola width (east-west)
+        const pgD   = terrD * 0.90;  // pergola depth (north-south)
+        const pgH   = 2.65;          // height of top beams
+        const pgCX  = 0;
+        const pgCZ  = (terrFrontZ + terrBackZ) / 2; // centred over terrace
+        const POST  = 0.085;         // post section
+        const BEAM  = 0.090;         // main beam height
+        const PURLIN = 0.055;        // purlin height
+        const purlinCount = Math.max(5, Math.round(pgW / 0.65));
+        const steelMat = { color: "#1E2028" as const, roughness: 0.14, metalness: 0.92, envMapIntensity: 2.0 as const };
+        return (
+          <group position={[pgCX, 0, pgCZ]}>
+            {/* 4 corner posts */}
+            {([-pgW/2+POST/2, pgW/2-POST/2] as number[]).flatMap(px2 =>
+              ([-pgD/2+POST/2, pgD/2-POST/2] as number[]).map((pz2, i) => (
+                <mesh key={`pp-${px2}-${i}`} position={[px2, pgH / 2, pz2]} castShadow>
+                  <boxGeometry args={[POST, pgH, POST]} />
+                  <meshStandardMaterial {...steelMat} />
+                </mesh>
+              ))
+            )}
+            {/* 2 main longitudinal beams (east-west) */}
+            {([-pgD/2, pgD/2] as number[]).map((bz2, i) => (
+              <mesh key={`pb-${i}`} position={[0, pgH, bz2]} castShadow>
+                <boxGeometry args={[pgW, BEAM, 0.050]} />
+                <meshStandardMaterial {...steelMat} />
+              </mesh>
+            ))}
+            {/* Purlins — parallel slats running north-south */}
+            {Array.from({ length: purlinCount }, (_, pi) => {
+              const px2 = -pgW/2 + (pi + 0.5) * (pgW / purlinCount);
+              return (
+                <mesh key={`pur-${pi}`} position={[px2, pgH + PURLIN / 2, 0]} castShadow>
+                  <boxGeometry args={[0.040, PURLIN, pgD + 0.06]} />
+                  <meshStandardMaterial {...steelMat} />
+                </mesh>
+              );
+            })}
           </group>
         );
       })()}
