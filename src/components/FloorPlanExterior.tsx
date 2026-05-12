@@ -4087,6 +4087,53 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5c-2b. 泳池跳台（pool diving board, north end of pool）──
+           Chrome-rail diving board on the north deck edge. 1m overhang
+           over the pool, non-slip white surface. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const pz2b = -D / 2 - 5.80;   // pool group centre Z
+        const poolL2b = 4.80;
+        const poolW2b = Math.min(W * 0.72, 10.0);
+        const boardX = poolW2b * 0.28;    // slightly off-centre
+        const boardZ = pz2b - poolL2b / 2 - 0.20; // at north pool edge
+        return (
+          <group position={[boardX, 0, boardZ]}>
+            {/* 2 supporting chrome posts */}
+            {([-0.22, 0.22] as number[]).map((rx, ri) => (
+              <group key={ri}>
+                {/* Vertical post */}
+                <mesh position={[rx, 0.45, -0.55]}>
+                  <cylinderGeometry args={[0.018, 0.018, 0.90, 6]} />
+                  <meshStandardMaterial color="#C4CCD4" roughness={0.18} metalness={0.92} envMapIntensity={2.4} />
+                </mesh>
+                {/* Horizontal handrail */}
+                <mesh position={[rx, 0.90, 0.10]} rotation={[Math.PI / 16, 0, 0]}>
+                  <cylinderGeometry args={[0.014, 0.014, 1.50, 6]} />
+                  <meshStandardMaterial color="#C4CCD4" roughness={0.18} metalness={0.92} envMapIntensity={2.2} />
+                </mesh>
+              </group>
+            ))}
+            {/* Board platform — non-slip white fibreglass */}
+            <mesh position={[0, 0.72, 0.30]} rotation={[-0.04, 0, 0]}>
+              <boxGeometry args={[0.44, 0.028, 1.60]} />
+              <meshStandardMaterial color="#EEEAE4" roughness={0.88} metalness={0.02} />
+            </mesh>
+            {/* Non-slip grip pattern on board */}
+            {Array.from({ length: 8 }, (_, gi) => (
+              <mesh key={gi} position={[0, 0.735, -0.30 + gi * 0.18]} rotation={[-0.04, 0, 0]}>
+                <boxGeometry args={[0.40, 0.006, 0.012]} />
+                <meshStandardMaterial color="#D8D4CC" roughness={0.92} />
+              </mesh>
+            ))}
+            {/* Fulcrum block under board */}
+            <mesh position={[0, 0.64, -0.22]}>
+              <boxGeometry args={[0.44, 0.08, 0.10]} />
+              <meshStandardMaterial color="#A0A8B0" roughness={0.45} metalness={0.55} />
+            </mesh>
+          </group>
+        );
+      })()}
+
       {/* ── 5c-3. 北院绿篱屏障（formal clipped hedge, north boundary inside）──
            Dense clipped yew/boxwood hedge 1.2m tall runs along inside of north wall,
            providing green backdrop behind the garden sculpture and fountain. */}
@@ -5889,6 +5936,104 @@ export default function FloorPlanBuilding({
               <cylinderGeometry args={[0.008, 0.008, 0.44, 4]} />
               <meshStandardMaterial color="#303035" roughness={0.55} metalness={0.60} />
             </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── 5l-2. 豪华 SUV 停在车道旁（luxury SUV parked alongside sedan）──
+           White/silver SUV parked east of the sedan, taller body profile,
+           roof rails, slightly turned to indicate separate parking spot. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const suvX = 2.55;   // east of driveway centre (sedan at X=0)
+        const suvZ = -D / 2 - 8.10;  // similar Z to sedan
+        const isNightS2 = sunHour < 6 || sunHour > 20;
+        const isDuskS2  = !isNightS2 && (sunHour < 8 || sunHour > 18);
+        const suvBodyCol = "#E0E4E8"; // silver-white
+        const suvGlassCol = "#3A5060";
+        const suvWheelCol = "#111318";
+        const suvRimCol   = "#909AA8";
+        const suvHeadEmi = isNightS2 ? 4.5 : isDuskS2 ? 2.2 : 0.0;
+        const suvTailEmi = isNightS2 ? 3.5 : isDuskS2 ? 1.8 : 0.0;
+        // SUV dimensions (larger / taller than sedan)
+        const sL = 4.80, sW = 2.05, sH = 0.62, sG = 0.24, sRH = 0.80, sRL = 2.60;
+        return (
+          <group position={[suvX, 0, suvZ]} rotation={[0, -0.08, 0]}>
+            {/* Body slab */}
+            <mesh position={[0, sG + sH / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[sW, sH, sL]} />
+              <meshStandardMaterial color={suvBodyCol} roughness={0.22} metalness={0.80} envMapIntensity={2.8} />
+            </mesh>
+            {/* Cabin (taller, longer than sedan) */}
+            <mesh position={[0, sG + sH + sRH / 2, -0.05]} castShadow>
+              <boxGeometry args={[sW - 0.12, sRH, sRL]} />
+              <meshStandardMaterial color={suvBodyCol} roughness={0.20} metalness={0.82} envMapIntensity={2.8} />
+            </mesh>
+            {/* Windshield */}
+            <mesh position={[0, sG + sH + sRH * 0.44, sRL / 2 + 0.05]} rotation={[Math.PI * 0.18, 0, 0]}>
+              <boxGeometry args={[sW - 0.18, sRH * 0.84, 0.015]} />
+              <meshStandardMaterial color={suvGlassCol} transparent opacity={0.52} roughness={0.04} metalness={0.30} envMapIntensity={3.5} />
+            </mesh>
+            {/* Rear window */}
+            <mesh position={[0, sG + sH + sRH * 0.44, -sRL / 2 - 0.05]} rotation={[-Math.PI * 0.15, 0, 0]}>
+              <boxGeometry args={[sW - 0.18, sRH * 0.78, 0.015]} />
+              <meshStandardMaterial color={suvGlassCol} transparent opacity={0.52} roughness={0.04} metalness={0.30} envMapIntensity={3.5} />
+            </mesh>
+            {/* Side windows */}
+            {([-1, 1] as number[]).map(sx => (
+              <mesh key={sx} position={[sx * (sW / 2 - 0.008), sG + sH + sRH * 0.50, -0.05]}>
+                <boxGeometry args={[0.012, sRH * 0.70, sRL - 0.25]} />
+                <meshStandardMaterial color={suvGlassCol} transparent opacity={0.50} roughness={0.04} metalness={0.28} envMapIntensity={3.0} />
+              </mesh>
+            ))}
+            {/* Roof rails */}
+            {([-sW * 0.36, sW * 0.36] as number[]).map((rx2, ri) => (
+              <mesh key={ri} position={[rx2, sG + sH + sRH + 0.022, -0.05]}>
+                <boxGeometry args={[0.028, 0.028, sRL - 0.20]} />
+                <meshStandardMaterial color="#707880" roughness={0.35} metalness={0.70} envMapIntensity={1.6} />
+              </mesh>
+            ))}
+            {/* Headlights */}
+            {([-0.60, 0.60] as number[]).map((hx, hi) => (
+              <mesh key={hi} position={[hx, sG + sH * 0.68, sL / 2 + 0.06]}>
+                <boxGeometry args={[0.40, 0.075, 0.014]} />
+                <meshStandardMaterial color="#FFFFFF" emissive="#EEEEFF" emissiveIntensity={suvHeadEmi} roughness={0.04} />
+              </mesh>
+            ))}
+            {/* Tail lights */}
+            {([-0.60, 0.60] as number[]).map((tx, ti) => (
+              <mesh key={`st-${ti}`} position={[tx, sG + sH * 0.65, -sL / 2 - 0.04]}>
+                <boxGeometry args={[0.38, 0.065, 0.012]} />
+                <meshStandardMaterial color="#FF2020" emissive="#FF1010" emissiveIntensity={suvTailEmi} roughness={0.08} />
+              </mesh>
+            ))}
+            {/* 4 Wheels (SUV larger diameter) */}
+            {([
+              [ sW / 2 + 0.04, sG,  sL * 0.28],
+              [-sW / 2 - 0.04, sG,  sL * 0.28],
+              [ sW / 2 + 0.04, sG, -sL * 0.28],
+              [-sW / 2 - 0.04, sG, -sL * 0.28],
+            ] as [number,number,number][]).map(([wx, wy, wz], wi) => (
+              <group key={wi} position={[wx, wy, wz]} rotation={[0, 0, Math.PI / 2]}>
+                <mesh castShadow>
+                  <cylinderGeometry args={[0.38, 0.38, 0.26, 20]} />
+                  <meshStandardMaterial color={suvWheelCol} roughness={0.88} metalness={0.04} />
+                </mesh>
+                <mesh position={[0, 0.09, 0]}>
+                  <cylinderGeometry args={[0.26, 0.26, 0.022, 16]} />
+                  <meshStandardMaterial color={suvRimCol} roughness={0.20} metalness={0.88} envMapIntensity={2.0} />
+                </mesh>
+                {/* 5 spokes */}
+                {Array.from({ length: 5 }, (_, si) => {
+                  const a = (si / 5) * Math.PI * 2;
+                  return (
+                    <mesh key={si} position={[Math.sin(a) * 0.15, 0.10, Math.cos(a) * 0.15]}>
+                      <boxGeometry args={[0.040, 0.018, 0.14]} />
+                      <meshStandardMaterial color={suvRimCol} roughness={0.22} metalness={0.86} />
+                    </mesh>
+                  );
+                })}
+              </group>
+            ))}
           </group>
         );
       })()}
