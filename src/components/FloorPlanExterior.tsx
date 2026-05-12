@@ -817,11 +817,75 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
           </group>
         );
       })()}
-      {/* ── 屋顶排气管（细节）── */}
-      <mesh position={[W * 0.10, roofSlab + 0.25, -D * 0.10]} castShadow>
-        <cylinderGeometry args={[0.08, 0.10, 0.50, 8]} />
-        <meshStandardMaterial color="#606468" roughness={0.60} metalness={0.30} />
-      </mesh>
+      {/* ── 通风管道组（3 根，高度不一，北侧机房区）── */}
+      {([
+        [W * 0.10, -D * 0.10, 0.50, 0.08, 0.10],
+        [W * 0.14, -D * 0.08, 0.70, 0.055, 0.065],
+        [W * 0.06, -D * 0.14, 0.40, 0.065, 0.075],
+      ] as [number,number,number,number,number][]).map(([ex, ez, eH, rt, rb], ei) => (
+        <group key={`exhaust-${ei}`} position={[ex, roofSlab + 0.05 + eH / 2, ez]}>
+          {/* Main stack */}
+          <mesh castShadow>
+            <cylinderGeometry args={[rt, rb, eH, 8]} />
+            <meshStandardMaterial color="#606468" roughness={0.60} metalness={0.30} />
+          </mesh>
+          {/* Cap cowl */}
+          <mesh position={[0, eH / 2 + 0.04, 0]}>
+            <cylinderGeometry args={[rt + 0.025, rt + 0.006, 0.080, 8]} />
+            <meshStandardMaterial color="#484C52" roughness={0.55} metalness={0.38} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* ── 通信天线杆（roof communication antenna mast）── */}
+      {(() => {
+        const antX = -W * 0.38;
+        const antZ =  D * 0.30;   // north-west, away from terrace
+        const antY = roofSlab + 0.05;
+        const mH   = 1.60;   // mast height
+        return (
+          <group position={[antX, antY, antZ]}>
+            {/* Base flange plate */}
+            <mesh position={[0, 0.015, 0]}>
+              <boxGeometry args={[0.14, 0.030, 0.14]} />
+              <meshStandardMaterial color="#484C58" roughness={0.40} metalness={0.72} />
+            </mesh>
+            {/* Mast pole */}
+            <mesh position={[0, mH / 2 + 0.03, 0]} castShadow>
+              <cylinderGeometry args={[0.016, 0.020, mH, 6]} />
+              <meshStandardMaterial color="#3C4050" roughness={0.30} metalness={0.80} />
+            </mesh>
+            {/* Small dish — tilted 20° south */}
+            <group position={[0, mH + 0.05, 0]} rotation={[0.35, 0, 0]}>
+              <mesh>
+                <cylinderGeometry args={[0.18, 0.18, 0.012, 12]} />
+                <meshStandardMaterial color="#B8C0CC" roughness={0.45} metalness={0.52} side={THREE.DoubleSide} />
+              </mesh>
+              {/* Dish arm */}
+              <mesh position={[0, 0.10, -0.10]}>
+                <cylinderGeometry args={[0.008, 0.008, 0.22, 6]} />
+                <meshStandardMaterial color="#8A9098" roughness={0.40} metalness={0.65} />
+              </mesh>
+            </group>
+            {/* 3 guy-wire lines (thin boxes — cylinder would need many segments) */}
+            {([0, 120, 240] as number[]).map((deg, gi) => {
+              const radians = (deg * Math.PI) / 180;
+              const wireX = Math.sin(radians) * 0.55;
+              const wireZ = Math.cos(radians) * 0.55;
+              const wireLen = Math.sqrt(wireX * wireX + (mH * 0.65) * (mH * 0.65) + wireZ * wireZ);
+              const wireAngle = Math.atan2(mH * 0.65, 0.55);
+              return (
+                <mesh key={gi}
+                  position={[wireX / 2, mH * 0.35, wireZ / 2]}
+                  rotation={[wireAngle, radians, 0]}>
+                  <boxGeometry args={[0.006, wireLen, 0.006]} />
+                  <meshStandardMaterial color="#505860" roughness={0.60} metalness={0.55} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })()}
 
       {/* ── 屋顶露台区域（南向，阳光充足）── */}
       {/* 两把日光浴躺椅 — 淡米色，南向摆放，供远处视角可见 */}
