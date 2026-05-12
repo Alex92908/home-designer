@@ -1892,6 +1892,49 @@ export default function FloorPlanBuilding({
               );
             })()}
 
+            {/* ── 水景喷射水柱（water jet arcs from trough）——
+                 5 thin parabolic arcs emerge from the trough back-wall,
+                 simulated as angled thin cylinders. Glowing at night. */}
+            {(() => {
+              const wbW_j = Math.min(W * 0.70, 9.0);
+              const wbZ_j = southFaceZ2 + 0.28;
+              const isNightJ = sunHour < 6 || sunHour > 20;
+              const isDuskJ  = !isNightJ && (sunHour < 8 || sunHour > 18);
+              const jetGlowI = isNightJ ? 1.8 : isDuskJ ? 0.8 : 0.06;
+              const jetCount = 5;
+              const jetStep  = wbW_j / (jetCount - 1);
+              // Each jet: origin at back wall of trough, angle ~30° south-down
+              const jetLen  = 0.42;  // arc segment length
+              const jetAngle = Math.PI * 0.22;  // 40° below horizontal
+              return (
+                <group>
+                  {Array.from({ length: jetCount }, (_, ji) => {
+                    const jx = -wbW_j / 2 + ji * jetStep;
+                    const jOriginZ = wbZ_j + 0.22;  // at back wall
+                    const jOriginY = 0.06;
+                    // Position the jet mid-point between origin and arc tip
+                    const midX = jx;
+                    const midY = jOriginY + Math.cos(jetAngle) * jetLen / 2;
+                    const midZ = jOriginZ - Math.sin(jetAngle) * jetLen / 2;
+                    return (
+                      <group key={`jet-${ji}`} position={[midX, midY, midZ]}
+                        rotation={[jetAngle, 0, 0]}>
+                        <mesh>
+                          <cylinderGeometry args={[0.012, 0.014, jetLen, 6]} />
+                          <meshStandardMaterial
+                            color="#80D8F0"
+                            transparent opacity={0.72}
+                            roughness={0.04} metalness={0.02}
+                            emissive="#40B8E0" emissiveIntensity={jetGlowI}
+                          />
+                        </mesh>
+                      </group>
+                    );
+                  })}
+                </group>
+              );
+            })()}
+
             {/* ── 入口步道路灯柱（bollard lights）—— 水景两侧 4 盏，等间距 ── */}
             {(() => {
               const wbW2 = Math.min(W * 0.70, 9.0);
@@ -3167,6 +3210,92 @@ export default function FloorPlanBuilding({
               <boxGeometry args={[W - 0.06, 0.012, stoneT + 0.010]} />
               <meshStandardMaterial color="#3A3E48" roughness={0.22} metalness={0.90} envMapIntensity={1.8} />
             </mesh>
+            {/* South facade stone accent strip (match east/north) */}
+            <mesh position={[0, stoneY, -D / 2 - stoneT / 2 - 0.12 - 0.002]} castShadow>
+              <boxGeometry args={[W - 0.08, stoneH, stoneT]} />
+              <meshStandardMaterial color={stoneColA} roughness={0.74} metalness={0.02} envMapIntensity={0.6} />
+            </mesh>
+            {Array.from({ length: Math.round((W - 0.08) / jointStep) }, (_, ji) => {
+              const jx = -W / 2 + 0.04 + (ji + 1) * jointStep;
+              return (
+                <mesh key={`sj-${ji}`} position={[jx, stoneY, -D / 2 - stoneT - 0.12 - 0.003]}>
+                  <boxGeometry args={[0.010, stoneH - 0.01, 0.002]} />
+                  <meshStandardMaterial color={stoneColB} roughness={0.90} />
+                </mesh>
+              );
+            })}
+            <mesh position={[0, stoneY + stoneH / 2 + 0.006, -D / 2 - stoneT / 2 - 0.12 - 0.002]}>
+              <boxGeometry args={[W - 0.06, 0.012, stoneT + 0.010]} />
+              <meshStandardMaterial color="#3A3E48" roughness={0.22} metalness={0.90} envMapIntensity={1.8} />
+            </mesh>
+            {/* West facade stone accent strip */}
+            <mesh position={[-W / 2 - stoneT / 2 - 0.12 - 0.002, stoneY, 0]} castShadow>
+              <boxGeometry args={[stoneT, stoneH, D - 0.08]} />
+              <meshStandardMaterial color={stoneColA} roughness={0.74} metalness={0.02} envMapIntensity={0.6} />
+            </mesh>
+            {Array.from({ length: Math.round((D - 0.08) / jointStep) }, (_, ji) => {
+              const jz = -D / 2 + 0.04 + (ji + 1) * jointStep;
+              return (
+                <mesh key={`wj-${ji}`} position={[-W / 2 - stoneT - 0.12 - 0.003, stoneY, jz]}>
+                  <boxGeometry args={[0.002, stoneH - 0.01, 0.010]} />
+                  <meshStandardMaterial color={stoneColB} roughness={0.90} />
+                </mesh>
+              );
+            })}
+            <mesh position={[-W / 2 - stoneT / 2 - 0.12 - 0.002, stoneY + stoneH / 2 + 0.006, 0]}>
+              <boxGeometry args={[stoneT + 0.010, 0.012, D - 0.06]} />
+              <meshStandardMaterial color="#3A3E48" roughness={0.22} metalness={0.90} envMapIntensity={1.8} />
+            </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── 5a-eave. 屋檐下沿 LED 灯带（eave soffit LED downlight strip）──
+           Linear warm-white LED strip runs under all 4 eaves (roof overhang
+           underside). Adds strong night ambience and defines the roofline. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const OV5  = 0.45;     // roof overhang (matches FlatRoof)
+        const OV_S5 = 0.75;   // south overhang
+        const eaveY  = totalH + 0.04;   // underside of roof slab
+        const isNightE = sunHour < 6 || sunHour > 20;
+        const isDuskE  = !isNightE && (sunHour < 8 || sunHour > 18);
+        const eaveEmi  = isNightE ? 2.8 : isDuskE ? 1.4 : 0.20;
+        const eaveLI   = isNightE ? 8.0 : isDuskE ? 4.0 : 0.0;
+        const eaveCol  = "#FFE8C0";
+        const eaveW  = 0.018;  // strip width
+        const eaveH  = 0.010;  // strip thickness
+        const eaveInset = 0.12; // inset from eave edge
+        return (
+          <group>
+            {/* South eave strip */}
+            <mesh position={[0, eaveY, -D / 2 - OV_S5 + eaveInset]}>
+              <boxGeometry args={[W + OV5 * 2 - 0.10, eaveH, eaveW]} />
+              <meshStandardMaterial color={eaveCol} emissive={eaveCol} emissiveIntensity={eaveEmi} roughness={0.70} />
+            </mesh>
+            {/* North eave strip */}
+            <mesh position={[0, eaveY, D / 2 + OV5 - eaveInset]}>
+              <boxGeometry args={[W + OV5 * 2 - 0.10, eaveH, eaveW]} />
+              <meshStandardMaterial color={eaveCol} emissive={eaveCol} emissiveIntensity={eaveEmi} roughness={0.70} />
+            </mesh>
+            {/* East eave strip */}
+            <mesh position={[W / 2 + OV5 - eaveInset, eaveY, -(OV_S5 - OV5) / 2]}>
+              <boxGeometry args={[eaveW, eaveH, D + OV_S5 + OV5 - 0.10]} />
+              <meshStandardMaterial color={eaveCol} emissive={eaveCol} emissiveIntensity={eaveEmi} roughness={0.70} />
+            </mesh>
+            {/* West eave strip */}
+            <mesh position={[-W / 2 - OV5 + eaveInset, eaveY, -(OV_S5 - OV5) / 2]}>
+              <boxGeometry args={[eaveW, eaveH, D + OV_S5 + OV5 - 0.10]} />
+              <meshStandardMaterial color={eaveCol} emissive={eaveCol} emissiveIntensity={eaveEmi} roughness={0.70} />
+            </mesh>
+            {/* Point lights at eave corners for volumetric glow */}
+            {eaveLI > 0 && ([
+              [ W / 2 + OV5 * 0.60, eaveY, -D / 2 - OV_S5 * 0.60],
+              [-W / 2 - OV5 * 0.60, eaveY, -D / 2 - OV_S5 * 0.60],
+              [ W / 2 + OV5 * 0.60, eaveY,  D / 2 + OV5 * 0.60],
+              [-W / 2 - OV5 * 0.60, eaveY,  D / 2 + OV5 * 0.60],
+            ] as [number,number,number][]).map(([lx, ly, lz], li) => (
+              <pointLight key={li} position={[lx, ly, lz]} intensity={eaveLI * 0.35} distance={W * 0.8} decay={2.0} color="#FFE4B0" castShadow={false} />
+            ))}
           </group>
         );
       })()}
