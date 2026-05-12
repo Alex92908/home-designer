@@ -5844,7 +5844,7 @@ export default function HouseCanvas() {
   const siteLatLng  = useDesignerStore(s => s.siteLatLng);
   const sunPos = getSunPosition3D(sunHour, siteLatLng);
   const theme  = getSkyTheme(sunHour);
-  const skyHex = _rgbHex(theme.skyRgb);
+  void _rgbHex; // skyHex no longer needed — Sky component handles gradient
   const _buildingType    = (exterior as ExteriorSettings & { buildingType?: string }).buildingType;
   const isRichGlassVilla = _buildingType === "rich-glass-villa" || _buildingType === "floor-plan-driven";
 
@@ -6102,15 +6102,18 @@ export default function HouseCanvas() {
             backgroundBlurriness softens the HDR to remove distracting detail
             while keeping the sky colour/gradient. Night mode keeps a dark
             sphere instead since the night HDR is just a coloured gradient. */}
-        {/* Sky sphere — colour interpolates continuously with sun position */}
+        {/* Sky — physically-based Preetham atmospheric scattering (day/dawn/dusk).
+            Replaces the flat-colour sphere for a realistic gradient: deep blue
+            zenith, haze at horizon, warm glow around sun disc. */}
         {theme.phase !== "night" && (
-          <>
-            <color attach="background" args={[skyHex]} />
-            <mesh scale={[260, 260, 260]}>
-              <sphereGeometry args={[1, 32, 20]} />
-              <meshBasicMaterial color={skyHex} side={THREE.BackSide} depthWrite={false} fog={false} />
-            </mesh>
-          </>
+          <Sky
+            sunPosition={sunPos}
+            turbidity={theme.phase === "day" ? 4.5 : 9.0}
+            rayleigh={theme.phase === "day" ? 1.6 : 0.7}
+            mieCoefficient={theme.phase === "day" ? 0.005 : 0.008}
+            mieDirectionalG={0.85}
+            distance={450000}
+          />
         )}
         <HouseEnvironmentFallback>
           <Suspense fallback={null}>
