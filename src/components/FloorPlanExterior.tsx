@@ -1121,6 +1121,24 @@ export default function FloorPlanBuilding({
                 <meshStandardMaterial color="#18181E" roughness={0.28} metalness={0.88} envMapIntensity={2} />
               </mesh>
             ))}
+            {/* LED 灯带 — 雨棚底面满铺，暖白发光模拟线型灯槽 */}
+            <mesh position={[0, canopyY - canopyT / 2 - 0.004, canopyZ - 0.08]}>
+              <boxGeometry args={[canopyW * 0.88, 0.012, 0.045]} />
+              <meshStandardMaterial
+                color="#FFF8E8"
+                emissive="#FFEFA0"
+                emissiveIntensity={1.8}
+                roughness={0.6}
+              />
+            </mesh>
+            {/* 雨棚底部 LED 点光源（让灯带向下照射） */}
+            <pointLight
+              position={[0, canopyY - canopyT / 2 - 0.08, canopyZ - 0.05]}
+              intensity={3.5}
+              distance={4.0}
+              decay={1.8}
+              color="#FFF6D8"
+            />
           </group>
         );
       })()}
@@ -1378,12 +1396,17 @@ export default function FloorPlanBuilding({
               <group key={`slab-${fi}`}>
                 <mesh position={[slabCX, slabY, slabCZ]} castShadow receiveShadow>
                   <boxGeometry args={[totalW, SLAB_T, totalD]} />
-                  <meshStandardMaterial color={slabColor} roughness={0.85} />
+                  <meshStandardMaterial color={slabColor} roughness={0.85} metalness={0.02} />
                 </mesh>
                 {/* 楼板下边缘暗线（阴影缝，增加分层感）*/}
                 <mesh position={[slabCX, slabY - SLAB_T / 2 - 0.015, slabCZ]}>
                   <boxGeometry args={[totalW + 0.01, 0.030, totalD + 0.01]} />
                   <meshStandardMaterial color="#8A8680" roughness={0.9} />
+                </mesh>
+                {/* 楼板顶面金属压边（metal flashing cap）*/}
+                <mesh position={[slabCX, slabY + SLAB_T / 2 + 0.004, slabCZ]}>
+                  <boxGeometry args={[totalW + 0.01, 0.008, totalD + 0.01]} />
+                  <meshStandardMaterial color="#3A3E48" roughness={0.28} metalness={0.82} envMapIntensity={1.8} />
                 </mesh>
               </group>
             );
@@ -1589,6 +1612,29 @@ export default function FloorPlanBuilding({
         return (
           <group key={`co-${bi}`} position={[px, yMid, pz]} rotation={rot}>
             <ConcreteFacade width={segLen} height={FLOOR_H} windows={winInfos} />
+            {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部，
+                高度 0.55m（窗台 0.90m 以下，不遮窗），增加基座感与立面层次。*/}
+            {floorIndex === 0 && (
+              <group position={[0, -FLOOR_H / 2 + 0.275, 0.050]}>
+                {/* Main cladding slab */}
+                <mesh castShadow receiveShadow>
+                  <boxGeometry args={[segLen + 0.004, 0.55, 0.016]} />
+                  <meshStandardMaterial color="#D8D0BE" roughness={0.64} metalness={0.02} envMapIntensity={0.55} />
+                </mesh>
+                {/* Ashlar horizontal rustication joints — 3 stone courses */}
+                {[0.13, 0, -0.13].map((jy, ji) => (
+                  <mesh key={ji} position={[0, jy, 0.009]}>
+                    <boxGeometry args={[segLen + 0.005, 0.008, 0.006]} />
+                    <meshStandardMaterial color="#B8B0A0" roughness={0.88} />
+                  </mesh>
+                ))}
+                {/* Top edge flashing strip */}
+                <mesh position={[0, 0.278, 0.010]}>
+                  <boxGeometry args={[segLen + 0.006, 0.010, 0.012]} />
+                  <meshStandardMaterial color="#3A3E48" roughness={0.22} metalness={0.90} envMapIntensity={1.6} />
+                </mesh>
+              </group>
+            )}
           </group>
         );
       })}
