@@ -977,15 +977,28 @@ export default function FloorPlanBuilding({
     <group>
       {/* 地面基座 — 浅色石灰石平台（建筑基层）*/}
       <mesh position={[0, -0.04, 0]} receiveShadow>
-        <boxGeometry args={[W + 0.40, 0.08, D + 0.40]} />
-        <meshStandardMaterial color="#D8D0C0" roughness={0.88} metalness={0.01} />
+        <boxGeometry args={[W + 0.55, 0.10, D + 0.55]} />
+        <meshStandardMaterial color="#D4CCBA" roughness={0.72} metalness={0.03} envMapIntensity={0.35} />
       </mesh>
-      {/* 建筑基座压脚（深色混凝土踢脚，让建筑稳稳落地）*/}
+      {/* 建筑基座 — 两段式：下部黑花岗岩脚踢 + 上部深色抛光石材 */}
       {!insideBuilding && (
-        <mesh position={[0, 0.18, 0]} castShadow>
-          <boxGeometry args={[W + 0.08, 0.36, D + 0.08]} />
-          <meshStandardMaterial color="#2C3038" roughness={0.82} metalness={0.08} />
-        </mesh>
+        <>
+          {/* 下段：黑色花岗岩（低粗糙度，轻微抛光反射）*/}
+          <mesh position={[0, 0.10, 0]} castShadow>
+            <boxGeometry args={[W + 0.10, 0.20, D + 0.10]} />
+            <meshStandardMaterial color="#1A1C22" roughness={0.42} metalness={0.28} envMapIntensity={1.4} />
+          </mesh>
+          {/* 上段：深灰玄武岩（稍浅，形成两段阴影层次）*/}
+          <mesh position={[0, 0.30, 0]} castShadow>
+            <boxGeometry args={[W + 0.06, 0.20, D + 0.06]} />
+            <meshStandardMaterial color="#272B33" roughness={0.55} metalness={0.18} envMapIntensity={1.0} />
+          </mesh>
+          {/* 基座顶面金属压边（薄钢条，视觉分割线）*/}
+          <mesh position={[0, 0.405, 0]}>
+            <boxGeometry args={[W + 0.07, 0.010, D + 0.07]} />
+            <meshStandardMaterial color="#3A3E48" roughness={0.18} metalness={0.92} envMapIntensity={2.0} />
+          </mesh>
+        </>
       )}
       {/* ── 入口雨棚 —— 1F 顶端向南悬挑（现代建筑标志性元素） ── */}
       {!insideBuilding && isGlassVilla && (() => {
