@@ -417,15 +417,15 @@ function ConcreteFacade({
   // 竖向板缝：每 120cm 一道
   const vGrooveStep  = 1.20;
   const vGrooveCount = Math.max(1, Math.round(width / vGrooveStep) - 1);
-  const grooveColor  = "#B8B3AB";   // deeper groove shadow
-  const baseColor    = "#C8C4BC";   // warm-gray concrete base
+  const grooveColor  = "#C0BAB2";   // subtle groove shadow
+  const baseColor    = "#E6E0D8";   // crisp warm-white render (matches reference image)
 
   return (
     <group>
       {/* ── 底板（整面）── */}
       <mesh>
         <boxGeometry args={[width, height, 0.08]} />
-        <meshStandardMaterial color={baseColor} roughness={0.88} metalness={0.01} />
+        <meshStandardMaterial color={baseColor} roughness={0.78} metalness={0.02} envMapIntensity={0.35} />
       </mesh>
       {/* ── 竖向分板阴影面（每 vGrooveStep 一块，交替略暗，模拟预制挂板微差）── */}
       {Array.from({ length: Math.round(width / vGrooveStep) }, (_, vi) => {
@@ -3731,7 +3731,7 @@ export default function FloorPlanBuilding({
       {/* ── 外立面转角柱（4 角）— 黑色阳极氧化铝方柱，给建筑立面明确边界，
               现代玻璃幕墙建筑标配转角细节 ── */}
       {!insideBuilding && isGlassVilla && (() => {
-        const colW   = 0.16;   // column cross-section
+        const colW   = 0.22;   // column cross-section (wider for visual weight matching reference)
         const colH   = totalH + SLAB_T + 0.06; // full building height + small overshoot
         const colY   = colH / 2;
         const colMat = { color: "#181A1E" as const, roughness: 0.10 as const, metalness: 0.95 as const, envMapIntensity: 2.6 as const };
@@ -4129,6 +4129,39 @@ export default function FloorPlanBuilding({
                       )}
                     </>
                   )}
+
+                  {/* ── 餐厅桌椅（中等以上房间可见，reference 图参考）──
+                      Rectangular dining table + 3 chairs visible through south glass.
+                      Positioned toward back of room so not to block the glass view,
+                      yet still clearly visible as architectural interior depth. */}
+                  {!insideBuilding && iW > 2.5 && iD > 2.5 && !isLarge && (
+                    <group position={[0, -FLOOR_H / 2, iD * 0.15]}>
+                      {/* Dining table — dark walnut rectangular slab */}
+                      <mesh position={[0, 0.75, 0]} castShadow>
+                        <boxGeometry args={[Math.min(iW * 0.62, 2.20), 0.040, Math.min(iD * 0.42, 1.05)]} />
+                        <meshStandardMaterial color="#3A2418" roughness={0.58} metalness={0.08} envMapIntensity={1.0}
+                          emissive="#2A1A0C" emissiveIntensity={interiorGlowWall * 0.06} />
+                      </mesh>
+                      {/* Table base/pedestal */}
+                      <mesh position={[0, 0.375, 0]}>
+                        <boxGeometry args={[0.08, 0.75, 0.08]} />
+                        <meshStandardMaterial color="#2A1A0C" roughness={0.65} metalness={0.10} />
+                      </mesh>
+                      {/* Chairs — 3 visible from south (front) */}
+                      {([-0.75, 0, 0.75] as number[]).map((cx3, ci) => (
+                        <group key={ci} position={[cx3, 0, -Math.min(iD * 0.32, 0.90)]}>
+                          <mesh position={[0, 0.47, 0]}>
+                            <boxGeometry args={[0.44, 0.040, 0.44]} />
+                            <meshStandardMaterial color="#EDE6D8" roughness={0.88} />
+                          </mesh>
+                          <mesh position={[0, 0.76, 0.20]}>
+                            <boxGeometry args={[0.40, 0.40, 0.040]} />
+                            <meshStandardMaterial color="#EDE6D8" roughness={0.88} />
+                          </mesh>
+                        </group>
+                      ))}
+                    </group>
+                  )}
                 </group>
               );
             }
@@ -4155,7 +4188,7 @@ export default function FloorPlanBuilding({
         // 楼梯井位置（取 fi=0 的楼梯间，各层水平位置相同）
         const stairEntry = interiorRooms.find(r => r.isStair && r.fi === 0);
         // 层间楼板颜色：略深于外墙，产生分层阴影感（precast concrete）
-        const slabColor  = "#C8C4BC";
+        const slabColor  = "#DDD8D0";
 
         return Array.from({ length: usedFloors - 1 }, (_, fi) => {
           const slabY = (fi + 1) * (FLOOR_H + SLAB_T) - SLAB_T / 2;
