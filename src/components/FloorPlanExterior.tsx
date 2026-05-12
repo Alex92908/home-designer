@@ -1962,6 +1962,167 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
           </group>
         );
       })()}
+      {/* ── 屋顶露天酒吧台（rooftop sky bar, SE corner）──
+           Polished-concrete bar counter in an L-shape, black steel base,
+           5 bar stools, backbar with bottle display + wine rack, under-
+           counter LED strip. Night: warm amber glow activates. */}
+      {(() => {
+        const barX  =  W * 0.32;
+        const barZ  = -D * 0.38;
+        const barY  = roofSlab + 0.05;
+        const isNightBar = nightGlow > 0.4;
+        const barEmi  = isNightBar ? 2.8 : 0.30;
+        const barLI   = isNightBar ? 4.0 : 0.0;
+        const ctopCol = "#2C3040";   // dark charcoal concrete top
+        const bodyCol = "#1A1C22";   // near-black steel cabinet
+        const teak    = "#7A4E28";   // warm teak accents
+
+        return (
+          <group position={[barX, barY, barZ]}>
+            {/* ── Main bar counter body (E-W oriented, 2.20m long) ── */}
+            <mesh position={[0, 0.90, 0]} castShadow>
+              <boxGeometry args={[2.20, 0.040, 0.65]} />
+              <meshStandardMaterial color={ctopCol} roughness={0.10} metalness={0.50} envMapIntensity={3.5} />
+            </mesh>
+            {/* Counter waterfall edge — thin steel nose */}
+            <mesh position={[0, 0.872, -0.33]}>
+              <boxGeometry args={[2.20, 0.020, 0.018]} />
+              <meshStandardMaterial color="#303848" roughness={0.18} metalness={0.88} envMapIntensity={2.5} />
+            </mesh>
+            {/* Bar cabinet */}
+            <mesh position={[0, 0.44, 0]} castShadow>
+              <boxGeometry args={[2.20, 0.88, 0.62]} />
+              <meshStandardMaterial color={bodyCol} roughness={0.30} metalness={0.60} envMapIntensity={2.0} />
+            </mesh>
+            {/* Under-counter LED strip */}
+            <mesh position={[0, 0.040, -0.32]}>
+              <boxGeometry args={[2.10, 0.010, 0.012]} />
+              <meshStandardMaterial color="#FFE4A0" emissive="#FFD060" emissiveIntensity={barEmi} roughness={0.60} />
+            </mesh>
+            {barLI > 0 && (
+              <pointLight position={[0, 0.06, -0.35]} intensity={barLI} distance={3.5} decay={2} color="#FFE090" />
+            )}
+
+            {/* ── Return leg of L-shape (N-S oriented, 1.40m long) ── */}
+            <mesh position={[1.10, 0.90, 0.52]} castShadow>
+              <boxGeometry args={[0.65, 0.040, 1.40]} />
+              <meshStandardMaterial color={ctopCol} roughness={0.10} metalness={0.50} envMapIntensity={3.5} />
+            </mesh>
+            <mesh position={[1.10, 0.44, 0.52]} castShadow>
+              <boxGeometry args={[0.62, 0.88, 1.40]} />
+              <meshStandardMaterial color={bodyCol} roughness={0.30} metalness={0.60} envMapIntensity={2.0} />
+            </mesh>
+            {/* LED on return */}
+            <mesh position={[0.79, 0.040, 0.52]}>
+              <boxGeometry args={[0.012, 0.010, 1.30]} />
+              <meshStandardMaterial color="#FFE4A0" emissive="#FFD060" emissiveIntensity={barEmi} roughness={0.60} />
+            </mesh>
+
+            {/* ── 5 bar stools — front of main counter ── */}
+            {Array.from({ length: 5 }, (_, si) => {
+              const sx = -0.88 + si * 0.44;
+              return (
+                <group key={si} position={[sx, 0, -0.76]}>
+                  {/* Seat */}
+                  <mesh position={[0, 0.75, 0]}>
+                    <cylinderGeometry args={[0.18, 0.17, 0.048, 10]} />
+                    <meshStandardMaterial color="#1A1C22" roughness={0.24} metalness={0.82} envMapIntensity={2.0} />
+                  </mesh>
+                  {/* Seat cushion */}
+                  <mesh position={[0, 0.778, 0]}>
+                    <cylinderGeometry args={[0.16, 0.16, 0.030, 10]} />
+                    <meshStandardMaterial color="#383050" roughness={0.80} metalness={0.02} />
+                  </mesh>
+                  {/* Stem */}
+                  <mesh position={[0, 0.38, 0]}>
+                    <cylinderGeometry args={[0.022, 0.028, 0.74, 8]} />
+                    <meshStandardMaterial color="#505868" roughness={0.22} metalness={0.84} envMapIntensity={1.8} />
+                  </mesh>
+                  {/* Base ring */}
+                  <mesh position={[0, 0.025, 0]}>
+                    <cylinderGeometry args={[0.22, 0.24, 0.025, 12]} />
+                    <meshStandardMaterial color="#404858" roughness={0.28} metalness={0.80} envMapIntensity={1.6} />
+                  </mesh>
+                </group>
+              );
+            })}
+
+            {/* ── Back bar (against east parapet) ── */}
+            <group position={[1.42, 0, 0]}>
+              {/* Back bar shelf unit */}
+              <mesh position={[0, 1.05, 0.15]} castShadow>
+                <boxGeometry args={[0.12, 1.80, 0.80]} />
+                <meshStandardMaterial color="#161820" roughness={0.45} metalness={0.40} />
+              </mesh>
+              {/* Three glass shelves */}
+              {[0.80, 1.18, 1.52].map((sy, si) => (
+                <mesh key={si} position={[0.065, sy, 0.15]}>
+                  <boxGeometry args={[0.020, 0.012, 0.70]} />
+                  <meshStandardMaterial color="#B0C8D8" transparent opacity={0.55} roughness={0.04} metalness={0.10} envMapIntensity={4.0} />
+                </mesh>
+              ))}
+              {/* Bottle array — 6 bottles on middle shelf */}
+              {Array.from({ length: 6 }, (_, bi) => {
+                const bz = -0.30 + bi * 0.12;
+                return (
+                  <group key={bi} position={[0.065, 1.24, bz]}>
+                    <mesh position={[0, 0, 0]} castShadow>
+                      <cylinderGeometry args={[0.030, 0.028, 0.28, 7]} />
+                      <meshStandardMaterial
+                        color={bi % 3 === 0 ? "#3A5020" : bi % 3 === 1 ? "#6A3010" : "#1A2840"}
+                        roughness={0.08} metalness={0.08} envMapIntensity={3.0}
+                        transparent opacity={0.85}
+                      />
+                    </mesh>
+                    {/* Bottle neck */}
+                    <mesh position={[0, 0.17, 0]}>
+                      <cylinderGeometry args={[0.012, 0.020, 0.10, 6]} />
+                      <meshStandardMaterial color="#C0A060" roughness={0.20} metalness={0.60} />
+                    </mesh>
+                  </group>
+                );
+              })}
+              {/* Wine rack (lower section) — 4 horizontally stored bottles */}
+              {Array.from({ length: 4 }, (_, wi) => (
+                <mesh key={wi} position={[0.065, 0.70 - wi * 0.14, wi % 2 === 0 ? 0.05 : -0.05]}
+                  rotation={[0, 0, Math.PI / 2]}>
+                  <cylinderGeometry args={[0.033, 0.033, 0.30, 7]} />
+                  <meshStandardMaterial
+                    color={wi % 2 === 0 ? "#4A2840" : "#2A4820"}
+                    transparent opacity={0.82} roughness={0.06} metalness={0.06} envMapIntensity={2.5}
+                  />
+                </mesh>
+              ))}
+              {/* Mirror back panel — reflects bottles */}
+              <mesh position={[-0.002, 1.05, 0.15]}>
+                <boxGeometry args={[0.006, 1.78, 0.78]} />
+                <meshStandardMaterial color="#C8D4DC" roughness={0.04} metalness={0.96} envMapIntensity={5.0} />
+              </mesh>
+              {/* Backbar LED strip */}
+              <mesh position={[0.060, 1.88, 0.15]}>
+                <boxGeometry args={[0.012, 0.010, 0.72]} />
+                <meshStandardMaterial color="#FFF0D0" emissive="#FFE090" emissiveIntensity={barEmi} roughness={0.60} />
+              </mesh>
+              {barLI > 0 && (
+                <pointLight position={[0, 1.20, 0.15]} intensity={barLI * 0.7} distance={2.0} decay={2} color="#FFE8B0" />
+              )}
+            </group>
+
+            {/* ── Small decorative plant on bar corner ── */}
+            <group position={[-1.08, 0.94, -0.18]}>
+              <mesh position={[0, 0.06, 0]}>
+                <cylinderGeometry args={[0.075, 0.065, 0.12, 8]} />
+                <meshStandardMaterial color="#D0A878" roughness={0.72} metalness={0.06} />
+              </mesh>
+              <mesh position={[0, 0.18, 0]}>
+                <sphereGeometry args={[0.08, 8, 6]} />
+                <meshStandardMaterial color="#2E6020" roughness={0.95} metalness={0.01} />
+              </mesh>
+            </group>
+          </group>
+        );
+      })()}
+
     </group>
   );
 }
