@@ -5042,74 +5042,210 @@ export default function FloorPlanBuilding({
                 )}
               </group>
             ))}
-            {/* Driveway iron gate leaves (closed, dark charcoal) */}
+            {/* ── Driveway wrought-iron gate leaves ──
+                 Premium forged-iron estate gate:
+                 • Heavy outer frame with top arch rail
+                 • 7 spear-tip pickets per leaf
+                 • 3 horizontal rails (bottom, mid, top)
+                 • Diagonal diagonal brace from bottom-hinge to mid-rail
+                 • Ornamental scrollwork rings between mid-pickets
+                 • Hydraulic hinge stubs at pillar side */}
             {([-1, 1] as number[]).map((side) => {
-              const leafX = gateX2 + side * gateW2 / 2;
+              const leafX  = gateX2 + side * gateW2 / 2;
+              const leafH  = wallH2 * 1.18;           // gate taller than wall
+              const leafW  = gateW2 - 0.05;
+              const pickN  = 7;
+              const pickSpacing = (leafW - 0.10) / (pickN - 1);
+              const frameMat = { color: "#1A1C24", roughness: 0.22, metalness: 0.84, envMapIntensity: 2.2 };
+              const goldMat  = { color: "#B0A030", roughness: 0.16, metalness: 0.92, envMapIntensity: 3.5 };
               return (
                 <group key={side} position={[leafX, 0, bndS]}>
-                  {/* Outer frame */}
-                  <mesh position={[0, wallH2 * 0.55, 0]} castShadow>
-                    <boxGeometry args={[gateW2 - 0.06, wallH2 * 1.15, 0.040]} />
-                    <meshStandardMaterial color="#1C1E26" roughness={0.28} metalness={0.78} />
+                  {/* ── Outer frame (left/right stiles + bottom rail) ── */}
+                  {/* Left stile */}
+                  <mesh position={[-leafW / 2 + 0.025, leafH / 2, 0.018]} castShadow>
+                    <boxGeometry args={[0.048, leafH, 0.048]} />
+                    <meshStandardMaterial {...frameMat} />
                   </mesh>
-                  {/* Vertical bars × 5 (improved with pointed finials) */}
-                  {Array.from({ length: 5 }, (_, bi) => {
-                    const bx = -gateW2 / 2 + 0.08 + bi * ((gateW2 - 0.16) / 4);
+                  {/* Right stile */}
+                  <mesh position={[leafW / 2 - 0.025, leafH / 2, 0.018]} castShadow>
+                    <boxGeometry args={[0.048, leafH, 0.048]} />
+                    <meshStandardMaterial {...frameMat} />
+                  </mesh>
+                  {/* Bottom rail */}
+                  <mesh position={[0, 0.030, 0.018]} castShadow>
+                    <boxGeometry args={[leafW, 0.058, 0.044]} />
+                    <meshStandardMaterial {...frameMat} />
+                  </mesh>
+
+                  {/* ── Arch top rail — bent upward at centre ── */}
+                  {/* Approximated as 3 angled segments */}
+                  {([-0.30, 0, 0.30] as number[]).map((ax, ai) => {
+                    const archY = leafH - 0.025 + (ai === 1 ? 0.10 : 0);
+                    const archTilt = ai === 0 ? 0.08 : ai === 2 ? -0.08 : 0;
                     return (
-                      <group key={bi} position={[bx, wallH2 * 0.56, 0.022]}>
-                        {/* Bar shaft */}
-                        <mesh>
-                          <boxGeometry args={[0.026, wallH2 * 1.06, 0.026]} />
-                          <meshStandardMaterial color="#252830" roughness={0.28} metalness={0.75} />
+                      <mesh key={ai} position={[ax * (leafW / 0.90), archY, 0.018]} rotation={[0, 0, archTilt]}>
+                        <boxGeometry args={[leafW * 0.38, 0.044, 0.044]} />
+                        <meshStandardMaterial {...frameMat} />
+                      </mesh>
+                    );
+                  })}
+
+                  {/* ── 3 horizontal rails ── */}
+                  {/* Lower rail (kick plate level) */}
+                  <mesh position={[0, leafH * 0.18, 0.026]}>
+                    <boxGeometry args={[leafW - 0.06, 0.028, 0.028]} />
+                    <meshStandardMaterial {...frameMat} />
+                  </mesh>
+                  {/* Mid rail */}
+                  <mesh position={[0, leafH * 0.52, 0.026]}>
+                    <boxGeometry args={[leafW - 0.06, 0.028, 0.028]} />
+                    <meshStandardMaterial {...frameMat} />
+                  </mesh>
+                  {/* Upper rail */}
+                  <mesh position={[0, leafH * 0.82, 0.026]}>
+                    <boxGeometry args={[leafW - 0.06, 0.022, 0.022]} />
+                    <meshStandardMaterial {...frameMat} />
+                  </mesh>
+
+                  {/* ── 7 vertical pickets with spear finials ── */}
+                  {Array.from({ length: pickN }, (_, pi) => {
+                    const px = -leafW / 2 + 0.055 + pi * pickSpacing;
+                    const pickH = leafH - 0.055;
+                    // Middle pickets slightly taller
+                    const extraH = (pi === 3) ? 0.12 : (pi === 2 || pi === 4) ? 0.06 : 0;
+                    return (
+                      <group key={pi} position={[px, pickH / 2 + 0.028, 0.024]}>
+                        {/* Shaft */}
+                        <mesh castShadow>
+                          <boxGeometry args={[0.022, pickH + extraH, 0.022]} />
+                          <meshStandardMaterial {...frameMat} />
                         </mesh>
-                        {/* Spear finial tip at top */}
-                        <mesh position={[0, wallH2 * 1.06 / 2 + 0.055, 0]}>
-                          <coneGeometry args={[0.022, 0.11, 4]} />
-                          <meshStandardMaterial color="#303440" roughness={0.22} metalness={0.82} envMapIntensity={1.8} />
+                        {/* Spear finial — 4-sided */}
+                        <mesh position={[0, (pickH + extraH) / 2 + 0.065, 0]}>
+                          <coneGeometry args={[0.018, 0.130, 4]} />
+                          <meshStandardMaterial {...goldMat} />
+                        </mesh>
+                        {/* Finial collar ring */}
+                        <mesh position={[0, (pickH + extraH) / 2 - 0.008, 0]}>
+                          <torusGeometry args={[0.014, 0.005, 4, 8]} />
+                          <meshStandardMaterial {...goldMat} />
                         </mesh>
                       </group>
                     );
                   })}
-                  {/* Horizontal decorative rail at mid-height */}
-                  <mesh position={[0, wallH2 * 0.68, 0.028]}>
-                    <boxGeometry args={[gateW2 - 0.10, 0.022, 0.022]} />
-                    <meshStandardMaterial color="#202428" roughness={0.24} metalness={0.80} />
-                  </mesh>
-                  {/* Lower horizontal rail at bottom third */}
-                  <mesh position={[0, wallH2 * 0.30, 0.028]}>
-                    <boxGeometry args={[gateW2 - 0.10, 0.022, 0.022]} />
-                    <meshStandardMaterial color="#202428" roughness={0.24} metalness={0.80} />
-                  </mesh>
+
+                  {/* ── Ornamental scrollwork — C-scroll rings between mid pickets ── */}
+                  {[1, 3, 5].map((ri) => {
+                    const rx = -leafW / 2 + 0.055 + ri * pickSpacing + pickSpacing / 2;
+                    return (
+                      <group key={ri} position={[rx, leafH * 0.35, 0.030]}>
+                        {/* Outer ring */}
+                        <mesh>
+                          <torusGeometry args={[0.052, 0.008, 5, 12]} />
+                          <meshStandardMaterial {...goldMat} />
+                        </mesh>
+                        {/* Inner boss */}
+                        <mesh>
+                          <sphereGeometry args={[0.018, 6, 5]} />
+                          <meshStandardMaterial {...goldMat} />
+                        </mesh>
+                      </group>
+                    );
+                  })}
+
+                  {/* ── Diagonal brace (corner to mid-rail — only on hinge side) ── */}
+                  {(() => {
+                    const hx = side * (leafW / 2 - 0.025);
+                    const bLen = Math.sqrt((leafW * 0.85) ** 2 + (leafH * 0.48) ** 2);
+                    const bAngle = Math.atan2(leafH * 0.48, leafW * 0.85) * side;
+                    return (
+                      <mesh position={[-hx * 0.40, leafH * 0.25, 0.026]}
+                        rotation={[0, 0, bAngle]}>
+                        <boxGeometry args={[bLen * 0.55, 0.016, 0.016]} />
+                        <meshStandardMaterial color="#222630" roughness={0.28} metalness={0.80} />
+                      </mesh>
+                    );
+                  })()}
+
+                  {/* ── Hydraulic hinge stubs (gate-side, 3 per leaf) ── */}
+                  {[0.22, 0.55, 0.88].map((hy, hi) => (
+                    <mesh key={hi} position={[side * (leafW / 2 - 0.012), leafH * hy, 0.040]}
+                      rotation={[Math.PI / 2, 0, 0]}>
+                      <cylinderGeometry args={[0.018, 0.018, 0.055, 6]} />
+                      <meshStandardMaterial color="#505870" roughness={0.30} metalness={0.82} />
+                    </mesh>
+                  ))}
                 </group>
               );
             })}
-            {/* Central gate crest / monogram — decorative medallion at gate centre */}
-            <group position={[gateX2, wallH2 * 0.80, bndS + 0.025]}>
+
+            {/* ── Central gate crest / monogram ── */}
+            <group position={[gateX2, wallH2 * 0.85, bndS + 0.028]}>
               {/* Crest backing disc — polished dark */}
               <mesh>
-                <cylinderGeometry args={[0.20, 0.20, 0.012, 14]} />
-                <meshStandardMaterial color="#1A1C22" roughness={0.12} metalness={0.88} envMapIntensity={3.0} />
+                <cylinderGeometry args={[0.22, 0.22, 0.014, 16]} />
+                <meshStandardMaterial color="#1A1C22" roughness={0.10} metalness={0.90} envMapIntensity={3.0} />
               </mesh>
-              {/* Outer ring */}
+              {/* Outer gold ring */}
               <mesh>
-                <torusGeometry args={[0.18, 0.012, 6, 14]} />
-                <meshStandardMaterial color="#B0A040" roughness={0.18} metalness={0.90} envMapIntensity={3.5} />
+                <torusGeometry args={[0.20, 0.013, 6, 16]} />
+                <meshStandardMaterial color="#B0A040" roughness={0.15} metalness={0.92} envMapIntensity={3.8} />
               </mesh>
-              {/* Inner decorative cross */}
-              <mesh position={[0, 0.008, 0]}>
-                <boxGeometry args={[0.22, 0.012, 0.012]} />
-                <meshStandardMaterial color="#B0A040" roughness={0.20} metalness={0.88} envMapIntensity={3.0} />
-              </mesh>
-              <mesh position={[0, 0.008, 0]}>
-                <boxGeometry args={[0.012, 0.012, 0.22]} />
-                <meshStandardMaterial color="#B0A040" roughness={0.20} metalness={0.88} envMapIntensity={3.0} />
-              </mesh>
-              {/* Centre sphere (crest boss) */}
-              <mesh position={[0, 0.012, 0]}>
-                <sphereGeometry args={[0.030, 8, 6]} />
-                <meshStandardMaterial color="#C8B060" roughness={0.14} metalness={0.92} envMapIntensity={4.0} />
+              {/* Inner decorative star (8 spokes) */}
+              {Array.from({ length: 8 }, (_, si) => {
+                const sa = (si * Math.PI) / 4;
+                return (
+                  <mesh key={si} position={[Math.cos(sa) * 0.08, 0.010, Math.sin(sa) * 0.08]}
+                    rotation={[0, sa, 0]}>
+                    <boxGeometry args={[0.14, 0.010, 0.010]} />
+                    <meshStandardMaterial color="#C8B060" roughness={0.15} metalness={0.92} envMapIntensity={3.5} />
+                  </mesh>
+                );
+              })}
+              {/* Centre boss sphere */}
+              <mesh position={[0, 0.014, 0]}>
+                <sphereGeometry args={[0.034, 8, 6]} />
+                <meshStandardMaterial color="#D4C070" roughness={0.12} metalness={0.95} envMapIntensity={4.5} />
               </mesh>
             </group>
+
+            {/* ── Intercom / keypad panel on west gate pillar inner face ── */}
+            {(() => {
+              const pillarX  = gateX2 - gateW2 - pillarS / 2;
+              const icY      = pillarH * 0.62;
+              const isNightIC = sunHour < 6 || sunHour > 20;
+              return (
+                <group position={[pillarX + pillarS / 2 + 0.008, icY, bndS - 0.008]}>
+                  {/* Panel body */}
+                  <mesh castShadow>
+                    <boxGeometry args={[0.005, 0.175, 0.120]} />
+                    <meshStandardMaterial color="#1E2028" roughness={0.45} metalness={0.55} />
+                  </mesh>
+                  {/* Speaker grille strip */}
+                  <mesh position={[0.003, 0.040, 0]}>
+                    <boxGeometry args={[0.005, 0.055, 0.095]} />
+                    <meshStandardMaterial color="#14161E" roughness={0.70} metalness={0.30} />
+                  </mesh>
+                  {/* Camera lens (small dark disc) */}
+                  <mesh position={[0.004, 0.068, 0.020]}>
+                    <cylinderGeometry args={[0.008, 0.008, 0.004, 8]} />
+                    <meshStandardMaterial color="#080A10" roughness={0.10} metalness={0.50} />
+                  </mesh>
+                  {/* Call button */}
+                  <mesh position={[0.004, -0.020, 0.020]}>
+                    <cylinderGeometry args={[0.010, 0.010, 0.006, 8]} />
+                    <meshStandardMaterial color="#005080" roughness={0.25} metalness={0.55}
+                      emissive="#004060" emissiveIntensity={isNightIC ? 1.2 : 0.08} />
+                  </mesh>
+                  {/* Keypad screen glow */}
+                  <mesh position={[0.004, -0.050, 0]}>
+                    <boxGeometry args={[0.004, 0.040, 0.070]} />
+                    <meshStandardMaterial color="#203050" roughness={0.15} metalness={0.10}
+                      emissive="#1040A0" emissiveIntensity={isNightIC ? 0.80 : 0.06} />
+                  </mesh>
+                </group>
+              );
+            })()}
             {/* Driveway paving strip (gate → building steps) */}
             {(() => {
               const dvW  = gateW2 * 2 + 0.50;
