@@ -25,7 +25,11 @@ export type RoomType =
   | "custom4"    // 自定义4
   | "custom5"    // 自定义5
   | "stair"      // 楼梯间
-  | "hallway";   // 走廊/过道
+  | "hallway"    // 走廊/过道
+  // ── 户外结构（按房间机制管理位置和尺寸，可换 GLB）──
+  | "pool"       // 泳池
+  | "terrace"    // 露台
+  | "deck";      // 木栈台
 
 export type ViewMode = "2d" | "3d" | "all" | "exterior" | "global3d" | "yard2d";
 
@@ -479,6 +483,11 @@ export const ROOM_DEFS: Record<RoomType, RoomDef> = {
   custom5:   { width: 300, depth: 300, height: 280, name: "自定义5", icon: "🔲", defaultWallColor: "#EDE8E0", defaultFloorColor: "#C8A882", hasWindow: false, windowWall: "none", isCustom: true },
   stair:     { width: 260, depth: 220, height: 280, name: "楼梯间", icon: "🪜", defaultWallColor: "#F5F0E8", defaultFloorColor: "#C8B888", hasWindow: false, windowWall: "none" },
   hallway:   { width: 120, depth: 300, height: 280, name: "走廊",   icon: "🚶", defaultWallColor: "#EDE8E0", defaultFloorColor: "#C4BAA6", hasWindow: false, windowWall: "none" },
+  // 户外结构 —— 当作 isOutdoor 房间处理（不参与室内 facade/家具/外墙等），
+  // 位置和尺寸都由用户在 floor plan 里精确控制，3D 渲染时可换 GLB
+  pool:      { width: 600, depth: 350, height: 0,   name: "泳池",   icon: "🏊", defaultWallColor: "#C8DCE8", defaultFloorColor: "#3B82F6", hasWindow: false, windowWall: "none", isOutdoor: true },
+  terrace:   { width: 500, depth: 300, height: 0,   name: "露台",   icon: "🌅", defaultWallColor: "#E0D5C0", defaultFloorColor: "#D8C8A8", hasWindow: false, windowWall: "none", isOutdoor: true },
+  deck:      { width: 400, depth: 250, height: 0,   name: "木栈台", icon: "🪵", defaultWallColor: "#A07050", defaultFloorColor: "#8B6340", hasWindow: false, windowWall: "none", isOutdoor: true },
 };
 
 // ─── Room state ────────────────────────────────────────────
@@ -493,6 +502,11 @@ export interface RoomState {
   /** Pipe/wire routing — connections between water/electrical point
    *  fixtures placed in this room. Drawn in the 2D plan view. */
   connections?: RoutingConnection[];
+  /** 户外结构房间（pool/terrace/deck 等 isOutdoor）可指定一个 GLB 资产
+   *  来替代程序化几何。例如把泳池换成自带瓷砖纹理的 GLB 模型。
+   *  字符串是 customGltfPath（参考 outdoorAssets.ts 里的 PBR 资产）。
+   *  室内房间忽略此字段。 */
+  outdoorGlb?: string;
 }
 
 /** A single routing segment between two fixture instanceIds. The kind

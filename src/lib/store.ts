@@ -64,6 +64,7 @@ export const ALL_POSSIBLE_ROOMS: RoomType[] = [
   "yard","garage","gym","cinema",
   "custom1","custom2","custom3","custom4","custom5",
   "stair","hallway",
+  "pool","terrace","deck",
 ];
 
 export const DEFAULT_ENABLED: RoomType[] = [
@@ -96,6 +97,10 @@ export const DEFAULT_ROOM_LAYOUT: Record<RoomType, { x: number; y: number }> = {
   custom5:   { x: 820,  y: 1200 },
   stair:     { x: 620,  y: 780  },
   hallway:   { x: 380,  y: 360  },
+  // 户外结构 —— 默认放在屋子东侧，用户拖动到目标位置
+  pool:      { x: 1200, y: 400  },
+  terrace:   { x: 1200, y: 800  },
+  deck:      { x: 1200, y: 1100 },
 };
 
 export const DEFAULT_ROOM_DIMENSIONS: Record<RoomType, { width: number; depth: number }> =
