@@ -11,6 +11,8 @@ import { evaluateRoom, type EvaluatedItem, type DoorWall as ClearanceDoorWall } 
 import { pointInPolygon, getEdges } from "@/lib/roomGeometry";
 
 const EMPTY_WINDOWS: never[] = [];
+import { RoomState } from "@/lib/store";
+const EMPTY_ROOM_STATE: RoomState = { materials: {}, placedItems: [] };
 
 // ─── helpers ──────────────────────────────────────────────
 
@@ -436,7 +438,7 @@ export default function FloorPlan() {
   const [selectedDoorId, setSelectedDoorId] = useState<string | null>(null);
 
   const activeRoom           = useDesignerStore((s) => s.activeRoom);
-  const roomState            = useDesignerStore((s) => s.floorPlans[s.activeFloor].rooms[activeRoom]);
+  const roomState            = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom] ?? EMPTY_ROOM_STATE);
   const selectedInstanceIds  = useDesignerStore((s) => s.selectedInstanceIds);
   const moveItem             = useDesignerStore((s) => s.moveItem);
   const rotateItem           = useDesignerStore((s) => s.rotateItem);
@@ -457,13 +459,13 @@ export default function FloorPlan() {
   const copyToClipboard      = useDesignerStore((s) => s.copyToClipboard);
   const pasteFromClipboard   = useDesignerStore((s) => s.pasteFromClipboard);
   const clipboardLen         = useDesignerStore((s) => s.clipboard.length);
-  const roomWindows     = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows[activeRoom] ?? EMPTY_WINDOWS);
+  const roomWindows     = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWindows?.[activeRoom] ?? EMPTY_WINDOWS);
   const setRoomWindows  = useDesignerStore((s) => s.setRoomWindows);
   const addWindow       = useDesignerStore((s) => s.addWindow);
   const removeWindow    = useDesignerStore((s) => s.removeWindow);
-  const doorPosCm       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorPos[activeRoom] ?? 0);
-  const hasDoor         = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomHasDoor[activeRoom] ?? true);
-  const doorWall        = useDesignerStore((s) => (s.floorPlans[s.activeFloor].roomDoorWall[activeRoom] ?? "bottom") as DoorWall);
+  const doorPosCm       = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorPos?.[activeRoom] ?? 0);
+  const hasDoor         = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomHasDoor?.[activeRoom] ?? true);
+  const doorWall        = useDesignerStore((s) => (s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "bottom") as DoorWall);
   const doorLenCm       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
   const doorHCm         = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
   const setDoorPos      = useDesignerStore((s) => s.setDoorPos);
@@ -502,7 +504,7 @@ export default function FloorPlan() {
   const locale = useLocale();
 
   // ── Use store roomDimensions (respects global plan edits) ──
-  const roomDimensions  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
+  const roomDimensions  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDimensions?.[activeRoom]);
   const roomShape          = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomShapes?.[activeRoom]);
   const setRoomShape         = useDesignerStore((s) => s.setRoomShape);
   const updateRoomShapePoint = useDesignerStore((s) => s.updateRoomShapePoint);

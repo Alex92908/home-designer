@@ -18,8 +18,10 @@ import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
+import { RoomState } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
+const EMPTY_ROOM_STATE_GC: RoomState = { materials: {}, placedItems: [] };
 import { PlacedItemMesh } from "./RoomCanvas";
 import { useT } from "@/lib/i18n";
 import type { RoofStyle } from "@/lib/types";
@@ -314,8 +316,8 @@ function RoomGroup({
 }) {
   const def = ROOM_DEFS[room];
   const t = useT();
-  const dims = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions[room]);
-  const state = useDesignerStore(s => s.floorPlans[s.activeFloor].rooms[room]);
+  const dims = useDesignerStore(s => s.floorPlans[s.activeFloor]?.roomDimensions?.[room]);
+  const state = useDesignerStore(s => s.floorPlans[s.activeFloor]?.rooms[room] ?? EMPTY_ROOM_STATE_GC);
   const shape = useDesignerStore(s => s.floorPlans[s.activeFloor].roomShapes?.[room]);
   // Read stairConfig from THIS floor (not always activeFloor) so each floor's
   // staircase reflects that floor's shape/rotation setting.

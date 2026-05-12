@@ -10,6 +10,8 @@ import { useT, useLocale, useMaterialName } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn, translateClearanceReason } from "@/locales/itemNames";
 
 const EMPTY_WINDOWS: never[] = [];
+import { RoomState } from "@/lib/store";
+const EMPTY_ROOM_STATE: RoomState = { materials: {}, placedItems: [] };
 import { formatPrice } from "@/lib/currency";
 import { evaluateRoom } from "@/lib/clearance";
 
@@ -32,7 +34,7 @@ export default function RightPanel() {
   const locale = useLocale();
 
   const activeRoom = useDesignerStore((s) => s.activeRoom);
-  const roomState = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom] ?? { materials: {}, placedItems: [] });
+  const roomState = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom] ?? EMPTY_ROOM_STATE);
   const customRoomMeta = useDesignerStore((s) => s.customRoomMeta);
   const scores = useDesignerStore((s) => s.scores);
   const totalCostRaw = useDesignerStore((s) => s.totalCost());
