@@ -1064,7 +1064,8 @@ export default function FloorPlanBuilding({
       {!insideBuilding && (() => {
         // 楼梯井位置（取 fi=0 的楼梯间，各层水平位置相同）
         const stairEntry = interiorRooms.find(r => r.isStair && r.fi === 0);
-        const slabColor  = "#E0DCD4";
+        // 层间楼板颜色：略深于外墙，产生分层阴影感（precast concrete）
+        const slabColor  = "#C8C4BC";
 
         return Array.from({ length: usedFloors - 1 }, (_, fi) => {
           const slabY = (fi + 1) * (FLOOR_H + SLAB_T) - SLAB_T / 2;
@@ -1092,10 +1093,17 @@ export default function FloorPlanBuilding({
 
           if (!stairEntry) {
             return (
-              <mesh key={`slab-${fi}`} position={[slabCX, slabY, slabCZ]} castShadow receiveShadow>
-                <boxGeometry args={[totalW, SLAB_T, totalD]} />
-                <meshStandardMaterial color={slabColor} roughness={0.85} />
-              </mesh>
+              <group key={`slab-${fi}`}>
+                <mesh position={[slabCX, slabY, slabCZ]} castShadow receiveShadow>
+                  <boxGeometry args={[totalW, SLAB_T, totalD]} />
+                  <meshStandardMaterial color={slabColor} roughness={0.85} />
+                </mesh>
+                {/* 楼板下边缘暗线（阴影缝，增加分层感）*/}
+                <mesh position={[slabCX, slabY - SLAB_T / 2 - 0.015, slabCZ]}>
+                  <boxGeometry args={[totalW + 0.01, 0.030, totalD + 0.01]} />
+                  <meshStandardMaterial color="#8A8680" roughness={0.9} />
+                </mesh>
+              </group>
             );
           }
 
@@ -1120,6 +1128,11 @@ export default function FloorPlanBuilding({
                   <meshStandardMaterial color={slabColor} roughness={0.85} />
                 </mesh>
               ))}
+              {/* 楼板下边缘暗线（阴影缝）*/}
+              <mesh position={[slabCX, slabY - SLAB_T / 2 - 0.015, slabCZ]}>
+                <boxGeometry args={[totalW + 0.01, 0.030, totalD + 0.01]} />
+                <meshStandardMaterial color="#8A8680" roughness={0.9} />
+              </mesh>
             </group>
           );
         });
@@ -1220,27 +1233,33 @@ export default function FloorPlanBuilding({
           );
         }
 
-        // ── 木饰面（侧墙）──
+        // ── 木饰面（侧墙）—— 竖向木条板（charred wood / 碳化木）──
         if (facade === "wood") {
-          // 实心底板 + 凹槽线：避免单独木条之间的透光缝隙（百叶窗效果）
-          // 每 22cm 一道凹槽，3m 层高约 12 道凹槽线
-          const grooves    = Math.max(3, Math.round(FLOOR_H / 0.22));
-          const grooveStep = FLOOR_H / grooves;   // 凹槽间距
-          const grooveH    = 0.014;               // 凹槽线高度 14mm
+          // 竖向木条板，每条 12cm 宽，4mm 缝隙（阴影效果）
+          const SLAT_W  = 0.120;   // 木条宽度
+          const SLAT_GAP = 0.008;  // 缝隙
+          const SLAT_T  = 0.048;   // 木条厚度
+          const slatStep = SLAT_W + SLAT_GAP;
+          const slatCount = Math.max(3, Math.ceil(segLen / slatStep));
+          const slatColor  = "#7A4E2A";   // 暖棕木色
+          const grooveColor2 = "#3A2010";  // 缝隙深色
           return (
             <group key={`wd-${bi}`} position={[px, yMid, pz]} rotation={rot}>
-              {/* 实心底板 */}
+              {/* 背板（保证无漏光）*/}
               <mesh castShadow receiveShadow>
-                <boxGeometry args={[segLen, FLOOR_H, 0.06]} />
-                <meshStandardMaterial color="#8B5E3C" roughness={0.75} metalness={0.0} />
+                <boxGeometry args={[segLen, FLOOR_H, 0.02]} />
+                <meshStandardMaterial color={grooveColor2} roughness={0.92} />
               </mesh>
-              {/* 水平凹槽线（略深色，凸出表面 2mm 产生阴影感） */}
-              {Array.from({ length: grooves - 1 }, (_, i) => {
-                const gy = -FLOOR_H / 2 + (i + 1) * grooveStep;
+              {/* 竖向木条 */}
+              {Array.from({ length: slatCount }, (_, si) => {
+                const sx = -segLen / 2 + SLAT_W / 2 + si * slatStep;
+                if (sx > segLen / 2) return null;
+                // 交替略深色营造自然木纹变化
+                const col = si % 3 === 1 ? "#8B5E3C" : si % 3 === 2 ? "#6E4226" : slatColor;
                 return (
-                  <mesh key={i} position={[0, gy, 0.032]} castShadow>
-                    <boxGeometry args={[segLen + 0.01, grooveH, 0.008]} />
-                    <meshStandardMaterial color="#5C3A1E" roughness={0.88} />
+                  <mesh key={si} position={[sx, 0, 0.020 + SLAT_T / 2]} castShadow>
+                    <boxGeometry args={[SLAT_W, FLOOR_H - 0.04, SLAT_T]} />
+                    <meshStandardMaterial color={col} roughness={0.82} metalness={0.0} />
                   </mesh>
                 );
               })}
