@@ -2804,6 +2804,107 @@ export default function FloorPlanBuilding({
       })()}
 
       {/* ── 5. 平屋顶（室内视角下隐藏） ── */}
+      {/* ── 5a-rain. 雨链（rain chains）— 从屋顶排水口沿东西墙面垂直下挂 ──
+               Decorative copper/steel chains; typical on Japanese-style or
+               contemporary luxury architecture. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        // Rain chain positions match the scupper locations in FlatRoof:
+        // East: [W/2 + 0.04, roofSlab + 0.05 + 0.08, D*0.15]
+        // West: [-W/2 - 0.04, roofSlab + 0.05 + 0.08, -D*0.15]
+        const chainPositions: Array<[number, number]> = [
+          [ W / 2, D * 0.15],
+          [-W / 2, -D * 0.15],
+        ];
+        const chainTop = totalH + 0.08;   // roof scupper height
+        const chainLen = chainTop;         // chain runs from roof to grade
+        const linkCount = Math.round(chainLen / 0.12);
+        const chainColor = "#7A6858";      // aged copper / patinated steel
+        return (
+          <group>
+            {chainPositions.map(([cx2, cz2], ci) => (
+              <group key={ci} position={[cx2, chainTop / 2, cz2]}>
+                {/* Main chain column (thin cylinder stand-in for chain texture) */}
+                <mesh castShadow>
+                  <cylinderGeometry args={[0.010, 0.010, chainLen, 5]} />
+                  <meshStandardMaterial color={chainColor} roughness={0.70} metalness={0.48} />
+                </mesh>
+                {/* Ring links spaced every 0.12m — visible as ring torus elements */}
+                {Array.from({ length: Math.min(linkCount, 24) }, (_, li) => {
+                  const ly = chainLen / 2 - li * (chainLen / Math.max(linkCount, 1));
+                  return (
+                    <mesh key={li} position={[0, ly, 0]}>
+                      <torusGeometry args={[0.014, 0.004, 4, 6]} />
+                      <meshStandardMaterial color={chainColor} roughness={0.62} metalness={0.52} />
+                    </mesh>
+                  );
+                })}
+                {/* Splash basin at grade — small dark dish */}
+                <mesh position={[0, -chainLen / 2 + 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <cylinderGeometry args={[0.12, 0.15, 0.08, 10]} />
+                  <meshStandardMaterial color="#4A4840" roughness={0.60} metalness={0.30} />
+                </mesh>
+              </group>
+            ))}
+          </group>
+        );
+      })()}
+
+      {/* ── 5a-stone. 东立面地层石材装饰墙板（ground-floor stone accent strip）──
+               Adds a contrasting natural stone strip (travertine-look) along
+               the east and north concrete facade at grade — a common luxury
+               exterior detail that breaks up the monolithic concrete base. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const stoneH  = 1.10;   // height of the stone strip
+        const stoneT  = 0.015;  // protrusion from concrete base
+        const stoneY  = stoneH / 2 + 0.40;  // centre Y (above granite base at 0.40)
+        const stoneColA = "#C8C0A8";  // warm travertine base
+        const stoneColB = "#B8B0A0";  // darker vein / joint
+        const jointStep = 0.55;        // vertical joint spacing
+        return (
+          <group>
+            {/* East stone strip */}
+            <mesh position={[W / 2 + stoneT / 2 + 0.12 + 0.002, stoneY, 0]} castShadow>
+              <boxGeometry args={[stoneT, stoneH, D - 0.08]} />
+              <meshStandardMaterial color={stoneColA} roughness={0.74} metalness={0.02} envMapIntensity={0.6} />
+            </mesh>
+            {/* East stone joint lines */}
+            {Array.from({ length: Math.round((D - 0.08) / jointStep) }, (_, ji) => {
+              const jz = -D / 2 + 0.04 + (ji + 1) * jointStep;
+              return (
+                <mesh key={ji} position={[W / 2 + stoneT + 0.12 + 0.003, stoneY, jz]}>
+                  <boxGeometry args={[0.002, stoneH - 0.01, 0.010]} />
+                  <meshStandardMaterial color={stoneColB} roughness={0.90} />
+                </mesh>
+              );
+            })}
+            {/* North stone strip */}
+            <mesh position={[0, stoneY, D / 2 + stoneT / 2 + 0.12 + 0.002]} castShadow>
+              <boxGeometry args={[W - 0.08, stoneH, stoneT]} />
+              <meshStandardMaterial color={stoneColA} roughness={0.74} metalness={0.02} envMapIntensity={0.6} />
+            </mesh>
+            {/* North stone joint lines */}
+            {Array.from({ length: Math.round((W - 0.08) / jointStep) }, (_, ji) => {
+              const jx = -W / 2 + 0.04 + (ji + 1) * jointStep;
+              return (
+                <mesh key={ji} position={[jx, stoneY, D / 2 + stoneT + 0.12 + 0.003]}>
+                  <boxGeometry args={[0.010, stoneH - 0.01, 0.002]} />
+                  <meshStandardMaterial color={stoneColB} roughness={0.90} />
+                </mesh>
+              );
+            })}
+            {/* Horizontal top trim — separates stone strip from concrete above */}
+            <mesh position={[W / 2 + stoneT / 2 + 0.12 + 0.002, stoneY + stoneH / 2 + 0.006, 0]}>
+              <boxGeometry args={[stoneT + 0.010, 0.012, D - 0.06]} />
+              <meshStandardMaterial color="#3A3E48" roughness={0.22} metalness={0.90} envMapIntensity={1.8} />
+            </mesh>
+            <mesh position={[0, stoneY + stoneH / 2 + 0.006, D / 2 + stoneT / 2 + 0.12 + 0.002]}>
+              <boxGeometry args={[W - 0.06, 0.012, stoneT + 0.010]} />
+              <meshStandardMaterial color="#3A3E48" roughness={0.22} metalness={0.90} envMapIntensity={1.8} />
+            </mesh>
+          </group>
+        );
+      })()}
+
       {!insideBuilding && <FlatRoof W={W} D={D} roofY={totalH} nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0} />}
 
       {/* ── 5b. 建筑立面泛光灯（夜间效果）——根据 sunHour 自动调强度 ──
