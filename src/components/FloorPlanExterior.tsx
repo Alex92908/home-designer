@@ -5691,33 +5691,33 @@ export default function FloorPlanBuilding({
               <boxGeometry args={[poolW, poolDp + deckT * 2, poolL]} />
               <meshStandardMaterial color="#2E3440" roughness={0.65} metalness={0.08} />
             </mesh>
-            {/* Pool interior — azure blue ceramic tile */}
+            {/* Pool interior — vivid azure/turquoise tile (matches reference vivid blue pool) */}
             <mesh position={[0, -poolDp / 2, 0]}>
               <boxGeometry args={[poolW, poolDp - 0.02, poolL]} />
               <meshStandardMaterial
-                color="#1E72A0"
-                emissive="#104E78"
+                color="#0E6890"
+                emissive="#084060"
                 emissiveIntensity={poolGlowI}
-                roughness={0.32}
-                metalness={0.14}
-                envMapIntensity={1.8}
+                roughness={0.28}
+                metalness={0.18}
+                envMapIntensity={2.2}
               />
             </mesh>
-            {/* Water surface — ultra-clear highly reflective */}
+            {/* Water surface — vivid turquoise-cyan, ultra-clear and highly reflective */}
             <mesh position={[0, 0.010, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={10}>
               <planeGeometry args={[poolW - 0.04, poolL - 0.04]} />
               <meshPhysicalMaterial
-                color="#3898C8"
-                transparent opacity={0.82}
+                color="#28B8CC"
+                transparent opacity={0.85}
                 depthWrite={false}
-                roughness={0.02}
-                metalness={0.08}
-                reflectivity={0.70}
-                clearcoat={0.95}
-                clearcoatRoughness={0.015}
-                envMapIntensity={5.5}
-                emissive="#1878A8"
-                emissiveIntensity={poolGlowI * 0.6}
+                roughness={0.015}
+                metalness={0.06}
+                reflectivity={0.75}
+                clearcoat={0.98}
+                clearcoatRoughness={0.012}
+                envMapIntensity={6.0}
+                emissive="#0898B0"
+                emissiveIntensity={poolGlowI * 0.55}
                 side={THREE.DoubleSide}
                 {...overlayMaterialProps(2)}
               />
