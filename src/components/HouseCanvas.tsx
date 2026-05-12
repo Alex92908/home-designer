@@ -6166,6 +6166,13 @@ export default function HouseCanvas() {
           <>
             <pointLight position={[0, floors * FLOOR_H * 0.6, -D * 1.2]} intensity={8} distance={D * 4 + W * 2} decay={1.5} color="#FFF8F0" />
             <pointLight position={[-W * 0.8, floors * FLOOR_H * 0.5, -D * 0.6]} intensity={5} distance={W * 3} decay={1.8} color="#FFF4E8" />
+            {/* Facade ground-wash uplights — dramatic upward wash on south glass curtain wall */}
+            {[-W * 0.35, 0, W * 0.35].map((lx, li) => (
+              <pointLight key={li} position={[lx, 0.2, -D / 2 - 0.6]} intensity={4.5} distance={floors * FLOOR_H + 3} decay={1.6} color="#FFF6E8" />
+            ))}
+            {/* Side facade wash — east/west edges */}
+            <pointLight position={[-W / 2 - 0.5, 0.2,  D * 0.10]} intensity={3.0} distance={floors * FLOOR_H + 2} decay={1.8} color="#FFF2E0" />
+            <pointLight position={[ W / 2 + 0.5, 0.2, -D * 0.10]} intensity={3.0} distance={floors * FLOOR_H + 2} decay={1.8} color="#FFF2E0" />
           </>
         )}
         {/* Click empty ground to deselect */}
@@ -6204,6 +6211,23 @@ export default function HouseCanvas() {
             {/* Farther background pines for depth */}
             <Tree x={-(W / 2 + 6.0)} z={ D * 0.10} type="pine" scale={1.4} />
             <Tree x={  W / 2 + 6.0}  z={ D * 0.10} type="pine" scale={1.4} />
+
+            {/* ── Box hedge borders — formal garden borders along building flanks ── */}
+            {/* West flank hedge */}
+            <mesh position={[-(W / 2 + 0.55), 0.22, D * 0.05]} castShadow receiveShadow>
+              <boxGeometry args={[0.42, 0.44, D * 0.70]} />
+              <meshStandardMaterial color="#2A5820" roughness={0.94} />
+            </mesh>
+            {/* East flank hedge */}
+            <mesh position={[W / 2 + 0.55, 0.22, D * 0.05]} castShadow receiveShadow>
+              <boxGeometry args={[0.42, 0.44, D * 0.70]} />
+              <meshStandardMaterial color="#316428" roughness={0.92} />
+            </mesh>
+            {/* North (back) hedge strip */}
+            <mesh position={[0, 0.22, D / 2 + 0.55]} castShadow receiveShadow>
+              <boxGeometry args={[W * 0.80, 0.44, 0.42]} />
+              <meshStandardMaterial color="#2C5E24" roughness={0.93} />
+            </mesh>
 
             {/* ── Distant tree horizon ring — hides ground-plane edge ── */}
             <DistantTreeRing radius={Math.max(W, D) * 4.0 + 22} count={52} />
