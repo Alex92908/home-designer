@@ -3402,10 +3402,84 @@ export default function FloorPlanBuilding({
               );
             })}
             {/* Driveway paving strip (gate → building steps) */}
-            <mesh position={[gateX2, 0.003, (bndS + (-D / 2 - 3.0)) / 2]} receiveShadow>
-              <boxGeometry args={[gateW2 * 2 + 0.50, 0.006, Math.abs(bndS - (-D / 2 - 3.0))]} />
-              <meshStandardMaterial color="#C4BCA8" roughness={0.82} metalness={0.02} />
-            </mesh>
+            {(() => {
+              const dvW  = gateW2 * 2 + 0.50;
+              const dvL  = Math.abs(bndS - (-D / 2 - 3.0));
+              const dvZ  = (bndS + (-D / 2 - 3.0)) / 2;
+              const jointStep = 0.65;   // paver module
+              const nH = Math.round(dvL / jointStep);
+              const nV = Math.round(dvW / jointStep);
+              return (
+                <group>
+                  {/* Base slab */}
+                  <mesh position={[gateX2, 0.003, dvZ]} receiveShadow>
+                    <boxGeometry args={[dvW, 0.006, dvL]} />
+                    <meshStandardMaterial color="#C4BCA8" roughness={0.82} metalness={0.02} />
+                  </mesh>
+                  {/* Horizontal joint lines */}
+                  {Array.from({ length: nH - 1 }, (_, ji) => {
+                    const jz = bndS + (ji + 1) * jointStep;
+                    return (
+                      <mesh key={`hjt-${ji}`} position={[gateX2, 0.007, jz]}>
+                        <boxGeometry args={[dvW, 0.003, 0.012]} />
+                        <meshStandardMaterial color="#A8A098" roughness={0.90} />
+                      </mesh>
+                    );
+                  })}
+                  {/* Vertical joint lines (alternating offset like running bond) */}
+                  {Array.from({ length: nV - 1 }, (_, ji) => {
+                    const jx = gateX2 - dvW / 2 + (ji + 1) * jointStep;
+                    return (
+                      <mesh key={`vjt-${ji}`} position={[jx, 0.007, dvZ]}>
+                        <boxGeometry args={[0.012, 0.003, dvL]} />
+                        <meshStandardMaterial color="#A8A098" roughness={0.90} />
+                      </mesh>
+                    );
+                  })}
+                  {/* Centre dividing line — emphasizes two-lane approach */}
+                  <mesh position={[gateX2, 0.009, dvZ]}>
+                    <boxGeometry args={[0.025, 0.003, dvL - 0.20]} />
+                    <meshStandardMaterial color="#8A8880" roughness={0.86} />
+                  </mesh>
+                </group>
+              );
+            })()}
+            {/* Gate intercom panel — on east-side pillar inner face */}
+            {(() => {
+              const icPillarX = gateX2 + gateW2 + pillarS / 2;
+              const icY       = wallH2 * 0.52;
+              return (
+                <group position={[icPillarX - pillarS / 2 - 0.022, icY, bndS]}>
+                  {/* Intercom housing — brushed stainless rectangle */}
+                  <mesh>
+                    <boxGeometry args={[0.014, 0.18, 0.11]} />
+                    <meshStandardMaterial color="#8A9BA8" roughness={0.22} metalness={0.88} envMapIntensity={2.0} />
+                  </mesh>
+                  {/* Speaker grille — small dark rectangle */}
+                  <mesh position={[0.008, 0.035, 0]}>
+                    <boxGeometry args={[0.004, 0.055, 0.068]} />
+                    <meshStandardMaterial color="#2A2E38" roughness={0.60} metalness={0.40} />
+                  </mesh>
+                  {/* Button × 2 — call + unlock */}
+                  {([0.028, -0.022] as number[]).map((by, bti) => (
+                    <mesh key={bti} position={[0.008, by, 0.020]}>
+                      <boxGeometry args={[0.004, 0.020, 0.020]} />
+                      <meshStandardMaterial
+                        color={bti === 0 ? "#3A8AFF" : "#EEEEEC"}
+                        emissive={bti === 0 ? "#2070FF" : "#CCCCCA"}
+                        emissiveIntensity={0.6}
+                        roughness={0.30}
+                      />
+                    </mesh>
+                  ))}
+                  {/* LED status dot */}
+                  <mesh position={[0.008, -0.062, 0.016]}>
+                    <sphereGeometry args={[0.005, 6, 4]} />
+                    <meshStandardMaterial color="#20FF60" emissive="#10EE50" emissiveIntensity={1.5} />
+                  </mesh>
+                </group>
+              );
+            })()}
           </group>
         );
       })()}
