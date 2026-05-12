@@ -7796,13 +7796,16 @@ export default function FloorPlanBuilding({
         const deckBW2 = 2.80;
         const deckT2  = 0.12;
         const pz2     = -D / 2 - deckBW2 - poolL2 / 2 - 0.80;
-        const deckEdgeN = pz2 - poolL2 / 2 - deckBW2; // north (building-side) edge of deck
+        // Building-side deck edge (closer to z=0 / closer to building)
+        // Pool center is at pz2 (negative). Building side = pz2 + poolL/2 (less negative).
+        // Deck extends deckBW2 further toward building from pool's building-side edge.
+        const deckEdgeBldg = pz2 + poolL2 / 2 + deckBW2;  // building-side edge of deck
         const loungerColor = "#EDE6D2";
         const loungerMetal = "#B0B8C4";
         // 5 loungers between pool and building, in a row parallel to facade
         const nLoungers = 5;
         const loungerSpacing = Math.min(poolW2 * 0.70 / nLoungers, 1.90);
-        const loungerRowZ = deckEdgeN + 1.20;   // 1.2m from north deck edge, on the deck
+        const loungerRowZ = deckEdgeBldg - 1.20;   // 1.2m toward pool from building-side deck edge
         const loungerRowX0 = -(nLoungers - 1) * loungerSpacing / 2;
         return (
           <group>
