@@ -3532,6 +3532,85 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5e-2. 旗杆（flagpole, NE corner of boundary）──
+           Stainless steel tapered pole, 8m tall. Flag represented as a
+           flat rectangle with subtle drape offset at the fly end. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const isNightF  = sunHour < 6 || sunHour > 20;
+        const flagX     =  W / 2 + 3.80;   // near NE corner
+        const flagZ     =  D / 2 + 2.60;
+        const poleH     = 8.0;
+        // Flag dimensions
+        const flagW     = 1.50;
+        const flagH     = 1.00;
+        const flagY     = poleH - flagH / 2 - 0.10;
+        // Halyard line — thin vertical strip
+        const hCol      = "#D0D4D8";
+        // Flag color — red with small yellow stars (simplified: red body + yellow corner)
+        const flagEmi   = isNightF ? 0.08 : 0.0;
+        return (
+          <group position={[flagX, 0, flagZ]}>
+            {/* Pole — tapered stainless cylinder */}
+            <mesh position={[0, poleH / 2, 0]} castShadow>
+              <cylinderGeometry args={[0.025, 0.042, poleH, 8]} />
+              <meshStandardMaterial color="#C0C8D0" roughness={0.18} metalness={0.92} envMapIntensity={2.5} />
+            </mesh>
+            {/* Base flange disc */}
+            <mesh position={[0, 0.06, 0]}>
+              <cylinderGeometry args={[0.14, 0.14, 0.12, 8]} />
+              <meshStandardMaterial color="#9AA0A8" roughness={0.30} metalness={0.82} />
+            </mesh>
+            {/* Ball finial at top */}
+            <mesh position={[0, poleH + 0.05, 0]}>
+              <sphereGeometry args={[0.055, 8, 6]} />
+              <meshStandardMaterial color="#D4D8E0" roughness={0.14} metalness={0.94} envMapIntensity={3.0} />
+            </mesh>
+            {/* Halyard line */}
+            <mesh position={[0.032, poleH / 2, 0]}>
+              <boxGeometry args={[0.004, poleH, 0.004]} />
+              <meshStandardMaterial color={hCol} roughness={0.55} />
+            </mesh>
+            {/* Flag body — red field */}
+            <mesh position={[flagW / 2 + 0.04, flagY, 0.012]}>
+              <boxGeometry args={[flagW, flagH, 0.008]} />
+              <meshStandardMaterial
+                color="#DE2020"
+                emissive="#CC1010"
+                emissiveIntensity={flagEmi}
+                roughness={0.80}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+            {/* Flag — yellow canton (upper left quarter) */}
+            <mesh position={[0.04 + flagW * 0.18, flagY + flagH * 0.20, 0.018]}>
+              <boxGeometry args={[flagW * 0.38, flagH * 0.52, 0.008]} />
+              <meshStandardMaterial color="#FFD040" roughness={0.82} side={THREE.DoubleSide} />
+            </mesh>
+            {/* Large star centre */}
+            <mesh position={[0.04 + flagW * 0.12, flagY + flagH * 0.20, 0.024]}>
+              <sphereGeometry args={[0.075, 6, 4]} />
+              <meshStandardMaterial color="#FFD800" roughness={0.75} />
+            </mesh>
+            {/* 4 small arc stars (simplified spheres) */}
+            {([
+              [0.255, 0.32],  // top star
+              [0.315, 0.20],  // right star
+              [0.255, 0.08],  // bottom star
+              [0.195, 0.20],  // left star
+            ] as [number,number][]).map(([sxF, syF], si) => (
+              <mesh key={si} position={[0.04 + sxF, flagY - flagH / 2 + flagH * syF + flagH * 0.02, 0.024]}>
+                <sphereGeometry args={[0.035, 5, 4]} />
+                <meshStandardMaterial color="#FFD800" roughness={0.75} />
+              </mesh>
+            ))}
+            {/* Night ground-spot for pole base */}
+            {isNightF && (
+              <pointLight position={[0, 1.0, 0]} intensity={1.5} distance={4.0} decay={2.0} color="#FFF4E0" />
+            )}
+          </group>
+        );
+      })()}
+
       {/* ── 5f. 庭院绿篱（hedge rows inside boundary wall）── */}
       {!insideBuilding && isGlassVilla && (() => {
         // Boxwood-style clipped hedge rows along east/west inner boundary
