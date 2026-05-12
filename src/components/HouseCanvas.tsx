@@ -6123,6 +6123,26 @@ export default function HouseCanvas() {
             <meshStandardMaterial color="#D8D0BC" roughness={0.88} metalness={0.0} />
           </mesh>
         )}
+        {/* ── Floor-plan-driven: curated landscape trees (cypress + olive) ── */}
+        {_buildingType === "floor-plan-driven" && !insideBuilding && (
+          <>
+            {/* Flanking cypresses — formal Mediterranean sentinels at east & west */}
+            <Tree x={-(W / 2 + 2.2)} z={-D * 0.20} type="cypress" scale={1.3} />
+            <Tree x={-(W / 2 + 2.8)} z={ D * 0.25} type="cypress" scale={1.1} />
+            <Tree x={  W / 2 + 2.2}  z={-D * 0.20} type="cypress" scale={1.2} />
+            <Tree x={  W / 2 + 2.8}  z={ D * 0.25} type="cypress" scale={1.0} />
+            {/* Olive trees — silvery foliage behind building (north side) */}
+            <Tree x={-W * 0.28}       z={ D / 2 + 3.2} type="olive"   scale={1.0} />
+            <Tree x={ W * 0.28}       z={ D / 2 + 3.2} type="olive"   scale={1.15} />
+            <Tree x={0}               z={ D / 2 + 6.0} type="olive"   scale={1.3} />
+            {/* Topiary spheres flanking the south terrace (pool side) */}
+            <Tree x={-(W * 0.35 + 1.2)} z={-(D / 2 + 1.0)} type="topiary" scale={0.85} />
+            <Tree x={  W * 0.35 + 1.2}  z={-(D / 2 + 1.0)} type="topiary" scale={0.85} />
+            {/* Farther background pines for depth */}
+            <Tree x={-(W / 2 + 6.0)} z={ D * 0.10} type="pine" scale={1.4} />
+            <Tree x={  W / 2 + 6.0}  z={ D * 0.10} type="pine" scale={1.4} />
+          </>
+        )}
         <HouseBody
           W={W} D={D} settings={exterior}
           insideBuilding={insideBuilding} wallXray={wallXray}
