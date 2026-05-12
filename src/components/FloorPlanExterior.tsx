@@ -463,15 +463,28 @@ function ConcreteFacade({
       })}
 
       {/* ── 窗洞 ── */}
-      {windows.map((w, wi) => (
+      {windows.map((w, wi) => {
+        // Per-window deterministic glow style:
+        // 70% warm amber (bedroom/living), 18% cool blue-white (bathroom LED),
+        // 12% dark / off (unoccupied / blackout blind)
+        const glowRand = panelBlindHash(wi * 11 + 3, wi + 7);
+        const isWarm  = glowRand < 0.70;
+        const isCool  = glowRand < 0.88 && !isWarm;  // 70-88 range = cool
+        // isOff = glowRand >= 0.88 (12%)
+        const litMult = isWarm ? 1.0 : isCool ? 0.80 : 0.0;
+        const glowColor  = isWarm ? "#F4D890" : "#B8E4FF";
+        const bgColor    = isWarm ? "#F5E8C8" : isCool ? "#E8F4FF" : "#161A20";
+        const glassGlow  = isWarm ? "#F4C860" : "#A0D4F0";
+        const glassColor = windowGlow > 0.5 ? (isWarm ? "#D8C8A0" : isCool ? "#B8D8F0" : "#B8D4E8") : "#B8D4E8";
+        return (
         <group key={`ww-${wi}`} position={[w.localX, -height / 2 + w.winSill + w.winH / 2, 0]}>
-          {/* 室内衬底 — 白天深邃，夜间暖色发光（模拟室内灯光） */}
+          {/* 室内衬底 — 白天深邃，夜间按房间类型发光 */}
           <mesh position={[0, 0, -0.04]}>
             <boxGeometry args={[w.winLen - 0.02, w.winH - 0.02, 0.10]} />
             <meshStandardMaterial
-              color={windowGlow > 0.5 ? "#F5E8C8" : "#161A20"}
-              emissive={windowGlow > 0.5 ? "#F4D890" : "#000000"}
-              emissiveIntensity={windowGlow > 0.5 ? windowGlow * 0.95 : 0}
+              color={windowGlow > 0.5 ? bgColor : "#161A20"}
+              emissive={windowGlow > 0.5 && litMult > 0 ? glowColor : "#000000"}
+              emissiveIntensity={windowGlow > 0.5 ? windowGlow * 0.90 * litMult : 0}
               roughness={0.9}
             />
           </mesh>
@@ -479,12 +492,12 @@ function ConcreteFacade({
           <mesh position={[0, 0, 0.018]}>
             <planeGeometry args={[w.winLen - 0.04, w.winH - 0.04]} />
             <meshPhysicalMaterial
-              color={windowGlow > 0.5 ? "#D8C8A0" : "#B8D4E8"}
+              color={glassColor}
               transmission={windowGlow > 0.5 ? 0.22 : 0.35}
               roughness={0.04} metalness={0.08}
               transparent opacity={windowGlow > 0.5 ? 0.82 : 0.72}
-              emissive={windowGlow > 0.5 ? "#F4C860" : "#000000"}
-              emissiveIntensity={windowGlow > 0.5 ? windowGlow * 0.28 : 0}
+              emissive={windowGlow > 0.5 && litMult > 0 ? glassGlow : "#000000"}
+              emissiveIntensity={windowGlow > 0.5 ? windowGlow * 0.24 * litMult : 0}
               side={THREE.FrontSide}
             />
           </mesh>
@@ -550,7 +563,8 @@ function ConcreteFacade({
             </group>
           )}
         </group>
-      ))}
+        );
+      })}
     </group>
   );
 }
