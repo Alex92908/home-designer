@@ -403,16 +403,28 @@ function ConcreteFacade({
               <meshStandardMaterial color="#2E3540" roughness={0.35} metalness={0.62} />
             </mesh>
           ))}
-          {/* 窗台板（concrete sill ledge — casts shadow below window） */}
+          {/* 窗台板 + 滴水线（drip-edge metal cap on sill） */}
           <mesh position={[0, -w.winH / 2 - 0.040, 0.055]} castShadow>
             <boxGeometry args={[w.winLen + 0.10, 0.065, 0.130]} />
             <meshStandardMaterial color="#B8B4AC" roughness={0.86} metalness={0.02} />
           </mesh>
-          {/* 窗楣（concrete lintel above window — add shadow depth） */}
+          {/* Drip-edge metal cap on sill face */}
+          <mesh position={[0, -w.winH / 2 - 0.048, 0.116]}>
+            <boxGeometry args={[w.winLen + 0.12, 0.010, 0.010]} />
+            <meshStandardMaterial color="#2A2E38" roughness={0.20} metalness={0.92} envMapIntensity={1.8} />
+          </mesh>
+          {/* 窗楣（concrete lintel above window） */}
           <mesh position={[0, w.winH / 2 + 0.030, 0.050]}>
             <boxGeometry args={[w.winLen + 0.04, 0.048, 0.095]} />
             <meshStandardMaterial color="#C0BCB4" roughness={0.88} metalness={0.01} />
           </mesh>
+          {/* 侧边窗口竖向内衬（jamb reveals — adds visual depth to the reveal） */}
+          {([-w.winLen / 2, w.winLen / 2] as number[]).map((jx, ji) => (
+            <mesh key={`jamb-${ji}`} position={[jx + (ji === 0 ? 0.040 : -0.040), 0, -0.025]}>
+              <boxGeometry args={[0.080, w.winH - 0.04, 0.090]} />
+              <meshStandardMaterial color="#BCBAB2" roughness={0.90} metalness={0.01} />
+            </mesh>
+          ))}
         </group>
       ))}
     </group>
@@ -528,6 +540,43 @@ function FlatRoof({ W, D, roofY }: { W: number; D: number; roofY: number }) {
           <meshStandardMaterial color="#2E3240" roughness={0.22} metalness={0.90} envMapIntensity={2.0} />
         </mesh>
       ))}
+      {/* ── 线性天窗（linear skylight）— 南向采光，钢框 + 夹胶玻璃 ── */}
+      {(() => {
+        const slW = Math.min(W * 0.45, 5.0);  // skylight width
+        const slD = 0.90;                       // skylight depth (north-south)
+        const slY = roofSlab + 0.055;          // sits on roof slab
+        const slZ = -D * 0.18;                 // south-leaning position
+        return (
+          <group position={[0, slY, slZ]}>
+            {/* Frame curb — dark aluminum channel */}
+            <mesh position={[0, 0.045, 0]} castShadow>
+              <boxGeometry args={[slW + 0.06, 0.09, slD + 0.06]} />
+              <meshStandardMaterial color="#1E2028" roughness={0.20} metalness={0.92} envMapIntensity={2.2} />
+            </mesh>
+            {/* Glass infill — laminated glass, slight blue-green tint */}
+            <mesh position={[0, 0.094, 0]}>
+              <boxGeometry args={[slW - 0.02, 0.012, slD - 0.02]} />
+              <meshStandardMaterial
+                color="#AACCD8"
+                transparent opacity={0.58}
+                roughness={0.04} metalness={0.06}
+                envMapIntensity={3.5}
+                emissive="#60B0C8" emissiveIntensity={0.06}
+              />
+            </mesh>
+            {/* Interior glow — simulates light shaft from below */}
+            <pointLight position={[0, -0.30, 0]} intensity={2.0} distance={4.0} decay={2.0} color="#D8F0FF" />
+            {/* Longitudinal mullion dividers (3 sections) */}
+            {([-slW * 0.28, 0, slW * 0.28] as number[]).map((mx, mi) => (
+              <mesh key={mi} position={[mx, 0.094, 0]}>
+                <boxGeometry args={[0.028, 0.016, slD - 0.02]} />
+                <meshStandardMaterial color="#1E2028" roughness={0.18} metalness={0.94} envMapIntensity={2.0} />
+              </mesh>
+            ))}
+          </group>
+        );
+      })()}
+
       {/* ── 屋顶设备箱（机房/新风系统，增加细节感）── */}
       <mesh position={[-W * 0.28, roofSlab + 0.35, D * 0.18]} castShadow>
         <boxGeometry args={[1.40, 0.70, 0.90]} />
