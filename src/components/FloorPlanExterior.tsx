@@ -1566,32 +1566,75 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {/* ── 外墙壁灯（南立面）—— 每层 2 盏，对称布置 ── */}
-      {!insideBuilding && isGlassVilla && Array.from({ length: usedFloors }, (_, fi) => {
-        const wallY  = fi * (FLOOR_H + SLAB_T) + 2.2;  // 灯安装高度（距楼层地面2.2m）
-        const wallZ  = -D / 2 - 0.18;   // 紧贴南立面
-        const lampX1 = -W * 0.28;
-        const lampX2 =  W * 0.28;
-        const sconceColor = "#E8E0C0";
-        const lightIntensity = 2.5;
-        const lightDist = 4.0;
-        return [lampX1, lampX2].map((lx, li) => (
-          <group key={`sconce-${fi}-${li}`} position={[lx, wallY, wallZ]}>
-            {/* 壁灯托架（细矩形）*/}
-            <mesh>
-              <boxGeometry args={[0.06, 0.06, 0.14]} />
-              <meshStandardMaterial color="#282830" roughness={0.30} metalness={0.88} />
-            </mesh>
-            {/* 灯头（发光方盒）*/}
-            <mesh position={[0, 0, -0.10]}>
-              <boxGeometry args={[0.10, 0.10, 0.08]} />
-              <meshStandardMaterial color={sconceColor} emissive="#FFE4A0" emissiveIntensity={2.8} roughness={0.40} />
-            </mesh>
-            {/* 点光源 */}
-            <pointLight position={[0, -0.05, -0.22]} intensity={lightIntensity} distance={lightDist} decay={2} color="#FFF0D0" />
-          </group>
-        ));
-      })}
+      {/* ── 外墙壁灯（南立面）—— 每层 2 盏，对称布置，随时间调光 ── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const isNight2 = sunHour < 6 || sunHour > 20;
+        const isDusk2  = !isNight2 && (sunHour < 8 || sunHour > 18);
+        // Emissive and point light intensity scaled by time of day
+        const sconceEmi  = isNight2 ? 3.8 : isDusk2 ? 2.0 : 0.6;
+        const lightInt   = isNight2 ? 4.0 : isDusk2 ? 2.0 : 0.0;
+        const lightDist  = 5.0;
+        const wallZ = -D / 2 - 0.18;
+        return Array.from({ length: usedFloors }, (_, fi) => {
+          const wallY  = fi * (FLOOR_H + SLAB_T) + 2.2;
+          return [-W * 0.28, W * 0.28].map((lx, li) => (
+            <group key={`sconce-${fi}-${li}`} position={[lx, wallY, wallZ]}>
+              {/* 壁灯托架（细矩形）*/}
+              <mesh>
+                <boxGeometry args={[0.06, 0.06, 0.14]} />
+                <meshStandardMaterial color="#282830" roughness={0.30} metalness={0.88} />
+              </mesh>
+              {/* 灯头（发光方盒）*/}
+              <mesh position={[0, 0, -0.10]}>
+                <boxGeometry args={[0.10, 0.10, 0.08]} />
+                <meshStandardMaterial color="#E8E0C0" emissive="#FFE4A0" emissiveIntensity={sconceEmi} roughness={0.40} />
+              </mesh>
+              {/* 点光源（夜间/黄昏才开启）*/}
+              {lightInt > 0 && (
+                <pointLight position={[0, -0.05, -0.22]} intensity={lightInt} distance={lightDist} decay={2} color="#FFF0D0" />
+              )}
+            </group>
+          ));
+        });
+      })()}
+
+      {/* ── 4a-extra. 全幅铝合金水平腰线（每层交接处）—— 统一立面语言 ──
+               Modern curtain-wall buildings use continuous horizontal
+               aluminum spandrel bands at each floor plate. This strip
+               runs full width across east + south + west faces. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bandH  = 0.060;   // band height
+        const bandT  = 0.055;   // band protrusion from wall face
+        const bandColor = "#28303C";
+        // Positions: at each inter-floor level (top of each floor)
+        return Array.from({ length: usedFloors - 1 }, (_, fi) => {
+          const bandY = (fi + 1) * (FLOOR_H + SLAB_T) - SLAB_T / 2;
+          return (
+            <group key={`band-${fi}`}>
+              {/* South face band */}
+              <mesh position={[0, bandY, -D / 2 - bandT / 2 - 0.002]}>
+                <boxGeometry args={[W + 0.004, bandH, bandT]} />
+                <meshStandardMaterial color={bandColor} roughness={0.20} metalness={0.90} envMapIntensity={2.0} />
+              </mesh>
+              {/* East face band */}
+              <mesh position={[W / 2 + bandT / 2 + 0.002, bandY, 0]}>
+                <boxGeometry args={[bandT, bandH, D + 0.004]} />
+                <meshStandardMaterial color={bandColor} roughness={0.20} metalness={0.90} envMapIntensity={2.0} />
+              </mesh>
+              {/* West face band */}
+              <mesh position={[-W / 2 - bandT / 2 - 0.002, bandY, 0]}>
+                <boxGeometry args={[bandT, bandH, D + 0.004]} />
+                <meshStandardMaterial color={bandColor} roughness={0.20} metalness={0.90} envMapIntensity={2.0} />
+              </mesh>
+              {/* North face band */}
+              <mesh position={[0, bandY, D / 2 + bandT / 2 + 0.002]}>
+                <boxGeometry args={[W + 0.004, bandH, bandT]} />
+                <meshStandardMaterial color={bandColor} roughness={0.20} metalness={0.90} envMapIntensity={2.0} />
+              </mesh>
+            </group>
+          );
+        });
+      })()}
 
       {/* ── 外立面转角柱（4 角）— 黑色阳极氧化铝方柱，给建筑立面明确边界，
               现代玻璃幕墙建筑标配转角细节 ── */}
