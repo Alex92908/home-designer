@@ -5852,6 +5852,56 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5h-2. 户外厨房吧台凳（outdoor kitchen bar stools）──
+           3 bar stools facing the kitchen counter for al-fresco dining.
+           Dark steel frame, white leather seat pad. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const kitX2 = W / 2 + 0.85;
+        const kitZ2 = D / 2 - 1.80;
+        // Bar stools positioned 0.72m in front of kitchen counter
+        // Kitchen is rotated -PI/2, so "in front" = positive X from kitchen centre
+        return (
+          <group>
+            {[-0.65, 0, 0.65].map((offset, si) => {
+              // Transform: kitchen rotated -90°, so stool Z offset becomes X offset in world
+              const sX = kitX2 + 0.72;
+              const sZ = kitZ2 + offset;
+              return (
+                <group key={si} position={[sX, 0, sZ]}>
+                  {/* Seat cushion */}
+                  <mesh position={[0, 0.76, 0]} castShadow>
+                    <cylinderGeometry args={[0.18, 0.18, 0.040, 10]} />
+                    <meshStandardMaterial color="#EEEAE4" roughness={0.72} metalness={0.04} />
+                  </mesh>
+                  {/* Seat frame ring */}
+                  <mesh position={[0, 0.74, 0]}>
+                    <torusGeometry args={[0.18, 0.010, 6, 10]} />
+                    <meshStandardMaterial color="#484E5C" roughness={0.30} metalness={0.72} envMapIntensity={1.6} />
+                  </mesh>
+                  {/* Pedestal stem */}
+                  <mesh position={[0, 0.38, 0]} castShadow>
+                    <cylinderGeometry args={[0.022, 0.038, 0.74, 6]} />
+                    <meshStandardMaterial color="#484E5C" roughness={0.32} metalness={0.70} envMapIntensity={1.4} />
+                  </mesh>
+                  {/* Base cross */}
+                  {[0, Math.PI / 2].map((ra, ri) => (
+                    <mesh key={ri} position={[0, 0.022, 0]} rotation={[0, ra, 0]}>
+                      <boxGeometry args={[0.36, 0.018, 0.040]} />
+                      <meshStandardMaterial color="#383C44" roughness={0.40} metalness={0.65} />
+                    </mesh>
+                  ))}
+                  {/* Footrest ring */}
+                  <mesh position={[0, 0.38, 0]}>
+                    <torusGeometry args={[0.12, 0.008, 5, 10]} />
+                    <meshStandardMaterial color="#484E5C" roughness={0.32} metalness={0.68} />
+                  </mesh>
+                </group>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5i. 泳池边室外淋浴（outdoor shower post near pool）── */}
       {!insideBuilding && isGlassVilla && (() => {
         const poolW3 = Math.min(W * 0.72, 10.0);
