@@ -2797,6 +2797,249 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5c. 游泳池（outdoor swimming pool, south yard）── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const poolW  = Math.min(W * 0.72, 10.0);  // pool width E-W
+        const poolL  = 4.80;                        // pool length N-S
+        const poolDp = 0.55;                        // pool depth below grade
+        const pz     = -D / 2 - 5.80;              // south yard, clear of steps
+        const deckBW = 0.52;                        // deck border width
+        const deckT  = 0.09;                        // deck slab thickness
+        const isNightP = sunHour < 6 || sunHour > 20;
+        const isDuskP  = !isNightP && (sunHour < 8 || sunHour > 18);
+        const poolGlowI = isNightP ? 2.2 : isDuskP ? 1.0 : 0.06;
+        return (
+          <group position={[0, 0, pz]}>
+            {/* Pool shell — dark blue-grey rendered concrete */}
+            <mesh position={[0, -poolDp / 2 - deckT, 0]} receiveShadow>
+              <boxGeometry args={[poolW + deckBW * 2, poolDp + deckT * 2, poolL + deckBW * 2]} />
+              <meshStandardMaterial color="#404850" roughness={0.70} metalness={0.08} />
+            </mesh>
+            {/* Pool interior tile — azure mosaic blue */}
+            <mesh position={[0, -poolDp / 2, 0]}>
+              <boxGeometry args={[poolW, poolDp - 0.02, poolL]} />
+              <meshStandardMaterial
+                color="#2878A0"
+                emissive="#204E70"
+                emissiveIntensity={poolGlowI}
+                roughness={0.35}
+                metalness={0.10}
+              />
+            </mesh>
+            {/* Water surface — semi-transparent rippled */}
+            <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={10}>
+              <planeGeometry args={[poolW, poolL]} />
+              <meshStandardMaterial
+                color="#3090C0"
+                transparent opacity={0.78}
+                depthWrite={false}
+                roughness={0.04}
+                metalness={0.12}
+                envMapIntensity={4.5}
+                side={THREE.DoubleSide}
+                {...overlayMaterialProps(2)}
+              />
+            </mesh>
+            {/* Pool deck — travertine pale stone on all 4 sides */}
+            {([
+              [0,                      poolL / 2 + deckBW / 2,  poolW + deckBW * 2, deckBW],
+              [0,                     -(poolL / 2 + deckBW / 2), poolW + deckBW * 2, deckBW],
+              [ poolW / 2 + deckBW / 2, 0,                       deckBW,            poolL],
+              [-(poolW / 2 + deckBW / 2), 0,                     deckBW,            poolL],
+            ] as [number, number, number, number][]).map(([dx, dz, dw, dd], di) => (
+              <mesh key={di} position={[dx, deckT / 2, dz]} receiveShadow>
+                <boxGeometry args={[dw, deckT, dd]} />
+                <meshStandardMaterial color="#D8D0BC" roughness={0.74} metalness={0.04} />
+              </mesh>
+            ))}
+            {/* Underwater night glow */}
+            {isNightP && (
+              <pointLight position={[0, -0.20, 0]} intensity={poolGlowI * 3.0} distance={poolW * 1.4} decay={1.6} color="#40C0F0" castShadow={false} />
+            )}
+            {/* Pool ladder — south-east corner, chrome steel */}
+            <group position={[poolW / 2 - 0.32, 0, poolL / 2 - 0.24]}>
+              {([-0.20, 0.20] as number[]).map((hx, hi) => (
+                <mesh key={hi} position={[hx, -poolDp / 2, 0]}>
+                  <cylinderGeometry args={[0.014, 0.014, poolDp + 0.04, 6]} />
+                  <meshStandardMaterial color="#C4CCD4" roughness={0.18} metalness={0.90} />
+                </mesh>
+              ))}
+              {[-0.14, -0.28, -0.42].map((ry, ri) => (
+                <mesh key={ri} position={[0, ry, 0]} rotation={[0, 0, Math.PI / 2]}>
+                  <cylinderGeometry args={[0.011, 0.011, 0.38, 6]} />
+                  <meshStandardMaterial color="#B8C2CA" roughness={0.20} metalness={0.88} />
+                </mesh>
+              ))}
+            </group>
+          </group>
+        );
+      })()}
+
+      {/* ── 5d. 场地边界矮墙 + 入口大门 ── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const bndN   =  D / 2 + 3.20;    // north boundary Z
+        const bndS   = -D / 2 - 11.50;   // south boundary Z (beyond pool)
+        const bndE   =  W / 2 + 4.50;    // east boundary X
+        const bndW   = -W / 2 - 4.50;    // west boundary X
+        const wallH2 = 0.88;             // wall height
+        const wallT2 = 0.18;             // wall thickness
+        const wallY2 = wallH2 / 2;
+        const wCol   = "#D8D4CC";        // rendered plaster / light concrete
+        const capCol = "#484C58";        // dark aluminum cap flashing
+        const gateW2 = Math.min(W * 0.30, 3.8);  // half-width of gate opening
+        const gateX2 = 0;
+        const pillarS = 0.28;            // pillar square cross-section
+        const pillarH = wallH2 + 0.52;  // pillars taller than wall
+        const isNightG = sunHour < 6 || sunHour > 20;
+        const isDuskG  = !isNightG && (sunHour < 8 || sunHour > 18);
+        const pillLI   = isNightG ? 3.0 : isDuskG ? 1.5 : 0.2;
+
+        return (
+          <group>
+            {/* South wall — west half (gateX2 - gateW2 to bndW) */}
+            <mesh position={[(bndW + gateX2 - gateW2) / 2, wallY2, bndS]} castShadow receiveShadow>
+              <boxGeometry args={[Math.abs(bndW - (gateX2 - gateW2)), wallH2, wallT2]} />
+              <meshStandardMaterial color={wCol} roughness={0.84} metalness={0.01} />
+            </mesh>
+            {/* South wall — east half (gateX2 + gateW2 to bndE) */}
+            <mesh position={[(bndE + gateX2 + gateW2) / 2, wallY2, bndS]} castShadow receiveShadow>
+              <boxGeometry args={[Math.abs(bndE - (gateX2 + gateW2)), wallH2, wallT2]} />
+              <meshStandardMaterial color={wCol} roughness={0.84} metalness={0.01} />
+            </mesh>
+            {/* North wall */}
+            <mesh position={[0, wallY2, bndN]} castShadow receiveShadow>
+              <boxGeometry args={[bndE - bndW, wallH2, wallT2]} />
+              <meshStandardMaterial color={wCol} roughness={0.84} metalness={0.01} />
+            </mesh>
+            {/* East wall */}
+            <mesh position={[bndE, wallY2, (bndN + bndS) / 2]} castShadow receiveShadow>
+              <boxGeometry args={[wallT2, wallH2, bndN - bndS]} />
+              <meshStandardMaterial color={wCol} roughness={0.84} metalness={0.01} />
+            </mesh>
+            {/* West wall */}
+            <mesh position={[bndW, wallY2, (bndN + bndS) / 2]} castShadow receiveShadow>
+              <boxGeometry args={[wallT2, wallH2, bndN - bndS]} />
+              <meshStandardMaterial color={wCol} roughness={0.84} metalness={0.01} />
+            </mesh>
+            {/* Cap flashing — south, north, east, west */}
+            {([
+              [(bndW + gateX2 - gateW2) / 2, bndS, Math.abs(bndW - (gateX2 - gateW2)), wallT2],
+              [(bndE + gateX2 + gateW2) / 2, bndS, Math.abs(bndE - (gateX2 + gateW2)), wallT2],
+              [0, bndN, bndE - bndW, wallT2],
+              [bndE, (bndN + bndS) / 2, wallT2, bndN - bndS],
+              [bndW, (bndN + bndS) / 2, wallT2, bndN - bndS],
+            ] as [number, number, number, number][]).map(([cx3, cz3, cw3, cd3], ci) => (
+              <mesh key={ci} position={[cx3, wallH2 + 0.006, cz3]}>
+                <boxGeometry args={[cw3, 0.012, cd3 + 0.010]} />
+                <meshStandardMaterial color={capCol} roughness={0.22} metalness={0.88} envMapIntensity={1.8} />
+              </mesh>
+            ))}
+            {/* Gate pillars — 2 at entry opening */}
+            {([gateX2 - gateW2 - pillarS / 2, gateX2 + gateW2 + pillarS / 2] as number[]).map((gpx, gpi) => (
+              <group key={gpi} position={[gpx, 0, bndS]}>
+                <mesh position={[0, pillarH / 2, 0]} castShadow>
+                  <boxGeometry args={[pillarS, pillarH, pillarS]} />
+                  <meshStandardMaterial color="#C4C0B8" roughness={0.76} metalness={0.04} />
+                </mesh>
+                <mesh position={[0, pillarH + 0.007, 0]}>
+                  <boxGeometry args={[pillarS + 0.04, 0.022, pillarS + 0.04]} />
+                  <meshStandardMaterial color={capCol} roughness={0.20} metalness={0.90} envMapIntensity={2.2} />
+                </mesh>
+                {/* Pillar top lantern sphere */}
+                <mesh position={[0, pillarH + 0.072, 0]}>
+                  <sphereGeometry args={[0.065, 8, 6]} />
+                  <meshStandardMaterial
+                    color="#FFF8D8"
+                    emissive="#FFDC70"
+                    emissiveIntensity={pillLI}
+                    roughness={0.28}
+                  />
+                </mesh>
+                {isNightG && (
+                  <pointLight position={[0, pillarH + 0.072, 0]} intensity={1.8} distance={4.0} decay={2.0} color="#FFE890" />
+                )}
+              </group>
+            ))}
+            {/* Driveway iron gate leaves (closed, dark charcoal) */}
+            {([-1, 1] as number[]).map((side) => {
+              const leafX = gateX2 + side * gateW2 / 2;
+              return (
+                <group key={side} position={[leafX, 0, bndS]}>
+                  {/* Outer frame */}
+                  <mesh position={[0, wallH2 * 0.55, 0]} castShadow>
+                    <boxGeometry args={[gateW2 - 0.06, wallH2 * 1.15, 0.040]} />
+                    <meshStandardMaterial color="#1C1E26" roughness={0.28} metalness={0.78} />
+                  </mesh>
+                  {/* Vertical bars × 4 */}
+                  {Array.from({ length: 4 }, (_, bi) => {
+                    const bx = -gateW2 / 2 + 0.10 + bi * ((gateW2 - 0.20) / 3);
+                    return (
+                      <mesh key={bi} position={[bx, wallH2 * 0.56, 0.022]}>
+                        <boxGeometry args={[0.028, wallH2 * 1.10, 0.028]} />
+                        <meshStandardMaterial color="#252830" roughness={0.30} metalness={0.72} />
+                      </mesh>
+                    );
+                  })}
+                </group>
+              );
+            })}
+            {/* Driveway paving strip (gate → building steps) */}
+            <mesh position={[gateX2, 0.003, (bndS + (-D / 2 - 3.0)) / 2]} receiveShadow>
+              <boxGeometry args={[gateW2 * 2 + 0.50, 0.006, Math.abs(bndS - (-D / 2 - 3.0))]} />
+              <meshStandardMaterial color="#C4BCA8" roughness={0.82} metalness={0.02} />
+            </mesh>
+          </group>
+        );
+      })()}
+
+      {/* ── 5e. 庭院乔木（mature trees at site corners）── */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const treeData: Array<[number, number]> = [
+          [ W / 2 + 3.0,  D / 2 + 1.8],   // NE corner
+          [-W / 2 - 3.0,  D / 2 + 1.8],   // NW corner
+          [ W / 2 + 3.0, -D / 2 - 5.0],   // SE (south of canopy, near pool)
+          [-W / 2 - 3.0, -D / 2 - 5.0],   // SW
+          [ W / 2 + 3.5, -D / 2 + 1.0],   // mid-east
+          [-W / 2 - 3.5, -D / 2 + 1.0],   // mid-west
+        ];
+        return (
+          <group>
+            {treeData.map(([tx, tz], ti) => {
+              const trunkH   = 3.8 + panelBlindHash(ti * 3, 7) * 1.6;
+              const trunkR   = 0.11 + panelBlindHash(ti + 3, 2) * 0.07;
+              const fR       = 1.15 + panelBlindHash(ti, 11) * 0.65;
+              const fY       = trunkH * 0.74;
+              const gBase    = panelBlindHash(ti, 13) < 0.5 ? "#2A6020" : "#224E18";
+              const gDark    = panelBlindHash(ti, 17) < 0.5 ? "#1C4A12" : "#244E18";
+              return (
+                <group key={ti} position={[tx, 0, tz]}>
+                  {/* Trunk */}
+                  <mesh position={[0, trunkH / 2, 0]} castShadow>
+                    <cylinderGeometry args={[trunkR * 0.72, trunkR, trunkH, 7]} />
+                    <meshStandardMaterial color="#5A3E28" roughness={0.92} metalness={0.02} />
+                  </mesh>
+                  {/* Main foliage */}
+                  <mesh position={[0, fY, 0]} castShadow>
+                    <sphereGeometry args={[fR, 8, 6]} />
+                    <meshStandardMaterial color={gBase} roughness={0.96} metalness={0.01} />
+                  </mesh>
+                  {/* Upper cluster */}
+                  <mesh position={[fR * 0.22, fY + fR * 0.52, fR * 0.08]} castShadow>
+                    <sphereGeometry args={[fR * 0.62, 7, 5]} />
+                    <meshStandardMaterial color={gDark} roughness={0.97} metalness={0.01} />
+                  </mesh>
+                  {/* Side cluster */}
+                  <mesh position={[-fR * 0.46, fY - fR * 0.18, 0]} castShadow>
+                    <sphereGeometry args={[fR * 0.52, 7, 5]} />
+                    <meshStandardMaterial color={gBase} roughness={0.96} metalness={0.01} />
+                  </mesh>
+                </group>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 6a. 走廊地板（铺满整层，楼梯间开口处挖空）── */}
       {insideBuilding && Array.from({ length: floorCount }, (_, fi) => {
         const fp = floorPlans[fi];
