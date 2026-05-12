@@ -735,6 +735,21 @@ export default function FloorPlanBuilding({
   const setActiveRoom  = useDesignerStore(s => s.setActiveRoom);
   const setViewMode    = useDesignerStore(s => s.setViewMode);
   const setActiveFloor = useDesignerStore(s => s.setActiveFloor);
+  const sunHour        = useDesignerStore(s => s.sunHour);
+
+  // ── Interior emissive intensity driven by time-of-day ──────────────────
+  // Night/late evening → rooms glow warm from within (high emissive).
+  // Full day → minimal emissive (interior looks lit by natural light).
+  const interiorGlowWall: number = sunHour < 6 || sunHour > 20
+    ? 1.55   // night — strong interior glow
+    : sunHour < 8 || sunHour > 18
+    ? 1.20   // dawn/dusk — moderate glow
+    : 0.92;  // day — subtle (existing default)
+  const interiorGlowCeil: number = sunHour < 6 || sunHour > 20
+    ? 0.90   // night ceiling
+    : sunHour < 8 || sunHour > 18
+    ? 0.72   // dawn/dusk ceiling
+    : 0.60;  // day ceiling
 
   /** Click door/window on exterior →
    *  - if onEnterRoom prop given: walkthrough mode at this room's centre
@@ -1275,7 +1290,7 @@ export default function FloorPlanBuilding({
                   roughness={0.78}
                   metalness={0.02}
                   emissive={emissiveW}
-                  emissiveIntensity={0.92}
+                  emissiveIntensity={interiorGlowWall}
                   side={THREE.FrontSide}
                 />
               );
@@ -1309,7 +1324,7 @@ export default function FloorPlanBuilding({
                     <meshStandardMaterial
                       color={ceilC}
                       emissive="#FFF0A0"
-                      emissiveIntensity={0.60}
+                      emissiveIntensity={interiorGlowCeil}
                       roughness={0.92}
                       side={THREE.DoubleSide}
                     />
@@ -1320,23 +1335,52 @@ export default function FloorPlanBuilding({
                     <meshStandardMaterial color={floorC} roughness={0.55} />
                   </mesh>
 
-                  {/* 吊灯（仅 ≥12㎡ 的房间）*/}
+                  {/* 吊灯（仅 ≥12㎡ 的房间）— emissive 随时间动态增强 */}
                   {isLarge && (
                     <>
-                      <pointLight position={[0, FLOOR_H / 2 - 0.50, 0]} intensity={3.5} distance={Math.max(iW, iD) * 2.2} decay={1.8} color="#FFF8E0" />
+                      <pointLight
+                        position={[0, FLOOR_H / 2 - 0.50, 0]}
+                        intensity={interiorGlowWall > 1.20 ? 5.5 : 3.5}
+                        distance={Math.max(iW, iD) * 2.5}
+                        decay={1.8}
+                        color="#FFF4D8"
+                      />
+                      {/* Pendant cord */}
                       <mesh position={[0, FLOOR_H / 2 - 0.40, 0]}>
-                        <cylinderGeometry args={[0.008, 0.008, 0.30, 8]} />
-                        <meshStandardMaterial color="#222" roughness={0.6} />
+                        <cylinderGeometry args={[0.006, 0.006, 0.32, 6]} />
+                        <meshStandardMaterial color="#1A1A1A" roughness={0.6} />
                       </mesh>
+                      {/* Pendant globe */}
                       <mesh position={[0, FLOOR_H / 2 - 0.62, 0]}>
-                        <sphereGeometry args={[0.13, 16, 10]} />
+                        <sphereGeometry args={[0.14, 16, 10]} />
                         <meshStandardMaterial
                           color="#FFE0A0"
-                          emissive="#FFC966"
-                          emissiveIntensity={2.4}
-                          roughness={0.40}
+                          emissive="#FFC060"
+                          emissiveIntensity={interiorGlowWall > 1.20 ? 3.5 : 2.4}
+                          roughness={0.35}
                         />
                       </mesh>
+                      {/* Second smaller pendant offset for large rooms */}
+                      {Math.max(iW, iD) > 5 && (
+                        <>
+                          <pointLight
+                            position={[iW * 0.30, FLOOR_H / 2 - 0.50, iD * 0.25]}
+                            intensity={interiorGlowWall > 1.20 ? 3.5 : 2.2}
+                            distance={Math.max(iW, iD) * 1.8}
+                            decay={2.0}
+                            color="#FFF4D8"
+                          />
+                          <mesh position={[iW * 0.30, FLOOR_H / 2 - 0.56, iD * 0.25]}>
+                            <sphereGeometry args={[0.10, 12, 8]} />
+                            <meshStandardMaterial
+                              color="#FFE0A0"
+                              emissive="#FFB840"
+                              emissiveIntensity={interiorGlowWall > 1.20 ? 3.0 : 1.8}
+                              roughness={0.38}
+                            />
+                          </mesh>
+                        </>
+                      )}
                     </>
                   )}
                 </group>
