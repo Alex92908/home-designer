@@ -4618,6 +4618,75 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5e-0b. 北庭院藤架拱门（garden arbor arch, north garden entry）──
+           A white-painted iron arbor arch marking the transition from the
+           south lawn / path into the formal north garden. Draped with
+           climbing green vines and small flower clusters. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const arbX = 0;
+        const arbZ = D / 2 + 0.20;   // just beyond building footprint edge
+        const arbW = 1.60;   // arch opening width
+        const arbH = 2.40;   // arch height at peak
+        const postW = 0.055;
+        const postD = 0.055;
+        return (
+          <group position={[arbX, 0, arbZ]}>
+            {/* 2 side posts */}
+            {([-arbW / 2, arbW / 2] as number[]).map((px, pi) => (
+              <mesh key={pi} position={[px, arbH * 0.48, 0]} castShadow>
+                <boxGeometry args={[postW, arbH * 0.96, postD]} />
+                <meshStandardMaterial color="#F0EDE8" roughness={0.78} metalness={0.04} />
+              </mesh>
+            ))}
+            {/* Top rail horizontal */}
+            <mesh position={[0, arbH - 0.10, 0]} castShadow>
+              <boxGeometry args={[arbW + postW, postW, postD]} />
+              <meshStandardMaterial color="#F0EDE8" roughness={0.78} metalness={0.04} />
+            </mesh>
+            {/* Arch crown — semicircular look from 5 angled pickets */}
+            {Array.from({ length: 5 }, (_, pi) => {
+              const t = (pi / 4 - 0.5) * Math.PI * 0.6;  // -54° to +54°
+              const rx = Math.sin(t) * 0.75;
+              const ry = arbH - 0.10 + Math.cos(t) * 0.34;
+              return (
+                <mesh key={pi} position={[rx, ry, 0]} rotation={[0, 0, t]} castShadow>
+                  <boxGeometry args={[0.030, 0.46, 0.030]} />
+                  <meshStandardMaterial color="#F0EDE8" roughness={0.80} metalness={0.02} />
+                </mesh>
+              );
+            })}
+            {/* Vertical pickets — 4 per side */}
+            {([-1, 1] as number[]).flatMap((side, si) =>
+              Array.from({ length: 4 }, (_, pi) => {
+                const px2 = side * (arbW / 2 - postW / 2 - 0.06 - pi * 0.10);
+                return (
+                  <mesh key={`${si}-${pi}`} position={[px2, arbH * 0.30, 0]}>
+                    <boxGeometry args={[0.022, arbH * 0.55, 0.022]} />
+                    <meshStandardMaterial color="#E8E4DC" roughness={0.82} metalness={0.02} />
+                  </mesh>
+                );
+              })
+            )}
+            {/* Climbing vine foliage on arch */}
+            {Array.from({ length: 14 }, (_, vi) => {
+              const vHash = (vi * 13 + 5) % 11;
+              const side2 = vi < 7 ? -1 : 1;
+              const vy = 0.40 + (vi % 7) * (arbH / 7);
+              const vx2 = side2 * (arbW / 2 + 0.06 - (vHash % 3) * 0.04);
+              const vz2 = (vHash % 5 - 2) * 0.09;
+              const vr = 0.10 + (vHash % 3) * 0.038;
+              const vCol2 = vHash % 5 === 0 ? "#A060C0" : vHash % 5 === 1 ? "#B870D0" : vHash % 5 < 4 ? "#2E6820" : "#3A7828";
+              return (
+                <mesh key={vi} position={[vx2, vy, vz2]}>
+                  <sphereGeometry args={[vr, 6, 4]} />
+                  <meshStandardMaterial color={vCol2} roughness={0.95} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5e-1. 北侧庭院雕塑（garden sculpture, north yard centre）──
            Abstract polished-steel totem: stacked tapered cylinders on a
            dark granite plinth. Reflective, catches sky light well. */}
