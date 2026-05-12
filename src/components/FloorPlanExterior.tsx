@@ -4317,6 +4317,32 @@ export default function FloorPlanBuilding({
                 {isNightG && (
                   <pointLight position={[0, pillarH + 0.072, 0]} intensity={1.8} distance={4.0} decay={2.0} color="#FFE890" />
                 )}
+                {/* Address number plaque — on west-facing side of east pillar only */}
+                {gpi === 1 && (
+                  <group position={[-pillarS / 2 - 0.006, pillarH * 0.52, 0]}>
+                    {/* Dark backplate */}
+                    <mesh rotation={[0, Math.PI / 2, 0]}>
+                      <boxGeometry args={[0.18, 0.10, 0.010]} />
+                      <meshStandardMaterial color="#1C1E26" roughness={0.22} metalness={0.82} envMapIntensity={2.0} />
+                    </mesh>
+                    {/* Number bars (simplified "8" as 3 horizontal bars + 2 verticals = house number feel) */}
+                    {[0.030, -0.003, -0.035].map((ny, nii) => (
+                      <mesh key={nii} position={[0, ny, -0.008]} rotation={[0, Math.PI / 2, 0]}>
+                        <boxGeometry args={[0.10, 0.010, 0.004]} />
+                        <meshStandardMaterial
+                          color="#D4C060"
+                          emissive="#C8B040"
+                          emissiveIntensity={isNightG ? 1.4 : 0.4}
+                          roughness={0.18} metalness={0.88} envMapIntensity={3.0}
+                        />
+                      </mesh>
+                    ))}
+                    {/* Under-plaque LED wash */}
+                    {isNightG && (
+                      <pointLight position={[0.08, 0, -0.02]} intensity={0.6} distance={0.8} decay={2.2} color="#F8E890" />
+                    )}
+                  </group>
+                )}
               </group>
             ))}
             {/* Driveway iron gate leaves (closed, dark charcoal) */}
