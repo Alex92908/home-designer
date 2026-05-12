@@ -1562,6 +1562,9 @@ export default function FloorPlanBuilding({
         const apronY = -0.002; // just above grass
         const terrColor = "#D8D0BC";
         const edgeColor = "#3A3E48";
+        const isNight5 = sunHour < 6 || sunHour > 20;
+        const isDusk5  = !isNight5 && (sunHour < 8 || sunHour > 18);
+        const ledI = isNight5 ? 1.6 : isDusk5 ? 0.8 : 0.0;
         return (
           <group position={[0, apronY, 0]}>
             {/* East terrace strip */}
@@ -1589,6 +1592,23 @@ export default function FloorPlanBuilding({
                 <boxGeometry args={[e.w, 0.016, e.d]} />
                 <meshStandardMaterial color={edgeColor} roughness={0.28} metalness={0.82} envMapIntensity={1.6} />
               </mesh>
+            ))}
+            {/* LED ground marker lights at terrace edge (east + west sides) */}
+            {ledI > 0 && [
+              ...Array.from({ length: Math.round(D / 1.8) }, (_, gi) => ({
+                x: W / 2 + apronW - 0.05, z: -D / 2 + 0.9 + gi * 1.8,
+              })),
+              ...Array.from({ length: Math.round(D / 1.8) }, (_, gi) => ({
+                x: -W / 2 - apronW + 0.05, z: -D / 2 + 0.9 + gi * 1.8,
+              })),
+            ].map(({ x, z }, mi) => (
+              <group key={mi} position={[x, 0.012, z]}>
+                <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                  <circleGeometry args={[0.040, 8]} />
+                  <meshStandardMaterial color="#C0C8D0" emissive="#A0C8E8" emissiveIntensity={ledI} roughness={0.5} />
+                </mesh>
+                <pointLight position={[0, 0.04, 0]} intensity={ledI * 0.5} distance={1.2} decay={2.5} color="#B8E0F8" />
+              </group>
             ))}
           </group>
         );
