@@ -5802,6 +5802,9 @@ function WalkthroughController({
     const key = spawnPos.join(",");
     if (spawnedRef.current === key) return;
     spawnedRef.current = key;
+    // Push near clip out to avoid black jagged artifacts from near geometry.
+    const cam2 = camera as THREE.PerspectiveCamera;
+    if (cam2.isPerspectiveCamera) { cam2.near = 0.3; cam2.updateProjectionMatrix(); }
     camera.position.set(spawnPos[0], spawnPos[1], spawnPos[2]);
     yawRef.current = 0;
     pitchRef.current = 0;
@@ -5810,10 +5813,9 @@ function WalkthroughController({
   useEffect(() => {
     if (!active) {
       spawnedRef.current = null;
-      // Reset FOV in case user wheel-zoomed and is now exiting; otherwise
-      // re-entry would inherit the stale zoom value.
+      // Restore near clip and FOV when exiting walkthrough.
       const cam = camera as THREE.PerspectiveCamera;
-      if (cam.isPerspectiveCamera) { cam.fov = 50; cam.updateProjectionMatrix(); }
+      if (cam.isPerspectiveCamera) { cam.fov = 50; cam.near = 0.1; cam.updateProjectionMatrix(); }
     }
   }, [active, camera]);
 
@@ -5841,7 +5843,7 @@ function WalkthroughController({
       const dy = e.clientY - d.y;
       yawRef.current   -= dx * 0.0025;
       pitchRef.current -= dy * 0.0025;
-      pitchRef.current = Math.max(-Math.PI / 2.05, Math.min(Math.PI / 2.05, pitchRef.current));
+      pitchRef.current = Math.max(-Math.PI / 2.6, Math.min(Math.PI / 2.6, pitchRef.current));
       dragRef.current = { x: e.clientX, y: e.clientY };
     };
     const onPUp = () => { dragRef.current = null; };
@@ -6356,9 +6358,8 @@ export default function HouseCanvas() {
             while keeping the sky colour/gradient. Night mode keeps a dark
             sphere instead since the night HDR is just a coloured gradient. */}
         {/* Sky — physically-based Preetham atmospheric scattering (day/dawn/dusk).
-            Replaces the flat-colour sphere for a realistic gradient: deep blue
-            zenith, haze at horizon, warm glow around sun disc. */}
-        {theme.phase !== "night" && (
+            Hidden during walkthrough — causes visual artifacts from inside. */}
+        {!insideBuilding && theme.phase !== "night" && (
           <Sky
             sunPosition={sunPos}
             turbidity={theme.phase === "day" ? 4.5 : 9.0}
@@ -6368,6 +6369,7 @@ export default function HouseCanvas() {
             distance={450000}
           />
         )}
+        {insideBuilding && <color attach="background" args={["#D8D4CC"]} />}
         <HouseEnvironmentFallback>
           <Suspense fallback={null}>
             <Environment
@@ -6452,14 +6454,12 @@ export default function HouseCanvas() {
           setSelectedOutdoorKey(null);
           useDesignerStore.getState().setSelectedExteriorDecor(null);
         }} />
-        {/* ── Ground environment ── */}
-        {/* floor-plan-driven: grass ground + stone plaza for a lush look */}
-        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} />}
-        {!isRichGlassVilla && <Ground W={W} D={D} />}
-        {/* Entry driveway path for all villa types */}
-        {<EntryPath W={W} D={D} />}
+        {/* ── Ground environment — hidden during walkthrough to prevent Z-fighting ── */}
+        {!insideBuilding && _buildingType === "floor-plan-driven" && <Ground W={W} D={D} />}
+        {!insideBuilding && !isRichGlassVilla && <Ground W={W} D={D} />}
+        {!insideBuilding && !isRichGlassVilla && <EntryPath W={W} D={D} />}
         {/* rich-glass-villa (non-FPD): minimal stone plaza only */}
-        {isRichGlassVilla && _buildingType !== "floor-plan-driven" && (
+        {!insideBuilding && isRichGlassVilla && _buildingType !== "floor-plan-driven" && (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
             <planeGeometry args={[120, 120]} />
             <meshStandardMaterial color="#D8D0BC" roughness={0.88} metalness={0.0} />
@@ -6481,10 +6481,10 @@ export default function HouseCanvas() {
             setWalkthroughSpawn(worldPos);
           }}
         />
-        {/* Wall decor + yard items — enabled for all building types including FPD */}
-        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
-        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}
-        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPathItems3D />}
+        {/* Wall decor + yard items — hidden during walkthrough (exterior elements) */}
+        {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
+        {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}
+        {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPathItems3D />}
         {/* VillaYard 自动院（池 + 露台 + 躺椅）已移除 ——
             尺寸全部锚定建筑 W/D，用户不能调整也不能换 GLB。
             院子家具走 YardPlan（用户自由摆放）。 */}
