@@ -6114,10 +6114,19 @@ export default function HouseCanvas() {
             onClick={() => {
               if (walkthrough) { exitWalkthrough(); }
               else {
-                // Spawn at building centre, eye height. Y picked from W/D
-                // diagonal so it works for single-storey and multi-storey alike.
+                // Spawn at the centre of the largest room (by area) so the
+                // camera lands inside a room rather than in a structural wall.
+                let bestX = 0, bestZ = 0, bestArea = -1;
+                for (const aabb of wallAABBs) {
+                  const area = (aabb.maxX - aabb.minX) * (aabb.maxZ - aabb.minZ);
+                  if (area > bestArea) {
+                    bestArea = area;
+                    bestX = (aabb.minX + aabb.maxX) / 2;
+                    bestZ = (aabb.minZ + aabb.maxZ) / 2;
+                  }
+                }
                 setWalkthrough(true);
-                setWalkthroughSpawn([0, 1.6, 0]);
+                setWalkthroughSpawn([bestX, 1.6, bestZ]);
               }
             }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
