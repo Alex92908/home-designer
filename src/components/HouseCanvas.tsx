@@ -5241,7 +5241,7 @@ function getSkyTheme(hour: number): SkyTheme {
     ambient: 0.28 + elev * 0.10,
     fogColor: "#C0D4E8", fogNear: 55, fogFar: 210,  // clear daytime air — crisp distant view
     exposure: 1.02 + elev * 0.08,
-    hdr: "/hdr/potsdamer_platz_1k.hdr",
+    hdr: "/hdr/lebombo_1k.hdr",
     skyRgb: _lerpRgb([130, 185, 220], [60, 130, 200], elev),
   };
 }
@@ -6364,8 +6364,8 @@ export default function HouseCanvas() {
             <Environment
               files={theme.hdr}
               background={false}
-              backgroundBlurriness={0.06}
-              backgroundIntensity={theme.phase === "day" ? 0.50 : 0.75}
+              backgroundBlurriness={0.04}
+              backgroundIntensity={theme.phase === "day" ? 0.65 : 0.80}
             />
           </Suspense>
         </HouseEnvironmentFallback>
@@ -6508,9 +6508,9 @@ export default function HouseCanvas() {
             />
             {/* Bloom — warm halos for pool water, glass, and night emissives */}
             <Bloom
-              intensity={theme.phase === "night" ? 0.75 : theme.phase === "dusk" ? 0.44 : 0.24}
-              luminanceThreshold={theme.phase === "night" ? 0.86 : 0.87}
-              luminanceSmoothing={0.35}
+              intensity={theme.phase === "night" ? 0.80 : theme.phase === "dusk" ? 0.48 : 0.28}
+              luminanceThreshold={theme.phase === "night" ? 0.84 : theme.phase === "dusk" ? 0.82 : 0.85}
+              luminanceSmoothing={0.30}
               mipmapBlur
             />
             {/* HueSaturation — vivid architectural renders with rich pool/sky blues */}

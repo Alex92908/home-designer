@@ -8328,6 +8328,67 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5g-6. 泳池南端低矮植被边带（low planting border at pool south deck edge）──
+           A continuous 0.35m-wide planting trough flush with the south deck edge.
+           Alternating white agapanthus spheres + ornamental grass tufts, set into a
+           dark Cor-ten steel trough. Frames the pool in the near foreground view. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const poolL_b  = Math.min(D * 0.70, 9.50);
+        const poolW_b  = Math.min(W * 0.78, 11.0);
+        const deckBW_b = 2.80;
+        const deckT_b  = 0.12;
+        const pz_b     = -D / 2 - deckBW_b - poolL_b / 2 - 0.80;
+        const borderZ  = pz_b - poolL_b / 2 - deckBW_b + 0.20;  // 0.2m inside south deck edge
+        const borderW  = poolW_b + deckBW_b * 1.8;               // full deck width
+        const troughH  = 0.20;
+        const troughD  = 0.34;
+        const plantCount = Math.floor(borderW / 0.55);           // plant every 55cm
+        return (
+          <group position={[0, deckT_b, borderZ]}>
+            {/* Cor-ten steel trough */}
+            <mesh position={[0, troughH / 2, 0]} castShadow>
+              <boxGeometry args={[borderW, troughH, troughD]} />
+              <meshStandardMaterial color="#8B4C2A" roughness={0.72} metalness={0.28} envMapIntensity={0.6} />
+            </mesh>
+            {/* Soil top */}
+            <mesh position={[0, troughH + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[borderW - 0.02, troughD - 0.02]} />
+              <meshStandardMaterial color="#2C1E14" roughness={0.98} />
+            </mesh>
+            {/* Alternating plants: even = white agapanthus globe, odd = grass tuft */}
+            {Array.from({ length: plantCount }, (_, pi) => {
+              const px = -borderW / 2 + 0.28 + pi * (borderW - 0.56) / Math.max(1, plantCount - 1);
+              const isGlobe = pi % 2 === 0;
+              return (
+                <group key={pi} position={[px, troughH, 0]}>
+                  {isGlobe ? (
+                    // White agapanthus globe
+                    <mesh castShadow>
+                      <sphereGeometry args={[0.14, 7, 5]} />
+                      <meshStandardMaterial color="#F8F4F0" roughness={0.80} metalness={0.0} envMapIntensity={0.3} />
+                    </mesh>
+                  ) : (
+                    // Ornamental grass tuft — 6 thin blades fanned out
+                    <group>
+                      {Array.from({ length: 6 }, (_, bi) => {
+                        const ba = (bi / 6) * Math.PI * 1.8 - Math.PI * 0.4;
+                        return (
+                          <mesh key={bi} position={[0, 0.18, 0]}
+                            rotation={[ba * 0.28, (bi / 6) * Math.PI * 2, 0]}>
+                            <boxGeometry args={[0.010, 0.32, 0.008]} />
+                            <meshStandardMaterial color="#6A8840" roughness={0.90} metalness={0.0} />
+                          </mesh>
+                        );
+                      })}
+                    </group>
+                  )}
+                </group>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5h. 室外厨房 / BBQ 台（outdoor kitchen, east terrace apron）── */}
       {!insideBuilding && isGlassVilla && (() => {
         const kitX = W / 2 + 0.85;         // east terrace apron center
