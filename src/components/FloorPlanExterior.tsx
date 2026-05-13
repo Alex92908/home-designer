@@ -9339,9 +9339,9 @@ export default function FloorPlanBuilding({
         if (!stairEntry) {
           // 一楼或无楼梯间：整层铺满
           return (
-            <mesh key={`corr-${fi}`} position={[wcx, corrY, wcz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
+            <mesh key={`corr-${fi}`} position={[wcx, corrY, wcz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
               <planeGeometry args={[lW + 0.1, lD + 0.1]} />
-              <meshStandardMaterial color={corrCol} roughness={0.52} metalness={0.05} envMapIntensity={0.45} />
+              <meshStandardMaterial color={corrCol} roughness={0.52} metalness={0.05} envMapIntensity={0.45} side={THREE.FrontSide} />
             </mesh>
           );
         }
@@ -9367,9 +9367,9 @@ export default function FloorPlanBuilding({
         return (
           <group key={`corr-${fi}`}>
             {strips.map(s => (
-              <mesh key={s.key} position={[s.x, corrY, s.z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
+              <mesh key={s.key} position={[s.x, corrY, s.z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
                 <planeGeometry args={[s.w, s.d]} />
-                <meshStandardMaterial color={corrCol} roughness={0.52} metalness={0.05} envMapIntensity={0.45} />
+                <meshStandardMaterial color={corrCol} roughness={0.52} metalness={0.05} envMapIntensity={0.45} side={THREE.FrontSide} />
               </mesh>
             ))}
           </group>
@@ -9410,15 +9410,16 @@ export default function FloorPlanBuilding({
             )}
             {/* 地板：楼梯间上层（fi>0）不渲染地板，保持楼梯开口畅通 */}
             {!(isStair && fi > 0) && (
-              <mesh position={[cx, yBase + 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
+              <mesh position={[cx, yBase + 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+                {/* 漫游射线需要命中楼板，故不设 raycast={() => null}。
+                    FrontSide = 仅从上方可见，避免下层射线命中上层楼板反面。 */}
                 <planeGeometry args={[rW - 0.04, rD - 0.04]} />
-                {/* 室内：高光木地板（低粗糙度 + 轻微金属感，反射筒灯）*/}
                 <meshStandardMaterial
                   color={floorColor}
                   roughness={insideBuilding ? 0.42 : 0.70}
                   metalness={insideBuilding ? 0.06 : 0.03}
                   envMapIntensity={insideBuilding ? 0.55 : 0.2}
-                  side={THREE.DoubleSide}
+                  side={THREE.FrontSide}
                 />
               </mesh>
             )}

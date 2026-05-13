@@ -5790,6 +5790,10 @@ function WalkthroughController({
   const { camera, scene } = useThree();
   const keysRef = useRef<Record<string, boolean>>({});
   const spawnedRef = useRef<string | null>(null);
+  /** Y of the floor surface the player last stood on (world space).
+   *  Updated by the downward raycast; used as fallback when mid-air
+   *  (e.g. between stair steps or stepping off the top landing). */
+  const floorYRef = useRef(0);
   // Yaw/pitch tracked separately for drag-look (more reliable than mutating
   // camera.rotation directly).
   const yawRef   = useRef(0);
@@ -5806,6 +5810,8 @@ function WalkthroughController({
     const cam2 = camera as THREE.PerspectiveCamera;
     if (cam2.isPerspectiveCamera) { cam2.near = 0.3; cam2.updateProjectionMatrix(); }
     camera.position.set(spawnPos[0], spawnPos[1], spawnPos[2]);
+    // Initialise floor tracker to spawn floor (eye height − 1.6 m)
+    floorYRef.current = spawnPos[1] - 1.6;
     yawRef.current = 0;
     pitchRef.current = 0;
     camera.lookAt(spawnPos[0], spawnPos[1] - 0.1, spawnPos[2] + 1);
@@ -5929,7 +5935,7 @@ function WalkthroughController({
 
     if (dx === 0 && dz === 0) {
       // Still floor-snap so y stays right even without movement
-      raycastFloor();
+      raycastFloor(delta);
       return;
     }
     const magnitude = Math.min(1, Math.hypot(dx, dz));
@@ -5959,24 +5965,41 @@ function WalkthroughController({
     camera.position.z = nz;
 
     // ── 4. Floor snap: raycast straight down to find walkable surface,
-    //      set camera.y = floor.y + 1.6m. Handles stairs implicitly. ──
-    raycastFloor();
+    //      set camera.y = floor.y + 1.6m. Handles stairs and multi-storey. ──
+    raycastFloor(delta);
   });
 
-  function raycastFloor() {
-    raycaster.set(new THREE.Vector3(camera.position.x, bbox.maxY + 2, camera.position.z), downV);
+  function raycastFloor(dt: number) {
+    // Cast from just above the camera (not from the ceiling) so a lower floor's
+    // FrontSide plane doesn't accidentally get hit when standing on an upper floor.
+    raycaster.set(
+      new THREE.Vector3(camera.position.x, camera.position.y + 0.5, camera.position.z),
+      downV
+    );
     const hits = raycaster.intersectObjects(scene.children, true);
-    // Skip degenerate hits (sky, fog plane). Look for the first opaque
-    // mesh below max ceiling height.
     for (const h of hits) {
-      if (h.point.y < bbox.maxY + 1 && h.point.y > -1) {
-        const target = h.point.y + 1.6;
-        // Smooth y change so stair steps don't make camera jolt
-        camera.position.y += (target - camera.position.y) * Math.min(1, 12 * 0.016);
+      const hy = h.point.y;
+      // Accept only surfaces that are:
+      //   • below the camera eye level (not a ceiling/shelf above)
+      //   • within 2.5 m below — covers one full floor height (2.8 m) + step approach
+      //   • above the basement floor (avoid terrain/sky far below)
+      if (hy < camera.position.y - 0.1 && hy > camera.position.y - 2.5 && hy > bbox.minY - 1) {
+        const target = hy + 1.6;
+        const diff   = target - camera.position.y;
+        // Climb stairs faster (6/s) than descend (10/s) — rising feels responsive,
+        // descending snaps to avoid floating off a landing. Uses real frame dt.
+        const rate = diff > 0 ? 6 : 10;
+        camera.position.y += diff * Math.min(1, rate * dt);
+        floorYRef.current = hy;   // remember this floor for the fallback
         return;
       }
     }
-    // Fallback: clamp to floor 0 eye height
+    // No floor detected (mid-step gap, transition off stair landing, etc.).
+    // Gently float back to last-known floor + eye height rather than
+    // slamming to global minY, which would drop the player from the 2nd floor.
+    const fallbackEye = floorYRef.current + 1.6;
+    const diff = fallbackEye - camera.position.y;
+    camera.position.y += diff * Math.min(1, 6 * dt);
     camera.position.y = Math.max(bbox.minY, Math.min(bbox.maxY, camera.position.y));
   }
 
