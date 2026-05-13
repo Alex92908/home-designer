@@ -692,8 +692,218 @@ const GLASS_CURTAIN_VILLA: ProjectTemplate = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Template 5 — 豪华三层玻璃幕墙别墅 · 3F · 320㎡
+//
+// 布局逻辑（合理化设计）：
+//   1F 社交层：厨房 + 餐厅（开敞） + 客厅（大厅） + 书房 + 卫生间
+//   2F 私密层：主卧套房（含衣帽间+主浴） + 次卧×3 + 走廊
+//   3F 顶层：一间大套间 + 全幅观景露台（南向）
+//
+// 楼梯间贯穿三层，保持同一水平坐标（x=1000，宽200）。
+// 建筑面宽 1200cm（12m），进深 900cm（9m）。
+// 外观：落地玻璃幕墙 + 平屋顶 + 黑色铝合金框，floor-plan-driven 模式
+// ─────────────────────────────────────────────────────────────────────────────
+const LUXURY_3F_GLASS_VILLA: ProjectTemplate = {
+  id: "luxury-3f-glass-villa",
+  name: "豪华三层玻璃别墅",
+  emoji: "🏙️",
+  description: "三层 · 落地玻璃幕墙 · 泳池庭院 · 开放式布局",
+  areaSqm: 320,
+  palette: ["#F2EFE8", "#1A1A1A", "#CBE8F5"],
+
+  exterior: {
+    preset:       "modern",
+    roofStyle:    "flat",
+    roofColor:    "#1C1C1C",
+    wallMaterial: "render",
+    wallColor:    "#F2EFE8",
+    accentColor:  "#1A1A1A",
+    floors: 3,
+    showPerimeterFence: false,
+    fenceInsetMultiplier: 1.65,
+    pilotisHeightM: 0,
+    buildingType: "floor-plan-driven",
+  },
+
+  floorLayouts: [
+    // ── 1F · 社交娱乐层 ────────────────────────────────────────────────────
+    // 平面逻辑：
+    //   北区（y=0–320）  ：厨房 | 卫生间 | 餐厅（开敞，连客厅）
+    //   中区（y=320–400）：走廊（横向贯通）
+    //   南区（y=400–900）：客厅（大）  | 书房
+    //   右柱（x=1000–1200）：楼梯间（贯穿 y=0–440）
+    {
+      id: "l3g-f1",
+      name: "1F · 社交娱乐层",
+      area: 120,
+      rooms: [
+        // North service zone
+        { room: "kitchen",  x: 0,    y: 0,   width: 400, depth: 320 },
+        { room: "bathroom", x: 400,  y: 0,   width: 220, depth: 320 },
+        { room: "dining",   x: 620,  y: 0,   width: 380, depth: 440 },  // 3.8×4.4m — open dining
+        // Right column: stairwell
+        { room: "stair",    x: 1000, y: 0,   width: 200, depth: 440 },
+        // Central circulation
+        { room: "hallway",  x: 0,    y: 320, width: 620, depth: 80  },
+        // South living zone
+        { room: "living",   x: 0,    y: 400, width: 670, depth: 500 },  // 6.7×5.0m — grand living
+        { room: "study",    x: 670,  y: 400, width: 330, depth: 500 },  // 3.3×5.0m — study/office
+      ],
+    },
+
+    // ── 2F · 卧室私密层 ───────────────────────────────────────────────────
+    // 平面逻辑：
+    //   北区（y=0–420）  ：主卧 + 衣帽间 + 主浴（主卧套房）
+    //   走廊（y=420–500）：横向贯通
+    //   南区（y=500–920）：次卧 × 3（并排）
+    //   右柱（x=1000–1200）：楼梯间（同 1F 位置）
+    {
+      id: "l3g-f2",
+      name: "2F · 卧室私密层",
+      area: 115,
+      rooms: [
+        // Master suite
+        { room: "master",   x: 0,    y: 0,   width: 520, depth: 420 },  // 5.2×4.2m
+        { room: "closet",   x: 520,  y: 0,   width: 200, depth: 420 },  // 2.0×4.2m walk-in
+        { room: "bathroom", x: 720,  y: 0,   width: 280, depth: 420 },  // 2.8×4.2m ensuite
+        // Stairwell (same x as 1F)
+        { room: "stair",    x: 1000, y: 0,   width: 200, depth: 440 },
+        // Central hallway
+        { room: "hallway",  x: 0,    y: 420, width: 1000, depth: 80  },
+        // Secondary bedrooms
+        { room: "bedroom",  x: 0,    y: 500, width: 380, depth: 420 },  // 3.8×4.2m
+        { room: "bedroom2", x: 380,  y: 500, width: 340, depth: 420 },  // 3.4×4.2m
+        { room: "bedroom3", x: 720,  y: 500, width: 280, depth: 420 },  // 2.8×4.2m
+      ],
+    },
+
+    // ── 3F · 顶层雅室 ─────────────────────────────────────────────────────
+    // 平面逻辑：
+    //   北区（y=0–500）：顶层大套间（卧室 + 书房2 + 卫生间2）
+    //   南区（y=500–720）：全幅观景露台（12m 宽，面向花园泳池）
+    //   右柱：楼梯间（同 1/2F 位置，顶层上楼口）
+    {
+      id: "l3g-f3",
+      name: "3F · 顶层观景套间",
+      area: 85,
+      rooms: [
+        // Penthouse suite
+        { room: "master",    x: 0,    y: 0,   width: 560, depth: 500 },  // 5.6×5.0m penthouse bedroom
+        { room: "bathroom2", x: 560,  y: 0,   width: 260, depth: 320 },  // 2.6×3.2m
+        { room: "study2",    x: 820,  y: 0,   width: 180, depth: 320 },  // 1.8×3.2m penthouse study
+        // Stairwell top landing (same x=1000)
+        { room: "stair",     x: 1000, y: 0,   width: 200, depth: 440 },
+        // Hallway (service corridor)
+        { room: "hallway",   x: 560,  y: 320, width: 440, depth: 80  },
+        // Panoramic rooftop terrace (full south width)
+        { room: "balcony2",  x: 0,    y: 500, width: 1200, depth: 220 }, // 12.0×2.2m terrace
+      ],
+    },
+  ],
+
+  // ── Yard plan ─────────────────────────────────────────────────────────────
+  // 建筑面宽约 12m，深约 9.2m，中心 (0,0)。
+  // 南立面（面向泳池/庭院）约 z = -460cm
+  // 北立面（背面）约 z = +460cm
+  yardPlan: {
+    items: [
+      // ── Swimming pool (south-west, key feature) ──────────────────────────
+      { id: "l3g-pool",     type: "prefab", prefabKind: "pool",
+        x: -850, z: -380, rot: 0, scale: 1.15 },
+
+      // ── Pergola (end of pool deck) ───────────────────────────────────────
+      { id: "l3g-pergola",  type: "prefab", prefabKind: "pergola_classic",
+        x: -880, z: -820, rot: 0, scale: 1.0 },
+
+      // ── Privacy slat wall (west of pool) ─────────────────────────────────
+      { id: "l3g-slat",     type: "prefab", prefabKind: "slat_wall",
+        x: -1200, z: -560, rot: 0, scale: 1.0,
+        params: { lengthM: 10, heightM: 2.4 } },
+
+      // ── Pool loungers ─────────────────────────────────────────────────────
+      { id: "l3g-lngr1",    kind: "furniture.swimmingLounger", x: -580, z: -280, rot: 0,           scale: 1.0 },
+      { id: "l3g-lngr2",    kind: "furniture.swimmingLounger", x: -580, z: -420, rot: 0,           scale: 1.0 },
+      { id: "l3g-lngr3",    kind: "furniture.swimmingLounger", x: -1120, z: -280, rot: Math.PI,    scale: 1.0 },
+      { id: "l3g-lngr4",    kind: "furniture.swimmingLounger", x: -1120, z: -420, rot: Math.PI,    scale: 1.0 },
+
+      // ── Palm trees ────────────────────────────────────────────────────────
+      { id: "l3g-palm1",    kind: "tree.palm", x: -1350, z: -280, rot: 0,   scale: 1.3 },
+      { id: "l3g-palm2",    kind: "tree.palm", x: -1260, z: -620, rot: 0.4, scale: 1.1 },
+      { id: "l3g-palm3",    kind: "tree.palm", x: -1420, z:  240, rot: 0,   scale: 1.2 },
+      { id: "l3g-palm4",    kind: "tree.palm", x:  1350, z: -580, rot: 0.6, scale: 1.0 },
+
+      // ── Olive trees (architectural, sides) ───────────────────────────────
+      { id: "l3g-olv1",     kind: "tree.olive", x: -1520, z:  200, rot: 0,   scale: 1.2 },
+      { id: "l3g-olv2",     kind: "tree.olive", x: -1520, z:  620, rot: 0.2, scale: 1.1 },
+      { id: "l3g-olv3",     kind: "tree.olive", x:  1520, z:  100, rot: 0,   scale: 1.1 },
+      { id: "l3g-olv4",     kind: "tree.olive", x:  1520, z:  520, rot: 0,   scale: 1.0 },
+
+      // ── Cypress (rear boundary) ───────────────────────────────────────────
+      { id: "l3g-cyp1",     kind: "tree.cypress", x: -900, z:  920, rot: 0, scale: 1.4 },
+      { id: "l3g-cyp2",     kind: "tree.cypress", x:    0, z: 1000, rot: 0, scale: 1.4 },
+      { id: "l3g-cyp3",     kind: "tree.cypress", x:  900, z:  920, rot: 0, scale: 1.3 },
+      { id: "l3g-cyp4",     kind: "tree.cypress", x: -1500, z: -380, rot: 0, scale: 1.2 },
+
+      // ── Entry garden (ornamental rocks + low plants) ──────────────────────
+      { id: "l3g-rock1",    kind: "rock.tall",        x:  660, z: -560, rot: 0.5, scale: 0.9 },
+      { id: "l3g-rock2",    kind: "rock.large",       x:  740, z: -500, rot: -0.3, scale: 0.8 },
+      { id: "l3g-gr1",      kind: "plant.grass",      x:  400, z: -720, rot: 0,   scale: 1.1 },
+      { id: "l3g-gr2",      kind: "plant.grass",      x:  520, z: -680, rot: 0.5, scale: 0.9 },
+      { id: "l3g-bush1",    kind: "plant.bushLarge",  x: -380, z: -800, rot: 0,   scale: 1.0 },
+      { id: "l3g-bush2",    kind: "plant.bushSmall",  x:  380, z: -660, rot: 0,   scale: 0.9 },
+
+      // ── Zones ─────────────────────────────────────────────────────────────
+      // Entry forecourt (stone paving)
+      {
+        id: "l3g-z-court",  type: "zone" as const, zoneKind: "utility" as const,
+        x: -100, z: -740,
+        polygon: [[-540, -280], [400, -280], [400, 280], [-540, 280]] as Array<[number, number]>,
+        pavingMaterialId: "stone_grey",
+      },
+      // Pool deck (travertine)
+      {
+        id: "l3g-z-deck",   type: "zone" as const, zoneKind: "social" as const,
+        x: -860, z: -500,
+        polygon: [[-440, -440], [440, -440], [440, 440], [-440, 440]] as Array<[number, number]>,
+        pavingMaterialId: "stone_grey",
+      },
+      // East lawn
+      {
+        id: "l3g-z-lawn1",  type: "zone" as const, zoneKind: "lawn" as const,
+        x: 980, z: 0,
+        polygon: [[-380, -920], [380, -920], [380, 920], [-380, 920]] as Array<[number, number]>,
+      },
+      // Rear garden
+      {
+        id: "l3g-z-lawn2",  type: "zone" as const, zoneKind: "lawn" as const,
+        x: 0, z: 900,
+        polygon: [[-880, -320], [880, -320], [880, 320], [-880, 320]] as Array<[number, number]>,
+      },
+    ],
+
+    paths: [
+      // Main entry drive
+      {
+        id: "l3g-p-drive",
+        points: [[0, -1350], [0, -1000], [0, -580]] as Array<[number, number]>,
+        widthCm: 200,
+        material: "stone",
+      },
+      // Entry court → pool deck connector
+      {
+        id: "l3g-p-pool",
+        points: [[-140, -740], [-440, -740], [-440, -560]] as Array<[number, number]>,
+        widthCm: 100,
+        material: "stone",
+      },
+    ],
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
-  GLASS_CURTAIN_VILLA,     // ← 参考图风格，排第一
+  LUXURY_3F_GLASS_VILLA,    // ← 三层豪宅，排第一（用户当前设计的合理化版）
+  GLASS_CURTAIN_VILLA,      // ← 参考图风格，双层
   MODERN_POOL_VILLA,
   JAPANESE_ZEN_VILLA,
   MEDITERRANEAN_VILLA,
