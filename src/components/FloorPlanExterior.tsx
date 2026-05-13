@@ -20,7 +20,7 @@
 import { useMemo, useCallback, useState, useRef, Suspense } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { Html } from "@react-three/drei";
+import { Html, useGLTF, Clone } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
 import { overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem } from "@/lib/types";
@@ -2380,6 +2380,62 @@ function StairwellRailing({ rW, rD }: { rW: number; rD: number }) {
     </group>
   );
 }
+
+// ── 真实 GLTF 植物/树木加载器 ──────────────────────────────────────────────────
+/**
+ * Loads a GLTF model, auto-scales it to `targetH` metres tall, and places its
+ * base at y=0. Wrapped in Suspense so missing files fail gracefully.
+ * castShadow + receiveShadow set on all child meshes.
+ */
+const _gltfBboxCache = new Map<string, { h: number; minY: number }>();
+
+function GltfPlant({
+  path, targetH = 4.0, rotY = 0, scaleX = 1, scaleZ = 1,
+}: {
+  path: string;
+  targetH?: number;
+  rotY?: number;
+  scaleX?: number;  // independent horizontal scaling for stylistic variety
+  scaleZ?: number;
+}) {
+  const { scene } = useGLTF(path);
+  const { yOff, s } = useMemo(() => {
+    let cached = _gltfBboxCache.get(path);
+    if (!cached) {
+      const box = new THREE.Box3().setFromObject(scene);
+      const sz = new THREE.Vector3();
+      box.getSize(sz);
+      cached = { h: sz.y || 1, minY: box.min.y };
+      _gltfBboxCache.set(path, cached);
+    }
+    const sc = targetH / cached.h;
+    return { yOff: -cached.minY * sc, s: sc };
+  }, [path, targetH, scene]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useMemo(() => {
+    scene.traverse(o => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; }
+    });
+  }, [scene]);
+
+  return (
+    <group position={[0, yOff, 0]} rotation={[0, rotY, 0]} scale={[s * scaleX, s, s * scaleZ]}>
+      <Clone object={scene} />
+    </group>
+  );
+}
+
+// Convenience wrappers with correct public paths
+const CYPRESS_PATH  = "/models/outdoor_tree/cypress_tree_lowpoly/cypress_tree_lowpoly.gltf";
+const PALM_PATH     = "/models/outdoor_tree/palm_tree_lowpoly/palm_tree_lowpoly.gltf";
+const OLIVE_PATH    = "/models/outdoor_tree/old_olive_tree/old_olive_tree.gltf";
+const MAPLE_PATH    = "/models/outdoor_tree/maple_sugar_lowpoly/maple_sugar_lowpoly.gltf";
+// shrub_01/03/04 have truncated .bin files — only shrub_02 is valid
+const SHRUB2_PATH    = "/models/outdoor_shrub/shrub_02/shrub_02_1k.gltf";
+const BOXWOOD_PATH   = "/models/outdoor_plant/boxwood_bush/boxwood_bush.gltf";
+const HEDGE_PATH     = "/models/outdoor_plant/hedge_generic/hedge_generic.gltf";
+const LOUNGER_PATH   = "/models/outdoor_furniture/sun_lounger/sun_lounger.gltf";
 
 // ── 动态泳池焦散灯光（animated underwater caustic lights）────────────────────
 /**
@@ -6110,148 +6166,63 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {/* ── 5c-2d. 泳池两侧高柏树（tall cypress trees flanking pool deck）──
-           6 tall slender Italian-cypress-style trees: 3 per side, placed at the
-           east and west ends of the pool deck. Dark green columns frame the pool
-           composition and echo the reference image silhouette. */}
+      {/* ── 5c-2d. 泳池两侧高柏树（tall cypress trees flanking pool deck — real GLTF）──
+           6 cypress_tree_lowpoly GLTF models: 3 per side, at E and W deck edges.
+           Staggered heights 6.5–8m. Slender columnar form frames the pool. */}
       {!insideBuilding && isGlassVilla && (() => {
         const poolL_cy = Math.min(D * 0.70, 9.50);
         const poolW_cy = Math.min(W * 0.78, 11.0);
         const deckBW_cy = 2.80;
         const pz_cy = -D / 2 - deckBW_cy - poolL_cy / 2 - 0.80;
-        // Cypress positions: 3 east (x > 0), 3 west (x < 0)
-        // Evenly spaced along pool length, just outside deck edge
-        const deckEdgeX = poolW_cy / 2 + deckBW_cy + 0.55;  // just beyond deck E edge
-        const cypressPositions: Array<[number, number]> = [
-          [ deckEdgeX, pz_cy - poolL_cy * 0.35],
-          [ deckEdgeX, pz_cy],
-          [ deckEdgeX, pz_cy + poolL_cy * 0.30],
-          [-deckEdgeX, pz_cy - poolL_cy * 0.35],
-          [-deckEdgeX, pz_cy],
-          [-deckEdgeX, pz_cy + poolL_cy * 0.30],
+        const deckEdgeX = poolW_cy / 2 + deckBW_cy + 0.55;
+        const cypressData: Array<[number, number, number, number]> = [
+          // [x, z, targetH, rotY]
+          [ deckEdgeX, pz_cy - poolL_cy * 0.35, 7.5, 0.3],
+          [ deckEdgeX, pz_cy,                    8.0, 1.1],
+          [ deckEdgeX, pz_cy + poolL_cy * 0.30,  6.8, 2.0],
+          [-deckEdgeX, pz_cy - poolL_cy * 0.35,  7.2, 4.5],
+          [-deckEdgeX, pz_cy,                    7.8, 3.8],
+          [-deckEdgeX, pz_cy + poolL_cy * 0.30,  7.0, 5.2],
         ];
         return (
           <group>
-            {cypressPositions.map(([tx, tz], ti) => {
-              const tHash = (ti * 7 + 3) % 5;
-              const tH = 6.50 + tHash * 0.55;   // 6.5–9m tall
-              const tR = 0.34 + tHash * 0.04;   // canopy radius at widest (≈ 0.38–0.50m)
-              const tSegments = 8;
-              return (
-                <group key={ti} position={[tx, 0, tz]}>
-                  {/* Trunk — very slender dark brown */}
-                  <mesh position={[0, tH * 0.28, 0]} castShadow>
-                    <cylinderGeometry args={[0.055, 0.075, tH * 0.56, 6]} />
-                    <meshStandardMaterial color="#4A3018" roughness={0.88} metalness={0.01} />
-                  </mesh>
-                  {/* Canopy — tall cone representing dense columnar foliage */}
-                  <mesh position={[0, tH * 0.62, 0]} castShadow>
-                    <coneGeometry args={[tR, tH * 0.75, tSegments]} />
-                    <meshStandardMaterial color="#1A4010" roughness={0.97} metalness={0.00} />
-                  </mesh>
-                  {/* Mid-section canopy — slightly wider for realistic silhouette */}
-                  <mesh position={[0, tH * 0.42, 0]}>
-                    <coneGeometry args={[tR * 1.10, tH * 0.40, tSegments]} />
-                    <meshStandardMaterial color="#1E4814" roughness={0.97} metalness={0.00} />
-                  </mesh>
-                  {/* Base foliage skirt */}
-                  <mesh position={[0, tH * 0.08, 0]}>
-                    <coneGeometry args={[tR * 0.80, tH * 0.18, tSegments]} />
-                    <meshStandardMaterial color="#162E0E" roughness={0.97} metalness={0.00} />
-                  </mesh>
-                </group>
-              );
-            })}
+            {cypressData.map(([tx, tz, tH, rotY], ti) => (
+              <group key={ti} position={[tx, 0, tz]}>
+                <Suspense fallback={null}>
+                  <GltfPlant path={CYPRESS_PATH} targetH={tH} rotY={rotY} />
+                </Suspense>
+              </group>
+            ))}
           </group>
         );
       })()}
 
-      {/* ── 5c-2e. 泳池南端热带棕榈（tropical phoenix palms at pool south end）──
-           4 shorter phoenix/date palms flanking the infinity overflow edge.
-           Placed just beyond deck edge on E and W, at the pool's south end.
-           Adds resort/tropical character — visible in foreground from camera.
-           Staggered heights 3.5–5.5m for natural look. */}
+      {/* ── 5c-2e. 泳池南端热带棕榈（tropical palms at pool south end — real GLTF）──
+           4 palm_tree_lowpoly GLTF models flanking the infinity overflow edge.
+           2 east, 2 west, staggered heights 3.5–5m. Resort foreground element. */}
       {!insideBuilding && isGlassVilla && (() => {
         const poolL_tp  = Math.min(D * 0.70, 9.50);
         const poolW_tp  = Math.min(W * 0.78, 11.0);
         const deckBW_tp = 2.80;
         const pz_tp     = -D / 2 - deckBW_tp - poolL_tp / 2 - 0.80;
-        const deckEdgeX_tp = poolW_tp / 2 + deckBW_tp + 0.60;  // just outside deck E edge
-        const poolSZ = pz_tp - poolL_tp / 2 - deckBW_tp;       // south deck edge
-        const palmData: Array<[number, number, number]> = [
-          // [x, z, scale] — 2 east, 2 west
-          [ deckEdgeX_tp + 0.40, poolSZ + 0.90, 1.00],
-          [ deckEdgeX_tp + 0.90, poolSZ + 2.50, 0.85],
-          [-(deckEdgeX_tp + 0.40), poolSZ + 0.90, 0.95],
-          [-(deckEdgeX_tp + 0.90), poolSZ + 2.50, 0.90],
+        const deckEdgeX_tp = poolW_tp / 2 + deckBW_tp + 0.70;
+        const poolSZ = pz_tp - poolL_tp / 2 - deckBW_tp;
+        const palmData: Array<[number, number, number, number]> = [
+          // [x, z, targetH, rotY]
+          [ deckEdgeX_tp + 0.30, poolSZ + 1.0, 4.5, 0.5],
+          [ deckEdgeX_tp + 1.00, poolSZ + 2.8, 3.8, 2.2],
+          [-(deckEdgeX_tp + 0.30), poolSZ + 1.0, 4.2, 4.0],
+          [-(deckEdgeX_tp + 1.00), poolSZ + 2.8, 3.6, 5.5],
         ];
         return (
           <group>
-            {palmData.map(([px, pz, scale], pi) => {
-              const trunkH = (3.20 + pi * 0.45) * scale;
-              const trunkCurve = pi % 2 === 0 ? 0.18 : -0.12;  // lean toward/away from pool
-              const frondR = (1.40 + pi * 0.12) * scale;
-              const frondY = trunkH * 0.92;
-              const frondCount = 10;
-              const pHash = (pi * 7 + 3) % 5;
-              return (
-                <group key={pi} position={[px, 0, pz]}>
-                  {/* Curved trunk — 3 segments */}
-                  {[0, 1, 2].map((seg) => (
-                    <mesh
-                      key={seg}
-                      position={[
-                        trunkCurve * seg * 0.15,
-                        trunkH * (seg / 3 + 1 / 6),
-                        0,
-                      ]}
-                      rotation={[0, 0, trunkCurve * 0.18]}
-                      castShadow
-                    >
-                      <cylinderGeometry args={[
-                        0.055 * scale * (1 - seg * 0.12),
-                        0.075 * scale * (1 - seg * 0.08),
-                        trunkH / 3,
-                        6,
-                      ]} />
-                      <meshStandardMaterial
-                        color={pHash % 2 === 0 ? "#6E4A28" : "#5A3C20"}
-                        roughness={0.88} metalness={0.02}
-                      />
-                    </mesh>
-                  ))}
-                  {/* Frond crown — radial blades */}
-                  {Array.from({ length: frondCount }, (_, fi) => {
-                    const fa = (fi / frondCount) * Math.PI * 2;
-                    const fDrop = -0.25 - Math.sin((fi / frondCount) * Math.PI) * 0.10;
-                    return (
-                      <mesh
-                        key={fi}
-                        position={[
-                          Math.sin(fa) * frondR * 0.40,
-                          frondY + fDrop * frondR * 0.50,
-                          Math.cos(fa) * frondR * 0.40,
-                        ]}
-                        rotation={[fDrop, fa, 0]}
-                        castShadow
-                      >
-                        <planeGeometry args={[frondR * 0.22, frondR]} />
-                        <meshStandardMaterial
-                          color={fi % 3 === 0 ? "#2A6A18" : fi % 3 === 1 ? "#226014" : "#1E5010"}
-                          roughness={0.92} metalness={0.00}
-                          side={THREE.DoubleSide}
-                        />
-                      </mesh>
-                    );
-                  })}
-                  {/* Frond crown center cap — darker sphere */}
-                  <mesh position={[trunkCurve * 0.30, frondY + 0.10 * scale, 0]}>
-                    <sphereGeometry args={[frondR * 0.22, 7, 5]} />
-                    <meshStandardMaterial color="#1C4810" roughness={0.95} metalness={0.00} />
-                  </mesh>
-                </group>
-              );
-            })}
+            {palmData.map(([px, pz, tH, rotY], pi) => (
+              <group key={pi} position={[px, 0, pz]}>
+                <Suspense fallback={null}>
+                  <GltfPlant path={PALM_PATH} targetH={tH} rotY={rotY} />
+                </Suspense>
+              </group>
+            ))}
           </group>
         );
       })()}
@@ -6320,33 +6291,29 @@ export default function FloorPlanBuilding({
         </group>
       )}
 
-      {/* ── 5c-5. 东侧界墙爬藤三角梅（bougainvillea climbing east boundary wall）──
-           Vivid magenta bracts cascade down the inner face of the east wall,
-           created as overlapping sphere clusters at random heights.
-           Adds organic warmth against the hard concrete wall. */}
+      {/* ── 5c-5. 东侧界墙灌木（shrub row along inner east boundary wall — real GLTF）──
+           Replaces floating magenta ball clusters with real shrub_01/shrub_02 GLTF
+           models spaced along the east wall interior. 8 shrubs alternating models. */}
       {!insideBuilding && isGlassVilla && (() => {
-        const bndE5 =  W / 2 + 4.50;
-        const wallH5 = 0.88;
+        const bndE5  =  W / 2 + 4.50;
         const wallT5 = 0.18;
-        const wallX5 = bndE5 - wallT5 / 2;  // inner face of east wall
-        // Vine occupies middle 60% of the east wall length
-        const vineLen = (D + 7.20) * 0.60;  // portion of east wall height covered
-        const vineBottom = wallH5 * 0.20;
+        const wallX5 = bndE5 - wallT5 - 0.40;  // 0.4m inside east wall
+        const shrubZStart = -D / 2 - 1.5;       // start south of building
+        const shrubZEnd   = -D / 2 - 12.0;      // stop well before south boundary
+        const nShrubs = 7;
+        const shrubStep = (shrubZStart - shrubZEnd) / (nShrubs - 1);
         return (
           <group>
-            {Array.from({ length: 22 }, (_, vi) => {
-              const vHash = (vi * 17 + 5) % 23;
-              const vy = vineBottom + (vi / 21) * (vineLen);
-              const vz = -D / 2 - 3.80 + (vHash % 11) * 0.55;
-              const vx = wallX5 - wallT5 / 2 - 0.01 - (vHash % 4) * 0.080;
-              const vr = 0.16 + (vHash % 4) * 0.055;
-              // 75% magenta bougainvillea bracts, 25% green leaves
-              const vCol = vHash % 4 === 0 ? "#2A6018" : vHash % 7 < 3 ? "#CC2060" : vHash % 7 < 5 ? "#E03070" : "#D04888";
+            {Array.from({ length: nShrubs }, (_, si) => {
+              const sz = shrubZStart - si * shrubStep;
+              const rotY = (si * 1.3) % (Math.PI * 2);
+              const shrubPath = si % 3 === 0 ? BOXWOOD_PATH : si % 3 === 1 ? SHRUB2_PATH : HEDGE_PATH;
               return (
-                <mesh key={vi} position={[vx, vy, vz]}>
-                  <sphereGeometry args={[vr, 7, 5]} />
-                  <meshStandardMaterial color={vCol} roughness={0.95} />
-                </mesh>
+                <group key={si} position={[wallX5, 0, sz]}>
+                  <Suspense fallback={null}>
+                    <GltfPlant path={shrubPath} targetH={1.0} rotY={rotY} />
+                  </Suspense>
+                </group>
               );
             })}
           </group>
@@ -7015,63 +6982,40 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {/* ── 5e. 庭院乔木（mature trees at site corners）── */}
+      {/* ── 5e. 庭院乔木（mature trees at site corners — real GLTF models）──
+           Replaces fake sphere/cylinder geometry with real olive + maple models.
+           Alternates between old_olive_tree (SW/SE/mid-W) and maple_sugar (NE/NW/mid-E)
+           for visual variety. Each has a night in-ground uplight. */}
       {!insideBuilding && isGlassVilla && (() => {
-        const treeData: Array<[number, number]> = [
-          [ W / 2 + 3.0,  D / 2 + 1.8],   // NE corner
-          [-W / 2 - 3.0,  D / 2 + 1.8],   // NW corner
-          [ W / 2 + 3.0, -D / 2 - 5.0],   // SE (south of canopy, near pool)
-          [-W / 2 - 3.0, -D / 2 - 5.0],   // SW
-          [ W / 2 + 3.5, -D / 2 + 1.0],   // mid-east
-          [-W / 2 - 3.5, -D / 2 + 1.0],   // mid-west
+        // [x, z, targetH, useOlive, rotY]
+        const treeData: Array<[number, number, number, boolean, number]> = [
+          [ W / 2 + 3.0,  D / 2 + 1.8, 5.5, false, 0.8],   // NE — maple
+          [-W / 2 - 3.0,  D / 2 + 1.8, 5.0, false, 2.1],   // NW — maple
+          [ W / 2 + 3.0, -D / 2 - 5.0, 6.0, true,  1.2],   // SE — olive
+          [-W / 2 - 3.0, -D / 2 - 5.0, 5.8, true,  3.5],   // SW — olive
+          [ W / 2 + 3.5, -D / 2 + 1.0, 5.2, false, 0.4],   // mid-east — maple
+          [-W / 2 - 3.5, -D / 2 + 1.0, 5.4, true,  2.8],   // mid-west — olive
         ];
         const isNightT = sunHour < 6 || sunHour > 20;
         const isDuskT  = !isNightT && (sunHour < 8 || sunHour > 18);
         const treeLI   = isNightT ? 4.5 : isDuskT ? 2.2 : 0.0;
         return (
           <group>
-            {treeData.map(([tx, tz], ti) => {
-              const trunkH   = 3.8 + panelBlindHash(ti * 3, 7) * 1.6;
-              const trunkR   = 0.11 + panelBlindHash(ti + 3, 2) * 0.07;
-              const fR       = 1.15 + panelBlindHash(ti, 11) * 0.65;
-              const fY       = trunkH * 0.74;
-              const gBase    = panelBlindHash(ti, 13) < 0.5 ? "#2A6020" : "#224E18";
-              const gDark    = panelBlindHash(ti, 17) < 0.5 ? "#1C4A12" : "#244E18";
-              return (
-                <group key={ti} position={[tx, 0, tz]}>
-                  {/* Trunk */}
-                  <mesh position={[0, trunkH / 2, 0]} castShadow>
-                    <cylinderGeometry args={[trunkR * 0.72, trunkR, trunkH, 7]} />
-                    <meshStandardMaterial color="#5A3E28" roughness={0.92} metalness={0.02} />
-                  </mesh>
-                  {/* Main foliage */}
-                  <mesh position={[0, fY, 0]} castShadow>
-                    <sphereGeometry args={[fR, 8, 6]} />
-                    <meshStandardMaterial color={gBase} roughness={0.96} metalness={0.01} />
-                  </mesh>
-                  {/* Upper cluster */}
-                  <mesh position={[fR * 0.22, fY + fR * 0.52, fR * 0.08]} castShadow>
-                    <sphereGeometry args={[fR * 0.62, 7, 5]} />
-                    <meshStandardMaterial color={gDark} roughness={0.97} metalness={0.01} />
-                  </mesh>
-                  {/* Side cluster */}
-                  <mesh position={[-fR * 0.46, fY - fR * 0.18, 0]} castShadow>
-                    <sphereGeometry args={[fR * 0.52, 7, 5]} />
-                    <meshStandardMaterial color={gBase} roughness={0.96} metalness={0.01} />
-                  </mesh>
-                  {/* Tree ground up-light — in-ground spot at trunk base */}
-                  {isNightT && (
-                    <>
-                      <mesh position={[trunkR + 0.25, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                        <circleGeometry args={[0.052, 8]} />
-                        <meshStandardMaterial color="#282830" roughness={0.45} metalness={0.65} />
-                      </mesh>
-                      <pointLight position={[trunkR + 0.25, 0.04, 0]} intensity={treeLI} distance={fY + fR + 1.5} decay={1.6} color="#FFF4D0" castShadow={false} />
-                    </>
-                  )}
-                </group>
-              );
-            })}
+            {treeData.map(([tx, tz, tH, useOlive, rotY], ti) => (
+              <group key={ti} position={[tx, 0, tz]}>
+                <Suspense fallback={null}>
+                  <GltfPlant
+                    path={useOlive ? OLIVE_PATH : MAPLE_PATH}
+                    targetH={tH}
+                    rotY={rotY}
+                  />
+                </Suspense>
+                {/* In-ground up-light at tree base (night/dusk) */}
+                {treeLI > 0 && (
+                  <pointLight position={[0.30, 0.04, 0]} intensity={treeLI} distance={tH + 1.5} decay={1.6} color="#FFF4D0" castShadow={false} />
+                )}
+              </group>
+            ))}
           </group>
         );
       })()}
@@ -7228,61 +7172,28 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {/* ── 5e-0a. 车道两侧棕榈树（palm trees flanking driveway entry）──
-           4 tall fan palms (2 per side) at the gate entrance, adding a
-           tropical / Beverly Hills estate feel to the approach. */}
+      {/* ── 5e-0a. 车道两侧棕榈树（palm trees flanking driveway entry — real GLTF）──
+           4 tall palm_tree_lowpoly GLTF models at the gate entrance.
+           2 per side, heights 5.5–7m for Beverly Hills estate feel. */}
       {!insideBuilding && isGlassVilla && (() => {
         const dvHalfW3 = 2.20;
-        const gateZ3 = -D / 2 - 14.50 + 0.40;    // near gate
-        const palmPositions: Array<[number, number]> = [
-          [ dvHalfW3 + 1.20, gateZ3 + 1.20],   // east-near
-          [ dvHalfW3 + 2.60, gateZ3 + 0.60],   // east-far
-          [-dvHalfW3 - 1.20, gateZ3 + 1.20],   // west-near
-          [-dvHalfW3 - 2.60, gateZ3 + 0.60],   // west-far
+        const gateZ3 = -D / 2 - 14.50 + 0.40;
+        const palmData3: Array<[number, number, number, number]> = [
+          // [x, z, targetH, rotY]
+          [ dvHalfW3 + 1.20, gateZ3 + 1.20, 6.5, 0.8],
+          [ dvHalfW3 + 2.60, gateZ3 + 0.60, 5.8, 1.8],
+          [-dvHalfW3 - 1.20, gateZ3 + 1.20, 6.2, 3.5],
+          [-dvHalfW3 - 2.60, gateZ3 + 0.60, 7.0, 4.8],
         ];
         return (
           <group>
-            {palmPositions.map(([px, pz], pi) => {
-              const pHash3 = (pi * 11 + 5) % 7;
-              const trunkH3 = 5.50 + pHash3 * 0.55;   // 5.5–9m tall palms
-              const tiltX = (pi % 2 === 0 ? 0.06 : -0.04);  // slight lean
-              return (
-                <group key={pi} position={[px, 0, pz]}>
-                  {/* Trunk — segmented tapered cylinder */}
-                  {Array.from({ length: 7 }, (_, si) => {
-                    const segY = si * (trunkH3 / 7);
-                    const segR = 0.095 - si * 0.010;
-                    return (
-                      <mesh key={si} position={[tiltX * si * 0.12, segY + trunkH3 / 14, tiltX * si * 0.05]} castShadow>
-                        <cylinderGeometry args={[segR - 0.008, segR, trunkH3 / 7, 8]} />
-                        <meshStandardMaterial color={si % 2 === 0 ? "#806040" : "#9A7050"} roughness={0.88} metalness={0.01} />
-                      </mesh>
-                    );
-                  })}
-                  {/* Frond crown — 8 angled plumes */}
-                  {Array.from({ length: 8 }, (_, fi) => {
-                    const fAng = (fi / 8) * Math.PI * 2;
-                    const fTiltX = Math.cos(fAng) * 0.55 + tiltX * 0.3;
-                    const fTiltZ = Math.sin(fAng) * 0.55;
-                    const fLen = 1.80 + (fi % 3) * 0.25;
-                    return (
-                      <mesh key={fi} position={[fTiltX * 0.5, trunkH3 + fLen * 0.40, fTiltZ * 0.5]}
-                        rotation={[-fTiltZ * 0.55, fAng, fTiltX * 0.55]}>
-                        <boxGeometry args={[0.055, fLen, 0.30]} />
-                        <meshStandardMaterial color="#2E6818" roughness={0.90} metalness={0.02} />
-                      </mesh>
-                    );
-                  })}
-                  {/* Coconut-like fruit clusters at frond base */}
-                  {Array.from({ length: 3 }, (_, ci) => (
-                    <mesh key={ci} position={[(ci - 1) * 0.18 + tiltX * 0.4, trunkH3 + 0.22, (ci % 2) * 0.14]}>
-                      <sphereGeometry args={[0.065 + (ci % 2) * 0.020, 7, 5]} />
-                      <meshStandardMaterial color="#704820" roughness={0.82} />
-                    </mesh>
-                  ))}
-                </group>
-              );
-            })}
+            {palmData3.map(([px, pz, tH, rotY], pi) => (
+              <group key={pi} position={[px, 0, pz]}>
+                <Suspense fallback={null}>
+                  <GltfPlant path={PALM_PATH} targetH={tH} rotY={rotY} />
+                </Suspense>
+              </group>
+            ))}
           </group>
         );
       })()}
@@ -7796,30 +7707,28 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {/* ── 5e-1d. 西侧界墙爬墙月季（climbing roses on west boundary wall）──
-           Similar to bougainvillea on east wall but red/pink climbing roses
-           for variety. Adds symmetry and lush organic texture. */}
+      {/* ── 5e-1d. 西侧界墙灌木（shrub row along inner west boundary wall — real GLTF）──
+           Replaces floating pink/red rose ball clusters with real shrub GLTF models. */}
       {!insideBuilding && isGlassVilla && (() => {
-        const bndW6 = -W / 2 - 4.50;
-        const wallH6 = 0.88;
+        const bndW6  = -W / 2 - 4.50;
         const wallT6 = 0.18;
-        const wallX6 = bndW6 + wallT6 / 2;
-        const vineLen6 = (D + 7.20) * 0.55;
-        const vineBottom6 = wallH6 * 0.15;
+        const wallX6 = bndW6 + wallT6 + 0.40;  // 0.4m inside west wall
+        const shrubZStart6 = -D / 2 - 1.5;
+        const shrubZEnd6   = -D / 2 - 12.0;
+        const nShrubs6 = 7;
+        const shrubStep6 = (shrubZStart6 - shrubZEnd6) / (nShrubs6 - 1);
         return (
           <group>
-            {Array.from({ length: 20 }, (_, vi) => {
-              const vHash = (vi * 19 + 11) % 17;
-              const vy = vineBottom6 + (vi / 19) * vineLen6;
-              const vz = -D / 2 - 2.50 + (vHash % 9) * 0.60;
-              const vx = wallX6 + wallT6 / 2 + 0.01 + (vHash % 3) * 0.085;
-              const vr = 0.14 + (vHash % 4) * 0.050;
-              const vCol = vHash % 5 === 0 ? "#2A6018" : vHash % 5 === 1 ? "#C01840" : vHash % 5 === 2 ? "#D83060" : vHash % 5 === 3 ? "#E04070" : "#C83050";
+            {Array.from({ length: nShrubs6 }, (_, si) => {
+              const sz = shrubZStart6 - si * shrubStep6;
+              const rotY = (si * 1.7 + 1.0) % (Math.PI * 2);
+              const shrubPath = si % 3 === 0 ? SHRUB2_PATH : si % 3 === 1 ? HEDGE_PATH : BOXWOOD_PATH;
               return (
-                <mesh key={vi} position={[vx, vy, vz]}>
-                  <sphereGeometry args={[vr, 7, 5]} />
-                  <meshStandardMaterial color={vCol} roughness={0.95} />
-                </mesh>
+                <group key={si} position={[wallX6, 0, sz]}>
+                  <Suspense fallback={null}>
+                    <GltfPlant path={shrubPath} targetH={1.0} rotY={rotY} />
+                  </Suspense>
+                </group>
               );
             })}
           </group>
@@ -8108,33 +8017,12 @@ export default function FloorPlanBuilding({
         const loungerRowX0 = -(nLoungers - 1) * loungerSpacing / 2;
         return (
           <group>
-            {/* North-side loungers in a row (facing pool / south) */}
+            {/* North-side loungers — real sun_lounger GLTF models, facing pool (south) */}
             {Array.from({ length: nLoungers }, (_, li) => (
               <group key={li} position={[loungerRowX0 + li * loungerSpacing, deckT2, loungerRowZ]} rotation={[0, Math.PI, 0]}>
-                {/* Frame */}
-                <mesh position={[0, 0.19, 0]} castShadow>
-                  <boxGeometry args={[0.55, 0.06, 1.70]} />
-                  <meshStandardMaterial color={loungerMetal} roughness={0.22} metalness={0.88} />
-                </mesh>
-                {/* Cushion */}
-                <mesh position={[0, 0.26, 0]}>
-                  <boxGeometry args={[0.47, 0.09, 1.54]} />
-                  <meshStandardMaterial color={loungerColor} roughness={0.88} />
-                </mesh>
-                {/* Backrest tilt */}
-                <mesh position={[0, 0.34, 0.48]} rotation={[-0.28, 0, 0]}>
-                  <boxGeometry args={[0.45, 0.07, 0.60]} />
-                  <meshStandardMaterial color={loungerColor} roughness={0.88} />
-                </mesh>
-                {/* Legs */}
-                {([-0.22, 0.22] as number[]).flatMap(lx2 =>
-                  ([-0.68, 0.68] as number[]).map((lz2, ki) => (
-                    <mesh key={`${lx2}-${ki}`} position={[lx2, 0.09, lz2]} castShadow>
-                      <boxGeometry args={[0.032, 0.18, 0.032]} />
-                      <meshStandardMaterial color={loungerMetal} roughness={0.20} metalness={0.90} />
-                    </mesh>
-                  ))
-                )}
+                <Suspense fallback={null}>
+                  <GltfPlant path={LOUNGER_PATH} targetH={0.40} rotY={0} />
+                </Suspense>
               </group>
             ))}
             {/* Note: no umbrella over lounger row — the building cantilever provides shade */}
@@ -10480,3 +10368,13 @@ export default function FloorPlanBuilding({
     </group>
   );
 }
+
+// Preload all GLTF models used in this file so they are fetched before first render
+useGLTF.preload(CYPRESS_PATH);
+useGLTF.preload(PALM_PATH);
+useGLTF.preload(OLIVE_PATH);
+useGLTF.preload(MAPLE_PATH);
+useGLTF.preload(SHRUB2_PATH);
+useGLTF.preload(BOXWOOD_PATH);
+useGLTF.preload(HEDGE_PATH);
+useGLTF.preload(LOUNGER_PATH);
