@@ -885,44 +885,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
               </mesh>
             ))}
 
-            {/* ── Rectangular raised planter boxes at corners ── */}
-            {([[-grW * 0.38, -grD * 0.38], [grW * 0.38, -grD * 0.38]] as [number,number][]).map(([px, pz], pi) => (
-              <group key={pi} position={[px, 0.092, pz]}>
-                {/* Planter body — weathering steel */}
-                <mesh castShadow>
-                  <boxGeometry args={[0.80, 0.32, 0.44]} />
-                  <meshStandardMaterial color="#6A4830" roughness={0.65} metalness={0.38} />
-                </mesh>
-                {/* Soil surface */}
-                <mesh position={[0, 0.155, 0]}>
-                  <boxGeometry args={[0.76, 0.010, 0.40]} />
-                  <meshStandardMaterial color="#2A1A08" roughness={0.98} />
-                </mesh>
-                {/* 3 small ornamental plants */}
-                {[-0.22, 0, 0.22].map((ox, oi) => (
-                  <mesh key={oi} position={[ox, 0.30, 0]}>
-                    <sphereGeometry args={[0.14 + (oi % 2) * 0.04, 5, 4]} />
-                    <meshStandardMaterial color={oi === 1 ? "#8090A0" : "#3A5A28"} roughness={0.90} />
-                  </mesh>
-                ))}
-              </group>
-            ))}
-
-            {/* ── 4 ornamental grasses along boardwalk edge ── */}
-            {[[-grW * 0.20, 0], [grW * 0.20, 0], [0, -grD * 0.28], [0, grD * 0.28]].map(([ox, oz], oi) => (
-              <group key={oi} position={[ox as number, 0.10, oz as number]}>
-                {Array.from({ length: 7 }, (_, gi) => {
-                  const ga = (gi * Math.PI * 2) / 7;
-                  return (
-                    <mesh key={gi} position={[Math.cos(ga) * 0.08, 0.28, Math.sin(ga) * 0.08]}
-                      rotation={[Math.sin(ga) * 0.35, 0, Math.cos(ga) * 0.35]}>
-                      <boxGeometry args={[0.012, 0.55, 0.006]} />
-                      <meshStandardMaterial color="#8AAA40" roughness={0.90} />
-                    </mesh>
-                  );
-                })}
-              </group>
-            ))}
+            {/* rooftop planters + grasses removed */}
           </group>
         );
       })()}
@@ -1410,219 +1373,20 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
                 {...overlayMaterialProps(1)}
               />
             </mesh>
-            {/* 廊架垂挂紫藤 / 绿植（hanging wisteria vines from pergola beams）
-                Small sphere clusters hang from underside of louvers for lush effect. */}
-            {Array.from({ length: 10 }, (_, vi) => {
-              const vHash = (vi * 7 + 3) % 11;
-              const vx = -pgW * 0.40 + vi * (pgW * 0.80 / 9);
-              const vz = -pgD * 0.30 + (vHash % 3) * (pgD * 0.30);
-              const vLen = 0.22 + (vHash % 5) * 0.045;
-              const vCol = vHash % 4 === 0 ? "#9966BB" : vHash % 4 === 1 ? "#AA77CC" : vHash % 4 === 2 ? "#3A7028" : "#2E6022";
-              return (
-                <group key={`vine-${vi}`} position={[vx, pgH + 0.08, vz]}>
-                  {/* Hanging stem */}
-                  <mesh position={[0, -vLen / 2, 0]}>
-                    <cylinderGeometry args={[0.006, 0.005, vLen, 4]} />
-                    <meshStandardMaterial color="#3A2810" roughness={0.92} />
-                  </mesh>
-                  {/* Foliage/flower cluster at bottom */}
-                  <mesh position={[0, -vLen - 0.060, 0]}>
-                    <sphereGeometry args={[0.060, 7, 5]} />
-                    <meshStandardMaterial color={vCol} roughness={0.95} />
-                  </mesh>
-                  {/* Secondary cluster */}
-                  <mesh position={[0.05, -vLen - 0.038, 0.03]}>
-                    <sphereGeometry args={[0.040, 6, 4]} />
-                    <meshStandardMaterial color={vCol} roughness={0.96} />
-                  </mesh>
-                </group>
-              );
-            })}
-          </group>
-        );
-      })()}
-      {/* 屋顶种植箱 — 长方形黑钢槽，搭配多株造型植物 */}
-      {([[-W * 0.36, -D * 0.18], [W * 0.36, -D * 0.18]] as [number,number][]).map(([ppx, ppz], pi) => (
-        <group key={`rp-${pi}`} position={[ppx, roofSlab + 0.05, ppz]}>
-          {/* Planter box — dark steel trough */}
-          <mesh position={[0, 0.26, 0]} castShadow>
-            <boxGeometry args={[1.20, 0.52, 0.44]} />
-            <meshStandardMaterial color="#282A32" roughness={0.55} metalness={0.42} envMapIntensity={1.4} />
-          </mesh>
-          {/* Soil surface */}
-          <mesh position={[0, 0.525, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[1.14, 0.38]} />
-            <meshStandardMaterial color="#2A1A0E" roughness={0.98} />
-          </mesh>
-          {/* Main rounded shrub */}
-          <mesh position={[0, 0.80, 0]} castShadow>
-            <sphereGeometry args={[0.30, 10, 8]} />
-            <meshStandardMaterial color={pi === 0 ? "#2A6020" : "#224E18"} roughness={0.96} />
-          </mesh>
-          {/* Secondary cluster — offset for asymmetry */}
-          <mesh position={[0.32, 0.68, 0.05]} castShadow>
-            <sphereGeometry args={[0.22, 8, 6]} />
-            <meshStandardMaterial color="#1E4A14" roughness={0.97} />
-          </mesh>
-          {/* Small accent cluster */}
-          <mesh position={[-0.28, 0.64, -0.05]} castShadow>
-            <sphereGeometry args={[0.18, 7, 5]} />
-            <meshStandardMaterial color={pi === 0 ? "#2E6022" : "#284E1C"} roughness={0.96} />
-          </mesh>
-          {/* Tall spiky accent (ornamental grass / agave form) */}
-          <mesh position={[0.06, 0.88, 0]} castShadow>
-            <cylinderGeometry args={[0.04, 0.08, 0.52, 6]} />
-            <meshStandardMaterial color="#3A7028" roughness={0.94} />
-          </mesh>
-        </group>
-      ))}
-
-      {/* ── 楼梯间出入口小屋（stair penthouse）— 北侧混凝土体量 ── */}
-      {(() => {
-        const spW  = 2.10;   // east-west width
-        const spD  = 1.60;   // north-south depth
-        const spH  = 2.55;   // height above roof slab
-        const spX  = -W * 0.34;
-        const spZ  =  D * 0.26;   // north portion of roof
-        const spY  = roofSlab + 0.05 + spH / 2;
-        const bodyColor  = "#E4E0D8";  // matches concrete facade
-        const roofCapCol = "#CCCAC4";
-        // Door dims
-        const doorW = 0.82, doorH = 2.05, doorZ = spD / 2 + 0.004;
-        return (
-          <group position={[spX, spY, spZ]}>
-            {/* Main concrete body */}
-            <mesh castShadow receiveShadow>
-              <boxGeometry args={[spW, spH, spD]} />
-              <meshStandardMaterial color={bodyColor} roughness={0.86} metalness={0.03} />
-            </mesh>
-            {/* Flat roof cap — slightly darker with metal edging */}
-            <mesh position={[0, spH / 2 + 0.032, 0]}>
-              <boxGeometry args={[spW + 0.06, 0.065, spD + 0.06]} />
-              <meshStandardMaterial color={roofCapCol} roughness={0.78} metalness={0.06} />
-            </mesh>
-            {/* Cap edge flashing — dark anodized aluminium */}
-            <mesh position={[0, spH / 2 + 0.067, 0]}>
-              <boxGeometry args={[spW + 0.08, 0.014, spD + 0.08]} />
-              <meshStandardMaterial color="#2E3240" roughness={0.22} metalness={0.90} envMapIntensity={2.0} />
-            </mesh>
-            {/* Steel door — dark charcoal, south-facing */}
-            <mesh position={[0, (-spH / 2) + doorH / 2, doorZ]} castShadow>
-              <boxGeometry args={[doorW, doorH, 0.055]} />
-              <meshStandardMaterial color="#1C1E26" roughness={0.30} metalness={0.78} envMapIntensity={1.6} />
-            </mesh>
-            {/* Door frame — stainless reveal */}
-            <mesh position={[0, (-spH / 2) + doorH / 2, doorZ + 0.006]}>
-              <boxGeometry args={[doorW + 0.055, doorH + 0.055, 0.028]} />
-              <meshStandardMaterial color="#6C7280" roughness={0.25} metalness={0.82} envMapIntensity={1.8} />
-            </mesh>
-            {/* Door handle */}
-            <mesh position={[doorW / 2 - 0.09, (-spH / 2) + doorH * 0.52, doorZ + 0.044]}>
-              <boxGeometry args={[0.022, 0.12, 0.022]} />
-              <meshStandardMaterial color="#8A9BA8" roughness={0.20} metalness={0.90} />
-            </mesh>
-            {/* Small clerestory window on south face — frosted glass strip */}
-            <mesh position={[0, spH / 2 - 0.28, doorZ + 0.004]}>
-              <boxGeometry args={[spW * 0.60, 0.22, 0.018]} />
-              <meshStandardMaterial
-                color="#B8D4E0"
-                transparent opacity={0.55}
-                roughness={0.06} metalness={0.08}
-                envMapIntensity={2.5}
-              />
-            </mesh>
-            {/* Horizontal concrete joint line */}
-            <mesh position={[0, 0.02, spD / 2 + 0.002]}>
-              <boxGeometry args={[spW + 0.002, 0.012, 0.010]} />
-              <meshStandardMaterial color="#C8C4BC" roughness={0.88} />
-            </mesh>
-          </group>
-        );
-      })()}
-
-      {/* ── 电梯机房玻璃塔（elevator overrun glass tower）──
-           Slender glass-and-steel lift overrun penthouse, east of stair core.
-           Premium residential feature: frameless glass curtain panels on 3
-           sides, steel corner posts, aluminium cap band, interior cable drum
-           visible through glass, and cool-blue night illumination. */}
-      {(() => {
-        const epW  = 1.60;    // E-W
-        const epD  = 1.40;    // N-S
-        const epH  = 2.80;    // height above roofSlab
-        const epX  = -W * 0.34 + 1.85;    // east of stair penthouse
-        const epZ  =  D * 0.26;
-        const epY  = roofSlab + 0.05;
-        const isNightEP = nightGlow > 0;
-        const postM = { color: "#1E2028", roughness: 0.20, metalness: 0.90, envMapIntensity: 2.5 };
-        return (
-          <group position={[epX, epY, epZ]}>
-            {/* ── 4 corner steel posts ── */}
-            {([-epW / 2 + 0.04, epW / 2 - 0.04] as number[]).flatMap(px =>
-              ([-epD / 2 + 0.04, epD / 2 - 0.04] as number[]).map((pz, pzi) => (
-                <mesh key={`${px}-${pzi}`} position={[px, epH / 2, pz]} castShadow>
-                  <boxGeometry args={[0.065, epH, 0.065]} />
-                  <meshStandardMaterial {...postM} />
-                </mesh>
-              ))
-            )}
-            {/* ── Glass curtain panels — east, west, south faces ── */}
-            {/* East face */}
-            <mesh position={[epW / 2, epH / 2, 0]} {...overlayMaterialProps(1)}>
-              <boxGeometry args={[0.012, epH - 0.06, epD - 0.06]} />
-              <meshPhysicalMaterial color="#B8D0E0" transparent opacity={0.38}
-                roughness={0.03} metalness={0.06} transmission={0.40}
-                emissive="#8AB4CC" emissiveIntensity={isNightEP ? 0.22 : 0.04} side={2} />
-            </mesh>
-            {/* West face */}
-            <mesh position={[-epW / 2, epH / 2, 0]} {...overlayMaterialProps(1)}>
-              <boxGeometry args={[0.012, epH - 0.06, epD - 0.06]} />
-              <meshPhysicalMaterial color="#B8D0E0" transparent opacity={0.38}
-                roughness={0.03} metalness={0.06} transmission={0.40}
-                emissive="#8AB4CC" emissiveIntensity={isNightEP ? 0.22 : 0.04} side={2} />
-            </mesh>
-            {/* South face (glass) */}
-            <mesh position={[0, epH / 2, -epD / 2]} {...overlayMaterialProps(1)}>
-              <boxGeometry args={[epW - 0.06, epH - 0.06, 0.012]} />
-              <meshPhysicalMaterial color="#B8D0E0" transparent opacity={0.38}
-                roughness={0.03} metalness={0.06} transmission={0.40}
-                emissive="#8AB4CC" emissiveIntensity={isNightEP ? 0.22 : 0.04} side={2} />
-            </mesh>
-            {/* North face — solid steel (machine room back) */}
-            <mesh position={[0, epH / 2, epD / 2]}>
-              <boxGeometry args={[epW - 0.06, epH - 0.06, 0.055]} />
-              <meshStandardMaterial color="#24262E" roughness={0.35} metalness={0.72} />
-            </mesh>
-
-            {/* ── Interior cable drum (visible through glass) ── */}
-            <mesh position={[0, epH * 0.62, 0]} rotation={[0, 0, Math.PI / 2]}>
-              <cylinderGeometry args={[0.22, 0.22, 0.28, 10]} />
-              <meshStandardMaterial color="#303844" roughness={0.40} metalness={0.68} />
-            </mesh>
-            {/* Cable wrap lines on drum */}
-            {[0, 0.06, 0.12].map((dy, di) => (
-              <mesh key={di} position={[0, epH * 0.62 - 0.06 + dy, 0]} rotation={[0, 0, Math.PI / 2]}>
-                <torusGeometry args={[0.23, 0.008, 4, 10]} />
-                <meshStandardMaterial color="#505870" roughness={0.30} metalness={0.72} />
-              </mesh>
-            ))}
+            {/* pergola vines removed */}
 
             {/* ── Aluminium top cap band ── */}
-            <mesh position={[0, epH + 0.022, 0]}>
-              <boxGeometry args={[epW + 0.04, 0.045, epD + 0.04]} />
+            <mesh position={[0, pgH + 0.022, 0]}>
+              <boxGeometry args={[pgW + 0.04, 0.045, pgD + 0.04]} />
               <meshStandardMaterial color="#505868" roughness={0.22} metalness={0.88} envMapIntensity={2.2} />
             </mesh>
             {/* Cap edge angled drip */}
-            <mesh position={[0, epH + 0.046, 0]}>
-              <boxGeometry args={[epW + 0.06, 0.012, epD + 0.06]} />
+            <mesh position={[0, pgH + 0.046, 0]}>
+              <boxGeometry args={[pgW + 0.06, 0.012, pgD + 0.06]} />
               <meshStandardMaterial color="#3E4458" roughness={0.18} metalness={0.92} envMapIntensity={2.4} />
             </mesh>
 
-            {/* ── Night glow light ── */}
-            {isNightEP && (
-              <pointLight position={[0, epH * 0.50, 0]}
-                intensity={nightGlow * 2.5} distance={3.0} decay={2.0}
-                color="#80C0E8" castShadow={false} />
-            )}
+            {/* pergola night glow light removed */}
           </group>
         );
       })()}
@@ -3385,55 +3149,9 @@ export default function FloorPlanBuilding({
               );
             })()}
 
-            {/* 两侧种植槽（黑色钢制树箱 + 修剪球形灌木）*/}
-            {([-stepW / 2 - 1.0, stepW / 2 + 1.0] as number[]).map((bx, bi) => (
-              <group key={bi} position={[bx, 0.02, southFaceZ2 - 0.50]}>
-                {/* Steel planter box */}
-                <mesh position={[0, 0.22, 0]} castShadow>
-                  <boxGeometry args={[0.60, 0.44, 0.60]} />
-                  <meshStandardMaterial color="#1C1E24" roughness={0.28} metalness={0.70} envMapIntensity={1.5} />
-                </mesh>
-                {/* Soil top */}
-                <mesh position={[0, 0.455, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                  <planeGeometry args={[0.58, 0.58]} />
-                  <meshStandardMaterial color="#2A1A0E" roughness={0.98} />
-                </mesh>
-                {/* Clipped box topiary sphere */}
-                <mesh position={[0, 0.75, 0]} castShadow>
-                  <sphereGeometry args={[0.28, 12, 9]} />
-                  <meshStandardMaterial color="#2E6830" roughness={0.92} />
-                </mesh>
-              </group>
-            ))}
+            {/* entrance planters removed */}
 
-            {/* ── 入口两侧毛竹列（ornamental bamboo columns，点缀于台阶外侧）──
-                 各 3 根细竹竿 + 顶部叶簇球，增加东亚现代建筑氛围 */}
-            {([-stepW / 2 - 2.4, stepW / 2 + 2.4] as number[]).map((bx, bi) => (
-              <group key={`bamboo-${bi}`} position={[bx, 0, southFaceZ2 - 0.80]}>
-                {/* 3 竹竿，错开 ~0.16m */}
-                {([[-0.08, 4.50], [0, 5.20], [0.10, 4.85]] as [number,number][]).map(([ox, bH], ci) => (
-                  <group key={ci} position={[ox, 0, 0]}>
-                    {/* Bamboo culm — tapered cylinder */}
-                    <mesh castShadow>
-                      <cylinderGeometry args={[0.026, 0.038, bH, 6]} />
-                      <meshStandardMaterial color="#7A9040" roughness={0.80} metalness={0.02} />
-                    </mesh>
-                    {/* Node rings (every ~0.40m) */}
-                    {Array.from({ length: Math.floor(bH / 0.42) }, (_, ni) => (
-                      <mesh key={ni} position={[0, -bH / 2 + (ni + 1) * 0.42, 0]}>
-                        <cylinderGeometry args={[0.030, 0.030, 0.022, 6]} />
-                        <meshStandardMaterial color="#5E7030" roughness={0.88} />
-                      </mesh>
-                    ))}
-                    {/* Leaf cluster at top */}
-                    <mesh position={[ox * 0.8, bH / 2 + 0.28, 0]} castShadow>
-                      <sphereGeometry args={[0.35, 8, 6]} />
-                      <meshStandardMaterial color="#3A6820" roughness={0.96} />
-                    </mesh>
-                  </group>
-                ))}
-              </group>
-            ))}
+            {/* entrance bamboo removed */}
 
             {/* ── 台阶侧翼叠水槽（stepped cascade channels）——
                  台阶左右各一条石砌叠水槽，水流从建筑基础沿台阶逐级跌落到广场 ── */}
@@ -5290,7 +5008,7 @@ export default function FloorPlanBuilding({
            A strip of low ornamental grasses and mounding shrubs along the
            south and east/west faces, softening building-meets-ground transition.
            Standard luxury exterior finish — usually boxwood, liriope, or grasses. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const bedW = 0.55;    // planting bed depth from building face
         const bedY = bedW / 2;
         // South facade plant strip
@@ -5477,7 +5195,7 @@ export default function FloorPlanBuilding({
            Width = W × 0.38, depth = 2.4m, height = 3.2m at ridge.
            Dark anodized steel frame + laminated glass panels.
            At night: warm amber glow from interior plants / lighting. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const cW2 = Math.min(W * 0.38, 5.0);   // conservatory width
         const cD2 = 2.40;                        // depth (north from building wall)
         const cH2 = 2.80;                        // wall height (eave)
@@ -6169,7 +5887,7 @@ export default function FloorPlanBuilding({
       {/* ── 5c-2d. 泳池两侧高柏树（tall cypress trees flanking pool deck — real GLTF）──
            6 cypress_tree_lowpoly GLTF models: 3 per side, at E and W deck edges.
            Staggered heights 6.5–8m. Slender columnar form frames the pool. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const poolL_cy = Math.min(D * 0.70, 9.50);
         const poolW_cy = Math.min(W * 0.78, 11.0);
         const deckBW_cy = 2.80;
@@ -6200,7 +5918,7 @@ export default function FloorPlanBuilding({
       {/* ── 5c-2e. 泳池南端热带棕榈（tropical palms at pool south end — real GLTF）──
            4 palm_tree_lowpoly GLTF models flanking the infinity overflow edge.
            2 east, 2 west, staggered heights 3.5–5m. Resort foreground element. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const poolL_tp  = Math.min(D * 0.70, 9.50);
         const poolW_tp  = Math.min(W * 0.78, 11.0);
         const deckBW_tp = 2.80;
@@ -6294,7 +6012,7 @@ export default function FloorPlanBuilding({
       {/* ── 5c-5. 东侧界墙灌木（shrub row along inner east boundary wall — real GLTF）──
            Replaces floating magenta ball clusters with real shrub_01/shrub_02 GLTF
            models spaced along the east wall interior. 8 shrubs alternating models. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const bndE5  =  W / 2 + 4.50;
         const wallT5 = 0.18;
         const wallX5 = bndE5 - wallT5 - 0.40;  // 0.4m inside east wall
@@ -6908,7 +6626,7 @@ export default function FloorPlanBuilding({
       {/* ── 5d-2. 停车位标线 + 门卫岗亭（parking bay markings + security booth）──
            White painted parking bays alongside the driveway and a small
            modern security booth near the east gate pillar. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const bndS8  = -D / 2 - 14.50;
         const bndE8  =  W / 2 + 4.50;
         const gateW8 = Math.min(W * 0.30, 3.80);
@@ -6986,7 +6704,7 @@ export default function FloorPlanBuilding({
            Replaces fake sphere/cylinder geometry with real olive + maple models.
            Alternates between old_olive_tree (SW/SE/mid-W) and maple_sugar (NE/NW/mid-E)
            for visual variety. Each has a night in-ground uplight. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         // [x, z, targetH, useOlive, rotY]
         const treeData: Array<[number, number, number, boolean, number]> = [
           [ W / 2 + 3.0,  D / 2 + 1.8, 5.5, false, 0.8],   // NE — maple
@@ -7175,7 +6893,7 @@ export default function FloorPlanBuilding({
       {/* ── 5e-0a. 车道两侧棕榈树（palm trees flanking driveway entry — real GLTF）──
            4 tall palm_tree_lowpoly GLTF models at the gate entrance.
            2 per side, heights 5.5–7m for Beverly Hills estate feel. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const dvHalfW3 = 2.20;
         const gateZ3 = -D / 2 - 14.50 + 0.40;
         const palmData3: Array<[number, number, number, number]> = [
@@ -7263,7 +6981,7 @@ export default function FloorPlanBuilding({
            A white-painted iron arbor arch marking the transition from the
            south lawn / path into the formal north garden. Draped with
            climbing green vines and small flower clusters. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const arbX = 0;
         const arbZ = D / 2 + 0.20;   // just beyond building footprint edge
         const arbW = 1.60;   // arch opening width
@@ -7419,7 +7137,7 @@ export default function FloorPlanBuilding({
            leaning outward in a V shape. A floating torus ring caps the apex.
            Ground: large honed black granite pad + 4 LED uplights.
            Night: warm amber spots wash the arches, underwater LED in pool. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const sculX = 0;
         const sculZ = D / 2 + 1.70;
         const isNightSc  = sunHour < 6 || sunHour > 20;
@@ -7563,7 +7281,7 @@ export default function FloorPlanBuilding({
       {/* ── 5e-1b. 北庭院圆形喷泉（circular fountain in north yard）──
            Polished granite circular basin with single vertical water jet.
            Glowing at dusk/night with underwater LED. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const ftnX = -W * 0.28;  // slightly west to avoid sculpture
         const ftnZ =  D / 2 + 2.00;
         const ftnR = 0.72;   // basin radius
@@ -7638,7 +7356,7 @@ export default function FloorPlanBuilding({
       {/* ── 5e-1c. 北庭院锦鲤池（koi pond, north-east garden）──
            Oval stone-edged koi pond with lily pads and orange/white fish
            silhouettes visible through the water. Night: blue LED glow. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const kpX = W * 0.28;
         const kpZ = D / 2 + 2.10;
         const kpRX = 1.10;   // pond radius X (east-west)
@@ -7709,7 +7427,7 @@ export default function FloorPlanBuilding({
 
       {/* ── 5e-1d. 西侧界墙灌木（shrub row along inner west boundary wall — real GLTF）──
            Replaces floating pink/red rose ball clusters with real shrub GLTF models. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const bndW6  = -W / 2 - 4.50;
         const wallT6 = 0.18;
         const wallX6 = bndW6 + wallT6 + 0.40;  // 0.4m inside west wall
@@ -7894,12 +7612,12 @@ export default function FloorPlanBuilding({
         const bedLen = Math.abs(bedZN - bedZS);
         const bedMidZ = (bedZN + bedZS) / 2;
 
-        // Flower palette (deterministic via panelBlindHash)
-        const flowerPalette = ["#FF4460", "#FF9922", "#FFD840", "#EE44CC", "#CC44FF", "#FFFFFF", "#FF7744"];
-        const foliagePalette = ["#2E5818", "#3A6E22", "#245414", "#1E4410", "#4A7A28"];
-
-        // Scatter N flower clusters per bed
-        const flowerCount = 18;
+        // Pool deck dimensions (shared with 5g dining area)
+        const poolL2  = Math.min(D * 0.70, 9.50);
+        const poolW2  = Math.min(W * 0.78, 11.0);
+        const deckBW2 = 2.80;
+        const deckT2  = 0.12;
+        const pz2     = -D / 2 - deckBW2 - poolL2 / 2 - 0.80;
 
         return (
           <group>
@@ -7914,117 +7632,7 @@ export default function FloorPlanBuilding({
               <meshStandardMaterial color="#4A3020" roughness={0.98} metalness={0.00} />
             </mesh>
 
-            {/* Flower clusters — east bed */}
-            {Array.from({ length: flowerCount }, (_, fi3) => {
-              const fHash = panelBlindHash(fi3 * 17 + 3, fi3 + 11);
-              const fHash2 = panelBlindHash(fi3 * 7 + 5, fi3 * 3 + 2);
-              const fHash3 = panelBlindHash(fi3 * 13 + 1, fi3 * 5 + 7);
-              const fx = bedMidX_E - bedW / 2 + 0.20 + fHash * (bedW - 0.40);
-              const fz = bedMidZ - bedLen / 2 + 0.20 + fHash2 * (bedLen - 0.40);
-              const stemH = 0.22 + fHash3 * 0.18;
-              const bloomR = 0.09 + fHash * 0.07;
-              const flowerIdx = Math.floor(fHash3 * flowerPalette.length);
-              const foliageIdx = Math.floor(fHash2 * foliagePalette.length);
-              return (
-                <group key={`fe-${fi3}`} position={[fx, 0.024, fz]}>
-                  {/* Foliage mound */}
-                  <mesh position={[0, stemH * 0.40, 0]}>
-                    <sphereGeometry args={[bloomR * 1.1, 6, 5]} />
-                    <meshStandardMaterial color={foliagePalette[foliageIdx]} roughness={0.95} />
-                  </mesh>
-                  {/* Bloom sphere */}
-                  <mesh position={[0, stemH, 0]}>
-                    <sphereGeometry args={[bloomR, 6, 5]} />
-                    <meshStandardMaterial color={flowerPalette[flowerIdx]} roughness={0.80} emissive={flowerPalette[flowerIdx]} emissiveIntensity={0.12} />
-                  </mesh>
-                </group>
-              );
-            })}
-
-            {/* Flower clusters — west bed (mirrored with different hashes) */}
-            {Array.from({ length: flowerCount }, (_, fi3) => {
-              const fHash = panelBlindHash(fi3 * 19 + 7, fi3 + 17);
-              const fHash2 = panelBlindHash(fi3 * 11 + 3, fi3 * 7 + 5);
-              const fHash3 = panelBlindHash(fi3 * 5 + 9, fi3 * 13 + 3);
-              const fx = bedMidX_W - bedW / 2 + 0.20 + fHash * (bedW - 0.40);
-              const fz = bedMidZ - bedLen / 2 + 0.20 + fHash2 * (bedLen - 0.40);
-              const stemH = 0.22 + fHash3 * 0.18;
-              const bloomR = 0.09 + fHash * 0.07;
-              const flowerIdx = Math.floor(fHash3 * flowerPalette.length);
-              const foliageIdx = Math.floor(fHash2 * foliagePalette.length);
-              return (
-                <group key={`fw-${fi3}`} position={[fx, 0.024, fz]}>
-                  <mesh position={[0, stemH * 0.40, 0]}>
-                    <sphereGeometry args={[bloomR * 1.1, 6, 5]} />
-                    <meshStandardMaterial color={foliagePalette[foliageIdx]} roughness={0.95} />
-                  </mesh>
-                  <mesh position={[0, stemH, 0]}>
-                    <sphereGeometry args={[bloomR, 6, 5]} />
-                    <meshStandardMaterial color={flowerPalette[flowerIdx]} roughness={0.80} emissive={flowerPalette[flowerIdx]} emissiveIntensity={0.12} />
-                  </mesh>
-                </group>
-              );
-            })}
-
-            {/* ── 踏石小径（stepping-stone path）──
-                 East and west side paths from entry apron to pool deck,
-                 square travertine slabs set in the lawn. */}
-            {([-driveHalfW - 0.65, driveHalfW + 0.65] as number[]).map((pathX, pathI) => {
-              const stoneSpacing = 0.72;
-              const stoneCount = Math.max(3, Math.round(bedLen / stoneSpacing));
-              return (
-                <group key={`path-${pathI}`}>
-                  {Array.from({ length: stoneCount }, (_, si) => {
-                    const sz = bedZN + si * (bedLen / (stoneCount - 1));
-                    const sHash = panelBlindHash(si * 13 + pathI * 77, si + 3);
-                    const stoneW = 0.42 + sHash * 0.08;
-                    const stoneD = 0.42 + panelBlindHash(si * 7 + pathI * 33, si) * 0.08;
-                    const rotY = (sHash - 0.5) * 0.18;  // slight random rotation
-                    return (
-                      <mesh key={si} position={[pathX, 0.016, sz]} rotation={[0, rotY, 0]} receiveShadow>
-                        <boxGeometry args={[stoneW, 0.032, stoneD]} />
-                        <meshStandardMaterial color="#D8CEB8" roughness={0.82} metalness={0.02} />
-                      </mesh>
-                    );
-                  })}
-                </group>
-              );
-            })}
-          </group>
-        );
-      })()}
-
-      {/* ── 5g. 泳池边休闲区（pool-side loungers + outdoor dining table）──
-           Matches the updated section 5c pool dimensions.
-           5 loungers in a row between pool and building (like reference image). */}
-      {!insideBuilding && isGlassVilla && (() => {
-        // Must mirror section 5c dimensions exactly
-        const poolL2  = Math.min(D * 0.70, 9.50);
-        const poolW2  = Math.min(W * 0.78, 11.0);
-        const deckBW2 = 2.80;
-        const deckT2  = 0.12;
-        const pz2     = -D / 2 - deckBW2 - poolL2 / 2 - 0.80;
-        // Building-side deck edge (closer to z=0 / closer to building)
-        // Pool center is at pz2 (negative). Building side = pz2 + poolL/2 (less negative).
-        // Deck extends deckBW2 further toward building from pool's building-side edge.
-        const deckEdgeBldg = pz2 + poolL2 / 2 + deckBW2;  // building-side edge of deck
-        const loungerColor = "#EDE6D2";
-        const loungerMetal = "#B0B8C4";
-        // 5 loungers between pool and building, in a row parallel to facade
-        const nLoungers = 5;
-        const loungerSpacing = Math.min(poolW2 * 0.70 / nLoungers, 1.90);
-        const loungerRowZ = deckEdgeBldg - 1.20;   // 1.2m toward pool from building-side deck edge
-        const loungerRowX0 = -(nLoungers - 1) * loungerSpacing / 2;
-        return (
-          <group>
-            {/* North-side loungers — real sun_lounger GLTF models, facing pool (south) */}
-            {Array.from({ length: nLoungers }, (_, li) => (
-              <group key={li} position={[loungerRowX0 + li * loungerSpacing, deckT2, loungerRowZ]} rotation={[0, Math.PI, 0]}>
-                <Suspense fallback={null}>
-                  <GltfPlant path={LOUNGER_PATH} targetH={0.40} rotY={0} />
-                </Suspense>
-              </group>
-            ))}
+            {/* flower clusters removed */}
             {/* Note: no umbrella over lounger row — the building cantilever provides shade */}
             {/* Dining area umbrella (east side of pool deck) */}
             <group position={[poolW2 / 2 + deckBW2 * 0.5, deckT2, pz2]}>
@@ -8161,7 +7769,7 @@ export default function FloorPlanBuilding({
       {/* ── 5g-5. 泳池旁景观大花盆（large ornamental planters on pool deck）──
            4 tall round concrete planters flanking the lounger row, each with a
            slender architectural plant (agave form). Pairs at both ends of the row. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const poolL_pl  = Math.min(D * 0.70, 9.50);
         const poolW_pl  = Math.min(W * 0.78, 11.0);
         const deckBW_pl = 2.80;
@@ -8220,7 +7828,7 @@ export default function FloorPlanBuilding({
            A continuous 0.35m-wide planting trough flush with the south deck edge.
            Alternating white agapanthus spheres + ornamental grass tufts, set into a
            dark Cor-ten steel trough. Frames the pool in the near foreground view. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const poolL_b  = Math.min(D * 0.70, 9.50);
         const poolW_b  = Math.min(W * 0.78, 11.0);
         const deckBW_b = 2.80;
@@ -8278,7 +7886,7 @@ export default function FloorPlanBuilding({
       })()}
 
       {/* ── 5h. 室外厨房 / BBQ 台（outdoor kitchen, east terrace apron）── */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const kitX = W / 2 + 0.85;         // east terrace apron center
         const kitZ = D / 2 - 1.80;          // north-east corner of terrace
         const isNightK = sunHour < 6 || sunHour > 20;
@@ -8344,7 +7952,7 @@ export default function FloorPlanBuilding({
       {/* ── 5h-2. 户外厨房吧台凳（outdoor kitchen bar stools）──
            3 bar stools facing the kitchen counter for al-fresco dining.
            Dark steel frame, white leather seat pad. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const kitX2 = W / 2 + 0.85;
         const kitZ2 = D / 2 - 1.80;
         // Bar stools positioned 0.72m in front of kitchen counter
@@ -8849,7 +8457,7 @@ export default function FloorPlanBuilding({
 
       {/* ── 5j-3. 电动汽车充电桩（EV charging station, west of driveway entrance）──
            Wall-box style charger mounted on a post near the garage/gate area. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         // Place near the west boundary, at driveway level, south side
         const bndW5   = -W / 2 - 4.50;
         const chargeX = bndW5 + 0.40;   // just inside west boundary
@@ -9058,7 +8666,7 @@ export default function FloorPlanBuilding({
            powder-coated planting modules (each 0.40m × 0.50m), filled with
            green/chartreuse moss/plant varieties. Top mist nozzle rail.
            Night: linear LED wash at top face. */}
-      {!insideBuilding && isGlassVilla && (() => {
+      {false && (() => {
         const bndW_gw  = -W / 2 - 4.50;
         const wallT_gw = 0.18;
         const gwX      = bndW_gw + wallT_gw + 0.025;   // inner face of west wall
@@ -9470,260 +9078,9 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {/* ── 5l. 豪华轿车停在车道上（luxury sedan parked on driveway）──
-           Stylised low-LOD sedan: body + roof cabin + windshields + 4 wheels.
-           Placed centre of driveway, ~1m north of south gate pillars. */}
-      {!insideBuilding && isGlassVilla && (() => {
-        // Car sits on the driveway centreline (x = gateX2 from section 5d).
-        // We don't have gateX2 in scope here, so we replicate the logic:
-        const gateX2L  = 0;           // gate centred on X=0
-        const carZ     = -D / 2 - 7.80;  // between building and gate
+      {/* 5l sedan removed */}
 
-        const isNightL  = sunHour < 6 || sunHour > 20;
-        const isDuskL   = !isNightL && (sunHour < 8 || sunHour > 18);
-
-        // Car body colours — deep obsidian black
-        const bodyCol   = "#1A1C22";
-        const glassCol  = "#4A6880";
-        const wheelCol  = "#111318";
-        const rimCol    = "#B0B8C8";
-
-        // Headlights / tail lights — time-aware
-        const headEmi   = isNightL ? 5.0 : isDuskL ? 2.5 : 0.0;
-        const tailEmi   = isNightL ? 4.0 : isDuskL ? 2.0 : 0.0;
-        const headLI    = isNightL ? 6.0 : isDuskL ? 3.0 : 0.0;
-        const tailLI    = isNightL ? 2.0 : isDuskL ? 1.0 : 0.0;
-
-        // Dimensions (metres)
-        const cL = 4.60;   // car length (Z axis)
-        const cW = 1.90;   // car width  (X axis)
-        const cH = 0.52;   // body sill-to-shoulder height
-        const cG = 0.22;   // ground clearance
-        const roofH = 0.58; // roof cabin height above shoulder
-        const roofL = 2.20; // roof cabin length
-
-        return (
-          <group position={[gateX2L, 0, carZ]}>
-            {/* Main body — lower slab */}
-            <mesh position={[0, cG + cH / 2, 0]} castShadow receiveShadow>
-              <boxGeometry args={[cW, cH, cL]} />
-              <meshStandardMaterial color={bodyCol} roughness={0.18} metalness={0.88} envMapIntensity={3.0} />
-            </mesh>
-            {/* Roof cabin (slightly narrower, centred longitudinally) */}
-            <mesh position={[0, cG + cH + roofH / 2, -0.10]} castShadow>
-              <boxGeometry args={[cW - 0.14, roofH, roofL]} />
-              <meshStandardMaterial color={bodyCol} roughness={0.16} metalness={0.90} envMapIntensity={3.2} />
-            </mesh>
-            {/* Windshield — front */}
-            <mesh position={[0, cG + cH + roofH * 0.42, roofL / 2 + 0.06]} rotation={[Math.PI * 0.20, 0, 0]}>
-              <boxGeometry args={[cW - 0.20, roofH * 0.80, 0.015]} />
-              <meshStandardMaterial color={glassCol} transparent opacity={0.55} roughness={0.04} metalness={0.30} envMapIntensity={4.0} />
-            </mesh>
-            {/* Rear window */}
-            <mesh position={[0, cG + cH + roofH * 0.42, -roofL / 2 - 0.06]} rotation={[-Math.PI * 0.18, 0, 0]}>
-              <boxGeometry args={[cW - 0.20, roofH * 0.78, 0.015]} />
-              <meshStandardMaterial color={glassCol} transparent opacity={0.55} roughness={0.04} metalness={0.30} envMapIntensity={4.0} />
-            </mesh>
-            {/* Side windows (left & right) */}
-            {([-1, 1] as number[]).map(sx => (
-              <mesh key={sx} position={[sx * (cW / 2 - 0.008), cG + cH + roofH * 0.50, -0.10]} rotation={[0, 0, 0]}>
-                <boxGeometry args={[0.012, roofH * 0.72, roofL - 0.30]} />
-                <meshStandardMaterial color={glassCol} transparent opacity={0.52} roughness={0.04} metalness={0.30} envMapIntensity={3.5} />
-              </mesh>
-            ))}
-            {/* Front bumper / fascia */}
-            <mesh position={[0, cG + cH * 0.40, cL / 2 + 0.04]}>
-              <boxGeometry args={[cW + 0.06, cH * 0.60, 0.09]} />
-              <meshStandardMaterial color="#202228" roughness={0.55} metalness={0.30} />
-            </mesh>
-            {/* Rear bumper */}
-            <mesh position={[0, cG + cH * 0.40, -cL / 2 - 0.04]}>
-              <boxGeometry args={[cW + 0.06, cH * 0.55, 0.09]} />
-              <meshStandardMaterial color="#202228" roughness={0.55} metalness={0.30} />
-            </mesh>
-            {/* Headlights (two narrow strips) */}
-            {([-0.55, 0.55] as number[]).map((hx, hi) => (
-              <group key={hi} position={[hx, cG + cH * 0.65, cL / 2 + 0.06]}>
-                <mesh>
-                  <boxGeometry args={[0.38, 0.07, 0.015]} />
-                  <meshStandardMaterial color="#FFFFFF" emissive="#EEEEFF" emissiveIntensity={headEmi} roughness={0.04} metalness={0.10} />
-                </mesh>
-                {headLI > 0 && <pointLight intensity={headLI} distance={8.0} decay={2.0} color="#FFF8F0" position={[0, 0, 0.2]} />}
-              </group>
-            ))}
-            {/* DRL strips just above headlights */}
-            {([-0.55, 0.55] as number[]).map((hx, hi) => (
-              <mesh key={`drl-${hi}`} position={[hx, cG + cH * 0.76, cL / 2 + 0.055]}>
-                <boxGeometry args={[0.38, 0.025, 0.012]} />
-                <meshStandardMaterial color="#E0F4FF" emissive="#C0E8FF" emissiveIntensity={isNightL || isDuskL ? 3.0 : 0.8} roughness={0.05} />
-              </mesh>
-            ))}
-            {/* Tail lights (red strips) */}
-            {([-0.55, 0.55] as number[]).map((tx, ti) => (
-              <group key={`tail-${ti}`} position={[tx, cG + cH * 0.62, -cL / 2 - 0.04]}>
-                <mesh>
-                  <boxGeometry args={[0.36, 0.065, 0.012]} />
-                  <meshStandardMaterial color="#FF2020" emissive="#FF1010" emissiveIntensity={tailEmi} roughness={0.08} metalness={0.05} />
-                </mesh>
-                {tailLI > 0 && <pointLight intensity={tailLI} distance={4.0} decay={2.5} color="#FF2020" position={[0, 0, -0.1]} />}
-              </group>
-            ))}
-            {/* Wheels (4 corners) — flat cylinders rotated to horizontal */}
-            {([
-              [ cW / 2 + 0.04, cG,  cL * 0.30],
-              [-cW / 2 - 0.04, cG,  cL * 0.30],
-              [ cW / 2 + 0.04, cG, -cL * 0.30],
-              [-cW / 2 - 0.04, cG, -cL * 0.30],
-            ] as [number,number,number][]).map(([wx, wy, wz], wi) => (
-              <group key={`wheel-${wi}`} position={[wx, wy, wz]} rotation={[0, 0, Math.PI / 2]}>
-                {/* Tyre */}
-                <mesh castShadow>
-                  <cylinderGeometry args={[0.33, 0.33, 0.24, 20]} />
-                  <meshStandardMaterial color={wheelCol} roughness={0.88} metalness={0.04} />
-                </mesh>
-                {/* Alloy rim */}
-                <mesh position={[0, 0.08, 0]}>
-                  <cylinderGeometry args={[0.24, 0.24, 0.02, 16]} />
-                  <meshStandardMaterial color={rimCol} roughness={0.18} metalness={0.92} envMapIntensity={2.5} />
-                </mesh>
-                {/* Hub cap centre */}
-                <mesh position={[0, 0.10, 0]}>
-                  <cylinderGeometry args={[0.06, 0.06, 0.015, 12]} />
-                  <meshStandardMaterial color={bodyCol} roughness={0.20} metalness={0.88} />
-                </mesh>
-                {/* 5 spoke shadow */}
-                {Array.from({ length: 5 }, (_, si) => {
-                  const a = (si / 5) * Math.PI * 2;
-                  return (
-                    <mesh key={si} position={[Math.sin(a) * 0.14, 0.09, Math.cos(a) * 0.14]}>
-                      <boxGeometry args={[0.038, 0.018, 0.12]} />
-                      <meshStandardMaterial color={rimCol} roughness={0.20} metalness={0.90} />
-                    </mesh>
-                  );
-                })}
-              </group>
-            ))}
-            {/* Side door handle strips — thin chrome bars */}
-            {([-1, 1] as number[]).map(sx => (
-              <group key={`handle-${sx}`}>
-                {/* Front door handle */}
-                <mesh position={[sx * (cW / 2 + 0.005), cG + cH * 0.75, cL * 0.17]}>
-                  <boxGeometry args={[0.012, 0.022, 0.12]} />
-                  <meshStandardMaterial color="#C8D0D8" roughness={0.12} metalness={0.96} envMapIntensity={3.0} />
-                </mesh>
-                {/* Rear door handle */}
-                <mesh position={[sx * (cW / 2 + 0.005), cG + cH * 0.75, -cL * 0.10]}>
-                  <boxGeometry args={[0.012, 0.022, 0.12]} />
-                  <meshStandardMaterial color="#C8D0D8" roughness={0.12} metalness={0.96} envMapIntensity={3.0} />
-                </mesh>
-              </group>
-            ))}
-            {/* Roof aerial — thin post */}
-            <mesh position={[-0.55, cG + cH + roofH + 0.22, -0.30]}>
-              <cylinderGeometry args={[0.008, 0.008, 0.44, 4]} />
-              <meshStandardMaterial color="#303035" roughness={0.55} metalness={0.60} />
-            </mesh>
-          </group>
-        );
-      })()}
-
-      {/* ── 5l-2. 豪华 SUV 停在车道旁（luxury SUV parked alongside sedan）──
-           White/silver SUV parked east of the sedan, taller body profile,
-           roof rails, slightly turned to indicate separate parking spot. */}
-      {!insideBuilding && isGlassVilla && (() => {
-        const suvX = 2.55;   // east of driveway centre (sedan at X=0)
-        const suvZ = -D / 2 - 8.10;  // similar Z to sedan
-        const isNightS2 = sunHour < 6 || sunHour > 20;
-        const isDuskS2  = !isNightS2 && (sunHour < 8 || sunHour > 18);
-        const suvBodyCol = "#E0E4E8"; // silver-white
-        const suvGlassCol = "#3A5060";
-        const suvWheelCol = "#111318";
-        const suvRimCol   = "#909AA8";
-        const suvHeadEmi = isNightS2 ? 4.5 : isDuskS2 ? 2.2 : 0.0;
-        const suvTailEmi = isNightS2 ? 3.5 : isDuskS2 ? 1.8 : 0.0;
-        // SUV dimensions (larger / taller than sedan)
-        const sL = 4.80, sW = 2.05, sH = 0.62, sG = 0.24, sRH = 0.80, sRL = 2.60;
-        return (
-          <group position={[suvX, 0, suvZ]} rotation={[0, -0.08, 0]}>
-            {/* Body slab */}
-            <mesh position={[0, sG + sH / 2, 0]} castShadow receiveShadow>
-              <boxGeometry args={[sW, sH, sL]} />
-              <meshStandardMaterial color={suvBodyCol} roughness={0.22} metalness={0.80} envMapIntensity={2.8} />
-            </mesh>
-            {/* Cabin (taller, longer than sedan) */}
-            <mesh position={[0, sG + sH + sRH / 2, -0.05]} castShadow>
-              <boxGeometry args={[sW - 0.12, sRH, sRL]} />
-              <meshStandardMaterial color={suvBodyCol} roughness={0.20} metalness={0.82} envMapIntensity={2.8} />
-            </mesh>
-            {/* Windshield */}
-            <mesh position={[0, sG + sH + sRH * 0.44, sRL / 2 + 0.05]} rotation={[Math.PI * 0.18, 0, 0]}>
-              <boxGeometry args={[sW - 0.18, sRH * 0.84, 0.015]} />
-              <meshStandardMaterial color={suvGlassCol} transparent opacity={0.52} roughness={0.04} metalness={0.30} envMapIntensity={3.5} />
-            </mesh>
-            {/* Rear window */}
-            <mesh position={[0, sG + sH + sRH * 0.44, -sRL / 2 - 0.05]} rotation={[-Math.PI * 0.15, 0, 0]}>
-              <boxGeometry args={[sW - 0.18, sRH * 0.78, 0.015]} />
-              <meshStandardMaterial color={suvGlassCol} transparent opacity={0.52} roughness={0.04} metalness={0.30} envMapIntensity={3.5} />
-            </mesh>
-            {/* Side windows */}
-            {([-1, 1] as number[]).map(sx => (
-              <mesh key={sx} position={[sx * (sW / 2 - 0.008), sG + sH + sRH * 0.50, -0.05]}>
-                <boxGeometry args={[0.012, sRH * 0.70, sRL - 0.25]} />
-                <meshStandardMaterial color={suvGlassCol} transparent opacity={0.50} roughness={0.04} metalness={0.28} envMapIntensity={3.0} />
-              </mesh>
-            ))}
-            {/* Roof rails */}
-            {([-sW * 0.36, sW * 0.36] as number[]).map((rx2, ri) => (
-              <mesh key={ri} position={[rx2, sG + sH + sRH + 0.022, -0.05]}>
-                <boxGeometry args={[0.028, 0.028, sRL - 0.20]} />
-                <meshStandardMaterial color="#707880" roughness={0.35} metalness={0.70} envMapIntensity={1.6} />
-              </mesh>
-            ))}
-            {/* Headlights */}
-            {([-0.60, 0.60] as number[]).map((hx, hi) => (
-              <mesh key={hi} position={[hx, sG + sH * 0.68, sL / 2 + 0.06]}>
-                <boxGeometry args={[0.40, 0.075, 0.014]} />
-                <meshStandardMaterial color="#FFFFFF" emissive="#EEEEFF" emissiveIntensity={suvHeadEmi} roughness={0.04} />
-              </mesh>
-            ))}
-            {/* Tail lights */}
-            {([-0.60, 0.60] as number[]).map((tx, ti) => (
-              <mesh key={`st-${ti}`} position={[tx, sG + sH * 0.65, -sL / 2 - 0.04]}>
-                <boxGeometry args={[0.38, 0.065, 0.012]} />
-                <meshStandardMaterial color="#FF2020" emissive="#FF1010" emissiveIntensity={suvTailEmi} roughness={0.08} />
-              </mesh>
-            ))}
-            {/* 4 Wheels (SUV larger diameter) */}
-            {([
-              [ sW / 2 + 0.04, sG,  sL * 0.28],
-              [-sW / 2 - 0.04, sG,  sL * 0.28],
-              [ sW / 2 + 0.04, sG, -sL * 0.28],
-              [-sW / 2 - 0.04, sG, -sL * 0.28],
-            ] as [number,number,number][]).map(([wx, wy, wz], wi) => (
-              <group key={wi} position={[wx, wy, wz]} rotation={[0, 0, Math.PI / 2]}>
-                <mesh castShadow>
-                  <cylinderGeometry args={[0.38, 0.38, 0.26, 20]} />
-                  <meshStandardMaterial color={suvWheelCol} roughness={0.88} metalness={0.04} />
-                </mesh>
-                <mesh position={[0, 0.09, 0]}>
-                  <cylinderGeometry args={[0.26, 0.26, 0.022, 16]} />
-                  <meshStandardMaterial color={suvRimCol} roughness={0.20} metalness={0.88} envMapIntensity={2.0} />
-                </mesh>
-                {/* 5 spokes */}
-                {Array.from({ length: 5 }, (_, si) => {
-                  const a = (si / 5) * Math.PI * 2;
-                  return (
-                    <mesh key={si} position={[Math.sin(a) * 0.15, 0.10, Math.cos(a) * 0.15]}>
-                      <boxGeometry args={[0.040, 0.018, 0.14]} />
-                      <meshStandardMaterial color={suvRimCol} roughness={0.22} metalness={0.86} />
-                    </mesh>
-                  );
-                })}
-              </group>
-            ))}
-          </group>
-        );
-      })()}
+      {/* 5l-2 SUV removed */}
 
       {/* ── 5m. 外立面上打灯（ground-up facade spotlights on south face）──
            4 in-ground uplighters wash the south facade from below.
