@@ -3,6 +3,7 @@
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
+// RoomType re-exported so the enterWalkthrough event payload is typed
 
 /**
  * Left-side room list shown in 外观 view.
@@ -15,16 +16,14 @@ export default function ExteriorRoomList() {
   const floorPlans     = useDesignerStore(s => s.floorPlans);
   const exterior       = useDesignerStore(s => s.exterior);
   const customRoomMeta = useDesignerStore(s => s.customRoomMeta);
-  const setActiveRoom  = useDesignerStore(s => s.setActiveRoom);
-  const setActiveFloor = useDesignerStore(s => s.setActiveFloor);
-  const setViewMode    = useDesignerStore(s => s.setViewMode);
-
   const floorCount = Math.max(exterior.floors, 1);
 
+  /** Dispatch a custom event picked up by HouseCanvas to teleport the
+   *  walkthrough camera into the chosen room. */
   const enterRoom = (room: RoomType, fi: number) => {
-    setActiveFloor(fi);
-    setActiveRoom(room);
-    setViewMode("3d");
+    window.dispatchEvent(
+      new CustomEvent("enterWalkthrough", { detail: { room, fi } })
+    );
   };
 
   const localName = (r: RoomType) => {
@@ -89,7 +88,7 @@ export default function ExteriorRoomList() {
                           </span>
                         )}
                       </span>
-                      <span className="text-[10px]" style={{ color: "var(--ds-text-3)" }}>→</span>
+                      <span className="text-[10px]" style={{ color: "var(--ds-text-3)" }}>🚶</span>
                     </button>
                   );
                 })}

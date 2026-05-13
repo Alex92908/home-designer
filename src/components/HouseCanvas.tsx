@@ -6098,6 +6098,46 @@ export default function HouseCanvas() {
     }
     return out;
   }, [floorPlansForWalk]);
+
+  // ── Listen for "enterWalkthrough" event from ExteriorRoomList (left panel) ──
+  // ExteriorRoomList dispatches this when the user clicks a room item.
+  // We compute the room centre in world coords and teleport the camera there.
+  const WALK_FLOOR_H = 2.8; // metres per storey — must match FloorPlanExterior
+  useEffect(() => {
+    const CM_local = 0.01;
+    const handler = (e: Event) => {
+      const { room, fi } = (e as CustomEvent<{ room: import("@/lib/types").RoomType; fi: number }>).detail;
+      // Compute building-wide bounding box (all floors) for coord transform
+      let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
+      for (const fp of floorPlansForWalk) {
+        if (!fp) continue;
+        for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+          const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+          if (!p || !d) continue;
+          bMinX = Math.min(bMinX, p.x); bMinY = Math.min(bMinY, p.y);
+          bMaxX = Math.max(bMaxX, p.x + d.width); bMaxY = Math.max(bMaxY, p.y + d.depth);
+        }
+      }
+      if (!isFinite(bMinX)) return;
+      const Wh = (bMaxX - bMinX) * CM_local;
+      const Dh = (bMaxY - bMinY) * CM_local;
+      const fp = floorPlansForWalk[fi];
+      if (!fp) return;
+      type RT = import("@/lib/types").RoomType;
+      const p = fp.roomLayout?.[room as RT];
+      const d = fp.roomDimensions?.[room as RT];
+      if (!p || !d) return;
+      // Convert plan coords (cm, Y-down) → world coords (m, Z-forward)
+      const worldX = (p.x + d.width  / 2 - bMinX) * CM_local - Wh / 2;
+      const worldZ = -((p.y + d.depth / 2 - bMinY) * CM_local) + Dh / 2;
+      const worldY = fi * WALK_FLOOR_H + 1.6;  // eye height on this floor
+      setWalkthrough(true);
+      setWalkthroughSpawn([worldX, worldY, worldZ]);
+    };
+    window.addEventListener("enterWalkthrough", handler);
+    return () => window.removeEventListener("enterWalkthrough", handler);
+  }, [floorPlansForWalk]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Joystick state for touch devices — bound to a HUD widget below.
   const [joystick, setJoystick] = useState({ axisX: 0, axisZ: 0 });
   // "Ghost mode": disable internal wall collision so user can walk through
