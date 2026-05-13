@@ -5853,29 +5853,29 @@ export default function FloorPlanBuilding({
             <mesh position={[0, -poolDp / 2, 0]}>
               <boxGeometry args={[poolW, poolDp - 0.02, poolL]} />
               <meshStandardMaterial
-                color="#0E6890"
-                emissive="#084060"
-                emissiveIntensity={poolGlowI}
-                roughness={0.28}
-                metalness={0.18}
-                envMapIntensity={2.2}
+                color="#0878A8"
+                emissive="#065A88"
+                emissiveIntensity={Math.max(0.20, poolGlowI)}
+                roughness={0.22}
+                metalness={0.15}
+                envMapIntensity={3.5}
               />
             </mesh>
             {/* Water surface — vivid turquoise-cyan, ultra-clear and highly reflective */}
             <mesh position={[0, 0.010, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={10}>
               <planeGeometry args={[poolW - 0.04, poolL - 0.04]} />
               <meshPhysicalMaterial
-                color="#28B8CC"
-                transparent opacity={0.85}
+                color="#18C8E0"
+                transparent opacity={0.87}
                 depthWrite={false}
-                roughness={0.015}
-                metalness={0.06}
-                reflectivity={0.75}
-                clearcoat={0.98}
-                clearcoatRoughness={0.012}
-                envMapIntensity={6.0}
-                emissive="#0898B0"
-                emissiveIntensity={poolGlowI * 0.55}
+                roughness={0.012}
+                metalness={0.04}
+                reflectivity={0.80}
+                clearcoat={0.99}
+                clearcoatRoughness={0.010}
+                envMapIntensity={7.0}
+                emissive="#0898B8"
+                emissiveIntensity={Math.max(0.10, poolGlowI * 0.55)}
                 side={THREE.DoubleSide}
                 {...overlayMaterialProps(2)}
               />
@@ -6158,6 +6158,96 @@ export default function FloorPlanBuilding({
                   <mesh position={[0, tH * 0.08, 0]}>
                     <coneGeometry args={[tR * 0.80, tH * 0.18, tSegments]} />
                     <meshStandardMaterial color="#162E0E" roughness={0.97} metalness={0.00} />
+                  </mesh>
+                </group>
+              );
+            })}
+          </group>
+        );
+      })()}
+
+      {/* ── 5c-2e. 泳池南端热带棕榈（tropical phoenix palms at pool south end）──
+           4 shorter phoenix/date palms flanking the infinity overflow edge.
+           Placed just beyond deck edge on E and W, at the pool's south end.
+           Adds resort/tropical character — visible in foreground from camera.
+           Staggered heights 3.5–5.5m for natural look. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const poolL_tp  = Math.min(D * 0.70, 9.50);
+        const poolW_tp  = Math.min(W * 0.78, 11.0);
+        const deckBW_tp = 2.80;
+        const pz_tp     = -D / 2 - deckBW_tp - poolL_tp / 2 - 0.80;
+        const deckEdgeX_tp = poolW_tp / 2 + deckBW_tp + 0.60;  // just outside deck E edge
+        const poolSZ = pz_tp - poolL_tp / 2 - deckBW_tp;       // south deck edge
+        const palmData: Array<[number, number, number]> = [
+          // [x, z, scale] — 2 east, 2 west
+          [ deckEdgeX_tp + 0.40, poolSZ + 0.90, 1.00],
+          [ deckEdgeX_tp + 0.90, poolSZ + 2.50, 0.85],
+          [-(deckEdgeX_tp + 0.40), poolSZ + 0.90, 0.95],
+          [-(deckEdgeX_tp + 0.90), poolSZ + 2.50, 0.90],
+        ];
+        return (
+          <group>
+            {palmData.map(([px, pz, scale], pi) => {
+              const trunkH = (3.20 + pi * 0.45) * scale;
+              const trunkCurve = pi % 2 === 0 ? 0.18 : -0.12;  // lean toward/away from pool
+              const frondR = (1.40 + pi * 0.12) * scale;
+              const frondY = trunkH * 0.92;
+              const frondCount = 10;
+              const pHash = (pi * 7 + 3) % 5;
+              return (
+                <group key={pi} position={[px, 0, pz]}>
+                  {/* Curved trunk — 3 segments */}
+                  {[0, 1, 2].map((seg) => (
+                    <mesh
+                      key={seg}
+                      position={[
+                        trunkCurve * seg * 0.15,
+                        trunkH * (seg / 3 + 1 / 6),
+                        0,
+                      ]}
+                      rotation={[0, 0, trunkCurve * 0.18]}
+                      castShadow
+                    >
+                      <cylinderGeometry args={[
+                        0.055 * scale * (1 - seg * 0.12),
+                        0.075 * scale * (1 - seg * 0.08),
+                        trunkH / 3,
+                        6,
+                      ]} />
+                      <meshStandardMaterial
+                        color={pHash % 2 === 0 ? "#6E4A28" : "#5A3C20"}
+                        roughness={0.88} metalness={0.02}
+                      />
+                    </mesh>
+                  ))}
+                  {/* Frond crown — radial blades */}
+                  {Array.from({ length: frondCount }, (_, fi) => {
+                    const fa = (fi / frondCount) * Math.PI * 2;
+                    const fDrop = -0.25 - Math.sin((fi / frondCount) * Math.PI) * 0.10;
+                    return (
+                      <mesh
+                        key={fi}
+                        position={[
+                          Math.sin(fa) * frondR * 0.40,
+                          frondY + fDrop * frondR * 0.50,
+                          Math.cos(fa) * frondR * 0.40,
+                        ]}
+                        rotation={[fDrop, fa, 0]}
+                        castShadow
+                      >
+                        <planeGeometry args={[frondR * 0.22, frondR]} />
+                        <meshStandardMaterial
+                          color={fi % 3 === 0 ? "#2A6A18" : fi % 3 === 1 ? "#226014" : "#1E5010"}
+                          roughness={0.92} metalness={0.00}
+                          side={THREE.DoubleSide}
+                        />
+                      </mesh>
+                    );
+                  })}
+                  {/* Frond crown center cap — darker sphere */}
+                  <mesh position={[trunkCurve * 0.30, frondY + 0.10 * scale, 0]}>
+                    <sphereGeometry args={[frondR * 0.22, 7, 5]} />
+                    <meshStandardMaterial color="#1C4810" roughness={0.95} metalness={0.00} />
                   </mesh>
                 </group>
               );
