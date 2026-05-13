@@ -17,7 +17,8 @@
  *   楼层 → Three.js Y（向上）
  */
 
-import { useMemo, useCallback, useState, Suspense } from "react";
+import { useMemo, useCallback, useState, useRef, Suspense } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Html } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
@@ -2377,6 +2378,57 @@ function StairwellRailing({ rW, rD }: { rW: number; rD: number }) {
         </group>
       ))}
     </group>
+  );
+}
+
+// ── 动态泳池焦散灯光（animated underwater caustic lights）────────────────────
+/**
+ * Simulates the shimmering caustic light patterns that appear on the bottom and
+ * walls of a sunlit pool. Three point-lights orbit slowly at different phases and
+ * radii to create organic, non-repeating motion. Intensity scales with pool glow.
+ */
+function AnimatedPoolCaustics({
+  poolW, poolL, poolDp, poolGlowI,
+}: {
+  poolW: number; poolL: number; poolDp: number; poolGlowI: number;
+}) {
+  const t = useRef(0);
+  const lightsRef = useRef<THREE.PointLight[]>([]);
+
+  useFrame((_, delta) => {
+    t.current += delta;
+    const tc = t.current;
+    // Three caustic lights move on different Lissajous-like paths inside the pool
+    const configs = [
+      { ax: poolW * 0.28, az: poolL * 0.22, fx: 0.31, fz: 0.19, phase: 0.0, baseI: 1.8 },
+      { ax: poolW * 0.35, az: poolL * 0.30, fx: 0.19, fz: 0.27, phase: 2.1, baseI: 1.4 },
+      { ax: poolW * 0.22, az: poolL * 0.38, fx: 0.25, fz: 0.15, phase: 4.2, baseI: 1.6 },
+    ];
+    lightsRef.current.forEach((light, i) => {
+      if (!light) return;
+      const cfg = configs[i];
+      light.position.x = Math.sin(tc * cfg.fx + cfg.phase) * cfg.ax;
+      light.position.z = Math.cos(tc * cfg.fz + cfg.phase) * cfg.az;
+      light.position.y = -poolDp * 0.55;
+      // Gently pulse each light independently
+      const pulse = 0.80 + 0.20 * Math.sin(tc * 1.3 + cfg.phase);
+      light.intensity = cfg.baseI * poolGlowI * pulse;
+    });
+  });
+
+  return (
+    <>
+      {[0, 1, 2].map((i) => (
+        <pointLight
+          key={i}
+          ref={(el) => { if (el) lightsRef.current[i] = el; }}
+          distance={poolW * 1.2}
+          decay={1.8}
+          color="#50D8F0"
+          castShadow={false}
+        />
+      ))}
+    </>
   );
 }
 
@@ -5661,6 +5713,53 @@ export default function FloorPlanBuilding({
         );
       })()}
 
+      {/* ── 5b-4. 建筑南立面地面上照灯（in-ground uplight strip, south facade）──
+           Row of 5 narrow-beam up-lights recessed into the transition terrace/lawn,
+           aimed up at the building glass facade. Active from dusk onward.
+           Warm-white 3000K spots, evenly spaced across the building width.
+           Creates the dramatic "illuminated villa at night" look from the reference. */}
+      {!insideBuilding && isGlassVilla && (() => {
+        const isNightU = sunHour < 6 || sunHour > 20;
+        const isDuskU  = !isNightU && (sunHour < 8 || sunHour > 18);
+        const upLI     = isNightU ? 14.0 : isDuskU ? 7.0 : 0.0;
+        if (upLI === 0.0) return null;
+        const upZ = -D / 2 - 0.50;   // 0.5m south of building face (in transition terrace)
+        const count = 5;
+        return (
+          <group>
+            {Array.from({ length: count }, (_, ui) => {
+              const ux = -W * 0.38 + ui * (W * 0.76 / (count - 1));
+              return (
+                <group key={ui} position={[ux, 0, upZ]}>
+                  {/* Recessed housing — flush dark disc */}
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
+                    <cylinderGeometry args={[0.058, 0.060, 0.018, 8]} />
+                    <meshStandardMaterial color="#1A1C20" roughness={0.40} metalness={0.75} />
+                  </mesh>
+                  {/* LED emitter face */}
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.018, 0]}>
+                    <circleGeometry args={[0.038, 8]} />
+                    <meshStandardMaterial color="#FFF8E8" emissive="#FFF0D0" emissiveIntensity={isNightU ? 4.0 : 2.0} roughness={0.60} />
+                  </mesh>
+                  {/* Narrow up-beam spotlight — strongly directional, hits building face */}
+                  <spotLight
+                    position={[0, 0.02, 0]}
+                    target-position={[ux, totalH * 0.60, -D / 2]}
+                    intensity={upLI}
+                    distance={totalH * 2.0}
+                    angle={Math.PI / 10}
+                    penumbra={0.35}
+                    decay={1.6}
+                    color="#FFE8C8"
+                    castShadow={false}
+                  />
+                </group>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5c. 游泳池（outdoor swimming pool, south yard）──
            Large rectangular pool with wide travertine deck matching the
            reference image: pool is the primary outdoor focal point.
@@ -5719,6 +5818,32 @@ export default function FloorPlanBuilding({
                 <meshStandardMaterial color={deckLight} roughness={0.60} metalness={0.06} envMapIntensity={0.7} />
               </mesh>
             ))}
+            {/* Wet reflection band — polished travertine ring surrounding pool (0.35m wide).
+                 Simulates the perpetually wet/damp stone that forms around any pool.
+                 High envMapIntensity + low roughness = strong reflective sheen.
+                 Four planes: N / S / E / W edges of deck, just outside pool coping. */}
+            {([
+              [0,               -(poolL / 2 + 0.19),  poolW + 0.44, 0.36],
+              [0,                (poolL / 2 + 0.19),  poolW + 0.44, 0.36],
+              [-(poolW / 2 + 0.19), 0,  0.36, poolL + 0.44],
+              [ (poolW / 2 + 0.19), 0,  0.36, poolL + 0.44],
+            ] as [number,number,number,number][]).map(([dx, dz, rw, rd], ri) => (
+              <mesh key={`wet-${ri}`} position={[dx, deckT + 0.001, dz]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
+                <planeGeometry args={[rw, rd]} />
+                <meshPhysicalMaterial
+                  color="#C8C0B0"
+                  transparent opacity={0.75}
+                  roughness={0.08}
+                  metalness={0.02}
+                  reflectivity={0.65}
+                  clearcoat={0.90}
+                  clearcoatRoughness={0.06}
+                  envMapIntensity={4.5}
+                  depthWrite={false}
+                />
+              </mesh>
+            ))}
+
             {/* Pool shell — dark blue-grey rendered concrete */}
             <mesh position={[0, -poolDp / 2 - deckT, 0]} receiveShadow>
               <boxGeometry args={[poolW, poolDp + deckT * 2, poolL]} />
@@ -5930,6 +6055,57 @@ export default function FloorPlanBuilding({
                 </mesh>
               );
             })}
+
+            {/* ── LED underwater coping strip lights (dusk/night only) ──
+                 Thin emissive planes just below waterline on all four inner pool walls.
+                 Creates the signature "glowing pool edge" look of luxury night pools.
+                 4 strips × 2 sides: north/south horizontal + east/west vertical faces. */}
+            {(isDuskP || isNightP) && (() => {
+              const stripH = 0.040;  // 4cm tall LED strip
+              const glowI  = isNightP ? 1.20 : 0.60;
+              const yLED   = -0.040; // just below waterline
+              return (
+                <>
+                  {/* North inner wall strip (building side) */}
+                  <mesh position={[0, yLED, -poolL / 2 + 0.006]} rotation={[Math.PI / 2, 0, 0]}>
+                    <planeGeometry args={[poolW - 0.02, stripH]} />
+                    <meshStandardMaterial color="#80E4FF" emissive="#40C8F8" emissiveIntensity={glowI} transparent opacity={0.95} depthWrite={false} />
+                  </mesh>
+                  {/* South inner wall strip (infinity edge side) */}
+                  <mesh position={[0, yLED, poolL / 2 - 0.006]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <planeGeometry args={[poolW - 0.02, stripH]} />
+                    <meshStandardMaterial color="#80E4FF" emissive="#40C8F8" emissiveIntensity={glowI} transparent opacity={0.95} depthWrite={false} />
+                  </mesh>
+                  {/* East inner wall strip */}
+                  <mesh position={[poolW / 2 - 0.006, yLED, 0]} rotation={[Math.PI / 2, -Math.PI / 2, 0]}>
+                    <planeGeometry args={[poolL - 0.02, stripH]} />
+                    <meshStandardMaterial color="#80E4FF" emissive="#40C8F8" emissiveIntensity={glowI} transparent opacity={0.95} depthWrite={false} />
+                  </mesh>
+                  {/* West inner wall strip */}
+                  <mesh position={[-poolW / 2 + 0.006, yLED, 0]} rotation={[Math.PI / 2, Math.PI / 2, 0]}>
+                    <planeGeometry args={[poolL - 0.02, stripH]} />
+                    <meshStandardMaterial color="#80E4FF" emissive="#40C8F8" emissiveIntensity={glowI} transparent opacity={0.95} depthWrite={false} />
+                  </mesh>
+                  {/* Corner point-light accents — 4 corners */}
+                  {([[-1,-1],[-1,1],[1,-1],[1,1]] as [number,number][]).map(([sx, sz], ci) => (
+                    <pointLight
+                      key={`cl-${ci}`}
+                      position={[sx * poolW * 0.42, yLED, sz * poolL * 0.42]}
+                      intensity={glowI * 0.8}
+                      distance={3.5}
+                      decay={2.0}
+                      color="#50D0FF"
+                      castShadow={false}
+                    />
+                  ))}
+                </>
+              );
+            })()}
+
+            {/* ── Animated underwater caustics (day + dusk: sun refraction; night: LED shimmer) ── */}
+            <AnimatedPoolCaustics
+              poolW={poolW} poolL={poolL} poolDp={poolDp} poolGlowI={poolGlowI > 0.1 ? poolGlowI : 0.15}
+            />
           </group>
         );
       })()}
