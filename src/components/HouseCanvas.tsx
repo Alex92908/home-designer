@@ -1760,6 +1760,27 @@ function TechKenneyAsset({
   );
 }
 
+// ─── PBR asset error boundary ─────────────────────────────────────
+// Silently hides any single 3-D asset that fails to load (e.g. truncated
+// .bin, corrupt mesh data, CORS error) without crashing the whole scene.
+class PbrErrorBoundary extends Component<
+  { gltfPath: string; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err: Error) {
+    // Poison both caches so we never retry this broken file.
+    _gltfAvailable.set(this.props.gltfPath, false);
+    _gltfPending.delete(this.props.gltfPath);
+    console.warn(`[PbrSketchfabAsset] Skipping broken model ${this.props.gltfPath}: ${err.message}`);
+  }
+  render() {
+    if (this.state.failed) return null;
+    return this.props.children;
+  }
+}
+
 // ─── Real PBR asset (Sketchfab) ───────────────────────────────────
 // Used when an OutdoorAsset has customGltfPath set. Loads the real GLTF
 // and renders WITHOUT the technical-drawing material override — the
@@ -2301,19 +2322,23 @@ function SingletonItem({ item: it }: { item: import("@/lib/types").YardSingleton
 
   return (
     <group position={[wx, -0.5, wz]} rotation={[tilt, rot + yawJitter, 0]}>
-      <Suspense fallback={isFurniture ? <ProceduralFurnitureMesh kind={it.kind} /> : null}>
-        {sketchfabReady ? (
-          <PbrSketchfabAsset
-            key={`pbr:${asset.customGltfPath}`}
-            gltfPath={asset.customGltfPath}
-            targetHeightM={asset.customTargetHeightM}
-            userScale={isFurniture ? s : sketchfabUserScale}
-            groundAlign={asset.customGroundAlign ?? true}
-          />
-        ) : (
-          isFurniture ? <ProceduralFurnitureMesh kind={it.kind} /> : null
-        )}
-      </Suspense>
+      {/* PbrErrorBoundary is OUTSIDE Suspense so it catches errors that
+          propagate through async GLTF resolution (e.g. truncated .bin). */}
+      <PbrErrorBoundary gltfPath={asset.customGltfPath}>
+        <Suspense fallback={isFurniture ? <ProceduralFurnitureMesh kind={it.kind} /> : null}>
+          {sketchfabReady ? (
+            <PbrSketchfabAsset
+              key={`pbr:${asset.customGltfPath}`}
+              gltfPath={asset.customGltfPath}
+              targetHeightM={asset.customTargetHeightM}
+              userScale={isFurniture ? s : sketchfabUserScale}
+              groundAlign={asset.customGroundAlign ?? true}
+            />
+          ) : (
+            isFurniture ? <ProceduralFurnitureMesh kind={it.kind} /> : null
+          )}
+        </Suspense>
+      </PbrErrorBoundary>
     </group>
   );
 }

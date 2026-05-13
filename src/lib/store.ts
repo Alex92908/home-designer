@@ -354,6 +354,11 @@ interface DesignerStore {
   addRoom: (room: RoomType) => void;
   removeRoom: (room: RoomType) => void;
   resetLayout: () => void;
+  /** Auto-detect two adjacent room groups on the current floor and insert an
+   *  80 cm hallway corridor between them.  Shifts the right-group rooms to
+   *  make space.  No-op when no clear split is found or hallway is already
+   *  present at the detected position. */
+  autoInsertHallway: () => void;
 
   // Custom room names/icons
   customRoomMeta: Partial<Record<RoomType, { name: string; icon: string }>>;
@@ -1274,6 +1279,96 @@ export const useDesignerStore = create<DesignerStore>()(
           roomLayout: { ...DEFAULT_ROOM_LAYOUT },
           roomDimensions: { ...DEFAULT_ROOM_DIMENSIONS },
           enabledRooms: [...DEFAULT_ENABLED],
+        }));
+      },
+
+      autoInsertHallway: () => {
+        const HALLWAY_W = 80; // cm — corridor width
+        const s = get();
+        const fp = s.floorPlans[s.activeFloor];
+        if (!fp) return;
+
+        // Gather indoor, non-hallway rooms that have layout data
+        const OUTDOOR: RoomType[] = ["yard","garage","gym","cinema","pool","terrace","deck","balcony","balcony2"];
+        const rooms = (fp.enabledRooms ?? []).filter(r => r !== "hallway" && !OUTDOOR.includes(r));
+
+        type Box = { r: RoomType; x: number; y: number; w: number; d: number };
+        const boxes: Box[] = [];
+        for (const r of rooms) {
+          const pos = fp.roomLayout?.[r];
+          const dim = fp.roomDimensions?.[r];
+          if (!pos || !dim) continue;
+          boxes.push({ r, x: pos.x, y: pos.y, w: dim.width, d: dim.depth });
+        }
+        if (boxes.length < 2) return;
+
+        // ── Step 1: classify left vs right by x-center (median split) ──────────
+        const centers = boxes.map(b => b.x + b.w / 2).sort((a, b) => a - b);
+        const medCenter = centers[Math.floor(centers.length / 2)];
+
+        const leftGroup  = boxes.filter(b => b.x + b.w / 2 <= medCenter);
+        const rightGroup = boxes.filter(b => b.x + b.w / 2 >  medCenter);
+        if (leftGroup.length === 0 || rightGroup.length === 0) return;
+
+        // ── Step 2: find split position = rightmost edge of left group ──────────
+        const splitX     = Math.max(...leftGroup.map(b => b.x + b.w));
+        // Leftmost edge of right group (may overlap with left group)
+        const rightStart = Math.min(...rightGroup.map(b => b.x));
+
+        // How much do we need to shift the right group?
+        // If rightStart < splitX they overlap → shift by (splitX - rightStart + HALLWAY_W)
+        // If rightStart === splitX they touch → shift by HALLWAY_W
+        // If rightStart > splitX there is already a gap → we still normalize to HALLWAY_W
+        const shift = splitX + HALLWAY_W - rightStart;
+        // Only shift if the gap is not already large enough for a hallway
+        const currentGap = rightStart - splitX;
+        if (currentGap >= HALLWAY_W - 5) {
+          // Gap exists and is already ≥ hallway width — just place hallway in the gap
+        }
+
+        // ── Step 3: compute hallway y-span ──────────────────────────────────────
+        const allY = boxes.flatMap(b => [b.y, b.y + b.d]);
+        const minY = Math.min(...allY);
+        const maxY = Math.max(...allY);
+        const hallwayDepth = maxY - minY;
+        if (hallwayDepth <= 0) return;
+
+        // ── Step 4: build new layout ─────────────────────────────────────────────
+        const newLayout = { ...fp.roomLayout } as Record<RoomType, { x: number; y: number }>;
+        const newDims   = { ...fp.roomDimensions } as Record<RoomType, { width: number; depth: number }>;
+
+        if (currentGap < HALLWAY_W - 5) {
+          // Shift right group to make room for hallway
+          for (const b of rightGroup) {
+            newLayout[b.r] = { x: b.x + shift, y: b.y };
+          }
+        }
+
+        // Place hallway between groups
+        newLayout["hallway"] = { x: splitX, y: minY };
+        newDims["hallway"]   = { width: HALLWAY_W, depth: hallwayDepth };
+
+        const newEnabled: RoomType[] = fp.enabledRooms.includes("hallway")
+          ? fp.enabledRooms
+          : [...fp.enabledRooms, "hallway" as RoomType];
+
+        // Push undo snapshot first
+        set({
+          layoutHistory: [
+            ...s.layoutHistory.slice(-19),
+            {
+              floorIndex:     s.activeFloor,
+              roomLayout:     { ...fp.roomLayout },
+              roomDimensions: { ...fp.roomDimensions },
+              enabledRooms:   [...fp.enabledRooms],
+            },
+          ],
+        });
+
+        updateFloor(get, set, () => ({
+          roomLayout: newLayout,
+          roomDimensions: newDims,
+          enabledRooms: newEnabled,
         }));
       },
 

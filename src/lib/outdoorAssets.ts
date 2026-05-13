@@ -120,9 +120,9 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
   { kind: "plant.cactus",      label: "仙人掌", icon: "🌵", category: "plant", glb: "cactus_tall",         scale: 2.5, radiusCm: 35, color: "#5A8B5A",
     customGltfPath: "/models/outdoor_plant/cheiridopsis_succulent/cheiridopsis_succulent_1k.gltf",
     customTargetHeightM: 0.22, customAuthor: "Poly Haven CC0" },
-  { kind: "plant.lily",        label: "海芋",   icon: "🪷", category: "plant", glb: "lily_large",          scale: 1.8, radiusCm: 40, color: "#E8A8C8",
-    customGltfPath: "/models/outdoor_plant/calathea_orbifolia_01/calathea_orbifolia_01_1k.gltf",
-    customTargetHeightM: 0.55, customAuthor: "Poly Haven CC0" },
+  // calathea_orbifolia_01 .bin 截断（116KB 实际 vs 254KB 声明）→ 解析崩溃。
+  // 删 customGltfPath 走程序化 fallback，等文件重新完整下载后再开。
+  { kind: "plant.lily",        label: "海芋",   icon: "🪷", category: "plant", glb: "lily_large",          scale: 1.8, radiusCm: 40, color: "#E8A8C8" },
   { kind: "plant.mushroom",    label: "蘑菇",   icon: "🍄", category: "plant", glb: "mushroom_redGroup",   scale: 1.5, radiusCm: 30, color: "#D04848" },
 
   // ── Rocks ──

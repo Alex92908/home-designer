@@ -94,6 +94,7 @@ export function RoomPanel() {
   const deleteRoomShapePoint    = useDesignerStore(s => s.deleteRoomShapePoint);
   const rectifyRoomShape        = useDesignerStore(s => s.rectifyRoomShape);
   const resetLayout         = useDesignerStore(s => s.resetLayout);
+  const autoInsertHallway   = useDesignerStore(s => s.autoInsertHallway);
   const pushLayoutHistory   = useDesignerStore(s => s.pushLayoutHistory);
   const copyRoom            = useDesignerStore(s => s.copyRoom);
   const pasteRoom           = useDesignerStore(s => s.pasteRoom);
@@ -301,7 +302,12 @@ export function RoomPanel() {
         })}
       </div>
 
-      <div className="p-3 border-t border-gray-100 shrink-0">
+      <div className="p-3 border-t border-gray-100 shrink-0 flex flex-col gap-1.5">
+        <button onClick={autoInsertHallway}
+          className="w-full py-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 border border-blue-200 rounded-xl hover:border-blue-400 transition-colors"
+          title={locale === "en" ? "Auto-detect left/right room groups and insert an 80 cm hallway between them" : "自动检测左右两列房间，在中间插入80cm走廊"}>
+          🚪 {locale === "en" ? "Insert hallway" : "插入走廊"}
+        </button>
         <button onClick={resetLayout}
           className="w-full py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
           {t.allResetLayout}
