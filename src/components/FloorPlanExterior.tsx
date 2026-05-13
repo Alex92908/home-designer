@@ -7891,8 +7891,8 @@ export default function FloorPlanBuilding({
                 <meshStandardMaterial color="#5A5850" roughness={0.60} metalness={0.30} />
               </mesh>
             </group>
-            {/* Outdoor dining table (east side of pool deck) */}
-            <group position={[poolW2 / 2 + deckBW2 + 1.10, 0, pz2]}>
+            {/* Outdoor dining table (east side of pool deck, on deck surface) */}
+            <group position={[poolW2 / 2 + deckBW2 * 0.5, deckT2, pz2]}>
               {/* Table top */}
               <mesh position={[0, 0.74, 0]} castShadow>
                 <boxGeometry args={[1.60, 0.040, 0.90]} />
@@ -7952,7 +7952,7 @@ export default function FloorPlanBuilding({
         const poolW2b  = Math.min(W * 0.78, 11.0);
         const deckBW2b = 2.80;
         const pz2b     = -D / 2 - deckBW2b - poolL2b / 2 - 0.80;
-        const diningX  = poolW2b / 2 + deckBW2b + 1.10;
+        const diningX  = poolW2b / 2 + deckBW2b * 0.5;  // matches dining table in 5g
         const diningZ  = pz2b;
         const isNightSL = sunHour < 6 || sunHour > 20;
         const isDuskSL  = !isNightSL && (sunHour < 8 || sunHour > 18);
@@ -8013,10 +8013,10 @@ export default function FloorPlanBuilding({
         const deckBW_pl = 2.80;
         const deckT_pl  = 0.12;
         const pz_pl     = -D / 2 - deckBW_pl - poolL_pl / 2 - 0.80;
-        const deckEdge  = pz_pl + poolL_pl / 2 + deckBW_pl;  // building-side deck edge
-        const planterZ  = deckEdge - 0.70;  // 0.7m toward pool, near lounger row
-        // Two planters per side: near E and W ends of pool width
-        const planterXs: number[] = [-poolW_pl * 0.38, poolW_pl * 0.38];
+        // Match lounger row Z exactly: deckEdge - 1.20 (same as section 5g)
+        const planterZ  = pz_pl + poolL_pl / 2 + deckBW_pl - 1.20;
+        // Two planters flanking the lounger row ends (just outside the row)
+        const planterXs: number[] = [-poolW_pl * 0.40, poolW_pl * 0.40];
         const potR = 0.28;    // outer radius
         const potH = 0.50;    // pot height
         const plantH = 1.20;  // agave/ornamental grass height above pot
@@ -8558,10 +8558,12 @@ export default function FloorPlanBuilding({
            White acrylic shell with blue glowing water, set into a teak timber
            surround deck. Night mode adds strong underwater LED glow. */}
       {!insideBuilding && isGlassVilla && (() => {
-        const poolW4 = Math.min(W * 0.72, 10.0);
-        const poolZ4 = -D / 2 - 5.80;   // same Z as main pool
-        const htX    = -poolW4 / 2 - 1.80;  // west of pool deck
-        const htZ    = poolZ4 + 0.40;
+        const deckBW4 = 2.80;
+        const poolL4  = Math.min(D * 0.70, 9.50);
+        const poolW4  = Math.min(W * 0.78, 11.0);
+        const poolZ4  = -D / 2 - deckBW4 - poolL4 / 2 - 0.80;
+        const htX    = -(poolW4 / 2 + deckBW4 + 1.20);  // west of pool deck
+        const htZ    = poolZ4;
         const isNightH = sunHour < 6 || sunHour > 20;
         const isDuskH  = !isNightH && (sunHour < 8 || sunHour > 18);
         const waterGlowI = isNightH ? 2.0 : isDuskH ? 1.0 : 0.12;
