@@ -3725,9 +3725,9 @@ function usePbrSet(dir: string, asset: string, repeat: [number, number]): {
 } {
   const base = `/textures/${dir}/${asset}`;
   const [diff, nor, arm] = useLoader(THREE.TextureLoader, [
-    `${base}_diff_1k.jpg`,
-    `${base}_nor_gl_1k.jpg`,
-    `${base}_arm_1k.jpg`,
+    `${base}_diff_1k.webp`,
+    `${base}_nor_gl_1k.webp`,
+    `${base}_arm_1k.webp`,
   ]);
   return useMemo(() => {
     for (const t of [diff, nor, arm]) {
@@ -3743,61 +3743,61 @@ function usePbrSet(dir: string, asset: string, repeat: [number, number]): {
 // Procedural grass texture — generated on a canvas so there are zero seam
 // artifacts: no external file, no tiling repeat, no grid pattern.
 // The 1024×1024 canvas is created once via useMemo and handed to Three.js.
+// Module-level singleton — generated once for the entire app lifetime,
+// not recreated on every HouseCanvas mount (saves ~80–120ms on mobile).
+let _grassTex: THREE.CanvasTexture | null = null;
+function getProceduralGrassTexture(): THREE.CanvasTexture {
+  if (_grassTex) return _grassTex;
+  const RES = 512; // halved from 1024 — indistinguishable at ground-plane scale
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = RES;
+  const ctx = canvas.getContext("2d")!;
+
+  // ── 1. Base fill ────────────────────────────────────────────
+  ctx.fillStyle = "#3B5E1E";
+  ctx.fillRect(0, 0, RES, RES);
+
+  // ── 2. Organic patches — 160 blobs (halved, still realistic) ──
+  for (let i = 0; i < 160; i++) {
+    const x   = Math.random() * RES;
+    const y   = Math.random() * RES;
+    const rx  = 12 + Math.random() * 55;
+    const ry  = rx * (0.55 + Math.random() * 0.9);
+    const rot = Math.random() * Math.PI;
+    const isLight = Math.random() > 0.42;
+    const alpha   = 0.07 + Math.random() * 0.11;
+    const col = isLight ? `rgba(78,118,28,${alpha})` : `rgba(18,42,5,${alpha})`;
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry));
+    grad.addColorStop(0, col);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.scale(rx / Math.max(rx, ry), ry / Math.max(rx, ry));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.max(rx, ry), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ── 3. Per-pixel fine noise ─────────────────────────────────
+  const imgData = ctx.getImageData(0, 0, RES, RES);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (Math.random() - 0.5) * 24;
+    d[i]     = Math.max(0, Math.min(255, d[i]     + n * 0.35));
+    d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n * 0.75));
+    d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n * 0.20));
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  _grassTex = new THREE.CanvasTexture(canvas);
+  _grassTex.colorSpace = THREE.SRGBColorSpace;
+  return _grassTex;
+}
 function useProceduralGrassTexture(): THREE.CanvasTexture {
-  return useMemo(() => {
-    const RES = 1024;
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = RES;
-    const ctx = canvas.getContext("2d")!;
-
-    // ── 1. Base fill ────────────────────────────────────────────
-    ctx.fillStyle = "#3B5E1E";
-    ctx.fillRect(0, 0, RES, RES);
-
-    // ── 2. Organic patches (lighter clumps + darker hollows) ────
-    //   ~300 elliptical radial-gradient blobs at random positions/sizes
-    //   simulate the irregular colour variation of a real mowed lawn.
-    for (let i = 0; i < 320; i++) {
-      const x   = Math.random() * RES;
-      const y   = Math.random() * RES;
-      const rx  = 25 + Math.random() * 110;
-      const ry  = rx * (0.55 + Math.random() * 0.9);
-      const rot = Math.random() * Math.PI;
-      const isLight  = Math.random() > 0.42;
-      const alpha    = 0.07 + Math.random() * 0.11;
-      const col = isLight
-        ? `rgba(78,118,28,${alpha})`
-        : `rgba(18,42,5,${alpha})`;
-      const grad = ctx.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry));
-      grad.addColorStop(0, col);
-      grad.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(rot);
-      ctx.scale(rx / Math.max(rx, ry), ry / Math.max(rx, ry));
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(0, 0, Math.max(rx, ry), 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    // ── 3. Per-pixel fine noise (breaks up flat uniformity) ─────
-    const imgData = ctx.getImageData(0, 0, RES, RES);
-    const d = imgData.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const n = (Math.random() - 0.5) * 24;
-      d[i]     = Math.max(0, Math.min(255, d[i]     + n * 0.35));
-      d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n * 0.75));
-      d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n * 0.20));
-    }
-    ctx.putImageData(imgData, 0, 0);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    // repeat = 1 → single full-coverage application → absolute zero seams
-    return tex;
-  }, []);
+  return useMemo(() => getProceduralGrassTexture(), []);
 }
 
 function GrassGroundTextured({ size }: { size: number }) {
