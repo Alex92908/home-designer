@@ -6,6 +6,7 @@ import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone
 import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, HueSaturation } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
+import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
 import { useDesignerStore } from "@/lib/store";
@@ -3716,87 +3717,93 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef, selectedKey
 }
 
 // ─── Ground ─────────────────────────────────────────────────
+// ─── KTX2 loader singleton ───────────────────────────────────
+// One shared KTX2Loader instance so the basis transcoder WASM is only
+// fetched and compiled once for the entire app session.
+let _ktx2Loader: KTX2Loader | null = null;
+function getKtx2Loader(gl: THREE.WebGLRenderer): KTX2Loader {
+  if (_ktx2Loader) return _ktx2Loader;
+  _ktx2Loader = new KTX2Loader()
+    .setTranscoderPath("/")          // basis_transcoder.{js,wasm} in /public
+    .detectSupport(gl);
+  return _ktx2Loader;
+}
+
 // ─── PBR texture set loader ─────────────────────────────────
-// Maps a /public/textures/<dir>/<asset>_{diff,nor_gl,arm}_1k.jpg PolyHaven
-// triple to a configured material props object. `repeat` tiles the texture
-// over the surface — pass the world dimensions in meters for natural scale.
+// Loads GPU-compressed KTX2 (ETC1S) textures. Falls back transparently
+// when useLoader caches the result — Three.js global loader cache is keyed
+// by URL so the same texture is never uploaded twice.
 function usePbrSet(dir: string, asset: string, repeat: [number, number]): {
   map: THREE.Texture; normalMap: THREE.Texture; aoMap: THREE.Texture; roughnessMap: THREE.Texture;
 } {
+  const { gl } = useThree();
+  const loader = useMemo(() => getKtx2Loader(gl), [gl]);
   const base = `/textures/${dir}/${asset}`;
-  const [diff, nor, arm] = useLoader(THREE.TextureLoader, [
-    `${base}_diff_1k.webp`,
-    `${base}_nor_gl_1k.webp`,
-    `${base}_arm_1k.webp`,
-  ]);
+  const [diff, nor, arm] = useLoader(loader as any, [
+    `${base}_diff_1k.ktx2`,
+    `${base}_nor_gl_1k.ktx2`,
+    `${base}_arm_1k.ktx2`,
+  ] as any);
   return useMemo(() => {
-    for (const t of [diff, nor, arm]) {
+    for (const t of [diff, nor, arm] as THREE.Texture[]) {
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.repeat.set(repeat[0], repeat[1]);
       t.anisotropy = 8;
     }
-    diff.colorSpace = THREE.SRGBColorSpace;
-    return { map: diff, normalMap: nor, aoMap: arm, roughnessMap: arm };
+    (diff as THREE.Texture).colorSpace = THREE.SRGBColorSpace;
+    return { map: diff as THREE.Texture, normalMap: nor as THREE.Texture, aoMap: arm as THREE.Texture, roughnessMap: arm as THREE.Texture };
   }, [diff, nor, arm, repeat]);
 }
 
 // Procedural grass texture — generated on a canvas so there are zero seam
 // artifacts: no external file, no tiling repeat, no grid pattern.
 // The 1024×1024 canvas is created once via useMemo and handed to Three.js.
-// Module-level singleton — generated once for the entire app lifetime,
-// not recreated on every HouseCanvas mount (saves ~80–120ms on mobile).
-let _grassTex: THREE.CanvasTexture | null = null;
-function getProceduralGrassTexture(): THREE.CanvasTexture {
-  if (_grassTex) return _grassTex;
-  const RES = 512; // halved from 1024 — indistinguishable at ground-plane scale
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = RES;
-  const ctx = canvas.getContext("2d")!;
+// ─── Grass texture via Web Worker ───────────────────────────
+// The 160-blob + pixel-noise generation runs off the main thread.
+// Falls back to a plain green texture immediately, upgrades once the
+// worker bitmap arrives (usually < 200ms, invisible pop-in).
+let _grassTex: THREE.Texture | null = null;
+let _grassWorkerDone = false;
 
-  // ── 1. Base fill ────────────────────────────────────────────
-  ctx.fillStyle = "#3B5E1E";
-  ctx.fillRect(0, 0, RES, RES);
-
-  // ── 2. Organic patches — 160 blobs (halved, still realistic) ──
-  for (let i = 0; i < 160; i++) {
-    const x   = Math.random() * RES;
-    const y   = Math.random() * RES;
-    const rx  = 12 + Math.random() * 55;
-    const ry  = rx * (0.55 + Math.random() * 0.9);
-    const rot = Math.random() * Math.PI;
-    const isLight = Math.random() > 0.42;
-    const alpha   = 0.07 + Math.random() * 0.11;
-    const col = isLight ? `rgba(78,118,28,${alpha})` : `rgba(18,42,5,${alpha})`;
-    const grad = ctx.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry));
-    grad.addColorStop(0, col);
-    grad.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rot);
-    ctx.scale(rx / Math.max(rx, ry), ry / Math.max(rx, ry));
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(0, 0, Math.max(rx, ry), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+function kickGrassWorker() {
+  if (_grassWorkerDone || typeof Worker === "undefined") return;
+  _grassWorkerDone = true; // only launch once
+  try {
+    const w = new Worker("/grassWorker.js");
+    w.onmessage = (e: MessageEvent<{ bitmap: ImageBitmap }>) => {
+      const bitmapTex = new THREE.CanvasTexture(e.data.bitmap as any);
+      bitmapTex.colorSpace = THREE.SRGBColorSpace;
+      if (_grassTex) {
+        // Swap in the detailed texture — Three.js will pick it up next frame
+        (_grassTex as THREE.CanvasTexture).image = bitmapTex.image;
+        _grassTex.needsUpdate = true;
+        bitmapTex.dispose();
+      } else {
+        _grassTex = bitmapTex;
+      }
+      w.terminate();
+    };
+    w.postMessage(null);
+  } catch {
+    _grassWorkerDone = false; // allow retry
   }
+}
 
-  // ── 3. Per-pixel fine noise ─────────────────────────────────
-  const imgData = ctx.getImageData(0, 0, RES, RES);
-  const d = imgData.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const n = (Math.random() - 0.5) * 24;
-    d[i]     = Math.max(0, Math.min(255, d[i]     + n * 0.35));
-    d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n * 0.75));
-    d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n * 0.20));
+function getProceduralGrassTexture(): THREE.Texture {
+  if (!_grassTex) {
+    // Placeholder: solid green shown instantly, worker upgrades it async
+    const placeholder = document.createElement("canvas");
+    placeholder.width = placeholder.height = 4;
+    const ctx = placeholder.getContext("2d")!;
+    ctx.fillStyle = "#3B5E1E";
+    ctx.fillRect(0, 0, 4, 4);
+    _grassTex = new THREE.CanvasTexture(placeholder);
+    _grassTex.colorSpace = THREE.SRGBColorSpace;
+    kickGrassWorker();
   }
-  ctx.putImageData(imgData, 0, 0);
-
-  _grassTex = new THREE.CanvasTexture(canvas);
-  _grassTex.colorSpace = THREE.SRGBColorSpace;
   return _grassTex;
 }
-function useProceduralGrassTexture(): THREE.CanvasTexture {
+function useProceduralGrassTexture(): THREE.Texture {
   return useMemo(() => getProceduralGrassTexture(), []);
 }
 
@@ -6243,8 +6250,26 @@ export default function HouseCanvas() {
     : [-Math.sqrt(W*W+D*D)*0.30, floors*FLOOR_H_M*0.5+Math.sqrt(W*W+D*D)*0.28*1.6, -Math.sqrt(W*W+D*D)*1.6*0.90];
   const outsideLookAt: [number, number, number] = [0, floors * FLOOR_H_M * (_buildingType === "floor-plan-driven" ? 0.30 : 0.5), 0];
 
+  // ── Loading skeleton: shown briefly while Three.js scene initialises ──
+  const [sceneReady, setSceneReady] = useState(false);
+
   return (
     <div className="w-full h-full relative">
+      {/* Skeleton shown until Canvas calls onCreated */}
+      {!sceneReady && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3"
+          style={{ background: "linear-gradient(160deg,#C8D0DA 0%,#8E98A8 100%)" }}>
+          {/* Building silhouette shimmer */}
+          <div className="flex flex-col items-center gap-1 animate-pulse opacity-60">
+            <div className="w-40 h-6 rounded bg-white/30" />
+            <div className="w-40 h-10 rounded bg-white/25" />
+            <div className="w-40 h-10 rounded bg-white/25" />
+            <div className="w-40 h-10 rounded bg-white/25" />
+            <div className="w-48 h-2 rounded bg-white/20" />
+          </div>
+          <div className="text-white/70 text-xs font-medium tracking-wide mt-2">渲染中…</div>
+        </div>
+      )}
       {/* ── Enter / Exit walkthrough button + wall X-ray toggle ── */}
       {isRichGlassVilla && (
         <div className="absolute top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
@@ -6473,6 +6498,7 @@ export default function HouseCanvas() {
 
       <Canvas
         style={{ touchAction: "none" }}
+        onCreated={() => setTimeout(() => setSceneReady(true), 100)}
         shadows={{ type: THREE.PCFSoftShadowMap, enabled: true }}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
