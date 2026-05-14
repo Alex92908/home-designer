@@ -6234,26 +6234,8 @@ export default function HouseCanvas() {
     : [-Math.sqrt(W*W+D*D)*0.30, floors*FLOOR_H_M*0.5+Math.sqrt(W*W+D*D)*0.28*1.6, -Math.sqrt(W*W+D*D)*1.6*0.90];
   const outsideLookAt: [number, number, number] = [0, floors * FLOOR_H_M * (_buildingType === "floor-plan-driven" ? 0.30 : 0.5), 0];
 
-  // ── Loading skeleton: shown briefly while Three.js scene initialises ──
-  const [sceneReady, setSceneReady] = useState(false);
-
   return (
     <div className="w-full h-full relative">
-      {/* Skeleton shown until Canvas calls onCreated */}
-      {!sceneReady && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3"
-          style={{ background: "linear-gradient(160deg,#C8D0DA 0%,#8E98A8 100%)" }}>
-          {/* Building silhouette shimmer */}
-          <div className="flex flex-col items-center gap-1 animate-pulse opacity-60">
-            <div className="w-40 h-6 rounded bg-white/30" />
-            <div className="w-40 h-10 rounded bg-white/25" />
-            <div className="w-40 h-10 rounded bg-white/25" />
-            <div className="w-40 h-10 rounded bg-white/25" />
-            <div className="w-48 h-2 rounded bg-white/20" />
-          </div>
-          <div className="text-white/70 text-xs font-medium tracking-wide mt-2">渲染中…</div>
-        </div>
-      )}
       {/* ── Enter / Exit walkthrough button + wall X-ray toggle ── */}
       {isRichGlassVilla && (
         <div className="absolute top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
@@ -6482,7 +6464,6 @@ export default function HouseCanvas() {
 
       <Canvas
         style={{ touchAction: "none" }}
-        onCreated={() => setTimeout(() => setSceneReady(true), 100)}
         shadows={{ type: THREE.PCFSoftShadowMap, enabled: true }}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
