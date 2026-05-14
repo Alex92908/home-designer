@@ -709,25 +709,14 @@ export default function FloorPlan() {
           const rawHD    = (furn?.depth  ?? 100) * item.scaleD / 2;
           const halfW    = Math.min(r90 ? rawHD : rawHW, capturedRoomW / 2);
           const halfD    = Math.min(r90 ? rawHW : rawHD, capturedRoomD / 2);
-          let newX     = Math.max(halfW, Math.min(capturedRoomW - halfW, item.startX + dX));
-          let newZ     = Math.max(halfD, Math.min(capturedRoomD - halfD, item.startZ + dZ));
-          let didBlock = false;
-          // Polygon-shape constraint (L型/凸字)
-          if (capturedShape && !pointInPolygon(capturedShape.points, newX, newZ)) {
-            newX = item.startX;
-            newZ = item.startZ;
-            didBlock = true;
+          const newX     = Math.max(halfW, Math.min(capturedRoomW - halfW, item.startX + dX));
+          const newZ     = Math.max(halfD, Math.min(capturedRoomD - halfD, item.startZ + dZ));
+          // Visual-only: mark red when overlapping another item or outside polygon.
+          // Movement is never blocked — collision is shown via red outline only.
+          if (overlapsAny(newX, newZ, halfW, halfD)
+            || (capturedShape && !pointInPolygon(capturedShape.points, newX, newZ))) {
+            blocked.push(item.instanceId);
           }
-          // B4: 家具相互不穿模 — axis-separated slide.
-          if (overlapsAny(newX, newZ, halfW, halfD)) {
-            const onlyX = !overlapsAny(newX, item.startZ, halfW, halfD);
-            const onlyZ = !overlapsAny(item.startX, newZ, halfW, halfD);
-            if (onlyX)      { newZ = item.startZ; }
-            else if (onlyZ) { newX = item.startX; }
-            else            { newX = item.startX; newZ = item.startZ; }
-            didBlock = true;
-          }
-          if (didBlock) blocked.push(item.instanceId);
           moveItem(item.instanceId, newX, newZ);
         }
         // Surface blocked ids to render so we can draw red outlines on them.
