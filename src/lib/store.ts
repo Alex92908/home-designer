@@ -161,8 +161,10 @@ function emptyRoom(): RoomState {
 const ALL_ROOM_TYPES: RoomType[] = ALL_POSSIBLE_ROOMS;
 
 // ─── makeDefaultFloorPlan ─────────────────────────────────
-function makeDefaultFloorPlan(): FloorPlan {
-  return {
+/** Create a blank floor plan, optionally inheriting stair/hallway from a
+ *  reference floor so multi-floor buildings always have a staircase path. */
+function makeDefaultFloorPlan(ref?: FloorPlan): FloorPlan {
+  const fp: FloorPlan = {
     rooms: Object.fromEntries(ALL_ROOM_TYPES.map(r => [r, emptyRoom()])) as Record<RoomType, RoomState>,
     enabledRooms: [...DEFAULT_ENABLED],
     roomLayout: { ...DEFAULT_ROOM_LAYOUT },
@@ -172,6 +174,19 @@ function makeDefaultFloorPlan(): FloorPlan {
     roomHasDoor: { ...DEFAULT_ROOM_HAS_DOOR },
     roomDoorWall: { ...DEFAULT_ROOM_DOOR_WALL },
   };
+  // Copy stair (and hallway) from reference floor so new floors always have
+  // a staircase path. Position/dimensions are preserved for alignment.
+  const VERTICAL_ROOMS: RoomType[] = ["stair", "hallway"];
+  if (ref) {
+    for (const r of VERTICAL_ROOMS) {
+      if (!ref.enabledRooms.includes(r)) continue;
+      if (!fp.enabledRooms.includes(r)) fp.enabledRooms = [...fp.enabledRooms, r];
+      if (ref.roomLayout?.[r])     fp.roomLayout     = { ...fp.roomLayout,     [r]: { ...ref.roomLayout[r] } };
+      if (ref.roomDimensions?.[r]) fp.roomDimensions = { ...fp.roomDimensions, [r]: { ...ref.roomDimensions[r] } };
+      if (ref.stairConfig)         fp.stairConfig    = { ...ref.stairConfig };
+    }
+  }
+  return fp;
 }
 
 function makeRooftopFloorPlan(): FloorPlan {
@@ -1636,17 +1651,20 @@ export const useDesignerStore = create<DesignerStore>()(
 
         if (patch.floors !== undefined) {
           if (patch.floors > oldRegularFloors) {
-            // Grow: add blank floor plans for new regular floors
+            // Grow: add floor plans for new regular floors, inheriting stair from last floor
+            const refPlan = regularPlans[regularPlans.length - 1];
             while (regularPlans.length < patch.floors) {
-              regularPlans = [...regularPlans, makeDefaultFloorPlan()];
+              regularPlans = [...regularPlans, makeDefaultFloorPlan(refPlan)];
             }
           } else if (patch.floors < oldRegularFloors) {
             // Shrink: trim to exactly targetFloors
             regularPlans = regularPlans.slice(0, patch.floors);
           }
         }
-        // Ensure we have exactly targetFloors regular plans
-        while (regularPlans.length < targetFloors) regularPlans.push(makeDefaultFloorPlan());
+        // Ensure we have exactly targetFloors regular plans (inherit stair from last)
+        while (regularPlans.length < targetFloors) {
+          regularPlans.push(makeDefaultFloorPlan(regularPlans[regularPlans.length - 1]));
+        }
         regularPlans = regularPlans.slice(0, targetFloors);
 
         // ── Rooftop floor plan at index `targetFloors` ────────────────────
