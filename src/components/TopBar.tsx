@@ -75,17 +75,17 @@ function FloorSwitcher() {
             </button>
           );
         })}
-        {(() => {
-          const isActive = hasRooftop && activeFloor === rooftopIdx;
+        {hasRooftop && (() => {
+          const isActive = activeFloor === rooftopIdx;
           return (
             <button
               onClick={() => selectFloor(rooftopIdx)}
               className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all"
-              title={hasRooftop ? "屋顶层" : "点击开启天台层"}
+              title="屋顶层"
               style={{
                 background: isActive ? "#DC2626" : "transparent",
-                color:      isActive ? "white" : hasRooftop ? "#DC2626" : "#9CA3AF",
-                border:     `1.5px solid ${hasRooftop ? "#DC2626" : "#D1D5DB"}`,
+                color:      isActive ? "white" : "#DC2626",
+                border:     "1.5px solid #DC2626",
               }}
             >
               🏠天台

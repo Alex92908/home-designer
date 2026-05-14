@@ -153,24 +153,30 @@ export function RoomPanel() {
             >−</button>
             <span className="w-5 text-center text-xs font-black text-gray-800">{exterior.floors}</span>
             <button
-              onClick={() => setExterior({ floors: Math.min(6, exterior.floors + 1) })}
+              onClick={() => setExterior({ floors: Math.min(4, exterior.floors + 1) })}
               className="w-5 h-5 rounded-md text-xs font-bold text-gray-500 hover:text-blue-500 hover:bg-blue-50 flex items-center justify-center transition-colors"
-              disabled={exterior.floors >= 6}
+              disabled={exterior.floors >= 4}
             >＋</button>
           </div>
         </div>
-        {/* 天台已开启时，显示一个关闭入口 */}
-        {exterior.hasRooftop && (
-          <div className="flex items-center gap-2 mt-1.5">
-            <span className="text-[10px] text-red-500 font-semibold shrink-0">🏠 天台层已开启</span>
+        {/* 天台开关 — 始终显示 */}
+        <div className="flex items-center gap-2 mt-1.5">
+          {exterior.hasRooftop
+            ? <span className="text-[10px] text-red-500 font-semibold shrink-0">🏠 天台层已开启</span>
+            : <span className="text-[10px] text-gray-400 font-semibold shrink-0">🏠 天台层未开启</span>
+          }
+          {exterior.hasRooftop ? (
             <button
               onClick={() => { setExterior({ hasRooftop: false }); setActiveFloor(Math.min(activeFloor, exterior.floors - 1)); }}
               className="ml-auto px-2 py-0.5 rounded-lg text-[10px] font-bold text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 transition-colors"
-            >
-              关闭
-            </button>
-          </div>
-        )}
+            >关闭</button>
+          ) : (
+            <button
+              onClick={() => setExterior({ hasRooftop: true })}
+              className="ml-auto px-2 py-0.5 rounded-lg text-[10px] font-bold text-blue-500 hover:text-blue-700 border border-blue-200 hover:border-blue-400 transition-colors"
+            >开启</button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">

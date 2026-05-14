@@ -456,11 +456,11 @@ export default function ExteriorPanel() {
               <span className="text-2xl font-black text-gray-800">{exterior.floors}</span>
               <span className="text-xs text-gray-400 ml-1">{t.extFloorUnit}</span>
             </div>
-            <button onClick={() => setExterior({ preset: "custom", floors: Math.min(3, exterior.floors + 1) })}
+            <button onClick={() => setExterior({ preset: "custom", floors: Math.min(4, exterior.floors + 1) })}
               className="w-8 h-8 rounded-xl border border-gray-200 text-gray-600 font-bold hover:border-blue-400 hover:text-blue-600 transition-colors">＋</button>
           </div>
           <div className="flex gap-1 mt-2">
-            {[1,2,3].map(n => (
+            {[1,2,3,4].map(n => (
               <button key={n} onClick={() => setExterior({ preset: "custom", floors: n })}
                 className={`flex-1 py-1 rounded-lg text-xs font-bold transition-colors ${
                   exterior.floors === n ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
