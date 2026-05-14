@@ -901,8 +901,182 @@ const LUXURY_3F_GLASS_VILLA: ProjectTemplate = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Template 6 — 木饰面泳池别墅 (Wood-Accent Pool Villa) · 2F · 280㎡
+// Source: reference photo — white stucco + walnut soffit + full-glass ground
+// floor + upper balcony + front travertine pool deck + pine backdrop
+// ─────────────────────────────────────────────────────────────────────────────
+const WOOD_ACCENT_POOL_VILLA: ProjectTemplate = {
+  id: "wood-accent-pool-villa",
+  name: "木饰面泳池别墅",
+  emoji: "🏡",
+  description: "双层 · 白墙核桃木顶 · 落地玻璃 · 前院石板泳池",
+  areaSqm: 280,
+  palette: ["#EDE9E3", "#1C1814", "#8A5E38"],
+
+  exterior: {
+    preset: "contemporary",
+    roofStyle: "flat",
+    wallMaterial: "render",
+    wallColor: "#EDE9E3",
+    roofColor: "#1C1814",
+    accentColor: "#8A5E38",
+    floors: 2,
+    showPerimeterFence: false,
+    fenceInsetMultiplier: 1.5,
+    pilotisHeightM: 0,
+    buildingType: "floor-plan-driven",
+  },
+
+  // ── 1F: 社交开放层 ─────────────────────────────────────────────────────────
+  // 平面逻辑（cm，左上角为原点）:
+  //   南区玻璃幕墙（y 0–520）: 客厅 | 餐厅
+  //   中区（y 520–600）: 走廊
+  //   北区（y 0–740）右侧: 厨房 | 卫生间 | 书房
+  //   楼梯间（x 1200–1400，y 0–440）
+  //   南露台阳台（y 760–920，全宽）
+  floorLayouts: [
+    {
+      id: "wapv-f1",
+      name: "首层",
+      area: 148,
+      rooms: [
+        // ── 南侧大开间（落地玻璃，面向泳池）──
+        { room: "living",   x: 0,    y: 0,   width: 600, depth: 520 },
+        { room: "dining",   x: 600,  y: 0,   width: 380, depth: 380 },
+        // ── 北侧功能区 ──
+        { room: "kitchen",  x: 600,  y: 380, width: 380, depth: 360 },
+        { room: "bathroom", x: 980,  y: 0,   width: 220, depth: 300 },
+        { room: "study",    x: 980,  y: 300, width: 220, depth: 340 },
+        // ── 楼梯间（贯穿两层，同 x） ──
+        { room: "stair",    x: 1200, y: 0,   width: 200, depth: 440 },
+        // ── 走廊（横贯客厅北侧）──
+        { room: "hallway",  x: 0,    y: 520, width: 980, depth: 80 },
+        // ── 南露台（面向泳池）──
+        { room: "balcony",  x: 0,    y: 600, width: 1200, depth: 180 },
+      ],
+    },
+
+    // ── 2F: 私密休憩层 ────────────────────────────────────────────────────────
+    // 平面逻辑:
+    //   主卧套房（西）| 2 卧室（东）| 楼梯 | 南阳台（全宽落地玻璃）
+    {
+      id: "wapv-f2",
+      name: "二层",
+      area: 132,
+      rooms: [
+        { room: "master",    x: 0,    y: 0,   width: 580, depth: 460 },
+        { room: "closet",    x: 580,  y: 0,   width: 220, depth: 280 },
+        { room: "bathroom",  x: 580,  y: 280, width: 220, depth: 260 },
+        { room: "bedroom",   x: 800,  y: 0,   width: 400, depth: 460 },
+        { room: "stair",     x: 1200, y: 0,   width: 200, depth: 440 },
+        // ── 上层南阳台（落地玻璃栏杆，面向泳池）──
+        { room: "balcony2",  x: 0,    y: 460, width: 1200, depth: 200 },
+      ],
+    },
+  ],
+
+  // ── 庭院 ──────────────────────────────────────────────────────────────────
+  // 建筑足迹 ≈ 14m × 7.8m（1F 含阳台 ≈ 14×9.8m）
+  //   南立面（朝向泳池）≈ z = -700 cm
+  //   北立面 ≈ z = +500 cm
+  //   左墙  ≈ x = -700 cm
+  //   右墙  ≈ x = +700 cm
+  yardPlan: {
+    items: [
+      // ── 泳池（前院中央，矩形+圆头）────────────────────────────────────────
+      { id: "wapv-pool",  type: "prefab", prefabKind: "pool",
+        x: 0, z: -1100, rot: 0, scale: 1.2 },
+
+      // ── 躺椅：泳池两侧各 3 把 ───────────────────────────────────────────
+      { id: "wapv-lnge1", kind: "furniture.chaiseLounger", x: -560, z: -960,  rot: 0,           scale: 1.0 },
+      { id: "wapv-lnge2", kind: "furniture.chaiseLounger", x: -560, z: -1080, rot: 0,           scale: 1.0 },
+      { id: "wapv-lnge3", kind: "furniture.chaiseLounger", x: -560, z: -1200, rot: 0,           scale: 1.0 },
+      { id: "wapv-lnge4", kind: "furniture.chaiseLounger", x:  560, z: -960,  rot: Math.PI,     scale: 1.0 },
+      { id: "wapv-lnge5", kind: "furniture.chaiseLounger", x:  560, z: -1080, rot: Math.PI,     scale: 1.0 },
+      { id: "wapv-lnge6", kind: "furniture.chaiseLounger", x:  560, z: -1200, rot: Math.PI,     scale: 1.0 },
+
+      // ── 松树：背景左右各 2 棵 ───────────────────────────────────────────
+      { id: "wapv-pine1", kind: "tree.pine", x: -1300, z: -800,  rot: 0.3,  scale: 1.2 },
+      { id: "wapv-pine2", kind: "tree.pine", x: -1500, z: -200,  rot: 0,    scale: 1.0 },
+      { id: "wapv-pine3", kind: "tree.pine", x:  1400, z: -600,  rot: -0.2, scale: 1.1 },
+      { id: "wapv-pine4", kind: "tree.pine", x:  1600, z:  100,  rot: 0.4,  scale: 1.0 },
+      { id: "wapv-pine5", kind: "tree.pine", x: -1000, z:  600,  rot: 0.1,  scale: 0.9 },
+      { id: "wapv-pine6", kind: "tree.pine", x:  1100, z:  700,  rot: -0.3, scale: 0.95},
+
+      // ── 橄榄树：建筑两侧近景 ────────────────────────────────────────────
+      { id: "wapv-olv1",  kind: "tree.olive", x: -900, z: -500, rot: 0,   scale: 0.9 },
+      { id: "wapv-olv2",  kind: "tree.olive", x:  900, z: -400, rot: 0.2, scale: 0.85},
+
+      // ── 观赏草：泳池边缘点缀 ────────────────────────────────────────────
+      { id: "wapv-gr1",   kind: "plant.grass", x: -350, z: -1400, rot: 0,    scale: 1.0 },
+      { id: "wapv-gr2",   kind: "plant.grass", x:  300, z: -1420, rot: 0.3,  scale: 0.9 },
+      { id: "wapv-gr3",   kind: "plant.grass", x: -700, z: -1050, rot: -0.2, scale: 1.0 },
+      { id: "wapv-gr4",   kind: "plant.grass", x:  700, z: -900,  rot: 0.5,  scale: 0.85},
+
+      // ── 小灌木：石板区边缘 ──────────────────────────────────────────────
+      { id: "wapv-bush1", kind: "plant.bushSmall", x: -480, z: -1450, rot: 0,   scale: 0.8 },
+      { id: "wapv-bush2", kind: "plant.bushSmall", x:  420, z: -1460, rot: 0.3, scale: 0.75},
+      { id: "wapv-bush3", kind: "plant.bushLarge", x: -820, z: -700,  rot: 0,   scale: 0.7 },
+      { id: "wapv-bush4", kind: "plant.bushLarge", x:  840, z: -680,  rot: 0.2, scale: 0.65},
+
+      // ── 区域：入户前院石板（建筑正前方）────────────────────────────────
+      {
+        id: "wapv-zone-forecourt", type: "zone", zoneKind: "social",
+        x: 0, z: -680,
+        polygon: [
+          [-700, -180], [700, -180], [700, 180], [-700, 180],
+        ] as Array<[number, number]>,
+        pavingMaterialId: "stone_grey",
+      },
+      // ── 区域：泳池石板甲板 ───────────────────────────────────────────────
+      {
+        id: "wapv-zone-deck", type: "zone", zoneKind: "private",
+        x: 0, z: -1100,
+        polygon: [
+          [-800, -500], [800, -500], [800, 500], [-800, 500],
+        ] as Array<[number, number]>,
+        pavingMaterialId: "stone_grey",
+      },
+      // ── 区域：后院草坪 ───────────────────────────────────────────────────
+      {
+        id: "wapv-zone-lawn", type: "zone", zoneKind: "lawn",
+        x: 0, z: 700,
+        polygon: [
+          [-900, -300], [900, -300], [900, 300], [-900, 300],
+        ] as Array<[number, number]>,
+      },
+    ],
+
+    paths: [
+      // 入户通道：南大门 → 建筑南立面
+      {
+        id: "wapv-path-entry",
+        points: [
+          [0, -1800],
+          [0, -860],
+        ] as Array<[number, number]>,
+        widthCm: 140,
+        material: "stone",
+      },
+      // 连接通道：入户区 → 泳池甲板左侧
+      {
+        id: "wapv-path-pool",
+        points: [
+          [-140, -860],
+          [-560, -860],
+          [-560, -1100],
+        ] as Array<[number, number]>,
+        widthCm: 100,
+        material: "stone",
+      },
+    ],
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   LUXURY_3F_GLASS_VILLA,    // ← 三层豪宅，排第一（用户当前设计的合理化版）
+  WOOD_ACCENT_POOL_VILLA,   // ← 参考图：白墙核桃木顶，前院泳池
   GLASS_CURTAIN_VILLA,      // ← 参考图风格，双层
   MODERN_POOL_VILLA,
   JAPANESE_ZEN_VILLA,
