@@ -646,7 +646,7 @@ function buildFacadeBlocks(segs: ExteriorWallSeg[]): FacadeBlock[] {
 }
 
 // ── 平屋顶 ────────────────────────────────────────────────────
-function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY: number; nightGlow?: number }) {
+function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: number; D: number; roofY: number; nightGlow?: number; hasRooftop?: boolean }) {
   const OV = 0.45;   // 悬挑
   const OV_S = 0.75; // 南向多悬挑
   const PH = 0.30;   // 女儿墙高度
@@ -1263,6 +1263,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
       })()}
 
       {/* ── 屋顶露台区域（南向，阳光充足）── */}
+      {!hasRooftop && <>
       {/* 两把日光浴躺椅 — 淡米色，南向摆放，供远处视角可见 */}
       {([[-W * 0.15, 0], [W * 0.15, 0]] as [number,number][]).map(([lx, _lz], li) => (
         <group key={`rl-${li}`} position={[lx, roofSlab + 0.05, -D * 0.28]}>
@@ -2070,6 +2071,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0 }: { W: number; D: number; roofY:
           </group>
         );
       })()}
+      </>}
 
     </group>
   );
@@ -2251,6 +2253,253 @@ function AnimatedPoolCaustics({
     </>
   );
 }
+
+// ── 屋顶装饰层：读取屋顶平面图，按房间类型渲染 3D 模板 ──────────
+function RooftopDecorations({
+  W, D, surfaceY, planOffset, onEnterRoom, roofFloorIdx, nightGlow,
+}: {
+  W: number; D: number; surfaceY: number;
+  planOffset: PlanOffset;
+  onEnterRoom?: (room: RoomType, floorIndex: number, worldPos: [number, number, number]) => void;
+  roofFloorIdx: number;
+  nightGlow: number;
+}) {
+  const floorPlans = useDesignerStore(s => s.floorPlans);
+  const fp = floorPlans[roofFloorIdx];
+  if (!fp) return null;
+
+  const { enabledRooms, roomLayout, roomDimensions } = fp;
+
+  // coordinate transform: plan cm → world m
+  const toW = (px: number, py: number, rw: number, rd: number) => {
+    const cx = (px + rw / 2 - planOffset.minX) * CM - W / 2;
+    const cz = -((py + rd / 2 - planOffset.minY) * CM) + D / 2;
+    const rWm = rw * CM;
+    const rDm = rd * CM;
+    return { cx, cz, rWm, rDm };
+  };
+
+  const glowEmissive = nightGlow > 0.5 ? "#ffe8c0" : nightGlow > 0 ? "#fff0d8" : "#000000";
+  const glowIntensity = nightGlow;
+
+  return (
+    <group>
+      {enabledRooms.map((rt) => {
+        const pos  = roomLayout[rt];
+        const dims = roomDimensions[rt];
+        if (!pos || !dims) return null;
+        const { cx, cz, rWm, rDm } = toW(pos.x, pos.y, dims.width, dims.depth);
+        const y = surfaceY;
+
+        if (rt === "rooftop_lounge") {
+          // 休闲区：遮阳棚 + 躺椅
+          const postH = 2.2;
+          const postR = 0.06;
+          const roofT = 0.05;
+          const posts: [number, number][] = [
+            [-rWm / 2 + 0.15,  rDm / 2 - 0.15],
+            [ rWm / 2 - 0.15,  rDm / 2 - 0.15],
+            [-rWm / 2 + 0.15, -rDm / 2 + 0.15],
+            [ rWm / 2 - 0.15, -rDm / 2 + 0.15],
+          ];
+          return (
+            <group key={rt} position={[cx, y, cz]} onClick={() => onEnterRoom?.(rt, roofFloorIdx, [cx, y, cz])}>
+              {/* pergola posts */}
+              {posts.map(([px, pz], i) => (
+                <mesh key={i} position={[px, postH / 2, pz]} castShadow>
+                  <cylinderGeometry args={[postR, postR, postH, 8]} />
+                  <meshStandardMaterial color="#8B6914" roughness={0.7} />
+                </mesh>
+              ))}
+              {/* pergola roof slats */}
+              {Array.from({ length: Math.max(2, Math.round(rWm / 0.4)) }, (_, i) => {
+                const t = i / Math.max(1, Math.round(rWm / 0.4) - 1);
+                return (
+                  <mesh key={i} position={[lerp(-rWm / 2 + 0.15, rWm / 2 - 0.15, t), postH + roofT / 2, 0]} castShadow>
+                    <boxGeometry args={[0.06, roofT, rDm - 0.3]} />
+                    <meshStandardMaterial color="#A0784A" roughness={0.6} />
+                  </mesh>
+                );
+              })}
+              {/* loungers */}
+              {[-0.4, 0.4].map((ox, i) => (
+                <group key={i} position={[ox, 0.22, 0]}>
+                  <mesh castShadow>
+                    <boxGeometry args={[0.70, 0.08, 1.90]} />
+                    <meshStandardMaterial color="#F5DEB3" roughness={0.8} />
+                  </mesh>
+                  <mesh position={[0, 0.12, -0.75]} castShadow>
+                    <boxGeometry args={[0.68, 0.22, 0.40]} />
+                    <meshStandardMaterial color="#F5DEB3" roughness={0.8} />
+                  </mesh>
+                  {/* legs */}
+                  {([-0.28, 0.28] as number[]).flatMap((lx) =>
+                    ([-0.80, 0.80] as number[]).map((lz, j) => (
+                      <mesh key={`${lx}${lz}`} position={[lx, -0.11, lz]} castShadow>
+                        <boxGeometry args={[0.04, 0.22, 0.04]} />
+                        <meshStandardMaterial color="#C8A96E" roughness={0.6} />
+                      </mesh>
+                    ))
+                  )}
+                </group>
+              ))}
+            </group>
+          );
+        }
+
+        if (rt === "rooftop_pool") {
+          const poolDepth = 1.2;
+          const wallT = 0.12;
+          return (
+            <group key={rt} position={[cx, y, cz]} onClick={() => onEnterRoom?.(rt, roofFloorIdx, [cx, y, cz])}>
+              {/* pool walls */}
+              {[
+                { pos: [0,  rDm / 2 - wallT / 2, 0] as [number,number,number], size: [rWm, poolDepth, wallT] as [number,number,number] },
+                { pos: [0, -rDm / 2 + wallT / 2, 0] as [number,number,number], size: [rWm, poolDepth, wallT] as [number,number,number] },
+                { pos: [-rWm / 2 + wallT / 2, 0, 0] as [number,number,number], size: [wallT, poolDepth, rDm] as [number,number,number] },
+                { pos: [ rWm / 2 - wallT / 2, 0, 0] as [number,number,number], size: [wallT, poolDepth, rDm] as [number,number,number] },
+              ].map(({ pos: wp, size }, i) => (
+                <mesh key={i} position={[wp[0], wp[1] / 2 + 0.001, wp[2]]} castShadow>
+                  <boxGeometry args={size} />
+                  <meshStandardMaterial color="#E8E0D0" roughness={0.3} />
+                </mesh>
+              ))}
+              {/* water surface */}
+              <mesh position={[0, poolDepth * 0.7, 0]} receiveShadow>
+                <boxGeometry args={[rWm - wallT * 2, 0.04, rDm - wallT * 2]} />
+                <meshStandardMaterial
+                  color="#38BDF8"
+                  transparent opacity={0.75}
+                  roughness={0.05} metalness={0.1}
+                  emissive={nightGlow > 0 ? "#0ea5e9" : "#000"}
+                  emissiveIntensity={nightGlow * 0.4}
+                />
+              </mesh>
+              {/* pool light at night */}
+              {nightGlow > 0 && (
+                <pointLight position={[0, poolDepth * 0.5, 0]} intensity={nightGlow * 0.8} distance={Math.max(rWm, rDm) * 1.5} color="#38BDF8" />
+              )}
+            </group>
+          );
+        }
+
+        if (rt === "rooftop_garden") {
+          const grassColor = "#4A7C59";
+          const soilColor  = "#6B4226";
+          const plantCount = Math.max(3, Math.round(rWm * rDm * 0.8));
+          return (
+            <group key={rt} position={[cx, y, cz]} onClick={() => onEnterRoom?.(rt, roofFloorIdx, [cx, y, cz])}>
+              {/* grass base */}
+              <mesh receiveShadow>
+                <boxGeometry args={[rWm, 0.06, rDm]} />
+                <meshStandardMaterial color={grassColor} roughness={0.9} />
+              </mesh>
+              {/* planter boxes along edges */}
+              {[
+                { pos: [0,  rDm / 2 - 0.2, 0] as [number,number,number], size: [rWm * 0.7, 0.3, 0.35] as [number,number,number] },
+                { pos: [0, -rDm / 2 + 0.2, 0] as [number,number,number], size: [rWm * 0.7, 0.3, 0.35] as [number,number,number] },
+              ].map(({ pos: pp, size }, i) => (
+                <mesh key={i} position={[pp[0], pp[1] + 0.18, pp[2]]} castShadow>
+                  <boxGeometry args={size} />
+                  <meshStandardMaterial color={soilColor} roughness={0.95} />
+                </mesh>
+              ))}
+              {/* random shrubs */}
+              {Array.from({ length: plantCount }, (_, i) => {
+                const angle  = (i / plantCount) * Math.PI * 2;
+                const radius = Math.min(rWm, rDm) * 0.25 * (0.5 + (i % 3) * 0.25);
+                const px2    = Math.cos(angle) * radius;
+                const pz2    = Math.sin(angle) * radius;
+                const sh     = 0.4 + (i % 3) * 0.2;
+                return (
+                  <mesh key={i} position={[px2, sh / 2 + 0.06, pz2]} castShadow>
+                    <sphereGeometry args={[sh * 0.55, 7, 6]} />
+                    <meshStandardMaterial color={i % 2 === 0 ? "#3A6B47" : "#5A9E6A"} roughness={0.9} />
+                  </mesh>
+                );
+              })}
+            </group>
+          );
+        }
+
+        if (rt === "rooftop_bar") {
+          const counterH  = 1.05;
+          const counterD2 = 0.55;
+          const stoolH    = 0.75;
+          const stoolCount = Math.max(2, Math.floor(rWm / 0.65));
+          return (
+            <group key={rt} position={[cx, y, cz]} onClick={() => onEnterRoom?.(rt, roofFloorIdx, [cx, y, cz])}>
+              {/* bar counter */}
+              <mesh position={[0, counterH / 2, -rDm / 2 + counterD2 / 2]} castShadow>
+                <boxGeometry args={[rWm * 0.9, counterH, counterD2]} />
+                <meshStandardMaterial color="#4A3728" roughness={0.5} />
+              </mesh>
+              {/* counter top */}
+              <mesh position={[0, counterH + 0.025, -rDm / 2 + counterD2 / 2]} castShadow>
+                <boxGeometry args={[rWm * 0.9 + 0.04, 0.05, counterD2 + 0.04]} />
+                <meshStandardMaterial color="#C0A080" roughness={0.3} metalness={0.1} />
+              </mesh>
+              {/* stools */}
+              {Array.from({ length: stoolCount }, (_, i) => {
+                const t  = stoolCount > 1 ? i / (stoolCount - 1) : 0.5;
+                const sx = lerp(-rWm * 0.4, rWm * 0.4, t);
+                return (
+                  <group key={i} position={[sx, 0, -rDm / 2 + counterD2 + 0.45]}>
+                    <mesh position={[0, stoolH, 0]} castShadow>
+                      <cylinderGeometry args={[0.18, 0.18, 0.06, 10]} />
+                      <meshStandardMaterial color="#8B5E3C" roughness={0.7} />
+                    </mesh>
+                    <mesh position={[0, stoolH / 2, 0]} castShadow>
+                      <cylinderGeometry args={[0.03, 0.03, stoolH, 6]} />
+                      <meshStandardMaterial color="#C0A040" metalness={0.6} roughness={0.3} />
+                    </mesh>
+                  </group>
+                );
+              })}
+              {/* ambient bar glow at night */}
+              {nightGlow > 0 && (
+                <pointLight position={[0, counterH + 0.5, -rDm / 2 + counterD2]} intensity={nightGlow * 0.6} distance={Math.max(rWm, rDm) * 1.2} color="#FFD070" />
+              )}
+            </group>
+          );
+        }
+
+        if (rt === "equipment_room") {
+          const boxH = Math.min(rDm, 2.4);
+          return (
+            <group key={rt} position={[cx, y, cz]} onClick={() => onEnterRoom?.(rt, roofFloorIdx, [cx, y, cz])}>
+              {/* equipment enclosure */}
+              <mesh position={[0, boxH / 2, 0]} castShadow receiveShadow>
+                <boxGeometry args={[rWm, boxH, rDm]} />
+                <meshStandardMaterial color="#6B7280" roughness={0.6} />
+              </mesh>
+              {/* ventilation grilles */}
+              {[-0.15, 0.15].map((oz, i) => (
+                <mesh key={i} position={[rWm / 2 + 0.001, boxH * 0.55, oz]} castShadow>
+                  <boxGeometry args={[0.02, 0.25, 0.08]} />
+                  <meshStandardMaterial color="#374151" roughness={0.7} />
+                </mesh>
+              ))}
+              {/* warning light */}
+              <mesh position={[0, boxH + 0.06, 0]}>
+                <sphereGeometry args={[0.06, 8, 8]} />
+                <meshStandardMaterial
+                  color="#FF4444"
+                  emissive="#FF0000"
+                  emissiveIntensity={0.6 + Math.sin(Date.now() * 0.003) * 0.3}
+                />
+              </mesh>
+            </group>
+          );
+        }
+
+        return null;
+      })}
+    </group>
+  );
+}
+
+function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
 // ── 主组件 ────────────────────────────────────────────────────
 export default function FloorPlanBuilding({
@@ -5188,76 +5437,19 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {!insideBuilding && <FlatRoof W={W} D={D} roofY={totalH} nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0} />}
+      {!insideBuilding && <FlatRoof W={W} D={D} roofY={totalH} nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0} hasRooftop={exterior.hasRooftop} />}
 
-      {/* ── 屋顶层 (hasRooftop) — 在 FlatRoof 屋面板上渲染各功能区 ── */}
-      {exterior.hasRooftop && (() => {
-        const roofFp = floorPlans[exterior.floors];
-        if (!roofFp) return null;
-        const roofSlabY = totalH + 0.10; // FlatRoof roofSlab = roofY + 0.05; slab thickness = 0.10m
-        const surfaceY  = roofSlabY + 0.05 + 0.005; // just above slab surface
-        // Compute rooftop plan origin (min x/y of rooftop rooms)
-        const roofEnabled = (roofFp.enabledRooms ?? []);
-        if (roofEnabled.length === 0) return null;
-        let rtMinX = Infinity, rtMinY = Infinity;
-        for (const r of roofEnabled) {
-          const p = roofFp.roomLayout?.[r]; const d = roofFp.roomDimensions?.[r];
-          if (!p || !d) continue;
-          rtMinX = Math.min(rtMinX, p.x); rtMinY = Math.min(rtMinY, p.y);
-        }
-        if (!isFinite(rtMinX)) return null;
-        // Color map for rooftop room types
-        const roofColors: Record<string, string> = {
-          rooftop_lounge:  "#E8DCC8",
-          rooftop_pool:    "#3B82F6",
-          rooftop_garden:  "#6DB55A",
-          rooftop_bar:     "#2D2D3A",
-          equipment_room:  "#9CA3AF",
-        };
-        return (
-          <group key="rooftop-layer">
-            {roofEnabled.map(r => {
-              const p = roofFp.roomLayout?.[r]; const d = roofFp.roomDimensions?.[r];
-              if (!p || !d) return null;
-              const rW = d.width  * CM;
-              const rD = d.depth  * CM;
-              // Center on building footprint using planOffset from regular floors
-              const cx = (p.x + d.width  / 2 - planOffset.minX) * CM - W / 2;
-              const cz = -((p.y + d.depth / 2 - planOffset.minY) * CM) + D / 2;
-              const color = roofColors[r] ?? "#C8C0B0";
-              const isPool = r === "rooftop_pool";
-              const isGarden = r === "rooftop_garden";
-              const SLAB_TH = 0.03;
-              const eyeY = surfaceY + SLAB_TH / 2 + 1.6;
-              return (
-                <group key={r} position={[cx, surfaceY + SLAB_TH / 2, cz]}>
-                  {/* Zone floor slab — clickable to enter rooftop walkthrough */}
-                  <mesh
-                    receiveShadow castShadow
-                    onClick={onEnterRoom
-                      ? (e) => { e.stopPropagation(); onEnterRoom(r as RoomType, exterior.floors, [cx, eyeY, cz]); }
-                      : undefined}
-                  >
-                    <boxGeometry args={[rW - 0.04, SLAB_TH, rD - 0.04]} />
-                    <meshStandardMaterial
-                      color={color}
-                      roughness={isPool ? 0.1 : isGarden ? 0.9 : 0.75}
-                      metalness={isPool ? 0.0 : 0.0}
-                      transparent={isPool}
-                      opacity={isPool ? 0.85 : 1}
-                    />
-                  </mesh>
-                  {/* Subtle border line */}
-                  <mesh position={[0, -SLAB_TH / 2 - 0.001, 0]}>
-                    <boxGeometry args={[rW, 0.004, rD]} />
-                    <meshStandardMaterial color="#B8B0A0" roughness={0.9} />
-                  </mesh>
-                </group>
-              );
-            })}
-          </group>
-        );
-      })()}
+      {/* ── 屋顶层 (hasRooftop) — 读取屋顶平面图，按房间类型渲染 3D 模板装饰 ── */}
+      {exterior.hasRooftop && (
+        <RooftopDecorations
+          W={W} D={D}
+          surfaceY={totalH + 0.10 + 0.05 + 0.005}
+          planOffset={planOffset}
+          onEnterRoom={onEnterRoom}
+          roofFloorIdx={exterior.floors}
+          nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0}
+        />
+      )}
 
       {/* ── 5a-conservatory. 北侧温室 / 冬季花园（glass conservatory, north facade）──
            A Victorian-style steel-and-glass conservatory attached to the north wall.
