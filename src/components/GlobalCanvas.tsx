@@ -16,7 +16,7 @@
 import { useMemo, useRef, useState, useEffect, Suspense } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, useGLTF, Clone, Text } from "@react-three/drei";
+import { OrbitControls, Html, useGLTF, Clone } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
 import { RoomState } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
@@ -486,19 +486,29 @@ function RoomGroup({
         />
       )}
 
-      {/* Floating label — WebGL Text (no DOM overhead) */}
-      <Text
-        position={[0, isStair ? FLOOR_H * 0.6 : WALL_H + 0.18, 0]}
-        fontSize={0.28}
-        anchorX="center"
-        anchorY="middle"
-        color={isStair ? "#6366F1" : isActive ? "#1D4ED8" : "#1F2937"}
-        outlineWidth={0.018}
-        outlineColor="white"
-        renderOrder={1}
+      {/* Floating label — stair shows floor transition arrow */}
+      <Html
+        position={[0, (isStair ? FLOOR_H * 0.6 : WALL_H + 0.15), 0]}
+        center
+        distanceFactor={8}
+        style={{ pointerEvents: "none" }}
       >
-        {isStair ? `${label} ${floorIndex + 1}F→${floorIndex + 2}F` : `${icon} ${label}`}
-      </Text>
+        <div style={{
+          background: isStair
+            ? "rgba(99,102,241,0.9)"
+            : isActive ? "#1D4ED8" : "rgba(31,41,55,0.82)",
+          color: "white",
+          padding: "2px 8px",
+          borderRadius: 6,
+          fontSize: 11,
+          fontWeight: 700,
+          whiteSpace: "nowrap",
+          fontFamily: "system-ui, sans-serif",
+          boxShadow: isHover ? "0 0 0 2px #60A5FA" : undefined,
+        }}>
+          {isStair ? `🪜 ${label} ${floorIndex + 1}F→${floorIndex + 2}F` : `${icon} ${label}`}
+        </div>
+      </Html>
     </group>
   );
 }
@@ -938,20 +948,24 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
                 );
               })()}
 
-              {/* Floor label badge — WebGL Text */}
-              <Text
-                position={[cx - extent * 0.44, yOff + 0.35, cz - extent * 0.44]}
-                fontSize={0.38}
-                anchorX="center"
-                anchorY="middle"
-                color={fi === activeFloor ? "#1D4ED8" : "#3C3C50"}
-                outlineWidth={0.025}
-                outlineColor="white"
-                fontWeight="bold"
-                renderOrder={1}
+              {/* Floor label badge */}
+              <Html
+                position={[cx - extent * 0.48, yOff + 0.3, cz - extent * 0.48]}
+                style={{ pointerEvents: "none" }}
               >
-                {fi + 1}F
-              </Text>
+                <div style={{
+                  background: fi === activeFloor ? "#1D4ED8" : "rgba(60,60,80,0.78)",
+                  color: "#fff",
+                  padding: "1px 7px",
+                  borderRadius: 4,
+                  fontSize: 10,
+                  fontWeight: 800,
+                  fontFamily: "system-ui,sans-serif",
+                  letterSpacing: "0.04em",
+                }}>
+                  {fi + 1}F
+                </div>
+              </Html>
 
               {/* Rooms on this floor */}
               {visible.map(r => {
