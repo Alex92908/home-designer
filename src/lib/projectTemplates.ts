@@ -1019,6 +1019,20 @@ const WOOD_ACCENT_POOL_VILLA: ProjectTemplate = {
       { id: "wapv-bush3", kind: "plant.bushLarge", x: -820, z: -700,  rot: 0,   scale: 0.7 },
       { id: "wapv-bush4", kind: "plant.bushLarge", x:  840, z: -680,  rot: 0.2, scale: 0.65},
 
+      // ── 大门 + 两侧格栅围墙（南界） ─────────────────────────────────────
+      // 入口居中，宽约 4m；两侧各一段 slat_wall，现代钢构格栅风格
+      { id: "wapv-gate",  kind: "feature.fenceGate",
+        x: 0, z: -1760, rot: 0, scale: 3.5 },
+      { id: "wapv-slat-l", type: "prefab", prefabKind: "slat_wall",
+        x: -540, z: -1760, rot: 0, scale: 1.0,
+        params: { lengthM: 7, heightM: 2.2 } },
+      { id: "wapv-slat-r", type: "prefab", prefabKind: "slat_wall",
+        x:  540, z: -1760, rot: 0, scale: 1.0,
+        params: { lengthM: 7, heightM: 2.2 } },
+      // 大门两侧立柱绿植
+      { id: "wapv-gate-bush-l", kind: "plant.bushLarge", x: -280, z: -1780, rot: 0,   scale: 0.9 },
+      { id: "wapv-gate-bush-r", kind: "plant.bushLarge", x:  280, z: -1780, rot: 0.2, scale: 0.9 },
+
       // ── 区域：入户前院石板（建筑正前方）────────────────────────────────
       {
         id: "wapv-zone-forecourt", type: "zone", zoneKind: "social",
