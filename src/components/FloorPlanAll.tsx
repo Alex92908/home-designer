@@ -776,51 +776,8 @@ export default function FloorPlanAll() {
               <span className="text-[9px] px-1 rounded-full bg-orange-100">{historyLen}</span>
             )}
           </button>
-          {/* Floor switcher — always show all floors + rooftop tab */}
-          <div className="flex items-center gap-1 ml-auto">
-            {Array.from({ length: exterior.floors }).map((_, i) => {
-              const isActive = activeFloor === i;
-              const colors   = ["#2563EB", "#7C3AED", "#059669", "#D97706"];
-              const c        = colors[i % colors.length];
-              return (
-                <button
-                  key={i}
-                  onClick={() => setActiveFloor(i)}
-                  className="px-3 py-0.5 rounded-lg text-xs font-bold transition-all"
-                  style={{
-                    background: isActive ? c      : "white",
-                    color:      isActive ? "white" : c,
-                    border:     `1.5px solid ${c}`,
-                  }}
-                >
-                  {i + 1}F
-                </button>
-              );
-            })}
-            {/* 屋顶 tab — always shown; clicking enables hasRooftop if needed */}
-            {(() => {
-              const rooftopIdx = exterior.floors;
-              const isActive   = exterior.hasRooftop && activeFloor === rooftopIdx;
-              return (
-                <button
-                  key="rooftop"
-                  onClick={() => {
-                    if (!exterior.hasRooftop) setExterior({ hasRooftop: true });
-                    setActiveFloor(rooftopIdx);
-                  }}
-                  className="px-3 py-0.5 rounded-lg text-xs font-bold transition-all"
-                  title={exterior.hasRooftop ? "屋顶层" : "点击开启天台层"}
-                  style={{
-                    background: isActive ? "#DC2626" : "white",
-                    color:      isActive ? "white"   : exterior.hasRooftop ? "#DC2626" : "#9CA3AF",
-                    border:     `1.5px solid ${isActive ? "#DC2626" : exterior.hasRooftop ? "#DC2626" : "#D1D5DB"}`,
-                  }}
-                >
-                  🏠屋顶
-                </button>
-              );
-            })()}
-          </div>
+          {/* Floor switcher is now in the TopBar (unified across all views) */}
+          <div className="ml-auto" />
           {roomClipboard && (
             <button
               onClick={pasteAsNewRoom}

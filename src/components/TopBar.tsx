@@ -6,6 +6,65 @@ import { useT, useLocaleStore } from "@/lib/i18n";
 import { ROOM_DEFS } from "@/lib/types";
 import ShareButton from "./ShareButton";
 
+/** Compact floor-switcher used in the TopBar across all views. */
+function FloorSwitcher() {
+  const exterior      = useDesignerStore(s => s.exterior);
+  const activeFloor   = useDesignerStore(s => s.activeFloor);
+  const setActiveFloor = useDesignerStore(s => s.setActiveFloor);
+  const setExterior   = useDesignerStore(s => s.setExterior);
+
+  const { floors, hasRooftop } = exterior;
+  if (floors <= 1 && !hasRooftop) return null;
+
+  const floorColors = ["#2563EB", "#7C3AED", "#059669", "#D97706"];
+  const rooftopIdx  = floors;
+
+  return (
+    <div className="flex items-center gap-1 shrink-0">
+      {Array.from({ length: floors }).map((_, i) => {
+        const isActive = activeFloor === i;
+        const c = floorColors[i % floorColors.length];
+        return (
+          <button
+            key={i}
+            onClick={() => setActiveFloor(i)}
+            className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all"
+            style={{
+              background: isActive ? c : "transparent",
+              color:      isActive ? "white" : c,
+              border:     `1.5px solid ${c}`,
+            }}
+          >
+            {i + 1}F
+          </button>
+        );
+      })}
+      {/* 屋顶 tab */}
+      {(() => {
+        const isActive = hasRooftop && activeFloor === rooftopIdx;
+        return (
+          <button
+            key="rooftop"
+            onClick={() => {
+              if (!hasRooftop) setExterior({ hasRooftop: true });
+              setActiveFloor(rooftopIdx);
+            }}
+            className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all"
+            title={hasRooftop ? "屋顶层" : "点击开启天台层"}
+            style={{
+              background: isActive ? "#DC2626" : "transparent",
+              color:      isActive ? "white"   : hasRooftop ? "#DC2626" : "#9CA3AF",
+              border:     `1.5px solid ${isActive ? "#DC2626" : hasRooftop ? "#DC2626" : "#D1D5DB"}`,
+            }}
+          >
+            🏠屋顶
+          </button>
+        );
+      })()}
+    </div>
+  );
+}
+
 // Sync design state to MCP server so AI agents can query/modify it
 function useMCPSync() {
   const exterior = useDesignerStore(s => s.exterior);
@@ -67,8 +126,10 @@ export default function TopBar() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [pastCount, futureCount, temporalUndo, temporalRedo]);
 
-  // Floor context: only meaningful in room-editing views (2d / 3d)
-  const showFloorCtx = (viewMode === "2d" || viewMode === "3d") && exterior.floors > 1;
+  // Floor switcher: show in all non-exterior views when multi-floor
+  const showFloorSwitcher = viewMode !== "exterior" && viewMode !== "yard2d" && exterior.floors > 1;
+  // Room label: only shown in 2d/3d (room-specific) views
+  const showRoomCtx  = (viewMode === "2d" || viewMode === "3d") && exterior.floors > 1;
   const roomDef      = ROOM_DEFS[activeRoom];
   const roomMeta     = customRoomMeta[activeRoom];
   const roomLabel    = roomMeta?.name ?? (locale === "en" ? (t.roomNames[activeRoom] ?? roomDef?.name ?? activeRoom) : (roomDef?.name ?? activeRoom));
@@ -140,19 +201,20 @@ export default function TopBar() {
         })}
       </div>
 
-      {/* Floor + room context badge — visible in 2D/3D when multi-floor */}
-      {showFloorCtx && (
-        <div
-          className="hidden sm:flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0"
-          style={{
-            background: activeFloor === 0 ? "#DBEAFE" : "#EDE9FE",
-            color:      activeFloor === 0 ? "#1D4ED8" : "#6D28D9",
-          }}
-        >
-          <span>{activeFloor + 1}F</span>
-          <span style={{ opacity: 0.4 }}>·</span>
-          <span>{roomIcon}</span>
-          <span>{roomLabel}</span>
+      {/* Unified floor switcher — visible in all non-exterior views when multi-floor */}
+      {showFloorSwitcher && (
+        <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+          <FloorSwitcher />
+          {/* Room label badge — only for 2d/3d where user is in a specific room */}
+          {showRoomCtx && (
+            <div
+              className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ background: "var(--ds-bg)", color: "var(--ds-text-2)", border: "1px solid var(--ds-border)" }}
+            >
+              <span>{roomIcon}</span>
+              <span>{roomLabel}</span>
+            </div>
+          )}
         </div>
       )}
 
