@@ -1783,7 +1783,15 @@ export const useDesignerStore = create<DesignerStore>()(
         while (floorPlans.length <= floor) {
           floorPlans = [...floorPlans, makeDefaultFloorPlan()];
         }
-        return { activeFloor: floor, floorPlans };
+        // Auto-switch activeRoom to the best room on the target floor
+        const targetRooms = floorPlans[floor]?.enabledRooms ?? [];
+        const PREFERRED: RoomType[] = ["living", "master", "bedroom", "kitchen", "dining", "bathroom", "rooftop_lounge"];
+        const bestRoom: RoomType =
+          (targetRooms.includes(s.activeRoom) ? s.activeRoom : null) ??
+          PREFERRED.find(r => targetRooms.includes(r)) ??
+          targetRooms[0] ??
+          s.activeRoom;
+        return { activeFloor: floor, floorPlans, activeRoom: bestRoom };
       }),
 
       setRoomWindows: (room, windows) => {
