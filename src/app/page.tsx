@@ -184,6 +184,8 @@ export default function Home() {
   // Keep HouseCanvas alive once first visited so the WebGL scene isn't rebuilt
   // every time the user switches back to the exterior tab.
   const [exteriorEverShown, setExteriorEverShown] = useState(false);
+  // Same for GlobalCanvas (全局3D) — 4-floor scene is expensive to rebuild.
+  const [global3dEverShown, setGlobal3dEverShown] = useState(false);
 
   // After mount, collapse panels on mobile viewports + flip mounted flag.
   // On first-ever visit (no persisted state), load the glass-villa sample so
@@ -396,7 +398,14 @@ export default function Home() {
           {viewMode === "3d"  && <RoomCanvas />}
           {viewMode === "2d"  && <FloorPlan />}
           {isAll      && <FloorPlanAll />}
-          {isGlobal3d && <GlobalCanvas />}
+          {(isGlobal3d || global3dEverShown) && (
+            <div
+              className={isGlobal3d ? "w-full h-full" : "absolute inset-0 opacity-0 pointer-events-none -z-10"}
+              ref={el => { if (el && !global3dEverShown) setGlobal3dEverShown(true); }}
+            >
+              <GlobalCanvas />
+            </div>
+          )}
           {isExterior && viewMode === "yard2d" && <YardPlan />}
           {/* Keep HouseCanvas mounted once first shown so WebGL scene survives tab switches.
               When hidden: absolute + opacity-0 + pointer-events-none preserves canvas size
