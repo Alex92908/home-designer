@@ -244,6 +244,22 @@ function useFootprint() {
   };
 }
 
+/** Footprint always computed from floor 0 (ground floor) so the exterior
+ *  camera doesn't reset when the user switches floors. */
+function useGroundFloorFootprint() {
+  const enabledRooms   = useDesignerStore(s => s.floorPlans[0]?.enabledRooms ?? s.floorPlans[s.activeFloor].enabledRooms);
+  const roomLayout     = useDesignerStore(s => s.floorPlans[0]?.roomLayout    ?? s.floorPlans[s.activeFloor].roomLayout);
+  const roomDimensions = useDesignerStore(s => s.floorPlans[0]?.roomDimensions ?? s.floorPlans[s.activeFloor].roomDimensions);
+  const indoor = enabledRooms.filter(r => !ROOM_DEFS[r].isOutdoor);
+  if (!indoor.length) return { W: 8, D: 6 };
+  const xs = indoor.flatMap(r => [roomLayout[r].x, roomLayout[r].x + roomDimensions[r].width]);
+  const zs = indoor.flatMap(r => [roomLayout[r].y, roomLayout[r].y + roomDimensions[r].depth]);
+  return {
+    W: Math.max(4, (Math.max(...xs) - Math.min(...xs)) / 100),
+    D: Math.max(3, (Math.max(...zs) - Math.min(...zs)) / 100),
+  };
+}
+
 /** Returns an array of { x, z, W, D } box specs for the building footprint. */
 function useFootprintVolumes(W: number, D: number, settings: ExteriorSettings) {
   const shape = settings.footprintShape ?? "rect";
@@ -6098,7 +6114,8 @@ function CameraFlyTo({ pos, tgt, onDone }: {
 // ─── Main export ────────────────────────────────────────────
 export default function HouseCanvas() {
   const exterior      = useDesignerStore(s => s.exterior);
-  const { W, D }      = useFootprint();
+  // Use ground-floor footprint so CameraRig doesn't reset when user switches floors
+  const { W, D }      = useGroundFloorFootprint();
   const { floors }    = exterior;
   const orbitRef      = useRef<any>(null);
   const [selectedOutdoorKey, setSelectedOutdoorKey] = useState<string | null>(null);
