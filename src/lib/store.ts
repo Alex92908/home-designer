@@ -1810,7 +1810,19 @@ export const useDesignerStore = create<DesignerStore>()(
       updateDoor: (room, id, patch) => {
         updateFloor(get, set, fp => {
           const cur = fp.roomDoors?.[room] ?? [];
-          return { roomDoors: { ...(fp.roomDoors ?? {}), [room]: cur.map(d => d.id === id ? { ...d, ...patch } : d) } };
+          // New-style door: found in roomDoors array
+          if (cur.some(d => d.id === id)) {
+            return { roomDoors: { ...(fp.roomDoors ?? {}), [room]: cur.map(d => d.id === id ? { ...d, ...patch } : d) } };
+          }
+          // Legacy door: stored in roomDoorPos / roomDoorWall / etc.
+          if (id === `${room}-legacy-door`) {
+            const out: Partial<typeof fp> = {};
+            if (patch.pos  !== undefined) out.roomDoorPos  = { ...(fp.roomDoorPos  ?? {}), [room]: patch.pos };
+            if (patch.len  !== undefined) out.roomDoorLen  = { ...(fp.roomDoorLen  ?? {}), [room]: patch.len };
+            if (patch.wall !== undefined) out.roomDoorWall = { ...(fp.roomDoorWall ?? {}), [room]: patch.wall === "front" ? "bottom" : patch.wall === "back" ? "top" : patch.wall };
+            return out;
+          }
+          return {};
         });
       },
 

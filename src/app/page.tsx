@@ -480,7 +480,7 @@ export default function Home() {
       {/* Command Palette — Cmd+K / Ctrl+K (borrowed from pascal editor) */}
       <CommandPalette />
       {/* <OnboardingOverlay /> */}
-      <footer className="h-6 bg-white border-t border-gray-100 flex items-center justify-center shrink-0">
+      <footer className="h-6 bg-white border-t border-gray-100 flex items-center justify-center shrink-0" style={{ pointerEvents: "none" }}>
         <span className="text-[10px] text-gray-400">{t.disclaimer}</span>
       </footer>
     </div>

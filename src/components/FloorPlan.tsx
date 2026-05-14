@@ -331,83 +331,89 @@ function WindowSVG({
 type DoorWall = "bottom" | "top" | "left" | "right";
 
 function DoorSVG({
-  svgW, svgH, doorPosCm, doorLenCm, roomWidthCm, roomDepthCm, doorWall, scale, isEditMode, onPointerDown, polygonEdge,
+  svgW, svgH, doorPosCm, doorLenCm, roomWidthCm, roomDepthCm, doorWall, scale, isEditMode, onPointerDown, polygonEdge, noHitRect,
 }: {
   svgW: number; svgH: number;
   doorPosCm: number; doorLenCm: number; roomWidthCm: number; roomDepthCm: number;
   doorWall: DoorWall; scale: number;
-  isEditMode: boolean; onPointerDown: (e: React.PointerEvent<SVGGElement>) => void;
-  /** Polygon edge geometry. When set, the door is drawn along that edge
-   *  rather than on the bbox perimeter — needed for L / convex inner walls. */
+  isEditMode: boolean; onPointerDown: (e: React.PointerEvent<SVGRectElement>) => void;
   polygonEdge?: { x1: number; z1: number; x2: number; z2: number; length: number; nx: number; nz: number };
+  noHitRect?: boolean;
 }) {
-  // Polygon edge-bound: render along the actual edge with the swing arc
-  // pointing inward (room interior).
+  // Polygon edge-bound door
   if (polygonEdge) {
     const e = polygonEdge;
     const ux = (e.x2 - e.x1) / e.length;
     const uz = (e.z2 - e.z1) / e.length;
-    const t1 = doorPosCm;
     const doorWcm = Math.min(doorLenCm, e.length);
-    const sx = (e.x1 + ux * t1) * scale;
-    const sy = (e.z1 + uz * t1) * scale;
+    const sx = (e.x1 + ux * doorPosCm) * scale;
+    const sy = (e.z1 + uz * doorPosCm) * scale;
     const angleDeg = Math.atan2(uz, ux) * 180 / Math.PI;
     const widthPx = doorWcm * scale;
-    // Inward normal: e.nx, e.nz already point into the room
     return (
-      <g
-        transform={`translate(${sx} ${sy}) rotate(${angleDeg})`}
-        style={{ cursor: isEditMode ? "move" : "default" }}
-        onPointerDown={isEditMode ? onPointerDown : undefined}
-      >
+      <g transform={`translate(${sx} ${sy}) rotate(${angleDeg})`}>
         <rect x={0} y={-5} width={widthPx} height={10} fill="#1E2030" />
         <path d={`M0,0 A${widthPx},${widthPx} 0 0,${e.nz < 0 ? 1 : 0} ${widthPx},${(e.nz < 0 ? -widthPx : widthPx)}`}
               fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />
         <line x1={0} y1={0} x2={widthPx} y2={(e.nz < 0 ? -widthPx : widthPx)}
               stroke="#5A6070" strokeWidth={1.5} />
         {isEditMode && <rect x={-4} y={-7} width={widthPx + 8} height={14} fill="#F59E0B" opacity={0.35} rx={3} style={{ pointerEvents: "none" }} />}
+        {/* Transparent hit rect for pointer capture — same strategy as windows */}
+        {isEditMode && <rect x={-4} y={-7} width={widthPx + 8} height={14} fill="transparent"
+          style={{ cursor: "move" }} onPointerDown={onPointerDown} />}
       </g>
     );
   }
-  // Door width: explicit cm value (clamped to wall length)
+
   const wallLen = (doorWall === "bottom" || doorWall === "top") ? roomWidthCm : roomDepthCm;
   const doorW = Math.min(doorLenCm, wallLen) * scale;
   const pos = doorPosCm * scale;
 
-  // Build path for each wall orientation
+  // Transparent hit rect dimensions per wall — wide enough for easy grab
+  // noHitRect=true means the parent renders the hit rect after delete buttons (correct z-order)
+  let hitRect: React.ReactNode = null;
+  if (isEditMode && !noHitRect) {
+    if (doorWall === "bottom")
+      hitRect = <rect x={pos - 4} y={svgH - 20} width={doorW + 8} height={24} fill="transparent" style={{ cursor: "move" }} onPointerDown={onPointerDown} />;
+    else if (doorWall === "top")
+      hitRect = <rect x={pos - 4} y={-4} width={doorW + 8} height={24} fill="transparent" style={{ cursor: "move" }} onPointerDown={onPointerDown} />;
+    else if (doorWall === "left")
+      hitRect = <rect x={-4} y={pos - 4} width={24} height={doorW + 8} fill="transparent" style={{ cursor: "move" }} onPointerDown={onPointerDown} />;
+    else
+      hitRect = <rect x={svgW - 20} y={pos - 4} width={24} height={doorW + 8} fill="transparent" style={{ cursor: "move" }} onPointerDown={onPointerDown} />;
+  }
+
   let gapRect: React.ReactNode;
   let arc: React.ReactNode;
   let leaf: React.ReactNode;
   let highlight: React.ReactNode;
 
   if (doorWall === "bottom") {
-    gapRect  = <rect x={pos} y={svgH - 5} width={doorW} height={10} fill="#1E2030" />;
-    arc      = <path d={`M${pos},${svgH} A${doorW},${doorW} 0 0,1 ${pos+doorW},${svgH-doorW}`} fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />;
-    leaf     = <line x1={pos} y1={svgH} x2={pos+doorW} y2={svgH-doorW} stroke="#5A6070" strokeWidth={1.5} />;
+    gapRect   = <rect x={pos} y={svgH - 5} width={doorW} height={10} fill="#1E2030" />;
+    arc       = <path d={`M${pos},${svgH} A${doorW},${doorW} 0 0,1 ${pos+doorW},${svgH-doorW}`} fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />;
+    leaf      = <line x1={pos} y1={svgH} x2={pos+doorW} y2={svgH-doorW} stroke="#5A6070" strokeWidth={1.5} />;
     highlight = isEditMode && <rect x={pos-4} y={svgH-12} width={doorW+8} height={14} fill="#F59E0B" opacity={0.35} rx={3} style={{ pointerEvents:"none" }} />;
   } else if (doorWall === "top") {
-    gapRect  = <rect x={pos} y={-5} width={doorW} height={10} fill="#1E2030" />;
-    arc      = <path d={`M${pos},${0} A${doorW},${doorW} 0 0,0 ${pos+doorW},${doorW}`} fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />;
-    leaf     = <line x1={pos} y1={0} x2={pos+doorW} y2={doorW} stroke="#5A6070" strokeWidth={1.5} />;
+    gapRect   = <rect x={pos} y={-5} width={doorW} height={10} fill="#1E2030" />;
+    arc       = <path d={`M${pos},${0} A${doorW},${doorW} 0 0,0 ${pos+doorW},${doorW}`} fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />;
+    leaf      = <line x1={pos} y1={0} x2={pos+doorW} y2={doorW} stroke="#5A6070" strokeWidth={1.5} />;
     highlight = isEditMode && <rect x={pos-4} y={-2} width={doorW+8} height={14} fill="#F59E0B" opacity={0.35} rx={3} style={{ pointerEvents:"none" }} />;
   } else if (doorWall === "left") {
-    gapRect  = <rect x={-5} y={pos} width={10} height={doorW} fill="#1E2030" />;
-    arc      = <path d={`M${0},${pos} A${doorW},${doorW} 0 0,0 ${doorW},${pos+doorW}`} fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />;
-    leaf     = <line x1={0} y1={pos} x2={doorW} y2={pos+doorW} stroke="#5A6070" strokeWidth={1.5} />;
+    gapRect   = <rect x={-5} y={pos} width={10} height={doorW} fill="#1E2030" />;
+    arc       = <path d={`M${0},${pos} A${doorW},${doorW} 0 0,0 ${doorW},${pos+doorW}`} fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />;
+    leaf      = <line x1={0} y1={pos} x2={doorW} y2={pos+doorW} stroke="#5A6070" strokeWidth={1.5} />;
     highlight = isEditMode && <rect x={-2} y={pos-4} width={14} height={doorW+8} fill="#F59E0B" opacity={0.35} rx={3} style={{ pointerEvents:"none" }} />;
-  } else { // right
-    gapRect  = <rect x={svgW-5} y={pos} width={10} height={doorW} fill="#1E2030" />;
-    arc      = <path d={`M${svgW},${pos} A${doorW},${doorW} 0 0,1 ${svgW-doorW},${pos+doorW}`} fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />;
-    leaf     = <line x1={svgW} y1={pos} x2={svgW-doorW} y2={pos+doorW} stroke="#5A6070" strokeWidth={1.5} />;
+  } else {
+    gapRect   = <rect x={svgW-5} y={pos} width={10} height={doorW} fill="#1E2030" />;
+    arc       = <path d={`M${svgW},${pos} A${doorW},${doorW} 0 0,1 ${svgW-doorW},${pos+doorW}`} fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />;
+    leaf      = <line x1={svgW} y1={pos} x2={svgW-doorW} y2={pos+doorW} stroke="#5A6070" strokeWidth={1.5} />;
     highlight = isEditMode && <rect x={svgW-12} y={pos-4} width={14} height={doorW+8} fill="#F59E0B" opacity={0.35} rx={3} style={{ pointerEvents:"none" }} />;
   }
 
   return (
-    <g
-      style={{ cursor: isEditMode ? "move" : "default" }}
-      onPointerDown={isEditMode ? onPointerDown : undefined}
-    >
+    <g>
       {gapRect}{arc}{leaf}{highlight}
+      {hitRect}
     </g>
   );
 }
@@ -761,29 +767,51 @@ export default function FloorPlan() {
   );
 
   // ─── Door drag ───────────────────────────────────────────
+  // Uses window-level listeners (same as furniture drag) to avoid React
+  // concurrent-mode stale-closure issues with onPointerMove.
 
   const startDoorDrag = useCallback(
-    (e: React.PointerEvent<SVGGElement>, doorId?: string) => {
+    (e: React.PointerEvent<SVGRectElement>, doorId?: string) => {
       if (!svgRef.current || !doorId) return;
+      e.stopPropagation();
       const door = allDoors.find(d => d.id === doorId);
-      if (!door || door.edgeIndex != null) return; // skip polygon-edge doors
+      if (!door || door.edgeIndex != null) return;
       const svgWall: DoorWall = door.wall === "back" ? "top" : door.wall === "front" ? "bottom" : door.wall as DoorWall;
       const isHoriz = svgWall === "top" || svgWall === "bottom";
-      const wallLen = isHoriz ? roomW : roomD;
-      const pt = getSVGPoint(e, svgRef.current, zoomLevel);
-      setDoorDrag({
-        id: doorId,
-        wall: svgWall,
-        origWall: door.wall,
-        startMouse: isHoriz ? pt.x : pt.y,
-        origPos: door.pos,
-        wallLen,
-        doorLen: door.len,
-        isPolygonEdge: false,
-      });
-      (e.currentTarget as SVGGElement).setPointerCapture(e.pointerId);
+      const capturedWallLen = isHoriz ? roomW : roomD;
+      const capturedOrigPos = door.pos;
+      const capturedDoorLen = door.len;
+      const capturedScale   = scale;
+      const capturedZoom    = zoomLevel;
+      const capturedRoom    = activeRoom;
+      const capturedDoorId  = doorId;
+      const svg = svgRef.current;
+
+      const svgRect = svg.getBoundingClientRect();
+      const startAxis = isHoriz
+        ? (e.clientX - svgRect.left) / capturedZoom
+        : (e.clientY - svgRect.top)  / capturedZoom;
+
+      const onMove = (ev: PointerEvent) => {
+        ev.preventDefault();
+        const r = svg.getBoundingClientRect();
+        const axis = isHoriz
+          ? (ev.clientX - r.left)  / capturedZoom
+          : (ev.clientY - r.top)   / capturedZoom;
+        const delta  = (axis - startAxis) / capturedScale;
+        const newPos = Math.max(0, Math.min(capturedWallLen - capturedDoorLen, capturedOrigPos + delta));
+        updateDoor(capturedRoom, capturedDoorId, { pos: newPos });
+      };
+      const onUp = () => {
+        window.removeEventListener("pointermove",   onMove);
+        window.removeEventListener("pointerup",     onUp);
+        window.removeEventListener("pointercancel", onUp);
+      };
+      window.addEventListener("pointermove",   onMove, { passive: false });
+      window.addEventListener("pointerup",     onUp,   { once: true });
+      window.addEventListener("pointercancel", onUp,   { once: true });
     },
-    [allDoors, roomW, roomD, zoomLevel]
+    [allDoors, roomW, roomD, zoomLevel, scale, activeRoom, updateDoor]
   );
 
   // ─── Combined pointer move ───────────────────────────────
@@ -821,7 +849,7 @@ export default function FloorPlan() {
         return;
       }
 
-      // Door drag
+      // Door drag — same pattern as window drag
       if (doorDrag) {
         const pt = getSVGPoint(e, svgRef.current, zoomLevel);
         const isHoriz = doorDrag.wall === "top" || doorDrag.wall === "bottom";
@@ -831,7 +859,7 @@ export default function FloorPlan() {
         updateDoor(activeRoom, doorDrag.id, { pos: newPos });
       }
     },
-    [dragState, winDrag, doorDrag, scale, roomW, roomD, roomState.placedItems, moveItem, roomWindows, setRoomWindows, activeRoom, setDoorPos, updateDoor]  // eslint-disable-line react-hooks/exhaustive-deps
+    [winDrag, doorDrag, scale, roomW, roomD, roomWindows, setRoomWindows, activeRoom, updateDoor, zoomLevel]  // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const handlePointerUp = useCallback(() => {
@@ -1492,6 +1520,7 @@ export default function FloorPlan() {
                   scale={scale}
                   isEditMode={editWindows}
                   polygonEdge={polygonEdge}
+                  noHitRect={editWindows && !polygonEdge}
                   onPointerDown={editWindows ? (e) => startDoorDrag(e, d.id) : (() => {})}
                 />
                 {/* Per-door delete/edit buttons */}
@@ -1543,6 +1572,23 @@ export default function FloorPlan() {
                           fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✕</text>
                       </g>
                     </g>
+                  );
+                })()}
+                {/* Hit rect rendered LAST so it sits on top of delete/edit circles in SVG z-order */}
+                {editWindows && !polygonEdge && (() => {
+                  const isHoriz = cardinalDoorWall === "top" || cardinalDoorWall === "bottom";
+                  const wallLen = isHoriz ? roomW : roomD;
+                  const doorWpx = Math.min(d.len, wallLen) * scale;
+                  const doorPosPx = d.pos * scale;
+                  let hrX: number, hrY: number, hrW: number, hrH: number;
+                  if (cardinalDoorWall === "bottom")      { hrX = doorPosPx - 4; hrY = svgH - 20; hrW = doorWpx + 8; hrH = 24; }
+                  else if (cardinalDoorWall === "top")    { hrX = doorPosPx - 4; hrY = -4;        hrW = doorWpx + 8; hrH = 24; }
+                  else if (cardinalDoorWall === "left")   { hrX = -4;            hrY = doorPosPx - 4; hrW = 24; hrH = doorWpx + 8; }
+                  else                                    { hrX = svgW - 20;     hrY = doorPosPx - 4; hrW = 24; hrH = doorWpx + 8; }
+                  return (
+                    <rect x={hrX} y={hrY} width={hrW} height={hrH}
+                      fill="transparent" style={{ cursor: "move" }}
+                      onPointerDown={(e) => startDoorDrag(e, d.id)} />
                   );
                 })()}
               </g>
