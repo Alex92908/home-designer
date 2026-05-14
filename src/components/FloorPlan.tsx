@@ -947,8 +947,6 @@ export default function FloorPlan() {
     });
   };
 
-  // Reset inspector position whenever selection changes
-  useEffect(() => { setInspectorPos(null); }, [selectedInstanceIds]);
 
   // Inspector drag handler — reads current panel rect as start position
   const handleInspectorDragStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
