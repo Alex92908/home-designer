@@ -990,8 +990,61 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
         );
       })}
 
+      {/* ── 屋顶层 (hasRooftop) ── */}
+      {exterior.hasRooftop && (() => {
+        const roofFp = floorPlans[exterior.floors];
+        if (!roofFp) return null;
+        const roofY = floorCount * FLOOR_H;
+        const slabY = roofY + 0.06;
+        const roofEnabled = roofFp.enabledRooms ?? [];
+        const roofColors: Record<string, string> = {
+          rooftop_lounge: "#E8DCC8", rooftop_pool: "#3B82F6",
+          rooftop_garden: "#6DB55A", rooftop_bar: "#2D2D3A", equipment_room: "#9CA3AF",
+        };
+        // Compute rooftop bounding box for centering
+        let rtMinX = Infinity, rtMinY = Infinity, rtMaxX = -Infinity, rtMaxY = -Infinity;
+        for (const r of roofEnabled) {
+          const p = roofFp.roomLayout?.[r]; const d = roofFp.roomDimensions?.[r];
+          if (!p || !d) continue;
+          rtMinX = Math.min(rtMinX, p.x); rtMinY = Math.min(rtMinY, p.y);
+          rtMaxX = Math.max(rtMaxX, p.x + d.width); rtMaxY = Math.max(rtMaxY, p.y + d.depth);
+        }
+        const rtCx = isFinite(rtMinX) ? ((rtMinX + rtMaxX) / 2) * CM : cx;
+        const rtCz = isFinite(rtMinY) ? ((rtMinY + rtMaxY) / 2) * CM : cz;
+        return (
+          <group key="rooftop-global" position={[-cx, 0, -cz]}>
+            {/* Rooftop slab */}
+            <mesh position={[rtCx, slabY, rtCz]} receiveShadow>
+              <boxGeometry args={[Math.max((rtMaxX - rtMinX) * CM + 0.6, footW + 0.4), 0.12, Math.max((rtMaxY - rtMinY) * CM + 0.6, footD + 0.4)]} />
+              <meshStandardMaterial color="#E8E4DE" roughness={0.9} />
+            </mesh>
+            {/* Floor label */}
+            <mesh position={[rtCx, slabY + 0.07, rtCz]}>
+              <planeGeometry args={[1.2, 0.32]} />
+              <meshStandardMaterial color="#DC2626" />
+            </mesh>
+            {/* Room zones */}
+            {roofEnabled.map(r => {
+              const p = roofFp.roomLayout?.[r]; const d = roofFp.roomDimensions?.[r];
+              if (!p || !d) return null;
+              const rW = d.width * CM;
+              const rD = d.depth * CM;
+              const px = (p.x + d.width / 2) * CM;
+              const pz = (p.y + d.depth / 2) * CM;
+              const color = roofColors[r] ?? "#C8C0B0";
+              return (
+                <mesh key={r} position={[px, slabY + 0.065, pz]} receiveShadow>
+                  <boxGeometry args={[rW - 0.08, 0.04, rD - 0.08]} />
+                  <meshStandardMaterial color={color} roughness={0.75} transparent opacity={r === "rooftop_pool" ? 0.8 : 1} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── Roof ── */}
-      {showRoof && (
+      {showRoof && !exterior.hasRooftop && (
         <GlobalRoof
           footW={footW}
           footD={footD}
