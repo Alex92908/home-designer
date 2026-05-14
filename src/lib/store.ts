@@ -1624,18 +1624,38 @@ export const useDesignerStore = create<DesignerStore>()(
       setExterior: (patch) => set(s => {
         const newExterior = { ...s.exterior, ...patch };
         let floorPlans = s.floorPlans;
-        // Grow regular floor plans when floors increases
-        if (patch.floors !== undefined && patch.floors > floorPlans.length) {
-          while (floorPlans.length < patch.floors) {
-            floorPlans = [...floorPlans, makeDefaultFloorPlan()];
+        const targetFloors = newExterior.floors; // desired regular-floor count
+
+        // ── Sync floorPlans with the new floor count ───────────────────────
+        if (patch.floors !== undefined) {
+          if (patch.floors > s.exterior.floors) {
+            // Grow: add blank floor plans for new regular floors
+            while (floorPlans.length < patch.floors) {
+              floorPlans = [...floorPlans, makeDefaultFloorPlan()];
+            }
+          } else if (patch.floors < s.exterior.floors) {
+            // Shrink: trim to exactly targetFloors (rooftop re-added below if needed)
+            floorPlans = floorPlans.slice(0, patch.floors);
           }
         }
-        // Ensure rooftop floor plan exists at index `floors` when hasRooftop is enabled
-        const targetFloors = newExterior.floors;
-        if (newExterior.hasRooftop && floorPlans.length <= targetFloors) {
-          floorPlans = [...floorPlans.slice(0, targetFloors), makeRooftopFloorPlan()];
+
+        // ── Rooftop floor plan at index `targetFloors` ────────────────────
+        if (newExterior.hasRooftop) {
+          // Trim any excess regular floors that ended up beyond targetFloors,
+          // then ensure a rooftop plan sits exactly at index targetFloors.
+          const regularPart = floorPlans.slice(0, targetFloors);
+          while (regularPart.length < targetFloors) regularPart.push(makeDefaultFloorPlan());
+          floorPlans = [...regularPart, makeRooftopFloorPlan()];
+        } else {
+          // hasRooftop disabled: remove rooftop entry if present
+          floorPlans = floorPlans.slice(0, targetFloors);
         }
-        return { exterior: newExterior, floorPlans };
+
+        // ── Clamp activeFloor so it stays within valid range ──────────────
+        const maxFloor = newExterior.hasRooftop ? targetFloors : targetFloors - 1;
+        const activeFloor = Math.min(s.activeFloor, Math.max(0, maxFloor));
+
+        return { exterior: newExterior, floorPlans, activeFloor };
       }),
 
       setOutdoorPosition: (key, pos) => set(s => ({

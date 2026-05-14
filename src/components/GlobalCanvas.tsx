@@ -764,7 +764,9 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
     };
   }, [visibleBase, layout, dims]);
 
-  // Number of actual floor data entries we have (capped at exterior.floors).
+  // Number of regular floors to render — after the store fix, floorPlans.length
+  // is always kept in sync with exterior.floors, so these should be equal.
+  // We still take the min defensively so stale persisted state can't crash.
   const floorCount = Math.min(floorPlans.length, exteriorFloors);
 
   return (
@@ -1351,6 +1353,10 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
   const enabledRooms   = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
   const exteriorFloors = useDesignerStore(s => s.exterior.floors);
   const hasRooftop     = useDesignerStore(s => s.exterior.hasRooftop);
+  const floorPlansLen  = useDesignerStore(s => s.floorPlans.length);
+  // After the store fix, floorPlans.length === exterior.floors always.
+  // Take the min defensively so old persisted state can't cause out-of-bounds.
+  const floorCount     = Math.min(floorPlansLen, exteriorFloors);
   const t = useT();
 
   // ── Visibility / layout state (internal fallback when no props) ───────────
@@ -1432,7 +1438,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
       >
         {/* ── Floors ── */}
         <div className="text-[9px] font-bold text-gray-400 tracking-widest mb-0.5 px-1">楼层</div>
-        {Array.from({ length: exteriorFloors }, (_, fi) => (
+        {Array.from({ length: floorCount }, (_, fi) => (
           <button
             key={fi}
             onClick={() => toggleFloor(fi)}
@@ -1479,7 +1485,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
           <span>{showStairs ? "🪜" : "　"}</span> 楼梯
         </button>
 
-        {showStairs && exteriorFloors > 1 && (
+        {showStairs && floorCount > 1 && (
           <div className="px-2 py-0.5 text-[9px] text-orange-400 leading-tight">
             拖动楼梯可移位
           </div>
