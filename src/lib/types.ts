@@ -29,7 +29,13 @@ export type RoomType =
   // ── 户外结构（按房间机制管理位置和尺寸，可换 GLB）──
   | "pool"       // 泳池
   | "terrace"    // 露台
-  | "deck";      // 木栈台
+  | "deck"       // 木栈台
+  // ── 屋顶层专属（仅显示在 hasRooftop 的屋顶楼层）──
+  | "rooftop_lounge"   // 天台休闲区
+  | "rooftop_pool"     // 屋顶泳池
+  | "rooftop_garden"   // 屋顶花园
+  | "rooftop_bar"      // 天台酒吧
+  | "equipment_room";  // 设备间
 
 export type ViewMode = "2d" | "3d" | "all" | "exterior" | "global3d" | "yard2d";
 
@@ -205,6 +211,10 @@ export interface ExteriorSettings {
     left?: WallZone[];
     right?: WallZone[];
   };
+  /** Whether the building has a usable rooftop floor (天台层).
+   *  When true, floorPlans[floors] holds the rooftop layout with
+   *  parapet walls, no ceiling, and rooftop-only room types. */
+  hasRooftop?: boolean;
   /** Building footprint shape. Default "rect". */
   footprintShape?: "rect" | "L" | "U" | "T";
   /** Wing proportions for non-rectangular shapes. 0.4–0.7 range. Default 0.5. */
@@ -453,6 +463,7 @@ export interface RoomDef {
   windowWall: "back" | "right" | "left" | "none";
   isCustom?: boolean;
   isOutdoor?: boolean;
+  isRooftopOnly?: boolean;
 }
 
 export const ROOM_DEFS: Record<RoomType, RoomDef> = {
@@ -488,6 +499,12 @@ export const ROOM_DEFS: Record<RoomType, RoomDef> = {
   pool:      { width: 600, depth: 350, height: 0,   name: "泳池",   icon: "🏊", defaultWallColor: "#C8DCE8", defaultFloorColor: "#3B82F6", hasWindow: false, windowWall: "none", isOutdoor: true },
   terrace:   { width: 500, depth: 300, height: 0,   name: "露台",   icon: "🌅", defaultWallColor: "#E0D5C0", defaultFloorColor: "#D8C8A8", hasWindow: false, windowWall: "none", isOutdoor: true },
   deck:      { width: 400, depth: 250, height: 0,   name: "木栈台", icon: "🪵", defaultWallColor: "#A07050", defaultFloorColor: "#8B6340", hasWindow: false, windowWall: "none", isOutdoor: true },
+  // ── 屋顶层专属 ──
+  rooftop_lounge:  { width: 500, depth: 400, height: 0, name: "天台休闲区", icon: "🛋️", defaultWallColor: "#F0EDE5", defaultFloorColor: "#C8B898", hasWindow: false, windowWall: "none", isOutdoor: true, isRooftopOnly: true },
+  rooftop_pool:    { width: 600, depth: 350, height: 0, name: "屋顶泳池",   icon: "🏊", defaultWallColor: "#C8DCE8", defaultFloorColor: "#3B82F6", hasWindow: false, windowWall: "none", isOutdoor: true, isRooftopOnly: true },
+  rooftop_garden:  { width: 500, depth: 400, height: 0, name: "屋顶花园",   icon: "🌿", defaultWallColor: "#6B8E60", defaultFloorColor: "#7CAF5A", hasWindow: false, windowWall: "none", isOutdoor: true, isRooftopOnly: true },
+  rooftop_bar:     { width: 400, depth: 300, height: 0, name: "天台酒吧",   icon: "🍸", defaultWallColor: "#2D2D3A", defaultFloorColor: "#4A3C28", hasWindow: false, windowWall: "none", isOutdoor: true, isRooftopOnly: true },
+  equipment_room:  { width: 300, depth: 250, height: 250, name: "设备间",   icon: "⚙️", defaultWallColor: "#D0CEC8", defaultFloorColor: "#B0AEA8", hasWindow: false, windowWall: "none", isRooftopOnly: true },
 };
 
 // ─── Room state ────────────────────────────────────────────

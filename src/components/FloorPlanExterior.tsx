@@ -5190,6 +5190,75 @@ export default function FloorPlanBuilding({
 
       {!insideBuilding && <FlatRoof W={W} D={D} roofY={totalH} nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0} />}
 
+      {/* ── 屋顶层 (hasRooftop) — 在 FlatRoof 屋面板上渲染各功能区 ── */}
+      {exterior.hasRooftop && (() => {
+        const roofFp = floorPlans[exterior.floors];
+        if (!roofFp) return null;
+        const roofSlabY = totalH + 0.10; // FlatRoof roofSlab = roofY + 0.05; slab thickness = 0.10m
+        const surfaceY  = roofSlabY + 0.05 + 0.005; // just above slab surface
+        // Compute rooftop plan origin (min x/y of rooftop rooms)
+        const roofEnabled = (roofFp.enabledRooms ?? []);
+        if (roofEnabled.length === 0) return null;
+        let rtMinX = Infinity, rtMinY = Infinity;
+        for (const r of roofEnabled) {
+          const p = roofFp.roomLayout?.[r]; const d = roofFp.roomDimensions?.[r];
+          if (!p || !d) continue;
+          rtMinX = Math.min(rtMinX, p.x); rtMinY = Math.min(rtMinY, p.y);
+        }
+        if (!isFinite(rtMinX)) return null;
+        // Color map for rooftop room types
+        const roofColors: Record<string, string> = {
+          rooftop_lounge:  "#E8DCC8",
+          rooftop_pool:    "#3B82F6",
+          rooftop_garden:  "#6DB55A",
+          rooftop_bar:     "#2D2D3A",
+          equipment_room:  "#9CA3AF",
+        };
+        return (
+          <group key="rooftop-layer">
+            {roofEnabled.map(r => {
+              const p = roofFp.roomLayout?.[r]; const d = roofFp.roomDimensions?.[r];
+              if (!p || !d) return null;
+              const rW = d.width  * CM;
+              const rD = d.depth  * CM;
+              // Center on building footprint using planOffset from regular floors
+              const cx = (p.x + d.width  / 2 - planOffset.minX) * CM - W / 2;
+              const cz = -((p.y + d.depth / 2 - planOffset.minY) * CM) + D / 2;
+              const color = roofColors[r] ?? "#C8C0B0";
+              const isPool = r === "rooftop_pool";
+              const isGarden = r === "rooftop_garden";
+              const SLAB_TH = 0.03;
+              const eyeY = surfaceY + SLAB_TH / 2 + 1.6;
+              return (
+                <group key={r} position={[cx, surfaceY + SLAB_TH / 2, cz]}>
+                  {/* Zone floor slab — clickable to enter rooftop walkthrough */}
+                  <mesh
+                    receiveShadow castShadow
+                    onClick={onEnterRoom
+                      ? (e) => { e.stopPropagation(); onEnterRoom(r as RoomType, exterior.floors, [cx, eyeY, cz]); }
+                      : undefined}
+                  >
+                    <boxGeometry args={[rW - 0.04, SLAB_TH, rD - 0.04]} />
+                    <meshStandardMaterial
+                      color={color}
+                      roughness={isPool ? 0.1 : isGarden ? 0.9 : 0.75}
+                      metalness={isPool ? 0.0 : 0.0}
+                      transparent={isPool}
+                      opacity={isPool ? 0.85 : 1}
+                    />
+                  </mesh>
+                  {/* Subtle border line */}
+                  <mesh position={[0, -SLAB_TH / 2 - 0.001, 0]}>
+                    <boxGeometry args={[rW, 0.004, rD]} />
+                    <meshStandardMaterial color="#B8B0A0" roughness={0.9} />
+                  </mesh>
+                </group>
+              );
+            })}
+          </group>
+        );
+      })()}
+
       {/* ── 5a-conservatory. 北侧温室 / 冬季花园（glass conservatory, north facade）──
            A Victorian-style steel-and-glass conservatory attached to the north wall.
            Width = W × 0.38, depth = 2.4m, height = 3.2m at ridge.

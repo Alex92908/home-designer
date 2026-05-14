@@ -188,6 +188,7 @@ export const zh = {
   allGroupIndoor: "室内常用",
   allGroupSpecial: "特色空间",
   allGroupCustom: "自定义",
+  allGroupRooftop: "屋顶空间",
 
   // ── ExteriorPanel ────────────────────────────────────────
   extTitle: "🏠 外观设计",

@@ -65,6 +65,12 @@ export const ALL_POSSIBLE_ROOMS: RoomType[] = [
   "custom1","custom2","custom3","custom4","custom5",
   "stair","hallway",
   "pool","terrace","deck",
+  // 屋顶层专属
+  "rooftop_lounge","rooftop_pool","rooftop_garden","rooftop_bar","equipment_room",
+];
+
+export const ROOFTOP_ROOM_TYPES: RoomType[] = [
+  "rooftop_lounge","rooftop_pool","rooftop_garden","rooftop_bar","equipment_room",
 ];
 
 export const DEFAULT_ENABLED: RoomType[] = [
@@ -101,6 +107,12 @@ export const DEFAULT_ROOM_LAYOUT: Record<RoomType, { x: number; y: number }> = {
   pool:      { x: 1200, y: 400  },
   terrace:   { x: 1200, y: 800  },
   deck:      { x: 1200, y: 1100 },
+  // 屋顶层专属 —— 在屋顶平面图里分散排列
+  rooftop_lounge:  { x: 0,   y: 0   },
+  rooftop_pool:    { x: 600, y: 0   },
+  rooftop_garden:  { x: 0,   y: 450 },
+  rooftop_bar:     { x: 600, y: 450 },
+  equipment_room:  { x: 0,   y: 900 },
 };
 
 export const DEFAULT_ROOM_DIMENSIONS: Record<RoomType, { width: number; depth: number }> =
@@ -153,6 +165,19 @@ function makeDefaultFloorPlan(): FloorPlan {
   return {
     rooms: Object.fromEntries(ALL_ROOM_TYPES.map(r => [r, emptyRoom()])) as Record<RoomType, RoomState>,
     enabledRooms: [...DEFAULT_ENABLED],
+    roomLayout: { ...DEFAULT_ROOM_LAYOUT },
+    roomDimensions: { ...DEFAULT_ROOM_DIMENSIONS },
+    roomWindows: { ...DEFAULT_ROOM_WINDOWS },
+    roomDoorPos: { ...DEFAULT_ROOM_DOOR_POS },
+    roomHasDoor: { ...DEFAULT_ROOM_HAS_DOOR },
+    roomDoorWall: { ...DEFAULT_ROOM_DOOR_WALL },
+  };
+}
+
+function makeRooftopFloorPlan(): FloorPlan {
+  return {
+    rooms: Object.fromEntries(ALL_ROOM_TYPES.map(r => [r, emptyRoom()])) as Record<RoomType, RoomState>,
+    enabledRooms: ["rooftop_lounge"],
     roomLayout: { ...DEFAULT_ROOM_LAYOUT },
     roomDimensions: { ...DEFAULT_ROOM_DIMENSIONS },
     roomWindows: { ...DEFAULT_ROOM_WINDOWS },
@@ -1584,10 +1609,16 @@ export const useDesignerStore = create<DesignerStore>()(
       setExterior: (patch) => set(s => {
         const newExterior = { ...s.exterior, ...patch };
         let floorPlans = s.floorPlans;
+        // Grow regular floor plans when floors increases
         if (patch.floors !== undefined && patch.floors > floorPlans.length) {
           while (floorPlans.length < patch.floors) {
             floorPlans = [...floorPlans, makeDefaultFloorPlan()];
           }
+        }
+        // Ensure rooftop floor plan exists at index `floors` when hasRooftop is enabled
+        const targetFloors = newExterior.floors;
+        if (newExterior.hasRooftop && floorPlans.length <= targetFloors) {
+          floorPlans = [...floorPlans.slice(0, targetFloors), makeRooftopFloorPlan()];
         }
         return { exterior: newExterior, floorPlans };
       }),

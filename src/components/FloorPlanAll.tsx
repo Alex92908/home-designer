@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, RoomType, isYardSingleton, isYardPrefab, isYardZone, type YardItem } from "@/lib/types";
+import { ROOFTOP_ROOM_TYPES } from "@/lib/store";
 import { OUTDOOR_ASSET_LIBRARY } from "@/lib/outdoorAssets";
 import { ALL_POSSIBLE_ROOMS, DEFAULT_ENABLED } from "@/lib/store";
 import { getFurnitureById } from "@/lib/furniture";
@@ -43,6 +44,7 @@ const ROOM_GROUP_ROOMS = [
   { key: "allGroupSpecial",  rooms: ["hallway","stair","yard","garage","gym","cinema","pool","terrace","deck"] as RoomType[] },
   { key: "allGroupCustom",   rooms: CUSTOM_SLOTS },
 ];
+const ROOFTOP_GROUP = { key: "allGroupRooftop", rooms: ROOFTOP_ROOM_TYPES };
 const CUSTOM_ICONS = ["🔲","🏠","🛖","🏰","🏗️","🎯","🎲","🎪","⭐","💎","🌈","🔑"];
 
 // ─── Custom room name form ──────────────────────────────────
@@ -101,6 +103,7 @@ export function RoomPanel() {
   const roomClipboard       = useDesignerStore(s => s.roomClipboard);
   const exterior            = useDesignerStore(s => s.exterior);
   const setExterior         = useDesignerStore(s => s.setExterior);
+  const setActiveFloor      = useDesignerStore(s => s.setActiveFloor);
   const t      = useT();
   const locale = useLocale();
   const [expanded,    setExpanded]    = useState<RoomType | null>(null);
@@ -156,6 +159,18 @@ export function RoomPanel() {
             >＋</button>
           </div>
         </div>
+        {/* 天台已开启时，显示一个关闭入口 */}
+        {exterior.hasRooftop && (
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="text-[10px] text-red-500 font-semibold shrink-0">🏠 天台层已开启</span>
+            <button
+              onClick={() => { setExterior({ hasRooftop: false }); setActiveFloor(Math.min(activeFloor, exterior.floors - 1)); }}
+              className="ml-auto px-2 py-0.5 rounded-lg text-[10px] font-bold text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 transition-colors"
+            >
+              关闭
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -277,29 +292,33 @@ export function RoomPanel() {
         </div>
 
         {/* ── Addable rooms by group ── */}
-        {ROOM_GROUP_ROOMS.map(group => {
-          const addable = group.rooms.filter(r => !enabledRooms.includes(r));
-          if (!addable.length) return null;
-          const groupLabel = t[group.key as keyof typeof t] as string;
-          return (
-            <div key={group.key} className="px-2.5 pt-3 pb-1">
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">＋ {groupLabel}</div>
-              <div className="flex flex-col gap-1">
-                {addable.map(room => {
-                  const { name, icon } = getRoomLabel(room);
-                  return (
-                    <button key={room} onClick={() => { pushLayoutHistory(); addRoom(room); if (CUSTOM_SLOTS.includes(room)) setNaming(room); }}
-                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left">
-                      <span className="text-sm">{icon}</span>
-                      <span className="flex-1 text-xs text-gray-500 font-medium">{name}</span>
-                      <span className="text-sm font-bold text-blue-400">＋</span>
-                    </button>
-                  );
-                })}
+        {(() => {
+          const isRooftopFloor = exterior.hasRooftop && activeFloor === exterior.floors;
+          const groups = isRooftopFloor ? [ROOFTOP_GROUP] : ROOM_GROUP_ROOMS;
+          return groups.map(group => {
+            const addable = group.rooms.filter(r => !enabledRooms.includes(r));
+            if (!addable.length) return null;
+            const groupLabel = (t[group.key as keyof typeof t] as string) ?? "屋顶空间";
+            return (
+              <div key={group.key} className="px-2.5 pt-3 pb-1">
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">＋ {groupLabel}</div>
+                <div className="flex flex-col gap-1">
+                  {addable.map(room => {
+                    const { name, icon } = getRoomLabel(room);
+                    return (
+                      <button key={room} onClick={() => { pushLayoutHistory(); addRoom(room); if (CUSTOM_SLOTS.includes(room)) setNaming(room); }}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-dashed border-gray-200 hover:border-red-300 hover:bg-red-50 transition-colors text-left">
+                        <span className="text-sm">{icon}</span>
+                        <span className="flex-1 text-xs text-gray-500 font-medium">{name}</span>
+                        <span className="text-sm font-bold text-red-400">＋</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
       </div>
 
       <div className="p-3 border-t border-gray-100 shrink-0 flex flex-col gap-1.5">
@@ -346,6 +365,7 @@ export default function FloorPlanAll() {
   const roomClipboard       = useDesignerStore(s => s.roomClipboard);
   const pasteAsNewRoom      = useDesignerStore(s => s.pasteAsNewRoom);
   const exterior            = useDesignerStore(s => s.exterior);
+  const setExterior         = useDesignerStore(s => s.setExterior);
   const blueprint           = useDesignerStore(s => s.blueprint);
   const setBlueprint        = useDesignerStore(s => s.setBlueprint);
   const yardItems           = useDesignerStore(s => s.floorPlans[s.activeFloor].yardPlan?.items);
@@ -756,30 +776,51 @@ export default function FloorPlanAll() {
               <span className="text-[9px] px-1 rounded-full bg-orange-100">{historyLen}</span>
             )}
           </button>
-          {/* Floor switcher — simple active/inactive toggle */}
-          {exterior.floors > 1 && (
-            <div className="flex items-center gap-1 ml-auto">
-              {Array.from({ length: exterior.floors }).map((_, i) => {
-                const isActive = activeFloor === i;
-                const colors   = ["#2563EB", "#7C3AED", "#059669", "#D97706"];
-                const c        = colors[i % colors.length];
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setActiveFloor(i)}
-                    className="px-3 py-0.5 rounded-lg text-xs font-bold transition-all"
-                    style={{
-                      background: isActive ? c      : "white",
-                      color:      isActive ? "white" : c,
-                      border:     `1.5px solid ${c}`,
-                    }}
-                  >
-                    {i + 1}F
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          {/* Floor switcher — always show all floors + rooftop tab */}
+          <div className="flex items-center gap-1 ml-auto">
+            {Array.from({ length: exterior.floors }).map((_, i) => {
+              const isActive = activeFloor === i;
+              const colors   = ["#2563EB", "#7C3AED", "#059669", "#D97706"];
+              const c        = colors[i % colors.length];
+              return (
+                <button
+                  key={i}
+                  onClick={() => setActiveFloor(i)}
+                  className="px-3 py-0.5 rounded-lg text-xs font-bold transition-all"
+                  style={{
+                    background: isActive ? c      : "white",
+                    color:      isActive ? "white" : c,
+                    border:     `1.5px solid ${c}`,
+                  }}
+                >
+                  {i + 1}F
+                </button>
+              );
+            })}
+            {/* 屋顶 tab — always shown; clicking enables hasRooftop if needed */}
+            {(() => {
+              const rooftopIdx = exterior.floors;
+              const isActive   = exterior.hasRooftop && activeFloor === rooftopIdx;
+              return (
+                <button
+                  key="rooftop"
+                  onClick={() => {
+                    if (!exterior.hasRooftop) setExterior({ hasRooftop: true });
+                    setActiveFloor(rooftopIdx);
+                  }}
+                  className="px-3 py-0.5 rounded-lg text-xs font-bold transition-all"
+                  title={exterior.hasRooftop ? "屋顶层" : "点击开启天台层"}
+                  style={{
+                    background: isActive ? "#DC2626" : "white",
+                    color:      isActive ? "white"   : exterior.hasRooftop ? "#DC2626" : "#9CA3AF",
+                    border:     `1.5px solid ${isActive ? "#DC2626" : exterior.hasRooftop ? "#DC2626" : "#D1D5DB"}`,
+                  }}
+                >
+                  🏠屋顶
+                </button>
+              );
+            })()}
+          </div>
           {roomClipboard && (
             <button
               onClick={pasteAsNewRoom}

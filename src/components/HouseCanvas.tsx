@@ -6434,7 +6434,10 @@ export default function HouseCanvas() {
           bbox={{
             minX: -W / 2 + 0.3, maxX: W / 2 - 0.3,
             minZ: -D / 2 + 0.3, maxZ: D / 2 - 0.3,
-            minY: 1.6, maxY: floors * FLOOR_H_M - 0.4,
+            minY: 1.6,
+            maxY: exterior.hasRooftop
+              ? (floors + 1) * FLOOR_H_M + 1.2  // allow standing on rooftop
+              : floors * FLOOR_H_M - 0.4,
           }}
           walls={wallAABBs}
           joystick={joystick}
