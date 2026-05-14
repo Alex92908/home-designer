@@ -1629,28 +1629,34 @@ export const useDesignerStore = create<DesignerStore>()(
         const targetFloors = newExterior.floors; // desired regular-floor count
 
         // ── Sync floorPlans with the new floor count ───────────────────────
+        // Always work on the regular-floor slice only (strip any existing rooftop
+        // at index s.exterior.floors so it doesn't pollute regular floor slots).
+        const oldRegularFloors = s.exterior.floors;
+        let regularPlans = floorPlans.slice(0, oldRegularFloors);
+
         if (patch.floors !== undefined) {
-          if (patch.floors > s.exterior.floors) {
+          if (patch.floors > oldRegularFloors) {
             // Grow: add blank floor plans for new regular floors
-            while (floorPlans.length < patch.floors) {
-              floorPlans = [...floorPlans, makeDefaultFloorPlan()];
+            while (regularPlans.length < patch.floors) {
+              regularPlans = [...regularPlans, makeDefaultFloorPlan()];
             }
-          } else if (patch.floors < s.exterior.floors) {
-            // Shrink: trim to exactly targetFloors (rooftop re-added below if needed)
-            floorPlans = floorPlans.slice(0, patch.floors);
+          } else if (patch.floors < oldRegularFloors) {
+            // Shrink: trim to exactly targetFloors
+            regularPlans = regularPlans.slice(0, patch.floors);
           }
         }
+        // Ensure we have exactly targetFloors regular plans
+        while (regularPlans.length < targetFloors) regularPlans.push(makeDefaultFloorPlan());
+        regularPlans = regularPlans.slice(0, targetFloors);
 
         // ── Rooftop floor plan at index `targetFloors` ────────────────────
         if (newExterior.hasRooftop) {
-          // Trim any excess regular floors that ended up beyond targetFloors,
-          // then ensure a rooftop plan sits exactly at index targetFloors.
-          const regularPart = floorPlans.slice(0, targetFloors);
-          while (regularPart.length < targetFloors) regularPart.push(makeDefaultFloorPlan());
-          floorPlans = [...regularPart, makeRooftopFloorPlan()];
+          // Preserve existing rooftop plan if it was already there, else create new
+          const existingRooftop = s.exterior.hasRooftop ? floorPlans[oldRegularFloors] : undefined;
+          floorPlans = [...regularPlans, existingRooftop ?? makeRooftopFloorPlan()];
         } else {
-          // hasRooftop disabled: remove rooftop entry if present
-          floorPlans = floorPlans.slice(0, targetFloors);
+          // hasRooftop disabled: only regular floors
+          floorPlans = regularPlans;
         }
 
         // ── Clamp activeFloor so it stays within valid range ──────────────
