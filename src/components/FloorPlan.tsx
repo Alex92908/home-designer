@@ -1496,7 +1496,7 @@ export default function FloorPlan() {
             const cardinalDoorWall: DoorWall =
               d.wall === "back" ? "top" : d.wall === "front" ? "bottom" : d.wall;
             return (
-              <g key={d.id}>
+              <g key={d.id} style={{ pointerEvents: editWindows ? "auto" : "none" }}>
                 <DoorSVG
                   svgW={svgW} svgH={svgH}
                   doorPosCm={d.pos} doorLenCm={d.len}
