@@ -27,6 +27,12 @@ export interface ProjectTemplate {
   floorLayouts: FloorplanLayout[];
   /** Yard plan applied to floor 0. */
   yardPlan: YardPlan;
+  /**
+   * Style template ID to apply for furniture + materials.
+   * Matches an id in ALL_TEMPLATES (templates.ts).
+   * Applied to every floor after layout is set up.
+   */
+  styleTemplateId: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,6 +46,7 @@ const MODERN_POOL_VILLA: ProjectTemplate = {
   description: "双层 · 平屋顶 · 泳池庭院 · 木格栅立面",
   areaSqm: 230,
   palette: ["#F5F2EC", "#2A2A2A", "#8A6040"],
+  styleTemplateId: "luxury",
 
   exterior: {
     preset: "contemporary",
@@ -224,6 +231,7 @@ const JAPANESE_ZEN_VILLA: ProjectTemplate = {
   description: "双层 · 中式飞檐 · 枯山水 · 竹林围合",
   areaSqm: 180,
   palette: ["#F0EDE8", "#181818", "#5A4030"],
+  styleTemplateId: "japanese",
 
   exterior: {
     preset: "japanese",
@@ -369,6 +377,7 @@ const MEDITERRANEAN_VILLA: ProjectTemplate = {
   description: "双层 · 四坡顶 · 内庭院 · 橙树花园",
   areaSqm: 200,
   palette: ["#FFF8E8", "#B83820", "#9B6B3A"],
+  styleTemplateId: "stone-villa",
 
   exterior: {
     preset: "mediterranean",
@@ -526,6 +535,7 @@ const GLASS_CURTAIN_VILLA: ProjectTemplate = {
   description: "双层 · 平屋顶 · 全玻璃幕墙 · 泳池+棕榈庭院",
   areaSqm: 280,
   palette: ["#F2EFE8", "#1A1A1A", "#CBE8F5"],
+  styleTemplateId: "modern-villa",
 
   exterior: {
     preset:       "modern",
@@ -710,6 +720,7 @@ const LUXURY_3F_GLASS_VILLA: ProjectTemplate = {
   description: "三层 · 落地玻璃幕墙 · 泳池庭院 · 开放式布局",
   areaSqm: 320,
   palette: ["#F2EFE8", "#1A1A1A", "#CBE8F5"],
+  styleTemplateId: "modern-villa",
 
   exterior: {
     preset:       "modern",
@@ -912,6 +923,7 @@ const WOOD_ACCENT_POOL_VILLA: ProjectTemplate = {
   description: "双层 · 白墙核桃木顶 · 落地玻璃 · 前院石板泳池",
   areaSqm: 280,
   palette: ["#EDE9E3", "#1C1814", "#8A5E38"],
+  styleTemplateId: "walnut-villa",
 
   exterior: {
     preset: "contemporary",

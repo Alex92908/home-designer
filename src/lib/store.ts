@@ -1479,6 +1479,21 @@ export const useDesignerStore = create<DesignerStore>()(
           floorPlans: newFloorPlans,
           activeFloor: 0,
         });
+
+        // 3. Apply style template (furniture + materials + doors/windows) to every floor
+        if (tpl.styleTemplateId) {
+          for (let fi = 0; fi < floors; fi++) {
+            set({ activeFloor: fi });
+            get().loadTemplate(tpl.styleTemplateId);
+          }
+          // Reset to floor 0 and pick an activeRoom that actually EXISTS on floor 0.
+          // (The last loadTemplate call set activeRoom from floor N-1, which may have
+          // different rooms — e.g. floor 1 has "master" but floor 0 does not.)
+          const floor0Rooms = get().floorPlans[0].enabledRooms;
+          const preferredRooms: RoomType[] = ["living", "master", "bedroom", "kitchen", "dining", "bathroom"];
+          const bestRoom = preferredRooms.find(r => floor0Rooms.includes(r)) ?? floor0Rooms[0] ?? "living" as RoomType;
+          set({ activeFloor: 0, activeRoom: bestRoom });
+        }
       },
 
       applyAiDesign: (design) => {
