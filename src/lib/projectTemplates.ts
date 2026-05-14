@@ -976,67 +976,67 @@ const WOOD_ACCENT_POOL_VILLA: ProjectTemplate = {
   ],
 
   // ── 庭院 ──────────────────────────────────────────────────────────────────
+  // 坐标系：z 正 = 南（相机侧 / 建筑正面），z 负 = 北（背面）
   // 建筑足迹 ≈ 14m × 7.8m（1F 含阳台 ≈ 14×9.8m）
-  //   南立面（朝向泳池）≈ z = -700 cm
-  //   北立面 ≈ z = +500 cm
+  //   南立面（朝向泳池 / 相机）≈ z = +500 cm
+  //   北立面（背侧）          ≈ z = -390 cm
   //   左墙  ≈ x = -700 cm
   //   右墙  ≈ x = +700 cm
   yardPlan: {
     items: [
-      // ── 泳池（前院中央，矩形+圆头）────────────────────────────────────────
+      // ── 泳池（前院中央，正南方，落地玻璃可直视）──────────────────────────
       { id: "wapv-pool",  type: "prefab", prefabKind: "pool",
-        x: 0, z: -1100, rot: 0, scale: 1.2 },
+        x: 0, z: 1100, rot: 0, scale: 1.2 },
 
       // ── 躺椅：泳池两侧各 3 把 ───────────────────────────────────────────
-      { id: "wapv-lnge1", kind: "furniture.chaiseLounger", x: -560, z: -960,  rot: 0,           scale: 1.0 },
-      { id: "wapv-lnge2", kind: "furniture.chaiseLounger", x: -560, z: -1080, rot: 0,           scale: 1.0 },
-      { id: "wapv-lnge3", kind: "furniture.chaiseLounger", x: -560, z: -1200, rot: 0,           scale: 1.0 },
-      { id: "wapv-lnge4", kind: "furniture.chaiseLounger", x:  560, z: -960,  rot: Math.PI,     scale: 1.0 },
-      { id: "wapv-lnge5", kind: "furniture.chaiseLounger", x:  560, z: -1080, rot: Math.PI,     scale: 1.0 },
-      { id: "wapv-lnge6", kind: "furniture.chaiseLounger", x:  560, z: -1200, rot: Math.PI,     scale: 1.0 },
+      { id: "wapv-lnge1", kind: "furniture.chaiseLounger", x: -560, z:  960,  rot: 0,           scale: 1.0 },
+      { id: "wapv-lnge2", kind: "furniture.chaiseLounger", x: -560, z: 1080,  rot: 0,           scale: 1.0 },
+      { id: "wapv-lnge3", kind: "furniture.chaiseLounger", x: -560, z: 1200,  rot: 0,           scale: 1.0 },
+      { id: "wapv-lnge4", kind: "furniture.chaiseLounger", x:  560, z:  960,  rot: Math.PI,     scale: 1.0 },
+      { id: "wapv-lnge5", kind: "furniture.chaiseLounger", x:  560, z: 1080,  rot: Math.PI,     scale: 1.0 },
+      { id: "wapv-lnge6", kind: "furniture.chaiseLounger", x:  560, z: 1200,  rot: Math.PI,     scale: 1.0 },
 
-      // ── 松树：背景左右各 2 棵 ───────────────────────────────────────────
-      { id: "wapv-pine1", kind: "tree.pine", x: -1300, z: -800,  rot: 0.3,  scale: 1.2 },
-      { id: "wapv-pine2", kind: "tree.pine", x: -1500, z: -200,  rot: 0,    scale: 1.0 },
-      { id: "wapv-pine3", kind: "tree.pine", x:  1400, z: -600,  rot: -0.2, scale: 1.1 },
-      { id: "wapv-pine4", kind: "tree.pine", x:  1600, z:  100,  rot: 0.4,  scale: 1.0 },
-      { id: "wapv-pine5", kind: "tree.pine", x: -1000, z:  600,  rot: 0.1,  scale: 0.9 },
-      { id: "wapv-pine6", kind: "tree.pine", x:  1100, z:  700,  rot: -0.3, scale: 0.95},
+      // ── 松树：前院左右各 2 棵（参考图背景） ─────────────────────────────
+      { id: "wapv-pine1", kind: "tree.pine", x: -1300, z:  800,  rot: 0.3,  scale: 1.2 },
+      { id: "wapv-pine2", kind: "tree.pine", x: -1500, z:  200,  rot: 0,    scale: 1.0 },
+      { id: "wapv-pine3", kind: "tree.pine", x:  1400, z:  600,  rot: -0.2, scale: 1.1 },
+      { id: "wapv-pine4", kind: "tree.pine", x:  1600, z: -100,  rot: 0.4,  scale: 1.0 },
+      // ── 松树：后院（北侧隐私围合） ──────────────────────────────────────
+      { id: "wapv-pine5", kind: "tree.pine", x: -1000, z: -600,  rot: 0.1,  scale: 0.9 },
+      { id: "wapv-pine6", kind: "tree.pine", x:  1100, z: -700,  rot: -0.3, scale: 0.95},
 
       // ── 橄榄树：建筑两侧近景 ────────────────────────────────────────────
-      { id: "wapv-olv1",  kind: "tree.olive", x: -900, z: -500, rot: 0,   scale: 0.9 },
-      { id: "wapv-olv2",  kind: "tree.olive", x:  900, z: -400, rot: 0.2, scale: 0.85},
+      { id: "wapv-olv1",  kind: "tree.olive", x: -900, z:  500, rot: 0,   scale: 0.9 },
+      { id: "wapv-olv2",  kind: "tree.olive", x:  900, z:  400, rot: 0.2, scale: 0.85},
 
       // ── 观赏草：泳池边缘点缀 ────────────────────────────────────────────
-      { id: "wapv-gr1",   kind: "plant.grass", x: -350, z: -1400, rot: 0,    scale: 1.0 },
-      { id: "wapv-gr2",   kind: "plant.grass", x:  300, z: -1420, rot: 0.3,  scale: 0.9 },
-      { id: "wapv-gr3",   kind: "plant.grass", x: -700, z: -1050, rot: -0.2, scale: 1.0 },
-      { id: "wapv-gr4",   kind: "plant.grass", x:  700, z: -900,  rot: 0.5,  scale: 0.85},
+      { id: "wapv-gr1",   kind: "plant.grass", x: -350, z: 1400,  rot: 0,    scale: 1.0 },
+      { id: "wapv-gr2",   kind: "plant.grass", x:  300, z: 1420,  rot: 0.3,  scale: 0.9 },
+      { id: "wapv-gr3",   kind: "plant.grass", x: -700, z: 1050,  rot: -0.2, scale: 1.0 },
+      { id: "wapv-gr4",   kind: "plant.grass", x:  700, z:  900,  rot: 0.5,  scale: 0.85},
 
       // ── 小灌木：石板区边缘 ──────────────────────────────────────────────
-      { id: "wapv-bush1", kind: "plant.bushSmall", x: -480, z: -1450, rot: 0,   scale: 0.8 },
-      { id: "wapv-bush2", kind: "plant.bushSmall", x:  420, z: -1460, rot: 0.3, scale: 0.75},
-      { id: "wapv-bush3", kind: "plant.bushLarge", x: -820, z: -700,  rot: 0,   scale: 0.7 },
-      { id: "wapv-bush4", kind: "plant.bushLarge", x:  840, z: -680,  rot: 0.2, scale: 0.65},
+      { id: "wapv-bush1", kind: "plant.bushSmall", x: -480, z: 1450, rot: 0,   scale: 0.8 },
+      { id: "wapv-bush2", kind: "plant.bushSmall", x:  420, z: 1460, rot: 0.3, scale: 0.75},
+      { id: "wapv-bush3", kind: "plant.bushLarge", x: -820, z:  700, rot: 0,   scale: 0.7 },
+      { id: "wapv-bush4", kind: "plant.bushLarge", x:  840, z:  680, rot: 0.2, scale: 0.65},
 
-      // ── 大门 + 两侧格栅围墙（南界） ─────────────────────────────────────
-      // 入口居中，宽约 4m；两侧各一段 slat_wall，现代钢构格栅风格
+      // ── 大门 + 两侧格栅围墙（南界，临街）───────────────────────────────
       { id: "wapv-gate",  kind: "feature.fenceGate",
-        x: 0, z: -1760, rot: 0, scale: 3.5 },
+        x: 0, z: 1760, rot: 0, scale: 3.5 },
       { id: "wapv-slat-l", type: "prefab", prefabKind: "slat_wall",
-        x: -540, z: -1760, rot: 0, scale: 1.0,
+        x: -540, z: 1760, rot: 0, scale: 1.0,
         params: { lengthM: 7, heightM: 2.2 } },
       { id: "wapv-slat-r", type: "prefab", prefabKind: "slat_wall",
-        x:  540, z: -1760, rot: 0, scale: 1.0,
+        x:  540, z: 1760, rot: 0, scale: 1.0,
         params: { lengthM: 7, heightM: 2.2 } },
-      // 大门两侧立柱绿植
-      { id: "wapv-gate-bush-l", kind: "plant.bushLarge", x: -280, z: -1780, rot: 0,   scale: 0.9 },
-      { id: "wapv-gate-bush-r", kind: "plant.bushLarge", x:  280, z: -1780, rot: 0.2, scale: 0.9 },
+      { id: "wapv-gate-bush-l", kind: "plant.bushLarge", x: -280, z: 1780, rot: 0,   scale: 0.9 },
+      { id: "wapv-gate-bush-r", kind: "plant.bushLarge", x:  280, z: 1780, rot: 0.2, scale: 0.9 },
 
-      // ── 区域：入户前院石板（建筑正前方）────────────────────────────────
+      // ── 区域：入户前院石板（建筑南立面至大门之间）──────────────────────
       {
         id: "wapv-zone-forecourt", type: "zone", zoneKind: "social",
-        x: 0, z: -680,
+        x: 0, z: 680,
         polygon: [
           [-700, -180], [700, -180], [700, 180], [-700, 180],
         ] as Array<[number, number]>,
@@ -1045,16 +1045,16 @@ const WOOD_ACCENT_POOL_VILLA: ProjectTemplate = {
       // ── 区域：泳池石板甲板 ───────────────────────────────────────────────
       {
         id: "wapv-zone-deck", type: "zone", zoneKind: "private",
-        x: 0, z: -1100,
+        x: 0, z: 1100,
         polygon: [
           [-800, -500], [800, -500], [800, 500], [-800, 500],
         ] as Array<[number, number]>,
         pavingMaterialId: "stone_grey",
       },
-      // ── 区域：后院草坪 ───────────────────────────────────────────────────
+      // ── 区域：后院草坪（北侧，私密）────────────────────────────────────
       {
         id: "wapv-zone-lawn", type: "zone", zoneKind: "lawn",
-        x: 0, z: 700,
+        x: 0, z: -700,
         polygon: [
           [-900, -300], [900, -300], [900, 300], [-900, 300],
         ] as Array<[number, number]>,
@@ -1062,12 +1062,12 @@ const WOOD_ACCENT_POOL_VILLA: ProjectTemplate = {
     ],
 
     paths: [
-      // 入户通道：南大门 → 建筑南立面
+      // 入户通道：南侧大门 → 建筑南立面
       {
         id: "wapv-path-entry",
         points: [
-          [0, -1800],
-          [0, -860],
+          [0,    1800],
+          [0,     860],
         ] as Array<[number, number]>,
         widthCm: 140,
         material: "stone",
@@ -1076,9 +1076,9 @@ const WOOD_ACCENT_POOL_VILLA: ProjectTemplate = {
       {
         id: "wapv-path-pool",
         points: [
-          [-140, -860],
-          [-560, -860],
-          [-560, -1100],
+          [-140,  860],
+          [-560,  860],
+          [-560, 1100],
         ] as Array<[number, number]>,
         widthCm: 100,
         material: "stone",
