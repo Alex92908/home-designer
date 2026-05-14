@@ -46,8 +46,14 @@ interface WinDrag {
 // ─── Door drag state ──────────────────────────────────────
 
 interface DoorDrag {
+  id: string;
+  wall: "top" | "bottom" | "left" | "right"; // SVG wall convention
+  origWall: string;      // original door.wall ("back"|"front"|"left"|"right")
   startMouse: number;  // x for top/bottom walls, y for left/right walls
   origPos: number;
+  wallLen: number;       // cm, for clamping
+  doorLen: number;       // cm
+  isPolygonEdge: boolean; // polygon-edge doors can't be moved (skip)
 }
 
 // ─── Single placed item in SVG ────────────────────────────
@@ -767,15 +773,28 @@ export default function FloorPlan() {
 
   // ─── Door drag ───────────────────────────────────────────
 
-  // NOTE: door dragging not yet supported in the new multi-door model;
-  // users can delete + re-add to reposition. The id arg is accepted for
-  // forward compat with the per-door pointer handler.
   const startDoorDrag = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    (_e: React.PointerEvent<SVGGElement>, _doorId?: string) => {
-      // no-op
+    (e: React.PointerEvent<SVGGElement>, doorId?: string) => {
+      if (!svgRef.current || !doorId) return;
+      const door = allDoors.find(d => d.id === doorId);
+      if (!door || door.edgeIndex != null) return; // skip polygon-edge doors
+      const svgWall: DoorWall = door.wall === "back" ? "top" : door.wall === "front" ? "bottom" : door.wall as DoorWall;
+      const isHoriz = svgWall === "top" || svgWall === "bottom";
+      const wallLen = isHoriz ? roomW : roomD;
+      const pt = getSVGPoint(e, svgRef.current, zoomLevel);
+      setDoorDrag({
+        id: doorId,
+        wall: svgWall,
+        origWall: door.wall,
+        startMouse: isHoriz ? pt.x : pt.y,
+        origPos: door.pos,
+        wallLen,
+        doorLen: door.len,
+        isPolygonEdge: false,
+      });
+      (e.currentTarget as SVGGElement).setPointerCapture(e.pointerId);
     },
-    []
+    [allDoors, roomW, roomD, zoomLevel]
   );
 
   // ─── Combined pointer move ───────────────────────────────
@@ -794,17 +813,18 @@ export default function FloorPlan() {
         const delta = (axis - winDrag.startMouse) / scale;
         const MIN_LEN = 40;
 
+        const snap10 = (v: number) => Math.round(v / 10) * 10;
         const wins = roomWindows.map(w => {
           if (w.id !== winDrag.id) return w;
           if (winDrag.handle === "move") {
-            return { ...w, pos: Math.max(0, Math.min(wallLen - w.len, winDrag.origPos + delta)) };
+            return { ...w, pos: snap10(Math.max(0, Math.min(wallLen - w.len, winDrag.origPos + delta))) };
           }
           if (winDrag.handle === "start") {
-            const newPos = Math.max(0, Math.min(winDrag.origPos + winDrag.origLen - MIN_LEN, winDrag.origPos + delta));
+            const newPos = snap10(Math.max(0, Math.min(winDrag.origPos + winDrag.origLen - MIN_LEN, winDrag.origPos + delta)));
             return { ...w, pos: newPos, len: Math.max(MIN_LEN, winDrag.origLen - (newPos - winDrag.origPos)) };
           }
           if (winDrag.handle === "end") {
-            return { ...w, len: Math.max(MIN_LEN, Math.min(wallLen - w.pos, winDrag.origLen + delta)) };
+            return { ...w, len: snap10(Math.max(MIN_LEN, Math.min(wallLen - w.pos, winDrag.origLen + delta))) };
           }
           return w;
         });
@@ -815,16 +835,14 @@ export default function FloorPlan() {
       // Door drag
       if (doorDrag) {
         const pt = getSVGPoint(e, svgRef.current, zoomLevel);
-        const isHorizontalWall = doorWall === "top" || doorWall === "bottom";
-        const axis = isHorizontalWall ? pt.x : pt.y;
+        const isHoriz = doorDrag.wall === "top" || doorDrag.wall === "bottom";
+        const axis = isHoriz ? pt.x : pt.y;
         const delta = (axis - doorDrag.startMouse) / scale;
-        const wallLen = isHorizontalWall ? roomW : roomD;
-        const doorWCm = Math.min(doorLenCm, wallLen);
-        const newPos = Math.max(0, Math.min(wallLen - doorWCm, doorDrag.origPos + delta));
-        setDoorPos(activeRoom, newPos);
+        const newPos = Math.max(0, Math.min(doorDrag.wallLen - doorDrag.doorLen, doorDrag.origPos + delta));
+        updateDoor(activeRoom, doorDrag.id, { pos: newPos });
       }
     },
-    [dragState, winDrag, doorDrag, scale, roomW, roomD, doorWall, roomState.placedItems, moveItem, roomWindows, setRoomWindows, activeRoom, setDoorPos]  // eslint-disable-line react-hooks/exhaustive-deps
+    [dragState, winDrag, doorDrag, scale, roomW, roomD, roomState.placedItems, moveItem, roomWindows, setRoomWindows, activeRoom, setDoorPos, updateDoor]  // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const handlePointerUp = useCallback(() => {

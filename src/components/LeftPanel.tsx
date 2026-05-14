@@ -9,7 +9,7 @@ const EMPTY_PLACED: never[] = [];
 import TemplatesPanel from "./TemplatesPanel";
 import { MATERIALS } from "@/lib/data";
 import { FURNITURE, getFurnitureForRoom, FURNITURE_CATEGORIES, getCustomFurniture } from "@/lib/furniture";
-import { MaterialItem, FurnitureItem } from "@/lib/types";
+import { MaterialItem, FurnitureItem, StyleTag } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 import { formatUnitPrice, formatPrice } from "@/lib/currency";
@@ -488,27 +488,68 @@ function CustomFurnitureForm({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Furniture tab content ─────────────────────────────────
+const STYLE_TAGS: StyleTag[] = ["现代", "北欧", "中式", "日式", "工业风", "轻奢"];
+
 function FurnitureTab() {
   const activeRoom      = useDesignerStore((s) => s.activeRoom);
   const customFurniture = useDesignerStore((s) => s.customFurniture);
   const [showForm, setShowForm] = useState(false);
   const [allRooms, setAllRooms] = useState(false);
+  const [searchQ, setSearchQ] = useState("");
+  const [styleTag, setStyleTag] = useState<StyleTag | null>(null);
   const t = useT();
 
   const roomFurniture = allRooms ? [...FURNITURE, ...getCustomFurniture()] : getFurnitureForRoom(activeRoom);
   // Include any custom furniture (all rooms)
   const allItems = allRooms ? roomFurniture : [...roomFurniture, ...customFurniture];
 
+  // Apply search + tag filters
+  const filteredItems = allItems.filter(item => {
+    const matchSearch = !searchQ || item.name.includes(searchQ) || item.brand?.includes(searchQ);
+    const matchTag = !styleTag || (item.tags ?? []).includes(styleTag);
+    return matchSearch && matchTag;
+  });
+
   // Group by category
   const groups = FURNITURE_CATEGORIES
     .map((cat) => ({
       ...cat,
-      items: allItems.filter((f) => f.category === cat.id),
+      items: filteredItems.filter((f) => f.category === cat.id),
     }))
     .filter((g) => g.items.length > 0);
 
   return (
     <div className="flex flex-col gap-4 px-3 py-3">
+      {/* Search input */}
+      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+        <span style={{
+          position: "absolute",
+          left: 8,
+          fontSize: 13,
+          color: "var(--ds-text-3)",
+          pointerEvents: "none",
+          lineHeight: 1,
+        }}>🔍</span>
+        <input
+          type="text"
+          value={searchQ}
+          onChange={e => setSearchQ(e.target.value)}
+          placeholder="搜索家具…"
+          style={{
+            width: "100%",
+            height: 30,
+            paddingLeft: 26,
+            paddingRight: 8,
+            fontSize: 12,
+            borderRadius: 12,
+            border: "1px solid var(--ds-border)",
+            background: "var(--ds-surface)",
+            color: "var(--ds-text)",
+            outline: "none",
+          }}
+        />
+      </div>
+
       {/* All-rooms toggle + custom form */}
       <div className="flex gap-2 items-center">
         <button
@@ -532,10 +573,35 @@ function FurnitureTab() {
           </button>
         )}
       </div>
+
+      {/* Style tag filter pills */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+        {STYLE_TAGS.map(tag => (
+          <button
+            key={tag}
+            onClick={() => setStyleTag(prev => prev === tag ? null : tag)}
+            style={{
+              fontSize: 10,
+              padding: "2px 8px",
+              borderRadius: 999,
+              border: styleTag === tag ? "none" : "1px solid var(--ds-border)",
+              background: styleTag === tag ? "#007AFF" : "var(--ds-surface)",
+              color: styleTag === tag ? "#fff" : "var(--ds-text-3)",
+              cursor: "pointer",
+              lineHeight: "18px",
+            }}
+          >
+            {tag}
+          </button>
+        ))}
+      </div>
+
       {showForm && <CustomFurnitureForm onClose={() => setShowForm(false)} />}
 
       {groups.length === 0 ? (
-        <div className="text-xs text-gray-400 text-center py-6">{t.noFurnitureForRoom}</div>
+        <div className="text-xs text-gray-400 text-center py-6">
+          {searchQ || styleTag ? "没有匹配的家具" : t.noFurnitureForRoom}
+        </div>
       ) : (
         groups.map(({ id, icon, items }) => (
           <div key={id}>

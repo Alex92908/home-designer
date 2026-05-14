@@ -18,8 +18,8 @@
  * (warning chips, ring overlays on canvas, etc).
  */
 
-import type { YardItem, YardSingleton } from "./types";
-import { isYardSingleton } from "./types";
+import type { YardItem, YardSingleton, YardPrefab } from "./types";
+import { isYardSingleton, isYardPrefab } from "./types";
 import { getOutdoorAssetByKind } from "./outdoorAssets";
 
 export type OutdoorSeverity = "required" | "recommended";
@@ -112,12 +112,39 @@ function isPlanting(kind: string): boolean {
   return !!a && (a.category === "plant" || (a.category === "tree" && a.radiusCm < 80));
 }
 
+// ─── Prefab helpers ───────────────────────────────────────
+const PREFAB_FOOTPRINT_CM: Record<string, { w: number; d: number }> = {
+  social_island:    { w: 500, d: 400 },
+  farm_box:         { w: 300, d: 150 },
+  porte_cochere:    { w: 600, d: 400 },
+  slat_wall:        { w: 400, d: 20  },
+  pool:             { w: 600, d: 350 },
+  pergola_classic:  { w: 400, d: 300 },
+  outdoor_kitchen:  { w: 300, d: 120 },
+  fountain:         { w: 200, d: 200 },
+};
+
+function prefabAABB(item: YardPrefab): { minX: number; maxX: number; minZ: number; maxZ: number } {
+  const fp = PREFAB_FOOTPRINT_CM[item.prefabKind] ?? { w: 300, d: 300 };
+  const hw = fp.w / 2, hd = fp.d / 2;
+  return { minX: item.x - hw, maxX: item.x + hw, minZ: item.z - hd, maxZ: item.z + hd };
+}
+
+function aabbOverlap(
+  a: { minX: number; maxX: number; minZ: number; maxZ: number },
+  b: { minX: number; maxX: number; minZ: number; maxZ: number },
+): boolean {
+  return a.maxX > b.minX && a.minX < b.maxX && a.maxZ > b.minZ && a.minZ < b.maxZ;
+}
+
+function prefabDistToHouseM(item: YardPrefab, fp: HouseFootprintCm): number {
+  return distToHouseM(item.x, item.z, fp);
+}
+
 // ─── Main evaluator ────────────────────────────────────────
 export function evaluateYardPlan(items: YardItem[], house: HouseFootprintCm): OutdoorViolation[] {
   const out: OutdoorViolation[] = [];
 
-  // Singleton-only checks. Prefab/zone clearance has its own future
-  // ruleset (e.g. "social_island must adjoin building wall") — TODO P-next.
   const singletons = items.filter(isYardSingleton);
 
   for (const it of singletons) {
@@ -213,6 +240,84 @@ export function evaluateYardPlan(items: YardItem[], house: HouseFootprintCm): Ou
         reasonZh: `周围 2m 内堆了 ${count + 1} 株植物，过密会争夺养分`,
         reasonEn: `Crowded planting (${count + 1} within 2m) — they'll compete for nutrients`,
       });
+    }
+  }
+
+  // ─── Prefab checks ────────────────────────────────────────
+  const prefabs = items.filter((it): it is YardPrefab => isYardPrefab(it));
+
+  // Pool: must be ≥1.5m from house (humidity/structural concern)
+  for (const pf of prefabs) {
+    if (pf.prefabKind === "pool") {
+      const d = prefabDistToHouseM(pf, house);
+      if (d < 1.5) {
+        out.push({
+          itemId: pf.id,
+          kind: "tooCloseToHouse",
+          severity: "required",
+          requiredM: 1.5,
+          actualM: Math.max(0, d),
+          reasonZh: "泳池距房子过近（建议 ≥1.5m），潮湿可能损坏墙基",
+          reasonEn: "Pool too close to house (keep ≥1.5m) — moisture damages foundations",
+        });
+      }
+    }
+
+    // Outdoor kitchen: must be ≥2m from house (fire/grease safety)
+    if (pf.prefabKind === "outdoor_kitchen") {
+      const d = prefabDistToHouseM(pf, house);
+      if (d < 2) {
+        out.push({
+          itemId: pf.id,
+          kind: "fireHazard",
+          severity: "recommended",
+          requiredM: 2,
+          actualM: Math.max(0, d),
+          reasonZh: "户外厨房距房子过近（建议 ≥2m），烹饪烟火有安全隐患",
+          reasonEn: "Outdoor kitchen too close to house (keep ≥2m) — cooking smoke/fire risk",
+        });
+      }
+    }
+  }
+
+  // Prefab-to-prefab AABB overlap
+  for (let i = 0; i < prefabs.length; i++) {
+    for (let j = i + 1; j < prefabs.length; j++) {
+      const a = prefabs[i], b = prefabs[j];
+      const aBox = prefabAABB(a);
+      const bBox = prefabAABB(b);
+      if (aabbOverlap(aBox, bBox)) {
+        out.push({
+          itemId: a.id,
+          otherId: b.id,
+          kind: "overlap",
+          severity: "recommended",
+          reasonZh: "两个组合构件重叠，请拉开间距",
+          reasonEn: "Two prefabs overlap — separate them",
+        });
+      }
+    }
+  }
+
+  // Prefab-singleton overlap (prefab box vs singleton circle)
+  for (const pf of prefabs) {
+    const box = prefabAABB(pf);
+    for (const sg of singletons) {
+      const r = itemFootprintM(sg) * 100; // convert to cm
+      // Check if singleton circle overlaps prefab AABB (simple: check center inside expanded AABB)
+      const nearX = Math.max(box.minX, Math.min(box.maxX, sg.x));
+      const nearZ = Math.max(box.minZ, Math.min(box.maxZ, sg.z));
+      const dist = Math.hypot(sg.x - nearX, sg.z - nearZ);
+      if (dist < r * 0.7) {
+        out.push({
+          itemId: sg.id,
+          otherId: pf.id,
+          kind: "overlap",
+          severity: "recommended",
+          reasonZh: `景观元素与「${pf.prefabKind}」重叠，建议挪开`,
+          reasonEn: `Item overlaps with "${pf.prefabKind}" prefab — move it away`,
+        });
+      }
     }
   }
 

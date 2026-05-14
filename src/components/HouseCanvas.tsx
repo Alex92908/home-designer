@@ -6455,6 +6455,7 @@ export default function HouseCanvas() {
       </div>
 
       <Canvas
+        style={{ touchAction: "none" }}
         shadows={{ type: THREE.PCFSoftShadowMap, enabled: true }}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,

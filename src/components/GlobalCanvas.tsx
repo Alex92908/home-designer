@@ -10,7 +10,7 @@
  *    避免在大场景里加载大量 GLTF 造成卡顿。
  *  - 鼠标悬停 / 点击：单击某间房 → 切到 3D 单房间视图。
  *
- * L 型 / 凸字型房间暂未支持（仍按矩形渲染）——留给下一轮的多边形数据模型。
+ * L 型 / 凸字型房间：地板和墙体均已按真实多边形渲染（THREE.Shape + 边缘 boxwall）。
  */
 
 import { useMemo, useRef, useState, useEffect, Suspense } from "react";
@@ -355,9 +355,9 @@ function RoomGroup({
 }) {
   const def = ROOM_DEFS[room];
   const t = useT();
-  const dims = useDesignerStore(s => s.floorPlans[s.activeFloor]?.roomDimensions?.[room]);
-  const state = useDesignerStore(s => s.floorPlans[s.activeFloor]?.rooms[room] ?? EMPTY_ROOM_STATE_GC);
-  const shape = useDesignerStore(s => s.floorPlans[s.activeFloor].roomShapes?.[room]);
+  const dims = useDesignerStore(s => s.floorPlans[floorIndex]?.roomDimensions?.[room]);
+  const state = useDesignerStore(s => s.floorPlans[floorIndex]?.rooms[room] ?? EMPTY_ROOM_STATE_GC);
+  const shape = useDesignerStore(s => s.floorPlans[floorIndex]?.roomShapes?.[room]);
   // Read stairConfig from THIS floor (not always activeFloor) so each floor's
   // staircase reflects that floor's shape/rotation setting.
   const stairCfg = useDesignerStore(s => s.floorPlans[floorIndex]?.stairConfig);
