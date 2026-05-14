@@ -6,7 +6,6 @@ import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone
 import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, HueSaturation } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
-import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
 import { useDesignerStore } from "@/lib/store";
@@ -3717,41 +3716,26 @@ function YardElements({ W, D, yardPreset, parking = false, orbitRef, selectedKey
 }
 
 // ─── Ground ─────────────────────────────────────────────────
-// ─── KTX2 loader singleton ───────────────────────────────────
-// One shared KTX2Loader instance so the basis transcoder WASM is only
-// fetched and compiled once for the entire app session.
-let _ktx2Loader: KTX2Loader | null = null;
-function getKtx2Loader(gl: THREE.WebGLRenderer): KTX2Loader {
-  if (_ktx2Loader) return _ktx2Loader;
-  _ktx2Loader = new KTX2Loader()
-    .setTranscoderPath("/")          // basis_transcoder.{js,wasm} in /public
-    .detectSupport(gl);
-  return _ktx2Loader;
-}
-
 // ─── PBR texture set loader ─────────────────────────────────
-// Loads GPU-compressed KTX2 (ETC1S) textures. Falls back transparently
-// when useLoader caches the result — Three.js global loader cache is keyed
-// by URL so the same texture is never uploaded twice.
+// WebP 格式（已压缩 74%），Three.js TextureLoader 缓存全局唯一，
+// 相同 URL 只上传 GPU 一次。
 function usePbrSet(dir: string, asset: string, repeat: [number, number]): {
   map: THREE.Texture; normalMap: THREE.Texture; aoMap: THREE.Texture; roughnessMap: THREE.Texture;
 } {
-  const { gl } = useThree();
-  const loader = useMemo(() => getKtx2Loader(gl), [gl]);
   const base = `/textures/${dir}/${asset}`;
-  const [diff, nor, arm] = useLoader(loader as any, [
-    `${base}_diff_1k.ktx2`,
-    `${base}_nor_gl_1k.ktx2`,
-    `${base}_arm_1k.ktx2`,
-  ] as any);
+  const [diff, nor, arm] = useLoader(THREE.TextureLoader, [
+    `${base}_diff_1k.webp`,
+    `${base}_nor_gl_1k.webp`,
+    `${base}_arm_1k.webp`,
+  ]);
   return useMemo(() => {
-    for (const t of [diff, nor, arm] as THREE.Texture[]) {
+    for (const t of [diff, nor, arm]) {
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.repeat.set(repeat[0], repeat[1]);
       t.anisotropy = 8;
     }
-    (diff as THREE.Texture).colorSpace = THREE.SRGBColorSpace;
-    return { map: diff as THREE.Texture, normalMap: nor as THREE.Texture, aoMap: arm as THREE.Texture, roughnessMap: arm as THREE.Texture };
+    diff.colorSpace = THREE.SRGBColorSpace;
+    return { map: diff, normalMap: nor, aoMap: arm, roughnessMap: arm };
   }, [diff, nor, arm, repeat]);
 }
 
