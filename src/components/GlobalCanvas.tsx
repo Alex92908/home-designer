@@ -493,6 +493,8 @@ function RoomGroup({
         anchorX="center"
         anchorY="middle"
         color={isStair ? "#6366F1" : isActive ? "#1D4ED8" : "#1F2937"}
+        outlineWidth={0.018}
+        outlineColor="white"
         renderOrder={1}
       >
         {isStair ? `${label} ${floorIndex + 1}F→${floorIndex + 2}F` : `${icon} ${label}`}
@@ -767,8 +769,8 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
         position={[extent * 0.7, extent * 1.5 + floorCount * FLOOR_H, extent * 0.7]}
         intensity={1.4}
         castShadow
-        shadow-mapSize-width={512}
-        shadow-mapSize-height={512}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
         shadow-camera-left={-extent}
         shadow-camera-right={extent}
         shadow-camera-top={extent + floorCount * FLOOR_H}
@@ -943,6 +945,8 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
                 anchorX="center"
                 anchorY="middle"
                 color={fi === activeFloor ? "#1D4ED8" : "#3C3C50"}
+                outlineWidth={0.025}
+                outlineColor="white"
                 fontWeight="bold"
                 renderOrder={1}
               >
@@ -1320,7 +1324,6 @@ function CameraFit() {
       maxDistance={80}
       maxPolarAngle={Math.PI / 1.85}
       target={[0, 0, 0]}
-      regress
     />
   );
 }
@@ -1386,8 +1389,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
       style={{ background: "linear-gradient(180deg, #C4CAD4 0%, #969EA8 55%, #6E7684 100%)" }}
     >
       <Canvas
-        frameloop="demand"
-        shadows="soft"
+        shadows
         camera={{ position: [12, initY, 12], fov: 45 }}
         gl={{ antialias: true, alpha: true }}
       >
