@@ -1,66 +1,174 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDesignerStore, useTemporalStore } from "@/lib/store";
 import { useT, useLocaleStore } from "@/lib/i18n";
 import { ROOM_DEFS } from "@/lib/types";
 import ShareButton from "./ShareButton";
 
-/** Compact floor-switcher used in the TopBar across all views. */
+const FLOOR_COLORS = ["#2563EB", "#7C3AED", "#059669", "#D97706", "#0891B2", "#BE185D"];
+
+/**
+ * Unified floor-switcher for the TopBar.
+ * - ≤4 floors (+ optional rooftop): shows pill buttons inline.
+ * - ≥5 floors or rooftop overflows: shows a compact dropdown "2F ▾" button.
+ */
 function FloorSwitcher() {
-  const exterior      = useDesignerStore(s => s.exterior);
-  const activeFloor   = useDesignerStore(s => s.activeFloor);
+  const exterior       = useDesignerStore(s => s.exterior);
+  const activeFloor    = useDesignerStore(s => s.activeFloor);
   const setActiveFloor = useDesignerStore(s => s.setActiveFloor);
-  const setExterior   = useDesignerStore(s => s.setExterior);
+  const setExterior    = useDesignerStore(s => s.setExterior);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   const { floors, hasRooftop } = exterior;
+  const rooftopIdx = floors;
+  const totalOptions = floors + (hasRooftop ? 1 : 0);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   if (floors <= 1 && !hasRooftop) return null;
 
-  const floorColors = ["#2563EB", "#7C3AED", "#059669", "#D97706"];
-  const rooftopIdx  = floors;
+  // Current floor label for dropdown trigger
+  const isRooftopActive = hasRooftop && activeFloor === rooftopIdx;
+  const activeColor = isRooftopActive ? "#DC2626" : FLOOR_COLORS[activeFloor % FLOOR_COLORS.length];
+  const activeLabel = isRooftopActive ? "🏠屋顶" : `${activeFloor + 1}F`;
 
+  // Use inline pills for ≤4 total options (fits nicely); dropdown for more
+  const useDropdown = totalOptions > 4;
+
+  const selectFloor = (idx: number) => {
+    if (idx === rooftopIdx) {
+      if (!hasRooftop) setExterior({ hasRooftop: true });
+    }
+    setActiveFloor(idx);
+    setOpen(false);
+  };
+
+  if (!useDropdown) {
+    // ── Inline pill buttons ───────────────────────────────────────────────
+    return (
+      <div className="flex items-center gap-1 shrink-0">
+        {Array.from({ length: floors }).map((_, i) => {
+          const isActive = activeFloor === i;
+          const c = FLOOR_COLORS[i % FLOOR_COLORS.length];
+          return (
+            <button
+              key={i}
+              onClick={() => selectFloor(i)}
+              className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all"
+              style={{
+                background: isActive ? c : "transparent",
+                color:      isActive ? "white" : c,
+                border:     `1.5px solid ${c}`,
+              }}
+            >
+              {i + 1}F
+            </button>
+          );
+        })}
+        {hasRooftop && (() => {
+          const isActive = activeFloor === rooftopIdx;
+          return (
+            <button
+              onClick={() => selectFloor(rooftopIdx)}
+              className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all"
+              title="屋顶层"
+              style={{
+                background: isActive ? "#DC2626" : "transparent",
+                color:      isActive ? "white" : "#DC2626",
+                border:     "1.5px solid #DC2626",
+              }}
+            >
+              🏠屋顶
+            </button>
+          );
+        })()}
+      </div>
+    );
+  }
+
+  // ── Dropdown for 5+ floors ────────────────────────────────────────────────
   return (
-    <div className="flex items-center gap-1 shrink-0">
-      {Array.from({ length: floors }).map((_, i) => {
-        const isActive = activeFloor === i;
-        const c = floorColors[i % floorColors.length];
-        return (
-          <button
-            key={i}
-            onClick={() => setActiveFloor(i)}
-            className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all"
-            style={{
-              background: isActive ? c : "transparent",
-              color:      isActive ? "white" : c,
-              border:     `1.5px solid ${c}`,
-            }}
-          >
-            {i + 1}F
-          </button>
-        );
-      })}
-      {/* 屋顶 tab */}
-      {(() => {
-        const isActive = hasRooftop && activeFloor === rooftopIdx;
-        return (
-          <button
-            key="rooftop"
-            onClick={() => {
-              if (!hasRooftop) setExterior({ hasRooftop: true });
-              setActiveFloor(rooftopIdx);
-            }}
-            className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all"
-            title={hasRooftop ? "屋顶层" : "点击开启天台层"}
-            style={{
-              background: isActive ? "#DC2626" : "transparent",
-              color:      isActive ? "white"   : hasRooftop ? "#DC2626" : "#9CA3AF",
-              border:     `1.5px solid ${isActive ? "#DC2626" : hasRooftop ? "#DC2626" : "#D1D5DB"}`,
-            }}
-          >
-            🏠屋顶
-          </button>
-        );
-      })()}
+    <div className="relative shrink-0" ref={ref}>
+      {/* Trigger button */}
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all"
+        style={{
+          background: open ? activeColor : "transparent",
+          color:      open ? "white" : activeColor,
+          border:     `1.5px solid ${activeColor}`,
+        }}
+        title="切换楼层"
+      >
+        <span>{activeLabel}</span>
+        <span style={{ fontSize: 8, opacity: 0.8 }}>▾</span>
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div
+          className="absolute top-full left-0 mt-1 z-50 rounded-xl overflow-hidden shadow-xl"
+          style={{
+            background: "white",
+            border: "1px solid #E5E7EB",
+            minWidth: 80,
+          }}
+        >
+          {Array.from({ length: floors }).map((_, i) => {
+            const isActive = activeFloor === i;
+            const c = FLOOR_COLORS[i % FLOOR_COLORS.length];
+            return (
+              <button
+                key={i}
+                onClick={() => selectFloor(i)}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] font-bold transition-all hover:opacity-80"
+                style={{
+                  background: isActive ? c : "white",
+                  color:      isActive ? "white" : c,
+                }}
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: isActive ? "white" : c }}
+                />
+                {i + 1}F
+              </button>
+            );
+          })}
+          {/* Rooftop option */}
+          {(() => {
+            const isActive = hasRooftop && activeFloor === rooftopIdx;
+            return (
+              <button
+                onClick={() => selectFloor(rooftopIdx)}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] font-bold transition-all hover:opacity-80"
+                title={hasRooftop ? "屋顶层" : "点击开启天台层"}
+                style={{
+                  background: isActive ? "#DC2626" : "white",
+                  color:      isActive ? "white" : hasRooftop ? "#DC2626" : "#9CA3AF",
+                  borderTop: "1px solid #F3F4F6",
+                }}
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: isActive ? "white" : hasRooftop ? "#DC2626" : "#D1D5DB" }}
+                />
+                🏠屋顶
+              </button>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 }
