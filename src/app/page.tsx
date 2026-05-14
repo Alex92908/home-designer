@@ -189,28 +189,6 @@ export default function Home() {
   const global3dEvictTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const EVICT_MS = 5 * 60 * 1000; // 5 minutes
 
-  // When switching away from a view, start the eviction timer.
-  // When switching back, cancel the timer and keep it alive.
-  useEffect(() => {
-    if (isExterior && viewMode === "exterior") {
-      if (exteriorEvictTimer.current) { clearTimeout(exteriorEvictTimer.current); exteriorEvictTimer.current = null; }
-      setExteriorEverShown(true);
-    } else if (exteriorEverShown) {
-      exteriorEvictTimer.current = setTimeout(() => setExteriorEverShown(false), EVICT_MS);
-    }
-    return () => { if (exteriorEvictTimer.current) clearTimeout(exteriorEvictTimer.current); };
-  }, [isExterior, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (isGlobal3d) {
-      if (global3dEvictTimer.current) { clearTimeout(global3dEvictTimer.current); global3dEvictTimer.current = null; }
-      setGlobal3dEverShown(true);
-    } else if (global3dEverShown) {
-      global3dEvictTimer.current = setTimeout(() => setGlobal3dEverShown(false), EVICT_MS);
-    }
-    return () => { if (global3dEvictTimer.current) clearTimeout(global3dEvictTimer.current); };
-  }, [isGlobal3d]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // After mount, collapse panels on mobile viewports + flip mounted flag.
   // On first-ever visit (no persisted state), load the glass-villa sample so
   // new users immediately see a complete coherent design across all views.
@@ -302,6 +280,28 @@ export default function Home() {
   const isYard2d   = viewMode === "yard2d";
   const isGlobal3d = viewMode === "global3d";
   const isExterior = viewMode === "exterior" || isYard2d;
+
+  // When switching away from a view, start the eviction timer.
+  // When switching back, cancel the timer and keep it alive.
+  useEffect(() => {
+    if (isExterior) {
+      if (exteriorEvictTimer.current) { clearTimeout(exteriorEvictTimer.current); exteriorEvictTimer.current = null; }
+      setExteriorEverShown(true);
+    } else if (exteriorEverShown) {
+      exteriorEvictTimer.current = setTimeout(() => setExteriorEverShown(false), EVICT_MS);
+    }
+    return () => { if (exteriorEvictTimer.current) clearTimeout(exteriorEvictTimer.current); };
+  }, [isExterior]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (isGlobal3d) {
+      if (global3dEvictTimer.current) { clearTimeout(global3dEvictTimer.current); global3dEvictTimer.current = null; }
+      setGlobal3dEverShown(true);
+    } else if (global3dEverShown) {
+      global3dEvictTimer.current = setTimeout(() => setGlobal3dEverShown(false), EVICT_MS);
+    }
+    return () => { if (global3dEvictTimer.current) clearTimeout(global3dEvictTimer.current); };
+  }, [isGlobal3d]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Per-side panel routing.
   const showRoomSidebar = !isAll && !isExterior && !isGlobal3d;

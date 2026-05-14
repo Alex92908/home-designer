@@ -6463,6 +6463,7 @@ export default function HouseCanvas() {
       </div>
 
       <Canvas
+        frameloop="demand"
         style={{ touchAction: "none" }}
         shadows={{ type: THREE.PCFSoftShadowMap, enabled: true }}
         gl={{
@@ -6541,6 +6542,7 @@ export default function HouseCanvas() {
             minDistance={2}
             maxDistance={80}
             panSpeed={0.6}
+            regress
             target={
               _buildingType === "rich-glass-villa"
                 ? [-W * 0.05, 5.0, -D * 0.25] as [number, number, number]
