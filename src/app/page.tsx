@@ -181,6 +181,9 @@ export default function Home() {
   // 默认值不一致 → React 报 hydration mismatch（移动端 Chrome 尤其
   // 敏感）。等第一次 useEffect 跑完再渲染真正依赖 store 的内容。
   const [mounted, setMounted] = useState(false);
+  // Keep HouseCanvas alive once first visited so the WebGL scene isn't rebuilt
+  // every time the user switches back to the exterior tab.
+  const [exteriorEverShown, setExteriorEverShown] = useState(false);
 
   // After mount, collapse panels on mobile viewports + flip mounted flag.
   // On first-ever visit (no persisted state), load the glass-villa sample so
@@ -394,9 +397,19 @@ export default function Home() {
           {viewMode === "2d"  && <FloorPlan />}
           {isAll      && <FloorPlanAll />}
           {isGlobal3d && <GlobalCanvas />}
-          {isExterior         && (viewMode === "yard2d"
-            ? <YardPlan />
-            : <HouseCanvas />
+          {isExterior && viewMode === "yard2d" && <YardPlan />}
+          {/* Keep HouseCanvas mounted once first shown so WebGL scene survives tab switches.
+              When hidden: absolute + opacity-0 + pointer-events-none preserves canvas size
+              so OrbitControls doesn't need to reinitialise on return. */}
+          {(viewMode === "exterior" || exteriorEverShown) && (
+            <div
+              className={viewMode === "exterior"
+                ? "w-full h-full"
+                : "absolute inset-0 opacity-0 pointer-events-none -z-10"}
+              ref={el => { if (el && !exteriorEverShown) setExteriorEverShown(true); }}
+            >
+              <HouseCanvas />
+            </div>
           )}
 
           {/* AI Render + Import floating buttons — only in 3D/2D/exterior views,
