@@ -16,7 +16,7 @@
 import { useMemo, useRef, useState, useEffect, Suspense } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Html } from "@react-three/drei";
+import { OrbitControls, Html, useGLTF, Clone } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
 import { RoomState } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
@@ -28,6 +28,44 @@ import type { RoofStyle } from "@/lib/types";
 
 const CM = 0.01;       // cm → m
 const FLOOR_H = 2.8;  // metres per storey (matches HouseCanvas)
+
+// ── Rooftop 3D model paths (all bins verified OK) ────────────────────
+const RT_LOUNGER_PATH  = "/models/outdoor_furniture/sun_lounger/sun_lounger.gltf";
+const RT_SOFA_PATH     = "/models/outdoor_furniture/outdoor_sofa/outdoor_sofa.gltf";
+const RT_TABLE_PATH    = "/models/outdoor_furniture/garden_coffee_table/garden_coffee_table.gltf";
+const RT_CHAIR_PATH    = "/models/dining_chair/dining_chair_02/dining_chair_02_1k.gltf";
+const RT_BONSAI_PATH   = "/models/outdoor_tree/bonsai_lowpoly/bonsai_lowpoly.gltf";
+const RT_PALM_PATH     = "/models/outdoor_tree/palm_tree_lowpoly/palm_tree_lowpoly.gltf";
+const RT_SHRUB_PATH    = "/models/outdoor_shrub/shrub_02/shrub_02_1k.gltf";
+const RT_BOXWOOD_PATH  = "/models/outdoor_plant/boxwood_bush/boxwood_bush.gltf";
+const RT_HEDGE_PATH    = "/models/outdoor_plant/hedge_generic/hedge_generic.gltf";
+const RT_ANTHURIUM_PATH = "/models/outdoor_plant/anthurium_botany_01/anthurium_botany_01_1k.gltf";
+
+const _rtBboxCache = new Map<string, { h: number; minY: number }>();
+function GltfMini({ path, targetH = 1, rotY = 0, scaleX = 1, scaleZ = 1 }: {
+  path: string; targetH?: number; rotY?: number; scaleX?: number; scaleZ?: number;
+}) {
+  const { scene } = useGLTF(path);
+  const { yOff, s } = useMemo(() => {
+    let cached = _rtBboxCache.get(path);
+    if (!cached) {
+      const box = new THREE.Box3().setFromObject(scene);
+      const sz  = new THREE.Vector3(); box.getSize(sz);
+      cached = { h: sz.y || 1, minY: box.min.y };
+      _rtBboxCache.set(path, cached);
+    }
+    const sc = targetH / cached.h;
+    return { yOff: -cached.minY * sc, s: sc };
+  }, [path, targetH, scene]); // eslint-disable-line react-hooks/exhaustive-deps
+  useMemo(() => {
+    scene.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  }, [scene]);
+  return (
+    <group position={[0, yOff, 0]} rotation={[0, rotY, 0]} scale={[s * scaleX, s, s * scaleZ]}>
+      <Clone object={scene} />
+    </group>
+  );
+}
 
 /** One room: floor + 4 walls (no ceiling) + furniture + label. */
 /** Lightweight per-room light for global view. Reads the same
@@ -997,11 +1035,7 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
         const roofY = floorCount * FLOOR_H;
         const slabY = roofY + 0.06;
         const roofEnabled = roofFp.enabledRooms ?? [];
-        const roofColors: Record<string, string> = {
-          rooftop_lounge: "#E8DCC8", rooftop_pool: "#3B82F6",
-          rooftop_garden: "#6DB55A", rooftop_bar: "#2D2D3A", equipment_room: "#9CA3AF",
-        };
-        // Compute rooftop bounding box for centering
+        // Compute rooftop bounding box for slab size
         let rtMinX = Infinity, rtMinY = Infinity, rtMaxX = -Infinity, rtMaxY = -Infinity;
         for (const r of roofEnabled) {
           const p = roofFp.roomLayout?.[r]; const d = roofFp.roomDimensions?.[r];
@@ -1011,31 +1045,228 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
         }
         const rtCx = isFinite(rtMinX) ? ((rtMinX + rtMaxX) / 2) * CM : cx;
         const rtCz = isFinite(rtMinY) ? ((rtMinY + rtMaxY) / 2) * CM : cz;
+        const slabW = Math.max(isFinite(rtMinX) ? (rtMaxX - rtMinX) * CM + 0.6 : footW + 0.4, footW + 0.4);
+        const slabD2 = Math.max(isFinite(rtMinY) ? (rtMaxY - rtMinY) * CM + 0.6 : footD + 0.4, footD + 0.4);
+
+        // Helper: lerp
+        const lp = (a: number, b: number, t: number) => a + (b - a) * t;
+
         return (
           <group key="rooftop-global" position={[-cx, 0, -cz]}>
-            {/* Rooftop slab */}
+            {/* Rooftop slab — light concrete */}
             <mesh position={[rtCx, slabY, rtCz]} receiveShadow>
-              <boxGeometry args={[Math.max((rtMaxX - rtMinX) * CM + 0.6, footW + 0.4), 0.12, Math.max((rtMaxY - rtMinY) * CM + 0.6, footD + 0.4)]} />
-              <meshStandardMaterial color="#E8E4DE" roughness={0.9} />
+              <boxGeometry args={[slabW, 0.12, slabD2]} />
+              <meshStandardMaterial color="#D8D4CE" roughness={0.85} />
             </mesh>
-            {/* Floor label */}
-            <mesh position={[rtCx, slabY + 0.07, rtCz]}>
-              <planeGeometry args={[1.2, 0.32]} />
-              <meshStandardMaterial color="#DC2626" />
-            </mesh>
-            {/* Room zones */}
+            {/* Parapet walls (low walls around edge) */}
+            {[
+              { pos: [rtCx, slabY + 0.25, rtCz - slabD2 / 2 + 0.06] as [number,number,number], size: [slabW, 0.50, 0.12] as [number,number,number] },
+              { pos: [rtCx, slabY + 0.25, rtCz + slabD2 / 2 - 0.06] as [number,number,number], size: [slabW, 0.50, 0.12] as [number,number,number] },
+              { pos: [rtCx - slabW / 2 + 0.06, slabY + 0.25, rtCz] as [number,number,number], size: [0.12, 0.50, slabD2] as [number,number,number] },
+              { pos: [rtCx + slabW / 2 - 0.06, slabY + 0.25, rtCz] as [number,number,number], size: [0.12, 0.50, slabD2] as [number,number,number] },
+            ].map(({ pos, size }, i) => (
+              <mesh key={i} position={pos} castShadow receiveShadow>
+                <boxGeometry args={size} />
+                <meshStandardMaterial color="#C8C4BE" roughness={0.9} />
+              </mesh>
+            ))}
+            {/* Room 3D content */}
             {roofEnabled.map(r => {
               const p = roofFp.roomLayout?.[r]; const d = roofFp.roomDimensions?.[r];
               if (!p || !d) return null;
-              const rW = d.width * CM;
-              const rD = d.depth * CM;
-              const px = (p.x + d.width / 2) * CM;
-              const pz = (p.y + d.depth / 2) * CM;
-              const color = roofColors[r] ?? "#C8C0B0";
+              const rW  = d.width * CM;
+              const rD  = d.depth * CM;
+              const px  = (p.x + d.width  / 2) * CM;
+              const pz  = (p.y + d.depth  / 2) * CM;
+              const baseY = slabY + 0.12;
+
+              if (r === "rooftop_lounge") {
+                // Pergola frame (procedural) + real loungers + sofa + table
+                const postH = 2.0; const postR = 0.06;
+                const posts: [number,number][] = [[-rW/2+0.2, -rD/2+0.2],[ rW/2-0.2,-rD/2+0.2],[-rW/2+0.2, rD/2-0.2],[ rW/2-0.2, rD/2-0.2]];
+                const slats = Math.max(3, Math.round(rW / 0.5));
+                return (
+                  <group key={r} position={[px, baseY, pz]}>
+                    {posts.map(([ox,oz],i)=>(
+                      <mesh key={i} position={[ox, postH/2, oz]} castShadow>
+                        <cylinderGeometry args={[postR,postR,postH,8]}/>
+                        <meshStandardMaterial color="#4A4A4A" metalness={0.5} roughness={0.4}/>
+                      </mesh>
+                    ))}
+                    {[-rD/2+0.2, rD/2-0.2].map((oz,i)=>(
+                      <mesh key={i} position={[0,postH,oz]} castShadow>
+                        <boxGeometry args={[rW-0.4,0.06,0.08]}/>
+                        <meshStandardMaterial color="#4A4A4A" metalness={0.5} roughness={0.4}/>
+                      </mesh>
+                    ))}
+                    {Array.from({length:slats},(_,i)=>{
+                      const t=slats>1?i/(slats-1):0.5;
+                      return (
+                        <mesh key={i} position={[lp(-rW/2+0.2,rW/2-0.2,t),postH+0.04,0]} castShadow>
+                          <boxGeometry args={[0.05,0.04,rD-0.4]}/>
+                          <meshStandardMaterial color="#5A3A1A" roughness={0.6}/>
+                        </mesh>
+                      );
+                    })}
+                    <Suspense fallback={null}>
+                      <group position={[-rW*0.22, 0, rD*0.15]}>
+                        <GltfMini path={RT_LOUNGER_PATH} targetH={0.38} rotY={0}/>
+                      </group>
+                      <group position={[ rW*0.22, 0, rD*0.15]}>
+                        <GltfMini path={RT_LOUNGER_PATH} targetH={0.38} rotY={Math.PI}/>
+                      </group>
+                      <group position={[0, 0, -rD*0.28]}>
+                        <GltfMini path={RT_SOFA_PATH} targetH={0.80}/>
+                      </group>
+                      <group position={[0, 0, -rD*0.05]}>
+                        <GltfMini path={RT_TABLE_PATH} targetH={0.40}/>
+                      </group>
+                      {posts.map(([ox,oz],i)=>(
+                        <group key={i} position={[ox*0.65, 0, oz*0.65]}>
+                          <GltfMini path={RT_ANTHURIUM_PATH} targetH={0.45} rotY={i*1.3}/>
+                        </group>
+                      ))}
+                    </Suspense>
+                  </group>
+                );
+              }
+
+              if (r === "rooftop_pool") {
+                const wallT = 0.12; const poolH = 1.1;
+                return (
+                  <group key={r} position={[px, baseY, pz]}>
+                    {/* pool shell */}
+                    {([
+                      [[0, rD/2-wallT/2, 0],[rW,poolH,wallT]],
+                      [[0,-rD/2+wallT/2, 0],[rW,poolH,wallT]],
+                      [[-rW/2+wallT/2,0,0],[wallT,poolH,rD]],
+                      [[ rW/2-wallT/2,0,0],[wallT,poolH,rD]],
+                    ] as [[number,number,number],[number,number,number]][]).map(([wp,sz],i)=>(
+                      <mesh key={i} position={[wp[0],poolH/2,wp[2]]} castShadow receiveShadow>
+                        <boxGeometry args={sz}/><meshStandardMaterial color="#E0DCD4" roughness={0.2}/>
+                      </mesh>
+                    ))}
+                    {/* water */}
+                    <mesh position={[0, poolH*0.82, 0]} receiveShadow>
+                      <boxGeometry args={[rW-wallT*2,0.03,rD-wallT*2]}/>
+                      <meshStandardMaterial color="#29B6E8" transparent opacity={0.75} roughness={0.04} metalness={0.1}/>
+                    </mesh>
+                    {/* coping */}
+                    <mesh position={[0, poolH+0.04, 0]} castShadow>
+                      <boxGeometry args={[rW+0.1,0.06,rD+0.1]}/>
+                      <meshStandardMaterial color="#8A7968" roughness={0.3}/>
+                    </mesh>
+                    <mesh position={[0, poolH+0.07, 0]}>
+                      <boxGeometry args={[rW-wallT*2-0.1,0.01,rD-wallT*2-0.1]}/>
+                      <meshStandardMaterial color="#1E90C0" transparent opacity={0.4} roughness={0}/>
+                    </mesh>
+                    {/* poolside loungers */}
+                    <Suspense fallback={null}>
+                      {[-rW/2-0.55, rW/2+0.55].map((lx,i)=>(
+                        <group key={i} position={[lx, 0, 0]}>
+                          <GltfMini path={RT_LOUNGER_PATH} targetH={0.38} rotY={i===0?-Math.PI/2:Math.PI/2}/>
+                        </group>
+                      ))}
+                    </Suspense>
+                  </group>
+                );
+              }
+
+              if (r === "rooftop_garden") {
+                const shrubPaths = [RT_SHRUB_PATH, RT_BOXWOOD_PATH, RT_HEDGE_PATH];
+                const cols = Math.max(1, Math.round(rW/1.6));
+                const rows = Math.max(1, Math.round(rD/1.6));
+                return (
+                  <group key={r} position={[px, baseY, pz]}>
+                    {/* grass slab */}
+                    <mesh receiveShadow>
+                      <boxGeometry args={[rW,0.08,rD]}/>
+                      <meshStandardMaterial color="#3C7A4E" roughness={0.95}/>
+                    </mesh>
+                    {/* real shrubs */}
+                    <Suspense fallback={null}>
+                      {Array.from({length:rows*cols},(_,idx)=>{
+                        const row=Math.floor(idx/cols); const col=idx%cols;
+                        const ox=lp(-rW/2+0.4, rW/2-0.4, cols>1?col/(cols-1):0.5);
+                        const oz=lp(-rD/2+0.4, rD/2-0.4, rows>1?row/(rows-1):0.5);
+                        const h=0.45+(idx%3)*0.15;
+                        return (
+                          <group key={idx} position={[ox,0.08,oz]}>
+                            <GltfMini path={shrubPaths[idx%shrubPaths.length]} targetH={h} rotY={(idx*1.4)%(Math.PI*2)}/>
+                          </group>
+                        );
+                      })}
+                      {/* palm accent */}
+                      <group position={[0, 0.08, -rD/2+0.8]}>
+                        <GltfMini path={RT_PALM_PATH} targetH={Math.min(rD*0.5,2.5)}/>
+                      </group>
+                      {/* bonsai pots */}
+                      {([-rW/3, rW/3] as number[]).map((bx,i)=>(
+                        <group key={i} position={[bx,0.08, rD/2-0.5]}>
+                          <GltfMini path={RT_BONSAI_PATH} targetH={0.50} rotY={i*Math.PI}/>
+                        </group>
+                      ))}
+                    </Suspense>
+                  </group>
+                );
+              }
+
+              if (r === "rooftop_bar") {
+                const cH=1.05; const cD2=0.50;
+                const chairs=Math.max(2,Math.floor(rW/0.75));
+                return (
+                  <group key={r} position={[px, baseY, pz]}>
+                    {/* counter */}
+                    <mesh position={[0,cH/2,-rD/2+cD2/2]} castShadow receiveShadow>
+                      <boxGeometry args={[rW*0.9,cH,cD2]}/>
+                      <meshStandardMaterial color="#2C1F14" roughness={0.45}/>
+                    </mesh>
+                    {/* marble top */}
+                    <mesh position={[0,cH+0.03,-rD/2+cD2/2]} castShadow>
+                      <boxGeometry args={[rW*0.9+0.06,0.055,cD2+0.06]}/>
+                      <meshStandardMaterial color="#E8E2D8" roughness={0.1} metalness={0.05}/>
+                    </mesh>
+                    <Suspense fallback={null}>
+                      {Array.from({length:chairs},(_,i)=>{
+                        const t=chairs>1?i/(chairs-1):0.5;
+                        return (
+                          <group key={i} position={[lp(-rW*0.4,rW*0.4,t),0,-rD/2+cD2+0.55]}>
+                            <GltfMini path={RT_CHAIR_PATH} targetH={0.88} rotY={Math.PI}/>
+                          </group>
+                        );
+                      })}
+                      <group position={[0,0,rD/4]}>
+                        <GltfMini path={RT_TABLE_PATH} targetH={0.72}/>
+                      </group>
+                    </Suspense>
+                    <pointLight position={[0,cH+0.6,-rD/2+cD2]} intensity={0.4} distance={Math.max(rW,rD)*1.4} color="#FFD070" decay={2}/>
+                  </group>
+                );
+              }
+
+              if (r === "equipment_room") {
+                const bH=Math.min(Math.max(rD*0.55,1.8),2.6);
+                return (
+                  <group key={r} position={[px, baseY, pz]}>
+                    <mesh position={[0,bH/2,0]} castShadow receiveShadow>
+                      <boxGeometry args={[rW*0.85,bH,rD*0.80]}/>
+                      <meshStandardMaterial color="#6B7280" roughness={0.5} metalness={0.15}/>
+                    </mesh>
+                    {([-0.2,0,0.2] as number[]).map((oz,i)=>(
+                      <mesh key={i} position={[rW*0.425,bH*0.55,oz]} castShadow>
+                        <boxGeometry args={[0.025,0.15,0.05]}/>
+                        <meshStandardMaterial color="#374151" roughness={0.7}/>
+                      </mesh>
+                    ))}
+                  </group>
+                );
+              }
+
+              // fallback: colored zone
               return (
-                <mesh key={r} position={[px, slabY + 0.065, pz]} receiveShadow>
-                  <boxGeometry args={[rW - 0.08, 0.04, rD - 0.08]} />
-                  <meshStandardMaterial color={color} roughness={0.75} transparent opacity={r === "rooftop_pool" ? 0.8 : 1} />
+                <mesh key={r} position={[px, baseY+0.02, pz]} receiveShadow>
+                  <boxGeometry args={[rW-0.08,0.04,rD-0.08]}/>
+                  <meshStandardMaterial color="#C8C0B0" roughness={0.75}/>
                 </mesh>
               );
             })}
