@@ -39,7 +39,8 @@ const RT_PALM_PATH     = "/models/outdoor_tree/palm_tree_lowpoly/palm_tree_lowpo
 const RT_SHRUB_PATH    = "/models/outdoor_shrub/shrub_02/shrub_02_1k.gltf";
 const RT_BOXWOOD_PATH  = "/models/outdoor_plant/boxwood_bush/boxwood_bush.gltf";
 const RT_HEDGE_PATH    = "/models/outdoor_plant/hedge_generic/hedge_generic.gltf";
-const RT_ANTHURIUM_PATH = "/models/outdoor_plant/anthurium_botany_01/anthurium_botany_01_1k.gltf";
+// anthurium + all potted_plant bins are truncated — use cypress (healthy) as accent
+const RT_CYPRESS_PATH   = "/models/outdoor_tree/cypress_tree_lowpoly/cypress_tree_lowpoly.gltf";
 
 const _rtBboxCache = new Map<string, { h: number; minY: number }>();
 function GltfMini({ path, targetH = 1, rotY = 0, scaleX = 1, scaleZ = 1 }: {
@@ -1123,7 +1124,7 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
                       </group>
                       {posts.map(([ox,oz],i)=>(
                         <group key={i} position={[ox*0.65, 0, oz*0.65]}>
-                          <GltfMini path={RT_ANTHURIUM_PATH} targetH={0.45} rotY={i*1.3}/>
+                          <GltfMini path={RT_CYPRESS_PATH} targetH={0.45} rotY={i*1.3}/>
                         </group>
                       ))}
                     </Suspense>

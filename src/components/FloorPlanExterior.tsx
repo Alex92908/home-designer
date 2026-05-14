@@ -2205,8 +2205,8 @@ const LOUNGER_PATH   = "/models/outdoor_furniture/sun_lounger/sun_lounger.gltf";
 const OUTDOOR_SOFA_PATH   = "/models/outdoor_furniture/outdoor_sofa/outdoor_sofa.gltf";
 const GARDEN_TABLE_PATH   = "/models/outdoor_furniture/garden_coffee_table/garden_coffee_table.gltf";
 const DINING_CHAIR_PATH   = "/models/dining_chair/dining_chair_02/dining_chair_02_1k.gltf";
-// potted_plant_01/02/04 bins are truncated — use anthurium (healthy file) instead
-const POTTED_PLANT_PATH   = "/models/outdoor_plant/anthurium_botany_01/anthurium_botany_01_1k.gltf";
+// potted_plant_01/02/04 + anthurium bins truncated — use bonsai (healthy) as compact pot-plant
+const POTTED_PLANT_PATH   = "/models/outdoor_tree/bonsai_lowpoly/bonsai_lowpoly.gltf";
 const BONSAI_PATH         = "/models/outdoor_tree/bonsai_lowpoly/bonsai_lowpoly.gltf";
 
 // ── 动态泳池焦散灯光（animated underwater caustic lights）────────────────────
