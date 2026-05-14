@@ -990,8 +990,8 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
         );
       })}
 
-      {/* ── 屋顶层 (hasRooftop) ── */}
-      {exterior.hasRooftop && (() => {
+      {/* ── 屋顶层 (hasRooftop) — gated on showRoof so button controls it ── */}
+      {exterior.hasRooftop && showRoof && (() => {
         const roofFp = floorPlans[exterior.floors];
         if (!roofFp) return null;
         const roofY = floorCount * FLOOR_H;
@@ -1118,6 +1118,7 @@ export interface GlobalCanvasProps {
 export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }: GlobalCanvasProps = {}) {
   const enabledRooms   = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
   const exteriorFloors = useDesignerStore(s => s.exterior.floors);
+  const hasRooftop     = useDesignerStore(s => s.exterior.hasRooftop);
   const t = useT();
 
   // ── Visibility / layout state (internal fallback when no props) ───────────
@@ -1136,7 +1137,13 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
   const toggleFloor  = onToggleFloor ?? ((fi: number) =>
     setIntVisible(prev => prev.map((v, i) => i === fi ? !v : v)));
 
-  const [showRoof,   setShowRoof]   = useState(false);
+  // showRoof: when hasRooftop is true it controls rooftop-slab visibility;
+  // when false it controls the traditional GlobalRoof toggle.
+  // Auto-enable when hasRooftop becomes true so the floor shows by default.
+  const [showRoof, setShowRoof] = useState(false);
+  useEffect(() => {
+    if (hasRooftop) setShowRoof(true);
+  }, [hasRooftop]);
   const [showStairs, setShowStairs] = useState(true);
   const [stairPos, setStairPos] = useState<{ x: number; z: number } | null>(null);
 
@@ -1213,17 +1220,18 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
 
         <div className="h-px bg-gray-200 my-1" />
 
-        {/* ── Roof ── */}
+        {/* ── Roof / Rooftop floor ── */}
         <button
           onClick={() => setShowRoof(v => !v)}
           className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-bold transition-all"
           style={{
-            background: showRoof ? "#F0FDF4" : "#F3F4F6",
-            color:      showRoof ? "#15803D" : "#9CA3AF",
-            border: `1px solid ${showRoof ? "#BBF7D0" : "#E5E7EB"}`,
+            background: showRoof ? (hasRooftop ? "#FFF7ED" : "#F0FDF4") : "#F3F4F6",
+            color:      showRoof ? (hasRooftop ? "#C2410C" : "#15803D") : "#9CA3AF",
+            border: `1px solid ${showRoof ? (hasRooftop ? "#FED7AA" : "#BBF7D0") : "#E5E7EB"}`,
           }}
         >
-          <span>{showRoof ? "🏠" : "○"}</span> 屋顶
+          <span>{showRoof ? (hasRooftop ? "🏠" : "🏠") : "○"}</span>
+          {hasRooftop ? "天台" : "屋顶"}
         </button>
 
         {/* ── Stairs ── */}
