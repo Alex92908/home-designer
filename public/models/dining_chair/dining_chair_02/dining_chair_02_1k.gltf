@@ -1,16 +1,90 @@
 {
   "asset": {
-    "generator": "glTF-Transform v4.3.0",
+    "generator": "Khronos glTF Blender I/O v1.6.16",
     "version": "2.0"
   },
-  "accessors": [
+  "scene": 0,
+  "scenes": [
     {
-      "type": "SCALAR",
-      "componentType": 5123,
-      "count": 66039
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "dining_chair_02"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "dining_chair_02",
+      "normalTexture": {
+        "index": 0
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 1
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Cube.054",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
     },
     {
-      "type": "VEC3",
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 0,
+      "source": 2
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/jpeg",
+      "name": "dining_chair_02_nor_gl.png",
+      "uri": "textures/dining_chair_02_nor_gl_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "dining_chair_02_diff.png",
+      "uri": "textures/dining_chair_02_diff_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "dining_chair_02_metal-dining_chair_02_rough.png",
+      "uri": "textures/dining_chair_02_arm_1k.jpg"
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
       "componentType": 5126,
       "count": 12891,
       "max": [
@@ -22,134 +96,60 @@
         -0.21678538620471954,
         0.0012850910425186157,
         -0.33102381229400635
-      ]
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC3",
+      "bufferView": 1,
       "componentType": 5126,
-      "count": 12891
+      "count": 12891,
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 2,
       "componentType": 5126,
-      "count": 12891
+      "count": 12891,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5123,
+      "count": 66039,
+      "type": "SCALAR"
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
-      "byteOffset": 0,
-      "byteLength": 72534
+      "byteLength": 154692,
+      "byteOffset": 0
+    },
+    {
+      "buffer": 0,
+      "byteLength": 154692,
+      "byteOffset": 154692
+    },
+    {
+      "buffer": 0,
+      "byteLength": 103128,
+      "byteOffset": 309384
+    },
+    {
+      "buffer": 0,
+      "byteLength": 132078,
+      "byteOffset": 412512
     }
   ],
   "samplers": [
     {
       "magFilter": 9729,
-      "minFilter": 9987,
-      "wrapS": 10497,
-      "wrapT": 10497
-    }
-  ],
-  "textures": [
-    {
-      "source": 1,
-      "sampler": 0
-    },
-    {
-      "source": 0,
-      "sampler": 0
-    },
-    {
-      "source": 2,
-      "sampler": 0
-    }
-  ],
-  "images": [
-    {
-      "name": "dining_chair_02_nor_gl.png",
-      "mimeType": "image/jpeg",
-      "uri": "textures/dining_chair_02_nor_gl_1k.jpg"
-    },
-    {
-      "name": "dining_chair_02_diff.png",
-      "mimeType": "image/jpeg",
-      "uri": "textures/dining_chair_02_diff_1k.jpg"
-    },
-    {
-      "name": "dining_chair_02_metal-dining_chair_02_rough.png",
-      "mimeType": "image/jpeg",
-      "uri": "textures/dining_chair_02_arm_1k.jpg"
+      "minFilter": 9987
     }
   ],
   "buffers": [
     {
-      "uri": "dining_chair_02.bin",
-      "byteLength": 72534
+      "byteLength": 544592,
+      "uri": "dining_chair_02.bin"
     }
-  ],
-  "materials": [
-    {
-      "name": "dining_chair_02",
-      "doubleSided": true,
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 0
-        },
-        "metallicRoughnessTexture": {
-          "index": 2
-        }
-      },
-      "normalTexture": {
-        "index": 1
-      }
-    }
-  ],
-  "meshes": [
-    {
-      "name": "Cube.054",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 1,
-            "NORMAL": 2,
-            "TEXCOORD_0": 3
-          },
-          "mode": 4,
-          "material": 0,
-          "indices": 0,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 0,
-              "attributes": {
-                "POSITION": 0,
-                "NORMAL": 1,
-                "TEXCOORD_0": 2
-              }
-            }
-          }
-        }
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "name": "dining_chair_02",
-      "mesh": 0
-    }
-  ],
-  "scenes": [
-    {
-      "name": "Scene",
-      "nodes": [
-        0
-      ]
-    }
-  ],
-  "scene": 0,
-  "extensionsUsed": [
-    "KHR_draco_mesh_compression"
-  ],
-  "extensionsRequired": [
-    "KHR_draco_mesh_compression"
   ]
 }

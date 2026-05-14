@@ -104,32 +104,33 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
   { kind: "plant.bushSmall",   label: "小灌木", icon: "🌱", category: "plant", glb: "plant_bushSmall",     scale: 1.8, radiusCm: 45, color: "#6B9C45",
     customGltfPath: "/models/outdoor_shrub/shrub_02/shrub_02_1k.gltf",
     customTargetHeightM: 0.6, customAuthor: "Poly Haven CC0" },
-  { kind: "plant.flowerRed",   label: "红掌",   icon: "🌹", category: "plant", glb: "flower_redA",         scale: 1.5, radiusCm: 30, color: "#E04848",
+  { kind: "plant.flowerRed",   label: "红掌",   icon: "🌹", category: "plant", glb: "flower_redA",    scale: 1.5, radiusCm: 30, color: "#E04848",
     customGltfPath: "/models/outdoor_plant/anthurium_botany_01/anthurium_botany_01_1k.gltf",
     customTargetHeightM: 0.65, customAuthor: "Poly Haven CC0" },
-  { kind: "plant.flowerYellow",label: "蒲公英", icon: "🌻", category: "plant", glb: "flower_yellowA",      scale: 1.5, radiusCm: 30, color: "#E8B838",
+  { kind: "plant.flowerYellow",label: "蒲公英", icon: "🌻", category: "plant", glb: "flower_yellowA", scale: 1.5, radiusCm: 30, color: "#E8B838",
     customGltfPath: "/models/outdoor_plant/dandelion_01/dandelion_01_1k.gltf",
     customTargetHeightM: 0.28, customAuthor: "Poly Haven CC0" },
-  { kind: "plant.flowerPurple",label: "白屈菜", icon: "💜", category: "plant", glb: "flower_purpleA",      scale: 1.5, radiusCm: 30, color: "#9F5BC8",
+  { kind: "plant.flowerPurple",label: "白屈菜", icon: "💜", category: "plant", glb: "flower_purpleA", scale: 1.5, radiusCm: 30, color: "#9F5BC8",
     customGltfPath: "/models/outdoor_plant/celandine_01/celandine_01_1k.gltf",
     customTargetHeightM: 0.25, customAuthor: "Poly Haven CC0" },
-  // crystalline_iceplant 的 .bin 被截断（96KB），accessor 长 29488 解不出
-  // → "Invalid typed array length"。删 customGltfPath 走程序化 fallback，
-  // 等 .bin 重新下载完整后再开。
-  { kind: "plant.grass",       label: "冰草",   icon: "🌾", category: "plant", glb: "grass_large",         scale: 1.6, radiusCm: 35, color: "#7CA45A" },
-  { kind: "plant.cactus",      label: "仙人掌", icon: "🌵", category: "plant", glb: "cactus_tall",         scale: 2.5, radiusCm: 35, color: "#5A8B5A",
+  { kind: "plant.grass",       label: "冰草",   icon: "🌾", category: "plant", glb: "grass_large",    scale: 1.6, radiusCm: 35, color: "#7CA45A",
+    customGltfPath: "/models/outdoor_plant/crystalline_iceplant/crystalline_iceplant_1k.gltf",
+    customTargetHeightM: 0.15, customAuthor: "Poly Haven CC0" },
+  { kind: "plant.cactus",      label: "仙人掌", icon: "🌵", category: "plant", glb: "cactus_tall",    scale: 2.5, radiusCm: 35, color: "#5A8B5A",
     customGltfPath: "/models/outdoor_plant/cheiridopsis_succulent/cheiridopsis_succulent_1k.gltf",
     customTargetHeightM: 0.22, customAuthor: "Poly Haven CC0" },
-  // calathea_orbifolia_01 .bin 截断（116KB 实际 vs 254KB 声明）→ 解析崩溃。
-  // 删 customGltfPath 走程序化 fallback，等文件重新完整下载后再开。
-  { kind: "plant.lily",        label: "海芋",   icon: "🪷", category: "plant", glb: "lily_large",          scale: 1.8, radiusCm: 40, color: "#E8A8C8" },
+  { kind: "plant.lily",        label: "海芋",   icon: "🪷", category: "plant", glb: "lily_large",          scale: 1.8, radiusCm: 40, color: "#E8A8C8",
+    customGltfPath: "/models/outdoor_plant/calathea_orbifolia_01/calathea_orbifolia_01_1k.gltf",
+    customTargetHeightM: 0.5, customAuthor: "Poly Haven CC0" },
   { kind: "plant.mushroom",    label: "蘑菇",   icon: "🍄", category: "plant", glb: "mushroom_redGroup",   scale: 1.5, radiusCm: 30, color: "#D04848" },
 
   // ── Rocks ──
-  // NOTE: boulder_01 and coast_rocks_01 .bin files are truncated (incomplete
-  // downloads). customGltfPath removed until files are re-downloaded intact.
-  { kind: "rock.large",      label: "大岩石", icon: "🪨", category: "rock", glb: "rock_largeA",     scale: 2.5, radiusCm: 70, color: "#888888" },
-  { kind: "rock.small",      label: "小岩石", icon: "🪨", category: "rock", glb: "rock_smallA",     scale: 1.8, radiusCm: 40, color: "#9C9C9C" },
+  { kind: "rock.large",      label: "大岩石", icon: "🪨", category: "rock", glb: "rock_largeA",     scale: 2.5, radiusCm: 70, color: "#888888",
+    customGltfPath: "/models/outdoor_rock/boulder_01/boulder_01_1k.gltf",
+    customTargetHeightM: 0.8, customAuthor: "Poly Haven CC0" },
+  { kind: "rock.small",      label: "小岩石", icon: "🪨", category: "rock", glb: "rock_smallA",     scale: 1.8, radiusCm: 40, color: "#9C9C9C",
+    customGltfPath: "/models/outdoor_rock/coast_rocks_01/coast_rocks_01_1k.gltf",
+    customTargetHeightM: 0.4, customAuthor: "Poly Haven CC0" },
   { kind: "rock.tall",       label: "立石",   icon: "🗿", category: "rock", glb: "rock_tallA",      scale: 2.2, radiusCm: 50, color: "#7C7C7C" },
   { kind: "rock.flat",       label: "平石",   icon: "⬜", category: "rock", glb: "rock_smallFlatA", scale: 2.0, radiusCm: 60, color: "#A8A8A8" },
   { kind: "rock.stoneTall",  label: "高石",   icon: "🗻", category: "rock", glb: "stone_tallA",     scale: 2.2, radiusCm: 45, color: "#9C8C7C" },

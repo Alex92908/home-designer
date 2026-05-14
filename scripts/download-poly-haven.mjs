@@ -5,6 +5,7 @@
  * Usage:
  *   node scripts/download-poly-haven.mjs             # download default list
  *   node scripts/download-poly-haven.mjs --res=2k    # higher-res textures
+ *   node scripts/download-poly-haven.mjs --force     # re-download even if present (fix corrupt bins)
  *
  * Assets are CC0 (https://polyhaven.com/license).
  *
@@ -63,24 +64,42 @@ const ASSETS = [
   { slug: "ArmChair_01",               category: "accent_chair" },
 
   // ── Round 4: outdoor landscape — shrubs, rocks, plants ───────
+  // shrub_02 OK; shrub_01/03/04 .bin truncated (30-49%) — re-download
   { slug: "shrub_01",               category: "outdoor_shrub" },
   { slug: "shrub_02",               category: "outdoor_shrub" },
   { slug: "shrub_03",               category: "outdoor_shrub" },
   { slug: "shrub_04",               category: "outdoor_shrub" },
   { slug: "boulder_01",             category: "outdoor_rock"  },
   { slug: "coast_rocks_01",         category: "outdoor_rock"  },
+  // Plants — all .bin truncated (30-49%) — re-download all
   { slug: "crystalline_iceplant",   category: "outdoor_plant" },
   { slug: "cheiridopsis_succulent", category: "outdoor_plant" },
   { slug: "anthurium_botany_01",    category: "outdoor_plant" },
   { slug: "calathea_orbifolia_01",  category: "outdoor_plant" },
   { slug: "dandelion_01",           category: "outdoor_plant" },
   { slug: "celandine_01",           category: "outdoor_plant" },
+  // Potted plants — .bin truncated (36-47%) — re-download
+  { slug: "potted_plant_01",        category: "plant"         },
+  { slug: "potted_plant_02",        category: "plant"         },
+  { slug: "potted_plant_04",        category: "plant"         },
+  // Dresser — .bin truncated (38%) — re-download
+  { slug: "drawer_cabinet",         category: "dresser"       },
+
+  // ── Round 5: outdoor furniture alternatives (Poly Haven CC0) ──
+  // Sketchfab outdoor furniture has no gltf download available.
+  // These Poly Haven models serve as stand-ins:
+  { slug: "outdoor_table_chair_set_01", category: "outdoor_furniture" },  // dining set
+  { slug: "planter_pot_clay",           category: "outdoor_furniture" },  // large planter
+  { slug: "planter_box_01",             category: "outdoor_furniture" },  // rectangular planter
+  { slug: "stone_fire_pit",             category: "outdoor_furniture" },  // outdoor fireplace
+  { slug: "painted_wooden_bench",       category: "outdoor_furniture" },  // garden bench
 ];
 
 // ── CLI flags ──────────────────────────────────────────────────
 const argv = process.argv.slice(2);
 const resArg = argv.find(a => a.startsWith("--res="));
 const RES = resArg ? resArg.split("=")[1] : "1k"; // 1k | 2k | 4k
+const FORCE = argv.includes("--force");            // re-download even if present
 
 const API = "https://api.polyhaven.com";
 const ROOT = path.resolve(process.cwd(), "public", "models");
@@ -93,13 +112,14 @@ async function fetchJSON(url) {
 }
 
 async function downloadTo(url, dest) {
-  // Skip if file already exists with non-zero size (resume after
-  // interrupted run). We don't verify checksum for speed — if user
-  // suspects corruption they should rm the file and rerun.
-  try {
-    const stat = await fs.stat(dest);
-    if (stat.size > 0) return { size: stat.size, skipped: true };
-  } catch { /* missing, proceed */ }
+  // Skip if file already exists with non-zero size (resume after interrupted
+  // run). Pass --force on CLI to re-download and fix truncated .bin files.
+  if (!FORCE) {
+    try {
+      const stat = await fs.stat(dest);
+      if (stat.size > 0) return { size: stat.size, skipped: true };
+    } catch { /* missing, proceed */ }
+  }
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
   await fs.mkdir(path.dirname(dest), { recursive: true });

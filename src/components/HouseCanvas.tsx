@@ -6067,6 +6067,34 @@ function InsideCameraAnimator({ active, camPos, lookAt, teleport = false }: {
   return null;
 }
 
+/** Smoothly flies camera to a preset position. Calls onDone when animation completes. */
+function CameraFlyTo({ pos, tgt, onDone }: {
+  pos: THREE.Vector3;
+  tgt: THREE.Vector3;
+  onDone: () => void;
+}) {
+  const { camera } = useThree();
+  const controls = useThree(s => s.controls) as any;
+  const doneRef = useRef(false);
+  const posRef = useRef(pos);
+  const tgtRef = useRef(tgt);
+  posRef.current = pos;
+  tgtRef.current = tgt;
+  useFrame(() => {
+    if (doneRef.current) return;
+    const p = posRef.current, t = tgtRef.current;
+    camera.position.lerp(p, 0.08);
+    if (controls?.target) { controls.target.lerp(t, 0.08); controls.update?.(); }
+    if (camera.position.distanceTo(p) < 0.12) {
+      camera.position.copy(p);
+      if (controls?.target) { controls.target.copy(t); controls.update?.(); }
+      doneRef.current = true;
+      onDone();
+    }
+  });
+  return null;
+}
+
 // ─── Main export ────────────────────────────────────────────
 export default function HouseCanvas() {
   const exterior      = useDesignerStore(s => s.exterior);
@@ -6084,6 +6112,9 @@ export default function HouseCanvas() {
   const insideBuilding = walkthrough;
   const [walkthroughSpawn, setWalkthroughSpawn] = useState<[number, number, number] | null>(null);
   const [wallXray, setWallXray] = useState(false);
+  // tick-based fly-to: 0=idle, >0 top-view, <0 reset-view
+  const [flyTick, setFlyTick] = useState(0);
+  const zoomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const exitWalkthrough = () => { setWalkthrough(false); setWalkthroughSpawn(null); };
 
   // Build room AABBs in world coords for collision. Reads layout/dims from
@@ -6292,6 +6323,71 @@ export default function HouseCanvas() {
         </>
       )}
 
+      {/* ── Zoom + view buttons ── bottom-right ── */}
+      {!walkthrough && (
+        <div className="absolute bottom-20 right-4 z-20 flex flex-col gap-1 select-none">
+          {([
+            { label: "+", title: "放大", factor: 0.88 },
+            { label: "−", title: "缩小", factor: 1.14 },
+            { label: "⊙", title: "俯视", factor: 0 },
+            { label: "⌂", title: "重置视角", factor: 0 },
+          ] as { label: string; title: string; factor: number }[]).map(({ label, title, factor }) => {
+            const stopZoom = () => {
+              if (zoomTimerRef.current) { clearInterval(zoomTimerRef.current); zoomTimerRef.current = null; }
+            };
+            const applyZoom = (f: number) => {
+              const ctrl = orbitRef.current;
+              if (!ctrl) return;
+              const cam = ctrl.object as THREE.Camera;
+              const tgt = ctrl.target as THREE.Vector3;
+              const offset = cam.position.clone().sub(tgt);
+              const r = Math.max(ctrl.minDistance, Math.min(ctrl.maxDistance, offset.length() * f));
+              offset.setLength(r);
+              cam.position.copy(tgt).add(offset);
+              ctrl.update();
+            };
+            return (
+              <button
+                key={label}
+                title={title}
+                onPointerDown={e => {
+                  e.stopPropagation();
+                  if (factor === 0) {
+                    if (label === "⊙") setFlyTick(t => t > 0 ? t + 1 : 1);
+                    else setFlyTick(t => t < 0 ? t - 1 : -1);
+                    return;
+                  }
+                  stopZoom();
+                  applyZoom(factor);
+                  zoomTimerRef.current = setInterval(() => applyZoom(factor), 80);
+                }}
+                onPointerUp={stopZoom}
+                onPointerLeave={stopZoom}
+                onPointerCancel={stopZoom}
+                style={{
+                  width: 36, height: 36,
+                  borderRadius: 10,
+                  background: "rgba(8,10,20,0.80)",
+                  backdropFilter: "blur(12px)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "#fff",
+                  fontSize: label === "⊙" || label === "⌂" ? 16 : 20,
+                  lineHeight: 1,
+                  cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.4)",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(30,40,60,0.92)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "rgba(8,10,20,0.80)")}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── Sun Analysis Slider ── bottom-centre, draggable 0-24h ── */}
       <div
         className="absolute bottom-4 left-1/2 z-10 flex items-center gap-3 select-none"
@@ -6396,6 +6492,24 @@ export default function HouseCanvas() {
       >
         {/* Fog disabled when inside — would darken interior surfaces */}
         {!insideBuilding && <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />}
+        {!walkthrough && flyTick !== 0 && (() => {
+          const h = floors * FLOOR_H;
+          const done = () => setFlyTick(0);
+          if (flyTick > 0) {
+            const dist = Math.max(W, D) * 1.1 + h * 0.8 + 10;
+            return <CameraFlyTo key="top"
+              pos={new THREE.Vector3(0, dist + h, 0.5)}
+              tgt={new THREE.Vector3(0, h * 0.1, 0)}
+              onDone={done} />;
+          }
+          const diag = Math.sqrt(W * W + D * D);
+          const dist = diag * 1.15 + 5;
+          const camY = h * 0.65 + 1.8;
+          return <CameraFlyTo key="reset"
+            pos={new THREE.Vector3(-dist * 0.48, camY, -dist * 0.78)}
+            tgt={new THREE.Vector3(0, h * 0.30, 0)}
+            onDone={done} />;
+        })()}
         <ExteriorCaptureSetup />
         {!walkthrough && <CameraRig W={W} D={D} floors={floors} buildingType={_buildingType} />}
         <InsideCameraAnimator
@@ -6414,6 +6528,7 @@ export default function HouseCanvas() {
             minPolarAngle={0}
             maxPolarAngle={Math.PI * 0.58}
             rotateSpeed={1.2}
+            zoomSpeed={1.2}
             minDistance={2}
             maxDistance={80}
             panSpeed={0.6}

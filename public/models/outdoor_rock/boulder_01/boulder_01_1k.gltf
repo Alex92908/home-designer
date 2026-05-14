@@ -1,126 +1,38 @@
 {
   "asset": {
-    "generator": "glTF-Transform v4.3.0",
+    "generator": "Khronos glTF Blender I/O v4.0.44",
     "version": "2.0"
   },
-  "accessors": [
+  "scene": 0,
+  "scenes": [
     {
-      "type": "SCALAR",
-      "componentType": 5125,
-      "count": 198366,
-      "bufferView": 0,
-      "byteOffset": 0
-    },
-    {
-      "type": "VEC3",
-      "componentType": 5120,
-      "count": 67042,
-      "normalized": true,
-      "bufferView": 1,
-      "byteOffset": 0
-    },
-    {
-      "type": "VEC3",
-      "componentType": 5122,
-      "count": 67042,
-      "max": [
-        22774,
-        17970,
-        32767
-      ],
-      "min": [
-        -22774,
-        -17970,
-        -32767
-      ],
-      "normalized": true,
-      "bufferView": 1,
-      "byteOffset": 4
-    },
-    {
-      "type": "VEC2",
-      "componentType": 5123,
-      "count": 67042,
-      "normalized": true,
-      "bufferView": 1,
-      "byteOffset": 12
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
     }
   ],
-  "bufferViews": [
+  "nodes": [
     {
-      "buffer": 0,
-      "byteOffset": 0,
-      "byteLength": 793464,
-      "target": 34963
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 793464,
-      "byteLength": 1072672,
-      "byteStride": 16,
-      "target": 34962
-    }
-  ],
-  "samplers": [
-    {
-      "magFilter": 9729,
-      "minFilter": 9987,
-      "wrapS": 10497,
-      "wrapT": 10497
-    }
-  ],
-  "textures": [
-    {
-      "source": 1,
-      "sampler": 0
-    },
-    {
-      "source": 0,
-      "sampler": 0
-    },
-    {
-      "source": 2,
-      "sampler": 0
-    }
-  ],
-  "images": [
-    {
-      "name": "boulder_01_nor_gl",
-      "mimeType": "image/jpeg",
-      "uri": "textures/boulder_01_nor_gl_1k.jpg"
-    },
-    {
-      "name": "boulder_01_diff",
-      "mimeType": "image/jpeg",
-      "uri": "textures/boulder_01_diff_1k.jpg"
-    },
-    {
-      "name": "boulder_01_rough",
-      "mimeType": "image/jpeg",
-      "uri": "textures/boulder_01_arm_1k.jpg"
-    }
-  ],
-  "buffers": [
-    {
-      "uri": "boulder_01.bin",
-      "byteLength": 1866136
+      "mesh": 0,
+      "name": "boulder_01"
     }
   ],
   "materials": [
     {
-      "name": "boulder_01",
       "doubleSided": true,
+      "name": "boulder_01",
+      "normalTexture": {
+        "index": 0
+      },
       "pbrMetallicRoughness": {
-        "metallicFactor": 0,
         "baseColorTexture": {
-          "index": 0
+          "index": 1
         },
+        "metallicFactor": 0,
         "metallicRoughnessTexture": {
           "index": 2
         }
-      },
-      "normalTexture": {
-        "index": 1
       }
     }
   ],
@@ -130,46 +42,119 @@
       "primitives": [
         {
           "attributes": {
+            "POSITION": 0,
             "NORMAL": 1,
-            "POSITION": 2,
-            "TEXCOORD_0": 3
+            "TEXCOORD_0": 2
           },
-          "mode": 4,
-          "material": 0,
-          "indices": 0
+          "indices": 3,
+          "material": 0
         }
       ]
     }
   ],
-  "nodes": [
+  "textures": [
     {
-      "name": "boulder_01",
-      "translation": [
-        -0.11209189891815186,
-        0.4282721281051636,
-        -0.0332733690738678
-      ],
-      "scale": [
-        0.9151671230792999,
-        0.9151671230792999,
-        0.9151671230792999
-      ],
-      "mesh": 0
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 0,
+      "source": 2
     }
   ],
-  "scenes": [
+  "images": [
     {
-      "name": "Scene",
-      "nodes": [
-        0
-      ]
+      "mimeType": "image/jpeg",
+      "name": "boulder_01_nor_gl",
+      "uri": "textures/boulder_01_nor_gl_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "boulder_01_diff",
+      "uri": "textures/boulder_01_diff_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "boulder_01_rough",
+      "uri": "textures/boulder_01_arm_1k.jpg"
     }
   ],
-  "scene": 0,
-  "extensionsUsed": [
-    "KHR_mesh_quantization"
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 67042,
+      "max": [
+        0.5239759087562561,
+        0.9301872253417969,
+        0.8818937540054321
+      ],
+      "min": [
+        -0.7481597065925598,
+        -0.07364296913146973,
+        -0.9484404921531677
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 67042,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 67042,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5125,
+      "count": 198366,
+      "type": "SCALAR"
+    }
   ],
-  "extensionsRequired": [
-    "KHR_mesh_quantization"
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 804504,
+      "byteOffset": 0,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 804504,
+      "byteOffset": 804504,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 536336,
+      "byteOffset": 1609008,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 793464,
+      "byteOffset": 2145344,
+      "target": 34963
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 2938808,
+      "uri": "boulder_01.bin"
+    }
   ]
 }

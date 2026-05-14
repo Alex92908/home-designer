@@ -1,16 +1,144 @@
 {
   "asset": {
-    "generator": "glTF-Transform v4.3.0",
+    "generator": "Khronos glTF Blender I/O v4.0.44",
     "version": "2.0"
   },
-  "accessors": [
+  "scene": 0,
+  "scenes": [
     {
-      "type": "SCALAR",
-      "componentType": 5123,
-      "count": 1446
+      "name": "Scene",
+      "nodes": [
+        0,
+        1,
+        2
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "painted_wooden_cabinet_02"
     },
     {
-      "type": "VEC3",
+      "mesh": 1,
+      "name": "painted_wooden_cabinet_02_drawer",
+      "translation": [
+        -0.0002657175064086914,
+        1.0177390575408936,
+        0.12031605839729309
+      ]
+    },
+    {
+      "mesh": 2,
+      "name": "painted_wooden_cabinet_02_door",
+      "rotation": [
+        0,
+        0.040126629173755646,
+        0,
+        0.9991946220397949
+      ],
+      "translation": [
+        0.28470778465270996,
+        0.4712721109390259,
+        0.3267021179199219
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "painted_wooden_cabinet_02",
+      "normalTexture": {
+        "index": 0
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 1
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "cabinet.002",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "name": "cabinet.001",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 4,
+            "NORMAL": 5,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "name": "cabinet.003",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 8,
+            "NORMAL": 9,
+            "TEXCOORD_0": 10
+          },
+          "indices": 11,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 0,
+      "source": 2
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/jpeg",
+      "name": "painted_wooden_cabinet_02_nor_gl",
+      "uri": "textures/painted_wooden_cabinet_02_nor_gl_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "painted_wooden_cabinet_02_diff",
+      "uri": "textures/painted_wooden_cabinet_02_diff_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "painted_wooden_cabinet_02_metal-painted_wooden_cabinet_02_rough",
+      "uri": "textures/painted_wooden_cabinet_02_arm_1k.jpg"
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
       "componentType": 5126,
       "count": 548,
       "max": [
@@ -22,25 +150,29 @@
         -0.49846675992012024,
         -0.0010216402588412166,
         -0.3221842646598816
-      ]
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC3",
+      "bufferView": 1,
       "componentType": 5126,
-      "count": 548
+      "count": 548,
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 2,
       "componentType": 5126,
-      "count": 548
+      "count": 548,
+      "type": "VEC2"
     },
     {
-      "type": "SCALAR",
+      "bufferView": 3,
       "componentType": 5123,
-      "count": 948
+      "count": 1446,
+      "type": "SCALAR"
     },
     {
-      "type": "VEC3",
+      "bufferView": 4,
       "componentType": 5126,
       "count": 324,
       "max": [
@@ -52,25 +184,29 @@
         -0.46241724491119385,
         -0.10944926738739014,
         -0.25938159227371216
-      ]
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC3",
+      "bufferView": 5,
       "componentType": 5126,
-      "count": 324
+      "count": 324,
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 6,
       "componentType": 5126,
-      "count": 324
+      "count": 324,
+      "type": "VEC2"
     },
     {
-      "type": "SCALAR",
+      "bufferView": 7,
       "componentType": 5123,
-      "count": 504
+      "count": 948,
+      "type": "SCALAR"
     },
     {
-      "type": "VEC3",
+      "bufferView": 8,
       "componentType": 5126,
       "count": 176,
       "max": [
@@ -82,220 +218,112 @@
         -0.5695545673370361,
         -0.43679293990135193,
         -0.03810366988182068
-      ]
+      ],
+      "type": "VEC3"
     },
     {
-      "type": "VEC3",
+      "bufferView": 9,
       "componentType": 5126,
-      "count": 176
+      "count": 176,
+      "type": "VEC3"
     },
     {
-      "type": "VEC2",
+      "bufferView": 10,
       "componentType": 5126,
-      "count": 176
+      "count": 176,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5123,
+      "count": 504,
+      "type": "SCALAR"
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
+      "byteLength": 6576,
       "byteOffset": 0,
-      "byteLength": 3228
+      "target": 34962
     },
     {
       "buffer": 0,
-      "byteOffset": 3228,
-      "byteLength": 1971
+      "byteLength": 6576,
+      "byteOffset": 6576,
+      "target": 34962
     },
     {
       "buffer": 0,
-      "byteOffset": 5199,
-      "byteLength": 1179
+      "byteLength": 4384,
+      "byteOffset": 13152,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 2892,
+      "byteOffset": 17536,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 3888,
+      "byteOffset": 20428,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 3888,
+      "byteOffset": 24316,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 2592,
+      "byteOffset": 28204,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1896,
+      "byteOffset": 30796,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 2112,
+      "byteOffset": 32692,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 2112,
+      "byteOffset": 34804,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1408,
+      "byteOffset": 36916,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1008,
+      "byteOffset": 38324,
+      "target": 34963
     }
   ],
   "samplers": [
     {
       "magFilter": 9729,
-      "minFilter": 9987,
-      "wrapS": 10497,
-      "wrapT": 10497
-    }
-  ],
-  "textures": [
-    {
-      "source": 1,
-      "sampler": 0
-    },
-    {
-      "source": 0,
-      "sampler": 0
-    },
-    {
-      "source": 2,
-      "sampler": 0
-    }
-  ],
-  "images": [
-    {
-      "name": "painted_wooden_cabinet_02_nor_gl",
-      "mimeType": "image/jpeg",
-      "uri": "textures/painted_wooden_cabinet_02_nor_gl_1k.jpg"
-    },
-    {
-      "name": "painted_wooden_cabinet_02_diff",
-      "mimeType": "image/jpeg",
-      "uri": "textures/painted_wooden_cabinet_02_diff_1k.jpg"
-    },
-    {
-      "name": "painted_wooden_cabinet_02_metal-painted_wooden_cabinet_02_rough",
-      "mimeType": "image/jpeg",
-      "uri": "textures/painted_wooden_cabinet_02_arm_1k.jpg"
+      "minFilter": 9987
     }
   ],
   "buffers": [
     {
-      "uri": "painted_wooden_cabinet_02.bin",
-      "byteLength": 6378
+      "byteLength": 39332,
+      "uri": "painted_wooden_cabinet_02.bin"
     }
-  ],
-  "materials": [
-    {
-      "name": "painted_wooden_cabinet_02",
-      "doubleSided": true,
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 0
-        },
-        "metallicRoughnessTexture": {
-          "index": 2
-        }
-      },
-      "normalTexture": {
-        "index": 1
-      }
-    }
-  ],
-  "meshes": [
-    {
-      "name": "cabinet.002",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 1,
-            "NORMAL": 2,
-            "TEXCOORD_0": 3
-          },
-          "mode": 4,
-          "material": 0,
-          "indices": 0,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 0,
-              "attributes": {
-                "POSITION": 0,
-                "NORMAL": 1,
-                "TEXCOORD_0": 2
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "cabinet.001",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 5,
-            "NORMAL": 6,
-            "TEXCOORD_0": 7
-          },
-          "mode": 4,
-          "material": 0,
-          "indices": 4,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 1,
-              "attributes": {
-                "POSITION": 0,
-                "NORMAL": 1,
-                "TEXCOORD_0": 2
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "cabinet.003",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 9,
-            "NORMAL": 10,
-            "TEXCOORD_0": 11
-          },
-          "mode": 4,
-          "material": 0,
-          "indices": 8,
-          "extensions": {
-            "KHR_draco_mesh_compression": {
-              "bufferView": 2,
-              "attributes": {
-                "POSITION": 0,
-                "NORMAL": 1,
-                "TEXCOORD_0": 2
-              }
-            }
-          }
-        }
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "name": "painted_wooden_cabinet_02",
-      "mesh": 0
-    },
-    {
-      "name": "painted_wooden_cabinet_02_drawer",
-      "translation": [
-        -0.0002657175064086914,
-        1.0177390575408936,
-        0.12031605839729309
-      ],
-      "mesh": 1
-    },
-    {
-      "name": "painted_wooden_cabinet_02_door",
-      "translation": [
-        0.28470778465270996,
-        0.4712721109390259,
-        0.3267021179199219
-      ],
-      "rotation": [
-        0,
-        0.040126629173755646,
-        0,
-        0.9991946220397949
-      ],
-      "mesh": 2
-    }
-  ],
-  "scenes": [
-    {
-      "name": "Scene",
-      "nodes": [
-        0,
-        1,
-        2
-      ]
-    }
-  ],
-  "scene": 0,
-  "extensionsUsed": [
-    "KHR_draco_mesh_compression"
-  ],
-  "extensionsRequired": [
-    "KHR_draco_mesh_compression"
   ]
 }
