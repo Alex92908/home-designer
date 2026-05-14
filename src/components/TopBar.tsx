@@ -42,8 +42,8 @@ function FloorSwitcher() {
   const activeColor = isRooftopActive ? "#DC2626" : FLOOR_COLORS[activeFloor % FLOOR_COLORS.length];
   const activeLabel = isRooftopActive ? "🏠屋顶" : `${activeFloor + 1}F`;
 
-  // Use inline pills for ≤4 total options (fits nicely); dropdown for more
-  const useDropdown = totalOptions > 4;
+  // Use inline pills for ≤5 total options (4 floors + optional rooftop); dropdown for more
+  const useDropdown = totalOptions > 5;
 
   const selectFloor = (idx: number) => {
     if (idx === rooftopIdx) {
