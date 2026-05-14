@@ -11,7 +11,7 @@ import "@/lib/preload";
 const _VISITED_KEY = "home-designer-visited";
 let _sampleLoadedThisSession = false;
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import LeftPanel from "@/components/LeftPanel";
 import RightPanel from "@/components/RightPanel";
 import ExteriorPanel from "@/components/ExteriorPanel";
@@ -181,13 +181,6 @@ export default function Home() {
   // 默认值不一致 → React 报 hydration mismatch（移动端 Chrome 尤其
   // 敏感）。等第一次 useEffect 跑完再渲染真正依赖 store 的内容。
   const [mounted, setMounted] = useState(false);
-  // WebGL canvas keepalive — mount on first visit, auto-evict after 5 min idle
-  // so GPU memory is released when user hasn't touched that view for a while.
-  const [exteriorEverShown, setExteriorEverShown] = useState(false);
-  const [global3dEverShown, setGlobal3dEverShown] = useState(false);
-  const exteriorEvictTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const global3dEvictTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const EVICT_MS = 5 * 60 * 1000; // 5 minutes
 
   // After mount, collapse panels on mobile viewports + flip mounted flag.
   // On first-ever visit (no persisted state), load the glass-villa sample so
@@ -280,28 +273,6 @@ export default function Home() {
   const isYard2d   = viewMode === "yard2d";
   const isGlobal3d = viewMode === "global3d";
   const isExterior = viewMode === "exterior" || isYard2d;
-
-  // When switching away from a view, start the eviction timer.
-  // When switching back, cancel the timer and keep it alive.
-  useEffect(() => {
-    if (isExterior) {
-      if (exteriorEvictTimer.current) { clearTimeout(exteriorEvictTimer.current); exteriorEvictTimer.current = null; }
-      setExteriorEverShown(true);
-    } else if (exteriorEverShown) {
-      exteriorEvictTimer.current = setTimeout(() => setExteriorEverShown(false), EVICT_MS);
-    }
-    return () => { if (exteriorEvictTimer.current) clearTimeout(exteriorEvictTimer.current); };
-  }, [isExterior]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (isGlobal3d) {
-      if (global3dEvictTimer.current) { clearTimeout(global3dEvictTimer.current); global3dEvictTimer.current = null; }
-      setGlobal3dEverShown(true);
-    } else if (global3dEverShown) {
-      global3dEvictTimer.current = setTimeout(() => setGlobal3dEverShown(false), EVICT_MS);
-    }
-    return () => { if (global3dEvictTimer.current) clearTimeout(global3dEvictTimer.current); };
-  }, [isGlobal3d]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Per-side panel routing.
   const showRoomSidebar = !isAll && !isExterior && !isGlobal3d;
@@ -422,17 +393,9 @@ export default function Home() {
           {viewMode === "3d"  && <RoomCanvas />}
           {viewMode === "2d"  && <FloorPlan />}
           {isAll      && <FloorPlanAll />}
-          {(isGlobal3d || global3dEverShown) && (
-            <div className={isGlobal3d ? "w-full h-full" : "absolute inset-0 opacity-0 pointer-events-none -z-10"}>
-              <GlobalCanvas />
-            </div>
-          )}
+          {isGlobal3d && <GlobalCanvas />}
           {isExterior && viewMode === "yard2d" && <YardPlan />}
-          {(viewMode === "exterior" || exteriorEverShown) && (
-            <div className={viewMode === "exterior" ? "w-full h-full" : "absolute inset-0 opacity-0 pointer-events-none -z-10"}>
-              <HouseCanvas />
-            </div>
-          )}
+          {viewMode === "exterior" && <HouseCanvas />}
 
           {/* AI Render + Import floating buttons — only in 3D/2D/exterior views,
               hidden in 全局/全局3D/院子 to avoid blocking floor-plan controls */}
