@@ -1622,6 +1622,8 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       setExterior: (patch) => set(s => {
+        // Clamp exterior floors to 1–3 max (visual exterior cap)
+        if (patch.floors !== undefined) patch = { ...patch, floors: Math.max(1, Math.min(3, patch.floors)) };
         const newExterior = { ...s.exterior, ...patch };
         let floorPlans = s.floorPlans;
         const targetFloors = newExterior.floors; // desired regular-floor count
