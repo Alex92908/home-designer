@@ -6178,9 +6178,21 @@ function WalkthroughController({
       if (hy < camera.position.y - 0.1 && hy > camera.position.y - 2.5 && hy > bbox.minY - 1) {
         const target = hy + 1.6;
         const diff   = target - camera.position.y;
-        // Climb stairs faster (6/s) than descend (10/s) — rising feels responsive,
-        // descending snaps to avoid floating off a landing. Uses real frame dt.
-        const rate = diff > 0 ? 6 : 10;
+        // Natural stair-climb feel:
+        // - rate 14/s climbing: matches the ~93ms-per-step pace of walking
+        //   forward at 3 m/s across a 28cm tread. Lower rates (was 6/s)
+        //   left the camera trailing the geometry by half a step, making
+        //   stairs feel like a sticky escalator.
+        // - rate 18/s descending: a touch faster than the climb so the
+        //   eye snaps onto a lower tread instead of "floating" down.
+        // - For tiny vertical changes (<3 cm — flat-floor noise, step
+        //   nosing) bump the rate so the camera isn't visibly drifting
+        //   when standing still.
+        const absDiff = Math.abs(diff);
+        let rate: number;
+        if (absDiff < 0.03)    rate = 30;
+        else if (diff > 0)     rate = 14;
+        else                   rate = 18;
         camera.position.y += diff * Math.min(1, rate * dt);
         floorYRef.current = hy;   // remember this floor for the fallback
         return;
@@ -6420,6 +6432,15 @@ export default function HouseCanvas() {
     for (const fp of floorPlansForWalk) {
       if (!fp) continue;
       for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+        // Skip hallway + stair from the collision AABB set: those are the
+        // pass-through "circulation" spaces (corridors and the stair shaft).
+        // If we include them as their own AABBs, blocksMovement treats a
+        // room→hallway step as "crossing into a different room" and blocks
+        // it, even though IRL there's a doorway. Treating them as free
+        // walking space means moving from any room to the hallway counts
+        // as "both endpoints outside any AABB" → allowed. Outer building
+        // bbox still clamps so user can't leave the footprint.
+        if (r === "hallway" || r === "stair") continue;
         const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
         if (!p || !d) continue;
         // World rect: x∈[(p.x-minX)*CM - W/2, (p.x+w-minX)*CM - W/2]
@@ -6477,10 +6498,10 @@ export default function HouseCanvas() {
   // Joystick state for touch devices — bound to a HUD widget below.
   const [joystick, setJoystick] = useState({ axisX: 0, axisZ: 0 });
   // "Ghost mode": disable internal wall collision so user can walk through
-  // walls. Default ON — rooms share walls so AABB-based collision traps the
-  // player immediately when trying to move between adjacent rooms. The outer
-  // bbox clamp still prevents leaving the building footprint.
-  const [walkNoClip, setWalkNoClip] = useState(true);
+  // walls. Default OFF — user explicitly asked for walls to be solid in
+  // walkthrough ("你不要穿墙过"). The toggle stays available for users who
+  // get wedged at a doorway, but the natural-feeling default is collision-on.
+  const [walkNoClip, setWalkNoClip] = useState(false);
   // Sun analysis — read from global store so AiRenderModal + YardPlan share the value
   const sunHour     = useDesignerStore(s => s.sunHour);
   const setSunHour  = useDesignerStore(s => s.setSunHour);
@@ -6562,7 +6583,7 @@ export default function HouseCanvas() {
               <button
                 onClick={() => setWalkNoClip(v => !v)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
-                title="碰撞模式：开启后内墙会阻挡移动（默认关闭，建议保持默认）"
+                title="碰撞模式：开启时内墙阻挡移动（默认开启）。卡住时点开关临时穿墙。"
                 style={{
                   background: walkNoClip
                     ? "linear-gradient(135deg,rgba(245,158,11,0.92),rgba(217,119,6,0.92))"
