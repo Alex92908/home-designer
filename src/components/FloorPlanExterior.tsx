@@ -2328,12 +2328,36 @@ function GltfPlant({
     });
   }, [scene]);
 
+  // Distance culling: trees/shrubs are decorative — when the camera is >30m
+  // away the plant occupies just a few screen pixels and isn't worth the
+  // GLTF triangles + shadow-pass cost. Toggle visible on group ref each
+  // frame based on world-space distance. We throttle to every 6th frame
+  // (~100ms at 60fps) since plant positions are static — sub-frame
+  // accuracy buys nothing. Threshold has hysteresis (28m show / 32m hide)
+  // to avoid flicker right at the boundary.
+  const groupRef = useRef<THREE.Group>(null);
+  const frameCounter = useRef(0);
+  useFrame(({ camera }) => {
+    frameCounter.current++;
+    if (frameCounter.current % 6 !== 0) return;
+    const g = groupRef.current;
+    if (!g) return;
+    // group is local to a parent — get world position
+    g.getWorldPosition(_tmpVec3);
+    const dist = _tmpVec3.distanceTo(camera.position);
+    const wasVisible = g.visible;
+    if (wasVisible && dist > 32) g.visible = false;
+    else if (!wasVisible && dist < 28) g.visible = true;
+  });
+
   return (
-    <group position={[0, yOff, 0]} rotation={[0, rotY, 0]} scale={[s * scaleX, s, s * scaleZ]}>
+    <group ref={groupRef} position={[0, yOff, 0]} rotation={[0, rotY, 0]} scale={[s * scaleX, s, s * scaleZ]}>
       <Clone object={scene} />
     </group>
   );
 }
+
+const _tmpVec3 = new THREE.Vector3();
 
 // Convenience wrappers with correct public paths
 const CYPRESS_PATH  = "/models/outdoor_tree/cypress_tree_lowpoly/cypress_tree_lowpoly.gltf";
