@@ -6734,13 +6734,15 @@ export default function HouseCanvas() {
             panSpeed={0.6}
             onStart={handleOrbitStart}
             onEnd={handleOrbitEnd}
-            target={
-              _buildingType === "rich-glass-villa"
-                ? [-W * 0.05, 5.0, -D * 0.25] as [number, number, number]
-                : _buildingType === "floor-plan-driven"
-                ? [0, floors * FLOOR_H * 0.30, 0] as [number, number, number]
-                : [0, floors * FLOOR_H * 0.35, 0] as [number, number, number]
-            }
+            // NB: do NOT pass a `target` prop here. drei watches the prop
+            // and calls controls.target.set(...) on every change. Passing
+            // an array literal recreates it on every render → drei force-
+            // resets controls.target during the user's drag → the orbit
+            // radius springs back to "initial-target relative" and the
+            // camera appears to auto-zoom mid-drag. The initial target is
+            // already set inside CameraRig + InsideCameraAnimator via
+            // controls.target.copy() once on mount. Leave it untouched
+            // so user drags freely.
           />
         )}
         {/* Walkthrough = WASD + PointerLockControls. bbox is the house's

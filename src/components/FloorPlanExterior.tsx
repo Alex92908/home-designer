@@ -2405,7 +2405,7 @@ function AnimatedPoolCaustics({
 
 // ── 屋顶装饰层：读取屋顶平面图，按房间类型渲染真实 3D GLB 模型 ──
 function RooftopDecorations({
-  W, D, surfaceY, planOffset, onEnterRoom, roofFloorIdx, nightGlow,
+  W, D, surfaceY, planOffset, onEnterRoom: _onEnterRoom, roofFloorIdx, nightGlow,
 }: {
   W: number; D: number; surfaceY: number;
   planOffset: PlanOffset;
@@ -2435,7 +2435,17 @@ function RooftopDecorations({
         if (!pos || !dims) return null;
         const { cx, cz, rWm, rDm } = toW(pos.x, pos.y, dims.width, dims.depth);
         const y = surfaceY;
-        const click = () => onEnterRoom?.(rt, roofFloorIdx, [cx, y, cz]);
+        // NOTE: previously each rooftop room group had `onClick={() =>
+        // onEnterRoom?.(...)}`. R3F's <group onClick> fires on every
+        // pointerup that's preceded by a pointerdown on the same subtree
+        // — there's no built-in drag-threshold filter. The result: any
+        // drag-rotate that happened to start AND end over a rooftop room
+        // triggered the room-enter handler, sliding the camera and (with
+        // some probability) flipping into walkthrough mode mid-drag.
+        // Comment at line 4719 records the deliberate decision to drop
+        // these click handlers — entry is now solely via the left room
+        // list and the top 「进入室内漫游」 button. Keep onEnterRoom in the
+        // function signature for backwards compat with other callers.
 
         // ── 休闲区: 遮阳棚（程序化）+ 真实躺椅 GLB + 户外沙发 + 茶几 ──
         if (rt === "rooftop_lounge") {
@@ -2450,7 +2460,7 @@ function RooftopDecorations({
             [ rWm / 2 - 0.2, -rDm / 2 + 0.2],
           ];
           return (
-            <group key={rt} position={[cx, y, cz]} onClick={click}>
+            <group key={rt} position={[cx, y, cz]}>
               {/* pergola steel posts */}
               {posts.map(([px, pz], i) => (
                 <mesh key={i} position={[px, postH / 2, pz]} castShadow>
@@ -2519,7 +2529,7 @@ function RooftopDecorations({
           const innerW    = rWm - wallT * 2;
           const innerD    = rDm - wallT * 2;
           return (
-            <group key={rt} position={[cx, y, cz]} onClick={click}>
+            <group key={rt} position={[cx, y, cz]}>
               {/* white tiled pool walls */}
               {([
                 [[0,  rDm / 2 - wallT / 2, 0], [rWm, poolDepth, wallT]],
@@ -2574,7 +2584,7 @@ function RooftopDecorations({
           const plantCols = Math.max(1, Math.round(rWm / 1.8));
           const shrubPaths = [SHRUB2_PATH, BOXWOOD_PATH, HEDGE_PATH];
           return (
-            <group key={rt} position={[cx, y, cz]} onClick={click}>
+            <group key={rt} position={[cx, y, cz]}>
               {/* grass deck */}
               <mesh receiveShadow>
                 <boxGeometry args={[rWm, 0.07, rDm]} />
@@ -2634,7 +2644,7 @@ function RooftopDecorations({
           const counterD2  = 0.52;
           const chairCount = Math.max(2, Math.floor(rWm / 0.75));
           return (
-            <group key={rt} position={[cx, y, cz]} onClick={click}>
+            <group key={rt} position={[cx, y, cz]}>
               {/* bar counter body — dark walnut */}
               <mesh position={[0, counterH / 2, -rDm / 2 + counterD2 / 2]} castShadow receiveShadow>
                 <boxGeometry args={[rWm * 0.92, counterH, counterD2]} />
@@ -2681,7 +2691,7 @@ function RooftopDecorations({
         if (rt === "equipment_room") {
           const boxH = Math.min(Math.max(rDm * 0.6, 1.8), 2.8);
           return (
-            <group key={rt} position={[cx, y, cz]} onClick={click}>
+            <group key={rt} position={[cx, y, cz]}>
               <mesh position={[0, boxH / 2, 0]} castShadow receiveShadow>
                 <boxGeometry args={[rWm * 0.85, boxH, rDm * 0.8]} />
                 <meshStandardMaterial color="#6B7280" roughness={0.55} metalness={0.15} />
