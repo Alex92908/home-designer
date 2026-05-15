@@ -248,23 +248,29 @@ function GlassCurtain({
   }, [rows, height, rowH]);
 
   // Transom bars 只在 !hasDoor 的格子里 —— 先扫一遍算位置数组
-  const transomPositions = useMemo(() => {
-    const arr: Array<[number, number, number]> = [];
+  // 顺手扫出所有 noDoor 格子的玻璃面板位置 → InstancedMesh (Task 3)
+  const { transomPositions, upperPaneNoDoor, lowerPaneNoDoor } = useMemo(() => {
+    const transoms: Array<[number, number, number]> = [];
+    const uppersND: Array<[number, number, number]> = [];
+    const lowersND: Array<[number, number, number]> = [];
     for (let ci = 0; ci < cols; ci++) {
       const px = -width / 2 + (ci + 0.5) * panelW;
       for (let ri = 0; ri < rows; ri++) {
         const py = -height / 2 + (ri + 0.5) * rowH;
         const hasDoor = doors.some(d => Math.abs(d.cx - px) < panelW / 2 + d.w / 2 && ri === 0);
-        if (hasDoor) continue;
+        if (hasDoor) continue;  // hasDoor cells fall back to per-mesh below
         const spH    = Math.min(rowH * 0.200, 0.55);
         const visH   = rowH - spH;
+        const topH   = visH * 0.62;
         const botH   = visH * 0.38;
         const visBot = py - rowH / 2 + spH;
         const transY = visBot + botH;
-        arr.push([px, transY, 0.023]);
+        transoms.push([px, transY, 0.023]);
+        uppersND.push([px, visBot + botH + topH / 2, 0.020]);
+        lowersND.push([px, visBot + botH / 2, 0.020]);
       }
     }
-    return arr;
+    return { transomPositions: transoms, upperPaneNoDoor: uppersND, lowerPaneNoDoor: lowersND };
   }, [cols, rows, width, height, panelW, rowH, doors]);
 
   // Spandrel positions —— 每行底部 20% 的暗色面板
@@ -280,6 +286,11 @@ function GlassCurtain({
 
   const spandrelHeight = Math.min(rowH * 0.200, 0.55);  // 假定所有 row 同 height
   const transomWidth = panelW - 0.006;
+  // Glass pane heights —— 每格内 vision zone 拆 upper/lower (62/38) (Task 3)
+  const visH = rowH - spandrelHeight;
+  const upperPaneH = visH * 0.62 - 0.004;
+  const lowerPaneH = visH * 0.38 - 0.004;
+  const paneW = panelW - 0.006;
 
   return (
     <group>
@@ -329,6 +340,40 @@ function GlassCurtain({
         </Instances>
       )}
 
+      {/* Task 3: 玻璃面板 —— InstancedMesh (no-door 格子)
+          风险: transparent material 的 instance 之间无逐实例 depth-sort，
+          但所有 pane 同朝向 + 同 z 位置 + depthWrite=false + 用 renderOrder
+          统一在 spandrel 之后绘制，视觉上几乎无差异。hasDoor 的格子
+          (门的位置) 仍走 per-mesh 路径。 */}
+      {upperPaneNoDoor.length > 0 && (
+        <Instances limit={upperPaneNoDoor.length} renderOrder={10}>
+          <boxGeometry args={[paneW, upperPaneH, 0.008]} />
+          <meshPhysicalMaterial
+            color="#CEE4F4"
+            transparent opacity={0.25}
+            depthWrite={false} roughness={0.02} metalness={0.0}
+            reflectivity={0.55} clearcoat={0.9} clearcoatRoughness={0.04}
+            envMapIntensity={3.6} side={THREE.DoubleSide}
+            {...overlayMaterialProps(2)}
+          />
+          {upperPaneNoDoor.map((p, i) => <Instance key={i} position={p} />)}
+        </Instances>
+      )}
+      {lowerPaneNoDoor.length > 0 && (
+        <Instances limit={lowerPaneNoDoor.length} renderOrder={10}>
+          <boxGeometry args={[paneW, lowerPaneH, 0.008]} />
+          <meshPhysicalMaterial
+            color="#C8E0F2"
+            transparent opacity={0.27}
+            depthWrite={false} roughness={0.025} metalness={0.0}
+            reflectivity={0.50} clearcoat={0.85} clearcoatRoughness={0.04}
+            envMapIntensity={3.4} side={THREE.DoubleSide}
+            {...overlayMaterialProps(2)}
+          />
+          {lowerPaneNoDoor.map((p, i) => <Instance key={i} position={p} />)}
+        </Instances>
+      )}
+
       {/* 每块面板：玻璃 + 百叶帘（保留 individual，因为 opacity 和位置数据
           per-row 都不同）*/}
       {Array.from({ length: cols }, (_, ci) => {
@@ -351,30 +396,35 @@ function GlassCurtain({
               const transY = visBot + botH;               // transom center Y
               return (
                 <group key={`p${ri}`}>
-                  {/* Upper vision pane — high-clarity low-iron architectural glass */}
-                  <mesh position={[0, visBot + botH + topH / 2, 0.020]} renderOrder={10}>
-                    <boxGeometry args={[panelW - 0.006, topH - 0.004, 0.008]} />
-                    <meshPhysicalMaterial
-                      color={hasDoor ? "#D0E8F8" : "#CEE4F4"}
-                      transparent opacity={hasDoor ? 0.30 : 0.25}
-                      depthWrite={false} roughness={0.02} metalness={0.0}
-                      reflectivity={0.55} clearcoat={0.9} clearcoatRoughness={0.04}
-                      envMapIntensity={3.6} side={THREE.DoubleSide}
-                      {...overlayMaterialProps(2)}
-                    />
-                  </mesh>
-                  {/* Lower vision pane (fixed / operable bottom sash) */}
-                  <mesh position={[0, visBot + botH / 2, 0.020]} renderOrder={10}>
-                    <boxGeometry args={[panelW - 0.006, botH - 0.004, 0.008]} />
-                    <meshPhysicalMaterial
-                      color={hasDoor ? "#CCE4F6" : "#C8E0F2"}
-                      transparent opacity={hasDoor ? 0.32 : 0.27}
-                      depthWrite={false} roughness={0.025} metalness={0.0}
-                      reflectivity={0.50} clearcoat={0.85} clearcoatRoughness={0.04}
-                      envMapIntensity={3.4} side={THREE.DoubleSide}
-                      {...overlayMaterialProps(2)}
-                    />
-                  </mesh>
+                  {/* Glass panes —— no-door 已并入外层 InstancedMesh
+                      (upperPaneNoDoor / lowerPaneNoDoor)。
+                      hasDoor 格子保留 per-mesh（数量少 + 颜色/不透明度不同） */}
+                  {hasDoor && (
+                    <>
+                      <mesh position={[0, visBot + botH + topH / 2, 0.020]} renderOrder={10}>
+                        <boxGeometry args={[panelW - 0.006, topH - 0.004, 0.008]} />
+                        <meshPhysicalMaterial
+                          color="#D0E8F8"
+                          transparent opacity={0.30}
+                          depthWrite={false} roughness={0.02} metalness={0.0}
+                          reflectivity={0.55} clearcoat={0.9} clearcoatRoughness={0.04}
+                          envMapIntensity={3.6} side={THREE.DoubleSide}
+                          {...overlayMaterialProps(2)}
+                        />
+                      </mesh>
+                      <mesh position={[0, visBot + botH / 2, 0.020]} renderOrder={10}>
+                        <boxGeometry args={[panelW - 0.006, botH - 0.004, 0.008]} />
+                        <meshPhysicalMaterial
+                          color="#CCE4F6"
+                          transparent opacity={0.32}
+                          depthWrite={false} roughness={0.025} metalness={0.0}
+                          reflectivity={0.50} clearcoat={0.85} clearcoatRoughness={0.04}
+                          envMapIntensity={3.4} side={THREE.DoubleSide}
+                          {...overlayMaterialProps(2)}
+                        />
+                      </mesh>
+                    </>
+                  )}
                   {/* Transom bar 已并入外层 InstancedMesh (transomPositions) */}
                   {/* ── 百叶帘（venetian blinds）—— 28% 的面板随机部分拉下 ──
                       位于玻璃内侧（z < 0），只遮住上部 Vision pane 的
