@@ -49,7 +49,11 @@ interface PerfSnapshot {
 const SAMPLE_INTERVAL_MS = 1000;
 
 export default function PerfTelemetry({ label = "scene" }: { label?: string }) {
-  const { gl, scene } = useThree();
+  const { gl, scene, camera } = useThree();
+  // Expose camera globally for debugging — read via window.__cam.position
+  if (typeof window !== "undefined") {
+    (window as unknown as { __cam?: unknown }).__cam = camera;
+  }
   // 用 gl.info.render.frame 计数器代替 useFrame（frameloop=demand 下后者不
   // 触发，但 frame counter 仍随每次 .render() 递增）。
   const lastFrameCountRef = useRef<number>(0);
