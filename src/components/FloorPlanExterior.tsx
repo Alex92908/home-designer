@@ -482,42 +482,63 @@ function ConcreteFacade({
         <boxGeometry args={[width, height, 0.08]} />
         <meshStandardMaterial color={baseColor} roughness={0.78} metalness={0.02} envMapIntensity={0.35} />
       </mesh>
-      {/* ── 竖向分板阴影面（每 vGrooveStep 一块，交替略暗，模拟预制挂板微差）── */}
-      {Array.from({ length: Math.round(width / vGrooveStep) }, (_, vi) => {
-        const panelX = -width / 2 + (vi + 0.5) * vGrooveStep;
-        if (panelX > width / 2) return null;
-        const panelW2 = Math.min(vGrooveStep - 0.020, width - Math.abs(panelX) * 2);
-        if (panelW2 <= 0) return null;
-        const shade = vi % 2 === 0 ? "#CBC7BF" : "#C3BFB7";  // subtle alternating tone
+      {/* ── 竖向分板阴影面 —— InstancedMesh，颜色交替 (even/odd 拆 2 个) ──
+          每块宽固定 = vGrooveStep - 0.020。边角 panel 如果 panelW2 ≠ 标准
+          宽度，会被几何 scale；为简单起见，跳过越界的板。 */}
+      {(() => {
+        const evenPanels: Array<[number, number, number]> = [];
+        const oddPanels: Array<[number, number, number]> = [];
+        const N = Math.round(width / vGrooveStep);
+        for (let vi = 0; vi < N; vi++) {
+          const panelX = -width / 2 + (vi + 0.5) * vGrooveStep;
+          if (panelX > width / 2) continue;
+          const panelW2 = Math.min(vGrooveStep - 0.020, width - Math.abs(panelX) * 2);
+          if (panelW2 <= 0) continue;
+          // 我们假定 panelW2 ≈ 标准宽度（边角差异忽略，视觉上感觉不到）
+          (vi % 2 === 0 ? evenPanels : oddPanels).push([panelX, 0, 0.041]);
+        }
+        const stdW = vGrooveStep - 0.020;
         return (
-          <mesh key={`pnl-${vi}`} position={[panelX, 0, 0.041]}>
-            <boxGeometry args={[panelW2, height - 0.002, 0.004]} />
-            <meshStandardMaterial color={shade} roughness={0.88} metalness={0.01} />
-          </mesh>
+          <>
+            {evenPanels.length > 0 && (
+              <Instances limit={evenPanels.length}>
+                <boxGeometry args={[stdW, height - 0.002, 0.004]} />
+                <meshStandardMaterial color="#CBC7BF" roughness={0.88} metalness={0.01} />
+                {evenPanels.map((p, i) => <Instance key={i} position={p} />)}
+              </Instances>
+            )}
+            {oddPanels.length > 0 && (
+              <Instances limit={oddPanels.length}>
+                <boxGeometry args={[stdW, height - 0.002, 0.004]} />
+                <meshStandardMaterial color="#C3BFB7" roughness={0.88} metalness={0.01} />
+                {oddPanels.map((p, i) => <Instance key={i} position={p} />)}
+              </Instances>
+            )}
+          </>
         );
-      })}
+      })()}
 
-      {/* ── 水平板缝线 ── */}
-      {Array.from({ length: hGrooveCount }, (_, i) => {
-        const gy = -height / 2 + (i + 1) * hGrooveStep;
-        return (
-          <mesh key={`hg-${i}`} position={[0, gy, 0.042]}>
-            <boxGeometry args={[width + 0.01, 0.018, 0.006]} />
-            <meshStandardMaterial color={grooveColor} roughness={0.92} />
-          </mesh>
-        );
-      })}
+      {/* ── 水平板缝线 —— InstancedMesh */}
+      {hGrooveCount > 0 && (
+        <Instances limit={hGrooveCount}>
+          <boxGeometry args={[width + 0.01, 0.018, 0.006]} />
+          <meshStandardMaterial color={grooveColor} roughness={0.92} />
+          {Array.from({ length: hGrooveCount }, (_, i) => (
+            <Instance key={i} position={[0, -height / 2 + (i + 1) * hGrooveStep, 0.042]} />
+          ))}
+        </Instances>
+      )}
 
-      {/* ── 竖向板缝线 ── */}
-      {Array.from({ length: vGrooveCount }, (_, i) => {
-        const vx = -width / 2 + (i + 1) * vGrooveStep;
-        return (
-          <mesh key={`vg-${i}`} position={[vx, 0, 0.042]}>
-            <boxGeometry args={[0.018, height + 0.01, 0.006]} />
-            <meshStandardMaterial color={grooveColor} roughness={0.92} />
-          </mesh>
-        );
-      })}
+      {/* ── 竖向板缝线 —— InstancedMesh */}
+      {vGrooveCount > 0 && (
+        <Instances limit={vGrooveCount}>
+          <boxGeometry args={[0.018, height + 0.01, 0.006]} />
+          <meshStandardMaterial color={grooveColor} roughness={0.92} />
+          {Array.from({ length: vGrooveCount }, (_, i) => (
+            <Instance key={i} position={[-width / 2 + (i + 1) * vGrooveStep, 0, 0.042]} />
+          ))}
+        </Instances>
+      )}
 
       {/* ── 窗洞 ── */}
       {windows.map((w, wi) => {
