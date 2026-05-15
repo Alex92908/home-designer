@@ -4919,9 +4919,9 @@ function RichGlassVillaBuilding({ W, D, settings }: {
 }
 
 // ─── House body ──────────────────────────────────────────────
-function HouseBody({ W, D, settings, insideBuilding = false, wallXray = false, onEnterRoom }: {
+function HouseBody({ W, D, settings, insideBuilding = false, wallXray = false, hideInterior = false, onEnterRoom }: {
   W: number; D: number; settings: ExteriorSettings;
-  insideBuilding?: boolean; wallXray?: boolean;
+  insideBuilding?: boolean; wallXray?: boolean; hideInterior?: boolean;
   onEnterRoom?: (room: import("@/lib/types").RoomType, floorIndex: number, worldPos: [number, number, number]) => void;
 }) {
   // ── Rich Glass Villa shortcut ──────────────────────────────────────────
@@ -4932,7 +4932,7 @@ function HouseBody({ W, D, settings, insideBuilding = false, wallXray = false, o
     return <RichGlassVillaBuilding W={W} D={D} settings={settings} />;
   }
   if (buildingTypeHB === "floor-plan-driven") {
-    return <FloorPlanBuilding insideBuilding={insideBuilding} wallXray={wallXray} onEnterRoom={onEnterRoom} />;
+    return <FloorPlanBuilding insideBuilding={insideBuilding} wallXray={wallXray} hideInterior={hideInterior} onEnterRoom={onEnterRoom} />;
   }
 
   const { floors, roofStyle, roofColor, accentColor } = settings;
@@ -6142,14 +6142,17 @@ export default function HouseCanvas() {
   // Ref (not state) so ShadowFreezeOnOrbit reads it inside useFrame without
   // triggering React re-renders on every pointer move.
   const isInteractingRef = useRef(false);
+  const [hideInterior, setHideInterior] = useState(false);
   const interactTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleOrbitStart = () => {
     if (interactTimerRef.current) clearTimeout(interactTimerRef.current);
     isInteractingRef.current = true;
+    setHideInterior(true);
   };
   const handleOrbitEnd = () => {
     interactTimerRef.current = setTimeout(() => {
       isInteractingRef.current = false;
+      setHideInterior(false);
     }, 150);
   };
   // tick-based fly-to: 0=idle, >0 top-view, <0 reset-view
@@ -6726,6 +6729,7 @@ export default function HouseCanvas() {
         <HouseBody
           W={W} D={D} settings={exterior}
           insideBuilding={insideBuilding} wallXray={wallXray}
+          hideInterior={hideInterior}
           onEnterRoom={(_room, _fi, worldPos) => {
             // Teleport into walkthrough mode at the clicked room's centre.
             setWalkthrough(true);

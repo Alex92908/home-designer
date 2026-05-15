@@ -2587,11 +2587,14 @@ function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
 // ── 主组件 ────────────────────────────────────────────────────
 export default function FloorPlanBuilding({
-  insideBuilding = false, wallXray = false,
+  insideBuilding = false, wallXray = false, hideInterior = false,
   onEnterRoom,
 }: {
   insideBuilding?: boolean;
   wallXray?: boolean;
+  /** Hide interior room contents (furniture/walls) during orbit drag to reduce
+   *  Three.js scene traversal cost (~120ms JS saved per frame). */
+  hideInterior?: boolean;
   /** When provided, clicking a room block / window enters first-person
    *  walkthrough mode at that room's center (handled by HouseCanvas
    *  parent), instead of switching to the single-room 3D view. */
@@ -9724,7 +9727,10 @@ export default function FloorPlanBuilding({
       {/* ── 6. 室内渲染（仅室内视角）── */}
       {/* 室内渲染 —— 玻璃幕墙建筑的卖点是透过玻璃看到室内，所以
           结构层（地板/墙/天花板/楼梯/门）外观模式也渲染，但 GLTF
-          家具只在 insideBuilding 时加载（否则一次性 50+ GLTF 卡死）。 */}
+          家具只在 insideBuilding 时加载（否则一次性 50+ GLTF 卡死）。
+          hideInterior=true 时 visible=false：Three.js 跳过 projectObject
+          遍历这些对象，节省约 120ms JS/帧（拖拽期间内部不可见无所谓）。 */}
+      <group visible={insideBuilding || !hideInterior}>
       {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, stairShape, stairRotation }) => {
         const wallOpacity = wallXray ? 0.13 : 1.0;
         const isXray = wallXray;
@@ -10068,6 +10074,7 @@ export default function FloorPlanBuilding({
           </group>
         );
       })}
+      </group>
     </group>
   );
 }
