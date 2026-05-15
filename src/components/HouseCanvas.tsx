@@ -2,12 +2,31 @@
 
 import { useRef, useMemo, useEffect, useState, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars, Instances, Instance } from "@react-three/drei";
+import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars, Instances, Instance, PerformanceMonitor } from "@react-three/drei";
 import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, HueSaturation } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
+/** Task 2: 自适应 DPR —— PerformanceMonitor 持续测 FPS，把 dpr 限制在
+ *  [1, 2] 区间内。FPS 高 = factor → 1 → dpr=2 清晰; FPS 低 = factor → 0
+ *  → dpr=1 保流畅。flipflops=3 = 调 3 次后停止防止 ping-pong。
+ *  注意：Canvas 必须给 dpr={[1, 2]} 才能让 setDpr() 在该区间生效。 */
+function AdaptiveDpr() {
+  const setDpr = useThree(s => s.setDpr);
+  return (
+    <PerformanceMonitor
+      ms={250}
+      iterations={5}
+      threshold={0.75}
+      flipflops={3}
+      onChange={({ factor }) => {
+        const dpr = Math.round((1 + factor) * 10) / 10;
+        setDpr(dpr);
+      }}
+    />
+  );
+}
 import { useDesignerStore } from "@/lib/store";
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 
@@ -1684,8 +1703,11 @@ class SingletonErrorBoundary extends Component<
 
 // ─── Foundation ─────────────────────────────────────────────
 function Foundation({ W, D, color }: { W: number; D: number; color: string }) {
+  // Task 1: frustumCulled=false —— Foundation 是建筑底盘，从任何相机
+  // 角度都在视野内（除非相机在地下/超远），跳过 sphere-vs-frustum 测试
+  // 反而省 projectObject 里的 1 次浮点开销。
   return (
-    <mesh position={[0, -0.25, 0]} receiveShadow>
+    <mesh position={[0, -0.25, 0]} receiveShadow frustumCulled={false}>
       <boxGeometry args={[W + 0.3, 0.5, D + 0.3]} />
       <meshStandardMaterial color={color} roughness={0.95} />
     </mesh>
@@ -3828,8 +3850,9 @@ function useProceduralGrassTexture(): THREE.Texture {
 
 function GrassGroundTextured({ size }: { size: number }) {
   const texture = useProceduralGrassTexture();
+  // Task 1: 大草地 plane 永远在视野，跳过 frustum 测试
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.499, 0]} receiveShadow>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.499, 0]} receiveShadow frustumCulled={false}>
       <planeGeometry args={[size, size]} />
       <meshStandardMaterial
         map={texture}
@@ -3849,8 +3872,8 @@ function EntryPathTextured({ W, D }: { W: number; D: number }) {
   const pathW   = 2.8;  // wider driveway — fits one car comfortably
   return (
     <group>
-      {/* Main cobblestone driveway */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.496, D / 2 + pathLen / 2 - 0.1]} receiveShadow>
+      {/* Main cobblestone driveway —— always-visible, skip frustum check */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.496, D / 2 + pathLen / 2 - 0.1]} receiveShadow frustumCulled={false}>
         <planeGeometry args={[pathW, pathLen]} />
         <meshStandardMaterial map={map} normalMap={normalMap} roughnessMap={roughnessMap}
           color="#D0C8B8" roughness={0.85} metalness={0.01} />
@@ -6515,6 +6538,12 @@ export default function HouseCanvas() {
       <Canvas
         style={{ touchAction: "none" }}
         shadows={{ type: THREE.PCFShadowMap, enabled: true }}
+        // Plan A: frameloop="demand" —— 静止时 0 CPU/GPU 渲染。
+        // OrbitControls / setState / 点击都会自动 invalidate() 触发重绘；
+        // 没有自定义动画时这是免费 win。如果发现某些动画停了，把这行
+        // 改成 frameloop="always" 即可回滚。
+        // Task 2: Adaptive DPR — dpr={[1, 2]} 配合 <AdaptiveDpr> 动态降级。
+        dpr={[1, 2]}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: theme.exposure,
@@ -6548,7 +6577,6 @@ export default function HouseCanvas() {
           }
           return { fov: 58, near: 0.1, far: 300 };
         })()}
-        dpr={[1, 2]}
       >
         {/* Fog disabled when inside — would darken interior surfaces */}
         {!insideBuilding && <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />}
@@ -6806,6 +6834,10 @@ export default function HouseCanvas() {
             <SMAA />
           </EffectComposer>
         )}
+        {/* Task 2: PerformanceMonitor + adaptive DPR
+            FPS 高 → 升 dpr 到 2（清晰），FPS 低 → 降到 1（保流畅）。
+            flipflops=3 防止 ping-pong 抖动。*/}
+        <AdaptiveDpr />
       </Canvas>
     </div>
   );
