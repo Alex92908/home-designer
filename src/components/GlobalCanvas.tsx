@@ -15,7 +15,7 @@
 
 import { useMemo, useRef, useState, useEffect, Suspense } from "react";
 import * as THREE from "three";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html, useGLTF, Clone, Instances, Instance } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
 import { RoomState } from "@/lib/store";
@@ -1304,6 +1304,31 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
 }
 
 /** Camera controller: fit view to multi-floor cluster on first render. */
+/**
+ * Pre-compile all shaders on first frame to eliminate the lazy-compile stutter
+ * users see when they first interact with the scene. See HouseCanvas.tsx for
+ * full rationale.
+ */
+function ShaderPrecompiler() {
+  const { gl, scene, camera, invalidate } = useThree();
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      try {
+        gl.compile(scene, camera);
+        invalidate();
+        // eslint-disable-next-line no-console
+        console.log("[PERF global3d] shaders precompiled");
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("[PERF global3d] shader precompile failed", e);
+      }
+    }, 500);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
 function CameraFit() {
   const enabledRooms   = useDesignerStore(s => s.floorPlans[s.activeFloor].enabledRooms);
   const layout         = useDesignerStore(s => s.floorPlans[s.activeFloor].roomLayout);
@@ -1426,6 +1451,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
           setStairPos={setStairPos}
         />
         <CameraFit />
+        <ShaderPrecompiler />
       </Canvas>
 
       {/* ── Hint bar ── */}
