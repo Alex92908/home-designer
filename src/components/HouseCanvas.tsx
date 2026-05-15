@@ -6196,6 +6196,74 @@ function CameraFlyTo({ pos, tgt, onDone }: {
   return null;
 }
 
+/**
+ * Idle-time prefetch of the indoor furniture GLTFs.
+ *
+ * In exterior view, furniture is rendered as low-LOD coloured boxes
+ * (FloorPlanExterior.tsx ~10246). Switching to walkthrough mode swaps the
+ * boxes for the real GLTF assets via `<PlacedItemMesh insideBuilding>` —
+ * and triggers ~50 simultaneous `useGLTF()` loads. Without prefetch the
+ * user clicks "进入室内漫游" and the page **freezes for several seconds**
+ * while glTF parsing + texture upload + shader compile blast through on
+ * the main thread.
+ *
+ * This component runs once after the exterior settles, walks every
+ * placedItem across every floor, and calls `useGLTF.preload(url)` for
+ * each unique model3d.url on `requestIdleCallback`. By the time the
+ * user clicks the walkthrough button, the loader has already parsed
+ * + cached every asset → entry is instant.
+ *
+ * Mount inside HouseCanvas (outside <Canvas>) so it doesn't add an
+ * Object3D and so its work runs independently of frame ticks.
+ */
+function FurniturePreloader() {
+  const floorPlans = useDesignerStore(s => s.floorPlans);
+  useEffect(() => {
+    const urls = new Set<string>();
+    for (const fp of floorPlans) {
+      if (!fp) continue;
+      for (const roomEntry of Object.values(fp.rooms ?? {})) {
+        for (const p of (roomEntry?.placedItems ?? [])) {
+          const item = getFurnitureById(p.furnitureId);
+          const url = (item as { model3d?: { url?: string } } | undefined)?.model3d?.url;
+          if (url) urls.add(url);
+        }
+      }
+    }
+    // eslint-disable-next-line no-console
+    console.log(`[PERF] furniture preloader scanning: found ${urls.size} unique GLTFs in ${floorPlans.length} floors`);
+    if (urls.size === 0) return;
+    // Stagger across idle callbacks so we don't tie up the main thread
+    // even at idle — each idle slice fetches at most 4 URLs.
+    const urlList = Array.from(urls);
+    let i = 0;
+    const BATCH = 4;
+    const idleQueue = (window as Window & { requestIdleCallback?: (cb: IdleRequestCallback) => number }).requestIdleCallback
+      ?? ((cb: IdleRequestCallback) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline), 300));
+    let cancelled = false;
+    const runBatch = () => {
+      if (cancelled) return;
+      const slice = urlList.slice(i, i + BATCH);
+      i += BATCH;
+      for (const url of slice) {
+        try {
+          (useGLTF as unknown as { preload: (u: string) => void }).preload(url);
+        } catch {
+          // ignore — preload best-effort
+        }
+      }
+      if (i < urlList.length) idleQueue(runBatch);
+      else {
+        // eslint-disable-next-line no-console
+        console.log(`[PERF] furniture preload done (${urlList.length} GLTFs)`);
+      }
+    };
+    idleQueue(runBatch);
+    return () => { cancelled = true; };
+  }, [floorPlans]);
+  return null;
+}
+
 // ─── Main export ────────────────────────────────────────────
 export default function HouseCanvas() {
   const exterior      = useDesignerStore(s => s.exterior);
@@ -6348,6 +6416,9 @@ export default function HouseCanvas() {
 
   return (
     <div className="w-full h-full relative">
+      {/* Idle-time prefetch of indoor furniture GLTFs so walkthrough entry
+          is instant. Runs outside <Canvas> — no Object3D, no frame ticks. */}
+      <FurniturePreloader />
       {/* ── Enter / Exit walkthrough button + wall X-ray toggle ── */}
       {isRichGlassVilla && (
         <div className="absolute top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
