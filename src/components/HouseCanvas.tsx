@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useEffect, useState, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars } from "@react-three/drei";
+import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars, Instances, Instance } from "@react-three/drei";
 import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, HueSaturation } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
@@ -1153,19 +1153,26 @@ function FloorShell({ floorIndex, W, D, settings, totalFloors }: {
         const startX = offsetX - (numSlats * step) / 2 + SLAT_W / 2;
         const warm1 = accentColor;
         const warm2 = accentColor;                         // slight variation handled by roughness
+        // Combo-2 G: numSlats × <mesh> → 1 InstancedMesh
+        // 原本 per-slat roughness 在 0.38/0.42/0.46 三档循环 (i%3)，
+        // 用平均 0.42 一档统一 —— 视觉上 ±0.04 roughness 差人眼无感。
+        // warm1 == warm2（都 accentColor），所以颜色也统一。
         return (
           <group position={[0, 0, -(D / 2 - WT / 2 - SLAT_T)]}>
-            {Array.from({ length: numSlats }).map((_, i) => (
-              <mesh key={i} position={[startX + i * step, panelH / 2 - H / 2 + H * 0.15, 0]} castShadow>
+            {numSlats > 0 && (
+              <Instances limit={numSlats} castShadow>
                 <boxGeometry args={[SLAT_W, panelH, SLAT_T]} />
                 <meshStandardMaterial
-                  color={i % 2 === 0 ? warm1 : warm2}
-                  roughness={0.38 + (i % 3) * 0.04}
+                  color={warm1}
+                  roughness={0.42}
                   metalness={0.0}
                   envMapIntensity={0.55}
                 />
-              </mesh>
-            ))}
+                {Array.from({ length: numSlats }).map((_, i) => (
+                  <Instance key={i} position={[startX + i * step, panelH / 2 - H / 2 + H * 0.15, 0]} />
+                ))}
+              </Instances>
+            )}
           </group>
         );
       })()}
@@ -4583,22 +4590,30 @@ function WingFaceWall({
         <boxGeometry args={[W, H, WT]} />
         <meshStandardMaterial color={wallColor} roughness={0.72} metalness={0.01} />
       </mesh>
-      {/* Wood cladding accent panel */}
+      {/* Wood cladding accent panel —— Combo-2 G:
+          原 N×<mesh> 改成 3 个 InstancedMesh（按颜色 i%3 分组），
+          保留三色木板交替的视觉。每组共享 1 个 BufferGeometry。 */}
       {woodAccent && (() => {
         const SLAT_W = 0.088; const SLAT_GAP = 0.018; const SLAT_T = 0.040;
         const step = SLAT_W + SLAT_GAP;
         const numSlats = Math.floor(woodW / step);
         const startX = woodX - woodW / 2 + SLAT_W / 2;
+        const groups: Array<Array<[number, number, number]>> = [[], [], []];
+        for (let i = 0; i < numSlats; i++) {
+          groups[i % 3].push([startX + i * step, 0, 0]);
+        }
+        const colors = [woodDark, woodMid, "#96622F"];
         return (
           <group position={[0, 0, WT / 2 + SLAT_T / 2]}>
-            {Array.from({ length: numSlats }).map((_, i) => (
-              <mesh key={i} position={[startX + i * step, 0, 0]} castShadow>
+            {groups.map((positions, gi) => positions.length > 0 && (
+              <Instances key={gi} limit={positions.length} castShadow>
                 <boxGeometry args={[SLAT_W, H - 0.04, SLAT_T]} />
                 <meshStandardMaterial
-                  color={i % 3 === 0 ? woodDark : i % 3 === 1 ? woodMid : "#96622F"}
+                  color={colors[gi]}
                   roughness={0.38} metalness={0.0} envMapIntensity={0.55}
                 />
-              </mesh>
+                {positions.map((p, i) => <Instance key={i} position={p} />)}
+              </Instances>
             ))}
           </group>
         );

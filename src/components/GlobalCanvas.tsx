@@ -16,7 +16,7 @@
 import { useMemo, useRef, useState, useEffect, Suspense } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Html, useGLTF, Clone } from "@react-three/drei";
+import { OrbitControls, Html, useGLTF, Clone, Instances, Instance } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
 import { RoomState } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
@@ -164,20 +164,37 @@ export function StaircaseGeom({
     const balHOf = (i: number) =>
       railH + i * (railDY / STEPS) - (i + 1) * riserH;
 
-    const metalMat = <meshStandardMaterial color="#7c8fa0" metalness={0.85} roughness={0.15} />;
-    const treadMat = <meshStandardMaterial color="#6a7d8e" metalness={0.80} roughness={0.20} />;
+    // ── Combo-2 E: 踏步 + 栏杆 baluster 改 InstancedMesh ──
+    // 踏步：12 阶同几何同材质 → 1 InstancedMesh
+    // 栏杆：高度变化用 per-instance scale.y（base geo height=1）→ 1 InstancedMesh
+    // 扶手 2 根保持独立 mesh（数量少不值得）
+    const balusters = useMemo(() => {
+      const arr: Array<{ pos: [number, number, number]; height: number }> = [];
+      for (let i = 0; i < STEPS; i++) {
+        const bH = balHOf(i);
+        if (bH <= 0.02) continue;
+        const t = treads[i];
+        ([-1, 1] as const).forEach(side => {
+          const xSide = side * (treadW2 / 2 - ROD_R * 2);
+          arr.push({ pos: [xSide, t.topY + bH / 2, t.frontZ], height: bH });
+        });
+      }
+      return arr;
+    }, [treads, treadW2, ROD_R]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
       <group>
-        {/* 踏步 */}
-        {treads.map((t, i) => (
-          <mesh key={i} position={[0, t.midY, t.midZ]} castShadow receiveShadow>
-            <boxGeometry args={[treadW2, treadT, treadDepth]} />
-            {treadMat}
-          </mesh>
-        ))}
+        {/* 踏步 —— InstancedMesh (12 阶) */}
+        <Instances limit={treads.length} castShadow receiveShadow>
+          <boxGeometry args={[treadW2, treadT, treadDepth]} />
+          <meshStandardMaterial color="#6a7d8e" metalness={0.80} roughness={0.20} />
+          {treads.map((t, i) => (
+            <Instance key={i} position={[0, t.midY, t.midZ]} />
+          ))}
+        </Instances>
 
-        {/* 两侧斜扶手杆：起点 (baseY+railH, -runD/2)，终点 (baseY+height, +runD/2) */}
+        {/* 两侧斜扶手杆：起点 (baseY+railH, -runD/2)，终点 (baseY+height, +runD/2)
+            数量少 (2) 不值得 instance */}
         {([-1, 1] as const).map(side => {
           const xSide = side * (treadW2 / 2 - ROD_R);
           return (
@@ -187,28 +204,22 @@ export function StaircaseGeom({
               castShadow
             >
               <cylinderGeometry args={[ROD_R, ROD_R, railLen, 8]} />
-              {metalMat}
+              <meshStandardMaterial color="#7c8fa0" metalness={0.85} roughness={0.15} />
             </mesh>
           );
         })}
 
-        {/* 竖栏杆：只渲染 balH>0 的阶（顶端几阶 balH 趋近 0，自然消隐） */}
-        {treads.map((t, i) => {
-          const bH = balHOf(i);
-          if (bH <= 0.02) return null;
-          return ([-1, 1] as const).map(side => {
-            const xSide = side * (treadW2 / 2 - ROD_R * 2);
-            return (
-              <mesh key={`bal-${i}-${side}`}
-                position={[xSide, t.topY + bH / 2, t.frontZ]}
-                castShadow
-              >
-                <cylinderGeometry args={[BAL_R, BAL_R, bH, 6]} />
-                {metalMat}
-              </mesh>
-            );
-          });
-        })}
+        {/* 竖栏杆 baluster —— InstancedMesh (up to STEPS×2)，
+            base geo 高度=1，per-instance scale.y 调实际高度 */}
+        {balusters.length > 0 && (
+          <Instances limit={balusters.length} castShadow>
+            <cylinderGeometry args={[BAL_R, BAL_R, 1, 6]} />
+            <meshStandardMaterial color="#7c8fa0" metalness={0.85} roughness={0.15} />
+            {balusters.map((b, i) => (
+              <Instance key={i} position={b.pos} scale={[1, b.height, 1]} />
+            ))}
+          </Instances>
+        )}
       </group>
     );
   }

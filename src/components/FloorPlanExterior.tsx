@@ -803,19 +803,29 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
           { len: D, posX: -W / 2 + PT / 2, posZ: 0,         axisX: false },  // west
         ] as { len: number; posX: number; posZ: number; axisX: boolean }[];
 
+        // Combo-2 E: 4 侧所有立柱合并到 1 个 InstancedMesh（同几何同材质）
+        const allParapetPosts: Array<[number, number, number]> = [];
+        const sideMeta = sidesData.map(side => {
+          const posts = sideRailing(side.len, side.posX, side.posZ, side.axisX);
+          for (const { px, pz } of posts) {
+            allParapetPosts.push([px, parapetTopY + postH / 2, pz]);
+          }
+          return { side, posts };
+        });
+
         return (
           <group>
-            {sidesData.flatMap((side, si) => {
-              const posts = sideRailing(side.len, side.posX, side.posZ, side.axisX);
+            {/* 4 侧所有立柱 —— InstancedMesh */}
+            {allParapetPosts.length > 0 && (
+              <Instances limit={allParapetPosts.length} castShadow>
+                <boxGeometry args={[postS, postH, postS]} />
+                <meshStandardMaterial color="#9AA0A8" roughness={0.18} metalness={0.88} envMapIntensity={2.5} />
+                {allParapetPosts.map((p, i) => <Instance key={i} position={p} />)}
+              </Instances>
+            )}
+            {sideMeta.flatMap(({ side, posts }, si) => {
               const glassSegCount = posts.length - 1;
               return [
-                // Posts
-                ...posts.map(({ px, pz }, pi) => (
-                  <mesh key={`post-${si}-${pi}`} position={[px, parapetTopY + postH / 2, pz]} castShadow>
-                    <boxGeometry args={[side.axisX ? postS : postS, postH, side.axisX ? postS : postS]} />
-                    <meshStandardMaterial color="#9AA0A8" roughness={0.18} metalness={0.88} envMapIntensity={2.5} />
-                  </mesh>
-                )),
                 // Glass panels between posts
                 ...Array.from({ length: glassSegCount }, (_, gi) => {
                   const p0 = posts[gi];
@@ -2156,7 +2166,6 @@ function StairwellRailing({ rW, rD }: { rW: number; rD: number }) {
   const RH   = 0.92;   // 栏杆高度 m
   const POST = 0.06;   // 立柱截面 m
   const RAIL = 0.045;  // 横杆截面 m
-  const postMat = <meshStandardMaterial color="#8A9BA8" metalness={0.55} roughness={0.35} />;
   const railMat = <meshStandardMaterial color="#B0C0CC" metalness={0.45} roughness={0.40} />;
   const glassMat = <meshStandardMaterial color="#A8D4F5" transparent opacity={0.28} roughness={0.05} metalness={0.15} />;
 
@@ -2177,17 +2186,27 @@ function StairwellRailing({ rW, rD }: { rW: number; rD: number }) {
     { axis: "z", len: rD, fixed:  rW / 2 - POST / 2, railAxis: "z" },
   ];
 
+  // Combo-2 E: 4 侧的所有立柱合并到 1 个 InstancedMesh（同几何同材质）
+  const allPostPositions: Array<[number, number, number]> = [];
+  for (const s of allSides) {
+    for (const [px, , pz] of sidePosts(s.axis === "x" ? rW : rD, s.axis, s.fixed)) {
+      allPostPositions.push([px, RH / 2, pz]);
+    }
+  }
+
   return (
     <group position={[0, 0, 0]}>
+      {/* 立柱 —— InstancedMesh */}
+      {allPostPositions.length > 0 && (
+        <Instances limit={allPostPositions.length}>
+          <boxGeometry args={[POST, RH, POST]} />
+          <meshStandardMaterial color="#8A9BA8" metalness={0.55} roughness={0.35} />
+          {allPostPositions.map((p, i) => <Instance key={i} position={p} />)}
+        </Instances>
+      )}
+      {/* 横杆 + 玻璃保留 per-side（4 侧只画 4 套，每套 axis/len 各不同，不值得 instance） */}
       {allSides.map((s, si) => (
-        <group key={si}>
-          {/* 立柱 */}
-          {sidePosts(s.axis === "x" ? rW : rD, s.axis, s.fixed).map(([px, , pz], pi) => (
-            <mesh key={pi} position={[px, RH / 2, pz]}>
-              <boxGeometry args={[POST, RH, POST]} />
-              {postMat}
-            </mesh>
-          ))}
+        <group key={si}>{/* 立柱已合并到上面的 Instances */}
           {/* 顶部横杆 */}
           <mesh position={
             s.railAxis === "x"
