@@ -6427,6 +6427,19 @@ export default function HouseCanvas() {
   // Build room AABBs in world coords for collision. Reads layout/dims from
   // store, mirrors FloorPlanBuilding's coord system (Y axis flipped to -Z).
   const floorPlansForWalk = useDesignerStore(s => s.floorPlans);
+  // Rooms that should be freely walkable from any neighbour. Includes:
+  //   - hallway / stair: explicit circulation
+  //   - balcony / balcony2: semi-outdoor extensions of an indoor room
+  //   - any room flagged isOutdoor in ROOM_DEFS (yard / pool / terrace /
+  //     deck / rooftop_*): exterior spaces stepped onto via patio doors
+  // These rooms are excluded from the collision AABB set and treated as
+  // adjacency targets for auto-passage along shared walls.
+  const isCirculation = (room: string): boolean => {
+    if (room === "hallway" || room === "stair") return true;
+    if (room === "balcony" || room === "balcony2") return true;
+    const def = (ROOM_DEFS as Record<string, { isOutdoor?: boolean } | undefined>)[room];
+    return def?.isOutdoor === true;
+  };
   const wallAABBs = useMemo<AABB[]>(() => {
     const out: AABB[] = [];
     // House-wide bbox so each room's local center can be world-translated.
@@ -6447,15 +6460,12 @@ export default function HouseCanvas() {
     for (const fp of floorPlansForWalk) {
       if (!fp) continue;
       for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
-        // Skip hallway + stair from the collision AABB set: those are the
-        // pass-through "circulation" spaces (corridors and the stair shaft).
-        // If we include them as their own AABBs, blocksMovement treats a
-        // room→hallway step as "crossing into a different room" and blocks
-        // it, even though IRL there's a doorway. Treating them as free
-        // walking space means moving from any room to the hallway counts
-        // as "both endpoints outside any AABB" → allowed. Outer building
-        // bbox still clamps so user can't leave the footprint.
-        if (r === "hallway" || r === "stair") continue;
+        // Skip every circulation/transitional space from the collision
+        // AABB set: hallway, stair, balcony, and outdoor rooms. They're
+        // freely walkable so moves into them count as "both endpoints
+        // outside any AABB" → allowed. Outer building bbox still clamps
+        // so user can't drift off the property.
+        if (isCirculation(r)) continue;
         const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
         if (!p || !d) continue;
         // World rect: x∈[(p.x-minX)*CM - W/2, (p.x+w-minX)*CM - W/2]
@@ -6505,14 +6515,17 @@ export default function HouseCanvas() {
     const PAD = 0.5;
     const EDGE_EPS = 0.05;  // metres: walls within 5 cm count as "shared"
 
-    // First pass: collect every room rect (including hallway + stair) keyed
-    // by floor so adjacency checks stay floor-local.
+    // First pass: collect every room rect (including hallway, stair,
+    // balcony, AND outdoor rooms) keyed by floor so adjacency checks stay
+    // floor-local. Outdoor rooms are included here even though they don't
+    // appear in wallAABBs — we still want a room↔terrace shared wall to
+    // be auto-passable so the user can step out onto the terrace.
     type Rect = { room: string; floor: number; minX: number; maxX: number; minZ: number; maxZ: number };
     const rectsByFloor = new Map<number, Rect[]>();
     for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
       const fp = floorPlansForWalk[fi]; if (!fp) continue;
       const list: Rect[] = [];
-      for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+      for (const r of (fp.enabledRooms ?? [])) {
         const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
         if (!p || !d) continue;
         list.push({
@@ -6548,10 +6561,10 @@ export default function HouseCanvas() {
       }
     }
 
-    // (b) Auto-passage along every room↔hallway/stair shared edge
+    // (b) Auto-passage along every enclosed-room ↔ circulation/outdoor edge
     for (const rects of rectsByFloor.values()) {
-      const circ = rects.filter(r => r.room === "hallway" || r.room === "stair");
-      const others = rects.filter(r => r.room !== "hallway" && r.room !== "stair");
+      const circ = rects.filter(r => isCirculation(r.room));
+      const others = rects.filter(r => !isCirculation(r.room));
       for (const room of others) {
         for (const corridor of circ) {
           // North edge of room touches south edge of corridor: room.maxZ ≈ corridor.minZ
