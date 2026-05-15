@@ -17,7 +17,7 @@
  *   楼层 → Three.js Y（向上）
  */
 
-import { useMemo, useCallback, useState, useRef, Suspense } from "react";
+import React, { useMemo, useCallback, useState, useRef, Suspense } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Html, useGLTF, Clone, Instances, Instance } from "@react-three/drei";
@@ -9881,7 +9881,11 @@ export default function FloorPlanBuilding({
         // 有配置门优先用配置门，否则用自动生成门
         const effectiveDoors = doors.length > 0 ? doors : autoDoor ? [autoDoor] : [];
         return (
-          <group key={`int-${fi}-${room}`}>
+          // Fragment instead of <group> — the wrapper had no transform, so
+          // it added 1 traversed Object3D per room × floor (~40 dead nodes)
+          // for zero rendering benefit. React.Fragment lives in React's tree
+          // only; nothing is added to the Three.js scene graph.
+          <React.Fragment key={`int-${fi}-${room}`}>
             {/* 内墙面：BackSide box — 仅在室内侧可见，不会遮挡窗框/玻璃。
                 玻璃房间跳过 —— 这间已经在外层用 5 块独立 emissive plane
                 做了室内壳；再叠这个低 emissive 的 BackSide box 会从玻璃
@@ -10214,7 +10218,7 @@ export default function FloorPlanBuilding({
                   );
                 })}
             </group>
-          </group>
+          </React.Fragment>
         );
       })}
       </group>
