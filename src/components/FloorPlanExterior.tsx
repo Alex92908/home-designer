@@ -9932,7 +9932,16 @@ export default function FloorPlanBuilding({
             so a single `<Instances>` with per-instance scale collapses them
             into 1 draw call + 1 geometry buffer. */}
       {(() => {
-        const ceilingRooms = interiorRooms.filter(r => !r.isStair && !r.isHallway);
+        // Ceilings: include EVERY non-stair room (was: skip hallway). Hallway
+        // is a corridor between rooms; without a ceiling above it the user
+        // sees straight through to the floor above when they look up in
+        // walkthrough. Also include glass rooms — even though the room has
+        // no inner BackSide wall, it still needs a ceiling so the upper
+        // floor isn't visible. Stair rooms still skip (stair shaft must
+        // remain open between floors for the staircase geometry to make
+        // sense visually). The top-floor stair gets a roof from the
+        // exterior flat-roof mesh elsewhere.
+        const ceilingRooms = interiorRooms.filter(r => !r.isStair);
         if (ceilingRooms.length === 0) return null;
         const isXray = wallXray;
         const ceilOpacity = isXray ? 0.08 : 1;
