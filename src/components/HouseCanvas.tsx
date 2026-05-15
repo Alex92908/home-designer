@@ -351,6 +351,45 @@ function ShadowFreezeOnOrbit({ isInteractingRef }: { isInteractingRef: React.Ref
   return null;
 }
 
+/**
+ * Pre-compile all shaders on mount.
+ *
+ * Without this, WebGL lazily compiles + links shader programs the FIRST time
+ * each unique material is drawn — and the compile happens SYNCHRONOUSLY on the
+ * main thread (in WebGL2, no KHR_parallel_shader_compile fallback). With ~40
+ * unique materials in this scene, that's a 50–200ms stutter spread over the
+ * first 1–2 seconds of interaction (the "76ms p50 first window" we measured).
+ *
+ * `gl.compile(scene, camera)` walks the scene once, builds every program up
+ * front, and lets the user's first OrbitControls drag run at full 60 fps.
+ *
+ * Costs ~one extra heavy frame at mount (acceptable — user hasn't started
+ * interacting yet); pays back on every subsequent first-render of a material
+ * variant. Runs once per Canvas lifetime.
+ */
+function ShaderPrecompiler() {
+  const { gl, scene, camera, invalidate } = useThree();
+  useEffect(() => {
+    // Defer to next macrotask so Suspense fallbacks have resolved and the
+    // scene graph is fully populated. Doing it on mount tick would skip the
+    // late-loading GLTF materials entirely.
+    const id = window.setTimeout(() => {
+      try {
+        gl.compile(scene, camera);
+        invalidate(); // ensure a redraw with warmed-up programs
+        // eslint-disable-next-line no-console
+        console.log("[PERF] shaders precompiled");
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("[PERF] shader precompile failed", e);
+      }
+    }, 500);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
 function ExteriorCaptureSetup() {
   const { camera, gl, scene, controls } = useThree();
   const setCameraAndCapture = useDesignerStore(s => s.setCameraAndCapture);
@@ -6608,6 +6647,7 @@ export default function HouseCanvas() {
             onDone={done} />;
         })()}
         <ExteriorCaptureSetup />
+        <ShaderPrecompiler />
         <ShadowFreezeOnOrbit isInteractingRef={isInteractingRef} />
         {!walkthrough && <CameraRig W={W} D={D} floors={floors} buildingType={_buildingType} />}
         <InsideCameraAnimator
