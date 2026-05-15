@@ -419,15 +419,19 @@ function RoomGroup({
   }, [room, def.isOutdoor]);
 
   // Sibling rooms on the same floor — used to detect "wall faces another
-  // indoor room" for circulation-wall suppression. Read as plan-cm rects
-  // (back-left corner + width/depth) to keep the adjacency math simple.
-  const siblings = useDesignerStore(s => {
-    const fp = s.floorPlans[floorIndex];
-    if (!fp) return [] as Array<{ room: RoomType; x: number; y: number; w: number; d: number }>;
+  // indoor room" for circulation-wall suppression. Read raw store data
+  // (stable references) and derive the rect list in useMemo, otherwise
+  // returning a fresh array from the selector triggers zustand's "the
+  // result of getSnapshot should be cached" infinite-render guard.
+  const enabledRooms = useDesignerStore(s => s.floorPlans[floorIndex]?.enabledRooms);
+  const siblingLayout = useDesignerStore(s => s.floorPlans[floorIndex]?.roomLayout);
+  const siblingDims   = useDesignerStore(s => s.floorPlans[floorIndex]?.roomDimensions);
+  const siblings = useMemo(() => {
     const arr: Array<{ room: RoomType; x: number; y: number; w: number; d: number }> = [];
-    for (const r of (fp.enabledRooms ?? [])) {
+    if (!enabledRooms || !siblingLayout || !siblingDims) return arr;
+    for (const r of enabledRooms) {
       if (r === room) continue;
-      const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+      const p = siblingLayout[r]; const d = siblingDims[r];
       if (!p || !d) continue;
       // Only INDOOR siblings count — circulation walls facing outdoor
       // spaces (yard, terrace) should stay rendered so the corridor still
@@ -437,7 +441,7 @@ function RoomGroup({
       arr.push({ room: r, x: p.x, y: p.y, w: d.width, d: d.depth });
     }
     return arr;
-  });
+  }, [enabledRooms, siblingLayout, siblingDims, room]);
 
   // Polygon edge segments → wall boxes
   const wallBoxes = useMemo(() => {
