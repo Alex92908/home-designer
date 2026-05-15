@@ -23,6 +23,7 @@ import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
 const EMPTY_ROOM_STATE_GC: RoomState = { materials: {}, placedItems: [] };
 import { PlacedItemMesh } from "./RoomCanvas";
+import PerfTelemetry from "./PerfTelemetry";
 import { useT } from "@/lib/i18n";
 import type { RoofStyle } from "@/lib/types";
 
@@ -1404,6 +1405,8 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
     >
       <Canvas
         shadows
+        // Plan A: 静止时不渲染。OrbitControls 拖拽/setState 自动 invalidate。
+        frameloop="demand"
         camera={{ position: [12, initY, 12], fov: 45 }}
         gl={{ antialias: true, alpha: true }}
       >
@@ -1415,6 +1418,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
           setStairPos={setStairPos}
         />
         <CameraFit />
+        <PerfTelemetry label="global3d" />
       </Canvas>
 
       {/* ── Hint bar ── */}

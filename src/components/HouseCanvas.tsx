@@ -8,6 +8,7 @@ import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
+import PerfTelemetry from "./PerfTelemetry";
 import { useDesignerStore } from "@/lib/store";
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 
@@ -6500,6 +6501,11 @@ export default function HouseCanvas() {
       <Canvas
         style={{ touchAction: "none" }}
         shadows={{ type: THREE.PCFShadowMap, enabled: true }}
+        // Plan A: frameloop="demand" —— 静止时 0 CPU/GPU 渲染。
+        // OrbitControls / setState / 点击都会自动 invalidate() 触发重绘；
+        // 没有自定义动画时这是免费 win。如果发现某些动画停了，把这行
+        // 改成 frameloop="always" 即可回滚。
+        frameloop="demand"
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: theme.exposure,
@@ -6791,6 +6797,7 @@ export default function HouseCanvas() {
             <SMAA />
           </EffectComposer>
         )}
+        <PerfTelemetry label="exterior" />
       </Canvas>
     </div>
   );
