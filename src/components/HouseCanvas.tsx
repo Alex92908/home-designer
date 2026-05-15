@@ -14,10 +14,12 @@ import PerfTelemetry from "./PerfTelemetry";
  *  [1, 2] 区间内。FPS 高 = factor → 1 → dpr=2 清晰; FPS 低 = factor → 0
  *  → dpr=1 保流畅。flipflops=3 = 调 3 次后停止防止 ping-pong。
  *  注意：Canvas 必须给 dpr={[1, 2]} 才能让 setDpr() 在该区间生效。 */
-function AdaptiveDpr() {
+function AdaptiveDpr({ shadowSizeRef }: { shadowSizeRef?: React.MutableRefObject<number> }) {
   // useThree 在 Canvas 子树里取 setDpr —— R3F 提供的 store action，
   // 直接改 renderer pixelRatio。
   const setDpr = useThree(s => s.setDpr);
+  const scene = useThree(s => s.scene);
+  const gl = useThree(s => s.gl);
   return (
     <PerformanceMonitor
       ms={250}
@@ -28,6 +30,35 @@ function AdaptiveDpr() {
         // factor: 0 (worst) → 1 (best). dpr 在 1..2 之间。
         const dpr = Math.round((1 + factor) * 10) / 10;
         setDpr(dpr);
+        // Adaptive shadow map resolution: pair the dpr change with a 2048
+        // <-> 1024 swap on the sun's shadow map. Shadow render cost scales
+        // O(N²) with map size — halving to 1024 cuts shadow pass time ~4×.
+        // Threshold: factor < 0.75 → low-res 1024; else 2048. The visual
+        // difference at our scene scale (~30m wide bbox) is a slightly
+        // softer shadow edge — acceptable. We mutate light.shadow in-place
+        // and dispose the previous shadow.map so Three rebuilds it on the
+        // next shadow pass; this avoids remounting the light (which would
+        // cause a 1-frame flash) and keeps all light-pos/color uniforms.
+        const targetSize = factor < 0.75 ? 1024 : 2048;
+        if (shadowSizeRef && shadowSizeRef.current !== targetSize) {
+          shadowSizeRef.current = targetSize;
+          scene.traverse((o) => {
+            const l = o as THREE.DirectionalLight;
+            if (l.isDirectionalLight && l.castShadow) {
+              l.shadow.mapSize.width = targetSize;
+              l.shadow.mapSize.height = targetSize;
+              if (l.shadow.map) {
+                l.shadow.map.dispose();
+                // Force re-allocation on next shadow pass
+                (l.shadow as unknown as { map: null }).map = null;
+              }
+              l.shadow.needsUpdate = true;
+            }
+          });
+          gl.shadowMap.needsUpdate = true;
+          // eslint-disable-next-line no-console
+          console.log(`[PERF] shadowMap → ${targetSize}×${targetSize} (factor=${factor.toFixed(2)})`);
+        }
       }}
     />
   );
@@ -6331,6 +6362,11 @@ export default function HouseCanvas() {
   // Ref (not state) so ShadowFreezeOnOrbit reads it inside useFrame without
   // triggering React re-renders on every pointer move.
   const isInteractingRef = useRef(false);
+  // Adaptive shadow map size — initial 2048; AdaptiveDpr drops to 1024 when
+  // PerformanceMonitor reports factor < 0.75 (slow frames). Keeps the size
+  // out of React state so PerformanceMonitor's onChange doesn't force a tree
+  // re-render along with the shadow-map rebuild.
+  const shadowSizeRef = useRef(2048);
   const [hideInterior, setHideInterior] = useState(false);
   const interactTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleOrbitStart = () => {
@@ -7000,7 +7036,7 @@ export default function HouseCanvas() {
         {/* Task 2: PerformanceMonitor + adaptive DPR
             FPS 高 → 升 dpr 到 2（清晰），FPS 低 → 降到 1（保流畅）。
             flipflops=3 防止 ping-pong 抖动。*/}
-        <AdaptiveDpr />
+        <AdaptiveDpr shadowSizeRef={shadowSizeRef} />
       </Canvas>
     </div>
   );
