@@ -6471,19 +6471,23 @@ export default function HouseCanvas() {
     return out;
   }, [floorPlansForWalk]);
 
-  /** Door passage rectangles in world coords. One per configured door per
-   *  room. Each rectangle brackets the doorway: door-width across the wall,
-   *  ±0.5 m perpendicular to it (into the room + out into hallway/next room).
-   *  blocksMovement returns false if either segment endpoint lands inside
-   *  any of these — so walking through a door isn't treated as wall-crossing.
+  /** Door passage rectangles in world coords. Two sources:
    *
-   *  Only handles user-configured doors (`fp.roomDoors[r]`). Auto-doors are
-   *  not replicated here yet — rooms without configured doors will still be
-   *  trapped; user can toggle 「碰撞关」 to escape, or configure a door. */
+   *  (a) Configured doors (`fp.roomDoors[r]`): each becomes a passage box
+   *      door-width across × ±0.5 m perpendicular to the wall.
+   *
+   *  (b) AUTO door — for any room↔hallway/stair shared wall, punch a
+   *      passage along the ENTIRE shared edge. This is the "common-sense"
+   *      door: if your bedroom borders the corridor and you didn't
+   *      explicitly place a door, the renderer's auto-door already shows
+   *      one — collision now matches by opening the whole adjacent edge.
+   *      Without this, the user spawns into a bedroom that visually has
+   *      a door onto the corridor but is collision-trapped inside.
+   *
+   *  blocksMovement returns false if either endpoint sits in any passage. */
   const doorPasses = useMemo<AABB[]>(() => {
     const out: AABB[] = [];
     if (floorPlansForWalk.length === 0) return out;
-    // Re-derive the global plan bbox to convert door pos → world coords
     let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
     for (const fp of floorPlansForWalk) {
       if (!fp) continue;
@@ -6498,43 +6502,89 @@ export default function HouseCanvas() {
     const CM_local = 0.01;
     const Wh = (bMaxX - bMinX) * CM_local;
     const Dh = (bMaxY - bMinY) * CM_local;
-    const PAD = 0.5;  // metres of perpendicular extension into both rooms
-    for (const fp of floorPlansForWalk) {
-      if (!fp) continue;
+    const PAD = 0.5;
+    const EDGE_EPS = 0.05;  // metres: walls within 5 cm count as "shared"
+
+    // First pass: collect every room rect (including hallway + stair) keyed
+    // by floor so adjacency checks stay floor-local.
+    type Rect = { room: string; floor: number; minX: number; maxX: number; minZ: number; maxZ: number };
+    const rectsByFloor = new Map<number, Rect[]>();
+    for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
+      const fp = floorPlansForWalk[fi]; if (!fp) continue;
+      const list: Rect[] = [];
       for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
         const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
         if (!p || !d) continue;
-        const roomMinX = (p.x - bMinX) * CM_local - Wh / 2;
-        const roomMaxX = (p.x + d.width - bMinX) * CM_local - Wh / 2;
-        const roomMinZ = -((p.y + d.depth - bMinY) * CM_local) + Dh / 2;
-        const roomMaxZ = -((p.y - bMinY) * CM_local) + Dh / 2;
-        const doors = fp.roomDoors?.[r] ?? [];
+        list.push({
+          room: r as string, floor: fi,
+          minX: (p.x - bMinX) * CM_local - Wh / 2,
+          maxX: (p.x + d.width - bMinX) * CM_local - Wh / 2,
+          minZ: -((p.y + d.depth - bMinY) * CM_local) + Dh / 2,
+          maxZ: -((p.y - bMinY) * CM_local) + Dh / 2,
+        });
+      }
+      rectsByFloor.set(fi, list);
+    }
+
+    // (a) Configured doors
+    for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
+      const fp = floorPlansForWalk[fi]; if (!fp) continue;
+      const rects = rectsByFloor.get(fi) ?? [];
+      for (const rect of rects) {
+        const doors = fp.roomDoors?.[rect.room as keyof typeof fp.roomDoors] ?? [];
         for (const door of doors) {
           const dPos = door.pos * CM_local;
           const dLen = door.len * CM_local;
           if (door.wall === "back") {
-            // back wall sits at roomMinZ; door spans [roomMinX + dPos, +dLen]
-            out.push({
-              minX: roomMinX + dPos, maxX: roomMinX + dPos + dLen,
-              minZ: roomMinZ - PAD,  maxZ: roomMinZ + PAD,
-            });
+            out.push({ minX: rect.minX + dPos, maxX: rect.minX + dPos + dLen, minZ: rect.minZ - PAD, maxZ: rect.minZ + PAD });
           } else if (door.wall === "front") {
-            out.push({
-              minX: roomMinX + dPos, maxX: roomMinX + dPos + dLen,
-              minZ: roomMaxZ - PAD,  maxZ: roomMaxZ + PAD,
-            });
+            out.push({ minX: rect.minX + dPos, maxX: rect.minX + dPos + dLen, minZ: rect.maxZ - PAD, maxZ: rect.maxZ + PAD });
           } else if (door.wall === "left") {
-            // left wall at roomMinX, door span in Z (Y-flipped: maxZ - dPos - dLen .. maxZ - dPos)
-            out.push({
-              minX: roomMinX - PAD,           maxX: roomMinX + PAD,
-              minZ: roomMaxZ - dPos - dLen,   maxZ: roomMaxZ - dPos,
-            });
+            out.push({ minX: rect.minX - PAD, maxX: rect.minX + PAD, minZ: rect.maxZ - dPos - dLen, maxZ: rect.maxZ - dPos });
           } else {
-            // right wall
-            out.push({
-              minX: roomMaxX - PAD,           maxX: roomMaxX + PAD,
-              minZ: roomMaxZ - dPos - dLen,   maxZ: roomMaxZ - dPos,
-            });
+            out.push({ minX: rect.maxX - PAD, maxX: rect.maxX + PAD, minZ: rect.maxZ - dPos - dLen, maxZ: rect.maxZ - dPos });
+          }
+        }
+      }
+    }
+
+    // (b) Auto-passage along every room↔hallway/stair shared edge
+    for (const rects of rectsByFloor.values()) {
+      const circ = rects.filter(r => r.room === "hallway" || r.room === "stair");
+      const others = rects.filter(r => r.room !== "hallway" && r.room !== "stair");
+      for (const room of others) {
+        for (const corridor of circ) {
+          // North edge of room touches south edge of corridor: room.maxZ ≈ corridor.minZ
+          if (Math.abs(room.maxZ - corridor.minZ) < EDGE_EPS) {
+            const overlapMinX = Math.max(room.minX, corridor.minX);
+            const overlapMaxX = Math.min(room.maxX, corridor.maxX);
+            if (overlapMaxX > overlapMinX) {
+              out.push({ minX: overlapMinX, maxX: overlapMaxX, minZ: room.maxZ - PAD, maxZ: room.maxZ + PAD });
+            }
+          }
+          // South edge: room.minZ ≈ corridor.maxZ
+          if (Math.abs(room.minZ - corridor.maxZ) < EDGE_EPS) {
+            const overlapMinX = Math.max(room.minX, corridor.minX);
+            const overlapMaxX = Math.min(room.maxX, corridor.maxX);
+            if (overlapMaxX > overlapMinX) {
+              out.push({ minX: overlapMinX, maxX: overlapMaxX, minZ: room.minZ - PAD, maxZ: room.minZ + PAD });
+            }
+          }
+          // East edge of room touches west of corridor: room.maxX ≈ corridor.minX
+          if (Math.abs(room.maxX - corridor.minX) < EDGE_EPS) {
+            const overlapMinZ = Math.max(room.minZ, corridor.minZ);
+            const overlapMaxZ = Math.min(room.maxZ, corridor.maxZ);
+            if (overlapMaxZ > overlapMinZ) {
+              out.push({ minX: room.maxX - PAD, maxX: room.maxX + PAD, minZ: overlapMinZ, maxZ: overlapMaxZ });
+            }
+          }
+          // West edge: room.minX ≈ corridor.maxX
+          if (Math.abs(room.minX - corridor.maxX) < EDGE_EPS) {
+            const overlapMinZ = Math.max(room.minZ, corridor.minZ);
+            const overlapMaxZ = Math.min(room.maxZ, corridor.maxZ);
+            if (overlapMaxZ > overlapMinZ) {
+              out.push({ minX: room.minX - PAD, maxX: room.minX + PAD, minZ: overlapMinZ, maxZ: overlapMaxZ });
+            }
           }
         }
       }
