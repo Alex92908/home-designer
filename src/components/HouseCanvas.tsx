@@ -5937,7 +5937,7 @@ function TouchJoystick({ onChange }: { onChange: (axisX: number, axisZ: number) 
  *  - Mobile joystick: an external state can inject {axisX,axisZ}.
  *  - When `spawnPos` changes, teleports the camera there. */
 function WalkthroughController({
-  active, spawnPos, bbox, onExit, walls, joystick, noClip,
+  active, spawnPos, bbox, onExit, walls, doorPasses, joystick, noClip,
 }: {
   active: boolean;
   spawnPos: [number, number, number] | null;
@@ -5946,6 +5946,10 @@ function WalkthroughController({
   /** Room footprints in world coords. Movement is blocked by any of these
    *  rect's perimeter — when crossed, we slide. */
   walls: AABB[];
+  /** Door passage rectangles spanning each doorway. If movement endpoint
+   *  is inside any of these, the wall-cross test is bypassed so the user
+   *  can walk room→corridor through the door. */
+  doorPasses: AABB[];
   /** Live touch joystick output, -1..1 on each axis. Forward = +axisZ
    *  (same convention as WASD's dz). */
   joystick: { axisX: number; axisZ: number };
@@ -6086,6 +6090,17 @@ function WalkthroughController({
    *  user is moving INTO a room (both endpoints inside the same rect)
    *  or staying outside all rects. */
   const blocksMovement = (x1: number, z1: number, x2: number, z2: number): boolean => {
+    // First check door passages — a rectangle that brackets each doorway.
+    // If EITHER endpoint sits inside a passage, treat the move as
+    // "walking through a door" and allow it regardless of AABB cross. This
+    // is what makes the new collision-on default usable: without it the
+    // user is trapped in whichever room they spawn in.
+    for (const p of doorPasses) {
+      if ((x1 >= p.minX && x1 <= p.maxX && z1 >= p.minZ && z1 <= p.maxZ) ||
+          (x2 >= p.minX && x2 <= p.maxX && z2 >= p.minZ && z2 <= p.maxZ)) {
+        return false;
+      }
+    }
     // If either endpoint is inside a room AND the other isn't in the SAME
     // room (i.e. they're in different rooms with a wall between, or one is
     // outside any room), then the segment crosses a wall.
@@ -6451,6 +6466,77 @@ export default function HouseCanvas() {
           minZ: -((p.y + d.depth - minY) * CM_local) + Dh / 2,
           maxZ: -((p.y - minY) * CM_local) + Dh / 2,
         });
+      }
+    }
+    return out;
+  }, [floorPlansForWalk]);
+
+  /** Door passage rectangles in world coords. One per configured door per
+   *  room. Each rectangle brackets the doorway: door-width across the wall,
+   *  ±0.5 m perpendicular to it (into the room + out into hallway/next room).
+   *  blocksMovement returns false if either segment endpoint lands inside
+   *  any of these — so walking through a door isn't treated as wall-crossing.
+   *
+   *  Only handles user-configured doors (`fp.roomDoors[r]`). Auto-doors are
+   *  not replicated here yet — rooms without configured doors will still be
+   *  trapped; user can toggle 「碰撞关」 to escape, or configure a door. */
+  const doorPasses = useMemo<AABB[]>(() => {
+    const out: AABB[] = [];
+    if (floorPlansForWalk.length === 0) return out;
+    // Re-derive the global plan bbox to convert door pos → world coords
+    let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
+    for (const fp of floorPlansForWalk) {
+      if (!fp) continue;
+      for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+        const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+        if (!p || !d) continue;
+        bMinX = Math.min(bMinX, p.x); bMinY = Math.min(bMinY, p.y);
+        bMaxX = Math.max(bMaxX, p.x + d.width); bMaxY = Math.max(bMaxY, p.y + d.depth);
+      }
+    }
+    if (!isFinite(bMinX)) return out;
+    const CM_local = 0.01;
+    const Wh = (bMaxX - bMinX) * CM_local;
+    const Dh = (bMaxY - bMinY) * CM_local;
+    const PAD = 0.5;  // metres of perpendicular extension into both rooms
+    for (const fp of floorPlansForWalk) {
+      if (!fp) continue;
+      for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+        const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+        if (!p || !d) continue;
+        const roomMinX = (p.x - bMinX) * CM_local - Wh / 2;
+        const roomMaxX = (p.x + d.width - bMinX) * CM_local - Wh / 2;
+        const roomMinZ = -((p.y + d.depth - bMinY) * CM_local) + Dh / 2;
+        const roomMaxZ = -((p.y - bMinY) * CM_local) + Dh / 2;
+        const doors = fp.roomDoors?.[r] ?? [];
+        for (const door of doors) {
+          const dPos = door.pos * CM_local;
+          const dLen = door.len * CM_local;
+          if (door.wall === "back") {
+            // back wall sits at roomMinZ; door spans [roomMinX + dPos, +dLen]
+            out.push({
+              minX: roomMinX + dPos, maxX: roomMinX + dPos + dLen,
+              minZ: roomMinZ - PAD,  maxZ: roomMinZ + PAD,
+            });
+          } else if (door.wall === "front") {
+            out.push({
+              minX: roomMinX + dPos, maxX: roomMinX + dPos + dLen,
+              minZ: roomMaxZ - PAD,  maxZ: roomMaxZ + PAD,
+            });
+          } else if (door.wall === "left") {
+            // left wall at roomMinX, door span in Z (Y-flipped: maxZ - dPos - dLen .. maxZ - dPos)
+            out.push({
+              minX: roomMinX - PAD,           maxX: roomMinX + PAD,
+              minZ: roomMaxZ - dPos - dLen,   maxZ: roomMaxZ - dPos,
+            });
+          } else {
+            // right wall
+            out.push({
+              minX: roomMaxX - PAD,           maxX: roomMaxX + PAD,
+              minZ: roomMaxZ - dPos - dLen,   maxZ: roomMaxZ - dPos,
+            });
+          }
+        }
       }
     }
     return out;
@@ -6877,6 +6963,7 @@ export default function HouseCanvas() {
               : floors * FLOOR_H_M - 0.4,
           }}
           walls={wallAABBs}
+          doorPasses={doorPasses}
           joystick={joystick}
           noClip={walkNoClip}
           onExit={exitWalkthrough}
