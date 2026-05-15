@@ -5914,6 +5914,28 @@ function WalkthroughController({
   noClip: boolean;
 }) {
   const { camera, scene } = useThree();
+  const invalidate = useThree(s => s.invalidate);
+  const advance = useThree(s => s.advance);
+  // The whole walkthrough is driven by useFrame (apply yaw/pitch to camera
+  // rotation, integrate WASD movement, floor-snap raycast). Under
+  // frameloop="demand" useFrame ONLY fires when something invalidates the
+  // scene — but drag-to-look writes to refs (not state) and the OrbitControls
+  // that normally calls invalidate() is unmounted in walkthrough. So we run
+  // a small self-driven loop while walkthrough is active: rAF tick that
+  // calls invalidate() each frame. This is equivalent to frameloop="always"
+  // for this subtree but doesn't disturb the rest of the Canvas config (we
+  // tried setFrameloop("always") and it hung the renderer when combined
+  // with GLTF mount + preloader bursts).
+  useEffect(() => {
+    if (!active) return;
+    let rafId: number;
+    const tick = () => {
+      invalidate();
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [active, invalidate, advance]);
   const keysRef = useRef<Record<string, boolean>>({});
   const spawnedRef = useRef<string | null>(null);
   /** Y of the floor surface the player last stood on (world space).
