@@ -6140,11 +6140,17 @@ function WalkthroughController({
   return null;
 }
 
-function InsideCameraAnimator({ active, camPos, lookAt, teleport = false }: {
+function InsideCameraAnimator({ active, camPos, lookAt, teleport = false, isInteractingRef }: {
   active: boolean;
   camPos: [number, number, number];
   lookAt: [number, number, number];
   teleport?: boolean;
+  /** Set by OrbitControls onStart/onEnd. While true, abort any in-flight
+   *  lerp — we must NOT fight the user's drag. Without this guard the
+   *  animator pulls the camera back toward camV every frame the user
+   *  drags away from it, manifesting as a phantom "auto-zoom" toward
+   *  the initial preset position. */
+  isInteractingRef?: React.RefObject<boolean>;
 }) {
   const { camera } = useThree();
   const controls = useThree(s => s.controls) as any;
@@ -6157,6 +6163,14 @@ function InsideCameraAnimator({ active, camPos, lookAt, teleport = false }: {
   }, [active]);
   useFrame(() => {
     if (!active || done.current) return;
+    // If the user has touched the orbit controls, give up: they own the
+    // camera now. Marking done.current=true also means we won't resume
+    // the lerp on subsequent frames even after the user lets go — the
+    // pre-drag preset is moot once they've reoriented intentionally.
+    if (isInteractingRef?.current) {
+      done.current = true;
+      return;
+    }
     if (teleport) {
       // Instant teleport: jump on first frame, then stop animating entirely
       camera.position.copy(camV);
@@ -6728,6 +6742,7 @@ export default function HouseCanvas() {
           active={!walkthrough && _buildingType === "floor-plan-driven"}
           camPos={outsideCamPos}
           lookAt={outsideLookAt}
+          isInteractingRef={isInteractingRef}
         />
         {/* OrbitControls — disabled during first-person walkthrough so
             PointerLockControls owns mouse + drag rotation. */}
