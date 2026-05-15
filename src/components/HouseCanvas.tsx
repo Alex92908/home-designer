@@ -6362,6 +6362,13 @@ export default function HouseCanvas() {
   const insideBuilding = walkthrough;
   const [walkthroughSpawn, setWalkthroughSpawn] = useState<[number, number, number] | null>(null);
   const [wallXray, setWallXray] = useState(false);
+  // Force walls opaque on every walkthrough entry. Without this, an x-ray
+  // session left over from a previous walkthrough would persist and the
+  // user would step "into" a building whose walls were 13% opaque —
+  // confusing, and contrary to the design ("walls default opaque").
+  useEffect(() => {
+    if (walkthrough) setWallXray(false);
+  }, [walkthrough]);
 
   // ── Interaction-aware rendering ───────────────────────────────────────
   // Ref (not state) so ShadowFreezeOnOrbit reads it inside useFrame without
