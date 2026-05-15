@@ -20,7 +20,7 @@
 import { useMemo, useCallback, useState, useRef, Suspense } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { Html, useGLTF, Clone } from "@react-three/drei";
+import { Html, useGLTF, Clone, Instances, Instance } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
 import { overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem } from "@/lib/types";
@@ -224,9 +224,66 @@ function GlassCurtain({
   const rowH  = height / rows;
   const frame = "#181A1E";
 
+  // ── Combo-2: 把重复 frame meshes 折叠成 InstancedMesh ──
+  // 每个 GlassCurtain 实例内：竖向 mullion (cols+1) + 中部横向 rail (rows-1)
+  // + 横档 transom bar (cols×rows, !hasDoor) + spandrel (rows) 全部用
+  // drei <Instances>。原本每个 facade ~55+ mesh 现在合成 4 个 mesh，
+  // 配合多层多面的住宅，整体 mesh count 可显著下降。
+  const mullionPositions = useMemo(() => {
+    const arr: Array<[number, number, number]> = [];
+    for (let ci = 0; ci < cols; ci++) {
+      const px = -width / 2 + (ci + 0.5) * panelW;
+      arr.push([px + panelW / 2 + mullionW / 4, 0, 0.005]);  // right mullion
+      if (ci === 0) arr.push([px - (panelW / 2 + mullionW / 4), 0, 0.005]);  // first-col left
+    }
+    return arr;
+  }, [cols, width, panelW, mullionW]);
+
+  const midRailPositions = useMemo(() => {
+    const arr: Array<[number, number, number]> = [];
+    for (let i = 0; i < rows - 1; i++) {
+      arr.push([0, -height / 2 + (i + 1) * rowH, 0.005]);
+    }
+    return arr;
+  }, [rows, height, rowH]);
+
+  // Transom bars 只在 !hasDoor 的格子里 —— 先扫一遍算位置数组
+  const transomPositions = useMemo(() => {
+    const arr: Array<[number, number, number]> = [];
+    for (let ci = 0; ci < cols; ci++) {
+      const px = -width / 2 + (ci + 0.5) * panelW;
+      for (let ri = 0; ri < rows; ri++) {
+        const py = -height / 2 + (ri + 0.5) * rowH;
+        const hasDoor = doors.some(d => Math.abs(d.cx - px) < panelW / 2 + d.w / 2 && ri === 0);
+        if (hasDoor) continue;
+        const spH    = Math.min(rowH * 0.200, 0.55);
+        const visH   = rowH - spH;
+        const botH   = visH * 0.38;
+        const visBot = py - rowH / 2 + spH;
+        const transY = visBot + botH;
+        arr.push([px, transY, 0.023]);
+      }
+    }
+    return arr;
+  }, [cols, rows, width, height, panelW, rowH, doors]);
+
+  // Spandrel positions —— 每行底部 20% 的暗色面板
+  const spandrelPositions = useMemo(() => {
+    const arr: Array<[number, number, number]> = [];
+    for (let ri = 0; ri < rows; ri++) {
+      const py = -height / 2 + ri * rowH;
+      const spH = Math.min(rowH * 0.200, 0.55);
+      arr.push([0, py + spH / 2, 0.026]);
+    }
+    return arr;
+  }, [rows, rowH, height]);
+
+  const spandrelHeight = Math.min(rowH * 0.200, 0.55);  // 假定所有 row 同 height
+  const transomWidth = panelW - 0.006;
+
   return (
     <group>
-      {/* 顶部 / 底部 / 中部横向压条 —— 满铺 */}
+      {/* 顶部 / 底部 横向压条（每幅 facade 各 1 个，不需要 instance）*/}
       <mesh position={[0, height / 2 - 0.04, 0.005]}>
         <boxGeometry args={[width, 0.08, 0.062]} />
         <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
@@ -235,34 +292,50 @@ function GlassCurtain({
         <boxGeometry args={[width, 0.08, 0.062]} />
         <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
       </mesh>
-      {Array.from({ length: rows - 1 }, (_, i) => {
-        const py = -height / 2 + (i + 1) * rowH;
-        return (
-          <mesh key={`mid${i}`} position={[0, py, 0.005]}>
-            <boxGeometry args={[width, 0.042, 0.040]} />
-            <meshStandardMaterial color={frame} roughness={0.14} metalness={0.90} />
-          </mesh>
-        );
-      })}
 
-      {/* 每块面板：竖压条 + 玻璃 */}
+      {/* 中部 horizontal mid-rails —— InstancedMesh */}
+      {midRailPositions.length > 0 && (
+        <Instances limit={midRailPositions.length}>
+          <boxGeometry args={[width, 0.042, 0.040]} />
+          <meshStandardMaterial color={frame} roughness={0.14} metalness={0.90} />
+          {midRailPositions.map((p, i) => <Instance key={i} position={p} />)}
+        </Instances>
+      )}
+
+      {/* 竖向 mullions —— InstancedMesh */}
+      {mullionPositions.length > 0 && (
+        <Instances limit={mullionPositions.length}>
+          <boxGeometry args={[mullionW / 2, height + 0.08, 0.060]} />
+          <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
+          {mullionPositions.map((p, i) => <Instance key={i} position={p} />)}
+        </Instances>
+      )}
+
+      {/* 横档 transom bars —— InstancedMesh */}
+      {transomPositions.length > 0 && (
+        <Instances limit={transomPositions.length}>
+          <boxGeometry args={[transomWidth, 0.040, 0.014]} />
+          <meshStandardMaterial color={frame} roughness={0.12} metalness={0.94} envMapIntensity={2.6} />
+          {transomPositions.map((p, i) => <Instance key={i} position={p} />)}
+        </Instances>
+      )}
+
+      {/* Spandrel bands —— InstancedMesh */}
+      {spandrelPositions.length > 0 && (
+        <Instances limit={spandrelPositions.length}>
+          <boxGeometry args={[width - 0.004, spandrelHeight, 0.008]} />
+          <meshStandardMaterial color="#1A1D26" roughness={0.12} metalness={0.92} envMapIntensity={2.2} />
+          {spandrelPositions.map((p, i) => <Instance key={i} position={p} />)}
+        </Instances>
+      )}
+
+      {/* 每块面板：玻璃 + 百叶帘（保留 individual，因为 opacity 和位置数据
+          per-row 都不同）*/}
       {Array.from({ length: cols }, (_, ci) => {
         const px = -width / 2 + (ci + 0.5) * panelW;
-        const isFirst = ci === 0;
         return (
           <group key={`c${ci}`} position={[px, 0, 0.005]}>
-            {/* 右侧竖压条 */}
-            <mesh position={[panelW / 2 + mullionW / 4, 0, 0]}>
-              <boxGeometry args={[mullionW / 2, height + 0.08, 0.060]} />
-              <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
-            </mesh>
-            {/* 第一块左侧也补一条 */}
-            {isFirst && (
-              <mesh position={[-(panelW / 2 + mullionW / 4), 0, 0]}>
-                <boxGeometry args={[mullionW / 2, height + 0.08, 0.060]} />
-                <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} />
-              </mesh>
-            )}
+            {/* mullions / transom 已经在外层 <Instances> 处理，这里只剩玻璃 + 百叶帘 */}
             {/* 玻璃 + 中横档（transom bar）——每格一片玻璃，上部 62% 为主视野，
                 下部 38% 为固定扇（两者之间加细横档，与竖向幕墙语言匹配）*/}
             {Array.from({ length: rows }, (_, ri) => {
@@ -302,15 +375,7 @@ function GlassCurtain({
                       {...overlayMaterialProps(2)}
                     />
                   </mesh>
-                  {/* Horizontal transom bar between upper and lower pane */}
-                  {!hasDoor && (
-                    <mesh position={[0, transY, 0.023]} renderOrder={8}>
-                      <boxGeometry args={[panelW - 0.006, 0.040, 0.014]} />
-                      <meshStandardMaterial
-                        color={frame} roughness={0.12} metalness={0.94} envMapIntensity={2.6}
-                      />
-                    </mesh>
-                  )}
+                  {/* Transom bar 已并入外层 InstancedMesh (transomPositions) */}
                   {/* ── 百叶帘（venetian blinds）—— 28% 的面板随机部分拉下 ──
                       位于玻璃内侧（z < 0），只遮住上部 Vision pane 的
                       约 55%，底部留空（日常使用场景模拟）。
@@ -347,19 +412,7 @@ function GlassCurtain({
         );
       })}
 
-      {/* ── Spandrel band — dark metal panel at floor level of each row.
-          Hides the inter-floor slab and mechanical zone, as in real curtain walls.
-          Sits just in front of (z > ) the glass panels so it opaquely covers that area. */}
-      {Array.from({ length: rows }, (_, ri) => {
-        const py = -height / 2 + ri * rowH;  // bottom of this row
-        const spH = Math.min(rowH * 0.200, 0.55); // spandrel = bottom 20% of row, max 0.55m
-        return (
-          <mesh key={`spd-${ri}`} position={[0, py + spH / 2, 0.026]} renderOrder={9}>
-            <boxGeometry args={[width - 0.004, spH, 0.008]} />
-            <meshStandardMaterial color="#1A1D26" roughness={0.12} metalness={0.92} envMapIntensity={2.2} />
-          </mesh>
-        );
-      })}
+      {/* Spandrel bands 已并入外层 InstancedMesh (spandrelPositions) */}
 
       {/* 大门 —— 推拉式玻璃门：和玻璃幕墙同款玻璃材质，只多一道细黑
           竖框做"门扇分隔"。之前是 #111 厚框 + 染色玻璃，从外面看像独立
