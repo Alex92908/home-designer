@@ -5938,7 +5938,8 @@ function WalkthroughController({
   /** Room footprints in world coords. Movement is blocked by any of these
    *  rect's perimeter — when crossed, we slide. */
   walls: AABB[];
-  /** Live touch joystick output, -1..1 on each axis. Forward = -axisZ. */
+  /** Live touch joystick output, -1..1 on each axis. Forward = +axisZ
+   *  (same convention as WASD's dz). */
   joystick: { axisX: number; axisZ: number };
   /** When true, internal wall collision is disabled (still clamps to
    *  outer bbox so user can't fly outside the property). "Ghost mode". */
@@ -6101,9 +6102,13 @@ function WalkthroughController({
     if (keys.s || keys.arrowdown)  dz -= 1;
     if (keys.a || keys.arrowleft)  dx -= 1;
     if (keys.d || keys.arrowright) dx += 1;
-    // Joystick (-1..1 on each axis). -axisZ because forward = stick up = negative Y in screen space.
+    // Joystick (-1..1 on each axis). TouchJoystick already flips Y so that
+    // stick-forward (screen up) outputs +axisZ — see its onChange call
+    // (-dy/radius). So +axisZ === forward, same convention as the WASD
+    // path above. Previously this line had `-joystick.axisZ` which
+    // double-negated → stick forward moved the camera backward.
     dx += joystick.axisX;
-    dz += -joystick.axisZ;
+    dz += joystick.axisZ;
 
     // ── 2. Apply yaw/pitch to camera rotation ──
     const yaw = yawRef.current, pitch = pitchRef.current;
