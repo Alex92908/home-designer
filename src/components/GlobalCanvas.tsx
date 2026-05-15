@@ -1313,18 +1313,19 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
 function ShaderPrecompiler() {
   const { gl, scene, camera, invalidate } = useThree();
   useEffect(() => {
-    const id = window.setTimeout(() => {
+    const delays = [400, 1500, 3500];
+    const timers = delays.map(d => window.setTimeout(() => {
       try {
         gl.compile(scene, camera);
         invalidate();
         // eslint-disable-next-line no-console
-        console.log("[PERF global3d] shaders precompiled");
+        console.log(`[PERF global3d] shaders precompiled @${d}ms`);
       } catch (e) {
         // eslint-disable-next-line no-console
         console.warn("[PERF global3d] shader precompile failed", e);
       }
-    }, 500);
-    return () => window.clearTimeout(id);
+    }, d));
+    return () => timers.forEach(t => window.clearTimeout(t));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return null;

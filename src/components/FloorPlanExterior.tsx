@@ -9874,6 +9874,69 @@ export default function FloorPlanBuilding({
           hideInterior=true 时 visible=false：Three.js 跳过 projectObject
           遍历这些对象，节省约 120ms JS/帧（拖拽期间内部不可见无所谓）。 */}
       <group visible={insideBuilding || !hideInterior}>
+      {/* ── Consolidated CEILING planes — single InstancedMesh across all
+            non-stair / non-hallway rooms × floors. Replaces 1 mesh per room
+            (was ~40 meshes on 4-floor villa). All ceilings share fixed
+            material (#F5F2EE / roughness 0.88), only position+scale vary,
+            so a single `<Instances>` with per-instance scale collapses them
+            into 1 draw call + 1 geometry buffer. */}
+      {(() => {
+        const ceilingRooms = interiorRooms.filter(r => !r.isStair && !r.isHallway);
+        if (ceilingRooms.length === 0) return null;
+        const isXray = wallXray;
+        const ceilOpacity = isXray ? 0.08 : 1;
+        return (
+          <Instances limit={ceilingRooms.length} range={ceilingRooms.length} raycast={() => null}>
+            <planeGeometry args={[1, 1]} />
+            <meshStandardMaterial
+              color="#F5F2EE" roughness={0.88} side={THREE.BackSide}
+              emissive="#FFFDF8" emissiveIntensity={insideBuilding ? 0.08 : 0.02}
+              transparent={isXray} opacity={ceilOpacity} depthWrite={!isXray}
+            />
+            {ceilingRooms.map(r => (
+              <Instance
+                key={`ceil-${r.fi}-${r.room}`}
+                position={[r.cx, r.yBase + FLOOR_H - 0.025, r.cz]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                scale={[r.rW - 0.04, r.rD - 0.04, 1]}
+              />
+            ))}
+          </Instances>
+        );
+      })()}
+
+      {/* ── Consolidated FLOOR planes — single InstancedMesh across all
+            non-(upper-stair) rooms. Per-instance color via drei `<Instance
+            color>` (vertex color → material vertexColors=true). Same payoff
+            as ceilings (~40 meshes → 1). Note: floors are still
+            receiveShadow and ALLOW raycast (walkthrough mode hit-tests
+            against the floor plane). */}
+      {(() => {
+        const floorRooms = interiorRooms.filter(r => !(r.isStair && r.fi > 0));
+        if (floorRooms.length === 0) return null;
+        return (
+          <Instances limit={floorRooms.length} range={floorRooms.length} receiveShadow>
+            <planeGeometry args={[1, 1]} />
+            <meshStandardMaterial
+              vertexColors
+              roughness={insideBuilding ? 0.42 : 0.70}
+              metalness={insideBuilding ? 0.06 : 0.03}
+              envMapIntensity={insideBuilding ? 0.55 : 0.2}
+              side={THREE.FrontSide}
+            />
+            {floorRooms.map(r => (
+              <Instance
+                key={`floor-${r.fi}-${r.room}`}
+                position={[r.cx, r.yBase + 0.025, r.cz]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                scale={[r.rW - 0.04, r.rD - 0.04, 1]}
+                color={r.floorColor}
+              />
+            ))}
+          </Instances>
+        );
+      })()}
+
       {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, stairShape, stairRotation }) => {
         const wallOpacity = wallXray ? 0.13 : 1.0;
         const isXray = wallXray;
@@ -9902,30 +9965,10 @@ export default function FloorPlanBuilding({
                 <meshStandardMaterial color="#E8E4DC" roughness={0.88} side={THREE.DoubleSide} />
               </mesh>
             )}
-            {/* 地板：楼梯间上层（fi>0）不渲染地板，保持楼梯开口畅通 */}
-            {!(isStair && fi > 0) && (
-              <mesh position={[cx, yBase + 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                {/* 漫游射线需要命中楼板，故不设 raycast={() => null}。
-                    FrontSide = 仅从上方可见，避免下层射线命中上层楼板反面。 */}
-                <planeGeometry args={[rW - 0.04, rD - 0.04]} />
-                <meshStandardMaterial
-                  color={floorColor}
-                  roughness={insideBuilding ? 0.42 : 0.70}
-                  metalness={insideBuilding ? 0.06 : 0.03}
-                  envMapIntensity={insideBuilding ? 0.55 : 0.2}
-                  side={THREE.FrontSide}
-                />
-              </mesh>
-            )}
-            {/* 天花板 — 走廊和楼梯间不渲染 */}
-            {!isStair && !isHallway && (
-              <mesh position={[cx, yBase + FLOOR_H - 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
-                <planeGeometry args={[rW - 0.04, rD - 0.04]} />
-                <meshStandardMaterial color="#F5F2EE" roughness={0.88} side={THREE.BackSide}
-                  emissive="#FFFDF8" emissiveIntensity={insideBuilding ? 0.08 : 0.02}
-                  transparent={isXray} opacity={isXray ? 0.08 : 1} depthWrite={!isXray} />
-              </mesh>
-            )}
+            {/* 地板 / 天花板：已上提到外层 `<Instances>` (见 group 顶部
+                consolidated CEILING / FLOOR blocks)。原 1 mesh/房间 → 跨楼层
+                共享 1 InstancedMesh，~40 mesh 折叠成 1 draw call。
+                楼梯上层（fi>0）不渲染地板 — 在外层 filter 里处理过。 */}
             {/* 天花板筒灯（室内模式）—— 4 盏矩形嵌入式灯，不遮挡视线 */}
             {insideBuilding && !isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (() => {
               const roomArea = rW * rD;

@@ -370,21 +370,24 @@ function ShadowFreezeOnOrbit({ isInteractingRef }: { isInteractingRef: React.Ref
 function ShaderPrecompiler() {
   const { gl, scene, camera, invalidate } = useThree();
   useEffect(() => {
-    // Defer to next macrotask so Suspense fallbacks have resolved and the
-    // scene graph is fully populated. Doing it on mount tick would skip the
-    // late-loading GLTF materials entirely.
-    const id = window.setTimeout(() => {
+    // Compile multiple times as the scene grows. R3F Suspense fallbacks
+    // resolve over time — GLTFs, textures, and InstancedMesh materials all
+    // arrive on different ticks. A single early compile misses everything
+    // mounted later. Cheap-by-design: gl.compile() is idempotent on already-
+    // compiled programs.
+    const delays = [400, 1500, 3500];
+    const timers = delays.map(d => window.setTimeout(() => {
       try {
         gl.compile(scene, camera);
-        invalidate(); // ensure a redraw with warmed-up programs
+        invalidate();
         // eslint-disable-next-line no-console
-        console.log("[PERF] shaders precompiled");
+        console.log(`[PERF] shaders precompiled @${d}ms (children=${scene.children.length})`);
       } catch (e) {
         // eslint-disable-next-line no-console
         console.warn("[PERF] shader precompile failed", e);
       }
-    }, 500);
-    return () => window.clearTimeout(id);
+    }, d));
+    return () => timers.forEach(t => window.clearTimeout(t));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return null;
