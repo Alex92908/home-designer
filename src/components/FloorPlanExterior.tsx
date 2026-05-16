@@ -10009,17 +10009,24 @@ export default function FloorPlanBuilding({
           // for zero rendering benefit. React.Fragment lives in React's tree
           // only; nothing is added to the Three.js scene graph.
           <React.Fragment key={`int-${fi}-${room}`}>
-            {/* 内墙面：BackSide box — 仅在室内侧可见，不会遮挡窗框/玻璃。
-                玻璃房间跳过 —— 这间已经在外层用 5 块独立 emissive plane
-                做了室内壳；再叠这个低 emissive 的 BackSide box 会从玻璃
-                外看到额外的"立柱"剪影（双层 BackSide 叠加 + 房间间共享
-                墙的盒侧面在斜角下露出）。 */}
-            {!isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (
+            {/* 内墙面 box — 形状/位置不变，但 side 与 gating 随模式切换：
+                ─ EXTERIOR 模式：保持 BackSide（仅室内侧可见，不遮玻璃幕墙
+                  外视）。玻璃房间跳过，避免从外面看到额外的"立柱"剪影。
+                  走廊/楼梯也跳过，因为外观看走廊从外部毫无意义。
+                ─ WALKTHROUGH 模式：DoubleSide 让墙从任一房间的角度都能看
+                  到（玩家在走廊里看相邻卧室那面墙时，BackSide 会被剔除
+                  → 透明 bug）。玻璃房 / 走廊 / 楼梯也都画上，只跳过楼梯
+                  井（楼梯本身竖向贯通）。 */}
+            {!isStair && (insideBuilding || (!isHallway && !glassRooms.has(`${fi}:${room}`))) && (
               <mesh position={[cx, yBase + FLOOR_H / 2, cz]} raycast={() => null}>
                 <boxGeometry args={[rW - 0.02, FLOOR_H - 0.01, rD - 0.02]} />
-                <meshStandardMaterial color={wallColor} side={THREE.BackSide} roughness={0.82}
+                <meshStandardMaterial
+                  color={wallColor}
+                  side={insideBuilding ? THREE.DoubleSide : THREE.BackSide}
+                  roughness={0.82}
                   transparent={isXray} opacity={wallOpacity} depthWrite={!isXray}
-                  emissive={wallColor} emissiveIntensity={insideBuilding ? 0.22 : 0.06} />
+                  emissive={wallColor} emissiveIntensity={insideBuilding ? 0.22 : 0.06}
+                />
               </mesh>
             )}
             {/* 走廊：天花板板条（顶部薄板，让走廊从室内清晰可辨）*/}
