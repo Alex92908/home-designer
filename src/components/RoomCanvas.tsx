@@ -2734,6 +2734,21 @@ function GltfFurniture({
       if (mesh.isMesh) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
+        // Fix Sketchfab translucent panels (cabinet glass doors, sheer
+        // overlays) that ship with `transparent + depthWrite=false +
+        // opacity ≤ 0.4`. With depthWrite off, multiple layers in the
+        // same item Z-fight as the camera moves — manifests as torn /
+        // streaky "curtain" artifacts on the wall behind. Re-enabling
+        // depthWrite keeps the visual transparency but lets each layer
+        // occlude the next properly.
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const mat of mats) {
+          const sm = mat as THREE.MeshStandardMaterial;
+          if (sm?.transparent && sm.depthWrite === false && (sm.opacity ?? 1) < 0.6) {
+            sm.depthWrite = true;
+            sm.needsUpdate = true;
+          }
+        }
       }
     });
     // Measure the asset's native bounding box so we can scale to our
