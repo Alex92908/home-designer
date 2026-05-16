@@ -406,39 +406,28 @@ function RoomGroup({
     // we still include them as deps to be safe.
   }, [polyPts, W, D]);
 
-  // For circulation rooms (hallway / stair / balcony / outdoor), suppress
-  // walls that face ANOTHER indoor room — only keep the segments facing the
-  // building exterior. User observation: a corridor wall between itself and
-  // the bedroom is double-rendered (corridor's + bedroom's) and serves no
-  // purpose; what we actually want is the corridor's perimeter that hits
-  // the outside world.
-  const isCirculationRoom = useMemo(() => {
-    if (room === "hallway" || room === "stair") return true;
-    if (room === "balcony" || room === "balcony2") return true;
-    return def.isOutdoor === true;
-  }, [room, def.isOutdoor]);
+  // Wall rendering rule (user observation, sketched as red/green markers):
+  //   Render walls that face the BUILDING EXTERIOR. Hide every internal
+  //   wall — regardless of which two rooms it sits between (bedroom↔
+  //   bedroom, room↔corridor, room↔balcony, all hidden the same way).
+  // Implementation: for each wall edge, sample ±1 cm perpendicular to the
+  // segment. If EITHER sample lands inside any sibling room rect → the
+  // wall is internal → skip. Otherwise → it's on the building perimeter
+  // (outside reaches air) → render.
 
-  // Sibling rooms on the same floor — used to detect "wall faces another
-  // indoor room" for circulation-wall suppression. Read raw store data
-  // (stable references) and derive the rect list in useMemo, otherwise
-  // returning a fresh array from the selector triggers zustand's "the
-  // result of getSnapshot should be cached" infinite-render guard.
+  // Read raw store fields so the zustand selectors return stable
+  // references; derive the sibling rect list in useMemo.
   const enabledRooms = useDesignerStore(s => s.floorPlans[floorIndex]?.enabledRooms);
   const siblingLayout = useDesignerStore(s => s.floorPlans[floorIndex]?.roomLayout);
   const siblingDims   = useDesignerStore(s => s.floorPlans[floorIndex]?.roomDimensions);
   const siblings = useMemo(() => {
-    const arr: Array<{ room: RoomType; x: number; y: number; w: number; d: number }> = [];
+    const arr: Array<{ x: number; y: number; w: number; d: number }> = [];
     if (!enabledRooms || !siblingLayout || !siblingDims) return arr;
     for (const r of enabledRooms) {
       if (r === room) continue;
       const p = siblingLayout[r]; const d = siblingDims[r];
       if (!p || !d) continue;
-      // Only INDOOR siblings count — circulation walls facing outdoor
-      // spaces (yard, terrace) should stay rendered so the corridor still
-      // has a visible boundary toward the exterior.
-      const sdef = (ROOM_DEFS as Record<string, { isOutdoor?: boolean } | undefined>)[r as string];
-      if (sdef?.isOutdoor) continue;
-      arr.push({ room: r, x: p.x, y: p.y, w: d.width, d: d.depth });
+      arr.push({ x: p.x, y: p.y, w: d.width, d: d.depth });
     }
     return arr;
   }, [enabledRooms, siblingLayout, siblingDims, room]);
@@ -456,38 +445,30 @@ function RoomGroup({
       const len = Math.hypot(dx, dz);
       if (len < 0.01) continue;
 
-      // For circulation rooms, drop the segment if it touches an indoor
-      // sibling along this same line. Test in plan-cm coords: the wall
-      // midpoint in plan space is (originX_planCm + midX_localCm,
-      // originY_planCm + midY_localCm) where originX/Y_planCm are the
-      // top-left of THIS room. Sample 1 cm outward perpendicular to the
-      // edge and ask whether any sibling rect contains the sample.
-      if (isCirculationRoom) {
-        const midXLocal = (x1 + x2) / 2;
-        const midYLocal = (z1 + z2) / 2;
-        const midXPlan  = originX * 100 + midXLocal;
-        const midYPlan  = originZ * 100 + midYLocal;
-        // Edge vector in plan cm (z axis matches y in plan), perpendicular
-        // = (-dz, dx). For a CCW polygon this points outward, for CW it
-        // points inward — we sample both ±1 cm and accept either match,
-        // since we only care whether SOME indoor sibling is adjacent.
-        const edgeDx = x2 - x1, edgeDz = z2 - z1;
-        const edgeLen = Math.hypot(edgeDx, edgeDz);
-        const nx = -edgeDz / edgeLen;   // unit normal x
-        const ny =  edgeDx / edgeLen;   // unit normal y
-        let touches = false;
-        for (const sgn of [1, -1] as const) {
-          const sx = midXPlan + sgn * EDGE_EPS_CM * nx;
-          const sy = midYPlan + sgn * EDGE_EPS_CM * ny;
-          for (const sib of siblings) {
-            if (sx >= sib.x && sx <= sib.x + sib.w && sy >= sib.y && sy <= sib.y + sib.d) {
-              touches = true; break;
-            }
+      // Perimeter-only rule: sample ±EDGE_EPS_CM perpendicular to the
+      // wall. If either sample lands inside any sibling rect, this wall
+      // is between two rooms (internal) — skip it. If both samples are
+      // outside every sibling, the wall faces the building exterior.
+      const midXLocal = (x1 + x2) / 2;
+      const midYLocal = (z1 + z2) / 2;
+      const midXPlan  = originX * 100 + midXLocal;
+      const midYPlan  = originZ * 100 + midYLocal;
+      const edgeDx = x2 - x1, edgeDz = z2 - z1;
+      const edgeLen = Math.hypot(edgeDx, edgeDz);
+      const nx = -edgeDz / edgeLen;
+      const ny =  edgeDx / edgeLen;
+      let isInternal = false;
+      for (const sgn of [1, -1] as const) {
+        const sx = midXPlan + sgn * EDGE_EPS_CM * nx;
+        const sy = midYPlan + sgn * EDGE_EPS_CM * ny;
+        for (const sib of siblings) {
+          if (sx >= sib.x && sx <= sib.x + sib.w && sy >= sib.y && sy <= sib.y + sib.d) {
+            isInternal = true; break;
           }
-          if (touches) break;
         }
-        if (touches) continue;   // skip — this corridor edge meets another indoor room
+        if (isInternal) break;
       }
+      if (isInternal) continue;
 
       ws.push({
         cx: (wx1 + wx2) / 2,
@@ -497,7 +478,7 @@ function RoomGroup({
       });
     }
     return ws;
-  }, [polyPts, W, D, isCirculationRoom, siblings, originX, originZ]);
+  }, [polyPts, W, D, siblings, originX, originZ]);
 
   // Center of the room's bounding box, in world coords
   const cx = originX + W / 2;
