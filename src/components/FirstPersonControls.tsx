@@ -90,7 +90,7 @@ export function FirstPersonControls({
       if (!locked.current) return;
       yaw.current   -= e.movementX * LOOK_SENS;
       pitch.current -= e.movementY * LOOK_SENS;
-      pitch.current  = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, pitch.current));
+      pitch.current  = Math.max(-Math.PI / 2.6, Math.min(Math.PI / 2.6, pitch.current));
     };
     // Drag-look (used whenever pointer lock isn't active)
     const onPDown = (e: PointerEvent) => {
@@ -109,7 +109,7 @@ export function FirstPersonControls({
       const dy = e.clientY - d.y;
       yaw.current   -= dx * LOOK_SENS * 1.25;   // bump sensitivity slightly — drag is slower than lock-mode movement
       pitch.current -= dy * LOOK_SENS * 1.25;
-      pitch.current  = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, pitch.current));
+      pitch.current  = Math.max(-Math.PI / 2.6, Math.min(Math.PI / 2.6, pitch.current));
       dragRef.current = { x: e.clientX, y: e.clientY };
     };
     const onPUp = () => { dragRef.current = null; };
@@ -204,12 +204,14 @@ export function FirstPersonControls({
   }, [enabled, onExit, camera]);
 
   // Expose for debugging
+  const scene = useThree(s => s.scene);
   useEffect(() => {
     if (typeof window !== "undefined") {
-      (window as unknown as { __fpCam?: unknown; __fpKeys?: unknown }).__fpCam = camera;
-      (window as unknown as { __fpCam?: unknown; __fpKeys?: unknown }).__fpKeys = keys;
+      (window as unknown as { __fpCam?: unknown; __fpKeys?: unknown; __fpScene?: unknown }).__fpCam = camera;
+      (window as unknown as { __fpCam?: unknown; __fpKeys?: unknown; __fpScene?: unknown }).__fpKeys = keys;
+      (window as unknown as { __fpCam?: unknown; __fpKeys?: unknown; __fpScene?: unknown }).__fpScene = scene;
     }
-  }, [camera]);
+  }, [camera, scene]);
 
   // ── Per-frame movement ────────────────────────────────────────────────────
   useFrame((_, delta) => {
