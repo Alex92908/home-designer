@@ -276,18 +276,24 @@ function RoomShell({
   // Build the list of rectangular holes (in wall-local cm coordinates:
   // x from left end of wall, y from floor) for a given wall side.
   // Pulls windows and — if applicable — the door.
-  function holesForWall(side: "back" | "front" | "left" | "right", wallLenM: number): Rect[] {
+  function holesForWall(
+    side: "back" | "front" | "left" | "right",
+    wallLenM: number,
+    opts?: { skipWindows?: boolean },
+  ): Rect[] {
     const holes: Rect[] = [];
-    for (const w of windows) {
-      if (w.wall !== side) continue;
-      const sillM  = (w.sill ?? 90) / 100;
-      const winHM  = (w.h   ?? Math.min(H * 52, 150)) / 100;
-      holes.push({
-        x: w.pos / 100,
-        y: sillM,
-        w: w.len / 100,
-        h: Math.min(winHM, H - sillM - 0.05),
-      });
+    if (!opts?.skipWindows) {
+      for (const w of windows) {
+        if (w.wall !== side) continue;
+        const sillM  = (w.sill ?? 90) / 100;
+        const winHM  = (w.h   ?? Math.min(H * 52, 150)) / 100;
+        holes.push({
+          x: w.pos / 100,
+          y: sillM,
+          w: w.len / 100,
+          h: Math.min(winHM, H - sillM - 0.05),
+        });
+      }
     }
     // Door wall naming differs: "top"=back, "bottom"=front, left/right match
     const doorSideMap: Record<string, "back" | "front" | "left" | "right"> = {
@@ -339,7 +345,14 @@ function RoomShell({
      *  to every segment (upper, lower, all pieces around holes). */
     opacity?: number;
   }) {
-    const holes = holesForWall(lowerSide, wallLenM);
+    // Front wall opacity=1 ("实墙") means the user wants the cutaway view
+    // blocked. Keep the DOOR hole (so opening the door still lets the
+    // user see in / walk through) but fill over windows — otherwise a
+    // floor-to-ceiling curtain wall makes the room nearly fully visible
+    // and the 实墙 toggle does basically nothing. Other walls and other
+    // opacity values carve windows normally.
+    const skipWindows = lowerSide === "front" && opacity >= 1;
+    const holes = holesForWall(lowerSide, wallLenM, { skipWindows });
     const segments = splitWallAroundHoles(wallLenM, H, holes);
     const lowerMat = lower ? wallMatFor(lower.color, lower.id, wallLenM, splitH) : null;
     // Gap between interior and exterior wall planes — keep tiny so the
