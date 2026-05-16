@@ -4144,14 +4144,17 @@ export default function RoomCanvas() {
 
   return (
     <div className="w-full h-full relative">
-      {/* First-person toggle button — hidden for now */}
+      {/* First-person toggle — top-right, easy to see + reach */}
+      <div className="absolute top-3 right-3 z-20">
+        <FirstPersonButton active={firstPerson} onToggle={() => setFirstPerson(v => !v)} />
+      </div>
 
       {firstPerson && (
         <div
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 rounded-full text-xs text-white/70"
-          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 rounded-full text-xs text-white/80"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
         >
-          <span>点击画面锁定鼠标</span>
+          <span>左键拖动转视角</span>
           <span>·</span>
           <span>W/A/S/D 移动</span>
           <span>·</span>
