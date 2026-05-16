@@ -345,14 +345,7 @@ function RoomShell({
      *  to every segment (upper, lower, all pieces around holes). */
     opacity?: number;
   }) {
-    // Front wall opacity=1 ("实墙") means the user wants the cutaway view
-    // blocked. Keep the DOOR hole (so opening the door still lets the
-    // user see in / walk through) but fill over windows — otherwise a
-    // floor-to-ceiling curtain wall makes the room nearly fully visible
-    // and the 实墙 toggle does basically nothing. Other walls and other
-    // opacity values carve windows normally.
-    const skipWindows = lowerSide === "front" && opacity >= 1;
-    const holes = holesForWall(lowerSide, wallLenM, { skipWindows });
+    const holes = holesForWall(lowerSide, wallLenM);
     const segments = splitWallAroundHoles(wallLenM, H, holes);
     const lowerMat = lower ? wallMatFor(lower.color, lower.id, wallLenM, splitH) : null;
     // Gap between interior and exterior wall planes — keep tiny so the
