@@ -115,6 +115,23 @@ export function FirstPersonControls({
     const onPUp = () => { dragRef.current = null; };
     const onKeyDown = (e: KeyboardEvent) => { keys.current[e.code] = true; };
     const onKeyUp   = (e: KeyboardEvent) => { keys.current[e.code] = false; };
+    // Wheel zoom — change FOV (narrower = zoom in, wider = zoom out)
+    // instead of moving the camera forward. Forward-translation zoom would
+    // clip through walls / push the camera outside the room. FOV is
+    // clamped 25°–80°. Same trick HouseCanvas WalkthroughController uses.
+    const onWheel = (e: WheelEvent) => {
+      const target = e.target as HTMLElement;
+      if (target?.tagName !== "CANVAS") return;
+      e.preventDefault();
+      const cam2 = camera as PerspectiveCamera;
+      if (!cam2.isPerspectiveCamera) return;
+      const cur = cam2.fov ?? 58;
+      const next = Math.max(25, Math.min(80, cur + (e.deltaY > 0 ? 3 : -3)));
+      if (next !== cur) {
+        cam2.fov = next;
+        cam2.updateProjectionMatrix();
+      }
+    };
 
     document.addEventListener("pointerlockchange", onLockChange);
     document.addEventListener("pointerlockerror",  onLockError);
@@ -125,6 +142,7 @@ export function FirstPersonControls({
     window.addEventListener("pointercancel", onPUp);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup",   onKeyUp);
+    window.addEventListener("wheel", onWheel, { passive: false });
     // Try pointer lock once on first canvas click. If it fails (iframe
     // sandbox), drag-to-look picks up the slack on subsequent clicks.
     gl.domElement.addEventListener("click", requestLock);
@@ -150,6 +168,7 @@ export function FirstPersonControls({
     // exit-walkthrough returns to the original near for orbit / 第三人称.
     const cam = camera as PerspectiveCamera;
     const prevNear = cam.isPerspectiveCamera ? cam.near : 0.1;
+    const prevFov  = cam.isPerspectiveCamera ? cam.fov  : 58;
     if (cam.isPerspectiveCamera) {
       cam.near = 0.3;
       cam.updateProjectionMatrix();
@@ -171,15 +190,18 @@ export function FirstPersonControls({
       window.removeEventListener("pointercancel", onPUp);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup",   onKeyUp);
+      window.removeEventListener("wheel", onWheel);
       gl.domElement.removeEventListener("click", requestLock);
       if (document.pointerLockElement === gl.domElement) {
         document.exitPointerLock();
       }
       dragRef.current = null;
-      // Restore the original near clip so orbit / 第三人称 view comes back
-      // to its previous projection (otherwise small rooms look odd from far).
+      // Restore the original near + FOV so orbit / 第三人称 view comes back
+      // to its previous projection (otherwise small rooms look odd from far
+      // and the zoomed-in FOV persists into the orbit view).
       if (cam.isPerspectiveCamera) {
         cam.near = prevNear;
+        cam.fov  = prevFov;
         cam.updateProjectionMatrix();
       }
     };
