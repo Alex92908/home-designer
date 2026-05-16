@@ -4138,30 +4138,57 @@ export default function RoomCanvas() {
   const isIOS = detectIOS();
   const [firstPerson, setFirstPerson] = useState(false);
   const activeRoom     = useDesignerStore(s => s.activeRoom);
-  const roomDimensions = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions[activeRoom]);
+  const roomDimensions = useDesignerStore(s => s.floorPlans[s.activeFloor]?.roomDimensions?.[activeRoom]);
+  // Fallbacks so the walkthrough still works if the room dims haven't
+  // loaded yet (otherwise undefined.width crashes the whole render).
+  const roomWMeters = (roomDimensions?.width  ?? 400) * 0.01;
+  const roomDMeters = (roomDimensions?.depth  ?? 300) * 0.01;
 
   const exitFirstPerson = useCallback(() => setFirstPerson(false), []);
 
   return (
     <div className="w-full h-full relative">
-      {/* First-person toggle — top-right, easy to see + reach */}
-      <div className="absolute top-3 right-3 z-20">
-        <FirstPersonButton active={firstPerson} onToggle={() => setFirstPerson(v => !v)} />
+      {/* First-person toggle — top-right, prominent so it's findable */}
+      <div className="absolute top-3 right-3 z-30">
+        <button
+          onClick={() => setFirstPerson(v => !v)}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold shadow-lg transition-all active:scale-95"
+          style={firstPerson
+            ? { background: "linear-gradient(135deg,#10B981,#059669)", color: "#fff", border: "1px solid rgba(110,231,183,0.5)" }
+            : { background: "linear-gradient(135deg,#4F46E5,#4338CA)", color: "#fff", border: "1px solid rgba(167,139,250,0.5)" }
+          }
+        >
+          {firstPerson ? "↩ 退出漫游" : "🚶 第一人称漫游"}
+        </button>
       </div>
 
       {firstPerson && (
-        <div
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 rounded-full text-xs text-white/80"
-          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
-        >
-          <span>左键拖动转视角</span>
-          <span>·</span>
-          <span>W/A/S/D 移动</span>
-          <span>·</span>
-          <span>Shift 加速</span>
-          <span>·</span>
-          <span>ESC 退出</span>
-        </div>
+        <>
+          {/* Top center: active mode banner — unmissable */}
+          <div
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-lg text-sm font-bold text-white shadow-lg pointer-events-none"
+            style={{
+              background: "linear-gradient(135deg, rgba(16,185,129,0.92), rgba(5,150,105,0.92))",
+              border: "1px solid rgba(110,231,183,0.6)",
+              backdropFilter: "blur(8px)",
+            }}
+          >
+            🚶 漫游中
+          </div>
+          {/* Bottom: control hints */}
+          <div
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 rounded-full text-xs text-white/85"
+            style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)" }}
+          >
+            <span>左键拖动转视角</span>
+            <span>·</span>
+            <span>W/A/S/D 移动</span>
+            <span>·</span>
+            <span>Shift 加速</span>
+            <span>·</span>
+            <span>ESC 退出</span>
+          </div>
+        </>
       )}
 
       <ErrorBoundary>
@@ -4207,8 +4234,8 @@ export default function RoomCanvas() {
             enabled={firstPerson}
             onExit={exitFirstPerson}
             floorY={0}
-            roomW={roomDimensions.width  * 0.01}
-            roomD={roomDimensions.depth  * 0.01}
+            roomW={roomWMeters}
+            roomD={roomDMeters}
           />
           <Scene isIOS={isIOS} firstPerson={firstPerson} />
         </Canvas>

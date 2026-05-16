@@ -116,16 +116,25 @@ export function FirstPersonControls({
     // sandbox), drag-to-look picks up the slack on subsequent clicks.
     gl.domElement.addEventListener("click", requestLock);
 
-    // Place camera inside the room (near the front wall, centred X, eye height Y).
-    // This avoids the "all blank" bug where OrbitControls left the camera
-    // outside the room and yaw=0 pointed it straight into back-face geometry.
+    // Place camera inside the room (centred, near the front wall, eye height).
+    // Use max(0.6, roomD * 0.30) to ensure we step at least 60 cm in from
+    // the front wall — for tiny rooms (or roomD=0 fallback) this prevents
+    // spawning the camera right up against the wall.
+    const safeD = roomD > 0 ? roomD : 4;
+    const startZ = Math.min(safeD / 2 - 0.6, Math.max(0.6, safeD * 0.30));
     camera.position.set(
-      0,                            // centre of room on X
-      floorY + EYE_HEIGHT,          // eye height
-      roomD * 0.35,                 // 35% into room from front wall (front=+D/2)
+      0,
+      floorY + EYE_HEIGHT,
+      startZ,
     );
     yaw.current   = 0;              // yaw=0 → camera looks in -Z → faces back wall
     pitch.current = 0;
+    // Tell the OrbitControls (still in store under makeDefault) its
+    // target so on exit-walkthrough the camera doesn't snap somewhere
+    // weird. We don't have a direct controls handle here; rely on parent
+    // re-mounting OrbitControls with its target prop.
+    // eslint-disable-next-line no-console
+    console.log("[FPC] walkthrough on — cam at", camera.position.toArray().map(n => +n.toFixed(2)), "roomD=", safeD);
 
     return () => {
       document.removeEventListener("pointerlockchange", onLockChange);
@@ -143,7 +152,7 @@ export function FirstPersonControls({
       }
       dragRef.current = null;
     };
-  }, [enabled, gl.domElement, camera, floorY, roomD, requestLock]);
+  }, [enabled, gl.domElement, camera, floorY, roomW, roomD, requestLock]);
 
   // Exit on Escape; E key = interact with door (dispatches custom event)
   useEffect(() => {
