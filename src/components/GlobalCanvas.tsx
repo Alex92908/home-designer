@@ -406,14 +406,21 @@ function RoomGroup({
     // we still include them as deps to be safe.
   }, [polyPts, W, D]);
 
-  // Wall rendering rule (user observation, sketched as red/green markers):
-  //   Render walls that face the BUILDING EXTERIOR. Hide every internal
-  //   wall — regardless of which two rooms it sits between (bedroom↔
-  //   bedroom, room↔corridor, room↔balcony, all hidden the same way).
-  // Implementation: for each wall edge, sample ±1 cm perpendicular to the
-  // segment. If EITHER sample lands inside any sibling room rect → the
-  // wall is internal → skip. Otherwise → it's on the building perimeter
-  // (outside reaches air) → render.
+  // Wall rendering rule (asymmetric, applied only to "circulation" rooms):
+  //   - Circulation rooms (hallway / stair / balcony / outdoor): only
+  //     render walls that face the building exterior; hide the walls
+  //     that face other indoor rooms.
+  //   - Regular indoor rooms (bedroom, living, kitchen, ...): always
+  //     render all 4 walls.
+  // The room on the other side of a corridor wall keeps ITS wall
+  // (rendered by the regular-room path), so the cutaway still reads
+  // as enclosed rooms — only the corridor's redundant inward face
+  // disappears.
+  const isCirculationRoom = useMemo(() => {
+    if (room === "hallway" || room === "stair") return true;
+    if (room === "balcony" || room === "balcony2") return true;
+    return def.isOutdoor === true;
+  }, [room, def.isOutdoor]);
 
   // Read raw store fields so the zustand selectors return stable
   // references; derive the sibling rect list in useMemo.
@@ -445,30 +452,30 @@ function RoomGroup({
       const len = Math.hypot(dx, dz);
       if (len < 0.01) continue;
 
-      // Perimeter-only rule: sample ±EDGE_EPS_CM perpendicular to the
-      // wall. If either sample lands inside any sibling rect, this wall
-      // is between two rooms (internal) — skip it. If both samples are
-      // outside every sibling, the wall faces the building exterior.
-      const midXLocal = (x1 + x2) / 2;
-      const midYLocal = (z1 + z2) / 2;
-      const midXPlan  = originX * 100 + midXLocal;
-      const midYPlan  = originZ * 100 + midYLocal;
-      const edgeDx = x2 - x1, edgeDz = z2 - z1;
-      const edgeLen = Math.hypot(edgeDx, edgeDz);
-      const nx = -edgeDz / edgeLen;
-      const ny =  edgeDx / edgeLen;
-      let isInternal = false;
-      for (const sgn of [1, -1] as const) {
-        const sx = midXPlan + sgn * EDGE_EPS_CM * nx;
-        const sy = midYPlan + sgn * EDGE_EPS_CM * ny;
-        for (const sib of siblings) {
-          if (sx >= sib.x && sx <= sib.x + sib.w && sy >= sib.y && sy <= sib.y + sib.d) {
-            isInternal = true; break;
+      // Asymmetric rule: only circulation rooms suppress walls that face
+      // another room. Regular rooms render all 4 walls unconditionally.
+      if (isCirculationRoom) {
+        const midXLocal = (x1 + x2) / 2;
+        const midYLocal = (z1 + z2) / 2;
+        const midXPlan  = originX * 100 + midXLocal;
+        const midYPlan  = originZ * 100 + midYLocal;
+        const edgeDx = x2 - x1, edgeDz = z2 - z1;
+        const edgeLen = Math.hypot(edgeDx, edgeDz);
+        const nx = -edgeDz / edgeLen;
+        const ny =  edgeDx / edgeLen;
+        let touches = false;
+        for (const sgn of [1, -1] as const) {
+          const sx = midXPlan + sgn * EDGE_EPS_CM * nx;
+          const sy = midYPlan + sgn * EDGE_EPS_CM * ny;
+          for (const sib of siblings) {
+            if (sx >= sib.x && sx <= sib.x + sib.w && sy >= sib.y && sy <= sib.y + sib.d) {
+              touches = true; break;
+            }
           }
+          if (touches) break;
         }
-        if (isInternal) break;
+        if (touches) continue;
       }
-      if (isInternal) continue;
 
       ws.push({
         cx: (wx1 + wx2) / 2,
@@ -478,7 +485,7 @@ function RoomGroup({
       });
     }
     return ws;
-  }, [polyPts, W, D, siblings, originX, originZ]);
+  }, [polyPts, W, D, isCirculationRoom, siblings, originX, originZ]);
 
   // Center of the room's bounding box, in world coords
   const cx = originX + W / 2;
