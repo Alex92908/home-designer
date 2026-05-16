@@ -18,7 +18,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Euler, Vector3 } from "three";
+import { Euler, Vector3, PerspectiveCamera } from "three";
 
 const WALK_SPEED  = 3.0;  // m/s
 const RUN_SPEED   = 6.0;
@@ -142,6 +142,18 @@ export function FirstPersonControls({
     );
     yaw.current   = 0;              // yaw=0 → camera looks in -Z → faces back wall
     pitch.current = 0;
+
+    // Push the near clip plane out from the Canvas default (0.1 m) to 0.3 m.
+    // At 0.1, walking up to a wall or behind a painting causes near-plane
+    // jaggies / Z-fighting (the canvas previewed by the user). Same fix the
+    // exterior WalkthroughController already uses. We also save/restore so
+    // exit-walkthrough returns to the original near for orbit / 第三人称.
+    const cam = camera as PerspectiveCamera;
+    const prevNear = cam.isPerspectiveCamera ? cam.near : 0.1;
+    if (cam.isPerspectiveCamera) {
+      cam.near = 0.3;
+      cam.updateProjectionMatrix();
+    }
     // Tell the OrbitControls (still in store under makeDefault) its
     // target so on exit-walkthrough the camera doesn't snap somewhere
     // weird. We don't have a direct controls handle here; rely on parent
@@ -164,6 +176,12 @@ export function FirstPersonControls({
         document.exitPointerLock();
       }
       dragRef.current = null;
+      // Restore the original near clip so orbit / 第三人称 view comes back
+      // to its previous projection (otherwise small rooms look odd from far).
+      if (cam.isPerspectiveCamera) {
+        cam.near = prevNear;
+        cam.updateProjectionMatrix();
+      }
     };
   }, [enabled, gl.domElement, camera, floorY, roomW, roomD, requestLock]);
 
