@@ -14,7 +14,7 @@ import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, E
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
 import { DetailedDecor } from "./DetailedDecor";
-import { FirstPersonControls, FirstPersonButton } from "./FirstPersonControls";
+import { FirstPersonControls, FirstPersonButton, TouchJoystick } from "./FirstPersonControls";
 import { getFloorTexture, getWallTexture, floorTileSize, wallTileSize } from "@/lib/textures";
 import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 
@@ -4161,6 +4161,10 @@ function detectIOS(): boolean {
 export default function RoomCanvas() {
   const isIOS = detectIOS();
   const [firstPerson, setFirstPerson] = useState(false);
+  // Touch joystick — only active during walkthrough. Mirrors HouseCanvas's
+  // joystick state shape so the TouchJoystick widget can drive movement
+  // alongside (or instead of) WASD on devices without a keyboard.
+  const [joystick, setJoystick] = useState({ axisX: 0, axisZ: 0 });
   const activeRoom     = useDesignerStore(s => s.activeRoom);
   const roomDimensions = useDesignerStore(s => s.floorPlans[s.activeFloor]?.roomDimensions?.[activeRoom]);
   // Fallbacks so the walkthrough still works if the room dims haven't
@@ -4199,6 +4203,10 @@ export default function RoomCanvas() {
           >
             🚶 漫游中
           </div>
+          {/* Touch joystick — bottom-left, primary input on tablet / mobile,
+              also works alongside WASD on desktop. Output is folded into
+              the WASD movement vector inside FirstPersonControls. */}
+          <TouchJoystick onChange={(x, z) => setJoystick({ axisX: x, axisZ: z })} />
           {/* Bottom: control hints */}
           <div
             className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 rounded-full text-xs text-white/85"
@@ -4206,7 +4214,9 @@ export default function RoomCanvas() {
           >
             <span>左键拖动转视角</span>
             <span>·</span>
-            <span>W/A/S/D 移动</span>
+            <span>WASD / 摇杆 移动</span>
+            <span>·</span>
+            <span>滚轮 缩放</span>
             <span>·</span>
             <span>Shift 加速</span>
             <span>·</span>
@@ -4267,6 +4277,7 @@ export default function RoomCanvas() {
             floorY={0}
             roomW={roomWMeters}
             roomD={roomDMeters}
+            joystick={joystick}
           />
           <Scene isIOS={isIOS} firstPerson={firstPerson} />
         </Canvas>
