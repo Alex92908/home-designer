@@ -16,7 +16,7 @@
  *   - Escape → exit first-person
  */
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Euler, Vector3, PerspectiveCamera } from "three";
 
@@ -36,6 +36,9 @@ interface FirstPersonControlsProps {
   floorY?: number; // world Y of the floor plane, default 0
   roomW?: number;  // room width in metres (to clamp start position)
   roomD?: number;  // room depth in metres
+  /** Live touch joystick output, -1..1 on each axis. Forward = +axisZ
+   *  (matches WASD's `dz`). Same convention as HouseCanvas. */
+  joystick?: { axisX: number; axisZ: number };
 }
 
 export function FirstPersonControls({
@@ -44,6 +47,7 @@ export function FirstPersonControls({
   floorY = 0,
   roomW = 5,
   roomD = 4,
+  joystick,
 }: FirstPersonControlsProps) {
   const { camera, gl } = useThree();
 
@@ -51,6 +55,11 @@ export function FirstPersonControls({
   const locked = useRef(false);
   const yaw    = useRef(0);
   const pitch  = useRef(0);
+  // Mirror joystick into a ref so useFrame always reads the latest value
+  // without us having to add `joystick` to the useEffect dep array (which
+  // would re-register every keyboard / pointer listener on every move).
+  const joystickRef = useRef({ axisX: 0, axisZ: 0 });
+  joystickRef.current = joystick ?? { axisX: 0, axisZ: 0 };
   // Drag-to-look fallback: when PointerLock fails (iframe / mobile / browser
   // permission denied), fall back to "hold left button + drag to look".
   // dragRef holds the last pointer X/Y while the user is dragging; null
@@ -253,8 +262,17 @@ export function FirstPersonControls({
     // NB: `+(undefined || undefined)` is NaN — NaN propagates through the
     // movement math and corrupts camera.position to (NaN, y, NaN). Convert
     // each key explicitly to 0 or 1.
-    const fwd = (k["KeyW"] || k["ArrowUp"]   ? 1 : 0) - (k["KeyS"] || k["ArrowDown"] ? 1 : 0);
-    const str = (k["KeyD"] || k["ArrowRight"]? 1 : 0) - (k["KeyA"] || k["ArrowLeft"]  ? 1 : 0);
+    let fwd = (k["KeyW"] || k["ArrowUp"]   ? 1 : 0) - (k["KeyS"] || k["ArrowDown"] ? 1 : 0);
+    let str = (k["KeyD"] || k["ArrowRight"]? 1 : 0) - (k["KeyA"] || k["ArrowLeft"]  ? 1 : 0);
+    // Add joystick — TouchJoystick widget outputs axisZ flipped so that
+    // screen-up = +axisZ = forward (same as WASD's `dz`).
+    const j = joystickRef.current;
+    fwd += j.axisZ;
+    str += j.axisX;
+    // Clamp combined input to unit magnitude so diagonal keys+stick don't
+    // double-speed.
+    const mag = Math.hypot(fwd, str);
+    if (mag > 1) { fwd /= mag; str /= mag; }
 
     if (fwd !== 0 || str !== 0) {
       // Project camera direction onto XZ plane
@@ -288,6 +306,79 @@ export function FirstPersonControls({
 interface FirstPersonButtonProps {
   active: boolean;
   onToggle: () => void;
+}
+
+/**
+ * TouchJoystick — virtual joystick overlay for touch / mouse-drag movement
+ * during walkthrough. Outputs normalized {axisX, axisZ} where axisX is
+ * strafe (+ right) and axisZ is forward push (+ forward). Same component
+ * as HouseCanvas uses; promoted to FirstPersonControls.tsx so both
+ * RoomCanvas and HouseCanvas can share one implementation.
+ */
+export function TouchJoystick({ onChange }: { onChange: (axisX: number, axisZ: number) => void }) {
+  const baseRef = useRef<HTMLDivElement>(null);
+  const [knob, setKnob] = useState({ x: 0, y: 0 });
+  const activeRef = useRef<number | null>(null);
+  const radius = 48;
+  const knobR = 22;
+  const update = (e: React.PointerEvent) => {
+    const rect = baseRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top  + rect.height / 2;
+    let dx = e.clientX - cx;
+    let dy = e.clientY - cy;
+    const r = Math.hypot(dx, dy);
+    if (r > radius) { dx *= radius / r; dy *= radius / r; }
+    setKnob({ x: dx, y: dy });
+    onChange(dx / radius, -dy / radius);  // y flipped: screen-up = forward = +axisZ
+  };
+  const onDown = (e: React.PointerEvent) => {
+    activeRef.current = e.pointerId;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    update(e);
+  };
+  const onMove = (e: React.PointerEvent) => {
+    if (activeRef.current !== e.pointerId) return;
+    update(e);
+  };
+  const onUp = (e: React.PointerEvent) => {
+    if (activeRef.current !== e.pointerId) return;
+    activeRef.current = null;
+    setKnob({ x: 0, y: 0 });
+    onChange(0, 0);
+  };
+  return (
+    <div
+      ref={baseRef}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
+      className="absolute bottom-32 left-6 z-20 select-none"
+      style={{
+        width: radius * 2, height: radius * 2,
+        borderRadius: "50%",
+        background: "rgba(0,0,0,0.32)",
+        backdropFilter: "blur(8px)",
+        border: "1px solid rgba(255,255,255,0.18)",
+        touchAction: "none",
+      }}
+    >
+      <div style={{
+        position: "absolute",
+        left: radius - knobR + knob.x,
+        top: radius - knobR + knob.y,
+        width: knobR * 2,
+        height: knobR * 2,
+        borderRadius: "50%",
+        background: "rgba(255,255,255,0.55)",
+        border: "1px solid rgba(255,255,255,0.5)",
+        pointerEvents: "none",
+        transition: activeRef.current === null ? "all 0.18s" : "none",
+      }} />
+    </div>
+  );
 }
 
 export function FirstPersonButton({ active, onToggle }: FirstPersonButtonProps) {
