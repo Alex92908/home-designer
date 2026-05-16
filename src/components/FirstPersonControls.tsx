@@ -61,7 +61,20 @@ export function FirstPersonControls({
   // ── Pointer lock + drag-look fallback ─────────────────────────────────────
   const requestLock = useCallback(() => {
     if (!enabled) return;
-    try { gl.domElement.requestPointerLock(); } catch { /* SecurityError in iframes — drag-look fallback handles it */ }
+    try {
+      const p = gl.domElement.requestPointerLock();
+      // Modern browsers return a Promise — the SecurityError that fires in
+      // sandboxed iframes (e.g. Next.js Turbopack preview, Claude Preview)
+      // reaches us as a rejected Promise, NOT a thrown exception. A
+      // synchronous try/catch can't see it. Swallow it explicitly so the
+      // Next.js dev-tools red banner doesn't appear; the drag-look fallback
+      // handles input from this point on.
+      if (p && typeof (p as Promise<void>).catch === "function") {
+        (p as Promise<void>).catch(() => { /* drag-look picks up the slack */ });
+      }
+    } catch {
+      /* legacy synchronous-throw browsers — same outcome */
+    }
   }, [enabled, gl.domElement]);
 
   useEffect(() => {
@@ -172,6 +185,14 @@ export function FirstPersonControls({
     return () => window.removeEventListener("keydown", onKey);
   }, [enabled, onExit, camera]);
 
+  // Expose for debugging
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as unknown as { __fpCam?: unknown; __fpKeys?: unknown }).__fpCam = camera;
+      (window as unknown as { __fpCam?: unknown; __fpKeys?: unknown }).__fpKeys = keys;
+    }
+  }, [camera]);
+
   // ── Per-frame movement ────────────────────────────────────────────────────
   useFrame((_, delta) => {
     if (!enabled) return;
@@ -187,8 +208,11 @@ export function FirstPersonControls({
     const isRunning = k["ShiftLeft"] || k["ShiftRight"];
     const speed = isRunning ? RUN_SPEED : WALK_SPEED;
 
-    const fwd = +(k["KeyW"] || k["ArrowUp"])   - +(k["KeyS"] || k["ArrowDown"]);
-    const str = +(k["KeyD"] || k["ArrowRight"]) - +(k["KeyA"] || k["ArrowLeft"]);
+    // NB: `+(undefined || undefined)` is NaN — NaN propagates through the
+    // movement math and corrupts camera.position to (NaN, y, NaN). Convert
+    // each key explicitly to 0 or 1.
+    const fwd = (k["KeyW"] || k["ArrowUp"]   ? 1 : 0) - (k["KeyS"] || k["ArrowDown"] ? 1 : 0);
+    const str = (k["KeyD"] || k["ArrowRight"]? 1 : 0) - (k["KeyA"] || k["ArrowLeft"]  ? 1 : 0);
 
     if (fwd !== 0 || str !== 0) {
       // Project camera direction onto XZ plane
