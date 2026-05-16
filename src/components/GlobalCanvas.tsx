@@ -406,55 +406,23 @@ function RoomGroup({
     // we still include them as deps to be safe.
   }, [polyPts, W, D]);
 
-  // Wall rendering rule (asymmetric, applied only to "circulation" rooms):
-  //   - Circulation rooms (hallway / stair / balcony / outdoor): only
-  //     render walls that face the building exterior; hide the walls
-  //     that face other indoor rooms.
+  // Wall rendering rule (super simple):
+  //   - Circulation rooms (hallway / stair / balcony / outdoor):
+  //     render NO walls. They borrow the perimeter from the adjacent
+  //     indoor rooms' walls. Avoids all the "is this wall facing
+  //     outside" geometry checks that kept being wrong on edge cases.
   //   - Regular indoor rooms (bedroom, living, kitchen, ...): always
   //     render all 4 walls.
-  // The room on the other side of a corridor wall keeps ITS wall
-  // (rendered by the regular-room path), so the cutaway still reads
-  // as enclosed rooms — only the corridor's redundant inward face
-  // disappears.
   const isCirculationRoom = useMemo(() => {
     if (room === "hallway" || room === "stair") return true;
     if (room === "balcony" || room === "balcony2") return true;
     return def.isOutdoor === true;
   }, [room, def.isOutdoor]);
 
-  // Read raw store fields so the zustand selectors return stable
-  // references; derive the sibling rect list + building bbox in useMemo.
-  const enabledRooms = useDesignerStore(s => s.floorPlans[floorIndex]?.enabledRooms);
-  const siblingLayout = useDesignerStore(s => s.floorPlans[floorIndex]?.roomLayout);
-  const siblingDims   = useDesignerStore(s => s.floorPlans[floorIndex]?.roomDimensions);
-  const { siblings, buildingBBox } = useMemo(() => {
-    const arr: Array<{ x: number; y: number; w: number; d: number }> = [];
-    let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
-    if (!enabledRooms || !siblingLayout || !siblingDims) {
-      return { siblings: arr, buildingBBox: null as null | { minX: number; minY: number; maxX: number; maxY: number } };
-    }
-    // Building bbox: union of EVERY room on this floor (incl. self), so a
-    // wall whose outward sample lands inside the bbox but outside every
-    // individual room rect (a small no-room gap between siblings) is still
-    // recognised as INTERIOR rather than misread as exterior.
-    for (const r of enabledRooms) {
-      const p = siblingLayout[r]; const d = siblingDims[r];
-      if (!p || !d) continue;
-      bMinX = Math.min(bMinX, p.x); bMinY = Math.min(bMinY, p.y);
-      bMaxX = Math.max(bMaxX, p.x + d.width); bMaxY = Math.max(bMaxY, p.y + d.depth);
-      if (r === room) continue;
-      arr.push({ x: p.x, y: p.y, w: d.width, d: d.depth });
-    }
-    return {
-      siblings: arr,
-      buildingBBox: isFinite(bMinX) ? { minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY } : null,
-    };
-  }, [enabledRooms, siblingLayout, siblingDims, room]);
-
-  // Polygon edge segments → wall boxes
+  // Polygon edge segments → wall boxes (skip entirely for circulation rooms)
   const wallBoxes = useMemo(() => {
+    if (isCirculationRoom) return [] as Array<{ cx: number; cz: number; len: number; angle: number }>;
     const ws: Array<{ cx: number; cz: number; len: number; angle: number }> = [];
-    const EDGE_EPS_CM = 5;     // walls within 5 cm of a sibling edge count as "touching"
     for (let i = 0; i < polyPts.length; i++) {
       const [x1, z1] = polyPts[i];
       const [x2, z2] = polyPts[(i + 1) % polyPts.length];
@@ -463,45 +431,6 @@ function RoomGroup({
       const dx = wx2 - wx1, dz = wz2 - wz1;
       const len = Math.hypot(dx, dz);
       if (len < 0.01) continue;
-
-      // Asymmetric rule: only circulation rooms suppress walls that face
-      // another room or any "inside the building" empty space. Regular
-      // rooms always render all 4 walls.
-      if (isCirculationRoom) {
-        const midXLocal = (x1 + x2) / 2;
-        const midYLocal = (z1 + z2) / 2;
-        const midXPlan  = originX * 100 + midXLocal;
-        const midYPlan  = originZ * 100 + midYLocal;
-        const edgeDx = x2 - x1, edgeDz = z2 - z1;
-        const edgeLen = Math.hypot(edgeDx, edgeDz);
-        const nx = -edgeDz / edgeLen;
-        const ny =  edgeDx / edgeLen;
-        let interior = false;
-        for (const sgn of [1, -1] as const) {
-          const sx = midXPlan + sgn * EDGE_EPS_CM * nx;
-          const sy = midYPlan + sgn * EDGE_EPS_CM * ny;
-          // (a) Sample inside another room rect — interior wall.
-          for (const sib of siblings) {
-            if (sx >= sib.x && sx <= sib.x + sib.w && sy >= sib.y && sy <= sib.y + sib.d) {
-              interior = true; break;
-            }
-          }
-          if (interior) break;
-          // (b) Sample inside the building bbox but no specific room — a
-          // gap between rooms on the same floor (e.g. corridor's east
-          // wall facing empty space between stair & bedrooms below). The
-          // wall is still "indoors" and shouldn't render as a perimeter.
-          if (buildingBBox &&
-              sx > buildingBBox.minX + EDGE_EPS_CM &&
-              sx < buildingBBox.maxX - EDGE_EPS_CM &&
-              sy > buildingBBox.minY + EDGE_EPS_CM &&
-              sy < buildingBBox.maxY - EDGE_EPS_CM) {
-            interior = true; break;
-          }
-        }
-        if (interior) continue;
-      }
-
       ws.push({
         cx: (wx1 + wx2) / 2,
         cz: (wz1 + wz2) / 2,
@@ -510,7 +439,7 @@ function RoomGroup({
       });
     }
     return ws;
-  }, [polyPts, W, D, isCirculationRoom, siblings, buildingBBox, originX, originZ]);
+  }, [polyPts, W, D, isCirculationRoom]);
 
   // Center of the room's bounding box, in world coords
   const cx = originX + W / 2;
