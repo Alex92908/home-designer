@@ -1028,6 +1028,28 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
     );
   }
 
+  if (win.wall === "front") {
+    // Front wall is at z = +D/2; rotate the frame 180° around Y so its
+    // outward face (+Z local) points toward +Z world = outside the room.
+    // Previously this branch fell through to `return null` and the front
+    // wall ended up with the cutout but no frame / glass / mullions →
+    // visually a giant empty hole onto the rest of the scene.
+    const xc = winCenter - W / 2;
+    return (
+      <group position={[xc, winY, D / 2]}>
+        <group rotation={[0, Math.PI, 0]}>
+          {windowFrameJSX}
+        </group>
+        <directionalLight
+          position={[0, 0.3, 0.5]}
+          target-position={[0, -1.5, -2]}
+          intensity={0.35}
+          color="#FFF2D0"
+        />
+      </group>
+    );
+  }
+
   return null;
 }
 
