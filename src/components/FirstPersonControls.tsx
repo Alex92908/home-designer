@@ -178,6 +178,11 @@ export function FirstPersonControls({
     const cam = camera as PerspectiveCamera;
     const prevNear = cam.isPerspectiveCamera ? cam.near : 0.1;
     const prevFov  = cam.isPerspectiveCamera ? cam.fov  : 58;
+    // Save the orbit-view pose BEFORE we teleport into the room. On exit
+    // we restore it so the user lands back where the dollhouse view was,
+    // not stuck at wherever they walked to inside the room.
+    const prevPos  = camera.position.clone();
+    const prevQuat = camera.quaternion.clone();
     if (cam.isPerspectiveCamera) {
       cam.near = 0.3;
       cam.updateProjectionMatrix();
@@ -213,6 +218,10 @@ export function FirstPersonControls({
         cam.fov  = prevFov;
         cam.updateProjectionMatrix();
       }
+      // Restore the pre-walkthrough orbit pose so user lands back in the
+      // dollhouse view, not stranded wherever they walked to.
+      camera.position.copy(prevPos);
+      camera.quaternion.copy(prevQuat);
     };
   }, [enabled, gl.domElement, camera, floorY, roomW, roomD, requestLock]);
 
