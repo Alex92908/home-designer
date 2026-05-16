@@ -51,11 +51,17 @@ export function FirstPersonControls({
   const locked = useRef(false);
   const yaw    = useRef(0);
   const pitch  = useRef(0);
+  // Drag-to-look fallback: when PointerLock fails (iframe / mobile / browser
+  // permission denied), fall back to "hold left button + drag to look".
+  // dragRef holds the last pointer X/Y while the user is dragging; null
+  // when not dragging. Drag handlers are wired alongside the lock handlers
+  // and only do work when the lock isn't active.
+  const dragRef = useRef<{ x: number; y: number } | null>(null);
 
-  // ── Pointer lock ───────────────────────────────────────────────────────────
+  // ── Pointer lock + drag-look fallback ─────────────────────────────────────
   const requestLock = useCallback(() => {
     if (!enabled) return;
-    try { gl.domElement.requestPointerLock(); } catch { /* SecurityError in iframes — mouse-look unavailable but W/A/S/D still works */ }
+    try { gl.domElement.requestPointerLock(); } catch { /* SecurityError in iframes — drag-look fallback handles it */ }
   }, [enabled, gl.domElement]);
 
   useEffect(() => {
@@ -73,14 +79,41 @@ export function FirstPersonControls({
       pitch.current -= e.movementY * LOOK_SENS;
       pitch.current  = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, pitch.current));
     };
+    // Drag-look (used whenever pointer lock isn't active)
+    const onPDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      const target = e.target as HTMLElement;
+      if (target?.tagName !== "CANVAS") return;
+      // If lock is active, the lock loop owns mouse — drag does nothing
+      if (locked.current) return;
+      dragRef.current = { x: e.clientX, y: e.clientY };
+      try { target.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    };
+    const onPMove = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const dx = e.clientX - d.x;
+      const dy = e.clientY - d.y;
+      yaw.current   -= dx * LOOK_SENS * 1.25;   // bump sensitivity slightly — drag is slower than lock-mode movement
+      pitch.current -= dy * LOOK_SENS * 1.25;
+      pitch.current  = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, pitch.current));
+      dragRef.current = { x: e.clientX, y: e.clientY };
+    };
+    const onPUp = () => { dragRef.current = null; };
     const onKeyDown = (e: KeyboardEvent) => { keys.current[e.code] = true; };
     const onKeyUp   = (e: KeyboardEvent) => { keys.current[e.code] = false; };
 
     document.addEventListener("pointerlockchange", onLockChange);
     document.addEventListener("pointerlockerror",  onLockError);
     document.addEventListener("mousemove",         onMouseMove);
+    window.addEventListener("pointerdown", onPDown);
+    window.addEventListener("pointermove", onPMove);
+    window.addEventListener("pointerup", onPUp);
+    window.addEventListener("pointercancel", onPUp);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup",   onKeyUp);
+    // Try pointer lock once on first canvas click. If it fails (iframe
+    // sandbox), drag-to-look picks up the slack on subsequent clicks.
     gl.domElement.addEventListener("click", requestLock);
 
     // Place camera inside the room (near the front wall, centred X, eye height Y).
@@ -98,14 +131,19 @@ export function FirstPersonControls({
       document.removeEventListener("pointerlockchange", onLockChange);
       document.removeEventListener("pointerlockerror",  onLockError);
       document.removeEventListener("mousemove",         onMouseMove);
+      window.removeEventListener("pointerdown", onPDown);
+      window.removeEventListener("pointermove", onPMove);
+      window.removeEventListener("pointerup", onPUp);
+      window.removeEventListener("pointercancel", onPUp);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup",   onKeyUp);
       gl.domElement.removeEventListener("click", requestLock);
       if (document.pointerLockElement === gl.domElement) {
         document.exitPointerLock();
       }
+      dragRef.current = null;
     };
-  }, [enabled, gl.domElement, camera, floorY, requestLock]);
+  }, [enabled, gl.domElement, camera, floorY, roomD, requestLock]);
 
   // Exit on Escape; E key = interact with door (dispatches custom event)
   useEffect(() => {
@@ -160,6 +198,11 @@ export function FirstPersonControls({
       camera.position.add(moveDir);
       // Keep eye height fixed (no gravity for now)
       camera.position.y = floorY + EYE_HEIGHT;
+      // Clamp inside the room — leave 30 cm padding to the walls so the
+      // camera doesn't clip through.
+      const PAD = 0.3;
+      camera.position.x = Math.max(-roomW / 2 + PAD, Math.min(roomW / 2 - PAD, camera.position.x));
+      camera.position.z = Math.max(-roomD / 2 + PAD, Math.min(roomD / 2 - PAD, camera.position.z));
     }
   });
 
