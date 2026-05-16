@@ -2734,17 +2734,18 @@ function GltfFurniture({
       if (mesh.isMesh) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
-        // Fix Sketchfab translucent panels (cabinet glass doors, sheer
-        // overlays) that ship with `transparent + depthWrite=false +
-        // opacity ≤ 0.4`. With depthWrite off, multiple layers in the
-        // same item Z-fight as the camera moves — manifests as torn /
-        // streaky "curtain" artifacts on the wall behind. Re-enabling
-        // depthWrite keeps the visual transparency but lets each layer
-        // occlude the next properly.
+        // Sketchfab GLTF furniture ships with `transparent + depthWrite=
+        // false + opacity 0.3..0.9` on glass / screen / sheer layers.
+        // Without depthWrite, multiple stacked semi-transparent layers
+        // (TV body + screen + glass, cabinet glass doors, etc.) re-sort
+        // every frame and create the "torn streak" / "echelon stack"
+        // artifacts users see at close range. Force depthWrite=true on
+        // every transparent material in the imported asset — visual
+        // transparency is preserved, layers properly occlude each other.
         const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         for (const mat of mats) {
           const sm = mat as THREE.MeshStandardMaterial;
-          if (sm?.transparent && sm.depthWrite === false && (sm.opacity ?? 1) < 0.6) {
+          if (sm?.transparent && sm.depthWrite === false) {
             sm.depthWrite = true;
             sm.needsUpdate = true;
           }
@@ -3543,9 +3544,17 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
         <PlacedItemMesh key={placed.instanceId} placed={placed} def={def} roomW={W} roomD={D} />
       ))}
 
-      {/* Exterior decor on the OUTSIDE faces of this room's walls */}
-      <RoomExteriorDecorLayer room={activeRoom} W={W} D={D} H={H} />
-      <RoutingLinesLayer room={activeRoom} W={W} D={D} H={H} />
+      {/* Exterior decor on the OUTSIDE faces of this room's walls.
+          Skip in first-person — these are wall-mounted exterior items
+          (sconces, plant boxes, MEP routing) that live outside the room,
+          and in walkthrough mode they show through the wall as the user
+          walks close, producing the streak / ghost-painting artifacts. */}
+      {!firstPerson && (
+        <>
+          <RoomExteriorDecorLayer room={activeRoom} W={W} D={D} H={H} />
+          <RoutingLinesLayer room={activeRoom} W={W} D={D} H={H} />
+        </>
+      )}
 
       {/* Post-processing — skip on iOS (Metal compiler issues with complex fragment shaders).
           Wrapped in <PostFX/> which defers mounting until the WebGL context
@@ -4214,8 +4223,15 @@ export default function RoomCanvas() {
             // iOS Metal GLSL compiler fails on ACESFilmicToneMapping → use Linear
             toneMapping: isIOS ? THREE.LinearToneMapping : THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.2,
-            // Required for canvas.toDataURL() (AI render screenshot)
-            preserveDrawingBuffer: true,
+            // FIX: preserveDrawingBuffer=true causes frame-accumulation
+            // ghosting in walkthrough — the painting smears into 5–6
+            // copies cascading across the wall because the previous
+            // frame's pixels linger when Three's autoClear runs at the
+            // wrong moment. HouseCanvas already runs with false and
+            // captures via gl.render() + toDataURL() synchronously in
+            // the same call stack, which works without the flag (the
+            // buffer is valid for one tick after each render call).
+            preserveDrawingBuffer: false,
             // Explicit attrs — r3f 9.x + React 19 sometimes throws
             // "reading 'alpha'" when deriving defaults from a not-yet-ready
             // context. Setting these up-front dodges that race.
