@@ -1071,21 +1071,132 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
           rtMinX = Math.min(rtMinX, p.x); rtMinY = Math.min(rtMinY, p.y);
           rtMaxX = Math.max(rtMaxX, p.x + d.width); rtMaxY = Math.max(rtMaxY, p.y + d.depth);
         }
-        const rtCx = isFinite(rtMinX) ? ((rtMinX + rtMaxX) / 2) * CM : cx;
-        const rtCz = isFinite(rtMinY) ? ((rtMinY + rtMaxY) / 2) * CM : cz;
+        // Slab covers the building footprint (centered on the building, not
+        // on the rooftop room cluster). Using rtMinX/rtMaxX-derived center
+        // would shift the slab toward whichever side the rooftop rooms sit
+        // on, and the slab would no longer span the rest of the building —
+        // in particular the stair shaft (which lives on regular floors) would
+        // sit outside the slab and the shaft-cutout would never fire.
+        const rtCx = cx;
+        const rtCz = cz;
         const slabW = Math.max(isFinite(rtMinX) ? (rtMaxX - rtMinX) * CM + 0.6 : footW + 0.4, footW + 0.4);
         const slabD2 = Math.max(isFinite(rtMinY) ? (rtMaxY - rtMinY) * CM + 0.6 : footD + 0.4, footD + 0.4);
 
         // Helper: lerp
         const lp = (a: number, b: number, t: number) => a + (b - a) * t;
 
+        // ── 楼梯井：天台板挖洞 ──
+        // 同 fi>0 跨层板的逻辑：从下往上找最近一层带 stair 的房间，定位
+        // 楼梯井 (sx, sz, sw, sd)，把天台 slab 拆成 4 条带绕过它。没有
+        // stair 时回退为整块实板。位置都在 "[-cx, 0, -cz]" 父 group 的
+        // 局部系下，所以最终世界坐标 = 父系平移 + 子节点 local。
+        const _CMs = 0.01;
+        const _stairFp = (() => {
+          for (let k = floorCount; k >= 0; k--) {
+            if (floorPlans[k]?.enabledRooms?.includes("stair")) return floorPlans[k];
+          }
+          return null;
+        })();
+        const _stairLay = _stairFp?.roomLayout?.["stair"] ?? null;
+        const _stairDim = _stairFp?.roomDimensions?.["stair"] ?? null;
+        let rtSx = 0, rtSz = 0, rtSw = 0, rtSd = 0, rtHasShaft = false;
+        if (_stairLay && _stairDim) {
+          // Absolute plan-meters coords — same system as rtCx/rtCz (which are
+          // computed from rtMinX/rtMaxX without subtracting cx). The parent
+          // <group position={[-cx, 0, -cz]}> recenters everything once at the
+          // end; do NOT subtract cx/cz here or the shaft ends up doubly offset
+          // and never overlaps the slab → fallback solid slab → no hole.
+          rtSx = (_stairLay.x + _stairDim.width / 2) * _CMs;
+          rtSz = (_stairLay.y + _stairDim.depth / 2) * _CMs;
+          rtSw = _stairDim.width * _CMs;
+          rtSd = _stairDim.depth * _CMs;
+          rtHasShaft = true;
+        } else if (!floorPlans.some(f => f?.enabledRooms?.includes("stair"))) {
+          // AutoStairConnector fallback. stairPos is in centered (parent-local)
+          // coords, so add cx/cz back to align with rtCx/rtCz (absolute).
+          const autoSw = Math.min(footW * 0.18, 2.8);
+          const autoSd = Math.min(footD * 0.30, 4.2);
+          rtSx = (stairPos?.x ?? (footW / 2 - autoSw / 2 - 0.15)) + cx;
+          rtSz = (stairPos?.z ?? (footD / 2 - autoSd / 2 - 0.15)) + cz;
+          rtSw = autoSw;
+          rtSd = autoSd;
+          rtHasShaft = true;
+        }
+
         return (
           <group key="rooftop-global" position={[-cx, 0, -cz]}>
-            {/* Rooftop slab — light concrete */}
-            <mesh position={[rtCx, slabY, rtCz]} receiveShadow>
-              <boxGeometry args={[slabW, 0.12, slabD2]} />
-              <meshStandardMaterial color="#D8D4CE" roughness={0.85} />
-            </mesh>
+            {/* Rooftop slab — light concrete, 4 strips around stair shaft
+                so the top of the stair has an opening. Falls back to a
+                solid box if no stair exists anywhere in the building. */}
+            {rtHasShaft ? (() => {
+              const slabT = 0.12;
+              const yMid = slabY;
+              const mat = <meshStandardMaterial color="#D8D4CE" roughness={0.85} />;
+              // Slab rect spans rtCx ± slabW/2 × rtCz ± slabD2/2 (world).
+              // Shaft rect spans (rtSx + cx) ± rtSw/2 × (rtSz + cz) ± rtSd/2 in
+              // world; but rendered under parent group at -cx, -cz so we
+              // express positions in parent-local frame: stair at (rtSx, rtSz),
+              // slab at (rtCx, rtCz) — both already in parent-local. Good.
+              const slabMinX = rtCx - slabW / 2;
+              const slabMaxX = rtCx + slabW / 2;
+              const slabMinZ = rtCz - slabD2 / 2;
+              const slabMaxZ = rtCz + slabD2 / 2;
+              const shaftMinX = rtSx - rtSw / 2;
+              const shaftMaxX = rtSx + rtSw / 2;
+              const shaftMinZ = rtSz - rtSd / 2;
+              const shaftMaxZ = rtSz + rtSd / 2;
+              // If shaft sits entirely outside slab → no need to cut; render solid.
+              const overlaps = shaftMaxX > slabMinX && shaftMinX < slabMaxX &&
+                               shaftMaxZ > slabMinZ && shaftMinZ < slabMaxZ;
+              if (!overlaps) {
+                return (
+                  <mesh position={[rtCx, yMid, rtCz]} receiveShadow>
+                    <boxGeometry args={[slabW, slabT, slabD2]} />{mat}
+                  </mesh>
+                );
+              }
+              // Clamp shaft to slab to compute strip widths/depths.
+              const cMinX = Math.max(shaftMinX, slabMinX);
+              const cMaxX = Math.min(shaftMaxX, slabMaxX);
+              const cMinZ = Math.max(shaftMinZ, slabMinZ);
+              const cMaxZ = Math.min(shaftMaxZ, slabMaxZ);
+              const nD = slabMaxZ - cMaxZ;      // north strip depth (z > shaft)
+              const sD = cMinZ - slabMinZ;      // south strip depth (z < shaft)
+              const eW = slabMaxX - cMaxX;      // east strip width (x > shaft)
+              const wW = cMinX - slabMinX;      // west strip width (x < shaft)
+              const shaftW = cMaxX - cMinX;
+              const shaftCz = (cMinZ + cMaxZ) / 2;
+              return (
+                <group>
+                  {nD > 0 && (
+                    <mesh position={[rtCx, yMid, cMaxZ + nD / 2]} receiveShadow>
+                      <boxGeometry args={[slabW, slabT, nD]} />{mat}
+                    </mesh>
+                  )}
+                  {sD > 0 && (
+                    <mesh position={[rtCx, yMid, slabMinZ + sD / 2]} receiveShadow>
+                      <boxGeometry args={[slabW, slabT, sD]} />{mat}
+                    </mesh>
+                  )}
+                  {eW > 0 && (
+                    <mesh position={[cMaxX + eW / 2, yMid, shaftCz]} receiveShadow>
+                      <boxGeometry args={[eW, slabT, cMaxZ - cMinZ]} />{mat}
+                    </mesh>
+                  )}
+                  {wW > 0 && (
+                    <mesh position={[slabMinX + wW / 2, yMid, shaftCz]} receiveShadow>
+                      <boxGeometry args={[wW, slabT, cMaxZ - cMinZ]} />{mat}
+                    </mesh>
+                  )}
+                  {void shaftW}
+                </group>
+              );
+            })() : (
+              <mesh position={[rtCx, slabY, rtCz]} receiveShadow>
+                <boxGeometry args={[slabW, 0.12, slabD2]} />
+                <meshStandardMaterial color="#D8D4CE" roughness={0.85} />
+              </mesh>
+            )}
             {/* Parapet walls (low walls around edge) */}
             {[
               { pos: [rtCx, slabY + 0.25, rtCz - slabD2 / 2 + 0.06] as [number,number,number], size: [slabW, 0.50, 0.12] as [number,number,number] },
