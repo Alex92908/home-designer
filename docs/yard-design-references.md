@@ -523,8 +523,8 @@ planting layer (~200), and glue (~200).
 
 ### 6.5 Phase E — Starter templates
 
-Add 5 named presets in a new `outdoorTemplates.ts` (parallel to
-`floorplanLayouts.ts`):
+Add a named-preset library in a new `outdoorTemplates.ts` (parallel
+to `floorplanLayouts.ts`). The **minimal starter set** (ship-first):
 
 | Template | Lot | Zones included | Notes |
 |---|---|---|---|
@@ -534,8 +534,13 @@ Add 5 named presets in a new `outdoorTemplates.ts` (parallel to
 | `large-estate` | 50 × 40 m | all 5, doubled | Pool + pergola + orchard + meadow |
 | `edible-garden` | 25 × 20 m | agro-dominant + utility + small social | Raised beds, herb spiral, tool shed |
 
-Each template is a fixed `YardPlan` (zones + a hand-curated path /
-planting layout). User picks one, then nudges. Mirrors how
+These five are the **MVP**. The richer 10-template catalogue lives
+in §10 (Real-world makeover patterns) below — built from actual
+project crawls (Houzz, 好好住, ASLA), each with cited sources, zone
+sub-types, and a path topology. When the implementation matures,
+promote entries from §10 into `outdoorTemplates.ts` based on user
+demand. Each template is a fixed `YardPlan` (zones + a hand-curated
+path / planting layout). User picks one, then nudges. Mirrors how
 `projectTemplates.ts` works for indoor.
 
 ### 6.6 Phase F — Planting rules layer
@@ -656,9 +661,196 @@ Footprint columns: XS ≤ 1d, S ≈ 1–2d, M ≈ 2–4d, L ≥ 5d (one engineer
 
 ---
 
-## 10. Next steps — ordered phases the project owner can pick from
+## 10. Real-world makeover patterns
+
+The algorithmic sections above tell us *how* to allocate. This
+section tells us *what to allocate to* — distilled from actual
+residential makeover writeups on Houzz, 好好住 (haohaozhu), ASLA
+project galleries, Reddit r/landscaping before/after threads, BHG
+garden plans, and Garden Design / Gardeningetc editorial. Every
+row cites real URLs that were fetched (not fabricated).
+
+### 10.1 Lot-size → pattern matrix
+
+What real makeovers actually fit into each bucket. Areas in m²
+are the *yard area* (lot minus house footprint), not lot area.
+
+| Bucket | Yard area | House:yard ratio | Canonical pattern | Source examples |
+|---|---|---|---|---|
+| **Tiny urban** | ≤ 50 m² (≈ 5 × 10 m) | house dominates; yard is a side-strip or rear pocket | Single outdoor room. One paving surface, one hero tree or vertical green wall, no lawn. | NYC West Chelsea 16×20 ft dining patio ([Houzz outdoor makeovers 2025](https://www.houzz.com/magazine/the-top-5-outdoor-makeovers-of-2025-stsetivw-vs~183829253)); Kyoto Ryōan-ji 枯山水 330 m² total, 60–70 m² used pockets ([知乎 日式庭院](https://zhuanlan.zhihu.com/p/361199620)) |
+| **Small** | 50–150 m² (10×10 to 10×15) | roughly equal | Two-zone: patio (social) + minimal lawn or planting. Often one short path. | Houzz "small backyard with fire pit" ≈ 4.6–6.1 m square lounge ([Houzz small fire pit](https://www.houzz.com/photos/small-patio-with-a-fire-pit-ideas-phbr2-bp~t_725~a_30-231--34-282)); Chicago flexible urban patio ([Houzz top 5 2025](https://www.houzz.com/magazine/the-top-5-outdoor-makeovers-of-2025-stsetivw-vs~183829253)) |
+| **Medium** | 150–400 m² (15×15 to 20×20) | yard slightly larger than house | Three-to-four zones: social + private + lawn + utility. Loop or branching path. | Houston 28×12 ft patio + lawn ([Houzz patio key measurements](https://www.houzz.com/magazine/key-measurements-for-designing-your-perfect-patio-stsetivw-vs~89359139)); Timnath CO downsizer makeover w/ shade structure + fire pit + sauna ([Houzz top 5 2025](https://www.houzz.com/magazine/the-top-5-outdoor-makeovers-of-2025-stsetivw-vs~183829253)) |
+| **Large** | 400–1000 m² (20×20 to 30×33) | yard dominates | All five zone families. Driveway + entry walk + back-yard outdoor rooms + side veg + rear meadow/orchard. Often two loops. | 别墅花园 ~400 m² 台地花园 ([知乎 院子设计](https://zhuanlan.zhihu.com/p/114568146)); Oakland sloped sanctuary w/ hot tub + outdoor kitchen + shower ([Houzz top 5 2025](https://www.houzz.com/magazine/the-top-5-outdoor-makeovers-of-2025-stsetivw-vs~183829253)) |
+| **Estate** | > 1000 m² | yard is the project | Sequenced "rooms" connected by axial walks. Pool + cabana + dining + orchard + meadow + woodland edge. | LaGuardia "House on the Bluff", Surfacedesign "Trinity Road" — 2024 ASLA Residential Honor Awards ([Landezine 2024 ASLA](https://landezine.com/2024-asla-professional-awards-winners/)) |
+
+The codebase's current default of 30 × 30 m (`suburban-classic`)
+sits at the **Large** end. The data we have suggests the most
+common real makeover is **Small** (50–150 m²) — which is exactly
+the bucket the current 4-template set under-serves.
+
+### 10.2 The 10 templates users actually browse
+
+Replaces the generic 5 in §6.5 as a forward-looking catalogue.
+Promote into `outdoorTemplates.ts` in priority order; keep the §6.5
+five as a ship-first minimum. Each row maps to a §3 algorithmic
+primitive — see "alg" column.
+
+| # | Template | Lot + house position | Zone list (approx area) | Trees / density | Path topology | Alg primitive | Sources |
+|---|---|---|---|---|---|---|---|
+| 1 | **Urban courtyard** | 8–12 × 8–12 m, house wraps two sides | private patio (60%), planting strip (30%), threshold (10%) | 1 hero tree, hedge wall | dead-end stub from house door | Poisson r=very-large (single seed); medial-axis stub | [知乎 日式庭院 60 m² 案例](https://zhuanlan.zhihu.com/p/361199620); [Houzz patio measurements](https://www.houzz.com/magazine/key-measurements-for-designing-your-perfect-patio-stsetivw-vs~89359139) |
+| 2 | **Side-yard utility strip** | 1.5–3 × 10–20 m, between house and fence | path (40%), service zone — bins/AC/tools (30%), vertical green (30%) | climbers on fence, no canopy | linear or curved single path, optional arbor mid-span | Straight-skeleton spine; A* with curve bias | [Garden Design — side yard](https://www.gardendesign.com/landscape-design/side-yard.html); [Gardeningetc narrow gardens](https://www.gardeningetc.com/design/narrow-garden-ideas) |
+| 3 | **Small social patio** | 15–20 × 10–15 m, rear yard | patio/firepit (35%), lawn (40%), planting border (25%) | 1–2 shade trees at SW corner | front-door-to-patio + patio-to-back-fence | Voronoi 2-seed; A* | [Houzz small fire pit](https://www.houzz.com/photos/small-patio-with-a-fire-pit-ideas-phbr2-bp~t_725~a_30-231--34-282); [Chicago flexible patio](https://www.houzz.com/magazine/the-top-5-outdoor-makeovers-of-2025-stsetivw-vs~183829253) |
+| 4 | **Suburban classic** | 25–35 × 25–35 m, house centred | front lawn + driveway, back social, side agro, rear lawn, utility | front: 2 specimen; back: scattered canopy r=4 m | driveway + entry walk + rear loop | Merrell MH on 5-node graph | [Houzz top 5 — Timnath CO](https://www.houzz.com/magazine/the-top-5-outdoor-makeovers-of-2025-stsetivw-vs~183829253); existing default |
+| 5 | **Sloped/tiered retreat** | any, slope ≥ 5% | tiered outdoor rooms by elevation, 3–4 levels | terrace-edge plantings; specimens at landings | switchback stair + side stroll | Skip auto-layout (slope); manual template | [Oakland sloped sanctuary](https://www.houzz.com/magazine/the-top-5-outdoor-makeovers-of-2025-stsetivw-vs~183829253); [台地花园 400 m²](https://zhuanlan.zhihu.com/p/114568146) |
+| 6 | **Pool + cabana** | 20–30 × 15–25 m | pool deck (25%), cabana/dining (15%), lawn (40%), perimeter planting (20%) | screening hedge on neighbour-facing sides | pool-deck loop + service spur to kitchen door | Voronoi 3-seed + setback skeleton | [Needham MA elegant retreat](https://www.houzz.com/magazine/the-top-5-outdoor-makeovers-of-2025-stsetivw-vs~183829253); [ASLA 2024 Honor — La Fénix](https://landezine.com/2024-asla-professional-awards-winners/) |
+| 7 | **Edible / potager** | 15–25 × 15–20 m | raised beds (40%, grid-aligned), tool shed (10%), herb spiral (10%), social (20%), path (20%) | dwarf fruit trees on bed corners | central cross-axis (French potager) | Grid pattern + axial path (not Voronoi) | [BHG French potager — Marysbloomers](http://www.marysbloomers.com/pdfs/BHG%20designs/2021/bhg-summer-cottage-garden-plan.pdf); [Old Farmer's Almanac veg layouts](https://www.almanac.com/vegetable-garden-layout-ideas) |
+| 8 | **Native/pollinator meadow** | any ≥ 200 m² | meadow (60%+), mowed-path frame (15%), patio (15%), shrub edge (10%) | scattered specimens; meadow is herbaceous mass | mowed corridors through meadow | Poisson at meadow density + corridor mask | [Reddit native plant transformations](https://www.thecooldown.com/green-home/native-plant-landscaping-grass-swap-reddit-before-after/); [ASLA Highbank prairie](https://landezine.com/2024-asla-professional-awards-winners/) |
+| 9 | **Japanese 枯山水 pocket** | 5–15 × 5–15 m | gravel sea (50%), stone groups (10%), moss/planting (20%), engawa/threshold (20%) | no canopy; moss + low shrubs only | viewing path only (no walking) | Poisson w/ stone-cluster constraint; no scatter inside gravel | [Ryōan-ji 330 m² 案例](https://zhuanlan.zhihu.com/p/361199620); [一方园林 日式花园](https://www.ifangarden.com/212178.html) |
+| 10 | **Front-yard curb-appeal refresh** | typical front: 6–12 m deep × house width | entry walk (20%), foundation plantings (30%), lawn or xeriscape (40%), driveway-edge (10%) | 1 specimen + 3-5 foundation shrubs symmetric to door | gate → walk → porch (single axis, optionally curved) | A* axis + Poisson on bed mask | [CSU xeriscape front yards](https://engagement.source.colostate.edu/front-yard-xeriscape-ideas-with-photos-of-drought-tolerant-colorado-landscapes/); [Reddit lawn-to-meadow conversion](https://www.thecooldown.com/green-home/sustainable-landscaping-front-yard-reddit-lawn-care/) |
+
+### 10.3 Functional zone vocabulary — refined
+
+The codebase's current 5-kind union (`social / private / utility /
+agro / lawn`) is correct at the *coarse* level but loses
+descriptive power. Real designers and the Houzz/Gardendesign/
+Lovinger-Robertson glossaries use a richer sub-typing. Surface
+these as **tags or sub-kinds**, not new top-level zone kinds —
+they map onto the existing 5 cleanly:
+
+| Sub-type | Parent ZoneKind | Where it shows up | Map → §6.3 adjacency rules |
+|---|---|---|---|
+| **Entry sequence** | (cross-cutting) | Gate → walk → threshold → door | First-class concept in path inference §6.4 step 5 |
+| **Threshold** | private or social | Pergola, archway, gate, change-of-paving | Adjacency rule: required between front and back zones in "Suburban classic" |
+| **Outdoor room** | social | Patio, deck, cabana, dining terrace | The default "social" zone today |
+| **Sunset terrace** | social | West-facing patio for evening use | Sun-aware placement: prefer west / SW edge |
+| **Mudroom side** | utility | Side of house with bins/tools/AC | Adjacency to kitchen door |
+| **Kitchen garden / potager** | agro | Raised-bed grid near kitchen | Within 25 m of kitchen door (already a rule) |
+| **Fragrance corridor** | private or social | Aromatic planting along a walk | Path-adjacent strip, not a polygon |
+| **Wild edge** | lawn or agro | Meadow/woodland border at rear fence | Far from house, adjacent to fence |
+| **Threshold seating / "back-against"** | private | Bench with wall/hedge behind | Booth & Hiss rule — back to fence/wall required |
+| **Service yard** | utility | Tools, compost, hose bib | Hidden from social sightlines |
+| **Children's sightline zone** | lawn or social | Play area visible from kitchen window | Visibility constraint from house window |
+
+Implementation note: extend `YardZone` with an optional
+`subtype: string` tag. The constraint solver in §6.3 reads
+sub-types to apply richer rules (e.g. "sunset terrace prefers west
+exposure" hooks into `sunAnalysis.ts`). No data migration needed —
+existing zones default to `subtype: undefined` and fall back to
+parent-kind rules.
+
+Source: [Lovinger Robertson — Landscape Thresholds](https://lovingerrobertson.com/blog/entry/landscape-thresholds);
+[Gardengateways glossary](https://www.gardengateways.com/landscape-design-glossary/);
+[Roche Spaces — Spatial sequences](https://spaces.roche.com/exteriors/spatial-sequences/);
+[Shearon — entry moments](https://www.shearondesignco.com/blog/designing-entry-moments-that-feel-like-destinations).
+
+### 10.4 "Before" failures — the regret taxonomy
+
+What makeover posts complain about in their starting state. Each
+maps to a violation our `outdoorClearance.ts` (and proposed
+extensions) should surface. Use these as **default empty-state
+hints** when no zones are placed yet.
+
+| Before-state | Frequency in posts | Maps to violation / suggestion |
+|---|---|---|
+| **Patchy / unused lawn** | very high (Timnath CO, multiple Reddit threads) | "Replace lawn area > X m² with mixed zones" suggestion |
+| **No privacy from neighbours** | very high | Adjacency rule: any social or private zone within 3 m of property line → suggest screening |
+| **No shade** | high | Sun-analysis check: if patio area receives > N hours direct sun in July, suggest tree/pergola |
+| **Walkway too tight / no walkway at all** | high (Sweet Home 3D #445 confirms) | Path-missing violation when destinations have no path between them |
+| **Tools/bins visible from social zone** | high | Sightline rule: utility within sightline of social → flag |
+| **Cluttered, too many species** | medium (PrettyPurpleDoor) | Species-count cap per zone in planting layer |
+| **No focal point** | medium | Suggest one specimen tree per zone ≥ 50 m² |
+| **Plants too close / overgrown** | medium | Already implemented: cluster-density rule + canopy-spacing rule §6.6 |
+| **Bare in winter** | medium | Planting-mix rule: ≥ 20% evergreen by canopy area in mid-latitudes |
+| **Disconnected from house style** | low (subjective) | Out of scope |
+| **Pass-through with no purpose** | medium (Chicago patio) | Detect zoneless yard with paths only → suggest minimum 1 social zone |
+
+Sources: [Pretty Purple Door — 71 design mistakes](https://www.prettypurpledoor.com/landscape-design-mistakes/);
+[Bob Vila — 8 front-yard mistakes](https://www.bobvila.com/slideshow/don-t-make-these-8-mistakes-in-your-front-yard-49148/);
+[Homes & Gardens — landscaping mistakes](https://www.homesandgardens.com/gardens/landscaping-mistakes);
+[Lawnstarter — 12 mistakes](https://www.lawnstarter.com/blog/landscaping/common-landscaping-mistakes/).
+
+### 10.5 Climate / orientation adaptation
+
+How much does the template change between climates and house
+orientations. Useful because `sunAnalysis.ts` already computes
+sun/shadow.
+
+| Variable | Effect on template | Implementation hook |
+|---|---|---|
+| **South-facing yard, hot-dry (Phoenix, Madrid)** | Patio moves to **east** side for morning sun + afternoon shade. Pergola or shade-sail mandatory over social zone. Lawn → xeriscape gravel. Trees clustered SW of patio for late-afternoon shade. | `LotSettings.northDeg` already in §6.2 plan; bias seed-placement and planting density by climate flag |
+| **South-facing, temperate-wet (UK, US PNW)** | Patio stays south-facing (sun is the limiting good). Lawn viable. Drainage planning matters. | Default; no special handling |
+| **North-facing, temperate** | Social zone moves *away* from house to chase sun — far corner instead of patio-on-deck. Shade plantings near house. | Seed-placement heuristic in §6.4 step 2: bias social seed toward sunniest quadrant computed from sun-analysis |
+| **East/west-facing** | "Sunset terrace" sub-type on west side becomes the social anchor; morning-coffee nook on east | Sub-type tagging (§10.3) |
+| **Steep slope** | Tiered template (#5 in §10.2); auto-layout disabled, manual template only | Detection: ≥ 5% grade → switch UI to tiered template, hide "Generate" button |
+
+Sources: [Lawn Love — north-facing guide](https://lawnlove.com/blog/guide-to-landscaping-a-north-facing-yard/);
+[Summerwinds AZ — planting by direction](https://www.summerwindsnursery.com/az/inspire/blog/planting-by-direction-light/);
+[CSU xeriscape](https://engagement.source.colostate.edu/front-yard-xeriscape-ideas-with-photos-of-drought-tolerant-colorado-landscapes/);
+[Landscaping Network — xeriscape fundamentals](https://www.landscapingnetwork.com/landscape-design/Xeriscape.html).
+
+### 10.6 Budget tiers — smallest meaningful change
+
+What's the smallest meaningful change to a starting state. This
+informs the **"design suggestion"** UI surface: not every
+suggestion is "rebuild from scratch", and the cheapest fixes
+often resolve the most common complaints.
+
+| Tier | Budget / time | What changes | Maps to our system |
+|---|---|---|---|
+| **T0 — Tidy** | 0–$50, weekend | Mow, edge, trim, remove dead | "Validate, don't generate" — no item changes, just clear violations |
+| **T1 — Soft additions** | $50–$500, weekend | String lights, cushions, portable fire pit, gravel path | Add prefabs only (no zone polygon changes). Path-authoring (C2) is the primary lever here |
+| **T2 — One zone** | $500–$3 k, 1 weekend–1 month | Build one patio / firepit pad / raised bed cluster | Single zone insertion + Poisson scatter inside. Half the §10.2 #3 "Small social patio" template applied to existing yard |
+| **T3 — Multi-zone refresh** | $3 k–$20 k, 1–3 months | New paths, new patio, replant beds, fencing | Auto-layout § 6.4 over a subset of the yard, preserving existing house + driveway |
+| **T4 — Full renovation** | > $20 k, > 3 months | Earthworks, pool, hardscape, mature-tree install | Full §6.4 with no preserved items |
+
+UI implication: the "Generate" button in §6.4 should have a
+**tier selector** (T1–T4), not just a "Generate" verb. T1
+generation never moves existing zones; T4 generation discards
+everything and starts from the template.
+
+Sources: [HomeGuide — cheap backyard makeovers 2026](https://homeguide.com/costs/cheap-backyard-makeover-ideas);
+[Extra Space — DIY budget guide](https://www.extraspace.com/blog/home-organization/diy-guide-to-a-backyard-makeover-on-a-budget/);
+[Southern Yankee DIY — budget breakdown](https://southernyankeediy.com/projects/diy-decor/cheap-backyard-makeover-ideas-budget-breakdown/);
+[Allied Landscape — budget makeovers](https://www.alliedlandscape.com/blog/cheap-backyard-makeover-ideas-that-will-transform-your-outdoor-space).
+
+### 10.7 Cross-reference: real patterns → §3 algorithmic primitives
+
+Putting §10.2 patterns next to §3 algorithms so the pipeline is
+explicit:
+
+| Pattern (§10.2) | Primary algorithm | Why it fits |
+|---|---|---|
+| #1 Urban courtyard | Poisson at very-low density (1 seed); manual zone | Yard is too small for tessellation; one outdoor room is the answer |
+| #2 Side-yard strip | **Straight-skeleton spine** along long axis + A* with curve bias | Long thin polygon ⇒ medial axis *is* the path. Exactly what §3.6 ships for |
+| #3 Small social patio | Voronoi 2-seed (patio + lawn) | Two zones, one boundary — Voronoi degenerate but works |
+| #4 Suburban classic | **Merrell MH sampler** (§3.3) over full 5-node adjacency graph | The reference target for the auto-layout work in §6.4 |
+| #5 Sloped/tiered | Skip §3 — pre-baked template only | Slope breaks the planar Voronoi assumption (see §8.8) |
+| #6 Pool + cabana | Voronoi 3-seed + straight-skeleton setback | Fixed-position seeds (pool can't move past setback) |
+| #7 Edible potager | **Grid pattern** (not Voronoi) + axial path | Raised beds are explicitly rectilinear; Voronoi is wrong shape |
+| #8 Native meadow | Poisson over a mask + mowed-corridor A* | Meadow = high-density Poisson; corridors are A*-routed gaps |
+| #9 Japanese 枯山水 | Manual placement of stone groups + raked-gravel infill | The asymmetry rules are aesthetic, not algorithmic |
+| #10 Curb-appeal front | A* single axis + Poisson on bed mask + Booth & Hiss foundation-plant spacing | Symmetric layout; algorithm just provides the spacing math |
+
+The headline: **5 of the 10 templates use the same Voronoi +
+A* + Poisson pipeline already in §6.4**. The other 5 either skip
+the solver (#1, #5, #9) or swap one primitive (#2 skeleton-only,
+#7 grid-only). Implementing §6.4 well buys half the catalogue
+for free.
+
+---
+
+## 11. Next steps — ordered phases the project owner can pick from
 
 Three suggested orderings. Pick **one**.
+
+> **Update (informed by §10):** because the template library is now
+> well-scoped against real-world references (10 named patterns with
+> citations and explicit algorithm mappings), **Path 2 (Cold-start
+> wedge)** is a stronger candidate than it was. Templates went from
+> "5 generic" to "10 sourced", and #2 (side-yard) plus #3 (small
+> social patio) cover the most common real makeover (≤ 150 m²,
+> per §10.1). Recommend re-evaluating Path 1 vs Path 2 in light of
+> this.
 
 ### Path 1 — Minimum lift to make screenshots not embarrassing (≈ 1 week)
 
@@ -673,33 +865,55 @@ Three suggested orderings. Pick **one**.
 Total: ~6.5 days. No new algorithms; mostly plumbing existing
 primitives into the UI.
 
-### Path 2 — Cold-start wedge (≈ 2 weeks)
+### Path 2 — Cold-start wedge (≈ 2 weeks) — *upgraded scope*
 
 1. **A1 + A2** (as in Path 1) — prerequisite (1.5 days).
-2. **D1** — 5 starter templates (3 days). Solves "blank canvas".
-3. **B** — Lot polygon + setback (3 days). Makes templates
+2. **D1** — starter templates (3 days). Ship the **§6.5 minimal
+   five** as `outdoorTemplates.ts`. Documentation in §10.2 names
+   the next five to add in priority order (side-yard strip,
+   pool+cabana, edible potager, native meadow, front-yard refresh)
+   — each has a known algorithm mapping (§10.7) so they aren't
+   research items.
+3. **Empty-state hints** from §10.4 regret taxonomy (0.5 day) —
+   surface "no privacy / no shade / no walkway" hints before
+   the user even picks a template.
+4. **B** — Lot polygon + setback (3 days). Makes templates
    parametric to lot size.
-4. **C2** + **E** (5 days). Same as Path 1.
+5. **C2** + **E** (5 days). Same as Path 1.
 
-Total: ~12.5 days. Mostly content + data model. Low algorithm risk.
+Total: ~13 days. Mostly content + data model. Low algorithm risk.
+Now also addresses cold-start *and* the regret taxonomy.
 
 ### Path 3 — The full "design my yard" button (≈ 4 weeks)
 
-1. Everything from Path 2 (~12.5 days).
-2. **C1** — Adjacency rules (1 day).
-3. **D2** — Voronoi seed-based generator (3 days).
-4. **D4** — A* path inference (3 days).
+1. Everything from Path 2 (~13 days).
+2. **C1** — Adjacency rules (1 day). Use §10.3 zone-subtype
+   refinement, not just the 5 parent kinds.
+3. **D2** — Voronoi seed-based generator (3 days). Half the §10.2
+   catalogue (patterns #3, #6, #8, #10) shares this codepath.
+4. **D4** — A* path inference (3 days). Side-yard pattern #2
+   needs straight-skeleton instead — small additional spike.
 5. **D3** — MH constraint solver (5 days, with tuning sessions).
+   Targets pattern #4 specifically.
+6. **Budget-tier selector** (§10.6) on the Generate button
+   (0.5 day) — T1/T2/T3/T4 controls how much of the existing
+   plan the solver may discard.
 
-Total: ~25 days. Real algorithmic work. Output is a one-click
-plan-generator that other residential tools have failed to ship.
+Total: ~25.5 days. Real algorithmic work. Output is a one-click
+plan-generator that other residential tools have failed to ship,
+**and** covers the 10 templates the §10 research surfaced as the
+real demand surface.
 
 **Recommendation**: **Path 1**, then re-evaluate. The first four
 items in Path 1 already address the four user-visible complaints
 in the screenshots (zone overlap, two views, no paths, tree
 chaos) without any procedural-generation risk. After Path 1
 ships, the bar for Path 2 / 3 is much clearer because the user
-will be looking at real, less-broken plans.
+will be looking at real, less-broken plans. **Caveat from §10**:
+if user research shows the cold-start problem is the dominant
+complaint (consistent with the planner5d community-forum signal
+in §5), promote Path 2 above Path 1 — the §10.2 template
+catalogue now makes Path 2 cheaper than it looked.
 
 ---
 
