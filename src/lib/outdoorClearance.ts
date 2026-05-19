@@ -38,6 +38,7 @@ export type OutdoorViolationKind =
   | "noShade"          // social zone lacks nearby shade
   | "noPrivacy"        // social/private zone exposed — no screening
   | "noWalkway"        // social zone not connected by a path
+  | "canopyOverlap"    // two trees' mature canopies overlap (planting rule)
   | "cluttered"
   | "blocksDriveway";
 
@@ -370,6 +371,40 @@ export function evaluateYardPlan(
           reasonZh: `景观元素与「${pf.prefabKind}」重叠，建议挪开`,
           reasonEn: `Item overlaps with "${pf.prefabKind}" prefab — move it away`,
         });
+      }
+    }
+  }
+
+  // ─── Tree canopy spacing ──────────────────────────────────
+  // Mature canopies should not overlap (landscape-architecture rule).
+  // Two trees flagged if center-distance < sum of canopy radii − a small
+  // tolerance (0.5 m). Radii come from TREE_CANOPY_RADIUS_M scaled by
+  // each tree's `scale` field; falls back to 3 m for unknown kinds.
+  const canopyTrees = singletons.filter(s => s.kind?.startsWith("tree."));
+  if (canopyTrees.length > 1) {
+    // Lazy-load the canopy radius map without a circular import — the
+    // planting module is small and pure.
+    const { TREE_CANOPY_RADIUS_M } = require("./yardAutoPlanting") as
+      typeof import("./yardAutoPlanting");
+    for (let i = 0; i < canopyTrees.length; i++) {
+      for (let j = i + 1; j < canopyTrees.length; j++) {
+        const a = canopyTrees[i], b = canopyTrees[j];
+        const ra = (TREE_CANOPY_RADIUS_M[a.kind] ?? 3) * (a.scale ?? 1);
+        const rb = (TREE_CANOPY_RADIUS_M[b.kind] ?? 3) * (b.scale ?? 1);
+        const distM = Math.hypot(a.x - b.x, a.z - b.z) / 100;
+        const minSep = ra + rb - 0.5;
+        if (distM < minSep) {
+          out.push({
+            itemId: a.id,
+            otherId: b.id,
+            kind: "canopyOverlap",
+            severity: "recommended",
+            reasonZh: `两棵树冠重叠 (实际 ${distM.toFixed(1)}m, 需要 ≥${minSep.toFixed(1)}m)，将互相遮挡生长`,
+            reasonEn: `Tree canopies overlap (actual ${distM.toFixed(1)} m, need ≥ ${minSep.toFixed(1)} m) — they will compete for light`,
+            requiredM: minSep,
+            actualM: distM,
+          });
+        }
       }
     }
   }

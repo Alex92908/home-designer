@@ -24,6 +24,7 @@ import { PREFAB_REGISTRY, getPrefabDef } from "@/lib/outdoorPrefabs";
 import { ZONE_STYLES, polygonCentroid } from "@/lib/outdoorZones";
 import { evaluateYardPlan, violationsByItem, getEmptyStateHints } from "@/lib/outdoorClearance";
 import { autoGenerateYardPaths } from "@/lib/yardAutoLayout";
+import { autoScatterTrees } from "@/lib/yardAutoPlanting";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
 import { Image3dGenerator } from "./Image3dGenerator";
@@ -876,6 +877,17 @@ export default function YardPlan() {
           className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0 transition-all"
           style={{ background: "rgba(168,85,247,0.18)", color: "#C084FC", border: "1px solid rgba(168,85,247,0.4)" }}>
           🪄 自动路径
+        </button>
+        {/* Auto-plant button — Poisson scatter trees over open ground */}
+        <button
+          onClick={() => {
+            const trees = autoScatterTrees(yardItems, footprint);
+            for (const t of trees) addYardItem(t);
+          }}
+          title="在空地按树冠间距自动散植树木（避开房屋和区域）"
+          className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0 transition-all"
+          style={{ background: "rgba(34,197,94,0.18)", color: "#86EFAC", border: "1px solid rgba(34,197,94,0.4)" }}>
+          🌲 自动种树
         </button>
         {/* Path width + material selectors — only shown in path mode */}
         {drawMode === "path" && (
