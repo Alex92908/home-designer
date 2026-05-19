@@ -1605,6 +1605,26 @@ export default function FloorPlan() {
                   noHitRect={editWindows && !polygonEdge}
                   onPointerDown={editWindows ? (e) => startDoorDrag(e, d.id) : (() => {})}
                 />
+                {/* Hit rect (drag) — rendered BEFORE the edit/delete
+                    buttons so the buttons sit on top in SVG z-order.
+                    Previous order trapped pointerdown in the hit-rect
+                    and the user couldn't click ✎ or ✕.  */}
+                {editWindows && !polygonEdge && (() => {
+                  const isHoriz = cardinalDoorWall === "top" || cardinalDoorWall === "bottom";
+                  const wallLen = isHoriz ? roomW : roomD;
+                  const doorWpx = Math.min(d.len, wallLen) * scale;
+                  const doorPosPx = d.pos * scale;
+                  let hrX: number, hrY: number, hrW: number, hrH: number;
+                  if (cardinalDoorWall === "bottom")      { hrX = doorPosPx - 4; hrY = svgH - 20; hrW = doorWpx + 8; hrH = 24; }
+                  else if (cardinalDoorWall === "top")    { hrX = doorPosPx - 4; hrY = -4;        hrW = doorWpx + 8; hrH = 24; }
+                  else if (cardinalDoorWall === "left")   { hrX = -4;            hrY = doorPosPx - 4; hrW = 24; hrH = doorWpx + 8; }
+                  else                                    { hrX = svgW - 20;     hrY = doorPosPx - 4; hrW = 24; hrH = doorWpx + 8; }
+                  return (
+                    <rect x={hrX} y={hrY} width={hrW} height={hrH}
+                      fill="transparent" style={{ cursor: "move" }}
+                      onPointerDown={(e) => startDoorDrag(e, d.id)} />
+                  );
+                })()}
                 {/* Per-door delete/edit buttons */}
                 {editWindows && (() => {
                   const R = 9;
@@ -1662,23 +1682,6 @@ export default function FloorPlan() {
                           fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✕</text>
                       </g>
                     </g>
-                  );
-                })()}
-                {/* Hit rect rendered LAST so it sits on top of delete/edit circles in SVG z-order */}
-                {editWindows && !polygonEdge && (() => {
-                  const isHoriz = cardinalDoorWall === "top" || cardinalDoorWall === "bottom";
-                  const wallLen = isHoriz ? roomW : roomD;
-                  const doorWpx = Math.min(d.len, wallLen) * scale;
-                  const doorPosPx = d.pos * scale;
-                  let hrX: number, hrY: number, hrW: number, hrH: number;
-                  if (cardinalDoorWall === "bottom")      { hrX = doorPosPx - 4; hrY = svgH - 20; hrW = doorWpx + 8; hrH = 24; }
-                  else if (cardinalDoorWall === "top")    { hrX = doorPosPx - 4; hrY = -4;        hrW = doorWpx + 8; hrH = 24; }
-                  else if (cardinalDoorWall === "left")   { hrX = -4;            hrY = doorPosPx - 4; hrW = 24; hrH = doorWpx + 8; }
-                  else                                    { hrX = svgW - 20;     hrY = doorPosPx - 4; hrW = 24; hrH = doorWpx + 8; }
-                  return (
-                    <rect x={hrX} y={hrY} width={hrW} height={hrH}
-                      fill="transparent" style={{ cursor: "move" }}
-                      onPointerDown={(e) => startDoorDrag(e, d.id)} />
                   );
                 })()}
               </g>
