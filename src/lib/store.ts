@@ -215,6 +215,42 @@ function updateFloor(
   set({ floorPlans: updated });
 }
 
+/**
+ * Recompute roomDimensions[room] so the bounding box matches the polygon.
+ * Returned object is suitable for spreading into an updateFloor() patch.
+ * The polygon's positive-quadrant bbox becomes the new {width, depth};
+ * if the polygon's actual maxima are smaller than the current dimensions
+ * we GROW only — never shrink — to avoid kicking already-placed furniture
+ * outside the room when the user drags a vertex inward briefly. Returns
+ * an empty patch when the dimensions already accommodate the polygon.
+ *
+ * Called from updateRoomShapePoint / deleteRoomShapePoint /
+ * insertRoomShapePoint so the single-room 平面图 view, which sizes its
+ * SVG canvas from roomDimensions, stays in sync with global outline
+ * edits.
+ */
+function syncDimsToShape(
+  fp: FloorPlan,
+  room: RoomType,
+  points: Array<[number, number]>,
+): Partial<FloorPlan> {
+  if (!points.length) return {};
+  let maxX = 0, maxZ = 0;
+  for (const [x, z] of points) {
+    if (x > maxX) maxX = x;
+    if (z > maxZ) maxZ = z;
+  }
+  const cur = fp.roomDimensions[room];
+  // Snap to 10 cm so the displayed dimension stays clean.
+  const snap = (v: number) => Math.round(v / 10) * 10;
+  const newW = Math.max(cur?.width ?? 0, snap(maxX));
+  const newD = Math.max(cur?.depth ?? 0, snap(maxZ));
+  if (cur && cur.width === newW && cur.depth === newD) return {};
+  return {
+    roomDimensions: { ...fp.roomDimensions, [room]: { width: newW, depth: newD } },
+  };
+}
+
 // ─── updateYardFloor helper — yard is ground-level, always floor 0 ───
 // The yard (outdoor space) is a physical ground-level feature shared by
 // all floors. Always read/write yardPlan from floorPlans[0] regardless
@@ -1266,6 +1302,7 @@ export const useDesignerStore = create<DesignerStore>()(
           const nextPts = cur.points.map((p, i) => (i === idx ? [x, z] : p)) as Array<[number, number]>;
           return {
             roomShapes: { ...fp.roomShapes, [room]: { preset: "custom", points: nextPts } },
+            ...syncDimsToShape(fp, room, nextPts),
           };
         });
       },
@@ -1277,6 +1314,7 @@ export const useDesignerStore = create<DesignerStore>()(
           const nextPts = cur.points.filter((_, i) => i !== idx);
           return {
             roomShapes: { ...fp.roomShapes, [room]: { preset: "custom", points: nextPts } },
+            ...syncDimsToShape(fp, room, nextPts),
           };
         });
       },
@@ -1289,6 +1327,7 @@ export const useDesignerStore = create<DesignerStore>()(
           pts.splice(afterIdx + 1, 0, [x, z] as [number, number]);
           return {
             roomShapes: { ...fp.roomShapes, [room]: { preset: "custom", points: pts } },
+            ...syncDimsToShape(fp, room, pts),
           };
         });
       },
