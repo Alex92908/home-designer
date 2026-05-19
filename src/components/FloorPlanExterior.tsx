@@ -25,6 +25,7 @@ import { useDesignerStore } from "@/lib/store";
 import { overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
+import { InteriorRoomDetail } from "./InteriorRoomDetail";
 import { PlacedItemMesh } from "./RoomCanvas";
 import { StaircaseGeom } from "./GlobalCanvas";
 
@@ -10252,6 +10253,20 @@ export default function FloorPlanBuilding({
                   );
                 })}
             </group>
+            {/* ── §10 walkthrough LOD detail: baseboards + crown + warm
+                 point light. Only mounts inside the building so the
+                 exterior view stays unchanged. Stair / hallway skipped
+                 — they shouldn't have residential trim. ── */}
+            {insideBuilding && !isStair && !isHallway && (
+              <InteriorRoomDetail
+                cx={cx}
+                cz={cz}
+                yBase={yBase}
+                rW={rW}
+                rD={rD}
+                wallColor={wallColor}
+              />
+            )}
           </React.Fragment>
         );
       })}
