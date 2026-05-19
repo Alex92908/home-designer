@@ -540,10 +540,20 @@ export default function FloorPlan() {
   const { roomW, roomD } = useMemo(() => {
     let mX = _baseW, mZ = _baseD;
     if (_shapePts && _shapePts.length) {
+      // Use full bbox (max - min) so legacy data with polygon points in the
+      // negative quadrant still produces a usable canvas size. Newer edits
+      // are normalized at write time (store.ts syncDimsAndLayout) so min ≥ 0
+      // in fresh data — but this read-side fallback heals older saves.
+      let minX = _shapePts[0][0], minZ = _shapePts[0][1];
+      let maxX = minX, maxZ = minZ;
       for (const [px, pz] of _shapePts) {
-        if (px > mX) mX = px;
-        if (pz > mZ) mZ = pz;
+        if (px < minX) minX = px; if (px > maxX) maxX = px;
+        if (pz < minZ) minZ = pz; if (pz > maxZ) maxZ = pz;
       }
+      const spanX = maxX - Math.min(0, minX);
+      const spanZ = maxZ - Math.min(0, minZ);
+      if (spanX > mX) mX = spanX;
+      if (spanZ > mZ) mZ = spanZ;
     }
     return { roomW: mX, roomD: mZ };
   }, [_baseW, _baseD, _shapePts]);

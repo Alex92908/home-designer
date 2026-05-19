@@ -216,39 +216,61 @@ function updateFloor(
 }
 
 /**
- * Recompute roomDimensions[room] so the bounding box matches the polygon.
- * Returned object is suitable for spreading into an updateFloor() patch.
- * The polygon's positive-quadrant bbox becomes the new {width, depth};
- * if the polygon's actual maxima are smaller than the current dimensions
- * we GROW only — never shrink — to avoid kicking already-placed furniture
- * outside the room when the user drags a vertex inward briefly. Returns
- * an empty patch when the dimensions already accommodate the polygon.
+ * Normalize a polygon edit + sync roomDimensions + (if needed) shift
+ * roomLayout so the polygon stays in the positive quadrant.
  *
- * Called from updateRoomShapePoint / deleteRoomShapePoint /
- * insertRoomShapePoint so the single-room 平面图 view, which sizes its
- * SVG canvas from roomDimensions, stays in sync with global outline
- * edits.
+ * Polygon points are room-LOCAL (relative to roomLayout). The original
+ * sync helper only walked `max(x, z)` — when a user dragged the TOP edge
+ * UP (z goes negative), the polygon extended into the negative quadrant
+ * but dimensions stayed unchanged AND the single-room SVG, which only
+ * renders positive coords, clipped the extension. Symptom: user said
+ * "拉高了高度，你实现的是减小了".
+ *
+ * Fix:
+ *   1. Compute (minX, maxX, minZ, maxZ).
+ *   2. If minX<0 or minZ<0, shift all points by (-minX, -minZ) so the
+ *      polygon lives in [0, w] × [0, d]. To keep the room's WORLD
+ *      position stable, roomLayout shifts inversely (lay.x += minX).
+ *   3. roomDimensions grows to (maxX - minX, maxZ - minZ), snapped to
+ *      10 cm. Never shrinks — avoids kicking already-placed furniture
+ *      out when the user briefly drags a vertex inward.
+ *
+ * Returns the normalized points (call sites must store these in
+ * roomShapes, NOT the original) and the layout / dim patch.
  */
-function syncDimsToShape(
+function syncDimsAndLayout(
   fp: FloorPlan,
   room: RoomType,
   points: Array<[number, number]>,
-): Partial<FloorPlan> {
-  if (!points.length) return {};
-  let maxX = 0, maxZ = 0;
+): { points: Array<[number, number]>; patch: Partial<FloorPlan> } {
+  if (!points.length) return { points, patch: {} };
+  let minX = points[0][0], minZ = points[0][1], maxX = minX, maxZ = minZ;
   for (const [x, z] of points) {
-    if (x > maxX) maxX = x;
-    if (z > maxZ) maxZ = z;
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
   }
-  const cur = fp.roomDimensions[room];
-  // Snap to 10 cm so the displayed dimension stays clean.
+  const shiftX = minX < 0 ? -minX : 0;
+  const shiftZ = minZ < 0 ? -minZ : 0;
+  const normPts: Array<[number, number]> = (shiftX || shiftZ)
+    ? points.map(([x, z]) => [Math.round(x + shiftX), Math.round(z + shiftZ)] as [number, number])
+    : points;
+  const newMaxX = maxX + shiftX;
+  const newMaxZ = maxZ + shiftZ;
   const snap = (v: number) => Math.round(v / 10) * 10;
-  const newW = Math.max(cur?.width ?? 0, snap(maxX));
-  const newD = Math.max(cur?.depth ?? 0, snap(maxZ));
-  if (cur && cur.width === newW && cur.depth === newD) return {};
-  return {
-    roomDimensions: { ...fp.roomDimensions, [room]: { width: newW, depth: newD } },
-  };
+  const curDims = fp.roomDimensions[room];
+  const newW = Math.max(curDims?.width ?? 0, snap(newMaxX));
+  const newD = Math.max(curDims?.depth ?? 0, snap(newMaxZ));
+  const patch: Partial<FloorPlan> = {};
+  if (shiftX || shiftZ) {
+    const lay = fp.roomLayout[room];
+    if (lay) {
+      patch.roomLayout = { ...fp.roomLayout, [room]: { x: lay.x - shiftX, y: lay.y - shiftZ } };
+    }
+  }
+  if (!curDims || curDims.width !== newW || curDims.depth !== newD) {
+    patch.roomDimensions = { ...fp.roomDimensions, [room]: { width: newW, depth: newD } };
+  }
+  return { points: normPts, patch };
 }
 
 // ─── updateYardFloor helper — yard is ground-level, always floor 0 ───
@@ -1299,10 +1321,11 @@ export const useDesignerStore = create<DesignerStore>()(
         updateFloor(get, set, fp => {
           const cur = fp.roomShapes?.[room];
           if (!cur) return {};
-          const nextPts = cur.points.map((p, i) => (i === idx ? [x, z] : p)) as Array<[number, number]>;
+          const raw = cur.points.map((p, i) => (i === idx ? [x, z] : p)) as Array<[number, number]>;
+          const { points, patch } = syncDimsAndLayout(fp, room, raw);
           return {
-            roomShapes: { ...fp.roomShapes, [room]: { preset: "custom", points: nextPts } },
-            ...syncDimsToShape(fp, room, nextPts),
+            roomShapes: { ...fp.roomShapes, [room]: { preset: "custom", points } },
+            ...patch,
           };
         });
       },
@@ -1311,10 +1334,11 @@ export const useDesignerStore = create<DesignerStore>()(
         updateFloor(get, set, fp => {
           const cur = fp.roomShapes?.[room];
           if (!cur || cur.points.length <= 3) return {};   // keep ≥3
-          const nextPts = cur.points.filter((_, i) => i !== idx);
+          const raw = cur.points.filter((_, i) => i !== idx);
+          const { points, patch } = syncDimsAndLayout(fp, room, raw);
           return {
-            roomShapes: { ...fp.roomShapes, [room]: { preset: "custom", points: nextPts } },
-            ...syncDimsToShape(fp, room, nextPts),
+            roomShapes: { ...fp.roomShapes, [room]: { preset: "custom", points } },
+            ...patch,
           };
         });
       },
@@ -1323,11 +1347,12 @@ export const useDesignerStore = create<DesignerStore>()(
         updateFloor(get, set, fp => {
           const cur = fp.roomShapes?.[room];
           if (!cur) return {};
-          const pts = [...cur.points];
-          pts.splice(afterIdx + 1, 0, [x, z] as [number, number]);
+          const raw = [...cur.points];
+          raw.splice(afterIdx + 1, 0, [x, z] as [number, number]);
+          const { points, patch } = syncDimsAndLayout(fp, room, raw);
           return {
-            roomShapes: { ...fp.roomShapes, [room]: { preset: "custom", points: pts } },
-            ...syncDimsToShape(fp, room, pts),
+            roomShapes: { ...fp.roomShapes, [room]: { preset: "custom", points } },
+            ...patch,
           };
         });
       },
