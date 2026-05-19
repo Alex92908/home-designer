@@ -216,27 +216,21 @@ function updateFloor(
 }
 
 /**
- * Normalize a polygon edit + sync roomDimensions + (if needed) shift
- * roomLayout so the polygon stays in the positive quadrant.
+ * Sync roomDimensions to match the polygon's bbox span.
  *
- * Polygon points are room-LOCAL (relative to roomLayout). The original
- * sync helper only walked `max(x, z)` — when a user dragged the TOP edge
- * UP (z goes negative), the polygon extended into the negative quadrant
- * but dimensions stayed unchanged AND the single-room SVG, which only
- * renders positive coords, clipped the extension. Symptom: user said
- * "拉高了高度，你实现的是减小了".
+ * IMPORTANT: this function does NOT shift the polygon or roomLayout.
+ * An earlier attempt did — to keep the polygon in the positive
+ * quadrant — but that broke door/window/furniture positions, which
+ * also live in room-local coords and were NOT shifted. Result: doors
+ * jumped to wrong walls and couldn't be deleted.
  *
- * Fix:
- *   1. Compute (minX, maxX, minZ, maxZ).
- *   2. If minX<0 or minZ<0, shift all points by (-minX, -minZ) so the
- *      polygon lives in [0, w] × [0, d]. To keep the room's WORLD
- *      position stable, roomLayout shifts inversely (lay.x += minX).
- *   3. roomDimensions grows to (maxX - minX, maxZ - minZ), snapped to
- *      10 cm. Never shrinks — avoids kicking already-placed furniture
- *      out when the user briefly drags a vertex inward.
+ * Instead, we let the polygon keep negative coords (e.g. when the
+ * user drags the top edge up). Dimensions become the FULL span
+ * `(maxX - minX, maxZ - minZ)` so the SVG canvas in 单房间 平面图
+ * is big enough; the renderer handles the offset.
  *
- * Returns the normalized points (call sites must store these in
- * roomShapes, NOT the original) and the layout / dim patch.
+ * Returns the unmodified points (caller stores them as-is) plus the
+ * dim patch. Layout is NEVER touched here.
  */
 function syncDimsAndLayout(
   fp: FloorPlan,
@@ -249,28 +243,17 @@ function syncDimsAndLayout(
     if (x < minX) minX = x; if (x > maxX) maxX = x;
     if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
   }
-  const shiftX = minX < 0 ? -minX : 0;
-  const shiftZ = minZ < 0 ? -minZ : 0;
-  const normPts: Array<[number, number]> = (shiftX || shiftZ)
-    ? points.map(([x, z]) => [Math.round(x + shiftX), Math.round(z + shiftZ)] as [number, number])
-    : points;
-  const newMaxX = maxX + shiftX;
-  const newMaxZ = maxZ + shiftZ;
+  const spanX = maxX - Math.min(0, minX);
+  const spanZ = maxZ - Math.min(0, minZ);
   const snap = (v: number) => Math.round(v / 10) * 10;
   const curDims = fp.roomDimensions[room];
-  const newW = Math.max(curDims?.width ?? 0, snap(newMaxX));
-  const newD = Math.max(curDims?.depth ?? 0, snap(newMaxZ));
+  const newW = Math.max(curDims?.width ?? 0, snap(spanX));
+  const newD = Math.max(curDims?.depth ?? 0, snap(spanZ));
   const patch: Partial<FloorPlan> = {};
-  if (shiftX || shiftZ) {
-    const lay = fp.roomLayout[room];
-    if (lay) {
-      patch.roomLayout = { ...fp.roomLayout, [room]: { x: lay.x - shiftX, y: lay.y - shiftZ } };
-    }
-  }
   if (!curDims || curDims.width !== newW || curDims.depth !== newD) {
     patch.roomDimensions = { ...fp.roomDimensions, [room]: { width: newW, depth: newD } };
   }
-  return { points: normPts, patch };
+  return { points, patch };
 }
 
 // ─── updateYardFloor helper — yard is ground-level, always floor 0 ───
