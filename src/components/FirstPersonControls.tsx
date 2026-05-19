@@ -152,9 +152,11 @@ export function FirstPersonControls({
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup",   onKeyUp);
     window.addEventListener("wheel", onWheel, { passive: false });
-    // Try pointer lock once on first canvas click. If it fails (iframe
-    // sandbox), drag-to-look picks up the slack on subsequent clicks.
-    gl.domElement.addEventListener("click", requestLock);
+    // Pointer lock intentionally NOT requested — user prefers a visible
+    // cursor in 效果图 walkthrough. Drag-to-look is the only look input;
+    // the lock-mode mousemove handler above is dormant (locked.current
+    // stays false). requestLock() remains defined for opt-in callers
+    // but is no longer auto-triggered on canvas click.
 
     // Place camera inside the room (centred, near the front wall, eye height).
     // Use max(0.6, roomD * 0.30) to ensure we step at least 60 cm in from
@@ -205,7 +207,9 @@ export function FirstPersonControls({
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup",   onKeyUp);
       window.removeEventListener("wheel", onWheel);
-      gl.domElement.removeEventListener("click", requestLock);
+      // No click→requestLock listener was attached; nothing to remove.
+      // Defensive: if some external caller had locked the pointer on us,
+      // release it on cleanup so the cursor reappears reliably.
       if (document.pointerLockElement === gl.domElement) {
         document.exitPointerLock();
       }
@@ -223,7 +227,7 @@ export function FirstPersonControls({
       camera.position.copy(prevPos);
       camera.quaternion.copy(prevQuat);
     };
-  }, [enabled, gl.domElement, camera, floorY, roomW, roomD, requestLock]);
+  }, [enabled, gl.domElement, camera, floorY, roomW, roomD]);
 
   // Exit on Escape; E key = interact with door (dispatches custom event)
   useEffect(() => {
