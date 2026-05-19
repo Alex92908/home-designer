@@ -732,6 +732,252 @@ export const YARD_PRESETS: YardPreset[] = [
     ],
   },
 
+  // ──────────────────────────────────────────────────────────────────
+  // §10.2 PATTERN COVERAGE (2026-05-19) — filling gaps so users on
+  // small / typical suburban / front-yard / pool / meadow plots all
+  // get a "near-finished" starting state. Coords stay within ±1500 cm
+  // (the 30 × 30 m yard window); coordinate convention matches the
+  // existing presets above (house origin at 0,0, +z = "front of plot").
+  // ──────────────────────────────────────────────────────────────────
+
+  // ───── 13. 城市内庭 — Urban courtyard pocket (~12×12 m) ─────
+  // §10.2 pattern #1. Private patio framed by hedge walls + a hero tree.
+  // Common in townhouse / row-house contexts where two house walls form
+  // 90° of the perimeter.
+  {
+    id: "urbanCourtyard",
+    label: "城市内庭",
+    icon: "🪴",
+    desc: "12×12m 内庭 — 私享 patio + 围合绿墙 + 单植焦点树",
+    items: [
+      // Private patio — 8×8 m at center, leaves 2 m planting border on each side
+      { type: "zone", zoneKind: "private",
+        x: 0, z: 0,
+        polygon: rectZone(800, 800), rot: 0 },
+      // Hedge wall — back side
+      { type: "prefab", prefabKind: "slat_wall",
+        x: 0, z: -550, rot: 0,
+        params: { lengthM: 11, heightM: 2.0, slatCm: 4, gapCm: 3, backWall: false } },
+      // Hedge wall — left side (perpendicular)
+      { type: "prefab", prefabKind: "slat_wall",
+        x: -550, z: 0, rot: Math.PI / 2,
+        params: { lengthM: 11, heightM: 2.0, slatCm: 4, gapCm: 3, backWall: false } },
+      // Hero tree — single specimen, off-axis for asymmetric balance
+      { type: "singleton", kind: "tree.maple", x: -300, z: 100, scale: 1.5 },
+      // Low ornamental shrubs along the planting border (back-left corner)
+      { type: "singleton", kind: "shrub.lavender", x: -450, z: -450 },
+      { type: "singleton", kind: "shrub.lavender", x: -450, z: -250 },
+      { type: "singleton", kind: "shrub.lavender", x: -450, z:  -50 },
+      // Stepping stones from house door to patio center
+      { type: "singleton", kind: "feature.pathStone", x: 0, z: -450 },
+      { type: "singleton", kind: "feature.pathStone", x: 0, z: -350 },
+      { type: "singleton", kind: "feature.pathStone", x: 0, z: -250 },
+    ],
+  },
+
+  // ───── 14. 后院社交角 — Small social patio (~18×12 m) ─────
+  // §10.2 pattern #3. The most common backyard makeover: patio with
+  // firepit + lawn beyond + planting border. 2 trees SW for afternoon
+  // shade over the seating zone.
+  {
+    id: "smallSocialPatio",
+    label: "后院社交角",
+    icon: "🔥",
+    desc: "18×12m 后院 — 火炉 patio + 草坪 + 边界种植",
+    items: [
+      // Social zone — patio with firepit, near the house
+      { type: "zone", zoneKind: "social",
+        x: 0, z: -300,
+        polygon: rectZone(900, 500), rot: 0 },
+      { type: "prefab", prefabKind: "social_island",
+        x: 0, z: -300, rot: 0,
+        params: { sizeM: { w: 7, d: 4 }, fireFeature: "firepit", kitchenFacing: "north", sunkenSeat: false } },
+      // Lawn zone — beyond the patio, fills the back half
+      { type: "zone", zoneKind: "lawn",
+        x: 0, z: 350,
+        polygon: rectZone(1200, 600), rot: 0 },
+      // Planting border — back fence line, low strip
+      { type: "zone", zoneKind: "agro",
+        x: 0, z: 750,
+        polygon: rectZone(1200, 200), rot: 0 },
+      // SW shade trees — cluster of 2 for late-afternoon canopy
+      { type: "singleton", kind: "tree.oak",   x: -700, z: -200, scale: 1.2 },
+      { type: "singleton", kind: "tree.birch", x: -600, z:    0, scale: 1.0 },
+      // Boundary planting accents
+      { type: "singleton", kind: "shrub.lavender", x:  600, z: -400 },
+      { type: "singleton", kind: "shrub.lavender", x:  600, z:    0 },
+      { type: "singleton", kind: "shrub.lavender", x:  600, z:  400 },
+    ],
+  },
+
+  // ───── 15. 经典郊区户型 — Suburban classic (~25×25 m, house centered) ─────
+  // §10.2 pattern #4. The "all 5 zones" template: driveway utility
+  // (front), entry social, side agro, back lawn social, perimeter trees.
+  // Targets the typical N. American suburban lot.
+  {
+    id: "suburbanClassic",
+    label: "经典郊区户型",
+    icon: "🏘️",
+    desc: "25×25m — 车道·前院·后院·菜园·边界树 全功能",
+    items: [
+      // Driveway utility — front (north) of house
+      { type: "zone", zoneKind: "utility",
+        x: 0, z: -1000,
+        polygon: rectZone(700, 400), rot: 0 },
+      { type: "prefab", prefabKind: "porte_cochere",
+        x: 0, z: -1000, rot: 0,
+        params: { carCount: 2, pillarStyle: "square", facingDir: "south" } },
+      // Front-entry walk (utility transition strip)
+      { type: "singleton", kind: "feature.pathStone", x: 0, z: -700 },
+      { type: "singleton", kind: "feature.pathStone", x: 0, z: -600 },
+      // Side agro — east side, raised veggie beds near kitchen
+      { type: "zone", zoneKind: "agro",
+        x: 900, z: 0,
+        polygon: rectZone(300, 700), rot: 0 },
+      { type: "prefab", prefabKind: "farm_box",
+        x: 900, z: 0, rot: 0,
+        params: {} },
+      // Back social patio
+      { type: "zone", zoneKind: "social",
+        x: -300, z: 700,
+        polygon: rectZone(700, 400), rot: 0 },
+      { type: "prefab", prefabKind: "social_island",
+        x: -300, z: 700, rot: 0,
+        params: { sizeM: { w: 5, d: 3 }, fireFeature: "table", kitchenFacing: "south", sunkenSeat: false } },
+      // Rear lawn
+      { type: "zone", zoneKind: "lawn",
+        x: 400, z: 800,
+        polygon: rectZone(800, 400), rot: 0 },
+      // Perimeter trees (4 corners, single specimen each)
+      { type: "singleton", kind: "tree.oak", x: -1100, z: -800, scale: 1.1 },
+      { type: "singleton", kind: "tree.oak", x:  1100, z: -800, scale: 1.1 },
+      { type: "singleton", kind: "tree.maple", x: -1100, z: 1000, scale: 1.0 },
+      { type: "singleton", kind: "tree.maple", x:  1100, z: 1000, scale: 1.0 },
+    ],
+  },
+
+  // ───── 16. 泳池庄园 — Pool + cabana (~25×20 m) ─────
+  // §10.2 pattern #6. Pool-centric layout: pool deck, cabana/dining,
+  // perimeter screening hedge, perimeter lawn. Differs from
+  // mediterraneanVilla / marALago by being CASUAL not formal — no axis.
+  {
+    id: "poolCabana",
+    label: "泳池庄园",
+    icon: "🏊",
+    desc: "25×20m — 泳池 + 凉亭餐区 + 屏风篱笆 + 边界草坪",
+    items: [
+      // Pool — prefab, dominant feature
+      { type: "prefab", prefabKind: "pool",
+        x: 0, z: 200, rot: 0,
+        params: { widthM: 10, depthM: 5, shape: "rect", waterColor: "#3DA8E0" } },
+      // Pool deck zone — surrounds pool
+      { type: "zone", zoneKind: "social",
+        x: 0, z: 200,
+        polygon: rectZone(1300, 800), rot: 0 },
+      // Cabana / dining — west side, with pergola for shade
+      { type: "zone", zoneKind: "social",
+        x: -750, z: -300,
+        polygon: rectZone(500, 400), rot: 0 },
+      { type: "prefab", prefabKind: "pergola_classic",
+        x: -750, z: -300, rot: 0,
+        params: { widthM: 4, depthM: 3, style: "modern", roofMaterial: "polycarbonate" } },
+      { type: "prefab", prefabKind: "outdoor_kitchen",
+        x: -750, z: -150, rot: 0,
+        params: {} },
+      // Lawn — east side, soft contrast to hardscape
+      { type: "zone", zoneKind: "lawn",
+        x: 800, z: -200,
+        polygon: rectZone(500, 700), rot: 0 },
+      // Screening hedges along neighbour-facing edges (north + south)
+      { type: "prefab", prefabKind: "slat_wall",
+        x: 0, z: -800, rot: 0,
+        params: { lengthM: 22, heightM: 2.2, slatCm: 5, gapCm: 5, backWall: false } },
+      { type: "prefab", prefabKind: "slat_wall",
+        x: 0, z:  800, rot: 0,
+        params: { lengthM: 22, heightM: 2.2, slatCm: 5, gapCm: 5, backWall: false } },
+      // Palm trees flanking pool ends — typical poolside silhouette
+      { type: "singleton", kind: "tree.palm", x:  700, z: 200, scale: 1.2 },
+      { type: "singleton", kind: "tree.palm", x: -700, z: 200, scale: 1.2 },
+    ],
+  },
+
+  // ───── 17. 野趣花园 — Native pollinator meadow ─────
+  // §10.2 pattern #8. Replace lawn with mass meadow; mowed-path corridors
+  // give visual structure; one small patio anchored to the house edge;
+  // scattered specimens punctuate the field.
+  {
+    id: "nativeMeadow",
+    label: "野趣花园",
+    icon: "🌾",
+    desc: "替代草坪 — 野花草甸 + 修剪走道 + 小 patio",
+    items: [
+      // Meadow zone — dominant, lawn kind (but visually treated as meadow)
+      { type: "zone", zoneKind: "lawn",
+        x: 0, z: 300,
+        polygon: rectZone(2000, 1300), rot: 0 },
+      // Small social patio anchored to house (south-center)
+      { type: "zone", zoneKind: "social",
+        x: 0, z: -700,
+        polygon: rectZone(500, 400), rot: 0 },
+      { type: "prefab", prefabKind: "social_island",
+        x: 0, z: -700, rot: 0,
+        params: { sizeM: { w: 4, d: 3 }, fireFeature: "firepit", kitchenFacing: "north", sunkenSeat: false } },
+      // Mowed-path corridor through the meadow — visualised by zone strip
+      { type: "zone", zoneKind: "utility",
+        x: 0, z: 300,
+        polygon: rectZone(150, 1300), rot: 0 },
+      // Scattered specimens — birch grove + single pine for vertical accent
+      { type: "singleton", kind: "tree.birch", x: -600, z:   0, scale: 0.9 },
+      { type: "singleton", kind: "tree.birch", x: -500, z: 200, scale: 0.9 },
+      { type: "singleton", kind: "tree.birch", x: -700, z: 350, scale: 0.9 },
+      { type: "singleton", kind: "tree.pine",  x:  700, z: 500, scale: 1.1 },
+      { type: "singleton", kind: "tree.pine",  x:  850, z: 100, scale: 1.0 },
+      // Wildflower clusters dotting the meadow
+      { type: "singleton", kind: "plant.flowerPurple", x: -300, z: -200 },
+      { type: "singleton", kind: "plant.flowerYellow", x:  300, z: -200 },
+      { type: "singleton", kind: "plant.flowerRed",    x:  100, z:  600 },
+      { type: "singleton", kind: "plant.flowerPurple", x:  500, z:  800 },
+    ],
+  },
+
+  // ───── 18. 入户门面 — Front-yard curb appeal (~12×8 m, front of house) ─────
+  // §10.2 pattern #10. Symmetric entry walk + foundation plantings,
+  // single specimen tree near street, lawn frames the composition.
+  // Anchored south of origin (between house and street).
+  {
+    id: "frontYardCurbAppeal",
+    label: "入户门面",
+    icon: "🚪",
+    desc: "12×8m 前院 — 对称步道 + 基础种植 + 单植焦点树",
+    items: [
+      // Lawn zone — front lawn, flanks the walk
+      { type: "zone", zoneKind: "lawn",
+        x: 0, z: -500,
+        polygon: rectZone(1200, 600), rot: 0 },
+      // Foundation planting strip — close to house
+      { type: "zone", zoneKind: "agro",
+        x: 0, z: -200,
+        polygon: rectZone(1100, 150), rot: 0 },
+      // Entry walk — series of stones from street to door
+      { type: "singleton", kind: "feature.pathStone", x: 0, z: -800 },
+      { type: "singleton", kind: "feature.pathStone", x: 0, z: -700 },
+      { type: "singleton", kind: "feature.pathStone", x: 0, z: -600 },
+      { type: "singleton", kind: "feature.pathStone", x: 0, z: -500 },
+      { type: "singleton", kind: "feature.pathStone", x: 0, z: -400 },
+      { type: "singleton", kind: "feature.pathStone", x: 0, z: -300 },
+      // Foundation shrubs — symmetric around door
+      { type: "singleton", kind: "shrub.lavender", x: -300, z: -200 },
+      { type: "singleton", kind: "shrub.lavender", x: -150, z: -200 },
+      { type: "singleton", kind: "shrub.lavender", x:  150, z: -200 },
+      { type: "singleton", kind: "shrub.lavender", x:  300, z: -200 },
+      // Single specimen tree — off-axis on lawn for asymmetric balance
+      { type: "singleton", kind: "tree.maple", x: -400, z: -600, scale: 1.3 },
+      // Front entry urn / planter (kept abstract)
+      { type: "singleton", kind: "furniture.planter", x: -180, z: -300 },
+      { type: "singleton", kind: "furniture.planter", x:  180, z: -300 },
+    ],
+  },
+
   // ───── 12. 食材花园 (Potager) — edible kitchen garden ─────
   // Compact kitchen garden for a 6×8m rear plot. Raised veggie beds,
   // herb wheel, compost, small fruit tree. Inspired by §10.6.
