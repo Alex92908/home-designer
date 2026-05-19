@@ -1285,27 +1285,58 @@ export default function FloorPlan() {
                 });
               })()}
             </div>
-            {/* ── 隐藏墙：4 个 toggle，让用户点击决定哪面墙不渲染 ── */}
-            {/* 跟门窗一样设计——按面切换，已隐藏的高亮显示。RoomShell
-                + FloorPlanExterior 渲染时跳过对应面，2D 视图把那条边
-                改成虚线提示。 */}
-            <div className="flex items-center gap-0.5 ml-1">
+            {/* ── 隐藏墙：mirror the +窗 / +门 button layout so polygon
+                rooms get one toggle per actual edge (背墙1/背墙2/前墙1…)
+                while rect rooms keep 4 cardinal toggles. Hidden walls
+                render red so it's obvious which sides are off. ── */}
+            <div className="flex flex-wrap items-center gap-0.5 ml-1">
               <span className="text-[10px] text-gray-500 mr-0.5">隐藏</span>
-              {(["back","front","left","right"] as const).map(w => {
+              {(() => {
                 const labels = t.fpWallLabels;
-                const hidden = wallsHiddenOnRoom?.[w] === true;
-                return (
-                  <button key={`hide-${w}`}
-                    onClick={() => toggleWallHidden(activeRoom, w)}
-                    title={hidden ? `恢复${labels[w]}` : `隐藏${labels[w]}`}
-                    className="text-[10px] px-1.5 py-0.5 rounded font-semibold transition-all"
-                    style={hidden
-                      ? { background: "rgba(239,68,68,0.32)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.6)" }
-                      : { background: "rgba(75,85,99,0.20)", color: "#9CA3AF", border: "1px solid rgba(75,85,99,0.35)" }}>
-                    {hidden ? "✓" : "✕"}{labels[w]}
-                  </button>
-                );
-              })}
+                if (roomShape && roomShape.preset !== "rect") {
+                  // Polygon room — one button per outline edge, keyed by
+                  // edge index. Numbering matches the +窗/+门 buttons
+                  // above so "前墙2" hide button targets the same edge
+                  // that "+前墙2窗" added a window to.
+                  const edges = getEdges(roomShape.points)
+                    .filter(e => e.length > 40);
+                  const seen: Record<string, number> = { back: 0, front: 0, left: 0, right: 0 };
+                  return edges.map(e => {
+                    seen[e.facing] += 1;
+                    const sameFacingCount = edges.filter(x => x.facing === e.facing).length;
+                    const idx = seen[e.facing];
+                    const showIdx = sameFacingCount > 1;
+                    const key = `edge-${e.i}`;
+                    const hidden = wallsHiddenOnRoom?.[key] === true;
+                    return (
+                      <button key={`hide-${key}`}
+                        onClick={() => toggleWallHidden(activeRoom, key)}
+                        title={hidden ? `恢复${labels[e.facing]}${showIdx ? idx : ""}` : `隐藏${labels[e.facing]}${showIdx ? idx : ""}`}
+                        className="text-[10px] px-1.5 py-0.5 rounded font-semibold transition-all"
+                        style={hidden
+                          ? { background: "rgba(239,68,68,0.32)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.6)" }
+                          : { background: "rgba(75,85,99,0.20)", color: "#9CA3AF", border: "1px solid rgba(75,85,99,0.35)" }}>
+                        {hidden ? "✓" : "✕"}{labels[e.facing]}{showIdx ? idx : ""}
+                      </button>
+                    );
+                  });
+                }
+                // Rect room — 4 cardinal toggles, key = side name.
+                return (["back","front","left","right"] as const).map(w => {
+                  const hidden = wallsHiddenOnRoom?.[w] === true;
+                  return (
+                    <button key={`hide-${w}`}
+                      onClick={() => toggleWallHidden(activeRoom, w)}
+                      title={hidden ? `恢复${labels[w]}` : `隐藏${labels[w]}`}
+                      className="text-[10px] px-1.5 py-0.5 rounded font-semibold transition-all"
+                      style={hidden
+                        ? { background: "rgba(239,68,68,0.32)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.6)" }
+                        : { background: "rgba(75,85,99,0.20)", color: "#9CA3AF", border: "1px solid rgba(75,85,99,0.35)" }}>
+                      {hidden ? "✓" : "✕"}{labels[w]}
+                    </button>
+                  );
+                });
+              })()}
             </div>
           </div>
         )}
