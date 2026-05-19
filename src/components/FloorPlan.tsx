@@ -528,8 +528,25 @@ export default function FloorPlan() {
   const def             = ROOM_DEFS[activeRoom];
 
   // Effective dimensions: store override if different from default, else ROOM_DEFS
-  const roomW = roomDimensions?.width  ?? def.width;
-  const roomD = roomDimensions?.depth  ?? def.depth;
+  // Effective dimensions — base on store, but if a polygon outline edited
+  // in 全局 has bounds exceeding the rectangular roomDimensions, grow to
+  // include the polygon. Covers legacy saves where roomDimensions wasn't
+  // synced on shape edit (pre-`syncDimsToShape` fix). Computed inline so
+  // 全局 outline edits reflect immediately in 单房间 平面图.
+  const _baseW = roomDimensions?.width  ?? def.width;
+  const _baseD = roomDimensions?.depth  ?? def.depth;
+  const _shapePts = useDesignerStore((s) =>
+    s.floorPlans[s.activeFloor]?.roomShapes?.[activeRoom]?.points);
+  const { roomW, roomD } = useMemo(() => {
+    let mX = _baseW, mZ = _baseD;
+    if (_shapePts && _shapePts.length) {
+      for (const [px, pz] of _shapePts) {
+        if (px > mX) mX = px;
+        if (pz > mZ) mZ = pz;
+      }
+    }
+    return { roomW: mX, roomD: mZ };
+  }, [_baseW, _baseD, _shapePts]);
 
   // Reset zoom when switching rooms
   useEffect(() => { setZoomLevel(1); }, [activeRoom]);
