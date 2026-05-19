@@ -5978,7 +5978,7 @@ function WalkthroughController({
   // camera.rotation directly).
   const yawRef   = useRef(0);
   const pitchRef = useRef(0);
-  const dragRef  = useRef<{ x: number; y: number } | null>(null);
+  const dragRef  = useRef<{ x: number; y: number; captured: boolean; target: HTMLElement } | null>(null);
 
   // Teleport on spawnPos change
   useEffect(() => {
@@ -6013,24 +6013,37 @@ function WalkthroughController({
       keysRef.current[e.key.toLowerCase()] = true;
     };
     const onUp = (e: KeyboardEvent) => { keysRef.current[e.key.toLowerCase()] = false; };
+    // Drag-threshold pattern — pointerdown alone is NOT a drag. Only after
+    // the pointer has moved > DRAG_PX from its start position do we treat
+    // the gesture as "drag-look" and start rotating + capturing the pointer.
+    // Without this, a static click on a door/window mesh would still
+    // capture the pointer immediately, swallowing the click event from
+    // R3F's raycast → door open/close doesn't fire.
+    const DRAG_PX = 5;
     const onPDown = (e: PointerEvent) => {
-      // Only initiate drag on left-click on canvas
       if (e.button !== 0) return;
       const target = e.target as HTMLElement;
-      if (target?.tagName === "CANVAS") {
-        dragRef.current = { x: e.clientX, y: e.clientY };
-        target.setPointerCapture?.(e.pointerId);
-      }
+      if (target?.tagName !== "CANVAS") return;
+      // Stage the gesture; don't capture yet. onPMove promotes to drag once
+      // motion exceeds threshold.
+      dragRef.current = { x: e.clientX, y: e.clientY, captured: false, target };
     };
     const onPMove = (e: PointerEvent) => {
       const d = dragRef.current;
       if (!d) return;
       const dx = e.clientX - d.x;
       const dy = e.clientY - d.y;
+      if (!d.captured) {
+        // Below threshold? Don't rotate yet — let R3F dispatch click on
+        // pointerup if user releases without moving far.
+        if (Math.hypot(dx, dy) < DRAG_PX) return;
+        d.captured = true;
+        try { d.target.setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
+      }
       yawRef.current   -= dx * 0.0025;
       pitchRef.current -= dy * 0.0025;
       pitchRef.current = Math.max(-Math.PI / 2.6, Math.min(Math.PI / 2.6, pitchRef.current));
-      dragRef.current = { x: e.clientX, y: e.clientY };
+      d.x = e.clientX; d.y = e.clientY;
     };
     const onPUp = () => { dragRef.current = null; };
     // Wheel-zoom: changes camera FOV (narrower = zoom in, wider = zoom out).
