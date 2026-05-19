@@ -3166,7 +3166,7 @@ class GltfFurnitureWithFallback extends Component<
 // the wall between them is filled with box segments.
 function PolygonShell({
   points, H, wallColor, floorColor, ceilingColor, ceilingOpacity,
-  doors, windows, activeRoom,
+  doors, windows, activeRoom, wallsHidden,
 }: {
   points: Array<[number, number]>; // cm, back-left origin
   H: number;                       // meters
@@ -3182,6 +3182,10 @@ function PolygonShell({
   }>;
   windows: WindowConfig[];
   activeRoom: RoomType;
+  /** Per-edge hide flags keyed by "edge-${i}" matching the hide toggles
+   *  in the FloorPlan single-room toolbar. Hidden edges skip wall +
+   *  door + window rendering on that edge. */
+  wallsHidden?: Partial<Record<string, boolean>>;
 }) {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { getEdges, findEdgeForWall, polygonBounds } = require("@/lib/roomGeometry") as typeof import("@/lib/roomGeometry");
@@ -3239,9 +3243,11 @@ function PolygonShell({
       style: import("@/lib/types").DoorStyle;
     };
     const doorPlacements: DoorPlacement[] = [];
+    const isEdgeHidden = (i: number) => wallsHidden?.[`edge-${i}`] === true;
     for (const d of (doors ?? [])) {
       const hit = findEdgeForWall(points, d.wall, d.posCm, d.lenCm, bbox, d.edgeIndex);
       if (!hit) continue;
+      if (isEdgeHidden(hit.edgeIndex)) continue; // wall gone → no door
       const startM = hit.startCm / 100;
       const lenM = d.lenCm / 100;
       const hM = d.hCm / 100;
@@ -3269,6 +3275,7 @@ function PolygonShell({
     for (const w of windows) {
       const hit = findEdgeForWall(points, w.wall, w.pos, w.len, bbox, w.edgeIndex);
       if (!hit) continue;
+      if (isEdgeHidden(hit.edgeIndex)) continue; // wall gone → no window
       const startM = hit.startCm / 100;
       const lenM = w.len / 100;
       const sillM = (w.sill ?? 90) / 100;
@@ -3295,6 +3302,7 @@ function PolygonShell({
     type Seg = { cx: number; cy: number; cz: number; len: number; angle: number; h: number; yBottom: number };
     const segs: Seg[] = [];
     for (const e of edges) {
+      if (isEdgeHidden(e.i)) continue; // skip entire edge → no wall, no door, no window
       const wx1 = e.x1 / 100 - W / 2, wz1 = e.z1 / 100 - D / 2;
       const wx2 = e.x2 / 100 - W / 2, wz2 = e.z2 / 100 - D / 2;
       const dxm = wx2 - wx1, dzm = wz2 - wz1;
@@ -3323,7 +3331,7 @@ function PolygonShell({
       mkSeg(cursor, lenM - cursor, H, 0);                           // remainder
     }
     return { wallSegments: segs, doorPlacements, windowPlacements: winPlacements };
-  }, [points, W, D, H, doors, windows, getEdges, findEdgeForWall, polygonBounds]);
+  }, [points, W, D, H, doors, windows, getEdges, findEdgeForWall, polygonBounds, wallsHidden]);
 
   return (
     <>
@@ -3537,6 +3545,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
           }))}
           windows={roomWindows}
           activeRoom={activeRoom}
+          wallsHidden={wallsHiddenForActive}
         />
       ) : (
         <RoomShell
