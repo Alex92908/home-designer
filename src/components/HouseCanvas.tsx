@@ -6465,7 +6465,11 @@ export default function HouseCanvas() {
   // walls. Default ON — rooms share walls so AABB-based collision traps the
   // player immediately when trying to move between adjacent rooms. The outer
   // bbox clamp still prevents leaving the building footprint.
-  const [walkNoClip, setWalkNoClip] = useState(true);
+  // Wall collision default: ON. Walking-through-walls is opt-in via the
+  // 🧱 toggle button below ("穿墙关" → "穿墙开"). Matches the user's
+  // "你不要穿墙过" preference; toggle still available for when the user
+  // is wedged in a corner and wants to escape.
+  const [walkNoClip, setWalkNoClip] = useState(false);
   // Sun analysis — read from global store so AiRenderModal + YardPlan share the value
   const sunHour     = useDesignerStore(s => s.sunHour);
   const setSunHour  = useDesignerStore(s => s.setSunHour);
@@ -6547,16 +6551,18 @@ export default function HouseCanvas() {
               <button
                 onClick={() => setWalkNoClip(v => !v)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
-                title="碰撞模式：开启后内墙会阻挡移动（默认关闭，建议保持默认）"
+                title={walkNoClip
+                  ? "当前可穿墙 — 点击切换为实墙（不让穿）"
+                  : "当前实墙 — 点击切换为可穿墙（卡住时可临时用）"}
                 style={{
                   background: walkNoClip
                     ? "linear-gradient(135deg,rgba(245,158,11,0.92),rgba(217,119,6,0.92))"
-                    : "linear-gradient(135deg,rgba(55,65,81,0.88),rgba(31,41,55,0.88))",
+                    : "linear-gradient(135deg,rgba(34,197,94,0.92),rgba(22,163,74,0.92))",
                   backdropFilter: "blur(12px)",
-                  border: `1px solid ${walkNoClip ? "rgba(254,215,170,0.5)" : "rgba(255,255,255,0.15)"}`,
+                  border: `1px solid ${walkNoClip ? "rgba(254,215,170,0.5)" : "rgba(134,239,172,0.5)"}`,
                 }}
               >
-                🧱 {walkNoClip ? "碰撞关" : "碰撞开"}
+                🧱 {walkNoClip ? "可穿墙" : "实墙"}
               </button>
             </>
           )}

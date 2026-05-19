@@ -433,7 +433,7 @@ export function evaluateYardPlan(
   }
 
   // ── Social zone: check for shade (tree within 6 m or pergola within 8 m) ──
-  const trees = singletons.filter(it => {
+  const shadeTrees = singletons.filter(it => {
     const a = getOutdoorAssetByKind(it.kind);
     return !!a && a.category === "tree";
   });
@@ -444,7 +444,7 @@ export function evaluateYardPlan(
     const polyArea = polyAreaCm2(zone.polygon); // cm²
     if (polyArea < 4 * 10000) continue; // skip tiny zones < 4 m²
 
-    const hasTree    = trees.some(t => Math.hypot(t.x - zone.x, t.z - zone.z) < 600);
+    const hasTree    = shadeTrees.some(t => Math.hypot(t.x - zone.x, t.z - zone.z) < 600);
     const hasPergola = pergolaPs.some(p => Math.hypot(p.x - zone.x, p.z - zone.z) < 800);
     if (!hasTree && !hasPergola) {
       out.push({

@@ -17,7 +17,7 @@
  *   楼层 → Three.js Y（向上）
  */
 
-import React, { useMemo, useCallback, useState, useRef, Suspense } from "react";
+import React, { useMemo, useCallback, useEffect, useState, useRef, Suspense } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Html, useGLTF, Clone, Instances, Instance } from "@react-three/drei";
@@ -2785,6 +2785,23 @@ export default function FloorPlanBuilding({
   const setViewMode    = useDesignerStore(s => s.setViewMode);
   const setActiveFloor = useDesignerStore(s => s.setActiveFloor);
   const sunHour        = useDesignerStore(s => s.sunHour);
+
+  // ── Walkthrough door/window open-close state ──────────────────────────
+  // Map<key, open>. Key format: `door|${fi}|${room}|${di}` /
+  // `window|${fi}|${room}|${wi}`. Only the keys actually toggled live in
+  // the map; missing key = closed. Reset whenever walkthrough exits so a
+  // re-entry starts from a clean state.
+  const [openMap, setOpenMap] = useState<Map<string, boolean>>(new Map());
+  const toggleOpen = useCallback((key: string) => {
+    setOpenMap(prev => {
+      const next = new Map(prev);
+      next.set(key, !next.get(key));
+      return next;
+    });
+  }, []);
+  useEffect(() => {
+    if (!insideBuilding) setOpenMap(new Map());
+  }, [insideBuilding]);
 
   // ── Interior emissive intensity driven by time-of-day ──────────────────
   // Night/late evening → rooms glow warm from within (high emissive).
@@ -10058,6 +10075,15 @@ export default function FloorPlanBuilding({
               }
               // 门框颜色：一楼用浅灰铝合金，其他层用暖木色
               const frameCol = fi === 0 ? "#B0B8C0" : "#8B6914";
+              const doorKey = `door|${fi}|${room}|${di}`;
+              const isOpen = openMap.get(doorKey) ?? false;
+              // Swing-open angle (radians). Doors hinge inward (+Z local).
+              const swing = isOpen ? -Math.PI / 2 : 0;
+              const handleDoorClick = (e: { stopPropagation: () => void }) => {
+                if (!insideBuilding) return; // only interactive in walkthrough
+                e.stopPropagation();
+                toggleOpen(doorKey);
+              };
               return (
                 <group key={`door-${fi}-${room}-${di}`} position={[dx, yBase + dH / 2, dz]} rotation={[0, rotY, 0]}>
                   {/* 门框左柱 */}
@@ -10076,56 +10102,62 @@ export default function FloorPlanBuilding({
                     <meshStandardMaterial color={frameCol} roughness={0.5} metalness={fi === 0 ? 0.4 : 0.05} />
                   </mesh>
 
-                  {/* ── 法式对开玻璃门（关闭状态，紧贴墙面）── */}
+                  {/* ── 法式对开玻璃门：两扇分别从外侧合页向内旋开 ── */}
                   {style === "french_double" && (<>
-                    {/* 左扇 — 关闭，紧贴墙面 */}
-                    <mesh position={[-dW * 0.25, 0, 0.02]}>
-                      <boxGeometry args={[dW * 0.47, dH * 0.96, 0.04]} />
-                      <meshStandardMaterial color="#A8D4F5" transparent opacity={0.55} roughness={0.05} metalness={0.15} />
-                    </mesh>
-                    <mesh position={[-dW * 0.25, 0, 0.025]}>
-                      <boxGeometry args={[0.03, dH * 0.96, 0.05]} />
-                      <meshStandardMaterial color={frameCol} roughness={0.4} metalness={0.3} />
-                    </mesh>
-                    {/* 右扇 — 关闭，紧贴墙面 */}
-                    <mesh position={[dW * 0.25, 0, 0.02]}>
-                      <boxGeometry args={[dW * 0.47, dH * 0.96, 0.04]} />
-                      <meshStandardMaterial color="#A8D4F5" transparent opacity={0.55} roughness={0.05} metalness={0.15} />
-                    </mesh>
-                    <mesh position={[dW * 0.25, 0, 0.025]}>
-                      <boxGeometry args={[0.03, dH * 0.96, 0.05]} />
-                      <meshStandardMaterial color={frameCol} roughness={0.4} metalness={0.3} />
-                    </mesh>
+                    {/* 左扇：合页在最左（-dW/2），向内（朝 +Z 转 -90°）旋开 */}
+                    <group position={[-dW / 2, 0, 0.02]} rotation={[0, swing, 0]}>
+                      <mesh position={[dW * 0.25, 0, 0]} onClick={handleDoorClick}>
+                        <boxGeometry args={[dW * 0.47, dH * 0.96, 0.04]} />
+                        <meshStandardMaterial color="#A8D4F5" transparent opacity={0.55} roughness={0.05} metalness={0.15} />
+                      </mesh>
+                      <mesh position={[dW * 0.47 - 0.03, 0, 0.005]}>
+                        <boxGeometry args={[0.03, dH * 0.96, 0.05]} />
+                        <meshStandardMaterial color={frameCol} roughness={0.4} metalness={0.3} />
+                      </mesh>
+                    </group>
+                    {/* 右扇：合页在最右（+dW/2），向内（朝 +Z 转 +90°）旋开 */}
+                    <group position={[dW / 2, 0, 0.02]} rotation={[0, -swing, 0]}>
+                      <mesh position={[-dW * 0.25, 0, 0]} onClick={handleDoorClick}>
+                        <boxGeometry args={[dW * 0.47, dH * 0.96, 0.04]} />
+                        <meshStandardMaterial color="#A8D4F5" transparent opacity={0.55} roughness={0.05} metalness={0.15} />
+                      </mesh>
+                      <mesh position={[-dW * 0.47 + 0.03, 0, 0.005]}>
+                        <boxGeometry args={[0.03, dH * 0.96, 0.05]} />
+                        <meshStandardMaterial color={frameCol} roughness={0.4} metalness={0.3} />
+                      </mesh>
+                    </group>
                   </>)}
 
-                  {/* ── 磨砂玻璃门（关闭状态，紧贴墙面）── */}
+                  {/* ── 磨砂玻璃门：合页在左，整体内开 ── */}
                   {style === "frosted_glass" && (
-                    <group position={[0, 0, 0.02]}>
-                      <mesh position={[0, -dH * 0.27, 0]}>
+                    <group position={[-dW / 2, 0, 0.02]} rotation={[0, swing, 0]} onClick={handleDoorClick}>
+                      <mesh position={[dW / 2, -dH * 0.27, 0]}>
                         <boxGeometry args={[dW * 0.94, dH * 0.38, 0.04]} />
                         <meshStandardMaterial color="#C4922A" roughness={0.6} />
                       </mesh>
-                      <mesh position={[0, dH * 0.17, 0]}>
+                      <mesh position={[dW / 2, dH * 0.17, 0]}>
                         <boxGeometry args={[dW * 0.94, dH * 0.55, 0.04]} />
                         <meshStandardMaterial color="#E8EFF5" transparent opacity={0.72} roughness={0.9} />
                       </mesh>
                     </group>
                   )}
 
-                  {/* ── 谷仓推拉门（滑开状态，紧贴墙面一侧）── */}
+                  {/* ── 谷仓推拉门：闭=居中 / 开=滑到右侧 ── */}
                   {style === "sliding_barn" && (
-                    <mesh position={[dW * 0.55, 0, 0.06]}>
+                    <mesh position={[isOpen ? dW * 0.55 : 0, 0, 0.06]} onClick={handleDoorClick}>
                       <boxGeometry args={[dW * 0.94, dH * 0.97, 0.06]} />
                       <meshStandardMaterial color="#8B5E3C" roughness={0.7} />
                     </mesh>
                   )}
 
-                  {/* ── 标准实木门（关闭状态，紧贴墙面）── */}
+                  {/* ── 标准实木门：合页在左，内开 ── */}
                   {(style === "wood_panel" || (style !== "frosted_glass" && style !== "sliding_barn" && style !== "french_double")) && (
-                    <mesh position={[0, 0, 0.02]}>
-                      <boxGeometry args={[dW * 0.96, dH * 0.97, 0.04]} />
-                      <meshStandardMaterial color="#C4922A" roughness={0.5} metalness={0.05} />
-                    </mesh>
+                    <group position={[-dW / 2, 0, 0.02]} rotation={[0, swing, 0]}>
+                      <mesh position={[dW / 2, 0, 0]} onClick={handleDoorClick}>
+                        <boxGeometry args={[dW * 0.96, dH * 0.97, 0.04]} />
+                        <meshStandardMaterial color="#C4922A" roughness={0.5} metalness={0.05} />
+                      </mesh>
+                    </group>
                   )}
                 </group>
               );
@@ -10164,13 +10196,25 @@ export default function FloorPlanBuilding({
               const frameCol  = "#D8E8F0";
               const border    = 0.06;
               const thick     = 0.05;
+              const winKey = `window|${fi}|${room}|${wi}`;
+              const winOpen = openMap.get(winKey) ?? false;
+              // Casement-style tilt: hinge at the BOTTOM edge, top of pane
+              // swings outward (toward +Z local = away from interior) by 25°.
+              const tilt = winOpen ? 0.45 : 0;
+              const handleWinClick = (e: { stopPropagation: () => void }) => {
+                if (!insideBuilding) return;
+                e.stopPropagation();
+                toggleOpen(winKey);
+              };
               return (
                 <group key={`win-${fi}-${room}-${wi}`} position={[wx, frameCy, wz]} rotation={[0, rotY, 0]}>
-                  {/* 玻璃（浅蓝透明，嵌在墙壁内侧） */}
-                  <mesh>
-                    <boxGeometry args={[wW - border * 2, wH - border * 2, 0.01]} />
-                    <meshStandardMaterial color="#A8D4F5" transparent opacity={0.42} roughness={0.05} metalness={0.12} />
-                  </mesh>
+                  {/* 玻璃（浅蓝透明，嵌在墙壁内侧）—— hinge 在下沿，向外倾斜打开 */}
+                  <group position={[0, -(wH - border * 2) / 2, 0]} rotation={[tilt, 0, 0]}>
+                    <mesh position={[0, (wH - border * 2) / 2, 0]} onClick={handleWinClick}>
+                      <boxGeometry args={[wW - border * 2, wH - border * 2, 0.01]} />
+                      <meshStandardMaterial color="#A8D4F5" transparent opacity={0.42} roughness={0.05} metalness={0.12} />
+                    </mesh>
+                  </group>
                   {/* 四边窗框 */}
                   <mesh position={[0, wH / 2 - border / 2, 0]}>
                     <boxGeometry args={[wW, border, thick]} /><meshStandardMaterial color={frameCol} roughness={0.35} />
