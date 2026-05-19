@@ -2283,7 +2283,22 @@ export const useDesignerStore = create<DesignerStore>()(
         const firstTemplatedRoom = enabledRooms.find(r => template.rooms[r]) ?? s.activeRoom;
         const { materials, placedItems } = updatedRooms[firstTemplatedRoom];
         const computed = computeScores(materials as never, placedItems as never);
-        const exteriorPatch = template.exterior ? { exterior: { ...s.exterior, ...template.exterior } } : {};
+        // Strip `floors` from the style template's exterior patch — floors
+        // is a project-level concept (set by applyProjectTemplate /
+        // setExterior), and style templates declaring their own preferred
+        // floor count would silently overwrite it. Symptom: "豪华三层"
+        // project template applied 3 floors → loadTemplate("modern-villa")
+        // ran per floor → modern-villa.exterior.floors=2 leaked back into
+        // state → user saw 2 floors instead of 3.
+        const exteriorPatch = template.exterior
+          ? (() => {
+              const { floors: _ignoreFloors, ...rest } = template.exterior;
+              void _ignoreFloors;
+              return Object.keys(rest).length > 0
+                ? { exterior: { ...s.exterior, ...rest } }
+                : {};
+            })()
+          : {};
         set({
           floorPlans,
           activeRoom: firstTemplatedRoom,
