@@ -419,10 +419,15 @@ function RoomGroup({
     return def.isOutdoor === true;
   }, [room, def.isOutdoor]);
 
-  // Polygon edge segments → wall boxes (skip entirely for circulation rooms)
+  // Polygon edge segments → wall boxes (skip entirely for circulation rooms).
+  // Each segment carries its edge index so the per-side hide flag can skip
+  // it. Rect rooms map their cardinal toggles via edgeOrder=[back,right,front,left]
+  // — see fp.roomLayout convention: edge 0 (z1=z2=0) is the back wall.
   const wallBoxes = useMemo(() => {
-    if (isCirculationRoom) return [] as Array<{ cx: number; cz: number; len: number; angle: number }>;
-    const ws: Array<{ cx: number; cz: number; len: number; angle: number }> = [];
+    if (isCirculationRoom) return [] as Array<{ cx: number; cz: number; len: number; angle: number; edgeIdx: number; cardinal: "back" | "front" | "left" | "right" | null }>;
+    const ws: Array<{ cx: number; cz: number; len: number; angle: number; edgeIdx: number; cardinal: "back" | "front" | "left" | "right" | null }> = [];
+    const isRect = !(shape && shape.preset !== "rect");
+    const cardinalOrder: Array<"back" | "right" | "front" | "left"> = ["back", "right", "front", "left"];
     for (let i = 0; i < polyPts.length; i++) {
       const [x1, z1] = polyPts[i];
       const [x2, z2] = polyPts[(i + 1) % polyPts.length];
@@ -436,10 +441,15 @@ function RoomGroup({
         cz: (wz1 + wz2) / 2,
         len,
         angle: Math.atan2(-dz, dx),
+        edgeIdx: i,
+        cardinal: isRect && i < 4 ? cardinalOrder[i] : null,
       });
     }
     return ws;
-  }, [polyPts, W, D, isCirculationRoom]);
+  }, [polyPts, W, D, isCirculationRoom, shape]);
+
+  // Per-room hide flags (cardinal: back/front/left/right OR polygon: edge-${i}).
+  const wallsHidden = useDesignerStore(s => s.floorPlans[floorIndex]?.roomWallsHidden?.[room]);
 
   // Center of the room's bounding box, in world coords
   const cx = originX + W / 2;
@@ -480,13 +490,21 @@ function RoomGroup({
         />
       )}
 
-      {/* Walls — skip for stair rooms (StaircaseGeom provides the geometry) */}
-      {!isStair && wallBoxes.map((w, i) => (
-        <mesh key={i} position={[w.cx, WALL_H / 2, w.cz]} rotation={[0, w.angle, 0]} castShadow receiveShadow>
-          <boxGeometry args={[w.len, WALL_H, WALL]} />
-          <meshStandardMaterial color={wallColor} roughness={0.85} />
-        </mesh>
-      ))}
+      {/* Walls — skip for stair rooms (StaircaseGeom provides the geometry).
+          Per-side hide: rect rooms look up cardinal key, polygon rooms look
+          up edge-${i}. Either match → skip that wall segment. */}
+      {!isStair && wallBoxes.map((w, i) => {
+        const hidden =
+          (w.cardinal && wallsHidden?.[w.cardinal] === true) ||
+          (wallsHidden?.[`edge-${w.edgeIdx}`] === true);
+        if (hidden) return null;
+        return (
+          <mesh key={i} position={[w.cx, WALL_H / 2, w.cz]} rotation={[0, w.angle, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w.len, WALL_H, WALL]} />
+            <meshStandardMaterial color={wallColor} roughness={0.85} />
+          </mesh>
+        );
+      })}
 
       {/* Furniture — reuse RoomCanvas PlacedItemMesh (其自身已包每个 GLTF
           一层 Suspense + 程序化 fallback)。不再套外层 Suspense，让已加载

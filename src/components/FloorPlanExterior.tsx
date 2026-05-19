@@ -3101,6 +3101,7 @@ export default function FloorPlanBuilding({
       autoDoor: DoorConfig | null;
       stairShape: "straight" | "L-shaped" | "spiral";
       stairRotation: 0 | 90 | 180 | 270;
+      wallsHidden?: Partial<Record<string, boolean>>;
     }> = [];
 
     for (let fi = 0; fi < floorCount; fi++) {
@@ -3139,7 +3140,8 @@ export default function FloorPlanBuilding({
           ? windows.map(w => adjustWindowWall(w, cx, cz, rW, rD, rWcm, rDcm, bounds, doorWallForRoom))
           : windows;
 
-        result.push({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows: adjustedWindows, isStair, isHallway, autoDoor, stairShape, stairRotation });
+        const wallsHidden = fp.roomWallsHidden?.[room];
+        result.push({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows: adjustedWindows, isStair, isHallway, autoDoor, stairShape, stairRotation, wallsHidden });
       }
     }
     return result;
@@ -9926,7 +9928,7 @@ export default function FloorPlanBuilding({
           hideInterior=true 时 visible=false：Three.js 跳过 projectObject
           遍历这些对象，节省约 120ms JS/帧（拖拽期间内部不可见无所谓）。 */}
       <group visible={insideBuilding || !hideInterior}>
-      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, stairShape, stairRotation }) => {
+      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, stairShape, stairRotation, wallsHidden }) => {
         const wallOpacity = wallXray ? 0.13 : 1.0;
         const isXray = wallXray;
         // 走廊：无内墙、无天花板，仅地板；楼梯间：渲染楼梯几何体
@@ -9938,19 +9940,67 @@ export default function FloorPlanBuilding({
           // for zero rendering benefit. React.Fragment lives in React's tree
           // only; nothing is added to the Three.js scene graph.
           <React.Fragment key={`int-${fi}-${room}`}>
-            {/* 内墙面：BackSide box — 仅在室内侧可见，不会遮挡窗框/玻璃。
-                玻璃房间跳过 —— 这间已经在外层用 5 块独立 emissive plane
-                做了室内壳；再叠这个低 emissive 的 BackSide box 会从玻璃
-                外看到额外的"立柱"剪影（双层 BackSide 叠加 + 房间间共享
-                墙的盒侧面在斜角下露出）。 */}
-            {!isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (
-              <mesh position={[cx, yBase + FLOOR_H / 2, cz]} raycast={() => null}>
-                <boxGeometry args={[rW - 0.02, FLOOR_H - 0.01, rD - 0.02]} />
-                <meshStandardMaterial color={wallColor} side={THREE.BackSide} roughness={0.82}
-                  transparent={isXray} opacity={wallOpacity} depthWrite={!isXray}
-                  emissive={wallColor} emissiveIntensity={insideBuilding ? 0.22 : 0.06} />
-              </mesh>
-            )}
+            {/* 内墙面：4 块 FrontSide 平面 — 拆开支持 per-side 隐藏。
+                上一版是一个 BackSide box，整面一起渲染。现在每面墙是
+                独立 plane，朝向房间内部（FrontSide），点击 ✕背墙 等
+                toggle 后能单独消失。坐标系：back z = cz - rD/2，front =
+                cz + rD/2，left x = cx - rW/2，right x = cx + rW/2。
+                平面 default normal 是 +Z，配旋转让 FrontSide 朝向室内。
+                玻璃房间跳过 —— 玻璃 villa 客厅有自己的 5 块 emissive
+                壳，叠在它上面会从外侧看到额外的立柱剪影。 */}
+            {!isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (() => {
+              const wY = yBase + FLOOR_H / 2;
+              const wH = FLOOR_H - 0.01;
+              const insetW = rW - 0.02;
+              const insetD = rD - 0.02;
+              const halfW = insetW / 2;
+              const halfD = insetD / 2;
+              const matProps = {
+                color: wallColor,
+                roughness: 0.82,
+                transparent: isXray,
+                opacity: wallOpacity,
+                depthWrite: !isXray,
+                emissive: wallColor,
+                emissiveIntensity: insideBuilding ? 0.22 : 0.06,
+              };
+              return (
+                <>
+                  {/* back wall — plane at z=-halfD relative to room center.
+                      Default plane normal is +Z; FrontSide makes it visible
+                      from +Z side (= inside the room). No rotation needed. */}
+                  {!wallsHidden?.back && (
+                    <mesh position={[cx, wY, cz - halfD]} raycast={() => null}>
+                      <planeGeometry args={[insetW, wH]} />
+                      <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
+                    </mesh>
+                  )}
+                  {/* front wall — at z=+halfD, rotated π around Y so its +Z
+                      front faces -Z (room interior). */}
+                  {!wallsHidden?.front && (
+                    <mesh position={[cx, wY, cz + halfD]} rotation={[0, Math.PI, 0]} raycast={() => null}>
+                      <planeGeometry args={[insetW, wH]} />
+                      <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
+                    </mesh>
+                  )}
+                  {/* left wall — at x=-halfW, rotated +π/2 around Y so front
+                      points +X (interior). */}
+                  {!wallsHidden?.left && (
+                    <mesh position={[cx - halfW, wY, cz]} rotation={[0, Math.PI / 2, 0]} raycast={() => null}>
+                      <planeGeometry args={[insetD, wH]} />
+                      <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
+                    </mesh>
+                  )}
+                  {/* right wall — at x=+halfW, rotated -π/2. */}
+                  {!wallsHidden?.right && (
+                    <mesh position={[cx + halfW, wY, cz]} rotation={[0, -Math.PI / 2, 0]} raycast={() => null}>
+                      <planeGeometry args={[insetD, wH]} />
+                      <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
+                    </mesh>
+                  )}
+                </>
+              );
+            })()}
             {/* 走廊：天花板板条（顶部薄板，让走廊从室内清晰可辨）*/}
             {isHallway && (
               <mesh position={[cx, yBase + FLOOR_H - 0.04, cz]} raycast={() => null}>
