@@ -5843,7 +5843,13 @@ function VillaYard({ W, D, overrideW, xOff = 0 }: {
 /** When `active`, smoothly lerps camera + OrbitControls target inside the building. */
 /** Compact 2D AABB used for both room footprints and movement clamping.
  *  All values in metres, world-space. */
-type AABB = { minX: number; maxX: number; minZ: number; maxZ: number };
+type AABB = {
+  minX: number; maxX: number; minZ: number; maxZ: number;
+  /** Per-side hide flags. When set, blocksMovement allows crossing that
+   *  edge of this AABB even with collision ON. Plumbs from
+   *  fp.roomWallsHidden in HouseCanvas's wallAABBs builder. */
+  hides?: Partial<Record<"back" | "front" | "left" | "right", boolean>>;
+};
 
 /** Virtual joystick (DOM widget, not inside Canvas). Outputs normalized
  *  axis values in [-1, 1] on each axis (X = strafe right, Z = forward
@@ -6091,17 +6097,39 @@ function WalkthroughController({
    *  user is moving INTO a room (both endpoints inside the same rect)
    *  or staying outside all rects. */
   const blocksMovement = (x1: number, z1: number, x2: number, z2: number): boolean => {
-    // If either endpoint is inside a room AND the other isn't in the SAME
-    // room (i.e. they're in different rooms with a wall between, or one is
-    // outside any room), then the segment crosses a wall.
     let curRoom = -1, newRoom = -1;
     for (let i = 0; i < walls.length; i++) {
       const r = walls[i];
       if (x1 >= r.minX && x1 <= r.maxX && z1 >= r.minZ && z1 <= r.maxZ) curRoom = i;
       if (x2 >= r.minX && x2 <= r.maxX && z2 >= r.minZ && z2 <= r.maxZ) newRoom = i;
     }
-    if (curRoom === -1 && newRoom === -1) return false;  // both in hallway — allow
+    if (curRoom === -1 && newRoom === -1) return false;  // both outside any room
     if (curRoom === newRoom)              return false;  // same room — allow
+    // ── Hidden-wall pass-through ───────────────────────────────────
+    // If the segment exits curRoom through a side whose hide flag is
+    // set, allow it. Symmetric: if it enters newRoom through a hidden
+    // side, allow. "Side" is inferred from the endpoint's relation to
+    // the AABB extents — small step distances make this exact.
+    const sideCrossing = (r: typeof walls[number] | undefined, ex: number, ez: number): "back" | "front" | "left" | "right" | null => {
+      if (!r) return null;
+      if (ex < r.minX) return "left";
+      if (ex > r.maxX) return "right";
+      if (ez < r.minZ) return "back";   // smaller world Z = back wall (matches HouseCanvas convention)
+      if (ez > r.maxZ) return "front";
+      return null;
+    };
+    if (curRoom !== -1) {
+      const r = walls[curRoom];
+      const side = sideCrossing(r, x2, z2);
+      if (side && r.hides?.[side]) return false; // leaving via hidden side — allow
+    }
+    if (newRoom !== -1) {
+      const r = walls[newRoom];
+      // Entering = the previous endpoint was on the outside of newRoom's
+      // boundary. Same side function works on (x1, z1) for newRoom.
+      const side = sideCrossing(r, x1, z1);
+      if (side && r.hides?.[side]) return false; // entering through hidden side — allow
+    }
     return true;                                          // crossed wall
   };
 
@@ -6398,8 +6426,14 @@ export default function HouseCanvas() {
   // Build room AABBs in world coords for collision. Reads layout/dims from
   // store, mirrors FloorPlanBuilding's coord system (Y axis flipped to -Z).
   const floorPlansForWalk = useDesignerStore(s => s.floorPlans);
-  const wallAABBs = useMemo<AABB[]>(() => {
-    const out: AABB[] = [];
+  // Carry per-side hide flags alongside each room's AABB so blocksMovement
+  // can let the user step out through walls they've explicitly hidden in
+  // the FloorPlan toolbar. Cardinal keys only — polygon edge-${i} hides
+  // don't have a clean AABB-side mapping; users with polygon rooms still
+  // need no-clip mode to walk through hidden polygon edges.
+  type WallRect = AABB & { hides?: Partial<Record<"back" | "front" | "left" | "right", boolean>> };
+  const wallAABBs = useMemo<WallRect[]>(() => {
+    const out: WallRect[] = [];
     // House-wide bbox so each room's local center can be world-translated.
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
@@ -6422,11 +6456,19 @@ export default function HouseCanvas() {
         if (!p || !d) continue;
         // World rect: x∈[(p.x-minX)*CM - W/2, (p.x+w-minX)*CM - W/2]
         //             z∈[-((p.y+d-minY)*CM) + D/2, -((p.y-minY)*CM) + D/2]
+        const wh = fp.roomWallsHidden?.[r];
+        const hides: WallRect["hides"] = wh ? {
+          back:  wh.back  === true || undefined,
+          front: wh.front === true || undefined,
+          left:  wh.left  === true || undefined,
+          right: wh.right === true || undefined,
+        } : undefined;
         out.push({
           minX: (p.x - minX) * CM_local - Wh / 2,
           maxX: (p.x + d.width - minX) * CM_local - Wh / 2,
           minZ: -((p.y + d.depth - minY) * CM_local) + Dh / 2,
           maxZ: -((p.y - minY) * CM_local) + Dh / 2,
+          hides,
         });
       }
     }
