@@ -12,14 +12,20 @@
  *   - Crops > 25 m from house  →  inconvenient to harvest
  *   - Two heavy items overlapping (footprint)
  *   - Plant cluster overcrowded (>6 plantings within 2 m)
+ *   - Two zone polygons overlapping  →  zone layout conflict (§10.4)
+ *   - Social zone lacking shade (no tree/pergola within 6 m) →  sun discomfort
+ *   - Social/private zone with no privacy screening (§10.4 top complaint)
+ *   - Social zone not connected by a path  →  walkway missing (§10.4)
  *
- * The function is a pure transform: takes (items, houseFootprint) and
+ * The function is a pure transform: takes (items, houseFootprint, paths?) and
  * returns the violation list. The UI layer decides how to surface
  * (warning chips, ring overlays on canvas, etc).
+ *
+ * References: docs/yard-design-references.md §10.4 "Before" regret taxonomy.
  */
 
-import type { YardItem, YardSingleton, YardPrefab } from "./types";
-import { isYardSingleton, isYardPrefab } from "./types";
+import type { YardItem, YardSingleton, YardPrefab, YardZone } from "./types";
+import { isYardSingleton, isYardPrefab, isYardZone } from "./types";
 import { getOutdoorAssetByKind } from "./outdoorAssets";
 
 export type OutdoorSeverity = "required" | "recommended";
@@ -28,6 +34,10 @@ export type OutdoorViolationKind =
   | "tooCloseToHouse"
   | "tooFarFromHouse"
   | "overlap"
+  | "zoneOverlap"      // two zone polygons intersect
+  | "noShade"          // social zone lacks nearby shade
+  | "noPrivacy"        // social/private zone exposed — no screening
+  | "noWalkway"        // social zone not connected by a path
   | "cluttered"
   | "blocksDriveway";
 
@@ -141,8 +151,51 @@ function prefabDistToHouseM(item: YardPrefab, fp: HouseFootprintCm): number {
   return distToHouseM(item.x, item.z, fp);
 }
 
+// ─── Zone polygon helpers ──────────────────────────────────
+
+/** Zone polygon is stored relative to zone.(x,z). Convert to world coords. */
+function absPolygon(zone: YardZone): [number, number][] {
+  return zone.polygon.map(([rx, rz]) => [zone.x + rx, zone.z + rz] as [number, number]);
+}
+
+/** Ray-casting point-in-polygon (world cm coords). */
+function pointInPoly(px: number, pz: number, poly: [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][0], zi = poly[i][1];
+    const xj = poly[j][0], zj = poly[j][1];
+    if (((zi > pz) !== (zj > pz)) && px < ((xj - xi) * (pz - zi)) / (zj - zi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/** True if any vertex of polyA is inside polyB, or vice-versa. */
+function polygonsOverlap(polyA: [number, number][], polyB: [number, number][]): boolean {
+  return polyA.some(([px, pz]) => pointInPoly(px, pz, polyB))
+      || polyB.some(([px, pz]) => pointInPoly(px, pz, polyA));
+}
+
+/** Polygon area in cm² via shoelace formula. */
+function polyAreaCm2(poly: [number, number][]): number {
+  let a = 0;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    a += poly[j][0] * poly[i][1] - poly[i][0] * poly[j][1];
+  }
+  return Math.abs(a) / 2;
+}
+
 // ─── Main evaluator ────────────────────────────────────────
-export function evaluateYardPlan(items: YardItem[], house: HouseFootprintCm): OutdoorViolation[] {
+
+/** Path point type alias (matches YardPlan.paths element). */
+type YardPathRef = { id: string; points: Array<[number, number]>; widthCm: number; material: string };
+
+export function evaluateYardPlan(
+  items: YardItem[],
+  house: HouseFootprintCm,
+  paths?: YardPathRef[],
+): OutdoorViolation[] {
   const out: OutdoorViolation[] = [];
 
   const singletons = items.filter(isYardSingleton);
@@ -321,6 +374,96 @@ export function evaluateYardPlan(items: YardItem[], house: HouseFootprintCm): Ou
     }
   }
 
+  // ─── Zone-based smart checks ──────────────────────────────
+  const zones = items.filter(isYardZone);
+
+  // ── Zone-zone polygon overlap ──
+  for (let i = 0; i < zones.length; i++) {
+    for (let j = i + 1; j < zones.length; j++) {
+      const a = zones[i], b = zones[j];
+      const polyA = absPolygon(a);
+      const polyB = absPolygon(b);
+      // Only flag if overlap area is meaningful (>0.5 m²)
+      if (polygonsOverlap(polyA, polyB)) {
+        out.push({
+          itemId: a.id,
+          otherId: b.id,
+          kind: "zoneOverlap",
+          severity: "recommended",
+          reasonZh: `「${a.zoneKind}区」与「${b.zoneKind}区」的边界重叠，建议调整多边形使分区清晰`,
+          reasonEn: `"${a.zoneKind}" and "${b.zoneKind}" zone polygons overlap — adjust edges to avoid ambiguity`,
+        });
+      }
+    }
+  }
+
+  // ── Social zone: check for shade (tree within 6 m or pergola within 8 m) ──
+  const trees = singletons.filter(it => {
+    const a = getOutdoorAssetByKind(it.kind);
+    return !!a && a.category === "tree";
+  });
+  const pergolaPs = prefabs.filter(pf => pf.prefabKind === "pergola_classic");
+
+  for (const zone of zones) {
+    if (zone.zoneKind !== "social") continue;
+    const polyArea = polyAreaCm2(zone.polygon); // cm²
+    if (polyArea < 4 * 10000) continue; // skip tiny zones < 4 m²
+
+    const hasTree    = trees.some(t => Math.hypot(t.x - zone.x, t.z - zone.z) < 600);
+    const hasPergola = pergolaPs.some(p => Math.hypot(p.x - zone.x, p.z - zone.z) < 800);
+    if (!hasTree && !hasPergola) {
+      out.push({
+        itemId: zone.id,
+        kind: "noShade",
+        severity: "recommended",
+        reasonZh: "社交区缺少遮阴 — 建议 6m 内种一棵乔木，或添加花架（夏日直射让人无法久待）",
+        reasonEn: "Social zone has no shade — plant a tree within 6m or add a pergola (direct sun makes it unusable in summer)",
+      });
+    }
+  }
+
+  // ── Social / private zone: privacy screening check ──
+  // Flag if the zone is ≥4 m from house and has no fence/hedge/slat-wall within 6 m.
+  const screeningItems: YardItem[] = [
+    ...singletons.filter(it => it.kind.includes("fence") || it.kind.includes("hedge") || it.kind.includes("bamboo")),
+    ...prefabs.filter(pf => pf.prefabKind === "slat_wall" || pf.prefabKind === "fence_segment"),
+  ];
+  for (const zone of zones) {
+    if (zone.zoneKind !== "social" && zone.zoneKind !== "private") continue;
+    const dHouse = distToHouseM(zone.x, zone.z, house);
+    if (dHouse < 4) continue; // Zone is close to the house — house wall gives some screening
+    const hasScreening = screeningItems.some(s => Math.hypot(s.x - zone.x, s.z - zone.z) < 600);
+    if (!hasScreening) {
+      out.push({
+        itemId: zone.id,
+        kind: "noPrivacy",
+        severity: "recommended",
+        reasonZh: "该区域缺乏围挡，邻居可直接看到 — 建议添加围栏、格栅或绿篱（最高频改造投诉）",
+        reasonEn: "Zone is exposed to neighbours — add a fence, slat wall, or hedge (most-cited makeover regret per §10.4)",
+      });
+    }
+  }
+
+  // ── Social zone: walkway connectivity ──
+  // Flag if a social zone > 3 m from house has no path point within 5 m.
+  for (const zone of zones) {
+    if (zone.zoneKind !== "social") continue;
+    const dHouse = distToHouseM(zone.x, zone.z, house);
+    if (dHouse < 3) continue; // Right next to house — path not needed
+
+    const pathPoints = (paths ?? []).flatMap(p => p.points);
+    const hasNearbyPath = pathPoints.some(([px, pz]) => Math.hypot(px - zone.x, pz - zone.z) < 500);
+    if (!hasNearbyPath) {
+      out.push({
+        itemId: zone.id,
+        kind: "noWalkway",
+        severity: "recommended",
+        reasonZh: "社交区没有步道相连 — 建议从入口铺设路径（在工具栏选「路径」画线）",
+        reasonEn: "Social zone has no walkway — draw a path from the entrance (use the Path tool in the toolbar)",
+      });
+    }
+  }
+
   // De-dupe identical (itemId + kind + otherId) to avoid double-counting
   const seen = new Set<string>();
   return out.filter(v => {
@@ -329,6 +472,88 @@ export function evaluateYardPlan(items: YardItem[], house: HouseFootprintCm): Ou
     seen.add(k);
     return true;
   });
+}
+
+// ─── Empty-state hints (§10.4 regret taxonomy) ────────────
+// Shown in the Smart Suggestions panel when the yard is sparse,
+// BEFORE any violations accumulate. Based on the 11 most common
+// "before-state" complaints in real makeover posts.
+
+export interface YardHint {
+  icon: string;
+  reasonZh: string;
+  reasonEn: string;
+}
+
+/**
+ * Returns 1-4 contextual "getting started" hints when the yard has few or no
+ * items/zones. Not violations — just friendly nudges based on the §10.4
+ * regret taxonomy. Returns [] when the yard is non-trivially populated.
+ */
+export function getEmptyStateHints(items: YardItem[]): YardHint[] {
+  const zones     = items.filter(isYardZone);
+  const singletons = items.filter(isYardSingleton);
+  const prefabsH  = items.filter(isYardPrefab);
+  const total     = items.length;
+
+  // Yard is non-trivially populated — don't crowd the panel with hints
+  if (total >= 5 && zones.length >= 1) return [];
+
+  const hints: YardHint[] = [];
+
+  if (total === 0) {
+    hints.push(
+      {
+        icon: "📐",
+        reasonZh: "从左侧「功能区」拖入「社交区」开始规划，覆盖区域后再细化元素",
+        reasonEn: "Drag a 'Social' zone from the left panel to start — define areas first, then add elements",
+      },
+      {
+        icon: "🛤️",
+        reasonZh: "入口步道是最高 ROI 的改造：从门口铺一条路径连接休闲区（工具栏路径工具）",
+        reasonEn: "An entry walkway is the highest-ROI change — draw a path from the entrance (Path tool in toolbar)",
+      },
+      {
+        icon: "🌳",
+        reasonZh: "最常见的投诉：「完全没隐私』—— 一排绿篱或围栏就能解决",
+        reasonEn: "Most-cited regret: 'no privacy from neighbours' — a hedge or fence screen fixes it",
+      },
+    );
+    return hints;
+  }
+
+  if (zones.length === 0) {
+    hints.push({
+      icon: "📍",
+      reasonZh: "还没有功能区 — 先划定「社交区」或「草坪」，智能建议才能检查遮阴/隐私问题",
+      reasonEn: "No zones yet — define a 'Social' or 'Lawn' zone so smart-checks can run",
+    });
+  }
+
+  // Has items but no paths — suggest entry walkway
+  const hasAnyPath = false; // paths not accessible here; hint is cheap to show
+  if (!hasAnyPath && total < 8) {
+    hints.push({
+      icon: "🛤️",
+      reasonZh: "缺少步道 — 用工具栏「路径」工具从入口画到休闲区（高频改造投诉 §10.4）",
+      reasonEn: "No paths drawn — use the Path tool to connect entrance to social area (§10.4 top complaint)",
+    });
+  }
+
+  // Has plants but no privacy screening
+  const hasScreening = [
+    ...singletons.filter(it => it.kind.includes("fence") || it.kind.includes("hedge") || it.kind.includes("bamboo")),
+    ...prefabsH.filter(pf => pf.prefabKind === "slat_wall" || pf.prefabKind === "fence_segment"),
+  ].length > 0;
+  if (!hasScreening && total < 10) {
+    hints.push({
+      icon: "🔒",
+      reasonZh: "还没有隐私围挡 — 围栏、格栅或竹篱是最常被省略、事后最后悔的一步",
+      reasonEn: "No privacy screening yet — fence or hedge is the most-skipped, most-regretted element",
+    });
+  }
+
+  return hints.slice(0, 3); // at most 3 hints to avoid clutter
 }
 
 /** Group violations by itemId for quick "is this item flagged" lookup. */

@@ -659,5 +659,120 @@ export const YARD_PRESETS: YardPreset[] = [
       { type: "singleton", kind: "tree.bonsai", x: 800, z: 200 },
     ],
   },
+
+  // ──────────────────────────────────────────────────────────────────
+  // SMALL-YARD PRESETS (D1, 2026-05)
+  // Designed for lots 50-150 ㎡ — coords cluster within ±600 cm of
+  // origin so nothing spills off small plots.
+  // ──────────────────────────────────────────────────────────────────
+
+  // ───── 10. 小社交露台 — compact social patio (~8×8 m footprint) ─────
+  // Primary use-case: urban townhouse / terrace, direct-entry patio.
+  // One social zone, pergola for shade, low planting strip on two edges,
+  // a single multi-stem tree for privacy from neighbours.
+  {
+    id: "smallPatio",
+    label: "小露台",
+    icon: "☀️",
+    desc: "城市联排 8×8m 紧凑社交露台 — 遮阳棚 + 种植边界",
+    items: [
+      // Single social zone — 7×7m, tight to house
+      { type: "zone", zoneKind: "social",
+        x: 0, z: 400,
+        polygon: rectZone(700, 700), rot: 0 },
+      // Pergola for shade over most of patio
+      { type: "prefab", prefabKind: "pergola_classic",
+        x: 0, z: 350, rot: 0,
+        params: { widthM: 5, depthM: 4, style: "modern", roofMaterial: "polycarbonate" } },
+      // Compact seating island
+      { type: "prefab", prefabKind: "social_island",
+        x: 0, z: 450, rot: 0,
+        params: { sizeM: { w: 4, d: 3 }, fireFeature: "firepit", kitchenFacing: "north", sunkenSeat: false } },
+      // Planting strip along back edge for privacy
+      { type: "zone", zoneKind: "agro",
+        x: 0, z: -400,
+        polygon: rectZone(800, 200), rot: 0 },
+      // Multi-stem tree in corner for neighbour screening
+      { type: "singleton", kind: "tree.birch", x: -400, z: 600, scale: 1.0 },
+      // Low ornamental shrubs left edge
+      { type: "singleton", kind: "shrub.lavender", x: -450, z: 200 },
+      { type: "singleton", kind: "shrub.lavender", x: -450, z: 400 },
+    ],
+  },
+
+  // ───── 11. 侧院通道 — side-yard strip (~3m wide, 12m long) ─────
+  // Solves the narrow side passage: utility gate at one end, green
+  // corridor to social space at the other. Inspired by §10.8 patterns.
+  {
+    id: "sideYardStrip",
+    label: "侧院走廊",
+    icon: "🌿",
+    desc: "3m×12m 侧院 — 步道 + 垂直绿化 + 工具储物",
+    items: [
+      // Utility zone at entry (gate / bin storage end)
+      { type: "zone", zoneKind: "utility",
+        x: -700, z: 0,
+        polygon: rectZone(300, 400), rot: 0 },
+      // Green planting zone along entire strip
+      { type: "zone", zoneKind: "lawn",
+        x: 0, z: 0,
+        polygon: rectZone(1200, 200), rot: 0 },
+      // Vertical green wall / trellis along fence side
+      { type: "prefab", prefabKind: "slat_wall",
+        x: 0, z: -200, rot: 0,
+        params: { lengthM: 10, heightM: 2.2, slatCm: 4, gapCm: 6, backWall: false } },
+      // Storage at far end — represented as farm_box (nearest available prefab)
+      { type: "prefab", prefabKind: "farm_box",
+        x: 700, z: 0, rot: Math.PI / 2,
+        params: {} },
+      // Espalier / clipped trees along fence to filter light
+      { type: "singleton", kind: "tree.birch", x: -350, z: -150, scale: 0.8 },
+      { type: "singleton", kind: "tree.birch", x:   0,  z: -150, scale: 0.8 },
+      { type: "singleton", kind: "tree.birch", x:  350, z: -150, scale: 0.8 },
+    ],
+  },
+
+  // ───── 12. 食材花园 (Potager) — edible kitchen garden ─────
+  // Compact kitchen garden for a 6×8m rear plot. Raised veggie beds,
+  // herb wheel, compost, small fruit tree. Inspired by §10.6.
+  {
+    id: "potager",
+    label: "食材花园",
+    icon: "🥬",
+    desc: "6×8m 蔬菜香草园 — 高床 + 堆肥 + 果树",
+    items: [
+      // Main productive zone — entire plot (agro = edible landscape)
+      { type: "zone", zoneKind: "agro",
+        x: 0, z: 200,
+        polygon: rectZone(600, 800), rot: 0 },
+      // Seating / harvesting nook at edge
+      { type: "zone", zoneKind: "social",
+        x: 0, z: -500,
+        polygon: rectZone(400, 200), rot: 0 },
+      // Raised beds — farm_box is the nearest available prefab kind
+      { type: "prefab", prefabKind: "farm_box",
+        x: -150, z: 100, rot: 0,
+        params: {} },
+      { type: "prefab", prefabKind: "farm_box",
+        x:  150, z: 100, rot: 0,
+        params: {} },
+      { type: "prefab", prefabKind: "farm_box",
+        x: -150, z: 300, rot: 0,
+        params: {} },
+      { type: "prefab", prefabKind: "farm_box",
+        x:  150, z: 300, rot: 0,
+        params: {} },
+      // Herb wheel / spiral near kitchen door
+      { type: "singleton", kind: "feature.herbSpiral", x: 0, z: -300, scale: 1.0 },
+      // Compost bay tucked in corner
+      { type: "singleton", kind: "feature.compostBay", x: 350, z: 600, scale: 1.0 },
+      // Single fruit tree (apple / quince) for shade + harvest
+      { type: "singleton", kind: "tree.apple", x: -350, z: 600, scale: 1.1 },
+      // Low fence / wicker edging to keep paths clear
+      { type: "prefab", prefabKind: "slat_wall",
+        x: 0, z: 620, rot: 0,
+        params: { lengthM: 6, heightM: 0.5, slatCm: 6, gapCm: 2, backWall: false } },
+    ],
+  },
 ];
 

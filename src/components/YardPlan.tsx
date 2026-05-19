@@ -22,7 +22,7 @@ import { ROOM_DEFS, type YardItem, type YardZone, type PrefabKind, isYardSinglet
 import { OUTDOOR_ASSET_LIBRARY, OUTDOOR_CATEGORIES, getOutdoorAssetByKind, YARD_PRESETS, type OutdoorCategory } from "@/lib/outdoorAssets";
 import { PREFAB_REGISTRY, getPrefabDef } from "@/lib/outdoorPrefabs";
 import { ZONE_STYLES, polygonCentroid } from "@/lib/outdoorZones";
-import { evaluateYardPlan, violationsByItem } from "@/lib/outdoorClearance";
+import { evaluateYardPlan, violationsByItem, getEmptyStateHints } from "@/lib/outdoorClearance";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
 import { Image3dGenerator } from "./Image3dGenerator";
@@ -299,7 +299,7 @@ export function YardPlanLibrary() {
 
   // Apply preset action — needs store hooks at component scope
   const activeFloor    = useDesignerStore(s => s.activeFloor);
-  const yardItems      = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const yardItems      = useDesignerStore(s => s.floorPlans[0].yardPlan?.items ?? EMPTY_YARD_ITEMS);
   const addYardItem    = useDesignerStore(s => s.addYardItem);
   const removeYardItem = useDesignerStore(s => s.removeYardItem);
   const applyPreset = (p: import("@/lib/outdoorAssets").YardPreset) => {
@@ -620,8 +620,8 @@ export function useSharedSelectedYardId() {
 
 export default function YardPlan() {
   const activeFloor = useDesignerStore(s => s.activeFloor);
-  const yardItems   = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.items ?? EMPTY_YARD_ITEMS);
-  const yardPaths   = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.paths ?? EMPTY_YARD_PATHS);
+  const yardItems   = useDesignerStore(s => s.floorPlans[0].yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const yardPaths   = useDesignerStore(s => s.floorPlans[0].yardPlan?.paths ?? EMPTY_YARD_PATHS);
   const addYardItem = useDesignerStore(s => s.addYardItem);
   const removeYardItem = useDesignerStore(s => s.removeYardItem);
   const updateYardItem = useDesignerStore(s => s.updateYardItem);
@@ -629,7 +629,7 @@ export default function YardPlan() {
   const removeYardPath = useDesignerStore(s => s.removeYardPath);
   const { rooms: houseRooms, bbox: footprint } = useHouseRooms();
   // Outdoor smart-suggestions: evaluated whenever items / footprint change
-  const violations = useMemo(() => evaluateYardPlan(yardItems, footprint), [yardItems, footprint]);
+  const violations = useMemo(() => evaluateYardPlan(yardItems, footprint, yardPaths), [yardItems, footprint, yardPaths]);
   const violationMap = useMemo(() => violationsByItem(violations), [violations]);
   const requiredCount = violations.filter(v => v.severity === "required").length;
   const recommendedCount = violations.length - requiredCount;
@@ -670,6 +670,8 @@ export default function YardPlan() {
   const [pathPts, setPathPts] = useState<Array<[number, number]>>([]);   // cm world coords
   const [pathPreview, setPathPreview] = useState<[number, number] | null>(null);
   const [pathWidthCm, setPathWidthCm] = useState(80);  // default 80cm wide path
+  const [pathMaterial, setPathMaterial] = useState<"stone" | "gravel" | "grass" | "brick">("stone");
+  const [setbackCm, setSetbackCm] = useState(100); // lot setback in cm (default 1m)
   const [zoomLevel, setZoomLevel] = useState(1.0);
   // Guard so DnD-drop doesn't double-fire as a click-deselect
   const justDroppedRef = useRef(false);
@@ -863,22 +865,51 @@ export default function YardPlan() {
           }>
           🛤 路径
         </button>
-        {/* Path width selector — only shown in path mode */}
+        {/* Path width + material selectors — only shown in path mode */}
         {drawMode === "path" && (
-          <div className="flex items-center gap-1 shrink-0">
-            <span className="text-[10px] text-blue-400">宽</span>
-            {[60, 80, 120, 180].map(w => (
-              <button key={w}
-                onClick={() => setPathWidthCm(w)}
-                className="px-1.5 h-6 text-[10px] font-bold rounded transition-all"
-                style={pathWidthCm === w
-                  ? { background: "rgba(59,130,246,0.4)", color: "#93C5FD" }
-                  : { background: "rgba(255,255,255,0.06)", color: "#6B7280" }}>
-                {w}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-[10px] text-blue-400">宽</span>
+              {[60, 80, 120, 180].map(w => (
+                <button key={w}
+                  onClick={() => setPathWidthCm(w)}
+                  className="px-1.5 h-6 text-[10px] font-bold rounded transition-all"
+                  style={pathWidthCm === w
+                    ? { background: "rgba(59,130,246,0.4)", color: "#93C5FD" }
+                    : { background: "rgba(255,255,255,0.06)", color: "#6B7280" }}>
+                  {w}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-[10px] text-blue-400">材质</span>
+              {([ ["stone","石板","#94A3B8"], ["gravel","砾石","#D97706"], ["grass","草径","#16A34A"], ["brick","砖路","#DC2626"] ] as const).map(([m, label, color]) => (
+                <button key={m}
+                  onClick={() => setPathMaterial(m)}
+                  className="px-1.5 h-6 text-[10px] font-bold rounded transition-all"
+                  style={pathMaterial === m
+                    ? { background: color + "40", color, border: `1px solid ${color}` }
+                    : { background: "rgba(255,255,255,0.06)", color: "#6B7280" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>
         )}
+        {/* Setback selector — always visible */}
+        <div className="flex items-center gap-1 shrink-0 ml-1">
+          <span className="text-[10px] text-orange-400/80">退线</span>
+          {[50, 100, 150, 200].map(s => (
+            <button key={s}
+              onClick={() => setSetbackCm(s)}
+              className="px-1.5 h-6 text-[10px] font-bold rounded transition-all"
+              style={setbackCm === s
+                ? { background: "rgba(251,146,60,0.30)", color: "#FB923C", border: "1px solid rgba(251,146,60,0.6)" }
+                : { background: "rgba(255,255,255,0.06)", color: "#6B7280" }}>
+              {s / 100}m
+            </button>
+          ))}
+        </div>
         {/* Right: contextual actions when item selected */}
         {selectedItem && drawMode === "select" && (
           <div className="flex items-center gap-1 shrink-0">
@@ -1059,7 +1090,7 @@ export default function YardPlan() {
                 id: `path-${Date.now()}`,
                 points: pathPts,
                 widthCm: pathWidthCm,
-                material: "stone",
+                material: pathMaterial,
               });
               setPathPts([]);
               setPathPreview(null);
@@ -1148,6 +1179,41 @@ export default function YardPlan() {
             <line x1={500 / CM_PER_PX} y1={-3} x2={500 / CM_PER_PX} y2={3} stroke={INK} strokeWidth={1.2} />
             <text x={500 / CM_PER_PX / 2} y={14} textAnchor="middle" fontSize={9} fill={INK}>5.00 m</text>
           </g>
+
+          {/* ── Lot boundary + setback overlay ── */}
+          {(() => {
+            const lotPx = WIN_HALF_CM / CM_PER_PX;               // half-side of lot in SVG px
+            const setbackPx = setbackCm / CM_PER_PX;             // setback in SVG px
+            const cx = SVG_PX / 2, cy = SVG_PX / 2;
+            return (
+              <g style={{ pointerEvents: "none" }}>
+                {/* Outer lot boundary — dashed orange */}
+                <rect
+                  x={cx - lotPx} y={cy - lotPx}
+                  width={lotPx * 2} height={lotPx * 2}
+                  fill="none"
+                  stroke="rgba(251,146,60,0.55)"
+                  strokeWidth={1.5}
+                  strokeDasharray="8 5"
+                />
+                {/* Inner setback line — dashed lighter orange */}
+                <rect
+                  x={cx - lotPx + setbackPx} y={cy - lotPx + setbackPx}
+                  width={(lotPx - setbackPx) * 2} height={(lotPx - setbackPx) * 2}
+                  fill="none"
+                  stroke="rgba(251,146,60,0.30)"
+                  strokeWidth={1}
+                  strokeDasharray="4 5"
+                />
+                {/* Setback label */}
+                <text
+                  x={cx - lotPx + setbackPx + 4}
+                  y={cy - lotPx + setbackPx - 3}
+                  fontSize={8} fill="rgba(251,146,60,0.70)"
+                >setback {(setbackCm / 100).toFixed(1)} m</text>
+              </g>
+            );
+          })()}
 
           {/* ── Sun shadow overlay — semi-transparent dark polygon showing
               where the house casts shadow at the current sun hour.
@@ -1398,15 +1464,22 @@ export default function YardPlan() {
               return `${px},${pz}`;
             }).join(" ");
             const strokeW = Math.max(1, path.widthCm / CM_PER_PX);
+            const matColors: Record<string, [string, string]> = {
+              stone:  ["rgba(180,160,120,0.65)", "rgba(200,180,140,0.35)"],
+              gravel: ["rgba(160,150,130,0.60)", "rgba(180,170,150,0.30)"],
+              grass:  ["rgba(90,160,80,0.60)",   "rgba(120,190,100,0.30)"],
+              brick:  ["rgba(190,100,70,0.65)",  "rgba(210,120,90,0.30)"],
+            };
+            const [bodyColor, edgeColor] = matColors[path.material ?? "stone"] ?? matColors.stone;
             return (
               <g key={path.id} style={{ pointerEvents: "none" }}>
                 {/* Path body */}
                 <polyline points={pts} fill="none"
-                  stroke="rgba(180,160,120,0.60)" strokeWidth={strokeW}
+                  stroke={bodyColor} strokeWidth={strokeW}
                   strokeLinecap="round" strokeLinejoin="round" />
                 {/* Path edge dashes */}
                 <polyline points={pts} fill="none"
-                  stroke="rgba(200,180,140,0.35)" strokeWidth={strokeW + 1}
+                  stroke={edgeColor} strokeWidth={strokeW + 1}
                   strokeLinecap="round" strokeLinejoin="round"
                   strokeDasharray="4 6" />
                 {/* Delete handle on first segment midpoint */}
@@ -1532,15 +1605,16 @@ function YardPlanNavToExterior() {
 export function YardPlanInspector() {
   const selectedId = useSharedSelectedYardId();
   const activeFloor = useDesignerStore(s => s.activeFloor);
-  const items      = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const items      = useDesignerStore(s => s.floorPlans[0].yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const yardPaths  = useDesignerStore(s => s.floorPlans[0].yardPlan?.paths ?? EMPTY_YARD_PATHS);
   const updateYardItem = useDesignerStore(s => s.updateYardItem);
   const removeYardItem = useDesignerStore(s => s.removeYardItem);
   const addYardItem    = useDesignerStore(s => s.addYardItem);
   const { bbox: footprint } = useHouseRooms();
   const locale = useLocale();
 
-  // Smart suggestions — same evaluator as the canvas overlay
-  const violations = useMemo(() => evaluateYardPlan(items, footprint), [items, footprint]);
+  // Smart suggestions — same evaluator as the canvas overlay (now includes path connectivity)
+  const violations = useMemo(() => evaluateYardPlan(items, footprint, yardPaths), [items, footprint, yardPaths]);
   const item = selectedId ? items.find(i => i.id === selectedId) : null;
   // Asset lookup only makes sense for singletons; prefabs / zones get
   // their own descriptor below.
@@ -1649,8 +1723,9 @@ export function YardPlanInspector() {
 
   if (!item || !asset) {
     // No selection — show global smart-suggestions summary instead of empty
-    const requiredV = violations.filter(v => v.severity === "required");
-    const recommendedV = violations.filter(v => v.severity === "recommended");
+    const requiredV     = violations.filter(v => v.severity === "required");
+    const recommendedV  = violations.filter(v => v.severity === "recommended");
+    const emptyHints    = getEmptyStateHints(items);
     return (
       <aside className="h-full flex flex-col bg-white" style={{ borderLeft: "1px solid #E5E7EB" }}>
         <div className="px-3 py-2.5 flex items-center gap-2" style={{ borderBottom: "1px solid #E5E7EB" }}>
@@ -1660,7 +1735,7 @@ export function YardPlanInspector() {
           <YardPlanNavToExterior />
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {violations.length === 0 ? (
+          {violations.length === 0 && emptyHints.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center gap-2 py-12">
               <div className="text-3xl text-green-500">✓</div>
               <div className="text-[11px] text-gray-700">
@@ -1672,6 +1747,24 @@ export function YardPlanInspector() {
             </div>
           ) : (
             <>
+              {/* ── Empty-state getting-started hints (sparse yard) ── */}
+              {emptyHints.length > 0 && violations.length === 0 && (
+                <div className="mb-2">
+                  <div className="text-[10px] font-bold mb-1.5" style={{ color: "#6366F1" }}>
+                    {locale === "en" ? "💡 GETTING STARTED" : "💡 开始规划"}
+                  </div>
+                  {emptyHints.map((h, i) => (
+                    <div key={i} className="flex items-start gap-2 px-2.5 py-2 rounded-lg mb-1.5"
+                      style={{ background: "#EEF2FF", border: "1px solid #C7D2FE" }}>
+                      <span className="text-base leading-none mt-0.5 shrink-0">{h.icon}</span>
+                      <span className="text-[10px] leading-snug" style={{ color: "#4338CA" }}>
+                        {locale === "en" ? h.reasonEn : h.reasonZh}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {requiredV.length > 0 && (
                 <div>
                   <div className="text-[10px] font-bold mb-1" style={{ color: "#B91C1C" }}>

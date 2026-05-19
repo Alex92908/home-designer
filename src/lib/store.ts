@@ -215,6 +215,22 @@ function updateFloor(
   set({ floorPlans: updated });
 }
 
+// ─── updateYardFloor helper — yard is ground-level, always floor 0 ───
+// The yard (outdoor space) is a physical ground-level feature shared by
+// all floors. Always read/write yardPlan from floorPlans[0] regardless
+// of which floor the user is currently editing.
+function updateYardFloor(
+  get: () => DesignerStore,
+  set: (partial: Partial<DesignerStore> | ((s: DesignerStore) => Partial<DesignerStore>)) => void,
+  updater: (fp: FloorPlan) => Partial<FloorPlan>
+) {
+  const s = get();
+  const fp = s.floorPlans[0];
+  const updated = [...s.floorPlans];
+  updated[0] = { ...fp, ...updater(fp) };
+  set({ floorPlans: updated });
+}
+
 // ─── Store interface ───────────────────────────────────────
 
 interface DesignerStore {
@@ -1828,19 +1844,19 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       addYardItem: (item) => {
-        updateFloor(get, set, fp => {
+        updateYardFloor(get, set, fp => {
           const cur = fp.yardPlan?.items ?? [];
           return { yardPlan: { ...(fp.yardPlan ?? { items: [] }), items: [...cur, item] } };
         });
       },
       removeYardItem: (id) => {
-        updateFloor(get, set, fp => {
+        updateYardFloor(get, set, fp => {
           const cur = fp.yardPlan?.items ?? [];
           return { yardPlan: { ...(fp.yardPlan ?? { items: [] }), items: cur.filter(i => i.id !== id) } };
         });
       },
       updateYardItem: (id, patch) => {
-        updateFloor(get, set, fp => {
+        updateYardFloor(get, set, fp => {
           const cur = fp.yardPlan?.items ?? [];
           return {
             yardPlan: {
@@ -1852,13 +1868,13 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       addYardPath: (path) => {
-        updateFloor(get, set, fp => {
+        updateYardFloor(get, set, fp => {
           const cur = fp.yardPlan?.paths ?? [];
           return { yardPlan: { ...(fp.yardPlan ?? { items: [] }), paths: [...cur, path] } };
         });
       },
       removeYardPath: (id) => {
-        updateFloor(get, set, fp => {
+        updateYardFloor(get, set, fp => {
           const cur = fp.yardPlan?.paths ?? [];
           return { yardPlan: { ...(fp.yardPlan ?? { items: [] }), paths: cur.filter(p => p.id !== id) } };
         });

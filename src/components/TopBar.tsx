@@ -286,10 +286,8 @@ export default function TopBar() {
         className="flex items-center p-1 rounded-xl gap-0.5 shrink-0"
         style={{ background: "var(--ds-bg)", border: "1px solid var(--ds-border)" }}
       >
-        {/* Primary tabs — all, 平面图, 效果图, 全局3D, 外观
-            院子图 (yard2d) 已移除：用户在全局平面图缩小时就能看到院子，
-            统一一个画布编辑，少一个 tab */}
-        {(["all", "2d", "3d", "global3d", "exterior"] as const).map((mode) => {
+        {/* Primary tabs — all, 平面图, 效果图, 全局3D, 院子图, 外观 */}
+        {(["all", "2d", "3d", "global3d", "yard2d", "exterior"] as const).map((mode) => {
           const isActive = viewMode === mode;
           return (
             <button

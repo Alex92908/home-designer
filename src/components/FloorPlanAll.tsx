@@ -2,9 +2,8 @@
 
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
-import { ROOM_DEFS, RoomType, isYardSingleton, isYardPrefab, isYardZone, type YardItem } from "@/lib/types";
+import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ROOFTOP_ROOM_TYPES } from "@/lib/store";
-import { OUTDOOR_ASSET_LIBRARY } from "@/lib/outdoorAssets";
 import { ALL_POSSIBLE_ROOMS, DEFAULT_ENABLED } from "@/lib/store";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale } from "@/lib/i18n";
@@ -374,10 +373,7 @@ export default function FloorPlanAll() {
   const setExterior         = useDesignerStore(s => s.setExterior);
   const blueprint           = useDesignerStore(s => s.blueprint);
   const setBlueprint        = useDesignerStore(s => s.setBlueprint);
-  const yardItems           = useDesignerStore(s => s.floorPlans[s.activeFloor].yardPlan?.items);
-  const updateYardItem      = useDesignerStore(s => s.updateYardItem);
-  // 拖动 yard 物件时记录起始状态（SVG 坐标 + 物件初始 x,z）
-  const yardDragRef         = useRef<{ id: string; sx: number; sy: number; ox: number; oz: number } | null>(null);
+  // yardItems removed — yard not shown in FloorPlanAll; edit in 院子图 view
   const clearBlueprint      = useDesignerStore(s => s.clearBlueprint);
   // Unified tool state for the All/blueprint canvas:
   //   "browse" — normal (drag rooms, click to edit)
@@ -675,21 +671,9 @@ export default function FloorPlanAll() {
   const houseCenterX = roomXs.length ? (Math.min(...roomXs) + Math.max(...roomXs)) / 2 : 0;
   const houseCenterY = roomYs.length ? (Math.min(...roomYs) + Math.max(...roomYs)) / 2 : 0;
 
-  // 把 yard 物件（x,z 以房屋中心为原点）转换到 FloorPlanAll 的 SVG 坐标
-  const yardItemSVG = useMemo(() => {
-    if (!yardItems || yardItems.length === 0) return [];
-    return yardItems.map(it => ({
-      ...it,
-      svgX: houseCenterX + it.x,
-      svgY: houseCenterY + it.z,
-    }));
-  }, [yardItems, houseCenterX, houseCenterY]);
-
-  // 把 yard 物件位置纳入 viewBox，缩小就能看到整块院子地块
-  const yardXs = yardItemSVG.flatMap(it => [it.svgX - 80, it.svgX + 80]);
-  const yardYs = yardItemSVG.flatMap(it => [it.svgY - 80, it.svgY + 80]);
-  const allXs = [...roomXs, ...bpXs, ...yardXs];
-  const allYs = [...roomYs, ...bpYs, ...yardYs];
+  // yardItemSVG removed — yard not shown in global plan view
+  const allXs = [...roomXs, ...bpXs];
+  const allYs = [...roomYs, ...bpYs];
   const vbX1 = allXs.length ? Math.min(...allXs) - pad : 0;
   const vbY1 = allYs.length ? Math.min(...allYs) - pad : 0;
   const vbX2 = allXs.length ? Math.max(...allXs) + pad : 800;
@@ -1036,154 +1020,6 @@ export default function FloorPlanAll() {
           >
             {/* Background */}
             <rect x={vbX1} y={vbY1} width={vbX2 - vbX1} height={vbY2 - vbY1} fill="#9CA3AF" />
-
-            {/* 院子物件（背景层）—— singleton/prefab/zone 都按 cm 坐标
-                以房屋中心为原点画在 SVG。原"院子图"tab 已并入这里，
-                缩小就能看到房子周围的整块院子设计。可直接拖动。 */}
-            {yardItemSVG.length > 0 && (() => {
-              const startYardDrag = (e: React.PointerEvent<SVGElement>, id: string, ox: number, oz: number) => {
-                if (!svgRef.current) return;
-                e.stopPropagation();
-                svgRef.current.setPointerCapture(e.pointerId);
-                const pt = getSVGPoint(e, svgRef.current);
-                yardDragRef.current = { id, sx: pt.x, sy: pt.y, ox, oz };
-              };
-              const moveYardDrag = (e: React.PointerEvent<SVGElement>) => {
-                const d = yardDragRef.current;
-                if (!d || !svgRef.current) return;
-                const pt = getSVGPoint(e, svgRef.current);
-                const nx = snap(d.ox + (pt.x - d.sx));
-                const nz = snap(d.oz + (pt.y - d.sy));
-                updateYardItem(d.id, { x: nx, z: nz });
-              };
-              const endYardDrag = () => { yardDragRef.current = null; };
-              return (
-                <g
-                  onPointerMove={moveYardDrag}
-                  onPointerUp={endYardDrag}
-                  onPointerCancel={endYardDrag}
-                >
-                {yardItemSVG.map(it => {
-                  if (isYardZone(it)) {
-                    // 多边形区域（社交核心区/草坪等）
-                    const pts = it.polygon.map(([px, pz]) => `${it.svgX + px},${it.svgY + pz}`).join(" ");
-                    const fillByKind: Record<string, string> = {
-                      social:  "#FBBF24",
-                      private: "#A78BFA",
-                      utility: "#94A3B8",
-                      agro:    "#84CC16",
-                      lawn:    "#16A34A",
-                    };
-                    const fill = fillByKind[it.zoneKind] ?? "#64748B";
-                    return (
-                      <polygon
-                        key={`yz-${it.id}`}
-                        points={pts}
-                        style={{ cursor: "move", pointerEvents: "auto" }}
-                        onPointerDown={(e) => startYardDrag(e, it.id, it.x, it.z)}
-                        fill={fill}
-                        fillOpacity={0.18}
-                        stroke={fill}
-                        strokeOpacity={0.55}
-                        strokeDasharray="6 4"
-                        strokeWidth={1.5}
-                      />
-                    );
-                  }
-                  if (isYardPrefab(it)) {
-                    // 结构件（池子/凉亭/厨房岛/喷泉）—— 用方块占位
-                    const sizeByKind: Record<string, [number, number]> = {
-                      pool: [900, 500],
-                      pergola_classic: [400, 400],
-                      outdoor_kitchen: [320, 220],
-                      fountain: [180, 180],
-                      glb_model: [200, 200],
-                      social_island: [600, 600],
-                      farm_box: [200, 100],
-                      porte_cochere: [500, 300],
-                      slat_wall: [400, 30],
-                      fence_segment: [400, 20],
-                      parking_area: [500, 250],
-                    };
-                    const [w, h] = sizeByKind[it.prefabKind] ?? [200, 200];
-                    const labelByKind: Record<string, string> = {
-                      pool: "🏊 池", pergola_classic: "⛱ 凉亭",
-                      outdoor_kitchen: "🍳 厨", fountain: "⛲", glb_model: "📦",
-                      social_island: "🪑", farm_box: "🌱", porte_cochere: "🚗",
-                      slat_wall: "▮", fence_segment: "▬", parking_area: "🅿",
-                    };
-                    return (
-                      <g
-                        key={`yp-${it.id}`}
-                        transform={`rotate(${((it.rot ?? 0) * 180 / Math.PI)} ${it.svgX} ${it.svgY})`}
-                        style={{ cursor: "move", pointerEvents: "auto" }}
-                        onPointerDown={(e) => startYardDrag(e, it.id, it.x, it.z)}
-                      >
-                        <rect
-                          x={it.svgX - w / 2}
-                          y={it.svgY - h / 2}
-                          width={w}
-                          height={h}
-                          fill="#3B82F6"
-                          fillOpacity={0.28}
-                          stroke="#1D4ED8"
-                          strokeWidth={2}
-                          rx={4}
-                        />
-                        <text
-                          x={it.svgX}
-                          y={it.svgY}
-                          textAnchor="middle"
-                          dominantBaseline="central"
-                          fontSize={Math.min(80, Math.min(w, h) * 0.18)}
-                          fill="#1D4ED8"
-                          style={{ pointerEvents: "none" }}
-                        >
-                          {labelByKind[it.prefabKind] ?? "▢"}
-                        </text>
-                      </g>
-                    );
-                  }
-                  if (isYardSingleton(it)) {
-                    // 树/植物/岩石 —— 圆点
-                    const asset = OUTDOOR_ASSET_LIBRARY.find(a => a.kind === it.kind);
-                    const r = (asset?.radiusCm ?? 40) * (it.scale ?? 1);
-                    const color = asset?.color ?? "#10B981";
-                    const icon = asset?.icon ?? "•";
-                    return (
-                      <g
-                        key={`ys-${it.id}`}
-                        style={{ cursor: "move", pointerEvents: "auto" }}
-                        onPointerDown={(e) => startYardDrag(e, it.id, it.x, it.z)}
-                      >
-                        <circle
-                          cx={it.svgX}
-                          cy={it.svgY}
-                          r={r}
-                          fill={color}
-                          fillOpacity={0.35}
-                          stroke={color}
-                          strokeWidth={1.5}
-                          strokeOpacity={0.7}
-                        />
-                        <text
-                          x={it.svgX}
-                          y={it.svgY}
-                          textAnchor="middle"
-                          dominantBaseline="central"
-                          fontSize={Math.min(r * 0.6, 40)}
-                          style={{ pointerEvents: "none" }}
-                        >
-                          {icon}
-                        </text>
-                      </g>
-                    );
-                  }
-                  return null;
-                })}
-                </g>
-              );
-            })()}
 
             {/* Blueprint overlay — behind rooms. Draggable in trace mode. */}
             {blueprint.image && (
