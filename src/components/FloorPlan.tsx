@@ -1512,7 +1512,7 @@ export default function FloorPlan() {
                         fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✎</text>
                     </g>
                     <g style={{ cursor: "pointer" }}
-                      onClick={(ev) => { ev.stopPropagation(); removeWindow(activeRoom, win.id); if (selectedWinId === win.id) setSelectedWinId(null); }}>
+                      onPointerDown={(ev) => { ev.stopPropagation(); removeWindow(activeRoom, win.id); if (selectedWinId === win.id) setSelectedWinId(null); }}>
                       <circle cx={dx} cy={dy} r={R} fill="#EF4444" opacity={0.9} />
                       <text x={dx} y={dy} textAnchor="middle" dominantBaseline="middle"
                         fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✕</text>
@@ -1540,7 +1540,7 @@ export default function FloorPlan() {
                     fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✎</text>
                 </g>
                 <g style={{ cursor: "pointer" }}
-                  onClick={(e) => { e.stopPropagation(); removeWindow(activeRoom, win.id); if (selectedWinId === win.id) setSelectedWinId(null); }}>
+                  onPointerDown={(e) => { e.stopPropagation(); removeWindow(activeRoom, win.id); if (selectedWinId === win.id) setSelectedWinId(null); }}>
                   <circle cx={dx} cy={dy} r={R} fill="#EF4444" opacity={0.9} />
                   <text x={dx} y={dy} textAnchor="middle" dominantBaseline="middle"
                     fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✕</text>
@@ -1603,16 +1603,24 @@ export default function FloorPlan() {
                     sy = isHoriz ? dy : clampY(dy - R * 2.2);
                   }
                   const isLegacy = d.id === `${activeRoom}-legacy-door`;
+                  // Use onPointerDown (not onClick) so the gesture wins
+                  // even when the wider drag hit-rect (rendered later in
+                  // editWindows mode for cardinal-wall doors) is on top.
+                  // stopPropagation prevents the drag handler from claiming
+                  // the same pointer.
                   return (
                     <g>
                       <g style={{ cursor: "pointer" }}
-                        onClick={(ev) => { ev.stopPropagation(); setDoorSelected(true); setSelectedWinId(null); setSelectedDoorId(d.id); }}>
+                        onPointerDown={(ev) => {
+                          ev.stopPropagation();
+                          setDoorSelected(true); setSelectedWinId(null); setSelectedDoorId(d.id);
+                        }}>
                         <circle cx={sx} cy={sy} r={R} fill="#3B82F6" opacity={(doorSelected && selectedDoorId === d.id) ? 1 : 0.85} />
                         <text x={sx} y={sy} textAnchor="middle" dominantBaseline="middle"
                           fontSize={10} fill="white" style={{ pointerEvents: "none" }}>✎</text>
                       </g>
                       <g style={{ cursor: "pointer" }}
-                        onClick={(ev) => {
+                        onPointerDown={(ev) => {
                           ev.stopPropagation();
                           if (isLegacy) setRoomHasDoor(activeRoom, false);
                           else removeDoor(activeRoom, d.id);
