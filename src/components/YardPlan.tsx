@@ -24,7 +24,7 @@ import { PREFAB_REGISTRY, getPrefabDef } from "@/lib/outdoorPrefabs";
 import { ZONE_STYLES, polygonCentroid } from "@/lib/outdoorZones";
 import { evaluateYardPlan, violationsByItem, getEmptyStateHints } from "@/lib/outdoorClearance";
 import { autoGenerateYardPaths } from "@/lib/yardAutoLayout";
-import { autoScatterTrees } from "@/lib/yardAutoPlanting";
+import { autoScatterTrees, placeSunShadeTrees } from "@/lib/yardAutoPlanting";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
 import { Image3dGenerator } from "./Image3dGenerator";
@@ -672,6 +672,11 @@ export default function YardPlan() {
   const [pathPts, setPathPts] = useState<Array<[number, number]>>([]);   // cm world coords
   const [pathPreview, setPathPreview] = useState<[number, number] | null>(null);
   const [pathWidthCm, setPathWidthCm] = useState(80);  // default 80cm wide path
+  // §10.6 budget tier — T0 (validate only) → T4 (full reno).
+  // Drives the "✨ 自动设计" button: each tier opts into more aggressive
+  // automated changes. Defaults to T3 (multi-zone refresh) as the most
+  // common "I want it to look done" use case.
+  const [budgetTier, setBudgetTier] = useState<"T0" | "T1" | "T2" | "T3" | "T4">("T3");
   const [pathMaterial, setPathMaterial] = useState<"stone" | "gravel" | "grass" | "brick">("stone");
   const [setbackCm, setSetbackCm] = useState(100); // lot setback in cm (default 1m)
   const [zoomLevel, setZoomLevel] = useState(1.0);
@@ -878,16 +883,115 @@ export default function YardPlan() {
           style={{ background: "rgba(168,85,247,0.18)", color: "#C084FC", border: "1px solid rgba(168,85,247,0.4)" }}>
           🪄 自动路径
         </button>
-        {/* Auto-plant button — Poisson scatter trees over open ground */}
+        {/* Auto-plant button — Poisson scatter trees over open ground.
+            Also drops sun-side shade trees on social zones (§10.5). */}
         <button
           onClick={() => {
-            const trees = autoScatterTrees(yardItems, footprint);
-            for (const t of trees) addYardItem(t);
+            // §10.5 sun-aware shade first (high-purpose specimens),
+            // then Poisson filler in remaining open ground.
+            const shade = placeSunShadeTrees(yardItems, sunHour, siteLatLng);
+            for (const t of shade) addYardItem(t);
+            const allItemsAfterShade = [...yardItems, ...shade];
+            const filler = autoScatterTrees(allItemsAfterShade, footprint);
+            for (const t of filler) addYardItem(t);
           }}
-          title="在空地按树冠间距自动散植树木（避开房屋和区域）"
+          title="自动种树：先在 patio 朝阳侧放遮阴树，再 Poisson 散布填补空地"
           className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0 transition-all"
           style={{ background: "rgba(34,197,94,0.18)", color: "#86EFAC", border: "1px solid rgba(34,197,94,0.4)" }}>
           🌲 自动种树
+        </button>
+        {/* §10.6 budget tier selector — drives the unified ✨ button below */}
+        <div className="flex items-center gap-0.5 shrink-0 ml-1">
+          <span className="text-[10px] text-amber-400/80 mr-0.5">预算</span>
+          {(["T0","T1","T2","T3","T4"] as const).map(t => (
+            <button key={t}
+              onClick={() => setBudgetTier(t)}
+              title={
+                t === "T0" ? "T0 整理 — 只校验，不增减" :
+                t === "T1" ? "T1 软装 — 加灯/盆栽，不改区域" :
+                t === "T2" ? "T2 单区改造 — 添 1 个社交区 + 步道" :
+                t === "T3" ? "T3 多区翻新 — 步道 + 自动种树" :
+                "T4 大改造 — 清空后套用最大模板"
+              }
+              className="px-1.5 h-6 text-[10px] font-bold rounded transition-all"
+              style={budgetTier === t
+                ? { background: "rgba(251,191,36,0.30)", color: "#FCD34D", border: "1px solid rgba(251,191,36,0.6)" }
+                : { background: "rgba(255,255,255,0.06)", color: "#6B7280" }}>
+              {t}
+            </button>
+          ))}
+        </div>
+        {/* Unified ✨ auto-design — tier picks scope */}
+        <button
+          onClick={() => {
+            if (budgetTier === "T0") {
+              // Validate only — violations already render in the right panel.
+              return;
+            }
+            if (budgetTier === "T1") {
+              // Soft additions — drop a few planters and stones near the
+              // first social zone if any, else near the front of house.
+              const social = yardItems.find(it => isYardZone(it) && it.zoneKind === "social") as YardZone | undefined;
+              const cx = social ? social.x : 0;
+              const cz = social ? social.z + 200 : footprint.maxZ + 200;
+              const stamp = Date.now();
+              addYardItem({ id: `soft-${stamp}-a`, type: "singleton", kind: "furniture.planter", x: cx - 150, z: cz });
+              addYardItem({ id: `soft-${stamp}-b`, type: "singleton", kind: "furniture.planter", x: cx + 150, z: cz });
+              addYardItem({ id: `soft-${stamp}-c`, type: "singleton", kind: "feature.pathStone", x: cx, z: cz - 80 });
+              return;
+            }
+            if (budgetTier === "T2") {
+              // One zone — if no social zone exists, drop a small patio + a
+              // path back to the house. Otherwise act like T1.
+              const hasSocial = yardItems.some(it => isYardZone(it) && it.zoneKind === "social");
+              if (!hasSocial) {
+                const stamp = Date.now();
+                const newZone: YardZone = {
+                  id: `t2-social-${stamp}`,
+                  type: "zone", zoneKind: "social",
+                  x: 0, z: footprint.maxZ + 400,
+                  polygon: [[-300, -200], [300, -200], [300, 200], [-300, 200]],
+                };
+                addYardItem(newZone);
+                const paths = autoGenerateYardPaths([...yardItems, newZone], footprint);
+                for (const p of paths) addYardPath(p);
+              }
+              return;
+            }
+            if (budgetTier === "T3") {
+              // Multi-zone refresh — current full pipeline on existing items.
+              const paths = autoGenerateYardPaths(yardItems, footprint);
+              for (const p of paths) addYardPath(p);
+              const shade = placeSunShadeTrees(yardItems, sunHour, siteLatLng);
+              for (const t of shade) addYardItem(t);
+              const filler = autoScatterTrees([...yardItems, ...shade], footprint);
+              for (const t of filler) addYardItem(t);
+              return;
+            }
+            if (budgetTier === "T4") {
+              // Full reno — clear yard items, apply biggest matching template,
+              // then run T3 pipeline on the fresh layout.
+              for (const it of [...yardItems]) removeYardItem(it.id);
+              // Pick the template best matching the building footprint area.
+              const footW = (footprint.maxX - footprint.minX) / 100;
+              const footD = (footprint.maxZ - footprint.minZ) / 100;
+              const footArea = footW * footD;
+              const pickId =
+                footArea > 80 ? "suburbanClassic" :
+                footArea > 40 ? "smallSocialPatio" :
+                "smallPatio";
+              const preset = YARD_PRESETS.find(p => p.id === pickId) ?? YARD_PRESETS[0];
+              const stamp = Date.now();
+              preset.items.forEach((it, i) => {
+                addYardItem({ ...it, id: `${preset.id}-${stamp}-${i}` } as YardItem);
+              });
+              return;
+            }
+          }}
+          title="✨ 自动设计 — 根据当前预算 tier 综合应用模板/路径/种树"
+          className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0 transition-all"
+          style={{ background: "rgba(251,191,36,0.22)", color: "#FCD34D", border: "1px solid rgba(251,191,36,0.5)" }}>
+          ✨ 自动设计
         </button>
         {/* Path width + material selectors — only shown in path mode */}
         {drawMode === "path" && (
@@ -1732,6 +1836,28 @@ export function YardPlanInspector() {
                   className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
               </label>
             </div>
+          </section>
+          {/* §10.3 zone sub-type selector — refines the parent zoneKind
+              for sun-aware placement + clearance sub-rules. Optional. */}
+          <section>
+            <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>子类型 (可选)</div>
+            <select
+              value={item.subtype ?? ""}
+              onChange={e => updateYardItem(item.id, { subtype: (e.target.value || undefined) as YardZone["subtype"] })}
+              className="w-full px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400 text-[11px]">
+              <option value="">— 通用 —</option>
+              <option value="entry-sequence">入户序列 entry-sequence</option>
+              <option value="threshold">门廊过渡 threshold</option>
+              <option value="outdoor-room">户外客厅 outdoor-room</option>
+              <option value="sunset-terrace">夕阳露台 sunset-terrace</option>
+              <option value="mudroom-side">杂物侧院 mudroom-side</option>
+              <option value="kitchen-garden">厨园菜圃 kitchen-garden</option>
+              <option value="fragrance-corridor">香径花廊 fragrance-corridor</option>
+              <option value="wild-edge">野趣边界 wild-edge</option>
+              <option value="back-against">靠墙安坐 back-against</option>
+              <option value="service-yard">服务后院 service-yard</option>
+              <option value="kids-sightline">儿童视线 kids-sightline</option>
+            </select>
           </section>
           <section>
             <button onClick={() => { removeYardItem(item.id); setSharedSelectedId(null); }}

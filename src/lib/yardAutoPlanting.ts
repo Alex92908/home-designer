@@ -15,6 +15,7 @@
 import type { YardItem, YardZone, YardSingleton } from "./types";
 import { isYardZone, isYardSingleton } from "./types";
 import { poissonRect } from "./poissonDisc";
+import { getSunPosition3D, type LatLng } from "./sunAnalysis";
 
 /** Mature canopy radius (metres) per tree kind. Used both for spacing
  *  (Poisson minDist = 2 × radius) and as the "watering ring" UI hint.
@@ -161,4 +162,73 @@ export function autoScatterTrees(
     z: Math.round(a.z * 100),
     scale: 0.9 + rng() * 0.3, // 0.9 – 1.2 for natural variation
   }));
+}
+
+/**
+ * §10.5 sun-aware shade tree placement. For each social zone that
+ * doesn't already have a tree within a generous radius, drop one
+ * canopy tree on the SUN-FACING side of the zone so it casts shade
+ * across the patio in the afternoon.
+ *
+ * Sun direction comes from the project's `sunHour` + `siteLatLng`
+ * via getSunPosition3D. We project the sun vector onto the ground
+ * plane (XZ) and place the shade tree on the OPPOSITE side of the
+ * zone centroid from the sun (so the shadow falls across the zone).
+ * Result is in cm, ready to feed addYardItem().
+ */
+export function placeSunShadeTrees(
+  items: YardItem[],
+  sunHour: number,
+  siteLatLng: LatLng,
+): YardSingleton[] {
+  const sunVec = getSunPosition3D(sunHour, siteLatLng);
+  // Sun below horizon → nothing meaningful to do
+  if (sunVec[1] <= 0) return [];
+  // Ground projection: normalise (x, z) only
+  const sx = sunVec[0], sz = sunVec[2];
+  const slen = Math.hypot(sx, sz) || 1;
+  const sxN = sx / slen, szN = sz / slen;
+  // Shadow direction is OPPOSITE to sun direction (sun in +X side →
+  // shadow falls toward -X side). We want the tree on the SUN side so
+  // its shadow lands inside the zone, so place tree at centroid +
+  // sunDir * (radius + tree_canopy_buffer).
+  const TREE_BUFFER_M = 3.5; // canopy radius gap from zone edge
+
+  const zones = items.filter(isYardZone).filter(z => z.zoneKind === "social");
+  const existingTrees = items
+    .filter(isYardSingleton)
+    .filter(s => s.kind?.startsWith("tree."));
+
+  const out: YardSingleton[] = [];
+  zones.forEach((zone, i) => {
+    // Compute zone centroid + half-diagonal in metres
+    const poly = zone.polygon;
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const [px, pz] of poly) {
+      minX = Math.min(minX, px); maxX = Math.max(maxX, px);
+      minZ = Math.min(minZ, pz); maxZ = Math.max(maxZ, pz);
+    }
+    const cx = (zone.x + (minX + maxX) / 2) / 100;
+    const cz = (zone.z + (minZ + maxZ) / 2) / 100;
+    const halfDiagM = Math.hypot(maxX - minX, maxZ - minZ) / 200;
+    // Skip if a tree already lives within (halfDiag + 5 m) of the zone
+    // — we don't want to crowd existing shade.
+    const tooNear = existingTrees.some(t => {
+      const dx = t.x / 100 - cx, dz = t.z / 100 - cz;
+      return Math.hypot(dx, dz) < halfDiagM + 5;
+    });
+    if (tooNear) return;
+
+    const treeX = cx + sxN * (halfDiagM + TREE_BUFFER_M);
+    const treeZ = cz + szN * (halfDiagM + TREE_BUFFER_M);
+    out.push({
+      id: `shade-tree-${Date.now()}-${i}`,
+      type: "singleton",
+      kind: zone.polygon.length > 0 && halfDiagM > 4 ? "tree.oak" : "tree.maple",
+      x: Math.round(treeX * 100),
+      z: Math.round(treeZ * 100),
+      scale: 1.1,
+    });
+  });
+  return out;
 }

@@ -88,11 +88,39 @@ export interface YardZone extends YardCommonFields {
   type: "zone";
   /** Narrative role of this zone (drives default paving + plant rules). */
   zoneKind: ZoneKind;
+  /** Optional sub-type refining the parent ZoneKind. See ZoneSubtype docs
+   *  for the canonical set. Drives sun-aware placement + sub-rules in
+   *  outdoorClearance.ts. Existing zones default to undefined and fall
+   *  back to parent-kind rules. */
+  subtype?: ZoneSubtype;
   /** Polygon vertices in cm, RELATIVE TO the zone's (x, z) origin. */
   polygon: Array<[number, number]>;
   /** Override the default paving material id for this zoneKind. */
   pavingMaterialId?: string;
 }
+
+/** §10.3 of docs/yard-design-references.md — 11 functional sub-types
+ *  that real designers use. Each maps to one of the 5 parent ZoneKinds
+ *  but lets the solver apply richer rules (sunset terrace prefers west,
+ *  service yard hidden from social sightlines, etc.).
+ *
+ *  Selection: pick the sub-type your zone is intended as; leave unset
+ *  for generic. Used by:
+ *    - YardPlan inspector dropdown (UI hint + paving variant)
+ *    - outdoorClearance constraint rules (sun bias, sightline hide)
+ *    - sceneToPrompt naming for AI render captioning */
+export type ZoneSubtype =
+  | "entry-sequence"      // gate → walk → threshold → door
+  | "threshold"           // pergola / archway transition
+  | "outdoor-room"        // patio, deck, dining terrace (default social)
+  | "sunset-terrace"      // west-facing evening patio
+  | "mudroom-side"        // bins / AC / tools, side of house
+  | "kitchen-garden"      // raised-bed potager (default agro)
+  | "fragrance-corridor"  // aromatic planting along a walk
+  | "wild-edge"           // meadow / woodland edge at rear fence
+  | "back-against"        // bench with wall/hedge behind
+  | "service-yard"        // hidden tools / compost
+  | "kids-sightline";     // play area visible from kitchen window
 
 export type PrefabKind =
   | "social_island"
