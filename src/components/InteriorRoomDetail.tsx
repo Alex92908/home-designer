@@ -54,8 +54,6 @@ function shade(hex: string, amount: number): string {
   return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
 }
 
-const BASEBOARD_H = 0.10;     // metres — 10 cm strip at floor
-const BASEBOARD_T = 0.02;     // metres — 2 cm thick out from wall
 const CROWN_H     = 0.08;     // metres — 8 cm strip at ceiling
 const CROWN_T     = 0.025;
 const FIXTURE_H_DOWN = 0.18;  // light fixture hangs this far below ceiling
@@ -69,8 +67,7 @@ const FIXTURE_H_DOWN = 0.18;  // light fixture hangs this far below ceiling
 export function InteriorRoomDetail({
   cx, cz, yBase, rW, rD, wallColor, enabled = true,
 }: InteriorRoomDetailProps) {
-  // Memo the colors so we don't recompute per frame
-  const baseColor  = useMemo(() => shade(wallColor, 0.55), [wallColor]);
+  // Memo the color so we don't recompute per frame.
   const crownColor = useMemo(() => shade(wallColor, 0.08), [wallColor]);
 
   if (!enabled) return null;
@@ -86,29 +83,16 @@ export function InteriorRoomDetail({
   // so back = -Z, front = +Z, left = -X, right = +X.
   const halfW = rW / 2;
   const halfD = rD / 2;
-  const baseY = py + BASEBOARD_H / 2 + 0.005;
   const crownY = py + FLOOR_H_M - CROWN_H / 2 - 0.005;
   const fixtureY = py + FLOOR_H_M - 0.04;
 
   return (
     <group position={[px, 0, pz]}>
-      {/* ── A. BASEBOARDS — 4 walls ── */}
-      <mesh position={[0, baseY, -halfD + BASEBOARD_T / 2]} castShadow={false}>
-        <boxGeometry args={[rW - 0.02, BASEBOARD_H, BASEBOARD_T]} />
-        <meshStandardMaterial color={baseColor} roughness={0.55} metalness={0.05} />
-      </mesh>
-      <mesh position={[0, baseY,  halfD - BASEBOARD_T / 2]} castShadow={false}>
-        <boxGeometry args={[rW - 0.02, BASEBOARD_H, BASEBOARD_T]} />
-        <meshStandardMaterial color={baseColor} roughness={0.55} metalness={0.05} />
-      </mesh>
-      <mesh position={[-halfW + BASEBOARD_T / 2, baseY, 0]} castShadow={false}>
-        <boxGeometry args={[BASEBOARD_T, BASEBOARD_H, rD - 0.02]} />
-        <meshStandardMaterial color={baseColor} roughness={0.55} metalness={0.05} />
-      </mesh>
-      <mesh position={[ halfW - BASEBOARD_T / 2, baseY, 0]} castShadow={false}>
-        <boxGeometry args={[BASEBOARD_T, BASEBOARD_H, rD - 0.02]} />
-        <meshStandardMaterial color={baseColor} roughness={0.55} metalness={0.05} />
-      </mesh>
+      {/* Baseboards intentionally NOT rendered here — FloorPlanExterior
+          already draws 4 踢脚线 per room (see the `踢脚线（室内模式）`
+          block). This component is purely additive: crown moldings +
+          ceiling fixture (no real light — emissive only) which the
+          existing render didn't have. */}
 
       {/* ── B. CROWN MOLDINGS — 4 walls at ceiling ── */}
       <mesh position={[0, crownY, -halfD + CROWN_T / 2]} castShadow={false}>
@@ -128,7 +112,15 @@ export function InteriorRoomDetail({
         <meshStandardMaterial color={crownColor} roughness={0.7} metalness={0.02} />
       </mesh>
 
-      {/* ── C1. CEILING FIXTURE — small disc + warm emissive bulb ── */}
+      {/* ── C1. CEILING FIXTURE — disc + emissive bulb (no real light) ──
+          The bulb is emissive only; FloorPlanExterior already provides
+          1-4 emissive ceiling spots per room AND the scene-wide
+          directionalLight + ambient handle actual illumination.
+          Earlier versions emitted a true pointLight here, but with
+          10+ rooms in walkthrough that pushed past WebGL's default
+          light-uniform budget and tanked the framerate. The emissive
+          bulb keeps the visible source without the fragment-shader
+          cost. */}
       <mesh position={[0, fixtureY, 0]} castShadow={false}>
         <cylinderGeometry args={[0.18, 0.18, 0.04, 16]} />
         <meshStandardMaterial color="#E8E4DE" roughness={0.4} metalness={0.3} />
@@ -139,18 +131,7 @@ export function InteriorRoomDetail({
           color="#FFE5A8" emissive="#FFC95A" emissiveIntensity={1.6}
           roughness={0.4} metalness={0.0} />
       </mesh>
-
-      {/* ── C2. INTERIOR POINT LIGHT — warm, room-sized ── */}
-      {/*  Intensity tuned so a 4×4 m room reads as "warmly lit" without
-           bloating overall scene brightness when 10+ rooms light up.    */}
-      <pointLight
-        position={[0, fixtureY - FIXTURE_H_DOWN, 0]}
-        color="#FFC580"
-        intensity={Math.min(0.9, 0.18 * rW * rD)}
-        distance={Math.max(rW, rD) * 1.8}
-        decay={2}
-        castShadow={false}
-      />
+      {void [FIXTURE_H_DOWN, rW, rD]}
     </group>
   );
 }

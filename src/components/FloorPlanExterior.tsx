@@ -10048,19 +10048,17 @@ export default function FloorPlanBuilding({
                     <cylinderGeometry args={[0.08, 0.08, 0.02, 12]} />
                     <meshStandardMaterial color="#E0E0DC" roughness={0.4} metalness={0.25} />
                   </mesh>
-                  {/* 发光灯片 */}
+                  {/* 发光灯片 (emissive only — see comment below) */}
                   <mesh position={[0, -0.005, 0]} raycast={() => null}>
                     <cylinderGeometry args={[0.065, 0.065, 0.005, 12]} />
                     <meshStandardMaterial color="#FFFCE8" emissive="#FFF5D0" emissiveIntensity={3.5} roughness={0.3} />
                   </mesh>
-                  {/* 点光源 */}
-                  <pointLight
-                    position={[0, -0.12, 0]}
-                    intensity={rW * rD * 0.28}
-                    distance={Math.max(rW, rD) * 2.4}
-                    decay={2}
-                    color="#FFF8E8"
-                  />
+                  {/* Previous version emitted a real pointLight per spot
+                      — but 1-4 per room × 12 rooms blew past WebGL's
+                      light-uniform budget and stuttered walkthrough.
+                      The emissive disc still reads as a visible warm
+                      ceiling source; actual illumination falls to the
+                      scene-wide directionalLight + ambient. */}
                 </group>
               ));
             })()}
