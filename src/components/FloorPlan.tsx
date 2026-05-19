@@ -483,6 +483,8 @@ export default function FloorPlan() {
   const setDoorPos      = useDesignerStore((s) => s.setDoorPos);
   const setRoomHasDoor  = useDesignerStore((s) => s.setRoomHasDoor);
   const setDoorWall     = useDesignerStore((s) => s.setDoorWall);
+  const wallsHiddenOnRoom = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWallsHidden?.[activeRoom]);
+  const toggleWallHidden  = useDesignerStore((s) => s.toggleWallHidden);
   const setDoorLen      = useDesignerStore((s) => s.setDoorLen);
   const setDoorH        = useDesignerStore((s) => s.setDoorH);
   const setDoorStyle    = useDesignerStore((s) => s.setDoorStyle);
@@ -1255,6 +1257,28 @@ export default function FloorPlan() {
                   );
                 });
               })()}
+            </div>
+            {/* ── 隐藏墙：4 个 toggle，让用户点击决定哪面墙不渲染 ── */}
+            {/* 跟门窗一样设计——按面切换，已隐藏的高亮显示。RoomShell
+                + FloorPlanExterior 渲染时跳过对应面，2D 视图把那条边
+                改成虚线提示。 */}
+            <div className="flex items-center gap-0.5 ml-1">
+              <span className="text-[10px] text-gray-500 mr-0.5">隐藏</span>
+              {(["back","front","left","right"] as const).map(w => {
+                const labels = t.fpWallLabels;
+                const hidden = wallsHiddenOnRoom?.[w] === true;
+                return (
+                  <button key={`hide-${w}`}
+                    onClick={() => toggleWallHidden(activeRoom, w)}
+                    title={hidden ? `恢复${labels[w]}` : `隐藏${labels[w]}`}
+                    className="text-[10px] px-1.5 py-0.5 rounded font-semibold transition-all"
+                    style={hidden
+                      ? { background: "rgba(239,68,68,0.32)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.6)" }
+                      : { background: "rgba(75,85,99,0.20)", color: "#9CA3AF", border: "1px solid rgba(75,85,99,0.35)" }}>
+                    {hidden ? "✓" : "✕"}{labels[w]}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

@@ -577,6 +577,13 @@ export interface FloorPlan {
   roomDoorPos: Record<RoomType, number>;
   roomHasDoor: Record<RoomType, boolean>;
   roomDoorWall: Record<RoomType, "bottom" | "top" | "left" | "right">;
+  /** Per-room wall hide flags. When a side is true, the wall on that side
+   *  is omitted from rendering (RoomShell + FloorPlanExterior + 2D plan).
+   *  Lets the user merge two rooms visually by hiding the shared wall.
+   *  Walkthrough collision is unaffected — that comes from wallAABBs which
+   *  reads the geometry, not this flag; if collision-aware open opening is
+   *  desired, also update the doorPasses array. */
+  roomWallsHidden?: Partial<Record<RoomType, Partial<Record<"back" | "front" | "left" | "right", boolean>>>>;
   roomDoorLen?: Partial<Record<RoomType, number>>; // cm, width along wall (default 80)
   roomDoorH?: Partial<Record<RoomType, number>>;   // cm, height (default 200)
   /** Per-room door style. Default "wood_panel" if unset. */

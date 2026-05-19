@@ -457,6 +457,10 @@ interface DesignerStore {
   setDoorPos: (room: RoomType, pos: number) => void;
   setRoomHasDoor: (room: RoomType, has: boolean) => void;
   setDoorWall: (room: RoomType, wall: "bottom" | "top" | "left" | "right") => void;
+  /** Toggle a single wall's hidden flag for a room. Side is in
+   *  RoomShell's convention (back/front/left/right). Stored under
+   *  fp.roomWallsHidden[room][side]; missing entries default to false. */
+  toggleWallHidden: (room: RoomType, side: "back" | "front" | "left" | "right") => void;
   setDoorEdgeIdx: (room: RoomType, edgeIdx: number | null) => void;
 
   // ── Yard plan (outdoor 2D editor) ──
@@ -1832,6 +1836,23 @@ export const useDesignerStore = create<DesignerStore>()(
 
       setDoorWall: (room, wall) => {
         updateFloor(get, set, fp => ({ roomDoorWall: { ...fp.roomDoorWall, [room]: wall } }));
+      },
+
+      toggleWallHidden: (room, side) => {
+        updateFloor(get, set, fp => {
+          const all = fp.roomWallsHidden ?? {};
+          const cur = all[room] ?? {};
+          const next = { ...cur, [side]: !cur[side] };
+          // Drop the inner object entirely when all sides are unset — keeps
+          // the persisted JSON small for users who never used the feature.
+          const anyTrue = (Object.keys(next) as Array<"back" | "front" | "left" | "right">)
+            .some(k => next[k] === true);
+          return {
+            roomWallsHidden: anyTrue
+              ? { ...all, [room]: next }
+              : (() => { const c = { ...all }; delete c[room]; return c; })(),
+          };
+        });
       },
 
       setDoorEdgeIdx: (room, edgeIdx) => {

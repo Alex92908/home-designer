@@ -152,6 +152,7 @@ function RoomShell({
   activeRoom,
   frontWallOpacity,
   ceilingOpacity,
+  wallsHidden,
 }: {
   W: number; D: number; H: number;
   wallColor: string; floorColor: string;
@@ -176,6 +177,10 @@ function RoomShell({
   activeRoom: RoomType;
   frontWallOpacity: number;
   ceilingOpacity: number;
+  /** Per-side hide flags. true = skip rendering that wall entirely.
+   *  Lets the user merge rooms visually. Door/window holes on a hidden
+   *  wall become moot (the wall isn't drawn anyway). */
+  wallsHidden?: Partial<Record<"back" | "front" | "left" | "right", boolean>>;
 }) {
   const skirtColor = shade(wallColor, -18);
   const splitH = wallLower ? Math.max(0.2, Math.min(H - 0.2, (wallSplitCm ?? 110) / 100)) : 0;
@@ -412,43 +417,49 @@ function RoomShell({
       {(() => null)()}
 
       {/* Back wall — with hole-cutouts for windows/door */}
-      <WallWithHoles
-        side={sB} wallLenM={W}
-        groupPos={[0, H / 2, -D / 2]}
-        upperMat={wallMatFor(sB.color, sB.id, W, H)}
-        extMat={(() => {
-          const e = wallBackExterior ?? wallExterior;
-          return e ? wallMatFor(e.color, e.id, W, H) : undefined;
-        })()}
-        extOffsetSign={-1}
-        lowerSide="back"
-      />
+      {!wallsHidden?.back && (
+        <WallWithHoles
+          side={sB} wallLenM={W}
+          groupPos={[0, H / 2, -D / 2]}
+          upperMat={wallMatFor(sB.color, sB.id, W, H)}
+          extMat={(() => {
+            const e = wallBackExterior ?? wallExterior;
+            return e ? wallMatFor(e.color, e.id, W, H) : undefined;
+          })()}
+          extOffsetSign={-1}
+          lowerSide="back"
+        />
+      )}
 
       {/* Left wall */}
-      <WallWithHoles
-        side={sL} wallLenM={D}
-        groupPos={[-W / 2, H / 2, 0]} groupRot={[0, Math.PI / 2, 0]}
-        upperMat={wallMatFor(sL.color, sL.id, D, H)}
-        extMat={(() => {
-          const e = wallLeftExterior ?? wallExterior;
-          return e ? wallMatFor(e.color, e.id, D, H) : undefined;
-        })()}
-        extOffsetSign={-1}
-        lowerSide="left"
-      />
+      {!wallsHidden?.left && (
+        <WallWithHoles
+          side={sL} wallLenM={D}
+          groupPos={[-W / 2, H / 2, 0]} groupRot={[0, Math.PI / 2, 0]}
+          upperMat={wallMatFor(sL.color, sL.id, D, H)}
+          extMat={(() => {
+            const e = wallLeftExterior ?? wallExterior;
+            return e ? wallMatFor(e.color, e.id, D, H) : undefined;
+          })()}
+          extOffsetSign={-1}
+          lowerSide="left"
+        />
+      )}
 
       {/* Right wall */}
-      <WallWithHoles
-        side={sR} wallLenM={D}
-        groupPos={[W / 2, H / 2, 0]} groupRot={[0, -Math.PI / 2, 0]}
-        upperMat={wallMatFor(sR.color, sR.id, D, H)}
-        extMat={(() => {
-          const e = wallRightExterior ?? wallExterior;
-          return e ? wallMatFor(e.color, e.id, D, H) : undefined;
-        })()}
-        extOffsetSign={-1}
-        lowerSide="right"
-      />
+      {!wallsHidden?.right && (
+        <WallWithHoles
+          side={sR} wallLenM={D}
+          groupPos={[W / 2, H / 2, 0]} groupRot={[0, -Math.PI / 2, 0]}
+          upperMat={wallMatFor(sR.color, sR.id, D, H)}
+          extMat={(() => {
+            const e = wallRightExterior ?? wallExterior;
+            return e ? wallMatFor(e.color, e.id, D, H) : undefined;
+          })()}
+          extOffsetSign={-1}
+          lowerSide="right"
+        />
+      )}
 
       {/* Front wall — user-controllable opacity (0 = cut away, 0.5 =
           frosted glass, 1 = solid). Uses WallWithHoles so doors/windows
@@ -456,7 +467,7 @@ function RoomShell({
           a solid front wall would block the view of an open door's
           interior. The plane's default normal is +Z (outward), which is
           correct for the front wall at z=+D/2 — no rotation needed. */}
-      {frontWallOpacity > 0 && (() => {
+      {frontWallOpacity > 0 && !wallsHidden?.front && (() => {
         const sF = resolveSide(wallFront);
         const e = wallFrontExterior ?? wallExterior;
         return (
@@ -3461,6 +3472,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const frontWallOpacity = useDesignerStore((s) => s.frontWallOpacity);
   const ceilingOpacity = useDesignerStore((s) => s.ceilingOpacity);
   const lightPos = useDesignerStore((s) => s.lightPosByRoom[s.activeRoom]);
+  const wallsHiddenForActive = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWallsHidden?.[activeRoom]);
   const roomShape = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomShapes?.[activeRoom]);
   const def = ROOM_DEFS[activeRoom];
 
@@ -3555,6 +3567,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
           ceiling={roomState.materials.ceiling}
           frontWallOpacity={frontWallOpacity}
           ceilingOpacity={ceilingOpacity}
+          wallsHidden={wallsHiddenForActive}
         />
       )}
 
