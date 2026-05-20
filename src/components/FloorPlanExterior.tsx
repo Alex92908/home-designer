@@ -9949,7 +9949,7 @@ export default function FloorPlanBuilding({
                   这样隐藏功能只影响主动用了它的房间，其他保持原状不会
                   退化。Chrome 漫游"很多墙不显示"就是 (a)→(b) 时碰到的
                   共享墙单面可见 case 引起的，限定条件后回避了。 */}
-            {!isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (() => {
+            {!isStair && !isHallway && (insideBuilding || !glassRooms.has(`${fi}:${room}`)) && (() => {
               const wY = yBase + FLOOR_H / 2;
               const wH = FLOOR_H - 0.01;
               const insetW = rW - 0.02;
