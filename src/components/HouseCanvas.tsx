@@ -5954,6 +5954,15 @@ function WalkthroughController({
   const { camera, scene } = useThree();
   const invalidate = useThree(s => s.invalidate);
   const advance = useThree(s => s.advance);
+  // Dev-only globals so we can introspect this scene from the browser
+  // console (different scene from RoomCanvas's __fpScene/__fpCam).
+  useEffect(() => {
+    if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+      (window as unknown as { __extCam?: unknown; __extScene?: unknown; __extWalls?: unknown }).__extCam = camera;
+      (window as unknown as { __extCam?: unknown; __extScene?: unknown; __extWalls?: unknown }).__extScene = scene;
+      (window as unknown as { __extCam?: unknown; __extScene?: unknown; __extWalls?: unknown }).__extWalls = walls;
+    }
+  }, [camera, scene, walls]);
   // The whole walkthrough is driven by useFrame (apply yaw/pitch to camera
   // rotation, integrate WASD movement, floor-snap raycast). Under
   // frameloop="demand" useFrame ONLY fires when something invalidates the
@@ -6114,8 +6123,12 @@ function WalkthroughController({
       if (!r) return null;
       if (ex < r.minX) return "left";
       if (ex > r.maxX) return "right";
-      if (ez < r.minZ) return "back";   // smaller world Z = back wall (matches HouseCanvas convention)
-      if (ez > r.maxZ) return "front";
+      // FloorPlan UI convention: "背墙" = top of SVG = small plan-Y
+      // = LARGE world-Z (room AABB maxZ side). "前墙" = bottom of SVG
+      // = LARGE plan-Y = SMALL world-Z. Matches the swapped wall labels
+      // in FloorPlanExterior's 4-plane render.
+      if (ez < r.minZ) return "front";
+      if (ez > r.maxZ) return "back";
       return null;
     };
     if (curRoom !== -1) {

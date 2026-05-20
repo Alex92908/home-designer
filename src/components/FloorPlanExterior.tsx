@@ -9974,18 +9974,27 @@ export default function FloorPlanBuilding({
                 );
               }
               // Path (b) — 4 FrontSide planes, one per side, gated by hide flag.
+              // Convention: FloorPlan UI's "背墙" = top of SVG = small plan-Y
+              // = LARGE world-Z (cz + halfD). "前墙" = bottom of SVG = LARGE
+              // plan-Y = SMALL world-Z (cz - halfD). NB: this is opposite
+              // to FloorPlanExterior's door / window placement code (which
+              // historically swapped back↔front); we follow the UI label
+              // here so the user's ✓背墙 click hides the wall they expect.
               const halfW = insetW / 2;
               const halfD = insetD / 2;
               return (
                 <>
+                  {/* back wall — large world Z (hallway side for rooms
+                      whose entrance is on the south side per plan). */}
                   {!wallsHidden?.back && (
-                    <mesh position={[cx, wY, cz - halfD]} raycast={() => null}>
+                    <mesh position={[cx, wY, cz + halfD]} rotation={[0, Math.PI, 0]} raycast={() => null}>
                       <planeGeometry args={[insetW, wH]} />
                       <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
                     </mesh>
                   )}
+                  {/* front wall — small world Z. */}
                   {!wallsHidden?.front && (
-                    <mesh position={[cx, wY, cz + halfD]} rotation={[0, Math.PI, 0]} raycast={() => null}>
+                    <mesh position={[cx, wY, cz - halfD]} raycast={() => null}>
                       <planeGeometry args={[insetW, wH]} />
                       <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
                     </mesh>
