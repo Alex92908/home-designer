@@ -9940,21 +9940,20 @@ export default function FloorPlanBuilding({
           // for zero rendering benefit. React.Fragment lives in React's tree
           // only; nothing is added to the Three.js scene graph.
           <React.Fragment key={`int-${fi}-${room}`}>
-            {/* 内墙面：4 块 FrontSide 平面 — 拆开支持 per-side 隐藏。
-                上一版是一个 BackSide box，整面一起渲染。现在每面墙是
-                独立 plane，朝向房间内部（FrontSide），点击 ✕背墙 等
-                toggle 后能单独消失。坐标系：back z = cz - rD/2，front =
-                cz + rD/2，left x = cx - rW/2，right x = cx + rW/2。
-                平面 default normal 是 +Z，配旋转让 FrontSide 朝向室内。
-                玻璃房间跳过 —— 玻璃 villa 客厅有自己的 5 块 emissive
-                壳，叠在它上面会从外侧看到额外的立柱剪影。 */}
+            {/* 内墙面渲染 —— 双路径：
+                  (a) 普通房间走原来的单个 BackSide box —— 之前一直稳定，
+                      共享墙不会 Z-fight，玻璃房 / 多边形 / hallway 各种
+                      边界情况都处理过。
+                  (b) 用户对这间房标了任何 wallsHidden 时，才换成 4 块
+                      FrontSide plane（独立 mesh 才能 per-side 隐藏）。
+                  这样隐藏功能只影响主动用了它的房间，其他保持原状不会
+                  退化。Chrome 漫游"很多墙不显示"就是 (a)→(b) 时碰到的
+                  共享墙单面可见 case 引起的，限定条件后回避了。 */}
             {!isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (() => {
               const wY = yBase + FLOOR_H / 2;
               const wH = FLOOR_H - 0.01;
               const insetW = rW - 0.02;
               const insetD = rD - 0.02;
-              const halfW = insetW / 2;
-              const halfD = insetD / 2;
               const matProps = {
                 color: wallColor,
                 roughness: 0.82,
@@ -9964,34 +9963,39 @@ export default function FloorPlanBuilding({
                 emissive: wallColor,
                 emissiveIntensity: insideBuilding ? 0.22 : 0.06,
               };
+              const anyHidden = !!(wallsHidden?.back || wallsHidden?.front || wallsHidden?.left || wallsHidden?.right);
+              // Path (a) — single BackSide box, original behaviour.
+              if (!anyHidden) {
+                return (
+                  <mesh position={[cx, wY, cz]} raycast={() => null}>
+                    <boxGeometry args={[insetW, wH, insetD]} />
+                    <meshStandardMaterial {...matProps} side={THREE.BackSide} />
+                  </mesh>
+                );
+              }
+              // Path (b) — 4 FrontSide planes, one per side, gated by hide flag.
+              const halfW = insetW / 2;
+              const halfD = insetD / 2;
               return (
                 <>
-                  {/* back wall — plane at z=-halfD relative to room center.
-                      Default plane normal is +Z; FrontSide makes it visible
-                      from +Z side (= inside the room). No rotation needed. */}
                   {!wallsHidden?.back && (
                     <mesh position={[cx, wY, cz - halfD]} raycast={() => null}>
                       <planeGeometry args={[insetW, wH]} />
                       <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
                     </mesh>
                   )}
-                  {/* front wall — at z=+halfD, rotated π around Y so its +Z
-                      front faces -Z (room interior). */}
                   {!wallsHidden?.front && (
                     <mesh position={[cx, wY, cz + halfD]} rotation={[0, Math.PI, 0]} raycast={() => null}>
                       <planeGeometry args={[insetW, wH]} />
                       <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
                     </mesh>
                   )}
-                  {/* left wall — at x=-halfW, rotated +π/2 around Y so front
-                      points +X (interior). */}
                   {!wallsHidden?.left && (
                     <mesh position={[cx - halfW, wY, cz]} rotation={[0, Math.PI / 2, 0]} raycast={() => null}>
                       <planeGeometry args={[insetD, wH]} />
                       <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
                     </mesh>
                   )}
-                  {/* right wall — at x=+halfW, rotated -π/2. */}
                   {!wallsHidden?.right && (
                     <mesh position={[cx + halfW, wY, cz]} rotation={[0, -Math.PI / 2, 0]} raycast={() => null}>
                       <planeGeometry args={[insetD, wH]} />
