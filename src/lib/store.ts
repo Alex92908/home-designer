@@ -619,6 +619,15 @@ const initialExterior: ExteriorSettings = {
   showPerimeterFence: false,
 };
 
+// Dev-only global expose for browser-console debugging.
+//   useDesignerStore.getState() / setState() from window.__store
+// Skipped in production builds via the NODE_ENV check.
+const _dev_expose_store = (s: unknown) => {
+  if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+    (window as unknown as { __store?: unknown }).__store = s;
+  }
+};
+
 export const useDesignerStore = create<DesignerStore>()(
   temporal(
   persist(
@@ -2492,3 +2501,7 @@ export function getDoorsForRoom(fp: FloorPlan, room: RoomType): import("./types"
     edgeIndex: fp.roomDoorEdgeIdx?.[room],
   }];
 }
+
+// Install the dev-only console expose. Done at module load so it's
+// available before any UI renders. NOP in production.
+_dev_expose_store(useDesignerStore);
