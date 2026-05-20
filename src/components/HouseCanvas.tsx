@@ -5935,7 +5935,7 @@ function TouchJoystick({ onChange }: { onChange: (axisX: number, axisZ: number) 
  *  - Mobile joystick: an external state can inject {axisX,axisZ}.
  *  - When `spawnPos` changes, teleports the camera there. */
 function WalkthroughController({
-  active, spawnPos, bbox, onExit, walls, joystick, noClip,
+  active, spawnPos, bbox, onExit, walls, doorPasses, joystick, noClip,
 }: {
   active: boolean;
   spawnPos: [number, number, number] | null;
@@ -5944,6 +5944,9 @@ function WalkthroughController({
   /** Room footprints in world coords. Movement is blocked by any of these
    *  rect's perimeter — when crossed, we slide. */
   walls: AABB[];
+  /** Rect regions on walls where movement is freely allowed (doors).
+   *  blocksMovement checks these before declaring a wall crossing. */
+  doorPasses: Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>;
   /** Live touch joystick output, -1..1 on each axis. Forward = +axisZ
    *  (same convention as WASD's dz). */
   joystick: { axisX: number; axisZ: number };
@@ -6142,6 +6145,15 @@ function WalkthroughController({
       // boundary. Same side function works on (x1, z1) for newRoom.
       const side = sideCrossing(r, x1, z1);
       if (side && r.hides?.[side]) return false; // entering through hidden side — allow
+    }
+    // ── Door-pass — allow walking through door openings ──
+    // Check if EITHER endpoint (or segment midpoint) falls inside any
+    // doorPass rect. Doors auto-allow crossing the wall they're on.
+    const mx = (x1 + x2) * 0.5, mz = (z1 + z2) * 0.5;
+    for (const pass of doorPasses) {
+      if (x2 >= pass.minX && x2 <= pass.maxX && z2 >= pass.minZ && z2 <= pass.maxZ) return false;
+      if (x1 >= pass.minX && x1 <= pass.maxX && z1 >= pass.minZ && z1 <= pass.maxZ) return false;
+      if (mx >= pass.minX && mx <= pass.maxX && mz >= pass.minZ && mz <= pass.maxZ) return false;
     }
     return true;                                          // crossed wall
   };
@@ -6483,6 +6495,83 @@ export default function HouseCanvas() {
           maxZ: -((p.y - minY) * CM_local) + Dh / 2,
           hides,
         });
+      }
+    }
+    return out;
+  }, [floorPlansForWalk]);
+
+  // ── Door passages: rect regions on walls where collision allows crossing ──
+  // For each visible door, build a small "pass" rect straddling the wall it
+  // lives on. blocksMovement consults these — if the movement segment goes
+  // THROUGH a pass, allow even if it would otherwise cross a wall boundary.
+  // Convention swap reminder: door.wall ===
+  //   "back"  → world z = cz - rD/2 (small Z)   ← exterior side in UI
+  //   "front" → world z = cz + rD/2 (large Z)   ← hallway side in UI
+  // This matches FloorPlanExterior's door render (line 10111+).
+  const doorPasses = useMemo<Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>>(() => {
+    const out: Array<{ minX: number; maxX: number; minZ: number; maxZ: number }> = [];
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
+      const fp = floorPlansForWalk[fi]; if (!fp) continue;
+      for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+        const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+        if (!p || !d) continue;
+        minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x + d.width); maxY = Math.max(maxY, p.y + d.depth);
+      }
+    }
+    if (!isFinite(minX)) return out;
+    const CM = 0.01;
+    const Wh = (maxX - minX) * CM;
+    const Dh = (maxY - minY) * CM;
+    const PAD = 0.4; // metres on either side of the wall — generous so users don't snag
+
+    const collect = (door: { wall: string; pos: number; len: number },
+                     p: { x: number; y: number }, d: { width: number; depth: number }) => {
+      // Room world rect
+      const rMinX = (p.x - minX) * CM - Wh / 2;
+      const rMaxX = (p.x + d.width - minX) * CM - Wh / 2;
+      const rMinZ = -((p.y + d.depth - minY) * CM) + Dh / 2;
+      const rMaxZ = -((p.y - minY) * CM) + Dh / 2;
+      const dPos = door.pos * CM;
+      const dLen = door.len * CM;
+      if (door.wall === "back") {
+        // small Z side. Pos grows from left (small X) to right (large X).
+        const x0 = rMinX + dPos;
+        out.push({ minX: x0, maxX: x0 + dLen, minZ: rMinZ - PAD, maxZ: rMinZ + PAD });
+      } else if (door.wall === "front") {
+        // large Z side.
+        const x0 = rMinX + dPos;
+        out.push({ minX: x0, maxX: x0 + dLen, minZ: rMaxZ - PAD, maxZ: rMaxZ + PAD });
+      } else if (door.wall === "left") {
+        // small X side. Pos grows from large-Z (back end per data convention) →
+        // small-Z. World Z = rMaxZ - dPos.
+        const z1 = rMaxZ - dPos;
+        const z0 = z1 - dLen;
+        out.push({ minX: rMinX - PAD, maxX: rMinX + PAD, minZ: z0, maxZ: z1 });
+      } else if (door.wall === "right") {
+        const z1 = rMaxZ - dPos;
+        const z0 = z1 - dLen;
+        out.push({ minX: rMaxX - PAD, maxX: rMaxX + PAD, minZ: z0, maxZ: z1 });
+      }
+    };
+
+    for (const fp of floorPlansForWalk) {
+      if (!fp) continue;
+      for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+        const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+        if (!p || !d) continue;
+        const stored = fp.roomDoors?.[r];
+        if (stored && stored.length > 0) {
+          for (const door of stored) collect({ wall: door.wall, pos: door.pos, len: door.len }, p, d);
+        } else if (fp.roomHasDoor?.[r] !== false) {
+          // Legacy single-door fallback: roomDoorWall ("top"/"bottom"/"left"/"right")
+          const dw = fp.roomDoorWall?.[r] ?? "bottom";
+          const wall = dw === "top" ? "back" : dw === "bottom" ? "front" : dw;
+          const pos = fp.roomDoorPos?.[r] ?? 0;
+          const len = fp.roomDoorLen?.[r] ?? 80;
+          collect({ wall, pos, len }, p, d);
+        }
       }
     }
     return out;
@@ -6911,6 +7000,7 @@ export default function HouseCanvas() {
               : floors * FLOOR_H_M - 0.4,
           }}
           walls={wallAABBs}
+          doorPasses={doorPasses}
           joystick={joystick}
           noClip={walkNoClip}
           onExit={exitWalkthrough}
