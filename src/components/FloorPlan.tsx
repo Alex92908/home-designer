@@ -3,6 +3,7 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, WindowConfig } from "@/lib/types";
+import { FloorPlanMinimap } from "./FloorPlanMinimap";
 import { getFurnitureById } from "@/lib/furniture";
 import { PlacedItem } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
@@ -1039,6 +1040,9 @@ export default function FloorPlan() {
 
   return (
     <div className="flex-1 h-full flex flex-col bg-[#0f1117] select-none overflow-hidden relative">
+    {/* Floor minimap — bottom-right overlay so the user can see how the
+        room being edited sits in the floor. Click another room to switch. */}
+    <FloorPlanMinimap />
     {/* ── Scrollable canvas area ────────────────────────────── */}
     <div
       className="flex-1 flex flex-col items-center justify-start overflow-auto p-4 pt-10 min-h-0"
