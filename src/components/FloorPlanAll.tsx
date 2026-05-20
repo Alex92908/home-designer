@@ -231,7 +231,7 @@ export function RoomPanel() {
                     )}
                   </div>
                   <span className="text-[10px] text-gray-400 shrink-0 group-hover/row:hidden">
-                    {(dims.width/100).toFixed(1)}×{(dims.depth/100).toFixed(1)}
+                    {dims ? `${(dims.width/100).toFixed(1)}×${(dims.depth/100).toFixed(1)}` : "—"}
                   </span>
                   <button onClick={() => setExpanded(isExp ? null : room)}
                     className="text-[10px] text-gray-400 hover:text-gray-700 w-4 text-center shrink-0">
@@ -659,7 +659,8 @@ export default function FloorPlanAll() {
   const DOUBLE_MS = 400;
 
   // Compute viewBox from enabled rooms on current floor + optional blueprint
-  const visibleRooms = ALL_ROOMS.filter(r => enabledRooms.includes(r));
+  // Guard: only include rooms that have both layout and dimensions data
+  const visibleRooms = ALL_ROOMS.filter(r => enabledRooms.includes(r) && roomDimensions[r] && roomLayout[r]);
   const pad = 60;
   const bpW = blueprint.image ? blueprint.naturalW * blueprint.scale : 0;
   const bpH = blueprint.image ? blueprint.naturalH * blueprint.scale : 0;
