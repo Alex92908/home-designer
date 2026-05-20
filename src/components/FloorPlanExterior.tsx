@@ -9964,12 +9964,21 @@ export default function FloorPlanBuilding({
                 emissiveIntensity: insideBuilding ? 0.22 : 0.06,
               };
               const anyHidden = !!(wallsHidden?.back || wallsHidden?.front || wallsHidden?.left || wallsHidden?.right);
-              // Path (a) — single BackSide box, original behaviour.
+              // Walls are BackSide — visible from inside, transparent from
+              // outside. Inside walkthrough that means looking through a
+              // hidden wall into an adjacent room shows its furniture but
+              // not its walls (its walls are also BackSide, invisible from
+              // hallway / outside side). To make the adjacent room feel
+              // "solid" the user must also hide its facing wall — that's
+              // the per-room hide design. DoubleSide was tried briefly but
+              // made door openings vanish (the box has no cutout), so the
+              // door panel rendered against a solid wall = visually closed.
+              const wallSide = THREE.BackSide;
               if (!anyHidden) {
                 return (
                   <mesh position={[cx, wY, cz]} raycast={() => null}>
                     <boxGeometry args={[insetW, wH, insetD]} />
-                    <meshStandardMaterial {...matProps} side={THREE.BackSide} />
+                    <meshStandardMaterial {...matProps} side={wallSide} />
                   </mesh>
                 );
               }
