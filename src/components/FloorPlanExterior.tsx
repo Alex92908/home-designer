@@ -9949,11 +9949,24 @@ export default function FloorPlanBuilding({
                   这样隐藏功能只影响主动用了它的房间，其他保持原状不会
                   退化。Chrome 漫游"很多墙不显示"就是 (a)→(b) 时碰到的
                   共享墙单面可见 case 引起的，限定条件后回避了。 */}
+            {/* 内墙渲染 —— ShapeGeometry 带门窗洞，DoubleSide。
+                 模仿 RoomShell 的 WallWithHoles 思路：每面墙是一个
+                 Shape（外框）减去若干门洞 / 窗洞，然后 ShapeGeometry
+                 出来一片带洞的墙片，从内外两侧都看得见。门面板和
+                 窗玻璃由独立 mesh 渲染（见后面 effectiveDoors.map /
+                 windows.map），自然填入洞中。
+
+                 约定：FloorPlan UI "背墙" = top of SVG = 小 plan-Y =
+                 大 world-Z (cz + halfD)。门/窗存储里 wall:"back" 反
+                 而是小 Z（外墙南侧），所以渲染时这里做了 axis-Z 反转。
+                 left/right 一致无翻转。 */}
             {!isStair && !isHallway && (insideBuilding || !glassRooms.has(`${fi}:${room}`)) && (() => {
               const wY = yBase + FLOOR_H / 2;
               const wH = FLOOR_H - 0.01;
               const insetW = rW - 0.02;
               const insetD = rD - 0.02;
+              const halfW = insetW / 2;
+              const halfD = insetD / 2;
               const matProps = {
                 color: wallColor,
                 roughness: 0.82,
@@ -9963,63 +9976,91 @@ export default function FloorPlanBuilding({
                 emissive: wallColor,
                 emissiveIntensity: insideBuilding ? 0.22 : 0.06,
               };
-              const anyHidden = !!(wallsHidden?.back || wallsHidden?.front || wallsHidden?.left || wallsHidden?.right);
-              // Walls are BackSide — visible from inside, transparent from
-              // outside. Inside walkthrough that means looking through a
-              // hidden wall into an adjacent room shows its furniture but
-              // not its walls (its walls are also BackSide, invisible from
-              // hallway / outside side). To make the adjacent room feel
-              // "solid" the user must also hide its facing wall — that's
-              // the per-room hide design. DoubleSide was tried briefly but
-              // made door openings vanish (the box has no cutout), so the
-              // door panel rendered against a solid wall = visually closed.
-              const wallSide = THREE.BackSide;
-              if (!anyHidden) {
+              // Helper: build a Shape for one wall side with door/window holes.
+              // sideToCollect = the data-side label whose doors/windows live on
+              // THIS wall (back↔front inversion handled at call sites below).
+              const buildShape = (wallLenM: number, sideToCollect: "back" | "front" | "left" | "right") => {
+                const s = new THREE.Shape();
+                s.moveTo(0, 0); s.lineTo(wallLenM, 0); s.lineTo(wallLenM, wH); s.lineTo(0, wH); s.closePath();
+                const eDoors = effectiveDoors.filter(d => d.wall === sideToCollect);
+                const eWindows = windows.filter(w => w.wall === sideToCollect);
+                for (const d of eDoors) {
+                  const dPos = d.pos * CM;
+                  const dLen = d.len * CM;
+                  const dH   = (d.h ?? 200) * CM;
+                  // Door starts at floor (y=0). Side walls use pos from north
+                  // end (large Z, my "back" end), so flip pos for left/right
+                  // so wall-local X grows from "back" end to "front" end.
+                  const px = (sideToCollect === "left" || sideToCollect === "right")
+                    ? Math.max(0, Math.min(wallLenM - dLen, dPos))
+                    : Math.max(0, Math.min(wallLenM - dLen, dPos));
+                  const hole = new THREE.Path();
+                  hole.moveTo(px, 0); hole.lineTo(px + dLen, 0);
+                  hole.lineTo(px + dLen, dH); hole.lineTo(px, dH); hole.closePath();
+                  s.holes.push(hole);
+                }
+                for (const w of eWindows) {
+                  const wPos = w.pos * CM;
+                  const wLen = w.len * CM;
+                  const sill = (w.sill ?? 90) * CM;
+                  const winH = (w.h ?? 150) * CM;
+                  const px = Math.max(0, Math.min(wallLenM - wLen, wPos));
+                  const py = Math.max(0, Math.min(wH - winH, sill));
+                  const hole = new THREE.Path();
+                  hole.moveTo(px, py); hole.lineTo(px + wLen, py);
+                  hole.lineTo(px + wLen, py + winH); hole.lineTo(px, py + winH); hole.closePath();
+                  s.holes.push(hole);
+                }
+                return s;
+              };
+              // ShapeGeometry produces a flat XY mesh. Pivot is the y=wH/2
+              // local center after we shift by (-wallLenM/2, -wH/2). We mount
+              // each wall by translating, then rotating.
+              const wallMesh = (key: string, side: "back" | "front" | "left" | "right") => {
+                // Resolve which side of the data convention this wall's holes
+                // come from. Back/front are Z-axis-swapped between UI label and
+                // data; left/right are consistent.
+                const dataSide =
+                  side === "back"  ? "front" :
+                  side === "front" ? "back"  :
+                  side;
+                const wallLen = (side === "left" || side === "right") ? insetD : insetW;
+                const shape = buildShape(wallLen, dataSide);
+                // Position + rotation per side. Wall-local origin is bottom-left;
+                // shift mesh so that origin sits at the wall's left-bottom corner.
+                // back: at z = cz + halfD, face -Z (toward room centre).
+                // front: at z = cz - halfD, face +Z.
+                // left: at x = cx - halfW, face +X.
+                // right: at x = cx + halfW, face -X.
+                let pos: [number, number, number];
+                let rot: [number, number, number] = [0, 0, 0];
+                if (side === "back") {
+                  pos = [cx - wallLen / 2, wY - wH / 2, cz + halfD];
+                  rot = [0, Math.PI, 0];
+                  // After Y rotation π, shape X axis flips → adjust X position
+                  pos = [cx + wallLen / 2, wY - wH / 2, cz + halfD];
+                } else if (side === "front") {
+                  pos = [cx - wallLen / 2, wY - wH / 2, cz - halfD];
+                } else if (side === "left") {
+                  pos = [cx - halfW, wY - wH / 2, cz + wallLen / 2];
+                  rot = [0, -Math.PI / 2, 0];
+                } else {
+                  pos = [cx + halfW, wY - wH / 2, cz - wallLen / 2];
+                  rot = [0, Math.PI / 2, 0];
+                }
                 return (
-                  <mesh position={[cx, wY, cz]} raycast={() => null}>
-                    <boxGeometry args={[insetW, wH, insetD]} />
-                    <meshStandardMaterial {...matProps} side={wallSide} />
+                  <mesh key={key} position={pos} rotation={rot} raycast={() => null}>
+                    <shapeGeometry args={[shape]} />
+                    <meshStandardMaterial {...matProps} side={THREE.DoubleSide} />
                   </mesh>
                 );
-              }
-              // Path (b) — 4 FrontSide planes, one per side, gated by hide flag.
-              // Convention: FloorPlan UI's "背墙" = top of SVG = small plan-Y
-              // = LARGE world-Z (cz + halfD). "前墙" = bottom of SVG = LARGE
-              // plan-Y = SMALL world-Z (cz - halfD). NB: this is opposite
-              // to FloorPlanExterior's door / window placement code (which
-              // historically swapped back↔front); we follow the UI label
-              // here so the user's ✓背墙 click hides the wall they expect.
-              const halfW = insetW / 2;
-              const halfD = insetD / 2;
+              };
               return (
                 <>
-                  {/* back wall — large world Z (hallway side for rooms
-                      whose entrance is on the south side per plan). */}
-                  {!wallsHidden?.back && (
-                    <mesh position={[cx, wY, cz + halfD]} rotation={[0, Math.PI, 0]} raycast={() => null}>
-                      <planeGeometry args={[insetW, wH]} />
-                      <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
-                    </mesh>
-                  )}
-                  {/* front wall — small world Z. */}
-                  {!wallsHidden?.front && (
-                    <mesh position={[cx, wY, cz - halfD]} raycast={() => null}>
-                      <planeGeometry args={[insetW, wH]} />
-                      <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
-                    </mesh>
-                  )}
-                  {!wallsHidden?.left && (
-                    <mesh position={[cx - halfW, wY, cz]} rotation={[0, Math.PI / 2, 0]} raycast={() => null}>
-                      <planeGeometry args={[insetD, wH]} />
-                      <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
-                    </mesh>
-                  )}
-                  {!wallsHidden?.right && (
-                    <mesh position={[cx + halfW, wY, cz]} rotation={[0, -Math.PI / 2, 0]} raycast={() => null}>
-                      <planeGeometry args={[insetD, wH]} />
-                      <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
-                    </mesh>
-                  )}
+                  {!wallsHidden?.back  && wallMesh("w-back",  "back")}
+                  {!wallsHidden?.front && wallMesh("w-front", "front")}
+                  {!wallsHidden?.left  && wallMesh("w-left",  "left")}
+                  {!wallsHidden?.right && wallMesh("w-right", "right")}
                 </>
               );
             })()}
