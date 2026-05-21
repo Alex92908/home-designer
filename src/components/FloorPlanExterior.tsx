@@ -10021,28 +10021,27 @@ export default function FloorPlanBuilding({
               // ShapeGeometry produces a flat XY mesh. Pivot is the y=wH/2
               // local center after we shift by (-wallLenM/2, -wH/2). We mount
               // each wall by translating, then rotating.
+              // Wall body thickness — gives the wall real depth so edge-on
+              // views (e.g. a perpendicular interior wall seen from across
+              // the hallway) don't show as infinitely thin "fin" lines
+              // (user: "为什么会有隔板"). ExtrudeGeometry has a depth axis
+              // perpendicular to the shape; we translate the buffer so the
+              // extrusion is CENTERED on the original ShapeGeometry plane —
+              // adjacent rooms' shared walls then touch without overlap.
+              const WALL_T = 0.04;
               const wallMesh = (key: string, side: "back" | "front" | "left" | "right") => {
-                // Resolve which side of the data convention this wall's holes
-                // come from. Back/front are Z-axis-swapped between UI label and
-                // data; left/right are consistent.
                 const dataSide =
                   side === "back"  ? "front" :
                   side === "front" ? "back"  :
                   side;
                 const wallLen = (side === "left" || side === "right") ? insetD : insetW;
                 const shape = buildShape(wallLen, dataSide);
-                // Position + rotation per side. Wall-local origin is bottom-left;
-                // shift mesh so that origin sits at the wall's left-bottom corner.
-                // back: at z = cz + halfD, face -Z (toward room centre).
-                // front: at z = cz - halfD, face +Z.
-                // left: at x = cx - halfW, face +X.
-                // right: at x = cx + halfW, face -X.
+                const geo = new THREE.ExtrudeGeometry(shape, { depth: WALL_T, bevelEnabled: false });
+                geo.translate(0, 0, -WALL_T / 2);
                 let pos: [number, number, number];
                 let rot: [number, number, number] = [0, 0, 0];
                 if (side === "back") {
-                  pos = [cx - wallLen / 2, wY - wH / 2, cz + halfD];
                   rot = [0, Math.PI, 0];
-                  // After Y rotation π, shape X axis flips → adjust X position
                   pos = [cx + wallLen / 2, wY - wH / 2, cz + halfD];
                 } else if (side === "front") {
                   pos = [cx - wallLen / 2, wY - wH / 2, cz - halfD];
@@ -10055,8 +10054,8 @@ export default function FloorPlanBuilding({
                 }
                 return (
                   <mesh key={key} position={pos} rotation={rot} raycast={() => null}>
-                    <shapeGeometry args={[shape]} />
-                    <meshStandardMaterial {...matProps} side={THREE.DoubleSide} />
+                    <primitive object={geo} attach="geometry" />
+                    <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
                   </mesh>
                 );
               };
