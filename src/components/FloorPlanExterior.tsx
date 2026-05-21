@@ -4203,8 +4203,13 @@ export default function FloorPlanBuilding({
             // We use the precomputed glassRooms set (built from facadeBlocks)
             // so auto-detected glass walls also get the emissive interior,
             // not only the explicit "glass" UI override.
-            if (glassRooms.has(`${fi}:${room}`)) {
+            if (glassRooms.has(`${fi}:${room}`) && !insideBuilding) {
               // 玻璃幕墙房间室内：5 块独立发光平面（4 墙 + 天花板）+ 地板。
+              // ONLY runs in 外观图 view — in walkthrough the proper opaque
+              // ShapeGeometry walls (line 9952+) already render and double-
+              // rendering both creates Z-fighting + ghost partition lines
+              // visible between doorways (user: "为什么会有隔板和半透明
+              // 图层").
               // 之前用 BackSide 盒子，但盒子的侧墙在斜角下会产生奇怪的
               // "立柱状"剪影（用户："2F 有几个深色立柱状物体"）。
               // 拆成 5 块独立 plane，每块法线朝向房间内部（FrontSide 默
