@@ -3147,6 +3147,111 @@ export default function FloorPlanBuilding({
     return result;
   }, [floorPlans, floorCount, floorBoundsArr, planOffset, W, D]);
 
+  // ── Wall graph: unique interior wall segments per floor ──
+  // For each non-circulation room we list its 4 boundary lines in PLAN
+  // coords; identical lines from two rooms (e.g. 厨房 west == 健身房 east)
+  // collapse into a single segment carrying BOTH rooms' doors / windows /
+  // hide flags. Each segment is rendered EXACTLY ONCE as a flat
+  // ShapeGeometry plane sized to the segment, positioned on the boundary,
+  // DoubleSide so both adjoining rooms see an opaque wall. Eliminates the
+  // double-render that produced edge / fin artefacts the user reported.
+  type WallHole = { x: number; y: number; w: number; h: number };
+  type WallSeg = {
+    fi: number;
+    /** "h" = horizontal (constant plan-Y), "v" = vertical (constant plan-X). */
+    axis: "h" | "v";
+    /** Constant coordinate (plan-Y for horizontal, plan-X for vertical), cm. */
+    fixed: number;
+    /** Variable extent endpoints (plan-X for h, plan-Y for v), cm. */
+    a: number;
+    b: number;
+    holes: WallHole[];      // wall-local cm, x along the wall, y from floor
+    hideAny: boolean;       // hidden if ANY adjoining room marks this side hidden
+    wallColor: string;
+  };
+  const wallSegments = useMemo<WallSeg[]>(() => {
+    const map = new Map<string, WallSeg>();
+    // Convert door/window-on-side into wall-local hole. Side label is the
+    // DATA convention (back/front/left/right per fp.roomDoors). The hole's
+    // "x" is along the wall starting from the wall's "left" endpoint in
+    // plan coords:
+    //   - horizontal walls (back/front): x grows with plan-X (left → right)
+    //   - vertical walls (left/right):   x grows with plan-Y (top → bottom)
+    // d.pos and w.pos already follow the same convention (see DoorSVG and
+    // the door render at line ~10111).
+    const addHole = (seg: WallSeg, holes: WallHole[]) => seg.holes.push(...holes);
+    const collectHoles = (
+      side: "back" | "front" | "left" | "right",
+      effDoors: import("@/lib/types").DoorConfig[],
+      windows: import("@/lib/types").WindowConfig[],
+    ): WallHole[] => {
+      const out: WallHole[] = [];
+      for (const d of effDoors) {
+        if (d.wall !== side) continue;
+        out.push({ x: d.pos, y: 0, w: d.len, h: d.h ?? 200 });
+      }
+      for (const w of windows) {
+        if (w.wall !== side) continue;
+        out.push({ x: w.pos, y: w.sill ?? 90, w: w.len, h: w.h ?? 150 });
+      }
+      return out;
+    };
+    // Walk every non-circulation room and dedupe its 4 edges into the map.
+    // "fixed" + "axis" + endpoints (sorted) form a canonical key. We round
+    // to integer cm so near-matches snap together. Hallway / stair are
+    // excluded — they don't render walls, so any room bordering them
+    // contributes a unique unshared edge.
+    for (let fi = 0; fi < floorCount; fi++) {
+      const fp = floorPlans[fi]; if (!fp) continue;
+      for (const room of (fp.enabledRooms ?? [])) {
+        if (ROOM_DEFS[room]?.isOutdoor) continue;
+        if (room === "hallway" || room === "stair") continue;
+        const p = fp.roomLayout?.[room]; const d = fp.roomDimensions?.[room];
+        if (!p || !d) continue;
+        const wColor = fp.rooms?.[room]?.materials?.wall?.color ?? ROOM_DEFS[room]?.defaultWallColor ?? "#EDE8E0";
+        const doorsArr = fp.roomDoors?.[room] ?? [];
+        const winsArr = fp.roomWindows?.[room] ?? [];
+        const wh = fp.roomWallsHidden?.[room];
+        // Convention swap (UI ↔ data): UI "背墙" = small plan-Y but data
+        // door.wall === "back" lives at large plan-Y. The map iteration
+        // below uses UI sides (back = top of plan = small-Y, etc); when
+        // collecting holes we must look up the DATA-side label, which is
+        // the inverted one for back/front.
+        const sides: Array<{
+          uiSide: "back" | "front" | "left" | "right";
+          dataSide: "back" | "front" | "left" | "right";
+          axis: "h" | "v";
+          fixed: number;
+          a: number; b: number;
+        }> = [
+          // back = top of SVG = small plan-Y; data label is "front" (which
+          // the door render places at cz + rD/2 = small plan-Y in cm).
+          { uiSide: "back",  dataSide: "front", axis: "h", fixed: p.y,          a: p.x,          b: p.x + d.width },
+          { uiSide: "front", dataSide: "back",  axis: "h", fixed: p.y + d.depth, a: p.x,          b: p.x + d.width },
+          { uiSide: "left",  dataSide: "left",  axis: "v", fixed: p.x,          a: p.y,          b: p.y + d.depth },
+          { uiSide: "right", dataSide: "right", axis: "v", fixed: p.x + d.width, a: p.y,          b: p.y + d.depth },
+        ];
+        for (const s of sides) {
+          const lo = Math.min(s.a, s.b), hi = Math.max(s.a, s.b);
+          const key = `${fi}|${s.axis}|${Math.round(s.fixed)}|${Math.round(lo)}|${Math.round(hi)}`;
+          const seg = map.get(key);
+          const holes = collectHoles(s.dataSide, doorsArr, winsArr);
+          if (!seg) {
+            map.set(key, {
+              fi, axis: s.axis, fixed: s.fixed, a: lo, b: hi,
+              holes, hideAny: wh?.[s.uiSide] === true,
+              wallColor: wColor,
+            });
+          } else {
+            addHole(seg, holes);
+            if (wh?.[s.uiSide] === true) seg.hideAny = true;
+          }
+        }
+      }
+    }
+    return [...map.values()];
+  }, [floorPlans, floorCount]);
+
   return (
     <group>
       {/* 地面基座 — 浅色石灰石平台（建筑基层）*/}
@@ -9933,6 +10038,84 @@ export default function FloorPlanBuilding({
           hideInterior=true 时 visible=false：Three.js 跳过 projectObject
           遍历这些对象，节省约 120ms JS/帧（拖拽期间内部不可见无所谓）。 */}
       <group visible={insideBuilding || !hideInterior}>
+      {/* ── Unique interior wall segments (dedupe across rooms) ──
+          Renders each wall ONCE — shared walls between two rooms get
+          their door / window cutouts merged. ShapeGeometry plane (zero
+          thickness) DoubleSide so both adjoining interiors see an opaque
+          wall surface without the inset double-render that produced the
+          edge "fin" artefacts. */}
+      {wallSegments.map((seg, idx) => {
+        if (seg.hideAny) return null;
+        const CM_l = 0.01;
+        const wH = FLOOR_H - 0.01;
+        const yBase = seg.fi * (FLOOR_H + SLAB_T);
+        const wY = yBase + FLOOR_H / 2;
+        const wallLenM = (seg.b - seg.a) * CM_l;
+        if (wallLenM <= 0.05) return null;
+        // World-coord transform mirrors interiorRooms's cx / cz formula.
+        // For a horizontal wall: fixed = plan Y, extent runs along plan-X.
+        // For a vertical wall:   fixed = plan X, extent runs along plan-Y.
+        // Plan → world:  worldX = (planX - planOffset.minX) * CM - W/2
+        //                worldZ = -((planY - planOffset.minY) * CM) + D/2
+        let pos: [number, number, number];
+        let rot: [number, number, number] = [0, 0, 0];
+        if (seg.axis === "h") {
+          const midPlanX = (seg.a + seg.b) / 2;
+          const worldX = (midPlanX - planOffset.minX) * CM_l - W / 2;
+          const worldZ = -((seg.fixed - planOffset.minY) * CM_l) + D / 2;
+          // Shape's local X spans 0..wallLenM aligned with worldX direction.
+          // Plane default lies in XY, normal +Z. After we shift mesh by
+          // -wallLenM/2 in shape-X (to put the wall's middle at our pos),
+          // ShapeGeometry orientation matches world XY. Wall is in XZ plane
+          // in world (extent along world-X) — rotate around X by 0 keeps
+          // shape in XY → plane stands vertical, length along X. ✓
+          pos = [worldX - wallLenM / 2, wY - wH / 2, worldZ];
+        } else {
+          const midPlanY = (seg.a + seg.b) / 2;
+          const worldX = (seg.fixed - planOffset.minX) * CM_l - W / 2;
+          const worldZ = -((midPlanY - planOffset.minY) * CM_l) + D / 2;
+          // Vertical wall: rotate Y by +π/2 so shape-X axis maps to world -Z.
+          // The plan-Y axis grows DOWNWARD in our convention which maps to
+          // SMALLER world-Z; shape-X grows positive → small world-Z. ✓
+          // Wall extent runs from plan-Y=seg.a (top, large world-Z) to
+          // plan-Y=seg.b (bottom, small world-Z), wallLenM long. Pos goes
+          // to the "top" endpoint so wall extends in -Z direction.
+          const topZ = -((seg.a - planOffset.minY) * CM_l) + D / 2;
+          pos = [worldX, wY - wH / 2, topZ];
+          rot = [0, Math.PI / 2, 0];
+        }
+        // Build wall shape with holes. The seg.holes are in raw cm with
+        // their wall-local "x" coordinate; convert to metres.
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0); shape.lineTo(wallLenM, 0);
+        shape.lineTo(wallLenM, wH); shape.lineTo(0, wH); shape.closePath();
+        for (const h of seg.holes) {
+          const hx = Math.max(0, Math.min(wallLenM - h.w * CM_l, h.x * CM_l));
+          const hy = Math.max(0, Math.min(wH - h.h * CM_l, h.y * CM_l));
+          const hw = h.w * CM_l;
+          const hh = h.h * CM_l;
+          if (hw <= 0.01 || hh <= 0.01) continue;
+          const hole = new THREE.Path();
+          hole.moveTo(hx, hy); hole.lineTo(hx + hw, hy);
+          hole.lineTo(hx + hw, hy + hh); hole.lineTo(hx, hy + hh); hole.closePath();
+          shape.holes.push(hole);
+        }
+        return (
+          <mesh key={`wseg-${idx}`} position={pos} rotation={rot} raycast={() => null}>
+            <shapeGeometry args={[shape]} />
+            <meshStandardMaterial
+              color={seg.wallColor}
+              roughness={0.82}
+              side={THREE.DoubleSide}
+              emissive={seg.wallColor}
+              emissiveIntensity={insideBuilding ? 0.22 : 0.06}
+              transparent={wallXray}
+              opacity={wallXray ? 0.13 : 1.0}
+              depthWrite={!wallXray}
+            />
+          </mesh>
+        );
+      })}
       {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, stairShape, stairRotation, wallsHidden }) => {
         const wallOpacity = wallXray ? 0.13 : 1.0;
         const isXray = wallXray;
@@ -9945,125 +10128,9 @@ export default function FloorPlanBuilding({
           // for zero rendering benefit. React.Fragment lives in React's tree
           // only; nothing is added to the Three.js scene graph.
           <React.Fragment key={`int-${fi}-${room}`}>
-            {/* 内墙面渲染 —— 双路径：
-                  (a) 普通房间走原来的单个 BackSide box —— 之前一直稳定，
-                      共享墙不会 Z-fight，玻璃房 / 多边形 / hallway 各种
-                      边界情况都处理过。
-                  (b) 用户对这间房标了任何 wallsHidden 时，才换成 4 块
-                      FrontSide plane（独立 mesh 才能 per-side 隐藏）。
-                  这样隐藏功能只影响主动用了它的房间，其他保持原状不会
-                  退化。Chrome 漫游"很多墙不显示"就是 (a)→(b) 时碰到的
-                  共享墙单面可见 case 引起的，限定条件后回避了。 */}
-            {/* 内墙渲染 —— ShapeGeometry 带门窗洞，DoubleSide。
-                 模仿 RoomShell 的 WallWithHoles 思路：每面墙是一个
-                 Shape（外框）减去若干门洞 / 窗洞，然后 ShapeGeometry
-                 出来一片带洞的墙片，从内外两侧都看得见。门面板和
-                 窗玻璃由独立 mesh 渲染（见后面 effectiveDoors.map /
-                 windows.map），自然填入洞中。
-
-                 约定：FloorPlan UI "背墙" = top of SVG = 小 plan-Y =
-                 大 world-Z (cz + halfD)。门/窗存储里 wall:"back" 反
-                 而是小 Z（外墙南侧），所以渲染时这里做了 axis-Z 反转。
-                 left/right 一致无翻转。 */}
-            {!isStair && !isHallway && (insideBuilding || !glassRooms.has(`${fi}:${room}`)) && (() => {
-              const wY = yBase + FLOOR_H / 2;
-              const wH = FLOOR_H - 0.01;
-              const insetW = rW - 0.02;
-              const insetD = rD - 0.02;
-              const halfW = insetW / 2;
-              const halfD = insetD / 2;
-              const matProps = {
-                color: wallColor,
-                roughness: 0.82,
-                transparent: isXray,
-                opacity: wallOpacity,
-                depthWrite: !isXray,
-                emissive: wallColor,
-                emissiveIntensity: insideBuilding ? 0.22 : 0.06,
-              };
-              // Helper: build a Shape for one wall side with door/window holes.
-              // sideToCollect = the data-side label whose doors/windows live on
-              // THIS wall (back↔front inversion handled at call sites below).
-              const buildShape = (wallLenM: number, sideToCollect: "back" | "front" | "left" | "right") => {
-                const s = new THREE.Shape();
-                s.moveTo(0, 0); s.lineTo(wallLenM, 0); s.lineTo(wallLenM, wH); s.lineTo(0, wH); s.closePath();
-                const eDoors = effectiveDoors.filter(d => d.wall === sideToCollect);
-                const eWindows = windows.filter(w => w.wall === sideToCollect);
-                for (const d of eDoors) {
-                  const dPos = d.pos * CM;
-                  const dLen = d.len * CM;
-                  const dH   = (d.h ?? 200) * CM;
-                  // Door starts at floor (y=0). Side walls use pos from north
-                  // end (large Z, my "back" end), so flip pos for left/right
-                  // so wall-local X grows from "back" end to "front" end.
-                  const px = (sideToCollect === "left" || sideToCollect === "right")
-                    ? Math.max(0, Math.min(wallLenM - dLen, dPos))
-                    : Math.max(0, Math.min(wallLenM - dLen, dPos));
-                  const hole = new THREE.Path();
-                  hole.moveTo(px, 0); hole.lineTo(px + dLen, 0);
-                  hole.lineTo(px + dLen, dH); hole.lineTo(px, dH); hole.closePath();
-                  s.holes.push(hole);
-                }
-                for (const w of eWindows) {
-                  const wPos = w.pos * CM;
-                  const wLen = w.len * CM;
-                  const sill = (w.sill ?? 90) * CM;
-                  const winH = (w.h ?? 150) * CM;
-                  const px = Math.max(0, Math.min(wallLenM - wLen, wPos));
-                  const py = Math.max(0, Math.min(wH - winH, sill));
-                  const hole = new THREE.Path();
-                  hole.moveTo(px, py); hole.lineTo(px + wLen, py);
-                  hole.lineTo(px + wLen, py + winH); hole.lineTo(px, py + winH); hole.closePath();
-                  s.holes.push(hole);
-                }
-                return s;
-              };
-              // ShapeGeometry produces a flat XY mesh. Pivot is the y=wH/2
-              // local center after we shift by (-wallLenM/2, -wH/2). We mount
-              // each wall by translating, then rotating.
-              // Flat ShapeGeometry (no depth) — the 4 cm ExtrudeGeometry
-              // attempt made wall edges show as obvious 4 cm slabs. Going
-              // back to a zero-thickness plane keeps the edge artefact to
-              // ~1 px line. Proper fix (TODO) is to dedupe shared walls
-              // at the floor-plan level so each wall renders exactly once;
-              // that's a bigger refactor not done here.
-              const wallMesh = (key: string, side: "back" | "front" | "left" | "right") => {
-                const dataSide =
-                  side === "back"  ? "front" :
-                  side === "front" ? "back"  :
-                  side;
-                const wallLen = (side === "left" || side === "right") ? insetD : insetW;
-                const shape = buildShape(wallLen, dataSide);
-                let pos: [number, number, number];
-                let rot: [number, number, number] = [0, 0, 0];
-                if (side === "back") {
-                  rot = [0, Math.PI, 0];
-                  pos = [cx + wallLen / 2, wY - wH / 2, cz + halfD];
-                } else if (side === "front") {
-                  pos = [cx - wallLen / 2, wY - wH / 2, cz - halfD];
-                } else if (side === "left") {
-                  pos = [cx - halfW, wY - wH / 2, cz + wallLen / 2];
-                  rot = [0, -Math.PI / 2, 0];
-                } else {
-                  pos = [cx + halfW, wY - wH / 2, cz - wallLen / 2];
-                  rot = [0, Math.PI / 2, 0];
-                }
-                return (
-                  <mesh key={key} position={pos} rotation={rot} raycast={() => null}>
-                    <shapeGeometry args={[shape]} />
-                    <meshStandardMaterial {...matProps} side={THREE.DoubleSide} />
-                  </mesh>
-                );
-              };
-              return (
-                <>
-                  {!wallsHidden?.back  && wallMesh("w-back",  "back")}
-                  {!wallsHidden?.front && wallMesh("w-front", "front")}
-                  {!wallsHidden?.left  && wallMesh("w-left",  "left")}
-                  {!wallsHidden?.right && wallMesh("w-right", "right")}
-                </>
-              );
-            })()}
+            {/* 内墙现在统一在外层 wallSegments.map 渲染（去重 + 不超出
+                房间边界）。这里只留地板/天花板/门/窗等不需要 dedupe
+                的元素。 */}
             {/* 走廊：天花板板条（顶部薄板，让走廊从室内清晰可辨）*/}
             {isHallway && (
               <mesh position={[cx, yBase + FLOOR_H - 0.04, cz]} raycast={() => null}>
