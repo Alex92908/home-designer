@@ -10021,14 +10021,12 @@ export default function FloorPlanBuilding({
               // ShapeGeometry produces a flat XY mesh. Pivot is the y=wH/2
               // local center after we shift by (-wallLenM/2, -wH/2). We mount
               // each wall by translating, then rotating.
-              // Wall body thickness — gives the wall real depth so edge-on
-              // views (e.g. a perpendicular interior wall seen from across
-              // the hallway) don't show as infinitely thin "fin" lines
-              // (user: "为什么会有隔板"). ExtrudeGeometry has a depth axis
-              // perpendicular to the shape; we translate the buffer so the
-              // extrusion is CENTERED on the original ShapeGeometry plane —
-              // adjacent rooms' shared walls then touch without overlap.
-              const WALL_T = 0.04;
+              // Flat ShapeGeometry (no depth) — the 4 cm ExtrudeGeometry
+              // attempt made wall edges show as obvious 4 cm slabs. Going
+              // back to a zero-thickness plane keeps the edge artefact to
+              // ~1 px line. Proper fix (TODO) is to dedupe shared walls
+              // at the floor-plan level so each wall renders exactly once;
+              // that's a bigger refactor not done here.
               const wallMesh = (key: string, side: "back" | "front" | "left" | "right") => {
                 const dataSide =
                   side === "back"  ? "front" :
@@ -10036,8 +10034,6 @@ export default function FloorPlanBuilding({
                   side;
                 const wallLen = (side === "left" || side === "right") ? insetD : insetW;
                 const shape = buildShape(wallLen, dataSide);
-                const geo = new THREE.ExtrudeGeometry(shape, { depth: WALL_T, bevelEnabled: false });
-                geo.translate(0, 0, -WALL_T / 2);
                 let pos: [number, number, number];
                 let rot: [number, number, number] = [0, 0, 0];
                 if (side === "back") {
@@ -10054,8 +10050,8 @@ export default function FloorPlanBuilding({
                 }
                 return (
                   <mesh key={key} position={pos} rotation={rot} raycast={() => null}>
-                    <primitive object={geo} attach="geometry" />
-                    <meshStandardMaterial {...matProps} side={THREE.FrontSide} />
+                    <shapeGeometry args={[shape]} />
+                    <meshStandardMaterial {...matProps} side={THREE.DoubleSide} />
                   </mesh>
                 );
               };
