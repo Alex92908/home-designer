@@ -10328,12 +10328,38 @@ export default function FloorPlanBuilding({
                     </mesh>
                   )}
 
-                  {/* ── 标准实木门：合页在左，内开 ── */}
+                  {/* ── 标准实木门：合页在左，内开。带面板分割 + 把手 + 锁芯。 ── */}
                   {(style === "wood_panel" || (style !== "frosted_glass" && style !== "sliding_barn" && style !== "french_double")) && (
                     <group position={[-dW / 2, 0, 0.02]} rotation={[0, swing, 0]}>
+                      {/* 主门板 */}
                       <mesh position={[dW / 2, 0, 0]} onClick={handleDoorClick}>
                         <boxGeometry args={[dW * 0.96, dH * 0.97, 0.04]} />
-                        <meshStandardMaterial color="#C4922A" roughness={0.5} metalness={0.05} />
+                        <meshStandardMaterial color="#C4922A" roughness={0.55} metalness={0.04} />
+                      </mesh>
+                      {/* 上面板凹槽 — 浅一档的颜色让门有 2 段分割视觉 */}
+                      <mesh position={[dW / 2, dH * 0.22, 0.021]} onClick={handleDoorClick}>
+                        <boxGeometry args={[dW * 0.72, dH * 0.36, 0.003]} />
+                        <meshStandardMaterial color="#B5832A" roughness={0.62} metalness={0.04} />
+                      </mesh>
+                      {/* 下面板凹槽 */}
+                      <mesh position={[dW / 2, -dH * 0.22, 0.021]} onClick={handleDoorClick}>
+                        <boxGeometry args={[dW * 0.72, dH * 0.36, 0.003]} />
+                        <meshStandardMaterial color="#B5832A" roughness={0.62} metalness={0.04} />
+                      </mesh>
+                      {/* 把手底座（square escutcheon） */}
+                      <mesh position={[dW * 0.82, -dH * 0.04, 0.024]} onClick={handleDoorClick}>
+                        <boxGeometry args={[0.05, 0.13, 0.012]} />
+                        <meshStandardMaterial color="#C8B26A" roughness={0.35} metalness={0.85} />
+                      </mesh>
+                      {/* 杠杆把手（横向条，伸出门面外 ~6cm） */}
+                      <mesh position={[dW * 0.78, -dH * 0.04, 0.06]} rotation={[0, 0, 0]} onClick={handleDoorClick}>
+                        <boxGeometry args={[0.10, 0.025, 0.025]} />
+                        <meshStandardMaterial color="#D4BE7B" roughness={0.32} metalness={0.9} />
+                      </mesh>
+                      {/* 锁芯（小圆 + 钥匙孔） */}
+                      <mesh position={[dW * 0.82, -dH * 0.10, 0.024]} onClick={handleDoorClick}>
+                        <cylinderGeometry args={[0.018, 0.018, 0.006, 16]} />
+                        <meshStandardMaterial color="#7A6230" roughness={0.4} metalness={0.85} />
                       </mesh>
                     </group>
                   )}
