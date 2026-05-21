@@ -6488,11 +6488,16 @@ export default function HouseCanvas() {
           left:  wh.left  === true || undefined,
           right: wh.right === true || undefined,
         } : undefined;
+        // Shrink the walkable AABB by the wall HALF-thickness on each
+        // side so the user collides at the visible interior wall surface
+        // — not 6 cm INTO the wall (which is where the raw room AABB
+        // edge sits). Must match FPE's WALL_T (0.12m).
+        const WALL_HALF = 0.06;
         out.push({
-          minX: (p.x - minX) * CM_local - Wh / 2,
-          maxX: (p.x + d.width - minX) * CM_local - Wh / 2,
-          minZ: -((p.y + d.depth - minY) * CM_local) + Dh / 2,
-          maxZ: -((p.y - minY) * CM_local) + Dh / 2,
+          minX: (p.x - minX) * CM_local - Wh / 2 + WALL_HALF,
+          maxX: (p.x + d.width - minX) * CM_local - Wh / 2 - WALL_HALF,
+          minZ: -((p.y + d.depth - minY) * CM_local) + Dh / 2 + WALL_HALF,
+          maxZ: -((p.y - minY) * CM_local) + Dh / 2 - WALL_HALF,
           hides,
         });
       }
@@ -6556,21 +6561,81 @@ export default function HouseCanvas() {
       }
     };
 
-    for (const fp of floorPlansForWalk) {
+    // pickAutoDoor mirror: when a room has no stored doors, FloorPlanExterior
+    // synthesizes an auto-door via pickAutoDoor. We must compute the SAME
+    // door here so blocksMovement opens a passage through it — otherwise
+    // the visible door has no walkable opening. Plan-Y inverts to world-Z:
+    //   data "back"  = small worldZ = LARGE plan-Y end
+    //   data "front" = large worldZ = SMALL plan-Y end
+    const AUTO_DOOR_LEN_CM = 80;
+    const EPS_CM = 25; // 0.25 m: "interior" if dist to floor bound ≥ this
+    const autoDoorFor = (fi: number, room: string,
+                        p: { x: number; y: number }, d: { width: number; depth: number },
+                        fb: { minX: number; minY: number; maxX: number; maxY: number }
+                       ): { wall: "back" | "front" | "left" | "right"; pos: number; len: number } => {
+      const dists = {
+        back:  fb.maxY - (p.y + d.depth),
+        front: p.y - fb.minY,
+        left:  p.x - fb.minX,
+        right: fb.maxX - (p.x + d.width),
+      };
+      const Wcm = d.width, Dcm = d.depth;
+      const centred = (wall: "back"|"front"|"left"|"right") => {
+        const wallLen = (wall === "left" || wall === "right") ? Dcm : Wcm;
+        return Math.max(0, (wallLen - AUTO_DOOR_LEN_CM) / 2);
+      };
+      if (fi === 0 && room === "living") {
+        const all = (["back","front","left","right"] as const)
+          .map(w => [w, dists[w]] as const).sort((a, b) => a[1] - b[1]);
+        return { wall: all[0][0], pos: centred(all[0][0]), len: AUTO_DOOR_LEN_CM };
+      }
+      const interior = (w: "back"|"front"|"left"|"right") => dists[w] >= EPS_CM;
+      const yInt = (["back","front"] as const).filter(interior);
+      const xInt = (["left","right"] as const).filter(interior);
+      const cand: ReadonlyArray<"back"|"front"|"left"|"right"> = yInt.length ? yInt : xInt;
+      if (cand.length > 0) {
+        const w = [...cand].sort((a, b) => dists[b] - dists[a])[0];
+        return { wall: w, pos: centred(w), len: AUTO_DOOR_LEN_CM };
+      }
+      const all = (["back","front","left","right"] as const)
+        .map(w => [w, dists[w]] as const).sort((a, b) => a[1] - b[1]);
+      return { wall: all[0][0], pos: centred(all[0][0]), len: AUTO_DOOR_LEN_CM };
+    };
+
+    for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
+      const fp = floorPlansForWalk[fi];
       if (!fp) continue;
+      // Per-floor bounds in plan-cm — needed for the interior/exterior test.
+      let fMinX = Infinity, fMinY = Infinity, fMaxX = -Infinity, fMaxY = -Infinity;
       for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+        const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+        if (!p || !d) continue;
+        fMinX = Math.min(fMinX, p.x); fMinY = Math.min(fMinY, p.y);
+        fMaxX = Math.max(fMaxX, p.x + d.width); fMaxY = Math.max(fMaxY, p.y + d.depth);
+      }
+      if (!isFinite(fMinX)) continue;
+      const fb = { minX: fMinX, minY: fMinY, maxX: fMaxX, maxY: fMaxY };
+      for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+        // Hallway / stair don't carry doors in the FPE render loop
+        if (r === "hallway" || r === "stair") continue;
         const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
         if (!p || !d) continue;
         const stored = fp.roomDoors?.[r];
         if (stored && stored.length > 0) {
           for (const door of stored) collect({ wall: door.wall, pos: door.pos, len: door.len }, p, d);
         } else if (fp.roomHasDoor?.[r] !== false) {
-          // Legacy single-door fallback: roomDoorWall ("top"/"bottom"/"left"/"right")
-          const dw = fp.roomDoorWall?.[r] ?? "bottom";
-          const wall = dw === "top" ? "back" : dw === "bottom" ? "front" : dw;
-          const pos = fp.roomDoorPos?.[r] ?? 0;
-          const len = fp.roomDoorLen?.[r] ?? 80;
-          collect({ wall, pos, len }, p, d);
+          // No stored doors → FPE synthesizes via pickAutoDoor. Mirror it.
+          const auto = autoDoorFor(fi, r, p, d, fb);
+          collect(auto, p, d);
+          // Also handle the legacy single-door fields if set
+          if (fp.roomDoorWall?.[r]) {
+            const dw = fp.roomDoorWall[r] as string;
+            const wall = (dw === "top" ? "back" : dw === "bottom" ? "front" : dw) as
+              "back" | "front" | "left" | "right";
+            const pos = fp.roomDoorPos?.[r] ?? auto.pos;
+            const len = fp.roomDoorLen?.[r] ?? auto.len;
+            collect({ wall, pos, len }, p, d);
+          }
         }
       }
     }
@@ -7075,11 +7140,22 @@ export default function HouseCanvas() {
           shadow-bias={-0.0006}
           shadow-normalBias={0.06}
         />
-        {/* Sky fill from opposite side (fill tracks opposite of sun) */}
+        {/* Sky fill from opposite side (fill tracks opposite of sun).
+            Inside the building we MUST castShadow on this one too —
+            without it, the fill light passes straight through walls and
+            illuminates the inside wall from the wrong side, looking like
+            "light leaking through the wall". Outside, no shadow needed. */}
         <directionalLight
           position={[-sunPos[0] * 0.4, 20, -sunPos[2] * 0.4]}
           intensity={theme.fillIntensity}
           color={theme.fillColor}
+          castShadow={insideBuilding}
+          shadow-mapSize={[1024, 1024]}
+          shadow-camera-far={120}
+          shadow-camera-left={-35} shadow-camera-right={35}
+          shadow-camera-top={35} shadow-camera-bottom={-35}
+          shadow-bias={-0.0006}
+          shadow-normalBias={0.06}
         />
 
         {/* 玻璃幕墙建筑：室外补光点灯（从南面和西面打亮玻璃，增强立面质感）*/}

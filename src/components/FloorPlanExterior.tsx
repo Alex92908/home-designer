@@ -27,6 +27,10 @@ import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem } from "@/lib
 import { getFurnitureById } from "@/lib/furniture";
 import { InteriorRoomDetail } from "./InteriorRoomDetail";
 import { PlacedItemMesh } from "./RoomCanvas";
+import { WalkthroughDoor3D } from "@/components/walkthrough/WalkthroughDoor3D";
+import { splitWallAroundHoles } from "@/lib/wallGeom";
+import { paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
+import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize } from "@/lib/textures";
 import { StaircaseGeom } from "./GlobalCanvas";
 
 // ── 常量 ──────────────────────────────────────────────────────
@@ -2763,6 +2767,116 @@ function RooftopBeacon({ position }: { position: [number, number, number] }) {
 
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
+// ─── Walkthrough floor with proper texture (wood planks or registered
+// tile texture). Mirrors RoomShell's floor material — gives the
+// walkthrough the same wood-floor look as the effect page. ───────────
+function WalkthroughFloor({
+  cx, cz, yBase, rW, rD, floorColor, floorId, insideBuilding,
+}: {
+  cx: number; cz: number; yBase: number; rW: number; rD: number;
+  floorColor: string; floorId: string; insideBuilding: boolean;
+}) {
+  const floorTex = useMemo(() => {
+    const base = getFloorTexture(floorId);
+    if (!base) return null;
+    const t = base.clone();
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    const [us, vs] = floorTileSize(floorId);
+    t.repeat.set(rW / us, rD / vs);
+    t.needsUpdate = true;
+    return t;
+  }, [floorId, rW, rD]);
+  const defaultTex = useMemo(() => {
+    if (floorTex) return null;
+    const t = defaultFloorPlanks(floorColor).clone();
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(rW / 1.5, rD / 1.5);
+    t.needsUpdate = true;
+    return t;
+  }, [floorColor, rW, rD, floorTex]);
+  const map = floorTex ?? defaultTex;
+  return (
+    // Floor extends to the full room AABB (no 2cm inset). With 4cm walls
+    // intruding 2cm per side, the floor edge meets the wall's inner face
+    // exactly — no through-to-below gap visible at doorway thresholds.
+    <mesh position={[cx, yBase + 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <planeGeometry args={[rW, rD]} />
+      <meshStandardMaterial
+        color={floorColor}
+        roughness={insideBuilding ? 0.42 : 0.70}
+        metalness={insideBuilding ? 0.06 : 0.03}
+        envMapIntensity={insideBuilding ? 0.55 : 0.2}
+        side={THREE.FrontSide}
+        map={map ?? undefined}
+      />
+    </mesh>
+  );
+}
+
+// ─── Walkthrough wall piece. Drop-in mesh for one rectangle inside a
+// dedup'd wallSegment. Uses paintAlbedo + paintNormal for the painted
+// look that matches the effect page, or a registered tile texture if
+// the wall has a material id set. ─────────────────────────────────────
+function WalkthroughWallPiece({
+  position, w, h, thickness, wallColor, wallId, insideBuilding, wallXray,
+}: {
+  position: [number, number, number]; w: number; h: number; thickness: number;
+  wallColor: string; wallId: string; insideBuilding: boolean; wallXray: boolean;
+}) {
+  // Tile a registered wall material if the room has one (e.g. brick, tile).
+  // Otherwise generate a painted-wall albedo + normal so the surface has
+  // some texture instead of looking like a flat colored box.
+  const tiled = useMemo(() => {
+    const base = getWallTexture(wallId);
+    if (!base) return null;
+    const t = base.clone();
+    const [us, vs] = wallTileSize(wallId);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(w / us, h / vs);
+    t.needsUpdate = true;
+    return t;
+  }, [wallId, w, h]);
+  const paint = useMemo(() => {
+    if (tiled) return null;
+    const t = paintAlbedo(wallColor).clone();
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    // Tile so the noise pattern repeats across the wall — without wrap
+    // mode set explicitly, the cloned CanvasTexture defaults to
+    // ClampToEdge and the 512×512 image just stretches uniformly.
+    t.repeat.set(Math.max(1, w * 0.5), Math.max(1, h * 0.5));
+    t.needsUpdate = true;
+    return t;
+  }, [wallColor, w, h, tiled]);
+  const normalTex = useMemo(() => {
+    if (tiled) return null;
+    const t = paintNormal().clone();
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(Math.max(2, w * 2), Math.max(2, h * 2));
+    t.needsUpdate = true;
+    return t;
+  }, [tiled, w, h]);
+  return (
+    <mesh position={position} raycast={() => null} receiveShadow castShadow>
+      <boxGeometry args={[w, h, thickness]} />
+      <meshStandardMaterial
+        color={wallColor}
+        roughness={0.88}
+        metalness={0}
+        /* No emissive — RoomShell's wallMatFor doesn't use it either. The
+           previous 0.18 emissive washed out the paint-albedo texture so
+           walls looked like flat plastic. Insufficient ambient light in
+           walkthrough is solved at the scene level (hemisphereLight). */
+        transparent={wallXray}
+        opacity={wallXray ? 0.13 : 1.0}
+        depthWrite={!wallXray}
+        map={tiled ?? paint ?? undefined}
+        normalMap={!tiled ? normalTex ?? undefined : undefined}
+        normalScale={!tiled && normalTex ? new THREE.Vector2(0.12, 0.12) : undefined}
+      />
+    </mesh>
+  );
+}
+
 // ── 主组件 ────────────────────────────────────────────────────
 export default function FloorPlanBuilding({
   insideBuilding = false, wallXray = false, hideInterior = false,
@@ -3168,6 +3282,7 @@ export default function FloorPlanBuilding({
     holes: WallHole[];      // wall-local cm, x along the wall, y from floor
     hideAny: boolean;       // hidden if ANY adjoining room marks this side hidden
     wallColor: string;
+    wallId: string;         // material id (for getWallTexture); "" = paint
   };
   const wallSegments = useMemo<WallSeg[]>(() => {
     const map = new Map<string, WallSeg>();
@@ -3188,7 +3303,11 @@ export default function FloorPlanBuilding({
       const out: WallHole[] = [];
       for (const d of effDoors) {
         if (d.wall !== side) continue;
-        out.push({ x: d.pos, y: 0, w: d.len, h: d.h ?? 200 });
+        // Door hole goes ALL the way to the floor (y=0), not raised 1cm.
+        // The 1cm sill earlier made the doorway look like a window. The
+        // X axis is shrunk by 1cm on each side to match RoomDoor3D's
+        // panel inset (doorW-2cm wide) — closed door covers hole cleanly.
+        out.push({ x: d.pos + 1, y: 0, w: Math.max(1, d.len - 2), h: d.h ?? 200 });
       }
       for (const w of windows) {
         if (w.wall !== side) continue;
@@ -3209,7 +3328,23 @@ export default function FloorPlanBuilding({
         const p = fp.roomLayout?.[room]; const d = fp.roomDimensions?.[room];
         if (!p || !d) continue;
         const wColor = fp.rooms?.[room]?.materials?.wall?.color ?? ROOM_DEFS[room]?.defaultWallColor ?? "#EDE8E0";
-        const doorsArr = fp.roomDoors?.[room] ?? [];
+        const wId = fp.rooms?.[room]?.materials?.wall?.id ?? "";
+        const configuredDoors = fp.roomDoors?.[room] ?? [];
+        // Mirror the interior render: if a room has no configured doors
+        // but should have one (roomHasDoor !== false), synthesize the auto
+        // door via the SAME pickAutoDoor so the wall gets a hole exactly
+        // where the rendered door sits. Without this, opening the door
+        // reveals a solid wall behind it.
+        let doorsArr = configuredDoors;
+        if (configuredDoors.length === 0 && fp.roomHasDoor?.[room] !== false) {
+          const bounds = floorBoundsArr[fi];
+          if (bounds) {
+            const rW = d.width * CM; const rD = d.depth * CM;
+            const cx = (p.x + d.width  / 2 - planOffset.minX) * CM - W / 2;
+            const cz = -((p.y + d.depth / 2 - planOffset.minY) * CM) + D / 2;
+            doorsArr = [pickAutoDoor(fi, room, cx, cz, rW, rD, d.width, d.depth, bounds)];
+          }
+        }
         const winsArr = fp.roomWindows?.[room] ?? [];
         const wh = fp.roomWallsHidden?.[room];
         // Convention swap (UI ↔ data): UI "背墙" = small plan-Y but data
@@ -3241,6 +3376,7 @@ export default function FloorPlanBuilding({
               fi, axis: s.axis, fixed: s.fixed, a: lo, b: hi,
               holes, hideAny: wh?.[s.uiSide] === true,
               wallColor: wColor,
+              wallId: wId,
             });
           } else {
             addHole(seg, holes);
@@ -3250,7 +3386,7 @@ export default function FloorPlanBuilding({
       }
     }
     return [...map.values()];
-  }, [floorPlans, floorCount]);
+  }, [floorPlans, floorCount, floorBoundsArr, planOffset, W, D]);
 
   return (
     <group>
@@ -10084,36 +10220,37 @@ export default function FloorPlanBuilding({
           pos = [worldX, wY - wH / 2, topZ];
           rot = [0, Math.PI / 2, 0];
         }
-        // Build wall shape with holes. The seg.holes are in raw cm with
-        // their wall-local "x" coordinate; convert to metres.
-        const shape = new THREE.Shape();
-        shape.moveTo(0, 0); shape.lineTo(wallLenM, 0);
-        shape.lineTo(wallLenM, wH); shape.lineTo(0, wH); shape.closePath();
-        for (const h of seg.holes) {
-          const hx = Math.max(0, Math.min(wallLenM - h.w * CM_l, h.x * CM_l));
-          const hy = Math.max(0, Math.min(wH - h.h * CM_l, h.y * CM_l));
-          const hw = h.w * CM_l;
-          const hh = h.h * CM_l;
-          if (hw <= 0.01 || hh <= 0.01) continue;
-          const hole = new THREE.Path();
-          hole.moveTo(hx, hy); hole.lineTo(hx + hw, hy);
-          hole.lineTo(hx + hw, hy + hh); hole.lineTo(hx, hy + hh); hole.closePath();
-          shape.holes.push(hole);
-        }
+        // 10cm thick BOX wall pieces. Each piece is a separate rectangle
+        // from splitWallAroundHoles, so the door/window holes are real
+        // 3D gaps in the wall slab — doorways show proper jamb depth
+        // from any viewing angle. Door panels use WalkthroughDoor3D (a
+        // copy of the shared one) which positions the panel 7cm into the
+        // room — clear of the 5cm wall half-thickness, so the panel
+        // sits in the room interior past the wall's inner face.
+        // Wall thickness: 12cm — proper architectural thickness, jamb
+        // depth clearly visible. Walls intrude 6cm into each adjoining
+        // room. Floor is flush to boundary (no inset) so it covers the
+        // wall's bottom face. WalkthroughDoor3D panel offset (0.08m)
+        // sits the door panel ~2cm past the wall's interior face.
+        const WALL_T = 0.12;
+        const holesM = seg.holes
+          .map(h => ({ x: h.x * CM_l, y: h.y * CM_l, w: h.w * CM_l, h: h.h * CM_l }))
+          .filter(h => h.w > 0.01 && h.h > 0.01);
+        const pieces = splitWallAroundHoles(wallLenM, wH, holesM);
         return (
-          <mesh key={`wseg-${idx}`} position={pos} rotation={rot} raycast={() => null}>
-            <shapeGeometry args={[shape]} />
-            <meshStandardMaterial
-              color={seg.wallColor}
-              roughness={0.82}
-              side={THREE.DoubleSide}
-              emissive={seg.wallColor}
-              emissiveIntensity={insideBuilding ? 0.22 : 0.06}
-              transparent={wallXray}
-              opacity={wallXray ? 0.13 : 1.0}
-              depthWrite={!wallXray}
-            />
-          </mesh>
+          <group key={`wseg-${idx}`} position={pos} rotation={rot}>
+            {pieces.map((p, pi) => (
+              <WalkthroughWallPiece
+                key={`wp-${pi}`}
+                position={[p.x + p.w / 2, p.y + p.h / 2, 0]}
+                w={p.w} h={p.h} thickness={WALL_T}
+                wallColor={seg.wallColor}
+                wallId={seg.wallId}
+                insideBuilding={insideBuilding}
+                wallXray={wallXray}
+              />
+            ))}
+          </group>
         );
       })}
       {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, stairShape, stairRotation, wallsHidden }) => {
@@ -10140,18 +10277,12 @@ export default function FloorPlanBuilding({
             )}
             {/* 地板：楼梯间上层（fi>0）不渲染地板，保持楼梯开口畅通 */}
             {!(isStair && fi > 0) && (
-              <mesh position={[cx, yBase + 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                {/* 漫游射线需要命中楼板，故不设 raycast={() => null}。
-                    FrontSide = 仅从上方可见，避免下层射线命中上层楼板反面。 */}
-                <planeGeometry args={[rW - 0.04, rD - 0.04]} />
-                <meshStandardMaterial
-                  color={floorColor}
-                  roughness={insideBuilding ? 0.42 : 0.70}
-                  metalness={insideBuilding ? 0.06 : 0.03}
-                  envMapIntensity={insideBuilding ? 0.55 : 0.2}
-                  side={THREE.FrontSide}
-                />
-              </mesh>
+              <WalkthroughFloor
+                cx={cx} cz={cz} yBase={yBase} rW={rW} rD={rD}
+                floorColor={floorColor}
+                floorId={floorPlans[fi]?.rooms?.[room]?.materials?.floor?.id ?? ""}
+                insideBuilding={insideBuilding}
+              />
             )}
             {/* 天花板 — 走廊和楼梯间不渲染 */}
             {!isStair && !isHallway && (
@@ -10227,142 +10358,46 @@ export default function FloorPlanBuilding({
                 非玻璃房间（主卧/书房）的门也会从邻居玻璃幕墙看进来变
                 "立柱"。门是内视角装饰，对外观无贡献，安全跳过。 */}
             {!isStair && !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) && effectiveDoors.map((door, di) => {
-              const dW  = door.len * CM;
-              const dH  = (door.h ?? 200) * CM;
-              const dPos = door.pos * CM;
-              const style = door.style ?? (fi === 0 ? "french_double" : "wood_panel");
-              // 计算门在世界坐标系中的位置和朝向（+z local = 向室内方向）
-              // dPos and dW are already in metres — no extra * CM needed
-              let dx = 0, dz = 0, rotY = 0;
-              if (door.wall === "back") {
-                dz = cz - rD / 2 + 0.01;
-                dx = cx + dPos + dW / 2 - rW / 2;
-                rotY = 0;
-              } else if (door.wall === "front") {
-                dz = cz + rD / 2 - 0.01;
-                dx = cx + dPos + dW / 2 - rW / 2;
-                rotY = Math.PI;
-              } else if (door.wall === "left") {
-                dx = cx - rW / 2 + 0.01;
-                dz = cz - dPos - dW / 2 + rD / 2;
-                rotY = -Math.PI / 2;
-              } else {
-                dx = cx + rW / 2 - 0.01;
-                dz = cz - dPos - dW / 2 + rD / 2;
-                rotY = Math.PI / 2;
-              }
-              // 门框颜色：一楼用浅灰铝合金，其他层用暖木色
-              const frameCol = fi === 0 ? "#B0B8C0" : "#8B6914";
+              // Use the SAME RoomDoor3D component the effect page uses
+              // (shared module). Single source of truth for door visuals.
+              const dHcm = door.h ?? 200;
+              // Only the ground-floor living-room auto-door (= the actual
+              // front entrance, lands on the exterior wall) defaults to
+              // french_double glass. Every other door defaults to wood_panel.
+              const isFrontEntrance = fi === 0 && room === "living" && door.id?.startsWith("auto-");
+              const style = door.style ?? (isFrontEntrance ? "french_double" : "wood_panel");
+              // Wall mapping: FPE data → RoomDoor3D
+              //   back  (small worldZ) → "top"
+              //   front (large worldZ) → "bottom"
+              //   left  → "left"   (with pos mirror, see below)
+              //   right → "right"
+              const doorWall: "top" | "bottom" | "left" | "right" =
+                door.wall === "back" ? "top"
+                : door.wall === "front" ? "bottom"
+                : door.wall === "left" ? "left"
+                : "right";
+              // RoomDoor3D's "left" doorPos is the distance from the room's
+              // small-Z end (back-in-world) to the door's large-Z edge.
+              // FPE.pos for "left" is the distance from the large-Z end
+              // to the same large-Z edge. So:
+              //    RoomDoor3D.pos = D − FPE.pos   (NO −door.len term)
+              const doorPosCm = door.wall === "left"
+                ? Math.max(0, rDcm - door.pos)
+                : door.pos;
               const doorKey = `door|${fi}|${room}|${di}`;
               const isOpen = openMap.get(doorKey) ?? false;
-              // Swing-open angle (radians). Doors hinge inward (+Z local).
-              const swing = isOpen ? -Math.PI / 2 : 0;
-              const handleDoorClick = (e: { stopPropagation: () => void }) => {
-                if (!insideBuilding) return; // only interactive in walkthrough
-                e.stopPropagation();
-                toggleOpen(doorKey);
-              };
               return (
-                <group key={`door-${fi}-${room}-${di}`} position={[dx, yBase + dH / 2, dz]} rotation={[0, rotY, 0]}>
-                  {/* 门框左柱 */}
-                  <mesh position={[-dW / 2 + 0.03, 0, 0]}>
-                    <boxGeometry args={[0.06, dH, 0.10]} />
-                    <meshStandardMaterial color={frameCol} roughness={0.5} metalness={fi === 0 ? 0.4 : 0.05} />
-                  </mesh>
-                  {/* 门框右柱 */}
-                  <mesh position={[dW / 2 - 0.03, 0, 0]}>
-                    <boxGeometry args={[0.06, dH, 0.10]} />
-                    <meshStandardMaterial color={frameCol} roughness={0.5} metalness={fi === 0 ? 0.4 : 0.05} />
-                  </mesh>
-                  {/* 门框上横梁 */}
-                  <mesh position={[0, dH / 2 - 0.03, 0]}>
-                    <boxGeometry args={[dW, 0.06, 0.10]} />
-                    <meshStandardMaterial color={frameCol} roughness={0.5} metalness={fi === 0 ? 0.4 : 0.05} />
-                  </mesh>
-
-                  {/* ── 法式对开玻璃门：两扇分别从外侧合页向内旋开 ── */}
-                  {style === "french_double" && (<>
-                    {/* 左扇：合页在最左（-dW/2），向内（朝 +Z 转 -90°）旋开 */}
-                    <group position={[-dW / 2, 0, 0.02]} rotation={[0, swing, 0]}>
-                      <mesh position={[dW * 0.25, 0, 0]} onClick={handleDoorClick}>
-                        <boxGeometry args={[dW * 0.47, dH * 0.96, 0.04]} />
-                        <meshStandardMaterial color="#A8D4F5" transparent opacity={0.55} roughness={0.05} metalness={0.15} />
-                      </mesh>
-                      <mesh position={[dW * 0.47 - 0.03, 0, 0.005]}>
-                        <boxGeometry args={[0.03, dH * 0.96, 0.05]} />
-                        <meshStandardMaterial color={frameCol} roughness={0.4} metalness={0.3} />
-                      </mesh>
-                    </group>
-                    {/* 右扇：合页在最右（+dW/2），向内（朝 +Z 转 +90°）旋开 */}
-                    <group position={[dW / 2, 0, 0.02]} rotation={[0, -swing, 0]}>
-                      <mesh position={[-dW * 0.25, 0, 0]} onClick={handleDoorClick}>
-                        <boxGeometry args={[dW * 0.47, dH * 0.96, 0.04]} />
-                        <meshStandardMaterial color="#A8D4F5" transparent opacity={0.55} roughness={0.05} metalness={0.15} />
-                      </mesh>
-                      <mesh position={[-dW * 0.47 + 0.03, 0, 0.005]}>
-                        <boxGeometry args={[0.03, dH * 0.96, 0.05]} />
-                        <meshStandardMaterial color={frameCol} roughness={0.4} metalness={0.3} />
-                      </mesh>
-                    </group>
-                  </>)}
-
-                  {/* ── 磨砂玻璃门：合页在左，整体内开 ── */}
-                  {style === "frosted_glass" && (
-                    <group position={[-dW / 2, 0, 0.02]} rotation={[0, swing, 0]} onClick={handleDoorClick}>
-                      <mesh position={[dW / 2, -dH * 0.27, 0]}>
-                        <boxGeometry args={[dW * 0.94, dH * 0.38, 0.04]} />
-                        <meshStandardMaterial color="#C4922A" roughness={0.6} />
-                      </mesh>
-                      <mesh position={[dW / 2, dH * 0.17, 0]}>
-                        <boxGeometry args={[dW * 0.94, dH * 0.55, 0.04]} />
-                        <meshStandardMaterial color="#E8EFF5" transparent opacity={0.72} roughness={0.9} />
-                      </mesh>
-                    </group>
-                  )}
-
-                  {/* ── 谷仓推拉门：闭=居中 / 开=滑到右侧 ── */}
-                  {style === "sliding_barn" && (
-                    <mesh position={[isOpen ? dW * 0.55 : 0, 0, 0.06]} onClick={handleDoorClick}>
-                      <boxGeometry args={[dW * 0.94, dH * 0.97, 0.06]} />
-                      <meshStandardMaterial color="#8B5E3C" roughness={0.7} />
-                    </mesh>
-                  )}
-
-                  {/* ── 标准实木门：合页在左，内开。带面板分割 + 把手 + 锁芯。 ── */}
-                  {(style === "wood_panel" || (style !== "frosted_glass" && style !== "sliding_barn" && style !== "french_double")) && (
-                    <group position={[-dW / 2, 0, 0.02]} rotation={[0, swing, 0]}>
-                      {/* 主门板 */}
-                      <mesh position={[dW / 2, 0, 0]} onClick={handleDoorClick}>
-                        <boxGeometry args={[dW * 0.96, dH * 0.97, 0.04]} />
-                        <meshStandardMaterial color="#C4922A" roughness={0.55} metalness={0.04} />
-                      </mesh>
-                      {/* 上面板凹槽 — 浅一档的颜色让门有 2 段分割视觉 */}
-                      <mesh position={[dW / 2, dH * 0.22, 0.021]} onClick={handleDoorClick}>
-                        <boxGeometry args={[dW * 0.72, dH * 0.36, 0.003]} />
-                        <meshStandardMaterial color="#B5832A" roughness={0.62} metalness={0.04} />
-                      </mesh>
-                      {/* 下面板凹槽 */}
-                      <mesh position={[dW / 2, -dH * 0.22, 0.021]} onClick={handleDoorClick}>
-                        <boxGeometry args={[dW * 0.72, dH * 0.36, 0.003]} />
-                        <meshStandardMaterial color="#B5832A" roughness={0.62} metalness={0.04} />
-                      </mesh>
-                      {/* 把手底座（square escutcheon） */}
-                      <mesh position={[dW * 0.82, -dH * 0.04, 0.024]} onClick={handleDoorClick}>
-                        <boxGeometry args={[0.05, 0.13, 0.012]} />
-                        <meshStandardMaterial color="#C8B26A" roughness={0.35} metalness={0.85} />
-                      </mesh>
-                      {/* 杠杆把手（横向条，伸出门面外 ~6cm） */}
-                      <mesh position={[dW * 0.78, -dH * 0.04, 0.06]} rotation={[0, 0, 0]} onClick={handleDoorClick}>
-                        <boxGeometry args={[0.10, 0.025, 0.025]} />
-                        <meshStandardMaterial color="#D4BE7B" roughness={0.32} metalness={0.9} />
-                      </mesh>
-                      {/* 锁芯（小圆 + 钥匙孔） */}
-                      <mesh position={[dW * 0.82, -dH * 0.10, 0.024]} onClick={handleDoorClick}>
-                        <cylinderGeometry args={[0.018, 0.018, 0.006, 16]} />
-                        <meshStandardMaterial color="#7A6230" roughness={0.4} metalness={0.85} />
-                      </mesh>
-                    </group>
-                  )}
+                <group key={`door-${fi}-${room}-${di}`} position={[cx, yBase, cz]}>
+                  <WalkthroughDoor3D
+                    W={rW} D={rD} H={FLOOR_H - 0.01}
+                    doorWall={doorWall}
+                    doorPosCm={doorPosCm}
+                    doorLenCm={door.len}
+                    doorHCm={dHcm}
+                    isOpen={isOpen}
+                    onToggle={() => { if (insideBuilding) toggleOpen(doorKey); }}
+                    doorStyle={style}
+                  />
                 </group>
               );
             })}
