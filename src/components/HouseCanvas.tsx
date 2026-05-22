@@ -6541,13 +6541,13 @@ export default function HouseCanvas() {
       const dPos = door.pos * CM;
       const dLen = door.len * CM;
       if (door.wall === "back") {
-        // UI "back" = SVG top = small plan-Y = large world-Z (rMaxZ).
-        const x0 = rMinX + dPos;
-        out.push({ minX: x0, maxX: x0 + dLen, minZ: rMaxZ - PAD, maxZ: rMaxZ + PAD });
-      } else if (door.wall === "front") {
-        // UI "front" = SVG bottom = large plan-Y = small world-Z (rMinZ).
+        // small Z side. Pos grows from left (small X) to right (large X).
         const x0 = rMinX + dPos;
         out.push({ minX: x0, maxX: x0 + dLen, minZ: rMinZ - PAD, maxZ: rMinZ + PAD });
+      } else if (door.wall === "front") {
+        // large Z side.
+        const x0 = rMinX + dPos;
+        out.push({ minX: x0, maxX: x0 + dLen, minZ: rMaxZ - PAD, maxZ: rMaxZ + PAD });
       } else if (door.wall === "left") {
         // small X side. Pos grows from large-Z (back end per data convention) →
         // small-Z. World Z = rMaxZ - dPos.
@@ -6564,20 +6564,18 @@ export default function HouseCanvas() {
     // pickAutoDoor mirror: when a room has no stored doors, FloorPlanExterior
     // synthesizes an auto-door via pickAutoDoor. We must compute the SAME
     // door here so blocksMovement opens a passage through it — otherwise
-    // the visible door has no walkable opening. UI convention (matches plan SVG):
-    //   "back"  = SVG top = small plan-Y = large worldZ (rMaxZ)
-    //   "front" = SVG bottom = large plan-Y = small worldZ (rMinZ)
+    // the visible door has no walkable opening. Plan-Y inverts to world-Z:
+    //   data "back"  = small worldZ = LARGE plan-Y end
+    //   data "front" = large worldZ = SMALL plan-Y end
     const AUTO_DOOR_LEN_CM = 80;
     const EPS_CM = 25; // 0.25 m: "interior" if dist to floor bound ≥ this
     const autoDoorFor = (fi: number, room: string,
                         p: { x: number; y: number }, d: { width: number; depth: number },
                         fb: { minX: number; minY: number; maxX: number; maxY: number }
                        ): { wall: "back" | "front" | "left" | "right"; pos: number; len: number } => {
-      // UI convention: "back" = SVG top = small plan-Y = large world-Z.
-      // Small plan-Y boundary = fb.minY. Distance of room's small-Y edge (p.y) to fb.minY.
       const dists = {
-        back:  p.y - fb.minY,
-        front: fb.maxY - (p.y + d.depth),
+        back:  fb.maxY - (p.y + d.depth),
+        front: p.y - fb.minY,
         left:  p.x - fb.minX,
         right: fb.maxX - (p.x + d.width),
       };
@@ -7132,42 +7130,33 @@ export default function HouseCanvas() {
             <pointLight position={[0, 0.6, 0]} intensity={1.8} distance={W * 1.6} decay={2} color="#FFF4E0" />
           </>
         )}
-        {/* Primary sun — only enabled OUTSIDE the building.
-            Three.js transparent materials (glass curtain walls, windows
-            with meshPhysicalMaterial transmission) don't cast shadows by
-            default, so direct sunlight passes through them and stamps a
-            window-shape patch on opposite interior walls. After trying
-            multiple mitigations (reduce intensity, force castShadow on
-            transparent meshes), none of them eliminate the patch
-            cleanly. The walkthrough is an interior view — switch to a
-            purely ambient + hemisphere lighting model so the room is
-            uniformly lit, no directional stamps. The outdoor view still
-            gets the full sun for the facade renderings. */}
-        {!insideBuilding && (
-          <directionalLight
-            position={sunPos} intensity={theme.sunIntensity} color={theme.sunColor} castShadow
-            shadow-mapSize={[2048, 2048]}
-            shadow-camera-far={120}
-            shadow-camera-left={-35} shadow-camera-right={35}
-            shadow-camera-top={35} shadow-camera-bottom={-35}
-            shadow-bias={-0.0006}
-            shadow-normalBias={0.06}
-          />
-        )}
-        {/* Sky fill from opposite side — also outside only. */}
-        {!insideBuilding && (
-          <directionalLight
-            position={[-sunPos[0] * 0.4, 20, -sunPos[2] * 0.4]}
-            intensity={theme.fillIntensity}
-            color={theme.fillColor}
-          />
-        )}
-        {/* Indoor sky fill — soft non-directional boost to compensate
-            for losing the direct sun. Stays bright enough to read room
-            colors and textures, but creates no projections. */}
-        {insideBuilding && (
-          <hemisphereLight args={["#FFF8EC", "#D0CFC8", 1.2]} />
-        )}
+        {/* Primary sun — position updates every render frame as slider moves */}
+        <directionalLight
+          position={sunPos} intensity={theme.sunIntensity} color={theme.sunColor} castShadow
+          shadow-mapSize={[2048, 2048]}
+          shadow-camera-far={120}
+          shadow-camera-left={-35} shadow-camera-right={35}
+          shadow-camera-top={35} shadow-camera-bottom={-35}
+          shadow-bias={-0.0006}
+          shadow-normalBias={0.06}
+        />
+        {/* Sky fill from opposite side (fill tracks opposite of sun).
+            Inside the building we MUST castShadow on this one too —
+            without it, the fill light passes straight through walls and
+            illuminates the inside wall from the wrong side, looking like
+            "light leaking through the wall". Outside, no shadow needed. */}
+        <directionalLight
+          position={[-sunPos[0] * 0.4, 20, -sunPos[2] * 0.4]}
+          intensity={theme.fillIntensity}
+          color={theme.fillColor}
+          castShadow={insideBuilding}
+          shadow-mapSize={[1024, 1024]}
+          shadow-camera-far={120}
+          shadow-camera-left={-35} shadow-camera-right={35}
+          shadow-camera-top={35} shadow-camera-bottom={-35}
+          shadow-bias={-0.0006}
+          shadow-normalBias={0.06}
+        />
 
         {/* 玻璃幕墙建筑：室外补光点灯（从南面和西面打亮玻璃，增强立面质感）*/}
         {_buildingType === "floor-plan-driven" && !insideBuilding && (
