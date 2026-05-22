@@ -3566,12 +3566,16 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
           wallFrontExterior={roomState.materials.wallFrontExterior}
           wallLeftExterior={roomState.materials.wallLeftExterior}
           wallRightExterior={roomState.materials.wallRightExterior}
-          hasDoor={hasDoor}
-          doorWall={doorWall}
-          doorPosCm={doorPosCm}
-          doorLenCm={doorLenCm}
-          doorHCm={doorHCm}
-          doorStyle={doorStyle}
+          hasDoor={allDoors.length > 0}
+          doorWall={allDoors.length > 0
+            ? (allDoors[0].wall === "back" ? "top"
+              : allDoors[0].wall === "front" ? "bottom"
+              : allDoors[0].wall as "left" | "right")
+            : doorWall}
+          doorPosCm={allDoors.length > 0 ? allDoors[0].pos : doorPosCm}
+          doorLenCm={allDoors.length > 0 ? allDoors[0].len : doorLenCm}
+          doorHCm={allDoors.length > 0 ? (allDoors[0].h ?? 200) : doorHCm}
+          doorStyle={allDoors.length > 0 ? (allDoors[0].style ?? "wood_panel") : doorStyle}
           activeRoom={activeRoom}
           ceiling={roomState.materials.ceiling}
           frontWallOpacity={frontWallOpacity}

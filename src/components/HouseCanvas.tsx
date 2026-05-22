@@ -6012,7 +6012,7 @@ function WalkthroughController({
     floorYRef.current = spawnPos[1] - 1.6;
     yawRef.current = 0;
     pitchRef.current = 0;
-    camera.lookAt(spawnPos[0], spawnPos[1] - 0.1, spawnPos[2] + 1);
+    camera.lookAt(spawnPos[0], spawnPos[1] - 0.1, spawnPos[2] - 1);
   }, [active, spawnPos, camera]);
   useEffect(() => {
     if (!active) {
@@ -6493,26 +6493,47 @@ export default function HouseCanvas() {
         // — not 6 cm INTO the wall (which is where the raw room AABB
         // edge sits). Must match FPE's WALL_T (0.12m).
         const WALL_HALF = 0.06;
+        // Negate X to match the scene's scale={[-1,1,1]} flip applied during
+        // walkthrough. old minX→ -old maxX, old maxX → -old minX.
+        const oMinX = (p.x - minX) * CM_local - Wh / 2 + WALL_HALF;
+        const oMaxX = (p.x + d.width - minX) * CM_local - Wh / 2 - WALL_HALF;
         out.push({
-          minX: (p.x - minX) * CM_local - Wh / 2 + WALL_HALF,
-          maxX: (p.x + d.width - minX) * CM_local - Wh / 2 - WALL_HALF,
+          minX: -oMaxX,
+          maxX: -oMinX,
           minZ: -((p.y + d.depth - minY) * CM_local) + Dh / 2 + WALL_HALF,
           maxZ: -((p.y - minY) * CM_local) + Dh / 2 - WALL_HALF,
-          hides,
+          hides: hides ? { back: hides.back, front: hides.front, left: hides.right, right: hides.left } : undefined,
         });
       }
     }
     return out;
   }, [floorPlansForWalk]);
 
+  // Outer clamp box derived from actual room AABBs rather than the footprint
+  // estimate (W/D from useGroundFloorFootprint). The footprint-based bbox was
+  // 0.3m inside the footprint edge, which cut off the south wall of 客厅 at
+  // -3.94m while the footprint gave minZ=-3.7 — blocking the south door.
+  const walkBbox = useMemo(() => {
+    if (!wallAABBs.length) return { minX: -6.5, maxX: 6.5, minZ: -4.5, maxZ: 4.5 };
+    let mnX = Infinity, mxX = -Infinity, mnZ = Infinity, mxZ = -Infinity;
+    for (const a of wallAABBs) {
+      mnX = Math.min(mnX, a.minX); mxX = Math.max(mxX, a.maxX);
+      mnZ = Math.min(mnZ, a.minZ); mxZ = Math.max(mxZ, a.maxZ);
+    }
+    // Add WALL_HALF (0.06m) so the outer boundary sits at the actual wall
+    // surface, then a further 0.1m gap for the player radius clamp to work.
+    const PAD = 0.16;
+    return { minX: mnX - PAD, maxX: mxX + PAD, minZ: mnZ - PAD, maxZ: mxZ + PAD };
+  }, [wallAABBs]);
+
   // ── Door passages: rect regions on walls where collision allows crossing ──
   // For each visible door, build a small "pass" rect straddling the wall it
   // lives on. blocksMovement consults these — if the movement segment goes
   // THROUGH a pass, allow even if it would otherwise cross a wall boundary.
-  // Convention swap reminder: door.wall ===
-  //   "back"  → world z = cz - rD/2 (small Z)   ← exterior side in UI
-  //   "front" → world z = cz + rD/2 (large Z)   ← hallway side in UI
-  // This matches FloorPlanExterior's door render (line 10111+).
+  // Convention: door.wall ===
+  //   "back"  → SVG top (small planY) = large world-Z = room AABB maxZ side (NORTH wall)
+  //   "front" → SVG bottom (large planY) = small world-Z = room AABB minZ side (SOUTH wall)
+  // Matches FloorPlanExterior's door render convention.
   const doorPasses = useMemo<Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>>(() => {
     const out: Array<{ minX: number; maxX: number; minZ: number; maxZ: number }> = [];
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -6540,25 +6561,29 @@ export default function HouseCanvas() {
       const rMaxZ = -((p.y - minY) * CM) + Dh / 2;
       const dPos = door.pos * CM;
       const dLen = door.len * CM;
+      // Compute pass in original coords, then negate X to match
+      // the scene's scale={[-1,1,1]} flip applied during walkthrough.
+      let pass: { minX: number; maxX: number; minZ: number; maxZ: number } | null = null;
       if (door.wall === "back") {
         // UI "back" = SVG top = small plan-Y = large world-Z (rMaxZ).
         const x0 = rMinX + dPos;
-        out.push({ minX: x0, maxX: x0 + dLen, minZ: rMaxZ - PAD, maxZ: rMaxZ + PAD });
+        pass = { minX: x0, maxX: x0 + dLen, minZ: rMaxZ - PAD, maxZ: rMaxZ + PAD };
       } else if (door.wall === "front") {
         // UI "front" = SVG bottom = large plan-Y = small world-Z (rMinZ).
         const x0 = rMinX + dPos;
-        out.push({ minX: x0, maxX: x0 + dLen, minZ: rMinZ - PAD, maxZ: rMinZ + PAD });
+        pass = { minX: x0, maxX: x0 + dLen, minZ: rMinZ - PAD, maxZ: rMinZ + PAD };
       } else if (door.wall === "left") {
         // small X side. Pos grows from large-Z (back end per data convention) →
         // small-Z. World Z = rMaxZ - dPos.
         const z1 = rMaxZ - dPos;
         const z0 = z1 - dLen;
-        out.push({ minX: rMinX - PAD, maxX: rMinX + PAD, minZ: z0, maxZ: z1 });
+        pass = { minX: rMinX - PAD, maxX: rMinX + PAD, minZ: z0, maxZ: z1 };
       } else if (door.wall === "right") {
         const z1 = rMaxZ - dPos;
         const z0 = z1 - dLen;
-        out.push({ minX: rMaxX - PAD, maxX: rMaxX + PAD, minZ: z0, maxZ: z1 });
+        pass = { minX: rMaxX - PAD, maxX: rMaxX + PAD, minZ: z0, maxZ: z1 };
       }
+      if (pass) out.push({ minX: -pass.maxX, maxX: -pass.minX, minZ: pass.minZ, maxZ: pass.maxZ });
     };
 
     // pickAutoDoor mirror: when a room has no stored doors, FloorPlanExterior
@@ -6677,7 +6702,7 @@ export default function HouseCanvas() {
       const worldZ = -((p.y + d.depth / 2 - bMinY) * CM_local) + Dh / 2;
       const worldY = fi * WALK_FLOOR_H + 1.6;  // eye height on this floor
       setWalkthrough(true);
-      setWalkthroughSpawn([worldX, worldY, worldZ]);
+      setWalkthroughSpawn([-worldX, worldY, worldZ]);
     };
     window.addEventListener("enterWalkthrough", handler);
     return () => window.removeEventListener("enterWalkthrough", handler);
@@ -6743,7 +6768,7 @@ export default function HouseCanvas() {
                   }
                 }
                 setWalkthrough(true);
-                setWalkthroughSpawn([bestX, 1.6, bestZ]);
+                setWalkthroughSpawn([-bestX, 1.6, bestZ]);
               }
             }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
@@ -7059,8 +7084,8 @@ export default function HouseCanvas() {
           active={walkthrough}
           spawnPos={walkthroughSpawn ?? [0, 1.6, 0]}
           bbox={{
-            minX: -W / 2 + 0.3, maxX: W / 2 - 0.3,
-            minZ: -D / 2 + 0.3, maxZ: D / 2 - 0.3,
+            minX: walkBbox.minX, maxX: walkBbox.maxX,
+            minZ: walkBbox.minZ, maxZ: walkBbox.maxZ,
             minY: 1.6,
             maxY: exterior.hasRooftop
               ? (floors + 1) * FLOOR_H_M + 1.2  // allow standing on rooftop
@@ -7211,16 +7236,22 @@ export default function HouseCanvas() {
             floor plan / yard plan 里精确定位或换 GLB。后续应归纳到房间
             结构（room-driven prefab + 可换 GLB），现在先去掉避免假景。
             院子里需要的东西用户用 YardPlan 自己摆。 */}
-        <HouseBody
-          W={W} D={D} settings={exterior}
-          insideBuilding={insideBuilding} wallXray={wallXray}
-          hideInterior={hideInterior}
-          onEnterRoom={(_room, _fi, worldPos) => {
-            // Teleport into walkthrough mode at the clicked room's centre.
-            setWalkthrough(true);
-            setWalkthroughSpawn(worldPos);
-          }}
-        />
+        {/* X-flip group: Three.js right-hand rule makes west appear on screen
+            right when facing north — opposite of compass expectation. Negate
+            the scene X axis so that east is always on screen right when
+            facing north, matching the 2D plan. Only active during walkthrough;
+            exterior orbit view is already oriented correctly. */}
+        <group scale={insideBuilding ? [-1, 1, 1] : [1, 1, 1]}>
+          <HouseBody
+            W={W} D={D} settings={exterior}
+            insideBuilding={insideBuilding} wallXray={wallXray}
+            hideInterior={hideInterior}
+            onEnterRoom={(_room, _fi, worldPos) => {
+              setWalkthrough(true);
+              setWalkthroughSpawn([-worldPos[0], worldPos[1], worldPos[2]]);
+            }}
+          />
+        </group>
         {/* Wall decor + yard items — hidden during walkthrough (exterior elements) */}
         {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
         {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}

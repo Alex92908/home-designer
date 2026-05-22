@@ -3300,6 +3300,21 @@ export default function FloorPlanBuilding({
   };
   const wallSegments = useMemo<WallSeg[]>(() => {
     const map = new Map<string, WallSeg>();
+    // Secondary index: (fi|axis|fixedRound) → existing segments.
+    // Used to detect range overlaps: when room A's back wall [0..900] would
+    // otherwise create a NEW solid segment on top of room B/C/D's front walls
+    // at [0..280], [280..480], [480..900] (which have door holes), we instead
+    // skip the already-covered sub-ranges and distribute holes into the
+    // existing segments. Without this, the solid superset wall buries the
+    // door holes, making doors invisible in the walkthrough.
+    const fixedSegs = new Map<string, WallSeg[]>();
+    const registerSeg = (seg: WallSeg, key: string) => {
+      map.set(key, seg);
+      const fk = `${seg.fi}|${seg.axis}|${Math.round(seg.fixed)}`;
+      const list = fixedSegs.get(fk) ?? [];
+      list.push(seg);
+      fixedSegs.set(fk, list);
+    };
     // Convert door/window-on-side into wall-local hole. Side label is the
     // DATA convention (back/front/left/right per fp.roomDoors). The hole's
     // "x" is along the wall starting from the wall's "left" endpoint in
@@ -3361,11 +3376,8 @@ export default function FloorPlanBuilding({
         }
         const winsArr = fp.roomWindows?.[room] ?? [];
         const wh = fp.roomWallsHidden?.[room];
-        // Convention swap (UI ↔ data): UI "背墙" = small plan-Y but data
-        // door.wall === "back" lives at large plan-Y. The map iteration
-        // below uses UI sides (back = top of plan = small-Y, etc); when
-        // collecting holes we must look up the DATA-side label, which is
-        // the inverted one for back/front.
+        // dataSide matches door.wall convention directly (both use back/front/left/right).
+        // uiSide is used only for hide-wall flags (roomWallsHidden).
         const sides: Array<{
           uiSide: "back" | "front" | "left" | "right";
           dataSide: "back" | "front" | "left" | "right";
@@ -3384,18 +3396,55 @@ export default function FloorPlanBuilding({
         for (const s of sides) {
           const lo = Math.min(s.a, s.b), hi = Math.max(s.a, s.b);
           const key = `${fi}|${s.axis}|${Math.round(s.fixed)}|${Math.round(lo)}|${Math.round(hi)}`;
+          const fk  = `${fi}|${s.axis}|${Math.round(s.fixed)}`;
           const seg = map.get(key);
           const holes = collectHoles(s.dataSide, doorsArr, winsArr);
-          if (!seg) {
-            map.set(key, {
-              fi, axis: s.axis, fixed: s.fixed, a: lo, b: hi,
-              holes, hideAny: wh?.[s.uiSide] === true,
-              wallColor: wColor,
-              wallId: wId,
-            });
-          } else {
+          if (seg) {
+            // Exact range match: merge holes + hide flags.
             addHole(seg, holes);
             if (wh?.[s.uiSide] === true) seg.hideAny = true;
+          } else {
+            // Check for partially- or fully-overlapping segments at the same
+            // plan-Y (or plan-X for vertical walls). These come from rooms on
+            // the opposite side of the same physical wall. We must NOT create
+            // a duplicate slab on top of them — instead distribute holes into
+            // the overlapping segments and only create new segments for the
+            // sub-ranges that aren't covered yet.
+            const existing = fixedSegs.get(fk) ?? [];
+            const overlapping = existing.filter(e => e.a < hi && e.b > lo);
+
+            // Distribute holes from this wall into every overlapping segment
+            // (adjusting x so it's local to each segment's own [a..b] span).
+            for (const e of overlapping) {
+              const offsetX = e.a - lo; // e.a is in plan coords; lo is our wall's start
+              const clipped = holes
+                .map(h => ({ x: h.x - offsetX, y: h.y, w: h.w, h: h.h }))
+                .filter(h => h.x + h.w > 0 && h.x < e.b - e.a);
+              addHole(e, clipped);
+              if (wh?.[s.uiSide] === true) e.hideAny = true;
+            }
+
+            // Create new segments only for sub-ranges not yet covered.
+            const sortedOvlp = [...overlapping].sort((a, b) => a.a - b.a);
+            let cursor = lo;
+            const addSubSeg = (subLo: number, subHi: number) => {
+              if (subHi <= subLo) return;
+              const subKey = `${fi}|${s.axis}|${Math.round(s.fixed)}|${Math.round(subLo)}|${Math.round(subHi)}`;
+              const offsetX = subLo - lo;
+              const subHoles = holes
+                .map(h => ({ x: h.x - offsetX, y: h.y, w: h.w, h: h.h }))
+                .filter(h => h.x + h.w > 0 && h.x < subHi - subLo);
+              registerSeg({
+                fi, axis: s.axis, fixed: s.fixed, a: subLo, b: subHi,
+                holes: subHoles, hideAny: wh?.[s.uiSide] === true,
+                wallColor: wColor, wallId: wId,
+              }, subKey);
+            };
+            for (const e of sortedOvlp) {
+              addSubSeg(cursor, e.a);   // gap before this overlapping seg
+              cursor = Math.max(cursor, e.b);
+            }
+            addSubSeg(cursor, hi);      // tail gap (or full range if no overlap)
           }
         }
       }
@@ -10433,13 +10482,15 @@ export default function FloorPlanBuilding({
               // wPos and wW are already in metres — no extra * CM needed
               let wx = 0, wz = 0, rotY = 0;
               if (win.wall === "back") {
-                wz = cz - rD / 2 + 0.012;
-                wx = cx + wPos + wW / 2 - rW / 2;
-                rotY = 0;
-              } else if (win.wall === "front") {
+                // "back" = SVG top = small planY = large worldZ = north wall
                 wz = cz + rD / 2 - 0.012;
                 wx = cx + wPos + wW / 2 - rW / 2;
                 rotY = Math.PI;
+              } else if (win.wall === "front") {
+                // "front" = SVG bottom = large planY = small worldZ = south wall
+                wz = cz - rD / 2 + 0.012;
+                wx = cx + wPos + wW / 2 - rW / 2;
+                rotY = 0;
               } else if (win.wall === "left") {
                 wx = cx - rW / 2 + 0.012;
                 wz = cz - wPos - wW / 2 + rD / 2;
