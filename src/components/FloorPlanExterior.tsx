@@ -2818,14 +2818,23 @@ function WalkthroughFloor({
 // look that matches the effect page, or a registered tile texture if
 // the wall has a material id set. ─────────────────────────────────────
 function WalkthroughWallPiece({
-  position, w, h, thickness, wallColor, wallId, insideBuilding, wallXray,
+  position, w, h, thickness, pieceX, pieceY,
+  wallColor, wallId, insideBuilding, wallXray,
 }: {
   position: [number, number, number]; w: number; h: number; thickness: number;
+  /** Position of this piece's bottom-left corner within the parent wall
+   *  (wall-local metres). Used to compute texture OFFSET so the paint
+   *  pattern is continuous across piece boundaries — without this, each
+   *  piece restarts its tiling from 0 and the wall looks like a quilt of
+   *  rectangular patches. */
+  pieceX: number; pieceY: number;
   wallColor: string; wallId: string; insideBuilding: boolean; wallXray: boolean;
 }) {
-  // Tile a registered wall material if the room has one (e.g. brick, tile).
-  // Otherwise generate a painted-wall albedo + normal so the surface has
-  // some texture instead of looking like a flat colored box.
+  // Texture density: tiles per metre. Same for ALL pieces of all walls so
+  // the noise grain is consistent. With offset applied per piece, adjacent
+  // pieces appear continuous.
+  const TILES_PER_M = 3;
+  const NORMAL_TILES_PER_M = 4;
   const tiled = useMemo(() => {
     const base = getWallTexture(wallId);
     if (!base) return null;
@@ -2833,28 +2842,31 @@ function WalkthroughWallPiece({
     const [us, vs] = wallTileSize(wallId);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.repeat.set(w / us, h / vs);
+    t.offset.set(pieceX / us, pieceY / vs);
     t.needsUpdate = true;
     return t;
-  }, [wallId, w, h]);
+  }, [wallId, w, h, pieceX, pieceY]);
   const paint = useMemo(() => {
     if (tiled) return null;
     const t = paintAlbedo(wallColor).clone();
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    // Tile so the noise pattern repeats across the wall — without wrap
-    // mode set explicitly, the cloned CanvasTexture defaults to
-    // ClampToEdge and the 512×512 image just stretches uniformly.
-    t.repeat.set(Math.max(1, w * 0.5), Math.max(1, h * 0.5));
+    // Repeat across THIS piece = piece size × density.
+    t.repeat.set(w * TILES_PER_M, h * TILES_PER_M);
+    // Offset to start sampling where the parent wall sits in tile-space.
+    // Same TILES_PER_M density everywhere → piece-to-piece continuity.
+    t.offset.set(pieceX * TILES_PER_M, pieceY * TILES_PER_M);
     t.needsUpdate = true;
     return t;
-  }, [wallColor, w, h, tiled]);
+  }, [wallColor, w, h, pieceX, pieceY, tiled]);
   const normalTex = useMemo(() => {
     if (tiled) return null;
     const t = paintNormal().clone();
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.repeat.set(Math.max(2, w * 2), Math.max(2, h * 2));
+    t.repeat.set(w * NORMAL_TILES_PER_M, h * NORMAL_TILES_PER_M);
+    t.offset.set(pieceX * NORMAL_TILES_PER_M, pieceY * NORMAL_TILES_PER_M);
     t.needsUpdate = true;
     return t;
-  }, [tiled, w, h]);
+  }, [tiled, w, h, pieceX, pieceY]);
   return (
     <mesh position={position} raycast={() => null} receiveShadow castShadow>
       <boxGeometry args={[w, h, thickness]} />
@@ -3024,9 +3036,11 @@ export default function FloorPlanBuilding({
     cx: number, cz: number, rW: number, rD: number,
     bounds: { minX: number; maxX: number; minZ: number; maxZ: number }
   ) {
+    // UI convention: "back" = SVG top = small plan-Y = large world-Z (cz+rD/2 edge).
+    // "front" = SVG bottom = large plan-Y = small world-Z (cz-rD/2 edge).
     return {
-      back:  (cz - rD / 2) - bounds.minZ,
-      front: bounds.maxZ   - (cz + rD / 2),
+      back:  bounds.maxZ   - (cz + rD / 2),
+      front: (cz - rD / 2) - bounds.minZ,
       left:  (cx - rW / 2) - bounds.minX,
       right: bounds.maxX   - (cx + rW / 2),
     };
@@ -3359,10 +3373,11 @@ export default function FloorPlanBuilding({
           fixed: number;
           a: number; b: number;
         }> = [
-          // back = top of SVG = small plan-Y; data label is "front" (which
-          // the door render places at cz + rD/2 = small plan-Y in cm).
-          { uiSide: "back",  dataSide: "front", axis: "h", fixed: p.y,          a: p.x,          b: p.x + d.width },
-          { uiSide: "front", dataSide: "back",  axis: "h", fixed: p.y + d.depth, a: p.x,          b: p.x + d.width },
+          // UI convention: "back" = SVG top = small plan-Y = large world-Z (fixed: p.y).
+          // "front" = SVG bottom = large plan-Y = small world-Z (fixed: p.y + d.depth).
+          // dataSide matches the door.wall convention directly — no inversion needed.
+          { uiSide: "back",  dataSide: "back",  axis: "h", fixed: p.y,          a: p.x,          b: p.x + d.width },
+          { uiSide: "front", dataSide: "front", axis: "h", fixed: p.y + d.depth, a: p.x,          b: p.x + d.width },
           { uiSide: "left",  dataSide: "left",  axis: "v", fixed: p.x,          a: p.y,          b: p.y + d.depth },
           { uiSide: "right", dataSide: "right", axis: "v", fixed: p.x + d.width, a: p.y,          b: p.y + d.depth },
         ];
@@ -10244,6 +10259,7 @@ export default function FloorPlanBuilding({
                 key={`wp-${pi}`}
                 position={[p.x + p.w / 2, p.y + p.h / 2, 0]}
                 w={p.w} h={p.h} thickness={WALL_T}
+                pieceX={p.x} pieceY={p.y}
                 wallColor={seg.wallColor}
                 wallId={seg.wallId}
                 insideBuilding={insideBuilding}
@@ -10371,9 +10387,11 @@ export default function FloorPlanBuilding({
               //   front (large worldZ) → "bottom"
               //   left  → "left"   (with pos mirror, see below)
               //   right → "right"
+              // UI convention: "back" = SVG top = large world-Z = WalkthroughDoor3D "bottom".
+              // "front" = SVG bottom = small world-Z = "top".
               const doorWall: "top" | "bottom" | "left" | "right" =
-                door.wall === "back" ? "top"
-                : door.wall === "front" ? "bottom"
+                door.wall === "back" ? "bottom"
+                : door.wall === "front" ? "top"
                 : door.wall === "left" ? "left"
                 : "right";
               // RoomDoor3D's "left" doorPos is the distance from the room's
