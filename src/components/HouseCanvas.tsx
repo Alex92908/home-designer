@@ -6010,9 +6010,11 @@ function WalkthroughController({
     camera.position.set(spawnPos[0], spawnPos[1], spawnPos[2]);
     // Initialise floor tracker to spawn floor (eye height − 1.6 m)
     floorYRef.current = spawnPos[1] - 1.6;
-    yawRef.current = 0;
+    // yaw=π → camera faces south (+Z), same interior-facing view as the old
+    // north=+Z convention (where yaw=0 happened to face the room interior).
+    yawRef.current = Math.PI;
     pitchRef.current = 0;
-    camera.lookAt(spawnPos[0], spawnPos[1] - 0.1, spawnPos[2] - 1);
+    camera.lookAt(spawnPos[0], spawnPos[1] - 0.1, spawnPos[2] + 1);
   }, [active, spawnPos, camera]);
   useEffect(() => {
     if (!active) {

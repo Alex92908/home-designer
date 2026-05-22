@@ -10277,13 +10277,10 @@ export default function FloorPlanBuilding({
           const midPlanY = (seg.a + seg.b) / 2;
           const worldX = (seg.fixed - planOffset.minX) * CM_l - W / 2;
           const worldZ = (midPlanY - planOffset.minY) * CM_l - D / 2;
-          // Vertical wall: rotate Y by +π/2 so shape-X axis maps to world +Z.
-          // The plan-Y axis grows DOWNWARD in our convention which maps to
-          // LARGER world-Z; shape-X grows positive → large world-Z. ✓
-          // Wall extent runs from plan-Y=seg.a (top/north, small world-Z) to
-          // plan-Y=seg.b (bottom/south, large world-Z), wallLenM long. Pos goes
-          // to the "top" (small-Z, north) endpoint so wall extends in +Z direction.
-          const topZ = (seg.a - planOffset.minY) * CM_l - D / 2;
+          // Vertical wall: rotate Y by +π/2 so shape-X axis maps to world -Z.
+          // R_y(+π/2) * (1,0,0) = (0,0,-1) = world -Z (northward).
+          // Anchor at SOUTH end (large-Z) so pieces extend northward (-Z).
+          const topZ = (seg.b - planOffset.minY) * CM_l - D / 2;
           pos = [worldX, wY - wH / 2, topZ];
           rot = [0, Math.PI / 2, 0];
         }
