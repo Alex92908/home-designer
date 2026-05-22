@@ -99,11 +99,11 @@ export interface ExteriorWallSeg {
 // ── 坐标换算 ──────────────────────────────────────────────────
 interface PlanOffset { minX: number; minY: number; W: number; D: number }
 
-/** floor-plan cm → Three.js m (南 = world -Z) */
+/** floor-plan cm → Three.js m (北 = world -Z, 南 = world +Z) */
 function toWorld(fpX: number, fpY: number, o: PlanOffset): [number, number] {
   return [
     (fpX - o.minX) * CM - o.W / 2,
-    -(fpY - o.minY) * CM + o.D / 2,
+    (fpY - o.minY) * CM - o.D / 2,
   ];
 }
 
@@ -126,9 +126,10 @@ function subtractIntervals(
 }
 
 function sideToWinWall(side: WallSide): WindowConfig["wall"] {
-  // plan "south" = high plan-Y = low world-Z = "back" in 3D renderer convention
-  // plan "north" = low plan-Y  = high world-Z = "front" in 3D renderer convention
-  return { south: "back", north: "front", east: "right", west: "left" }[side] as WindowConfig["wall"];
+  // New convention: north = -Z (small worldZ), south = +Z (large worldZ).
+  // plan "north" = low plan-Y  = small world-Z = "back" in 3D renderer convention
+  // plan "south" = high plan-Y = large world-Z = "front" in 3D renderer convention
+  return { north: "back", south: "front", east: "right", west: "left" }[side] as WindowConfig["wall"];
 }
 
 // ── 外墙段检测 ─────────────────────────────────────────────────
@@ -2450,7 +2451,7 @@ function RooftopDecorations({
 
   const toW = (px: number, py: number, rw: number, rd: number) => {
     const cx  = (px + rw / 2 - planOffset.minX) * CM - W / 2;
-    const cz  = -((py + rd / 2 - planOffset.minY) * CM) + D / 2;
+    const cz  = (py + rd / 2 - planOffset.minY) * CM - D / 2;
     const rWm = rw * CM;
     const rDm = rd * CM;
     return { cx, cz, rWm, rDm };
@@ -2970,7 +2971,7 @@ export default function FloorPlanBuilding({
         const W = (maxX - minX) * CM;
         const D = (maxY - minY) * CM;
         const cx = ((lay.x + dims.width / 2 - minX) * CM) - W / 2;
-        const cz = -(((lay.y + dims.depth / 2 - minY) * CM)) + D / 2;
+        const cz = (lay.y + dims.depth / 2 - minY) * CM - D / 2;
         const cy = floorIndex * FLOOR_H + 1.6;   // eye height
         onEnterRoom(room, floorIndex, [cx, cy, cz]);
         return;
@@ -3021,8 +3022,8 @@ export default function FloorPlanBuilding({
       arr.push({
         minX: (bMinX - planOffset.minX) * CM - W / 2,
         maxX: (bMaxX - planOffset.minX) * CM - W / 2,
-        minZ: -((bMaxY - planOffset.minY) * CM) + D / 2,
-        maxZ: -((bMinY - planOffset.minY) * CM) + D / 2,
+        minZ: (bMinY - planOffset.minY) * CM - D / 2,
+        maxZ: (bMaxY - planOffset.minY) * CM - D / 2,
       });
     }
     return arr;
@@ -3036,11 +3037,12 @@ export default function FloorPlanBuilding({
     cx: number, cz: number, rW: number, rD: number,
     bounds: { minX: number; maxX: number; minZ: number; maxZ: number }
   ) {
-    // UI convention: "back" = SVG top = small plan-Y = large world-Z (cz+rD/2 edge).
-    // "front" = SVG bottom = large plan-Y = small world-Z (cz-rD/2 edge).
+    // New convention: north = -Z, south = +Z.
+    // "back" = SVG top = small plan-Y = small world-Z (cz-rD/2 edge, north face).
+    // "front" = SVG bottom = large plan-Y = large world-Z (cz+rD/2 edge, south face).
     return {
-      back:  bounds.maxZ   - (cz + rD / 2),
-      front: (cz - rD / 2) - bounds.minZ,
+      back:  (cz - rD / 2) - bounds.minZ,
+      front: bounds.maxZ   - (cz + rD / 2),
       left:  (cx - rW / 2) - bounds.minX,
       right: bounds.maxX   - (cx + rW / 2),
     };
@@ -3150,7 +3152,7 @@ export default function FloorPlanBuilding({
         if (!p || !dd) continue;
         const rW = dd.width * CM; const rD = dd.depth * CM;
         const cx = (p.x + dd.width  / 2 - planOffset.minX) * CM - W / 2;
-        const cz = -((p.y + dd.depth / 2 - planOffset.minY) * CM) + D / 2;
+        const cz = (p.y + dd.depth / 2 - planOffset.minY) * CM - D / 2;
 
         // 门：有配置门用配置门，否则用自动门
         const configuredDoors = fp.roomDoors?.[r] ?? [];
@@ -3241,7 +3243,7 @@ export default function FloorPlanBuilding({
         const rW = d.width * CM; const rD = d.depth * CM;
         const rWcm = d.width; const rDcm = d.depth;
         const cx = (p.x + d.width  / 2 - planOffset.minX) * CM - W / 2;
-        const cz = -((p.y + d.depth / 2 - planOffset.minY) * CM) + D / 2;
+        const cz = (p.y + d.depth / 2 - planOffset.minY) * CM - D / 2;
         const yBase = fi * (FLOOR_H + SLAB_T);
         const mats = fp.rooms?.[room]?.materials;
         const floorColor = mats?.floor?.color ?? ROOM_DEFS[room]?.defaultFloorColor ?? "#C8A882";
@@ -3370,7 +3372,7 @@ export default function FloorPlanBuilding({
           if (bounds) {
             const rW = d.width * CM; const rD = d.depth * CM;
             const cx = (p.x + d.width  / 2 - planOffset.minX) * CM - W / 2;
-            const cz = -((p.y + d.depth / 2 - planOffset.minY) * CM) + D / 2;
+            const cz = (p.y + d.depth / 2 - planOffset.minY) * CM - D / 2;
             doorsArr = [pickAutoDoor(fi, room, cx, cz, rW, rD, d.width, d.depth, bounds)];
           }
         }
@@ -3644,9 +3646,9 @@ export default function FloorPlanBuilding({
         const canopyD  = 2.0;   // 向南悬挑深度
         const canopyT  = 0.075; // 雨棚厚度（薄板）
         const canopyY  = FLOOR_H - 0.02;  // 紧贴 1F 顶端（略低于楼板）
-        // 南立面外墙在 world-z ≈ -D/2。再向南 0.25m 开始，延伸 canopyD
-        const southFaceZ = -D / 2 - 0.20;  // 玻璃幕墙平面约在此处
-        const canopyZ    = southFaceZ - canopyD / 2;  // 雨棚中心
+        // 南立面外墙在 world-z ≈ +D/2（新坐标系：北=-Z, 南=+Z）。再向南 0.25m 开始，延伸 canopyD
+        const southFaceZ = D / 2 + 0.20;  // 玻璃幕墙平面约在此处
+        const canopyZ    = southFaceZ + canopyD / 2;  // 雨棚中心
         const isNightC = sunHour < 6 || sunHour > 20;
         const isDuskC  = !isNightC && (sunHour < 8 || sunHour > 18);
         const soffitEmi = isNightC ? 3.5 : isDuskC ? 2.2 : 0.8;
@@ -3740,8 +3742,8 @@ export default function FloorPlanBuilding({
         const canopyD_sw  = 2.0;
         const canopyT_sw  = 0.075;
         const canopyY_sw  = FLOOR_H - 0.02;   // top of canopy slab
-        const southFaceZ_sw = -D / 2 - 0.20;
-        const canopyZ_sw    = southFaceZ_sw - canopyD_sw / 2;
+        const southFaceZ_sw = D / 2 + 0.20;
+        const canopyZ_sw    = southFaceZ_sw + canopyD_sw / 2;
         const isNightSW  = sunHour < 6 || sunHour > 20;
         const isDuskSW   = !isNightSW && (sunHour < 8 || sunHour > 18);
         const glassEmiSW = isNightSW ? 0.12 : isDuskSW ? 0.04 : 0.0;
@@ -3804,7 +3806,7 @@ export default function FloorPlanBuilding({
 
       {/* ── 入口台阶 + 入口广场 + 水景线 ── */}
       {!insideBuilding && isGlassVilla && (() => {
-        const southFaceZ2 = -D / 2 - 0.20;
+        const southFaceZ2 = D / 2 + 0.20;
         const stepW = Math.min(W * 0.50, 5.5);  // step width
         const nSteps = 3;
         const stepRise = 0.14;  // each step rise (m)
@@ -3812,7 +3814,7 @@ export default function FloorPlanBuilding({
         const baseY = -nSteps * stepRise;  // ground level depression (building base is at 0.40)
         const plazaW = stepW + 2.8;
         const plazaD = nSteps * stepRun + 0.60;
-        const plazaZ = southFaceZ2 - plazaD / 2;
+        const plazaZ = southFaceZ2 + plazaD / 2;
 
         return (
           <group>
@@ -3835,7 +3837,7 @@ export default function FloorPlanBuilding({
             {/* 台阶（3 级，从广场升至建筑入口）*/}
             {Array.from({ length: nSteps }, (_, si) => {
               const sy = si * stepRise + 0.005;
-              const sz = southFaceZ2 - si * stepRun - stepRun / 2;
+              const sz = southFaceZ2 + si * stepRun + stepRun / 2;
               const sw = stepW - si * 0.12;  // slight tapering for elegance
               const isNightStep = sunHour < 6 || sunHour > 20;
               const isDuskStep  = !isNightStep && (sunHour < 8 || sunHour > 18);
@@ -3875,8 +3877,8 @@ export default function FloorPlanBuilding({
                       <meshStandardMaterial color="#D0CCBE" roughness={0.68} />
                     </mesh>
                   ))}
-                  {/* Trough back wall (against building) */}
-                  <mesh position={[0, wbY + 0.02, wbZ + 0.28]}>
+                  {/* Trough back wall (against building, north side) */}
+                  <mesh position={[0, wbY + 0.02, wbZ - 0.28]}>
                     <boxGeometry args={[wbW + 0.30, 0.06, 0.10]} />
                     <meshStandardMaterial color="#D0CCBE" roughness={0.68} />
                   </mesh>
@@ -3891,13 +3893,13 @@ export default function FloorPlanBuilding({
                     />
                   </mesh>
                   {/* LED strip along water (glows at night) */}
-                  <mesh position={[0, wbY + 0.025, wbZ + 0.24]}>
+                  <mesh position={[0, wbY + 0.025, wbZ - 0.24]}>
                     <boxGeometry args={[wbW, 0.012, 0.014]} />
                     <meshStandardMaterial color="#80D8F0" emissive="#40C8E8" emissiveIntensity={1.4} />
                   </mesh>
                   <pointLight position={[0, wbY + 0.05, wbZ]} intensity={2.0} distance={wbW} decay={2.0} color="#40C8E8" castShadow={false} />
                   {/* Stone coping on far (south) side of water trough */}
-                  <mesh position={[0, wbY + 0.02, wbZ - 0.30]}>
+                  <mesh position={[0, wbY + 0.02, wbZ + 0.30]}>
                     <boxGeometry args={[wbW + 0.30, 0.055, 0.12]} />
                     <meshStandardMaterial color="#D4CCBA" roughness={0.72} metalness={0.02} />
                   </mesh>
@@ -3923,12 +3925,12 @@ export default function FloorPlanBuilding({
                 <group>
                   {Array.from({ length: jetCount }, (_, ji) => {
                     const jx = -wbW_j / 2 + ji * jetStep;
-                    const jOriginZ = wbZ_j + 0.22;  // at back wall
+                    const jOriginZ = wbZ_j - 0.22;  // at back wall (north side, toward building)
                     const jOriginY = 0.06;
                     // Position the jet mid-point between origin and arc tip
                     const midX = jx;
                     const midY = jOriginY + Math.cos(jetAngle) * jetLen / 2;
-                    const midZ = jOriginZ - Math.sin(jetAngle) * jetLen / 2;
+                    const midZ = jOriginZ + Math.sin(jetAngle) * jetLen / 2;
                     return (
                       <group key={`jet-${ji}`} position={[midX, midY, midZ]}
                         rotation={[jetAngle, 0, 0]}>
@@ -3963,7 +3965,7 @@ export default function FloorPlanBuilding({
                 <group>
                   {Array.from({ length: bCount }, (_, bi) => {
                     const bx = -wbW2 / 2 + bi * bSpacing;
-                    const bz = wbZ2 - 0.35;   // in front of water trough
+                    const bz = wbZ2 + 0.35;   // in front of water trough
                     return (
                       <group key={bi} position={[bx, 0, bz]}>
                         {/* Bollard post — brushed steel cylinder */}
@@ -4011,8 +4013,8 @@ export default function FloorPlanBuilding({
                       {Array.from({ length: nSteps }, (_, si) => {
                         const stepTopY  = (si + 1) * stepRise;  // top face of this step
                         const stepBotY  = si * stepRise;        // bottom of this step
-                        const stepFaceZ = southFaceZ2 - si * stepRun;  // front face of step
-                        const treadZ    = stepFaceZ - stepRun / 2;
+                        const stepFaceZ = southFaceZ2 + si * stepRun;  // front face of step
+                        const treadZ    = stepFaceZ + stepRun / 2;
                         const slabY     = stepBotY + 0.008;     // channel floor just above step tread
 
                         return (
@@ -4077,7 +4079,7 @@ export default function FloorPlanBuilding({
                       {/* Splash pool at base — small basin where water collects */}
                       {(() => {
                         const poolFloorY  = -0.004;
-                        const poolZ       = southFaceZ2 - nSteps * stepRun - 0.12;
+                        const poolZ       = southFaceZ2 + nSteps * stepRun + 0.12;
                         const poolD       = 0.30;
                         return (
                           <group>
@@ -4087,7 +4089,7 @@ export default function FloorPlanBuilding({
                               <meshStandardMaterial color="#B0ACA4" roughness={0.60} metalness={0.04} />
                             </mesh>
                             {/* Basin front lip */}
-                            <mesh position={[cx, poolFloorY + 0.038, poolZ - poolD / 2 - 0.030]}>
+                            <mesh position={[cx, poolFloorY + 0.038, poolZ + poolD / 2 + 0.030]}>
                               <boxGeometry args={[cascW + wallT * 2 + 0.04, 0.060, 0.055]} />
                               <meshStandardMaterial color="#C4C0B8" roughness={0.55} metalness={0.03} />
                             </mesh>
@@ -4124,7 +4126,7 @@ export default function FloorPlanBuilding({
             {/* ── 门牌号码（house number plate）—— 东侧基座上，不锈钢底板 + LED 背光 ── */}
             {(() => {
               const plateX = stepW / 2 + 0.38;  // east of steps
-              const plateZ = southFaceZ2 - 0.05;
+              const plateZ = southFaceZ2 + 0.05;
               const plateY = 1.20;
               return (
                 <group position={[plateX, plateY, plateZ]}>
@@ -4158,10 +4160,10 @@ export default function FloorPlanBuilding({
       {/* ── 入口大型装饰花盆（entry plaza ornamental urns）——
                台阶顶端两侧各一只黑花岗岩大盆，搭配修剪球形灌木 ── */}
       {!insideBuilding && isGlassVilla && (() => {
-        const southFaceZ6 = -D / 2 - 0.20;
+        const southFaceZ6 = D / 2 + 0.20;
         const stepW6 = Math.min(W * 0.50, 5.5);
         const urnX   = stepW6 / 2 + 0.55;
-        const urnZ   = southFaceZ6 + 0.05;   // level with building face
+        const urnZ   = southFaceZ6 - 0.05;   // level with building face
         const urnY   = 3 * 0.14;              // top of 3 steps
         return (
           <group>
@@ -4325,7 +4327,7 @@ export default function FloorPlanBuilding({
         const finT    = 0.020;       // blade thickness
         const finAngle = -Math.PI * 0.05;   // 9° tilt upward
         const finsPerFloor = 4;
-        const southFaceZF = -D / 2 - 0.18;
+        const southFaceZF = D / 2 + 0.18;
         const eastFaceXF  =  W / 2 + 0.18;
         const westFaceXF  = -W / 2 - 0.18;
 
@@ -4346,7 +4348,7 @@ export default function FloorPlanBuilding({
                       <group key={ni}>
                         {/* South facade fin */}
                         <mesh
-                          position={[0, finY, southFaceZF - finD / 2]}
+                          position={[0, finY, southFaceZF + finD / 2]}
                           rotation={[finAngle, 0, 0]}
                           castShadow
                         >
@@ -4470,7 +4472,7 @@ export default function FloorPlanBuilding({
         const lcx = (lMinX + lMaxX) / 2;
         const lcy = (lMinY + lMaxY) / 2;
         const wcx = (lcx - planOffset.minX) * CM - W / 2;
-        const wcz = -((lcy - planOffset.minY) * CM) + D / 2;
+        const wcz = (lcy - planOffset.minY) * CM - D / 2;
         const yBase = fi * (FLOOR_H + SLAB_T);
         if (insideBuilding) return null; // hidden inside — visible=false still intercepts raycasting
         return (
@@ -4498,7 +4500,7 @@ export default function FloorPlanBuilding({
             const rW = d.width * CM;
             const rD = d.depth * CM;
             const cx = (p.x + d.width / 2 - planOffset.minX) * CM - W / 2;
-            const cz = -((p.y + d.depth / 2 - planOffset.minY) * CM) + D / 2;
+            const cz = (p.y + d.depth / 2 - planOffset.minY) * CM - D / 2;
             // Glass-curtain room: drop the opaque box and stage a "warm
             // emissive interior" exactly like the template's RichGlassInterior.
             // Key trick: walls/ceiling SELF-EMIT (emissive map) so the
@@ -4878,16 +4880,16 @@ export default function FloorPlanBuilding({
               totalW = (lMaxX - lMinX) * CM + 0.30;
               totalD = (lMaxY - lMinY) * CM + 0.30;
               slabCX = ((lMinX + lMaxX) / 2 - planOffset.minX) * CM - W / 2;
-              slabCZ = -(((lMinY + lMaxY) / 2 - planOffset.minY) * CM) + D / 2;
+              slabCZ = ((lMinY + lMaxY) / 2 - planOffset.minY) * CM - D / 2;
             }
           }
           // Glass villa: add south cantilever so upper floor dramatically
           // projects over the ground-floor glass facade, as in the reference image.
-          // Extend slab 1.50m further south (-Z direction) and narrow the north side.
+          // Extend slab 1.50m further south (+Z direction) and narrow the north side.
           if (isGlassVilla) {
             const cantilever = 1.50;      // m of south projection beyond ground floor
             totalD  += cantilever;
-            slabCZ  -= cantilever / 2;    // shift slab centre south to keep north edge fixed
+            slabCZ  += cantilever / 2;    // shift slab centre south (+Z) to keep north edge fixed
           }
           const halfW = totalW / 2;
           const halfD = totalD / 2;
@@ -9896,8 +9898,8 @@ export default function FloorPlanBuilding({
         const canopyW3 = Math.min(W * 0.62, 8.0);
         const canopyD3 = 2.0;
         const canopyY3 = FLOOR_H - 0.02;
-        const southFaceZ3 = -D / 2 - 0.20;
-        const canopyZ3 = southFaceZ3 - canopyD3 / 2;
+        const southFaceZ3 = D / 2 + 0.20;
+        const canopyZ3 = southFaceZ3 + canopyD3 / 2;
         // Translucent polycarbonate panel between the columns — 3 panels with thin mullions
         const panelCount = 3;
         const panelW3 = (canopyW3 - 0.10) / panelCount;
@@ -10178,7 +10180,7 @@ export default function FloorPlanBuilding({
         const lcx  = (lMinX + lMaxX) / 2;
         const lcy  = (lMinY + lMaxY) / 2;
         const wcx  = (lcx - planOffset.minX) * CM - W / 2;
-        const wcz  = -((lcy - planOffset.minY) * CM) + D / 2;
+        const wcz  = (lcy - planOffset.minY) * CM - D / 2;
         const yBase  = fi * (FLOOR_H + SLAB_T);
         const corrY  = yBase + 0.008;
         const corrCol = "#CEC0A8";  // warm travertine hallway stone
@@ -10255,14 +10257,15 @@ export default function FloorPlanBuilding({
         // World-coord transform mirrors interiorRooms's cx / cz formula.
         // For a horizontal wall: fixed = plan Y, extent runs along plan-X.
         // For a vertical wall:   fixed = plan X, extent runs along plan-Y.
+        // New convention: north = -Z, south = +Z.
         // Plan → world:  worldX = (planX - planOffset.minX) * CM - W/2
-        //                worldZ = -((planY - planOffset.minY) * CM) + D/2
+        //                worldZ = (planY - planOffset.minY) * CM - D/2
         let pos: [number, number, number];
         let rot: [number, number, number] = [0, 0, 0];
         if (seg.axis === "h") {
           const midPlanX = (seg.a + seg.b) / 2;
           const worldX = (midPlanX - planOffset.minX) * CM_l - W / 2;
-          const worldZ = -((seg.fixed - planOffset.minY) * CM_l) + D / 2;
+          const worldZ = (seg.fixed - planOffset.minY) * CM_l - D / 2;
           // Shape's local X spans 0..wallLenM aligned with worldX direction.
           // Plane default lies in XY, normal +Z. After we shift mesh by
           // -wallLenM/2 in shape-X (to put the wall's middle at our pos),
@@ -10273,14 +10276,14 @@ export default function FloorPlanBuilding({
         } else {
           const midPlanY = (seg.a + seg.b) / 2;
           const worldX = (seg.fixed - planOffset.minX) * CM_l - W / 2;
-          const worldZ = -((midPlanY - planOffset.minY) * CM_l) + D / 2;
-          // Vertical wall: rotate Y by +π/2 so shape-X axis maps to world -Z.
+          const worldZ = (midPlanY - planOffset.minY) * CM_l - D / 2;
+          // Vertical wall: rotate Y by +π/2 so shape-X axis maps to world +Z.
           // The plan-Y axis grows DOWNWARD in our convention which maps to
-          // SMALLER world-Z; shape-X grows positive → small world-Z. ✓
-          // Wall extent runs from plan-Y=seg.a (top, large world-Z) to
-          // plan-Y=seg.b (bottom, small world-Z), wallLenM long. Pos goes
-          // to the "top" endpoint so wall extends in -Z direction.
-          const topZ = -((seg.a - planOffset.minY) * CM_l) + D / 2;
+          // LARGER world-Z; shape-X grows positive → large world-Z. ✓
+          // Wall extent runs from plan-Y=seg.a (top/north, small world-Z) to
+          // plan-Y=seg.b (bottom/south, large world-Z), wallLenM long. Pos goes
+          // to the "top" (small-Z, north) endpoint so wall extends in +Z direction.
+          const topZ = (seg.a - planOffset.minY) * CM_l - D / 2;
           pos = [worldX, wY - wH / 2, topZ];
           rot = [0, Math.PI / 2, 0];
         }
@@ -10431,24 +10434,22 @@ export default function FloorPlanBuilding({
               // french_double glass. Every other door defaults to wood_panel.
               const isFrontEntrance = fi === 0 && room === "living" && door.id?.startsWith("auto-");
               const style = door.style ?? (isFrontEntrance ? "french_double" : "wood_panel");
-              // Wall mapping: FPE data → RoomDoor3D
-              //   back  (small worldZ) → "top"
-              //   front (large worldZ) → "bottom"
-              //   left  → "left"   (with pos mirror, see below)
-              //   right → "right"
-              // UI convention: "back" = SVG top = large world-Z = WalkthroughDoor3D "bottom".
-              // "front" = SVG bottom = small world-Z = "top".
+              // Wall mapping: FPE data → WalkthroughDoor3D
+              // New convention: north = -Z (small worldZ), south = +Z (large worldZ).
+              //   back  (north, small worldZ = -D/2) → "top"
+              //   front (south, large worldZ = +D/2) → "bottom"
+              //   left  → "left"   (pos direct — both measure from small-Z/north end)
+              //   right → "right"  (with pos mirror — WalkthroughDoor3D "right" measures from large-Z)
               const doorWall: "top" | "bottom" | "left" | "right" =
-                door.wall === "back" ? "bottom"
-                : door.wall === "front" ? "top"
+                door.wall === "back" ? "top"
+                : door.wall === "front" ? "bottom"
                 : door.wall === "left" ? "left"
                 : "right";
-              // RoomDoor3D's "left" doorPos is the distance from the room's
-              // small-Z end (back-in-world) to the door's large-Z edge.
-              // FPE.pos for "left" is the distance from the large-Z end
-              // to the same large-Z edge. So:
-              //    RoomDoor3D.pos = D − FPE.pos   (NO −door.len term)
-              const doorPosCm = door.wall === "left"
+              // WalkthroughDoor3D "right" measures pos from the large-Z (south/front) end.
+              // FPE.pos for "right" is from the small-Z (north/back) end (new convention).
+              // So reverse: WalkthroughDoor3D.pos = D − FPE.pos  (NO −door.len term)
+              // "left" is direct: both measure from small-Z (north/back) end.
+              const doorPosCm = door.wall === "right"
                 ? Math.max(0, rDcm - door.pos)
                 : door.pos;
               const doorKey = `door|${fi}|${room}|${di}`;
@@ -10482,22 +10483,24 @@ export default function FloorPlanBuilding({
               // wPos and wW are already in metres — no extra * CM needed
               let wx = 0, wz = 0, rotY = 0;
               if (win.wall === "back") {
-                // "back" = SVG top = small planY = large worldZ = north wall
-                wz = cz + rD / 2 - 0.012;
+                // "back" = SVG top = small planY = small worldZ (north wall, -Z face)
+                wz = cz - rD / 2 + 0.012;
                 wx = cx + wPos + wW / 2 - rW / 2;
                 rotY = Math.PI;
               } else if (win.wall === "front") {
-                // "front" = SVG bottom = large planY = small worldZ = south wall
-                wz = cz - rD / 2 + 0.012;
+                // "front" = SVG bottom = large planY = large worldZ (south wall, +Z face)
+                wz = cz + rD / 2 - 0.012;
                 wx = cx + wPos + wW / 2 - rW / 2;
                 rotY = 0;
               } else if (win.wall === "left") {
+                // pos grows from back (north/small-Z) end
                 wx = cx - rW / 2 + 0.012;
-                wz = cz - wPos - wW / 2 + rD / 2;
+                wz = cz - rD / 2 + wPos + wW / 2;
                 rotY = -Math.PI / 2;
               } else {
+                // pos grows from back (north/small-Z) end
                 wx = cx + rW / 2 - 0.012;
-                wz = cz - wPos - wW / 2 + rD / 2;
+                wz = cz - rD / 2 + wPos + wW / 2;
                 rotY = Math.PI / 2;
               }
               const frameCy   = yBase + wSill + wH / 2;

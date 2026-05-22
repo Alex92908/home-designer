@@ -6493,16 +6493,13 @@ export default function HouseCanvas() {
         // — not 6 cm INTO the wall (which is where the raw room AABB
         // edge sits). Must match FPE's WALL_T (0.12m).
         const WALL_HALF = 0.06;
-        // Negate X to match the scene's scale={[-1,1,1]} flip applied during
-        // walkthrough. old minX→ -old maxX, old maxX → -old minX.
-        const oMinX = (p.x - minX) * CM_local - Wh / 2 + WALL_HALF;
-        const oMaxX = (p.x + d.width - minX) * CM_local - Wh / 2 - WALL_HALF;
+        // No X-negation needed: new convention east = +X is correct without flip.
         out.push({
-          minX: -oMaxX,
-          maxX: -oMinX,
-          minZ: -((p.y + d.depth - minY) * CM_local) + Dh / 2 + WALL_HALF,
-          maxZ: -((p.y - minY) * CM_local) + Dh / 2 - WALL_HALF,
-          hides: hides ? { back: hides.back, front: hides.front, left: hides.right, right: hides.left } : undefined,
+          minX: (p.x - minX) * CM_local - Wh / 2 + WALL_HALF,
+          maxX: (p.x + d.width - minX) * CM_local - Wh / 2 - WALL_HALF,
+          minZ: (p.y - minY) * CM_local - Dh / 2 + WALL_HALF,
+          maxZ: (p.y + d.depth - minY) * CM_local - Dh / 2 - WALL_HALF,
+          hides,
         });
       }
     }
@@ -6530,9 +6527,9 @@ export default function HouseCanvas() {
   // For each visible door, build a small "pass" rect straddling the wall it
   // lives on. blocksMovement consults these — if the movement segment goes
   // THROUGH a pass, allow even if it would otherwise cross a wall boundary.
-  // Convention: door.wall ===
-  //   "back"  → SVG top (small planY) = large world-Z = room AABB maxZ side (NORTH wall)
-  //   "front" → SVG bottom (large planY) = small world-Z = room AABB minZ side (SOUTH wall)
+  // New convention: north = -Z, south = +Z. door.wall ===
+  //   "back"  → SVG top (small planY) = small world-Z = room AABB minZ side (NORTH wall)
+  //   "front" → SVG bottom (large planY) = large world-Z = room AABB maxZ side (SOUTH wall)
   // Matches FloorPlanExterior's door render convention.
   const doorPasses = useMemo<Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>>(() => {
     const out: Array<{ minX: number; maxX: number; minZ: number; maxZ: number }> = [];
@@ -6554,51 +6551,50 @@ export default function HouseCanvas() {
 
     const collect = (door: { wall: string; pos: number; len: number },
                      p: { x: number; y: number }, d: { width: number; depth: number }) => {
-      // Room world rect
+      // Room world rect — new convention: north = -Z (small worldZ), south = +Z.
       const rMinX = (p.x - minX) * CM - Wh / 2;
       const rMaxX = (p.x + d.width - minX) * CM - Wh / 2;
-      const rMinZ = -((p.y + d.depth - minY) * CM) + Dh / 2;
-      const rMaxZ = -((p.y - minY) * CM) + Dh / 2;
+      const rMinZ = (p.y - minY) * CM - Dh / 2;
+      const rMaxZ = (p.y + d.depth - minY) * CM - Dh / 2;
       const dPos = door.pos * CM;
       const dLen = door.len * CM;
-      // Compute pass in original coords, then negate X to match
-      // the scene's scale={[-1,1,1]} flip applied during walkthrough.
+      // No X-negation: new coordinate system is correct without flip.
       let pass: { minX: number; maxX: number; minZ: number; maxZ: number } | null = null;
       if (door.wall === "back") {
-        // UI "back" = SVG top = small plan-Y = large world-Z (rMaxZ).
-        const x0 = rMinX + dPos;
-        pass = { minX: x0, maxX: x0 + dLen, minZ: rMaxZ - PAD, maxZ: rMaxZ + PAD };
-      } else if (door.wall === "front") {
-        // UI "front" = SVG bottom = large plan-Y = small world-Z (rMinZ).
+        // "back" = SVG top = small plan-Y = small world-Z (rMinZ, north face).
         const x0 = rMinX + dPos;
         pass = { minX: x0, maxX: x0 + dLen, minZ: rMinZ - PAD, maxZ: rMinZ + PAD };
+      } else if (door.wall === "front") {
+        // "front" = SVG bottom = large plan-Y = large world-Z (rMaxZ, south face).
+        const x0 = rMinX + dPos;
+        pass = { minX: x0, maxX: x0 + dLen, minZ: rMaxZ - PAD, maxZ: rMaxZ + PAD };
       } else if (door.wall === "left") {
-        // small X side. Pos grows from large-Z (back end per data convention) →
-        // small-Z. World Z = rMaxZ - dPos.
-        const z1 = rMaxZ - dPos;
-        const z0 = z1 - dLen;
+        // Pos grows from small-Z (back/north) end in new convention.
+        const z0 = rMinZ + dPos;
+        const z1 = z0 + dLen;
         pass = { minX: rMinX - PAD, maxX: rMinX + PAD, minZ: z0, maxZ: z1 };
       } else if (door.wall === "right") {
-        const z1 = rMaxZ - dPos;
-        const z0 = z1 - dLen;
+        // Pos grows from small-Z (back/north) end in new convention.
+        const z0 = rMinZ + dPos;
+        const z1 = z0 + dLen;
         pass = { minX: rMaxX - PAD, maxX: rMaxX + PAD, minZ: z0, maxZ: z1 };
       }
-      if (pass) out.push({ minX: -pass.maxX, maxX: -pass.minX, minZ: pass.minZ, maxZ: pass.maxZ });
+      if (pass) out.push(pass);
     };
 
     // pickAutoDoor mirror: when a room has no stored doors, FloorPlanExterior
     // synthesizes an auto-door via pickAutoDoor. We must compute the SAME
     // door here so blocksMovement opens a passage through it — otherwise
     // the visible door has no walkable opening. UI convention (matches plan SVG):
-    //   "back"  = SVG top = small plan-Y = large worldZ (rMaxZ)
-    //   "front" = SVG bottom = large plan-Y = small worldZ (rMinZ)
+    //   "back"  = SVG top = small plan-Y = small worldZ (rMinZ, north face)
+    //   "front" = SVG bottom = large plan-Y = large worldZ (rMaxZ, south face)
     const AUTO_DOOR_LEN_CM = 80;
     const EPS_CM = 25; // 0.25 m: "interior" if dist to floor bound ≥ this
     const autoDoorFor = (fi: number, room: string,
                         p: { x: number; y: number }, d: { width: number; depth: number },
                         fb: { minX: number; minY: number; maxX: number; maxY: number }
                        ): { wall: "back" | "front" | "left" | "right"; pos: number; len: number } => {
-      // UI convention: "back" = SVG top = small plan-Y = large world-Z.
+      // UI convention: "back" = SVG top = small plan-Y = small world-Z (north face).
       // Small plan-Y boundary = fb.minY. Distance of room's small-Y edge (p.y) to fb.minY.
       const dists = {
         back:  p.y - fb.minY,
@@ -6697,12 +6693,12 @@ export default function HouseCanvas() {
       const p = fp.roomLayout?.[room as RT];
       const d = fp.roomDimensions?.[room as RT];
       if (!p || !d) return;
-      // Convert plan coords (cm, Y-down) → world coords (m, Z-forward)
+      // Convert plan coords (cm, Y-down) → world coords (m, north = -Z)
       const worldX = (p.x + d.width  / 2 - bMinX) * CM_local - Wh / 2;
-      const worldZ = -((p.y + d.depth / 2 - bMinY) * CM_local) + Dh / 2;
+      const worldZ = (p.y + d.depth / 2 - bMinY) * CM_local - Dh / 2;
       const worldY = fi * WALK_FLOOR_H + 1.6;  // eye height on this floor
       setWalkthrough(true);
-      setWalkthroughSpawn([-worldX, worldY, worldZ]);
+      setWalkthroughSpawn([worldX, worldY, worldZ]);
     };
     window.addEventListener("enterWalkthrough", handler);
     return () => window.removeEventListener("enterWalkthrough", handler);
@@ -6768,7 +6764,7 @@ export default function HouseCanvas() {
                   }
                 }
                 setWalkthrough(true);
-                setWalkthroughSpawn([-bestX, 1.6, bestZ]);
+                setWalkthroughSpawn([bestX, 1.6, bestZ]);
               }
             }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
@@ -7236,22 +7232,18 @@ export default function HouseCanvas() {
             floor plan / yard plan 里精确定位或换 GLB。后续应归纳到房间
             结构（room-driven prefab + 可换 GLB），现在先去掉避免假景。
             院子里需要的东西用户用 YardPlan 自己摆。 */}
-        {/* X-flip group: Three.js right-hand rule makes west appear on screen
-            right when facing north — opposite of compass expectation. Negate
-            the scene X axis so that east is always on screen right when
-            facing north, matching the 2D plan. Only active during walkthrough;
-            exterior orbit view is already oriented correctly. */}
-        <group scale={insideBuilding ? [-1, 1, 1] : [1, 1, 1]}>
-          <HouseBody
-            W={W} D={D} settings={exterior}
-            insideBuilding={insideBuilding} wallXray={wallXray}
-            hideInterior={hideInterior}
-            onEnterRoom={(_room, _fi, worldPos) => {
-              setWalkthrough(true);
-              setWalkthroughSpawn([-worldPos[0], worldPos[1], worldPos[2]]);
-            }}
-          />
-        </group>
+        {/* Coordinate convention: north = -Z (camera faces north at yaw=0),
+            south = +Z, east = +X, west = -X. This matches the compass correctly:
+            when facing north, screen-right = +X = east. No X-flip needed. */}
+        <HouseBody
+          W={W} D={D} settings={exterior}
+          insideBuilding={insideBuilding} wallXray={wallXray}
+          hideInterior={hideInterior}
+          onEnterRoom={(_room, _fi, worldPos) => {
+            setWalkthrough(true);
+            setWalkthroughSpawn([worldPos[0], worldPos[1], worldPos[2]]);
+          }}
+        />
         {/* Wall decor + yard items — hidden during walkthrough (exterior elements) */}
         {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
         {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}
