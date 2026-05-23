@@ -10561,7 +10561,7 @@ export default function FloorPlanBuilding({
                   return true;
                 })
                 .map(p => {
-                  const modP = { ...p, z: rDcm - p.z, rotation: (540 - p.rotation) % 360 };
+                  const modP = p;
                   if (insideBuilding) {
                     return (
                       <Suspense key={p.instanceId} fallback={null}>
