@@ -745,11 +745,16 @@ function buildFacadeBlocks(segs: ExteriorWallSeg[]): FacadeBlock[] {
   const result: FacadeBlock[] = [];
   for (const { fi, side, wc, segs: pSegs } of planes.values()) {
     const sorted = [...pSegs].sort((a, b) => a.segStart - b.segStart);
+    const isCirc = (r: string) => r === "stair" || r === "hallway";
     const groups: ExteriorWallSeg[][] = [[sorted[0]]];
     for (let i = 1; i < sorted.length; i++) {
       const last = groups[groups.length - 1];
       const lastEnd = Math.max(...last.map(s => s.segEnd));
-      if (sorted[i].segStart - lastEnd <= TOLE * 3) {
+      const adjacent = sorted[i].segStart - lastEnd <= TOLE * 3;
+      // Never merge circulation rooms (stair/hallway) with regular rooms —
+      // keeps their facade blocks separate so solid-wall logic applies.
+      const sameKind = isCirc(sorted[i].room) === last.every(s => isCirc(s.room));
+      if (adjacent && sameKind) {
         last.push(sorted[i]);
       } else {
         groups.push([sorted[i]]);
@@ -5019,7 +5024,10 @@ export default function FloorPlanBuilding({
 
         const totalWinLen = winEntries.reduce((s, e) => s + e.w.len, 0);
         const winCoverage = segLen > 0 ? (totalWinLen * CM) / segLen : 0;
-        const isGlassWall = winCoverage > 0.42 || (isGlassVilla && (isSouth || winCoverage > 0.28));
+        // Stair/hallway rooms must always be solid — never auto-glass even on
+        // south-facing glass-villa facades (stairs are interior structure).
+        const blockIsCirculation = block.rooms.every(r => r === "stair" || r === "hallway");
+        const isGlassWall = !blockIsCirculation && (winCoverage > 0.42 || (isGlassVilla && (isSouth || winCoverage > 0.28)));
 
         let facade: "glass" | "concrete" | "wood";
         if (forceGlass) {
