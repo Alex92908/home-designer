@@ -10520,7 +10520,7 @@ export default function FloorPlanBuilding({
                   <group position={[0, -(wH - border * 2) / 2, 0]} rotation={[tilt, 0, 0]}>
                     <mesh position={[0, (wH - border * 2) / 2, 0]} onClick={handleWinClick}>
                       <boxGeometry args={[wW - border * 2, wH - border * 2, 0.01]} />
-                      <meshStandardMaterial color="#A8D4F5" transparent opacity={0.42} roughness={0.05} metalness={0.12} />
+                      <meshPhysicalMaterial color="#A8D4F5" transmission={0.75} roughness={0.05} metalness={0.12} thickness={0.02} transparent opacity={0.6} />
                     </mesh>
                   </group>
                   {/* 四边窗框 */}
