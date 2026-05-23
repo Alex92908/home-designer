@@ -1349,7 +1349,7 @@ export default function YardPlan() {
               house silhouette always reads clearly on top. ── */}
           {shadowPoly && (() => {
             const pts = shadowPoly
-              .map(([sx, sz]) => `${SVG_PX / 2 + sx / CM_PER_PX},${SVG_PX / 2 + sz / CM_PER_PX}`)
+              .map(([sx, sz]) => `${SVG_PX / 2 + sx / CM_PER_PX},${SVG_PX / 2 - sz / CM_PER_PX}`)
               .join(" ");
             const cx = shadowPoly.reduce((s, [sx]) => s + sx, 0) / shadowPoly.length;
             const cz = shadowPoly.reduce((s, [, sz]) => s + sz, 0) / shadowPoly.length;
@@ -1364,7 +1364,7 @@ export default function YardPlan() {
                 />
                 <text
                   x={SVG_PX / 2 + cx / CM_PER_PX}
-                  y={SVG_PX / 2 + cz / CM_PER_PX}
+                  y={SVG_PX / 2 - cz / CM_PER_PX}
                   textAnchor="middle" dominantBaseline="middle"
                   fontSize={8} fill="rgba(255,200,80,0.65)"
                   fontFamily="ui-monospace, Menlo, monospace"
@@ -1376,19 +1376,22 @@ export default function YardPlan() {
           })()}
 
           {/* House footprint — per-room polygons with hatching overlay */}
+          {/* Z axis is flipped here: south (+Z, living-room side) → small SVG-Y (top of lot,
+              toward driveway). This matches the user's expectation that the façade faces the
+              entrance road at the top of the yard plan. */}
           {(() => {
             const toSvg = ([x, z]: [number, number]): [number, number] => [
               SVG_PX / 2 + x / CM_PER_PX,
-              SVG_PX / 2 + z / CM_PER_PX,  // standard: north (-Z) → top, south (+Z) → bottom
+              SVG_PX / 2 - z / CM_PER_PX,  // flipped: south (+Z) → top
             ];
             const cxBox = SVG_PX / 2 + (footprint.minX + footprint.maxX) / 2 / CM_PER_PX;
-            const cyBox = SVG_PX / 2 + (footprint.minZ + footprint.maxZ) / 2 / CM_PER_PX;
+            const cyBox = SVG_PX / 2 - (footprint.minZ + footprint.maxZ) / 2 / CM_PER_PX;
             return (
               <g style={{ pointerEvents: "none" }}>
                 {/* Subtle drop shadow */}
                 <rect
                   x={SVG_PX / 2 + footprint.minX / CM_PER_PX + 4}
-                  y={SVG_PX / 2 + footprint.minZ / CM_PER_PX - 4}
+                  y={SVG_PX / 2 - footprint.maxZ / CM_PER_PX + 4}
                   width={(footprint.maxX - footprint.minX) / CM_PER_PX}
                   height={(footprint.maxZ - footprint.minZ) / CM_PER_PX}
                   fill="rgba(0,0,0,0.4)" rx={2}
@@ -1407,7 +1410,7 @@ export default function YardPlan() {
                 {/* Thick outer wall outline */}
                 <rect
                   x={SVG_PX / 2 + footprint.minX / CM_PER_PX}
-                  y={SVG_PX / 2 + footprint.minZ / CM_PER_PX}
+                  y={SVG_PX / 2 - footprint.maxZ / CM_PER_PX}
                   width={(footprint.maxX - footprint.minX) / CM_PER_PX}
                   height={(footprint.maxZ - footprint.minZ) / CM_PER_PX}
                   fill="none" stroke={INK} strokeWidth={2.2} strokeLinejoin="round"
