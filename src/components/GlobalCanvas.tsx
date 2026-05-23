@@ -121,8 +121,12 @@ export function StaircaseGeom({
   const treadT  = 0.06;
   const railH   = FLOOR_H * 0.95;
   const railMat = <meshStandardMaterial color="#A0A0A8" roughness={0.5} />;
-  // Convert stairRotation degrees → radians for the Y axis
-  const rotY = (stairRotation * Math.PI) / 180;
+  // Convert stairRotation degrees → radians for the Y axis.
+  // +180° base offset corrects for coord-refactor (north = -Z): the 2D plan
+  // shows the staircase entry at the south end (large planY / +Z), but the
+  // StraightRun geometry places step-0 at local Z = -runD/2 (the -Z / north
+  // end).  Adding 180° flips the run so step-0 sits at +Z (south = entry).
+  const rotY = ((stairRotation + 180) * Math.PI) / 180;
 
   // ── Straight run ───────────────────────────────────────────
   // 金属杆式楼梯：金属踏步 + 两侧斜扶手杆（顶端封在楼板处）+ 竖栏杆
