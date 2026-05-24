@@ -11,9 +11,10 @@
  *      其他面 → 混凝土（带窗洞）
  *   3. 顶面加平屋顶
  *
- * 坐标系与全局3D一致：
+ * 坐标系与全局3D完全一致（coord-refactor 之后）：
  *   Floor plan X → Three.js X（不翻转）
- *   Floor plan Y → Three.js -Z（翻转，南=大Y → world -Z 面向摄像机）
+ *   Floor plan Y → Three.js +Z（南=大Y → world +Z；北=-Z）
+ *   摄像机在 SE 角（+X,+Z），朝 NW 看，与 GlobalCanvas 相同象限
  *   楼层 → Three.js Y（向上）
  */
 
