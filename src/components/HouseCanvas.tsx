@@ -461,15 +461,15 @@ function CameraRig({ W, D, floors, buildingType }: {
     const isFloorPlanDriven = buildingType === "floor-plan-driven";
 
     if (isFloorPlanDriven) {
-      // Floor-plan-driven exterior: south face (+Z) is the front of the house
-      // (living room faces the yard entrance; yard plan shows south side at top near driveway).
-      // Camera: south-west corner (+Z side), lower angle.
+      // Floor-plan-driven exterior: south face (+Z) is the front of the house.
+      // Camera: south-EAST corner (+Z, +X) — same quadrant as GlobalCanvas (d*0.85, _, d*0.85)
+      // so left/right orientation matches the 全局3D view.
       const diag  = Math.sqrt(W * W + D * D);
       const dist  = diag * 1.15 + 5;
       // Keep camera low enough that the pool deck (y≈0) is in the lower third of the frame.
       const camY  = h * 0.65 + 1.8;   // ~ 1–2 floors elevation, not above the roof
       const camZ  = +(dist * 0.78);
-      const camX  = -(dist * 0.48);
+      const camX  = +(dist * 0.48);   // +X = east, matching GlobalCanvas camera quadrant
 
       camera.position.set(camX, camY, camZ);
       (camera as THREE.PerspectiveCamera).fov = 52;
