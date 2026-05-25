@@ -1292,13 +1292,15 @@ export default function YardPlan() {
           <rect width={SVG_PX} height={SVG_PX} fill="url(#yard-grid-minor)" />
           <rect width={SVG_PX} height={SVG_PX} fill="url(#yard-grid-major)" />
 
-          {/* Compass — minimal, dark version */}
-          <g transform={`translate(${SVG_PX - 32}, 30)`} style={{ pointerEvents: "none" }}>
-            <circle r={14} fill="rgba(255,255,255,0.06)" stroke={INK} strokeWidth={0.8} />
-            <line x1={0} y1={-10} x2={0} y2={10} stroke={INK} strokeWidth={0.6} />
-            <line x1={-10} y1={0} x2={10} y2={0} stroke={INK_LIGHT} strokeWidth={0.4} />
-            <path d="M 0 -10 L 3 -3 L 0 -5 L -3 -3 Z" fill={INK} />
-            <text y={-16} textAnchor="middle" fontSize={8} fill={INK} fontWeight={700}>N</text>
+          {/* Compass — N/S/W/E (matches FloorPlanAll convention) */}
+          <g transform={`translate(${SVG_PX - 50}, 50)`} style={{ pointerEvents: "none" }}>
+            <circle r={28} fill="white" fillOpacity={0.92} stroke="#D1D5DB" strokeWidth={1.5} />
+            <text textAnchor="middle" y={-11} fontSize={15} fontWeight="bold" fill="#1F2937" fontFamily="system-ui">N</text>
+            <text textAnchor="middle" y={20}  fontSize={12} fill="#9CA3AF" fontFamily="system-ui">S</text>
+            <text textAnchor="start"  x={8}   y={5}  fontSize={12} fill="#9CA3AF" fontFamily="system-ui">E</text>
+            <text textAnchor="end"    x={-8}  y={5}  fontSize={12} fill="#9CA3AF" fontFamily="system-ui">W</text>
+            <polygon points="0,-21 4,-7 0,-10 -4,-7" fill="#374151" />
+            <polygon points="0,21 4,7 0,10 -4,7"    fill="#9CA3AF" />
           </g>
           {/* Scale bar */}
           <g transform={`translate(20, ${SVG_PX - 24})`} style={{ pointerEvents: "none" }}>
@@ -1349,7 +1351,7 @@ export default function YardPlan() {
               house silhouette always reads clearly on top. ── */}
           {shadowPoly && (() => {
             const pts = shadowPoly
-              .map(([sx, sz]) => `${SVG_PX / 2 + sx / CM_PER_PX},${SVG_PX / 2 - sz / CM_PER_PX}`)
+              .map(([sx, sz]) => `${SVG_PX / 2 + sx / CM_PER_PX},${SVG_PX / 2 + sz / CM_PER_PX}`)
               .join(" ");
             const cx = shadowPoly.reduce((s, [sx]) => s + sx, 0) / shadowPoly.length;
             const cz = shadowPoly.reduce((s, [, sz]) => s + sz, 0) / shadowPoly.length;
@@ -1364,7 +1366,7 @@ export default function YardPlan() {
                 />
                 <text
                   x={SVG_PX / 2 + cx / CM_PER_PX}
-                  y={SVG_PX / 2 - cz / CM_PER_PX}
+                  y={SVG_PX / 2 + cz / CM_PER_PX}
                   textAnchor="middle" dominantBaseline="middle"
                   fontSize={8} fill="rgba(255,200,80,0.65)"
                   fontFamily="ui-monospace, Menlo, monospace"
@@ -1376,22 +1378,22 @@ export default function YardPlan() {
           })()}
 
           {/* House footprint — per-room polygons with hatching overlay */}
-          {/* Z axis is flipped here: south (+Z, living-room side) → small SVG-Y (top of lot,
-              toward driveway). This matches the user's expectation that the façade faces the
-              entrance road at the top of the yard plan. */}
+          {/* Z axis is NOT flipped (after coord-refactor): -Z (north / kitchen-back-of-house side)
+              renders at small SVG-Y (top of lot), consistent with FloorPlanAll convention
+              ("north at top"). Yard items (trees, gate, fence) use the same +sz mapping. */}
           {(() => {
             const toSvg = ([x, z]: [number, number]): [number, number] => [
               SVG_PX / 2 + x / CM_PER_PX,
-              SVG_PX / 2 - z / CM_PER_PX,  // flipped: south (+Z) → top
+              SVG_PX / 2 + z / CM_PER_PX,
             ];
             const cxBox = SVG_PX / 2 + (footprint.minX + footprint.maxX) / 2 / CM_PER_PX;
-            const cyBox = SVG_PX / 2 - (footprint.minZ + footprint.maxZ) / 2 / CM_PER_PX;
+            const cyBox = SVG_PX / 2 + (footprint.minZ + footprint.maxZ) / 2 / CM_PER_PX;
             return (
               <g style={{ pointerEvents: "none" }}>
                 {/* Subtle drop shadow */}
                 <rect
                   x={SVG_PX / 2 + footprint.minX / CM_PER_PX + 4}
-                  y={SVG_PX / 2 - footprint.maxZ / CM_PER_PX + 4}
+                  y={SVG_PX / 2 + footprint.minZ / CM_PER_PX + 4}
                   width={(footprint.maxX - footprint.minX) / CM_PER_PX}
                   height={(footprint.maxZ - footprint.minZ) / CM_PER_PX}
                   fill="rgba(0,0,0,0.4)" rx={2}
@@ -1410,7 +1412,7 @@ export default function YardPlan() {
                 {/* Thick outer wall outline */}
                 <rect
                   x={SVG_PX / 2 + footprint.minX / CM_PER_PX}
-                  y={SVG_PX / 2 - footprint.maxZ / CM_PER_PX}
+                  y={SVG_PX / 2 + footprint.minZ / CM_PER_PX}
                   width={(footprint.maxX - footprint.minX) / CM_PER_PX}
                   height={(footprint.maxZ - footprint.minZ) / CM_PER_PX}
                   fill="none" stroke={INK} strokeWidth={2.2} strokeLinejoin="round"
@@ -1700,6 +1702,26 @@ export default function YardPlan() {
               点击拖拽绘制围栏 — 按 ESC 退出
             </text>
           )}
+
+          {/* ── DEBUG: NWES direction labels — commented out for production.
+               Re-enable to debug coord directions in 院子图. ── */}
+          {/* {(() => {
+            const cx = vbOrigin + vbSize / 2;
+            const cy = vbOrigin + vbSize / 2;
+            const labels = [
+              { x: cx,                       y: vbOrigin + 28,            t: "N (-Z, world)", anchor: "middle" as const },
+              { x: cx,                       y: vbOrigin + vbSize - 10,   t: "S (+Z, world)", anchor: "middle" as const },
+              { x: vbOrigin + 10,            y: cy,                       t: "W (-X)",        anchor: "start"  as const },
+              { x: vbOrigin + vbSize - 10,   y: cy,                       t: "E (+X)",        anchor: "end"    as const },
+            ];
+            return labels.map((l, i) => (
+              <text key={i} x={l.x} y={l.y} textAnchor={l.anchor}
+                fontSize={28} fontWeight={900} fill="#FF1493" stroke="#FFFFFF" strokeWidth={2}
+                paintOrder="stroke" style={{ pointerEvents: "none", userSelect: "none" }}>
+                {l.t}
+              </text>
+            ));
+          })()} */}
         </svg>
       </div>
 

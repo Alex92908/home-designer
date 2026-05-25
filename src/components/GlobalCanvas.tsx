@@ -1446,6 +1446,28 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
         />
       )}
 
+      {/* ── DEBUG: NWES direction labels (code convention: north=-Z, south=+Z, east=+X, west=-X) ──
+           Commented out for production; re-enable to debug coord directions in 全局3D. */}
+      {/* {(() => {
+        const lblY = 1.0;
+        const lblStyle: React.CSSProperties = {
+          fontSize: 60, fontWeight: 900, color: '#FF1493',
+          background: 'rgba(255,255,255,0.95)',
+          padding: '6px 16px', borderRadius: 8,
+          border: '3px solid #FF1493',
+          whiteSpace: 'nowrap', userSelect: 'none', pointerEvents: 'none',
+          transform: 'translate(-50%, -50%)',
+        };
+        return (
+          <group>
+            <Html position={[0, lblY, -footD / 2 - 2]} center><div style={lblStyle}>N (-Z)</div></Html>
+            <Html position={[0, lblY,  footD / 2 + 2]} center><div style={lblStyle}>S (+Z)</div></Html>
+            <Html position={[ footW / 2 + 2, lblY, 0]} center><div style={lblStyle}>E (+X)</div></Html>
+            <Html position={[-footW / 2 - 2, lblY, 0]} center><div style={lblStyle}>W (-X)</div></Html>
+          </group>
+        );
+      })()} */}
+
     </>
   );
 }
@@ -1605,6 +1627,19 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
       <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold shadow pointer-events-none"
         style={{ background: "rgba(255,255,255,0.92)", color: "#374151" }}>
         <span>{t.global3dHint}</span>
+      </div>
+
+      {/* ── Compass — static, N=world -Z (matches FloorPlanAll + YardPlan) ── */}
+      <div className="absolute pointer-events-none" style={{ top: 60, right: 130, width: 60, height: 60 }}>
+        <svg viewBox="-32 -32 64 64" width="60" height="60">
+          <circle r={28} fill="white" fillOpacity={0.92} stroke="#D1D5DB" strokeWidth={1.5} />
+          <text textAnchor="middle" y={-11} fontSize={15} fontWeight="bold" fill="#1F2937" fontFamily="system-ui">N</text>
+          <text textAnchor="middle" y={20} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">S</text>
+          <text textAnchor="start"  x={8}  y={5} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">E</text>
+          <text textAnchor="end"    x={-8} y={5} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">W</text>
+          <polygon points="0,-21 4,-7 0,-10 -4,-7" fill="#374151" />
+          <polygon points="0,21 4,7 0,10 -4,7" fill="#9CA3AF" />
+        </svg>
       </div>
 
       {/* ── Control panel (right side) ── */}

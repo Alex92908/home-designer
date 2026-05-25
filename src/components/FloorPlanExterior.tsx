@@ -988,7 +988,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
            plants, wooden boardwalk path, and planters. */}
       {(() => {
         const grX   = -W * 0.18;   // centre of green zone (west of skylight)
-        const grZ   =  D * 0.14;   // north half
+        const grZ   = -D * 0.14;   // north half (current convention: north = -Z)
         const grW   = Math.min(W * 0.42, 5.50);
         const grD   = Math.min(D * 0.38, 4.20);
         const grY   = roofSlab + 0.05;
@@ -1041,7 +1041,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
         const slW = Math.min(W * 0.45, 5.0);  // skylight width
         const slD = 0.90;                       // skylight depth (north-south)
         const slY = roofSlab + 0.055;          // sits on roof slab
-        const slZ = -D * 0.18;                 // south-leaning position
+        const slZ =  D * 0.18;                 // south-leaning position (current: south = +Z)
         return (
           <group position={[0, slY, slZ]}>
             {/* Frame curb — dark aluminum channel */}
@@ -1074,7 +1074,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
       })()}
 
       {/* ── HVAC 冷凝器组（2 台并排，带风扇格栅）── */}
-      {([[-W * 0.30, D * 0.18], [-W * 0.16, D * 0.18]] as [number,number][]).map(([hvx, hvz], hi) => (
+      {([[-W * 0.30, -D * 0.18], [-W * 0.16, -D * 0.18]] as [number,number][]).map(([hvx, hvz], hi) => (
         <group key={`hv-${hi}`} position={[hvx, roofSlab + 0.04, hvz]}>
           {/* 机体箱 — 浅灰色蒙皮，略带金属感 */}
           <mesh castShadow>
@@ -1113,7 +1113,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
         const arrW = pvCols * (pvW + pvGap) - pvGap;
         const arrDepth = pvRows * (pvH + pvGap) - pvGap;  // total depth along tilt axis
         const arrX = W * 0.22;
-        const arrZ = D * 0.24;
+        const arrZ = D * 0.24;   // solar PV: south for sun (current: south = +Z, stays)
         const arrY = roofSlab + 0.14;
         return (
           <group position={[arrX, arrY, arrZ]} rotation={[pvTilt, 0, 0]}>
@@ -1165,9 +1165,9 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
       })()}
       {/* ── 通风管道组（3 根，高度不一，北侧机房区）── */}
       {([
-        [W * 0.10, -D * 0.10, 0.50, 0.08, 0.10],
-        [W * 0.14, -D * 0.08, 0.70, 0.055, 0.065],
-        [W * 0.06, -D * 0.14, 0.40, 0.065, 0.075],
+        [W * 0.10,  D * 0.10, 0.50, 0.08, 0.10],
+        [W * 0.14,  D * 0.08, 0.70, 0.055, 0.065],
+        [W * 0.06,  D * 0.14, 0.40, 0.065, 0.075],
       ] as [number,number,number,number,number][]).map(([ex, ez, eH, rt, rb], ei) => (
         <group key={`exhaust-${ei}`} position={[ex, roofSlab + 0.05 + eH / 2, ez]}>
           {/* Main stack */}
@@ -1224,7 +1224,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
       {/* ── 通信天线杆（roof communication antenna mast）── */}
       {(() => {
         const antX = -W * 0.38;
-        const antZ =  D * 0.30;   // north-west, away from terrace
+        const antZ = -D * 0.30;   // north-west, away from terrace (current: north = -Z)
         const antY = roofSlab + 0.05;
         const mH   = 1.60;   // mast height
         return (
@@ -1278,7 +1278,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
            Mounted on a galvanised pole with equipment cross-arm. */}
       {(() => {
         const wsX = W * 0.42;
-        const wsZ = D * 0.35;    // north-east, away from PV array and helipad
+        const wsZ = -D * 0.35;    // north-east, away from PV array and helipad (current: north = -Z)
         const wsY = roofSlab + 0.05;
         const poleH = 1.80;
         return (
@@ -1412,7 +1412,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
       {!hasRooftop && <>
       {/* 两把日光浴躺椅 — 淡米色，南向摆放，供远处视角可见 */}
       {([[-W * 0.15, 0], [W * 0.15, 0]] as [number,number][]).map(([lx, _lz], li) => (
-        <group key={`rl-${li}`} position={[lx, roofSlab + 0.05, -D * 0.28]}>
+        <group key={`rl-${li}`} position={[lx, roofSlab + 0.05, D * 0.28]}>
           {/* 躺椅框架 */}
           <mesh position={[0, 0.19, 0]} castShadow>
             <boxGeometry args={[0.58, 0.06, 1.75]} />
@@ -1440,7 +1440,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
         </group>
       ))}
       {/* 躺椅之间的小边桌 — 铝合金 + 玻璃台面 */}
-      <group position={[0, roofSlab + 0.05, -D * 0.28]}>
+      <group position={[0, roofSlab + 0.05, D * 0.28]}>
         {/* Table frame */}
         <mesh position={[0, 0.38, 0]}>
           <cylinderGeometry args={[0.28, 0.28, 0.015, 12]} />
@@ -1470,7 +1470,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
         const pgD = 2.40;                       // pergola depth (N-S)
         const pgH = 2.20;                       // height above roof slab
         const pgY = roofSlab + 0.05;            // base Y
-        const pgZ = -D * 0.28;                  // south-leaning terrace
+        const pgZ =  D * 0.28;                  // south-leaning terrace (current: south = +Z)
         const pgX = -W * 0.13;                  // slightly west of center
         const postColor  = "#3A3C44";
         const louverColor = "#50545E";
@@ -1545,7 +1545,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
            tubes with selective absorber inner coating (deep blue). */}
       {(() => {
         const tcX    =  W * 0.38;         // east side of roof
-        const tcZ    =  D * 0.08;         // slightly north of centre
+        const tcZ    = -D * 0.08;         // slightly north of centre (current: north = -Z)
         const tcY    =  roofSlab + 0.05;
         const tilt   =  0.61;             // ≈ 35° south-facing tilt
         const nCollectors = 2;            // two side-by-side banks
@@ -1632,7 +1632,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
       {(() => {
         const hpR  = Math.min(W * 0.18, 2.60);  // helipad circle radius
         const hpX  = -W * 0.28;
-        const hpZ  = -D * 0.26;
+        const hpZ  =  D * 0.26;
         const hpY  = roofSlab + 0.055;           // sits on roof slab surface
         const segments = 32;
         return (
@@ -1692,7 +1692,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
         const rpL = 1.20;                         // pool depth N-S
         const rpDp = 0.18;                        // water depth (shallow)
         const rpX = W * 0.22;
-        const rpZ =  D * 0.06;                   // centre-east of roof
+        const rpZ = -D * 0.06;                   // centre, slight north (current convention)
         const rpY = roofSlab + 0.05;
         return (
           <group position={[rpX, rpY, rpZ]}>
@@ -1777,10 +1777,10 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
         return (
           <group>
             {/* Two sun loungers, side-by-side facing south */}
-            <Lounger x={-W * 0.05} z={-D * 0.32} rotY={0} />
-            <Lounger x={-W * 0.05} z={-D * 0.16} rotY={0} />
+            <Lounger x={-W * 0.05} z={ D * 0.32} rotY={0} />
+            <Lounger x={-W * 0.05} z={ D * 0.16} rotY={0} />
             {/* Side table between loungers */}
-            <group position={[-W * 0.05, furY, -D * 0.24]}>
+            <group position={[-W * 0.05, furY, D * 0.24]}>
               <mesh position={[1.20, 0.35, 0]}>
                 <cylinderGeometry args={[0.25, 0.25, 0.016, 10]} />
                 <meshStandardMaterial color="#E0D8C8" roughness={0.35} metalness={0.10} envMapIntensity={2.0} />
@@ -1798,7 +1798,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
             {/* Rooftop dining set — 4 chairs around round table under pergola */}
             {(() => {
               const dtX = -W * 0.13;
-              const dtZ = -D * 0.28 + 0.40;  // inside pergola zone
+              const dtZ =  D * 0.28 - 0.40;  // inside pergola zone (current: south = +Z)
               // Round table
               return (
                 <group position={[dtX, furY, dtZ]}>
@@ -1853,7 +1853,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
            and underwater glow. 2m × 2m, 0.65m deep. */}
       {(() => {
         const htX = W * 0.10;
-        const htZ = -D * 0.05;   // open east area of roof
+        const htZ =  D * 0.05;   // open area of roof (slight south)
         const htY = roofSlab + 0.05;
         const htW = 1.90;  // hot tub width
         const htH = 0.65;  // depth
@@ -1929,7 +1929,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
       {(() => {
         // Placed near roof terrace sun loungers and dining set
         const bbqX = W * 0.28;
-        const bbqZ = -D * 0.22;
+        const bbqZ =  D * 0.22;
         const bbqY = roofSlab + 0.05;
         return (
           <group position={[bbqX, bbqY, bbqZ]}>
@@ -1972,7 +1972,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
            Glass viewing panel on south face, ladder handles, underwater LED. */}
       {(() => {
         const cpX  = -W * 0.22;    // NE quadrant, clear of elevator overrun
-        const cpZ  =  D * 0.12;
+        const cpZ  = -D * 0.12;   // current: north = -Z
         const cpY  = roofSlab + 0.05;
         const cpW  = 2.00;   // pool width (E-W)
         const cpD  = 1.20;   // pool depth (N-S)
@@ -2063,7 +2063,7 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
            counter LED strip. Night: warm amber glow activates. */}
       {(() => {
         const barX  =  W * 0.32;
-        const barZ  = -D * 0.38;
+        const barZ  =  D * 0.38;
         const barY  = roofSlab + 0.05;
         const isNightBar = nightGlow > 0.4;
         const barEmi  = isNightBar ? 2.8 : 0.30;
@@ -4214,13 +4214,17 @@ export default function FloorPlanBuilding({
       {/* ── 车道边缘低矮灯柱（driveway side bollards）——
                从大门向建筑入口沿车道两侧布置，每侧 4 盏，时间感知 ── */}
       {!insideBuilding && isGlassVilla && (() => {
-        const bndS7   = -D / 2 - 14.50;
+        const bndS7   = D / 2 + 14.50;
         const gateW7  = Math.min(W * 0.30, 3.8);
-        const driveZ1 = bndS7 + 0.5;             // near gate
-        const driveZ2 = -D / 2 - 3.0;            // near building steps
+        const driveZ1 = bndS7 - 0.5;             // near gate (slightly toward building)
+        const driveZ2 = D / 2 + 3.0;            // near building steps
         const bollardCount = 4;
-        const bollardH7 = 0.60;
-        const bxOffset  = gateW7 + 0.45;         // lateral offset from centre line
+        const bollardH7  = 0.60;
+        // Lateral offset: keep lamps outside the pool footprint (pool W ≈ min(W*0.78, 11)).
+        // Place them just outside the pool deck edge so they flank the south yard rather
+        // than penetrate the pool surface.
+        const poolHalfW7 = Math.min(W * 0.78, 11.0) / 2;
+        const bxOffset   = Math.max(gateW7 + 0.45, poolHalfW7 + 1.20);
         const isNight7  = sunHour < 6 || sunHour > 20;
         const isDusk7   = !isNight7 && (sunHour < 8 || sunHour > 18);
         const bEmi7 = isNight7 ? 3.0 : isDusk7 ? 1.8 : 0.2;
@@ -4259,7 +4263,7 @@ export default function FloorPlanBuilding({
         const sconceEmi  = isNight2 ? 3.8 : isDusk2 ? 2.0 : 0.6;
         const lightInt   = isNight2 ? 4.0 : isDusk2 ? 2.0 : 0.0;
         const lightDist  = 5.0;
-        const wallZ = -D / 2 - 0.18;
+        const wallZ = D / 2 + 0.18;
         return Array.from({ length: usedFloors }, (_, fi) => {
           const wallY  = fi * (FLOOR_H + SLAB_T) + 2.2;
           return [-W * 0.28, W * 0.28].map((lx, li) => (
@@ -4297,7 +4301,7 @@ export default function FloorPlanBuilding({
           return (
             <group key={`band-${fi}`}>
               {/* South face band */}
-              <mesh position={[0, bandY, -D / 2 - bandT / 2 - 0.002]}>
+              <mesh position={[0, bandY, D / 2 + bandT / 2 - 0.002]}>
                 <boxGeometry args={[W + 0.004, bandH, bandT]} />
                 <meshStandardMaterial color={bandColor} roughness={0.20} metalness={0.90} envMapIntensity={2.0} />
               </mesh>
@@ -5518,7 +5522,7 @@ export default function FloorPlanBuilding({
         const nSouth = Math.max(2, Math.round(W / spacing));
         for (let i = 0; i < nSouth; i++) {
           const fx = -W / 2 + (i + 0.5) * (W / nSouth);
-          fixtures.push({ x: fx, y: 0, z: -D / 2 - ulOffset, rY: 0 });
+          fixtures.push({ x: fx, y: 0, z: D / 2 + ulOffset, rY: 0 });
         }
         // North face (positive Z)
         for (let i = 0; i < nSouth; i++) {
@@ -5680,7 +5684,7 @@ export default function FloorPlanBuilding({
         const postW = 0.038;      // post cross-section
         const frameColor = "#1C1E26";
         const terW = Math.min(W * 0.60, 7.0);  // terrace railing span (south only, centered)
-        const railZ = -D / 2 - OV + 0.20;  // inset from south parapet inner face
+        const railZ = D / 2 + OV + 0.20;  // inset from south parapet inner face
         // Number of glass panels (each ~1.2m wide)
         const panelCount = Math.max(2, Math.round(terW / 1.2));
         const postPositions = Array.from({ length: panelCount + 1 }, (_, i) => -terW / 2 + i * (terW / panelCount));
@@ -5819,20 +5823,20 @@ export default function FloorPlanBuilding({
               <meshStandardMaterial color="#3A3E48" roughness={0.22} metalness={0.90} envMapIntensity={1.8} />
             </mesh>
             {/* South facade stone accent strip (match east/north) */}
-            <mesh position={[0, stoneY, -D / 2 - stoneT / 2 - 0.12 - 0.002]} castShadow>
+            <mesh position={[0, stoneY, D / 2 + stoneT / 2 + 0.12 + 0.002]} castShadow>
               <boxGeometry args={[W - 0.08, stoneH, stoneT]} />
               <meshStandardMaterial color={stoneColA} roughness={0.74} metalness={0.02} envMapIntensity={0.6} />
             </mesh>
             {Array.from({ length: Math.round((W - 0.08) / jointStep) }, (_, ji) => {
               const jx = -W / 2 + 0.04 + (ji + 1) * jointStep;
               return (
-                <mesh key={`sj-${ji}`} position={[jx, stoneY, -D / 2 - stoneT - 0.12 - 0.003]}>
+                <mesh key={`sj-${ji}`} position={[jx, stoneY, D / 2 + stoneT + 0.12 + 0.003]}>
                   <boxGeometry args={[0.010, stoneH - 0.01, 0.002]} />
                   <meshStandardMaterial color={stoneColB} roughness={0.90} />
                 </mesh>
               );
             })}
-            <mesh position={[0, stoneY + stoneH / 2 + 0.006, -D / 2 - stoneT / 2 - 0.12 - 0.002]}>
+            <mesh position={[0, stoneY + stoneH / 2 + 0.006, D / 2 + stoneT / 2 + 0.12 + 0.002]}>
               <boxGeometry args={[W - 0.06, 0.012, stoneT + 0.010]} />
               <meshStandardMaterial color="#3A3E48" roughness={0.22} metalness={0.90} envMapIntensity={1.8} />
             </mesh>
@@ -5866,7 +5870,7 @@ export default function FloorPlanBuilding({
         const bedW = 0.55;    // planting bed depth from building face
         const bedY = bedW / 2;
         // South facade plant strip
-        const southZ = -D / 2 - bedW / 2 - 0.004;
+        const southZ = D / 2 + bedW / 2 - 0.004;
         const plantCount = Math.round(W / 0.65);
         const plants: Array<{ x: number; z: number; type: number }> = [];
         // South face
@@ -6010,7 +6014,7 @@ export default function FloorPlanBuilding({
         return (
           <group>
             {/* South eave strip */}
-            <mesh position={[0, eaveY, -D / 2 - OV_S5 + eaveInset]}>
+            <mesh position={[0, eaveY, D / 2 + OV_S5 + eaveInset]}>
               <boxGeometry args={[W + OV5 * 2 - 0.10, eaveH, eaveW]} />
               <meshStandardMaterial color={eaveCol} emissive={eaveCol} emissiveIntensity={eaveEmi} roughness={0.70} />
             </mesh>
@@ -6031,8 +6035,8 @@ export default function FloorPlanBuilding({
             </mesh>
             {/* Point lights at eave corners for volumetric glow */}
             {eaveLI > 0 && ([
-              [ W / 2 + OV5 * 0.60, eaveY, -D / 2 - OV_S5 * 0.60],
-              [-W / 2 - OV5 * 0.60, eaveY, -D / 2 - OV_S5 * 0.60],
+              [ W / 2 + OV5 * 0.60, eaveY, D / 2 + OV_S5 * 0.60],
+              [-W / 2 - OV5 * 0.60, eaveY, D / 2 + OV_S5 * 0.60],
               [ W / 2 + OV5 * 0.60, eaveY,  D / 2 + OV5 * 0.60],
               [-W / 2 - OV5 * 0.60, eaveY,  D / 2 + OV5 * 0.60],
             ] as [number,number,number][]).map(([lx, ly, lz], li) => (
@@ -6043,6 +6047,28 @@ export default function FloorPlanBuilding({
       })()}
 
       {!insideBuilding && <FlatRoof W={W} D={D} roofY={totalH} nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0} hasRooftop={exterior.hasRooftop} />}
+
+      {/* ── DEBUG: NWES direction labels (code convention: north=-Z, south=+Z, east=+X, west=-X) ──
+           Commented out for production; re-enable to debug coord directions in 外观图. */}
+      {/* {!insideBuilding && (() => {
+        const lblY = 1.5;
+        const lblStyle: React.CSSProperties = {
+          fontSize: 72, fontWeight: 900, color: '#FF1493',
+          background: 'rgba(255,255,255,0.95)',
+          padding: '8px 20px', borderRadius: 10,
+          border: '4px solid #FF1493',
+          whiteSpace: 'nowrap', userSelect: 'none', pointerEvents: 'none',
+          transform: 'translate(-50%, -50%)',
+        };
+        return (
+          <group>
+            <Html position={[0, lblY, -D / 2 - 2]} center><div style={lblStyle}>N (-Z)</div></Html>
+            <Html position={[0, lblY,  D / 2 + 2]} center><div style={lblStyle}>S (+Z)</div></Html>
+            <Html position={[ W / 2 + 2, lblY, 0]} center><div style={lblStyle}>E (+X)</div></Html>
+            <Html position={[-W / 2 - 2, lblY, 0]} center><div style={lblStyle}>W (-X)</div></Html>
+          </group>
+        );
+      })()} */}
 
       {/* ── 屋顶层 (hasRooftop) — 读取屋顶平面图，按房间类型渲染 3D 模板装饰 ── */}
       {exterior.hasRooftop && (
@@ -6246,21 +6272,21 @@ export default function FloorPlanBuilding({
            A rich green lawn plane fills the site inside boundary walls.
            The central entry/driveway axis uses dark granite slabs. */}
       {!insideBuilding && isGlassVilla && (() => {
-        const bndS5   = -D / 2 - 14.50;
-        const bndN5   =  D / 2 + 3.20;
+        const bndS5   = D / 2 + 14.50;
+        const bndN5   = -D / 2 - 3.20;   // current: north = -Z
         const bndE5   =  W / 2 + 4.50;
         const bndW5   = -W / 2 - 4.50;
         const wallT5  = 0.18;
         // Lawn fills inside boundary minus wall thickness
         const lawnW   = bndE5 - bndW5 - wallT5 * 2;
-        const lawnD   = bndN5 - bndS5 - wallT5 * 2;
+        const lawnD   = bndS5 - bndN5 - wallT5 * 2;   // bndS5 > bndN5 after coord refactor
         const lawnMidZ = (bndN5 + bndS5) / 2;
 
         // Driveway / main path: 5.4m wide along centre axis
         const driveW5 = 5.40;
-        const driveZ1 = bndS5 + wallT5 + 0.05;
-        const driveZ2 = -D / 2 - 0.15;   // south face of building
-        const driveLen = driveZ2 - driveZ1;
+        const driveZ1 = bndS5 - wallT5 - 0.05;   // near gate (smaller Z than bndS5)
+        const driveZ2 = D / 2 + 0.15;   // south face of building (smallest +Z)
+        const driveLen = driveZ1 - driveZ2;   // driveZ1 (near gate, larger +Z) - driveZ2 (near building)
         const driveMidZ = (driveZ1 + driveZ2) / 2;
 
         return (
@@ -6274,7 +6300,7 @@ export default function FloorPlanBuilding({
             {/* Lawn stripe pattern (slightly lighter bands for mow lines) */}
             {Array.from({ length: Math.round(lawnD / 1.20) }, (_, li) => {
               if (li % 2 === 0) return null;  // alternate stripes only
-              const sz = bndS5 + wallT5 + (li + 0.5) * 1.20;
+              const sz = bndS5 - wallT5 - (li + 0.5) * 1.20;   // stripes from gate toward building (decreasing Z)
               return (
                 <mesh key={`stripe-${li}`} position={[0, 0.002, sz]} rotation={[-Math.PI / 2, 0, 0]}>
                   <planeGeometry args={[lawnW, 1.18]} />
@@ -6289,7 +6315,7 @@ export default function FloorPlanBuilding({
             </mesh>
             {/* Path joint lines — transverse granite joints every 0.65m */}
             {Array.from({ length: Math.round(Math.abs(driveLen) / 0.65) - 1 }, (_, ji) => {
-              const jz = driveZ1 + (ji + 1) * 0.65;
+              const jz = driveZ1 - (ji + 1) * 0.65;   // joints from gate toward building (decreasing Z)
               return (
                 <mesh key={`pj-${ji}`} position={[0, 0.018, jz]} rotation={[-Math.PI / 2, 0, 0]}>
                   <planeGeometry args={[driveW5, 0.010]} />
@@ -6313,7 +6339,7 @@ export default function FloorPlanBuilding({
             ))}
             {/* Lawn colour in north yard (lighter / different shade) */}
             <mesh position={[0, 0.003, D / 2 + 1.60]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-              <planeGeometry args={[lawnW * 0.80, bndN5 - D / 2 - wallT5 * 2 - 0.20]} />
+              <planeGeometry args={[lawnW * 0.80, Math.abs(bndN5) - D / 2 - wallT5 * 2 - 0.20]} />
               <meshStandardMaterial color="#3E7030" roughness={0.94} metalness={0.00} />
             </mesh>
           </group>
@@ -6329,10 +6355,10 @@ export default function FloorPlanBuilding({
         const deckT3  = 0.12;
         const poolL3  = Math.min(D * 0.70, 9.50);
         const poolW3  = Math.min(W * 0.78, 11.0);
-        const pz3     = -D / 2 - deckBW3 - poolL3 / 2 - 0.80;
-        const deckEdgeN3 = pz3 + poolL3 / 2 + deckBW3;   // building-side edge of pool deck
-        // Gap from deckEdgeN3 to building face: deckEdgeN3 = -D/2 - 0.80, bldgFace = -D/2
-        const terraceZ1 = -D / 2;          // building south face
+        const pz3     = D / 2 + deckBW3 + poolL3 / 2 + 0.80;
+        const deckEdgeN3 = pz3 - poolL3 / 2 - deckBW3;   // building-side edge of pool deck = D/2 + 0.80
+        // Gap from building face (D/2) to deckEdgeN3 (D/2 + 0.80) ≈ 0.80m
+        const terraceZ1 = D / 2;           // building south face (current: south = +Z)
         const terraceZ2 = deckEdgeN3;      // pool deck north edge
         const terraceLen = Math.abs(terraceZ1 - terraceZ2);  // ≈ 0.80m
         const terraceCZ  = (terraceZ1 + terraceZ2) / 2;
@@ -6363,7 +6389,7 @@ export default function FloorPlanBuilding({
         const isDuskU  = !isNightU && (sunHour < 8 || sunHour > 18);
         const upLI     = isNightU ? 14.0 : isDuskU ? 7.0 : 0.0;
         if (upLI === 0.0) return null;
-        const upZ = -D / 2 - 0.50;   // 0.5m south of building face (in transition terrace)
+        const upZ = D / 2 + 0.50;   // 0.5m south of building face (in transition terrace)
         const count = 5;
         return (
           <group>
@@ -6410,7 +6436,7 @@ export default function FloorPlanBuilding({
         const poolDp = 0.55;                         // pool depth below grade
         const deckBW = 2.80;                         // generous travertine deck on all sides
         const deckT  = 0.12;                         // deck slab thickness
-        const pz     = -D / 2 - deckBW - poolL / 2 - 0.80;  // south yard, deck flush with building steps
+        const pz     = D / 2 + deckBW + poolL / 2 + 0.80;  // south yard, deck flush with building steps
         const isNightP = sunHour < 6 || sunHour > 20;
         const isDuskP  = !isNightP && (sunHour < 8 || sunHour > 18);
         const poolGlowI = isNightP ? 2.8 : isDuskP ? 1.2 : 0.12;
@@ -6421,11 +6447,24 @@ export default function FloorPlanBuilding({
         const TILE_SIZE = 0.80;        // 80cm × 80cm large format tile
         return (
           <group position={[0, 0, pz]}>
-            {/* ── Continuous stone plaza base (deck + pool surround) ── */}
-            <mesh position={[0, deckT / 2, 0]} receiveShadow>
-              <boxGeometry args={[poolW + deckBW * 2, deckT, poolL + deckBW * 2]} />
-              <meshStandardMaterial color={deckBase} roughness={0.68} metalness={0.04} envMapIntensity={0.5} />
-            </mesh>
+            {/* ── Stone deck — 4 strips around the pool (frame). All 4 strips extend
+                past the corners so they overlap at the corners; with the same material
+                there's no visible seam and no corner gap. ── */}
+            {([
+              // North strip — extends full deck width (includes corners)
+              [0, -(poolL / 2 + deckBW / 2), poolW + deckBW * 2, deckBW],
+              // South strip
+              [0,  (poolL / 2 + deckBW / 2), poolW + deckBW * 2, deckBW],
+              // East strip — extends full deck depth (includes corners)
+              [(poolW / 2 + deckBW / 2), 0, deckBW, poolL + deckBW * 2],
+              // West strip
+              [-(poolW / 2 + deckBW / 2), 0, deckBW, poolL + deckBW * 2],
+            ] as [number, number, number, number][]).map(([dx, dz, dw, dd], di) => (
+              <mesh key={`deck-${di}`} position={[dx, deckT / 2, dz]} receiveShadow>
+                <boxGeometry args={[dw, deckT, dd]} />
+                <meshStandardMaterial color={deckBase} roughness={0.68} metalness={0.04} envMapIntensity={0.5} />
+              </mesh>
+            ))}
             {/* Large-format tile grid — E-W grout lines */}
             {Array.from({ length: Math.ceil((poolL + deckBW * 2) / TILE_SIZE) + 1 }, (_, gi) => {
               const gz = -(poolL / 2 + deckBW) + gi * TILE_SIZE;
@@ -6757,7 +6796,7 @@ export default function FloorPlanBuilding({
         const poolL_cy = Math.min(D * 0.70, 9.50);
         const poolW_cy = Math.min(W * 0.78, 11.0);
         const deckBW_cy = 2.80;
-        const pz_cy = -D / 2 - deckBW_cy - poolL_cy / 2 - 0.80;
+        const pz_cy = D / 2 + deckBW_cy + poolL_cy / 2 + 0.80;
         const deckEdgeX = poolW_cy / 2 + deckBW_cy + 0.55;
         const cypressData: Array<[number, number, number, number]> = [
           // [x, z, targetH, rotY]
@@ -6788,7 +6827,7 @@ export default function FloorPlanBuilding({
         const poolL_tp  = Math.min(D * 0.70, 9.50);
         const poolW_tp  = Math.min(W * 0.78, 11.0);
         const deckBW_tp = 2.80;
-        const pz_tp     = -D / 2 - deckBW_tp - poolL_tp / 2 - 0.80;
+        const pz_tp     = D / 2 + deckBW_tp + poolL_tp / 2 + 0.80;
         const deckEdgeX_tp = poolW_tp / 2 + deckBW_tp + 0.70;
         const poolSZ = pz_tp - poolL_tp / 2 - deckBW_tp;
         const palmData: Array<[number, number, number, number]> = [
@@ -6815,14 +6854,14 @@ export default function FloorPlanBuilding({
            Dense clipped yew/boxwood hedge 1.2m tall runs along inside of north wall,
            providing green backdrop behind the garden sculpture and fountain. */}
       {!insideBuilding && isGlassVilla && (() => {
-        const bndN3  =  D / 2 + 3.20;
+        const bndN3  = -D / 2 - 3.20;   // current: north = -Z
         const bndE3  =  W / 2 + 4.50;
         const bndW3  = -W / 2 - 4.50;
         const wallT3 = 0.18;
         const hedgeH = 1.20;
         const hedgeD = 0.55;
         const hedgeY = hedgeH / 2;
-        const hedgeZ = bndN3 - wallT3 - hedgeD / 2 - 0.06;
+        const hedgeZ = bndN3 + wallT3 + hedgeD / 2 + 0.06;   // hedge sits just inside north wall (toward building)
         const hedgeW = bndE3 - bndW3 - wallT3 * 2 - 0.20;
         return (
           <group>
@@ -6882,8 +6921,8 @@ export default function FloorPlanBuilding({
         const bndE5  =  W / 2 + 4.50;
         const wallT5 = 0.18;
         const wallX5 = bndE5 - wallT5 - 0.40;  // 0.4m inside east wall
-        const shrubZStart = -D / 2 - 1.5;       // start south of building
-        const shrubZEnd   = -D / 2 - 12.0;      // stop well before south boundary
+        const shrubZStart = D / 2 + 1.5;       // start south of building
+        const shrubZEnd   = D / 2 + 12.0;      // stop well before south boundary
         const nShrubs = 7;
         const shrubStep = (shrubZStart - shrubZEnd) / (nShrubs - 1);
         return (
@@ -6904,10 +6943,12 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {/* ── 5d. 场地边界矮墙 + 入口大门 ── */}
+      {/* ── 5d. 场地边界矮墙 + 入口大门 ──
+           Coord convention (current): north = -Z, south = +Z. The gate goes on
+           the SOUTH boundary (large +Z, facing the living-room facade). */}
       {!insideBuilding && isGlassVilla && (() => {
-        const bndN   =  D / 2 + 3.20;    // north boundary Z
-        const bndS   = -D / 2 - 14.50;   // south boundary Z (beyond pool)
+        const bndN   = -D / 2 - 3.20;   // north boundary Z (current: north = -Z)
+        const bndS   =  D / 2 + 14.50;  // south boundary Z — gate is here (large +Z)
         const bndE   =  W / 2 + 4.50;    // east boundary X
         const bndW   = -W / 2 - 4.50;    // west boundary X
         const wallH2 = 0.88;             // wall height
@@ -6942,12 +6983,12 @@ export default function FloorPlanBuilding({
             </mesh>
             {/* East wall */}
             <mesh position={[bndE, wallY2, (bndN + bndS) / 2]} castShadow receiveShadow>
-              <boxGeometry args={[wallT2, wallH2, bndN - bndS]} />
+              <boxGeometry args={[wallT2, wallH2, bndS - bndN]} />
               <meshStandardMaterial color={wCol} roughness={0.84} metalness={0.01} />
             </mesh>
             {/* West wall */}
             <mesh position={[bndW, wallY2, (bndN + bndS) / 2]} castShadow receiveShadow>
-              <boxGeometry args={[wallT2, wallH2, bndN - bndS]} />
+              <boxGeometry args={[wallT2, wallH2, bndS - bndN]} />
               <meshStandardMaterial color={wCol} roughness={0.84} metalness={0.01} />
             </mesh>
             {/* Cap flashing — south, north, east, west */}
@@ -6955,8 +6996,8 @@ export default function FloorPlanBuilding({
               [(bndW + gateX2 - gateW2) / 2, bndS, Math.abs(bndW - (gateX2 - gateW2)), wallT2],
               [(bndE + gateX2 + gateW2) / 2, bndS, Math.abs(bndE - (gateX2 + gateW2)), wallT2],
               [0, bndN, bndE - bndW, wallT2],
-              [bndE, (bndN + bndS) / 2, wallT2, bndN - bndS],
-              [bndW, (bndN + bndS) / 2, wallT2, bndN - bndS],
+              [bndE, (bndN + bndS) / 2, wallT2, bndS - bndN],
+              [bndW, (bndN + bndS) / 2, wallT2, bndS - bndN],
             ] as [number, number, number, number][]).map(([cx3, cz3, cw3, cd3], ci) => (
               <mesh key={ci} position={[cx3, wallH2 + 0.006, cz3]}>
                 <boxGeometry args={[cw3, 0.012, cd3 + 0.010]} />
@@ -6969,8 +7010,8 @@ export default function FloorPlanBuilding({
               const pilasterH  = wallH2 + 0.18;  // slightly taller than wall
               const pilasterCol = "#C8C4BC";
               const pStep = 3.20;  // spacing
-              // East wall
-              const eWallLen  = bndN - bndS;
+              // East wall (length is signed: bndS - bndN > 0 since bndS at +Z, bndN at -Z)
+              const eWallLen  = bndS - bndN;
               const eCount    = Math.max(1, Math.floor(eWallLen / pStep) - 1);
               const eStep     = eWallLen / (eCount + 1);
               // West wall (same count)
@@ -6978,14 +7019,14 @@ export default function FloorPlanBuilding({
               const nCount    = Math.max(1, Math.floor(nWallLen / pStep) - 1);
               const nStep     = nWallLen / (nCount + 1);
               const pilasters: Array<[number, number, number]> = [];
-              // East wall pilasters
+              // East wall pilasters — spread from bndN (north end) toward bndS (south end)
               for (let i = 0; i < eCount; i++) {
-                const pz = bndS + (i + 1) * eStep;
+                const pz = bndN + (i + 1) * eStep;
                 pilasters.push([bndE, wallH2 / 2, pz]);
               }
               // West wall pilasters
               for (let i = 0; i < eCount; i++) {
-                const pz = bndS + (i + 1) * eStep;
+                const pz = bndN + (i + 1) * eStep;
                 pilasters.push([bndW, wallH2 / 2, pz]);
               }
               // North wall pilasters
@@ -7203,7 +7244,7 @@ export default function FloorPlanBuilding({
             })}
 
             {/* ── Central gate crest / monogram ── */}
-            <group position={[gateX2, wallH2 * 0.85, bndS + 0.028]}>
+            <group position={[gateX2, wallH2 * 0.85, bndS - 0.028]}>
               {/* Crest backing disc — polished dark */}
               <mesh>
                 <cylinderGeometry args={[0.22, 0.22, 0.014, 16]} />
@@ -7238,7 +7279,7 @@ export default function FloorPlanBuilding({
               const icY      = pillarH * 0.62;
               const isNightIC = sunHour < 6 || sunHour > 20;
               return (
-                <group position={[pillarX + pillarS / 2 + 0.008, icY, bndS - 0.008]}>
+                <group position={[pillarX + pillarS / 2 + 0.008, icY, bndS + 0.008]}>
                   {/* Panel body */}
                   <mesh castShadow>
                     <boxGeometry args={[0.005, 0.175, 0.120]} />
@@ -7272,8 +7313,8 @@ export default function FloorPlanBuilding({
             {/* Driveway paving strip (gate → building steps) */}
             {(() => {
               const dvW  = gateW2 * 2 + 0.50;
-              const dvL  = Math.abs(bndS - (-D / 2 - 3.0));
-              const dvZ  = (bndS + (-D / 2 - 3.0)) / 2;
+              const dvL  = Math.abs(bndS - (D / 2 + 3.0));
+              const dvZ  = (bndS + (D / 2 + 3.0)) / 2;
               const jointStep = 0.65;   // paver module
               const nH = Math.round(dvL / jointStep);
               const nV = Math.round(dvW / jointStep);
@@ -7286,7 +7327,7 @@ export default function FloorPlanBuilding({
                   </mesh>
                   {/* Horizontal joint lines */}
                   {Array.from({ length: nH - 1 }, (_, ji) => {
-                    const jz = bndS + (ji + 1) * jointStep;
+                    const jz = bndS - (ji + 1) * jointStep;   // joints from gate toward building (decreasing Z)
                     return (
                       <mesh key={`hjt-${ji}`} position={[gateX2, 0.007, jz]}>
                         <boxGeometry args={[dvW, 0.003, 0.012]} />
@@ -7364,9 +7405,9 @@ export default function FloorPlanBuilding({
         const rwEmi    = isNightRW ? 3.5 : 1.8;
         const rwLI     = isNightRW ? 2.0 : 0.8;
 
-        const bndS_rw  = -D / 2 - 14.50;
-        const rwGateZ  = bndS_rw + 0.40;     // just inside gate
-        const rwBuildZ = -D / 2 - 0.50;      // near building steps
+        const bndS_rw  = D / 2 + 14.50;
+        const rwGateZ  = bndS_rw - 0.40;     // just inside gate (toward building)
+        const rwBuildZ = D / 2 + 0.50;      // near building steps
         const rwLen    = rwBuildZ - rwGateZ;
         const rwMidZ   = (rwGateZ + rwBuildZ) / 2;
         const rwLineOX = 1.60;  // X offset from centre for each guide line
@@ -7411,7 +7452,7 @@ export default function FloorPlanBuilding({
            the south boundary wall, providing warm amber pathway lighting at
            dusk and night. */}
       {!insideBuilding && isGlassVilla && (() => {
-        const bndS9   = -D / 2 - 14.50;
+        const bndS9   = D / 2 + 14.50;
         const bndW9   = -W / 2 - 4.50;
         const bndE9   =  W / 2 + 4.50;
         const gateW9  = Math.min(W * 0.30, 3.80);
@@ -7493,13 +7534,13 @@ export default function FloorPlanBuilding({
            White painted parking bays alongside the driveway and a small
            modern security booth near the east gate pillar. */}
       {false && (() => {
-        const bndS8  = -D / 2 - 14.50;
+        const bndS8  = D / 2 + 14.50;
         const bndE8  =  W / 2 + 4.50;
         const gateW8 = Math.min(W * 0.30, 3.80);
         const isNightB = sunHour < 6 || sunHour > 20;
         const isDuskB  = !isNightB && (sunHour < 8 || sunHour > 18);
         // Parking bay for sedan (X=0, Z=-D/2-7.80) and SUV (X=2.55, Z=-D/2-8.10)
-        const parkZ = -D / 2 - 7.90;
+        const parkZ = D / 2 + 7.90;
         return (
           <group>
             {/* White parking bay lines — 2 bays side by side */}
@@ -7520,13 +7561,13 @@ export default function FloorPlanBuilding({
             ))}
             {/* Bay front / back markings */}
             {[-parkZ - D / 2 - 5.30, -parkZ - D / 2 - 10.30].map((_, mi) => (
-              <mesh key={`bm-${mi}`} position={[1.80, 0.016, -D / 2 - 5.30 - mi * 5.0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <mesh key={`bm-${mi}`} position={[1.80, 0.016, D / 2 + 5.30 - mi * 5.0]} rotation={[-Math.PI / 2, 0, 0]}>
                 <planeGeometry args={[5.00, 0.10]} />
                 <meshStandardMaterial color="#E8E8E8" roughness={0.82} />
               </mesh>
             ))}
             {/* Security guard booth — east side of gate, inside boundary */}
-            <group position={[gateW8 + 1.50, 0, bndS8 + 1.20]}>
+            <group position={[gateW8 + 1.50, 0, bndS8 - 1.20]}>
               {/* Booth floor */}
               <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
                 <planeGeometry args={[1.10, 1.10]} />
@@ -7575,8 +7616,8 @@ export default function FloorPlanBuilding({
         const treeData: Array<[number, number, number, boolean, number]> = [
           [ W / 2 + 3.0,  D / 2 + 1.8, 5.5, false, 0.8],   // NE — maple
           [-W / 2 - 3.0,  D / 2 + 1.8, 5.0, false, 2.1],   // NW — maple
-          [ W / 2 + 3.0, -D / 2 - 5.0, 6.0, true,  1.2],   // SE — olive
-          [-W / 2 - 3.0, -D / 2 - 5.0, 5.8, true,  3.5],   // SW — olive
+          [ W / 2 + 3.0, D / 2 + 5.0, 6.0, true,  1.2],   // SE — olive
+          [-W / 2 - 3.0, D / 2 + 5.0, 5.8, true,  3.5],   // SW — olive
           [ W / 2 + 3.5, -D / 2 + 1.0, 5.2, false, 0.4],   // mid-east — maple
           [-W / 2 - 3.5, -D / 2 + 1.0, 5.4, true,  2.8],   // mid-west — olive
         ];
@@ -7611,8 +7652,8 @@ export default function FloorPlanBuilding({
            and a stone slab path leading east to the main driveway. */}
       {!insideBuilding && isGlassVilla && (() => {
         const bndW_pg   = -W / 2 - 4.50;   // west boundary X
-        const bndS_pg   = -D / 2 - 14.50;  // south boundary Z
-        const pgZ       = bndS_pg + 3.50;   // ~3.5m north of SW corner
+        const bndS_pg   = D / 2 + 14.50;  // south boundary Z
+        const pgZ       = bndS_pg - 3.50;   // ~3.5m inside boundary (toward building, north of SW corner)
         const pgGateW   = 1.10;             // gate opening width
         const pgPillarS = 0.22;             // pillar cross-section
         const pgPillarH = 1.40;
@@ -7761,7 +7802,7 @@ export default function FloorPlanBuilding({
            2 per side, heights 5.5–7m for Beverly Hills estate feel. */}
       {false && (() => {
         const dvHalfW3 = 2.20;
-        const gateZ3 = -D / 2 - 14.50 + 0.40;
+        const gateZ3 = D / 2 + 14.50 + 0.40;
         const palmData3: Array<[number, number, number, number]> = [
           // [x, z, targetH, rotY]
           [ dvHalfW3 + 1.20, gateZ3 + 1.20, 6.5, 0.8],
@@ -7793,12 +7834,13 @@ export default function FloorPlanBuilding({
         if (pEmi === 0.0) return null;
 
         const driveHalfW3 = 2.20;
-        const bndS3b    = -D / 2 - 14.50;
+        const bndS3b    = D / 2 + 14.50;
+        // (bedZS3b will be set below; if it uses bndS3b + offset, change to - offset to stay inside)
         const poolL3b   = Math.min(D * 0.70, 9.50);
         const deckBW3b  = 2.80;
-        const poolZ3b   = -D / 2 - deckBW3b - poolL3b / 2 - 0.80;
+        const poolZ3b   = D / 2 + deckBW3b + poolL3b / 2 + 0.80;
         const bedZN3b   = poolZ3b - poolL3b / 2 - deckBW3b - 0.10;
-        const bedZS3b   = bndS3b + 1.50;
+        const bedZS3b   = bndS3b - 1.50;   // inside boundary (toward building)
         const bedLen3b  = Math.abs(bedZN3b - bedZS3b);
         const stakeSpacing = 1.40;
         const stakeCount = Math.round(bedLen3b / stakeSpacing);
@@ -8297,8 +8339,8 @@ export default function FloorPlanBuilding({
         const bndW6  = -W / 2 - 4.50;
         const wallT6 = 0.18;
         const wallX6 = bndW6 + wallT6 + 0.40;  // 0.4m inside west wall
-        const shrubZStart6 = -D / 2 - 1.5;
-        const shrubZEnd6   = -D / 2 - 12.0;
+        const shrubZStart6 = D / 2 + 1.5;
+        const shrubZEnd6   = D / 2 + 12.0;
         const nShrubs6 = 7;
         const shrubStep6 = (shrubZStart6 - shrubZEnd6) / (nShrubs6 - 1);
         return (
@@ -8403,15 +8445,15 @@ export default function FloorPlanBuilding({
         // Boxwood-style clipped hedge rows along east/west inner boundary
         const bndE2  =  W / 2 + 4.50;
         const bndW2  = -W / 2 - 4.50;
-        const bndN2  =  D / 2 + 3.20;
-        const bndS2  = -D / 2 - 14.50;
+        const bndN2  = -D / 2 - 3.20;   // current: north = -Z
+        const bndS2  = D / 2 + 14.50;
         const hedgeH = 0.90;   // hedge height
         const hedgeW = 0.52;   // hedge width/depth
         const gapS   = 0.32;   // gap from boundary wall face
         const hedgeCol = "#2A5A1C";
         const hedgeDk  = "#1E4816";
         // East hedge: inner side of east wall, north-to-south
-        const eHedgeLen = bndN2 - bndS2 - 1.0;
+        const eHedgeLen = bndS2 - bndN2 - 1.0;   // bndS2 > bndN2 in current convention
         const eHedgeZ   = (bndN2 + bndS2) / 2;
         // West hedge similarly
         return (
@@ -8436,11 +8478,11 @@ export default function FloorPlanBuilding({
               <meshStandardMaterial color={hedgeDk} roughness={0.97} metalness={0.01} />
             </mesh>
             {/* North hedge row */}
-            <mesh position={[0, hedgeH / 2, bndN2 - hedgeW / 2 - gapS]} castShadow receiveShadow>
+            <mesh position={[0, hedgeH / 2, bndN2 + hedgeW / 2 + gapS]} castShadow receiveShadow>
               <boxGeometry args={[bndE2 - bndW2 - 1.0, hedgeH, hedgeW]} />
               <meshStandardMaterial color={hedgeCol} roughness={0.96} metalness={0.01} />
             </mesh>
-            <mesh position={[0, hedgeH + 0.06, bndN2 - hedgeW / 2 - gapS]}>
+            <mesh position={[0, hedgeH + 0.06, bndN2 + hedgeW / 2 + gapS]}>
               <boxGeometry args={[bndE2 - bndW2 - 1.04, 0.12, hedgeW - 0.04]} />
               <meshStandardMaterial color={hedgeDk} roughness={0.97} metalness={0.01} />
             </mesh>
@@ -8453,7 +8495,7 @@ export default function FloorPlanBuilding({
            flower clusters.  A stepping-stone path runs the length of the garden. */}
       {!insideBuilding && isGlassVilla && (() => {
         // Shared constants from section 5d
-        const bndS3   = -D / 2 - 14.50;
+        const bndS3   = D / 2 + 14.50;
         const bndE3   =  W / 2 + 4.50;
         const bndW3   = -W / 2 - 4.50;
         const gapS3   = 0.12;         // gap between hedge and wall
@@ -8471,10 +8513,10 @@ export default function FloorPlanBuilding({
         // Bed Z: from behind building terrace to north edge of pool deck
         const poolL3 = Math.min(D * 0.70, 9.50);
         const deckBW3 = 2.80;
-        const poolZ3 = -D / 2 - deckBW3 - poolL3 / 2 - 0.80;
+        const poolZ3 = D / 2 + deckBW3 + poolL3 / 2 + 0.80;
         const poolDeckW3 = Math.min(W * 0.78, 11.0);
         const bedZN = poolZ3 - poolL3 / 2 - deckBW3 - 0.10;
-        const bedZS = bndS3 + 1.50;  // well inside boundary wall
+        const bedZS = bndS3 - 1.50;  // well inside boundary wall (toward building)
         const bedLen = Math.abs(bedZN - bedZS);
         const bedMidZ = (bedZN + bedZS) / 2;
 
@@ -8483,7 +8525,7 @@ export default function FloorPlanBuilding({
         const poolW2  = Math.min(W * 0.78, 11.0);
         const deckBW2 = 2.80;
         const deckT2  = 0.12;
-        const pz2     = -D / 2 - deckBW2 - poolL2 / 2 - 0.80;
+        const pz2     = D / 2 + deckBW2 + poolL2 / 2 + 0.80;
 
         return (
           <group>
@@ -8579,7 +8621,7 @@ export default function FloorPlanBuilding({
         const poolL2b  = Math.min(D * 0.70, 9.50);
         const poolW2b  = Math.min(W * 0.78, 11.0);
         const deckBW2b = 2.80;
-        const pz2b     = -D / 2 - deckBW2b - poolL2b / 2 - 0.80;
+        const pz2b     = D / 2 + deckBW2b + poolL2b / 2 + 0.80;
         const diningX  = poolW2b / 2 + deckBW2b * 0.5;  // matches dining table in 5g
         const diningZ  = pz2b;
         const isNightSL = sunHour < 6 || sunHour > 20;
@@ -8640,7 +8682,7 @@ export default function FloorPlanBuilding({
         const poolW_pl  = Math.min(W * 0.78, 11.0);
         const deckBW_pl = 2.80;
         const deckT_pl  = 0.12;
-        const pz_pl     = -D / 2 - deckBW_pl - poolL_pl / 2 - 0.80;
+        const pz_pl     = D / 2 + deckBW_pl + poolL_pl / 2 + 0.80;
         // Match lounger row Z exactly: deckEdge - 1.20 (same as section 5g)
         const planterZ  = pz_pl + poolL_pl / 2 + deckBW_pl - 1.20;
         // Two planters flanking the lounger row ends (just outside the row)
@@ -8699,7 +8741,7 @@ export default function FloorPlanBuilding({
         const poolW_b  = Math.min(W * 0.78, 11.0);
         const deckBW_b = 2.80;
         const deckT_b  = 0.12;
-        const pz_b     = -D / 2 - deckBW_b - poolL_b / 2 - 0.80;
+        const pz_b     = D / 2 + deckBW_b + poolL_b / 2 + 0.80;
         const borderZ  = pz_b - poolL_b / 2 - deckBW_b + 0.20;  // 0.2m inside south deck edge
         const borderW  = poolW_b + deckBW_b * 1.8;               // full deck width
         const troughH  = 0.20;
@@ -8870,7 +8912,7 @@ export default function FloorPlanBuilding({
         const poolL3 = Math.min(D * 0.70, 9.50);
         const poolW3 = Math.min(W * 0.78, 11.0);
         const deckBW3i = 2.80;
-        const pz3    = -D / 2 - deckBW3i - poolL3 / 2 - 0.80;
+        const pz3    = D / 2 + deckBW3i + poolL3 / 2 + 0.80;
         const showerX = poolW3 / 2 + 0.85;   // east side of pool deck
         const showerZ = pz3 - 0.60;           // toward south end of pool
         const postH   = 2.30;
@@ -9250,7 +9292,7 @@ export default function FloorPlanBuilding({
         const deckBW4 = 2.80;
         const poolL4  = Math.min(D * 0.70, 9.50);
         const poolW4  = Math.min(W * 0.78, 11.0);
-        const poolZ4  = -D / 2 - deckBW4 - poolL4 / 2 - 0.80;
+        const poolZ4  = D / 2 + deckBW4 + poolL4 / 2 + 0.80;
         const htX    = -(poolW4 / 2 + deckBW4 + 1.20);  // west of pool deck
         const htZ    = poolZ4;
         const isNightH = sunHour < 6 || sunHour > 20;
@@ -9327,7 +9369,7 @@ export default function FloorPlanBuilding({
         // Place near the west boundary, at driveway level, south side
         const bndW5   = -W / 2 - 4.50;
         const chargeX = bndW5 + 0.40;   // just inside west boundary
-        const chargeZ = -D / 2 - 8.50;  // south end, near gate
+        const chargeZ = D / 2 + 8.50;  // south end, near gate
         const isNightEV = sunHour < 6 || sunHour > 20;
         const isDuskEV  = !isNightEV && (sunHour < 8 || sunHour > 18);
         const evGlow    = isNightEV ? 1.8 : isDuskEV ? 1.0 : 0.3;
@@ -9459,7 +9501,7 @@ export default function FloorPlanBuilding({
            a raised projector post. Illuminated white panel at night. */}
       {!insideBuilding && isGlassVilla && (() => {
         const cinX  = -W * 0.22;
-        const cinZ  = -D / 2 - 3.20;   // between steps and pool
+        const cinZ  = D / 2 + 3.20;   // between steps and pool
         const scrW  = 3.20;
         const scrH  = 1.80;
         const isNightC = sunHour < 6 || sunHour > 20;
@@ -9790,7 +9832,7 @@ export default function FloorPlanBuilding({
            wire panel sections, gate, and a small kennel house with pitched roof. */}
       {!insideBuilding && isGlassVilla && (() => {
         const petX   =  W / 2 + 2.80;   // east yard
-        const petZ   = -D / 2 - 2.80;   // south side of east yard
+        const petZ   = D / 2 + 2.80;   // south side of east yard
         const runW   = 3.20;             // E-W
         const runD   = 2.20;             // N-S
         const fenceH = 1.60;
@@ -9956,7 +9998,7 @@ export default function FloorPlanBuilding({
         const isDuskM   = !isNightM && (sunHour < 8 || sunHour > 18);
         const uplightEmi = isNightM ? 3.2 : isDuskM ? 1.8 : 0.5;
         const uplightLI  = isNightM ? 8.0 : isDuskM ? 4.5 : 0.0;
-        const faceZ      = -D / 2 - 0.12;  // just south of south facade
+        const faceZ      = D / 2 + 0.12;  // just south of south facade
         const count      = 4;
         const step       = (W - 1.20) / (count - 1);
         return (
@@ -10006,16 +10048,19 @@ export default function FloorPlanBuilding({
         const glowEmi   = isNightN ? 2.8 : isDuskN ? 1.4 : 0.0;
         // Posts placed along driveway from gate to building entrance
         const dvHalf = Math.min(W * 0.15, 2.20);  // half-width of driveway
-        const gateZ  = -D / 2 - 14.50 + 0.5;      // approx gate Z
-        const buildZ = -D / 2 - 0.80;              // near south face
+        const gateZ  = D / 2 + 14.50 - 0.5;      // just inside gate (toward building)
+        const buildZ = D / 2 + 0.80;              // near south face
         const postCount = 3;
         const postH  = 3.20;
+        // Lateral offset: keep posts outside the pool footprint (poolW/2 + margin)
+        const poolHalfWN = Math.min(W * 0.78, 11.0) / 2;
+        const lampX = Math.max(dvHalf + 0.55, poolHalfWN + 1.20);
         const postPositions: Array<[number, number]> = [];
         for (let pi = 0; pi < postCount; pi++) {
           const t  = (pi + 0.5) / postCount;
           const pz = gateZ + t * (buildZ - gateZ);
-          postPositions.push([ dvHalf + 0.55, pz]);
-          postPositions.push([-dvHalf - 0.55, pz]);
+          postPositions.push([ lampX, pz]);
+          postPositions.push([-lampX, pz]);
         }
         return (
           <group>
@@ -10088,7 +10133,7 @@ export default function FloorPlanBuilding({
       {!insideBuilding && isGlassVilla && (() => {
         const stepW_fw   = Math.min(W * 0.50, 5.5);
         const fwX        = stepW_fw / 2 + 1.50;    // east of entrance steps
-        const fwZ        = -D / 2 - 0.20 - 0.05;   // just proud of south face
+        const fwZ        = D / 2 + 0.20 - 0.05;   // just proud of south face
         const fwW        = 2.40;
         const fwH        = 2.80;
         const fwT        = 0.055;

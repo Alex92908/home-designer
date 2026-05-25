@@ -461,25 +461,26 @@ function CameraRig({ W, D, floors, buildingType }: {
     const isFloorPlanDriven = buildingType === "floor-plan-driven";
 
     if (isFloorPlanDriven) {
-      // Floor-plan-driven exterior: south face (+Z) is the front of the house.
-      // Camera: south-EAST corner (+Z, +X) — same quadrant as GlobalCanvas (d*0.85, _, d*0.85)
-      // so left/right orientation matches the 全局3D view.
-      const diag  = Math.sqrt(W * W + D * D);
-      const dist  = diag * 1.15 + 5;
-      // Keep camera low enough that the pool deck (y≈0) is in the lower third of the frame.
-      const camY  = h * 0.65 + 1.8;   // ~ 1–2 floors elevation, not above the roof
-      const camZ  = +(dist * 0.78);
-      const camX  = +(dist * 0.48);   // +X = east, matching GlobalCanvas camera quadrant
+      // Match GlobalCanvas camera setup EXACTLY so 外观图 default orientation
+      // === 全局3D default orientation. GlobalCanvas uses:
+      //   d3 = max(extent, totalH) * 1.1
+      //   position = (d3*0.85, lookH + d3*0.65, d3*0.85)   ← equal X & Z = 45° SE
+      //   target   = (0, lookH, 0)   where lookH = totalH * 0.5
+      const extent = Math.max(W, D);
+      const totalH = h;
+      const d3     = Math.max(extent, totalH) * 1.1;
+      const lookH  = totalH * 0.5;
+      const camX   = d3 * 0.85;
+      const camY   = lookH + d3 * 0.65;
+      const camZ   = d3 * 0.85;
 
       camera.position.set(camX, camY, camZ);
-      (camera as THREE.PerspectiveCamera).fov = 52;
+      (camera as THREE.PerspectiveCamera).fov = 45;
       (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
 
       if (controls) {
         const ctrl = controls as any;
-        // Look at mid-height of building — this pulls the horizon line into the
-        // upper half of the frame, leaving room for pool/terrace in lower half.
-        ctrl.target.set(0, h * 0.30, 0);
+        ctrl.target.set(0, lookH, 0);
         ctrl.update();
       } else {
         return;
@@ -6745,6 +6746,18 @@ export default function HouseCanvas() {
 
   return (
     <div className="w-full h-full relative">
+      {/* ── Compass — static, N=world -Z (matches FloorPlanAll + YardPlan + GlobalCanvas) ── */}
+      <div className="absolute pointer-events-none z-30" style={{ top: 60, right: 130, width: 60, height: 60 }}>
+        <svg viewBox="-32 -32 64 64" width="60" height="60">
+          <circle r={28} fill="white" fillOpacity={0.92} stroke="#D1D5DB" strokeWidth={1.5} />
+          <text textAnchor="middle" y={-11} fontSize={15} fontWeight="bold" fill="#1F2937" fontFamily="system-ui">N</text>
+          <text textAnchor="middle" y={20} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">S</text>
+          <text textAnchor="start"  x={8}  y={5} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">E</text>
+          <text textAnchor="end"    x={-8} y={5} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">W</text>
+          <polygon points="0,-21 4,-7 0,-10 -4,-7" fill="#374151" />
+          <polygon points="0,21 4,7 0,10 -4,7" fill="#9CA3AF" />
+        </svg>
+      </div>
       {/* Idle-time prefetch of indoor furniture GLTFs so walkthrough entry
           is instant. Runs outside <Canvas> — no Object3D, no frame ticks. */}
       <FurniturePreloader />

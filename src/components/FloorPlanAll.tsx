@@ -1795,6 +1795,28 @@ export default function FloorPlanAll() {
                 <text key={t} x={x} y={34} textAnchor="middle" fontSize={17} fill="#374151" fontFamily="system-ui">{t}</text>
               ))}
             </g>
+
+            {/* ── DEBUG: NWES direction labels — commented out for production.
+                 Re-enable to debug coord directions in 全局图 (2D). ── */}
+            {/* {(() => {
+              const cx = (vbX1 + vbX2) / 2;
+              const cy = (vbY1 + vbY2) / 2;
+              const fs = 56;
+              const labels = [
+                { x: cx, y: vbY1 + 40, t: "N (small Y / top of plan)" },
+                { x: cx, y: vbY2 - 10, t: "S (large Y / bottom of plan)" },
+                { x: vbX1 + 40, y: cy, t: "W (small X)" },
+                { x: vbX2 - 40, y: cy, t: "E (large X)" },
+              ];
+              return labels.map((l, i) => (
+                <text key={i} x={l.x} y={l.y}
+                  textAnchor={l.x === vbX2 - 40 ? "end" : (l.x === vbX1 + 40 ? "start" : "middle")}
+                  fontSize={fs} fontWeight={900} fill="#FF1493" stroke="#FFFFFF" strokeWidth={4}
+                  paintOrder="stroke" style={{ pointerEvents: "none", userSelect: "none" }}>
+                  {l.t}
+                </text>
+              ));
+            })()} */}
           </svg>
           </div>
           {/* ── Stair shape picker — HTML panel, always readable regardless of zoom ── */}
