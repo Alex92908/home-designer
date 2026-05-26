@@ -3379,20 +3379,18 @@ export default function FloorPlanBuilding({
       }
       return out;
     };
-    // Walk every non-circulation room and dedupe its 4 edges into the map.
-    // "fixed" + "axis" + endpoints (sorted) form a canonical key. We round
-    // to integer cm so near-matches snap together. Hallway / stair are
-    // excluded — they don't render walls, so any room bordering them
-    // contributes a unique unshared edge.
+    // Walk every room and dedupe its 4 edges into the map. "fixed" + "axis"
+    // + endpoints (sorted) form a canonical key. We round to integer cm so
+    // near-matches snap together. Stair + hallway are also registered so
+    // they own their wall hide/show + door via the standard wallsHidden
+    // mechanism. Hallway is a thin special case: only its W + E short ends
+    // are registered (the long N + S walls remain neighbour-contributed
+    // so hallway's lack-of-hide-flag doesn't OR-pollute the neighbour's
+    // shared wall via dedup — see task #57).
     for (let fi = 0; fi < floorCount; fi++) {
       const fp = floorPlans[fi]; if (!fp) continue;
       for (const room of (fp.enabledRooms ?? [])) {
         if (ROOM_DEFS[room]?.isOutdoor) continue;
-        if (room === "stair") continue;
-        // Hallway: only register W + E (the short ends with no neighbour
-        // to contribute). N + S long walls remain neighbour-contributed
-        // so hallway's lack-of-hide-flag doesn't OR into neighbour's
-        // hide via dedup. See task #57.
         const onlyShortEnds = room === "hallway";
         const p = fp.roomLayout?.[room]; const d = fp.roomDimensions?.[room];
         if (!p || !d) continue;
