@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, getRoomArea } from "@/lib/types";
-import type { RoomType, ExteriorWall, ExteriorWallDecorItem } from "@/lib/types";
+import type { RoomType, ExteriorWall, ExteriorWallDecorItem, WallSide } from "@/lib/types";
 import { FURNITURE, getFurnitureById } from "@/lib/furniture";
 import { MATERIALS } from "@/lib/data";
 import { useT, useLocale, useMaterialName } from "@/lib/i18n";
@@ -60,14 +60,14 @@ export default function RightPanel() {
   const roomW = roomDims?.width ?? def.width;
   const roomD = roomDims?.depth ?? def.depth;
   const hasDoor   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomHasDoor?.[activeRoom] ?? true);
-  const doorWall  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "bottom");
+  const doorWall  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "S");
   const doorPosCm = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorPos?.[activeRoom] ?? 0);
   const doorLenCm = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorLen?.[activeRoom] ?? 80);
   const roomWindows = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows[activeRoom] ?? EMPTY_WINDOWS);
   const evaluation = useMemo(
     () => evaluateRoom(
       placedItems, getFurnitureById, roomW, roomD,
-      hasDoor ? { hasDoor, wall: doorWall as "bottom" | "top" | "left" | "right", posCm: doorPosCm, lenCm: doorLenCm } : undefined,
+      hasDoor ? { hasDoor, wall: doorWall as import("@/lib/clearance").DoorWall, posCm: doorPosCm, lenCm: doorLenCm } : undefined,
       roomWindows,
     ),
     [placedItems, roomW, roomD, hasDoor, doorWall, doorPosCm, doorLenCm, roomWindows]
@@ -433,7 +433,7 @@ export default function RightPanel() {
 }
 
 // ─── Per-room exterior decor picker + editor ────────────────
-const EXTERIOR_WALL_IDS: ExteriorWall[] = ["front", "back", "left", "right"];
+const EXTERIOR_WALL_IDS: ExteriorWall[] = ["S", "N", "W", "E"];
 
 const EMPTY_EXT_DECOR: ExteriorWallDecorItem[] = [];
 
@@ -470,16 +470,16 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
     s => s.floorPlans[s.activeFloor].roomExteriorStyle?.[activeRoom] ?? "auto"
   );
   const setRoomExteriorStyle = useDesignerStore(s => s.setRoomExteriorStyle);
-  const [extColorSide, setExtColorSide] = useState<"all" | "back" | "front" | "left" | "right">("all");
+  const [extColorSide, setExtColorSide] = useState<"all" | WallSide>("all");
 
   const currentExt =
-    extColorSide === "all"   ? wallExterior :
-    extColorSide === "back"  ? wallBackExterior :
-    extColorSide === "front" ? wallFrontExterior :
-    extColorSide === "left"  ? wallLeftExterior :
-                               wallRightExterior;
+    extColorSide === "all" ? wallExterior :
+    extColorSide === "N"   ? wallBackExterior :
+    extColorSide === "S"   ? wallFrontExterior :
+    extColorSide === "W"   ? wallLeftExterior :
+                             wallRightExterior;
 
-  const [pickerWall, setPickerWall] = useState<ExteriorWall>("front");
+  const [pickerWall, setPickerWall] = useState<ExteriorWall>("S");
   const decorItems = FURNITURE.filter(f => f.category === "exterior_wall_decor");
   const selected = decor.find(d => d.instanceId === selectedId);
   const selectedItem = selected ? getFurnitureById(selected.furnitureId) : null;
@@ -531,18 +531,18 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
         {/* Side selector for which face the color picker applies to */}
         <div className="flex gap-1 mb-1.5">
           {([
-            { id: "all",   label: t.exteriorWallAll },
-            { id: "front", label: t.exteriorWalls.front },
-            { id: "back",  label: t.exteriorWalls.back },
-            { id: "left",  label: t.exteriorWalls.left },
-            { id: "right", label: t.exteriorWalls.right },
+            { id: "all", label: t.exteriorWallAll },
+            { id: "S",   label: t.exteriorWalls.S },
+            { id: "N",   label: t.exteriorWalls.N },
+            { id: "W",   label: t.exteriorWalls.W },
+            { id: "E",   label: t.exteriorWalls.E },
           ] as const).map(s => {
             const sideMat =
               s.id === "all" ? wallExterior :
-              s.id === "front" ? wallFrontExterior :
-              s.id === "back"  ? wallBackExterior :
-              s.id === "left"  ? wallLeftExterior :
-                                 wallRightExterior;
+              s.id === "S"   ? wallFrontExterior :
+              s.id === "N"   ? wallBackExterior :
+              s.id === "W"   ? wallLeftExterior :
+                               wallRightExterior;
             return (
               <button
                 key={s.id}

@@ -38,7 +38,6 @@ function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number
     const box = new THREE.Box3().setFromObject(c);
     const size = new THREE.Vector3();
     box.getSize(size);
-    // eslint-disable-next-line no-console
     console.log(`[GltfDoorPanel] native ${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m target ${doorW.toFixed(2)}×${doorH.toFixed(2)}m`);
     if (size.x > 0 && size.y > 0 && size.z > 0) {
       // Uniform scale by height. This preserves the door's natural
@@ -94,7 +93,7 @@ export function RoomDoor3D({
   isOpen, onToggle, doorStyle,
 }: {
   W: number; D: number; H: number;
-  doorWall: "bottom" | "top" | "left" | "right";
+  doorWall: "N" | "S" | "W" | "E";
   doorPosCm: number; doorLenCm: number; doorHCm: number;
   isOpen: boolean;
   onToggle: () => void;
@@ -137,12 +136,12 @@ export function RoomDoor3D({
   let groupRot: [number, number, number];
   let hingeOffset: number; // direction the panel extends in local +X when closed
   switch (doorWall) {
-    case "top": // back wall (z = -D/2)
+    case "N": // back wall (z = -D/2)
       groupPos = [doorPos - W / 2, 0, -D / 2 + 0.02];
       groupRot = [0, 0, 0];
       hingeOffset = 1;
       break;
-    case "bottom": // front wall (z = +D/2) — normally hidden wall but
+    case "S": // front wall (z = +D/2) — normally hidden wall but
       // door itself should still render so it's visible in dollhouse.
       // Rotate 180° around Y so door faces room interior (-Z).
       // Position: door's LEFT edge (from outside) at world X = -W/2 + doorPos.
@@ -152,12 +151,12 @@ export function RoomDoor3D({
       groupRot = [0, Math.PI, 0];
       hingeOffset = 1;
       break;
-    case "left":
+    case "W":
       groupPos = [-W / 2 + 0.02, 0, doorPos - D / 2];
       groupRot = [0, Math.PI / 2, 0];
       hingeOffset = 1;
       break;
-    case "right":
+    case "E":
       groupPos = [W / 2 - 0.02, 0, -(doorPos - D / 2) - doorW];
       groupRot = [0, -Math.PI / 2, 0];
       hingeOffset = 1;

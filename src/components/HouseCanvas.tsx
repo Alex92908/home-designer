@@ -1136,25 +1136,26 @@ function FloorShell({ floorIndex, W, D, settings, totalFloors }: {
   const fmt = settings.faceMaterialTypes ?? {};
   const fz  = settings.faceZones ?? {};
   const globalZones = settings.wallZones;
-  const frontColor    = fm.front  ?? wallColor;
-  const backColor     = fm.back   ?? wallColor;
-  const leftColor     = fm.left   ?? wallColor;
-  const rightColor    = fm.right  ?? wallColor;
-  const frontMat      = fmt.front ?? wallMaterial;
-  const backMat       = fmt.back  ?? wallMaterial;
-  const leftMat       = fmt.left  ?? wallMaterial;
-  const rightMat      = fmt.right ?? wallMaterial;
+  // NSWE: S = +Z (front), N = -Z (back), W = -X (left), E = +X (right)
+  const frontColor    = fm.S  ?? wallColor;
+  const backColor     = fm.N  ?? wallColor;
+  const leftColor     = fm.W  ?? wallColor;
+  const rightColor    = fm.E  ?? wallColor;
+  const frontMat      = fmt.S ?? wallMaterial;
+  const backMat       = fmt.N ?? wallMaterial;
+  const leftMat       = fmt.W ?? wallMaterial;
+  const rightMat      = fmt.E ?? wallMaterial;
   // Per-face zones fall back to global zones
-  const frontZones = fz.front ?? globalZones;
-  const backZones  = fz.back  ?? globalZones;
-  const leftZones  = fz.left  ?? globalZones;
-  const rightZones = fz.right ?? globalZones;
+  const frontZones = fz.S ?? globalZones;
+  const backZones  = fz.N ?? globalZones;
+  const leftZones  = fz.W ?? globalZones;
+  const rightZones = fz.E ?? globalZones;
   // Component-based facade per face per floor
   const ff = settings.facades;
-  const frontFacade = ff?.front?.[floorIndex];
-  const backFacade  = ff?.back?.[floorIndex];
-  const leftFacade  = ff?.left?.[floorIndex];
-  const rightFacade = ff?.right?.[floorIndex];
+  const frontFacade = ff?.S?.[floorIndex];
+  const backFacade  = ff?.N?.[floorIndex];
+  const leftFacade  = ff?.W?.[floorIndex];
+  const rightFacade = ff?.E?.[floorIndex];
   const H = FLOOR_H;
   const isGround  = floorIndex === 0;
   const isFlatRoof = roofStyle === "flat";
@@ -1207,7 +1208,7 @@ function FloorShell({ floorIndex, W, D, settings, totalFloors }: {
       {/* Exposed slab band between floors */}
       {(() => {
         // Use prominent slab style when facade is active OR preset is modern
-        const hasFacade = !!(ff?.front?.length || ff?.back?.length || ff?.left?.length || ff?.right?.length);
+        const hasFacade = !!(ff?.S?.length || ff?.N?.length || ff?.W?.length || ff?.E?.length);
         const slabStyle = isModern || hasFacade;
         const slabW = W + (slabStyle ? 0.18 : 0);
         const slabD = D + (slabStyle ? 0.18 : 0);
@@ -1269,7 +1270,7 @@ function FloorShell({ floorIndex, W, D, settings, totalFloors }: {
       })()}
 
       {/* Glass balcony railing on front face — modern style OR component facade, upper floors */}
-      {(isModern || !!(ff?.front?.length)) && floorIndex > 0 && (
+      {(isModern || !!(ff?.S?.length)) && floorIndex > 0 && (
         <group position={[0, 0.28 + 0.55, -(D / 2 + 0.02)]}>
           {/* Glass panel */}
           <mesh>
@@ -1566,10 +1567,10 @@ function roomWallFrame(
   const y = roomH / 2;
   const off = DECOR_OFFSET;
   switch (wall) {
-    case "back":  return { position: [roomCx, y, roomCz - roomD / 2 - off], rotation: [0, Math.PI, 0],     wallW: roomW, wallH: roomH };
-    case "front": return { position: [roomCx, y, roomCz + roomD / 2 + off], rotation: [0, 0, 0],           wallW: roomW, wallH: roomH };
-    case "left":  return { position: [roomCx - roomW / 2 - off, y, roomCz], rotation: [0, -Math.PI / 2, 0], wallW: roomD, wallH: roomH };
-    case "right": return { position: [roomCx + roomW / 2 + off, y, roomCz], rotation: [0,  Math.PI / 2, 0], wallW: roomD, wallH: roomH };
+    case "N": return { position: [roomCx, y, roomCz - roomD / 2 - off], rotation: [0, Math.PI, 0],      wallW: roomW, wallH: roomH };
+    case "S": return { position: [roomCx, y, roomCz + roomD / 2 + off], rotation: [0, 0, 0],            wallW: roomW, wallH: roomH };
+    case "W": return { position: [roomCx - roomW / 2 - off, y, roomCz], rotation: [0, -Math.PI / 2, 0], wallW: roomD, wallH: roomH };
+    case "E": return { position: [roomCx + roomW / 2 + off, y, roomCz], rotation: [0,  Math.PI / 2, 0], wallW: roomD, wallH: roomH };
   }
 }
 
@@ -1707,7 +1708,7 @@ function WallDecorLayer({
       // aligns with its floor slab.
       const roomH  = FLOOR_H;
       const yOff   = floorIdx * FLOOR_H;
-      const walls: import("@/lib/types").ExteriorWall[] = ["front", "back", "left", "right"];
+      const walls: import("@/lib/types").ExteriorWall[] = ["S", "N", "W", "E"];
       for (const wall of walls) {
         const items = decor.filter(d => d.wall === wall);
         if (items.length === 0) continue;
@@ -3526,323 +3527,7 @@ function Car({ x, z, color = "#2255AA" }: { x: number; z: number; color?: string
   );
 }
 
-// ─── Circular luxury driveway ────────────────────────────────
-// Renders relative to its own origin (z=0 = house-front edge).
-// Wrap in DraggableGroup at defaultZ=D/2 for world positioning.
-function DrivewayAndParking() {
-  // All z-coords are relative to house-front (z=0 here).
-  const circleZ = 11.0; // center of circular driveway, 11 m from house front
-  const outerR = 5.5;
-  const innerR = 3.2;
-  const roadW = outerR - innerR;
-  const SEGS = 36;
 
-  const ringSegments = useMemo(() => {
-    const segs: { pos: [number,number,number]; rot: number; w: number; len: number }[] = [];
-    for (let i = 0; i < SEGS; i++) {
-      const a0 = (i / SEGS) * Math.PI * 2;
-      const a1 = ((i + 1) / SEGS) * Math.PI * 2;
-      const midA = (a0 + a1) / 2;
-      const midR = (outerR + innerR) / 2;
-      segs.push({
-        pos: [Math.cos(midA) * midR, -0.492, circleZ + Math.sin(midA) * midR],
-        rot: midA + Math.PI / 2,
-        w: roadW - 0.05,
-        len: (2 * Math.PI * midR) / SEGS + 0.05,
-      });
-    }
-    return segs;
-  }, []);
-
-  const islandPavers = useMemo(() => {
-    const pvs: { px: number; pz: number }[] = [];
-    const step = 0.55;
-    for (let xi = -Math.ceil(innerR / step); xi <= Math.ceil(innerR / step); xi++) {
-      for (let zi = -Math.ceil(innerR / step); zi <= Math.ceil(innerR / step); zi++) {
-        const px = xi * step, pz = zi * step;
-        if (px * px + pz * pz < (innerR - 0.3) * (innerR - 0.3)) pvs.push({ px, pz });
-      }
-    }
-    return pvs;
-  }, []);
-
-  const carportX = outerR + 5.0;
-
-  return (
-    <group>
-      {/* ── Straight approach from origin (house front) to circle ── */}
-      <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -0.492, 5.5]} receiveShadow>
-        <planeGeometry args={[4.2, 11.0]} />
-        <meshStandardMaterial color="#C9C2B5" roughness={0.85} />
-      </mesh>
-
-      {/* ── Ring road segments ── */}
-      {ringSegments.map((seg, i) => (
-        <mesh key={i} rotation={[-Math.PI/2, seg.rot, 0]} position={seg.pos} receiveShadow>
-          <planeGeometry args={[seg.w, seg.len]} />
-          <meshStandardMaterial color="#C9C2B5" roughness={0.85} />
-        </mesh>
-      ))}
-
-      {/* ── Center island: grass ── */}
-      <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -0.494, circleZ]} receiveShadow>
-        <circleGeometry args={[innerR - 0.15, 32]} />
-        <meshStandardMaterial color="#5CBF40" roughness={0.98} />
-      </mesh>
-
-      {/* ── Center island ornamental topiary ── */}
-      <group position={[0, 0, circleZ]}>
-        <mesh position={[0, 0.6, 0]} castShadow>
-          <cylinderGeometry args={[0.12, 0.16, 1.2, 8]} />
-          <meshStandardMaterial color="#5A3A1A" roughness={0.9} />
-        </mesh>
-        <mesh position={[0, 2.0, 0]} castShadow>
-          <sphereGeometry args={[1.05, 10, 8]} />
-          <meshStandardMaterial color="#2E7020" roughness={0.9} />
-        </mesh>
-      </group>
-
-      {/* ── Bollard lights along approach ── */}
-      {([-1.5, 1.5] as number[]).map((bx, side) =>
-        [2.0, 5.0, 8.0].map((bz, j) => (
-          <group key={`${side}-${j}`} position={[bx, 0, bz]}>
-            <mesh position={[0, 0.3, 0]} castShadow>
-              <cylinderGeometry args={[0.07, 0.09, 0.6, 8]} />
-              <meshStandardMaterial color="#C8C0A0" roughness={0.6} metalness={0.3} />
-            </mesh>
-            <mesh position={[0, 0.64, 0]}>
-              <sphereGeometry args={[0.1, 8, 7]} />
-              <meshStandardMaterial color="#FFFFDD" emissive="#FFFFAA" emissiveIntensity={0.6} roughness={0.3} />
-            </mesh>
-          </group>
-        ))
-      )}
-
-      {/* ── Bollard lights around ring ── */}
-      {Array.from({ length: 12 }).map((_, i) => {
-        const a = (i / 12) * Math.PI * 2;
-        return (
-          <group key={i} position={[Math.cos(a) * (outerR + 0.5), 0, circleZ + Math.sin(a) * (outerR + 0.5)]}>
-            <mesh position={[0, 0.3, 0]} castShadow>
-              <cylinderGeometry args={[0.07, 0.09, 0.6, 8]} />
-              <meshStandardMaterial color="#C8C0A0" roughness={0.6} metalness={0.3} />
-            </mesh>
-            <mesh position={[0, 0.64, 0]}>
-              <sphereGeometry args={[0.1, 8, 7]} />
-              <meshStandardMaterial color="#FFFFDD" emissive="#FFFFAA" emissiveIntensity={0.6} roughness={0.3} />
-            </mesh>
-          </group>
-        );
-      })}
-
-      {/* ── Carport with 4 columns + flat roof ── */}
-      <group position={[carportX, 0, circleZ]}>
-        <mesh position={[0, 2.6, 0]} castShadow receiveShadow>
-          <boxGeometry args={[6.5, 0.18, 5.5]} />
-          <meshStandardMaterial color="#D8D2C0" roughness={0.8} />
-        </mesh>
-        {([ [-2.8, -2.2], [2.8, -2.2], [-2.8, 2.2], [2.8, 2.2] ] as [number,number][]).map(([cx, cz], i) => (
-          <mesh key={i} position={[cx, 1.3, cz]} castShadow>
-            <cylinderGeometry args={[0.14, 0.14, 2.6, 10]} />
-            <meshStandardMaterial color="#F0EAD8" roughness={0.7} />
-          </mesh>
-        ))}
-        <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -0.492, 0]} receiveShadow>
-          <planeGeometry args={[6.2, 5.2]} />
-          <meshStandardMaterial color="#B8A888" roughness={0.88} />
-        </mesh>
-        <Car x={-1.8} z={0} color="#E8E8E8" />
-        <Car x={ 1.8} z={0} color="#1A1A2E" />
-        <Car x={0}    z={4.0} color="#8B4513" />
-      </group>
-    </group>
-  );
-}
-
-// ─── Yard presets ─────────────────────────────────────────────
-// LEGACY: kept for back-compat with the ExteriorSettings.yardPreset
-// dropdown. NEW preferred path = drag Pool / Pergola / etc as Prefab
-// items in the YardPlan editor (BLOCKS library tab). When the user has
-// any structural prefab in their yardPlan.items, this whole legacy
-// function returns null to avoid double-rendering them.
-function YardElements({ W, D, yardPreset, parking = false, orbitRef, selectedKey, onSelect }: {
-  W: number; D: number; yardPreset: string; parking?: boolean;
-  orbitRef: React.MutableRefObject<any>;
-  selectedKey: string | null;
-  onSelect: (key: string | null) => void;
-}) {
-  // Skip the entire legacy auto-place when user-driven yardPlan already
-  // contains a structural prefab (pool / pergola_classic / outdoor_kitchen
-  // / fountain). The user explicitly chose to compose the structures via
-  // the YardPlan editor — respect that and don't shadow them.
-  const activeFloor = useDesignerStore(s => s.activeFloor);
-  const yardItems = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.items);
-  const hasUserStructure = useMemo(() => {
-    if (!yardItems) return false;
-    return yardItems.some(it =>
-      it.type === "prefab" &&
-      ["pool", "pergola_classic", "outdoor_kitchen", "fountain"].includes(it.prefabKind)
-    );
-  }, [yardItems]);
-  if (hasUserStructure) return null;
-
-  const xOff = W / 2 + 7.5;   // right side (more room for luxury pool)
-
-  if (yardPreset === "minimal") {
-    return (
-      <>
-        <Tree x={-(W / 2 + 2.5)} z={-(D / 2 + 1.5)} scale={1.1} />
-        <Tree x={  W / 2 + 2.5}  z={-(D / 2 + 1.5)} scale={1.1} />
-        <Tree x={-(W / 2 + 3.5)} z={  D / 2 + 1.8}  scale={0.9} />
-        <Tree x={  W / 2 + 3.5}  z={  D / 2 + 1.8}  scale={0.9} />
-        <GardenPath W={W} D={D} />
-        <FlowerBed x={W / 2 + 1.5} z={-(D / 2 - 0.5)} w={2} d={0.8} />
-        {parking && (
-          <DraggableGroup posKey="driveway" label="🚗 停车场" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
-            <DrivewayAndParking />
-          </DraggableGroup>
-        )}
-      </>
-    );
-  }
-
-  if (yardPreset === "garden") {
-    return (
-      <>
-        <Tree x={-(W / 2 + 2.5)} z={-(D / 2 + 1.5)} scale={1.2} />
-        <Tree x={  W / 2 + 2.5}  z={-(D / 2 + 1.5)} scale={1.0} type="pine" />
-        <Tree x={-(W / 2 + 3.0)} z={  D / 2 + 2.0}  scale={0.9} />
-        <Tree x={  W / 2 + 3.5}  z={  D / 2 + 2.0}  scale={1.1} type="pine" />
-        <Tree x={0}               z={  D / 2 + 5.0}  scale={1.3} />
-        <Tree x={-(W / 2 + 5.5)} z={-(D / 2 + 2.0)} type="cypress" scale={1.0} />
-        <Tree x={  W / 2 + 5.5}  z={-(D / 2 + 2.0)} type="cypress" scale={1.0} />
-        <Tree x={-(W / 2 + 5.5)} z={  D / 2 + 2.5}  type="cypress" scale={0.9} />
-        <Tree x={  W / 2 + 5.5}  z={  D / 2 + 2.5}  type="cypress" scale={0.9} />
-        {[-D/4, 0, D/4].map((hz, i) => (
-          <Bush key={i} x={-(W / 2 + 1.2)} z={hz} scale={0.9} />
-        ))}
-        <FlowerBed x={-(W / 2 - 0.5)} z={-(D / 2 + 2.0)} w={3} d={0.9} />
-        <FlowerBed x={  W / 2 - 0.5}  z={-(D / 2 + 2.0)} w={3} d={0.9} />
-        <FlowerBed x={0}              z={  D / 2 + 2.5}   w={4} d={1.0} />
-        <Lawn x={0} z={D / 2 + 5} w={W + 4} d={4} />
-        <GardenPath W={W} D={D} />
-        <DraggableGroup posKey="fountain" label="⛲ 喷泉" defaultX={0} defaultZ={-(D / 2 + 6.5)} hitW={5} hitD={5} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
-          <Fountain x={0} z={0} />
-        </DraggableGroup>
-        {parking && (
-          <DraggableGroup posKey="driveway" label="🚗 停车场" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
-            <DrivewayAndParking />
-          </DraggableGroup>
-        )}
-      </>
-    );
-  }
-
-  if (yardPreset === "pool") {
-    return (
-      <>
-        <DraggableGroup posKey="pool" label="🏊 泳池" defaultX={xOff} defaultZ={0} hitW={16} hitD={13} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
-          <Pool x={0} z={0} w={9} d={5} />
-          <Tree x={-1.5} z={-(5 / 2 + 3.5)} type="cypress" scale={1.1} />
-          <Tree x={ 1.5} z={-(5 / 2 + 3.5)} type="cypress" scale={1.1} />
-          <Tree x={-1.5} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
-          <Tree x={ 1.5} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
-        </DraggableGroup>
-        <Tree x={-(W / 2 + 2.5)} z={-(D / 2 + 1.5)} scale={1.1} />
-        <Tree x={  W / 2 + 2.5}  z={-(D / 2 + 1.5)} type="palm" scale={1.0} />
-        <Tree x={xOff + 9.5}   z={-3.5} type="palm" scale={0.9} />
-        <Tree x={xOff + 9.5}   z={ 3.5} type="palm" scale={0.9} />
-        <DraggableGroup posKey="outdoor_kitchen" label="🍳 户外厨房" defaultX={xOff - 3.0} defaultZ={-(5 / 2 + 6.5)} hitW={8} hitD={6} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
-          <OutdoorKitchen x={0} z={0} />
-        </DraggableGroup>
-        <Bush x={xOff - 0.8} z={-3.5} scale={0.8} />
-        <Bush x={xOff - 0.8} z={ 3.5} scale={0.8} />
-        <Lawn x={xOff + 1.0} z={0} w={10} d={12} />
-        <GardenPath W={W} D={D} />
-        <FlowerBed x={-(W / 2 + 1.5)} z={D / 2 + 1.5} w={3} d={0.8} />
-        {parking && (
-          <DraggableGroup posKey="driveway" label="🚗 停车场" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
-            <DrivewayAndParking />
-          </DraggableGroup>
-        )}
-      </>
-    );
-  }
-
-  if (yardPreset === "full") {
-    return (
-      <>
-        {/* Symmetrical olive trees flanking the front entrance — Mediterranean villa signature */}
-        <Tree x={-(W / 2 + 2.5)} z={-(D / 2 + 1.5)} type="olive"   scale={1.15} />
-        <Tree x={  W / 2 + 2.5}  z={-(D / 2 + 1.5)} type="olive"   scale={1.15} />
-        {/* Cypress pillars further out — formal sentinels */}
-        <Tree x={-(W / 2 + 6.0)} z={-(D / 2 + 2.5)} type="cypress" scale={1.1} />
-        <Tree x={  W / 2 + 6.0}  z={-(D / 2 + 2.5)} type="cypress" scale={1.1} />
-        {/* Side garden round trees */}
-        <Tree x={-(W / 2 + 4.5)} z={  0}             scale={1.05} />
-        <Tree x={  W / 2 + 4.5}  z={  0}             scale={1.0} />
-        <Tree x={-(W / 2 + 3.5)} z={  D / 2 + 2.5}  scale={0.9} />
-        <Tree x={  W / 2 + 3.5}  z={  D / 2 + 2.5}  scale={1.0} />
-        {/* Centerpiece tree behind fountain */}
-        <Tree x={0}               z={  D / 2 + 7.0}  scale={1.3} />
-        {/* Palm pair near pool — tropical accent */}
-        <Tree x={xOff + 9.5}      z={-4.0} type="palm"  scale={0.9} />
-        <Tree x={xOff + 9.5}      z={ 4.0} type="palm"  scale={0.9} />
-        {/* Driveway: cypress columns + boxwood hedge along the edges */}
-        {parking && ([8.0, 12.0, 16.0] as number[]).map((cz, i) => (
-          <Fragment key={i}>
-            <Tree x={-2.8} z={D / 2 + cz} type="cypress" scale={1.0} />
-            <Tree x={ 2.8} z={D / 2 + cz} type="cypress" scale={1.0} />
-          </Fragment>
-        ))}
-        {parking && ([6.0, 10.0, 14.0, 18.0] as number[]).map((cz, i) => (
-          <Fragment key={`bx-${i}`}>
-            <Tree x={-3.6} z={D / 2 + cz} type="boxwood" scale={0.7} />
-            <Tree x={ 3.6} z={D / 2 + cz} type="boxwood" scale={0.7} />
-          </Fragment>
-        ))}
-        <DraggableGroup posKey="pool" label="🏊 泳池" defaultX={xOff} defaultZ={0} hitW={16} hitD={13} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
-          <Pool x={0} z={0} w={9} d={5} />
-          {/* Topiary spheres — formal pool corners */}
-          <Tree x={-4.0} z={-(5 / 2 + 0.8)} type="topiary" scale={1.1} />
-          <Tree x={ 4.0} z={-(5 / 2 + 0.8)} type="topiary" scale={1.1} />
-          <Tree x={-4.0} z={ 5 / 2 + 0.8}  type="topiary" scale={1.1} />
-          <Tree x={ 4.0} z={ 5 / 2 + 0.8}  type="topiary" scale={1.1} />
-          {/* Cypress backdrop */}
-          <Tree x={-1.8} z={-(5 / 2 + 3.5)} type="cypress" scale={1.05} />
-          <Tree x={ 1.8} z={-(5 / 2 + 3.5)} type="cypress" scale={1.05} />
-          <Tree x={-1.8} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
-          <Tree x={ 1.8} z={ 5 / 2 + 3.5}  type="cypress" scale={1.0} />
-        </DraggableGroup>
-        <DraggableGroup posKey="pergola" label="🏛 凉亭" defaultX={-(xOff - 2)} defaultZ={D / 2 + 5} hitW={10} hitD={9} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
-          <Pergola x={0} z={0} />
-        </DraggableGroup>
-        <DraggableGroup posKey="fountain" label="⛲ 喷泉" defaultX={0} defaultZ={-(D / 2 + 7.0)} hitW={5} hitD={5} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
-          <Fountain x={0} z={0} />
-        </DraggableGroup>
-        <DraggableGroup posKey="outdoor_kitchen" label="🍳 户外厨房" defaultX={xOff - 3.0} defaultZ={-(5 / 2 + 7.0)} hitW={8} hitD={6} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
-          <OutdoorKitchen x={0} z={0} />
-        </DraggableGroup>
-        <FlowerBed x={-(W / 2 - 0.5)} z={-(D / 2 + 2.0)} w={2.5} d={0.9} />
-        <FlowerBed x={  W / 2 - 0.5}  z={-(D / 2 + 2.0)} w={2.5} d={0.9} />
-        <FlowerBed x={0}              z={  D / 2 + 2.5}   w={5} d={1.0} />
-        {[-D/3, 0, D/3].map((hz, i) => (
-          <Bush key={i} x={-(W / 2 + 1.6)} z={hz} scale={1.0} />
-        ))}
-        <Lawn x={xOff + 1.0} z={0} w={10} d={14} />
-        <Lawn x={0} z={D / 2 + 5.5} w={W + 6} d={5} />
-        <GardenPath W={W} D={D} />
-        {parking && (
-          <DraggableGroup posKey="driveway" label="🚗 停车场" defaultX={0} defaultZ={D / 2} hitW={28} hitD={30} orbitRef={orbitRef} selectedKey={selectedKey} onSelect={onSelect}>
-            <DrivewayAndParking />
-          </DraggableGroup>
-        )}
-      </>
-    );
-  }
-
-  return null;
-}
 
 // ─── Ground ─────────────────────────────────────────────────
 // ─── PBR texture set loader ─────────────────────────────────
@@ -4144,10 +3829,11 @@ function SlatFence({ W, D, insetX, insetZ }: { W: number; D: number; insetX: num
   const drivewayGap = 3.0;
 
   const sides: Array<{ key: string; cx: number; cz: number; len: number; angle: number; gap?: boolean }> = [
-    { key: "front", cx: 0,        cz:  halfZ, len: halfX * 2, angle: 0,            gap: true },
-    { key: "back",  cx: 0,        cz: -halfZ, len: halfX * 2, angle: 0 },
-    { key: "left",  cx: -halfX,   cz: 0,      len: halfZ * 2, angle: Math.PI / 2 },
-    { key: "right", cx:  halfX,   cz: 0,      len: halfZ * 2, angle: Math.PI / 2 },
+    // NSWE: S = +Z (front of plot — driveway gap), N = -Z, W = -X, E = +X
+    { key: "S", cx: 0,        cz:  halfZ, len: halfX * 2, angle: 0,            gap: true },
+    { key: "N", cx: 0,        cz: -halfZ, len: halfX * 2, angle: 0 },
+    { key: "W", cx: -halfX,   cz: 0,      len: halfZ * 2, angle: Math.PI / 2 },
+    { key: "E", cx:  halfX,   cz: 0,      len: halfZ * 2, angle: Math.PI / 2 },
   ];
 
   return (
@@ -4745,7 +4431,7 @@ function WingFaceWall({
 }
 
 /** Upper-floor glass balustrade — slim steel posts + frameless glass panels */
-function GlassBalustrade({ W, side = "front" }: { W: number; side?: "front" | "side" }) {
+function GlassBalustrade({ W }: { W: number }) {
   const postH   = 1.08;
   const postSpacing = 1.80;
   const numPosts = Math.max(2, Math.round(W / postSpacing));
@@ -5850,7 +5536,7 @@ type AABB = {
   /** Per-side hide flags. When set, blocksMovement allows crossing that
    *  edge of this AABB even with collision ON. Plumbs from
    *  fp.roomWallsHidden in HouseCanvas's wallAABBs builder. */
-  hides?: Partial<Record<"back" | "front" | "left" | "right", boolean>>;
+  hides?: Partial<Record<import("@/lib/types").WallSide, boolean>>;
 };
 
 /** Virtual joystick (DOM widget, not inside Canvas). Outputs normalized
@@ -6126,16 +5812,17 @@ function WalkthroughController({
     // set, allow it. Symmetric: if it enters newRoom through a hidden
     // side, allow. "Side" is inferred from the endpoint's relation to
     // the AABB extents — small step distances make this exact.
-    const sideCrossing = (r: typeof walls[number] | undefined, ex: number, ez: number): "back" | "front" | "left" | "right" | null => {
+    const sideCrossing = (r: typeof walls[number] | undefined, ex: number, ez: number): import("@/lib/types").WallSide | null => {
       if (!r) return null;
-      if (ex < r.minX) return "left";
-      if (ex > r.maxX) return "right";
-      // FloorPlan UI convention: "背墙" = top of SVG = small plan-Y
-      // = LARGE world-Z (room AABB maxZ side). "前墙" = bottom of SVG
-      // = LARGE plan-Y = SMALL world-Z. Matches the swapped wall labels
-      // in FloorPlanExterior's 4-plane render.
-      if (ez < r.minZ) return "front";
-      if (ez > r.maxZ) return "back";
+      // NSWE convention: N = -Z (small worldZ), S = +Z (large worldZ),
+      // W = -X (small worldX), E = +X (large worldX). wallAABBs above is
+      // built without any Z-negation, so r.minZ is the room's NORTH side
+      // and r.maxZ is the SOUTH side. Crossing OUT through the small-Z
+      // boundary means exiting through the N wall, not S.
+      if (ex < r.minX) return "W";
+      if (ex > r.maxX) return "E";
+      if (ez < r.minZ) return "N";
+      if (ez > r.maxZ) return "S";
       return null;
     };
     if (curRoom !== -1) {
@@ -6460,7 +6147,7 @@ export default function HouseCanvas() {
   // the FloorPlan toolbar. Cardinal keys only — polygon edge-${i} hides
   // don't have a clean AABB-side mapping; users with polygon rooms still
   // need no-clip mode to walk through hidden polygon edges.
-  type WallRect = AABB & { hides?: Partial<Record<"back" | "front" | "left" | "right", boolean>> };
+  type WallRect = AABB & { hides?: Partial<Record<import("@/lib/types").WallSide, boolean>> };
   const wallAABBs = useMemo<WallRect[]>(() => {
     const out: WallRect[] = [];
     // House-wide bbox so each room's local center can be world-translated.
@@ -6483,14 +6170,15 @@ export default function HouseCanvas() {
       for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
         const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
         if (!p || !d) continue;
-        // World rect: x∈[(p.x-minX)*CM - W/2, (p.x+w-minX)*CM - W/2]
-        //             z∈[-((p.y+d-minY)*CM) + D/2, -((p.y-minY)*CM) + D/2]
+        // World rect (NSWE convention, no Z-flip):
+        //   x ∈ [(p.x-minX)*CM - W/2, (p.x+w-minX)*CM - W/2]   W = -X, E = +X
+        //   z ∈ [(p.y-minY)*CM - D/2, (p.y+d-minY)*CM - D/2]   N = -Z, S = +Z
         const wh = fp.roomWallsHidden?.[r];
         const hides: WallRect["hides"] = wh ? {
-          back:  wh.back  === true || undefined,
-          front: wh.front === true || undefined,
-          left:  wh.left  === true || undefined,
-          right: wh.right === true || undefined,
+          N: wh.N === true || undefined,
+          S: wh.S === true || undefined,
+          W: wh.W === true || undefined,
+          E: wh.E === true || undefined,
         } : undefined;
         // Shrink the walkable AABB by the wall HALF-thickness on each
         // side so the user collides at the visible interior wall surface
@@ -6510,30 +6198,32 @@ export default function HouseCanvas() {
     return out;
   }, [floorPlansForWalk]);
 
-  // Outer clamp box derived from actual room AABBs rather than the footprint
-  // estimate (W/D from useGroundFloorFootprint). The footprint-based bbox was
-  // 0.3m inside the footprint edge, which cut off the south wall of 客厅 at
-  // -3.94m while the footprint gave minZ=-3.7 — blocking the south door.
+  // Outer clamp box: extends BEYOND the building into the yard so the user
+  // can walk out through the front-entrance door. Padding is 15 m on each
+  // side which matches the YardPlan's visible 30×30 m lot. Inside the
+  // building, blocksMovement still gates wall crossings via doorPasses;
+  // outside the building the user moves freely on open ground.
   const walkBbox = useMemo(() => {
-    if (!wallAABBs.length) return { minX: -6.5, maxX: 6.5, minZ: -4.5, maxZ: 4.5 };
+    if (!wallAABBs.length) return { minX: -15, maxX: 15, minZ: -15, maxZ: 15 };
     let mnX = Infinity, mxX = -Infinity, mnZ = Infinity, mxZ = -Infinity;
     for (const a of wallAABBs) {
       mnX = Math.min(mnX, a.minX); mxX = Math.max(mxX, a.maxX);
       mnZ = Math.min(mnZ, a.minZ); mxZ = Math.max(mxZ, a.maxZ);
     }
-    // Add WALL_HALF (0.06m) so the outer boundary sits at the actual wall
-    // surface, then a further 0.1m gap for the player radius clamp to work.
-    const PAD = 0.16;
-    return { minX: mnX - PAD, maxX: mxX + PAD, minZ: mnZ - PAD, maxZ: mxZ + PAD };
+    // 15 m yard padding around the building footprint — lets the user
+    // step out through any exterior door and roam the yard. Matches the
+    // 30 m × 30 m visible area in YardPlan.tsx.
+    const YARD_PAD = 15;
+    return { minX: mnX - YARD_PAD, maxX: mxX + YARD_PAD, minZ: mnZ - YARD_PAD, maxZ: mxZ + YARD_PAD };
   }, [wallAABBs]);
 
   // ── Door passages: rect regions on walls where collision allows crossing ──
   // For each visible door, build a small "pass" rect straddling the wall it
   // lives on. blocksMovement consults these — if the movement segment goes
   // THROUGH a pass, allow even if it would otherwise cross a wall boundary.
-  // New convention: north = -Z, south = +Z. door.wall ===
-  //   "back"  → SVG top (small planY) = small world-Z = room AABB minZ side (NORTH wall)
-  //   "front" → SVG bottom (large planY) = large world-Z = room AABB maxZ side (SOUTH wall)
+  // door.wall ===
+  //   "N" → SVG top (small planY)  = small world-Z = room AABB minZ side (NORTH wall, -Z)
+  //   "S" → SVG bottom (large planY) = large world-Z = room AABB maxZ side (SOUTH wall, +Z)
   // Matches FloorPlanExterior's door render convention.
   const doorPasses = useMemo<Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>>(() => {
     const out: Array<{ minX: number; maxX: number; minZ: number; maxZ: number }> = [];
@@ -6564,21 +6254,21 @@ export default function HouseCanvas() {
       const dLen = door.len * CM;
       // No X-negation: new coordinate system is correct without flip.
       let pass: { minX: number; maxX: number; minZ: number; maxZ: number } | null = null;
-      if (door.wall === "back") {
-        // "back" = SVG top = small plan-Y = small world-Z (rMinZ, north face).
+      if (door.wall === "N") {
+        // N (north, -Z) — small plan-Y, rMinZ face.
         const x0 = rMinX + dPos;
         pass = { minX: x0, maxX: x0 + dLen, minZ: rMinZ - PAD, maxZ: rMinZ + PAD };
-      } else if (door.wall === "front") {
-        // "front" = SVG bottom = large plan-Y = large world-Z (rMaxZ, south face).
+      } else if (door.wall === "S") {
+        // S (south, +Z) — large plan-Y, rMaxZ face.
         const x0 = rMinX + dPos;
         pass = { minX: x0, maxX: x0 + dLen, minZ: rMaxZ - PAD, maxZ: rMaxZ + PAD };
-      } else if (door.wall === "left") {
-        // Pos grows from small-Z (back/north) end in new convention.
+      } else if (door.wall === "W") {
+        // Pos grows from N (small-Z) end.
         const z0 = rMinZ + dPos;
         const z1 = z0 + dLen;
         pass = { minX: rMinX - PAD, maxX: rMinX + PAD, minZ: z0, maxZ: z1 };
-      } else if (door.wall === "right") {
-        // Pos grows from small-Z (back/north) end in new convention.
+      } else if (door.wall === "E") {
+        // Pos grows from N (small-Z) end.
         const z0 = rMinZ + dPos;
         const z1 = z0 + dLen;
         pass = { minX: rMaxX - PAD, maxX: rMaxX + PAD, minZ: z0, maxZ: z1 };
@@ -6589,42 +6279,52 @@ export default function HouseCanvas() {
     // pickAutoDoor mirror: when a room has no stored doors, FloorPlanExterior
     // synthesizes an auto-door via pickAutoDoor. We must compute the SAME
     // door here so blocksMovement opens a passage through it — otherwise
-    // the visible door has no walkable opening. UI convention (matches plan SVG):
-    //   "back"  = SVG top = small plan-Y = small worldZ (rMinZ, north face)
-    //   "front" = SVG bottom = large plan-Y = large worldZ (rMaxZ, south face)
+    // the visible door has no walkable opening. Convention:
+    //   N = SVG top    = small plan-Y = small worldZ (rMinZ, north face, -Z)
+    //   S = SVG bottom = large plan-Y = large worldZ (rMaxZ, south face, +Z)
+    //   W = small plan-X = small worldX (-X);  E = large plan-X (+X)
     const AUTO_DOOR_LEN_CM = 80;
     const EPS_CM = 25; // 0.25 m: "interior" if dist to floor bound ≥ this
     const autoDoorFor = (fi: number, room: string,
                         p: { x: number; y: number }, d: { width: number; depth: number },
                         fb: { minX: number; minY: number; maxX: number; maxY: number }
-                       ): { wall: "back" | "front" | "left" | "right"; pos: number; len: number } => {
-      // UI convention: "back" = SVG top = small plan-Y = small world-Z (north face).
-      // Small plan-Y boundary = fb.minY. Distance of room's small-Y edge (p.y) to fb.minY.
+                       ): { wall: import("@/lib/types").WallSide; pos: number; len: number } => {
+      // N (back, -Z) = SVG top = small plan-Y = small world-Z (north face).
       const dists = {
-        back:  p.y - fb.minY,
-        front: fb.maxY - (p.y + d.depth),
-        left:  p.x - fb.minX,
-        right: fb.maxX - (p.x + d.width),
+        N: p.y - fb.minY,
+        S: fb.maxY - (p.y + d.depth),
+        W: p.x - fb.minX,
+        E: fb.maxX - (p.x + d.width),
       };
       const Wcm = d.width, Dcm = d.depth;
-      const centred = (wall: "back"|"front"|"left"|"right") => {
-        const wallLen = (wall === "left" || wall === "right") ? Dcm : Wcm;
+      const centred = (wall: import("@/lib/types").WallSide) => {
+        const wallLen = (wall === "W" || wall === "E") ? Dcm : Wcm;
         return Math.max(0, (wallLen - AUTO_DOOR_LEN_CM) / 2);
       };
       if (fi === 0 && room === "living") {
-        const all = (["back","front","left","right"] as const)
+        // Mirror FloorPlanExterior.pickAutoDoor: prefer S → N → W → E
+        // among exterior walls (dist < EPS_CM). Falls back to min-distance
+        // only if no wall is exterior. Without this priority, floating-point
+        // ties between e.g. S≈0 and W=0 would pick W and the walkable opening
+        // would land on the wrong wall (invisible passage at W, visible door
+        // with no passage at S).
+        const exterior = (["S","N","W","E"] as const).find(w => dists[w] < EPS_CM);
+        if (exterior) {
+          return { wall: exterior, pos: centred(exterior), len: AUTO_DOOR_LEN_CM };
+        }
+        const all = (["N","S","W","E"] as const)
           .map(w => [w, dists[w]] as const).sort((a, b) => a[1] - b[1]);
         return { wall: all[0][0], pos: centred(all[0][0]), len: AUTO_DOOR_LEN_CM };
       }
-      const interior = (w: "back"|"front"|"left"|"right") => dists[w] >= EPS_CM;
-      const yInt = (["back","front"] as const).filter(interior);
-      const xInt = (["left","right"] as const).filter(interior);
-      const cand: ReadonlyArray<"back"|"front"|"left"|"right"> = yInt.length ? yInt : xInt;
+      const interior = (w: import("@/lib/types").WallSide) => dists[w] >= EPS_CM;
+      const yInt = (["N","S"] as const).filter(interior);
+      const xInt = (["W","E"] as const).filter(interior);
+      const cand: ReadonlyArray<import("@/lib/types").WallSide> = yInt.length ? yInt : xInt;
       if (cand.length > 0) {
         const w = [...cand].sort((a, b) => dists[b] - dists[a])[0];
         return { wall: w, pos: centred(w), len: AUTO_DOOR_LEN_CM };
       }
-      const all = (["back","front","left","right"] as const)
+      const all = (["N","S","W","E"] as const)
         .map(w => [w, dists[w]] as const).sort((a, b) => a[1] - b[1]);
       return { wall: all[0][0], pos: centred(all[0][0]), len: AUTO_DOOR_LEN_CM };
     };
@@ -6656,9 +6356,8 @@ export default function HouseCanvas() {
           collect(auto, p, d);
           // Also handle the legacy single-door fields if set
           if (fp.roomDoorWall?.[r]) {
-            const dw = fp.roomDoorWall[r] as string;
-            const wall = (dw === "top" ? "back" : dw === "bottom" ? "front" : dw) as
-              "back" | "front" | "left" | "right";
+            // Stored value is already NSWE post v1→v2 migration.
+            const wall = fp.roomDoorWall[r] as import("@/lib/types").WallSide;
             const pos = fp.roomDoorPos?.[r] ?? auto.pos;
             const len = fp.roomDoorLen?.[r] ?? auto.len;
             collect({ wall, pos, len }, p, d);
@@ -7039,7 +6738,7 @@ export default function HouseCanvas() {
           const done = () => setFlyTick(0);
           if (flyTick > 0) {
             const dist = Math.max(W, D) * 1.1 + h * 0.8 + 10;
-            return <CameraFlyTo key="top"
+            return <CameraFlyTo key="topdown"
               pos={new THREE.Vector3(0, dist + h, 0.5)}
               tgt={new THREE.Vector3(0, h * 0.1, 0)}
               onDone={done} />;
@@ -7230,9 +6929,12 @@ export default function HouseCanvas() {
           setSelectedOutdoorKey(null);
           useDesignerStore.getState().setSelectedExteriorDecor(null);
         }} />
-        {/* ── Ground environment — hidden during walkthrough to prevent Z-fighting ── */}
-        {!insideBuilding && _buildingType === "floor-plan-driven" && <Ground W={W} D={D} />}
-        {!insideBuilding && !isRichGlassVilla && <Ground W={W} D={D} />}
+        {/* ── Ground environment — always rendered. Ground sits at y=-0.5
+             so it can't z-fight with room floors at y=0.025. Walkthrough
+             needs Ground so the user can step through the front door and
+             roam the yard without falling into the void. ── */}
+        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} />}
+        {!isRichGlassVilla && <Ground W={W} D={D} />}
         {!insideBuilding && !isRichGlassVilla && <EntryPath W={W} D={D} />}
         {/* rich-glass-villa (non-FPD): minimal stone plaza only */}
         {!insideBuilding && isRichGlassVilla && _buildingType !== "floor-plan-driven" && (
@@ -7260,10 +6962,14 @@ export default function HouseCanvas() {
             setWalkthroughSpawn([worldPos[0], worldPos[1], worldPos[2]]);
           }}
         />
-        {/* Wall decor + yard items — hidden during walkthrough (exterior elements) */}
+        {/* Wall decor — exterior-only (hidden in walkthrough where camera
+            is inside the building most of the time and the decor would
+            poke through walls). */}
         {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
-        {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}
-        {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPathItems3D />}
+        {/* Yard items + paths — always rendered. Walkthrough now lets the
+            user step out the front door, so the yard must be visible. */}
+        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}
+        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPathItems3D />}
         {/* VillaYard 自动院（池 + 露台 + 躺椅）已移除 ——
             尺寸全部锚定建筑 W/D，用户不能调整也不能换 GLB。
             院子家具走 YardPlan（用户自由摆放）。 */}

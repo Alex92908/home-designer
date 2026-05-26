@@ -425,13 +425,14 @@ function RoomGroup({
 
   // Polygon edge segments → wall boxes (skip entirely for circulation rooms).
   // Each segment carries its edge index so the per-side hide flag can skip
-  // it. Rect rooms map their cardinal toggles via edgeOrder=[back,right,front,left]
-  // — see fp.roomLayout convention: edge 0 (z1=z2=0) is the back wall.
+  // it. Rect rooms map their cardinal toggles via edgeOrder=[N,E,S,W]
+  // — see fp.roomLayout convention: edge 0 (z1=z2=0) is the N (back) wall.
   const wallBoxes = useMemo(() => {
-    if (isCirculationRoom) return [] as Array<{ cx: number; cz: number; len: number; angle: number; edgeIdx: number; cardinal: "back" | "front" | "left" | "right" | null }>;
-    const ws: Array<{ cx: number; cz: number; len: number; angle: number; edgeIdx: number; cardinal: "back" | "front" | "left" | "right" | null }> = [];
+    type WB = { cx: number; cz: number; len: number; angle: number; edgeIdx: number; cardinal: import("@/lib/types").WallSide | null };
+    if (isCirculationRoom) return [] as WB[];
+    const ws: WB[] = [];
     const isRect = !(shape && shape.preset !== "rect");
-    const cardinalOrder: Array<"back" | "right" | "front" | "left"> = ["back", "right", "front", "left"];
+    const cardinalOrder: Array<import("@/lib/types").WallSide> = ["N", "E", "S", "W"];
     for (let i = 0; i < polyPts.length; i++) {
       const [x1, z1] = polyPts[i];
       const [x2, z2] = polyPts[(i + 1) % polyPts.length];

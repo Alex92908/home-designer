@@ -55,7 +55,7 @@ function item(
 }
 
 function win(
-  wall: "front"|"back"|"left"|"right",
+  wall: "N"|"S"|"W"|"E",
   pos: number, len: number,
   h = 140, sill = 90,
   style: WindowConfig["style"] = "fixed"
@@ -64,7 +64,7 @@ function win(
 }
 
 function door(
-  wall: "front"|"back"|"left"|"right",
+  wall: "N"|"S"|"W"|"E",
   pos: number, len = 90, h = 210
 ): DoorConfig {
   return { id: uid("door"), wall, pos, len, h };
@@ -282,21 +282,21 @@ const stair2State: RoomState = emptyRoomState();
 
 // 一楼
 const fl0Windows = {
-  living:   [win("front", 30, 840, 260, 10, "fixed")],   // 南面通高玻璃幕墙
-  dining:   [win("front", 30, 340, 260, 10, "fixed")],   // 南面通高
-  kitchen:  [win("back",  80, 240, 100, 100, "sliding")],// 北面采光推拉窗
-  gym:      [win("back",  60, 300, 130,  80, "fixed")],  // 北面固定大窗
+  living:   [win("S", 30, 840, 260, 10, "fixed")],   // 南面通高玻璃幕墙
+  dining:   [win("S", 30, 340, 260, 10, "fixed")],   // 南面通高
+  kitchen:  [win("N",  80, 240, 100, 100, "sliding")],// 北面采光推拉窗
+  gym:      [win("N",  60, 300, 130,  80, "fixed")],  // 北面固定大窗
   bathroom: [],                                            // 卫生间无窗
   stair:    [],
 };
 
 // 二楼
 const fl1Windows = {
-  master:   [win("back",   80, 440, 160, 70, "fixed")],  // 北面私密横向大窗
-  bedroom:  [win("back",   60, 280, 150, 80, "sliding")],// 北面推拉窗
-  study:    [win("right",  50, 300, 220, 30, "fixed"),   // 东面通高景观窗
-             win("back",   50, 200, 120, 90, "sliding")],// 北面采光
-  bedroom2: [win("front",  40, 470, 180, 50, "fixed")],  // 南面景观大窗
+  master:   [win("N",   80, 440, 160, 70, "fixed")],  // 北面私密横向大窗
+  bedroom:  [win("N",   60, 280, 150, 80, "sliding")],// 北面推拉窗
+  study:    [win("E",  50, 300, 220, 30, "fixed"),   // 东面通高景观窗
+             win("N",   50, 200, 120, 90, "sliding")],// 北面采光
+  bedroom2: [win("S",  40, 470, 180, 50, "fixed")],  // 南面景观大窗
   closet:   [],
   bathroom2:[],
   stair:    [],
@@ -307,21 +307,21 @@ const fl1Windows = {
 // ─────────────────────────────────────────────────────────────
 
 const fl0Doors: Record<string, DoorConfig[]> = {
-  living:   [door("front", 340, 120, 230)],  // 主入口双开大门
-  kitchen:  [door("front",  50,  90, 210)],  // 厨餐通道门
-  bathroom: [door("front",  90,  80, 210)],  // 卫生间门
-  gym:      [door("front", 170,  80, 210)],  // 健身房门
-  stair:    [door("front",  55,  90, 210)],  // 楼梯门
+  living:   [door("S", 340, 120, 230)],  // 主入口双开大门
+  kitchen:  [door("S",  50,  90, 210)],  // 厨餐通道门
+  bathroom: [door("S",  90,  80, 210)],  // 卫生间门
+  gym:      [door("S", 170,  80, 210)],  // 健身房门
+  stair:    [door("S",  55,  90, 210)],  // 楼梯门
 };
 
 const fl1Doors: Record<string, DoorConfig[]> = {
-  master:   [door("front", 240,  90, 210)],  // 主卧门
-  bedroom:  [door("front", 150,  90, 210)],  // 次卧门
-  study:    [door("left",  100,  80, 210)],  // 书房门（西墙）
-  closet:   [door("back",   60,  70, 210)],  // 衣帽间门（北面→主卧）
-  bathroom2:[door("back",   80,  80, 210)],  // 卫浴门（北面→过道）
-  bedroom2: [door("back",  200,  90, 210)],  // 次卧2门（北面）
-  stair:    [door("back",  100,  90, 210)],  // 楼梯间门
+  master:   [door("S", 240,  90, 210)],  // 主卧门
+  bedroom:  [door("S", 150,  90, 210)],  // 次卧门
+  study:    [door("W",  100,  80, 210)],  // 书房门（西墙）
+  closet:   [door("N",   60,  70, 210)],  // 衣帽间门（北面→主卧）
+  bathroom2:[door("N",   80,  80, 210)],  // 卫浴门（北面→过道）
+  bedroom2: [door("N",  200,  90, 210)],  // 次卧2门（北面）
+  stair:    [door("N",  100,  90, 210)],  // 楼梯间门
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -343,7 +343,7 @@ function buildFloorPlan(
   const allRooms  = Object.fromEntries(ALL_POSSIBLE_ROOMS.map(r => [r, emptyRoomState()])) as Record<string, RoomState>;
   const doorPosDefault = Object.fromEntries(ALL_POSSIBLE_ROOMS.map(r => [r, 40])) as Record<string, number>;
   const hasDoorDefault = Object.fromEntries(ALL_POSSIBLE_ROOMS.map(r => [r, true])) as Record<string, boolean>;
-  const doorWallDefault = Object.fromEntries(ALL_POSSIBLE_ROOMS.map(r => [r, "bottom" as const])) as Record<string, "bottom"|"top"|"left"|"right">;
+  const doorWallDefault = Object.fromEntries(ALL_POSSIBLE_ROOMS.map(r => [r, "S" as const])) as Record<string, "N"|"S"|"W"|"E">;
 
   Object.assign(allLayout, layout);
   Object.assign(allDims, dimensions);

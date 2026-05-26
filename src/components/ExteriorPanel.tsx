@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import { useDesignerStore } from "@/lib/store";
-import type { RoofStyle, WallMaterialType, WallZone } from "@/lib/types";
+import type { RoofStyle, WallMaterialType, WallSide, WallZone } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 import CloudRenderButton from "./CloudRenderButton";
 import DesignVariants from "./DesignVariants";
 import { PROJECT_TEMPLATES } from "@/lib/projectTemplates";
 import FacadeEditor from "./FacadeEditor";
-import type { FaceName } from "./FacadeEditor";
 import { getSampleGlassVillaFloorPlans, SAMPLE_GLASS_VILLA_EXTERIOR } from "@/lib/sampleGlassVilla";
 
 // NOTE: Exterior wall decor (壁灯/门牌/信箱/爬藤…) lives per-room and is
@@ -209,8 +208,11 @@ function ColorSwatch({ label, value, onChange }: { label: string; value: string;
   );
 }
 
-type WallFace = "front" | "back" | "left" | "right";
-const FACE_LABELS: Record<WallFace, string> = { front:"前墙", back:"后墙", left:"左墙", right:"右墙" };
+// Facade-face identifiers are unified with room walls (NSWE) end-to-end —
+// data layer, internal types, AND user-visible labels. Compass labels make
+// it unambiguous which face you're styling regardless of camera orientation.
+type WallFace = WallSide;
+const FACE_LABELS: Record<WallFace, string> = { S:"南墙", N:"北墙", W:"西墙", E:"东墙" };
 
 // ─── Main panel ──────────────────────────────────────────────
 export default function ExteriorPanel() {
@@ -225,8 +227,8 @@ export default function ExteriorPanel() {
   const [perFaceEnabled, setPerFaceEnabled] = useState(
     !!(exterior.faceMaterials && Object.keys(exterior.faceMaterials).length > 0)
   );
-  const [activeFace, setActiveFace] = useState<WallFace>("front");
-  const [activeFacadeFace, setActiveFacadeFace] = useState<FaceName>("front");
+  const [activeFace, setActiveFace] = useState<WallFace>("S");
+  const [activeFacadeFace, setActiveFacadeFace] = useState<WallSide>("S");
 
   const hasMovedOutdoor = Object.keys(exterior.outdoorPositions ?? {}).length > 0;
   const resetOutdoorPositions = () => setExterior({ outdoorPositions: {} });
@@ -499,8 +501,8 @@ export default function ExteriorPanel() {
                 setPerFaceEnabled(next);
                 if (next) {
                   // initialise all faces to current global material
-                  setExterior({ faceMaterials: { front: exterior.wallColor, back: exterior.wallColor, left: exterior.wallColor, right: exterior.wallColor },
-                    faceMaterialTypes: { front: exterior.wallMaterial, back: exterior.wallMaterial, left: exterior.wallMaterial, right: exterior.wallMaterial } });
+                  setExterior({ faceMaterials: { S: exterior.wallColor, N: exterior.wallColor, W: exterior.wallColor, E: exterior.wallColor },
+                    faceMaterialTypes: { S: exterior.wallMaterial, N: exterior.wallMaterial, W: exterior.wallMaterial, E: exterior.wallMaterial } });
                 } else {
                   setExterior({ faceMaterials: {}, faceMaterialTypes: {} });
                 }
@@ -517,7 +519,7 @@ export default function ExteriorPanel() {
           {/* Per-face tab selector */}
           {perFaceEnabled && (
             <div className="flex gap-1 mb-2">
-              {(["front","back","left","right"] as const).map(face => (
+              {(["S","N","W","E"] as const).map(face => (
                 <button key={face}
                   onClick={() => setActiveFace(face)}
                   className="flex-1 py-1 rounded-lg text-[9px] font-bold transition-colors"
@@ -692,8 +694,8 @@ export default function ExteriorPanel() {
           </div>
           {/* Face selector */}
           <div className="flex gap-1 mb-3">
-            {(["front","back","left","right"] as const).map(face => {
-              const faceLabels = { front:"前", back:"后", left:"左", right:"右" };
+            {(["S","N","W","E"] as const).map(face => {
+              const faceLabels: Record<WallSide, string> = { S:"南", N:"北", W:"西", E:"东" };
               const hasFacade = !!exterior.facades?.[face]?.length;
               return (
                 <button key={face}

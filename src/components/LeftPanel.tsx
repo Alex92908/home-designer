@@ -136,7 +136,7 @@ const MATERIAL_SECTIONS: Array<{ key: string; icon: string; category: MaterialIt
  *  RoomMaterials gets set when user picks a wall material: "all" writes
  *  to the default `wall`; the 4 sides write to wallBack/Front/Left/Right;
  *  "lower" writes to wallLower (wainscot). */
-type WallTarget = "all" | "back" | "front" | "left" | "right" | "lower";
+type WallTarget = "all" | "N" | "S" | "W" | "E" | "lower";
 
 /** Card variant for walls: dispatches to the right store action based on
  *  the currently-selected wall target. */
@@ -151,12 +151,12 @@ function WallMatCard({ item, target }: { item: MaterialItem; target: WallTarget 
   const displayBrand = locale === "en" ? getBrandNameEn(item.brand) : item.brand;
 
   // Check if this material is the active selection for the current target.
-  const activeField = target === "all"   ? roomMaterials.wall
-                    : target === "back"  ? roomMaterials.wallBack
-                    : target === "front" ? roomMaterials.wallFront
-                    : target === "left"  ? roomMaterials.wallLeft
-                    : target === "right" ? roomMaterials.wallRight
-                    :                      roomMaterials.wallLower;
+  const activeField = target === "all" ? roomMaterials.wall
+                    : target === "N"   ? roomMaterials.wallBack
+                    : target === "S"   ? roomMaterials.wallFront
+                    : target === "W"   ? roomMaterials.wallLeft
+                    : target === "E"   ? roomMaterials.wallRight
+                    :                    roomMaterials.wallLower;
   const isSelected = activeField?.id === item.id;
 
   const handleClick = () => {
@@ -215,10 +215,10 @@ function WallSection() {
 
   const TARGETS: Array<{ key: WallTarget; label: string; hint: string }> = [
     { key: "all",   ...t.wallTargets.all },
-    { key: "back",  ...t.wallTargets.back },
-    { key: "front", ...t.wallTargets.front },
-    { key: "left",  ...t.wallTargets.left },
-    { key: "right", ...t.wallTargets.right },
+    { key: "N",     ...t.wallTargets.N },
+    { key: "S",     ...t.wallTargets.S },
+    { key: "W",     ...t.wallTargets.W },
+    { key: "E",     ...t.wallTargets.E },
     { key: "lower", ...t.wallTargets.lower },
   ];
 
@@ -228,11 +228,11 @@ function WallSection() {
     else setWallSide(target, undefined);
   };
   const currentlySet = target === "all" ? roomMaterials.wall
-                     : target === "back" ? roomMaterials.wallBack
-                     : target === "front" ? roomMaterials.wallFront
-                     : target === "left" ? roomMaterials.wallLeft
-                     : target === "right" ? roomMaterials.wallRight
-                     : roomMaterials.wallLower;
+                     : target === "N"   ? roomMaterials.wallBack
+                     : target === "S"   ? roomMaterials.wallFront
+                     : target === "W"   ? roomMaterials.wallLeft
+                     : target === "E"   ? roomMaterials.wallRight
+                     :                    roomMaterials.wallLower;
 
   return (
     <div>
@@ -290,11 +290,11 @@ function WallSection() {
         {TARGETS.map(t => {
           const isActive = t.key === target;
           const isSet = t.key === "all" ? !!roomMaterials.wall
-                      : t.key === "back" ? !!roomMaterials.wallBack
-                      : t.key === "front" ? !!roomMaterials.wallFront
-                      : t.key === "left" ? !!roomMaterials.wallLeft
-                      : t.key === "right" ? !!roomMaterials.wallRight
-                      : !!roomMaterials.wallLower;
+                      : t.key === "N"   ? !!roomMaterials.wallBack
+                      : t.key === "S"   ? !!roomMaterials.wallFront
+                      : t.key === "W"   ? !!roomMaterials.wallLeft
+                      : t.key === "E"   ? !!roomMaterials.wallRight
+                      :                   !!roomMaterials.wallLower;
           return (
             <button
               key={t.key}

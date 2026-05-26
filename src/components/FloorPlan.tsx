@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
-import { ROOM_DEFS, WindowConfig } from "@/lib/types";
+import { ROOM_DEFS, WindowConfig, WallSide } from "@/lib/types";
 import { FloorPlanMinimap } from "./FloorPlanMinimap";
 import { getFurnitureById } from "@/lib/furniture";
 import { PlacedItem } from "@/lib/types";
@@ -37,7 +37,7 @@ interface DragState {
 
 interface WinDrag {
   id: string;
-  wall: "back" | "front" | "right" | "left";
+  wall: WallSide;
   handle: "move" | "start" | "end";
   startMouse: number;
   origPos: number;
@@ -48,9 +48,8 @@ interface WinDrag {
 
 interface DoorDrag {
   id: string;
-  wall: "top" | "bottom" | "left" | "right"; // SVG wall convention
-  origWall: string;      // original door.wall ("back"|"front"|"left"|"right")
-  startMouse: number;  // x for top/bottom walls, y for left/right walls
+  wall: WallSide;        // unified cardinal naming (N/S/W/E)
+  startMouse: number;    // x for N/S walls, y for W/E walls
   origPos: number;
   wallLen: number;       // cm, for clamping
   doorLen: number;       // cm
@@ -244,7 +243,7 @@ function WindowSVG({
     );
   }
 
-  if (win.wall === "back") {
+  if (win.wall === "N") {
     const x1 = win.pos * scale;
     const x2 = (win.pos + win.len) * scale;
     return (
@@ -264,7 +263,7 @@ function WindowSVG({
       </g>
     );
   }
-  if (win.wall === "right") {
+  if (win.wall === "E") {
     const y1 = win.pos * scale;
     const y2 = (win.pos + win.len) * scale;
     return (
@@ -284,7 +283,7 @@ function WindowSVG({
       </g>
     );
   }
-  if (win.wall === "left") {
+  if (win.wall === "W") {
     const y1 = win.pos * scale;
     const y2 = (win.pos + win.len) * scale;
     return (
@@ -304,7 +303,7 @@ function WindowSVG({
       </g>
     );
   }
-  if (win.wall === "front") {
+  if (win.wall === "S") {
     const x1 = win.pos * scale;
     const x2 = (win.pos + win.len) * scale;
     return (
@@ -329,7 +328,7 @@ function WindowSVG({
 
 // ─── Draggable door (supports 4 walls) ────────────────────
 
-type DoorWall = "bottom" | "top" | "left" | "right";
+type DoorWall = WallSide;
 
 function DoorSVG({
   svgW, svgH, doorPosCm, doorLenCm, roomWidthCm, roomDepthCm, doorWall, scale, isEditMode, onPointerDown, polygonEdge, noHitRect,
@@ -366,7 +365,7 @@ function DoorSVG({
     );
   }
 
-  const wallLen = (doorWall === "bottom" || doorWall === "top") ? roomWidthCm : roomDepthCm;
+  const wallLen = (doorWall === "N" || doorWall === "S") ? roomWidthCm : roomDepthCm;
   const doorW = Math.min(doorLenCm, wallLen) * scale;
   const pos = doorPosCm * scale;
 
@@ -374,11 +373,11 @@ function DoorSVG({
   // noHitRect=true means the parent renders the hit rect after delete buttons (correct z-order)
   let hitRect: React.ReactNode = null;
   if (isEditMode && !noHitRect) {
-    if (doorWall === "bottom")
+    if (doorWall === "S")
       hitRect = <rect x={pos - 4} y={svgH - 20} width={doorW + 8} height={24} fill="transparent" style={{ cursor: "move" }} onPointerDown={onPointerDown} />;
-    else if (doorWall === "top")
+    else if (doorWall === "N")
       hitRect = <rect x={pos - 4} y={-4} width={doorW + 8} height={24} fill="transparent" style={{ cursor: "move" }} onPointerDown={onPointerDown} />;
-    else if (doorWall === "left")
+    else if (doorWall === "W")
       hitRect = <rect x={-4} y={pos - 4} width={24} height={doorW + 8} fill="transparent" style={{ cursor: "move" }} onPointerDown={onPointerDown} />;
     else
       hitRect = <rect x={svgW - 20} y={pos - 4} width={24} height={doorW + 8} fill="transparent" style={{ cursor: "move" }} onPointerDown={onPointerDown} />;
@@ -389,17 +388,19 @@ function DoorSVG({
   let leaf: React.ReactNode;
   let highlight: React.ReactNode;
 
-  if (doorWall === "bottom") {
+  if (doorWall === "S") {
+    // SVG bottom edge — south wall (+Z)
     gapRect   = <rect x={pos} y={svgH - 5} width={doorW} height={10} fill="#1E2030" />;
     arc       = <path d={`M${pos},${svgH} A${doorW},${doorW} 0 0,1 ${pos+doorW},${svgH-doorW}`} fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />;
     leaf      = <line x1={pos} y1={svgH} x2={pos+doorW} y2={svgH-doorW} stroke="#5A6070" strokeWidth={1.5} />;
     highlight = isEditMode && <rect x={pos-4} y={svgH-12} width={doorW+8} height={14} fill="#F59E0B" opacity={0.35} rx={3} style={{ pointerEvents:"none" }} />;
-  } else if (doorWall === "top") {
+  } else if (doorWall === "N") {
+    // SVG top edge — north wall (-Z)
     gapRect   = <rect x={pos} y={-5} width={doorW} height={10} fill="#1E2030" />;
     arc       = <path d={`M${pos},${0} A${doorW},${doorW} 0 0,0 ${pos+doorW},${doorW}`} fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />;
     leaf      = <line x1={pos} y1={0} x2={pos+doorW} y2={doorW} stroke="#5A6070" strokeWidth={1.5} />;
     highlight = isEditMode && <rect x={pos-4} y={-2} width={doorW+8} height={14} fill="#F59E0B" opacity={0.35} rx={3} style={{ pointerEvents:"none" }} />;
-  } else if (doorWall === "left") {
+  } else if (doorWall === "W") {
     gapRect   = <rect x={-5} y={pos} width={10} height={doorW} fill="#1E2030" />;
     arc       = <path d={`M${0},${pos} A${doorW},${doorW} 0 0,0 ${doorW},${pos+doorW}`} fill="none" stroke="#5A6070" strokeWidth={1} strokeDasharray="3,2" />;
     leaf      = <line x1={0} y1={pos} x2={doorW} y2={pos+doorW} stroke="#5A6070" strokeWidth={1.5} />;
@@ -478,7 +479,7 @@ export default function FloorPlan() {
   const removeWindow    = useDesignerStore((s) => s.removeWindow);
   const doorPosCm       = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorPos?.[activeRoom] ?? 0);
   const hasDoor         = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomHasDoor?.[activeRoom] ?? true);
-  const doorWall        = useDesignerStore((s) => (s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "bottom") as DoorWall);
+  const doorWall        = useDesignerStore((s) => (s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "S") as DoorWall);
   const doorLenCm       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
   const doorHCm         = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
   const setDoorPos      = useDesignerStore((s) => s.setDoorPos);
@@ -502,11 +503,9 @@ export default function FloorPlan() {
   const allDoors = useMemo(() => {
     if (roomDoorsArr && roomDoorsArr.length > 0) return roomDoorsArr;
     if (!hasDoor) return [];
-    const wall: "back" | "front" | "left" | "right" =
-      doorWall === "top" ? "back" : doorWall === "bottom" ? "front" : doorWall;
     return [{
       id: `${activeRoom}-legacy-door`,
-      wall,
+      wall: doorWall as WallSide,
       pos: doorPosCm,
       len: doorLenCm,
       h: doorHCm,
@@ -790,7 +789,7 @@ export default function FloorPlan() {
       e.stopPropagation();
       if (!svgRef.current) return;
       const pt = getSVGPoint(e, svgRef.current, zoomLevel);
-      const axis = (win.wall === "back" || win.wall === "front") ? pt.x : pt.y;
+      const axis = (win.wall === "N" || win.wall === "S") ? pt.x : pt.y;
       setWinDrag({ id: win.id, wall: win.wall, handle, startMouse: axis, origPos: win.pos, origLen: win.len });
       (e.currentTarget as SVGRectElement).setPointerCapture(e.pointerId);
     }, []
@@ -806,8 +805,8 @@ export default function FloorPlan() {
       e.stopPropagation();
       const door = allDoors.find(d => d.id === doorId);
       if (!door || door.edgeIndex != null) return;
-      const svgWall: DoorWall = door.wall === "back" ? "top" : door.wall === "front" ? "bottom" : door.wall as DoorWall;
-      const isHoriz = svgWall === "top" || svgWall === "bottom";
+      const cardinal: DoorWall = door.wall as DoorWall;
+      const isHoriz = cardinal === "N" || cardinal === "S";
       const capturedWallLen = isHoriz ? roomW : roomD;
       const capturedOrigPos = door.pos;
       const capturedDoorLen = door.len;
@@ -854,7 +853,7 @@ export default function FloorPlan() {
       // Window drag
       if (winDrag) {
         const pt = getSVGPoint(e, svgRef.current, zoomLevel);
-        const isHorizWin = winDrag.wall === "back" || winDrag.wall === "front";
+        const isHorizWin = winDrag.wall === "N" || winDrag.wall === "S";
         const axis = isHorizWin ? pt.x : pt.y;
         const wallLen = isHorizWin ? roomW : roomD;
         const delta = (axis - winDrag.startMouse) / scale;
@@ -882,7 +881,7 @@ export default function FloorPlan() {
       // Door drag — same pattern as window drag
       if (doorDrag) {
         const pt = getSVGPoint(e, svgRef.current, zoomLevel);
-        const isHoriz = doorDrag.wall === "top" || doorDrag.wall === "bottom";
+        const isHoriz = doorDrag.wall === "N" || doorDrag.wall === "S";
         const axis = isHoriz ? pt.x : pt.y;
         const delta = (axis - doorDrag.startMouse) / scale;
         const newPos = Math.max(0, Math.min(doorDrag.wallLen - doorDrag.doorLen, doorDrag.origPos + delta));
@@ -950,8 +949,8 @@ export default function FloorPlan() {
 
   // ─── Add window helpers ──────────────────────────────────
   // Cardinal-wall add (rect rooms): centered on the bbox wall.
-  const handleAddWindow = (wall: "back" | "front" | "right" | "left") => {
-    const wallLen = (wall === "back" || wall === "front") ? roomW : roomD;
+  const handleAddWindow = (wall: WallSide) => {
+    const wallLen = (wall === "N" || wall === "S") ? roomW : roomD;
     addWindow(activeRoom, {
       id: `${activeRoom}-w${Date.now()}`,
       wall,
@@ -992,9 +991,9 @@ export default function FloorPlan() {
   };
 
   // Cardinal-wall add door (rect rooms).
-  const handleAddDoorCardinal = (cardinal: "back" | "front" | "left" | "right") => {
+  const handleAddDoorCardinal = (cardinal: WallSide) => {
     const dl = doorLenCm ?? 80;
-    const wallLen = (cardinal === "back" || cardinal === "front") ? roomW : roomD;
+    const wallLen = (cardinal === "N" || cardinal === "S") ? roomW : roomD;
     addDoor(activeRoom, {
       id: `${activeRoom}-d${Date.now()}`,
       wall: cardinal,
@@ -1211,8 +1210,8 @@ export default function FloorPlan() {
                 const labels = t.fpWallLabels;
                 const edges = getEdges(roomShape.points)
                   .filter(e => e.length > 40); // skip only tiny stub edges (<40cm)
-                // Number duplicates per facing (e.g. two "back" edges → #1, #2)
-                const seen: Record<string, number> = { back: 0, front: 0, left: 0, right: 0 };
+                // Number duplicates per facing (e.g. two "N" edges → #1, #2)
+                const seen: Record<string, number> = { N: 0, S: 0, W: 0, E: 0 };
                 return edges.map(e => {
                   seen[e.facing] += 1;
                   const sameFacingCount = edges.filter(x => x.facing === e.facing).length;
@@ -1232,9 +1231,9 @@ export default function FloorPlan() {
                   );
                 });
               }
-              return (["back","front","left","right"] as const).map(wall => {
+              return (["N","S","W","E"] as const).map(wall => {
                 const labels = t.fpWallLabels;
-                const wallLen = (wall === "back" || wall === "front") ? roomW : roomD;
+                const wallLen = (wall === "N" || wall === "S") ? roomW : roomD;
                 if (wallLen <= 100) return null;
                 return (
                   <button key={wall} onClick={() => handleAddWindow(wall)}
@@ -1256,7 +1255,7 @@ export default function FloorPlan() {
                 if (roomShape && roomShape.preset !== "rect") {
                   const edges = getEdges(roomShape.points)
                     .filter(e => e.length >= (doorLenCm ?? 80));
-                  const seen: Record<string, number> = { back: 0, front: 0, left: 0, right: 0 };
+                  const seen: Record<string, number> = { N: 0, S: 0, W: 0, E: 0 };
                   return edges.map(e => {
                     seen[e.facing] += 1;
                     const sameFacingCount = edges.filter(x => x.facing === e.facing).length;
@@ -1275,9 +1274,9 @@ export default function FloorPlan() {
                     );
                   });
                 }
-                return (["back","front","left","right"] as const).map(w => {
+                return (["N","S","W","E"] as const).map(w => {
                   const labels = t.fpWallLabels;
-                  const wallLen = (w === "back" || w === "front") ? roomW : roomD;
+                  const wallLen = (w === "N" || w === "S") ? roomW : roomD;
                   if (wallLen <= 100) return null;
                   return (
                     <button key={`door-${w}`} onClick={() => handleAddDoorCardinal(w)}
@@ -1290,7 +1289,7 @@ export default function FloorPlan() {
               })()}
             </div>
             {/* ── 隐藏墙：mirror the +窗 / +门 button layout so polygon
-                rooms get one toggle per actual edge (背墙1/背墙2/前墙1…)
+                rooms get one toggle per actual edge (北墙1/北墙2/南墙1…)
                 while rect rooms keep 4 cardinal toggles. Hidden walls
                 render red so it's obvious which sides are off. ── */}
             <div className="flex flex-wrap items-center gap-0.5 ml-1">
@@ -1300,11 +1299,11 @@ export default function FloorPlan() {
                 if (roomShape && roomShape.preset !== "rect") {
                   // Polygon room — one button per outline edge, keyed by
                   // edge index. Numbering matches the +窗/+门 buttons
-                  // above so "前墙2" hide button targets the same edge
-                  // that "+前墙2窗" added a window to.
+                  // above so "南墙2" hide button targets the same edge
+                  // that "+南墙2窗" added a window to.
                   const edges = getEdges(roomShape.points)
                     .filter(e => e.length > 40);
-                  const seen: Record<string, number> = { back: 0, front: 0, left: 0, right: 0 };
+                  const seen: Record<string, number> = { N: 0, S: 0, W: 0, E: 0 };
                   return edges.map(e => {
                     seen[e.facing] += 1;
                     const sameFacingCount = edges.filter(x => x.facing === e.facing).length;
@@ -1326,7 +1325,7 @@ export default function FloorPlan() {
                   });
                 }
                 // Rect room — 4 cardinal toggles, key = side name.
-                return (["back","front","left","right"] as const).map(w => {
+                return (["N","S","W","E"] as const).map(w => {
                   const hidden = wallsHiddenOnRoom?.[w] === true;
                   return (
                     <button key={`hide-${w}`}
@@ -1559,10 +1558,10 @@ export default function FloorPlan() {
 
             // Cardinal-bound window (rect rooms): old bbox-edge layout
             const mid = (win.pos + win.len / 2) * scale;
-            const horiz = win.wall === "back" || win.wall === "front";
-            if (win.wall === "back")        { dx = clampX(mid); dy = R + 4; }
-            else if (win.wall === "front")  { dx = clampX(mid); dy = svgH - R - 4; }
-            else if (win.wall === "right")  { dx = svgW - R - 4; dy = clampY(mid); }
+            const horiz = win.wall === "N" || win.wall === "S";
+            if (win.wall === "N")           { dx = clampX(mid); dy = R + 4; }
+            else if (win.wall === "S")      { dx = clampX(mid); dy = svgH - R - 4; }
+            else if (win.wall === "E")      { dx = svgW - R - 4; dy = clampY(mid); }
             else                            { dx = R + 4;        dy = clampY(mid); }
             if (horiz) { sx = clampX(dx - R * 2.2); sy = dy; }
             else       { sx = dx;                   sy = clampY(dy - R * 2.2); }
@@ -1593,9 +1592,8 @@ export default function FloorPlan() {
               const e = edges.find(x => x.i === d.edgeIndex);
               if (e) polygonEdge = { x1: e.x1, z1: e.z1, x2: e.x2, z2: e.z2, length: e.length, nx: e.nx, nz: e.nz };
             }
-            // Cardinal-wall coord (DoorWall enum) for legacy DoorSVG path
-            const cardinalDoorWall: DoorWall =
-              d.wall === "back" ? "top" : d.wall === "front" ? "bottom" : d.wall;
+            // Cardinal-wall coord — DoorSVG now speaks the same NSWE names.
+            const cardinalDoorWall: DoorWall = d.wall as DoorWall;
             return (
               <g key={d.id}>
                 <DoorSVG
@@ -1614,15 +1612,15 @@ export default function FloorPlan() {
                     Previous order trapped pointerdown in the hit-rect
                     and the user couldn't click ✎ or ✕.  */}
                 {editWindows && !polygonEdge && (() => {
-                  const isHoriz = cardinalDoorWall === "top" || cardinalDoorWall === "bottom";
+                  const isHoriz = cardinalDoorWall === "N" || cardinalDoorWall === "S";
                   const wallLen = isHoriz ? roomW : roomD;
                   const doorWpx = Math.min(d.len, wallLen) * scale;
                   const doorPosPx = d.pos * scale;
                   let hrX: number, hrY: number, hrW: number, hrH: number;
-                  if (cardinalDoorWall === "bottom")      { hrX = doorPosPx - 4; hrY = svgH - 20; hrW = doorWpx + 8; hrH = 24; }
-                  else if (cardinalDoorWall === "top")    { hrX = doorPosPx - 4; hrY = -4;        hrW = doorWpx + 8; hrH = 24; }
-                  else if (cardinalDoorWall === "left")   { hrX = -4;            hrY = doorPosPx - 4; hrW = 24; hrH = doorWpx + 8; }
-                  else                                    { hrX = svgW - 20;     hrY = doorPosPx - 4; hrW = 24; hrH = doorWpx + 8; }
+                  if (cardinalDoorWall === "S")      { hrX = doorPosPx - 4; hrY = svgH - 20; hrW = doorWpx + 8; hrH = 24; }
+                  else if (cardinalDoorWall === "N") { hrX = doorPosPx - 4; hrY = -4;        hrW = doorWpx + 8; hrH = 24; }
+                  else if (cardinalDoorWall === "W") { hrX = -4;            hrY = doorPosPx - 4; hrW = 24; hrH = doorWpx + 8; }
+                  else                               { hrX = svgW - 20;     hrY = doorPosPx - 4; hrW = 24; hrH = doorWpx + 8; }
                   return (
                     <rect x={hrX} y={hrY} width={hrW} height={hrH}
                       fill="transparent" style={{ cursor: "move" }}
@@ -1646,14 +1644,14 @@ export default function FloorPlan() {
                     sx = clampX(dx - ux * 22);
                     sy = clampY(dy - uz * 22);
                   } else {
-                    const isHoriz = cardinalDoorWall === "top" || cardinalDoorWall === "bottom";
+                    const isHoriz = cardinalDoorWall === "N" || cardinalDoorWall === "S";
                     const wallLen = isHoriz ? roomW : roomD;
                     const doorWpx = Math.min(d.len, wallLen) * scale;
                     const doorMid = d.pos * scale + doorWpx / 2;
-                    if (cardinalDoorWall === "bottom")      { dx = doorMid; dy = svgH - 14; }
-                    else if (cardinalDoorWall === "top")    { dx = doorMid; dy = 14; }
-                    else if (cardinalDoorWall === "left")   { dx = 14; dy = doorMid; }
-                    else                                    { dx = svgW - 14; dy = doorMid; }
+                    if (cardinalDoorWall === "S")      { dx = doorMid; dy = svgH - 14; }
+                    else if (cardinalDoorWall === "N") { dx = doorMid; dy = 14; }
+                    else if (cardinalDoorWall === "W") { dx = 14; dy = doorMid; }
+                    else                               { dx = svgW - 14; dy = doorMid; }
                     sx = isHoriz ? clampX(dx - R * 2.2) : dx;
                     sy = isHoriz ? dy : clampY(dy - R * 2.2);
                   }
@@ -1695,10 +1693,10 @@ export default function FloorPlan() {
             /* No door — show "add door" button in edit mode, near active wall */
             editWindows && (() => {
               let bx: number, by: number;
-              if (doorWall === "bottom")      { bx = svgW * 0.08;     by = svgH - 18; }
-              else if (doorWall === "top")    { bx = svgW * 0.08;     by = 0; }
-              else if (doorWall === "left")   { bx = 0;               by = svgH * 0.08; }
-              else                            { bx = svgW - 60;       by = svgH * 0.08; }
+              if (doorWall === "S")      { bx = svgW * 0.08;     by = svgH - 18; }
+              else if (doorWall === "N") { bx = svgW * 0.08;     by = 0; }
+              else if (doorWall === "W") { bx = 0;               by = svgH * 0.08; }
+              else                       { bx = svgW - 60;       by = svgH * 0.08; }
               return (
                 <g style={{ cursor: "pointer" }}
                   onClick={(e) => { e.stopPropagation(); setRoomHasDoor(activeRoom, true); }}>
@@ -1730,10 +1728,10 @@ export default function FloorPlan() {
             // Hinge corner is the one closest to a room corner along the wall.
             let hingeX = x, hingeY = y;
             let sweepX = x + w, sweepY = y + h;
-            if (wall === "bottom")      { hingeX = x;       hingeY = y + h; sweepX = x + w; sweepY = y; }
-            else if (wall === "top")    { hingeX = x;       hingeY = y;     sweepX = x + w; sweepY = y + h; }
-            else if (wall === "left")   { hingeX = x;       hingeY = y;     sweepX = x + w; sweepY = y + h; }
-            else                        { hingeX = x + w;   hingeY = y;     sweepX = x;     sweepY = y + h; }
+            if (wall === "S")      { hingeX = x;       hingeY = y + h; sweepX = x + w; sweepY = y; }
+            else if (wall === "N") { hingeX = x;       hingeY = y;     sweepX = x + w; sweepY = y + h; }
+            else if (wall === "W") { hingeX = x;       hingeY = y;     sweepX = x + w; sweepY = y + h; }
+            else                   { hingeX = x + w;   hingeY = y;     sweepX = x;     sweepY = y + h; }
             const r = Math.min(w, h);
             return (
               <g style={{ pointerEvents: "none" }}>
@@ -1743,7 +1741,7 @@ export default function FloorPlan() {
                   strokeDasharray="4 3" rx={2} />
                 {/* 90° arc from hinge — visual hint of swing direction */}
                 <path
-                  d={`M ${hingeX + (sweepX - hingeX)} ${hingeY} A ${r} ${r} 0 0 ${wall === "bottom" || wall === "right" ? 1 : 0} ${hingeX} ${hingeY + (sweepY - hingeY)}`}
+                  d={`M ${hingeX + (sweepX - hingeX)} ${hingeY} A ${r} ${r} 0 0 ${wall === "S" || wall === "E" ? 1 : 0} ${hingeX} ${hingeY + (sweepY - hingeY)}`}
                   fill="none" stroke={color} strokeOpacity={0.6} strokeWidth={1} strokeDasharray="2 2"
                 />
               </g>
@@ -1909,6 +1907,25 @@ export default function FloorPlan() {
               {t.fpFurnitureHint}
             </text>
           )}
+          {/* ── DEBUG: NSWE wall labels — code convention back=N (-Z, top of svg),
+               front=S (+Z, bottom of svg), left=W (-X), right=E (+X). ── */}
+          {(() => {
+            const fs = Math.max(20, Math.min(48, Math.min(svgW, svgH) * 0.05));
+            const inset = Math.max(8, fs * 0.4);
+            const lbls = [
+              { x: svgW / 2,         y: inset + fs * 0.5, t: "N" },
+              { x: svgW / 2,         y: svgH - inset,     t: "S" },
+              { x: inset,            y: svgH / 2,         t: "W" },
+              { x: svgW - inset,     y: svgH / 2,         t: "E" },
+            ];
+            return lbls.map((l, i) => (
+              <text key={`nswe-${i}`} x={l.x} y={l.y} textAnchor="middle" dominantBaseline="middle"
+                fontSize={fs} fontWeight={900} fill="#FF1493" stroke="#FFFFFF" strokeWidth={3}
+                paintOrder="stroke" style={{ pointerEvents: "none", userSelect: "none" }}>
+                {l.t}
+              </text>
+            ));
+          })()}
         </svg>
       </div>
       </div>{/* end zoom wrapper */}
@@ -1936,9 +1953,9 @@ export default function FloorPlan() {
           if (sel.edgeIndex != null && roomShape && roomShape.preset !== "rect") {
             const edges = getEdges(roomShape.points);
             const e = edges.find(x => x.i === sel.edgeIndex);
-            wallLen = e ? e.length : ((sel.wall === "back" || sel.wall === "front") ? roomW : roomD);
+            wallLen = e ? e.length : ((sel.wall === "N" || sel.wall === "S") ? roomW : roomD);
           } else {
-            wallLen = (sel.wall === "back" || sel.wall === "front") ? roomW : roomD;
+            wallLen = (sel.wall === "N" || sel.wall === "S") ? roomW : roomD;
           }
           const dLen = sel.len;
           const dH   = sel.h ?? 200;
@@ -2022,9 +2039,9 @@ export default function FloorPlan() {
         if (selectedWin.edgeIndex != null && roomShape && roomShape.preset !== "rect") {
           const edges = getEdges(roomShape.points);
           const e = edges.find(x => x.i === selectedWin.edgeIndex);
-          wallLen = e ? e.length : ((selectedWin.wall === "back" || selectedWin.wall === "front") ? roomW : roomD);
+          wallLen = e ? e.length : ((selectedWin.wall === "N" || selectedWin.wall === "S") ? roomW : roomD);
         } else {
-          wallLen = (selectedWin.wall === "back" || selectedWin.wall === "front") ? roomW : roomD;
+          wallLen = (selectedWin.wall === "N" || selectedWin.wall === "S") ? roomW : roomD;
         }
         const winH   = selectedWin.h   ?? 150;
         const winSill = selectedWin.sill ?? 90;

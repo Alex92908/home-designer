@@ -60,12 +60,13 @@ const GlobalCanvas = dynamic(() => import("@/components/GlobalCanvas"), {
 
 
 // ─── Panel toggle tab button ──────────────────────────────
-/** Cycles front-wall opacity: 0 → 0.5 → 1 → 0. Lets user see artwork
- *  placed on the front wall, which is cut away in the default dollhouse
- *  view. "0.5" is a frosted-glass look, "1" is a normal solid wall. */
-function FrontWallToggle() {
-  const opacity = useDesignerStore(s => s.frontWallOpacity);
-  const setOpacity = useDesignerStore(s => s.setFrontWallOpacity);
+/** Cycles south-wall opacity: 0 → 0.5 → 1 → 0. Lets user see artwork
+ *  placed on the south wall, which is cut away in the default dollhouse
+ *  view (camera looks north → south wall is closest to viewer).
+ *  "0.5" is a frosted-glass look, "1" is a normal solid wall. */
+function SouthWallToggle() {
+  const opacity = useDesignerStore(s => s.southWallOpacity);
+  const setOpacity = useDesignerStore(s => s.setSouthWallOpacity);
   const t = useT();
   const label = opacity === 0 ? t.wallToggleHide : opacity === 0.5 ? t.wallToggleHalf : t.wallToggleSolid;
   const next = opacity === 0 ? 0.5 : opacity === 0.5 ? 1 : 0;
@@ -89,8 +90,8 @@ function FrontWallToggle() {
   );
 }
 
-/** Cycles ceiling opacity — same 3-stage UX as FrontWallToggle but for
- *  the top slab. Stacked right above the front-wall button. */
+/** Cycles ceiling opacity — same 3-stage UX as SouthWallToggle but for
+ *  the top slab. Stacked right above the south-wall button. */
 function CeilingToggle() {
   const opacity = useDesignerStore(s => s.ceilingOpacity);
   const setOpacity = useDesignerStore(s => s.setCeilingOpacity);
@@ -427,7 +428,7 @@ export default function Home() {
           </div>
 
           {/* Front wall + ceiling toggles — both in 3D only */}
-          {viewMode === "3d" && <FrontWallToggle />}
+          {viewMode === "3d" && <SouthWallToggle />}
           {viewMode === "3d" && <CeilingToggle />}
 
           {/* Stair navigation — shown when viewing a stair room in 3D */}

@@ -1170,24 +1170,43 @@ export default function FloorPlanAll() {
                   {(roomWindows[room] ?? []).map(win => {
                     const s2 = w / (roomDimensions[room].width);
                     const s3 = d / (roomDimensions[room].depth);
-                    if (win.wall === "back") {
+                    if (win.wall === "N") {
                       const wx = x + win.pos * s2, ww = win.len * s2;
                       return <rect key={win.id} x={wx} y={y + 2} width={ww} height={6} fill="#7DD3FC" opacity={0.6} rx={2} style={{ pointerEvents: "none" }} />;
                     }
-                    if (win.wall === "front") {
+                    if (win.wall === "S") {
                       const wx = x + win.pos * s2, ww = win.len * s2;
                       return <rect key={win.id} x={wx} y={y + d - 8} width={ww} height={6} fill="#7DD3FC" opacity={0.6} rx={2} style={{ pointerEvents: "none" }} />;
                     }
-                    if (win.wall === "right") {
+                    if (win.wall === "E") {
                       const wy = y + win.pos * s3, wh = win.len * s3;
                       return <rect key={win.id} x={x + w - 8} y={wy} width={6} height={wh} fill="#7DD3FC" opacity={0.6} rx={2} style={{ pointerEvents: "none" }} />;
                     }
-                    if (win.wall === "left") {
+                    if (win.wall === "W") {
                       const wy = y + win.pos * s3, wh = win.len * s3;
                       return <rect key={win.id} x={x + 2} y={wy} width={6} height={wh} fill="#7DD3FC" opacity={0.6} rx={2} style={{ pointerEvents: "none" }} />;
                     }
                     return null;
                   })}
+
+                  {/* ── DEBUG: per-room NSWE wall labels (code convention) ── */}
+                  {(() => {
+                    const fs = Math.max(10, Math.min(20, Math.min(w, d) * 0.10));
+                    const inset = Math.max(6, fs * 0.7);
+                    const nswe = [
+                      { x: x + w / 2,        y: y + inset,         t: "N" },
+                      { x: x + w / 2,        y: y + d - inset,     t: "S" },
+                      { x: x + inset,        y: y + d / 2,         t: "W" },
+                      { x: x + w - inset,    y: y + d / 2,         t: "E" },
+                    ];
+                    return nswe.map((l, i) => (
+                      <text key={`nswe-${room}-${i}`} x={l.x} y={l.y} textAnchor="middle" dominantBaseline="middle"
+                        fontSize={fs} fontWeight={900} fill="#FF1493" stroke="#FFFFFF" strokeWidth={2}
+                        paintOrder="stroke" style={{ pointerEvents: "none", userSelect: "none" }}>
+                        {l.t}
+                      </text>
+                    ));
+                  })()}
 
                   {/* Active room highlight */}
                   {isActive && (

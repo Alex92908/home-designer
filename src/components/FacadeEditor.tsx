@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useDesignerStore } from "@/lib/store";
-import type { FacadeSegment, FacadeSegmentType, FloorFacade, WallMaterialType } from "@/lib/types";
+import type { FacadeSegment, FacadeSegmentType, FloorFacade, WallMaterialType, WallSide } from "@/lib/types";
 
 // ─── Type metadata ──────────────────────────────────────────
 const TYPE_META: Record<FacadeSegmentType, { label: string; icon: string; bg: string }> = {
@@ -37,7 +37,10 @@ function normalize(segs: FacadeSegment[]): FacadeSegment[] {
 }
 
 // ─── Preset definitions ────────────────────────────────────
-export type FaceName = "front" | "back" | "left" | "right";
+/** @deprecated Facade-zone face names are now unified with room walls. Use
+ *  `WallSide` (N | S | W | E) from `@/lib/types` instead. Kept as an alias
+ *  for any external import; new code should reference `WallSide`. */
+export type FaceName = WallSide;
 
 interface FacadePreset {
   id: string; label: string; icon: string; desc: string;
@@ -145,10 +148,10 @@ export default function FacadeEditor({ face, floors }: Props) {
     setExterior({
       facades: {
         ...(exterior.facades ?? {}),
-        front: generated,
-        back:  generated,
-        left:  generated,
-        right: generated,
+        S: generated,
+        N: generated,
+        W: generated,
+        E: generated,
       }
     });
     setSelectedFloor(0);

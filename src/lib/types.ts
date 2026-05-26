@@ -211,20 +211,12 @@ export interface ExteriorSettings {
    *  raised tea houses. Default 0 (slab on grade). Sane range 0 - 4m. */
   pilotisHeightM?: number;
   /** Optional per-face material overrides. Each face can have its own color
-   *  AND material type. If absent, falls back to wallColor / wallMaterial. */
-  faceMaterials?: {
-    front?: string;
-    back?: string;
-    left?: string;
-    right?: string;
-  };
+   *  AND material type. If absent, falls back to wallColor / wallMaterial.
+   *  Keys are NSWE cardinal sides: N=-Z (back), S=+Z (front), W=-X (left),
+   *  E=+X (right). Unified with room WallSide identifiers. */
+  faceMaterials?: Partial<Record<WallSide, string>>;
   /** Per-face material type (used alongside faceMaterials colors). */
-  faceMaterialTypes?: {
-    front?: WallMaterialType;
-    back?: WallMaterialType;
-    left?: WallMaterialType;
-    right?: WallMaterialType;
-  };
+  faceMaterialTypes?: Partial<Record<WallSide, WallMaterialType>>;
   /**
    * Split-zone wall material for ALL faces.
    * When set, overrides the single wallMaterial/wallColor.
@@ -232,13 +224,9 @@ export interface ExteriorSettings {
    *           { material:"glass", color:"#C8E0F0", heightFraction:0.6 }]
    */
   wallZones?: WallZone[];
-  /** Per-face zone overrides. When set for a face, overrides wallZones for that face. */
-  faceZones?: {
-    front?: WallZone[];
-    back?: WallZone[];
-    left?: WallZone[];
-    right?: WallZone[];
-  };
+  /** Per-face zone overrides. When set for a face, overrides wallZones for that face.
+   *  Keys are NSWE cardinal sides — see `faceMaterials` for the convention. */
+  faceZones?: Partial<Record<WallSide, WallZone[]>>;
   /** Whether the building has a usable rooftop floor (天台层).
    *  When true, floorPlans[floors] holds the rooftop layout with
    *  parapet walls, no ceiling, and rooftop-only room types. */
@@ -253,12 +241,7 @@ export interface ExteriorSettings {
    * wallZones approach and lets the user compose the facade from individual
    * segments (glass curtain, solid wall, window opening, door, column…).
    */
-  facades?: {
-    front?: FloorFacade[];
-    back?:  FloorFacade[];
-    left?:  FloorFacade[];
-    right?: FloorFacade[];
-  };
+  facades?: Partial<Record<WallSide, FloorFacade[]>>;
   /**
    * Special building renderer override.
    * "rich-glass-villa" → RichGlassVillaBuilding (3-volume luxury modern villa)
@@ -297,11 +280,11 @@ export interface FloorFacade {
 }
 
 /** A decor item pinned to the OUTSIDE face of a room wall. Stored inside
- *  the owning room (see `RoomState.exteriorDecor`). Walls match the
- *  windows naming: back = -Z, front = +Z (room view convention), left =
- *  -X, right = +X. Normalized u/v coords span the wall rectangle (0 =
- *  left/bottom, 1 = right/top as viewed from outside). */
-export type ExteriorWall = WallSide; // = "back" | "front" | "left" | "right"
+ *  the owning room (see `RoomState.exteriorDecor`). Cardinal-direction
+ *  naming: N = -Z (back), S = +Z (front), W = -X (left), E = +X (right).
+ *  Normalized u/v coords span the wall rectangle (0 = left/bottom, 1 =
+ *  right/top as viewed from outside). */
+export type ExteriorWall = WallSide; // = "N" | "S" | "W" | "E"
 
 export interface ExteriorWallDecorItem {
   instanceId: string;
@@ -388,7 +371,7 @@ export interface FurnitureItem {
 
 export interface WindowConfig {
   id: string;
-  wall: "back" | "front" | "right" | "left";
+  wall: WallSide;
   pos: number;   // cm from wall start (left or top)
   len: number;   // cm length (width along wall)
   h?: number;    // cm height (vertical), default 150
@@ -409,7 +392,7 @@ export interface WindowConfig {
  *  edge (L / convex). */
 export interface DoorConfig {
   id: string;
-  wall: "back" | "front" | "right" | "left";
+  wall: WallSide;
   pos: number;   // cm offset from wall / edge start
   len: number;   // cm width along wall (default 80)
   h?: number;    // cm height (default 200)
@@ -442,9 +425,11 @@ export interface PlacedItem {
   mountCeiling?: boolean;
 }
 
-/** Which of the 4 walls an override applies to. Dollhouse view hides
- *  `front` but we still track the data for 2D plan + future views. */
-export type WallSide = "back" | "front" | "left" | "right";
+/** Which of the 4 walls an override applies to. Cardinal-direction
+ *  naming: N (back, world -Z), S (front, world +Z), W (left, world -X),
+ *  E (right, world +X). Dollhouse view hides `S` (front) but we still
+ *  track the data for 2D plan + future views. */
+export type WallSide = "N" | "S" | "W" | "E";
 
 export interface RoomMaterials {
   /** Default wall material — applied to any side without an override. */
@@ -488,31 +473,31 @@ export interface RoomDef {
   defaultWallColor: string;
   defaultFloorColor: string;
   hasWindow: boolean;
-  windowWall: "back" | "right" | "left" | "none";
+  windowWall: "N" | "E" | "W" | "none";
   isCustom?: boolean;
   isOutdoor?: boolean;
   isRooftopOnly?: boolean;
 }
 
 export const ROOM_DEFS: Record<RoomType, RoomDef> = {
-  living:    { width: 500, depth: 420, height: 280, name: "客厅",    icon: "🛋️", defaultWallColor: "#EDE8E0", defaultFloorColor: "#C8A882", hasWindow: true,  windowWall: "right" },
-  master:    { width: 400, depth: 360, height: 280, name: "主卧",    icon: "🛏️", defaultWallColor: "#EAE5DC", defaultFloorColor: "#C8A882", hasWindow: true,  windowWall: "right" },
-  bedroom:   { width: 320, depth: 300, height: 280, name: "次卧",    icon: "🛏️", defaultWallColor: "#EEF0F5", defaultFloorColor: "#C8B890", hasWindow: true,  windowWall: "back"  },
-  bedroom2:  { width: 300, depth: 280, height: 280, name: "次卧2",   icon: "🛏️", defaultWallColor: "#EEF0F5", defaultFloorColor: "#C8B890", hasWindow: true,  windowWall: "back"  },
-  bedroom3:  { width: 280, depth: 260, height: 280, name: "次卧3",   icon: "🛏️", defaultWallColor: "#EEF0F5", defaultFloorColor: "#C8B890", hasWindow: true,  windowWall: "back"  },
-  kitchen:   { width: 360, depth: 280, height: 270, name: "厨房",    icon: "🍳", defaultWallColor: "#FFFFFF", defaultFloorColor: "#E8E8E8", hasWindow: true,  windowWall: "back"  },
+  living:    { width: 500, depth: 420, height: 280, name: "客厅",    icon: "🛋️", defaultWallColor: "#EDE8E0", defaultFloorColor: "#C8A882", hasWindow: true,  windowWall: "E"     },
+  master:    { width: 400, depth: 360, height: 280, name: "主卧",    icon: "🛏️", defaultWallColor: "#EAE5DC", defaultFloorColor: "#C8A882", hasWindow: true,  windowWall: "E"     },
+  bedroom:   { width: 320, depth: 300, height: 280, name: "次卧",    icon: "🛏️", defaultWallColor: "#EEF0F5", defaultFloorColor: "#C8B890", hasWindow: true,  windowWall: "N"     },
+  bedroom2:  { width: 300, depth: 280, height: 280, name: "次卧2",   icon: "🛏️", defaultWallColor: "#EEF0F5", defaultFloorColor: "#C8B890", hasWindow: true,  windowWall: "N"     },
+  bedroom3:  { width: 280, depth: 260, height: 280, name: "次卧3",   icon: "🛏️", defaultWallColor: "#EEF0F5", defaultFloorColor: "#C8B890", hasWindow: true,  windowWall: "N"     },
+  kitchen:   { width: 360, depth: 280, height: 270, name: "厨房",    icon: "🍳", defaultWallColor: "#FFFFFF", defaultFloorColor: "#E8E8E8", hasWindow: true,  windowWall: "N"     },
   bathroom:  { width: 260, depth: 220, height: 260, name: "卫生间",  icon: "🚿", defaultWallColor: "#F5F5F5", defaultFloorColor: "#DCDCDC", hasWindow: false, windowWall: "none"  },
   bathroom2: { width: 240, depth: 200, height: 260, name: "卫生间2", icon: "🚿", defaultWallColor: "#F5F5F5", defaultFloorColor: "#DCDCDC", hasWindow: false, windowWall: "none"  },
-  dining:    { width: 380, depth: 320, height: 280, name: "餐厅",    icon: "🍽️", defaultWallColor: "#EDE8E0", defaultFloorColor: "#C8A882", hasWindow: true,  windowWall: "right" },
-  study:     { width: 320, depth: 290, height: 280, name: "书房",    icon: "📚", defaultWallColor: "#E8E0D8", defaultFloorColor: "#B89060", hasWindow: true,  windowWall: "back"  },
-  study2:    { width: 300, depth: 260, height: 280, name: "书房2",   icon: "📚", defaultWallColor: "#E8E0D8", defaultFloorColor: "#B89060", hasWindow: true,  windowWall: "back"  },
+  dining:    { width: 380, depth: 320, height: 280, name: "餐厅",    icon: "🍽️", defaultWallColor: "#EDE8E0", defaultFloorColor: "#C8A882", hasWindow: true,  windowWall: "E"     },
+  study:     { width: 320, depth: 290, height: 280, name: "书房",    icon: "📚", defaultWallColor: "#E8E0D8", defaultFloorColor: "#B89060", hasWindow: true,  windowWall: "N"     },
+  study2:    { width: 300, depth: 260, height: 280, name: "书房2",   icon: "📚", defaultWallColor: "#E8E0D8", defaultFloorColor: "#B89060", hasWindow: true,  windowWall: "N"     },
   closet:    { width: 260, depth: 200, height: 260, name: "衣帽间",  icon: "👗", defaultWallColor: "#F5F0E8", defaultFloorColor: "#D4C0A0", hasWindow: false, windowWall: "none"  },
-  balcony:   { width: 420, depth: 160, height: 280, name: "阳台",    icon: "🌿", defaultWallColor: "#E8E8E0", defaultFloorColor: "#A0A098", hasWindow: true,  windowWall: "back"  },
-  balcony2:  { width: 300, depth: 160, height: 280, name: "阳台2",   icon: "🌿", defaultWallColor: "#E8E8E0", defaultFloorColor: "#A0A098", hasWindow: true,  windowWall: "back"  },
+  balcony:   { width: 420, depth: 160, height: 280, name: "阳台",    icon: "🌿", defaultWallColor: "#E8E8E0", defaultFloorColor: "#A0A098", hasWindow: true,  windowWall: "N"     },
+  balcony2:  { width: 300, depth: 160, height: 280, name: "阳台2",   icon: "🌿", defaultWallColor: "#E8E8E0", defaultFloorColor: "#A0A098", hasWindow: true,  windowWall: "N"     },
   // Outdoor
   yard:      { width: 800, depth: 600, height: 0,   name: "院子",    icon: "🏡", defaultWallColor: "#6B8E60", defaultFloorColor: "#7CAF5A", hasWindow: false, windowWall: "none", isOutdoor: true },
-  garage:    { width: 500, depth: 320, height: 260, name: "车库",    icon: "🚗", defaultWallColor: "#D0CEC8", defaultFloorColor: "#B0AEA8", hasWindow: true,  windowWall: "right" },
-  gym:       { width: 360, depth: 320, height: 280, name: "健身房",  icon: "🏋️", defaultWallColor: "#E8E8E8", defaultFloorColor: "#C0C0C0", hasWindow: true,  windowWall: "back"  },
+  garage:    { width: 500, depth: 320, height: 260, name: "车库",    icon: "🚗", defaultWallColor: "#D0CEC8", defaultFloorColor: "#B0AEA8", hasWindow: true,  windowWall: "E"     },
+  gym:       { width: 360, depth: 320, height: 280, name: "健身房",  icon: "🏋️", defaultWallColor: "#E8E8E8", defaultFloorColor: "#C0C0C0", hasWindow: true,  windowWall: "N"     },
   cinema:    { width: 420, depth: 320, height: 280, name: "影音室",  icon: "🎬", defaultWallColor: "#1A1A2E", defaultFloorColor: "#16213E", hasWindow: false, windowWall: "none"  },
   // Custom slots
   custom1:   { width: 300, depth: 300, height: 280, name: "自定义1", icon: "🔲", defaultWallColor: "#EDE8E0", defaultFloorColor: "#C8A882", hasWindow: false, windowWall: "none", isCustom: true },
@@ -576,13 +561,13 @@ export interface FloorPlan {
   roomWindows: Record<RoomType, WindowConfig[]>;
   roomDoorPos: Record<RoomType, number>;
   roomHasDoor: Record<RoomType, boolean>;
-  roomDoorWall: Record<RoomType, "bottom" | "top" | "left" | "right">;
+  roomDoorWall: Record<RoomType, WallSide>;
   /** Per-room wall hide flags. Two key styles share the inner record:
-   *    - cardinal: "back" | "front" | "left" | "right" — rect rooms +
+   *    - cardinal: "N" | "S" | "W" | "E" — rect rooms +
    *      RoomShell-rendered rooms (single facing).
    *    - polygon edge: "edge-${i}" where `i` is the index into the
    *      room's roomShape.points polygon. Polygon rooms can have many
-   *      walls per facing ("前墙1", "前墙2"…), each needing independent
+   *      walls per facing ("南墙1", "南墙2"…), each needing independent
    *      hide control.
    *  Renderers / FloorPlan UI map between the two styles. Missing flag
    *  = visible. Lets the user merge two rooms visually by hiding the

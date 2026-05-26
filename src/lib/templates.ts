@@ -2,7 +2,7 @@
  * Style templates: one-click full room configuration
  * Each template sets materials and furniture for all enabled rooms.
  */
-import { RoomType, StyleTag, WindowConfig, WindowStyle, DoorStyle, ExteriorWall, ExteriorWallDecorItem, RoutingConnection, RoutingKind, ExteriorSettings } from "./types";
+import { RoomType, StyleTag, WindowConfig, WindowStyle, DoorStyle, WallSide, ExteriorWall, ExteriorWallDecorItem, RoutingConnection, RoutingKind, ExteriorSettings } from "./types";
 import { MATERIALS } from "./data";
 import { getFurnitureById } from "./furniture";
 
@@ -32,7 +32,7 @@ export interface EmbeddedRoom {
    *  relative to the room's base dimensions; loadTemplate scales them
    *  to the user's actual room size. */
   windows?: Array<{
-    wall: "back" | "front" | "left" | "right";
+    wall: WallSide;
     pos: number; len: number; h?: number; sill?: number;
     style?: WindowStyle;
   }>;
@@ -42,7 +42,7 @@ export interface EmbeddedRoom {
    *  set, loadTemplate moves the room's door to this location — lets
    *  templates pin the door at the center of a wall so paired decor
    *  (couplets, wall lamps, house numbers) land symmetrically. */
-  doorWall?: "bottom" | "top" | "left" | "right";
+  doorWall?: WallSide;
   doorPos?: number;   // cm along the wall in base dims (scaled proportionally)
   doorLen?: number;   // cm, door width
   /** Exterior-wall decor — hung on the OUTSIDE face of the room's walls.
@@ -134,10 +134,10 @@ export function buildEmbeddedRoomState(
 
   // Scale windows (positions are in cm along the wall)
   const windows: WindowConfig[] = (embedded.windows ?? []).map((w, i) => {
-    // For back/front walls, position scales with userW (room width)
-    // For left/right walls, position scales with userD (room depth)
-    const sAlong = (w.wall === "back" || w.wall === "front") ? sx : sz;
-    const wallMax = (w.wall === "back" || w.wall === "front") ? userW : userD;
+    // For N/S walls, position scales with userW (room width)
+    // For W/E walls, position scales with userD (room depth)
+    const sAlong = (w.wall === "N" || w.wall === "S") ? sx : sz;
+    const wallMax = (w.wall === "N" || w.wall === "S") ? userW : userD;
     const len = Math.min(wallMax - 20, w.len * sAlong);
     const pos = Math.max(10, Math.min(wallMax - len - 10, w.pos * sAlong));
     return {
@@ -161,9 +161,9 @@ export function buildEmbeddedRoomState(
     ...(d.rotation !== undefined ? { rotation: d.rotation } : {}),
   }));
 
-  // Door position: scale along the wall (bottom/top ~ sx, left/right ~ sz)
+  // Door position: scale along the wall (N/S ~ sx, W/E ~ sz)
   const doorSide = embedded.doorWall ?? undefined;
-  const doorScale = (doorSide === "left" || doorSide === "right") ? sz : sx;
+  const doorScale = (doorSide === "W" || doorSide === "E") ? sz : sx;
   const doorPos = embedded.doorPos !== undefined ? Math.round(embedded.doorPos * doorScale) : undefined;
   const doorLen = embedded.doorLen !== undefined ? Math.round(embedded.doorLen * doorScale) : undefined;
 
@@ -254,17 +254,17 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
         { furnitureId:"curtain-modern-gray", x:485, z:200, rotation:270 },
       ],
       windows: [
-        { wall:"right", pos:80, len:240, h:180, sill:90, style:"sliding" },
+        { wall:"E", pos:80, len:240, h:180, sill:90, style:"sliding" },
       ],
       doorStyle: "wood_panel",
       // Door centered on front wall so the wall lamps flank it symmetrically.
-      doorWall: "bottom", doorPos: 210, doorLen: 80,
+      doorWall: "S", doorPos: 210, doorLen: 80,
       exteriorDecor: [
         // Door spans u≈0.42-0.58; wall lamps safely outside that on each side.
-        { furnitureId:"wall-lamp-modern", wall:"front", u:0.25, v:0.72 },
-        { furnitureId:"wall-lamp-modern", wall:"front", u:0.75, v:0.72 },
-        { furnitureId:"house-number",     wall:"front", u:0.5,  v:0.88 },
-        { furnitureId:"light-strip-warm", wall:"front", u:0.5,  v:0.97, scaleW:1.4 },
+        { furnitureId:"wall-lamp-modern", wall:"S", u:0.25, v:0.72 },
+        { furnitureId:"wall-lamp-modern", wall:"S", u:0.75, v:0.72 },
+        { furnitureId:"house-number",     wall:"S", u:0.5,  v:0.88 },
+        { furnitureId:"light-strip-warm", wall:"S", u:0.5,  v:0.97, scaleW:1.4 },
       ],
     },
     master: {
@@ -279,10 +279,10 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
         { furnitureId:"curtain-modern-gray",   x:385, z:180, rotation:270 },
       ],
       windows: [
-        { wall:"right", pos:80, len:200, h:180, sill:90, style:"sliding" },
+        { wall:"E", pos:80, len:200, h:180, sill:90, style:"sliding" },
       ],
       doorStyle: "wood_panel",
-      doorWall: "bottom", doorPos: 160, doorLen: 80,
+      doorWall: "S", doorPos: 160, doorLen: 80,
     },
     bedroom: {
       baseW: 320, baseD: 300,
@@ -458,17 +458,17 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
         { furnitureId:"curtain-brown-sheer", x:485, z:200, rotation:270 },
       ],
       windows: [
-        { wall:"right", pos:60, len:280, h:200, sill:60, style:"fixed" },
+        { wall:"E", pos:60, len:280, h:200, sill:60, style:"fixed" },
       ],
       doorStyle: "french_double",
-      doorWall: "bottom", doorPos: 210, doorLen: 80,
+      doorWall: "S", doorPos: 210, doorLen: 80,
       exteriorDecor: [
         // Door spans u≈0.42-0.58. Mural placed well left of door.
-        { furnitureId:"mural-great-wave", wall:"front", u:0.22, v:0.55, scaleW:1.0, scaleH:1.0 },
-        { furnitureId:"wall-lamp-modern", wall:"front", u:0.38, v:0.72 },
-        { furnitureId:"wall-lamp-modern", wall:"front", u:0.62, v:0.72 },
-        { furnitureId:"nameplate-family", wall:"front", u:0.78, v:0.82 },
-        { furnitureId:"light-strip-rgb",  wall:"front", u:0.5,  v:0.95, scaleW:1.5 },
+        { furnitureId:"mural-great-wave", wall:"S", u:0.22, v:0.55, scaleW:1.0, scaleH:1.0 },
+        { furnitureId:"wall-lamp-modern", wall:"S", u:0.38, v:0.72 },
+        { furnitureId:"wall-lamp-modern", wall:"S", u:0.62, v:0.72 },
+        { furnitureId:"nameplate-family", wall:"S", u:0.78, v:0.82 },
+        { furnitureId:"light-strip-rgb",  wall:"S", u:0.5,  v:0.95, scaleW:1.5 },
       ],
     },
     master: {
@@ -491,10 +491,10 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
         { furnitureId:"curtain-brown-sheer",   x:385, z:170, rotation:270 },
       ],
       windows: [
-        { wall:"right", pos:60, len:220, h:200, sill:60, style:"fixed" },
+        { wall:"E", pos:60, len:220, h:200, sill:60, style:"fixed" },
       ],
       doorStyle: "french_double",
-      doorWall: "bottom", doorPos: 160, doorLen: 80,
+      doorWall: "S", doorPos: 160, doorLen: 80,
     },
     bedroom: {
       baseW: 320, baseD: 300,
@@ -651,17 +651,17 @@ export const TEMPLATE_INDUSTRIAL: StyleTemplate = {
         { furnitureId:"lamp-industrial-black",x:445, z:220, rotation:0   },
       ],
       windows: [
-        { wall:"right", pos:100, len:200, h:150, sill:90, style:"security" },
+        { wall:"E", pos:100, len:200, h:150, sill:90, style:"security" },
       ],
       doorStyle: "sliding_barn",
-      doorWall: "bottom", doorPos: 210, doorLen: 80,
+      doorWall: "S", doorPos: 210, doorLen: 80,
       exteriorDecor: [
         // Door spans u≈0.42-0.58. AC unit well off to one side.
-        { furnitureId:"ac-condenser",     wall:"front", u:0.18, v:0.55 },
-        { furnitureId:"wall-lamp-modern", wall:"front", u:0.25, v:0.75 },
-        { furnitureId:"wall-lamp-modern", wall:"front", u:0.75, v:0.75 },
-        { furnitureId:"house-number",     wall:"front", u:0.5,  v:0.85 },
-        { furnitureId:"light-strip-warm", wall:"front", u:0.5,  v:0.97, scaleW:1.4 },
+        { furnitureId:"ac-condenser",     wall:"S", u:0.18, v:0.55 },
+        { furnitureId:"wall-lamp-modern", wall:"S", u:0.25, v:0.75 },
+        { furnitureId:"wall-lamp-modern", wall:"S", u:0.75, v:0.75 },
+        { furnitureId:"house-number",     wall:"S", u:0.5,  v:0.85 },
+        { furnitureId:"light-strip-warm", wall:"S", u:0.5,  v:0.97, scaleW:1.4 },
       ],
     },
     master: {
@@ -674,10 +674,10 @@ export const TEMPLATE_INDUSTRIAL: StyleTemplate = {
         { furnitureId:"wardrobe-solid-walnut", x:30,  z:200, rotation:90  },
       ],
       windows: [
-        { wall:"right", pos:80, len:180, h:150, sill:90, style:"security" },
+        { wall:"E", pos:80, len:180, h:150, sill:90, style:"security" },
       ],
       doorStyle: "sliding_barn",
-      doorWall: "bottom", doorPos: 160, doorLen: 80,
+      doorWall: "S", doorPos: 160, doorLen: 80,
     },
     bedroom: {
       baseW: 320, baseD: 300,
@@ -788,17 +788,17 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
         { furnitureId:"curtain-modern-gray", x:485, z:200, rotation:270 },
       ],
       windows: [
-        { wall:"right", pos:80, len:240, h:180, sill:50, style:"wooden" },
-        { wall:"back",  pos:50, len:120, h:100, sill:120, style:"louvered" },
+        { wall:"E", pos:80, len:240, h:180, sill:50, style:"wooden" },
+        { wall:"N",  pos:50, len:120, h:100, sill:120, style:"louvered" },
       ],
       doorStyle: "sliding_barn",
-      doorWall: "bottom", doorPos: 210, doorLen: 80,
+      doorWall: "S", doorPos: 210, doorLen: 80,
       exteriorDecor: [
         // Lanterns flank centered door at u=0.5.
-        { furnitureId:"wall-lamp-lantern", wall:"front", u:0.28, v:0.7 },
-        { furnitureId:"wall-lamp-lantern", wall:"front", u:0.72, v:0.7 },
-        { furnitureId:"nameplate-family",  wall:"front", u:0.5,  v:0.86 },
-        { furnitureId:"border-meander",    wall:"front", u:0.5,  v:0.96, scaleW:1.6 },
+        { furnitureId:"wall-lamp-lantern", wall:"S", u:0.28, v:0.7 },
+        { furnitureId:"wall-lamp-lantern", wall:"S", u:0.72, v:0.7 },
+        { furnitureId:"nameplate-family",  wall:"S", u:0.5,  v:0.86 },
+        { furnitureId:"border-meander",    wall:"S", u:0.5,  v:0.96, scaleW:1.6 },
       ],
     },
     master: {
@@ -812,10 +812,10 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
         { furnitureId:"curtain-modern-gray",   x:385, z:180, rotation:270 },
       ],
       windows: [
-        { wall:"right", pos:80, len:200, h:180, sill:50, style:"wooden" },
+        { wall:"E", pos:80, len:200, h:180, sill:50, style:"wooden" },
       ],
       doorStyle: "sliding_barn",
-      doorWall: "bottom", doorPos: 160, doorLen: 80,
+      doorWall: "S", doorPos: 160, doorLen: 80,
     },
     bedroom: {
       baseW: 320, baseD: 300,
@@ -924,19 +924,19 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
         { furnitureId:"curtain-brown-sheer", x:485, z:210, rotation:270 },
       ],
       windows: [
-        { wall:"right", pos:80, len:260, h:200, sill:70, style:"wooden" },
+        { wall:"E", pos:80, len:260, h:200, sill:70, style:"wooden" },
       ],
       doorStyle: "french_double",
-      doorWall: "bottom", doorPos: 210, doorLen: 80,
+      doorWall: "S", doorPos: 210, doorLen: 80,
       exteriorDecor: [
         // Couplets flank the centered door (u≈0.42-0.58). Inner edge of
         // couplet at u=0.35 leaves ~0.07 (35cm) margin to door.
-        { furnitureId:"couplet-spring",     wall:"front", u:0.35, v:0.52, scaleH:1.1 },
-        { furnitureId:"couplet-prosperity", wall:"front", u:0.65, v:0.52, scaleH:1.1 },
-        { furnitureId:"wall-lamp-lantern",  wall:"front", u:0.22, v:0.72 },
-        { furnitureId:"wall-lamp-lantern",  wall:"front", u:0.78, v:0.72 },
-        { furnitureId:"nameplate-family",   wall:"front", u:0.5,  v:0.9 },
-        { furnitureId:"mural-inkwash",      wall:"back",  u:0.5,  v:0.55 },
+        { furnitureId:"couplet-spring",     wall:"S", u:0.35, v:0.52, scaleH:1.1 },
+        { furnitureId:"couplet-prosperity", wall:"S", u:0.65, v:0.52, scaleH:1.1 },
+        { furnitureId:"wall-lamp-lantern",  wall:"S", u:0.22, v:0.72 },
+        { furnitureId:"wall-lamp-lantern",  wall:"S", u:0.78, v:0.72 },
+        { furnitureId:"nameplate-family",   wall:"S", u:0.5,  v:0.9 },
+        { furnitureId:"mural-inkwash",      wall:"N",  u:0.5,  v:0.55 },
       ],
     },
     master: {
@@ -951,10 +951,10 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
         { furnitureId:"curtain-brown-sheer",   x:385, z:180, rotation:270 },
       ],
       windows: [
-        { wall:"right", pos:80, len:200, h:180, sill:70, style:"wooden" },
+        { wall:"E", pos:80, len:200, h:180, sill:70, style:"wooden" },
       ],
       doorStyle: "french_double",
-      doorWall: "bottom", doorPos: 160, doorLen: 80,
+      doorWall: "S", doorPos: 160, doorLen: 80,
     },
     bedroom: {
       baseW: 320, baseD: 300,

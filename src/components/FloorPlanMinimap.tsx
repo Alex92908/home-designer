@@ -146,7 +146,7 @@ export function FloorPlanMinimap() {
         fontSize: 9, color: "#6B7280", marginTop: 4, paddingLeft: 2,
         whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
       }}>
-        {`${(planW / 100).toFixed(1)} × ${(planD / 100).toFixed(1)} m · ${t.fpWallLabels?.back ?? "back"} = 顶部`}
+        {`${(planW / 100).toFixed(1)} × ${(planD / 100).toFixed(1)} m · ${t.fpWallLabels?.N ?? "N"} = 顶部`}
       </div>
     </aside>
   );

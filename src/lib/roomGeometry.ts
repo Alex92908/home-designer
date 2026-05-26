@@ -118,7 +118,7 @@ export function pointInPolygon(pts: Array<[number, number]>, x: number, z: numbe
 
 // ─── Edge helpers (for placing doors/windows on polygon walls) ──
 
-export type WallFacing = "back" | "front" | "left" | "right";
+export type WallFacing = "N" | "S" | "W" | "E";
 
 export interface EdgeInfo {
   /** Index into `points` of this edge's start vertex. */
@@ -145,14 +145,14 @@ export function getEdges(points: Array<[number, number]>): EdgeInfo[] {
     const nz =  dx / length;
     const ox = -nx, oz = -nz;    // outward normal
     let facing: WallFacing;
-    if (Math.abs(ox) >= Math.abs(oz)) facing = ox > 0 ? "right" : "left";
-    else                              facing = oz > 0 ? "front" : "back";
+    if (Math.abs(ox) >= Math.abs(oz)) facing = ox > 0 ? "E" : "W";
+    else                              facing = oz > 0 ? "S" : "N";
     edges.push({ i, x1, z1, x2, z2, length, nx, nz, facing });
   }
   return edges;
 }
 
-/** Map the user's "back/front/left/right" door wall (cm offset along that
+/** Map the user's "N/S/W/E" door wall (cm offset along that
  *  wall, measured from the conventional "start") onto a polygon edge +
  *  offset along that edge. Returns null if no matching polygon edge
  *  contains the requested span. `bbox` is the room's bounding box. */
@@ -181,15 +181,15 @@ export function findEdgeForWall(
 
   // Legacy: project the (wall, posCm) tuple to a world point on the bbox
   // perimeter, then find the polygon edge whose line passes through it.
-  //   back:  (posCm, 0)           running +x
-  //   right: (maxX,  posCm)       running +z
-  //   front: (posCm, maxZ)        running +x
-  //   left:  (0,     posCm)       running +z
+  //   N: (posCm, 0)        running +x
+  //   E: (maxX,  posCm)    running +z
+  //   S: (posCm, maxZ)     running +x
+  //   W: (0,     posCm)    running +z
   let wx: number, wz: number;
-  if (wall === "back")       { wx = posCm;         wz = 0; }
-  else if (wall === "front") { wx = posCm;         wz = bbox.maxZ; }
-  else if (wall === "right") { wx = bbox.maxX;     wz = posCm; }
-  else                       { wx = 0;             wz = posCm; }
+  if (wall === "N")      { wx = posCm;     wz = 0; }
+  else if (wall === "S") { wx = posCm;     wz = bbox.maxZ; }
+  else if (wall === "E") { wx = bbox.maxX; wz = posCm; }
+  else                   { wx = 0;         wz = posCm; }
 
   const candidates = edges.filter(e => e.facing === wall);
   for (const e of candidates) {

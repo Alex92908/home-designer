@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useMemo, useState, useCallback, Component, ReactNode } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, useGLTF } from "@react-three/drei";
+import { OrbitControls, Environment, Html, useGLTF, Text } from "@react-three/drei";
 import { EffectComposer, N8AO, Bloom, Vignette, SMAA } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import { Suspense } from "react";
@@ -10,7 +10,7 @@ import * as THREE from "three";
 import { useDesignerStore, RoomState } from "@/lib/store";
 const EMPTY_ROOM_STATE_RC: RoomState = { materials: {}, placedItems: [] };
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
-import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem } from "@/lib/types";
+import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem, WallSide } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
 import { DetailedDecor } from "./DetailedDecor";
@@ -150,7 +150,7 @@ function RoomShell({
   ceiling,
   hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle,
   activeRoom,
-  frontWallOpacity,
+  southWallOpacity,
   ceilingOpacity,
   wallsHidden,
 }: {
@@ -169,18 +169,18 @@ function RoomShell({
   wallRightExterior?: MaterialItem;
   ceiling?: MaterialItem;
   hasDoor: boolean;
-  doorWall: "bottom" | "top" | "left" | "right";
+  doorWall: WallSide;
   doorPosCm: number;
   doorLenCm: number;
   doorHCm: number;
   doorStyle: import("@/lib/types").DoorStyle;
   activeRoom: RoomType;
-  frontWallOpacity: number;
+  southWallOpacity: number;
   ceilingOpacity: number;
   /** Per-side hide flags. true = skip rendering that wall entirely.
    *  Lets the user merge rooms visually. Door/window holes on a hidden
    *  wall become moot (the wall isn't drawn anyway). */
-  wallsHidden?: Partial<Record<"back" | "front" | "left" | "right", boolean>>;
+  wallsHidden?: Partial<Record<WallSide, boolean>>;
 }) {
   const skirtColor = shade(wallColor, -18);
   const splitH = wallLower ? Math.max(0.2, Math.min(H - 0.2, (wallSplitCm ?? 110) / 100)) : 0;
@@ -282,7 +282,7 @@ function RoomShell({
   // x from left end of wall, y from floor) for a given wall side.
   // Pulls windows and — if applicable — the door.
   function holesForWall(
-    side: "back" | "front" | "left" | "right",
+    side: WallSide,
     wallLenM: number,
     opts?: { skipWindows?: boolean },
   ): Rect[] {
@@ -300,11 +300,8 @@ function RoomShell({
         });
       }
     }
-    // Door wall naming differs: "top"=back, "bottom"=front, left/right match
-    const doorSideMap: Record<string, "back" | "front" | "left" | "right"> = {
-      top: "back", bottom: "front", left: "left", right: "right",
-    };
-    if (hasDoor && doorSideMap[doorWall] === side) {
+    // Door wall + window wall now share the NSWE alphabet — no remap.
+    if (hasDoor && doorWall === side) {
       holes.push({
         x: doorPosCm / 100,
         y: 0,
@@ -345,7 +342,7 @@ function RoomShell({
      *  back/left/right walls (outward = -Z local), +1 for the front
      *  wall (outward = +Z local, because its frame has no flip). */
     extOffsetSign?: 1 | -1;
-    lowerSide: "back" | "front" | "left" | "right";
+    lowerSide: WallSide;
     /** 0 = don't render, 0.5 = frosted glass, 1 = solid. Applied uniformly
      *  to every segment (upper, lower, all pieces around holes). */
     opacity?: number;
@@ -417,7 +414,7 @@ function RoomShell({
       {(() => null)()}
 
       {/* Back wall — with hole-cutouts for windows/door */}
-      {!wallsHidden?.back && (
+      {!wallsHidden?.N && (
         <WallWithHoles
           side={sB} wallLenM={W}
           groupPos={[0, H / 2, -D / 2]}
@@ -427,12 +424,12 @@ function RoomShell({
             return e ? wallMatFor(e.color, e.id, W, H) : undefined;
           })()}
           extOffsetSign={-1}
-          lowerSide="back"
+          lowerSide="N"
         />
       )}
 
       {/* Left wall */}
-      {!wallsHidden?.left && (
+      {!wallsHidden?.W && (
         <WallWithHoles
           side={sL} wallLenM={D}
           groupPos={[-W / 2, H / 2, 0]} groupRot={[0, Math.PI / 2, 0]}
@@ -442,12 +439,12 @@ function RoomShell({
             return e ? wallMatFor(e.color, e.id, D, H) : undefined;
           })()}
           extOffsetSign={-1}
-          lowerSide="left"
+          lowerSide="W"
         />
       )}
 
       {/* Right wall */}
-      {!wallsHidden?.right && (
+      {!wallsHidden?.E && (
         <WallWithHoles
           side={sR} wallLenM={D}
           groupPos={[W / 2, H / 2, 0]} groupRot={[0, -Math.PI / 2, 0]}
@@ -457,7 +454,7 @@ function RoomShell({
             return e ? wallMatFor(e.color, e.id, D, H) : undefined;
           })()}
           extOffsetSign={-1}
-          lowerSide="right"
+          lowerSide="E"
         />
       )}
 
@@ -467,7 +464,7 @@ function RoomShell({
           a solid front wall would block the view of an open door's
           interior. The plane's default normal is +Z (outward), which is
           correct for the front wall at z=+D/2 — no rotation needed. */}
-      {frontWallOpacity > 0 && !wallsHidden?.front && (() => {
+      {southWallOpacity > 0 && !wallsHidden?.S && (() => {
         const sF = resolveSide(wallFront);
         const e = wallFrontExterior ?? wallExterior;
         return (
@@ -477,8 +474,8 @@ function RoomShell({
             upperMat={wallMatFor(sF.color, sF.id, W, H)}
             extMat={e ? wallMatFor(e.color, e.id, W, H) : undefined}
             extOffsetSign={1}
-            lowerSide="front"
-            opacity={frontWallOpacity}
+            lowerSide="S"
+            opacity={southWallOpacity}
           />
         );
       })()}
@@ -986,7 +983,7 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
     )
   ) : proceduralBackFrame;
 
-  if (win.wall === "back") {
+  if (win.wall === "N") {
     // back wall: X axis runs from -W/2 to W/2, window pos is from left (0) to right (W)
     const xc = winCenter - W / 2;
     return (
@@ -1005,7 +1002,7 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
     );
   }
 
-  if (win.wall === "right") {
+  if (win.wall === "E") {
     const zc = winCenter - D / 2;
     return (
       <group position={[W / 2, winY, zc]}>
@@ -1022,7 +1019,7 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
     );
   }
 
-  if (win.wall === "left") {
+  if (win.wall === "W") {
     const zc = winCenter - D / 2;
     return (
       <group position={[-W / 2, winY, zc]}>
@@ -1039,7 +1036,7 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
     );
   }
 
-  if (win.wall === "front") {
+  if (win.wall === "S") {
     // Front wall is at z = +D/2; rotate the frame 180° around Y so its
     // outward face (+Z local) points toward +Z world = outside the room.
     // Previously this branch fell through to `return null` and the front
@@ -1160,7 +1157,7 @@ function RoomDoor3D({
   activeRoom, doorStyle,
 }: {
   W: number; D: number; H: number;
-  doorWall: "bottom" | "top" | "left" | "right";
+  doorWall: WallSide;
   doorPosCm: number; doorLenCm: number; doorHCm: number;
   activeRoom: RoomType;
   doorStyle: import("@/lib/types").DoorStyle;
@@ -1200,27 +1197,24 @@ function RoomDoor3D({
   let groupRot: [number, number, number];
   let hingeOffset: number; // direction the panel extends in local +X when closed
   switch (doorWall) {
-    case "top": // back wall (z = -D/2)
+    case "N": // back wall (z = -D/2)
       groupPos = [doorPos - W / 2, 0, -D / 2 + 0.02];
       groupRot = [0, 0, 0];
       hingeOffset = 1;
       break;
-    case "bottom": // front wall (z = +D/2) — normally hidden wall but
+    case "S": // front wall (z = +D/2) — normally hidden wall but
       // door itself should still render so it's visible in dollhouse.
       // Rotate 180° around Y so door faces room interior (-Z).
-      // Position: door's LEFT edge (from outside) at world X = -W/2 + doorPos.
-      // With rotation π, local +X → world -X, so group origin sits at the
-      // door's right edge in world: -W/2 + doorPos + doorW.
       groupPos = [-W / 2 + doorPos + doorW, 0, D / 2 - 0.02];
       groupRot = [0, Math.PI, 0];
       hingeOffset = 1;
       break;
-    case "left":
+    case "W":
       groupPos = [-W / 2 + 0.02, 0, doorPos - D / 2];
       groupRot = [0, Math.PI / 2, 0];
       hingeOffset = 1;
       break;
-    case "right":
+    case "E":
       groupPos = [W / 2 - 0.02, 0, -(doorPos - D / 2) - doorW];
       groupRot = [0, -Math.PI / 2, 0];
       hingeOffset = 1;
@@ -2842,7 +2836,7 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
   const activeRoom  = useDesignerStore(s => s.activeRoom);
   const roomKey = room ?? activeRoom;
   const roomWindows = useDesignerStore(s => s.floorPlans[activeFloor]?.roomWindows?.[roomKey] ?? EMPTY_WINDOWS);
-  const doorWall    = useDesignerStore(s => s.floorPlans[activeFloor]?.roomDoorWall?.[roomKey] ?? "bottom");
+  const doorWall    = useDesignerStore(s => s.floorPlans[activeFloor]?.roomDoorWall?.[roomKey] ?? "S");
 
   if (!item) return null;
 
@@ -2952,21 +2946,21 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
       const halfD = roomD / 2;
 
       // Map plan-coordinate wall names to 3D snap positions + inward rotation.
-      // In 3D: back wall (plan-top)  = z = -halfD, curtain faces +Z.
-      //        front wall (plan-bot) = z = +halfD, curtain faces -Z.
-      //        left wall             = x = -halfW, curtain faces +X.
-      //        right wall            = x = +halfW, curtain faces -X.
-      type WallEntry = { name: string; dist: number; cx: number; cz: number; ry: number };
+      // N (back, plan-top)  = z = -halfD, curtain faces +Z.
+      // S (front, plan-bot) = z = +halfD, curtain faces -Z.
+      // W (left)            = x = -halfW, curtain faces +X.
+      // E (right)           = x = +halfW, curtain faces -X.
+      type WallEntry = { name: WallSide; dist: number; cx: number; cz: number; ry: number };
       const wallEntries: WallEntry[] = [
-        { name: "back",  dist: Math.abs(z3d - (-halfD)), cx: x3d,        cz: -halfD + 0.02, ry: 0 },
-        { name: "front", dist: Math.abs(z3d - ( halfD)), cx: x3d,        cz:  halfD - 0.02, ry: Math.PI },
-        { name: "left",  dist: Math.abs(x3d - (-halfW)), cx: -halfW + 0.02, cz: z3d,        ry: -Math.PI / 2 },
-        { name: "right", dist: Math.abs(x3d - ( halfW)), cx:  halfW - 0.02, cz: z3d,        ry:  Math.PI / 2 },
+        { name: "N", dist: Math.abs(z3d - (-halfD)), cx: x3d,        cz: -halfD + 0.02, ry: 0 },
+        { name: "S", dist: Math.abs(z3d - ( halfD)), cx: x3d,        cz:  halfD - 0.02, ry: Math.PI },
+        { name: "W", dist: Math.abs(x3d - (-halfW)), cx: -halfW + 0.02, cz: z3d,        ry: -Math.PI / 2 },
+        { name: "E", dist: Math.abs(x3d - ( halfW)), cx:  halfW - 0.02, cz: z3d,        ry:  Math.PI / 2 },
       ];
 
       // Prefer walls that have windows; avoid the door wall.
       const windowWalls = new Set<string>(roomWindows.map(w => w.wall));
-      const doorWallCanon = doorWall === "top" ? "back" : doorWall === "bottom" ? "front" : doorWall;
+      const doorWallCanon = doorWall;
 
       const ranked = [...wallEntries].sort((a, b) => {
         // 1. Never put curtain on door wall (obstructs movement / looks wrong)
@@ -3175,7 +3169,7 @@ function PolygonShell({
   ceilingColor: string;
   ceilingOpacity: number;
   doors: Array<{
-    wall: "back" | "front" | "left" | "right";
+    wall: WallSide;
     posCm: number; lenCm: number; hCm: number;
     style: import("@/lib/types").DoorStyle;
     edgeIndex?: number;
@@ -3452,7 +3446,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const roomWindows   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWindows?.[activeRoom] ?? EMPTY_WINDOWS);
   const roomDimensions = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDimensions?.[activeRoom]);
   const hasDoor    = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomHasDoor?.[activeRoom] ?? true);
-  const doorWall   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "bottom");
+  const doorWall   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "S");
   const doorPosCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorPos?.[activeRoom] ?? 0);
   const doorLenCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
   const doorHCm    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
@@ -3465,11 +3459,9 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const allDoors = useMemo(() => {
     if (roomDoorsArr && roomDoorsArr.length > 0) return roomDoorsArr;
     if (!hasDoor) return [];
-    const wall: "back" | "front" | "left" | "right" =
-      doorWall === "top" ? "back" : doorWall === "bottom" ? "front" : doorWall;
     return [{
       id: `${activeRoom}-legacy-door`,
-      wall,
+      wall: doorWall as WallSide,
       pos: doorPosCm,
       len: doorLenCm,
       h: doorHCm,
@@ -3477,7 +3469,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
       edgeIndex: doorEdgeIdx,
     }];
   }, [roomDoorsArr, hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle, doorEdgeIdx, activeRoom]);
-  const frontWallOpacity = useDesignerStore((s) => s.frontWallOpacity);
+  const southWallOpacity = useDesignerStore((s) => s.southWallOpacity);
   const ceilingOpacity = useDesignerStore((s) => s.ceilingOpacity);
   const lightPos = useDesignerStore((s) => s.lightPosByRoom[s.activeRoom]);
   const wallsHiddenForActive = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWallsHidden?.[activeRoom]);
@@ -3501,6 +3493,46 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
       <CameraController W={W} D={D} H={H} />
       <CameraAndCaptureSetup />
       <ExposureController />
+
+      {/* ── DEBUG: NSWE wall labels — small flat 3D decals on the inner
+           face of each wall, matching the walkthrough view's style and the
+           2D floor-plan SVG visual weight. One label per wall, anchored
+           25 % from the wall's start corner so centred doors/windows
+           don't eat the label. ── */}
+      {(() => {
+        const lblY    = 1.5;
+        const eps     = 0.08;          // clear interior wall surface
+        const fontSize   = 0.20;       // 20 cm tall letter
+        const plaqueSize = fontSize * 1.5;
+        const xQ = -W * 0.25;          // 25 % from W (-X) end, along X
+        const zQ = -D * 0.25;          // 25 % from N (-Z) end, along Z
+        const common = {
+          fontSize, color: '#FF1493',
+          outlineWidth: fontSize * 0.06, outlineColor: '#ffffff',
+          anchorX: 'center' as const, anchorY: 'middle' as const,
+        };
+        const Decal = ({
+          letter, pos, rot,
+        }: { letter: string; pos: [number, number, number]; rot: [number, number, number] }) => (
+          <group position={pos} rotation={rot}>
+            {/* Opaque white plate behind text — kills mirrored leak through
+                the back face since troika-text ignores material-side. */}
+            <mesh position={[0, 0, -0.005]} raycast={() => null}>
+              <planeGeometry args={[plaqueSize, plaqueSize]} />
+              <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} toneMapped={false} />
+            </mesh>
+            <Text {...common}>{letter}</Text>
+          </group>
+        );
+        return (
+          <group>
+            <Decal letter="N" pos={[xQ, lblY, -D / 2 + eps]} rot={[0, 0, 0]} />
+            <Decal letter="S" pos={[xQ, lblY,  D / 2 - eps]} rot={[0, Math.PI, 0]} />
+            <Decal letter="W" pos={[-W / 2 + eps, lblY, zQ]} rot={[0, Math.PI / 2, 0]} />
+            <Decal letter="E" pos={[ W / 2 - eps, lblY, zQ]} rot={[0, -Math.PI / 2, 0]} />
+          </group>
+        );
+      })()}
 
       {/* Interior lighting — NO Environment IBL (any HDR/preset blows out
           white walls since they reflect everything). Keep it simple:
@@ -3567,18 +3599,14 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
           wallLeftExterior={roomState.materials.wallLeftExterior}
           wallRightExterior={roomState.materials.wallRightExterior}
           hasDoor={allDoors.length > 0}
-          doorWall={allDoors.length > 0
-            ? (allDoors[0].wall === "back" ? "top"
-              : allDoors[0].wall === "front" ? "bottom"
-              : allDoors[0].wall as "left" | "right")
-            : doorWall}
+          doorWall={allDoors.length > 0 ? allDoors[0].wall : doorWall}
           doorPosCm={allDoors.length > 0 ? allDoors[0].pos : doorPosCm}
           doorLenCm={allDoors.length > 0 ? allDoors[0].len : doorLenCm}
           doorHCm={allDoors.length > 0 ? (allDoors[0].h ?? 200) : doorHCm}
           doorStyle={allDoors.length > 0 ? (allDoors[0].style ?? "wood_panel") : doorStyle}
           activeRoom={activeRoom}
           ceiling={roomState.materials.ceiling}
-          frontWallOpacity={frontWallOpacity}
+          southWallOpacity={southWallOpacity}
           ceilingOpacity={ceilingOpacity}
           wallsHidden={wallsHiddenForActive}
         />
@@ -3744,10 +3772,10 @@ function RoomExteriorDecorLayer({ room, W, D, H }: {
     wall: ExteriorWallTSType; position: [number, number, number];
     rotation: [number, number, number]; wallW: number; wallH: number;
   }> = [
-    { wall: "back",  position: [0, H / 2, -(D / 2) - DECOR_OFFSET], rotation: [0, Math.PI, 0],     wallW: W, wallH: H },
-    { wall: "front", position: [0, H / 2,  (D / 2) + DECOR_OFFSET], rotation: [0, 0, 0],           wallW: W, wallH: H },
-    { wall: "left",  position: [-(W / 2) - DECOR_OFFSET, H / 2, 0], rotation: [0, -Math.PI / 2, 0], wallW: D, wallH: H },
-    { wall: "right", position: [ (W / 2) + DECOR_OFFSET, H / 2, 0], rotation: [0,  Math.PI / 2, 0], wallW: D, wallH: H },
+    { wall: "N", position: [0, H / 2, -(D / 2) - DECOR_OFFSET], rotation: [0, Math.PI, 0],     wallW: W, wallH: H },
+    { wall: "S", position: [0, H / 2,  (D / 2) + DECOR_OFFSET], rotation: [0, 0, 0],           wallW: W, wallH: H },
+    { wall: "W", position: [-(W / 2) - DECOR_OFFSET, H / 2, 0], rotation: [0, -Math.PI / 2, 0], wallW: D, wallH: H },
+    { wall: "E", position: [ (W / 2) + DECOR_OFFSET, H / 2, 0], rotation: [0,  Math.PI / 2, 0], wallW: D, wallH: H },
   ];
 
   return (

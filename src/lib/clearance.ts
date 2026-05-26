@@ -159,7 +159,7 @@ export function clearanceBBox(placed: PlacedItem, f: FurnitureItem, rule: Cleara
 // stricter than the true quadrant arc, but zero false negatives and
 // much simpler to render/detect.
 
-export type DoorWall = "bottom" | "top" | "left" | "right";
+export type DoorWall = "N" | "S" | "W" | "E";
 
 export interface DoorSwingZone {
   /** AABB of the swing clearance in room coordinates. */
@@ -180,13 +180,15 @@ export function doorSwingZone(
   if (doorLenCm <= 0) return null;
   const L = doorLenCm;
   let minX = 0, maxX = 0, minZ = 0, maxZ = 0;
-  if (wall === "bottom") {
+  if (wall === "S") {
+    // bottom (front, +Z)
     minX = doorPosCm; maxX = doorPosCm + L;
     minZ = roomD - L; maxZ = roomD;
-  } else if (wall === "top") {
+  } else if (wall === "N") {
+    // top (back, -Z)
     minX = doorPosCm; maxX = doorPosCm + L;
     minZ = 0;          maxZ = L;
-  } else if (wall === "left") {
+  } else if (wall === "W") {
     minX = 0;          maxX = L;
     minZ = doorPosCm; maxZ = doorPosCm + L;
   } else {
@@ -363,10 +365,10 @@ export interface RelationalLink {
 /** Midpoint of a window in room coordinates. */
 function windowMidpoint(win: WindowConfig, roomW: number, roomD: number): { x: number; z: number } {
   const mid = win.pos + win.len / 2;
-  if (win.wall === "back")       return { x: mid,     z: 0 };
-  if (win.wall === "front")      return { x: mid,     z: roomD };
-  if (win.wall === "left")       return { x: 0,       z: mid };
-  /* right */                    return { x: roomW,   z: mid };
+  if (win.wall === "N")          return { x: mid,     z: 0 };
+  if (win.wall === "S")          return { x: mid,     z: roomD };
+  if (win.wall === "W")          return { x: 0,       z: mid };
+  /* E */                        return { x: roomW,   z: mid };
 }
 
 export interface RoomEvaluation {
@@ -392,13 +394,13 @@ function windowStripBBox(
 ): AABB {
   const D = WINDOW_BLOCK_DEPTH_CM;
   let minX = 0, maxX = 0, minZ = 0, maxZ = 0;
-  if (win.wall === "back") {
+  if (win.wall === "N") {
     minX = win.pos; maxX = win.pos + win.len;
     minZ = 0;       maxZ = D;
-  } else if (win.wall === "front") {
+  } else if (win.wall === "S") {
     minX = win.pos; maxX = win.pos + win.len;
     minZ = roomD - D; maxZ = roomD;
-  } else if (win.wall === "left") {
+  } else if (win.wall === "W") {
     minX = 0;       maxX = D;
     minZ = win.pos; maxZ = win.pos + win.len;
   } else {

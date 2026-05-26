@@ -262,10 +262,10 @@ function posHint(x: number, z: number, roomW: number, roomD: number): string {
   const hx = x / roomW;
   const hz = z / roomD;
   const h = hx < 0.33 ? "left" : hx < 0.67 ? "center" : "right";
-  const v = hz < 0.33 ? "back" : hz < 0.67 ? "middle" : "front";
+  const v = hz < 0.33 ? "far" : hz < 0.67 ? "middle" : "near";
   if (h === "center" && v === "middle") return "centered";
-  if (v === "back")  return `along back wall (${h})`;
-  if (v === "front") return `near front (${h})`;
+  if (v === "far")  return `along far wall (${h})`;
+  if (v === "near") return `near viewer (${h})`;
   return `${h} side`;
 }
 

@@ -4,7 +4,7 @@ import { temporal } from "zundo";
 import type { TemporalState } from "zundo";
 import { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, ROOM_DEFS, StyleTag, getRoomArea, FurnitureItem, ExteriorSettings, WindowConfig, RoomState, FloorPlan, ExteriorWallDecorItem, ExteriorWall, WallSide } from "./types";
 import { FURNITURE, getFurnitureById, registerFurniture } from "./furniture";
-import { MATERIALS, STYLE_RULES } from "./data";
+import { MATERIALS } from "./data";
 import { ALL_TEMPLATES, buildTemplateRoomState, buildEmbeddedRoomState } from "./templates";
 
 // ─── Style scoring ─────────────────────────────────────────
@@ -127,8 +127,8 @@ function genWinId(room: RoomType) { return `${room}-w${++_winIdCounter}`; }
 function makeDefaultWindows(room: RoomType): WindowConfig[] {
   const def = ROOM_DEFS[room];
   if (!def.hasWindow || def.windowWall === "none") return [];
-  const wall = def.windowWall as "back" | "right" | "left";
-  const wallLen = wall === "back" ? def.width : def.depth;
+  const wall = def.windowWall as "N" | "E" | "W";
+  const wallLen = wall === "N" ? def.width : def.depth;
   return [{ id: genWinId(room), wall, pos: wallLen * 0.25, len: wallLen * 0.45 }];
 }
 
@@ -142,8 +142,8 @@ export const DEFAULT_ROOM_DOOR_POS: Record<RoomType, number> =
 export const DEFAULT_ROOM_HAS_DOOR: Record<RoomType, boolean> =
   Object.fromEntries(ALL_POSSIBLE_ROOMS.map(r => [r, true])) as Record<RoomType, boolean>;
 
-export const DEFAULT_ROOM_DOOR_WALL: Record<RoomType, "bottom" | "top" | "left" | "right"> =
-  Object.fromEntries(ALL_POSSIBLE_ROOMS.map(r => [r, "bottom" as const])) as Record<RoomType, "bottom" | "top" | "left" | "right">;
+export const DEFAULT_ROOM_DOOR_WALL: Record<RoomType, WallSide> =
+  Object.fromEntries(ALL_POSSIBLE_ROOMS.map(r => [r, "S" as const])) as Record<RoomType, WallSide>;
 
 // ─── ID generator ─────────────────────────────────────────
 let _idCounter = 0;
@@ -302,8 +302,8 @@ interface DesignerStore {
   // Front wall opacity in 3D dollhouse view. 0 = cut away (default, so
   // you can see into the room), 0.5 = frosted glass, 1.0 = fully opaque.
   // User cycles through these three via the floating toggle.
-  frontWallOpacity: 0 | 0.5 | 1;
-  setFrontWallOpacity: (o: 0 | 0.5 | 1) => void;
+  southWallOpacity: 0 | 0.5 | 1;
+  setSouthWallOpacity: (o: 0 | 0.5 | 1) => void;
   /** Ceiling display opacity — same 0/0.5/1 cycle as front wall. Lets the
    *  user see the ceiling lamp / skylight / 吊顶装饰 from above by
    *  hiding the slab. */
@@ -391,8 +391,8 @@ interface DesignerStore {
   // Material actions
   setMaterial: (material: MaterialItem) => void;
   removeMaterial: (category: keyof RoomMaterials) => void;
-  /** Set a per-side wall override. side="back"|"front"|"left"|"right". */
-  setWallSide: (side: "back" | "front" | "left" | "right", material: MaterialItem | undefined) => void;
+  /** Set a per-side wall override. side="N"|"S"|"W"|"E". */
+  setWallSide: (side: WallSide, material: MaterialItem | undefined) => void;
   /** Set the lower-wall (护墙板/墙裙) material. Pass undefined to clear. */
   setWallLower: (material: MaterialItem | undefined) => void;
   /** Set where upper/lower split happens (cm from floor). Default 110. */
@@ -400,7 +400,7 @@ interface DesignerStore {
   /** Set exterior-face wall material for the active room. Pass
    *  side="all" for the global default, or a specific side for
    *  independent per-face color. Pass undefined material to clear. */
-  setWallExterior: (side: "all" | "back" | "front" | "left" | "right", material: MaterialItem | undefined) => void;
+  setWallExterior: (side: "all" | WallSide, material: MaterialItem | undefined) => void;
 
   // Furniture placement actions
   placeFurniture: (furnitureId: string) => void;
@@ -497,9 +497,9 @@ interface DesignerStore {
   // Door per room (operate on current floor)
   setDoorPos: (room: RoomType, pos: number) => void;
   setRoomHasDoor: (room: RoomType, has: boolean) => void;
-  setDoorWall: (room: RoomType, wall: "bottom" | "top" | "left" | "right") => void;
+  setDoorWall: (room: RoomType, wall: WallSide) => void;
   /** Toggle a single wall's hidden flag for a room. Key is either a
-   *  cardinal side ("back"/"front"/"left"/"right") for rect rooms OR
+   *  cardinal side ("N"/"S"/"W"/"E") for rect rooms OR
    *  "edge-${i}" for polygon-edge rooms. */
   toggleWallHidden: (room: RoomType, key: string) => void;
   setDoorEdgeIdx: (room: RoomType, edgeIdx: number | null) => void;
@@ -652,8 +652,8 @@ export const useDesignerStore = create<DesignerStore>()(
       toggleWindowOpen: (winId) => set(st => ({
         windowOpenByWinId: { ...st.windowOpenByWinId, [winId]: !st.windowOpenByWinId[winId] },
       })),
-      frontWallOpacity: 0,
-      setFrontWallOpacity: (o) => set({ frontWallOpacity: o }),
+      southWallOpacity: 0,
+      setSouthWallOpacity: (o) => set({ southWallOpacity: o }),
       ceilingOpacity: 0,
       setCeilingOpacity: (o) => set({ ceilingOpacity: o }),
       lightsOnByRoom: {},
@@ -796,7 +796,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const { activeRoom, activeFloor } = s;
         const fp = s.floorPlans[activeFloor];
         if (!fp?.rooms[activeRoom]) return;
-        const key = side === "back" ? "wallBack" : side === "front" ? "wallFront" : side === "left" ? "wallLeft" : "wallRight";
+        const key = side === "N" ? "wallBack" : side === "S" ? "wallFront" : side === "W" ? "wallLeft" : "wallRight";
         const updatedMaterials = { ...fp.rooms[activeRoom].materials };
         if (material) updatedMaterials[key] = material;
         else delete updatedMaterials[key];
@@ -847,11 +847,11 @@ export const useDesignerStore = create<DesignerStore>()(
         if (!fp?.rooms[activeRoom]) return;
         const updatedMaterials = { ...fp.rooms[activeRoom].materials };
         const fieldMap = {
-          all:   "wallExterior",
-          back:  "wallBackExterior",
-          front: "wallFrontExterior",
-          left:  "wallLeftExterior",
-          right: "wallRightExterior",
+          all: "wallExterior",
+          N:   "wallBackExterior",
+          S:   "wallFrontExterior",
+          W:   "wallLeftExterior",
+          E:   "wallRightExterior",
         } as const;
         const key = fieldMap[side];
         if (material) (updatedMaterials as Record<string, MaterialItem>)[key] = material;
@@ -1025,7 +1025,7 @@ export const useDesignerStore = create<DesignerStore>()(
         const DECOR_PLAN: Record<string, Array<{ id: string; pos: (w: number, d: number) => { x: number; z: number; rot?: number } }>> = {
           living: [
             { id: "rug-nordic-geo",    pos: (w, d) => ({ x: w / 2,        z: d * 0.65 }) },
-            { id: "plant-monstera",    pos: (w, d) => ({ x: w - 40,       z: 40 }) },
+            { id: "plant-monstera",    pos: (w)    => ({ x: w - 40,       z: 40 }) },
             { id: "plant-rubber-tree", pos: (_, d) => ({ x: 40,           z: d - 40 }) },
             { id: "artwork-abstract",  pos: (w)    => ({ x: w / 2,        z: 10 }) },
             { id: "lamp-arc-gold",     pos: (_, d) => ({ x: 40,           z: d * 0.4 }) },
@@ -1980,7 +1980,7 @@ export const useDesignerStore = create<DesignerStore>()(
             const out: Partial<typeof fp> = {};
             if (patch.pos  !== undefined) out.roomDoorPos  = { ...(fp.roomDoorPos  ?? {}), [room]: patch.pos };
             if (patch.len  !== undefined) out.roomDoorLen  = { ...(fp.roomDoorLen  ?? {}), [room]: patch.len };
-            if (patch.wall !== undefined) out.roomDoorWall = { ...(fp.roomDoorWall ?? {}), [room]: patch.wall === "front" ? "bottom" : patch.wall === "back" ? "top" : patch.wall };
+            if (patch.wall !== undefined) out.roomDoorWall = { ...(fp.roomDoorWall ?? {}), [room]: patch.wall };
             return out;
           }
           return {};
@@ -2030,24 +2030,22 @@ export const useDesignerStore = create<DesignerStore>()(
           rotation: (item.rotation + 90) % 360,
         }));
 
-        // Door wall remap (90° CW): bottom→left, left→top, top→right, right→bottom
-        const doorWallCW: Record<string, "bottom"|"top"|"left"|"right"> = {
-          bottom: "left", left: "top", top: "right", right: "bottom",
+        // Wall remap (90° CW rotation of the room):
+        //   N(top) → E(right), E(right) → S(bottom), S(bottom) → W(left), W(left) → N(top)
+        const wallCW: Record<WallSide, WallSide> = {
+          N: "E", E: "S", S: "W", W: "N",
         };
-        const oldDoorWall = fp.roomDoorWall[room] ?? "bottom";
-        const newDoorWall = doorWallCW[oldDoorWall];
-        const oldDoorWallLen = (oldDoorWall === "bottom" || oldDoorWall === "top") ? W : D;
-        const newDoorWallLen = (newDoorWall === "bottom" || newDoorWall === "top") ? D : W;
+        const oldDoorWall = fp.roomDoorWall[room] ?? "S";
+        const newDoorWall = wallCW[oldDoorWall];
+        // Horizontal walls (N/S) span the room's width; vertical walls (W/E) span depth.
+        const oldDoorWallLen = (oldDoorWall === "N" || oldDoorWall === "S") ? W : D;
+        const newDoorWallLen = (newDoorWall === "N" || newDoorWall === "S") ? D : W;
         const newDoorPos = (fp.roomDoorPos[room] ?? 0) * (newDoorWallLen / oldDoorWallLen);
 
-        // Window wall remap (90° CW): back→right, right→front, front→left, left→back
-        const winWallCW: Record<string, "back"|"front"|"right"|"left"> = {
-          back: "right", right: "front", front: "left", left: "back",
-        };
         const newWindows = (fp.roomWindows[room] ?? []).map(win => {
-          const newWall = winWallCW[win.wall] ?? win.wall;
-          const oldLen = (win.wall === "back" || win.wall === "front") ? W : D;
-          const newLen = (newWall === "back" || newWall === "front") ? D : W;
+          const newWall = wallCW[win.wall] ?? win.wall;
+          const oldLen = (win.wall === "N" || win.wall === "S") ? W : D;
+          const newLen = (newWall === "N" || newWall === "S") ? D : W;
           const scale = newLen / oldLen;
           return { ...win, wall: newWall, pos: win.pos * scale, len: win.len * scale };
         });
@@ -2138,7 +2136,7 @@ export const useDesignerStore = create<DesignerStore>()(
         roomExposureByRoom: {},
         lightPosByRoom: {},
         fixtureOffById: {},
-        frontWallOpacity: 0,
+        southWallOpacity: 0,
         ceilingOpacity: 0,
         blueprint: { image: null, naturalW: 0, naturalH: 0, opacity: 0.4, offsetX: 0, offsetY: 0, scale: 1 },
       }),
@@ -2244,7 +2242,7 @@ export const useDesignerStore = create<DesignerStore>()(
         // patches and apply them alongside the per-room rooms update.
         const windowsPatch: Record<string, import("./types").WindowConfig[]> = {};
         const doorStylePatch: Partial<Record<RoomType, import("./types").DoorStyle>> = {};
-        const doorWallPatch: Partial<Record<RoomType, "bottom" | "top" | "left" | "right">> = {};
+        const doorWallPatch: Partial<Record<RoomType, WallSide>> = {};
         const doorPosPatch: Partial<Record<RoomType, number>> = {};
         const doorLenPatch: Partial<Record<RoomType, number>> = {};
         for (const roomId of enabledRooms) {
@@ -2259,7 +2257,7 @@ export const useDesignerStore = create<DesignerStore>()(
           // Optional fields only present on embedded rooms
           const windows = (built as { windows?: import("./types").WindowConfig[] }).windows ?? [];
           const doorStyle = (built as { doorStyle?: import("./types").DoorStyle }).doorStyle;
-          const doorWall = (built as { doorWall?: "bottom" | "top" | "left" | "right" }).doorWall;
+          const doorWall = (built as { doorWall?: WallSide }).doorWall;
           const doorPos = (built as { doorPos?: number }).doorPos;
           const doorLen = (built as { doorLen?: number }).doorLen;
           const exteriorDecor = (built as { exteriorDecor?: import("./types").ExteriorWallDecorItem[] }).exteriorDecor ?? [];
@@ -2378,7 +2376,22 @@ export const useDesignerStore = create<DesignerStore>()(
       //   v0 = legacy (pre-versioning)
       //   v1 = templates now drive roomDoorPos/Len/Wall/Style,
       //        roomWindows, and RoomState.exteriorDecor
-      version: 1,
+      //   v2 = wall-side strings unified to NSWE. Old saves carried
+      //        "back"/"front"/"left"/"right" (room data) and
+      //        "top"/"bottom"/"left"/"right" (SVG door-wall). The migrate
+      //        function below rewrites all of them to N/S/W/E. CRITICAL:
+      //        without this, every existing user's saved house breaks.
+      //   v3 = facade-zone keys on ExteriorSettings (faceMaterials,
+      //        faceMaterialTypes, faceZones, facades) unified to NSWE.
+      //        Old saves stored them as "front"/"back"/"left"/"right"
+      //        sub-records; the v2 → v3 branch rewrites the keys.
+      //   v4 = yard-only-from-yardPlan: hardcoded "luxury villa" yard
+      //        items (pool, driveway, perimeter fence + gate, granite
+      //        path, bollard lamps, perimeter trees, lawn fill, etc.)
+      //        in FloorPlanExterior have been deleted. Yard is now
+      //        sourced exclusively from `yardPlan.items`. Migration is
+      //        a no-op (no seeding) — see v3 → v4 branch.
+      version: 4,
       migrate: (persistedState, persistedVersion) => {
         const state = persistedState as Partial<DesignerStore> | undefined;
         if (!state) return state as unknown as DesignerStore;
@@ -2401,8 +2414,130 @@ export const useDesignerStore = create<DesignerStore>()(
               ])
             ) as unknown as typeof fp.rooms,
           }));
-          // eslint-disable-next-line no-console
           console.info("[home-designer] migrated persist v0 → v1 (cleared door/window/decor fields)");
+        }
+        if (persistedVersion < 2 && state.floorPlans) {
+          // v1 → v2: rewrite every wall-side literal to NSWE form.
+          //   "back"   → "N"   (also  "top"    in SVG door-wall storage)
+          //   "front"  → "S"   (also  "bottom" in SVG door-wall storage)
+          //   "left"   → "W"
+          //   "right"  → "E"
+          const roomData = (w: unknown): WallSide | undefined => {
+            switch (w) {
+              case "back": case "top":     return "N";
+              case "front": case "bottom": return "S";
+              case "left":                 return "W";
+              case "right":                return "E";
+              case "N": case "S": case "W": case "E": return w;
+              default: return undefined;
+            }
+          };
+          state.floorPlans = state.floorPlans.map((fp) => {
+            const out = { ...fp } as FloorPlan;
+            // roomDoorWall (was "bottom"/"top"/"left"/"right")
+            if (fp.roomDoorWall) {
+              out.roomDoorWall = Object.fromEntries(
+                Object.entries(fp.roomDoorWall).map(([k, v]) => [k, roomData(v) ?? "S"]),
+              ) as FloorPlan["roomDoorWall"];
+            }
+            // roomDoors[]
+            if (fp.roomDoors) {
+              out.roomDoors = Object.fromEntries(
+                Object.entries(fp.roomDoors).map(([rk, doors]) => [
+                  rk,
+                  (doors ?? []).map(d => ({ ...d, wall: roomData(d.wall) ?? d.wall })),
+                ]),
+              ) as FloorPlan["roomDoors"];
+            }
+            // roomWindows[]
+            if (fp.roomWindows) {
+              out.roomWindows = Object.fromEntries(
+                Object.entries(fp.roomWindows).map(([rk, wins]) => [
+                  rk,
+                  (wins ?? []).map(w => ({ ...w, wall: roomData(w.wall) ?? w.wall })),
+                ]),
+              ) as FloorPlan["roomWindows"];
+            }
+            // roomWallsHidden — inner key is either a cardinal wall name
+            // OR "edge-${i}". Only rewrite cardinal-style keys.
+            if (fp.roomWallsHidden) {
+              out.roomWallsHidden = Object.fromEntries(
+                Object.entries(fp.roomWallsHidden).map(([rk, inner]) => {
+                  if (!inner) return [rk, inner];
+                  const remapped: Record<string, boolean | undefined> = {};
+                  for (const [key, val] of Object.entries(inner)) {
+                    const ns = roomData(key);
+                    remapped[ns ?? key] = val;
+                  }
+                  return [rk, remapped];
+                }),
+              ) as FloorPlan["roomWallsHidden"];
+            }
+            // exteriorDecor inside each room
+            if (fp.rooms) {
+              out.rooms = Object.fromEntries(
+                Object.entries(fp.rooms).map(([rk, room]) => {
+                  const r = room as RoomState;
+                  if (!r?.exteriorDecor || r.exteriorDecor.length === 0) return [rk, r];
+                  return [rk, {
+                    ...r,
+                    exteriorDecor: r.exteriorDecor.map(d => ({
+                      ...d,
+                      wall: (roomData(d.wall) ?? d.wall) as ExteriorWall,
+                    })),
+                  }];
+                }),
+              ) as FloorPlan["rooms"];
+            }
+            return out;
+          });
+          console.info("[home-designer] migrated persist v1 → v2 (wall sides → NSWE)");
+        }
+        if (persistedVersion < 3 && state.exterior) {
+          // v2 → v3: rewrite facade-zone keys on ExteriorSettings from
+          // front/back/left/right to NSWE (S/N/W/E). Same mapping as the
+          // v1 → v2 wall-side migration above. Inline switch — do NOT
+          // extract into a shared helper (keeps the migration self-
+          // contained for review).
+          const faceKey = (k: unknown): WallSide | undefined => {
+            switch (k) {
+              case "back":  return "N";
+              case "front": return "S";
+              case "left":  return "W";
+              case "right": return "E";
+              case "N": case "S": case "W": case "E": return k;
+              default: return undefined;
+            }
+          };
+          const remap = <V,>(rec: Record<string, V> | undefined): Partial<Record<WallSide, V>> | undefined => {
+            if (!rec) return rec;
+            const out: Partial<Record<WallSide, V>> = {};
+            for (const [k, v] of Object.entries(rec)) {
+              const ns = faceKey(k);
+              if (ns !== undefined) out[ns] = v;
+            }
+            return out;
+          };
+          const ext = { ...state.exterior } as ExteriorSettings & Record<string, unknown>;
+          if (ext.faceMaterials)      ext.faceMaterials      = remap(ext.faceMaterials as Record<string, string>);
+          if (ext.faceMaterialTypes)  ext.faceMaterialTypes  = remap(ext.faceMaterialTypes as Record<string, ExteriorSettings["wallMaterial"]>);
+          if (ext.faceZones)          ext.faceZones          = remap(ext.faceZones as Record<string, NonNullable<ExteriorSettings["faceZones"]>[WallSide]>);
+          if (ext.facades)            ext.facades            = remap(ext.facades as Record<string, NonNullable<ExteriorSettings["facades"]>[WallSide]>);
+          state.exterior = ext;
+          console.info("[home-designer] migrated persist v2 → v3 (facade zones → NSWE)");
+        }
+        if (persistedVersion < 4) {
+          // v3 → v4: Yard items now live ONLY in `yardPlan.items` —
+          // FloorPlanExterior no longer auto-places hardcoded landscape
+          // (pool, driveway, perimeter fence, lawn, lamps, granite path,
+          // perimeter trees, etc.). New projects start from templates that
+          // already populate yardPlan.items.
+          //
+          // We intentionally DO NOT seed defaults into existing saves:
+          // a user with deliberately empty yardPlan.items would have
+          // those defaults clobbered. The trade-off is an empty yard for
+          // migrated saves; users can add prefabs via the YardPlan editor.
+          console.info("[home-designer] migrated persist v3 → v4 (yard items now sourced from yardPlan.items only)");
         }
         return state as unknown as DesignerStore;
       },
@@ -2443,7 +2578,7 @@ export const useDesignerStore = create<DesignerStore>()(
               if (!roomWindows[r])    roomWindows[r]    = makeDefaultWindows(r);
               if (roomDoorPos[r]    === undefined) roomDoorPos[r]  = DEFAULT_ROOM_DOOR_POS[r]  ?? 50;
               if (roomHasDoor[r]    === undefined) roomHasDoor[r]  = DEFAULT_ROOM_HAS_DOOR[r]  ?? true;
-              if (!roomDoorWall[r]) roomDoorWall[r]   = DEFAULT_ROOM_DOOR_WALL[r] ?? "bottom";
+              if (!roomDoorWall[r]) roomDoorWall[r]   = DEFAULT_ROOM_DOOR_WALL[r] ?? "S";
             }
             return { ...fp, rooms, roomLayout, roomDimensions, roomWindows, roomDoorPos, roomHasDoor, roomDoorWall };
           });
@@ -2487,10 +2622,8 @@ export function getDoorsForRoom(fp: FloorPlan, room: RoomType): import("./types"
   // Legacy single door fallback
   const hasDoor = fp.roomHasDoor?.[room];
   if (!hasDoor) return [];
-  // Map legacy doorWall ("bottom"/"top") to new wall facing ("front"/"back")
-  const w = fp.roomDoorWall?.[room] ?? "bottom";
-  const wall: "back" | "front" | "left" | "right" =
-    w === "top" ? "back" : w === "bottom" ? "front" : w;
+  // roomDoorWall is already NSWE post v1→v2 migration.
+  const wall: WallSide = fp.roomDoorWall?.[room] ?? "S";
   return [{
     id: `${room}-legacy-door`,
     wall,

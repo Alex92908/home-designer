@@ -40,7 +40,6 @@ function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number
     const box = new THREE.Box3().setFromObject(c);
     const size = new THREE.Vector3();
     box.getSize(size);
-    // eslint-disable-next-line no-console
     console.log(`[GltfDoorPanel] native ${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m target ${doorW.toFixed(2)}×${doorH.toFixed(2)}m`);
     if (size.x > 0 && size.y > 0 && size.z > 0) {
       // Uniform scale by height. This preserves the door's natural
@@ -96,7 +95,7 @@ export function WalkthroughDoor3D({
   isOpen, onToggle, doorStyle,
 }: {
   W: number; D: number; H: number;
-  doorWall: "bottom" | "top" | "left" | "right";
+  doorWall: "N" | "S" | "W" | "E";
   doorPosCm: number; doorLenCm: number; doorHCm: number;
   isOpen: boolean;
   onToggle: () => void;
@@ -144,23 +143,23 @@ export function WalkthroughDoor3D({
     // 0.08 means the group sits 7cm into the room from the boundary; with
     // the panel at local z = -0.02 (or thickness 0.035), the panel front
     // face lands ~2cm inside the room from the wall's interior face.
-    case "top": // back wall (z = -D/2)
+    case "N": // back wall (z = -D/2)
       groupPos = [doorPos - W / 2, 0, -D / 2 + 0.08];
       groupRot = [0, 0, 0];
       hingeOffset = 1;
       break;
-    case "bottom": // front wall (z = +D/2)
+    case "S": // front wall (z = +D/2)
       // Rotate 180° around Y so door faces room interior (-Z).
       groupPos = [-W / 2 + doorPos + doorW, 0, D / 2 - 0.08];
       groupRot = [0, Math.PI, 0];
       hingeOffset = 1;
       break;
-    case "left":
+    case "W":
       groupPos = [-W / 2 + 0.08, 0, doorPos - D / 2];
       groupRot = [0, Math.PI / 2, 0];
       hingeOffset = 1;
       break;
-    case "right":
+    case "E":
       groupPos = [W / 2 - 0.08, 0, -(doorPos - D / 2) - doorW];
       groupRot = [0, -Math.PI / 2, 0];
       hingeOffset = 1;
