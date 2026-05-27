@@ -3024,7 +3024,15 @@ export default function FloorPlanBuilding({
   const { W, D } = planOffset;
   const wallColor  = exterior.wallColor ?? "#F0EDE6";
   const buildingType = (exterior as any).buildingType ?? "";
-  const isGlassVilla = buildingType === "rich-glass-villa" || buildingType === "floor-plan-driven";
+  // The 'glass curtain wall' concept is deprecated — per user request,
+  // glass facades are now just regular walls with large windows. We keep
+  // the variable so the existing conditional branches still compile, but
+  // hard-wire it to false so every `!insideBuilding && isGlassVilla`
+  // special path becomes dead code. (Removing the branches outright is a
+  // 40+ site refactor with high regression surface; gating them is
+  // strictly safer and leaves a clean revert path.)
+  void buildingType;
+  const isGlassVilla = false;
 
   // ── 每层世界坐标包围盒（共用于外墙段 + 室内渲染）──────────────────────────
   const floorBoundsArr = useMemo(() => {
@@ -3221,33 +3229,12 @@ export default function FloorPlanBuilding({
   // 然后把这些房间收集到 Set 里。下面"房间盒子 / 低 LOD 家具 / 背景填充板"
   // 都用这个 Set 做条件，自动判玻璃的房间也能得到暖色发光内饰，不必靠
   // 用户手动切到"玻璃幕墙"。
-  const glassRooms = useMemo(() => {
-    const set = new Set<string>();
-    for (const block of facadeBlocks) {
-      const fp = floorPlans[block.floorIndex];
-      if (!fp) continue;
-      const styles = block.rooms.map(r => fp.roomExteriorStyle?.[r] ?? "auto");
-      const forceGlass    = styles.some(s => s === "glass");
-      const forceConcrete = !forceGlass && styles.some(s => s === "concrete");
-      const segLen = (block.mergedEnd - block.mergedStart) * CM;
-      const totalWinLen = block.winEntries.reduce((s, e) => s + e.w.len, 0);
-      const winCoverage = segLen > 0 ? (totalWinLen * CM) / segLen : 0;
-      const isSouth = block.side === "S";
-      const isGlassWall = winCoverage > 0.42 || (isGlassVilla && (isSouth || winCoverage > 0.28));
-      // 阳台默认开放：自动判玻璃（实际上半透明栏杆效果，不再像实墙包房间）
-      const hasBalcony = block.rooms.some(r => r === "balcony" || r === "balcony2");
-      let isGlass: boolean;
-      if (forceGlass) isGlass = true;
-      else if (forceConcrete) isGlass = false;
-      else if (hasBalcony) isGlass = true;
-      else if (isGlassVilla) isGlass = isGlassWall;
-      else isGlass = false;
-      if (isGlass) {
-        for (const r of block.rooms) set.add(`${block.floorIndex}:${r}`);
-      }
-    }
-    return set;
-  }, [facadeBlocks, floorPlans, isGlassVilla]);
+  // 'Glass-room' concept is deprecated — glass facades are now just
+  // regular walls with windows. Always return an empty set so every
+  // `glassRooms.has(...)` check falls through to the standard wall
+  // path. The Set type is preserved so downstream `.has(...)` calls
+  // still type-check.
+  const glassRooms = useMemo<Set<string>>(() => new Set(), []);
 
   // ── 室内渲染数据（地板 + 墙面材质 + 天花板 + 家具）────────────────────────────
   const interiorRooms = useMemo(() => {

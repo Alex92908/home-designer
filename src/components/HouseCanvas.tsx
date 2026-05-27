@@ -6456,7 +6456,11 @@ export default function HouseCanvas() {
   const theme  = getSkyTheme(sunHour);
   void _rgbHex; // skyHex no longer needed — Sky component handles gradient
   const _buildingType    = (exterior as ExteriorSettings & { buildingType?: string }).buildingType;
-  const isRichGlassVilla = _buildingType === "rich-glass-villa" || _buildingType === "floor-plan-driven";
+  // 'Rich glass villa' is deprecated — glass facades are now just regular
+  // walls with windows. Hard-wire false so every `isRichGlassVilla`-gated
+  // special path becomes dead code without ripping out the conditionals.
+  const isRichGlassVilla = false;
+  void _buildingType;
 
   // Camera positions for inside vs outside
   const FLOOR_H_M = 3.0;
