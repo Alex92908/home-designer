@@ -516,11 +516,17 @@ function GlassCurtain({
 // ── 混凝土外墙面（带板缝线条，建筑感） ──────────────────────────────
 function ConcreteFacade({
   width, height, windows = [], windowGlow = 0,
+  glassColor: glassColorOverride,
+  frameColor: frameColorOverride,
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
   /** Night-mode interior glow (0 = off, 0.9+ = full night). */
   windowGlow?: number;
+  /** Daytime window glass color (when no night glow). Falls back to slate-blue. */
+  glassColor?: string;
+  /** Window frame color. Falls back to dark anodised. */
+  frameColor?: string;
 }) {
   // 水平板缝：每 90cm 一道（模拟预制混凝土挂板分割）
   const hGrooveStep  = 0.90;
@@ -614,9 +620,11 @@ function ConcreteFacade({
         // facade look dark — you're seeing into a shaded interior). The
         // previous pale-sky-blue (#B8D4E8) was so close to the wall colour
         // that windows blurred into the facade in the bird-eye view.
+        const glassDay = glassColorOverride ?? "#3E5066";
         const glassColor = windowGlow > 0.5
           ? (isWarm ? "#D8C8A0" : isCool ? "#B8D8F0" : "#3A4A60")
-          : "#3E5066";
+          : glassDay;
+        const fc = frameColorOverride ?? "#1E2530";
         return (
         <group key={`ww-${wi}`} position={[w.localX, -height / 2 + w.winSill + w.winH / 2, 0]}>
           {/* 室内衬底 — 白天深邃，夜间按房间类型发光 */}
@@ -652,7 +660,7 @@ function ConcreteFacade({
           ]).map(([fx, fy, fw, fh], k) => (
             <mesh key={k} position={[fx, fy, 0.022]}>
               <planeGeometry args={[fw, fh]} />
-              <meshStandardMaterial color="#1E2530" roughness={0.30} metalness={0.70} />
+              <meshStandardMaterial color={fc} roughness={0.30} metalness={0.70} />
             </mesh>
           ))}
           {/* 窗台板 + 滴水线（drip-edge metal cap on sill） */}
@@ -5272,7 +5280,11 @@ export default function FloorPlanBuilding({
         // ── 混凝土（含窗） ──
         return (
           <group key={`co-${bi}`} position={[px, yMid, pz]} rotation={rot}>
-            <ConcreteFacade width={segLen} height={FLOOR_H} windows={winInfos} windowGlow={interiorGlowWall} />
+            <ConcreteFacade
+              width={segLen} height={FLOOR_H} windows={winInfos} windowGlow={interiorGlowWall}
+              glassColor={exterior.windowGlassColor}
+              frameColor={exterior.windowFrameColor ?? exterior.accentColor}
+            />
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部，
                 高度 0.55m（窗台 0.90m 以下，不遮窗），增加基座感与立面层次。*/}
             {floorIndex === 0 && (

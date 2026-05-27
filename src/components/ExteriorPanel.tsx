@@ -735,6 +735,37 @@ export default function ExteriorPanel() {
           </button>
         </div>
 
+        {/* ── 窗户外观（Window Appearance） ── */}
+        <div className="px-3 pt-4">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">窗户 (WINDOWS)</div>
+          <div className="px-1 flex flex-col gap-2">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-gray-600">玻璃色（白天）</span>
+              <input
+                type="color"
+                value={exterior.windowGlassColor ?? "#3E5066"}
+                onChange={e => setExterior({ windowGlassColor: e.target.value })}
+                className="w-8 h-6 rounded border border-gray-200 cursor-pointer"
+              />
+            </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-gray-600">窗框色</span>
+              <input
+                type="color"
+                value={exterior.windowFrameColor ?? exterior.accentColor ?? "#1E2530"}
+                onChange={e => setExterior({ windowFrameColor: e.target.value })}
+                className="w-8 h-6 rounded border border-gray-200 cursor-pointer"
+              />
+            </div>
+            <button
+              onClick={() => setExterior({ windowGlassColor: undefined, windowFrameColor: undefined })}
+              className="text-[9px] text-gray-400 hover:text-blue-500 self-end mt-0.5"
+            >
+              恢复默认
+            </button>
+          </div>
+        </div>
+
         {/* ── 屋顶配置（Rooftop） ── */}
         <div className="px-3 pt-4">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">屋顶 (ROOFTOP)</div>

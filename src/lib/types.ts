@@ -260,6 +260,13 @@ export interface ExteriorSettings {
    *  decoration meshes are hidden — useful for a clean flat-roof look or
    *  when the user wants to place their own items via yardPlan. Default true. */
   rooftopDeckEnabled?: boolean;
+  // ── Window appearance (user-configurable; was previously hardcoded) ─────
+  /** Window glass tint in daytime. Hex string. Reads as a dark "punch-hole"
+   *  against the cream facade. Default '#3E5066' (dark slate-blue). */
+  windowGlassColor?: string;
+  /** Window frame color (aluminium / millwork). Hex string. Falls back to
+   *  ExteriorSettings.accentColor, then to '#1E2530' (dark anodised). */
+  windowFrameColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
