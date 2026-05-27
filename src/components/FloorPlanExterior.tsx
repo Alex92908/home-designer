@@ -609,7 +609,14 @@ function ConcreteFacade({
         const glowColor  = isWarm ? "#F4D890" : "#B8E4FF";
         const bgColor    = isWarm ? "#F5E8C8" : isCool ? "#E8F4FF" : "#161A20";
         const glassGlow  = isWarm ? "#F4C860" : "#A0D4F0";
-        const glassColor = windowGlow > 0.5 ? (isWarm ? "#D8C8A0" : isCool ? "#B8D8F0" : "#B8D4E8") : "#B8D4E8";
+        // Daytime glass reads MUCH darker than the cream facade so windows
+        // clearly "punch" out from the wall (real windows on a sunlit white
+        // facade look dark — you're seeing into a shaded interior). The
+        // previous pale-sky-blue (#B8D4E8) was so close to the wall colour
+        // that windows blurred into the facade in the bird-eye view.
+        const glassColor = windowGlow > 0.5
+          ? (isWarm ? "#D8C8A0" : isCool ? "#B8D8F0" : "#3A4A60")
+          : "#3E5066";
         return (
         <group key={`ww-${wi}`} position={[w.localX, -height / 2 + w.winSill + w.winH / 2, 0]}>
           {/* 室内衬底 — 白天深邃，夜间按房间类型发光 */}
@@ -622,29 +629,30 @@ function ConcreteFacade({
               roughness={0.9}
             />
           </mesh>
-          {/* 玻璃（浅蓝透明，带反射；夜间略带暖色透射）*/}
+          {/* 玻璃 — 白天偏深蓝灰色，更清晰区别于墙面。Opacity 抬到 0.92 让
+              深色不被墙底色透回来稀释。夜间保持半透发光。 */}
           <mesh position={[0, 0, 0.018]}>
             <planeGeometry args={[w.winLen - 0.04, w.winH - 0.04]} />
             <meshPhysicalMaterial
               color={glassColor}
-              transmission={windowGlow > 0.5 ? 0.22 : 0.35}
+              transmission={windowGlow > 0.5 ? 0.22 : 0.12}
               roughness={0.04} metalness={0.08}
-              transparent opacity={windowGlow > 0.5 ? 0.82 : 0.72}
+              transparent opacity={windowGlow > 0.5 ? 0.82 : 0.92}
               emissive={windowGlow > 0.5 && litMult > 0 ? glassGlow : "#000000"}
               emissiveIntensity={windowGlow > 0.5 ? windowGlow * 0.24 * litMult : 0}
               side={THREE.FrontSide}
             />
           </mesh>
-          {/* 窗框 — 暗铝合金色，4 条压条 */}
+          {/* 窗框 — 暗铝合金色，4 条压条（从 0.05 → 0.08 厚度加粗，更明显）*/}
           {([
-            [-w.winLen / 2 + 0.025, 0,               0.028, w.winH  ] as [number,number,number,number],
-            [ w.winLen / 2 - 0.025, 0,               0.028, w.winH  ] as [number,number,number,number],
-            [0,  w.winH / 2 - 0.025, w.winLen, 0.052] as [number,number,number,number],
-            [0, -w.winH / 2 + 0.025, w.winLen, 0.052] as [number,number,number,number],
+            [-w.winLen / 2 + 0.040, 0,               0.040, w.winH  ] as [number,number,number,number],
+            [ w.winLen / 2 - 0.040, 0,               0.040, w.winH  ] as [number,number,number,number],
+            [0,  w.winH / 2 - 0.040, w.winLen, 0.080] as [number,number,number,number],
+            [0, -w.winH / 2 + 0.040, w.winLen, 0.080] as [number,number,number,number],
           ]).map(([fx, fy, fw, fh], k) => (
             <mesh key={k} position={[fx, fy, 0.022]}>
               <planeGeometry args={[fw, fh]} />
-              <meshStandardMaterial color="#2E3540" roughness={0.35} metalness={0.62} />
+              <meshStandardMaterial color="#1E2530" roughness={0.30} metalness={0.70} />
             </mesh>
           ))}
           {/* 窗台板 + 滴水线（drip-edge metal cap on sill） */}
@@ -5210,12 +5218,12 @@ export default function FloorPlanBuilding({
                       <meshStandardMaterial color="#1E2028" roughness={0.25} metalness={0.88} envMapIntensity={2.2} />
                     </mesh>
                   ))}
-                  {/* 玻璃 */}
+                  {/* 玻璃 — 白天偏深蓝灰，更清晰区分于墙面（matches ConcreteFacade）*/}
                   <mesh position={[0, 0, 0.018]}>
                     <planeGeometry args={[w.winLen - 0.04, w.winH - 0.04]} />
                     <meshPhysicalMaterial
-                      color={interiorGlowWall > 0.5 ? "#D8C8A0" : "#B0C8E0"}
-                      transparent opacity={interiorGlowWall > 0.5 ? 0.80 : 0.60}
+                      color={interiorGlowWall > 0.5 ? "#D8C8A0" : "#3A4A60"}
+                      transparent opacity={interiorGlowWall > 0.5 ? 0.80 : 0.92}
                       roughness={0.04} metalness={0.10}
                       emissive={interiorGlowWall > 0.5 ? "#F4C860" : "#000000"}
                       emissiveIntensity={interiorGlowWall > 0.5 ? interiorGlowWall * 0.22 : 0}
