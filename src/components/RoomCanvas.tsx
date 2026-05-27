@@ -2865,7 +2865,15 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
     const distRight = wallW - xCm;
     const minDist = Math.min(distBack, distFront, distLeft, distRight);
     const y = def.height / 100 * 0.52;
-    const GAP = 0.04;
+    // GAP must clear the inner face of the wall. RoomCanvas effect-view
+    // walls are 8 cm thick → inner face at 4 cm from boundary. FPE
+    // walkthrough walls are 12 cm thick → inner face at 6 cm. With the
+    // old GAP=0.04, walkthrough artwork sat 2 cm INSIDE the wall slab
+    // (buried, invisible). GAP=0.10 puts the artwork CENTRE 4 cm in
+    // front of the walkthrough inner face (6 cm in front of effect-view
+    // inner face) — clearly mounted on the wall in both views, even
+    // when the wall is shared with a neighbouring room.
+    const GAP = 0.10;
     let position: [number, number, number];
     let rotation: [number, number, number];
     if (minDist === distBack) {
