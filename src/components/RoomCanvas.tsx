@@ -2865,15 +2865,19 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
     const distRight = wallW - xCm;
     const minDist = Math.min(distBack, distFront, distLeft, distRight);
     const y = def.height / 100 * 0.52;
-    // GAP must clear the inner face of the wall. RoomCanvas effect-view
-    // walls are 8 cm thick → inner face at 4 cm from boundary. FPE
-    // walkthrough walls are 12 cm thick → inner face at 6 cm. With the
-    // old GAP=0.04, walkthrough artwork sat 2 cm INSIDE the wall slab
-    // (buried, invisible). GAP=0.10 puts the artwork CENTRE 4 cm in
-    // front of the walkthrough inner face (6 cm in front of effect-view
-    // inner face) — clearly mounted on the wall in both views, even
-    // when the wall is shared with a neighbouring room.
-    const GAP = 0.10;
+    // GAP must clear the inner face of the wall AND the frame back
+    // (2.5 cm). FPE walkthrough walls are 12 cm thick → inner face at
+    // 6 cm from boundary. Frame back is GAP − 1.25 cm from boundary,
+    // so GAP ≥ 7.25 cm is the absolute minimum. Past versions used
+    // 4 cm (buried) and 10 cm (still failed for shared walls in the
+    // walkthrough — likely because of OR-merged door/window holes
+    // overlapping the artwork at sub-mm precision). 15 cm gives the
+    // frame a clean 7.5 cm of air in front of the wall face — well
+    // outside any z-fight band and any wall-mounted obstacle.
+    //
+    // Trade-off: the painting reads as protruding a bit off the wall
+    // rather than flush. That's the price for shared-wall robustness.
+    const GAP = 0.15;
     let position: [number, number, number];
     let rotation: [number, number, number];
     if (minDist === distBack) {
@@ -2890,7 +2894,10 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
       rotation = [0, -Math.PI / 2, 0];   // faces -X
     }
     return (
-      <group position={position} rotation={rotation}>
+      // renderOrder=10 makes the painting composite AFTER walls (default 0)
+      // so the depth sort can't accidentally put a shared-wall mesh on
+      // top of the artwork at near-coplanar distances.
+      <group position={position} rotation={rotation} renderOrder={10}>
         <FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} room={room} />
       </group>
     );
