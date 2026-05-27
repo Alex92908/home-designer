@@ -7593,32 +7593,86 @@ export default function FloorPlanBuilding({
                   <Text {...common}>{letter}</Text>
                 </group>
               );
-              // Direct port of RoomCanvas effect-view placement (works
-              // there because coordinates are now unified NSWE). Anchor
-              // 25 % from the NW corner. Simple. If a label lands inside
-              // a window/door opening on one wall, that's the user's
-              // layout choice — symmetric with the effect view.
-              // Anchor 25% from NW corner.
-              // NOTE: when two rooms share a wall (no gap between them),
-              // the shared wall is dedup'd to ONE wallSegment that BOTH
-              // rooms write holes / hide-flags into. If the neighbour
-              // room hides or holes its side, this room's decal at the
-              // same z can end up floating in front of an opening rather
-              // than a solid wall. Workaround: separate rooms with a small
-              // gap so each wall renders independently. Tracked in
-              // task #36 for a proper fix.
-              const xQ = cx - rW * 0.25;
-              const zQ = cz - rD * 0.25;
+              // Anchor strategy: try 25% from the NW corner first, but if
+              // the resulting decal would land inside a door/window hole
+              // contributed by EITHER room sharing this wall (after the
+              // wallSegments dedup OR-merge), shift the anchor to the
+              // nearest clear span on the same wall. This fixes the
+              // long-standing "shared wall — no NSWE label visible" case
+              // where the neighbour's hole punched through the decal
+              // landing zone (task #36 / commit dc14513 limitation note).
+              const p = floorPlans[fi]?.roomLayout?.[room];
+              const dd = floorPlans[fi]?.roomDimensions?.[room];
+              const DECAL_Y_CM = 150;          // 1.5 m above wall base
+              const DECAL_HALF_CM = 18;        // 18 cm half-width margin (plaque is 30 cm wide)
+              // Collect holes from every deduped wallSegment that covers
+              // (any portion of) this room's wall. Translate hole x into
+              // this wall's local coords (cm from the NW/SW end —
+              // matches the same "x grows along plan-X / plan-Y" rule the
+              // dedup builder uses).
+              const collectBlocked = (axis: "h" | "v", fixed: number, lo: number, hi: number): Array<[number, number]> => {
+                const blocked: Array<[number, number]> = [];
+                for (const seg of wallSegments) {
+                  if (seg.fi !== fi) continue;
+                  if (seg.axis !== axis) continue;
+                  if (Math.abs(seg.fixed - fixed) > 1) continue;
+                  if (seg.a >= hi || seg.b <= lo) continue;
+                  const offset = seg.a - lo;
+                  for (const h of seg.holes) {
+                    // Skip holes that don't intersect the decal's vertical band.
+                    if (h.y > DECAL_Y_CM + 10 || h.y + h.h < DECAL_Y_CM - 10) continue;
+                    const x0 = Math.max(0, offset + h.x);
+                    const x1 = Math.min(hi - lo, offset + h.x + h.w);
+                    if (x1 > x0) blocked.push([x0, x1]);
+                  }
+                }
+                return blocked;
+              };
+              const pickClearAnchor = (wallLenCm: number, blocked: Array<[number, number]>): number => {
+                const isClear = (xCm: number) => {
+                  if (xCm - DECAL_HALF_CM < 5 || xCm + DECAL_HALF_CM > wallLenCm - 5) return false;
+                  for (const [b0, b1] of blocked) {
+                    if (xCm + DECAL_HALF_CM > b0 && xCm - DECAL_HALF_CM < b1) return false;
+                  }
+                  return true;
+                };
+                const candidates = [0.25, 0.75, 0.5, 0.15, 0.85, 0.35, 0.65, 0.10, 0.90];
+                for (const r of candidates) {
+                  const x = wallLenCm * r;
+                  if (isClear(x)) return x;
+                }
+                // Final fallback: scan in 5cm steps. If still nothing, just use 0.25.
+                for (let x = DECAL_HALF_CM + 5; x < wallLenCm - DECAL_HALF_CM - 5; x += 5) {
+                  if (isClear(x)) return x;
+                }
+                return wallLenCm * 0.25;
+              };
+              // World x (for N/S walls) and world z (for W/E walls) from a
+              // local-cm anchor along that wall.
+              const xFromAnchor = (anchorCm: number) => cx - rW / 2 + (anchorCm / 100);
+              const zFromAnchor = (anchorCm: number) => cz - rD / 2 + (anchorCm / 100);
+              let xQ_N = cx - rW * 0.25, xQ_S = cx - rW * 0.25;
+              let zQ_W = cz - rD * 0.25, zQ_E = cz - rD * 0.25;
+              if (p && dd) {
+                // N wall: axis=h, fixed=p.y,           plan-X range [p.x, p.x+d.width]
+                xQ_N = xFromAnchor(pickClearAnchor(rWcm, collectBlocked("h", p.y,            p.x, p.x + dd.width)));
+                // S wall: axis=h, fixed=p.y+d.depth,   same plan-X range
+                xQ_S = xFromAnchor(pickClearAnchor(rWcm, collectBlocked("h", p.y + dd.depth, p.x, p.x + dd.width)));
+                // W wall: axis=v, fixed=p.x,           plan-Y range [p.y, p.y+d.depth]
+                zQ_W = zFromAnchor(pickClearAnchor(rDcm, collectBlocked("v", p.x,            p.y, p.y + dd.depth)));
+                // E wall: axis=v, fixed=p.x+d.width,   same plan-Y range
+                zQ_E = zFromAnchor(pickClearAnchor(rDcm, collectBlocked("v", p.x + dd.width, p.y, p.y + dd.depth)));
+              }
               return (
                 <group>
                   {/* N wall: back, -Z, faces +Z */}
-                  <Decal letter="N" pos={[xQ, lblY, cz - rD / 2 + eps]} rot={[0, 0, 0]} />
+                  <Decal letter="N" pos={[xQ_N, lblY, cz - rD / 2 + eps]} rot={[0, 0, 0]} />
                   {/* S wall: front, +Z, faces -Z */}
-                  <Decal letter="S" pos={[xQ, lblY, cz + rD / 2 - eps]} rot={[0, Math.PI, 0]} />
+                  <Decal letter="S" pos={[xQ_S, lblY, cz + rD / 2 - eps]} rot={[0, Math.PI, 0]} />
                   {/* W wall: left, -X, faces +X */}
-                  <Decal letter="W" pos={[cx - rW / 2 + eps, lblY, zQ]} rot={[0, Math.PI / 2, 0]} />
+                  <Decal letter="W" pos={[cx - rW / 2 + eps, lblY, zQ_W]} rot={[0, Math.PI / 2, 0]} />
                   {/* E wall: right, +X, faces -X */}
-                  <Decal letter="E" pos={[cx + rW / 2 - eps, lblY, zQ]} rot={[0, -Math.PI / 2, 0]} />
+                  <Decal letter="E" pos={[cx + rW / 2 - eps, lblY, zQ_E]} rot={[0, -Math.PI / 2, 0]} />
                 </group>
               );
             })()}
