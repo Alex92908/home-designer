@@ -7548,11 +7548,17 @@ export default function FloorPlanBuilding({
                  west=-X (left), east=+X (right). ── */}
             {insideBuilding && !isStair && !isHallway && (() => {
               const lblY = yBase + 1.5;
-              // Wall thickness is 0.12m centered on room boundary → inner face
-              // sits 0.06m inside. Push the decal 12 cm into the room — past
-              // the inner wall face (6 cm) AND past any door-panel/artwork
-              // backer that lives within the first ~10 cm of room interior.
-              const eps  = 0.12;
+              // Treat each room's 4 walls INDEPENDENTLY of any shared-wall
+              // dedup — float the decal 30 cm INTO the room from its own
+              // wall plane, well clear of the wall thickness (12 cm),
+              // any door-panel sitting in the jamb (~8 cm), wall artwork
+              // (~6 cm), or the neighbour's identical decal on the other
+              // face of a shared wall. From this room's camera it reads as
+              // a floating "wall tag" hovering in front of that wall — no
+              // possibility of being buried in wall geometry, no possibility
+              // of z-fight with anything else, and visible regardless of
+              // whether the wall is dedup'd or hidden.
+              const eps  = 0.30;
               // Pick a stable color from a small palette using room+floor key
               const palette = [
                 '#FF1493','#1E90FF','#32CD32','#FF8C00','#9932CC',
