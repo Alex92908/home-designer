@@ -7549,11 +7549,10 @@ export default function FloorPlanBuilding({
             {insideBuilding && !isStair && !isHallway && (() => {
               const lblY = yBase + 1.5;
               // Wall thickness is 0.12m centered on room boundary → inner face
-              // sits 0.06m inside. Push the decal 15 cm into the room (not 8 cm)
-              // so it clearly clears both faces of any shared-wall thickness
-              // and any neighbour's WalkthroughDoor3D panel (which sits at
-              // ≈ wall_inner_face + 7 cm = 13 cm from boundary).
-              const eps  = 0.15;
+              // sits 0.06m inside. Push the decal 12 cm into the room — past
+              // the inner wall face (6 cm) AND past any door-panel/artwork
+              // backer that lives within the first ~10 cm of room interior.
+              const eps  = 0.12;
               // Pick a stable color from a small palette using room+floor key
               const palette = [
                 '#FF1493','#1E90FF','#32CD32','#FF8C00','#9932CC',
@@ -7563,57 +7562,31 @@ export default function FloorPlanBuilding({
               let hash = 0;
               for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
               const col = palette[hash % palette.length];
-              // Bumped from 0.20 → 0.28 so labels are legible at typical
+              // Bumped from 0.20 → 0.32 so labels are legible at typical
               // walkthrough distance (3–6 m). Plate scales with font.
-              const fontSize = 0.28;
+              const fontSize = 0.32;
               const plaqueSize = fontSize * 1.8;
               const common = {
                 fontSize,
                 color: col,
-                outlineWidth: fontSize * 0.08,
+                outlineWidth: fontSize * 0.10,
                 outlineColor: '#ffffff',
                 anchorX: 'center' as const,
                 anchorY: 'middle' as const,
-                // polygonOffset pushes the glyph geometry slightly toward the
-                // camera in NDC, eliminating any sub-mm z-fight with shared
-                // walls / artwork backers nearby. depthOffset (troika-three-
-                // text built-in) gives the same effect for the text-specific
-                // SDF shader path.
-                depthOffset: -2,
-                'material-polygonOffset': true,
-                'material-polygonOffsetFactor': -2,
-                'material-polygonOffsetUnits': -2,
               };
-              // troika-text (drei <Text/>) ignores `material-side` and renders
-              // both sides. To prevent the decal "leaking" through a doorway
-              // and looking like it sits on an outer wall, we put an opaque
-              // double-sided white plate just behind the text, on the
-              // wall-side. From the adjacent room (or outside the building),
-              // the plate occludes the back face of the text.
-              // renderOrder=50 makes the group draw AFTER the walls (default 0)
-              // so they're definitely composited on top within the same depth
-              // bucket. Combined with polygonOffset above, this defeats z-
-              // fight even on shared walls where 2 rooms' decals + 1 wall
-              // mesh live within a 12 cm slab.
+              // Backing plate occludes anything behind (e.g. the neighbour
+              // room's mirrored text on a shared wall). renderOrder=50 makes
+              // the decal group composite AFTER walls within the same depth
+              // bucket so it wins z-sorting at sub-mm distances.
               const Decal = ({
                 letter, pos, rot,
               }: { letter: string; pos: [number, number, number]; rot: [number, number, number] }) => (
                 <group position={pos} rotation={rot} renderOrder={50}>
-                  {/* Backing plate (opaque, both sides) — 1 cm behind text.
-                      polygonOffset positive = pushed AWAY from camera, so the
-                      plate sits visually behind the text without z-fight. */}
-                  <mesh position={[0, 0, -0.01]} raycast={() => null} renderOrder={49}>
+                  <mesh position={[0, 0, -0.01]} raycast={() => null}>
                     <planeGeometry args={[plaqueSize, plaqueSize]} />
-                    <meshBasicMaterial
-                      color="#ffffff"
-                      side={THREE.DoubleSide}
-                      toneMapped={false}
-                      polygonOffset
-                      polygonOffsetFactor={1}
-                      polygonOffsetUnits={1}
-                    />
+                    <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} toneMapped={false} />
                   </mesh>
-                  <Text {...common} renderOrder={51}>{letter}</Text>
+                  <Text {...common}>{letter}</Text>
                 </group>
               );
               // Anchor strategy: try 25% from the NW corner first, but if
