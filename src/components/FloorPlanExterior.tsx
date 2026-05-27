@@ -2961,17 +2961,24 @@ export default function FloorPlanBuilding({
 
   // ── Interior emissive intensity driven by time-of-day ──────────────────
   // Night/late evening → rooms glow warm from within (high emissive).
-  // Full day → minimal emissive (interior looks lit by natural light).
+  // Full day → ZERO emissive so the interior behind windows reads as a
+  // dark shaded space — exactly how a real interior looks through a
+  // window on a sunny day. The previous daytime value of 1.15 made the
+  // interior backing self-illuminate (amber emissive ≈ 1.0 intensity),
+  // which the user perceived as "light leaking through the walls"
+  // because the warm glow stamped halos around every window. Dawn/dusk
+  // also brought down — the strong amber there was the "golden hour"
+  // tint, only realistic when sky is already dim.
   const interiorGlowWall: number = sunHour < 6 || sunHour > 20
     ? 2.10   // night — strong warm interior glow visible through clear glass
     : sunHour < 8 || sunHour > 18
-    ? 1.55   // dawn/dusk — warm amber glow
-    : 1.15;  // day — visible but not overpowering (more transparent glass shows this)
+    ? 0.55   // dawn/dusk — subtle warm amber, not stamping halos
+    : 0.0;   // day — no glow; interior reads as dark shade through windows
   const interiorGlowCeil: number = sunHour < 6 || sunHour > 20
     ? 1.10   // night ceiling — warm downlight wash
     : sunHour < 8 || sunHour > 18
-    ? 0.85   // dawn/dusk ceiling
-    : 0.72;  // day ceiling — warm ambient
+    ? 0.40   // dawn/dusk ceiling
+    : 0.0;   // day ceiling — no self-emit
 
   /** Click door/window on exterior →
    *  - if onEnterRoom prop given: walkthrough mode at this room's centre
