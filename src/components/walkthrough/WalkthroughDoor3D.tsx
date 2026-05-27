@@ -40,7 +40,6 @@ function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number
     const box = new THREE.Box3().setFromObject(c);
     const size = new THREE.Vector3();
     box.getSize(size);
-    console.log(`[GltfDoorPanel] native ${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m target ${doorW.toFixed(2)}×${doorH.toFixed(2)}m`);
     if (size.x > 0 && size.y > 0 && size.z > 0) {
       // Uniform scale by height. This preserves the door's natural
       // width:height:depth ratio instead of stretching it to match our
@@ -113,15 +112,28 @@ export function WalkthroughDoor3D({
   useFrame((_, delta) => {
     const isSliding = doorStyle === "sliding_barn";
     const target = isOpen ? (isSliding ? -(doorLenCm / 100) : -Math.PI / 2) : 0;
-    const speed = isSliding ? 2.4 : 5.5;
+    // Exponential smoothing — feels far snappier than the old linear
+    // ramp at the same average speed. Higher k = faster catch-up; the
+    // animation visibly accelerates from rest and decelerates as it
+    // approaches the target, the way real spring-loaded hinges read.
+    // k≈12 for hinges, ≈6 for sliding barn (slower for heavier door).
+    const k = isSliding ? 6 : 12;
     const current = animRef.current;
     const diff = target - current;
-    if (Math.abs(diff) > 0.002) {
-      const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
-      animRef.current = current + step;
+    if (Math.abs(diff) > 0.001) {
+      // Frame-rate-independent lerp: c += (t-c) · (1 - e^(-Δt·k))
+      // 60 fps → α ≈ 0.18, 30 fps → α ≈ 0.33, identical perceived speed.
+      animRef.current = current + diff * (1 - Math.exp(-delta * k));
       if (panelRef.current) {
         if (isSliding) panelRef.current.position.x = animRef.current;
         else panelRef.current.rotation.y = animRef.current;
+      }
+    } else if (animRef.current !== target) {
+      // Snap to target so the door doesn't sit at 99.999 % forever.
+      animRef.current = target;
+      if (panelRef.current) {
+        if (isSliding) panelRef.current.position.x = target;
+        else panelRef.current.rotation.y = target;
       }
     }
   });
