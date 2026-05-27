@@ -1794,14 +1794,16 @@ export default function FloorPlanAll() {
               );
             })()}
 
-            {/* Compass */}
-            <g transform={`translate(${vbX2 - 60}, ${vbY2 - 80})`}>
-              <circle r={36} fill="white" fillOpacity={0.92} stroke="#D1D5DB" strokeWidth={2} />
-              <text textAnchor="middle" y={-14} fontSize={20} fontWeight="bold" fill="#1F2937" fontFamily="system-ui">N</text>
-              <text textAnchor="middle" y={24}  fontSize={16} fill="#9CA3AF" fontFamily="system-ui">S</text>
-              <text textAnchor="start"  x={9}   y={6} fontSize={16} fill="#9CA3AF" fontFamily="system-ui">E</text>
-              <text textAnchor="end"    x={-9}  y={6} fontSize={16} fill="#9CA3AF" fontFamily="system-ui">W</text>
-            </g>
+            {/* Compass hidden per user request. */}
+            {false && (
+              <g transform={`translate(${vbX2 - 60}, ${vbY2 - 80})`}>
+                <circle r={36} fill="white" fillOpacity={0.92} stroke="#D1D5DB" strokeWidth={2} />
+                <text textAnchor="middle" y={-14} fontSize={20} fontWeight="bold" fill="#1F2937" fontFamily="system-ui">N</text>
+                <text textAnchor="middle" y={24}  fontSize={16} fill="#9CA3AF" fontFamily="system-ui">S</text>
+                <text textAnchor="start"  x={9}   y={6} fontSize={16} fill="#9CA3AF" fontFamily="system-ui">E</text>
+                <text textAnchor="end"    x={-9}  y={6} fontSize={16} fill="#9CA3AF" fontFamily="system-ui">W</text>
+              </g>
+            )}
 
             {/* Scale ruler */}
             <g transform={`translate(${vbX1 + 20}, ${vbY2 - 50})`}>

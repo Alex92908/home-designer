@@ -1292,14 +1292,16 @@ export default function YardPlan() {
           <rect width={SVG_PX} height={SVG_PX} fill="url(#yard-grid-minor)" />
           <rect width={SVG_PX} height={SVG_PX} fill="url(#yard-grid-major)" />
 
-          {/* Compass — N/S/W/E (matches FloorPlanAll convention) */}
-          <g transform={`translate(${SVG_PX - 50}, 50)`} style={{ pointerEvents: "none" }}>
-            <circle r={28} fill="white" fillOpacity={0.92} stroke="#D1D5DB" strokeWidth={1.5} />
-            <text textAnchor="middle" y={-11} fontSize={15} fontWeight="bold" fill="#1F2937" fontFamily="system-ui">N</text>
-            <text textAnchor="middle" y={20}  fontSize={12} fill="#9CA3AF" fontFamily="system-ui">S</text>
-            <text textAnchor="start"  x={8}   y={5}  fontSize={12} fill="#9CA3AF" fontFamily="system-ui">E</text>
-            <text textAnchor="end"    x={-8}  y={5}  fontSize={12} fill="#9CA3AF" fontFamily="system-ui">W</text>
-          </g>
+          {/* Compass hidden per user request. */}
+          {false && (
+            <g transform={`translate(${SVG_PX - 50}, 50)`} style={{ pointerEvents: "none" }}>
+              <circle r={28} fill="white" fillOpacity={0.92} stroke="#D1D5DB" strokeWidth={1.5} />
+              <text textAnchor="middle" y={-11} fontSize={15} fontWeight="bold" fill="#1F2937" fontFamily="system-ui">N</text>
+              <text textAnchor="middle" y={20}  fontSize={12} fill="#9CA3AF" fontFamily="system-ui">S</text>
+              <text textAnchor="start"  x={8}   y={5}  fontSize={12} fill="#9CA3AF" fontFamily="system-ui">E</text>
+              <text textAnchor="end"    x={-8}  y={5}  fontSize={12} fill="#9CA3AF" fontFamily="system-ui">W</text>
+            </g>
+          )}
           {/* Scale bar */}
           <g transform={`translate(20, ${SVG_PX - 24})`} style={{ pointerEvents: "none" }}>
             <line x1={0} y1={0} x2={500 / CM_PER_PX} y2={0} stroke={INK} strokeWidth={1.2} />

@@ -1708,12 +1708,14 @@ export default function FloorPlan() {
             })()
           )}
 
-          {/* Compass */}
-          <g transform={`translate(${svgW - 22}, 22)`}>
-            <circle r={12} fill="rgba(0,0,0,0.5)" />
-            <text x={0} y={-5} textAnchor="middle" dominantBaseline="middle" fontSize={7} fill="#4488AA">N</text>
-            <line x1={0} y1={-9} x2={0} y2={-4} stroke="#4488AA" strokeWidth={1.5} />
-          </g>
+          {/* Compass hidden per user request. */}
+          {false && (
+            <g transform={`translate(${svgW - 22}, 22)`}>
+              <circle r={12} fill="rgba(0,0,0,0.5)" />
+              <text x={0} y={-5} textAnchor="middle" dominantBaseline="middle" fontSize={7} fill="#4488AA">N</text>
+              <line x1={0} y1={-9} x2={0} y2={-4} stroke="#4488AA" strokeWidth={1.5} />
+            </g>
+          )}
 
           {/* Door-swing zone — always shown when door exists */}
           {doorSwing && (() => {

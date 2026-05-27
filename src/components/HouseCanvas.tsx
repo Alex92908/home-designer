@@ -6475,16 +6475,19 @@ export default function HouseCanvas() {
 
   return (
     <div className="w-full h-full relative">
-      {/* ── Compass — rotates with camera so N (world -Z) stays consistent ── */}
-      <div className="absolute pointer-events-none z-30" style={{ top: 60, right: 130, width: 60, height: 60 }}>
-        <svg viewBox="-32 -32 64 64" width="60" height="60" style={{ transform: `rotate(${compassDeg}deg)`, transition: "transform 60ms linear" }}>
-          <circle r={28} fill="white" fillOpacity={0.92} stroke="#D1D5DB" strokeWidth={1.5} />
-          <text textAnchor="middle" y={-11} fontSize={15} fontWeight="bold" fill="#1F2937" fontFamily="system-ui">N</text>
-          <text textAnchor="middle" y={20} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">S</text>
-          <text textAnchor="start"  x={8}  y={5} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">E</text>
-          <text textAnchor="end"    x={-8} y={5} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">W</text>
-        </svg>
-      </div>
+      {/* ── Compass hidden per user request. Yaw tracker still mounted so
+           re-enabling later is a one-line revert. ── */}
+      {false && (
+        <div className="absolute pointer-events-none z-30" style={{ top: 60, right: 130, width: 60, height: 60 }}>
+          <svg viewBox="-32 -32 64 64" width="60" height="60" style={{ transform: `rotate(${compassDeg}deg)`, transition: "transform 60ms linear" }}>
+            <circle r={28} fill="white" fillOpacity={0.92} stroke="#D1D5DB" strokeWidth={1.5} />
+            <text textAnchor="middle" y={-11} fontSize={15} fontWeight="bold" fill="#1F2937" fontFamily="system-ui">N</text>
+            <text textAnchor="middle" y={20} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">S</text>
+            <text textAnchor="start"  x={8}  y={5} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">E</text>
+            <text textAnchor="end"    x={-8} y={5} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">W</text>
+          </svg>
+        </div>
+      )}
       {/* Idle-time prefetch of indoor furniture GLTFs so walkthrough entry
           is instant. Runs outside <Canvas> — no Object3D, no frame ticks. */}
       <FurniturePreloader />
