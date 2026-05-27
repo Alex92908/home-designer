@@ -248,6 +248,18 @@ export interface ExteriorSettings {
    * undefined → standard FloorShell-based rendering
    */
   buildingType?: string;
+  // ── Rooftop content (user-configurable; replaces hardcoded counts) ──────
+  /** Solar panels visible on the flat roof. Default true. */
+  solarPanelsEnabled?: boolean;
+  /** Columns in the PV grid. Sane range 1–10. Default 5. */
+  solarPanelCols?: number;
+  /** Rows in the PV grid. Sane range 1–6. Default 3. */
+  solarPanelRows?: number;
+  /** Rooftop deck furniture (loungers, dining set, hot tub, BBQ, bar, plunge
+   *  pool, weather station, etc.). When false, all the hardcoded terrace
+   *  decoration meshes are hidden — useful for a clean flat-roof look or
+   *  when the user wants to place their own items via yardPlan. Default true. */
+  rooftopDeckEnabled?: boolean;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

@@ -789,7 +789,20 @@ function buildFacadeBlocks(segs: ExteriorWallSeg[]): FacadeBlock[] {
 }
 
 // ── 平屋顶 ────────────────────────────────────────────────────
-function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: number; D: number; roofY: number; nightGlow?: number; hasRooftop?: boolean }) {
+function FlatRoof({
+  W, D, roofY, nightGlow = 0, hasRooftop = false,
+  solarPanelsEnabled = true,
+  solarPanelCols = 5,
+  solarPanelRows = 3,
+  rooftopDeckEnabled = true,
+}: {
+  W: number; D: number; roofY: number;
+  nightGlow?: number; hasRooftop?: boolean;
+  solarPanelsEnabled?: boolean;
+  solarPanelCols?: number;
+  solarPanelRows?: number;
+  rooftopDeckEnabled?: boolean;
+}) {
   const OV = 0.45;   // 悬挑
   const OV_S = 0.75; // 南向多悬挑
   const PH = 0.30;   // 女儿墙高度
@@ -1112,9 +1125,12 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
           ))}
         </group>
       ))}
-      {/* ── 光伏板阵列（solar PV array）— 朝南倾斜 18°，3×5 矩阵 ── */}
-      {(() => {
-        const pvCols = 5, pvRows = 3;
+      {/* ── 光伏板阵列（solar PV array）— 朝南倾斜 18°，rows × cols 矩阵
+           现在数量由 ExteriorSettings.solarPanel{Rows,Cols} 决定，且整
+           个阵列可通过 solarPanelsEnabled 一键关掉。 ── */}
+      {solarPanelsEnabled && (() => {
+        const pvCols = Math.max(1, Math.min(10, solarPanelCols));
+        const pvRows = Math.max(1, Math.min(6,  solarPanelRows));
         const pvW = 1.08, pvH = 1.70, pvGap = 0.06;
         const pvTilt = 0.32;   // tilt angle (radians, ≈ 18°)
         const arrW = pvCols * (pvW + pvGap) - pvGap;
@@ -1416,7 +1432,12 @@ function FlatRoof({ W, D, roofY, nightGlow = 0, hasRooftop = false }: { W: numbe
       })()}
 
       {/* ── 屋顶露台区域（南向，阳光充足）── */}
-      {!hasRooftop && <>
+      {/* The lifestyle decoration block — loungers / dining / pergola /
+          helipad / reflecting pool / hot tub / BBQ / plunge pool / sky
+          bar — now hidden when ExteriorSettings.rooftopDeckEnabled is
+          false. Previously this large block was ALWAYS rendered, making
+          every flat-roof building look like the same showcase villa. */}
+      {!hasRooftop && rooftopDeckEnabled && <>
       {/* 两把日光浴躺椅 — 淡米色，南向摆放，供远处视角可见 */}
       {([[-W * 0.15, 0], [W * 0.15, 0]] as [number,number][]).map(([lx, _lz], li) => (
         <group key={`rl-${li}`} position={[lx, roofSlab + 0.05, D * 0.28]}>
@@ -5850,7 +5871,17 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {!insideBuilding && <FlatRoof W={W} D={D} roofY={totalH} nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0} hasRooftop={exterior.hasRooftop} />}
+      {!insideBuilding && (
+        <FlatRoof
+          W={W} D={D} roofY={totalH}
+          nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0}
+          hasRooftop={exterior.hasRooftop}
+          solarPanelsEnabled={exterior.solarPanelsEnabled ?? true}
+          solarPanelCols={exterior.solarPanelCols ?? 5}
+          solarPanelRows={exterior.solarPanelRows ?? 3}
+          rooftopDeckEnabled={exterior.rooftopDeckEnabled ?? true}
+        />
+      )}
 
       {/* ── DEBUG: NWES direction labels (code convention: north=-Z, south=+Z, east=+X, west=-X) ──
            Commented out for production; re-enable to debug coord directions in 外观图. */}

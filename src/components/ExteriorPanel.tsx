@@ -735,6 +735,60 @@ export default function ExteriorPanel() {
           </button>
         </div>
 
+        {/* ── 屋顶配置（Rooftop） ── */}
+        <div className="px-3 pt-4">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">屋顶 (ROOFTOP)</div>
+          <div className="px-1 flex flex-col gap-2">
+            {/* Solar panels enable */}
+            <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={exterior.solarPanelsEnabled ?? true}
+                onChange={e => setExterior({ solarPanelsEnabled: e.target.checked })}
+                className="accent-blue-500"
+              />
+              <span className="text-gray-700">显示光伏板阵列</span>
+            </label>
+            {/* Solar panel grid size */}
+            {(exterior.solarPanelsEnabled ?? true) && (
+              <div className="pl-5 flex flex-col gap-1">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-gray-500">列数</span>
+                  <span className="font-mono text-gray-700">{exterior.solarPanelCols ?? 5}</span>
+                </div>
+                <input type="range" min={1} max={10} step={1}
+                  value={exterior.solarPanelCols ?? 5}
+                  onChange={e => setExterior({ solarPanelCols: parseInt(e.target.value, 10) })}
+                  className="w-full accent-blue-500" />
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-gray-500">行数</span>
+                  <span className="font-mono text-gray-700">{exterior.solarPanelRows ?? 3}</span>
+                </div>
+                <input type="range" min={1} max={6} step={1}
+                  value={exterior.solarPanelRows ?? 3}
+                  onChange={e => setExterior({ solarPanelRows: parseInt(e.target.value, 10) })}
+                  className="w-full accent-blue-500" />
+                <div className="text-[9px] text-gray-400">
+                  共 {(exterior.solarPanelCols ?? 5) * (exterior.solarPanelRows ?? 3)} 块
+                </div>
+              </div>
+            )}
+            {/* Rooftop deck items */}
+            <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={exterior.rooftopDeckEnabled ?? true}
+                onChange={e => setExterior({ rooftopDeckEnabled: e.target.checked })}
+                className="accent-blue-500"
+              />
+              <span className="text-gray-700">显示屋顶休闲设施</span>
+            </label>
+            <div className="text-[9px] text-gray-400 pl-5 -mt-1">
+              （躺椅 / 餐桌 / 凉亭 / 浴缸 / BBQ / 浅池 / 吧台 / 直升机坪）
+            </div>
+          </div>
+        </div>
+
         {/* ── 架空层 (Pilotis) ── */}
         <div className="px-3 pt-4">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">架空层 (PILOTIS)</div>
