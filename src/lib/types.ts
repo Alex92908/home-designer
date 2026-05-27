@@ -267,6 +267,21 @@ export interface ExteriorSettings {
   /** Window frame color (aluminium / millwork). Hex string. Falls back to
    *  ExteriorSettings.accentColor, then to '#1E2530' (dark anodised). */
   windowFrameColor?: string;
+  // ── Facade panelisation (was hardcoded in ConcreteFacade) ───────────────
+  /** Horizontal precast-panel seam spacing in metres. Default 0.90.
+   *  Sane range 0.4–2.0. Smaller = more horizontal banding. */
+  wallPanelHSpacing?: number;
+  /** Vertical precast-panel seam spacing in metres. Default 1.20.
+   *  Sane range 0.4–3.0. Smaller = more vertical articulation. */
+  wallPanelVSpacing?: number;
+  // ── Ground-floor stone base + roof vents ────────────────────────────────
+  /** Limestone-look base rustication band on the ground floor. Default true. */
+  stoneBaseEnabled?: boolean;
+  /** Height of the ground-floor stone base in metres. Default 0.55. */
+  stoneBaseHeight?: number;
+  /** Roof exhaust / vent stacks. Default 3. Range 0–6. Zero hides the
+   *  rooftop machine-room cluster entirely. */
+  roofVentCount?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

@@ -766,6 +766,50 @@ export default function ExteriorPanel() {
           </div>
         </div>
 
+        {/* ── 墙体细节（Wall Detail） ── */}
+        <div className="px-3 pt-4">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">墙体细节 (WALL DETAIL)</div>
+          <div className="px-1 flex flex-col gap-2">
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-gray-500">横向板缝间距</span>
+              <span className="font-mono text-gray-700">{(exterior.wallPanelHSpacing ?? 0.90).toFixed(2)} m</span>
+            </div>
+            <input type="range" min={0.4} max={2.0} step={0.05}
+              value={exterior.wallPanelHSpacing ?? 0.90}
+              onChange={e => setExterior({ wallPanelHSpacing: parseFloat(e.target.value) })}
+              className="w-full accent-blue-500" />
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-gray-500">竖向板缝间距</span>
+              <span className="font-mono text-gray-700">{(exterior.wallPanelVSpacing ?? 1.20).toFixed(2)} m</span>
+            </div>
+            <input type="range" min={0.4} max={3.0} step={0.05}
+              value={exterior.wallPanelVSpacing ?? 1.20}
+              onChange={e => setExterior({ wallPanelVSpacing: parseFloat(e.target.value) })}
+              className="w-full accent-blue-500" />
+            <label className="flex items-center gap-2 text-[11px] cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={exterior.stoneBaseEnabled ?? true}
+                onChange={e => setExterior({ stoneBaseEnabled: e.target.checked })}
+                className="accent-blue-500"
+              />
+              <span className="text-gray-700">首层石材腰线</span>
+            </label>
+            {(exterior.stoneBaseEnabled ?? true) && (
+              <div className="pl-5 flex flex-col gap-1">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-gray-500">高度</span>
+                  <span className="font-mono text-gray-700">{(exterior.stoneBaseHeight ?? 0.55).toFixed(2)} m</span>
+                </div>
+                <input type="range" min={0.15} max={1.20} step={0.05}
+                  value={exterior.stoneBaseHeight ?? 0.55}
+                  onChange={e => setExterior({ stoneBaseHeight: parseFloat(e.target.value) })}
+                  className="w-full accent-blue-500" />
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* ── 屋顶配置（Rooftop） ── */}
         <div className="px-3 pt-4">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">屋顶 (ROOFTOP)</div>
@@ -817,6 +861,15 @@ export default function ExteriorPanel() {
             <div className="text-[9px] text-gray-400 pl-5 -mt-1">
               （躺椅 / 餐桌 / 凉亭 / 浴缸 / BBQ / 浅池 / 吧台 / 直升机坪）
             </div>
+            {/* Vent count */}
+            <div className="flex items-center justify-between text-[10px] pt-1">
+              <span className="text-gray-500">通风管道</span>
+              <span className="font-mono text-gray-700">{exterior.roofVentCount ?? 3} 根</span>
+            </div>
+            <input type="range" min={0} max={6} step={1}
+              value={exterior.roofVentCount ?? 3}
+              onChange={e => setExterior({ roofVentCount: parseInt(e.target.value, 10) })}
+              className="w-full accent-blue-500" />
           </div>
         </div>
 

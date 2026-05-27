@@ -518,6 +518,8 @@ function ConcreteFacade({
   width, height, windows = [], windowGlow = 0,
   glassColor: glassColorOverride,
   frameColor: frameColorOverride,
+  hGrooveStep: hGrooveStepOverride,
+  vGrooveStep: vGrooveStepOverride,
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
@@ -527,12 +529,16 @@ function ConcreteFacade({
   glassColor?: string;
   /** Window frame color. Falls back to dark anodised. */
   frameColor?: string;
+  /** Horizontal precast seam spacing (m). Default 0.90. */
+  hGrooveStep?: number;
+  /** Vertical precast seam spacing (m). Default 1.20. */
+  vGrooveStep?: number;
 }) {
-  // 水平板缝：每 90cm 一道（模拟预制混凝土挂板分割）
-  const hGrooveStep  = 0.90;
+  // 水平板缝：每 hGrooveStep m 一道（模拟预制混凝土挂板分割）
+  const hGrooveStep  = Math.max(0.4, Math.min(2.0, hGrooveStepOverride ?? 0.90));
   const hGrooveCount = Math.max(1, Math.round(height / hGrooveStep) - 1);
-  // 竖向板缝：每 120cm 一道
-  const vGrooveStep  = 1.20;
+  // 竖向板缝：每 vGrooveStep m 一道
+  const vGrooveStep  = Math.max(0.4, Math.min(3.0, vGrooveStepOverride ?? 1.20));
   const vGrooveCount = Math.max(1, Math.round(width / vGrooveStep) - 1);
   const grooveColor  = "#C0BAB2";   // subtle groove shadow
   const baseColor    = "#E6E0D8";   // crisp warm-white render (matches reference image)
@@ -803,6 +809,7 @@ function FlatRoof({
   solarPanelCols = 5,
   solarPanelRows = 3,
   rooftopDeckEnabled = true,
+  ventCount = 3,
 }: {
   W: number; D: number; roofY: number;
   nightGlow?: number; hasRooftop?: boolean;
@@ -810,6 +817,7 @@ function FlatRoof({
   solarPanelCols?: number;
   solarPanelRows?: number;
   rooftopDeckEnabled?: boolean;
+  ventCount?: number;
 }) {
   const OV = 0.45;   // 悬挑
   const OV_S = 0.75; // 南向多悬挑
@@ -1194,12 +1202,19 @@ function FlatRoof({
           </group>
         );
       })()}
-      {/* ── 通风管道组（3 根，高度不一，北侧机房区）── */}
+      {/* ── 通风管道组（北侧机房区）── 数量由 ExteriorSettings.roofVentCount
+           控制（0–6，默认 3）。前 3 根用原 hand-picked 位置/尺寸，4–6 根在
+           机房带均匀补位，避免一律对齐。 */}
       {([
-        [W * 0.10,  D * 0.10, 0.50, 0.08, 0.10],
+        [W * 0.10,  D * 0.10, 0.50, 0.08,  0.10 ],
         [W * 0.14,  D * 0.08, 0.70, 0.055, 0.065],
         [W * 0.06,  D * 0.14, 0.40, 0.065, 0.075],
-      ] as [number,number,number,number,number][]).map(([ex, ez, eH, rt, rb], ei) => (
+        [W * 0.18,  D * 0.12, 0.55, 0.060, 0.070],
+        [W * 0.02,  D * 0.10, 0.45, 0.050, 0.060],
+        [W * 0.20,  D * 0.06, 0.60, 0.070, 0.085],
+      ] as [number,number,number,number,number][])
+        .slice(0, Math.max(0, Math.min(6, ventCount)))
+        .map(([ex, ez, eH, rt, rb], ei) => (
         <group key={`exhaust-${ei}`} position={[ex, roofSlab + 0.05 + eH / 2, ez]}>
           {/* Main stack */}
           <mesh castShadow>
@@ -5284,30 +5299,37 @@ export default function FloorPlanBuilding({
               width={segLen} height={FLOOR_H} windows={winInfos} windowGlow={interiorGlowWall}
               glassColor={exterior.windowGlassColor}
               frameColor={exterior.windowFrameColor ?? exterior.accentColor}
+              hGrooveStep={exterior.wallPanelHSpacing}
+              vGrooveStep={exterior.wallPanelVSpacing}
             />
-            {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部，
-                高度 0.55m（窗台 0.90m 以下，不遮窗），增加基座感与立面层次。*/}
-            {floorIndex === 0 && (
-              <group position={[0, -FLOOR_H / 2 + 0.275, 0.050]}>
-                {/* Main cladding slab */}
-                <mesh castShadow receiveShadow>
-                  <boxGeometry args={[segLen + 0.004, 0.55, 0.016]} />
-                  <meshStandardMaterial color="#D8D0BE" roughness={0.64} metalness={0.02} envMapIntensity={0.55} />
-                </mesh>
-                {/* Ashlar horizontal rustication joints — 3 stone courses */}
-                {[0.13, 0, -0.13].map((jy, ji) => (
-                  <mesh key={ji} position={[0, jy, 0.009]}>
-                    <boxGeometry args={[segLen + 0.005, 0.008, 0.006]} />
-                    <meshStandardMaterial color="#B8B0A0" roughness={0.88} />
+            {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部。
+                Height + on/off now driven by ExteriorSettings.stoneBase{Enabled,Height}. */}
+            {floorIndex === 0 && (exterior.stoneBaseEnabled ?? true) && (() => {
+              const sbH = Math.max(0.15, Math.min(1.20, exterior.stoneBaseHeight ?? 0.55));
+              // Course joint Y positions evenly spaced (3 courses regardless of height)
+              const j = sbH / 4;
+              return (
+                <group position={[0, -FLOOR_H / 2 + sbH / 2, 0.050]}>
+                  {/* Main cladding slab */}
+                  <mesh castShadow receiveShadow>
+                    <boxGeometry args={[segLen + 0.004, sbH, 0.016]} />
+                    <meshStandardMaterial color="#D8D0BE" roughness={0.64} metalness={0.02} envMapIntensity={0.55} />
                   </mesh>
-                ))}
-                {/* Top edge flashing strip */}
-                <mesh position={[0, 0.278, 0.010]}>
-                  <boxGeometry args={[segLen + 0.006, 0.010, 0.012]} />
-                  <meshStandardMaterial color="#3A3E48" roughness={0.22} metalness={0.90} envMapIntensity={1.6} />
-                </mesh>
-              </group>
-            )}
+                  {/* Ashlar horizontal rustication joints — 3 stone courses */}
+                  {[j, 0, -j].map((jy, ji) => (
+                    <mesh key={ji} position={[0, jy, 0.009]}>
+                      <boxGeometry args={[segLen + 0.005, 0.008, 0.006]} />
+                      <meshStandardMaterial color="#B8B0A0" roughness={0.88} />
+                    </mesh>
+                  ))}
+                  {/* Top edge flashing strip */}
+                  <mesh position={[0, sbH / 2 + 0.003, 0.010]}>
+                    <boxGeometry args={[segLen + 0.006, 0.010, 0.012]} />
+                    <meshStandardMaterial color="#3A3E48" roughness={0.22} metalness={0.90} envMapIntensity={1.6} />
+                  </mesh>
+                </group>
+              );
+            })()}
             {/* ── 车库门（garage door）——宽门（≥ 2m）渲染为高精度分节卷帘车库门 ──
                  Modern raised-panel sectional garage door:
                  • 8 narrow horizontal slat panels with 3D raised ridges
@@ -5892,6 +5914,7 @@ export default function FloorPlanBuilding({
           solarPanelCols={exterior.solarPanelCols ?? 5}
           solarPanelRows={exterior.solarPanelRows ?? 3}
           rooftopDeckEnabled={exterior.rooftopDeckEnabled ?? true}
+          ventCount={exterior.roofVentCount ?? 3}
         />
       )}
 
