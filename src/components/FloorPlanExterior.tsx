@@ -7825,23 +7825,37 @@ export default function FloorPlanBuilding({
               const thick     = 0.05;
               const winKey = `window|${fi}|${room}|${wi}`;
               const winOpen = openMap.get(winKey) ?? false;
-              // Casement-style tilt: hinge at the BOTTOM edge, top of pane
-              // swings outward (toward +Z local = away from interior) by 25°.
-              const tilt = winOpen ? 0.45 : 0;
+              // Horizontal sliding window — matches RoomCanvas effect view.
+              // Two half-panes side-by-side. Right pane is fixed at +winLen/4.
+              // Left pane starts at -winLen/4 (closed) and slides to +winLen/4
+              // (open, overlapping the right pane). Half-width panes guarantee
+              // the moving sash never extends past the wall hole.
+              const innerW = wW - border * 2;
+              const innerH = wH - border * 2;
+              const slideX = winOpen ? innerW / 4 : -innerW / 4;
               const handleWinClick = (e: { stopPropagation: () => void }) => {
                 if (!insideBuilding) return;
                 e.stopPropagation();
                 toggleOpen(winKey);
               };
+              const halfGlass = (
+                <meshPhysicalMaterial
+                  color="#A8D4F5" transmission={0.75} roughness={0.05} metalness={0.12}
+                  thickness={0.02} transparent opacity={0.6}
+                />
+              );
               return (
                 <group key={`win-${fi}-${room}-${wi}`} position={[wx, frameCy, wz]} rotation={[0, rotY, 0]}>
-                  {/* 玻璃（浅蓝透明，嵌在墙壁内侧）—— hinge 在下沿，向外倾斜打开 */}
-                  <group position={[0, -(wH - border * 2) / 2, 0]} rotation={[tilt, 0, 0]}>
-                    <mesh position={[0, (wH - border * 2) / 2, 0]} onClick={handleWinClick}>
-                      <boxGeometry args={[wW - border * 2, wH - border * 2, 0.01]} />
-                      <meshPhysicalMaterial color="#A8D4F5" transmission={0.75} roughness={0.05} metalness={0.12} thickness={0.02} transparent opacity={0.6} />
-                    </mesh>
-                  </group>
+                  {/* 右扇（固定） */}
+                  <mesh position={[innerW / 4, 0, 0]} onClick={handleWinClick}>
+                    <boxGeometry args={[innerW / 2, innerH, 0.01]} />
+                    {halfGlass}
+                  </mesh>
+                  {/* 左扇（推拉，winOpen 时水平滑到右扇位置）*/}
+                  <mesh position={[slideX, 0, 0]} onClick={handleWinClick}>
+                    <boxGeometry args={[innerW / 2, innerH, 0.01]} />
+                    {halfGlass}
+                  </mesh>
                   {/* 四边窗框 */}
                   <mesh position={[0, wH / 2 - border / 2, 0]}>
                     <boxGeometry args={[wW, border, thick]} /><meshStandardMaterial color={frameCol} roughness={0.35} />
@@ -7855,9 +7869,9 @@ export default function FloorPlanBuilding({
                   <mesh position={[wW / 2 - border / 2, 0, 0]}>
                     <boxGeometry args={[border, wH, thick]} /><meshStandardMaterial color={frameCol} roughness={0.35} />
                   </mesh>
-                  {/* 中竖分隔条 */}
+                  {/* 中竖分隔条（推拉窗中缝）*/}
                   <mesh>
-                    <boxGeometry args={[0.04, wH - border * 2, thick]} /><meshStandardMaterial color={frameCol} roughness={0.35} />
+                    <boxGeometry args={[0.04, innerH, thick]} /><meshStandardMaterial color={frameCol} roughness={0.35} />
                   </mesh>
                 </group>
               );
