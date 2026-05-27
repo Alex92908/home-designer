@@ -805,13 +805,20 @@ export default function YardPlan() {
       if (ev.key === "Delete" || ev.key === "Backspace") {
         const t = ev.target as HTMLElement;
         if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
-        removeYardItem(selectedId);
+        // selectedId may refer to either a yard item or a yard path. Try
+        // path first (cheaper lookup, less common) then fall through to
+        // the yardItems remove.
+        if (yardPaths.some(p => p.id === selectedId)) {
+          removeYardPath(selectedId);
+        } else {
+          removeYardItem(selectedId);
+        }
         setSelectedId(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedId, removeYardItem, drawMode]);
+  }, [selectedId, removeYardItem, removeYardPath, yardPaths, drawMode]);
 
   const houseW = Math.round((footprint.maxX - footprint.minX) / 100 * 10) / 10;
   const houseD = Math.round((footprint.maxZ - footprint.minZ) / 100 * 10) / 10;
@@ -1604,27 +1611,60 @@ export default function YardPlan() {
               brick:  ["rgba(190,100,70,0.65)",  "rgba(210,120,90,0.30)"],
             };
             const [bodyColor, edgeColor] = matColors[path.material ?? "stone"] ?? matColors.stone;
+            const isSel = selectedId === path.id;
             return (
-              <g key={path.id} style={{ pointerEvents: "none" }}>
+              <g key={path.id}>
+                {/* Selected outline halo — only when this path is selected */}
+                {isSel && (
+                  <polyline points={pts} fill="none"
+                    stroke={SEL_INK} strokeWidth={strokeW + 4}
+                    strokeLinecap="round" strokeLinejoin="round"
+                    opacity={0.55} style={{ pointerEvents: "none" }} />
+                )}
                 {/* Path body */}
                 <polyline points={pts} fill="none"
                   stroke={bodyColor} strokeWidth={strokeW}
-                  strokeLinecap="round" strokeLinejoin="round" />
+                  strokeLinecap="round" strokeLinejoin="round"
+                  style={{ pointerEvents: "none" }} />
                 {/* Path edge dashes */}
                 <polyline points={pts} fill="none"
                   stroke={edgeColor} strokeWidth={strokeW + 1}
                   strokeLinecap="round" strokeLinejoin="round"
-                  strokeDasharray="4 6" />
-                {/* Delete handle on first segment midpoint */}
+                  strokeDasharray="4 6"
+                  style={{ pointerEvents: "none" }} />
+                {/* Invisible-but-fat hit area so the entire path body is
+                    clickable for selection. Without this the only way to
+                    delete a path was the tiny red dot at the first-
+                    segment midpoint — easy to miss, no Delete-key
+                    support. */}
+                <polyline points={pts} fill="none"
+                  stroke="rgba(0,0,0,0)" strokeWidth={Math.max(16, strokeW + 8)}
+                  strokeLinecap="round" strokeLinejoin="round"
+                  style={{ pointerEvents: "stroke", cursor: "pointer" }}
+                  onPointerDown={(e) => { e.stopPropagation(); setSelectedId(path.id); }}
+                  onClick={(e) => e.stopPropagation()} />
+                {/* Delete handle on first segment midpoint — bumped to
+                    r=10 so it's easier to hit; stopPropagation so the
+                    SVG background's deselect handler doesn't race it. */}
                 {(() => {
                   const [ax, az] = path.points[0];
                   const [bx, bz] = path.points[1];
                   const mx = SVG_PX / 2 + (ax + bx) / 2 / CM_PER_PX;
                   const mz = SVG_PX / 2 + (az + bz) / 2 / CM_PER_PX;
                   return (
-                    <circle cx={mx} cy={mz} r={6} fill="rgba(239,68,68,0.7)" stroke="white" strokeWidth={1}
-                      style={{ pointerEvents: "all", cursor: "pointer" }}
-                      onClick={() => removeYardPath(path.id)} />
+                    <g style={{ pointerEvents: "all", cursor: "pointer" }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeYardPath(path.id);
+                        if (isSel) setSelectedId(null);
+                      }}>
+                      <circle cx={mx} cy={mz} r={10}
+                        fill="#EF4444" stroke="white" strokeWidth={1.5} />
+                      <text x={mx} y={mz} textAnchor="middle" dominantBaseline="middle"
+                        fontSize={11} fontWeight="bold" fill="white"
+                        style={{ pointerEvents: "none" }}>✕</text>
+                    </g>
                   );
                 })()}
               </g>
