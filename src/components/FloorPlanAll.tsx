@@ -1801,8 +1801,6 @@ export default function FloorPlanAll() {
               <text textAnchor="middle" y={24}  fontSize={16} fill="#9CA3AF" fontFamily="system-ui">S</text>
               <text textAnchor="start"  x={9}   y={6} fontSize={16} fill="#9CA3AF" fontFamily="system-ui">E</text>
               <text textAnchor="end"    x={-9}  y={6} fontSize={16} fill="#9CA3AF" fontFamily="system-ui">W</text>
-              <polygon points="0,-26 5,-8 0,-13 -5,-8" fill="#374151" />
-              <polygon points="0,26 5,8 0,13 -5,8"    fill="#9CA3AF" />
             </g>
 
             {/* Scale ruler */}

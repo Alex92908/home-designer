@@ -1548,6 +1548,34 @@ function CameraFit() {
   );
 }
 
+/**
+ * Reads camera azimuth each frame and reports it to the parent so the
+ * HTML compass overlay (outside <Canvas>) can rotate in sync with the
+ * orbit. Throttled to 1° changes so it doesn't flood React with setState
+ * calls during continuous camera motion.
+ *
+ * Math: camera.getWorldDirection() gives the look vector in world space.
+ * On the XZ plane the look direction is (fx, fz). World-N is −Z. The
+ * azimuth of the look vector measured from −Z (CCW positive seen from
+ * above) is atan2(fx, −fz). To keep N at the top of the compass dial,
+ * rotate the SVG by −azimuth in CSS (CSS rotate(α) is CW for α > 0).
+ */
+function CompassYawTracker({ onChange }: { onChange: (deg: number) => void }) {
+  const tmp = useRef(new THREE.Vector3());
+  const last = useRef<number>(NaN);
+  useFrame(({ camera }) => {
+    camera.getWorldDirection(tmp.current);
+    const az = Math.atan2(tmp.current.x, -tmp.current.z); // 0 when looking N
+    const deg = -az * 180 / Math.PI;
+    if (!isFinite(deg)) return;
+    if (Math.abs(deg - last.current) > 0.8) {
+      last.current = deg;
+      onChange(deg);
+    }
+  });
+  return null;
+}
+
 export interface GlobalCanvasProps {
   /** External floor-visibility array.  When provided, the component is
    *  "controlled" — the parent owns the state and receives toggle events. */
@@ -1590,6 +1618,11 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
   }, [hasRooftop]);
   const [showStairs, setShowStairs] = useState(true);
   const [stairPos, setStairPos] = useState<{ x: number; z: number } | null>(null);
+  // Compass yaw: degrees CW the compass SVG should rotate so world-N
+  // (= world −Z) stays at the top of the dial as the OrbitControls
+  // camera orbits around the building. Updated each frame from inside
+  // the Canvas by <CompassYawTracker/>.
+  const [compassDeg, setCompassDeg] = useState(0);
 
   if (enabledRooms.length === 0) {
     return (
@@ -1622,6 +1655,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
         />
         <CameraFit />
         <ShaderPrecompiler />
+        <CompassYawTracker onChange={setCompassDeg} />
       </Canvas>
 
       {/* ── Hint bar ── */}
@@ -1630,16 +1664,14 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
         <span>{t.global3dHint}</span>
       </div>
 
-      {/* ── Compass — static, N=world -Z (matches FloorPlanAll + YardPlan) ── */}
+      {/* ── Compass — rotates with camera so N (world -Z) stays consistent ── */}
       <div className="absolute pointer-events-none" style={{ top: 60, right: 130, width: 60, height: 60 }}>
-        <svg viewBox="-32 -32 64 64" width="60" height="60">
+        <svg viewBox="-32 -32 64 64" width="60" height="60" style={{ transform: `rotate(${compassDeg}deg)`, transition: "transform 60ms linear" }}>
           <circle r={28} fill="white" fillOpacity={0.92} stroke="#D1D5DB" strokeWidth={1.5} />
           <text textAnchor="middle" y={-11} fontSize={15} fontWeight="bold" fill="#1F2937" fontFamily="system-ui">N</text>
           <text textAnchor="middle" y={20} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">S</text>
           <text textAnchor="start"  x={8}  y={5} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">E</text>
           <text textAnchor="end"    x={-8} y={5} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">W</text>
-          <polygon points="0,-21 4,-7 0,-10 -4,-7" fill="#374151" />
-          <polygon points="0,21 4,7 0,10 -4,7" fill="#9CA3AF" />
         </svg>
       </div>
 

@@ -393,6 +393,32 @@ function ShadowFreezeOnOrbit({ isInteractingRef }: { isInteractingRef: React.Ref
  * interacting yet); pays back on every subsequent first-render of a material
  * variant. Runs once per Canvas lifetime.
  */
+/**
+ * Reads camera azimuth each frame and reports it to the parent so the
+ * HTML compass overlay (outside <Canvas>) rotates in sync. Throttled
+ * to 1° changes so continuous camera motion doesn't flood setState.
+ *
+ * Math: getWorldDirection gives the look vector. On the XZ plane the
+ * azimuth measured from world −Z (= N) is atan2(fx, −fz). CSS rotate
+ * is CW for positive values, so apply −azimuth to keep N at the top
+ * of the dial regardless of which way the camera is facing.
+ */
+function CompassYawTracker({ onChange }: { onChange: (deg: number) => void }) {
+  const tmp = useRef(new THREE.Vector3());
+  const last = useRef<number>(NaN);
+  useFrame(({ camera }) => {
+    camera.getWorldDirection(tmp.current);
+    const az = Math.atan2(tmp.current.x, -tmp.current.z);
+    const deg = -az * 180 / Math.PI;
+    if (!isFinite(deg)) return;
+    if (Math.abs(deg - last.current) > 0.8) {
+      last.current = deg;
+      onChange(deg);
+    }
+  });
+  return null;
+}
+
 function ShaderPrecompiler() {
   const { gl, scene, camera, invalidate } = useThree();
   useEffect(() => {
@@ -6418,6 +6444,10 @@ export default function HouseCanvas() {
   // "你不要穿墙过" preference; toggle still available for when the user
   // is wedged in a corner and wants to escape.
   const [walkNoClip, setWalkNoClip] = useState(false);
+  // Compass yaw — degrees CW for the HTML compass overlay. Updated each
+  // frame by <CompassYawTracker/> inside the Canvas so the dial spins
+  // with the orbit / walkthrough camera and N stays at world −Z.
+  const [compassDeg, setCompassDeg] = useState(0);
   // Sun analysis — read from global store so AiRenderModal + YardPlan share the value
   const sunHour     = useDesignerStore(s => s.sunHour);
   const setSunHour  = useDesignerStore(s => s.setSunHour);
@@ -6445,16 +6475,14 @@ export default function HouseCanvas() {
 
   return (
     <div className="w-full h-full relative">
-      {/* ── Compass — static, N=world -Z (matches FloorPlanAll + YardPlan + GlobalCanvas) ── */}
+      {/* ── Compass — rotates with camera so N (world -Z) stays consistent ── */}
       <div className="absolute pointer-events-none z-30" style={{ top: 60, right: 130, width: 60, height: 60 }}>
-        <svg viewBox="-32 -32 64 64" width="60" height="60">
+        <svg viewBox="-32 -32 64 64" width="60" height="60" style={{ transform: `rotate(${compassDeg}deg)`, transition: "transform 60ms linear" }}>
           <circle r={28} fill="white" fillOpacity={0.92} stroke="#D1D5DB" strokeWidth={1.5} />
           <text textAnchor="middle" y={-11} fontSize={15} fontWeight="bold" fill="#1F2937" fontFamily="system-ui">N</text>
           <text textAnchor="middle" y={20} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">S</text>
           <text textAnchor="start"  x={8}  y={5} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">E</text>
           <text textAnchor="end"    x={-8} y={5} fontSize={12} fill="#9CA3AF" fontFamily="system-ui">W</text>
-          <polygon points="0,-21 4,-7 0,-10 -4,-7" fill="#374151" />
-          <polygon points="0,21 4,7 0,10 -4,7" fill="#9CA3AF" />
         </svg>
       </div>
       {/* Idle-time prefetch of indoor furniture GLTFs so walkthrough entry
@@ -7025,6 +7053,7 @@ export default function HouseCanvas() {
             FPS 高 → 升 dpr 到 2（清晰），FPS 低 → 降到 1（保流畅）。
             flipflops=3 防止 ping-pong 抖动。*/}
         <AdaptiveDpr shadowSizeRef={shadowSizeRef} />
+        <CompassYawTracker onChange={setCompassDeg} />
       </Canvas>
     </div>
   );

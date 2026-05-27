@@ -1299,8 +1299,6 @@ export default function YardPlan() {
             <text textAnchor="middle" y={20}  fontSize={12} fill="#9CA3AF" fontFamily="system-ui">S</text>
             <text textAnchor="start"  x={8}   y={5}  fontSize={12} fill="#9CA3AF" fontFamily="system-ui">E</text>
             <text textAnchor="end"    x={-8}  y={5}  fontSize={12} fill="#9CA3AF" fontFamily="system-ui">W</text>
-            <polygon points="0,-21 4,-7 0,-10 -4,-7" fill="#374151" />
-            <polygon points="0,21 4,7 0,10 -4,7"    fill="#9CA3AF" />
           </g>
           {/* Scale bar */}
           <g transform={`translate(20, ${SVG_PX - 24})`} style={{ pointerEvents: "none" }}>
