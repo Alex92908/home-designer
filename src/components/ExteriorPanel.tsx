@@ -940,6 +940,13 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ roomCeilingColor: e.target.value })}
                 className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
             </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-gray-600">走廊顶板色</span>
+              <input type="color"
+                value={exterior.hallwayCeilingColor ?? "#E8E4DC"}
+                onChange={e => setExterior({ hallwayCeilingColor: e.target.value })}
+                className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+            </div>
             <label className="flex items-center gap-2 text-[11px] cursor-pointer">
               <input
                 type="checkbox"
@@ -1180,6 +1187,26 @@ export default function ExteriorPanel() {
                 <span className="text-gray-700">女儿墙顶玻璃护栏</span>
               </label>
             )}
+            {/* Roof material colors */}
+            <div className="border-t border-gray-100 pt-2 mt-1 flex flex-col gap-1.5">
+              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">材质颜色</div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-600">屋面板色</span>
+                <input type="color"
+                  value={exterior.roofSlabColor ?? "#F0EDE8"}
+                  onChange={e => setExterior({ roofSlabColor: e.target.value })}
+                  className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+              </div>
+              {(exterior.parapetHeight ?? 0.30) > 0.01 && (
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-gray-600">女儿墙色</span>
+                  <input type="color"
+                    value={exterior.parapetColor ?? "#E8E4DE"}
+                    onChange={e => setExterior({ parapetColor: e.target.value })}
+                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

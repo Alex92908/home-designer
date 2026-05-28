@@ -387,6 +387,17 @@ export interface ExteriorSettings {
   /** Interior ceiling paint color. Hex string. Default '#F5F2EE'
    *  (warm off-white). Try '#1E1E22' for a moody dark ceiling. */
   roomCeilingColor?: string;
+  /** Flat-roof slab + eave color (the top deck visible from above /
+   *  from the eaves below). Hex. Default '#F0EDE8' (warm off-white).
+   *  Try '#3A3E48' for a charcoal modern look. */
+  roofSlabColor?: string;
+  /** Parapet wall color (the low wall around the roof terrace).
+   *  Hex. Default '#E8E4DE'. Often matches the facade but can be
+   *  set independently for contrast. */
+  parapetColor?: string;
+  /** Hallway ceiling slat color (the thin top board that visually
+   *  caps the corridor). Hex. Default '#E8E4DC'. */
+  hallwayCeilingColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

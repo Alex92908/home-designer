@@ -857,6 +857,8 @@ function FlatRoof({
   overhangSouthExtra = 0.30,
   parapetH = 0.30,
   parapetGlass = true,
+  slabColor = "#F0EDE8",
+  parapetColorOverride,
 }: {
   W: number; D: number; roofY: number;
   nightGlow?: number; hasRooftop?: boolean;
@@ -869,13 +871,15 @@ function FlatRoof({
   overhangSouthExtra?: number;
   parapetH?: number;
   parapetGlass?: boolean;
+  slabColor?: string;
+  parapetColorOverride?: string;
 }) {
   const OV   = Math.max(0, Math.min(1.5, overhang));
   const OV_S = OV + Math.max(0, Math.min(1.5, overhangSouthExtra));
   const PH   = Math.max(0, Math.min(1.0, parapetH));   // 女儿墙高度 — 0 隐藏
   const PT   = 0.12;   // 女儿墙厚度（厚度不暴露，避免太薄露馅）
-  const roofColor    = "#F0EDE8";
-  const parapetColor = "#E8E4DE";
+  const roofColor    = slabColor;
+  const parapetColor = parapetColorOverride ?? "#E8E4DE";
   const roofSlab     = roofY + 0.05;  // 屋面板中心Y
   return (
     <group>
@@ -5993,6 +5997,8 @@ export default function FloorPlanBuilding({
           overhangSouthExtra={exterior.roofOverhangSouthExtra ?? 0.30}
           parapetH={exterior.parapetHeight ?? 0.30}
           parapetGlass={exterior.parapetGlassEnabled ?? true}
+          slabColor={exterior.roofSlabColor ?? "#F0EDE8"}
+          parapetColorOverride={exterior.parapetColor}
         />
       )}
 
@@ -7674,7 +7680,7 @@ export default function FloorPlanBuilding({
             {isHallway && (
               <mesh position={[cx, yBase + FLOOR_H - 0.04, cz]} raycast={() => null}>
                 <boxGeometry args={[rW, 0.08, rD]} />
-                <meshStandardMaterial color="#E8E4DC" roughness={0.88} side={THREE.DoubleSide} />
+                <meshStandardMaterial color={exterior.hallwayCeilingColor ?? "#E8E4DC"} roughness={0.88} side={THREE.DoubleSide} />
               </mesh>
             )}
             {/* 地板：楼梯间上层（fi>0）不渲染地板，保持楼梯开口畅通 */}
