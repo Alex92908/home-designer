@@ -890,6 +890,8 @@ function FlatRoof({
   slabColor = "#F0EDE8",
   parapetColorOverride,
   ventColor = "#606468",
+  slabThicknessCm = 10,
+  parapetThicknessCm: parapetTCm = 12,
 }: {
   W: number; D: number; roofY: number;
   nightGlow?: number; hasRooftop?: boolean;
@@ -905,6 +907,10 @@ function FlatRoof({
   slabColor?: string;
   parapetColorOverride?: string;
   ventColor?: string;
+  /** Slab thickness (cm). Default 10. */
+  slabThicknessCm?: number;
+  /** Parapet thickness (cm). Default 12. */
+  parapetThicknessCm?: number;
 }) {
   // Cap cowl auto-darkens ~25 % below stack color for shadow detail.
   const ventCapColor = (() => {
@@ -919,15 +925,16 @@ function FlatRoof({
   const OV   = Math.max(0, Math.min(1.5, overhang));
   const OV_S = OV + Math.max(0, Math.min(1.5, overhangSouthExtra));
   const PH   = Math.max(0, Math.min(1.0, parapetH));   // 女儿墙高度 — 0 隐藏
-  const PT   = 0.12;   // 女儿墙厚度（厚度不暴露，避免太薄露馅）
+  const PT   = Math.max(0.06, Math.min(0.25, parapetTCm / 100));   // 女儿墙厚度（可配，6–25 cm）
+  const ST   = Math.max(0.05, Math.min(0.30, slabThicknessCm / 100)); // 屋面板厚度
   const roofColor    = slabColor;
   const parapetColor = parapetColorOverride ?? "#E8E4DE";
   const roofSlab     = roofY + 0.05;  // 屋面板中心Y
   return (
     <group>
-      {/* 屋面板 */}
+      {/* 屋面板 — 厚度由 ExteriorSettings.roofSlabThicknessCm 控制 */}
       <mesh position={[0, roofSlab, -(OV_S - OV) / 2]} castShadow receiveShadow>
-        <boxGeometry args={[W + OV * 2, 0.10, D + OV_S + OV]} />
+        <boxGeometry args={[W + OV * 2, ST, D + OV_S + OV]} />
         <meshStandardMaterial color={roofColor} roughness={0.88} />
       </mesh>
       {/* 女儿墙 — 四边（仅 PH > 0 时渲染）*/}
@@ -6047,6 +6054,8 @@ export default function FloorPlanBuilding({
           slabColor={exterior.roofSlabColor ?? "#F0EDE8"}
           parapetColorOverride={exterior.parapetColor}
           ventColor={exterior.roofVentColor ?? "#606468"}
+          slabThicknessCm={exterior.roofSlabThicknessCm ?? 10}
+          parapetThicknessCm={exterior.parapetThicknessCm ?? 12}
         />
       )}
 

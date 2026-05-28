@@ -1267,6 +1267,27 @@ export default function ExteriorPanel() {
                 <span className="text-gray-700">女儿墙顶玻璃护栏</span>
               </label>
             )}
+            {/* Slab + parapet thickness */}
+            <div className="flex items-center justify-between text-[10px] pt-1">
+              <span className="text-gray-500">屋面板厚度</span>
+              <span className="font-mono text-gray-700">{exterior.roofSlabThicknessCm ?? 10} cm</span>
+            </div>
+            <input type="range" min={5} max={30} step={1}
+              value={exterior.roofSlabThicknessCm ?? 10}
+              onChange={e => setExterior({ roofSlabThicknessCm: parseInt(e.target.value, 10) })}
+              className="w-full accent-blue-500" />
+            {(exterior.parapetHeight ?? 0.30) > 0.01 && (
+              <>
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-gray-500">女儿墙厚度</span>
+                  <span className="font-mono text-gray-700">{exterior.parapetThicknessCm ?? 12} cm</span>
+                </div>
+                <input type="range" min={6} max={25} step={1}
+                  value={exterior.parapetThicknessCm ?? 12}
+                  onChange={e => setExterior({ parapetThicknessCm: parseInt(e.target.value, 10) })}
+                  className="w-full accent-blue-500" />
+              </>
+            )}
             {/* Roof material colors */}
             <div className="border-t border-gray-100 pt-2 mt-1 flex flex-col gap-1.5">
               <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">材质颜色</div>

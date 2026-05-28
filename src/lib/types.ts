@@ -428,6 +428,12 @@ export interface ExteriorSettings {
   skirtingThicknessCm?: number;
   /** Hallway ceiling cap thickness in cm. Default 8. Range 3–20. */
   hallwayCeilingThicknessCm?: number;
+  /** Flat-roof slab thickness in cm. Default 10. Range 5–30. Higher
+   *  reads as a beefier cantilever; lower for a thin minimal eave. */
+  roofSlabThicknessCm?: number;
+  /** Parapet wall thickness in cm. Default 12. Range 6–25. Thicker
+   *  parapets read more solid / masonry; thinner reads modern metal. */
+  parapetThicknessCm?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
