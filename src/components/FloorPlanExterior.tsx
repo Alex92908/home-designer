@@ -607,9 +607,10 @@ function ConcreteFacade({
 
   return (
     <group>
-      {/* ── 底板（整面）── */}
-      <mesh>
-        <boxGeometry args={[width, height, 0.08]} />
+      {/* ── 底板（整面）── 12 cm 厚，跟漫游模式 WALL_T 一致，让外观图墙体在
+           转角处显出真实墙厚（不像纸片）。 */}
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[width, height, 0.12]} />
         <meshStandardMaterial color={baseColor} roughness={0.78} metalness={0.02} envMapIntensity={0.35} />
       </mesh>
       {/* ── 竖向分板阴影面 —— InstancedMesh，颜色交替 (even/odd 拆 2 个) ──
@@ -5497,6 +5498,20 @@ export default function FloorPlanBuilding({
         }
 
         // ── 混凝土（含窗） ──
+        // Resolution order for the facade base color (per user request — the
+        // exterior should reflect what was set in 效果图 per-room material):
+        //   1. wallBaseColor (an explicit building-wide override the user set
+        //      via ExteriorPanel, if any) — highest priority because it's the
+        //      "I want this exact color" knob.
+        //   2. The primary room's wall material color, looked up from
+        //      fp.rooms[room].materials.wall.color — i.e. whatever the user
+        //      configured in the per-room effect-view material picker.
+        //   3. ROOM_DEFS[room].defaultWallColor — the room-type baseline.
+        //   4. The original hardcoded ConcreteFacade default.
+        const blockFp = floorPlans[floorIndex];
+        const roomWallColor = blockFp?.rooms?.[block.primaryRoom]?.materials?.wall?.color
+          ?? ROOM_DEFS[block.primaryRoom]?.defaultWallColor;
+        const facadeBase = exterior.wallBaseColor ?? roomWallColor ?? "#E6E0D8";
         return (
           <group key={`co-${bi}`} position={[px, yMid, pz]} rotation={rot}>
             <ConcreteFacade
@@ -5519,7 +5534,7 @@ export default function FloorPlanBuilding({
               flowerBoxColor={exterior.windowFlowerBoxColor ?? "#2A2C34"}
               flowerFoliageColor={exterior.flowerFoliageColor ?? "#3E7428"}
               flowerBloomColor={exterior.flowerBloomColor ?? "#E83040"}
-              baseColor={exterior.wallBaseColor ?? "#E6E0D8"}
+              baseColor={facadeBase}
               grooveColor={exterior.wallGrooveColor ?? "#C0BAB2"}
             />
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部。
