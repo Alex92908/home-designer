@@ -896,6 +896,9 @@ function FlatRoof({
   scupperColor = "#5A6070",
   greenRoofEnabled = true,
   greenRoofSubstrateColor = "#3A6420",
+  greenRoofBoardwalkColor = "#8B6240",
+  skylightEnabled = true,
+  hvacCount = 2,
 }: {
   W: number; D: number; roofY: number;
   nightGlow?: number; hasRooftop?: boolean;
@@ -923,6 +926,12 @@ function FlatRoof({
   greenRoofEnabled?: boolean;
   /** Substrate (sedum carpet) color. Default '#3A6420'. */
   greenRoofSubstrateColor?: string;
+  /** Boardwalk plank color. Default '#8B6240'. */
+  greenRoofBoardwalkColor?: string;
+  /** Render the south skylight. Default true. */
+  skylightEnabled?: boolean;
+  /** Rooftop HVAC condenser count. Default 2 (range 0–4). */
+  hvacCount?: number;
 }) {
   // Cap cowl auto-darkens ~25 % below stack color for shadow detail.
   const ventCapColor = (() => {
@@ -1207,26 +1216,39 @@ function FlatRoof({
               return (
                 <mesh key={bi} position={[0, 0.115, bz]} castShadow>
                   <boxGeometry args={[grW * 0.70, 0.028, 0.14]} />
-                  <meshStandardMaterial color="#8B6240" roughness={0.80} metalness={0.05}
+                  <meshStandardMaterial color={greenRoofBoardwalkColor} roughness={0.80} metalness={0.05}
                     emissive="#4A2C10" emissiveIntensity={0.04} />
                 </mesh>
               );
             })}
-            {/* Boardwalk side stringers */}
-            {([-grW * 0.355, grW * 0.355] as number[]).map((sx, si) => (
-              <mesh key={si} position={[sx, 0.112, 0]} castShadow>
-                <boxGeometry args={[0.040, 0.022, grD * 0.70]} />
-                <meshStandardMaterial color="#6A4828" roughness={0.75} metalness={0.06} />
-              </mesh>
-            ))}
+            {/* Boardwalk side stringers — auto-darkens 22 % below the
+                user's boardwalk color (NOT substrate, the lookup needs to
+                follow the wood tone). */}
+            {(() => {
+              const bm = /^#([0-9a-f]{6})$/i.exec(greenRoofBoardwalkColor);
+              const stringerColor = bm ? (() => {
+                const n = parseInt(bm[1], 16);
+                const r = Math.max(0, Math.round(((n >> 16) & 0xff) * 0.78));
+                const g = Math.max(0, Math.round(((n >>  8) & 0xff) * 0.78));
+                const b = Math.max(0, Math.round(( n        & 0xff) * 0.78));
+                return `#${[r, g, b].map(v => v.toString(16).padStart(2, "0")).join("")}`;
+              })() : "#6A4828";
+              return ([-grW * 0.355, grW * 0.355] as number[]).map((sx, si) => (
+                <mesh key={si} position={[sx, 0.112, 0]} castShadow>
+                  <boxGeometry args={[0.040, 0.022, grD * 0.70]} />
+                  <meshStandardMaterial color={stringerColor} roughness={0.75} metalness={0.06} />
+                </mesh>
+              ));
+            })()}
 
             {/* rooftop planters + grasses removed */}
           </group>
         );
       })()}
 
-      {/* ── 线性天窗（linear skylight）— 南向采光，钢框 + 夹胶玻璃 ── */}
-      {(() => {
+      {/* ── 线性天窗（linear skylight）— 南向采光，钢框 + 夹胶玻璃 ──
+           Gated by ExteriorSettings.rooftopSkylightEnabled. */}
+      {skylightEnabled && (() => {
         const slW = Math.min(W * 0.45, 5.0);  // skylight width
         const slD = 0.90;                       // skylight depth (north-south)
         const slY = roofSlab + 0.055;          // sits on roof slab
@@ -1262,8 +1284,13 @@ function FlatRoof({
         );
       })()}
 
-      {/* ── HVAC 冷凝器组（2 台并排，带风扇格栅）── */}
-      {([[-W * 0.30, -D * 0.18], [-W * 0.16, -D * 0.18]] as [number,number][]).map(([hvx, hvz], hi) => (
+      {/* ── HVAC 冷凝器组（数量由 ExteriorSettings.rooftopHvacCount 控制）── */}
+      {([
+        [-W * 0.30, -D * 0.18],
+        [-W * 0.16, -D * 0.18],
+        [-W * 0.02, -D * 0.18],
+        [ W * 0.12, -D * 0.18],
+      ] as [number,number][]).slice(0, Math.max(0, Math.min(4, hvacCount))).map(([hvx, hvz], hi) => (
         <group key={`hv-${hi}`} position={[hvx, roofSlab + 0.04, hvz]}>
           {/* 机体箱 — 浅灰色蒙皮，略带金属感 */}
           <mesh castShadow>
@@ -6103,6 +6130,9 @@ export default function FloorPlanBuilding({
           scupperColor={exterior.roofScupperColor ?? "#5A6070"}
           greenRoofEnabled={exterior.rooftopGreenRoofEnabled ?? true}
           greenRoofSubstrateColor={exterior.greenRoofSubstrateColor ?? "#3A6420"}
+          greenRoofBoardwalkColor={exterior.greenRoofBoardwalkColor ?? "#8B6240"}
+          skylightEnabled={exterior.rooftopSkylightEnabled ?? true}
+          hvacCount={exterior.rooftopHvacCount ?? 2}
         />
       )}
 

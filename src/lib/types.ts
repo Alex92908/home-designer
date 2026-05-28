@@ -447,6 +447,14 @@ export interface ExteriorSettings {
   /** Green-roof sedum substrate color. Hex. Default '#3A6420'. Lighter
    *  surface patches auto-vary around this base. */
   greenRoofSubstrateColor?: string;
+  /** Green-roof boardwalk plank color. Hex. Default '#8B6240'
+   *  (warm teak). Side stringers auto-darken below this. */
+  greenRoofBoardwalkColor?: string;
+  /** Linear south-facing rooftop skylight. Default true. */
+  rooftopSkylightEnabled?: boolean;
+  /** Rooftop HVAC condenser unit count. Default 2. Range 0–4.
+   *  0 hides the entire HVAC cluster. */
+  rooftopHvacCount?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

@@ -1232,14 +1232,42 @@ export default function ExteriorPanel() {
               <span className="text-gray-700">屋顶绿化区（sedum + 木栈道）</span>
             </label>
             {(exterior.rooftopGreenRoofEnabled ?? true) && (
-              <div className="pl-5 flex items-center justify-between text-[11px]">
-                <span className="text-gray-600">基质色</span>
-                <input type="color"
-                  value={exterior.greenRoofSubstrateColor ?? "#3A6420"}
-                  onChange={e => setExterior({ greenRoofSubstrateColor: e.target.value })}
-                  className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+              <div className="pl-5 flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-gray-600">基质色</span>
+                  <input type="color"
+                    value={exterior.greenRoofSubstrateColor ?? "#3A6420"}
+                    onChange={e => setExterior({ greenRoofSubstrateColor: e.target.value })}
+                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-gray-600">木栈道色</span>
+                  <input type="color"
+                    value={exterior.greenRoofBoardwalkColor ?? "#8B6240"}
+                    onChange={e => setExterior({ greenRoofBoardwalkColor: e.target.value })}
+                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+                </div>
               </div>
             )}
+            {/* Skylight toggle */}
+            <label className="flex items-center gap-2 text-[11px] cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={exterior.rooftopSkylightEnabled ?? true}
+                onChange={e => setExterior({ rooftopSkylightEnabled: e.target.checked })}
+                className="accent-blue-500"
+              />
+              <span className="text-gray-700">南向线性天窗</span>
+            </label>
+            {/* HVAC count */}
+            <div className="flex items-center justify-between text-[10px] pt-1">
+              <span className="text-gray-500">空调外机</span>
+              <span className="font-mono text-gray-700">{exterior.rooftopHvacCount ?? 2} 台</span>
+            </div>
+            <input type="range" min={0} max={4} step={1}
+              value={exterior.rooftopHvacCount ?? 2}
+              onChange={e => setExterior({ rooftopHvacCount: parseInt(e.target.value, 10) })}
+              className="w-full accent-blue-500" />
             {/* Vent count */}
             <div className="flex items-center justify-between text-[10px] pt-1">
               <span className="text-gray-500">通风管道</span>
