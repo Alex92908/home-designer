@@ -441,6 +441,12 @@ export interface ExteriorSettings {
   /** Scupper metal color. Hex. Default '#5A6070' (galvanised steel).
    *  Drip-lip auto-darkens ~20 % below this. */
   roofScupperColor?: string;
+  /** Intensive green-roof zone (sedum carpet + boardwalk + planters).
+   *  Default true. Disable for projects that want a bare technical roof. */
+  rooftopGreenRoofEnabled?: boolean;
+  /** Green-roof sedum substrate color. Hex. Default '#3A6420'. Lighter
+   *  surface patches auto-vary around this base. */
+  greenRoofSubstrateColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

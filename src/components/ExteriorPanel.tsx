@@ -1221,6 +1221,25 @@ export default function ExteriorPanel() {
             <div className="text-[9px] text-gray-400 pl-5 -mt-1">
               （躺椅 / 餐桌 / 凉亭 / 浴缸 / BBQ / 浅池 / 吧台 / 直升机坪）
             </div>
+            {/* Green roof toggle */}
+            <label className="flex items-center gap-2 text-[11px] cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={exterior.rooftopGreenRoofEnabled ?? true}
+                onChange={e => setExterior({ rooftopGreenRoofEnabled: e.target.checked })}
+                className="accent-blue-500"
+              />
+              <span className="text-gray-700">屋顶绿化区（sedum + 木栈道）</span>
+            </label>
+            {(exterior.rooftopGreenRoofEnabled ?? true) && (
+              <div className="pl-5 flex items-center justify-between text-[11px]">
+                <span className="text-gray-600">基质色</span>
+                <input type="color"
+                  value={exterior.greenRoofSubstrateColor ?? "#3A6420"}
+                  onChange={e => setExterior({ greenRoofSubstrateColor: e.target.value })}
+                  className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+              </div>
+            )}
             {/* Vent count */}
             <div className="flex items-center justify-between text-[10px] pt-1">
               <span className="text-gray-500">通风管道</span>

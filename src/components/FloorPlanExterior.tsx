@@ -894,6 +894,8 @@ function FlatRoof({
   parapetThicknessCm: parapetTCm = 12,
   scupperCount = 2,
   scupperColor = "#5A6070",
+  greenRoofEnabled = true,
+  greenRoofSubstrateColor = "#3A6420",
 }: {
   W: number; D: number; roofY: number;
   nightGlow?: number; hasRooftop?: boolean;
@@ -917,6 +919,10 @@ function FlatRoof({
   scupperCount?: number;
   /** Scupper metal color. Default '#5A6070'. */
   scupperColor?: string;
+  /** Show green-roof zone (sedum + boardwalk + planters). Default true. */
+  greenRoofEnabled?: boolean;
+  /** Substrate (sedum carpet) color. Default '#3A6420'. */
+  greenRoofSubstrateColor?: string;
 }) {
   // Cap cowl auto-darkens ~25 % below stack color for shadow detail.
   const ventCapColor = (() => {
@@ -1155,21 +1161,34 @@ function FlatRoof({
 
       {/* ── 屋顶绿化区（intensive green roof zone + boardwalk）──
            North-west quadrant of roof: sedum/grass carpet, mixed ornamental
-           plants, wooden boardwalk path, and planters. */}
-      {(() => {
+           plants, wooden boardwalk path, and planters. Whole block now
+           gated by ExteriorSettings.rooftopGreenRoofEnabled. */}
+      {greenRoofEnabled && (() => {
         const grX   = -W * 0.18;   // centre of green zone (west of skylight)
         const grZ   = -D * 0.14;   // north half (current convention: north = -Z)
         const grW   = Math.min(W * 0.42, 5.50);
         const grD   = Math.min(D * 0.38, 4.20);
         const grY   = roofSlab + 0.05;
+        // Surface-patch colors auto-derived from the user's substrate base.
+        const sm = /^#([0-9a-f]{6})$/i.exec(greenRoofSubstrateColor);
+        const shiftedColor = (factor: number): string => {
+          if (!sm) return greenRoofSubstrateColor;
+          const n = parseInt(sm[1], 16);
+          const r = Math.max(0, Math.min(255, Math.round(((n >> 16) & 0xff) * factor)));
+          const g = Math.max(0, Math.min(255, Math.round(((n >>  8) & 0xff) * factor)));
+          const b = Math.max(0, Math.min(255, Math.round(( n        & 0xff) * factor)));
+          return `#${[r, g, b].map(v => v.toString(16).padStart(2, "0")).join("")}`;
+        };
+        const patchLight = shiftedColor(1.20);
+        const patchDark  = shiftedColor(0.75);
         return (
           <group position={[grX, grY, grZ]}>
             {/* ── Green substrate (sedum carpet) ── */}
             <mesh position={[0, 0.045, 0]} receiveShadow>
               <boxGeometry args={[grW, 0.090, grD]} />
-              <meshStandardMaterial color="#3A6420" roughness={0.98} metalness={0.0} />
+              <meshStandardMaterial color={greenRoofSubstrateColor} roughness={0.98} metalness={0.0} />
             </mesh>
-            {/* Surface texture — lighter green patches */}
+            {/* Surface texture — lighter/darker patches derived from substrate */}
             {Array.from({ length: 16 }, (_, gi) => {
               const gHash = (gi * 17 + 5) % 13;
               const gx = -grW / 2 + 0.30 + (gi % 4) * (grW - 0.60) / 3;
@@ -1177,7 +1196,7 @@ function FlatRoof({
               return (
                 <mesh key={gi} position={[gx + (gHash - 6) * 0.08, 0.092, gz + (gHash % 4 - 2) * 0.08]}>
                   <sphereGeometry args={[0.28 + (gHash % 3) * 0.07, 5, 3]} />
-                  <meshStandardMaterial color={gHash % 2 === 0 ? "#4A7828" : "#2E5A14"} roughness={0.98} />
+                  <meshStandardMaterial color={gHash % 2 === 0 ? patchLight : patchDark} roughness={0.98} />
                 </mesh>
               );
             })}
@@ -6082,6 +6101,8 @@ export default function FloorPlanBuilding({
           parapetThicknessCm={exterior.parapetThicknessCm ?? 12}
           scupperCount={exterior.roofScupperCount ?? 2}
           scupperColor={exterior.roofScupperColor ?? "#5A6070"}
+          greenRoofEnabled={exterior.rooftopGreenRoofEnabled ?? true}
+          greenRoofSubstrateColor={exterior.greenRoofSubstrateColor ?? "#3A6420"}
         />
       )}
 
