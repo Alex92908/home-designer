@@ -378,6 +378,15 @@ export interface ExteriorSettings {
   /** Window lintel (the cast-concrete band above each window) color.
    *  Hex string. Default '#C0BCB4' (off-white concrete). */
   windowLintelColor?: string;
+  /** Window jamb (side reveals — the depth recess around each window
+   *  opening) color. Hex string. Default '#BCBAB2'. */
+  windowJambColor?: string;
+  /** Window jamb depth in cm. Default 9. Range 4–20. Controls how
+   *  deeply the reveal punches back from the wall face. */
+  windowJambDepthCm?: number;
+  /** Interior ceiling paint color. Hex string. Default '#F5F2EE'
+   *  (warm off-white). Try '#1E1E22' for a moody dark ceiling. */
+  roomCeilingColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

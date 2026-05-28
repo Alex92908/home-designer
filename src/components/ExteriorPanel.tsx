@@ -857,6 +857,21 @@ export default function ExteriorPanel() {
                   onChange={e => setExterior({ windowLintelColor: e.target.value })}
                   className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
               </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-600">侧凹色</span>
+                <input type="color"
+                  value={exterior.windowJambColor ?? "#BCBAB2"}
+                  onChange={e => setExterior({ windowJambColor: e.target.value })}
+                  className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+              </div>
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-gray-500">侧凹深度</span>
+                <span className="font-mono text-gray-700">{exterior.windowJambDepthCm ?? 9} cm</span>
+              </div>
+              <input type="range" min={4} max={20} step={1}
+                value={exterior.windowJambDepthCm ?? 9}
+                onChange={e => setExterior({ windowJambDepthCm: parseInt(e.target.value, 10) })}
+                className="w-full accent-blue-500" />
             </div>
           </div>
         </div>
@@ -918,6 +933,13 @@ export default function ExteriorPanel() {
         <div className="px-3 pt-4">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">室内 (INTERIOR · 仅漫游)</div>
           <div className="px-1 flex flex-col gap-2">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-gray-600">天花板色</span>
+              <input type="color"
+                value={exterior.roomCeilingColor ?? "#F5F2EE"}
+                onChange={e => setExterior({ roomCeilingColor: e.target.value })}
+                className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+            </div>
             <label className="flex items-center gap-2 text-[11px] cursor-pointer">
               <input
                 type="checkbox"

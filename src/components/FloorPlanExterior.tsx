@@ -524,6 +524,7 @@ function ConcreteFacade({
   flowerBoxFreq = 70, twoTone = true,
   stripVCm = 4, stripHCm = 8,
   sillColor = "#B8B4AC", lintelColor = "#C0BCB4",
+  jambColor = "#BCBAB2", jambDepthCm = 9,
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
@@ -555,7 +556,12 @@ function ConcreteFacade({
   sillColor?: string;
   /** Window lintel concrete color. Default '#C0BCB4'. */
   lintelColor?: string;
+  /** Window jamb (side reveal) color. Default '#BCBAB2'. */
+  jambColor?: string;
+  /** Window jamb depth (cm). Default 9. */
+  jambDepthCm?: number;
 }) {
+  const jambDepthM = Math.max(0.04, Math.min(0.20, jambDepthCm / 100));
   // Convert strip-thickness cm → metres for mesh use, with clamps.
   const stripVm = Math.max(0.02, Math.min(0.12, stripVCm / 100));
   const stripHm = Math.max(0.02, Math.min(0.16, stripHCm / 100));
@@ -720,11 +726,12 @@ function ConcreteFacade({
               <meshStandardMaterial color={lintelColor} roughness={0.88} metalness={0.01} />
             </mesh>
           )}
-          {/* 侧边窗口竖向内衬（jamb reveals — adds visual depth to the reveal） */}
+          {/* 侧边窗口竖向内衬（jamb reveals — adds visual depth to the reveal）
+              Depth and color are user-configurable. */}
           {jambEnabled && ([-w.winLen / 2, w.winLen / 2] as number[]).map((jx, ji) => (
-            <mesh key={`jamb-${ji}`} position={[jx + (ji === 0 ? 0.040 : -0.040), 0, -0.025]}>
-              <boxGeometry args={[0.080, w.winH - 0.04, 0.090]} />
-              <meshStandardMaterial color="#BCBAB2" roughness={0.90} metalness={0.01} />
+            <mesh key={`jamb-${ji}`} position={[jx + (ji === 0 ? 0.040 : -0.040), 0, -jambDepthM / 2 + 0.020]}>
+              <boxGeometry args={[0.080, w.winH - 0.04, jambDepthM]} />
+              <meshStandardMaterial color={jambColor} roughness={0.90} metalness={0.01} />
             </mesh>
           ))}
           {/* 窗台花箱（window flower box）—— flowerBoxFreq% 的窗户下加一个铁艺花箱
@@ -5366,6 +5373,8 @@ export default function FloorPlanBuilding({
               stripHCm={exterior.windowFrameStripHCm ?? 8}
               sillColor={exterior.windowSillColor ?? "#B8B4AC"}
               lintelColor={exterior.windowLintelColor ?? "#C0BCB4"}
+              jambColor={exterior.windowJambColor ?? "#BCBAB2"}
+              jambDepthCm={exterior.windowJambDepthCm ?? 9}
             />
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部。
                 Height + on/off now driven by ExteriorSettings.stoneBase{Enabled,Height}. */}
@@ -7815,11 +7824,11 @@ export default function FloorPlanBuilding({
                 </group>
               );
             })()}
-            {/* 天花板 — 走廊和楼梯间不渲染 */}
+            {/* 天花板 — 走廊和楼梯间不渲染。色由 ExteriorSettings.roomCeilingColor 决定。*/}
             {!isStair && !isHallway && (
               <mesh position={[cx, yBase + FLOOR_H - 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
                 <planeGeometry args={[rW - 0.04, rD - 0.04]} />
-                <meshStandardMaterial color="#F5F2EE" roughness={0.88} side={THREE.BackSide}
+                <meshStandardMaterial color={exterior.roomCeilingColor ?? "#F5F2EE"} roughness={0.88} side={THREE.BackSide}
                   emissive="#FFFDF8" emissiveIntensity={insideBuilding ? 0.08 : 0.02}
                   transparent={isXray} opacity={isXray ? 0.08 : 1} depthWrite={!isXray} />
               </mesh>
