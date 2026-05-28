@@ -5376,7 +5376,7 @@ export default function FloorPlanBuilding({
                  • Overhead opener motor rail unit
                  • Bottom weather seal rubber strip
                  • LED soffit strip at night */}
-            {floorIndex === 0 && doorInfos.filter(d => d.w >= 2.0).map((d, di) => {
+            {floorIndex === 0 && doorInfos.filter(d => d.w >= (exterior.garageDoorMinWidth ?? 2.0)).map((d, di) => {
               const gdW      = d.w;
               const gdH      = Math.min(d.h, FLOOR_H * 0.85);
               const gdY      = -FLOOR_H / 2 + gdH / 2;
@@ -7868,7 +7868,7 @@ export default function FloorPlanBuilding({
               // front entrance, lands on the exterior wall) defaults to
               // french_double glass. Every other door defaults to wood_panel.
               const isFrontEntrance = fi === 0 && room === "living" && door.id?.startsWith("auto-");
-              const style = door.style ?? (isFrontEntrance ? "french_double" : "wood_panel");
+              const style = door.style ?? (isFrontEntrance ? (exterior.frontEntranceStyle ?? "french_double") : "wood_panel");
               // Wall mapping: FPE data → WalkthroughDoor3D — both use NSWE now.
               const doorWall: import("@/lib/types").WallSide = door.wall;
               // WalkthroughDoor3D "E" (east/right) measures pos from the large-Z (south) end.

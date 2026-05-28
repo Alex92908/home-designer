@@ -307,6 +307,14 @@ export interface ExteriorSettings {
   /** Glass balustrade on top of the parapet (for roof-terrace safety).
    *  Default true. Only renders when parapetHeight > 0. */
   parapetGlassEnabled?: boolean;
+  // ── Door style overrides (was hardcoded) ────────────────────────────────
+  /** Minimum door width (m) above which the door renders as a sectional
+   *  garage door instead of a regular hinged door. Default 2.0.
+   *  Set very high (e.g. 10) to never render garage-door styling. */
+  garageDoorMinWidth?: number;
+  /** Default style for the auto-generated ground-floor living-room entrance
+   *  door. Other doors fall back to "wood_panel". Default "french_double". */
+  frontEntranceStyle?: DoorStyle;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

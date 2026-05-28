@@ -852,6 +852,36 @@ export default function ExteriorPanel() {
           </div>
         </div>
 
+        {/* ── 门样式（Doors） ── */}
+        <div className="px-3 pt-4">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">门 (DOORS)</div>
+          <div className="px-1 flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] text-gray-600">入户门样式</span>
+              <select
+                value={exterior.frontEntranceStyle ?? "french_double"}
+                onChange={e => setExterior({ frontEntranceStyle: e.target.value as import("@/lib/types").DoorStyle })}
+                className="text-[11px] px-2 py-1 rounded border border-gray-200 bg-white"
+              >
+                <option value="french_double">法式对开玻璃门</option>
+                <option value="frosted_glass">磨砂玻璃门</option>
+                <option value="wood_panel">实木门</option>
+                <option value="sliding_barn">谷仓推拉门</option>
+              </select>
+              <div className="text-[9px] text-gray-400">作用于一层客厅自动生成的大门</div>
+            </div>
+            <div className="flex items-center justify-between text-[10px] pt-1">
+              <span className="text-gray-500">车库门触发宽度</span>
+              <span className="font-mono text-gray-700">≥ {(exterior.garageDoorMinWidth ?? 2.0).toFixed(1)} m</span>
+            </div>
+            <input type="range" min={1.0} max={5.0} step={0.1}
+              value={exterior.garageDoorMinWidth ?? 2.0}
+              onChange={e => setExterior({ garageDoorMinWidth: parseFloat(e.target.value) })}
+              className="w-full accent-blue-500" />
+            <div className="text-[9px] text-gray-400">该宽度以上的门渲染为分节卷帘车库门</div>
+          </div>
+        </div>
+
         {/* ── 屋顶配置（Rooftop） ── */}
         <div className="px-3 pt-4">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">屋顶 (ROOFTOP)</div>
