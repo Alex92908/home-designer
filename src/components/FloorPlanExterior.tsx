@@ -525,6 +525,7 @@ function ConcreteFacade({
   stripVCm = 4, stripHCm = 8,
   sillColor = "#B8B4AC", lintelColor = "#C0BCB4",
   jambColor = "#BCBAB2", jambDepthCm = 9,
+  flowerBoxColor = "#2A2C34",
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
@@ -560,6 +561,8 @@ function ConcreteFacade({
   jambColor?: string;
   /** Window jamb depth (cm). Default 9. */
   jambDepthCm?: number;
+  /** Wrought-iron flower-box body color. Default '#2A2C34'. */
+  flowerBoxColor?: string;
 }) {
   const jambDepthM = Math.max(0.04, Math.min(0.20, jambDepthCm / 100));
   // Convert strip-thickness cm → metres for mesh use, with clamps.
@@ -741,7 +744,7 @@ function ConcreteFacade({
               {/* Box body — wrought iron / dark charcoal */}
               <mesh castShadow>
                 <boxGeometry args={[w.winLen + 0.04, 0.18, 0.18]} />
-                <meshStandardMaterial color="#2A2C34" roughness={0.55} metalness={0.52} envMapIntensity={1.2} />
+                <meshStandardMaterial color={flowerBoxColor} roughness={0.55} metalness={0.52} envMapIntensity={1.2} />
               </mesh>
               {/* Soil surface */}
               <mesh position={[0, 0.095, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -859,6 +862,7 @@ function FlatRoof({
   parapetGlass = true,
   slabColor = "#F0EDE8",
   parapetColorOverride,
+  ventColor = "#606468",
 }: {
   W: number; D: number; roofY: number;
   nightGlow?: number; hasRooftop?: boolean;
@@ -873,7 +877,18 @@ function FlatRoof({
   parapetGlass?: boolean;
   slabColor?: string;
   parapetColorOverride?: string;
+  ventColor?: string;
 }) {
+  // Cap cowl auto-darkens ~25 % below stack color for shadow detail.
+  const ventCapColor = (() => {
+    const m = /^#([0-9a-f]{6})$/i.exec(ventColor);
+    if (!m) return "#484C52";
+    const n = parseInt(m[1], 16);
+    const r = Math.max(0, Math.round(((n >> 16) & 0xff) * 0.75));
+    const g = Math.max(0, Math.round(((n >>  8) & 0xff) * 0.75));
+    const b = Math.max(0, Math.round(( n        & 0xff) * 0.75));
+    return `#${[r, g, b].map(v => v.toString(16).padStart(2, "0")).join("")}`;
+  })();
   const OV   = Math.max(0, Math.min(1.5, overhang));
   const OV_S = OV + Math.max(0, Math.min(1.5, overhangSouthExtra));
   const PH   = Math.max(0, Math.min(1.0, parapetH));   // 女儿墙高度 — 0 隐藏
@@ -1280,12 +1295,12 @@ function FlatRoof({
           {/* Main stack */}
           <mesh castShadow>
             <cylinderGeometry args={[rt, rb, eH, 8]} />
-            <meshStandardMaterial color="#606468" roughness={0.60} metalness={0.30} />
+            <meshStandardMaterial color={ventColor} roughness={0.60} metalness={0.30} />
           </mesh>
           {/* Cap cowl */}
           <mesh position={[0, eH / 2 + 0.04, 0]}>
             <cylinderGeometry args={[rt + 0.025, rt + 0.006, 0.080, 8]} />
-            <meshStandardMaterial color="#484C52" roughness={0.55} metalness={0.38} />
+            <meshStandardMaterial color={ventCapColor} roughness={0.55} metalness={0.38} />
           </mesh>
         </group>
       ))}
@@ -5379,6 +5394,7 @@ export default function FloorPlanBuilding({
               lintelColor={exterior.windowLintelColor ?? "#C0BCB4"}
               jambColor={exterior.windowJambColor ?? "#BCBAB2"}
               jambDepthCm={exterior.windowJambDepthCm ?? 9}
+              flowerBoxColor={exterior.windowFlowerBoxColor ?? "#2A2C34"}
             />
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部。
                 Height + on/off now driven by ExteriorSettings.stoneBase{Enabled,Height}. */}
@@ -5999,6 +6015,7 @@ export default function FloorPlanBuilding({
           parapetGlass={exterior.parapetGlassEnabled ?? true}
           slabColor={exterior.roofSlabColor ?? "#F0EDE8"}
           parapetColorOverride={exterior.parapetColor}
+          ventColor={exterior.roofVentColor ?? "#606468"}
         />
       )}
 

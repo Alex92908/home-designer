@@ -398,6 +398,14 @@ export interface ExteriorSettings {
   /** Hallway ceiling slat color (the thin top board that visually
    *  caps the corridor). Hex. Default '#E8E4DC'. */
   hallwayCeilingColor?: string;
+  /** Wrought-iron flower-box body color. Hex. Default '#2A2C34'
+   *  (warm charcoal). The cap rim of the box is auto-derived from
+   *  this so a single picker drives the whole flower-box look. */
+  windowFlowerBoxColor?: string;
+  /** Roof exhaust / vent stack metal color. Hex. Default '#606468'
+   *  (galvanised steel). Cap cowl darkens ~25 % below this value
+   *  automatically. */
+  roofVentColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
