@@ -902,6 +902,30 @@ export default function ExteriorPanel() {
               onChange={e => setExterior({ garageDoorMinWidth: parseFloat(e.target.value) })}
               className="w-full accent-blue-500" />
             <div className="text-[9px] text-gray-400">该宽度以上的门渲染为分节卷帘车库门</div>
+            {/* Door material colors */}
+            <div className="border-t border-gray-100 pt-2 mt-1 flex flex-col gap-1.5">
+              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">材质颜色</div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-600">门框漆色</span>
+                <input type="color"
+                  value={exterior.doorFrameColor ?? "#F0EEEA"}
+                  onChange={e => setExterior({ doorFrameColor: e.target.value })}
+                  className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-600">把手金属色</span>
+                <input type="color"
+                  value={exterior.doorHandleColor ?? "#B8A060"}
+                  onChange={e => setExterior({ doorHandleColor: e.target.value })}
+                  className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+              </div>
+              <button
+                onClick={() => setExterior({ doorFrameColor: undefined, doorHandleColor: undefined })}
+                className="text-[9px] text-gray-400 hover:text-blue-500 self-end mt-0.5"
+              >
+                恢复默认
+              </button>
+            </div>
           </div>
         </div>
 

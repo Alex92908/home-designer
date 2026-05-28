@@ -7896,6 +7896,8 @@ export default function FloorPlanBuilding({
                     isOpen={isOpen}
                     onToggle={() => { if (insideBuilding) toggleOpen(doorKey); }}
                     doorStyle={style}
+                    frameColor={exterior.doorFrameColor ?? "#F0EEEA"}
+                    handleColor={exterior.doorHandleColor ?? "#B8A060"}
                   />
                 </group>
               );

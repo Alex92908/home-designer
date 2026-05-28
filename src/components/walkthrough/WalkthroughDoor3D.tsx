@@ -92,6 +92,8 @@ export function WalkthroughDoor3D({
   W, D, H,
   doorWall, doorPosCm, doorLenCm, doorHCm,
   isOpen, onToggle, doorStyle,
+  frameColor = "#F0EEEA",
+  handleColor = "#B8A060",
 }: {
   W: number; D: number; H: number;
   doorWall: "N" | "S" | "W" | "E";
@@ -99,6 +101,10 @@ export function WalkthroughDoor3D({
   isOpen: boolean;
   onToggle: () => void;
   doorStyle: DoorStyle;
+  /** Frame paint color. Default '#F0EEEA' (warm millwork). */
+  frameColor?: string;
+  /** Handle / knob metal color. Default '#B8A060' (brass). */
+  handleColor?: string;
 }) {
   // Note: H is currently unused inside this body but kept in the signature
   // for API parity with the original (callers pass room height for future
@@ -185,15 +191,15 @@ export function WalkthroughDoor3D({
       {/* Door frame (stays fixed, inside the wall hole) */}
       <mesh position={[doorW / 2, doorH + frameT / 2, 0]}>
         <boxGeometry args={[doorW + frameT * 2, frameT, 0.05]} />
-        <meshStandardMaterial color="#F0EEEA" roughness={0.6} />
+        <meshStandardMaterial color={frameColor} roughness={0.6} />
       </mesh>
       <mesh position={[-frameT / 2, doorH / 2, 0]}>
         <boxGeometry args={[frameT, doorH, 0.05]} />
-        <meshStandardMaterial color="#F0EEEA" roughness={0.6} />
+        <meshStandardMaterial color={frameColor} roughness={0.6} />
       </mesh>
       <mesh position={[doorW + frameT / 2, doorH / 2, 0]}>
         <boxGeometry args={[frameT, doorH, 0.05]} />
-        <meshStandardMaterial color="#F0EEEA" roughness={0.6} />
+        <meshStandardMaterial color={frameColor} roughness={0.6} />
       </mesh>
 
       {/* Door panel (rotates around hinge at local X=0) */}
@@ -257,11 +263,11 @@ export function WalkthroughDoor3D({
           {/* Two knobs at center */}
           <mesh position={[doorW / 2 - 0.08, doorH * 0.45, 0.02]}>
             <sphereGeometry args={[0.02, 10, 10]} />
-            <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.2} />
+            <meshStandardMaterial color={handleColor} metalness={0.85} roughness={0.2} />
           </mesh>
           <mesh position={[doorW / 2 + 0.08, doorH * 0.45, 0.02]}>
             <sphereGeometry args={[0.02, 10, 10]} />
-            <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.2} />
+            <meshStandardMaterial color={handleColor} metalness={0.85} roughness={0.2} />
           </mesh>
         </group>
       ) : (
@@ -293,11 +299,11 @@ export function WalkthroughDoor3D({
                     exported. Two small spheres + short stem. */}
                 <mesh position={[doorW - 0.1, doorH * 0.45, 0.035]}>
                   <sphereGeometry args={[0.032, 14, 14]} />
-                  <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.25} />
+                  <meshStandardMaterial color={handleColor} metalness={0.85} roughness={0.25} />
                 </mesh>
                 <mesh position={[doorW - 0.1, doorH * 0.45, -0.035]}>
                   <sphereGeometry args={[0.032, 14, 14]} />
-                  <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.25} />
+                  <meshStandardMaterial color={handleColor} metalness={0.85} roughness={0.25} />
                 </mesh>
               </>
             ) : (

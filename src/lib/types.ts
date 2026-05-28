@@ -322,6 +322,14 @@ export interface ExteriorSettings {
   /** Default window height in cm for windows without explicit `h`.
    *  Default 150. Range 60–280. Larger than `FLOOR_H - sill` will clip. */
   defaultWindowHeight?: number;
+  // ── Door materials (was hardcoded inside WalkthroughDoor3D) ─────────────
+  /** Door-frame paint color (the trim around every interior door). Hex
+   *  string. Default '#F0EEEA' — warm off-white millwork. */
+  doorFrameColor?: string;
+  /** Door handle / knob metal color. Hex string. Default '#B8A060'
+   *  (warm brass). Try '#9A9A9E' for brushed nickel or '#1E1E22' for
+   *  matt black hardware. */
+  doorHandleColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
