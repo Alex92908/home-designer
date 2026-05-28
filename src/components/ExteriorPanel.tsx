@@ -834,6 +834,15 @@ export default function ExteriorPanel() {
                 value={exterior.windowFrameStripHCm ?? 8}
                 onChange={e => setExterior({ windowFrameStripHCm: parseInt(e.target.value, 10) })}
                 className="w-full accent-blue-500" />
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-gray-500">中竖分隔（漫游）</span>
+                <span className="font-mono text-gray-700">{exterior.windowCenterMullionCm ?? 4} cm</span>
+              </div>
+              <input type="range" min={0} max={10} step={1}
+                value={exterior.windowCenterMullionCm ?? 4}
+                onChange={e => setExterior({ windowCenterMullionCm: parseInt(e.target.value, 10) })}
+                className="w-full accent-blue-500" />
+              <div className="text-[9px] text-gray-400">两扇推拉窗中间的立柱，0 = 隐藏</div>
             </div>
           </div>
         </div>

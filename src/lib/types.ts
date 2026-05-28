@@ -358,6 +358,10 @@ export interface ExteriorSettings {
    *  traditional sash-window look; setting equal gives a uniform metal
    *  frame. */
   windowFrameStripHCm?: number;
+  /** Walkthrough window center mullion (the vertical bar between the
+   *  two sliding sashes) width in cm. Default 4. Range 0–10.
+   *  0 = no mullion, gives a frameless modern look. */
+  windowCenterMullionCm?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

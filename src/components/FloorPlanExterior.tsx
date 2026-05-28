@@ -8008,10 +8008,13 @@ export default function FloorPlanBuilding({
                   <mesh position={[wW / 2 - border / 2, 0, 0]}>
                     <boxGeometry args={[border, wH, thick]} /><meshStandardMaterial color={frameCol} roughness={0.35} />
                   </mesh>
-                  {/* 中竖分隔条（推拉窗中缝）*/}
-                  <mesh>
-                    <boxGeometry args={[0.04, innerH, thick]} /><meshStandardMaterial color={frameCol} roughness={0.35} />
-                  </mesh>
+                  {/* 中竖分隔条（推拉窗中缝）— 厚度由 ExteriorSettings 控制，0 = 隐藏 */}
+                  {(exterior.windowCenterMullionCm ?? 4) > 0 && (
+                    <mesh>
+                      <boxGeometry args={[Math.min(0.10, (exterior.windowCenterMullionCm ?? 4) / 100), innerH, thick]} />
+                      <meshStandardMaterial color={frameCol} roughness={0.35} />
+                    </mesh>
+                  )}
                 </group>
               );
             })}
