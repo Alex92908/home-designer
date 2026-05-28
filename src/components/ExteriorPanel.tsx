@@ -1206,6 +1206,14 @@ export default function ExteriorPanel() {
                 <div className="text-[9px] text-gray-400">
                   共 {(exterior.solarPanelCols ?? 5) * (exterior.solarPanelRows ?? 3)} 块
                 </div>
+                <div className="flex items-center justify-between text-[10px] pt-1">
+                  <span className="text-gray-500">板面倾角</span>
+                  <span className="font-mono text-gray-700">{exterior.solarPanelTiltDeg ?? 18}°</span>
+                </div>
+                <input type="range" min={0} max={45} step={1}
+                  value={exterior.solarPanelTiltDeg ?? 18}
+                  onChange={e => setExterior({ solarPanelTiltDeg: parseInt(e.target.value, 10) })}
+                  className="w-full accent-blue-500" />
               </div>
             )}
             {/* Rooftop deck items */}
@@ -1268,6 +1276,29 @@ export default function ExteriorPanel() {
               value={exterior.rooftopHvacCount ?? 2}
               onChange={e => setExterior({ rooftopHvacCount: parseInt(e.target.value, 10) })}
               className="w-full accent-blue-500" />
+            {/* Cove light toggle + color */}
+            {(exterior.parapetHeight ?? 0.30) > 0.01 && (
+              <>
+                <label className="flex items-center gap-2 text-[11px] cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={exterior.coveLightEnabled ?? true}
+                    onChange={e => setExterior({ coveLightEnabled: e.target.checked })}
+                    className="accent-blue-500"
+                  />
+                  <span className="text-gray-700">女儿墙内侧 LED 灯槽</span>
+                </label>
+                {(exterior.coveLightEnabled ?? true) && (
+                  <div className="pl-5 flex items-center justify-between text-[11px]">
+                    <span className="text-gray-600">LED 色温</span>
+                    <input type="color"
+                      value={exterior.coveLightColor ?? "#D0E8FF"}
+                      onChange={e => setExterior({ coveLightColor: e.target.value })}
+                      className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+                  </div>
+                )}
+              </>
+            )}
             {/* Vent count */}
             <div className="flex items-center justify-between text-[10px] pt-1">
               <span className="text-gray-500">通风管道</span>

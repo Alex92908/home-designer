@@ -455,6 +455,17 @@ export interface ExteriorSettings {
   /** Rooftop HVAC condenser unit count. Default 2. Range 0–4.
    *  0 hides the entire HVAC cluster. */
   rooftopHvacCount?: number;
+  /** Parapet inner-cove LED strip (subtle uplight). Default true.
+   *  Turns OFF the 4-side LED strip + day/night glow logic. */
+  coveLightEnabled?: boolean;
+  /** Parapet cove LED emissive color. Hex. Default '#D0E8FF'
+   *  (cool white). Try '#FFE4A0' for warm white, '#9050E0' for a
+   *  decorative purple-tint terrace. */
+  coveLightColor?: string;
+  /** Solar PV panel tilt angle in degrees. Default 18 (typical mid-
+   *  latitude optimum). Range 0–45. 0 = flush horizontal, 45 =
+   *  steep winter-optimised. */
+  solarPanelTiltDeg?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

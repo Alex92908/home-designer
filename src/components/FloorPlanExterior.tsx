@@ -899,6 +899,9 @@ function FlatRoof({
   greenRoofBoardwalkColor = "#8B6240",
   skylightEnabled = true,
   hvacCount = 2,
+  coveLightEnabled = true,
+  coveLightColor = "#D0E8FF",
+  solarPanelTiltDeg = 18,
 }: {
   W: number; D: number; roofY: number;
   nightGlow?: number; hasRooftop?: boolean;
@@ -932,6 +935,12 @@ function FlatRoof({
   skylightEnabled?: boolean;
   /** Rooftop HVAC condenser count. Default 2 (range 0–4). */
   hvacCount?: number;
+  /** Parapet cove LED strip. Default true. */
+  coveLightEnabled?: boolean;
+  /** Cove LED emissive color. Default '#D0E8FF'. */
+  coveLightColor?: string;
+  /** Solar PV tilt in degrees. Default 18. */
+  solarPanelTiltDeg?: number;
 }) {
   // Cap cowl auto-darkens ~25 % below stack color for shadow detail.
   const ventCapColor = (() => {
@@ -1099,13 +1108,13 @@ function FlatRoof({
 
       {/* ── 女儿墙内侧 LED 灯槽（parapet interior cove light）——
            现代平屋顶标配：屋顶有人使用时，女儿墙内侧 LED 提供弥散照明。
-           材质：薄铝槽 + 白色 LED 条 + 向上泛光 */}
-      {(() => {
+           Gated by coveLightEnabled + only when there IS a parapet. */}
+      {coveLightEnabled && PH > 0.01 && (() => {
         const coveH  = 0.032;   // LED strip height
         const coveT  = 0.015;   // strip depth
         const coveY  = roofSlab + 0.05 + 0.04;  // just above slab surface, at parapet base
         const coveColor = "#E8F4FF";
-        const coveEmi   = "#D0E8FF";
+        const coveEmi   = coveLightColor;
         // Parapet cove light: subtle during day, bright at night
         const coveI = 0.25 + nightGlow * 0.70;
         return (
@@ -1328,7 +1337,7 @@ function FlatRoof({
         const pvCols = Math.max(1, Math.min(10, solarPanelCols));
         const pvRows = Math.max(1, Math.min(6,  solarPanelRows));
         const pvW = 1.08, pvH = 1.70, pvGap = 0.06;
-        const pvTilt = 0.32;   // tilt angle (radians, ≈ 18°)
+        const pvTilt = Math.max(0, Math.min(45, solarPanelTiltDeg)) * Math.PI / 180;   // tilt angle (radians, from degrees)
         const arrW = pvCols * (pvW + pvGap) - pvGap;
         const arrDepth = pvRows * (pvH + pvGap) - pvGap;  // total depth along tilt axis
         const arrX = W * 0.22;
@@ -6133,6 +6142,9 @@ export default function FloorPlanBuilding({
           greenRoofBoardwalkColor={exterior.greenRoofBoardwalkColor ?? "#8B6240"}
           skylightEnabled={exterior.rooftopSkylightEnabled ?? true}
           hvacCount={exterior.rooftopHvacCount ?? 2}
+          coveLightEnabled={exterior.coveLightEnabled ?? true}
+          coveLightColor={exterior.coveLightColor ?? "#D0E8FF"}
+          solarPanelTiltDeg={exterior.solarPanelTiltDeg ?? 18}
         />
       )}
 
