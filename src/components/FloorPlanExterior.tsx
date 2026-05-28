@@ -520,6 +520,8 @@ function ConcreteFacade({
   frameColor: frameColorOverride,
   hGrooveStep: hGrooveStepOverride,
   vGrooveStep: vGrooveStepOverride,
+  sillEnabled = true, lintelEnabled = true, jambEnabled = true,
+  flowerBoxFreq = 70, twoTone = true,
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
@@ -533,6 +535,16 @@ function ConcreteFacade({
   hGrooveStep?: number;
   /** Vertical precast seam spacing (m). Default 1.20. */
   vGrooveStep?: number;
+  /** Window sill + drip edge. Default true. */
+  sillEnabled?: boolean;
+  /** Window lintel above. Default true. */
+  lintelEnabled?: boolean;
+  /** Side jamb reveals. Default true. */
+  jambEnabled?: boolean;
+  /** Flower-box probability per window in 0–100. Default 70. */
+  flowerBoxFreq?: number;
+  /** Even/odd two-tone panel striping. Default true. */
+  twoTone?: boolean;
 }) {
   // 水平板缝：每 hGrooveStep m 一道（模拟预制混凝土挂板分割）
   const hGrooveStep  = Math.max(0.4, Math.min(2.0, hGrooveStepOverride ?? 0.90));
@@ -553,7 +565,7 @@ function ConcreteFacade({
       {/* ── 竖向分板阴影面 —— InstancedMesh，颜色交替 (even/odd 拆 2 个) ──
           每块宽固定 = vGrooveStep - 0.020。边角 panel 如果 panelW2 ≠ 标准
           宽度，会被几何 scale；为简单起见，跳过越界的板。 */}
-      {(() => {
+      {twoTone && (() => {
         const evenPanels: Array<[number, number, number]> = [];
         const oddPanels: Array<[number, number, number]> = [];
         const N = Math.round(width / vGrooveStep);
@@ -670,30 +682,36 @@ function ConcreteFacade({
             </mesh>
           ))}
           {/* 窗台板 + 滴水线（drip-edge metal cap on sill） */}
-          <mesh position={[0, -w.winH / 2 - 0.040, 0.055]} castShadow>
-            <boxGeometry args={[w.winLen + 0.10, 0.065, 0.130]} />
-            <meshStandardMaterial color="#B8B4AC" roughness={0.86} metalness={0.02} />
-          </mesh>
-          {/* Drip-edge metal cap on sill face */}
-          <mesh position={[0, -w.winH / 2 - 0.048, 0.116]}>
-            <boxGeometry args={[w.winLen + 0.12, 0.010, 0.010]} />
-            <meshStandardMaterial color="#2A2E38" roughness={0.20} metalness={0.92} envMapIntensity={1.8} />
-          </mesh>
+          {sillEnabled && (
+            <>
+              <mesh position={[0, -w.winH / 2 - 0.040, 0.055]} castShadow>
+                <boxGeometry args={[w.winLen + 0.10, 0.065, 0.130]} />
+                <meshStandardMaterial color="#B8B4AC" roughness={0.86} metalness={0.02} />
+              </mesh>
+              {/* Drip-edge metal cap on sill face */}
+              <mesh position={[0, -w.winH / 2 - 0.048, 0.116]}>
+                <boxGeometry args={[w.winLen + 0.12, 0.010, 0.010]} />
+                <meshStandardMaterial color="#2A2E38" roughness={0.20} metalness={0.92} envMapIntensity={1.8} />
+              </mesh>
+            </>
+          )}
           {/* 窗楣（concrete lintel above window） */}
-          <mesh position={[0, w.winH / 2 + 0.030, 0.050]}>
-            <boxGeometry args={[w.winLen + 0.04, 0.048, 0.095]} />
-            <meshStandardMaterial color="#C0BCB4" roughness={0.88} metalness={0.01} />
-          </mesh>
+          {lintelEnabled && (
+            <mesh position={[0, w.winH / 2 + 0.030, 0.050]}>
+              <boxGeometry args={[w.winLen + 0.04, 0.048, 0.095]} />
+              <meshStandardMaterial color="#C0BCB4" roughness={0.88} metalness={0.01} />
+            </mesh>
+          )}
           {/* 侧边窗口竖向内衬（jamb reveals — adds visual depth to the reveal） */}
-          {([-w.winLen / 2, w.winLen / 2] as number[]).map((jx, ji) => (
+          {jambEnabled && ([-w.winLen / 2, w.winLen / 2] as number[]).map((jx, ji) => (
             <mesh key={`jamb-${ji}`} position={[jx + (ji === 0 ? 0.040 : -0.040), 0, -0.025]}>
               <boxGeometry args={[0.080, w.winH - 0.04, 0.090]} />
               <meshStandardMaterial color="#BCBAB2" roughness={0.90} metalness={0.01} />
             </mesh>
           ))}
-          {/* 窗台花箱（window flower box）—— 70% 的窗户下加一个铁艺花箱，带土壤和灌木
+          {/* 窗台花箱（window flower box）—— flowerBoxFreq% 的窗户下加一个铁艺花箱
               用确定性 hash 决定哪些窗有花箱，避免 Math.random() */}
-          {panelBlindHash(wi * 7, wi * 3 + 1) < 0.70 && (
+          {panelBlindHash(wi * 7, wi * 3 + 1) < (flowerBoxFreq / 100) && (
             <group position={[0, -w.winH / 2 - 0.095, 0.065]}>
               {/* Box body — wrought iron / dark charcoal */}
               <mesh castShadow>
@@ -5301,6 +5319,11 @@ export default function FloorPlanBuilding({
               frameColor={exterior.windowFrameColor ?? exterior.accentColor}
               hGrooveStep={exterior.wallPanelHSpacing}
               vGrooveStep={exterior.wallPanelVSpacing}
+              sillEnabled={exterior.windowSillEnabled ?? true}
+              lintelEnabled={exterior.windowLintelEnabled ?? true}
+              jambEnabled={exterior.windowJambEnabled ?? true}
+              flowerBoxFreq={exterior.windowFlowerBoxFreq ?? 70}
+              twoTone={exterior.wallPanelTwoTone ?? true}
             />
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部。
                 Height + on/off now driven by ExteriorSettings.stoneBase{Enabled,Height}. */}

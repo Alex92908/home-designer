@@ -282,6 +282,18 @@ export interface ExteriorSettings {
   /** Roof exhaust / vent stacks. Default 3. Range 0–6. Zero hides the
    *  rooftop machine-room cluster entirely. */
   roofVentCount?: number;
+  // ── Window ornaments (default classic; turn off for a minimal look) ─────
+  /** Stone sill + drip-edge under each window. Default true. */
+  windowSillEnabled?: boolean;
+  /** Concrete lintel above each window. Default true. */
+  windowLintelEnabled?: boolean;
+  /** Side jamb reveals (3D depth around the window opening). Default true. */
+  windowJambEnabled?: boolean;
+  /** Wrought-iron flower-box probability per window (0–100). Default 70. */
+  windowFlowerBoxFreq?: number;
+  /** Even/odd two-tone panel striping on the facade. Default true.
+   *  Turn off for a perfectly flat single-tone wall. */
+  wallPanelTwoTone?: boolean;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

@@ -763,6 +763,39 @@ export default function ExteriorPanel() {
             >
               恢复默认
             </button>
+            {/* Ornament toggles — minimal vs classic look */}
+            <div className="border-t border-gray-100 pt-2 mt-1 flex flex-col gap-1.5">
+              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">装饰件</div>
+              <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+                <input type="checkbox"
+                  checked={exterior.windowSillEnabled ?? true}
+                  onChange={e => setExterior({ windowSillEnabled: e.target.checked })}
+                  className="accent-blue-500" />
+                <span className="text-gray-700">窗台板 + 滴水线</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+                <input type="checkbox"
+                  checked={exterior.windowLintelEnabled ?? true}
+                  onChange={e => setExterior({ windowLintelEnabled: e.target.checked })}
+                  className="accent-blue-500" />
+                <span className="text-gray-700">窗楣（上方混凝土）</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+                <input type="checkbox"
+                  checked={exterior.windowJambEnabled ?? true}
+                  onChange={e => setExterior({ windowJambEnabled: e.target.checked })}
+                  className="accent-blue-500" />
+                <span className="text-gray-700">侧面凹深内衬</span>
+              </label>
+              <div className="flex items-center justify-between text-[10px] pt-0.5">
+                <span className="text-gray-500">花箱频率</span>
+                <span className="font-mono text-gray-700">{exterior.windowFlowerBoxFreq ?? 70}%</span>
+              </div>
+              <input type="range" min={0} max={100} step={5}
+                value={exterior.windowFlowerBoxFreq ?? 70}
+                onChange={e => setExterior({ windowFlowerBoxFreq: parseInt(e.target.value, 10) })}
+                className="w-full accent-blue-500" />
+            </div>
           </div>
         </div>
 
@@ -787,6 +820,15 @@ export default function ExteriorPanel() {
               onChange={e => setExterior({ wallPanelVSpacing: parseFloat(e.target.value) })}
               className="w-full accent-blue-500" />
             <label className="flex items-center gap-2 text-[11px] cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={exterior.wallPanelTwoTone ?? true}
+                onChange={e => setExterior({ wallPanelTwoTone: e.target.checked })}
+                className="accent-blue-500"
+              />
+              <span className="text-gray-700">板间双色阴影</span>
+            </label>
+            <label className="flex items-center gap-2 text-[11px] cursor-pointer">
               <input
                 type="checkbox"
                 checked={exterior.stoneBaseEnabled ?? true}
