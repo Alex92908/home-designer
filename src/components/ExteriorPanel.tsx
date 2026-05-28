@@ -934,6 +934,22 @@ export default function ExteriorPanel() {
                 <div className="text-[9px] text-gray-400">
                   房间面积小于「2 盏」阈值 → 1 盏；介于两阈值之间 → 2 盏；大于「4 盏」阈值 → 4 盏。
                 </div>
+                <div className="flex items-center justify-between text-[10px] pt-1">
+                  <span className="text-gray-500">筒灯半径</span>
+                  <span className="font-mono text-gray-700">{exterior.ceilingLightRadiusCm ?? 8} cm</span>
+                </div>
+                <input type="range" min={4} max={15} step={1}
+                  value={exterior.ceilingLightRadiusCm ?? 8}
+                  onChange={e => setExterior({ ceilingLightRadiusCm: parseInt(e.target.value, 10) })}
+                  className="w-full accent-blue-500" />
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-gray-500">发光强度</span>
+                  <span className="font-mono text-gray-700">{(exterior.ceilingLightIntensity ?? 3.5).toFixed(1)}</span>
+                </div>
+                <input type="range" min={0.5} max={6.0} step={0.1}
+                  value={exterior.ceilingLightIntensity ?? 3.5}
+                  onChange={e => setExterior({ ceilingLightIntensity: parseFloat(e.target.value) })}
+                  className="w-full accent-blue-500" />
               </div>
             )}
             {/* Skirting / baseboard */}

@@ -362,6 +362,12 @@ export interface ExteriorSettings {
    *  two sliding sashes) width in cm. Default 4. Range 0–10.
    *  0 = no mullion, gives a frameless modern look. */
   windowCenterMullionCm?: number;
+  /** Ceiling downlight housing radius (cm). Default 8. Range 4–15.
+   *  Larger = bigger downlight cans (more dramatic ceiling presence). */
+  ceilingLightRadiusCm?: number;
+  /** Ceiling downlight emissive intensity. Default 3.5. Range 0.5–6.0.
+   *  Higher = brighter glow disc (visible ceiling light source). */
+  ceilingLightIntensity?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

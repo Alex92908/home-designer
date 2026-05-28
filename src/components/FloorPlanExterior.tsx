@@ -7824,6 +7824,11 @@ export default function FloorPlanBuilding({
               const lgA = Math.max(4, Math.min(40, exterior.ceilingLightLargeArea ?? 12));
               const mdA = Math.max(2, Math.min(lgA, exterior.ceilingLightMediumArea ?? 6));
               const lightCount = roomArea > lgA ? 4 : roomArea > mdA ? 2 : 1;
+              // Configurable can size + glow intensity. Inner emissive disc
+              // stays 1.5 cm smaller than the housing so the bezel reads.
+              const rOuter = Math.max(0.04, Math.min(0.15, (exterior.ceilingLightRadiusCm ?? 8) / 100));
+              const rInner = Math.max(0.02, rOuter - 0.015);
+              const emiI   = Math.max(0.5, Math.min(6.0, exterior.ceilingLightIntensity ?? 3.5));
               const offsets: [number, number][] = lightCount === 4
                 ? [[-rW*0.26, -rD*0.26], [rW*0.26, -rD*0.26], [-rW*0.26, rD*0.26], [rW*0.26, rD*0.26]]
                 : lightCount === 2
@@ -7833,13 +7838,13 @@ export default function FloorPlanBuilding({
                 <group key={`clight-${li}`} position={[cx + ox, yBase + FLOOR_H - 0.02, cz + oz]}>
                   {/* 嵌入式筒灯外壳 */}
                   <mesh raycast={() => null}>
-                    <cylinderGeometry args={[0.08, 0.08, 0.02, 12]} />
+                    <cylinderGeometry args={[rOuter, rOuter, 0.02, 12]} />
                     <meshStandardMaterial color="#E0E0DC" roughness={0.4} metalness={0.25} />
                   </mesh>
                   {/* 发光灯片 (emissive only — see comment below) */}
                   <mesh position={[0, -0.005, 0]} raycast={() => null}>
-                    <cylinderGeometry args={[0.065, 0.065, 0.005, 12]} />
-                    <meshStandardMaterial color="#FFFCE8" emissive="#FFF5D0" emissiveIntensity={3.5} roughness={0.3} />
+                    <cylinderGeometry args={[rInner, rInner, 0.005, 12]} />
+                    <meshStandardMaterial color="#FFFCE8" emissive="#FFF5D0" emissiveIntensity={emiI} roughness={0.3} />
                   </mesh>
                   {/* Previous version emitted a real pointLight per spot
                       — but 1-4 per room × 12 rooms blew past WebGL's
