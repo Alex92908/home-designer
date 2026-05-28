@@ -349,6 +349,15 @@ export interface ExteriorSettings {
   skirtingHeight?: number;
   /** Skirting paint color. Hex string. Default '#9C8A70' (warm walnut). */
   skirtingColor?: string;
+  // ── Window frame strip thickness ────────────────────────────────────────
+  /** Vertical (left + right) window frame strip width in cm. Default 4.
+   *  Range 2–12. Higher = chunkier sash-bar look. */
+  windowFrameStripVCm?: number;
+  /** Horizontal (top + bottom) window frame strip thickness in cm.
+   *  Default 8. Range 2–16. Setting higher than vertical gives a more
+   *  traditional sash-window look; setting equal gives a uniform metal
+   *  frame. */
+  windowFrameStripHCm?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

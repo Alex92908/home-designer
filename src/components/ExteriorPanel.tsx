@@ -818,6 +818,22 @@ export default function ExteriorPanel() {
                 value={exterior.windowFlowerBoxFreq ?? 70}
                 onChange={e => setExterior({ windowFlowerBoxFreq: parseInt(e.target.value, 10) })}
                 className="w-full accent-blue-500" />
+              <div className="flex items-center justify-between text-[10px] pt-1">
+                <span className="text-gray-500">竖框宽度</span>
+                <span className="font-mono text-gray-700">{exterior.windowFrameStripVCm ?? 4} cm</span>
+              </div>
+              <input type="range" min={2} max={12} step={1}
+                value={exterior.windowFrameStripVCm ?? 4}
+                onChange={e => setExterior({ windowFrameStripVCm: parseInt(e.target.value, 10) })}
+                className="w-full accent-blue-500" />
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-gray-500">横框厚度</span>
+                <span className="font-mono text-gray-700">{exterior.windowFrameStripHCm ?? 8} cm</span>
+              </div>
+              <input type="range" min={2} max={16} step={1}
+                value={exterior.windowFrameStripHCm ?? 8}
+                onChange={e => setExterior({ windowFrameStripHCm: parseInt(e.target.value, 10) })}
+                className="w-full accent-blue-500" />
             </div>
           </div>
         </div>

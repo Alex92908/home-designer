@@ -522,6 +522,7 @@ function ConcreteFacade({
   vGrooveStep: vGrooveStepOverride,
   sillEnabled = true, lintelEnabled = true, jambEnabled = true,
   flowerBoxFreq = 70, twoTone = true,
+  stripVCm = 4, stripHCm = 8,
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
@@ -545,7 +546,14 @@ function ConcreteFacade({
   flowerBoxFreq?: number;
   /** Even/odd two-tone panel striping. Default true. */
   twoTone?: boolean;
+  /** Vertical (left + right) frame strip width in cm. Default 4. */
+  stripVCm?: number;
+  /** Horizontal (top + bottom) frame strip height in cm. Default 8. */
+  stripHCm?: number;
 }) {
+  // Convert strip-thickness cm → metres for mesh use, with clamps.
+  const stripVm = Math.max(0.02, Math.min(0.12, stripVCm / 100));
+  const stripHm = Math.max(0.02, Math.min(0.16, stripHCm / 100));
   // 水平板缝：每 hGrooveStep m 一道（模拟预制混凝土挂板分割）
   const hGrooveStep  = Math.max(0.4, Math.min(2.0, hGrooveStepOverride ?? 0.90));
   const hGrooveCount = Math.max(1, Math.round(height / hGrooveStep) - 1);
@@ -669,18 +677,23 @@ function ConcreteFacade({
               side={THREE.FrontSide}
             />
           </mesh>
-          {/* 窗框 — 暗铝合金色，4 条压条（从 0.05 → 0.08 厚度加粗，更明显）*/}
-          {([
-            [-w.winLen / 2 + 0.040, 0,               0.040, w.winH  ] as [number,number,number,number],
-            [ w.winLen / 2 - 0.040, 0,               0.040, w.winH  ] as [number,number,number,number],
-            [0,  w.winH / 2 - 0.040, w.winLen, 0.080] as [number,number,number,number],
-            [0, -w.winH / 2 + 0.040, w.winLen, 0.080] as [number,number,number,number],
-          ]).map(([fx, fy, fw, fh], k) => (
-            <mesh key={k} position={[fx, fy, 0.022]}>
-              <planeGeometry args={[fw, fh]} />
-              <meshStandardMaterial color={fc} roughness={0.30} metalness={0.70} />
-            </mesh>
-          ))}
+          {/* 窗框 — 暗铝合金色，4 条压条。厚度由 ExteriorSettings 控制：
+              垂直压条用 stripV（左右），水平压条用 stripH（上下）。 */}
+          {(() => {
+            const stripV = stripVm; // metres
+            const stripH = stripHm;
+            return ([
+              [-w.winLen / 2 + stripV, 0,               stripV, w.winH  ] as [number,number,number,number],
+              [ w.winLen / 2 - stripV, 0,               stripV, w.winH  ] as [number,number,number,number],
+              [0,  w.winH / 2 - stripH / 2, w.winLen, stripH] as [number,number,number,number],
+              [0, -w.winH / 2 + stripH / 2, w.winLen, stripH] as [number,number,number,number],
+            ]).map(([fx, fy, fw, fh], k) => (
+              <mesh key={k} position={[fx, fy, 0.022]}>
+                <planeGeometry args={[fw, fh]} />
+                <meshStandardMaterial color={fc} roughness={0.30} metalness={0.70} />
+              </mesh>
+            ));
+          })()}
           {/* 窗台板 + 滴水线（drip-edge metal cap on sill） */}
           {sillEnabled && (
             <>
@@ -5344,6 +5357,8 @@ export default function FloorPlanBuilding({
               jambEnabled={exterior.windowJambEnabled ?? true}
               flowerBoxFreq={exterior.windowFlowerBoxFreq ?? 70}
               twoTone={exterior.wallPanelTwoTone ?? true}
+              stripVCm={exterior.windowFrameStripVCm ?? 4}
+              stripHCm={exterior.windowFrameStripHCm ?? 8}
             />
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部。
                 Height + on/off now driven by ExteriorSettings.stoneBase{Enabled,Height}. */}
