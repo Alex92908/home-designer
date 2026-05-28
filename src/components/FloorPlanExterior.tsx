@@ -828,6 +828,10 @@ function FlatRoof({
   solarPanelRows = 3,
   rooftopDeckEnabled = true,
   ventCount = 3,
+  overhang = 0.45,
+  overhangSouthExtra = 0.30,
+  parapetH = 0.30,
+  parapetGlass = true,
 }: {
   W: number; D: number; roofY: number;
   nightGlow?: number; hasRooftop?: boolean;
@@ -836,11 +840,15 @@ function FlatRoof({
   solarPanelRows?: number;
   rooftopDeckEnabled?: boolean;
   ventCount?: number;
+  overhang?: number;
+  overhangSouthExtra?: number;
+  parapetH?: number;
+  parapetGlass?: boolean;
 }) {
-  const OV = 0.45;   // 悬挑
-  const OV_S = 0.75; // 南向多悬挑
-  const PH = 0.30;   // 女儿墙高度
-  const PT = 0.12;   // 女儿墙厚度
+  const OV   = Math.max(0, Math.min(1.5, overhang));
+  const OV_S = OV + Math.max(0, Math.min(1.5, overhangSouthExtra));
+  const PH   = Math.max(0, Math.min(1.0, parapetH));   // 女儿墙高度 — 0 隐藏
+  const PT   = 0.12;   // 女儿墙厚度（厚度不暴露，避免太薄露馅）
   const roofColor    = "#F0EDE8";
   const parapetColor = "#E8E4DE";
   const roofSlab     = roofY + 0.05;  // 屋面板中心Y
@@ -851,30 +859,35 @@ function FlatRoof({
         <boxGeometry args={[W + OV * 2, 0.10, D + OV_S + OV]} />
         <meshStandardMaterial color={roofColor} roughness={0.88} />
       </mesh>
-      {/* 女儿墙 — 四边 */}
-      <mesh position={[0,   roofSlab + 0.05 + PH / 2,  D / 2]} castShadow>
-        <boxGeometry args={[W, PH, PT]} />
-        <meshStandardMaterial color={parapetColor} roughness={0.85} />
-      </mesh>
-      <mesh position={[0,   roofSlab + 0.05 + PH / 2, -D / 2]} castShadow>
-        <boxGeometry args={[W, PH, PT]} />
-        <meshStandardMaterial color={parapetColor} roughness={0.85} />
-      </mesh>
-      <mesh position={[ W / 2, roofSlab + 0.05 + PH / 2, 0]} castShadow>
-        <boxGeometry args={[PT, PH, D]} />
-        <meshStandardMaterial color={parapetColor} roughness={0.85} />
-      </mesh>
-      <mesh position={[-W / 2, roofSlab + 0.05 + PH / 2, 0]} castShadow>
-        <boxGeometry args={[PT, PH, D]} />
-        <meshStandardMaterial color={parapetColor} roughness={0.85} />
-      </mesh>
+      {/* 女儿墙 — 四边（仅 PH > 0 时渲染）*/}
+      {PH > 0.01 && (
+        <>
+          <mesh position={[0,   roofSlab + 0.05 + PH / 2,  D / 2]} castShadow>
+            <boxGeometry args={[W, PH, PT]} />
+            <meshStandardMaterial color={parapetColor} roughness={0.85} />
+          </mesh>
+          <mesh position={[0,   roofSlab + 0.05 + PH / 2, -D / 2]} castShadow>
+            <boxGeometry args={[W, PH, PT]} />
+            <meshStandardMaterial color={parapetColor} roughness={0.85} />
+          </mesh>
+          <mesh position={[ W / 2, roofSlab + 0.05 + PH / 2, 0]} castShadow>
+            <boxGeometry args={[PT, PH, D]} />
+            <meshStandardMaterial color={parapetColor} roughness={0.85} />
+          </mesh>
+          <mesh position={[-W / 2, roofSlab + 0.05 + PH / 2, 0]} castShadow>
+            <boxGeometry args={[PT, PH, D]} />
+            <meshStandardMaterial color={parapetColor} roughness={0.85} />
+          </mesh>
+        </>
+      )}
       {/* 屋顶边缘影线 */}
       <mesh position={[0, roofY - 0.005, -(OV_S - OV) / 2]}>
         <boxGeometry args={[W + OV * 2 + 0.005, 0.01, D + OV_S + OV + 0.005]} />
         <meshStandardMaterial color="#D8D4CE" roughness={0.85} />
       </mesh>
-      {/* 女儿墙顶面金属压盖（parapet cap flashing — dark anodized aluminum） */}
-      {[
+      {/* 女儿墙顶面金属压盖（parapet cap flashing — dark anodized aluminum）
+          PH=0 时无女儿墙，也就没有压盖了 */}
+      {PH > 0.01 && [
         { w: W + 0.02,  d: PT + 0.02, x: 0,        z:  D / 2 },
         { w: W + 0.02,  d: PT + 0.02, x: 0,        z: -D / 2 },
         { w: PT + 0.02, d: D + 0.02,  x:  W / 2,   z: 0 },
@@ -889,8 +902,9 @@ function FlatRoof({
            Frameless glass panels on stainless-steel mini-posts sit on top of
            the concrete parapet, extending the effective railing height to ~0.72m
            above the parapet cap. Panels face inward (toward roof terrace).
-           Posts are square 40mm brushed steel, spaced ~1.2m on all four sides. */}
-      {(() => {
+           Posts are square 40mm brushed steel, spaced ~1.2m on all four sides.
+           Only renders when parapetGlass=true AND there's a parapet to sit on. */}
+      {parapetGlass && PH > 0.01 && (() => {
         const parapetTopY  = roofSlab + 0.05 + PH + 0.012;  // top of parapet cap flashing
         const glassH       = 0.42;    // glass panel height above parapet cap
         const glassT       = 0.010;   // glass panel thickness
@@ -5938,6 +5952,10 @@ export default function FloorPlanBuilding({
           solarPanelRows={exterior.solarPanelRows ?? 3}
           rooftopDeckEnabled={exterior.rooftopDeckEnabled ?? true}
           ventCount={exterior.roofVentCount ?? 3}
+          overhang={exterior.roofOverhang ?? 0.45}
+          overhangSouthExtra={exterior.roofOverhangSouthExtra ?? 0.30}
+          parapetH={exterior.parapetHeight ?? 0.30}
+          parapetGlass={exterior.parapetGlassEnabled ?? true}
         />
       )}
 

@@ -294,6 +294,19 @@ export interface ExteriorSettings {
   /** Even/odd two-tone panel striping on the facade. Default true.
    *  Turn off for a perfectly flat single-tone wall. */
   wallPanelTwoTone?: boolean;
+  // ── Roof geometry (was hardcoded in FlatRoof) ───────────────────────────
+  /** Eave overhang on N / E / W sides in metres. Default 0.45. Range 0–1.5.
+   *  0 = flush flat-roof; larger = deeper modernist cantilever. */
+  roofOverhang?: number;
+  /** Extra south-side overhang beyond `roofOverhang` (m). Default 0.30.
+   *  Set 0 for symmetric eaves on all 4 sides. */
+  roofOverhangSouthExtra?: number;
+  /** Parapet wall height (m) around the flat roof. Default 0.30.
+   *  Set 0 to drop the parapet — gives an unbroken cantilever look. */
+  parapetHeight?: number;
+  /** Glass balustrade on top of the parapet (for roof-terrace safety).
+   *  Default true. Only renders when parapetHeight > 0. */
+  parapetGlassEnabled?: boolean;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

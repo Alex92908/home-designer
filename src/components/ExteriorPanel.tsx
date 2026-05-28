@@ -912,6 +912,43 @@ export default function ExteriorPanel() {
               value={exterior.roofVentCount ?? 3}
               onChange={e => setExterior({ roofVentCount: parseInt(e.target.value, 10) })}
               className="w-full accent-blue-500" />
+            {/* Roof overhang */}
+            <div className="flex items-center justify-between text-[10px] pt-1">
+              <span className="text-gray-500">屋檐悬挑（四周）</span>
+              <span className="font-mono text-gray-700">{(exterior.roofOverhang ?? 0.45).toFixed(2)} m</span>
+            </div>
+            <input type="range" min={0} max={1.5} step={0.05}
+              value={exterior.roofOverhang ?? 0.45}
+              onChange={e => setExterior({ roofOverhang: parseFloat(e.target.value) })}
+              className="w-full accent-blue-500" />
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-gray-500">南面额外悬挑</span>
+              <span className="font-mono text-gray-700">+{(exterior.roofOverhangSouthExtra ?? 0.30).toFixed(2)} m</span>
+            </div>
+            <input type="range" min={0} max={1.5} step={0.05}
+              value={exterior.roofOverhangSouthExtra ?? 0.30}
+              onChange={e => setExterior({ roofOverhangSouthExtra: parseFloat(e.target.value) })}
+              className="w-full accent-blue-500" />
+            {/* Parapet */}
+            <div className="flex items-center justify-between text-[10px] pt-1">
+              <span className="text-gray-500">女儿墙高度</span>
+              <span className="font-mono text-gray-700">{(exterior.parapetHeight ?? 0.30).toFixed(2)} m</span>
+            </div>
+            <input type="range" min={0} max={1.0} step={0.05}
+              value={exterior.parapetHeight ?? 0.30}
+              onChange={e => setExterior({ parapetHeight: parseFloat(e.target.value) })}
+              className="w-full accent-blue-500" />
+            {(exterior.parapetHeight ?? 0.30) > 0.01 && (
+              <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={exterior.parapetGlassEnabled ?? true}
+                  onChange={e => setExterior({ parapetGlassEnabled: e.target.checked })}
+                  className="accent-blue-500"
+                />
+                <span className="text-gray-700">女儿墙顶玻璃护栏</span>
+              </label>
+            )}
           </div>
         </div>
 
