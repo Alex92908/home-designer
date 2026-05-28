@@ -7724,13 +7724,16 @@ export default function FloorPlanBuilding({
             {/* 内墙现在统一在外层 wallSegments.map 渲染（去重 + 不超出
                 房间边界）。这里只留地板/天花板/门/窗等不需要 dedupe
                 的元素。 */}
-            {/* 走廊：天花板板条（顶部薄板，让走廊从室内清晰可辨）*/}
-            {isHallway && (
-              <mesh position={[cx, yBase + FLOOR_H - 0.04, cz]} raycast={() => null}>
-                <boxGeometry args={[rW, 0.08, rD]} />
-                <meshStandardMaterial color={exterior.hallwayCeilingColor ?? "#E8E4DC"} roughness={0.88} side={THREE.DoubleSide} />
-              </mesh>
-            )}
+            {/* 走廊：天花板板条（顶部薄板，让走廊从室内清晰可辨。厚度可调） */}
+            {isHallway && (() => {
+              const hcT = Math.max(0.03, Math.min(0.20, (exterior.hallwayCeilingThicknessCm ?? 8) / 100));
+              return (
+                <mesh position={[cx, yBase + FLOOR_H - hcT / 2, cz]} raycast={() => null}>
+                  <boxGeometry args={[rW, hcT, rD]} />
+                  <meshStandardMaterial color={exterior.hallwayCeilingColor ?? "#E8E4DC"} roughness={0.88} side={THREE.DoubleSide} />
+                </mesh>
+              );
+            })()}
             {/* 地板：楼梯间上层（fi>0）不渲染地板，保持楼梯开口畅通 */}
             {!(isStair && fi > 0) && (
               <WalkthroughFloor
@@ -7929,27 +7932,28 @@ export default function FloorPlanBuilding({
             {/* 踢脚线（室内模式）—— 沿四墙底部，高度+色由 ExteriorSettings 决定 */}
             {insideBuilding && (exterior.skirtingEnabled ?? true) && !isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (() => {
               const skH = Math.max(0.04, Math.min(0.20, (exterior.skirtingHeight ?? 8) / 100));
+              const skT = Math.max(0.005, Math.min(0.04, (exterior.skirtingThicknessCm ?? 1.2) / 100));
               const skColor = exterior.skirtingColor ?? "#9C8A70";
               return (
                 <group position={[cx, yBase + skH / 2, cz]} raycast={() => null}>
                   {/* 北墙踢脚 */}
-                  <mesh position={[0, 0,  rD / 2 - 0.01]} rotation={[0, Math.PI, 0]}>
-                    <boxGeometry args={[rW - 0.04, skH, 0.012]} />
+                  <mesh position={[0, 0,  rD / 2 - skT / 2 - 0.004]} rotation={[0, Math.PI, 0]}>
+                    <boxGeometry args={[rW - 0.04, skH, skT]} />
                     <meshStandardMaterial color={skColor} roughness={0.75} />
                   </mesh>
                   {/* 南墙踢脚 */}
-                  <mesh position={[0, 0, -rD / 2 + 0.01]}>
-                    <boxGeometry args={[rW - 0.04, skH, 0.012]} />
+                  <mesh position={[0, 0, -rD / 2 + skT / 2 + 0.004]}>
+                    <boxGeometry args={[rW - 0.04, skH, skT]} />
                     <meshStandardMaterial color={skColor} roughness={0.75} />
                   </mesh>
                   {/* 东墙踢脚 */}
-                  <mesh position={[ rW / 2 - 0.01, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-                    <boxGeometry args={[rD - 0.04, skH, 0.012]} />
+                  <mesh position={[ rW / 2 - skT / 2 - 0.004, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+                    <boxGeometry args={[rD - 0.04, skH, skT]} />
                     <meshStandardMaterial color={skColor} roughness={0.75} />
                   </mesh>
                   {/* 西墙踢脚 */}
-                  <mesh position={[-rW / 2 + 0.01, 0, 0]} rotation={[0,  Math.PI / 2, 0]}>
-                    <boxGeometry args={[rD - 0.04, skH, 0.012]} />
+                  <mesh position={[-rW / 2 + skT / 2 + 0.004, 0, 0]} rotation={[0,  Math.PI / 2, 0]}>
+                    <boxGeometry args={[rD - 0.04, skH, skT]} />
                     <meshStandardMaterial color={skColor} roughness={0.75} />
                   </mesh>
                 </group>

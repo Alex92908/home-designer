@@ -986,6 +986,14 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ hallwayCeilingColor: e.target.value })}
                 className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
             </div>
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-gray-500">走廊顶板厚度</span>
+              <span className="font-mono text-gray-700">{exterior.hallwayCeilingThicknessCm ?? 8} cm</span>
+            </div>
+            <input type="range" min={3} max={20} step={1}
+              value={exterior.hallwayCeilingThicknessCm ?? 8}
+              onChange={e => setExterior({ hallwayCeilingThicknessCm: parseInt(e.target.value, 10) })}
+              className="w-full accent-blue-500" />
             <label className="flex items-center gap-2 text-[11px] cursor-pointer">
               <input
                 type="checkbox"
@@ -1060,6 +1068,14 @@ export default function ExteriorPanel() {
                 <input type="range" min={4} max={20} step={1}
                   value={exterior.skirtingHeight ?? 8}
                   onChange={e => setExterior({ skirtingHeight: parseInt(e.target.value, 10) })}
+                  className="w-full accent-blue-500" />
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-gray-500">凸出厚度</span>
+                  <span className="font-mono text-gray-700">{(exterior.skirtingThicknessCm ?? 1.2).toFixed(1)} cm</span>
+                </div>
+                <input type="range" min={0.5} max={4} step={0.1}
+                  value={exterior.skirtingThicknessCm ?? 1.2}
+                  onChange={e => setExterior({ skirtingThicknessCm: parseFloat(e.target.value) })}
                   className="w-full accent-blue-500" />
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-gray-600">颜色</span>

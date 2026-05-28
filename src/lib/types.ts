@@ -422,6 +422,12 @@ export interface ExteriorSettings {
   /** Concrete facade groove shadow color (the thin lines between
    *  panels). Hex. Default '#C0BAB2'. */
   wallGrooveColor?: string;
+  /** Skirting strip thickness in cm (how far it protrudes from the
+   *  wall). Default 1.2. Range 0.5–4. Higher = chunkier ornate
+   *  baseboard; lower = flush modern reveal. */
+  skirtingThicknessCm?: number;
+  /** Hallway ceiling cap thickness in cm. Default 8. Range 3–20. */
+  hallwayCeilingThicknessCm?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
