@@ -330,6 +330,18 @@ export interface ExteriorSettings {
    *  (warm brass). Try '#9A9A9E' for brushed nickel or '#1E1E22' for
    *  matt black hardware. */
   doorHandleColor?: string;
+  // ── Ceiling downlights (walkthrough only) ───────────────────────────────
+  /** Master toggle for the recessed ceiling downlight array. Default true.
+   *  Disabling gives unlit ceilings — sometimes preferred for bedroom
+   *  walkthrough where ambient light is sufficient and downlights pop too
+   *  bright. */
+  ceilingLightsEnabled?: boolean;
+  /** Floor area (m²) above which a room gets 4 downlights instead of 2.
+   *  Default 12. Range 4–40. */
+  ceilingLightLargeArea?: number;
+  /** Floor area (m²) above which a room gets 2 downlights instead of 1.
+   *  Default 6. Range 2–20. Must be ≤ ceilingLightLargeArea. */
+  ceilingLightMediumArea?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

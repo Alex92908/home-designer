@@ -875,6 +875,45 @@ export default function ExteriorPanel() {
           </div>
         </div>
 
+        {/* ── 室内（Interior — walkthrough only） ── */}
+        <div className="px-3 pt-4">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">室内 (INTERIOR · 仅漫游)</div>
+          <div className="px-1 flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={exterior.ceilingLightsEnabled ?? true}
+                onChange={e => setExterior({ ceilingLightsEnabled: e.target.checked })}
+                className="accent-blue-500"
+              />
+              <span className="text-gray-700">天花板嵌入筒灯</span>
+            </label>
+            {(exterior.ceilingLightsEnabled ?? true) && (
+              <div className="pl-5 flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-gray-500">2 盏阈值（≥）</span>
+                  <span className="font-mono text-gray-700">{exterior.ceilingLightMediumArea ?? 6} m²</span>
+                </div>
+                <input type="range" min={2} max={20} step={1}
+                  value={exterior.ceilingLightMediumArea ?? 6}
+                  onChange={e => setExterior({ ceilingLightMediumArea: parseInt(e.target.value, 10) })}
+                  className="w-full accent-blue-500" />
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-gray-500">4 盏阈值（≥）</span>
+                  <span className="font-mono text-gray-700">{exterior.ceilingLightLargeArea ?? 12} m²</span>
+                </div>
+                <input type="range" min={4} max={40} step={1}
+                  value={exterior.ceilingLightLargeArea ?? 12}
+                  onChange={e => setExterior({ ceilingLightLargeArea: parseInt(e.target.value, 10) })}
+                  className="w-full accent-blue-500" />
+                <div className="text-[9px] text-gray-400">
+                  房间面积小于「2 盏」阈值 → 1 盏；介于两阈值之间 → 2 盏；大于「4 盏」阈值 → 4 盏。
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* ── 门样式（Doors） ── */}
         <div className="px-3 pt-4">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">门 (DOORS)</div>

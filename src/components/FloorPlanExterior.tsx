@@ -7802,10 +7802,13 @@ export default function FloorPlanBuilding({
                   transparent={isXray} opacity={isXray ? 0.08 : 1} depthWrite={!isXray} />
               </mesh>
             )}
-            {/* 天花板筒灯（室内模式）—— 4 盏矩形嵌入式灯，不遮挡视线 */}
-            {insideBuilding && !isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (() => {
+            {/* 天花板筒灯（室内模式）—— 4 盏矩形嵌入式灯，不遮挡视线。
+                阈值 + 总开关从 ExteriorSettings 读取，便于按风格统一调灯感。 */}
+            {insideBuilding && (exterior.ceilingLightsEnabled ?? true) && !isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (() => {
               const roomArea = rW * rD;
-              const lightCount = roomArea > 12 ? 4 : roomArea > 6 ? 2 : 1;
+              const lgA = Math.max(4, Math.min(40, exterior.ceilingLightLargeArea ?? 12));
+              const mdA = Math.max(2, Math.min(lgA, exterior.ceilingLightMediumArea ?? 6));
+              const lightCount = roomArea > lgA ? 4 : roomArea > mdA ? 2 : 1;
               const offsets: [number, number][] = lightCount === 4
                 ? [[-rW*0.26, -rD*0.26], [rW*0.26, -rD*0.26], [-rW*0.26, rD*0.26], [rW*0.26, rD*0.26]]
                 : lightCount === 2
