@@ -1230,6 +1230,15 @@ export default function ExteriorPanel() {
               value={exterior.roofVentCount ?? 3}
               onChange={e => setExterior({ roofVentCount: parseInt(e.target.value, 10) })}
               className="w-full accent-blue-500" />
+            {/* Scupper count */}
+            <div className="flex items-center justify-between text-[10px] pt-1">
+              <span className="text-gray-500">排水口</span>
+              <span className="font-mono text-gray-700">{exterior.roofScupperCount ?? 2} 个</span>
+            </div>
+            <input type="range" min={0} max={4} step={1}
+              value={exterior.roofScupperCount ?? 2}
+              onChange={e => setExterior({ roofScupperCount: parseInt(e.target.value, 10) })}
+              className="w-full accent-blue-500" />
             {/* Roof overhang */}
             <div className="flex items-center justify-between text-[10px] pt-1">
               <span className="text-gray-500">屋檐悬挑（四周）</span>
@@ -1313,6 +1322,15 @@ export default function ExteriorPanel() {
                   <input type="color"
                     value={exterior.roofVentColor ?? "#606468"}
                     onChange={e => setExterior({ roofVentColor: e.target.value })}
+                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+                </div>
+              )}
+              {(exterior.roofScupperCount ?? 2) > 0 && (
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-gray-600">排水口色</span>
+                  <input type="color"
+                    value={exterior.roofScupperColor ?? "#5A6070"}
+                    onChange={e => setExterior({ roofScupperColor: e.target.value })}
                     className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
                 </div>
               )}

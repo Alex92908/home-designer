@@ -892,6 +892,8 @@ function FlatRoof({
   ventColor = "#606468",
   slabThicknessCm = 10,
   parapetThicknessCm: parapetTCm = 12,
+  scupperCount = 2,
+  scupperColor = "#5A6070",
 }: {
   W: number; D: number; roofY: number;
   nightGlow?: number; hasRooftop?: boolean;
@@ -911,6 +913,10 @@ function FlatRoof({
   slabThicknessCm?: number;
   /** Parapet thickness (cm). Default 12. */
   parapetThicknessCm?: number;
+  /** Scupper count (0–4). Default 2. */
+  scupperCount?: number;
+  /** Scupper metal color. Default '#5A6070'. */
+  scupperColor?: string;
 }) {
   // Cap cowl auto-darkens ~25 % below stack color for shadow detail.
   const ventCapColor = (() => {
@@ -1113,21 +1119,39 @@ function FlatRoof({
         );
       })()}
 
-      {/* ── 屋顶排水口（roof drain scupper）—— 东西女儿墙各一个穿墙排水管 ── */}
-      {([[ W / 2 + 0.04, D * 0.15], [-W / 2 - 0.04, -D * 0.15]] as [number,number][]).map(([sx, sz], si) => (
-        <group key={`scupper-${si}`} position={[sx, roofSlab + 0.05 + 0.08, sz]}>
-          {/* Scupper tube */}
-          <mesh rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.042, 0.042, 0.18, 8]} />
-            <meshStandardMaterial color="#5A6070" roughness={0.55} metalness={0.45} />
-          </mesh>
-          {/* Drip lip */}
-          <mesh position={[si === 0 ? 0.092 : -0.092, -0.022, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.052, 0.052, 0.018, 8]} />
-            <meshStandardMaterial color="#484E5C" roughness={0.50} metalness={0.48} />
-          </mesh>
-        </group>
-      ))}
+      {/* ── 屋顶排水口（roof drain scupper）—— count + color 由用户控制 ──
+           前 2 个 = 东西女儿墙原 hand-picked 位置；3–4 则在另一对侧加。
+           Drip lip auto-darkens 20% below scupper color. */}
+      {(() => {
+        const allPositions: [number, number][] = [
+          [ W / 2 + 0.04,  D * 0.15],
+          [-W / 2 - 0.04, -D * 0.15],
+          [ W / 2 + 0.04, -D * 0.30],
+          [-W / 2 - 0.04,  D * 0.30],
+        ];
+        const m = /^#([0-9a-f]{6})$/i.exec(scupperColor);
+        const dripLipColor = m ? (() => {
+          const n = parseInt(m[1], 16);
+          const r = Math.max(0, Math.round(((n >> 16) & 0xff) * 0.80));
+          const g = Math.max(0, Math.round(((n >>  8) & 0xff) * 0.80));
+          const b = Math.max(0, Math.round(( n        & 0xff) * 0.80));
+          return `#${[r, g, b].map(v => v.toString(16).padStart(2, "0")).join("")}`;
+        })() : "#484E5C";
+        return allPositions.slice(0, Math.max(0, Math.min(4, scupperCount))).map(([sx, sz], si) => (
+          <group key={`scupper-${si}`} position={[sx, roofSlab + 0.05 + 0.08, sz]}>
+            {/* Scupper tube */}
+            <mesh rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.042, 0.042, 0.18, 8]} />
+              <meshStandardMaterial color={scupperColor} roughness={0.55} metalness={0.45} />
+            </mesh>
+            {/* Drip lip — flipped to whichever side the scupper protrudes */}
+            <mesh position={[sx > 0 ? 0.092 : -0.092, -0.022, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.052, 0.052, 0.018, 8]} />
+              <meshStandardMaterial color={dripLipColor} roughness={0.50} metalness={0.48} />
+            </mesh>
+          </group>
+        ));
+      })()}
 
       {/* ── 屋顶绿化区（intensive green roof zone + boardwalk）──
            North-west quadrant of roof: sedum/grass carpet, mixed ornamental
@@ -6056,6 +6080,8 @@ export default function FloorPlanBuilding({
           ventColor={exterior.roofVentColor ?? "#606468"}
           slabThicknessCm={exterior.roofSlabThicknessCm ?? 10}
           parapetThicknessCm={exterior.parapetThicknessCm ?? 12}
+          scupperCount={exterior.roofScupperCount ?? 2}
+          scupperColor={exterior.roofScupperColor ?? "#5A6070"}
         />
       )}
 

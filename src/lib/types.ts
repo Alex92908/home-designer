@@ -434,6 +434,13 @@ export interface ExteriorSettings {
   /** Parapet wall thickness in cm. Default 12. Range 6–25. Thicker
    *  parapets read more solid / masonry; thinner reads modern metal. */
   parapetThicknessCm?: number;
+  /** Roof drain scupper count — protruding metal pipes that drain the
+   *  flat roof through the parapet. Default 2 (one per east-west side).
+   *  Range 0–4. 0 = clean parapet with no scuppers. */
+  roofScupperCount?: number;
+  /** Scupper metal color. Hex. Default '#5A6070' (galvanised steel).
+   *  Drip-lip auto-darkens ~20 % below this. */
+  roofScupperColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
