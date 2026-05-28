@@ -528,6 +528,8 @@ function ConcreteFacade({
   flowerBoxColor = "#2A2C34",
   flowerFoliageColor = "#3E7428",
   flowerBloomColor = "#E83040",
+  baseColor = "#E6E0D8",
+  grooveColor = "#C0BAB2",
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
@@ -569,6 +571,10 @@ function ConcreteFacade({
   flowerFoliageColor?: string;
   /** Bloom base color. Default '#E83040'. */
   flowerBloomColor?: string;
+  /** Facade base color. Default '#E6E0D8'. */
+  baseColor?: string;
+  /** Facade groove shadow color. Default '#C0BAB2'. */
+  grooveColor?: string;
 }) {
   // Per-tone hash variation around the base — shifts RGB ±20 % so the
   // mound doesn't read as flat-tone. Saturation/hue stay anchored to
@@ -597,8 +603,7 @@ function ConcreteFacade({
   // 竖向板缝：每 vGrooveStep m 一道
   const vGrooveStep  = Math.max(0.4, Math.min(3.0, vGrooveStepOverride ?? 1.20));
   const vGrooveCount = Math.max(1, Math.round(width / vGrooveStep) - 1);
-  const grooveColor  = "#C0BAB2";   // subtle groove shadow
-  const baseColor    = "#E6E0D8";   // crisp warm-white render (matches reference image)
+  // grooveColor + baseColor are now props (configured via ExteriorSettings).
 
   return (
     <group>
@@ -5419,6 +5424,8 @@ export default function FloorPlanBuilding({
               flowerBoxColor={exterior.windowFlowerBoxColor ?? "#2A2C34"}
               flowerFoliageColor={exterior.flowerFoliageColor ?? "#3E7428"}
               flowerBloomColor={exterior.flowerBloomColor ?? "#E83040"}
+              baseColor={exterior.wallBaseColor ?? "#E6E0D8"}
+              grooveColor={exterior.wallGrooveColor ?? "#C0BAB2"}
             />
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部。
                 Height + on/off now driven by ExteriorSettings.stoneBase{Enabled,Height}. */}

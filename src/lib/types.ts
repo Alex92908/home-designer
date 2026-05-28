@@ -414,6 +414,14 @@ export interface ExteriorSettings {
    *  Hex. Default '#E83040' (geranium red). Try '#9940CC' for
    *  bougainvillea or '#F0F0F0' for jasmine white. */
   flowerBloomColor?: string;
+  /** Concrete facade base color (the wall panels themselves).
+   *  Hex. Default '#E6E0D8' (warm-white render). This is the OUTER
+   *  facade surface — distinct from `wallColor`, which paints
+   *  interior room boxes. */
+  wallBaseColor?: string;
+  /** Concrete facade groove shadow color (the thin lines between
+   *  panels). Hex. Default '#C0BAB2'. */
+  wallGrooveColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

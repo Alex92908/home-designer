@@ -905,6 +905,20 @@ export default function ExteriorPanel() {
         <div className="px-3 pt-4">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">墙体细节 (WALL DETAIL)</div>
           <div className="px-1 flex flex-col gap-2">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-gray-600">立面底色</span>
+              <input type="color"
+                value={exterior.wallBaseColor ?? "#E6E0D8"}
+                onChange={e => setExterior({ wallBaseColor: e.target.value })}
+                className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+            </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-gray-600">板缝阴影色</span>
+              <input type="color"
+                value={exterior.wallGrooveColor ?? "#C0BAB2"}
+                onChange={e => setExterior({ wallGrooveColor: e.target.value })}
+                className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+            </div>
             <div className="flex items-center justify-between text-[10px]">
               <span className="text-gray-500">横向板缝间距</span>
               <span className="font-mono text-gray-700">{(exterior.wallPanelHSpacing ?? 0.90).toFixed(2)} m</span>
