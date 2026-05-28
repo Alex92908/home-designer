@@ -523,6 +523,7 @@ function ConcreteFacade({
   sillEnabled = true, lintelEnabled = true, jambEnabled = true,
   flowerBoxFreq = 70, twoTone = true,
   stripVCm = 4, stripHCm = 8,
+  sillColor = "#B8B4AC", lintelColor = "#C0BCB4",
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
@@ -550,6 +551,10 @@ function ConcreteFacade({
   stripVCm?: number;
   /** Horizontal (top + bottom) frame strip height in cm. Default 8. */
   stripHCm?: number;
+  /** Window sill stone color. Default '#B8B4AC'. */
+  sillColor?: string;
+  /** Window lintel concrete color. Default '#C0BCB4'. */
+  lintelColor?: string;
 }) {
   // Convert strip-thickness cm → metres for mesh use, with clamps.
   const stripVm = Math.max(0.02, Math.min(0.12, stripVCm / 100));
@@ -699,7 +704,7 @@ function ConcreteFacade({
             <>
               <mesh position={[0, -w.winH / 2 - 0.040, 0.055]} castShadow>
                 <boxGeometry args={[w.winLen + 0.10, 0.065, 0.130]} />
-                <meshStandardMaterial color="#B8B4AC" roughness={0.86} metalness={0.02} />
+                <meshStandardMaterial color={sillColor} roughness={0.86} metalness={0.02} />
               </mesh>
               {/* Drip-edge metal cap on sill face */}
               <mesh position={[0, -w.winH / 2 - 0.048, 0.116]}>
@@ -712,7 +717,7 @@ function ConcreteFacade({
           {lintelEnabled && (
             <mesh position={[0, w.winH / 2 + 0.030, 0.050]}>
               <boxGeometry args={[w.winLen + 0.04, 0.048, 0.095]} />
-              <meshStandardMaterial color="#C0BCB4" roughness={0.88} metalness={0.01} />
+              <meshStandardMaterial color={lintelColor} roughness={0.88} metalness={0.01} />
             </mesh>
           )}
           {/* 侧边窗口竖向内衬（jamb reveals — adds visual depth to the reveal） */}
@@ -5359,6 +5364,8 @@ export default function FloorPlanBuilding({
               twoTone={exterior.wallPanelTwoTone ?? true}
               stripVCm={exterior.windowFrameStripVCm ?? 4}
               stripHCm={exterior.windowFrameStripHCm ?? 8}
+              sillColor={exterior.windowSillColor ?? "#B8B4AC"}
+              lintelColor={exterior.windowLintelColor ?? "#C0BCB4"}
             />
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部。
                 Height + on/off now driven by ExteriorSettings.stoneBase{Enabled,Height}. */}
@@ -7829,6 +7836,7 @@ export default function FloorPlanBuilding({
               const rOuter = Math.max(0.04, Math.min(0.15, (exterior.ceilingLightRadiusCm ?? 8) / 100));
               const rInner = Math.max(0.02, rOuter - 0.015);
               const emiI   = Math.max(0.5, Math.min(6.0, exterior.ceilingLightIntensity ?? 3.5));
+              const emiC   = exterior.ceilingLightColor ?? "#FFF5D0";
               const offsets: [number, number][] = lightCount === 4
                 ? [[-rW*0.26, -rD*0.26], [rW*0.26, -rD*0.26], [-rW*0.26, rD*0.26], [rW*0.26, rD*0.26]]
                 : lightCount === 2
@@ -7844,7 +7852,7 @@ export default function FloorPlanBuilding({
                   {/* 发光灯片 (emissive only — see comment below) */}
                   <mesh position={[0, -0.005, 0]} raycast={() => null}>
                     <cylinderGeometry args={[rInner, rInner, 0.005, 12]} />
-                    <meshStandardMaterial color="#FFFCE8" emissive="#FFF5D0" emissiveIntensity={emiI} roughness={0.3} />
+                    <meshStandardMaterial color="#FFFCE8" emissive={emiC} emissiveIntensity={emiI} roughness={0.3} />
                   </mesh>
                   {/* Previous version emitted a real pointLight per spot
                       — but 1-4 per room × 12 rooms blew past WebGL's

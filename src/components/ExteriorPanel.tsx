@@ -843,6 +843,20 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ windowCenterMullionCm: parseInt(e.target.value, 10) })}
                 className="w-full accent-blue-500" />
               <div className="text-[9px] text-gray-400">两扇推拉窗中间的立柱，0 = 隐藏</div>
+              <div className="flex items-center justify-between text-[11px] pt-1">
+                <span className="text-gray-600">窗台板色</span>
+                <input type="color"
+                  value={exterior.windowSillColor ?? "#B8B4AC"}
+                  onChange={e => setExterior({ windowSillColor: e.target.value })}
+                  className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-600">窗楣色</span>
+                <input type="color"
+                  value={exterior.windowLintelColor ?? "#C0BCB4"}
+                  onChange={e => setExterior({ windowLintelColor: e.target.value })}
+                  className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+              </div>
             </div>
           </div>
         </div>
@@ -950,6 +964,13 @@ export default function ExteriorPanel() {
                   value={exterior.ceilingLightIntensity ?? 3.5}
                   onChange={e => setExterior({ ceilingLightIntensity: parseFloat(e.target.value) })}
                   className="w-full accent-blue-500" />
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-gray-600">发光色</span>
+                  <input type="color"
+                    value={exterior.ceilingLightColor ?? "#FFF5D0"}
+                    onChange={e => setExterior({ ceilingLightColor: e.target.value })}
+                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+                </div>
               </div>
             )}
             {/* Skirting / baseboard */}

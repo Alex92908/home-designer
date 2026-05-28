@@ -368,6 +368,16 @@ export interface ExteriorSettings {
   /** Ceiling downlight emissive intensity. Default 3.5. Range 0.5–6.0.
    *  Higher = brighter glow disc (visible ceiling light source). */
   ceilingLightIntensity?: number;
+  /** Ceiling downlight glow color. Hex string. Default '#FFF5D0' (warm
+   *  white). Try '#E4E8FF' for cool daylight or '#FF9F50' for sodium-
+   *  vapour warm. */
+  ceilingLightColor?: string;
+  /** Window sill (the stone band under each window) paint color.
+   *  Hex string. Default '#B8B4AC' (limestone). */
+  windowSillColor?: string;
+  /** Window lintel (the cast-concrete band above each window) color.
+   *  Hex string. Default '#C0BCB4' (off-white concrete). */
+  windowLintelColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
