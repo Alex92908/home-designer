@@ -7835,31 +7835,35 @@ export default function FloorPlanBuilding({
                 </group>
               ));
             })()}
-            {/* 踢脚线（室内模式）—— 沿四墙底部 6cm 深色条 */}
-            {insideBuilding && !isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (
-              <group position={[cx, yBase + 0.04, cz]} raycast={() => null}>
-                {/* 北墙踢脚 */ }
-                <mesh position={[0, 0,  rD / 2 - 0.01]} rotation={[0, Math.PI, 0]}>
-                  <boxGeometry args={[rW - 0.04, 0.08, 0.012]} />
-                  <meshStandardMaterial color="#9C8A70" roughness={0.75} />
-                </mesh>
-                {/* 南墙踢脚 */}
-                <mesh position={[0, 0, -rD / 2 + 0.01]}>
-                  <boxGeometry args={[rW - 0.04, 0.08, 0.012]} />
-                  <meshStandardMaterial color="#9C8A70" roughness={0.75} />
-                </mesh>
-                {/* 东墙踢脚 */}
-                <mesh position={[ rW / 2 - 0.01, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-                  <boxGeometry args={[rD - 0.04, 0.08, 0.012]} />
-                  <meshStandardMaterial color="#9C8A70" roughness={0.75} />
-                </mesh>
-                {/* 西墙踢脚 */}
-                <mesh position={[-rW / 2 + 0.01, 0, 0]} rotation={[0,  Math.PI / 2, 0]}>
-                  <boxGeometry args={[rD - 0.04, 0.08, 0.012]} />
-                  <meshStandardMaterial color="#9C8A70" roughness={0.75} />
-                </mesh>
-              </group>
-            )}
+            {/* 踢脚线（室内模式）—— 沿四墙底部，高度+色由 ExteriorSettings 决定 */}
+            {insideBuilding && (exterior.skirtingEnabled ?? true) && !isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (() => {
+              const skH = Math.max(0.04, Math.min(0.20, (exterior.skirtingHeight ?? 8) / 100));
+              const skColor = exterior.skirtingColor ?? "#9C8A70";
+              return (
+                <group position={[cx, yBase + skH / 2, cz]} raycast={() => null}>
+                  {/* 北墙踢脚 */}
+                  <mesh position={[0, 0,  rD / 2 - 0.01]} rotation={[0, Math.PI, 0]}>
+                    <boxGeometry args={[rW - 0.04, skH, 0.012]} />
+                    <meshStandardMaterial color={skColor} roughness={0.75} />
+                  </mesh>
+                  {/* 南墙踢脚 */}
+                  <mesh position={[0, 0, -rD / 2 + 0.01]}>
+                    <boxGeometry args={[rW - 0.04, skH, 0.012]} />
+                    <meshStandardMaterial color={skColor} roughness={0.75} />
+                  </mesh>
+                  {/* 东墙踢脚 */}
+                  <mesh position={[ rW / 2 - 0.01, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+                    <boxGeometry args={[rD - 0.04, skH, 0.012]} />
+                    <meshStandardMaterial color={skColor} roughness={0.75} />
+                  </mesh>
+                  {/* 西墙踢脚 */}
+                  <mesh position={[-rW / 2 + 0.01, 0, 0]} rotation={[0,  Math.PI / 2, 0]}>
+                    <boxGeometry args={[rD - 0.04, skH, 0.012]} />
+                    <meshStandardMaterial color={skColor} roughness={0.75} />
+                  </mesh>
+                </group>
+              );
+            })()}
             {/* 楼梯间：每层都渲染一套完整楼梯（扶手封在楼板处，无 X 交叉） */}
             {isStair && (
               <group position={[cx, yBase, cz]}>

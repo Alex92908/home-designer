@@ -911,6 +911,37 @@ export default function ExteriorPanel() {
                 </div>
               </div>
             )}
+            {/* Skirting / baseboard */}
+            <label className="flex items-center gap-2 text-[11px] cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={exterior.skirtingEnabled ?? true}
+                onChange={e => setExterior({ skirtingEnabled: e.target.checked })}
+                className="accent-blue-500"
+              />
+              <span className="text-gray-700">墙脚踢脚线</span>
+            </label>
+            {(exterior.skirtingEnabled ?? true) && (
+              <div className="pl-5 flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-gray-500">高度</span>
+                  <span className="font-mono text-gray-700">{exterior.skirtingHeight ?? 8} cm</span>
+                </div>
+                <input type="range" min={4} max={20} step={1}
+                  value={exterior.skirtingHeight ?? 8}
+                  onChange={e => setExterior({ skirtingHeight: parseInt(e.target.value, 10) })}
+                  className="w-full accent-blue-500" />
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-gray-600">颜色</span>
+                  <input
+                    type="color"
+                    value={exterior.skirtingColor ?? "#9C8A70"}
+                    onChange={e => setExterior({ skirtingColor: e.target.value })}
+                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -342,6 +342,13 @@ export interface ExteriorSettings {
   /** Floor area (m²) above which a room gets 2 downlights instead of 1.
    *  Default 6. Range 2–20. Must be ≤ ceilingLightLargeArea. */
   ceilingLightMediumArea?: number;
+  // ── Skirting / baseboard (walkthrough only) ─────────────────────────────
+  /** Skirting (baseboard) at the foot of interior walls. Default true. */
+  skirtingEnabled?: boolean;
+  /** Skirting height in cm. Default 8. Range 4–20. */
+  skirtingHeight?: number;
+  /** Skirting paint color. Hex string. Default '#9C8A70' (warm walnut). */
+  skirtingColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
