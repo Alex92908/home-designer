@@ -902,6 +902,9 @@ function FlatRoof({
   coveLightEnabled = true,
   coveLightColor = "#D0E8FF",
   solarPanelTiltDeg = 18,
+  solarPanelFrameColor = "#2C3040",
+  solarPanelCellColor = "#1A1E2E",
+  hvacColor = "#C4C0B8",
 }: {
   W: number; D: number; roofY: number;
   nightGlow?: number; hasRooftop?: boolean;
@@ -941,6 +944,12 @@ function FlatRoof({
   coveLightColor?: string;
   /** Solar PV tilt in degrees. Default 18. */
   solarPanelTiltDeg?: number;
+  /** Solar PV frame color. Default '#2C3040'. */
+  solarPanelFrameColor?: string;
+  /** Solar PV cell-surface color. Default '#1A1E2E'. */
+  solarPanelCellColor?: string;
+  /** HVAC unit housing color. Default '#C4C0B8'. */
+  hvacColor?: string;
 }) {
   // Cap cowl auto-darkens ~25 % below stack color for shadow detail.
   const ventCapColor = (() => {
@@ -1301,10 +1310,10 @@ function FlatRoof({
         [ W * 0.12, -D * 0.18],
       ] as [number,number][]).slice(0, Math.max(0, Math.min(4, hvacCount))).map(([hvx, hvz], hi) => (
         <group key={`hv-${hi}`} position={[hvx, roofSlab + 0.04, hvz]}>
-          {/* 机体箱 — 浅灰色蒙皮，略带金属感 */}
+          {/* 机体箱 — 颜色由 ExteriorSettings.rooftopHvacColor 控制 */}
           <mesh castShadow>
             <boxGeometry args={[0.90, 0.68, 0.90]} />
-            <meshStandardMaterial color="#C4C0B8" roughness={0.70} metalness={0.18} envMapIntensity={0.8} />
+            <meshStandardMaterial color={hvacColor} roughness={0.70} metalness={0.18} envMapIntensity={0.8} />
           </mesh>
           {/* 顶部风扇圆格栅 */}
           <mesh position={[0, 0.346, 0]}>
@@ -1359,16 +1368,16 @@ function FlatRoof({
                 const pz = -arrDepth / 2 + ri * (pvH + pvGap) + pvH / 2;
                 return (
                   <group key={`pv-${ri}-${ci}`} position={[px, 0, pz]}>
-                    {/* Panel frame — dark anodized aluminium */}
+                    {/* Panel frame — anodised aluminium, color configurable */}
                     <mesh castShadow>
                       <boxGeometry args={[pvW, pvH, 0.032]} />
-                      <meshStandardMaterial color="#2C3040" roughness={0.35} metalness={0.55} />
+                      <meshStandardMaterial color={solarPanelFrameColor} roughness={0.35} metalness={0.55} />
                     </mesh>
-                    {/* Glass cell surface — dark blue monocrystalline silicon */}
+                    {/* Glass cell surface — monocrystalline silicon, color configurable */}
                     <mesh position={[0, 0, 0.018]}>
                       <boxGeometry args={[pvW - 0.04, pvH - 0.04, 0.008]} />
                       <meshStandardMaterial
-                        color="#1A1E2E"
+                        color={solarPanelCellColor}
                         roughness={0.08} metalness={0.18}
                         envMapIntensity={3.0}
                         emissive="#0E1422" emissiveIntensity={0.06}
@@ -6145,6 +6154,9 @@ export default function FloorPlanBuilding({
           coveLightEnabled={exterior.coveLightEnabled ?? true}
           coveLightColor={exterior.coveLightColor ?? "#D0E8FF"}
           solarPanelTiltDeg={exterior.solarPanelTiltDeg ?? 18}
+          solarPanelFrameColor={exterior.solarPanelFrameColor ?? "#2C3040"}
+          solarPanelCellColor={exterior.solarPanelCellColor ?? "#1A1E2E"}
+          hvacColor={exterior.rooftopHvacColor ?? "#C4C0B8"}
         />
       )}
 

@@ -466,6 +466,18 @@ export interface ExteriorSettings {
    *  latitude optimum). Range 0–45. 0 = flush horizontal, 45 =
    *  steep winter-optimised. */
   solarPanelTiltDeg?: number;
+  /** Solar PV panel frame color (the anodised-aluminium edge band).
+   *  Hex. Default '#2C3040' (dark anodised). Try '#1A1A1E' for
+   *  matt-black bezels or '#A8AEB4' for natural anodised. */
+  solarPanelFrameColor?: string;
+  /** Solar PV cell-surface color (the monocrystalline silicon).
+   *  Hex. Default '#1A1E2E' (dark blue silicon). Cell-busbar grid
+   *  lines auto-derive a lighter tone above this. */
+  solarPanelCellColor?: string;
+  /** Rooftop HVAC condenser housing color. Hex. Default '#C4C0B8'
+   *  (light grey). Try '#1E2026' for a stealth-black industrial
+   *  look. */
+  rooftopHvacColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

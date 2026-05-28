@@ -1214,6 +1214,20 @@ export default function ExteriorPanel() {
                   value={exterior.solarPanelTiltDeg ?? 18}
                   onChange={e => setExterior({ solarPanelTiltDeg: parseInt(e.target.value, 10) })}
                   className="w-full accent-blue-500" />
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-gray-600">板框色</span>
+                  <input type="color"
+                    value={exterior.solarPanelFrameColor ?? "#2C3040"}
+                    onChange={e => setExterior({ solarPanelFrameColor: e.target.value })}
+                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-gray-600">硅片色</span>
+                  <input type="color"
+                    value={exterior.solarPanelCellColor ?? "#1A1E2E"}
+                    onChange={e => setExterior({ solarPanelCellColor: e.target.value })}
+                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+                </div>
               </div>
             )}
             {/* Rooftop deck items */}
@@ -1276,6 +1290,15 @@ export default function ExteriorPanel() {
               value={exterior.rooftopHvacCount ?? 2}
               onChange={e => setExterior({ rooftopHvacCount: parseInt(e.target.value, 10) })}
               className="w-full accent-blue-500" />
+            {(exterior.rooftopHvacCount ?? 2) > 0 && (
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-600">空调外机色</span>
+                <input type="color"
+                  value={exterior.rooftopHvacColor ?? "#C4C0B8"}
+                  onChange={e => setExterior({ rooftopHvacColor: e.target.value })}
+                  className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+              </div>
+            )}
             {/* Cove light toggle + color */}
             {(exterior.parapetHeight ?? 0.30) > 0.01 && (
               <>
