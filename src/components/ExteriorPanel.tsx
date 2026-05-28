@@ -7,6 +7,7 @@ import { useT } from "@/lib/i18n";
 import CloudRenderButton from "./CloudRenderButton";
 import DesignVariants from "./DesignVariants";
 import { PROJECT_TEMPLATES } from "@/lib/projectTemplates";
+import { EXTERIOR_PRESETS } from "@/lib/exteriorPresets";
 import FacadeEditor from "./FacadeEditor";
 import { getSampleGlassVillaFloorPlans, SAMPLE_GLASS_VILLA_EXTERIOR } from "@/lib/sampleGlassVilla";
 
@@ -733,6 +734,30 @@ export default function ExteriorPanel() {
             </div>
             <span className="text-[10px] font-bold" style={{ color: "#1F6F1F" }}>→</span>
           </button>
+        </div>
+
+        {/* ── 风格预设（Style Presets — applies ~30 settings in one click） ── */}
+        <div className="px-3 pt-4">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">风格预设 (STYLE PRESETS)</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {EXTERIOR_PRESETS.map(p => (
+              <button
+                key={p.id}
+                onClick={() => setExterior(p.settings)}
+                className="flex flex-col items-start gap-0.5 px-2 py-1.5 rounded-lg border transition-colors text-left bg-gray-50 border-gray-200 hover:bg-blue-50 hover:border-blue-300"
+                title={p.blurb}
+              >
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-700">
+                  <span className="text-[12px]">{p.icon}</span>
+                  <span>{p.label}</span>
+                </div>
+                <span className="text-[9px] text-gray-400 leading-tight">{p.blurb}</span>
+              </button>
+            ))}
+          </div>
+          <div className="text-[9px] text-gray-400 mt-1.5 leading-tight">
+            一键应用 ~30 项配色 / 尺寸。点击后下方各项可继续微调，不会覆盖你额外的更改。
+          </div>
         </div>
 
         {/* ── 窗户外观（Window Appearance） ── */}
