@@ -3045,6 +3045,12 @@ export default function FloorPlanBuilding({
   // because the warm glow stamped halos around every window. Dawn/dusk
   // also brought down — the strong amber there was the "golden hour"
   // tint, only realistic when sky is already dim.
+  // Default window dimensions (cm) — applied to any WindowConfig that
+  // doesn't specify its own sill/h. Lets users dial up floor-to-ceiling
+  // glazing (sill=0) or short kitchen strip windows globally.
+  const defWinSill = Math.max(0, Math.min(200, exterior.defaultWindowSill ?? 90));
+  const defWinH    = Math.max(60, Math.min(280, exterior.defaultWindowHeight ?? 150));
+
   const interiorGlowWall: number = sunHour < 6 || sunHour > 20
     ? 2.10   // night — strong warm interior glow visible through clear glass
     : sunHour < 8 || sunHour > 18
@@ -3453,7 +3459,7 @@ export default function FloorPlanBuilding({
       }
       for (const w of windows) {
         if (w.wall !== side) continue;
-        out.push({ x: w.pos, y: w.sill ?? 90, w: w.len, h: w.h ?? 150 });
+        out.push({ x: w.pos, y: w.sill ?? defWinSill, w: w.len, h: w.h ?? defWinH });
       }
       return out;
     };
@@ -5112,8 +5118,8 @@ export default function FloorPlanBuilding({
           return {
             localX,
             winLen:  w.len * CM,
-            winH:    (w.h ?? 150) * CM,
-            winSill: (w.sill ?? 90) * CM,
+            winH:    (w.h ?? defWinH) * CM,
+            winSill: (w.sill ?? defWinSill) * CM,
           };
         });
 
@@ -7902,8 +7908,8 @@ export default function FloorPlanBuilding({
                 贡献，安全跳过。 */}
             {!isStair && !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) && windows.map((win, wi) => {
               const wW   = win.len * CM;
-              const wH   = (win.h    ?? 150) * CM;
-              const wSill = (win.sill ?? 90)  * CM;
+              const wH   = (win.h    ?? defWinH) * CM;
+              const wSill = (win.sill ?? defWinSill)  * CM;
               const wPos  = win.pos * CM;
               // wPos and wW are already in metres — no extra * CM needed
               let wx = 0, wz = 0, rotY = 0;

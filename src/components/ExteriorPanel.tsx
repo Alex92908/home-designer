@@ -763,6 +763,29 @@ export default function ExteriorPanel() {
             >
               恢复默认
             </button>
+            {/* Default dimensions — apply to any window without explicit sill/h */}
+            <div className="border-t border-gray-100 pt-2 mt-1 flex flex-col gap-1.5">
+              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">默认尺寸</div>
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-gray-500">窗台高（离地）</span>
+                <span className="font-mono text-gray-700">{exterior.defaultWindowSill ?? 90} cm</span>
+              </div>
+              <input type="range" min={0} max={200} step={5}
+                value={exterior.defaultWindowSill ?? 90}
+                onChange={e => setExterior({ defaultWindowSill: parseInt(e.target.value, 10) })}
+                className="w-full accent-blue-500" />
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-gray-500">窗高</span>
+                <span className="font-mono text-gray-700">{exterior.defaultWindowHeight ?? 150} cm</span>
+              </div>
+              <input type="range" min={60} max={280} step={5}
+                value={exterior.defaultWindowHeight ?? 150}
+                onChange={e => setExterior({ defaultWindowHeight: parseInt(e.target.value, 10) })}
+                className="w-full accent-blue-500" />
+              <div className="text-[9px] text-gray-400">
+                窗台 = 0 → 落地窗。仅影响未单独设置尺寸的窗户。
+              </div>
+            </div>
             {/* Ornament toggles — minimal vs classic look */}
             <div className="border-t border-gray-100 pt-2 mt-1 flex flex-col gap-1.5">
               <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">装饰件</div>

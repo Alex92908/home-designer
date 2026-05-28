@@ -315,6 +315,13 @@ export interface ExteriorSettings {
   /** Default style for the auto-generated ground-floor living-room entrance
    *  door. Other doors fall back to "wood_panel". Default "french_double". */
   frontEntranceStyle?: DoorStyle;
+  // ── Window dimension defaults (cm) ──────────────────────────────────────
+  /** Default sill height (cm above the floor) for windows without explicit
+   *  `sill`. Default 90. Range 0–200. Floor-to-ceiling glazing = 0. */
+  defaultWindowSill?: number;
+  /** Default window height in cm for windows without explicit `h`.
+   *  Default 150. Range 60–280. Larger than `FLOOR_H - sill` will clip. */
+  defaultWindowHeight?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
