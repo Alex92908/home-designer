@@ -406,6 +406,14 @@ export interface ExteriorSettings {
    *  (galvanised steel). Cap cowl darkens ~25 % below this value
    *  automatically. */
   roofVentColor?: string;
+  /** Flower-box foliage base color (the leafy mounds in each window
+   *  flower box). Hex. Default '#3E7428' (mid foliage green). Per-
+   *  bush variation still hashes ±20 % brightness for natural look. */
+  flowerFoliageColor?: string;
+  /** Flower bloom base color (the colourful dots above foliage).
+   *  Hex. Default '#E83040' (geranium red). Try '#9940CC' for
+   *  bougainvillea or '#F0F0F0' for jasmine white. */
+  flowerBloomColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

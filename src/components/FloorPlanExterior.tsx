@@ -526,6 +526,8 @@ function ConcreteFacade({
   sillColor = "#B8B4AC", lintelColor = "#C0BCB4",
   jambColor = "#BCBAB2", jambDepthCm = 9,
   flowerBoxColor = "#2A2C34",
+  flowerFoliageColor = "#3E7428",
+  flowerBloomColor = "#E83040",
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
@@ -563,7 +565,28 @@ function ConcreteFacade({
   jambDepthCm?: number;
   /** Wrought-iron flower-box body color. Default '#2A2C34'. */
   flowerBoxColor?: string;
+  /** Foliage base color. Default '#3E7428'. */
+  flowerFoliageColor?: string;
+  /** Bloom base color. Default '#E83040'. */
+  flowerBloomColor?: string;
 }) {
+  // Per-tone hash variation around the base — shifts RGB ±20 % so the
+  // mound doesn't read as flat-tone. Saturation/hue stay anchored to
+  // the user's pick. Helper inlined since it's only used twice.
+  const shadeBy = (hex: string, by: number): string => {
+    const m = /^#([0-9a-f]{6})$/i.exec(hex);
+    if (!m) return hex;
+    const n = parseInt(m[1], 16);
+    const r = Math.max(0, Math.min(255, Math.round(((n >> 16) & 0xff) * (1 + by))));
+    const g = Math.max(0, Math.min(255, Math.round(((n >>  8) & 0xff) * (1 + by))));
+    const b = Math.max(0, Math.min(255, Math.round(( n        & 0xff) * (1 + by))));
+    return `#${[r, g, b].map(v => v.toString(16).padStart(2, "0")).join("")}`;
+  };
+  const foliageA = shadeBy(flowerFoliageColor, -0.20);
+  const foliageB = shadeBy(flowerFoliageColor,  0.10);
+  const bloomA   = flowerBloomColor;
+  const bloomB   = shadeBy(flowerBloomColor,  0.15);
+  const bloomC   = shadeBy(flowerBloomColor, -0.15);
   const jambDepthM = Math.max(0.04, Math.min(0.20, jambDepthCm / 100));
   // Convert strip-thickness cm → metres for mesh use, with clamps.
   const stripVm = Math.max(0.02, Math.min(0.12, stripVCm / 100));
@@ -754,7 +777,7 @@ function ConcreteFacade({
               {/* Plant foliage — green base mound */}
               {Array.from({ length: Math.max(2, Math.round(w.winLen / 0.55)) }, (_, pi) => {
                 const px3 = -w.winLen / 2 + 0.28 + pi * (w.winLen / Math.max(1, Math.round(w.winLen / 0.55) - 0));
-                const greenTone = panelBlindHash(wi + pi * 5, wi * 2 + pi) < 0.5 ? "#2E6820" : "#4A8030";
+                const greenTone = panelBlindHash(wi + pi * 5, wi * 2 + pi) < 0.5 ? foliageA : foliageB;
                 return (
                   <mesh key={pi} position={[px3, 0.12, 0]} castShadow>
                     <sphereGeometry args={[0.10 + panelBlindHash(pi, wi + 3) * 0.05, 6, 5]} />
@@ -762,12 +785,11 @@ function ConcreteFacade({
                   </mesh>
                 );
               })}
-              {/* Flower blooms — colorful dots above foliage */}
+              {/* Flower blooms — colorful dots above foliage (3 hash-picked shades around the user's bloom color) */}
               {Array.from({ length: Math.max(3, Math.round(w.winLen / 0.38)) }, (_, fi) => {
                 const fx3 = -w.winLen / 2 + 0.18 + fi * (w.winLen - 0.16) / Math.max(2, Math.round(w.winLen / 0.38) - 1);
-                // Deterministic flower color: geranium red, bougainvillea pink, petunia purple, white
                 const flHash = panelBlindHash(wi * 13 + fi * 7, wi + fi * 3);
-                const flColor = flHash < 0.30 ? "#E83040" : flHash < 0.55 ? "#E85090" : flHash < 0.75 ? "#9940CC" : "#F0F0F0";
+                const flColor = flHash < 0.33 ? bloomA : flHash < 0.66 ? bloomB : bloomC;
                 return (
                   <mesh key={`fl-${fi}`} position={[fx3, 0.195, 0.012]} castShadow>
                     <sphereGeometry args={[0.040 + flHash * 0.018, 5, 4]} />
@@ -5395,6 +5417,8 @@ export default function FloorPlanBuilding({
               jambColor={exterior.windowJambColor ?? "#BCBAB2"}
               jambDepthCm={exterior.windowJambDepthCm ?? 9}
               flowerBoxColor={exterior.windowFlowerBoxColor ?? "#2A2C34"}
+              flowerFoliageColor={exterior.flowerFoliageColor ?? "#3E7428"}
+              flowerBloomColor={exterior.flowerBloomColor ?? "#E83040"}
             />
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部。
                 Height + on/off now driven by ExteriorSettings.stoneBase{Enabled,Height}. */}

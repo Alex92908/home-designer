@@ -873,13 +873,29 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ windowJambDepthCm: parseInt(e.target.value, 10) })}
                 className="w-full accent-blue-500" />
               {(exterior.windowFlowerBoxFreq ?? 70) > 0 && (
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-600">花箱色</span>
-                  <input type="color"
-                    value={exterior.windowFlowerBoxColor ?? "#2A2C34"}
-                    onChange={e => setExterior({ windowFlowerBoxColor: e.target.value })}
-                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
-                </div>
+                <>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-gray-600">花箱色</span>
+                    <input type="color"
+                      value={exterior.windowFlowerBoxColor ?? "#2A2C34"}
+                      onChange={e => setExterior({ windowFlowerBoxColor: e.target.value })}
+                      className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-gray-600">叶片色</span>
+                    <input type="color"
+                      value={exterior.flowerFoliageColor ?? "#3E7428"}
+                      onChange={e => setExterior({ flowerFoliageColor: e.target.value })}
+                      className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-gray-600">花朵色</span>
+                    <input type="color"
+                      value={exterior.flowerBloomColor ?? "#E83040"}
+                      onChange={e => setExterior({ flowerBloomColor: e.target.value })}
+                      className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+                  </div>
+                </>
               )}
             </div>
           </div>
