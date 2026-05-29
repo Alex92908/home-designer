@@ -530,6 +530,14 @@ function ConcreteFacade({
   flowerBloomColor = "#E83040",
   baseColor = "#E6E0D8",
   grooveColor = "#C0BAB2",
+  glassTopColor,
+  mullionPos = 0,
+  mullionThicknessCm = 3,
+  grooveOpacity = 0.55,
+  revealShadow = 0.50,
+  baseShadow = 0.0,
+  eaveShadow = 0.0,
+  wallVignette = 0.0,
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
@@ -575,6 +583,25 @@ function ConcreteFacade({
   baseColor?: string;
   /** Facade groove shadow color. Default '#C0BAB2'. */
   grooveColor?: string;
+  /** Window glass TOP colour for sky-reflection gradient. When undefined,
+   *  glass is drawn as a single uniform pane in `glassColor`. */
+  glassTopColor?: string;
+  /** Horizontal mullion position 0–1 of pane height. 0 = disabled. */
+  mullionPos?: number;
+  /** Mullion thickness in cm. Default 3. */
+  mullionThicknessCm?: number;
+  /** Multiplier on grout-line opacity (0–1). Default 0.55. Lower = grout
+   *  blends into wall, reducing the "kindergarten brick" look. */
+  grooveOpacity?: number;
+  /** Strength of the inward darkening band at the jamb (0–1). Default 0.50. */
+  revealShadow?: number;
+  /** AO-style dark strip at wall bottom (where wall meets ground / slab). 0..1. */
+  baseShadow?: number;
+  /** AO-style dark strip below the eave / parapet (top of wall). 0..1. */
+  eaveShadow?: number;
+  /** 0..1 vertical wall vignette — adds a soft top→bottom darkening overlay
+   *  so the wall reads as 3D-lit instead of flat-fill. */
+  wallVignette?: number;
 }) {
   // Per-tone hash variation around the base — shifts RGB ±20 % so the
   // mound doesn't read as flat-tone. Saturation/hue stay anchored to
@@ -604,6 +631,23 @@ function ConcreteFacade({
   const vGrooveStep  = Math.max(0.4, Math.min(3.0, vGrooveStepOverride ?? 1.20));
   const vGrooveCount = Math.max(1, Math.round(width / vGrooveStep) - 1);
   // grooveColor + baseColor are now props (configured via ExteriorSettings).
+  // ── Iter 3: soften panel grout. Blend grooveColor toward baseColor by
+  // (1 - grooveOpacity). At grooveOpacity=0 the seam reads as a hairline
+  // tonal break instead of a kindergarten-brick white line. ────────────
+  const grooveCol = (() => {
+    const op = Math.max(0, Math.min(1, grooveOpacity));
+    if (op >= 0.99) return grooveColor;
+    const hexOf = (h: string) => {
+      const m = /^#([0-9a-f]{6})$/i.exec(h);
+      if (!m) return [192, 186, 178];
+      const n = parseInt(m[1], 16);
+      return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+    };
+    const a = hexOf(grooveColor);
+    const b = hexOf(baseColor);
+    const mix = a.map((ai, i) => Math.round(ai * op + b[i] * (1 - op)));
+    return `#${mix.map(v => v.toString(16).padStart(2, "0")).join("")}`;
+  })();
 
   return (
     <group>
@@ -613,6 +657,43 @@ function ConcreteFacade({
         <boxGeometry args={[width, height, 0.12]} />
         <meshStandardMaterial color={baseColor} roughness={0.78} metalness={0.02} envMapIntensity={0.35} />
       </mesh>
+      {/* ── Iter 7-9: AO-style overlays. All three (baseShadow, eaveShadow,
+           wallVignette) are thin transparent dark planes layered just in
+           front of the wall — purely additive, never replaces baseColor. */}
+      {baseShadow > 0 && (
+        <mesh position={[0, -height / 2 + 0.10, 0.062]}>
+          <planeGeometry args={[width + 0.004, 0.20]} />
+          <meshStandardMaterial color="#000000" transparent
+            opacity={Math.max(0, Math.min(1, baseShadow)) * 0.55}
+            roughness={1.0} metalness={0} />
+        </mesh>
+      )}
+      {eaveShadow > 0 && (
+        <mesh position={[0, height / 2 - 0.075, 0.062]}>
+          <planeGeometry args={[width + 0.004, 0.15]} />
+          <meshStandardMaterial color="#000000" transparent
+            opacity={Math.max(0, Math.min(1, eaveShadow)) * 0.50}
+            roughness={1.0} metalness={0} />
+        </mesh>
+      )}
+      {wallVignette > 0 && (() => {
+        // Stack 3 horizontal bands: dim at bottom, neutral middle, slight
+        // boost at top. Cheap fake of sky-occlusion lighting without writing
+        // a custom shader.
+        const v = Math.max(0, Math.min(1, wallVignette));
+        return (
+          <>
+            <mesh position={[0, -height / 4, 0.061]}>
+              <planeGeometry args={[width + 0.004, height / 2 - 0.10]} />
+              <meshStandardMaterial color="#000000" transparent opacity={v * 0.18} roughness={1.0} metalness={0} />
+            </mesh>
+            <mesh position={[0, height / 4, 0.061]}>
+              <planeGeometry args={[width + 0.004, height / 2 - 0.10]} />
+              <meshStandardMaterial color="#FFFFFF" transparent opacity={v * 0.08} roughness={1.0} metalness={0} />
+            </mesh>
+          </>
+        );
+      })()}
       {/* ── 竖向分板阴影面 —— InstancedMesh，颜色交替 (even/odd 拆 2 个) ──
           每块宽固定 = vGrooveStep - 0.020。边角 panel 如果 panelW2 ≠ 标准
           宽度，会被几何 scale；为简单起见，跳过越界的板。 */}
@@ -653,7 +734,7 @@ function ConcreteFacade({
       {hGrooveCount > 0 && (
         <Instances limit={hGrooveCount}>
           <boxGeometry args={[width + 0.01, 0.018, 0.006]} />
-          <meshStandardMaterial color={grooveColor} roughness={0.92} />
+          <meshStandardMaterial color={grooveCol} roughness={0.92} />
           {Array.from({ length: hGrooveCount }, (_, i) => (
             <Instance key={i} position={[0, -height / 2 + (i + 1) * hGrooveStep, 0.042]} />
           ))}
@@ -664,7 +745,7 @@ function ConcreteFacade({
       {vGrooveCount > 0 && (
         <Instances limit={vGrooveCount}>
           <boxGeometry args={[0.018, height + 0.01, 0.006]} />
-          <meshStandardMaterial color={grooveColor} roughness={0.92} />
+          <meshStandardMaterial color={grooveCol} roughness={0.92} />
           {Array.from({ length: vGrooveCount }, (_, i) => (
             <Instance key={i} position={[-width / 2 + (i + 1) * vGrooveStep, 0, 0.042]} />
           ))}
@@ -709,21 +790,86 @@ function ConcreteFacade({
           {/* 玻璃 — 白天偏深蓝灰色，更清晰区别于墙面。Opacity 抬到 0.92 让
               深色不被墙底色透回来稀释。夜间保持半透发光。
               envMapIntensity 0.3 + roughness 0.15 防止白天玻璃把整个 sky
-              反射回来变成跟白墙一样亮的灰板（user: 窗户和门外形不明显）*/}
-          <mesh position={[0, 0, 0.018]}>
-            <planeGeometry args={[w.winLen - 0.04, w.winH - 0.04]} />
-            <meshPhysicalMaterial
-              color={glassColor}
-              transmission={windowGlow > 0.5 ? 0.22 : 0.05}
-              roughness={windowGlow > 0.5 ? 0.04 : 0.15}
-              metalness={0.05}
-              envMapIntensity={windowGlow > 0.5 ? 1.0 : 0.30}
-              transparent opacity={windowGlow > 0.5 ? 0.82 : 0.96}
-              emissive={windowGlow > 0.5 && litMult > 0 ? glassGlow : "#000000"}
-              emissiveIntensity={windowGlow > 0.5 ? windowGlow * 0.24 * litMult : 0}
-              side={THREE.FrontSide}
-            />
-          </mesh>
+              反射回来变成跟白墙一样亮的灰板（user: 窗户和门外形不明显）
+              v2 (decartoon): 上下两片，上片用 glassTopColor 模拟天空反射，
+              下片用 glassColor 保持房间深邃。中间一根水平窗梃。 */}
+          {(() => {
+            const innerW = w.winLen - 0.04;
+            const innerH = w.winH - 0.04;
+            // Split position 0..1 measured from the bottom of the pane.
+            // Default 0.50 (mid). When mullionPos===0, force 0.50 and skip
+            // the mullion bar so the legacy "uniform pane" look is preserved
+            // when glassTopColor is also unset.
+            const splitT = mullionPos > 0 ? Math.max(0.10, Math.min(0.90, mullionPos)) : 0.50;
+            const topH    = innerH * (1 - splitT);
+            const botH    = innerH * splitT;
+            const yMidTop = (splitT) * innerH / 2;          // centre of top sub-plane (relative to window centre)
+            const yMidBot = -((1 - splitT)) * innerH / 2;   // centre of bottom sub-plane
+            const topCol  = (windowGlow > 0.5)
+              ? glassColor                                  // at night, top + bottom both glow uniformly
+              : (glassTopColor ?? glassColor);              // day: optional sky-reflective tint
+            const glassMatFor = (col: string) => (
+              <meshPhysicalMaterial
+                color={col}
+                transmission={windowGlow > 0.5 ? 0.22 : 0.05}
+                roughness={windowGlow > 0.5 ? 0.04 : 0.15}
+                metalness={0.05}
+                envMapIntensity={windowGlow > 0.5 ? 1.0 : 0.30}
+                transparent opacity={windowGlow > 0.5 ? 0.82 : 0.96}
+                emissive={windowGlow > 0.5 && litMult > 0 ? glassGlow : "#000000"}
+                emissiveIntensity={windowGlow > 0.5 ? windowGlow * 0.24 * litMult : 0}
+                side={THREE.FrontSide}
+              />
+            );
+            return (
+              <>
+                <mesh position={[0, yMidTop + (innerH/2 - topH/2 - yMidTop), 0.018]}>
+                  {/* explicit: top plane centred at +(innerH/2 - topH/2) */}
+                  <planeGeometry args={[innerW, topH]} />
+                  {glassMatFor(topCol)}
+                </mesh>
+                <mesh position={[0, -(innerH/2 - botH/2), 0.018]}>
+                  <planeGeometry args={[innerW, botH]} />
+                  {glassMatFor(glassColor)}
+                </mesh>
+                {mullionPos > 0 && (() => {
+                  const mTh = Math.max(0.015, Math.min(0.08, mullionThicknessCm / 100));
+                  // Y of mullion centre — at the boundary between top + bottom.
+                  // Boundary measured from bottom = splitT * innerH ; relative to pane centre = splitT*innerH - innerH/2.
+                  const mY = splitT * innerH - innerH / 2;
+                  return (
+                    <mesh position={[0, mY, 0.021]}>
+                      <planeGeometry args={[innerW, mTh]} />
+                      <meshStandardMaterial color={fc} roughness={0.30} metalness={0.70} />
+                    </mesh>
+                  );
+                })()}
+              </>
+            );
+          })()}
+          {/* ── Iter 6: window-opening reveal shadow band. Adds a thin near-
+              black ring just inside the frame so the window reads as a real
+              hole punched in the wall, not a sticker. Controlled by the
+              user via ExteriorSettings.windowRevealShadow (0..1). Opacity
+              scales linearly with the dial. ────────────────────────── */}
+          {revealShadow > 0 && (() => {
+            const op = Math.max(0, Math.min(1, revealShadow)) * 0.65;
+            const band = 0.025; // 2.5 cm visual reveal width
+            const innerW = w.winLen - 0.04;
+            const innerH = w.winH - 0.04;
+            // 4 thin planes (top, bottom, left, right) just behind the frame.
+            return ([
+              [0,  innerH/2 - band/2, innerW, band] as [number,number,number,number],
+              [0, -innerH/2 + band/2, innerW, band] as [number,number,number,number],
+              [-innerW/2 + band/2, 0, band, innerH] as [number,number,number,number],
+              [ innerW/2 - band/2, 0, band, innerH] as [number,number,number,number],
+            ]).map(([rx, ry, rw, rh], k) => (
+              <mesh key={`rv-${k}`} position={[rx, ry, 0.019]}>
+                <planeGeometry args={[rw, rh]} />
+                <meshStandardMaterial color="#0A0C10" transparent opacity={op} roughness={1.0} metalness={0} />
+              </mesh>
+            ));
+          })()}
           {/* 窗框 — 暗铝合金色，4 条压条。厚度由 ExteriorSettings 控制：
               垂直压条用 stripV（左右），水平压条用 stripH（上下）。 */}
           {(() => {
@@ -5540,6 +5686,14 @@ export default function FloorPlanBuilding({
               flowerBloomColor={exterior.flowerBloomColor ?? "#E83040"}
               baseColor={facadeBase}
               grooveColor={exterior.wallGrooveColor ?? "#C0BAB2"}
+              glassTopColor={exterior.windowGlassTopColor}
+              mullionPos={exterior.windowMullionPos ?? 0}
+              mullionThicknessCm={exterior.windowMullionThicknessCm ?? 3}
+              grooveOpacity={exterior.wallPanelGrooveOpacity ?? 0.55}
+              revealShadow={exterior.windowRevealShadow ?? 0.50}
+              baseShadow={floorIndex === 0 ? (exterior.buildingBaseShadow ?? 0) : 0}
+              eaveShadow={floorIndex === exterior.floors - 1 ? (exterior.eaveShadow ?? 0) : 0}
+              wallVignette={exterior.wallVignette ?? 0}
             />
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部。
                 Height + on/off now driven by ExteriorSettings.stoneBase{Enabled,Height}. */}

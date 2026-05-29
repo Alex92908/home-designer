@@ -7,7 +7,18 @@
  * IMPORTANT: every field listed here must be a real key on
  * ExteriorSettings. TypeScript enforces this via the `satisfies` clause.
  */
-import type { ExteriorSettings } from "./types";
+import type { ExteriorSettings, RoomType, YardItem } from "./types";
+
+/** Per-room material bundle shipped with a preset. Values are MaterialItem
+ *  IDs from MATERIALS (src/lib/data.ts). The applier resolves them on click
+ *  and assigns the corresponding MaterialItem objects to that room. */
+export interface ExteriorPresetRoomMaterials {
+  wall?: string;
+  floor?: string;
+  tile?: string;
+  light?: string;
+  wallLower?: string;
+}
 
 export interface ExteriorPreset {
   id: string;
@@ -19,6 +30,15 @@ export interface ExteriorPreset {
   icon: string;
   /** The bundle of settings the preset applies. */
   settings: Partial<ExteriorSettings>;
+  /** Optional per-room default materials. When set, applying the preset
+   *  also assigns matching wall/floor/tile materials to every enabled
+   *  room on the current floor, giving a coherent "designed package"
+   *  feel instead of pure exterior tuning. */
+  roomMaterials?: Partial<Record<RoomType, ExteriorPresetRoomMaterials>>;
+  /** Optional yard items. When set, applying the preset REPLACES the
+   *  floor-0 yardPlan.items with this list — so the landscape matches
+   *  the style. Leave undefined to preserve the user's current yard. */
+  yardItems?: YardItem[];
 }
 
 export const EXTERIOR_PRESETS: ExteriorPreset[] = [
@@ -39,7 +59,19 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       // (the recessed reveal IS the minimalist read), 5 cm frame so the
       // window doesn't disappear into white wall under sky reflection.
       windowGlassColor: "#1A2030",
+      windowGlassTopColor: "#4A5C72",  // sky-reflection band on upper half
+      windowMullionPos: 0.50,           // classic centre mullion
+      windowMullionThicknessCm: 2.5,
       windowFrameColor: "#1A1A1E",
+      // Decartoon: barely-there grout, naturalised lawn, hazy sky.
+      wallPanelGrooveOpacity: 0.25,
+      lawnTint: "#7E8E6A",
+      skyHaze: 0.20,
+      windowRevealShadow: 0.65,
+      treeColorJitter: 0.40,
+      buildingBaseShadow: 0.55,
+      eaveShadow: 0.45,
+      wallVignette: 0.30,
       windowSillEnabled: false,
       windowLintelEnabled: false,
       windowJambEnabled: true,
@@ -74,6 +106,35 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       roofSlabColor: "#3A3E48",
       roofVentCount: 0,
     },
+    // ── Designed package: each room gets a curated material pair that
+    // matches the monochrome facade. Oak floors in living spaces give
+    // the scene its warm note; whites tie back to the cream wall.
+    roomMaterials: {
+      living:    { floor: "floor-oak",        wall: "wall-white", light: "light-recessed" },
+      master:    { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant" },
+      bedroom:   { floor: "floor-oak",        wall: "wall-white", light: "light-recessed" },
+      bedroom2:  { floor: "floor-oak",        wall: "wall-white", light: "light-recessed" },
+      bedroom3:  { floor: "floor-oak",        wall: "wall-white", light: "light-recessed" },
+      study:     { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant" },
+      study2:    { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant" },
+      dining:    { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant" },
+      hallway:   { floor: "floor-oak",        wall: "wall-white", light: "light-recessed" },
+      closet:    { floor: "floor-oak",        wall: "wall-white", light: "light-recessed" },
+      kitchen:   { floor: "floor-white-tile", wall: "wall-tile-white", light: "light-linear-pendant" },
+      bathroom:  { floor: "floor-white-tile", wall: "wall-tile-metro", light: "light-smart-panel" },
+      bathroom2: { floor: "floor-white-tile", wall: "wall-tile-metro", light: "light-smart-panel" },
+      balcony:   { floor: "floor-concrete",   wall: "wall-white" },
+      balcony2:  { floor: "floor-concrete",   wall: "wall-white" },
+    },
+    // Minimal landscape: one anchoring olive on each side of the house,
+    // a single feature stone, and a low maple by the entry. Sparse on
+    // purpose — it's "modern minimal", not "garden party".
+    yardItems: [
+      { id: "mm-tree-1", type: "singleton", kind: "tree.olive",   x: -900, z:  600, scale: 1.3 },
+      { id: "mm-tree-2", type: "singleton", kind: "tree.olive",   x:  900, z:  600, scale: 1.3 },
+      { id: "mm-tree-3", type: "singleton", kind: "tree.maple",   x:  450, z: -650, scale: 1.0 },
+      { id: "mm-rock-1", type: "singleton", kind: "rock.large", x: -500, z: -650, scale: 1.2 },
+    ],
   },
   {
     id: "french-classical",

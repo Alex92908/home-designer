@@ -2449,6 +2449,9 @@ function SingletonItem({ item: it }: { item: import("@/lib/types").YardSingleton
   const asset = getOutdoorAssetByKind(it.kind);
   // ALWAYS call hooks unconditionally — pass undefined when not applicable
   const sketchfabReady = useGltfAvailable(asset?.customGltfPath);
+  // Read the user's jitter dial. We tap exterior at this level so each
+  // instance can scale/rotate independently. Hook order is stable.
+  const treeJitter = useDesignerStore(s => s.exterior.treeColorJitter ?? 0.35);
   if (!asset) return null;
   const wx  = it.x / 100;
   const wz  = it.z / 100;
@@ -2458,9 +2461,14 @@ function SingletonItem({ item: it }: { item: import("@/lib/types").YardSingleton
   const h2 = treeHash(it.x, it.z, 7);
   // Furniture: no organic tilt/jitter — placed items should be perfectly upright
   const isFurniture = asset.category === "furniture";
+  // ── Iter 4: per-instance variation driven by ExteriorSettings.treeColorJitter.
+  // The factor scales both rotation and scale randomness. j=0 → identical clones,
+  // j=1 → strong variation. Default 0.35 yields a quiet but visible variety
+  // (±15 % scale, ±40° yaw) instead of the previous fixed ±8 %/±23°.
+  const j = isFurniture ? 0 : Math.max(0, Math.min(1, treeJitter));
   const tilt = isFurniture ? 0 : (h1 - 0.5) * 0.04;
-  const yawJitter = isFurniture ? 0 : (h2 - 0.5) * 0.4;
-  const sJitter = isFurniture ? 1 : (0.92 + h1 * 0.16);
+  const yawJitter = isFurniture ? 0 : (h2 - 0.5) * (0.4 + j * 1.2);
+  const sJitter = isFurniture ? 1 : (1 + (h1 - 0.5) * (0.16 + j * 0.30));
   const kenneyScale = asset.scale * s * sJitter;
   const sketchfabUserScale = s * sJitter;
   const fillColor = techColorForAsset(it.kind, asset.category);
@@ -3287,7 +3295,7 @@ function useProceduralGrassTexture(): THREE.Texture {
   return useMemo(() => getProceduralGrassTexture(), []);
 }
 
-function GrassGroundTextured({ size }: { size: number }) {
+function GrassGroundTextured({ size, tint }: { size: number; tint: string }) {
   const texture = useProceduralGrassTexture();
   // Task 1: 大草地 plane 永远在视野，跳过 frustum 测试
   return (
@@ -3295,6 +3303,7 @@ function GrassGroundTextured({ size }: { size: number }) {
       <planeGeometry args={[size, size]} />
       <meshStandardMaterial
         map={texture}
+        color={tint}
         roughness={0.95}
         metalness={0.0}
         envMapIntensity={0.12}
@@ -3343,23 +3352,31 @@ function EntryPath({ W, D }: { W: number; D: number }) {
   );
 }
 
-function Ground({ W, D }: { W: number; D: number }) {
+function Ground({ W, D, lawnTint }: { W: number; D: number; lawnTint?: string }) {
   // Single large plane — no seam between "far" and "near" zones.
   // Sized to fill the camera frustum; PBR texture loads async via Suspense.
   const size = Math.max(W, D) * 7 + 40;
   const grassRadius = Math.max(W, D) * 3.5 + 16;
+  const tint = lawnTint ?? "#7E8E6A";
+  // Fallback colour is the tint × a mid-grass green so the unloaded state
+  // doesn't flash bright kindergarten green. Multiplied via THREE.Color.
+  const fallbackCol = useMemo(() => {
+    const c = new THREE.Color(tint);
+    c.multiply(new THREE.Color("#5F7A48"));
+    return c;
+  }, [tint]);
   return (
     <>
       <Suspense fallback={
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.500, 0]} receiveShadow>
           <planeGeometry args={[size, size]} />
-          <meshStandardMaterial color="#3E6020" roughness={0.96} />
+          <meshStandardMaterial color={fallbackCol} roughness={0.96} />
         </mesh>
       }>
-        <GrassGroundTextured size={size} />
+        <GrassGroundTextured size={size} tint={tint} />
       </Suspense>
       {/* Instanced grass blades around building — skips building footprint */}
-      <GrassCarpet W={W} D={D} count={2800} radius={grassRadius} />
+      <GrassCarpet W={W} D={D} count={2800} radius={grassRadius} lawnTint={tint} />
     </>
   );
 }
@@ -3368,7 +3385,7 @@ function Ground({ W, D }: { W: number; D: number }) {
 // Scatters thousands of thin tapered triangles across the lawn. Skips
 // blades that fall inside the house footprint or pool footprint so they
 // don't poke through hard surfaces.
-function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: number; radius: number }) {
+function GrassCarpet({ W, D, count, radius, lawnTint }: { W: number; D: number; count: number; radius: number; lawnTint?: string }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const geom = useMemo(() => {
     // 2-tri tapered blade: rectangular base narrowing to a point
@@ -3419,7 +3436,10 @@ function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: num
       dummy.scale.set(s, s, s);
       dummy.updateMatrix();
       mesh.setMatrixAt(placed, dummy.matrix);
-      // Colour variation: rich natural lawn greens with subtle warm/cool shift
+      // Colour variation: rich natural lawn greens with subtle warm/cool shift.
+      // Final colour = raw blade greens × `lawnTint` (post-multiply), so the
+      // exposed ExteriorSettings.lawnTint dial desaturates the carpet in
+      // lockstep with the ground plane.
       const tint = 0.45 + Math.random() * 0.50;
       const warmth = Math.random() * 0.08; // occasional warm yellow-green blade
       const col = new THREE.Color(
@@ -3427,13 +3447,14 @@ function GrassCarpet({ W, D, count, radius }: { W: number; D: number; count: num
         0.36 * tint + 0.06 + warmth * 0.3,
         0.08 * tint,
       );
+      if (lawnTint) col.multiply(new THREE.Color(lawnTint));
       mesh.setColorAt(placed, col);
       placed++;
     }
     mesh.count = placed;
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [count, radius, W, D]);
+  }, [count, radius, W, D, lawnTint]);
 
   return (
     <instancedMesh ref={meshRef} args={[geom, undefined, count]} castShadow={false} receiveShadow>
@@ -6505,16 +6526,24 @@ export default function HouseCanvas() {
             sphere instead since the night HDR is just a coloured gradient. */}
         {/* Sky — physically-based Preetham atmospheric scattering (day/dawn/dusk).
             Hidden during walkthrough — causes visual artifacts from inside. */}
-        {!insideBuilding && theme.phase !== "night" && (
-          <Sky
-            sunPosition={sunPos}
-            turbidity={theme.phase === "day" ? 4.5 : 9.0}
-            rayleigh={theme.phase === "day" ? 1.6 : 0.7}
-            mieCoefficient={theme.phase === "day" ? 0.005 : 0.008}
-            mieDirectionalG={0.85}
-            distance={450000}
-          />
-        )}
+        {!insideBuilding && theme.phase !== "night" && (() => {
+          // ── Iter 5: skyHaze (0..1) bumps turbidity + rayleigh toward an
+          // overcast / urban-haze look. Bigger turbidity = milkier sky;
+          // smaller rayleigh = less blue saturation. Default 0.15. ─────
+          const haze = Math.max(0, Math.min(1, exterior.skyHaze ?? 0.15));
+          const baseT = theme.phase === "day" ? 4.5 : 9.0;
+          const baseR = theme.phase === "day" ? 1.6 : 0.7;
+          return (
+            <Sky
+              sunPosition={sunPos}
+              turbidity={baseT + haze * 6.0}
+              rayleigh={baseR * (1 - haze * 0.55)}
+              mieCoefficient={(theme.phase === "day" ? 0.005 : 0.008) + haze * 0.010}
+              mieDirectionalG={0.85}
+              distance={450000}
+            />
+          );
+        })()}
         {insideBuilding && <color attach="background" args={["#D8D4CC"]} />}
         <HouseEnvironmentFallback>
           <Suspense fallback={null}>
@@ -6630,8 +6659,8 @@ export default function HouseCanvas() {
              so it can't z-fight with room floors at y=0.025. Walkthrough
              needs Ground so the user can step through the front door and
              roam the yard without falling into the void. ── */}
-        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} />}
-        {!isRichGlassVilla && <Ground W={W} D={D} />}
+        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} lawnTint={exterior.lawnTint} />}
+        {!isRichGlassVilla && <Ground W={W} D={D} lawnTint={exterior.lawnTint} />}
         {!insideBuilding && !isRichGlassVilla && <EntryPath W={W} D={D} />}
         {/* rich-glass-villa (non-FPD): minimal stone plaza only */}
         {!insideBuilding && isRichGlassVilla && _buildingType !== "floor-plan-driven" && (

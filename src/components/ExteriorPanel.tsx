@@ -219,6 +219,7 @@ const FACE_LABELS: Record<WallFace, string> = { S:"南墙", N:"北墙", W:"西�
 export default function ExteriorPanel() {
   const exterior              = useDesignerStore(s => s.exterior);
   const setExterior           = useDesignerStore(s => s.setExterior);
+  const applyExteriorPreset   = useDesignerStore(s => s.applyExteriorPreset);
   const applyProjectTemplate  = useDesignerStore(s => s.applyProjectTemplate);
   const viewMode              = useDesignerStore(s => s.viewMode);
   const setViewMode           = useDesignerStore(s => s.setViewMode);
@@ -743,20 +744,24 @@ export default function ExteriorPanel() {
             {EXTERIOR_PRESETS.map(p => (
               <button
                 key={p.id}
-                onClick={() => setExterior(p.settings)}
+                onClick={() => applyExteriorPreset(p.id)}
                 className="flex flex-col items-start gap-0.5 px-2 py-1.5 rounded-lg border transition-colors text-left bg-gray-50 border-gray-200 hover:bg-blue-50 hover:border-blue-300"
                 title={p.blurb}
               >
                 <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-700">
                   <span className="text-[12px]">{p.icon}</span>
                   <span>{p.label}</span>
+                  {(p.roomMaterials || p.yardItems) && (
+                    <span className="text-[10px] text-amber-500" title="完整方案 — 含房间材质 / 院子">✦</span>
+                  )}
                 </div>
                 <span className="text-[9px] text-gray-400 leading-tight">{p.blurb}</span>
               </button>
             ))}
           </div>
           <div className="text-[9px] text-gray-400 mt-1.5 leading-tight">
-            一键应用 ~30 项配色 / 尺寸。点击后下方各项可继续微调，不会覆盖你额外的更改。
+            一键设计包：外观 ~30 项 + 每间房地板 / 墙面材质 + 院子植被。
+            带 <span className="text-gray-500 font-semibold">✦</span> 的为已配齐房间材质与院子的"完整方案"。
           </div>
         </div>
 

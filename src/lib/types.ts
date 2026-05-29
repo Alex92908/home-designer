@@ -478,6 +478,49 @@ export interface ExteriorSettings {
    *  (light grey). Try '#1E2026' for a stealth-black industrial
    *  look. */
   rooftopHvacColor?: string;
+  // ── Realism dial (Wallich-inspired naturalisation, 2026-05) ────────────────
+  /** Hex tint MULTIPLIED into the grass ground texture + per-blade colour.
+   *  Lower the saturation of the procedural grass without ripping out the
+   *  worker. Default '#7E8E6A' (muted sage); try '#5F7050' for darker
+   *  English-lawn vibe, or '#9AA88A' for sun-bleached prairie. Use white
+   *  ('#FFFFFF') to bypass tinting and see the raw worker texture. */
+  lawnTint?: string;
+  /** Hex top-of-glass colour for window panes — simulates sky reflection on
+   *  the upper portion. Default '#3B4A5E' (overcast deep blue). Bottom
+   *  half blends to `windowGlassColor`. Pure photoreal look: set both to
+   *  the same value to disable the gradient. */
+  windowGlassTopColor?: string;
+  /** Horizontal mullion (cross-bar) position on each window pane, 0–1 of
+   *  pane height. Default 0 (disabled). 0.45–0.55 reads as classic 2-over-2
+   *  glazing; 0.30 reads as transom over picture window. */
+  windowMullionPos?: number;
+  /** Mullion thickness in cm. Default 3. */
+  windowMullionThicknessCm?: number;
+  /** 0–1 visibility of the panel grout/seam lines on the facade. Default
+   *  0.55. 1 = full saturation of `wallGrooveColor`; 0 = grout invisible.
+   *  Lowering this is the single biggest "decartoon" lever for the wall. */
+  wallPanelGrooveOpacity?: number;
+  /** 0–1 amount of per-instance hue + scale jitter applied to yard trees
+   *  and shrubs. Default 0.35. 0 = all clones identical; 0.6 = obviously
+   *  varied palette. Deterministic per-item id. */
+  treeColorJitter?: number;
+  /** 0–1 sky/atmosphere haziness. Default 0.15. Boosts drei `<Sky>`
+   *  turbidity + adds a soft grey-blue scene fog at the horizon. */
+  skyHaze?: number;
+  /** 0–1 strength of the inward darkening band drawn just inside each
+   *  window's jamb. Reads windows as real openings, not stickers.
+   *  Default 0.50. 0 disables. */
+  windowRevealShadow?: number;
+  /** 0–1 dark AO strip at the bottom of the ground-floor wall. Default 0
+   *  (off). Makes the building stop "floating" above the grass. */
+  buildingBaseShadow?: number;
+  /** 0–1 dark AO strip below the eave / parapet on the top floor.
+   *  Default 0 (off). Gives the cantilever a tangible undershadow. */
+  eaveShadow?: number;
+  /** 0–1 vertical wall vignette overlay. Default 0 (off). Top half gets
+   *  a soft white wash, bottom half a soft black wash — fakes
+   *  sky-occlusion lighting cheaply. */
+  wallVignette?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
