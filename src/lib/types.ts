@@ -540,6 +540,17 @@ export interface ExteriorSettings {
    *  Lowering tames the ACES roll-off that produces white halos on
    *  sun-lit cream walls. */
   exposure?: number;
+  /** Multiply a procedural stucco/grain texture into the ConcreteFacade
+   *  baseColor. Default true (legacy was untextured cream cardboard).
+   *  Set false to disable per-preset for pure-glass curtain wall looks. */
+  wallStuccoEnabled?: boolean;
+  /** Physical size (in metres) of one stucco-grain texture tile on the wall.
+   *  Smaller = finer grain, larger = coarser. Default 1.2. Only applies when
+   *  wallStuccoEnabled is not false. */
+  wallStuccoScale?: number;
+  /** Surface roughness of the stuccoed wall material, 0..1. Default 0.85.
+   *  Higher = more matte plaster, lower = subtle sheen. */
+  wallStuccoRoughness?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

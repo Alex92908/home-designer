@@ -31,7 +31,7 @@ import { PlacedItemMesh } from "./RoomCanvas";
 import { WalkthroughDoor3D } from "@/components/walkthrough/WalkthroughDoor3D";
 import { splitWallAroundHoles } from "@/lib/wallGeom";
 import { paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
-import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize } from "@/lib/textures";
+import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize, getStuccoTexture } from "@/lib/textures";
 import { StaircaseGeom } from "./GlobalCanvas";
 
 // ── 常量 ──────────────────────────────────────────────────────
@@ -538,6 +538,9 @@ function ConcreteFacade({
   baseShadow = 0.0,
   eaveShadow = 0.0,
   wallVignette = 0.0,
+  stuccoEnabled = true,
+  stuccoScale = 1.2,
+  stuccoRoughness = 0.85,
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
@@ -602,6 +605,13 @@ function ConcreteFacade({
   /** 0..1 vertical wall vignette — adds a soft top→bottom darkening overlay
    *  so the wall reads as 3D-lit instead of flat-fill. */
   wallVignette?: number;
+  /** Multiply procedural stucco grain into the baseColor box. Default true.
+   *  Set false for the flat painted-cardboard legacy look. */
+  stuccoEnabled?: boolean;
+  /** Physical tile size (m) of the stucco grain. Default 1.2. */
+  stuccoScale?: number;
+  /** Roughness of the stuccoed wall material 0..1. Default 0.85. */
+  stuccoRoughness?: number;
 }) {
   // Per-tone hash variation around the base — shifts RGB ±20 % so the
   // mound doesn't read as flat-tone. Saturation/hue stay anchored to
@@ -652,10 +662,24 @@ function ConcreteFacade({
   return (
     <group>
       {/* ── 底板（整面）── 12 cm 厚，跟漫游模式 WALL_T 一致，让外观图墙体在
-           转角处显出真实墙厚（不像纸片）。 */}
+           转角处显出真实墙厚（不像纸片）。
+           Stucco grain texture multiplied into baseColor stops the wall
+           reading as cardboard flat-fill. Repeat scaled by width/height so
+           the speckle stays the same physical size regardless of segment.
+           Configurable via stuccoTextureEnabled (default true). */}
       <mesh castShadow receiveShadow>
         <boxGeometry args={[width, height, 0.12]} />
-        <meshStandardMaterial color={baseColor} roughness={0.78} metalness={0.02} envMapIntensity={0.35} />
+        {(() => {
+          if (stuccoEnabled === false) {
+            return <meshStandardMaterial color={baseColor} roughness={0.78} metalness={0.02} envMapIntensity={0.35} />;
+          }
+          const tex = getStuccoTexture(1).clone();
+          tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+          const scl = Math.max(0.2, stuccoScale);
+          tex.repeat.set(Math.max(2, width / scl), Math.max(2, height / scl));
+          tex.needsUpdate = true;
+          return <meshStandardMaterial map={tex} color={baseColor} roughness={stuccoRoughness} metalness={0.02} envMapIntensity={0.30} />;
+        })()}
       </mesh>
       {/* ── Iter 7-9: AO-style overlays. All three (baseShadow, eaveShadow,
            wallVignette) are thin transparent dark planes layered just in
@@ -5715,6 +5739,9 @@ export default function FloorPlanBuilding({
               baseShadow={floorIndex === 0 ? (exterior.buildingBaseShadow ?? 0) : 0}
               eaveShadow={floorIndex === exterior.floors - 1 ? (exterior.eaveShadow ?? 0) : 0}
               wallVignette={exterior.wallVignette ?? 0}
+              stuccoEnabled={exterior.wallStuccoEnabled ?? true}
+              stuccoScale={exterior.wallStuccoScale ?? 1.2}
+              stuccoRoughness={exterior.wallStuccoRoughness ?? 0.85}
             />
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部。
                 Height + on/off now driven by ExteriorSettings.stoneBase{Enabled,Height}. */}

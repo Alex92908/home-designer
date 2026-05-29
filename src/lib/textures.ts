@@ -9,6 +9,58 @@ import * as THREE from "three";
 // ── Cache ──────────────────────────────────────────────────────────────────
 const _cache = new Map<string, THREE.CanvasTexture>();
 
+/** Procedural fine-grain stucco for exterior walls. Multiplies into a
+ *  baseColor on the ConcreteFacade box so monolithic cream walls stop
+ *  reading as flat-fill cardboard. Output is a tilable 512² noise +
+ *  speckle pattern, near-white luminance averaging ~0.96 so it doesn't
+ *  visibly darken the wall. Cache key includes seed so callers can mix
+ *  variants per facade if they want. */
+export function getStuccoTexture(seed = 1): THREE.CanvasTexture {
+  return cached(`stucco-${seed}`, () => {
+    const N = 512;
+    const [c, ctx] = makeCtx(N);
+    // Base: near-white cream
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, N, N);
+    // Low-frequency tonal blotches — like sun-faded stucco mottling.
+    // Deterministic xorshift so the same seed always produces the same
+    // pattern (avoids per-mount re-blotching jank).
+    let s = seed * 2654435761;
+    const rand = () => {
+      s = (s ^ (s << 13)) >>> 0;
+      s = (s ^ (s >>> 17)) >>> 0;
+      s = (s ^ (s << 5))  >>> 0;
+      return s / 0xffffffff;
+    };
+    for (let i = 0; i < 90; i++) {
+      const x = rand() * N;
+      const y = rand() * N;
+      const r = 40 + rand() * 80;
+      const v = 240 + Math.floor(rand() * 15);
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0,   `rgba(${v},${v},${v},0.10)`);
+      g.addColorStop(1,   `rgba(${v},${v},${v},0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // High-frequency grain — 0.5px speckles giving a faint sandpaper
+    // microtexture that catches sun without visible repetition.
+    const img = ctx.getImageData(0, 0, N, N);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const j = (rand() * 14 - 7) | 0;
+      img.data[i]   = Math.max(0, Math.min(255, img.data[i]   + j));
+      img.data[i+1] = Math.max(0, Math.min(255, img.data[i+1] + j));
+      img.data[i+2] = Math.max(0, Math.min(255, img.data[i+2] + j));
+    }
+    ctx.putImageData(img, 0, 0);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  });
+}
+
 function cached(id: string, gen: () => THREE.CanvasTexture): THREE.CanvasTexture {
   if (_cache.has(id)) return _cache.get(id)!;
   const tex = gen();
