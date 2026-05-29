@@ -35,15 +35,18 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       wallPanelVSpacing: 1.80,
       wallPanelTwoTone: false,
       stoneBaseEnabled: false,
-      // Windows: minimal frame, no ornaments
-      windowGlassColor: "#2E3640",
+      // Windows: minimal but still legible. sill/lintel off, but jamb on
+      // (the recessed reveal IS the minimalist read), 5 cm frame so the
+      // window doesn't disappear into white wall under sky reflection.
+      windowGlassColor: "#1A2030",
       windowFrameColor: "#1A1A1E",
       windowSillEnabled: false,
       windowLintelEnabled: false,
-      windowJambEnabled: false,
+      windowJambEnabled: true,
+      windowJambDepthCm: 12,
       windowFlowerBoxFreq: 0,
-      windowFrameStripVCm: 2,
-      windowFrameStripHCm: 2,
+      windowFrameStripVCm: 5,
+      windowFrameStripHCm: 5,
       windowCenterMullionCm: 0,
       defaultWindowSill: 30,
       defaultWindowHeight: 230,

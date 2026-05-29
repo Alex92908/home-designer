@@ -707,14 +707,18 @@ function ConcreteFacade({
             />
           </mesh>
           {/* 玻璃 — 白天偏深蓝灰色，更清晰区别于墙面。Opacity 抬到 0.92 让
-              深色不被墙底色透回来稀释。夜间保持半透发光。 */}
+              深色不被墙底色透回来稀释。夜间保持半透发光。
+              envMapIntensity 0.3 + roughness 0.15 防止白天玻璃把整个 sky
+              反射回来变成跟白墙一样亮的灰板（user: 窗户和门外形不明显）*/}
           <mesh position={[0, 0, 0.018]}>
             <planeGeometry args={[w.winLen - 0.04, w.winH - 0.04]} />
             <meshPhysicalMaterial
               color={glassColor}
-              transmission={windowGlow > 0.5 ? 0.22 : 0.12}
-              roughness={0.04} metalness={0.08}
-              transparent opacity={windowGlow > 0.5 ? 0.82 : 0.92}
+              transmission={windowGlow > 0.5 ? 0.22 : 0.05}
+              roughness={windowGlow > 0.5 ? 0.04 : 0.15}
+              metalness={0.05}
+              envMapIntensity={windowGlow > 0.5 ? 1.0 : 0.30}
+              transparent opacity={windowGlow > 0.5 ? 0.82 : 0.96}
               emissive={windowGlow > 0.5 && litMult > 0 ? glassGlow : "#000000"}
               emissiveIntensity={windowGlow > 0.5 ? windowGlow * 0.24 * litMult : 0}
               side={THREE.FrontSide}
