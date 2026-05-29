@@ -6544,8 +6544,14 @@ export default function HouseCanvas() {
             <pointLight position={[-40, 55, -120]} intensity={1.8} distance={300} color="#E8F0FF" decay={1} />
           </>
         )}
-        {/* Hemisphere light — sky/ground bounce */}
-        <hemisphereLight args={[theme.hemiSky, theme.hemiGround, theme.hemiIntensity]} />
+        {/* Hemisphere light — sky/ground bounce. Skipped while inside the
+            building because theme.hemiSky is a pale sky blue (#C8DDEF in
+            daytime) which painted every white tile floor in walkthrough
+            visibly blue — the interior has its own warm hemi below that
+            handles the indoor fill light. */}
+        {!insideBuilding && (
+          <hemisphereLight args={[theme.hemiSky, theme.hemiGround, theme.hemiIntensity]} />
+        )}
         <ambientLight intensity={insideBuilding ? 0.82 : theme.ambient} />
         {/* Interior ceiling lights — warm downlights active when camera is inside */}
         {insideBuilding && (
