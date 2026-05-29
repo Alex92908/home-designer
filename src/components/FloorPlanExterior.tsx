@@ -715,14 +715,14 @@ function ConcreteFacade({
             {evenPanels.length > 0 && (
               <Instances limit={evenPanels.length}>
                 <boxGeometry args={[stdW, height - 0.002, 0.004]} />
-                <meshStandardMaterial color="#CBC7BF" roughness={0.88} metalness={0.01} />
+                <meshStandardMaterial color={shadeBy(baseColor,  0.020)} roughness={0.88} metalness={0.01} />
                 {evenPanels.map((p, i) => <Instance key={i} position={p} />)}
               </Instances>
             )}
             {oddPanels.length > 0 && (
               <Instances limit={oddPanels.length}>
                 <boxGeometry args={[stdW, height - 0.002, 0.004]} />
-                <meshStandardMaterial color="#C3BFB7" roughness={0.88} metalness={0.01} />
+                <meshStandardMaterial color={shadeBy(baseColor, -0.025)} roughness={0.88} metalness={0.01} />
                 {oddPanels.map((p, i) => <Instance key={i} position={p} />)}
               </Instances>
             )}
@@ -7983,8 +7983,14 @@ export default function FloorPlanBuilding({
                 position={[p.x + p.w / 2, p.y + p.h / 2, 0]}
                 w={p.w} h={p.h} thickness={WALL_T}
                 pieceX={p.x} pieceY={p.y}
-                wallColor={seg.wallColor}
-                wallId={seg.wallId}
+                // In EXTERIOR view, when the user has set a building-wide
+                // wallBaseColor (Modern Minimal etc.), repaint every wall
+                // segment with that flat colour and drop the texture id —
+                // otherwise per-room bath/kitchen tile materials leak
+                // through the ConcreteFacade as bright stripes. Walkthrough
+                // always keeps the real per-room material.
+                wallColor={(!insideBuilding && exterior.wallBaseColor) ? exterior.wallBaseColor : seg.wallColor}
+                wallId={(!insideBuilding && exterior.wallBaseColor) ? "" : seg.wallId}
                 insideBuilding={insideBuilding}
                 wallXray={wallXray}
               />

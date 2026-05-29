@@ -50,9 +50,10 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
     settings: {
       // Facade: clean monochrome
       wallBaseColor: "#F0EDE6",
-      wallGrooveColor: "#D8D2C8",
-      wallPanelHSpacing: 1.20,
-      wallPanelVSpacing: 1.80,
+      wallGrooveColor: "#F0EDE6",  // grooves match base → invisible seams
+      // Push spacings huge so the InstancedMesh count → 0 → no seam lines.
+      wallPanelHSpacing: 99,
+      wallPanelVSpacing: 99,
       wallPanelTwoTone: false,
       stoneBaseEnabled: false,
       // Windows: minimal but still legible. sill/lintel off, but jamb on
@@ -72,6 +73,12 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       buildingBaseShadow: 0.55,
       eaveShadow: 0.45,
       wallVignette: 0.30,
+      // Clean silhouette — Modern Minimal hides all rooftop clutter that
+      // breaks the cantilevered-slab read.
+      rooftopDeckEnabled: false,
+      rooftopHvacCount: 0,
+      solarPanelsEnabled: false,
+      hideInteriorWalls: true,  // kill metro-tile leakage through facade
       windowSillEnabled: false,
       windowLintelEnabled: false,
       windowJambEnabled: true,

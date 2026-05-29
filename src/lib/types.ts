@@ -521,6 +521,12 @@ export interface ExteriorSettings {
    *  a soft white wash, bottom half a soft black wash — fakes
    *  sky-occlusion lighting cheaply. */
   wallVignette?: number;
+  /** Hide interior walkthrough walls in the EXTERIOR view so the per-room
+   *  tile/brick wall texture (kitchen metro tile, bath tile, etc.) stops
+   *  leaking through the cream ConcreteFacade as bright patches. Only
+   *  affects the exterior view; walkthrough always renders walls.
+   *  Default false (backward-compatible). */
+  hideInteriorWalls?: boolean;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
