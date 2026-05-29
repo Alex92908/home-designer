@@ -8168,7 +8168,9 @@ export default function FloorPlanBuilding({
                 rotY = Math.PI / 2;
               }
               const frameCy   = yBase + wSill + wH / 2;
-              const frameCol  = "#D8E8F0";
+              // Walkthrough window now reads ExteriorSettings so it stays
+              // visually consistent with what's shown from outside.
+              const frameCol  = exterior.windowFrameColor ?? exterior.accentColor ?? "#D8E8F0";
               const border    = 0.06;
               const thick     = 0.05;
               const winKey = `window|${fi}|${room}|${wi}`;
@@ -8186,10 +8188,19 @@ export default function FloorPlanBuilding({
                 e.stopPropagation();
                 toggleOpen(winKey);
               };
+              // Glass color also from ExteriorSettings. Tuned to keep some
+              // see-through during walkthrough (transmission 0.55, opacity
+              // 0.55) so you can see the yard through the window — but with
+              // envMapIntensity 0.4 it no longer reads as a sky-mirror.
               const halfGlass = (
                 <meshPhysicalMaterial
-                  color="#A8D4F5" transmission={0.75} roughness={0.05} metalness={0.12}
-                  thickness={0.02} transparent opacity={0.6}
+                  color={exterior.windowGlassColor ?? "#A8D4F5"}
+                  transmission={0.55}
+                  roughness={0.12}
+                  metalness={0.06}
+                  envMapIntensity={0.4}
+                  thickness={0.02}
+                  transparent opacity={0.55}
                 />
               );
               return (

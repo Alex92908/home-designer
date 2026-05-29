@@ -48,8 +48,13 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       windowFrameStripVCm: 5,
       windowFrameStripHCm: 5,
       windowCenterMullionCm: 0,
-      defaultWindowSill: 30,
-      defaultWindowHeight: 230,
+      // Was 30 / 230 → effectively floor-to-ceiling. Walking into the
+      // room put the camera face-to-face with a giant pane of glass
+      // dominating the whole view. 70 cm sill + 180 cm height tops out
+      // at 250 cm — still tall modernist, but with a clean wall band
+      // above and a comfortable waist-line at the bottom.
+      defaultWindowSill: 70,
+      defaultWindowHeight: 180,
       // Doors: glass front
       frontEntranceStyle: "french_double",
       doorFrameColor: "#1A1A1E",
@@ -141,8 +146,10 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       windowFrameStripHCm: 3,
       windowCenterMullionCm: 3,
       windowSillColor: "#3A3E48",
-      defaultWindowSill: 80,
-      defaultWindowHeight: 200,
+      // 80 + 200 = 280 was too close to the 300 cm ceiling — only 20 cm
+      // wall band at top. 90 + 170 = 260 leaves a clean 40 cm band.
+      defaultWindowSill: 90,
+      defaultWindowHeight: 170,
       frontEntranceStyle: "wood_panel",
       doorFrameColor: "#2A2A2E",
       doorHandleColor: "#1E1E22",
