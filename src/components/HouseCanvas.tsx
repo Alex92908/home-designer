@@ -6726,9 +6726,11 @@ export default function HouseCanvas() {
               worldProximityThreshold={0.4}
               worldProximityFalloff={1.2}
             />
-            {/* Bloom — warm halos for pool water, glass, and night emissives */}
+            {/* Bloom — warm halos for pool water, glass, and night emissives.
+                Multiplier exterior.bloomIntensity scales the time-of-day
+                base (1 = unchanged, 0 = disable, 1.5 = punchier). Default 1. */}
             <Bloom
-              intensity={theme.phase === "night" ? 0.80 : theme.phase === "dusk" ? 0.48 : 0.28}
+              intensity={(exterior.bloomIntensity ?? 1) * (theme.phase === "night" ? 0.80 : theme.phase === "dusk" ? 0.48 : 0.28)}
               luminanceThreshold={theme.phase === "night" ? 0.84 : theme.phase === "dusk" ? 0.82 : 0.85}
               luminanceSmoothing={0.30}
               mipmapBlur

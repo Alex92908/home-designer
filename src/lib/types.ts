@@ -527,6 +527,10 @@ export interface ExteriorSettings {
    *  affects the exterior view; walkthrough always renders walls.
    *  Default false (backward-compatible). */
   hideInteriorWalls?: boolean;
+  /** Multiplier on the postprocess Bloom intensity (1 = default).
+   *  Drop to 0.3–0.5 to kill the "halo at the base of windows" daytime
+   *  bloom artifact, or push to 1.5 for a more cinematic look. */
+  bloomIntensity?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

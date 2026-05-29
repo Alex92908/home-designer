@@ -660,14 +660,21 @@ function ConcreteFacade({
       {/* ── Iter 7-9: AO-style overlays. All three (baseShadow, eaveShadow,
            wallVignette) are thin transparent dark planes layered just in
            front of the wall — purely additive, never replaces baseColor. */}
-      {baseShadow > 0 && (
-        <mesh position={[0, -height / 2 + 0.10, 0.062]}>
-          <planeGeometry args={[width + 0.004, 0.20]} />
-          <meshStandardMaterial color="#000000" transparent
-            opacity={Math.max(0, Math.min(1, baseShadow)) * 0.55}
-            roughness={1.0} metalness={0} />
-        </mesh>
-      )}
+      {baseShadow > 0 && (() => {
+        // Band height grows with the dial — at full strength covers 60 cm
+        // up the wall (enough to mask base bloom/specular hot-spots), at
+        // low strength reads as a hairline AO line.
+        const op = Math.max(0, Math.min(1, baseShadow));
+        const bandH = 0.20 + op * 0.40; // 20..60 cm
+        return (
+          <mesh position={[0, -height / 2 + bandH / 2, 0.062]}>
+            <planeGeometry args={[width + 0.004, bandH]} />
+            <meshStandardMaterial color="#000000" transparent
+              opacity={op * 0.55}
+              roughness={1.0} metalness={0} />
+          </mesh>
+        );
+      })()}
       {eaveShadow > 0 && (
         <mesh position={[0, height / 2 - 0.075, 0.062]}>
           <planeGeometry args={[width + 0.004, 0.15]} />

@@ -70,7 +70,7 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       skyHaze: 0.20,
       windowRevealShadow: 0.65,
       treeColorJitter: 0.40,
-      buildingBaseShadow: 0.55,
+      buildingBaseShadow: 1.0,  // max — also masks any bloom hot-spots at base
       eaveShadow: 0.45,
       wallVignette: 0.30,
       // Clean silhouette — Modern Minimal hides all rooftop clutter that
@@ -79,6 +79,7 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       rooftopHvacCount: 0,
       solarPanelsEnabled: false,
       hideInteriorWalls: true,  // kill metro-tile leakage through facade
+      bloomIntensity: 0.20,     // kill daytime halo at base of windows
       windowSillEnabled: false,
       windowLintelEnabled: false,
       windowJambEnabled: true,
