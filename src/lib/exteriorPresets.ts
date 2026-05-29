@@ -85,6 +85,7 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       // The procedural ground texture alone gives the "modern minimal"
       // mown-lawn look the preset is going for.
       grassDensity: 0,
+      exposure: 0.82,           // tame ACES roll-off + cleaner sky
       windowSillEnabled: false,
       windowLintelEnabled: false,
       windowJambEnabled: true,

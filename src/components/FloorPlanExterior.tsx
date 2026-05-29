@@ -5119,13 +5119,22 @@ export default function FloorPlanBuilding({
                   {/* 吊灯（仅 ≥12㎡ 的房间）— emissive 随时间动态增强 */}
                   {isLarge && (
                     <>
-                      <pointLight
-                        position={[0, FLOOR_H / 2 - 0.50, 0]}
-                        intensity={interiorGlowWall > 1.20 ? 5.5 : 3.5}
-                        distance={Math.max(iW, iD) * 2.5}
-                        decay={1.8}
-                        color="#FFF4D8"
-                      />
+                      {/* Pendant pointLight — ONLY at dusk/night. At day the
+                          previous 3.5-intensity light leaked through the 12 cm
+                          wall and produced a warm halo on the exterior wall at
+                          ground-floor corners (visible in the 外观 view as
+                          unexplained "bloom blobs"). Clamp distance to the
+                          room's longest side so far-floor leak doesn't reach
+                          adjacent exteriors either. */}
+                      {interiorGlowWall > 0 && (
+                        <pointLight
+                          position={[0, FLOOR_H / 2 - 0.50, 0]}
+                          intensity={interiorGlowWall > 1.20 ? 5.5 : 3.5}
+                          distance={Math.min(Math.max(iW, iD), 4.0)}
+                          decay={1.8}
+                          color="#FFF4D8"
+                        />
+                      )}
                       {/* Pendant cord */}
                       <mesh position={[0, FLOOR_H / 2 - 0.40, 0]}>
                         <cylinderGeometry args={[0.006, 0.006, 0.32, 6]} />
@@ -5144,13 +5153,18 @@ export default function FloorPlanBuilding({
                       {/* Second smaller pendant offset for large rooms */}
                       {Math.max(iW, iD) > 5 && (
                         <>
-                          <pointLight
-                            position={[iW * 0.30, FLOOR_H / 2 - 0.50, iD * 0.25]}
-                            intensity={interiorGlowWall > 1.20 ? 3.5 : 2.2}
-                            distance={Math.max(iW, iD) * 1.8}
-                            decay={2.0}
-                            color="#FFF4D8"
-                          />
+                          {/* Same fix as the primary pendant — gate by
+                              dusk/night + clamp distance to room footprint
+                              so the light doesn't leak through walls. */}
+                          {interiorGlowWall > 0 && (
+                            <pointLight
+                              position={[iW * 0.30, FLOOR_H / 2 - 0.50, iD * 0.25]}
+                              intensity={interiorGlowWall > 1.20 ? 3.5 : 2.2}
+                              distance={Math.min(Math.max(iW, iD), 3.5)}
+                              decay={2.0}
+                              color="#FFF4D8"
+                            />
+                          )}
                           <mesh position={[iW * 0.30, FLOOR_H / 2 - 0.56, iD * 0.25]}>
                             <sphereGeometry args={[0.10, 12, 8]} />
                             <meshStandardMaterial

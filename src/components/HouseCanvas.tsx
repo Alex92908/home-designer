@@ -6434,7 +6434,11 @@ export default function HouseCanvas() {
         dpr={[1, 2]}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: theme.exposure,
+          // exposure = theme baseline × user dial. Dial < 1 darkens the
+          // whole scene + tames ACES roll-off near sun-lit walls; > 1
+          // brightens. Default 1 keeps the legacy look. Modern Minimal
+          // uses 0.85 for a cooler, less blown-out architectural mood.
+          toneMappingExposure: theme.exposure * (exterior.exposure ?? 1),
           // FIX: preserveDrawingBuffer:true forces GPU→CPU sync every frame on Apple
           // Metal/ANGLE (~130ms/frame = 58% of frame time wasted). The AI capture
           // calls gl.render() + toDataURL() synchronously so false is safe here.

@@ -535,6 +535,11 @@ export interface ExteriorSettings {
    *  (= 1400 blades, mostly near building). 0 disables the carpet
    *  (use when the blades read as falling rain at low camera angles). */
   grassDensity?: number;
+  /** Tone-mapping exposure multiplier on the time-of-day baseline.
+   *  1 = unchanged, 0.7 = darker / more cinematic, 1.3 = brighter.
+   *  Lowering tames the ACES roll-off that produces white halos on
+   *  sun-lit cream walls. */
+  exposure?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
