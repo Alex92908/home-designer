@@ -80,7 +80,11 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       solarPanelsEnabled: false,
       hideInteriorWalls: true,  // kill metro-tile leakage through facade
       bloomIntensity: 0.20,     // kill daytime halo at base of windows
-      grassDensity: 0.7,        // sparser tufts — avoid "rain" at low angles
+      // Disable grass blades entirely — even at 0.7 density the thin
+      // tapered triangles still read as falling rain at low camera angles.
+      // The procedural ground texture alone gives the "modern minimal"
+      // mown-lawn look the preset is going for.
+      grassDensity: 0,
       windowSillEnabled: false,
       windowLintelEnabled: false,
       windowJambEnabled: true,
