@@ -80,6 +80,7 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       solarPanelsEnabled: false,
       hideInteriorWalls: true,  // kill metro-tile leakage through facade
       bloomIntensity: 0.20,     // kill daytime halo at base of windows
+      grassDensity: 0.7,        // sparser tufts — avoid "rain" at low angles
       windowSillEnabled: false,
       windowLintelEnabled: false,
       windowJambEnabled: true,

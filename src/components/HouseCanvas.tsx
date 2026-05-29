@@ -3352,11 +3352,14 @@ function EntryPath({ W, D }: { W: number; D: number }) {
   );
 }
 
-function Ground({ W, D, lawnTint }: { W: number; D: number; lawnTint?: string }) {
+function Ground({ W, D, lawnTint, grassDensity }: { W: number; D: number; lawnTint?: string; grassDensity?: number }) {
   // Single large plane — no seam between "far" and "near" zones.
   // Sized to fill the camera frustum; PBR texture loads async via Suspense.
   const size = Math.max(W, D) * 7 + 40;
-  const grassRadius = Math.max(W, D) * 3.5 + 16;
+  // Clamp the blade scatter radius: at huge radii the thin tapered
+  // triangles read as falling rain against the sky. 22 m is enough to
+  // hide the procedural ground plane edge for a typical 10 m villa.
+  const grassRadius = Math.min(22, Math.max(W, D) * 1.6 + 8);
   const tint = lawnTint ?? "#7E8E6A";
   // Fallback colour is the tint × a mid-grass green so the unloaded state
   // doesn't flash bright kindergarten green. Multiplied via THREE.Color.
@@ -3375,8 +3378,13 @@ function Ground({ W, D, lawnTint }: { W: number; D: number; lawnTint?: string })
       }>
         <GrassGroundTextured size={size} tint={tint} />
       </Suspense>
-      {/* Instanced grass blades around building — skips building footprint */}
-      <GrassCarpet W={W} D={D} count={2800} radius={grassRadius} lawnTint={tint} />
+      {/* Instanced grass blades around building — skips building footprint.
+          Count is scaled by ExteriorSettings.grassDensity (0..2, default 1).
+          Set 0 to disable the blades entirely if they still read as rain
+          at extreme camera angles. */}
+      <GrassCarpet W={W} D={D}
+        count={Math.round(1400 * Math.max(0, Math.min(2, grassDensity ?? 1)))}
+        radius={grassRadius} lawnTint={tint} />
     </>
   );
 }
@@ -3391,11 +3399,14 @@ function GrassCarpet({ W, D, count, radius, lawnTint }: { W: number; D: number; 
     // 2-tri tapered blade: rectangular base narrowing to a point
     // Slightly taller (0.22m) and wider (0.030m) for lusher ground coverage
     const g = new THREE.BufferGeometry();
+    // Wider base (5 cm) + shorter blade (18 cm) — same overall coverage
+    // with fewer instances; close-up reads as grass tufts instead of the
+    // earlier "tall thin needles that look like rain at distance".
     const verts = new Float32Array([
       // base-left, base-right, tip
-      -0.030, 0,    0,
-       0.030, 0,    0,
-       0,     0.22, 0,
+      -0.050, 0,    0,
+       0.050, 0,    0,
+       0,     0.18, 0,
     ]);
     g.setAttribute("position", new THREE.BufferAttribute(verts, 3));
     g.setIndex([0, 1, 2]);
@@ -3421,8 +3432,12 @@ function GrassCarpet({ W, D, count, radius, lawnTint }: { W: number; D: number; 
     let attempts = 0;
     while (placed < count && attempts < count * 4) {
       attempts++;
-      // Sample within a ring around the house
-      const r = Math.sqrt(Math.random()) * radius;
+      // Sample within a ring around the house. Power-2 weighting
+      // concentrates blades close to the building (constant 2D density
+      // would be sqrt; we want denser near the foundation, thinning out
+      // by ~r²); far-field thinning prevents the "falling rain against
+      // sky" artifact at low camera angles.
+      const r = Math.pow(Math.random(), 2.0) * radius;
       const a = Math.random() * Math.PI * 2;
       const x = Math.cos(a) * r;
       const z = Math.sin(a) * r;
@@ -5824,17 +5839,25 @@ export default function HouseCanvas() {
   // out of React state so PerformanceMonitor's onChange doesn't force a tree
   // re-render along with the shadow-map rebuild.
   const shadowSizeRef = useRef(2048);
-  const [hideInterior, setHideInterior] = useState(false);
+  // Kept as a `const` (not state) — used to toggle during orbit but
+  // disabled (see handleOrbitStart). Reads true if/when we re-introduce a
+  // drag-perf optimisation; for now wallSegments always render.
+  const hideInterior = false;
   const interactTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleOrbitStart = () => {
     if (interactTimerRef.current) clearTimeout(interactTimerRef.current);
     isInteractingRef.current = true;
-    setHideInterior(true);
+    // Previously: setHideInterior(true) — a perf hint that skipped interior
+    // wall rendering during drag. But when the camera lives in the exterior
+    // view, hiding interior walls also hides the exterior face of the
+    // building (wallSegments owns BOTH inside + outside faces), so the user
+    // sees a "dark void" silhouette through every drag. Modern GPUs render
+    // the wall set in < 1 ms so the optimization is no longer needed.
+    // Leaving hideInterior false keeps the building solid during orbit.
   };
   const handleOrbitEnd = () => {
     interactTimerRef.current = setTimeout(() => {
       isInteractingRef.current = false;
-      setHideInterior(false);
     }, 150);
   };
   // tick-based fly-to: 0=idle, >0 top-view, <0 reset-view
@@ -6659,8 +6682,8 @@ export default function HouseCanvas() {
              so it can't z-fight with room floors at y=0.025. Walkthrough
              needs Ground so the user can step through the front door and
              roam the yard without falling into the void. ── */}
-        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} lawnTint={exterior.lawnTint} />}
-        {!isRichGlassVilla && <Ground W={W} D={D} lawnTint={exterior.lawnTint} />}
+        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} />}
+        {!isRichGlassVilla && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} />}
         {!insideBuilding && !isRichGlassVilla && <EntryPath W={W} D={D} />}
         {/* rich-glass-villa (non-FPD): minimal stone plaza only */}
         {!insideBuilding && isRichGlassVilla && _buildingType !== "floor-plan-driven" && (

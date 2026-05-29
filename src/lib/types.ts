@@ -531,6 +531,10 @@ export interface ExteriorSettings {
    *  Drop to 0.3–0.5 to kill the "halo at the base of windows" daytime
    *  bloom artifact, or push to 1.5 for a more cinematic look. */
   bloomIntensity?: number;
+  /** Multiplier on instanced grass-blade count, 0..2. Default 1
+   *  (= 1400 blades, mostly near building). 0 disables the carpet
+   *  (use when the blades read as falling rain at low camera angles). */
+  grassDensity?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
