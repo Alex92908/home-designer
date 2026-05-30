@@ -5712,7 +5712,7 @@ export default function FloorPlanBuilding({
             <ConcreteFacade
               width={segLen} height={FLOOR_H} windows={winInfos} windowGlow={interiorGlowWall}
               glassColor={exterior.windowGlassColor}
-              frameColor={exterior.windowFrameColor ?? exterior.accentColor}
+              frameColor={exterior.windowFrameColor ?? exterior.accentColor ?? "#2A2E36"}
               hGrooveStep={exterior.wallPanelHSpacing}
               vGrooveStep={exterior.wallPanelVSpacing}
               sillEnabled={exterior.windowSillEnabled ?? true}
@@ -5720,8 +5720,8 @@ export default function FloorPlanBuilding({
               jambEnabled={exterior.windowJambEnabled ?? true}
               flowerBoxFreq={exterior.windowFlowerBoxFreq ?? 70}
               twoTone={exterior.wallPanelTwoTone ?? true}
-              stripVCm={exterior.windowFrameStripVCm ?? 4}
-              stripHCm={exterior.windowFrameStripHCm ?? 8}
+              stripVCm={exterior.windowFrameStripVCm ?? 2.5}
+              stripHCm={exterior.windowFrameStripHCm ?? 3}
               sillColor={exterior.windowSillColor ?? "#B8B4AC"}
               lintelColor={exterior.windowLintelColor ?? "#C0BCB4"}
               jambColor={exterior.windowJambColor ?? "#BCBAB2"}
@@ -5736,9 +5736,9 @@ export default function FloorPlanBuilding({
               mullionThicknessCm={exterior.windowMullionThicknessCm ?? 3}
               grooveOpacity={exterior.wallPanelGrooveOpacity ?? 0.55}
               revealShadow={exterior.windowRevealShadow ?? 0.50}
-              baseShadow={floorIndex === 0 ? (exterior.buildingBaseShadow ?? 0) : 0}
-              eaveShadow={floorIndex === exterior.floors - 1 ? (exterior.eaveShadow ?? 0) : 0}
-              wallVignette={exterior.wallVignette ?? 0}
+              baseShadow={floorIndex === 0 ? (exterior.buildingBaseShadow ?? 0.6) : 0}
+              eaveShadow={floorIndex === exterior.floors - 1 ? (exterior.eaveShadow ?? 0.35) : 0}
+              wallVignette={exterior.wallVignette ?? 0.30}
               stuccoEnabled={exterior.wallStuccoEnabled ?? true}
               stuccoScale={exterior.wallStuccoScale ?? 1.2}
               stuccoRoughness={exterior.wallStuccoRoughness ?? 0.85}
