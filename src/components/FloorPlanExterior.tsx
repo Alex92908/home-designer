@@ -3281,6 +3281,7 @@ function WalkthroughFloor({
 function WalkthroughWallPiece({
   position, w, h, thickness, pieceX, pieceY,
   wallColor, wallId, insideBuilding, wallXray,
+  glassFacade = false, glassFacadeColor,
 }: {
   position: [number, number, number]; w: number; h: number; thickness: number;
   /** Position of this piece's bottom-left corner within the parent wall
@@ -3290,6 +3291,12 @@ function WalkthroughWallPiece({
    *  rectangular patches. */
   pieceX: number; pieceY: number;
   wallColor: string; wallId: string; insideBuilding: boolean; wallXray: boolean;
+  /** Whole-building glass curtain-wall mode. When true (exterior view only),
+   *  the shell wall renders as reflective glass spandrel so faces NOT covered
+   *  by a GlassCurtain overlay panel still read as glass — keeping the whole
+   *  envelope a uniform glass tower instead of a glass/matte-concrete mix. */
+  glassFacade?: boolean;
+  glassFacadeColor?: string;
 }) {
   // Texture density: tiles per metre. Same for ALL pieces of all walls so
   // the noise grain is consistent. With offset applied per piece, adjacent
@@ -3331,21 +3338,37 @@ function WalkthroughWallPiece({
   return (
     <mesh position={position} raycast={() => null} receiveShadow castShadow>
       <boxGeometry args={[w, h, thickness]} />
-      <meshStandardMaterial
-        color={wallColor}
-        roughness={0.88}
-        metalness={0}
-        /* No emissive — RoomShell's wallMatFor doesn't use it either. The
-           previous 0.18 emissive washed out the paint-albedo texture so
-           walls looked like flat plastic. Insufficient ambient light in
-           walkthrough is solved at the scene level (hemisphereLight). */
-        transparent={wallXray}
-        opacity={wallXray ? 0.13 : 1.0}
-        depthWrite={!wallXray}
-        map={tiled ?? paint ?? undefined}
-        normalMap={!tiled ? normalTex ?? undefined : undefined}
-        normalScale={!tiled && normalTex ? new THREE.Vector2(0.12, 0.12) : undefined}
-      />
+      {glassFacade && !wallXray ? (
+        /* Reflective glass spandrel — turns the bare shell wall into glass so
+           faces with no GlassCurtain overlay still read as a glass curtain
+           wall. Glossy + clearcoat gives the curtain-wall sheen; opacity kept
+           high so the cartoon interior doesn't show through. */
+        <meshPhysicalMaterial
+          color={glassFacadeColor ?? "#C2D8EA"}
+          roughness={0.07}
+          metalness={0.0}
+          clearcoat={1.0}
+          clearcoatRoughness={0.08}
+          reflectivity={0.9}
+          envMapIntensity={2.0}
+        />
+      ) : (
+        <meshStandardMaterial
+          color={wallColor}
+          roughness={0.88}
+          metalness={0}
+          /* No emissive — RoomShell's wallMatFor doesn't use it either. The
+             previous 0.18 emissive washed out the paint-albedo texture so
+             walls looked like flat plastic. Insufficient ambient light in
+             walkthrough is solved at the scene level (hemisphereLight). */
+          transparent={wallXray}
+          opacity={wallXray ? 0.13 : 1.0}
+          depthWrite={!wallXray}
+          map={tiled ?? paint ?? undefined}
+          normalMap={!tiled ? normalTex ?? undefined : undefined}
+          normalScale={!tiled && normalTex ? new THREE.Vector2(0.12, 0.12) : undefined}
+        />
+      )}
     </mesh>
   );
 }
@@ -5458,11 +5481,17 @@ export default function FloorPlanBuilding({
         if (isSouth) {
           [px] = toWorld(midCoord, wallCoord, planOffset);
           [, pz] = toWorld(0, wallCoord, planOffset);
-          rot = [0, Math.PI, 0]; pz -= 0.12;
+          // South wall sits at max-Z (the building's +Z edge); outward = +Z.
+          // The facade panel must be pushed OUTWARD so it sits in front of the
+          // room-shell wall — otherwise the shell occludes the glass curtain
+          // and that face reads as a bare (matte/spandrel) wall instead of
+          // glass, producing the "颜色不统一" face-to-face inconsistency.
+          rot = [0, Math.PI, 0]; pz += 0.12;
         } else if (side === "N") {
           [px] = toWorld(midCoord, wallCoord, planOffset);
           [, pz] = toWorld(0, wallCoord, planOffset);
-          rot = [0, 0, 0]; pz += 0.12;
+          // North wall sits at min-Z (the building's -Z edge); outward = -Z.
+          rot = [0, 0, 0]; pz -= 0.12;
         } else if (side === "E") {
           [px] = toWorld(wallCoord, 0, planOffset);
           [, pz] = toWorld(0, midCoord, planOffset);
@@ -8073,6 +8102,8 @@ export default function FloorPlanBuilding({
                     : (!insideBuilding && exterior.wallBaseColor) ? exterior.wallBaseColor : seg.wallColor
                 }
                 wallId={(!insideBuilding && ((exterior.facadeGlass ?? false) || exterior.wallBaseColor)) ? "" : seg.wallId}
+                glassFacade={!insideBuilding && (exterior.facadeGlass ?? false)}
+                glassFacadeColor={exterior.glassColor ?? exterior.glassShellColor ?? "#C2D8EA"}
                 insideBuilding={insideBuilding}
                 wallXray={wallXray}
               />
