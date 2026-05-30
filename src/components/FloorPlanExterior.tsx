@@ -3217,36 +3217,28 @@ function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 // walkthrough the same wood-floor look as the effect page. ───────────
 function WalkthroughFloor({
   cx, cz, yBase, rW, rD, floorColor, floorId, insideBuilding,
-  roomKey, bleed = 0,
+  bleed = 0, depthRank = 0,
 }: {
   cx: number; cz: number; yBase: number; rW: number; rD: number;
   floorColor: string; floorId: string; insideBuilding: boolean;
-  /** Stable identifier so we can hash a sub-millimetre Y offset per
-   *  room. Two adjacent rooms with edge-to-edge floors at exactly the
-   *  same Y z-fight along the shared boundary (visible as a zigzag
-   *  dither at doorways). A 0–0.5 mm stagger breaks the tie without
-   *  creating a visible step. */
-  roomKey: string;
-  /** Per-edge overscan (m). Room floors are exact width×depth rectangles
-   *  butted edge-to-edge, so the shared boundary is a hairline butt-joint
-   *  that lets the bright background bleed through as a thin white seam
-   *  (most visible at open room↔hallway boundaries with no wall on top).
-   *  Growing each floor by `bleed` on every edge overlaps neighbours so
-   *  the seam is covered. The overlap tucks under interior walls and the
-   *  exterior wall, so nothing pokes out. Configurable. */
+  /** Per-edge overscan (m). Room floors are exact width×depth rectangles.
+   *  At the open room↔corridor boundary (the corridor has no interior wall)
+   *  the two floors are separated by the wall-thickness strip, so a gap
+   *  shows the bright background as a thin seam. Growing each floor by
+   *  `bleed` on every edge overlaps neighbours and bridges that strip. The
+   *  overlap tucks under interior/exterior walls so nothing pokes out.
+   *  Configurable. */
   bleed?: number;
+  /** Unique, monotonic per-room index used as a polygonOffset depth rank.
+   *  The `bleed` overlap means adjacent floors share a coplanar band; at
+   *  exactly the same depth bias they z-fight and shimmer as a bright line.
+   *  Keeping every floor COPLANAR (no Y stagger — a Y step lifts one floor's
+   *  edge so it catches light as a bright rim) and instead giving each a
+   *  DISTINCT polygonOffset makes one floor deterministically win the depth
+   *  test across the whole overlap: no z-fight, no lit step, just a clean
+   *  material transition. Unique per room ⇒ no two neighbours ever tie. */
+  depthRank?: number;
 }) {
-  // Deterministic Y stagger from room key. Adjacent room floors now OVERLAP
-  // (see `bleed`), so a sub-mm stagger is too small to resolve depth in the
-  // overlap band → the two coplanar floors z-fight and shimmer as a bright
-  // line (visible at grazing angle as a thin diagonal streak). A few-mm
-  // stagger lets the higher floor cleanly occlude the lower one across the
-  // whole overlap with no z-fight; a 0–4 mm step is imperceptible on foot.
-  const yJitter = useMemo(() => {
-    let h = 0;
-    for (let i = 0; i < roomKey.length; i++) h = (h * 31 + roomKey.charCodeAt(i)) >>> 0;
-    return (h % 1000) * 0.000004;   // 0 … 0.004 m = 0–4 mm
-  }, [roomKey]);
   // Bleed-expanded floor dimensions (overlap neighbours to hide seams).
   const fW = rW + bleed * 2;
   const fD = rD + bleed * 2;
@@ -3270,11 +3262,13 @@ function WalkthroughFloor({
   }, [floorColor, fW, fD, floorTex]);
   const map = floorTex ?? defaultTex;
   return (
-    // Floor extends to the room AABB plus a small `bleed` overscan on every
-    // edge. Adjacent rooms' floors then overlap, covering the hairline
-    // butt-joint seam (bright background bleed-through) at shared edges —
-    // especially open room↔hallway boundaries that have no wall on top.
-    <mesh position={[cx, yBase + 0.025 + yJitter, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+    // All room floors sit at EXACTLY the same Y (coplanar) so no floor edge
+    // is lifted above its neighbour to catch light as a bright rim. The
+    // `bleed` overscan overlaps neighbours to bridge the open corridor gap;
+    // the per-room `depthRank` polygonOffset decides the overlap cleanly
+    // (no z-fight), yielding a flat, continuous floor with clean material
+    // transitions between rooms.
+    <mesh position={[cx, yBase + 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
       <planeGeometry args={[fW, fD]} />
       <meshStandardMaterial
         color={floorColor}
@@ -3282,10 +3276,12 @@ function WalkthroughFloor({
         metalness={insideBuilding ? 0.06 : 0.03}
         envMapIntensity={insideBuilding ? 0.55 : 0.2}
         side={THREE.FrontSide}
-        map={map ?? undefined}
         polygonOffset
         polygonOffsetFactor={-1}
-        polygonOffsetUnits={-1}
+        // Unique per-room depth bias (−1, −1.5, −2, …) so overlapping coplanar
+        // floors never tie in the depth test → no z-fight shimmer at seams.
+        polygonOffsetUnits={-1 - depthRank * 0.5}
+        map={map ?? undefined}
       />
     </mesh>
   );
@@ -8128,7 +8124,7 @@ export default function FloorPlanBuilding({
           </group>
         );
       })}
-      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, stairShape, stairRotation, wallsHidden }) => {
+      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, stairShape, stairRotation, wallsHidden }, ridx) => {
         const wallOpacity = wallXray ? 0.13 : 1.0;
         const isXray = wallXray;
         // 走廊：无内墙、无天花板，仅地板；楼梯间：渲染楼梯几何体
@@ -8160,8 +8156,8 @@ export default function FloorPlanBuilding({
                 floorColor={floorColor}
                 floorId={floorPlans[fi]?.rooms?.[room]?.materials?.floor?.id ?? ""}
                 insideBuilding={insideBuilding}
-                roomKey={`${fi}:${room}`}
                 bleed={Math.max(0, (exterior.walkthroughFloorBleedCm ?? 6) / 100)}
+                depthRank={ridx}
               />
             )}
             {/* ── DEBUG: per-room NSWE wall labels rendered as flat 3D Text
