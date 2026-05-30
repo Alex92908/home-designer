@@ -551,6 +551,11 @@ export interface ExteriorSettings {
   /** Surface roughness of the stuccoed wall material, 0..1. Default 0.85.
    *  Higher = more matte plaster, lower = subtle sheen. */
   wallStuccoRoughness?: number;
+  /** Override the EffectComposer Bloom luminanceThreshold (0..1). When unset,
+   *  uses the time-of-day default (night 0.84 / dusk 0.82 / day 0.95).
+   *  Raising it stops bright matte walls from blooming into halos while
+   *  still letting genuine highlights, glass and lights glow. */
+  bloomThreshold?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

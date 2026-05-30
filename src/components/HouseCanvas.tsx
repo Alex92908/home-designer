@@ -6758,7 +6758,7 @@ export default function HouseCanvas() {
                 base (1 = unchanged, 0 = disable, 1.5 = punchier). Default 1. */}
             <Bloom
               intensity={(exterior.bloomIntensity ?? 1) * (theme.phase === "night" ? 0.80 : theme.phase === "dusk" ? 0.48 : 0.28)}
-              luminanceThreshold={theme.phase === "night" ? 0.84 : theme.phase === "dusk" ? 0.82 : 0.85}
+              luminanceThreshold={exterior.bloomThreshold ?? (theme.phase === "night" ? 0.84 : theme.phase === "dusk" ? 0.82 : 0.95)}
               luminanceSmoothing={0.30}
               mipmapBlur
             />
