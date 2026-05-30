@@ -581,6 +581,15 @@ export interface ExteriorSettings {
    *  Default 240 cm gives a more proportional opening. Per-door `h` still
    *  wins; per-room `roomDoorH` overrides too. */
   interiorDoorHeightCm?: number;
+
+  /** Interior-walkthrough trim colors. The exterior facade uses dark accent
+   *  mullions (doorFrameColor / windowFrameColor / windowGlassColor) tuned for
+   *  the glass-tower look, but indoors those read as ugly black frames + a dark
+   *  mirror pane. These light/natural defaults are used only when standing
+   *  inside the building so doors/windows look real. All configurable. */
+  interiorDoorFrameColor?: string;   // default "#EFEAE2"
+  interiorWindowFrameColor?: string; // default "#EFEAE2"
+  interiorWindowGlassColor?: string; // default "#CFE8F7"
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

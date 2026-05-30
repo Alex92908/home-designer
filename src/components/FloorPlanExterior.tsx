@@ -8400,7 +8400,9 @@ export default function FloorPlanBuilding({
                     isOpen={isOpen}
                     onToggle={() => { if (insideBuilding) toggleOpen(doorKey); }}
                     doorStyle={style}
-                    frameColor={exterior.doorFrameColor ?? "#F0EEEA"}
+                    frameColor={insideBuilding
+                      ? (exterior.interiorDoorFrameColor ?? "#EFEAE2")
+                      : (exterior.doorFrameColor ?? "#F0EEEA")}
                     handleColor={exterior.doorHandleColor ?? "#B8A060"}
                   />
                 </group>
@@ -8443,7 +8445,12 @@ export default function FloorPlanBuilding({
               const frameCy   = yBase + wSill + wH / 2;
               // Walkthrough window now reads ExteriorSettings so it stays
               // visually consistent with what's shown from outside.
-              const frameCol  = exterior.windowFrameColor ?? exterior.accentColor ?? "#D8E8F0";
+              // Indoors the dark exterior mullion color reads as an ugly black
+              // frame, so interior walkthrough uses a light natural frame color
+              // (configurable). Exterior facade keeps the dark accent mullion.
+              const frameCol  = insideBuilding
+                ? (exterior.interiorWindowFrameColor ?? "#EFEAE2")
+                : (exterior.windowFrameColor ?? exterior.accentColor ?? "#D8E8F0");
               const border    = 0.06;
               const thick     = 0.05;
               const winKey = `window|${fi}|${room}|${wi}`;
@@ -8465,7 +8472,20 @@ export default function FloorPlanBuilding({
               // see-through during walkthrough (transmission 0.55, opacity
               // 0.55) so you can see the yard through the window — but with
               // envMapIntensity 0.4 it no longer reads as a sky-mirror.
-              const halfGlass = (
+              // Interior walkthrough uses clearer, lighter glass so the window
+              // reads as a real pane (not a dark mirror). The very dark exterior
+              // glass tint is kept only for the outside facade view.
+              const halfGlass = insideBuilding ? (
+                <meshPhysicalMaterial
+                  color={exterior.interiorWindowGlassColor ?? "#CFE8F7"}
+                  transmission={0.85}
+                  roughness={0.08}
+                  metalness={0.0}
+                  envMapIntensity={0.25}
+                  thickness={0.02}
+                  transparent opacity={0.35}
+                />
+              ) : (
                 <meshPhysicalMaterial
                   color={exterior.windowGlassColor ?? "#A8D4F5"}
                   transmission={0.55}

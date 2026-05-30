@@ -6195,8 +6195,12 @@ export default function HouseCanvas() {
       {/* Idle-time prefetch of indoor furniture GLTFs so walkthrough entry
           is instant. Runs outside <Canvas> — no Object3D, no frame ticks. */}
       <FurniturePreloader />
-      {/* ── Enter / Exit walkthrough button + wall X-ray toggle ── */}
-      {isRichGlassVilla && (
+      {/* ── Enter / Exit walkthrough button + wall X-ray toggle ──
+           Always shown (was gated on the now-deprecated isRichGlassVilla,
+           which hid the essential 退出漫游 / 墙体透视 / 实墙 controls when a
+           walkthrough was entered via the room list). The enter button is
+           harmless in the exploded 全局3D view and gives a one-click way in. */}
+      {true && (
         <div className="absolute top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
           <button
             onClick={() => {
