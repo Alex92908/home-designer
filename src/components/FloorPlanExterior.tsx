@@ -211,11 +211,18 @@ function panelBlindHash(col: number, row: number): number {
 }
 
 function GlassCurtain({
-  width, height, floorH, doors = [],
+  width, height, floorH, doors = [], opacityScale = 1, glassColor,
 }: {
   width: number; height: number; floorH: number;
   doors?: Array<{ cx: number; w: number; h: number }>;
+  // Whole-house glass-tower mode multiplies pane opacity so the curtain
+  // wall reads as reflective glass instead of a transparent window onto
+  // the (stylised, cream) interior shell. Configurable via exterior.glassOpacity.
+  opacityScale?: number;
+  glassColor?: string;
 }) {
+  // Clamp so glass never goes fully opaque (keeps a hint of depth/reflection).
+  const op = (v: number) => Math.min(0.92, v * Math.max(0.1, opacityScale));
   // 完全对齐"现代玻璃幕墙别墅"模板的 GlassCurtainWallFace：
   //  · 玻璃 #C8E0EA opacity 0.45 roughness 0.06 metalness 0.04 envMapIntensity 0.35
   //  · 黑色阳极氧化铝压条 #181A1E，金属感强但不被环境贴图染色
@@ -355,8 +362,8 @@ function GlassCurtain({
         <Instances limit={upperPaneNoDoor.length} renderOrder={10}>
           <boxGeometry args={[paneW, upperPaneH, 0.008]} />
           <meshPhysicalMaterial
-            color="#CEE4F4"
-            transparent opacity={0.25}
+            color={glassColor ?? "#CEE4F4"}
+            transparent opacity={op(0.25)}
             depthWrite={false} roughness={0.02} metalness={0.0}
             reflectivity={0.55} clearcoat={0.9} clearcoatRoughness={0.04}
             envMapIntensity={3.6} side={THREE.DoubleSide}
@@ -369,8 +376,8 @@ function GlassCurtain({
         <Instances limit={lowerPaneNoDoor.length} renderOrder={10}>
           <boxGeometry args={[paneW, lowerPaneH, 0.008]} />
           <meshPhysicalMaterial
-            color="#C8E0F2"
-            transparent opacity={0.27}
+            color={glassColor ?? "#C8E0F2"}
+            transparent opacity={op(0.27)}
             depthWrite={false} roughness={0.025} metalness={0.0}
             reflectivity={0.50} clearcoat={0.85} clearcoatRoughness={0.04}
             envMapIntensity={3.4} side={THREE.DoubleSide}
@@ -410,8 +417,8 @@ function GlassCurtain({
                       <mesh position={[0, visBot + botH + topH / 2, 0.020]} renderOrder={10}>
                         <boxGeometry args={[panelW - 0.006, topH - 0.004, 0.008]} />
                         <meshPhysicalMaterial
-                          color="#D0E8F8"
-                          transparent opacity={0.30}
+                          color={glassColor ?? "#D0E8F8"}
+                          transparent opacity={op(0.30)}
                           depthWrite={false} roughness={0.02} metalness={0.0}
                           reflectivity={0.55} clearcoat={0.9} clearcoatRoughness={0.04}
                           envMapIntensity={3.6} side={THREE.DoubleSide}
@@ -421,8 +428,8 @@ function GlassCurtain({
                       <mesh position={[0, visBot + botH / 2, 0.020]} renderOrder={10}>
                         <boxGeometry args={[panelW - 0.006, botH - 0.004, 0.008]} />
                         <meshPhysicalMaterial
-                          color="#CCE4F6"
-                          transparent opacity={0.32}
+                          color={glassColor ?? "#CCE4F6"}
+                          transparent opacity={op(0.32)}
                           depthWrite={false} roughness={0.025} metalness={0.0}
                           reflectivity={0.50} clearcoat={0.85} clearcoatRoughness={0.04}
                           envMapIntensity={3.4} side={THREE.DoubleSide}
@@ -481,9 +488,9 @@ function GlassCurtain({
             <mesh key={si} position={[ox, 0, 0.020]} renderOrder={10}>
               <boxGeometry args={[door.w / 2 - 0.020, door.h - 0.05, 0.008]} />
               <meshStandardMaterial
-                color="#C8E0EA"
+                color={glassColor ?? "#C8E0EA"}
                 transparent
-                opacity={0.45}
+                opacity={op(0.45)}
                 depthWrite={false}
                 roughness={0.06}
                 metalness={0.04}
@@ -5430,6 +5437,13 @@ export default function FloorPlanBuilding({
           facade = "glass";
         } else if (forceConcrete) {
           facade = "concrete";
+        } else if (exterior.facadeGlass ?? false) {
+          // Whole-building glass curtain-wall mode (configurable dial).
+          // Deliberately glazes the ENTIRE envelope — including the
+          // stair/hallway core — so the tower reads as a uniform glass
+          // curtain wall (真·整屋玻璃幕墙) rather than a glass shell with a
+          // solid service core. This is the "整屋玻璃幕墙" toggle's intent.
+          facade = "glass";
         } else if (isGlassVilla) {
           facade = isGlassWall ? "glass"
                  : side === "W" && floorIndex > 0 ? "wood"
@@ -5496,7 +5510,17 @@ export default function FloorPlanBuilding({
           const finCount2 = showSunshade ? Math.max(3, Math.round(segLen / 0.90)) : 0;
           return (
             <group key={`gl-${bi}`} position={[px, yMid, pz]} rotation={rot}>
-              <GlassCurtain width={segLen} height={FLOOR_H} floorH={FLOOR_H} doors={floorIndex === 0 ? doorInfos : []} />
+              <GlassCurtain
+                width={segLen} height={FLOOR_H} floorH={FLOOR_H}
+                doors={floorIndex === 0 ? doorInfos : []}
+                /* Whole-house glass-tower mode: bump pane opacity so the
+                   curtain wall reads as reflective glass rather than a
+                   transparent window onto the stylised interior. Fully
+                   configurable via exterior.glassOpacity (default 2.1× in
+                   whole-house mode, 1× otherwise = unchanged legacy look). */
+                opacityScale={exterior.glassOpacity ?? ((exterior.facadeGlass ?? false) ? 2.1 : 1)}
+                glassColor={exterior.glassColor}
+              />
               {/* External horizontal sunshade fins — upper-floor south facade detail */}
               {showSunshade && (() => {
                 const shadeY = FLOOR_H / 2 - 0.18;   // near top of glass panel
@@ -8037,8 +8061,18 @@ export default function FloorPlanBuilding({
                 // otherwise per-room bath/kitchen tile materials leak
                 // through the ConcreteFacade as bright stripes. Walkthrough
                 // always keeps the real per-room material.
-                wallColor={(!insideBuilding && exterior.wallBaseColor) ? exterior.wallBaseColor : seg.wallColor}
-                wallId={(!insideBuilding && exterior.wallBaseColor) ? "" : seg.wallId}
+                wallColor={
+                  // Whole-building glass curtain-wall mode: any exterior-facing
+                  // room-shell wall that the glass cladding fails to fully
+                  // occlude (offset/side bugs on certain faces) would otherwise
+                  // read as a bright white cartoon wall. Back it with a dark
+                  // glass-spandrel tint so every face reads as a uniform glass
+                  // tower. Configurable via exterior.glassShellColor.
+                  (!insideBuilding && (exterior.facadeGlass ?? false))
+                    ? (exterior.glassShellColor ?? "#1B2531")
+                    : (!insideBuilding && exterior.wallBaseColor) ? exterior.wallBaseColor : seg.wallColor
+                }
+                wallId={(!insideBuilding && ((exterior.facadeGlass ?? false) || exterior.wallBaseColor)) ? "" : seg.wallId}
                 insideBuilding={insideBuilding}
                 wallXray={wallXray}
               />

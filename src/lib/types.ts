@@ -556,6 +556,25 @@ export interface ExteriorSettings {
    *  Raising it stops bright matte walls from blooming into halos while
    *  still letting genuine highlights, glass and lights glow. */
   bloomThreshold?: number;
+  /** Whole-building glass curtain wall. When true, every exterior
+   *  (non-circulation) facade block renders as a full GlassCurtain instead
+   *  of stucco-with-punched-windows, giving the modern glass-tower look
+   *  without having to flip each room individually. Per-room "concrete"
+   *  overrides still win. Default false. */
+  facadeGlass?: boolean;
+  /** Curtain-wall glass opacity multiplier (applied on top of each pane's
+   *  base opacity, clamped ≤0.92). Higher = more reflective/less see-through,
+   *  so the tower reads as glass rather than a window onto the interior.
+   *  Default: 2.1 when facadeGlass is on, 1 otherwise (legacy look). */
+  glassOpacity?: number;
+  /** Override curtain-wall glass tint (hex). Default keeps the per-pane
+   *  cool blue-white. Configurable for e.g. bronze/green glass towers. */
+  glassColor?: string;
+  /** Backing tint for exterior-facing room-shell walls when facadeGlass is on.
+   *  On some faces the glass cladding doesn't fully occlude the white shell
+   *  wall; this dark glass-spandrel colour makes those faces read as glass
+   *  rather than bright cartoon walls. Default "#1B2531" (dark blue-slate). */
+  glassShellColor?: string;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
