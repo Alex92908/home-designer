@@ -590,6 +590,14 @@ export interface ExteriorSettings {
   interiorDoorFrameColor?: string;   // default "#EFEAE2"
   interiorWindowFrameColor?: string; // default "#EFEAE2"
   interiorWindowGlassColor?: string; // default "#CFE8F7"
+
+  /** Walkthrough floor overscan per edge (cm). Each room's floor is an exact
+   *  width×depth rectangle; butted edge-to-edge they leave a hairline seam
+   *  that shows the bright background (most visible at open room↔hallway
+   *  boundaries). Growing each floor by this margin overlaps neighbours and
+   *  hides the seam. The overlap tucks under walls so nothing pokes out.
+   *  Default 6 cm. Set 0 to disable. */
+  walkthroughFloorBleedCm?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

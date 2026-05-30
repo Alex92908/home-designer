@@ -3217,7 +3217,7 @@ function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 // walkthrough the same wood-floor look as the effect page. ───────────
 function WalkthroughFloor({
   cx, cz, yBase, rW, rD, floorColor, floorId, insideBuilding,
-  roomKey,
+  roomKey, bleed = 0,
 }: {
   cx: number; cz: number; yBase: number; rW: number; rD: number;
   floorColor: string; floorId: string; insideBuilding: boolean;
@@ -3227,38 +3227,55 @@ function WalkthroughFloor({
    *  dither at doorways). A 0–0.5 mm stagger breaks the tie without
    *  creating a visible step. */
   roomKey: string;
+  /** Per-edge overscan (m). Room floors are exact width×depth rectangles
+   *  butted edge-to-edge, so the shared boundary is a hairline butt-joint
+   *  that lets the bright background bleed through as a thin white seam
+   *  (most visible at open room↔hallway boundaries with no wall on top).
+   *  Growing each floor by `bleed` on every edge overlaps neighbours so
+   *  the seam is covered. The overlap tucks under interior walls and the
+   *  exterior wall, so nothing pokes out. Configurable. */
+  bleed?: number;
 }) {
-  // Sub-mm Y stagger from room key (deterministic, 0–0.5 mm).
+  // Deterministic Y stagger from room key. Adjacent room floors now OVERLAP
+  // (see `bleed`), so a sub-mm stagger is too small to resolve depth in the
+  // overlap band → the two coplanar floors z-fight and shimmer as a bright
+  // line (visible at grazing angle as a thin diagonal streak). A few-mm
+  // stagger lets the higher floor cleanly occlude the lower one across the
+  // whole overlap with no z-fight; a 0–4 mm step is imperceptible on foot.
   const yJitter = useMemo(() => {
     let h = 0;
     for (let i = 0; i < roomKey.length; i++) h = (h * 31 + roomKey.charCodeAt(i)) >>> 0;
-    return (h % 1000) * 0.0000005;   // 0 … 0.0005 m = 0–0.5 mm
+    return (h % 1000) * 0.000004;   // 0 … 0.004 m = 0–4 mm
   }, [roomKey]);
+  // Bleed-expanded floor dimensions (overlap neighbours to hide seams).
+  const fW = rW + bleed * 2;
+  const fD = rD + bleed * 2;
   const floorTex = useMemo(() => {
     const base = getFloorTexture(floorId);
     if (!base) return null;
     const t = base.clone();
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     const [us, vs] = floorTileSize(floorId);
-    t.repeat.set(rW / us, rD / vs);
+    t.repeat.set(fW / us, fD / vs);
     t.needsUpdate = true;
     return t;
-  }, [floorId, rW, rD]);
+  }, [floorId, fW, fD]);
   const defaultTex = useMemo(() => {
     if (floorTex) return null;
     const t = defaultFloorPlanks(floorColor).clone();
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.repeat.set(rW / 1.5, rD / 1.5);
+    t.repeat.set(fW / 1.5, fD / 1.5);
     t.needsUpdate = true;
     return t;
-  }, [floorColor, rW, rD, floorTex]);
+  }, [floorColor, fW, fD, floorTex]);
   const map = floorTex ?? defaultTex;
   return (
-    // Floor extends to the full room AABB (no 2cm inset). With 4cm walls
-    // intruding 2cm per side, the floor edge meets the wall's inner face
-    // exactly — no through-to-below gap visible at doorway thresholds.
+    // Floor extends to the room AABB plus a small `bleed` overscan on every
+    // edge. Adjacent rooms' floors then overlap, covering the hairline
+    // butt-joint seam (bright background bleed-through) at shared edges —
+    // especially open room↔hallway boundaries that have no wall on top.
     <mesh position={[cx, yBase + 0.025 + yJitter, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-      <planeGeometry args={[rW, rD]} />
+      <planeGeometry args={[fW, fD]} />
       <meshStandardMaterial
         color={floorColor}
         roughness={insideBuilding ? 0.42 : 0.70}
@@ -8144,6 +8161,7 @@ export default function FloorPlanBuilding({
                 floorId={floorPlans[fi]?.rooms?.[room]?.materials?.floor?.id ?? ""}
                 insideBuilding={insideBuilding}
                 roomKey={`${fi}:${room}`}
+                bleed={Math.max(0, (exterior.walkthroughFloorBleedCm ?? 6) / 100)}
               />
             )}
             {/* ── DEBUG: per-room NSWE wall labels rendered as flat 3D Text
