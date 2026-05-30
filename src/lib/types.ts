@@ -575,6 +575,12 @@ export interface ExteriorSettings {
    *  wall; this dark glass-spandrel colour makes those faces read as glass
    *  rather than bright cartoon walls. Default "#1B2531" (dark blue-slate). */
   glassShellColor?: string;
+  /** Global default interior-door opening height (cm) used in walkthrough/
+   *  exterior when a door has no explicit height. With a 3.0 m ceiling the
+   *  legacy 200 cm doors left a 1 m header and the 门洞 read as small/stubby.
+   *  Default 240 cm gives a more proportional opening. Per-door `h` still
+   *  wins; per-room `roomDoorH` overrides too. */
+  interiorDoorHeightCm?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────

@@ -3464,7 +3464,11 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const doorWall   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "S");
   const doorPosCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorPos?.[activeRoom] ?? 0);
   const doorLenCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
-  const doorHCm    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
+  // Global default interior-door opening height (cm). Mirrors the walkthrough
+  // (FloorPlanExterior) fallback so the door reads the same height in 效果图
+  // and 漫游. Per-door `h` and per-room `roomDoorH` still win when set.
+  const doorHDefault = useDesignerStore((s) => s.exterior?.interiorDoorHeightCm ?? 240);
+  const doorHCm    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom]) ?? doorHDefault;
   const doorStyle  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? "wood_panel");
   const doorEdgeIdx = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorEdgeIdx?.[activeRoom]);
   // Select the raw doors array — stable reference if unchanged.
@@ -3586,7 +3590,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
             wall: d.wall,
             posCm: d.pos,
             lenCm: d.len,
-            hCm: d.h ?? 200,
+            hCm: d.h ?? doorHDefault,
             style: d.style ?? "wood_panel",
             edgeIndex: d.edgeIndex,
           }))}
@@ -3617,7 +3621,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
           doorWall={allDoors.length > 0 ? allDoors[0].wall : doorWall}
           doorPosCm={allDoors.length > 0 ? allDoors[0].pos : doorPosCm}
           doorLenCm={allDoors.length > 0 ? allDoors[0].len : doorLenCm}
-          doorHCm={allDoors.length > 0 ? (allDoors[0].h ?? 200) : doorHCm}
+          doorHCm={allDoors.length > 0 ? (allDoors[0].h ?? doorHDefault) : doorHCm}
           doorStyle={allDoors.length > 0 ? (allDoors[0].style ?? "wood_panel") : doorStyle}
           activeRoom={activeRoom}
           ceiling={roomState.materials.ceiling}

@@ -3833,7 +3833,7 @@ export default function FloorPlanBuilding({
         // The 1cm sill earlier made the doorway look like a window. The
         // X axis is shrunk by 1cm on each side to match RoomDoor3D's
         // panel inset (doorW-2cm wide) — closed door covers hole cleanly.
-        out.push({ x: d.pos + 1, y: 0, w: Math.max(1, d.len - 2), h: d.h ?? 200 });
+        out.push({ x: d.pos + 1, y: 0, w: Math.max(1, d.len - 2), h: d.h ?? (exterior.interiorDoorHeightCm ?? 240) });
       }
       for (const w of windows) {
         if (w.wall !== side) continue;
@@ -3951,7 +3951,7 @@ export default function FloorPlanBuilding({
       }
     }
     return [...map.values()];
-  }, [floorPlans, floorCount, floorBoundsArr, planOffset, W, D]);
+  }, [floorPlans, floorCount, floorBoundsArr, planOffset, W, D, exterior.interiorDoorHeightCm]);
 
   return (
     <group>
@@ -8373,7 +8373,7 @@ export default function FloorPlanBuilding({
             {!isStair && !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) && effectiveDoors.map((door, di) => {
               // Use the SAME RoomDoor3D component the effect page uses
               // (shared module). Single source of truth for door visuals.
-              const dHcm = door.h ?? 200;
+              const dHcm = door.h ?? (exterior.interiorDoorHeightCm ?? 240);
               // Only the ground-floor living-room auto-door (= the actual
               // front entrance, lands on the exterior wall) defaults to
               // french_double glass. Every other door defaults to wood_panel.

@@ -481,7 +481,11 @@ export default function FloorPlan() {
   const hasDoor         = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomHasDoor?.[activeRoom] ?? true);
   const doorWall        = useDesignerStore((s) => (s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "S") as DoorWall);
   const doorLenCm       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
-  const doorHCm         = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom] ?? 200);
+  // Default interior-door opening height (cm). Mirrors the 3D render fallback
+  // (RoomCanvas / FloorPlanExterior) so the editor shows the same value that
+  // actually renders. Per-door / per-room overrides still win.
+  const doorHDefault    = useDesignerStore((s) => s.exterior?.interiorDoorHeightCm ?? 240);
+  const doorHCm         = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom]) ?? doorHDefault;
   const setDoorPos      = useDesignerStore((s) => s.setDoorPos);
   const setRoomHasDoor  = useDesignerStore((s) => s.setRoomHasDoor);
   const setDoorWall     = useDesignerStore((s) => s.setDoorWall);
@@ -984,7 +988,7 @@ export default function FloorPlan() {
       wall: edge.facing,
       pos,
       len: dl,
-      h: doorHCm ?? 200,
+      h: doorHCm,
       style: doorStyle ?? "wood_panel",
       edgeIndex: edge.i,
     });
@@ -999,7 +1003,7 @@ export default function FloorPlan() {
       wall: cardinal,
       pos: Math.max(0, (wallLen - dl) / 2),
       len: dl,
-      h: doorHCm ?? 200,
+      h: doorHCm,
       style: doorStyle ?? "wood_panel",
     });
   };
@@ -1960,7 +1964,7 @@ export default function FloorPlan() {
             wallLen = (sel.wall === "N" || sel.wall === "S") ? roomW : roomD;
           }
           const dLen = sel.len;
-          const dH   = sel.h ?? 200;
+          const dH   = sel.h ?? doorHDefault;
           const dStyle = sel.style ?? "wood_panel";
           const patchDoor = (patch: Partial<typeof sel>) => {
             if (isLegacy) {
