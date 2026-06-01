@@ -3,8 +3,8 @@
 import { useRef, useMemo, useEffect, useState, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
 import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars, Instances, Instance, PerformanceMonitor } from "@react-three/drei";
-import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, HueSaturation } from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
+import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, HueSaturation, ToneMapping } from "@react-three/postprocessing";
+import { BlendFunction, ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
@@ -60,6 +60,34 @@ function AdaptiveDpr({ shadowSizeRef }: { shadowSizeRef?: React.MutableRefObject
 }
 import { useDesignerStore } from "@/lib/store";
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
+
+/** Dev-only scene bridge. When exterior.debugExposeScene is true it publishes
+ *  the live R3F scene/camera/gl on window.__SCENE so the running 3D graph can
+ *  be introspected (which mesh/material draws what). Default OFF — leaves no
+ *  trace in production. Fully driven by the configurable ExteriorSettings flag. */
+function SceneDebugBridge({ enabled }: { enabled?: boolean }) {
+  const scene = useThree(s => s.scene);
+  const camera = useThree(s => s.camera);
+  const gl = useThree(s => s.gl);
+  const controls = useThree(s => s.controls);
+  const invalidate = useThree(s => s.invalidate);
+  useEffect(() => {
+    const w = window as unknown as { __SCENE?: unknown; __CAM?: unknown; __GL?: unknown; __CONTROLS?: unknown; __INVALIDATE?: unknown };
+    if (enabled) {
+      w.__SCENE = scene;
+      w.__CAM = camera;
+      w.__GL = gl;
+      w.__CONTROLS = controls;
+      w.__INVALIDATE = invalidate;
+      // eslint-disable-next-line no-console
+      console.log("[DEBUG] window.__SCENE exposed");
+    }
+    return () => {
+      if (enabled) { const ww = window as unknown as { __SCENE?: unknown }; delete ww.__SCENE; }
+    };
+  }, [enabled, scene, camera, gl, controls, invalidate]);
+  return null;
+}
 
 // ─── three-mesh-bvh: 全局加速射线检测 ────────────────────────────────────────
 // 替换 THREE.Mesh.raycast 为 BVH 版本，复杂场景下点击响应快 5-10×
@@ -3379,12 +3407,18 @@ function Ground({ W, D, lawnTint, grassDensity }: { W: number; D: number; lawnTi
         <GrassGroundTextured size={size} tint={tint} />
       </Suspense>
       {/* Instanced grass blades around building — skips building footprint.
-          Count is scaled by ExteriorSettings.grassDensity (0..2, default 1).
-          Set 0 to disable the blades entirely if they still read as rain
-          at extreme camera angles. */}
-      <GrassCarpet W={W} D={D}
-        count={Math.round(1400 * Math.max(0, Math.min(2, grassDensity ?? 1)))}
-        radius={grassRadius} lawnTint={tint} />
+          Count is scaled by ExteriorSettings.grassDensity (0..2).
+          DEFAULT 0 (blades OFF): at the orbit camera angles used for the
+          外观 launch render the thin tapered triangles read as "falling rain"
+          / dark speckles against the sky, which the user explicitly rejected.
+          The textured ground plane (GrassGroundTextured) already gives a
+          convincing lawn on its own. Users who want close-up 3D blades can
+          opt back in via ExteriorSettings.grassDensity (0..2). */}
+      {(grassDensity ?? 0) > 0 && (
+        <GrassCarpet W={W} D={D}
+          count={Math.round(650 * Math.max(0, Math.min(2, grassDensity ?? 0)))}
+          radius={grassRadius} lawnTint={tint} />
+      )}
     </>
   );
 }
@@ -3402,11 +3436,18 @@ function GrassCarpet({ W, D, count, radius, lawnTint }: { W: number; D: number; 
     // Wider base (5 cm) + shorter blade (18 cm) — same overall coverage
     // with fewer instances; close-up reads as grass tufts instead of the
     // earlier "tall thin needles that look like rain at distance".
+    // Shorter (0.11 m) + wider (7 cm) tuft: at grazing eye-level the old
+    // 0.18 m blades stood up as a field of dark vertical "needles/rain".
+    // A short wide tuft, combined with the random lean applied per-instance
+    // below, breaks that vertical silhouette so the lawn reads as grass.
+    // Small bright tufts (4 cm tall, 3.6 cm wide): at this size the blades
+    // never read as discrete dark triangles / "rain" — they merge into a
+    // fuzzy carpet on top of the textured ground plane.
     const verts = new Float32Array([
       // base-left, base-right, tip
-      -0.050, 0,    0,
-       0.050, 0,    0,
-       0,     0.18, 0,
+      -0.018, 0,    0,
+       0.018, 0,    0,
+       0,     0.040, 0,
     ]);
     g.setAttribute("position", new THREE.BufferAttribute(verts, 3));
     g.setIndex([0, 1, 2]);
@@ -3447,6 +3488,10 @@ function GrassCarpet({ W, D, count, radius, lawnTint }: { W: number; D: number; 
       if (Math.abs(x) < deckHalfX && z > deckZS && z < deckZN) continue;
       dummy.position.set(x, -0.49, z);
       dummy.rotation.y = Math.random() * Math.PI * 2;
+      // Slight lean only (±0.12 rad ≈ ±7°): short tufts stay mostly upright
+      // so they don't flop over and flash their dark double-sided undersides.
+      dummy.rotation.x = (Math.random() - 0.5) * 0.24;
+      dummy.rotation.z = (Math.random() - 0.5) * 0.24;
       const s = 0.7 + Math.random() * 0.7;
       dummy.scale.set(s, s, s);
       dummy.updateMatrix();
@@ -4798,12 +4843,23 @@ function getSkyTheme(hour: number): SkyTheme {
   // Daytime 8–17: elevation drives colour saturation
   return {
     phase: "day",
-    sunColor: "#FFF8F0", sunIntensity: 1.6 + elev * 0.9,
-    fillColor: "#C8E0F8", fillIntensity: 0.45 + elev * 0.12,
-    hemiSky: "#C8DDEF", hemiGround: "#A8A070", hemiIntensity: 0.58 + elev * 0.10,
-    ambient: 0.28 + elev * 0.10,
+    // Sun + exposure pulled back from (2.5 sun / 1.10 exp at noon): the old
+    // values clipped near-white matte facades (#F4F2EE) to pure blown white,
+    // erasing wall-panel detail AND washing the window glass into the wall so
+    // windows read as invisible. Lower sun keeps the lit face below the ACES
+    // clip knee so panel grooves + dark glass punch out. Still user-tunable
+    // via exterior.exposure (multiplier) for those who want it brighter.
+    // 2026-05 launch pass: even at 1.2 sun the matte cream facade clipped to
+    // pure white (ACES knee exceeded by sun+fill+hemi+ambient+envMap+bloom all
+    // stacking). Pulled every term down ~35% so the brightest lit face lands at
+    // ~0.8 luminance — leaving headroom for panel grooves + dark window glass to
+    // read. All still proportionally scalable via exterior.exposure.
+    sunColor: "#FFF8F0", sunIntensity: 0.80 + elev * 0.34,
+    fillColor: "#C8E0F8", fillIntensity: 0.22 + elev * 0.06,
+    hemiSky: "#C8DDEF", hemiGround: "#A8A070", hemiIntensity: 0.30 + elev * 0.07,
+    ambient: 0.13 + elev * 0.05,
     fogColor: "#C0D4E8", fogNear: 55, fogFar: 210,  // clear daytime air — crisp distant view
-    exposure: 1.02 + elev * 0.08,
+    exposure: 0.94 + elev * 0.08,
     hdr: "/hdr/lebombo_1k.hdr",
     skyRgb: _lerpRgb([130, 185, 220], [60, 130, 200], elev),
   };
@@ -6613,18 +6669,39 @@ export default function HouseCanvas() {
           <hemisphereLight args={[theme.hemiSky, theme.hemiGround, theme.hemiIntensity]} />
         )}
         <ambientLight intensity={insideBuilding ? 0.82 : theme.ambient} />
-        {/* Interior ceiling lights — warm downlights active when camera is inside */}
-        {insideBuilding && (
-          <>
-            <pointLight position={[0,          FLOOR_H_M * 0.90, 0]}         intensity={5.0} distance={W * 2.5} decay={1.8} color="#FFF8E8" />
-            <pointLight position={[-W * 0.30,  FLOOR_H_M * 0.90, 0]}         intensity={3.5} distance={W * 2.0} decay={1.8} color="#FFFAEC" />
-            <pointLight position={[ W * 0.30,  FLOOR_H_M * 0.90, 0]}         intensity={3.5} distance={W * 2.0} decay={1.8} color="#FFFAEC" />
-            <pointLight position={[0,          FLOOR_H_M * 0.90, -D * 0.28]} intensity={3.0} distance={W * 1.8} decay={1.8} color="#FFFBF0" />
-            <pointLight position={[0,          FLOOR_H_M * 0.90,  D * 0.28]} intensity={3.0} distance={W * 1.8} decay={1.8} color="#FFFBF0" />
-            {/* 地板高度补光 */}
-            <pointLight position={[0, 0.6, 0]} intensity={1.8} distance={W * 1.6} decay={2} color="#FFF4E0" />
-          </>
-        )}
+        {/* Interior ceiling lights — warm downlights.
+            · 室内漫游（insideBuilding）：始终全亮（k=1），让室内可读。
+            · 外观图（!insideBuilding + 透明立面 transparentExterior）：也点亮
+              室内，强度按 exterior.exteriorInteriorFillIntensity 缩放（默认 0.6，
+              0 = 关闭）。因为透明立面下墙体是带真实窗洞的几何体，点亮室内后
+              光透过窗洞，从外面看窗户里有「亮堂的室内」——和外观漫游图一样
+              清晰、有层次，而不是一片惨白透不出内容的玻璃。
+              每层楼都布一组灯，避免 2F 窗户内部发黑。 */}
+        {(() => {
+          const litInside = insideBuilding;
+          const litExterior = !insideBuilding
+            && _buildingType === "floor-plan-driven"
+            && (exterior.transparentExterior ?? true);
+          if (!litInside && !litExterior) return null;
+          const k = litInside ? 1 : (exterior.exteriorInteriorFillIntensity ?? 0.6);
+          if (k <= 0) return null;
+          // 每层一组顶灯（楼层基准高度 = floor * FLOOR_H_M）
+          return Array.from({ length: floors }).map((_, fl) => {
+            const yC = fl * FLOOR_H_M + FLOOR_H_M * 0.90; // 该层吊顶高度
+            const yF = fl * FLOOR_H_M + 0.6;              // 该层地面补光
+            return (
+              <group key={`interior-fill-${fl}`}>
+                <pointLight position={[0,         yC, 0]}         intensity={5.0 * k} distance={W * 2.5} decay={1.8} color="#FFF8E8" />
+                <pointLight position={[-W * 0.30, yC, 0]}         intensity={3.5 * k} distance={W * 2.0} decay={1.8} color="#FFFAEC" />
+                <pointLight position={[ W * 0.30, yC, 0]}         intensity={3.5 * k} distance={W * 2.0} decay={1.8} color="#FFFAEC" />
+                <pointLight position={[0,         yC, -D * 0.28]} intensity={3.0 * k} distance={W * 1.8} decay={1.8} color="#FFFBF0" />
+                <pointLight position={[0,         yC,  D * 0.28]} intensity={3.0 * k} distance={W * 1.8} decay={1.8} color="#FFFBF0" />
+                {/* 地板高度补光 */}
+                <pointLight position={[0, yF, 0]} intensity={1.8 * k} distance={W * 1.6} decay={2} color="#FFF4E0" />
+              </group>
+            );
+          });
+        })()}
         {/* Primary sun — only enabled OUTSIDE the building.
             Three.js transparent materials (glass curtain walls, windows
             with meshPhysicalMaterial transmission) don't cast shadows by
@@ -6662,25 +6739,34 @@ export default function HouseCanvas() {
           <hemisphereLight args={["#FFF8EC", "#D0CFC8", 1.2]} />
         )}
 
-        {/* 玻璃幕墙建筑：室外补光点灯（从南面和西面打亮玻璃，增强立面质感）*/}
-        {_buildingType === "floor-plan-driven" && !insideBuilding && (
+        {/* 玻璃幕墙建筑：室外补光点灯（从南面和西面打亮玻璃，增强立面质感）。
+            这一整组"立面洗墙"补光是为玻璃幕墙调的——玻璃本身不漫反射，
+            需要额外点光把立面打亮才有质感。但若把它们打在哑光白墙（非玻璃）
+            的实墙立面上，叠加 太阳+半球+环境+补光 会把 #F4F2EE 这类近白墙
+            直接顶到纯白（连天空一起过曝）。所以仅在「玻璃幕墙」模式下启用，
+            强度可通过 exterior.facadeWashIntensity 配置（默认 1，0 = 关闭）。*/}
+        {_buildingType === "floor-plan-driven" && !insideBuilding && (exterior.facadeGlass ?? false) && (() => {
+          const fw = exterior.facadeWashIntensity ?? 1;
+          if (fw <= 0) return null;
+          return (
           <>
-            <pointLight position={[0, floors * FLOOR_H * 0.6, -D * 1.2]} intensity={8} distance={D * 4 + W * 2} decay={1.5} color="#FFF8F0" />
-            <pointLight position={[-W * 0.8, floors * FLOOR_H * 0.5, -D * 0.6]} intensity={5} distance={W * 3} decay={1.8} color="#FFF4E8" />
+            <pointLight position={[0, floors * FLOOR_H * 0.6, -D * 1.2]} intensity={8 * fw} distance={D * 4 + W * 2} decay={1.5} color="#FFF8F0" />
+            <pointLight position={[-W * 0.8, floors * FLOOR_H * 0.5, -D * 0.6]} intensity={5 * fw} distance={W * 3} decay={1.8} color="#FFF4E8" />
             {/* Facade ground-wash uplights — dramatic upward wash on south glass curtain wall */}
             {[-W * 0.35, 0, W * 0.35].map((lx, li) => (
-              <pointLight key={li} position={[lx, 0.2, -D / 2 - 0.6]} intensity={4.5} distance={floors * FLOOR_H + 3} decay={1.6} color="#FFF6E8" />
+              <pointLight key={li} position={[lx, 0.2, -D / 2 - 0.6]} intensity={4.5 * fw} distance={floors * FLOOR_H + 3} decay={1.6} color="#FFF6E8" />
             ))}
             {/* Side facade wash — east/west edges */}
-            <pointLight position={[-W / 2 - 0.5, 0.2,  D * 0.10]} intensity={3.0} distance={floors * FLOOR_H + 2} decay={1.8} color="#FFF2E0" />
-            <pointLight position={[ W / 2 + 0.5, 0.2, -D * 0.10]} intensity={3.0} distance={floors * FLOOR_H + 2} decay={1.8} color="#FFF2E0" />
+            <pointLight position={[-W / 2 - 0.5, 0.2,  D * 0.10]} intensity={3.0 * fw} distance={floors * FLOOR_H + 2} decay={1.8} color="#FFF2E0" />
+            <pointLight position={[ W / 2 + 0.5, 0.2, -D * 0.10]} intensity={3.0 * fw} distance={floors * FLOOR_H + 2} decay={1.8} color="#FFF2E0" />
             {/* Pool water bounce light — cool blue fill reflected from pool surface onto
                 building south face. Approximates the real pool position (D*1.8 south). */}
-            <pointLight position={[0, 1.2, -D * 1.8]} intensity={3.5} distance={D * 4 + W * 1.5} decay={1.6} color="#4AACCC" />
+            <pointLight position={[0, 1.2, -D * 1.8]} intensity={3.5 * fw} distance={D * 4 + W * 1.5} decay={1.6} color="#4AACCC" />
             {/* Stone deck reflected fill — warm from travertine deck between building and pool */}
-            <pointLight position={[0, 0.5, -D * 0.85]} intensity={2.2} distance={D * 2 + W} decay={2.0} color="#E8D8B0" />
+            <pointLight position={[0, 0.5, -D * 0.85]} intensity={2.2 * fw} distance={D * 2 + W} decay={2.0} color="#E8D8B0" />
           </>
-        )}
+          );
+        })()}
         {/* Click empty ground to deselect */}
         <DeselectPlane onDeselect={() => {
           setSelectedOutdoorKey(null);
@@ -6692,7 +6778,7 @@ export default function HouseCanvas() {
              roam the yard without falling into the void. ── */}
         {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} />}
         {!isRichGlassVilla && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} />}
-        {!insideBuilding && !isRichGlassVilla && <EntryPath W={W} D={D} />}
+        {!insideBuilding && !isRichGlassVilla && (exterior.entryPathEnabled ?? false) && <EntryPath W={W} D={D} />}
         {/* rich-glass-villa (non-FPD): minimal stone plaza only */}
         {!insideBuilding && isRichGlassVilla && _buildingType !== "floor-plan-driven" && (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
@@ -6766,6 +6852,16 @@ export default function HouseCanvas() {
               luminanceSmoothing={0.30}
               mipmapBlur
             />
+            {/* ── ToneMapping (HDR → LDR) ──────────────────────────────────
+                CRITICAL: @react-three/postprocessing's EffectComposer FORCES
+                gl.toneMapping = NoToneMapping on mount (it expects tone mapping
+                to happen inside the pipeline). Without an explicit ToneMapping
+                effect here, sun-lit walls clip straight to pure #FFF — the
+                "墙壁爆白、门窗看不见" bug. ACES rolls highlights off smoothly so
+                the cream facade keeps its form and windows punch through.
+                Placed after Bloom (which works in HDR) and before the LDR
+                colour-grade effects below. */}
+            <ToneMapping mode={ToneMappingMode.AGX} />
             {/* HueSaturation — vivid architectural renders with rich pool/sky blues */}
             <HueSaturation
               saturation={theme.phase === "night" ? -0.05 : theme.phase === "day" ? 0.18 : 0.10}
@@ -6773,7 +6869,7 @@ export default function HouseCanvas() {
             />
             <BrightnessContrast
               brightness={theme.phase === "night" ? 0.0 : theme.phase === "day" ? 0.005 : 0.010}
-              contrast={theme.phase === "night" ? 0.15 : theme.phase === "day" ? 0.14 : 0.10}
+              contrast={theme.phase === "night" ? 0.15 : theme.phase === "day" ? 0.05 : 0.08}
             />
             {/* Vignette — lighter during day for clean look, dark at night */}
             <Vignette offset={0.42} darkness={theme.phase === "night" ? 0.62 : theme.phase === "day" ? 0.28 : 0.40} eskil={false} />
@@ -6784,6 +6880,7 @@ export default function HouseCanvas() {
             FPS 高 → 升 dpr 到 2（清晰），FPS 低 → 降到 1（保流畅）。
             flipflops=3 防止 ping-pong 抖动。*/}
         <AdaptiveDpr shadowSizeRef={shadowSizeRef} />
+        <SceneDebugBridge enabled={exterior.debugExposeScene ?? false} />
         <CompassYawTracker onChange={setCompassDeg} />
       </Canvas>
     </div>

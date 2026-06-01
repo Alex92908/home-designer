@@ -94,6 +94,7 @@ export function WalkthroughDoor3D({
   isOpen, onToggle, doorStyle,
   frameColor = "#F0EEEA",
   handleColor = "#B8A060",
+  outwardProtrude = 0,
 }: {
   W: number; D: number; H: number;
   doorWall: "N" | "S" | "W" | "E";
@@ -105,6 +106,11 @@ export function WalkthroughDoor3D({
   frameColor?: string;
   /** Handle / knob metal color. Default '#B8A060' (brass). */
   handleColor?: string;
+  /** 把整扇门沿墙体外法线方向往外推的距离（米）。默认 0（室内漫游不动）。
+   *  外观图用：门默认坐在墙内侧 8cm（D/2-0.08），落在墙体厚度后方 → 大白天
+   *  斜视角下被墙挡住（实测关 depthTest 才看得到）。往外推到墙体前表面之外
+   *  （≈0.16m），门就凸出墙面、永不被挡，从外面立刻能读出来。仅外观图传值。 */
+  outwardProtrude?: number;
 }) {
   // Note: H is currently unused inside this body but kept in the signature
   // for API parity with the original (callers pass room height for future
@@ -184,6 +190,17 @@ export function WalkthroughDoor3D({
       break;
     default:
       return null;
+  }
+
+  // 外观图：把整扇门沿墙体外法线往外推 outwardProtrude（米），使门凸出墙面、
+  // 不再被墙体厚度遮挡。每面墙的外法线方向不同（N=-Z, S=+Z, W=-X, E=+X）。
+  if (outwardProtrude !== 0) {
+    switch (doorWall) {
+      case "N": groupPos = [groupPos[0], groupPos[1], groupPos[2] - outwardProtrude]; break;
+      case "S": groupPos = [groupPos[0], groupPos[1], groupPos[2] + outwardProtrude]; break;
+      case "W": groupPos = [groupPos[0] - outwardProtrude, groupPos[1], groupPos[2]]; break;
+      case "E": groupPos = [groupPos[0] + outwardProtrude, groupPos[1], groupPos[2]]; break;
+    }
   }
 
   return (

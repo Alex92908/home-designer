@@ -64,8 +64,9 @@ export function getLayerOffset(layer: keyof typeof Z_LAYER): number {
  *  factor / units 经验值：
  *  - -1, -1 适合 stickers / decals（最常用）
  *  - -2, -2 适合相隔多层的复杂叠加（外墙装饰之上又叠了贴纸）
+ *  - -3, -3 适合"门板玻璃压在门框 + 门洞 + 墙体"这种叠了三层的开口件
  */
-export function overlayMaterialProps(strength: 1 | 2 = 1) {
+export function overlayMaterialProps(strength: 1 | 2 | 3 = 1) {
   return {
     polygonOffset: true,
     polygonOffsetFactor: -strength,

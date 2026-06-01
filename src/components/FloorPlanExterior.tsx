@@ -29,6 +29,11 @@ import { getFurnitureById } from "@/lib/furniture";
 import { InteriorRoomDetail } from "./InteriorRoomDetail";
 import { PlacedItemMesh } from "./RoomCanvas";
 import { WalkthroughDoor3D } from "@/components/walkthrough/WalkthroughDoor3D";
+import { StyledWindow } from "@/components/shared/StyledWindow";
+import {
+  WINDOW_GLASS_COLOR, WINDOW_FRAME_COLOR,
+  ENTRANCE_DOOR_COLOR, ENTRANCE_DOOR_CASING_COLOR, ENTRANCE_DOOR_HANDLE_COLOR,
+} from "@/lib/roomVisuals";
 import { splitWallAroundHoles } from "@/lib/wallGeom";
 import { paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize, getStuccoTexture } from "@/lib/textures";
@@ -212,6 +217,10 @@ function panelBlindHash(col: number, row: number): number {
 
 function GlassCurtain({
   width, height, floorH, doors = [], opacityScale = 1, glassColor,
+  spandrelColor = "#283442",
+  entranceFrameColor = "#202329",
+  entranceHandleColor = "#C8CDD2",
+  entranceCanopy = true,
 }: {
   width: number; height: number; floorH: number;
   doors?: Array<{ cx: number; w: number; h: number }>;
@@ -220,6 +229,18 @@ function GlassCurtain({
   // the (stylised, cream) interior shell. Configurable via exterior.glassOpacity.
   opacityScale?: number;
   glassColor?: string;
+  /** Spandrel (opaque shadow-box) glass colour. Configurable via
+   *  exterior.glassSpandrelColor. Default soft blue-grey #283442. */
+  spandrelColor?: string;
+  /** Ground-floor entrance door frame colour. Configurable via
+   *  exterior.entranceFrameColor. Default near-black anodised #202329. */
+  entranceFrameColor?: string;
+  /** Entrance door pull-handle colour. Configurable via
+   *  exterior.entranceHandleColor. Default brushed steel #C8CDD2. */
+  entranceHandleColor?: string;
+  /** Project a flat canopy slab over the entrance. Configurable via
+   *  exterior.entranceCanopy. Default true. */
+  entranceCanopy?: boolean;
 }) {
   // Clamp so glass never goes fully opaque (keeps a hint of depth/reflection).
   const op = (v: number) => Math.min(0.92, v * Math.max(0.1, opacityScale));
@@ -348,7 +369,10 @@ function GlassCurtain({
       {spandrelPositions.length > 0 && (
         <Instances limit={spandrelPositions.length}>
           <boxGeometry args={[width - 0.004, spandrelHeight, 0.008]} />
-          <meshStandardMaterial color="#1A1D26" roughness={0.12} metalness={0.92} envMapIntensity={2.2} />
+          {/* Spandrel (shadow-box) glass. A softer blue-grey + lower envMap so
+              it harmonises with the vision glass instead of reading as a harsh
+              near-black band alternating with blown-out white panes. */}
+          <meshStandardMaterial color={spandrelColor} roughness={0.28} metalness={0.85} envMapIntensity={1.25} />
           {spandrelPositions.map((p, i) => <Instance key={i} position={p} />)}
         </Instances>
       )}
@@ -362,11 +386,11 @@ function GlassCurtain({
         <Instances limit={upperPaneNoDoor.length} renderOrder={10}>
           <boxGeometry args={[paneW, upperPaneH, 0.008]} />
           <meshPhysicalMaterial
-            color={glassColor ?? "#CEE4F4"}
-            transparent opacity={op(0.25)}
-            depthWrite={false} roughness={0.02} metalness={0.0}
-            reflectivity={0.55} clearcoat={0.9} clearcoatRoughness={0.04}
-            envMapIntensity={3.6} side={THREE.DoubleSide}
+            color={glassColor ?? "#93AEC8"}
+            transparent opacity={op(0.30)}
+            depthWrite={false} roughness={0.05} metalness={0.0}
+            reflectivity={0.6} clearcoat={0.9} clearcoatRoughness={0.05}
+            envMapIntensity={1.5} side={THREE.DoubleSide}
             {...overlayMaterialProps(2)}
           />
           {upperPaneNoDoor.map((p, i) => <Instance key={i} position={p} />)}
@@ -376,11 +400,11 @@ function GlassCurtain({
         <Instances limit={lowerPaneNoDoor.length} renderOrder={10}>
           <boxGeometry args={[paneW, lowerPaneH, 0.008]} />
           <meshPhysicalMaterial
-            color={glassColor ?? "#C8E0F2"}
-            transparent opacity={op(0.27)}
-            depthWrite={false} roughness={0.025} metalness={0.0}
-            reflectivity={0.50} clearcoat={0.85} clearcoatRoughness={0.04}
-            envMapIntensity={3.4} side={THREE.DoubleSide}
+            color={glassColor ?? "#8AA6C2"}
+            transparent opacity={op(0.34)}
+            depthWrite={false} roughness={0.06} metalness={0.0}
+            reflectivity={0.55} clearcoat={0.85} clearcoatRoughness={0.05}
+            envMapIntensity={1.4} side={THREE.DoubleSide}
             {...overlayMaterialProps(2)}
           />
           {lowerPaneNoDoor.map((p, i) => <Instance key={i} position={p} />)}
@@ -417,22 +441,22 @@ function GlassCurtain({
                       <mesh position={[0, visBot + botH + topH / 2, 0.020]} renderOrder={10}>
                         <boxGeometry args={[panelW - 0.006, topH - 0.004, 0.008]} />
                         <meshPhysicalMaterial
-                          color={glassColor ?? "#D0E8F8"}
+                          color={glassColor ?? "#93AEC8"}
                           transparent opacity={op(0.30)}
-                          depthWrite={false} roughness={0.02} metalness={0.0}
-                          reflectivity={0.55} clearcoat={0.9} clearcoatRoughness={0.04}
-                          envMapIntensity={3.6} side={THREE.DoubleSide}
+                          depthWrite={false} roughness={0.05} metalness={0.0}
+                          reflectivity={0.6} clearcoat={0.9} clearcoatRoughness={0.05}
+                          envMapIntensity={1.5} side={THREE.DoubleSide}
                           {...overlayMaterialProps(2)}
                         />
                       </mesh>
                       <mesh position={[0, visBot + botH / 2, 0.020]} renderOrder={10}>
                         <boxGeometry args={[panelW - 0.006, botH - 0.004, 0.008]} />
                         <meshPhysicalMaterial
-                          color={glassColor ?? "#CCE4F6"}
-                          transparent opacity={op(0.32)}
-                          depthWrite={false} roughness={0.025} metalness={0.0}
-                          reflectivity={0.50} clearcoat={0.85} clearcoatRoughness={0.04}
-                          envMapIntensity={3.4} side={THREE.DoubleSide}
+                          color={glassColor ?? "#8AA6C2"}
+                          transparent opacity={op(0.34)}
+                          depthWrite={false} roughness={0.06} metalness={0.0}
+                          reflectivity={0.55} clearcoat={0.85} clearcoatRoughness={0.05}
+                          envMapIntensity={1.4} side={THREE.DoubleSide}
                           {...overlayMaterialProps(2)}
                         />
                       </mesh>
@@ -443,7 +467,7 @@ function GlassCurtain({
                       位于玻璃内侧（z < 0），只遮住上部 Vision pane 的
                       约 55%，底部留空（日常使用场景模拟）。
                       seeded hash：不调用 Math.random(), 每帧渲染结果相同。 */}
-                  {!hasDoor && panelBlindHash(ci, ri) < 0.14 && (() => {
+                  {!hasDoor && panelBlindHash(ci, ri) < 0.08 && (() => {
                     const blindCoverage = 0.50 + panelBlindHash(ci + 17, ri + 3) * 0.25; // 50-75%
                     const blindH  = topH * blindCoverage;
                     const blindTop = visBot + botH + topH;       // top of vision pane
@@ -460,7 +484,7 @@ function GlassCurtain({
                         <mesh key={`blind-${sli}`} position={[0, slatY, -0.012]} rotation={[tiltAngle, 0, 0]} renderOrder={9}>
                           <boxGeometry args={[slatW, slatT, 0.045]} />
                           <meshStandardMaterial
-                            color="#E8E2D4"
+                            color="#C2C6CC"
                             roughness={0.70} metalness={0.03}
                             {...overlayMaterialProps(1)}
                           />
@@ -477,44 +501,71 @@ function GlassCurtain({
 
       {/* Spandrel bands 已并入外层 InstancedMesh (spandrelPositions) */}
 
-      {/* 大门 —— 推拉式玻璃门：和玻璃幕墙同款玻璃材质，只多一道细黑
-          竖框做"门扇分隔"。之前是 #111 厚框 + 染色玻璃，从外面看像独立
-          的木门贴在幕墙上，违和。现在融在幕墙里几乎看不出来，只有竖
-          中线和地板/天花处的纤细横轨提示这里能开。 */}
-      {doors.map((door, di) => (
-        <group key={`door-${di}`} position={[door.cx, -height / 2 + door.h / 2, 0.005]}>
-          {/* 两扇门玻璃 —— 和主玻璃同色同透明度 */}
-          {[-door.w / 4, door.w / 4].map((ox, si) => (
-            <mesh key={si} position={[ox, 0, 0.020]} renderOrder={10}>
-              <boxGeometry args={[door.w / 2 - 0.020, door.h - 0.05, 0.008]} />
-              <meshStandardMaterial
-                color={glassColor ?? "#C8E0EA"}
-                transparent
-                opacity={op(0.45)}
-                depthWrite={false}
-                roughness={0.06}
-                metalness={0.04}
-                envMapIntensity={0.35}
-                side={THREE.DoubleSide}
-                {...overlayMaterialProps(2)}
-              />
-            </mesh>
-          ))}
-          {/* 门框 —— 顶/底细横轨 + 左/中/右细竖框，全部用 #181A1E */}
-          {[
-            [0, door.h / 2,  door.w, 0.035] as const,
-            [0, -door.h / 2, door.w, 0.035] as const,
-            [-door.w / 2, 0, 0.035, door.h] as const,
-            [0, 0,           0.035, door.h] as const,
-            [door.w / 2, 0,  0.035, door.h] as const,
-          ].map(([bx, by, bw, bh], bi) => (
-            <mesh key={bi} position={[bx, by, 0]}>
-              <boxGeometry args={[bw, bh, 0.045]} />
-              <meshStandardMaterial color="#181A1E" metalness={0.92} roughness={0.16} envMapIntensity={2.4} />
-            </mesh>
-          ))}
-        </group>
-      ))}
+      {/* 大门 —— 玻璃幕墙底层的"可读"主入口。
+          旧版把门做得和幕墙同色同透明度 + 细黑竖线，几乎看不出来，
+          正是用户抱怨的"看不出门"。现在做成一个清晰的入口门洞：
+          · 落到地面的整片门（盖住该格 spandrel 暗带，z 在 spandrel 之前）
+          · 较粗的深色门框（门头 + 两侧门套 + 地槛）勾出门洞
+          · 双扇透明玻璃门（比幕墙更清透）
+          · 一对竖向不锈钢拉手（强烈的"这是门"信号）
+          · 可选的入口雨棚挑板。
+          颜色/雨棚全部可配置（exterior.entrance*）。 */}
+      {doors.map((door, di) => {
+        const dW = door.w;
+        const dH = door.h;
+        const fT = 0.07;             // frame member width
+        const fD = 0.07;             // frame depth
+        const zFront = 0.034;        // sit in front of spandrel band (z≈0.026)
+        const baseY = -height / 2;   // building floor line
+        const leafW = dW / 2 - fT * 0.6;
+        const handleH = Math.min(0.9, dH * 0.42);
+        const handleY = baseY + dH * 0.5;
+        return (
+          <group key={`door-${di}`} position={[door.cx, baseY, zFront]}>
+            {/* 双扇玻璃门 —— 比幕墙更清透，读作"可进入的开口" */}
+            {[-dW / 4 + fT * 0.1, dW / 4 - fT * 0.1].map((ox, si) => (
+              <mesh key={si} position={[ox, dH / 2, 0.004]} renderOrder={20}>
+                <boxGeometry args={[leafW, dH - 0.06, 0.010]} />
+                <meshPhysicalMaterial
+                  color={glassColor ?? "#7FA6C4"}
+                  transparent opacity={op(0.30)}
+                  depthWrite={false} roughness={0.04} metalness={0.0}
+                  reflectivity={0.55} clearcoat={0.9} clearcoatRoughness={0.04}
+                  envMapIntensity={1.4} side={THREE.DoubleSide}
+                  {...overlayMaterialProps(3)}
+                />
+              </mesh>
+            ))}
+            {/* 门框：门头 + 左右门套 + 中竖梃 + 地槛 */}
+            {[
+              [0, dH + fT / 2, dW + fT * 2, fT] as const,            // head
+              [-(dW / 2 + fT / 2), dH / 2, fT, dH + fT] as const,    // left jamb
+              [ (dW / 2 + fT / 2), dH / 2, fT, dH + fT] as const,    // right jamb
+              [0, dH / 2, fT * 0.7, dH] as const,                    // meeting mullion
+              [0, 0.025, dW + fT * 2, 0.05] as const,                // threshold
+            ].map(([bx, by, bw, bh], bi) => (
+              <mesh key={bi} position={[bx, by, 0.012]}>
+                <boxGeometry args={[bw, bh, fD]} />
+                <meshStandardMaterial color={entranceFrameColor} metalness={0.85} roughness={0.22} envMapIntensity={1.8} />
+              </mesh>
+            ))}
+            {/* 一对竖向拉手 */}
+            {[-0.10, 0.10].map((hx, hi) => (
+              <mesh key={hi} position={[hx, handleY, 0.05]}>
+                <boxGeometry args={[0.022, handleH, 0.030]} />
+                <meshStandardMaterial color={entranceHandleColor} metalness={0.9} roughness={0.25} envMapIntensity={2.2} />
+              </mesh>
+            ))}
+            {/* 入口雨棚挑板 —— 明确的"主入口"提示 */}
+            {entranceCanopy && (
+              <mesh position={[0, dH + fT + 0.06, 0.30]}>
+                <boxGeometry args={[dW + 0.55, 0.06, 0.62]} />
+                <meshStandardMaterial color={entranceFrameColor} metalness={0.6} roughness={0.4} envMapIntensity={1.4} />
+              </mesh>
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -538,6 +589,7 @@ function ConcreteFacade({
   baseColor = "#E6E0D8",
   grooveColor = "#C0BAB2",
   glassTopColor,
+  glassEnvIntensity = 0.10,
   mullionPos = 0,
   mullionThicknessCm = 3,
   grooveOpacity = 0.55,
@@ -548,9 +600,35 @@ function ConcreteFacade({
   stuccoEnabled = true,
   stuccoScale = 1.2,
   stuccoRoughness = 0.85,
+  wallTextureId = "",
+  windowProtrude = 0.06,
+  doors = [],
+  // 门色默认值从共享视觉模块取（与效果图同一真源），不在此处另写色值。
+  doorColor = ENTRANCE_DOOR_COLOR,
+  doorHandleColor = ENTRANCE_DOOR_HANDLE_COLOR,
+  casingColor = "#D8D0C2",
+  // 门套独立配色（与窗套 casingColor 解耦），同样取共享真源
+  doorCasingColor = ENTRANCE_DOOR_CASING_COLOR,
+  frameDepthCm = 7,
+  frameMemberCm = 5.5,
 }: {
   width: number; height: number;
   windows?: Array<{ localX: number; winLen: number; winH: number; winSill: number }>;
+  /** Ground-floor entrance doors (concrete facade). cx/w/h in metres. */
+  doors?: Array<{ cx: number; w: number; h: number }>;
+  /** Door leaf color. Default gray '#9C9699' to match 效果图 glTF door. */
+  doorColor?: string;
+  /** Door handle / hardware metal color. Default brushed metal '#B7BBC0'. */
+  doorHandleColor?: string;
+  /** Window outer plaster casing (trim) color. Default '#D8D0C2'. */
+  casingColor?: string;
+  /** Door casing/frame color. Default gray '#C7C4C7' to match 效果图 door frame. */
+  doorCasingColor?: string;
+  /** Forward projection (cm) of the window frame ring — creates the recessed
+   *  3D window depth so glass reads as set behind a real proud frame. Default 7. */
+  frameDepthCm?: number;
+  /** Window frame member width (cm). Default 5.5. */
+  frameMemberCm?: number;
   /** Night-mode interior glow (0 = off, 0.9+ = full night). */
   windowGlow?: number;
   /** Daytime window glass color (when no night glow). Falls back to slate-blue. */
@@ -596,6 +674,10 @@ function ConcreteFacade({
   /** Window glass TOP colour for sky-reflection gradient. When undefined,
    *  glass is drawn as a single uniform pane in `glassColor`. */
   glassTopColor?: string;
+  /** Daytime glass envMap reflection strength (0–1). Default 0.10 — kept low so
+   *  the pane reads as a dark recessed opening instead of mirroring the bright
+   *  sky and washing into the facade. */
+  glassEnvIntensity?: number;
   /** Horizontal mullion position 0–1 of pane height. 0 = disabled. */
   mullionPos?: number;
   /** Mullion thickness in cm. Default 3. */
@@ -619,6 +701,23 @@ function ConcreteFacade({
   stuccoScale?: number;
   /** Roughness of the stuccoed wall material 0..1. Default 0.85. */
   stuccoRoughness?: number;
+  /** Registered wall material id (brick / stone / wood / tile …) configured on
+   *  the room's exterior wall in 效果图. When set AND `getWallTexture` knows it,
+   *  the facade base wall is clad with that SAME tiled texture (matching the
+   *  interior render & walkthrough) instead of the procedural stucco grain.
+   *  Empty string → keep stucco (the default matte-cream villa look). The
+   *  building-wide `wallBaseColor` flat-color override clears this upstream so a
+   *  user-picked solid color always wins. Default "". */
+  wallTextureId?: string;
+  /** Forward offset (m) of the whole window detail group so the glass clears
+   *  the 12 cm-thick wall box (front face at local z=+0.06) and is actually
+   *  visible from outside. Without this the glass/frame (authored at local
+   *  z≈0.018–0.022) sit INSIDE the solid wall and get occluded — the window
+   *  vanishes, leaving only the protruding flower box on a blank wall.
+   *  Default 0.06 → group sits AT the wall front face; glass/backing land a
+   *  few mm proud and the frame ring projects forward by frameDepthCm to make
+   *  a real recessed window. Configurable to match a thinner/thicker wall. */
+  windowProtrude?: number;
 }) {
   // Per-tone hash variation around the base — shifts RGB ±20 % so the
   // mound doesn't read as flat-tone. Saturation/hue stay anchored to
@@ -677,6 +776,22 @@ function ConcreteFacade({
       <mesh castShadow receiveShadow>
         <boxGeometry args={[width, height, 0.12]} />
         {(() => {
+          // ── 与效果图 / 漫游同源的外墙材质贴图 ──
+          // 当该面外墙在 效果图 里配了砖/石/木/瓷砖等注册材质 (wallTextureId)，
+          // 就用 getWallTexture 取同一张贴图铺在外立面 —— 与 RoomCanvas /
+          // WalkthroughWallPiece 调用的是同一套纹理 + 同一套 wallTileSize，
+          // 三个视图墙面一致。tileSize 决定每块贴图的物理尺寸，repeat 用
+          // width/height 换算，保证砖块大小不随墙段长度漂移。baseColor 作为
+          // 染色叠加（多数砖石贴图是近灰底，乘上墙色微调色温即可）。
+          const wallTex = wallTextureId ? getWallTexture(wallTextureId) : null;
+          if (wallTex) {
+            const t = wallTex.clone();
+            t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            const [us, vs] = wallTileSize(wallTextureId);
+            t.repeat.set(Math.max(1, width / us), Math.max(1, height / vs));
+            t.needsUpdate = true;
+            return <meshStandardMaterial map={t} color={baseColor} roughness={0.85} metalness={0.02} envMapIntensity={0.30} />;
+          }
           if (stuccoEnabled === false) {
             return <meshStandardMaterial color={baseColor} roughness={0.78} metalness={0.02} envMapIntensity={0.35} />;
           }
@@ -790,7 +905,7 @@ function ConcreteFacade({
         </Instances>
       )}
 
-      {/* ── 窗洞 ── */}
+      {/* ── 窗（真实 3D：墙面外凸窗框 + 凹陷玻璃，形成真实窗洞进深）── */}
       {windows.map((w, wi) => {
         // Per-window deterministic glow style:
         // 70% warm amber (bedroom/living), 18% cool blue-white (bathroom LED),
@@ -803,57 +918,61 @@ function ConcreteFacade({
         const glowColor  = isWarm ? "#F4D890" : "#B8E4FF";
         const bgColor    = isWarm ? "#F5E8C8" : isCool ? "#E8F4FF" : "#161A20";
         const glassGlow  = isWarm ? "#F4C860" : "#A0D4F0";
-        // Daytime glass reads MUCH darker than the cream facade so windows
-        // clearly "punch" out from the wall (real windows on a sunlit white
-        // facade look dark — you're seeing into a shaded interior). The
-        // previous pale-sky-blue (#B8D4E8) was so close to the wall colour
-        // that windows blurred into the facade in the bird-eye view.
-        const glassDay = glassColorOverride ?? "#3E5066";
+        // 与效果图（RoomCanvas）程序化窗共享同一玻璃色（WINDOW_GLASS_COLOR）。
+        // 白天模式玻璃 opacity=1、transmission=0（不透，不暴露内部），所以
+        // 用浅蓝只是表面反射色，安全。仍可由 exterior.windowGlassColor 覆盖。
+        const glassDay = glassColorOverride ?? WINDOW_GLASS_COLOR;
+        // 顶片天空反射 tint，比主玻璃略亮一点，读作真实玻璃；可由
+        // glassTopColor 覆盖。
+        const glassSkyDay = "#D4E4F0";
         const glassColor = windowGlow > 0.5
           ? (isWarm ? "#D8C8A0" : isCool ? "#B8D8F0" : "#3A4A60")
           : glassDay;
-        const fc = frameColorOverride ?? "#1E2530";
+        // 窗框/窗梃色：与效果图程序化窗共享同一白框（WINDOW_FRAME_COLOR）。
+        const fc = frameColorOverride ?? WINDOW_FRAME_COLOR;
+        // ── Real 3D window geometry ──────────────────────────────────────
+        // The wall is a SOLID 12 cm box (no CSG holes), so anything authored
+        // BEHIND its front face (local z<0 here, since the group sits AT the
+        // face) is occluded. We fake a real recessed opening by:
+        //   • glass + backing sitting a few mm proud of the wall face;
+        //   • a frame ring (4 boxes) PROJECTING forward by frameDepth → the
+        //     glass reads as set deep behind a proud frame (genuine depth,
+        //     not a flat sticker);
+        //   • an outer plaster casing/trim ring flush on the wall surface.
+        const frameDepth = Math.max(0.02, Math.min(0.16, frameDepthCm / 100));
+        const frameM     = Math.max(0.03, Math.min(0.12, frameMemberCm / 100));
+        const glassZ     = 0.010;                 // pane just proud of wall face
+        const backZ      = 0.003;                 // interior backing
+        const innerW     = Math.max(0.05, w.winLen - frameM * 2);
+        const innerH     = Math.max(0.05, w.winH  - frameM * 2);
         return (
-        <group key={`ww-${wi}`} position={[w.localX, -height / 2 + w.winSill + w.winH / 2, 0]}>
+        <group key={`ww-${wi}`} position={[w.localX, -height / 2 + w.winSill + w.winH / 2, windowProtrude]}>
           {/* 室内衬底 — 白天深邃，夜间按房间类型发光 */}
-          <mesh position={[0, 0, -0.04]}>
-            <boxGeometry args={[w.winLen - 0.02, w.winH - 0.02, 0.10]} />
+          <mesh position={[0, 0, backZ]}>
+            <planeGeometry args={[innerW, innerH]} />
             <meshStandardMaterial
-              color={windowGlow > 0.5 ? bgColor : "#161A20"}
+              color={windowGlow > 0.5 ? bgColor : "#11151B"}
               emissive={windowGlow > 0.5 && litMult > 0 ? glowColor : "#000000"}
               emissiveIntensity={windowGlow > 0.5 ? windowGlow * 0.90 * litMult : 0}
-              roughness={0.9}
+              roughness={0.92}
             />
           </mesh>
-          {/* 玻璃 — 白天偏深蓝灰色，更清晰区别于墙面。Opacity 抬到 0.92 让
-              深色不被墙底色透回来稀释。夜间保持半透发光。
-              envMapIntensity 0.3 + roughness 0.15 防止白天玻璃把整个 sky
-              反射回来变成跟白墙一样亮的灰板（user: 窗户和门外形不明显）
-              v2 (decartoon): 上下两片，上片用 glassTopColor 模拟天空反射，
-              下片用 glassColor 保持房间深邃。中间一根水平窗梃。 */}
+          {/* 玻璃 — 上下两片渐变（上片反射天空、下片偏深邃房间色）+ 窗梃 */}
           {(() => {
-            const innerW = w.winLen - 0.04;
-            const innerH = w.winH - 0.04;
-            // Split position 0..1 measured from the bottom of the pane.
-            // Default 0.50 (mid). When mullionPos===0, force 0.50 and skip
-            // the mullion bar so the legacy "uniform pane" look is preserved
-            // when glassTopColor is also unset.
-            const splitT = mullionPos > 0 ? Math.max(0.10, Math.min(0.90, mullionPos)) : 0.50;
+            const splitT  = mullionPos > 0 ? Math.max(0.10, Math.min(0.90, mullionPos)) : 0.50;
             const topH    = innerH * (1 - splitT);
             const botH    = innerH * splitT;
-            const yMidTop = (splitT) * innerH / 2;          // centre of top sub-plane (relative to window centre)
-            const yMidBot = -((1 - splitT)) * innerH / 2;   // centre of bottom sub-plane
-            const topCol  = (windowGlow > 0.5)
-              ? glassColor                                  // at night, top + bottom both glow uniformly
-              : (glassTopColor ?? glassColor);              // day: optional sky-reflective tint
+            const topCol  = (windowGlow > 0.5) ? glassColor : (glassTopColor ?? glassSkyDay);
+            const mTh     = Math.max(0.015, Math.min(0.08, mullionThicknessCm / 100));
             const glassMatFor = (col: string) => (
               <meshPhysicalMaterial
                 color={col}
-                transmission={windowGlow > 0.5 ? 0.22 : 0.05}
-                roughness={windowGlow > 0.5 ? 0.04 : 0.15}
+                transmission={windowGlow > 0.5 ? 0.22 : 0}
+                roughness={windowGlow > 0.5 ? 0.04 : 0.18}
                 metalness={0.05}
-                envMapIntensity={windowGlow > 0.5 ? 1.0 : 0.30}
-                transparent opacity={windowGlow > 0.5 ? 0.82 : 0.96}
+                clearcoat={0.55} clearcoatRoughness={0.12}
+                envMapIntensity={windowGlow > 0.5 ? 1.0 : (glassEnvIntensity ?? 0.10)}
+                transparent opacity={windowGlow > 0.5 ? 0.82 : 1.0}
                 emissive={windowGlow > 0.5 && litMult > 0 ? glassGlow : "#000000"}
                 emissiveIntensity={windowGlow > 0.5 ? windowGlow * 0.24 * litMult : 0}
                 side={THREE.FrontSide}
@@ -861,139 +980,136 @@ function ConcreteFacade({
             );
             return (
               <>
-                <mesh position={[0, yMidTop + (innerH/2 - topH/2 - yMidTop), 0.018]}>
-                  {/* explicit: top plane centred at +(innerH/2 - topH/2) */}
+                <mesh position={[0, innerH / 2 - topH / 2, glassZ]}>
                   <planeGeometry args={[innerW, topH]} />
                   {glassMatFor(topCol)}
                 </mesh>
-                <mesh position={[0, -(innerH/2 - botH/2), 0.018]}>
+                <mesh position={[0, -innerH / 2 + botH / 2, glassZ]}>
                   <planeGeometry args={[innerW, botH]} />
                   {glassMatFor(glassColor)}
                 </mesh>
-                {mullionPos > 0 && (() => {
-                  const mTh = Math.max(0.015, Math.min(0.08, mullionThicknessCm / 100));
-                  // Y of mullion centre — at the boundary between top + bottom.
-                  // Boundary measured from bottom = splitT * innerH ; relative to pane centre = splitT*innerH - innerH/2.
-                  const mY = splitT * innerH - innerH / 2;
-                  return (
-                    <mesh position={[0, mY, 0.021]}>
-                      <planeGeometry args={[innerW, mTh]} />
-                      <meshStandardMaterial color={fc} roughness={0.30} metalness={0.70} />
-                    </mesh>
-                  );
-                })()}
+                {/* 水平窗梃（mullion）— 始终一根，使玻璃读作真实可开启窗 */}
+                <mesh position={[0, splitT * innerH - innerH / 2, glassZ + 0.006]}>
+                  <boxGeometry args={[innerW, mTh, 0.012]} />
+                  <meshStandardMaterial color={fc} roughness={0.5} metalness={0.25} envMapIntensity={0.18} />
+                </mesh>
+                {/* 竖向窗梃 —— 宽窗才加，避免小窗显挤 */}
+                {innerW > 1.25 && (
+                  <mesh position={[0, 0, glassZ + 0.006]}>
+                    <boxGeometry args={[mTh, innerH, 0.012]} />
+                    <meshStandardMaterial color={fc} roughness={0.5} metalness={0.25} envMapIntensity={0.18} />
+                  </mesh>
+                )}
               </>
             );
           })()}
-          {/* ── Iter 6: window-opening reveal shadow band. Adds a thin near-
-              black ring just inside the frame so the window reads as a real
-              hole punched in the wall, not a sticker. Controlled by the
-              user via ExteriorSettings.windowRevealShadow (0..1). Opacity
-              scales linearly with the dial. ────────────────────────── */}
-          {revealShadow > 0 && (() => {
-            const op = Math.max(0, Math.min(1, revealShadow)) * 0.65;
-            const band = 0.025; // 2.5 cm visual reveal width
-            const innerW = w.winLen - 0.04;
-            const innerH = w.winH - 0.04;
-            // 4 thin planes (top, bottom, left, right) just behind the frame.
-            return ([
-              [0,  innerH/2 - band/2, innerW, band] as [number,number,number,number],
-              [0, -innerH/2 + band/2, innerW, band] as [number,number,number,number],
-              [-innerW/2 + band/2, 0, band, innerH] as [number,number,number,number],
-              [ innerW/2 - band/2, 0, band, innerH] as [number,number,number,number],
-            ]).map(([rx, ry, rw, rh], k) => (
-              <mesh key={`rv-${k}`} position={[rx, ry, 0.019]}>
-                <planeGeometry args={[rw, rh]} />
-                <meshStandardMaterial color="#0A0C10" transparent opacity={op} roughness={1.0} metalness={0} />
-              </mesh>
-            ));
-          })()}
-          {/* 窗框 — 暗铝合金色，4 条压条。厚度由 ExteriorSettings 控制：
-              垂直压条用 stripV（左右），水平压条用 stripH（上下）。 */}
+          {/* 窗框环 —— 4 根盒体向外凸出 frameDepth，内侧面构成真实窗洞进深。
+              暗金属色，可由 windowFrameColor 配置。 */}
+          {([
+            [-w.winLen / 2 + frameM / 2, 0,                       frameM,    w.winH ] as [number, number, number, number],
+            [ w.winLen / 2 - frameM / 2, 0,                       frameM,    w.winH ] as [number, number, number, number],
+            [0,                          w.winH / 2 - frameM / 2,  w.winLen,  frameM ] as [number, number, number, number],
+            [0,                         -w.winH / 2 + frameM / 2,  w.winLen,  frameM ] as [number, number, number, number],
+          ]).map(([fx, fy, fw, fh], k) => (
+            <mesh key={`fr-${k}`} position={[fx, fy, frameDepth / 2 + glassZ]} castShadow>
+              <boxGeometry args={[fw, fh, frameDepth]} />
+              <meshStandardMaterial color={fc} roughness={0.45} metalness={0.30} envMapIntensity={0.22} />
+            </mesh>
+          ))}
+          {/* 外圈灰泥窗套（plaster casing / trim）—— 贴在墙面上，略凸 3 cm，
+              让窗与墙之间有一圈装饰收边。颜色由 casingColor 配置。 */}
           {(() => {
-            const stripV = stripVm; // metres
-            const stripH = stripHm;
+            const tw = 0.085;                 // trim member width
+            const tz = 0.014;                 // trim projection
+            const oW = w.winLen + tw * 2;
+            const oH = w.winH  + tw * 2;
             return ([
-              [-w.winLen / 2 + stripV, 0,               stripV, w.winH  ] as [number,number,number,number],
-              [ w.winLen / 2 - stripV, 0,               stripV, w.winH  ] as [number,number,number,number],
-              [0,  w.winH / 2 - stripH / 2, w.winLen, stripH] as [number,number,number,number],
-              [0, -w.winH / 2 + stripH / 2, w.winLen, stripH] as [number,number,number,number],
-            ]).map(([fx, fy, fw, fh], k) => (
-              <mesh key={k} position={[fx, fy, 0.022]}>
-                <planeGeometry args={[fw, fh]} />
-                <meshStandardMaterial color={fc} roughness={0.30} metalness={0.70} />
+              [-oW / 2 + tw / 2, 0,                tw, oH] as [number, number, number, number],
+              [ oW / 2 - tw / 2, 0,                tw, oH] as [number, number, number, number],
+              [0,                 oH / 2 - tw / 2, oW, tw] as [number, number, number, number],
+              [0,                -oH / 2 + tw / 2, oW, tw] as [number, number, number, number],
+            ]).map(([tx, ty, tcw, tch], k) => (
+              <mesh key={`tr-${k}`} position={[tx, ty, tz / 2]} castShadow>
+                <boxGeometry args={[tcw, tch, tz]} />
+                <meshStandardMaterial color={casingColor} roughness={0.82} metalness={0.02} envMapIntensity={0.3} />
               </mesh>
             ));
           })()}
-          {/* 窗台板 + 滴水线（drip-edge metal cap on sill） */}
+          {/* 窗台板 + 滴水线（projecting sill + drip-edge metal cap） */}
           {sillEnabled && (
             <>
-              <mesh position={[0, -w.winH / 2 - 0.040, 0.055]} castShadow>
-                <boxGeometry args={[w.winLen + 0.10, 0.065, 0.130]} />
-                <meshStandardMaterial color={sillColor} roughness={0.86} metalness={0.02} />
+              <mesh position={[0, -w.winH / 2 - 0.055, frameDepth * 0.55]} castShadow receiveShadow>
+                <boxGeometry args={[w.winLen + 0.18, 0.07, frameDepth + 0.06]} />
+                <meshStandardMaterial color={sillColor} roughness={0.84} metalness={0.02} />
               </mesh>
-              {/* Drip-edge metal cap on sill face */}
-              <mesh position={[0, -w.winH / 2 - 0.048, 0.116]}>
-                <boxGeometry args={[w.winLen + 0.12, 0.010, 0.010]} />
+              <mesh position={[0, -w.winH / 2 - 0.078, frameDepth + 0.05]}>
+                <boxGeometry args={[w.winLen + 0.20, 0.010, 0.010]} />
                 <meshStandardMaterial color="#2A2E38" roughness={0.20} metalness={0.92} envMapIntensity={1.8} />
               </mesh>
             </>
           )}
-          {/* 窗楣（concrete lintel above window） */}
+          {/* 窗楣（projecting concrete lintel above window） */}
           {lintelEnabled && (
-            <mesh position={[0, w.winH / 2 + 0.030, 0.050]}>
-              <boxGeometry args={[w.winLen + 0.04, 0.048, 0.095]} />
-              <meshStandardMaterial color={lintelColor} roughness={0.88} metalness={0.01} />
+            <mesh position={[0, w.winH / 2 + 0.045, frameDepth * 0.5]} castShadow>
+              <boxGeometry args={[w.winLen + 0.14, 0.06, frameDepth + 0.03]} />
+              <meshStandardMaterial color={lintelColor} roughness={0.86} metalness={0.01} />
             </mesh>
-          )}
-          {/* 侧边窗口竖向内衬（jamb reveals — adds visual depth to the reveal）
-              Depth and color are user-configurable. */}
-          {jambEnabled && ([-w.winLen / 2, w.winLen / 2] as number[]).map((jx, ji) => (
-            <mesh key={`jamb-${ji}`} position={[jx + (ji === 0 ? 0.040 : -0.040), 0, -jambDepthM / 2 + 0.020]}>
-              <boxGeometry args={[0.080, w.winH - 0.04, jambDepthM]} />
-              <meshStandardMaterial color={jambColor} roughness={0.90} metalness={0.01} />
-            </mesh>
-          ))}
-          {/* 窗台花箱（window flower box）—— flowerBoxFreq% 的窗户下加一个铁艺花箱
-              用确定性 hash 决定哪些窗有花箱，避免 Math.random() */}
-          {panelBlindHash(wi * 7, wi * 3 + 1) < (flowerBoxFreq / 100) && (
-            <group position={[0, -w.winH / 2 - 0.095, 0.065]}>
-              {/* Box body — wrought iron / dark charcoal */}
-              <mesh castShadow>
-                <boxGeometry args={[w.winLen + 0.04, 0.18, 0.18]} />
-                <meshStandardMaterial color={flowerBoxColor} roughness={0.55} metalness={0.52} envMapIntensity={1.2} />
-              </mesh>
-              {/* Soil surface */}
-              <mesh position={[0, 0.095, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[w.winLen + 0.02, 0.16]} />
-                <meshStandardMaterial color="#2A1A0E" roughness={0.98} />
-              </mesh>
-              {/* Plant foliage — green base mound */}
-              {Array.from({ length: Math.max(2, Math.round(w.winLen / 0.55)) }, (_, pi) => {
-                const px3 = -w.winLen / 2 + 0.28 + pi * (w.winLen / Math.max(1, Math.round(w.winLen / 0.55) - 0));
-                const greenTone = panelBlindHash(wi + pi * 5, wi * 2 + pi) < 0.5 ? foliageA : foliageB;
-                return (
-                  <mesh key={pi} position={[px3, 0.12, 0]} castShadow>
-                    <sphereGeometry args={[0.10 + panelBlindHash(pi, wi + 3) * 0.05, 6, 5]} />
-                    <meshStandardMaterial color={greenTone} roughness={0.96} />
-                  </mesh>
-                );
-              })}
-              {/* Flower blooms — colorful dots above foliage (3 hash-picked shades around the user's bloom color) */}
-              {Array.from({ length: Math.max(3, Math.round(w.winLen / 0.38)) }, (_, fi) => {
-                const fx3 = -w.winLen / 2 + 0.18 + fi * (w.winLen - 0.16) / Math.max(2, Math.round(w.winLen / 0.38) - 1);
-                const flHash = panelBlindHash(wi * 13 + fi * 7, wi + fi * 3);
-                const flColor = flHash < 0.33 ? bloomA : flHash < 0.66 ? bloomB : bloomC;
-                return (
-                  <mesh key={`fl-${fi}`} position={[fx3, 0.195, 0.012]} castShadow>
-                    <sphereGeometry args={[0.040 + flHash * 0.018, 5, 4]} />
-                    <meshStandardMaterial color={flColor} roughness={0.92} emissive={flColor} emissiveIntensity={0.08} />
-                  </mesh>
-                );
-              })}
-            </group>
           )}
         </group>
+        );
+      })}
+      {/* ── 入户门（真实 3D：外凸门套 + 凹陷木门扇 + 镶板 + 金属把手 + 门槛石）── */}
+      {doors.map((d, di) => {
+        const oW = Math.max(0.5, d.w);
+        const oH = Math.max(1.2, d.h);
+        const trimW   = 0.10;        // door casing member width
+        const trimZ   = 0.09;        // casing forward projection
+        const leafZ   = 0.020;       // leaf face just proud of wall
+        const leafDp  = 0.05;        // leaf thickness
+        const lw = oW - trimW;       // leaf width (set inside casing)
+        const lh = oH - trimW / 2;   // leaf height (threshold at bottom)
+        const panelShade = shadeBy(doorColor, -0.24);
+        return (
+          <group key={`dr-${di}`} position={[d.cx, -height / 2 + oH / 2, windowProtrude]}>
+            {/* 门套环（3 边：左/右/顶）—— 向外凸出，构成门洞进深 */}
+            {([
+              [-oW / 2 + trimW / 2, 0,               trimW, oH    ] as [number, number, number, number],
+              [ oW / 2 - trimW / 2, 0,               trimW, oH    ] as [number, number, number, number],
+              [0,                    oH / 2 - trimW / 2, oW,   trimW] as [number, number, number, number],
+            ]).map(([tx, ty, tcw, tch], k) => (
+              <mesh key={`dt-${k}`} position={[tx, ty, trimZ / 2]} castShadow>
+                <boxGeometry args={[tcw, tch, trimZ]} />
+                <meshStandardMaterial color={doorCasingColor} roughness={0.8} metalness={0.02} envMapIntensity={0.3} />
+              </mesh>
+            ))}
+            {/* 门扇 —— 木质，凹陷在门套之内 */}
+            <mesh position={[0, -trimW / 4, leafZ + leafDp / 2]} castShadow receiveShadow>
+              <boxGeometry args={[lw, lh, leafDp]} />
+              <meshStandardMaterial color={doorColor} roughness={0.62} metalness={0.04} envMapIntensity={0.25} />
+            </mesh>
+            {/* 三块镶板（inset panels）—— 凹陷的木门镶板 */}
+            {[0.30, 0.0, -0.30].map((fr, k) => {
+              const pw = lw - 0.16;
+              const ph = lh * 0.24;
+              const py = -trimW / 4 + fr * lh;
+              return (
+                <mesh key={`dp-${k}`} position={[0, py, leafZ + leafDp + 0.001]}>
+                  <planeGeometry args={[pw, ph]} />
+                  <meshStandardMaterial color={panelShade} roughness={0.7} metalness={0.04} />
+                </mesh>
+              );
+            })}
+            {/* 金属门把手 */}
+            <mesh position={[lw / 2 - 0.10, -trimW / 4, leafZ + leafDp + 0.02]} castShadow>
+              <boxGeometry args={[0.03, 0.14, 0.04]} />
+              <meshStandardMaterial color={doorHandleColor} roughness={0.25} metalness={0.9} envMapIntensity={1.6} />
+            </mesh>
+            {/* 门槛石（threshold stone） */}
+            <mesh position={[0, -oH / 2 + 0.03, trimZ * 0.5]} castShadow receiveShadow>
+              <boxGeometry args={[oW + 0.10, 0.06, trimZ + 0.08]} />
+              <meshStandardMaterial color={sillColor} roughness={0.82} metalness={0.02} />
+            </mesh>
+          </group>
         );
       })}
     </group>
@@ -3217,7 +3333,7 @@ function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 // walkthrough the same wood-floor look as the effect page. ───────────
 function WalkthroughFloor({
   cx, cz, yBase, rW, rD, floorColor, floorId, insideBuilding,
-  bleed = 0, depthRank = 0,
+  bleed = 0, depthRank = 0, underlayMargin = 0,
 }: {
   cx: number; cz: number; yBase: number; rW: number; rD: number;
   floorColor: string; floorId: string; insideBuilding: boolean;
@@ -3227,17 +3343,27 @@ function WalkthroughFloor({
    *  shows the bright background as a thin seam. Growing each floor by
    *  `bleed` on every edge overlaps neighbours and bridges that strip. The
    *  overlap tucks under interior/exterior walls so nothing pokes out.
-   *  Configurable. */
+   *  NOTE: prefer `underlayMargin` over `bleed` — bleed makes a neighbour's
+   *  (possibly lighter) floor intrude on TOP of this room near shared walls.
+   *  Configurable; default 0. */
   bleed?: number;
   /** Unique, monotonic per-room index used as a polygonOffset depth rank.
-   *  The `bleed` overlap means adjacent floors share a coplanar band; at
-   *  exactly the same depth bias they z-fight and shimmer as a bright line.
-   *  Keeping every floor COPLANAR (no Y stagger — a Y step lifts one floor's
-   *  edge so it catches light as a bright rim) and instead giving each a
-   *  DISTINCT polygonOffset makes one floor deterministically win the depth
-   *  test across the whole overlap: no z-fight, no lit step, just a clean
-   *  material transition. Unique per room ⇒ no two neighbours ever tie. */
+   *  Adjacent room floors are coplanar; at exactly the same depth bias they
+   *  z-fight and shimmer as a bright line. Keeping every floor COPLANAR (no
+   *  Y stagger — a Y step lifts one floor's edge so it catches light as a
+   *  bright rim) and instead giving each a DISTINCT polygonOffset makes one
+   *  floor deterministically win the depth test (no z-fight, no lit step).
+   *  Unique per room ⇒ no two neighbours ever tie. */
   depthRank?: number;
+  /** Per-edge margin (m) of a neutral UNDERLAY plane rendered 2 cm BELOW the
+   *  real floor. The real floor stays an exact room-sized rectangle (no
+   *  intrusion onto neighbours), but the open 客厅↔走廊 boundary still leaves
+   *  a hairline gap that, with nothing beneath, shows the bright background
+   *  as a white seam. The underlay (this room's own floor tone) sits just
+   *  under that gap so the seam reads as floor, never white sky. Because it
+   *  is BELOW every real floor, neighbours' floors fully occlude it inside
+   *  rooms — it only shows in the thin inter-room gap. Configurable. */
+  underlayMargin?: number;
 }) {
   // Bleed-expanded floor dimensions (overlap neighbours to hide seams).
   const fW = rW + bleed * 2;
@@ -3262,28 +3388,57 @@ function WalkthroughFloor({
   }, [floorColor, fW, fD, floorTex]);
   const map = floorTex ?? defaultTex;
   return (
-    // All room floors sit at EXACTLY the same Y (coplanar) so no floor edge
-    // is lifted above its neighbour to catch light as a bright rim. The
-    // `bleed` overscan overlaps neighbours to bridge the open corridor gap;
-    // the per-room `depthRank` polygonOffset decides the overlap cleanly
-    // (no z-fight), yielding a flat, continuous floor with clean material
-    // transitions between rooms.
-    <mesh position={[cx, yBase + 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-      <planeGeometry args={[fW, fD]} />
-      <meshStandardMaterial
-        color={floorColor}
-        roughness={insideBuilding ? 0.42 : 0.70}
-        metalness={insideBuilding ? 0.06 : 0.03}
-        envMapIntensity={insideBuilding ? 0.55 : 0.2}
-        side={THREE.FrontSide}
-        polygonOffset
-        polygonOffsetFactor={-1}
-        // Unique per-room depth bias (−1, −1.5, −2, …) so overlapping coplanar
-        // floors never tie in the depth test → no z-fight shimmer at seams.
-        polygonOffsetUnits={-1 - depthRank * 0.5}
-        map={map ?? undefined}
-      />
-    </mesh>
+    <>
+      {/* UNDERLAY — only in walkthrough. A neutral, room-tone plane 2 cm below
+          the real floor, grown by `underlayMargin` on every edge so it tucks
+          under neighbours and fills the thin inter-room gap from beneath.
+          This makes any seam read as floor instead of bright sky. Kept out of
+          exterior view (insideBuilding === false) so it never pokes past the
+          building base. */}
+      {insideBuilding && underlayMargin > 0 && (
+        <mesh
+          position={[cx, yBase + 0.025 - 0.02, cz]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          raycast={() => null}
+        >
+          <planeGeometry args={[rW + underlayMargin * 2, rD + underlayMargin * 2]} />
+          <meshStandardMaterial
+            color={floorColor}
+            roughness={0.85}
+            metalness={0.0}
+            side={THREE.FrontSide}
+            polygonOffset
+            polygonOffsetFactor={-1 - depthRank * 0.6}
+            // Unique per-room bias so overlapping underlays don't z-fight either.
+            // 每个房间 factor + units 同步拉开（≈3 个单位/房间），保证在掠射角
+            // / 远距离下相邻楼板的深度排序仍是决定性的，不会闪烁出虚影。
+            polygonOffsetUnits={-2 - depthRank * 3}
+          />
+        </mesh>
+      )}
+      {/* REAL FLOOR — exact room rectangle (plus optional `bleed`). All room
+          floors are coplanar (no Y stagger → no lit edge); the per-room
+          `depthRank` polygonOffset breaks z-fight ties cleanly. */}
+      <mesh position={[cx, yBase + 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[fW, fD]} />
+        <meshStandardMaterial
+          color={floorColor}
+          roughness={insideBuilding ? 0.42 : 0.70}
+          metalness={insideBuilding ? 0.06 : 0.03}
+          envMapIntensity={insideBuilding ? 0.55 : 0.2}
+          side={THREE.FrontSide}
+          polygonOffset
+          // 相邻房间的楼板是共面的，且因房间矩形在开放边界（客厅↔走廊）
+          // 互相重叠 ~0.4m，仅靠 0.5 单位的偏移差在掠射角/远距离下不足以
+          // 决定深度排序 → 闪烁出"虚影"撕裂带。把 factor 与 units 都按房间
+          // 序号成倍拉开（≈3 单位/房间 + 斜率项），让某一块楼板在重叠区
+          // 始终确定性获胜，彻底消除 z-fight。
+          polygonOffsetFactor={-1 - depthRank * 0.6}
+          polygonOffsetUnits={-2 - depthRank * 3}
+          map={map ?? undefined}
+        />
+      </mesh>
+    </>
   );
 }
 
@@ -5441,8 +5596,12 @@ export default function FloorPlanBuilding({
         });
       })()}
 
-      {/* ── 4. 外墙 facade overlay（基于合并块，无双框缝）── 室内模式下隐藏外墙 */}
-      {!insideBuilding && facadeBlocks.map((block, bi) => {
+      {/* ── 4. 外墙 facade overlay（基于合并块，无双框缝）── 室内模式下隐藏外墙。
+           transparentExterior（默认开）时也跳过：外观图改用与效果图/室内漫游同源
+           的透明立面 —— 露出带窗洞的墙体 + 共享 <StyledWindow> 透明玻璃，不再叠
+           盖窗洞的实心 ConcreteFacade 立面层。设 transparentExterior=false 可恢复
+           旧的实心立面外观。 */}
+      {!insideBuilding && !(exterior.transparentExterior ?? true) && facadeBlocks.map((block, bi) => {
         const { floorIndex, side, wallCoord, mergedStart, mergedEnd, doorEntries, winEntries } = block;
         const segLen  = (mergedEnd - mergedStart) * CM;
         const yBase   = floorIndex * (FLOOR_H + SLAB_T);
@@ -5562,6 +5721,10 @@ export default function FloorPlanBuilding({
                    whole-house mode, 1× otherwise = unchanged legacy look). */
                 opacityScale={exterior.glassOpacity ?? ((exterior.facadeGlass ?? false) ? 2.1 : 1)}
                 glassColor={exterior.glassColor}
+                spandrelColor={exterior.glassSpandrelColor}
+                entranceFrameColor={exterior.entranceFrameColor}
+                entranceHandleColor={exterior.entranceHandleColor}
+                entranceCanopy={exterior.entranceCanopy}
               />
               {/* External horizontal sunshade fins — upper-floor south facade detail */}
               {showSunshade && (() => {
@@ -5770,21 +5933,60 @@ export default function FloorPlanBuilding({
         //   3. ROOM_DEFS[room].defaultWallColor — the room-type baseline.
         //   4. The original hardcoded ConcreteFacade default.
         const blockFp = floorPlans[floorIndex];
-        const roomWallColor = blockFp?.rooms?.[block.primaryRoom]?.materials?.wall?.color
+        const blockMats = blockFp?.rooms?.[block.primaryRoom]?.materials;
+        // 与效果图外墙面 100% 对齐：每面外立面优先取该面的外墙材质
+        // (wall{Side}Exterior)，其次整间外墙 (wallExterior)，再回落到该面
+        // 内墙材质、整间墙色、最后房型默认色 —— 与 RoomCanvas 渲染外墙面时
+        // 的取色顺序完全一致（N=后/S=前/E=右/W=左）。
+        const sideExtMat =
+            block.side === "N" ? (blockMats?.wallBackExterior  ?? blockMats?.wallExterior)
+          : block.side === "S" ? (blockMats?.wallFrontExterior ?? blockMats?.wallExterior)
+          : block.side === "E" ? (blockMats?.wallRightExterior ?? blockMats?.wallExterior)
+          :                      (blockMats?.wallLeftExterior  ?? blockMats?.wallExterior);
+        const sideIntMat =
+            block.side === "N" ? blockMats?.wallBack
+          : block.side === "S" ? blockMats?.wallFront
+          : block.side === "E" ? blockMats?.wallRight
+          :                      blockMats?.wallLeft;
+        const roomWallColor = sideExtMat?.color ?? sideIntMat?.color ?? blockMats?.wall?.color
           ?? ROOM_DEFS[block.primaryRoom]?.defaultWallColor;
         const facadeBase = exterior.wallBaseColor ?? roomWallColor ?? "#E6E0D8";
+        // 外立面贴图 id —— 取色同序：本面外墙材质 → 内墙材质 → 整间墙材质。
+        // 当用户设了 wallBaseColor（整楼纯色覆盖）时清空贴图，让纯色生效，
+        // 与 WalkthroughWallPiece 在 exterior.wallBaseColor 下丢弃 wallId 一致。
+        const sideWallTexId = exterior.wallBaseColor
+          ? ""
+          : (sideExtMat?.id ?? sideIntMat?.id ?? blockMats?.wall?.id ?? "");
         return (
           <group key={`co-${bi}`} position={[px, yMid, pz]} rotation={rot}>
+            {/* ConcreteFacade is authored with its exterior detail (glass, sills, lintels,
+                jambs, flower boxes) protruding toward local +z, but the per-wall `rot`
+                convention above (written for GlassCurtain) places the exterior face on
+                local -z. Without this flip the opaque interior backing pane faces the
+                camera and the glass/trim render inside the building (the "black hole"
+                windows). One uniform z-flip on ONLY the facade re-faces all its detail
+                outward on every wall without mirroring window X positions. The sibling
+                stone base below is already authored on the correct (+z exterior) side,
+                so it must stay outside this flip. three.js auto-corrects winding/normals
+                for the negative-determinant matrix, so FrontSide lighting is unaffected. */}
+            <group scale={[1, 1, -1]}>
             <ConcreteFacade
               width={segLen} height={FLOOR_H} windows={winInfos} windowGlow={interiorGlowWall}
+              doors={floorIndex === 0 ? doorInfos : []}
+              doorColor={exterior.entranceDoorColor ?? ENTRANCE_DOOR_COLOR}
+              doorHandleColor={exterior.entranceHandleColor ?? ENTRANCE_DOOR_HANDLE_COLOR}
+              doorCasingColor={exterior.entranceCasingColor ?? ENTRANCE_DOOR_CASING_COLOR}
+              casingColor={exterior.windowCasingColor ?? "#D8D0C2"}
+              frameDepthCm={exterior.windowFrameDepthCm ?? 7}
+              frameMemberCm={exterior.windowFrameMemberCm ?? 5.5}
               glassColor={exterior.windowGlassColor}
-              frameColor={exterior.windowFrameColor ?? exterior.accentColor ?? "#2A2E36"}
+              frameColor={exterior.windowFrameColor ?? WINDOW_FRAME_COLOR}
               hGrooveStep={exterior.wallPanelHSpacing}
               vGrooveStep={exterior.wallPanelVSpacing}
               sillEnabled={exterior.windowSillEnabled ?? true}
               lintelEnabled={exterior.windowLintelEnabled ?? true}
               jambEnabled={exterior.windowJambEnabled ?? true}
-              flowerBoxFreq={exterior.windowFlowerBoxFreq ?? 70}
+              flowerBoxFreq={exterior.windowFlowerBoxFreq ?? 0}
               twoTone={exterior.wallPanelTwoTone ?? true}
               stripVCm={exterior.windowFrameStripVCm ?? 2.5}
               stripHCm={exterior.windowFrameStripHCm ?? 3}
@@ -5808,7 +6010,10 @@ export default function FloorPlanBuilding({
               stuccoEnabled={exterior.wallStuccoEnabled ?? true}
               stuccoScale={exterior.wallStuccoScale ?? 1.2}
               stuccoRoughness={exterior.wallStuccoRoughness ?? 0.85}
+              wallTextureId={sideWallTexId}
+              windowProtrude={exterior.windowProtrude ?? 0.06}
             />
+            </group>
             {/* 底部石材腰线（ground floor only）— 仿石灰岩腰线覆盖在混凝土底部。
                 Height + on/off now driven by ExteriorSettings.stoneBase{Enabled,Height}. */}
             {floorIndex === 0 && (exterior.stoneBaseEnabled ?? true) && (() => {
@@ -6418,8 +6623,8 @@ export default function FloorPlanBuilding({
           nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0}
           hasRooftop={exterior.hasRooftop}
           solarPanelsEnabled={exterior.solarPanelsEnabled ?? true}
-          solarPanelCols={exterior.solarPanelCols ?? 5}
-          solarPanelRows={exterior.solarPanelRows ?? 3}
+          solarPanelCols={exterior.solarPanelCols ?? 4}
+          solarPanelRows={exterior.solarPanelRows ?? 2}
           rooftopDeckEnabled={exterior.rooftopDeckEnabled ?? true}
           ventCount={exterior.roofVentCount ?? 3}
           overhang={exterior.roofOverhang ?? 0.45}
@@ -8156,8 +8361,9 @@ export default function FloorPlanBuilding({
                 floorColor={floorColor}
                 floorId={floorPlans[fi]?.rooms?.[room]?.materials?.floor?.id ?? ""}
                 insideBuilding={insideBuilding}
-                bleed={Math.max(0, (exterior.walkthroughFloorBleedCm ?? 6) / 100)}
+                bleed={Math.max(0, (exterior.walkthroughFloorBleedCm ?? 0) / 100)}
                 depthRank={ridx}
+                underlayMargin={Math.max(0, (exterior.walkthroughFloorUnderlayCm ?? 20) / 100)}
               />
             )}
             {/* ── DEBUG: per-room NSWE wall labels rendered as flat 3D Text
@@ -8350,28 +8556,79 @@ export default function FloorPlanBuilding({
               const skH = Math.max(0.04, Math.min(0.20, (exterior.skirtingHeight ?? 8) / 100));
               const skT = Math.max(0.005, Math.min(0.04, (exterior.skirtingThicknessCm ?? 1.2) / 100));
               const skColor = exterior.skirtingColor ?? "#9C8A70";
+              const END_INSET = 0.02;   // stop 2cm short of each corner
+              const DOOR_MARGIN = 0.06; // clearance each side of a door opening
+              // Door openings reach the floor, so a full-width skirting strip
+              // would float across the threshold and read as a bright "白线"
+              // on the floor at open room↔room boundaries. Break the strip
+              // around every door opening on that wall. Mapping matches
+              // WalkthroughDoor3D's groupPos so the gap lands on the door.
+              const sideGaps = (side: "N" | "S" | "E" | "W"): Array<[number, number]> => {
+                const out: Array<[number, number]> = [];
+                for (const d of effectiveDoors) {
+                  if (d.wall !== side) continue;
+                  const dW = (d.len ?? 90) / 100;
+                  let s: number;
+                  if (side === "E") {
+                    const dPos = Math.max(0, rDcm - d.pos) / 100;
+                    s = rD / 2 - dPos - dW;
+                  } else if (side === "W") {
+                    s = -rD / 2 + d.pos / 100;
+                  } else { // N or S — door runs along X
+                    s = -rW / 2 + d.pos / 100;
+                  }
+                  out.push([s - DOOR_MARGIN, s + dW + DOOR_MARGIN]);
+                }
+                return out;
+              };
+              const split = (L: number, gaps: Array<[number, number]>): Array<{ c: number; len: number }> => {
+                const half = L / 2 - END_INSET;
+                const g = gaps.slice().sort((a, b) => a[0] - b[0]);
+                const segs: Array<{ c: number; len: number }> = [];
+                let cur = -half;
+                for (const [gs, ge] of g) {
+                  const cs = Math.max(-half, gs), ce = Math.min(half, ge);
+                  if (ce <= cur) continue;
+                  if (cs > cur) segs.push({ c: (cur + cs) / 2, len: cs - cur });
+                  cur = Math.max(cur, ce);
+                }
+                if (cur < half) segs.push({ c: (cur + half) / 2, len: half - cur });
+                return segs.filter(sg => sg.len > 0.03);
+              };
+              const nSegs = split(rW, sideGaps("N"));
+              const sSegs = split(rW, sideGaps("S"));
+              const eSegs = split(rD, sideGaps("E"));
+              const wSegs = split(rD, sideGaps("W"));
               return (
                 <group position={[cx, yBase + skH / 2, cz]} raycast={() => null}>
-                  {/* 北墙踢脚 */}
-                  <mesh position={[0, 0,  rD / 2 - skT / 2 - 0.004]} rotation={[0, Math.PI, 0]}>
-                    <boxGeometry args={[rW - 0.04, skH, skT]} />
-                    <meshStandardMaterial color={skColor} roughness={0.75} />
-                  </mesh>
-                  {/* 南墙踢脚 */}
-                  <mesh position={[0, 0, -rD / 2 + skT / 2 + 0.004]}>
-                    <boxGeometry args={[rW - 0.04, skH, skT]} />
-                    <meshStandardMaterial color={skColor} roughness={0.75} />
-                  </mesh>
-                  {/* 东墙踢脚 */}
-                  <mesh position={[ rW / 2 - skT / 2 - 0.004, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-                    <boxGeometry args={[rD - 0.04, skH, skT]} />
-                    <meshStandardMaterial color={skColor} roughness={0.75} />
-                  </mesh>
-                  {/* 西墙踢脚 */}
-                  <mesh position={[-rW / 2 + skT / 2 + 0.004, 0, 0]} rotation={[0,  Math.PI / 2, 0]}>
-                    <boxGeometry args={[rD - 0.04, skH, skT]} />
-                    <meshStandardMaterial color={skColor} roughness={0.75} />
-                  </mesh>
+                  {/* 北墙踢脚 (physical z = +rD/2) — break around S-wall doors */}
+                  {sSegs.map((sg, i) => (
+                    <mesh key={`skN-${i}`} position={[sg.c, 0,  rD / 2 - skT / 2 - 0.004]} rotation={[0, Math.PI, 0]}>
+                      <boxGeometry args={[sg.len, skH, skT]} />
+                      <meshStandardMaterial color={skColor} roughness={0.75} />
+                    </mesh>
+                  ))}
+                  {/* 南墙踢脚 (physical z = -rD/2) — break around N-wall doors */}
+                  {nSegs.map((sg, i) => (
+                    <mesh key={`skS-${i}`} position={[sg.c, 0, -rD / 2 + skT / 2 + 0.004]}>
+                      <boxGeometry args={[sg.len, skH, skT]} />
+                      <meshStandardMaterial color={skColor} roughness={0.75} />
+                    </mesh>
+                  ))}
+                  {/* 东墙踢脚 (physical x = +rW/2) */}
+                  {eSegs.map((sg, i) => (
+                    <mesh key={`skE-${i}`} position={[ rW / 2 - skT / 2 - 0.004, 0, sg.c]} rotation={[0, -Math.PI / 2, 0]}>
+                      <boxGeometry args={[sg.len, skH, skT]} />
+                      <meshStandardMaterial color={skColor} roughness={0.75} />
+                    </mesh>
+                  ))}
+                  {/* 西墙踢脚 (physical x = -rW/2) */}
+                  {wSegs.map((sg, i) => (
+                    <mesh key={`skW-${i}`} position={[-rW / 2 + skT / 2 + 0.004, 0, sg.c]} rotation={[0,  Math.PI / 2, 0]}>
+                      <boxGeometry args={[sg.len, skH, skT]} />
+                      <meshStandardMaterial color={skColor} roughness={0.75} />
+                    </mesh>
+                  ))}
                 </group>
               );
             })()}
@@ -8384,15 +8641,19 @@ export default function FloorPlanBuilding({
             {/* 门：外观模式 + 本层有任何玻璃房间 → 跳过本层所有内部门：
                 非玻璃房间（主卧/书房）的门也会从邻居玻璃幕墙看进来变
                 "立柱"。门是内视角装饰，对外观无贡献，安全跳过。 */}
-            {!isStair && !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) && effectiveDoors.map((door, di) => {
+            {(!isStair || (exterior.renderStairOpenings ?? true)) && !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) && effectiveDoors.map((door, di) => {
               // Use the SAME RoomDoor3D component the effect page uses
               // (shared module). Single source of truth for door visuals.
               const dHcm = door.h ?? (exterior.interiorDoorHeightCm ?? 240);
-              // Only the ground-floor living-room auto-door (= the actual
-              // front entrance, lands on the exterior wall) defaults to
-              // french_double glass. Every other door defaults to wood_panel.
-              const isFrontEntrance = fi === 0 && room === "living" && door.id?.startsWith("auto-");
-              const style = door.style ?? (isFrontEntrance ? (exterior.frontEntranceStyle ?? "french_double") : "wood_panel");
+              // 门样式单一真源 = 效果图：与 RoomCanvas 完全同序
+              //   per-door door.style → roomDoorStyle[room] → "wood_panel"。
+              // 历史：这里曾给 客厅一层入户自动门 特判成 french_double（白色
+              // 双开玻璃门），导致「漫游=白双开玻璃 / 效果图=灰木门」不一致
+              // （用户反馈：客厅的门三视图不一致）。改为直接读效果图的
+              // roomDoorStyle，三视图门样式从此一致。
+              const style = door.style
+                ?? floorPlans[fi]?.roomDoorStyle?.[room]
+                ?? "wood_panel";
               // Wall mapping: FPE data → WalkthroughDoor3D — both use NSWE now.
               const doorWall: import("@/lib/types").WallSide = door.wall;
               // WalkthroughDoor3D "E" (east/right) measures pos from the large-Z (south) end.
@@ -8412,23 +8673,31 @@ export default function FloorPlanBuilding({
                     doorLenCm={door.len}
                     doorHCm={dHcm}
                     isOpen={isOpen}
-                    onToggle={() => { if (insideBuilding) toggleOpen(doorKey); }}
+                    onToggle={() => { if (insideBuilding || (exterior.exteriorInteractiveOpenings ?? true)) toggleOpen(doorKey); }}
                     doorStyle={style}
                     frameColor={insideBuilding
                       ? (exterior.interiorDoorFrameColor ?? "#EFEAE2")
-                      : (exterior.doorFrameColor ?? "#F0EEEA")}
+                      : (exterior.transparentExterior ?? true)
+                        // 透明立面外观图：和窗框同理——大白天近白门框会糊进近白墙里，
+                        // 门「消失」。给门框一个有存在感的中性轮廓色（默认与窗框同一
+                        // 暖灰 #6E6A60），门立刻能从墙体里读出来。可配置。
+                        ? (exterior.transparentExteriorDoorFrameColor ?? exterior.transparentExteriorFrameColor ?? "#6E6A60")
+                        : (exterior.doorFrameColor ?? "#F0EEEA")}
                     handleColor={exterior.doorHandleColor ?? "#B8A060"}
+                    outwardProtrude={insideBuilding ? 0 : (exterior.exteriorDoorProtrude ?? 0.16)}
                   />
                 </group>
               );
             })}
 
-            {/* 窗框：在有窗户的墙面渲染窗框（仅室内视角，嵌在墙面内侧）
-                外观模式 + 本层有任何玻璃房间 → 跳过本层所有窗框：
-                即使是非玻璃房间（如主卧）的窗户，也可能从邻居的玻璃
-                幕墙看进来变成"立柱"。窗框是内视角装饰，对外观视角无
-                贡献，安全跳过。 */}
-            {!isStair && !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) && windows.map((win, wi) => {
+            {/* 窗框：在有窗户的墙面渲染共享 <StyledWindow>（嵌在墙洞内）。
+                · 室内漫游（insideBuilding）：始终渲染。
+                · 外观图（!insideBuilding）：当 transparentExterior（默认开）时也
+                  渲染 —— 因为此时 ConcreteFacade 实心立面层已关闭，窗洞露出，
+                  透明玻璃可隔窗看到室内，窗型/玻璃/墙色与效果图完全一致。
+                · transparentExterior=false（旧实心立面）：外观图不渲染这里的窗，
+                  外立面窗户完全交给 ConcreteFacade，避免双层窗重叠。 */}
+            {(!isStair || (exterior.renderStairOpenings ?? true)) && (insideBuilding || (exterior.transparentExterior ?? true)) && windows.map((win, wi) => {
               const wW   = win.len * CM;
               const wH   = (win.h    ?? defWinH) * CM;
               const wSill = (win.sill ?? defWinSill)  * CM;
@@ -8462,86 +8731,73 @@ export default function FloorPlanBuilding({
               // Indoors the dark exterior mullion color reads as an ugly black
               // frame, so interior walkthrough uses a light natural frame color
               // (configurable). Exterior facade keeps the dark accent mullion.
+              // 窗框配色三态：
+              // · 室内漫游（insideBuilding）：白框 WINDOW_FRAME_COLOR（= 效果图同源），
+              //   室内看深色框很丑；可被 interiorWindowFrameColor 覆盖。
+              // · 透明立面外观图（!insideBuilding + transparentExterior）：用「有
+              //   存在感」的中性框色 transparentExteriorFrameColor（默认暖灰 #6E6A60）。
+              //   因为从外面大白天看，白框会糊进近纯白的墙里 → 窗户消失；给框一个
+              //   明确的轮廓色，窗户立刻能读出来（像外观漫游图那样清晰）。
+              // · 旧实心立面外观（transparentExterior=false）：深色立面窗梃。
               const frameCol  = insideBuilding
-                ? (exterior.interiorWindowFrameColor ?? "#EFEAE2")
-                : (exterior.windowFrameColor ?? exterior.accentColor ?? "#D8E8F0");
-              const border    = 0.06;
-              const thick     = 0.05;
+                ? (exterior.interiorWindowFrameColor ?? WINDOW_FRAME_COLOR)
+                : (exterior.transparentExterior ?? true)
+                  ? (exterior.transparentExteriorFrameColor ?? exterior.windowFrameColor ?? "#6E6A60")
+                  : (exterior.windowFrameColor ?? exterior.accentColor ?? "#3A4150");
+              // 外立面窗框反射强度（可配置）。默认很低，避免框体镜面化
+              // 把明亮的天空 HDR 反射成接近墙体的奶油白 → 窗户消失。
               const winKey = `window|${fi}|${room}|${wi}`;
               const winOpen = openMap.get(winKey) ?? false;
-              // Horizontal sliding window — matches RoomCanvas effect view.
-              // Two half-panes side-by-side. Right pane is fixed at +winLen/4.
-              // Left pane starts at -winLen/4 (closed) and slides to +winLen/4
-              // (open, overlapping the right pane). Half-width panes guarantee
-              // the moving sash never extends past the wall hole.
-              const innerW = wW - border * 2;
-              const innerH = wH - border * 2;
-              const slideX = winOpen ? innerW / 4 : -innerW / 4;
-              const handleWinClick = (e: { stopPropagation: () => void }) => {
-                if (!insideBuilding) return;
-                e.stopPropagation();
-                toggleOpen(winKey);
-              };
-              // Glass color also from ExteriorSettings. Tuned to keep some
-              // see-through during walkthrough (transmission 0.55, opacity
-              // 0.55) so you can see the yard through the window — but with
-              // envMapIntensity 0.4 it no longer reads as a sky-mirror.
-              // Interior walkthrough uses clearer, lighter glass so the window
-              // reads as a real pane (not a dark mirror). The very dark exterior
-              // glass tint is kept only for the outside facade view.
-              const halfGlass = insideBuilding ? (
-                <meshPhysicalMaterial
-                  color={exterior.interiorWindowGlassColor ?? "#CFE8F7"}
-                  transmission={0.85}
-                  roughness={0.08}
-                  metalness={0.0}
-                  envMapIntensity={0.25}
-                  thickness={0.02}
-                  transparent opacity={0.35}
-                />
-              ) : (
-                <meshPhysicalMaterial
-                  color={exterior.windowGlassColor ?? "#A8D4F5"}
-                  transmission={0.55}
-                  roughness={0.12}
-                  metalness={0.06}
-                  envMapIntensity={0.4}
-                  thickness={0.02}
-                  transparent opacity={0.55}
-                />
-              );
+              // 漫游窗户款式取平面图配置 win.style（与效果图同一真源），
+              // 缺省为国内推拉窗 sliding。
+              const winStyle = win.style ?? "sliding";
+              // 玻璃参数两套：
+              // · 室内漫游（insideBuilding）：高通透（transmission 0.85 /
+              //   opacity 0.35），便于透窗看院子，从里看本就对比强。
+              // · 外观图（!insideBuilding）：大白天从外面看，全透玻璃显示的
+              //   颜色≈墙色 → 窗户糊进墙里看不见。改用「可见的有色反光玻璃」
+              //   （低通透 + 偏蓝灰 + 一定反射），窗户立刻像真实建筑玻璃一样
+              //   明显跳出。全部可配置，0/默认可调。
+              // 注意：transmission>0 会让玻璃「折射式透视」背景，薄玻璃（厚 1cm）
+              // 几乎不着色 → 大白天透出明亮背景 = 一片惨白。所以外观图玻璃
+              // 默认 transmission=0，纯靠 opacity + 偏蓝灰 color 做成「可见的
+              // 半透实体玻璃面板」，从外面立刻能读出门窗。
+              const exView = !insideBuilding;
+              const gTrans = exView ? (exterior.exteriorWindowGlassTransmission ?? 0) : 0.85;
+              const gOpac  = exView ? (exterior.exteriorWindowGlassOpacity ?? 0.82) : 0.35;
+              const gColor = exView
+                ? (exterior.exteriorWindowGlassColor ?? "#8FA3B2")
+                : (exterior.interiorWindowGlassColor ?? WINDOW_GLASS_COLOR);
+              const gEnv   = exView ? (exterior.exteriorWindowGlassEnvMapIntensity ?? 0.6) : 0.25;
+              const gRough = exView ? (exterior.exteriorWindowGlassRoughness ?? 0.12) : 0.08;
+              // 外观图玻璃「凸出墙面」：经实测，玻璃面 wallOffset=0 时落在墙体
+              // 厚度（WALL_T=0.12m）中线 → 大白天斜视角下被墙体几何挡住（实测
+              // 把玻璃 depthTest 关掉才看得到 → 证明被遮挡而非颜色问题）。把外观
+              // 玻璃往外推到墙体前表面之外（默认 0.06m，略大于半墙厚 0.06），
+              // 玻璃永不被墙挡，门窗立刻能从墙体里读出来。可配置。
+              const gOffset = exView ? (exterior.exteriorWindowProtrude ?? 0.06) : 0;
               return (
                 <group key={`win-${fi}-${room}-${wi}`} position={[wx, frameCy, wz]} rotation={[0, rotY, 0]}>
-                  {/* 右扇（固定） */}
-                  <mesh position={[innerW / 4, 0, 0]} onClick={handleWinClick}>
-                    <boxGeometry args={[innerW / 2, innerH, 0.01]} />
-                    {halfGlass}
-                  </mesh>
-                  {/* 左扇（推拉，winOpen 时水平滑到右扇位置）*/}
-                  <mesh position={[slideX, 0, 0]} onClick={handleWinClick}>
-                    <boxGeometry args={[innerW / 2, innerH, 0.01]} />
-                    {halfGlass}
-                  </mesh>
-                  {/* 四边窗框 */}
-                  <mesh position={[0, wH / 2 - border / 2, 0]}>
-                    <boxGeometry args={[wW, border, thick]} /><meshStandardMaterial color={frameCol} roughness={0.35} />
-                  </mesh>
-                  <mesh position={[0, -wH / 2 + border / 2, 0]}>
-                    <boxGeometry args={[wW, border, thick]} /><meshStandardMaterial color={frameCol} roughness={0.35} />
-                  </mesh>
-                  <mesh position={[-wW / 2 + border / 2, 0, 0]}>
-                    <boxGeometry args={[border, wH, thick]} /><meshStandardMaterial color={frameCol} roughness={0.35} />
-                  </mesh>
-                  <mesh position={[wW / 2 - border / 2, 0, 0]}>
-                    <boxGeometry args={[border, wH, thick]} /><meshStandardMaterial color={frameCol} roughness={0.35} />
-                  </mesh>
-                  {/* 中竖分隔条（推拉窗中缝）— 厚度由 ExteriorSettings 控制，0 = 隐藏 */}
-                  {(exterior.windowCenterMullionCm ?? 4) > 0 && (
-                    <mesh>
-                      <boxGeometry args={[Math.min(0.10, (exterior.windowCenterMullionCm ?? 4) / 100), innerH, thick]} />
-                      <meshStandardMaterial color={frameCol} roughness={0.35} />
-                    </mesh>
-                  )}
+                  {/* 共享 <StyledWindow>，按 win.style 渲染（推拉/百叶/平开/
+                      固定/木窗/防盗）。玻璃参数随视图切换（见上）。 */}
+                  <StyledWindow
+                    winLen={wW}
+                    winH={wH}
+                    style={winStyle}
+                    isOpen={winOpen}
+                    onToggle={() => toggleOpen(winKey)}
+                    frameColor={frameCol}
+                    glassColor={gColor}
+                    glassTransmission={gTrans}
+                    glassOpacity={gOpac}
+                    glassRoughness={gRough}
+                    glassEnvMapIntensity={gEnv}
+                    wallOffset={gOffset}
+                    // 外观图给百叶窗叶片用对比框色（默认暖灰），并在叶片后加 tinted
+                    // 玻璃背板，否则百叶在大白天透出墙体发白「像没渲染」。
+                    mullionColor={exView ? frameCol : undefined}
+                    glassBehindLouver={exView}
+                  />
                 </group>
               );
             })}

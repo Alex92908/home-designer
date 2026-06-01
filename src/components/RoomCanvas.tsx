@@ -17,6 +17,7 @@ import { DetailedDecor } from "./DetailedDecor";
 import { FirstPersonControls, FirstPersonButton, TouchJoystick } from "./FirstPersonControls";
 import { getFloorTexture, getWallTexture, floorTileSize, wallTileSize } from "@/lib/textures";
 import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
+import { StyledWindow } from "@/components/shared/StyledWindow";
 
 // ─── Error boundary ───────────────────────────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -572,149 +573,11 @@ function RoomShell({
   );
 }
 
-// ─── glTF window (real 3D asset, replaces procedural frame/glass/mullion) ─
-// Enabled when a closed-state window asset is available. Previous attempt
-// (`window_modern` by JeanLescano) was a SketchUp-exported "opened 47cm"
-// casement pose that didn't close via auto-transform. Switched to
-// AleixoAlonso's `residential_window` (closed-state, 2.8k faces, CC-BY).
-const ENABLE_GLTF_WINDOW = true;
-// Default arch window — sanjaysinghfazilka's PBR archviz window
-// (CC-BY-4.0). The glTF ships with nested matrices (base.fbx + model)
-// that cancel out to identity, so the composed world bbox is already
-// Y-up (1.91 × 1.81 × 0.24m) and no axis fix is needed.
-const ARCH_WINDOW_URL = "/models/_arch_window/modern_window_archviz/scene.gltf";
-// 防盗窗（铁艺栏栅）— CC-BY by 4000z, 203 meshes. Used only for "security".
-// NOTE: `animated_window_systems` (CC-BY-NC) is deliberately NOT used here;
-// the project may go commercial and NC licenses forbid that.
-const IRON_BAR_WINDOW_URL = "/models/_arch_window/iron_bar_window/iron_bar_window.gltf";
-// 百叶窗 — CC-BY by AHMED KCHIKICH, low-poly. Replaces the procedural
-// slat grid for the "louvered" style.
-const BLINDS_WINDOW_URL = "/models/_arch_window/window_blinds/scene.gltf";
-// 木窗 — CC-BY by ahmagh2e. Used for the "wooden" style (复古/中式/乡村).
-const WOODEN_WINDOW_URL = "/models/_arch_window/wooden_window/scene.gltf";
-
-/** Per-asset loader hints. Orientation is now auto-detected inside
- *  `GltfArchWindow` (Z→X axis swap when the raw bbox suggests the
- *  window-width is along Z), so the spec currently carries only the URL. */
-type GltfWindowSpec = { url: string };
-
-/** Map a WindowStyle to the glTF to render, or null to fall back to
- *  procedural. Casement remains procedural because its single-pane look
- *  is easier to drive with the swing-open animation. */
-function gltfSpecForStyle(style: import("@/lib/types").WindowStyle): GltfWindowSpec | null {
-  switch (style) {
-    // Sliding + louvered must stay procedural: the real glTFs are one
-    // combined mesh, so we can't slide only the inner sash (sliding) or
-    // tilt individual slats (louvered). Procedural meshes give us the
-    // split geometry we need for convincing animation.
-    case "sliding":
-    case "louvered":
-      return null;
-    case "fixed":
-      return { url: ARCH_WINDOW_URL };
-    case "security":
-      return { url: IRON_BAR_WINDOW_URL };
-    case "wooden":
-      return { url: WOODEN_WINDOW_URL };
-    case "casement":
-      return null;
-  }
-}
-
-function GltfArchWindow({
-  winLen, winH, url,
-}: { winLen: number; winH: number; url: string }) {
-  const { scene } = useGLTF(url) as unknown as { scene: THREE.Object3D };
-  const cloned = useMemo(() => {
-    const inner = scene.clone(true);
-    // Strip SketchUp helper nodes that aren't meshes (cameras, scenes)
-    // — these get exported as empties at huge offsets (88m, 135m away)
-    // and pollute the bounding-box measurement below.
-    const toRemove: THREE.Object3D[] = [];
-    inner.traverse(obj => {
-      if (/^skp_camera/i.test(obj.name || "") || /^(ID\d+|Scene_)/i.test(obj.name || "")) {
-        toRemove.push(obj);
-      }
-    });
-    for (const o of toRemove) o.parent?.remove(o);
-
-    inner.traverse(obj => {
-      const m = obj as THREE.Mesh;
-      if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; }
-    });
-
-    // Wrap in an outer group so we can apply corrective transforms
-    // (axis swaps) without disturbing the inner scene's own transforms.
-    const c = new THREE.Group();
-    c.add(inner);
-
-    // === Measure native bbox ===
-    c.updateMatrixWorld(true);
-    const rawBox = new THREE.Box3().setFromObject(c);
-    const rawSize = new THREE.Vector3();
-    rawBox.getSize(rawSize);
-
-    // Auto-orient: the "window width" axis should be X (horizontal in
-    // the wall). Most assets export this correctly, but some (like
-    // `window_blinds` 10.7 × 198 × 209 and `iron_bar_window` 12 × 23 × 49)
-    // put the window-width along Z instead — causing the visible content
-    // to get compressed onto the thin depth axis. Detect this by
-    // comparing X-extent vs Z-extent among the two "horizontal" axes:
-    // whichever is larger is the intended width axis. If Z is larger,
-    // rotate the inner -90° around Y so world-Z → world-X.
-    if (rawSize.z > rawSize.x) {
-      inner.rotation.y = -Math.PI / 2;
-      c.updateMatrixWorld(true);
-    }
-
-    const box = new THREE.Box3().setFromObject(c);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    // eslint-disable-next-line no-console
-    console.log(`[GltfArchWindow] ${url} native ${rawSize.x.toFixed(2)}×${rawSize.y.toFixed(2)}×${rawSize.z.toFixed(2)} → oriented ${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m, target ${winLen.toFixed(2)}×${winH.toFixed(2)}m`);
-    if (size.x > 0 && size.y > 0 && size.z > 0) {
-      // Scale X→winLen, Y→winH. For depth (Z) preserve the x/z ratio
-      // by default but clamp so the final frame is never thicker than
-      // MAX_DEPTH. Without this clamp, assets with exaggerated native
-      // depth get turned into multi-metre slabs that punch through the
-      // wall horizontally.
-      const MAX_DEPTH = 0.2;
-      const sx = winLen / size.x;
-      const sy = winH / size.y;
-      let sz = sx;
-      if (size.z * sz > MAX_DEPTH) sz = MAX_DEPTH / size.z;
-      c.scale.set(sx, sy, sz);
-      c.updateMatrixWorld(true);
-      // Re-center XY on origin, keep Z so the frame straddles the wall plane
-      const box2 = new THREE.Box3().setFromObject(c);
-      c.position.x -= (box2.min.x + box2.max.x) / 2;
-      c.position.y -= (box2.min.y + box2.max.y) / 2;
-      c.position.z -= (box2.min.z + box2.max.z) / 2;
-    }
-    return c;
-  }, [scene, winLen, winH, url]);
-
-  return <primitive object={cloned} />;
-}
-
-/** ErrorBoundary wrapper: if the glTF 404s or fails to parse, render
- *  the provided `fallback` instead. Combined with <Suspense fallback>
- *  in the tree, this gives us: glTF → procedural on both load failure
- *  and still-loading states. */
-class ArchWindowFallback extends Component<
-  { children: ReactNode; fallback: ReactNode },
-  { failed: boolean }
-> {
-  state = { failed: false };
-  static getDerivedStateFromError() { return { failed: true }; }
-  componentDidCatch(err: Error) {
-    console.warn(`[GltfArchWindow] load failed — falling back to procedural: ${err.message}`);
-  }
-  render() {
-    if (this.state.failed) return this.props.fallback;
-    return this.props.children;
-  }
-}
+// ─── glTF window helpers MOVED to shared/StyledWindow.tsx ─────
+// gltfSpecForStyle / GltfArchWindow / ArchWindowFallback and the arch-window
+// asset URLs now live in src/components/shared/StyledWindow.tsx, which both
+// this 效果图 view and the 外观漫游 (FloorPlanExterior) render from — a single
+// source of truth for window geometry, materials and the per-style glTF map.
 
 /** Catches failures from drei's <Environment> — most commonly a network
  *  error fetching the Poly Haven HDR (e.g. `lebombo_1k.hdr` for the
@@ -748,240 +611,23 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   const winY = Math.max(0.05, Math.min(H - winH - 0.05, sill)) + winH / 2;
   const isOpen = useDesignerStore(s => !!s.windowOpenByWinId[win.id]);
   const toggleWinOpen = useDesignerStore(s => s.toggleWindowOpen);
-  // Animation refs:
-  //  - sashRef: sliding (translate), casement + wooden (rotate around hinge)
-  //  - slatRefs: louvered (per-slat X rotation for blinds tilt)
-  const sashRef = useRef<THREE.Group>(null);
-  const sashAngleRef = useRef(0);
-  const slatRefs = useRef<Array<THREE.Mesh | null>>([]);
-  const slatAngleRef = useRef(-0.25); // starting tilt for horizontal slats
-  useFrame((_, delta) => {
-    const style = win.style ?? "sliding";
-    if (style === "sliding" || style === "casement" || style === "wooden") {
-      // Sliding (now real 2-panel): sashRef wraps the LEFT half-panel
-      // sitting at base position [-winLen/4, 0, 0]. Open = translate by
-      // +winLen/2 so left panel ends at +winLen/4, overlapping the
-      // fixed right panel. Both half-panels are winLen/2 wide so the
-      // sliding one always stays inside the wall hole.
-      // Casement + wooden: swing 45° outward around the hinge.
-      const target = isOpen
-        ? (style === "sliding" ? winLen / 2 : -Math.PI / 4)
-        : 0;
-      const speed = style === "sliding" ? 2.2 : 3.8;
-      const current = sashAngleRef.current;
-      const diff = target - current;
-      if (Math.abs(diff) > 0.002) {
-        const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
-        sashAngleRef.current = current + step;
-        if (sashRef.current) {
-          if (style === "sliding") {
-            // sashRef is the LEFT panel group at base x=-winLen/4. Add
-            // sashAngleRef to its base — no scale change needed since
-            // each panel is only winLen/2 wide and stays in the hole.
-            sashRef.current.position.x = -winLen / 4 + sashAngleRef.current;
-          } else {
-            sashRef.current.rotation.y = sashAngleRef.current;
-          }
-        }
-      }
-    } else if (style === "louvered") {
-      // Blinds tilt: closed (= privacy) tilts slats nearly vertical,
-      // open tilts them back to the slightly-down horizontal default.
-      const target = isOpen ? -Math.PI / 2 + 0.08 : -0.25;
-      const current = slatAngleRef.current;
-      const diff = target - current;
-      if (Math.abs(diff) > 0.002) {
-        const step = Math.sign(diff) * Math.min(Math.abs(diff), 3.5 * delta);
-        slatAngleRef.current = current + step;
-        for (const r of slatRefs.current) {
-          if (r) r.rotation.x = slatAngleRef.current;
-        }
-      }
-    }
-  });
-
-  // Flat window — thin frame + glass, flush with wall. Interior mullion
-  // depends on window style. Style defaults to "sliding" (国内推拉窗).
-  const FRAME_THIN = 0.025;
-  const WALL_OFFSET = 0.015;
+  // All window geometry + open/close animation now lives in the shared
+  // <StyledWindow> (src/components/shared/StyledWindow.tsx) so the 效果图
+  // (this view) and the 外观漫游 render byte-identical windows from the same
+  // `win.style`. Per-window open state stays in the store via win.id.
+  // Defaults inside StyledWindow reproduce this view's previous materials
+  // (WINDOW_FRAME_COLOR / WINDOW_GLASS_COLOR, transmission 0.7, opacity 0.5,
+  // wallOffset 0.015), so the effect view is visually unchanged.
   const style = win.style ?? "sliding";
-
-  // Window frame jambs — INSET into the wall hole (covering the cut
-  // edge from inside) instead of protruding outward. Previous design
-  // extended each jamb FRAME_THIN/2 (12.5mm) past the hole boundary,
-  // which from oblique angles read as "the window pokes out of the
-  // wall". Now the frame fully fits inside the wall cutout.
-  const frameBars = (
-    <>
-      {/* Top */}
-      <mesh position={[0, winH / 2 - FRAME_THIN / 2, WALL_OFFSET]} castShadow>
-        <boxGeometry args={[winLen, FRAME_THIN, 0.02]} />
-        <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
-      </mesh>
-      {/* Bottom */}
-      <mesh position={[0, -winH / 2 + FRAME_THIN / 2, WALL_OFFSET]} castShadow>
-        <boxGeometry args={[winLen, FRAME_THIN, 0.02]} />
-        <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
-      </mesh>
-      {/* Left jamb */}
-      <mesh position={[-winLen / 2 + FRAME_THIN / 2, 0, WALL_OFFSET]} castShadow>
-        <boxGeometry args={[FRAME_THIN, winH - FRAME_THIN * 2, 0.02]} />
-        <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
-      </mesh>
-      {/* Right jamb */}
-      <mesh position={[winLen / 2 - FRAME_THIN / 2, 0, WALL_OFFSET]} castShadow>
-        <boxGeometry args={[FRAME_THIN, winH - FRAME_THIN * 2, 0.02]} />
-        <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
-      </mesh>
-    </>
-  );
-
-  const glass = (
-    <mesh position={[0, 0, WALL_OFFSET + 0.002]}>
-      <planeGeometry args={[winLen, winH]} />
-      <meshPhysicalMaterial color="#BED3E8" transmission={0.7} roughness={0.08} metalness={0} thickness={0.01} ior={1.45} transparent opacity={0.5} side={THREE.DoubleSide} />
-    </mesh>
-  );
-
-  // Style-specific mullion geometry
-  const mullions = (() => {
-    switch (style) {
-      case "fixed":
-        return null;
-      case "sliding": {
-        // One or two vertical rails (3-panel if >1.8m wide)
-        const panels = winLen > 1.8 ? 3 : 2;
-        return Array.from({ length: panels - 1 }).map((_, i) => {
-          const x = -winLen / 2 + (winLen / panels) * (i + 1);
-          return (
-            <mesh key={`rail-${i}`} position={[x, 0, WALL_OFFSET + 0.006]}>
-              <boxGeometry args={[0.03, winH, 0.018]} />
-              <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
-            </mesh>
-          );
-        });
-      }
-      case "casement":
-        return null; // single integral pane, no mullion
-      case "louvered": {
-        // Horizontal slats. Each slat gets its own ref so useFrame can
-        // tilt them in unison (simulating blinds open/close). Slats are
-        // centered on their horizontal axis, so rotating each mesh's
-        // rotation.x pivots around its own center — exactly how a real
-        // blind slat moves.
-        const slatCount = Math.max(4, Math.floor(winH / 0.12));
-        const slatH = winH / slatCount;
-        return Array.from({ length: slatCount }).map((_, i) => {
-          const y = -winH / 2 + slatH / 2 + i * slatH;
-          return (
-            <mesh
-              key={`slat-${i}`}
-              ref={r => { slatRefs.current[i] = r; }}
-              position={[0, y, WALL_OFFSET + 0.008]}
-              rotation={[slatAngleRef.current, 0, 0]}
-            >
-              <boxGeometry args={[winLen - 0.04, slatH * 0.55, 0.015]} />
-              <meshStandardMaterial color="#E8E8E4" roughness={0.6} />
-            </mesh>
-          );
-        });
-      }
-    }
-  })();
-
-  // Procedural sliding window — TWO half-width panels overlap when open.
-  // - rightSash is fixed at +winLen/4
-  // - leftSash starts at -winLen/4 (closed, both halves visible together)
-  //   and animates to +winLen/4 (open, overlapping the right) via sashRef
-  // This is a real "两扇推拉" simulation — the moving sash never extends
-  // past the wall hole because each panel is only winLen/2 wide.
-  const halfGlassMat = (
-    <meshPhysicalMaterial
-      color="#BED3E8" transmission={0.7} roughness={0.08} metalness={0}
-      thickness={0.01} ior={1.45} transparent opacity={0.5}
-      side={THREE.DoubleSide}
+  const windowFrameJSX = (
+    <StyledWindow
+      winLen={winLen}
+      winH={winH}
+      style={style}
+      isOpen={isOpen}
+      onToggle={() => toggleWinOpen(win.id)}
     />
   );
-  const halfPanel = (
-    <>
-      <mesh position={[0, 0, WALL_OFFSET + 0.002]}>
-        <planeGeometry args={[winLen / 2, winH]} />
-        {halfGlassMat}
-      </mesh>
-      {/* Mid mullion of the panel (cosmetic — gives sliding window its
-          characteristic look) */}
-      <mesh position={[0, 0, WALL_OFFSET + 0.006]}>
-        <boxGeometry args={[0.022, winH - FRAME_THIN * 2, 0.018]} />
-        <meshStandardMaterial color="#F4F4F2" roughness={0.55} />
-      </mesh>
-    </>
-  );
-
-  const proceduralBackFrame = (
-    <>
-      {frameBars}
-      {style === "sliding" ? (
-        <>
-          {/* Fixed right panel */}
-          <group
-            position={[winLen / 4, 0, 0]}
-            onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}
-          >
-            {halfPanel}
-          </group>
-          {/* Sliding left panel — sashRef applies the open animation */}
-          <group
-            ref={sashRef}
-            position={[-winLen / 4, 0, 0]}
-            onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}
-          >
-            {halfPanel}
-          </group>
-        </>
-      ) : (
-        // Other styles: single full-width sash with style-specific mullions.
-        <group
-          ref={sashRef}
-          onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}
-        >
-          {style !== "louvered" && glass}
-          {mullions}
-        </group>
-      )}
-    </>
-  );
-
-  // Pick a glTF for this style (or null → use procedural-only). For
-  // openable styles (sliding/casement) we wrap the glTF inside `sashRef`
-  // so clicking it actually animates. Fixed + security render glTF
-  // statically without a sash.
-  const gltfSpec = ENABLE_GLTF_WINDOW ? gltfSpecForStyle(style) : null;
-  const gltfContent = gltfSpec ? (
-    <ArchWindowFallback fallback={proceduralBackFrame}>
-      <Suspense fallback={proceduralBackFrame}>
-        <GltfArchWindow winLen={winLen} winH={winH} url={gltfSpec.url} />
-      </Suspense>
-    </ArchWindowFallback>
-  ) : null;
-
-  const animatesOpen = style === "sliding" || style === "casement" || style === "wooden";
-  const windowFrameJSX = gltfContent ? (
-    animatesOpen ? (
-      // The glTF already includes its own outer frame — wrap only in sash
-      // group so click toggles the open/close animation.
-      <group
-        ref={sashRef}
-        onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}
-      >
-        {gltfContent}
-      </group>
-    ) : (
-      // Fixed / security: static glTF + click toggles (noop animation).
-      <group onClick={(e) => { e.stopPropagation(); toggleWinOpen(win.id); }}>
-        {gltfContent}
-      </group>
-    )
-  ) : proceduralBackFrame;
 
   if (win.wall === "N") {
     // back wall: X axis runs from -W/2 to W/2, window pos is from left (0) to right (W)

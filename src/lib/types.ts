@@ -264,9 +264,25 @@ export interface ExteriorSettings {
   /** Window glass tint in daytime. Hex string. Reads as a dark "punch-hole"
    *  against the cream facade. Default '#3E5066' (dark slate-blue). */
   windowGlassColor?: string;
+  /** Dev-only: when true, the live R3F scene is published on window.__SCENE for
+   *  introspection/debugging. Default false (off). Configurable; leaves no
+   *  trace in production when unset. */
+  debugExposeScene?: boolean;
+  /** Exterior facade glass dials (per-room window panes in 外观). These tune
+   *  how "glassy" vs "see-through" the panes read. Defaults make windows
+   *  reflect the sky (light steel-blue, low transmission, high opacity) so they
+   *  no longer read as flat black holes punched in the wall. */
+  windowGlassTransmission?: number; // default 0.12 (0 = fully reflective, 1 = clear)
+  windowGlassOpacity?: number;      // default 0.90
+  windowGlassReflect?: number;      // default 0.70 (envMapIntensity — sky reflection)
+  windowGlassRoughness?: number;    // default 0.10 (lower = glossier mirror)
   /** Window frame color (aluminium / millwork). Hex string. Falls back to
-   *  ExteriorSettings.accentColor, then to '#1E2530' (dark anodised). */
+   *  ExteriorSettings.accentColor, then to '#3A4150' (dark anodised). */
   windowFrameColor?: string;
+  /** Exterior window-frame sky reflection (envMapIntensity). Default 0.14
+   *  (low — keeps the frame matte so it doesn't mirror the bright sky HDR
+   *  into the same cream tone as the wall and make the window vanish). */
+  windowFrameReflect?: number;
   // ── Facade panelisation (was hardcoded in ConcreteFacade) ───────────────
   /** Horizontal precast-panel seam spacing in metres. Default 0.90.
    *  Sane range 0.4–2.0. Smaller = more horizontal banding. */
@@ -384,6 +400,83 @@ export interface ExteriorSettings {
   /** Window jamb depth in cm. Default 9. Range 4–20. Controls how
    *  deeply the reveal punches back from the wall face. */
   windowJambDepthCm?: number;
+  /** Forward offset (m) of the exterior window detail so the glass clears the
+   *  12 cm-thick facade wall box and is visible from outside. Default 0.05.
+   *  Lower it toward 0 only if the wall is made thinner; raise it if windows
+   *  read as recessed/occluded. */
+  windowProtrude?: number;
+  /** 外观图（非漫游）是否使用与效果图/室内漫游同源的"透明立面"渲染：
+   *  关闭实心 ConcreteFacade 立面叠加层，露出带真实窗洞的墙体，并用共享
+   *  <StyledWindow>（透明玻璃，按 win.style 渲染）填充窗洞 —— 这样外观图
+   *  的窗型、玻璃通透度、墙面配色与效果图/室内漫游完全一致，可隔窗看到室内。
+   *  false → 旧的实心立面外观（混凝土/木饰面/玻璃幕墙 + 程序化不透明窗）。
+   *  Default true. */
+  transparentExterior?: boolean;
+  /** 外观图（透明立面）下室内补光强度系数（0..~1.5）。透明立面把墙体露成
+   *  带真实窗洞的几何体后，室内默认是发黑的，从外面看窗户透不出内容（一片
+   *  惨白玻璃）。点亮室内（每层一组暖色顶灯，强度 = 室内漫游值 × 本系数），
+   *  光透过窗洞，外观图的窗户就有了「亮堂的室内」层次，和外观漫游图一样清晰。
+   *  0 = 关闭（室内保持黑，回到旧的惨白窗）。Default 0.6。
+   *  仅在 transparentExterior 开启的平面图驱动外观图生效，不影响室内漫游。 */
+  exteriorInteriorFillIntensity?: number;
+  /** 透明立面外观图的窗框颜色（Hex）。从外面大白天看，纯白窗框会糊进近纯白
+   *  的墙体里导致窗户「消失」；给窗框一个有存在感的中性轮廓色，窗户立刻清晰
+   *  可读（接近外观漫游图的观感）。Default '#6E6A60'（暖灰）。
+   *  仅作用于 transparentExterior 外观图，不影响室内漫游（仍用白框）。 */
+  transparentExteriorFrameColor?: string;
+  /** 外观图（透明立面）专用玻璃外观——大白天从外面看，全透玻璃显示的颜色≈墙色，
+   *  窗户会糊进墙里。这组参数把外观图的玻璃做成「可见的有色反光玻璃」（偏蓝灰、
+   *  低通透、带一点反射），让门窗像真实建筑玻璃一样明显跳出墙面。
+   *  仅作用于外观图，室内漫游仍是高通透全透玻璃。 */
+  /** 外观图玻璃透射率 0..1。注意 >0 会折射式透出明亮背景导致惨白，默认 0
+   *  改用 opacity+color 做成可见的半透实体玻璃面板。Default 0。 */
+  exteriorWindowGlassTransmission?: number;
+  /** 外观图玻璃不透明度 0..1，越高越像实体玻璃面板。Default 0.82。 */
+  exteriorWindowGlassOpacity?: number;
+  /** 外观图玻璃颜色（Hex），偏蓝灰更像建筑玻璃。Default '#8FA3B2'。 */
+  exteriorWindowGlassColor?: string;
+  /** 外观图玻璃环境反射强度 0..~1，给玻璃一点天空反射的层次。Default 0.6。 */
+  exteriorWindowGlassEnvMapIntensity?: number;
+  /** 外观图玻璃粗糙度 0..1。Default 0.12。 */
+  exteriorWindowGlassRoughness?: number;
+  /** 外观图玻璃凸出墙面的距离（米）。实测玻璃落在墙体厚度（WALL_T=0.12m）中线
+   *  时，大白天斜视角下会被墙体几何挡住（关掉 depthTest 才看得到 → 证明是遮挡
+   *  非颜色问题）。把外观玻璃往外推到墙体前表面之外，玻璃永不被墙挡，门窗立刻
+   *  能从墙里读出来。Default 0.06（略大于半墙厚）。仅作用于外观图。 */
+  exteriorWindowProtrude?: number;
+  /** 透明立面外观图的入户/房门门框颜色（Hex）。和窗框同理：大白天近白门框会
+   *  糊进近白墙体里导致门「消失」；给门框一个有存在感的中性轮廓色，门立刻清晰
+   *  可读。缺省回退到 transparentExteriorFrameColor，最终默认 '#6E6A60'（暖灰）。
+   *  仅作用于 transparentExterior 外观图，不影响室内漫游（仍用浅色门框）。 */
+  transparentExteriorDoorFrameColor?: string;
+  /** 外观图里把门沿墙体外法线往外推的距离（米）。和外观窗玻璃凸出同理：门默认
+   *  坐在墙体内侧（D/2-0.08），落在墙体厚度后方，大白天斜视角下被墙挡住，门
+   *  「消失」。往外推到墙体前表面之外，门凸出墙面、永不被挡，从外面立刻能读出
+   *  来。Default 0.16。仅作用于外观图，室内漫游门位置不变（传 0）。 */
+  exteriorDoorProtrude?: number;
+  /** 是否在外观图/漫游里渲染楼梯间的门窗（楼梯间原本只渲染楼梯几何体，门窗被
+   *  !isStair 跳过 → 楼梯间配的百叶窗/门在外观图不显示）。Default true。 */
+  renderStairOpenings?: boolean;
+  /** 外观图里是否允许点击门/窗开合（推拉门滑动、平开窗摆动等）。原本只在室内
+   *  漫游 insideBuilding 才响应点击 → 外观图点推拉门没反应。Default true。 */
+  exteriorInteractiveOpenings?: boolean;
+  /** Outer plaster casing/trim ring color around windows AND entrance doors
+   *  on the concrete facade. Hex. Default '#D8D0C2'. */
+  windowCasingColor?: string;
+  /** Window frame ring forward projection in cm — the proud metal frame that
+   *  makes the glass read as set deep behind it (real 3D window depth).
+   *  Default 7. Range 2–16. */
+  windowFrameDepthCm?: number;
+  /** Window frame member width in cm. Default 5.5. Range 3–12. */
+  windowFrameMemberCm?: number;
+  /** Entrance door leaf color on the concrete facade. Hex.
+   *  Default '#9C9699' — gray, matching the 效果图 (interior render)
+   *  door_with_frame.gltf door so both views stay visually consistent.
+   *  (Glass-facade entrances use entranceFrameColor.) */
+  entranceDoorColor?: string;
+  /** Entrance door casing/frame color on the concrete facade. Hex.
+   *  Default '#C7C4C7' — light gray matching the 效果图 door frame. */
+  entranceCasingColor?: string;
   /** Interior ceiling paint color. Hex string. Default '#F5F2EE'
    *  (warm off-white). Try '#1E1E22' for a moody dark ceiling. */
   roomCeilingColor?: string;
@@ -532,9 +625,14 @@ export interface ExteriorSettings {
    *  bloom artifact, or push to 1.5 for a more cinematic look. */
   bloomIntensity?: number;
   /** Multiplier on instanced grass-blade count, 0..2. Default 1
-   *  (= 1400 blades, mostly near building). 0 disables the carpet
+   *  (= 650 blades, mostly near building). 0 disables the carpet
    *  (use when the blades read as falling rain at low camera angles). */
   grassDensity?: number;
+  /** Show the cobblestone entry driveway leading south from the building.
+   *  Default false — the procedural floor-plan-driven yard is meant to be
+   *  1:1 with the user's YardPlan, so the auto-added driveway reads as an
+   *  unwanted extra path. Set true to bring it back. */
+  entryPathEnabled?: boolean;
   /** Tone-mapping exposure multiplier on the time-of-day baseline.
    *  1 = unchanged, 0.7 = darker / more cinematic, 1.3 = brighter.
    *  Lowering tames the ACES roll-off that produces white halos on
@@ -570,6 +668,24 @@ export interface ExteriorSettings {
   /** Override curtain-wall glass tint (hex). Default keeps the per-pane
    *  cool blue-white. Configurable for e.g. bronze/green glass towers. */
   glassColor?: string;
+  /** Curtain-wall spandrel (opaque shadow-box) glass colour. Sits at the
+   *  bottom band of each floor's panel. Default soft blue-grey "#283442" so
+   *  it harmonises with the vision glass instead of reading as a harsh
+   *  near-black band. */
+  glassSpandrelColor?: string;
+  /** Ground-floor glass entrance: door-frame colour. Default near-black
+   *  anodised "#202329". Makes the front door legible against the curtain wall. */
+  entranceFrameColor?: string;
+  /** Ground-floor glass entrance: pull-handle colour. Default brushed
+   *  steel "#C8CDD2". */
+  entranceHandleColor?: string;
+  /** Project a flat canopy slab over the ground-floor entrance. Default true. */
+  entranceCanopy?: boolean;
+  /** Strength multiplier for the glass-facade "wash" point lights that light
+   *  up the curtain wall. Default 1. Set 0 to disable. Only applies when
+   *  facadeGlass is on — matte (non-glass) walls don't need them and get
+   *  blown out to pure white if they fire. */
+  facadeWashIntensity?: number;
   /** Backing tint for exterior-facing room-shell walls when facadeGlass is on.
    *  On some faces the glass cladding doesn't fully occlude the white shell
    *  wall; this dark glass-spandrel colour makes those faces read as glass
@@ -598,6 +714,10 @@ export interface ExteriorSettings {
    *  hides the seam. The overlap tucks under walls so nothing pokes out.
    *  Default 6 cm. Set 0 to disable. */
   walkthroughFloorBleedCm?: number;
+  /** Walkthrough: opaque underlay plane margin (cm) drawn just below each room
+   *  floor so any hairline seam at room↔room boundaries cannot show the
+   *  background through. Default 20 cm. Set 0 to disable. */
+  walkthroughFloorUnderlayCm?: number;
 }
 
 // ─── Facade component system ────────────────────────────────────────────────
