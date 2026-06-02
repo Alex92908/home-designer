@@ -236,6 +236,7 @@ export const zh = {
     storage: "收纳", floor_lamp: "落地灯", plant: "绿植", rug: "地毯",
     artwork: "装饰画", outdoor_plant: "户外植物", outdoor_hardscape: "硬景观",
     outdoor_water: "水景", outdoor_structure: "户外建构", pet: "宠物", livestock: "家禽牲畜",
+    stair: "楼梯",
   } as Record<string, string>,
 
   // ── Style tags ───────────────────────────────────────────

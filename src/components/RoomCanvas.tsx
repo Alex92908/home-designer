@@ -19,6 +19,7 @@ import { getFloorTexture, getWallTexture, floorTileSize, wallTileSize } from "@/
 import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 import { StyledWindow } from "@/components/shared/StyledWindow";
 import { ROOFTOP_FIXTURE_IDS, RooftopFixtureMesh } from "./RooftopFixtures";
+import { STAIR_FURNITURE_IDS, StaircaseMesh } from "./Staircase";
 
 // ─── Error boundary ───────────────────────────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -2505,6 +2506,18 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
     return (
       <group position={[x3d, fixBaseY, z3d]} rotation={[0, rotY, 0]}>
         <RooftopFixtureMesh item={item} fw={fw} fd={fd} fh={fh} />
+      </group>
+    );
+  }
+
+  // ── 楼梯（原 stairConfig + StaircaseGeom 特例，现为普通家具）──
+  // 几何体填满 fw×fd×fh、底座 y=0、居中。方位走家具 rotation，大小走宽深高
+  // 缩放手柄 —— 在「平面图 / 效果图」用通用手柄拖动 / 缩放 / 旋转，各视图一致。
+  if (STAIR_FURNITURE_IDS.has(item.id)) {
+    const stairBaseY = (placed.elevationY ?? 0) / 100;
+    return (
+      <group position={[x3d, stairBaseY, z3d]} rotation={[0, rotY, 0]}>
+        <StaircaseMesh item={item} fw={fw} fd={fd} fh={fh} />
       </group>
     );
   }

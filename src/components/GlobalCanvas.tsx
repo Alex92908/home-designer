@@ -105,272 +105,6 @@ function GlobalRoomLight({ room, H, color }: { room: RoomType; H: number; color:
   );
 }
 
-/**
- * StaircaseGeom — 3D staircase that honours the floor's stairConfig.
- * Supports three shapes: straight, L-shaped, spiral.
- */
-export function StaircaseGeom({
-  W: roomW, D: roomD, color,
-  shape = "straight",
-  stairRotation = 0,
-  footprintW = 1,
-  footprintD = 1,
-  footprintOffsetX = 0,
-  footprintOffsetZ = 0,
-}: {
-  W: number; D: number; color: string;
-  shape?: "straight" | "L-shaped" | "spiral";
-  stairRotation?: 0 | 90 | 180 | 270;
-  /** 楼梯占房间宽 / 深的比例（0.2~1），其余空间留作通行。默认 1。 */
-  footprintW?: number;
-  footprintD?: number;
-  /** 楼梯区域相对房间中心的偏移（房间宽 / 深的比例，-0.5~0.5）。默认 0。 */
-  footprintOffsetX?: number;
-  footprintOffsetZ?: number;
-}) {
-  // 自定义楼梯区域：把楼梯几何缩进到房间的一个子区域，剩余空间供人通行。
-  const fpW = Math.max(0.2, Math.min(1, footprintW));
-  const fpD = Math.max(0.2, Math.min(1, footprintD));
-  const W = roomW * fpW;
-  const D = roomD * fpD;
-  const fpOffX = Math.max(-0.5, Math.min(0.5, footprintOffsetX)) * roomW;
-  const fpOffZ = Math.max(-0.5, Math.min(0.5, footprintOffsetZ)) * roomD;
-  const treadT  = 0.06;
-  const railH   = FLOOR_H * 0.95;
-  const railMat = <meshStandardMaterial color="#A0A0A8" roughness={0.5} />;
-  // Convert stairRotation degrees → radians for the Y axis.
-  // +180° base offset corrects for coord-refactor (north = -Z): the 2D plan
-  // shows the staircase entry at the south end (large planY / +Z), but the
-  // StraightRun geometry places step-0 at local Z = -runD/2 (the -Z / north
-  // end).  Adding 180° flips the run so step-0 sits at +Z (south = entry).
-  const rotY = ((stairRotation + 180) * Math.PI) / 180;
-
-  // ── Straight run ───────────────────────────────────────────
-  // 金属杆式楼梯：金属踏步 + 两侧斜扶手杆（顶端封在楼板处）+ 竖栏杆
-  function StraightRun({ runW, runD, baseY = 0, height = FLOOR_H }: {
-    runW: number; runD: number; baseY?: number; height?: number;
-  }) {
-    const STEPS      = 12;
-    const treadDepth = runD / STEPS;
-    const riserH     = height / STEPS;
-    const treadW2    = runW - 0.08;
-    const ROD_R      = 0.020;   // 扶手杆半径
-    const BAL_R      = 0.013;   // 竖栏杆半径
-    const railH      = 0.90;   // 底部扶手离地高度
-
-    // 踏步中心坐标
-    const treads = useMemo(() => Array.from({ length: STEPS }, (_, i) => ({
-      midY:   baseY + (i + 1) * riserH - treadT / 2,
-      midZ:   i * treadDepth + treadDepth / 2 - runD / 2,
-      topY:   baseY + (i + 1) * riserH,
-      frontZ: i * treadDepth - runD / 2,
-    })), [runD, riserH, treadDepth, baseY]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // ── 扶手几何（顶端封在 baseY+height，不超出楼板）──
-    // 起点: (z=-runD/2, y=baseY+railH)
-    // 终点: (z=+runD/2, y=baseY+height)  ← 正好是上层楼板高度
-    // 方向向量: (0, height-railH, runD)
-    const railDY  = height - railH;                           // 扶手垂直高差
-    const railLen = Math.sqrt(railDY * railDY + runD * runD); // 扶手圆柱长度
-    // 绕 X 轴旋转 θ，使圆柱轴 → (0, railDY, runD) 方向
-    const cylRotX  = Math.atan2(runD, railDY);
-    const railMidY = baseY + (railH + height) / 2;            // 扶手圆柱中心 y（两端点中点）
-
-    // ── 竖栏杆高度（各阶不同，因扶手坡角略小于踏步坡角）──
-    // 扶手在步骤 i 前沿处的 y:  y_rail_i = baseY + railH + i * (railDY/STEPS)
-    // 踏步顶面 y:               y_top_i  = baseY + (i+1) * riserH
-    // 竖杆高度:                  balH_i   = y_rail_i - y_top_i
-    //                                     = railH + i*railDY/STEPS - (i+1)*riserH
-    // 靠近顶端几阶 balH<0 → 不渲染（扶手已封在楼板处，顶端无需竖杆）
-    const balHOf = (i: number) =>
-      railH + i * (railDY / STEPS) - (i + 1) * riserH;
-
-    // ── Combo-2 E: 踏步 + 栏杆 baluster 改 InstancedMesh ──
-    // 踏步：12 阶同几何同材质 → 1 InstancedMesh
-    // 栏杆：高度变化用 per-instance scale.y（base geo height=1）→ 1 InstancedMesh
-    // 扶手 2 根保持独立 mesh（数量少不值得）
-    const balusters = useMemo(() => {
-      const arr: Array<{ pos: [number, number, number]; height: number }> = [];
-      for (let i = 0; i < STEPS; i++) {
-        const bH = balHOf(i);
-        if (bH <= 0.02) continue;
-        const t = treads[i];
-        ([-1, 1] as const).forEach(side => {
-          const xSide = side * (treadW2 / 2 - ROD_R * 2);
-          arr.push({ pos: [xSide, t.topY + bH / 2, t.frontZ], height: bH });
-        });
-      }
-      return arr;
-    }, [treads, treadW2, ROD_R]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    return (
-      <group>
-        {/* 踏步 —— InstancedMesh (12 阶) */}
-        <Instances limit={treads.length} castShadow receiveShadow>
-          <boxGeometry args={[treadW2, treadT, treadDepth]} />
-          <meshStandardMaterial color="#6a7d8e" metalness={0.80} roughness={0.20} />
-          {treads.map((t, i) => (
-            <Instance key={i} position={[0, t.midY, t.midZ]} />
-          ))}
-        </Instances>
-
-        {/* 两侧斜扶手杆：起点 (baseY+railH, -runD/2)，终点 (baseY+height, +runD/2)
-            数量少 (2) 不值得 instance */}
-        {([-1, 1] as const).map(side => {
-          const xSide = side * (treadW2 / 2 - ROD_R);
-          return (
-            <mesh key={`rail-${side}`}
-              position={[xSide, railMidY, 0]}
-              rotation={[cylRotX, 0, 0]}
-              castShadow
-            >
-              <cylinderGeometry args={[ROD_R, ROD_R, railLen, 8]} />
-              <meshStandardMaterial color="#7c8fa0" metalness={0.85} roughness={0.15} />
-            </mesh>
-          );
-        })}
-
-        {/* 竖栏杆 baluster —— InstancedMesh (up to STEPS×2)，
-            base geo 高度=1，per-instance scale.y 调实际高度 */}
-        {balusters.length > 0 && (
-          <Instances limit={balusters.length} castShadow>
-            <cylinderGeometry args={[BAL_R, BAL_R, 1, 6]} />
-            <meshStandardMaterial color="#7c8fa0" metalness={0.85} roughness={0.15} />
-            {balusters.map((b, i) => (
-              <Instance key={i} position={b.pos} scale={[1, b.height, 1]} />
-            ))}
-          </Instances>
-        )}
-      </group>
-    );
-  }
-
-  // ── L-shaped: two half-height runs at 90° ──────────────────
-  function LShapedRun() {
-    const halfH   = FLOOR_H / 2;
-    const run1D   = D * 0.55;   // first run depth
-    const run1W   = W;
-    const run2D   = W * 0.55;   // second run depth (perpendicular)
-    const run2W   = D;
-    // Landing platform
-    const landW   = W;
-    const landD   = D * 0.45;
-    const landY   = halfH;
-    const LSTEPS  = 6;
-    const tD1     = run1D / LSTEPS;
-    const rH1     = halfH / LSTEPS;
-    const tD2     = run2D / LSTEPS;
-    const rH2     = halfH / LSTEPS;
-    const tW1     = run1W - 0.08;
-    const tW2     = run2W - 0.08;
-    const treadMat = <meshStandardMaterial color={color} roughness={0.7} />;
-    const landMat  = <meshStandardMaterial color={color} roughness={0.8} />;
-    // Run 1: bottom half, going along Z (front to back)
-    const run1Treads = useMemo(() => Array.from({ length: LSTEPS }, (_, i) => ({
-      y: i * rH1 + treadT / 2,
-      z: i * tD1 + tD1 / 2 - run1D / 2,
-    })), []); // eslint-disable-line react-hooks/exhaustive-deps
-    // Run 2: top half, going along X (left to right), starting from back
-    const run2Treads = useMemo(() => Array.from({ length: LSTEPS }, (_, i) => ({
-      x: i * tD2 + tD2 / 2 - run2D / 2,
-      y: landY + i * rH2 + treadT / 2,
-    })), []); // eslint-disable-line react-hooks/exhaustive-deps
-    return (
-      <group>
-        {/* Run 1 — going in Z direction */}
-        {run1Treads.map((t, i) => (
-          <mesh key={`r1-${i}`} position={[0, t.y, t.z]} castShadow receiveShadow>
-            <boxGeometry args={[tW1, treadT, tD1 + 0.01]} />
-            {treadMat}
-          </mesh>
-        ))}
-        {/* Landing platform */}
-        <mesh position={[0, landY - treadT / 2, D / 2 - landD / 2]} receiveShadow>
-          <boxGeometry args={[landW - 0.1, treadT, landD]} />
-          {landMat}
-        </mesh>
-        {/* Run 2 — going in X direction */}
-        {run2Treads.map((t, i) => (
-          <mesh key={`r2-${i}`} position={[t.x, t.y, D / 2 - landD / 2]} castShadow receiveShadow>
-            <boxGeometry args={[tD2 + 0.01, treadT, tW2]} />
-            {treadMat}
-          </mesh>
-        ))}
-        {/* Side rails */}
-        <mesh position={[-(tW1 / 2 + 0.04), FLOOR_H * 0.95 / 2, 0]} castShadow>
-          <boxGeometry args={[0.08, FLOOR_H * 0.95, run1D * 0.95]} />
-          {railMat}
-        </mesh>
-        <mesh position={[tW1 / 2 + 0.04, FLOOR_H * 0.95 / 2, 0]} castShadow>
-          <boxGeometry args={[0.08, FLOOR_H * 0.95, run1D * 0.95]} />
-          {railMat}
-        </mesh>
-      </group>
-    );
-  }
-
-  // ── Spiral ─────────────────────────────────────────────────
-  function SpiralRun() {
-    const r     = Math.min(W, D) / 2 - 0.1;
-    const poleR = Math.max(0.1, r * 0.15);
-    const STEPS = 14;
-    const dTheta = (Math.PI * 1.5) / STEPS;  // 270° sweep
-    const treadLen = r - poleR - 0.05;
-
-    const spiralTreads = useMemo(() => Array.from({ length: STEPS }, (_, i) => {
-      const theta = -Math.PI / 2 + i * dTheta;
-      const riseY = (i / STEPS) * FLOOR_H;
-      const midR  = poleR + treadLen / 2;
-      return {
-        x: Math.cos(theta) * midR,
-        z: Math.sin(theta) * midR,
-        y: riseY + treadT / 2,
-        rot: theta,
-      };
-    }), []); // eslint-disable-line react-hooks/exhaustive-deps
-
-    return (
-      <group>
-        {/* Center pole */}
-        <mesh position={[0, FLOOR_H / 2, 0]} castShadow>
-          <cylinderGeometry args={[poleR, poleR, FLOOR_H, 12]} />
-          <meshStandardMaterial color="#8A8890" roughness={0.6} />
-        </mesh>
-        {/* Tread slabs */}
-        {spiralTreads.map((t, i) => (
-          <mesh key={i} position={[t.x, t.y, t.z]} rotation={[0, -t.rot, 0]} castShadow receiveShadow>
-            <boxGeometry args={[treadLen, treadT, Math.min(W, D) * 0.22]} />
-            <meshStandardMaterial color={color} roughness={0.7} />
-          </mesh>
-        ))}
-        {/* Outer curved rail (approximated with thin boxes) */}
-        {spiralTreads.map((t, i) => {
-          const outerX = Math.cos(t.rot) * (r - 0.04);
-          const outerZ = Math.sin(t.rot) * (r - 0.04);
-          return (
-            <mesh key={`rail-${i}`} position={[outerX, t.y + railH * 0.5, outerZ]}>
-              <boxGeometry args={[0.06, 0.15, 0.06]} />
-              {railMat}
-            </mesh>
-          );
-        })}
-      </group>
-    );
-  }
-
-  // When rotated 90° or 270°, the local Z axis (running direction) maps
-  // to world X, so W and D must be swapped to keep the stair within its room.
-  const isTransposed = stairRotation === 90 || stairRotation === 270;
-  return (
-    <group position={[fpOffX, 0, fpOffZ]}>
-      <group rotation={[0, rotY, 0]}>
-        {shape === "straight"  && <StraightRun runW={isTransposed ? D : W} runD={isTransposed ? W : D} />}
-        {shape === "L-shaped"  && <LShapedRun />}
-        {shape === "spiral"    && <SpiralRun />}
-      </group>
-    </group>
-  );
-}
 
 function RoomGroup({
   room, originX, originZ, onPick, isActive, isHover, setHover, showFurniture, floorIndex,
@@ -392,9 +126,6 @@ function RoomGroup({
   const dims = useDesignerStore(s => s.floorPlans[floorIndex]?.roomDimensions?.[room]);
   const state = useDesignerStore(s => s.floorPlans[floorIndex]?.rooms[room] ?? EMPTY_ROOM_STATE_GC);
   const shape = useDesignerStore(s => s.floorPlans[floorIndex]?.roomShapes?.[room]);
-  // Read stairConfig from THIS floor (not always activeFloor) so each floor's
-  // staircase reflects that floor's shape/rotation setting.
-  const stairCfg = useDesignerStore(s => s.floorPlans[floorIndex]?.stairConfig);
   const label = useDesignerStore(s => s.customRoomMeta[room]?.name) ?? t.roomNames[room] ?? def.name;
   const icon = useDesignerStore(s => s.customRoomMeta[room]?.icon) ?? def.icon;
 
@@ -497,31 +228,17 @@ function RoomGroup({
         <mesh position={[0, 0.001, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
           <shapeGeometry args={[floorShape]} />
           <meshStandardMaterial
-            color={isStair ? "#C8C8D0" : (isActive ? "#BAE6FD" : (isHover ? "#DBEAFE" : floorColor))}
+            color={isActive ? "#BAE6FD" : (isHover ? "#DBEAFE" : floorColor)}
             roughness={0.9}
             side={THREE.DoubleSide}
           />
         </mesh>
       )}
 
-      {/* 每层楼梯间都渲染一套楼梯几何体（fi=0 → 1F→2F，fi=1 → 2F→3F …）。
-          扶手顶端已封在 baseY+FLOOR_H，不会超出上层楼板，无 X 形交叉。 */}
-      {isStair && (
-        <StaircaseGeom
-          W={W} D={D} color={wallColor}
-          shape={stairCfg?.shape ?? "straight"}
-          stairRotation={(stairCfg?.rotation ?? 0) as 0 | 90 | 180 | 270}
-          footprintW={stairCfg?.footprintW ?? 1}
-          footprintD={stairCfg?.footprintD ?? 1}
-          footprintOffsetX={stairCfg?.footprintOffsetX ?? 0}
-          footprintOffsetZ={stairCfg?.footprintOffsetZ ?? 0}
-        />
-      )}
-
-      {/* Walls — skip for stair rooms (StaircaseGeom provides the geometry).
-          Per-side hide: rect rooms look up cardinal key, polygon rooms look
-          up edge-${i}. Either match → skip that wall segment. */}
-      {!isStair && wallBoxes.map((w, i) => {
+      {/* Walls — per-side hide: rect rooms look up cardinal key, polygon rooms
+          look up edge-${i}. Either match → skip that wall segment.
+          楼梯间已是普通房间：照常渲染四壁，楼梯本身是房内的普通家具。 */}
+      {wallBoxes.map((w, i) => {
         const hidden =
           (w.cardinal && wallsHidden?.[w.cardinal] === true) ||
           (wallsHidden?.[`edge-${w.edgeIdx}`] === true);
@@ -539,8 +256,7 @@ function RoomGroup({
           完的家具立即出现而不被慢的那件拖住 —— 上一版外层 Suspense 只
           要有 1 件没加载好，整间房全部 gone。
           showFurniture=false 时直接跳过（用于首帧只渲染激活房间家具）。*/}
-      {/* Furniture — skip for stair rooms */}
-      {showFurniture && !isStair && (state?.placedItems ?? []).map(p => (
+      {showFurniture && (state?.placedItems ?? []).map(p => (
         <PlacedItemMesh key={p.instanceId} placed={p} def={def} roomW={W} roomD={D} room={room} />
       ))}
 
@@ -549,13 +265,11 @@ function RoomGroup({
           past MAX_TEXTURE_IMAGE_UNITS=16 once multiplied across all rooms
           (WebGL shader compile fails). The single-room 3D view still uses
           the full fixture; global view gets this simplified stand-in. */}
-      {!isStair && (
-        <GlobalRoomLight
-          room={room}
-          H={WALL_H}
-          color={state?.materials?.light?.color ?? "#FFE8A0"}
-        />
-      )}
+      <GlobalRoomLight
+        room={room}
+        H={WALL_H}
+        color={state?.materials?.light?.color ?? "#FFE8A0"}
+      />
 
       {/* Floating label — stair shows floor transition arrow */}
       <Html

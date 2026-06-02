@@ -270,6 +270,7 @@ export const en: Translations = {
     storage: "Storage", floor_lamp: "Floor Lamp", plant: "Plant", rug: "Rug",
     artwork: "Artwork", outdoor_plant: "Outdoor Plant", outdoor_hardscape: "Hardscape",
     outdoor_water: "Water Feature", outdoor_structure: "Outdoor Structure", pet: "Pet", livestock: "Livestock",
+    stair: "Staircase",
   },
 
   // ── Style tags ───────────────────────────────────────────

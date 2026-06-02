@@ -748,6 +748,7 @@ export type FurnitureCategory =
   | "plant" | "rug" | "artwork" | "floor_lamp" | "curtain" | "exterior_wall_decor"
   | "bath_accessory" | "electrical" | "plumbing"
   | "outdoor_plant" | "outdoor_hardscape" | "outdoor_water" | "outdoor_structure"
+  | "stair"
   | "pet" | "livestock";
 
 export interface MaterialItem {
@@ -1031,32 +1032,6 @@ export interface FloorPlan {
    *  exterior view; others are reserved for future "ground vs roof deck"
    *  distinction). Drawn by user in the 院子图 (yard2d) view. */
   yardPlan?: YardPlan;
-  /** Stair shape / orientation config (only meaningful when "stair" room is enabled). */
-  stairConfig?: StairConfig;
-}
-
-/** Staircase appearance configuration used in the 2-D floor plan. */
-export interface StairConfig {
-  /** Visual shape of the stair symbol */
-  shape: "straight" | "L-shaped" | "spiral";
-  /** Rotation of the whole stair block in degrees (0 | 90 | 180 | 270).
-   *  For straight: 0 = treads horizontal, ascending toward top-left.
-   *  For L-shaped: 0 = first run goes up, second turns right. */
-  rotation: 0 | 90 | 180 | 270;
-  /** L-shaped only: which side the turn goes toward. */
-  turnSide?: "left" | "right";
-  /** Number of treads visible in each run (default auto-computed from room depth) */
-  risers?: number;
-  /** 楼梯实际占用的踏步区域（自定义楼梯区域）。楼梯间通常比楼梯本身大，
-   *  需要留出剩余空间供人通行。下列字段把楼梯几何缩进到房间的一个子区域：
-   *  - footprintW / footprintD: 楼梯占房间宽 / 深的比例 (0.2 ~ 1)，默认 1（占满）。
-   *  - footprintOffsetX / footprintOffsetZ: 楼梯区域中心相对房间中心的偏移，
-   *    单位 = 房间宽 / 深的比例 (-0.5 ~ 0.5)，默认 0（居中）。
-   *  剩余的房间面积即为通行 / 平台空间。 */
-  footprintW?: number;
-  footprintD?: number;
-  footprintOffsetX?: number;
-  footprintOffsetZ?: number;
 }
 
 /** Interior-door visual styles. Each variant is rendered differently by

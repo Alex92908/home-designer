@@ -28,6 +28,7 @@ import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem } from "@/lib
 import { getFurnitureById } from "@/lib/furniture";
 import { InteriorRoomDetail } from "./InteriorRoomDetail";
 import { PlacedItemMesh } from "./RoomCanvas";
+import { STAIR_FURNITURE_IDS } from "./Staircase";
 import { WalkthroughDoor3D } from "@/components/walkthrough/WalkthroughDoor3D";
 import { StyledWindow } from "@/components/shared/StyledWindow";
 import {
@@ -37,7 +38,6 @@ import {
 import { splitWallAroundHoles } from "@/lib/wallGeom";
 import { paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize, getStuccoTexture } from "@/lib/textures";
-import { StaircaseGeom } from "./GlobalCanvas";
 
 // ── 常量 ──────────────────────────────────────────────────────
 const CM      = 0.01;
@@ -2513,12 +2513,6 @@ export default function FloorPlanBuilding({
       isStair: boolean;
       isHallway: boolean;
       autoDoor: DoorConfig | null;
-      stairShape: "straight" | "L-shaped" | "spiral";
-      stairRotation: 0 | 90 | 180 | 270;
-      stairFootprintW: number;
-      stairFootprintD: number;
-      stairFootprintOffsetX: number;
-      stairFootprintOffsetZ: number;
       wallsHidden?: Partial<Record<string, boolean>>;
     }> = [];
 
@@ -2541,13 +2535,6 @@ export default function FloorPlanBuilding({
         const windows = fp.roomWindows?.[room] ?? [];
         const isStair = room === "stair";
         const isHallway = room === "hallway";
-        const stairCfg = fp.stairConfig;
-        const stairShape  = stairCfg?.shape ?? "straight";
-        const stairRotation = stairCfg?.rotation ?? 0;
-        const stairFootprintW = stairCfg?.footprintW ?? 1;
-        const stairFootprintD = stairCfg?.footprintD ?? 1;
-        const stairFootprintOffsetX = stairCfg?.footprintOffsetX ?? 0;
-        const stairFootprintOffsetZ = stairCfg?.footprintOffsetZ ?? 0;
         const bounds = floorBoundsArr[fi];
 
         // 自动门（共用 pickAutoDoor）
@@ -2563,7 +2550,7 @@ export default function FloorPlanBuilding({
           : windows;
 
         const wallsHidden = fp.roomWallsHidden?.[room];
-        result.push({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows: adjustedWindows, isStair, isHallway, autoDoor, stairShape, stairRotation, stairFootprintW, stairFootprintD, stairFootprintOffsetX, stairFootprintOffsetZ, wallsHidden });
+        result.push({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows: adjustedWindows, isStair, isHallway, autoDoor, wallsHidden });
       }
     }
     return result;
@@ -6941,7 +6928,7 @@ export default function FloorPlanBuilding({
           </group>
         );
       })}
-      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, stairShape, stairRotation, stairFootprintW, stairFootprintD, stairFootprintOffsetX, stairFootprintOffsetZ, wallsHidden }, ridx) => {
+      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, wallsHidden }, ridx) => {
         const wallOpacity = wallXray ? 0.13 : 1.0;
         const isXray = wallXray;
         // 走廊：无内墙、无天花板，仅地板；楼梯间：渲染楼梯几何体
@@ -7244,12 +7231,6 @@ export default function FloorPlanBuilding({
                 </group>
               );
             })()}
-            {/* 楼梯间：每层都渲染一套完整楼梯（扶手封在楼板处，无 X 交叉） */}
-            {isStair && (
-              <group position={[cx, yBase, cz]}>
-                <StaircaseGeom W={rW} D={rD} color={wallColor} shape={stairShape} stairRotation={stairRotation} footprintW={stairFootprintW} footprintD={stairFootprintD} footprintOffsetX={stairFootprintOffsetX} footprintOffsetZ={stairFootprintOffsetZ} />
-              </group>
-            )}
             {/* 门：外观模式 + 本层有任何玻璃房间 → 跳过本层所有内部门：
                 非玻璃房间（主卧/书房）的门也会从邻居玻璃幕墙看进来变
                 "立柱"。门是内视角装饰，对外观无贡献，安全跳过。 */}
@@ -7422,8 +7403,7 @@ export default function FloorPlanBuilding({
                   （沙发 / 茶几 / 吊灯）在玻璃后专门画了，再叠彩色 box
                   会乱。 */}
             <group position={[cx, yBase, cz]}>
-              {!isStair
-                && !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`)))
+              {!(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`)))
                 && placedItems
                 .filter(p => {
                   // Curtains: hide ONLY in low-LOD 效果图 (they'd be invisible
@@ -7448,6 +7428,7 @@ export default function FloorPlanBuilding({
                   const needsPlacedMesh =
                     insideBuilding
                     || fItem?.category === "artwork"
+                    || (fItem ? STAIR_FURNITURE_IDS.has(fItem.id) : false)
                     || fItem?.id?.includes("cabinet-upper");
                   if (needsPlacedMesh) {
                     return (

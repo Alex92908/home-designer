@@ -174,6 +174,10 @@ function makeDefaultFloorPlan(ref?: FloorPlan): FloorPlan {
     roomHasDoor: { ...DEFAULT_ROOM_HAS_DOOR },
     roomDoorWall: { ...DEFAULT_ROOM_DOOR_WALL },
   };
+  // 楼梯间默认放一把直梯（普通家具）。
+  if (fp.enabledRooms.includes("stair")) {
+    fp.rooms.stair = { materials: {}, placedItems: defaultStairItems() };
+  }
   // Copy stair (and hallway) from reference floor so new floors always have
   // a staircase path. Position/dimensions are preserved for alignment.
   const VERTICAL_ROOMS: RoomType[] = ["stair", "hallway"];
@@ -183,7 +187,13 @@ function makeDefaultFloorPlan(ref?: FloorPlan): FloorPlan {
       if (!fp.enabledRooms.includes(r)) fp.enabledRooms = [...fp.enabledRooms, r];
       if (ref.roomLayout?.[r])     fp.roomLayout     = { ...fp.roomLayout,     [r]: { ...ref.roomLayout[r] } };
       if (ref.roomDimensions?.[r]) fp.roomDimensions = { ...fp.roomDimensions, [r]: { ...ref.roomDimensions[r] } };
-      if (ref.stairConfig)         fp.stairConfig    = { ...ref.stairConfig };
+      // 楼梯家具随参考楼层一并继承（保持楼梯位置/方位/大小一致）。
+      if (r === "stair" && ref.rooms?.stair?.placedItems) {
+        fp.rooms.stair = {
+          materials: { ...(ref.rooms.stair.materials ?? {}) },
+          placedItems: ref.rooms.stair.placedItems.map(p => ({ ...p, instanceId: genId() })),
+        };
+      }
     }
   }
   return fp;
@@ -207,6 +217,20 @@ function defaultRooftopLoungeItems(): PlacedItem[] {
     // 可在平面图 / 效果图里拖动 / 缩放 / 旋转，拉大尺寸即增加面板。
     mk("solar-panel-array", 260, 150, 0),
   ];
+}
+
+/** 楼梯间默认家具：一把直梯，居中放置。楼梯和其它家具一样是普通
+ *  placedItem，方位（rotation）/大小（scaleW/D/H）走统一编辑流程，
+ *  各视图统一用 PlacedItemMesh → StaircaseMesh 渲染。 */
+function defaultStairItems(): PlacedItem[] {
+  const { width, depth } = DEFAULT_ROOM_DIMENSIONS.stair;
+  return [{
+    instanceId: genId(),
+    furnitureId: "staircase-straight",
+    x: Math.round(width / 2),
+    z: Math.round(depth / 2),
+    rotation: 0,
+  }];
 }
 
 function makeRooftopFloorPlan(): FloorPlan {
@@ -468,7 +492,6 @@ interface DesignerStore {
    *  choosing the dominant axis per edge. Useful after noisy vertex
    *  drags produced slightly tilted walls. */
   rectifyRoomShape: (room: RoomType) => void;
-  setStairConfig: (cfg: import("./types").StairConfig) => void;
   toggleRoom: (room: RoomType) => void;
   addRoom: (room: RoomType) => void;
   removeRoom: (room: RoomType) => void;
@@ -1374,10 +1397,6 @@ export const useDesignerStore = create<DesignerStore>()(
             ...patch,
           };
         });
-      },
-
-      setStairConfig: (cfg) => {
-        updateFloor(get, set, () => ({ stairConfig: cfg }));
       },
 
       toggleRoom: (room) => {
@@ -2504,7 +2523,7 @@ export const useDesignerStore = create<DesignerStore>()(
       //        in FloorPlanExterior have been deleted. Yard is now
       //        sourced exclusively from `yardPlan.items`. Migration is
       //        a no-op (no seeding) — see v3 → v4 branch.
-      version: 4,
+      version: 5,
       migrate: (persistedState, persistedVersion) => {
         const state = persistedState as Partial<DesignerStore> | undefined;
         if (!state) return state as unknown as DesignerStore;
@@ -2651,6 +2670,32 @@ export const useDesignerStore = create<DesignerStore>()(
           // those defaults clobbered. The trade-off is an empty yard for
           // migrated saves; users can add prefabs via the YardPlan editor.
           console.info("[home-designer] migrated persist v3 → v4 (yard items now sourced from yardPlan.items only)");
+        }
+        if (persistedVersion < 5) {
+          // v4 → v5: 楼梯不再是 stairConfig 特判，改成普通家具。给已启用
+          // 楼梯间、却没有楼梯家具的存档注入一把默认直梯，并丢弃旧的
+          // stairConfig 字段。各视图统一用 PlacedItemMesh → StaircaseMesh。
+          const STAIR_IDS = ["staircase-straight", "staircase-l-shaped", "staircase-spiral"];
+          const st = state as { floorPlans?: FloorPlan[] };
+          if (Array.isArray(st.floorPlans)) {
+            st.floorPlans.forEach(fp => {
+              delete (fp as { stairConfig?: unknown }).stairConfig;
+              if (!fp.enabledRooms?.includes("stair")) return;
+              const stairRoom = fp.rooms?.stair;
+              const items = stairRoom?.placedItems ?? [];
+              const hasStair = items.some(p => STAIR_IDS.includes(p.furnitureId));
+              if (!hasStair) {
+                fp.rooms = {
+                  ...fp.rooms,
+                  stair: {
+                    materials: stairRoom?.materials ?? {},
+                    placedItems: [...items, ...defaultStairItems()],
+                  },
+                } as FloorPlan["rooms"];
+              }
+            });
+          }
+          console.info("[home-designer] migrated persist v4 → v5 (stair → ordinary furniture)");
         }
         return state as unknown as DesignerStore;
       },

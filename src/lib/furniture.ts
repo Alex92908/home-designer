@@ -1319,6 +1319,11 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"cold-plunge-pool", name:"冷水泳池",      brand:"屋面水景", price:28000,unit:"元/座", category:"outdoor_water",     roomTypes:["rooftop_lounge","rooftop_garden","rooftop_bar"], color:"#3888B0", width:212, depth:132, height:92,  tags:["现代","轻奢"], description:"不锈钢冷水泳池，玻璃观景面 + 扶手", icon:"🧊" },
   { id:"sky-bar",          name:"露天吧台",      brand:"屋面家具", price:18800,unit:"元/座", category:"outdoor_structure", roomTypes:["rooftop_lounge","rooftop_garden","rooftop_bar"], color:"#2C3040", width:300, depth:220, height:195, tags:["轻奢"], description:"L 形混凝土吧台 + 5 吧椅 + 后吧酒架", icon:"🍸" },
 
+  // ─── 楼梯 Staircases（普通家具：方位走旋转、大小走宽深高缩放）──────
+  { id:"staircase-straight", name:"直梯",   brand:"楼梯定制", price:9800, unit:"元/座", category:"stair", roomTypes:["stair"], color:"#9aa3ad", width:220, depth:320, height:280, tags:["现代"], description:"金属踏步直跑楼梯 + 双侧扶手", icon:"🪜" },
+  { id:"staircase-l-shaped", name:"L形梯",  brand:"楼梯定制", price:12800,unit:"元/座", category:"stair", roomTypes:["stair"], color:"#B0A890", width:260, depth:260, height:280, tags:["现代","北欧"], description:"带中段平台的 L 形转角楼梯", icon:"🪜" },
+  { id:"staircase-spiral",   name:"螺旋梯", brand:"楼梯定制", price:15800,unit:"元/座", category:"stair", roomTypes:["stair"], color:"#8A8890", width:200, depth:200, height:280, tags:["现代","轻奢"], description:"中心柱螺旋楼梯 + 外侧扶手", icon:"🪜" },
+
   // ─── 水景 Water Features ───────────────────────────────
   { id:"pond",         name:"锦鲤鱼池",   brand:"水景专家", price:5800, unit:"元/座", category:"outdoor_water",     roomTypes:["yard"],                     color:"#4A90C0", width:300, depth:200, height:40,  tags:["日式","中式"], description:"锦鲤观赏鱼池", icon:"🐟" },
   { id:"fountain",     name:"喷水景观",   brand:"水景专家", price:3200, unit:"元/座", category:"outdoor_water",     roomTypes:["yard"],                     color:"#5AA8D8", width:150, depth:150, height:80,  tags:["现代","轻奢"], description:"循环喷水景观",  icon:"⛲" },
