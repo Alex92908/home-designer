@@ -35,7 +35,9 @@ function getSVGPoint(e: { clientX: number; clientY: number }, svg: SVGSVGElement
 // ─── Types ─────────────────────────────────────────────────
 type DragState =
   | { type: "move";   room: RoomType; sx: number; sy: number; ox: number; oy: number; hasMoved: boolean }
-  | { type: "resize"; room: RoomType; sx: number; sy: number; ow: number; od: number };
+  | { type: "resize"; room: RoomType; sx: number; sy: number; ow: number; od: number }
+  | { type: "stairMove";   sx: number; sy: number; ox: number; oy: number; roomW: number; roomD: number }
+  | { type: "stairResize"; sx: number; sy: number; ow: number; od: number; roomW: number; roomD: number };
 
 const CUSTOM_SLOTS: RoomType[] = ["custom1","custom2","custom3","custom4","custom5"];
 const ROOM_GROUP_ROOMS = [
@@ -696,6 +698,20 @@ export default function FloorPlanAll() {
       if (!ds.hasMoved) pushLayoutHistory();
       dragRef.current = { ...ds, hasMoved: true };
       updateRoomLayout(ds.room, snap(ds.ox + dx), snap(ds.oy + dy));
+    } else if (ds.type === "stairMove") {
+      const cur = stairConfig ?? { shape: "straight" as const, rotation: 0 as const };
+      const clamp = (v: number) => Math.max(-0.5, Math.min(0.5, v));
+      setStairConfig({ ...cur,
+        footprintOffsetX: Math.round(clamp(ds.ox + dx / ds.roomW) * 100) / 100,
+        footprintOffsetZ: Math.round(clamp(ds.oy + dy / ds.roomD) * 100) / 100,
+      });
+    } else if (ds.type === "stairResize") {
+      const cur = stairConfig ?? { shape: "straight" as const, rotation: 0 as const };
+      const clamp = (v: number) => Math.max(0.2, Math.min(1, v));
+      setStairConfig({ ...cur,
+        footprintW: Math.round(clamp(ds.ow + (dx * 2) / ds.roomW) * 100) / 100,
+        footprintD: Math.round(clamp(ds.od + (dy * 2) / ds.roomD) * 100) / 100,
+      });
     } else {
       updateRoomDimension(ds.room,
         Math.max(MIN_W, snap(ds.ow + dx)),
@@ -1222,7 +1238,17 @@ export default function FloorPlanAll() {
                   {/* ── Stair room: multi-shape symbol ── */}
                   {room === "stair" && (() => {
                     const cfg = stairConfig ?? { shape: "straight", rotation: 0 };
-                    const inner = { x: x + WALL, y: y + WALL, w: w - WALL*2, d: d - WALL*2 };
+                    // 楼梯实际占用区域（footprint）——剩余空间留作通道
+                    const clampF = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+                    const room0 = { x: x + WALL, y: y + WALL, w: w - WALL*2, d: d - WALL*2 };
+                    const fpW = clampF(cfg.footprintW ?? 1, 0.2, 1);
+                    const fpD = clampF(cfg.footprintD ?? 1, 0.2, 1);
+                    const fpOX = clampF(cfg.footprintOffsetX ?? 0, -0.5, 0.5);
+                    const fpOZ = clampF(cfg.footprintOffsetZ ?? 0, -0.5, 0.5);
+                    const fw = room0.w * fpW, fd = room0.d * fpD;
+                    const fcx = room0.x + room0.w/2 + fpOX * room0.w;
+                    const fcy = room0.y + room0.d/2 + fpOZ * room0.d;
+                    const inner = { x: fcx - fw/2, y: fcy - fd/2, w: fw, d: fd };
                     const { x: ix, y: iy, w: iw, d: id } = inner;
                     const cx2 = ix + iw / 2, cy2 = iy + id / 2;
                     const rot = cfg.rotation ?? 0;
@@ -1519,8 +1545,54 @@ export default function FloorPlanAll() {
                     const row2Y = row1Y + btnH2 + gap;
                     // Row 3: turn-side toggle (L-shaped only)
                     const row3Y = row2Y + btnH2 + gap;
+                    // ── 楼梯占用区域 footprint：可拖动 + 可缩放（剩余空间留作通道）──
+                    const clampF = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+                    const room0 = { x: x + WALL, y: y + WALL, w: w - WALL*2, d: d - WALL*2 };
+                    const fpW = clampF(cur.footprintW ?? 1, 0.2, 1);
+                    const fpD = clampF(cur.footprintD ?? 1, 0.2, 1);
+                    const fpOX = clampF(cur.footprintOffsetX ?? 0, -0.5, 0.5);
+                    const fpOZ = clampF(cur.footprintOffsetZ ?? 0, -0.5, 0.5);
+                    const fw = room0.w * fpW, fd = room0.d * fpD;
+                    const frx = room0.x + room0.w/2 + fpOX*room0.w - fw/2;
+                    const fry = room0.y + room0.d/2 + fpOZ*room0.d - fd/2;
+                    const partial = fpW < 0.999 || fpD < 0.999;
+                    const rHandle = Math.max(7, Math.min(fw, fd) * 0.16);
                     return (
                       <g>
+                        {/* 楼梯占用区域：仅当未铺满整间房时显示边框，提示通道 */}
+                        {partial && (
+                          <rect x={frx} y={fry} width={fw} height={fd}
+                            fill="none" stroke="#D97706" strokeWidth={1.6}
+                            strokeDasharray="6 4" style={{ pointerEvents: "none" }} rx={2}/>
+                        )}
+                        {/* 拖动整块楼梯占用区域 */}
+                        <rect x={frx} y={fry} width={fw} height={fd}
+                          fill="transparent" style={{ cursor: "move" }}
+                          onPointerDown={e => {
+                            e.stopPropagation();
+                            if (!svgRef.current) return;
+                            svgRef.current.setPointerCapture(e.pointerId);
+                            const pt = getSVGPoint(e, svgRef.current);
+                            dragRef.current = { type: "stairMove", sx: pt.x, sy: pt.y,
+                              ox: fpOX, oy: fpOZ, roomW: room0.w, roomD: room0.d };
+                          }}/>
+                        {/* 右下角缩放手柄：调整楼梯占用大小 */}
+                        <g style={{ cursor: "nwse-resize" }}
+                          onPointerDown={e => {
+                            e.stopPropagation();
+                            if (!svgRef.current) return;
+                            svgRef.current.setPointerCapture(e.pointerId);
+                            const pt = getSVGPoint(e, svgRef.current);
+                            dragRef.current = { type: "stairResize", sx: pt.x, sy: pt.y,
+                              ow: fpW, od: fpD, roomW: room0.w, roomD: room0.d };
+                          }}>
+                          <rect x={frx + fw - rHandle} y={fry + fd - rHandle}
+                            width={rHandle} height={rHandle} fill="#D97706" opacity={0.9} rx={2}/>
+                          <text x={frx + fw - rHandle/2} y={fry + fd - rHandle/2}
+                            textAnchor="middle" dominantBaseline="middle"
+                            fontSize={rHandle*0.7} fill="white"
+                            style={{ pointerEvents:"none", userSelect:"none" }}>⤡</text>
+                        </g>
                         {/* Shape type buttons */}
                         {shapes.map((s, i) => {
                           const bx = row1X + i*(btnW2+gap);
@@ -1896,6 +1968,9 @@ export default function FloorPlanAll() {
                     ))}
                   </div>
                 )}
+                <div className="mt-1 pt-1 border-t border-amber-100 text-[9px] text-amber-600 leading-snug">
+                  拖动平面图上的楼梯区域可调位置，拖右下角 ⤡ 调大小，剩余空间即通道
+                </div>
               </div>
             );
           })()}

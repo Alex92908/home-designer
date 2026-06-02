@@ -189,9 +189,31 @@ function makeDefaultFloorPlan(ref?: FloorPlan): FloorPlan {
   return fp;
 }
 
+/** 天台休闲区默认家具布局。坐标为房间左上角原点、单位 cm，房间默认
+ *  500×400cm（ROOM_DEFS.rooftop_lounge）。这些就是普通房间的 placedItems，
+ *  渲染、拖动、增删全部走统一流程（平面图 / 效果图 / 外观 / 全局3D）。 */
+function defaultRooftopLoungeItems(): PlacedItem[] {
+  const mk = (furnitureId: string, x: number, z: number, rotation = 0): PlacedItem => ({
+    instanceId: genId(), furnitureId, x, z, rotation,
+  });
+  return [
+    mk("lounger-sun", 175, 250, 0),
+    mk("lounger-sun", 325, 250, 180),
+    mk("outdoor-sofa", 250, 95, 0),
+    mk("garden-coffee-table", 250, 185, 0),
+    mk("planter-clay", 55, 345, 0),
+    mk("planter-clay", 445, 345, 0),
+    // 光伏阵列：一件普通家具，默认 360×360（≈3×2 块），放在休闲区里，
+    // 可在平面图 / 效果图里拖动 / 缩放 / 旋转，拉大尺寸即增加面板。
+    mk("solar-panel-array", 260, 150, 0),
+  ];
+}
+
 function makeRooftopFloorPlan(): FloorPlan {
+  const rooms = Object.fromEntries(ALL_ROOM_TYPES.map(r => [r, emptyRoom()])) as Record<RoomType, RoomState>;
+  rooms.rooftop_lounge = { materials: {}, placedItems: defaultRooftopLoungeItems() };
   return {
-    rooms: Object.fromEntries(ALL_ROOM_TYPES.map(r => [r, emptyRoom()])) as Record<RoomType, RoomState>,
+    rooms,
     enabledRooms: ["rooftop_lounge"],
     roomLayout: { ...DEFAULT_ROOM_LAYOUT },
     roomDimensions: { ...DEFAULT_ROOM_DIMENSIONS },

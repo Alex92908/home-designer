@@ -110,14 +110,31 @@ function GlobalRoomLight({ room, H, color }: { room: RoomType; H: number; color:
  * Supports three shapes: straight, L-shaped, spiral.
  */
 export function StaircaseGeom({
-  W, D, color,
+  W: roomW, D: roomD, color,
   shape = "straight",
   stairRotation = 0,
+  footprintW = 1,
+  footprintD = 1,
+  footprintOffsetX = 0,
+  footprintOffsetZ = 0,
 }: {
   W: number; D: number; color: string;
   shape?: "straight" | "L-shaped" | "spiral";
   stairRotation?: 0 | 90 | 180 | 270;
+  /** 楼梯占房间宽 / 深的比例（0.2~1），其余空间留作通行。默认 1。 */
+  footprintW?: number;
+  footprintD?: number;
+  /** 楼梯区域相对房间中心的偏移（房间宽 / 深的比例，-0.5~0.5）。默认 0。 */
+  footprintOffsetX?: number;
+  footprintOffsetZ?: number;
 }) {
+  // 自定义楼梯区域：把楼梯几何缩进到房间的一个子区域，剩余空间供人通行。
+  const fpW = Math.max(0.2, Math.min(1, footprintW));
+  const fpD = Math.max(0.2, Math.min(1, footprintD));
+  const W = roomW * fpW;
+  const D = roomD * fpD;
+  const fpOffX = Math.max(-0.5, Math.min(0.5, footprintOffsetX)) * roomW;
+  const fpOffZ = Math.max(-0.5, Math.min(0.5, footprintOffsetZ)) * roomD;
   const treadT  = 0.06;
   const railH   = FLOOR_H * 0.95;
   const railMat = <meshStandardMaterial color="#A0A0A8" roughness={0.5} />;
@@ -345,10 +362,12 @@ export function StaircaseGeom({
   // to world X, so W and D must be swapped to keep the stair within its room.
   const isTransposed = stairRotation === 90 || stairRotation === 270;
   return (
-    <group rotation={[0, rotY, 0]}>
-      {shape === "straight"  && <StraightRun runW={isTransposed ? D : W} runD={isTransposed ? W : D} />}
-      {shape === "L-shaped"  && <LShapedRun />}
-      {shape === "spiral"    && <SpiralRun />}
+    <group position={[fpOffX, 0, fpOffZ]}>
+      <group rotation={[0, rotY, 0]}>
+        {shape === "straight"  && <StraightRun runW={isTransposed ? D : W} runD={isTransposed ? W : D} />}
+        {shape === "L-shaped"  && <LShapedRun />}
+        {shape === "spiral"    && <SpiralRun />}
+      </group>
     </group>
   );
 }
@@ -492,6 +511,10 @@ function RoomGroup({
           W={W} D={D} color={wallColor}
           shape={stairCfg?.shape ?? "straight"}
           stairRotation={(stairCfg?.rotation ?? 0) as 0 | 90 | 180 | 270}
+          footprintW={stairCfg?.footprintW ?? 1}
+          footprintD={stairCfg?.footprintD ?? 1}
+          footprintOffsetX={stairCfg?.footprintOffsetX ?? 0}
+          footprintOffsetZ={stairCfg?.footprintOffsetZ ?? 0}
         />
       )}
 

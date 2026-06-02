@@ -18,6 +18,7 @@ import { FirstPersonControls, FirstPersonButton, TouchJoystick } from "./FirstPe
 import { getFloorTexture, getWallTexture, floorTileSize, wallTileSize } from "@/lib/textures";
 import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 import { StyledWindow } from "@/components/shared/StyledWindow";
+import { ROOFTOP_FIXTURE_IDS, RooftopFixtureMesh } from "./RooftopFixtures";
 
 // ─── Error boundary ───────────────────────────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -2496,6 +2497,79 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
   const fh = (item.height * (placed.scaleH ?? 1)) / 100;
 
   const rotY = (placed.rotation * Math.PI) / 180;
+
+  // ── 屋顶机电/设施（原建筑级硬编码，现为普通家具）──
+  // 居中渲染于本地原点，底座坐落于 y=0（板面）。位置/朝向/尺寸全走通用手柄。
+  if (ROOFTOP_FIXTURE_IDS.has(item.id)) {
+    const fixBaseY = (placed.elevationY ?? 0) / 100;
+    return (
+      <group position={[x3d, fixBaseY, z3d]} rotation={[0, rotY, 0]}>
+        <RooftopFixtureMesh item={item} fw={fw} fd={fd} fh={fh} />
+      </group>
+    );
+  }
+
+  // ── 光伏阵列（solar-panel-array）──
+  // 完全当成一件普通家具：位置/朝向走 placedItem 的 x/z/rotation，尺寸走家具
+  // 自身的宽×深（含缩放手柄 scaleW/scaleD）。面板按家具占地自动平铺出列×行，
+  // 不再读外观面板的列/行/倾角配置（那是“特立独行”）。倾角固定 18°，硅片色取
+  // 家具自身 color，可在「平面图 / 效果图」用通用手柄拖动 / 缩放 / 旋转。
+  if (item.id === "solar-panel-array") {
+    const pvW = 1.08, pvH = 1.70, pvGap = 0.06;   // 单块面板（含间距）
+    const pvTilt = 18 * Math.PI / 180;
+    const frameColor = "#2C3040";
+    const cellColor  = item.color || "#1A1E2E";
+    // 按家具占地（fw×fd）平铺，至少 1×1：
+    const pvCols = Math.max(1, Math.floor((fw + pvGap) / (pvW + pvGap)));
+    const pvRows = Math.max(1, Math.floor((fd + pvGap) / (pvH + pvGap)));
+    const arrW = pvCols * (pvW + pvGap) - pvGap;
+    const arrDepth = pvRows * (pvH + pvGap) - pvGap;
+    const pvBaseY = (placed.elevationY ?? 0) / 100 + 0.10;
+    return (
+      <group position={[x3d, pvBaseY, z3d]} rotation={[0, rotY, 0]}>
+        <group rotation={[pvTilt, 0, 0]}>
+          {[pvH * 0.25 - arrDepth / 2, pvH * 0.75 - arrDepth / 2 + (pvRows - 1) * (pvH + pvGap) * 0.5].map((rz, ri) => (
+            <mesh key={ri} position={[0, 0, rz]} castShadow>
+              <boxGeometry args={[arrW + 0.12, 0.04, 0.055]} />
+              <meshStandardMaterial color="#4A5060" roughness={0.42} metalness={0.62} />
+            </mesh>
+          ))}
+          {Array.from({ length: pvRows }, (_, ri) =>
+            Array.from({ length: pvCols }, (_, ci) => {
+              const px = -arrW / 2 + ci * (pvW + pvGap) + pvW / 2;
+              const pz = -arrDepth / 2 + ri * (pvH + pvGap) + pvH / 2;
+              return (
+                <group key={`pv-${ri}-${ci}`} position={[px, 0, pz]}>
+                  <mesh castShadow>
+                    <boxGeometry args={[pvW, pvH, 0.032]} />
+                    <meshStandardMaterial color={frameColor} roughness={0.35} metalness={0.55} />
+                  </mesh>
+                  <mesh position={[0, 0, 0.018]}>
+                    <boxGeometry args={[pvW - 0.04, pvH - 0.04, 0.008]} />
+                    <meshStandardMaterial
+                      color={cellColor}
+                      roughness={0.08} metalness={0.18}
+                      envMapIntensity={3.0}
+                      emissive="#0E1422" emissiveIntensity={0.06}
+                    />
+                  </mesh>
+                  {Array.from({ length: 5 }, (_, li) => {
+                    const ly = -pvH / 2 + (li + 1) * (pvH / 6);
+                    return (
+                      <mesh key={li} position={[0, ly, 0.023]}>
+                        <boxGeometry args={[pvW - 0.05, 0.008, 0.004]} />
+                        <meshStandardMaterial color="#3A4260" roughness={0.28} metalness={0.42} />
+                      </mesh>
+                    );
+                  })}
+                </group>
+              );
+            })
+          )}
+        </group>
+      </group>
+    );
+  }
 
   // Artwork special case: mount on the wall nearest to the 2D placement.
   // Rotate so the image faces the room interior. Eye-level height at

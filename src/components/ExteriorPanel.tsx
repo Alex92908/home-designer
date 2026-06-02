@@ -1196,131 +1196,19 @@ export default function ExteriorPanel() {
         <div className="px-3 pt-4">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">屋顶 (ROOFTOP)</div>
           <div className="px-1 flex flex-col gap-2">
-            {/* Solar panels enable */}
-            <label className="flex items-center gap-2 text-[11px] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={exterior.solarPanelsEnabled ?? true}
-                onChange={e => setExterior({ solarPanelsEnabled: e.target.checked })}
-                className="accent-blue-500"
-              />
-              <span className="text-gray-700">显示光伏板阵列</span>
-            </label>
-            {/* Solar panel grid size */}
-            {(exterior.solarPanelsEnabled ?? true) && (
-              <div className="pl-5 flex flex-col gap-1">
-                <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-gray-500">列数</span>
-                  <span className="font-mono text-gray-700">{exterior.solarPanelCols ?? 5}</span>
-                </div>
-                <input type="range" min={1} max={10} step={1}
-                  value={exterior.solarPanelCols ?? 5}
-                  onChange={e => setExterior({ solarPanelCols: parseInt(e.target.value, 10) })}
-                  className="w-full accent-blue-500" />
-                <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-gray-500">行数</span>
-                  <span className="font-mono text-gray-700">{exterior.solarPanelRows ?? 3}</span>
-                </div>
-                <input type="range" min={1} max={6} step={1}
-                  value={exterior.solarPanelRows ?? 3}
-                  onChange={e => setExterior({ solarPanelRows: parseInt(e.target.value, 10) })}
-                  className="w-full accent-blue-500" />
-                <div className="text-[9px] text-gray-400">
-                  共 {(exterior.solarPanelCols ?? 5) * (exterior.solarPanelRows ?? 3)} 块
-                </div>
-                <div className="flex items-center justify-between text-[10px] pt-1">
-                  <span className="text-gray-500">板面倾角</span>
-                  <span className="font-mono text-gray-700">{exterior.solarPanelTiltDeg ?? 18}°</span>
-                </div>
-                <input type="range" min={0} max={45} step={1}
-                  value={exterior.solarPanelTiltDeg ?? 18}
-                  onChange={e => setExterior({ solarPanelTiltDeg: parseInt(e.target.value, 10) })}
-                  className="w-full accent-blue-500" />
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-600">板框色</span>
-                  <input type="color"
-                    value={exterior.solarPanelFrameColor ?? "#2C3040"}
-                    onChange={e => setExterior({ solarPanelFrameColor: e.target.value })}
-                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
-                </div>
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-600">硅片色</span>
-                  <input type="color"
-                    value={exterior.solarPanelCellColor ?? "#1A1E2E"}
-                    onChange={e => setExterior({ solarPanelCellColor: e.target.value })}
-                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
-                </div>
-              </div>
-            )}
-            {/* Rooftop deck items */}
-            <label className="flex items-center gap-2 text-[11px] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={exterior.rooftopDeckEnabled ?? true}
-                onChange={e => setExterior({ rooftopDeckEnabled: e.target.checked })}
-                className="accent-blue-500"
-              />
-              <span className="text-gray-700">显示屋顶休闲设施</span>
-            </label>
-            <div className="text-[9px] text-gray-400 pl-5 -mt-1">
-              （躺椅 / 餐桌 / 凉亭 / 浴缸 / BBQ / 浅池 / 吧台 / 直升机坪）
+            {/* 光伏阵列已是一件普通家具（🔆 光伏阵列）：大小由家具尺寸决定，
+                面板自动平铺；增删 / 位置 / 朝向 / 缩放都走通用家具流程。 */}
+            <div className="text-[10px] text-gray-500 leading-snug bg-gray-50 rounded px-2 py-1.5">
+              ☀️ 光伏阵列现为天台家具「🔆 光伏阵列」：在「平面图 / 效果图 · 天台休闲区」里增删、拖动、缩放、旋转——拉大尺寸即自动增加面板。
             </div>
-            {/* Green roof toggle */}
-            <label className="flex items-center gap-2 text-[11px] cursor-pointer pt-1">
-              <input
-                type="checkbox"
-                checked={exterior.rooftopGreenRoofEnabled ?? true}
-                onChange={e => setExterior({ rooftopGreenRoofEnabled: e.target.checked })}
-                className="accent-blue-500"
-              />
-              <span className="text-gray-700">屋顶绿化区（sedum + 木栈道）</span>
-            </label>
-            {(exterior.rooftopGreenRoofEnabled ?? true) && (
-              <div className="pl-5 flex flex-col gap-1.5">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-600">基质色</span>
-                  <input type="color"
-                    value={exterior.greenRoofSubstrateColor ?? "#3A6420"}
-                    onChange={e => setExterior({ greenRoofSubstrateColor: e.target.value })}
-                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
-                </div>
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-600">木栈道色</span>
-                  <input type="color"
-                    value={exterior.greenRoofBoardwalkColor ?? "#8B6240"}
-                    onChange={e => setExterior({ greenRoofBoardwalkColor: e.target.value })}
-                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
-                </div>
+            {/* 天台休闲区家具与普通房间一致：在 平面图 / 效果图 里增删拖动 */}
+            {(exterior.hasRooftop ?? false) && (
+              <div className="pt-1.5 mt-1 border-t border-gray-100 text-[9px] text-gray-400 leading-snug">
+                休闲家具同普通房间：在「平面图 / 效果图 · 天台休闲区」里自由增删、拖动
               </div>
             )}
-            {/* Skylight toggle */}
-            <label className="flex items-center gap-2 text-[11px] cursor-pointer pt-1">
-              <input
-                type="checkbox"
-                checked={exterior.rooftopSkylightEnabled ?? true}
-                onChange={e => setExterior({ rooftopSkylightEnabled: e.target.checked })}
-                className="accent-blue-500"
-              />
-              <span className="text-gray-700">南向线性天窗</span>
-            </label>
-            {/* HVAC count */}
-            <div className="flex items-center justify-between text-[10px] pt-1">
-              <span className="text-gray-500">空调外机</span>
-              <span className="font-mono text-gray-700">{exterior.rooftopHvacCount ?? 2} 台</span>
-            </div>
-            <input type="range" min={0} max={4} step={1}
-              value={exterior.rooftopHvacCount ?? 2}
-              onChange={e => setExterior({ rooftopHvacCount: parseInt(e.target.value, 10) })}
-              className="w-full accent-blue-500" />
-            {(exterior.rooftopHvacCount ?? 2) > 0 && (
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-600">空调外机色</span>
-                <input type="color"
-                  value={exterior.rooftopHvacColor ?? "#C4C0B8"}
-                  onChange={e => setExterior({ rooftopHvacColor: e.target.value })}
-                  className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
-              </div>
-            )}
+            {/* 绿化块 / 线性天窗 / 空调外机已改为天台家具（绿化块 / 线性天窗 /
+                空调外机），在平面图/效果图「天台」里增删拖动缩放 */}
             {/* Cove light toggle + color */}
             {(exterior.parapetHeight ?? 0.30) > 0.01 && (
               <>
@@ -1344,24 +1232,8 @@ export default function ExteriorPanel() {
                 )}
               </>
             )}
-            {/* Vent count */}
-            <div className="flex items-center justify-between text-[10px] pt-1">
-              <span className="text-gray-500">通风管道</span>
-              <span className="font-mono text-gray-700">{exterior.roofVentCount ?? 3} 根</span>
-            </div>
-            <input type="range" min={0} max={6} step={1}
-              value={exterior.roofVentCount ?? 3}
-              onChange={e => setExterior({ roofVentCount: parseInt(e.target.value, 10) })}
-              className="w-full accent-blue-500" />
-            {/* Scupper count */}
-            <div className="flex items-center justify-between text-[10px] pt-1">
-              <span className="text-gray-500">排水口</span>
-              <span className="font-mono text-gray-700">{exterior.roofScupperCount ?? 2} 个</span>
-            </div>
-            <input type="range" min={0} max={4} step={1}
-              value={exterior.roofScupperCount ?? 2}
-              onChange={e => setExterior({ roofScupperCount: parseInt(e.target.value, 10) })}
-              className="w-full accent-blue-500" />
+            {/* 通风管 / 排水口 / 避雷针 / 天线杆 / 气象站均已改为天台家具，
+                在平面图/效果图「天台」里增删拖动缩放 */}
             {/* Roof overhang */}
             <div className="flex items-center justify-between text-[10px] pt-1">
               <span className="text-gray-500">屋檐悬挑（四周）</span>
@@ -1436,24 +1308,6 @@ export default function ExteriorPanel() {
                   <input type="color"
                     value={exterior.parapetColor ?? "#E8E4DE"}
                     onChange={e => setExterior({ parapetColor: e.target.value })}
-                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
-                </div>
-              )}
-              {(exterior.roofVentCount ?? 3) > 0 && (
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-600">通风管色</span>
-                  <input type="color"
-                    value={exterior.roofVentColor ?? "#606468"}
-                    onChange={e => setExterior({ roofVentColor: e.target.value })}
-                    className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
-                </div>
-              )}
-              {(exterior.roofScupperCount ?? 2) > 0 && (
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-600">排水口色</span>
-                  <input type="color"
-                    value={exterior.roofScupperColor ?? "#5A6070"}
-                    onChange={e => setExterior({ roofScupperColor: e.target.value })}
                     className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
                 </div>
               )}

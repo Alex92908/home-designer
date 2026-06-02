@@ -73,10 +73,6 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       buildingBaseShadow: 1.0,  // max — also masks any bloom hot-spots at base
       eaveShadow: 0.45,
       wallVignette: 0.30,
-      // Clean silhouette — Modern Minimal hides all rooftop clutter that
-      // breaks the cantilevered-slab read.
-      rooftopDeckEnabled: false,
-      rooftopHvacCount: 0,
       solarPanelsEnabled: false,
       hideInteriorWalls: true,  // kill metro-tile leakage through facade
       bloomIntensity: 0.20,     // kill daytime halo at base of windows
@@ -118,7 +114,6 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       parapetHeight: 0,
       parapetGlassEnabled: false,
       roofSlabColor: "#3A3E48",
-      roofVentCount: 0,
     },
     // ── Designed package: each room gets a curated material pair that
     // matches the monochrome facade. Oak floors in living spaces give
@@ -195,7 +190,6 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       parapetGlassEnabled: false,
       roofSlabColor: "#E8D8B0",
       parapetColor: "#E8D8B0",
-      roofVentCount: 3,
     },
   },
   {
@@ -241,8 +235,6 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       parapetGlassEnabled: false,
       roofSlabColor: "#5E564E",
       parapetColor: "#7A7068",
-      roofVentColor: "#2A2C30",
-      roofVentCount: 5,
     },
   },
   {
@@ -289,7 +281,6 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       parapetGlassEnabled: false,
       roofSlabColor: "#C26840",
       parapetColor: "#C26840",
-      roofVentCount: 1,
     },
   },
   {
@@ -332,7 +323,6 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       parapetHeight: 0,
       parapetGlassEnabled: false,
       roofSlabColor: "#2A1E14",
-      roofVentCount: 0,
     },
   },
 ];

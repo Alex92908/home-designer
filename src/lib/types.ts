@@ -255,11 +255,6 @@ export interface ExteriorSettings {
   solarPanelCols?: number;
   /** Rows in the PV grid. Sane range 1–6. Default 3. */
   solarPanelRows?: number;
-  /** Rooftop deck furniture (loungers, dining set, hot tub, BBQ, bar, plunge
-   *  pool, weather station, etc.). When false, all the hardcoded terrace
-   *  decoration meshes are hidden — useful for a clean flat-roof look or
-   *  when the user wants to place their own items via yardPlan. Default true. */
-  rooftopDeckEnabled?: boolean;
   // ── Window appearance (user-configurable; was previously hardcoded) ─────
   /** Window glass tint in daytime. Hex string. Reads as a dark "punch-hole"
    *  against the cream facade. Default '#3E5066' (dark slate-blue). */
@@ -295,9 +290,6 @@ export interface ExteriorSettings {
   stoneBaseEnabled?: boolean;
   /** Height of the ground-floor stone base in metres. Default 0.55. */
   stoneBaseHeight?: number;
-  /** Roof exhaust / vent stacks. Default 3. Range 0–6. Zero hides the
-   *  rooftop machine-room cluster entirely. */
-  roofVentCount?: number;
   // ── Window ornaments (default classic; turn off for a minimal look) ─────
   /** Stone sill + drip-edge under each window. Default true. */
   windowSillEnabled?: boolean;
@@ -495,10 +487,6 @@ export interface ExteriorSettings {
    *  (warm charcoal). The cap rim of the box is auto-derived from
    *  this so a single picker drives the whole flower-box look. */
   windowFlowerBoxColor?: string;
-  /** Roof exhaust / vent stack metal color. Hex. Default '#606468'
-   *  (galvanised steel). Cap cowl darkens ~25 % below this value
-   *  automatically. */
-  roofVentColor?: string;
   /** Flower-box foliage base color (the leafy mounds in each window
    *  flower box). Hex. Default '#3E7428' (mid foliage green). Per-
    *  bush variation still hashes ±20 % brightness for natural look. */
@@ -527,27 +515,6 @@ export interface ExteriorSettings {
   /** Parapet wall thickness in cm. Default 12. Range 6–25. Thicker
    *  parapets read more solid / masonry; thinner reads modern metal. */
   parapetThicknessCm?: number;
-  /** Roof drain scupper count — protruding metal pipes that drain the
-   *  flat roof through the parapet. Default 2 (one per east-west side).
-   *  Range 0–4. 0 = clean parapet with no scuppers. */
-  roofScupperCount?: number;
-  /** Scupper metal color. Hex. Default '#5A6070' (galvanised steel).
-   *  Drip-lip auto-darkens ~20 % below this. */
-  roofScupperColor?: string;
-  /** Intensive green-roof zone (sedum carpet + boardwalk + planters).
-   *  Default true. Disable for projects that want a bare technical roof. */
-  rooftopGreenRoofEnabled?: boolean;
-  /** Green-roof sedum substrate color. Hex. Default '#3A6420'. Lighter
-   *  surface patches auto-vary around this base. */
-  greenRoofSubstrateColor?: string;
-  /** Green-roof boardwalk plank color. Hex. Default '#8B6240'
-   *  (warm teak). Side stringers auto-darken below this. */
-  greenRoofBoardwalkColor?: string;
-  /** Linear south-facing rooftop skylight. Default true. */
-  rooftopSkylightEnabled?: boolean;
-  /** Rooftop HVAC condenser unit count. Default 2. Range 0–4.
-   *  0 hides the entire HVAC cluster. */
-  rooftopHvacCount?: number;
   /** Parapet inner-cove LED strip (subtle uplight). Default true.
    *  Turns OFF the 4-side LED strip + day/night glow logic. */
   coveLightEnabled?: boolean;
@@ -567,10 +534,6 @@ export interface ExteriorSettings {
    *  Hex. Default '#1A1E2E' (dark blue silicon). Cell-busbar grid
    *  lines auto-derive a lighter tone above this. */
   solarPanelCellColor?: string;
-  /** Rooftop HVAC condenser housing color. Hex. Default '#C4C0B8'
-   *  (light grey). Try '#1E2026' for a stealth-black industrial
-   *  look. */
-  rooftopHvacColor?: string;
   // ── Realism dial (Wallich-inspired naturalisation, 2026-05) ────────────────
   /** Hex tint MULTIPLIED into the grass ground texture + per-blade colour.
    *  Lower the saturation of the procedural grass without ripping out the
@@ -1084,6 +1047,16 @@ export interface StairConfig {
   turnSide?: "left" | "right";
   /** Number of treads visible in each run (default auto-computed from room depth) */
   risers?: number;
+  /** 楼梯实际占用的踏步区域（自定义楼梯区域）。楼梯间通常比楼梯本身大，
+   *  需要留出剩余空间供人通行。下列字段把楼梯几何缩进到房间的一个子区域：
+   *  - footprintW / footprintD: 楼梯占房间宽 / 深的比例 (0.2 ~ 1)，默认 1（占满）。
+   *  - footprintOffsetX / footprintOffsetZ: 楼梯区域中心相对房间中心的偏移，
+   *    单位 = 房间宽 / 深的比例 (-0.5 ~ 0.5)，默认 0（居中）。
+   *  剩余的房间面积即为通行 / 平台空间。 */
+  footprintW?: number;
+  footprintD?: number;
+  footprintOffsetX?: number;
+  footprintOffsetZ?: number;
 }
 
 /** Interior-door visual styles. Each variant is rendered differently by
