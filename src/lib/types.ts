@@ -449,6 +449,19 @@ export interface ExteriorSettings {
   /** 是否在外观图/漫游里渲染楼梯间的门窗（楼梯间原本只渲染楼梯几何体，门窗被
    *  !isStair 跳过 → 楼梯间配的百叶窗/门在外观图不显示）。Default true。 */
   renderStairOpenings?: boolean;
+  /** 通行空间（楼梯间 / 走廊）是否像普通房间一样渲染墙面装饰 —— 四壁、门、
+   *  窗、踢脚线、吸顶灯。原本这些被 `!isStair && !isHallway` 硬编码跳过
+   *  （通行空间借用相邻房间的墙）。这是一个可调试开关：Default false（保持
+   *  通行空间无装饰的结构性约定），打开后通行空间也长门窗/踢脚/吸顶灯，
+   *  方便排查"楼梯间为什么不画墙"之类问题。 */
+  circulationDecor?: boolean;
+  /** 楼梯间在上层（fi>0）是否渲染实心楼板。原本硬编码 `!(isStair && fi>0)`
+   *  跳过 —— 上层楼梯间是楼梯井开口，没楼板下层才能上来。可调试开关：
+   *  Default false（保持楼梯井开口）；打开后上层楼梯间也铺实心楼板。 */
+  stairFloorSlab?: boolean;
+  /** 一层客厅是否自动生成入户门（原本硬编码 `fi===0 && room==="living"`）。
+   *  可调试开关：Default true（保持入户门）；关掉则一层客厅不再特判入户门。 */
+  livingEntryDoor?: boolean;
   /** 外观图里是否允许点击门/窗开合（推拉门滑动、平开窗摆动等）。原本只在室内
    *  漫游 insideBuilding 才响应点击 → 外观图点推拉门没反应。Default true。 */
   exteriorInteractiveOpenings?: boolean;

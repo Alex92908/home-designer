@@ -18,6 +18,7 @@ import { FurnitureItem } from "@/lib/types";
  */
 
 export const ROOFTOP_FIXTURE_IDS = new Set<string>([
+  "pergola",
   "roof-vent",
   "hvac-condenser",
   "roof-skylight",
@@ -707,8 +708,55 @@ function SkyBar({ fw, fd, fh }: FixtureProps) {
   );
 }
 
+/** 凉亭 / 遮阳棚 — 四角钢柱 + 横梁 + 木格栅顶（按物件尺寸参数化）。 */
+function Pergola({ fw, fd, fh, item }: FixtureProps) {
+  const postH  = Math.max(1.6, fh);
+  const postR  = 0.07;
+  const roofT  = 0.04;
+  const inset  = Math.min(0.2, fw / 2 - 0.05, fd / 2 - 0.05);
+  const slats  = Math.max(3, Math.round(fw / 0.45));
+  const postCol = item.color && /steel|metal/i.test(item.color) ? item.color : "#5C5C5C";
+  const slatCol = "#6B4C2A";
+  const posts: [number, number][] = [
+    [-fw / 2 + inset,  fd / 2 - inset],
+    [ fw / 2 - inset,  fd / 2 - inset],
+    [-fw / 2 + inset, -fd / 2 + inset],
+    [ fw / 2 - inset, -fd / 2 + inset],
+  ];
+  return (
+    <group>
+      {/* steel posts */}
+      {posts.map(([px, pz], i) => (
+        <mesh key={i} position={[px, postH / 2, pz]} castShadow>
+          <cylinderGeometry args={[postR, postR, postH, 10]} />
+          <meshStandardMaterial color={postCol} roughness={0.4} metalness={0.6} />
+        </mesh>
+      ))}
+      {/* cross-beams along X */}
+      {[-fd / 2 + inset, fd / 2 - inset].map((pz, i) => (
+        <mesh key={i} position={[0, postH, pz]} castShadow>
+          <boxGeometry args={[fw - inset * 2, 0.06, 0.10]} />
+          <meshStandardMaterial color={postCol} roughness={0.4} metalness={0.6} />
+        </mesh>
+      ))}
+      {/* wooden slats along Z */}
+      {Array.from({ length: slats }, (_, i) => {
+        const t = slats > 1 ? i / (slats - 1) : 0.5;
+        const sx = (-fw / 2 + inset) + (fw - inset * 2) * t;
+        return (
+          <mesh key={i} position={[sx, postH + 0.04, 0]} castShadow>
+            <boxGeometry args={[0.06, roofT, fd - inset * 2]} />
+            <meshStandardMaterial color={slatCol} roughness={0.55} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
 export function RooftopFixtureMesh(props: FixtureProps) {
   switch (props.item.id) {
+    case "pergola": return <Pergola {...props} />;
     case "roof-vent": return <RoofVent {...props} />;
     case "hvac-condenser": return <HvacCondenser {...props} />;
     case "roof-skylight": return <RoofSkylight {...props} />;

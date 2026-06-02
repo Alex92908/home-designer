@@ -45,6 +45,28 @@ const FLOOR_H = 3.00;   // 每层净高 m
 const SLAB_T  = 0.20;   // 层间楼板厚 m
 const TOLE    = 10;     // 外墙相邻判定容差 cm
 
+/** 把一块矩形地块（XZ 平面，单位 m）绕开一个矩形开口拆成 ≤4 块矩形，
+ *  返回 {w,d,x,z} 数组；opening=null 时返回整块。屋面板 / 背景板 / 层间
+ *  楼板都复用同一机制开「楼梯井」，保证天台开口上下贯通、不被任何一层
+ *  封死。中间 W/E 两块按开口与地块的交集裁剪，避免开口越界时溢出。*/
+function carveRect(
+  fW: number, fD: number, cX: number, cZ: number,
+  opening: { cx: number; cz: number; w: number; d: number } | null,
+): Array<{ key: string; w: number; d: number; x: number; z: number }> {
+  if (!opening) return [{ key: "all", w: fW, d: fD, x: cX, z: cZ }];
+  const oL = opening.cx - opening.w / 2, oR = opening.cx + opening.w / 2;
+  const oN = opening.cz - opening.d / 2, oS = opening.cz + opening.d / 2;
+  const fL = cX - fW / 2, fR = cX + fW / 2, fN = cZ - fD / 2, fS = cZ + fD / 2;
+  const pcs: Array<{ key: string; w: number; d: number; x: number; z: number }> = [];
+  if (oN - fN > 0.01) pcs.push({ key: "N", w: fW, d: oN - fN, x: cX, z: (fN + oN) / 2 });
+  if (fS - oS > 0.01) pcs.push({ key: "S", w: fW, d: fS - oS, x: cX, z: (oS + fS) / 2 });
+  const midN = Math.max(oN, fN), midS = Math.min(oS, fS);
+  const midD = midS - midN, midZ = (midN + midS) / 2;
+  if (oL - fL > 0.01) pcs.push({ key: "W", w: oL - fL, d: midD, x: (fL + oL) / 2, z: midZ });
+  if (fR - oR > 0.01) pcs.push({ key: "E", w: fR - oR, d: midD, x: (oR + fR) / 2, z: midZ });
+  return pcs;
+}
+
 // ── Canvas-baked wood-grain texture (module singleton) ────────
 // Vertical grain lines on a warm-brown base. Deterministic using
 // seeded hash so we get repeatable grain without SSR issues.
@@ -1193,6 +1215,7 @@ function FlatRoof({
   parapetThicknessCm: parapetTCm = 12,
   coveLightEnabled = true,
   coveLightColor = "#D0E8FF",
+  stairOpening = null,
 }: {
   W: number; D: number; roofY: number;
   nightGlow?: number; hasRooftop?: boolean;
@@ -1210,6 +1233,11 @@ function FlatRoof({
   coveLightEnabled?: boolean;
   /** Cove LED emissive color. Default '#D0E8FF'. */
   coveLightColor?: string;
+  /** Stairwell footprint (building-center coords, metres) to carve out of the
+   *  roof slab so the stair from the top floor emerges onto the 天台. Same
+   *  treatment as the inter-floor slabs (4-piece carve around the opening).
+   *  Only carved when hasRooftop. null ⇒ solid roof. */
+  stairOpening?: { cx: number; cz: number; w: number; d: number } | null;
 }) {
   const OV   = Math.max(0, Math.min(1.5, overhang));
   const OV_S = OV + Math.max(0, Math.min(1.5, overhangSouthExtra));
@@ -1219,13 +1247,46 @@ function FlatRoof({
   const roofColor    = slabColor;
   const parapetColor = parapetColorOverride ?? "#E8E4DE";
   const roofSlab     = roofY + 0.05;  // 屋面板中心Y
+
+  // 楼梯井开口：天台需要从下层楼梯上来的「楼梯口」，否则屋面板把楼梯
+  // 间封死。与层间楼板一致，绕开 stairOpening 用 4 块矩形拼出屋面板。
+  // 仅在 hasRooftop（天台可上人）时开洞。
+  const opening = hasRooftop && stairOpening ? stairOpening : null;
+  const carve = (fW: number, fD: number, cX: number, cZ: number) =>
+    carveRect(fW, fD, cX, cZ, opening);
+
   return (
     <group>
-      {/* 屋面板 — 厚度由 ExteriorSettings.roofSlabThicknessCm 控制 */}
-      <mesh position={[0, roofSlab, -(OV_S - OV) / 2]} castShadow receiveShadow>
-        <boxGeometry args={[W + OV * 2, ST, D + OV_S + OV]} />
-        <meshStandardMaterial color={roofColor} roughness={0.88} />
-      </mesh>
+      {/* 屋面板 — 厚度由 ExteriorSettings.roofSlabThicknessCm 控制；
+          天台层绕开楼梯井开口（4 块矩形拼接）*/}
+      {carve(W + OV * 2, D + OV_S + OV, 0, -(OV_S - OV) / 2).map((p) => (
+        <mesh key={p.key} position={[p.x, roofSlab, p.z]} castShadow receiveShadow>
+          <boxGeometry args={[p.w, ST, p.d]} />
+          <meshStandardMaterial color={roofColor} roughness={0.88} />
+        </mesh>
+      ))}
+      {/* 楼梯井开口安全护栏（天台开洞时）：在朝天台内侧（未贴女儿墙）
+          的一侧留缺口，作为人从楼梯上来踏出天台的出入口。 */}
+      {opening && (() => {
+        const tol = 0.2;
+        const perim: Record<"N" | "S" | "E" | "W", boolean> = {
+          N: Math.abs((opening.cz - opening.d / 2) - (-D / 2)) < tol,
+          S: Math.abs((opening.cz + opening.d / 2) - ( D / 2)) < tol,
+          W: Math.abs((opening.cx - opening.w / 2) - (-W / 2)) < tol,
+          E: Math.abs((opening.cx + opening.w / 2) - ( W / 2)) < tol,
+        };
+        const towardX: "W" | "E" = opening.cx > 0 ? "W" : "E";
+        const towardZ: "N" | "S" = opening.cz > 0 ? "N" : "S";
+        const order: Array<"N" | "S" | "E" | "W"> = Math.abs(opening.cx) >= Math.abs(opening.cz)
+          ? [towardX, towardZ, towardX === "W" ? "E" : "W", towardZ === "N" ? "S" : "N"]
+          : [towardZ, towardX, towardZ === "N" ? "S" : "N", towardX === "W" ? "E" : "W"];
+        const exitSide = order.find(s => !perim[s]) ?? "S";
+        return (
+          <group position={[opening.cx, roofSlab + ST / 2, opening.cz]}>
+            <StairwellRailing rW={opening.w} rD={opening.d} gap={exitSide} />
+          </group>
+        );
+      })()}
       {/* 女儿墙 — 四边（仅 PH > 0 时渲染）*/}
       {PH > 0.01 && (
         <>
@@ -1247,11 +1308,13 @@ function FlatRoof({
           </mesh>
         </>
       )}
-      {/* 屋顶边缘影线 */}
-      <mesh position={[0, roofY - 0.005, -(OV_S - OV) / 2]}>
-        <boxGeometry args={[W + OV * 2 + 0.005, 0.01, D + OV_S + OV + 0.005]} />
-        <meshStandardMaterial color="#D8D4CE" roughness={0.85} />
-      </mesh>
+      {/* 屋顶边缘影线（同样绕开楼梯井开口） */}
+      {carve(W + OV * 2 + 0.005, D + OV_S + OV + 0.005, 0, -(OV_S - OV) / 2).map((p) => (
+        <mesh key={p.key} position={[p.x, roofY - 0.005, p.z]}>
+          <boxGeometry args={[p.w, 0.01, p.d]} />
+          <meshStandardMaterial color="#D8D4CE" roughness={0.85} />
+        </mesh>
+      ))}
       {/* 女儿墙顶面金属压盖（parapet cap flashing — dark anodized aluminum）
           PH=0 时无女儿墙，也就没有压盖了 */}
       {PH > 0.01 && [
@@ -1421,7 +1484,7 @@ function FlatRoof({
 }
 
 // ── 楼梯间围栏（上层开口处安全栏杆） ─────────────────────────
-function StairwellRailing({ rW, rD }: { rW: number; rD: number }) {
+function StairwellRailing({ rW, rD, gap = null }: { rW: number; rD: number; gap?: "N" | "S" | "E" | "W" | null }) {
   const RH   = 0.92;   // 栏杆高度 m
   const POST = 0.06;   // 立柱截面 m
   const RAIL = 0.045;  // 横杆截面 m
@@ -1438,12 +1501,15 @@ function StairwellRailing({ rW, rD }: { rW: number; rD: number }) {
     });
   }
 
-  const allSides: Array<{ axis: "x" | "z"; len: number; fixed: number; railAxis: "x" | "z" }> = [
-    { axis: "x", len: rW, fixed: -rD / 2 + POST / 2, railAxis: "x" },
-    { axis: "x", len: rW, fixed:  rD / 2 - POST / 2, railAxis: "x" },
-    { axis: "z", len: rD, fixed: -rW / 2 + POST / 2, railAxis: "z" },
-    { axis: "z", len: rD, fixed:  rW / 2 - POST / 2, railAxis: "z" },
+  // 局部坐标：+Z=南 -Z=北 +X=东 -X=西。gap 指定的那一侧整段不画，
+  // 留出人从楼梯上来踏出天台的出入口。
+  const sideDefs: Array<{ side: "N" | "S" | "W" | "E"; axis: "x" | "z"; len: number; fixed: number; railAxis: "x" | "z" }> = [
+    { side: "N", axis: "x", len: rW, fixed: -rD / 2 + POST / 2, railAxis: "x" },
+    { side: "S", axis: "x", len: rW, fixed:  rD / 2 - POST / 2, railAxis: "x" },
+    { side: "W", axis: "z", len: rD, fixed: -rW / 2 + POST / 2, railAxis: "z" },
+    { side: "E", axis: "z", len: rD, fixed:  rW / 2 - POST / 2, railAxis: "z" },
   ];
+  const allSides = sideDefs.filter(s => s.side !== gap);
 
   // Combo-2 E: 4 侧的所有立柱合并到 1 个 InstancedMesh（同几何同材质）
   const allPostPositions: Array<[number, number, number]> = [];
@@ -1578,9 +1644,6 @@ const SHRUB2_PATH    = "/models/outdoor_shrub/shrub_02/shrub_02_1k.gltf";
 const BOXWOOD_PATH   = "/models/outdoor_plant/boxwood_bush/boxwood_bush.gltf";
 const HEDGE_PATH     = "/models/outdoor_plant/hedge_generic/hedge_generic.gltf";
 const LOUNGER_PATH   = "/models/outdoor_furniture/sun_lounger/sun_lounger.gltf";
-const GARDEN_TABLE_PATH   = "/models/outdoor_furniture/garden_coffee_table/garden_coffee_table.gltf";
-const DINING_CHAIR_PATH   = "/models/dining_chair/dining_chair_02/dining_chair_02_1k.gltf";
-const BONSAI_PATH         = "/models/outdoor_tree/bonsai_lowpoly/bonsai_lowpoly.gltf";
 
 // ── 动态泳池焦散灯光（animated underwater caustic lights）────────────────────
 /**
@@ -1677,277 +1740,29 @@ function RooftopDecorations({
         // list and the top 「进入室内漫游」 button. Keep onEnterRoom in the
         // function signature for backwards compat with other callers.
 
-        // ── 休闲区: 仅保留按房间尺寸参数化的遮阳棚外壳；家具统一走房间
-        //    placedItems（见下方 PlacedItemMesh），不再程序化写死。 ──
-        if (rt === "rooftop_lounge") {
-          const postH  = 2.4;
-          const postR  = 0.07;
-          const roofT  = 0.04;
-          const slats  = Math.max(3, Math.round(rWm / 0.45));
-          const posts: [number, number][] = [
-            [-rWm / 2 + 0.2,  rDm / 2 - 0.2],
-            [ rWm / 2 - 0.2,  rDm / 2 - 0.2],
-            [-rWm / 2 + 0.2, -rDm / 2 + 0.2],
-            [ rWm / 2 - 0.2, -rDm / 2 + 0.2],
-          ];
-          return (
-            <group key={rt} position={[cx, y, cz]}>
-              {/* pergola steel posts */}
-              {posts.map(([px, pz], i) => (
-                <mesh key={i} position={[px, postH / 2, pz]} castShadow>
-                  <cylinderGeometry args={[postR, postR, postH, 10]} />
-                  <meshStandardMaterial color="#5C5C5C" roughness={0.4} metalness={0.6} />
-                </mesh>
-              ))}
-              {/* pergola cross-beams (two long beams along X) */}
-              {[-rDm / 2 + 0.2, rDm / 2 - 0.2].map((pz, i) => (
-                <mesh key={i} position={[0, postH, pz]} castShadow>
-                  <boxGeometry args={[rWm - 0.4, 0.06, 0.10]} />
-                  <meshStandardMaterial color="#5C5C5C" roughness={0.4} metalness={0.6} />
-                </mesh>
-              ))}
-              {/* slats along Z */}
-              {Array.from({ length: slats }, (_, i) => {
-                const t = slats > 1 ? i / (slats - 1) : 0.5;
-                const sx = lerp(-rWm / 2 + 0.2, rWm / 2 - 0.2, t);
-                return (
-                  <mesh key={i} position={[sx, postH + 0.04, 0]} castShadow>
-                    <boxGeometry args={[0.06, roofT, rDm - 0.4]} />
-                    <meshStandardMaterial color="#6B4C2A" roughness={0.55} />
-                  </mesh>
-                );
-              })}
-              {/* 休闲区家具：统一走房间 placedItems（与普通楼层房间一致，
-                  不再程序化写死躺椅/沙发/茶几），用通用 PlacedItemMesh 渲染。
-                  默认布局在 store.makeRooftopFloorPlan 注入，用户可在
-                  平面图 / 效果图 里自由增删拖动。 */}
-              {(fp.rooms?.[rt]?.placedItems ?? []).map((p) => (
-                <Suspense key={p.instanceId} fallback={null}>
-                  <PlacedItemMesh placed={p} def={ROOM_DEFS[rt]} roomW={rWm} roomD={rDm} room={rt} />
-                </Suspense>
-              ))}
-              {nightGlow > 0 && (
-                <pointLight position={[0, postH - 0.3, 0]} intensity={nightGlow * 0.5} distance={Math.max(rWm, rDm) * 1.4} color="#FFE4A0" />
-              )}
-            </group>
-          );
-        }
-
-        // ── 天台泳池: 真实池壁 + 半透明水面 + 动态水光 ──
-        if (rt === "rooftop_pool") {
-          const poolDepth = 1.3;
-          const wallT     = 0.14;
-          const innerW    = rWm - wallT * 2;
-          const innerD    = rDm - wallT * 2;
-          return (
-            <group key={rt} position={[cx, y, cz]}>
-              {/* white tiled pool walls */}
-              {([
-                [[0,  rDm / 2 - wallT / 2, 0], [rWm, poolDepth, wallT]],
-                [[0, -rDm / 2 + wallT / 2, 0], [rWm, poolDepth, wallT]],
-                [[-rWm / 2 + wallT / 2, 0, 0], [wallT, poolDepth, rDm]],
-                [[ rWm / 2 - wallT / 2, 0, 0], [wallT, poolDepth, rDm]],
-              ] as [[number,number,number],[number,number,number]][]).map(([wp, sz], i) => (
-                <mesh key={i} position={[wp[0], poolDepth / 2, wp[2]]} castShadow receiveShadow>
-                  <boxGeometry args={sz} />
-                  <meshStandardMaterial color="#E8E4DC" roughness={0.15} metalness={0.05} />
-                </mesh>
-              ))}
-              {/* pool floor (white tile) */}
-              <mesh position={[0, 0.01, 0]} receiveShadow>
-                <boxGeometry args={[innerW, 0.06, innerD]} />
-                <meshStandardMaterial color="#D6EEF8" roughness={0.2} />
-              </mesh>
-              {/* animated water surface */}
-              <mesh position={[0, poolDepth * 0.82, 0]} receiveShadow>
-                <boxGeometry args={[innerW, 0.03, innerD]} />
-                <meshStandardMaterial
-                  color="#29B6E8"
-                  transparent opacity={0.72}
-                  roughness={0.04} metalness={0.15}
-                  emissive={nightGlow > 0 ? "#0284C7" : "#000000"}
-                  emissiveIntensity={nightGlow * 0.55}
-                />
-              </mesh>
-              {/* pool coping edge (dark stone cap) */}
-              {([
-                [0,  rDm / 2, rWm + 0.08],
-                [0, -rDm / 2, rWm + 0.08],
-                [-rWm / 2, 0, wallT * 0.6],
-                [ rWm / 2, 0, wallT * 0.6],
-              ] as [number,number,number][]).map(([ex, ez, ew], i) => (
-                <mesh key={i} position={[ex, poolDepth + 0.03, ez < 0 ? -rDm / 2 : ez > rDm / 3 ? rDm / 2 : 0]}
-                      rotation={[0, i > 1 ? Math.PI / 2 : 0, 0]} castShadow>
-                  <boxGeometry args={[i < 2 ? rWm + 0.08 : rDm + 0.08, 0.06, 0.18]} />
-                  <meshStandardMaterial color="#8A7968" roughness={0.35} />
-                </mesh>
-              ))}
-              {nightGlow > 0 && (
-                <pointLight position={[0, poolDepth * 0.4, 0]} intensity={nightGlow * 1.1} distance={Math.max(rWm, rDm) * 1.8} color="#38BDF8" decay={2} />
-              )}
-            </group>
-          );
-        }
-
-        // ── 天台花园: 草地 + 真实灌木 + 树木 GLB ──
-        if (rt === "rooftop_garden") {
-          const plantRows = Math.max(1, Math.round(rDm / 1.8));
-          const plantCols = Math.max(1, Math.round(rWm / 1.8));
-          const shrubPaths = [SHRUB2_PATH, BOXWOOD_PATH, HEDGE_PATH];
-          return (
-            <group key={rt} position={[cx, y, cz]}>
-              {/* grass deck */}
-              <mesh receiveShadow>
-                <boxGeometry args={[rWm, 0.07, rDm]} />
-                <meshStandardMaterial color="#3D7A4E" roughness={0.95} />
-              </mesh>
-              {/* edge planter strips (concrete trough) */}
-              {[rDm / 2 - 0.22, -rDm / 2 + 0.22].map((pz, i) => (
-                <group key={i}>
-                  <mesh position={[0, 0.20, pz]} castShadow>
-                    <boxGeometry args={[rWm * 0.85, 0.38, 0.42]} />
-                    <meshStandardMaterial color="#7A6F64" roughness={0.85} />
-                  </mesh>
-                  {/* soil top */}
-                  <mesh position={[0, 0.40, pz]}>
-                    <boxGeometry args={[rWm * 0.85, 0.04, 0.42]} />
-                    <meshStandardMaterial color="#4A3322" roughness={0.98} />
-                  </mesh>
-                </group>
-              ))}
-              {/* real shrub GLBs in a grid */}
-              <Suspense fallback={null}>
-                {Array.from({ length: plantRows * plantCols }, (_, idx) => {
-                  const row  = Math.floor(idx / plantCols);
-                  const col  = idx % plantCols;
-                  const px2  = lerp(-rWm / 2 + 0.5, rWm / 2 - 0.5, plantCols > 1 ? col / (plantCols - 1) : 0.5);
-                  const pz2  = lerp(-rDm / 2 + 0.6, rDm / 2 - 0.6, plantRows > 1 ? row / (plantRows - 1) : 0.5);
-                  const path = shrubPaths[idx % shrubPaths.length];
-                  const h    = 0.5 + (idx % 3) * 0.18;
-                  return (
-                    <group key={idx} position={[px2, 0.07, pz2]}>
-                      <GltfPlant path={path} targetH={h} rotY={(idx * 1.37) % (Math.PI * 2)} />
-                    </group>
-                  );
-                })}
+        // 天台房间统一按普通房间渲染：外壳/装饰（遮阳棚/泳池/花园/吧台/
+        // 设备箱）全部已是目录家具，走房间 placedItems，不再按房间类型
+        // 程序化写死几何。默认布局在 store.makeRooftopFloorPlan 注入，
+        // 用户可在平面图 / 效果图里自由增删 / 缩放 / 旋转，各视图统一用
+        // PlacedItemMesh 渲染（与普通楼层房间完全一致）。
+        const items = fp.rooms?.[rt]?.placedItems ?? [];
+        return (
+          <group key={rt} position={[cx, y, cz]}>
+            {items.map((p) => (
+              <Suspense key={p.instanceId} fallback={null}>
+                <PlacedItemMesh placed={p} def={ROOM_DEFS[rt]} roomW={rWm} roomD={rDm} room={rt} />
               </Suspense>
-              {/* palm accent tree at center-back */}
-              <Suspense fallback={null}>
-                <group position={[0, 0.07, -rDm / 2 + 1.0]}>
-                  <GltfPlant path={PALM_PATH} targetH={Math.min(rDm * 0.55, 2.8)} />
-                </group>
-              </Suspense>
-              {/* bonsai pots as accent */}
-              <Suspense fallback={null}>
-                {([-rWm / 3, rWm / 3] as number[]).map((bx, i) => (
-                  <group key={i} position={[bx, 0.07, rDm / 2 - 0.5]}>
-                    <GltfPlant path={BONSAI_PATH} targetH={0.55} rotY={i * Math.PI} />
-                  </group>
-                ))}
-              </Suspense>
-            </group>
-          );
-        }
-
-        // ── 天台吧台: 程序化吧台 + 真实餐椅 GLB ──
-        if (rt === "rooftop_bar") {
-          const counterH   = 1.08;
-          const counterD2  = 0.52;
-          const chairCount = Math.max(2, Math.floor(rWm / 0.75));
-          return (
-            <group key={rt} position={[cx, y, cz]}>
-              {/* bar counter body — dark walnut */}
-              <mesh position={[0, counterH / 2, -rDm / 2 + counterD2 / 2]} castShadow receiveShadow>
-                <boxGeometry args={[rWm * 0.92, counterH, counterD2]} />
-                <meshStandardMaterial color="#2C1F14" roughness={0.45} />
-              </mesh>
-              {/* counter top — light marble */}
-              <mesh position={[0, counterH + 0.028, -rDm / 2 + counterD2 / 2]} castShadow>
-                <boxGeometry args={[rWm * 0.92 + 0.06, 0.055, counterD2 + 0.06]} />
-                <meshStandardMaterial color="#E8E2D8" roughness={0.12} metalness={0.05} />
-              </mesh>
-              {/* under-counter shelving (glass shelves) */}
-              {[0.28, 0.58, 0.88].map((frac, i) => (
-                <mesh key={i} position={[0, counterH * frac, -rDm / 2 + counterD2 * 0.45]} castShadow>
-                  <boxGeometry args={[rWm * 0.80, 0.02, counterD2 * 0.75]} />
-                  <meshStandardMaterial color="#A8C8D8" transparent opacity={0.5} roughness={0.05} metalness={0.1} />
-                </mesh>
-              ))}
-              {/* real dining chairs as bar stools */}
-              <Suspense fallback={null}>
-                {Array.from({ length: chairCount }, (_, i) => {
-                  const t  = chairCount > 1 ? i / (chairCount - 1) : 0.5;
-                  const sx = lerp(-rWm * 0.42, rWm * 0.42, t);
-                  return (
-                    <group key={i} position={[sx, 0, -rDm / 2 + counterD2 + 0.55]}>
-                      <GltfPlant path={DINING_CHAIR_PATH} targetH={0.90} rotY={Math.PI} />
-                    </group>
-                  );
-                })}
-              </Suspense>
-              {/* garden table as serving table at center of room */}
-              <Suspense fallback={null}>
-                <group position={[0, 0, rDm / 4]}>
-                  <GltfPlant path={GARDEN_TABLE_PATH} targetH={0.75} />
-                </group>
-              </Suspense>
-              {nightGlow > 0 && (
-                <pointLight position={[0, counterH + 0.6, -rDm / 2 + counterD2]} intensity={nightGlow * 0.8} distance={Math.max(rWm, rDm) * 1.5} color="#FFD080" decay={2} />
-              )}
-            </group>
-          );
-        }
-
-        // ── 设备间: 程序化设备箱 + 细节（无合适 GLB）──
-        if (rt === "equipment_room") {
-          const boxH = Math.min(Math.max(rDm * 0.6, 1.8), 2.8);
-          return (
-            <group key={rt} position={[cx, y, cz]}>
-              <mesh position={[0, boxH / 2, 0]} castShadow receiveShadow>
-                <boxGeometry args={[rWm * 0.85, boxH, rDm * 0.8]} />
-                <meshStandardMaterial color="#6B7280" roughness={0.55} metalness={0.15} />
-              </mesh>
-              {/* louvred vents */}
-              {([-0.22, 0, 0.22] as number[]).map((oz, i) => (
-                <mesh key={i} position={[rWm * 0.425 + 0.001, boxH * 0.55, oz]} castShadow>
-                  <boxGeometry args={[0.025, 0.18, 0.06]} />
-                  <meshStandardMaterial color="#374151" roughness={0.7} />
-                </mesh>
-              ))}
-              {/* access panel lines */}
-              <mesh position={[-rWm * 0.30, boxH * 0.5, rDm * 0.401]} castShadow>
-                <boxGeometry args={[rWm * 0.35, boxH * 0.55, 0.02]} />
-                <meshStandardMaterial color="#9CA3AF" roughness={0.5} metalness={0.2} />
-              </mesh>
-              {/* flashing warning beacon */}
-              <RooftopBeacon position={[0, boxH + 0.08, 0]} />
-            </group>
-          );
-        }
-
-        return null;
+            ))}
+            {nightGlow > 0 && (
+              <pointLight position={[0, 2.2, 0]} intensity={nightGlow * 0.5} distance={Math.max(rWm, rDm) * 1.5} color="#FFE4A0" />
+            )}
+          </group>
+        );
       })}
     </group>
   );
 }
 
-function RooftopBeacon({ position }: { position: [number, number, number] }) {
-  const ref = useRef<THREE.Mesh>(null!);
-  useFrame(({ clock }) => {
-    if (ref.current) {
-      const mat = ref.current.material as THREE.MeshStandardMaterial;
-      mat.emissiveIntensity = 0.4 + Math.abs(Math.sin(clock.getElapsedTime() * 2.5)) * 0.8;
-    }
-  });
-  return (
-    <mesh ref={ref} position={position}>
-      <sphereGeometry args={[0.07, 10, 8]} />
-      <meshStandardMaterial color="#FF3333" emissive="#FF0000" emissiveIntensity={0.8} />
-    </mesh>
-  );
-}
-
-function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
 // ─── Walkthrough floor with proper texture (wood planks or registered
 // tile texture). Mirrors RoomShell's floor material — gives the
@@ -2352,7 +2167,7 @@ export default function FloorPlanBuilding({
     // 优先级：S → N → W → E，只要这面墙是外墙（距离 < EPS）。
     // 没有任何外墙时，回退到"最接近外边界"（升序最小距离）。
     // 这样可以避免浮点并列导致门钉到侧墙。
-    if (fi === 0 && room === "living") {
+    if ((exterior.livingEntryDoor ?? true) && fi === 0 && room === "living") {
       const wallsByPriority: DoorConfig["wall"][] = ["S", "N", "W", "E"];
       const pickFrontFirst = wallsByPriority.find(w => d[w] < EPS);
       const wall: DoorConfig["wall"] = pickFrontFirst ?? (() => {
@@ -3676,11 +3491,22 @@ export default function FloorPlanBuilding({
         const wcz = (lcy - planOffset.minY) * CM - D / 2;
         const yBase = fi * (FLOOR_H + SLAB_T);
         if (insideBuilding) return null; // hidden inside — visible=false still intercepts raycasting
+        // 顶层背景板：天台可上人时，绕开楼梯井开口（同屋面板/层间楼板的
+        // carveRect 机制），否则这块实心板的顶面会把天台楼梯口封死。
+        const topFloor   = usedFloors - 1;
+        const stairEntry = interiorRooms.find(r => r.isStair && r.fi === 0);
+        const bgOpening  = (exterior.hasRooftop && fi === topFloor && stairEntry)
+          ? { cx: stairEntry.cx, cz: stairEntry.cz, w: stairEntry.rW, d: stairEntry.rD }
+          : null;
         return (
-          <mesh key={`bg-${fi}`} position={[wcx, yBase + FLOOR_H / 2, wcz]} receiveShadow>
-            <boxGeometry args={[lW + 0.02, FLOOR_H + 0.01, lD + 0.02]} />
-            <meshStandardMaterial color={wallColor} roughness={0.82} metalness={0.01} />
-          </mesh>
+          <group key={`bg-${fi}`}>
+            {carveRect(lW + 0.02, lD + 0.02, wcx, wcz, bgOpening).map((p) => (
+              <mesh key={p.key} position={[p.x, yBase + FLOOR_H / 2, p.z]} receiveShadow>
+                <boxGeometry args={[p.w, FLOOR_H + 0.01, p.d]} />
+                <meshStandardMaterial color={wallColor} roughness={0.82} metalness={0.01} />
+              </mesh>
+            ))}
+          </group>
         );
       })}
 
@@ -4060,6 +3886,9 @@ export default function FloorPlanBuilding({
             const floorHasGlass = (fp.enabledRooms ?? [])
               .some(r => glassRooms.has(`${fi}:${r}`));
             if (floorHasGlass) return null;
+            // 顶层楼梯间：天台可上人时不画实心盒子，否则盒子顶面把天台
+            // 楼梯口封死（背景板已在同位置 carveRect 开了井口）。
+            if (room === "stair" && exterior.hasRooftop && fi === usedFloors - 1) return null;
             return (
               <mesh key={`box-${fi}-${room}`} position={[cx, yBase + FLOOR_H / 2, cz]} castShadow receiveShadow>
                 <boxGeometry args={[rW, FLOOR_H, rD]} />
@@ -5248,6 +5077,10 @@ export default function FloorPlanBuilding({
           parapetThicknessCm={exterior.parapetThicknessCm ?? 12}
           coveLightEnabled={exterior.coveLightEnabled ?? true}
           coveLightColor={exterior.coveLightColor ?? "#D0E8FF"}
+          stairOpening={(() => {
+            const se = interiorRooms.find(r => r.isStair && r.fi === 0);
+            return se ? { cx: se.cx, cz: se.cz, w: se.rW, d: se.rD } : null;
+          })()}
         />
       )}
 
@@ -6953,8 +6786,9 @@ export default function FloorPlanBuilding({
                 </mesh>
               );
             })()}
-            {/* 地板：楼梯间上层（fi>0）不渲染地板，保持楼梯开口畅通 */}
-            {!(isStair && fi > 0) && (
+            {/* 地板：楼梯间上层（fi>0）默认不渲染地板，保持楼梯开口畅通；
+                可用 exterior.stairFloorSlab 开关强制铺实心楼板（调试用）。 */}
+            {(!(isStair && fi > 0) || (exterior.stairFloorSlab ?? false)) && (
               <WalkthroughFloor
                 cx={cx} cz={cz} yBase={yBase} rW={rW} rD={rD}
                 floorColor={floorColor}
@@ -7102,8 +6936,9 @@ export default function FloorPlanBuilding({
                 </group>
               );
             })()}
-            {/* 天花板 — 走廊和楼梯间不渲染。色由 ExteriorSettings.roomCeilingColor 决定。*/}
-            {!isStair && !isHallway && (
+            {/* 天花板 — 走廊和楼梯间默认不渲染（通行空间无装饰的结构性约定）；
+                exterior.circulationDecor 打开后通行空间也铺天花板（调试用）。*/}
+            {((exterior.circulationDecor ?? false) || (!isStair && !isHallway)) && (
               <mesh position={[cx, yBase + FLOOR_H - 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
                 <planeGeometry args={[rW - 0.04, rD - 0.04]} />
                 <meshStandardMaterial color={exterior.roomCeilingColor ?? "#F5F2EE"} roughness={0.88} side={THREE.BackSide}
@@ -7113,7 +6948,7 @@ export default function FloorPlanBuilding({
             )}
             {/* 天花板筒灯（室内模式）—— 4 盏矩形嵌入式灯，不遮挡视线。
                 阈值 + 总开关从 ExteriorSettings 读取，便于按风格统一调灯感。 */}
-            {insideBuilding && (exterior.ceilingLightsEnabled ?? true) && !isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (() => {
+            {insideBuilding && (exterior.ceilingLightsEnabled ?? true) && ((exterior.circulationDecor ?? false) || (!isStair && !isHallway)) && !glassRooms.has(`${fi}:${room}`) && (() => {
               const roomArea = rW * rD;
               const lgA = Math.max(4, Math.min(40, exterior.ceilingLightLargeArea ?? 12));
               const mdA = Math.max(2, Math.min(lgA, exterior.ceilingLightMediumArea ?? 6));
@@ -7151,7 +6986,7 @@ export default function FloorPlanBuilding({
               ));
             })()}
             {/* 踢脚线（室内模式）—— 沿四墙底部，高度+色由 ExteriorSettings 决定 */}
-            {insideBuilding && (exterior.skirtingEnabled ?? true) && !isStair && !isHallway && !glassRooms.has(`${fi}:${room}`) && (() => {
+            {insideBuilding && (exterior.skirtingEnabled ?? true) && ((exterior.circulationDecor ?? false) || (!isStair && !isHallway)) && !glassRooms.has(`${fi}:${room}`) && (() => {
               const skH = Math.max(0.04, Math.min(0.20, (exterior.skirtingHeight ?? 8) / 100));
               const skT = Math.max(0.005, Math.min(0.04, (exterior.skirtingThicknessCm ?? 1.2) / 100));
               const skColor = exterior.skirtingColor ?? "#9C8A70";
@@ -7475,8 +7310,9 @@ export default function FloorPlanBuilding({
             {/* ── §10 walkthrough LOD detail: baseboards + crown + warm
                  point light. Only mounts inside the building so the
                  exterior view stays unchanged. Stair / hallway skipped
-                 — they shouldn't have residential trim. ── */}
-            {insideBuilding && !isStair && !isHallway && (
+                 by default — they shouldn't have residential trim;
+                 exterior.circulationDecor 打开后通行空间也加室内细节。 ── */}
+            {insideBuilding && ((exterior.circulationDecor ?? false) || (!isStair && !isHallway)) && (
               <InteriorRoomDetail
                 cx={cx}
                 cz={cz}

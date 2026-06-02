@@ -207,6 +207,9 @@ function defaultRooftopLoungeItems(): PlacedItem[] {
     instanceId: genId(), furnitureId, x, z, rotation,
   });
   return [
+    // 遮阳棚：一件普通家具（凉亭），默认覆盖休闲区中央，渲染走统一
+    // PlacedItemMesh → RooftopFixtureMesh(Pergola)，不再在各视图写死。
+    mk("pergola", 250, 200, 0),
     mk("lounger-sun", 175, 250, 0),
     mk("lounger-sun", 325, 250, 180),
     mk("outdoor-sofa", 250, 95, 0),
@@ -216,6 +219,34 @@ function defaultRooftopLoungeItems(): PlacedItem[] {
     // 光伏阵列：一件普通家具，默认 360×360（≈3×2 块），放在休闲区里，
     // 可在平面图 / 效果图里拖动 / 缩放 / 旋转，拉大尺寸即增加面板。
     mk("solar-panel-array", 260, 150, 0),
+  ];
+}
+
+/** 屋顶泳池默认布局（600×350cm）：一座镜面泳池 + 两张躺椅。家具化，
+ *  各视图统一渲染，用户可自由增删 / 缩放 / 拖动。 */
+function defaultRooftopPoolItems(): PlacedItem[] {
+  return [
+    { instanceId: genId(), furnitureId: "reflecting-pool", x: 300, z: 200, rotation: 0, scaleW: 1.6, scaleD: 2.5 },
+    { instanceId: genId(), furnitureId: "lounger-sun", x: 80,  z: 60, rotation: 0 },
+    { instanceId: genId(), furnitureId: "lounger-sun", x: 520, z: 60, rotation: 0 },
+  ];
+}
+
+/** 屋顶花园默认布局（500×400cm）：一块绿化草坪 + 数个花盆。家具化。 */
+function defaultRooftopGardenItems(): PlacedItem[] {
+  return [
+    { instanceId: genId(), furnitureId: "green-roof-patch", x: 250, z: 200, rotation: 0 },
+    { instanceId: genId(), furnitureId: "planter-clay", x: 60,  z: 60,  rotation: 0 },
+    { instanceId: genId(), furnitureId: "planter-clay", x: 440, z: 60,  rotation: 0 },
+    { instanceId: genId(), furnitureId: "planter-clay", x: 60,  z: 340, rotation: 0 },
+    { instanceId: genId(), furnitureId: "planter-clay", x: 440, z: 340, rotation: 0 },
+  ];
+}
+
+/** 天台酒吧默认布局（400×300cm）：一座露天吧台（含吧凳/酒架）。家具化。 */
+function defaultRooftopBarItems(): PlacedItem[] {
+  return [
+    { instanceId: genId(), furnitureId: "sky-bar", x: 200, z: 130, rotation: 0 },
   ];
 }
 
@@ -236,6 +267,11 @@ function defaultStairItems(): PlacedItem[] {
 function makeRooftopFloorPlan(): FloorPlan {
   const rooms = Object.fromEntries(ALL_ROOM_TYPES.map(r => [r, emptyRoom()])) as Record<RoomType, RoomState>;
   rooms.rooftop_lounge = { materials: {}, placedItems: defaultRooftopLoungeItems() };
+  // 其余天台房间也预置默认家具：用户启用后即按普通房间渲染（外壳/装饰
+  // 全部走 placedItems，不再在视图里按类型写死）。
+  rooms.rooftop_pool   = { materials: {}, placedItems: defaultRooftopPoolItems() };
+  rooms.rooftop_garden = { materials: {}, placedItems: defaultRooftopGardenItems() };
+  rooms.rooftop_bar    = { materials: {}, placedItems: defaultRooftopBarItems() };
   return {
     rooms,
     enabledRooms: ["rooftop_lounge"],
@@ -2523,7 +2559,7 @@ export const useDesignerStore = create<DesignerStore>()(
       //        in FloorPlanExterior have been deleted. Yard is now
       //        sourced exclusively from `yardPlan.items`. Migration is
       //        a no-op (no seeding) — see v3 → v4 branch.
-      version: 5,
+      version: 6,
       migrate: (persistedState, persistedVersion) => {
         const state = persistedState as Partial<DesignerStore> | undefined;
         if (!state) return state as unknown as DesignerStore;
@@ -2696,6 +2732,43 @@ export const useDesignerStore = create<DesignerStore>()(
             });
           }
           console.info("[home-designer] migrated persist v4 → v5 (stair → ordinary furniture)");
+        }
+        if (persistedVersion < 6) {
+          // v5 → v6: 天台「房间外壳」（遮阳棚/泳池/花园/吧台）不再在视图里
+          // 按房间类型写死，全部改成普通 placedItems。给已启用却没有对应
+          // 外壳家具的天台房间补默认布局，遮阳棚补进休闲区。
+          const seeders: Record<string, () => PlacedItem[]> = {
+            rooftop_lounge: () => [{ instanceId: genId(), furnitureId: "pergola", x: 250, z: 200, rotation: 0 }],
+            rooftop_pool:   defaultRooftopPoolItems,
+            rooftop_garden: defaultRooftopGardenItems,
+            rooftop_bar:    defaultRooftopBarItems,
+          };
+          const shellIds: Record<string, string[]> = {
+            rooftop_lounge: ["pergola"],
+            rooftop_pool:   ["reflecting-pool"],
+            rooftop_garden: ["green-roof-patch"],
+            rooftop_bar:    ["sky-bar"],
+          };
+          const st = state as { floorPlans?: FloorPlan[] };
+          if (Array.isArray(st.floorPlans)) {
+            st.floorPlans.forEach(fp => {
+              for (const rt of Object.keys(seeders)) {
+                if (!fp.enabledRooms?.includes(rt as RoomType)) continue;
+                const room = fp.rooms?.[rt as RoomType];
+                const items = room?.placedItems ?? [];
+                const hasShell = items.some(p => shellIds[rt].includes(p.furnitureId));
+                if (hasShell) continue;
+                fp.rooms = {
+                  ...fp.rooms,
+                  [rt]: {
+                    materials: room?.materials ?? {},
+                    placedItems: [...items, ...seeders[rt]()],
+                  },
+                } as FloorPlan["rooms"];
+              }
+            });
+          }
+          console.info("[home-designer] migrated persist v5 → v6 (rooftop shells → ordinary furniture)");
         }
         return state as unknown as DesignerStore;
       },
