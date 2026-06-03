@@ -14,7 +14,7 @@ import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, E
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
 import { DetailedDecor } from "./DetailedDecor";
-import { FirstPersonControls, FirstPersonButton, TouchJoystick } from "./FirstPersonControls";
+import { FirstPersonControls, TouchJoystick } from "./FirstPersonControls";
 import { getFloorTexture, getWallTexture, floorTileSize, wallTileSize } from "@/lib/textures";
 import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 import { StyledWindow } from "@/components/shared/StyledWindow";
@@ -4010,20 +4010,6 @@ export default function RoomCanvas() {
 
   return (
     <div className="w-full h-full relative">
-      {/* First-person toggle — top-right, prominent so it's findable */}
-      <div className="absolute top-3 right-3 z-30">
-        <button
-          onClick={() => setFirstPerson(v => !v)}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold shadow-lg transition-all active:scale-95"
-          style={firstPerson
-            ? { background: "linear-gradient(135deg,#10B981,#059669)", color: "#fff", border: "1px solid rgba(110,231,183,0.5)" }
-            : { background: "linear-gradient(135deg,#4F46E5,#4338CA)", color: "#fff", border: "1px solid rgba(167,139,250,0.5)" }
-          }
-        >
-          {firstPerson ? "↩ 退出漫游" : "🚶 第一人称漫游"}
-        </button>
-      </div>
-
       {firstPerson && (
         <>
           {/* Top center: active mode banner — unmissable */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useEffect, useState, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
+import { useRef, useMemo, useEffect, useState, useCallback, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
 import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars, Instances, Instance, PerformanceMonitor } from "@react-three/drei";
 import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, HueSaturation, ToneMapping } from "@react-three/postprocessing";
@@ -5397,18 +5397,24 @@ function TouchJoystick({ onChange }: { onChange: (axisX: number, axisZ: number) 
  *  - Mobile joystick: an external state can inject {axisX,axisZ}.
  *  - When `spawnPos` changes, teleports the camera there. */
 function WalkthroughController({
-  active, spawnPos, bbox, onExit, walls, doorPasses, joystick, noClip,
+  active, spawnPos, bbox, onExit, walls, doorPasses, joystick, noClip, storeyH,
 }: {
   active: boolean;
   spawnPos: [number, number, number] | null;
   bbox: { minX: number; maxX: number; minZ: number; maxZ: number; minY: number; maxY: number };
   onExit: () => void;
   /** Room footprints in world coords. Movement is blocked by any of these
-   *  rect's perimeter — when crossed, we slide. */
-  walls: AABB[];
+   *  rect's perimeter — when crossed, we slide. `floor` tags which storey
+   *  the rect belongs to so the 2D collision test only uses rooms on the
+   *  player's current floor (otherwise stacked upper/lower rooms blur the
+   *  wall positions and you walk straight through walls). */
+  walls: Array<AABB & { floor: number; room: string; hides?: Partial<Record<import("@/lib/types").WallSide, boolean>> }>;
+  /** Metres per storey (FloorPlanExterior pitch). Used to derive the
+   *  player's current floor index from camera.y. */
+  storeyH: number;
   /** Rect regions on walls where movement is freely allowed (doors).
    *  blocksMovement checks these before declaring a wall crossing. */
-  doorPasses: Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>;
+  doorPasses: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number }>;
   /** Live touch joystick output, -1..1 on each axis. Forward = +axisZ
    *  (same convention as WASD's dz). */
   joystick: { axisX: number; axisZ: number };
@@ -5417,6 +5423,7 @@ function WalkthroughController({
   noClip: boolean;
 }) {
   const { camera, scene } = useThree();
+  const gl = useThree(s => s.gl);
   const invalidate = useThree(s => s.invalidate);
   const advance = useThree(s => s.advance);
   // Dev-only globals so we can introspect this scene from the browser
@@ -5454,6 +5461,10 @@ function WalkthroughController({
    *  Updated by the downward raycast; used as fallback when mid-air
    *  (e.g. between stair steps or stepping off the top landing). */
   const floorYRef = useRef(0);
+  /** Consecutive frames the downward raycast found no floor. We only fall
+   *  back to floorYRef after several misses, so a single-frame miss on the
+   *  instanced stair treads doesn't yank the eye downward (jitter on stairs). */
+  const floorMissRef = useRef(0);
   // Yaw/pitch tracked separately for drag-look (more reliable than mutating
   // camera.rotation directly).
   const yawRef   = useRef(0);
@@ -5466,9 +5477,15 @@ function WalkthroughController({
     const key = spawnPos.join(",");
     if (spawnedRef.current === key) return;
     spawnedRef.current = key;
-    // Push near clip out to avoid black jagged artifacts from near geometry.
+    // Near clip kept SMALL (0.12) so walls right in front of the eye still
+    // render. A larger near (we used 0.3) clipped away any wall within 0.3 m —
+    // so pushing the joystick up against a wall sliced the wall out of the
+    // frustum and you saw straight through it into the yard / the next room
+    // ("墙像是透视的"). 0.12 m, paired with the WALL_STANDOFF collision gap in
+    // useFrame (which keeps the eye ≥0.2 m off every wall face), guarantees the
+    // wall is always in front of the near plane → never clipped.
     const cam2 = camera as THREE.PerspectiveCamera;
-    if (cam2.isPerspectiveCamera) { cam2.near = 0.3; cam2.updateProjectionMatrix(); }
+    if (cam2.isPerspectiveCamera) { cam2.near = 0.12; cam2.updateProjectionMatrix(); }
     camera.position.set(spawnPos[0], spawnPos[1], spawnPos[2]);
     // Initialise floor tracker to spawn floor (eye height − 1.6 m)
     floorYRef.current = spawnPos[1] - 1.6;
@@ -5491,7 +5508,10 @@ function WalkthroughController({
   useEffect(() => {
     if (!active) return;
     const onDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { onExit(); return; }
+      if (e.key === "Escape") {
+        onExit();
+        return;
+      }
       keysRef.current[e.key.toLowerCase()] = true;
     };
     const onUp = (e: KeyboardEvent) => { keysRef.current[e.key.toLowerCase()] = false; };
@@ -5573,49 +5593,131 @@ function WalkthroughController({
    *  user is moving INTO a room (both endpoints inside the same rect)
    *  or staying outside all rects. */
   const blocksMovement = (x1: number, z1: number, x2: number, z2: number): boolean => {
-    let curRoom = -1, newRoom = -1;
+    // Collision is a 2D (XZ) test, but room rects from EVERY storey are
+    // flattened together. Without a floor filter the rooms stacked above /
+    // below the player overlap his XZ footprint, scrambling which rect he's
+    // "in" → walls land in the wrong place and he glides through them. So we
+    // restrict the test to ONE floor's rects.
+    //
+    // Pick that floor by NEAREST floor-base-Y to the player's foot height
+    // (eye − 1.6), not by `round((y−1.6)/storey)`. Rounding silently selects
+    // a floor index that might not exist among the rects (e.g. when you're
+    // mid-stair, or the storey pitch is a touch off) → zero rects match →
+    // blocksMovement returns false for everything → you walk through ALL
+    // walls. Nearest-match always lands on a real, populated floor, so
+    // collision can never silently disable.
+    const footY = camera.position.y - 1.6;
+    let curFloorIdx = -1, bestFloorDist = Infinity;
+    for (let i = 0; i < walls.length; i++) {
+      const dist = Math.abs(walls[i].floor * storeyH - footY);
+      if (dist < bestFloorDist) { bestFloorDist = dist; curFloorIdx = walls[i].floor; }
+    }
+    // ── Building-shell gate (fixes joystick "出到房屋外面") ──────────
+    // The walkable room rects are each shrunk inward by WALL_HALF, so a thin
+    // band hugs every wall where membership reads -1. On INTERIOR walls the
+    // two neighbouring rooms' bands overlap and cover the wall, but on the
+    // OUTER perimeter only one room abuts the wall → the outward half of that
+    // band has NO room and no neighbour. The old `curRoom===-1 && newRoom===-1
+    // → allow` rule then let any outward step leak straight through the shell
+    // into the yard. Mirror the building's solid outer wall instead: crossing
+    // the building's outer boundary is blocked unless a doorPass covers it —
+    // the general "exterior wall is solid except at doors" rule.
+    //
+    // The shell is the OUTER BOUNDING BOX of this floor's room rects — i.e. the
+    // exterior-wall outline itself — NOT a per-room padded union. Two earlier
+    // attempts at a padded union both failed:
+    //   • pad = WALL_HALF (0.06): adjacent rooms don't tile flush (their walls
+    //     sit ~0.10m apart, +0.06 shrink each → up to 0.22m collision seams,
+    //     e.g. 客厅 maxX 0.44 ↔ 书房 minX 0.66). 0.06 left a slit down every
+    //     interior wall; where it met the outer wall it was a pinhole → leak.
+    //   • pad = 0.15 (to bridge the 0.22m seams): closed the pinholes but
+    //     overshot the EXTERIOR wall — the player could stand 0.15m past a room
+    //     rect, which is 0.03m beyond the 0.12m-thick outer wall's far face, so
+    //     the camera near-plane poked into the yard ("眼睛穿出外墙"). A single
+    //     symmetric pad can't both bridge a 0.22m interior seam AND stay inside
+    //     a 0.12m exterior wall — the two constraints contradict.
+    // The bbox sidesteps both: interior seams are INSIDE the box (the room-vs-
+    // room logic below still walls them off), and the box edge is exactly the
+    // exterior wall's interior face, so the eye stops at the wall — no pinhole,
+    // no overshoot. (For a non-rectangular footprint the bbox is a touch loose
+    // around concave notches, but the player still can't reach the outer yard.)
+    let shMinX = Infinity, shMaxX = -Infinity, shMinZ = Infinity, shMaxZ = -Infinity;
     for (let i = 0; i < walls.length; i++) {
       const r = walls[i];
-      if (x1 >= r.minX && x1 <= r.maxX && z1 >= r.minZ && z1 <= r.maxZ) curRoom = i;
-      if (x2 >= r.minX && x2 <= r.maxX && z2 >= r.minZ && z2 <= r.maxZ) newRoom = i;
+      if (r.floor !== curFloorIdx) continue;
+      if (r.minX < shMinX) shMinX = r.minX;
+      if (r.maxX > shMaxX) shMaxX = r.maxX;
+      if (r.minZ < shMinZ) shMinZ = r.minZ;
+      if (r.maxZ > shMaxZ) shMaxZ = r.maxZ;
     }
-    if (curRoom === -1 && newRoom === -1) return false;  // both outside any room
-    if (curRoom === newRoom)              return false;  // same room — allow
-    // ── Hidden-wall pass-through ───────────────────────────────────
-    // If the segment exits curRoom through a side whose hide flag is
-    // set, allow it. Symmetric: if it enters newRoom through a hidden
-    // side, allow. "Side" is inferred from the endpoint's relation to
-    // the AABB extents — small step distances make this exact.
-    const sideCrossing = (r: typeof walls[number] | undefined, ex: number, ez: number): import("@/lib/types").WallSide | null => {
-      if (!r) return null;
-      // NSWE convention: N = -Z (small worldZ), S = +Z (large worldZ),
-      // W = -X (small worldX), E = +X (large worldX). wallAABBs above is
-      // built without any Z-negation, so r.minZ is the room's NORTH side
-      // and r.maxZ is the SOUTH side. Crossing OUT through the small-Z
-      // boundary means exiting through the N wall, not S.
-      if (ex < r.minX) return "W";
-      if (ex > r.maxX) return "E";
-      if (ez < r.minZ) return "N";
-      if (ez > r.maxZ) return "S";
-      return null;
+    const inFootprint = (x: number, z: number): boolean =>
+      x >= shMinX && x <= shMaxX && z >= shMinZ && z <= shMaxZ;
+    if (inFootprint(x1, z1) !== inFootprint(x2, z2)) {
+      const mxs = (x1 + x2) * 0.5, mzs = (z1 + z2) * 0.5;
+      for (const pass of doorPasses) {
+        if (pass.floor !== curFloorIdx) continue;  // only THIS floor's doors open this floor's shell
+        if (x2 >= pass.minX && x2 <= pass.maxX && z2 >= pass.minZ && z2 <= pass.maxZ) return false;
+        if (x1 >= pass.minX && x1 <= pass.maxX && z1 >= pass.minZ && z1 <= pass.maxZ) return false;
+        if (mxs >= pass.minX && mxs <= pass.maxX && mzs >= pass.minZ && mzs <= pass.maxZ) return false;
+      }
+      return true;  // crossing the outer shell away from a door — blocked
+    }
+
+    // ── Interior wall collision: cross a SOLID rendered wall LINE → block ──
+    // Mirror FloorPlanExterior's wallSegments builder exactly: every room
+    // renders its 4 side walls as flat planes EXCEPT (a) sides flagged in
+    // roomWallsHidden, and (b) the hallway's long N/S sides (it abstains —
+    // `onlyShortEnds` — letting the neighbour rooms contribute those walls).
+    // A door punches a local hole (handled by the doorPass check below).
+    //
+    // We test the movement segment against every solid wall LINE rather than
+    // asking "which room is each endpoint in". The layout has OVERLAPPING
+    // room footprints (e.g. the corridor's rect overlaps the living room's by
+    // ~0.3 m), and point-in-rect membership mis-reads which room you're in
+    // inside that overlap → both endpoints read as the same room → the old
+    // `curRoom===newRoom → allow` short-circuit let you glide straight through
+    // the wall. A line-crossing test has no such ambiguity: the segment either
+    // crosses a wall line or it doesn't, no matter how the rects overlap.
+    //
+    // A horizontal wall (room N/S side) is the line z = zf over x ∈ [xlo,xhi];
+    // a vertical wall (room W/E side) is x = xf over z ∈ [zlo,zhi].
+    const crossesH = (zf: number, xlo: number, xhi: number): boolean => {
+      if ((z1 - zf) * (z2 - zf) > 0) return false;   // both endpoints same side
+      if (z1 === z2) return false;                   // travelling parallel to it
+      const t = (zf - z1) / (z2 - z1);
+      if (t < 0 || t > 1) return false;
+      const xc = x1 + (x2 - x1) * t;
+      return xc >= xlo && xc <= xhi;
     };
-    if (curRoom !== -1) {
-      const r = walls[curRoom];
-      const side = sideCrossing(r, x2, z2);
-      if (side && r.hides?.[side]) return false; // leaving via hidden side — allow
+    const crossesV = (xf: number, zlo: number, zhi: number): boolean => {
+      if ((x1 - xf) * (x2 - xf) > 0) return false;
+      if (x1 === x2) return false;
+      const t = (xf - x1) / (x2 - x1);
+      if (t < 0 || t > 1) return false;
+      const zc = z1 + (z2 - z1) * t;
+      return zc >= zlo && zc <= zhi;
+    };
+    let crossed = false;
+    for (let i = 0; i < walls.length && !crossed; i++) {
+      const r = walls[i];
+      if (r.floor !== curFloorIdx) continue;
+      const isHall = r.room === "hallway";
+      // N / S long sides — skipped for the hallway (neighbours render them).
+      if (!isHall) {
+        if (!r.hides?.N && crossesH(r.minZ, r.minX, r.maxX)) { crossed = true; break; }
+        if (!r.hides?.S && crossesH(r.maxZ, r.minX, r.maxX)) { crossed = true; break; }
+      }
+      // W / E short sides — every room (incl. hallway) renders these.
+      if (!r.hides?.W && crossesV(r.minX, r.minZ, r.maxZ)) { crossed = true; break; }
+      if (!r.hides?.E && crossesV(r.maxX, r.minZ, r.maxZ)) { crossed = true; break; }
     }
-    if (newRoom !== -1) {
-      const r = walls[newRoom];
-      // Entering = the previous endpoint was on the outside of newRoom's
-      // boundary. Same side function works on (x1, z1) for newRoom.
-      const side = sideCrossing(r, x1, z1);
-      if (side && r.hides?.[side]) return false; // entering through hidden side — allow
-    }
+    if (!crossed) return false;  // didn't cross any solid wall — allow
     // ── Door-pass — allow walking through door openings ──
     // Check if EITHER endpoint (or segment midpoint) falls inside any
     // doorPass rect. Doors auto-allow crossing the wall they're on.
     const mx = (x1 + x2) * 0.5, mz = (z1 + z2) * 0.5;
     for (const pass of doorPasses) {
+      if (pass.floor !== curFloorIdx) continue;  // a door only opens the wall on ITS floor
       if (x2 >= pass.minX && x2 <= pass.maxX && z2 >= pass.minZ && z2 <= pass.maxZ) return false;
       if (x1 >= pass.minX && x1 <= pass.maxX && z1 >= pass.minZ && z1 <= pass.maxZ) return false;
       if (mx >= pass.minX && mx <= pass.maxX && mz >= pass.minZ && mz <= pass.maxZ) return false;
@@ -5661,19 +5763,32 @@ function WalkthroughController({
     const mvZ = fwd.z * dz / Math.hypot(dx, dz) * speed + right.z * dx / Math.hypot(dx, dz) * speed;
 
     // ── 3. Wall collision: try full move, then X-only, then Z-only, else block ──
+    // `blocked` probes WALL_STANDOFF beyond the destination along the travel
+    // direction, so the eye halts that far SHORT of any wall instead of pressing
+    // flat against it. The gap (0.2 m) exceeds the camera near-clip (0.12 m), so
+    // the wall always sits in front of the near plane and is never sliced away —
+    // i.e. you can't push the joystick into a wall and see through it. The probe
+    // is direction-only: walls you slide PARALLEL to don't trip it.
+    const WALL_STANDOFF = 0.2;
+    const blocked = (x1: number, z1: number, x2: number, z2: number): boolean => {
+      if (blocksMovement(x1, z1, x2, z2)) return true;
+      const ddx = x2 - x1, ddz = z2 - z1, L = Math.hypot(ddx, ddz);
+      if (L < 1e-6) return false;
+      return blocksMovement(x2, z2, x2 + (ddx / L) * WALL_STANDOFF, z2 + (ddz / L) * WALL_STANDOFF);
+    };
     const cx = camera.position.x, cz = camera.position.z;
     let nx = cx + mvX, nz = cz + mvZ;
     const m = 0.25;
     nx = Math.min(bbox.maxX - m, Math.max(bbox.minX + m, nx));
     nz = Math.min(bbox.maxZ - m, Math.max(bbox.minZ + m, nz));
-    if (!noClip && blocksMovement(cx, cz, nx, nz)) {
+    if (!noClip && blocked(cx, cz, nx, nz)) {
       // Try sliding on X only
       const sx = Math.min(bbox.maxX - m, Math.max(bbox.minX + m, cx + mvX));
-      if (!blocksMovement(cx, cz, sx, cz)) { nx = sx; nz = cz; }
+      if (!blocked(cx, cz, sx, cz)) { nx = sx; nz = cz; }
       else {
         const sz = Math.min(bbox.maxZ - m, Math.max(bbox.minZ + m, cz + mvZ));
-        if (!blocksMovement(cx, cz, cx, sz)) { nx = cx; nz = sz; }
-        else                                  { nx = cx; nz = cz; }
+        if (!blocked(cx, cz, cx, sz)) { nx = cx; nz = sz; }
+        else                          { nx = cx; nz = cz; }
       }
     }
     camera.position.x = nx;
@@ -5699,22 +5814,35 @@ function WalkthroughController({
       //   • within 2.5 m below — covers one full floor height (2.8 m) + step approach
       //   • above the basement floor (avoid terrain/sky far below)
       if (hy < camera.position.y - 0.1 && hy > camera.position.y - 2.5 && hy > bbox.minY - 1) {
+        floorMissRef.current = 0;
+        floorYRef.current = hy;   // remember this floor for the fallback
         const target = hy + 1.6;
         const diff   = target - camera.position.y;
-        // Climb stairs faster (6/s) than descend (10/s) — rising feels responsive,
-        // descending snaps to avoid floating off a landing. Uses real frame dt.
-        const rate = diff > 0 ? 6 : 10;
-        camera.position.y += diff * Math.min(1, rate * dt);
-        floorYRef.current = hy;   // remember this floor for the fallback
+        // Frame-rate-independent exponential smoothing toward the floor.
+        //
+        // Stairs are ~41° (0.25 m rise over 0.28 m run), so walking up at
+        // 3 m/s demands ~2.6 m/s of *vertical* climb (5.2 m/s when running).
+        // The previous rate (6) capped vertical speed at diff·6 ≈ 1.5 m/s for
+        // a single 0.25 m step, so the eye could never keep up — it sank into
+        // the steps then lurched up at the top. Use a much higher climb rate
+        // and the proper 1−e^(−rate·dt) factor so the eye tracks the treads
+        // smoothly without per-step bobbing. Descend a touch faster so you
+        // don't float off a landing edge.
+        const rate = diff > 0 ? 16 : 20;
+        camera.position.y += diff * (1 - Math.exp(-rate * dt));
         return;
       }
     }
-    // No floor detected (mid-step gap, transition off stair landing, etc.).
-    // Gently float back to last-known floor + eye height rather than
-    // slamming to global minY, which would drop the player from the 2nd floor.
+    // No floor detected this frame. A single miss is usually just the
+    // downward ray slipping between instanced stair treads — hold the
+    // current eye height instead of yanking down. Only after several
+    // consecutive misses (genuinely walked off an edge) do we ease back
+    // to the last-known floor + eye height.
+    floorMissRef.current += 1;
+    if (floorMissRef.current < 6) return;
     const fallbackEye = floorYRef.current + 1.6;
     const diff = fallbackEye - camera.position.y;
-    camera.position.y += diff * Math.min(1, 6 * dt);
+    camera.position.y += diff * (1 - Math.exp(-8 * dt));
     camera.position.y = Math.max(bbox.minY, Math.min(bbox.maxY, camera.position.y));
   }
 
@@ -5929,7 +6057,7 @@ export default function HouseCanvas() {
   // the FloorPlan toolbar. Cardinal keys only — polygon edge-${i} hides
   // don't have a clean AABB-side mapping; users with polygon rooms still
   // need no-clip mode to walk through hidden polygon edges.
-  type WallRect = AABB & { hides?: Partial<Record<import("@/lib/types").WallSide, boolean>> };
+  type WallRect = AABB & { floor: number; room: string; hides?: Partial<Record<import("@/lib/types").WallSide, boolean>> };
   const wallAABBs = useMemo<WallRect[]>(() => {
     const out: WallRect[] = [];
     // House-wide bbox so each room's local center can be world-translated.
@@ -5947,7 +6075,8 @@ export default function HouseCanvas() {
     const CM_local = 0.01;
     const Wh = (maxX - minX) * CM_local;
     const Dh = (maxY - minY) * CM_local;
-    for (const fp of floorPlansForWalk) {
+    for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
+      const fp = floorPlansForWalk[fi];
       if (!fp) continue;
       for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
         const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
@@ -5969,6 +6098,8 @@ export default function HouseCanvas() {
         const WALL_HALF = 0.06;
         // No X-negation needed: new convention east = +X is correct without flip.
         out.push({
+          floor: fi,
+          room: r,
           minX: (p.x - minX) * CM_local - Wh / 2 + WALL_HALF,
           maxX: (p.x + d.width - minX) * CM_local - Wh / 2 - WALL_HALF,
           minZ: (p.y - minY) * CM_local - Dh / 2 + WALL_HALF,
@@ -6007,8 +6138,8 @@ export default function HouseCanvas() {
   //   "N" → SVG top (small planY)  = small world-Z = room AABB minZ side (NORTH wall, -Z)
   //   "S" → SVG bottom (large planY) = large world-Z = room AABB maxZ side (SOUTH wall, +Z)
   // Matches FloorPlanExterior's door render convention.
-  const doorPasses = useMemo<Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>>(() => {
-    const out: Array<{ minX: number; maxX: number; minZ: number; maxZ: number }> = [];
+  const doorPasses = useMemo<Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number }>>(() => {
+    const out: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number }> = [];
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
       const fp = floorPlansForWalk[fi]; if (!fp) continue;
@@ -6026,7 +6157,8 @@ export default function HouseCanvas() {
     const PAD = 0.4; // metres on either side of the wall — generous so users don't snag
 
     const collect = (door: { wall: string; pos: number; len: number },
-                     p: { x: number; y: number }, d: { width: number; depth: number }) => {
+                     p: { x: number; y: number }, d: { width: number; depth: number },
+                     floor: number) => {
       // Room world rect — new convention: north = -Z (small worldZ), south = +Z.
       const rMinX = (p.x - minX) * CM - Wh / 2;
       const rMaxX = (p.x + d.width - minX) * CM - Wh / 2;
@@ -6055,7 +6187,7 @@ export default function HouseCanvas() {
         const z1 = z0 + dLen;
         pass = { minX: rMaxX - PAD, maxX: rMaxX + PAD, minZ: z0, maxZ: z1 };
       }
-      if (pass) out.push(pass);
+      if (pass) out.push({ ...pass, floor });
     };
 
     // pickAutoDoor mirror: when a room has no stored doors, FloorPlanExterior
@@ -6131,18 +6263,18 @@ export default function HouseCanvas() {
         if (!p || !d) continue;
         const stored = fp.roomDoors?.[r];
         if (stored && stored.length > 0) {
-          for (const door of stored) collect({ wall: door.wall, pos: door.pos, len: door.len }, p, d);
+          for (const door of stored) collect({ wall: door.wall, pos: door.pos, len: door.len }, p, d, fi);
         } else if (fp.roomHasDoor?.[r] !== false) {
           // No stored doors → FPE synthesizes via pickAutoDoor. Mirror it.
           const auto = autoDoorFor(fi, r, p, d, fb);
-          collect(auto, p, d);
+          collect(auto, p, d, fi);
           // Also handle the legacy single-door fields if set
           if (fp.roomDoorWall?.[r]) {
             // Stored value is already NSWE post v1→v2 migration.
             const wall = fp.roomDoorWall[r] as import("@/lib/types").WallSide;
             const pos = fp.roomDoorPos?.[r] ?? auto.pos;
             const len = fp.roomDoorLen?.[r] ?? auto.len;
-            collect({ wall, pos, len }, p, d);
+            collect({ wall, pos, len }, p, d, fi);
           }
         }
       }
@@ -6153,7 +6285,11 @@ export default function HouseCanvas() {
   // ── Listen for "enterWalkthrough" event from ExteriorRoomList (left panel) ──
   // ExteriorRoomList dispatches this when the user clicks a room item.
   // We compute the room centre in world coords and teleport the camera there.
-  const WALK_FLOOR_H = 2.8; // metres per storey — must match FloorPlanExterior
+  // Real storey pitch in FloorPlanExterior = FLOOR_H(3.0) + SLAB_T(0.2) = 3.2 m.
+  // (The old 2.8 made every upper-floor spawn land ~0.4 m below the real slab,
+  // so you popped upward on arrival.) The downward raycast re-snaps Y anyway,
+  // but matching the pitch makes spawn land cleanly on the right floor.
+  const WALK_FLOOR_H = 3.2; // metres per storey — matches FloorPlanExterior pitch
   useEffect(() => {
     const CM_local = 0.01;
     const handler = (e: Event) => {
@@ -6182,6 +6318,7 @@ export default function HouseCanvas() {
       const worldX = (p.x + d.width  / 2 - bMinX) * CM_local - Wh / 2;
       const worldZ = (p.y + d.depth / 2 - bMinY) * CM_local - Dh / 2;
       const worldY = fi * WALK_FLOOR_H + 1.6;  // eye height on this floor
+      setWalkNoClip(false); // always enter with solid walls; 穿墙 is opt-in
       setWalkthrough(true);
       setWalkthroughSpawn([worldX, worldY, worldZ]);
     };
@@ -6207,6 +6344,20 @@ export default function HouseCanvas() {
   // Sun analysis — read from global store so AiRenderModal + YardPlan share the value
   const sunHour     = useDesignerStore(s => s.sunHour);
   const setSunHour  = useDesignerStore(s => s.setSunHour);
+  // Slider drag throttle: a <input type=range> drag fires many onChange
+  // events per frame, and each setSunHour re-renders this (very large)
+  // component + the whole 3D scene → visible lag. Coalesce to at most one
+  // store write per animation frame so the drag stays smooth.
+  const sunRafRef     = useRef<number | null>(null);
+  const sunPendingRef = useRef<number | null>(null);
+  const onSunDrag = useCallback((v: number) => {
+    sunPendingRef.current = v;
+    if (sunRafRef.current != null) return;
+    sunRafRef.current = requestAnimationFrame(() => {
+      sunRafRef.current = null;
+      if (sunPendingRef.current != null) setSunHour(sunPendingRef.current);
+    });
+  }, [setSunHour]);
   const siteLatLng  = useDesignerStore(s => s.siteLatLng);
   const sunPos = getSunPosition3D(sunHour, siteLatLng);
   const theme  = getSkyTheme(sunHour);
@@ -6273,6 +6424,7 @@ export default function HouseCanvas() {
                     bestZ = (aabb.minZ + aabb.maxZ) / 2;
                   }
                 }
+                setWalkNoClip(false); // always enter with solid walls; 穿墙 is opt-in
                 setWalkthrough(true);
                 setWalkthroughSpawn([bestX, 1.6, bestZ]);
               }
@@ -6307,8 +6459,8 @@ export default function HouseCanvas() {
                 onClick={() => setWalkNoClip(v => !v)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
                 title={walkNoClip
-                  ? "当前可穿墙 — 点击切换为实墙（不让穿）"
-                  : "当前实墙 — 点击切换为可穿墙（卡住时可临时用）"}
+                  ? "穿墙模式已开 — 当前可以穿过所有墙。点击关闭，恢复实墙阻挡。"
+                  : "穿墙模式已关 — 墙体正常阻挡。卡住时点击可临时穿墙。"}
                 style={{
                   background: walkNoClip
                     ? "linear-gradient(135deg,rgba(245,158,11,0.92),rgba(217,119,6,0.92))"
@@ -6317,7 +6469,7 @@ export default function HouseCanvas() {
                   border: `1px solid ${walkNoClip ? "rgba(254,215,170,0.5)" : "rgba(134,239,172,0.5)"}`,
                 }}
               >
-                🧱 {walkNoClip ? "可穿墙" : "实墙"}
+                {walkNoClip ? "👻 穿墙：开" : "🧱 穿墙：关"}
               </button>
             </>
           )}
@@ -6344,7 +6496,7 @@ export default function HouseCanvas() {
               letterSpacing: "0.04em",
               whiteSpace: "nowrap",
             }}>
-            🖱 左键拖动转视角 · 滚轮缩放 · WASD / 方向键 行走 · Shift 加速 · ESC 退出
+            🖱 左键拖动转视角 · WASD 行走 · Shift 疾跑 · 走上楼梯/天台 · ESC 退出
           </div>
           {/* Touch joystick — bottom-left, only useful with finger but
               always rendered (mouse drag also works on it). */}
@@ -6417,7 +6569,11 @@ export default function HouseCanvas() {
         </div>
       )}
 
-      {/* ── Sun Analysis Slider ── bottom-centre, draggable 0-24h ── */}
+      {/* ── Sun Analysis Slider ── bottom-centre, draggable 0-24h ──
+           Hidden during walkthrough: the sun-angle / shadow control only
+           affects the exterior daylight read, which is meaningless while
+           walking inside. */}
+      {!walkthrough && (
       <div
         className="absolute bottom-4 left-1/2 z-10 flex items-center gap-3 select-none"
         style={{
@@ -6468,7 +6624,7 @@ export default function HouseCanvas() {
           {/* Transparent range input — captures all drag events */}
           <input
             type="range" min={0} max={24} step={0.25} value={sunHour}
-            onChange={e => setSunHour(Number(e.target.value))}
+            onChange={e => onSunDrag(Number(e.target.value))}
             style={{
               position: "absolute", inset: 0, width: "100%", height: "100%",
               opacity: 0, cursor: "ew-resize", margin: 0, padding: 0,
@@ -6482,6 +6638,7 @@ export default function HouseCanvas() {
           SHADOW
         </span>
       </div>
+      )}
 
       <Canvas
         style={{ touchAction: "none" }}
@@ -6560,8 +6717,8 @@ export default function HouseCanvas() {
           lookAt={outsideLookAt}
           isInteractingRef={isInteractingRef}
         />
-        {/* OrbitControls — disabled during first-person walkthrough so
-            PointerLockControls owns mouse + drag rotation. */}
+        {/* OrbitControls — disabled during walkthrough so the WASD +
+            drag-look controller owns mouse rotation. */}
         {!walkthrough && (
           <OrbitControls
             ref={orbitRef}
@@ -6588,7 +6745,7 @@ export default function HouseCanvas() {
             // so user drags freely.
           />
         )}
-        {/* Walkthrough = WASD + PointerLockControls. bbox is the house's
+        {/* Walkthrough = WASD + drag-look. bbox is the house's
             ground-floor footprint with floors * FLOOR_H_M ceiling cap. */}
         <WalkthroughController
           active={walkthrough}
@@ -6605,6 +6762,7 @@ export default function HouseCanvas() {
           doorPasses={doorPasses}
           joystick={joystick}
           noClip={walkNoClip}
+          storeyH={WALK_FLOOR_H}
           onExit={exitWalkthrough}
         />
         {/* HDR as both IBL lighting AND photorealistic sky background.

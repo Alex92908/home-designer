@@ -2463,8 +2463,16 @@ export default function FloorPlanBuilding({
         // door via the SAME pickAutoDoor so the wall gets a hole exactly
         // where the rendered door sits. Without this, opening the door
         // reveals a solid wall behind it.
+        //
+        // Circulation rooms (stair / hallway) are EXCLUDED from auto-door
+        // synthesis — exactly as the interior render is (it only builds an
+        // autoDoor for `!isStair && !isHallway`). Previously this punched a
+        // phantom door hole into the stairwell's exterior wall while the
+        // interior render drew NO door panel there → an open gap you could
+        // see the yard grass through. A user-configured door still applies.
+        const isCircRoom = room === "stair" || room === "hallway";
         let doorsArr = configuredDoors;
-        if (configuredDoors.length === 0 && fp.roomHasDoor?.[room] !== false) {
+        if (!isCircRoom && configuredDoors.length === 0 && fp.roomHasDoor?.[room] !== false) {
           const bounds = floorBoundsArr[fi];
           if (bounds) {
             const rW = d.width * CM; const rD = d.depth * CM;
@@ -6941,7 +6949,7 @@ export default function FloorPlanBuilding({
             {((exterior.circulationDecor ?? false) || (!isStair && !isHallway)) && (
               <mesh position={[cx, yBase + FLOOR_H - 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
                 <planeGeometry args={[rW - 0.04, rD - 0.04]} />
-                <meshStandardMaterial color={exterior.roomCeilingColor ?? "#F5F2EE"} roughness={0.88} side={THREE.BackSide}
+                <meshStandardMaterial color={exterior.roomCeilingColor ?? "#F5F2EE"} roughness={0.88} side={THREE.DoubleSide}
                   emissive="#FFFDF8" emissiveIntensity={insideBuilding ? 0.08 : 0.02}
                   transparent={isXray} opacity={isXray ? 0.08 : 1} depthWrite={!isXray} />
               </mesh>
