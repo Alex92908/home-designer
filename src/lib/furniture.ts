@@ -1322,6 +1322,7 @@ export const FURNITURE: FurnitureItem[] = [
   // ─── 楼梯 Staircases（普通家具：方位走旋转、大小走宽深高缩放）──────
   { id:"staircase-straight", name:"直梯",   brand:"楼梯定制", price:9800, unit:"元/座", category:"stair", roomTypes:["stair"], color:"#9aa3ad", width:220, depth:320, height:280, tags:["现代"], description:"金属踏步直跑楼梯 + 双侧扶手", icon:"🪜" },
   { id:"staircase-l-shaped", name:"L形梯",  brand:"楼梯定制", price:12800,unit:"元/座", category:"stair", roomTypes:["stair"], color:"#B0A890", width:260, depth:260, height:280, tags:["现代","北欧"], description:"带中段平台的 L 形转角楼梯", icon:"🪜" },
+  { id:"staircase-u-shaped", name:"转折梯", brand:"楼梯定制", price:13800,unit:"元/座", category:"stair", roomTypes:["stair"], color:"#B0A890", width:240, depth:340, height:280, tags:["现代","北欧"], description:"双跑转折楼梯 + 半层休息平台，上下同侧进出、连接顺畅", icon:"🪜" },
   { id:"staircase-spiral",   name:"螺旋梯", brand:"楼梯定制", price:15800,unit:"元/座", category:"stair", roomTypes:["stair"], color:"#8A8890", width:200, depth:200, height:280, tags:["现代","轻奢"], description:"中心柱螺旋楼梯 + 外侧扶手", icon:"🪜" },
 
   // ─── 水景 Water Features ───────────────────────────────

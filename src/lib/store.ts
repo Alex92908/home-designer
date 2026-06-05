@@ -250,14 +250,16 @@ function defaultRooftopBarItems(): PlacedItem[] {
   ];
 }
 
-/** 楼梯间默认家具：一把直梯，居中放置。楼梯和其它家具一样是普通
- *  placedItem，方位（rotation）/大小（scaleW/D/H）走统一编辑流程，
- *  各视图统一用 PlacedItemMesh → StaircaseMesh 渲染。 */
+/** 楼梯间默认家具：一把双跑转折梯，居中放置。转折梯自带半层休息平台，
+ *  上下都在同侧(走廊端)进出，到层后能直接走到走廊/下一跑，漫游里可真正
+ *  爬通——直梯每层填满梯井、无平台、两跑反端，物理上走不通。楼梯和其它
+ *  家具一样是普通 placedItem，方位/大小走统一编辑流程，各视图统一用
+ *  PlacedItemMesh → StaircaseMesh 渲染。 */
 function defaultStairItems(): PlacedItem[] {
   const { width, depth } = DEFAULT_ROOM_DIMENSIONS.stair;
   return [{
     instanceId: genId(),
-    furnitureId: "staircase-straight",
+    furnitureId: "staircase-u-shaped",
     x: Math.round(width / 2),
     z: Math.round(depth / 2),
     rotation: 0,
@@ -2711,7 +2713,7 @@ export const useDesignerStore = create<DesignerStore>()(
           // v4 → v5: 楼梯不再是 stairConfig 特判，改成普通家具。给已启用
           // 楼梯间、却没有楼梯家具的存档注入一把默认直梯，并丢弃旧的
           // stairConfig 字段。各视图统一用 PlacedItemMesh → StaircaseMesh。
-          const STAIR_IDS = ["staircase-straight", "staircase-l-shaped", "staircase-spiral"];
+          const STAIR_IDS = ["staircase-straight", "staircase-l-shaped", "staircase-u-shaped", "staircase-spiral"];
           const st = state as { floorPlans?: FloorPlan[] };
           if (Array.isArray(st.floorPlans)) {
             st.floorPlans.forEach(fp => {
