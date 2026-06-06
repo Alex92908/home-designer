@@ -480,13 +480,23 @@ const STAIR_SHAPE_BY_ID: Record<string, "straight" | "L-shaped" | "u-shaped" | "
  * fw×fd×fh（米，已含家具缩放），base 在 y=0、居中。方位由外层 group
  * 的家具 rotation 决定，大小由家具宽深高缩放决定 —— 完全走通用机制。
  */
-export function StaircaseMesh({ item, fw, fd, fh }: {
+export function StaircaseMesh({ item, fw, fd, fh, roomH }: {
   item: FurnitureItem; fw: number; fd: number; fh: number;
+  /** 楼梯所在房间的净层高（米，= 地面到天花）。楼梯垂直方向恰好填满它：
+   *  底踏接地板、顶踏接天花。不传则退回目录高度。 */
+  roomH?: number;
 }) {
   const shape = STAIR_SHAPE_BY_ID[item.id] ?? "straight";
+  // 占地（宽 × 深）必须与平面图里看到的完全一致 —— 平面图用的就是缩放后的
+  // fw × fd，所以这里也用 fw × fd，用户在平面图怎么拖，效果图就怎么画。
+  // 高度方向则"和自己比较，不和上面楼层比较"：恰好填满所在房间的净层高 roomH
+  // （底踏接地板、顶踏接天花）。高度在平面图里看不到，不影响平面↔效果的一致性。
+  const W = fw;
+  const D = fd;
+  const rise = roomH ?? fh;
   return (
     <StaircaseGeom
-      W={fw} D={fd} height={fh}
+      W={W} D={D} height={rise}
       color={item.color ?? "#9aa3ad"}
       shape={shape}
     />

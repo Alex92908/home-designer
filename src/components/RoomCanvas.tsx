@@ -2517,7 +2517,7 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
     const stairBaseY = (placed.elevationY ?? 0) / 100;
     return (
       <group position={[x3d, stairBaseY, z3d]} rotation={[0, rotY, 0]}>
-        <StaircaseMesh item={item} fw={fw} fd={fd} fh={fh} />
+        <StaircaseMesh item={item} fw={fw} fd={fd} fh={fh} roomH={def.height / 100} />
       </group>
     );
   }

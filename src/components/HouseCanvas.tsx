@@ -6108,6 +6108,26 @@ export default function HouseCanvas() {
         });
       }
     }
+    // 天台层：露台是开放的，只有四周女儿墙（= 建筑外轮廓），内部无隔墙。屋顶板
+    // 满铺整个 footprint，人从任意位置（含东侧梯井口）爬上来都能站。所以这里给
+    // 天台层加“一整块满铺 footprint”的碰撞矩形，而不是按 rooftop 子房间——后者
+    // 会在开阔屋顶上凭空造出看不见的隔墙（天台房间在走查里根本不渲染墙）。没有
+    // 这一层，blocksMovement 的“就近匹配楼层”会把站在天台的人误判成还在顶层、
+    // 套用顶层室内墙，于是走不出梯井 → “从楼梯去不了天台”。
+    const roofFloorIdx = floorPlansForWalk.findIndex(
+      (fp) => fp && (fp.enabledRooms ?? []).some(r => ROOM_DEFS[r]?.isRooftopOnly)
+    );
+    if (roofFloorIdx >= 0) {
+      const WALL_HALF = 0.06;
+      out.push({
+        floor: roofFloorIdx,
+        room: "__rooftop_deck__",
+        minX: -Wh / 2 + WALL_HALF,
+        maxX:  Wh / 2 - WALL_HALF,
+        minZ: -Dh / 2 + WALL_HALF,
+        maxZ:  Dh / 2 - WALL_HALF,
+      });
+    }
     return out;
   }, [floorPlansForWalk]);
 
