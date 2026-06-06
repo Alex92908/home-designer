@@ -1344,6 +1344,26 @@ export default function FloorPlan() {
                   );
                 });
               })()}
+              {/* 通用的「地板 / 天花板」显隐切换 —— 与 N/S/W/E 共用同一
+                  roomWallsHidden 机制 (task #100)，所有房间都能用。例如：
+                  天台休闲区把 ceiling+floor 关掉 = 露天甲板；楼梯出屋面间
+                  打开 ceiling = 顶层屋面间挡雨。多边形房间也适用（与边数
+                  无关，floor/ceiling 是两个独立键）。 */}
+              {(["floor","ceiling"] as const).map(face => {
+                const hidden = wallsHiddenOnRoom?.[face] === true;
+                const lbl = face === "floor" ? "地板" : "天花板";
+                return (
+                  <button key={`hide-${face}`}
+                    onClick={() => toggleWallHidden(activeRoom, face)}
+                    title={hidden ? `恢复${lbl}` : `隐藏${lbl}`}
+                    className="text-[10px] px-1.5 py-0.5 rounded font-semibold transition-all"
+                    style={hidden
+                      ? { background: "rgba(239,68,68,0.32)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.6)" }
+                      : { background: "rgba(75,85,99,0.20)", color: "#9CA3AF", border: "1px solid rgba(75,85,99,0.35)" }}>
+                    {hidden ? "✓" : "✕"}{lbl}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -2079,9 +2099,18 @@ export default function FloorPlan() {
                   <span className="text-[10px] text-gray-400">{t.fpHeight}</span>
                   <span className="text-[10px] text-gray-300 font-mono">{(winH / 100).toFixed(2)}m</span>
                 </div>
-                <input type="range" min={40} max={Math.min(240, ceilH - winSill - 5)} step={5}
+                <input type="range" min={40} max={Math.min(240, ceilH - 5)} step={5}
                   value={winH}
-                  onChange={e => updateWindow(activeRoom, selectedWin.id, { h: parseInt(e.target.value) })}
+                  onChange={e => {
+                    // 高度 = 窗户自身尺寸高度，与离地高度解耦：滑块量程只受层高约束，
+                    // 不再随离地高度缩水。仅当「离地高度 + 新高度」会顶穿天花板时，
+                    // 才把离地高度下压到刚好贴顶，保证窗体始终在房间内（物理定位）。
+                    const newH = parseInt(e.target.value);
+                    const maxSill = Math.max(0, ceilH - newH - 5);
+                    const patch: Partial<WindowConfig> = { h: newH };
+                    if (winSill > maxSill) patch.sill = maxSill;
+                    updateWindow(activeRoom, selectedWin.id, patch);
+                  }}
                   className="w-full accent-blue-500 h-2 md:h-1.5" />
               </div>
             </div>

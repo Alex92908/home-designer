@@ -858,7 +858,12 @@ function RoomDoor3D({
       hingeOffset = 1;
       break;
     case "W":
-      groupPos = [-W / 2 + 0.02, 0, doorPos - D / 2];
+      // 西墙：墙洞在 WallWithHoles 里以「wall-local x=0 在南端(+Z)、向北(-Z)递增」
+      // 落位，门洞世界 z 区间 = [D/2 - doorPos - doorW, D/2 - doorPos]。门板组旋转
+      // +π/2 后局部 +X 映射到世界 -Z，因此铰链(组原点)须落在门洞的「+Z 南缘」=
+      // D/2 - doorPos，门板再沿 -Z 填满门洞。原来的 doorPos - D/2 是符号写反，导致
+      // 门板整体偏出门洞一个门宽 → 出现「关着的门 + 旁边一个空洞」。E 墙是对的镜像。
+      groupPos = [-W / 2 + 0.02, 0, D / 2 - doorPos];
       groupRot = [0, Math.PI / 2, 0];
       hingeOffset = 1;
       break;
@@ -2515,9 +2520,33 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
   // 缩放手柄 —— 在「平面图 / 效果图」用通用手柄拖动 / 缩放 / 旋转，各视图一致。
   if (STAIR_FURNITURE_IDS.has(item.id)) {
     const stairBaseY = (placed.elevationY ?? 0) / 100;
+    // 楼梯跨满一个完整楼层（floor-to-floor），顶踏要接到「上一层地面 / 天台
+    // 板」，而不是停在自己房间的净天花高度。楼层间距 = FLOOR_H + SLAB_T，
+    // 目录里 4 款楼梯的 height 都按这个间距设成 320cm，所以这里直接用 fh
+    // （目录高度），不再用房间净高 roomH 去压低楼梯——那会让楼梯顶比天台
+    // 矮一截，上天台前要多跨一大步，体感像匍匐。
+    //
+    // 占地夹回楼梯井（房间）轮廓：楼梯是被楼梯间包裹的结构件，不该戳穿墙体 /
+    // 屋面板。按「旋转后的 AABB」等比缩小到房间内部（单侧留一点墙厚余量），
+    // 再把中心夹回房间内。高度方向不动（仍跨满层高）。只夹占地、不改高度，
+    // 既消除戳出墙外的部分，又保持顶踏接上层地面。
+    const ST_INSET = 0.06; // 单侧 6cm 墙厚余量
+    const stCos = Math.abs(Math.cos(rotY)), stSin = Math.abs(Math.sin(rotY));
+    const stAabbX = fw * stCos + fd * stSin;
+    const stAabbZ = fw * stSin + fd * stCos;
+    const stMaxX = Math.max(0.2, roomW - ST_INSET * 2);
+    const stMaxZ = Math.max(0.2, roomD - ST_INSET * 2);
+    const stK = Math.min(1, stMaxX / stAabbX, stMaxZ / stAabbZ);
+    const stW = fw * stK, stD = fd * stK;
+    const stClampedAabbX = stW * stCos + stD * stSin;
+    const stClampedAabbZ = stW * stSin + stD * stCos;
+    const stLimX = Math.max(0, roomW / 2 - ST_INSET - stClampedAabbX / 2);
+    const stLimZ = Math.max(0, roomD / 2 - ST_INSET - stClampedAabbZ / 2);
+    const stX = Math.max(-stLimX, Math.min(stLimX, x3d));
+    const stZ = Math.max(-stLimZ, Math.min(stLimZ, z3d));
     return (
-      <group position={[x3d, stairBaseY, z3d]} rotation={[0, rotY, 0]}>
-        <StaircaseMesh item={item} fw={fw} fd={fd} fh={fh} roomH={def.height / 100} />
+      <group position={[stX, stairBaseY, stZ]} rotation={[0, rotY, 0]}>
+        <StaircaseMesh item={item} fw={stW} fd={stD} fh={fh} />
       </group>
     );
   }

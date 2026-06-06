@@ -3,7 +3,6 @@
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
-import { ROOFTOP_ROOM_TYPES } from "@/lib/store";
 import { ALL_POSSIBLE_ROOMS, DEFAULT_ENABLED } from "@/lib/store";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale } from "@/lib/i18n";
@@ -40,10 +39,9 @@ type DragState =
 const CUSTOM_SLOTS: RoomType[] = ["custom1","custom2","custom3","custom4","custom5"];
 const ROOM_GROUP_ROOMS = [
   { key: "allGroupIndoor",   rooms: ["living","master","bedroom","bedroom2","bedroom3","kitchen","bathroom","bathroom2","dining","study","study2","closet","balcony","balcony2"] as RoomType[] },
-  { key: "allGroupSpecial",  rooms: ["hallway","stair","yard","garage","gym","cinema","pool","terrace","deck"] as RoomType[] },
+  { key: "allGroupSpecial",  rooms: ["hallway","stair","yard","garage","gym","cinema","pool","terrace","deck","pergola","equipment_room"] as RoomType[] },
   { key: "allGroupCustom",   rooms: CUSTOM_SLOTS },
 ];
-const ROOFTOP_GROUP = { key: "allGroupRooftop", rooms: ROOFTOP_ROOM_TYPES };
 const CUSTOM_ICONS = ["🔲","🏠","🛖","🏰","🏗️","🎯","🎲","🎪","⭐","💎","🌈","🔑"];
 
 // ─── Custom room name form ──────────────────────────────────
@@ -183,7 +181,7 @@ export function RoomPanel() {
         <div className="py-1">
           {ALL_ROOMS.filter(r => enabledRooms.includes(r)).map(room => {
             const { name, icon } = getRoomLabel(room);
-            const dims  = roomDimensions[room];
+            const dims  = roomDimensions[room] ?? { width: ROOM_DEFS[room]?.width ?? 300, depth: ROOM_DEFS[room]?.depth ?? 260 };
             const isExp = expanded === room;
             const isRenaming = renamingRoom === room;
 
@@ -298,8 +296,8 @@ export function RoomPanel() {
 
         {/* ── Addable rooms by group ── */}
         {(() => {
-          const isRooftopFloor = exterior.hasRooftop && activeFloor === exterior.floors;
-          const groups = isRooftopFloor ? [ROOFTOP_GROUP] : ROOM_GROUP_ROOMS;
+          // 天台 = 普通楼层：可添加房间分组与其它楼层完全一致，不做特判。
+          const groups = ROOM_GROUP_ROOMS;
           return groups.map(group => {
             const addable = group.rooms.filter(r => !enabledRooms.includes(r));
             if (!addable.length) return null;
@@ -658,7 +656,21 @@ export default function FloorPlanAll() {
 
   // Compute viewBox from enabled rooms on current floor + optional blueprint
   // Guard: only include rooms that have both layout and dimensions data
-  const visibleRooms = ALL_ROOMS.filter(r => enabledRooms.includes(r) && roomDimensions[r] && roomLayout[r]);
+  // Z 顺序：outdoor 先画（垫底），indoor 后画（覆盖在上）；同组内面积大的先画。
+  // 这样天台休闲区（outdoor 大块）做背景，楼梯间（indoor 小块）画在它上面可见，
+  // 通用规则不只服务天台 —— 任何 outdoor 大房间套小 indoor 都会自然显出位置关系。
+  const visibleRooms = ALL_ROOMS
+    .filter(r => enabledRooms.includes(r) && roomDimensions[r] && roomLayout[r])
+    .slice()
+    .sort((a, b) => {
+      const oa = ROOM_DEFS[a]?.isOutdoor ? 0 : 1;
+      const ob = ROOM_DEFS[b]?.isOutdoor ? 0 : 1;
+      if (oa !== ob) return oa - ob;
+      const da = roomDimensions[a], db = roomDimensions[b];
+      const areaA = da.width * da.depth;
+      const areaB = db.width * db.depth;
+      return areaB - areaA; // 面积大的先画
+    });
   const pad = 60;
   const bpW = blueprint.image ? blueprint.naturalW * blueprint.scale : 0;
   const bpH = blueprint.image ? blueprint.naturalH * blueprint.scale : 0;

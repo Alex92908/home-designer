@@ -1216,6 +1216,10 @@ function FlatRoof({
   coveLightEnabled = true,
   coveLightColor = "#D0E8FF",
   stairOpening = null,
+  stairExitSide = null,
+  stairWallsHidden = null,
+  penthouse = false,
+  penthouseColor = "#E8E4DE",
 }: {
   W: number; D: number; roofY: number;
   nightGlow?: number; hasRooftop?: boolean;
@@ -1238,6 +1242,18 @@ function FlatRoof({
    *  treatment as the inter-floor slabs (4-piece carve around the opening).
    *  Only carved when hasRooftop. null ⇒ solid roof. */
   stairOpening?: { cx: number; cz: number; w: number; d: number } | null;
+  /** 楼梯踏出天台的那一侧（= 天台楼梯间的门所在墙，NSWE）。开口护栏在这一
+   *  侧留缺口、出屋面间的门也开在这侧，使「围栏缺口 / 门 / 漫游碰撞门洞」三者
+   *  统一到房间真实配置的门，而非另算几何。null ⇒ 回退到按开口贴边几何推断。 */
+  stairExitSide?: "N" | "S" | "E" | "W" | null;
+  /** 天台楼梯间各墙是否隐藏（NSWE）。开口护栏只补在「墙体被隐藏」的那几侧
+   *  ——墙在=房间盒子已挡人，护栏多余；墙隐=开敞楼梯口，护栏作安全栏。门侧
+   *  始终留缺口。null/全 false ⇒ 不画护栏（盒子四壁已围合）。 */
+  stairWallsHidden?: Partial<Record<"N" | "S" | "E" | "W", boolean>> | null;
+  /** 天台楼梯口加盖「出屋面间」（带门带顶小屋，挡雨）。默认 false。 */
+  penthouse?: boolean;
+  /** 出屋面间墙体颜色。默认同女儿墙色。 */
+  penthouseColor?: string;
 }) {
   const OV   = Math.max(0, Math.min(1.5, overhang));
   const OV_S = OV + Math.max(0, Math.min(1.5, overhangSouthExtra));
@@ -1280,10 +1296,19 @@ function FlatRoof({
         const order: Array<"N" | "S" | "E" | "W"> = Math.abs(opening.cx) >= Math.abs(opening.cz)
           ? [towardX, towardZ, towardX === "W" ? "E" : "W", towardZ === "N" ? "S" : "N"]
           : [towardZ, towardX, towardZ === "N" ? "S" : "N", towardX === "W" ? "E" : "W"];
-        const exitSide = order.find(s => !perim[s]) ?? "S";
+        // 优先用天台楼梯间「真实配置的门」所在侧，使围栏缺口与门 / 漫游碰撞
+        // 门洞完全一致（不特立独行、不另算几何）；房间没有门时才回退到按开口
+        // 贴边几何推断「朝天台内侧」的那一面。
+        const exitSide = stairExitSide ?? order.find(s => !perim[s]) ?? "S";
         return (
           <group position={[opening.cx, roofSlab + ST / 2, opening.cz]}>
-            <StairwellRailing rW={opening.w} rD={opening.d} gap={exitSide} />
+            {/* 开口护栏：门洞那一侧留缺口（与出屋面间的门同侧） */}
+            <StairwellRailing rW={opening.w} rD={opening.d} gap={exitSide} wallsHidden={stairWallsHidden} />
+            {/* 出屋面间：带门带顶小屋，门开在 exitSide（踏出天台那侧），挡雨 */}
+            {penthouse && (
+              <StairPenthouse rW={opening.w} rD={opening.d} doorSide={exitSide}
+                wallColor={penthouseColor} roofColor={roofColor} />
+            )}
           </group>
         );
       })()}
@@ -1484,7 +1509,14 @@ function FlatRoof({
 }
 
 // ── 楼梯间围栏（上层开口处安全栏杆） ─────────────────────────
-function StairwellRailing({ rW, rD, gap = null }: { rW: number; rD: number; gap?: "N" | "S" | "E" | "W" | null }) {
+function StairwellRailing({ rW, rD, gap = null, wallsHidden = null }: {
+  rW: number; rD: number;
+  gap?: "N" | "S" | "E" | "W" | null;
+  /** 楼梯间各墙的显隐（NSWE）。护栏只在「没有墙」的那一侧补栏杆 —— 与房间
+   *  墙体互补、绝不重复：墙在 → 由墙挡（不画护栏）；墙隐（开放楼梯井）→ 护栏
+   *  补上做安全围栏。null ⇒ 视为四面都有墙（即不画护栏，全交给房间墙体）。 */
+  wallsHidden?: Partial<Record<"N" | "S" | "E" | "W", boolean>> | null;
+}) {
   const RH   = 0.92;   // 栏杆高度 m
   const POST = 0.06;   // 立柱截面 m
   const RAIL = 0.045;  // 横杆截面 m
@@ -1509,7 +1541,10 @@ function StairwellRailing({ rW, rD, gap = null }: { rW: number; rD: number; gap?
     { side: "W", axis: "z", len: rD, fixed: -rW / 2 + POST / 2, railAxis: "z" },
     { side: "E", axis: "z", len: rD, fixed:  rW / 2 - POST / 2, railAxis: "z" },
   ];
-  const allSides = sideDefs.filter(s => s.side !== gap);
+  // 护栏与房间墙体互补：只在「该侧墙被隐藏」时补栏杆，且永远空出出入口
+  // （gap = 门 / 踏出天台那侧）。四面都有墙时 allSides 为空 → 不画护栏，
+  // 避免和房间自身的墙重复成「双层笼子」。
+  const allSides = sideDefs.filter(s => s.side !== gap && (wallsHidden?.[s.side] === true));
 
   // Combo-2 E: 4 侧的所有立柱合并到 1 个 InstancedMesh（同几何同材质）
   const allPostPositions: Array<[number, number, number]> = [];
@@ -1561,6 +1596,69 @@ function StairwellRailing({ rW, rD, gap = null }: { rW: number; rD: number; gap?
           </mesh>
         </group>
       ))}
+    </group>
+  );
+}
+
+// ── 楼梯出屋面间（penthouse / 屋面梯屋）──────────────────────────────
+// 天台楼梯口的「带门带顶小屋」：四面墙 + 平屋面板，门洞开在 doorSide
+// （= 楼梯口踏出天台的那一侧，与开口护栏的缺口同侧），其余三面封闭。
+// 作用：挡雨遮风，避免雨水顺楼梯口灌入下层。坐标系与 StairwellRailing
+// 一致（局部中心在天台开口中心、y=0 在屋面上表面）。
+function StairPenthouse({ rW, rD, doorSide, wallColor, roofColor }: {
+  rW: number; rD: number; doorSide: "N" | "S" | "E" | "W";
+  wallColor: string; roofColor: string;
+}) {
+  const H     = 2.30;  // 墙净高 m
+  const WT    = 0.12;  // 墙厚 m
+  const RT    = 0.12;  // 屋面板厚 m
+  const OV    = 0.12;  // 屋面出挑 m
+  const doorW = Math.min(1.0, Math.min(rW, rD) * 0.55);
+  const doorH = Math.min(2.1, H - 0.12);
+  const wallMat = <meshStandardMaterial color={wallColor} roughness={0.84} />;
+  const doorMat = <meshStandardMaterial color="#6B5847" roughness={0.6} metalness={0.05} />;
+
+  const fullWall = (side: "N" | "S" | "E" | "W") => {
+    const horiz = side === "N" || side === "S";
+    const pos: [number, number, number] =
+      side === "N" ? [0, H / 2, -rD / 2] : side === "S" ? [0, H / 2, rD / 2]
+      : side === "W" ? [-rW / 2, H / 2, 0] : [rW / 2, H / 2, 0];
+    const args: [number, number, number] = horiz ? [rW, H, WT] : [WT, H, rD];
+    return <mesh position={pos} castShadow receiveShadow><boxGeometry args={args} />{wallMat}</mesh>;
+  };
+
+  const doorWall = (side: "N" | "S" | "E" | "W") => {
+    const horiz = side === "N" || side === "S";
+    const fixedZ = side === "N" ? -rD / 2 : rD / 2;
+    const fixedX = side === "W" ? -rW / 2 : rW / 2;
+    const span = horiz ? rW : rD;
+    const segL = (span - doorW) / 2;
+    const segC = doorW / 2 + segL / 2;   // 门垛中心离中线
+    const segArgs:  [number, number, number] = horiz ? [segL, H, WT] : [WT, H, segL];
+    const headArgs: [number, number, number] = horiz ? [doorW, H - doorH, WT] : [WT, H - doorH, doorW];
+    const doorArgs: [number, number, number] = horiz ? [doorW * 0.94, doorH, WT * 0.5] : [WT * 0.5, doorH, doorW * 0.94];
+    const p = (along: number, y: number): [number, number, number] =>
+      horiz ? [along, y, fixedZ] : [fixedX, y, along];
+    return (
+      <>
+        <mesh position={p(-segC, H / 2)} castShadow receiveShadow><boxGeometry args={segArgs} />{wallMat}</mesh>
+        <mesh position={p( segC, H / 2)} castShadow receiveShadow><boxGeometry args={segArgs} />{wallMat}</mesh>
+        <mesh position={p(0, (doorH + H) / 2)} castShadow receiveShadow><boxGeometry args={headArgs} />{wallMat}</mesh>
+        <mesh position={p(0, doorH / 2)} castShadow><boxGeometry args={doorArgs} />{doorMat}</mesh>
+      </>
+    );
+  };
+
+  return (
+    <group>
+      {(["N", "S", "E", "W"] as const).map(s => (
+        <group key={s}>{s === doorSide ? doorWall(s) : fullWall(s)}</group>
+      ))}
+      {/* 平屋面板（带四周出挑） */}
+      <mesh position={[0, H + RT / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[rW + WT + OV * 2, RT, rD + WT + OV * 2]} />
+        <meshStandardMaterial color={roofColor} roughness={0.86} />
+      </mesh>
     </group>
   );
 }
@@ -2300,6 +2398,18 @@ export default function FloorPlanBuilding({
   const usedFloors = allSegs.length > 0 ? Math.max(...allSegs.map(s => s.floorIndex)) + 1 : 1;
   const totalH     = usedFloors * (FLOOR_H + SLAB_T) - SLAB_T;
 
+  // ── 天台层并入通用房间渲染 ─────────────────────────────────────────────
+  // 天台(floorPlans[floorCount]) 就是一个「普通楼层」，只是它的房间通过
+  // roomWallsHidden 把露天的面隐掉：楼梯出屋面间(stair)保留四面墙+顶板+门，
+  // 休闲区(rooftop_lounge)四面墙/地板/顶板全隐 → 露天甲板。它不进入建筑高度
+  // 推导(usedFloors/totalH 仍只数封闭楼层)，楼层基面落在 FlatRoof 屋面板顶面。
+  const roofFi      = exterior.hasRooftop ? floorCount : -1;        // 天台层在 floorPlans 中的下标
+  const roomLoopMax = roofFi >= 0 ? roofFi + 1 : floorCount;        // 房间/墙体循环上界（含天台层）
+  // FlatRoof 屋面板顶面 = roofY(totalH) + 0.05(板中心偏移) + ST/2。默认板厚
+  // 10cm → 顶面 = totalH + 0.10。天台房间的墙/顶/地都以此为基面坐落在甲板上。
+  const roofDeckY   = totalH + 0.05 + (exterior.roofSlabThicknessCm ?? 10) / 100 / 2;
+  const yBaseOf     = (fi: number) => (fi === roofFi ? roofDeckY : fi * (FLOOR_H + SLAB_T));
+
   // 把相邻共面段合并 → 玻璃幕墙不再出现双框缝
   const facadeBlocks = useMemo(() => buildFacadeBlocks(allSegs), [allSegs]);
 
@@ -2329,9 +2439,11 @@ export default function FloorPlanBuilding({
       isHallway: boolean;
       autoDoor: DoorConfig | null;
       wallsHidden?: Partial<Record<string, boolean>>;
+      floorHidden: boolean;
+      ceilingHidden: boolean;
     }> = [];
 
-    for (let fi = 0; fi < floorCount; fi++) {
+    for (let fi = 0; fi < roomLoopMax; fi++) {
       const fp = floorPlans[fi];
       if (!fp) continue;
       for (const room of (fp.enabledRooms ?? []).filter(r => !ROOM_DEFS[r]?.isOutdoor) as RoomType[]) {
@@ -2341,7 +2453,7 @@ export default function FloorPlanBuilding({
         const rWcm = d.width; const rDcm = d.depth;
         const cx = (p.x + d.width  / 2 - planOffset.minX) * CM - W / 2;
         const cz = (p.y + d.depth / 2 - planOffset.minY) * CM - D / 2;
-        const yBase = fi * (FLOOR_H + SLAB_T);
+        const yBase = fi === roofFi ? roofDeckY : fi * (FLOOR_H + SLAB_T);
         const mats = fp.rooms?.[room]?.materials;
         const floorColor = mats?.floor?.color ?? ROOM_DEFS[room]?.defaultFloorColor ?? "#C8A882";
         const wallColor  = mats?.wall?.color  ?? ROOM_DEFS[room]?.defaultWallColor  ?? "#EDE8E0";
@@ -2365,11 +2477,38 @@ export default function FloorPlanBuilding({
           : windows;
 
         const wallsHidden = fp.roomWallsHidden?.[room];
-        result.push({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows: adjustedWindows, isStair, isHallway, autoDoor, wallsHidden });
+        // 地板/天花板显隐复用 roomWallsHidden 的「单面显隐」机制，只是把可隐藏
+        // 的面从 4 面墙扩到 floor / ceiling 两个键 —— 楼梯间从此和任何普通房间
+        // 同权，渲染器不再特判 isStair。下面两行仅是「行为不变的默认值」：
+        // 只有楼梯间需要上下贯通的竖直开口 —— 上层楼梯间默认不铺地板、楼梯间
+        // 默认无天花板（让楼梯穿层而上）。走廊是普通房间，默认有天花板（否则
+        // 从上层/天台往下看会穿透走廊）。房间显式给出的 floor / ceiling 值一律优先。
+        const floorHidden = wallsHidden?.floor
+          ?? (isStair && fi > 0 && !(exterior.stairFloorSlab ?? false));
+        // 楼梯间默认无天花板 —— 让楼梯穿层而上；但「顶层楼梯间」（楼上没
+        // 有更高楼层，比如天台出屋面间）上方根本没东西可穿，是否盖顶由
+        // exterior.stairTopFloorCeiling 控制（default true = 盖顶挡雨）。
+        // 中间层楼梯间默认无顶以贯通楼梯井；circulationDecor 打开后所有
+        // 楼梯间都盖顶（调试通行空间装饰用）。
+        const hasStairAbove = fi + 1 < roomLoopMax
+          && (floorPlans[fi + 1]?.enabledRooms?.includes("stair") ?? false);
+        const isTopStair  = isStair && !hasStairAbove;
+        const topHasRoof  = exterior.stairTopFloorCeiling ?? true;
+        // 天台（屋顶层）= 一个「没有顶的普通楼层」：其普通房间默认露天，盖顶与否
+        // 由 exterior.rooftopCeiling 单一开关控制（default false = 不盖顶）。仍走
+        // 通用 ceilingHidden，不特判天台房间类型；房间显式 ceiling 值优先。
+        const isRooftopNormalRoom = fi === roofFi && !isStair;
+        const ceilingHidden = wallsHidden?.ceiling
+          ?? (isRooftopNormalRoom
+              ? !(exterior.rooftopCeiling ?? false)
+              : (isStair
+                 && !(exterior.circulationDecor ?? false)
+                 && !(isTopStair && topHasRoof)));
+        result.push({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows: adjustedWindows, isStair, isHallway, autoDoor, wallsHidden, floorHidden, ceilingHidden });
       }
     }
     return result;
-  }, [floorPlans, floorCount, floorBoundsArr, planOffset, W, D]);
+  }, [floorPlans, floorCount, roofFi, roofDeckY, roomLoopMax, floorBoundsArr, planOffset, W, D, exterior.stairFloorSlab, exterior.circulationDecor, exterior.stairTopFloorCeiling, exterior.rooftopCeiling]);
 
   // ── Wall graph: unique interior wall segments per floor ──
   // For each non-circulation room we list its 4 boundary lines in PLAN
@@ -2448,10 +2587,16 @@ export default function FloorPlanBuilding({
     // are registered (the long N + S walls remain neighbour-contributed
     // so hallway's lack-of-hide-flag doesn't OR-pollute the neighbour's
     // shared wall via dedup — see task #57).
-    for (let fi = 0; fi < floorCount; fi++) {
+    for (let fi = 0; fi < roomLoopMax; fi++) {
       const fp = floorPlans[fi]; if (!fp) continue;
       for (const room of (fp.enabledRooms ?? [])) {
         if (ROOM_DEFS[room]?.isOutdoor) continue;
+        // 跳过「四壁全隐」的房间：它们是纯容器（如天台休闲区＝开放露台），
+        // 不参与墙体图。否则 dedup 会把容器的「全隐 E 墙」与相邻房间（如
+        // 楼梯出屋面间）的「实 W 墙」合并，hideAny=true 一锁定，相邻房间
+        // 的那面墙连同门洞一起消失。
+        const whThis = fp.roomWallsHidden?.[room];
+        if (whThis?.N && whThis?.S && whThis?.E && whThis?.W) continue;
         const onlyShortEnds = room === "hallway";
         const p = fp.roomLayout?.[room]; const d = fp.roomDimensions?.[room];
         if (!p || !d) continue;
@@ -2558,7 +2703,7 @@ export default function FloorPlanBuilding({
       }
     }
     return [...map.values()];
-  }, [floorPlans, floorCount, floorBoundsArr, planOffset, W, D, exterior.interiorDoorHeightCm]);
+  }, [floorPlans, floorCount, roomLoopMax, floorBoundsArr, planOffset, W, D, exterior.interiorDoorHeightCm]);
 
   return (
     <group>
@@ -4783,57 +4928,12 @@ export default function FloorPlanBuilding({
 
       {/* ── 4c. 建筑周边绿化带（基础种植床）—— 紧贴东/西/北面建筑基座 ── */}
 
-      {/* ── 4d. 屋顶露台玻璃栏杆（南向露台内侧，安全围护）──
-               沿女儿墙内侧布置，仅在南侧和东西短边各一段
-               材质：夹胶玻璃 + 黑色阳极氧化铝竖框 */}
-      {!insideBuilding && (() => {
-        const railY = totalH + 0.30 + 0.48;  // parapet top + railing base
-        const PH = 0.30;          // parapet height (same as FlatRoof)
-        const OV = 0.45;          // roof overhang
-        const rH  = 0.92;         // railing glass height
-        const rT  = 0.012;        // glass panel thickness
-        const postW = 0.038;      // post cross-section
-        const frameColor = "#1C1E26";
-        const terW = Math.min(W * 0.60, 7.0);  // terrace railing span (south only, centered)
-        const railZ = D / 2 + OV + 0.20;  // inset from south parapet inner face
-        // Number of glass panels (each ~1.2m wide)
-        const panelCount = Math.max(2, Math.round(terW / 1.2));
-        const postPositions = Array.from({ length: panelCount + 1 }, (_, i) => -terW / 2 + i * (terW / panelCount));
-        return (
-          <group position={[0, railY, railZ]}>
-            {/* Glass panels */}
-            {Array.from({ length: panelCount }, (_, i) => {
-              const cx2 = -terW / 2 + (i + 0.5) * (terW / panelCount);
-              const pW  = terW / panelCount - postW - 0.008;
-              return (
-                <mesh key={i} position={[cx2, rH / 2, 0]} renderOrder={11}>
-                  <boxGeometry args={[pW, rH - 0.06, rT]} />
-                  <meshStandardMaterial
-                    color="#C8DCE8"
-                    transparent opacity={0.38}
-                    depthWrite={false}
-                    roughness={0.04} metalness={0.10}
-                    envMapIntensity={2.4}
-                    side={THREE.DoubleSide}
-                  />
-                </mesh>
-              );
-            })}
-            {/* Vertical posts */}
-            {postPositions.map((px2, pi) => (
-              <mesh key={pi} position={[px2, rH / 2, 0]} castShadow>
-                <boxGeometry args={[postW, rH, postW]} />
-                <meshStandardMaterial color={frameColor} roughness={0.12} metalness={0.92} envMapIntensity={2.2} />
-              </mesh>
-            ))}
-            {/* Top handrail */}
-            <mesh position={[0, rH + 0.018, 0]}>
-              <boxGeometry args={[terW + 0.04, 0.038, 0.060]} />
-              <meshStandardMaterial color={frameColor} roughness={0.12} metalness={0.94} envMapIntensity={2.4} />
-            </mesh>
-          </group>
-        );
-      })()}
+      {/* ── 4d. 屋顶南向露台玻璃栏杆已移除 ──
+               这段是硬编码的南向露台栏杆（始终渲染、不受开关控制、railY 写死
+               totalH+0.78 且假定女儿墙 0.30/悬挑 0.45），当实际女儿墙高度或悬挑
+               不同时会悬空错位，看着像漂浮的玻璃板/光伏板。天台四周护栏统一由
+               FlatRoof 的女儿墙顶玻璃护栏（parapetGlassEnabled，绕屋顶一圈、随
+               女儿墙高度自动贴合）负责，避免重复与特例。 */}
 
       {/* ── 5. 平屋顶（室内视角下隐藏） ── */}
       {/* ── 5a-rain. 雨链（rain chains）— 从屋顶排水口沿东西墙面垂直下挂 ──
@@ -5089,6 +5189,19 @@ export default function FloorPlanBuilding({
             const se = interiorRooms.find(r => r.isStair && r.fi === 0);
             return se ? { cx: se.cx, cz: se.cz, w: se.rW, d: se.rD } : null;
           })()}
+          stairExitSide={(() => {
+            // 天台楼梯间真实配置的门所在侧 —— 与漫游碰撞用的同一扇门同源。
+            const rs = interiorRooms.find(r => r.isStair && r.fi === roofFi);
+            return (rs?.doors?.[0]?.wall as "N" | "S" | "E" | "W" | undefined) ?? null;
+          })()}
+          stairWallsHidden={(() => {
+            // 天台楼梯间各墙显隐 —— 与房间真实墙体同源。护栏只补在被隐藏的墙侧，
+            // 墙在则盒子四壁已围合、不再叠玻璃栏杆（不特立独行）。
+            const rs = interiorRooms.find(r => r.isStair && r.fi === roofFi);
+            return (rs?.wallsHidden as Partial<Record<"N" | "S" | "E" | "W", boolean>> | undefined) ?? null;
+          })()}
+          penthouse={false}
+          penthouseColor={exterior.penthouseColor ?? exterior.parapetColor ?? "#E8E4DE"}
         />
       )}
 
@@ -6683,7 +6796,7 @@ export default function FloorPlanBuilding({
         if (seg.hideAny) return null;
         const CM_l = 0.01;
         const wH = FLOOR_H - 0.01;
-        const yBase = seg.fi * (FLOOR_H + SLAB_T);
+        const yBase = yBaseOf(seg.fi);
         const wY = yBase + FLOOR_H / 2;
         const wallLenM = (seg.b - seg.a) * CM_l;
         if (wallLenM <= 0.05) return null;
@@ -6769,7 +6882,7 @@ export default function FloorPlanBuilding({
           </group>
         );
       })}
-      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, wallsHidden }, ridx) => {
+      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, wallsHidden, floorHidden, ceilingHidden }, ridx) => {
         const wallOpacity = wallXray ? 0.13 : 1.0;
         const isXray = wallXray;
         // 走廊：无内墙、无天花板，仅地板；楼梯间：渲染楼梯几何体
@@ -6784,19 +6897,14 @@ export default function FloorPlanBuilding({
             {/* 内墙现在统一在外层 wallSegments.map 渲染（去重 + 不超出
                 房间边界）。这里只留地板/天花板/门/窗等不需要 dedupe
                 的元素。 */}
-            {/* 走廊：天花板板条（顶部薄板，让走廊从室内清晰可辨。厚度可调） */}
-            {isHallway && (() => {
-              const hcT = Math.max(0.03, Math.min(0.20, (exterior.hallwayCeilingThicknessCm ?? 8) / 100));
-              return (
-                <mesh position={[cx, yBase + FLOOR_H - hcT / 2, cz]} raycast={() => null}>
-                  <boxGeometry args={[rW, hcT, rD]} />
-                  <meshStandardMaterial color={exterior.hallwayCeilingColor ?? "#E8E4DC"} roughness={0.88} side={THREE.DoubleSide} />
-                </mesh>
-              );
-            })()}
-            {/* 地板：楼梯间上层（fi>0）默认不渲染地板，保持楼梯开口畅通；
-                可用 exterior.stairFloorSlab 开关强制铺实心楼板（调试用）。 */}
-            {(!(isStair && fi > 0) || (exterior.stairFloorSlab ?? false)) && (
+            {/* 走廊天花板不再特判：与所有房间一样由通用 ceilingHidden 控制
+                （见下方天花板块 + interiorRooms 默认值——走廊作普通房间默认有顶，
+                只有楼梯间默认无顶以贯通竖井）。旧的 isHallway 专属常显顶板会从
+                二楼楼梯井开口露出顶面发白成「白色区块」、且绕过 roomWallsHidden
+                统一机制，已删除；改由通用 per-room 顶板按房间足迹精确裁剪。 */}
+            {/* 地板：显隐统一由 roomWallsHidden.floor 控制（默认值见 interiorRooms
+                构建处——上层楼梯间默认隐藏以保持竖直开口）。楼梯间不再特判。 */}
+            {!floorHidden && (
               <WalkthroughFloor
                 cx={cx} cz={cz} yBase={yBase} rW={rW} rD={rD}
                 floorColor={floorColor}
@@ -6944,9 +7052,9 @@ export default function FloorPlanBuilding({
                 </group>
               );
             })()}
-            {/* 天花板 — 走廊和楼梯间默认不渲染（通行空间无装饰的结构性约定）；
-                exterior.circulationDecor 打开后通行空间也铺天花板（调试用）。*/}
-            {((exterior.circulationDecor ?? false) || (!isStair && !isHallway)) && (
+            {/* 天花板 — 显隐统一由 roomWallsHidden.ceiling 控制（默认值见
+                interiorRooms 构建处——楼梯/走廊默认隐藏）。不再特判 isStair。*/}
+            {!ceilingHidden && (
               <mesh position={[cx, yBase + FLOOR_H - 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
                 <planeGeometry args={[rW - 0.04, rD - 0.04]} />
                 <meshStandardMaterial color={exterior.roomCeilingColor ?? "#F5F2EE"} roughness={0.88} side={THREE.DoubleSide}
@@ -7246,7 +7354,13 @@ export default function FloorPlanBuilding({
                   （沙发 / 茶几 / 吊灯）在玻璃后专门画了，再叠彩色 box
                   会乱。 */}
             <group position={[cx, yBase, cz]}>
-              {!(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`)))
+              {/* 天台层家具的单一渲染者是 RooftopDecorations（全精度
+                  PlacedItemMesh，露天可见所以不走低 LOD 彩色 box）。这里
+                  若再渲染一遍，露台家具会叠出一个低 LOD 占位 box —— 例如
+                  廊架(pergola)会在真实木条顶之下多出一只橙色实心盒子。
+                  故跳过 fi === roofFi，避免与 RooftopDecorations 重复渲染。 */}
+              {fi !== roofFi
+                && !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`)))
                 && placedItems
                 .filter(p => {
                   // Curtains: hide ONLY in low-LOD 效果图 (they'd be invisible
@@ -7315,12 +7429,15 @@ export default function FloorPlanBuilding({
                   );
                 })}
             </group>
-            {/* ── §10 walkthrough LOD detail: baseboards + crown + warm
-                 point light. Only mounts inside the building so the
-                 exterior view stays unchanged. Stair / hallway skipped
-                 by default — they shouldn't have residential trim;
-                 exterior.circulationDecor 打开后通行空间也加室内细节。 ── */}
-            {insideBuilding && ((exterior.circulationDecor ?? false) || (!isStair && !isHallway)) && (
+            {/* ── §10 walkthrough LOD detail: crown molding + 吸顶灯。Only
+                 mounts inside the building so the exterior view stays
+                 unchanged. Stair / hallway skipped by default — they
+                 shouldn't have residential trim; exterior.circulationDecor
+                 打开后通行空间也加室内细节。
+                 天花板隐藏的房间（如全隐藏的露天露台/天台休息区）不挂：天花线
+                 与吸顶灯都是「盖顶」装饰，房间既无天花板就不该悬空出现 ——
+                 复用通用的 ceilingHidden，不特判房间类型。 ── */}
+            {insideBuilding && !ceilingHidden && ((exterior.circulationDecor ?? false) || (!isStair && !isHallway)) && (
               <InteriorRoomDetail
                 cx={cx}
                 cz={cz}

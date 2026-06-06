@@ -89,8 +89,14 @@ export function StaircaseGeom({
     // reads as built, not floating.
     const strLen   = Math.sqrt(runD * runD + runH * runH);
     const strRotX  = Math.atan2(runD, runH);
-    const strMidY  = baseY + (riserH + runH) / 2 - 0.12;
     const STR_DEPTH = 0.26;
+    // 斜梁绕 X 轴倾斜后，其最低角点 = 中心 - (strLen/2)·cos − (STR_DEPTH/2)·sin。
+    // 若按视觉中线放置会有一角扎进地板，故把中心抬到「最低角点正好落在 baseY」，
+    // 取与原视觉位置的较大者：不穿地板，且斜度平缓时仍保留原观感。
+    const strSin   = runD / strLen;                  // = sin(strRotX)
+    const strCos   = runH / strLen;                  // = cos(strRotX)
+    const strFloorMidY = baseY + (strLen / 2) * strCos + (STR_DEPTH / 2) * strSin;
+    const strMidY  = Math.max(baseY + (riserH + runH) / 2 - 0.12, strFloorMidY);
 
     const balHOf = (i: number) =>
       railH + i * (railDY / STEPS) - (i + 1) * riserH;
@@ -336,17 +342,31 @@ export function StaircaseGeom({
           );
         })()}
 
-        {/* 外侧斜梯梁（每半跑一条） */}
-        <mesh position={[-(Wi / 2) + 0.03, (riserH + halfH) / 2 - 0.12, -landD / 2]}
-          rotation={[strRotX, 0, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.05, strLen, 0.26]} />
-          {landMat}
-        </mesh>
-        <mesh position={[(Wi / 2) - 0.03, halfH + (riserH + halfH) / 2 - 0.12, -landD / 2]}
-          rotation={[-strRotX, 0, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.05, strLen, 0.26]} />
-          {landMat}
-        </mesh>
+        {/* 外侧斜梯梁（每半跑一条）—— 抬到最低角点正好落地，不扎进地板 */}
+        {(() => {
+          const STR_DEPTH = 0.26;
+          const strSin = flightRun / strLen;            // = sin(strRotX)
+          const strCos = halfH / strLen;                // = cos(strRotX)
+          // 斜梁绕 X 倾斜后最低角点距中心 = (strLen/2)·cos + (STR_DEPTH/2)·sin，
+          // 把中心抬到该距离以上即可保证底角落在各自起跑层面（西跑 0 / 东跑 halfH）。
+          const lift = (strLen / 2) * strCos + (STR_DEPTH / 2) * strSin;
+          const midYW = Math.max((riserH + halfH) / 2 - 0.12, lift);
+          const midYE = Math.max(halfH + (riserH + halfH) / 2 - 0.12, halfH + lift);
+          return (
+            <>
+              <mesh position={[-(Wi / 2) + 0.03, midYW, -landD / 2]}
+                rotation={[strRotX, 0, 0]} castShadow receiveShadow>
+                <boxGeometry args={[0.05, strLen, STR_DEPTH]} />
+                {landMat}
+              </mesh>
+              <mesh position={[(Wi / 2) - 0.03, midYE, -landD / 2]}
+                rotation={[-strRotX, 0, 0]} castShadow receiveShadow>
+                <boxGeometry args={[0.05, strLen, STR_DEPTH]} />
+                {landMat}
+              </mesh>
+            </>
+          );
+        })()}
 
         {/* —— 扶手：装在每跑朝中井的内侧（临空侧），顶斜扶手 + 一排栏杆立柱 —— */}
         {/* 西半跑：内侧顶扶手 + 立柱 */}
@@ -360,40 +380,36 @@ export function StaircaseGeom({
           {railMetal}
           {f1.map((t, i) => <Instance key={i} position={[innerXL, (i + 1) * riserH + RAIL_H / 2, t.z]} />)}
         </Instances>
-        {/* 东半跑（上跑→天台）内侧扶手：随梯爬升，但到天台地面标高(y=H)即封平，
-            绝不高出天台。立柱同步缩短，顶端始终落在扶手线上。 */}
+        {/* 东半跑（上跑）内侧扶手：与西跑完全同构 —— 一根恒定 RAIL_H 的顶斜扶手
+            + 一排等高立柱。顶端立柱落在最高一级踏面（= 上层楼面）之上 0.9m，
+            自然形成楼梯口护栏并与上层接平；不再向「天台」特例封顶。 */}
+        <mesh position={[innerXR, RAIL_H + halfH + (riserH + halfH) / 2, -landD / 2]}
+          rotation={[-strRotX, 0, 0]} castShadow>
+          <cylinderGeometry args={[ROD_R, ROD_R, railLen, 10]} />
+          {railMetal}
+        </mesh>
+        <Instances limit={HALF_STEPS} castShadow>
+          <cylinderGeometry args={[0.012, 0.012, RAIL_H, 6]} />
+          {railMetal}
+          {f2.map((t, i) => <Instance key={i} position={[innerXR, halfH + (i + 1) * riserH + RAIL_H / 2, t.z]} />)}
+        </Instances>
+        {/* —— 平台转角扶手：上下两跑临井侧扶手在休息平台南缘处接平（横跨梯井），
+            两跑顶端等高(RAIL_H+halfH+riserH/2)、同 z(landS)，仅 x 不同 → 一根横杆连通 + 中柱支撑 —— */}
         {(() => {
-          const ROOF_Y = H;                       // 天台地面 = 楼梯 footprint 顶
-          const pts = f2.map((t, i) => ({
-            z: t.z,
-            treadTop: halfH + (i + 1) * riserH,    // 该级踏面顶高
-            y: Math.min(halfH + (i + 1) * riserH + RAIL_H, ROOF_Y), // 扶手高度，封顶到天台
-          }));
-          const seg = (a: typeof pts[number], b: typeof pts[number], key: string) => {
-            const dz = b.z - a.z, dy = b.y - a.y;
-            const len = Math.hypot(dz, dy);
-            const ang = Math.atan2(dz, dy);
-            return (
-              <mesh key={key} position={[innerXR, (a.y + b.y) / 2, (a.z + b.z) / 2]}
-                rotation={[ang, 0, 0]} castShadow>
-                <cylinderGeometry args={[ROD_R, ROD_R, len, 10]} />
-                {railMetal}
-              </mesh>
-            );
-          };
+          const railY = RAIL_H + halfH + riserH / 2;   // 两跑临井扶手在平台处的端点高度
+          const landS = D / 2 - landD;                 // 休息平台南缘 = 两跑顶端所在 z
+          const span  = innerXR - innerXL;             // 横跨梯井的连通段长度
+          const postH = railY - (halfH - treadT / 2);  // 中柱：从平台板面顶到扶手
           return (
             <>
-              {pts.slice(0, -1).map((p, i) => seg(p, pts[i + 1], `f2rail-${i}`))}
-              {pts.map((p, i) => {
-                const postH = p.y - p.treadTop;    // 立柱高（封顶后自动缩短）
-                if (postH < 0.04) return null;     // 顶端贴近天台的省略
-                return (
-                  <mesh key={`f2post-${i}`} position={[innerXR, p.treadTop + postH / 2, p.z]} castShadow>
-                    <cylinderGeometry args={[0.012, 0.012, postH, 6]} />
-                    {railMetal}
-                  </mesh>
-                );
-              })}
+              <mesh position={[0, railY, landS]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                <cylinderGeometry args={[ROD_R, ROD_R, span, 10]} />
+                {railMetal}
+              </mesh>
+              <mesh position={[0, (halfH - treadT / 2) + postH / 2, landS]} castShadow>
+                <cylinderGeometry args={[0.012, 0.012, postH, 6]} />
+                {railMetal}
+              </mesh>
             </>
           );
         })()}
@@ -480,20 +496,19 @@ const STAIR_SHAPE_BY_ID: Record<string, "straight" | "L-shaped" | "u-shaped" | "
  * fw×fd×fh（米，已含家具缩放），base 在 y=0、居中。方位由外层 group
  * 的家具 rotation 决定，大小由家具宽深高缩放决定 —— 完全走通用机制。
  */
-export function StaircaseMesh({ item, fw, fd, fh, roomH }: {
+export function StaircaseMesh({ item, fw, fd, fh }: {
   item: FurnitureItem; fw: number; fd: number; fh: number;
-  /** 楼梯所在房间的净层高（米，= 地面到天花）。楼梯垂直方向恰好填满它：
-   *  底踏接地板、顶踏接天花。不传则退回目录高度。 */
-  roomH?: number;
 }) {
   const shape = STAIR_SHAPE_BY_ID[item.id] ?? "straight";
   // 占地（宽 × 深）必须与平面图里看到的完全一致 —— 平面图用的就是缩放后的
   // fw × fd，所以这里也用 fw × fd，用户在平面图怎么拖，效果图就怎么画。
-  // 高度方向则"和自己比较，不和上面楼层比较"：恰好填满所在房间的净层高 roomH
-  // （底踏接地板、顶踏接天花）。高度在平面图里看不到，不影响平面↔效果的一致性。
+  // 高度方向用目录高度 fh：楼梯的职责是连通「上一层地面 / 天台板」，必须跨满
+  // 一个完整楼层间距（floor-to-floor = FLOOR_H + SLAB_T），目录里 4 款楼梯
+  // 的 height 都按这个间距设成 320cm。绝不能用房间净天花高去压低楼梯——那样
+  // 顶踏接不到上层地面，上楼后要多跨一大步，体感像匍匐。
   const W = fw;
   const D = fd;
-  const rise = roomH ?? fh;
+  const rise = fh;
   return (
     <StaircaseGeom
       W={W} D={D} height={rise}

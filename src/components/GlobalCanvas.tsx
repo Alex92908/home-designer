@@ -174,6 +174,9 @@ function RoomGroup({
   // Vertical offset: each storey sits at floorIndex * FLOOR_H
   const yBase = floorIndex * FLOOR_H;
   const isStair = room === "stair";
+  // 顶层（含天台出屋面间）的楼梯没有「上一层」，不显示 nF→(n+1)F 上行箭头。
+  const topFloorIdx = useDesignerStore(s => s.floorPlans.length - 1);
+  const isTopStair  = isStair && floorIndex >= topFloorIdx;
 
   return (
     <group position={[cx, yBase, cz]}
@@ -186,7 +189,7 @@ function RoomGroup({
           楼梯间在 fi>0 跳过：上层楼梯间是楼梯井开口，没楼板才能让下层
           楼梯上来；楼梯本身的"顶端平台"已经在踏步级末端提供了齐平 2F
           楼面的小平台。 */}
-      {!(isStair && floorIndex > 0) && (
+      {!(isStair && floorIndex > 0) && wallsHidden?.floor !== true && (
         <mesh position={[0, 0.001, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
           <shapeGeometry args={[floorShape]} />
           <meshStandardMaterial
@@ -253,7 +256,7 @@ function RoomGroup({
           fontFamily: "system-ui, sans-serif",
           boxShadow: isHover ? "0 0 0 2px #60A5FA" : undefined,
         }}>
-          {isStair ? `🪜 ${label} ${floorIndex + 1}F→${floorIndex + 2}F` : `${icon} ${label}`}
+          {isStair ? (isTopStair ? `🪜 ${label}` : `🪜 ${label} ${floorIndex + 1}F→${floorIndex + 2}F`) : `${icon} ${label}`}
         </div>
       </Html>
     </group>
@@ -780,7 +783,8 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
 
       {/* ── 屋顶层 (hasRooftop) — gated on showRoof so button controls it ── */}
       {exterior.hasRooftop && showRoof && (() => {
-        const roofFp = floorPlans[exterior.floors];
+        const roofFi = exterior.floors;            // 天台层在 floorPlans 中的索引
+        const roofFp = floorPlans[roofFi];
         if (!roofFp) return null;
         const roofY = floorCount * FLOOR_H;
         const slabY = roofY + 0.06;
@@ -928,26 +932,42 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
                 <meshStandardMaterial color="#C8C4BE" roughness={0.9} />
               </mesh>
             ))}
-            {/* Room 3D content — 天台各房间统一渲染 placedItems（与普通楼层
-                完全一致），不再按房间类型写死遮阳棚/泳池/花园/吧台等外壳。
-                家具默认布局在 store.makeRooftopFloorPlan 注入，用户可在
-                平面图 / 效果图里自由增删拖动，各视图统一用 PlacedItemMesh。
-                furniture 渲染随 renderAllFurniture 渐进出现（与普通楼层一致）。 */}
-            {renderAllFurniture && roofEnabled.map(r => {
+            {/* 天台各房间统一走通用 RoomGroup：墙/地板/家具/楼层徽标与普通
+                楼层完全一致，按 roomWallsHidden 通用显隐控制开放露台（floor
+                隐藏）与楼梯出屋面间。不再按房间类型写死遮阳棚/泳池/吧台外壳，
+                也不再只渲染 placedItems —— 之前只渲家具导致 3D 里天台层几乎
+                不可见（无房间徽标/无墙/楼梯间空）。RoomGroup 自身按 floorIndex
+                = roofFi 定位到 roofFi*FLOOR_H（=天台板高度），与本块 slab 对齐。 */}
+            {roofEnabled.map(r => {
               const p = roofFp.roomLayout?.[r]; const d = roofFp.roomDimensions?.[r];
               if (!p || !d) return null;
-              const rW  = d.width * CM;
-              const rD  = d.depth * CM;
-              const px  = (p.x + d.width  / 2) * CM;
-              const pz  = (p.y + d.depth  / 2) * CM;
-              const baseY = slabY + 0.12;
-              const items = roofFp.rooms?.[r]?.placedItems ?? [];
+              const key = `${roofFi}:${r}`;
               return (
-                <group key={r} position={[px, baseY, pz]}>
-                  {items.map(it => (
-                    <PlacedItemMesh key={it.instanceId} placed={it} def={ROOM_DEFS[r]} roomW={rW} roomD={rD} room={r} />
-                  ))}
-                </group>
+                <RoomGroup
+                  key={key}
+                  room={r}
+                  floorIndex={roofFi}
+                  originX={p.x * CM}
+                  originZ={p.y * CM}
+                  isActive={r === activeRoom && roofFi === activeFloor}
+                  isHover={hover === key}
+                  setHover={hov => setHover(hov ? key : null)}
+                  showFurniture={(r === activeRoom && roofFi === activeFloor) || renderAllFurniture}
+                  onPick={() => {
+                    const now = Date.now();
+                    const last = lastPickRef.current;
+                    if (last && last.room === r && last.floorIdx === roofFi && now - last.t < DOUBLE_MS) {
+                      setActiveFloor(roofFi);
+                      setActiveRoom(r);
+                      setViewMode("3d");
+                      lastPickRef.current = null;
+                    } else {
+                      setActiveFloor(roofFi);
+                      setActiveRoom(r);
+                      lastPickRef.current = { room: r, floorIdx: roofFi, t: now };
+                    }
+                  }}
+                />
               );
             })}
           </group>

@@ -6114,9 +6114,8 @@ export default function HouseCanvas() {
     // 会在开阔屋顶上凭空造出看不见的隔墙（天台房间在走查里根本不渲染墙）。没有
     // 这一层，blocksMovement 的“就近匹配楼层”会把站在天台的人误判成还在顶层、
     // 套用顶层室内墙，于是走不出梯井 → “从楼梯去不了天台”。
-    const roofFloorIdx = floorPlansForWalk.findIndex(
-      (fp) => fp && (fp.enabledRooms ?? []).some(r => ROOM_DEFS[r]?.isRooftopOnly)
-    );
+    // 天台 = 最后一个楼层（按下标判定），不再依赖“天台专属房间类型”。
+    const roofFloorIdx = exterior.hasRooftop ? floorPlansForWalk.length - 1 : -1;
     if (roofFloorIdx >= 0) {
       const WALL_HALF = 0.06;
       out.push({
@@ -6129,7 +6128,7 @@ export default function HouseCanvas() {
       });
     }
     return out;
-  }, [floorPlansForWalk]);
+  }, [floorPlansForWalk, exterior.hasRooftop]);
 
   // Outer clamp box: extends BEYOND the building into the yard so the user
   // can walk out through the front-entrance door. Padding is 15 m on each
@@ -6277,14 +6276,20 @@ export default function HouseCanvas() {
       if (!isFinite(fMinX)) continue;
       const fb = { minX: fMinX, minY: fMinY, maxX: fMaxX, maxY: fMaxY };
       for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
-        // Hallway / stair don't carry doors in the FPE render loop
-        if (r === "hallway" || r === "stair") continue;
         const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
         if (!p || !d) continue;
+        // Mirror FloorPlanExterior's door render EXACTLY (FPE line ~2595):
+        // a CONFIGURED door applies to every room — including circulation
+        // rooms (stair / hallway) — and FPE punches the matching wall hole.
+        // Only AUTO-door synthesis (pickAutoDoor) is skipped for circulation
+        // rooms. The old wholesale `if (stair||hallway) continue` dropped the
+        // stair's configured door too, so the rooftop stairwell rendered a
+        // visible door but had NO walkable opening → "天台楼梯间出不去".
+        const isCirc = r === "hallway" || r === "stair";
         const stored = fp.roomDoors?.[r];
         if (stored && stored.length > 0) {
           for (const door of stored) collect({ wall: door.wall, pos: door.pos, len: door.len }, p, d, fi);
-        } else if (fp.roomHasDoor?.[r] !== false) {
+        } else if (!isCirc && fp.roomHasDoor?.[r] !== false) {
           // No stored doors → FPE synthesizes via pickAutoDoor. Mirror it.
           const auto = autoDoorFor(fi, r, p, d, fb);
           collect(auto, p, d, fi);

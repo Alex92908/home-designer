@@ -17,6 +17,9 @@ export default function ExteriorRoomList() {
   const exterior       = useDesignerStore(s => s.exterior);
   const customRoomMeta = useDesignerStore(s => s.customRoomMeta);
   const floorCount = Math.max(exterior.floors, 1);
+  // 天台层作为普通楼层并入列表：紧跟最高楼层，编号 = floorCount（0-based）。
+  const roofFi      = exterior.hasRooftop ? floorCount : -1;
+  const listFloors  = roofFi >= 0 ? floorCount + 1 : floorCount;
 
   /** Dispatch a custom event picked up by HouseCanvas to teleport the
    *  walkthrough camera into the chosen room. */
@@ -44,7 +47,7 @@ export default function ExteriorRoomList() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-2">
-        {Array.from({ length: floorCount }, (_, fi) => {
+        {Array.from({ length: listFloors }, (_, fi) => {
           const fp = floorPlans[fi];
           if (!fp) return null;
           const rooms = (fp.enabledRooms ?? []).filter(r => !ROOM_DEFS[r]?.isOutdoor);
@@ -52,7 +55,7 @@ export default function ExteriorRoomList() {
           return (
             <div key={fi} className="mb-3">
               <div className="px-2 mb-1 text-[10px] font-bold" style={{ color: "var(--ds-text-2)" }}>
-                {fi + 1}F
+                {fi === roofFi ? (locale === "en" ? "Rooftop" : "天台") : `${fi + 1}F`}
               </div>
               <div className="flex flex-col gap-1">
                 {rooms.map(r => {

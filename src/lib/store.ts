@@ -64,13 +64,8 @@ export const ALL_POSSIBLE_ROOMS: RoomType[] = [
   "yard","garage","gym","cinema",
   "custom1","custom2","custom3","custom4","custom5",
   "stair","hallway",
-  "pool","terrace","deck",
-  // 屋顶层专属
-  "rooftop_lounge","rooftop_pool","rooftop_garden","rooftop_bar","equipment_room",
-];
-
-export const ROOFTOP_ROOM_TYPES: RoomType[] = [
-  "rooftop_lounge","rooftop_pool","rooftop_garden","rooftop_bar","equipment_room",
+  "pool","terrace","deck","pergola",
+  "equipment_room",
 ];
 
 export const DEFAULT_ENABLED: RoomType[] = [
@@ -107,11 +102,7 @@ export const DEFAULT_ROOM_LAYOUT: Record<RoomType, { x: number; y: number }> = {
   pool:      { x: 1200, y: 400  },
   terrace:   { x: 1200, y: 800  },
   deck:      { x: 1200, y: 1100 },
-  // 屋顶层专属 —— 在屋顶平面图里分散排列
-  rooftop_lounge:  { x: 0,   y: 0   },
-  rooftop_pool:    { x: 600, y: 0   },
-  rooftop_garden:  { x: 0,   y: 450 },
-  rooftop_bar:     { x: 600, y: 450 },
+  pergola:   { x: 1200, y: 100  },
   equipment_room:  { x: 0,   y: 900 },
 };
 
@@ -199,57 +190,6 @@ function makeDefaultFloorPlan(ref?: FloorPlan): FloorPlan {
   return fp;
 }
 
-/** 天台休闲区默认家具布局。坐标为房间左上角原点、单位 cm，房间默认
- *  500×400cm（ROOM_DEFS.rooftop_lounge）。这些就是普通房间的 placedItems，
- *  渲染、拖动、增删全部走统一流程（平面图 / 效果图 / 外观 / 全局3D）。 */
-function defaultRooftopLoungeItems(): PlacedItem[] {
-  const mk = (furnitureId: string, x: number, z: number, rotation = 0): PlacedItem => ({
-    instanceId: genId(), furnitureId, x, z, rotation,
-  });
-  return [
-    // 遮阳棚：一件普通家具（凉亭），默认覆盖休闲区中央，渲染走统一
-    // PlacedItemMesh → RooftopFixtureMesh(Pergola)，不再在各视图写死。
-    mk("pergola", 250, 200, 0),
-    mk("lounger-sun", 175, 250, 0),
-    mk("lounger-sun", 325, 250, 180),
-    mk("outdoor-sofa", 250, 95, 0),
-    mk("garden-coffee-table", 250, 185, 0),
-    mk("planter-clay", 55, 345, 0),
-    mk("planter-clay", 445, 345, 0),
-    // 光伏阵列：一件普通家具，默认 360×360（≈3×2 块），放在休闲区里，
-    // 可在平面图 / 效果图里拖动 / 缩放 / 旋转，拉大尺寸即增加面板。
-    mk("solar-panel-array", 260, 150, 0),
-  ];
-}
-
-/** 屋顶泳池默认布局（600×350cm）：一座镜面泳池 + 两张躺椅。家具化，
- *  各视图统一渲染，用户可自由增删 / 缩放 / 拖动。 */
-function defaultRooftopPoolItems(): PlacedItem[] {
-  return [
-    { instanceId: genId(), furnitureId: "reflecting-pool", x: 300, z: 200, rotation: 0, scaleW: 1.6, scaleD: 2.5 },
-    { instanceId: genId(), furnitureId: "lounger-sun", x: 80,  z: 60, rotation: 0 },
-    { instanceId: genId(), furnitureId: "lounger-sun", x: 520, z: 60, rotation: 0 },
-  ];
-}
-
-/** 屋顶花园默认布局（500×400cm）：一块绿化草坪 + 数个花盆。家具化。 */
-function defaultRooftopGardenItems(): PlacedItem[] {
-  return [
-    { instanceId: genId(), furnitureId: "green-roof-patch", x: 250, z: 200, rotation: 0 },
-    { instanceId: genId(), furnitureId: "planter-clay", x: 60,  z: 60,  rotation: 0 },
-    { instanceId: genId(), furnitureId: "planter-clay", x: 440, z: 60,  rotation: 0 },
-    { instanceId: genId(), furnitureId: "planter-clay", x: 60,  z: 340, rotation: 0 },
-    { instanceId: genId(), furnitureId: "planter-clay", x: 440, z: 340, rotation: 0 },
-  ];
-}
-
-/** 天台酒吧默认布局（400×300cm）：一座露天吧台（含吧凳/酒架）。家具化。 */
-function defaultRooftopBarItems(): PlacedItem[] {
-  return [
-    { instanceId: genId(), furnitureId: "sky-bar", x: 200, z: 130, rotation: 0 },
-  ];
-}
-
 /** 楼梯间默认家具：一把双跑转折梯，居中放置。转折梯自带半层休息平台，
  *  上下都在同侧(走廊端)进出，到层后能直接走到走廊/下一跑，漫游里可真正
  *  爬通——直梯每层填满梯井、无平台、两跑反端，物理上走不通。楼梯和其它
@@ -266,17 +206,40 @@ function defaultStairItems(): PlacedItem[] {
   }];
 }
 
-function makeRooftopFloorPlan(): FloorPlan {
-  const rooms = Object.fromEntries(ALL_ROOM_TYPES.map(r => [r, emptyRoom()])) as Record<RoomType, RoomState>;
-  rooms.rooftop_lounge = { materials: {}, placedItems: defaultRooftopLoungeItems() };
-  // 其余天台房间也预置默认家具：用户启用后即按普通房间渲染（外壳/装饰
-  // 全部走 placedItems，不再在视图里按类型写死）。
-  rooms.rooftop_pool   = { materials: {}, placedItems: defaultRooftopPoolItems() };
-  rooms.rooftop_garden = { materials: {}, placedItems: defaultRooftopGardenItems() };
-  rooms.rooftop_bar    = { materials: {}, placedItems: defaultRooftopBarItems() };
-  return {
-    rooms,
-    enabledRooms: ["rooftop_lounge"],
+/** 凉亭房间默认家具：一座凉亭骨架，居中。和楼梯一样是普通 placedItem，
+ *  方位/大小走统一编辑流程——「凉亭」本身就是这个房间。 */
+function defaultPergolaItems(): PlacedItem[] {
+  const { width, depth } = DEFAULT_ROOM_DIMENSIONS.pergola;
+  return [{
+    instanceId: genId(),
+    furnitureId: "pergola",
+    x: Math.round(width / 2),
+    z: Math.round(depth / 2),
+    rotation: 0,
+  }];
+}
+
+/** 通用「房间添加即带的默认家具」表。某些房间（楼梯间、凉亭…）的本体就是
+ *  一件家具，启用房间时自动放一件，省得用户再去目录里找。普通房间不在表里
+ *  就是空房间。这是统一机制，不针对任何单一房间特判。 */
+const DEFAULT_ROOM_FURNITURE: Partial<Record<RoomType, () => PlacedItem[]>> = {
+  stair:   defaultStairItems,
+  pergola: defaultPergolaItems,
+};
+
+/**
+ * 天台层默认计划：天台就是一个「没有顶的普通楼层」，默认空着——只继承楼下的
+ * 出屋面楼梯间（保证漫游能从楼梯爬上天台），其余房间由用户像普通楼层一样自行
+ * 添加。没有任何天台专属房间类型或特殊家具预设。盖顶与否由 exterior.rooftopCeiling
+ * 单一开关控制（默认露天）。
+ */
+function makeRooftopFloorPlan(regularPlans?: FloorPlan[]): FloorPlan {
+  const ref = regularPlans && regularPlans.length > 0
+    ? regularPlans[regularPlans.length - 1]
+    : undefined;
+  const fp: FloorPlan = {
+    rooms: Object.fromEntries(ALL_ROOM_TYPES.map(r => [r, emptyRoom()])) as Record<RoomType, RoomState>,
+    enabledRooms: [],
     roomLayout: { ...DEFAULT_ROOM_LAYOUT },
     roomDimensions: { ...DEFAULT_ROOM_DIMENSIONS },
     roomWindows: { ...DEFAULT_ROOM_WINDOWS },
@@ -284,6 +247,16 @@ function makeRooftopFloorPlan(): FloorPlan {
     roomHasDoor: { ...DEFAULT_ROOM_HAS_DOOR },
     roomDoorWall: { ...DEFAULT_ROOM_DOOR_WALL },
   };
+  // 只继承楼梯间（出屋面间）——与楼下同位、同尺寸、同家具，让漫游可真正爬通。
+  if (ref?.enabledRooms?.includes("stair")) {
+    fp.enabledRooms = ["stair"];
+    if (ref.roomLayout?.stair)     fp.roomLayout     = { ...fp.roomLayout,     stair: { ...ref.roomLayout.stair } };
+    if (ref.roomDimensions?.stair) fp.roomDimensions = { ...fp.roomDimensions, stair: { ...ref.roomDimensions.stair } };
+    fp.rooms.stair = ref.rooms?.stair?.placedItems
+      ? { materials: { ...(ref.rooms.stair.materials ?? {}) }, placedItems: ref.rooms.stair.placedItems.map(p => ({ ...p, instanceId: genId() })) }
+      : { materials: {}, placedItems: defaultStairItems() };
+  }
+  return fp;
 }
 
 // ─── updateFloor helper ───────────────────────────────────
@@ -1451,10 +1424,28 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       addRoom: (room) => {
-        updateFloor(get, set, fp => ({
-          enabledRooms: fp.enabledRooms.includes(room) ? fp.enabledRooms : [...fp.enabledRooms, room],
-          rooms: fp.rooms[room] ? fp.rooms : { ...fp.rooms, [room]: { materials: {}, placedItems: [] } },
-        }));
+        updateFloor(get, set, fp => {
+          const already = fp.enabledRooms.includes(room);
+          // 房间本体即家具的（楼梯/凉亭…）首次启用时自动放一件默认家具。
+          const existing = fp.rooms[room]?.placedItems ?? [];
+          const seed = (!existing.length && DEFAULT_ROOM_FURNITURE[room]) ? DEFAULT_ROOM_FURNITURE[room]!() : [];
+          // 兼容旧存档：该楼层若缺这个房间类型的尺寸/位置等默认值（房间类型是
+          // 在此存档落地之后才新增的），就地补默认值，避免后续读 dims.width 崩。
+          const patch: Partial<FloorPlan> = {};
+          if (!fp.roomDimensions?.[room]) patch.roomDimensions = { ...fp.roomDimensions, [room]: DEFAULT_ROOM_DIMENSIONS[room] ?? { width: 300, depth: 260 } };
+          if (!fp.roomLayout?.[room])     patch.roomLayout     = { ...fp.roomLayout,     [room]: DEFAULT_ROOM_LAYOUT[room]     ?? { x: 0, y: 0 } };
+          if (!fp.roomWindows?.[room])    patch.roomWindows    = { ...fp.roomWindows,    [room]: makeDefaultWindows(room) };
+          if (fp.roomDoorPos?.[room] === undefined)  patch.roomDoorPos  = { ...fp.roomDoorPos,  [room]: DEFAULT_ROOM_DOOR_POS[room]  ?? 50 };
+          if (fp.roomHasDoor?.[room] === undefined)  patch.roomHasDoor  = { ...fp.roomHasDoor,  [room]: DEFAULT_ROOM_HAS_DOOR[room]  ?? true };
+          if (!fp.roomDoorWall?.[room])   patch.roomDoorWall   = { ...fp.roomDoorWall,   [room]: DEFAULT_ROOM_DOOR_WALL[room]   ?? "S" };
+          return {
+            ...patch,
+            enabledRooms: already ? fp.enabledRooms : [...fp.enabledRooms, room],
+            rooms: (fp.rooms[room] && existing.length)
+              ? fp.rooms
+              : { ...fp.rooms, [room]: { materials: fp.rooms[room]?.materials ?? {}, placedItems: [...existing, ...seed] } },
+          };
+        });
       },
 
       removeRoom: (room) => {
@@ -1489,7 +1480,7 @@ export const useDesignerStore = create<DesignerStore>()(
         if (!fp) return;
 
         // Gather indoor, non-hallway rooms that have layout data
-        const OUTDOOR: RoomType[] = ["yard","garage","gym","cinema","pool","terrace","deck","balcony","balcony2"];
+        const OUTDOOR: RoomType[] = ["yard","garage","gym","cinema","pool","terrace","deck","pergola","balcony","balcony2"];
         const rooms = (fp.enabledRooms ?? []).filter(r => r !== "hallway" && !OUTDOOR.includes(r));
 
         type Box = { r: RoomType; x: number; y: number; w: number; d: number };
@@ -1917,7 +1908,7 @@ export const useDesignerStore = create<DesignerStore>()(
         if (newExterior.hasRooftop) {
           // Preserve existing rooftop plan if it was already there, else create new
           const existingRooftop = s.exterior.hasRooftop ? floorPlans[oldRegularFloors] : undefined;
-          floorPlans = [...regularPlans, existingRooftop ?? makeRooftopFloorPlan()];
+          floorPlans = [...regularPlans, existingRooftop ?? makeRooftopFloorPlan(regularPlans)];
         } else {
           // hasRooftop disabled: only regular floors
           floorPlans = regularPlans;
@@ -2031,7 +2022,7 @@ export const useDesignerStore = create<DesignerStore>()(
         }
         // Auto-switch activeRoom to the best room on the target floor
         const targetRooms = floorPlans[floor]?.enabledRooms ?? [];
-        const PREFERRED: RoomType[] = ["living", "master", "bedroom", "kitchen", "dining", "bathroom", "rooftop_lounge"];
+        const PREFERRED: RoomType[] = ["living", "master", "bedroom", "kitchen", "dining", "bathroom"];
         const bestRoom: RoomType =
           (targetRooms.includes(s.activeRoom) ? s.activeRoom : null) ??
           PREFERRED.find(r => targetRooms.includes(r)) ??
@@ -2561,7 +2552,7 @@ export const useDesignerStore = create<DesignerStore>()(
       //        in FloorPlanExterior have been deleted. Yard is now
       //        sourced exclusively from `yardPlan.items`. Migration is
       //        a no-op (no seeding) — see v3 → v4 branch.
-      version: 6,
+      version: 7,
       migrate: (persistedState, persistedVersion) => {
         const state = persistedState as Partial<DesignerStore> | undefined;
         if (!state) return state as unknown as DesignerStore;
@@ -2736,41 +2727,32 @@ export const useDesignerStore = create<DesignerStore>()(
           console.info("[home-designer] migrated persist v4 → v5 (stair → ordinary furniture)");
         }
         if (persistedVersion < 6) {
-          // v5 → v6: 天台「房间外壳」（遮阳棚/泳池/花园/吧台）不再在视图里
-          // 按房间类型写死，全部改成普通 placedItems。给已启用却没有对应
-          // 外壳家具的天台房间补默认布局，遮阳棚补进休闲区。
-          const seeders: Record<string, () => PlacedItem[]> = {
-            rooftop_lounge: () => [{ instanceId: genId(), furnitureId: "pergola", x: 250, z: 200, rotation: 0 }],
-            rooftop_pool:   defaultRooftopPoolItems,
-            rooftop_garden: defaultRooftopGardenItems,
-            rooftop_bar:    defaultRooftopBarItems,
-          };
-          const shellIds: Record<string, string[]> = {
-            rooftop_lounge: ["pergola"],
-            rooftop_pool:   ["reflecting-pool"],
-            rooftop_garden: ["green-roof-patch"],
-            rooftop_bar:    ["sky-bar"],
-          };
-          const st = state as { floorPlans?: FloorPlan[] };
+          // v5 → v6: 历史上这里给天台专属房间（休闲区/泳池/花园/吧台）补外壳
+          // 家具。这些天台专属房间类型已被整体删除（天台 = 普通空楼层），故本
+          // 迁移改为 no-op；旧类型的清理在 v6 → v7 进行。
+          console.info("[home-designer] migrated persist v5 → v6 (no-op; rooftop room types removed)");
+        }
+        if (persistedVersion < 7) {
+          // v6 → v7: 删除天台专属房间类型（rooftop_lounge/pool/garden/bar）。
+          // 天台改成「没有顶的普通楼层」，不再有任何专属房间。把存档里残留的
+          // 这些类型从 enabledRooms / rooms 里清掉，避免 ROOM_DEFS 查不到而崩。
+          const DEAD: string[] = ["rooftop_lounge", "rooftop_pool", "rooftop_garden", "rooftop_bar"];
+          const st = state as { floorPlans?: FloorPlan[]; activeRoom?: string };
           if (Array.isArray(st.floorPlans)) {
             st.floorPlans.forEach(fp => {
-              for (const rt of Object.keys(seeders)) {
-                if (!fp.enabledRooms?.includes(rt as RoomType)) continue;
-                const room = fp.rooms?.[rt as RoomType];
-                const items = room?.placedItems ?? [];
-                const hasShell = items.some(p => shellIds[rt].includes(p.furnitureId));
-                if (hasShell) continue;
-                fp.rooms = {
-                  ...fp.rooms,
-                  [rt]: {
-                    materials: room?.materials ?? {},
-                    placedItems: [...items, ...seeders[rt]()],
-                  },
-                } as FloorPlan["rooms"];
+              if (Array.isArray(fp.enabledRooms)) {
+                fp.enabledRooms = fp.enabledRooms.filter(r => !DEAD.includes(r as string));
               }
+              if (fp.rooms) {
+                for (const rt of DEAD) delete (fp.rooms as Record<string, unknown>)[rt];
+              }
+              if (fp.roomDimensions) { for (const rt of DEAD) delete (fp.roomDimensions as Record<string, unknown>)[rt]; }
+              if (fp.roomLayout)     { for (const rt of DEAD) delete (fp.roomLayout as Record<string, unknown>)[rt]; }
             });
           }
-          console.info("[home-designer] migrated persist v5 → v6 (rooftop shells → ordinary furniture)");
+          // activeRoom 若指向已删除的天台专属房间，回退到通用房间，避免 ROOM_DEFS 查空崩溃。
+          if (st.activeRoom && DEAD.includes(st.activeRoom)) st.activeRoom = "living";
+          console.info("[home-designer] migrated persist v6 → v7 (removed rooftop-only room types)");
         }
         return state as unknown as DesignerStore;
       },

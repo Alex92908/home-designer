@@ -283,8 +283,7 @@ export const en: Translations = {
     study: "Study", study2: "Study 2", closet: "Walk-in Closet", balcony: "Balcony", balcony2: "Balcony 2",
     yard: "Yard", garage: "Garage", gym: "Gym", cinema: "Home Cinema",
     custom1: "Custom 1", custom2: "Custom 2", custom3: "Custom 3", custom4: "Custom 4", custom5: "Custom 5",
-    rooftop_lounge: "Rooftop Lounge", rooftop_pool: "Rooftop Pool", rooftop_garden: "Rooftop Garden",
-    rooftop_bar: "Rooftop Bar", equipment_room: "Equipment Room",
+    pergola: "Pergola", equipment_room: "Equipment Room",
   },
 
   // ── LeftPanel wall target picker ─────────────────────────

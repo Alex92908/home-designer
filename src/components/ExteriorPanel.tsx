@@ -1203,9 +1203,35 @@ export default function ExteriorPanel() {
             </div>
             {/* 天台休闲区家具与普通房间一致：在 平面图 / 效果图 里增删拖动 */}
             {(exterior.hasRooftop ?? false) && (
-              <div className="pt-1.5 mt-1 border-t border-gray-100 text-[9px] text-gray-400 leading-snug">
-                休闲家具同普通房间：在「平面图 / 效果图 · 天台休闲区」里自由增删、拖动
-              </div>
+              <>
+                <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={exterior.rooftopCeiling ?? false}
+                    onChange={e => setExterior({ rooftopCeiling: e.target.checked })}
+                    className="accent-blue-500"
+                  />
+                  <span className="text-gray-700">天台盖顶（顶层加天花板）</span>
+                </label>
+                <div className="pl-5 text-[9px] text-gray-400 leading-snug">
+                  天台本质是「没有顶的普通楼层」：默认露天，勾选后整层加盖天花板。
+                </div>
+                <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={exterior.parapetGlassEnabled ?? true}
+                    onChange={e => setExterior({ parapetGlassEnabled: e.target.checked })}
+                    className="accent-blue-500"
+                  />
+                  <span className="text-gray-700">天台栏杆（四周玻璃护栏）</span>
+                </label>
+                <div className="pl-5 text-[9px] text-gray-400 leading-snug">
+                  天台四周的安全护栏：默认开启，取消勾选可移除整圈栏杆。
+                </div>
+                <div className="pt-1.5 mt-1 border-t border-gray-100 text-[9px] text-gray-400 leading-snug">
+                  休闲家具同普通房间：在「平面图 / 效果图 · 天台休闲区」里自由增删、拖动
+                </div>
+              </>
             )}
             {/* 绿化块 / 线性天窗 / 空调外机已改为天台家具（绿化块 / 线性天窗 /
                 空调外机），在平面图/效果图「天台」里增删拖动缩放 */}
@@ -1260,17 +1286,7 @@ export default function ExteriorPanel() {
               value={exterior.parapetHeight ?? 0.30}
               onChange={e => setExterior({ parapetHeight: parseFloat(e.target.value) })}
               className="w-full accent-blue-500" />
-            {(exterior.parapetHeight ?? 0.30) > 0.01 && (
-              <label className="flex items-center gap-2 text-[11px] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={exterior.parapetGlassEnabled ?? true}
-                  onChange={e => setExterior({ parapetGlassEnabled: e.target.checked })}
-                  className="accent-blue-500"
-                />
-                <span className="text-gray-700">女儿墙顶玻璃护栏</span>
-              </label>
-            )}
+            {/* 天台栏杆（玻璃护栏）开关已上移至「屋顶」顶部，与天台盖顶并列 */}
             {/* Slab + parapet thickness */}
             <div className="flex items-center justify-between text-[10px] pt-1">
               <span className="text-gray-500">屋面板厚度</span>

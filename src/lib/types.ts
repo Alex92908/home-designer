@@ -30,12 +30,8 @@ export type RoomType =
   | "pool"       // 泳池
   | "terrace"    // 露台
   | "deck"       // 木栈台
-  // ── 屋顶层专属（仅显示在 hasRooftop 的屋顶楼层）──
-  | "rooftop_lounge"   // 天台休闲区
-  | "rooftop_pool"     // 屋顶泳池
-  | "rooftop_garden"   // 屋顶花园
-  | "rooftop_bar"      // 天台酒吧
-  | "equipment_room";  // 设备间
+  | "pergola"    // 凉亭（户外结构房间，添加即自带凉亭骨架家具）
+  | "equipment_room";  // 设备间（普通封闭房间，任意楼层可用）
 
 export type ViewMode = "2d" | "3d" | "all" | "exterior" | "global3d" | "yard2d";
 
@@ -459,6 +455,21 @@ export interface ExteriorSettings {
    *  跳过 —— 上层楼梯间是楼梯井开口，没楼板下层才能上来。可调试开关：
    *  Default false（保持楼梯井开口）；打开后上层楼梯间也铺实心楼板。 */
   stairFloorSlab?: boolean;
+  /** 天台楼梯口是否加盖「出屋面间」（带门带顶的小屋，门开在踏出天台那一侧）。
+   *  挡雨遮风，避免雨水顺楼梯口灌入下层。Default true。关掉则楼梯口露天，
+   *  仅保留开口安全护栏。 */
+  stairPenthouse?: boolean;
+  /** 顶层楼梯间（上方没有更高楼层的那个 stair 房间）默认是否带天花板。
+   *  普通中间层楼梯间天花板要留洞让楼梯井贯通，所以默认无顶；但顶层
+   *  楼梯间（出屋面间）上方就是天空，无需贯通，默认有顶才能挡雨。
+   *  Default true。关掉后顶层楼梯间也露天（仅保留四面墙）。 */
+  stairTopFloorCeiling?: boolean;
+  /** 天台（屋顶层）的普通房间是否盖顶。天台本质就是一个「没有顶的普通楼层」，
+   *  默认露天（false → ceilingHidden）。打开后天台房间像普通楼层一样有天花板/盖顶。
+   *  走通用 roomWallsHidden[room].ceiling 机制，不特判天台。 */
+  rooftopCeiling?: boolean;
+  /** 出屋面间墙体颜色。Hex。Default 同女儿墙色 parapetColor / '#E8E4DE'。 */
+  penthouseColor?: string;
   /** 一层客厅是否自动生成入户门（原本硬编码 `fi===0 && room==="living"`）。
    *  可调试开关：Default true（保持入户门）；关掉则一层客厅不再特判入户门。 */
   livingEntryDoor?: boolean;
@@ -923,7 +934,6 @@ export interface RoomDef {
   windowWall: "N" | "E" | "W" | "none";
   isCustom?: boolean;
   isOutdoor?: boolean;
-  isRooftopOnly?: boolean;
 }
 
 export const ROOM_DEFS: Record<RoomType, RoomDef> = {
@@ -959,12 +969,9 @@ export const ROOM_DEFS: Record<RoomType, RoomDef> = {
   pool:      { width: 600, depth: 350, height: 0,   name: "泳池",   icon: "🏊", defaultWallColor: "#C8DCE8", defaultFloorColor: "#3B82F6", hasWindow: false, windowWall: "none", isOutdoor: true },
   terrace:   { width: 500, depth: 300, height: 0,   name: "露台",   icon: "🌅", defaultWallColor: "#E0D5C0", defaultFloorColor: "#D8C8A8", hasWindow: false, windowWall: "none", isOutdoor: true },
   deck:      { width: 400, depth: 250, height: 0,   name: "木栈台", icon: "🪵", defaultWallColor: "#A07050", defaultFloorColor: "#8B6340", hasWindow: false, windowWall: "none", isOutdoor: true },
-  // ── 屋顶层专属 ──
-  rooftop_lounge:  { width: 500, depth: 400, height: 0, name: "天台休闲区", icon: "🛋️", defaultWallColor: "#F0EDE5", defaultFloorColor: "#C8B898", hasWindow: false, windowWall: "none", isOutdoor: true, isRooftopOnly: true },
-  rooftop_pool:    { width: 600, depth: 350, height: 0, name: "屋顶泳池",   icon: "🏊", defaultWallColor: "#C8DCE8", defaultFloorColor: "#3B82F6", hasWindow: false, windowWall: "none", isOutdoor: true, isRooftopOnly: true },
-  rooftop_garden:  { width: 500, depth: 400, height: 0, name: "屋顶花园",   icon: "🌿", defaultWallColor: "#6B8E60", defaultFloorColor: "#7CAF5A", hasWindow: false, windowWall: "none", isOutdoor: true, isRooftopOnly: true },
-  rooftop_bar:     { width: 400, depth: 300, height: 0, name: "天台酒吧",   icon: "🍸", defaultWallColor: "#2D2D3A", defaultFloorColor: "#4A3C28", hasWindow: false, windowWall: "none", isOutdoor: true, isRooftopOnly: true },
-  equipment_room:  { width: 300, depth: 250, height: 250, name: "设备间",   icon: "⚙️", defaultWallColor: "#D0CEC8", defaultFloorColor: "#B0AEA8", hasWindow: false, windowWall: "none", isRooftopOnly: true },
+  pergola:   { width: 300, depth: 300, height: 0,   name: "凉亭",   icon: "⛩️", defaultWallColor: "#C8A070", defaultFloorColor: "#B8946A", hasWindow: false, windowWall: "none", isOutdoor: true },
+  // 设备间：普通封闭小屋（任意楼层可用），天台上也只是「楼层里的一个普通房间」。
+  equipment_room:  { width: 300, depth: 250, height: 250, name: "设备间",   icon: "⚙️", defaultWallColor: "#D0CEC8", defaultFloorColor: "#B0AEA8", hasWindow: false, windowWall: "none" },
 };
 
 // ─── Room state ────────────────────────────────────────────
