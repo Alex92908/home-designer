@@ -498,6 +498,7 @@ function FurnitureTab() {
   const [searchQ, setSearchQ] = useState("");
   const [styleTag, setStyleTag] = useState<StyleTag | null>(null);
   const t = useT();
+  const locale = useLocale();
 
   const roomFurniture = allRooms ? [...FURNITURE, ...getCustomFurniture()] : getFurnitureForRoom(activeRoom);
   // Include any custom furniture (all rooms)
@@ -534,7 +535,7 @@ function FurnitureTab() {
           type="text"
           value={searchQ}
           onChange={e => setSearchQ(e.target.value)}
-          placeholder="搜索家具…"
+          placeholder={locale === "en" ? "Search furniture…" : "搜索家具…"}
           style={{
             width: "100%",
             height: 30,
@@ -591,7 +592,7 @@ function FurnitureTab() {
               lineHeight: "18px",
             }}
           >
-            {tag}
+            {t.styleTags[tag] ?? tag}
           </button>
         ))}
       </div>
@@ -600,7 +601,7 @@ function FurnitureTab() {
 
       {groups.length === 0 ? (
         <div className="text-xs text-gray-400 text-center py-6">
-          {searchQ || styleTag ? "没有匹配的家具" : t.noFurnitureForRoom}
+          {searchQ || styleTag ? (locale === "en" ? "No matching furniture" : "没有匹配的家具") : t.noFurnitureForRoom}
         </div>
       ) : (
         groups.map(({ id, icon, items }) => (

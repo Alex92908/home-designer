@@ -59,6 +59,7 @@ function AdaptiveDpr({ shadowSizeRef }: { shadowSizeRef?: React.MutableRefObject
   );
 }
 import { useDesignerStore } from "@/lib/store";
+import { useLocale } from "@/lib/i18n";
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 
 /** Dev-only scene bridge. When exterior.debugExposeScene is true it publishes
@@ -2554,6 +2555,7 @@ function DraggableGroup({
   children: React.ReactNode;
 }) {
   const { gl, camera } = useThree();
+  const locale = useLocale();
   const setOutdoorPosition  = useDesignerStore(s => s.setOutdoorPosition);
   const rotateOutdoor       = useDesignerStore(s => s.rotateOutdoor);
   const resetOutdoorPosition = useDesignerStore(s => s.resetOutdoorPosition);
@@ -2695,7 +2697,7 @@ function DraggableGroup({
               }}
               onMouseEnter={e => (e.currentTarget.style.background = "#F3F4F6")}
               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-              title="旋转 45°"
+              title={locale === "en" ? "Rotate 45°" : "旋转 45°"}
             >
               ↻ <span style={{ fontSize: 10 }}>45°</span>
             </button>
@@ -2709,7 +2711,7 @@ function DraggableGroup({
               }}
               onMouseEnter={e => (e.currentTarget.style.background = "#FEF2F2")}
               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-              title="重置位置"
+              title={locale === "en" ? "Reset position" : "重置位置"}
             >
               ↺
             </button>
@@ -2722,7 +2724,7 @@ function DraggableGroup({
               }}
               onMouseEnter={e => (e.currentTarget.style.color = "#111827")}
               onMouseLeave={e => (e.currentTarget.style.color = "#9CA3AF")}
-              title="取消选中"
+              title={locale === "en" ? "Deselect" : "取消选中"}
             >
               ✕
             </button>
@@ -5997,6 +5999,7 @@ function FurniturePreloader() {
 
 // ─── Main export ────────────────────────────────────────────
 export default function HouseCanvas() {
+  const locale        = useLocale();
   const exterior      = useDesignerStore(s => s.exterior);
   // Use ground-floor footprint so CameraRig doesn't reset when user switches floors
   const { W, D }      = useGroundFloorFootprint();
@@ -6463,7 +6466,7 @@ export default function HouseCanvas() {
               border: `1px solid ${walkthrough ? "rgba(110,231,183,0.4)" : "rgba(147,197,253,0.4)"}`,
             }}
           >
-            {walkthrough ? "↩ 退出漫游" : "🚶 进入室内漫游"}
+            {walkthrough ? (locale === "en" ? "↩ Exit walkthrough" : "↩ 退出漫游") : (locale === "en" ? "🚶 Enter walkthrough" : "🚶 进入室内漫游")}
           </button>
           {walkthrough && (
             <>
@@ -6478,14 +6481,14 @@ export default function HouseCanvas() {
                   border: `1px solid ${wallXray ? "rgba(216,180,254,0.5)" : "rgba(255,255,255,0.15)"}`,
                 }}
               >
-                🔮 {wallXray ? "取消透视" : "墙体透视"}
+                🔮 {wallXray ? (locale === "en" ? "Disable X-ray" : "取消透视") : (locale === "en" ? "Wall X-ray" : "墙体透视")}
               </button>
               <button
                 onClick={() => setWalkNoClip(v => !v)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
                 title={walkNoClip
-                  ? "穿墙模式已开 — 当前可以穿过所有墙。点击关闭，恢复实墙阻挡。"
-                  : "穿墙模式已关 — 墙体正常阻挡。卡住时点击可临时穿墙。"}
+                  ? (locale === "en" ? "No-clip is ON — you can pass through all walls. Click to turn off and restore solid walls." : "穿墙模式已开 — 当前可以穿过所有墙。点击关闭，恢复实墙阻挡。")
+                  : (locale === "en" ? "No-clip is OFF — walls block normally. Click to temporarily pass through when stuck." : "穿墙模式已关 — 墙体正常阻挡。卡住时点击可临时穿墙。")}
                 style={{
                   background: walkNoClip
                     ? "linear-gradient(135deg,rgba(245,158,11,0.92),rgba(217,119,6,0.92))"
@@ -6494,7 +6497,7 @@ export default function HouseCanvas() {
                   border: `1px solid ${walkNoClip ? "rgba(254,215,170,0.5)" : "rgba(134,239,172,0.5)"}`,
                 }}
               >
-                {walkNoClip ? "👻 穿墙：开" : "🧱 穿墙：关"}
+                {walkNoClip ? (locale === "en" ? "👻 No-clip: ON" : "👻 穿墙：开") : (locale === "en" ? "🧱 No-clip: OFF" : "🧱 穿墙：关")}
               </button>
             </>
           )}
@@ -6521,7 +6524,7 @@ export default function HouseCanvas() {
               letterSpacing: "0.04em",
               whiteSpace: "nowrap",
             }}>
-            🖱 左键拖动转视角 · WASD 行走 · Shift 疾跑 · 走上楼梯/天台 · ESC 退出
+            {locale === "en" ? "🖱 Drag to look · WASD to move · Shift to sprint · walk up stairs/rooftop · ESC to exit" : "🖱 左键拖动转视角 · WASD 行走 · Shift 疾跑 · 走上楼梯/天台 · ESC 退出"}
           </div>
           {/* Touch joystick — bottom-left, only useful with finger but
               always rendered (mouse drag also works on it). */}
@@ -6533,10 +6536,10 @@ export default function HouseCanvas() {
       {!walkthrough && (
         <div className="absolute bottom-20 right-4 z-20 flex flex-col gap-1 select-none">
           {([
-            { label: "+", title: "放大", factor: 0.88 },
-            { label: "−", title: "缩小", factor: 1.14 },
-            { label: "⊙", title: "俯视", factor: 0 },
-            { label: "⌂", title: "重置视角", factor: 0 },
+            { label: "+", title: locale === "en" ? "Zoom in" : "放大", factor: 0.88 },
+            { label: "−", title: locale === "en" ? "Zoom out" : "缩小", factor: 1.14 },
+            { label: "⊙", title: locale === "en" ? "Top view" : "俯视", factor: 0 },
+            { label: "⌂", title: locale === "en" ? "Reset view" : "重置视角", factor: 0 },
           ] as { label: string; title: string; factor: number }[]).map(({ label, title, factor }) => {
             const stopZoom = () => {
               if (zoomTimerRef.current) { clearInterval(zoomTimerRef.current); zoomTimerRef.current = null; }

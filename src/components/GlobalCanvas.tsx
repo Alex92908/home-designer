@@ -23,7 +23,7 @@ import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
 const EMPTY_ROOM_STATE_GC: RoomState = { materials: {}, placedItems: [] };
 import { PlacedItemMesh } from "./RoomCanvas";
-import { useT } from "@/lib/i18n";
+import { useT, useLocale } from "@/lib/i18n";
 import type { RoofStyle } from "@/lib/types";
 
 const CM = 0.01;       // cm → m
@@ -1130,6 +1130,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
   // Take the min defensively so old persisted state can't cause out-of-bounds.
   const floorCount     = Math.min(floorPlansLen, exteriorFloors);
   const t = useT();
+  const locale = useLocale();
 
   // ── Visibility / layout state (internal fallback when no props) ───────────
   const [intVisible, setIntVisible] = useState<boolean[]>(() =>
@@ -1230,7 +1231,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
         }}
       >
         {/* ── Floors ── */}
-        <div className="text-[9px] font-bold text-gray-400 tracking-widest mb-0.5 px-1">楼层</div>
+        <div className="text-[9px] font-bold text-gray-400 tracking-widest mb-0.5 px-1">{locale === "en" ? "FLOORS" : "楼层"}</div>
         {Array.from({ length: floorCount }, (_, fi) => (
           <button
             key={fi}
@@ -1262,7 +1263,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
           }}
         >
           <span>{showRoof ? (hasRooftop ? "🏠" : "🏠") : "○"}</span>
-          {hasRooftop ? "天台" : "屋顶"}
+          {hasRooftop ? (locale === "en" ? "Rooftop" : "天台") : (locale === "en" ? "Roof" : "屋顶")}
         </button>
 
         {/* ── Stairs ── */}
@@ -1275,12 +1276,12 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
             border: `1px solid ${showStairs ? "#FED7AA" : "#E5E7EB"}`,
           }}
         >
-          <span>{showStairs ? "🪜" : "　"}</span> 楼梯
+          <span>{showStairs ? "🪜" : "　"}</span> {locale === "en" ? "Stairs" : "楼梯"}
         </button>
 
         {showStairs && floorCount > 1 && (
           <div className="px-2 py-0.5 text-[9px] text-orange-400 leading-tight">
-            拖动楼梯可移位
+            {locale === "en" ? "Drag stairs to reposition" : "拖动楼梯可移位"}
           </div>
         )}
       </div>

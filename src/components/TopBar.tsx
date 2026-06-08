@@ -18,6 +18,7 @@ function FloorSwitcher() {
   const activeFloor    = useDesignerStore(s => s.activeFloor);
   const setActiveFloor = useDesignerStore(s => s.setActiveFloor);
   const setExterior    = useDesignerStore(s => s.setExterior);
+  const locale         = useLocaleStore((s) => s.locale);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -40,7 +41,7 @@ function FloorSwitcher() {
   // Current floor label for dropdown trigger
   const isRooftopActive = hasRooftop && activeFloor === rooftopIdx;
   const activeColor = isRooftopActive ? "#DC2626" : FLOOR_COLORS[activeFloor % FLOOR_COLORS.length];
-  const activeLabel = isRooftopActive ? "🏠屋顶" : `${activeFloor + 1}F`;
+  const activeLabel = isRooftopActive ? (locale === "en" ? "🏠Roof" : "🏠屋顶") : `${activeFloor + 1}F`;
 
   // Use inline pills for ≤5 total options (4 floors + optional rooftop); dropdown for more
   const useDropdown = totalOptions > 5;
@@ -81,14 +82,14 @@ function FloorSwitcher() {
             <button
               onClick={() => selectFloor(rooftopIdx)}
               className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all"
-              title="屋顶层"
+              title={locale === "en" ? "Rooftop floor" : "屋顶层"}
               style={{
                 background: isActive ? "#DC2626" : "transparent",
                 color:      isActive ? "white" : "#DC2626",
                 border:     "1.5px solid #DC2626",
               }}
             >
-              🏠天台
+              {locale === "en" ? "🏠Roof" : "🏠天台"}
             </button>
           );
         })()}
@@ -108,7 +109,7 @@ function FloorSwitcher() {
           color:      open ? "white" : activeColor,
           border:     `1.5px solid ${activeColor}`,
         }}
-        title="切换楼层"
+        title={locale === "en" ? "Switch floor" : "切换楼层"}
       >
         <span>{activeLabel}</span>
         <span style={{ fontSize: 8, opacity: 0.8 }}>▾</span>
@@ -152,7 +153,7 @@ function FloorSwitcher() {
               <button
                 onClick={() => selectFloor(rooftopIdx)}
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] font-bold transition-all hover:opacity-80"
-                title={hasRooftop ? "屋顶层" : "点击开启天台层"}
+                title={hasRooftop ? (locale === "en" ? "Rooftop floor" : "屋顶层") : (locale === "en" ? "Click to enable rooftop floor" : "点击开启天台层")}
                 style={{
                   background: isActive ? "#DC2626" : "white",
                   color:      isActive ? "white" : hasRooftop ? "#DC2626" : "#9CA3AF",
@@ -163,7 +164,7 @@ function FloorSwitcher() {
                   className="w-2 h-2 rounded-full shrink-0"
                   style={{ background: isActive ? "white" : hasRooftop ? "#DC2626" : "#D1D5DB" }}
                 />
-                🏠屋顶
+                {locale === "en" ? "🏠Roof" : "🏠屋顶"}
               </button>
             );
           })()}
@@ -329,7 +330,7 @@ export default function TopBar() {
           <button
             onClick={handleUndo}
             disabled={!canUndo}
-            title={viewMode === "all" ? "撤销布局操作" : "撤销家具操作"}
+            title={viewMode === "all" ? (locale === "en" ? "Undo layout action" : "撤销布局操作") : (locale === "en" ? "Undo furniture action" : "撤销家具操作")}
             className="flex items-center justify-center w-7 h-7 rounded-lg text-sm transition-all disabled:opacity-30"
             style={{
               background: canUndo ? "var(--ds-bg)" : "transparent",
@@ -344,7 +345,7 @@ export default function TopBar() {
         <button
           onClick={() => temporalUndo()}
           disabled={pastCount === 0}
-          title={`撤销设计操作 (Ctrl+Z) · ${pastCount} 步可撤销`}
+          title={locale === "en" ? `Undo design action (Ctrl+Z) · ${pastCount} step(s) available` : `撤销设计操作 (Ctrl+Z) · ${pastCount} 步可撤销`}
           className="flex items-center justify-center w-7 h-7 rounded-lg text-sm transition-all disabled:opacity-30"
           style={{
             background: pastCount > 0 ? "#EEF2FF" : "transparent",
@@ -358,7 +359,7 @@ export default function TopBar() {
         <button
           onClick={() => temporalRedo()}
           disabled={futureCount === 0}
-          title={`重做设计操作 (Ctrl+Y) · ${futureCount} 步可重做`}
+          title={locale === "en" ? `Redo design action (Ctrl+Y) · ${futureCount} step(s) available` : `重做设计操作 (Ctrl+Y) · ${futureCount} 步可重做`}
           className="flex items-center justify-center w-7 h-7 rounded-lg text-sm transition-all disabled:opacity-30"
           style={{
             background: futureCount > 0 ? "#EEF2FF" : "transparent",
@@ -403,7 +404,7 @@ export default function TopBar() {
         onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }))}
         className="hidden md:flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] transition-all shrink-0"
         style={{ border: "1px solid var(--ds-border)", color: "var(--ds-text-3)", background: "var(--ds-bg)" }}
-        title="命令面板 (⌘K)"
+        title={locale === "en" ? "Command palette (⌘K)" : "命令面板 (⌘K)"}
       >
         <span>⌘K</span>
       </button>

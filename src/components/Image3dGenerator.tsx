@@ -16,24 +16,28 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useDesignerStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import type { YardPrefab } from "@/lib/types";
 
 // ─── Part presets ─────────────────────────────────────────────────
 // Common villa outdoor parts the user can generate with one click.
-const PART_PRESETS = [
-  { hint: "infinity pool",       emoji: "🏊", label: "泳池" },
-  { hint: "pergola",             emoji: "⛺", label: "凉亭" },
-  { hint: "outdoor kitchen",     emoji: "🍳", label: "户外厨房" },
-  { hint: "gate entrance",       emoji: "🚪", label: "入口大门" },
-  { hint: "garden fountain",     emoji: "⛲", label: "喷泉" },
-  { hint: "car parking shelter", emoji: "🚗", label: "停车棚" },
-  { hint: "stone path",          emoji: "🪨", label: "石径" },
-  { hint: "luxury sun lounger",  emoji: "🛋", label: "躺椅" },
+type PartLabelKey = "presetPool" | "presetPergola" | "presetKitchen" | "presetGate"
+  | "presetFountain" | "presetCarport" | "presetPath" | "presetLounger";
+const PART_PRESETS: { hint: string; emoji: string; labelKey: PartLabelKey }[] = [
+  { hint: "infinity pool",       emoji: "🏊", labelKey: "presetPool" },
+  { hint: "pergola",             emoji: "⛺", labelKey: "presetPergola" },
+  { hint: "outdoor kitchen",     emoji: "🍳", labelKey: "presetKitchen" },
+  { hint: "gate entrance",       emoji: "🚪", labelKey: "presetGate" },
+  { hint: "garden fountain",     emoji: "⛲", labelKey: "presetFountain" },
+  { hint: "car parking shelter", emoji: "🚗", labelKey: "presetCarport" },
+  { hint: "stone path",          emoji: "🪨", labelKey: "presetPath" },
+  { hint: "luxury sun lounger",  emoji: "🛋", labelKey: "presetLounger" },
 ];
 
 type GenState = "idle" | "generating" | "done" | "error";
 
 export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
+  const t = useT();
   const referenceImage   = useDesignerStore(s => s.referenceImageDataUrl);
   const addYardItem      = useDesignerStore(s => s.addYardItem);
   const requestAiRender  = useDesignerStore(s => s.requestAiRender);
@@ -61,8 +65,8 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
 
   // ── Generate ─────────────────────────────────────────────────────
   const generate = useCallback(async () => {
-    if (!activeImage) { setErrorMsg("请先上传参考图片"); setState("error"); return; }
-    if (!partHint.trim()) { setErrorMsg("请选择或输入零件类型"); setState("error"); return; }
+    if (!activeImage) { setErrorMsg(t.image3d.needUploadImg); setState("error"); return; }
+    if (!partHint.trim()) { setErrorMsg(t.image3d.needPartType); setState("error"); return; }
     setState("generating");
     setErrorMsg("");
     setPreviewGlb(null);
@@ -77,7 +81,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
         glbBase64?: string; glbUrl?: string; error?: string; details?: string[];
       };
       if (!res.ok || (!json.glbBase64 && !json.glbUrl)) {
-        throw new Error(json.error ?? "生成失败");
+        throw new Error(json.error ?? t.image3d.genFailed);
       }
       const src = json.glbUrl ?? json.glbBase64!;
       setPreviewGlb(src);
@@ -89,7 +93,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setState("error");
     }
-  }, [activeImage, partHint, partLabel]);
+  }, [activeImage, partHint, partLabel, t]);
 
   // ── Add to yard ───────────────────────────────────────────────────
   const addToScene = useCallback((andRender = false) => {
@@ -104,7 +108,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
       scale:       1,
       glbSrc:      previewGlb,
       partColor:   partColor !== "#D4B896" ? partColor : undefined,
-      partLabel:   partLabel || partHint || "AI模型",
+      partLabel:   partLabel || partHint || t.image3d.aiModelFallback,
     };
     addYardItem(prefab);
     setState("idle");
@@ -114,7 +118,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
       setTimeout(() => requestAiRender(), 300);
     }
     onClose?.();
-  }, [previewGlb, partColor, partLabel, partHint, addYardItem, requestAiRender, onClose]);
+  }, [previewGlb, partColor, partLabel, partHint, addYardItem, requestAiRender, onClose, t]);
 
   return (
     <div style={{
@@ -130,7 +134,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div style={{ fontWeight: 700, fontSize: 15 }}>
-          🤖 AI 生成 3D 零件
+          {t.image3d.title}
         </div>
         {onClose && (
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#888" }}>
@@ -144,13 +148,13 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
         background: "#EFF6FF", border: "1px solid #BFDBFE",
         borderRadius: 8, padding: "8px 12px", marginBottom: 14, fontSize: 11, color: "#1E40AF",
       }}>
-        🔬 使用开源模型：<b>Stable Fast 3D</b>（Stability AI）→ <b>TripoSR</b> 备用<br />
-        均托管于 Hugging Face Spaces，完全免费，无需 API Key。
+        {t.image3d.modelInfo1a}<b>{t.image3d.modelInfo1b}</b>{t.image3d.modelInfo1c}<b>{t.image3d.modelInfo1d}</b>{t.image3d.modelInfo1e}<br />
+        {t.image3d.modelInfo2}
       </div>
 
       {/* Reference image */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>参考图片</div>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>{t.image3d.referenceImage}</div>
         {activeImage ? (
           <div style={{ position: "relative" }}>
             <img
@@ -167,7 +171,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
                 fontSize: 10, cursor: "pointer",
               }}
             >
-              换图
+              {t.image3d.replaceImg}
             </button>
           </div>
         ) : (
@@ -179,7 +183,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
               color: "#888", fontSize: 13,
             }}
           >
-            + 点击上传参考图片
+            {t.image3d.uploadRef}
           </button>
         )}
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
@@ -187,12 +191,12 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
 
       {/* Part presets */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>选择零件类型</div>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>{t.image3d.selectPartType}</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {PART_PRESETS.map(p => (
             <button
               key={p.hint}
-              onClick={() => { setPartHint(p.hint); setPartLabel(p.label); }}
+              onClick={() => { setPartHint(p.hint); setPartLabel(t.image3d[p.labelKey]); }}
               style={{
                 padding: "5px 10px",
                 borderRadius: 20,
@@ -203,7 +207,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
                 fontSize: 11,
               }}
             >
-              {p.emoji} {p.label}
+              {p.emoji} {t.image3d[p.labelKey]}
             </button>
           ))}
         </div>
@@ -213,7 +217,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
       <input
         value={partHint}
         onChange={e => setPartHint(e.target.value)}
-        placeholder="或自定义描述，如 'curved pool with infinity edge'"
+        placeholder={t.image3d.customPlaceholder}
         style={{
           width: "100%", boxSizing: "border-box",
           border: "1px solid #DDD", borderRadius: 8, padding: "8px 10px",
@@ -223,14 +227,14 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
 
       {/* Color override */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-        <span style={{ fontWeight: 600 }}>颜色覆盖</span>
+        <span style={{ fontWeight: 600 }}>{t.image3d.colorOverride}</span>
         <input
           type="color"
           value={partColor}
           onChange={e => setPartColor(e.target.value)}
           style={{ width: 36, height: 26, border: "none", borderRadius: 4, cursor: "pointer" }}
         />
-        <span style={{ fontSize: 11, color: "#888" }}>覆盖 GLB 原始材质色</span>
+        <span style={{ fontSize: 11, color: "#888" }}>{t.image3d.colorOverrideHint}</span>
       </div>
 
       {/* Generate button */}
@@ -245,7 +249,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
           marginBottom: 10,
         }}
       >
-        {state === "generating" ? "⏳ 生成中（30-60秒）…" : "🚀 生成 3D 模型"}
+        {state === "generating" ? t.image3d.generating : t.image3d.generateBtn}
       </button>
 
       {/* Error */}
@@ -253,7 +257,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
         <div style={{ color: "#DC2626", fontSize: 11, marginBottom: 8 }}>
           ⚠ {errorMsg}
           <br />
-          <span style={{ color: "#888" }}>HF Spaces 有时繁忙，可稍后重试</span>
+          <span style={{ color: "#888" }}>{t.image3d.hfBusy}</span>
         </div>
       )}
 
@@ -261,12 +265,12 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
       {state === "done" && previewGlb && (
         <div style={{ background: "#F0FDF4", border: "1px solid #86EFAC", borderRadius: 8, padding: 12 }}>
           <div style={{ color: "#166534", fontWeight: 600, marginBottom: 8 }}>
-            ✅ GLB 生成成功！
+            {t.image3d.glbSuccess}
           </div>
           <input
             value={partLabel}
             onChange={e => setPartLabel(e.target.value)}
-            placeholder="零件名称（可选）"
+            placeholder={t.image3d.partNamePlaceholder}
             style={{
               width: "100%", boxSizing: "border-box",
               border: "1px solid #BBF7D0", borderRadius: 6, padding: "6px 8px",
@@ -283,7 +287,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
                 fontSize: 12, fontWeight: 600, cursor: "pointer",
               }}
             >
-              ➕ 加入场景
+              {t.image3d.addToScene}
             </button>
             <button
               onClick={() => addToScene(true)}
@@ -294,7 +298,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
                 fontSize: 12, fontWeight: 600, cursor: "pointer",
               }}
             >
-              🎨 加入并渲染
+              {t.image3d.addAndRender}
             </button>
           </div>
 
@@ -324,7 +328,7 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
                 whiteSpace: "nowrap",
               }}
             >
-              ⬇ 下载 GLB
+              {t.image3d.downloadGlb}
             </button>
           </div>
         </div>
@@ -332,9 +336,9 @@ export function Image3dGenerator({ onClose }: { onClose?: () => void }) {
 
       {/* Pipeline diagram */}
       <div style={{ marginTop: 14, padding: "8px 10px", background: "#F8F8F8", borderRadius: 8, fontSize: 10, color: "#666", lineHeight: 1.7 }}>
-        <b>变形金刚拆解流程：</b><br />
-        参考图片 → 选部位 → SF3D/TripoSR → GLB<br />
-        → 独立拖拽节点 → 换色/换位置 → AI渲染
+        <b>{t.image3d.pipelineTitle}</b><br />
+        {t.image3d.pipeline1}<br />
+        {t.image3d.pipeline2}
       </div>
     </div>
   );

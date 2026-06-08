@@ -19,11 +19,13 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useDesignerStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import type { YardPrefab } from "@/lib/types";
 
 type Stage = "idle" | "working" | "done" | "error";
 
 export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
+  const t = useT();
   const referenceImageDataUrl = useDesignerStore(s => s.referenceImageDataUrl);
   const addYardItem           = useDesignerStore(s => s.addYardItem);
 
@@ -62,7 +64,7 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
 
   // ── Apply PBR — tries /api/pbr-texture first, then ComfyUI local ──
   const applyPbr = useCallback(async () => {
-    if (!glbSrc || !refImg) { setErrMsg("请先上传 GLB 和参考图"); return; }
+    if (!glbSrc || !refImg) { setErrMsg(t.glbPbr.needUploadBoth); return; }
     setStage("working");
     setErrMsg("");
     setNoKeys(false);
@@ -84,7 +86,7 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
       };
       if (res.status === 422 && json.error === "no_api_keys") {
         setNoKeys(true);
-        setErrMsg(json.message ?? "未配置 API Key");
+        setErrMsg(json.message ?? t.glbPbr.noApiKey);
         setStage("error");
         return;
       }
@@ -110,15 +112,15 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
 
       if (comfyRes.status === 503) {
         // ComfyUI offline — throw combined error
-        throw new Error((json.error ?? "所有云端服务失败") + "\n\n💡 本地 ComfyUI 未运行");
+        throw new Error((json.error ?? t.glbPbr.allCloudFailed) + "\n\n" + t.glbPbr.comfyNotRunning);
       }
       if (!comfyRes.ok || !comfyJson.glbBase64) {
-        throw new Error(comfyJson.message ?? comfyJson.error ?? json.error ?? "PBR 生成失败");
+        throw new Error(comfyJson.message ?? comfyJson.error ?? json.error ?? t.glbPbr.pbrGenFailed);
       }
 
       setResultGlb(comfyJson.glbBase64);
-      setBackend(`ComfyUI 本地 (${comfyJson.mode ?? "auto"})`);
-      setBackendNote("本地 ComfyUI 生成，从参考图重建新模型 + 纹理");
+      setBackend(t.glbPbr.comfyBackend(comfyJson.mode ?? "auto"));
+      setBackendNote(t.glbPbr.comfyNote);
       setTrueRetexture(false);
       setStage("done");
 
@@ -126,7 +128,7 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
       setErrMsg(err instanceof Error ? err.message : String(err));
       setStage("error");
     }
-  }, [glbSrc, refImg, prompt]);
+  }, [glbSrc, refImg, prompt, t]);
 
   // ── Add PBR result to yard ───────────────────────────────────────
   const addToScene = useCallback(() => {
@@ -137,11 +139,11 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
       prefabKind: "glb_model",
       x: 200, z: 200, rot: 0, scale: 1,
       glbSrc:    resultGlb,
-      partLabel: `PBR模型 (${glbName || "uploaded"})`,
+      partLabel: t.glbPbr.pbrModelLabel(glbName || "uploaded"),
     };
     addYardItem(prefab);
     onClose?.();
-  }, [resultGlb, glbName, addYardItem, onClose]);
+  }, [resultGlb, glbName, addYardItem, onClose, t]);
 
   // ── Download ─────────────────────────────────────────────────────
   const download = useCallback(() => {
@@ -162,9 +164,9 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>🎨 GLB + 原图 → PBR 贴图</div>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>{t.glbPbr.title}</div>
           <div style={{ fontSize: 10, color: "#888", marginTop: 3 }}>
-            给现有 GLB 模型上 PBR：Albedo · Normal · Roughness · Metalness
+            {t.glbPbr.subtitle}
           </div>
         </div>
         {onClose && (
@@ -178,17 +180,16 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
         background: "#F0F9FF", border: "1px solid #BAE6FD",
         borderRadius: 8, padding: "10px 12px", marginBottom: 16, fontSize: 11,
       }}>
-        <b style={{ color: "#0369A1" }}>为什么需要 PBR？</b>
+        <b style={{ color: "#0369A1" }}>{t.glbPbr.whyPbr}</b>
         <div style={{ color: "#0C4A6E", marginTop: 4, lineHeight: 1.7 }}>
-          TripoSR / TRELLIS 默认输出的 GLB 仅含顶点色，在自然光下显得"塑料感"。<br />
-          PBR 为模型追加 <b>法线图（凹凸细节）+ 粗糙度图（高光）+ 金属度图</b>，
-          渲染效果提升一个等级。
+          {t.glbPbr.whyPbrBody1}<br />
+          {t.glbPbr.whyPbrBody2a}<b>{t.glbPbr.whyPbrBody2b}</b>{t.glbPbr.whyPbrBody2c}
         </div>
       </div>
 
       {/* ── Step 1: Upload GLB ── */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>Step 1 · 上传 GLB 模型</div>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>{t.glbPbr.step1}</div>
         {glbSrc ? (
           <div style={{
             display: "flex", alignItems: "center", gap: 10,
@@ -206,7 +207,7 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
             </div>
             <button onClick={() => glbRef.current?.click()}
               style={{ background: "none", border: "1px solid #86EFAC", borderRadius: 6, padding: "3px 10px", fontSize: 11, cursor: "pointer", color: "#166534" }}>
-              换
+              {t.glbPbr.replace}
             </button>
           </div>
         ) : (
@@ -217,7 +218,7 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
             display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
           }}>
             <span style={{ fontSize: 28 }}>📦</span>
-            <span style={{ fontSize: 12 }}>点击上传 .glb 文件</span>
+            <span style={{ fontSize: 12 }}>{t.glbPbr.uploadGlb}</span>
           </button>
         )}
         <input ref={glbRef} type="file" accept=".glb,.gltf" style={{ display: "none" }} onChange={loadGlb} />
@@ -226,10 +227,10 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
       {/* ── Step 2: Reference image ── */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>
-          Step 2 · 参考图片
+          {t.glbPbr.step2}
           {referenceImageDataUrl && !refImg && (
             <span style={{ fontSize: 10, color: "#7C3AED", marginLeft: 8, fontWeight: 400 }}>
-              （已自动载入工作区参考图）
+              {t.glbPbr.autoLoadedRef}
             </span>
           )}
         </div>
@@ -245,7 +246,7 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
               background: "rgba(0,0,0,0.6)", color: "#fff",
               border: "none", borderRadius: 6, padding: "3px 10px",
               fontSize: 10, cursor: "pointer",
-            }}>换图</button>
+            }}>{t.glbPbr.replaceImg}</button>
           </div>
         ) : (
           <button onClick={() => imgRef.current?.click()} style={{
@@ -255,7 +256,7 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
             display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
           }}>
             <span style={{ fontSize: 28 }}>🖼</span>
-            <span style={{ fontSize: 12 }}>上传别墅参考图（用于贴图参考）</span>
+            <span style={{ fontSize: 12 }}>{t.glbPbr.uploadVillaRef}</span>
           </button>
         )}
         <input ref={imgRef} type="file" accept="image/*" style={{ display: "none" }} onChange={loadImg} />
@@ -264,8 +265,8 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
       {/* ── Step 3: texture prompt (for Meshy) ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>
-          Step 3 · 材质描述
-          <span style={{ fontSize: 10, color: "#7C3AED", marginLeft: 8, fontWeight: 400 }}>（Meshy AI 需要此描述生成贴图）</span>
+          {t.glbPbr.step3}
+          <span style={{ fontSize: 10, color: "#7C3AED", marginLeft: 8, fontWeight: 400 }}>{t.glbPbr.step3Hint}</span>
         </div>
         <textarea
           value={prompt}
@@ -284,11 +285,11 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
       {stage === "working" && (
         <div style={{ textAlign: "center", padding: "20px 0", marginBottom: 12 }}>
           <div style={{ fontSize: 36, marginBottom: 10 }}>⚙️</div>
-          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>正在生成 PBR 贴图…</div>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{t.glbPbr.generating}</div>
           <div style={{ fontSize: 11, color: "#666", lineHeight: 1.7 }}>
-            上传 GLB + 参考图<br />
-            AI 分析材质、光泽、细节<br />
-            生成：法线 · 粗糙度 · 金属度 · Albedo
+            {t.glbPbr.genBody1}<br />
+            {t.glbPbr.genBody2}<br />
+            {t.glbPbr.genBody3}
           </div>
           <div style={{ marginTop: 16, height: 4, background: "#E5E7EB", borderRadius: 2, overflow: "hidden" }}>
             <div style={{
@@ -310,10 +311,10 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
           {noKeys ? (
             <>
               <div style={{ fontWeight: 700, color: "#92400E", marginBottom: 6 }}>
-                🔑 需要配置 API Key
+                {t.glbPbr.needKeyTitle}
               </div>
               <div style={{ fontSize: 11, color: "#78350F", lineHeight: 1.6, marginBottom: 10 }}>
-                三种模式，任选其一在 <code>.env.local</code> 配置：
+                {t.glbPbr.needKeyDesc1}<code>.env.local</code>{t.glbPbr.needKeyDesc2}
               </div>
               <div style={{
                 background: "#1E293B", color: "#E2E8F0",
@@ -321,13 +322,13 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
                 fontFamily: "monospace", fontSize: 10, lineHeight: 2,
                 marginBottom: 10,
               }}>
-                <div style={{ color: "#94A3B8" }}># ① Meshy AI — 真实重贴图（推荐）</div>
-                <div style={{ color: "#94A3B8" }}>#    保留原始几何，免费 200 credits</div>
+                <div style={{ color: "#94A3B8" }}>{t.glbPbr.keyComment1a}</div>
+                <div style={{ color: "#94A3B8" }}>{t.glbPbr.keyComment1b}</div>
                 <div>MESHY_API_KEY=msy_xxxx</div>
-                <div style={{ marginTop: 6, color: "#94A3B8" }}># ② TripoAI — 300 free credits/month</div>
-                <div style={{ color: "#94A3B8" }}>#    从参考图重建新模型+PBR</div>
+                <div style={{ marginTop: 6, color: "#94A3B8" }}>{t.glbPbr.keyComment2a}</div>
+                <div style={{ color: "#94A3B8" }}>{t.glbPbr.keyComment2b}</div>
                 <div>TRIPO_API_KEY=tsk_xxxx</div>
-                <div style={{ marginTop: 6, color: "#94A3B8" }}># ③ Fal.ai — 按量付费</div>
+                <div style={{ marginTop: 6, color: "#94A3B8" }}>{t.glbPbr.keyComment3}</div>
                 <div>FAL_API_KEY=xxxx:xxxx</div>
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -337,7 +338,7 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
                     borderRadius: 8, border: "1px solid #D97706",
                     color: "#92400E", fontSize: 10, fontWeight: 600, textDecoration: "none",
                   }}>
-                  Meshy AI 免费注册 →
+                  {t.glbPbr.meshyFreeSignup}
                 </a>
                 <a href="https://platform.tripo3d.ai/" target="_blank" rel="noopener noreferrer"
                   style={{
@@ -345,7 +346,7 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
                     borderRadius: 8, border: "1px solid #D97706",
                     color: "#92400E", fontSize: 10, fontWeight: 600, textDecoration: "none",
                   }}>
-                  Tripo3D 免费注册 →
+                  {t.glbPbr.tripoFreeSignup}
                 </a>
                 <a href="https://fal.ai/" target="_blank" rel="noopener noreferrer"
                   style={{
@@ -353,29 +354,29 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
                     borderRadius: 8, border: "1px solid #D97706",
                     color: "#92400E", fontSize: 10, fontWeight: 600, textDecoration: "none",
                   }}>
-                  Fal.ai 注册 →
+                  {t.glbPbr.falSignup}
                 </a>
               </div>
             </>
           ) : (
             <>
-              <div style={{ fontWeight: 700, color: "#DC2626", marginBottom: 4 }}>⚠ 贴图失败</div>
+              <div style={{ fontWeight: 700, color: "#DC2626", marginBottom: 4 }}>{t.glbPbr.textureFailed}</div>
               <div style={{ fontSize: 11, color: "#7F1D1D", lineHeight: 1.7, marginBottom: 8 }}>{errMsg}</div>
               {/* Credit exhaustion helpers */}
               {errMsg.includes("TripoAI") && errMsg.includes("用完") && (
                 <a href="https://platform.tripo3d.ai/" target="_blank" rel="noopener noreferrer"
                   style={{ display: "block", textAlign: "center", marginBottom: 6, padding: "6px 0", borderRadius: 8, border: "1px solid #DC2626", color: "#DC2626", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
-                  TripoAI 充值 / 等待每月重置 →
+                  {t.glbPbr.tripoTopUp}
                 </a>
               )}
               {errMsg.includes("Fal.ai") && errMsg.includes("余额") && (
                 <a href="https://fal.ai/dashboard/billing" target="_blank" rel="noopener noreferrer"
                   style={{ display: "block", textAlign: "center", marginBottom: 6, padding: "6px 0", borderRadius: 8, border: "1px solid #DC2626", color: "#DC2626", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
-                  Fal.ai 充值 →
+                  {t.glbPbr.falTopUp}
                 </a>
               )}
               <div style={{ fontSize: 10, color: "#7F1D1D", marginBottom: 8 }}>
-                💡 添加 <b>Meshy AI 免费账户</b>（保留原始几何，免费 200 credits）：
+                {t.glbPbr.addMeshyHintPre}<b>{t.glbPbr.addMeshyHintBold}</b>{t.glbPbr.addMeshyHintPost}
                 <code style={{ display: "block", marginTop: 4, background: "#1E293B", color: "#E2E8F0", padding: "4px 8px", borderRadius: 4 }}>
                   MESHY_API_KEY=msy_xxxx
                 </code>
@@ -383,13 +384,13 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
               <div style={{ display: "flex", gap: 8 }}>
                 <a href="https://app.meshy.ai/" target="_blank" rel="noopener noreferrer"
                   style={{ flex: 1, textAlign: "center", padding: "6px 0", borderRadius: 8, border: "1px solid #7F1D1D", color: "#7F1D1D", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
-                  Meshy AI 免费注册 →
+                  {t.glbPbr.meshyFreeSignup}
                 </a>
                 <button onClick={applyPbr} style={{
                   flex: 1, padding: "6px 0", borderRadius: 8,
                   background: "#DC2626", color: "#fff", border: "none", fontSize: 11,
                   fontWeight: 700, cursor: "pointer",
-                }}>🔄 重试</button>
+                }}>{t.glbPbr.retry}</button>
               </div>
             </>
           )}
@@ -403,7 +404,7 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
           borderRadius: 10, padding: "12px 14px", marginBottom: 12,
         }}>
           <div style={{ fontWeight: 700, color: "#166534", marginBottom: 6, fontSize: 13 }}>
-            ✅ PBR 贴图成功！
+            {t.glbPbr.pbrSuccess}
           </div>
           {backend && (
             <div style={{
@@ -425,21 +426,21 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
             </div>
           )}
           <div style={{ fontSize: 11, color: "#15803D", marginBottom: 10, lineHeight: 1.6 }}>
-            已生成包含 Albedo · Normal · Roughness · Metalness 的完整 PBR GLB。<br />
-            在 Three.js 中光照效果将显著改善。
+            {t.glbPbr.doneBody1}<br />
+            {t.glbPbr.doneBody2}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={addToScene} style={{
               flex: 1, padding: "9px 0", borderRadius: 8, border: "none",
               background: "#16A34A", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer",
             }}>
-              ➕ 加入场景
+              {t.glbPbr.addToScene}
             </button>
             <button onClick={download} style={{
               flex: 1, padding: "9px 0", borderRadius: 8, border: "none",
               background: "#15803D", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer",
             }}>
-              ⬇ 下载 PBR GLB
+              {t.glbPbr.downloadGlb}
             </button>
           </div>
         </div>
@@ -458,7 +459,7 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
             cursor: !glbSrc || !refImg ? "not-allowed" : "pointer",
           }}
         >
-          🎨 生成 PBR 贴图
+          {t.glbPbr.generateBtn}
         </button>
       )}
 
@@ -470,7 +471,7 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
             background: "transparent", border: "1px solid #D1D5DB",
             borderRadius: 8, fontSize: 12, cursor: "pointer", color: "#666",
           }}>
-          ↩ 换一个模型
+          {t.glbPbr.changeModel}
         </button>
       )}
     </div>

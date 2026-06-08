@@ -1,28 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n";
 
 const STORAGE_KEY = "home-designer-v2-onboarded";
 
-const STEPS = [
-  {
-    icon: "🎨",
-    title: "选材料 & 摆家具",
-    desc: "左侧面板选择墙面材料、地板和家具\n点击即可应用到当前房间",
-  },
-  {
-    icon: "📐",
-    title: "拖动调整布局",
-    desc: "切换「平面图」，拖拽家具调整位置\n拖拽角落可自由缩放房间大小",
-  },
-  {
-    icon: "🏠",
-    title: "3D 预览 & 一键导出",
-    desc: "切换「效果图」查看3D渲染效果\n右上角「导入/导出」下载完整报价单",
-  },
-];
+const STEP_ICONS = ["🎨", "📐", "🏠"];
 
 export default function OnboardingOverlay() {
+  const t = useT();
+  const STEPS = [
+    { icon: STEP_ICONS[0], title: t.onboarding.step1Title, desc: t.onboarding.step1Desc },
+    { icon: STEP_ICONS[1], title: t.onboarding.step2Title, desc: t.onboarding.step2Desc },
+    { icon: STEP_ICONS[2], title: t.onboarding.step3Title, desc: t.onboarding.step3Desc },
+  ];
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(0);
   const [animating, setAnimating] = useState(false);
@@ -75,12 +66,12 @@ export default function OnboardingOverlay() {
           onClick={dismiss}
           className="absolute top-4 right-5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
         >
-          跳过
+          {t.onboarding.skip}
         </button>
 
         {/* Step count */}
         <p className="text-[11px] text-gray-400 mb-4 font-medium tracking-wider uppercase">
-          第 {step + 1} 步 / {STEPS.length}
+          {t.onboarding.stepCount(step + 1, STEPS.length)}
         </p>
 
         {/* Icon */}
@@ -122,7 +113,7 @@ export default function OnboardingOverlay() {
               onClick={() => goTo(step - 1)}
               className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium"
             >
-              ← 上一步
+              {t.onboarding.prev}
             </button>
           )}
           <button
@@ -130,7 +121,7 @@ export default function OnboardingOverlay() {
             className="flex-1 py-3 rounded-xl text-white text-sm font-semibold transition-all active:scale-95"
             style={{ background: "linear-gradient(135deg, #6366f1, #818cf8)" }}
           >
-            {isLast ? "开始设计 🚀" : "下一步 →"}
+            {isLast ? t.onboarding.start : t.onboarding.next}
           </button>
         </div>
       </div>

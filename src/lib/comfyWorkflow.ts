@@ -724,7 +724,7 @@ export function generateImg2ImgWorkflow(
  * buildFlux2WhiteModelWorkflow
  *
  * Converts a white-model (白膜) screenshot into a photorealistic rendered image
- * using the Flux-2-Klein architecture. Matches the "单角度白膜出效果图工作流（懂老师）"
+ * using the Flux-2-Klein architecture. Matches the "单角度白膜出效果图工作流"
  * from the project reference materials.
  *
  * Node chain (ComfyUI API prompt format):

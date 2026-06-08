@@ -351,7 +351,7 @@ export default function RightPanel() {
                         color: placed.mountCeiling ? "var(--ds-primary, #3B82F6)" : "var(--ds-text-3)",
                         opacity: placed.mountCeiling ? 1 : undefined,
                       }}
-                      title={placed.mountCeiling ? "吸顶 → 点击切回落地" : "落地 → 点击吸顶"}
+                      title={placed.mountCeiling ? (locale === "en" ? "Ceiling-mounted → click to set floor-standing" : "吸顶 → 点击切回落地") : (locale === "en" ? "Floor-standing → click to mount on ceiling" : "落地 → 点击吸顶")}
                     >{placed.mountCeiling ? "📌" : "⬇️"}</button>
                     <button
                       onClick={(e) => { e.stopPropagation(); removeItem(placed.instanceId); }}

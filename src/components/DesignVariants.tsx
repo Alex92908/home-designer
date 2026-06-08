@@ -11,6 +11,7 @@
 
 import { useState, useCallback } from "react";
 import { useDesignerStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import type { RoofStyle, WallMaterialType } from "@/lib/types";
 
 // Simple mulberry32 PRNG — same approach as pascal editor
@@ -49,7 +50,11 @@ interface Variant {
   label: string;
 }
 
-function generateVariants(seed: number, count = 4): Variant[] {
+function generateVariants(
+  seed: number,
+  count = 4,
+  labelFor: (n: number) => string = (n) => `${n}`,
+): Variant[] {
   const rng = mulberry32(seed);
   const pick = <T,>(arr: T[]): T => arr[Math.floor(rng() * arr.length)];
 
@@ -60,11 +65,12 @@ function generateVariants(seed: number, count = 4): Variant[] {
     wallColor:    pick(WALL_PALETTES),
     roofColor:    pick(ROOF_PALETTES),
     accentColor:  pick(ACCENT_PALETTES),
-    label:        `方案 ${i + 1}`,
+    label:        labelFor(i + 1),
   }));
 }
 
 export default function DesignVariants() {
+  const t = useT();
   const [variants, setVariants]   = useState<Variant[]>([]);
   const [seed, setSeed]           = useState(Math.floor(Math.random() * 0xffff));
   const [loading, setLoading]     = useState(false);
@@ -77,10 +83,10 @@ export default function DesignVariants() {
     setSeed(newSeed);
     // Small delay for UX feedback
     setTimeout(() => {
-      setVariants(generateVariants(newSeed, 4));
+      setVariants(generateVariants(newSeed, 4, t.designVariants.variantLabel));
       setLoading(false);
     }, 180);
-  }, []);
+  }, [t]);
 
   const apply = useCallback((v: Variant) => {
     setExterior({
@@ -97,7 +103,7 @@ export default function DesignVariants() {
     <div className="px-3 pt-4">
       <div className="flex items-center justify-between mb-2">
         <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-          🎲 设计变体
+          {t.designVariants.title}
         </div>
         <button
           onClick={generate}
@@ -109,7 +115,7 @@ export default function DesignVariants() {
             border: "1px solid #C7D2FE",
           }}
         >
-          {loading ? "生成中…" : "重新生成"}
+          {loading ? t.designVariants.generating : t.designVariants.regenerate}
         </button>
       </div>
 
@@ -119,7 +125,7 @@ export default function DesignVariants() {
           className="w-full py-3 rounded-xl border-2 border-dashed text-[11px] font-semibold text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-all"
           style={{ borderColor: "var(--ds-border)" }}
         >
-          ✨ 点击生成 4 个风格变体
+          {t.designVariants.generatePrompt}
         </button>
       ) : (
         <div className="grid grid-cols-2 gap-1.5">
@@ -148,7 +154,7 @@ export default function DesignVariants() {
                   {v.wallMaterial} · {v.roofStyle}
                 </div>
                 {isActive && (
-                  <div className="text-[9px] font-bold" style={{ color: "#6366F1" }}>✓ 当前</div>
+                  <div className="text-[9px] font-bold" style={{ color: "#6366F1" }}>{t.designVariants.current}</div>
                 )}
               </button>
             );

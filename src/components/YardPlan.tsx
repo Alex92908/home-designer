@@ -59,6 +59,7 @@ function AssetGlyph({ asset, r, selected = false }: {
   r: number;
   selected?: boolean;
 }) {
+  const locale = useLocale();
   const stroke = selected ? SEL_INK : INK;
   const sw = selected ? r * 0.08 : r * 0.045;
 
@@ -110,17 +111,28 @@ function AssetGlyph({ asset, r, selected = false }: {
   }
   if (asset.category === "furniture") {
     // Furniture symbol — filled rounded rectangle with item-specific sub-label
-    const furnitureLabelMap: Record<string, string> = {
-      "furniture.chaiseLounger":   "躺椅",
-      "furniture.swimmingLounger": "泳池",
-      "furniture.outdoorSofa":     "沙发",
-      "furniture.parasol":         "伞",
-      "furniture.coffeeTable":     "茶几",
-      "furniture.diningSet":       "餐桌",
-      "furniture.fireplace":       "壁炉",
-      "furniture.planter":         "花盆",
-    };
-    const sub = furnitureLabelMap[asset.kind] ?? "家具";
+    const furnitureLabelMap: Record<string, string> = locale === "en"
+      ? {
+          "furniture.chaiseLounger":   "Lounger",
+          "furniture.swimmingLounger": "Pool",
+          "furniture.outdoorSofa":     "Sofa",
+          "furniture.parasol":         "Parasol",
+          "furniture.coffeeTable":     "Table",
+          "furniture.diningSet":       "Dining",
+          "furniture.fireplace":       "Fire",
+          "furniture.planter":         "Planter",
+        }
+      : {
+          "furniture.chaiseLounger":   "躺椅",
+          "furniture.swimmingLounger": "泳池",
+          "furniture.outdoorSofa":     "沙发",
+          "furniture.parasol":         "伞",
+          "furniture.coffeeTable":     "茶几",
+          "furniture.diningSet":       "餐桌",
+          "furniture.fireplace":       "壁炉",
+          "furniture.planter":         "花盆",
+        };
+    const sub = furnitureLabelMap[asset.kind] ?? (locale === "en" ? "Furniture" : "家具");
     return (
       <g>
         <rect x={-r * 0.85} y={-r * 0.75} width={r * 1.70} height={r * 1.50}
@@ -283,6 +295,7 @@ function darkenHex(hex: string, by: number): string {
 // discoverable in the same place as FloorPlan's 样板.
 type LibraryTab = OutdoorCategory | "prefab" | "template";
 export function YardPlanLibrary() {
+  const locale = useLocale();
   const [tab, setTab] = useState<LibraryTab>("template");
   const [show3dGen, setShow3dGen]                     = useState(false);
   const [showVillaDecompose, setShowVillaDecompose]   = useState(false);
@@ -294,9 +307,9 @@ export function YardPlanLibrary() {
     : OUTDOOR_ASSET_LIBRARY.filter(a => a.category === tab);
 
   // Tab labels — Chinese to match the rest of the app
-  const tabLabels: Record<LibraryTab, string> = {
-    template: "样板", prefab: "组件", tree: "树木", plant: "花卉", rock: "山石", feature: "设施", furniture: "家具",
-  };
+  const tabLabels: Record<LibraryTab, string> = locale === "en"
+    ? { template: "Templates", prefab: "Blocks", tree: "Trees", plant: "Plants", rock: "Rocks", feature: "Features", furniture: "Furniture" }
+    : { template: "样板", prefab: "组件", tree: "树木", plant: "花卉", rock: "山石", feature: "设施", furniture: "家具" };
   const allTabs: LibraryTab[] = ["template", "prefab", ...OUTDOOR_CATEGORIES.map(c => c.id)];
 
   // Apply preset action — needs store hooks at component scope
@@ -305,7 +318,7 @@ export function YardPlanLibrary() {
   const addYardItem    = useDesignerStore(s => s.addYardItem);
   const removeYardItem = useDesignerStore(s => s.removeYardItem);
   const applyPreset = (p: import("@/lib/outdoorAssets").YardPreset) => {
-    if (yardItems.length > 0 && !window.confirm(`替换当前 ${yardItems.length} 个元素为「${p.label}」？`)) return;
+    if (yardItems.length > 0 && !window.confirm(locale === "en" ? `Replace the current ${yardItems.length} element(s) with "${p.label}"?` : `替换当前 ${yardItems.length} 个元素为「${p.label}」？`)) return;
     for (const it of [...yardItems]) removeYardItem(it.id);
     const stamp = Date.now().toString(36);
     p.items.forEach((it, i) => {
@@ -364,8 +377,8 @@ export function YardPlanLibrary() {
           >
             <span style={{ fontSize: 22 }}>🏗</span>
             <div className="flex flex-col flex-1 min-w-0">
-              <div className="text-[11px] font-bold" style={{ color: "#7C3AED" }}>整图拆解 → 3D组件集合</div>
-              <div className="text-[9px]" style={{ color: "#8B5CF6" }}>Trellis 1.0 · 一张别墅图 → 批量生成零件</div>
+              <div className="text-[11px] font-bold" style={{ color: "#7C3AED" }}>{locale === "en" ? "Decompose image → 3D part set" : "整图拆解 → 3D组件集合"}</div>
+              <div className="text-[9px]" style={{ color: "#8B5CF6" }}>{locale === "en" ? "Trellis 1.0 · one villa image → batch-generate parts" : "Trellis 1.0 · 一张别墅图 → 批量生成零件"}</div>
             </div>
             <span style={{ color: "#A78BFA", fontSize: 14 }}>›</span>
           </button>
@@ -379,13 +392,13 @@ export function YardPlanLibrary() {
             <span style={{ fontSize: 22 }}>🏗</span>
             <div className="flex flex-col flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold" style={{ color: "#C2410C" }}>整图拆解 → 3D组件集合</span>
+                <span className="text-[11px] font-bold" style={{ color: "#C2410C" }}>{locale === "en" ? "Decompose image → 3D part set" : "整图拆解 → 3D组件集合"}</span>
                 <span style={{
                   fontSize: 9, background: "#7C3AED", color: "#fff",
                   borderRadius: 3, padding: "0px 4px", fontWeight: 700,
                 }}>v2.0</span>
               </div>
-              <div className="text-[9px]" style={{ color: "#EA580C" }}>TRELLIS 2.0 · 1024分辨率 · 更精细纹理</div>
+              <div className="text-[9px]" style={{ color: "#EA580C" }}>{locale === "en" ? "TRELLIS 2.0 · 1024 resolution · finer textures" : "TRELLIS 2.0 · 1024分辨率 · 更精细纹理"}</div>
             </div>
             <span style={{ color: "#FB923C", fontSize: 14 }}>›</span>
           </button>
@@ -399,13 +412,13 @@ export function YardPlanLibrary() {
             <span style={{ fontSize: 22 }}>⚡</span>
             <div className="flex flex-col flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold" style={{ color: "#065F46" }}>SF3D 快速3D</span>
+                <span className="text-[11px] font-bold" style={{ color: "#065F46" }}>{locale === "en" ? "SF3D Quick 3D" : "SF3D 快速3D"}</span>
                 <span style={{
                   fontSize: 9, background: "#059669", color: "#fff",
                   borderRadius: 3, padding: "0px 5px", fontWeight: 700,
-                }}>无限制</span>
+                }}>{locale === "en" ? "Unlimited" : "无限制"}</span>
               </div>
-              <div className="text-[9px]" style={{ color: "#047857" }}>L4专用GPU · 无每日配额 · ~10秒 · 整图生成GLB</div>
+              <div className="text-[9px]" style={{ color: "#047857" }}>{locale === "en" ? "Dedicated L4 GPU · no daily quota · ~10s · full-image GLB" : "L4专用GPU · 无每日配额 · ~10秒 · 整图生成GLB"}</div>
             </div>
             <span style={{ color: "#10B981", fontSize: 14 }}>›</span>
           </button>
@@ -418,8 +431,8 @@ export function YardPlanLibrary() {
           >
             <span style={{ fontSize: 22 }}>🏠</span>
             <div className="flex flex-col flex-1 min-w-0">
-              <div className="text-[11px] font-bold" style={{ color: "#065F46" }}>VillaTo3D 别墅拆解</div>
-              <div className="text-[9px]" style={{ color: "#059669" }}>上传图片 → TRELLIS 1.0 → 选零件 → 加入场景</div>
+              <div className="text-[11px] font-bold" style={{ color: "#065F46" }}>{locale === "en" ? "VillaTo3D Decompose" : "VillaTo3D 别墅拆解"}</div>
+              <div className="text-[9px]" style={{ color: "#059669" }}>{locale === "en" ? "Upload image → TRELLIS 1.0 → pick parts → add to scene" : "上传图片 → TRELLIS 1.0 → 选零件 → 加入场景"}</div>
             </div>
             <span style={{ color: "#34D399", fontSize: 14 }}>›</span>
           </button>
@@ -432,8 +445,8 @@ export function YardPlanLibrary() {
           >
             <span style={{ fontSize: 22 }}>🎨</span>
             <div className="flex flex-col flex-1 min-w-0">
-              <div className="text-[11px] font-bold" style={{ color: "#5B21B6" }}>GLB → PBR 贴图</div>
-              <div className="text-[9px]" style={{ color: "#7C3AED" }}>已有 GLB + 原图 → 生成法线/粗糙/金属度</div>
+              <div className="text-[11px] font-bold" style={{ color: "#5B21B6" }}>{locale === "en" ? "GLB → PBR Textures" : "GLB → PBR 贴图"}</div>
+              <div className="text-[9px]" style={{ color: "#7C3AED" }}>{locale === "en" ? "Existing GLB + image → generate normal/roughness/metallic" : "已有 GLB + 原图 → 生成法线/粗糙/金属度"}</div>
             </div>
             <span style={{ color: "#A78BFA", fontSize: 14 }}>›</span>
           </button>
@@ -446,8 +459,8 @@ export function YardPlanLibrary() {
           >
             <span style={{ fontSize: 22 }}>🤖</span>
             <div className="flex flex-col flex-1 min-w-0">
-              <div className="text-[11px] font-bold" style={{ color: "#4338CA" }}>AI 生成单个零件</div>
-              <div className="text-[9px]" style={{ color: "#6366F1" }}>选部位 → SF3D → GLB → 拖入场景</div>
+              <div className="text-[11px] font-bold" style={{ color: "#4338CA" }}>{locale === "en" ? "AI Generate Single Part" : "AI 生成单个零件"}</div>
+              <div className="text-[9px]" style={{ color: "#6366F1" }}>{locale === "en" ? "Pick part → SF3D → GLB → drag into scene" : "选部位 → SF3D → GLB → 拖入场景"}</div>
             </div>
             <span style={{ color: "#818CF8", fontSize: 14 }}>›</span>
           </button>
@@ -621,6 +634,7 @@ export function useSharedSelectedYardId() {
 }
 
 export default function YardPlan() {
+  const locale = useLocale();
   const activeFloor = useDesignerStore(s => s.activeFloor);
   const yardItems   = useDesignerStore(s => s.floorPlans[0].yardPlan?.items ?? EMPTY_YARD_ITEMS);
   const yardPaths   = useDesignerStore(s => s.floorPlans[0].yardPlan?.paths ?? EMPTY_YARD_PATHS);
@@ -831,7 +845,7 @@ export default function YardPlan() {
         style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         {/* Left: info text */}
         <span className="text-[11px] text-gray-500 font-mono flex-1 min-w-0 truncate">
-          院子图 · 地块 30 × 30 m · 房屋 {houseW}m × {houseD}m · {yardItems.length} 元素
+          {locale === "en" ? "Yard plan" : "院子图"} · {locale === "en" ? "site" : "地块"} 30 × 30 m · {locale === "en" ? "house" : "房屋"} {houseW}m × {houseD}m · {yardItems.length} {locale === "en" ? "elements" : "元素"}
         </span>
         {/* Center: zoom controls */}
         <div className="flex items-center gap-0.5 shrink-0">
@@ -863,7 +877,7 @@ export default function YardPlan() {
             ? { background: "rgba(168,132,90,0.30)", color: "#D4A86A", border: "1px solid rgba(168,132,90,0.6)" }
             : { background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.12)" }
           }>
-          🔧 围栏
+          🔧 {locale === "en" ? "Fence" : "围栏"}
         </button>
         {/* Path draw mode toggle */}
         <button
@@ -877,7 +891,7 @@ export default function YardPlan() {
             ? { background: "rgba(59,130,246,0.25)", color: "#60A5FA", border: "1px solid rgba(59,130,246,0.5)" }
             : { background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.12)" }
           }>
-          🛤 路径
+          🛤 {locale === "en" ? "Path" : "路径"}
         </button>
         {/* Auto-path button — derives walkways from existing zones */}
         <button
@@ -885,10 +899,10 @@ export default function YardPlan() {
             const paths = autoGenerateYardPaths(yardItems, footprint);
             for (const p of paths) addYardPath(p);
           }}
-          title="基于已放置的区域自动生成步道"
+          title={locale === "en" ? "Auto-generate walkways from placed zones" : "基于已放置的区域自动生成步道"}
           className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0 transition-all"
           style={{ background: "rgba(168,85,247,0.18)", color: "#C084FC", border: "1px solid rgba(168,85,247,0.4)" }}>
-          🪄 自动路径
+          🪄 {locale === "en" ? "Auto path" : "自动路径"}
         </button>
         {/* Auto-plant button — Poisson scatter trees over open ground.
             Also drops sun-side shade trees on social zones (§10.5). */}
@@ -902,23 +916,32 @@ export default function YardPlan() {
             const filler = autoScatterTrees(allItemsAfterShade, footprint);
             for (const t of filler) addYardItem(t);
           }}
-          title="自动种树：先在 patio 朝阳侧放遮阴树，再 Poisson 散布填补空地"
+          title={locale === "en" ? "Auto-plant trees: shade trees on the sunny side of the patio first, then Poisson scatter to fill open ground" : "自动种树：先在 patio 朝阳侧放遮阴树，再 Poisson 散布填补空地"}
           className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0 transition-all"
           style={{ background: "rgba(34,197,94,0.18)", color: "#86EFAC", border: "1px solid rgba(34,197,94,0.4)" }}>
-          🌲 自动种树
+          🌲 {locale === "en" ? "Auto plant" : "自动种树"}
         </button>
         {/* §10.6 budget tier selector — drives the unified ✨ button below */}
         <div className="flex items-center gap-0.5 shrink-0 ml-1">
-          <span className="text-[10px] text-amber-400/80 mr-0.5">预算</span>
+          <span className="text-[10px] text-amber-400/80 mr-0.5">{locale === "en" ? "Budget" : "预算"}</span>
           {(["T0","T1","T2","T3","T4"] as const).map(t => (
             <button key={t}
               onClick={() => setBudgetTier(t)}
-              title={
-                t === "T0" ? "T0 整理 — 只校验，不增减" :
-                t === "T1" ? "T1 软装 — 加灯/盆栽，不改区域" :
-                t === "T2" ? "T2 单区改造 — 添 1 个社交区 + 步道" :
-                t === "T3" ? "T3 多区翻新 — 步道 + 自动种树" :
-                "T4 大改造 — 清空后套用最大模板"
+              title={locale === "en"
+                ? (
+                  t === "T0" ? "T0 Tidy — validate only, no changes" :
+                  t === "T1" ? "T1 Soft décor — add lights/planters, keep zones" :
+                  t === "T2" ? "T2 Single-zone reno — add 1 social zone + path" :
+                  t === "T3" ? "T3 Multi-zone reno — paths + auto-plant trees" :
+                  "T4 Full reno — clear and apply the largest template"
+                )
+                : (
+                  t === "T0" ? "T0 整理 — 只校验，不增减" :
+                  t === "T1" ? "T1 软装 — 加灯/盆栽，不改区域" :
+                  t === "T2" ? "T2 单区改造 — 添 1 个社交区 + 步道" :
+                  t === "T3" ? "T3 多区翻新 — 步道 + 自动种树" :
+                  "T4 大改造 — 清空后套用最大模板"
+                )
               }
               className="px-1.5 h-6 text-[10px] font-bold rounded transition-all"
               style={budgetTier === t
@@ -995,16 +1018,16 @@ export default function YardPlan() {
               return;
             }
           }}
-          title="✨ 自动设计 — 根据当前预算 tier 综合应用模板/路径/种树"
+          title={locale === "en" ? "✨ Auto design — applies templates/paths/planting based on the current budget tier" : "✨ 自动设计 — 根据当前预算 tier 综合应用模板/路径/种树"}
           className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0 transition-all"
           style={{ background: "rgba(251,191,36,0.22)", color: "#FCD34D", border: "1px solid rgba(251,191,36,0.5)" }}>
-          ✨ 自动设计
+          ✨ {locale === "en" ? "Auto design" : "自动设计"}
         </button>
         {/* Path width + material selectors — only shown in path mode */}
         {drawMode === "path" && (
           <>
             <div className="flex items-center gap-1 shrink-0">
-              <span className="text-[10px] text-blue-400">宽</span>
+              <span className="text-[10px] text-blue-400">{locale === "en" ? "Width" : "宽"}</span>
               {[60, 80, 120, 180].map(w => (
                 <button key={w}
                   onClick={() => setPathWidthCm(w)}
@@ -1017,15 +1040,15 @@ export default function YardPlan() {
               ))}
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <span className="text-[10px] text-blue-400">材质</span>
-              {([ ["stone","石板","#94A3B8"], ["gravel","砾石","#D97706"], ["grass","草径","#16A34A"], ["brick","砖路","#DC2626"] ] as const).map(([m, label, color]) => (
+              <span className="text-[10px] text-blue-400">{locale === "en" ? "Material" : "材质"}</span>
+              {([ ["stone","石板","Stone","#94A3B8"], ["gravel","砾石","Gravel","#D97706"], ["grass","草径","Grass","#16A34A"], ["brick","砖路","Brick","#DC2626"] ] as const).map(([m, label, labelEn, color]) => (
                 <button key={m}
                   onClick={() => setPathMaterial(m)}
                   className="px-1.5 h-6 text-[10px] font-bold rounded transition-all"
                   style={pathMaterial === m
                     ? { background: color + "40", color, border: `1px solid ${color}` }
                     : { background: "rgba(255,255,255,0.06)", color: "#6B7280" }}>
-                  {label}
+                  {locale === "en" ? labelEn : label}
                 </button>
               ))}
             </div>
@@ -1033,7 +1056,7 @@ export default function YardPlan() {
         )}
         {/* Setback selector — always visible */}
         <div className="flex items-center gap-1 shrink-0 ml-1">
-          <span className="text-[10px] text-orange-400/80">退线</span>
+          <span className="text-[10px] text-orange-400/80">{locale === "en" ? "Setback" : "退线"}</span>
           {[50, 100, 150, 200].map(s => (
             <button key={s}
               onClick={() => setSetbackCm(s)}
@@ -1052,7 +1075,7 @@ export default function YardPlan() {
               onClick={() => updateYardItem(selectedItem.id, { rot: (selectedItem.rot ?? 0) + Math.PI / 2 })}
               className="px-2 h-7 text-[11px] font-semibold rounded transition-colors"
               style={{ background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.12)" }}>
-              ↻ 旋转
+              ↻ {locale === "en" ? "Rotate" : "旋转"}
             </button>
             <button
               onClick={() => {
@@ -1062,13 +1085,13 @@ export default function YardPlan() {
               }}
               className="px-2 h-7 text-[11px] font-semibold rounded transition-colors"
               style={{ background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.12)" }}>
-              ⧉ 复制
+              ⧉ {locale === "en" ? "Duplicate" : "复制"}
             </button>
             <button
               onClick={() => { removeYardItem(selectedItem.id); setSelectedId(null); }}
               className="px-2 h-7 text-[11px] font-semibold rounded transition-colors"
               style={{ background: "rgba(220,38,38,0.15)", color: "#FCA5A5", border: "1px solid rgba(220,38,38,0.3)" }}>
-              ✕ 删除
+              ✕ {locale === "en" ? "Delete" : "删除"}
             </button>
           </div>
         )}
@@ -1076,25 +1099,25 @@ export default function YardPlan() {
         {requiredCount > 0 && (
           <span className="px-2 py-0.5 text-[10px] font-bold rounded shrink-0"
             style={{ background: "rgba(220,38,38,0.18)", color: "#FCA5A5", border: "1px solid rgba(220,38,38,0.4)" }}>
-            ⚠ {requiredCount} 必须
+            ⚠ {requiredCount} {locale === "en" ? "required" : "必须"}
           </span>
         )}
         {recommendedCount > 0 && (
           <span className="px-2 py-0.5 text-[10px] font-bold rounded shrink-0"
             style={{ background: "rgba(245,158,11,0.18)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.4)" }}>
-            ⚠ {recommendedCount} 建议
+            ⚠ {recommendedCount} {locale === "en" ? "recommended" : "建议"}
           </span>
         )}
         {yardItems.length > 0 && (
           <button
             onClick={() => {
-              if (!window.confirm(`清除全部 ${yardItems.length} 个元素？`)) return;
+              if (!window.confirm(locale === "en" ? `Clear all ${yardItems.length} element(s)?` : `清除全部 ${yardItems.length} 个元素？`)) return;
               for (const it of [...yardItems]) removeYardItem(it.id);
               setSelectedId(null);
             }}
             className="px-2 h-7 text-[11px] font-semibold rounded-lg transition-all shrink-0"
             style={{ background: "rgba(220,38,38,0.18)", color: "#FCA5A5", border: "1px solid rgba(220,38,38,0.4)" }}>
-            清空
+            {locale === "en" ? "Clear" : "清空"}
           </button>
         )}
         {/* Auto-route button — appears when parking_area + items exist */}
@@ -1124,7 +1147,7 @@ export default function YardPlan() {
             }}
             className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0"
             style={{ background: "rgba(34,197,94,0.15)", color: "#86EFAC", border: "1px solid rgba(34,197,94,0.3)" }}>
-            🛤 自动铺路
+            🛤 {locale === "en" ? "Auto paving" : "自动铺路"}
           </button>
         )}
         {/* Quote sheet */}
@@ -1133,7 +1156,7 @@ export default function YardPlan() {
             onClick={() => setShowQuote(true)}
             className="px-2 h-7 text-[11px] font-semibold rounded-lg shrink-0"
             style={{ background: "rgba(251,191,36,0.15)", color: "#FCD34D", border: "1px solid rgba(251,191,36,0.3)" }}>
-            💰 获取报价
+            💰 {locale === "en" ? "Get quote" : "获取报价"}
           </button>
         )}
       </div>
@@ -1146,7 +1169,7 @@ export default function YardPlan() {
           <div className="bg-[#13161E] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
             style={{ width: "min(640px,95vw)", maxHeight: "80vh", border: "1px solid rgba(255,255,255,0.10)" }}>
             <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-              <h2 className="text-white font-bold text-base">💰 采购报价单</h2>
+              <h2 className="text-white font-bold text-base">💰 {locale === "en" ? "Purchase Quote" : "采购报价单"}</h2>
               <button onClick={() => setShowQuote(false)} className="text-white/50 hover:text-white text-xl">✕</button>
             </div>
             <div className="overflow-y-auto flex-1 p-4 space-y-2">
@@ -1161,7 +1184,7 @@ export default function YardPlan() {
                     if (p) rows.push({ label: p.label, brand: p.brand, price: p.estimatedPriceCNY, url: p.purchaseUrl });
                   }
                 }
-                if (rows.length === 0) return <p className="text-white/40 text-sm text-center py-8">当前设计中没有可报价的元素</p>;
+                if (rows.length === 0) return <p className="text-white/40 text-sm text-center py-8">{locale === "en" ? "No quotable elements in the current design" : "当前设计中没有可报价的元素"}</p>;
                 const total = rows.reduce((s, r) => s + r.price, 0);
                 return (
                   <>
@@ -1177,17 +1200,17 @@ export default function YardPlan() {
                           <a href={r.url} target="_blank" rel="noopener noreferrer"
                             className="text-xs px-2 py-1 rounded shrink-0"
                             style={{ background: "rgba(251,191,36,0.15)", color: "#FCD34D", border: "1px solid rgba(251,191,36,0.3)" }}>
-                            购买 →
+                            {locale === "en" ? "Buy" : "购买"} →
                           </a>
                         )}
                       </div>
                     ))}
                     <div className="flex justify-between items-center px-4 py-3 mt-2 rounded-lg"
                       style={{ background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.25)" }}>
-                      <span className="text-white font-bold">预估总价</span>
+                      <span className="text-white font-bold">{locale === "en" ? "Estimated Total" : "预估总价"}</span>
                       <span className="text-amber-300 font-bold text-lg">¥{total.toLocaleString()}</span>
                     </div>
-                    <p className="text-white/30 text-[10px] text-center pt-1">价格为市场参考价，实际以供应商报价为准</p>
+                    <p className="text-white/30 text-[10px] text-center pt-1">{locale === "en" ? "Prices are market references; actual prices subject to supplier quotes" : "价格为市场参考价，实际以供应商报价为准"}</p>
                   </>
                 );
               })()}
@@ -1378,7 +1401,7 @@ export default function YardPlan() {
                   fontSize={8} fill="rgba(255,200,80,0.65)"
                   fontFamily="ui-monospace, Menlo, monospace"
                   letterSpacing="0.08em">
-                  ☽ 阴影区
+                  ☽ {locale === "en" ? "Shade" : "阴影区"}
                 </text>
               </g>
             );
@@ -1702,7 +1725,7 @@ export default function YardPlan() {
                 )}
                 <text x={SVG_PX / 2} y={SVG_PX - 20} textAnchor="middle"
                   fontSize={9} fill="#60A5FA" fontFamily="ui-monospace, Menlo, monospace">
-                  点击添加节点 · 双击结束 · 退格撤销最后一点 · ESC 取消 ({pathPts.length} 点)
+                  {locale === "en" ? `Click to add a node · double-click to finish · backspace to undo last point · ESC to cancel (${pathPts.length} pts)` : `点击添加节点 · 双击结束 · 退格撤销最后一点 · ESC 取消 (${pathPts.length} 点)`}
                 </text>
               </g>
             );
@@ -1739,7 +1762,7 @@ export default function YardPlan() {
             <text x={SVG_PX / 2} y={SVG_PX - 20} textAnchor="middle"
               fontSize={9} fill="#A8845A" fontFamily="ui-monospace, Menlo, monospace"
               style={{ pointerEvents: "none" }}>
-              点击拖拽绘制围栏 — 按 ESC 退出
+              {locale === "en" ? "Click and drag to draw a fence — press ESC to exit" : "点击拖拽绘制围栏 — 按 ESC 退出"}
             </text>
           )}
 
@@ -1781,15 +1804,16 @@ export default function YardPlan() {
 // Small "go to exterior settings" button used inside YardPlanInspector header.
 // Avoids importing useDesignerStore at the top level of a sub-component.
 function YardPlanNavToExterior() {
+  const locale = useLocale();
   const setViewMode = useDesignerStore(s => s.setViewMode);
   return (
     <button
       onClick={() => setViewMode("exterior")}
       className="text-[9px] px-2 py-0.5 rounded-full shrink-0"
       style={{ background: "#EEF2FF", color: "#4F46E5" }}
-      title="切换到外观设置面板"
+      title={locale === "en" ? "Switch to exterior settings panel" : "切换到外观设置面板"}
     >
-      外观设置 →
+      {locale === "en" ? "Exterior settings" : "外观设置"} →
     </button>
   );
 }
@@ -1834,7 +1858,7 @@ export function YardPlanInspector() {
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4 text-[11px]">
           <section>
-            <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>位置 (m)</div>
+            <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Position (m)" : "位置 (m)"}</div>
             <div className="grid grid-cols-2 gap-2">
               <label className="flex items-center gap-1">
                 <span className="text-gray-400 w-3">X</span>
@@ -1854,7 +1878,7 @@ export function YardPlanInspector() {
           </section>
           <section>
             <div className="flex items-center justify-between mb-1">
-              <span className="font-semibold" style={{ color: "var(--ds-text-2)" }}>旋转</span>
+              <span className="font-semibold" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Rotation" : "旋转"}</span>
               <span className="font-mono text-gray-500">{Math.round(((item.rot ?? 0) * 180 / Math.PI + 360) % 360)}°</span>
             </div>
             <input type="range" min={0} max={360} step={5}
@@ -1866,7 +1890,7 @@ export function YardPlanInspector() {
             <button onClick={() => { removeYardItem(item.id); setSharedSelectedId(null); }}
               className="w-full py-2 rounded-lg text-[12px] font-semibold transition-colors border"
               style={{ background: "white", borderColor: "#FCA5A5", color: "#DC2626" }}>
-              ✕ 删除
+              ✕ {locale === "en" ? "Delete" : "删除"}
             </button>
           </section>
         </div>
@@ -1884,7 +1908,7 @@ export function YardPlanInspector() {
         <div className="flex-1 overflow-y-auto p-4 space-y-4 text-[11px]">
           <div className="text-[11px]" style={{ color: "var(--ds-text-2)" }}>{style.desc}</div>
           <section>
-            <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>位置 (m)</div>
+            <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Position (m)" : "位置 (m)"}</div>
             <div className="grid grid-cols-2 gap-2">
               <label className="flex items-center gap-1">
                 <span className="text-gray-400 w-3">X</span>
@@ -1905,30 +1929,30 @@ export function YardPlanInspector() {
           {/* §10.3 zone sub-type selector — refines the parent zoneKind
               for sun-aware placement + clearance sub-rules. Optional. */}
           <section>
-            <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>子类型 (可选)</div>
+            <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Subtype (optional)" : "子类型 (可选)"}</div>
             <select
               value={item.subtype ?? ""}
               onChange={e => updateYardItem(item.id, { subtype: (e.target.value || undefined) as YardZone["subtype"] })}
               className="w-full px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400 text-[11px]">
-              <option value="">— 通用 —</option>
-              <option value="entry-sequence">入户序列 entry-sequence</option>
-              <option value="threshold">门廊过渡 threshold</option>
-              <option value="outdoor-room">户外客厅 outdoor-room</option>
-              <option value="sunset-terrace">夕阳露台 sunset-terrace</option>
-              <option value="mudroom-side">杂物侧院 mudroom-side</option>
-              <option value="kitchen-garden">厨园菜圃 kitchen-garden</option>
-              <option value="fragrance-corridor">香径花廊 fragrance-corridor</option>
-              <option value="wild-edge">野趣边界 wild-edge</option>
-              <option value="back-against">靠墙安坐 back-against</option>
-              <option value="service-yard">服务后院 service-yard</option>
-              <option value="kids-sightline">儿童视线 kids-sightline</option>
+              <option value="">{locale === "en" ? "— Generic —" : "— 通用 —"}</option>
+              <option value="entry-sequence">{locale === "en" ? "Entry sequence" : "入户序列 entry-sequence"}</option>
+              <option value="threshold">{locale === "en" ? "Threshold" : "门廊过渡 threshold"}</option>
+              <option value="outdoor-room">{locale === "en" ? "Outdoor room" : "户外客厅 outdoor-room"}</option>
+              <option value="sunset-terrace">{locale === "en" ? "Sunset terrace" : "夕阳露台 sunset-terrace"}</option>
+              <option value="mudroom-side">{locale === "en" ? "Mudroom side yard" : "杂物侧院 mudroom-side"}</option>
+              <option value="kitchen-garden">{locale === "en" ? "Kitchen garden" : "厨园菜圃 kitchen-garden"}</option>
+              <option value="fragrance-corridor">{locale === "en" ? "Fragrance corridor" : "香径花廊 fragrance-corridor"}</option>
+              <option value="wild-edge">{locale === "en" ? "Wild edge" : "野趣边界 wild-edge"}</option>
+              <option value="back-against">{locale === "en" ? "Back-against seating" : "靠墙安坐 back-against"}</option>
+              <option value="service-yard">{locale === "en" ? "Service yard" : "服务后院 service-yard"}</option>
+              <option value="kids-sightline">{locale === "en" ? "Kids sightline" : "儿童视线 kids-sightline"}</option>
             </select>
           </section>
           <section>
             <button onClick={() => { removeYardItem(item.id); setSharedSelectedId(null); }}
               className="w-full py-2 rounded-lg text-[12px] font-semibold transition-colors border"
               style={{ background: "white", borderColor: "#FCA5A5", color: "#DC2626" }}>
-              ✕ 删除
+              ✕ {locale === "en" ? "Delete" : "删除"}
             </button>
           </section>
         </div>
@@ -2035,7 +2059,7 @@ export function YardPlanInspector() {
         )}
         {/* Position */}
         <section>
-          <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>位置 (m)</div>
+          <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Position (m)" : "位置 (m)"}</div>
           <div className="grid grid-cols-2 gap-2">
             <label className="flex items-center gap-1">
               <span className="text-gray-400 w-3">X</span>
@@ -2057,7 +2081,7 @@ export function YardPlanInspector() {
         {/* Scale slider */}
         <section>
           <div className="flex items-center justify-between mb-1">
-            <span className="font-semibold" style={{ color: "var(--ds-text-2)" }}>缩放</span>
+            <span className="font-semibold" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Scale" : "缩放"}</span>
             <span className="font-mono text-gray-500">{scale.toFixed(2)}×</span>
           </div>
           <input type="range" min={0.4} max={2.5} step={0.05}
@@ -2069,7 +2093,7 @@ export function YardPlanInspector() {
         {/* Rotation slider */}
         <section>
           <div className="flex items-center justify-between mb-1">
-            <span className="font-semibold" style={{ color: "var(--ds-text-2)" }}>旋转</span>
+            <span className="font-semibold" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Rotation" : "旋转"}</span>
             <span className="font-mono text-gray-500">{rotDeg}°</span>
           </div>
           <input type="range" min={0} max={360} step={5}
@@ -2096,7 +2120,7 @@ export function YardPlanInspector() {
             onMouseEnter={e => { e.currentTarget.style.background = "#EEF2FF"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "white"; }}
           >
-            ⧉ 复制
+            ⧉ {locale === "en" ? "Duplicate" : "复制"}
           </button>
           <button
             onClick={() => {
@@ -2108,7 +2132,7 @@ export function YardPlanInspector() {
             onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "white"; }}
           >
-            ✕ 删除
+            ✕ {locale === "en" ? "Delete" : "删除"}
           </button>
         </section>
       </div>

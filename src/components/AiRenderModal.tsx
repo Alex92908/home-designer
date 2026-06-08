@@ -654,8 +654,8 @@ export default function AiRenderModal({ open, onClose }: Props) {
             )}
             {referenceImageDataUrl && (
               <div className="flex items-center gap-1.5 ml-2">
-                <img src={referenceImageDataUrl} className="w-6 h-6 rounded object-cover" alt="参考图" />
-                <span className="text-[10px] text-indigo-600 font-medium">风格参考已锁定</span>
+                <img src={referenceImageDataUrl} className="w-6 h-6 rounded object-cover" alt={t.aiRenderModalX.refAlt} />
+                <span className="text-[10px] text-indigo-600 font-medium">{t.aiRenderModalX.refLocked}</span>
                 <button onClick={() => setReferenceImageDataUrl(null)} className="text-gray-400 text-xs hover:text-gray-600">✕</button>
               </div>
             )}
@@ -674,7 +674,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
           {backends.length > 0 && phase === "idle" && (
             <div>
               <p className="text-[11px] font-medium text-gray-400 mb-2 uppercase tracking-wider">
-                出图后端 · ComfyUI
+                {t.aiRenderModalX.backendLabel}
               </p>
               <div className="flex gap-2 flex-wrap">
                 {backends.map(b => {
@@ -696,7 +696,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
                 })}
               </div>
               <p className="text-[10px] text-gray-400 mt-1.5 leading-snug">
-                在 ⚙️ 设置里增删后端。RunningHub 云端请用「🎨 AI 出图」下拉（按 workflowId 出图）。
+                {t.aiRenderModalX.backendHint}
               </p>
             </div>
           )}
@@ -708,8 +708,8 @@ export default function AiRenderModal({ open, onClose }: Props) {
               style={{ border: "1px dashed #6366f1", background: "#eef2ff" }}>
               <span>📷</span>
               <div>
-                <p className="text-xs font-semibold text-indigo-700">从参考图片导入设计风格</p>
-                <p className="text-[10px] text-indigo-400">上传建筑照片，AI 自动识别风格 · 材质 · 配色</p>
+                <p className="text-xs font-semibold text-indigo-700">{t.aiRenderModalX.importTitle}</p>
+                <p className="text-[10px] text-indigo-400">{t.aiRenderModalX.importSub}</p>
               </div>
             </button>
           )}
@@ -768,7 +768,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
           {comfyAvailable === true && phase === "idle" && (
             <div>
               <p className="text-[11px] font-medium text-gray-400 mb-2 uppercase tracking-wider">
-                模型 · SD Checkpoint
+                {t.aiRenderModalX.modelLabel}
               </p>
               <div className="flex flex-col gap-1.5">
                 {SD_MODELS.map(m => {
@@ -802,7 +802,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
                           {isRecommended && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
                               style={{ background: "#fef3c7", color: "#92400e" }}>
-                              推荐
+                              {t.aiRenderModalX.recommended}
                             </span>
                           )}
                         </div>
@@ -822,15 +822,15 @@ export default function AiRenderModal({ open, onClose }: Props) {
                         onClick={e => e.stopPropagation()}
                         className="text-[9px] px-1.5 py-1 rounded shrink-0 mt-0.5 hover:opacity-80 transition-opacity"
                         style={{ background: "#f3f4f6", color: "#6b7280" }}
-                        title="下载模型">
-                        ↗ 下载
+                        title={t.aiRenderModalX.downloadModel}>
+                        {t.aiRenderModalX.downloadBtn}
                       </a>
                     </button>
                   );
                 })}
               </div>
               <p className="text-[10px] text-gray-400 mt-1.5 leading-snug">
-                模型文件放入 <span className="font-mono">ComfyUI/models/checkpoints/</span> 后即可选用
+                {t.aiRenderModalX.modelDirHintPre}<span className="font-mono">ComfyUI/models/checkpoints/</span>{t.aiRenderModalX.modelDirHintPost}
               </p>
             </div>
           )}
@@ -855,10 +855,10 @@ export default function AiRenderModal({ open, onClose }: Props) {
                   }}
                 >
                   <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">
-                    ✏️ 提示词编辑
+                    ✏️ {t.aiRenderModalX.promptEditor}
                     {customised && (
                       <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                        style={{ background: "#fef3c7", color: "#92400e" }}>已自定义</span>
+                        style={{ background: "#fef3c7", color: "#92400e" }}>{t.aiRenderModalX.customised}</span>
                     )}
                   </p>
                   <span className="text-gray-400 text-xs">{promptEditorOpen ? "▲" : "▼"}</span>
@@ -867,10 +867,10 @@ export default function AiRenderModal({ open, onClose }: Props) {
                   <div className="mt-2 flex flex-col gap-2">
                     <div>
                       <p className="text-[10px] text-gray-400 mb-1 flex items-center justify-between">
-                        <span>正向提示词</span>
+                        <span>{t.aiRenderModalX.positivePrompt}</span>
                         {editPositive !== null && (
                           <button className="text-indigo-400 text-[9px]" onClick={() => setEditPositive(null)}>
-                            ↺ 恢复自动
+                            {t.aiRenderModalX.restoreAuto}
                           </button>
                         )}
                       </p>
@@ -884,10 +884,10 @@ export default function AiRenderModal({ open, onClose }: Props) {
                     </div>
                     <div>
                       <p className="text-[10px] text-gray-400 mb-1 flex items-center justify-between">
-                        <span>负向提示词</span>
+                        <span>{t.aiRenderModalX.negativePrompt}</span>
                         {editNegative !== null && (
                           <button className="text-indigo-400 text-[9px]" onClick={() => setEditNegative(null)}>
-                            ↺ 恢复自动
+                            {t.aiRenderModalX.restoreAuto}
                           </button>
                         )}
                       </p>
@@ -909,10 +909,10 @@ export default function AiRenderModal({ open, onClose }: Props) {
           {comfyAvailable === true && phase === "idle" && referenceImageDataUrl && (
             <div className="px-3 py-2.5 rounded-xl border" style={{ background: "#eef2ff", borderColor: "#c7d2fe" }}>
               <div className="flex items-center gap-2 mb-2">
-                <img src={referenceImageDataUrl} className="w-8 h-8 rounded object-cover shrink-0" alt="参考图" />
+                <img src={referenceImageDataUrl} className="w-8 h-8 rounded object-cover shrink-0" alt={t.aiRenderModalX.refAlt} />
                 <div className="flex-1">
-                  <p className="text-[11px] font-semibold text-indigo-700">风格参考强度</p>
-                  <p className="text-[9px] text-indigo-400">数值越高，渲染结果越接近参考图风格</p>
+                  <p className="text-[11px] font-semibold text-indigo-700">{t.aiRenderModalX.refStrength}</p>
+                  <p className="text-[9px] text-indigo-400">{t.aiRenderModalX.refStrengthHint}</p>
                 </div>
                 <span className="text-sm font-bold text-indigo-600 shrink-0 w-8 text-right">
                   {Math.round(ipAdapterWeight * 100)}%
@@ -925,9 +925,9 @@ export default function AiRenderModal({ open, onClose }: Props) {
                 className="w-full accent-indigo-500"
               />
               <div className="flex justify-between text-[9px] text-indigo-300 mt-0.5">
-                <span>30% 微妙</span>
-                <span>75% 均衡</span>
-                <span>100% 主导</span>
+                <span>{t.aiRenderModalX.refSubtle}</span>
+                <span>{t.aiRenderModalX.refBalanced}</span>
+                <span>{t.aiRenderModalX.refDominant}</span>
               </div>
             </div>
           )}
@@ -1130,11 +1130,11 @@ export default function AiRenderModal({ open, onClose }: Props) {
             <div className="rounded-xl border border-gray-100 overflow-hidden">
               <div className="px-3 py-2 flex items-center gap-1.5" style={{ background: "#f8fafc" }}>
                 <span className="text-sm">🔧</span>
-                <p className="text-[11px] font-semibold text-gray-600">哪里不满意？</p>
+                <p className="text-[11px] font-semibold text-gray-600">{t.aiRenderModalX.feedbackTitle}</p>
               </div>
               <div className="p-3 flex flex-col gap-2">
                 <div className="flex gap-1.5 flex-wrap">
-                  {["泳池太小", "树木太少", "屋顶颜色太深", "玻璃太多", "光线太暗", "增加植栽"].map(hint => (
+                  {t.aiRenderModalX.hints.map(hint => (
                     <button key={hint}
                       onClick={() => setRetouchFeedback(v => v ? `${v}, ${hint}` : hint)}
                       className="text-[10px] px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 transition-colors">
@@ -1145,7 +1145,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
                 <textarea
                   value={retouchFeedback}
                   onChange={e => setRetouchFeedback(e.target.value)}
-                  placeholder="描述想修改的地方，例如：「泳池形状改成矩形」「增加更多松树」"
+                  placeholder={t.aiRenderModalX.feedbackPlaceholder}
                   rows={2}
                   className="w-full text-[11px] rounded-lg border border-gray-200 px-2.5 py-2 resize-none outline-none focus:border-indigo-300"
                 />
@@ -1165,7 +1165,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
                   }}
                   className="py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ background: "linear-gradient(135deg,#6366f1,#818cf8)", color: "white" }}>
-                  ✨ 微调重渲
+                  {t.aiRenderModalX.retouchBtn}
                 </button>
               </div>
             </div>

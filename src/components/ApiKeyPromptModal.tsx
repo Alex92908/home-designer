@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AI_PROVIDER_LIST, AiProviderId, getAiProvider } from "@/lib/aiProviders";
+import { useT } from "@/lib/i18n";
 
 // ─── 通用 BYOK 密钥填写弹窗 ─────────────────────────────────────────────────
 // 任何需要用户自带大模型密钥的功能（户型解析、外观解析、文生设计等）都复用：
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function ApiKeyPromptModal({ initialProvider, getSavedKey, onSave, onClose }: Props) {
+  const t = useT();
   const [provider, setProvider] = useState<AiProviderId>(initialProvider);
   const [val, setVal] = useState(() => getSavedKey(initialProvider));
   const meta = getAiProvider(provider);
@@ -41,15 +43,15 @@ export default function ApiKeyPromptModal({ initialProvider, getSavedKey, onSave
       <div className="w-full max-w-md rounded-2xl overflow-hidden"
         style={{ background: "var(--ds-surface, #fff)", boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
         <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--ds-border, #e5e7eb)" }}>
-          <div className="text-sm font-bold" style={{ color: "var(--ds-text, #111)" }}>填写大模型 API Key</div>
+          <div className="text-sm font-bold" style={{ color: "var(--ds-text, #111)" }}>{t.apiKeyPrompt.title}</div>
           <div className="text-[11px] mt-1 leading-relaxed" style={{ color: "var(--ds-text-3, #9ca3af)" }}>
-            户型解析、外观解析、文生设计都用大模型。选一个你有账号的平台，填入它的 API 密钥即可（智谱有免费额度）。
+            {t.apiKeyPrompt.intro}
           </div>
         </div>
 
         <div className="px-5 py-4 flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ds-text-3, #9ca3af)" }}>选择平台</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ds-text-3, #9ca3af)" }}>{t.apiKeyPrompt.selectPlatform}</span>
             <select
               value={provider}
               onChange={(e) => switchProvider(e.target.value as AiProviderId)}
@@ -68,17 +70,17 @@ export default function ApiKeyPromptModal({ initialProvider, getSavedKey, onSave
             value={val}
             onChange={(e) => setVal(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onClose(); }}
-            placeholder={`粘贴 ${meta.label.split("（")[0]} 的 API Key`}
+            placeholder={t.apiKeyPrompt.inputPlaceholder(meta.label.split("（")[0])}
             className="w-full px-3 py-2 rounded-lg text-sm outline-none"
             style={{ border: "1px solid var(--ds-border, #d1d5db)", background: "var(--ds-surface-2, #f9fafb)", color: "var(--ds-text, #111)" }}
           />
           <div className="text-[11px] leading-relaxed" style={{ color: "var(--ds-text-3, #9ca3af)" }}>
             {meta.keyHint}
             {" "}
-            <a href={meta.helpUrl} target="_blank" rel="noopener" className="font-semibold text-indigo-600 underline">前往申请</a>
+            <a href={meta.helpUrl} target="_blank" rel="noopener" className="font-semibold text-indigo-600 underline">{t.apiKeyPrompt.apply}</a>
           </div>
           <div className="text-[10px] leading-relaxed" style={{ color: "var(--ds-text-3, #9ca3af)" }}>
-            🔒 密钥只存在你本机浏览器，随请求转发，不会上传或保存到服务器。
+            {t.apiKeyPrompt.privacyNote}
           </div>
         </div>
 
@@ -86,12 +88,12 @@ export default function ApiKeyPromptModal({ initialProvider, getSavedKey, onSave
           <button onClick={onClose}
             className="px-3 py-1.5 rounded-lg text-xs font-semibold"
             style={{ color: "var(--ds-text-2, #6b7280)", background: "var(--ds-surface-2, #f3f4f6)" }}>
-            取消
+            {t.apiKeyPrompt.cancel}
           </button>
           <button onClick={save} disabled={!val.trim()}
             className="px-4 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
             style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}>
-            保存并继续
+            {t.apiKeyPrompt.saveContinue}
           </button>
         </div>
       </div>

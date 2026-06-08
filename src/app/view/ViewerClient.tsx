@@ -5,30 +5,37 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { decodeSnapshot, type ViewSnapshot } from "@/lib/shareUrl";
 import { useDesignerStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 
 // Lazy-load the heavy 3D canvas
 const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
   ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center h-screen bg-gray-900 text-gray-400 text-sm">
-      渲染场景中…
-    </div>
-  ),
+  loading: () => <CanvasLoading />,
 });
+
+function CanvasLoading() {
+  const t = useT();
+  return (
+    <div className="flex items-center justify-center h-screen bg-gray-900 text-gray-400 text-sm">
+      {t.viewer.rendering}
+    </div>
+  );
+}
 
 // ─── Status screens ───────────────────────────────────────────────────────────
 function ErrorScreen() {
+  const t = useT();
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-900 gap-4">
       <div className="text-5xl">😞</div>
-      <div className="text-gray-300 font-semibold">链接无效或已过期</div>
-      <div className="text-gray-500 text-sm">请联系分享者重新生成链接</div>
+      <div className="text-gray-300 font-semibold">{t.viewer.errorTitle}</div>
+      <div className="text-gray-500 text-sm">{t.viewer.errorDesc}</div>
       <a
         href="/"
         className="mt-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
         style={{ background: "#007AFF" }}
       >
-        去设计器 →
+        {t.viewer.goToDesigner}
       </a>
     </div>
   );
@@ -36,6 +43,7 @@ function ErrorScreen() {
 
 // ─── Main viewer ──────────────────────────────────────────────────────────────
 export default function ViewerClient() {
+  const t = useT();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [snapshot, setSnapshot] = useState<ViewSnapshot | null>(null);
@@ -86,7 +94,7 @@ export default function ViewerClient() {
   if (status === "loading") {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-gray-400 text-sm">
-        解析方案中…
+        {t.viewer.parsing}
       </div>
     );
   }
@@ -114,12 +122,12 @@ export default function ViewerClient() {
           >
             🏠
           </div>
-          <span className="text-white text-sm font-semibold tracking-tight">装修配置器</span>
+          <span className="text-white text-sm font-semibold tracking-tight">{t.viewer.appName}</span>
           <span
             className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
             style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)" }}
           >
-            只读预览
+            {t.viewer.readOnly}
           </span>
           {snapshot?.name && (
             <span className="text-white/70 text-xs ml-1">· {snapshot.name}</span>
@@ -136,14 +144,14 @@ export default function ViewerClient() {
               color: "rgba(255,255,255,0.7)",
             }}
           >
-            设计器首页
+            {t.viewer.designerHome}
           </a>
           <a
             href={editorUrl}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
             style={{ background: "linear-gradient(135deg,#6366f1,#818cf8)" }}
           >
-            ✏️ 在设计器中编辑
+            {t.viewer.editInDesigner}
           </a>
         </div>
       </div>
@@ -160,11 +168,11 @@ export default function ViewerClient() {
         }}
       >
         <span className="text-gray-400 text-[11px]">
-          {snapshot?.exterior.floors ?? 1} 层 ·{" "}
-          {snapshot?.exterior.roofStyle ?? ""} 屋顶 ·{" "}
+          {snapshot?.exterior.floors ?? 1} {t.viewer.floors} ·{" "}
+          {snapshot?.exterior.roofStyle ?? ""} {t.viewer.roof} ·{" "}
           {snapshot?.exterior.wallMaterial ?? ""}
         </span>
-        <span className="text-gray-600 text-[11px]">拖动旋转 · 滚轮缩放</span>
+        <span className="text-gray-600 text-[11px]">{t.viewer.dragRotate}</span>
       </div>
     </div>
   );

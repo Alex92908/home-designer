@@ -21,6 +21,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useDesignerStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import type { YardPrefab } from "@/lib/types";
 
 // ─── Types ────────────────────────────────────────────────────────
@@ -39,14 +40,6 @@ type Stage =
   | "selecting"         // user reviews parts
   | "done";
 
-const STAGE_LABELS: Record<Stage, string> = {
-  upload:           "上传图",
-  generating_full:  "生成整体3D",
-  segmenting:       "拆解零件",
-  selecting:        "选零件",
-  done:             "完成",
-};
-
 const SEG_EMOJI: Record<string, string> = {
   roof:   "🏠", upper: "🏢", wall: "🧱", ground: "🌿", pool: "🏊",
 };
@@ -61,9 +54,18 @@ export function VillaTo3D({
   apiPath?: string;
   version?: "v1" | "v2" | "sf3d";
 }) {
+  const t = useT();
   const referenceImageDataUrl = useDesignerStore(s => s.referenceImageDataUrl);
   const addYardItem           = useDesignerStore(s => s.addYardItem);
   const requestAiRender       = useDesignerStore(s => s.requestAiRender);
+
+  const STAGE_LABELS: Record<Stage, string> = {
+    upload:           t.villaTo3d.stageUpload,
+    generating_full:  t.villaTo3d.stageGenerating,
+    segmenting:       t.villaTo3d.stageSegmenting,
+    selecting:        t.villaTo3d.stageSelecting,
+    done:             t.villaTo3d.stageDone,
+  };
 
   const [uploadedImg, setUploadedImg]   = useState<string | null>(null);
   const [stage, setStage]               = useState<Stage>("upload");
@@ -90,7 +92,7 @@ export function VillaTo3D({
 
   // ── Full pipeline ───────────────────────────────────────────────
   const run = useCallback(async () => {
-    if (!activeImage) { setError("请先上传别墅图片"); return; }
+    if (!activeImage) { setError(t.villaTo3d.needUploadImg); return; }
     setError("");
     setQuotaExceeded(false);
 
@@ -108,23 +110,23 @@ export function VillaTo3D({
       };
       if (res.status === 429 && json.quotaExceeded) {
         setQuotaExceeded(true);
-        setError("今日 GPU 配额已用完");
+        setError(t.villaTo3d.quotaUsedUp);
         setStage("upload");
         return;
       }
-      if (!res.ok || (!json.glbBase64 && !json.glbUrl)) throw new Error(json.error ?? "Trellis 调用失败");
+      if (!res.ok || (!json.glbBase64 && !json.glbUrl)) throw new Error(json.error ?? t.villaTo3d.trellisFailed);
       glbB64 = json.glbBase64 ?? `data:model/gltf-binary;base64,${json.glbUrl}`;
       setFullGlb(glbB64);
       if (json.glbUrl) setSavedGlbUrl(json.glbUrl);
     } catch (err) {
-      setError(`整体3D生成失败: ${err instanceof Error ? err.message : String(err)}`);
+      setError(t.villaTo3d.fullGenFailed(err instanceof Error ? err.message : String(err)));
       setStage("upload");
       return;
     }
 
     // ── Step 2: GLB segmentation (skipped for SF3D — single-object model) ──
     if (version === "sf3d") {
-      setParts([{ label: "sf3d model", chinese: "SF3D生成模型", seg: "wall", faceCount: 0, glbBase64: glbB64 }]);
+      setParts([{ label: "sf3d model", chinese: t.villaTo3d.sf3dModel, seg: "wall", faceCount: 0, glbBase64: glbB64 }]);
       setSelected(new Set([0]));
       setStage("selecting");
       return;
@@ -138,17 +140,17 @@ export function VillaTo3D({
         body: JSON.stringify({ glbBase64: glbB64 }),
       });
       const json = await res.json() as { parts?: SegmentedPart[]; error?: string };
-      if (!res.ok || !json.parts?.length) throw new Error(json.error ?? "分割失败");
+      if (!res.ok || !json.parts?.length) throw new Error(json.error ?? t.villaTo3d.segFailed);
       setParts(json.parts);
       setSelected(new Set(json.parts.map((_, i) => i)));
       setStage("selecting");
     } catch (err) {
-      setError(`分割失败: ${err instanceof Error ? err.message : String(err)}`);
-      setParts([{ label: "complete villa", chinese: "完整别墅", seg: "wall", faceCount: 0, glbBase64: glbB64 }]);
+      setError(t.villaTo3d.segFailedMsg(err instanceof Error ? err.message : String(err)));
+      setParts([{ label: "complete villa", chinese: t.villaTo3d.completeVilla, seg: "wall", faceCount: 0, glbBase64: glbB64 }]);
       setSelected(new Set([0]));
       setStage("selecting");
     }
-  }, [activeImage, version]);
+  }, [activeImage, version, t]);
 
   // ── Add selected parts to scene ─────────────────────────────────
   // asMainBuilding=true → single GLB at origin (0,0), user-set scale
@@ -195,7 +197,7 @@ export function VillaTo3D({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 15 }}>
-            🏗 整图 → 完整3D → 拆解零件
+            {t.villaTo3d.title}
             {version === "v2" && (
               <span style={{
                 marginLeft: 8, fontSize: 10,
@@ -205,9 +207,7 @@ export function VillaTo3D({
             )}
           </div>
           <div style={{ fontSize: 10, color: "#888", marginTop: 3 }}>
-            {version === "v2"
-              ? "TRELLIS 2.0（微软最新）1024分辨率 · 更精细纹理 · 几何分割 → 独立零件"
-              : "Trellis（微软开源）生成整体场景 → 几何分割 → 独立可编辑零件"}
+            {version === "v2" ? t.villaTo3d.subtitleV2 : t.villaTo3d.subtitleV1}
           </div>
         </div>
         {onClose && (
@@ -240,10 +240,10 @@ export function VillaTo3D({
       {stage === "upload" && (
         <>
           <div style={{ background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: 8, padding: "10px 12px", marginBottom: 14, fontSize: 11 }}>
-            <b style={{ color: "#0369A1" }}>与 TripoSR 的本质区别</b>
+            <b style={{ color: "#0369A1" }}>{t.villaTo3d.diffTitle}</b>
             <div style={{ color: "#0C4A6E", marginTop: 4, lineHeight: 1.6 }}>
-              TripoSR → 单个孤立物体<br />
-              <b>Trellis</b> → 整栋别墅完整场景，包含建筑+院子+泳池，一次生成带纹理的完整 mesh，再按几何特征拆解。
+              {t.villaTo3d.diffBody1}<br />
+              <b>{t.villaTo3d.diffBody2a}</b>{t.villaTo3d.diffBody2b}
             </div>
           </div>
 
@@ -255,7 +255,7 @@ export function VillaTo3D({
                 background: "rgba(0,0,0,0.6)", color: "#fff",
                 border: "none", borderRadius: 6, padding: "3px 10px",
                 fontSize: 10, cursor: "pointer",
-              }}>换图</button>
+              }}>{t.villaTo3d.replaceImg}</button>
             </div>
           ) : (
             <button onClick={() => fileRef.current?.click()} style={{
@@ -267,7 +267,7 @@ export function VillaTo3D({
               marginBottom: 14,
             }}>
               <span style={{ fontSize: 36 }}>🏠</span>
-              <span>上传别墅参考图片</span>
+              <span>{t.villaTo3d.uploadVillaRef}</span>
             </button>
           )}
           <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
@@ -283,11 +283,11 @@ export function VillaTo3D({
               borderRadius: 10, padding: "12px 14px", marginBottom: 12,
             }}>
               <div style={{ fontWeight: 700, fontSize: 12, color: "#92400E", marginBottom: 6 }}>
-                ⚠️ HuggingFace 今日免费 GPU 配额已用完
+                {t.villaTo3d.quotaTitle}
               </div>
               <div style={{ fontSize: 11, color: "#78350F", lineHeight: 1.7, marginBottom: 10 }}>
-                每日限额 120 GPU 秒，image_to_3d 单步约需 120s。<br />
-                选项：
+                {t.villaTo3d.quotaBody1}<br />
+                {t.villaTo3d.quotaOptions}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <button
@@ -299,7 +299,7 @@ export function VillaTo3D({
                     border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer",
                   }}
                 >
-                  🔄 重试生成
+                  {t.villaTo3d.retryGen}
                 </button>
                 <a
                   href="https://huggingface.co/subscribe/pro"
@@ -312,10 +312,10 @@ export function VillaTo3D({
                     fontSize: 11, fontWeight: 600, textDecoration: "none",
                   }}
                 >
-                  🚀 升级 HF Pro（$9/月）获得更多配额
+                  {t.villaTo3d.upgradePro}
                 </a>
                 <div style={{ fontSize: 10, color: "#9CA3AF", textAlign: "center" }}>
-                  或等待明日 UTC 00:00 配额重置后再试
+                  {t.villaTo3d.waitReset}
                 </div>
               </div>
             </div>
@@ -328,11 +328,11 @@ export function VillaTo3D({
             fontSize: 14, fontWeight: 700, cursor: !activeImage ? "not-allowed" : "pointer",
             marginBottom: 6,
           }}>
-            🚀 生成3D（12步全质量）
+            {t.villaTo3d.genBtn}
           </button>
 
           <div style={{ fontSize: 10, color: "#9CA3AF", textAlign: "center", marginTop: 8 }}>
-            Trellis 生成完整场景 → 几何分割 → 独立零件集合
+            {t.villaTo3d.genHint}
           </div>
         </>
       )}
@@ -342,12 +342,12 @@ export function VillaTo3D({
         <div style={{ textAlign: "center", padding: "30px 0" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>⚙️</div>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>
-            {version === "v2" ? "TRELLIS 2.0 生成完整3D场景中…" : "Trellis 生成完整3D场景中…"}
+            {version === "v2" ? t.villaTo3d.genFullV2 : t.villaTo3d.genFullV1}
           </div>
           <div style={{ color: "#666", fontSize: 12, lineHeight: 1.7 }}>
-            分析建筑结构、材质、空间关系<br />
-            生成带纹理的完整别墅 mesh<br />
-            {version === "v2" ? "预计 90-180 秒（1024分辨率更慢）" : "预计 60-120 秒"}
+            {t.villaTo3d.genFullBody1}<br />
+            {t.villaTo3d.genFullBody2}<br />
+            {version === "v2" ? t.villaTo3d.genFullEtaV2 : t.villaTo3d.genFullEtaV1}
           </div>
           <div style={{ marginTop: 20, height: 4, background: "#E5E7EB", borderRadius: 2, overflow: "hidden" }}>
             <div style={{
@@ -364,11 +364,11 @@ export function VillaTo3D({
       {stage === "segmenting" && (
         <div style={{ textAlign: "center", padding: "30px 0" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>✂️</div>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>几何分割中…</div>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>{t.villaTo3d.segmenting}</div>
           <div style={{ color: "#666", fontSize: 12, lineHeight: 1.7 }}>
-            解析 mesh 法线方向<br />
-            按位置/法线/材质聚类<br />
-            切出：屋顶 / 外墙 / 院子 / 泳池…
+            {t.villaTo3d.segBody1}<br />
+            {t.villaTo3d.segBody2}<br />
+            {t.villaTo3d.segBody3}
           </div>
         </div>
       )}
@@ -377,7 +377,7 @@ export function VillaTo3D({
       {stage === "selecting" && (
         <>
           <div style={{ fontWeight: 600, marginBottom: 12 }}>
-            拆解出 {parts.length} 个零件，选择要加入场景的：
+            {t.villaTo3d.partsCount(parts.length)}
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
@@ -399,7 +399,7 @@ export function VillaTo3D({
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600 }}>{p.chinese}</div>
                   <div style={{ fontSize: 10, color: "#888" }}>
-                    {p.label} · {p.faceCount.toLocaleString()} 面
+                    {p.label} · {p.faceCount.toLocaleString()} {t.villaTo3d.faceUnit}
                   </div>
                 </div>
               </label>
@@ -411,7 +411,7 @@ export function VillaTo3D({
               background: "#FEF3C7", border: "1px solid #FDE68A",
               borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: 11, color: "#92400E",
             }}>
-              ⚠ 分割说明：{error}
+              ⚠ {t.villaTo3d.segNote(error)}
             </div>
           )}
 
@@ -423,7 +423,7 @@ export function VillaTo3D({
               color: "#fff", border: "none", borderRadius: 8,
               fontSize: 13, fontWeight: 600, cursor: selected.size === 0 ? "not-allowed" : "pointer",
             }}>
-              ➕ 加入场景
+              {t.villaTo3d.addToScene}
             </button>
             <button onClick={() => addToScene(true)} disabled={selected.size === 0} style={{
               flex: 1, padding: "10px 0",
@@ -431,7 +431,7 @@ export function VillaTo3D({
               color: "#fff", border: "none", borderRadius: 8,
               fontSize: 13, fontWeight: 600, cursor: selected.size === 0 ? "not-allowed" : "pointer",
             }}>
-              🎨 加入并渲染
+              {t.villaTo3d.addAndRender}
             </button>
           </div>
 
@@ -441,10 +441,10 @@ export function VillaTo3D({
             padding: "12px 14px", background: "#FAF5FF",
           }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#5B21B6", marginBottom: 8 }}>
-              🏠 设为主建筑（居中放置在院子中心）
+              {t.villaTo3d.setMainTitle}
             </div>
             <div style={{ fontSize: 11, color: "#6D28D9", marginBottom: 8 }}>
-              缩放比例：<b>{buildingScale.toFixed(1)}×</b>
+              {t.villaTo3d.scaleLabelPre}<b>{buildingScale.toFixed(1)}×</b>
             </div>
             <input
               type="range" min={0.1} max={5} step={0.05}
@@ -463,7 +463,7 @@ export function VillaTo3D({
                   cursor: selected.size === 0 ? "not-allowed" : "pointer",
                 }}
               >
-                🏠 设为主建筑
+                {t.villaTo3d.setMain}
               </button>
               <button
                 onClick={() => addToScene(true, true)}
@@ -475,7 +475,7 @@ export function VillaTo3D({
                   cursor: selected.size === 0 ? "not-allowed" : "pointer",
                 }}
               >
-                🎨 设为主建筑+渲染
+                {t.villaTo3d.setMainRender}
               </button>
             </div>
           </div>
@@ -486,9 +486,9 @@ export function VillaTo3D({
       {stage === "done" && (
         <div style={{ textAlign: "center", padding: "24px 0" }}>
           <div style={{ fontSize: 44 }}>✅</div>
-          <div style={{ fontWeight: 700, fontSize: 15, marginTop: 10 }}>已加入场景！</div>
+          <div style={{ fontWeight: 700, fontSize: 15, marginTop: 10 }}>{t.villaTo3d.addedToScene}</div>
           <div style={{ color: "#666", fontSize: 12, marginTop: 6 }}>
-            各零件为独立拖拽节点，可分别调整位置/颜色
+            {t.villaTo3d.addedBody}
           </div>
 
           {/* ── 本地保存提示 + 下载按钮 ── */}
@@ -498,7 +498,7 @@ export function VillaTo3D({
             textAlign: "left",
           }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#166534", marginBottom: 6 }}>
-              💾 GLB 已自动保存到项目本地
+              {t.villaTo3d.glbSaved}
             </div>
             {savedGlbUrl && (
               <div style={{
@@ -525,7 +525,7 @@ export function VillaTo3D({
                     fontSize: 11, fontWeight: 700, cursor: "pointer",
                   }}
                 >
-                  ⬇ 下载完整 GLB
+                  {t.villaTo3d.downloadFullGlb}
                 </button>
               )}
               {/* 在新标签预览（如果已保存到 public） */}
@@ -538,7 +538,7 @@ export function VillaTo3D({
                     color: "#16A34A", fontSize: 11, fontWeight: 700, cursor: "pointer",
                   }}
                 >
-                  🔗 在线预览
+                  {t.villaTo3d.onlinePreview}
                 </button>
               )}
             </div>

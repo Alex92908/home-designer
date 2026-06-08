@@ -8,6 +8,8 @@
 // 这三者都说同一种「ComfyUI 工作流」语言，差别只在「提交端点 + 鉴权」。
 // 配置只存浏览器 localStorage，请求经本站 /api/airender 代理转发，密钥不落服务端。
 
+import type { Locale } from "./i18n";
+
 export type BackendKind = "comfyui-local" | "comfyui-http" | "runninghub";
 
 export interface RenderBackend {
@@ -48,13 +50,37 @@ export interface AiRenderConfig {
 
 const STORAGE_KEY = "home-designer-airender";
 
+// 各后端类型的默认名（中/英）。DEFAULT_CONFIG 用中文键种子，显示时按 locale 本地化。
+// 单一数据源：localizeBackendName 据此判断「用户没改过名的默认值」并翻译。
+export const DEFAULT_BACKEND_NAMES: Record<BackendKind, { zh: string; en: string }> = {
+  "comfyui-local": { zh: "本地 ComfyUI",  en: "Local ComfyUI" },
+  "comfyui-http":  { zh: "自建 ComfyUI",  en: "Self-hosted ComfyUI" },
+  "runninghub":    { zh: "RunningHub 云", en: "RunningHub Cloud" },
+};
+
 export const DEFAULT_CONFIG: AiRenderConfig = {
   backends: [
-    { id: "local",      name: "本地 ComfyUI", kind: "comfyui-local", baseUrl: "http://localhost:8188" },
-    { id: "runninghub", name: "RunningHub 云", kind: "runninghub",    baseUrl: "https://www.runninghub.ai", apiKey: "" },
+    { id: "local",      name: DEFAULT_BACKEND_NAMES["comfyui-local"].zh, kind: "comfyui-local", baseUrl: "http://localhost:8188" },
+    { id: "runninghub", name: DEFAULT_BACKEND_NAMES.runninghub.zh,       kind: "runninghub",    baseUrl: "https://www.runninghub.ai", apiKey: "" },
   ],
   workflows: [],
 };
+
+/** 显示时本地化后端名：用户没改过名（仍等于默认中文名）则按 locale 翻译，否则原样显示用户自定义名 */
+export function localizeBackendName(backend: RenderBackend, locale: Locale): string {
+  const def = DEFAULT_BACKEND_NAMES[backend.kind];
+  if (def && backend.name === def.zh) return locale === "en" ? def.en : def.zh;
+  return backend.name;
+}
+
+/** 显示时本地化工作流名：来自预设且名字仍是预设中文名则按 locale 取预设名，否则原样显示 */
+export function localizeWorkflowName(workflow: RenderWorkflow, locale: Locale): string {
+  if (workflow.presetPath) {
+    const preset = WORKFLOW_PRESETS.find((p) => p.jsonPath === workflow.presetPath);
+    if (preset && workflow.name === preset.name) return presetName(preset, locale);
+  }
+  return workflow.name;
+}
 
 export function getAiRenderConfig(): AiRenderConfig {
   if (typeof window === "undefined") return structuredClone(DEFAULT_CONFIG);
@@ -103,7 +129,7 @@ export function newId(prefix: string): string {
 }
 
 // ─── 预设 → 工作流（供设置面板批量导入 & 视图内一键直达共用）────────────────
-import type { WorkflowPreset } from "./workflowPresets";
+import { WORKFLOW_PRESETS, presetName, type WorkflowPreset } from "./workflowPresets";
 
 /** cloud 预设挂第一个 RunningHub 后端；local 预设挂第一个 ComfyUI 后端 */
 export function backendIdForPreset(config: AiRenderConfig, cloud: boolean): string {

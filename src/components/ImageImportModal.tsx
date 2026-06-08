@@ -5,6 +5,7 @@ import { useDesignerStore } from "@/lib/store";
 import { ExteriorSettings } from "@/lib/types";
 import { getAiKey, setAiKey, getSelectedProvider, setSelectedProvider } from "@/lib/aiKeys";
 import { AiProviderId } from "@/lib/aiProviders";
+import { useT } from "@/lib/i18n";
 import ApiKeyPromptModal from "./ApiKeyPromptModal";
 
 interface Props {
@@ -32,6 +33,7 @@ interface AnalysisResult {
 }
 
 export default function ImageImportModal({ open, onClose }: Props) {
+  const t = useT();
   const setExterior             = useDesignerStore(s => s.setExterior);
   const setReferenceImageDataUrl = useDesignerStore(s => s.setReferenceImageDataUrl);
   const setPromptAdditions      = useDesignerStore(s => s.setPromptAdditions);
@@ -133,7 +135,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
       setPhase("review");
     } catch (err) {
       console.error("analyze-exterior failed:", err);
-      setAnalyzeError("分析失败，请重试");
+      setAnalyzeError(t.imageImport.analyzeFailed);
       setPhase("upload");
     }
   }
@@ -190,7 +192,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
       {toast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[10000] px-5 py-2.5 rounded-full text-sm font-semibold text-white shadow-lg"
           style={{ background: "#4f46e5" }}>
-          设计已更新 ✓
+          {t.imageImport.designUpdated}
         </div>
       )}
 
@@ -202,7 +204,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-base">📷</span>
-            <h2 className="text-sm font-bold text-gray-800">从参考图片导入设计风格</h2>
+            <h2 className="text-sm font-bold text-gray-800">{t.imageImport.title}</h2>
           </div>
           <button
             onClick={() => { onClose(); resetState(); }}
@@ -235,8 +237,8 @@ export default function ImageImportModal({ open, onClose }: Props) {
               >
                 <span className="text-4xl">🏠</span>
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-gray-700">拖放建筑照片到这里</p>
-                  <p className="text-xs text-gray-400 mt-1">或点击选择文件 · 支持 JPG、PNG、WebP</p>
+                  <p className="text-sm font-semibold text-gray-700">{t.imageImport.dropHere}</p>
+                  <p className="text-xs text-gray-400 mt-1">{t.imageImport.dropHint}</p>
                 </div>
                 <button
                   type="button"
@@ -244,7 +246,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
                   style={{ background: "#6366f1" }}
                   onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
                 >
-                  选择图片
+                  {t.imageImport.selectImage}
                 </button>
               </div>
               <input
@@ -255,7 +257,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
                 onChange={handleFileChange}
               />
               <p className="text-[10px] text-gray-400 text-center">
-                上传建筑外观照片，AI 将自动识别风格、材质、配色方案
+                {t.imageImport.uploadHint}
               </p>
             </div>
           )}
@@ -266,7 +268,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
               {imageUrl && (
                 <img
                   src={imageUrl}
-                  alt="上传的图片"
+                  alt={t.imageImport.uploadedAlt}
                   className="w-48 h-36 object-cover rounded-xl shadow-md"
                 />
               )}
@@ -276,8 +278,8 @@ export default function ImageImportModal({ open, onClose }: Props) {
                   className="w-10 h-10 rounded-full border-4 animate-spin"
                   style={{ borderColor: "#e0e7ff", borderTopColor: "#6366f1" }}
                 />
-                <p className="text-sm font-semibold text-indigo-700">AI 正在分析建筑风格...</p>
-                <p className="text-[10px] text-gray-400">识别风格 · 材质 · 配色 · 特征</p>
+                <p className="text-sm font-semibold text-indigo-700">{t.imageImport.analyzing}</p>
+                <p className="text-[10px] text-gray-400">{t.imageImport.analyzingHint}</p>
               </div>
             </div>
           )}
@@ -287,7 +289,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
             <div className="flex flex-col gap-5">
               {result.fallback && (
                 <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
-                  分析服务暂时不可用，已使用默认参数，请手动调整。
+                  {t.imageImport.fallbackNotice}
                 </div>
               )}
 
@@ -296,12 +298,12 @@ export default function ImageImportModal({ open, onClose }: Props) {
                 <div className="shrink-0">
                   <img
                     src={imageUrl}
-                    alt="参考图片"
+                    alt={t.imageImport.refAlt}
                     className="w-44 h-36 object-cover rounded-xl shadow-md"
                   />
                   {result.confidence > 0 && (
                     <div className="mt-2 text-center">
-                      <span className="text-[10px] text-gray-400">识别置信度 </span>
+                      <span className="text-[10px] text-gray-400">{t.imageImport.confidence}</span>
                       <span className="text-[10px] font-semibold" style={{ color: result.confidence > 0.7 ? "#059669" : "#d97706" }}>
                         {Math.round(result.confidence * 100)}%
                       </span>
@@ -315,7 +317,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
                   <div className="grid grid-cols-2 gap-3">
                     {/* 建筑风格 */}
                     <label className="flex flex-col gap-1">
-                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">建筑风格</span>
+                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{t.imageImport.fieldStyle}</span>
                       <select
                         value={preset}
                         onChange={e => setPreset(e.target.value)}
@@ -331,7 +333,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
 
                     {/* 屋顶类型 */}
                     <label className="flex flex-col gap-1">
-                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">屋顶类型</span>
+                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{t.imageImport.fieldRoof}</span>
                       <select
                         value={roofStyle}
                         onChange={e => setRoofStyle(e.target.value as ExteriorSettings["roofStyle"])}
@@ -347,7 +349,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
 
                     {/* 外墙材质 */}
                     <label className="flex flex-col gap-1">
-                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">外墙材质</span>
+                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{t.imageImport.fieldWall}</span>
                       <select
                         value={wallMaterial}
                         onChange={e => setWallMaterial(e.target.value as ExteriorSettings["wallMaterial"])}
@@ -363,7 +365,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
 
                     {/* 院落方案 */}
                     <label className="flex flex-col gap-1">
-                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">院落方案</span>
+                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{t.imageImport.fieldYard}</span>
                       <select
                         value={yardPreset}
                         onChange={e => setYardPreset(e.target.value as ExteriorSettings["yardPreset"])}
@@ -380,7 +382,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
                   {/* Colors row */}
                   <div className="flex gap-3">
                     <label className="flex flex-col gap-1 items-start">
-                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">外墙颜色</span>
+                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{t.imageImport.fieldWallColor}</span>
                       <div className="flex items-center gap-1.5">
                         <input
                           type="color"
@@ -393,7 +395,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
                     </label>
 
                     <label className="flex flex-col gap-1 items-start">
-                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">点缀色</span>
+                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{t.imageImport.fieldAccentColor}</span>
                       <div className="flex items-center gap-1.5">
                         <input
                           type="color"
@@ -406,7 +408,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
                     </label>
 
                     <label className="flex flex-col gap-1 items-start">
-                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">屋顶颜色</span>
+                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{t.imageImport.fieldRoofColor}</span>
                       <div className="flex items-center gap-1.5">
                         <input
                           type="color"
@@ -422,7 +424,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
                   {/* Floors + Fence row */}
                   <div className="flex gap-4 items-end">
                     <label className="flex flex-col gap-1">
-                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">楼层数</span>
+                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{t.imageImport.fieldFloors}</span>
                       <input
                         type="number"
                         min={1}
@@ -440,7 +442,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
                         onChange={e => setShowPerimeterFence(e.target.checked)}
                         className="w-3.5 h-3.5 rounded"
                       />
-                      <span className="text-xs text-gray-600">周界围栏</span>
+                      <span className="text-xs text-gray-600">{t.imageImport.fieldFence}</span>
                     </label>
                   </div>
                 </div>
@@ -449,7 +451,7 @@ export default function ImageImportModal({ open, onClose }: Props) {
               {/* Detected features */}
               {detectedFeatures.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">识别特征</p>
+                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">{t.imageImport.detectedFeatures}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {detectedFeatures.map((f, i) => (
                       <span
@@ -466,15 +468,15 @@ export default function ImageImportModal({ open, onClose }: Props) {
 
               {/* Prompt additions */}
               <label className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">额外提示词</span>
+                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{t.imageImport.fieldPrompt}</span>
                 <textarea
                   value={promptAdditionsVal}
                   onChange={e => setPromptAdditionsVal(e.target.value)}
                   rows={2}
-                  placeholder="额外的 SD 关键词，留空则不添加..."
+                  placeholder={t.imageImport.promptPlaceholder}
                   className="text-xs border border-gray-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-indigo-400"
                 />
-                <p className="text-[9px] text-gray-400">这些关键词将附加到 AI 渲染提示词中</p>
+                <p className="text-[9px] text-gray-400">{t.imageImport.promptHint}</p>
               </label>
             </div>
           )}
@@ -487,14 +489,14 @@ export default function ImageImportModal({ open, onClose }: Props) {
               onClick={() => { setPhase("upload"); setImageUrl(null); setResult(null); }}
               className="flex-1 py-2.5 rounded-xl text-xs font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
             >
-              重新分析
+              {t.imageImport.reanalyze}
             </button>
             <button
               onClick={handleApply}
               className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-white transition-all"
               style={{ background: "#6366f1" }}
             >
-              应用到设计
+              {t.imageImport.applyDesign}
             </button>
           </div>
         )}

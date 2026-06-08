@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useDesignerStore } from "@/lib/store";
 import type { RoofStyle, WallMaterialType, WallSide, WallZone } from "@/lib/types";
-import { useT } from "@/lib/i18n";
+import { useT, useLocale } from "@/lib/i18n";
 import DesignVariants from "./DesignVariants";
 import { PROJECT_TEMPLATES } from "@/lib/projectTemplates";
 import { EXTERIOR_PRESETS } from "@/lib/exteriorPresets";
@@ -44,45 +44,49 @@ const ROOF_STYLES: { id: RoofStyle; label: string; icon: string; desc: string }[
 interface ExtMat {
   id: string;          // unique key
   label: string;
+  labelEn: string;
   type: WallMaterialType;
   color: string;       // primary display color
   thumb: string;       // CSS background for the thumbnail strip
   desc: string;
+  descEn: string;
 }
 const EXT_MATERIALS: ExtMat[] = [
   // ── 涂料 (render / painted plaster) ──────────────────────
-  { id:"render-cream",   label:"奶油涂料",   type:"render",   color:"#F5F0E8", thumb:"linear-gradient(135deg,#F9F5EF,#EDE5D8)", desc:"经典暖白，百搭" },
-  { id:"render-white",   label:"纯白涂料",   type:"render",   color:"#FFFFFF", thumb:"linear-gradient(135deg,#FFFFFF,#E8E8E8)", desc:"极简纯白" },
-  { id:"render-gray",    label:"浅灰涂料",   type:"render",   color:"#D8D5CF", thumb:"linear-gradient(135deg,#E0DDD8,#C8C5BF)", desc:"中性高级灰" },
-  { id:"render-warm",    label:"杏仁色",     type:"render",   color:"#EDD9B4", thumb:"linear-gradient(135deg,#F2E4C2,#D8C498)", desc:"温暖地中海" },
-  { id:"render-terra",   label:"赭石涂料",   type:"render",   color:"#C47850", thumb:"linear-gradient(135deg,#D08560,#A86040)", desc:"热带橙赭" },
-  { id:"render-moss",    label:"苔绿涂料",   type:"render",   color:"#7A9870", thumb:"linear-gradient(135deg,#8AAA80,#6A8860)", desc:"自然气息" },
+  { id:"render-cream",   label:"奶油涂料",   labelEn:"Cream Render",   type:"render",   color:"#F5F0E8", thumb:"linear-gradient(135deg,#F9F5EF,#EDE5D8)", desc:"经典暖白，百搭", descEn:"Classic warm white, versatile" },
+  { id:"render-white",   label:"纯白涂料",   labelEn:"Pure White Render",   type:"render",   color:"#FFFFFF", thumb:"linear-gradient(135deg,#FFFFFF,#E8E8E8)", desc:"极简纯白", descEn:"Minimalist pure white" },
+  { id:"render-gray",    label:"浅灰涂料",   labelEn:"Light Gray Render",   type:"render",   color:"#D8D5CF", thumb:"linear-gradient(135deg,#E0DDD8,#C8C5BF)", desc:"中性高级灰", descEn:"Neutral sophisticated gray" },
+  { id:"render-warm",    label:"杏仁色",     labelEn:"Almond",     type:"render",   color:"#EDD9B4", thumb:"linear-gradient(135deg,#F2E4C2,#D8C498)", desc:"温暖地中海", descEn:"Warm Mediterranean" },
+  { id:"render-terra",   label:"赭石涂料",   labelEn:"Terracotta Render",   type:"render",   color:"#C47850", thumb:"linear-gradient(135deg,#D08560,#A86040)", desc:"热带橙赭", descEn:"Tropical orange ochre" },
+  { id:"render-moss",    label:"苔绿涂料",   labelEn:"Moss Green Render",   type:"render",   color:"#7A9870", thumb:"linear-gradient(135deg,#8AAA80,#6A8860)", desc:"自然气息", descEn:"Natural ambience" },
   // ── 砖墙 (brick) ─────────────────────────────────────────
-  { id:"brick-red",      label:"红砖",       type:"brick",    color:"#B05030", thumb:"repeating-linear-gradient(0deg,#B05030 0,#B05030 8px,#D0A080 8px,#D0A080 10px),repeating-linear-gradient(90deg,transparent 0,transparent 24px,#D0A080 24px,#D0A080 26px)", desc:"传统清水红砖" },
-  { id:"brick-white",    label:"白砖",       type:"brick",    color:"#E8E4DF", thumb:"repeating-linear-gradient(0deg,#DDD9D4 0,#DDD9D4 8px,#F5F2EE 8px,#F5F2EE 10px),repeating-linear-gradient(90deg,transparent 0,transparent 24px,#F5F2EE 24px,#F5F2EE 26px)", desc:"清爽白色砖墙" },
-  { id:"brick-charcoal", label:"深灰砖",     type:"brick",    color:"#4A4A48", thumb:"repeating-linear-gradient(0deg,#3C3C3A 0,#3C3C3A 8px,#5C5C58 8px,#5C5C58 10px)", desc:"现代工业暗砖" },
-  { id:"brick-aged",     label:"仿古砖",     type:"brick",    color:"#8C6040", thumb:"repeating-linear-gradient(0deg,#7C5030 0,#7C5030 8px,#A07850 8px,#A07850 10px)", desc:"做旧质感" },
+  { id:"brick-red",      label:"红砖",       labelEn:"Red Brick",       type:"brick",    color:"#B05030", thumb:"repeating-linear-gradient(0deg,#B05030 0,#B05030 8px,#D0A080 8px,#D0A080 10px),repeating-linear-gradient(90deg,transparent 0,transparent 24px,#D0A080 24px,#D0A080 26px)", desc:"传统清水红砖", descEn:"Traditional exposed red brick" },
+  { id:"brick-white",    label:"白砖",       labelEn:"White Brick",       type:"brick",    color:"#E8E4DF", thumb:"repeating-linear-gradient(0deg,#DDD9D4 0,#DDD9D4 8px,#F5F2EE 8px,#F5F2EE 10px),repeating-linear-gradient(90deg,transparent 0,transparent 24px,#F5F2EE 24px,#F5F2EE 26px)", desc:"清爽白色砖墙", descEn:"Crisp white brickwork" },
+  { id:"brick-charcoal", label:"深灰砖",     labelEn:"Charcoal Brick",     type:"brick",    color:"#4A4A48", thumb:"repeating-linear-gradient(0deg,#3C3C3A 0,#3C3C3A 8px,#5C5C58 8px,#5C5C58 10px)", desc:"现代工业暗砖", descEn:"Modern industrial dark brick" },
+  { id:"brick-aged",     label:"仿古砖",     labelEn:"Aged Brick",     type:"brick",    color:"#8C6040", thumb:"repeating-linear-gradient(0deg,#7C5030 0,#7C5030 8px,#A07850 8px,#A07850 10px)", desc:"做旧质感", descEn:"Distressed texture" },
   // ── 石材 (stone) ─────────────────────────────────────────
-  { id:"stone-sand",     label:"砂岩",       type:"stone",    color:"#D4C4A0", thumb:"linear-gradient(135deg,#D8C8A8 25%,#C8B890 50%,#D4C4A0 75%)", desc:"自然砂岩" },
-  { id:"stone-slate",    label:"板岩",       type:"stone",    color:"#787870", thumb:"linear-gradient(120deg,#707068 20%,#606058 40%,#888880 60%,#686860 80%)", desc:"深灰板岩" },
-  { id:"stone-marble",   label:"大理石",     type:"stone",    color:"#EEEAE4", thumb:"linear-gradient(135deg,#F5F2EC,#E0DCD4,#F2EEEA)", desc:"高贵白大理石" },
-  { id:"stone-granite",  label:"花岗岩",     type:"stone",    color:"#9A9088", thumb:"linear-gradient(135deg,#A09890 20%,#888078 50%,#9C9088 80%)", desc:"厚重花岗岩" },
+  { id:"stone-sand",     label:"砂岩",       labelEn:"Sandstone",       type:"stone",    color:"#D4C4A0", thumb:"linear-gradient(135deg,#D8C8A8 25%,#C8B890 50%,#D4C4A0 75%)", desc:"自然砂岩", descEn:"Natural sandstone" },
+  { id:"stone-slate",    label:"板岩",       labelEn:"Slate",       type:"stone",    color:"#787870", thumb:"linear-gradient(120deg,#707068 20%,#606058 40%,#888880 60%,#686860 80%)", desc:"深灰板岩", descEn:"Dark gray slate" },
+  { id:"stone-marble",   label:"大理石",     labelEn:"Marble",     type:"stone",    color:"#EEEAE4", thumb:"linear-gradient(135deg,#F5F2EC,#E0DCD4,#F2EEEA)", desc:"高贵白大理石", descEn:"Elegant white marble" },
+  { id:"stone-granite",  label:"花岗岩",     labelEn:"Granite",     type:"stone",    color:"#9A9088", thumb:"linear-gradient(135deg,#A09890 20%,#888078 50%,#9C9088 80%)", desc:"厚重花岗岩", descEn:"Solid granite" },
   // ── 木饰面 (wood) ─────────────────────────────────────────
-  { id:"wood-cedar",     label:"雪松木",     type:"wood",     color:"#A06030", thumb:"repeating-linear-gradient(90deg,#A06030 0,#A06030 18px,#8A5028 18px,#8A5028 20px)", desc:"竖纹深棕雪松" },
-  { id:"wood-pine",      label:"浅松木",     type:"wood",     color:"#D4A870", thumb:"repeating-linear-gradient(90deg,#D4A870 0,#D4A870 18px,#C09050 18px,#C09050 20px)", desc:"温润浅松" },
-  { id:"wood-dark",      label:"碳化木",     type:"wood",     color:"#3C2818", thumb:"repeating-linear-gradient(90deg,#3C2818 0,#3C2818 18px,#2C1808 18px,#2C1808 20px)", desc:"日式碳化深棕" },
+  { id:"wood-cedar",     label:"雪松木",     labelEn:"Cedar Wood",     type:"wood",     color:"#A06030", thumb:"repeating-linear-gradient(90deg,#A06030 0,#A06030 18px,#8A5028 18px,#8A5028 20px)", desc:"竖纹深棕雪松", descEn:"Vertical-grain dark brown cedar" },
+  { id:"wood-pine",      label:"浅松木",     labelEn:"Light Pine",     type:"wood",     color:"#D4A870", thumb:"repeating-linear-gradient(90deg,#D4A870 0,#D4A870 18px,#C09050 18px,#C09050 20px)", desc:"温润浅松", descEn:"Warm light pine" },
+  { id:"wood-dark",      label:"碳化木",     labelEn:"Charred Wood",     type:"wood",     color:"#3C2818", thumb:"repeating-linear-gradient(90deg,#3C2818 0,#3C2818 18px,#2C1808 18px,#2C1808 20px)", desc:"日式碳化深棕", descEn:"Japanese charred dark brown" },
   // ── 清水混凝土 (concrete) ──────────────────────────────────
-  { id:"concrete-smooth",label:"光面清水",   type:"concrete", color:"#909090", thumb:"linear-gradient(135deg,#969696,#808080,#949494)", desc:"极简光面混凝土" },
-  { id:"concrete-board", label:"木纹清水",   type:"concrete", color:"#7C7870", thumb:"repeating-linear-gradient(0deg,#7C7870 0,#7C7870 14px,#6C6860 14px,#6C6860 16px)", desc:"木模板纹理" },
-  { id:"concrete-raw",   label:"毛面混凝土", type:"concrete", color:"#666462", thumb:"linear-gradient(135deg,#706E6A 10%,#5C5A58 40%,#6E6C68 70%)", desc:"粗犷工业感" },
+  { id:"concrete-smooth",label:"光面清水",   labelEn:"Smooth Concrete",   type:"concrete", color:"#909090", thumb:"linear-gradient(135deg,#969696,#808080,#949494)", desc:"极简光面混凝土", descEn:"Minimalist smooth concrete" },
+  { id:"concrete-board", label:"木纹清水",   labelEn:"Board-Formed Concrete",   type:"concrete", color:"#7C7870", thumb:"repeating-linear-gradient(0deg,#7C7870 0,#7C7870 14px,#6C6860 14px,#6C6860 16px)", desc:"木模板纹理", descEn:"Wood-formwork texture" },
+  { id:"concrete-raw",   label:"毛面混凝土", labelEn:"Raw Concrete", type:"concrete", color:"#666462", thumb:"linear-gradient(135deg,#706E6A 10%,#5C5A58 40%,#6E6C68 70%)", desc:"粗犷工业感", descEn:"Rugged industrial feel" },
 ];
 
 // ─── Combination / multi-zone wall presets ──────────────────
 interface ComboPreset {
   id: string;
   label: string;
+  labelEn: string;
   icon: string;
   desc: string;
+  descEn: string;
   zones: WallZone[];
   /** CSS gradient for the thumbnail strip (bottom→top) */
   thumb: string;
@@ -92,8 +96,10 @@ const COMBO_PRESETS: ComboPreset[] = [
   {
     id: "brick-glass",
     label: "砖+玻璃",
+    labelEn: "Brick + Glass",
     icon: "🧱",
     desc: "砖石底部 + 落地玻璃幕墙",
+    descEn: "Brick base + floor-to-ceiling glass curtain wall",
     thumb: "linear-gradient(to top, #B05030 0%, #B05030 40%, #CBE8F5 40%, #CBE8F5 100%)",
     zones: [
       { material: "brick",  color: "#B05030", heightFraction: 0.40 },
@@ -103,8 +109,10 @@ const COMBO_PRESETS: ComboPreset[] = [
   {
     id: "brick-wood",
     label: "砖+木饰面",
+    labelEn: "Brick + Wood",
     icon: "🪵",
     desc: "红砖基座 + 雪松木挂板",
+    descEn: "Red brick base + cedar cladding",
     thumb: "linear-gradient(to top, #B05030 0%, #B05030 35%, #A06030 35%, #A06030 100%)",
     zones: [
       { material: "brick", color: "#B05030", heightFraction: 0.35 },
@@ -114,8 +122,10 @@ const COMBO_PRESETS: ComboPreset[] = [
   {
     id: "stone-glass",
     label: "石材+玻璃",
+    labelEn: "Stone + Glass",
     icon: "💎",
     desc: "毛石基础 + 玻璃上墙",
+    descEn: "Rough stone base + glass upper walls",
     thumb: "linear-gradient(to top, #9A9088 0%, #9A9088 45%, #CBE8F5 45%, #CBE8F5 100%)",
     zones: [
       { material: "stone", color: "#9A9088", heightFraction: 0.45 },
@@ -125,8 +135,10 @@ const COMBO_PRESETS: ComboPreset[] = [
   {
     id: "stone-wood",
     label: "石材+木",
+    labelEn: "Stone + Wood",
     icon: "🏡",
     desc: "花岗岩基座 + 松木挂板",
+    descEn: "Granite base + pine cladding",
     thumb: "linear-gradient(to top, #787870 0%, #787870 45%, #D4A870 45%, #D4A870 100%)",
     zones: [
       { material: "stone", color: "#787870", heightFraction: 0.45 },
@@ -136,8 +148,10 @@ const COMBO_PRESETS: ComboPreset[] = [
   {
     id: "concrete-glass",
     label: "混凝土+玻璃",
+    labelEn: "Concrete + Glass",
     icon: "🏢",
     desc: "清水混凝土 + 玻璃幕墙",
+    descEn: "Exposed concrete + glass curtain wall",
     thumb: "linear-gradient(to top, #909090 0%, #909090 50%, #CBE8F5 50%, #CBE8F5 100%)",
     zones: [
       { material: "concrete", color: "#909090", heightFraction: 0.50 },
@@ -147,8 +161,10 @@ const COMBO_PRESETS: ComboPreset[] = [
   {
     id: "render-stone",
     label: "涂料+石材",
+    labelEn: "Render + Stone",
     icon: "🏛️",
     desc: "地中海涂料 + 石材基座",
+    descEn: "Mediterranean render + stone base",
     thumb: "linear-gradient(to top, #D4C4A0 0%, #D4C4A0 30%, #FFF8E8 30%, #FFF8E8 100%)",
     zones: [
       { material: "stone",  color: "#D4C4A0", heightFraction: 0.30 },
@@ -158,8 +174,10 @@ const COMBO_PRESETS: ComboPreset[] = [
   {
     id: "wood-house",
     label: "全木屋",
+    labelEn: "All-Wood House",
     icon: "🌲",
     desc: "全外墙木饰面 · 日式/田园",
+    descEn: "Full wood cladding · Japanese / rustic",
     thumb: "repeating-linear-gradient(90deg,#A06030 0,#A06030 14px,#8A5028 14px,#8A5028 16px)",
     zones: [
       { material: "wood", color: "#A06030", heightFraction: 1.0 },
@@ -168,8 +186,10 @@ const COMBO_PRESETS: ComboPreset[] = [
   {
     id: "full-glass",
     label: "全玻璃",
+    labelEn: "All-Glass",
     icon: "🔮",
     desc: "四面通透玻璃幕墙 · 现代极简",
+    descEn: "Glass curtain wall on all sides · modern minimalist",
     thumb: "linear-gradient(135deg, #CBE8F5 0%, #9DC8E8 50%, #CBE8F5 100%)",
     zones: [
       { material: "glass", color: "#CBE8F5", heightFraction: 1.0 },
@@ -178,8 +198,10 @@ const COMBO_PRESETS: ComboPreset[] = [
   {
     id: "brick-render-wood",
     label: "三段式",
+    labelEn: "Three-Tier",
     icon: "🏗️",
     desc: "砖基 + 涂料中段 + 木饰上部",
+    descEn: "Brick base + render mid + wood top",
     thumb: "linear-gradient(to top, #B05030 0%, #B05030 25%, #F5F0E8 25%, #F5F0E8 65%, #A06030 65%, #A06030 100%)",
     zones: [
       { material: "brick",  color: "#B05030", heightFraction: 0.25 },
@@ -213,6 +235,7 @@ function ColorSwatch({ label, value, onChange }: { label: string; value: string;
 // it unambiguous which face you're styling regardless of camera orientation.
 type WallFace = WallSide;
 const FACE_LABELS: Record<WallFace, string> = { S:"南墙", N:"北墙", W:"西墙", E:"东墙" };
+const FACE_LABELS_EN: Record<WallFace, string> = { S:"South", N:"North", W:"West", E:"East" };
 
 // ─── Main panel ──────────────────────────────────────────────
 export default function ExteriorPanel() {
@@ -223,6 +246,9 @@ export default function ExteriorPanel() {
   const viewMode              = useDesignerStore(s => s.viewMode);
   const setViewMode           = useDesignerStore(s => s.setViewMode);
   const t = useT();
+  const locale = useLocale();
+  const en = locale === "en";
+  const faceLabel = (f: WallFace) => en ? FACE_LABELS_EN[f] : FACE_LABELS[f];
 
   // "分面材质" mode — which face is currently selected for per-face editing
   const [perFaceEnabled, setPerFaceEnabled] = useState(
@@ -256,9 +282,9 @@ export default function ExteriorPanel() {
             onClick={() => setViewMode("all")}
             className="text-[9px] px-2 py-0.5 rounded-full"
             style={{ background: "#EEF2FF", color: "#4F46E5" }}
-            title="回到全局平面图"
+            title={en ? "Back to global floor plan" : "回到全局平面图"}
           >
-            ← 全局图
+            {en ? "← Global" : "← 全局图"}
           </button>
         </div>
         <div className="text-[10px] text-gray-400 mb-2">
@@ -273,7 +299,7 @@ export default function ExteriorPanel() {
               ? { background: "#fff", color: "#111", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
               : { color: "#6B7280" }}
           >
-            🏠 3D外观
+            {en ? "🏠 3D Exterior" : "🏠 3D外观"}
           </button>
           <button
             onClick={() => setViewMode("yard2d")}
@@ -282,7 +308,7 @@ export default function ExteriorPanel() {
               ? { background: "#fff", color: "#111", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
               : { color: "#6B7280" }}
           >
-            🌿 2D院子
+            {en ? "🌿 2D Yard" : "🌿 2D院子"}
           </button>
         </div>
       </div>
@@ -292,7 +318,7 @@ export default function ExteriorPanel() {
         {/* ── 项目模板 — one-click full villa setup ── */}
         <div className="px-3 pt-3">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-            ✨ 项目模板
+            {en ? "✨ Project Templates" : "✨ 项目模板"}
           </div>
           <div className="flex flex-col gap-1.5">
             {PROJECT_TEMPLATES.map(tpl => (
@@ -357,8 +383,8 @@ export default function ExteriorPanel() {
               >
                 <span className="text-xl shrink-0">🏗️</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-bold truncate">平面图驱动外观</div>
-                  <div className="text-[9px] opacity-60 truncate">按真实户型自动生成外立面</div>
+                  <div className="text-[11px] font-bold truncate">{en ? "Floor-Plan-Driven Exterior" : "平面图驱动外观"}</div>
+                  <div className="text-[9px] opacity-60 truncate">{en ? "Auto-generate the facade from the real floor plan" : "按真实户型自动生成外立面"}</div>
                 </div>
                 {isActive && (
                   <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
@@ -380,8 +406,8 @@ export default function ExteriorPanel() {
               >
                 <span className="text-xl shrink-0">🔄</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-bold truncate">重置为玻璃幕墙别墅样板</div>
-                  <div className="text-[9px] opacity-60 truncate">恢复初始2层完整方案</div>
+                  <div className="text-[11px] font-bold truncate">{en ? "Reset to Glass-Curtain Villa Sample" : "重置为玻璃幕墙别墅样板"}</div>
+                  <div className="text-[9px] opacity-60 truncate">{en ? "Restore the original full 2-story scheme" : "恢复初始2层完整方案"}</div>
                 </div>
               </button>
             </div>
@@ -418,7 +444,7 @@ export default function ExteriorPanel() {
 
         {/* ── 平面形状 ── */}
         <div className="px-3 pt-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">平面形状</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{en ? "Footprint Shape" : "平面形状"}</div>
           <div className="grid grid-cols-4 gap-1">
             {(["rect","L","U","T"] as const).map(shape => {
               const icons = { rect:"□", L:"⌐", U:"⊔", T:"⊤" };
@@ -438,7 +464,7 @@ export default function ExteriorPanel() {
           {(exterior.footprintShape && exterior.footprintShape !== "rect") && (
             <div className="mt-2">
               <div className="flex items-center justify-between text-[10px] mb-1">
-                <span className="text-gray-500">翼比</span>
+                <span className="text-gray-500">{en ? "Wing Ratio" : "翼比"}</span>
                 <span className="font-mono text-gray-700">{((exterior.wingRatio ?? 0.5) * 100).toFixed(0)}%</span>
               </div>
               <input type="range" min={0.3} max={0.7} step={0.05}
@@ -502,7 +528,7 @@ export default function ExteriorPanel() {
                 : "border-gray-100 hover:border-gray-200 bg-gray-50"
             }`}>
             <span className="text-lg w-6 text-center">🏢</span>
-            <span className="flex-1 text-left text-xs font-semibold text-gray-700">整屋玻璃幕墙</span>
+            <span className="flex-1 text-left text-xs font-semibold text-gray-700">{en ? "Whole-Building Glass Curtain Wall" : "整屋玻璃幕墙"}</span>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
               exterior.facadeGlass ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500"
             }`}>{exterior.facadeGlass ? "ON" : "OFF"}</span>
@@ -512,7 +538,7 @@ export default function ExteriorPanel() {
         {/* ── 外墙材质 — rich material catalog ── */}
         <div className="px-3 pt-4">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">外墙材质</div>
+            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{en ? "Wall Material" : "外墙材质"}</div>
             <button
               onClick={() => {
                 const next = !perFaceEnabled;
@@ -530,7 +556,7 @@ export default function ExteriorPanel() {
                 ? { background: "#4F46E5", color: "#fff" }
                 : { background: "#EEF2FF", color: "#4F46E5" }}
             >
-              {perFaceEnabled ? "✓ 分面" : "分面"}
+              {en ? (perFaceEnabled ? "✓ Per-Face" : "Per-Face") : (perFaceEnabled ? "✓ 分面" : "分面")}
             </button>
           </div>
 
@@ -545,7 +571,7 @@ export default function ExteriorPanel() {
                     ? { background: "#4F46E5", color: "#fff" }
                     : { background: "#F3F4F6", color: "#6B7280" }}
                 >
-                  {FACE_LABELS[face]}
+                  {faceLabel(face)}
                 </button>
               ))}
             </div>
@@ -559,7 +585,7 @@ export default function ExteriorPanel() {
                 : (exterior.wallColor === m.color && exterior.wallMaterial === m.type);
               return (
                 <button key={m.id}
-                  title={m.desc}
+                  title={en ? m.descEn : m.desc}
                   onClick={() => {
                     if (perFaceEnabled) {
                       setExterior({
@@ -578,7 +604,7 @@ export default function ExteriorPanel() {
                   {/* Texture thumbnail */}
                   <div className="w-full h-8 rounded-lg border border-gray-100"
                     style={{ background: m.thumb }} />
-                  <div className="text-[9px] font-medium text-gray-700 leading-tight truncate">{m.label}</div>
+                  <div className="text-[9px] font-medium text-gray-700 leading-tight truncate">{en ? m.labelEn : m.label}</div>
                 </button>
               );
             })}
@@ -592,7 +618,7 @@ export default function ExteriorPanel() {
                   value={exterior.faceMaterials?.[activeFace] ?? exterior.wallColor}
                   onChange={e => setExterior({ faceMaterials: { ...(exterior.faceMaterials ?? {}), [activeFace]: e.target.value } })}
                   className="w-7 h-7 rounded-lg border border-gray-200 cursor-pointer shrink-0" />
-                <span className="text-[10px] text-gray-500">{FACE_LABELS[activeFace]}颜色微调</span>
+                <span className="text-[10px] text-gray-500">{en ? `${FACE_LABELS_EN[activeFace]} color tweak` : `${FACE_LABELS[activeFace]}颜色微调`}</span>
                 <span className="text-[10px] font-mono text-gray-300 ml-auto">
                   {exterior.faceMaterials?.[activeFace] ?? exterior.wallColor}
                 </span>
@@ -611,19 +637,21 @@ export default function ExteriorPanel() {
         {/* ── 组合材质 — split-zone wall combos ── */}
         <div className="px-3 pt-4">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">🎨 组合材质</div>
+            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{en ? "🎨 Combined Materials" : "🎨 组合材质"}</div>
             {exterior.wallZones && (
               <button
                 onClick={() => setExterior({ wallZones: undefined, faceZones: undefined })}
                 className="text-[9px] px-2 py-0.5 rounded-full"
                 style={{ background: "#FEF2F2", color: "#DC2626" }}
               >
-                ✕ 清除组合
+                {en ? "✕ Clear Combo" : "✕ 清除组合"}
               </button>
             )}
           </div>
           <div className="text-[9px] text-gray-400 mb-2 leading-relaxed">
-            上下分区墙面——砖+玻璃、石+木、木屋等，自由设计每种建筑风格
+            {en
+              ? "Vertically split walls — brick + glass, stone + wood, all-wood, etc. Design any architectural style freely."
+              : "上下分区墙面——砖+玻璃、石+木、木屋等，自由设计每种建筑风格"}
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             {COMBO_PRESETS.map(cp => {
@@ -632,7 +660,7 @@ export default function ExteriorPanel() {
                 : false;
               return (
                 <button key={cp.id}
-                  title={cp.desc}
+                  title={en ? cp.descEn : cp.desc}
                   onClick={() => setExterior({
                     preset: "custom",
                     wallZones: cp.zones,
@@ -650,7 +678,7 @@ export default function ExteriorPanel() {
                     style={{ background: cp.thumb }} >
                     <span className="absolute bottom-0.5 right-1 text-sm drop-shadow">{cp.icon}</span>
                   </div>
-                  <div className="text-[9px] font-medium text-gray-700 leading-tight">{cp.label}</div>
+                  <div className="text-[9px] font-medium text-gray-700 leading-tight">{en ? cp.labelEn : cp.label}</div>
                 </button>
               );
             })}
@@ -659,7 +687,7 @@ export default function ExteriorPanel() {
           {/* Zone editor — shown when a multi-zone combo is active */}
           {exterior.wallZones && exterior.wallZones.length >= 2 && (
             <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 p-2.5">
-              <div className="text-[10px] font-bold text-amber-800 mb-2">📐 分区调整</div>
+              <div className="text-[10px] font-bold text-amber-800 mb-2">{en ? "📐 Zone Adjustment" : "📐 分区调整"}</div>
               {exterior.wallZones.map((zone, idx) => (
                 <div key={idx} className="flex items-center gap-2 mb-1.5">
                   <input type="color" value={zone.color}
@@ -671,7 +699,9 @@ export default function ExteriorPanel() {
                     }}
                     className="w-6 h-6 rounded border border-gray-200 cursor-pointer shrink-0" />
                   <span className="text-[9px] text-gray-600 w-12 shrink-0">
-                    {zone.material === "glass" ? "玻璃" : zone.material === "brick" ? "砖" : zone.material === "stone" ? "石" : zone.material === "wood" ? "木" : zone.material === "concrete" ? "混凝土" : "涂料"}
+                    {en
+                      ? (zone.material === "glass" ? "Glass" : zone.material === "brick" ? "Brick" : zone.material === "stone" ? "Stone" : zone.material === "wood" ? "Wood" : zone.material === "concrete" ? "Concrete" : "Render")
+                      : (zone.material === "glass" ? "玻璃" : zone.material === "brick" ? "砖" : zone.material === "stone" ? "石" : zone.material === "wood" ? "木" : zone.material === "concrete" ? "混凝土" : "涂料")}
                   </span>
                   <input type="range" min={0.1} max={0.9} step={0.05}
                     value={zone.heightFraction}
@@ -698,22 +728,26 @@ export default function ExteriorPanel() {
         {/* ── 🏗️ 立面设计 — component-by-component facade builder ── */}
         <div className="px-3 pt-4">
           <div className="flex items-center justify-between mb-1">
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">🏗️ 立面设计</div>
+            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{en ? "🏗️ Facade Design" : "🏗️ 立面设计"}</div>
             {exterior.facades && Object.keys(exterior.facades).length > 0 && (
               <button
                 onClick={() => setExterior({ facades: undefined })}
                 className="text-[9px] px-2 py-0.5 rounded-full"
                 style={{ background: "#FEF2F2", color: "#DC2626" }}
-              >✕ 全部清除</button>
+              >{en ? "✕ Clear All" : "✕ 全部清除"}</button>
             )}
           </div>
           <div className="text-[9px] text-gray-400 mb-2 leading-relaxed">
-            一件一件搭——玻璃幕/实墙/柱/门窗自由组合
+            {en
+              ? "Build piece by piece — freely combine glass curtain, solid walls, columns, doors and windows."
+              : "一件一件搭——玻璃幕/实墙/柱/门窗自由组合"}
           </div>
           {/* Face selector */}
           <div className="flex gap-1 mb-3">
             {(["S","N","W","E"] as const).map(face => {
-              const faceLabels: Record<WallSide, string> = { S:"南", N:"北", W:"西", E:"东" };
+              const faceLabels: Record<WallSide, string> = en
+                ? { S:"S", N:"N", W:"W", E:"E" }
+                : { S:"南", N:"北", W:"西", E:"东" };
               const hasFacade = !!exterior.facades?.[face]?.length;
               return (
                 <button key={face}
@@ -744,9 +778,9 @@ export default function ExteriorPanel() {
           >
             <span className="text-xl">🌿</span>
             <div className="flex-1 min-w-0">
-              <div className="text-[11px] font-bold" style={{ color: "#1F6F1F" }}>2D 院子编辑器</div>
+              <div className="text-[11px] font-bold" style={{ color: "#1F6F1F" }}>{en ? "2D Yard Editor" : "2D 院子编辑器"}</div>
               <div className="text-[9px] leading-tight mt-0.5" style={{ color: "#3F783F" }}>
-                泳池 / 凉亭 / 户外厨房 / 喷泉 拖拽布置
+                {en ? "Drag-and-drop pool / pavilion / outdoor kitchen / fountain" : "泳池 / 凉亭 / 户外厨房 / 喷泉 拖拽布置"}
               </div>
             </div>
             <span className="text-[10px] font-bold" style={{ color: "#1F6F1F" }}>→</span>
@@ -755,7 +789,7 @@ export default function ExteriorPanel() {
 
         {/* ── 风格预设（Style Presets — applies ~30 settings in one click） ── */}
         <div className="px-3 pt-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">风格预设 (STYLE PRESETS)</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{en ? "STYLE PRESETS" : "风格预设 (STYLE PRESETS)"}</div>
           <div className="grid grid-cols-2 gap-1.5">
             {EXTERIOR_PRESETS.map(p => (
               <button
@@ -768,7 +802,7 @@ export default function ExteriorPanel() {
                   <span className="text-[12px]">{p.icon}</span>
                   <span>{p.label}</span>
                   {(p.roomMaterials || p.yardItems) && (
-                    <span className="text-[10px] text-amber-500" title="完整方案 — 含房间材质 / 院子">✦</span>
+                    <span className="text-[10px] text-amber-500" title={en ? "Full scheme — includes room materials / yard" : "完整方案 — 含房间材质 / 院子"}>✦</span>
                   )}
                 </div>
                 <span className="text-[9px] text-gray-400 leading-tight">{p.blurb}</span>
@@ -776,17 +810,22 @@ export default function ExteriorPanel() {
             ))}
           </div>
           <div className="text-[9px] text-gray-400 mt-1.5 leading-tight">
-            一键设计包：外观 ~30 项 + 每间房地板 / 墙面材质 + 院子植被。
-            带 <span className="text-gray-500 font-semibold">✦</span> 的为已配齐房间材质与院子的"完整方案"。
+            {en ? (
+              <>One-click design pack: ~30 exterior settings + per-room floor / wall materials + yard planting.
+              Those marked <span className="text-gray-500 font-semibold">✦</span> are &quot;full schemes&quot; with room materials and yard already set up.</>
+            ) : (
+              <>一键设计包：外观 ~30 项 + 每间房地板 / 墙面材质 + 院子植被。
+              带 <span className="text-gray-500 font-semibold">✦</span> 的为已配齐房间材质与院子的&quot;完整方案&quot;。</>
+            )}
           </div>
         </div>
 
         {/* ── 窗户外观（Window Appearance） ── */}
         <div className="px-3 pt-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">窗户 (WINDOWS)</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{en ? "WINDOWS" : "窗户 (WINDOWS)"}</div>
           <div className="px-1 flex flex-col gap-2">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-gray-600">玻璃色（白天）</span>
+              <span className="text-gray-600">{en ? "Glass Color (Day)" : "玻璃色（白天）"}</span>
               <input
                 type="color"
                 value={exterior.windowGlassColor ?? "#3E5066"}
@@ -795,7 +834,7 @@ export default function ExteriorPanel() {
               />
             </div>
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-gray-600">窗框色</span>
+              <span className="text-gray-600">{en ? "Frame Color" : "窗框色"}</span>
               <input
                 type="color"
                 value={exterior.windowFrameColor ?? exterior.accentColor ?? "#1E2530"}
@@ -807,13 +846,13 @@ export default function ExteriorPanel() {
               onClick={() => setExterior({ windowGlassColor: undefined, windowFrameColor: undefined })}
               className="text-[9px] text-gray-400 hover:text-blue-500 self-end mt-0.5"
             >
-              恢复默认
+              {en ? "Reset to default" : "恢复默认"}
             </button>
             {/* Default dimensions — apply to any window without explicit sill/h */}
             <div className="border-t border-gray-100 pt-2 mt-1 flex flex-col gap-1.5">
-              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">默认尺寸</div>
+              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">{en ? "Default Dimensions" : "默认尺寸"}</div>
               <div className="flex items-center justify-between text-[10px]">
-                <span className="text-gray-500">窗台高（离地）</span>
+                <span className="text-gray-500">{en ? "Sill Height (from floor)" : "窗台高（离地）"}</span>
                 <span className="font-mono text-gray-700">{exterior.defaultWindowSill ?? 90} cm</span>
               </div>
               <input type="range" min={0} max={200} step={5}
@@ -821,7 +860,7 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ defaultWindowSill: parseInt(e.target.value, 10) })}
                 className="w-full accent-blue-500" />
               <div className="flex items-center justify-between text-[10px]">
-                <span className="text-gray-500">窗高</span>
+                <span className="text-gray-500">{en ? "Window Height" : "窗高"}</span>
                 <span className="font-mono text-gray-700">{exterior.defaultWindowHeight ?? 150} cm</span>
               </div>
               <input type="range" min={60} max={280} step={5}
@@ -829,35 +868,35 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ defaultWindowHeight: parseInt(e.target.value, 10) })}
                 className="w-full accent-blue-500" />
               <div className="text-[9px] text-gray-400">
-                窗台 = 0 → 落地窗。仅影响未单独设置尺寸的窗户。
+                {en ? "Sill = 0 → floor-to-ceiling window. Only affects windows without individually set dimensions." : "窗台 = 0 → 落地窗。仅影响未单独设置尺寸的窗户。"}
               </div>
             </div>
             {/* Ornament toggles — minimal vs classic look */}
             <div className="border-t border-gray-100 pt-2 mt-1 flex flex-col gap-1.5">
-              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">装饰件</div>
+              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">{en ? "Ornaments" : "装饰件"}</div>
               <label className="flex items-center gap-2 text-[11px] cursor-pointer">
                 <input type="checkbox"
                   checked={exterior.windowSillEnabled ?? true}
                   onChange={e => setExterior({ windowSillEnabled: e.target.checked })}
                   className="accent-blue-500" />
-                <span className="text-gray-700">窗台板 + 滴水线</span>
+                <span className="text-gray-700">{en ? "Sill board + drip line" : "窗台板 + 滴水线"}</span>
               </label>
               <label className="flex items-center gap-2 text-[11px] cursor-pointer">
                 <input type="checkbox"
                   checked={exterior.windowLintelEnabled ?? true}
                   onChange={e => setExterior({ windowLintelEnabled: e.target.checked })}
                   className="accent-blue-500" />
-                <span className="text-gray-700">窗楣（上方混凝土）</span>
+                <span className="text-gray-700">{en ? "Lintel (concrete above)" : "窗楣（上方混凝土）"}</span>
               </label>
               <label className="flex items-center gap-2 text-[11px] cursor-pointer">
                 <input type="checkbox"
                   checked={exterior.windowJambEnabled ?? true}
                   onChange={e => setExterior({ windowJambEnabled: e.target.checked })}
                   className="accent-blue-500" />
-                <span className="text-gray-700">侧面凹深内衬</span>
+                <span className="text-gray-700">{en ? "Recessed side reveal" : "侧面凹深内衬"}</span>
               </label>
               <div className="flex items-center justify-between text-[10px] pt-0.5">
-                <span className="text-gray-500">花箱频率</span>
+                <span className="text-gray-500">{en ? "Flower Box Frequency" : "花箱频率"}</span>
                 <span className="font-mono text-gray-700">{exterior.windowFlowerBoxFreq ?? 70}%</span>
               </div>
               <input type="range" min={0} max={100} step={5}
@@ -865,7 +904,7 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ windowFlowerBoxFreq: parseInt(e.target.value, 10) })}
                 className="w-full accent-blue-500" />
               <div className="flex items-center justify-between text-[10px] pt-1">
-                <span className="text-gray-500">竖框宽度</span>
+                <span className="text-gray-500">{en ? "Mullion Width" : "竖框宽度"}</span>
                 <span className="font-mono text-gray-700">{exterior.windowFrameStripVCm ?? 4} cm</span>
               </div>
               <input type="range" min={2} max={12} step={1}
@@ -873,7 +912,7 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ windowFrameStripVCm: parseInt(e.target.value, 10) })}
                 className="w-full accent-blue-500" />
               <div className="flex items-center justify-between text-[10px]">
-                <span className="text-gray-500">横框厚度</span>
+                <span className="text-gray-500">{en ? "Transom Thickness" : "横框厚度"}</span>
                 <span className="font-mono text-gray-700">{exterior.windowFrameStripHCm ?? 8} cm</span>
               </div>
               <input type="range" min={2} max={16} step={1}
@@ -881,37 +920,37 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ windowFrameStripHCm: parseInt(e.target.value, 10) })}
                 className="w-full accent-blue-500" />
               <div className="flex items-center justify-between text-[10px]">
-                <span className="text-gray-500">中竖分隔（漫游）</span>
+                <span className="text-gray-500">{en ? "Center Mullion (walkthrough)" : "中竖分隔（漫游）"}</span>
                 <span className="font-mono text-gray-700">{exterior.windowCenterMullionCm ?? 4} cm</span>
               </div>
               <input type="range" min={0} max={10} step={1}
                 value={exterior.windowCenterMullionCm ?? 4}
                 onChange={e => setExterior({ windowCenterMullionCm: parseInt(e.target.value, 10) })}
                 className="w-full accent-blue-500" />
-              <div className="text-[9px] text-gray-400">两扇推拉窗中间的立柱，0 = 隐藏</div>
+              <div className="text-[9px] text-gray-400">{en ? "Vertical post between two sliding sashes, 0 = hidden" : "两扇推拉窗中间的立柱，0 = 隐藏"}</div>
               <div className="flex items-center justify-between text-[11px] pt-1">
-                <span className="text-gray-600">窗台板色</span>
+                <span className="text-gray-600">{en ? "Sill Board Color" : "窗台板色"}</span>
                 <input type="color"
                   value={exterior.windowSillColor ?? "#B8B4AC"}
                   onChange={e => setExterior({ windowSillColor: e.target.value })}
                   className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
               </div>
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-600">窗楣色</span>
+                <span className="text-gray-600">{en ? "Lintel Color" : "窗楣色"}</span>
                 <input type="color"
                   value={exterior.windowLintelColor ?? "#C0BCB4"}
                   onChange={e => setExterior({ windowLintelColor: e.target.value })}
                   className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
               </div>
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-600">侧凹色</span>
+                <span className="text-gray-600">{en ? "Reveal Color" : "侧凹色"}</span>
                 <input type="color"
                   value={exterior.windowJambColor ?? "#BCBAB2"}
                   onChange={e => setExterior({ windowJambColor: e.target.value })}
                   className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
               </div>
               <div className="flex items-center justify-between text-[10px]">
-                <span className="text-gray-500">侧凹深度</span>
+                <span className="text-gray-500">{en ? "Reveal Depth" : "侧凹深度"}</span>
                 <span className="font-mono text-gray-700">{exterior.windowJambDepthCm ?? 9} cm</span>
               </div>
               <input type="range" min={4} max={20} step={1}
@@ -921,21 +960,21 @@ export default function ExteriorPanel() {
               {(exterior.windowFlowerBoxFreq ?? 70) > 0 && (
                 <>
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-600">花箱色</span>
+                    <span className="text-gray-600">{en ? "Flower Box Color" : "花箱色"}</span>
                     <input type="color"
                       value={exterior.windowFlowerBoxColor ?? "#2A2C34"}
                       onChange={e => setExterior({ windowFlowerBoxColor: e.target.value })}
                       className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
                   </div>
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-600">叶片色</span>
+                    <span className="text-gray-600">{en ? "Foliage Color" : "叶片色"}</span>
                     <input type="color"
                       value={exterior.flowerFoliageColor ?? "#3E7428"}
                       onChange={e => setExterior({ flowerFoliageColor: e.target.value })}
                       className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
                   </div>
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-600">花朵色</span>
+                    <span className="text-gray-600">{en ? "Bloom Color" : "花朵色"}</span>
                     <input type="color"
                       value={exterior.flowerBloomColor ?? "#E83040"}
                       onChange={e => setExterior({ flowerBloomColor: e.target.value })}
@@ -949,24 +988,24 @@ export default function ExteriorPanel() {
 
         {/* ── 墙体细节（Wall Detail） ── */}
         <div className="px-3 pt-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">墙体细节 (WALL DETAIL)</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{en ? "WALL DETAIL" : "墙体细节 (WALL DETAIL)"}</div>
           <div className="px-1 flex flex-col gap-2">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-gray-600">立面底色</span>
+              <span className="text-gray-600">{en ? "Facade Base Color" : "立面底色"}</span>
               <input type="color"
                 value={exterior.wallBaseColor ?? "#E6E0D8"}
                 onChange={e => setExterior({ wallBaseColor: e.target.value })}
                 className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
             </div>
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-gray-600">板缝阴影色</span>
+              <span className="text-gray-600">{en ? "Joint Shadow Color" : "板缝阴影色"}</span>
               <input type="color"
                 value={exterior.wallGrooveColor ?? "#C0BAB2"}
                 onChange={e => setExterior({ wallGrooveColor: e.target.value })}
                 className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
             </div>
             <div className="flex items-center justify-between text-[10px]">
-              <span className="text-gray-500">横向板缝间距</span>
+              <span className="text-gray-500">{en ? "Horizontal Joint Spacing" : "横向板缝间距"}</span>
               <span className="font-mono text-gray-700">{(exterior.wallPanelHSpacing ?? 0.90).toFixed(2)} m</span>
             </div>
             <input type="range" min={0.4} max={2.0} step={0.05}
@@ -974,7 +1013,7 @@ export default function ExteriorPanel() {
               onChange={e => setExterior({ wallPanelHSpacing: parseFloat(e.target.value) })}
               className="w-full accent-blue-500" />
             <div className="flex items-center justify-between text-[10px]">
-              <span className="text-gray-500">竖向板缝间距</span>
+              <span className="text-gray-500">{en ? "Vertical Joint Spacing" : "竖向板缝间距"}</span>
               <span className="font-mono text-gray-700">{(exterior.wallPanelVSpacing ?? 1.20).toFixed(2)} m</span>
             </div>
             <input type="range" min={0.4} max={3.0} step={0.05}
@@ -988,7 +1027,7 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ wallPanelTwoTone: e.target.checked })}
                 className="accent-blue-500"
               />
-              <span className="text-gray-700">板间双色阴影</span>
+              <span className="text-gray-700">{en ? "Two-tone panel shadows" : "板间双色阴影"}</span>
             </label>
             <label className="flex items-center gap-2 text-[11px] cursor-pointer">
               <input
@@ -997,12 +1036,12 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ stoneBaseEnabled: e.target.checked })}
                 className="accent-blue-500"
               />
-              <span className="text-gray-700">首层石材腰线</span>
+              <span className="text-gray-700">{en ? "Ground-floor stone base course" : "首层石材腰线"}</span>
             </label>
             {(exterior.stoneBaseEnabled ?? true) && (
               <div className="pl-5 flex flex-col gap-1">
                 <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-gray-500">高度</span>
+                  <span className="text-gray-500">{en ? "Height" : "高度"}</span>
                   <span className="font-mono text-gray-700">{(exterior.stoneBaseHeight ?? 0.55).toFixed(2)} m</span>
                 </div>
                 <input type="range" min={0.15} max={1.20} step={0.05}
@@ -1016,24 +1055,24 @@ export default function ExteriorPanel() {
 
         {/* ── 室内（Interior — walkthrough only） ── */}
         <div className="px-3 pt-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">室内 (INTERIOR · 仅漫游)</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{en ? "INTERIOR · walkthrough only" : "室内 (INTERIOR · 仅漫游)"}</div>
           <div className="px-1 flex flex-col gap-2">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-gray-600">天花板色</span>
+              <span className="text-gray-600">{en ? "Ceiling Color" : "天花板色"}</span>
               <input type="color"
                 value={exterior.roomCeilingColor ?? "#F5F2EE"}
                 onChange={e => setExterior({ roomCeilingColor: e.target.value })}
                 className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
             </div>
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-gray-600">走廊顶板色</span>
+              <span className="text-gray-600">{en ? "Hallway Ceiling Color" : "走廊顶板色"}</span>
               <input type="color"
                 value={exterior.hallwayCeilingColor ?? "#E8E4DC"}
                 onChange={e => setExterior({ hallwayCeilingColor: e.target.value })}
                 className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
             </div>
             <div className="flex items-center justify-between text-[10px]">
-              <span className="text-gray-500">走廊顶板厚度</span>
+              <span className="text-gray-500">{en ? "Hallway Ceiling Thickness" : "走廊顶板厚度"}</span>
               <span className="font-mono text-gray-700">{exterior.hallwayCeilingThicknessCm ?? 8} cm</span>
             </div>
             <input type="range" min={3} max={20} step={1}
@@ -1047,12 +1086,12 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ ceilingLightsEnabled: e.target.checked })}
                 className="accent-blue-500"
               />
-              <span className="text-gray-700">天花板嵌入筒灯</span>
+              <span className="text-gray-700">{en ? "Recessed ceiling downlights" : "天花板嵌入筒灯"}</span>
             </label>
             {(exterior.ceilingLightsEnabled ?? true) && (
               <div className="pl-5 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-gray-500">2 盏阈值（≥）</span>
+                  <span className="text-gray-500">{en ? "2-light threshold (≥)" : "2 盏阈值（≥）"}</span>
                   <span className="font-mono text-gray-700">{exterior.ceilingLightMediumArea ?? 6} m²</span>
                 </div>
                 <input type="range" min={2} max={20} step={1}
@@ -1060,7 +1099,7 @@ export default function ExteriorPanel() {
                   onChange={e => setExterior({ ceilingLightMediumArea: parseInt(e.target.value, 10) })}
                   className="w-full accent-blue-500" />
                 <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-gray-500">4 盏阈值（≥）</span>
+                  <span className="text-gray-500">{en ? "4-light threshold (≥)" : "4 盏阈值（≥）"}</span>
                   <span className="font-mono text-gray-700">{exterior.ceilingLightLargeArea ?? 12} m²</span>
                 </div>
                 <input type="range" min={4} max={40} step={1}
@@ -1068,10 +1107,12 @@ export default function ExteriorPanel() {
                   onChange={e => setExterior({ ceilingLightLargeArea: parseInt(e.target.value, 10) })}
                   className="w-full accent-blue-500" />
                 <div className="text-[9px] text-gray-400">
-                  房间面积小于「2 盏」阈值 → 1 盏；介于两阈值之间 → 2 盏；大于「4 盏」阈值 → 4 盏。
+                  {en
+                    ? "Room area below the \"2-light\" threshold → 1 light; between the two thresholds → 2 lights; above the \"4-light\" threshold → 4 lights."
+                    : "房间面积小于「2 盏」阈值 → 1 盏；介于两阈值之间 → 2 盏；大于「4 盏」阈值 → 4 盏。"}
                 </div>
                 <div className="flex items-center justify-between text-[10px] pt-1">
-                  <span className="text-gray-500">筒灯半径</span>
+                  <span className="text-gray-500">{en ? "Downlight Radius" : "筒灯半径"}</span>
                   <span className="font-mono text-gray-700">{exterior.ceilingLightRadiusCm ?? 8} cm</span>
                 </div>
                 <input type="range" min={4} max={15} step={1}
@@ -1079,7 +1120,7 @@ export default function ExteriorPanel() {
                   onChange={e => setExterior({ ceilingLightRadiusCm: parseInt(e.target.value, 10) })}
                   className="w-full accent-blue-500" />
                 <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-gray-500">发光强度</span>
+                  <span className="text-gray-500">{en ? "Glow Intensity" : "发光强度"}</span>
                   <span className="font-mono text-gray-700">{(exterior.ceilingLightIntensity ?? 3.5).toFixed(1)}</span>
                 </div>
                 <input type="range" min={0.5} max={6.0} step={0.1}
@@ -1087,7 +1128,7 @@ export default function ExteriorPanel() {
                   onChange={e => setExterior({ ceilingLightIntensity: parseFloat(e.target.value) })}
                   className="w-full accent-blue-500" />
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-600">发光色</span>
+                  <span className="text-gray-600">{en ? "Glow Color" : "发光色"}</span>
                   <input type="color"
                     value={exterior.ceilingLightColor ?? "#FFF5D0"}
                     onChange={e => setExterior({ ceilingLightColor: e.target.value })}
@@ -1103,12 +1144,12 @@ export default function ExteriorPanel() {
                 onChange={e => setExterior({ skirtingEnabled: e.target.checked })}
                 className="accent-blue-500"
               />
-              <span className="text-gray-700">墙脚踢脚线</span>
+              <span className="text-gray-700">{en ? "Baseboard / skirting" : "墙脚踢脚线"}</span>
             </label>
             {(exterior.skirtingEnabled ?? true) && (
               <div className="pl-5 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-gray-500">高度</span>
+                  <span className="text-gray-500">{en ? "Height" : "高度"}</span>
                   <span className="font-mono text-gray-700">{exterior.skirtingHeight ?? 8} cm</span>
                 </div>
                 <input type="range" min={4} max={20} step={1}
@@ -1116,7 +1157,7 @@ export default function ExteriorPanel() {
                   onChange={e => setExterior({ skirtingHeight: parseInt(e.target.value, 10) })}
                   className="w-full accent-blue-500" />
                 <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-gray-500">凸出厚度</span>
+                  <span className="text-gray-500">{en ? "Protrusion Thickness" : "凸出厚度"}</span>
                   <span className="font-mono text-gray-700">{(exterior.skirtingThicknessCm ?? 1.2).toFixed(1)} cm</span>
                 </div>
                 <input type="range" min={0.5} max={4} step={0.1}
@@ -1124,7 +1165,7 @@ export default function ExteriorPanel() {
                   onChange={e => setExterior({ skirtingThicknessCm: parseFloat(e.target.value) })}
                   className="w-full accent-blue-500" />
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-600">颜色</span>
+                  <span className="text-gray-600">{en ? "Color" : "颜色"}</span>
                   <input
                     type="color"
                     value={exterior.skirtingColor ?? "#9C8A70"}
@@ -1139,43 +1180,43 @@ export default function ExteriorPanel() {
 
         {/* ── 门样式（Doors） ── */}
         <div className="px-3 pt-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">门 (DOORS)</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{en ? "DOORS" : "门 (DOORS)"}</div>
           <div className="px-1 flex flex-col gap-2">
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] text-gray-600">入户门样式</span>
+              <span className="text-[11px] text-gray-600">{en ? "Front Door Style" : "入户门样式"}</span>
               <select
                 value={exterior.frontEntranceStyle ?? "french_double"}
                 onChange={e => setExterior({ frontEntranceStyle: e.target.value as import("@/lib/types").DoorStyle })}
                 className="text-[11px] px-2 py-1 rounded border border-gray-200 bg-white"
               >
-                <option value="french_double">法式对开玻璃门</option>
-                <option value="frosted_glass">磨砂玻璃门</option>
-                <option value="wood_panel">实木门</option>
-                <option value="sliding_barn">谷仓推拉门</option>
+                <option value="french_double">{en ? "French double glass door" : "法式对开玻璃门"}</option>
+                <option value="frosted_glass">{en ? "Frosted glass door" : "磨砂玻璃门"}</option>
+                <option value="wood_panel">{en ? "Solid wood door" : "实木门"}</option>
+                <option value="sliding_barn">{en ? "Sliding barn door" : "谷仓推拉门"}</option>
               </select>
-              <div className="text-[9px] text-gray-400">作用于一层客厅自动生成的大门</div>
+              <div className="text-[9px] text-gray-400">{en ? "Applies to the auto-generated front door of the ground-floor living room" : "作用于一层客厅自动生成的大门"}</div>
             </div>
             <div className="flex items-center justify-between text-[10px] pt-1">
-              <span className="text-gray-500">车库门触发宽度</span>
+              <span className="text-gray-500">{en ? "Garage Door Trigger Width" : "车库门触发宽度"}</span>
               <span className="font-mono text-gray-700">≥ {(exterior.garageDoorMinWidth ?? 2.0).toFixed(1)} m</span>
             </div>
             <input type="range" min={1.0} max={5.0} step={0.1}
               value={exterior.garageDoorMinWidth ?? 2.0}
               onChange={e => setExterior({ garageDoorMinWidth: parseFloat(e.target.value) })}
               className="w-full accent-blue-500" />
-            <div className="text-[9px] text-gray-400">该宽度以上的门渲染为分节卷帘车库门</div>
+            <div className="text-[9px] text-gray-400">{en ? "Doors wider than this render as sectional roller garage doors" : "该宽度以上的门渲染为分节卷帘车库门"}</div>
             {/* Door material colors */}
             <div className="border-t border-gray-100 pt-2 mt-1 flex flex-col gap-1.5">
-              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">材质颜色</div>
+              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">{en ? "Material Colors" : "材质颜色"}</div>
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-600">门框漆色</span>
+                <span className="text-gray-600">{en ? "Door Frame Paint" : "门框漆色"}</span>
                 <input type="color"
                   value={exterior.doorFrameColor ?? "#F0EEEA"}
                   onChange={e => setExterior({ doorFrameColor: e.target.value })}
                   className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
               </div>
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-600">把手金属色</span>
+                <span className="text-gray-600">{en ? "Handle Metal Color" : "把手金属色"}</span>
                 <input type="color"
                   value={exterior.doorHandleColor ?? "#B8A060"}
                   onChange={e => setExterior({ doorHandleColor: e.target.value })}
@@ -1185,7 +1226,7 @@ export default function ExteriorPanel() {
                 onClick={() => setExterior({ doorFrameColor: undefined, doorHandleColor: undefined })}
                 className="text-[9px] text-gray-400 hover:text-blue-500 self-end mt-0.5"
               >
-                恢复默认
+                {en ? "Reset to default" : "恢复默认"}
               </button>
             </div>
           </div>
@@ -1193,12 +1234,14 @@ export default function ExteriorPanel() {
 
         {/* ── 屋顶配置（Rooftop） ── */}
         <div className="px-3 pt-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">屋顶 (ROOFTOP)</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{en ? "ROOFTOP" : "屋顶 (ROOFTOP)"}</div>
           <div className="px-1 flex flex-col gap-2">
             {/* 光伏阵列已是一件普通家具（🔆 光伏阵列）：大小由家具尺寸决定，
                 面板自动平铺；增删 / 位置 / 朝向 / 缩放都走通用家具流程。 */}
             <div className="text-[10px] text-gray-500 leading-snug bg-gray-50 rounded px-2 py-1.5">
-              ☀️ 光伏阵列现为天台家具「🔆 光伏阵列」：在「平面图 / 效果图 · 天台休闲区」里增删、拖动、缩放、旋转——拉大尺寸即自动增加面板。
+              {en
+                ? "☀️ The PV array is now rooftop furniture (🔆 PV Array): add, remove, drag, scale and rotate it in the Floor Plan / Render · Rooftop Lounge — enlarge it to add more panels automatically."
+                : "☀️ 光伏阵列现为天台家具「🔆 光伏阵列」：在「平面图 / 效果图 · 天台休闲区」里增删、拖动、缩放、旋转——拉大尺寸即自动增加面板。"}
             </div>
             {/* 天台休闲区家具与普通房间一致：在 平面图 / 效果图 里增删拖动 */}
             {(exterior.hasRooftop ?? false) && (
@@ -1210,10 +1253,12 @@ export default function ExteriorPanel() {
                     onChange={e => setExterior({ rooftopCeiling: e.target.checked })}
                     className="accent-blue-500"
                   />
-                  <span className="text-gray-700">天台盖顶（顶层加天花板）</span>
+                  <span className="text-gray-700">{en ? "Rooftop cover (add ceiling to top floor)" : "天台盖顶（顶层加天花板）"}</span>
                 </label>
                 <div className="pl-5 text-[9px] text-gray-400 leading-snug">
-                  天台本质是「没有顶的普通楼层」：默认露天，勾选后整层加盖天花板。
+                  {en
+                    ? "The rooftop is essentially \"a normal floor without a roof\": open-air by default; check this to add a ceiling over the whole floor."
+                    : "天台本质是「没有顶的普通楼层」：默认露天，勾选后整层加盖天花板。"}
                 </div>
                 <label className="flex items-center gap-2 text-[11px] cursor-pointer">
                   <input
@@ -1222,13 +1267,17 @@ export default function ExteriorPanel() {
                     onChange={e => setExterior({ parapetGlassEnabled: e.target.checked })}
                     className="accent-blue-500"
                   />
-                  <span className="text-gray-700">天台栏杆（四周玻璃护栏）</span>
+                  <span className="text-gray-700">{en ? "Rooftop railing (glass guardrail all around)" : "天台栏杆（四周玻璃护栏）"}</span>
                 </label>
                 <div className="pl-5 text-[9px] text-gray-400 leading-snug">
-                  天台四周的安全护栏：默认开启，取消勾选可移除整圈栏杆。
+                  {en
+                    ? "Safety guardrail around the rooftop: on by default; uncheck to remove the entire railing loop."
+                    : "天台四周的安全护栏：默认开启，取消勾选可移除整圈栏杆。"}
                 </div>
                 <div className="pt-1.5 mt-1 border-t border-gray-100 text-[9px] text-gray-400 leading-snug">
-                  休闲家具同普通房间：在「平面图 / 效果图 · 天台休闲区」里自由增删、拖动
+                  {en
+                    ? "Lounge furniture works like any normal room: freely add, remove and drag it in the Floor Plan / Render · Rooftop Lounge."
+                    : "休闲家具同普通房间：在「平面图 / 效果图 · 天台休闲区」里自由增删、拖动"}
                 </div>
               </>
             )}
@@ -1244,11 +1293,11 @@ export default function ExteriorPanel() {
                     onChange={e => setExterior({ coveLightEnabled: e.target.checked })}
                     className="accent-blue-500"
                   />
-                  <span className="text-gray-700">女儿墙内侧 LED 灯槽</span>
+                  <span className="text-gray-700">{en ? "LED cove light inside parapet" : "女儿墙内侧 LED 灯槽"}</span>
                 </label>
                 {(exterior.coveLightEnabled ?? true) && (
                   <div className="pl-5 flex items-center justify-between text-[11px]">
-                    <span className="text-gray-600">LED 色温</span>
+                    <span className="text-gray-600">{en ? "LED Color Temperature" : "LED 色温"}</span>
                     <input type="color"
                       value={exterior.coveLightColor ?? "#D0E8FF"}
                       onChange={e => setExterior({ coveLightColor: e.target.value })}
@@ -1261,7 +1310,7 @@ export default function ExteriorPanel() {
                 在平面图/效果图「天台」里增删拖动缩放 */}
             {/* Roof overhang */}
             <div className="flex items-center justify-between text-[10px] pt-1">
-              <span className="text-gray-500">屋檐悬挑（四周）</span>
+              <span className="text-gray-500">{en ? "Eave Overhang (all around)" : "屋檐悬挑（四周）"}</span>
               <span className="font-mono text-gray-700">{(exterior.roofOverhang ?? 0.45).toFixed(2)} m</span>
             </div>
             <input type="range" min={0} max={1.5} step={0.05}
@@ -1269,7 +1318,7 @@ export default function ExteriorPanel() {
               onChange={e => setExterior({ roofOverhang: parseFloat(e.target.value) })}
               className="w-full accent-blue-500" />
             <div className="flex items-center justify-between text-[10px]">
-              <span className="text-gray-500">南面额外悬挑</span>
+              <span className="text-gray-500">{en ? "Extra South Overhang" : "南面额外悬挑"}</span>
               <span className="font-mono text-gray-700">+{(exterior.roofOverhangSouthExtra ?? 0.30).toFixed(2)} m</span>
             </div>
             <input type="range" min={0} max={1.5} step={0.05}
@@ -1278,7 +1327,7 @@ export default function ExteriorPanel() {
               className="w-full accent-blue-500" />
             {/* Parapet */}
             <div className="flex items-center justify-between text-[10px] pt-1">
-              <span className="text-gray-500">女儿墙高度</span>
+              <span className="text-gray-500">{en ? "Parapet Height" : "女儿墙高度"}</span>
               <span className="font-mono text-gray-700">{(exterior.parapetHeight ?? 0.30).toFixed(2)} m</span>
             </div>
             <input type="range" min={0} max={1.0} step={0.05}
@@ -1288,7 +1337,7 @@ export default function ExteriorPanel() {
             {/* 天台栏杆（玻璃护栏）开关已上移至「屋顶」顶部，与天台盖顶并列 */}
             {/* Slab + parapet thickness */}
             <div className="flex items-center justify-between text-[10px] pt-1">
-              <span className="text-gray-500">屋面板厚度</span>
+              <span className="text-gray-500">{en ? "Roof Slab Thickness" : "屋面板厚度"}</span>
               <span className="font-mono text-gray-700">{exterior.roofSlabThicknessCm ?? 10} cm</span>
             </div>
             <input type="range" min={5} max={30} step={1}
@@ -1298,7 +1347,7 @@ export default function ExteriorPanel() {
             {(exterior.parapetHeight ?? 0.30) > 0.01 && (
               <>
                 <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-gray-500">女儿墙厚度</span>
+                  <span className="text-gray-500">{en ? "Parapet Thickness" : "女儿墙厚度"}</span>
                   <span className="font-mono text-gray-700">{exterior.parapetThicknessCm ?? 12} cm</span>
                 </div>
                 <input type="range" min={6} max={25} step={1}
@@ -1309,9 +1358,9 @@ export default function ExteriorPanel() {
             )}
             {/* Roof material colors */}
             <div className="border-t border-gray-100 pt-2 mt-1 flex flex-col gap-1.5">
-              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">材质颜色</div>
+              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">{en ? "Material Colors" : "材质颜色"}</div>
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-600">屋面板色</span>
+                <span className="text-gray-600">{en ? "Roof Slab Color" : "屋面板色"}</span>
                 <input type="color"
                   value={exterior.roofSlabColor ?? "#F0EDE8"}
                   onChange={e => setExterior({ roofSlabColor: e.target.value })}
@@ -1319,7 +1368,7 @@ export default function ExteriorPanel() {
               </div>
               {(exterior.parapetHeight ?? 0.30) > 0.01 && (
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-600">女儿墙色</span>
+                  <span className="text-gray-600">{en ? "Parapet Color" : "女儿墙色"}</span>
                   <input type="color"
                     value={exterior.parapetColor ?? "#E8E4DE"}
                     onChange={e => setExterior({ parapetColor: e.target.value })}
@@ -1332,10 +1381,10 @@ export default function ExteriorPanel() {
 
         {/* ── 架空层 (Pilotis) ── */}
         <div className="px-3 pt-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">架空层 (PILOTIS)</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{en ? "PILOTIS" : "架空层 (PILOTIS)"}</div>
           <div className="px-1">
             <div className="flex items-center justify-between text-[10px] mb-1">
-              <span className="text-gray-500">高度</span>
+              <span className="text-gray-500">{en ? "Height" : "高度"}</span>
               <span className="font-mono text-gray-700">{(exterior.pilotisHeightM ?? 0).toFixed(2)} m</span>
             </div>
             <input type="range" min={0} max={4} step={0.1}
@@ -1344,8 +1393,8 @@ export default function ExteriorPanel() {
               className="w-full accent-blue-500" />
             <div className="text-[9px] text-gray-400 mt-0.5">
               {(exterior.pilotisHeightM ?? 0) === 0
-                ? "贴地 (slab on grade)"
-                : "整栋抬升 + 4 根混凝土柱（柯布西耶 pilotis / 高脚屋 / 中式台基）"}
+                ? (en ? "Slab on grade" : "贴地 (slab on grade)")
+                : (en ? "Whole building raised + 4 concrete columns (Corbusian pilotis / stilt house / Chinese plinth)" : "整栋抬升 + 4 根混凝土柱（柯布西耶 pilotis / 高脚屋 / 中式台基）")}
             </div>
           </div>
         </div>

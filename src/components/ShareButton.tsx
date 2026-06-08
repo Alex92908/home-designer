@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { buildShareUrl, type ViewSnapshot } from "@/lib/shareUrl";
+import { useT } from "@/lib/i18n";
 
 type CopyState = "idle" | "copying" | "done" | "error";
 
 export default function ShareButton() {
+  const t = useT();
   const [state, setState] = useState<CopyState>("idle");
 
   const exterior    = useDesignerStore(s => s.exterior);
@@ -41,10 +43,10 @@ export default function ShareButton() {
   };
 
   const labels: Record<CopyState, string> = {
-    idle:    "🔗 分享",
-    copying: "⏳",
-    done:    "✅ 链接已复制",
-    error:   "❌ 复制失败",
+    idle:    t.shareButton.idle,
+    copying: t.shareButton.copying,
+    done:    t.shareButton.done,
+    error:   t.shareButton.error,
   };
 
   return (
@@ -63,7 +65,7 @@ export default function ShareButton() {
           ? "#ECFDF5"
           : "var(--ds-surface)",
       }}
-      title="生成分享链接并复制到剪贴板"
+      title={t.shareButton.title}
     >
       {labels[state]}
     </button>

@@ -162,19 +162,19 @@ export function RoomPanel() {
         {/* 天台开关 — 始终显示 */}
         <div className="flex items-center gap-2 mt-1.5">
           {exterior.hasRooftop
-            ? <span className="text-[10px] text-red-500 font-semibold shrink-0">🏠 天台层已开启</span>
-            : <span className="text-[10px] text-gray-400 font-semibold shrink-0">🏠 天台层未开启</span>
+            ? <span className="text-[10px] text-red-500 font-semibold shrink-0">🏠 {locale === "en" ? "Rooftop floor enabled" : "天台层已开启"}</span>
+            : <span className="text-[10px] text-gray-400 font-semibold shrink-0">🏠 {locale === "en" ? "Rooftop floor disabled" : "天台层未开启"}</span>
           }
           {exterior.hasRooftop ? (
             <button
               onClick={() => { setExterior({ hasRooftop: false }); setActiveFloor(Math.min(activeFloor, exterior.floors - 1)); }}
               className="ml-auto px-2 py-0.5 rounded-lg text-[10px] font-bold text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 transition-colors"
-            >关闭</button>
+            >{locale === "en" ? "Disable" : "关闭"}</button>
           ) : (
             <button
               onClick={() => setExterior({ hasRooftop: true })}
               className="ml-auto px-2 py-0.5 rounded-lg text-[10px] font-bold text-blue-500 hover:text-blue-700 border border-blue-200 hover:border-blue-400 transition-colors"
-            >开启</button>
+            >{locale === "en" ? "Enable" : "开启"}</button>
           )}
         </div>
       </div>
@@ -209,7 +209,7 @@ export function RoomPanel() {
                       <span className="text-xs font-semibold text-gray-700 truncate">{name}</span>
                       {room === "stair" && exterior.floors > 1 && (
                         <span className="shrink-0 text-[8px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">
-                          每层同位
+                          {locale === "en" ? "Same on each floor" : "每层同位"}
                         </span>
                       )}
                     </div>
@@ -304,7 +304,7 @@ export function RoomPanel() {
           return groups.map(group => {
             const addable = group.rooms.filter(r => !enabledRooms.includes(r));
             if (!addable.length) return null;
-            const groupLabel = (t[group.key as keyof typeof t] as string) ?? "屋顶空间";
+            const groupLabel = (t[group.key as keyof typeof t] as string) ?? (locale === "en" ? "Rooftop space" : "屋顶空间");
             return (
               <div key={group.key} className="px-2.5 pt-3 pb-1">
                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">＋ {groupLabel}</div>
@@ -449,15 +449,15 @@ export default function FloorPlanAll() {
           setKeyPrompt({ run: (p, k) => void doAiGenerate(p, k) });
           return;
         }
-        setAiError(data.error ?? "AI 生成失败，请重试");
+        setAiError(data.error ?? (locale === "en" ? "AI generation failed, please retry" : "AI 生成失败，请重试"));
         return;
       }
       applyAiDesign(data);
-      setAiSummary(data.summary ?? "设计已生成！");
+      setAiSummary(data.summary ?? (locale === "en" ? "Design generated!" : "设计已生成！"));
       setLayoutPickerOpen(false);
       setViewMode("exterior");
     } catch {
-      setAiError("网络错误，请检查连接后重试");
+      setAiError(locale === "en" ? "Network error, please check your connection and retry" : "网络错误，请检查连接后重试");
     } finally {
       setAiLoading(false);
     }
@@ -839,17 +839,17 @@ export default function FloorPlanAll() {
             onClick={() => setViewMode("yard2d")}
             className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all"
             style={{ border: "1px solid #10B981", color: "#059669", background: "white" }}
-            title="进入院子设计：拖拽树/花/池子/凉亭等到房屋周围"
+            title={locale === "en" ? "Open yard design: drag trees / flowers / pools / pavilions around the house" : "进入院子设计：拖拽树/花/池子/凉亭等到房屋周围"}
           >
-            🌳 编辑院子
+            🌳 {locale === "en" ? "Edit yard" : "编辑院子"}
           </button>
           <button
             onClick={() => setViewMode("exterior")}
             className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all"
             style={{ border: "1px solid #6366F1", color: "#6366F1", background: "white" }}
-            title="进入 3D 外观设计"
+            title={locale === "en" ? "Open 3D exterior design" : "进入 3D 外观设计"}
           >
-            🏠 外观
+            🏠 {locale === "en" ? "Exterior" : "外观"}
           </button>
           {/* Blueprint tracing: upload image, adjust, toggle trace mode */}
           {!blueprint.image ? (
@@ -1418,7 +1418,7 @@ export default function FloorPlanAll() {
                           textAnchor="middle" dominantBaseline="middle"
                           fontSize={btnH * 0.5} fill="white" fontWeight="bold"
                           style={{ pointerEvents: "none", userSelect: "none" }}>
-                          {isEditing ? "完成" : "编辑轮廓"}
+                          {isEditing ? (locale === "en" ? "Done" : "完成") : (locale === "en" ? "Edit outline" : "编辑轮廓")}
                         </text>
                       </g>
                     );
@@ -1544,7 +1544,7 @@ export default function FloorPlanAll() {
                           fill="rgba(239,68,68,0.88)" />
                         <text x={bx + 36} y={by + 13} textAnchor="middle" dominantBaseline="middle"
                           fontSize={13} fill="white" fontWeight="bold"
-                          style={{ pointerEvents: "none", userSelect: "none" }}>重置矩形</text>
+                          style={{ pointerEvents: "none", userSelect: "none" }}>{locale === "en" ? "Reset rect" : "重置矩形"}</text>
                       </g>
                     );
                   })()}
@@ -1597,12 +1597,12 @@ export default function FloorPlanAll() {
                     textAnchor="middle" dominantBaseline="middle"
                     fontSize={13} fill="white" fontWeight="bold"
                     fontFamily="system-ui"
-                    style={{ pointerEvents: "none", userSelect: "none" }}>+ 添加楼梯</text>
+                    style={{ pointerEvents: "none", userSelect: "none" }}>{locale === "en" ? "+ Add stairs" : "+ 添加楼梯"}</text>
                   <text x={symX + symW / 2} y={symY + symD + 42}
                     textAnchor="middle" dominantBaseline="middle"
                     fontSize={12} fill="#92400E"
                     fontFamily="system-ui"
-                    style={{ pointerEvents: "none", userSelect: "none" }}>楼梯间</text>
+                    style={{ pointerEvents: "none", userSelect: "none" }}>{locale === "en" ? "Stairwell" : "楼梯间"}</text>
                 </g>
               );
             })()}
@@ -1739,14 +1739,14 @@ export default function FloorPlanAll() {
             <div className="mb-4 p-3 rounded-xl" style={{ background: "linear-gradient(135deg,#EFF6FF,#F0FDF4)" }}>
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="text-sm">✨</span>
-                <span className="text-[11px] font-bold text-blue-700">AI 智能设计</span>
-                <span className="text-[9px] text-blue-400 bg-blue-50 px-2 py-0.5 rounded-full">描述需求，自动生成平面图 + 外观</span>
+                <span className="text-[11px] font-bold text-blue-700">{locale === "en" ? "AI Smart Design" : "AI 智能设计"}</span>
+                <span className="text-[9px] text-blue-400 bg-blue-50 px-2 py-0.5 rounded-full">{locale === "en" ? "Describe needs, auto-generate floor plan + exterior" : "描述需求，自动生成平面图 + 外观"}</span>
               </div>
               <div className="flex gap-2">
                 <textarea
                   className="flex-1 text-[11px] rounded-lg border border-blue-200 bg-white px-2.5 py-1.5 resize-none outline-none focus:border-blue-400 placeholder-gray-400 text-gray-700"
                   rows={2}
-                  placeholder={"例如：三室两厅两卫，120㎡，主卧朝南带卫生间，现代简约风，需要车库"}
+                  placeholder={locale === "en" ? "e.g. 3 bed 2 living 2 bath, 120㎡, south-facing master with ensuite, modern minimal style, garage needed" : "例如：三室两厅两卫，120㎡，主卧朝南带卫生间，现代简约风，需要车库"}
                   value={aiInput}
                   onChange={e => setAiInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAiGenerate(); }}
@@ -1758,26 +1758,26 @@ export default function FloorPlanAll() {
                   className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-white transition-all disabled:opacity-40"
                   style={{ background: "linear-gradient(135deg,#3B82F6,#10B981)" }}
                 >
-                  {aiLoading ? "生成中…" : "生成"}
+                  {aiLoading ? (locale === "en" ? "Generating…" : "生成中…") : (locale === "en" ? "Generate" : "生成")}
                 </button>
               </div>
               {aiError   && <p className="mt-1.5 text-[10px] text-red-500">⚠ {aiError}</p>}
               {aiSummary && <p className="mt-1.5 text-[10px] text-green-600">✅ {aiSummary}</p>}
-              <p className="mt-1.5 text-[9px] text-gray-400">Ctrl+Enter 快速生成 · 支持中文描述</p>
+              <p className="mt-1.5 text-[9px] text-gray-400">{locale === "en" ? "Ctrl+Enter to generate quickly · supports Chinese descriptions" : "Ctrl+Enter 快速生成 · 支持中文描述"}</p>
             </div>
             <div className="border-t border-gray-200 mb-3" />
 
             {/* ── 别墅项目模板 (multi-floor + yard) ── */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">✨ 别墅项目模板</div>
-                <div className="text-[9px] text-gray-400 bg-indigo-50 px-2 py-0.5 rounded-full">双层 + 外观 + 院子一键加载</div>
+                <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">✨ {locale === "en" ? "Villa Project Templates" : "别墅项目模板"}</div>
+                <div className="text-[9px] text-gray-400 bg-indigo-50 px-2 py-0.5 rounded-full">{locale === "en" ? "Two floors + exterior + yard, one-click load" : "双层 + 外观 + 院子一键加载"}</div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
                 {PROJECT_TEMPLATES.map(tpl => (
                   <button key={tpl.id}
                     onClick={() => {
-                      confirmDialog(`加载「${tpl.name}」将替换所有楼层平面图、外观设置和院子布局，确认吗？`).then(ok => {
+                      confirmDialog(locale === "en" ? `Loading "${tpl.name}" will replace all floor plans, exterior settings and yard layout. Continue?` : `加载「${tpl.name}」将替换所有楼层平面图、外观设置和院子布局，确认吗？`).then(ok => {
                         if (!ok) return;
                         applyProjectTemplate(tpl.id);
                         setLayoutPickerOpen(false);
@@ -1797,7 +1797,7 @@ export default function FloorPlanAll() {
                       <span className="text-lg">{tpl.emoji}</span>
                       <div>
                         <div className="text-[11px] font-bold text-gray-800">{tpl.name}</div>
-                        <div className="text-[9px] text-gray-500">{tpl.areaSqm}㎡ · {tpl.floorLayouts.length}层</div>
+                        <div className="text-[9px] text-gray-500">{tpl.areaSqm}㎡ · {tpl.floorLayouts.length}{locale === "en" ? "F" : "层"}</div>
                       </div>
                     </div>
                     <div className="text-[9px] text-indigo-600 leading-relaxed">{tpl.description}</div>
@@ -1805,7 +1805,7 @@ export default function FloorPlanAll() {
                 ))}
               </div>
               <div className="border-t border-gray-200 mb-3" />
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">📐 单层平面户型</div>
+              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">📐 {locale === "en" ? "Single-floor layouts" : "单层平面户型"}</div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">

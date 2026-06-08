@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { useDesignerStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import type { FacadeSegment, FacadeSegmentType, FloorFacade, WallMaterialType, WallSide } from "@/lib/types";
 
 // ─── Type metadata ──────────────────────────────────────────
-const TYPE_META: Record<FacadeSegmentType, { label: string; icon: string; bg: string }> = {
-  glass:  { label: "玻璃", icon: "🪟", bg: "linear-gradient(135deg,#A8D8F0,#C8ECFF)" },
-  solid:  { label: "实墙", icon: "▪", bg: "linear-gradient(135deg,#E8E4DC,#D4D0C8)" },
-  window: { label: "窗",   icon: "◻", bg: "linear-gradient(135deg,#B8CFEA,#D8E8F8)" },
-  door:   { label: "门",   icon: "🚪", bg: "linear-gradient(135deg,#D4A870,#C09050)" },
-  column: { label: "柱",   icon: "▐",  bg: "linear-gradient(135deg,#F0EDE8,#E0DDD6)" },
+type FacadeLabelKey = "typeGlass" | "typeSolid" | "typeWindow" | "typeDoor" | "typeColumn";
+const TYPE_META: Record<FacadeSegmentType, { labelKey: FacadeLabelKey; icon: string; bg: string }> = {
+  glass:  { labelKey: "typeGlass",  icon: "🪟", bg: "linear-gradient(135deg,#A8D8F0,#C8ECFF)" },
+  solid:  { labelKey: "typeSolid",  icon: "▪", bg: "linear-gradient(135deg,#E8E4DC,#D4D0C8)" },
+  window: { labelKey: "typeWindow", icon: "◻", bg: "linear-gradient(135deg,#B8CFEA,#D8E8F8)" },
+  door:   { labelKey: "typeDoor",   icon: "🚪", bg: "linear-gradient(135deg,#D4A870,#C09050)" },
+  column: { labelKey: "typeColumn", icon: "▐",  bg: "linear-gradient(135deg,#F0EDE8,#E0DDD6)" },
 };
 
 const SEG_CYCLE: FacadeSegmentType[] = ["glass", "solid", "window", "door", "column"];
@@ -42,17 +44,19 @@ function normalize(segs: FacadeSegment[]): FacadeSegment[] {
  *  for any external import; new code should reference `WallSide`. */
 export type FaceName = WallSide;
 
+type FacadePresetLabelKey = "presetGlassVilla" | "presetWoodGlass" | "presetBrickGlass" | "presetConcreteWindow";
+type FacadePresetDescKey  = "presetGlassVillaDesc" | "presetWoodGlassDesc" | "presetBrickGlassDesc" | "presetConcreteWindowDesc";
 interface FacadePreset {
-  id: string; label: string; icon: string; desc: string;
+  id: string; labelKey: FacadePresetLabelKey; icon: string; descKey: FacadePresetDescKey;
   generate: (floors: number) => FloorFacade[];
 }
 
 export const FACADE_PRESETS: FacadePreset[] = [
   {
     id: "glass-villa",
-    label: "玻璃幕墙别墅",
+    labelKey: "presetGlassVilla",
     icon: "🏢",
-    desc: "白柱+全玻璃·现代极简",
+    descKey: "presetGlassVillaDesc",
     generate: floors => Array.from({ length: floors }, (_, fi) => ({
       segments: fi === 0 ? [
         { id:"c1", type:"column", widthFraction:0.07, color:"#F2EFE8", material:"render", frameColor:"#1C1C1C" },
@@ -68,9 +72,9 @@ export const FACADE_PRESETS: FacadePreset[] = [
   },
   {
     id: "wood-glass",
-    label: "木框玻璃",
+    labelKey: "presetWoodGlass",
     icon: "🌲",
-    desc: "雪松木柱+落地玻璃",
+    descKey: "presetWoodGlassDesc",
     generate: floors => Array.from({ length: floors }, (_, fi) => ({
       segments: fi === 0 ? [
         { id:"c1", type:"column", widthFraction:0.08, color:"#9C5C28", material:"wood", frameColor:"#5A3818" },
@@ -86,9 +90,9 @@ export const FACADE_PRESETS: FacadePreset[] = [
   },
   {
     id: "brick-column-glass",
-    label: "砖柱+玻璃",
+    labelKey: "presetBrickGlass",
     icon: "🏗️",
-    desc: "红砖结构框+玻璃填充",
+    descKey: "presetBrickGlassDesc",
     generate: floors => Array.from({ length: floors }, () => ({
       segments: [
         { id:"c1", type:"column", widthFraction:0.08, color:"#B05030", material:"brick", frameColor:"#1C1C1C" },
@@ -101,9 +105,9 @@ export const FACADE_PRESETS: FacadePreset[] = [
   },
   {
     id: "concrete-window",
-    label: "混凝土+带窗",
+    labelKey: "presetConcreteWindow",
     icon: "🏭",
-    desc: "清水混凝土·工业水平窗",
+    descKey: "presetConcreteWindowDesc",
     generate: floors => Array.from({ length: floors }, () => ({
       segments: [
         { id:"s1", type:"solid",  widthFraction:0.15, color:"#909090", material:"concrete", frameColor:"#1C1C1C" },
@@ -122,6 +126,7 @@ interface Props {
 }
 
 export default function FacadeEditor({ face, floors }: Props) {
+  const t = useT();
   const exterior   = useDesignerStore(s => s.exterior);
   const setExterior = useDesignerStore(s => s.setExterior);
 
@@ -188,8 +193,8 @@ export default function FacadeEditor({ face, floors }: Props) {
             className="flex flex-col gap-1 p-2 rounded-xl border-2 border-transparent hover:border-indigo-200 bg-gray-50 text-left transition-all active:scale-[0.97]"
           >
             <span className="text-xl leading-none">{p.icon}</span>
-            <div className="text-[9px] font-bold text-gray-700 leading-tight">{p.label}</div>
-            <div className="text-[8px] text-gray-400 leading-tight">{p.desc}</div>
+            <div className="text-[9px] font-bold text-gray-700 leading-tight">{t.facadeEditor[p.labelKey]}</div>
+            <div className="text-[8px] text-gray-400 leading-tight">{t.facadeEditor[p.descKey]}</div>
           </button>
         ))}
       </div>
@@ -198,12 +203,12 @@ export default function FacadeEditor({ face, floors }: Props) {
       {isActive && (
         <>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">编辑组件</span>
+            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">{t.facadeEditor.editComponents}</span>
             <button
               onClick={clearFace}
               className="text-[8px] px-2 py-0.5 rounded-full"
               style={{ background: "#FEF2F2", color: "#DC2626" }}
-            >✕ 清除立面</button>
+            >{t.facadeEditor.clearFacade}</button>
           </div>
 
           {/* Floor selector */}
@@ -229,7 +234,7 @@ export default function FacadeEditor({ face, floors }: Props) {
           >
             {segs.length === 0 ? (
               <div className="h-full flex items-center justify-center text-[10px] text-gray-400">
-                点击 + 添加组件
+                {t.facadeEditor.clickAddComponent}
               </div>
             ) : (
               <div className="flex h-full">
@@ -263,12 +268,12 @@ export default function FacadeEditor({ face, floors }: Props) {
             <button
               onClick={addSegment}
               className="flex-1 py-1 text-[9px] font-bold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
-            >+ 添加</button>
+            >{t.facadeEditor.add}</button>
             <button
               onClick={applyToAll}
-              title="将此楼层立面应用到所有楼层"
+              title={t.facadeEditor.applyToAllTitle}
               className="flex-1 py-1 text-[9px] font-bold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-            >↕ 复制全层</button>
+            >{t.facadeEditor.applyToAll}</button>
           </div>
 
           {/* Segment detail editor */}
@@ -313,13 +318,14 @@ function SegmentEditor({ seg, onChange, onDelete, onMoveLeft, onMoveRight }: {
   onMoveLeft: () => void;
   onMoveRight: () => void;
 }) {
+  const tr = useT();
   const meta = TYPE_META[seg.type];
   const MAT_OPTIONS: { v: WallMaterialType; label: string }[] = [
-    { v: "render",   label: "涂料" },
-    { v: "concrete", label: "混凝土" },
-    { v: "brick",    label: "砖" },
-    { v: "stone",    label: "石材" },
-    { v: "wood",     label: "木" },
+    { v: "render",   label: tr.facadeEditor.matRender },
+    { v: "concrete", label: tr.facadeEditor.matConcrete },
+    { v: "brick",    label: tr.facadeEditor.matBrick },
+    { v: "stone",    label: tr.facadeEditor.matStone },
+    { v: "wood",     label: tr.facadeEditor.matWood },
   ];
 
   return (
@@ -330,7 +336,7 @@ function SegmentEditor({ seg, onChange, onDelete, onMoveLeft, onMoveRight }: {
           className="w-6 h-6 rounded-lg flex items-center justify-center text-sm shrink-0"
           style={{ background: meta.bg }}
         >{meta.icon}</div>
-        <span className="text-[10px] font-bold text-indigo-800 flex-1">{meta.label}</span>
+        <span className="text-[10px] font-bold text-indigo-800 flex-1">{tr.facadeEditor[meta.labelKey]}</span>
         <button onClick={onMoveLeft}  className="w-6 h-6 text-[10px] rounded-md bg-white text-gray-500 hover:text-indigo-600 font-bold">←</button>
         <button onClick={onMoveRight} className="w-6 h-6 text-[10px] rounded-md bg-white text-gray-500 hover:text-indigo-600 font-bold">→</button>
         <button onClick={onDelete}    className="w-6 h-6 text-[10px] rounded-md bg-red-50 text-red-500 hover:bg-red-100 font-bold">✕</button>
@@ -346,13 +352,13 @@ function SegmentEditor({ seg, onChange, onDelete, onMoveLeft, onMoveRight }: {
             style={seg.type === t
               ? { background: "#4F46E5", color: "#fff" }
               : { background: "#E0E7FF", color: "#4F46E5" }}
-          >{TYPE_META[t].label}</button>
+          >{tr.facadeEditor[TYPE_META[t].labelKey]}</button>
         ))}
       </div>
 
       {/* Width slider */}
       <div className="flex items-center gap-2">
-        <span className="text-[9px] text-indigo-700 w-8 shrink-0">宽度</span>
+        <span className="text-[9px] text-indigo-700 w-8 shrink-0">{tr.facadeEditor.width}</span>
         <input
           type="range" min={0.04} max={0.95} step={0.01}
           value={seg.widthFraction}
@@ -366,11 +372,11 @@ function SegmentEditor({ seg, onChange, onDelete, onMoveLeft, onMoveRight }: {
 
       {/* Color + frame */}
       <div className="flex items-center gap-2">
-        <span className="text-[9px] text-indigo-700 w-8 shrink-0">颜色</span>
+        <span className="text-[9px] text-indigo-700 w-8 shrink-0">{tr.facadeEditor.color}</span>
         <input type="color" value={seg.color ?? "#F0ECE4"}
           onChange={e => onChange({ ...seg, color: e.target.value })}
           className="w-6 h-6 rounded border border-indigo-200 cursor-pointer shrink-0" />
-        <span className="text-[9px] text-indigo-700 ml-1 shrink-0">框架</span>
+        <span className="text-[9px] text-indigo-700 ml-1 shrink-0">{tr.facadeEditor.frame}</span>
         <input type="color" value={seg.frameColor ?? "#1A1A1A"}
           onChange={e => onChange({ ...seg, frameColor: e.target.value })}
           className="w-6 h-6 rounded border border-indigo-200 cursor-pointer shrink-0" />
@@ -379,7 +385,7 @@ function SegmentEditor({ seg, onChange, onDelete, onMoveLeft, onMoveRight }: {
       {/* Material selector (solid / column / window / door) */}
       {seg.type !== "glass" && (
         <div className="flex items-center gap-2">
-          <span className="text-[9px] text-indigo-700 w-8 shrink-0">材质</span>
+          <span className="text-[9px] text-indigo-700 w-8 shrink-0">{tr.facadeEditor.material}</span>
           <div className="flex gap-0.5 flex-wrap">
             {MAT_OPTIONS.map(o => (
               <button key={o.v}
@@ -397,7 +403,7 @@ function SegmentEditor({ seg, onChange, onDelete, onMoveLeft, onMoveRight }: {
       {/* Panel count (glass only) */}
       {seg.type === "glass" && (
         <div className="flex items-center gap-2">
-          <span className="text-[9px] text-indigo-700 w-8 shrink-0">分格</span>
+          <span className="text-[9px] text-indigo-700 w-8 shrink-0">{tr.facadeEditor.panels}</span>
           <input
             type="range" min={1} max={8} step={1}
             value={seg.panelCount ?? 3}
