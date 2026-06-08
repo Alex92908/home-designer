@@ -1,0 +1,913 @@
+{
+  "id": "0e640800-744f-4f90-9eb9-0abbdd2ef13b",
+  "revision": 0,
+  "last_node_id": 41,
+  "last_link_id": 44,
+  "nodes": [
+    {
+      "id": 32,
+      "type": "ImageAndMaskPreview",
+      "pos": [
+        -580.6575927734375,
+        371.836669921875
+      ],
+      "size": [
+        233.9713897705078,
+        126
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "image",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 31
+        },
+        {
+          "label": "遮罩",
+          "name": "mask",
+          "shape": 7,
+          "type": "MASK",
+          "link": 32
+        }
+      ],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "composite",
+          "type": "IMAGE",
+          "links": [
+            30,
+            36
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageAndMaskPreview",
+        "widget_ue_connectable": {},
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "57366692888ffc0a10f5fbba683963631d03c786"
+      },
+      "widgets_values": [
+        1,
+        "255,0,0",
+        true
+      ]
+    },
+    {
+      "id": 34,
+      "type": "LoadImage",
+      "pos": [
+        -1170,
+        810
+      ],
+      "size": [
+        516.8609619140625,
+        425.82110595703125
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 2,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            38
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "b24379ac8903bdbb602a6475d151a289386b22a91e0ff280078831af18bcdd25.jpg",
+        "image"
+      ]
+    },
+    {
+      "id": 35,
+      "type": "LoadImage",
+      "pos": [
+        -582.679443359375,
+        813.1100463867188
+      ],
+      "size": [
+        470.8365173339844,
+        429.3614501953125
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 2,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            39
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK"
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "pasted/3f6c725b38db7faeffa0bcf696d7523adf598d83ef7dc5f20d09aec2aa83d993.png",
+        "image"
+      ]
+    },
+    {
+      "id": 36,
+      "type": "LoadImage",
+      "pos": [
+        -73.48178100585938,
+        814.0128784179688
+      ],
+      "size": [
+        470.8365173339844,
+        429.3614501953125
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 2,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": []
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK"
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "pasted/3f6c725b38db7faeffa0bcf696d7523adf598d83ef7dc5f20d09aec2aa83d993.png",
+        "image"
+      ]
+    },
+    {
+      "id": 40,
+      "type": "CR Prompt Text",
+      "pos": [
+        -71.2732925415039,
+        161.16061401367188
+      ],
+      "size": [
+        397.7787780761719,
+        522.8895874023438
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "提示词文本",
+          "name": "prompt",
+          "type": "STRING",
+          "links": [
+            42
+          ]
+        },
+        {
+          "label": "show_help",
+          "name": "show_help",
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CR Prompt Text",
+        "widget_ue_connectable": {},
+        "cnr_id": "comfyroll",
+        "ver": "d78b780ae43fcf8c6b7c6505e6ffb4584281ceca",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        },
+        "ttNbgOverride": {
+          "bgcolor": "#533",
+          "groupcolor": "#A88",
+          "color": "#322"
+        }
+      },
+      "widgets_values": [
+        "把图1的毛坯房变成精装修客厅设计的，布局合理，保持图1结构，空间，角度保持不变，严格按照图1的结构保持不变，风格参考图2"
+      ],
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 37,
+      "type": "Fast Groups Muter (rgthree)",
+      "pos": [
+        -1504.868896484375,
+        12.852205276489258
+      ],
+      "size": [
+        218.158203125,
+        252.12989807128906
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "可选连接",
+          "name": "OPT_CONNECTION",
+          "type": "*"
+        }
+      ],
+      "properties": {
+        "matchColors": "",
+        "matchTitle": "",
+        "showNav": true,
+        "sort": "position",
+        "customSortAlphabet": "",
+        "toggleRestriction": "default",
+        "widget_ue_connectable": {},
+        "hasSecondTab": false,
+        "secondTabOffset": 80,
+        "tabWidth": 65,
+        "secondTabWidth": 65,
+        "secondTabText": "Send Back",
+        "enableTabs": false,
+        "tabXOffset": 10
+      }
+    },
+    {
+      "id": 28,
+      "type": "PrimitiveNode",
+      "pos": [
+        -1502.41943359375,
+        324.6527404785156
+      ],
+      "size": [
+        210,
+        106
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "COMBO",
+          "type": "COMBO",
+          "widget": {
+            "name": "resolution"
+          },
+          "links": [
+            44
+          ]
+        }
+      ],
+      "properties": {
+        "Run widget replace on values": false,
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "2k",
+        "fixed",
+        ""
+      ]
+    },
+    {
+      "id": 41,
+      "type": "RH_Nano_Banana2_Gemini31Flash",
+      "pos": [
+        428.71160888671875,
+        271.60479736328125
+      ],
+      "size": [
+        460.7135925292969,
+        596.0725708007812
+      ],
+      "flags": {
+        "collapsed": true,
+        "pinned": true
+      },
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "images",
+          "name": "images",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 36
+        },
+        {
+          "label": "image1",
+          "name": "image1",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 37
+        },
+        {
+          "label": "image2",
+          "name": "image2",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 38
+        },
+        {
+          "label": "image3",
+          "name": "image3",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 39
+        },
+        {
+          "label": "image4",
+          "name": "image4",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image5",
+          "name": "image5",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image6",
+          "name": "image6",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image7",
+          "name": "image7",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image8",
+          "name": "image8",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image9",
+          "name": "image9",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": 42
+        },
+        {
+          "label": "aspectRatio",
+          "name": "aspectRatio",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "aspectRatio"
+          },
+          "link": 43
+        },
+        {
+          "label": "resolution",
+          "name": "resolution",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "resolution"
+          },
+          "link": 44
+        }
+      ],
+      "outputs": [
+        {
+          "label": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            40,
+            41
+          ]
+        },
+        {
+          "label": "image_url",
+          "name": "image_url",
+          "type": "STRING"
+        },
+        {
+          "label": "response",
+          "name": "response",
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "widget_ue_connectable": {},
+        "Node name for S&R": "RH_Nano_Banana2_Gemini31Flash"
+      },
+      "widgets_values": [
+        "",
+        353535492,
+        "randomize",
+        "auto",
+        "2k",
+        false,
+        "Third-party"
+      ]
+    },
+    {
+      "id": 27,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        354.9686279296875,
+        159.07550048828125
+      ],
+      "size": [
+        677.8425903320312,
+        527.415771484375
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "label": "图像_A",
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 40
+        },
+        {
+          "dir": 3,
+          "label": "图像_B",
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 30
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "label": "image_urls",
+          "name": "image_urls",
+          "shape": 3,
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "comparer_mode": "Slide",
+        "widget_ue_connectable": {},
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "enableTabs": false,
+        "secondTabOffset": 80,
+        "tabWidth": 65,
+        "secondTabWidth": 65,
+        "tabXOffset": 10
+      },
+      "widgets_values": [
+        [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/view?filename=rgthree.compare._temp_grgze_00024_pgppd_1776775149.jpg&type=temp&subfolder=&rand=0.43822212693345775&Rh-Comfy-Auth=eyJ1c2VySWQiOiI0NDIwOTYzOTdkYjM4NWU0ZmM1MGRkNWQzMmEzMDZlMSIsInNpZ25FeHBpcmUiOjE3NzczNzk4NDU4OTEsInRzIjoxNzc2Nzc1MDQ1ODkxLCJzaWduIjoiY2ZmYjk5NDMwZGU1Y2FkMzdhYWQ0YTEyYTk3YjA4ZmEifQ==&Rh-Identify=442096397db385e4fc50dd5d32a306e1"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/view?filename=rgthree.compare._temp_grgze_00025_ufqsk_1776775151.jpg&type=temp&subfolder=&rand=0.8916103533899868&Rh-Comfy-Auth=eyJ1c2VySWQiOiI0NDIwOTYzOTdkYjM4NWU0ZmM1MGRkNWQzMmEzMDZlMSIsInNpZ25FeHBpcmUiOjE3NzczNzk4NDU4OTEsInRzIjoxNzc2Nzc1MDQ1ODkxLCJzaWduIjoiY2ZmYjk5NDMwZGU1Y2FkMzdhYWQ0YTEyYTk3YjA4ZmEifQ==&Rh-Identify=442096397db385e4fc50dd5d32a306e1"
+          }
+        ]
+      ]
+    },
+    {
+      "id": 4,
+      "type": "SaveImage",
+      "pos": [
+        1092.8427734375,
+        172.32992553710938
+      ],
+      "size": [
+        576.6959838867188,
+        524.0848999023438
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 41
+        },
+        {
+          "label": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "label": "image_urls",
+          "name": "image_urls",
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SaveImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 31,
+      "type": "LoadImage",
+      "pos": [
+        -596.2764282226562,
+        190.7139434814453
+      ],
+      "size": [
+        470.8365173339844,
+        429.3614501953125
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            37
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK"
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "pasted/3f6c725b38db7faeffa0bcf696d7523adf598d83ef7dc5f20d09aec2aa83d993.png",
+        "image"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "LoadImage",
+      "pos": [
+        -1172.0421142578125,
+        207.99298095703125
+      ],
+      "size": [
+        470.8365173339844,
+        429.3614501953125
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "image",
+          "name": "image",
+          "type": "COMBO",
+          "widget": {
+            "name": "image"
+          }
+        },
+        {
+          "label": "upload",
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "widget": {
+            "name": "upload"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            31
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            32
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "b24379ac8903bdbb602a6475d151a289386b22a91e0ff280078831af18bcdd25.jpg",
+        "image"
+      ]
+    },
+    {
+      "id": 29,
+      "type": "PrimitiveNode",
+      "pos": [
+        -1505.6207275390625,
+        492.2156677246094
+      ],
+      "size": [
+        210,
+        106
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "COMBO",
+          "type": "COMBO",
+          "widget": {
+            "name": "aspectRatio"
+          },
+          "links": [
+            43
+          ]
+        }
+      ],
+      "properties": {
+        "Run widget replace on values": false,
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "auto",
+        "fixed",
+        ""
+      ]
+    }
+  ],
+  "links": [
+    [
+      30,
+      32,
+      0,
+      27,
+      1,
+      "IMAGE"
+    ],
+    [
+      31,
+      3,
+      0,
+      32,
+      0,
+      "IMAGE"
+    ],
+    [
+      32,
+      3,
+      1,
+      32,
+      1,
+      "MASK"
+    ],
+    [
+      36,
+      32,
+      0,
+      41,
+      0,
+      "IMAGE"
+    ],
+    [
+      37,
+      31,
+      0,
+      41,
+      1,
+      "IMAGE"
+    ],
+    [
+      38,
+      34,
+      0,
+      41,
+      2,
+      "IMAGE"
+    ],
+    [
+      39,
+      35,
+      0,
+      41,
+      3,
+      "IMAGE"
+    ],
+    [
+      40,
+      41,
+      0,
+      27,
+      0,
+      "IMAGE"
+    ],
+    [
+      41,
+      41,
+      0,
+      4,
+      0,
+      "IMAGE"
+    ],
+    [
+      42,
+      40,
+      0,
+      41,
+      10,
+      "STRING"
+    ],
+    [
+      43,
+      29,
+      0,
+      41,
+      11,
+      "COMBO"
+    ],
+    [
+      44,
+      28,
+      0,
+      41,
+      12,
+      "COMBO"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "图1",
+      "bounding": [
+        -1190,
+        110,
+        566.9295043945312,
+        556.870849609375
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 5,
+      "title": "香蕉超多图编辑",
+      "bounding": [
+        -1193.556884765625,
+        -32.73513412475586,
+        650.4931030273438,
+        102.07719421386719
+      ],
+      "color": "#3f789e",
+      "font_size": 80,
+      "flags": {}
+    },
+    {
+      "id": 8,
+      "title": "图2",
+      "bounding": [
+        -606.2764282226562,
+        117.11392974853516,
+        506.892578125,
+        558.1193237304688
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 9,
+      "title": "图3",
+      "bounding": [
+        -1180,
+        736.4000244140625,
+        554.1795654296875,
+        526.3130493164062
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 10,
+      "title": "图4",
+      "bounding": [
+        -592.679443359375,
+        739.5100708007812,
+        490.8365173339844,
+        512.96142578125
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 11,
+      "title": "图5",
+      "bounding": [
+        -83.48176574707031,
+        740.4129028320312,
+        490.8365173339844,
+        512.96142578125
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "links_added_by_ue": [],
+    "VHS_KeepIntermediate": true,
+    "ue_links": [],
+    "VHS_MetadataImage": true,
+    "0246.VERSION": [
+      0,
+      0,
+      4
+    ],
+    "VHS_latentpreviewrate": 0,
+    "frontendVersion": "1.23.0",
+    "VHS_latentpreview": false,
+    "ds": {
+      "scale": 0.3380916604057103,
+      "offset": [
+        2544.4355992806227,
+        704.6195464029399
+      ]
+    }
+  },
+  "version": 0.4
+}

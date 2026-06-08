@@ -1,0 +1,879 @@
+{
+  "id": "908d0bfb-e192-4627-9b57-147496e6e2dd",
+  "revision": 0,
+  "last_node_id": 106,
+  "last_link_id": 142,
+  "nodes": [
+    {
+      "id": 80,
+      "type": "VAELoader",
+      "pos": [
+        -1119.787353515625,
+        1207.1038818359375
+      ],
+      "size": [
+        430,
+        58
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "vae_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "vae_name"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            109
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.8.2",
+        "Node name for S&R": "VAELoader",
+        "hasSecondTab": false,
+        "models": [
+          {
+            "directory_invalid": true,
+            "name": "flux2-vae.safetensors",
+            "directory": "vae",
+            "url": "https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/vae/flux2-vae.safetensors"
+          }
+        ],
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.5.2"
+        },
+        "secondTabOffset": 80,
+        "tabWidth": 65,
+        "secondTabWidth": 65,
+        "widget_ue_connectable": {},
+        "secondTabText": "Send Back",
+        "enableTabs": false,
+        "tabXOffset": 10
+      },
+      "widgets_values": [
+        "flux2-vae.safetensors"
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 60,
+      "type": "KSampler",
+      "pos": [
+        98.97748565673828,
+        873.3800659179688
+      ],
+      "size": [
+        275.6060485839844,
+        474
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "模型",
+          "name": "model",
+          "type": "MODEL",
+          "link": 114
+        },
+        {
+          "label": "正面条件",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 93
+        },
+        {
+          "label": "负面条件",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 90
+        },
+        {
+          "label": "Latent",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 99
+        },
+        {
+          "label": "seed",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          }
+        },
+        {
+          "label": "steps",
+          "name": "steps",
+          "type": "INT",
+          "widget": {
+            "name": "steps"
+          }
+        },
+        {
+          "label": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          }
+        },
+        {
+          "label": "sampler_name",
+          "name": "sampler_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "sampler_name"
+          }
+        },
+        {
+          "label": "scheduler",
+          "name": "scheduler",
+          "type": "COMBO",
+          "widget": {
+            "name": "scheduler"
+          }
+        },
+        {
+          "label": "denoise",
+          "name": "denoise",
+          "type": "FLOAT",
+          "widget": {
+            "name": "denoise"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "label": "Latent",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            85
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.9.2",
+        "Node name for S&R": "KSampler",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        187335936068068,
+        "randomize",
+        20,
+        1,
+        "euler",
+        "simple",
+        1
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 63,
+      "type": "ConditioningZeroOut",
+      "pos": [
+        -150.00888061523438,
+        860.4366455078125
+      ],
+      "size": [
+        200,
+        30
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "条件",
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 94
+        }
+      ],
+      "outputs": [
+        {
+          "label": "条件",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            90
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.9.2",
+        "Node name for S&R": "ConditioningZeroOut",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 78,
+      "type": "UNETLoader",
+      "pos": [
+        -1118.5863037109375,
+        861.6965942382812
+      ],
+      "size": [
+        430,
+        82
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "unet_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "unet_name"
+          }
+        },
+        {
+          "name": "weight_dtype",
+          "type": "COMBO",
+          "widget": {
+            "name": "weight_dtype"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "label": "模型",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            114
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.8.2",
+        "Node name for S&R": "UNETLoader",
+        "hasSecondTab": false,
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.5.2"
+        },
+        "widget_ue_connectable": {},
+        "secondTabText": "Send Back",
+        "enableTabs": false,
+        "secondTabOffset": 80,
+        "tabWidth": 65,
+        "secondTabWidth": 65,
+        "tabXOffset": 10
+      },
+      "widgets_values": [
+        "flux-2-klein-4b-fp8.safetensors",
+        "default"
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 64,
+      "type": "CLIPTextEncode",
+      "pos": [
+        -635.73974609375,
+        885.551025390625
+      ],
+      "size": [
+        391.97406005859375,
+        346.4664001464844
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "CLIP",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 142
+        },
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": 138
+        }
+      ],
+      "outputs": [
+        {
+          "label": "条件",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            93,
+            94
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.9.2",
+        "Node name for S&R": "CLIPTextEncode",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "这是一处极具现代奢华感的酒店大堂或高端会所前厅，整体设计融合了Art Deco装饰艺术风格与东方美学元素，营造出庄重典雅的氛围。\n\n- **空间与结构**：挑高的层高与对称式布局，强化了空间的纵深感与仪式感。地面采用高光泽的黑色大理石，清晰倒映出天花板与灯具的轮廓，让空间显得更加开阔。中央铺设了一块圆形花纹地毯，图案繁复精美，成为视觉焦点。\n\n- **材质与色彩**：主色调为米白、香槟金与深棕，搭配黑色大理石的沉稳。墙面采用细腻的米白色饰面，搭配金属线条勾勒出几何轮廓；天花板与拱门处的金属框架，采用了香槟金的色调，提升了空间的精致度。\n\n- **照明与装饰**：天花板上的大型嵌入式灯具与拱门处的弧形灯组，采用了透光材质与金属边框，散发出柔和的暖光，是空间的核心装饰。两侧墙面的壁灯与落地大窗，让自然光与人工照明相互补充。空间中点缀着大型花艺装饰与艺术画作，增添了生机与艺术气息。\n\n- **细节与氛围**：大理石前台、精致的边柜与相框、以及窗外隐约可见的城市景观，共同构建了一个兼具功能性与美学价值的高端公共空间，传递出低调奢华的品质感。\n\n如果你需要，我可以帮你把这段描述改写成更适合用于**室内设计方案汇报**的专业文案，要试试吗？"
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 57,
+      "type": "VAEDecode",
+      "pos": [
+        426.6876525878906,
+        887.4994506835938
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "Latent",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 85
+        },
+        {
+          "label": "VAE",
+          "name": "vae",
+          "type": "VAE",
+          "link": 109
+        }
+      ],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            139,
+            140,
+            141
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.9.2",
+        "Node name for S&R": "VAEDecode",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 105,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        -128.0692138671875,
+        -409.43255615234375
+      ],
+      "size": [
+        630.45849609375,
+        397.8249816894531
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "label": "图像_A",
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 139
+        },
+        {
+          "dir": 3,
+          "label": "图像_B",
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 141
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "label": "image_urls",
+          "name": "image_urls",
+          "shape": 3,
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "ver": "8ff50e4521881eca1fe26aec9615fc9362474931",
+        "comparer_mode": "Slide",
+        "widget_ue_connectable": {},
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "enableTabs": false,
+        "secondTabOffset": 80,
+        "tabWidth": 65,
+        "secondTabWidth": 65,
+        "tabXOffset": 10
+      },
+      "widgets_values": [
+        [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_lzyjv_00001_.png&type=temp&subfolder=&rand=0.5127897209304726"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_lzyjv_00002_.png&type=temp&subfolder=&rand=0.2748084633721559"
+          }
+        ]
+      ]
+    },
+    {
+      "id": 99,
+      "type": "CR Text",
+      "pos": [
+        -1100.8765869140625,
+        -418.525634765625
+      ],
+      "size": [
+        414.5135498046875,
+        376.2361145019531
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "文本",
+          "name": "text",
+          "type": "*",
+          "links": [
+            138
+          ]
+        },
+        {
+          "label": "显示帮助",
+          "name": "show_help",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI_Comfyroll_CustomNodes",
+        "ver": "unknown",
+        "Node name for S&R": "CR Text",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "这是一个现代简约风格的客餐厅一体化空间，整体设计以自然、舒适、通透为核心，营造出温暖而有质感的居住氛围。\n\n### 空间布局与动线\n- **客餐厅一体**：采用开放式布局，客厅与餐厅、厨房无缝衔接，最大化利用空间，增强家庭成员间的互动性。\n- **通透采光**：右侧整面落地推拉门连接阳台，引入充足的自然光线，同时将室外绿意与城市景观延伸至室内，让空间更显开阔。\n\n### 材质与色彩\n- **主色调**：以米白、浅灰、原木色为基底，搭配少量深棕与大理石纹理，营造出柔和、宁静的视觉感受。\n- **地面**：采用浅木色地板，纹理自然，脚感温润，为空间奠定温暖基调。\n- **墙面**：左侧电视背景墙采用浅灰色大理石与白色乳胶漆拼接，层次分明，兼具质感与现代感。\n- **家具**：浅灰色布艺沙发、米色单人休闲椅、木质与大理石拼接的茶几，材质混搭丰富，却保持了整体的和谐统一。\n\n### 照明与氛围\n- **主照明**：无主灯设计，通过嵌入式筒灯提供基础照明，光线均匀柔和。\n- **氛围光**：客厅与餐厅之间的吊顶暗藏灯带，勾勒出空间轮廓，提升了层次感与高级感。\n- **自然光**：阳台的绿植与纱帘，让光线更加柔和，同时为空间注入生机。\n\n### 软装与细节\n- **家具选择**：L型布艺沙发提供充足的休憩空间，单人休闲椅则是阅读、放松的理想角落。茶几上的茶具与摆件，体现了主人对生活品质的追求。\n- **装饰元素**：电视下方的大理石台面上摆放着陶艺品与书籍，简约而有格调；餐厅的绿植与厨房的精致摆件，让空间充满生活气息。\n- **阳台景观**：阳台摆放的休闲椅与大型绿植，打造了一个惬意的户外休闲区，成为室内空间的延伸。\n\n---\n\n如果你需要，我可以帮你提炼这个空间的**设计关键词**和**可复制的软装搭配清单**，方便你参考落地。需要我整理吗？"
+      ]
+    },
+    {
+      "id": 58,
+      "type": "SaveImage",
+      "pos": [
+        531.832763671875,
+        -402.1535949707031
+      ],
+      "size": [
+        560.38427734375,
+        400.60675048828125
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 140
+        },
+        {
+          "label": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image_urls",
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.9.2",
+        "Node name for S&R": "SaveImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "ComfyUI"
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 69,
+      "type": "EmptyFlux2LatentImage",
+      "pos": [
+        -605.8925170898438,
+        -394.19189453125
+      ],
+      "size": [
+        358.7618713378906,
+        251.83934020996094
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          }
+        },
+        {
+          "label": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          }
+        },
+        {
+          "label": "batch_size",
+          "name": "batch_size",
+          "type": "INT",
+          "widget": {
+            "name": "batch_size"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "label": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            99
+          ]
+        }
+      ],
+      "title": "尺寸调整",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.9.2",
+        "Node name for S&R": "EmptyFlux2LatentImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        1504,
+        1024,
+        1
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 106,
+      "type": "CLIPLoader",
+      "pos": [
+        -1117.1568603515625,
+        1029.361083984375
+      ],
+      "size": [
+        450.27813720703125,
+        106
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            142
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.8.2",
+        "Node name for S&R": "CLIPLoader",
+        "widget_ue_connectable": {},
+        "hasSecondTab": false,
+        "models": [
+          {
+            "name": "qwen_3_4b.safetensors",
+            "directory": "text_encoders",
+            "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors"
+          }
+        ],
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.3"
+        },
+        "secondTabOffset": 80,
+        "tabWidth": 65,
+        "secondTabWidth": 65,
+        "secondTabText": "Send Back",
+        "enableTabs": false,
+        "tabXOffset": 10
+      },
+      "widgets_values": [
+        "qwen_3_4b.safetensors",
+        "flux2",
+        "default"
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    }
+  ],
+  "links": [
+    [
+      85,
+      60,
+      0,
+      57,
+      0,
+      "LATENT"
+    ],
+    [
+      90,
+      63,
+      0,
+      60,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      93,
+      64,
+      0,
+      60,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      94,
+      64,
+      0,
+      63,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      99,
+      69,
+      0,
+      60,
+      3,
+      "LATENT"
+    ],
+    [
+      109,
+      80,
+      0,
+      57,
+      1,
+      "VAE"
+    ],
+    [
+      114,
+      78,
+      0,
+      60,
+      0,
+      "MODEL"
+    ],
+    [
+      138,
+      99,
+      0,
+      64,
+      1,
+      "STRING"
+    ],
+    [
+      139,
+      57,
+      0,
+      105,
+      0,
+      "IMAGE"
+    ],
+    [
+      140,
+      57,
+      0,
+      58,
+      0,
+      "IMAGE"
+    ],
+    [
+      141,
+      57,
+      0,
+      105,
+      1,
+      "IMAGE"
+    ],
+    [
+      142,
+      106,
+      0,
+      64,
+      0,
+      "CLIP"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "FLUX2 KLEIN 文生图",
+      "bounding": [
+        -1133.724365234375,
+        780.3049926757812,
+        2298.00439453125,
+        586.3759155273438
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 2,
+      "title": "文字描述",
+      "bounding": [
+        -1125.701171875,
+        -508.0905456542969,
+        463.64434814453125,
+        554.0706176757812
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 3,
+      "title": "尺寸调整和数量（宽高）",
+      "bounding": [
+        -647.8263549804688,
+        -501.28350830078125,
+        457.42828369140625,
+        549.2045288085938
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 4,
+      "title": "右键保存图片",
+      "bounding": [
+        -178.15118408203125,
+        -497.1221008300781,
+        1407.5435791015625,
+        573.7201538085938
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 5,
+      "title": "flux2文生图",
+      "bounding": [
+        -1121.3446044921875,
+        -633.4721069335938,
+        339.04315185546875,
+        80
+      ],
+      "color": "#3f789e",
+      "font_size": 60,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "VHS_KeepIntermediate": true,
+    "links_added_by_ue": [],
+    "VHS_MetadataImage": true,
+    "ue_links": [],
+    "0246.VERSION": [
+      0,
+      0,
+      4
+    ],
+    "VHS_latentpreviewrate": 0,
+    "frontendVersion": "1.36.14",
+    "VHS_latentpreview": false,
+    "ds": {
+      "scale": 0.544500000000002,
+      "offset": [
+        1679.9353799143614,
+        1182.6747226654954
+      ]
+    },
+    "workflowRendererVersion": "LG"
+  },
+  "version": 0.4
+}

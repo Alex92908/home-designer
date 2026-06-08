@@ -1,0 +1,686 @@
+{
+  "id": "0e640800-744f-4f90-9eb9-0abbdd2ef13b",
+  "revision": 0,
+  "last_node_id": 34,
+  "last_link_id": 38,
+  "nodes": [
+    {
+      "id": 28,
+      "type": "PrimitiveNode",
+      "pos": [
+        -906.858642578125,
+        197.57925415039062
+      ],
+      "size": [
+        210,
+        106
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "COMBO",
+          "type": "COMBO",
+          "widget": {
+            "name": "resolution"
+          },
+          "links": [
+            36
+          ]
+        }
+      ],
+      "properties": {
+        "Run widget replace on values": false,
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "2k",
+        "fixed",
+        ""
+      ]
+    },
+    {
+      "id": 29,
+      "type": "PrimitiveNode",
+      "pos": [
+        -908.7422485351562,
+        423.1744689941406
+      ],
+      "size": [
+        210,
+        106
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "COMBO",
+          "type": "COMBO",
+          "widget": {
+            "name": "aspectRatio"
+          },
+          "links": [
+            35
+          ]
+        }
+      ],
+      "properties": {
+        "Run widget replace on values": false,
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "auto",
+        "fixed",
+        ""
+      ]
+    },
+    {
+      "id": 32,
+      "type": "LoadImage",
+      "pos": [
+        -589.5968627929688,
+        212.5682373046875
+      ],
+      "size": [
+        599.03125,
+        720.4668579101562
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            28
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            29
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "widget_ue_connectable": {},
+        "cnr_id": "comfy-core",
+        "ver": "0.3.42"
+      },
+      "widgets_values": [
+        "e57123eaf49530d679556a8da6f16915d328a01e103c8c6d718597a206b194a8.jpg",
+        "image"
+      ]
+    },
+    {
+      "id": 31,
+      "type": "ImageAndMaskPreview",
+      "pos": [
+        101.94282531738281,
+        767.596435546875
+      ],
+      "size": [
+        233.9713897705078,
+        126
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "image",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 28
+        },
+        {
+          "label": "遮罩",
+          "name": "mask",
+          "shape": 7,
+          "type": "MASK",
+          "link": 29
+        }
+      ],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "composite",
+          "type": "IMAGE",
+          "links": [
+            31,
+            33
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageAndMaskPreview",
+        "widget_ue_connectable": {},
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "57366692888ffc0a10f5fbba683963631d03c786"
+      },
+      "widgets_values": [
+        0.6500000000000001,
+        "255,0,0",
+        true
+      ]
+    },
+    {
+      "id": 34,
+      "type": "RH_Nano_Banana2_Gemini31Flash",
+      "pos": [
+        699.4638061523438,
+        267.1562805175781
+      ],
+      "size": [
+        460.7135925292969,
+        597.452392578125
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "images",
+          "name": "images",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 33
+        },
+        {
+          "label": "image1",
+          "name": "image1",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image2",
+          "name": "image2",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image3",
+          "name": "image3",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image4",
+          "name": "image4",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image5",
+          "name": "image5",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image6",
+          "name": "image6",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image7",
+          "name": "image7",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image8",
+          "name": "image8",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image9",
+          "name": "image9",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": 34
+        },
+        {
+          "label": "aspectRatio",
+          "name": "aspectRatio",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "aspectRatio"
+          },
+          "link": 35
+        },
+        {
+          "label": "resolution",
+          "name": "resolution",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "resolution"
+          },
+          "link": 36
+        }
+      ],
+      "outputs": [
+        {
+          "label": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            37,
+            38
+          ]
+        },
+        {
+          "label": "image_url",
+          "name": "image_url",
+          "type": "STRING"
+        },
+        {
+          "label": "response",
+          "name": "response",
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "widget_ue_connectable": {},
+        "Node name for S&R": "RH_Nano_Banana2_Gemini31Flash"
+      },
+      "widgets_values": [
+        "",
+        281290475,
+        "randomize",
+        "auto",
+        "2k",
+        false,
+        "Third-party"
+      ]
+    },
+    {
+      "id": 27,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        558.4915161132812,
+        209.09556579589844
+      ],
+      "size": [
+        682.860107421875,
+        549.9947509765625
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "label": "图像_A",
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 37
+        },
+        {
+          "dir": 3,
+          "label": "图像_B",
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 31
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "label": "image_urls",
+          "name": "image_urls",
+          "shape": 3,
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "comparer_mode": "Slide",
+        "widget_ue_connectable": {},
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "enableTabs": false,
+        "secondTabOffset": 80,
+        "tabWidth": 65,
+        "secondTabWidth": 65,
+        "tabXOffset": 10
+      },
+      "widgets_values": [
+        [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/view?filename=rgthree.compare._temp_ebnpa_00015_ireov_1776770773.jpg&type=temp&subfolder=&rand=0.67244145646188&Rh-Comfy-Auth=eyJ1c2VySWQiOiI0NDIwOTYzOTdkYjM4NWU0ZmM1MGRkNWQzMmEzMDZlMSIsInNpZ25FeHBpcmUiOjE3NzczNzQzNTMyNzQsInRzIjoxNzc2NzY5NTUzMjc0LCJzaWduIjoiYTkxNWNlMjdjYmEzZWMyM2E2MDk5Y2E4ZWQ5YThjNTgifQ==&Rh-Identify=442096397db385e4fc50dd5d32a306e1"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/view?filename=rgthree.compare._temp_ebnpa_00016_uaqrt_1776770775.jpg&type=temp&subfolder=&rand=0.5577997205216503&Rh-Comfy-Auth=eyJ1c2VySWQiOiI0NDIwOTYzOTdkYjM4NWU0ZmM1MGRkNWQzMmEzMDZlMSIsInNpZ25FeHBpcmUiOjE3NzczNzQzNTMyNzQsInRzIjoxNzc2NzY5NTUzMjc0LCJzaWduIjoiYTkxNWNlMjdjYmEzZWMyM2E2MDk5Y2E4ZWQ5YThjNTgifQ==&Rh-Identify=442096397db385e4fc50dd5d32a306e1"
+          }
+        ]
+      ]
+    },
+    {
+      "id": 4,
+      "type": "SaveImage",
+      "pos": [
+        1275.6024169921875,
+        215.53817749023438
+      ],
+      "size": [
+        581.7047729492188,
+        545.78955078125
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 38
+        },
+        {
+          "label": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "label": "image_urls",
+          "name": "image_urls",
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SaveImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 18,
+      "type": "CR Prompt Text",
+      "pos": [
+        98.80219268798828,
+        193.58795166015625
+      ],
+      "size": [
+        375.1998291015625,
+        472.714111328125
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "label": "提示词文本",
+          "name": "prompt",
+          "type": "STRING",
+          "links": [
+            34
+          ]
+        },
+        {
+          "label": "show_help",
+          "name": "show_help",
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CR Prompt Text",
+        "cnr_id": "comfyroll",
+        "ver": "d78b780ae43fcf8c6b7c6505e6ffb4584281ceca",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        },
+        "widget_ue_connectable": {},
+        "ttNbgOverride": {
+          "bgcolor": "#533",
+          "groupcolor": "#A88",
+          "color": "#322"
+        }
+      },
+      "widgets_values": [
+        "c4d渲染效果，产品精修，保持产品形状不变，重塑产品光影重塑高光阴影，细腻的高光\n商业摄影，产品拍摄，杰作，最佳质量，超细节，8k分辨率，\n高端精修，清晰对焦，虚幻引擎5渲染，\nOC渲染器，V-Ray渲染，专业级调色。\n"
+      ],
+      "color": "#322",
+      "bgcolor": "#533"
+    }
+  ],
+  "links": [
+    [
+      28,
+      32,
+      0,
+      31,
+      0,
+      "IMAGE"
+    ],
+    [
+      29,
+      32,
+      1,
+      31,
+      1,
+      "MASK"
+    ],
+    [
+      31,
+      31,
+      0,
+      27,
+      1,
+      "IMAGE"
+    ],
+    [
+      33,
+      31,
+      0,
+      34,
+      0,
+      "IMAGE"
+    ],
+    [
+      34,
+      18,
+      0,
+      34,
+      10,
+      "STRING"
+    ],
+    [
+      35,
+      29,
+      0,
+      34,
+      11,
+      "COMBO"
+    ],
+    [
+      36,
+      28,
+      0,
+      34,
+      12,
+      "COMBO"
+    ],
+    [
+      37,
+      34,
+      0,
+      27,
+      0,
+      "IMAGE"
+    ],
+    [
+      38,
+      34,
+      0,
+      4,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "上传图片",
+      "bounding": [
+        -666.0861206054688,
+        110.80438995361328,
+        724.6949462890625,
+        846.3984985351562
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 2,
+      "title": "输入文字",
+      "bounding": [
+        72.19975280761719,
+        116.51653289794922,
+        430.9888610839844,
+        568.6527709960938
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 3,
+      "title": "结果图",
+      "bounding": [
+        519.9835205078125,
+        121.48174285888672,
+        1405.8157958984375,
+        701.0150146484375
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 5,
+      "title": "香蕉产品模仿精修",
+      "bounding": [
+        -682.7706298828125,
+        -33.7386474609375,
+        650.4931030273438,
+        102.07719421386719
+      ],
+      "color": "#3f789e",
+      "font_size": 80,
+      "flags": {}
+    },
+    {
+      "id": 6,
+      "title": "图片大小",
+      "bounding": [
+        -916.858642578125,
+        123.97928619384766,
+        230,
+        189.6000213623047
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 7,
+      "title": "图片比例",
+      "bounding": [
+        -918.7422485351562,
+        349.574462890625,
+        230,
+        189.60000610351562
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "links_added_by_ue": [],
+    "VHS_KeepIntermediate": true,
+    "ue_links": [],
+    "VHS_MetadataImage": true,
+    "0246.VERSION": [
+      0,
+      0,
+      4
+    ],
+    "VHS_latentpreviewrate": 0,
+    "frontendVersion": "1.23.0",
+    "VHS_latentpreview": false,
+    "ds": {
+      "scale": 0.7247295000000024,
+      "offset": [
+        878.0397748292065,
+        249.89227528369537
+      ]
+    }
+  },
+  "version": 0.4
+}

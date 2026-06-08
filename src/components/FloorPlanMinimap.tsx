@@ -68,7 +68,10 @@ export function FloorPlanMinimap() {
     <aside
       style={{
         position: "absolute",
-        bottom: 12,
+        // 抬高让开右下角的「✨ AI 渲染」悬浮按钮（page.tsx bottom-4 right-4）。
+        // 二者同处右下角，原本 bottom:12 会把 FAB 整个盖住 → 单间平面图里看不到
+        // AI 入口。改成 64 让小地图上移、FAB 露在它下方，二者纵向叠放不打架。
+        bottom: 64,
         right: 12,
         width: MINIMAP_PX,
         zIndex: 30,

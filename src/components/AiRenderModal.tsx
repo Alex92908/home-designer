@@ -5,6 +5,7 @@ import { useDesignerStore } from "@/lib/store";
 import { generateRoomPrompt } from "@/lib/roomPrompt";
 import { generateExteriorPrompt } from "@/lib/sceneToPrompt";
 import { generateControlNetWorkflow, generateTxt2ImgWorkflow, SD_MODELS } from "@/lib/comfyWorkflow";
+import { getAiRenderConfig, type RenderBackend } from "@/lib/aiRenderConfig";
 import { useT } from "@/lib/i18n";
 import ImageImportModal from "@/components/ImageImportModal";
 
@@ -120,6 +121,26 @@ export default function AiRenderModal({ open, onClose }: Props) {
   const ipAdapterWeight        = useDesignerStore(s => s.ipAdapterWeight);
   const setIpAdapterWeight     = useDesignerStore(s => s.setIpAdapterWeight);
 
+  // 通用后端：从统一配置里取「ComfyUI 系」后端（本地 / 自建），不再写死 localhost。
+  // 这套生成式工作流（ControlNet/链式/文生图）只能跑在真正的 ComfyUI 上，所以这里
+  // 仅列出 comfyui-local / comfyui-http；RunningHub 走另一套 workflowId 管线（🎨 出图下拉）。
+  const [backends,         setBackends]         = useState<RenderBackend[]>([]);
+  const [selectedBackendId, setSelectedBackendId] = useState<string>("");
+  const selectedBackend = backends.find(b => b.id === selectedBackendId);
+  const apiBase = selectedBackend?.baseUrl?.trim() ? selectedBackend.baseUrl.replace(/\/$/, "") : "";
+
+  // 把 baseUrl 透传给 /api/comfyui* 各端点的小工具
+  const comfyStatusUrl = (id: string) => {
+    const q = new URLSearchParams({ id });
+    if (apiBase) q.set("baseUrl", apiBase);
+    return `/api/comfyui/status?${q.toString()}`;
+  };
+  const comfyImageUrl = (filename: string, subfolder?: string, type?: string) => {
+    const q = new URLSearchParams({ filename, subfolder: subfolder ?? "", type: type ?? "output" });
+    if (apiBase) q.set("baseUrl", apiBase);
+    return `/api/comfyui/image?${q.toString()}`;
+  };
+
   // Local state
   const [screenshot,     setScreenshot]     = useState<string | null>(null);
   const [comfyAvailable, setComfyAvailable] = useState<boolean | null>(null);
@@ -209,14 +230,28 @@ export default function AiRenderModal({ open, onClose }: Props) {
       }
     }, 80);
 
-    // Check ComfyUI health
-    fetch("/api/comfyui/health")
+    return () => clearTimeout(t);
+  }, [open]);
+
+  // ── Load ComfyUI 系后端（本地 / 自建）+ 选中默认项 ────────────
+  useEffect(() => {
+    if (!open) return;
+    const cfg   = getAiRenderConfig();
+    const comfy = cfg.backends.filter(b => b.kind === "comfyui-local" || b.kind === "comfyui-http");
+    setBackends(comfy);
+    setSelectedBackendId(prev => (comfy.some(b => b.id === prev) ? prev : comfy[0]?.id ?? ""));
+  }, [open]);
+
+  // ── 健康检查随「选中后端」变化重跑 ───────────────────────────
+  useEffect(() => {
+    if (!open) return;
+    setComfyAvailable(null);
+    const url = `/api/comfyui/health${apiBase ? `?baseUrl=${encodeURIComponent(apiBase)}` : ""}`;
+    fetch(url)
       .then(r => r.json())
       .then((d: { available: boolean }) => setComfyAvailable(d.available))
       .catch(() => setComfyAvailable(false));
-
-    return () => clearTimeout(t);
-  }, [open]);
+  }, [open, apiBase]);
 
   // ── Capture all angle previews when modal opens ─────────────
   useEffect(() => {
@@ -386,6 +421,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
         mode:            "ipadapter-chain",
         model:           sdModel,
         ipAdapterWeight: referenceImageDataUrl ? ipAdapterWeight : undefined,
+        baseUrl:         apiBase || undefined,
       }),
     });
     const data = await res.json() as { promptId?: string; error?: string };
@@ -395,11 +431,11 @@ export default function AiRenderModal({ open, onClose }: Props) {
     return await new Promise<string>((resolve, reject) => {
       const iv = setInterval(async () => {
         try {
-          const r = await fetch(`/api/comfyui/status?id=${data.promptId}`);
+          const r = await fetch(comfyStatusUrl(data.promptId!));
           const s = await r.json() as { status: string; filename?: string; subfolder?: string; type?: string };
           if (s.status === "done" && s.filename) {
             clearInterval(iv);
-            resolve(`/api/comfyui/image?filename=${encodeURIComponent(s.filename)}&subfolder=${encodeURIComponent(s.subfolder ?? "")}&type=${s.type ?? "output"}`);
+            resolve(comfyImageUrl(s.filename, s.subfolder, s.type));
           } else if (s.status === "error") {
             clearInterval(iv);
             reject(new Error("comfy_step_error"));
@@ -506,6 +542,7 @@ export default function AiRenderModal({ open, onClose }: Props) {
         model:            sdModel,
         referenceImage:   referenceImageDataUrl ?? undefined,
         ipAdapterWeight:  referenceImageDataUrl ? ipAdapterWeight : undefined,
+        baseUrl:          apiBase || undefined,
       };
 
       const res = await fetch("/api/comfyui", {
@@ -529,13 +566,13 @@ export default function AiRenderModal({ open, onClose }: Props) {
       pollRef.current = setInterval(async () => {
         const sid  = promptRef.current;
         if (!sid) return;
-        const sres = await fetch(`/api/comfyui/status?id=${sid}`);
+        const sres = await fetch(comfyStatusUrl(sid));
         const sdata = await sres.json() as { status: string; filename?: string; subfolder?: string; type?: string };
 
         if (sdata.status === "done" && sdata.filename) {
           clearInterval(pollRef.current ?? undefined);
           clearInterval(timerRef.current ?? undefined);
-          const imgUrl = `/api/comfyui/image?filename=${encodeURIComponent(sdata.filename)}&subfolder=${encodeURIComponent(sdata.subfolder ?? "")}&type=${sdata.type ?? "output"}`;
+          const imgUrl = comfyImageUrl(sdata.filename, sdata.subfolder, sdata.type);
           setResultUrl(imgUrl);
           setPhase("done");
         } else if (sdata.status === "error") {
@@ -632,6 +669,37 @@ export default function AiRenderModal({ open, onClose }: Props) {
 
         {/* ── Body ───────────────────────────────────────────── */}
         <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-4">
+
+          {/* 出图后端选择（统一配置里的 ComfyUI 系后端：本地 / 自建） */}
+          {backends.length > 0 && phase === "idle" && (
+            <div>
+              <p className="text-[11px] font-medium text-gray-400 mb-2 uppercase tracking-wider">
+                出图后端 · ComfyUI
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                {backends.map(b => {
+                  const active = b.id === selectedBackendId;
+                  return (
+                    <button
+                      key={b.id}
+                      onClick={() => setSelectedBackendId(b.id)}
+                      className="px-3 py-1.5 rounded-lg border text-[11px] font-medium transition-all"
+                      style={{
+                        borderColor: active ? "#6366f1" : "#e5e7eb",
+                        background:  active ? "#eef2ff" : "#fafafa",
+                        color:       active ? "#4f46e5" : "#6b7280",
+                      }}
+                    >
+                      {b.kind === "comfyui-local" ? "🖥" : "🌐"} {b.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1.5 leading-snug">
+                在 ⚙️ 设置里增删后端。RunningHub 云端请用「🎨 AI 出图」下拉（按 workflowId 出图）。
+              </p>
+            </div>
+          )}
 
           {/* Import from photo banner */}
           {phase === "idle" && (

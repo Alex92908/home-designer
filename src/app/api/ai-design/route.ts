@@ -6,18 +6,20 @@
  * JSON that the store's applyAiDesign() action can apply directly.
  *
  * Key chain (first configured key wins):
- *   1. ANTHROPIC_API_KEY  → Claude claude-opus-4-5
- *   2. ZHIPUAI_API_KEY    → GLM-4 (OpenAI-compatible, text-only)
+ *   1. ANTHROPIC_API_KEY  → Claude claude-opus-4-5（服务端 env 优先）
+ *   2. provider + apiKey（请求 body，用户 BYOK）→ 该平台文本模型；智谱可回退
+ *      .env.local 的 ZHIPUAI_API_KEY（老用户零配置仍可用）。
  *
- * Neither key requires user input — both are set in .env.local on the server.
+ * provider 决定 endpoint / 文本模型，见 aiProviders 注册表。密钥只存浏览器本地，
+ * 随请求转发，不落服务端、不回显。
  */
 import { NextRequest, NextResponse } from "next/server";
+import { getAiProvider } from "@/lib/aiProviders";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
 const ZHIPUAI_API_KEY   = process.env.ZHIPUAI_API_KEY;
-const ZHIPUAI_API_URL   = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
 // ─── Shared system prompt ────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are an expert Chinese residential architect AI.
@@ -88,10 +90,14 @@ function parseJSON(raw: string): unknown {
 export async function POST(req: NextRequest) {
   let description = "";
   let floors = 0;
+  let apiKey = "";
+  let providerId = "";
   try {
     const body = await req.json();
     description = (body.description ?? "").trim();
     floors = Number(body.floors) || 0;
+    apiKey = (body.apiKey ?? "").trim();
+    providerId = body.provider ?? "";
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
@@ -100,10 +106,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "description is required" }, { status: 400 });
   }
 
-  if (!ANTHROPIC_API_KEY && !ZHIPUAI_API_KEY) {
+  const provider = getAiProvider(providerId);
+  // BYOK 优先：用户弹窗自带的 key > 服务端 env 兜底（仅智谱有兜底）
+  const envFallback = provider.id === "zhipu" ? (ZHIPUAI_API_KEY ?? "") : "";
+  const providerKey = apiKey || envFallback;
+
+  if (!ANTHROPIC_API_KEY && !providerKey) {
     return NextResponse.json(
-      { error: "No AI key configured. Add ANTHROPIC_API_KEY or ZHIPUAI_API_KEY to .env.local" },
-      { status: 500 }
+      { error: "no_key", message: "尚未配置大模型 API Key —— 在弹窗里选平台并填入即可（密钥只存你本机）" },
+      { status: 401 }
     );
   }
 
@@ -146,17 +157,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── 2. Fallback: ZhipuAI GLM-4 ──────────────────────────────────────────
-  if (ZHIPUAI_API_KEY) {
+  // ── 2. Fallback: 所选平台文本模型（OpenAI 兼容） ─────────────────────────
+  if (providerKey) {
     try {
-      const res = await fetch(ZHIPUAI_API_URL, {
+      const res = await fetch(provider.endpoint, {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "Authorization": `Bearer ${ZHIPUAI_API_KEY}`,
+          "Authorization": `Bearer ${providerKey}`,
         },
         body: JSON.stringify({
-          model: "glm-4",
+          model: provider.textModel,
           max_tokens: 2000,
           temperature: 0.2,
           messages: [

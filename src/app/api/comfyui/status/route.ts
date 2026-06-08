@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const COMFYUI = "http://localhost:8188";
+// 后端地址由查询参数 baseUrl 指定（选中的通用 ComfyUI 后端），缺省退回本地。
+function resolveBase(baseUrl: string | null): string {
+  return baseUrl && baseUrl.trim() ? baseUrl.replace(/\/$/, "") : "http://localhost:8188";
+}
 
 interface ComfyImage {
   filename: string;
@@ -30,6 +33,7 @@ export async function GET(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "missing_id" }, { status: 400 });
   }
+  const COMFYUI = resolveBase(req.nextUrl.searchParams.get("baseUrl"));
 
   try {
     const res = await fetch(`${COMFYUI}/history/${id}`, {

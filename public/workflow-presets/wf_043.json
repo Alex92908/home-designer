@@ -1,0 +1,533 @@
+{
+  "id": "0e640800-744f-4f90-9eb9-0abbdd2ef13b",
+  "revision": 0,
+  "last_node_id": 34,
+  "last_link_id": 37,
+  "nodes": [
+    {
+      "id": 28,
+      "type": "PrimitiveNode",
+      "pos": [
+        -906.858642578125,
+        197.57925415039062
+      ],
+      "size": [
+        210,
+        106
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "COMBO",
+          "type": "COMBO",
+          "widget": {
+            "name": "resolution"
+          },
+          "links": [
+            37
+          ]
+        }
+      ],
+      "properties": {
+        "Run widget replace on values": false,
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "2k",
+        "fixed",
+        ""
+      ]
+    },
+    {
+      "id": 4,
+      "type": "SaveImage",
+      "pos": [
+        558.093505859375,
+        223.81712341308594
+      ],
+      "size": [
+        581.7047729492188,
+        545.78955078125
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 34
+        },
+        {
+          "label": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "label": "image_urls",
+          "name": "image_urls",
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SaveImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 29,
+      "type": "PrimitiveNode",
+      "pos": [
+        -908.7422485351562,
+        423.1744689941406
+      ],
+      "size": [
+        210,
+        106
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "COMBO",
+          "type": "COMBO",
+          "widget": {
+            "name": "aspectRatio"
+          },
+          "links": [
+            36
+          ]
+        }
+      ],
+      "properties": {
+        "Run widget replace on values": false,
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "auto",
+        "fixed",
+        ""
+      ]
+    },
+    {
+      "id": 18,
+      "type": "CR Prompt Text",
+      "pos": [
+        -618.7067260742188,
+        204.62660217285156
+      ],
+      "size": [
+        375.1998291015625,
+        472.714111328125
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "label": "提示词文本",
+          "name": "prompt",
+          "type": "STRING",
+          "links": [
+            35
+          ]
+        },
+        {
+          "label": "show_help",
+          "name": "show_help",
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CR Prompt Text",
+        "cnr_id": "comfyroll",
+        "ver": "d78b780ae43fcf8c6b7c6505e6ffb4584281ceca",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        },
+        "widget_ue_connectable": {},
+        "ttNbgOverride": {
+          "bgcolor": "#533",
+          "groupcolor": "#A88",
+          "color": "#322"
+        }
+      },
+      "widgets_values": [
+        "画一个护肤品展会特装展台（展位）、A1展板，风简约科技感，需要有流动的参数化木构架作为龙骨结构，表皮polycarbonate，完成该A1竖向展板的建筑设计方案，图纸需要夜景渲染图，展板在深灰色（偏冷调的中性灰）。设计说明用中文，展板需要配合画出场地分析图，材料分析，平面图，立面图，剖面图，功能分析，轴测图等。"
+      ],
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 34,
+      "type": "RH_Nano_Banana2_Gemini31Flash",
+      "pos": [
+        -25.405738830566406,
+        431.1160583496094
+      ],
+      "size": [
+        460.7135925292969,
+        596.0725708007812
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "images",
+          "name": "images",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image1",
+          "name": "image1",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image2",
+          "name": "image2",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image3",
+          "name": "image3",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image4",
+          "name": "image4",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image5",
+          "name": "image5",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image6",
+          "name": "image6",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image7",
+          "name": "image7",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image8",
+          "name": "image8",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "image9",
+          "name": "image9",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "label": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": 35
+        },
+        {
+          "label": "aspectRatio",
+          "name": "aspectRatio",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "aspectRatio"
+          },
+          "link": 36
+        },
+        {
+          "label": "resolution",
+          "name": "resolution",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "resolution"
+          },
+          "link": 37
+        }
+      ],
+      "outputs": [
+        {
+          "label": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            33,
+            34
+          ]
+        },
+        {
+          "label": "image_url",
+          "name": "image_url",
+          "type": "STRING"
+        },
+        {
+          "label": "response",
+          "name": "response",
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "widget_ue_connectable": {},
+        "Node name for S&R": "RH_Nano_Banana2_Gemini31Flash"
+      },
+      "widgets_values": [
+        "",
+        2053078891,
+        "randomize",
+        "auto",
+        "2k",
+        false,
+        "Third-party"
+      ]
+    },
+    {
+      "id": 27,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        -171.27047729492188,
+        230.7945098876953
+      ],
+      "size": [
+        682.860107421875,
+        549.9947509765625
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "label": "图像_A",
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 33
+        },
+        {
+          "dir": 3,
+          "label": "图像_B",
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "label": "image_urls",
+          "name": "image_urls",
+          "shape": 3,
+          "type": "STRING"
+        }
+      ],
+      "properties": {
+        "comparer_mode": "Slide",
+        "widget_ue_connectable": {},
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "enableTabs": false,
+        "secondTabOffset": 80,
+        "tabWidth": 65,
+        "secondTabWidth": 65,
+        "tabXOffset": 10
+      },
+      "widgets_values": [
+        [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/view?filename=rgthree.compare._temp_jyfqn_00001_qylcp_1774932378.jpg&type=temp&subfolder=&rand=0.06317727866557421&Rh-Comfy-Auth=eyJ1c2VySWQiOiI0NDIwOTYzOTdkYjM4NWU0ZmM1MGRkNWQzMmEzMDZlMSIsInNpZ25FeHBpcmUiOjE3NzU1MzY2NTA2NTksInRzIjoxNzc0OTMxODUwNjU5LCJzaWduIjoiNzUzMmQyZWNmZWNlODdhZDE3YzczMGUwOWM5NGUzYWEifQ==&Rh-Identify=442096397db385e4fc50dd5d32a306e1"
+          }
+        ]
+      ]
+    }
+  ],
+  "links": [
+    [
+      33,
+      34,
+      0,
+      27,
+      0,
+      "IMAGE"
+    ],
+    [
+      34,
+      34,
+      0,
+      4,
+      0,
+      "IMAGE"
+    ],
+    [
+      35,
+      18,
+      0,
+      34,
+      10,
+      "STRING"
+    ],
+    [
+      36,
+      29,
+      0,
+      34,
+      11,
+      "COMBO"
+    ],
+    [
+      37,
+      28,
+      0,
+      34,
+      12,
+      "COMBO"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 2,
+      "title": "输入文字",
+      "bounding": [
+        -645.3091430664062,
+        127.5551528930664,
+        430.9888610839844,
+        568.6527709960938
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 3,
+      "title": "结果图",
+      "bounding": [
+        -197.52554321289062,
+        129.7606964111328,
+        1405.8157958984375,
+        701.0150146484375
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 5,
+      "title": "香蕉文生图",
+      "bounding": [
+        -682.7706298828125,
+        -33.7386474609375,
+        650.4931030273438,
+        102.07719421386719
+      ],
+      "color": "#3f789e",
+      "font_size": 80,
+      "flags": {}
+    },
+    {
+      "id": 6,
+      "title": "图片大小",
+      "bounding": [
+        -916.858642578125,
+        123.97928619384766,
+        230,
+        189.6000213623047
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 7,
+      "title": "图片比例",
+      "bounding": [
+        -918.7422485351562,
+        349.574462890625,
+        230,
+        189.60000610351562
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "links_added_by_ue": [],
+    "VHS_KeepIntermediate": true,
+    "ue_links": [],
+    "VHS_MetadataImage": true,
+    "0246.VERSION": [
+      0,
+      0,
+      4
+    ],
+    "VHS_latentpreviewrate": 0,
+    "frontendVersion": "1.23.0",
+    "VHS_latentpreview": false,
+    "ds": {
+      "scale": 0.7247295000000004,
+      "offset": [
+        1308.00792455439,
+        182.85658690317894
+      ]
+    }
+  },
+  "version": 0.4
+}

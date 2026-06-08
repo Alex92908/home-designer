@@ -9,6 +9,9 @@ import { useT, useLocale } from "@/lib/i18n";
 import { FLOORPLAN_LAYOUTS, type FloorplanLayout } from "@/lib/floorplanLayouts";
 import { PROJECT_TEMPLATES } from "@/lib/projectTemplates";
 import { getLayoutNameEn } from "@/locales/itemNames";
+import { getAiKey, setAiKey, getSelectedProvider, setSelectedProvider } from "@/lib/aiKeys";
+import { AiProviderId } from "@/lib/aiProviders";
+import ApiKeyPromptModal from "./ApiKeyPromptModal";
 
 function localizeLayoutName(layout: FloorplanLayout, locale: string): string {
   if (locale === "en") return getLayoutNameEn(layout.id) ?? layout.name;
@@ -404,13 +407,29 @@ export default function FloorPlanAll() {
   const [layoutPickerOpen, setLayoutPickerOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
+  // BYOK key 弹窗：存「拿到 平台+key 后要继续干什么」的回调，AI 解析 / 文生设计共用
+  const [keyPrompt, setKeyPrompt] = useState<{ run: (provider: AiProviderId, key: string) => void } | null>(null);
+  // 选中平台有 key 就直接跑，没有就弹窗让用户选平台 + 填 key，填好后再跑
+  const ensureAiKey = (run: (provider: AiProviderId, key: string) => void) => {
+    const provider = getSelectedProvider();
+    const key = getAiKey(provider);
+    if (key) run(provider, key);
+    else setKeyPrompt({ run });
+  };
   // AI text-to-design
   const [aiInput, setAiInput]       = useState("");
   const [aiLoading, setAiLoading]   = useState(false);
   const [aiError, setAiError]       = useState<string | null>(null);
   const [aiSummary, setAiSummary]   = useState<string | null>(null);
 
-  async function handleAiGenerate() {
+  /** 点「✨ AI 生成」：没填智谱 key 先弹窗，否则直接生成 */
+  function handleAiGenerate() {
+    if (!aiInput.trim()) return;
+    ensureAiKey((provider, key) => void doAiGenerate(provider, key));
+  }
+
+  /** 实际文生设计：平台 + key 随请求 BYOK 传递 */
+  async function doAiGenerate(provider: AiProviderId, key: string) {
     const desc = aiInput.trim();
     if (!desc) return;
     setAiLoading(true);
@@ -420,10 +439,16 @@ export default function FloorPlanAll() {
       const res = await fetch("/api/ai-design", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ description: desc }),
+        body: JSON.stringify({ description: desc, provider, apiKey: key }),
       });
       const data = await res.json();
       if (!res.ok || data.error) {
+        // 401 = key 缺失/失效：清掉该平台本地 key 并重新弹窗
+        if (res.status === 401) {
+          setAiKey(provider, "");
+          setKeyPrompt({ run: (p, k) => void doAiGenerate(p, k) });
+          return;
+        }
         setAiError(data.error ?? "AI 生成失败，请重试");
         return;
       }
@@ -493,8 +518,14 @@ export default function FloorPlanAll() {
     影院:    ["cinema"],
   };
 
-  /** 点「✨ AI 解析」：调服务端路由 → GLM-4V-Flash → 批量建房 */
-  const runAnalyze = async () => {
+  /** 点「✨ AI 解析」：没填智谱 key 先弹窗，否则直接解析 */
+  const runAnalyze = () => {
+    if (!blueprint.image) return;
+    ensureAiKey((provider, key) => void doAnalyze(provider, key));
+  };
+
+  /** 实际解析：调服务端路由 → 所选平台视觉模型 → 批量建房（平台+key 随请求 BYOK 传递） */
+  const doAnalyze = async (provider: AiProviderId, key: string) => {
     if (!blueprint.image) return;
     setAnalyzing(true);
     setAnalyzeMsg(null);
@@ -502,10 +533,16 @@ export default function FloorPlanAll() {
       const res = await fetch("/api/analyze-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: blueprint.image }),
+        body: JSON.stringify({ image: blueprint.image, provider, apiKey: key }),
       });
       const data = await res.json();
       if (!res.ok) {
+        // 401 = key 缺失/失效：清掉该平台本地 key 并重新弹窗让用户填
+        if (res.status === 401) {
+          setAiKey(provider, "");
+          setKeyPrompt({ run: (p, k) => void doAnalyze(p, k) });
+          return;
+        }
         const msg = data.message || data.error || t.fpRecognizeFailed;
         setAnalyzeMsg(`❌ ${msg}`);
         return;
@@ -922,6 +959,20 @@ export default function FloorPlanAll() {
             </div>
           </div>
         )}
+
+        {/* BYOK 大模型 key 弹窗：AI 解析 / 文生设计共用，没填 key 时弹出，填好后跑挂起的动作 */}
+        {keyPrompt && <ApiKeyPromptModal
+          initialProvider={getSelectedProvider()}
+          getSavedKey={getAiKey}
+          onSave={(provider, k) => {
+            setAiKey(provider, k);
+            setSelectedProvider(provider);
+            const run = keyPrompt.run;
+            setKeyPrompt(null);
+            run(provider, k);
+          }}
+          onClose={() => setKeyPrompt(null)}
+        />}
 
         {/* AI analyze result / error */}
         {analyzeMsg && (
@@ -1601,8 +1652,9 @@ export default function FloorPlanAll() {
           </svg>
           </div>
 
-          {/* Zoom controls — floating bottom-right of canvas, mirrors FloorPlan */}
-          <div className="absolute bottom-3 right-3 flex items-center rounded-xl shadow-md bg-white border border-gray-200 overflow-hidden">
+          {/* Zoom controls — floating bottom-right, 抬到 AI 渲染 FAB（bottom-4 right-4）上方避免重叠，
+              与 HouseCanvas 的缩放列同一约定（让出右下角给全局 AI 入口）。 */}
+          <div className="absolute bottom-16 right-3 flex items-center rounded-xl shadow-md bg-white border border-gray-200 overflow-hidden">
             <button onClick={() => setZoomLevel(p => Math.max(0.3, p * 0.8))}
               className="px-2 py-1 text-gray-500 hover:text-gray-800 hover:bg-gray-50 text-sm font-bold"
               style={{ minWidth: 28 }}>−</button>

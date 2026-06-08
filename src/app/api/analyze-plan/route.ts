@@ -2,17 +2,19 @@
  * POST /api/analyze-plan
  * Body: { image: data:image/…;base64,… }
  *
- * Forwards the image to 智谱 GLM-4V-Flash (free tier, OpenAI-compatible
+ * Forwards the image to the chosen platform's vision model (OpenAI-compatible
  * schema) with a strict prompt that asks for a JSON array of rooms.
  *
  * Returns { rooms: Array<{ name, bbox:[x,y,w,h], shape }>, raw? }.
  *
- * Env: ZHIPUAI_API_KEY must be set in .env.local.
+ * 密钥来源（BYOK 优先）：请求 body 里的 provider + apiKey（用户弹窗自带，存浏览器
+ * 本地，不落服务端）；provider 决定 endpoint / 视觉模型，见 aiProviders 注册表。
+ * 智谱可回退 .env.local 的 ZHIPUAI_API_KEY（老用户零配置仍可用）。
  */
 import { NextResponse } from "next/server";
+import { getAiProvider } from "@/lib/aiProviders";
 
 const ZHIPU_KEY = process.env.ZHIPUAI_API_KEY ?? "";
-const ENDPOINT  = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
 const SYSTEM_PROMPT = `你是建筑户型图分析专家。识别图中每一个独立房间区域，返回严格的 JSON 数组。
 
@@ -32,30 +34,35 @@ const SYSTEM_PROMPT = `你是建筑户型图分析专家。识别图中每一个
 [{"name":"客厅","bbox":[120,240,600,480],"shape":"rect"},{"name":"主卧","bbox":[720,0,400,320],"shape":"rect"}]`;
 
 export async function POST(req: Request) {
-  if (!ZHIPU_KEY) {
-    return NextResponse.json(
-      { error: "no_key", message: "ZHIPUAI_API_KEY 未配置（在项目根目录 .env.local 里加一行 ZHIPUAI_API_KEY=xxx）" },
-      { status: 500 },
-    );
-  }
-  let body: { image?: string };
+  let body: { image?: string; apiKey?: string; provider?: string };
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "invalid_body" }, { status: 400 }); }
-  const { image } = body;
+  const { image, apiKey, provider: providerId } = body;
+
+  const provider = getAiProvider(providerId);
+  // BYOK 优先：用户弹窗自带的 key > 服务端 env 兜底（仅智谱有兜底）
+  const envFallback = provider.id === "zhipu" ? ZHIPU_KEY : "";
+  const key = apiKey?.trim() || envFallback;
+  if (!key) {
+    return NextResponse.json(
+      { error: "no_key", message: "尚未配置大模型 API Key —— 点击「AI 解析」后在弹窗里选平台并填入即可（密钥只存你本机）" },
+      { status: 401 },
+    );
+  }
   if (!image || !image.startsWith("data:")) {
     return NextResponse.json({ error: "image_required" }, { status: 400 });
   }
 
   let upstream: Response;
   try {
-    upstream = await fetch(ENDPOINT, {
+    upstream = await fetch(provider.endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${ZHIPU_KEY}`,
+        "Authorization": `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: "glm-4v-flash",
+        model: provider.visionModel,
         messages: [{
           role: "user",
           content: [

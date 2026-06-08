@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useDesignerStore } from "@/lib/store";
 import type { RoofStyle, WallMaterialType, WallSide, WallZone } from "@/lib/types";
 import { useT } from "@/lib/i18n";
-import CloudRenderButton from "./CloudRenderButton";
 import DesignVariants from "./DesignVariants";
 import { PROJECT_TEMPLATES } from "@/lib/projectTemplates";
 import { EXTERIOR_PRESETS } from "@/lib/exteriorPresets";
@@ -1354,14 +1353,7 @@ export default function ExteriorPanel() {
         {/* ── 设计变体生成 ── */}
         <DesignVariants />
 
-        {/* ── 云端AI渲染 ── */}
-        <div className="px-3 pt-4 pb-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">云端 AI 渲染</div>
-          <CloudRenderButton />
-          <div className="text-[9px] text-gray-400 mt-2 leading-relaxed">
-            无需本地模型。点击选择工作流后，提示词自动复制，RunningHub 云端页面在新标签页打开。
-          </div>
-        </div>
+        {/* 云端 AI 渲染入口已统一到右下角「✨ AI 渲染」分层菜单（⚡一键 / 🎨选预设 / ✨生成式精修）。 */}
 
       </div>
     </aside>

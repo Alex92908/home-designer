@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateControlNetWorkflow, generateMultiViewControlNetWorkflow, generateTxt2ImgWorkflow, generateMultiControlNetWorkflow, generateIPAdapterChainWorkflow, generateHiResWorkflow } from "@/lib/comfyWorkflow";
 import { generateRoomPrompt, type RoomPromptInput, type GeneratedPrompt } from "@/lib/roomPrompt";
 
-const COMFYUI = "http://localhost:8188";
+// 后端基地址由客户端按需传入（BYOK，与 /api/airender 一致）：选中的通用 ComfyUI
+// 后端（本地 / 自建）。缺省退回本地，保持老用户零配置可用。
+function resolveBase(baseUrl?: string): string {
+  return baseUrl && baseUrl.trim() ? baseUrl.replace(/\/$/, "") : "http://localhost:8188";
+}
 
 const DEFAULT_PROMPT = {
   roomType: "living room",
@@ -26,7 +30,7 @@ const DEFAULT_PROMPT = {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { screenshot, screenshots, referenceImage, referenceImages, seed, roomData, mode = "controlnet", model, ipAdapterWeight } = await req.json() as {
+    const { screenshot, screenshots, referenceImage, referenceImages, seed, roomData, mode = "controlnet", model, ipAdapterWeight, baseUrl } = await req.json() as {
       screenshot?: string;
       screenshots?: string[];     // multi-view: array of data URLs
       referenceImage?: string;    // ipadapter-chain: single previous render (legacy)
@@ -39,7 +43,9 @@ export async function POST(req: NextRequest) {
       mode?: "controlnet" | "txt2img" | "multicontrolnet" | "ipadapter-chain" | "hires4k";
       model?: string;             // SD checkpoint filename (must exist in ComfyUI/models/checkpoints/)
       ipAdapterWeight?: number;   // 0.3–1.0 style reference strength for ipadapter-chain
+      baseUrl?: string;           // 选中的通用 ComfyUI 后端地址（缺省本地 8188）
     };
+    const COMFYUI = resolveBase(baseUrl);
     // Workflow opts shared across all modes
     const workflowOpts = {
       ...(model            ? { model }                         : {}),

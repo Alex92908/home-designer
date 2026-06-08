@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAiProvider } from "@/lib/aiProviders";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
-// ZhipuAI (智谱) GLM-4V — used when Anthropic key is not configured
+// 智谱 env 兜底（老用户零配置）；其余平台一律走 BYOK，endpoint/模型见 aiProviders
 const ZHIPUAI_API_KEY = process.env.ZHIPUAI_API_KEY;
-const ZHIPUAI_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
 interface AnalysisResult {
   preset: "modern" | "contemporary" | "mediterranean" | "industrial" | "minimalist";
@@ -39,15 +39,22 @@ const FALLBACK: AnalysisResult = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { image } = await req.json() as { image: string };
+    const { image, apiKey, provider: providerId } = await req.json() as { image: string; apiKey?: string; provider?: string };
 
     if (!image) {
       return NextResponse.json({ error: "missing_image" }, { status: 400 });
     }
 
-    if (!ANTHROPIC_API_KEY && !ZHIPUAI_API_KEY) {
-      console.warn("No vision API key configured — returning fallback");
-      return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
+    const provider = getAiProvider(providerId);
+    // BYOK 优先：用户弹窗自带的 key > 服务端 env 兜底（仅智谱有兜底）
+    const envFallback = provider.id === "zhipu" ? ZHIPUAI_API_KEY : undefined;
+    const providerKey = (apiKey ?? "").trim() || envFallback;
+
+    if (!ANTHROPIC_API_KEY && !providerKey) {
+      return NextResponse.json(
+        { error: "no_key", message: "尚未配置大模型 API Key —— 在弹窗里选平台并填入即可（密钥只存你本机）" },
+        { status: 401 },
+      );
     }
 
     // Extract base64 data from data URL
@@ -106,8 +113,8 @@ Be precise about colors — extract the actual dominant colors you see. Output O
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Anthropic API error:", response.status, errorText);
-        // Fall through to ZhipuAI if key is also available, otherwise return fallback
-        if (!ZHIPUAI_API_KEY) {
+        // Fall through to BYOK provider if a key is available, otherwise return fallback
+        if (!providerKey) {
           return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
         }
       } else {
@@ -120,16 +127,16 @@ Be precise about colors — extract the actual dominant colors you see. Output O
       }
     }
 
-    // ── ZhipuAI GLM-4V (fallback / primary when Anthropic not set) ───────
+    // ── BYOK 平台视觉模型（fallback / primary when Anthropic not set，OpenAI 兼容） ──
     {
-      const zhipuResponse = await fetch(ZHIPUAI_API_URL, {
+      const zhipuResponse = await fetch(provider.endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${ZHIPUAI_API_KEY}`,
+          "Authorization": `Bearer ${providerKey}`,
         },
         body: JSON.stringify({
-          model: "glm-4v",
+          model: provider.visionModel,
           messages: [{
             role: "user",
             content: [
@@ -144,7 +151,7 @@ Be precise about colors — extract the actual dominant colors you see. Output O
 
       if (!zhipuResponse.ok) {
         const errorText = await zhipuResponse.text();
-        console.error("ZhipuAI API error:", zhipuResponse.status, errorText);
+        console.error("Vision provider API error:", zhipuResponse.status, errorText);
         return NextResponse.json({ error: "analysis_failed", fallback: true, ...FALLBACK });
       }
 

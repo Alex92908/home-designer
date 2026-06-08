@@ -244,8 +244,6 @@ export default function TopBar() {
   const roomIcon     = roomMeta?.icon ?? roomDef?.icon ?? "🏠";
 
   const openExport   = () => window.dispatchEvent(new Event("openExport"));
-  const openAiRender = () => window.dispatchEvent(new Event("openAiRender"));
-  const openImport   = () => window.dispatchEvent(new Event("openImport"));
 
   return (
     <header
@@ -433,27 +431,7 @@ export default function TopBar() {
           {t.autoSaved}
         </div>
 
-        {/* Import reference photo */}
-        <button
-          onClick={openImport}
-          className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
-          style={{
-            border: "1px dashed #6366f1",
-            color: "#4f46e5",
-            background: "#eef2ff",
-          }}
-          title="上传参考图，AI 自动识别建筑风格">
-          📷 <span className="hidden md:inline">导入参考图</span>
-        </button>
-
-        {/* AI render */}
-        <button
-          onClick={openAiRender}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all"
-          style={{ background: "linear-gradient(135deg,#6366f1,#818cf8)" }}
-          title="AI 渲染效果图">
-          🎨 <span className="hidden md:inline">AI 渲染</span>
-        </button>
+        {/* AI 渲染 + 导入参考图入口已统一到右下角「✨ AI 渲染」分层菜单（⚡一键 / 🎨选预设 / ✨生成式精修 / 📷导入参考图）。 */}
 
         <button onClick={openExport} className="ds-btn-primary flex items-center gap-1.5">
           <span>📄</span>

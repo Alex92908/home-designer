@@ -3,6 +3,9 @@
 import { useCallback, useRef, useState } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { ExteriorSettings } from "@/lib/types";
+import { getAiKey, setAiKey, getSelectedProvider, setSelectedProvider } from "@/lib/aiKeys";
+import { AiProviderId } from "@/lib/aiProviders";
+import ApiKeyPromptModal from "./ApiKeyPromptModal";
 
 interface Props {
   open: boolean;
@@ -39,6 +42,15 @@ export default function ImageImportModal({ open, onClose }: Props) {
   const [toast,    setToast]    = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  // BYOK：缺密钥时挂起待执行的解析回调，弹窗选平台填完再跑（与户型 AI 解析共用一套）
+  const [keyPrompt, setKeyPrompt] = useState<{ run: (provider: AiProviderId, key: string) => void } | null>(null);
+
+  const ensureAiKey = (run: (provider: AiProviderId, key: string) => void) => {
+    const provider = getSelectedProvider();
+    const key = getAiKey(provider);
+    if (key) run(provider, key);
+    else setKeyPrompt({ run });
+  };
 
   // Editable fields (populated from analysis result)
   const [preset,             setPreset]             = useState("modern");
@@ -75,6 +87,13 @@ export default function ImageImportModal({ open, onClose }: Props) {
     });
 
     setImageUrl(dataUrl);
+    setAnalyzeError(null);
+
+    // BYOK 网关：选中平台有 key 直接解析，没有则弹窗选平台填 key，填完重试
+    ensureAiKey((provider, key) => void analyzeImage(dataUrl, provider, key));
+  }
+
+  async function analyzeImage(dataUrl: string, provider: AiProviderId, key: string) {
     setPhase("analyzing");
     setAnalyzeError(null);
 
@@ -83,8 +102,17 @@ export default function ImageImportModal({ open, onClose }: Props) {
       const res = await fetch("/api/analyze-exterior", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: dataUrl }),
+        body: JSON.stringify({ image: dataUrl, provider, apiKey: key }),
       });
+
+      // 密钥失效 / 未配置：清掉该平台本地 key，重新弹窗让用户填
+      if (res.status === 401) {
+        setAiKey(provider, "");
+        setPhase("upload");
+        setKeyPrompt({ run: (p, k) => void analyzeImage(dataUrl, p, k) });
+        return;
+      }
+
       const data = await res.json() as AnalysisResult;
 
       setResult(data);
@@ -471,6 +499,21 @@ export default function ImageImportModal({ open, onClose }: Props) {
           </div>
         )}
       </div>
+
+      {keyPrompt && (
+        <ApiKeyPromptModal
+          initialProvider={getSelectedProvider()}
+          getSavedKey={getAiKey}
+          onSave={(provider, k) => {
+            setAiKey(provider, k);
+            setSelectedProvider(provider);
+            const run = keyPrompt.run;
+            setKeyPrompt(null);
+            run(provider, k);
+          }}
+          onClose={() => setKeyPrompt(null)}
+        />
+      )}
     </div>
   );
 }

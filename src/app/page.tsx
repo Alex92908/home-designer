@@ -22,6 +22,7 @@ import RightPanelAll from "@/components/RightPanelAll";
 import ExportModal from "@/components/ExportModal";
 import ShareModal from "@/components/ShareModal";
 import FloorPlan from "@/components/FloorPlan";
+import AiEntryMenu from "@/components/AiEntryMenu";
 import FloorPlanAll, { RoomPanel as FloorPlanAllRoomPanel } from "@/components/FloorPlanAll";
 import YardPlan, { YardPlanLibrary, YardPlanInspector } from "@/components/YardPlan";
 // import OnboardingOverlay from "@/components/OnboardingOverlay";  // TODO: enable when ready
@@ -398,33 +399,13 @@ export default function Home() {
           {isExterior && viewMode === "yard2d" && <YardPlan />}
           {viewMode === "exterior" && <HouseCanvas />}
 
-          {/* AI Render + Import floating buttons — only in 3D/2D/exterior views,
-              hidden in 全局/全局3D/院子 to avoid blocking floor-plan controls */}
-          <div className={`absolute bottom-4 right-4 z-20 flex flex-col gap-2 items-end transition-opacity duration-200 ${isAll || isGlobal3d || isYard2d ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
-            <button
-              onClick={() => setShowImport(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-lg transition-all active:scale-95 hover:scale-105"
-              style={{
-                background: "rgba(255,255,255,0.92)",
-                backdropFilter: "blur(8px)",
-                border: "1px dashed #6366f1",
-                color: "#4f46e5",
-              }}
-              title="从参考图片导入设计风格"
-            >
-              📷 导入参考图
-            </button>
-            <button
-              onClick={() => setShowAiRender(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-lg transition-all active:scale-95 hover:scale-105"
-              style={{
-                background: "linear-gradient(135deg, #6366f1, #818cf8)",
-                backdropFilter: "blur(6px)",
-              }}
-              title={t.aiRenderTitle}
-            >
-              {t.aiRenderBtn}
-            </button>
+          {/* 统一 AI 入口 — 六站全覆盖：单按钮 + 分层菜单（⚡一键 / 🎨选预设 / ✨生成式精修 / 📷导入参考图）。
+              ✨ 与 📷 通过 openAiRender / openImport window 事件触发（与 TopBar 一致）。 */}
+          {/* z-40：要盖过单间平面图右下角的楼层小地图（FloorPlanMinimap z-30）。
+              菜单弹层自身虽是 z-50，但它在本容器的堆叠上下文内，容器若 < 小地图
+              就整体被压下去 → 弹层被小地图挡住。把容器抬到 40 让整棵子树都在上面。 */}
+          <div className="absolute bottom-4 right-4 z-40 flex flex-col gap-2 items-end transition-opacity duration-200 opacity-100">
+            <AiEntryMenu />
           </div>
 
           {/* Front wall + ceiling toggles — both in 3D only */}
