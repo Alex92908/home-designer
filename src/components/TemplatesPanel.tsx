@@ -129,7 +129,7 @@ export default function TemplatesPanel({ onLoaded }: Props) {
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <span className="text-base leading-none">{tpl.emoji}</span>
                       <span className="text-[12px] font-bold truncate" style={{ color: isConfirming ? "#fff" : "var(--ds-text)" }}>
-                        {tpl.name}
+                        {locale === "en" ? tpl.nameEn : tpl.name}
                       </span>
                       <span
                         className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold shrink-0"
@@ -145,7 +145,7 @@ export default function TemplatesPanel({ onLoaded }: Props) {
                     <div className="text-[10px] leading-snug" style={{ color: isConfirming ? "rgba(255,255,255,0.9)" : "var(--ds-text-3)" }}>
                       {isConfirming
                         ? (locale === "en" ? "👆 Tap again to apply!" : "👆 再点一次立即应用！")
-                        : tpl.description}
+                        : (locale === "en" ? tpl.descriptionEn : tpl.description)}
                     </div>
                   </div>
 

@@ -16,8 +16,10 @@ import type { FloorplanLayout } from "./floorplanLayouts";
 export interface ProjectTemplate {
   id: string;
   name: string;
+  nameEn: string;
   emoji: string;
   description: string;
+  descriptionEn: string;
   /** cm² shown in the picker */
   areaSqm: number;
   /** preview palette: [wallColor, roofColor, accentColor] */
@@ -42,8 +44,10 @@ export interface ProjectTemplate {
 const MODERN_POOL_VILLA: ProjectTemplate = {
   id: "modern-pool-villa",
   name: "现代泳池别墅",
+  nameEn: "Modern Pool Villa",
   emoji: "🏊",
   description: "双层 · 平屋顶 · 泳池庭院 · 木格栅立面",
+  descriptionEn: "2 Floors · Flat Roof · Pool Garden · Wood-Slat Facade",
   areaSqm: 230,
   palette: ["#F5F2EC", "#2A2A2A", "#8A6040"],
   styleTemplateId: "luxury",
@@ -227,8 +231,10 @@ const MODERN_POOL_VILLA: ProjectTemplate = {
 const JAPANESE_ZEN_VILLA: ProjectTemplate = {
   id: "japanese-zen-villa",
   name: "日式禅意庭院",
+  nameEn: "Japanese Zen Courtyard",
   emoji: "⛩️",
   description: "双层 · 中式飞檐 · 枯山水 · 竹林围合",
+  descriptionEn: "2 Floors · Flying Eaves · Dry Garden · Bamboo Grove",
   areaSqm: 180,
   palette: ["#F0EDE8", "#181818", "#5A4030"],
   styleTemplateId: "japanese",
@@ -373,8 +379,10 @@ const JAPANESE_ZEN_VILLA: ProjectTemplate = {
 const MEDITERRANEAN_VILLA: ProjectTemplate = {
   id: "mediterranean-villa",
   name: "地中海庭院别墅",
+  nameEn: "Mediterranean Courtyard Villa",
   emoji: "🏛️",
   description: "双层 · 四坡顶 · 内庭院 · 橙树花园",
+  descriptionEn: "2 Floors · Hip Roof · Inner Courtyard · Orange-Tree Garden",
   areaSqm: 200,
   palette: ["#FFF8E8", "#B83820", "#9B6B3A"],
   styleTemplateId: "stone-villa",
@@ -531,8 +539,10 @@ function glassFloors(n: number, withDoor: boolean[] = []) {
 const GLASS_CURTAIN_VILLA: ProjectTemplate = {
   id: "glass-curtain-villa",
   name: "现代玻璃幕墙别墅",
+  nameEn: "Modern Glass-Curtain Villa",
   emoji: "🏢",
   description: "双层 · 平屋顶 · 全玻璃幕墙 · 泳池+棕榈庭院",
+  descriptionEn: "2 Floors · Flat Roof · Full Glass Curtain · Pool + Palm Garden",
   areaSqm: 280,
   palette: ["#F2EFE8", "#1A1A1A", "#CBE8F5"],
   styleTemplateId: "modern-villa",
@@ -716,8 +726,10 @@ const GLASS_CURTAIN_VILLA: ProjectTemplate = {
 const LUXURY_3F_GLASS_VILLA: ProjectTemplate = {
   id: "luxury-3f-glass-villa",
   name: "豪华三层玻璃别墅",
+  nameEn: "Luxury 3-Floor Glass Villa",
   emoji: "🏙️",
   description: "三层 · 落地玻璃幕墙 · 泳池庭院 · 开放式布局",
+  descriptionEn: "3 Floors · Floor-to-Ceiling Glass · Pool Garden · Open Layout",
   areaSqm: 320,
   palette: ["#F2EFE8", "#1A1A1A", "#CBE8F5"],
   styleTemplateId: "modern-villa",
@@ -919,8 +931,10 @@ const LUXURY_3F_GLASS_VILLA: ProjectTemplate = {
 const WOOD_ACCENT_POOL_VILLA: ProjectTemplate = {
   id: "wood-accent-pool-villa",
   name: "木饰面泳池别墅",
+  nameEn: "Wood-Veneer Pool Villa",
   emoji: "🏡",
   description: "双层 · 白墙核桃木顶 · 落地玻璃 · 前院石板泳池",
+  descriptionEn: "2 Floors · White Walls & Walnut Ceiling · Glass Walls · Front-Yard Slate Pool",
   areaSqm: 280,
   palette: ["#EDE9E3", "#1C1814", "#8A5E38"],
   styleTemplateId: "walnut-villa",
