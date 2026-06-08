@@ -249,6 +249,8 @@ export const zh = {
     study: "书房", study2: "书房2", closet: "衣帽间", balcony: "阳台", balcony2: "阳台2",
     yard: "院子", garage: "车库", gym: "健身房", cinema: "影音室",
     custom1: "自定义1", custom2: "自定义2", custom3: "自定义3", custom4: "自定义4", custom5: "自定义5",
+    stair: "楼梯间", hallway: "走廊", pool: "泳池", terrace: "露台", deck: "木栈台",
+    pergola: "凉亭", equipment_room: "设备间",
   } as Record<string, string>,
 
   // ── ShareModal ───────────────────────────────────────────

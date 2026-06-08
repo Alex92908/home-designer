@@ -283,8 +283,9 @@ export const en: Translations = {
     study: "Study", study2: "Study 2", closet: "Walk-in Closet", balcony: "Balcony", balcony2: "Balcony 2",
     yard: "Yard", garage: "Garage", gym: "Gym", cinema: "Home Cinema",
     custom1: "Custom 1", custom2: "Custom 2", custom3: "Custom 3", custom4: "Custom 4", custom5: "Custom 5",
+    stair: "Stairwell", hallway: "Hallway", pool: "Pool", terrace: "Terrace", deck: "Deck",
     pergola: "Pergola", equipment_room: "Equipment Room",
-  },
+  } as Record<string, string>,
 
   // ── LeftPanel wall target picker ─────────────────────────
   wallTargetLabel: "🪟 Walls",
