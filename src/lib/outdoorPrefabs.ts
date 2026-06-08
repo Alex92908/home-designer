@@ -90,8 +90,12 @@ export interface PrefabDef<P extends PrefabParams = PrefabParams> {
   kind: PrefabKind;
   /** UI label (zh). */
   label: string;
+  /** UI label (en). */
+  labelEn: string;
   /** Short description (tooltip). */
   desc: string;
+  /** Short description (tooltip, en). */
+  descEn: string;
   /** Single-character tag for the 2D plan glyph (≤ 4 chars). */
   glyphTag: string;
   /** Bounding-box footprint in cm — used for the 2D dashed envelope and
@@ -107,7 +111,9 @@ export const PREFAB_REGISTRY: PrefabDef[] = [
   {
     kind: "social_island",
     label: "社交岛",
+    labelEn: "Social Island",
     desc: "下沉卡座 + 篝火 + 岛台 — 紧邻建筑，社交闭环",
+    descEn: "Sunken seating + fire pit + island counter — adjacent, social loop",
     glyphTag: "SOC",
     defaultFootprintCm: { w: 600, d: 400 },
     defaultParams: {
@@ -121,7 +127,9 @@ export const PREFAB_REGISTRY: PrefabDef[] = [
   {
     kind: "farm_box",
     label: "抬高床菜园",
+    labelEn: "Raised-Bed Garden",
     desc: "木质抬高床 + 草本 / 蔬菜 — 可食景观",
+    descEn: "Wooden raised beds + herbs / vegetables — edible landscape",
     glyphTag: "AGR",
     defaultFootprintCm: { w: 500, d: 300 },
     defaultParams: {
@@ -135,7 +143,9 @@ export const PREFAB_REGISTRY: PrefabDef[] = [
   {
     kind: "porte_cochere",
     label: "入户挑檐",
+    labelEn: "Porte-Cochère",
     desc: "RC 板挑檐 + 隐形车位 — 摒弃独立车棚",
+    descEn: "RC canopy + hidden parking — replaces standalone carport",
     glyphTag: "PCH",
     defaultFootprintCm: { w: 600, d: 400 },
     defaultParams: {
@@ -148,7 +158,9 @@ export const PREFAB_REGISTRY: PrefabDef[] = [
   {
     kind: "slat_wall",
     label: "格栅景墙",
+    labelEn: "Slat Feature Wall",
     desc: "竖向木格栅 + 后置混凝土 — 虚实结合",
+    descEn: "Vertical wood slats + concrete backing — solid-void interplay",
     glyphTag: "WAL",
     defaultFootprintCm: { w: 600, d: 30 },
     defaultParams: {
@@ -167,7 +179,9 @@ export const PREFAB_REGISTRY: PrefabDef[] = [
   {
     kind: "pool",
     label: "无边泳池",
+    labelEn: "Infinity Pool",
     desc: "Travertine 露台 + 无边瀑布 + 按摩浴 + 4 张躺椅 + 池畔小屋",
+    descEn: "Travertine deck + infinity edge + spa + 4 loungers + poolside cabana",
     glyphTag: "POOL",
     defaultFootprintCm: { w: 1200, d: 1100 },
     defaultParams: {},
@@ -176,7 +190,9 @@ export const PREFAB_REGISTRY: PrefabDef[] = [
   {
     kind: "pergola_classic",
     label: "凉亭餐区",
+    labelEn: "Pergola Dining",
     desc: "钢铝格栅顶 + 暗色框架 + 整套餐桌 6 椅",
+    descEn: "Steel-aluminum louvered roof + dark frame + full dining set for 6",
     glyphTag: "PRG",
     defaultFootprintCm: { w: 530, d: 430 },
     defaultParams: {},
@@ -185,7 +201,9 @@ export const PREFAB_REGISTRY: PrefabDef[] = [
   {
     kind: "outdoor_kitchen",
     label: "户外厨房",
+    labelEn: "Outdoor Kitchen",
     desc: "L 型岛台 + 嵌入式烧烤炉 + 顶部小型 pergola",
+    descEn: "L-shaped island + built-in grill + small pergola overhead",
     glyphTag: "BBQ",
     defaultFootprintCm: { w: 320, d: 280 },
     defaultParams: {},
@@ -194,7 +212,9 @@ export const PREFAB_REGISTRY: PrefabDef[] = [
   {
     kind: "fountain",
     label: "喷泉",
+    labelEn: "Fountain",
     desc: "石质圆形喷泉，中心立柱",
+    descEn: "Round stone fountain with central pillar",
     glyphTag: "FNT",
     defaultFootprintCm: { w: 280, d: 280 },
     defaultParams: {},
@@ -203,7 +223,9 @@ export const PREFAB_REGISTRY: PrefabDef[] = [
   {
     kind: "fence_segment",
     label: "围栏段",
+    labelEn: "Fence Segment",
     desc: "竖板木栅栏 — 可多段拼接围合地块边界",
+    descEn: "Vertical-board wood fence — tile multiple segments to enclose the plot",
     glyphTag: "FNC",
     defaultFootprintCm: { w: 400, d: 20 },
     defaultParams: {
@@ -217,7 +239,9 @@ export const PREFAB_REGISTRY: PrefabDef[] = [
   {
     kind: "parking_area",
     label: "停车区",
+    labelEn: "Parking Area",
     desc: "混凝土车位 + 进出车道 — 可拖至任意位置",
+    descEn: "Concrete parking spots + driveway approach — drag anywhere",
     glyphTag: "PKG",
     defaultFootprintCm: { w: 550, d: 600 },
     defaultParams: {

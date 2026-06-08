@@ -13,8 +13,12 @@ import type { ZoneKind } from "./types";
 export interface ZoneStyle {
   /** UI label (zh) — shown on the 2D plan and library card. */
   label: string;
+  /** UI label (en). */
+  labelEn: string;
   /** Short explanation for tooltip. */
   desc: string;
+  /** Short explanation for tooltip (en). */
+  descEn: string;
   /** Default paving material id from textures.ts (procedural). */
   defaultPavingId: string;
   /** Solid hex color for paving fallback when texture unavailable. */
@@ -34,7 +38,9 @@ export interface ZoneStyle {
 export const ZONE_STYLES: Record<ZoneKind, ZoneStyle> = {
   social: {
     label: "社交核心区",
+    labelEn: "Social Core",
     desc: "泳池 / BBQ / 下沉卡座 — 紧邻建筑",
+    descEn: "Pool / BBQ / sunken seating — adjacent to building",
     defaultPavingId: "outdoor-travertine",
     fallbackColor: "#C8BBA5",            // 3D travertine wash (warm beige)
     planFill: "rgba(251,191,36,0.10)",   // amber translucent
@@ -43,7 +49,9 @@ export const ZONE_STYLES: Record<ZoneKind, ZoneStyle> = {
   },
   private: {
     label: "私密休闲区",
+    labelEn: "Private Retreat",
     desc: "凉亭 / 茶座 / 冥想 — 中段过渡",
+    descEn: "Pergola / tea seating / meditation — mid transition",
     defaultPavingId: "outdoor-wood-deck",
     fallbackColor: "#6B4F30",            // 3D teak wood
     planFill: "rgba(217,119,6,0.10)",
@@ -52,7 +60,9 @@ export const ZONE_STYLES: Record<ZoneKind, ZoneStyle> = {
   },
   utility: {
     label: "功能配套区",
+    labelEn: "Utility Zone",
     desc: "停车 / 入户 / 服务 — 外围",
+    descEn: "Parking / entry / service — perimeter",
     defaultPavingId: "outdoor-polished-concrete",
     fallbackColor: "#9A9A95",            // 3D concrete grey
     planFill: "rgba(156,163,175,0.10)",
@@ -61,7 +71,9 @@ export const ZONE_STYLES: Record<ZoneKind, ZoneStyle> = {
   },
   agro: {
     label: "菜园 / 抬高床",
+    labelEn: "Garden / Raised Bed",
     desc: "可食景观 — 草本 / 蔬菜",
+    descEn: "Edible landscape — herbs / vegetables",
     defaultPavingId: "outdoor-crushed-gravel",
     fallbackColor: "#8E7956",            // 3D decomposed granite
     planFill: "rgba(132,204,22,0.10)",
@@ -70,7 +82,9 @@ export const ZONE_STYLES: Record<ZoneKind, ZoneStyle> = {
   },
   lawn: {
     label: "草坪",
+    labelEn: "Lawn",
     desc: "柔过渡，运动 / 阳光",
+    descEn: "Soft transition, play / sun",
     defaultPavingId: "outdoor-lawn-turf",
     fallbackColor: "#688F4C",            // 3D mowed lawn
     planFill: "rgba(74,222,128,0.10)",

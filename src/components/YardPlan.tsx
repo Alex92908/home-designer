@@ -196,6 +196,7 @@ function PrefabGlyph({ kind, footprintPx, selected = false }: {
   footprintPx: { w: number; d: number };
   selected?: boolean;
 }) {
+  const locale = useLocale();
   const def = getPrefabDef(kind);
   if (!def) return null;
   const palette = PREFAB_PALETTE[kind] ?? { stroke: INK, fill: "rgba(255,255,255,0.06)" };
@@ -216,7 +217,7 @@ function PrefabGlyph({ kind, footprintPx, selected = false }: {
       <text x={0} y={0} textAnchor="middle" dominantBaseline="middle"
         fontSize={labelSize} fontWeight={600} fill={stroke}
         style={{ userSelect: "none", pointerEvents: "none" }}>
-        {def.label}
+        {locale === "en" ? def.labelEn : def.label}
       </text>
       {/* Monogram tag — small secondary in top-left corner */}
       <text x={-halfW + 4} y={-halfD + tagSize + 2} textAnchor="start" dominantBaseline="middle"
@@ -236,6 +237,7 @@ function ZoneGlyph({ zone, polygonPx, selected = false }: {
   polygonPx: Array<[number, number]>;
   selected?: boolean;
 }) {
+  const locale = useLocale();
   const style = ZONE_STYLES[zone.zoneKind];
   const ptsAttr = polygonPx.map(p => p.join(",")).join(" ");
   const [cxLocal, czLocal] = polygonCentroid(polygonPx);
@@ -250,7 +252,7 @@ function ZoneGlyph({ zone, polygonPx, selected = false }: {
         fontSize={10} fontWeight={600}
         fill={style.planStroke} letterSpacing="0.06em"
         style={{ userSelect: "none", pointerEvents: "none" }}>
-        {style.label}
+        {locale === "en" ? style.labelEn : style.label}
       </text>
     </g>
   );
@@ -318,7 +320,7 @@ export function YardPlanLibrary() {
   const addYardItem    = useDesignerStore(s => s.addYardItem);
   const removeYardItem = useDesignerStore(s => s.removeYardItem);
   const applyPreset = (p: import("@/lib/outdoorAssets").YardPreset) => {
-    if (yardItems.length > 0 && !window.confirm(locale === "en" ? `Replace the current ${yardItems.length} element(s) with "${p.label}"?` : `替换当前 ${yardItems.length} 个元素为「${p.label}」？`)) return;
+    if (yardItems.length > 0 && !window.confirm(locale === "en" ? `Replace the current ${yardItems.length} element(s) with "${p.labelEn}"?` : `替换当前 ${yardItems.length} 个元素为「${p.label}」？`)) return;
     for (const it of [...yardItems]) removeYardItem(it.id);
     const stamp = Date.now().toString(36);
     p.items.forEach((it, i) => {
@@ -355,11 +357,11 @@ export function YardPlanLibrary() {
             <button key={p.id}
               onClick={() => applyPreset(p)}
               className="group flex flex-col items-center gap-1 px-1 py-3 rounded-xl border transition-colors text-center bg-gray-50 border-gray-100 hover:bg-blue-50 hover:border-blue-300"
-              title={p.desc}
+              title={locale === "en" ? p.descEn : p.desc}
             >
               <span className="text-2xl leading-none">{p.icon}</span>
-              <span className="text-[11px] font-bold mt-1 text-gray-700">{p.label}</span>
-              <span className="text-[9px] leading-tight text-gray-400 px-0.5">{p.desc}</span>
+              <span className="text-[11px] font-bold mt-1 text-gray-700">{locale === "en" ? p.labelEn : p.label}</span>
+              <span className="text-[9px] leading-tight text-gray-400 px-0.5">{locale === "en" ? p.descEn : p.desc}</span>
             </button>
           ))}
         </div>
@@ -525,15 +527,15 @@ export function YardPlanLibrary() {
                 e.dataTransfer.effectAllowed = "copy";
               }}
               className="group flex items-center gap-3 px-2 py-2 rounded-xl border transition-colors cursor-grab active:cursor-grabbing text-left bg-gray-50 border-gray-100 hover:bg-blue-50 hover:border-blue-300"
-              title={p.desc}
+              title={locale === "en" ? p.descEn : p.desc}
             >
               {/* Glyph rendered against a small dark inset (mirror of canvas) */}
               <svg viewBox="-32 -22 64 44" width="56" height="38" style={{ background: "#1A1D26", borderRadius: 4 }}>
                 <PrefabGlyph kind={p.kind} footprintPx={{ w: 50, d: 32 }} />
               </svg>
               <div className="flex flex-col flex-1 min-w-0">
-                <div className="text-[11px] font-bold text-gray-700">{p.label}</div>
-                <div className="text-[9px] truncate text-gray-400">{p.desc}</div>
+                <div className="text-[11px] font-bold text-gray-700">{locale === "en" ? p.labelEn : p.label}</div>
+                <div className="text-[9px] truncate text-gray-400">{locale === "en" ? p.descEn : p.desc}</div>
               </div>
             </button>
           ))}
@@ -551,13 +553,13 @@ export function YardPlanLibrary() {
                 e.dataTransfer.effectAllowed = "copy";
               }}
               className="group flex flex-col items-center gap-1 px-1 py-2 rounded-xl border transition-colors cursor-grab active:cursor-grabbing bg-gray-50 border-gray-100 hover:bg-blue-50 hover:border-blue-300"
-              title={asset.label}
+              title={locale === "en" ? asset.labelEn : asset.label}
             >
               {/* Mini dark inset so the light SVG glyphs are visible */}
               <svg viewBox="-32 -32 64 64" width="44" height="44" style={{ background: "#1A1D26", borderRadius: 4 }}>
                 <AssetGlyph asset={asset} r={26} />
               </svg>
-              <div className="text-[10px] text-center font-medium text-gray-700">{asset.label}</div>
+              <div className="text-[10px] text-center font-medium text-gray-700">{locale === "en" ? asset.labelEn : asset.label}</div>
             </button>
           ))}
         </div>
@@ -1178,10 +1180,10 @@ export default function YardPlan() {
                 for (const item of yardItems) {
                   if (isYardSingleton(item)) {
                     const asset = _getAsset(item.kind);
-                    if (asset?.estimatedPriceCNY) rows.push({ label: asset.label, brand: asset.brand ?? "—", price: asset.estimatedPriceCNY, url: asset.purchaseUrl ?? "" });
+                    if (asset?.estimatedPriceCNY) rows.push({ label: locale === "en" ? asset.labelEn : asset.label, brand: asset.brand ?? "—", price: asset.estimatedPriceCNY, url: asset.purchaseUrl ?? "" });
                   } else if (isYardPrefab(item)) {
                     const p = PREFAB_PURCHASE[(item as import("@/lib/types").YardPrefab).prefabKind];
-                    if (p) rows.push({ label: p.label, brand: p.brand, price: p.estimatedPriceCNY, url: p.purchaseUrl });
+                    if (p) rows.push({ label: locale === "en" ? p.labelEn : p.label, brand: p.brand, price: p.estimatedPriceCNY, url: p.purchaseUrl });
                   }
                 }
                 if (rows.length === 0) return <p className="text-white/40 text-sm text-center py-8">{locale === "en" ? "No quotable elements in the current design" : "当前设计中没有可报价的元素"}</p>;
@@ -1852,7 +1854,7 @@ export function YardPlanInspector() {
             <PrefabGlyph kind={item.prefabKind} footprintPx={{ w: 50, d: 32 }} />
           </svg>
           <div>
-            <div className="text-xs font-bold" style={{ color: "var(--ds-text)" }}>{def?.label ?? item.prefabKind}</div>
+            <div className="text-xs font-bold" style={{ color: "var(--ds-text)" }}>{locale === "en" ? (def?.labelEn ?? item.prefabKind) : (def?.label ?? item.prefabKind)}</div>
             <div className="text-[10px]" style={{ color: "var(--ds-text-3)" }}>PREFAB · {item.prefabKind}</div>
           </div>
         </div>
@@ -1902,11 +1904,11 @@ export function YardPlanInspector() {
     return (
       <aside className="h-full flex flex-col" style={{ background: "var(--ds-surface)", borderLeft: "1px solid var(--ds-border)" }}>
         <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--ds-border)" }}>
-          <div className="text-xs font-bold" style={{ color: "var(--ds-text)" }}>{style.label}</div>
+          <div className="text-xs font-bold" style={{ color: "var(--ds-text)" }}>{locale === "en" ? style.labelEn : style.label}</div>
           <div className="text-[10px]" style={{ color: "var(--ds-text-3)" }}>ZONE · {item.zoneKind}</div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4 text-[11px]">
-          <div className="text-[11px]" style={{ color: "var(--ds-text-2)" }}>{style.desc}</div>
+          <div className="text-[11px]" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? style.descEn : style.desc}</div>
           <section>
             <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Position (m)" : "位置 (m)"}</div>
             <div className="grid grid-cols-2 gap-2">
@@ -2042,7 +2044,7 @@ export function YardPlanInspector() {
           <AssetGlyph asset={asset} r={26} />
         </svg>
         <div>
-          <div className="text-xs font-bold" style={{ color: "var(--ds-text)" }}>{asset.label}</div>
+          <div className="text-xs font-bold" style={{ color: "var(--ds-text)" }}>{locale === "en" ? asset.labelEn : asset.label}</div>
           <div className="text-[10px]" style={{ color: "var(--ds-text-3)" }}>{asset.kind}</div>
         </div>
       </div>

@@ -16,17 +16,18 @@
 
 export type OutdoorCategory = "tree" | "plant" | "rock" | "feature" | "furniture";
 
-export const OUTDOOR_CATEGORIES: Array<{ id: OutdoorCategory; label: string; icon: string }> = [
-  { id: "tree",      label: "树木", icon: "🌳" },
-  { id: "plant",     label: "花卉", icon: "🌸" },
-  { id: "rock",      label: "山石", icon: "🪨" },
-  { id: "feature",   label: "设施", icon: "🏛" },
-  { id: "furniture", label: "家具", icon: "🛋" },
+export const OUTDOOR_CATEGORIES: Array<{ id: OutdoorCategory; label: string; labelEn: string; icon: string }> = [
+  { id: "tree",      label: "树木", labelEn: "Trees",     icon: "🌳" },
+  { id: "plant",     label: "花卉", labelEn: "Flowers",   icon: "🌸" },
+  { id: "rock",      label: "山石", labelEn: "Rocks",     icon: "🪨" },
+  { id: "feature",   label: "设施", labelEn: "Facilities",icon: "🏛" },
+  { id: "furniture", label: "家具", labelEn: "Furniture", icon: "🛋" },
 ];
 
 export interface OutdoorAsset {
   kind: string;
   label: string;
+  labelEn: string;
   icon: string;
   category: OutdoorCategory;
   glb: string;          // Kenney filename without path / extension (legacy fallback)
@@ -74,130 +75,130 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
   // scripts/download-sketchfab.mjs). At runtime, if the file exists the
   // renderer uses the real PBR model; if not, falls back to the Kenney
   // GLB at `glb`. So the schema works in both states.
-  { kind: "tree.oak",      label: "橡树",   icon: "🌳", category: "tree",    glb: "tree_oak",          scale: 4.5, radiusCm: 130, color: "#5C8A3F" },
-  { kind: "tree.pine",     label: "松树",   icon: "🌲", category: "tree",    glb: "tree_pineDefaultA", scale: 5.0, radiusCm: 110, color: "#3F6B45" },
+  { kind: "tree.oak",      label: "橡树",   labelEn: "Oak",     icon: "🌳", category: "tree",    glb: "tree_oak",          scale: 4.5, radiusCm: 130, color: "#5C8A3F" },
+  { kind: "tree.pine",     label: "松树",   labelEn: "Pine",    icon: "🌲", category: "tree",    glb: "tree_pineDefaultA", scale: 5.0, radiusCm: 110, color: "#3F6B45" },
   // PBR Sketchfab models are auto-normalised at render time. We just
   // declare the desired real-world HEIGHT in metres (customTargetHeightM)
   // and the renderer reads each model's bounding box and computes the
   // scale. Bulletproof against the model's native units (cm, m, inches).
-  { kind: "tree.cypress",  label: "柏树",   icon: "🌲", category: "tree",    glb: "tree_pineTallA",    scale: 6.0, radiusCm: 80,  color: "#345A2E",
+  { kind: "tree.cypress",  label: "柏树",   labelEn: "Cypress", icon: "🌲", category: "tree",    glb: "tree_pineTallA",    scale: 6.0, radiusCm: 80,  color: "#345A2E",
     customGltfPath: "/models/outdoor_tree/cypress_tree_lowpoly/cypress_tree_lowpoly.gltf",
     customTargetHeightM: 4.5, customAuthor: "Alan Zimmerman" },
   // Palm: switched to `palm_tree_lowpoly` (Connor_Appleton) — opaque
   // foliage planes, no alpha cutout issues.
-  { kind: "tree.palm",     label: "棕榈",   icon: "🌴", category: "tree",    glb: "tree_palmTall",     scale: 5.5, radiusCm: 120, color: "#7BA058",
+  { kind: "tree.palm",     label: "棕榈",   labelEn: "Palm",    icon: "🌴", category: "tree",    glb: "tree_palmTall",     scale: 5.5, radiusCm: 120, color: "#7BA058",
     customGltfPath: "/models/outdoor_tree/palm_tree_lowpoly/palm_tree_lowpoly.gltf",
     customTargetHeightM: 6.5, customAuthor: "Connor_Appleton" },
-  { kind: "tree.olive",    label: "橄榄",   icon: "🫒", category: "tree",    glb: "tree_default",      scale: 4.0, radiusCm: 120, color: "#9FA078",
+  { kind: "tree.olive",    label: "橄榄",   labelEn: "Olive",   icon: "🫒", category: "tree",    glb: "tree_default",      scale: 4.0, radiusCm: 120, color: "#9FA078",
     customGltfPath: "/models/outdoor_tree/old_olive_tree/old_olive_tree.gltf",
     customTargetHeightM: 5.0, customAuthor: "massive-graphisme" },
-  { kind: "tree.maple",    label: "枫树",   icon: "🍁", category: "tree",    glb: "tree_oak",          scale: 4.5, radiusCm: 130, color: "#C97A3F",
+  { kind: "tree.maple",    label: "枫树",   labelEn: "Maple",   icon: "🍁", category: "tree",    glb: "tree_oak",          scale: 4.5, radiusCm: 130, color: "#C97A3F",
     customGltfPath: "/models/outdoor_tree/japanese_maple/japanese_maple.gltf",
     customTargetHeightM: 4.5, customAuthor: "OliverMatheGames" },
-  { kind: "tree.bonsai",   label: "盆栽",   icon: "🪴", category: "tree",    glb: "tree_blocks",       scale: 2.8, radiusCm: 60,  color: "#5C8A3F",
+  { kind: "tree.bonsai",   label: "盆栽",   labelEn: "Bonsai",  icon: "🪴", category: "tree",    glb: "tree_blocks",       scale: 2.8, radiusCm: 60,  color: "#5C8A3F",
     customGltfPath: "/models/outdoor_tree/bonsai_lowpoly/bonsai_lowpoly.gltf",
     customTargetHeightM: 0.6, customAuthor: "Alice Ursu" },
 
   // ── Plants ──
   // shrub_01 .bin 截断 → 走程序化 fallback（同 crystalline_iceplant）
-  { kind: "plant.bushLarge",   label: "大灌木", icon: "🌿", category: "plant", glb: "plant_bushLarge",     scale: 2.4, radiusCm: 60, color: "#5E8A3A" },
-  { kind: "plant.bushSmall",   label: "小灌木", icon: "🌱", category: "plant", glb: "plant_bushSmall",     scale: 1.8, radiusCm: 45, color: "#6B9C45",
+  { kind: "plant.bushLarge",   label: "大灌木", labelEn: "Large Shrub", icon: "🌿", category: "plant", glb: "plant_bushLarge",     scale: 2.4, radiusCm: 60, color: "#5E8A3A" },
+  { kind: "plant.bushSmall",   label: "小灌木", labelEn: "Small Shrub", icon: "🌱", category: "plant", glb: "plant_bushSmall",     scale: 1.8, radiusCm: 45, color: "#6B9C45",
     customGltfPath: "/models/outdoor_shrub/shrub_02/shrub_02_1k.gltf",
     customTargetHeightM: 0.6, customAuthor: "Poly Haven CC0" },
-  { kind: "plant.flowerRed",   label: "红掌",   icon: "🌹", category: "plant", glb: "flower_redA",    scale: 1.5, radiusCm: 30, color: "#E04848",
+  { kind: "plant.flowerRed",   label: "红掌",   labelEn: "Anthurium",  icon: "🌹", category: "plant", glb: "flower_redA",    scale: 1.5, radiusCm: 30, color: "#E04848",
     customGltfPath: "/models/outdoor_plant/anthurium_botany_01/anthurium_botany_01_1k.gltf",
     customTargetHeightM: 0.65, customAuthor: "Poly Haven CC0" },
-  { kind: "plant.flowerYellow",label: "蒲公英", icon: "🌻", category: "plant", glb: "flower_yellowA", scale: 1.5, radiusCm: 30, color: "#E8B838",
+  { kind: "plant.flowerYellow",label: "蒲公英", labelEn: "Dandelion",  icon: "🌻", category: "plant", glb: "flower_yellowA", scale: 1.5, radiusCm: 30, color: "#E8B838",
     customGltfPath: "/models/outdoor_plant/dandelion_01/dandelion_01_1k.gltf",
     customTargetHeightM: 0.28, customAuthor: "Poly Haven CC0" },
-  { kind: "plant.flowerPurple",label: "白屈菜", icon: "💜", category: "plant", glb: "flower_purpleA", scale: 1.5, radiusCm: 30, color: "#9F5BC8",
+  { kind: "plant.flowerPurple",label: "白屈菜", labelEn: "Celandine",  icon: "💜", category: "plant", glb: "flower_purpleA", scale: 1.5, radiusCm: 30, color: "#9F5BC8",
     customGltfPath: "/models/outdoor_plant/celandine_01/celandine_01_1k.gltf",
     customTargetHeightM: 0.25, customAuthor: "Poly Haven CC0" },
-  { kind: "plant.grass",       label: "冰草",   icon: "🌾", category: "plant", glb: "grass_large",    scale: 1.6, radiusCm: 35, color: "#7CA45A",
+  { kind: "plant.grass",       label: "冰草",   labelEn: "Iceplant",   icon: "🌾", category: "plant", glb: "grass_large",    scale: 1.6, radiusCm: 35, color: "#7CA45A",
     customGltfPath: "/models/outdoor_plant/crystalline_iceplant/crystalline_iceplant_1k.gltf",
     customTargetHeightM: 0.15, customAuthor: "Poly Haven CC0" },
-  { kind: "plant.cactus",      label: "仙人掌", icon: "🌵", category: "plant", glb: "cactus_tall",    scale: 2.5, radiusCm: 35, color: "#5A8B5A",
+  { kind: "plant.cactus",      label: "仙人掌", labelEn: "Cactus",     icon: "🌵", category: "plant", glb: "cactus_tall",    scale: 2.5, radiusCm: 35, color: "#5A8B5A",
     customGltfPath: "/models/outdoor_plant/cheiridopsis_succulent/cheiridopsis_succulent_1k.gltf",
     customTargetHeightM: 0.22, customAuthor: "Poly Haven CC0" },
-  { kind: "plant.lily",        label: "海芋",   icon: "🪷", category: "plant", glb: "lily_large",          scale: 1.8, radiusCm: 40, color: "#E8A8C8",
+  { kind: "plant.lily",        label: "海芋",   labelEn: "Calathea",   icon: "🪷", category: "plant", glb: "lily_large",          scale: 1.8, radiusCm: 40, color: "#E8A8C8",
     customGltfPath: "/models/outdoor_plant/calathea_orbifolia_01/calathea_orbifolia_01_1k.gltf",
     customTargetHeightM: 0.5, customAuthor: "Poly Haven CC0" },
-  { kind: "plant.mushroom",    label: "蘑菇",   icon: "🍄", category: "plant", glb: "mushroom_redGroup",   scale: 1.5, radiusCm: 30, color: "#D04848" },
+  { kind: "plant.mushroom",    label: "蘑菇",   labelEn: "Mushroom",   icon: "🍄", category: "plant", glb: "mushroom_redGroup",   scale: 1.5, radiusCm: 30, color: "#D04848" },
 
   // ── Rocks ──
-  { kind: "rock.large",      label: "大岩石", icon: "🪨", category: "rock", glb: "rock_largeA",     scale: 2.5, radiusCm: 70, color: "#888888",
+  { kind: "rock.large",      label: "大岩石", labelEn: "Large Rock", icon: "🪨", category: "rock", glb: "rock_largeA",     scale: 2.5, radiusCm: 70, color: "#888888",
     customGltfPath: "/models/outdoor_rock/boulder_01/boulder_01_1k.gltf",
     customTargetHeightM: 0.8, customAuthor: "Poly Haven CC0" },
-  { kind: "rock.small",      label: "小岩石", icon: "🪨", category: "rock", glb: "rock_smallA",     scale: 1.8, radiusCm: 40, color: "#9C9C9C",
+  { kind: "rock.small",      label: "小岩石", labelEn: "Small Rock", icon: "🪨", category: "rock", glb: "rock_smallA",     scale: 1.8, radiusCm: 40, color: "#9C9C9C",
     customGltfPath: "/models/outdoor_rock/coast_rocks_01/coast_rocks_01_1k.gltf",
     customTargetHeightM: 0.4, customAuthor: "Poly Haven CC0" },
-  { kind: "rock.tall",       label: "立石",   icon: "🗿", category: "rock", glb: "rock_tallA",      scale: 2.2, radiusCm: 50, color: "#7C7C7C" },
-  { kind: "rock.flat",       label: "平石",   icon: "⬜", category: "rock", glb: "rock_smallFlatA", scale: 2.0, radiusCm: 60, color: "#A8A8A8" },
-  { kind: "rock.stoneTall",  label: "高石",   icon: "🗻", category: "rock", glb: "stone_tallA",     scale: 2.2, radiusCm: 45, color: "#9C8C7C" },
+  { kind: "rock.tall",       label: "立石",   labelEn: "Standing Stone", icon: "🗿", category: "rock", glb: "rock_tallA",      scale: 2.2, radiusCm: 50, color: "#7C7C7C" },
+  { kind: "rock.flat",       label: "平石",   labelEn: "Flat Stone",   icon: "⬜", category: "rock", glb: "rock_smallFlatA", scale: 2.0, radiusCm: 60, color: "#A8A8A8" },
+  { kind: "rock.stoneTall",  label: "高石",   labelEn: "Tall Stone",   icon: "🗻", category: "rock", glb: "stone_tallA",     scale: 2.2, radiusCm: 45, color: "#9C8C7C" },
 
   // ── Features ──
-  { kind: "feature.fence",       label: "栅栏",   icon: "🚧", category: "feature", glb: "fence_planks",         scale: 2.0, radiusCm: 80,  color: "#8A6A40" },
-  { kind: "feature.fenceGate",   label: "栅栏门", icon: "🚪", category: "feature", glb: "fence_gate",           scale: 2.0, radiusCm: 60,  color: "#A88A60" },
-  { kind: "feature.bridgeWood",  label: "木桥",   icon: "🌉", category: "feature", glb: "bridge_wood",          scale: 2.5, radiusCm: 100, color: "#7A5A30" },
-  { kind: "feature.campfire",    label: "篝火",   icon: "🔥", category: "feature", glb: "campfire_logs",        scale: 1.6, radiusCm: 50,  color: "#D87830" },
-  { kind: "feature.tent",        label: "帐篷",   icon: "⛺", category: "feature", glb: "tent_smallOpen",       scale: 2.0, radiusCm: 80,  color: "#C8A858" },
-  { kind: "feature.pathStone",   label: "石板路", icon: "🪨", category: "feature", glb: "path_stoneCircle",     scale: 2.0, radiusCm: 60,  color: "#A0A0A0" },
-  { kind: "feature.signPost",    label: "指示牌", icon: "🪧", category: "feature", glb: "sign",                 scale: 1.8, radiusCm: 30,  color: "#A88A60" },
-  { kind: "feature.canoe",       label: "独木舟", icon: "🛶", category: "feature", glb: "canoe",                scale: 1.8, radiusCm: 80,  color: "#8A5A30" },
-  { kind: "feature.cropCarrot",  label: "胡萝卜", icon: "🥕", category: "feature", glb: "crop_carrot",          scale: 2.0, radiusCm: 30,  color: "#E8852A" },
-  { kind: "feature.cropPumpkin", label: "南瓜",   icon: "🎃", category: "feature", glb: "crop_pumpkin",         scale: 2.0, radiusCm: 35,  color: "#E07A20" },
-  { kind: "feature.cropMelon",   label: "西瓜",   icon: "🍉", category: "feature", glb: "crop_melon",           scale: 2.0, radiusCm: 35,  color: "#5BA84A" },
-  { kind: "feature.cropCorn",    label: "玉米",   icon: "🌽", category: "feature", glb: "crops_cornStageD",     scale: 2.5, radiusCm: 30,  color: "#E8C840" },
-  { kind: "feature.cropBamboo",  label: "竹子",   icon: "🎋", category: "feature", glb: "crops_bambooStageB",   scale: 3.0, radiusCm: 35,  color: "#7CA45A" },
-  { kind: "feature.cropDirt",    label: "菜畦",   icon: "🟫", category: "feature", glb: "crops_dirtRow",        scale: 2.5, radiusCm: 80,  color: "#7A5A40" },
+  { kind: "feature.fence",       label: "栅栏",   labelEn: "Fence",      icon: "🚧", category: "feature", glb: "fence_planks",         scale: 2.0, radiusCm: 80,  color: "#8A6A40" },
+  { kind: "feature.fenceGate",   label: "栅栏门", labelEn: "Fence Gate", icon: "🚪", category: "feature", glb: "fence_gate",           scale: 2.0, radiusCm: 60,  color: "#A88A60" },
+  { kind: "feature.bridgeWood",  label: "木桥",   labelEn: "Wood Bridge",icon: "🌉", category: "feature", glb: "bridge_wood",          scale: 2.5, radiusCm: 100, color: "#7A5A30" },
+  { kind: "feature.campfire",    label: "篝火",   labelEn: "Campfire",   icon: "🔥", category: "feature", glb: "campfire_logs",        scale: 1.6, radiusCm: 50,  color: "#D87830" },
+  { kind: "feature.tent",        label: "帐篷",   labelEn: "Tent",       icon: "⛺", category: "feature", glb: "tent_smallOpen",       scale: 2.0, radiusCm: 80,  color: "#C8A858" },
+  { kind: "feature.pathStone",   label: "石板路", labelEn: "Stone Path", icon: "🪨", category: "feature", glb: "path_stoneCircle",     scale: 2.0, radiusCm: 60,  color: "#A0A0A0" },
+  { kind: "feature.signPost",    label: "指示牌", labelEn: "Signpost",   icon: "🪧", category: "feature", glb: "sign",                 scale: 1.8, radiusCm: 30,  color: "#A88A60" },
+  { kind: "feature.canoe",       label: "独木舟", labelEn: "Canoe",      icon: "🛶", category: "feature", glb: "canoe",                scale: 1.8, radiusCm: 80,  color: "#8A5A30" },
+  { kind: "feature.cropCarrot",  label: "胡萝卜", labelEn: "Carrots",    icon: "🥕", category: "feature", glb: "crop_carrot",          scale: 2.0, radiusCm: 30,  color: "#E8852A" },
+  { kind: "feature.cropPumpkin", label: "南瓜",   labelEn: "Pumpkin",    icon: "🎃", category: "feature", glb: "crop_pumpkin",         scale: 2.0, radiusCm: 35,  color: "#E07A20" },
+  { kind: "feature.cropMelon",   label: "西瓜",   labelEn: "Watermelon", icon: "🍉", category: "feature", glb: "crop_melon",           scale: 2.0, radiusCm: 35,  color: "#5BA84A" },
+  { kind: "feature.cropCorn",    label: "玉米",   labelEn: "Corn",       icon: "🌽", category: "feature", glb: "crops_cornStageD",     scale: 2.5, radiusCm: 30,  color: "#E8C840" },
+  { kind: "feature.cropBamboo",  label: "竹子",   labelEn: "Bamboo",     icon: "🎋", category: "feature", glb: "crops_bambooStageB",   scale: 3.0, radiusCm: 35,  color: "#7CA45A" },
+  { kind: "feature.cropDirt",    label: "菜畦",   labelEn: "Veg Bed",    icon: "🟫", category: "feature", glb: "crops_dirtRow",        scale: 2.5, radiusCm: 80,  color: "#7A5A40" },
 
   // ── Outdoor Furniture — photorealistic Sketchfab PBR models ──
   // When customGltfPath model is present (after running download-sketchfab.mjs)
   // the renderer uses the real PBR GLTF. Before download, a high-quality
   // procedural mesh (ProceduralFurnitureMesh in HouseCanvas) acts as fallback.
-  { kind: "furniture.chaiseLounger", label: "躺椅",     icon: "🛋", category: "furniture",
+  { kind: "furniture.chaiseLounger", label: "躺椅",     labelEn: "Chaise Lounger", icon: "🛋", category: "furniture",
     glb: "", scale: 1, radiusCm: 110, color: "#D4C4A0",
     customGltfPath: "/models/outdoor_furniture/sun_lounger/sun_lounger.gltf",
     customTargetHeightM: 0.85, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
     brand: "Kettal", estimatedPriceCNY: 12800,
     purchaseUrl: "https://www.kettal.com/en/products/outdoor-lounge/chaise-lounges" },
-  { kind: "furniture.outdoorSofa",   label: "户外沙发", icon: "🛋", category: "furniture",
+  { kind: "furniture.outdoorSofa",   label: "户外沙发", labelEn: "Outdoor Sofa",   icon: "🛋", category: "furniture",
     glb: "", scale: 1, radiusCm: 160, color: "#C8C0A8",
     customGltfPath: "/models/outdoor_furniture/outdoor_sofa/outdoor_sofa.gltf",
     customTargetHeightM: 0.90, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
     brand: "Dedon", estimatedPriceCNY: 28000,
     purchaseUrl: "https://www.dedon.de/en/outdoor-sofas" },
-  { kind: "furniture.parasol",       label: "遮阳伞",   icon: "⛱", category: "furniture",
+  { kind: "furniture.parasol",       label: "遮阳伞",   labelEn: "Parasol",        icon: "⛱", category: "furniture",
     glb: "", scale: 1, radiusCm: 200, color: "#F5EDD8",
     customGltfPath: "/models/outdoor_furniture/garden_parasol/garden_parasol.gltf",
     customTargetHeightM: 2.60, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
     brand: "Jardinico", estimatedPriceCNY: 9800,
     purchaseUrl: "https://www.jardinico.com/products/parasols" },
-  { kind: "furniture.coffeeTable",   label: "户外茶几", icon: "🪵", category: "furniture",
+  { kind: "furniture.coffeeTable",   label: "户外茶几", labelEn: "Coffee Table",   icon: "🪵", category: "furniture",
     glb: "", scale: 1, radiusCm: 65,  color: "#A8A0A0",
     customGltfPath: "/models/outdoor_furniture/garden_coffee_table/garden_coffee_table.gltf",
     customTargetHeightM: 0.45, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
     brand: "Tribu", estimatedPriceCNY: 6800,
     purchaseUrl: "https://www.tribuliving.com/collections/outdoor-tables" },
-  { kind: "furniture.diningSet",     label: "户外餐桌", icon: "🍽", category: "furniture",
+  { kind: "furniture.diningSet",     label: "户外餐桌", labelEn: "Dining Set",     icon: "🍽", category: "furniture",
     glb: "", scale: 1, radiusCm: 180, color: "#C8B8A0",
     customGltfPath: "/models/outdoor_furniture/outdoor_dining_set/outdoor_dining_set.gltf",
     customTargetHeightM: 0.75, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
     brand: "Gloster", estimatedPriceCNY: 38000,
     purchaseUrl: "https://www.gloster.com/dining-sets" },
-  { kind: "furniture.fireplace",     label: "户外壁炉", icon: "🔥", category: "furniture",
+  { kind: "furniture.fireplace",     label: "户外壁炉", labelEn: "Outdoor Fireplace", icon: "🔥", category: "furniture",
     glb: "", scale: 1, radiusCm: 90,  color: "#787068",
     customGltfPath: "/models/outdoor_furniture/outdoor_fireplace/outdoor_fireplace.gltf",
     customTargetHeightM: 1.10, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
     brand: "EcoSmart Fire", estimatedPriceCNY: 22000,
     purchaseUrl: "https://www.ecosmartfire.com/outdoor-fireplaces" },
-  { kind: "furniture.planter",       label: "花盆",     icon: "🌺", category: "furniture",
+  { kind: "furniture.planter",       label: "花盆",     labelEn: "Planter",        icon: "🌺", category: "furniture",
     glb: "", scale: 1, radiusCm: 55,  color: "#C8A882",
     customGltfPath: "/models/outdoor_furniture/large_planter/large_planter.gltf",
     customTargetHeightM: 0.65, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
     brand: "Vondom", estimatedPriceCNY: 3200,
     purchaseUrl: "https://www.vondom.com/products/planters" },
-  { kind: "furniture.swimmingLounger",label: "泳池躺椅",icon: "🏖", category: "furniture",
+  { kind: "furniture.swimmingLounger",label: "泳池躺椅",labelEn: "Pool Lounger",  icon: "🏖", category: "furniture",
     glb: "", scale: 1, radiusCm: 110, color: "#E8E0C8",
     customGltfPath: "/models/outdoor_furniture/sun_lounger/sun_lounger.gltf",
     customTargetHeightM: 0.75, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
@@ -210,20 +211,21 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
  *  Keyed by PrefabKind. */
 export const PREFAB_PURCHASE: Record<string, {
   label: string;
+  labelEn: string;
   brand: string;
   estimatedPriceCNY: number;
   purchaseUrl: string;
 }> = {
-  pool:            { label: "无边际泳池",   brand: "Compass Pools",   estimatedPriceCNY: 280000, purchaseUrl: "https://www.compasspools.com" },
-  social_island:   { label: "社交岛 + 火坑", brand: "Extremis",        estimatedPriceCNY: 68000,  purchaseUrl: "https://www.extremis.com" },
-  pergola_classic: { label: "钢木廊架",      brand: "Unopiù",          estimatedPriceCNY: 45000,  purchaseUrl: "https://www.unopiu.com/en/pergolas" },
-  outdoor_kitchen: { label: "户外厨房",      brand: "Higold",          estimatedPriceCNY: 58000,  purchaseUrl: "https://www.higold.com/outdoor-kitchen" },
-  fountain:        { label: "石材喷泉",      brand: "Serena & Lily",   estimatedPriceCNY: 12000,  purchaseUrl: "https://www.serenaandlily.com/fountains" },
-  farm_box:        { label: "高床菜箱",      brand: "Vego Garden",     estimatedPriceCNY: 3800,   purchaseUrl: "https://www.vegogarden.com" },
-  porte_cochere:   { label: "混凝土车棚",    brand: "自建",             estimatedPriceCNY: 95000,  purchaseUrl: "" },
-  slat_wall:       { label: "竖板隐私屏",    brand: "Toja Grid",       estimatedPriceCNY: 8800,   purchaseUrl: "https://www.tojagrid.com" },
-  fence_segment:   { label: "现代木栅栏",    brand: "Trex",            estimatedPriceCNY: 4200,   purchaseUrl: "https://www.trex.com/fencing" },
-  parking_area:    { label: "砾石停车位",    brand: "自建",             estimatedPriceCNY: 18000,  purchaseUrl: "" },
+  pool:            { label: "无边际泳池",   labelEn: "Infinity Pool",      brand: "Compass Pools",   estimatedPriceCNY: 280000, purchaseUrl: "https://www.compasspools.com" },
+  social_island:   { label: "社交岛 + 火坑", labelEn: "Social Island + Fire Pit", brand: "Extremis",  estimatedPriceCNY: 68000,  purchaseUrl: "https://www.extremis.com" },
+  pergola_classic: { label: "钢木廊架",      labelEn: "Steel-Wood Pergola", brand: "Unopiù",          estimatedPriceCNY: 45000,  purchaseUrl: "https://www.unopiu.com/en/pergolas" },
+  outdoor_kitchen: { label: "户外厨房",      labelEn: "Outdoor Kitchen",    brand: "Higold",          estimatedPriceCNY: 58000,  purchaseUrl: "https://www.higold.com/outdoor-kitchen" },
+  fountain:        { label: "石材喷泉",      labelEn: "Stone Fountain",     brand: "Serena & Lily",   estimatedPriceCNY: 12000,  purchaseUrl: "https://www.serenaandlily.com/fountains" },
+  farm_box:        { label: "高床菜箱",      labelEn: "Raised Garden Bed",  brand: "Vego Garden",     estimatedPriceCNY: 3800,   purchaseUrl: "https://www.vegogarden.com" },
+  porte_cochere:   { label: "混凝土车棚",    labelEn: "Concrete Carport",   brand: "自建",             estimatedPriceCNY: 95000,  purchaseUrl: "" },
+  slat_wall:       { label: "竖板隐私屏",    labelEn: "Slat Privacy Screen",brand: "Toja Grid",       estimatedPriceCNY: 8800,   purchaseUrl: "https://www.tojagrid.com" },
+  fence_segment:   { label: "现代木栅栏",    labelEn: "Modern Wood Fence",  brand: "Trex",            estimatedPriceCNY: 4200,   purchaseUrl: "https://www.trex.com/fencing" },
+  parking_area:    { label: "砾石停车位",    labelEn: "Gravel Parking",     brand: "自建",             estimatedPriceCNY: 18000,  purchaseUrl: "" },
 };
 
 export function getOutdoorAssetByKind(kind: string): OutdoorAsset | undefined {
@@ -252,8 +254,10 @@ export type YardPresetItem =
 export interface YardPreset {
   id: string;
   label: string;
+  labelEn: string;
   icon: string;
   desc: string;
+  descEn: string;
   items: YardPresetItem[];
 }
 
@@ -265,8 +269,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "modernVilla",
     label: "现代别墅",
+    labelEn: "Modern Villa",
     icon: "🏛",
     desc: "三环叙事流：入户·社交·私享 — Prefab 主导",
+    descEn: "Three-ring narrative: Entry·Social·Private — Prefab-led",
     items: [
       // Utility ring (driveway zone behind the house, n side)
       { type: "zone", zoneKind: "utility",
@@ -303,8 +309,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "mediterranean",
     label: "地中海别墅",
+    labelEn: "Mediterranean Villa",
     icon: "🌊",
     desc: "柏树轴线 + 社交岛 — 轴线对称",
+    descEn: "Cypress axis + social island — axial symmetry",
     items: [
       // Social ring (front yard, between cypress wings)
       { type: "zone", zoneKind: "social",
@@ -332,8 +340,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "japanese",
     label: "日式禅意",
+    labelEn: "Japanese Zen",
     icon: "🎋",
     desc: "私享木台 + 孤植枫 + 竹格栅",
+    descEn: "Private wood deck + solitary maple + bamboo screen",
     items: [
       // Private ring (centered wood deck for tea ceremony)
       { type: "zone", zoneKind: "private",
@@ -361,8 +371,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "farmEstate",
     label: "田园农庄",
+    labelEn: "Farm Estate",
     icon: "🌾",
     desc: "抬高床菜园 + 入户挑檐 + 边界橡树",
+    descEn: "Raised-bed garden + porte-cochere + boundary oaks",
     items: [
       // Utility entry (driveway side, north)
       { type: "zone", zoneKind: "utility",
@@ -411,8 +423,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "marALago",
     label: "Mar-a-Lago 风",
+    labelEn: "Mar-a-Lago Style",
     icon: "🌴",
     desc: "棕榈轴线 + 形式化露台 + 喷池 — Trump estate 风",
+    descEn: "Palm axis + formal terrace + fountain — Trump estate style",
     items: [
       // Grand entry zone (driveway with cobble feel via concrete)
       { type: "zone", zoneKind: "utility",
@@ -467,8 +481,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "versailles",
     label: "凡尔赛缩影",
+    labelEn: "Versailles Mini",
     icon: "⚜",
     desc: "极致轴对称 · 大型几何花坛 · 喷池轴线",
+    descEn: "Strict axial symmetry · grand geometric parterre · fountain axis",
     items: [
       // CENTRAL AXIS — long thin social zone (reflecting pool stand-in)
       { type: "zone", zoneKind: "social",
@@ -524,8 +540,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "modernHilltop",
     label: "现代山顶庄园",
+    labelEn: "Modern Hilltop Estate",
     icon: "🏔",
     desc: "极简现代 · 全景轴 · 成熟植被 — 香港山顶范",
+    descEn: "Minimal modern · panoramic axis · mature planting — HK Peak style",
     items: [
       // Wide infinity-pool-style social zone facing south (out the view)
       { type: "zone", zoneKind: "social",
@@ -575,8 +593,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "tuscan",
     label: "托斯卡纳石村",
+    labelEn: "Tuscan Stone Village",
     icon: "🍷",
     desc: "橄榄园 + 石墙露台 + 浸泡池 — 意式乡村奢华",
+    descEn: "Olive grove + stone-walled terrace + plunge pool — Italian rustic luxury",
     items: [
       // Main social terrace (travertine-feel paving)
       { type: "zone", zoneKind: "social",
@@ -620,8 +640,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "karesansui",
     label: "枯山水庭院",
+    labelEn: "Karesansui Garden",
     icon: "🪨",
     desc: "白砂 + 石组 + 苔藓 + 松 — 日式禅意",
+    descEn: "White gravel + stone groupings + moss + pine — Japanese zen",
     items: [
       // Gravel zone (the raked white sand) — agro fallback is gravelly
       { type: "zone", zoneKind: "agro",
@@ -673,8 +695,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "smallPatio",
     label: "小露台",
+    labelEn: "Small Patio",
     icon: "☀️",
     desc: "城市联排 8×8m 紧凑社交露台 — 遮阳棚 + 种植边界",
+    descEn: "Urban townhouse 8×8m compact social patio — pergola + planting border",
     items: [
       // Single social zone — 7×7m, tight to house
       { type: "zone", zoneKind: "social",
@@ -706,8 +730,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "sideYardStrip",
     label: "侧院走廊",
+    labelEn: "Side-Yard Corridor",
     icon: "🌿",
     desc: "3m×12m 侧院 — 步道 + 垂直绿化 + 工具储物",
+    descEn: "3m×12m side yard — walkway + vertical greenery + tool storage",
     items: [
       // Utility zone at entry (gate / bin storage end)
       { type: "zone", zoneKind: "utility",
@@ -747,8 +773,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "urbanCourtyard",
     label: "城市内庭",
+    labelEn: "Urban Courtyard",
     icon: "🪴",
     desc: "12×12m 内庭 — 私享 patio + 围合绿墙 + 单植焦点树",
+    descEn: "12×12m courtyard — private patio + enclosing green walls + single focal tree",
     items: [
       // Private patio — 8×8 m at center, leaves 2 m planting border on each side
       { type: "zone", zoneKind: "private",
@@ -782,8 +810,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "smallSocialPatio",
     label: "后院社交角",
+    labelEn: "Backyard Social Corner",
     icon: "🔥",
     desc: "18×12m 后院 — 火炉 patio + 草坪 + 边界种植",
+    descEn: "18×12m backyard — firepit patio + lawn + boundary planting",
     items: [
       // Social zone — patio with firepit, near the house
       { type: "zone", zoneKind: "social",
@@ -817,8 +847,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "suburbanClassic",
     label: "经典郊区户型",
+    labelEn: "Suburban Classic",
     icon: "🏘️",
     desc: "25×25m — 车道·前院·后院·菜园·边界树 全功能",
+    descEn: "25×25m — driveway·front·back·garden·boundary trees, all-in-one",
     items: [
       // Driveway utility — front (north) of house
       { type: "zone", zoneKind: "utility",
@@ -863,8 +895,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "poolCabana",
     label: "泳池庄园",
+    labelEn: "Pool Cabana",
     icon: "🏊",
     desc: "25×20m — 泳池 + 凉亭餐区 + 屏风篱笆 + 边界草坪",
+    descEn: "25×20m — pool + pergola dining + screening fence + boundary lawn",
     items: [
       // Pool — prefab, dominant feature
       { type: "prefab", prefabKind: "pool",
@@ -908,8 +942,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "nativeMeadow",
     label: "野趣花园",
+    labelEn: "Native Meadow",
     icon: "🌾",
     desc: "替代草坪 — 野花草甸 + 修剪走道 + 小 patio",
+    descEn: "Lawn alternative — wildflower meadow + mowed paths + small patio",
     items: [
       // Meadow zone — dominant, lawn kind (but visually treated as meadow)
       { type: "zone", zoneKind: "lawn",
@@ -947,8 +983,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "frontYardCurbAppeal",
     label: "入户门面",
+    labelEn: "Front-Yard Curb Appeal",
     icon: "🚪",
     desc: "12×8m 前院 — 对称步道 + 基础种植 + 单植焦点树",
+    descEn: "12×8m front yard — symmetric walk + foundation planting + single focal tree",
     items: [
       // Lawn zone — front lawn, flanks the walk
       { type: "zone", zoneKind: "lawn",
@@ -984,8 +1022,10 @@ export const YARD_PRESETS: YardPreset[] = [
   {
     id: "potager",
     label: "食材花园",
+    labelEn: "Potager",
     icon: "🥬",
     desc: "6×8m 蔬菜香草园 — 高床 + 堆肥 + 果树",
+    descEn: "6×8m veggie-herb garden — raised beds + compost + fruit tree",
     items: [
       // Main productive zone — entire plot (agro = edible landscape)
       { type: "zone", zoneKind: "agro",
