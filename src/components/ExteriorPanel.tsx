@@ -341,8 +341,8 @@ export default function ExteriorPanel() {
                 </div>
                 <span className="text-xl shrink-0">{tpl.emoji}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-bold text-gray-800 truncate">{tpl.name}</div>
-                  <div className="text-[9px] text-gray-400 truncate">{tpl.description}</div>
+                  <div className="text-[11px] font-bold text-gray-800 truncate">{en ? tpl.nameEn : tpl.name}</div>
+                  <div className="text-[9px] text-gray-400 truncate">{en ? tpl.descriptionEn : tpl.description}</div>
                 </div>
                 <div className="text-[10px] font-bold text-gray-400 shrink-0">{tpl.areaSqm}㎡</div>
               </button>

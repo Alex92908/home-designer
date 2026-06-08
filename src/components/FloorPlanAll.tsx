@@ -1777,7 +1777,7 @@ export default function FloorPlanAll() {
                 {PROJECT_TEMPLATES.map(tpl => (
                   <button key={tpl.id}
                     onClick={() => {
-                      confirmDialog(locale === "en" ? `Loading "${tpl.name}" will replace all floor plans, exterior settings and yard layout. Continue?` : `加载「${tpl.name}」将替换所有楼层平面图、外观设置和院子布局，确认吗？`).then(ok => {
+                      confirmDialog(locale === "en" ? `Loading "${tpl.nameEn}" will replace all floor plans, exterior settings and yard layout. Continue?` : `加载「${tpl.name}」将替换所有楼层平面图、外观设置和院子布局，确认吗？`).then(ok => {
                         if (!ok) return;
                         applyProjectTemplate(tpl.id);
                         setLayoutPickerOpen(false);
@@ -1796,11 +1796,11 @@ export default function FloorPlanAll() {
                     <div className="flex items-center gap-1.5">
                       <span className="text-lg">{tpl.emoji}</span>
                       <div>
-                        <div className="text-[11px] font-bold text-gray-800">{tpl.name}</div>
+                        <div className="text-[11px] font-bold text-gray-800">{locale === "en" ? tpl.nameEn : tpl.name}</div>
                         <div className="text-[9px] text-gray-500">{tpl.areaSqm}㎡ · {tpl.floorLayouts.length}{locale === "en" ? "F" : "层"}</div>
                       </div>
                     </div>
-                    <div className="text-[9px] text-indigo-600 leading-relaxed">{tpl.description}</div>
+                    <div className="text-[9px] text-indigo-600 leading-relaxed">{locale === "en" ? tpl.descriptionEn : tpl.description}</div>
                   </button>
                 ))}
               </div>
