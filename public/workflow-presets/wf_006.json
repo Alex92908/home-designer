@@ -1652,7 +1652,7 @@
   "groups": [
     {
       "id": 1,
-      "title": "精修幅度",
+      "title": "Refine Strength",
       "bounding": [
         5570.4951171875,
         1420.213623046875,
@@ -1665,7 +1665,7 @@
     },
     {
       "id": 6,
-      "title": "洗图工作流",
+      "title": "Image Cleanup",
       "bounding": [
         4453.0703125,
         1378.5062255859375,

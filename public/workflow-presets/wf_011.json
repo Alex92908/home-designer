@@ -2904,7 +2904,7 @@
   "groups": [
     {
       "id": 57,
-      "title": "提示词输入（中英文均可）",
+      "title": "Prompt Input (Chinese or English)",
       "bounding": [
         4217.2412109375,
         3553.40771484375,
@@ -2917,7 +2917,7 @@
     },
     {
       "id": 58,
-      "title": "右键保存图片",
+      "title": "Right-click to Save Image",
       "bounding": [
         4877.591796875,
         3556.793212890625,
@@ -2930,7 +2930,7 @@
     },
     {
       "id": 59,
-      "title": "局部重绘手动指定物体",
+      "title": "Inpaint (Manual Object)",
       "bounding": [
         2933.05419921875,
         3312.689208984375,
@@ -2943,7 +2943,7 @@
     },
     {
       "id": 63,
-      "title": "上传原图（右键编辑遮罩）图1",
+      "title": "Upload Source (Right-click to Edit Mask) · Image 1",
       "bounding": [
         2931.3701171875,
         3548.47998046875,
@@ -2956,7 +2956,7 @@
     },
     {
       "id": 64,
-      "title": "上传指定图片图2",
+      "title": "Upload Specified Image · Image 2",
       "bounding": [
         3584.764404296875,
         3557.1884765625,

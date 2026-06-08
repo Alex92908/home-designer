@@ -3426,7 +3426,7 @@
   "groups": [
     {
       "id": 5,
-      "title": "过程预览",
+      "title": "Process Preview",
       "bounding": [
         -2490.372314453125,
         -3175.343994140625,
@@ -3465,7 +3465,7 @@
     },
     {
       "id": 8,
-      "title": "上传原图",
+      "title": "Upload Source Image",
       "bounding": [
         -2491.590576171875,
         -4338.83349609375,
@@ -3478,7 +3478,7 @@
     },
     {
       "id": 9,
-      "title": "图片一键生成带贴图灯光3D模型",
+      "title": "Image to Textured & Lit 3D Model",
       "bounding": [
         -1726.368408203125,
         -4348.5185546875,

@@ -1660,7 +1660,7 @@
   "groups": [
     {
       "id": 1,
-      "title": "精修幅度",
+      "title": "Refine Strength",
       "bounding": [
         5570.4951171875,
         1420.213623046875,
@@ -1673,7 +1673,7 @@
     },
     {
       "id": 6,
-      "title": "flux2产品精修",
+      "title": "flux2 Product Refine",
       "bounding": [
         4453.0703125,
         1378.5062255859375,
@@ -1686,7 +1686,7 @@
     },
     {
       "id": 9,
-      "title": "上传图片",
+      "title": "Upload Image",
       "bounding": [
         4474.4970703125,
         1627.59375,
@@ -1699,7 +1699,7 @@
     },
     {
       "id": 10,
-      "title": "右键保存",
+      "title": "Right-click to Save",
       "bounding": [
         5355.26806640625,
         1634.131103515625,

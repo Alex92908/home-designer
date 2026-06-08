@@ -1431,7 +1431,7 @@
   "groups": [
     {
       "id": 11,
-      "title": "Kontext修图",
+      "title": "Kontext Retouch",
       "bounding": [
         4458.00927734375,
         3.1329123973846436,
@@ -1444,7 +1444,7 @@
     },
     {
       "id": 12,
-      "title": "上传图片",
+      "title": "Upload Image",
       "bounding": [
         4524.9697265625,
         290.5074157714844,
@@ -1457,7 +1457,7 @@
     },
     {
       "id": 13,
-      "title": "右键保存",
+      "title": "Right-click to Save",
       "bounding": [
         5359.3876953125,
         289.7652893066406,

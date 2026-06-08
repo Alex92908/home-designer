@@ -1991,7 +1991,7 @@
   "groups": [
     {
       "id": 5,
-      "title": "FLUX2-Klein（这部分不要动）",
+      "title": "FLUX2-Klein (Do Not Modify)",
       "bounding": [
         9404.3251953125,
         4376.927734375,
@@ -2004,7 +2004,7 @@
     },
     {
       "id": 1,
-      "title": "加载模型",
+      "title": "Load Model",
       "bounding": [
         10174.3251953125,
         4536.92724609375,
@@ -2017,7 +2017,7 @@
     },
     {
       "id": 6,
-      "title": "1上传图片",
+      "title": "1 Upload Image",
       "bounding": [
         9410.8876953125,
         2296.62255859375,
@@ -2030,7 +2030,7 @@
     },
     {
       "id": 7,
-      "title": "2文字描述",
+      "title": "2 Text Description",
       "bounding": [
         10203.833984375,
         2301.94775390625,
@@ -2043,7 +2043,7 @@
     },
     {
       "id": 8,
-      "title": "3图像对比（右键保存）",
+      "title": "3 Image Compare (Right-click to Save)",
       "bounding": [
         10940.3828125,
         2309.586181640625,
@@ -2056,7 +2056,7 @@
     },
     {
       "id": 9,
-      "title": "线稿出效果图工作流",
+      "title": "Line Art to Render",
       "bounding": [
         9396.8349609375,
         2101.598388671875,
@@ -2069,7 +2069,7 @@
     },
     {
       "id": 10,
-      "title": "数量",
+      "title": "Count",
       "bounding": [
         9151.44921875,
         2304.542724609375,

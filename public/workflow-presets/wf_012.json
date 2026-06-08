@@ -1807,7 +1807,7 @@
   "groups": [
     {
       "id": 2,
-      "title": "右键图片保存",
+      "title": "Right-click to Save Image",
       "bounding": [
         -80.35987091064453,
         -1043.5478515625,
@@ -1822,7 +1822,7 @@
     },
     {
       "id": 3,
-      "title": "1上传原图",
+      "title": "1 Upload Source",
       "bounding": [
         -1263.2607421875,
         -1048.071044921875,
@@ -1837,7 +1837,7 @@
     },
     {
       "id": 4,
-      "title": "2输入文字，（想改生成输入什么）",
+      "title": "2 Input Text (describe what to change)",
       "bounding": [
         -691.9411010742188,
         -1047.90625,
@@ -1852,7 +1852,7 @@
     },
     {
       "id": 5,
-      "title": "生成张数",
+      "title": "Number of Images",
       "bounding": [
         -1519.0888671875,
         -1044.8470458984375,
@@ -1865,7 +1865,7 @@
     },
     {
       "id": 6,
-      "title": "指定修改单图版本flux2",
+      "title": "Targeted Edit · Single Image (flux2)",
       "bounding": [
         -1513.6356201171875,
         -1149.6064453125,

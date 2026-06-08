@@ -4098,7 +4098,7 @@
   "groups": [
     {
       "id": 31,
-      "title": "二图",
+      "title": "Image Two",
       "bounding": [
         -2650,
         -600,
@@ -4143,7 +4143,7 @@
     },
     {
       "id": 24,
-      "title": "图1（毛坯）",
+      "title": "Image 1 (Bare Shell)",
       "bounding": [
         -2911.0712890625,
         -2841.533447265625,
@@ -4156,7 +4156,7 @@
     },
     {
       "id": 25,
-      "title": "图2（风格参考）",
+      "title": "Image 2 (Style Reference)",
       "bounding": [
         -2539.9990234375,
         -2841.695556640625,
@@ -4169,7 +4169,7 @@
     },
     {
       "id": 26,
-      "title": "改图提示词",
+      "title": "Edit Prompt",
       "bounding": [
         -2161.05126953125,
         -2837.174072265625,
@@ -4182,7 +4182,7 @@
     },
     {
       "id": 27,
-      "title": "最终结果（右键保存）",
+      "title": "Final Result (Right-click to Save)",
       "bounding": [
         -1666.91064453125,
         -2838.479248046875,
@@ -4195,7 +4195,7 @@
     },
     {
       "id": 32,
-      "title": "图片最长边调整",
+      "title": "Longest-Side Resize",
       "bounding": [
         -2620,
         -510,
@@ -4210,7 +4210,7 @@
     },
     {
       "id": 34,
-      "title": "保存",
+      "title": "Save",
       "bounding": [
         -827.3301391601562,
         -2836.2685546875,
@@ -4223,7 +4223,7 @@
     },
     {
       "id": 35,
-      "title": "毛坯出效果图风格参考工作流",
+      "title": "Bare Shell to Render (Style Reference)",
       "bounding": [
         -2922.176025390625,
         -2997.484130859375,
@@ -4238,7 +4238,7 @@
     },
     {
       "id": 39,
-      "title": "2文字描述",
+      "title": "2 Text Description",
       "bounding": [
         -2640,
         690,

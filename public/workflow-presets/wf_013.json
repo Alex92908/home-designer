@@ -1799,7 +1799,7 @@
     },
     {
       "id": 8,
-      "title": "图1上传原图",
+      "title": "Image 1 · Upload Source",
       "bounding": [
         -4255.138671875,
         -13.025259017944336,
@@ -1812,7 +1812,7 @@
     },
     {
       "id": 9,
-      "title": "图2上传替换物品",
+      "title": "Image 2 · Upload Replacement Object",
       "bounding": [
         -3695.44921875,
         -8.408068656921387,
@@ -1825,7 +1825,7 @@
     },
     {
       "id": 10,
-      "title": "3.输入文字",
+      "title": "3. Input Text",
       "bounding": [
         -3240.1220703125,
         -5.798251152038574,
@@ -1838,7 +1838,7 @@
     },
     {
       "id": 11,
-      "title": "生成几张",
+      "title": "Number of Images",
       "bounding": [
         -4506.02001953125,
         -13.619266510009766,
@@ -1851,7 +1851,7 @@
     },
     {
       "id": 12,
-      "title": "右键图片保存",
+      "title": "Right-click to Save Image",
       "bounding": [
         -2786.82177734375,
         -0.9576748609542847,
@@ -1864,7 +1864,7 @@
     },
     {
       "id": 13,
-      "title": "指定修改多图版本flux2",
+      "title": "Targeted Edit · Multi Image (flux2)",
       "bounding": [
         -4501.50439453125,
         -130.84153747558594,

@@ -162,7 +162,7 @@
           ]
         }
       ],
-      "title": "尺寸调整",
+      "title": "Resize",
       "properties": {
         "Node name for S&R": "EmptyFlux2LatentImage",
         "cnr_id": "comfy-core",
@@ -800,7 +800,7 @@
   "groups": [
     {
       "id": 2,
-      "title": "文字描述",
+      "title": "Text Description",
       "bounding": [
         -1125.701171875,
         -508.0905456542969,
@@ -813,7 +813,7 @@
     },
     {
       "id": 3,
-      "title": "尺寸调整和数量（宽高）",
+      "title": "Resize & Count (Width/Height)",
       "bounding": [
         -647.8263549804688,
         -501.28350830078125,
@@ -826,7 +826,7 @@
     },
     {
       "id": 4,
-      "title": "右键保存图片",
+      "title": "Right-click to Save Image",
       "bounding": [
         -178.15118408203125,
         -497.1221008300781,
@@ -839,7 +839,7 @@
     },
     {
       "id": 5,
-      "title": "flux2文生图",
+      "title": "flux2 Text-to-Image",
       "bounding": [
         -1121.3446044921875,
         -633.4721069335938,
