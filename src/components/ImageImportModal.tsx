@@ -5,7 +5,7 @@ import { useDesignerStore } from "@/lib/store";
 import { ExteriorSettings } from "@/lib/types";
 import { getAiKey, setAiKey, getSelectedProvider, setSelectedProvider } from "@/lib/aiKeys";
 import { AiProviderId } from "@/lib/aiProviders";
-import { useT } from "@/lib/i18n";
+import { useT, useLocale } from "@/lib/i18n";
 import ApiKeyPromptModal from "./ApiKeyPromptModal";
 
 interface Props {
@@ -34,6 +34,7 @@ interface AnalysisResult {
 
 export default function ImageImportModal({ open, onClose }: Props) {
   const t = useT();
+  const en = useLocale() === "en";
   const setExterior             = useDesignerStore(s => s.setExterior);
   const setReferenceImageDataUrl = useDesignerStore(s => s.setReferenceImageDataUrl);
   const setPromptAdditions      = useDesignerStore(s => s.setPromptAdditions);
@@ -323,11 +324,11 @@ export default function ImageImportModal({ open, onClose }: Props) {
                         onChange={e => setPreset(e.target.value)}
                         className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-indigo-400"
                       >
-                        <option value="modern">现代 Modern</option>
-                        <option value="contemporary">当代 Contemporary</option>
-                        <option value="mediterranean">地中海 Mediterranean</option>
-                        <option value="industrial">工业 Industrial</option>
-                        <option value="minimalist">极简 Minimalist</option>
+                        <option value="modern">{en ? "Modern" : "现代"}</option>
+                        <option value="contemporary">{en ? "Contemporary" : "当代"}</option>
+                        <option value="mediterranean">{en ? "Mediterranean" : "地中海"}</option>
+                        <option value="industrial">{en ? "Industrial" : "工业"}</option>
+                        <option value="minimalist">{en ? "Minimalist" : "极简"}</option>
                       </select>
                     </label>
 
@@ -339,11 +340,11 @@ export default function ImageImportModal({ open, onClose }: Props) {
                         onChange={e => setRoofStyle(e.target.value as ExteriorSettings["roofStyle"])}
                         className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-indigo-400"
                       >
-                        <option value="flat">平屋顶 Flat</option>
-                        <option value="gable">人字顶 Gable</option>
-                        <option value="hip">四坡顶 Hip</option>
-                        <option value="mansard">孟莎顶 Mansard</option>
-                        <option value="chinese">中式屋顶 Chinese</option>
+                        <option value="flat">{en ? "Flat" : "平屋顶"}</option>
+                        <option value="gable">{en ? "Gable" : "人字顶"}</option>
+                        <option value="hip">{en ? "Hip" : "四坡顶"}</option>
+                        <option value="mansard">{en ? "Mansard" : "孟莎顶"}</option>
+                        <option value="chinese">{en ? "Chinese" : "中式屋顶"}</option>
                       </select>
                     </label>
 
@@ -355,11 +356,11 @@ export default function ImageImportModal({ open, onClose }: Props) {
                         onChange={e => setWallMaterial(e.target.value as ExteriorSettings["wallMaterial"])}
                         className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-indigo-400"
                       >
-                        <option value="render">涂料 Render</option>
-                        <option value="brick">砖墙 Brick</option>
-                        <option value="stone">石材 Stone</option>
-                        <option value="wood">木材 Wood</option>
-                        <option value="concrete">混凝土 Concrete</option>
+                        <option value="render">{en ? "Render" : "涂料"}</option>
+                        <option value="brick">{en ? "Brick" : "砖墙"}</option>
+                        <option value="stone">{en ? "Stone" : "石材"}</option>
+                        <option value="wood">{en ? "Wood" : "木材"}</option>
+                        <option value="concrete">{en ? "Concrete" : "混凝土"}</option>
                       </select>
                     </label>
 
@@ -371,10 +372,10 @@ export default function ImageImportModal({ open, onClose }: Props) {
                         onChange={e => setYardPreset(e.target.value as ExteriorSettings["yardPreset"])}
                         className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-indigo-400"
                       >
-                        <option value="pool">泳池 Pool</option>
-                        <option value="garden">花园 Garden</option>
-                        <option value="minimal">简约 Minimal</option>
-                        <option value="full">完整 Full</option>
+                        <option value="pool">{en ? "Pool" : "泳池"}</option>
+                        <option value="garden">{en ? "Garden" : "花园"}</option>
+                        <option value="minimal">{en ? "Minimal" : "简约"}</option>
+                        <option value="full">{en ? "Full" : "完整"}</option>
                       </select>
                     </label>
                   </div>

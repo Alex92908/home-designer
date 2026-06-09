@@ -30,7 +30,7 @@ import AiRenderModal from "@/components/AiRenderModal";
 import ImageImportModal from "@/components/ImageImportModal";
 import CommandPalette from "@/components/CommandPalette";
 import { useDesignerStore } from "@/lib/store";
-import { useT } from "@/lib/i18n";
+import { useT, useLocale, useLocaleStore } from "@/lib/i18n";
 import { decodeShare } from "@/lib/share";
 import { decodeSnapshot } from "@/lib/shareUrl";
 import { getSampleGlassVillaFloorPlans, SAMPLE_GLASS_VILLA_EXTERIOR } from "@/lib/sampleGlassVilla";
@@ -169,6 +169,7 @@ export default function Home() {
   const setActiveRoom      = useDesignerStore((s) => s.setActiveRoom);
   const floorPlans         = useDesignerStore((s) => s.floorPlans);
   const t = useT();
+  const locale = useLocale();
 
   // Panels start OPEN on both server and client to avoid hydration
   // mismatch (server can't know window.innerWidth). A useEffect after
@@ -213,6 +214,7 @@ export default function Home() {
       // Inject the welcome banner directly into the DOM — synchronously inside
       // the effect so it's guaranteed to fire on every first-visit page load.
       if (!document.getElementById("sample-welcome-banner")) {
+        const locale = useLocaleStore.getState().locale;
         const el = document.createElement("div");
         el.id = "sample-welcome-banner";
         el.style.cssText = [
@@ -241,8 +243,8 @@ export default function Home() {
         el.innerHTML = `
           <span style="font-size:22px;flex-shrink:0">🏡</span>
           <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:12px;color:#BFDBFE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">现代玻璃幕墙别墅 · 样板已加载</div>
-            <div style="font-size:10px;color:rgba(191,219,254,0.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">依次点击标签探索 → 平面图 → 效果图 → 全局3D → 外观</div>
+            <div style="font-weight:700;font-size:12px;color:#BFDBFE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${locale === "en" ? "Modern Glass-Curtain Villa · sample loaded" : "现代玻璃幕墙别墅 · 样板已加载"}</div>
+            <div style="font-size:10px;color:rgba(191,219,254,0.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${locale === "en" ? "Click the tabs in order → Floor Plan → Render → Global 3D → Exterior" : "依次点击标签探索 → 平面图 → 效果图 → 全局3D → 外观"}</div>
           </div>
           <button id="sample-banner-close" style="flex-shrink:0;width:20px;height:20px;border:none;background:rgba(255,255,255,0.1);border-radius:50%;color:white;font-size:9px;cursor:pointer;opacity:0.6;display:flex;align-items:center;justify-content:center">✕</button>
         `;
@@ -355,7 +357,7 @@ export default function Home() {
     return (
       <div className="flex flex-col h-screen bg-gray-50 overflow-hidden" suppressHydrationWarning>
         <div className="flex-1 flex items-center justify-center text-[11px] text-gray-300">
-          加载中…
+          {locale === "en" ? "Loading…" : "加载中…"}
         </div>
       </div>
     );
@@ -425,7 +427,7 @@ export default function Home() {
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-xl active:scale-95 transition-all"
                     style={{ background: "linear-gradient(135deg,rgba(30,58,138,0.92),rgba(59,130,246,0.92))", backdropFilter: "blur(12px)", border: "1px solid rgba(147,197,253,0.4)" }}
                   >
-                    ↑ 上楼 {activeFloor + 2}F
+                    {locale === "en" ? `↑ Up ${activeFloor + 2}F` : `↑ 上楼 ${activeFloor + 2}F`}
                   </button>
                 )}
                 {hasDown && (
@@ -434,7 +436,7 @@ export default function Home() {
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-xl active:scale-95 transition-all"
                     style={{ background: "linear-gradient(135deg,rgba(30,58,138,0.92),rgba(59,130,246,0.92))", backdropFilter: "blur(12px)", border: "1px solid rgba(147,197,253,0.4)" }}
                   >
-                    ↓ 下楼 {activeFloor}F
+                    {locale === "en" ? `↓ Down ${activeFloor}F` : `↓ 下楼 ${activeFloor}F`}
                   </button>
                 )}
               </div>

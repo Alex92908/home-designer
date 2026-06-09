@@ -800,7 +800,7 @@ export default function ExteriorPanel() {
               >
                 <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-700">
                   <span className="text-[12px]">{p.icon}</span>
-                  <span>{p.label}</span>
+                  <span>{en ? p.labelEn : p.label}</span>
                   {(p.roomMaterials || p.yardItems) && (
                     <span className="text-[10px] text-amber-500" title={en ? "Full scheme — includes room materials / yard" : "完整方案 — 含房间材质 / 院子"}>✦</span>
                   )}

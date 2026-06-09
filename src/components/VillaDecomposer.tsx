@@ -18,6 +18,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useDesignerStore } from "@/lib/store";
+import { useLocale } from "@/lib/i18n";
 import type { YardPrefab } from "@/lib/types";
 import type { DetectedElement } from "@/app/api/villa-decompose/route";
 
@@ -68,6 +69,7 @@ const BBOX_COLORS = [
 
 // ─── Main component ────────────────────────────────────────────────
 export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
+  const locale = useLocale();
   const referenceImageDataUrl = useDesignerStore(s => s.referenceImageDataUrl);
   const addYardItem           = useDesignerStore(s => s.addYardItem);
   const requestAiRender       = useDesignerStore(s => s.requestAiRender);
@@ -94,7 +96,7 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
 
   // ── Step 1: Detect elements ─────────────────────────────────────
   const detect = useCallback(async () => {
-    if (!activeImage) { setGlobalError("请先上传别墅图片"); return; }
+    if (!activeImage) { setGlobalError(locale === "en" ? "Please upload a villa image first" : "请先上传别墅图片"); return; }
     setStage("detecting");
     setGlobalError("");
     try {
@@ -104,7 +106,7 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
         body: JSON.stringify({ imageBase64: activeImage }),
       });
       const json = await res.json() as { elements?: DetectedElement[]; error?: string };
-      if (!res.ok || !json.elements?.length) throw new Error(json.error ?? "识别失败");
+      if (!res.ok || !json.elements?.length) throw new Error(json.error ?? (locale === "en" ? "Detection failed" : "识别失败"));
       setElements(json.elements);
       setSelected(new Set(json.elements.map((_, i) => i)));  // select all by default
       setStage("selecting");
@@ -112,13 +114,13 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
       setGlobalError(err instanceof Error ? err.message : String(err));
       setStage("upload");
     }
-  }, [activeImage]);
+  }, [activeImage, locale]);
 
   // ── Step 2: Crop + generate GLBs ───────────────────────────────
   const generateAll = useCallback(async () => {
     if (!activeImage) return;
     const chosen = elements.filter((_, i) => selected.has(i));
-    if (!chosen.length) { setGlobalError("请至少选择一个元素"); return; }
+    if (!chosen.length) { setGlobalError(locale === "en" ? "Please select at least one element" : "请至少选择一个元素"); return; }
 
     const initial: PartResult[] = chosen.map(el => ({ element: el, status: "pending" }));
     setParts(initial);
@@ -139,7 +141,7 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
           body: JSON.stringify({ imageBase64: crop, partHint: el.label }),
         });
         const json = await res.json() as { glbBase64?: string; glbUrl?: string; error?: string };
-        if (!res.ok || (!json.glbBase64 && !json.glbUrl)) throw new Error(json.error ?? "生成失败");
+        if (!res.ok || (!json.glbBase64 && !json.glbUrl)) throw new Error(json.error ?? (locale === "en" ? "Generation failed" : "生成失败"));
         const src = json.glbUrl ?? json.glbBase64!;
         setParts(prev => prev.map((p, idx) => idx === i ? { ...p, status: "done", glbSrc: src } : p));
       } catch (err) {
@@ -148,7 +150,7 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
       }
     }
     setStage("done");
-  }, [activeImage, elements, selected]);
+  }, [activeImage, elements, selected, locale]);
 
   // ── Step 3: Add all successful parts to scene ──────────────────
   const addAllToScene = useCallback((andRender: boolean) => {
@@ -187,9 +189,9 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>🏗 整图拆解 → 3D 零件集合</div>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>{locale === "en" ? "🏗 Decompose image → 3D part set" : "🏗 整图拆解 → 3D 零件集合"}</div>
           <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
-            一张别墅图 → AI识别元素 → 各自生成GLB → 一套可编辑组件
+            {locale === "en" ? "One villa image → AI detects elements → generate a GLB each → an editable part set" : "一张别墅图 → AI识别元素 → 各自生成GLB → 一套可编辑组件"}
           </div>
         </div>
         {onClose && (
@@ -200,7 +202,9 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
       {/* Pipeline steps */}
       <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
         {(["upload", "detecting", "selecting", "generating", "done"] as Stage[]).map((s, i) => {
-          const labels = ["上传图", "识别中", "选元素", "生成中", "完成"];
+          const labels = locale === "en"
+            ? ["Upload", "Detecting", "Select", "Generating", "Done"]
+            : ["上传图", "识别中", "选元素", "生成中", "完成"];
           const done   = ["upload","detecting","selecting","generating","done"].indexOf(stage) > i;
           const active = stage === s;
           return (
@@ -231,7 +235,7 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
                   background: "rgba(0,0,0,0.6)", color: "#fff",
                   border: "none", borderRadius: 6, padding: "3px 10px",
                   fontSize: 10, cursor: "pointer",
-                }}>换图</button>
+                }}>{locale === "en" ? "Change image" : "换图"}</button>
               </div>
             ) : (
               <button onClick={() => fileRef.current?.click()} style={{
@@ -242,8 +246,8 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
                 flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
               }}>
                 <span style={{ fontSize: 32 }}>🏠</span>
-                <span>上传别墅参考图片</span>
-                <span style={{ fontSize: 10, color: "#AAA" }}>支持 JPG / PNG</span>
+                <span>{locale === "en" ? "Upload a villa reference image" : "上传别墅参考图片"}</span>
+                <span style={{ fontSize: 10, color: "#AAA" }}>{locale === "en" ? "JPG / PNG supported" : "支持 JPG / PNG"}</span>
               </button>
             )}
             <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
@@ -259,7 +263,9 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
             color: "#fff", border: "none", borderRadius: 8,
             fontSize: 14, fontWeight: 600, cursor: stage === "detecting" ? "not-allowed" : "pointer",
           }}>
-            {stage === "detecting" ? "⏳ AI 识别元素中…" : "🔍 识别场景元素"}
+            {stage === "detecting"
+              ? (locale === "en" ? "⏳ AI detecting elements…" : "⏳ AI 识别元素中…")
+              : (locale === "en" ? "🔍 Detect scene elements" : "🔍 识别场景元素")}
           </button>
         </>
       )}
@@ -268,7 +274,9 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
       {stage === "selecting" && activeImage && (
         <>
           <div style={{ marginBottom: 10, fontWeight: 600, fontSize: 12 }}>
-            识别到 {elements.length} 个元素，选择需要生成3D的：
+            {locale === "en"
+              ? `Detected ${elements.length} element(s) — choose which to turn into 3D:`
+              : `识别到 ${elements.length} 个元素，选择需要生成3D的：`}
           </div>
 
           {/* Annotated image with bboxes */}
@@ -325,16 +333,18 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
           <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
             <button onClick={() => setSelected(new Set(elements.map((_, i) => i)))}
               style={{ flex: 1, padding: "6px 0", background: "#F3F4F6", border: "1px solid #DDD", borderRadius: 6, fontSize: 11, cursor: "pointer" }}>
-              全选
+              {locale === "en" ? "Select all" : "全选"}
             </button>
             <button onClick={() => setSelected(new Set())}
               style={{ flex: 1, padding: "6px 0", background: "#F3F4F6", border: "1px solid #DDD", borderRadius: 6, fontSize: 11, cursor: "pointer" }}>
-              全不选
+              {locale === "en" ? "Clear" : "全不选"}
             </button>
           </div>
 
           <div style={{ fontSize: 10, color: "#888", marginBottom: 10 }}>
-            已选 {selected.size} 个，每个约 30-60 秒，共约 {Math.round(selected.size * 45 / 60)} 分钟
+            {locale === "en"
+              ? `${selected.size} selected · ~30-60s each · ~${Math.round(selected.size * 45 / 60)} min total`
+              : `已选 ${selected.size} 个，每个约 30-60 秒，共约 ${Math.round(selected.size * 45 / 60)} 分钟`}
           </div>
 
           <button onClick={generateAll} disabled={selected.size === 0} style={{
@@ -343,7 +353,9 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
             color: "#fff", border: "none", borderRadius: 8,
             fontSize: 14, fontWeight: 600, cursor: selected.size === 0 ? "not-allowed" : "pointer",
           }}>
-            🚀 批量生成 {selected.size} 个 3D 零件
+            {locale === "en"
+              ? `🚀 Batch-generate ${selected.size} 3D part(s)`
+              : `🚀 批量生成 ${selected.size} 个 3D 零件`}
           </button>
         </>
       )}
@@ -353,8 +365,12 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
         <>
           <div style={{ marginBottom: 10, fontWeight: 600 }}>
             {stage === "generating"
-              ? `⏳ 生成中 ${doneCount + errorCount}/${parts.length}…`
-              : `✅ 完成！成功 ${doneCount} 个${errorCount ? `，失败 ${errorCount} 个` : ""}`}
+              ? (locale === "en"
+                  ? `⏳ Generating ${doneCount + errorCount}/${parts.length}…`
+                  : `⏳ 生成中 ${doneCount + errorCount}/${parts.length}…`)
+              : (locale === "en"
+                  ? `✅ Done! ${doneCount} succeeded${errorCount ? `, ${errorCount} failed` : ""}`
+                  : `✅ 完成！成功 ${doneCount} 个${errorCount ? `，失败 ${errorCount} 个` : ""}`)}
           </div>
 
           {/* Part cards */}
@@ -373,7 +389,7 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
                   <span style={{ flex: 1, fontWeight: 600 }}>{p.element.chinese}</span>
                   <span>{icon}</span>
                   {p.status === "generating" && (
-                    <span style={{ fontSize: 10, color: "#6B7280" }}>约30-60秒…</span>
+                    <span style={{ fontSize: 10, color: "#6B7280" }}>{locale === "en" ? "~30-60s…" : "约30-60秒…"}</span>
                   )}
                   {p.status === "error" && (
                     <span style={{ fontSize: 10, color: "#DC2626" }}>{p.error}</span>
@@ -391,7 +407,7 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
                 border: "none", borderRadius: 8,
                 fontSize: 13, fontWeight: 600, cursor: "pointer",
               }}>
-                ➕ 全部加入场景
+                {locale === "en" ? "➕ Add all to scene" : "➕ 全部加入场景"}
               </button>
               <button onClick={() => addAllToScene(true)} style={{
                 flex: 1, padding: "10px 0",
@@ -399,7 +415,7 @@ export function VillaDecomposer({ onClose }: { onClose?: () => void }) {
                 border: "none", borderRadius: 8,
                 fontSize: 13, fontWeight: 600, cursor: "pointer",
               }}>
-                🎨 加入并渲染整体
+                {locale === "en" ? "🎨 Add & render all" : "🎨 加入并渲染整体"}
               </button>
             </div>
           )}

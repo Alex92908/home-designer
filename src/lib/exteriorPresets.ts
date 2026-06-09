@@ -24,6 +24,8 @@ export interface ExteriorPreset {
   id: string;
   /** Chinese display name (shown on the button). */
   label: string;
+  /** English display name (shown when locale is English). */
+  labelEn: string;
   /** Short English / decorative one-liner shown under the label. */
   blurb: string;
   /** Small emoji icon for the chip. */
@@ -45,6 +47,7 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
   {
     id: "modern-minimal",
     label: "现代极简",
+    labelEn: "Modern Minimal",
     blurb: "Floor-to-ceiling glazing · flat parapet · monochrome",
     icon: "▱",
     settings: {
@@ -148,6 +151,7 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
   {
     id: "french-classical",
     label: "法式古典",
+    labelEn: "French Classic",
     blurb: "Brass · stone trim · flower boxes · warm cream",
     icon: "⚜",
     settings: {
@@ -195,6 +199,7 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
   {
     id: "industrial-loft",
     label: "工业风",
+    labelEn: "Industrial",
     blurb: "Exposed concrete · black metal · no ornaments",
     icon: "▪",
     settings: {
@@ -240,6 +245,7 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
   {
     id: "mediterranean",
     label: "地中海",
+    labelEn: "Mediterranean",
     blurb: "Terracotta · azure · jasmine · sunlit",
     icon: "🌿",
     settings: {
@@ -286,6 +292,7 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
   {
     id: "japanese-zen",
     label: "日式禅意",
+    labelEn: "Japanese Zen",
     blurb: "Charred wood · paper-screen white · low parapet",
     icon: "禅",
     settings: {

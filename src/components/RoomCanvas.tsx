@@ -8,6 +8,7 @@ import { BlendFunction } from "postprocessing";
 import { Suspense } from "react";
 import * as THREE from "three";
 import { useDesignerStore, RoomState } from "@/lib/store";
+import { useLocale, useLocaleStore } from "@/lib/i18n";
 const EMPTY_ROOM_STATE_RC: RoomState = { materials: {}, placedItems: [] };
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem, WallSide } from "@/lib/types";
@@ -27,9 +28,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: string |
   static getDerivedStateFromError(e: Error) { return { error: e.message }; }
   render() {
     if (this.state.error) {
+      const locale = useLocaleStore.getState().locale;
       return (
         <div className="flex items-center justify-center w-full h-full text-gray-400 text-sm flex-col gap-2 bg-gray-900">
-          <span>⚠️ 3D渲染错误</span>
+          <span>{locale === "en" ? "⚠️ 3D render error" : "⚠️ 3D渲染错误"}</span>
           <span className="text-xs opacity-60">{this.state.error}</span>
         </div>
       );
@@ -4023,6 +4025,7 @@ function detectIOS(): boolean {
 
 export default function RoomCanvas() {
   const isIOS = detectIOS();
+  const locale = useLocale();
   const [firstPerson, setFirstPerson] = useState(false);
   // Touch joystick — only active during walkthrough. Mirrors HouseCanvas's
   // joystick state shape so the TouchJoystick widget can drive movement
@@ -4050,7 +4053,7 @@ export default function RoomCanvas() {
               backdropFilter: "blur(8px)",
             }}
           >
-            🚶 漫游中
+            {locale === "en" ? "🚶 Walking" : "🚶 漫游中"}
           </div>
           {/* Touch joystick — bottom-left, primary input on tablet / mobile,
               also works alongside WASD on desktop. Output is folded into
@@ -4061,15 +4064,15 @@ export default function RoomCanvas() {
             className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 rounded-full text-xs text-white/85"
             style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)" }}
           >
-            <span>左键拖动转视角</span>
+            <span>{locale === "en" ? "Drag to look" : "左键拖动转视角"}</span>
             <span>·</span>
-            <span>WASD / 摇杆 移动</span>
+            <span>{locale === "en" ? "WASD / joystick to move" : "WASD / 摇杆 移动"}</span>
             <span>·</span>
-            <span>滚轮 缩放</span>
+            <span>{locale === "en" ? "Scroll to zoom" : "滚轮 缩放"}</span>
             <span>·</span>
-            <span>Shift 加速</span>
+            <span>{locale === "en" ? "Shift to sprint" : "Shift 加速"}</span>
             <span>·</span>
-            <span>ESC 退出</span>
+            <span>{locale === "en" ? "ESC to exit" : "ESC 退出"}</span>
           </div>
         </>
       )}
