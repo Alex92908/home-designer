@@ -21,6 +21,7 @@
 import { Suspense, useEffect, useMemo } from "react";
 import { useGLTF, Html } from "@react-three/drei";
 import * as THREE from "three";
+import { useT } from "@/lib/i18n";
 
 // ─── Colour applicator ────────────────────────────────────────────
 // Overrides the BASE colour tint only — ALL PBR texture maps are kept:
@@ -104,6 +105,7 @@ function GlbInner({
 
 // ─── Loading fallback ─────────────────────────────────────────────
 function GlbLoadingBox() {
+  const t = useT();
   return (
     <group>
       {/* Transparent bounding-box placeholder while GLB loads */}
@@ -125,7 +127,7 @@ function GlbLoadingBox() {
           fontSize: 11,
           whiteSpace: "nowrap",
         }}>
-          ⟳ 加载模型…
+          {t.fpModelLoading}
         </div>
       </Html>
     </group>

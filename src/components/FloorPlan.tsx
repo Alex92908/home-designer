@@ -1194,9 +1194,9 @@ export default function FloorPlan() {
                     }}
                     className="text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all"
                     style={{ border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.5)", background: "transparent" }}
-                    title="重置为矩形"
+                    title={t.fpResetShapeTitle}
                   >
-                    重置
+                    {t.fpResetShape}
                   </button>
                 </>
               )}
@@ -1297,7 +1297,7 @@ export default function FloorPlan() {
                 while rect rooms keep 4 cardinal toggles. Hidden walls
                 render red so it's obvious which sides are off. ── */}
             <div className="flex flex-wrap items-center gap-0.5 ml-1">
-              <span className="text-[10px] text-gray-500 mr-0.5">隐藏</span>
+              <span className="text-[10px] text-gray-500 mr-0.5">{t.fpHideWord}</span>
               {(() => {
                 const labels = t.fpWallLabels;
                 if (roomShape && roomShape.preset !== "rect") {
@@ -1318,7 +1318,7 @@ export default function FloorPlan() {
                     return (
                       <button key={`hide-${key}`}
                         onClick={() => toggleWallHidden(activeRoom, key)}
-                        title={hidden ? `恢复${labels[e.facing]}${showIdx ? idx : ""}` : `隐藏${labels[e.facing]}${showIdx ? idx : ""}`}
+                        title={(hidden ? t.fpRestorePrefix : t.fpHidePrefix) + `${labels[e.facing]}${showIdx ? idx : ""}`}
                         className="text-[10px] px-1.5 py-0.5 rounded font-semibold transition-all"
                         style={hidden
                           ? { background: "rgba(239,68,68,0.32)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.6)" }
@@ -1334,7 +1334,7 @@ export default function FloorPlan() {
                   return (
                     <button key={`hide-${w}`}
                       onClick={() => toggleWallHidden(activeRoom, w)}
-                      title={hidden ? `恢复${labels[w]}` : `隐藏${labels[w]}`}
+                      title={(hidden ? t.fpRestorePrefix : t.fpHidePrefix) + `${labels[w]}`}
                       className="text-[10px] px-1.5 py-0.5 rounded font-semibold transition-all"
                       style={hidden
                         ? { background: "rgba(239,68,68,0.32)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.6)" }
@@ -1351,11 +1351,11 @@ export default function FloorPlan() {
                   无关，floor/ceiling 是两个独立键）。 */}
               {(["floor","ceiling"] as const).map(face => {
                 const hidden = wallsHiddenOnRoom?.[face] === true;
-                const lbl = face === "floor" ? "地板" : "天花板";
+                const lbl = face === "floor" ? t.fpFaceFloor : t.fpFaceCeiling;
                 return (
                   <button key={`hide-${face}`}
                     onClick={() => toggleWallHidden(activeRoom, face)}
-                    title={hidden ? `恢复${lbl}` : `隐藏${lbl}`}
+                    title={(hidden ? t.fpRestorePrefix : t.fpHidePrefix) + lbl}
                     className="text-[10px] px-1.5 py-0.5 rounded font-semibold transition-all"
                     style={hidden
                       ? { background: "rgba(239,68,68,0.32)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.6)" }

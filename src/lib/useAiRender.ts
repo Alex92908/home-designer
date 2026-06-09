@@ -7,6 +7,7 @@ import {
   type RenderWorkflow,
   type RenderBackend,
 } from "./aiRenderConfig";
+import { useLocaleStore } from "./i18n";
 
 // ─── 通用 AI 出图客户端编排 ────────────────────────────────────────────────
 // 上传 → 提交 → 轮询 → 取图。后端差异全在 /api/airender 代理里处理，这里只按
@@ -64,16 +65,19 @@ export function useAiRender() {
     cancelledRef.current = false;
     setError(null);
     setImages([]);
+    const en = useLocaleStore.getState().locale === "en";
 
     const config = getAiRenderConfig();
     const backend: RenderBackend | undefined = getBackend(config, args.workflow.backendId);
     if (!backend) {
-      setError("该工作流未绑定有效后端，请在设置里检查。");
+      setError(en ? "This workflow isn't bound to a valid backend. Check the settings."
+                  : "该工作流未绑定有效后端，请在设置里检查。");
       setPhase("error");
       return null;
     }
     if (backend.kind === "runninghub" && !backend.apiKey?.trim()) {
-      setError("RunningHub 后端缺少 API Key，请先在设置里填写。");
+      setError(en ? "The RunningHub backend is missing an API key. Add it in settings first."
+                  : "RunningHub 后端缺少 API Key，请先在设置里填写。");
       setPhase("error");
       return null;
     }
@@ -91,7 +95,7 @@ export function useAiRender() {
       const up = await callProxy<{ fileName: string }>({ ...base, action: "upload", image: args.image });
       if (cancelledRef.current) return null;
       if (!up.ok || !up.data?.fileName) {
-        setError(up.error ?? "图片上传失败");
+        setError(up.error ?? (en ? "Image upload failed" : "图片上传失败"));
         setPhase("error");
         return null;
       }
@@ -108,7 +112,7 @@ export function useAiRender() {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         workflowJson = await r.text();
       } catch (e) {
-        setError(`读取预设工作流失败：${e instanceof Error ? e.message : String(e)}`);
+        setError(`${en ? "Failed to load preset workflow: " : "读取预设工作流失败："}${e instanceof Error ? e.message : String(e)}`);
         setPhase("error");
         return null;
       }
@@ -124,7 +128,7 @@ export function useAiRender() {
     });
     if (cancelledRef.current) return null;
     if (!submitted.ok || !submitted.data?.taskId) {
-      setError(submitted.error ?? "任务提交失败");
+      setError(submitted.error ?? (en ? "Task submission failed" : "任务提交失败"));
       setPhase("error");
       return null;
     }
@@ -141,7 +145,7 @@ export function useAiRender() {
       const status = String(st.data?.status ?? "").toUpperCase();
       if (status === "SUCCESS") break;
       if (status === "FAILED" || status === "ERROR") {
-        setError("渲染失败（后端返回 FAILED）");
+        setError(en ? "Render failed (backend returned FAILED)" : "渲染失败（后端返回 FAILED）");
         setPhase("error");
         return null;
       }
@@ -151,7 +155,7 @@ export function useAiRender() {
     const out = await callProxy<{ images: string[] }>({ ...base, action: "outputs", taskId });
     if (cancelledRef.current) return null;
     if (!out.ok || !out.data?.images?.length) {
-      setError(out.error ?? "未取到产出图（可能仍在排队，稍后重试）");
+      setError(out.error ?? (en ? "No output image (may still be queued — try again later)" : "未取到产出图（可能仍在排队，稍后重试）"));
       setPhase("error");
       return null;
     }

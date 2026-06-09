@@ -19,6 +19,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Euler, Vector3, PerspectiveCamera } from "three";
+import { useT } from "@/lib/i18n";
 
 const WALK_SPEED  = 3.0;  // m/s
 const RUN_SPEED   = 6.0;
@@ -395,17 +396,18 @@ export function TouchJoystick({ onChange }: { onChange: (axisX: number, axisZ: n
 }
 
 export function FirstPersonButton({ active, onToggle }: FirstPersonButtonProps) {
+  const t = useT();
   return (
     <button
       onClick={onToggle}
-      title={active ? "退出第一人称 (ESC)" : "进入第一人称漫游 (W/A/S/D)"}
+      title={active ? t.fpcBtnExitTitle : t.fpcBtnEnterTitle}
       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
       style={active
         ? { background: "#4F46E5", color: "#fff", border: "1px solid #4338CA" }
         : { background: "var(--ds-surface)", color: "var(--ds-text-2)", border: "1px solid var(--ds-border)" }
       }
     >
-      {active ? "🚶 退出漫游" : "🚶 第一人称"}
+      {active ? t.fpcBtnExit : t.fpcBtnEnter}
     </button>
   );
 }

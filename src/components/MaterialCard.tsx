@@ -6,7 +6,7 @@ import { MaterialItem } from "@/lib/types";
 const EMPTY_MATS = {} as const;
 import { useDesignerStore } from "@/lib/store";
 import { useLocale } from "@/lib/i18n";
-import { getMaterialNameEn } from "@/locales/itemNames";
+import { getMaterialNameEn, getLocalizedUnit } from "@/locales/itemNames";
 
 export default function MaterialCard({ item }: { item: MaterialItem }) {
   const setMaterial = useDesignerStore((s) => s.setMaterial);
@@ -35,7 +35,7 @@ export default function MaterialCard({ item }: { item: MaterialItem }) {
         <span className="text-[10px] text-gray-400">{item.brand}</span>
         <span className="text-[10px] font-bold text-blue-600">¥{item.price.toLocaleString()}</span>
       </div>
-      <span className="text-[9px] text-gray-400">{item.unit}</span>
+      <span className="text-[9px] text-gray-400">{getLocalizedUnit(item.unit, locale)}</span>
       {isSelected && (
         <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
           <span className="text-white text-[9px]">✓</span>

@@ -7,7 +7,7 @@ import type { RoomType, ExteriorWall, ExteriorWallDecorItem, WallSide } from "@/
 import { FURNITURE, getFurnitureById } from "@/lib/furniture";
 import { MATERIALS } from "@/lib/data";
 import { useT, useLocale, useMaterialName } from "@/lib/i18n";
-import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn, translateClearanceReason } from "@/locales/itemNames";
+import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn, translateClearanceReason, getLocalizedUnit } from "@/locales/itemNames";
 
 const EMPTY_WINDOWS: never[] = [];
 import { RoomState } from "@/lib/store";
@@ -603,7 +603,7 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
           <button key={it.id}
             onClick={() => addItem(activeRoom, it.id, pickerWall)}
             className="flex flex-col items-center gap-0.5 py-1.5 rounded-xl border border-gray-200 bg-white hover:border-blue-400 transition-all"
-            title={`${localName(it)} — ${it.price}${it.unit}`}>
+            title={`${localName(it)} — ${it.price}${getLocalizedUnit(it.unit, locale)}`}>
             <span className="text-lg">{it.icon}</span>
             <span className="text-[9px] text-gray-700 font-semibold leading-tight text-center px-0.5">{localName(it)}</span>
           </button>

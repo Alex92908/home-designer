@@ -466,3 +466,32 @@ export function translateClearanceReason(zh: string, locale: string): string {
   if (locale !== "en" || !zh) return zh;
   return CLEARANCE_REASON_EN[zh] ?? zh;
 }
+
+// ─── Price units ──────────────────────────────────────────────────
+// Catalog units are Chinese "元/<量词>" tokens (元 = ¥). A finite set,
+// so one shared map localizes every display site (MaterialCard / RightPanel)
+// without touching catalog data. Falls back to the raw Chinese token.
+export const UNIT_NAMES_EN: Record<string, string> = {
+  "元/件": "¥/item",
+  "元/个": "¥/pc",
+  "元/座": "¥/unit",
+  "元/㎡": "¥/m²",
+  "元/条": "¥/pc",
+  "元/台": "¥/unit",
+  "元/组": "¥/set",
+  "元/套": "¥/set",
+  "元/棵": "¥/tree",
+  "元/幅": "¥/piece",
+  "元/块": "¥/pc",
+  "元/丛": "¥/cluster",
+  "元/延米": "¥/m",
+  "元/盏": "¥/lamp",
+  "元/支": "¥/pc",
+  "元/张": "¥/pc",
+  "元/片": "¥/pc",
+};
+
+export function getLocalizedUnit(unit: string, locale: string): string {
+  if (locale !== "en" || !unit) return unit;
+  return UNIT_NAMES_EN[unit.trim()] ?? unit;
+}

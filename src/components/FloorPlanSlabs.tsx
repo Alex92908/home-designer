@@ -11,6 +11,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 
 // ── Constants ─────────────────────────────────────────────────
@@ -325,6 +326,7 @@ export default function FloorPlanSlabs({
   floorVisible: extVisible,
   onToggleFloor,
 }: FloorPlanSlabsProps = {}) {
+  const t = useT();
   const exteriorFloors = useDesignerStore(s => s.exterior.floors);
   const floorCount = Math.max(exteriorFloors, 1);
 
@@ -357,7 +359,7 @@ export default function FloorPlanSlabs({
         className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-[11px] font-bold pointer-events-none select-none shadow"
         style={{ background: "rgba(255,255,255,0.92)", color: "#374151" }}
       >
-        🏠 拖动旋转 · 滚轮缩放 · 右键平移
+        {t.fpSlabHint}
       </div>
 
       {/* Floor panel */}
@@ -373,7 +375,7 @@ export default function FloorPlanSlabs({
           boxShadow: "0 4px 16px rgba(0,0,0,0.13)",
         }}
       >
-        <div className="text-[9px] font-bold text-gray-400 tracking-widest mb-0.5 px-1">楼层</div>
+        <div className="text-[9px] font-bold text-gray-400 tracking-widest mb-0.5 px-1">{t.fpFloor}</div>
         {Array.from({ length: floorCount }, (_, fi) => {
           const on = floorVisible[fi];
           const c  = FLOOR_ACCENT[fi % FLOOR_ACCENT.length];
