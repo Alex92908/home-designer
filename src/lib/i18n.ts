@@ -59,3 +59,13 @@ export function getLocalizedMaterialName(id: string, fallback: string, locale: L
   if (locale === "en") return getMaterialNameEn(id) ?? fallback;
   return fallback;
 }
+
+/** Non-hook localized room-type display name.
+ *  Reuses the central locale `roomNames` table (covers every RoomType in
+ *  both locales) so non-React callers don't duplicate their own maps.
+ *  Falls back to the Chinese table, then the raw key. */
+export function getLocalizedRoomName(type: string, locale: Locale): string {
+  const table = LOCALES[locale].roomNames as Record<string, string>;
+  const zhTable = LOCALES.zh.roomNames as Record<string, string>;
+  return table[type] ?? zhTable[type] ?? type;
+}

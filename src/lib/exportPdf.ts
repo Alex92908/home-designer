@@ -8,23 +8,10 @@ import { MaterialItem, RoomType, getRoomArea, ROOM_DEFS, PlacedItem } from "./ty
 import { getFurnitureById } from "./furniture";
 import { getMaterialNameEn, getBrandNameEn, getFurnitureNameEn } from "@/locales/itemNames";
 import { formatPrice } from "./currency";
+import { getLocalizedRoomName } from "./i18n";
 
 // ─── Helpers ──────────────────────────────────────────────────
 
-const ROOM_NAMES_ZH: Partial<Record<RoomType, string>> = {
-  living:"客厅", master:"主卧", bedroom:"次卧", bedroom2:"次卧2", bedroom3:"次卧3",
-  kitchen:"厨房", bathroom:"卫生间", bathroom2:"卫生间2", dining:"餐厅",
-  study:"书房", study2:"书房2", closet:"衣帽间", balcony:"阳台", balcony2:"阳台2",
-  yard:"院子", garage:"车库", gym:"健身房", cinema:"影音室",
-};
-const ROOM_NAMES_EN: Partial<Record<RoomType, string>> = {
-  living:"Living Room", master:"Master Bedroom", bedroom:"Bedroom 1",
-  bedroom2:"Bedroom 2", bedroom3:"Bedroom 3", kitchen:"Kitchen",
-  bathroom:"Bathroom", bathroom2:"Bathroom 2", dining:"Dining Room",
-  study:"Study", study2:"Study 2", closet:"Walk-in Closet",
-  balcony:"Balcony", balcony2:"Balcony 2", yard:"Yard",
-  garage:"Garage", gym:"Gym", cinema:"Home Cinema",
-};
 const CAT_ZH: Record<string,string> = {
   wall:"墙面", floor:"地板", ceiling:"吊顶", light:"灯光", tile:"瓷砖",
 };
@@ -33,8 +20,7 @@ const CAT_EN: Record<string,string> = {
 };
 
 function roomName(room: RoomType, locale: string): string {
-  return (locale === "en" ? ROOM_NAMES_EN[room] : ROOM_NAMES_ZH[room])
-    ?? ROOM_DEFS[room].name;
+  return getLocalizedRoomName(room, locale === "en" ? "en" : "zh");
 }
 function matName(item: MaterialItem, locale: string): string {
   return locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name;

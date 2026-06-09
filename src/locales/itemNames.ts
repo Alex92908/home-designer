@@ -408,6 +408,7 @@ export const CLEARANCE_REASON_EN: Record<string, string> = {
   "洗手台前留 75cm 弯腰+站立": "Leave 75cm in front of vanity for bending + standing",
   "书桌前留 75cm 椅子+坐位": "Leave 75cm in front of desk for chair + seat",
   "储物柜建议贴墙，节省空间+更稳": "Storage cabinet should hug wall — saves space, more stable",
+  "储物柜前留 60cm 开门": "Leave 60cm in front of storage cabinet to open doors",
   "书桌距窗户过远（建议 ≤2m），白天读写需开灯，长期用眼疲劳": "Desk too far from window (keep ≤2m) — daytime reading needs light, causes eye strain",
   "阻挡门开合，门可能撞到家具": "Blocks door swing — the door may hit furniture",
   "家具高于窗台且位于窗前，遮挡采光与通风": "Furniture taller than sill blocks light and ventilation",
