@@ -452,6 +452,7 @@ export default function FloorPlan() {
   const [selectedDoorId, setSelectedDoorId] = useState<string | null>(null);
 
   const activeRoom           = useDesignerStore((s) => s.activeRoom);
+  const showCompass          = useDesignerStore((s) => s.showCompass);
   const roomState            = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom] ?? EMPTY_ROOM_STATE);
   const selectedInstanceIds  = useDesignerStore((s) => s.selectedInstanceIds);
   const moveItem             = useDesignerStore((s) => s.moveItem);
@@ -1933,9 +1934,10 @@ export default function FloorPlan() {
               {t.fpFurnitureHint}
             </text>
           )}
-          {/* ── DEBUG: NSWE wall labels — code convention back=N (-Z, top of svg),
-               front=S (+Z, bottom of svg), left=W (-X), right=E (+X). ── */}
-          {(() => {
+          {/* ── NSWE wall labels — code convention back=N (-Z, top of svg),
+               front=S (+Z, bottom of svg), left=W (-X), right=E (+X).
+               由 showCompass 开关控制显隐。 ── */}
+          {showCompass && (() => {
             const fs = Math.max(20, Math.min(48, Math.min(svgW, svgH) * 0.05));
             const inset = Math.max(8, fs * 0.4);
             const lbls = [

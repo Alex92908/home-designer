@@ -491,7 +491,7 @@ export default function ExteriorPanel() {
               <span className="text-2xl font-black text-gray-800">{exterior.floors}</span>
               <span className="text-xs text-gray-400 ml-1">{t.extFloorUnit}</span>
             </div>
-            <button onClick={() => setExterior({ preset: "custom", floors: Math.min(4, exterior.floors + 1) })}
+            <button onClick={() => setExterior({ preset: "custom", floors: exterior.floors + 1 })}
               className="w-8 h-8 rounded-xl border border-gray-200 text-gray-600 font-bold hover:border-blue-400 hover:text-blue-600 transition-colors">＋</button>
           </div>
           <div className="flex gap-1 mt-2">

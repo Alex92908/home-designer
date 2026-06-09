@@ -2092,6 +2092,7 @@ export default function FloorPlanBuilding({
 }) {
   const floorPlans     = useDesignerStore(s => s.floorPlans);
   const exterior       = useDesignerStore(s => s.exterior);
+  const showCompass    = useDesignerStore(s => s.showCompass);
   const floorCount     = Math.max(exterior.floors, 1);
   const setActiveRoom  = useDesignerStore(s => s.setActiveRoom);
   const setViewMode    = useDesignerStore(s => s.setViewMode);
@@ -6915,12 +6916,12 @@ export default function FloorPlanBuilding({
                 underlayMargin={Math.max(0, (exterior.walkthroughFloorUnderlayCm ?? 20) / 100)}
               />
             )}
-            {/* ── DEBUG: per-room NSWE wall labels rendered as flat 3D Text
+            {/* ── per-room NSWE wall labels rendered as flat 3D Text
                  decals on the inner face of each wall (like wall art). Each
                  room gets its own color so adjacent rooms are easy to tell
                  apart. Code convention: north=-Z (back), south=+Z (front),
-                 west=-X (left), east=+X (right). ── */}
-            {insideBuilding && !isStair && !isHallway && (() => {
+                 west=-X (left), east=+X (right). 由 showCompass 开关控制显隐。 ── */}
+            {showCompass && insideBuilding && !isStair && !isHallway && (() => {
               const lblY = yBase + 1.5;
               // Treat each room's 4 walls INDEPENDENTLY of any shared-wall
               // dedup — float the decal 30 cm INTO the room from its own

@@ -153,9 +153,8 @@ export function RoomPanel() {
             >−</button>
             <span className="w-5 text-center text-xs font-black text-gray-800">{exterior.floors}</span>
             <button
-              onClick={() => setExterior({ floors: Math.min(4, exterior.floors + 1) })}
+              onClick={() => setExterior({ floors: exterior.floors + 1 })}
               className="w-5 h-5 rounded-md text-xs font-bold text-gray-500 hover:text-blue-500 hover:bg-blue-50 flex items-center justify-center transition-colors"
-              disabled={exterior.floors >= 4}
             >＋</button>
           </div>
         </div>

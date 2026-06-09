@@ -3221,6 +3221,7 @@ function PolygonDoorPanel({
 
 function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }) {
   const activeRoom    = useDesignerStore((s) => s.activeRoom);
+  const showCompass   = useDesignerStore((s) => s.showCompass);
   const roomState     = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom] ?? EMPTY_ROOM_STATE_RC);
   const roomWindows   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWindows?.[activeRoom] ?? EMPTY_WINDOWS);
   const roomDimensions = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDimensions?.[activeRoom]);
@@ -3277,12 +3278,12 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
       <CameraAndCaptureSetup />
       <ExposureController />
 
-      {/* ── DEBUG: NSWE wall labels — small flat 3D decals on the inner
+      {/* ── NSWE wall labels — small flat 3D decals on the inner
            face of each wall, matching the walkthrough view's style and the
            2D floor-plan SVG visual weight. One label per wall, anchored
            25 % from the wall's start corner so centred doors/windows
-           don't eat the label. ── */}
-      {(() => {
+           don't eat the label. 由 showCompass 开关控制显隐。 ── */}
+      {showCompass && (() => {
         const lblY    = 1.5;
         const eps     = 0.08;          // clear interior wall surface
         const fontSize   = 0.20;       // 20 cm tall letter

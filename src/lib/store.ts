@@ -336,6 +336,10 @@ interface DesignerStore {
   floorPlans: FloorPlan[];
   activeRoom: RoomType;
   viewMode: ViewMode;
+  // NSWE 方位标识（平面图/效果图/漫游图各墙的 N/S/W/E 标签）的显隐开关。
+  // 用户可一键显示或隐藏。持久化保存偏好。
+  showCompass: boolean;
+  toggleCompass: () => void;
   selectedInstanceId: string | null;
   selectedInstanceIds: string[];
   budget: number;
@@ -696,6 +700,7 @@ export const useDesignerStore = create<DesignerStore>()(
       floorPlans: [makeDefaultFloorPlan()],
       activeRoom: "living",
       viewMode: "3d",
+      showCompass: true,
       selectedInstanceId: null,
       selectedInstanceIds: [],
       doorOpenByRoom: {},
@@ -821,6 +826,7 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       setViewMode: (mode) => set({ viewMode: mode }),
+      toggleCompass: () => set(s => ({ showCompass: !s.showCompass })),
 
       setMaterial: (material) => {
         const s = get();
@@ -1876,8 +1882,9 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       setExterior: (patch) => set(s => {
-        // Clamp exterior floors to 1–3 max (visual exterior cap)
-        if (patch.floors !== undefined) patch = { ...patch, floors: Math.max(1, Math.min(4, patch.floors)) };
+        // Floors: 不再限制最多 4 层。仅保留下限 1 与一个宽松的安全上限 99
+        // （防止导入异常值或误操作造成的超大楼层数把渲染拖垮）。
+        if (patch.floors !== undefined) patch = { ...patch, floors: Math.max(1, Math.min(99, patch.floors)) };
         const newExterior = { ...s.exterior, ...patch };
         let floorPlans = s.floorPlans;
         const targetFloors = newExterior.floors; // desired regular-floor count
@@ -2762,6 +2769,7 @@ export const useDesignerStore = create<DesignerStore>()(
         floorPlans: state.floorPlans,
         activeRoom: state.activeRoom,
         activeFloor: state.activeFloor,
+        showCompass: state.showCompass,
         budget: state.budget,
         scores: state.scores,
         customRoomMeta: state.customRoomMeta,

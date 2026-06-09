@@ -193,16 +193,12 @@ export default function TopBar() {
   useMCPSync();
   const viewMode          = useDesignerStore((s) => s.viewMode);
   const setViewMode       = useDesignerStore((s) => s.setViewMode);
-  const scores            = useDesignerStore((s) => s.scores);
+  const showCompass       = useDesignerStore((s) => s.showCompass);
+  const toggleCompass     = useDesignerStore((s) => s.toggleCompass);
   const roomClipboard     = useDesignerStore((s) => s.roomClipboard);
   const activeRoom        = useDesignerStore((s) => s.activeRoom);
-  const activeFloor       = useDesignerStore((s) => s.activeFloor);
   const exterior          = useDesignerStore((s) => s.exterior);
   const customRoomMeta    = useDesignerStore((s) => s.customRoomMeta);
-  const furnitureHistory  = useDesignerStore((s) => s.furnitureHistory);
-  const layoutHistory     = useDesignerStore((s) => s.layoutHistory);
-  const undoFurniture     = useDesignerStore((s) => s.undoFurniture);
-  const undoLayout        = useDesignerStore((s) => s.undoLayout);
   const t               = useT();
   const locale          = useLocaleStore((s) => s.locale);
   const setLocale       = useLocaleStore((s) => s.setLocale);
@@ -212,11 +208,6 @@ export default function TopBar() {
   const temporalRedo     = useTemporalStore((s) => s.redo);
   const pastCount        = useTemporalStore((s) => s.pastStates.length);
   const futureCount      = useTemporalStore((s) => s.futureStates.length);
-
-  const canUndo = viewMode === "all"
-    ? layoutHistory.length > 0
-    : furnitureHistory.length > 0;
-  const handleUndo = viewMode === "all" ? undoLayout : undoFurniture;
 
   // Keyboard shortcuts: Ctrl+Z = temporal undo, Ctrl+Y / Ctrl+Shift+Z = temporal redo
   useEffect(() => {
@@ -324,24 +315,11 @@ export default function TopBar() {
         </div>
       )}
 
-      {/* Undo / Redo buttons */}
+      {/* Undo / Redo buttons — 合并为统一的两个按钮。
+          旧版按房间的家具/布局撤销已冗余：zundo 设计态历史追踪 floorPlans
+          （含每个房间的 placedItems）+ exterior + budget，Ctrl+Z 同样会回退
+          家具与布局变更，故移除旧版灰色 ↩ 按钮，只保留下面统一的撤销/重做。 */}
       <div className="flex items-center gap-1 shrink-0">
-        {/* Legacy per-room undo (furniture / layout) */}
-        {viewMode !== "exterior" && (
-          <button
-            onClick={handleUndo}
-            disabled={!canUndo}
-            title={viewMode === "all" ? (locale === "en" ? "Undo layout action" : "撤销布局操作") : (locale === "en" ? "Undo furniture action" : "撤销家具操作")}
-            className="flex items-center justify-center w-7 h-7 rounded-lg text-sm transition-all disabled:opacity-30"
-            style={{
-              background: canUndo ? "var(--ds-bg)" : "transparent",
-              border: canUndo ? "1px solid var(--ds-border)" : "1px solid transparent",
-              color: "var(--ds-text-2)",
-            }}
-          >
-            ↩
-          </button>
-        )}
         {/* Zundo design-state undo (Ctrl+Z) */}
         <button
           onClick={() => temporalUndo()}
@@ -372,20 +350,27 @@ export default function TopBar() {
         </button>
       </div>
 
-      {/* Style badge */}
-      {scores.dominantStyle && (
-        <div
-          className="hidden md:flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full shrink-0"
-          style={{ background: "#E8F1FF", color: "#0055B3", border: "1px solid #CCE4FF" }}
-          title={`${t.scoreStyle}: ${scores.style}/100`}
+      {/* NSWE 方位标识显隐开关 —— 控制平面图/效果图/漫游图各墙上的
+          N/S/W/E 标签。仅在会出现这些标签的视图（平面图/效果图/外观漫游）显示。 */}
+      {(viewMode === "2d" || viewMode === "3d" || viewMode === "exterior") && (
+        <button
+          onClick={() => toggleCompass()}
+          title={locale === "en"
+            ? (showCompass ? "Hide NSWE direction labels" : "Show NSWE direction labels")
+            : (showCompass ? "隐藏 NSWE 方位标识" : "显示 NSWE 方位标识")}
+          className="flex items-center justify-center px-2 h-7 rounded-lg text-[11px] font-bold transition-all shrink-0"
+          style={{
+            background: showCompass ? "#FCE7F3" : "transparent",
+            border: showCompass ? "1px solid #FBCFE8" : "1px solid var(--ds-border)",
+            color: showCompass ? "#DB2777" : "var(--ds-text-3)",
+          }}
         >
-          <span>✨</span>
-          <span>{t.styleTags[scores.dominantStyle] ?? scores.dominantStyle}</span>
-          <span style={{ color: "#C4B5FD" }}>·</span>
-          <span style={{ color: "#007AFF" }}>{scores.style}</span>
-          <span style={{ color: "#C4B5FD", fontSize: 9, fontWeight: 400 }}>/100</span>
-        </div>
+          🧭 NSWE
+        </button>
       )}
+
+      {/* 风格评分徽章已下线 —— 完整评分（风格/空间/采光 + 主导风格）已在
+          右侧 RightPanel 常驻展示，顶栏不再重复占位。 */}
 
       {/* Room clipboard indicator */}
       {roomClipboard && (
@@ -423,16 +408,8 @@ export default function TopBar() {
         {locale === "zh" ? "🌐 EN" : "🌐 中"}
       </button>
 
-      {/* Auto-save + AI actions + Export */}
+      {/* Auto-save 指示已下线（用户不需要，自动保存照常运行）。 */}
       <div className="flex items-center gap-2 shrink-0">
-        <div
-          className="hidden lg:flex items-center gap-1 text-[10px] font-medium"
-          style={{ color: "var(--ds-text-3)" }}
-        >
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--ds-success)" }} />
-          {t.autoSaved}
-        </div>
-
         {/* AI 渲染 + 导入参考图入口已统一到右下角「✨ AI 渲染」分层菜单（⚡一键 / 🎨选预设 / ✨生成式精修 / 📷导入参考图）。 */}
 
         <button onClick={openExport} className="ds-btn-primary flex items-center gap-1.5">
