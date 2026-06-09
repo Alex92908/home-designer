@@ -263,8 +263,8 @@ export default function Home() {
     }
   }, [viewMode]);
 
-  // When any component calls requestAiRender() (e.g. Image3dGenerator after
-  // adding a GLB part), open AiRenderModal and clear the flag.
+  // When any component calls requestAiRender() (e.g. VillaTo3D after
+  // adding a GLB model), open AiRenderModal and clear the flag.
   useEffect(() => {
     if (aiRenderRequested) {
       setShowAiRender(true);

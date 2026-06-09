@@ -27,7 +27,6 @@ import { autoGenerateYardPaths } from "@/lib/yardAutoLayout";
 import { autoScatterTrees, placeSunShadeTrees } from "@/lib/yardAutoPlanting";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
-import { Image3dGenerator } from "./Image3dGenerator";
 import { VillaTo3D } from "./VillaTo3D";
 import { GlbPbrPanel } from "./GlbPbrPanel";
 import { getShadowPolygon } from "@/lib/sunAnalysis";
@@ -299,12 +298,11 @@ type LibraryTab = OutdoorCategory | "prefab" | "template";
 export function YardPlanLibrary() {
   const locale = useLocale();
   const [tab, setTab] = useState<LibraryTab>("template");
-  const [show3dGen, setShow3dGen]                     = useState(false);
-  const [showVillaDecompose, setShowVillaDecompose]   = useState(false);
-  const [showVillaDecompose2, setShowVillaDecompose2] = useState(false);
-  const [showVillaTo3D, setShowVillaTo3D]             = useState(false);
-  const [showSf3dQuick, setShowSf3dQuick]             = useState(false);
-  const [showPbrPanel, setShowPbrPanel]               = useState(false);
+  // 统一图生 3D：单模型 / 整图拆解 共用 VillaTo3D（mode 区分），PBR 与手动导入各一
+  const [showGen3dSingle, setShowGen3dSingle]   = useState(false);
+  const [showVillaDecompose, setShowVillaDecompose] = useState(false);
+  const [showPbrPanel, setShowPbrPanel]         = useState(false);
+  const manualGlbRef = useRef<HTMLInputElement>(null);
   const items = (tab === "prefab" || tab === "template") ? null
     : OUTDOOR_ASSET_LIBRARY.filter(a => a.category === tab);
 
@@ -326,6 +324,28 @@ export function YardPlanLibrary() {
     p.items.forEach((it, i) => {
       addYardItem({ ...it, id: `${p.id}-${stamp}-${i}` } as YardItem);
     });
+  };
+
+  // 手动导入 .glb/.gltf：读成 data URL → 直接入库为可拖放的 glb_model 预制件
+  const handleManualGlb = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // 允许重复选同一文件
+    if (!file) return;
+    const name = file.name.replace(/\.(glb|gltf)$/i, "");
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const src = ev.target?.result as string;
+      if (!src) return;
+      addYardItem({
+        id:         `glb_import_${Date.now()}`,
+        type:       "prefab",
+        prefabKind: "glb_model",
+        x:          200, z: 300, rot: 0, scale: 1,
+        glbSrc:     src,
+        partLabel:  name || (locale === "en" ? "Imported model" : "导入模型"),
+      } as YardItem);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -371,7 +391,21 @@ export function YardPlanLibrary() {
       {tab === "prefab" && (
         <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1.5">
 
-          {/* ── 整图拆解入口 v1 (TRELLIS 1.0) ───────────── */}
+          {/* ── 图片 → 3D 生成（单模型，TRELLIS/Hunyuan 弹窗选） ── */}
+          <button
+            onClick={() => setShowGen3dSingle(true)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
+            style={{ background: "linear-gradient(135deg,#F0FDF4,#ECFDF5)", border: "1px solid #6EE7B7" }}
+          >
+            <span style={{ fontSize: 22 }}>🏠</span>
+            <div className="flex flex-col flex-1 min-w-0">
+              <div className="text-[11px] font-bold" style={{ color: "#065F46" }}>{locale === "en" ? "Image → 3D model" : "图片 → 3D 模型"}</div>
+              <div className="text-[9px]" style={{ color: "#059669" }}>{locale === "en" ? "TRELLIS / Hunyuan · bring your own key · whole model into scene" : "TRELLIS / Hunyuan · 自带密钥 · 整模型入场景"}</div>
+            </div>
+            <span style={{ color: "#34D399", fontSize: 14 }}>›</span>
+          </button>
+
+          {/* ── 整图拆解 → 3D 组件集合 ───────────────────── */}
           <button
             onClick={() => setShowVillaDecompose(true)}
             className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
@@ -380,63 +414,9 @@ export function YardPlanLibrary() {
             <span style={{ fontSize: 22 }}>🏗</span>
             <div className="flex flex-col flex-1 min-w-0">
               <div className="text-[11px] font-bold" style={{ color: "#7C3AED" }}>{locale === "en" ? "Decompose image → 3D part set" : "整图拆解 → 3D组件集合"}</div>
-              <div className="text-[9px]" style={{ color: "#8B5CF6" }}>{locale === "en" ? "Trellis 1.0 · one villa image → batch-generate parts" : "Trellis 1.0 · 一张别墅图 → 批量生成零件"}</div>
+              <div className="text-[9px]" style={{ color: "#8B5CF6" }}>{locale === "en" ? "TRELLIS / Hunyuan → split into roof / walls / pool parts" : "TRELLIS / Hunyuan → 拆成屋顶/墙体/泳池等零件"}</div>
             </div>
             <span style={{ color: "#A78BFA", fontSize: 14 }}>›</span>
-          </button>
-
-          {/* ── 整图拆解入口 v2 (TRELLIS 2.0) ───────────── */}
-          <button
-            onClick={() => setShowVillaDecompose2(true)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
-            style={{ background: "linear-gradient(135deg,#FFF7ED,#FDF4FF)", border: "1px solid #FDBA74" }}
-          >
-            <span style={{ fontSize: 22 }}>🏗</span>
-            <div className="flex flex-col flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold" style={{ color: "#C2410C" }}>{locale === "en" ? "Decompose image → 3D part set" : "整图拆解 → 3D组件集合"}</span>
-                <span style={{
-                  fontSize: 9, background: "#7C3AED", color: "#fff",
-                  borderRadius: 3, padding: "0px 4px", fontWeight: 700,
-                }}>v2.0</span>
-              </div>
-              <div className="text-[9px]" style={{ color: "#EA580C" }}>{locale === "en" ? "TRELLIS 2.0 · 1024 resolution · finer textures" : "TRELLIS 2.0 · 1024分辨率 · 更精细纹理"}</div>
-            </div>
-            <span style={{ color: "#FB923C", fontSize: 14 }}>›</span>
-          </button>
-
-          {/* ── SF3D 快速通道（L4 专用 GPU，无配额限制）──── */}
-          <button
-            onClick={() => setShowSf3dQuick(true)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
-            style={{ background: "linear-gradient(135deg,#F0FFF4,#ECFDF5)", border: "1px solid #34D399" }}
-          >
-            <span style={{ fontSize: 22 }}>⚡</span>
-            <div className="flex flex-col flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold" style={{ color: "#065F46" }}>{locale === "en" ? "SF3D Quick 3D" : "SF3D 快速3D"}</span>
-                <span style={{
-                  fontSize: 9, background: "#059669", color: "#fff",
-                  borderRadius: 3, padding: "0px 5px", fontWeight: 700,
-                }}>{locale === "en" ? "Unlimited" : "无限制"}</span>
-              </div>
-              <div className="text-[9px]" style={{ color: "#047857" }}>{locale === "en" ? "Dedicated L4 GPU · no daily quota · ~10s · full-image GLB" : "L4专用GPU · 无每日配额 · ~10秒 · 整图生成GLB"}</div>
-            </div>
-            <span style={{ color: "#10B981", fontSize: 14 }}>›</span>
-          </button>
-
-          {/* ── VillaTo3D 独立入口 ────────────────────────── */}
-          <button
-            onClick={() => setShowVillaTo3D(true)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
-            style={{ background: "linear-gradient(135deg,#F0FDF4,#ECFDF5)", border: "1px solid #6EE7B7" }}
-          >
-            <span style={{ fontSize: 22 }}>🏠</span>
-            <div className="flex flex-col flex-1 min-w-0">
-              <div className="text-[11px] font-bold" style={{ color: "#065F46" }}>{locale === "en" ? "VillaTo3D Decompose" : "VillaTo3D 别墅拆解"}</div>
-              <div className="text-[9px]" style={{ color: "#059669" }}>{locale === "en" ? "Upload image → TRELLIS 1.0 → pick parts → add to scene" : "上传图片 → TRELLIS 1.0 → 选零件 → 加入场景"}</div>
-            </div>
-            <span style={{ color: "#34D399", fontSize: 14 }}>›</span>
           </button>
 
           {/* ── GLB + 原图 → PBR 贴图 ─────────────────────── */}
@@ -453,62 +433,40 @@ export function YardPlanLibrary() {
             <span style={{ color: "#A78BFA", fontSize: 14 }}>›</span>
           </button>
 
-          {/* ── 单零件生成入口 ────────────────────────────── */}
+          {/* ── 手动导入 .glb/.gltf ──────────────────────── */}
           <button
-            onClick={() => setShow3dGen(true)}
+            onClick={() => manualGlbRef.current?.click()}
             className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
             style={{ background: "linear-gradient(135deg,#EEF2FF,#F0FDF4)", border: "1px solid #C7D2FE" }}
           >
-            <span style={{ fontSize: 22 }}>🤖</span>
+            <span style={{ fontSize: 22 }}>📦</span>
             <div className="flex flex-col flex-1 min-w-0">
-              <div className="text-[11px] font-bold" style={{ color: "#4338CA" }}>{locale === "en" ? "AI Generate Single Part" : "AI 生成单个零件"}</div>
-              <div className="text-[9px]" style={{ color: "#6366F1" }}>{locale === "en" ? "Pick part → SF3D → GLB → drag into scene" : "选部位 → SF3D → GLB → 拖入场景"}</div>
+              <div className="text-[11px] font-bold" style={{ color: "#4338CA" }}>{locale === "en" ? "Import .glb / .gltf" : "手动导入 .glb / .gltf"}</div>
+              <div className="text-[9px]" style={{ color: "#6366F1" }}>{locale === "en" ? "Pick a local model → drops into scene, drag to place" : "选本地模型 → 直接入场景，可拖放放置"}</div>
             </div>
             <span style={{ color: "#818CF8", fontSize: 14 }}>›</span>
           </button>
+          <input
+            ref={manualGlbRef}
+            type="file"
+            accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
+            style={{ display: "none" }}
+            onChange={handleManualGlb}
+          />
 
           {/* Overlays */}
+          {showGen3dSingle && (
+            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)",
+              display:"flex", alignItems:"center", justifyContent:"center" }}
+              onClick={e => { if (e.target === e.currentTarget) setShowGen3dSingle(false); }}>
+              <VillaTo3D mode="single" onClose={() => setShowGen3dSingle(false)} />
+            </div>
+          )}
           {showVillaDecompose && (
             <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)",
               display:"flex", alignItems:"center", justifyContent:"center" }}
               onClick={e => { if (e.target === e.currentTarget) setShowVillaDecompose(false); }}>
-              <VillaTo3D onClose={() => setShowVillaDecompose(false)} />
-            </div>
-          )}
-          {showVillaDecompose2 && (
-            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.55)",
-              display:"flex", alignItems:"center", justifyContent:"center" }}
-              onClick={e => { if (e.target === e.currentTarget) setShowVillaDecompose2(false); }}>
-              <VillaTo3D
-                apiPath="/api/trellis2"
-                version="v2"
-                onClose={() => setShowVillaDecompose2(false)}
-              />
-            </div>
-          )}
-          {showSf3dQuick && (
-            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)",
-              display:"flex", alignItems:"center", justifyContent:"center" }}
-              onClick={e => { if (e.target === e.currentTarget) setShowSf3dQuick(false); }}>
-              <VillaTo3D
-                apiPath="/api/image-to-3d"
-                version="sf3d"
-                onClose={() => setShowSf3dQuick(false)}
-              />
-            </div>
-          )}
-          {showVillaTo3D && (
-            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)",
-              display:"flex", alignItems:"center", justifyContent:"center" }}
-              onClick={e => { if (e.target === e.currentTarget) setShowVillaTo3D(false); }}>
-              <VillaTo3D onClose={() => setShowVillaTo3D(false)} />
-            </div>
-          )}
-          {show3dGen && (
-            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.45)",
-              display:"flex", alignItems:"center", justifyContent:"center" }}
-              onClick={e => { if (e.target === e.currentTarget) setShow3dGen(false); }}>
-              <Image3dGenerator onClose={() => setShow3dGen(false)} />
+              <VillaTo3D mode="decompose" onClose={() => setShowVillaDecompose(false)} />
             </div>
           )}
           {showPbrPanel && (

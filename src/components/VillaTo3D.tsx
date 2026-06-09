@@ -21,8 +21,19 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useDesignerStore } from "@/lib/store";
-import { useT } from "@/lib/i18n";
+import { useT, useLocale } from "@/lib/i18n";
 import type { YardPrefab } from "@/lib/types";
+import {
+  getModel3dProvider,
+  Model3dProviderId,
+} from "@/lib/model3dProviders";
+import {
+  getModel3dKey,
+  setModel3dKey,
+  getSelected3dProvider,
+  setSelected3dProvider,
+} from "@/lib/model3dKeys";
+import Model3dKeyPromptModal from "./Model3dKeyPromptModal";
 
 // ─── Types ────────────────────────────────────────────────────────
 interface SegmentedPart {
@@ -47,17 +58,22 @@ const SEG_EMOJI: Record<string, string> = {
 // ─── Component ────────────────────────────────────────────────────
 export function VillaTo3D({
   onClose,
-  apiPath = "/api/trellis",
-  version = "v1",
+  mode = "decompose",
 }: {
   onClose?: () => void;
-  apiPath?: string;
-  version?: "v1" | "v2" | "sf3d";
+  /** decompose = 整图 → glb-segment 拆零件；single = 整模型直接入场景 */
+  mode?: "decompose" | "single";
 }) {
   const t = useT();
+  const en = useLocale() === "en";
   const referenceImageDataUrl = useDesignerStore(s => s.referenceImageDataUrl);
   const addYardItem           = useDesignerStore(s => s.addYardItem);
   const requestAiRender       = useDesignerStore(s => s.requestAiRender);
+
+  // 选中的 3D 后端（TRELLIS 1.0/2.0/Hunyuan）—— 即「选模型」+「选凭证」
+  const [provider, setProvider] = useState<Model3dProviderId>(() => getSelected3dProvider());
+  const [keyPrompt, setKeyPrompt] = useState(false);
+  const providerMeta = getModel3dProvider(provider)!;
 
   const STAGE_LABELS: Record<Stage, string> = {
     upload:           t.villaTo3d.stageUpload,
@@ -90,20 +106,20 @@ export function VillaTo3D({
     reader.readAsDataURL(f);
   }, []);
 
-  // ── Full pipeline ───────────────────────────────────────────────
-  const run = useCallback(async () => {
+  // ── Full pipeline（统一走 /api/model-3d，token 自带） ─────────────
+  const run = useCallback(async (hfToken: string) => {
     if (!activeImage) { setError(t.villaTo3d.needUploadImg); return; }
     setError("");
     setQuotaExceeded(false);
 
-    // ── Step 1: Trellis → full scene GLB ──────────────────────────
+    // ── Step 1: 后端模型 → 整场景 GLB ─────────────────────────────
     setStage("generating_full");
     let glbB64: string;
     try {
-      const res  = await fetch(apiPath, {
+      const res  = await fetch("/api/model-3d", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: activeImage }),
+        body: JSON.stringify({ provider, hfToken, imageBase64: activeImage }),
       });
       const json = await res.json() as {
         glbBase64?: string; glbUrl?: string; error?: string; quotaExceeded?: boolean;
@@ -124,9 +140,9 @@ export function VillaTo3D({
       return;
     }
 
-    // ── Step 2: GLB segmentation (skipped for SF3D — single-object model) ──
-    if (version === "sf3d") {
-      setParts([{ label: "sf3d model", chinese: t.villaTo3d.sf3dModel, seg: "wall", faceCount: 0, glbBase64: glbB64 }]);
+    // ── Step 2: GLB 拆件（single 模式整模型直接入场景，不拆） ──────
+    if (mode === "single") {
+      setParts([{ label: providerMeta.label, chinese: providerMeta.label, seg: "wall", faceCount: 0, glbBase64: glbB64 }]);
       setSelected(new Set([0]));
       setStage("selecting");
       return;
@@ -150,7 +166,14 @@ export function VillaTo3D({
       setSelected(new Set([0]));
       setStage("selecting");
     }
-  }, [activeImage, version, t]);
+  }, [activeImage, provider, mode, providerMeta.label, t]);
+
+  // ── BYOK 网关：选中后端有 key 就跑，没有就弹窗填 key ──────────────
+  const ensureKeyThenRun = useCallback(() => {
+    const key = getModel3dKey(providerMeta.credential);
+    if (key) void run(key);
+    else setKeyPrompt(true);
+  }, [providerMeta.credential, run]);
 
   // ── Add selected parts to scene ─────────────────────────────────
   // asMainBuilding=true → single GLB at origin (0,0), user-set scale
@@ -198,16 +221,14 @@ export function VillaTo3D({
         <div>
           <div style={{ fontWeight: 700, fontSize: 15 }}>
             {t.villaTo3d.title}
-            {version === "v2" && (
-              <span style={{
-                marginLeft: 8, fontSize: 10,
-                background: "#7C3AED", color: "#fff",
-                borderRadius: 4, padding: "1px 6px", verticalAlign: "middle",
-              }}>TRELLIS 2.0</span>
-            )}
+            <span style={{
+              marginLeft: 8, fontSize: 10,
+              background: "#7C3AED", color: "#fff",
+              borderRadius: 4, padding: "1px 6px", verticalAlign: "middle",
+            }}>{providerMeta.label}</span>
           </div>
           <div style={{ fontSize: 10, color: "#888", marginTop: 3 }}>
-            {version === "v2" ? t.villaTo3d.subtitleV2 : t.villaTo3d.subtitleV1}
+            {en ? providerMeta.blurb.en : providerMeta.blurb.zh}
           </div>
         </div>
         {onClose && (
@@ -291,7 +312,7 @@ export function VillaTo3D({
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <button
-                  onClick={() => run()}
+                  onClick={() => ensureKeyThenRun()}
                   disabled={!activeImage}
                   style={{
                     padding: "8px 0", borderRadius: 8,
@@ -321,7 +342,30 @@ export function VillaTo3D({
             </div>
           )}
 
-          <button onClick={() => run()} disabled={!activeImage} style={{
+          {/* 后端选择条：当前模型 + 换/填密钥 */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            gap: 8, padding: "8px 10px", marginBottom: 10,
+            border: "1px solid #E5E7EB", borderRadius: 8, background: "#FAFAFA",
+          }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#374151" }}>
+                {en ? "Backend" : "后端模型"}：{providerMeta.label}
+              </div>
+              <div style={{ fontSize: 9, color: "#9CA3AF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {en ? providerMeta.blurb.en : providerMeta.blurb.zh}
+              </div>
+            </div>
+            <button onClick={() => setKeyPrompt(true)} style={{
+              flexShrink: 0, padding: "5px 10px", borderRadius: 6,
+              border: "1px solid #C4B5FD", background: "#fff",
+              color: "#6D28D9", fontSize: 10, fontWeight: 700, cursor: "pointer",
+            }}>
+              {en ? "Switch / key" : "更换 / 密钥"}
+            </button>
+          </div>
+
+          <button onClick={() => ensureKeyThenRun()} disabled={!activeImage} style={{
             width: "100%", padding: "11px 0",
             background: !activeImage ? "#9CA3AF" : "linear-gradient(135deg,#7C3AED,#4F46E5)",
             color: "#fff", border: "none", borderRadius: 10,
@@ -342,12 +386,12 @@ export function VillaTo3D({
         <div style={{ textAlign: "center", padding: "30px 0" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>⚙️</div>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>
-            {version === "v2" ? t.villaTo3d.genFullV2 : t.villaTo3d.genFullV1}
+            {t.villaTo3d.genFullV1}
           </div>
           <div style={{ color: "#666", fontSize: 12, lineHeight: 1.7 }}>
             {t.villaTo3d.genFullBody1}<br />
             {t.villaTo3d.genFullBody2}<br />
-            {version === "v2" ? t.villaTo3d.genFullEtaV2 : t.villaTo3d.genFullEtaV1}
+            {t.villaTo3d.genFullEtaV1}
           </div>
           <div style={{ marginTop: 20, height: 4, background: "#E5E7EB", borderRadius: 2, overflow: "hidden" }}>
             <div style={{
@@ -516,7 +560,7 @@ export function VillaTo3D({
                   onClick={() => {
                     const a = document.createElement("a");
                     a.href = fullGlb!;
-                    a.download = `trellis${version === "v2" ? "2" : ""}_villa_${Date.now()}.glb`;
+                    a.download = `${provider}_villa_${Date.now()}.glb`;
                     a.click();
                   }}
                   style={{
@@ -544,6 +588,21 @@ export function VillaTo3D({
             </div>
           </div>
         </div>
+      )}
+
+      {keyPrompt && (
+        <Model3dKeyPromptModal
+          initialProvider={provider}
+          onSave={(p, k) => {
+            setModel3dKey(getModel3dProvider(p)!.credential, k);
+            setSelected3dProvider(p);
+            setProvider(p);
+            setKeyPrompt(false);
+            // 填完即跑：用刚保存的 key 直接生成
+            void run(k);
+          }}
+          onClose={() => setKeyPrompt(false)}
+        />
       )}
     </div>
   );
