@@ -279,6 +279,28 @@ export const MATERIAL_NAMES_EN: Record<string, string> = {
   "tile-white-marble":  "White Marble Tile",
   "tile-gray-stone":    "Gray Stone Tile",
   "tile-terracotta":    "Vintage Floor Tile",
+
+  // Sample-villa bespoke materials (synthetic ids from sampleGlassVilla.ts `mat()`)
+  "m-wall-F2EDE5":      "Warm White Paint",
+  "m-wall-F0EBE2":      "Warm White Paint",
+  "m-wall-F2F0EC":      "Warm White Paint",
+  "m-wall-FFFFFF":      "White Tile",
+  "m-wall-F5F5F5":      "White Tile",
+  "m-wall-E8E8E8":      "Sport Gray Paint",
+  "m-wall-EAE4DC":      "Warm Gray Paint",
+  "m-wall-EEF0F5":      "Light Blue-White Paint",
+  "m-wall-E8E0D8":      "Wood-Tone Paint",
+  "m-wall-F5F0E8":      "Cream White Paint",
+  "m-wall-F0F0F0":      "Matte White Tile",
+  "m-floor-C8A882":     "Oak Flooring",
+  "m-floor-E0E0E0":     "Anti-Slip Floor Tile",
+  "m-floor-DCDCDC":     "Anti-Slip Floor Tile",
+  "m-floor-4A4A4A":     "Rubber Flooring",
+  "m-floor-8B6340":     "Dark Oak Flooring",
+  "m-floor-C8B890":     "Solid Wood Flooring",
+  "m-floor-B89060":     "Antique Wood Flooring",
+  "m-floor-D4C0A0":     "Engineered Wood Flooring",
+  "m-floor-D4D4D4":     "Anti-Slip Marble",
 };
 
 export const BRAND_NAMES_EN: Record<string, string> = {
