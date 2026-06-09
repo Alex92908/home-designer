@@ -123,14 +123,17 @@ function RoomGroup({
   }, [polyPts, W, D]);
 
   // Wall rendering rule (super simple):
-  //   - Circulation rooms (hallway / stair / balcony / outdoor):
+  //   - Circulation rooms (hallway / balcony / outdoor):
   //     render NO walls. They borrow the perimeter from the adjacent
   //     indoor rooms' walls. Avoids all the "is this wall facing
   //     outside" geometry checks that kept being wrong on edge cases.
   //   - Regular indoor rooms (bedroom, living, kitchen, ...): always
   //     render all 4 walls.
+  //   - 楼梯间 (stair) 是普通房间，不再当作 circulation —— 照常渲染四壁，
+  //     由 roomWallsHidden 通用机制控制显隐。这样天台出屋面楼梯间在全局
+  //     3D 也能显示围护墙，与外观视图 (FloorPlanExterior) 保持一致。
   const isCirculationRoom = useMemo(() => {
-    if (room === "hallway" || room === "stair") return true;
+    if (room === "hallway") return true;
     if (room === "balcony" || room === "balcony2") return true;
     return def.isOutdoor === true;
   }, [room, def.isOutdoor]);
