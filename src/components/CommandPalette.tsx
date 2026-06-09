@@ -74,7 +74,8 @@ export default function CommandPalette() {
     { id: "view-2d",       label: en ? "2D Floor Plan"       : "2D 平面图",     icon: "📐", group: gView, action: () => setViewMode("2d") },
     { id: "view-all",      label: en ? "Overview Plan"       : "全局平面图",     icon: "🗺️", group: gView, action: () => setViewMode("all") },
     { id: "view-exterior", label: en ? "Exterior 3D"         : "外立面 3D",      icon: "🏠", group: gView, action: () => setViewMode("exterior") },
-    { id: "view-yard2d",   label: en ? "Yard Plan"           : "院子图",        icon: "🌿", group: gView, action: () => setViewMode("yard2d") },
+    // 院子入口先注释掉 — 命令面板「院子图」暂时下线
+    // { id: "view-yard2d",   label: en ? "Yard Plan"           : "院子图",        icon: "🌿", group: gView, action: () => setViewMode("yard2d") },
     { id: "view-global3d", label: en ? "Global 3D"           : "全局 3D",       icon: "🌐", group: gView, action: () => setViewMode("global3d") },
 
     // Undo/redo

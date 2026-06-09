@@ -833,8 +833,7 @@ export default function FloorPlanAll() {
           >
             {t.fpHouseTemplateBtn}
           </button>
-          {/* 院子图 tab 已移除，但 yard2d viewMode 内部仍可用 ——
-              暴露成全局视图里的一个按钮入口，方便用户继续编辑院子 */}
+          {/* 院子入口先注释掉 — 「编辑院子」按钮暂时下线
           <button
             onClick={() => setViewMode("yard2d")}
             className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all"
@@ -843,6 +842,7 @@ export default function FloorPlanAll() {
           >
             🌳 {locale === "en" ? "Edit yard" : "编辑院子"}
           </button>
+          */}
           <button
             onClick={() => setViewMode("exterior")}
             className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all"

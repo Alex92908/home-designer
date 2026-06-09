@@ -239,7 +239,7 @@ export default function ExteriorPanel() {
   const exterior              = useDesignerStore(s => s.exterior);
   const setExterior           = useDesignerStore(s => s.setExterior);
   const applyExteriorPreset   = useDesignerStore(s => s.applyExteriorPreset);
-  const viewMode              = useDesignerStore(s => s.viewMode);
+  // const viewMode           = useDesignerStore(s => s.viewMode); // 院子入口注释后暂无用，恢复 toggle 时一并恢复
   const setViewMode           = useDesignerStore(s => s.setViewMode);
   const t = useT();
   const locale = useLocale();
@@ -287,7 +287,7 @@ export default function ExteriorPanel() {
         <div className="text-[10px] text-gray-400 mb-2">
           {exterior.floors} {t.extFloorUnit} · {t.extRoofLabels[exterior.roofStyle] ?? exterior.roofStyle}
         </div>
-        {/* Sub-mode toggle: 3D外观 vs 2D院子 */}
+        {/* 院子入口先注释掉 — 3D外观/2D院子 子切换暂时下线
         <div className="flex gap-1 p-0.5 rounded-xl" style={{ background: "#F3F4F6" }}>
           <button
             onClick={() => setViewMode("exterior")}
@@ -308,6 +308,7 @@ export default function ExteriorPanel() {
             {en ? "🌿 2D Yard" : "🌿 2D院子"}
           </button>
         </div>
+        */}
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -774,7 +775,7 @@ export default function ExteriorPanel() {
           <FacadeEditor face={activeFacadeFace} floors={exterior.floors} />
         </div>
 
-        {/* ── 院子布局 ── */}
+        {/* 院子入口先注释掉 — 院子布局（2D 院子编辑器）入口暂时下线
         <div className="mx-3 mt-4">
           <button
             onClick={() => setViewMode("yard2d")}
@@ -791,6 +792,7 @@ export default function ExteriorPanel() {
             <span className="text-[10px] font-bold" style={{ color: "#1F6F1F" }}>→</span>
           </button>
         </div>
+        */}
 
 
         {/* ── 窗户外观（Window Appearance） ── */}

@@ -286,7 +286,8 @@ export default function TopBar() {
         style={{ background: "var(--ds-bg)", border: "1px solid var(--ds-border)" }}
       >
         {/* Primary tabs — all, 平面图, 效果图, 全局3D, 院子图, 外观 */}
-        {(["all", "2d", "3d", "global3d", "yard2d", "exterior"] as const).map((mode) => {
+        {/* 院子入口先注释掉 — yard2d 标签暂时下线 */}
+        {(["all", "2d", "3d", "global3d", /* "yard2d", */ "exterior"] as const).map((mode) => {
           const isActive = viewMode === mode;
           return (
             <button
