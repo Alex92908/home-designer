@@ -53,7 +53,7 @@ const MODERN_POOL_VILLA: ProjectTemplate = {
   styleTemplateId: "luxury",
 
   exterior: {
-    preset: "contemporary",
+    preset: "modern-minimal",
     roofStyle: "flat",
     wallMaterial: "render",
     wallColor: "#F5F2EC",
@@ -240,7 +240,7 @@ const JAPANESE_ZEN_VILLA: ProjectTemplate = {
   styleTemplateId: "japanese",
 
   exterior: {
-    preset: "japanese",
+    preset: "japanese-zen",
     roofStyle: "chinese",
     wallMaterial: "wood",
     wallColor: "#F0EDE8",
@@ -548,7 +548,7 @@ const GLASS_CURTAIN_VILLA: ProjectTemplate = {
   styleTemplateId: "modern-villa",
 
   exterior: {
-    preset:       "modern",
+    preset:       "modern-minimal",
     roofStyle:    "flat",
     roofColor:    "#1C1C1C",
     wallMaterial: "render",
@@ -735,7 +735,7 @@ const LUXURY_3F_GLASS_VILLA: ProjectTemplate = {
   styleTemplateId: "modern-villa",
 
   exterior: {
-    preset:       "modern",
+    preset:       "modern-minimal",
     roofStyle:    "flat",
     roofColor:    "#1C1C1C",
     wallMaterial: "render",
@@ -940,7 +940,7 @@ const WOOD_ACCENT_POOL_VILLA: ProjectTemplate = {
   styleTemplateId: "walnut-villa",
 
   exterior: {
-    preset: "contemporary",
+    preset: "modern-minimal",
     roofStyle: "flat",
     wallMaterial: "render",
     wallColor: "#EDE9E3",

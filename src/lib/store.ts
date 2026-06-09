@@ -1671,7 +1671,9 @@ export const useDesignerStore = create<DesignerStore>()(
         if (!preset) return;
 
         // 1) Exterior settings — merge over current (preserves unset fields).
-        get().setExterior(preset.settings);
+        //    Stamp the canonical style id so the active highlight stays in sync
+        //    no matter which entry point applied it (单一风格主线 single source).
+        get().setExterior({ ...preset.settings, preset: presetId });
 
         // 2) Per-room material defaults + 3) yard items. Both touch
         // floorPlans, so we batch them into one set() to avoid an

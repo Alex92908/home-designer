@@ -5,7 +5,6 @@ import { useDesignerStore } from "@/lib/store";
 import type { RoofStyle, WallMaterialType, WallSide, WallZone } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
 import DesignVariants from "./DesignVariants";
-import { PROJECT_TEMPLATES } from "@/lib/projectTemplates";
 import { EXTERIOR_PRESETS } from "@/lib/exteriorPresets";
 import FacadeEditor from "./FacadeEditor";
 import { getSampleGlassVillaFloorPlans, SAMPLE_GLASS_VILLA_EXTERIOR } from "@/lib/sampleGlassVilla";
@@ -15,20 +14,18 @@ import { getSampleGlassVillaFloorPlans, SAMPLE_GLASS_VILLA_EXTERIOR } from "@/li
 // `src/components/RightPanel.tsx::ExteriorDecorSection`.
 
 // ─── Presets ────────────────────────────────────────────────
-const PRESETS: {
-  id: string; label: string; icon: string;
-  roofStyle: RoofStyle; roofColor: string;
-  wallMaterial: WallMaterialType; wallColor: string; accentColor: string;
-}[] = [
-  { id:"modern",        label:"现代简约", icon:"🏢", roofStyle:"flat",    roofColor:"#3A3A3A", wallMaterial:"render",   wallColor:"#F2EEE6", accentColor:"#2A2A2A" },
-  { id:"mediterranean", label:"地中海",   icon:"🏛️", roofStyle:"hip",     roofColor:"#B83820", wallMaterial:"render",   wallColor:"#FFF8E8", accentColor:"#9B6B3A" },
-  { id:"chinese",       label:"中式传统", icon:"🏯", roofStyle:"chinese", roofColor:"#1E2238", wallMaterial:"render",   wallColor:"#F0E8D0", accentColor:"#882020" },
-  { id:"european",      label:"欧式古典", icon:"🏰", roofStyle:"mansard", roofColor:"#4A5870", wallMaterial:"brick",    wallColor:"#E8D8C0", accentColor:"#7A7050" },
-  { id:"industrial",    label:"工业风",   icon:"🏗️", roofStyle:"gable",   roofColor:"#3C4848", wallMaterial:"concrete", wallColor:"#787878", accentColor:"#E84000" },
-  { id:"japanese",      label:"日式和风", icon:"⛩️", roofStyle:"chinese", roofColor:"#181818", wallMaterial:"wood",     wallColor:"#F0EDE8", accentColor:"#282828" },
-  { id:"modern_villa",  label:"现代别墅", icon:"🏡", roofStyle:"gable",   roofColor:"#2A4060", wallMaterial:"render",   wallColor:"#FFFFFF", accentColor:"#2A4060" },
-  { id:"rustic",        label:"乡村田园", icon:"🌾", roofStyle:"hip",     roofColor:"#6B4820", wallMaterial:"wood",     wallColor:"#D4B880", accentColor:"#5A3818" },
-];
+// ── 快速色卡：从 EXTERIOR_PRESETS 派生（单一风格主线，不再维护独立 id 空间）──
+// 色卡只取每个风格的几个代表色做"仅改色"的轻量微调；完整方案走 applyExteriorPreset。
+// id 与 EXTERIOR_PRESETS 一致 → exterior.preset 高亮在模板 / 设计包 / 色卡间始终同步。
+const COLOR_SWATCHES = EXTERIOR_PRESETS.map(p => ({
+  id: p.id,
+  label: p.label,
+  labelEn: p.labelEn,
+  icon: p.icon,
+  wall:   p.settings.wallBaseColor ?? p.settings.wallColor ?? "#E8E2D6",
+  roof:   p.settings.roofColor ?? "#3A3A3A",
+  accent: p.settings.windowFrameColor ?? p.settings.accentColor ?? "#222222",
+}));
 
 const ROOF_STYLES: { id: RoofStyle; label: string; icon: string; desc: string }[] = [
   { id:"flat",    label:"平屋顶", icon:"▬",  desc:"现代简约" },
@@ -242,7 +239,6 @@ export default function ExteriorPanel() {
   const exterior              = useDesignerStore(s => s.exterior);
   const setExterior           = useDesignerStore(s => s.setExterior);
   const applyExteriorPreset   = useDesignerStore(s => s.applyExteriorPreset);
-  const applyProjectTemplate  = useDesignerStore(s => s.applyProjectTemplate);
   const viewMode              = useDesignerStore(s => s.viewMode);
   const setViewMode           = useDesignerStore(s => s.setViewMode);
   const t = useT();
@@ -260,14 +256,15 @@ export default function ExteriorPanel() {
   const hasMovedOutdoor = Object.keys(exterior.outdoorPositions ?? {}).length > 0;
   const resetOutdoorPositions = () => setExterior({ outdoorPositions: {} });
 
-  const applyPreset = (p: typeof PRESETS[0]) => {
+  // 仅改色：套用代表色 + 写 canonical preset id（不动房间材质 / 院子）。
+  const applyColorSwatch = (sw: typeof COLOR_SWATCHES[0]) => {
     setExterior({
-      preset: p.id,
-      roofStyle: p.roofStyle,
-      roofColor: p.roofColor,
-      wallMaterial: p.wallMaterial,
-      wallColor: p.wallColor,
-      accentColor: p.accentColor,
+      preset: sw.id,
+      wallBaseColor: sw.wall,
+      wallColor: sw.wall,
+      roofColor: sw.roof,
+      windowFrameColor: sw.accent,
+      accentColor: sw.accent,
     });
   };
 
@@ -315,40 +312,46 @@ export default function ExteriorPanel() {
 
       <div className="flex-1 overflow-y-auto">
 
-        {/* ── 项目模板 — one-click full villa setup ── */}
+        {/* 整屋项目模板（会改楼层布局/房间）已上移到「户型/平面」前段流程
+           （FloorPlanAll + TemplatesPanel）—— 外观面板只管外观，不再覆盖上游设计。*/}
+
+        {/* ── 外观风格（完整设计包 — applies ~30 settings + 房间材质 + 院子）──
+             面板第一块大笔触风格选择，下面才是细调。 */}
         <div className="px-3 pt-3">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-            {en ? "✨ Project Templates" : "✨ 项目模板"}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {PROJECT_TEMPLATES.map(tpl => (
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{en ? "✨ Exterior Style (Full Pack)" : "✨ 外观风格（完整设计包）"}</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {EXTERIOR_PRESETS.map(p => (
               <button
-                key={tpl.id}
-                onClick={() => applyProjectTemplate(tpl.id)}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all hover:shadow-sm active:scale-[0.98]"
-                style={{
-                  background: "linear-gradient(135deg, rgba(255,255,255,0.8), rgba(245,242,238,0.6))",
-                  border: "1px solid #E5E7EB",
-                }}
+                key={p.id}
+                onClick={() => applyExteriorPreset(p.id)}
+                className={`flex flex-col items-start gap-0.5 px-2 py-1.5 rounded-lg border transition-colors text-left ${
+                  exterior.preset === p.id
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 bg-gray-50 hover:bg-blue-50 hover:border-blue-300"
+                }`}
+                title={p.blurb}
               >
-                {/* Color palette strip */}
-                <div className="flex flex-col gap-px shrink-0">
-                  <div className="w-5 h-5 rounded-lg overflow-hidden flex">
-                    <div className="flex-1" style={{ background: tpl.palette[0] }} />
-                    <div className="w-2"    style={{ background: tpl.palette[1] }} />
-                    <div className="w-1.5"  style={{ background: tpl.palette[2] }} />
-                  </div>
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-700">
+                  <span className="text-[12px]">{p.icon}</span>
+                  <span>{en ? p.labelEn : p.label}</span>
+                  {(p.roomMaterials || p.yardItems) && (
+                    <span className="text-[10px] text-amber-500" title={en ? "Full scheme — includes room materials / yard" : "完整方案 — 含房间材质 / 院子"}>✦</span>
+                  )}
                 </div>
-                <span className="text-xl shrink-0">{tpl.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-bold text-gray-800 truncate">{en ? tpl.nameEn : tpl.name}</div>
-                  <div className="text-[9px] text-gray-400 truncate">{en ? tpl.descriptionEn : tpl.description}</div>
-                </div>
-                <div className="text-[10px] font-bold text-gray-400 shrink-0">{tpl.areaSqm}㎡</div>
+                <span className="text-[9px] text-gray-400 leading-tight">{p.blurb}</span>
               </button>
             ))}
           </div>
-          <div className="mt-1.5 mb-0.5 border-t border-gray-100" />
+          <div className="text-[9px] text-gray-400 mt-1.5 leading-tight">
+            {en ? (
+              <>One-click design pack: ~30 exterior settings + per-room floor / wall materials + yard planting.
+              Those marked <span className="text-gray-500 font-semibold">✦</span> are &quot;full schemes&quot; with room materials and yard already set up.</>
+            ) : (
+              <>一键设计包：外观 ~30 项 + 每间房地板 / 墙面材质 + 院子植被。
+              带 <span className="text-gray-500 font-semibold">✦</span> 的为已配齐房间材质与院子的&quot;完整方案&quot;。</>
+            )}
+          </div>
+          <div className="mt-2 mb-0.5 border-t border-gray-100" />
         </div>
 
         {/* ── 平面图驱动外观 ── */}
@@ -414,25 +417,27 @@ export default function ExteriorPanel() {
           );
         })()}
 
-        {/* ── Style presets ── */}
+        {/* ── 快速色卡（仅改色 — 从 EXTERIOR_PRESETS 派生，不动房间材质/院子）── */}
         <div className="px-3 pt-3">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t.extPresets}</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+            {en ? "🎨 Quick Recolor (exterior only)" : "🎨 快速色卡（仅改色）"}
+          </div>
           <div className="grid grid-cols-2 gap-1.5">
-            {PRESETS.map(p => (
-              <button key={p.id} onClick={() => applyPreset(p)}
+            {COLOR_SWATCHES.map(sw => (
+              <button key={sw.id} onClick={() => applyColorSwatch(sw)}
                 className={`relative flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border-2 text-center transition-all ${
-                  exterior.preset === p.id
+                  exterior.preset === sw.id
                     ? "border-blue-500 bg-blue-50"
                     : "border-transparent bg-gray-50 hover:border-gray-200"
                 }`}>
                 <div className="w-full h-6 rounded-lg flex overflow-hidden gap-px mb-0.5">
-                  <div className="flex-1" style={{ background: p.wallColor }} />
-                  <div className="w-5"   style={{ background: p.roofColor }} />
-                  <div className="w-3"   style={{ background: p.accentColor }} />
+                  <div className="flex-1" style={{ background: sw.wall }} />
+                  <div className="w-5"   style={{ background: sw.roof }} />
+                  <div className="w-3"   style={{ background: sw.accent }} />
                 </div>
-                <span className="text-sm leading-none">{p.icon}</span>
-                <span className="text-[10px] font-semibold text-gray-700 leading-tight">{t.extPresetLabels[p.id] ?? p.label}</span>
-                {exterior.preset === p.id && (
+                <span className="text-sm leading-none">{sw.icon}</span>
+                <span className="text-[10px] font-semibold text-gray-700 leading-tight">{en ? sw.labelEn : sw.label}</span>
+                {exterior.preset === sw.id && (
                   <div className="absolute top-1 right-1 w-3.5 h-3.5 bg-blue-500 rounded-full flex items-center justify-center">
                     <span className="text-white text-[7px]">✓</span>
                   </div>
@@ -787,38 +792,6 @@ export default function ExteriorPanel() {
           </button>
         </div>
 
-        {/* ── 风格预设（Style Presets — applies ~30 settings in one click） ── */}
-        <div className="px-3 pt-4">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{en ? "STYLE PRESETS" : "风格预设 (STYLE PRESETS)"}</div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {EXTERIOR_PRESETS.map(p => (
-              <button
-                key={p.id}
-                onClick={() => applyExteriorPreset(p.id)}
-                className="flex flex-col items-start gap-0.5 px-2 py-1.5 rounded-lg border transition-colors text-left bg-gray-50 border-gray-200 hover:bg-blue-50 hover:border-blue-300"
-                title={p.blurb}
-              >
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-700">
-                  <span className="text-[12px]">{p.icon}</span>
-                  <span>{en ? p.labelEn : p.label}</span>
-                  {(p.roomMaterials || p.yardItems) && (
-                    <span className="text-[10px] text-amber-500" title={en ? "Full scheme — includes room materials / yard" : "完整方案 — 含房间材质 / 院子"}>✦</span>
-                  )}
-                </div>
-                <span className="text-[9px] text-gray-400 leading-tight">{p.blurb}</span>
-              </button>
-            ))}
-          </div>
-          <div className="text-[9px] text-gray-400 mt-1.5 leading-tight">
-            {en ? (
-              <>One-click design pack: ~30 exterior settings + per-room floor / wall materials + yard planting.
-              Those marked <span className="text-gray-500 font-semibold">✦</span> are &quot;full schemes&quot; with room materials and yard already set up.</>
-            ) : (
-              <>一键设计包：外观 ~30 项 + 每间房地板 / 墙面材质 + 院子植被。
-              带 <span className="text-gray-500 font-semibold">✦</span> 的为已配齐房间材质与院子的&quot;完整方案&quot;。</>
-            )}
-          </div>
-        </div>
 
         {/* ── 窗户外观（Window Appearance） ── */}
         <div className="px-3 pt-4">
