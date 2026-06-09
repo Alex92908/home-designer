@@ -212,6 +212,32 @@ export const FURNITURE_NAMES_EN: Record<string, string> = {
   "horse":                  "Horse",
   "chicken-coop":           "Chicken Coop",
   "barn":                   "Barn",
+
+  // Rooftop / outdoor facilities & staircases
+  "lounger-sun":              "Sun Lounger",
+  "garden-coffee-table":      "Garden Coffee Table",
+  "planter-clay":             "Terracotta Planter",
+  "outdoor-dining-set":       "Outdoor Dining Set",
+  "solar-panel-array":        "Solar Panel Array",
+  "roof-vent":                "Roof Vent",
+  "hvac-condenser":           "HVAC Condenser",
+  "roof-skylight":            "Linear Skylight",
+  "green-roof-patch":         "Green Roof Patch",
+  "lightning-rod":            "Lightning Rod",
+  "antenna-mast":             "Antenna Mast",
+  "weather-station":          "Weather Station",
+  "roof-scupper":             "Roof Scupper",
+  "solar-thermal-collector":  "Solar Thermal Collector",
+  "helipad-marking":          "Helipad Marking",
+  "reflecting-pool":          "Reflecting Pool",
+  "cold-plunge-pool":         "Cold Plunge Pool",
+  "sky-bar":                  "Sky Bar",
+  "staircase-straight":       "Straight Staircase",
+  "staircase-l-shaped":       "L-Shaped Staircase",
+  "staircase-u-shaped":       "U-Shaped Staircase",
+  "staircase-spiral":         "Spiral Staircase",
+  "water-supply-cold":        "Water Supply (Cold)",
+  "water-supply-hot":         "Water Supply (Hot)",
 };
 
 export const MATERIAL_NAMES_EN: Record<string, string> = {
@@ -325,6 +351,14 @@ export const BRAND_NAMES_EN: Record<string, string> = {
   "电工":         "Electrical",
   "家用电器":     "Appliance",
   "灯饰":         "Lighting",
+  // Rooftop / staircase brands
+  "屋面家具":     "Rooftop Furniture",
+  "屋面机电":     "Rooftop MEP",
+  "屋面标识":     "Rooftop Marking",
+  "屋面水景":     "Rooftop Water Feature",
+  "屋面绿化":     "Rooftop Greenery",
+  "楼梯定制":     "Custom Staircase",
+  "绿能光伏":     "Solar PV",
 };
 
 export function getFurnitureNameEn(id: string): string | undefined {
@@ -396,6 +430,9 @@ export const FLOORPLAN_LAYOUT_NAMES_EN: Record<string, string> = {
   "3br-2lr-110":            "3-Bed 2-Living 110㎡",
   "l-shaped-living-95":     "L-shape 2-Bed Living 95㎡",
   "big-flat-with-study-150":"Large Flat with Study 150㎡",
+  "villa-floor1-corridor":  "Villa Floor 1 (with Corridor)",
+  "villa-floor2-corridor":  "Villa Floor 2 (with Corridor)",
+  "villa-floor3-corridor":  "Villa Floor 3 (with Corridor)",
 };
 
 export function getLayoutNameEn(id: string): string | undefined {
