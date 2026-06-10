@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import ViewerClient from "./ViewerClient";
 
 export const metadata = {
-  title: "方案预览 — 装修配置器",
+  title: "方案预览 · 筑雅 ZHUYA",
   description: "查看别人分享的装修方案",
 };
 

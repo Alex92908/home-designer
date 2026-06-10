@@ -2,7 +2,7 @@ import type { Translations } from "./zh";
 
 export const en: Translations = {
   // ── App / TopBar ─────────────────────────────────────────
-  appName: "Home Designer",
+  appName: "ZHUYA",
   appTagline: "Pro",
   viewModes: { "3d": "3D View", "2d": "Floor Plan", all: "Overview", exterior: "Exterior", global3d: "Global 3D", yard2d: "Yard Plan" },
   viewIcons: { "3d": "🎨", "2d": "📐", all: "🗺️", exterior: "🏠", global3d: "🏘️", yard2d: "🌳" },
@@ -911,7 +911,7 @@ export const en: Translations = {
     errorTitle:     "Link invalid or expired",
     errorDesc:      "Ask the sharer to regenerate the link",
     goToDesigner:   "Open designer →",
-    appName:        "Interior Configurator",
+    appName:        "ZHUYA",
     readOnly:       "Read-only preview",
     designerHome:   "Designer home",
     editInDesigner: "✏️ Edit in designer",

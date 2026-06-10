@@ -1120,7 +1120,7 @@ export function LightFixture({ H, lightColor, lightId, lightX = 0, lightZ = 0, r
   );
 }
 
-function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, brightness = 1 }: {
+export function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, brightness = 1, visualOnly = false }: {
   H: number; lightColor: string; lightId: string;
   chandelierRef: React.RefObject<THREE.Mesh | null>;
   /** When false, every emissive material and spot/point light in the
@@ -1129,10 +1129,17 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
   /** Global multiplier applied to BOTH emissiveIntensity and pointLight
    *  intensity. User-controlled in RightPanel (0.3–2.0). */
   brightness?: number;
+  /** When true, render ONLY the fixture's meshes (emissive shapes) and OMIT
+   *  every shadow-casting spot/point light. 全局3D + 漫游 reuse the same
+   *  fixture shapes but provide their own single light, so they must skip
+   *  these extra lights — each shadow-caster eats a texture unit and the
+   *  scene caps at MAX_TEXTURE_IMAGE_UNITS=16. */
+  visualOnly?: boolean;
 }) {
   const ref = chandelierRef;
   const em = isOn ? brightness : 0;
   const bm = isOn ? brightness : 0;
+  const lit = !visualOnly;
 
   if (lightId === "light-spot") {
     return (
@@ -1147,7 +1154,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
               <cylinderGeometry args={[0.04, 0.07, 0.14, 8]} />
               <meshStandardMaterial color="#111" metalness={0.9} roughness={0.2} />
             </mesh>
-            <spotLight visible={isOn} position={[x, H - 0.22, 0]} target-position={[x, 0, 0]} intensity={6 * bm} angle={0.35} penumbra={0.4} color="#FFF2D8" castShadow shadow-mapSize={[512, 512]} />
+            {lit && <spotLight visible={isOn} position={[x, H - 0.22, 0]} target-position={[x, 0, 0]} intensity={6 * bm} angle={0.35} penumbra={0.4} color="#FFF2D8" castShadow shadow-mapSize={[512, 512]} />}
           </group>
         ))}
       </group>
@@ -1165,7 +1172,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
           <cylinderGeometry args={[0.015, 0.015, 0.4, 6]} />
           <meshStandardMaterial color="#AAA" metalness={0.9} roughness={0.2} />
         </mesh>
-        <pointLight visible={isOn} position={[0, H - 0.22, 0]} intensity={10 * bm} color={lightColor} distance={5} decay={2} castShadow />
+        {lit && <pointLight visible={isOn} position={[0, H - 0.22, 0]} intensity={10 * bm} color={lightColor} distance={5} decay={2} castShadow />}
       </group>
     );
   }
@@ -1181,7 +1188,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
           <cylinderGeometry args={[0.005, 0.005, 0.28, 4]} />
           <meshStandardMaterial color="#AAA" metalness={0.9} />
         </mesh>
-        <pointLight visible={isOn} position={[0, H - 0.25, 0]} intensity={9 * bm} color={lightColor} distance={5} decay={2} castShadow />
+        {lit && <pointLight visible={isOn} position={[0, H - 0.25, 0]} intensity={9 * bm} color={lightColor} distance={5} decay={2} castShadow />}
       </group>
     );
   }
@@ -1210,7 +1217,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
           <meshStandardMaterial color="#8B6A40" roughness={0.7} />
         </mesh>
         {/* Warm diffuse light */}
-        <pointLight visible={isOn} position={[0, H - 0.22, 0]} intensity={7 * bm} color="#FFF0C0" distance={5} decay={2} castShadow />
+        {lit && <pointLight visible={isOn} position={[0, H - 0.22, 0]} intensity={7 * bm} color="#FFF0C0" distance={5} decay={2} castShadow />}
       </group>
     );
   }
@@ -1242,11 +1249,11 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
               <meshStandardMaterial color="#F5C060" emissive="#F5A020" emissiveIntensity={0.9 * em} roughness={0.05} transparent opacity={0.82} />
             </mesh>
             {/* Filament glow */}
-            <pointLight visible={isOn} position={[bx, H - 0.5 + Math.abs(by), 0]} intensity={2.5 * bm} color="#FF9800" distance={3} decay={2} />
+            {lit && <pointLight visible={isOn} position={[bx, H - 0.5 + Math.abs(by), 0]} intensity={2.5 * bm} color="#FF9800" distance={3} decay={2} />}
           </group>
         ))}
         {/* Main area light */}
-        <pointLight visible={isOn} position={[0, H - 0.55, 0]} intensity={6 * bm} color="#FFB347" distance={5} decay={2} castShadow />
+        {lit && <pointLight visible={isOn} position={[0, H - 0.55, 0]} intensity={6 * bm} color="#FFB347" distance={5} decay={2} castShadow />}
       </group>
     );
   }
@@ -1272,7 +1279,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
           <sphereGeometry args={[0.08, 14, 12]} />
           <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={0.55 * em} roughness={0.25} transparent opacity={0.85} />
         </mesh>
-        <pointLight visible={isOn} position={[0, -0.06, 0]} intensity={6 * bm} color={lightColor} distance={4.5} decay={2} castShadow />
+        {lit && <pointLight visible={isOn} position={[0, -0.06, 0]} intensity={6 * bm} color={lightColor} distance={4.5} decay={2} castShadow />}
       </group>
     );
   }
@@ -1304,7 +1311,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
             emissiveIntensity={0.9 * em} roughness={0.2} metalness={0.1}
           />
         </mesh>
-        <pointLight visible={isOn} position={[0, -0.12, 0]} intensity={9 * bm} color={lightColor} distance={5} decay={2} castShadow />
+        {lit && <pointLight visible={isOn} position={[0, -0.12, 0]} intensity={9 * bm} color={lightColor} distance={5} decay={2} castShadow />}
       </group>
     );
   }
@@ -1344,7 +1351,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
             />
           </mesh>
         ))}
-        <pointLight visible={isOn} position={[0, -0.1, 0]} intensity={12 * bm} color={lightColor} distance={6} decay={2} castShadow />
+        {lit && <pointLight visible={isOn} position={[0, -0.1, 0]} intensity={12 * bm} color={lightColor} distance={6} decay={2} castShadow />}
       </group>
     );
   }
@@ -1372,7 +1379,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
                 emissiveIntensity={1.2 * em} roughness={0.15}
               />
             </mesh>
-            <spotLight visible={isOn} position={[x, -0.08, 0]} target-position={[x, 0, 0]} intensity={4 * bm} angle={0.4} penumbra={0.5} color={lightColor} castShadow shadow-mapSize={[512, 512]} />
+            {lit && <spotLight visible={isOn} position={[x, -0.08, 0]} target-position={[x, 0, 0]} intensity={4 * bm} angle={0.4} penumbra={0.5} color={lightColor} castShadow shadow-mapSize={[512, 512]} />}
           </group>
         ))}
       </group>
@@ -1396,7 +1403,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
             emissiveIntensity={0.8 * em} roughness={0.4} opacity={0.92} transparent
           />
         </mesh>
-        <pointLight visible={isOn} position={[0, -0.06, 0]} intensity={11 * bm} color={lightColor} distance={6} decay={2} castShadow />
+        {lit && <pointLight visible={isOn} position={[0, -0.06, 0]} intensity={11 * bm} color={lightColor} distance={6} decay={2} castShadow />}
       </group>
     );
   }
@@ -1419,7 +1426,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
                 emissiveIntensity={1.0 * em} roughness={0.2}
               />
             </mesh>
-            <spotLight visible={isOn} position={[x, -0.03, z]} target-position={[x, 0, z]} intensity={3 * bm} angle={0.5} penumbra={0.6} color={lightColor} castShadow shadow-mapSize={[512, 512]} />
+            {lit && <spotLight visible={isOn} position={[x, -0.03, z]} target-position={[x, 0, z]} intensity={3 * bm} angle={0.5} penumbra={0.6} color={lightColor} castShadow shadow-mapSize={[512, 512]} />}
           </group>
         ))}
       </group>
@@ -1451,7 +1458,7 @@ function LightFixtureInner({ H, lightColor, lightId, chandelierRef, isOn, bright
         <sphereGeometry args={[R, 20, 20]} />
         <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={0.9 * em} roughness={0.15} transparent opacity={0.85} />
       </mesh>
-      <pointLight visible={isOn} position={[0, 0, 0]} intensity={8 * bm} color={lightColor} distance={4.8} decay={2} castShadow />
+      {lit && <pointLight visible={isOn} position={[0, 0, 0]} intensity={8 * bm} color={lightColor} distance={4.8} decay={2} castShadow />}
     </group>
   );
 }

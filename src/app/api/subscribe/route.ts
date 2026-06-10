@@ -24,13 +24,13 @@ export async function POST(req: Request) {
       method: "POST",
       headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM ?? "Home Designer <onboarding@resend.dev>",
+        from: process.env.RESEND_FROM ?? "ZHUYA 筑雅 <onboarding@resend.dev>",
         to: [email],
-        subject: "Your Home Designer plan is ready 🏠",
+        subject: "Your ZHUYA 筑雅 plan is ready 🏠",
         html: `<p>Hi there!</p>
-<p>Thanks for using <strong>Home Designer</strong>. Your design plan has been saved.</p>
+<p>Thanks for using <strong>ZHUYA 筑雅</strong>. Your design plan has been saved.</p>
 <p>Come back anytime to continue planning your perfect home: <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://home-designer-lovat.vercel.app"}">Open my plan</a></p>
-<p>— The Home Designer Team</p>`,
+<p>— The ZHUYA 筑雅 Team</p>`,
       }),
     });
 
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         method: "POST",
         headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: process.env.RESEND_FROM ?? "Home Designer <onboarding@resend.dev>",
+          from: process.env.RESEND_FROM ?? "ZHUYA 筑雅 <onboarding@resend.dev>",
           to: [ownerEmail],
           subject: `New lead: ${email}`,
           html: `<p>New subscriber from <strong>${source ?? "unknown"}</strong>: ${email}</p>`,

@@ -23,6 +23,7 @@ import ExportModal from "@/components/ExportModal";
 import ShareModal from "@/components/ShareModal";
 import FloorPlan from "@/components/FloorPlan";
 import AiEntryMenu from "@/components/AiEntryMenu";
+import AiDesignDialog from "@/components/AiDesignDialog";
 import FloorPlanAll, { RoomPanel as FloorPlanAllRoomPanel } from "@/components/FloorPlanAll";
 import YardPlan, { YardPlanLibrary, YardPlanInspector } from "@/components/YardPlan";
 // import OnboardingOverlay from "@/components/OnboardingOverlay";  // TODO: enable when ready
@@ -407,6 +408,7 @@ export default function Home() {
               菜单弹层自身虽是 z-50，但它在本容器的堆叠上下文内，容器若 < 小地图
               就整体被压下去 → 弹层被小地图挡住。把容器抬到 40 让整棵子树都在上面。 */}
           <div className="absolute bottom-4 right-4 z-40 flex flex-col gap-2 items-end transition-opacity duration-200 opacity-100">
+            <AiDesignDialog />
             <AiEntryMenu />
           </div>
 

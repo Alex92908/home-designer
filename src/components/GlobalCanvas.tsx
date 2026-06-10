@@ -22,7 +22,7 @@ import { RoomState } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
 const EMPTY_ROOM_STATE_GC: RoomState = { materials: {}, placedItems: [] };
-import { PlacedItemMesh } from "./RoomCanvas";
+import { PlacedItemMesh, LightFixtureInner } from "./RoomCanvas";
 import { useT, useLocale } from "@/lib/i18n";
 import type { RoofStyle } from "@/lib/types";
 
@@ -36,27 +36,33 @@ const FLOOR_H = 2.8;  // metres per storey (matches HouseCanvas)
  *  toggle still works), but renders only a single non-shadow pointLight
  *  + an emissive sphere — no shadow maps = no MAX_TEXTURE_IMAGE_UNITS
  *  blowup when multiplied across many rooms. */
-function GlobalRoomLight({ room, H, color }: { room: RoomType; H: number; color: string }) {
+function GlobalRoomLight({ room, H, color, lightId }: { room: RoomType; H: number; color: string; lightId?: string }) {
   const isOn = useDesignerStore(s => s.lightsOnByRoom[room] !== false);
   const brightness = useDesignerStore(s => s.lightBrightnessByRoom[room] ?? 1);
   const colorOverride = useDesignerStore(s => s.lightColorByRoom[room]);
   const toggle = useDesignerStore(s => s.toggleRoomLights);
+  const chandelierRef = useRef<THREE.Mesh>(null);
   const finalColor = colorOverride ?? color;
   const mul = isOn ? brightness : 0;
+  // 复用 效果图 的同一套灯具造型（visualOnly：只出网格、不出投影灯），
+  // 这样「换灯具类型」在全局3D里也能看出形状变化；真正的照明仍由下面那盏
+  // 单独的非投影 pointLight 提供，避免多房间叠加爆 MAX_TEXTURE_IMAGE_UNITS=16。
   return (
-    <group position={[0, H - 0.25, 0]}>
-      <mesh onClick={(e) => { e.stopPropagation(); toggle(room); }}>
-        <sphereGeometry args={[0.12, 12, 8]} />
-        <meshStandardMaterial
-          color={finalColor}
-          emissive={finalColor}
-          emissiveIntensity={0.9 * mul}
-          roughness={0.3}
-          transparent
-          opacity={0.85}
-        />
+    <group>
+      {/* 点击灯具区域开关灯：透明命中代理。r=0.6 与 RoomCanvas 同口径——
+          要罩住四角筒灯(±0.7m)/轨道射灯等离散造型，太小会点不中、
+          点击穿透到房间格子触发"进入房间"。 */}
+      <mesh position={[0, H - 0.25, 0]} onClick={(e) => { e.stopPropagation(); toggle(room); }}>
+        <sphereGeometry args={[0.6, 12, 8]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
+      <LightFixtureInner
+        H={H} lightColor={finalColor} lightId={lightId ?? ""}
+        chandelierRef={chandelierRef} isOn={isOn} brightness={brightness}
+        visualOnly
+      />
       <pointLight
+        position={[0, H - 0.25, 0]}
         visible={mul > 0}
         intensity={5 * mul}
         color={finalColor}
@@ -237,6 +243,7 @@ function RoomGroup({
         room={room}
         H={WALL_H}
         color={state?.materials?.light?.color ?? "#FFE8A0"}
+        lightId={state?.materials?.light?.id}
       />
 
       {/* Floating label — stair shows floor transition arrow */}

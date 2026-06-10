@@ -27,7 +27,7 @@ import { overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { InteriorRoomDetail } from "./InteriorRoomDetail";
-import { PlacedItemMesh } from "./RoomCanvas";
+import { PlacedItemMesh, LightFixtureInner } from "./RoomCanvas";
 import { STAIR_FURNITURE_IDS } from "./Staircase";
 import { WalkthroughDoor3D } from "@/components/walkthrough/WalkthroughDoor3D";
 import { StyledWindow } from "@/components/shared/StyledWindow";
@@ -38,6 +38,29 @@ import {
 import { splitWallAroundHoles } from "@/lib/wallGeom";
 import { paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize, getStuccoTexture } from "@/lib/textures";
+
+/** 漫游/室内模式下的房间灯具：复用 效果图 的同一套灯具造型
+ *  （LightFixtureInner，visualOnly=只出网格、不出投影灯——漫游里
+ *  实际照明由场景级方向光+环境光提供，避免每房多盏点光爆 WebGL
+ *  灯数/纹理预算）。读取该房间的 materials.light.id，这样「换灯具
+ *  类型 / AI 改灯」在漫游里也能看出形状变化，不再是写死的筒灯。
+ *  开关 / 调光 / 改色复用与 效果图 相同的 store 状态。 */
+function WalkthroughRoomLight({ room, lightId, color, H }: {
+  room: RoomType; lightId: string; color: string; H: number;
+}) {
+  const isOn = useDesignerStore(s => s.lightsOnByRoom[room] !== false);
+  const brightness = useDesignerStore(s => s.lightBrightnessByRoom[room] ?? 1);
+  const colorOverride = useDesignerStore(s => s.lightColorByRoom[room]);
+  const ref = useRef<THREE.Mesh>(null);
+  const finalColor = colorOverride ?? color;
+  return (
+    <LightFixtureInner
+      H={H} lightColor={finalColor} lightId={lightId}
+      chandelierRef={ref} isOn={isOn} brightness={brightness}
+      visualOnly
+    />
+  );
+}
 
 // ── 常量 ──────────────────────────────────────────────────────
 const CM      = 0.01;
@@ -7065,7 +7088,26 @@ export default function FloorPlanBuilding({
             )}
             {/* 天花板筒灯（室内模式）—— 4 盏矩形嵌入式灯，不遮挡视线。
                 阈值 + 总开关从 ExteriorSettings 读取，便于按风格统一调灯感。 */}
+            {/* 该房间若选了具体灯具（用户手选 / AI 改灯 → materials.light.id），
+                漫游里就渲染那盏灯的真实造型（复用 效果图 同款 LightFixtureInner，
+                visualOnly）。注意：不挂在 ceilingLightsEnabled（那是"通用筒灯"
+                的总开关）和 glassRooms 门控下——用户点名选的灯具不该被它们误杀。 */}
+            {insideBuilding && ((exterior.circulationDecor ?? false) || (!isStair && !isHallway)) && (() => {
+              const lightMat = floorPlans[fi]?.rooms?.[room]?.materials?.light;
+              if (!lightMat?.id) return null;
+              return (
+                <group position={[cx, yBase, cz]}>
+                  <WalkthroughRoomLight
+                    room={room} lightId={lightMat.id}
+                    color={lightMat.color ?? "#FFF5D0"} H={FLOOR_H}
+                  />
+                </group>
+              );
+            })()}
             {insideBuilding && (exterior.ceilingLightsEnabled ?? true) && ((exterior.circulationDecor ?? false) || (!isStair && !isHallway)) && !glassRooms.has(`${fi}:${room}`) && (() => {
+              // 选了具体灯具的房间走上面的真实灯型，这里只给"没选灯"的房间
+              // 渲染默认筒灯阵列，避免两套灯叠加。
+              if (floorPlans[fi]?.rooms?.[room]?.materials?.light?.id) return null;
               const roomArea = rW * rD;
               const lgA = Math.max(4, Math.min(40, exterior.ceilingLightLargeArea ?? 12));
               const mdA = Math.max(2, Math.min(lgA, exterior.ceilingLightMediumArea ?? 6));

@@ -260,12 +260,6 @@ export default function TopBar() {
         >
           {t.appName}
         </span>
-        <span
-          className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
-          style={{ background: "#E8F1FF", color: "#007AFF" }}
-        >
-          {t.appTagline}
-        </span>
       </div>
 
       {/* Divider */}

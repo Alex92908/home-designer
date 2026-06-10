@@ -5,6 +5,7 @@ import type { TemporalState } from "zundo";
 import { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, ROOM_DEFS, StyleTag, getRoomArea, FurnitureItem, ExteriorSettings, WindowConfig, RoomState, FloorPlan, ExteriorWallDecorItem, ExteriorWall, WallSide } from "./types";
 import { FURNITURE, getFurnitureById, registerFurniture } from "./furniture";
 import { MATERIALS } from "./data";
+import { getOutdoorAssetByKind } from "./outdoorAssets";
 import { ALL_TEMPLATES, buildTemplateRoomState, buildEmbeddedRoomState } from "./templates";
 
 // ─── Style scoring ─────────────────────────────────────────
@@ -147,6 +148,264 @@ export type { RoomState };
 
 function emptyRoom(): RoomState {
   return { materials: {}, placedItems: [] };
+}
+
+// ─── AI 文生设计：家具分类 → 具体家具 id ─────────────────────────────
+// 模型只给分类（如 "bookshelf"），这里挑一件最贴合该房间的真实家具。
+function pickFurnitureForCategory(category: string, room: RoomType): string | undefined {
+  const inCat = FURNITURE.filter(f => f.category === category);
+  if (!inCat.length) return undefined;
+  const forRoom = inCat.find(f => f.roomTypes.includes(room));
+  return (forRoom ?? inCat[0]).id;
+}
+
+// AI 文生设计：材质 id → 具体 MaterialItem。只在 id 存在且分类匹配时返回，
+// 否则返回 undefined（保持房间原材质不被乱改）。
+// 把 AI 给的材质标识解析成 MaterialItem。弱模型（如 glm-4-flash）常常不回精确 id，
+// 而是回中文名（「水晶吊灯」）、英文片段（「chandelier」）或近似词（「氛围吊灯」）。
+// 严格 id=== 会把这些全判没 → 用户「换不了灯/墙/地」。所以分级模糊匹配，全程限定在
+// 期望 category 内（绝不跨墙/地/灯/砖），最差也只是挑到同类里最接近的一件——
+// 对用户而言「有变化」远好过「没反应」。
+function resolveAiMaterial(
+  id: string | undefined,
+  expected: "wall" | "floor" | "light" | "tile",
+): import("./types").MaterialItem | undefined {
+  if (!id) return undefined;
+  const q = String(id).trim();
+  if (!q) return undefined;
+  const ql = q.toLowerCase();
+  const pool = MATERIALS.filter(x => x.category === expected);
+  // 1) 精确 id
+  let m = pool.find(x => x.id === q);
+  if (m) return m;
+  // 2) 精确中文名
+  m = pool.find(x => x.name === q);
+  if (m) return m;
+  // 3) id 片段：「chandelier」→ light-chandelier；含/被含都算（≥3 字符防误命中）
+  if (ql.length >= 3) {
+    m = pool.find(x => x.id.toLowerCase().includes(ql) || ql.includes(x.id.toLowerCase()));
+    if (m) return m;
+  }
+  // 4) 中文名互相包含：「水晶灯」⊂「水晶吊灯」之类
+  if (q.length >= 2) {
+    m = pool.find(x => x.name.includes(q) || q.includes(x.name));
+    if (m) return m;
+  }
+  // 5) 2-gram 重叠打分（中文友好）：「氛围吊灯」与名称含「吊灯」的项重叠最高 → 选它
+  const grams = (s: string) => {
+    const g: string[] = [];
+    const t = s.toLowerCase();
+    for (let i = 0; i < t.length - 1; i++) g.push(t.slice(i, i + 2));
+    return g;
+  };
+  const qg = grams(q);
+  let best: import("./types").MaterialItem | undefined;
+  let bestScore = 0;
+  for (const x of pool) {
+    const ng = new Set(grams(x.name));
+    let sc = 0;
+    for (const g of qg) if (ng.has(g)) sc++;
+    if (sc > bestScore) { bestScore = sc; best = x; }
+  }
+  return bestScore >= 1 ? best : undefined;
+}
+
+// 把 AI 的家具清单解析成 PlacedItem[]：有 id 用 id（保住手动摆的），
+// 否则按分类挑一件；没给坐标就从左到右、自动换行铺，并夹进房间范围内。
+function resolveAiFurniture(
+  list: import("./aiDesignTypes").AiDesignFurniture[],
+  room: RoomType, roomW: number, roomD: number,
+): PlacedItem[] {
+  const items: PlacedItem[] = [];
+  const M = 40; // 边距 / 间距 cm
+  let cursorX = M, cursorZ = M, rowMaxD = 0;
+  for (const entry of list) {
+    let fid: string | undefined;
+    if (entry.id && getFurnitureById(entry.id)) fid = entry.id;
+    else if (entry.category) fid = pickFurnitureForCategory(entry.category, room);
+    if (!fid) continue;
+    const f = getFurnitureById(fid)!;
+    let x = entry.x, z = entry.y;
+    if (x === undefined && z === undefined) {
+      if (cursorX + f.width + M > roomW) { cursorX = M; cursorZ += rowMaxD + M; rowMaxD = 0; }
+      x = cursorX + f.width / 2;
+      z = cursorZ + f.depth / 2;
+      cursorX += f.width + M;
+      rowMaxD = Math.max(rowMaxD, f.depth);
+    } else {
+      // 只给了一个轴：尊重给出的那个，缺的轴默认房间居中——
+      // 别因为缺一半就把两个都丢回自动摆放。
+      x = x ?? roomW / 2;
+      z = z ?? roomD / 2;
+    }
+    x = Math.max(f.width / 2, Math.min(roomW - f.width / 2, x));
+    z = Math.max(f.depth / 2, Math.min(roomD - f.depth / 2, z));
+    // 朝向/缩放/吊顶：AI 给了就用，否则默认正放、原尺寸、落地。
+    // rotation 吸附到最近的 90° 档（PlacedItem 只认 0/90/180/270）。
+    const rot = entry.rotation != null
+      ? (((Math.round(entry.rotation / 90) * 90) % 360) + 360) % 360
+      : 0;
+    const clampScale = (v: number | undefined) =>
+      v != null ? Math.max(0.2, Math.min(5, v)) : 1;
+    items.push({
+      instanceId: genId(), furnitureId: fid, x, z,
+      rotation: rot,
+      scaleW: clampScale(entry.scaleW),
+      scaleD: clampScale(entry.scaleD),
+      scaleH: clampScale(entry.scaleH),
+      ...(entry.mountCeiling ? { mountCeiling: true } : {}),
+      ...(entry.elevationY != null ? { elevationY: Math.max(0, Math.round(entry.elevationY)) } : {}),
+    });
+  }
+  return items;
+}
+
+// 院子结构件 prefab：AI 只允许这几种"整块"结构（与 PrefabKind 中 structural 子集对齐）。
+const AI_YARD_PREFABS = ["pool", "pergola_classic", "outdoor_kitchen", "fountain"] as const;
+
+// 把 AI 给的门款（可能是 DoorStyle 枚举值，也可能是中文/近义词）解析成合法
+// DoorStyle。弱模型常回「磨砂玻璃」「谷仓门」这类自然语言而非枚举 id，严格匹配
+// 会让「主卧门换磨砂玻璃」落空（设计已应用但门没变），故走宽容关键字匹配。
+function resolveAiDoorStyle(v: string | undefined): import("./types").DoorStyle | undefined {
+  if (!v) return undefined;
+  const q = String(v).trim().toLowerCase();
+  if (!q) return undefined;
+  // 1) 直接是枚举值
+  if (q === "wood_panel" || q === "frosted_glass" || q === "sliding_barn" || q === "french_double") {
+    return q as import("./types").DoorStyle;
+  }
+  // 2) 关键字匹配（中英混合）。顺序：先判更具体的玻璃/谷仓/法式，木门兜底。
+  if (/法式|french|double|对开/.test(q)) return "french_double";
+  if (/谷仓|推拉|sliding|barn|移门|吊轨/.test(q)) return "sliding_barn";
+  if (/磨砂|玻璃|frost|glass/.test(q)) return "frosted_glass";
+  if (/实木|木门|木板|wood|panel|木质/.test(q)) return "wood_panel";
+  return undefined;
+}
+
+// 把 AI 给的窗款（枚举值或中文/近义词）解析成合法 WindowStyle。理由同门款：
+// 弱模型常回「落地窗」「百叶」这类自然语言，严格匹配会让「换成观景窗」落空。
+function resolveAiWindowStyle(v: string | undefined): import("./types").WindowStyle | undefined {
+  if (!v) return undefined;
+  const q = String(v).trim().toLowerCase();
+  if (!q) return undefined;
+  if (q === "sliding" || q === "casement" || q === "fixed" || q === "louvered" || q === "security" || q === "wooden") {
+    return q as import("./types").WindowStyle;
+  }
+  // 「落地窗/观景窗/固定窗」→ fixed（无分隔大玻璃）。先判更具体的，推拉窗兜底。
+  if (/防盗|栏栅|铁艺|security|grille|bars/.test(q)) return "security";
+  if (/百叶|louver|louvre|shutter|blind/.test(q)) return "louvered";
+  if (/木窗|复古|中式|乡村|wood/.test(q)) return "wooden";
+  if (/落地|观景|固定|panorama|picture|fixed/.test(q)) return "fixed";
+  if (/平开|外开|casement/.test(q)) return "casement";
+  if (/推拉|移窗|sliding|slide/.test(q)) return "sliding";
+  return undefined;
+}
+
+// 外墙材质类型（render/brick/stone/wood/concrete/glass）宽容解析。
+function resolveAiWallMaterial(v: string | undefined): import("./types").WallMaterialType | undefined {
+  if (!v) return undefined;
+  const q = String(v).trim().toLowerCase();
+  if (!q) return undefined;
+  if (["render", "brick", "stone", "wood", "concrete", "glass"].includes(q)) {
+    return q as import("./types").WallMaterialType;
+  }
+  if (/砖|红砖|青砖|brick/.test(q)) return "brick";
+  if (/石材|石头|大理石|stone|marble/.test(q)) return "stone";
+  if (/木|wood|timber/.test(q)) return "wood";
+  if (/混凝土|清水|水泥|concrete|cement/.test(q)) return "concrete";
+  if (/玻璃|幕墙|glass|curtain/.test(q)) return "glass";
+  if (/抹灰|涂料|乳胶|render|stucco|paint/.test(q)) return "render";
+  return undefined;
+}
+
+// 房间形状预设（rect/l-shape/convex）宽容解析。custom 不让 AI 直接给（要点坐标）。
+function resolveAiRoomShape(v: string | undefined): import("./roomGeometry").ShapePreset | undefined {
+  if (!v) return undefined;
+  const q = String(v).trim().toLowerCase();
+  if (!q) return undefined;
+  if (q === "rect" || q === "l-shape" || q === "convex") return q;
+  if (/l型|l形|lshape|l-shape|l字/.test(q)) return "l-shape";
+  if (/凸|convex|t型|t形/.test(q)) return "convex";
+  if (/矩形|长方|方形|rect/.test(q)) return "rect";
+  return undefined;
+}
+
+// 房间外立面（glass/concrete/auto）宽容解析。
+function resolveAiExteriorStyle(v: string | undefined): "glass" | "concrete" | "auto" | undefined {
+  if (!v) return undefined;
+  const q = String(v).trim().toLowerCase();
+  if (!q) return undefined;
+  if (q === "glass" || q === "concrete" || q === "auto") return q;
+  if (/玻璃|幕墙|glass|curtain/.test(q)) return "glass";
+  if (/实墙|混凝土|concrete|solid/.test(q)) return "concrete";
+  if (/自动|auto/.test(q)) return "auto";
+  return undefined;
+}
+
+// 院子小径铺装材质（stone/gravel/grass/brick）宽容解析。
+function resolveAiPathMaterial(v: string | undefined): "stone" | "gravel" | "grass" | "brick" | undefined {
+  if (!v) return undefined;
+  const q = String(v).trim().toLowerCase();
+  if (!q) return undefined;
+  if (["stone", "gravel", "grass", "brick"].includes(q)) return q as "stone";
+  if (/石板|石头|石|stone/.test(q)) return "stone";
+  if (/砾石|碎石|gravel/.test(q)) return "gravel";
+  if (/草|grass/.test(q)) return "grass";
+  if (/砖|brick/.test(q)) return "brick";
+  return undefined;
+}
+
+// 楼体轮廓（rect/L/U/T）宽容解析。
+function resolveAiFootprint(v: string | undefined): "rect" | "L" | "U" | "T" | undefined {
+  if (!v) return undefined;
+  const q = String(v).trim();
+  if (!q) return undefined;
+  const u = q.toUpperCase();
+  if (u === "RECT" || /矩形|长方/.test(q)) return "rect";
+  if (u === "L" || /L型|L形|L字/i.test(q)) return "L";
+  if (u === "U" || /U型|U形|U字|回字/i.test(q)) return "U";
+  if (u === "T" || /T型|T形|T字/i.test(q)) return "T";
+  return undefined;
+}
+
+// 把 AI 的院子清单解析成 YardItem[]：kind 走 OUTDOOR_ASSET_LIBRARY（树/灌木/石头/
+// 装饰/户外家具），prefab 走结构件（泳池/廊架/户外厨房/喷泉）。没给坐标就在前院
+// （+z）自动散开，避免全堆在原点重叠。
+function resolveAiYard(
+  list: import("./aiDesignTypes").AiDesignYardItem[],
+  startIndex: number,
+): import("./types").YardItem[] {
+  const out: import("./types").YardItem[] = [];
+  let auto = startIndex;
+  for (const entry of list) {
+    // 自动散点：沿前院左右交替铺开，每个间隔 ~350cm。
+    const autoPos = () => {
+      const i = auto++;
+      const col = Math.ceil(i / 2);
+      const sign = i % 2 === 0 ? 1 : -1;
+      return { x: sign * col * 350, z: 650 + (i % 3) * 200 };
+    };
+    if (entry.prefab && (AI_YARD_PREFABS as readonly string[]).includes(entry.prefab)) {
+      const p = entry.x != null && entry.z != null ? { x: entry.x, z: entry.z } : autoPos();
+      out.push({
+        id: `yard-${genId()}`,
+        type: "prefab",
+        prefabKind: entry.prefab,
+        x: p.x, z: p.z,
+        ...(entry.scale != null ? { scale: entry.scale } : {}),
+      });
+    } else if (entry.kind && getOutdoorAssetByKind(entry.kind)) {
+      const p = entry.x != null && entry.z != null ? { x: entry.x, z: entry.z } : autoPos();
+      out.push({
+        id: `yard-${genId()}`,
+        type: "singleton",
+        kind: entry.kind,
+        x: p.x, z: p.z,
+        ...(entry.scale != null ? { scale: entry.scale } : {}),
+      });
+    }
+  }
+  return out;
 }
 
 const ALL_ROOM_TYPES: RoomType[] = ALL_POSSIBLE_ROOMS;
@@ -625,8 +884,13 @@ interface DesignerStore {
    *  + a matching yard item list. Preserves anything the preset leaves
    *  undefined. See src/lib/exteriorPresets.ts. */
   applyExteriorPreset: (presetId: string) => void;
-  /** Apply a design generated by the AI text-to-design API. */
-  applyAiDesign: (design: import("./aiDesignTypes").AiDesignResult) => void;
+  /** Apply a design generated by the AI text-to-design API.
+   *  merge=true（增量微调）：只更新返回里出现的楼层/房间，其余原样保留——
+   *  这样模型只需吐改动的那一两个房间，不必重写整套，又快又不易截断。 */
+  applyAiDesign: (
+    design: import("./aiDesignTypes").AiDesignResult,
+    opts?: { merge?: boolean },
+  ) => void;
 
   // Derived
   currentRoom: () => RoomState;
@@ -1756,38 +2020,366 @@ export const useDesignerStore = create<DesignerStore>()(
         set({ floorPlans, scores, activeTemplateId: null });
       },
 
-      applyAiDesign: (design) => {
+      applyAiDesign: (design, opts) => {
+        const merge = opts?.merge ?? false;
+        // 单一风格主线：preset 必须先于逐房材质执行——它会整包覆写每间房的
+        // 墙/地/灯/砖和院子，放在后面会把 AI 点名的材质冲掉（「地中海风格
+        // +客厅鱼骨纹地板」后者丢失）。另外微调模式 current 会回传 preset、
+        // 模型常照抄 → 只有 preset 真的变了才重跑，避免每次微调重置全屋。
+        if (design.exterior?.preset
+            && (!merge || design.exterior.preset !== get().exterior.preset)) {
+          get().applyExteriorPreset(design.exterior.preset);
+        }
         const s = get();
-        const floors = Math.max(1, Math.min(3, design.floors ?? 1));
-        const newFloorPlans = Array.from({ length: floors }, (_, fi) => {
-          const existing = s.floorPlans[fi] ?? makeDefaultFloorPlan();
+        // 楼层不再限制最多 3 层：与 setExterior 一致，仅 [1,99] 安全区间。
+        // 增量模式：模型可能只回传改动的楼层，floors 缺省时沿用当前层数，别误把楼缩没了。
+        const floors = Math.max(
+          1,
+          Math.min(99, design.floors ?? (merge ? s.exterior.floors : 1)),
+        );
+        // 旧的常规层数：floorPlans[oldRegularFloors] 在有天台时是天台层，
+        // 加层时绝不能把它当普通楼层复用（否则新楼层继承天台布局且天台翻倍）。
+        const oldRegularFloors = s.exterior.floors;
+        const oldHadRooftop = s.exterior.hasRooftop ?? false;
+        // 房间改名（customRoomMeta 是工程级、跨楼层的，循环里收集、最后一次写入）。
+        const renamePatch: Partial<Record<RoomType, { name: string; icon: string }>> = {};
+        // 灯光状态（开关/亮度/色温也是工程级 map，循环里收集、最后一次写入）。
+        const lightOnPatch: Partial<Record<RoomType, boolean>> = {};
+        const lightBrightnessPatch: Partial<Record<RoomType, number>> = {};
+        const lightColorPatch: Partial<Record<RoomType, string>> = {};
+        const newRegularPlans = Array.from({ length: floors }, (_, fi) => {
+          // 索引落在旧天台层及以上 → 这是新加的普通楼层，从空白开始。
+          const existing = (oldHadRooftop && fi >= oldRegularFloors)
+            ? makeDefaultFloorPlan()
+            : (s.floorPlans[fi] ?? makeDefaultFloorPlan());
           const layoutEntry = design.floorLayouts?.find(l => l.floorIndex === fi);
-          if (!layoutEntry || !layoutEntry.rooms?.length) {
-            return { ...existing, enabledRooms: [] };
+          // removeRooms 单独也算"动了这层"——「把书房去掉」可能 rooms 为空只给删除列表。
+          if (!layoutEntry || (!layoutEntry.rooms?.length && !layoutEntry.removeRooms?.length)) {
+            // 增量模式：没返回这层 = 没动这层，原样保留；重建模式：清空。
+            return merge ? existing : { ...existing, enabledRooms: [] };
           }
-          const enabled: RoomType[] = [];
+          // 增量模式从现有房间起步（保留没提到的房间）；重建模式从空开始。
+          const enabled: RoomType[] = merge ? [...existing.enabledRooms] : [];
           const layoutMap = { ...existing.roomLayout };
           const dimsMap   = { ...existing.roomDimensions };
-          for (const r of layoutEntry.rooms) {
+          const roomsMap  = { ...existing.rooms };
+          const windowsMap = { ...existing.roomWindows };
+          const doorsMap = { ...(existing.roomDoors ?? {}) };
+          const doorStyleMap = { ...(existing.roomDoorStyle ?? {}) };
+          const doorWallMap = { ...existing.roomDoorWall };
+          const doorPosMap = { ...existing.roomDoorPos };
+          const doorLenMap = { ...(existing.roomDoorLen ?? {}) };
+          const hasDoorMap = { ...existing.roomHasDoor };
+          const shapesMap = { ...(existing.roomShapes ?? {}) };
+          const extStyleMap = { ...(existing.roomExteriorStyle ?? {}) };
+          const wallsHiddenMap: NonNullable<typeof existing.roomWallsHidden> = { ...(existing.roomWallsHidden ?? {}) };
+          for (const r of layoutEntry.rooms ?? []) {
             // Validate room type
             if (!(r.type in ROOM_DEFS)) continue;
-            enabled.push(r.type as RoomType);
-            layoutMap[r.type as RoomType] = { x: r.x ?? 50, y: r.y ?? 50 };
-            dimsMap[r.type as RoomType]   = {
-              width: Math.max(120, r.widthCm ?? ROOM_DEFS[r.type as RoomType]?.width ?? 300),
-              depth: Math.max(100, r.depthCm ?? ROOM_DEFS[r.type as RoomType]?.depth ?? 260),
+            const rt = r.type as RoomType;
+            if (!enabled.includes(rt)) enabled.push(rt);
+            // 增量模式下 x/y/尺寸缺省就沿用现值，避免把没提的房间挪位/改尺寸。
+            const prevPos = layoutMap[rt];
+            layoutMap[rt] = {
+              x: r.x ?? prevPos?.x ?? 50,
+              y: r.y ?? prevPos?.y ?? 50,
             };
+            const prevDim = dimsMap[rt];
+            const width = Math.max(120, r.widthCm ?? prevDim?.width ?? ROOM_DEFS[rt]?.width ?? 300);
+            const depth = Math.max(100, r.depthCm ?? prevDim?.depth ?? ROOM_DEFS[rt]?.depth ?? 260);
+            dimsMap[rt] = { width, depth };
+            // 家具 + 材质（墙/地/灯/砖）：哪个字段给了就改哪个，没给的保持原样。
+            // 这样「主卧换个吊灯」只动 light，墙面/地板/家具都不受影响。
+            const hasFurniture = r.furniture !== undefined;
+            const newWall    = resolveAiMaterial(r.wall, "wall");
+            const newFloor   = resolveAiMaterial(r.floor, "floor");
+            const newLight   = resolveAiMaterial(r.light, "light");
+            const newTile    = resolveAiMaterial(r.tile, "tile");
+            // 天花板/墙裙没有独立材质库，复用 wall 条目（与左面板「天花板」分区
+            // 同一做法）；天花板重新打 category 标。
+            const ceilingBase = resolveAiMaterial(r.ceiling, "wall");
+            const newCeiling = ceilingBase ? { ...ceilingBase, category: "ceiling" as const } : undefined;
+            const newWallLower = resolveAiMaterial(r.wallLower, "wall");
+            const hasMaterial = !!(newWall || newFloor || newLight || newTile || newCeiling || newWallLower);
+            // 外墙装饰：wallDecor 给了（含[]）就按此重建（id 必须是
+            // exterior_wall_decor 目录里的真实家具）。
+            const hasWallDecor = r.wallDecor !== undefined;
+            const newDecor = hasWallDecor
+              ? (r.wallDecor ?? [])
+                  .filter(d => d?.id && getFurnitureById(d.id)?.category === "exterior_wall_decor"
+                    && ["N", "S", "W", "E"].includes(d.wall))
+                  .map(d => ({
+                    instanceId: genId(),
+                    furnitureId: d.id,
+                    wall: d.wall,
+                    u: Math.max(0.05, Math.min(0.95, d.u ?? 0.5)),
+                    v: Math.max(0.05, Math.min(0.95, d.v ?? 0.6)),
+                  }))
+              : undefined;
+            if (hasFurniture || hasMaterial || hasWallDecor) {
+              const prevRoom = roomsMap[rt] ?? emptyRoom();
+              roomsMap[rt] = {
+                ...prevRoom,
+                placedItems: hasFurniture
+                  ? resolveAiFurniture(r.furniture!, rt, width, depth)
+                  : prevRoom.placedItems,
+                ...(newDecor !== undefined ? { exteriorDecor: newDecor } : {}),
+                materials: {
+                  ...prevRoom.materials,
+                  ...(newWall  ? { wall:  newWall  } : {}),
+                  ...(newFloor ? { floor: newFloor } : {}),
+                  ...(newLight ? { light: newLight } : {}),
+                  ...(newTile  ? { tile:  newTile  } : {}),
+                  ...(newCeiling ? { ceiling: newCeiling } : {}),
+                  ...(newWallLower ? { wallLower: newWallLower } : {}),
+                },
+              };
+            }
+            // 窗户：r.windows 给了就按此重建该房间窗户（服务端生成 id）；没给保持原样。
+            if (r.windows !== undefined) {
+              windowsMap[rt] = r.windows
+                // 防脏数据：非法墙向 / 非数值坐标直接丢弃（NaN 入库会让渲染层崩）。
+                .filter(w => ["N", "S", "W", "E"].includes(w?.wall)
+                  && Number.isFinite(w.pos) && Number.isFinite(w.len))
+                .map(w => {
+                  const style = resolveAiWindowStyle(w.style);
+                  return {
+                    id: `${rt}-w-${genId()}`,
+                    wall: w.wall,
+                    pos: Math.max(0, Math.round(w.pos)),
+                    len: Math.max(30, Math.round(w.len)),
+                    ...(w.h    != null && Number.isFinite(w.h)    ? { h:    Math.round(w.h)    } : {}),
+                    ...(w.sill != null && Number.isFinite(w.sill) ? { sill: Math.round(w.sill) } : {}),
+                    ...(style ? { style } : {}),
+                    ...(w.edgeIndex != null && Number.isFinite(w.edgeIndex)
+                      ? { edgeIndex: Math.round(w.edgeIndex) } : {}),
+                  };
+                });
+            }
+            // 开放式/拆墙：openWalls 给了就按此重建该房间的 NSWE 隐藏；
+            // 非 NSWE 的隐藏键（如 ceiling）原样保留。
+            if (r.openWalls !== undefined) {
+              const prev = wallsHiddenMap[rt] ?? {};
+              const next: Record<string, boolean> = {};
+              for (const k of Object.keys(prev)) {
+                if (!["N", "S", "W", "E"].includes(k)) next[k] = prev[k]!;
+              }
+              for (const side of r.openWalls) next[side] = true;
+              wallsHiddenMap[rt] = next;
+            }
+            // 门（多门数组 + 单门旧字段，两套存储互斥感知）：
+            // getDoorsForRoom 的规则是「roomDoors 非空 → 只认数组、忽略旧字段；
+            // 空/缺省 → 按 hasDoor 回退旧单门」。所以：
+            // 1) r.doors 给了（含[]）→ 重建数组；[] 时必须同时 hasDoor=false，
+            //    否则旧字段回退会让门"删不掉"。
+            if (r.doors !== undefined) {
+              doorsMap[rt] = r.doors
+                .filter(d => ["N", "S", "W", "E"].includes(d?.wall)
+                  && Number.isFinite(d.pos))
+                .map(d => {
+                  const style = resolveAiDoorStyle(d.style);
+                  return {
+                    id: `${rt}-d-${genId()}`,
+                    wall: d.wall,
+                    pos: Math.max(0, Math.round(d.pos)),
+                    len: Math.max(60, Math.min(200, Math.round(d.len ?? 80))),
+                    ...(d.h != null && Number.isFinite(d.h)
+                      ? { h: Math.max(180, Math.min(240, Math.round(d.h))) } : {}),
+                    ...(style ? { style } : {}),
+                  };
+                });
+              hasDoorMap[rt] = doorsMap[rt]!.length > 0;
+            }
+            // 2) 单门字段：该房间已有多门数组时（渲染层忽略旧字段），改写数组
+            //    第一扇门；否则照旧写旧字段。
+            const newDoorStyle = resolveAiDoorStyle(r.door);
+            const wantWall = r.doorWall && ["N", "S", "W", "E"].includes(r.doorWall) ? r.doorWall : undefined;
+            const wantPos = r.doorPos != null && Number.isFinite(r.doorPos)
+              ? Math.max(0, Math.round(r.doorPos)) : undefined;
+            const wantLen = r.doorLen != null && Number.isFinite(r.doorLen)
+              ? Math.max(60, Math.min(200, Math.round(r.doorLen))) : undefined;
+            const doorArr = doorsMap[rt];
+            if (doorArr?.length && (newDoorStyle || wantWall || wantPos !== undefined || wantLen !== undefined)) {
+              doorsMap[rt] = doorArr.map((d, i) => i === 0 ? {
+                ...d,
+                ...(wantWall ? { wall: wantWall } : {}),
+                ...(wantPos !== undefined ? { pos: wantPos } : {}),
+                ...(wantLen !== undefined ? { len: wantLen } : {}),
+                ...(newDoorStyle ? { style: newDoorStyle } : {}),
+              } : d);
+            } else {
+              if (newDoorStyle) doorStyleMap[rt] = newDoorStyle;
+              if (wantWall) doorWallMap[rt] = wantWall;
+              if (wantPos !== undefined) doorPosMap[rt] = wantPos;
+              if (wantLen !== undefined) doorLenMap[rt] = wantLen;
+            }
+            // 3) hasDoor=false → 旧字段关掉之外，多门数组也得清空（数组优先）。
+            if (r.hasDoor != null) hasDoorMap[rt] = r.hasDoor;
+            if (r.hasDoor === false && doorsMap[rt]?.length) doorsMap[rt] = [];
+            // 房间形状：按当前宽深重建预设多边形；rect=清掉多边形回矩形。
+            const shapePreset = resolveAiRoomShape(r.shape);
+            if (shapePreset) {
+              if (shapePreset === "rect") {
+                delete shapesMap[rt];
+              } else {
+                // eslint-disable-next-line @typescript-eslint/no-require-imports
+                const { buildShape } = require("./roomGeometry") as typeof import("./roomGeometry");
+                shapesMap[rt] = buildShape(shapePreset, width, depth);
+              }
+            }
+            // 房间外立面（玻璃幕墙/实墙/自动）。
+            const extStyle = resolveAiExteriorStyle(r.exteriorStyle);
+            if (extStyle) extStyleMap[rt] = extStyle;
+            // 改名：沿用现有图标，只换显示名。
+            if (r.name && r.name.trim()) {
+              renamePatch[rt] = {
+                name: r.name.trim().slice(0, 12),
+                icon: s.customRoomMeta[rt]?.icon ?? ROOM_DEFS[rt]?.icon ?? "🏠",
+              };
+            }
+            // 灯光状态（开关/亮度/色温）：工程级 map，给哪个改哪个。
+            if (r.lightOn != null) lightOnPatch[rt] = !!r.lightOn;
+            if (r.lightBrightness != null && Number.isFinite(r.lightBrightness)) {
+              lightBrightnessPatch[rt] = Math.max(0.3, Math.min(2, r.lightBrightness));
+            }
+            if (r.lightColor && /^#[0-9a-fA-F]{3,8}$/.test(r.lightColor.trim())) {
+              lightColorPatch[rt] = r.lightColor.trim();
+            }
           }
-          return { ...existing, enabledRooms: enabled, roomLayout: layoutMap, roomDimensions: dimsMap };
+          // 删房间：从 enabled 里移除（仅增量模式有意义——重建模式本来从空开始）。
+          const removeSet = new Set(
+            (layoutEntry.removeRooms ?? []).filter((rr): rr is RoomType => rr in ROOM_DEFS),
+          );
+          const finalEnabled = removeSet.size
+            ? enabled.filter(r => !removeSet.has(r))
+            : enabled;
+          return {
+            ...existing,
+            enabledRooms: finalEnabled,
+            roomLayout: layoutMap,
+            roomDimensions: dimsMap,
+            rooms: roomsMap,
+            roomWindows: windowsMap,
+            roomDoors: doorsMap,
+            roomDoorStyle: doorStyleMap,
+            roomDoorWall: doorWallMap,
+            roomDoorPos: doorPosMap,
+            roomDoorLen: doorLenMap,
+            roomHasDoor: hasDoorMap,
+            roomShapes: shapesMap,
+            roomExteriorStyle: extStyleMap,
+            roomWallsHidden: wallsHiddenMap,
+          };
         });
 
-        const extUpdate: Partial<typeof s.exterior> = { floors };
+        // 天台统一化：天台层 = floorPlans[floors]，复用 setExterior 的同款逻辑。
+        // 重建模式 hasRooftop 缺省=false（从零重建不能把旧天台复活），
+        // 且只有增量模式才复用旧天台布局。
+        const hasRooftop = design.exterior?.hasRooftop
+          ?? (merge ? (s.exterior.hasRooftop ?? false) : false);
+        let floorPlans = newRegularPlans;
+        if (hasRooftop) {
+          const existingRooftop = merge && oldHadRooftop
+            ? s.floorPlans[oldRegularFloors]
+            : undefined;
+          floorPlans = [...newRegularPlans, existingRooftop ?? makeRooftopFloorPlan(newRegularPlans)];
+        }
+
+        // 颜色作为兜底；若指定了 canonical preset，下面 applyExteriorPreset 会覆盖成整包风格。
+        const extUpdate: Partial<typeof s.exterior> = { floors, hasRooftop };
         if (design.exterior?.wallColor)  extUpdate.wallColor  = design.exterior.wallColor;
         if (design.exterior?.roofColor)  extUpdate.roofColor  = design.exterior.roofColor;
         if (design.exterior?.roofType)   extUpdate.roofStyle  = design.exterior.roofType as typeof s.exterior.roofStyle;
         if (design.exterior?.accentColor) extUpdate.accentColor = design.exterior.accentColor;
+        const newWallMat = resolveAiWallMaterial(design.exterior?.wallMaterial);
+        if (newWallMat) extUpdate.wallMaterial = newWallMat;
+        const newFootprint = resolveAiFootprint(design.exterior?.footprintShape);
+        if (newFootprint) extUpdate.footprintShape = newFootprint;
+        if (design.exterior?.pilotis != null && Number.isFinite(design.exterior.pilotis)) {
+          extUpdate.pilotisHeightM = Math.max(0, Math.min(4, design.exterior.pilotis));
+        }
+        if (design.exterior?.fence != null) extUpdate.showPerimeterFence = !!design.exterior.fence;
+        // 分层外墙：解析每带材质、归一化高度占比；全带非法就不动。
+        if (Array.isArray(design.exterior?.wallZones) && design.exterior.wallZones.length) {
+          const zones = design.exterior.wallZones
+            .map(z => ({
+              material: resolveAiWallMaterial(z?.material),
+              color: typeof z?.color === "string" && /^#[0-9a-fA-F]{3,8}$/.test(z.color.trim())
+                ? z.color.trim() : "#CCCCCC",
+              hf: Number(z?.heightFraction),
+            }))
+            .filter(z => z.material && Number.isFinite(z.hf) && z.hf > 0);
+          const hfSum = zones.reduce((a, z) => a + z.hf, 0);
+          if (zones.length && hfSum > 0) {
+            extUpdate.wallZones = zones.map(z => ({
+              material: z.material!, color: z.color, heightFraction: z.hf / hfSum,
+            }));
+          }
+        }
 
-        set({ exterior: { ...s.exterior, ...extUpdate }, floorPlans: newFloorPlans, activeFloor: 0 });
+        // 增量微调：别把用户从当前楼层/房间甩走——保留 activeFloor（夹到合法范围）。
+        // 从零重建才回到一楼总览。
+        const nextActiveFloor = merge
+          ? Math.min(s.activeFloor, floorPlans.length - 1)
+          : 0;
+        set({
+          exterior: { ...s.exterior, ...extUpdate },
+          floorPlans,
+          activeFloor: nextActiveFloor,
+          ...(Object.keys(renamePatch).length
+            ? { customRoomMeta: { ...s.customRoomMeta, ...renamePatch } }
+            : {}),
+          ...(Object.keys(lightOnPatch).length
+            ? { lightsOnByRoom: { ...s.lightsOnByRoom, ...lightOnPatch } }
+            : {}),
+          ...(Object.keys(lightBrightnessPatch).length
+            ? { lightBrightnessByRoom: { ...s.lightBrightnessByRoom, ...lightBrightnessPatch } }
+            : {}),
+          ...(Object.keys(lightColorPatch).length
+            ? { lightColorByRoom: { ...s.lightColorByRoom, ...lightColorPatch } }
+            : {}),
+        });
+
+        // （applyExteriorPreset 已提前到函数开头执行——必须先铺整包风格、
+        //   再落 AI 点名的逐房材质，顺序反了会把后者冲掉。）
+
+        // 院子（floor 0）：在 preset 之后处理，避免被 preset 的整套院子覆盖。
+        // clear=先清空再加；否则在现有基础上追加（与 edit 模式语义一致）。
+        if (design.yard) {
+          const fp0 = get().floorPlans[0];
+          if (fp0) {
+            const existingItems = design.yard.clear ? [] : (fp0.yardPlan?.items ?? []);
+            const added = resolveAiYard(design.yard.add ?? [], existingItems.length);
+            // 小径：追加语义（clear 只清物件、不动小径，与注释口径一致）。
+            const addedPaths = (design.yard.paths ?? [])
+              .filter(p => Array.isArray(p?.points) && p.points.length >= 2)
+              .map(p => ({
+                id: `yard-path-${genId()}`,
+                points: p.points
+                  .filter(pt => Array.isArray(pt) && pt.length >= 2)
+                  .map(pt => [Math.round(pt[0]), Math.round(pt[1])] as [number, number]),
+                widthCm: Math.max(30, Math.min(300, Math.round(p.widthCm ?? 80))),
+                material: resolveAiPathMaterial(p.material) ?? "stone",
+              }))
+              .filter(p => p.points.length >= 2);
+            set(state => ({
+              floorPlans: state.floorPlans.map((fp, fi) =>
+                fi === 0 && fp
+                  ? {
+                      ...fp,
+                      yardPlan: {
+                        ...(fp.yardPlan ?? { items: [] }),
+                        items: [...existingItems, ...added],
+                        ...(addedPaths.length
+                          ? { paths: [...(fp.yardPlan?.paths ?? []), ...addedPaths] }
+                          : {}),
+                      },
+                    }
+                  : fp,
+              ),
+            }));
+          }
+        }
       },
 
       copyRoom: (room) => {

@@ -1,6 +1,6 @@
 export const zh = {
   // ── App / TopBar ─────────────────────────────────────────
-  appName: "家居设计师",
+  appName: "筑雅",
   appTagline: "Pro",
   viewModes: { "3d": "效果图", "2d": "平面图", all: "全局", exterior: "外观", global3d: "全局3D", yard2d: "院子图" } as Record<string, string>,
   viewIcons: { "3d": "🎨", "2d": "📐", all: "🗺️", exterior: "🏠", global3d: "🏘️", yard2d: "🌳" } as Record<string, string>,
@@ -918,7 +918,7 @@ export const zh = {
     errorTitle:     "链接无效或已过期",
     errorDesc:      "请联系分享者重新生成链接",
     goToDesigner:   "去设计器 →",
-    appName:        "装修配置器",
+    appName:        "筑雅",
     readOnly:       "只读预览",
     designerHome:   "设计器首页",
     editInDesigner: "✏️ 在设计器中编辑",

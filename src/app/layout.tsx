@@ -9,8 +9,8 @@ import "./globals.css";
 // No network request, no build error, faster TTFB.
 
 export const metadata: Metadata = {
-  title: "装修配置器 — 像攒电脑一样装修",
-  description: "沉浸式3D装修方案生成器，实时报价，一键分享",
+  title: "筑雅 ZHUYA · 惟吾德馨，筑雅而居",
+  description: "筑雅 ZHUYA —— AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
 };
 
 export default function RootLayout({

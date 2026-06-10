@@ -261,7 +261,7 @@ export function generatePdf(data: ExportData): void {
                   :"实际价格因地区和供应商不同而异，最终报价以施工方确认为准。"}</p>
       </div>
       <div class="footer">
-        <span>${isEn?"Home Designer":"家居设计师"} · homedesigner.app</span>
+        <span>筑雅 ZHUYA · zhuya.app</span>
         <span>${date}</span>
       </div>
     </div>
@@ -525,7 +525,7 @@ export function generateAllRoomsPdf(data: AllRoomsExportData, groupBy: "room" | 
                   :"实际价格因地区和供应商不同而异，最终以施工方报价为准。"}</p>
       </div>
       <div class="footer">
-        <span>${isEn?"Home Designer":"家居设计师"} · homedesigner.app</span>
+        <span>筑雅 ZHUYA · zhuya.app</span>
         <span>${date}</span>
       </div>
     </div>

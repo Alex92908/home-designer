@@ -315,7 +315,9 @@ export const MATERIALS: MaterialItem[] = [
   },
   {
     id: "light-crystal-chandelier",
-    name: "水晶吊灯",
+    // 注意别与 light-chandelier 的「水晶吊灯」重名——AI 按名称模糊匹配时
+    // 重名永远命中前者，导致这款被悄悄换成另一个产品。
+    name: "多层水晶吊灯",
     brand: "灯饰",
     price: 4800,
     unit: "元/件",
