@@ -32,6 +32,9 @@ export interface AiProvider {
   /** 文生设计单次 max_tokens 上限（平台输出 token 硬顶）。缺省 8000。
    *  例：glm-4-flash 输出上限 4095，传 8000 会被平台直接 400 拒掉。 */
   maxTokens?: number;
+  /** 视觉模型的 max_tokens 上限（照片复刻房间用）。视觉档往往比文本档更紧：
+   *  glm-4v-flash 限 [1,1024]。缺省回落到 maxTokens。 */
+  visionMaxTokens?: number;
 }
 
 export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
@@ -48,6 +51,8 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     output: "json",
     // glm-4-flash 输出 token 硬顶 4095，给 8000 会 400。
     maxTokens: 4000,
+    // glm-4v-flash 视觉档更紧：max_tokens 限 [1,1024]。
+    visionMaxTokens: 1024,
   },
   openai: {
     id: "openai",

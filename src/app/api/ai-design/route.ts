@@ -337,6 +337,23 @@ EDIT MODE (a "CURRENT DESIGN" JSON is provided in the user message):
 - This PARTIAL/PATCH rule applies ONLY in EDIT MODE. Without a CURRENT DESIGN,
   output the COMPLETE design as described above.
 
+REFERENCE PHOTO MODE (用户消息附带一张参考房间照片时):
+- 你的任务是「按图复刻」：识别照片里这一间房的类型、大致尺寸、家具清单与相对
+  摆位、墙/地材质色调、窗户位置、灯具类型，然后用本 schema 输出这一间房。
+- "floorLayouts" 只含一层、一间房。房间 "type" 按照片判断（卧室→bedroom/master、
+  客厅→living、餐厅→dining…）；用户文字点名了房间就用他点名的 type。
+- 家具映射到最接近的 FurnitureCategory 并给 "x"/"y" 还原照片相对布局
+  （如圆桌居中、椅子环绕 → 桌 x=width/2,y=depth/2，椅子绕四周）。
+- 墙/地/灯从 AVAILABLE MATERIALS 挑色调最接近的 id；窗户按照片所在墙面开
+  （照片正对的墙通常是 N 或 S，自行判断合理即可）。
+- EDIT MODE + 照片：
+  * 用户点名了房间 → 复刻到那间（保留其 x/y 位置，只换家具/材质/窗）。
+  * 没点名但 CURRENT DESIGN 已有同类型房间 → 复刻进那间。
+  * 用户说「新增/加一间」或 CURRENT DESIGN 没有同类型房间 → 新增：选一个
+    CURRENT DESIGN 里不存在的 type（同类被占就用 custom1-custom5），并看现有
+    各房间的 x/y/widthCm/depthCm 挑一个不重叠的空位摆放。
+  * 无论哪种，其余房间一律不动（不要出现在输出里）。
+
 OUTPUT ONLY the JSON. No explanation. No markdown.`;
 
 // ─── Helper: strip markdown fences and parse JSON ────────────────────────────
@@ -391,8 +408,9 @@ function degradeOutput(m: OutputMode): OutputMode {
   return m === "native" ? "json" : "text";
 }
 
-/** 按输出档位拼 OpenAI 兼容请求体。 */
-function buildProviderBody(model: string, system: string, user: string, mode: OutputMode, maxTokens?: number) {
+/** 按输出档位拼 OpenAI 兼容请求体。user 可以是纯文本，也可以是
+ *  多模态 content 数组（文本 + image_url，照片复刻房间用）。 */
+function buildProviderBody(model: string, system: string, user: string | unknown[], mode: OutputMode, maxTokens?: number) {
   const base = {
     model,
     // 完整方案 JSON 可能很长（多楼层 + 每房家具/窗/材质），给足 8000 防截断；
@@ -439,6 +457,7 @@ export async function POST(req: NextRequest) {
   let providerId = "";
   let mode: "create" | "edit" = "create";
   let current: unknown = null;
+  let image = "";
   try {
     const body = await req.json();
     description = (body.description ?? "").trim();
@@ -447,11 +466,14 @@ export async function POST(req: NextRequest) {
     providerId = body.provider ?? "";
     mode = body.mode === "edit" ? "edit" : "create";
     current = body.current ?? null;
+    // 参考房间照片（data URL，base64）。给了就走视觉模型按图复刻房间。
+    image = typeof body.image === "string" && body.image.startsWith("data:image/")
+      ? body.image : "";
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!description) {
+  if (!description && !image) {
     return NextResponse.json({ error: "description is required" }, { status: 400 });
   }
 
@@ -467,13 +489,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const baseMessage = floors > 0
-    ? `请帮我设计一个${floors}层的住宅。需求描述：${description}`
-    : `请帮我设计一个住宅。需求描述：${description}`;
+  const desc = description || "请参照附带的照片复刻这间房";
+  const baseMessage = image
+    ? `请按 REFERENCE PHOTO MODE 处理：参照附带的房间照片复刻这间房。${description ? `补充要求：${description}` : ""}`
+    : floors > 0
+      ? `请帮我设计一个${floors}层的住宅。需求描述：${desc}`
+      : `请帮我设计一个住宅。需求描述：${desc}`;
   // 增量微调：把当前设计快照交给模型，让它在原方案上改，而不是重建
-  const userMessage = mode === "edit" && current
-    ? `这是当前设计（CURRENT DESIGN）：\n${JSON.stringify(current)}\n\n请在此基础上做增量修改。修改要求：${description}\n只改我提到的部分，其余保持不变。返回完整 JSON。`
+  const userText = mode === "edit" && current
+    ? `这是当前设计（CURRENT DESIGN）：\n${JSON.stringify(current)}\n\n请在此基础上做增量修改。修改要求：${baseMessage}\n只改我提到的部分，其余保持不变。返回完整 JSON。`
     : baseMessage;
+  // 带照片 → OpenAI 兼容多模态 content（text + image_url，各家通用）。
+  const userMessage: string | unknown[] = image
+    ? [
+        { type: "text", text: userText },
+        { type: "image_url", image_url: { url: image } },
+      ]
+    : userText;
 
   // ── 1. Try Anthropic Claude ──────────────────────────────────────────────
   if (ANTHROPIC_API_KEY) {
@@ -492,7 +524,21 @@ export async function POST(req: NextRequest) {
           // 工具调用：强制 Claude 通过 emit_design 工具回参，拿到的就是合法 JSON 对象。
           tools: [{ name: "emit_design", description: "提交住宅设计方案 JSON（schema 见 system 提示）。", input_schema: DESIGN_TOOL_PARAMS }],
           tool_choice: { type: "tool", name: "emit_design" },
-          messages: [{ role: "user", content: userMessage }],
+          // Anthropic 的图片块格式与 OpenAI 兼容层不同：data URL 拆成 base64 source。
+          messages: [{
+            role: "user",
+            content: image
+              ? (() => {
+                  const m = image.match(/^data:(image\/[a-z+.-]+);base64,(.+)$/i);
+                  return m
+                    ? [
+                        { type: "image", source: { type: "base64", media_type: m[1], data: m[2] } },
+                        { type: "text", text: userText },
+                      ]
+                    : userText;
+                })()
+              : userText,
+          }],
         }),
       });
 
@@ -527,14 +573,23 @@ export async function POST(req: NextRequest) {
         "content-type": "application/json",
         "Authorization": `Bearer ${providerKey}`,
       },
-      body: JSON.stringify(buildProviderBody(provider.textModel, SYSTEM_PROMPT, userMessage, mode, provider.maxTokens)),
+      // 带照片走视觉模型（户型/外观解析同款），纯文字走文本模型。
+      // 视觉档的 max_tokens 上限往往更紧（glm-4v-flash 限 1024），单独取。
+      body: JSON.stringify(buildProviderBody(
+        image ? provider.visionModel : provider.textModel,
+        SYSTEM_PROMPT, userMessage, mode,
+        image ? (provider.visionMaxTokens ?? provider.maxTokens) : provider.maxTokens,
+      )),
     });
 
     // 免费档（尤其 Gemini）经常 429/503 限流或过载——这类是「瞬时」错误，重试一次常能成。
     const isTransient = (status: number) => status === 429 || status >= 500;
     // 工具调用为首选档位；若平台不吃 tools/response_format（400/422）或解析失败，
     // 就自愈降级 native→json→text，最多 2 次降级，绝不会把某个平台彻底搞挂。
-    let outputMode: OutputMode = provider.output ?? "text";
+    // 视觉模型普遍不支持函数调用（如 glm-4v-flash）→ 带照片时首档降到 json。
+    let outputMode: OutputMode = image
+      ? (provider.output === "text" ? "text" : "json")
+      : (provider.output ?? "text");
     let lastStatus = 0;
     let lastDetail = "";
     let threw = false;

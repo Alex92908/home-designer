@@ -229,4 +229,8 @@ export interface AiDesignRequest {
   mode?: AiDesignMode;
   /** Serialized current design — only used when mode === "edit". */
   current?: AiDesignResult;
+  /** 参考房间照片（data URL，base64）。给了就走视觉模型「按图复刻房间」：
+   *  识别照片的家具/材质/窗户并输出单房间设计。可与 description 组合
+   *  （如「把客厅照这张图搭」）。 */
+  image?: string;
 }

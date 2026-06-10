@@ -23,6 +23,9 @@ import { useLocale } from "./i18n";
 export interface UseAiDesign {
   aiInput: string;
   setAiInput: (v: string) => void;
+  /** 参考房间照片（data URL）。非空时走视觉模型「按图复刻房间」。 */
+  aiImage: string | null;
+  setAiImage: (v: string | null) => void;
   aiLoading: boolean;
   /** 实时处理进度文案（带已用秒数），生成中显示，让用户知道没卡死 */
   aiStatus: string | null;
@@ -47,6 +50,7 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
   const setViewMode = useDesignerStore((s) => s.setViewMode);
 
   const [aiInput, setAiInput] = useState("");
+  const [aiImage, setAiImage] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -81,15 +85,18 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
 
   async function doGenerate(provider: AiProviderId, key: string, mode: AiDesignMode) {
     const desc = aiInput.trim();
-    if (!desc) return;
+    if (!desc && !aiImage) return;
     setAiLoading(true);
     setAiError(null);
     setAiSummary(null);
-    const genLabel = mode === "edit"
-      ? (en ? "AI is fine-tuning the design…" : "AI 正在微调设计…")
-      : (en ? "AI is generating the design…" : "AI 正在生成设计…");
+    const genLabel = aiImage
+      ? (en ? "AI is reading the reference photo…" : "AI 正在识别参考图并复刻房间…")
+      : mode === "edit"
+        ? (en ? "AI is fine-tuning the design…" : "AI 正在微调设计…")
+        : (en ? "AI is generating the design…" : "AI 正在生成设计…");
     try {
       const body: Record<string, unknown> = { description: desc, provider, apiKey: key, mode };
+      if (aiImage) body.image = aiImage;
       if (mode === "edit") {
         setAiStatus(en ? "Packing the current design…" : "正在打包当前设计…");
         const { floorPlans, exterior } = useDesignerStore.getState();
@@ -129,7 +136,7 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
   }
 
   const generate = (mode: AiDesignMode) => {
-    if (!aiInput.trim()) return;
+    if (!aiInput.trim() && !aiImage) return;
     ensureAiKey((provider, key) => void doGenerate(provider, key, mode));
   };
 
@@ -151,7 +158,7 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
   const configureKey = () => setKeyPrompt({ run: () => {} });
 
   return {
-    aiInput, setAiInput, aiLoading, aiStatus, aiError, aiSummary,
+    aiInput, setAiInput, aiImage, setAiImage, aiLoading, aiStatus, aiError, aiSummary,
     clearMessages, generate, keyPrompt, onKeySave, onKeyClose, onKeyRemove, configureKey,
   };
 }
