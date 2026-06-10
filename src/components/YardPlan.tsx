@@ -27,6 +27,7 @@ import { autoGenerateYardPaths } from "@/lib/yardAutoLayout";
 import { autoScatterTrees, placeSunShadeTrees } from "@/lib/yardAutoPlanting";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
+import { persistGlb } from "@/lib/glbStorage";
 import { VillaTo3D } from "./VillaTo3D";
 import { GlbPbrPanel } from "./GlbPbrPanel";
 import { getShadowPolygon } from "@/lib/sunAnalysis";
@@ -326,26 +327,26 @@ export function YardPlanLibrary() {
     });
   };
 
-  // 手动导入 .glb/.gltf：读成 data URL → 直接入库为可拖放的 glb_model 预制件
+  // 手动导入 .glb/.gltf：落成 public/models/imported/ 真实文件（与内置家具
+  // 同一套「URL 即资产」机制），store 里只存 URL；只读环境自动退 IndexedDB。
+  // 之前读成 data URL 直接进 zustand persist（localStorage 5MB 配额），
+  // 一个普通 GLB 就 QuotaExceededError 把整次导入写挂。
   const handleManualGlb = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // 允许重复选同一文件
     if (!file) return;
     const name = file.name.replace(/\.(glb|gltf)$/i, "");
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const src = ev.target?.result as string;
-      if (!src) return;
+    const key = `glb_import_${Date.now()}`;
+    void persistGlb(name || key, file).then(src => {
       addYardItem({
-        id:         `glb_import_${Date.now()}`,
+        id:         key,
         type:       "prefab",
         prefabKind: "glb_model",
         x:          200, z: 300, rot: 0, scale: 1,
         glbSrc:     src,
         partLabel:  name || (locale === "en" ? "Imported model" : "导入模型"),
       } as YardItem);
-    };
-    reader.readAsDataURL(file);
+    });
   };
 
   return (

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useDesignerStore } from "@/lib/store";
+import { persistGlb } from "@/lib/glbStorage";
 import { ROOM_DEFS, getRoomArea, RoomType } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { generatePdf, generateAllRoomsPdf } from "@/lib/exportPdf";
@@ -52,6 +53,8 @@ export default function ExportModal() {
   const [exporting, setExporting] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
+  const glbInputRef = useRef<HTMLInputElement>(null);
+  const [glbImporting, setGlbImporting] = useState(false);
   const t = useT();
   const locale = useLocale();
 
@@ -223,6 +226,31 @@ export default function ExportModal() {
     } catch {
       alert(locale === "en" ? "Failed to load demo." : "样板加载失败，请重试。");
     }
+  };
+
+  // 导入 3D 模型（.glb/.gltf）→ 落成 public/models/imported/ 真实文件
+  // （只读部署退 IndexedDB），作为可拖放的 glb_model 进院子，导完直接
+  // 跳到院子图让用户看见它。与院子图左侧「📦 手动导入」共用同一条链路。
+  const handleImportGlb = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const name = file.name.replace(/\.(glb|gltf)$/i, "");
+    setGlbImporting(true);
+    void persistGlb(name || `glb_import_${Date.now()}`, file).then(src => {
+      const st = useDesignerStore.getState();
+      st.addYardItem({
+        id:         `glb_import_${Date.now()}`,
+        type:       "prefab",
+        prefabKind: "glb_model",
+        x: 200, z: 300, rot: 0, scale: 1,
+        glbSrc:     src,
+        partLabel:  name || (locale === "en" ? "Imported model" : "导入模型"),
+      });
+      st.setViewMode("yard2d");
+      setGlbImporting(false);
+      close();
+    }).catch(() => setGlbImporting(false));
   };
 
   const handleLoadJson = () => {
@@ -600,6 +628,30 @@ export default function ExportModal() {
                 <button onClick={handleLoadJson}
                   className="w-full py-2.5 bg-gray-700 text-white text-sm font-bold rounded-xl hover:bg-gray-800 transition-colors">
                   {t.loadBtn}
+                </button>
+              </div>
+
+              {/* 导入 3D 模型（.glb/.gltf）——全局入口；院子图左侧库里也有同款 */}
+              <div className="rounded-xl p-4 border" style={{ background: "linear-gradient(135deg,#EEF2FF,#F0FDF4)", borderColor: "#C7D2FE" }}>
+                <div className="text-sm font-bold text-gray-800 mb-1">
+                  📦 {locale === "en" ? "Import 3D Model (.glb / .gltf)" : "导入 3D 模型（.glb / .gltf）"}
+                </div>
+                <div className="text-xs text-gray-500 mb-3">
+                  {locale === "en"
+                    ? "Save into the project model library and drop into the yard — drag to place, survives refresh."
+                    : "存入项目模型库并放进院子，可拖动摆放；存为真实文件，刷新/换浏览器不丢。"}
+                </div>
+                <input
+                  ref={glbInputRef} type="file" className="hidden"
+                  accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
+                  onChange={handleImportGlb}
+                />
+                <button onClick={() => glbInputRef.current?.click()} disabled={glbImporting}
+                  className="w-full py-2.5 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-60"
+                  style={{ background: "#6366F1" }}>
+                  {glbImporting
+                    ? (locale === "en" ? "Importing…" : "导入中…")
+                    : (locale === "en" ? "Choose model file" : "选择模型文件")}
                 </button>
               </div>
 

@@ -18,10 +18,11 @@
  *   <GlbPrefabMesh src="/models/generated/pool.glb" color="#00B4D8" scale={1} />
  */
 
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useGLTF, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useT } from "@/lib/i18n";
+import { isIdbGlbSrc, resolveGlbSrc } from "@/lib/glbStorage";
 
 // ─── Colour applicator ────────────────────────────────────────────
 // Overrides the BASE colour tint only — ALL PBR texture maps are kept:
@@ -149,12 +150,42 @@ export interface GlbPrefabMeshProps {
   castShadow?: boolean;
 }
 
+/** "idb://" 引用（导入的 GLB 存在 IndexedDB，store 里只有轻量 key）需要
+ *  先异步换成 object URL 再喂给 useGLTF。src 变化靠外层 key={src} 重挂载
+ *  重置状态——避免在 effect 里同步 setState（react-hooks 规则）。 */
+function GlbIdbResolved({ src, partColor, nodeOverrides, castShadow }: GlbPrefabMeshProps & { castShadow: boolean }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void resolveGlbSrc(src).then(u => { if (alive) setUrl(u); });
+    return () => { alive = false; };
+  }, [src]);
+  // null = 还在读库；解析失败（库被清）也停在 loading 盒，至少不崩场景。
+  if (!url) return <GlbLoadingBox />;
+  return (
+    <Suspense fallback={<GlbLoadingBox />}>
+      <GlbInner src={url} partColor={partColor} nodeOverrides={nodeOverrides} castShadow={castShadow} />
+    </Suspense>
+  );
+}
+
 export function GlbPrefabMesh({
   src,
   partColor,
   nodeOverrides,
   castShadow = true,
 }: GlbPrefabMeshProps) {
+  if (isIdbGlbSrc(src)) {
+    return (
+      <GlbIdbResolved
+        key={src}
+        src={src}
+        partColor={partColor}
+        nodeOverrides={nodeOverrides}
+        castShadow={castShadow}
+      />
+    );
+  }
   return (
     <Suspense fallback={<GlbLoadingBox />}>
       <GlbInner

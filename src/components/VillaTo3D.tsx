@@ -34,6 +34,7 @@ import {
   setSelected3dProvider,
 } from "@/lib/model3dKeys";
 import Model3dKeyPromptModal from "./Model3dKeyPromptModal";
+import { persistGlb, dataUrlToBlob } from "@/lib/glbStorage";
 
 // ─── Types ────────────────────────────────────────────────────────
 interface SegmentedPart {
@@ -183,21 +184,29 @@ export function VillaTo3D({
     const chosen = parts.filter((_, i) => selected.has(i));
     if (!chosen.length) return;
 
+    // base64 GLB 先持久化（首选 public/models/imported/ 文件、退 IndexedDB），
+    // store 只存轻量 src —— 直接塞 base64 会把 zustand persist 的
+    // localStorage 配额炸掉（QuotaExceededError）。
     chosen.forEach((p, i) => {
-      const prefab: YardPrefab = {
-        id:         `glb_${Date.now()}_${i}`,
-        type:       "prefab",
-        prefabKind: "glb_model",
-        // Main building → center of the yard (house origin)
-        // Parts → spread out so they don't overlap
-        x:          asMainBuilding ? 0   : (i % 3) * 400 + 150,
-        z:          asMainBuilding ? 0   : Math.floor(i / 3) * 400 + 200,
-        rot:        0,
-        scale:      asMainBuilding ? buildingScale : 1,
-        glbSrc:     p.glbBase64,
-        partLabel:  p.chinese,
-      };
-      addYardItem(prefab);
+      const key = `glb_${Date.now()}_${i}`;
+      const blob = dataUrlToBlob(p.glbBase64);
+      const save = blob ? persistGlb(key, blob) : Promise.resolve(p.glbBase64);
+      void save.then(src => {
+        const prefab: YardPrefab = {
+          id:         key,
+          type:       "prefab",
+          prefabKind: "glb_model",
+          // Main building → center of the yard (house origin)
+          // Parts → spread out so they don't overlap
+          x:          asMainBuilding ? 0   : (i % 3) * 400 + 150,
+          z:          asMainBuilding ? 0   : Math.floor(i / 3) * 400 + 200,
+          rot:        0,
+          scale:      asMainBuilding ? buildingScale : 1,
+          glbSrc:     src,
+          partLabel:  p.chinese,
+        };
+        addYardItem(prefab);
+      });
     });
 
     setStage("done");

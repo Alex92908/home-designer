@@ -21,6 +21,7 @@ import { useState, useRef, useCallback } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import type { YardPrefab } from "@/lib/types";
+import { persistGlb, dataUrlToBlob } from "@/lib/glbStorage";
 
 type Stage = "idle" | "working" | "done" | "error";
 
@@ -131,18 +132,26 @@ export function GlbPbrPanel({ onClose }: { onClose?: () => void }) {
   }, [glbSrc, refImg, prompt, t]);
 
   // ── Add PBR result to yard ───────────────────────────────────────
+  // base64 结果先转 Blob 持久化（首选 public/models/imported/ 真实文件，
+  // 退 IndexedDB），store 只存轻量 src —— 否则几 MB 的 GLB 直接进
+  // zustand persist 会把 localStorage 配额炸掉。
   const addToScene = useCallback(() => {
     if (!resultGlb) return;
-    const prefab: YardPrefab = {
-      id:         `pbr_${Date.now()}`,
-      type:       "prefab",
-      prefabKind: "glb_model",
-      x: 200, z: 200, rot: 0, scale: 1,
-      glbSrc:    resultGlb,
-      partLabel: t.glbPbr.pbrModelLabel(glbName || "uploaded"),
-    };
-    addYardItem(prefab);
-    onClose?.();
+    const key = `pbr_${Date.now()}`;
+    const blob = dataUrlToBlob(resultGlb);
+    const save = blob ? persistGlb(key, blob) : Promise.resolve(resultGlb);
+    void save.then(src => {
+      const prefab: YardPrefab = {
+        id:         key,
+        type:       "prefab",
+        prefabKind: "glb_model",
+        x: 200, z: 200, rot: 0, scale: 1,
+        glbSrc:    src,
+        partLabel: t.glbPbr.pbrModelLabel(glbName || "uploaded"),
+      };
+      addYardItem(prefab);
+      onClose?.();
+    });
   }, [resultGlb, glbName, addYardItem, onClose, t]);
 
   // ── Download ─────────────────────────────────────────────────────
