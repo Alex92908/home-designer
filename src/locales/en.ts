@@ -4,7 +4,7 @@ export const en: Translations = {
   // ── App / TopBar ─────────────────────────────────────────
   appName: "ZHUYA",
   appTagline: "Pro",
-  viewModes: { "3d": "3D View", "2d": "Floor Plan", all: "Overview", exterior: "Exterior", global3d: "Global 3D", yard2d: "Yard Plan" },
+  viewModes: { all: "Layout", "2d": "Floor Plan", "3d": "Decorate", global3d: "House 3D", yard2d: "Yard", exterior: "Exterior" },
   viewIcons: { "3d": "🎨", "2d": "📐", all: "🗺️", exterior: "🏠", global3d: "🏘️", yard2d: "🌳" },
   hints: {
     "3d": "🖱️ Drag to rotate · Scroll to zoom",
@@ -609,9 +609,11 @@ export const en: Translations = {
     phaseRendering:   "Rendering (about 1–3 min)…",
     phaseFallback:    "Processing…",
     renderingBtn:     "Rendering…",
-    aiRender:         "AI Render",
-    triggerTitle:     "AI render — one-click · presets · generative refine · import reference",
-    menuHeader:       "AI Render",
+    aiRender:         "AI Assistant",
+    triggerTitle:     "AI assistant — text-to-design · one-click render · presets · refine · import reference",
+    menuHeader:       "AI Assistant",
+    textDesign:       "Text to Design / Photo Rebuild",
+    textDesignSub:    "One sentence or a photo — generate or edit the home",
     settingsTitle:    "Manage backends & workflows",
     noPreset:         "No recommended preset · configure in ⚙️",
     reasonGoConfig:   (reason: string) => `${reason} (click here to set up)`,

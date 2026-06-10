@@ -41,7 +41,19 @@ export interface ExteriorPreset {
    *  floor-0 yardPlan.items with this list — so the landscape matches
    *  the style. Leave undefined to preserve the user's current yard. */
   yardItems?: YardItem[];
+  /** Optional yard paths (小径). Same semantics as yardItems: set =
+   *  REPLACE floor-0 yardPlan.paths. 与 yardItems 一起构成「风格选一次、
+   *  院子整包到位」的一致性主线——用户不必去院子图重新铺路。 */
+  yardPaths?: Array<{ id: string; points: Array<[number, number]>; widthCm: number; material: string }>;
 }
+
+// ── 庭院坐标约定 ───────────────────────────────────────────────
+// 世界坐标 cm，原点 = 房子中心，+z = 前院(南)，+x = 右(东)。
+// 典型住宅半宽 ~600、半深 ~500；前门在 +z 一侧中央，围栏在 ~±1100。
+// zone 的 polygon 是相对 (x,z) 质心的顶点；这里统一用居中矩形。
+const zoneRect = (w: number, d: number): Array<[number, number]> => [
+  [-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2],
+];
 
 export const EXTERIOR_PRESETS: ExteriorPreset[] = [
   {
@@ -138,14 +150,25 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       balcony:   { floor: "floor-concrete",   wall: "wall-white" },
       balcony2:  { floor: "floor-concrete",   wall: "wall-white" },
     },
-    // Minimal landscape: one anchoring olive on each side of the house,
-    // a single feature stone, and a low maple by the entry. Sparse on
-    // purpose — it's "modern minimal", not "garden party".
+    // 现代极简庭院包：克制留白。前右一块户外客厅（社交区），前左大草坪，
+    // 锚点橄榄树对置 + 一组景石。功能分区 + 植物 + 小径一次到位。
     yardItems: [
-      { id: "mm-tree-1", type: "singleton", kind: "tree.olive",   x: -900, z:  600, scale: 1.3 },
-      { id: "mm-tree-2", type: "singleton", kind: "tree.olive",   x:  900, z:  600, scale: 1.3 },
-      { id: "mm-tree-3", type: "singleton", kind: "tree.maple",   x:  450, z: -650, scale: 1.0 },
+      // 分区
+      { id: "mm-zone-social", type: "zone", zoneKind: "social", subtype: "outdoor-room", x: 380, z: 680, polygon: zoneRect(320, 240) },
+      { id: "mm-zone-lawn",   type: "zone", zoneKind: "lawn",   x: -420, z: 720, polygon: zoneRect(520, 380) },
+      // 植物 / 景石
+      { id: "mm-tree-1", type: "singleton", kind: "tree.olive", x: -900, z:  600, scale: 1.3 },
+      { id: "mm-tree-2", type: "singleton", kind: "tree.olive", x:  900, z:  600, scale: 1.3 },
+      { id: "mm-tree-3", type: "singleton", kind: "tree.maple", x:  450, z: -650, scale: 1.0 },
       { id: "mm-rock-1", type: "singleton", kind: "rock.large", x: -500, z: -650, scale: 1.2 },
+      { id: "mm-bush-1", type: "singleton", kind: "plant.bushSmall", x: -150, z: 540 },
+      { id: "mm-bush-2", type: "singleton", kind: "plant.bushSmall", x:  150, z: 540 },
+      // 社交区家具
+      { id: "mm-sofa",  type: "singleton", kind: "furniture.outdoorSofa",  x: 380, z: 620, rot: Math.PI },
+      { id: "mm-table", type: "singleton", kind: "furniture.coffeeTable",  x: 380, z: 720 },
+    ],
+    yardPaths: [
+      { id: "mm-path-entry", points: [[0, 1100], [0, 500]], widthCm: 110, material: "stone" },
     ],
   },
   {
@@ -195,6 +218,30 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       roofSlabColor: "#E8D8B0",
       parapetColor: "#E8D8B0",
     },
+    // 法式古典庭院包：轴线对称。砖径两侧柏树列植 + 花境，左前喷泉为焦点，
+    // 右前社交区摆餐桌椅；后院留草坪。
+    yardItems: [
+      { id: "fc-zone-social", type: "zone", zoneKind: "social", subtype: "outdoor-room", x: 420, z: 700, polygon: zoneRect(340, 260) },
+      { id: "fc-zone-lawn",   type: "zone", zoneKind: "lawn",   x: 0, z: -780, polygon: zoneRect(700, 360) },
+      // 柏树列植（沿入户轴线对称）
+      { id: "fc-cy-1", type: "singleton", kind: "tree.cypress", x: -160, z: 1000, scale: 1.1 },
+      { id: "fc-cy-2", type: "singleton", kind: "tree.cypress", x:  160, z: 1000, scale: 1.1 },
+      { id: "fc-cy-3", type: "singleton", kind: "tree.cypress", x: -160, z:  720, scale: 1.1 },
+      { id: "fc-cy-4", type: "singleton", kind: "tree.cypress", x:  160, z:  720, scale: 1.1 },
+      // 花境（红/紫/黄三色，靠路两侧）
+      { id: "fc-fl-1", type: "singleton", kind: "plant.flowerRed",    x: -260, z: 880 },
+      { id: "fc-fl-2", type: "singleton", kind: "plant.flowerPurple", x:  260, z: 880 },
+      { id: "fc-fl-3", type: "singleton", kind: "plant.flowerYellow", x: -260, z: 620 },
+      { id: "fc-fl-4", type: "singleton", kind: "plant.flowerRed",    x:  260, z: 620 },
+      // 焦点喷泉（左前）+ 社交区餐桌
+      { id: "fc-fountain", type: "prefab", prefabKind: "fountain", x: -450, z: 760 },
+      { id: "fc-dining",   type: "singleton", kind: "furniture.diningSet", x: 420, z: 700 },
+      { id: "fc-oak",      type: "singleton", kind: "tree.oak", x: 850, z: -550, scale: 1.2 },
+    ],
+    yardPaths: [
+      { id: "fc-path-entry", points: [[0, 1100], [0, 500]], widthCm: 130, material: "brick" },
+      { id: "fc-path-social", points: [[120, 700], [420, 700]], widthCm: 80, material: "brick" },
+    ],
   },
   {
     id: "industrial-loft",
@@ -241,6 +288,26 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       roofSlabColor: "#5E564E",
       parapetColor: "#7A7068",
     },
+    // 工业风庭院包：砾石 + 观赏草 + 原石，硬朗低维护。前右社交角壁炉 +
+    // 户外沙发；侧边隐蔽服务区（工具/设备）。
+    yardItems: [
+      { id: "il-zone-social",  type: "zone", zoneKind: "social",  subtype: "outdoor-room",  x: 400, z: 700, polygon: zoneRect(340, 260) },
+      { id: "il-zone-service", type: "zone", zoneKind: "utility", subtype: "service-yard",  x: -780, z: -200, polygon: zoneRect(220, 420) },
+      { id: "il-pine-1", type: "singleton", kind: "tree.pine", x: -880, z: 560, scale: 1.2 },
+      { id: "il-pine-2", type: "singleton", kind: "tree.pine", x:  920, z: -420, scale: 1.0 },
+      { id: "il-grass-1", type: "singleton", kind: "plant.grass", x: -340, z: 760, scale: 1.4 },
+      { id: "il-grass-2", type: "singleton", kind: "plant.grass", x: -460, z: 640, scale: 1.2 },
+      { id: "il-grass-3", type: "singleton", kind: "plant.grass", x:  200, z: 900, scale: 1.3 },
+      { id: "il-rock-1", type: "singleton", kind: "rock.flat",  x: -250, z: 880, scale: 1.3 },
+      { id: "il-rock-2", type: "singleton", kind: "rock.large", x: -600, z: 800, scale: 1.1 },
+      { id: "il-fire",  type: "singleton", kind: "furniture.fireplace",  x: 400, z: 780 },
+      { id: "il-sofa",  type: "singleton", kind: "furniture.outdoorSofa", x: 400, z: 620, rot: Math.PI },
+      { id: "il-planter", type: "singleton", kind: "furniture.planter", x: 180, z: 540 },
+    ],
+    yardPaths: [
+      { id: "il-path-entry", points: [[0, 1100], [0, 500]], widthCm: 120, material: "gravel" },
+      { id: "il-path-side",  points: [[-120, 760], [-680, 760], [-780, 100]], widthCm: 80, material: "gravel" },
+    ],
   },
   {
     id: "mediterranean",
@@ -288,6 +355,27 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       roofSlabColor: "#C26840",
       parapetColor: "#C26840",
     },
+    // 地中海庭院包：度假感。左前泳池 + 躺椅，右前阳伞餐区（社交），
+    // 棕榈对置 + 橄榄 + 耐旱多肉，陶盆点缀入户。
+    yardItems: [
+      { id: "md-zone-social", type: "zone", zoneKind: "social", subtype: "outdoor-room", x: 430, z: 700, polygon: zoneRect(360, 280) },
+      { id: "md-zone-lawn",   type: "zone", zoneKind: "lawn",   x: 0, z: -780, polygon: zoneRect(700, 360) },
+      { id: "md-pool", type: "prefab", prefabKind: "pool", x: -450, z: 780 },
+      { id: "md-palm-1", type: "singleton", kind: "tree.palm", x: -900, z: 600, scale: 1.2 },
+      { id: "md-palm-2", type: "singleton", kind: "tree.palm", x:  920, z: 620, scale: 1.2 },
+      { id: "md-olive",  type: "singleton", kind: "tree.olive", x: -480, z: -700, scale: 1.3 },
+      { id: "md-cactus-1", type: "singleton", kind: "plant.cactus", x: 740, z: 880 },
+      { id: "md-cactus-2", type: "singleton", kind: "plant.cactus", x: 840, z: 760 },
+      { id: "md-planter-1", type: "singleton", kind: "furniture.planter", x: -150, z: 540 },
+      { id: "md-planter-2", type: "singleton", kind: "furniture.planter", x:  150, z: 540 },
+      { id: "md-parasol", type: "singleton", kind: "furniture.parasol",   x: 430, z: 700 },
+      { id: "md-dining",  type: "singleton", kind: "furniture.diningSet", x: 430, z: 700 },
+      { id: "md-lounger", type: "singleton", kind: "furniture.swimmingLounger", x: -450, z: 1010, rot: Math.PI },
+    ],
+    yardPaths: [
+      { id: "md-path-entry", points: [[0, 1100], [0, 500]], widthCm: 120, material: "stone" },
+      { id: "md-path-pool",  points: [[-110, 780], [-260, 780]], widthCm: 80, material: "stone" },
+    ],
   },
   {
     id: "japanese-zen",
@@ -331,5 +419,35 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       parapetGlassEnabled: false,
       roofSlabColor: "#2A1E14",
     },
+    // 日式禅意庭院包：枯山水。横向砾石「砂川」+ 木桥，三石组（主石+副石+
+    // 平石），红枫/黑松/盆景，右前私密茶角（背靠围合）。无草坪，重留白。
+    yardItems: [
+      { id: "jz-zone-tea", type: "zone", zoneKind: "private", subtype: "back-against", x: 450, z: 700, polygon: zoneRect(280, 220) },
+      // 三石组（左前，枯山水主景）
+      { id: "jz-rock-main", type: "singleton", kind: "rock.stoneTall", x: -420, z: 800, scale: 1.4 },
+      { id: "jz-rock-sub",  type: "singleton", kind: "rock.large",     x: -540, z: 740, scale: 1.0 },
+      { id: "jz-rock-flat", type: "singleton", kind: "rock.flat",      x: -330, z: 720, scale: 1.1 },
+      // 乔木：红枫 + 黑松；入户对置盆景
+      { id: "jz-maple-1", type: "singleton", kind: "tree.maple", x: -560, z: 600, scale: 1.1 },
+      { id: "jz-maple-2", type: "singleton", kind: "tree.maple", x:  880, z: -380, scale: 0.9 },
+      { id: "jz-pine",    type: "singleton", kind: "tree.pine",  x:  900, z: 620, scale: 1.1 },
+      { id: "jz-bonsai-1", type: "singleton", kind: "tree.bonsai", x: -150, z: 530 },
+      { id: "jz-bonsai-2", type: "singleton", kind: "tree.bonsai", x:  150, z: 530 },
+      // 低层灌木（苔感）
+      { id: "jz-bush-1", type: "singleton", kind: "plant.bushSmall", x: -360, z: 880 },
+      { id: "jz-bush-2", type: "singleton", kind: "plant.bushSmall", x: -600, z: 840 },
+      { id: "jz-bush-3", type: "singleton", kind: "plant.bushSmall", x:  340, z: 860 },
+      // 砂川上的木桥 + 茶角矮桌
+      { id: "jz-bridge", type: "singleton", kind: "feature.bridgeWood", x: -400, z: 950, rot: Math.PI / 2 },
+      { id: "jz-tea-table", type: "singleton", kind: "furniture.coffeeTable", x: 450, z: 700 },
+    ],
+    yardPaths: [
+      // 入户主径（碎石）
+      { id: "jz-path-entry", points: [[0, 1100], [0, 500]], widthCm: 100, material: "gravel" },
+      // 枯山水「砂川」横贯左前院
+      { id: "jz-path-river", points: [[-1050, 900], [-400, 950], [-150, 880]], widthCm: 170, material: "gravel" },
+      // 汀步到茶角
+      { id: "jz-path-tea", points: [[90, 660], [430, 700]], widthCm: 70, material: "stone" },
+    ],
   },
 ];

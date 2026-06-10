@@ -91,7 +91,8 @@ export default function AiEntryMenu() {
   const quickStatus = quickPreset ? quickReadiness(config, quickPreset) : null;
 
   const promptForView = () =>
-    buildViewPrompt({ viewMode, exterior, yardItems: floorPlans[activeFloor].yardPlan?.items ?? [] });
+    // 院子数据只存 floor 0（store 约定），别读 activeFloor。
+    buildViewPrompt({ viewMode, exterior, yardItems: floorPlans[0]?.yardPlan?.items ?? [] });
 
   // ⚡ 一键：按当前视图推荐预设
   const runQuick = async () => {
@@ -144,6 +145,17 @@ export default function AiEntryMenu() {
             <span>{t.aiEntry.menuHeader}</span>
             <button onClick={() => { setOpen(false); setSettingsOpen(true); }} title={t.aiEntry.settingsTitle} className="text-sm opacity-70 hover:opacity-100">⚙️</button>
           </div>
+
+          {/* 🏠 文生设计（统一入口：右下角只此一个 AI 按钮，设计/出图都从这进） */}
+          <button onClick={() => { setOpen(false); window.dispatchEvent(new Event("openAiDesign")); }}
+            className="flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors hover:bg-teal-50"
+            style={{ borderBottom: "1px solid var(--ds-border-soft, #f3f4f6)" }}>
+            <span className="text-xl w-7 text-center shrink-0">🏠</span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold leading-tight" style={{ color: "var(--ds-text, #111)" }}>{t.aiEntry.textDesign}</span>
+              <span className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3, #9ca3af)" }}>{t.aiEntry.textDesignSub}</span>
+            </div>
+          </button>
 
           {/* ⚡ 一键 */}
           {target && (

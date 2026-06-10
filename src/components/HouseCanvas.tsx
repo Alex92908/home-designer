@@ -2100,8 +2100,9 @@ function techColorForAsset(kind: string, category: string): string {
  *  singleton primitives (legacy), then prefabs (compound blocks on top). */
 const EMPTY_YARD_ITEMS_3D: import("@/lib/types").YardItem[] = [];
 function YardPlanItems3D() {
-  const activeFloor = useDesignerStore(s => s.activeFloor);
-  const items = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.items ?? EMPTY_YARD_ITEMS_3D);
+  // 院子数据只存在 floor 0（store 约定：yardPlan 一律读写 floorPlans[0]）。
+  // 之前误读 activeFloor —— 用户切到二楼/天台后整个院子在外观图里凭空消失。
+  const items = useDesignerStore(s => s.floorPlans[0]?.yardPlan?.items ?? EMPTY_YARD_ITEMS_3D);
 
   // Render order matters for visual layering:
   //   zones (paving) → singletons → prefabs (often the largest mass)
@@ -2139,8 +2140,8 @@ function YardPlanItems3D() {
 // Points are in world-cm, Y is ground level (0).
 const EMPTY_YARD_PATHS_3D: NonNullable<import("@/lib/types").YardPlan["paths"]> = [];
 function YardPathItems3D() {
-  const activeFloor = useDesignerStore(s => s.activeFloor);
-  const paths = useDesignerStore(s => s.floorPlans[activeFloor].yardPlan?.paths ?? EMPTY_YARD_PATHS_3D);
+  // 同上：小径也一律读 floor 0。
+  const paths = useDesignerStore(s => s.floorPlans[0]?.yardPlan?.paths ?? EMPTY_YARD_PATHS_3D);
 
   return (
     <group>

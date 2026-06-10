@@ -279,6 +279,11 @@ EXTERIOR RULES (外墙材质/楼体轮廓 — exterior.wallMaterial / exterior.f
   各带 heightFraction 和为 1。只有用户明确要分层墙面才给。
 
 YARD RULES (院子/花园/前后院 — "yard"，只作用于 floor 0):
+- 一致性主线：「日式庭院/地中海花园」这类"换庭院风格"的请求 → 输出对应的
+  "exterior.preset"（japanese-zen / mediterranean…），preset 自带整套配齐的
+  庭院包（分区+植物+小径），不要再手拼 yard.add 散件。
+  只有"在现有院子上加几样东西"才用 yard.add，且所加素材应与当前风格协调
+  （日式配枫/松/石，地中海配棕榈/橄榄/多肉，法式配柏树/花境）。
 - 只有当用户提到院子/花园/泳池/草坪/绿化/树/喷泉等室外内容时才输出 "yard"，否则整段省略。
 - "yard.add" 是要"加进"院子的物件：结构件给 "prefab"（pool/pergola_classic/
   outdoor_kitchen/fountain），植物/石头/装饰/户外家具给 "kind"（见下方目录的精确 id）。

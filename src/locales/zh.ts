@@ -2,7 +2,9 @@ export const zh = {
   // ── App / TopBar ─────────────────────────────────────────
   appName: "筑雅",
   appTagline: "Pro",
-  viewModes: { "3d": "效果图", "2d": "平面图", all: "全局", exterior: "外观", global3d: "全局3D", yard2d: "院子图" } as Record<string, string>,
+  // 流程步骤条文案（TopBar）：按工作顺序命名——摆布局→改平面→装房间→
+  // 全屋3D 成型→放进院子→整体外观（房子+院子合成），每个 tab 说清"这一步干什么"。
+  viewModes: { all: "整体布局", "2d": "房间平面", "3d": "室内装修", global3d: "全屋3D", yard2d: "院子景观", exterior: "整体外观" } as Record<string, string>,
   viewIcons: { "3d": "🎨", "2d": "📐", all: "🗺️", exterior: "🏠", global3d: "🏘️", yard2d: "🌳" } as Record<string, string>,
   hints: {
     "3d": "🖱️ 拖拽旋转 · 滚轮缩放",
@@ -611,10 +613,13 @@ export const zh = {
     phaseFallback:    "处理中…",
     // 触发按钮
     renderingBtn:     "渲染中…",
-    aiRender:         "AI 渲染",
-    triggerTitle:     "AI 出图 / 渲染 — 一键 · 选预设 · 生成式精修 · 导入参考图",
+    aiRender:         "AI 助手",
+    triggerTitle:     "AI 助手 — 文生设计 · 一键出图 · 选预设 · 生成式精修 · 导入参考图",
     // 菜单头
-    menuHeader:       "AI 出图 / 渲染",
+    menuHeader:       "AI 助手",
+    // 文生设计（并入统一菜单）
+    textDesign:       "文生设计 / 参考图复刻",
+    textDesignSub:    "一句话或一张照片，直接生成/修改户型",
     settingsTitle:    "管理后端与工作流",
     // 一键项
     noPreset:         "未找到推荐预设 · 点 ⚙️ 配置",

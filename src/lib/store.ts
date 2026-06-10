@@ -1995,17 +1995,18 @@ export const useDesignerStore = create<DesignerStore>()(
           });
         }
 
-        if (preset.yardItems) {
-          // Replace floor-0 yard items wholesale — the preset's landscape
-          // is curated to match the facade. Paths / groundPolygons (if
-          // any) are preserved.
+        if (preset.yardItems || preset.yardPaths) {
+          // Replace floor-0 yard items / paths wholesale — the preset's
+          // landscape is curated to match the facade（风格选一次、院子整包
+          // 到位的一致性主线）。preset 没带的部分保持原样。
           floorPlans = floorPlans.map((fp, fi) => {
             if (fi !== 0 || !fp) return fp;
             return {
               ...fp,
               yardPlan: {
                 ...(fp.yardPlan ?? { items: [] }),
-                items: preset.yardItems!,
+                ...(preset.yardItems ? { items: preset.yardItems } : {}),
+                ...(preset.yardPaths ? { paths: preset.yardPaths } : {}),
               },
             };
           });

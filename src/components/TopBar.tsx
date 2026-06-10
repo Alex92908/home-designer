@@ -270,24 +270,30 @@ export default function TopBar() {
         className="flex items-center p-1 rounded-xl gap-0.5 shrink-0"
         style={{ background: "var(--ds-bg)", border: "1px solid var(--ds-border)" }}
       >
-        {/* Primary tabs — all, 平面图, 效果图, 全局3D, 院子图, 外观 */}
-        {/* 院子入口先注释掉 — yard2d 标签暂时下线 */}
-        {(["all", "2d", "3d", "global3d", /* "yard2d", */ "exterior"] as const).map((mode) => {
+        {/* 设计流程步骤条 — 按真实工作顺序排列：布局 → 平面 → 装修 →
+            全屋3D 成型 → 把房子放进院子 → 外观 = 房子+院子的整体合成。
+            带 ①-⑥ 序号 + 连接箭头，让用户一眼看懂"我在第几步、下一步去哪"。
+            仍是自由切换，只是叙事有了顺序。 */}
+        {(["all", "2d", "3d", "global3d", "yard2d", "exterior"] as const).map((mode, i, arr) => {
           const isActive = viewMode === mode;
           return (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150"
-              style={
-                isActive
-                  ? { background: "var(--ds-surface)", color: "var(--ds-text)", boxShadow: "var(--ds-shadow-sm)" }
-                  : { color: "var(--ds-text-3)" }
-              }
-            >
-              <span>{t.viewIcons[mode]}</span>
-              <span className="hidden sm:block">{t.viewModes[mode]}</span>
-            </button>
+            <div key={mode} className="flex items-center">
+              <button
+                onClick={() => setViewMode(mode)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all duration-150"
+                style={
+                  isActive
+                    ? { background: "var(--ds-surface)", color: "var(--ds-text)", boxShadow: "var(--ds-shadow-sm)" }
+                    : { color: "var(--ds-text-3)" }
+                }
+              >
+                <span>{t.viewIcons[mode]}</span>
+                <span className="hidden sm:block">{t.viewModes[mode]}</span>
+              </button>
+              {i < arr.length - 1 && (
+                <span className="text-[9px] px-0.5 select-none" style={{ color: "var(--ds-text-3)", opacity: 0.5 }}>›</span>
+              )}
+            </div>
           );
         })}
       </div>

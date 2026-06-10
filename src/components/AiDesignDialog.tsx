@@ -47,6 +47,15 @@ export default function AiDesignDialog() {
     img.src = url;
   };
 
+  // 统一 AI 入口：不再有自己的常驻按钮——由 AiEntryMenu 菜单项派发
+  // "openAiDesign" 事件打开（与 openAiRender / openImport 同一套机制），
+  // 右下角只剩一个 AI 按钮，流程入口不分叉。
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener("openAiDesign", onOpen);
+    return () => window.removeEventListener("openAiDesign", onOpen);
+  }, []);
+
   // 点外部关闭（生成中或 key 弹窗开着时不关，避免误触打断）
   useEffect(() => {
     if (!open) return;
@@ -64,20 +73,9 @@ export default function AiDesignDialog() {
 
   return (
     <div className="relative" ref={wrapRef}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-lg transition-all active:scale-95 hover:scale-105"
-        style={{ background: "linear-gradient(135deg, #0d9488, #2dd4bf)", backdropFilter: "blur(6px)" }}
-        title={en ? "Describe your home, AI builds the layout" : "用一句话描述，AI 直接生成户型配置"}
-      >
-        <span>🏠</span>
-        <span>{en ? "Text to Design" : "文生设计"}</span>
-        <span className="ml-0.5 opacity-70">{open ? "▲" : "▼"}</span>
-      </button>
-
       {open && (
         <div
-          className="absolute bottom-full right-0 mb-2 w-80 rounded-2xl overflow-hidden z-50 text-left"
+          className="absolute bottom-0 right-0 w-80 rounded-2xl overflow-hidden z-50 text-left"
           style={{ background: "var(--ds-surface, #fff)", border: "1px solid var(--ds-border, #e5e7eb)", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
         >
           {/* 头：标题 + ⚙️ 设置（配/换 API Key） */}
