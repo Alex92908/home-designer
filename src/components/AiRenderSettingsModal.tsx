@@ -94,6 +94,16 @@ export default function AiRenderSettingsModal({ open, onClose }: Props) {
       return { ...c, workflows: [...c.workflows, ...adds] };
     });
 
+  // 下载工作流 JSON 原文件（同源静态资源，anchor download 即可，无需 fetch）。
+  const downloadPresetJson = (p: WorkflowPreset) => {
+    const a = document.createElement("a");
+    a.href = p.jsonPath;
+    a.download = `${presetName(p, locale)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
   const copyPresetJson = async (p: WorkflowPreset) => {
     try {
       const r = await fetch(p.jsonPath);
@@ -166,6 +176,10 @@ export default function AiRenderSettingsModal({ open, onClose }: Props) {
                               {copiedId === p.id ? tr.copied : tr.copyJson}
                             </button>
                           )}
+                          <button onClick={() => downloadPresetJson(p)}
+                            className="shrink-0 text-[10px] text-indigo-600 hover:underline">
+                            {tr.downloadJson}
+                          </button>
                           <button onClick={() => importPreset(p)} disabled={done}
                             className="shrink-0 text-[10px] font-semibold disabled:opacity-40"
                             style={{ color: done ? "var(--ds-text-3, #9ca3af)" : "#0ea5e9" }}>

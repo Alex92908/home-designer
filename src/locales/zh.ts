@@ -557,6 +557,7 @@ export const zh = {
     tagLocal:         "本地",
     copied:           "已复制✓",
     copyJson:         "复制JSON",
+    downloadJson:     "下载",
     imported:         "已导入",
     importOne:        "＋导入",
     // 后端 tab

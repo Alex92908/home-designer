@@ -559,6 +559,7 @@ export const en: Translations = {
     tagLocal:         "Local",
     copied:           "Copied ✓",
     copyJson:         "Copy JSON",
+    downloadJson:     "Download",
     imported:         "Imported",
     importOne:        "＋ Import",
     // backends tab
