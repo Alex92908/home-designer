@@ -23,7 +23,7 @@ import { OUTDOOR_ASSET_LIBRARY, OUTDOOR_CATEGORIES, getOutdoorAssetByKind, YARD_
 import { PREFAB_REGISTRY, getPrefabDef } from "@/lib/outdoorPrefabs";
 import { ZONE_STYLES, polygonCentroid } from "@/lib/outdoorZones";
 import { evaluateYardPlan, violationsByItem, getEmptyStateHints } from "@/lib/outdoorClearance";
-import { autoGenerateYardPaths } from "@/lib/yardAutoLayout";
+import { autoGenerateYardPaths, houseHalfExtentsCm, clearYardItemsOfHouse } from "@/lib/yardAutoLayout";
 import { autoScatterTrees, placeSunShadeTrees } from "@/lib/yardAutoPlanting";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
@@ -322,7 +322,12 @@ export function YardPlanLibrary() {
     if (yardItems.length > 0 && !window.confirm(locale === "en" ? `Replace the current ${yardItems.length} element(s) with "${p.labelEn}"?` : `替换当前 ${yardItems.length} 个元素为「${p.label}」？`)) return;
     for (const it of [...yardItems]) removeYardItem(it.id);
     const stamp = Date.now().toString(36);
-    p.items.forEach((it, i) => {
+    // 模板坐标按"典型住宅"写死——先按当前房屋占地把重叠的分区/物件推出
+    // 屋外（否则大房子会出现「泳池压进客厅」）。
+    const fp0 = useDesignerStore.getState().floorPlans[0];
+    const { hw, hd } = houseHalfExtentsCm(fp0);
+    const cleared = clearYardItemsOfHouse(p.items as YardItem[], hw, hd);
+    cleared.forEach((it, i) => {
       addYardItem({ ...it, id: `${p.id}-${stamp}-${i}` } as YardItem);
     });
   };

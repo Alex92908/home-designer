@@ -19,8 +19,89 @@
  * to its polygon points).
  */
 
-import type { YardItem, YardZone } from "./types";
-import { isYardZone } from "./types";
+import type { YardItem, YardZone, FloorPlan } from "./types";
+import { isYardZone, isYardPrefab, ROOM_DEFS, type RoomType } from "./types";
+
+// ─── 房屋占地 + 避让 ─────────────────────────────────────────────
+// 院子模板/风格包的坐标是按"典型住宅"写死的；真实住宅尺寸各异，直接套
+// 会出现「泳池压进客厅」。应用任何院子包前先用这两个函数把落在房屋
+// 占地内的物件/分区推到屋外（位移最小的方向），布局意图尽量保留。
+
+/** floor-0 室内房间的包围盒半宽/半深（cm，世界坐标原点=房中心）。 */
+export function houseHalfExtentsCm(fp: FloorPlan | undefined): { hw: number; hd: number } {
+  const fallback = { hw: 200, hd: 200 };
+  if (!fp) return fallback;
+  const indoor = (fp.enabledRooms ?? []).filter(r => !ROOM_DEFS[r as RoomType]?.isOutdoor) as RoomType[];
+  if (!indoor.length) return fallback;
+  const xs = indoor.flatMap(r => {
+    const lay = fp.roomLayout[r]; const dim = fp.roomDimensions[r];
+    return lay && dim ? [lay.x, lay.x + dim.width] : [];
+  });
+  const zs = indoor.flatMap(r => {
+    const lay = fp.roomLayout[r]; const dim = fp.roomDimensions[r];
+    return lay && dim ? [lay.y, lay.y + dim.depth] : [];
+  });
+  if (!xs.length) return fallback;
+  return {
+    hw: (Math.max(...xs) - Math.min(...xs)) / 2,
+    hd: (Math.max(...zs) - Math.min(...zs)) / 2,
+  };
+}
+
+/** 单个物件的占地半长/半深（cm）。预制件查注册表的真实占地
+ *  （pool 是 1200×1100 的整片露台！之前拍脑袋给 250 半径根本推不动），
+ *  social_island 等带 sizeM 参数的按参数算；小物件给 40cm。 */
+function itemHalfExtents(it: YardItem): { ex: number; ez: number } {
+  if (isYardPrefab(it)) {
+    const sizeM = (it.params as { sizeM?: { w: number; d: number } } | undefined)?.sizeM;
+    if (sizeM?.w && sizeM?.d) return { ex: sizeM.w * 50, ez: sizeM.d * 50 };
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getPrefabDef } = require("./outdoorPrefabs") as typeof import("./outdoorPrefabs");
+    const fp = getPrefabDef(it.prefabKind)?.defaultFootprintCm;
+    if (fp) return { ex: fp.w / 2, ez: fp.d / 2 };
+    return { ex: 120, ez: 120 };
+  }
+  return { ex: 40, ez: 40 };
+}
+
+/** 把与房屋占地（含 margin 缓冲带）重叠的物件/分区沿位移最小的方向推出。
+ *  返回新数组，原数组不动。 */
+export function clearYardItemsOfHouse(
+  items: YardItem[],
+  hw: number, hd: number,
+  margin = 60,
+): YardItem[] {
+  const HX = hw + margin, HZ = hd + margin;
+  return items.map(it => {
+    // 物件的占地范围（世界 cm）。zone 用多边形真实 min/max（不假设居中），
+    // 预制件/单体用半长半深。
+    let minX: number, maxX: number, minZ: number, maxZ: number;
+    if (isYardZone(it)) {
+      const xs = (it as YardZone).polygon.map(p => p[0]);
+      const zs = (it as YardZone).polygon.map(p => p[1]);
+      minX = it.x + Math.min(...xs); maxX = it.x + Math.max(...xs);
+      minZ = it.z + Math.min(...zs); maxZ = it.z + Math.max(...zs);
+    } else {
+      const { ex, ez } = itemHalfExtents(it);
+      minX = it.x - ex; maxX = it.x + ex;
+      minZ = it.z - ez; maxZ = it.z + ez;
+    }
+    const overlaps = maxX > -HX && minX < HX && maxZ > -HZ && minZ < HZ;
+    if (!overlaps) return it;
+    // 四个方向各自需要的位移量，挑绝对值最小的那个
+    const pushE = HX - minX;        // 往 +x 推
+    const pushW = -(maxX + HX);     // 往 -x 推
+    const pushS = HZ - minZ;        // 往 +z（前院）推
+    const pushN = -(maxZ + HZ);     // 往 -z（后院）推
+    const candidates: Array<{ dx: number; dz: number }> = [
+      { dx: 0, dz: pushS }, { dx: 0, dz: pushN },
+      { dx: pushE, dz: 0 }, { dx: pushW, dz: 0 },
+    ];
+    const best = candidates.reduce((a, b) =>
+      Math.abs(a.dx + a.dz) <= Math.abs(b.dx + b.dz) ? a : b);
+    return { ...it, x: it.x + best.dx, z: it.z + best.dz };
+  });
+}
 
 export type AutoPath = {
   id: string;

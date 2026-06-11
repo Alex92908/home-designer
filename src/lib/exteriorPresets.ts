@@ -163,6 +163,13 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       { id: "mm-rock-1", type: "singleton", kind: "rock.large", x: -500, z: -650, scale: 1.2 },
       { id: "mm-bush-1", type: "singleton", kind: "plant.bushSmall", x: -150, z: 540 },
       { id: "mm-bush-2", type: "singleton", kind: "plant.bushSmall", x:  150, z: 540 },
+      // 灌木层：球状绿篱沿围栏列植（参考图里现代小院的标志元素）
+      { id: "mm-hedge-1", type: "singleton", kind: "plant.bushLarge", x: -1020, z:  300, scale: 0.9 },
+      { id: "mm-hedge-2", type: "singleton", kind: "plant.bushLarge", x: -1020, z:    0, scale: 0.9 },
+      { id: "mm-hedge-3", type: "singleton", kind: "plant.bushLarge", x: -1020, z: -300, scale: 0.9 },
+      // 草本层：观赏草点缀社交区边角
+      { id: "mm-grass-1", type: "singleton", kind: "plant.grass", x: 560, z: 560, scale: 1.2 },
+      { id: "mm-grass-2", type: "singleton", kind: "plant.grass", x: 220, z: 820, scale: 1.1 },
       // 社交区家具
       { id: "mm-sofa",  type: "singleton", kind: "furniture.outdoorSofa",  x: 380, z: 620, rot: Math.PI },
       { id: "mm-table", type: "singleton", kind: "furniture.coffeeTable",  x: 380, z: 720 },
@@ -237,6 +244,13 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       { id: "fc-fountain", type: "prefab", prefabKind: "fountain", x: -450, z: 760 },
       { id: "fc-dining",   type: "singleton", kind: "furniture.diningSet", x: 420, z: 700 },
       { id: "fc-oak",      type: "singleton", kind: "tree.oak", x: 850, z: -550, scale: 1.2 },
+      // 灌木层：修剪绿篱沿入户两侧（法式 parterre 的骨架）+ 喷泉环植花
+      { id: "fc-hedge-1", type: "singleton", kind: "plant.bushLarge", x: -340, z: 1000, scale: 0.85 },
+      { id: "fc-hedge-2", type: "singleton", kind: "plant.bushLarge", x:  340, z: 1000, scale: 0.85 },
+      { id: "fc-hedge-3", type: "singleton", kind: "plant.bushLarge", x: -340, z:  540, scale: 0.85 },
+      { id: "fc-hedge-4", type: "singleton", kind: "plant.bushLarge", x:  340, z:  540, scale: 0.85 },
+      { id: "fc-fl-5", type: "singleton", kind: "plant.flowerYellow", x: -600, z: 860 },
+      { id: "fc-fl-6", type: "singleton", kind: "plant.flowerPurple", x: -300, z: 760 },
     ],
     yardPaths: [
       { id: "fc-path-entry", points: [[0, 1100], [0, 500]], widthCm: 130, material: "brick" },
@@ -303,6 +317,11 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       { id: "il-fire",  type: "singleton", kind: "furniture.fireplace",  x: 400, z: 780 },
       { id: "il-sofa",  type: "singleton", kind: "furniture.outdoorSofa", x: 400, z: 620, rot: Math.PI },
       { id: "il-planter", type: "singleton", kind: "furniture.planter", x: 180, z: 540 },
+      // 草本层：观赏草丛沿砾石径两侧成带（工业风的"软"全靠草）
+      { id: "il-grass-4", type: "singleton", kind: "plant.grass", x: -140, z: 980, scale: 1.3 },
+      { id: "il-grass-5", type: "singleton", kind: "plant.grass", x:  150, z: 880, scale: 1.2 },
+      { id: "il-grass-6", type: "singleton", kind: "plant.grass", x: -540, z: 380, scale: 1.4 },
+      { id: "il-rock-3",  type: "singleton", kind: "rock.small", x: 240, z: 1000, scale: 1.2 },
     ],
     yardPaths: [
       { id: "il-path-entry", points: [[0, 1100], [0, 500]], widthCm: 120, material: "gravel" },
@@ -371,6 +390,12 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       { id: "md-parasol", type: "singleton", kind: "furniture.parasol",   x: 430, z: 700 },
       { id: "md-dining",  type: "singleton", kind: "furniture.diningSet", x: 430, z: 700 },
       { id: "md-lounger", type: "singleton", kind: "furniture.swimmingLounger", x: -450, z: 1010, rot: Math.PI },
+      // 花境层：暖色花带沿社交区与小径（地中海的阳光配色）
+      { id: "md-fl-1", type: "singleton", kind: "plant.flowerRed",    x: 240, z: 560 },
+      { id: "md-fl-2", type: "singleton", kind: "plant.flowerPurple", x: 640, z: 600 },
+      { id: "md-fl-3", type: "singleton", kind: "plant.flowerYellow", x: 620, z: 840 },
+      { id: "md-bush-1", type: "singleton", kind: "plant.bushSmall", x: -150, z: 470 },
+      { id: "md-bush-2", type: "singleton", kind: "plant.bushSmall", x:  150, z: 470 },
     ],
     yardPaths: [
       { id: "md-path-entry", points: [[0, 1100], [0, 500]], widthCm: 120, material: "stone" },
@@ -440,6 +465,11 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       // 砂川上的木桥 + 茶角矮桌
       { id: "jz-bridge", type: "singleton", kind: "feature.bridgeWood", x: -400, z: 950, rot: Math.PI / 2 },
       { id: "jz-tea-table", type: "singleton", kind: "furniture.coffeeTable", x: 450, z: 700 },
+      // 苔层补密：低灌沿砂川南岸 + 茶角背后一组小石（参考枯山水照片的留白配重）
+      { id: "jz-bush-4", type: "singleton", kind: "plant.bushSmall", x: -800, z: 980 },
+      { id: "jz-bush-5", type: "singleton", kind: "plant.bushSmall", x: -200, z: 1000 },
+      { id: "jz-rock-s1", type: "singleton", kind: "rock.small", x: 560, z: 820, scale: 1.1 },
+      { id: "jz-rock-s2", type: "singleton", kind: "rock.small", x: 620, z: 760, scale: 0.9 },
     ],
     yardPaths: [
       // 入户主径（碎石）

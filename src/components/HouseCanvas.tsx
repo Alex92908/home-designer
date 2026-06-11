@@ -2139,6 +2139,14 @@ function YardPlanItems3D() {
 // Renders each path as a flat extruded strip following a polyline.
 // Points are in world-cm, Y is ground level (0).
 const EMPTY_YARD_PATHS_3D: NonNullable<import("@/lib/types").YardPlan["paths"]> = [];
+// 小径材质外观（参考真实庭院）：石板=暖灰、砾石=浅砂、砖=赭红、草径=草绿。
+// 之前除了 stone 全是同一个颜色，砖路/草径根本认不出来。
+const PATH_LOOK: Record<string, { color: string; rough: number }> = {
+  stone:  { color: "#C9C2B2", rough: 0.85 },
+  gravel: { color: "#CFC5AA", rough: 0.98 },
+  brick:  { color: "#A85B3C", rough: 0.90 },
+  grass:  { color: "#6E8F58", rough: 0.95 },
+};
 function YardPathItems3D() {
   // 同上：小径也一律读 floor 0。
   const paths = useDesignerStore(s => s.floorPlans[0]?.yardPlan?.paths ?? EMPTY_YARD_PATHS_3D);
@@ -2149,7 +2157,10 @@ function YardPathItems3D() {
         if (path.points.length < 2) return null;
         const halfW = (path.widthCm / 100) / 2;
         const H = 0.04; // flat slab height
-        // Build quads between consecutive points
+        const look = PATH_LOOK[path.material] ?? PATH_LOOK.stone;
+        // 窄石板路（≤1m）按「汀步」渲染：一块块 45cm 石板留 12cm 缝，
+        // 正是参考庭院里草地上的踏步石——比整条板带更有设计感。
+        const stepping = path.material === "stone" && path.widthCm <= 100;
         const quads: React.ReactElement[] = [];
         for (let i = 0; i < path.points.length - 1; i++) {
           const [ax, az] = path.points[i];
@@ -2157,28 +2168,43 @@ function YardPathItems3D() {
           const dx = bx - ax, dz = bz - az;
           const len = Math.sqrt(dx * dx + dz * dz) / 100; // metres
           const angle = Math.atan2(dz, dx);
+          if (stepping) {
+            // 沿段铺汀步石板
+            const STEP = 0.45, GAP = 0.12;
+            const n = Math.max(1, Math.floor((len + GAP) / (STEP + GAP)));
+            const ux = dx / 100 / len, uz = dz / 100 / len;
+            for (let k = 0; k < n; k++) {
+              const t = (k + 0.5) * (len / n);
+              quads.push(
+                <mesh key={`${i}-s${k}`}
+                  position={[ax / 100 + ux * t, H / 2, az / 100 + uz * t]}
+                  rotation={[0, -angle, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[Math.min(STEP, len / n - GAP / 2), H, halfW * 2]} />
+                  <meshStandardMaterial color={look.color} roughness={look.rough} metalness={0} />
+                </mesh>
+              );
+            }
+            continue;
+          }
           const mx = (ax + bx) / 200;  // world metres
           const mz = (az + bz) / 200;
           quads.push(
             <mesh key={i} position={[mx, H / 2, mz]} rotation={[0, -angle, 0]} receiveShadow>
               <boxGeometry args={[len, H, halfW * 2]} />
-              <meshStandardMaterial
-                color={path.material === "stone" ? "#C8BFAF" : "#D4C8A8"}
-                roughness={0.88} metalness={0.0}
-              />
+              <meshStandardMaterial color={look.color} roughness={look.rough} metalness={0} />
             </mesh>
           );
           // Rounded cap at each vertex
           if (i === 0) quads.push(
             <mesh key={`cap-${i}`} position={[ax / 100, H / 2, az / 100]} receiveShadow>
               <cylinderGeometry args={[halfW, halfW, H, 12]} />
-              <meshStandardMaterial color="#C8BFAF" roughness={0.88} />
+              <meshStandardMaterial color={look.color} roughness={look.rough} />
             </mesh>
           );
           quads.push(
             <mesh key={`cap-e-${i}`} position={[bx / 100, H / 2, bz / 100]} receiveShadow>
               <cylinderGeometry args={[halfW, halfW, H, 12]} />
-              <meshStandardMaterial color="#C8BFAF" roughness={0.88} />
+              <meshStandardMaterial color={look.color} roughness={look.rough} />
             </mesh>
           );
         }

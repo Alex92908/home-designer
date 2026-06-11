@@ -1999,13 +1999,20 @@ export const useDesignerStore = create<DesignerStore>()(
           // Replace floor-0 yard items / paths wholesale — the preset's
           // landscape is curated to match the facade（风格选一次、院子整包
           // 到位的一致性主线）。preset 没带的部分保持原样。
+          // 包里的坐标按"典型住宅"写死，应用前先按当前房屋占地把重叠的
+          // 物件/分区推出屋外（泳池压进客厅这类穿模就是这么来的）。
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { houseHalfExtentsCm, clearYardItemsOfHouse } = require("./yardAutoLayout") as typeof import("./yardAutoLayout");
           floorPlans = floorPlans.map((fp, fi) => {
             if (fi !== 0 || !fp) return fp;
+            const { hw, hd } = houseHalfExtentsCm(fp);
             return {
               ...fp,
               yardPlan: {
                 ...(fp.yardPlan ?? { items: [] }),
-                ...(preset.yardItems ? { items: preset.yardItems } : {}),
+                ...(preset.yardItems
+                  ? { items: clearYardItemsOfHouse(preset.yardItems, hw, hd) }
+                  : {}),
                 ...(preset.yardPaths ? { paths: preset.yardPaths } : {}),
               },
             };
@@ -2350,7 +2357,12 @@ export const useDesignerStore = create<DesignerStore>()(
           const fp0 = get().floorPlans[0];
           if (fp0) {
             const existingItems = design.yard.clear ? [] : (fp0.yardPlan?.items ?? []);
-            const added = resolveAiYard(design.yard.add ?? [], existingItems.length);
+            // AI 给的/自动散开的落点也要避开房屋占地（大宅会盖住默认前院位）。
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const { houseHalfExtentsCm, clearYardItemsOfHouse } = require("./yardAutoLayout") as typeof import("./yardAutoLayout");
+            const { hw, hd } = houseHalfExtentsCm(fp0);
+            const added = clearYardItemsOfHouse(
+              resolveAiYard(design.yard.add ?? [], existingItems.length), hw, hd);
             // 小径：追加语义（clear 只清物件、不动小径，与注释口径一致）。
             const addedPaths = (design.yard.paths ?? [])
               .filter(p => Array.isArray(p?.points) && p.points.length >= 2)
