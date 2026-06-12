@@ -1756,15 +1756,15 @@ function GltfPlant({
 const _tmpVec3 = new THREE.Vector3();
 
 // Convenience wrappers with correct public paths
-const CYPRESS_PATH  = "/models/outdoor_tree/cypress_tree_lowpoly/cypress_tree_lowpoly.gltf";
-const PALM_PATH     = "/models/outdoor_tree/palm_tree_lowpoly/palm_tree_lowpoly.gltf";
-const OLIVE_PATH    = "/models/outdoor_tree/old_olive_tree/old_olive_tree.gltf";
-const MAPLE_PATH    = "/models/outdoor_tree/maple_sugar_lowpoly/maple_sugar_lowpoly.gltf";
+const CYPRESS_PATH  = "/models/outdoor_tree/cypress_tree_lowpoly/cypress_tree_lowpoly.glb";
+const PALM_PATH     = "/models/outdoor_tree/palm_tree_lowpoly/palm_tree_lowpoly.glb";
+const OLIVE_PATH    = "/models/outdoor_tree/old_olive_tree/old_olive_tree.glb";
+const MAPLE_PATH    = "/models/outdoor_tree/maple_sugar_lowpoly/maple_sugar_lowpoly.glb";
 // shrub_01/03/04 have truncated .bin files — only shrub_02 is valid
-const SHRUB2_PATH    = "/models/outdoor_shrub/shrub_02/shrub_02_1k.gltf";
-const BOXWOOD_PATH   = "/models/outdoor_plant/boxwood_bush/boxwood_bush.gltf";
-const HEDGE_PATH     = "/models/outdoor_plant/hedge_generic/hedge_generic.gltf";
-const LOUNGER_PATH   = "/models/outdoor_furniture/sun_lounger/sun_lounger.gltf";
+const SHRUB2_PATH    = "/models/outdoor_shrub/shrub_02/shrub_02_1k.glb";
+const BOXWOOD_PATH   = "/models/outdoor_plant/boxwood_bush/boxwood_bush.glb";
+const HEDGE_PATH     = "/models/outdoor_plant/hedge_generic/hedge_generic.glb";
+const LOUNGER_PATH   = "/models/outdoor_furniture/sun_lounger/sun_lounger.glb";
 
 // ── 动态泳池焦散灯光（animated underwater caustic lights）────────────────────
 /**

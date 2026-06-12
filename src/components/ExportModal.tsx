@@ -55,6 +55,9 @@ export default function ExportModal() {
   const [confirmWipe, setConfirmWipe] = useState(false);
   const glbInputRef = useRef<HTMLInputElement>(null);
   const [glbImporting, setGlbImporting] = useState(false);
+  const [glbLocalPath, setGlbLocalPath] = useState("");
+  const [glbPathError, setGlbPathError] = useState<string | null>(null);
+  const [glbCompress, setGlbCompress] = useState(true);
   const t = useT();
   const locale = useLocale();
 
@@ -231,26 +234,53 @@ export default function ExportModal() {
   // 导入 3D 模型（.glb/.gltf）→ 落成 public/models/imported/ 真实文件
   // （只读部署退 IndexedDB），作为可拖放的 glb_model 进院子，导完直接
   // 跳到院子图让用户看见它。与院子图左侧「📦 手动导入」共用同一条链路。
+  // 入库后端会自动 gltf-transform 压缩（Draco + 1k WebP），落真实文件。
+  const addImportedModel = (src: string, name: string) => {
+    const st = useDesignerStore.getState();
+    st.addYardItem({
+      id:         `glb_import_${Date.now()}`,
+      type:       "prefab",
+      prefabKind: "glb_model",
+      x: 200, z: 300, rot: 0, scale: 1,
+      glbSrc:     src,
+      partLabel:  name || (locale === "en" ? "Imported model" : "导入模型"),
+    });
+    st.setViewMode("yard2d");
+    setGlbImporting(false);
+    close();
+  };
+
   const handleImportGlb = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     const name = file.name.replace(/\.(glb|gltf)$/i, "");
     setGlbImporting(true);
-    void persistGlb(name || `glb_import_${Date.now()}`, file).then(src => {
-      const st = useDesignerStore.getState();
-      st.addYardItem({
-        id:         `glb_import_${Date.now()}`,
-        type:       "prefab",
-        prefabKind: "glb_model",
-        x: 200, z: 300, rot: 0, scale: 1,
-        glbSrc:     src,
-        partLabel:  name || (locale === "en" ? "Imported model" : "导入模型"),
-      });
-      st.setViewMode("yard2d");
+    void persistGlb(name || `glb_import_${Date.now()}`, file, { compress: glbCompress })
+      .then(src => addImportedModel(src, name))
+      .catch(() => setGlbImporting(false));
+  };
+
+  // 本机文件路径直接放入（不经浏览器读文件；服务端校验/打包/压缩）。
+  const handleImportLocalPath = () => {
+    const p = glbLocalPath.trim();
+    if (!p) return;
+    setGlbImporting(true);
+    setGlbPathError(null);
+    void fetch("/api/import-model", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ localPath: p, compress: glbCompress }),
+    }).then(async r => {
+      const data = await r.json();
+      if (!r.ok || !data.url) throw new Error(data.error || `HTTP ${r.status}`);
+      const name = p.split("/").pop()?.replace(/\.(glb|gltf)$/i, "") ?? "";
+      setGlbLocalPath("");
+      addImportedModel(data.url, name);
+    }).catch((e: unknown) => {
       setGlbImporting(false);
-      close();
-    }).catch(() => setGlbImporting(false));
+      setGlbPathError(e instanceof Error ? e.message : String(e));
+    });
   };
 
   const handleLoadJson = () => {
@@ -646,13 +676,41 @@ export default function ExportModal() {
                   accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
                   onChange={handleImportGlb}
                 />
+                {/* 压缩开关：默认开（Draco+1k WebP，体积小加载快）；
+                    追求原始精度（高模/烘焙贴图）可关掉 */}
+                <label className="flex items-center gap-1.5 mb-2 text-[11px] text-gray-600 cursor-pointer select-none">
+                  <input type="checkbox" checked={glbCompress} disabled={glbImporting}
+                    onChange={(e) => setGlbCompress(e.target.checked)} className="accent-indigo-500" />
+                  {locale === "en"
+                    ? "Compress on import (Draco + 1k textures, recommended)"
+                    : "导入时压缩（Draco + 1k 贴图，推荐；要保留原始精度就取消勾选）"}
+                </label>
                 <button onClick={() => glbInputRef.current?.click()} disabled={glbImporting}
                   className="w-full py-2.5 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-60"
                   style={{ background: "#6366F1" }}>
                   {glbImporting
-                    ? (locale === "en" ? "Importing…" : "导入中…")
+                    ? (locale === "en" ? "Importing…" : glbCompress ? "导入中（压缩中）…" : "导入中…")
                     : (locale === "en" ? "Choose model file" : "选择模型文件")}
                 </button>
+                {/* 本机路径直接放入：服务端读取/打包/压缩，散件 .gltf 也能收 */}
+                <div className="flex gap-1.5 mt-2">
+                  <input
+                    value={glbLocalPath}
+                    onChange={(e) => { setGlbLocalPath(e.target.value); if (glbPathError) setGlbPathError(null); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleImportLocalPath(); }}
+                    disabled={glbImporting}
+                    placeholder={locale === "en" ? "…or paste a local file path (/Users/…/model.glb)" : "或粘贴本机文件路径（/Users/…/model.glb）"}
+                    className="flex-1 min-w-0 px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-indigo-300 disabled:opacity-60"
+                  />
+                  <button onClick={handleImportLocalPath} disabled={glbImporting || !glbLocalPath.trim()}
+                    className="shrink-0 px-3 py-2 text-xs font-bold rounded-lg text-white disabled:opacity-50"
+                    style={{ background: "#4F46E5" }}>
+                    {locale === "en" ? "Add" : "放入"}
+                  </button>
+                </div>
+                {glbPathError && (
+                  <div className="mt-1.5 text-[11px] text-red-600">⚠️ {glbPathError}</div>
+                )}
               </div>
 
               <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">

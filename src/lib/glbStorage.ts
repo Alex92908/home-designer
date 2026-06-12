@@ -75,10 +75,16 @@ export async function resolveGlbSrc(src: string): Promise<string | null> {
  *  首选：POST /api/import-model 落成 public/models/imported/ 真实文件
  *  （与内置家具同一套「URL 即资产」机制——换浏览器/清缓存不丢、可提交分享）；
  *  失败（只读部署等）→ 退回 IndexedDB（"idb://key"）。 */
-export async function persistGlb(key: string, blob: Blob): Promise<string> {
+export async function persistGlb(
+  key: string,
+  blob: Blob,
+  opts?: { compress?: boolean },
+): Promise<string> {
   try {
     const fd = new FormData();
     fd.append("file", blob, `${key}.glb`);
+    // 压缩用户可选（默认开）：Draco 网格 + 1k WebP 贴图。
+    if (opts?.compress === false) fd.append("compress", "0");
     const r = await fetch("/api/import-model", { method: "POST", body: fd });
     if (r.ok) {
       const { url } = await r.json();

@@ -18,7 +18,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "现代"],
     description: "轻盈布艺，简约舒适",
     icon: "🛋️",
-    model3d: { url: "/models/sofa/sofa_03/sofa_03_1k.gltf" },
+    model3d: { url: "/models/sofa/sofa_03/sofa_03_1k.glb" },
   },
   {
     id: "sofa-leather-brown",
@@ -36,7 +36,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "头层牛皮，功能电动沙发",
     icon: "🛋️",
-    model3d: { url: "/models/sofa/sofa_02/sofa_02_1k.gltf" },
+    model3d: { url: "/models/sofa/sofa_02/sofa_02_1k.glb" },
   },
   {
     id: "sofa-nordic-blue",
@@ -54,7 +54,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "轻奢"],
     description: "天鹅绒质感，撞色显眼",
     icon: "🛋️",
-    model3d: { url: "/models/sofa/Sofa_01/Sofa_01_1k.gltf" },
+    model3d: { url: "/models/sofa/Sofa_01/Sofa_01_1k.glb" },
   },
   {
     id: "sofa-japanese",
@@ -107,7 +107,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "日式", "现代"],
     description: "天然橡木，圆形无尖角",
     icon: "⭕",
-    model3d: { url: "/models/coffee_table/coffee_table_round_01/coffee_table_round_01_1k.gltf" },
+    model3d: { url: "/models/coffee_table/coffee_table_round_01/coffee_table_round_01_1k.glb" },
   },
   {
     id: "coffee-marble-rect",
@@ -125,7 +125,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "天然大理石面，金属腿",
     icon: "⬜",
-    model3d: { url: "/models/coffee_table/modern_coffee_table_01/modern_coffee_table_01_1k.gltf" },
+    model3d: { url: "/models/coffee_table/modern_coffee_table_01/modern_coffee_table_01_1k.glb" },
   },
   {
     id: "coffee-glass-black",
@@ -142,7 +142,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "工业风"],
     description: "钢化玻璃面，黑色铁架",
     icon: "⬛",
-    model3d: { url: "/models/coffee_table/industrial_coffee_table/industrial_coffee_table_1k.gltf" },
+    model3d: { url: "/models/coffee_table/industrial_coffee_table/industrial_coffee_table_1k.glb" },
   },
 
   // ─── 电视柜 TV Unit ────────────────────────────────────
@@ -179,7 +179,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["日式", "中式"],
     description: "原木质感，温馨耐用",
     icon: "📺",
-    model3d: { url: "/models/tv_unit/modern_wooden_cabinet/modern_wooden_cabinet_1k.gltf" },
+    model3d: { url: "/models/tv_unit/modern_wooden_cabinet/modern_wooden_cabinet_1k.glb" },
     imageUrl: "/artworks/hokusai_great_wave.jpg",
   },
   {
@@ -251,7 +251,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "五层开放式，收纳展示两用",
     icon: "📚",
-    model3d: { url: "/models/bookshelf/steel_frame_shelves_01/steel_frame_shelves_01_1k.gltf" },
+    model3d: { url: "/models/bookshelf/steel_frame_shelves_01/steel_frame_shelves_01_1k.glb" },
   },
   {
     id: "bookshelf-solid-walnut",
@@ -268,7 +268,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["日式", "中式"],
     description: "实木框架，经久耐用",
     icon: "📚",
-    model3d: { url: "/models/bookshelf/wooden_bookshelf_worn/wooden_bookshelf_worn_1k.gltf" },
+    model3d: { url: "/models/bookshelf/wooden_bookshelf_worn/wooden_bookshelf_worn_1k.glb" },
   },
 
   // ─── 边柜/玄关柜 Sideboard ─────────────────────────────
@@ -287,7 +287,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["日式", "中式"],
     description: "玄关收纳，温润自然",
     icon: "🗄️",
-    model3d: { url: "/models/sideboard/vintage_cabinet_01/vintage_cabinet_01_1k.gltf" },
+    model3d: { url: "/models/sideboard/vintage_cabinet_01/vintage_cabinet_01_1k.glb" },
   },
   {
     id: "sideboard-modern-black",
@@ -304,7 +304,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "工业风"],
     description: "黑色金属，工业感十足",
     icon: "🗄️",
-    model3d: { url: "/models/sideboard/painted_wooden_cabinet_02/painted_wooden_cabinet_02_1k.gltf" },
+    model3d: { url: "/models/sideboard/painted_wooden_cabinet_02/painted_wooden_cabinet_02_1k.glb" },
   },
 
   // ─── 绿植 Plant ───────────────────────────────────────
@@ -540,7 +540,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "简约落地帘，柔和褶皱",
     icon: "🪟",
-    model3d: { url: "/models/_decor_curtain/modern_curtains/scene.gltf" },
+    model3d: { url: "/models/_decor_curtain/modern_curtains/scene.glb" },
   },
   {
     id: "curtain-brown-sheer",
@@ -557,7 +557,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "外层遮光布艺+内层轻纱",
     icon: "🪟",
-    model3d: { url: "/models/_decor_curtain/brown_curtain_with_shear/scene.gltf" },
+    model3d: { url: "/models/_decor_curtain/brown_curtain_with_shear/scene.glb" },
   },
 
   // ─── 床 Bed ───────────────────────────────────────────
@@ -577,7 +577,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "现代"],
     description: "软包靠背，舒适减压",
     icon: "🛏️",
-    model3d: { url: "/models/bed/bed_07/bed_07.gltf" },
+    model3d: { url: "/models/bed/bed_07/bed_07.glb" },
   },
   {
     id: "bed-leather-dark",
@@ -595,7 +595,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "头层牛皮，沉稳大气",
     icon: "🛏️",
-    model3d: { url: "/models/bed/dark_modern_bed/dark_modern_bed.gltf" },
+    model3d: { url: "/models/bed/dark_modern_bed/dark_modern_bed.glb" },
   },
   {
     id: "bed-wood-nordic",
@@ -630,7 +630,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["日式"],
     description: "低矮设计，禅意空间感",
     icon: "🛏️",
-    model3d: { url: "/models/bed/japanese_futon_bed/japanese_futon_bed.gltf" },
+    model3d: { url: "/models/bed/japanese_futon_bed/japanese_futon_bed.glb" },
   },
   {
     id: "bed-single-white",
@@ -666,7 +666,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "简约抽屉，实用收纳",
     icon: "🗃️",
-    model3d: { url: "/models/nightstand/side_table_01/side_table_01_1k.gltf" },
+    model3d: { url: "/models/nightstand/side_table_01/side_table_01_1k.glb" },
   },
   {
     id: "nightstand-oak",
@@ -683,7 +683,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "日式"],
     description: "原木质感，温馨自然",
     icon: "🗃️",
-    model3d: { url: "/models/nightstand/ClassicNightstand_01/ClassicNightstand_01_1k.gltf" },
+    model3d: { url: "/models/nightstand/ClassicNightstand_01/ClassicNightstand_01_1k.glb" },
   },
 
   // ─── 衣柜 Wardrobe ────────────────────────────────────
@@ -703,7 +703,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "滑轨推拉，节省开门空间",
     icon: "🚪",
-    model3d: { url: "/models/wardrobe/wardrobe_dylanheyes/wardrobe_dylanheyes.gltf" },
+    model3d: { url: "/models/wardrobe/wardrobe_dylanheyes/wardrobe_dylanheyes.glb" },
   },
   {
     id: "wardrobe-solid-walnut",
@@ -721,7 +721,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["中式", "日式"],
     description: "实木框架，传统榫卯",
     icon: "🚪",
-    model3d: { url: "/models/wardrobe/antique_wooden_wardrobe/antique_wooden_wardrobe.gltf" },
+    model3d: { url: "/models/wardrobe/antique_wooden_wardrobe/antique_wooden_wardrobe.glb" },
   },
   {
     id: "wardrobe-open-rack",
@@ -810,7 +810,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "圆台面，无尖角更安全",
     icon: "⭕",
-    model3d: { url: "/models/dining_table/round_wooden_table_01/round_wooden_table_01_1k.gltf" },
+    model3d: { url: "/models/dining_table/round_wooden_table_01/round_wooden_table_01_1k.glb" },
   },
   {
     id: "dining-oak-rect",
@@ -827,7 +827,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "日式", "现代"],
     description: "实木桌面，耐用经典",
     icon: "⬜",
-    model3d: { url: "/models/dining_table/WoodenTable_02/WoodenTable_02_1k.gltf" },
+    model3d: { url: "/models/dining_table/WoodenTable_02/WoodenTable_02_1k.glb" },
   },
   {
     id: "dining-black-metal",
@@ -862,7 +862,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "日式"],
     description: "白橡木实木椅，经典耐用",
     icon: "🪑",
-    model3d: { url: "/models/dining_chair/dining_chair_02/dining_chair_02_1k.gltf" },
+    model3d: { url: "/models/dining_chair/dining_chair_02/dining_chair_02_1k.glb" },
   },
   {
     id: "chair-modern-gray",
@@ -914,7 +914,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "整体橱柜下柜，石英石台面",
     icon: "🍳",
-    model3d: { url: "/models/kitchen_cabinet/modular_kitchen_cabinets/modular_kitchen_cabinets.gltf" },
+    model3d: { url: "/models/kitchen_cabinet/modular_kitchen_cabinets/modular_kitchen_cabinets.glb" },
   },
   {
     id: "cabinet-lower-gray",
@@ -932,7 +932,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "哑光灰门板，高级质感",
     icon: "🍳",
-    model3d: { url: "/models/kitchen_cabinet/cabinet_base_drawers/cabinet_base_drawers.gltf" },
+    model3d: { url: "/models/kitchen_cabinet/cabinet_base_drawers/cabinet_base_drawers.glb" },
   },
   {
     id: "cabinet-upper-white",
@@ -949,7 +949,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "上柜悬挂，增大收纳空间",
     icon: "🍳",
-    model3d: { url: "/models/kitchen_cabinet/kitchen_cabinet_library/kitchen_cabinet_library.gltf" },
+    model3d: { url: "/models/kitchen_cabinet/kitchen_cabinet_library/kitchen_cabinet_library.glb" },
   },
 
   // ─── 冰箱 Refrigerator ────────────────────────────────
@@ -968,7 +968,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "对开门大容量，变频节能",
     icon: "🧊",
-    model3d: { url: "/models/refrigerator/french_door_fridge/french_door_fridge.gltf" },
+    model3d: { url: "/models/refrigerator/french_door_fridge/french_door_fridge.glb" },
   },
   {
     id: "fridge-single-white",
@@ -985,7 +985,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "小户型适用，静音节能",
     icon: "🧊",
-    model3d: { url: "/models/refrigerator/modern_fridge_drawer/modern_fridge_drawer.gltf" },
+    model3d: { url: "/models/refrigerator/modern_fridge_drawer/modern_fridge_drawer.glb" },
   },
 
   // ─── 油烟机 Range Hood ────────────────────────────────
@@ -1004,7 +1004,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "侧吸大吸力，静音高效",
     icon: "🌬️",
-    model3d: { url: "/models/range_hood/range_hood/range_hood.gltf" },
+    model3d: { url: "/models/range_hood/range_hood/range_hood.glb" },
   },
 
   // ─── 厨房水槽 Kitchen Sink ────────────────────────────
@@ -1023,7 +1023,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "304不锈钢，双槽分区",
     icon: "🚿",
-    model3d: { url: "/models/kitchen_sink/double_sink/double_sink.gltf" },
+    model3d: { url: "/models/kitchen_sink/double_sink/double_sink.glb" },
   },
 
   // ─── 马桶 Toilet ──────────────────────────────────────
@@ -1042,7 +1042,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "智能冲洗，加热座圈",
     icon: "🚽",
-    model3d: { url: "/models/toilet/curved_modern_wc/curved_modern_wc.gltf" },
+    model3d: { url: "/models/toilet/curved_modern_wc/curved_modern_wc.glb" },
   },
   {
     id: "toilet-standard",
@@ -1059,7 +1059,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "虹吸静音，冲洗干净",
     icon: "🚽",
-    model3d: { url: "/models/toilet/modern_toilet/modern_toilet.gltf" },
+    model3d: { url: "/models/toilet/modern_toilet/modern_toilet.glb" },
   },
   {
     id: "toilet-wallhung",
@@ -1076,7 +1076,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "悬浮设计，清洁方便",
     icon: "🚽",
-    model3d: { url: "/models/toilet/simple_toilet/simple_toilet.gltf" },
+    model3d: { url: "/models/toilet/simple_toilet/simple_toilet.glb" },
   },
 
   // ─── 浴缸 Bathtub ─────────────────────────────────────
@@ -1095,7 +1095,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "铸铁独立浴缸，保温佳",
     icon: "🛁",
-    model3d: { url: "/models/bathtub/simple_bathtub/simple_bathtub.gltf" },
+    model3d: { url: "/models/bathtub/simple_bathtub/simple_bathtub.glb" },
   },
   {
     id: "bathtub-builtin",
@@ -1112,7 +1112,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "靠墙嵌入，节省空间",
     icon: "🛁",
-    model3d: { url: "/models/bathtub/bathtub_3ddomino/bathtub_3ddomino.gltf" },
+    model3d: { url: "/models/bathtub/bathtub_3ddomino/bathtub_3ddomino.glb" },
   },
 
   // ─── 淋浴 Shower ──────────────────────────────────────
@@ -1131,7 +1131,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "钢化玻璃，干湿分离",
     icon: "🚿",
-    model3d: { url: "/models/shower/corner_shower/corner_shower.gltf" },
+    model3d: { url: "/models/shower/corner_shower/corner_shower.glb" },
   },
   {
     id: "shower-walkin",
@@ -1167,7 +1167,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "陶瓷盆+浴室柜，防潮板材",
     icon: "🪥",
-    model3d: { url: "/models/bathroom_vanity/legion_vanity_sink/legion_vanity_sink.gltf" },
+    model3d: { url: "/models/bathroom_vanity/legion_vanity_sink/legion_vanity_sink.glb" },
   },
   {
     id: "vanity-double-marble",
@@ -1219,7 +1219,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "L型大桌面，工作娱乐两用",
     icon: "🖥️",
-    model3d: { url: "/models/desk/metal_office_desk/metal_office_desk_1k.gltf" },
+    model3d: { url: "/models/desk/metal_office_desk/metal_office_desk_1k.glb" },
   },
   {
     id: "desk-standing",
@@ -1289,15 +1289,15 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"fence",        name:"围栏",       brand:"景观五金", price:220,  unit:"元/延米",category:"outdoor_hardscape", roomTypes:["yard"],                     color:"#8A7A6A", width:20,  depth:200, height:120, tags:[], description:"木质围栏",      icon:"🚧" },
   { id:"pergola",      name:"凉亭",       brand:"景观木业", price:8800, unit:"元/座", category:"outdoor_hardscape", roomTypes:["yard","terrace","deck","pergola"], color:"#C8A070", width:300, depth:300, height:250, tags:["中式","日式"], description:"木制凉亭",    icon:"⛩️" },
   { id:"bbq-grill",    name:"BBQ烧烤台", brand:"户外生活", price:1200, unit:"元/台", category:"outdoor_hardscape", roomTypes:["yard"],                     color:"#444444", width:120, depth:60,  height:90,  tags:["现代"], description:"不锈钢烧烤架", icon:"🍖" },
-  { id:"outdoor-sofa", name:"户外沙发组", brand:"户外生活", price:3800, unit:"元/组", category:"outdoor_hardscape", roomTypes:["yard","balcony","balcony2","terrace","deck"], color:"#888888", width:200, depth:80,  height:80,  tags:["现代","北欧"], description:"防水户外沙发组", icon:"🛋️", model3d:{ url:"/models/outdoor_furniture/outdoor_sofa/outdoor_sofa.gltf" } },
+  { id:"outdoor-sofa", name:"户外沙发组", brand:"户外生活", price:3800, unit:"元/组", category:"outdoor_hardscape", roomTypes:["yard","balcony","balcony2","terrace","deck"], color:"#888888", width:200, depth:80,  height:80,  tags:["现代","北欧"], description:"防水户外沙发组", icon:"🛋️", model3d:{ url:"/models/outdoor_furniture/outdoor_sofa/outdoor_sofa.glb" } },
   { id:"parking-spot", name:"停车位",     brand:"-",        price:0,    unit:"-",     category:"outdoor_hardscape", roomTypes:["yard","garage"],             color:"#888880", width:250, depth:500, height:0,   tags:[], description:"停车位标线",    icon:"🚘" },
   { id:"car",          name:"轿车",       brand:"示意",     price:0,    unit:"-",     category:"outdoor_hardscape", roomTypes:["yard","garage"],             color:"#4A90D9", width:200, depth:450, height:150, tags:[], description:"车位示意",      icon:"🚗" },
 
   // ─── 天台 / 户外家具（GLB）Rooftop & outdoor furniture ──────
-  { id:"lounger-sun",       name:"太阳躺椅",   brand:"户外生活", price:1980, unit:"元/张", category:"outdoor_hardscape", roomTypes:["yard","balcony","balcony2","terrace","deck"], color:"#C8B89A", width:65,  depth:195, height:90,  tags:["现代","北欧"], description:"铝架可调躺椅",    icon:"🛋️", model3d:{ url:"/models/outdoor_furniture/sun_lounger/sun_lounger.gltf" } },
-  { id:"garden-coffee-table",name:"户外茶几",  brand:"户外生活", price:1280, unit:"元/张", category:"outdoor_hardscape", roomTypes:["yard","balcony","balcony2","terrace","deck"], color:"#9A8A6A", width:90,  depth:90,  height:45,  tags:["现代","北欧"], description:"防腐木户外茶几",  icon:"🪵", model3d:{ url:"/models/outdoor_furniture/garden_coffee_table/garden_coffee_table.gltf" } },
-  { id:"planter-clay",      name:"陶土花盆",   brand:"园艺优选", price:380,  unit:"元/个", category:"outdoor_plant",     roomTypes:["yard","balcony","balcony2","terrace","deck"], color:"#B07A52", width:50,  depth:50,  height:60,  tags:[], description:"绿植陶土花盆",  icon:"🪴", model3d:{ url:"/models/outdoor_furniture/planter_pot_clay/planter_pot_clay_1k.gltf" } },
-  { id:"outdoor-dining-set",name:"户外桌椅套", brand:"户外生活", price:4600, unit:"元/套", category:"outdoor_hardscape", roomTypes:["yard","balcony","balcony2","terrace","deck"], color:"#8A7A5A", width:160, depth:160, height:100, tags:["现代"], description:"户外餐桌椅套装",  icon:"🪑", model3d:{ url:"/models/outdoor_furniture/outdoor_table_chair_set_01/outdoor_table_chair_set_01_1k.gltf" } },
+  { id:"lounger-sun",       name:"太阳躺椅",   brand:"户外生活", price:1980, unit:"元/张", category:"outdoor_hardscape", roomTypes:["yard","balcony","balcony2","terrace","deck"], color:"#C8B89A", width:65,  depth:195, height:90,  tags:["现代","北欧"], description:"铝架可调躺椅",    icon:"🛋️", model3d:{ url:"/models/outdoor_furniture/sun_lounger/sun_lounger.glb" } },
+  { id:"garden-coffee-table",name:"户外茶几",  brand:"户外生活", price:1280, unit:"元/张", category:"outdoor_hardscape", roomTypes:["yard","balcony","balcony2","terrace","deck"], color:"#9A8A6A", width:90,  depth:90,  height:45,  tags:["现代","北欧"], description:"防腐木户外茶几",  icon:"🪵", model3d:{ url:"/models/outdoor_furniture/garden_coffee_table/garden_coffee_table.glb" } },
+  { id:"planter-clay",      name:"陶土花盆",   brand:"园艺优选", price:380,  unit:"元/个", category:"outdoor_plant",     roomTypes:["yard","balcony","balcony2","terrace","deck"], color:"#B07A52", width:50,  depth:50,  height:60,  tags:[], description:"绿植陶土花盆",  icon:"🪴", model3d:{ url:"/models/outdoor_furniture/planter_pot_clay/planter_pot_clay_1k.glb" } },
+  { id:"outdoor-dining-set",name:"户外桌椅套", brand:"户外生活", price:4600, unit:"元/套", category:"outdoor_hardscape", roomTypes:["yard","balcony","balcony2","terrace","deck"], color:"#8A7A5A", width:160, depth:160, height:100, tags:["现代"], description:"户外餐桌椅套装",  icon:"🪑", model3d:{ url:"/models/outdoor_furniture/outdoor_table_chair_set_01/outdoor_table_chair_set_01_1k.glb" } },
   // 光伏阵列：一件普通家具。倾斜栅格在 PlacedItemMesh 里按家具占地（宽×深，
   // 含缩放）自动平铺面板；位置/朝向/尺寸全走通用手柄。默认 360×360 ≈ 3×2 块，
   // 能放进 5.2×4.8m 的休闲区；拉大尺寸即增加面板。color 即硅片色。
