@@ -6,7 +6,7 @@ import { ROOM_DEFS, getRoomArea } from "@/lib/types";
 import type { RoomType, ExteriorWall, ExteriorWallDecorItem, WallSide } from "@/lib/types";
 import { FURNITURE, getFurnitureById } from "@/lib/furniture";
 import { MATERIALS } from "@/lib/data";
-import { useT, useLocale, useMaterialName } from "@/lib/i18n";
+import { useT, useLocale, useMaterialName , customRoomDisplayName} from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn, translateClearanceReason, getLocalizedUnit } from "@/locales/itemNames";
 
 const EMPTY_WINDOWS: never[] = [];
@@ -120,7 +120,7 @@ export default function RightPanel() {
         }
       >
         <div className="text-xs font-semibold mb-1" style={{ color: isOverBudget ? "var(--ds-danger)" : "rgba(255,255,255,0.75)" }}>
-          💰 {customRoomMeta[activeRoom]?.name ?? t.roomNames[activeRoom] ?? def.name} · {t.budgetTitle}
+          💰 {customRoomDisplayName(customRoomMeta[activeRoom], locale) ?? t.roomNames[activeRoom] ?? def.name} · {t.budgetTitle}
         </div>
         <div className="text-3xl font-black mb-0.5" style={{ color: isOverBudget ? "var(--ds-danger)" : "#fff" }}>
           {formatPrice(totalCost, locale)}
@@ -486,7 +486,7 @@ function ExteriorDecorSection({ activeRoom }: { activeRoom: RoomType }) {
 
   return (
     <div className="px-4 pb-4 border-t border-gray-100 pt-3">
-      <div className="text-[11px] font-black text-gray-800 mb-2">🏮 {t.exteriorDecorTitle(customRoomMeta[activeRoom]?.name ?? t.roomNames[activeRoom] ?? ROOM_DEFS[activeRoom].name)}</div>
+      <div className="text-[11px] font-black text-gray-800 mb-2">🏮 {t.exteriorDecorTitle(customRoomDisplayName(customRoomMeta[activeRoom], locale) ?? t.roomNames[activeRoom] ?? ROOM_DEFS[activeRoom].name)}</div>
 
       {/* Exterior facade style — per-room override (auto / glass curtain / concrete) */}
       <div className="mb-2 p-2 rounded-xl bg-gray-50 border border-gray-100">

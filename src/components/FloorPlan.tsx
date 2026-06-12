@@ -6,7 +6,7 @@ import { ROOM_DEFS, WindowConfig, WallSide } from "@/lib/types";
 import { FloorPlanMinimap } from "./FloorPlanMinimap";
 import { getFurnitureById } from "@/lib/furniture";
 import { PlacedItem } from "@/lib/types";
-import { useT, useLocale } from "@/lib/i18n";
+import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
 import { getFurnitureNameEn } from "@/locales/itemNames";
 import { evaluateRoom, type EvaluatedItem, type DoorWall as ClearanceDoorWall } from "@/lib/clearance";
 import { pointInPolygon, getEdges } from "@/lib/roomGeometry";
@@ -93,7 +93,11 @@ function splitNameLines(name: string, maxPx: number): [string] | [string, string
 }
 
 function PlacedItemSVG({ placed, scale, isSelected, isBlocked, hasViolation, violationSeverity, onPointerDown }: PlacedItemSVGProps) {
-  const furniture = getFurnitureById(placed.furnitureId);
+  // 内置家具走静态 FURNITURE；导入家具响应式订阅 store.customFurniture，
+  // 否则刷新后查非响应式的 _customItems 拿不到（同 RoomCanvas PlacedItemMesh）。
+  const customFurniture = useDesignerStore(s => s.customFurniture);
+  const furniture = getFurnitureById(placed.furnitureId)
+    ?? customFurniture.find(f => f.id === placed.furnitureId);
   const locale = useLocale();
   if (!furniture) return null;
 
@@ -1063,7 +1067,7 @@ export default function FloorPlan() {
         {/* Row 1: room info + action buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[11px] text-gray-500 font-mono flex-1 min-w-0 truncate">
-            {customRoomMeta[activeRoom]?.name ?? t.roomNames[activeRoom] ?? def.name} · {(roomW / 100).toFixed(1)}m × {(roomD / 100).toFixed(1)}m · {t.fpCeilingLabel} {(def.height / 100).toFixed(1)}m
+            {customRoomDisplayName(customRoomMeta[activeRoom], locale) ?? t.roomNames[activeRoom] ?? def.name} · {(roomW / 100).toFixed(1)}m × {(roomD / 100).toFixed(1)}m · {t.fpCeilingLabel} {(def.height / 100).toFixed(1)}m
           </span>
           <div className="flex items-center gap-1 shrink-0">
             {/* Zoom controls */}

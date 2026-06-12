@@ -23,7 +23,7 @@ import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
 const EMPTY_ROOM_STATE_GC: RoomState = { materials: {}, placedItems: [] };
 import { PlacedItemMesh, LightFixtureInner } from "./RoomCanvas";
-import { useT, useLocale } from "@/lib/i18n";
+import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
 import type { RoofStyle } from "@/lib/types";
 
 const CM = 0.01;       // cm → m
@@ -91,10 +91,12 @@ function RoomGroup({
 }) {
   const def = ROOM_DEFS[room];
   const t = useT();
+  const locale = useLocale();
   const dims = useDesignerStore(s => s.floorPlans[floorIndex]?.roomDimensions?.[room]);
   const state = useDesignerStore(s => s.floorPlans[floorIndex]?.rooms[room] ?? EMPTY_ROOM_STATE_GC);
   const shape = useDesignerStore(s => s.floorPlans[floorIndex]?.roomShapes?.[room]);
-  const label = useDesignerStore(s => s.customRoomMeta[room]?.name) ?? t.roomNames[room] ?? def.name;
+  const roomMeta = useDesignerStore(s => s.customRoomMeta[room]);
+  const label = customRoomDisplayName(roomMeta, locale) ?? t.roomNames[room] ?? def.name;
   const icon = useDesignerStore(s => s.customRoomMeta[room]?.icon) ?? def.icon;
 
   const W = dims.width * CM;

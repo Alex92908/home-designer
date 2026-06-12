@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useDesignerStore, useTemporalStore } from "@/lib/store";
-import { useT, useLocaleStore } from "@/lib/i18n";
+import { useT, useLocaleStore , customRoomDisplayName} from "@/lib/i18n";
 import { ROOM_DEFS } from "@/lib/types";
 import ShareButton from "./ShareButton";
 
@@ -232,7 +232,7 @@ export default function TopBar() {
   const showRoomCtx  = (viewMode === "2d" || viewMode === "3d") && exterior.floors > 1;
   const roomDef      = ROOM_DEFS[activeRoom];
   const roomMeta     = customRoomMeta[activeRoom];
-  const roomLabel    = roomMeta?.name ?? (locale === "en" ? (t.roomNames[activeRoom] ?? roomDef?.name ?? activeRoom) : (roomDef?.name ?? activeRoom));
+  const roomLabel    = customRoomDisplayName(roomMeta, locale) ?? (locale === "en" ? (t.roomNames[activeRoom] ?? roomDef?.name ?? activeRoom) : (roomDef?.name ?? activeRoom));
   const roomIcon     = roomMeta?.icon ?? roomDef?.icon ?? "🏠";
 
   const openExport   = () => window.dispatchEvent(new Event("openExport"));

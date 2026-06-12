@@ -13,20 +13,20 @@ import { useGLTF } from "@react-three/drei";
 // list — preloading too many will saturate the network and hurt TTFB.
 const HOT_URLS = [
   // Living
-  "/models/sofa/sofa_03/sofa_03_1k.gltf",
-  "/models/coffee_table/coffee_table_round_01/coffee_table_round_01_1k.gltf",
-  "/models/tv_unit/modern_wooden_cabinet/modern_wooden_cabinet_1k.gltf",
-  "/models/sideboard/vintage_cabinet_01/vintage_cabinet_01_1k.gltf",
-  "/models/bookshelf/steel_frame_shelves_01/steel_frame_shelves_01_1k.gltf",
+  "/models/sofa/sofa_03/sofa_03_1k.glb",
+  "/models/coffee_table/coffee_table_round_01/coffee_table_round_01_1k.glb",
+  "/models/tv_unit/modern_wooden_cabinet/modern_wooden_cabinet_1k.glb",
+  "/models/sideboard/vintage_cabinet_01/vintage_cabinet_01_1k.glb",
+  "/models/bookshelf/steel_frame_shelves_01/steel_frame_shelves_01_1k.glb",
 
   // Bedroom
-  "/models/bed/bed_07/bed_07.gltf",
-  "/models/nightstand/side_table_01/side_table_01_1k.gltf",
-  "/models/wardrobe/wardrobe_dylanheyes/wardrobe_dylanheyes.gltf",
+  "/models/bed/bed_07/bed_07.glb",
+  "/models/nightstand/side_table_01/side_table_01_1k.glb",
+  "/models/wardrobe/wardrobe_dylanheyes/wardrobe_dylanheyes.glb",
 
   // Windows/doors (highest-reuse assets — every room typically has one)
-  "/models/_arch_window/modern_window_archviz/scene.gltf",
-  "/models/_arch_door/door_with_frame/door_with_frame.gltf",
+  "/models/_arch_window/modern_window_archviz/scene.glb",
+  "/models/_arch_door/door_with_frame/door_with_frame.glb",
 ];
 
 // All client-only side effects. Gate on window so SSR / hydration pass

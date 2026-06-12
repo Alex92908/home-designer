@@ -777,8 +777,8 @@ interface DesignerStore {
   autoInsertHallway: () => void;
 
   // Custom room names/icons
-  customRoomMeta: Partial<Record<RoomType, { name: string; icon: string }>>;
-  setCustomRoomMeta: (room: RoomType, name: string, icon: string) => void;
+  customRoomMeta: Partial<Record<RoomType, { name: string; icon: string; nameEn?: string }>>;
+  setCustomRoomMeta: (room: RoomType, name: string, icon: string, nameEn?: string) => void;
 
   // Room copy/paste
   copyRoom: (room: RoomType) => void;
@@ -1220,7 +1220,9 @@ export const useDesignerStore = create<DesignerStore>()(
         const floorPlans = [...s.floorPlans];
         floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: updatedRoom } };
         const { materials } = updatedRoom;
-        set({ floorPlans, selectedInstanceId: newItem.instanceId, scores: computeScores(materials, updatedPlaced), viewMode: "2d" });
+        // 不再强制跳到平面图——在效果图/全屋3D/整体布局里加家具就留在原视图
+        // （新家具落在房间中心，所有视图都立刻可见；要精调位置自己切平面图）。
+        set({ floorPlans, selectedInstanceId: newItem.instanceId, scores: computeScores(materials, updatedPlaced) });
       },
 
       moveItem: (instanceId, x, z) => {
@@ -1833,8 +1835,8 @@ export const useDesignerStore = create<DesignerStore>()(
         }));
       },
 
-      setCustomRoomMeta: (room, name, icon) =>
-        set(s => ({ customRoomMeta: { ...s.customRoomMeta, [room]: { name, icon } } })),
+      setCustomRoomMeta: (room, name, icon, nameEn) =>
+        set(s => ({ customRoomMeta: { ...s.customRoomMeta, [room]: { name, icon, ...(nameEn?.trim() ? { nameEn: nameEn.trim() } : {}) } } })),
 
       setBlueprint: (patch) => set(s => ({ blueprint: { ...s.blueprint, ...patch } })),
       clearBlueprint: () => set(() => ({ blueprint: { image: null, naturalW: 0, naturalH: 0, opacity: 0.4, offsetX: 0, offsetY: 0, scale: 1 } })),
@@ -3374,6 +3376,8 @@ export const useDesignerStore = create<DesignerStore>()(
         floorPlans: state.floorPlans,
         activeRoom: state.activeRoom,
         activeFloor: state.activeFloor,
+        // 刷新后回到离开时的视图（之前没持久化 → 永远回到默认的室内装修）
+        viewMode: state.viewMode,
         showCompass: state.showCompass,
         budget: state.budget,
         scores: state.scores,

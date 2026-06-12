@@ -27,19 +27,37 @@ const execFileAsync = promisify(execFile);
 
 const MAX_SIZE = 50 * 1024 * 1024;
 const IMPORT_DIR = () => path.join(process.cwd(), "public", "models", "imported");
+const MANIFEST = () => path.join(IMPORT_DIR(), "_manifest.json");
 
-/** GET：列出已导入的模型（院子图「已导入」分区调出用）。 */
+/** 模型元数据（中英文名 + 预览图）。键 = 裸文件名。 */
+type ModelMeta = { nameZh?: string; nameEn?: string; previewUrl?: string };
+async function readManifest(): Promise<Record<string, ModelMeta>> {
+  try {
+    const { readFile } = await import("fs/promises");
+    return JSON.parse(await readFile(MANIFEST(), "utf8"));
+  } catch { return {}; }
+}
+async function writeManifest(m: Record<string, ModelMeta>): Promise<void> {
+  await mkdir(IMPORT_DIR(), { recursive: true });
+  await writeFile(MANIFEST(), JSON.stringify(m, null, 2));
+}
+
+/** GET：列出已导入的模型（含中英文名 + 预览图，库列表用）。 */
 export async function GET() {
   try {
     const dir = IMPORT_DIR();
     const files = await readdir(dir).catch(() => [] as string[]);
+    const manifest = await readManifest();
     const models = await Promise.all(
       files.filter(f => /\.glb$/i.test(f)).map(async f => {
         const st = await stat(path.join(dir, f));
+        const meta = manifest[f] ?? {};
+        const fallback = f.replace(/\.glb$/i, "").replace(/_\d{13}$/, "");
         return {
           url: `/models/imported/${f}`,
-          // 去掉导入时附加的时间戳后缀，还原成可读名
-          name: f.replace(/\.glb$/i, "").replace(/_\d{13}$/, ""),
+          name: meta.nameZh || fallback,
+          nameEn: meta.nameEn || fallback,
+          previewUrl: meta.previewUrl ?? null,
           bytes: st.size,
           mtime: st.mtimeMs,
         };
@@ -55,6 +73,37 @@ export async function GET() {
   }
 }
 
+/** PATCH：写模型元数据 { file, nameZh?, nameEn?, preview?(dataURL png) }。
+ *  preview 落成 <file>.preview.png 真实文件，manifest 只存 URL。 */
+export async function PATCH(req: NextRequest) {
+  try {
+    const { file, nameZh, nameEn, preview } = await req.json();
+    if (typeof file !== "string" || !/^[^/\\]+\.glb$/i.test(file)) {
+      return NextResponse.json({ error: "invalid file" }, { status: 400 });
+    }
+    const manifest = await readManifest();
+    const meta: ModelMeta = { ...manifest[file] };
+    if (typeof nameZh === "string" && nameZh.trim()) meta.nameZh = nameZh.trim().slice(0, 40);
+    if (typeof nameEn === "string" && nameEn.trim()) meta.nameEn = nameEn.trim().slice(0, 60);
+    if (typeof preview === "string" && preview.startsWith("data:image/png;base64,")) {
+      const png = Buffer.from(preview.slice("data:image/png;base64,".length), "base64");
+      if (png.length <= 512 * 1024) {
+        const pf = `${file}.preview.png`;
+        await writeFile(path.join(IMPORT_DIR(), pf), png);
+        meta.previewUrl = `/models/imported/${pf}`;
+      }
+    }
+    manifest[file] = meta;
+    await writeManifest(manifest);
+    return NextResponse.json({ ok: true, meta });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "patch failed" },
+      { status: 500 },
+    );
+  }
+}
+
 /** DELETE：从模型库删除一个已导入文件（只认 imported/ 下的裸文件名）。 */
 export async function DELETE(req: NextRequest) {
   try {
@@ -65,6 +114,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "invalid file" }, { status: 400 });
     }
     await rm(path.join(IMPORT_DIR(), file), { force: true });
+    await rm(path.join(IMPORT_DIR(), `${file}.preview.png`), { force: true });
+    const manifest = await readManifest();
+    if (manifest[file]) { delete manifest[file]; await writeManifest(manifest); }
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json(

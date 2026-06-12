@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, getRoomArea } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
-import { useT, useLocale } from "@/lib/i18n";
+import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn } from "@/locales/itemNames";
 import { formatPrice } from "@/lib/currency";
 
@@ -141,7 +141,7 @@ export default function RightPanelAll() {
           configuredRooms.map(({ r, cost, area }) => {
             const def      = ROOM_DEFS[r];
             const meta     = customRoomMeta[r];
-            const name     = meta?.name ?? t.roomNames[r] ?? def.name;
+            const name     = customRoomDisplayName(meta, locale) ?? t.roomNames[r] ?? def.name;
             const icon     = meta?.icon ?? def.icon;
             const isOpen   = expanded.has(r);
             const { materials, placedItems } = rooms[r];

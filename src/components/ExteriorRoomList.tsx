@@ -2,7 +2,7 @@
 
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
-import { useT, useLocale } from "@/lib/i18n";
+import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
 // RoomType re-exported so the enterWalkthrough event payload is typed
 
 /**
@@ -30,8 +30,8 @@ export default function ExteriorRoomList() {
   };
 
   const localName = (r: RoomType) => {
-    const meta = customRoomMeta[r];
-    if (meta?.name) return meta.name;
+    const custom = customRoomDisplayName(customRoomMeta[r], locale);
+    if (custom) return custom;
     return t.roomNames[r] ?? ROOM_DEFS[r]?.name ?? r;
   };
 

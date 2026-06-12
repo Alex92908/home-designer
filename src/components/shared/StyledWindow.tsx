@@ -30,9 +30,9 @@ import {
 
 // ─── glTF arch-window assets ─────────────────────────────────
 const ENABLE_GLTF_WINDOW = true;
-const ARCH_WINDOW_URL = "/models/_arch_window/modern_window_archviz/scene.gltf";
-const IRON_BAR_WINDOW_URL = "/models/_arch_window/iron_bar_window/iron_bar_window.gltf";
-const WOODEN_WINDOW_URL = "/models/_arch_window/wooden_window/scene.gltf";
+const ARCH_WINDOW_URL = "/models/_arch_window/modern_window_archviz/scene.glb";
+const IRON_BAR_WINDOW_URL = "/models/_arch_window/iron_bar_window/iron_bar_window.glb";
+const WOODEN_WINDOW_URL = "/models/_arch_window/wooden_window/scene.glb";
 
 type GltfWindowSpec = { url: string };
 

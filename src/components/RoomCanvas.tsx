@@ -717,7 +717,7 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
 // non-uniform XYZ fit — that distorted the earlier keam.wf asset into a
 // "plank stack").
 const ENABLE_GLTF_DOOR = true;
-const WOODEN_DOOR_URL = "/models/_arch_door/door_with_frame/door_with_frame.gltf";
+const WOODEN_DOOR_URL = "/models/_arch_door/door_with_frame/door_with_frame.glb";
 
 function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number; onClick: () => void }) {
   const { scene } = useGLTF(WOODEN_DOOR_URL) as unknown as { scene: THREE.Object3D };
@@ -2490,7 +2490,14 @@ function GltfFurniture({
 }
 
 export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: PlacedItem; def: RoomDef; roomW: number; roomD: number; room?: RoomType }) {
-  const item = getFurnitureById(placed.furnitureId);
+  // 内置家具走静态 FURNITURE（getFurnitureById）；用户导入的家具改为
+  // 响应式订阅 store.customFurniture —— 它是持久化状态，刷新后随 store
+  // rehydrate 立即可用，且变化会触发重渲染。之前只查模块级 _customItems
+  // （非响应式 + 靠 onRehydrate 异步填充），SSR→客户端 hydration 时序下
+  // 首帧拿不到 → 导入家具刷新后凭空消失（内置家具因在静态数组里不受影响）。
+  const customFurniture = useDesignerStore(s => s.customFurniture);
+  const item = getFurnitureById(placed.furnitureId)
+    ?? customFurniture.find(f => f.id === placed.furnitureId);
 
   // For curtain wall-snap logic: get the windows & door wall for THIS room.
   // We need these even before the early-return so that hooks aren't called conditionally.

@@ -27,7 +27,7 @@ import { autoGenerateYardPaths, houseHalfExtentsCm, clearYardItemsOfHouse } from
 import { autoScatterTrees, placeSunShadeTrees } from "@/lib/yardAutoPlanting";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
-import { persistGlb } from "@/lib/glbStorage";
+import ModelImportCard from "./ModelImportCard";
 import { VillaTo3D } from "./VillaTo3D";
 import { GlbPbrPanel } from "./GlbPbrPanel";
 import { getShadowPolygon } from "@/lib/sunAnalysis";
@@ -303,10 +303,9 @@ export function YardPlanLibrary() {
   const [showGen3dSingle, setShowGen3dSingle]   = useState(false);
   const [showVillaDecompose, setShowVillaDecompose] = useState(false);
   const [showPbrPanel, setShowPbrPanel]         = useState(false);
-  const manualGlbRef = useRef<HTMLInputElement>(null);
   // 已导入模型库（public/models/imported/ 真实文件）——切到「组件」tab 时拉取，
   // 点卡片即可把同一模型再放一个实例进院子；导入过的东西从这里随时调出。
-  const [importedModels, setImportedModels] = useState<Array<{ url: string; name: string; bytes: number }>>([]);
+  const [importedModels, setImportedModels] = useState<Array<{ url: string; name: string; nameEn?: string; previewUrl?: string | null; bytes: number }>>([]);
   useEffect(() => {
     if (tab !== "prefab") return;
     let alive = true;
@@ -363,28 +362,22 @@ export function YardPlanLibrary() {
 
   // 手动导入 .glb/.gltf：落成 public/models/imported/ 真实文件（与内置家具
   // 同一套「URL 即资产」机制），store 里只存 URL；只读环境自动退 IndexedDB。
-  // 之前读成 data URL 直接进 zustand persist（localStorage 5MB 配额），
-  // 一个普通 GLB 就 QuotaExceededError 把整次导入写挂。
-  const handleManualGlb = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = ""; // 允许重复选同一文件
-    if (!file) return;
-    const name = file.name.replace(/\.(glb|gltf)$/i, "");
-    const key = `glb_import_${crypto.randomUUID().slice(0, 8)}`;
-    void persistGlb(name || key, file).then(src => {
-      addYardItem({
-        id:         key,
-        type:       "prefab",
-        prefabKind: "glb_model",
-        x:          200, z: 300, rot: 0, scale: 1,
-        glbSrc:     src,
-        partLabel:  name || (locale === "en" ? "Imported model" : "导入模型"),
-      } as YardItem);
-      // 同步出现在「已导入模型」列表，之后可随时再调出
-      if (src.startsWith("/models/imported/")) {
-        setImportedModels(list => [{ url: src, name: name || key, bytes: file.size }, ...list]);
-      }
-    });
+  // 统一导入卡（ModelImportCard：压缩可选 + 本机路径），导入后放进院子
+  // 并同步出现在「已导入模型」列表，之后可随时再调出。
+  const [showGlbImport, setShowGlbImport] = useState(false);
+  const handleImportedGlb = (src: string, name: string) => {
+    addYardItem({
+      id:         `glb_import_${crypto.randomUUID().slice(0, 8)}`,
+      type:       "prefab",
+      prefabKind: "glb_model",
+      x:          200, z: 300, rot: 0, scale: 1,
+      glbSrc:     src,
+      partLabel:  name || (locale === "en" ? "Imported model" : "导入模型"),
+    } as YardItem);
+    setShowGlbImport(false);
+    if (src.startsWith("/models/imported/")) {
+      setImportedModels(list => list.some(m => m.url === src) ? list : [{ url: src, name, bytes: 0 }, ...list]);
+    }
   };
 
   return (
@@ -472,26 +465,20 @@ export function YardPlanLibrary() {
             <span style={{ color: "#A78BFA", fontSize: 14 }}>›</span>
           </button>
 
-          {/* ── 手动导入 .glb/.gltf ──────────────────────── */}
+          {/* ── 手动导入 .glb/.gltf（统一导入卡：压缩可选/本机路径）──── */}
           <button
-            onClick={() => manualGlbRef.current?.click()}
+            onClick={() => setShowGlbImport(v => !v)}
             className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
-            style={{ background: "linear-gradient(135deg,#EEF2FF,#F0FDF4)", border: "1px solid #C7D2FE" }}
+            style={{ background: "linear-gradient(135deg,#EEF2FF,#F0FDF4)", border: showGlbImport ? "1px solid #6366F1" : "1px solid #C7D2FE" }}
           >
             <span style={{ fontSize: 22 }}>📦</span>
             <div className="flex flex-col flex-1 min-w-0">
               <div className="text-[11px] font-bold" style={{ color: "#4338CA" }}>{locale === "en" ? "Import .glb / .gltf" : "手动导入 .glb / .gltf"}</div>
-              <div className="text-[9px]" style={{ color: "#6366F1" }}>{locale === "en" ? "Pick a local model → drops into scene, drag to place" : "选本地模型 → 直接入场景，可拖放放置"}</div>
+              <div className="text-[9px]" style={{ color: "#6366F1" }}>{locale === "en" ? "Upload / local path · optional compression · drops into yard" : "上传或本机路径 · 压缩可选 · 直接入院子"}</div>
             </div>
-            <span style={{ color: "#818CF8", fontSize: 14 }}>›</span>
+            <span style={{ color: "#818CF8", fontSize: 14 }}>{showGlbImport ? "▾" : "›"}</span>
           </button>
-          <input
-            ref={manualGlbRef}
-            type="file"
-            accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
-            style={{ display: "none" }}
-            onChange={handleManualGlb}
-          />
+          {showGlbImport && <ModelImportCard onImported={handleImportedGlb} />}
 
           {/* ── 已导入模型库：随时调出再放一个实例 ───────────── */}
           {importedModels.length > 0 && (
@@ -499,21 +486,29 @@ export function YardPlanLibrary() {
               <div className="mt-1 mb-0.5 text-[10px] font-bold tracking-widest text-gray-400">
                 {locale === "en" ? "IMPORTED MODELS" : "已导入模型（点击放入院子）"}
               </div>
-              {importedModels.map(m => (
-                <div key={m.url}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors text-left bg-gray-50 border-gray-100 hover:bg-indigo-50 hover:border-indigo-200">
-                  <button onClick={() => placeImported(m)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
-                    <span style={{ fontSize: 18 }}>🧩</span>
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <div className="text-[11px] font-bold text-gray-700 truncate">{m.name}</div>
-                      <div className="text-[9px] text-gray-400">{(m.bytes / 1024 / 1024).toFixed(1)}MB · {locale === "en" ? "click to place" : "点击放入"}</div>
-                    </div>
-                  </button>
-                  <button onClick={() => deleteImported(m)}
-                    title={locale === "en" ? "Delete from library" : "从模型库删除"}
-                    className="shrink-0 text-xs text-gray-300 hover:text-red-500">✕</button>
-                </div>
-              ))}
+              {importedModels.map(m => {
+                const display = locale === "en" ? (m.nameEn || m.name) : m.name;
+                return (
+                  <div key={m.url}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors text-left bg-gray-50 border-gray-100 hover:bg-indigo-50 hover:border-indigo-200">
+                    <button onClick={() => placeImported({ url: m.url, name: display })} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                      {m.previewUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={m.previewUrl} alt="" className="w-9 h-9 rounded shrink-0 object-contain bg-white" />
+                      ) : (
+                        <span style={{ fontSize: 18 }} className="w-9 text-center">🧩</span>
+                      )}
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <div className="text-[11px] font-bold text-gray-700 truncate">{display}</div>
+                        <div className="text-[9px] text-gray-400">{(m.bytes / 1024 / 1024).toFixed(1)}MB · {locale === "en" ? "click to place" : "点击放入"}</div>
+                      </div>
+                    </button>
+                    <button onClick={() => deleteImported(m)}
+                      title={locale === "en" ? "Delete from library" : "从模型库删除"}
+                      className="shrink-0 text-xs text-gray-300 hover:text-red-500">✕</button>
+                  </div>
+                );
+              })}
             </>
           )}
 

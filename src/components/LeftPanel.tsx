@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useDesignerStore } from "@/lib/store";
-import { persistGlb } from "@/lib/glbStorage";
+import ModelImportCard from "./ModelImportCard";
 
 /** Stable fallback so selectors don't create a new object on each render */
 const EMPTY_MATERIALS = {} as const;
@@ -503,14 +503,13 @@ function FurnitureTab() {
   const t = useT();
   const locale = useLocale();
 
-  // ── 导入 3D 模型为家具：平面图/效果图都能摆 ─────────────────────
-  // 与院子的导入共用同一条 persistGlb 链路（落 public/models/imported/
-  // 真实文件 + 可选压缩）；导入后注册成自定义家具（model3d.url 走 GLB
-  // 渲染），并直接摆进当前房间。「模型库」列出历史导入，随时再调出。
-  const glbInputRef = useRef<HTMLInputElement>(null);
+  // ── 导入 3D 模型为家具（统一导入卡：压缩可选 + 本机路径）────────────
+  // 与院子/导入导出共用同一条链路（落 public/models/imported/ 真实文件）；
+  // 导入后注册成自定义家具（model3d.url 走 GLB 渲染）并摆进当前房间。
+  // 「模型库」列出历史导入，随时再调出。
+  const [showGlbImport, setShowGlbImport] = useState(false);
   const [showGlbLib, setShowGlbLib] = useState(false);
-  const [glbLib, setGlbLib] = useState<Array<{ url: string; name: string; bytes: number }>>([]);
-  const [glbBusy, setGlbBusy] = useState(false);
+  const [glbLib, setGlbLib] = useState<Array<{ url: string; name: string; nameEn?: string; previewUrl?: string | null; bytes: number }>>([]);
   useEffect(() => {
     if (!showGlbLib) return;
     let alive = true;
@@ -520,6 +519,16 @@ function FurnitureTab() {
       .catch(() => {});
     return () => { alive = false; };
   }, [showGlbLib]);
+
+  const deleteGlbModel = (m: { url: string; name: string }) => {
+    const file = m.url.split("/").pop() ?? "";
+    if (!window.confirm(locale === "en"
+      ? `Delete "${m.name}" from the model library? Placed instances will fail to load.`
+      : `从模型库删除「${m.name}」？已摆放的实例会变成加载失败。`)) return;
+    void fetch(`/api/import-model?file=${encodeURIComponent(file)}`, { method: "DELETE" })
+      .then(() => setGlbLib(list => list.filter(x => x.url !== m.url)))
+      .catch(() => {});
+  };
 
   const addGlbAsFurniture = (url: string, name: string) => {
     const item: FurnitureItem = {
@@ -541,15 +550,13 @@ function FurnitureTab() {
     placeFurniture(item.id);
   };
 
-  const handleGlbFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    const name = file.name.replace(/\.(glb|gltf)$/i, "");
-    setGlbBusy(true);
-    void persistGlb(name || `furn_${Date.now()}`, file)
-      .then(src => { addGlbAsFurniture(src, name); setGlbBusy(false); })
-      .catch(() => setGlbBusy(false));
+  const handleImported = (url: string, name: string) => {
+    addGlbAsFurniture(url, name);
+    setShowGlbImport(false);
+    // 同步进「模型库」列表，之后可随时再调出
+    if (url.startsWith("/models/imported/")) {
+      setGlbLib(list => list.some(m => m.url === url) ? list : [{ url, name, bytes: 0 }, ...list]);
+    }
   };
 
   const roomFurniture = allRooms ? [...FURNITURE, ...getCustomFurniture()] : getFurnitureForRoom(activeRoom);
@@ -627,17 +634,16 @@ function FurnitureTab() {
         )}
       </div>
 
-      {/* 导入 3D 模型为家具 + 模型库调出（与院子导入同一条链路） */}
+      {/* 导入 3D 模型为家具 + 模型库调出（统一导入卡：压缩可选/本机路径） */}
       <div className="flex gap-2 items-center -mt-2">
-        <input ref={glbInputRef} type="file" className="hidden"
-          accept=".glb,.gltf,model/gltf-binary,model/gltf+json" onChange={handleGlbFile} />
         <button
-          onClick={() => glbInputRef.current?.click()}
-          disabled={glbBusy}
-          className="flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all disabled:opacity-50"
-          style={{ border: "1px dashed var(--ds-border)", color: "var(--ds-text-3)", background: "transparent" }}
+          onClick={() => setShowGlbImport(v => !v)}
+          className="flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all"
+          style={showGlbImport
+            ? { background: "#6366F1", color: "#fff", border: "1px solid #6366F1" }
+            : { border: "1px dashed var(--ds-border)", color: "var(--ds-text-3)", background: "transparent" }}
         >
-          {glbBusy ? (locale === "en" ? "Importing…" : "导入中…") : (locale === "en" ? "📦 Import model" : "📦 导入模型")}
+          {locale === "en" ? "📦 Import model" : "📦 导入模型"}
         </button>
         <button
           onClick={() => setShowGlbLib(v => !v)}
@@ -649,6 +655,11 @@ function FurnitureTab() {
           {locale === "en" ? "🧩 Model library" : "🧩 模型库"}
         </button>
       </div>
+      {showGlbImport && (
+        <div className="-mt-2">
+          <ModelImportCard onImported={handleImported} />
+        </div>
+      )}
       {showGlbLib && (
         <div className="flex flex-col gap-1 -mt-2">
           {glbLib.length === 0 && (
@@ -656,18 +667,31 @@ function FurnitureTab() {
               {locale === "en" ? "No imported models yet — use “Import model”." : "还没有导入过模型——点「📦 导入模型」上传。"}
             </div>
           )}
-          {glbLib.map(m => (
-            <button key={m.url}
-              onClick={() => addGlbAsFurniture(m.url, m.name)}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors hover:bg-blue-50"
-              style={{ border: "1px solid var(--ds-border)", background: "var(--ds-surface)" }}
-              title={locale === "en" ? "Place into current room" : "放进当前房间"}
-            >
-              <span className="text-sm">🧩</span>
-              <span className="flex-1 min-w-0 truncate text-[11px] font-semibold" style={{ color: "var(--ds-text-2)" }}>{m.name}</span>
-              <span className="text-[9px] shrink-0" style={{ color: "var(--ds-text-3)" }}>{(m.bytes / 1024 / 1024).toFixed(1)}MB</span>
-            </button>
-          ))}
+          {glbLib.map(m => {
+            const display = locale === "en" ? (m.nameEn || m.name) : m.name;
+            return (
+              <div key={m.url}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors hover:bg-blue-50"
+                style={{ border: "1px solid var(--ds-border)", background: "var(--ds-surface)" }}>
+                <button onClick={() => addGlbAsFurniture(m.url, display)}
+                  className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                  title={locale === "en" ? "Place into current room" : "放进当前房间"}>
+                  {m.previewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.previewUrl} alt="" className="w-8 h-8 rounded shrink-0 object-contain"
+                      style={{ background: "var(--ds-bg)" }} />
+                  ) : (
+                    <span className="text-sm w-8 text-center">🧩</span>
+                  )}
+                  <span className="flex-1 min-w-0 truncate text-[11px] font-semibold" style={{ color: "var(--ds-text-2)" }}>{display}</span>
+                  <span className="text-[9px] shrink-0" style={{ color: "var(--ds-text-3)" }}>{(m.bytes / 1024 / 1024).toFixed(1)}MB</span>
+                </button>
+                <button onClick={() => deleteGlbModel({ url: m.url, name: display })}
+                  title={locale === "en" ? "Delete from library" : "从模型库删除"}
+                  className="shrink-0 text-xs text-gray-300 hover:text-red-500">✕</button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -721,6 +745,14 @@ function FurnitureTab() {
 export default function LeftPanel() {
   const [tab, setTab] = useState<"materials" | "furniture" | "templates">("materials");
   const t = useT();
+  // 加家具（含导入模型）只在 2D 编辑视图：房间平面（这里）+ 院子图（YardPlanLibrary）。
+  // 效果图/全屋3D 是"看效果"的视图，隐藏家具 tab，避免在 3D 里加完找不到/误操作。
+  const viewMode = useDesignerStore(s => s.viewMode);
+  const canEditFurniture = viewMode === "2d";
+  const tabs = canEditFurniture
+    ? (["materials", "furniture", "templates"] as const)
+    : (["materials", "templates"] as const);
+  const effectiveTab = !canEditFurniture && tab === "furniture" ? "materials" : tab;
 
   return (
     <aside
@@ -732,13 +764,13 @@ export default function LeftPanel() {
         className="px-3 pt-3 pb-0 flex gap-0.5 shrink-0"
         style={{ borderBottom: "1px solid var(--ds-border)" }}
       >
-        {(["materials", "furniture", "templates"] as const).map((key) => (
+        {tabs.map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             className="flex-1 py-1.5 text-xs font-bold rounded-t-lg transition-all"
             style={
-              tab === key
+              effectiveTab === key
                 ? {
                     background: "var(--ds-surface)",
                     color: "#007AFF",
@@ -755,18 +787,18 @@ export default function LeftPanel() {
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
-        {tab === "materials" && <MaterialsTab />}
-        {tab === "furniture" && <FurnitureTab />}
-        {tab === "templates" && <TemplatesPanel />}
+        {effectiveTab === "materials" && <MaterialsTab />}
+        {effectiveTab === "furniture" && <FurnitureTab />}
+        {effectiveTab === "templates" && <TemplatesPanel />}
       </div>
 
       {/* Hint — hidden on templates tab */}
-      {tab !== "templates" && (
+      {effectiveTab !== "templates" && (
         <div
           className="px-3 py-2 text-[10px] shrink-0"
           style={{ borderTop: "1px solid var(--ds-border-soft)", color: "var(--ds-text-3)" }}
         >
-          {tab === "furniture" ? t.furnitureHint : t.matHint}
+          {effectiveTab === "furniture" ? t.furnitureHint : t.matHint}
         </div>
       )}
     </aside>

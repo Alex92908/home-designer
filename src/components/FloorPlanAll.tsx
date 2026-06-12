@@ -5,7 +5,7 @@ import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS, DEFAULT_ENABLED } from "@/lib/store";
 import { getFurnitureById } from "@/lib/furniture";
-import { useT, useLocale } from "@/lib/i18n";
+import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
 import { FLOORPLAN_LAYOUTS, type FloorplanLayout } from "@/lib/floorplanLayouts";
 import { PROJECT_TEMPLATES } from "@/lib/projectTemplates";
 import { getLayoutNameEn } from "@/locales/itemNames";
@@ -52,12 +52,18 @@ function CustomRoomForm({ room, onDone }: { room: RoomType; onDone: () => void }
   const setCustomRoomMeta = useDesignerStore(s => s.setCustomRoomMeta);
   const meta = useDesignerStore(s => s.customRoomMeta[room]);
   const [name, setName] = useState(meta?.name ?? "");
+  const [nameEn, setNameEn] = useState(meta?.nameEn ?? "");
   const [icon, setIcon] = useState(meta?.icon ?? "🔲");
   const t = useT();
+  const locale = useLocale();
   return (
     <div className="px-3 pb-3 bg-blue-50 flex flex-col gap-2">
       <input value={name} onChange={e => setName(e.target.value)}
         placeholder={t.allRoomNamePlaceholder} maxLength={12}
+        className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-blue-400 bg-white" />
+      {/* 英文名（可选）：英文界面显示它，没填回落中文名 */}
+      <input value={nameEn} onChange={e => setNameEn(e.target.value)}
+        placeholder={locale === "en" ? "English name (optional)" : "English name（可选）"} maxLength={24}
         className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-blue-400 bg-white" />
       <div className="flex flex-wrap gap-1">
         {CUSTOM_ICONS.map(ic => (
@@ -68,7 +74,7 @@ function CustomRoomForm({ room, onDone }: { room: RoomType; onDone: () => void }
         ))}
       </div>
       <div className="flex gap-2">
-        <button onClick={() => { if (name.trim()) { setCustomRoomMeta(room, name.trim(), icon); onDone(); } }}
+        <button onClick={() => { if (name.trim()) { setCustomRoomMeta(room, name.trim(), icon, nameEn); onDone(); } }}
           disabled={!name.trim()}
           className="flex-1 py-1 bg-blue-600 text-white text-xs font-bold rounded-xl disabled:opacity-40">
           {t.allConfirm}
@@ -117,7 +123,7 @@ export function RoomPanel() {
   const getRoomLabel = (room: RoomType) => {
     const meta = customRoomMeta[room];
     const def  = ROOM_DEFS[room];
-    const baseName = meta?.name ?? (locale === "en" ? (t.roomNames[room] ?? def.name) : def.name);
+    const baseName = customRoomDisplayName(meta, locale) ?? (locale === "en" ? (t.roomNames[room] ?? def.name) : def.name);
     return { name: baseName, icon: meta?.icon ?? def.icon };
   };
 
@@ -132,7 +138,12 @@ export function RoomPanel() {
     if (trimmed) {
       const meta = customRoomMeta[room];
       const def  = ROOM_DEFS[room];
-      setCustomRoomMeta(room, trimmed, meta?.icon ?? def.icon);
+      // 英文界面改名写 nameEn（中文名保留），中文界面写 name（英文名保留）
+      if (locale === "en") {
+        setCustomRoomMeta(room, meta?.name ?? def.name, meta?.icon ?? def.icon, trimmed);
+      } else {
+        setCustomRoomMeta(room, trimmed, meta?.icon ?? def.icon, meta?.nameEn);
+      }
     }
     setRenamingRoom(null);
   };
@@ -1374,7 +1385,7 @@ export default function FloorPlanAll() {
                   <g style={{ cursor: "pointer" }}
                     onPointerDown={e => {
                       e.stopPropagation();
-                      const roomName = customRoomMeta[room]?.name ?? t.roomNames[room] ?? ROOM_DEFS[room].name;
+                      const roomName = customRoomDisplayName(customRoomMeta[room], locale) ?? t.roomNames[room] ?? ROOM_DEFS[room].name;
                       void confirmDialog(t.fpRoomDeleteConfirm(roomName)).then(ok => {
                         if (!ok) return;
                         pushLayoutHistory();

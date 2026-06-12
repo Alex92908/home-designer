@@ -2,7 +2,7 @@
 
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS } from "@/lib/types";
-import { useT } from "@/lib/i18n";
+import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
 
 export default function RoomSidebar() {
   const activeRoom     = useDesignerStore((s) => s.activeRoom);
@@ -13,6 +13,7 @@ export default function RoomSidebar() {
   const enabledRooms   = useDesignerStore((s) => s.floorPlans[s.activeFloor].enabledRooms);
   const customRoomMeta = useDesignerStore((s) => s.customRoomMeta);
   const t              = useT();
+  const locale         = useLocale();
 
   return (
     <aside
@@ -28,7 +29,7 @@ export default function RoomSidebar() {
         const def      = ROOM_DEFS[r];
         const meta     = customRoomMeta[r];
         // User rename (meta.name) 优先；否则按 locale 的默认名 / 内置名
-        const name     = meta?.name ?? t.roomNames[r] ?? def.name;
+        const name     = customRoomDisplayName(meta, locale) ?? t.roomNames[r] ?? def.name;
         const icon     = meta?.icon ?? def.icon;
         const isActive = activeRoom === r && viewMode !== "all" && viewMode !== "exterior";
         const hasContent =

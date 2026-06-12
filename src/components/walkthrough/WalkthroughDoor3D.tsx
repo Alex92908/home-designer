@@ -26,7 +26,7 @@ import type { DoorStyle } from "@/lib/types";
 // non-uniform XYZ fit — that distorted the earlier keam.wf asset into a
 // "plank stack").
 const ENABLE_GLTF_DOOR = true;
-const WOODEN_DOOR_URL = "/models/_arch_door/door_with_frame/door_with_frame.gltf";
+const WOODEN_DOOR_URL = "/models/_arch_door/door_with_frame/door_with_frame.glb";
 
 function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number; onClick: () => void }) {
   const { scene } = useGLTF(WOODEN_DOOR_URL) as unknown as { scene: THREE.Object3D };

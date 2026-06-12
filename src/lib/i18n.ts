@@ -69,3 +69,13 @@ export function getLocalizedRoomName(type: string, locale: Locale): string {
   const zhTable = LOCALES.zh.roomNames as Record<string, string>;
   return table[type] ?? zhTable[type] ?? type;
 }
+
+/** 自定义房间名按语言取：英文界面优先 nameEn，没填回落中文名。
+ *  meta 为空返回 undefined，让调用方继续走 roomNames/ROOM_DEFS 兜底链。 */
+export function customRoomDisplayName(
+  meta: { name: string; nameEn?: string } | undefined,
+  locale: Locale,
+): string | undefined {
+  if (!meta) return undefined;
+  return locale === "en" && meta.nameEn ? meta.nameEn : meta.name;
+}
