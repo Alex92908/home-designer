@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir, copyFile, stat, rm } from "fs/promises";
+import { writeFile, mkdir, copyFile, stat, rm, readdir } from "fs/promises";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import os from "os";
@@ -26,6 +26,53 @@ const execFileAsync = promisify(execFile);
  */
 
 const MAX_SIZE = 50 * 1024 * 1024;
+const IMPORT_DIR = () => path.join(process.cwd(), "public", "models", "imported");
+
+/** GET：列出已导入的模型（院子图「已导入」分区调出用）。 */
+export async function GET() {
+  try {
+    const dir = IMPORT_DIR();
+    const files = await readdir(dir).catch(() => [] as string[]);
+    const models = await Promise.all(
+      files.filter(f => /\.glb$/i.test(f)).map(async f => {
+        const st = await stat(path.join(dir, f));
+        return {
+          url: `/models/imported/${f}`,
+          // 去掉导入时附加的时间戳后缀，还原成可读名
+          name: f.replace(/\.glb$/i, "").replace(/_\d{13}$/, ""),
+          bytes: st.size,
+          mtime: st.mtimeMs,
+        };
+      }),
+    );
+    models.sort((a, b) => b.mtime - a.mtime);
+    return NextResponse.json({ models });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "list failed" },
+      { status: 500 },
+    );
+  }
+}
+
+/** DELETE：从模型库删除一个已导入文件（只认 imported/ 下的裸文件名）。 */
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const file = searchParams.get("file") ?? "";
+    // 只接受裸文件名，杜绝路径穿越
+    if (!/^[^/\\]+\.glb$/i.test(file)) {
+      return NextResponse.json({ error: "invalid file" }, { status: 400 });
+    }
+    await rm(path.join(IMPORT_DIR(), file), { force: true });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "delete failed" },
+      { status: 500 },
+    );
+  }
+}
 
 function sanitizeBase(name: string): string {
   return (name || "model.glb")

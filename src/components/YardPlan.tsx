@@ -304,6 +304,35 @@ export function YardPlanLibrary() {
   const [showVillaDecompose, setShowVillaDecompose] = useState(false);
   const [showPbrPanel, setShowPbrPanel]         = useState(false);
   const manualGlbRef = useRef<HTMLInputElement>(null);
+  // 已导入模型库（public/models/imported/ 真实文件）——切到「组件」tab 时拉取，
+  // 点卡片即可把同一模型再放一个实例进院子；导入过的东西从这里随时调出。
+  const [importedModels, setImportedModels] = useState<Array<{ url: string; name: string; bytes: number }>>([]);
+  useEffect(() => {
+    if (tab !== "prefab") return;
+    let alive = true;
+    void fetch("/api/import-model")
+      .then(r => r.ok ? r.json() : { models: [] })
+      .then(d => { if (alive) setImportedModels(d.models ?? []); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [tab]);
+  const placeImported = (m: { url: string; name: string }) => {
+    addYardItem({
+      id: `glb_lib_${crypto.randomUUID().slice(0, 8)}`,
+      type: "prefab",
+      prefabKind: "glb_model",
+      x: 200, z: 300, rot: 0, scale: 1,
+      glbSrc: m.url,
+      partLabel: m.name,
+    } as YardItem);
+  };
+  const deleteImported = (m: { url: string }) => {
+    const file = m.url.split("/").pop() ?? "";
+    if (!window.confirm(locale === "en" ? `Delete "${file}" from the model library?` : `从模型库删除「${file}」？已摆放的实例会变成加载失败。`)) return;
+    void fetch(`/api/import-model?file=${encodeURIComponent(file)}`, { method: "DELETE" })
+      .then(() => setImportedModels(list => list.filter(x => x.url !== m.url)))
+      .catch(() => {});
+  };
   const items = (tab === "prefab" || tab === "template") ? null
     : OUTDOOR_ASSET_LIBRARY.filter(a => a.category === tab);
 
@@ -341,7 +370,7 @@ export function YardPlanLibrary() {
     e.target.value = ""; // 允许重复选同一文件
     if (!file) return;
     const name = file.name.replace(/\.(glb|gltf)$/i, "");
-    const key = `glb_import_${Date.now()}`;
+    const key = `glb_import_${crypto.randomUUID().slice(0, 8)}`;
     void persistGlb(name || key, file).then(src => {
       addYardItem({
         id:         key,
@@ -351,6 +380,10 @@ export function YardPlanLibrary() {
         glbSrc:     src,
         partLabel:  name || (locale === "en" ? "Imported model" : "导入模型"),
       } as YardItem);
+      // 同步出现在「已导入模型」列表，之后可随时再调出
+      if (src.startsWith("/models/imported/")) {
+        setImportedModels(list => [{ url: src, name: name || key, bytes: file.size }, ...list]);
+      }
     });
   };
 
@@ -459,6 +492,30 @@ export function YardPlanLibrary() {
             style={{ display: "none" }}
             onChange={handleManualGlb}
           />
+
+          {/* ── 已导入模型库：随时调出再放一个实例 ───────────── */}
+          {importedModels.length > 0 && (
+            <>
+              <div className="mt-1 mb-0.5 text-[10px] font-bold tracking-widest text-gray-400">
+                {locale === "en" ? "IMPORTED MODELS" : "已导入模型（点击放入院子）"}
+              </div>
+              {importedModels.map(m => (
+                <div key={m.url}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors text-left bg-gray-50 border-gray-100 hover:bg-indigo-50 hover:border-indigo-200">
+                  <button onClick={() => placeImported(m)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                    <span style={{ fontSize: 18 }}>🧩</span>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <div className="text-[11px] font-bold text-gray-700 truncate">{m.name}</div>
+                      <div className="text-[9px] text-gray-400">{(m.bytes / 1024 / 1024).toFixed(1)}MB · {locale === "en" ? "click to place" : "点击放入"}</div>
+                    </div>
+                  </button>
+                  <button onClick={() => deleteImported(m)}
+                    title={locale === "en" ? "Delete from library" : "从模型库删除"}
+                    className="shrink-0 text-xs text-gray-300 hover:text-red-500">✕</button>
+                </div>
+              ))}
+            </>
+          )}
 
           {/* Overlays */}
           {showGen3dSingle && (

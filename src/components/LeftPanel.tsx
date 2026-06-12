@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useDesignerStore } from "@/lib/store";
+import { persistGlb } from "@/lib/glbStorage";
 
 /** Stable fallback so selectors don't create a new object on each render */
 const EMPTY_MATERIALS = {} as const;
@@ -493,12 +494,63 @@ const STYLE_TAGS: StyleTag[] = ["现代", "北欧", "中式", "日式", "工业�
 function FurnitureTab() {
   const activeRoom      = useDesignerStore((s) => s.activeRoom);
   const customFurniture = useDesignerStore((s) => s.customFurniture);
+  const addCustomFurniture = useDesignerStore((s) => s.addCustomFurniture);
+  const placeFurniture  = useDesignerStore((s) => s.placeFurniture);
   const [showForm, setShowForm] = useState(false);
   const [allRooms, setAllRooms] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const [styleTag, setStyleTag] = useState<StyleTag | null>(null);
   const t = useT();
   const locale = useLocale();
+
+  // ── 导入 3D 模型为家具：平面图/效果图都能摆 ─────────────────────
+  // 与院子的导入共用同一条 persistGlb 链路（落 public/models/imported/
+  // 真实文件 + 可选压缩）；导入后注册成自定义家具（model3d.url 走 GLB
+  // 渲染），并直接摆进当前房间。「模型库」列出历史导入，随时再调出。
+  const glbInputRef = useRef<HTMLInputElement>(null);
+  const [showGlbLib, setShowGlbLib] = useState(false);
+  const [glbLib, setGlbLib] = useState<Array<{ url: string; name: string; bytes: number }>>([]);
+  const [glbBusy, setGlbBusy] = useState(false);
+  useEffect(() => {
+    if (!showGlbLib) return;
+    let alive = true;
+    void fetch("/api/import-model")
+      .then(r => r.ok ? r.json() : { models: [] })
+      .then(d => { if (alive) setGlbLib(d.models ?? []); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [showGlbLib]);
+
+  const addGlbAsFurniture = (url: string, name: string) => {
+    const item: FurnitureItem = {
+      id:          `custom_glb_${crypto.randomUUID().slice(0, 8)}`,
+      name:        name || (locale === "en" ? "Imported model" : "导入模型"),
+      brand:       locale === "en" ? "Imported" : "导入模型",
+      price:       0,
+      unit:        "元/件",
+      category:    "storage",
+      roomTypes:   ["living","master","bedroom","kitchen","bathroom","dining","study","closet","balcony"],
+      color:       "#B0AFA8",
+      width:       80, depth: 60, height: 80,
+      tags:        [],
+      description: locale === "en" ? "User-imported 3D model" : "用户导入的 3D 模型",
+      icon:        "🧩",
+      model3d:     { url },
+    };
+    addCustomFurniture(item);
+    placeFurniture(item.id);
+  };
+
+  const handleGlbFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const name = file.name.replace(/\.(glb|gltf)$/i, "");
+    setGlbBusy(true);
+    void persistGlb(name || `furn_${Date.now()}`, file)
+      .then(src => { addGlbAsFurniture(src, name); setGlbBusy(false); })
+      .catch(() => setGlbBusy(false));
+  };
 
   const roomFurniture = allRooms ? [...FURNITURE, ...getCustomFurniture()] : getFurnitureForRoom(activeRoom);
   // Include any custom furniture (all rooms)
@@ -574,6 +626,50 @@ function FurnitureTab() {
           </button>
         )}
       </div>
+
+      {/* 导入 3D 模型为家具 + 模型库调出（与院子导入同一条链路） */}
+      <div className="flex gap-2 items-center -mt-2">
+        <input ref={glbInputRef} type="file" className="hidden"
+          accept=".glb,.gltf,model/gltf-binary,model/gltf+json" onChange={handleGlbFile} />
+        <button
+          onClick={() => glbInputRef.current?.click()}
+          disabled={glbBusy}
+          className="flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all disabled:opacity-50"
+          style={{ border: "1px dashed var(--ds-border)", color: "var(--ds-text-3)", background: "transparent" }}
+        >
+          {glbBusy ? (locale === "en" ? "Importing…" : "导入中…") : (locale === "en" ? "📦 Import model" : "📦 导入模型")}
+        </button>
+        <button
+          onClick={() => setShowGlbLib(v => !v)}
+          className="flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all"
+          style={showGlbLib
+            ? { background: "#007AFF", color: "#fff", border: "1px solid #007AFF" }
+            : { border: "1px dashed var(--ds-border)", color: "var(--ds-text-3)", background: "transparent" }}
+        >
+          {locale === "en" ? "🧩 Model library" : "🧩 模型库"}
+        </button>
+      </div>
+      {showGlbLib && (
+        <div className="flex flex-col gap-1 -mt-2">
+          {glbLib.length === 0 && (
+            <div className="text-[10px] px-1" style={{ color: "var(--ds-text-3)" }}>
+              {locale === "en" ? "No imported models yet — use “Import model”." : "还没有导入过模型——点「📦 导入模型」上传。"}
+            </div>
+          )}
+          {glbLib.map(m => (
+            <button key={m.url}
+              onClick={() => addGlbAsFurniture(m.url, m.name)}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors hover:bg-blue-50"
+              style={{ border: "1px solid var(--ds-border)", background: "var(--ds-surface)" }}
+              title={locale === "en" ? "Place into current room" : "放进当前房间"}
+            >
+              <span className="text-sm">🧩</span>
+              <span className="flex-1 min-w-0 truncate text-[11px] font-semibold" style={{ color: "var(--ds-text-2)" }}>{m.name}</span>
+              <span className="text-[9px] shrink-0" style={{ color: "var(--ds-text-3)" }}>{(m.bytes / 1024 / 1024).toFixed(1)}MB</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Style tag filter pills */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
