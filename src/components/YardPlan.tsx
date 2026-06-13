@@ -24,6 +24,7 @@ import { PREFAB_REGISTRY, getPrefabDef } from "@/lib/outdoorPrefabs";
 import { ZONE_STYLES, polygonCentroid } from "@/lib/outdoorZones";
 import { evaluateYardPlan, violationsByItem, getEmptyStateHints } from "@/lib/outdoorClearance";
 import { autoGenerateYardPaths, houseHalfExtentsCm, clearYardItemsOfHouse } from "@/lib/yardAutoLayout";
+import { EXTERIOR_PRESETS } from "@/lib/exteriorPresets";
 import { autoScatterTrees, placeSunShadeTrees } from "@/lib/yardAutoPlanting";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
@@ -349,7 +350,7 @@ export function YardPlanLibrary() {
   const applyPreset = (p: import("@/lib/outdoorAssets").YardPreset) => {
     if (yardItems.length > 0 && !window.confirm(locale === "en" ? `Replace the current ${yardItems.length} element(s) with "${p.labelEn}"?` : `替换当前 ${yardItems.length} 个元素为「${p.label}」？`)) return;
     for (const it of [...yardItems]) removeYardItem(it.id);
-    const stamp = Date.now().toString(36);
+    const stamp = crypto.randomUUID().slice(0, 6);
     // 模板坐标按"典型住宅"写死——先按当前房屋占地把重叠的分区/物件推出
     // 屋外（否则大房子会出现「泳池压进客厅」）。
     const fp0 = useDesignerStore.getState().floorPlans[0];
@@ -661,7 +662,28 @@ export default function YardPlan() {
   const updateYardItem = useDesignerStore(s => s.updateYardItem);
   const addYardPath    = useDesignerStore(s => s.addYardPath);
   const removeYardPath = useDesignerStore(s => s.removeYardPath);
+  const exteriorPreset = useDesignerStore(s => s.exterior.preset);
   const { rooms: houseRooms, bbox: footprint } = useHouseRooms();
+
+  // 按当前外观风格一键铺满院子：复用 EXTERIOR_PRESETS 的 yardItems/yardPaths
+  // （与外观面板同一份数据，保持风格一致），按当前房屋占地避让。只动院子，
+  // 不碰立面/房间材质。空院子引导 + 「重新铺」都走它。
+  const styleForYard = EXTERIOR_PRESETS.find(p => p.id === exteriorPreset && p.yardItems);
+  const fillYardByStyle = () => {
+    if (!styleForYard?.yardItems) return;
+    if (yardItems.length > 0 && !window.confirm(
+      locale === "en"
+        ? `Replace the current ${yardItems.length} yard element(s) with the “${styleForYard.labelEn}” package?`
+        : `用「${styleForYard.label}」整套院子替换当前 ${yardItems.length} 个元素？`,
+    )) return;
+    const { hw, hd } = houseHalfExtentsCm(useDesignerStore.getState().floorPlans[0]);
+    const cleared = clearYardItemsOfHouse(styleForYard.yardItems, hw, hd);
+    for (const it of [...yardItems]) removeYardItem(it.id);
+    for (const p of [...yardPaths]) removeYardPath(p.id);
+    const stamp = crypto.randomUUID().slice(0, 6);
+    cleared.forEach((it, i) => addYardItem({ ...it, id: `${styleForYard.id}-${stamp}-${i}` } as YardItem));
+    (styleForYard.yardPaths ?? []).forEach((p, i) => addYardPath({ ...p, id: `${styleForYard.id}-path-${stamp}-${i}` }));
+  };
   // Outdoor smart-suggestions: evaluated whenever items / footprint change
   const violations = useMemo(() => evaluateYardPlan(yardItems, footprint, yardPaths), [yardItems, footprint, yardPaths]);
   const violationMap = useMemo(() => violationsByItem(violations), [violations]);
@@ -1238,7 +1260,32 @@ export default function YardPlan() {
       )}
 
       {/* ── Canvas area ── */}
-      <div className="flex-1 flex items-center justify-center overflow-auto p-4 min-h-0">
+      <div className="flex-1 flex items-center justify-center overflow-auto p-4 min-h-0 relative">
+        {/* 空院子引导浮层：一键按当前风格铺满 + 引导去模板/拖素材 */}
+        {yardItems.length === 0 && yardPaths.length === 0 && (
+          <div className="absolute z-20 left-1/2 -translate-x-1/2 top-6 w-[min(92%,360px)] rounded-2xl px-4 py-3 text-center"
+            style={{ background: "rgba(20,24,32,0.92)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 8px 30px rgba(0,0,0,0.4)" }}>
+            <div className="text-white text-sm font-bold mb-1">
+              {locale === "en" ? "Your yard is empty" : "院子还是空的"}
+            </div>
+            <div className="text-white/55 text-[11px] leading-relaxed mb-2.5">
+              {locale === "en"
+                ? "Fill it in one click by your current exterior style, or drag elements from the left library / pick a template."
+                : "按当前外观风格一键铺满，或从左侧素材库拖入元素 / 选个模板。"}
+            </div>
+            {styleForYard ? (
+              <button onClick={fillYardByStyle}
+                className="w-full py-2 rounded-xl text-white text-xs font-bold transition-transform active:scale-95"
+                style={{ background: "linear-gradient(135deg,#0d9488,#2dd4bf)" }}>
+                🎨 {locale === "en" ? `One-click fill (${styleForYard.labelEn})` : `一键铺满（${styleForYard.label}风格）`}
+              </button>
+            ) : (
+              <div className="text-white/40 text-[10px]">
+                {locale === "en" ? "Set an exterior style first to enable one-click fill." : "先在「整体外观」选一个风格，即可一键铺院子。"}
+              </div>
+            )}
+          </div>
+        )}
         <svg
           ref={svgRef}
           viewBox={`${vbOrigin} ${vbOrigin} ${vbSize} ${vbSize}`}
