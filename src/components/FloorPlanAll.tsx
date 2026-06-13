@@ -912,9 +912,12 @@ export default function FloorPlanAll() {
                 title={t.fpBlueprintAdjustTitle}
               >⚙️</button>
               <button onClick={() => { clearBlueprint(); setTool("browse"); }}
-                className="px-2 py-1 rounded-xl text-xs font-bold text-gray-400 hover:text-red-500"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all hover:text-white"
+                style={{ border: "1px solid #EF4444", color: "#EF4444", background: "white" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#EF4444"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "white"; }}
                 title={t.fpBlueprintRemoveTitle}
-              >✕</button>
+              ><span>🗑️</span><span>{t.fpBlueprintRemoveTitle}</span></button>
             </div>
           )}
         </div>
