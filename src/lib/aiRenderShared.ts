@@ -50,10 +50,20 @@ export function buildViewPrompt({ viewMode, exterior, yardItems, sunHour = 14 }:
 
 /** 抓当前 Three.js WebGL 画布为 PNG dataURL（needsImage 工作流用作输入图）。 */
 export function captureCanvas(): string | null {
-  const canvases = document.querySelectorAll<HTMLCanvasElement>("canvas");
-  for (const c of canvases) {
-    const ctx = c.getContext("webgl") ?? c.getContext("webgl2");
-    if (ctx) return c.toDataURL("image/png");
+  // 不要用 getContext("webgl") 探测：r3f 画布已持有 webgl2 上下文，再求异类型
+  // 上下文会让浏览器报红「Canvas has an existing context of a different type」。
+  // 改为直接挑「可见面积最大」的画布——即当前 3D 主视口（缩略图/2D 小画布面积小，
+  // 自然被排除），对它 toDataURL 即可，无需探测上下文类型。
+  let best: HTMLCanvasElement | null = null;
+  let bestArea = 0;
+  for (const c of document.querySelectorAll<HTMLCanvasElement>("canvas")) {
+    const area = c.width * c.height;
+    if (area > bestArea) { bestArea = area; best = c; }
   }
-  return null;
+  if (!best) return null;
+  try {
+    return best.toDataURL("image/png");
+  } catch {
+    return null;   // 跨域污染等极端情况：宁可不带图也别抛错
+  }
 }

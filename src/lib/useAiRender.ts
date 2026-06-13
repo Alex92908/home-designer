@@ -46,6 +46,28 @@ async function callProxy<T>(payload: Record<string, unknown>): Promise<ProxyResu
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// RunningHub 的原始报错（如 NODE_INFO_MISMATCH(nodeId=18,fieldName=prompt,
+// reason=field_not_found_in_node_inputs)）对用户是天书。这里把已知模式翻成
+// 「该改哪个设置」的可操作中文/英文。节点不匹配 = 预设里默认的节点号/字段名
+// 跟用户 RunningHub 账号里那条工作流对不上 → 去设置改 mapping 即可。
+function friendlyRenderError(raw: string | undefined, en: boolean): string {
+  const fallback = en ? "Task submission failed" : "任务提交失败";
+  if (!raw) return fallback;
+  const m = /NODE_INFO_MISMATCH\(nodeId=([^,]+),\s*fieldName=([^,)]+)/i.exec(raw);
+  if (m) {
+    const [, nodeId, field] = m;
+    return en
+      ? `Node ${nodeId} has no “${field}” field in your RunningHub workflow. Open settings and change the prompt/image node ID & field to match the actual text/image node in your workflow.`
+      : `你 RunningHub 工作流里第 ${nodeId} 号节点没有「${field}」字段。请打开设置，把「提示词/输入图 节点号·字段」改成你工作流里实际的文本/图片节点。`;
+  }
+  if (/field_not_found_in_node_inputs/i.test(raw)) {
+    return en
+      ? `A configured node/field doesn't exist in your RunningHub workflow. Fix the node IDs in settings. (${raw})`
+      : `配置的节点号/字段在你 RunningHub 工作流里不存在，请到设置里修正节点号。（${raw}）`;
+  }
+  return raw;
+}
+
 export function useAiRender() {
   const [phase, setPhase] = useState<RenderPhase>("idle");
   const [images, setImages] = useState<string[]>([]);
@@ -128,7 +150,7 @@ export function useAiRender() {
     });
     if (cancelledRef.current) return null;
     if (!submitted.ok || !submitted.data?.taskId) {
-      setError(submitted.error ?? (en ? "Task submission failed" : "任务提交失败"));
+      setError(friendlyRenderError(submitted.error, en));
       setPhase("error");
       return null;
     }
