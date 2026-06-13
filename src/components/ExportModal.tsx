@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useDesignerStore } from "@/lib/store";
 import ModelImportCard from "./ModelImportCard";
+import { getCurrentScene } from "@/lib/sceneRegistry";
+import { exportScene, EXPORT_FORMATS, type ExportFormat } from "@/lib/exportModel";
 import { ROOM_DEFS, getRoomArea, RoomType } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { generatePdf, generateAllRoomsPdf } from "@/lib/exportPdf";
@@ -53,8 +55,39 @@ export default function ExportModal() {
   const [exporting, setExporting] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
+  const [modelFmt, setModelFmt] = useState<ExportFormat>("glb");
+  const [modelExporting, setModelExporting] = useState(false);
+  const [modelExportMsg, setModelExportMsg] = useState<string | null>(null);
   const t = useT();
   const locale = useLocale();
+
+  const viewMode = useDesignerStore(s => s.viewMode);
+  // 只有三个 3D 视图能导出几何（2D/院子图是 SVG，没有 THREE 场景）。
+  const VIEW_LABEL: Record<string, { zh: string; en: string }> = {
+    "3d": { zh: "室内装修", en: "Interior" },
+    global3d: { zh: "全屋3D", en: "House 3D" },
+    exterior: { zh: "整体外观", en: "Exterior" },
+  };
+  const exportableView = VIEW_LABEL[viewMode];
+
+  const handleExportModel = async () => {
+    const reg = getCurrentScene();
+    if (!reg) {
+      setModelExportMsg(locale === "en" ? "Open a 3D view first (Interior / House 3D / Exterior)." : "请先切到 3D 视图（室内装修 / 全屋3D / 整体外观）。");
+      return;
+    }
+    setModelExporting(true);
+    setModelExportMsg(null);
+    try {
+      const tag = exportableView ? (locale === "en" ? exportableView.en : exportableView.zh) : reg.view;
+      await exportScene(reg.scene, modelFmt, `zhuya-${tag}`);
+      setModelExportMsg(locale === "en" ? "Exported ✓" : "已导出 ✓");
+    } catch (e) {
+      setModelExportMsg((locale === "en" ? "Export failed: " : "导出失败：") + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setModelExporting(false);
+    }
+  };
 
   const activeRoom      = useDesignerStore(s => s.activeRoom);
   const floorPlans      = useDesignerStore(s => s.floorPlans);
@@ -633,6 +666,39 @@ export default function ExportModal() {
                     : "存入项目模型库并放进院子，可拖动摆放；存为真实文件，刷新/换浏览器不丢。"}
                 </div>
                 <ModelImportCard onImported={(url, name) => addImportedModel(url, name)} />
+              </div>
+
+              {/* 导出当前 3D 视图为模型（GLB/glTF/OBJ/STL，用户可选格式） */}
+              <div className="rounded-xl p-4 border" style={{ background: "linear-gradient(135deg,#F5F3FF,#FAF5FF)", borderColor: "#DDD6FE" }}>
+                <div className="text-sm font-bold text-gray-800 mb-1">
+                  📤 {locale === "en" ? "Export 3D Model" : "导出 3D 模型"}
+                </div>
+                <div className="text-xs text-gray-500 mb-3">
+                  {exportableView
+                    ? (locale === "en"
+                        ? `Export the current “${exportableView.en}” view as a 3D model file.`
+                        : `把当前「${exportableView.zh}」视图导出成 3D 模型文件。`)
+                    : (locale === "en"
+                        ? "Switch to a 3D view (Interior / House 3D / Exterior) to export geometry."
+                        : "切到 3D 视图（室内装修 / 全屋3D / 整体外观）即可导出几何。")}
+                </div>
+                <div className="flex gap-2">
+                  <select value={modelFmt} onChange={(e) => setModelFmt(e.target.value as ExportFormat)}
+                    disabled={modelExporting}
+                    className="flex-1 min-w-0 px-2 py-2 text-xs rounded-lg border border-gray-200 bg-white outline-none">
+                    {EXPORT_FORMATS.map(f => (
+                      <option key={f.value} value={f.value}>{locale === "en" ? f.labelEn : f.label}</option>
+                    ))}
+                  </select>
+                  <button onClick={handleExportModel} disabled={modelExporting || !exportableView}
+                    className="shrink-0 px-4 py-2 text-xs font-bold rounded-lg text-white disabled:opacity-50"
+                    style={{ background: "#7C3AED" }}>
+                    {modelExporting ? (locale === "en" ? "Exporting…" : "导出中…") : (locale === "en" ? "Export" : "导出")}
+                  </button>
+                </div>
+                {modelExportMsg && (
+                  <div className="mt-2 text-[11px]" style={{ color: modelExportMsg.includes("✓") ? "#059669" : "#dc2626" }}>{modelExportMsg}</div>
+                )}
               </div>
 
               <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">

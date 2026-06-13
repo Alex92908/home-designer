@@ -4,6 +4,13 @@ import type { NextConfig } from "next";
 const isStaticExport = process.env.NEXT_EXPORT === "1";
 
 const nextConfig: NextConfig = {
+  // 生产构建剥离 console.log/info/debug（保留 error/warn）——诊断日志
+  // （[pbr]/[PERF]/[DEBUG] 等）不该泄漏到用户控制台，也省一点体积。
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production"
+      ? { exclude: ["error", "warn"] }
+      : false,
+  },
   // Turbopack (Next.js 16 default bundler) has a bug resolving
   // @vercel/turbopack-next/internal/font/google/font when next/font/google
   // is used. Disable Turbopack so webpack handles the build instead.

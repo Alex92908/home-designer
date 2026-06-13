@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useMemo, useEffect, useState, useCallback, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
+import { SceneRegistrar } from "@/lib/sceneRegistry";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
 import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars, Instances, Instance, PerformanceMonitor } from "@react-three/drei";
 import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, HueSaturation, ToneMapping } from "@react-three/postprocessing";
@@ -6742,6 +6743,7 @@ export default function HouseCanvas() {
           return { fov: 58, near: 0.1, far: 300 };
         })()}
       >
+        <SceneRegistrar view="exterior" />
         {/* Fog disabled when inside — would darken interior surfaces */}
         {!insideBuilding && <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />}
         {!walkthrough && flyTick !== 0 && (() => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useMemo, useState, useCallback, Component, ReactNode } from "react";
+import { SceneRegistrar } from "@/lib/sceneRegistry";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { OrbitControls, Environment, Html, useGLTF, Text } from "@react-three/drei";
 import { EffectComposer, N8AO, Bloom, Vignette, SMAA } from "@react-three/postprocessing";
@@ -4126,6 +4127,7 @@ export default function RoomCanvas() {
             background: "linear-gradient(180deg, #B8C0CC 0%, #929BA8 55%, #6E7684 100%)",
           }}
         >
+          <SceneRegistrar view="interior" />
           {!firstPerson && (
             <OrbitControls
               makeDefault

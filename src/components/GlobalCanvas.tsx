@@ -14,6 +14,7 @@
  */
 
 import { useMemo, useRef, useState, useEffect } from "react";
+import { SceneRegistrar } from "@/lib/sceneRegistry";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
@@ -1197,6 +1198,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
         camera={{ position: [12, initY, 12], fov: 45 }}
         gl={{ antialias: true, alpha: true }}
       >
+        <SceneRegistrar view="global3d" />
         <Scene
           floorVisible={floorVisible}
           showRoof={showRoof}
