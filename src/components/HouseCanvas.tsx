@@ -3,7 +3,7 @@
 import { useRef, useMemo, useEffect, useState, useCallback, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { SceneRegistrar } from "@/lib/sceneRegistry";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars, Instances, Instance, PerformanceMonitor } from "@react-three/drei";
+import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars, Instances, Instance, PerformanceMonitor, Loader } from "@react-three/drei";
 import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, HueSaturation, ToneMapping } from "@react-three/postprocessing";
 import { BlendFunction, ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
@@ -7098,6 +7098,15 @@ export default function HouseCanvas() {
         <SceneDebugBridge enabled={exterior.debugExposeScene ?? false} />
         <CompassYawTracker onChange={setCompassDeg} />
       </Canvas>
+      {/* 整体外观首次加载大量院子/导入 GLB 时的全局进度条（drei Loader 监听
+          所有 useGLTF/useTexture 的 useProgress）。资产缓存后二次访问几乎不出现。 */}
+      <Loader
+        containerStyles={{ background: "rgba(17,24,39,0.55)", backdropFilter: "blur(2px)" }}
+        innerStyles={{ width: 200, height: 4, background: "rgba(255,255,255,0.18)" }}
+        barStyles={{ background: "#2dd4bf", height: 4 }}
+        dataStyles={{ color: "#fff", fontSize: 13, marginTop: 14, fontFamily: "inherit" }}
+        dataInterpolation={(p) => locale === "en" ? `Loading models ${p.toFixed(0)}%` : `加载模型 ${p.toFixed(0)}%`}
+      />
     </div>
   );
 }

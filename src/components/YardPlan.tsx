@@ -68,7 +68,7 @@ function AssetGlyph({ asset, r, selected = false }: {
     // Standard landscape architect tree: double circle with radial spokes
     return (
       <g>
-        <circle r={r} fill={FILL_LIGHT} stroke={stroke} strokeWidth={sw} />
+        <circle r={r} fill={asset.color} fillOpacity={0.22} stroke={stroke} strokeWidth={sw} />
         <circle r={r * 0.55} fill="none" stroke={stroke} strokeWidth={sw * 0.7} />
         {Array.from({ length: 8 }).map((_, i) => {
           const a = (i / 8) * Math.PI * 2;
@@ -90,7 +90,7 @@ function AssetGlyph({ asset, r, selected = false }: {
       <g>
         {pts.map(([px, py], i) => (
           <circle key={i} cx={px} cy={py} r={r * 0.30}
-            fill={FILL_LIGHT} stroke={stroke} strokeWidth={sw * 0.7} />
+            fill={asset.color} fillOpacity={0.22} stroke={stroke} strokeWidth={sw * 0.7} />
         ))}
       </g>
     );
@@ -104,7 +104,7 @@ function AssetGlyph({ asset, r, selected = false }: {
     }).join(" ");
     return (
       <g>
-        <polygon points={verts} fill={FILL_LIGHT} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
+        <polygon points={verts} fill={asset.color} fillOpacity={0.22} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
         <line x1={-r * 0.4} y1={-r * 0.1} x2={r * 0.3} y2={r * 0.2}
           stroke={INK_LIGHT} strokeWidth={sw * 0.7} strokeLinecap="round" />
       </g>
@@ -165,7 +165,7 @@ function AssetGlyph({ asset, r, selected = false }: {
   return (
     <g>
       <rect x={-r * 0.85} y={-r * 0.7} width={r * 1.7} height={r * 1.4}
-        rx={r * 0.10} fill={FILL_LIGHT} stroke={stroke} strokeWidth={sw} />
+        rx={r * 0.10} fill={asset.color} fillOpacity={0.22} stroke={stroke} strokeWidth={sw} />
       <text textAnchor="middle" dominantBaseline="middle"
         fontSize={r * 0.55} fill={stroke} fontFamily="ui-monospace, Menlo, monospace" fontWeight={700}
         style={{ userSelect: "none", pointerEvents: "none" }}>{sub}</text>
