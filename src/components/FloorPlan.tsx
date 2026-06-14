@@ -99,6 +99,9 @@ function PlacedItemSVG({ placed, scale, isSelected, isBlocked, hasViolation, vio
   const furniture = getFurnitureById(placed.furnitureId)
     ?? customFurniture.find(f => f.id === placed.furnitureId);
   const locale = useLocale();
+  // 导入的 GLB 家具在平面图里显示预览缩略图（与模型库列表同一张
+  // <file>.preview.png），而不是通用 🧩 图标；图加载失败回落到 icon。
+  const [imgFailed, setImgFailed] = useState(false);
   if (!furniture) return null;
 
   const sw = placed.scaleW ?? 1;
@@ -113,6 +116,9 @@ function PlacedItemSVG({ placed, scale, isSelected, isBlocked, hasViolation, vio
   const LABEL_SIZE = 8;
   const LINE_H = 9;
   const nameLines = w > 30 && d > 22 ? splitNameLines(displayName, w - 6) : null;
+  // 导入模型的预览图（落在 public 的真实文件才有；idb:// 缓存无）。
+  const glbUrl = furniture.model3d?.url;
+  const glbPreview = !imgFailed && glbUrl?.startsWith("/models/imported/") ? `${glbUrl}.preview.png` : null;
 
   return (
     <g
@@ -155,7 +161,11 @@ function PlacedItemSVG({ placed, scale, isSelected, isBlocked, hasViolation, vio
           style={{ pointerEvents: "none", animation: "fpBlockedPulse 0.4s ease-out infinite alternate" }}
         />
       )}
-      {fontSize > 5 && (
+      {glbPreview ? (
+        <image href={glbPreview} x={-w / 2 + 2} y={-d / 2 + 2} width={Math.max(0, w - 4)} height={Math.max(0, d - 4)}
+          preserveAspectRatio="xMidYMid meet" style={{ pointerEvents: "none" }}
+          onError={() => setImgFailed(true)} />
+      ) : fontSize > 5 && (
         <text x={0} y={d > 30 ? -3 : 0} textAnchor="middle" dominantBaseline="middle"
           fontSize={Math.min(fontSize, 18)} style={{ userSelect: "none", pointerEvents: "none" }}>
           {furniture.icon}
