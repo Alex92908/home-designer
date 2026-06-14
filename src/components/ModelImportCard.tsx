@@ -16,8 +16,9 @@ import { makeGlbThumbnail } from "@/lib/glbThumbnail";
 import { useLocale } from "@/lib/i18n";
 
 export default function ModelImportCard({ onImported }: {
-  /** name 已按当前语言选好（en 给英文名、zh 给中文名）。 */
-  onImported: (url: string, name: string) => void;
+  /** name 已按当前语言选好（en 给英文名、zh 给中文名）。
+   *  batch=true 表示这是「批量导入」中的一件 —— 调用方据此只入库、不自动摆放/关卡。 */
+  onImported: (url: string, name: string, batch?: boolean) => void;
 }) {
   const en = useLocale() === "en";
   const fileRef = useRef<HTMLInputElement>(null);
@@ -26,6 +27,7 @@ export default function ModelImportCard({ onImported }: {
   const [nameZh, setNameZh] = useState("");
   const [nameEn, setNameEn] = useState("");
   const [busy, setBusy] = useState(false);
+  const [batchProg, setBatchProg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   /** 导入完成后的收尾：写中英文名 + 自动烤预览图（PATCH 元数据），
@@ -46,15 +48,48 @@ export default function ModelImportCard({ onImported }: {
     onImported(url, en ? enName : zh);
   };
 
+  /** 批量入库（不走名字输入框，按文件名命名，导入后到模型库里手动重命名）。 */
+  const importOneToLibrary = async (file: File) => {
+    const fallback = file.name.replace(/\.(glb|gltf)$/i, "") || `model_${crypto.randomUUID().slice(0, 8)}`;
+    const src = await persistGlb(fallback, file, { compress });
+    const fname = src.split("/").pop() ?? "";
+    if (src.startsWith("/models/imported/") && fname) {
+      const preview = await makeGlbThumbnail(src).catch(() => null);
+      void fetch("/api/import-model", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ file: fname, nameZh: fallback, nameEn: fallback, ...(preview ? { preview } : {}) }),
+      }).catch(() => {});
+    }
+    onImported(src, fallback, true);
+  };
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!file) return;
-    const fallback = file.name.replace(/\.(glb|gltf)$/i, "");
-    setBusy(true); setError(null);
-    void persistGlb(nameZh.trim() || fallback || `model_${crypto.randomUUID().slice(0, 8)}`, file, { compress })
-      .then(async src => { await finalize(src, fallback); setBusy(false); })
-      .catch((err: unknown) => { setBusy(false); setError(err instanceof Error ? err.message : String(err)); });
+    if (files.length === 0) return;
+    // 单文件：沿用名字输入框 + 自动摆放（onImported 不带 batch）
+    if (files.length === 1) {
+      const file = files[0];
+      const fallback = file.name.replace(/\.(glb|gltf)$/i, "");
+      setBusy(true); setError(null);
+      void persistGlb(nameZh.trim() || fallback || `model_${crypto.randomUUID().slice(0, 8)}`, file, { compress })
+        .then(async src => { await finalize(src, fallback); setBusy(false); })
+        .catch((err: unknown) => { setBusy(false); setError(err instanceof Error ? err.message : String(err)); });
+      return;
+    }
+    // 多文件：批量入库（按文件名），导入后到模型库逐个手动重命名
+    setBusy(true); setError(null); setBatchProg(`0/${files.length}`);
+    void (async () => {
+      let done = 0, failed = 0;
+      for (const file of files) {
+        try { await importOneToLibrary(file); }
+        catch (err) { failed++; setError(err instanceof Error ? err.message : String(err)); }
+        setBatchProg(`${++done}/${files.length}`);
+      }
+      setBusy(false); setBatchProg(null);
+      if (failed === 0) setError(null);
+    })();
   };
 
   const handleLocalPath = () => {
@@ -81,7 +116,7 @@ export default function ModelImportCard({ onImported }: {
   return (
     <div className="rounded-xl p-2.5 flex flex-col gap-2"
       style={{ background: "linear-gradient(135deg,#EEF2FF,#F0FDF4)", border: "1px solid #C7D2FE" }}>
-      <input ref={fileRef} type="file" className="hidden"
+      <input ref={fileRef} type="file" multiple className="hidden"
         accept=".glb,.gltf,model/gltf-binary,model/gltf+json" onChange={handleFile} />
       {/* 中英文名（可选，缺省用文件名）；预览图导入后自动生成 */}
       <div className="flex gap-1">
@@ -103,8 +138,10 @@ export default function ModelImportCard({ onImported }: {
         className="w-full py-2 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-60"
         style={{ background: "#6366F1" }}>
         {busy
-          ? (en ? "Importing…" : compress ? "导入中（压缩中）…" : "导入中…")
-          : (en ? "Choose model file (.glb/.gltf)" : "选择模型文件（.glb / .gltf）")}
+          ? (batchProg
+              ? (en ? `Importing ${batchProg}…` : `批量导入 ${batchProg}…`)
+              : (en ? "Importing…" : compress ? "导入中（压缩中）…" : "导入中…"))
+          : (en ? "Choose model file(s) (.glb/.gltf)" : "选择模型文件（.glb / .gltf，可多选）")}
       </button>
       <div className="flex gap-1">
         <input

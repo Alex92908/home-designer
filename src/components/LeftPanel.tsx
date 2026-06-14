@@ -530,6 +530,22 @@ function FurnitureTab() {
       .catch(() => {});
   };
 
+  // 手动重命名：按当前语言改对应名字字段（PATCH 合并，另一语言名保留）。
+  const renameGlbModel = (m: { url: string; name: string; nameEn?: string }) => {
+    const file = m.url.split("/").pop() ?? "";
+    const cur = locale === "en" ? (m.nameEn || m.name) : m.name;
+    const next = window.prompt(locale === "en" ? "Rename model:" : "重命名模型：", cur);
+    if (next == null) return;
+    const t = next.trim();
+    if (!t || t === cur) return;
+    const body = locale === "en" ? { file, nameEn: t } : { file, nameZh: t };
+    void fetch("/api/import-model", {
+      method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+    }).then(() => setGlbLib(list => list.map(x => x.url === m.url
+      ? (locale === "en" ? { ...x, nameEn: t } : { ...x, name: t }) : x)))
+      .catch(() => {});
+  };
+
   const addGlbAsFurniture = (url: string, name: string) => {
     const item: FurnitureItem = {
       id:          `custom_glb_${crypto.randomUUID().slice(0, 8)}`,
@@ -550,13 +566,18 @@ function FurnitureTab() {
     placeFurniture(item.id);
   };
 
-  const handleImported = (url: string, name: string) => {
-    addGlbAsFurniture(url, name);
-    setShowGlbImport(false);
+  const handleImported = (url: string, name: string, batch?: boolean) => {
+    // 批量导入：只入库（不自动摆放、不关卡），导入后到模型库逐个重命名/摆放。
+    if (!batch) {
+      addGlbAsFurniture(url, name);
+      setShowGlbImport(false);
+    }
     // 同步进「模型库」列表，之后可随时再调出
     if (url.startsWith("/models/imported/")) {
       setGlbLib(list => list.some(m => m.url === url) ? list : [{ url, name, bytes: 0 }, ...list]);
     }
+    // 批量结束后自动展开模型库，方便立即重命名
+    if (batch) setShowGlbLib(true);
   };
 
   const roomFurniture = allRooms ? [...FURNITURE, ...getCustomFurniture()] : getFurnitureForRoom(activeRoom);
@@ -686,6 +707,9 @@ function FurnitureTab() {
                   <span className="flex-1 min-w-0 truncate text-[11px] font-semibold" style={{ color: "var(--ds-text-2)" }}>{display}</span>
                   <span className="text-[9px] shrink-0" style={{ color: "var(--ds-text-3)" }}>{(m.bytes / 1024 / 1024).toFixed(1)}MB</span>
                 </button>
+                <button onClick={() => renameGlbModel(m)}
+                  title={locale === "en" ? "Rename" : "重命名"}
+                  className="shrink-0 text-xs text-gray-300 hover:text-indigo-500">✎</button>
                 <button onClick={() => deleteGlbModel({ url: m.url, name: display })}
                   title={locale === "en" ? "Delete from library" : "从模型库删除"}
                   className="shrink-0 text-xs text-gray-300 hover:text-red-500">✕</button>

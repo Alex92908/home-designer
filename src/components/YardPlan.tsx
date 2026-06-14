@@ -366,19 +366,38 @@ export function YardPlanLibrary() {
   // 统一导入卡（ModelImportCard：压缩可选 + 本机路径），导入后放进院子
   // 并同步出现在「已导入模型」列表，之后可随时再调出。
   const [showGlbImport, setShowGlbImport] = useState(false);
-  const handleImportedGlb = (src: string, name: string) => {
-    addYardItem({
-      id:         `glb_import_${crypto.randomUUID().slice(0, 8)}`,
-      type:       "prefab",
-      prefabKind: "glb_model",
-      x:          200, z: 300, rot: 0, scale: 1,
-      glbSrc:     src,
-      partLabel:  name || (locale === "en" ? "Imported model" : "导入模型"),
-    } as YardItem);
-    setShowGlbImport(false);
+  const handleImportedGlb = (src: string, name: string, batch?: boolean) => {
+    // 批量导入：只入库（不自动放进院子、不关卡），导入后到列表逐个重命名/摆放。
+    if (!batch) {
+      addYardItem({
+        id:         `glb_import_${crypto.randomUUID().slice(0, 8)}`,
+        type:       "prefab",
+        prefabKind: "glb_model",
+        x:          200, z: 300, rot: 0, scale: 1,
+        glbSrc:     src,
+        partLabel:  name || (locale === "en" ? "Imported model" : "导入模型"),
+      } as YardItem);
+      setShowGlbImport(false);
+    }
     if (src.startsWith("/models/imported/")) {
       setImportedModels(list => list.some(m => m.url === src) ? list : [{ url: src, name, bytes: 0 }, ...list]);
     }
+  };
+
+  // 手动重命名：按当前语言改对应名字字段（PATCH 合并）。
+  const renameImported = (m: { url: string; name: string; nameEn?: string }) => {
+    const file = m.url.split("/").pop() ?? "";
+    const cur = locale === "en" ? (m.nameEn || m.name) : m.name;
+    const next = window.prompt(locale === "en" ? "Rename model:" : "重命名模型：", cur);
+    if (next == null) return;
+    const t = next.trim();
+    if (!t || t === cur) return;
+    const body = locale === "en" ? { file, nameEn: t } : { file, nameZh: t };
+    void fetch("/api/import-model", {
+      method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+    }).then(() => setImportedModels(list => list.map(x => x.url === m.url
+      ? (locale === "en" ? { ...x, nameEn: t } : { ...x, name: t }) : x)))
+      .catch(() => {});
   };
 
   return (
@@ -504,6 +523,9 @@ export function YardPlanLibrary() {
                         <div className="text-[9px] text-gray-400">{(m.bytes / 1024 / 1024).toFixed(1)}MB · {locale === "en" ? "click to place" : "点击放入"}</div>
                       </div>
                     </button>
+                    <button onClick={() => renameImported(m)}
+                      title={locale === "en" ? "Rename" : "重命名"}
+                      className="shrink-0 text-xs text-gray-300 hover:text-indigo-500">✎</button>
                     <button onClick={() => deleteImported(m)}
                       title={locale === "en" ? "Delete from library" : "从模型库删除"}
                       className="shrink-0 text-xs text-gray-300 hover:text-red-500">✕</button>
