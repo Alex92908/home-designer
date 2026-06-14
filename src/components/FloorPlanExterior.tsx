@@ -2556,6 +2556,11 @@ export default function FloorPlanBuilding({
     hideAny: boolean;       // hidden if ANY adjoining room marks this side hidden
     wallColor: string;
     wallId: string;         // material id (for getWallTexture); "" = paint
+    /** 该面的「外墙材质」(wall{Side}Exterior ?? wallExterior) 颜色/贴图 id —
+     *  仅外观图(!insideBuilding)用，优先于 wallBaseColor，让左面板「外墙材质」
+     *  真正驱动外立面。未设外墙材质时为 undefined → 回落原行为（零回归）。 */
+    extWallColor?: string;
+    extWallId?: string;
   };
   const wallSegments = useMemo<WallSeg[]>(() => {
     const map = new Map<string, WallSeg>();
@@ -2667,10 +2672,20 @@ export default function FloorPlanBuilding({
           { uiSide: "W", dataSide: "W", axis: "v", fixed: p.x,          a: p.y,          b: p.y + d.depth },
           { uiSide: "E", dataSide: "E", axis: "v", fixed: p.x + d.width, a: p.y,          b: p.y + d.depth },
         ];
+        const segMats = fp.rooms?.[room]?.materials;
         for (const s of sides) {
           // For hallway, skip N + S (let neighbours contribute those).
           // Only contribute W + E to give the corridor its short-end walls.
           if (onlyShortEnds && (s.uiSide === "N" || s.uiSide === "S")) continue;
+          // 该面的外墙材质（逐面 > 整间 wallExterior）。外观图渲染时用它驱动
+          // 外立面贴图/颜色（见 wallColor/wallId 取值），与左面板「外墙材质」同源。
+          const extMat =
+              s.uiSide === "N" ? (segMats?.wallBackExterior  ?? segMats?.wallExterior)
+            : s.uiSide === "S" ? (segMats?.wallFrontExterior ?? segMats?.wallExterior)
+            : s.uiSide === "E" ? (segMats?.wallRightExterior ?? segMats?.wallExterior)
+            :                    (segMats?.wallLeftExterior  ?? segMats?.wallExterior);
+          const extColor = extMat?.color;
+          const extId    = extMat?.id;
           const lo = Math.min(s.a, s.b), hi = Math.max(s.a, s.b);
           const key = `${fi}|${s.axis}|${Math.round(s.fixed)}|${Math.round(lo)}|${Math.round(hi)}`;
           const fk  = `${fi}|${s.axis}|${Math.round(s.fixed)}`;
@@ -2715,6 +2730,7 @@ export default function FloorPlanBuilding({
                 fi, axis: s.axis, fixed: s.fixed, a: subLo, b: subHi,
                 holes: subHoles, hideAny: wh?.[s.uiSide] === true,
                 wallColor: wColor, wallId: wId,
+                extWallColor: extColor, extWallId: extId,
               }, subKey);
             };
             for (const e of sortedOvlp) {
@@ -6894,9 +6910,17 @@ export default function FloorPlanBuilding({
                   // tower. Configurable via exterior.glassShellColor.
                   (!insideBuilding && (exterior.facadeGlass ?? false))
                     ? (exterior.glassShellColor ?? "#1B2531")
+                    // 外观图：该面设了「外墙材质」就用它（优先于 wallBaseColor）
+                    // —— 让左面板的外墙材质真正驱动外立面（白下木上等）。
+                    : (!insideBuilding && seg.extWallColor) ? seg.extWallColor
                     : (!insideBuilding && exterior.wallBaseColor) ? exterior.wallBaseColor : seg.wallColor
                 }
-                wallId={(!insideBuilding && ((exterior.facadeGlass ?? false) || exterior.wallBaseColor)) ? "" : seg.wallId}
+                wallId={
+                  (!insideBuilding && (exterior.facadeGlass ?? false)) ? ""
+                    : (!insideBuilding && seg.extWallId) ? seg.extWallId
+                    : (!insideBuilding && exterior.wallBaseColor) ? ""
+                    : seg.wallId
+                }
                 glassFacade={!insideBuilding && (exterior.facadeGlass ?? false)}
                 glassFacadeColor={exterior.glassColor ?? exterior.glassShellColor ?? "#C2D8EA"}
                 insideBuilding={insideBuilding}

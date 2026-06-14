@@ -18,6 +18,16 @@ export interface ExteriorPresetRoomMaterials {
   tile?: string;
   light?: string;
   wallLower?: string;
+  /** 外墙材质（MaterialItem id）。写进该房间的 materials.wallExterior，
+   *  与左面板「外墙材质（全部）」同一字段 → 选风格即配套设好立面材质、且
+   *  用户可在原面板继续改（一致性，复用通用机制）。缺省不动外墙材质。 */
+  wallExterior?: string;
+  /** 逐面外墙材质覆盖（NSWE）。落到 wall{Back|Front|Left|Right}Exterior，
+   *  与「外墙材质（南/北/西/东）」同源。缺省回落到 wallExterior。 */
+  wallExteriorN?: string;
+  wallExteriorS?: string;
+  wallExteriorW?: string;
+  wallExteriorE?: string;
 }
 
 export interface ExteriorPreset {
@@ -133,49 +143,66 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
     // ── Designed package: each room gets a curated material pair that
     // matches the monochrome facade. Oak floors in living spaces give
     // the scene its warm note; whites tie back to the cream wall.
+    // wallExterior 配套设好「外墙材质」面板：上层房型（卧室/书房）暖木饰面、
+    // 地面层（客厅/厨房/餐厅等）白墙 —— 在典型「楼下公共、楼上卧室」的住宅里
+    // 形成参考图那种「白下木上」的现代别墅立面。选风格即立面到位，用户仍可
+    // 在左面板「外墙材质」逐房间/逐面继续改（复用通用机制）。
     roomMaterials: {
-      living:    { floor: "floor-oak",        wall: "wall-white", light: "light-recessed" },
-      master:    { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant" },
-      bedroom:   { floor: "floor-oak",        wall: "wall-white", light: "light-recessed" },
-      bedroom2:  { floor: "floor-oak",        wall: "wall-white", light: "light-recessed" },
-      bedroom3:  { floor: "floor-oak",        wall: "wall-white", light: "light-recessed" },
-      study:     { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant" },
-      study2:    { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant" },
-      dining:    { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant" },
-      hallway:   { floor: "floor-oak",        wall: "wall-white", light: "light-recessed" },
-      closet:    { floor: "floor-oak",        wall: "wall-white", light: "light-recessed" },
-      kitchen:   { floor: "floor-white-tile", wall: "wall-tile-white", light: "light-linear-pendant" },
-      bathroom:  { floor: "floor-white-tile", wall: "wall-tile-metro", light: "light-smart-panel" },
-      bathroom2: { floor: "floor-white-tile", wall: "wall-tile-metro", light: "light-smart-panel" },
-      balcony:   { floor: "floor-concrete",   wall: "wall-white" },
-      balcony2:  { floor: "floor-concrete",   wall: "wall-white" },
+      living:    { floor: "floor-oak",        wall: "wall-white", light: "light-recessed",       wallExterior: "wall-white" },
+      master:    { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant",  wallExterior: "wall-wood-panel" },
+      bedroom:   { floor: "floor-oak",        wall: "wall-white", light: "light-recessed",       wallExterior: "wall-wood-panel" },
+      bedroom2:  { floor: "floor-oak",        wall: "wall-white", light: "light-recessed",       wallExterior: "wall-wood-panel" },
+      bedroom3:  { floor: "floor-oak",        wall: "wall-white", light: "light-recessed",       wallExterior: "wall-wood-panel" },
+      study:     { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant",  wallExterior: "wall-wood-panel" },
+      study2:    { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant",  wallExterior: "wall-wood-panel" },
+      dining:    { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant",  wallExterior: "wall-white" },
+      hallway:   { floor: "floor-oak",        wall: "wall-white", light: "light-recessed",       wallExterior: "wall-white" },
+      closet:    { floor: "floor-oak",        wall: "wall-white", light: "light-recessed",       wallExterior: "wall-white" },
+      kitchen:   { floor: "floor-white-tile", wall: "wall-tile-white", light: "light-linear-pendant", wallExterior: "wall-white" },
+      bathroom:  { floor: "floor-white-tile", wall: "wall-tile-metro", light: "light-smart-panel",     wallExterior: "wall-white" },
+      bathroom2: { floor: "floor-white-tile", wall: "wall-tile-metro", light: "light-smart-panel",     wallExterior: "wall-wood-panel" },
+      balcony:   { floor: "floor-concrete",   wall: "wall-white", wallExterior: "wall-white" },
+      balcony2:  { floor: "floor-concrete",   wall: "wall-white", wallExterior: "wall-wood-panel" },
     },
-    // 现代极简庭院包：克制留白。前右一块户外客厅（社交区），前左大草坪，
-    // 锚点橄榄树对置 + 一组景石。功能分区 + 植物 + 小径一次到位。
+    // 现代泳池度假庭院包（对标参考图：泳池 + travertine 甲板 + 躺椅 + 火塘 +
+    // 观赏草 + 暖木栅栏背景 + 松柏锚点）。「木 + 白 + 石 + 玻璃」暖调从建筑流到院子。
+    // 坐标：+z=前院(社交/落地玻璃侧)，泳池居中前置，东用餐露台 / 西火塘对置。
     yardItems: [
-      // 分区
-      { id: "mm-zone-social", type: "zone", zoneKind: "social", subtype: "outdoor-room", x: 380, z: 680, polygon: zoneRect(320, 240) },
-      { id: "mm-zone-lawn",   type: "zone", zoneKind: "lawn",   x: -420, z: 720, polygon: zoneRect(520, 380) },
-      // 植物 / 景石
-      { id: "mm-tree-1", type: "singleton", kind: "tree.olive", x: -900, z:  600, scale: 1.3 },
-      { id: "mm-tree-2", type: "singleton", kind: "tree.olive", x:  900, z:  600, scale: 1.3 },
-      { id: "mm-tree-3", type: "singleton", kind: "tree.maple", x:  450, z: -650, scale: 1.0 },
-      { id: "mm-rock-1", type: "singleton", kind: "rock.large", x: -500, z: -650, scale: 1.2 },
-      { id: "mm-bush-1", type: "singleton", kind: "plant.bushSmall", x: -150, z: 540 },
-      { id: "mm-bush-2", type: "singleton", kind: "plant.bushSmall", x:  150, z: 540 },
-      // 灌木层：球状绿篱沿围栏列植（参考图里现代小院的标志元素）
-      { id: "mm-hedge-1", type: "singleton", kind: "plant.bushLarge", x: -1020, z:  300, scale: 0.9 },
-      { id: "mm-hedge-2", type: "singleton", kind: "plant.bushLarge", x: -1020, z:    0, scale: 0.9 },
-      { id: "mm-hedge-3", type: "singleton", kind: "plant.bushLarge", x: -1020, z: -300, scale: 0.9 },
-      // 草本层：观赏草点缀社交区边角
-      { id: "mm-grass-1", type: "singleton", kind: "plant.grass", x: 560, z: 560, scale: 1.2 },
-      { id: "mm-grass-2", type: "singleton", kind: "plant.grass", x: 220, z: 820, scale: 1.1 },
-      // 社交区家具
-      { id: "mm-sofa",  type: "singleton", kind: "furniture.outdoorSofa",  x: 380, z: 620, rot: Math.PI },
-      { id: "mm-table", type: "singleton", kind: "furniture.coffeeTable",  x: 380, z: 720 },
+      // ── 主景：泳池（prefab 自带 travertine 露台 + 无边瀑布 + spa + 4 躺椅 + 池畔小屋）
+      { id: "mm-pool", type: "prefab", prefabKind: "pool", x: 0, z: 760, rot: 0 },
+      // ── 东侧用餐露台：travertine 社交区 + 整套餐桌椅 + 遮阳伞
+      { id: "mm-zone-dine", type: "zone", zoneKind: "social", subtype: "outdoor-room", x: 820, z: 700, polygon: zoneRect(360, 320) },
+      { id: "mm-dineset", type: "singleton", kind: "furniture.diningSet", x: 820, z: 700, rot: 0 },
+      { id: "mm-parasol", type: "singleton", kind: "furniture.parasol",   x: 820, z: 700 },
+      // ── 西侧火塘社交岛（下沉卡座 + 篝火），紧邻建筑形成傍晚社交角
+      { id: "mm-fire", type: "prefab", prefabKind: "social_island", x: -820, z: 720, rot: 0,
+        params: { sizeM: { w: 5, d: 4 }, fireFeature: "pit", sunkenSeat: true, kitchenFacing: "north" } },
+      // ── 暖木栅栏围合：南界背景线（3 段）+ 东西短返，参考图的木栅栏背景
+      { id: "mm-fence-s1", type: "prefab", prefabKind: "fence_segment", x: -720, z: 1080, rot: 0,
+        params: { lengthM: 7.2, heightM: 1.8 } },
+      { id: "mm-fence-s2", type: "prefab", prefabKind: "fence_segment", x:    0, z: 1080, rot: 0,
+        params: { lengthM: 7.2, heightM: 1.8 } },
+      { id: "mm-fence-s3", type: "prefab", prefabKind: "fence_segment", x:  720, z: 1080, rot: 0,
+        params: { lengthM: 7.2, heightM: 1.8 } },
+      { id: "mm-fence-w",  type: "prefab", prefabKind: "fence_segment", x: -1080, z: 560, rot: Math.PI / 2,
+        params: { lengthM: 6.0, heightM: 1.8 } },
+      { id: "mm-fence-e",  type: "prefab", prefabKind: "fence_segment", x:  1080, z: 560, rot: Math.PI / 2,
+        params: { lengthM: 6.0, heightM: 1.8 } },
+      // ── 松柏背景（参考图远景松林）+ 橄榄树锚点
+      { id: "mm-tree-1", type: "singleton", kind: "tree.cypress", x: -980, z: 980, scale: 1.2 },
+      { id: "mm-tree-2", type: "singleton", kind: "tree.cypress", x:  980, z: 980, scale: 1.2 },
+      { id: "mm-tree-3", type: "singleton", kind: "tree.olive",   x: -560, z: 1000, scale: 1.2 },
+      { id: "mm-tree-4", type: "singleton", kind: "tree.olive",   x:  560, z: 1000, scale: 1.2 },
+      // ── 观赏草花境：沿甲板边角丛植（参考图铺装缝里的草簇）
+      { id: "mm-grass-1", type: "singleton", kind: "plant.grass", x: -520, z: 560, scale: 1.2 },
+      { id: "mm-grass-2", type: "singleton", kind: "plant.grass", x: -440, z: 600, scale: 1.0 },
+      { id: "mm-grass-3", type: "singleton", kind: "plant.grass", x:  520, z: 560, scale: 1.2 },
+      { id: "mm-grass-4", type: "singleton", kind: "plant.grass", x:  440, z: 600, scale: 1.0 },
+      { id: "mm-grass-5", type: "singleton", kind: "plant.grass", x:    0, z: 1030, scale: 1.1 },
     ],
+    // 侧路通向入户（泳池居中占前院，入户走西侧 travertine 步道）
     yardPaths: [
-      { id: "mm-path-entry", points: [[0, 1100], [0, 500]], widthCm: 110, material: "stone" },
+      { id: "mm-path-entry", points: [[-560, 1080], [-560, 520]], widthCm: 120, material: "stone" },
     ],
   },
   {

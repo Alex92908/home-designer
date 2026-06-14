@@ -1956,23 +1956,35 @@ export const useDesignerStore = create<DesignerStore>()(
 
         let floorPlans = s.floorPlans;
 
-        if (preset.roomMaterials) {
+        // 外墙材质由「套风格」完全托管：每次应用风格都先清空所有启用房间的
+        // 外墙面材质，再按 recipe 重设 —— 否则上一个风格的外墙材质（如现代的
+        // 木饰面）会残留到下一个风格（串味）。内墙/地面/灯等仍仅在 recipe
+        // 指定时改（原行为）。注意：套风格本就是"一键重置为该风格"，会覆盖
+        // 用户手动设的外墙材质。其余风格暂无 roomMaterials → 外墙材质被清空 →
+        // 回落到该风格的 wallBaseColor（一致）。
+        {
           const rm = preset.roomMaterials;
-          floorPlans = floorPlans.map((fp, fi) => {
+          floorPlans = floorPlans.map((fp) => {
             if (!fp) return fp;
             const updatedRooms = { ...fp.rooms };
-            // Only touch rooms that are actually enabled on this floor —
-            // no point materialising 主卧 on floor 0 if user disabled it.
             for (const room of fp.enabledRooms) {
-              const recipe = rm[room];
-              if (!recipe) continue;
               const existing = updatedRooms[room];
               if (!existing) continue;
-              const wall    = findMat(recipe.wall);
-              const floor   = findMat(recipe.floor);
-              const tile    = findMat(recipe.tile);
-              const light   = findMat(recipe.light);
-              const lower   = findMat(recipe.wallLower);
+              const recipe = rm?.[room];
+              // 内墙/地面/瓷砖/灯/墙裙：仅 recipe 指定时改（保持原行为）
+              const wall    = findMat(recipe?.wall);
+              const floor   = findMat(recipe?.floor);
+              const tile    = findMat(recipe?.tile);
+              const light   = findMat(recipe?.light);
+              const lower   = findMat(recipe?.wallLower);
+              // 外墙材质（整体 + 逐面）：与左面板「外墙材质」同一字段，托管赋值
+              // —— 指定就用、没指定就 undefined（清空）。让"选风格→立面到位"
+              // 且切风格不串味，用户仍可在原面板逐房间/逐面继续改。
+              const extAll  = findMat(recipe?.wallExterior);
+              const extN    = findMat(recipe?.wallExteriorN);
+              const extS    = findMat(recipe?.wallExteriorS);
+              const extW    = findMat(recipe?.wallExteriorW);
+              const extE    = findMat(recipe?.wallExteriorE);
               updatedRooms[room] = {
                 ...existing,
                 materials: {
@@ -1982,16 +1994,13 @@ export const useDesignerStore = create<DesignerStore>()(
                   ...(tile  ? { tile }       : {}),
                   ...(light ? { light }      : {}),
                   ...(lower ? { wallLower: lower } : {}),
+                  wallExterior:      extAll,
+                  wallBackExterior:  extN,
+                  wallFrontExterior: extS,
+                  wallLeftExterior:  extW,
+                  wallRightExterior: extE,
                 },
               };
-            }
-            // Recompute scores only for the active floor's active room.
-            if (fi === s.activeFloor) {
-              const r = updatedRooms[s.activeRoom];
-              if (r) {
-                // computeScores happens via the closing set() below — we
-                // call it inline for the new activeRoom snapshot.
-              }
             }
             return { ...fp, rooms: updatedRooms };
           });
