@@ -29,8 +29,6 @@ import { autoScatterTrees, placeSunShadeTrees } from "@/lib/yardAutoPlanting";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
 import ModelImportCard from "./ModelImportCard";
-import { VillaTo3D } from "./VillaTo3D";
-import { GlbPbrPanel } from "./GlbPbrPanel";
 import { getShadowPolygon } from "@/lib/sunAnalysis";
 import { getOutdoorAssetByKind as _getAsset, PREFAB_PURCHASE } from "@/lib/outdoorAssets";
 
@@ -300,10 +298,7 @@ type LibraryTab = OutdoorCategory | "prefab" | "template";
 export function YardPlanLibrary() {
   const locale = useLocale();
   const [tab, setTab] = useState<LibraryTab>("template");
-  // 统一图生 3D：单模型 / 整图拆解 共用 VillaTo3D（mode 区分），PBR 与手动导入各一
-  const [showGen3dSingle, setShowGen3dSingle]   = useState(false);
-  const [showVillaDecompose, setShowVillaDecompose] = useState(false);
-  const [showPbrPanel, setShowPbrPanel]         = useState(false);
+  // 图生3D / 整图拆解 / GLB→PBR 已移到右下角统一「✨ AI 助手」菜单（AiEntryMenu）
   // 已导入模型库（public/models/imported/ 真实文件）——切到「组件」tab 时拉取，
   // 点卡片即可把同一模型再放一个实例进院子；导入过的东西从这里随时调出。
   const [importedModels, setImportedModels] = useState<Array<{ url: string; name: string; nameEn?: string; previewUrl?: string | null; bytes: number }>>([]);
@@ -443,47 +438,8 @@ export function YardPlanLibrary() {
       {tab === "prefab" && (
         <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1.5">
 
-          {/* ── 图片 → 3D 生成（单模型，TRELLIS/Hunyuan 弹窗选） ── */}
-          <button
-            onClick={() => setShowGen3dSingle(true)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
-            style={{ background: "linear-gradient(135deg,#F0FDF4,#ECFDF5)", border: "1px solid #6EE7B7" }}
-          >
-            <span style={{ fontSize: 22 }}>🏠</span>
-            <div className="flex flex-col flex-1 min-w-0">
-              <div className="text-[11px] font-bold" style={{ color: "#065F46" }}>{locale === "en" ? "Image → 3D model" : "图片 → 3D 模型"}</div>
-              <div className="text-[9px]" style={{ color: "#059669" }}>{locale === "en" ? "TRELLIS / Hunyuan · bring your own key · whole model into scene" : "TRELLIS / Hunyuan · 自带密钥 · 整模型入场景"}</div>
-            </div>
-            <span style={{ color: "#34D399", fontSize: 14 }}>›</span>
-          </button>
-
-          {/* ── 整图拆解 → 3D 组件集合 ───────────────────── */}
-          <button
-            onClick={() => setShowVillaDecompose(true)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
-            style={{ background: "linear-gradient(135deg,#FDF4FF,#EEF2FF)", border: "1px solid #DDD6FE" }}
-          >
-            <span style={{ fontSize: 22 }}>🏗</span>
-            <div className="flex flex-col flex-1 min-w-0">
-              <div className="text-[11px] font-bold" style={{ color: "#7C3AED" }}>{locale === "en" ? "Decompose image → 3D part set" : "整图拆解 → 3D组件集合"}</div>
-              <div className="text-[9px]" style={{ color: "#8B5CF6" }}>{locale === "en" ? "TRELLIS / Hunyuan → split into roof / walls / pool parts" : "TRELLIS / Hunyuan → 拆成屋顶/墙体/泳池等零件"}</div>
-            </div>
-            <span style={{ color: "#A78BFA", fontSize: 14 }}>›</span>
-          </button>
-
-          {/* ── GLB + 原图 → PBR 贴图 ─────────────────────── */}
-          <button
-            onClick={() => setShowPbrPanel(true)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors text-left"
-            style={{ background: "linear-gradient(135deg,#FAF5FF,#F5F3FF)", border: "1px solid #C4B5FD" }}
-          >
-            <span style={{ fontSize: 22 }}>🎨</span>
-            <div className="flex flex-col flex-1 min-w-0">
-              <div className="text-[11px] font-bold" style={{ color: "#5B21B6" }}>{locale === "en" ? "GLB → PBR Textures" : "GLB → PBR 贴图"}</div>
-              <div className="text-[9px]" style={{ color: "#7C3AED" }}>{locale === "en" ? "Existing GLB + image → generate normal/roughness/metallic" : "已有 GLB + 原图 → 生成法线/粗糙/金属度"}</div>
-            </div>
-            <span style={{ color: "#A78BFA", fontSize: 14 }}>›</span>
-          </button>
+          {/* 图生3D / 整图拆解 / GLB→PBR 已并入右下角统一「✨ AI 助手」菜单的
+              「3D 建模」分区（不再散落在院子组件 tab）。此处保留手动导入 + 模型库。 */}
 
           {/* ── 手动导入 .glb/.gltf（统一导入卡：压缩可选/本机路径）──── */}
           <button
@@ -533,29 +489,6 @@ export function YardPlanLibrary() {
                 );
               })}
             </>
-          )}
-
-          {/* Overlays */}
-          {showGen3dSingle && (
-            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)",
-              display:"flex", alignItems:"center", justifyContent:"center" }}
-              onClick={e => { if (e.target === e.currentTarget) setShowGen3dSingle(false); }}>
-              <VillaTo3D mode="single" onClose={() => setShowGen3dSingle(false)} />
-            </div>
-          )}
-          {showVillaDecompose && (
-            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)",
-              display:"flex", alignItems:"center", justifyContent:"center" }}
-              onClick={e => { if (e.target === e.currentTarget) setShowVillaDecompose(false); }}>
-              <VillaTo3D mode="decompose" onClose={() => setShowVillaDecompose(false)} />
-            </div>
-          )}
-          {showPbrPanel && (
-            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)",
-              display:"flex", alignItems:"center", justifyContent:"center" }}
-              onClick={e => { if (e.target === e.currentTarget) setShowPbrPanel(false); }}>
-              <GlbPbrPanel onClose={() => setShowPbrPanel(false)} />
-            </div>
           )}
 
           {PREFAB_REGISTRY.map(p => (

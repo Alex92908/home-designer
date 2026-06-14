@@ -9,6 +9,8 @@ import { buildViewPrompt, captureCanvas } from "@/lib/aiRenderShared";
 import type { ViewMode } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
 import AiRenderSettingsModal from "./AiRenderSettingsModal";
+import { VillaTo3D } from "./VillaTo3D";
+import { GlbPbrPanel } from "./GlbPbrPanel";
 
 // ─── 统一 AI 入口：右下角单按钮 + 分层弹出菜单 ─────────────────────────────
 // 把原先分散的三个入口收成一个：
@@ -57,6 +59,10 @@ export default function AiEntryMenu() {
   const [open, setOpen]                 = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [config, setConfig]             = useState<AiRenderConfig>({ backends: [], workflows: [] });
+  // 3D 建模工具（原在院子「组件」tab，现并入统一 AI 菜单，任何视图可用）
+  const [show3dSingle, setShow3dSingle]     = useState(false);
+  const [show3dDecompose, setShow3dDecompose] = useState(false);
+  const [showPbr, setShowPbr]               = useState(false);
   const menuRef                         = useRef<HTMLDivElement>(null);
 
   const { phase, images, error, generate, reset } = useAiRender();
@@ -219,13 +225,65 @@ export default function AiEntryMenu() {
             </div>
           </button>
           <button onClick={() => { setOpen(false); window.dispatchEvent(new Event("openImport")); }}
-            className="flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors hover:bg-indigo-50">
+            className="flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors hover:bg-indigo-50"
+            style={{ borderBottom: "1px solid var(--ds-border-soft, #f3f4f6)" }}>
             <span className="text-xl w-7 text-center shrink-0">📷</span>
             <div className="flex flex-col min-w-0">
               <span className="text-xs font-semibold leading-tight" style={{ color: "var(--ds-text, #111)" }}>{t.aiEntry.importRef}</span>
               <span className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3, #9ca3af)" }}>{t.aiEntry.importRefSub}</span>
             </div>
           </button>
+
+          {/* 🧱 3D 建模（原院子组件 tab 的三件 AI 工具，并入统一 AI 板块） */}
+          <div className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--ds-text-3, #9ca3af)" }}>
+            {locale === "en" ? "3D Modeling" : "3D 建模"}
+          </div>
+          <button onClick={() => { setOpen(false); setShow3dSingle(true); }}
+            className="flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors hover:bg-emerald-50"
+            style={{ borderBottom: "1px solid var(--ds-border-soft, #f3f4f6)" }}>
+            <span className="text-xl w-7 text-center shrink-0">🏠</span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold leading-tight" style={{ color: "var(--ds-text, #111)" }}>{locale === "en" ? "Image → 3D model" : "图片 → 3D 模型"}</span>
+              <span className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3, #9ca3af)" }}>{locale === "en" ? "TRELLIS / Hunyuan · BYOK · whole model" : "TRELLIS / Hunyuan · 自带密钥 · 整模型"}</span>
+            </div>
+          </button>
+          <button onClick={() => { setOpen(false); setShow3dDecompose(true); }}
+            className="flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors hover:bg-violet-50"
+            style={{ borderBottom: "1px solid var(--ds-border-soft, #f3f4f6)" }}>
+            <span className="text-xl w-7 text-center shrink-0">🏗</span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold leading-tight" style={{ color: "var(--ds-text, #111)" }}>{locale === "en" ? "Decompose image → 3D part set" : "整图拆解 → 3D组件集合"}</span>
+              <span className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3, #9ca3af)" }}>{locale === "en" ? "Split into roof / walls / pool parts" : "拆成屋顶/墙体/泳池等零件"}</span>
+            </div>
+          </button>
+          <button onClick={() => { setOpen(false); setShowPbr(true); }}
+            className="flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors hover:bg-violet-50">
+            <span className="text-xl w-7 text-center shrink-0">🎨</span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold leading-tight" style={{ color: "var(--ds-text, #111)" }}>{locale === "en" ? "GLB → PBR Textures" : "GLB → PBR 贴图"}</span>
+              <span className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3, #9ca3af)" }}>{locale === "en" ? "GLB + image → normal/roughness/metallic" : "已有 GLB + 原图 → 法线/粗糙/金属度"}</span>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* 3D 建模工具弹窗（全局托管，任何视图可用；产出落到模型库） */}
+      {show3dSingle && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.50)", display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={e => { if (e.target === e.currentTarget) setShow3dSingle(false); }}>
+          <VillaTo3D mode="single" onClose={() => setShow3dSingle(false)} />
+        </div>
+      )}
+      {show3dDecompose && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.50)", display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={e => { if (e.target === e.currentTarget) setShow3dDecompose(false); }}>
+          <VillaTo3D mode="decompose" onClose={() => setShow3dDecompose(false)} />
+        </div>
+      )}
+      {showPbr && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.50)", display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={e => { if (e.target === e.currentTarget) setShowPbr(false); }}>
+          <GlbPbrPanel onClose={() => setShowPbr(false)} />
         </div>
       )}
 
