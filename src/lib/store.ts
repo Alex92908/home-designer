@@ -7,6 +7,7 @@ import { FURNITURE, getFurnitureById, registerFurniture } from "./furniture";
 import { MATERIALS } from "./data";
 import { getOutdoorAssetByKind } from "./outdoorAssets";
 import { ALL_TEMPLATES, buildTemplateRoomState, buildEmbeddedRoomState } from "./templates";
+import { makeDefaultProject } from "./defaultProject";
 
 // ─── Style scoring ─────────────────────────────────────────
 
@@ -961,11 +962,16 @@ const _dev_expose_store = (s: unknown) => {
 // 否则 zustand 会从 0 开始跑迁移链——其中 v0→v1 会把门窗整组抹成默认值。
 export const PERSIST_VERSION = 7;
 
+// 冷启动默认方案（度假泳池别墅）。只在「无本地存档」时生效：persist 中间件
+// 用初始 state，已有存档的老用户会被 rehydrate 覆盖，不受影响。模块加载时
+// 取一份深拷贝即可（整轮会话只用这一份引用）。
+const __defaultProject = makeDefaultProject();
+
 export const useDesignerStore = create<DesignerStore>()(
   temporal(
   persist(
     (set, get) => ({
-      floorPlans: [makeDefaultFloorPlan()],
+      floorPlans: __defaultProject.floorPlans,
       activeRoom: "living",
       viewMode: "3d",
       showCompass: true,
@@ -1053,10 +1059,10 @@ export const useDesignerStore = create<DesignerStore>()(
       clipboard: [],
       roomClipboard: null,
       blueprint: { image: null, naturalW: 0, naturalH: 0, opacity: 0.4, offsetX: 0, offsetY: 0, scale: 1 },
-      scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
+      scores: __defaultProject.scores,
       customRoomMeta: {},
       customFurniture: [],
-      exterior: { ...initialExterior },
+      exterior: { ...initialExterior, ...__defaultProject.exterior },
       activeFloor: 0,
       layoutHistory: [],
       activeTemplateId: null,
