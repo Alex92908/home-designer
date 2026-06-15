@@ -39,6 +39,30 @@ export const metadata: Metadata = {
     : undefined,
 };
 
+// schema.org 结构化数据：让 Google / AI 搜索准确理解「这是一个免费的在线
+// AI 家装设计 Web 应用」，提升收录与富结果展示。纯 SEO，对用户不可见。
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "筑雅 ZHUYA",
+  alternateName: "ZHUYA 家装设计",
+  applicationCategory: "DesignApplication",
+  operatingSystem: "Web",
+  url: SITE_URL,
+  inLanguage: "zh-CN",
+  description:
+    "筑雅 ZHUYA 是免费的在线 AI 家装设计工具：AI 文生户型、沉浸式 3D 装修与漫游、外观立面与庭院设计、实时装修报价、一键分享方案。",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "CNY" },
+  featureList: [
+    "AI 文生户型",
+    "3D 实时装修与漫游",
+    "建筑外观与立面设计",
+    "庭院 / 院子景观设计",
+    "实时装修报价",
+    "方案一键分享",
+  ],
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -47,6 +71,11 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+        />
         {children}
         <Analytics />
       </body>

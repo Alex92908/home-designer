@@ -138,7 +138,7 @@ export default function ShowcaseClient() {
     <div className="min-h-screen bg-gray-900 text-gray-100">
       <header className="flex items-center justify-between px-6 py-5 border-b border-white/10">
         <div>
-          <h1 className="text-xl font-bold">{en ? "Showroom" : "样板间"}</h1>
+          <div className="text-xl font-bold">{en ? "Showroom" : "样板间"}</div>
           <p className="text-sm text-gray-400">
             {en ? "Browse the 3D exterior of curated home designs" : "浏览精选住宅设计的 3D 外观"}
           </p>
@@ -183,6 +183,72 @@ export default function ShowcaseClient() {
           </button>
         ))}
       </main>
+
+      {/* ── SEO 内容区：给搜索引擎/AI 提供可索引的真实中文内容，也是给用户的产品介绍 ── */}
+      <section className="px-6 pb-16 pt-4 max-w-5xl mx-auto">
+        <h1 className="text-2xl font-bold mb-3">
+          {en ? "ZHUYA — Free Online AI Home Design Tool" : "筑雅 ZHUYA —— 免费在线 AI 家装设计工具"}
+        </h1>
+        <p className="text-gray-300 leading-relaxed mb-8">
+          {en
+            ? "ZHUYA turns a text prompt or a floor-plan photo into an editable 3D home: design interiors with real-time pricing, walk through the rooms, shape the building exterior and the yard, then share the whole plan with one link — all in your browser, for free."
+            : "筑雅 ZHUYA 把一句话或一张户型照片,变成可编辑的 3D 住宅:在浏览器里实时装修并即时报价、沉浸式漫游房间、设计建筑外观立面与院子景观,再一键分享整套方案。无需下载,完全免费。"}
+        </p>
+
+        <h2 className="text-lg font-semibold mb-4">{en ? "Features" : "核心功能"}</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-10">
+          {(en
+            ? [
+                ["🤖 AI floor plans", "Generate a full layout from a text prompt or a floor-plan photo."],
+                ["🛋️ Real-time 3D interior", "Furnish rooms, change materials, see live cost estimates."],
+                ["🚶 Immersive walkthrough", "Walk through every room and out into the yard."],
+                ["🏛️ Exterior & facade", "Design the building's exterior, windows and roofline."],
+                ["🌳 Yard & landscape", "Lay out pools, paths, trees and the whole courtyard."],
+                ["🔗 One-click share", "Share the full plan with a single link."],
+              ]
+            : [
+                ["🤖 AI 文生户型", "一句话或一张户型照片,自动生成整套布局。"],
+                ["🛋️ 3D 实时装修", "摆家具、换材质,装修成本即时报价。"],
+                ["🚶 沉浸式漫游", "走进每个房间,还能走到院子里。"],
+                ["🏛️ 外观与立面", "设计建筑外观、门窗与屋顶造型。"],
+                ["🌳 庭院景观", "泳池、步道、树木,排布整个院子。"],
+                ["🔗 一键分享", "整套方案,一个链接分享出去。"],
+              ]
+          ).map(([title, desc]) => (
+            <div key={title} className="rounded-xl border border-white/10 bg-gray-800/40 p-4">
+              <div className="font-semibold mb-1">{title}</div>
+              <div className="text-sm text-gray-400">{desc}</div>
+            </div>
+          ))}
+        </div>
+
+        <h2 className="text-lg font-semibold mb-4">{en ? "FAQ" : "常见问题"}</h2>
+        <div className="space-y-4">
+          {(en
+            ? [
+                ["Is ZHUYA free?", "Yes. Designing, 3D walkthrough and sharing are free to use in the browser."],
+                ["Do I need to install anything?", "No. ZHUYA runs entirely in your web browser."],
+                ["What can I design?", "Interior decoration, building exterior / facade, and the yard & landscape — for houses and villas."],
+              ]
+            : [
+                ["筑雅是免费的吗?", "是的。设计、3D 漫游、分享都可以在浏览器里免费使用。"],
+                ["需要下载安装吗?", "不需要。筑雅完全在网页浏览器里运行。"],
+                ["能设计哪些内容?", "室内装修、建筑外观立面、院子景观,适用于住宅与别墅。"],
+              ]
+          ).map(([q, a]) => (
+            <div key={q}>
+              <div className="font-semibold mb-1">{q}</div>
+              <div className="text-sm text-gray-400">{a}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-10">
+          <a href="/" className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white inline-block" style={{ background: "#007AFF" }}>
+            {en ? "Start designing for free →" : "免费开始设计 →"}
+          </a>
+        </div>
+      </section>
     </div>
   );
 }
