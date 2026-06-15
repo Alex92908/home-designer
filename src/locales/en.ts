@@ -148,6 +148,10 @@ export const en: Translations = {
   fpEditDone: "🪟 Done Editing",
   fpEditStart: "🪟 Edit Windows/Door",
   fpWallLabels: { N: "North", S: "South", W: "West", E: "East" } as Record<string, string>,
+  // Floor minimap (FloorPlanMinimap)
+  mmRoomsWord: "rooms",
+  mmClickSwitch: "tap to switch",
+  mmTopWord: "Top",
   fpWindowWord: " Win",
   fpDoorLabel: "Door:",
   fpResetShape: "Reset",

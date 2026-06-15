@@ -148,6 +148,10 @@ export const zh = {
   fpEditDone: "🪟 完成编辑",
   fpEditStart: "🪟 编辑窗/门",
   fpWallLabels: { N: "北墙", S: "南墙", W: "西墙", E: "东墙" } as Record<string, string>,
+  // 楼层小地图（FloorPlanMinimap）
+  mmRoomsWord: "房间",
+  mmClickSwitch: "点击切换",
+  mmTopWord: "顶部",
   fpWindowWord: "窗",
   fpDoorLabel: "门朝向:",
   fpResetShape: "重置",

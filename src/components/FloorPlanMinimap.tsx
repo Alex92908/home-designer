@@ -91,7 +91,7 @@ export function FloorPlanMinimap() {
         fontSize: 10, color: "#9CA3AF", letterSpacing: "0.08em",
         textTransform: "uppercase", marginBottom: 4, paddingLeft: 2,
       }}>
-        {`F${activeFloor + 1} · ${list.length} 房间 · 点击切换`}
+        {`F${activeFloor + 1} · ${list.length} ${t.mmRoomsWord} · ${t.mmClickSwitch}`}
       </div>
       <svg width={MINIMAP_PX} height={MINIMAP_PX} style={{ display: "block", background: "#0f1117", borderRadius: 4 }}>
         {/* Light grid (every 1m). Cheap; helps gauge scale. */}
@@ -118,7 +118,7 @@ export function FloorPlanMinimap() {
           // Polygon path (when room has custom shape)
           const polyPts = r.polygon?.map(([px, pz]) =>
             `${(cx + px * scale).toFixed(1)},${(cy + pz * scale).toFixed(1)}`).join(" ");
-          const label = (def?.name ?? r.room).slice(0, LABEL_MAX);
+          const label = (t.roomNames?.[r.room] ?? def?.name ?? r.room).slice(0, LABEL_MAX);
           return (
             <g key={r.room} style={{ cursor: "pointer" }}
               onClick={(ev) => { ev.stopPropagation(); setActiveRoom(r.room); }}>
@@ -149,7 +149,7 @@ export function FloorPlanMinimap() {
         fontSize: 9, color: "#6B7280", marginTop: 4, paddingLeft: 2,
         whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
       }}>
-        {`${(planW / 100).toFixed(1)} × ${(planD / 100).toFixed(1)} m · ${t.fpWallLabels?.N ?? "N"} = 顶部`}
+        {`${(planW / 100).toFixed(1)} × ${(planD / 100).toFixed(1)} m · ${t.fpWallLabels?.N ?? "N"} = ${t.mmTopWord}`}
       </div>
     </aside>
   );
