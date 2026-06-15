@@ -395,6 +395,16 @@ export default function TopBar() {
         <span>⌘K</span>
       </button>
 
+      {/* 样板间入口（独立页 /showcase：精选方案的 3D 外形图画廊） */}
+      <a
+        href="/showcase"
+        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all shrink-0"
+        style={{ border: "1px solid var(--ds-border)", color: "var(--ds-text-2)", background: "var(--ds-surface)" }}
+        title={locale === "en" ? "Showroom — exterior gallery" : "样板间 — 外形图画廊"}
+      >
+        {locale === "en" ? "🏝️ Showroom" : "🏝️ 样板间"}
+      </a>
+
       {/* Share button */}
       <ShareButton />
 
