@@ -957,6 +957,10 @@ const _dev_expose_store = (s: unknown) => {
   }
 };
 
+// 当前持久化 schema 版本。导入 JSON 回灌 localStorage 时必须打这个版本号，
+// 否则 zustand 会从 0 开始跑迁移链——其中 v0→v1 会把门窗整组抹成默认值。
+export const PERSIST_VERSION = 7;
+
 export const useDesignerStore = create<DesignerStore>()(
   temporal(
   persist(
@@ -3177,7 +3181,7 @@ export const useDesignerStore = create<DesignerStore>()(
       //        in FloorPlanExterior have been deleted. Yard is now
       //        sourced exclusively from `yardPlan.items`. Migration is
       //        a no-op (no seeding) — see v3 → v4 branch.
-      version: 7,
+      version: PERSIST_VERSION,
       migrate: (persistedState, persistedVersion) => {
         const state = persistedState as Partial<DesignerStore> | undefined;
         if (!state) return state as unknown as DesignerStore;

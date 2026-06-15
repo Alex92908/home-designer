@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useDesignerStore } from "@/lib/store";
+import { useDesignerStore, PERSIST_VERSION } from "@/lib/store";
 import ModelImportCard from "./ModelImportCard";
 import { getCurrentScene } from "@/lib/sceneRegistry";
 import { exportScene, EXPORT_FORMATS, type ExportFormat } from "@/lib/exportModel";
@@ -333,7 +333,9 @@ export default function ExportModal() {
               activeRoom: data.floorPlans[0]?.enabledRooms?.[0] ?? "living",
               ...extraState,
             };
-            localStorage.setItem("home-designer-v2", JSON.stringify({ state, version: 0 }));
+            // 导入的数据已经是当前 schema，必须打当前版本号；若打 0 会触发
+            // v0→v1 迁移把门窗整组抹成默认值（窗户跑到内墙、看起来全朝内）。
+            localStorage.setItem("home-designer-v2", JSON.stringify({ state, version: PERSIST_VERSION }));
             window.location.reload();
 
           // ── Legacy format (v1): single-floor rooms + enabledRooms ──
@@ -356,7 +358,9 @@ export default function ExportModal() {
               activeRoom: data.enabledRooms[0] ?? "living",
               ...extraState,
             };
-            localStorage.setItem("home-designer-v2", JSON.stringify({ state, version: 0 }));
+            // 旧 flat 格式可能早于 NSWE 墙面统一，需从 v1 起跑迁移链做墙面
+            // 重映射；但要跳过会抹门窗的 v0→v1，故打 1 而非 0。
+            localStorage.setItem("home-designer-v2", JSON.stringify({ state, version: 1 }));
             window.location.reload();
           } else {
             alert(t.invalidFile);
