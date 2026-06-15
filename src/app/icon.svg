@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- 筑雅 ZHUYA 品牌图标：圆角方块（品牌蓝渐变）+ 白色「家」轮廓。
+       纯几何路径，不依赖字体，16x16 favicon 下也清晰。 -->
+  <defs>
+    <linearGradient id="zg" x1="0" y1="0" x2="0" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#zg)"/>
+  <!-- 屋顶 + 墙体（白色房子剪影），底角微圆 -->
+  <path d="M32 13 L53 31 V49 a3 3 0 0 1-3 3 H14 a3 3 0 0 1-3-3 V31 Z" fill="#ffffff"/>
+  <!-- 门（挖空成品牌色） -->
+  <rect x="28" y="40" width="8" height="12" rx="1" fill="#2563EB"/>
+  <!-- 窗 -->
+  <rect x="19" y="34" width="7" height="7" rx="1" fill="#2563EB"/>
+</svg>

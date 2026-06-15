@@ -405,6 +405,23 @@ export default function TopBar() {
         {locale === "en" ? "🏝️ Showroom" : "🏝️ 样板间"}
       </a>
 
+      {/* 反馈入口（mailto → 作者邮箱，零依赖） */}
+      <a
+        href={`mailto:zhuwen160@gmail.com?subject=${encodeURIComponent(
+          locale === "en" ? "ZHUYA feedback" : "筑雅 ZHUYA 反馈",
+        )}&body=${encodeURIComponent(
+          (locale === "en"
+            ? "Describe your issue or suggestion:\n\n\n---\nPage: "
+            : "请描述你的问题或建议：\n\n\n---\n页面：") +
+            (typeof window !== "undefined" ? window.location.href : ""),
+        )}`}
+        className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all shrink-0"
+        style={{ border: "1px solid var(--ds-border)", color: "var(--ds-text-2)", background: "var(--ds-surface)" }}
+        title={locale === "en" ? "Send feedback" : "反馈问题 / 建议"}
+      >
+        {locale === "en" ? "💬 Feedback" : "💬 反馈"}
+      </a>
+
       {/* Share button */}
       <ShareButton />
 
