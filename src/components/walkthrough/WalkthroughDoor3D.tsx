@@ -28,13 +28,30 @@ import type { DoorStyle } from "@/lib/types";
 const ENABLE_GLTF_DOOR = true;
 const WOODEN_DOOR_URL = "/models/_arch_door/door_with_frame/door_with_frame.glb";
 
-function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number; onClick: () => void }) {
+function GltfDoorPanel({ doorW, doorH, exterior = false, onClick }: { doorW: number; doorH: number; exterior?: boolean; onClick: () => void }) {
   const { scene } = useGLTF(WOODEN_DOOR_URL) as unknown as { scene: THREE.Object3D };
   const cloned = useMemo(() => {
     const c = scene.clone(true);
     c.traverse(obj => {
       const m = obj as THREE.Mesh;
-      if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; }
+      if (!m.isMesh) return;
+      m.castShadow = true; m.receiveShadow = true;
+      // 外观图：南面门常在建筑阴影里，门板贴图下半又偏暗 → 渲成「黑下半」。
+      // 给门材质加一层中性浅灰自发光地板，抵消阴影、把暗部抬成漫游里那种浅灰门
+      // 质感（不黑）。中性灰不染色，保留门原本质感。克隆材质避免污染 useGLTF 缓存。
+      // 室内漫游（exterior=false）门本就打光充足，不加自发光，保持精细原样。
+      if (exterior) {
+        const lift = (mt: THREE.Material): THREE.Material => {
+          const sm = mt as THREE.MeshStandardMaterial;
+          if (!sm || !sm.isMeshStandardMaterial) return mt;
+          const nm = sm.clone();
+          nm.emissive = new THREE.Color("#B8B4AC");   // 中性浅灰（不染色）
+          nm.emissiveIntensity = 0.55;
+          return nm;
+        };
+        if (Array.isArray(m.material)) m.material = m.material.map(lift);
+        else if (m.material) m.material = lift(m.material);
+      }
     });
     c.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(c);
@@ -56,7 +73,7 @@ function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number
       c.position.x += doorW / 2;
     }
     return c;
-  }, [scene, doorW, doorH]);
+  }, [scene, doorW, doorH, exterior]);
 
   return (
     <group onClick={(e) => { e.stopPropagation(); onClick(); }}>
@@ -292,6 +309,10 @@ export function WalkthroughDoor3D({
         // (it's a glass-look tinted box — glTF wouldn't match semantics).
         <group ref={panelRef} position={[0, 0, 0.01]}>
           {doorStyle === "wood_panel" ? (
+            // 室内 + 外观图都用精细 glTF 门（用户明确要这种，不要程序化木门）。
+            // 外观图（outwardProtrude>0）南面常在阴影里，门板贴图下半又偏暗 → 会
+            // 渲成「黑下半」；给 glTF 门加中性浅灰自发光地板抵消阴影（见 GltfDoorPanel
+            // 的 exterior 分支），保持漫游那种浅灰门质感、不黑。
             ENABLE_GLTF_DOOR ? (
               <>
                 <GltfDoorFallback
@@ -308,7 +329,7 @@ export function WalkthroughDoor3D({
                       onClick={() => onToggle()}
                     />
                   }>
-                    <GltfDoorPanel doorW={doorW} doorH={doorH} onClick={() => onToggle()} />
+                    <GltfDoorPanel doorW={doorW} doorH={doorH} exterior={outwardProtrude > 0} onClick={() => onToggle()} />
                   </Suspense>
                 </GltfDoorFallback>
                 {/* Extra handle on both faces of the door so it's always

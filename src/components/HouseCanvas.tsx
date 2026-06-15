@@ -3016,33 +3016,12 @@ export function Pool({ x, z, w = 9, d = 5 }: { x: number; z: number; w?: number;
         </mesh>
       </group>
 
-      {/* ── Pool cabana / pool house ── */}
-      <group position={[0, 0, -(d / 2 + 4.5)]}>
-        {/* Flat roof slab */}
-        <mesh position={[0, 2.6, 0]} castShadow receiveShadow>
-          <boxGeometry args={[5.5, 0.18, 3.2]} />
-          <meshStandardMaterial color="#E8E2D0" roughness={0.8} />
-        </mesh>
-        {/* 4 slim columns */}
-        {([ [-2.3, -1.3], [2.3, -1.3], [-2.3, 1.3], [2.3, 1.3] ] as [number,number][]).map(([cx, cz], i) => (
-          <mesh key={i} position={[cx, 1.3, cz]} castShadow>
-            <cylinderGeometry args={[0.1, 0.1, 2.6, 10]} />
-            <meshStandardMaterial color="#F0EAD8" roughness={0.7} />
-          </mesh>
-        ))}
-        {/* Curtain panels (translucent vertical planes) */}
-        {([ [-1.0, 0], [1.0, 0] ] as [number,number][]).map(([cx, cz], i) => (
-          <mesh key={i} position={[cx, 1.3, cz]}>
-            <boxGeometry args={[1.2, 2.4, 0.04]} />
-            <meshStandardMaterial color="#FFFFF8" transparent opacity={0.35} roughness={0.9} side={THREE.DoubleSide} />
-          </mesh>
-        ))}
-        {/* Floor slab */}
-        <mesh position={[0, 0.02, 0]} receiveShadow>
-          <boxGeometry args={[5.3, 0.04, 3.0]} />
-          <meshStandardMaterial color="#EDE8D8" roughness={0.75} />
-        </mesh>
-      </group>
+      {/* ── 池畔小屋(cabana)已移除 ──
+          原本在泳池中心北侧 4.5m+ 处伸出一个带 4 根立柱的小屋（5.5×3.2m）。
+          泳池放进窄前院时（如 modern-minimal），小屋会伸进建筑内部，立柱落在
+          客厅里 → 漫游/外观图出现突兀白柱（用户反馈）。小屋是泳池最外缘、最易
+          穿模的附件，去掉后泳池仍保留 travertine 甲板 + 无边瀑布 + spa + 躺椅的
+          完整度假观感，且对所有用 pool 的风格（modern/地中海）都不再穿模。 */}
     </group>
   );
 }
