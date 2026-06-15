@@ -351,6 +351,15 @@ export default function ExportModal() {
                 roomDoorPos: data.roomDoorPos ?? {},
                 roomHasDoor: data.roomHasDoor ?? {},
                 roomDoorWall: data.roomDoorWall ?? {},
+                // 也带上其余楼层级字段，缺则交给 migrate/onRehydrate 兜底，
+                // 避免门/拆墙/异形房/院子在导入旧文件时丢失。
+                roomDoors: data.roomDoors ?? {},
+                roomDoorStyle: data.roomDoorStyle ?? {},
+                roomDoorLen: data.roomDoorLen ?? {},
+                roomDoorH: data.roomDoorH ?? {},
+                roomWallsHidden: data.roomWallsHidden ?? {},
+                roomShapes: data.roomShapes ?? {},
+                yardPlan: data.yardPlan ?? { items: [], paths: [] },
               }],
               exterior: data.exterior,
               budget: data.budget,

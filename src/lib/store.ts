@@ -2956,13 +2956,24 @@ export const useDesignerStore = create<DesignerStore>()(
           // New format: floorPlans array
           const floorPlans = (snapshot.floorPlans as FloorPlan[]).map(sfp => {
             const merged = makeDefaultFloorPlan();
-            merged.enabledRooms = sfp.enabledRooms ?? merged.enabledRooms;
-            merged.roomLayout = { ...merged.roomLayout, ...(sfp.roomLayout ?? {}) };
-            merged.roomDimensions = { ...merged.roomDimensions, ...(sfp.roomDimensions ?? {}) };
+            // 先把快照里所有楼层级字段整体并进来（roomWindows / 各门字段 /
+            // roomWallsHidden / roomShapes / yardPlan 等），缺哪个就保留默认。
+            // 之前只搬了 enabledRooms/layout/dimensions/rooms，导致载入 demo
+            // 或分享链接时门窗/院子全退回默认（窗户跑内墙、看起来全朝内）。
+            const out: FloorPlan = { ...merged, ...sfp };
+            out.enabledRooms = sfp.enabledRooms ?? merged.enabledRooms;
+            out.roomLayout = { ...merged.roomLayout, ...(sfp.roomLayout ?? {}) };
+            out.roomDimensions = { ...merged.roomDimensions, ...(sfp.roomDimensions ?? {}) };
+            out.roomWindows = { ...merged.roomWindows, ...(sfp.roomWindows ?? {}) };
+            out.roomDoorPos = { ...merged.roomDoorPos, ...(sfp.roomDoorPos ?? {}) };
+            out.roomDoorWall = { ...merged.roomDoorWall, ...(sfp.roomDoorWall ?? {}) };
+            out.roomHasDoor = { ...merged.roomHasDoor, ...(sfp.roomHasDoor ?? {}) };
+            // rooms 要并进默认（保证所有房间类型都在），快照里的覆盖默认。
+            out.rooms = { ...merged.rooms };
             for (const [room, rs] of Object.entries(sfp.rooms ?? {})) {
-              if (rs) merged.rooms[room as RoomType] = rs as RoomState;
+              if (rs) out.rooms[room as RoomType] = rs as RoomState;
             }
-            return merged;
+            return out;
           });
           set({
             floorPlans,
