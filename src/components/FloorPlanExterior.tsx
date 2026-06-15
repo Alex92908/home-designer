@@ -236,8 +236,11 @@ export function computeExteriorWalls(
       for (const [segStart, segEnd] of exterior) {
         if (segEnd - segStart < 20) continue;
         const segWins = roomWins.filter(w => {
-          const wS = wallStart + (w.pos ?? 0);
-          return wS + w.len > segStart && wS < segEnd;
+          // 按窗户「中心点」归属到唯一墙段，避免横跨切割点的宽窗被相邻两段
+          // 各画一遍（重复窗框/窗梃错位叠加 → 多余竖线、下方拖线）。门已用
+          // 同样的「落在段内」思路（见下方 segDoors）。
+          const wCenter = wallStart + (w.pos ?? 0) + w.len / 2;
+          return wCenter >= segStart && wCenter < segEnd;
         });
         const segDoors = roomDoors.filter(d => {
           const dS = wallStart + (d.pos ?? 0);
@@ -6885,6 +6888,14 @@ export default function FloorPlanBuilding({
         const WALL_T = 0.12;
         const holesM = seg.holes
           .map(h => ({ x: h.x * CM_l, y: h.y * CM_l, w: h.w * CM_l, h: h.h * CM_l }))
+          // 竖墙(v)洞方向修正：collectHoles 的 hole.x 从 seg.a(北/小-Z 端)量起，
+          // 但下面竖墙渲染把 shape-x=0 锚在 seg.b(南/大-Z 端)向北延伸（见 else
+          // 分支 topZ + rotY=+π/2）。两端不一致会把洞镜像到墙的另一头——窗玻璃
+          // /门板都按「北端起算」定位（StyledWindow wPos、WalkthroughDoor3D），于是
+          // 洞与窗/门错位（共用墙上偏移最明显：客厅西窗一半压实墙、一半空洞发白）。
+          // 沿墙长翻转洞 x，使洞回到北端起算，与窗/门对齐。横墙(h)shape-x→+X 与
+          // collectHoles 同向，无需翻转。
+          .map(h => seg.axis === "v" ? { ...h, x: wallLenM - (h.x + h.w) } : h)
           .filter(h => h.w > 0.01 && h.h > 0.01);
         const pieces = splitWallAroundHoles(wallLenM, wH, holesM);
         return (
