@@ -45,3 +45,6 @@ next-env.d.ts
 public/models/**/*.zip
 .claude/scheduled_tasks.lock
 agent-worktree/
+
+# Claude agent 沙盒 worktree 不入库
+.claude/worktrees/
