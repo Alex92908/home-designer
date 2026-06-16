@@ -2476,17 +2476,16 @@ function GltfFurniture({
     console.log(`[GltfFurniture] ${url} native=${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m target=${w.toFixed(2)}×${h.toFixed(2)}×${d.toFixed(2)}m center=(${center.x.toFixed(2)},${center.y.toFixed(2)},${center.z.toFixed(2)})`);
     // Safety: if any dim is zero (broken model), skip auto-scale.
     if (size.x > 0 && size.y > 0 && size.z > 0) {
-      // Non-uniform fit: scale each axis independently to match the
-      // declared W×D×H (respecting the per-instance scaleW/scaleD/scaleH
-      // the caller rolled into w/d/h). Some aspect distortion on models
-      // whose native proportions don't match the declared furniture, but
-      // that's preferable to a wardrobe bursting through the ceiling.
-      // The `scale` prop from furniture.ts stacks on top as a final
-      // uniform trim if needed per-asset.
-      const sx = (w / size.x) * (scale ?? 1);
-      const sy = (h / size.y) * (scale ?? 1);
-      const sz = (d / size.z) * (scale ?? 1);
-      c.scale.set(sx, sy, sz);
+      // Uniform "contain" fit: scale by a SINGLE factor so the model fits
+      // inside the declared W×D×H box while keeping its real proportions.
+      // We pick the smallest of the three axis ratios, so the model never
+      // bursts past the declared footprint or height — and, crucially, never
+      // gets squished/stretched the way the old per-axis fit did (that made
+      // cabinets/sinks/toilets look "small & ugly" when the model's native
+      // proportions didn't match the declared box). The `scale` prop stacks
+      // on top as a per-asset trim.
+      const s = Math.min(w / size.x, h / size.y, d / size.z) * (scale ?? 1);
+      c.scale.set(s, s, s);
       // Re-measure after scale, then shift so base is at Y=0 and
       // footprint is centered on X/Z origin (matches procedural-box convention).
       c.updateMatrixWorld(true);
