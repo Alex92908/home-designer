@@ -988,7 +988,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "对开门大容量，变频节能",
     icon: "🧊",
-    model3d: { url: "/models/refrigerator/french_door_fridge/french_door_fridge.glb" },
+    model3d: { url: "/models/refrigerator/stainless_fridge/stainless_fridge.glb" },
   },
   {
     id: "fridge-single-white",

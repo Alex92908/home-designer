@@ -171,6 +171,7 @@ const ASSETS = [
   { uid: "016c963080b84372aec7fa1241632d5b", slug: "outdoor_grill",        category: "outdoor_structure", author: "shirlanne" },
   { uid: "dcd691724f6b4d29a6d16def24d14e6e", slug: "angelo_freestanding_bath", category: "bathtub",         author: "tissinouk" },
   { uid: "6e20541ed8f543b28d2e71aef79b7b5e", slug: "sink_and_vanity",          category: "bathroom_vanity", author: "timothyahene" },
+  { uid: "2829178402f74fee856f0f51ad824ed9", slug: "stainless_fridge",        category: "refrigerator",    author: "marishka1611" },
 ];
 
 const API = "https://api.sketchfab.com/v3";
