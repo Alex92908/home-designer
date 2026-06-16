@@ -1,0 +1,11 @@
+Model Information:
+* title:	Pergola
+* source:	https://sketchfab.com/3d-models/pergola-eca838f2af7b4969813747fbc64f207f
+* author:	alex999m (https://sketchfab.com/alex999m)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Pergola" (https://sketchfab.com/3d-models/pergola-eca838f2af7b4969813747fbc64f207f) by alex999m (https://sketchfab.com/alex999m) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

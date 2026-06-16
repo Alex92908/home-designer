@@ -21,6 +21,7 @@
 
 import { useMemo } from "react";
 import * as THREE from "three";
+import { useGLTF } from "@react-three/drei";
 import type { YardPrefab, PrefabKind } from "@/lib/types";
 import { getPrefabDef, resolveParams } from "@/lib/outdoorPrefabs";
 import { getOutdoorTexture, outdoorTileSize } from "@/lib/textures";
@@ -32,7 +33,34 @@ import { GlbPrefabMesh } from "./GlbPrefabMesh";
 // because these are React components called at render time, not at module
 // init — by the time React invokes them, both modules have finished
 // evaluating and ESM live bindings resolve correctly.
-import { Pool, Pergola, OutdoorKitchen, Fountain } from "./HouseCanvas";
+import { OutdoorKitchen } from "./HouseCanvas";
+
+// 院子结构件用真实 GLB 渲染：按包围盒把模型缩放到目标 footprint（米），
+// 并落地（base→y=0）、水平居中。比手搓几何真实得多。
+function GlbStructure({ src, sizeM }: { src: string; sizeM: number }) {
+  const { scene } = useGLTF(src);
+  const obj = useMemo(() => {
+    const c = scene.clone(true);
+    const box = new THREE.Box3().setFromObject(c);
+    const size = new THREE.Vector3(); box.getSize(size);
+    const center = new THREE.Vector3(); box.getCenter(center);
+    const footprint = Math.max(size.x, size.z) || 1;
+    const s = sizeM / footprint;
+    c.position.set(-center.x, -box.min.y, -center.z); // 居中 + 落地
+    const g = new THREE.Group();
+    g.add(c);
+    g.scale.setScalar(s);
+    return g;
+  }, [scene, sizeM]);
+  return <primitive object={obj} />;
+}
+
+const POOL_GLB    = "/models/outdoor_structure/swimming_pool/swimming_pool.glb";
+const PERGOLA_GLB = "/models/outdoor_structure/pergola/pergola.glb";
+const FOUNTAIN_GLB = "/models/outdoor_structure/water_fountain/water_fountain.glb";
+useGLTF.preload(POOL_GLB);
+useGLTF.preload(PERGOLA_GLB);
+useGLTF.preload(FOUNTAIN_GLB);
 
 const CM = 0.01;
 
@@ -599,10 +627,10 @@ export function PrefabMesh({ prefab }: { prefab: YardPrefab }) {
   // upward from y=0, so we just wrap rotation around their pivot.
   return (
     <group position={[wx, 0, wz]} rotation={[0, rot, 0]}>
-      {prefab.prefabKind === "pool"            && <Pool x={0} z={0} />}
-      {prefab.prefabKind === "pergola_classic" && <Pergola x={0} z={0} />}
+      {prefab.prefabKind === "pool"            && <GlbStructure src={POOL_GLB} sizeM={8} />}
+      {prefab.prefabKind === "pergola_classic" && <GlbStructure src={PERGOLA_GLB} sizeM={5} />}
       {prefab.prefabKind === "outdoor_kitchen" && <OutdoorKitchen x={0} z={0} />}
-      {prefab.prefabKind === "fountain"        && <Fountain x={0} z={0} />}
+      {prefab.prefabKind === "fountain"        && <GlbStructure src={FOUNTAIN_GLB} sizeM={2.6} />}
     </group>
   );
 }
