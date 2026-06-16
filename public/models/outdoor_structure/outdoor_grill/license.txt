@@ -1,0 +1,11 @@
+Model Information:
+* title:	Outdoor Grill
+* source:	https://sketchfab.com/3d-models/outdoor-grill-016c963080b84372aec7fa1241632d5b
+* author:	shirlanne (https://sketchfab.com/shirlanne)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Outdoor Grill" (https://sketchfab.com/3d-models/outdoor-grill-016c963080b84372aec7fa1241632d5b) by shirlanne (https://sketchfab.com/shirlanne) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

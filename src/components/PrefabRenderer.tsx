@@ -27,14 +27,6 @@ import { getPrefabDef, resolveParams } from "@/lib/outdoorPrefabs";
 import { getOutdoorTexture, outdoorTileSize } from "@/lib/textures";
 import { poissonRect } from "@/lib/poissonDisc";
 import { GlbPrefabMesh } from "./GlbPrefabMesh";
-// Structural prefabs reuse the existing detailed Pool/Pergola/OutdoorKitchen
-// /Fountain implementations from HouseCanvas. The import is technically
-// circular (HouseCanvas imports PrefabMesh from here), but it works fine
-// because these are React components called at render time, not at module
-// init — by the time React invokes them, both modules have finished
-// evaluating and ESM live bindings resolve correctly.
-import { OutdoorKitchen } from "./HouseCanvas";
-
 // 院子结构件用真实 GLB 渲染：按包围盒把模型缩放到目标 footprint（米），
 // 并落地（base→y=0）、水平居中。比手搓几何真实得多。
 function GlbStructure({ src, sizeM }: { src: string; sizeM: number }) {
@@ -58,9 +50,11 @@ function GlbStructure({ src, sizeM }: { src: string; sizeM: number }) {
 const POOL_GLB    = "/models/outdoor_structure/swimming_pool/swimming_pool.glb";
 const PERGOLA_GLB = "/models/outdoor_structure/pergola/pergola.glb";
 const FOUNTAIN_GLB = "/models/outdoor_structure/water_fountain/water_fountain.glb";
+const GRILL_GLB    = "/models/outdoor_structure/outdoor_grill/outdoor_grill.glb";
 useGLTF.preload(POOL_GLB);
 useGLTF.preload(PERGOLA_GLB);
 useGLTF.preload(FOUNTAIN_GLB);
+useGLTF.preload(GRILL_GLB);
 
 const CM = 0.01;
 
@@ -621,15 +615,13 @@ export function PrefabMesh({ prefab }: { prefab: YardPrefab }) {
     );
   }
 
-  // ─── Structural prefabs ── delegate to the existing detailed
-  // Pool / Pergola / OutdoorKitchen / Fountain components imported
-  // from HouseCanvas. They take (x, z) in world metres and draw
-  // upward from y=0, so we just wrap rotation around their pivot.
+  // ─── Structural prefabs ── 全部用真实 GLB（泳池/廊架/烤架/喷泉），
+  // 通过 GlbStructure 按 footprint 缩放并落地居中，外层只管旋转。
   return (
     <group position={[wx, 0, wz]} rotation={[0, rot, 0]}>
       {prefab.prefabKind === "pool"            && <GlbStructure src={POOL_GLB} sizeM={8} />}
       {prefab.prefabKind === "pergola_classic" && <GlbStructure src={PERGOLA_GLB} sizeM={5} />}
-      {prefab.prefabKind === "outdoor_kitchen" && <OutdoorKitchen x={0} z={0} />}
+      {prefab.prefabKind === "outdoor_kitchen" && <GlbStructure src={GRILL_GLB} sizeM={2.2} />}
       {prefab.prefabKind === "fountain"        && <GlbStructure src={FOUNTAIN_GLB} sizeM={2.6} />}
     </group>
   );

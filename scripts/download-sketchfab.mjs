@@ -168,6 +168,7 @@ const ASSETS = [
   { uid: "ac64f37d1ece47f99fe5b50fdba1b1cf", slug: "coat_rack",             category: "wardrobe", author: "plaggy" },
   { uid: "57f348196dba448ca26fe80148efbb5b", slug: "luxury_wardrobe_closet", category: "storage", author: "zeroual.elmehdi" },
   { uid: "3c79bf11bc70400a8efcef9dc419d068", slug: "minimalist_closet",     category: "storage", author: "uniboxtrade" },
+  { uid: "016c963080b84372aec7fa1241632d5b", slug: "outdoor_grill",        category: "outdoor_structure", author: "shirlanne" },
 ];
 
 const API = "https://api.sketchfab.com/v3";

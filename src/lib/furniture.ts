@@ -72,6 +72,8 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["日式", "北欧"],
     description: "低矮设计，禅意十足",
     icon: "🛋️",
+    // 暂复用现有沙发模型占位，后续用 TRELLIS 生成专属榻榻米矮沙发
+    model3d: { url: "/models/sofa/sofa_03/sofa_03_1k.glb" },
   },
   {
     id: "sofa-modular-green",
