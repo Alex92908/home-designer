@@ -2420,8 +2420,8 @@ function PlumbingFixture({ item, w, d, h }: { item: FurnitureItem; w: number; d:
 // <ErrorBoundary> in the parent.
 
 function GltfFurniture({
-  url, scale, rotation, yOffset, w, d, h,
-}: { url: string; scale?: number; rotation?: number; yOffset?: number; w: number; d: number; h: number }) {
+  url, scale, rotation, yOffset, recolor, w, d, h,
+}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number }) {
   const { scene } = useGLTF(url) as unknown as { scene: THREE.Object3D };
 
   // Clone so multiple instances don't share transforms or materials.
@@ -2432,6 +2432,21 @@ function GltfFurniture({
       if (mesh.isMesh) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
+        // Repaint when the source GLB has a wrong/placeholder base color.
+        // Skip clearly-glass materials (transmissive / very transparent) so
+        // we don't paint over windows/doors on the model.
+        if (recolor) {
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          for (const mat of mats) {
+            const sm = mat as THREE.MeshStandardMaterial;
+            if (!sm || !sm.color) continue;
+            const phys = sm as unknown as { transmission?: number };
+            if ((phys.transmission ?? 0) > 0.1 || (sm.transparent && sm.opacity < 0.6)) continue;
+            sm.color.set(recolor);
+            sm.map = null;
+            sm.needsUpdate = true;
+          }
+        }
         // Sketchfab GLTF furniture ships with `transparent + depthWrite=
         // false + opacity 0.3..0.9` on glass / screen / sheer layers.
         // Without depthWrite, multiple stacked semi-transparent layers
@@ -2483,7 +2498,7 @@ function GltfFurniture({
       c.scale.setScalar(scale);
     }
     return c;
-  }, [scene, w, d, h, scale]);
+  }, [scene, w, d, h, scale, recolor]);
 
   return (
     <group rotation={[0, rotation ?? 0, 0]} position={[0, yOffset ?? 0, 0]}>
@@ -2943,6 +2958,7 @@ class GltfFurnitureWithFallback extends Component<
         scale={item.model3d.scale}
         rotation={item.model3d.rotation}
         yOffset={item.model3d.yOffset}
+        recolor={item.model3d.recolor}
         w={w} d={d} h={h}
       />
     );

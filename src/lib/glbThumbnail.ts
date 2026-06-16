@@ -8,18 +8,26 @@
  * 绝不阻断导入流程；调用方把结果 PATCH 给 /api/import-model 落成
  * <file>.preview.png，库列表直接 <img> 显示。
  */
-export async function makeGlbThumbnail(url: string, size = 128): Promise<string | null> {
+export async function makeGlbThumbnail(url: string, size = 128, recolor?: string): Promise<string | null> {
   try {
     const THREE = await import("three");
-    const { GLTFLoader, DRACOLoader } = await import("three-stdlib");
+    const { GLTFLoader, DRACOLoader, RoomEnvironment } = await import("three-stdlib");
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     renderer.setSize(size, size);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const scene = new THREE.Scene();
-    scene.add(new THREE.AmbientLight(0xffffff, 1.1));
-    const key = new THREE.DirectionalLight(0xffffff, 2.2);
+    // Image-based lighting from a neutral studio room. Critical for metallic
+    // (stainless fridge, steel sink) and glass materials: without an
+    // environment map they reflect nothing and render near-black, which
+    // misrepresents how they look in the app (which has its own <Environment>).
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const RoomEnv = RoomEnvironment as unknown as { new (): object };
+    const envTex = pmrem.fromScene(new RoomEnv() as never, 0.04).texture;
+    scene.environment = envTex;
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const key = new THREE.DirectionalLight(0xffffff, 1.6);
     key.position.set(3, 5, 4);
     scene.add(key);
 
@@ -30,6 +38,24 @@ export async function makeGlbThumbnail(url: string, size = 128): Promise<string 
 
     try {
       const gltf = await loader.loadAsync(url);
+      // Mirror the 3D scene's recolor (see GltfFurniture) so the catalog
+      // thumbnail matches what gets placed — e.g. the teal-exported fridge
+      // shows as the silver it renders in-room.
+      if (recolor) {
+        gltf.scene.traverse((obj) => {
+          const m = obj as { isMesh?: boolean; material?: unknown };
+          if (!m.isMesh) return;
+          const mats = Array.isArray(m.material) ? m.material : [m.material];
+          for (const mat of mats) {
+            const sm = mat as { color?: { set: (c: string) => void }; map?: unknown; transmission?: number; transparent?: boolean; opacity?: number; needsUpdate?: boolean };
+            if (!sm || !sm.color) continue;
+            if ((sm.transmission ?? 0) > 0.1 || (sm.transparent && (sm.opacity ?? 1) < 0.6)) continue;
+            sm.color.set(recolor);
+            sm.map = null;
+            sm.needsUpdate = true;
+          }
+        });
+      }
       scene.add(gltf.scene);
       const box = new THREE.Box3().setFromObject(gltf.scene);
       const center = box.getCenter(new THREE.Vector3());
@@ -47,6 +73,8 @@ export async function makeGlbThumbnail(url: string, size = 128): Promise<string 
       // baking dozens of catalog thumbnails back-to-back, else Chrome hits
       // "Too many active WebGL contexts" and drops the oldest.
       try { renderer.forceContextLoss(); } catch { /* noop */ }
+      pmrem.dispose();
+      envTex.dispose();
       renderer.dispose();
       draco.dispose();
     }

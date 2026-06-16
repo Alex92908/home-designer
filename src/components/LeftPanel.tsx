@@ -79,7 +79,7 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
   const displayName = locale === "en" ? (getFurnitureNameEn(item.id) ?? item.name) : item.name;
   const displayBrand = locale === "en" ? getBrandNameEn(item.brand) : item.brand;
   // 有 GLB 的家具：离屏烤一张真实预览图替掉 emoji（烤好前先显示 emoji）。
-  const thumb = useCatalogThumbnail(item.model3d?.url);
+  const thumb = useCatalogThumbnail(item.model3d?.url, item.model3d?.recolor);
 
   return (
     <button

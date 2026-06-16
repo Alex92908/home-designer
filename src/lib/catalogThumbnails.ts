@@ -18,12 +18,15 @@ import { makeGlbThumbnail } from "./glbThumbnail";
 const THUMB_SIZE = 96;
 const LS_PREFIX = "glbthumb:v1:";
 
-const mem = new Map<string, string>();        // url → dataURL
-const failed = new Set<string>();             // url 烤失败，不再重试
+const mem = new Map<string, string>();        // key → dataURL
+const failed = new Set<string>();             // key 烤失败，不再重试
 const queued = new Set<string>();             // 已入队/在烤
-const subs = new Map<string, Set<() => void>>(); // url → 重渲染回调
-const queue: string[] = [];
+const subs = new Map<string, Set<() => void>>(); // key → 重渲染回调
+const queue: Array<{ key: string; url: string; recolor?: string }> = [];
 let running = false;
+
+// 缓存键 = url(+recolor)：换了模型路径或重涂色都会重烤。
+const keyOf = (url: string, recolor?: string) => (recolor ? `${url}|${recolor}` : url);
 
 function lsGet(url: string): string | null {
   try { return localStorage.getItem(LS_PREFIX + url); } catch { return null; }
@@ -39,16 +42,16 @@ async function pump(): Promise<void> {
   if (running) return;
   running = true;
   while (queue.length) {
-    const url = queue.shift()!;
-    if (mem.has(url) || failed.has(url)) continue;
-    const data = await makeGlbThumbnail(url, THUMB_SIZE);
+    const { key, url, recolor } = queue.shift()!;
+    if (mem.has(key) || failed.has(key)) continue;
+    const data = await makeGlbThumbnail(url, THUMB_SIZE, recolor);
     if (data) {
-      mem.set(url, data);
-      lsSet(url, data);
+      mem.set(key, data);
+      lsSet(key, data);
     } else {
-      failed.add(url);
+      failed.add(key);
     }
-    notify(url);
+    notify(key);
     // 让出一帧，别把主线程占死（缩略图是后台活）
     await new Promise((r) => requestAnimationFrame(() => r(null)));
   }
@@ -57,31 +60,32 @@ async function pump(): Promise<void> {
 
 /** 取某个 GLB 的缩略图 dataURL；没有则返回 null（卡片回退到 emoji）。
  *  首次会把它排进串行队列后台烤，烤好后触发重渲染。 */
-export function useCatalogThumbnail(url?: string): string | null {
+export function useCatalogThumbnail(url?: string, recolor?: string): string | null {
   const [, force] = useState(0);
+  const key = url ? keyOf(url, recolor) : "";
 
   useEffect(() => {
-    if (!url || mem.has(url) || failed.has(url)) return;
+    if (!url || mem.has(key) || failed.has(key)) return;
     // 先看 localStorage 有没有上次烤好的
-    const cached = lsGet(url);
+    const cached = lsGet(key);
     if (cached) {
-      mem.set(url, cached);
+      mem.set(key, cached);
       force((x) => x + 1);
       return;
     }
     // 订阅 + 入队
-    let set = subs.get(url);
-    if (!set) { set = new Set(); subs.set(url, set); }
+    let set = subs.get(key);
+    if (!set) { set = new Set(); subs.set(key, set); }
     const fn = () => force((x) => x + 1);
     set.add(fn);
-    if (!queued.has(url)) {
-      queued.add(url);
-      queue.push(url);
+    if (!queued.has(key)) {
+      queued.add(key);
+      queue.push({ key, url, recolor });
       void pump();
     }
     return () => { set!.delete(fn); };
-  }, [url]);
+  }, [key, url, recolor]);
 
   if (!url) return null;
-  return mem.get(url) ?? null;
+  return mem.get(key) ?? null;
 }

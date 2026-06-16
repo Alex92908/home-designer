@@ -824,6 +824,13 @@ export interface FurnitureItem {
     /** Y offset in meters to push the model up/down from floor level.
      *  Use when the asset's pivot isn't at the base. */
     yOffset?: number;
+    /** Optional hex color to repaint the model's materials. Use when the
+     *  source GLB ships with a wrong/placeholder base color (e.g. a Sketchfab
+     *  model whose "stainless" fridge is actually exported teal). Each mesh
+     *  material's color is set to this and its base-color map dropped so the
+     *  flat color shows cleanly. Best for untextured models; on textured ones
+     *  it trades surface detail for a correct color. */
+    recolor?: string;
   };
 }
 
