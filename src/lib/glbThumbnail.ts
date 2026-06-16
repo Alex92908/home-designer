@@ -43,6 +43,10 @@ export async function makeGlbThumbnail(url: string, size = 128): Promise<string 
       renderer.render(scene, cam);
       return renderer.domElement.toDataURL("image/png");
     } finally {
+      // forceContextLoss frees the GPU context immediately — critical when
+      // baking dozens of catalog thumbnails back-to-back, else Chrome hits
+      // "Too many active WebGL contexts" and drops the oldest.
+      try { renderer.forceContextLoss(); } catch { /* noop */ }
       renderer.dispose();
       draco.dispose();
     }
