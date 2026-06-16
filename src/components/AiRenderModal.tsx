@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useDesignerStore } from "@/lib/store";
+import { watermarkBlob } from "@/lib/watermark";
 import { generateRoomPrompt } from "@/lib/roomPrompt";
 import { generateExteriorPrompt } from "@/lib/sceneToPrompt";
 import { generateControlNetWorkflow, generateTxt2ImgWorkflow, SD_MODELS } from "@/lib/comfyWorkflow";
@@ -593,11 +594,11 @@ export default function AiRenderModal({ open, onClose }: Props) {
   async function downloadResult() {
     if (!resultUrl) return;
     const res  = await fetch(resultUrl);
-    const blob = await res.blob();
+    const blob = await watermarkBlob(await res.blob());   // 盖品牌水印再下载
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
     a.href     = url;
-    a.download = `hd_render_${Date.now()}.png`;
+    a.download = `zhuya_render_${Date.now()}.png`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -1265,11 +1266,11 @@ export default function AiRenderModal({ open, onClose }: Props) {
                     // Download all chain results in sequence
                     for (let i = 0; i < chainResults.length; i++) {
                       const r = await fetch(chainResults[i]);
-                      const b = await r.blob();
+                      const b = await watermarkBlob(await r.blob());   // 盖品牌水印
                       const u = URL.createObjectURL(b);
                       const a = document.createElement("a");
                       a.href = u;
-                      a.download = `hd_chain_${i+1}_${chainAngles[i]}_${Date.now()}.png`;
+                      a.download = `zhuya_chain_${i+1}_${chainAngles[i]}_${Date.now()}.png`;
                       a.click();
                       URL.revokeObjectURL(u);
                       await new Promise(res => setTimeout(res, 200));
