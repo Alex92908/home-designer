@@ -323,6 +323,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧", "日式"],
     description: "热带感强，空气净化好手",
     icon: "🌿",
+    model3d: { url: "/models/plant/potted_plant_01/potted_plant_01_1k.glb" },
   },
   {
     id: "plant-sansevieria",
@@ -339,6 +340,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "日式"],
     description: "极耐阴，懒人首选",
     icon: "🌱",
+    model3d: { url: "/models/plant/potted_plant_04/potted_plant_04_1k.glb" },
   },
   {
     id: "plant-rubber-tree",
@@ -355,6 +357,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "宽叶光泽，存在感强",
     icon: "🌳",
+    model3d: { url: "/models/plant/potted_plant_02/potted_plant_02_1k.glb" },
   },
   {
     id: "plant-balcony-pot",
@@ -371,6 +374,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "长条花盆，阳台绿化首选",
     icon: "🌺",
+    model3d: { url: "/models/plant/potted_plant_04/potted_plant_04_1k.glb" },
   },
 
   // ─── 地毯 Rug ─────────────────────────────────────────
