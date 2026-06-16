@@ -218,6 +218,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "现代"],
     description: "弧形臂设计，照亮阅读角",
     icon: "💡",
+    model3d: { url: "/models/floor_lamp/pbr_floor_lamp/pbr_floor_lamp.glb" },
   },
   {
     id: "lamp-industrial-black",
@@ -620,6 +621,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "日式"],
     description: "白橡木框架，自然清新",
     icon: "🛏️",
+    model3d: { url: "/models/bed/bed_07/bed_07.glb" },
   },
   {
     id: "bed-tatami",
@@ -655,6 +657,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "小户型单人床，省空间",
     icon: "🛏️",
+    model3d: { url: "/models/bed/japanese_futon_bed/japanese_futon_bed.glb" },
   },
 
   // ─── 床头柜 Nightstand ─────────────────────────────────
@@ -1159,6 +1162,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "开放式设计，视觉大气",
     icon: "🚿",
+    model3d: { url: "/models/shower/corner_shower_glass/corner_shower_glass.glb" },
   },
 
   // ─── 浴室柜 Bathroom Vanity ───────────────────────────
@@ -1196,6 +1200,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "双台盆，岩板台面奢华",
     icon: "🪥",
+    model3d: { url: "/models/bathroom_vanity/laufen_kartell_vanity/laufen_kartell_vanity.glb" },
   },
 
   // ─── 书桌 Desk ────────────────────────────────────────
@@ -1214,6 +1219,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "日式"],
     description: "橡木桌面，极简线条",
     icon: "🖥️",
+    model3d: { url: "/models/desk/office_desk/office_desk.glb" },
   },
   {
     id: "desk-l-shape-white",
@@ -1247,6 +1253,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "电动升降，久坐不累",
     icon: "🖥️",
+    model3d: { url: "/models/desk/adjustable_desk/adjustable_desk.glb" },
   },
 
   // ─── 办公椅 Office Chair ──────────────────────────────
@@ -1265,6 +1272,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "全铝支架，护腰支撑",
     icon: "🪑",
+    model3d: { url: "/models/office_chair/office_chair/office_chair.glb" },
   },
   {
     id: "chair-simple-fabric",

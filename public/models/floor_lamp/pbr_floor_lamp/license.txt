@@ -1,0 +1,11 @@
+Model Information:
+* title:	PBR Floor Lamp (Free Download)
+* source:	https://sketchfab.com/3d-models/pbr-floor-lamp-free-download-083c9408b89949d8b201e8a1bb6ce41c
+* author:	Justin.Foley (https://sketchfab.com/Justin.Foley)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "PBR Floor Lamp (Free Download)" (https://sketchfab.com/3d-models/pbr-floor-lamp-free-download-083c9408b89949d8b201e8a1bb6ce41c) by Justin.Foley (https://sketchfab.com/Justin.Foley) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
