@@ -93,6 +93,22 @@ const ASSETS = [
   { slug: "planter_box_01",             category: "outdoor_furniture" },  // rectangular planter
   { slug: "stone_fire_pit",             category: "outdoor_furniture" },  // outdoor fireplace
   { slug: "painted_wooden_bench",       category: "outdoor_furniture" },  // garden bench
+
+  // ── Round 6: 替换「程序化盒子」的丑家具（Poly Haven 有好货的那批）──
+  // 绿植（程序化最假，收益最大）→ 接 plant-monstera / -rubber-tree / -sansevieria / -balcony-pot
+  { slug: "potted_plant_01",            category: "plant" },
+  { slug: "potted_plant_02",            category: "plant" },
+  { slug: "potted_plant_04",            category: "plant" },
+  // 餐桌 → 接 dining-black-metal；餐椅 → 接 chair-modern-gray / -industrial-black
+  { slug: "WoodenTable_03",             category: "dining_table" },
+  { slug: "painted_wooden_chair_01",    category: "dining_chair" },
+  { slug: "painted_wooden_chair_02",    category: "dining_chair" },
+  // 电视柜 → 接 tvunit-float-white / -black-stone（古典控制台风，凑合）
+  { slug: "ClassicConsole_01",          category: "tv_unit" },
+  // 梳妆台 → 接 dresser-nordic-white
+  { slug: "vintage_wooden_drawer_01",   category: "dresser" },
+  // 工业落地灯 → 接 lamp-industrial-black
+  { slug: "industrial_pipe_lamp",       category: "floor_lamp" },
 ];
 
 // ── CLI flags ──────────────────────────────────────────────────
