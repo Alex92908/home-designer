@@ -37,7 +37,7 @@ import {
 } from "@/lib/roomVisuals";
 import { splitWallAroundHoles } from "@/lib/wallGeom";
 import { paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
-import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize, getStuccoTexture } from "@/lib/textures";
+import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize, getStuccoTexture, getStuccoNormal } from "@/lib/textures";
 
 /** 漫游/室内模式下的房间灯具：复用 效果图 的同一套灯具造型
  *  （LightFixtureInner，visualOnly=只出网格、不出投影灯——漫游里
@@ -846,9 +846,15 @@ function ConcreteFacade({
           const tex = getStuccoTexture(1).clone();
           tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
           const scl = Math.max(0.2, stuccoScale);
-          tex.repeat.set(Math.max(2, width / scl), Math.max(2, height / scl));
+          const rx = Math.max(2, width / scl), ry = Math.max(2, height / scl);
+          tex.repeat.set(rx, ry);
           tex.needsUpdate = true;
-          return <meshStandardMaterial map={tex} color={baseColor} roughness={stuccoRoughness} metalness={0.02} envMapIntensity={0.30} />;
+          // 法线贴图：给外墙加凹凸光感（关键「假→真」），与 albedo 同 repeat。
+          const nrm = getStuccoNormal(1).clone();
+          nrm.wrapS = nrm.wrapT = THREE.RepeatWrapping;
+          nrm.repeat.set(rx, ry);
+          nrm.needsUpdate = true;
+          return <meshStandardMaterial map={tex} normalMap={nrm} normalScale={new THREE.Vector2(0.32, 0.32)} color={baseColor} roughness={stuccoRoughness} metalness={0.02} envMapIntensity={0.30} />;
         })()}
       </mesh>
       {/* ── Iter 7-9: AO-style overlays. All three (baseShadow, eaveShadow,

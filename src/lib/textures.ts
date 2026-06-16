@@ -100,6 +100,43 @@ function adjustHex(hex: string, amt: number): string {
 }
 
 /**
+ * 程序化外墙灰泥「法线贴图」：从随机高度场求导得到切线空间法线，给本来平
+ * 的外立面加上细腻凹凸光感（关键的「假→真」一步）。线性色彩空间。
+ */
+export function getStuccoNormal(seed = 1): THREE.CanvasTexture {
+  return cached(`stucco-nrm-${seed}`, () => {
+    const N = 256;
+    const [c, ctx] = makeCtx(N);
+    let s = seed * 2654435761;
+    const rand = () => {
+      s = (s ^ (s << 13)) >>> 0; s = (s ^ (s >>> 17)) >>> 0; s = (s ^ (s << 5)) >>> 0;
+      return s / 0xffffffff;
+    };
+    const H = new Float32Array(N * N);
+    for (let i = 0; i < N * N; i++) H[i] = rand();
+    const at = (x: number, y: number) => H[((y + N) % N) * N + ((x + N) % N)];
+    const img = ctx.createImageData(N, N);
+    const strength = 2.0;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      let nx = -(at(x + 1, y) - at(x - 1, y)) * strength;
+      let ny = -(at(x, y + 1) - at(x, y - 1)) * strength;
+      let nz = 1;
+      const len = Math.hypot(nx, ny, nz) || 1;
+      nx /= len; ny /= len; nz /= len;
+      const o = (y * N + x) * 4;
+      img.data[o]     = (nx * 0.5 + 0.5) * 255;
+      img.data[o + 1] = (ny * 0.5 + 0.5) * 255;
+      img.data[o + 2] = (nz * 0.5 + 0.5) * 255;
+      img.data[o + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.NoColorSpace; // 法线贴图须线性
+    return t;
+  });
+}
+
+/**
  * 程序化地毯贴图：织物底纹 + 按地毯类型画花纹（北欧几何 / 波斯纹章 / 现代素织）。
  * 把「纯色盒子地毯」升级成有图案有织感的真地毯。CanvasTexture，零外部资源。
  */
