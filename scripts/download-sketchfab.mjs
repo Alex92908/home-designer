@@ -169,6 +169,8 @@ const ASSETS = [
   { uid: "57f348196dba448ca26fe80148efbb5b", slug: "luxury_wardrobe_closet", category: "storage", author: "zeroual.elmehdi" },
   { uid: "3c79bf11bc70400a8efcef9dc419d068", slug: "minimalist_closet",     category: "storage", author: "uniboxtrade" },
   { uid: "016c963080b84372aec7fa1241632d5b", slug: "outdoor_grill",        category: "outdoor_structure", author: "shirlanne" },
+  { uid: "dcd691724f6b4d29a6d16def24d14e6e", slug: "angelo_freestanding_bath", category: "bathtub",         author: "tissinouk" },
+  { uid: "6e20541ed8f543b28d2e71aef79b7b5e", slug: "sink_and_vanity",          category: "bathroom_vanity", author: "timothyahene" },
 ];
 
 const API = "https://api.sketchfab.com/v3";

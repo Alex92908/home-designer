@@ -1115,7 +1115,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "铸铁独立浴缸，保温佳",
     icon: "🛁",
-    model3d: { url: "/models/bathtub/simple_bathtub/simple_bathtub.glb" },
+    model3d: { url: "/models/bathtub/angelo_freestanding_bath/angelo_freestanding_bath.glb" },
   },
   {
     id: "bathtub-builtin",
@@ -1188,7 +1188,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "陶瓷盆+浴室柜，防潮板材",
     icon: "🪥",
-    model3d: { url: "/models/bathroom_vanity/legion_vanity_sink/legion_vanity_sink.glb" },
+    model3d: { url: "/models/bathroom_vanity/sink_and_vanity/sink_and_vanity.glb" },
   },
   {
     id: "vanity-double-marble",

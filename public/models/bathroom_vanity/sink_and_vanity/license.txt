@@ -1,0 +1,11 @@
+Model Information:
+* title:	Sink and vanity
+* source:	https://sketchfab.com/3d-models/sink-and-vanity-6e20541ed8f543b28d2e71aef79b7b5e
+* author:	Timothy Ahene (https://sketchfab.com/timothyahene)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Sink and vanity" (https://sketchfab.com/3d-models/sink-and-vanity-6e20541ed8f543b28d2e71aef79b7b5e) by Timothy Ahene (https://sketchfab.com/timothyahene) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
