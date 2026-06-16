@@ -246,14 +246,21 @@ async function main() {
     process.exit(1);
   }
 
+  // 并发下载（同时 N 个，大幅加速；已存在的文件会被跳过，可随时 Ctrl+C 重跑续传）。
+  const CONCURRENCY = Number(process.env.DL_CONCURRENCY) || 4;
   const results = [];
-  for (const a of ASSETS) {
-    try {
-      results.push(await downloadAsset(a, token));
-    } catch (err) {
-      console.error(`✗ ${a.slug}: ${err.message}`);
+  let idx = 0;
+  const worker = async () => {
+    while (idx < ASSETS.length) {
+      const a = ASSETS[idx++];
+      try {
+        results.push(await downloadAsset(a, token));
+      } catch (err) {
+        console.error(`✗ ${a.slug}: ${err.message}`);
+      }
     }
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, ASSETS.length) }, worker));
 
   console.log(`\n✅ Done. ${results.length}/${ASSETS.length} assets downloaded.`);
   console.log(`\nRemember: each of these is CC-BY. Make sure public/models/ATTRIBUTION.md`);
