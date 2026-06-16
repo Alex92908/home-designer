@@ -158,6 +158,11 @@ const ASSETS = [
   // ── 院子结构件（接 yardPlan prefab；下完需把对应 prefab 改成渲染 GLB）──
   { uid: "788d32bf1a5648ddafad8ef1b88538d9", slug: "swimming_pool",       category: "outdoor_structure", author: "ahmagh2e" },
   { uid: "eca838f2af7b4969813747fbc64f207f", slug: "pergola",             category: "outdoor_structure", author: "alex999m" },
+  { uid: "c7291c7bf89944dab0af896d0392c012", slug: "garden_gazebo",       category: "outdoor_structure", author: "atayhenna001" },
+  { uid: "fb0a385842c94a009ea6fba45c2b80d2", slug: "water_fountain",      category: "outdoor_structure", author: "Harold.Llanos" },
+  // ── 室内补齐 ──
+  { uid: "57ba9e7b17464b58998e91f05dae9035", slug: "adjustable_desk",     category: "desk",   author: "twopixels" },
+  { uid: "c48c05b0877a4ebf89ca92615519640c", slug: "corner_shower_glass", category: "shower", author: "allenbranch" },
 ];
 
 const API = "https://api.sketchfab.com/v3";
