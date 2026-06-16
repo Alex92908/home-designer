@@ -604,6 +604,8 @@ interface DesignerStore {
   selectedInstanceIds: string[];
   budget: number;
   scores: StyleScore;
+  /** 内置默认方案的版本戳（见 DEFAULT_PROJECT_VERSION）。 */
+  defaultProjectVersion: number;
 
   // Door open/close state per room (ephemeral UI state, not persisted).
   // Used by 3D view to animate doors swinging open on click.
@@ -960,7 +962,14 @@ const _dev_expose_store = (s: unknown) => {
 
 // 当前持久化 schema 版本。导入 JSON 回灌 localStorage 时必须打这个版本号，
 // 否则 zustand 会从 0 开始跑迁移链——其中 v0→v1 会把门窗整组抹成默认值。
-export const PERSIST_VERSION = 7;
+export const PERSIST_VERSION = 8;
+
+// 内置默认方案的版本号。存档里会戳上这个值。当老存档的戳 < 此值时，迁移会
+// 把「最新完备默认方案」灌进去（详见 migrate 的 v7→v8）。
+// ⚠️ 含义：bump 这个值 = 强制把所有低于它的存档重置成最新默认（会覆盖用户
+// 自定义）。所以——只在「想强推新默认给所有人」时才 bump；如果只是想让新用户
+// 看到更好的默认、不动老用户，**不要 bump**（冷启动初始 state 已覆盖新用户）。
+export const DEFAULT_PROJECT_VERSION = 1;
 
 // 冷启动默认方案（度假泳池别墅）。只在「无本地存档」时生效：persist 中间件
 // 用初始 state，已有存档的老用户会被 rehydrate 覆盖，不受影响。模块加载时
@@ -1060,6 +1069,7 @@ export const useDesignerStore = create<DesignerStore>()(
       roomClipboard: null,
       blueprint: { image: null, naturalW: 0, naturalH: 0, opacity: 0.4, offsetX: 0, offsetY: 0, scale: 1 },
       scores: __defaultProject.scores,
+      defaultProjectVersion: DEFAULT_PROJECT_VERSION,
       customRoomMeta: {},
       customFurniture: [],
       exterior: { ...initialExterior, ...__defaultProject.exterior },
@@ -3400,6 +3410,30 @@ export const useDesignerStore = create<DesignerStore>()(
           if (st.activeRoom && DEAD.includes(st.activeRoom)) st.activeRoom = "living";
           console.info("[home-designer] migrated persist v6 → v7 (removed rooftop-only room types)");
         }
+        if (persistedVersion < 8) {
+          // v7 → v8: 给默认方案加版本戳。2026-6-16 之前的旧存档没有这个戳
+          // （多是测试/半成品数据）—— 把「最新完备默认方案」(度假泳池别墅，
+          // 带完整院子+门窗) 灌进去，让这些老用户也用到完备版；之后大家都带
+          // defaultProjectVersion，再改默认只影响新用户、不动已有数据。
+          // 注意：本迁移会覆盖所有 戳<当前 的存档（含自定义）——这是按需求
+          // 「2026-6-16 之前的数据不管」的一次性升级。
+          const st = state as {
+            defaultProjectVersion?: number;
+            floorPlans?: FloorPlan[];
+            exterior?: ExteriorSettings;
+            scores?: StyleScore;
+          };
+          if ((st.defaultProjectVersion ?? 0) < DEFAULT_PROJECT_VERSION) {
+            const dp = makeDefaultProject();
+            st.floorPlans = dp.floorPlans;
+            st.exterior = { ...initialExterior, ...dp.exterior } as ExteriorSettings;
+            st.scores = dp.scores;
+            st.defaultProjectVersion = DEFAULT_PROJECT_VERSION;
+            console.info("[home-designer] migrated persist v7 → v8 (re-seeded latest default project; pre-stamp save upgraded)");
+          } else {
+            console.info("[home-designer] persist v7 → v8 (default already current; kept user data)");
+          }
+        }
         return state as unknown as DesignerStore;
       },
       partialize: (state) => ({
@@ -3411,6 +3445,7 @@ export const useDesignerStore = create<DesignerStore>()(
         showCompass: state.showCompass,
         budget: state.budget,
         scores: state.scores,
+        defaultProjectVersion: state.defaultProjectVersion,
         customRoomMeta: state.customRoomMeta,
         customFurniture: state.customFurniture,
         exterior: state.exterior,
