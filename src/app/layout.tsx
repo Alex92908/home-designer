@@ -32,11 +32,16 @@ export const metadata: Metadata = {
     title: "筑雅 ZHUYA · 惟吾德馨，筑雅而居",
     description: "AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
   },
-  // Google Search Console 验证码：在 Vercel 环境变量 GOOGLE_SITE_VERIFICATION
-  // 里填 Search Console 给的字符串即可（无需改代码）。未设则不渲染该标签。
-  verification: process.env.GOOGLE_SITE_VERIFICATION
-    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
-    : undefined,
+  // 站长验证码（无需改代码，按需在 Vercel 环境变量里填）：
+  //   · Google Search Console → GOOGLE_SITE_VERIFICATION
+  //   · Bing Webmaster Tools  → BING_SITE_VERIFICATION（渲染 msvalidate.01 标签）
+  // 未设则不渲染对应标签。
+  verification: {
+    ...(process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : {}),
+    ...(process.env.BING_SITE_VERIFICATION
+      ? { other: { "msvalidate.01": process.env.BING_SITE_VERIFICATION } }
+      : {}),
+  },
 };
 
 // schema.org 结构化数据：让 Google / AI 搜索准确理解「这是一个免费的在线
