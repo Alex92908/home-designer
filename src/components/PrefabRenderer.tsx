@@ -47,11 +47,13 @@ function GlbStructure({ src, sizeM }: { src: string; sizeM: number }) {
   return <primitive object={obj} />;
 }
 
-const POOL_GLB    = "/models/outdoor_structure/swimming_pool/swimming_pool.glb";
+// 泳池保留程序化 Pool（无边泳池 + 按摩池 + 动画水面），比现有 904 面低模
+// GLB 真实得多；其余结构件用真实 GLB。
+import { Pool } from "./HouseCanvas";
+
 const PERGOLA_GLB = "/models/outdoor_structure/pergola/pergola.glb";
 const FOUNTAIN_GLB = "/models/outdoor_structure/water_fountain/water_fountain.glb";
 const GRILL_GLB    = "/models/outdoor_structure/outdoor_grill/outdoor_grill.glb";
-useGLTF.preload(POOL_GLB);
 useGLTF.preload(PERGOLA_GLB);
 useGLTF.preload(FOUNTAIN_GLB);
 useGLTF.preload(GRILL_GLB);
@@ -615,11 +617,11 @@ export function PrefabMesh({ prefab }: { prefab: YardPrefab }) {
     );
   }
 
-  // ─── Structural prefabs ── 全部用真实 GLB（泳池/廊架/烤架/喷泉），
-  // 通过 GlbStructure 按 footprint 缩放并落地居中，外层只管旋转。
+  // ─── Structural prefabs ── 泳池走程序化 Pool，廊架/烤架/喷泉走真实 GLB
+  // （GlbStructure 按 footprint 缩放并落地居中），外层只管定位与旋转。
   return (
     <group position={[wx, 0, wz]} rotation={[0, rot, 0]}>
-      {prefab.prefabKind === "pool"            && <GlbStructure src={POOL_GLB} sizeM={8} />}
+      {prefab.prefabKind === "pool"            && <Pool x={0} z={0} />}
       {prefab.prefabKind === "pergola_classic" && <GlbStructure src={PERGOLA_GLB} sizeM={5} />}
       {prefab.prefabKind === "outdoor_kitchen" && <GlbStructure src={GRILL_GLB} sizeM={2.2} />}
       {prefab.prefabKind === "fountain"        && <GlbStructure src={FOUNTAIN_GLB} sizeM={2.6} />}
