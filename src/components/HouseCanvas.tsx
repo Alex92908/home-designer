@@ -2772,72 +2772,129 @@ function DraggableGroup({
 // the surface lines up with the infinity-edge lip.
 export function AnimatedWater({ w, d }: { w: number; d: number }) {
   const surfaceRef = useRef<THREE.Mesh>(null);
-  // Procedural ripple normal map — generated once via canvas. Cheap, no
-  // network request, and animates by sliding the offset each frame.
-  const rippleNormal = useMemo(() => {
+  // Procedural ripple maps — generated once via canvas. We build a seamless
+  // height field from a handful of interfering sine waves with *integer* wave
+  // numbers (so it tiles perfectly under RepeatWrapping), then derive:
+  //   • a tangent-space NORMAL map  → surface ripple shading
+  //   • a grayscale DISTORTION map  → wobbles the mirror reflection (the bit
+  //     that actually sells "real water" — reflections must shimmer, not sit
+  //     flat like a mirror tile).
+  const { rippleNormal, distortionMap } = useMemo(() => {
     const SIZE = 256;
-    const c = document.createElement("canvas");
-    c.width = c.height = SIZE;
-    const ctx = c.getContext("2d")!;
-    const img = ctx.createImageData(SIZE, SIZE);
+    // Height field h[y][x] in [-1,1] from summed sines. Integer (kx,ky) keep
+    // it seamless; mixed frequencies/directions make it look organic.
+    const waves = [
+      { kx: 3, ky: 1, a: 1.0, ph: 0.0 },
+      { kx: 1, ky: 4, a: 0.8, ph: 1.7 },
+      { kx: 5, ky: 3, a: 0.5, ph: 3.1 },
+      { kx: 2, ky: 7, a: 0.35, ph: 0.6 },
+      { kx: 8, ky: 5, a: 0.22, ph: 2.2 },
+      { kx: 11, ky: 9, a: 0.14, ph: 4.0 },
+    ];
+    const norm = waves.reduce((s, v) => s + v.a, 0);
+    const h = new Float32Array(SIZE * SIZE);
+    const TWO_PI = Math.PI * 2;
     for (let y = 0; y < SIZE; y++) {
       for (let x = 0; x < SIZE; x++) {
-        // Two interfering sine waves → soft cellular pattern
-        const a = Math.sin(x * 0.18) * Math.cos(y * 0.21);
-        const b = Math.sin((x + y) * 0.10) * 0.7;
-        const v = (a + b) * 0.4 + 0.5;
-        const i = (y * SIZE + x) * 4;
-        // Encode as a tangent-space normal: flat (0.5, 0.5, 1.0) plus tiny xy
-        img.data[i + 0] = Math.min(255, Math.max(0, 128 + v * 30));
-        img.data[i + 1] = Math.min(255, Math.max(0, 128 + (1 - v) * 30));
-        img.data[i + 2] = 255;
-        img.data[i + 3] = 255;
+        let v = 0;
+        for (const wv of waves) {
+          v += wv.a * Math.sin((TWO_PI / SIZE) * (wv.kx * x + wv.ky * y) + wv.ph);
+        }
+        h[y * SIZE + x] = v / norm; // ~[-1,1]
       }
     }
-    ctx.putImageData(img, 0, 0);
-    const tex = new THREE.CanvasTexture(c);
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(w / 1.5, d / 1.5);
-    tex.anisotropy = 4;
-    return tex;
+    const at = (x: number, y: number) => h[((y + SIZE) % SIZE) * SIZE + ((x + SIZE) % SIZE)];
+
+    const mkTex = (data: Uint8ClampedArray) => {
+      const c = document.createElement("canvas");
+      c.width = c.height = SIZE;
+      const ctx = c.getContext("2d")!;
+      const img = ctx.createImageData(SIZE, SIZE);
+      img.data.set(data);
+      ctx.putImageData(img, 0, 0);
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.anisotropy = 8;
+      return tex;
+    };
+
+    // NORMAL map via central-difference gradient of the height field.
+    const nImg = new Uint8ClampedArray(SIZE * SIZE * 4);
+    const STRENGTH = 2.4;
+    for (let y = 0; y < SIZE; y++) {
+      for (let x = 0; x < SIZE; x++) {
+        const dx = (at(x + 1, y) - at(x - 1, y)) * STRENGTH;
+        const dy = (at(x, y + 1) - at(x, y - 1)) * STRENGTH;
+        // normalize (-dx,-dy,1)
+        const inv = 1 / Math.sqrt(dx * dx + dy * dy + 1);
+        const i = (y * SIZE + x) * 4;
+        nImg[i + 0] = (-dx * inv * 0.5 + 0.5) * 255;
+        nImg[i + 1] = (-dy * inv * 0.5 + 0.5) * 255;
+        nImg[i + 2] = (inv * 0.5 + 0.5) * 255;
+        nImg[i + 3] = 255;
+      }
+    }
+    // DISTORTION map = height as grayscale.
+    const dImg = new Uint8ClampedArray(SIZE * SIZE * 4);
+    for (let p = 0; p < SIZE * SIZE; p++) {
+      const g = (h[p] * 0.5 + 0.5) * 255;
+      dImg[p * 4 + 0] = dImg[p * 4 + 1] = dImg[p * 4 + 2] = g;
+      dImg[p * 4 + 3] = 255;
+    }
+
+    const rn = mkTex(nImg);
+    rn.repeat.set(Math.max(2, w / 2.2), Math.max(2, d / 2.2));
+    const dm = mkTex(dImg);
+    dm.repeat.set(Math.max(1.5, w / 3.0), Math.max(1.5, d / 3.0));
+    return { rippleNormal: rn, distortionMap: dm };
   }, [w, d]);
 
   useFrame((_, delta) => {
-    // Drift the normal map in the +X / +Z direction to fake water flow
-    rippleNormal.offset.x += delta * 0.04;
-    rippleNormal.offset.y += delta * 0.025;
+    // Drift the two maps in slightly different directions/speeds so the
+    // ripple and the reflection-wobble never line up → livelier water.
+    rippleNormal.offset.x += delta * 0.035;
+    rippleNormal.offset.y += delta * 0.022;
+    distortionMap.offset.x -= delta * 0.018;
+    distortionMap.offset.y += delta * 0.030;
     if (surfaceRef.current) {
-      // Tiny vertical bob so the surface isn't dead-still
       surfaceRef.current.position.y = -0.12 + Math.sin(Date.now() * 0.0011) * 0.003;
     }
   });
 
   return (
     <group>
-      {/* Pool bottom — deep turquoise mosaic tile.
-          Deeper hue (#1A9AAE) gives that "infinite pool depth" look.
-          Sun + sky + underwater LEDs light this through the water surface. */}
+      {/* Pool bottom — deep turquoise mosaic tile. Deeper hue gives the
+          "infinite pool depth" look; sun + sky light it through the surface. */}
       <mesh position={[0, -0.42, 0]} receiveShadow>
         <boxGeometry args={[w + 0.02, 0.04, d + 0.02]} />
-        <meshStandardMaterial color="#1A9AAE" roughness={0.28} metalness={0.06} />
+        <meshStandardMaterial color="#1690A6" roughness={0.22} metalness={0.05} />
       </mesh>
-      {/* Reflective water surface */}
+      {/* Reflective water surface: real-time planar reflection of sky/yard,
+          wobbled by the distortion map and rippled by the normal map. Lower
+          mirror + depth thresholds let the turquoise bottom show through near
+          the camera and reflections dominate at grazing angles (fresnel-ish). */}
       <mesh ref={surfaceRef} position={[0, -0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[w, d, 1, 1]} />
         <MeshReflectorMaterial
-          blur={[120, 60]}
-          resolution={512}
-          mixBlur={0.55}
-          mixStrength={1.55}
-          mirror={0.70}
-          mixContrast={1.15}
-          roughness={0.06}
-          metalness={0.12}
-          color="#5CCCE6"
+          blur={[300, 110]}
+          resolution={1024}
+          mixBlur={1.0}
+          mixStrength={3.2}
+          mirror={0.55}
+          mixContrast={1.0}
+          roughness={0.9}
+          metalness={0.15}
+          color="#3FAFC4"
+          distortion={0.55}
+          distortionMap={distortionMap}
           normalMap={rippleNormal}
-          normalScale={new THREE.Vector2(0.18, 0.18)}
+          normalScale={new THREE.Vector2(0.45, 0.45)}
+          depthScale={1.1}
+          minDepthThreshold={0.85}
+          maxDepthThreshold={1.35}
+          depthToBlurRatioBias={0.25}
           transparent
-          opacity={0.92}
+          opacity={0.9}
         />
       </mesh>
     </group>
