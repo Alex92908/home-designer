@@ -163,6 +163,11 @@ const ASSETS = [
   // ── 室内补齐 ──
   { uid: "57ba9e7b17464b58998e91f05dae9035", slug: "adjustable_desk",     category: "desk",   author: "twopixels" },
   { uid: "c48c05b0877a4ebf89ca92615519640c", slug: "corner_shower_glass", category: "shower", author: "allenbranch" },
+  // ── 补齐最后几件（换关键词找到的）──
+  { uid: "463f2c77f2694a699413dffd45797d9a", slug: "modular_l_sofa",        category: "sofa",    author: "murattd3v" },
+  { uid: "ac64f37d1ece47f99fe5b50fdba1b1cf", slug: "coat_rack",             category: "wardrobe", author: "plaggy" },
+  { uid: "57f348196dba448ca26fe80148efbb5b", slug: "luxury_wardrobe_closet", category: "storage", author: "zeroual.elmehdi" },
+  { uid: "3c79bf11bc70400a8efcef9dc419d068", slug: "minimalist_closet",     category: "storage", author: "uniboxtrade" },
 ];
 
 const API = "https://api.sketchfab.com/v3";

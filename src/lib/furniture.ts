@@ -89,6 +89,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "模块自由组合，适应多种空间",
     icon: "🛋️",
+    model3d: { url: "/models/sofa/modular_l_sofa/modular_l_sofa.glb" },
   },
 
   // ─── 茶几 Coffee Table ─────────────────────────────────
@@ -748,6 +749,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "工业风"],
     description: "工业管材，展示收纳",
     icon: "👔",
+    model3d: { url: "/models/wardrobe/coat_rack/coat_rack.glb" },
   },
 
   // ─── 梳妆台 Dresser ────────────────────────────────────
@@ -786,6 +788,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "定制全屋收纳，分区科学",
     icon: "👗",
+    model3d: { url: "/models/storage/luxury_wardrobe_closet/luxury_wardrobe_closet.glb" },
   },
   {
     id: "closet-island-white",
@@ -802,6 +805,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "中央岛台，收纳首饰配件",
     icon: "🗄️",
+    model3d: { url: "/models/storage/minimalist_closet/minimalist_closet.glb" },
   },
 
   // ─── 餐桌 Dining Table ─────────────────────────────────
