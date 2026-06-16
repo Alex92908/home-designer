@@ -269,6 +269,13 @@ export default function ShowcaseClient() {
             {en ? "Start designing for free →" : "免费开始设计 →"}
           </a>
         </div>
+        <footer className="mt-12 pt-6 border-t border-white/10 text-xs text-gray-500">
+          <a href="/credits" className="underline hover:text-gray-300">
+            {en ? "Asset credits" : "素材致谢"}
+          </a>
+          <span className="mx-2">·</span>
+          <span>© 筑雅 ZHUYA</span>
+        </footer>
       </section>
     </div>
   );
