@@ -17,7 +17,7 @@ import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
 import { DetailedDecor } from "./DetailedDecor";
 import { FirstPersonControls, TouchJoystick } from "./FirstPersonControls";
-import { getFloorTexture, getWallTexture, floorTileSize, wallTileSize } from "@/lib/textures";
+import { getFloorTexture, getWallTexture, getRugTexture, floorTileSize, wallTileSize } from "@/lib/textures";
 import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 import { StyledWindow } from "@/components/shared/StyledWindow";
 import { ROOFTOP_FIXTURE_IDS, RooftopFixtureMesh } from "./RooftopFixtures";
@@ -2021,11 +2021,13 @@ function Plant({ color, w, d, h }: MeshProps) {
   );
 }
 
-function Rug({ color, w, d }: MeshProps) {
+function Rug({ color, sc, w, d, id }: MeshProps & { id?: string }) {
+  // 程序化花纹贴图（北欧几何/波斯/素织），把纯色盒子升级成有图案有织感的地毯。
+  const tex = useMemo(() => getRugTexture(id ?? "rug", color, sc), [id, color, sc]);
   return (
-    <mesh position={[0, 0.01, 0]} receiveShadow>
+    <mesh position={[0, 0.012, 0]} receiveShadow>
       <boxGeometry args={[w, 0.015, d]} />
-      <meshStandardMaterial color={color} roughness={0.98} metalness={0} />
+      <meshStandardMaterial map={tex} color="#ffffff" roughness={0.97} metalness={0} />
     </mesh>
   );
 }
@@ -2227,7 +2229,7 @@ function FurnitureMesh({ item, w, d, h, instanceId, room }: { item: FurnitureIte
     case "storage":         return <Storage {...props} />;
     case "floor_lamp":      return <FloorLamp {...props} instanceId={instanceId} room={room} />;
     case "plant":           return <Plant {...props} />;
-    case "rug":             return <Rug {...props} />;
+    case "rug":             return <Rug {...props} id={item.id} />;
     case "artwork":         return <Artwork {...props} imageUrl={item.imageUrl} />;
     case "sideboard":       return <CoffeeTable {...props} />;
     case "bath_accessory":  return <BathAccessory item={item} w={w} d={d} h={h} />;

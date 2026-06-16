@@ -99,6 +99,65 @@ function adjustHex(hex: string, amt: number): string {
   return `#${toHex(r + amt)}${toHex(g + amt)}${toHex(b + amt)}`;
 }
 
+/**
+ * 程序化地毯贴图：织物底纹 + 按地毯类型画花纹（北欧几何 / 波斯纹章 / 现代素织）。
+ * 把「纯色盒子地毯」升级成有图案有织感的真地毯。CanvasTexture，零外部资源。
+ */
+export function getRugTexture(rugId: string, color: string, accent?: string): THREE.CanvasTexture {
+  return cached(`rug|${rugId}|${color}|${accent ?? ""}`, () => {
+    const N = 512;
+    const [c, ctx] = makeCtx(N);
+    const dark = adjustHex(color, -55);
+    const light = adjustHex(color, 42);
+    const acc = accent && /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : adjustHex(color, -95);
+
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, N, N);
+    // 织物经纬：细密横竖线，制造布面织感
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.05; ctx.strokeStyle = "#000";
+    for (let y = 0; y < N; y += 3) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(N, y); ctx.stroke(); }
+    ctx.globalAlpha = 0.035; ctx.strokeStyle = "#fff";
+    for (let x = 0; x < N; x += 3) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, N); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+
+    const id = rugId.toLowerCase();
+    if (id.includes("geo") || id.includes("nordic")) {
+      // 北欧几何：菱形棋盘
+      const step = N / 8;
+      for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) {
+        if ((i + j) % 2 === 0) continue;
+        const cx = i * step + step / 2, cy = j * step + step / 2;
+        ctx.fillStyle = (i + j) % 4 === 1 ? dark : acc;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - step * 0.34); ctx.lineTo(cx + step * 0.34, cy);
+        ctx.lineTo(cx, cy + step * 0.34); ctx.lineTo(cx - step * 0.34, cy);
+        ctx.closePath(); ctx.fill();
+      }
+    } else if (id.includes("persian")) {
+      // 波斯：多重边框 + 中央菱形纹章
+      const frames: Array<[number, string]> = [[18, dark], [36, acc], [54, light]];
+      ctx.lineWidth = 8;
+      for (const [pad, col] of frames) { ctx.strokeStyle = col; ctx.strokeRect(pad, pad, N - pad * 2, N - pad * 2); }
+      const diamond = (rr: number, col: string) => {
+        ctx.fillStyle = col; ctx.beginPath();
+        ctx.moveTo(N / 2, N / 2 - rr); ctx.lineTo(N / 2 + rr, N / 2);
+        ctx.lineTo(N / 2, N / 2 + rr); ctx.lineTo(N / 2 - rr, N / 2);
+        ctx.closePath(); ctx.fill();
+      };
+      diamond(N * 0.28, acc); diamond(N * 0.17, light);
+      ctx.fillStyle = dark; ctx.beginPath(); ctx.arc(N / 2, N / 2, N * 0.055, 0, Math.PI * 2); ctx.fill();
+    } else {
+      // 现代素织：细边框
+      ctx.strokeStyle = adjustHex(color, -32); ctx.lineWidth = 10;
+      ctx.strokeRect(28, 28, N - 56, N - 56);
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  });
+}
+
 /** Lerp between two hex colors */
 function lerpHex(a: string, b: string, t: number): string {
   const [ar, ag, ab] = hexRGB(a);
