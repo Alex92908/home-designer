@@ -934,7 +934,8 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "整体橱柜下柜，石英石台面",
     icon: "🍳",
-    model3d: { url: "/models/kitchen_cabinet/modular_kitchen_cabinets/modular_kitchen_cabinets.glb" },
+    // 贴图导出偏青绿，刷成目录的白色
+    model3d: { url: "/models/kitchen_cabinet/modular_kitchen_cabinets/modular_kitchen_cabinets.glb", recolor: "#EAE8E4" },
   },
   {
     id: "cabinet-lower-gray",
@@ -952,7 +953,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "哑光灰门板，高级质感",
     icon: "🍳",
-    model3d: { url: "/models/kitchen_cabinet/cabinet_base_drawers/cabinet_base_drawers.glb" },
+    model3d: { url: "/models/kitchen_cabinet/cabinet_base_drawers/cabinet_base_drawers.glb", recolor: "#A7ACB0" },
   },
   {
     id: "cabinet-upper-white",
@@ -969,7 +970,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "上柜悬挂，增大收纳空间",
     icon: "🍳",
-    model3d: { url: "/models/kitchen_cabinet/kitchen_cabinet_library/kitchen_cabinet_library.glb" },
+    model3d: { url: "/models/kitchen_cabinet/kitchen_cabinet_library/kitchen_cabinet_library.glb", recolor: "#EAE8E4" },
   },
 
   // ─── 冰箱 Refrigerator ────────────────────────────────
