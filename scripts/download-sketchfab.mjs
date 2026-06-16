@@ -93,7 +93,7 @@ const ASSETS = [
   // { uid: "REPLACE", slug: "tv_stand",         category: "tv_unit",      author: "Author" },
   //
   // Desks
-  // { uid: "REPLACE", slug: "computer_desk",    category: "desk",         author: "Author" },
+  { uid: "18abda12d33b4231aa13f92a291c717e", slug: "office_desk",    category: "desk",         author: "ahmagh2e" },
   //
   // Dining chairs (extra)
   // { uid: "REPLACE", slug: "dining_chair_b",   category: "dining_chair", author: "Author" },
@@ -102,10 +102,10 @@ const ASSETS = [
   // { uid: "REPLACE", slug: "accent_chair",     category: "accent_chair", author: "Author" },
   //
   // Floor lamps
-  // { uid: "REPLACE", slug: "floor_lamp",       category: "floor_lamp",   author: "Author" },
+  { uid: "083c9408b89949d8b201e8a1bb6ce41c", slug: "pbr_floor_lamp", category: "floor_lamp",   author: "Justin.Foley" },
   //
   // Office chairs
-  // { uid: "REPLACE", slug: "office_chair",     category: "office_chair", author: "Author" },
+  { uid: "a7fefb5dde954c84896949246dde5be6", slug: "office_chair",   category: "office_chair", author: "artvolodskikh" },
   //
   // Dresser
   // { uid: "REPLACE", slug: "dresser",          category: "dresser",      author: "Author" },
@@ -151,14 +151,13 @@ const ASSETS = [
   //   "ceramic planter large"→ target: tall ceramic/concrete pot
   //   "pool chaise"          → target: adjustable recline, white frame
   //
-  // { uid: "REPLACE", slug: "sun_lounger",         category: "outdoor_furniture", author: "Author" },
-  // { uid: "REPLACE", slug: "outdoor_sofa",        category: "outdoor_furniture", author: "Author" },
-  // { uid: "REPLACE", slug: "garden_parasol",      category: "outdoor_furniture", author: "Author" },
-  // { uid: "REPLACE", slug: "garden_coffee_table", category: "outdoor_furniture", author: "Author" },
-  // { uid: "REPLACE", slug: "outdoor_dining_set",  category: "outdoor_furniture", author: "Author" },
-  // { uid: "REPLACE", slug: "outdoor_fireplace",   category: "outdoor_furniture", author: "Author" },
-  // { uid: "REPLACE", slug: "large_planter",       category: "outdoor_furniture", author: "Author" },
-  // { uid: "REPLACE", slug: "pool_lounger",        category: "outdoor_furniture", author: "Author" },
+  { uid: "c2c86c8f882d46abb01d06ddf9d1d7a8", slug: "sun_lounger",        category: "outdoor_furniture", author: "hotdoghans" },
+  { uid: "f4eeef140d184d379bcd5461a4dc9b82", slug: "outdoor_lounge_sofa", category: "outdoor_furniture", author: "smomotempest" },
+  { uid: "280a65bca20b425e96617b0dd78cce21", slug: "garden_parasol",      category: "outdoor_furniture", author: "k3v1nc0" },
+  { uid: "9490039432e94536b05ac5bd3406ed61", slug: "fire_pit",            category: "outdoor_furniture", author: "meerschaumdigital" },
+  // ── 院子结构件（接 yardPlan prefab；下完需把对应 prefab 改成渲染 GLB）──
+  { uid: "788d32bf1a5648ddafad8ef1b88538d9", slug: "swimming_pool",       category: "outdoor_structure", author: "ahmagh2e" },
+  { uid: "eca838f2af7b4969813747fbc64f207f", slug: "pergola",             category: "outdoor_structure", author: "alex999m" },
 ];
 
 const API = "https://api.sketchfab.com/v3";
