@@ -162,6 +162,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "悬浮设计，视觉减负",
     icon: "📺",
+    model3d: { url: "/models/tv_unit/ClassicConsole_01/ClassicConsole_01_1k.glb" },
   },
   {
     id: "tvunit-walnut",
@@ -197,6 +198,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢", "工业风"],
     description: "岩板台面，高级质感",
     icon: "📺",
+    model3d: { url: "/models/tv_unit/ClassicConsole_01/ClassicConsole_01_1k.glb" },
     imageUrl: "/artworks/monet_impression_sunrise.jpg",
   },
 
@@ -232,6 +234,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["工业风", "现代"],
     description: "金属质感，个性硬朗",
     icon: "💡",
+    model3d: { url: "/models/floor_lamp/industrial_pipe_lamp/industrial_pipe_lamp_1k.glb" },
   },
 
   // ─── 书架 Bookshelf ────────────────────────────────────
@@ -760,6 +763,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["北欧", "现代"],
     description: "带镜梳妆，收纳实用",
     icon: "🪞",
+    model3d: { url: "/models/dresser/vintage_wooden_drawer_01/vintage_wooden_drawer_01_1k.glb" },
   },
 
   // ─── 衣帽间系统 Closet System ─────────────────────────
@@ -848,6 +852,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "工业风"],
     description: "金属脚架+岩板台面",
     icon: "⬛",
+    model3d: { url: "/models/dining_table/WoodenTable_03/WoodenTable_03_1k.glb" },
   },
 
   // ─── 餐椅 Dining Chair ─────────────────────────────────
@@ -883,6 +888,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "仿皮软包，舒适有型",
     icon: "🪑",
+    model3d: { url: "/models/dining_chair/painted_wooden_chair_01/painted_wooden_chair_01_1k.glb" },
   },
   {
     id: "chair-industrial-black",
@@ -899,6 +905,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["工业风", "现代"],
     description: "金属骨架，硬朗个性",
     icon: "🪑",
+    model3d: { url: "/models/dining_chair/painted_wooden_chair_02/painted_wooden_chair_02_1k.glb" },
   },
 
   // ─── 橱柜 Kitchen Cabinet ──────────────────────────────

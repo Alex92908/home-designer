@@ -48,3 +48,6 @@ agent-worktree/
 
 # Claude agent 沙盒 worktree 不入库
 .claude/worktrees/
+
+# 脚本误在 scripts/ 下跑时落的 public（应在仓库根 public/）
+scripts/public/
