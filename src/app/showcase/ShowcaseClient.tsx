@@ -107,6 +107,19 @@ export default function ShowcaseClient() {
     setActiveId(null);
   };
 
+  // 「在设计器中打开此方案」：把当前查看的模板据为己有 —— 清掉备份（卸载时
+  // 不再还原），让模板数据留在 store + localStorage，跳到设计器编辑。会替换
+  // 用户当前设计，故先确认。
+  const openInDesigner = () => {
+    const msg = en
+      ? "Open this design in the editor? It will replace your current design."
+      : "在设计器中打开此方案？这会替换你当前的设计。";
+    if (!window.confirm(msg)) return;
+    backup.current = null; // 不还原 → 模板成为用户的新工作设计
+    useDesignerStore.setState({ viewMode: "3d" as never, activeFloor: 0 });
+    window.location.href = "/";
+  };
+
   // ── 外形图查看器 ──
   if (activeId) {
     const t = SHOWCASE_TEMPLATES.find((x) => x.id === activeId);
@@ -129,6 +142,14 @@ export default function ShowcaseClient() {
             <div className="text-xs text-gray-300">{en ? t.descEn : t.descZh}</div>
           </div>
         )}
+        {/* 在设计器中打开此方案（fork 成自己的设计去编辑） */}
+        <button
+          onClick={openInDesigner}
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-xl"
+          style={{ background: "#007AFF" }}
+        >
+          {en ? "Open this design in the editor →" : "在设计器中打开此方案 →"}
+        </button>
       </div>
     );
   }
