@@ -1,0 +1,11 @@
+Model Information:
+* title:	FSS-WHT-29951PP
+* source:	https://sketchfab.com/3d-models/fss-wht-29951pp-871a37b0a8c84e15a2e8d464f017e73e
+* author:	kaushikpaul5 (https://sketchfab.com/kaushikpaul5)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "FSS-WHT-29951PP" (https://sketchfab.com/3d-models/fss-wht-29951pp-871a37b0a8c84e15a2e8d464f017e73e) by kaushikpaul5 (https://sketchfab.com/kaushikpaul5) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
