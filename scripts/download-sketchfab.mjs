@@ -35,6 +35,9 @@ async function loadEnv() {
 
 // ── Assets (uid + category + author for attribution) ───────────
 const ASSETS = [
+  { uid: "e2c6a8dd490e4e4398378e1f6c9121a8", slug: "glass_shower_cabin",      category: "shower",          author: "Heliona" },
+  { uid: "7f2e26eae09d4cee928e9f4d2207b0cb", slug: "smart_marble_toilet",     category: "toilet",          author: "marshango" },
+  { uid: "415459153aa54757b16163e13ce67153", slug: "double_sink_vanity",      category: "bathroom_vanity", author: "Rabko_7" },
   // ── Beds ─────────────────────────────────────────────
   { uid: "95e58eda71e8438fbf0be4169fefef86", slug: "bed_07",                  category: "bed",             author: "DoaaSheha" },
   { uid: "0d5590d1d2184aa98797c3d6382afd7e", slug: "japanese_futon_bed",      category: "bed",             author: "nicolas_solo" },

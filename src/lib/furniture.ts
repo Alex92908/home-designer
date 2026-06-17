@@ -1075,7 +1075,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "智能冲洗，加热座圈",
     icon: "🚽",
-    model3d: { url: "/models/toilet/curved_modern_wc/curved_modern_wc.glb" },
+    model3d: { url: "/models/toilet/smart_marble_toilet/smart_marble_toilet.glb" },
   },
   {
     id: "toilet-standard",
@@ -1164,7 +1164,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "钢化玻璃，干湿分离",
     icon: "🚿",
-    model3d: { url: "/models/shower/corner_shower/corner_shower.glb" },
+    model3d: { url: "/models/shower/glass_shower_cabin/glass_shower_cabin.glb" },
   },
   {
     id: "shower-walkin",
@@ -1181,7 +1181,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "开放式设计，视觉大气",
     icon: "🚿",
-    model3d: { url: "/models/shower/corner_shower_glass/corner_shower_glass.glb" },
+    model3d: { url: "/models/shower/glass_shower_cabin/glass_shower_cabin.glb" },
   },
 
   // ─── 浴室柜 Bathroom Vanity ───────────────────────────
@@ -1215,11 +1215,11 @@ export const FURNITURE: FurnitureItem[] = [
     secondaryColor: "#F5F5F5",
     width: 150,
     depth: 52,
-    height: 82,
+    height: 160,
     tags: ["轻奢", "现代"],
     description: "双台盆，岩板台面奢华",
     icon: "🪥",
-    model3d: { url: "/models/bathroom_vanity/laufen_kartell_vanity/laufen_kartell_vanity.glb" },
+    model3d: { url: "/models/bathroom_vanity/double_sink_vanity/double_sink_vanity.glb" },
   },
 
   // ─── 书桌 Desk ────────────────────────────────────────

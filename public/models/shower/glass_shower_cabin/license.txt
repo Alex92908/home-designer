@@ -1,0 +1,11 @@
+Model Information:
+* title:	Shower Cabin
+* source:	https://sketchfab.com/3d-models/shower-cabin-e2c6a8dd490e4e4398378e1f6c9121a8
+* author:	Heliona (https://sketchfab.com/Heliona)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Shower Cabin" (https://sketchfab.com/3d-models/shower-cabin-e2c6a8dd490e4e4398378e1f6c9121a8) by Heliona (https://sketchfab.com/Heliona) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
