@@ -934,8 +934,9 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "整体橱柜下柜，石英石台面",
     icon: "🍳",
-    // 贴图导出偏青绿，刷成目录的白色
-    model3d: { url: "/models/kitchen_cabinet/modular_kitchen_cabinets/modular_kitchen_cabinets.glb", recolor: "#EAE8E4" },
+    // 旧 modular_kitchen_cabinets.glb 原始尺寸 7.89×2.01×0.65m（含吊柜、比例失真），
+    // contain 后柜体被压成薄片层架。改用干净的单体底柜模块 + tile 平铺成整排。
+    model3d: { url: "/models/kitchen_cabinet/cabinet_base_drawers/cabinet_base_drawers.glb", recolor: "#EAE8E4", fit: "tile" },
   },
   {
     id: "cabinet-lower-gray",
@@ -953,7 +954,8 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "哑光灰门板，高级质感",
     icon: "🍳",
-    model3d: { url: "/models/kitchen_cabinet/cabinet_base_drawers/cabinet_base_drawers.glb", recolor: "#A7ACB0" },
+    // 单体底柜模块沿延米平铺，台面高度与进深正确（不再压成薄片）。
+    model3d: { url: "/models/kitchen_cabinet/cabinet_base_drawers/cabinet_base_drawers.glb", recolor: "#A7ACB0", fit: "tile" },
   },
   {
     id: "cabinet-upper-white",
@@ -989,8 +991,15 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢"],
     description: "对开门大容量，变频节能",
     icon: "🧊",
-    // 该模型导出色是青绿（无贴图纯色），刷成不锈钢银白
-    model3d: { url: "/models/refrigerator/stainless_fridge/stainless_fridge.glb", recolor: "#D7DBDF" },
+    // ⚠️ 不用 GLB：两个冰箱模型都不可用——stainless_fridge.glb 是「冰箱+橱柜整组
+    // 场景」（几何中心偏移 z=1.92）；modern_fridge_drawer.glb 是带骨骼的 SkinnedMesh
+    // （Left_Door/Right_Door/Freezer 关节），它的 geometry.boundingBox 取的是绑定前
+    // 的静止姿态包围盒，和蒙皮后真正渲染出来的位置不一致，导致我们的「测量→缩放→
+    // 居中」流水线把可见网格摆错位置（用户实际看到的就是：明明靠墙放却显示在房间
+    // 中间、移动无效），非等比缩放还会让骨骼剪切变形、静态包围球又触发视锥剔除导致
+    // 冰箱时隐时现。改用程序化 Refrigerator（见 RoomCanvas）：纯 box，永远按
+    // 90×180×70 的申报体量精确就位、贴墙、不剔除、不变形。
+    // model3d 留空 → 走 FurnitureMesh→Refrigerator 程序化渲染（法式双门外观）。
   },
   {
     id: "fridge-single-white",
@@ -1007,7 +1016,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "小户型适用，静音节能",
     icon: "🧊",
-    model3d: { url: "/models/refrigerator/modern_fridge_drawer/modern_fridge_drawer.glb" },
+    // 同上：弃用带骨骼的 modern_fridge_drawer.glb，走程序化 Refrigerator（单门外观）。
   },
 
   // ─── 油烟机 Range Hood ────────────────────────────────
@@ -1026,7 +1035,8 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "侧吸大吸力，静音高效",
     icon: "🌬️",
-    model3d: { url: "/models/range_hood/range_hood/range_hood.glb" },
+    // 壁挂于灶台上方（见 PlacedItemMesh 的 range_hood 高度锚定）；fill 撑满 0.9×0.6×0.52m。
+    model3d: { url: "/models/range_hood/range_hood/range_hood.glb", fit: "fill" },
   },
 
   // ─── 厨房水槽 Kitchen Sink ────────────────────────────
@@ -1045,7 +1055,8 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "304不锈钢，双槽分区",
     icon: "🚿",
-    model3d: { url: "/models/kitchen_sink/double_sink/double_sink.glb" },
+    // 落在台面上（见 PlacedItemMesh 的 kitchen_sink 高度锚定）；fill 撑满 0.8×0.25×0.45m。
+    model3d: { url: "/models/kitchen_sink/double_sink/double_sink.glb", fit: "fill" },
   },
 
   // ─── 马桶 Toilet ──────────────────────────────────────

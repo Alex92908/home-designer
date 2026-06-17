@@ -1797,22 +1797,57 @@ function KitchenCabinet({ color, w, d, h }: MeshProps) {
 
 function Refrigerator({ color, w, d, h }: MeshProps) {
   const metal = useMemo(() => { const t = brushedMetalMap(color).clone(); t.repeat.set(1, Math.max(1, h * 0.8)); t.needsUpdate = true; return t; }, [color, h]);
+  // A fridge ≥ 0.78 m wide reads as a french-door (two top doors) model;
+  // narrower bodies are single-door. The freezer drawer occupies the bottom
+  // ~36 % in both cases. Everything is modeled with base at y=0 and fully
+  // fills w×d×h, so placement/scale always match the declared footprint.
+  const isFrench = w >= 0.78;
+  const fz = h * 0.36;            // freezer height
+  const doorH = h - fz;          // upper door section height
+  const front = d / 2 + 0.006;   // front face z (slightly proud for seams)
+  const seam = shade(color, -22);
+  const handleMat = { color: "#9aa0a6", metalness: 0.7, roughness: 0.28 } as const;
   return (
     <group>
+      {/* Body */}
       <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, h, d]} />
         <meshStandardMaterial color={color} map={metal} roughness={0.4} metalness={0.55} />
       </mesh>
-      {/* Door line */}
-      <mesh position={[0, h * 0.35, d / 2 + 0.005]}>
-        <boxGeometry args={[w - 0.04, 0.008, 0.01]} />
-        <meshStandardMaterial color={shade(color, -20)} roughness={0.3} />
+      {/* Horizontal seam between fridge section and freezer drawer */}
+      <mesh position={[0, fz, front]}>
+        <boxGeometry args={[w - 0.03, 0.01, 0.012]} />
+        <meshStandardMaterial color={seam} roughness={0.3} />
       </mesh>
-      {/* Handle */}
-      <mesh position={[w * 0.35, h * 0.6, d / 2 + 0.03]}>
-        <boxGeometry args={[0.03, h * 0.25, 0.06]} />
-        <meshStandardMaterial color="#888" metalness={0.7} roughness={0.3} />
+      {/* Freezer drawer handle (horizontal bar) */}
+      <mesh position={[0, fz - h * 0.06, front + 0.025]}>
+        <boxGeometry args={[w * 0.5, 0.028, 0.05]} />
+        <meshStandardMaterial {...handleMat} />
       </mesh>
+      {isFrench ? (
+        <>
+          {/* Vertical center seam splitting the two top doors */}
+          <mesh position={[0, fz + doorH / 2, front]}>
+            <boxGeometry args={[0.012, doorH - 0.03, 0.012]} />
+            <meshStandardMaterial color={seam} roughness={0.3} />
+          </mesh>
+          {/* Two vertical door handles, flanking the center seam */}
+          <mesh position={[-w * 0.06, fz + doorH * 0.5, front + 0.025]}>
+            <boxGeometry args={[0.03, doorH * 0.6, 0.05]} />
+            <meshStandardMaterial {...handleMat} />
+          </mesh>
+          <mesh position={[w * 0.06, fz + doorH * 0.5, front + 0.025]}>
+            <boxGeometry args={[0.03, doorH * 0.6, 0.05]} />
+            <meshStandardMaterial {...handleMat} />
+          </mesh>
+        </>
+      ) : (
+        /* Single tall door handle on the right edge */
+        <mesh position={[w * 0.36, fz + doorH * 0.5, front + 0.025]}>
+          <boxGeometry args={[0.03, doorH * 0.6, 0.05]} />
+          <meshStandardMaterial {...handleMat} />
+        </mesh>
+      )}
     </group>
   );
 }
@@ -2420,16 +2455,18 @@ function PlumbingFixture({ item, w, d, h }: { item: FurnitureItem; w: number; d:
 // <ErrorBoundary> in the parent.
 
 function GltfFurniture({
-  url, scale, rotation, yOffset, recolor, w, d, h,
-}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number }) {
+  url, scale, rotation, yOffset, recolor, w, d, h, fit,
+}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile" }) {
   const { scene } = useGLTF(url) as unknown as { scene: THREE.Object3D };
 
   // Clone so multiple instances don't share transforms or materials.
-  const cloned = useMemo(() => {
-    const c = scene.clone(true);
-    c.traverse((obj) => {
-      const mesh = obj as THREE.Mesh;
-      if (mesh.isMesh) {
+  // Returns one or more positioned instances (tiling produces several).
+  const instances = useMemo(() => {
+    // Per-mesh material fixups shared by every clone we build.
+    const prep = (root: THREE.Object3D) => {
+      root.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         // Repaint when the source GLB has a wrong/placeholder base color.
@@ -2463,45 +2500,86 @@ function GltfFurniture({
             sm.needsUpdate = true;
           }
         }
-      }
-    });
-    // Measure the asset's native bounding box so we can scale to our
-    // declared furniture size (width/depth/height in meters).
-    const box = new THREE.Box3().setFromObject(c);
+      });
+    };
+    // Scale a fresh clone uniformly by `s`, then recenter footprint on the
+    // X/Z origin and drop its base to Y=0 (matches procedural-box convention).
+    const buildUniform = (s: number) => {
+      const c = scene.clone(true);
+      prep(c);
+      c.scale.setScalar(s);
+      c.updateMatrixWorld(true);
+      const b = new THREE.Box3().setFromObject(c);
+      c.position.x -= (b.min.x + b.max.x) / 2;
+      c.position.z -= (b.min.z + b.max.z) / 2;
+      c.position.y -= b.min.y;
+      return { obj: c, box: b };
+    };
+
+    // Measure the asset's native bounding box from a prepped clone so we can
+    // scale to our declared furniture size (width/depth/height in meters).
+    const base = scene.clone(true);
+    prep(base);
+    const box = new THREE.Box3().setFromObject(base);
     const size = new THREE.Vector3();
     box.getSize(size);
     const center = new THREE.Vector3();
     box.getCenter(center);
     // eslint-disable-next-line no-console
-    console.log(`[GltfFurniture] ${url} native=${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m target=${w.toFixed(2)}×${h.toFixed(2)}×${d.toFixed(2)}m center=(${center.x.toFixed(2)},${center.y.toFixed(2)},${center.z.toFixed(2)})`);
+    console.log(`[GltfFurniture] ${url} fit=${fit ?? "contain"} native=${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m target=${w.toFixed(2)}×${h.toFixed(2)}×${d.toFixed(2)}m center=(${center.x.toFixed(2)},${center.y.toFixed(2)},${center.z.toFixed(2)})`);
+
     // Safety: if any dim is zero (broken model), skip auto-scale.
-    if (size.x > 0 && size.y > 0 && size.z > 0) {
-      // Uniform "contain" fit: scale by a SINGLE factor so the model fits
-      // inside the declared W×D×H box while keeping its real proportions.
-      // We pick the smallest of the three axis ratios, so the model never
-      // bursts past the declared footprint or height — and, crucially, never
-      // gets squished/stretched the way the old per-axis fit did (that made
-      // cabinets/sinks/toilets look "small & ugly" when the model's native
-      // proportions didn't match the declared box). The `scale` prop stacks
-      // on top as a per-asset trim.
-      const s = Math.min(w / size.x, h / size.y, d / size.z) * (scale ?? 1);
-      c.scale.set(s, s, s);
-      // Re-measure after scale, then shift so base is at Y=0 and
-      // footprint is centered on X/Z origin (matches procedural-box convention).
-      c.updateMatrixWorld(true);
-      const box2 = new THREE.Box3().setFromObject(c);
-      c.position.x -= (box2.min.x + box2.max.x) / 2;
-      c.position.z -= (box2.min.z + box2.max.z) / 2;
-      c.position.y -= box2.min.y;
-    } else if (scale) {
-      c.scale.setScalar(scale);
+    if (!(size.x > 0 && size.y > 0 && size.z > 0)) {
+      if (scale) base.scale.setScalar(scale);
+      return [{ obj: base, x: 0 }];
     }
-    return c;
-  }, [scene, w, d, h, scale, recolor]);
+
+    const mode = fit ?? "contain";
+    const trim = scale ?? 1;
+
+    if (mode === "fill") {
+      // Non-uniform: exactly fill W×D×H. Best for boxy appliances whose
+      // declared size IS the real product size (fridge/sink/range hood).
+      base.scale.set((w / size.x) * trim, (h / size.y) * trim, (d / size.z) * trim);
+      base.updateMatrixWorld(true);
+      const b2 = new THREE.Box3().setFromObject(base);
+      base.position.x -= (b2.min.x + b2.max.x) / 2;
+      base.position.z -= (b2.min.z + b2.max.z) / 2;
+      base.position.y -= b2.min.y;
+      return [{ obj: base, x: 0 }];
+    }
+
+    if (mode === "tile") {
+      // Fit a single module by depth+height (its real cabinet cross-section),
+      // keep the module's own width, then repeat it along the run to fill `w`.
+      const s = Math.min(h / size.y, d / size.z) * trim;
+      const first = buildUniform(s);
+      const moduleW = first.box.max.x - first.box.min.x;
+      const count = Math.max(1, Math.round(w / Math.max(moduleW, 1e-3)));
+      const out: { obj: THREE.Object3D; x: number }[] = [];
+      for (let i = 0; i < count; i++) {
+        const obj = i === 0 ? first.obj : buildUniform(s).obj;
+        const x = (i - (count - 1) / 2) * moduleW;
+        out.push({ obj, x });
+      }
+      return out;
+    }
+
+    // "contain" (default): uniform scale by the SMALLEST axis ratio so the
+    // model keeps its real proportions and never bursts past the box. Best
+    // for organic/proportioned items (plants, sofas, chairs, lamps).
+    const s = Math.min(w / size.x, h / size.y, d / size.z) * trim;
+    const only = buildUniform(s);
+    return [{ obj: only.obj, x: 0 }];
+  }, [scene, w, d, h, scale, recolor, fit]);
 
   return (
     <group rotation={[0, rotation ?? 0, 0]} position={[0, yOffset ?? 0, 0]}>
-      <primitive object={cloned} />
+      {instances.map((inst, i) => (
+        <group key={i} position={[inst.x, 0, 0]}>
+          <primitive object={inst.obj} />
+        </group>
+      ))}
     </group>
   );
 }
@@ -2735,9 +2813,24 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
   // ceiling (roomH). The mesh is modeled with base at y=0, so we shift
   // its Y by roomH - itemH. Floor-mounted items use elevationY as before.
   const roomH = def.height / 100;
-  const baseY = placed.mountCeiling
+  let baseY = placed.mountCeiling
     ? roomH - fh
     : (placed.elevationY ?? 0) / 100;
+
+  // Kitchen fixtures aren't floor-standing: a sink drops into the counter and
+  // a range hood hangs on the wall above the cooktop. When the user hasn't
+  // overridden placement (no 吸顶, no manual elevationY), auto-anchor them at
+  // the right height so they don't sit flat on the floor.
+  if (!placed.mountCeiling && (placed.elevationY ?? 0) === 0) {
+    const COUNTER_H = 0.85; // standard base-cabinet counter height (m)
+    if (item.category === "kitchen_sink") {
+      // Rest the sink on the counter (its base ~ counter top).
+      baseY = COUNTER_H - fh * 0.35;
+    } else if (item.category === "range_hood") {
+      // Hood bottom ~0.65m above the counter.
+      baseY = COUNTER_H + 0.62;
+    }
+  }
 
   // If the furniture item has a real 3D asset, render it; else fall
   // back to procedural box mesh. Suspense handles async glb load; if
@@ -2958,6 +3051,7 @@ class GltfFurnitureWithFallback extends Component<
         rotation={item.model3d.rotation}
         yOffset={item.model3d.yOffset}
         recolor={item.model3d.recolor}
+        fit={item.model3d.fit}
         w={w} d={d} h={h}
       />
     );

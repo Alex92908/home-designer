@@ -824,6 +824,20 @@ export interface FurnitureItem {
     /** Y offset in meters to push the model up/down from floor level.
      *  Use when the asset's pivot isn't at the base. */
     yOffset?: number;
+    /** How to scale the asset into the declared width/depth/height box.
+     *  - "contain" (default): uniform scale by the SMALLEST axis ratio so
+     *    the model keeps its real proportions and never bursts past the box.
+     *    Best for organic/proportioned items (plants, sofas, chairs, lamps).
+     *  - "fill": non-uniform scale so the model exactly fills W×D×H. Best for
+     *    boxy single appliances (fridge, sink, range hood) whose declared
+     *    size is the real product size — no visible distortion since they're
+     *    already rectangular, and it fixes the "too small/short" look that
+     *    `contain` produces when the native aspect ratio differs.
+     *  - "tile": uniform-fit ONE module by depth+height, then repeat it along
+     *    the width to fill the declared run length. Best for cabinet runs
+     *    where the GLB is a single cabinet module but the catalog declares a
+     *    multi-meter counter run (e.g. 2.6m of base cabinets). */
+    fit?: "contain" | "fill" | "tile";
     /** Optional hex color to repaint the model's materials. Use when the
      *  source GLB ships with a wrong/placeholder base color (e.g. a Sketchfab
      *  model whose "stainless" fridge is actually exported teal). Each mesh
