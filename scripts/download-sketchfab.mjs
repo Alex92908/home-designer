@@ -35,6 +35,7 @@ async function loadEnv() {
 
 // ── Assets (uid + category + author for attribution) ───────────
 const ASSETS = [
+  { uid: "936dcb6b4b34465e9c66245b5ef71966", slug: "squat_toilet", category: "toilet", author: "nihaldevang4" },
   { uid: "5b18711616054a44b025d9272b745a6a", slug: "qualitas_toilet",        category: "toilet",          author: "5Life" },
   { uid: "871a37b0a8c84e15a2e8d464f017e73e", slug: "wallhung_toilet_fss",    category: "toilet",          author: "kaushikpaul5" },
   { uid: "e2c6a8dd490e4e4398378e1f6c9121a8", slug: "glass_shower_cabin",      category: "shower",          author: "Heliona" },

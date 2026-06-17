@@ -1405,7 +1405,7 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"barn",         name:"牲畜棚",     brand:"农场",     price:8800, unit:"元/座", category:"livestock",         roomTypes:["yard"],                     color:"#C06030", width:400, depth:300, height:300, tags:[], description:"大型牲畜棚",     icon:"🏚️" },
 
   // ─── 卫浴补全 Bathroom accessories ────────────────────────
-  { id:"toilet-squat",       name:"蹲坑",         brand:"陶瓷", price:380,  unit:"元/件", category:"toilet",         roomTypes:["bathroom","bathroom2"], color:"#F5F5F5", width:60, depth:80, height:15, tags:[],      description:"传统蹲便器",   icon:"🚽" },
+  { id:"toilet-squat",       name:"蹲坑",         brand:"陶瓷", price:380,  unit:"元/件", category:"toilet",         roomTypes:["bathroom","bathroom2"], color:"#F5F5F5", width:48, depth:65, height:18, tags:[],      description:"传统蹲便器",   icon:"🚽", model3d:{ url:"/models/toilet/squat_toilet/squat_toilet.glb", rotation: Math.PI/2 } },
   { id:"mirror-cabinet",     name:"镜柜",         brand:"五金", price:780,  unit:"元/件", category:"bathroom_vanity", roomTypes:["bathroom","bathroom2"], color:"#E8E8E8", width:80, depth:18, height:80, tags:["现代"], description:"带镜储物柜",   icon:"🪞" },
   { id:"shower-head",        name:"淋浴花洒（手持+顶喷）", brand:"五金", price:680, unit:"元/套", category:"bath_accessory", roomTypes:["bathroom","bathroom2"], color:"#C8C8C8", width:25, depth:15, height:120, tags:["现代"], description:"花洒龙头一体套装", icon:"🚿" },
   { id:"faucet-basin",       name:"面盆龙头",     brand:"五金", price:280,  unit:"元/件", category:"bath_accessory", roomTypes:["bathroom","bathroom2","kitchen"], color:"#C8C8C8", width:8,  depth:18, height:22,  tags:[],      description:"单把混水龙头", icon:"🚰" },
