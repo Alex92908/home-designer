@@ -10,6 +10,7 @@
  * 外形图，不污染用户自己的设计（ShowcaseClient 负责备份/还原）。
  */
 import { makeDefaultProject } from "./defaultProject";
+import { EXTERIOR_PRESETS } from "./exteriorPresets";
 import type { FloorPlan, ExteriorSettings } from "./types";
 
 export interface ShowcaseTemplate {
@@ -35,6 +36,20 @@ export const SHOWCASE_TEMPLATES: ShowcaseTemplate[] = [
     load: () => {
       const p = makeDefaultProject();
       return { floorPlans: p.floorPlans, exterior: p.exterior };
+    },
+  },
+  {
+    id: "clear-glass-curtain-villa",
+    nameZh: "通透玻璃幕墙别墅",
+    nameEn: "Clear Glass-Curtain Villa",
+    descZh: "通透玻璃幕墙 · 胡桃木挑檐 · 逐面可调立面 · 泳池庭院",
+    descEn: "See-through glass curtain · walnut soffit · per-face facade · pool yard",
+    tags: ["3F", "玻璃幕墙", "泳池院"],
+    load: () => {
+      // 同一套 defaultProject 户型，叠加 glass-curtain 外观预设 → 通透玻璃幕墙立面。
+      const p = makeDefaultProject();
+      const gc = EXTERIOR_PRESETS.find((x) => x.id === "glass-curtain")?.settings ?? {};
+      return { floorPlans: p.floorPlans, exterior: { ...p.exterior, ...gc, preset: "glass-curtain" } };
     },
   },
   // ── 以后在此追加更多样板 / 用户投稿（也可改为运行时从 API 注入）──
