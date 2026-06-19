@@ -93,12 +93,17 @@ export default function ShowcaseClient() {
   const openTemplate = (t: ShowcaseTemplate) => {
     ensureBackup();
     const { floorPlans, exterior } = t.load();
-    useDesignerStore.setState((s) => ({
-      floorPlans,
-      exterior: { ...s.exterior, ...exterior },
+    // REPLACE the exterior wholesale (load() returns a complete exterior built
+    // from defaultProject). Merging over s.exterior leaked the previously-opened
+    // template's facade — e.g. the glass-curtain template set facadeSystem:
+    // "curtain-wall" globally, so switching back to the modern-minimal villa
+    // (whose exterior doesn't set facadeSystem) still rendered as glass.
+    useDesignerStore.setState({
+      floorPlans: floorPlans as never,
+      exterior: exterior as never,
       viewMode: "exterior" as never,
       activeFloor: 0,
-    }));
+    });
     setActiveId(t.id);
   };
 
