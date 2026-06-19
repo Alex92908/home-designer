@@ -2567,6 +2567,11 @@ export default function FloorPlanBuilding({
   // 直接从 allSegs 解析(含被 layeredSegs 过滤掉的「全开敞」面)，覆盖更全。
   const glassRooms = useMemo<Set<string>>(() => {
     const set = new Set<string>();
+    // 仅幕墙模式才有「玻璃房间」。普通立面(punched-window)下，floor-plan 里隐藏的
+    // 外墙(roomWallsHidden，如默认方案的 living.N / hallway / stair)只是「开/缺墙」，
+    // 不是玻璃；若误判为 glassRoom 会跳过实心盒子和门板 → 门变空洞、家具裸露
+    // (用户反馈「门和家具不正常」)。所以非幕墙模式直接返回空集。
+    if (!curtainWall) return set;
     for (const s of allSegs) {
       const wallShown = resolveFacadeLayer(floorPlans[s.floorIndex], s.room, s.side, "wall", curtainWall);
       if (!wallShown) set.add(`${s.floorIndex}:${s.room}`);
@@ -3806,8 +3811,8 @@ export default function FloorPlanBuilding({
         const hasGlassRoom = (fp.enabledRooms ?? [])
           .some(r => glassRooms.has(`${fi}:${r}`));
         if (hasGlassRoom) return null;
-        // 本层有任何「外墙开洞」房间时也跳过背景填充板：它会从洞口后面挡住
-        // 视线，让开窗/开门看不到真实室内。各封闭房间仍各自画实心盒子兜底。
+        // 本层有「外墙开洞」房间时跳过背景填充板，让透过通透门窗看到真实室内。
+        // (门板仍由 glassRooms 已限定幕墙 → 普通立面照常渲染门板，不再是空洞。)
         const hasOpeningRoom = (fp.enabledRooms ?? [])
           .some(r => openingRooms.has(`${fi}:${r}`));
         if (hasOpeningRoom) return null;
@@ -4225,8 +4230,8 @@ export default function FloorPlanBuilding({
             const floorHasGlass = (fp.enabledRooms ?? [])
               .some(r => glassRooms.has(`${fi}:${r}`));
             if (floorHasGlass) return null;
-            // 有外墙开洞的房间：外观图跳过实心盒子，让窗/门洞透出真实室内。
-            // 实体外墙(wallSegments)仍带洞渲染，墙的实心部分照样挡视线。
+            // 有外墙开洞的房间跳过实心盒子，让窗/门洞透出真实室内家具。门板仍
+            // 渲染(glassRooms 已限定幕墙)，实体外墙带洞，墙的实心部分照样挡视线。
             if (!insideBuilding && openingRooms.has(`${fi}:${room}`)) return null;
             // 顶层楼梯间：天台可上人时不画实心盒子，否则盒子顶面把天台
             // 楼梯口封死（背景板已在同位置 carveRect 开了井口）。
@@ -7549,10 +7554,11 @@ export default function FloorPlanBuilding({
               // 默认 transmission=0，纯靠 opacity + 偏蓝灰 color 做成「可见的
               // 半透实体玻璃面板」，从外面立刻能读出门窗。
               const exView = !insideBuilding;
-              // 外观窗玻璃默认改为「通透玻璃」：开窗/开门要能透过洞口看到真实
-              // 室内（用户要求）。配套：窗/门洞后面的实心房间盒子已按 openingRooms
-              // 跳过（见 §2 房间盒子），洞后是真实家具/内墙而非亮天空，故 transmission
-              // 不会发白。仍全部可配置——预设想要反光实体玻璃可显式覆盖这些字段。
+              // 窗玻璃通透只在幕墙模式开启：开窗/开门透过洞口看到真实室内(配套
+              // openingRooms 跳过盒子)。普通立面(punched-window)保留原「可见的反光
+              // 半透实体玻璃」(transmission=0 / opacity≈0.82)——否则窗户半透半反、
+              // 通透窗玻璃（所有立面）：开窗/开门透过洞口看到真实室内（配套
+              // openingRooms 跳过洞后实心盒子）。室内漫游恒为高通透。
               const gTrans = exView ? (exterior.exteriorWindowGlassTransmission ?? 0.9) : 0.85;
               const gOpac  = exView ? (exterior.exteriorWindowGlassOpacity ?? 0.14) : 0.35;
               const gColor = exView
@@ -7637,9 +7643,14 @@ export default function FloorPlanBuilding({
                   // （PlacedItemMesh），而非低 LOD 彩色 box —— 用户要求真实模型。
                   // 仍逐件 <Suspense>，且 fallback 用 box 占位：GLTF 流式加载时
                   // 先显示 box，加载完原地替换，避免一次性 50+ GLTF 的空窗期。
+                  // 外观图里凡是「盒子被跳过、室内可透过门窗看到」的房间(玻璃房间
+                  // 或有开洞的房间)都用全精度 GLTF——透过通透门窗看到的是真实家具，
+                  // 而非低 LOD 彩色 box。其余外观房间(盒子仍在、看不到内部)保留 box 省开销。
+                  const seeThroughRoom = !insideBuilding
+                    && (glassRooms.has(`${fi}:${room}`) || openingRooms.has(`${fi}:${room}`));
                   const needsPlacedMesh =
                     insideBuilding
-                    || (curtainWall && !insideBuilding)
+                    || seeThroughRoom
                     || fItem?.category === "artwork"
                     || (fItem ? STAIR_FURNITURE_IDS.has(fItem.id) : false)
                     || fItem?.id?.includes("cabinet-upper");
