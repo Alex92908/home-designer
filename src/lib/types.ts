@@ -641,11 +641,24 @@ export interface ExteriorSettings {
    *  Raising it stops bright matte walls from blooming into halos while
    *  still letting genuine highlights, glass and lights glow. */
   bloomThreshold?: number;
-  /** Whole-building glass curtain wall. When true, every exterior
-   *  (non-circulation) facade block renders as a full GlassCurtain instead
-   *  of stucco-with-punched-windows, giving the modern glass-tower look
-   *  without having to flip each room individually. Per-room "concrete"
-   *  overrides still win. Default false. */
+  /**
+   * Unified facade engine selector ("hidden-frame curtain wall" model).
+   *  · "punched-window" (default) — the honest solid-wall envelope: stucco /
+   *    concrete / brick / wood walls with discrete punched window openings.
+   *    Correct for classical / Mediterranean / industrial / zen styles.
+   *  · "curtain-wall" — the building envelope is expressed as a hidden-frame
+   *    curtain wall: black-aluminium mullion grid + vision glass on every
+   *    exterior (non-circulation) bay, white concrete slab bands at each floor
+   *    line, rendered AT the wall plane (the glass IS the envelope, not a
+   *    sticker in front of an opaque box). Per-room `roomExteriorStyle`
+   *    ("glass" | "concrete") overrides the per-bay infill; privacy rooms
+   *    (bath / stair / hallway) stay as solid stucco infill panels.
+   *  This replaces the legacy `facadeGlass` + `transparentExterior` tangle —
+   *  when set it is authoritative. Default "punched-window". */
+  facadeSystem?: "punched-window" | "curtain-wall";
+  /** @deprecated Superseded by `facadeSystem: "curtain-wall"`. Still read as a
+   *  back-compat alias (facadeGlass:true ⇒ curtain-wall) so older saved designs
+   *  keep working. Prefer setting `facadeSystem`. */
   facadeGlass?: boolean;
   /** Curtain-wall glass opacity multiplier (applied on top of each pane's
    *  base opacity, clamped ≤0.92). Higher = more reflective/less see-through,
@@ -668,6 +681,12 @@ export interface ExteriorSettings {
   entranceHandleColor?: string;
   /** Project a flat canopy slab over the ground-floor entrance. Default true. */
   entranceCanopy?: boolean;
+  /** Render a warm walnut/teak batten soffit (实木格栅吊顶) on the underside of
+   *  every floor slab / roof cantilever, instead of the default flat grey
+   *  shadow strip. Gives the contemporary glass villa its signature warm
+   *  wood underside (matches the reference photo). Default false so other
+   *  designs are unaffected; opt in for glass-curtain villas. */
+  woodSoffit?: boolean;
   /** Strength multiplier for the glass-facade "wash" point lights that light
    *  up the curtain wall. Default 1. Set 0 to disable. Only applies when
    *  facadeGlass is on — matte (non-glass) walls don't need them and get
@@ -1048,6 +1067,26 @@ export interface FloorPlan {
    *  = visible. Lets the user merge two rooms visually by hiding the
    *  shared wall. Walkthrough collision is unaffected. */
   roomWallsHidden?: Partial<Record<RoomType, Partial<Record<string, boolean>>>>;
+  /** Per-face facade LAYER overrides (curtain-wall era). Each exterior face
+   *  (same key styles as roomWallsHidden: "N"/"S"/"W"/"E" or "edge-${i}") has
+   *  three independently controllable layers — 实墙(wall) / 玻璃幕墙(glass) /
+   *  框架(frame) — plus a per-face glass transparency.
+   *
+   *  Each visibility flag is TRI-STATE: `true` = force show, `false` = force
+   *  hide, `undefined` = use the global facade-mode default:
+   *    - curtain-wall mode default → wall hidden, glass shown, frame shown
+   *    - punched-window mode default → wall shown, glass hidden, frame hidden
+   *  This lets the global "玻璃幕墙模式" be a macro (= per face: hide 实墙 +
+   *  show 玻璃幕墙 + 框架) while any single layer can still be overridden per
+   *  face (墙归墙、幕墙归幕墙、框架归框架).
+   *
+   *  `opacity` (0..1) overrides the glass transparency for THIS face only;
+   *  undefined falls back to the global exterior.glassOpacity. The legacy
+   *  roomWallsHidden[side]=true is still honoured as a fallback "wall hidden"
+   *  when `wall` here is undefined (back-compat with saved designs). */
+  roomFacadeFaces?: Partial<Record<RoomType, Record<string, {
+    wall?: boolean; glass?: boolean; frame?: boolean; opacity?: number;
+  }>>>;
   roomDoorLen?: Partial<Record<RoomType, number>>; // cm, width along wall (default 80)
   roomDoorH?: Partial<Record<RoomType, number>>;   // cm, height (default 200)
   /** Per-room door style. Default "wood_panel" if unset. */
@@ -1073,6 +1112,37 @@ export interface FloorPlan {
    *  exterior view; others are reserved for future "ground vs roof deck"
    *  distinction). Drawn by user in the 院子图 (yard2d) view. */
   yardPlan?: YardPlan;
+}
+
+/** The three independently-controllable facade layers on an exterior face. */
+export type FacadeLayer = "wall" | "glass" | "frame";
+
+/** Mode default visibility for a facade layer (when no per-face override):
+ *  curtain-wall → 实墙 hidden, 玻璃幕墙 + 框架 shown;
+ *  punched-window → 实墙 shown, 玻璃幕墙 + 框架 hidden. */
+export function facadeLayerDefault(layer: FacadeLayer, curtainWall: boolean): boolean {
+  return curtainWall ? layer !== "wall" : layer === "wall";
+}
+
+/** Resolve whether a facade layer is SHOWN on a given room face.
+ *  Precedence: explicit per-face override (roomFacadeFaces) > legacy
+ *  roomWallsHidden (wall layer only) > global mode default. */
+export function resolveFacadeLayer(
+  fp: Pick<FloorPlan, "roomFacadeFaces" | "roomWallsHidden"> | undefined,
+  room: RoomType, sideKey: string, layer: FacadeLayer, curtainWall: boolean,
+): boolean {
+  const ov = fp?.roomFacadeFaces?.[room]?.[sideKey]?.[layer];
+  if (ov !== undefined) return ov;
+  if (layer === "wall" && fp?.roomWallsHidden?.[room]?.[sideKey] === true) return false;
+  return facadeLayerDefault(layer, curtainWall);
+}
+
+/** Per-face glass transparency (0..1), falling back to the global value. */
+export function resolveFaceOpacity(
+  fp: Pick<FloorPlan, "roomFacadeFaces"> | undefined,
+  room: RoomType, sideKey: string, globalOpacity: number,
+): number {
+  return fp?.roomFacadeFaces?.[room]?.[sideKey]?.opacity ?? globalOpacity;
 }
 
 /** Interior-door visual styles. Each variant is rendered differently by

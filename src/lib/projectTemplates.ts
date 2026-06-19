@@ -1114,7 +1114,429 @@ const WOOD_ACCENT_POOL_VILLA: ProjectTemplate = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Template 7 — 现代悬挑玻璃别墅 (Modern Cantilever Glass Villa) · 2F · 300㎡
+//
+// 直接对标用户参考照片：
+//   • 通高黑框落地玻璃幕墙主体（rich-glass-villa 渲染器逐物件还原参考图）
+//   • 深挑檐平屋顶 + 胡桃木挑檐吊顶（暖白涂料 + #8B6340 木饰面，渲染器内置）
+//   • 二层悬挑 + 玻璃栏杆露台 + 白色楼层板带
+//   • 左侧木饰面单层翼 + 纤细钢柱柱廊
+//   • 前院石板甲板 + 矩形泳池（圆弧端）+ 成排躺椅 + 松柏背景 + 木格栅围墙
+//
+// 注意：渲染器是 rich-glass-villa（HouseCanvas.tsx 内逐物件还原参考图），
+// 面宽/进深取首层"室内"房间包围盒（阳台等室外房间不计）。所以这里把首层
+// 室内做成宽体横向布局（约 14m 宽 × 9m 深），贴合照片的全景宽幅比例。
+// 外立面颜色由渲染器内置（暖白 + 胡桃木），模板的 wallColor 等仅影响 2D/室内。
+// ─────────────────────────────────────────────────────────────────────────────
+const MODERN_CANTILEVER_GLASS_VILLA: ProjectTemplate = {
+  id: "modern-cantilever-glass-villa",
+  name: "现代悬挑玻璃别墅",
+  nameEn: "Modern Cantilever Glass Villa",
+  emoji: "🌿",
+  description: "双层 · 落地玻璃幕墙 · 胡桃木挑檐 · 悬挑玻璃栏杆 · 前院泳池",
+  descriptionEn: "2 Floors · Glass Curtain · Walnut Soffit · Cantilever Balcony · Pool",
+  areaSqm: 300,
+  palette: ["#F0EDE6", "#1C1C1C", "#8B6340"],
+  styleTemplateId: "walnut-villa",
+
+  exterior: {
+    preset:       "modern-minimal",
+    roofStyle:    "flat",
+    roofColor:    "#1C1C1C",
+    wallMaterial: "render",
+    wallColor:    "#F0EDE6",
+    accentColor:  "#8B6340",
+    floors: 2,
+    showPerimeterFence: false,
+    fenceInsetMultiplier: 1.6,
+    pilotisHeightM: 0,
+    buildingType: "rich-glass-villa",  // → RichGlassVillaBuilding（逐物件还原参考图）
+    facades: {},
+  },
+
+  // ── 首层：社交开放层（宽体横向，室内包围盒 ≈ 14m × 9m）─────────────────────
+  floorLayouts: [
+    {
+      id: "mcgv-f1",
+      name: "首层 (Ground)",
+      area: 168,
+      rooms: [
+        // 南侧大开间（落地玻璃，面向泳池）
+        { room: "living",   x: 0,    y: 360, width: 760,  depth: 540 },
+        // 北侧服务区
+        { room: "kitchen",  x: 0,    y: 0,   width: 420,  depth: 360 },
+        { room: "dining",   x: 420,  y: 0,   width: 360,  depth: 360 },
+        { room: "study",    x: 780,  y: 0,   width: 320,  depth: 360 },
+        { room: "bathroom", x: 760,  y: 360, width: 340,  depth: 280 },
+        // 东翼 + 楼梯间
+        { room: "garage",   x: 1100, y: 0,   width: 300,  depth: 540 },
+        { room: "stair",    x: 1100, y: 540, width: 200,  depth: 360 },
+        // 南向露台（室外，不计入面宽包围盒）
+        { room: "balcony",  x: 0,    y: 900, width: 1400, depth: 180 },
+      ],
+    },
+    // ── 二层：私密休憩层 ──────────────────────────────────────────────────────
+    {
+      id: "mcgv-f2",
+      name: "二层",
+      area: 132,
+      rooms: [
+        { room: "master",    x: 0,    y: 0,   width: 640, depth: 480 },
+        { room: "closet",    x: 640,  y: 0,   width: 240, depth: 300 },
+        { room: "bathroom",  x: 640,  y: 300, width: 360, depth: 300 },
+        { room: "bedroom",   x: 0,    y: 480, width: 480, depth: 420 },
+        { room: "bedroom2",  x: 480,  y: 480, width: 480, depth: 420 },
+        { room: "bathroom2", x: 960,  y: 480, width: 280, depth: 280 },
+        { room: "stair",     x: 1100, y: 540, width: 200, depth: 360 },
+        // 上层悬挑玻璃栏杆露台（全宽，面向泳池）
+        { room: "balcony2",  x: 0,    y: 900, width: 1400, depth: 200 },
+      ],
+    },
+  ],
+
+  // ── 庭院 ────────────────────────────────────────────────────────────────────
+  // rich-glass-villa 玻璃正立面朝 −Z（相机侧），前院在 −Z 方向。
+  // 室内包围盒约 14m × 9m → 南立面（正面）≈ z = -450cm。
+  // 泳池/躺椅/松柏全部布置在 −Z 前院，正对落地玻璃。
+  yardPlan: {
+    items: [
+      // ── 泳池（前院中央偏左，长轴平行立面，参考图主角）─────────────────
+      { id: "mcgv-pool",    type: "prefab", prefabKind: "pool",
+        x: -120, z: -1060, rot: 0, scale: 1.3 },
+
+      // ── 凉棚（泳池远端遮荫）──────────────────────────────────────────────
+      { id: "mcgv-pergola", type: "prefab", prefabKind: "pergola_classic",
+        x: -880, z: -1180, rot: 0, scale: 0.95 },
+
+      // ── 木格栅隐私墙（西侧 + 临街，呼应照片左侧横向木围墙）──────────────
+      { id: "mcgv-slat-w",  type: "prefab", prefabKind: "slat_wall",
+        x: -1320, z: -300, rot: 0, scale: 1.0,
+        params: { lengthM: 14, heightM: 2.2 } },
+      // 右侧隐私格栅墙（沿 Z 走向，不挡正面视线）
+      { id: "mcgv-slat-e",  type: "prefab", prefabKind: "slat_wall",
+        x: 1320, z: -300, rot: 0, scale: 1.0,
+        params: { lengthM: 14, heightM: 2.2 } },
+
+      // ── 成排躺椅（泳池近房一侧，面向泳池/阳光）─────────────────────────
+      { id: "mcgv-lngr1",   kind: "furniture.swimmingLounger", x: -560, z: -800, rot: 0, scale: 1.0 },
+      { id: "mcgv-lngr2",   kind: "furniture.swimmingLounger", x: -340, z: -800, rot: 0, scale: 1.0 },
+      { id: "mcgv-lngr3",   kind: "furniture.swimmingLounger", x: -120, z: -800, rot: 0, scale: 1.0 },
+      { id: "mcgv-lngr4",   kind: "furniture.swimmingLounger", x:  100, z: -800, rot: 0, scale: 1.0 },
+      { id: "mcgv-lngr5",   kind: "furniture.swimmingLounger", x:  320, z: -800, rot: 0, scale: 1.0 },
+      // 远端一对躺椅
+      { id: "mcgv-lngr6",   kind: "furniture.swimmingLounger", x:  680, z: -1100, rot: -Math.PI / 2, scale: 1.0 },
+      { id: "mcgv-lngr7",   kind: "furniture.swimmingLounger", x:  680, z: -1280, rot: -Math.PI / 2, scale: 1.0 },
+
+      // ── 松柏背景（参考图：密植常绿，沿前院两侧 + 背面围合）──────────────
+      { id: "mcgv-pine1",   kind: "tree.pine", x: -1300, z: -1100, rot: 0.2,  scale: 1.3 },
+      { id: "mcgv-pine2",   kind: "tree.pine", x: -1450, z: -600,  rot: 0,    scale: 1.1 },
+      { id: "mcgv-pine3",   kind: "tree.pine", x:  1300, z: -1000, rot: -0.2, scale: 1.3 },
+      { id: "mcgv-pine4",   kind: "tree.pine", x:  1480, z: -500,  rot: 0.3,  scale: 1.1 },
+      // 背面（+Z）私密围合
+      { id: "mcgv-pine5",   kind: "tree.pine", x: -800, z:  900,  rot: 0.1,  scale: 1.2 },
+      { id: "mcgv-pine6",   kind: "tree.pine", x:    0, z: 1000,  rot: 0,    scale: 1.3 },
+      { id: "mcgv-pine7",   kind: "tree.pine", x:  800, z:  900,  rot: -0.1, scale: 1.2 },
+
+      // ── 橄榄树（建筑两侧近景，柔化立面边缘）──────────────────────────────
+      { id: "mcgv-olv1",    kind: "tree.olive", x: -880, z: -480, rot: 0,   scale: 0.95 },
+      { id: "mcgv-olv2",    kind: "tree.olive", x:  880, z: -440, rot: 0.2, scale: 0.9 },
+
+      // ── 观赏草 + 灌木（泳池/甲板边缘点缀）────────────────────────────────
+      { id: "mcgv-gr1",     kind: "plant.grass",     x: -640, z: -1300, rot: 0,   scale: 1.0 },
+      { id: "mcgv-gr2",     kind: "plant.grass",     x:  560, z: -1320, rot: 0.3, scale: 0.9 },
+      { id: "mcgv-gr3",     kind: "plant.grass",     x: -700, z: -900,  rot: 0.5, scale: 0.85 },
+      { id: "mcgv-bush1",   kind: "plant.bushLarge", x:  640, z: -700,  rot: 0,   scale: 0.8 },
+      { id: "mcgv-bush2",   kind: "plant.bushSmall", x: -560, z: -1400, rot: 0,   scale: 0.75 },
+
+      // ── 区域 ──────────────────────────────────────────────────────────────
+      // 大面积石板甲板（前院 + 泳池四周，参考图整片浅色石材铺装）
+      {
+        id: "mcgv-z-deck",  type: "zone" as const, zoneKind: "social" as const,
+        x: -60, z: -980,
+        polygon: [[-820, -620], [800, -620], [800, 620], [-820, 620]] as Array<[number, number]>,
+        pavingMaterialId: "stone_grey",
+      },
+      // 东侧草坪
+      {
+        id: "mcgv-z-lawn1", type: "zone" as const, zoneKind: "lawn" as const,
+        x: 1080, z: -300,
+        polygon: [[-300, -700], [300, -700], [300, 700], [-300, 700]] as Array<[number, number]>,
+      },
+      // 后院草坪
+      {
+        id: "mcgv-z-lawn2", type: "zone" as const, zoneKind: "lawn" as const,
+        x: 0, z: 760,
+        polygon: [[-900, -300], [900, -300], [900, 300], [-900, 300]] as Array<[number, number]>,
+      },
+    ],
+
+    paths: [
+      // 侧向步道：前院甲板 → 东侧入户
+      {
+        id: "mcgv-p-side",
+        points: [[820, -600], [1080, -600], [1080, -200]] as Array<[number, number]>,
+        widthCm: 120,
+        material: "stone",
+      },
+    ],
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Template 8 — 玻璃幕墙泳池别墅 (源自用户方案) · 2F · 250㎡
+//
+// 基于用户导出的「装修方案_2026-6-17.json」首/二层房间布局重建，并贴合参考照片：
+//   • 四向落地玻璃幕墙（glassFloors：首层 柱/门/玻璃/柱，二层 柱/玻璃/柱）
+//   • 砖基 + 胡桃木上段墙裙（wallZones，呼应照片暖木调）
+//   • 平屋顶 + 1m 深挑檐（南向额外 0.6m）→ 覆盖式前廊观感
+//   • 前院石板甲板 + 矩形泳池 + 成排躺椅 + 松柏背景 + 木格栅围墙
+//
+// 用户原方案为 3 层（含屋顶层），此处取首/二层两层以贴合照片的两层体量。
+// buildingType = floor-plan-driven：外立面直接由房间平面生成，正面（玻璃面）朝 −Z。
+// ─────────────────────────────────────────────────────────────────────────────
+const GLASS_POOL_VILLA_FROM_PLAN: ProjectTemplate = {
+  id: "glass-pool-villa-from-plan",
+  name: "玻璃幕墙泳池别墅",
+  nameEn: "Glass-Curtain Pool Villa",
+  emoji: "🪟",
+  description: "双层 · 四向玻璃幕墙 · 砖木墙裙 · 深挑檐 · 前院泳池（源自你的方案）",
+  descriptionEn: "2 Floors · Glass Curtain · Brick+Wood Base · Deep Eaves · Pool (From Your Plan)",
+  areaSqm: 250,
+  palette: ["#F4F0E4", "#2A2A2A", "#A06030"],
+  styleTemplateId: "modern-villa",
+
+  exterior: {
+    preset:       "custom",
+    roofStyle:    "flat",
+    roofColor:    "#2A2A2A",
+    wallMaterial: "render",
+    wallColor:    "#F4F0E4",
+    accentColor:  "#1A1A1A",
+    floors: 2,
+    showPerimeterFence: false,
+    fenceInsetMultiplier: 1.65,
+    pilotisHeightM: 0,
+    buildingType: "floor-plan-driven",
+    roofOverhang: 1.0,
+    roofOverhangSouthExtra: 0.6,
+    parapetHeight: 0,
+    parapetGlassEnabled: false,
+    // 砖基 + 木上段（呼应照片暖木调；玻璃幕墙以外的实墙段显示）
+    wallZones: [
+      { material: "brick", color: "#B05030", heightFraction: 0.35 },
+      { material: "wood",  color: "#A06030", heightFraction: 0.65 },
+    ],
+    // 四向落地玻璃幕墙 —— 复用 glassFloors（首层带门）
+    facades: {
+      S: glassFloors(2, [true, false]),
+      N: glassFloors(2, [true, false]),
+      W: glassFloors(2, [true, false]),
+      E: glassFloors(2, [true, false]),
+    },
+  },
+
+  // ── 首/二层：直接采用用户方案的房间布局 ──────────────────────────────────
+  floorLayouts: [
+    {
+      id: "gpvp-f1",
+      name: "首层 (源自方案)",
+      area: 140,
+      rooms: [
+        { room: "kitchen",  x: 0,    y: 0,   width: 400,  depth: 320 },
+        { room: "bathroom", x: 400,  y: 0,   width: 240,  depth: 320 },
+        { room: "dining",   x: 640,  y: 0,   width: 360,  depth: 340 },
+        { room: "stair",    x: 1000, y: 0,   width: 240,  depth: 340 },
+        { room: "hallway",  x: 0,    y: 320, width: 1240, depth: 240 },
+        { room: "living",   x: 0,    y: 520, width: 680,  depth: 500 },
+        { room: "study",    x: 680,  y: 560, width: 340,  depth: 460 },
+        { room: "closet",   x: 1020, y: 560, width: 220,  depth: 460 },
+      ],
+    },
+    {
+      id: "gpvp-f2",
+      name: "二层 (源自方案)",
+      area: 110,
+      rooms: [
+        { room: "master",   x: 0,    y: 0,   width: 520,  depth: 420 },
+        { room: "closet",   x: 520,  y: 0,   width: 200,  depth: 420 },
+        { room: "bathroom", x: 720,  y: 0,   width: 280,  depth: 420 },
+        { room: "stair",    x: 1000, y: 0,   width: 240,  depth: 420 },
+        { room: "hallway",  x: 0,    y: 420, width: 1240, depth: 180 },
+        { room: "bedroom",  x: 0,    y: 600, width: 380,  depth: 420 },
+        { room: "bedroom2", x: 380,  y: 600, width: 340,  depth: 420 },
+        { room: "bedroom3", x: 720,  y: 600, width: 280,  depth: 420 },
+        { room: "study",    x: 1000, y: 600, width: 240,  depth: 420 },
+      ],
+    },
+  ],
+
+  // ── 庭院 ────────────────────────────────────────────────────────────────────
+  // floor-plan-driven 玻璃正立面朝 −Z。室内包围盒 ≈ 12.4m × 10.2m → 南立面 ≈ z = -510cm。
+  yardPlan: {
+    items: [
+      { id: "gpvp-pool",    type: "prefab", prefabKind: "pool",
+        x: -120, z: -1080, rot: 0, scale: 1.3 },
+      { id: "gpvp-pergola", type: "prefab", prefabKind: "pergola_classic",
+        x: -880, z: -1200, rot: 0, scale: 0.95 },
+      { id: "gpvp-slat-w",  type: "prefab", prefabKind: "slat_wall",
+        x: -1320, z: -300, rot: 0, scale: 1.0, params: { lengthM: 14, heightM: 2.2 } },
+      { id: "gpvp-slat-e",  type: "prefab", prefabKind: "slat_wall",
+        x: 1320, z: -300, rot: 0, scale: 1.0, params: { lengthM: 14, heightM: 2.2 } },
+
+      // 成排躺椅（泳池近房一侧）
+      { id: "gpvp-lngr1",   kind: "furniture.swimmingLounger", x: -560, z: -820, rot: 0, scale: 1.0 },
+      { id: "gpvp-lngr2",   kind: "furniture.swimmingLounger", x: -340, z: -820, rot: 0, scale: 1.0 },
+      { id: "gpvp-lngr3",   kind: "furniture.swimmingLounger", x: -120, z: -820, rot: 0, scale: 1.0 },
+      { id: "gpvp-lngr4",   kind: "furniture.swimmingLounger", x:  100, z: -820, rot: 0, scale: 1.0 },
+      { id: "gpvp-lngr5",   kind: "furniture.swimmingLounger", x:  320, z: -820, rot: 0, scale: 1.0 },
+
+      // 松柏背景
+      { id: "gpvp-pine1",   kind: "tree.pine", x: -1300, z: -1120, rot: 0.2,  scale: 1.3 },
+      { id: "gpvp-pine2",   kind: "tree.pine", x: -1460, z: -640,  rot: 0,    scale: 1.1 },
+      { id: "gpvp-pine3",   kind: "tree.pine", x:  1300, z: -1020, rot: -0.2, scale: 1.3 },
+      { id: "gpvp-pine4",   kind: "tree.pine", x:  1480, z: -540,  rot: 0.3,  scale: 1.1 },
+      { id: "gpvp-pine5",   kind: "tree.pine", x: -800,  z:  960,  rot: 0.1,  scale: 1.2 },
+      { id: "gpvp-pine6",   kind: "tree.pine", x:    0,  z: 1040,  rot: 0,    scale: 1.3 },
+      { id: "gpvp-pine7",   kind: "tree.pine", x:  800,  z:  960,  rot: -0.1, scale: 1.2 },
+
+      // 橄榄树 + 枫树（用户原方案树种）侧向点缀
+      { id: "gpvp-olv1",    kind: "tree.olive", x: -900, z: -520, rot: 0,   scale: 0.95 },
+      { id: "gpvp-mpl1",    kind: "tree.maple", x:  900, z: -480, rot: 0.2, scale: 0.95 },
+
+      // 观赏草 + 灌木
+      { id: "gpvp-gr1",     kind: "plant.grass",     x: -640, z: -1320, rot: 0,   scale: 1.0 },
+      { id: "gpvp-gr2",     kind: "plant.grass",     x:  560, z: -1340, rot: 0.3, scale: 0.9 },
+      { id: "gpvp-bush1",   kind: "plant.bushLarge", x:  640, z: -720,  rot: 0,   scale: 0.8 },
+
+      // 区域
+      {
+        id: "gpvp-z-deck",  type: "zone" as const, zoneKind: "social" as const,
+        x: -60, z: -1000,
+        polygon: [[-820, -640], [800, -640], [800, 640], [-820, 640]] as Array<[number, number]>,
+        pavingMaterialId: "stone_grey",
+      },
+      {
+        id: "gpvp-z-lawn1", type: "zone" as const, zoneKind: "lawn" as const,
+        x: 1080, z: -300,
+        polygon: [[-300, -700], [300, -700], [300, 700], [-300, 700]] as Array<[number, number]>,
+      },
+      {
+        id: "gpvp-z-lawn2", type: "zone" as const, zoneKind: "lawn" as const,
+        x: 0, z: 800,
+        polygon: [[-900, -300], [900, -300], [900, 300], [-900, 300]] as Array<[number, number]>,
+      },
+    ],
+
+    paths: [
+      {
+        id: "gpvp-p-side",
+        points: [[820, -620], [1080, -620], [1080, -200]] as Array<[number, number]>,
+        widthCm: 120,
+        material: "stone",
+      },
+    ],
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 用户当前设计（实时捕获）— 通透玻璃幕墙 · 平面图驱动 · 逐面三层立面 · 泳池庭院。
+// 区别于其它玻璃模板：buildingType="floor-plan-driven" 走真实户型 + 通透幕墙引擎
+// （非 GLB 别墅），房间布局即用户手工搭的两层方案。
+const CLEAR_GLASS_CURTAIN_HOME: ProjectTemplate = {
+  id: "clear-glass-curtain-home",
+  name: "通透玻璃幕墙别墅",
+  nameEn: "Clear Glass-Curtain Villa",
+  emoji: "✨",
+  description: "双层 · 平屋顶 · 通透玻璃幕墙（逐面可调）· 胡桃木挑檐 · 泳池庭院",
+  descriptionEn: "2F · Flat Roof · See-through Glass Curtain (per-face) · Walnut Soffit · Pool Yard",
+  areaSqm: 257,
+  palette: ["#F2EFE8", "#EAE7E0", "#AEC4D2"],
+  styleTemplateId: "modern-villa",
+
+  exterior: {
+    preset: "glass-curtain",
+    facadeSystem: "curtain-wall",
+    roofStyle: "flat",
+    floors: 2,
+    hasRooftop: true,
+    buildingType: "floor-plan-driven",
+    wallColor: "#F4F3EE",
+    wallBaseColor: "#F2EFE8",
+    glassColor: "#AEC4D2",
+    glassSpandrelColor: "#EDEAE3",
+    glassOpacity: 1,
+    windowFrameColor: "#15171B",
+    entranceFrameColor: "#15171B",
+    woodSoffit: true,
+    roofOverhang: 1.2,
+    roofOverhangSouthExtra: 0.9,
+    parapetHeight: 0,
+    roofSlabColor: "#EAE7E0",
+    roofColor: "#EFEEE9",
+    stoneBaseEnabled: false,
+    yardPreset: "pool",
+  },
+
+  // 户型即用户实时方案（floors 0 / 1，cm）。
+  floorLayouts: [
+    {
+      id: "cgc-f1",
+      name: "首层",
+      area: 130,
+      rooms: [
+        { room: "kitchen",  x: 0,    y: 0,   width: 400,  depth: 320 },
+        { room: "bathroom", x: 400,  y: 0,   width: 240,  depth: 320 },
+        { room: "dining",   x: 640,  y: 0,   width: 360,  depth: 340 },
+        { room: "stair",    x: 1000, y: 0,   width: 240,  depth: 340 },
+        { room: "hallway",  x: 0,    y: 320, width: 1240, depth: 240 },
+        { room: "living",   x: 0,    y: 520, width: 680,  depth: 500 },
+        { room: "study",    x: 680,  y: 560, width: 340,  depth: 460 },
+        { room: "closet",   x: 1020, y: 560, width: 220,  depth: 460 },
+      ],
+    },
+    {
+      id: "cgc-f2",
+      name: "二层",
+      area: 127,
+      rooms: [
+        { room: "master",   x: 0,    y: 0,   width: 520,  depth: 420 },
+        { room: "closet",   x: 520,  y: 0,   width: 200,  depth: 420 },
+        { room: "bathroom", x: 720,  y: 0,   width: 280,  depth: 420 },
+        { room: "stair",    x: 1000, y: 0,   width: 240,  depth: 420 },
+        { room: "hallway",  x: 0,    y: 420, width: 1240, depth: 180 },
+        { room: "bedroom",  x: 0,    y: 600, width: 380,  depth: 420 },
+        { room: "bedroom2", x: 380,  y: 600, width: 340,  depth: 420 },
+        { room: "bedroom3", x: 720,  y: 600, width: 280,  depth: 420 },
+        { room: "study",    x: 1000, y: 600, width: 240,  depth: 420 },
+      ],
+    },
+  ],
+
+  // 庭院即用户实时方案：D 端泳池 + 餐区 + 躺椅 + 柏树/松树/草丛。
+  yardPlan: {
+    items: [
+      { id: "gc-pool",    type: "prefab", prefabKind: "pool", x: 0, z: 1120, rot: 0 },
+      { id: "gc-zone-dine", type: "zone", zoneKind: "social", subtype: "outdoor-room", x: 820, z: 730,
+        polygon: [[-180, -160], [180, -160], [180, 160], [-180, 160]] },
+      { id: "gc-dineset",  type: "singleton", kind: "furniture.diningSet",      x: 820,  z: 700, rot: 0 },
+      { id: "gc-parasol",  type: "singleton", kind: "furniture.parasol",        x: 820,  z: 700 },
+      { id: "gc-lounge-1", type: "singleton", kind: "furniture.chaiseLounger",  x: -360, z: 610, rot: 0 },
+      { id: "gc-lounge-2", type: "singleton", kind: "furniture.chaiseLounger",  x: -240, z: 610, rot: 0 },
+      { id: "gc-tree-1",   type: "singleton", kind: "tree.cypress", x: -980, z: 980,  scale: 1.2 },
+      { id: "gc-tree-2",   type: "singleton", kind: "tree.cypress", x: 980,  z: 980,  scale: 1.2 },
+      { id: "gc-tree-3",   type: "singleton", kind: "tree.pine",    x: -600, z: 1040, scale: 1.3 },
+      { id: "gc-tree-4",   type: "singleton", kind: "tree.pine",    x: 600,  z: 1040, scale: 1.3 },
+      { id: "gc-grass-1",  type: "singleton", kind: "plant.grass",  x: -520, z: 610,  scale: 1.2 },
+      { id: "gc-grass-2",  type: "singleton", kind: "plant.grass",  x: 520,  z: 610,  scale: 1.2 },
+    ],
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
+  MODERN_CANTILEVER_GLASS_VILLA,  // ← 参考照片专属：宽体玻璃幕墙 + 胡桃木挑檐 + 前院泳池
+  CLEAR_GLASS_CURTAIN_HOME,       // ← 第二个：用户当前设计（通透玻璃幕墙 + 真实户型）
+  GLASS_POOL_VILLA_FROM_PLAN,     // ← 源自用户方案的房间布局 + 四向玻璃幕墙 + 照片庭院
   LUXURY_3F_GLASS_VILLA,    // ← 三层豪宅，排第一（用户当前设计的合理化版）
   WOOD_ACCENT_POOL_VILLA,   // ← 参考图：白墙核桃木顶，前院泳池
   GLASS_CURTAIN_VILLA,      // ← 参考图风格，双层

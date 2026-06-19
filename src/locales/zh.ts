@@ -145,8 +145,8 @@ export const zh = {
   fpPaste: "粘贴",
   fpRotate: "旋转",
   fpRotateTitle: "旋转房间90°（家具/门/窗一起旋转）",
-  fpEditDone: "🪟 完成编辑",
-  fpEditStart: "🪟 编辑窗/门",
+  fpEditDone: "🧱 完成编辑",
+  fpEditStart: "🧱 编辑墙/窗/门",
   fpWallLabels: { N: "北墙", S: "南墙", W: "西墙", E: "东墙" } as Record<string, string>,
   // 楼层小地图（FloorPlanMinimap）
   mmRoomsWord: "房间",

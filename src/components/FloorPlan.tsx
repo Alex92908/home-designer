@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
-import { ROOM_DEFS, WindowConfig, WallSide } from "@/lib/types";
+import { ROOM_DEFS, WindowConfig, WallSide, FacadeLayer, resolveFacadeLayer, resolveFaceOpacity } from "@/lib/types";
 import { FloorPlanMinimap } from "./FloorPlanMinimap";
 import { getFurnitureById } from "@/lib/furniture";
 import { PlacedItem } from "@/lib/types";
@@ -506,6 +506,14 @@ export default function FloorPlan() {
   const setDoorWall     = useDesignerStore((s) => s.setDoorWall);
   const wallsHiddenOnRoom = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWallsHidden?.[activeRoom]);
   const toggleWallHidden  = useDesignerStore((s) => s.toggleWallHidden);
+  const facadeFacesOnRoom = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomFacadeFaces?.[activeRoom]);
+  const setFaceLayer      = useDesignerStore((s) => s.setFaceLayer);
+  const setFaceOpacity    = useDesignerStore((s) => s.setFaceOpacity);
+  // Curtain-wall mode? (drives per-face facade layer defaults + when to show
+  // the 实墙/玻璃幕墙/框架 controls). Mirrors FloorPlanExterior's derivation.
+  const curtainWall = useDesignerStore((s) =>
+    s.exterior?.facadeSystem === "curtain-wall"
+    || (s.exterior?.facadeSystem == null && (s.exterior?.facadeGlass ?? false)));
   const setDoorLen      = useDesignerStore((s) => s.setDoorLen);
   const setDoorH        = useDesignerStore((s) => s.setDoorH);
   const setDoorStyle    = useDesignerStore((s) => s.setDoorStyle);
@@ -1380,6 +1388,72 @@ export default function FloorPlan() {
                 );
               })}
             </div>
+            {/* ── 幕墙模式：逐面三层(实墙/玻璃幕墙/框架)独立显隐 + 逐面玻璃透明度 ──
+                墙归墙、幕墙归幕墙、框架归框架；全局「玻璃幕墙模式」是宏(= 隐实墙
+                + 显玻璃 + 显框)，这里可逐面覆盖任意一层。 */}
+            {curtainWall && (() => {
+              let keys: { key: string; label: string }[];
+              if (roomShape && roomShape.preset !== "rect") {
+                const edges = getEdges(roomShape.points).filter(e => e.length > 40);
+                const seen: Record<string, number> = { N: 0, S: 0, W: 0, E: 0 };
+                keys = edges.map(e => {
+                  seen[e.facing] += 1;
+                  const same = edges.filter(x => x.facing === e.facing).length;
+                  return { key: `edge-${e.i}`, label: `${t.fpWallLabels[e.facing]}${same > 1 ? seen[e.facing] : ""}` };
+                });
+              } else {
+                keys = (["N", "S", "W", "E"] as const).map(w => ({ key: w, label: t.fpWallLabels[w] }));
+              }
+              const fpLike = {
+                roomFacadeFaces: { [activeRoom]: facadeFacesOnRoom },
+                roomWallsHidden: { [activeRoom]: wallsHiddenOnRoom },
+              } as Parameters<typeof resolveFacadeLayer>[0];
+              const en = t.fpWallLabels.N === "N";
+              const layers: { layer: FacadeLayer; label: string }[] = [
+                { layer: "wall",  label: en ? "Wall"  : "实墙" },
+                { layer: "glass", label: en ? "Glass" : "幕墙" },
+                { layer: "frame", label: en ? "Frame" : "框架" },
+              ];
+              return (
+                <div className="flex flex-col gap-0.5 ml-1 mt-1 pt-1 border-t border-gray-700/40">
+                  {layers.map(({ layer, label }) => (
+                    <div key={layer} className="flex flex-wrap items-center gap-0.5">
+                      <span className="text-[10px] text-gray-500 mr-0.5 w-8 text-right">{label}</span>
+                      {keys.map(({ key, label: kl }) => {
+                        const shown = resolveFacadeLayer(fpLike, activeRoom, key, layer, curtainWall);
+                        return (
+                          <button key={`${layer}-${key}`}
+                            onClick={() => setFaceLayer(activeRoom, key, layer, !shown)}
+                            title={`${shown ? t.fpHidePrefix : t.fpRestorePrefix}${label}·${kl}`}
+                            className="text-[10px] px-1.5 py-0.5 rounded font-semibold transition-all"
+                            style={shown
+                              ? { background: "rgba(59,130,246,0.22)", color: "#93C5FD", border: "1px solid rgba(59,130,246,0.5)" }
+                              : { background: "rgba(75,85,99,0.18)", color: "#9CA3AF", border: "1px solid rgba(75,85,99,0.3)" }}>
+                            {shown ? "●" : "○"}{kl}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                  {/* 逐面玻璃透明度 */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-gray-500 mr-0.5 w-8 text-right">{en ? "Opacity" : "透明度"}</span>
+                    {keys.map(({ key, label: kl }) => {
+                      // 透明度 0..1：1 = 全透(清玻璃) ，0 = 不透(实心磨砂面)。默认 0.85。
+                      const op = resolveFaceOpacity(fpLike, activeRoom, key, 0.85);
+                      return (
+                        <label key={`op-${key}`} className="flex items-center gap-0.5 text-[9px] text-gray-400">
+                          {kl}
+                          <input type="range" min={0} max={1} step={0.02} value={op}
+                            onChange={(e) => setFaceOpacity(activeRoom, key, parseFloat(e.target.value))}
+                            style={{ width: 44 }} />
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

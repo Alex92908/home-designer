@@ -507,4 +507,82 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       { id: "jz-path-tea", points: [[90, 660], [430, 700]], widthCm: 70, material: "stone" },
     ],
   },
+  {
+    // ── 玻璃幕墙（隐框：白色混凝土楼板带 + 黑铝幕墙）──────────────────────────
+    // The reference modern-glass villa. Drives the unified facadeSystem engine:
+    // every exterior non-circulation bay becomes a black-aluminium mullion grid
+    // + vision glass AT the wall plane; white expressed slab bands at each floor
+    // line; the stair/hallway core stays solid white stucco; walnut soffit under
+    // a deep flat-roof cantilever. Stays 100% floor-plan-driven (no hardcoded
+    // model). Travertine pool deck with a D-end pool reused from the resort yard.
+    id: "glass-curtain",
+    label: "玻璃幕墙",
+    labelEn: "Glass Curtain Wall",
+    blurb: "Hidden-frame curtain wall · white slab bands · walnut soffit",
+    icon: "▦",
+    settings: {
+      // The authoritative facade engine selector.
+      facadeSystem: "curtain-wall",
+      transparentExterior: false,   // curtain wall is the authoritative envelope
+      // White masses + white expressed slab bands behind the black curtain wall.
+      wallBaseColor: "#F2EFE8",
+      glassShellColor: "#33414E",   // dark glass shell tint (transparent, see-through)
+      glassSpandrelColor: "#EDEAE3",// white slab-band spandrels in the curtain
+      glassColor: "#73899B",        // cool transparent vision glass (reads see-through)
+      glassOpacity: 1.0,            // transparent ground-floor glazing
+      entranceFrameColor: "#15171B",// black-aluminium entrance framing
+      windowFrameColor: "#15171B",
+      woodSoffit: true,             // walnut soffit under the cantilever
+      // Deep flat-roof cantilever, no parapet (reference look).
+      roofOverhang: 1.20,
+      roofOverhangSouthExtra: 0.90,
+      parapetHeight: 0,
+      parapetGlassEnabled: false,
+      roofSlabColor: "#EAE7E0",     // white flat-roof slab
+      // Clean monochrome masses — kill panel seams / stone base / two-tone.
+      stoneBaseEnabled: false,
+      wallPanelTwoTone: false,
+      wallPanelHSpacing: 99,
+      wallPanelVSpacing: 99,
+      wallGrooveColor: "#F2EFE8",
+      grassDensity: 0,
+      solarPanelsEnabled: false,
+      hideInteriorWalls: true,
+      exposure: 0.84,
+    },
+    // Interior package: warm oak floors + white walls (reads through the glass);
+    // white exterior so any exposed mass stays white behind the curtain wall.
+    roomMaterials: {
+      living:    { floor: "floor-oak",        wall: "wall-white", light: "light-recessed",      wallExterior: "wall-white" },
+      master:    { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant", wallExterior: "wall-white" },
+      bedroom:   { floor: "floor-oak",        wall: "wall-white", light: "light-recessed",      wallExterior: "wall-white" },
+      bedroom2:  { floor: "floor-oak",        wall: "wall-white", light: "light-recessed",      wallExterior: "wall-white" },
+      bedroom3:  { floor: "floor-oak",        wall: "wall-white", light: "light-recessed",      wallExterior: "wall-white" },
+      study:     { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant", wallExterior: "wall-white" },
+      dining:    { floor: "floor-oak",        wall: "wall-white", light: "light-linear-pendant", wallExterior: "wall-white" },
+      hallway:   { floor: "floor-oak",        wall: "wall-white", light: "light-recessed",      wallExterior: "wall-white" },
+      kitchen:   { floor: "floor-white-tile", wall: "wall-tile-white", light: "light-linear-pendant", wallExterior: "wall-white" },
+      bathroom:  { floor: "floor-white-tile", wall: "wall-tile-metro", light: "light-smart-panel",     wallExterior: "wall-white" },
+      bathroom2: { floor: "floor-white-tile", wall: "wall-tile-metro", light: "light-smart-panel",     wallExterior: "wall-white" },
+    },
+    // Travertine pool-deck resort yard (D-end pool prefab + stone social decks).
+    yardItems: [
+      { id: "gc-pool", type: "prefab", prefabKind: "pool", x: 0, z: 760, rot: 0 },
+      { id: "gc-zone-dine", type: "zone", zoneKind: "social", subtype: "outdoor-room", x: 820, z: 700, polygon: zoneRect(360, 320) },
+      { id: "gc-dineset", type: "singleton", kind: "furniture.diningSet", x: 820, z: 700, rot: 0 },
+      { id: "gc-parasol", type: "singleton", kind: "furniture.parasol",   x: 820, z: 700 },
+      { id: "gc-lounge-1", type: "singleton", kind: "furniture.chaiseLounger", x: -360, z: 560, rot: 0 },
+      { id: "gc-lounge-2", type: "singleton", kind: "furniture.chaiseLounger", x: -240, z: 560, rot: 0 },
+      // Pine backdrop + cypress anchors (reference far-tree line)
+      { id: "gc-tree-1", type: "singleton", kind: "tree.cypress", x: -980, z: 980, scale: 1.2 },
+      { id: "gc-tree-2", type: "singleton", kind: "tree.cypress", x:  980, z: 980, scale: 1.2 },
+      { id: "gc-tree-3", type: "singleton", kind: "tree.pine",    x: -600, z: 1040, scale: 1.3 },
+      { id: "gc-tree-4", type: "singleton", kind: "tree.pine",    x:  600, z: 1040, scale: 1.3 },
+      { id: "gc-grass-1", type: "singleton", kind: "plant.grass", x: -520, z: 560, scale: 1.2 },
+      { id: "gc-grass-2", type: "singleton", kind: "plant.grass", x:  520, z: 560, scale: 1.2 },
+    ],
+    yardPaths: [
+      { id: "gc-path-entry", points: [[-560, 1080], [-560, 520]], widthCm: 120, material: "stone" },
+    ],
+  },
 ];

@@ -145,8 +145,8 @@ export const en: Translations = {
   fpPaste: "Paste",
   fpRotate: "Rotate",
   fpRotateTitle: "Rotate room 90° (furniture, door & windows rotate too)",
-  fpEditDone: "🪟 Done Editing",
-  fpEditStart: "🪟 Edit Windows/Door",
+  fpEditDone: "🧱 Done Editing",
+  fpEditStart: "🧱 Edit Wall/Window/Door",
   fpWallLabels: { N: "North", S: "South", W: "West", E: "East" } as Record<string, string>,
   // Floor minimap (FloorPlanMinimap)
   mmRoomsWord: "rooms",

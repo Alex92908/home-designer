@@ -2,7 +2,7 @@ import { create, useStore } from "zustand";
 import { persist } from "zustand/middleware";
 import { temporal } from "zundo";
 import type { TemporalState } from "zundo";
-import { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, ROOM_DEFS, StyleTag, getRoomArea, FurnitureItem, ExteriorSettings, WindowConfig, RoomState, FloorPlan, ExteriorWallDecorItem, ExteriorWall, WallSide } from "./types";
+import { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, ROOM_DEFS, StyleTag, getRoomArea, FurnitureItem, ExteriorSettings, WindowConfig, RoomState, FloorPlan, ExteriorWallDecorItem, ExteriorWall, WallSide, FacadeLayer } from "./types";
 import { FURNITURE, getFurnitureById, registerFurniture } from "./furniture";
 import { MATERIALS } from "./data";
 import { getOutdoorAssetByKind } from "./outdoorAssets";
@@ -824,6 +824,12 @@ interface DesignerStore {
    *  cardinal side ("N"/"S"/"W"/"E") for rect rooms OR
    *  "edge-${i}" for polygon-edge rooms. */
   toggleWallHidden: (room: RoomType, key: string) => void;
+  /** Set the explicit show/hide override for one facade layer (实墙/玻璃幕墙/
+   *  框架) on one face. `value` = true (force show) / false (force hide) /
+   *  undefined (clear override → back to mode default). */
+  setFaceLayer: (room: RoomType, key: string, layer: FacadeLayer, value: boolean | undefined) => void;
+  /** Set per-face glass transparency (0..1). null clears → global default. */
+  setFaceOpacity: (room: RoomType, key: string, value: number | null) => void;
   setDoorEdgeIdx: (room: RoomType, edgeIdx: number | null) => void;
 
   // ── Yard plan (outdoor 2D editor) ──
@@ -2716,6 +2722,39 @@ export const useDesignerStore = create<DesignerStore>()(
         });
       },
 
+      setFaceLayer: (room, key, layer, value) => {
+        updateFloor(get, set, fp => {
+          const all = { ...(fp.roomFacadeFaces ?? {}) };
+          const face = { ...(all[room]?.[key] ?? {}) };
+          if (value === undefined) delete face[layer];
+          else face[layer] = value;
+          // Drop empty inner objects so persisted JSON stays small.
+          const faceEmpty = face.wall === undefined && face.glass === undefined
+            && face.frame === undefined && face.opacity === undefined;
+          const roomFaces = { ...(all[room] ?? {}) };
+          if (faceEmpty) delete roomFaces[key];
+          else roomFaces[key] = face;
+          if (Object.keys(roomFaces).length === 0) delete all[room];
+          else all[room] = roomFaces;
+          return { roomFacadeFaces: all };
+        });
+      },
+      setFaceOpacity: (room, key, value) => {
+        updateFloor(get, set, fp => {
+          const all = { ...(fp.roomFacadeFaces ?? {}) };
+          const face = { ...(all[room]?.[key] ?? {}) };
+          if (value === null) delete face.opacity;
+          else face.opacity = value;
+          const faceEmpty = face.wall === undefined && face.glass === undefined
+            && face.frame === undefined && face.opacity === undefined;
+          const roomFaces = { ...(all[room] ?? {}) };
+          if (faceEmpty) delete roomFaces[key];
+          else roomFaces[key] = face;
+          if (Object.keys(roomFaces).length === 0) delete all[room];
+          else all[room] = roomFaces;
+          return { roomFacadeFaces: all };
+        });
+      },
       setDoorEdgeIdx: (room, edgeIdx) => {
         updateFloor(get, set, fp => {
           const next = { ...(fp.roomDoorEdgeIdx ?? {}) };
