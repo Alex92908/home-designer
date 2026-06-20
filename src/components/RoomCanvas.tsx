@@ -2062,7 +2062,19 @@ function Rug({ color, sc, w, d, id }: MeshProps & { id?: string }) {
   return (
     <mesh position={[0, 0.012, 0]} receiveShadow>
       <boxGeometry args={[w, 0.015, d]} />
-      <meshStandardMaterial map={tex} color="#ffffff" roughness={0.97} metalness={0} />
+      {/* polygonOffset：地毯贴地，外观视图楼板带负 polygonOffset(约 -4/-17)
+          会把地毯盖住。给地毯更强的负偏移，让它稳定画在楼板之上。配合
+          FloorPlanExterior 对地毯的 0.03 抬升，外观图里地毯即可显示。室内
+          视图本就正常，加偏移无副作用。 */}
+      <meshStandardMaterial
+        map={tex}
+        color="#ffffff"
+        roughness={0.97}
+        metalness={0}
+        polygonOffset
+        polygonOffsetFactor={-8}
+        polygonOffsetUnits={-40}
+      />
     </mesh>
   );
 }

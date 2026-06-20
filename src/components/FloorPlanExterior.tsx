@@ -213,20 +213,33 @@ export function computeExteriorWalls(
     ];
 
     for (const { side, wallCoord, axis, wallStart, wallEnd } of sides) {
+      // 「被相邻房间覆盖」= 内墙；剩下的才是真正的建筑外周面。
+      // 旧逻辑只认「边缘精确对齐」(other 的对面边 == wallCoord)，一旦相邻
+      // 房间与本房间在该轴上有重叠/错位(如默认户型里走廊 y320–560 压进
+      // 客厅 y520–1020 共 40cm)，对齐判定失败 → 把这道内墙误判成外周 →
+      // 幕墙模式下渲染成玻璃幕墙(用户：客厅 N 墙明明隐藏了却出现幕墙)。
+      // 改用「房体重叠」判定：取该面正外侧 1cm 处的探针点，若它落在另一个
+      // 房间体内，则该段属于内墙(被覆盖)。对完美拼接的户型与旧逻辑等价，
+      // 对重叠/错位户型更正确。
+      const PROBE = 1; // cm，刚好探到面外侧
       const covered: [number, number][] = [];
       for (const other of rooms) {
         if (other === room) continue;
         const op = layout[other]; const od = dims[other];
         if (!op || !od) continue;
-        let adjCoord: number, oStart: number, oEnd: number;
+        let onOuterSide: boolean, oStart: number, oEnd: number;
         if (axis === "x") {
-          adjCoord = side === "S" ? op.y : op.y + od.depth;
+          // N/S 面：外侧在 y 方向
+          const outerY = side === "S" ? wallCoord + PROBE : wallCoord - PROBE;
+          onOuterSide = op.y - TOLE <= outerY && outerY <= op.y + od.depth + TOLE;
           oStart = op.x; oEnd = op.x + od.width;
         } else {
-          adjCoord = side === "E" ? op.x : op.x + od.width;
+          // E/W 面：外侧在 x 方向
+          const outerX = side === "E" ? wallCoord + PROBE : wallCoord - PROBE;
+          onOuterSide = op.x - TOLE <= outerX && outerX <= op.x + od.width + TOLE;
           oStart = op.y; oEnd = op.y + od.depth;
         }
-        if (Math.abs(adjCoord - wallCoord) > TOLE) continue;
+        if (!onOuterSide) continue;
         const overS = Math.max(wallStart, oStart);
         const overE = Math.min(wallEnd, oEnd);
         if (overE - overS > TOLE) covered.push([overS, overE]);
@@ -277,6 +290,8 @@ function GlassCurtain({
   showFrame = true,
   showGlass = true,
   glassTransparency,
+  showBottomSpandrel = true,
+  showEntranceDoor = true,
 }: {
   width: number; height: number; floorH: number;
   doors?: Array<{ cx: number; w: number; h: number }>;
@@ -291,6 +306,15 @@ function GlassCurtain({
    *  Independently toggleable per face (roomFacadeFaces[..].glass). When false
    *  the face is an open aluminium frame (or fully open if frame也 hidden). */
   showGlass?: boolean;
+  /** 底部裙板(落地处那道暗色 spandrel)开关。一楼(floorIndex===0)设为 false，
+   *  让玻璃直接落地、露出室内地面家具(地毯/矮茶几)，符合通透玻璃幕墙别墅参考图；
+   *  楼层间的带(上层 facade 的底带)保留以表达楼板线。默认 true。 */
+  showBottomSpandrel?: boolean;
+  /** 是否渲染幕墙自带的「静态装饰入户门」。curtainWall villa 里设为 false：
+   *  门改由可点击开关的 WalkthroughDoor3D（french_double 玻璃门）渲染在
+   *  幕墙留出的门洞里，于是门能真正推开(用户：幕墙门能推开吗)。GlassCurtain
+   *  仍按 doors 在该格跳过玻璃面留洞，只是不再画那道静态门。默认 true。 */
+  showEntranceDoor?: boolean;
   // Whole-house glass-tower mode multiplies pane opacity so the curtain
   // wall reads as reflective glass instead of a transparent window onto
   // the (stylised, cream) interior shell. Configurable via exterior.glassOpacity.
@@ -373,7 +397,7 @@ function GlassCurtain({
         const py = -height / 2 + (ri + 0.5) * rowH;
         const hasDoor = doors.some(d => Math.abs(d.cx - px) < panelW / 2 + d.w / 2 && ri === 0);
         if (hasDoor) continue;  // hasDoor cells fall back to per-mesh below
-        const spH    = Math.min(rowH * 0.200, 0.55);
+        const spH    = showBottomSpandrel ? Math.min(rowH * 0.200, 0.55) : 0;
         const visH   = rowH - spH;
         const topH   = visH * 0.62;
         const botH   = visH * 0.38;
@@ -385,7 +409,7 @@ function GlassCurtain({
       }
     }
     return { transomPositions: transoms, upperPaneNoDoor: uppersND, lowerPaneNoDoor: lowersND };
-  }, [cols, rows, width, height, panelW, rowH, doors]);
+  }, [cols, rows, width, height, panelW, rowH, doors, showBottomSpandrel]);
 
   // Spandrel positions —— 每行底部 20% 的暗色面板
   const spandrelPositions = useMemo(() => {
@@ -393,12 +417,14 @@ function GlassCurtain({
     for (let ri = 0; ri < rows; ri++) {
       const py = -height / 2 + ri * rowH;
       const spH = Math.min(rowH * 0.200, 0.55);
+      // 一楼关裙板：跳过落地处那道，让玻璃直接到地、露出地面家具。
+      if (!showBottomSpandrel && ri === 0) continue;
       arr.push([0, py + spH / 2, 0.026]);
     }
     return arr;
-  }, [rows, rowH, height]);
+  }, [rows, rowH, height, showBottomSpandrel]);
 
-  const spandrelHeight = Math.min(rowH * 0.200, 0.55);  // 假定所有 row 同 height
+  const spandrelHeight = showBottomSpandrel ? Math.min(rowH * 0.200, 0.55) : 0;  // 假定所有 row 同 height
   const transomWidth = panelW - 0.006;
   // Glass pane heights —— 每格内 vision zone 拆 upper/lower (62/38) (Task 3)
   const visH = rowH - spandrelHeight;
@@ -464,7 +490,7 @@ function GlassCurtain({
             transparent opacity={op(0.13)}
             transmission={0.9} ior={1.45} thickness={0.012}
             depthWrite={false} roughness={0.04} metalness={0.0}
-            reflectivity={0.08} envMapIntensity={0.35} side={THREE.DoubleSide}
+            reflectivity={0.42} envMapIntensity={1.7} side={THREE.DoubleSide}
             {...overlayMaterialProps(2)}
           />
           {upperPaneNoDoor.map((p, i) => <Instance key={i} position={p} />)}
@@ -478,7 +504,7 @@ function GlassCurtain({
             transparent opacity={op(0.15)}
             transmission={0.88} ior={1.45} thickness={0.012}
             depthWrite={false} roughness={0.05} metalness={0.0}
-            reflectivity={0.08} envMapIntensity={0.35} side={THREE.DoubleSide}
+            reflectivity={0.42} envMapIntensity={1.7} side={THREE.DoubleSide}
             {...overlayMaterialProps(2)}
           />
           {lowerPaneNoDoor.map((p, i) => <Instance key={i} position={p} />)}
@@ -519,7 +545,7 @@ function GlassCurtain({
                           transparent opacity={op(0.13)}
                           transmission={0.9} ior={1.45} thickness={0.012}
                           depthWrite={false} roughness={0.04} metalness={0.0}
-                          reflectivity={0.08} envMapIntensity={0.35} side={THREE.DoubleSide}
+                          reflectivity={0.42} envMapIntensity={1.7} side={THREE.DoubleSide}
                           {...overlayMaterialProps(2)}
                         />
                       </mesh>
@@ -530,7 +556,7 @@ function GlassCurtain({
                           transparent opacity={op(0.15)}
                           transmission={0.88} ior={1.45} thickness={0.012}
                           depthWrite={false} roughness={0.05} metalness={0.0}
-                          reflectivity={0.08} envMapIntensity={0.35} side={THREE.DoubleSide}
+                          reflectivity={0.42} envMapIntensity={1.7} side={THREE.DoubleSide}
                           {...overlayMaterialProps(2)}
                         />
                       </mesh>
@@ -583,8 +609,10 @@ function GlassCurtain({
           · 双扇透明玻璃门（比幕墙更清透）
           · 一对竖向不锈钢拉手（强烈的"这是门"信号）
           · 可选的入口雨棚挑板。
-          颜色/雨棚全部可配置（exterior.entrance*）。 */}
-      {doors.map((door, di) => {
+          颜色/雨棚全部可配置（exterior.entrance*）。
+          showEntranceDoor=false（curtainWall villa）时不画这道静态门——
+          改由可开关的 WalkthroughDoor3D 玻璃门接管，门能真正推开。 */}
+      {showEntranceDoor && doors.map((door, di) => {
         const dW = door.w;
         const dH = door.h;
         const fT = 0.07;             // frame member width
@@ -3002,8 +3030,23 @@ export default function FloorPlanBuilding({
           </group>
         );
       })()}
-      {/* 建筑基座 — 两段式：下部黑花岗岩脚踢 + 上部深色抛光石材 */}
-      {!insideBuilding && (
+      {/* 建筑基座 — 两段式：下部黑花岗岩脚踢 + 上部深色抛光石材。
+          ⚠️ 玻璃幕墙别墅例外：这道 0.4m 高的不透明地台会沿落地玻璃底部
+          一圈把室内低于 0.4m 的东西（地毯、矮茶几等）从外面全挡住，与
+          「通透玻璃幕墙落地」的卖点冲突（用户：基座暗带挡住地面家具）。
+          故 curtainWall 模式下把基座压成贴地的 2cm 薄压边——保留干净的
+          落地线，但不再遮挡室内地面家具。非幕墙(实墙)建筑保留原两段式基座。 */}
+      {!insideBuilding && ((curtainWall || (exterior.transparentExterior ?? true)) ? (
+        /* 幕墙 / 透明立面：贴地薄压边（高 2cm，顶面 0.02m，低于地板 0.025）。
+           透明立面(默认)能透过门窗看到室内，0.4m 两段式深色基座会从门窗下方
+           露出、像地板下多了两层暗带(用户：普通立面地板也有两层/暗带)，故同样
+           压成薄边。只有完全不透明的实心立面(transparentExterior=false)才保留
+           原两段式厚基座。 */
+        <mesh position={[0, 0.01, 0]} castShadow>
+          <boxGeometry args={[W + 0.06, 0.02, D + 0.06]} />
+          <meshStandardMaterial color="#3A3E48" roughness={0.30} metalness={0.55} envMapIntensity={1.6} />
+        </mesh>
+      ) : (
         <>
           {/* 下段：黑色花岗岩（低粗糙度，轻微抛光反射）*/}
           <mesh position={[0, 0.10, 0]} castShadow>
@@ -3021,7 +3064,7 @@ export default function FloorPlanBuilding({
             <meshStandardMaterial color="#3A3E48" roughness={0.18} metalness={0.92} envMapIntensity={2.0} />
           </mesh>
         </>
-      )}
+      ))}
       {/* ── 基座悬浮灯带（floating building LED gap）——
            A continuous thin warm LED strip in the shadow gap between ground
            and building base. Creates the "floating box" silhouette effect
@@ -3892,8 +3935,6 @@ export default function FloorPlanBuilding({
               // 认即可），从玻璃外看到的就是连续的发光奶油墙面。
               const wallC     = "#EDE6D8";
               const ceilC     = "#F3EEE4";
-              const mats      = fp.rooms?.[room]?.materials;
-              const floorC    = mats?.floor?.color ?? ROOM_DEFS[room]?.defaultFloorColor ?? "#6B4C2A";
               const emissiveW = "#F4DDB0";
               const inset   = 0.08;
               const iW = rW - inset * 2;
@@ -3913,28 +3954,52 @@ export default function FloorPlanBuilding({
                 />
               );
 
+              // 逐面判断：该面是「玻璃外立面」(在 exteriorPlanes 里)就跳过这堵
+              // 奶油背景墙——否则它紧贴在玻璃后面，从斜角看会把房间糊成不透明
+              // 奶油盒(用户：这个角度 S 墙不透明)。只有「内隔墙/实墙」面才画奶油
+              // 背景(给玻璃后一个干净背衬)。角落两面玻璃的房间因此能真正透出去。
+              const _pl = floorPlans[fi]?.roomLayout?.[room];
+              const _dm = floorPlans[fi]?.roomDimensions?.[room];
+              const _isGlassFace = (axis: "h" | "v", wc: number) =>
+                !!_pl && !!_dm && exteriorPlanes.has(`${fi}|${axis}|${Math.round(wc)}`);
+              // 也要跳过「用户在平面图里隐藏掉的面」(roomWallsHidden)——隐藏=开口，
+              // 既不该有玻璃幕墙、也不该有这堵奶油盒墙，否则隐藏后仍显示乳白墙
+              // (用户：客厅 N 墙隐藏了却还显示乳白墙)。
+              const _hid = floorPlans[fi]?.roomWallsHidden?.[room];
+              const skipS = !!_hid?.S || (!!_dm && _isGlassFace("h", (_pl?.y ?? 0) + (_dm?.depth ?? 0)));
+              const skipN = !!_hid?.N || _isGlassFace("h", _pl?.y ?? 0);
+              const skipE = !!_hid?.E || (!!_dm && _isGlassFace("v", (_pl?.x ?? 0) + (_dm?.width ?? 0)));
+              const skipW = !!_hid?.W || _isGlassFace("v", _pl?.x ?? 0);
               return (
                 <group key={`gbox-${fi}-${room}`} position={[cx, cy, cz]}>
                   {/* 南墙 S（+Z 方向，朝 -Z 即朝室内）*/}
+                  {!skipS && (
                   <mesh position={[0, 0,  iD / 2 - 0.005]} rotation={[0, Math.PI, 0]}>
                     <planeGeometry args={[iW, wallH]} />
                     {wallMat}
                   </mesh>
+                  )}
                   {/* 北墙 N（-Z 方向，朝 +Z 即朝室内）*/}
+                  {!skipN && (
                   <mesh position={[0, 0, -iD / 2 + 0.005]}>
                     <planeGeometry args={[iW, wallH]} />
                     {wallMat}
                   </mesh>
+                  )}
                   {/* 西墙 W（-X 方向，朝 +X 即朝室内）*/}
+                  {!skipW && (
                   <mesh position={[-iW / 2 + 0.005, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
                     <planeGeometry args={[iD, wallH]} />
                     {wallMat}
                   </mesh>
+                  )}
                   {/* 东墙 E（+X 方向，朝 -X 即朝室内）*/}
+                  {!skipE && (
                   <mesh position={[ iW / 2 - 0.005, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
                     <planeGeometry args={[iD, wallH]} />
                     {wallMat}
                   </mesh>
+                  )}
 
                   {/* 天花板 —— DoubleSide emissive */}
                   <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, FLOOR_H / 2 - 0.05, 0]}>
@@ -3947,11 +4012,14 @@ export default function FloorPlanBuilding({
                       side={THREE.DoubleSide}
                     />
                   </mesh>
-                  {/* 地板 —— 胡桃木 */}
-                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -FLOOR_H / 2 + 0.04, 0]} receiveShadow>
-                    <planeGeometry args={[iW, iD]} />
-                    <meshStandardMaterial color={floorC} roughness={0.55} />
-                  </mesh>
+                  {/* 地板 —— 已移除（修复「多了一层地板」）。
+                      这套发光室内盒原本在 yBase+0.04 又画了一层纯色地板，
+                      但每间房的 WalkthroughFloor 已在 yBase+0.025 渲染了带
+                      木纹的真实楼板。两层叠加：① 立面上看像「一层多了一层
+                      地板 + 下方深色夹层」；② 高 1.5cm 的 0.04 板把贴地的
+                      地毯/矮茶几埋住，外观图里看不到地面家具。删掉这层重复
+                      地板后，真实楼板(0.025)单独显示，地毯/矮件随之露出。
+                      墙面/天花仍保留发光盒，透过玻璃的奶油色室内观感不变。 */}
 
                   {/* 大房间家具剪影（仅在外观模式下渲染，通过玻璃可见）
                       不渲染 GLTF — 只是简单的几何体轮廓，给室内视觉深度
@@ -4393,7 +4461,10 @@ export default function FloorPlanBuilding({
            的透明立面 —— 露出带窗洞的墙体 + 共享 <StyledWindow> 透明玻璃，不再叠
            盖窗洞的实心 ConcreteFacade 立面层。设 transparentExterior=false 可恢复
            旧的实心立面外观。 */}
-      {!insideBuilding && (curtainWall || !(exterior.transparentExterior ?? true)) && facadeBlocks.map((block, bi) => {
+      {/* 幕墙玻璃立面：curtainWall 模式下漫游(insideBuilding)也渲染，
+          这样从室内往外看是通透玻璃而非实墙(用户反馈：漫游里幕墙变实墙)。
+          非幕墙的 legacy 路径仍只在外观图渲染。 */}
+      {(curtainWall || (!insideBuilding && !(exterior.transparentExterior ?? true))) && facadeBlocks.map((block, bi) => {
         const { floorIndex, side, wallCoord, mergedStart, mergedEnd, doorEntries, winEntries } = block;
         const segLen  = (mergedEnd - mergedStart) * CM;
         const yBase   = floorIndex * (FLOOR_H + SLAB_T);
@@ -4521,6 +4592,13 @@ export default function FloorPlanBuilding({
                    the global opacity. */
                 showGlass={viaLayers ? block.fl.glass : true}
                 showFrame={viaLayers ? block.fl.frame : true}
+                /* 各层幕墙都不放底部裙板 → 玻璃到各层楼板，外观可透过玻璃
+                   看到地面家具(地毯/矮茶几)。楼层线由层间楼板(slab)表达，
+                   不需要裙带。(用户：一楼、二楼裙带都去掉) */
+                showBottomSpandrel={false}
+                /* 幕墙别墅：不画静态装饰门，门交给可点击开关的 WalkthroughDoor3D
+                   玻璃门(见下方 doorStyle 强制 french_double)，于是门能推开。 */
+                showEntranceDoor={!curtainWall}
                 opacityScale={exterior.glassOpacity ?? (curtainWall ? 1.1 : 1)}
                 glassTransparency={viaLayers ? block.fl.opacity : undefined}
                 glassColor={exterior.glassColor}
@@ -6999,13 +7077,16 @@ export default function FloorPlanBuilding({
           edge "fin" artefacts. */}
       {wallSegments.map((seg, idx) => {
         if (seg.hideAny) return null;
-        // Curtain-wall mode, exterior view: drop the opaque shell on any
-        // building-perimeter plane — the GlassCurtain on that face IS the
-        // envelope, and a white wall behind it would make the glass read
-        // milky/opaque. Interior partitions (not on a perimeter plane) and
-        // the walkthrough view (insideBuilding) keep their solid walls.
+        // Curtain-wall mode: drop the opaque shell on any building-perimeter
+        // plane — the GlassCurtain on that face IS the envelope, and a white
+        // wall behind it would make the glass read milky/opaque. Now applies
+        // in BOTH exterior AND walkthrough (insideBuilding): the curtain glass
+        // renders in walkthrough too (see facadeBlocks gate above), so from
+        // inside you look out through transparent glass instead of a solid
+        // wall (用户反馈：漫游里幕墙变实墙). Interior partitions (not on a
+        // perimeter plane) keep their solid walls.
         if (
-          curtainWall && !insideBuilding &&
+          curtainWall &&
           exteriorPlanes.has(`${seg.fi}|${seg.axis}|${Math.round(seg.fixed)}`)
         ) return null;
         const CM_l = 0.01;
@@ -7442,9 +7523,26 @@ export default function FloorPlanBuilding({
               // 双开玻璃门），导致「漫游=白双开玻璃 / 效果图=灰木门」不一致
               // （用户反馈：客厅的门三视图不一致）。改为直接读效果图的
               // roomDoorStyle，三视图门样式从此一致。
-              const style = door.style
-                ?? floorPlans[fi]?.roomDoorStyle?.[room]
-                ?? "wood_panel";
+              // 幕墙玻璃外立面上的门：强制用 french_double(双扇玻璃门)——
+              // 既是通透玻璃门、又走 WalkthroughDoor3D 的开关动画(可点击推开)，
+              // 替代原来 GlassCurtain 的静态装饰门(用户：幕墙门能推开吗)。
+              // 其余面(普通实墙/内门)仍按效果图门样式。
+              const _doorOnGlassFace = curtainWall && (() => {
+                const _dpl = floorPlans[fi]?.roomLayout?.[room];
+                const _ddm = floorPlans[fi]?.roomDimensions?.[room];
+                if (!_dpl || !_ddm) return false;
+                const _dax = (door.wall === "N" || door.wall === "S") ? "h" : "v";
+                const _dwc = door.wall === "S" ? _dpl.y + _ddm.depth
+                           : door.wall === "N" ? _dpl.y
+                           : door.wall === "E" ? _dpl.x + _ddm.width
+                           :                      _dpl.x;
+                return exteriorPlanes.has(`${fi}|${_dax}|${Math.round(_dwc)}`);
+              })();
+              const style: import("@/lib/types").DoorStyle = _doorOnGlassFace
+                ? "french_double"
+                : (door.style
+                  ?? floorPlans[fi]?.roomDoorStyle?.[room]
+                  ?? "wood_panel");
               // Wall mapping: FPE data → WalkthroughDoor3D — both use NSWE now.
               const doorWall: import("@/lib/types").WallSide = door.wall;
               // WalkthroughDoor3D "E" (east/right) measures pos from the large-Z (south) end.
@@ -7489,6 +7587,23 @@ export default function FloorPlanBuilding({
                 · transparentExterior=false（旧实心立面）：外观图不渲染这里的窗，
                   外立面窗户完全交给 ConcreteFacade，避免双层窗重叠。 */}
             {(!isStair || (exterior.renderStairOpenings ?? true)) && (insideBuilding || (exterior.transparentExterior ?? true)) && windows.map((win, wi) => {
+              // 幕墙玻璃面：不画独立「打孔窗」(StyledWindow 带框/窗台/百叶)——
+              // 真实通透玻璃幕墙里整片玻璃即是窗，再叠一个打孔窗会和幕墙打架
+              // (用户问幕墙门窗该怎么处理)。该面是玻璃外立面(在 exteriorPlanes
+              // 里)时直接跳过；通风/遮阳交给幕墙玻璃 + 室内卷帘/百叶。普通实墙
+              // 立面(punched-window)不受影响，照常渲染。
+              if (curtainWall) {
+                const _wpl = floorPlans[fi]?.roomLayout?.[room];
+                const _wdm = floorPlans[fi]?.roomDimensions?.[room];
+                if (_wpl && _wdm) {
+                  const _ax = (win.wall === "N" || win.wall === "S") ? "h" : "v";
+                  const _wc = win.wall === "S" ? _wpl.y + _wdm.depth
+                            : win.wall === "N" ? _wpl.y
+                            : win.wall === "E" ? _wpl.x + _wdm.width
+                            :                     _wpl.x;
+                  if (exteriorPlanes.has(`${fi}|${_ax}|${Math.round(_wc)}`)) return null;
+                }
+              }
               const wW   = win.len * CM;
               const wH   = (win.h    ?? defWinH) * CM;
               const wSill = (win.sill ?? defWinSill)  * CM;
@@ -7689,9 +7804,17 @@ export default function FloorPlanBuilding({
                     );
                   })();
                   if (needsPlacedMesh) {
+                    // 地毯专属抬升：地毯是贴地薄片(1.5cm)，PlacedItemMesh 把它放在
+                    // group 的 yBase 上 → 整片沉在真实楼板(yBase+0.025)之下被盖住。
+                    // 只把「地毯」抬到楼板面之上(0.03)，配合 Rug 材质的 polygonOffset
+                    // 让它稳定画在楼板前面，外观图里就能透过落地玻璃看到。其余家具
+                    // 够高，不抬，避免悬空。
+                    const rugLiftY = fItem?.category === "rug" ? 0.03 : 0;
                     return (
                       <Suspense key={p.instanceId} fallback={proxyBox}>
-                        <PlacedItemMesh placed={modP} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} />
+                        <group position={[0, rugLiftY, 0]}>
+                          <PlacedItemMesh placed={modP} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} />
+                        </group>
                       </Suspense>
                     );
                   }

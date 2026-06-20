@@ -2510,6 +2510,9 @@ function SingletonItem({ item: it }: { item: import("@/lib/types").YardSingleton
   // instance can scale/rotate independently. Hook order is stable.
   const treeJitter = useDesignerStore(s => s.exterior.treeColorJitter ?? 0.35);
   if (!asset) return null;
+  // 草丛/小灌木读成丑陋的小绿球,用户要求不要这种植物 —— 一处拦截,所有
+  // 预设/样板/方案里的草和灌木球都不再渲染(数据保留,无害;树木照常)。
+  if (it.kind === "plant.grass" || it.kind === "plant.bushSmall" || it.kind === "plant.bushLarge") return null;
   const wx  = it.x / 100;
   const wz  = it.z / 100;
   const s   = it.scale ?? 1;
@@ -2770,6 +2773,95 @@ function DraggableGroup({
 // scene, plus distortion + blur for a wet-glass look) layered on top of a
 // turquoise pool floor. The whole thing sits ~22cm below the coping so
 // the surface lines up with the infinity-edge lip.
+// Procedural tiling water-normals (no waternormals.jpg is shipped). Interfering
+// integer-frequency sines → seamless ripple normal map for the official three
+// Water shader (drives the wave distortion of the real-time reflection).
+let _waterNrm: THREE.Texture | null = null;
+function getWaterNormals() {
+  if (_waterNrm) return _waterNrm;
+  const S = 256; const h = new Float32Array(S * S);
+  const waves: [number, number, number][] = [[3, 1, 1], [1, 4, 0.7], [5, 3, 0.45], [8, 6, 0.25], [12, 9, 0.15]];
+  const TWO = Math.PI * 2;
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { let v = 0; for (const [kx, ky, a] of waves) v += a * Math.sin((TWO / S) * (kx * x + ky * y)); h[y * S + x] = v; }
+  const at = (x: number, y: number) => h[((y + S) % S) * S + ((x + S) % S)];
+  const data = new Uint8ClampedArray(S * S * 4);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; const dx = (at(x + 1, y) - at(x - 1, y)) * 1.6, dy = (at(x, y + 1) - at(x, y - 1)) * 1.6; const inv = 1 / Math.sqrt(dx * dx + dy * dy + 1); data[i] = (-dx * inv * 0.5 + 0.5) * 255; data[i + 1] = (-dy * inv * 0.5 + 0.5) * 255; data[i + 2] = (inv * 0.5 + 0.5) * 255; data[i + 3] = 255; }
+  const c = document.createElement("canvas"); c.width = c.height = S; const ctx = c.getContext("2d")!; const img = ctx.createImageData(S, S); img.data.set(data); ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; _waterNrm = tex; return tex;
+}
+
+// Realistic pool water the way real water actually reads (researched):
+//   • TRANSPARENT (transmission) — you see the tiled bottom THROUGH the water,
+//     just like glass; this is the single biggest "it's real" cue.
+//   • Depth-based colour absorption (attenuationColor/Distance) — shallow water
+//     stays bright turquoise, deep water absorbs to teal. This is the gradient.
+//   • Animated normal map — ripples that REFRACT the view of the bottom + catch
+//     sky/building reflections (envMap) on the surface.
+// Borrows the glass MeshPhysicalMaterial pipeline rather than an opaque mirror.
+// Radial depth-gradient for the pool floor: bright turquoise tile at the rim,
+// absorbing to deep teal toward the centre — fakes a shallow→deep slope so a
+// flat-bottomed box still reads as a real pool with depth.
+let _poolFloorTex: THREE.CanvasTexture | null = null;
+function getPoolFloorTexture() {
+  if (_poolFloorTex) return _poolFloorTex;
+  const S = 256; const c = document.createElement("canvas"); c.width = c.height = S;
+  const ctx = c.getContext("2d")!;
+  const g = ctx.createRadialGradient(S / 2, S / 2, S * 0.05, S / 2, S / 2, S * 0.62);
+  g.addColorStop(0, "#0A4A58");   // deep centre
+  g.addColorStop(0.55, "#1C8DA0");
+  g.addColorStop(1, "#54C3D6");   // bright shallow rim
+  ctx.fillStyle = g; ctx.fillRect(0, 0, S, S);
+  // faint tile grid
+  ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 1;
+  for (let i = 1; i < 8; i++) { const p = (i / 8) * S; ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, S); ctx.moveTo(0, p); ctx.lineTo(S, p); ctx.stroke(); }
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  _poolFloorTex = tex; return tex;
+}
+
+export function PoolWater({ w, d }: { w: number; d: number }) {
+  const floorTex = useMemo(() => getPoolFloorTexture(), []);
+  const normals = useMemo(() => {
+    const t = getWaterNormals(); t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(Math.max(2, w / 2.2), Math.max(2, d / 2.2));
+    return t;
+  }, [w, d]);
+  useFrame((_, delta) => {
+    normals.offset.x += delta * 0.028;
+    normals.offset.y += delta * 0.018;
+  });
+  return (
+    <group>
+      {/* Bright turquoise mosaic bottom — seen THROUGH the transmissive water;
+          the water's volume absorption darkens it to teal with depth. */}
+      <mesh position={[0, -0.55, 0]} receiveShadow>
+        <boxGeometry args={[w + 0.02, 0.04, d + 0.02]} />
+        <meshStandardMaterial map={floorTex} roughness={0.4} metalness={0.0} />
+      </mesh>
+      {/* Transmissive water surface (glass-style) */}
+      <mesh position={[0, -0.12, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
+        <planeGeometry args={[w, d, 1, 1]} />
+        <meshPhysicalMaterial
+          color="#dff3f6"
+          roughness={0.06}
+          metalness={0}
+          transmission={1.0}
+          ior={1.333}
+          thickness={1.6}
+          attenuationColor={new THREE.Color("#0B5A68")}
+          attenuationDistance={1.6}
+          transparent
+          normalMap={normals}
+          normalScale={new THREE.Vector2(0.16, 0.16)}
+          envMapIntensity={1.1}
+          clearcoat={0.4}
+          clearcoatRoughness={0.06}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 export function AnimatedWater({ w, d }: { w: number; d: number }) {
   const surfaceRef = useRef<THREE.Mesh>(null);
   // Procedural ripple maps — generated once via canvas. We build a seamless
@@ -2867,7 +2959,9 @@ export function AnimatedWater({ w, d }: { w: number; d: number }) {
           "infinite pool depth" look; sun + sky light it through the surface. */}
       <mesh position={[0, -0.42, 0]} receiveShadow>
         <boxGeometry args={[w + 0.02, 0.04, d + 0.02]} />
-        <meshStandardMaterial color="#1690A6" roughness={0.22} metalness={0.05} />
+        {/* Deep teal mosaic bottom — dark so the water reads as deep even from
+            top-down (where the surface reflects bright sky). */}
+        <meshStandardMaterial color="#0A4F5A" roughness={0.20} metalness={0.05} />
       </mesh>
       {/* Reflective water surface: real-time planar reflection of sky/yard,
           wobbled by the distortion map and rippled by the normal map. Lower
@@ -2879,30 +2973,75 @@ export function AnimatedWater({ w, d }: { w: number; d: number }) {
           blur={[300, 110]}
           resolution={1024}
           mixBlur={1.0}
-          mixStrength={3.2}
-          mirror={0.55}
-          mixContrast={1.0}
-          roughness={0.9}
-          metalness={0.15}
-          color="#3FAFC4"
-          distortion={0.55}
+          mixStrength={1.6}
+          mirror={0.62}
+          mixContrast={1.3}
+          roughness={0.55}
+          metalness={0.35}
+          color="#15677A"
+          distortion={0.5}
           distortionMap={distortionMap}
           normalMap={rippleNormal}
-          normalScale={new THREE.Vector2(0.45, 0.45)}
-          depthScale={1.1}
-          minDepthThreshold={0.85}
-          maxDepthThreshold={1.35}
+          normalScale={new THREE.Vector2(0.5, 0.5)}
+          depthScale={1.2}
+          minDepthThreshold={0.8}
+          maxDepthThreshold={1.4}
           depthToBlurRatioBias={0.25}
           transparent
-          opacity={0.9}
+          opacity={0.92}
         />
       </mesh>
     </group>
   );
 }
 
+// Procedural travertine PBR — cream stone with mottled veining + pores, plus a
+// derived normal map so the deck reads as real cut stone under the SSAO/HDRI
+// lighting instead of a flat color. Built once (module-level cache).
+let _travCache: { map: THREE.CanvasTexture; normal: THREE.CanvasTexture } | null = null;
+function getTravertineTextures() {
+  if (_travCache) return _travCache;
+  const S = 256;
+  // Height/value field: low-freq mottle + a few diagonal veins + fine pores.
+  const h = new Float32Array(S * S);
+  const rnd = (n: number) => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); };
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    let v = 0;
+    v += 0.5 * Math.sin((x / S) * Math.PI * 3 + Math.cos(y / S * Math.PI * 2));
+    v += 0.3 * Math.sin((x + y) / S * Math.PI * 7 + 1.3);
+    v += 0.18 * Math.sin((x - y * 0.6) / S * Math.PI * 13);
+    // fine pore speckle
+    v += (rnd(x * 3.1 + y * 7.7) - 0.5) * 0.22;
+    h[y * S + x] = v;
+  }
+  const at = (x: number, y: number) => h[((y + S) % S) * S + ((x + S) % S)];
+  const albedo = new Uint8ClampedArray(S * S * 4);
+  const nrm = new Uint8ClampedArray(S * S * 4);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const i = (y * S + x) * 4;
+    const v = at(x, y);                       // ~[-1,1]
+    const t = 0.5 + v * 0.16;                 // tone around mid
+    // cream travertine: warm off-white, veins slightly darker/warmer
+    albedo[i] = 238 * t + 14; albedo[i + 1] = 230 * t + 12; albedo[i + 2] = 214 * t + 10; albedo[i + 3] = 255;
+    const dx = (at(x + 1, y) - at(x - 1, y)) * 2.2;
+    const dy = (at(x, y + 1) - at(x, y - 1)) * 2.2;
+    const inv = 1 / Math.sqrt(dx * dx + dy * dy + 1);
+    nrm[i] = (-dx * inv * 0.5 + 0.5) * 255; nrm[i + 1] = (-dy * inv * 0.5 + 0.5) * 255; nrm[i + 2] = (inv * 0.5 + 0.5) * 255; nrm[i + 3] = 255;
+  }
+  const mk = (data: Uint8ClampedArray, srgb: boolean) => {
+    const c = document.createElement("canvas"); c.width = c.height = S;
+    const ctx = c.getContext("2d")!; const img = ctx.createImageData(S, S); img.data.set(data); ctx.putImageData(img, 0, 0);
+    const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = 8;
+    if (srgb) tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+  _travCache = { map: mk(albedo, true), normal: mk(nrm, false) };
+  return _travCache;
+}
+
 // Luxury infinity-edge pool with travertine deck, spa, loungers, cabana
 export function Pool({ x, z, w = 9, d = 5 }: { x: number; z: number; w?: number; d?: number }) {
+  const trav = useMemo(() => getTravertineTextures(), []);
   // Travertine deck tiles
   const deckTiles = useMemo(() => {
     const tiles: { tx: number; tz: number }[] = [];
@@ -2925,11 +3064,25 @@ export function Pool({ x, z, w = 9, d = 5 }: { x: number; z: number; w?: number;
 
   return (
     <group position={[x, 0, z]}>
-      {/* ── Travertine deck ── */}
+      {/* Grout base — a slightly darker plane just under the deck tiles so the
+          ~4cm gaps between 86cm tiles read as joint lines (large-format stone
+          paving look from the reference), instead of a seamless flat deck. */}
+      <mesh position={[0, -0.035, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[w + 3.0, d + 3.0]} />
+        <meshStandardMaterial color="#BDB6A4" roughness={0.9} metalness={0} />
+      </mesh>
+      {/* ── Travertine deck (large-format tiles, 4cm grout reveal) ──
+          PBR: shared travertine albedo + normal map gives each tile real cut-
+          stone veining/pores; per-tile color tone keeps it from looking tiled. */}
       {deckTiles.map((t, i) => (
         <mesh key={i} position={[t.tx, -0.02, t.tz]} receiveShadow>
           <boxGeometry args={[0.86, 0.04, 0.86]} />
-          <meshStandardMaterial color="#EDE8D8" roughness={0.75} metalness={0.02} />
+          <meshStandardMaterial
+            normalMap={trav.normal}
+            normalScale={new THREE.Vector2(0.22, 0.22)}
+            color={i % 2 === 0 ? "#EFEADB" : "#ECE6D6"}
+            roughness={0.82} metalness={0.02}
+          />
         </mesh>
       ))}
 
@@ -2945,8 +3098,8 @@ export function Pool({ x, z, w = 9, d = 5 }: { x: number; z: number; w?: number;
         <meshStandardMaterial color="#85C8E0" roughness={0.25} />
       </mesh>
 
-      {/* ── Water surface ── */}
-      <AnimatedWater w={w - 0.15} d={d - 0.15} />
+      {/* ── Water surface — official three Water (real reflection + ripples) ── */}
+      <PoolWater w={w - 0.15} d={d - 0.15} />
 
       {/* ── Infinity edge: +z side overflow lip (slightly lower) ── */}
       <mesh position={[0, -0.06, d / 2 + 0.18]} castShadow>

@@ -217,20 +217,8 @@ function SocialIslandMesh({ params, rot }: {
         </mesh>
       </group>
 
-      {/* Decorative planters at the open side corners */}
-      {[[-W / 2 + 0.25, 0, D / 2 - 0.25], [W / 2 - 0.25, 0, D / 2 - 0.25]].map((p, i) => (
-        <group key={i} position={p as [number, number, number]}>
-          <mesh position={[0, 0.20, 0]} castShadow receiveShadow>
-            <boxGeometry args={[0.40, 0.40, 0.40]} />
-            <meshStandardMaterial color="#5C5145" roughness={0.85} />
-          </mesh>
-          {/* Foliage tuft */}
-          <mesh position={[0, 0.55, 0]} castShadow>
-            <sphereGeometry args={[0.30, 12, 8]} />
-            <meshStandardMaterial color="#5C8A3F" roughness={0.95} />
-          </mesh>
-        </group>
-      ))}
+      {/* Decorative planters (box + green foliage-tuft sphere) removed — the
+          procedural green balls read as fake (user request to drop these). */}
     </group>
   );
 }
@@ -403,13 +391,8 @@ function PorteCochereMesh({ params, rot }: {
         })
       )}
 
-      {/* Side hedges — 1.2m tall low evergreen, hides the parking line */}
-      {[-1, 1].map(sx => (
-        <mesh key={sx} position={[sx * (W / 2 + 0.35), 0.6, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.55, 1.20, D - 0.5]} />
-          <meshStandardMaterial color="#3F6B45" roughness={0.95} />
-        </mesh>
-      ))}
+      {/* Side hedges removed — the procedural green hedge read as fake/ugly
+          (user request to drop these plants). The canopy + curb stand alone. */}
 
       {/* Demarcating curb at the open (front) edge */}
       <mesh position={[0, 0.05, D / 2 - 0.05]} castShadow={false} receiveShadow>
