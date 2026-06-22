@@ -235,8 +235,15 @@ export function computeExteriorWalls(
           oStart = op.x; oEnd = op.x + od.width;
         } else {
           // E/W 面：外侧在 x 方向
-          const outerX = side === "E" ? wallCoord + PROBE : wallCoord - PROBE;
-          onOuterSide = op.x - TOLE <= outerX && outerX <= op.x + od.width + TOLE;
+          // W 面特别处理：同一 x 坐标的共面房间不互相遮蔽。
+          // 只有真正在本墙外侧（对 W 面 = 更靠西，即 op.x < wallCoord）的房间
+          // 才算覆盖。避免走廊/客厅等共享同一 x=0 的房间互相削去对方的外立面段。
+          if (side === "W") {
+            onOuterSide = op.x < wallCoord && op.x + od.width + TOLE >= wallCoord;
+          } else {
+            // E 面：覆盖房间在右侧，op.x + od.width > wallCoord 且 op.x ≤ wallCoord+TOLE
+            onOuterSide = op.x + od.width > wallCoord && op.x <= wallCoord + TOLE;
+          }
           oStart = op.y; oEnd = op.y + od.depth;
         }
         if (!onOuterSide) continue;
@@ -281,8 +288,108 @@ function panelBlindHash(col: number, row: number): number {
   return (h >>> 0) / 0x100000000;
 }
 
+/**
+ * 幕墙竖挺 + 分格的「单一真源」布局 —— 网格优先模型(用户:框架先均匀排布,门窗再选
+ * 合适的格嵌进去,框架别太密)。供外观图(GlassCurtain)与门窗吸附(房间循环)共用:
+ *   1. 竖挺先按 ~bay(默认 1.5m,不太密)均匀排满整段,与洞口无关。两端=承重粗框
+ *      structW,中间=分格细挺 mullionW。
+ *   2. 门:吸附到它覆盖的「整数个格」,跨格时只去掉门内部的中间挺(门=对齐网格的干净
+ *      洞口),其余竖挺不动。
+ *   3. 窗:选最近的「一个格」放一个适配该格的开启扇(玻璃仍为固定玻璃,开启扇嵌在格内、
+ *      绝不跨挺),竖挺完全不动。
+ * 返回:mullions(最终竖挺,含两级宽) / cells(door=key 的格在外观图里抠掉玻璃,window
+ *      的格保留固定玻璃) / openingBay(每个洞口吸附到的格区间,门=跨格区间、窗=单格)。
+ * 纯函数、确定性:相同输入 → 相同输出,GlassCurtain 与吸附 memo 各自调用必然一致。
+ */
+function buildCurtainLayout(
+  segLen: number,
+  openings: Array<{ cx: number; w: number; key: string; kind: "d" | "w" }>,
+  cfg: { bay?: number; structW?: number; mullionW?: number; gridOriginM?: number; flip?: boolean },
+): {
+  mullions: Array<{ x: number; w: number }>;
+  cells: Array<{ x0: number; x1: number; door: string | null }>;
+  openingBay: Map<string, { x0: number; x1: number; kind: "d" | "w" }>;
+} {
+  const half = segLen / 2;
+  const bay = Math.max(0.8, cfg.bay ?? 1.5);
+  const structW = Math.max(0.04, cfg.structW ?? 0.085);
+  const mullionW = Math.max(0.03, cfg.mullionW ?? 0.07);
+  // 1. 均匀网格 —— 全局对齐:内部挺落在「沿墙轴的全局倍数」网格线上(gridOriginM = 本块
+  //    沿墙轴起点 m)。这样同一面上相邻的多个立面块,挺落在同一组线上 → 交接处对齐、
+  //    不再重复/碎格(用户:中间门厅那道粗缝)。两端仍是承重挺。flip 对齐 S/E 翻转。
+  const gridOriginM = cfg.gridOriginM ?? 0;
+  const flip = cfg.flip ?? false;
+  const gridX: number[] = [-half, half];
+  {
+    const margin = bay * 0.5;                                       // 离块端不到半格不加挺(防碎格)
+    const startK = Math.ceil((gridOriginM + margin) / bay);
+    const endK = Math.floor((gridOriginM + segLen - margin) / bay);
+    for (let k = startK; k <= endK; k++) {
+      const run = k * bay - gridOriginM;     // 沿墙轴距块起点(米)
+      const lx = flip ? -(run - half) : (run - half);
+      gridX.push(lx);
+    }
+  }
+  gridX.sort((a, b) => a - b);
+  const n = gridX.length - 1;
+  const cellCenter = (i: number) => (gridX[i] + gridX[i + 1]) / 2;
+
+  const ops = openings
+    .map(o => ({ x0: Math.max(-half, o.cx - o.w / 2), x1: Math.min(half, o.cx + o.w / 2), cx: o.cx, key: o.key, kind: o.kind }))
+    .filter(o => o.x1 - o.x0 > 0.05)
+    .sort((a, b) => a.cx - b.cx);
+
+  const removed = new Set<number>();            // 被门吃掉的内部竖挺 index
+  const taken = new Array<string | null>(n).fill(null);
+  const openingBay = new Map<string, { x0: number; x1: number; kind: "d" | "w" }>();
+
+  // 2. 门先吸附:覆盖中心落在门内的格;否则取最近格。跨格 → 去掉门内部竖挺。
+  for (const o of ops.filter(o => o.kind === "d")) {
+    let lo = -1, hi = -1;
+    for (let i = 0; i < n; i++) {
+      const cc = cellCenter(i);
+      if (cc > o.x0 && cc < o.x1) { if (lo < 0) lo = i; hi = i; }
+    }
+    if (lo < 0) {
+      let best = 0, bd = Infinity;
+      for (let i = 0; i < n; i++) { const d = Math.abs(cellCenter(i) - o.cx); if (d < bd) { bd = d; best = i; } }
+      lo = hi = best;
+    }
+    for (let i = lo + 1; i <= hi; i++) removed.add(i);   // 门跨的内部竖挺去掉
+    for (let i = lo; i <= hi; i++) taken[i] = o.key;
+    openingBay.set(o.key, { x0: gridX[lo], x1: gridX[hi + 1], kind: "d" });
+  }
+  // 3. 窗后吸附:选最近的「空闲」格(没被门/别的窗占),竖挺不动。
+  for (const o of ops.filter(o => o.kind === "w")) {
+    let best = -1, bd = Infinity;
+    for (let i = 0; i < n; i++) { if (taken[i]) continue; const d = Math.abs(cellCenter(i) - o.cx); if (d < bd) { bd = d; best = i; } }
+    if (best < 0) { for (let i = 0; i < n; i++) { const d = Math.abs(cellCenter(i) - o.cx); if (d < bd) { bd = d; best = i; } } }
+    if (best < 0) continue;
+    taken[best] = o.key;
+    openingBay.set(o.key, { x0: gridX[best], x1: gridX[best + 1], kind: "w" });
+  }
+
+  // 4. 最终竖挺(去掉门内部的),两级宽:端部 structW,其余 mullionW。
+  const mullions: Array<{ x: number; w: number }> = [];
+  for (let i = 0; i <= n; i++) {
+    if (removed.has(i)) continue;
+    mullions.push({ x: gridX[i], w: (i === 0 || i === n) ? structW : mullionW });
+  }
+  // 5. 分格:door 格(中心落在某门跨距内)在外观图抠掉玻璃;窗格保留玻璃。
+  const cells: Array<{ x0: number; x1: number; door: string | null }> = [];
+  for (let i = 0; i < mullions.length - 1; i++) {
+    const x0 = mullions[i].x, x1 = mullions[i + 1].x, mid = (x0 + x1) / 2;
+    let doorKey: string | null = null;
+    for (const [k, b] of openingBay) { if (b.kind === "d" && mid > b.x0 && mid < b.x1) { doorKey = k; break; } }
+    cells.push({ x0, x1, door: doorKey });
+  }
+  return { mullions, cells, openingBay };
+}
+
 function GlassCurtain({
-  width, height, floorH, doors = [], opacityScale = 1, glassColor,
+  width, height, floorH, doors = [], windows = [], opacityScale = 1, glassColor,
+  mullionBay, structFrameWidth, mullionWidth, gridOriginM = 0, gridFlip = false,
+  skipMullionLeft = false, skipMullionRight = false,
   spandrelColor = "#283442",
   entranceFrameColor = "#202329",
   entranceHandleColor = "#C8CDD2",
@@ -292,9 +399,24 @@ function GlassCurtain({
   glassTransparency,
   showBottomSpandrel = true,
   showEntranceDoor = true,
+  showBlinds = false,
 }: {
   width: number; height: number; floorH: number;
   doors?: Array<{ cx: number; w: number; h: number }>;
+  /** 该立面段上的窗(中心+宽,立面局部),与门一起决定竖挺分格(洞口边必有挺)。 */
+  windows?: Array<{ cx: number; w: number }>;
+  /** 竖挺节奏(米,默认 1.2):非洞口段按此补匀中间挺。可经 exterior.curtainMullionBay 配。 */
+  mullionBay?: number;
+  /** 承重外框料宽(米,默认 0.16):建筑两端 + 上下楼板线用粗框。exterior.curtainStructFrameWidth。 */
+  structFrameWidth?: number;
+  /** 分格竖挺料宽(米,默认 0.07):洞口边 + 中间补匀挺用细框。exterior.curtainMullionWidth。 */
+  mullionWidth?: number;
+  /** 本立面块沿墙轴的起点(米)+ 是否翻转 —— 用于竖挺「全局对齐」(同面相邻块挺对齐)。 */
+  gridOriginM?: number;
+  gridFlip?: boolean;
+  /** 跨块去重:抑制本块左端(−half)/右端(+half)的承重端挺(交界处只留隔壁块那根)。 */
+  skipMullionLeft?: boolean;
+  skipMullionRight?: boolean;
   /** Per-face 透明度 0..1 (1 = fully clear see-through, 0 = opaque frosted panel).
    *  When set, it drives the vision-pane opacity DIRECTLY across the full
    *  clear→opaque range, overriding the (multiplicative) opacityScale path. */
@@ -315,6 +437,10 @@ function GlassCurtain({
    *  幕墙留出的门洞里，于是门能真正推开(用户：幕墙门能推开吗)。GlassCurtain
    *  仍按 doors 在该格跳过玻璃面留洞，只是不再画那道静态门。默认 true。 */
   showEntranceDoor?: boolean;
+  /** 幕墙玻璃内侧的「百叶帘」装饰(随机部分格上部拉下水平百叶)。从外面看是
+   *  一片悬浮的半透水平细网,易被误读(用户:这个网是什么)。默认 false 关闭，
+   *  可经 exterior.curtainBlinds 恢复。 */
+  showBlinds?: boolean;
   // Whole-house glass-tower mode multiplies pane opacity so the curtain
   // wall reads as reflective glass instead of a transparent window onto
   // the (stylised, cream) interior shell. Configurable via exterior.glassOpacity.
@@ -351,252 +477,109 @@ function GlassCurtain({
   // Wider panels (1.80m) match reference image's curtain wall rhythm
   // Vertical-mullion rhythm. ~1.2m bays give a consistent floor-to-ceiling
   // glazing grid even on wide rooms (1.80m left wide faces looking frameless).
-  const cols  = Math.max(2, Math.round(width / 1.20));
-  const panelW = width / cols;
-  // Mullion face width. Bumped to ~9cm so the vertical frames read clearly as
-  // black mullions against transparent glass (thin 3.75cm bars washed out at
-  // daytime, making the facade look frameless/open). Matches the reference's
-  // prominent black vertical framing.
-  const mullionW = 0.18;
   const rows  = Math.round(height / floorH);
   const rowH  = height / rows;
   const frame = "#181A1E";
+  void showBlinds; void panelBlindHash;   // 百叶帘已移除(用户:这个网是什么)
 
-  // ── Combo-2: 把重复 frame meshes 折叠成 InstancedMesh ──
-  // 每个 GlassCurtain 实例内：竖向 mullion (cols+1) + 中部横向 rail (rows-1)
-  // + 横档 transom bar (cols×rows, !hasDoor) + spandrel (rows) 全部用
-  // drei <Instances>。原本每个 facade ~55+ mesh 现在合成 4 个 mesh，
-  // 配合多层多面的住宅，整体 mesh count 可显著下降。
-  const mullionPositions = useMemo(() => {
-    const arr: Array<[number, number, number]> = [];
-    for (let ci = 0; ci < cols; ci++) {
-      const px = -width / 2 + (ci + 0.5) * panelW;
-      arr.push([px + panelW / 2 + mullionW / 4, 0, 0.005]);  // right mullion
-      if (ci === 0) arr.push([px - (panelW / 2 + mullionW / 4), 0, 0.005]);  // first-col left
-    }
-    return arr;
-  }, [cols, width, panelW, mullionW]);
-
-  const midRailPositions = useMemo(() => {
-    const arr: Array<[number, number, number]> = [];
-    for (let i = 0; i < rows - 1; i++) {
-      arr.push([0, -height / 2 + (i + 1) * rowH, 0.005]);
-    }
-    return arr;
-  }, [rows, height, rowH]);
-
-  // Transom bars 只在 !hasDoor 的格子里 —— 先扫一遍算位置数组
-  // 顺手扫出所有 noDoor 格子的玻璃面板位置 → InstancedMesh (Task 3)
-  const { transomPositions, upperPaneNoDoor, lowerPaneNoDoor } = useMemo(() => {
-    const transoms: Array<[number, number, number]> = [];
-    const uppersND: Array<[number, number, number]> = [];
-    const lowersND: Array<[number, number, number]> = [];
-    for (let ci = 0; ci < cols; ci++) {
-      const px = -width / 2 + (ci + 0.5) * panelW;
-      for (let ri = 0; ri < rows; ri++) {
-        const py = -height / 2 + (ri + 0.5) * rowH;
-        const hasDoor = doors.some(d => Math.abs(d.cx - px) < panelW / 2 + d.w / 2 && ri === 0);
-        if (hasDoor) continue;  // hasDoor cells fall back to per-mesh below
-        const spH    = showBottomSpandrel ? Math.min(rowH * 0.200, 0.55) : 0;
-        const visH   = rowH - spH;
-        const topH   = visH * 0.62;
-        const botH   = visH * 0.38;
-        const visBot = py - rowH / 2 + spH;
-        const transY = visBot + botH;
-        transoms.push([px, transY, 0.023]);
-        uppersND.push([px, visBot + botH + topH / 2, 0.020]);
-        lowersND.push([px, visBot + botH / 2, 0.020]);
-      }
-    }
-    return { transomPositions: transoms, upperPaneNoDoor: uppersND, lowerPaneNoDoor: lowersND };
-  }, [cols, rows, width, height, panelW, rowH, doors, showBottomSpandrel]);
-
-  // Spandrel positions —— 每行底部 20% 的暗色面板
-  const spandrelPositions = useMemo(() => {
-    const arr: Array<[number, number, number]> = [];
-    for (let ri = 0; ri < rows; ri++) {
-      const py = -height / 2 + ri * rowH;
-      const spH = Math.min(rowH * 0.200, 0.55);
-      // 一楼关裙板：跳过落地处那道，让玻璃直接到地、露出地面家具。
-      if (!showBottomSpandrel && ri === 0) continue;
-      arr.push([0, py + spH / 2, 0.026]);
-    }
-    return arr;
-  }, [rows, rowH, height, showBottomSpandrel]);
-
-  const spandrelHeight = showBottomSpandrel ? Math.min(rowH * 0.200, 0.55) : 0;  // 假定所有 row 同 height
-  const transomWidth = panelW - 0.006;
-  // Glass pane heights —— 每格内 vision zone 拆 upper/lower (62/38) (Task 3)
-  const visH = rowH - spandrelHeight;
-  const upperPaneH = visH * 0.62 - 0.004;
-  const lowerPaneH = visH * 0.38 - 0.004;
-  const paneW = panelW - 0.006;
+  // ── 竖挺/分格「统一真源」布局:均匀网格优先 + 门窗吸附到格(见 buildCurtainLayout)。
+  //    两级框宽(承重粗 structW / 分格细 mullW),bay 默认 1.5m(不太密)。 ──
+  const structW = Math.max(0.05, structFrameWidth ?? 0.085);
+  const mullW   = Math.max(0.03, mullionWidth ?? 0.07);
+  const layout = useMemo(
+    () => buildCurtainLayout(
+      width,
+      [
+        ...doors.map((d, i) => ({ cx: d.cx, w: d.w, key: `d${i}`, kind: "d" as const })),
+        ...windows.map((w, i) => ({ cx: w.cx, w: w.w, key: `w${i}`, kind: "w" as const })),
+      ],
+      { bay: mullionBay ?? 1.5, structW, mullionW: mullW, gridOriginM, flip: gridFlip },
+    ),
+    [width, doors, windows, mullionBay, structW, mullW, gridOriginM, gridFlip],
+  );
 
   return (
     <group>
       {/* ── 框架(框) layer — gated by showFrame ── */}
       {showFrame && (
       <>
-      {/* 顶部 / 底部 横向压条（每幅 facade 各 1 个，不需要 instance）*/}
-      <mesh position={[0, height / 2 - 0.04, 0.005]}>
-        <boxGeometry args={[width, 0.08, 0.062]} />
+      {/* 上/下楼板线 = 承重粗横框(structW) */}
+      <mesh position={[0, height / 2 - structW / 2, 0.005]}>
+        <boxGeometry args={[width, structW, 0.064]} />
         <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
       </mesh>
-      <mesh position={[0, -height / 2 + 0.04, 0.005]}>
-        <boxGeometry args={[width, 0.08, 0.062]} />
+      <mesh position={[0, -height / 2 + structW / 2, 0.005]}>
+        <boxGeometry args={[width, structW, 0.064]} />
         <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
       </mesh>
 
-      {/* 横向 mid-rails / transom 已移除：真实玻璃幕墙以「纵向竖挺(mullion)」为主，
-          每层只在楼板处留一道(spandrel 板带 = 白色楼板带)。原本满铺的水平横档把
-          立面分成办公楼式格子，与参考图(竖向落地玻璃 + 楼板白带)不符。水平观感
-          交给楼板 spandrel 带 + 阳台栏杆(独立元件)。 */}
-
-      {/* 竖向 mullions —— InstancedMesh（玻璃幕墙的主框架）*/}
-      {mullionPositions.length > 0 && (
-        <Instances limit={mullionPositions.length}>
-          <boxGeometry args={[mullionW / 2, height + 0.08, 0.060]} />
+      {/* 竖挺:由 buildCurtainLayout 决定 —— 洞口左右边「必有」一根挺(门窗永远
+          落在两挺之间,不跨挺不留缝);两端=承重粗框 structW,其余=分格细挺 mullW。
+          每根挺自带料宽 m.w(两级)。 */}
+      {layout.mullions.filter(m => {
+        // 跨块去重:交界处抑制本块的左/右端挺(隔壁块已有一根)。
+        if (skipMullionLeft  && Math.abs(m.x - (-width / 2)) < 0.02) return false;
+        if (skipMullionRight && Math.abs(m.x - ( width / 2)) < 0.02) return false;
+        return true;
+      }).map((m, i) => (
+        <mesh key={`mul-${i}`} position={[m.x, 0, 0.005]}>
+          <boxGeometry args={[m.w, height + 0.22, 0.060]} />
           <meshStandardMaterial color={frame} roughness={0.10} metalness={0.96} envMapIntensity={2.8} />
-          {mullionPositions.map((p, i) => <Instance key={i} position={p} />)}
-        </Instances>
-      )}
-
-      {/* 横档 transom bars 已移除（见上）——保持每格为整片竖向落地玻璃。 */}
+        </mesh>
+      ))}
       </>
       )}
 
-      {/* Spandrel bands —— InstancedMesh（玻璃 layer）*/}
-      {showGlass && spandrelPositions.length > 0 && (
-        <Instances limit={spandrelPositions.length}>
-          <boxGeometry args={[width - 0.004, spandrelHeight, 0.008]} />
-          {/* Spandrel (shadow-box) glass. A softer blue-grey + lower envMap so
-              it harmonises with the vision glass instead of reading as a harsh
-              near-black band alternating with blown-out white panes. */}
-          <meshStandardMaterial color={spandrelColor} roughness={0.28} metalness={0.85} envMapIntensity={1.25} />
-          {spandrelPositions.map((p, i) => <Instance key={i} position={p} />)}
-        </Instances>
-      )}
-
-      {/* Task 3: 玻璃面板 —— InstancedMesh (no-door 格子)
-          风险: transparent material 的 instance 之间无逐实例 depth-sort，
-          但所有 pane 同朝向 + 同 z 位置 + depthWrite=false + 用 renderOrder
-          统一在 spandrel 之后绘制，视觉上几乎无差异。hasDoor 的格子
-          (门的位置) 仍走 per-mesh 路径。 */}
-      {showGlass && upperPaneNoDoor.length > 0 && (
-        <Instances limit={upperPaneNoDoor.length} renderOrder={10}>
-          <boxGeometry args={[paneW, upperPaneH, 0.008]} />
-          <meshPhysicalMaterial
-            color={glassColor ?? "#93AEC8"}
-            transparent opacity={op(0.13)}
-            transmission={0.9} ior={1.45} thickness={0.012}
-            depthWrite={false} roughness={0.04} metalness={0.0}
-            reflectivity={0.42} envMapIntensity={1.7} side={THREE.DoubleSide}
-            {...overlayMaterialProps(2)}
-          />
-          {upperPaneNoDoor.map((p, i) => <Instance key={i} position={p} />)}
-        </Instances>
-      )}
-      {showGlass && lowerPaneNoDoor.length > 0 && (
-        <Instances limit={lowerPaneNoDoor.length} renderOrder={10}>
-          <boxGeometry args={[paneW, lowerPaneH, 0.008]} />
-          <meshPhysicalMaterial
-            color={glassColor ?? "#8AA6C2"}
-            transparent opacity={op(0.15)}
-            transmission={0.88} ior={1.45} thickness={0.012}
-            depthWrite={false} roughness={0.05} metalness={0.0}
-            reflectivity={0.42} envMapIntensity={1.7} side={THREE.DoubleSide}
-            {...overlayMaterialProps(2)}
-          />
-          {lowerPaneNoDoor.map((p, i) => <Instance key={i} position={p} />)}
-        </Instances>
-      )}
-
-      {/* 每块面板：玻璃 + 百叶帘（保留 individual，因为 opacity 和位置数据
-          per-row 都不同）*/}
-      {Array.from({ length: cols }, (_, ci) => {
-        const px = -width / 2 + (ci + 0.5) * panelW;
-        return (
-          <group key={`c${ci}`} position={[px, 0, 0.005]}>
-            {/* mullions / transom 已经在外层 <Instances> 处理，这里只剩玻璃 + 百叶帘 */}
-            {/* 玻璃 + 中横档（transom bar）——每格一片玻璃，上部 62% 为主视野，
-                下部 38% 为固定扇（两者之间加细横档，与竖向幕墙语言匹配）*/}
-            {Array.from({ length: rows }, (_, ri) => {
-              const py = -height / 2 + (ri + 0.5) * rowH;
-              const hasDoor = doors.some(d => Math.abs(d.cx - px) < panelW / 2 + d.w / 2 && ri === 0);
-              // Spandrel occupies bottom 20% of row — vision glass is above that.
-              // Split vision zone into upper 62% / lower 38% with a transom bar.
-              const spH    = Math.min(rowH * 0.200, 0.55);
-              const visH   = rowH - spH;                 // vision zone height
-              const topH   = visH * 0.62;                // upper vision pane
-              const botH   = visH * 0.38;                // lower vision pane
-              const visBot = py - rowH / 2 + spH;        // bottom of vision zone
-              const transY = visBot + botH;               // transom center Y
-              return (
-                <group key={`p${ri}`}>
-                  {/* Glass panes —— no-door 已并入外层 InstancedMesh
-                      (upperPaneNoDoor / lowerPaneNoDoor)。
-                      hasDoor 格子保留 per-mesh（数量少 + 颜色/不透明度不同） */}
-                  {showGlass && hasDoor && (
-                    <>
-                      <mesh position={[0, visBot + botH + topH / 2, 0.020]} renderOrder={10}>
-                        <boxGeometry args={[panelW - 0.006, topH - 0.004, 0.008]} />
-                        <meshPhysicalMaterial
-                          color={glassColor ?? "#93AEC8"}
-                          transparent opacity={op(0.13)}
-                          transmission={0.9} ior={1.45} thickness={0.012}
-                          depthWrite={false} roughness={0.04} metalness={0.0}
-                          reflectivity={0.42} envMapIntensity={1.7} side={THREE.DoubleSide}
-                          {...overlayMaterialProps(2)}
-                        />
-                      </mesh>
-                      <mesh position={[0, visBot + botH / 2, 0.020]} renderOrder={10}>
-                        <boxGeometry args={[panelW - 0.006, botH - 0.004, 0.008]} />
-                        <meshPhysicalMaterial
-                          color={glassColor ?? "#8AA6C2"}
-                          transparent opacity={op(0.15)}
-                          transmission={0.88} ior={1.45} thickness={0.012}
-                          depthWrite={false} roughness={0.05} metalness={0.0}
-                          reflectivity={0.42} envMapIntensity={1.7} side={THREE.DoubleSide}
-                          {...overlayMaterialProps(2)}
-                        />
-                      </mesh>
-                    </>
-                  )}
-                  {/* Transom bar 已并入外层 InstancedMesh (transomPositions) */}
-                  {/* ── 百叶帘（venetian blinds）—— 28% 的面板随机部分拉下 ──
-                      位于玻璃内侧（z < 0），只遮住上部 Vision pane 的
-                      约 55%，底部留空（日常使用场景模拟）。
-                      seeded hash：不调用 Math.random(), 每帧渲染结果相同。 */}
-                  {showGlass && !hasDoor && panelBlindHash(ci, ri) < 0.08 && (() => {
-                    const blindCoverage = 0.50 + panelBlindHash(ci + 17, ri + 3) * 0.25; // 50-75%
-                    const blindH  = topH * blindCoverage;
-                    const blindTop = visBot + botH + topH;       // top of vision pane
-                    const blindBot = blindTop - blindH;           // bottom of blind zone
-                    const slatCount = Math.max(3, Math.round(blindH / 0.055));
-                    const slatH = blindH / slatCount;
-                    const slatT = 0.009;
-                    const slatW = panelW - 0.022;
-                    return Array.from({ length: slatCount }, (_, sli) => {
-                      const slatY = blindBot + (sli + 0.5) * slatH;
-                      // Slight tilt: alternating 8° tilt for light-control effect
-                      const tiltAngle = 0.14 + panelBlindHash(ci + sli, ri + 11) * 0.08;
-                      return (
-                        <mesh key={`blind-${sli}`} position={[0, slatY, -0.012]} rotation={[tiltAngle, 0, 0]} renderOrder={9}>
-                          <boxGeometry args={[slatW, slatT, 0.045]} />
-                          <meshStandardMaterial
-                            color="#C2C6CC"
-                            roughness={0.70} metalness={0.03}
-                            {...overlayMaterialProps(1)}
-                          />
-                        </mesh>
-                      );
-                    });
-                  })()}
-                </group>
-              );
-            })}
-          </group>
-        );
+      {/* ── 玻璃 layer：除「门格」外都铺固定视觉玻璃(裙带 + 上/下视野 62/38)。
+          · 门格:留空,由可开关的 WalkthroughDoor3D 玻璃门填满。
+          · 窗格:保留固定玻璃,小开启扇(StyledWindow 上悬扇)嵌在格内、覆在固定玻璃上
+            (参考实拍:整面固定玻璃 + 少数小开启扇)。
+          三视图共用同一套 layout,门窗永远正好嵌进该格、不跨挺。 ── */}
+      {showGlass && layout.cells.map((cell, ci) => {
+        if (cell.door) return null;                          // 门格:不铺玻璃(门填满)
+        const cxc = (cell.x0 + cell.x1) / 2;
+        const cw  = (cell.x1 - cell.x0) - mullW - 0.006;     // 扣掉两侧半根挺
+        if (cw <= 0.02) return null;
+        return Array.from({ length: rows }, (_, ri) => {
+          const py     = -height / 2 + (ri + 0.5) * rowH;
+          const spH    = showBottomSpandrel ? Math.min(rowH * 0.200, 0.55) : 0;
+          const visH   = rowH - spH;
+          const topH   = visH * 0.62;
+          const botH   = visH * 0.38;
+          const visBot = py - rowH / 2 + spH;
+          return (
+            <group key={`cell-${ci}-${ri}`} position={[cxc, 0, 0.005]}>
+              {spH > 0 && (
+                <mesh position={[0, py - rowH / 2 + spH / 2, 0.021]}>
+                  <boxGeometry args={[cw, spH, 0.008]} />
+                  <meshStandardMaterial color={spandrelColor} roughness={0.28} metalness={0.85} envMapIntensity={1.25} />
+                </mesh>
+              )}
+              <mesh position={[0, visBot + botH + topH / 2, 0.020]} renderOrder={10}>
+                <boxGeometry args={[cw, topH - 0.004, 0.008]} />
+                <meshPhysicalMaterial
+                  color={glassColor ?? "#93AEC8"}
+                  transparent opacity={op(0.22)}
+                  transmission={0.68} ior={1.45} thickness={0.012}
+                  depthWrite={false} roughness={0.04} metalness={0.0}
+                  reflectivity={0.5} envMapIntensity={2.0} side={THREE.DoubleSide}
+                  {...overlayMaterialProps(2)}
+                />
+              </mesh>
+              <mesh position={[0, visBot + botH / 2, 0.020]} renderOrder={10}>
+                <boxGeometry args={[cw, botH - 0.004, 0.008]} />
+                <meshPhysicalMaterial
+                  color={glassColor ?? "#8AA6C2"}
+                  transparent opacity={op(0.24)}
+                  transmission={0.66} ior={1.45} thickness={0.012}
+                  depthWrite={false} roughness={0.05} metalness={0.0}
+                  reflectivity={0.5} envMapIntensity={2.0} side={THREE.DoubleSide}
+                  {...overlayMaterialProps(2)}
+                />
+              </mesh>
+            </group>
+          );
+        });
       })}
 
       {/* Spandrel bands 已并入外层 InstancedMesh (spandrelPositions) */}
@@ -1278,7 +1261,12 @@ function buildFacadeBlocks(segs: ExteriorWallSeg[]): FacadeBlock[] {
       if (adjacent && sameKind && sameLayers) {
         last.push(sorted[i]);
       } else {
-        groups.push([sorted[i]]);
+        // Clip new group's start to previous group's end to prevent
+        // coplanar rooms that overlap in Y from double-rendering the overlap zone.
+        const clippedStart = Math.max(sorted[i].segStart, lastEnd);
+        if (clippedStart < sorted[i].segEnd) {
+          groups.push([{ ...sorted[i], segStart: clippedStart }]);
+        }
       }
     }
     const isHoriz = side === "S" || side === "N";
@@ -2548,6 +2536,94 @@ export default function FloorPlanBuilding({
   );
   // 把相邻共面段合并 → 玻璃幕墙不再出现双框缝
   const facadeBlocks = useMemo(() => buildFacadeBlocks(layeredSegs), [layeredSegs]);
+
+  // 幕墙玻璃门「吸附到竖挺分格」：可开关的门(WalkthroughDoor3D)在按房间的循环里
+  // 渲染(房间局部坐标),而幕墙竖挺网格在按立面块渲染(立面块坐标)——两套坐标系。
+  // 用户要门「借助幕墙的两根竖挺当门框」(圈红两根 mullion),所以门必须正好填满它
+  // 所在的那一格(GlassCurtain 已在该格抠掉视觉玻璃),门左右边贴住分格两侧的竖挺。
+  // 这里在立面块坐标里算出每道一层幕墙门所在的分格(中心+宽),再换算回房间局部的
+  // 门 pos/len,键 = `${fi}:${room}:${wall}:${round(pos)}`,供下方房间循环消费。
+  const curtainOpeningSnap = useMemo(() => {
+    const m = new Map<string, { posCm: number; lenCm: number }>();
+    if (!curtainWall) return m;
+    const ex = exterior as { curtainMullionBay?: number; curtainStructFrameWidth?: number; curtainMullionWidth?: number };
+    const bay = ex.curtainMullionBay ?? 1.5;
+    const structW = Math.max(0.05, ex.curtainStructFrameWidth ?? 0.085);
+    const mullW = Math.max(0.03, ex.curtainMullionWidth ?? 0.07);
+    for (const block of facadeBlocks) {
+      const segLen = (block.mergedEnd - block.mergedStart) * CM;   // 立面块宽(米)
+      if (segLen <= 0) continue;
+      const flipX = block.side === "S" || block.side === "E";
+      // 立面局部洞口列表 —— 必须与传给 GlassCurtain 的 doors/windows 完全同序同坐标,
+      // 这样吸附用的 buildCurtainLayout 与外观图渲染用的 layout 必然一致。
+      const ops: Array<{ cx: number; w: number; key: string; kind: "d" | "w"; room: RoomType; wall: string; pos: number; roomWallStart: number }> = [];
+      if (block.floorIndex === 0) {
+        block.doorEntries.forEach(({ roomWallStart, d, room }, i) => {
+          const dPos = d.pos ?? 0, dLen = d.len;
+          const rawX = (roomWallStart + dPos + dLen / 2 - block.mergedStart) * CM - segLen / 2;
+          const flipped = flipX ? -rawX : rawX;
+          const dLenM = dLen * CM;
+          // 与 doorInfos 同样夹紧到段内。
+          const cx = Math.max(-segLen / 2 + dLenM / 2, Math.min(segLen / 2 - dLenM / 2, flipped));
+          ops.push({ cx, w: dLenM, key: `d${i}`, kind: "d", room, wall: d.wall, pos: dPos, roomWallStart });
+        });
+      }
+      block.winEntries.forEach(({ roomWallStart, w, room }, i) => {
+        const wPos = w.pos ?? 0;
+        const rawX = (roomWallStart + wPos + w.len / 2 - block.mergedStart) * CM - segLen / 2;
+        const cx = flipX ? -rawX : rawX;
+        ops.push({ cx, w: w.len * CM, key: `w${i}`, kind: "w", room, wall: w.wall, pos: wPos, roomWallStart });
+      });
+      if (!ops.length) continue;
+      const layout = buildCurtainLayout(segLen, ops.map(o => ({ cx: o.cx, w: o.w, key: o.key, kind: o.kind })), { bay, structW, mullionW: mullW, gridOriginM: block.mergedStart * CM, flip: flipX });
+      for (const o of ops) {
+        const baySpan = layout.openingBay.get(o.key);
+        if (!baySpan) continue;
+        const bayCenter = (baySpan.x0 + baySpan.x1) / 2;                 // 立面局部:吸附到的格(中心)
+        const bayInner  = (baySpan.x1 - baySpan.x0) - mullW;            // 两挺内净宽
+        // 门、窗的开启扇都「填满它那一格的宽度」(贴住两侧竖挺,轻微交叠 2cm 消缝)——
+        // 窗不再做成格子里的浮动小框(四周留大缝 = 接缝太大),而是整格宽的开启扇,
+        // 高度仍按配置(底部开启扇 + 上部固定玻璃当横头),侧边无缝、框也不显厚。
+        const fillW = Math.max(0.4, bayInner + 0.02);
+        const rawTarget = flipX ? -bayCenter : bayCenter;               // 反 flip 回 raw
+        const lenCm = fillW / CM;
+        const posCm = (rawTarget + segLen / 2) / CM - o.roomWallStart - lenCm / 2 + block.mergedStart;
+        m.set(`${o.kind}:${block.floorIndex}:${o.room}:${o.wall}:${Math.round(o.pos)}`, { posCm, lenCm });
+      }
+    }
+    return m;
+  }, [facadeBlocks, curtainWall, exterior]);
+
+  // 幕墙竖挺「跨块去重」：同一面上多个相邻立面块,各自在交界处都有一根承重端挺,
+  // 两块的端挺挤在一起(贴合 → 双挺;有小凹口 → 0.4m 碎缝)= 用户反复指的「粗接缝/碎格」。
+  // 这里按「面」分组,沿墙轴排序,凡相邻两块间距 < 0.6m,就抑制后一块的「轴起点」端挺
+  // (保留前一块的端挺),交界处只剩一根挺。结果按块 index 给出「左/右端挺是否抑制」。
+  const curtainEndSuppress = useMemo(() => {
+    const res = facadeBlocks.map(() => ({ left: false, right: false }));
+    if (!curtainWall) return res;
+    const faces = new Map<string, number[]>();
+    facadeBlocks.forEach((b, bi) => {
+      const k = `${b.floorIndex}|${b.side}|${Math.round(b.wallCoord)}`;
+      if (!faces.has(k)) faces.set(k, []);
+      faces.get(k)!.push(bi);
+    });
+    for (const bis of faces.values()) {
+      bis.sort((a, b) => facadeBlocks[a].mergedStart - facadeBlocks[b].mergedStart);
+      for (let i = 1; i < bis.length; i++) {
+        const A = facadeBlocks[bis[i - 1]], B = facadeBlocks[bis[i]];
+        const gap = (B.mergedStart - A.mergedEnd) * CM;   // 沿墙轴两块间距(米)
+        // 只合并「几乎重合」的双挺(两块贴合 → 端挺叠在一起)。有真实凹口(0.1~0.6m)时
+        // 两根挺各自框住凹口两侧,不能删 —— 否则那侧玻璃没边框,看起来「断开」。
+        if (gap < 0.12) {
+          const biB = bis[i];
+          const flipB = B.side === "S" || B.side === "E";
+          // 抑制 B 的「轴起点」端挺:flip 时它在 local +half(右),否则在 −half(左)。
+          if (flipB) res[biB].right = true; else res[biB].left = true;
+        }
+      }
+    }
+    return res;
+  }, [facadeBlocks, curtainWall]);
 
   // 幕墙模式：建筑外周「立面平面」集合（fi|轴|平面坐标）。用于在外观图里
   // 抑制与玻璃幕墙重合的那道不透明外墙壳——否则白墙背衬玻璃 → 玻璃发白不透。
@@ -4586,6 +4662,18 @@ export default function FloorPlanBuilding({
               <GlassCurtain
                 width={segLen} height={FLOOR_H} floorH={FLOOR_H}
                 doors={floorIndex === 0 ? doorInfos : []}
+                /* 窗也参与竖挺分格(洞口边必有挺、不跨挺) —— 与房间循环里上悬扇
+                   共用同一套 buildCurtainLayout,故窗永远正好嵌进它那一格。 */
+                windows={winInfos.map(w => ({ cx: w.localX, w: w.winLen }))}
+                mullionBay={(exterior as { curtainMullionBay?: number }).curtainMullionBay}
+                structFrameWidth={(exterior as { curtainStructFrameWidth?: number }).curtainStructFrameWidth}
+                mullionWidth={(exterior as { curtainMullionWidth?: number }).curtainMullionWidth}
+                /* 竖挺全局对齐:本块沿墙轴起点(米)+ 翻转,使同面相邻块的挺落在同一组网格线。 */
+                gridOriginM={mergedStart * CM}
+                gridFlip={flipX}
+                /* 跨块去重:交界处抑制本块端挺(curtainEndSuppress 按面分组算出)。 */
+                skipMullionLeft={curtainEndSuppress[bi]?.left ?? false}
+                skipMullionRight={curtainEndSuppress[bi]?.right ?? false}
                 /* Per-face layers: 玻璃幕墙(showGlass) and 框架(showFrame) toggle
                    independently; opacity is per-face. Legacy non-layer glass
                    faces (forceGlass / isGlassVilla) render the full curtain at
@@ -4596,11 +4684,14 @@ export default function FloorPlanBuilding({
                    看到地面家具(地毯/矮茶几)。楼层线由层间楼板(slab)表达，
                    不需要裙带。(用户：一楼、二楼裙带都去掉) */
                 showBottomSpandrel={false}
+                /* 幕墙内侧百叶帘装饰：默认关(从外看是悬浮水平细网,易误读)。
+                   可经 exterior.curtainBlinds 开启。 */
+                showBlinds={(exterior as { curtainBlinds?: boolean }).curtainBlinds ?? false}
                 /* 幕墙别墅：不画静态装饰门，门交给可点击开关的 WalkthroughDoor3D
                    玻璃门(见下方 doorStyle 强制 french_double)，于是门能推开。 */
                 showEntranceDoor={!curtainWall}
                 opacityScale={exterior.glassOpacity ?? (curtainWall ? 1.1 : 1)}
-                glassTransparency={viaLayers ? block.fl.opacity : undefined}
+                glassTransparency={viaLayers && !curtainWall ? block.fl.opacity : undefined}
                 glassColor={exterior.glassColor}
                 spandrelColor={curtainWall ? slabBandColor : exterior.glassSpandrelColor}
                 entranceFrameColor={exterior.entranceFrameColor}
@@ -7513,7 +7604,7 @@ export default function FloorPlanBuilding({
             {/* 门：外观模式 + 本层有任何玻璃房间 → 跳过本层所有内部门：
                 非玻璃房间（主卧/书房）的门也会从邻居玻璃幕墙看进来变
                 "立柱"。门是内视角装饰，对外观无贡献，安全跳过。 */}
-            {(!isStair || (exterior.renderStairOpenings ?? true)) && !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) && effectiveDoors.map((door, di) => {
+            {(!isStair || (exterior.renderStairOpenings ?? true)) && effectiveDoors.map((door, di) => {
               // Use the SAME RoomDoor3D component the effect page uses
               // (shared module). Single source of truth for door visuals.
               const dHcm = door.h ?? (exterior.interiorDoorHeightCm ?? 240);
@@ -7538,19 +7629,33 @@ export default function FloorPlanBuilding({
                            :                      _dpl.x;
                 return exteriorPlanes.has(`${fi}|${_dax}|${Math.round(_dwc)}`);
               })();
+              // 外观模式 + 本层有玻璃房间：跳过「内部门」(非玻璃面的门会从邻居
+              // 玻璃幕墙看进来变成立柱状)，但 perimeter 玻璃外立面上的「入户门」
+              // 要照常渲染——那正是透过幕墙看到、且能点击推开的那道玻璃门。
+              if (!insideBuilding && !_doorOnGlassFace
+                  && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) {
+                return null;
+              }
+              const _cfgDoorStyle = door.style ?? floorPlans[fi]?.roomDoorStyle?.[room];
               const style: import("@/lib/types").DoorStyle = _doorOnGlassFace
-                ? "french_double"
-                : (door.style
-                  ?? floorPlans[fi]?.roomDoorStyle?.[room]
-                  ?? "wood_panel");
+                // 幕墙玻璃面：用通透玻璃门。用户若指定了玻璃平开/玻璃推拉就用其一，
+                // 否则默认玻璃平开门(glass_swing)。两种都是新增的玻璃门样式。
+                ? (_cfgDoorStyle === "glass_slide" || _cfgDoorStyle === "glass_swing" ? _cfgDoorStyle : "glass_swing")
+                : (_cfgDoorStyle ?? "wood_panel");
               // Wall mapping: FPE data → WalkthroughDoor3D — both use NSWE now.
               const doorWall: import("@/lib/types").WallSide = door.wall;
               // WalkthroughDoor3D "E" (east/right) measures pos from the large-Z (south) end.
               // FPE.pos for "E" is from the small-Z (north) end. So mirror.
               // "W" (west/left) is direct: both measure from the small-Z (north) end.
+              // 幕墙玻璃门:吸附到所在竖挺分格(填满整格、左右贴住竖挺当门框)。
+              const _snap = _doorOnGlassFace
+                ? curtainOpeningSnap.get(`d:${fi}:${room}:${door.wall}:${Math.round(door.pos)}`)
+                : undefined;
+              const _basePos = _snap ? _snap.posCm : door.pos;
               const doorPosCm = door.wall === "E"
-                ? Math.max(0, rDcm - door.pos)
-                : door.pos;
+                ? Math.max(0, rDcm - _basePos)
+                : _basePos;
+              const _doorLenCm = _snap ? _snap.lenCm : door.len;
               const doorKey = `door|${fi}|${room}|${di}`;
               const isOpen = openMap.get(doorKey) ?? false;
               return (
@@ -7559,20 +7664,34 @@ export default function FloorPlanBuilding({
                     W={rW} D={rD} H={FLOOR_H - 0.01}
                     doorWall={doorWall}
                     doorPosCm={doorPosCm}
-                    doorLenCm={door.len}
-                    doorHCm={dHcm}
+                    doorLenCm={_doorLenCm}
+                    doorHCm={_doorOnGlassFace
+                      // 幕墙玻璃门做成近满层高的落地玻璃门 —— 填满整格、消除门上方
+                      // 那段「空玻璃」(用户：门上方空的干嘛呢)。留 ~10cm 作顶横档。
+                      ? Math.round((FLOOR_H - 0.10) * 100)
+                      : dHcm}
                     isOpen={isOpen}
                     onToggle={() => { if (insideBuilding || (exterior.exteriorInteractiveOpenings ?? true)) toggleOpen(doorKey); }}
                     doorStyle={style}
                     frameColor={insideBuilding
                       ? (exterior.interiorDoorFrameColor ?? "#EFEAE2")
+                      : _doorOnGlassFace
+                        // 幕墙玻璃门：门框用幕墙竖挺同色的黑(借助幕墙钢筋当框、
+                        // 融进网格),靠外置竖向长拉手表明是门(用户:借助幕墙钢筋、
+                        // 外面加把手)。可用 exterior.curtainDoorFrameColor 覆盖。
+                        ? ((exterior as { curtainDoorFrameColor?: string }).curtainDoorFrameColor
+                            ?? exterior.entranceFrameColor ?? "#181A20")
                       : (exterior.transparentExterior ?? true)
                         // 透明立面外观图：和窗框同理——大白天近白门框会糊进近白墙里，
                         // 门「消失」。给门框一个有存在感的中性轮廓色（默认与窗框同一
                         // 暖灰 #6E6A60），门立刻能从墙体里读出来。可配置。
                         ? (exterior.transparentExteriorDoorFrameColor ?? exterior.transparentExteriorFrameColor ?? "#6E6A60")
                         : (exterior.doorFrameColor ?? "#F0EEEA")}
-                    handleColor={exterior.doorHandleColor ?? "#B8A060"}
+                    handleColor={_doorOnGlassFace
+                      // 幕墙玻璃门借用幕墙竖挺当门框，把手必须是不锈钢银色才能从黑色
+                      // 竖挺/深色玻璃里读出来；沿用全局 doorHandleColor(常为近黑)会糊掉。
+                      ? ((exterior as { curtainDoorHandleColor?: string }).curtainDoorHandleColor ?? "#C8CDD2")
+                      : (exterior.doorHandleColor ?? "#B8A060")}
                     outwardProtrude={insideBuilding ? 0 : (exterior.exteriorDoorProtrude ?? 0.16)}
                   />
                 </group>
@@ -7586,28 +7705,32 @@ export default function FloorPlanBuilding({
                   透明玻璃可隔窗看到室内，窗型/玻璃/墙色与效果图完全一致。
                 · transparentExterior=false（旧实心立面）：外观图不渲染这里的窗，
                   外立面窗户完全交给 ConcreteFacade，避免双层窗重叠。 */}
-            {(!isStair || (exterior.renderStairOpenings ?? true)) && (insideBuilding || (exterior.transparentExterior ?? true)) && windows.map((win, wi) => {
-              // 幕墙玻璃面：不画独立「打孔窗」(StyledWindow 带框/窗台/百叶)——
-              // 真实通透玻璃幕墙里整片玻璃即是窗，再叠一个打孔窗会和幕墙打架
-              // (用户问幕墙门窗该怎么处理)。该面是玻璃外立面(在 exteriorPlanes
-              // 里)时直接跳过；通风/遮阳交给幕墙玻璃 + 室内卷帘/百叶。普通实墙
-              // 立面(punched-window)不受影响，照常渲染。
-              if (curtainWall) {
+            {(!isStair || (exterior.renderStairOpenings ?? true)) && (insideBuilding || (exterior.transparentExterior ?? true) || curtainWall) && windows.map((win, wi) => {
+              // 幕墙面也渲染共享 <StyledWindow>：用户要门窗「看得出来 + 能开关」，
+              // 所以幕墙玻璃面上配置的窗仍画出可见的开启扇(带开关动画)，而不是
+              // 完全并进整片玻璃看不见。(之前为「纯通透」跳过过，现按用户要求恢复)
+              // 该窗是否落在「玻璃幕墙面」(exteriorPlanes)——是则参与幕墙竖挺分格、
+              // 吸附到它那一格(与门同理);否则是普通实墙上的窗,保持原 pos/len。
+              const _winOnGlassFace = curtainWall && (() => {
                 const _wpl = floorPlans[fi]?.roomLayout?.[room];
                 const _wdm = floorPlans[fi]?.roomDimensions?.[room];
-                if (_wpl && _wdm) {
-                  const _ax = (win.wall === "N" || win.wall === "S") ? "h" : "v";
-                  const _wc = win.wall === "S" ? _wpl.y + _wdm.depth
-                            : win.wall === "N" ? _wpl.y
-                            : win.wall === "E" ? _wpl.x + _wdm.width
-                            :                     _wpl.x;
-                  if (exteriorPlanes.has(`${fi}|${_ax}|${Math.round(_wc)}`)) return null;
-                }
-              }
-              const wW   = win.len * CM;
+                if (!_wpl || !_wdm) return false;
+                const _wax = (win.wall === "N" || win.wall === "S") ? "h" : "v";
+                const _wwc = win.wall === "S" ? _wpl.y + _wdm.depth
+                           : win.wall === "N" ? _wpl.y
+                           : win.wall === "E" ? _wpl.x + _wdm.width
+                           :                     _wpl.x;
+                return exteriorPlanes.has(`${fi}|${_wax}|${Math.round(_wwc)}`);
+              })();
+              // 幕墙玻璃面上的窗:吸附到它所在的竖挺分格(填满整格、左右贴竖挺),
+              // 与 GlassCurtain 用同一套 buildCurtainLayout → 永远不跨挺、不留缝。
+              const _winSnap = _winOnGlassFace
+                ? curtainOpeningSnap.get(`w:${fi}:${room}:${win.wall}:${Math.round(win.pos)}`)
+                : undefined;
+              const wW   = _winSnap ? _winSnap.lenCm * CM : win.len * CM;
               const wH   = (win.h    ?? defWinH) * CM;
               const wSill = (win.sill ?? defWinSill)  * CM;
-              const wPos  = win.pos * CM;
+              const wPos  = (_winSnap ? _winSnap.posCm : win.pos) * CM;
               // wPos and wW are already in metres — no extra * CM needed
               let wx = 0, wz = 0, rotY = 0;
               if (win.wall === "N") {
@@ -7654,9 +7777,10 @@ export default function FloorPlanBuilding({
               // 把明亮的天空 HDR 反射成接近墙体的奶油白 → 窗户消失。
               const winKey = `window|${fi}|${room}|${wi}`;
               const winOpen = openMap.get(winKey) ?? false;
-              // 漫游窗户款式取平面图配置 win.style（与效果图同一真源），
-              // 缺省为国内推拉窗 sliding。
-              const winStyle = win.style ?? "sliding";
+              // 幕墙别墅:配置的窗统一做成「上悬开启扇」(顶铰、底边外顶,参考实拍幕墙
+              // 通风扇),带框 + 执手 + 开关动画。其余(非幕墙)按效果图配置的窗型。
+              const winStyle: import("@/lib/types").WindowStyle =
+                curtainWall ? "awning" : (win.style ?? "sliding");
               // 玻璃参数两套：
               // · 室内漫游（insideBuilding）：高通透（transmission 0.85 /
               //   opacity 0.35），便于透窗看院子，从里看本就对比强。
@@ -7687,6 +7811,17 @@ export default function FloorPlanBuilding({
               // 玻璃往外推到墙体前表面之外（默认 0.06m，略大于半墙厚 0.06），
               // 玻璃永不被墙挡，门窗立刻能从墙体里读出来。可配置。
               const gOffset = exView ? (exterior.exteriorWindowProtrude ?? 0.06) : 0;
+              // 幕墙别墅的上悬开启扇:玻璃与幕墙「视觉玻璃」同色、同透、同反射强度,
+              // 消除「开启扇是一块灰玻璃」的色差(用户:玻璃窗不要有色差)。GlassCurtain
+              // 视觉玻璃 = color glassColor??#93AEC8 / opacity≈0.13 / transmission 0.9 /
+              // envMapIntensity 1.7 / roughness 0.04 —— 这里对齐。并给开启扇更宽的铝框。
+              const curtainSash = curtainWall && exView;
+              const wGColor = curtainSash ? (exterior.glassColor ?? "#93AEC8") : gColor;
+              const wGOpac  = curtainSash ? 0.13 : gOpac;
+              const wGTrans = curtainSash ? 0.9  : gTrans;
+              const wGEnv   = curtainSash ? 1.6  : gEnv;
+              const wGRough = curtainSash ? 0.04 : gRough;
+              const wFrameWidth = curtainSash ? 0.06 : undefined;  // 加宽铝框
               return (
                 <group key={`win-${fi}-${room}-${wi}`} position={[wx, frameCy, wz]} rotation={[0, rotY, 0]}>
                   {/* 共享 <StyledWindow>，按 win.style 渲染（推拉/百叶/平开/
@@ -7698,11 +7833,12 @@ export default function FloorPlanBuilding({
                     isOpen={winOpen}
                     onToggle={() => toggleOpen(winKey)}
                     frameColor={frameCol}
-                    glassColor={gColor}
-                    glassTransmission={gTrans}
-                    glassOpacity={gOpac}
-                    glassRoughness={gRough}
-                    glassEnvMapIntensity={gEnv}
+                    glassColor={wGColor}
+                    glassTransmission={wGTrans}
+                    glassOpacity={wGOpac}
+                    glassRoughness={wGRough}
+                    glassEnvMapIntensity={wGEnv}
+                    frameWidth={wFrameWidth}
                     wallOffset={gOffset}
                     // 外观图给百叶窗叶片用对比框色（默认暖灰），并在叶片后加 tinted
                     // 玻璃背板，否则百叶在大白天透出墙体发白「像没渲染」。
