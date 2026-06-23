@@ -583,7 +583,11 @@ function RoomShell({
           doorLenCm={doorLenCm}
           doorHCm={doorHCm}
           activeRoom={activeRoom}
-          doorStyle={curtainGlassWalls?.has(doorWall as WallSide) ? "glass_slide" : doorStyle}
+          doorStyle={
+            curtainGlassWalls?.has(doorWall as WallSide)
+              ? (doorStyle === "glass_swing" || doorStyle === "glass_slide" ? doorStyle : "glass_slide")
+              : doorStyle
+          }
         />
       )}
 
