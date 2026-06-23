@@ -583,11 +583,7 @@ function RoomShell({
           doorLenCm={doorLenCm}
           doorHCm={doorHCm}
           activeRoom={activeRoom}
-          doorStyle={
-            curtainGlassWalls?.has(doorWall as WallSide)
-              ? (doorStyle === "glass_swing" || doorStyle === "glass_slide" ? doorStyle : "glass_slide")
-              : doorStyle
-          }
+          doorStyle={doorStyle}
         />
       )}
 
@@ -910,6 +906,7 @@ function RoomDoor3D({
   const isOpen = useDesignerStore(s => !!s.doorOpenByRoom[activeRoom]);
   const toggleDoorOpen = useDesignerStore(s => s.toggleDoorOpen);
   const panelRef = useRef<THREE.Group>(null);
+  const panelRightRef = useRef<THREE.Group>(null); // right leaf for glass_swing double door
   // Animated value, smoothed each frame toward the target.
   // For hinged doors: used as rotation angle (0 → -π/2).
   // For sliding doors: used as translation distance (0 → -doorW).
@@ -926,6 +923,10 @@ function RoomDoor3D({
       if (panelRef.current) {
         if (isSliding) panelRef.current.position.x = animRef.current;
         else panelRef.current.rotation.y = animRef.current;
+      }
+      // Right leaf of glass_swing swings in the opposite direction.
+      if (doorStyle === "glass_swing" && panelRightRef.current) {
+        panelRightRef.current.rotation.y = -animRef.current;
       }
     }
   });
@@ -1066,6 +1067,59 @@ function RoomDoor3D({
             <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.2} />
           </mesh>
         </group>
+      ) : doorStyle === "glass_swing" ? (
+        // Double glass swing door — mirrors WalkthroughDoor3D.
+        // Left leaf: hinge at x=0, glass fills 0..lw, ONE inner stile at meeting edge.
+        // Right leaf: hinge at x=doorW, glass fills doorW..lw, ONE inner stile at meeting edge.
+        // No outer frame — curtain wall mullions serve as the door frame.
+        (() => {
+          const fC = "#1B1E24"; const lw = doorW / 2;
+          const barH = Math.min(1.15, doorH * 0.42); const cy = doorH * 0.46;
+          return (
+            <group position={[0, 0, 0.01]}>
+              {/* Left leaf: hinge at x=0 */}
+              <group ref={panelRef}>
+                <group onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}>
+                  <mesh position={[lw / 2, doorH / 2, 0]}>
+                    <boxGeometry args={[lw - 0.012, doorH - 0.02, 0.012]} />
+                    <meshPhysicalMaterial color="#C8D8E5" transmission={0.86} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={0.34} side={THREE.DoubleSide} />
+                  </mesh>
+                  {/* Inner stile at meeting edge */}
+                  <mesh position={[lw - 0.02, doorH / 2, 0]} castShadow>
+                    <boxGeometry args={[0.04, doorH - 0.02, 0.035]} />
+                    <meshStandardMaterial color={fC} roughness={0.3} metalness={0.7} />
+                  </mesh>
+                  {[-0.09, 0.09].map((hz, i) => (
+                    <mesh key={i} position={[lw - 0.085, cy, hz]}>
+                      <boxGeometry args={[0.035, barH, 0.035]} />
+                      <meshStandardMaterial color="#2A2A2A" metalness={0.95} roughness={0.16} />
+                    </mesh>
+                  ))}
+                </group>
+              </group>
+              {/* Right leaf: hinge at x=doorW, extends leftward */}
+              <group ref={panelRightRef} position={[doorW, 0, 0]}>
+                <group onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}>
+                  <mesh position={[-lw / 2, doorH / 2, 0]}>
+                    <boxGeometry args={[lw - 0.012, doorH - 0.02, 0.012]} />
+                    <meshPhysicalMaterial color="#C8D8E5" transmission={0.86} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={0.34} side={THREE.DoubleSide} />
+                  </mesh>
+                  {/* Inner stile at meeting edge */}
+                  <mesh position={[-lw + 0.02, doorH / 2, 0]} castShadow>
+                    <boxGeometry args={[0.04, doorH - 0.02, 0.035]} />
+                    <meshStandardMaterial color={fC} roughness={0.3} metalness={0.7} />
+                  </mesh>
+                  {[-0.09, 0.09].map((hz, i) => (
+                    <mesh key={i} position={[-lw + 0.085, cy, hz]}>
+                      <boxGeometry args={[0.035, barH, 0.035]} />
+                      <meshStandardMaterial color="#2A2A2A" metalness={0.95} roughness={0.16} />
+                    </mesh>
+                  ))}
+                </group>
+              </group>
+            </group>
+          );
+        })()
       ) : (
         // Default: wood_panel uses real glTF; frosted_glass uses procedural
         // (it's a glass-look tinted box — glTF wouldn't match semantics).
@@ -1108,46 +1162,27 @@ function RoomDoor3D({
                 onClick={() => toggleDoorOpen(activeRoom)}
               />
             )
-          ) : doorStyle === "glass_swing" || doorStyle === "glass_slide" ? (
-            // glass_swing / glass_slide — thin dark metal frame + large clear glass panel
-            // matching the curtain-wall mullion system
-            (() => {
-              const fC = "#1B1E24"; const sW = 0.038; const depth = 0.030;
-              return (
-                <>
-                  {/* Thin perimeter frame: left, right, top, bottom stiles */}
-                  <mesh position={[sW / 2, doorH / 2, 0]}>
-                    <boxGeometry args={[sW, doorH, depth]} />
-                    <meshStandardMaterial color={fC} metalness={0.96} roughness={0.10} />
-                  </mesh>
-                  <mesh position={[doorW - sW / 2, doorH / 2, 0]}>
-                    <boxGeometry args={[sW, doorH, depth]} />
-                    <meshStandardMaterial color={fC} metalness={0.96} roughness={0.10} />
-                  </mesh>
-                  <mesh position={[doorW / 2, doorH - sW / 2, 0]}>
-                    <boxGeometry args={[doorW, sW, depth]} />
-                    <meshStandardMaterial color={fC} metalness={0.96} roughness={0.10} />
-                  </mesh>
-                  <mesh position={[doorW / 2, sW / 2, 0]}>
-                    <boxGeometry args={[doorW, sW, depth]} />
-                    <meshStandardMaterial color={fC} metalness={0.96} roughness={0.10} />
-                  </mesh>
-                  {/* Clear glass fill — same material as curtain wall panels */}
-                  <mesh
-                    position={[doorW / 2, doorH / 2, 0]}
-                    onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
-                  >
-                    <planeGeometry args={[doorW - sW * 2, doorH - sW * 2]} />
-                    <meshPhysicalMaterial color="#8AA6C2" transmission={0.72} roughness={0.03} ior={1.45} thickness={0.012} transparent opacity={0.45} side={THREE.DoubleSide} />
-                  </mesh>
-                  {/* Vertical pull handle */}
-                  <mesh position={[doorW - sW - 0.04, doorH * 0.45, depth / 2 + 0.008]}>
-                    <boxGeometry args={[0.014, 0.20, 0.014]} />
-                    <meshStandardMaterial color="#2A2A2A" metalness={0.90} roughness={0.20} />
-                  </mesh>
-                </>
-              );
-            })()
+          ) : doorStyle === "glass_slide" ? (
+            // glass_slide — matches WalkthroughDoor3D: full-glass sliding panel, no outer
+            // frame (curtain mullions serve as frame), top rail, vertical pull handle.
+            <>
+              {/* Top rail (fixed, not part of animated group) */}
+              <mesh position={[doorW / 2, doorH + 0.04, 0]}>
+                <boxGeometry args={[doorW * 1.06, 0.045, 0.05]} />
+                <meshStandardMaterial color="#2A2A2A" metalness={0.6} roughness={0.4} />
+              </mesh>
+              <group onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}>
+                <mesh position={[doorW / 2, doorH / 2, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[doorW - 0.02, doorH - 0.03, 0.012]} />
+                  <meshPhysicalMaterial color="#C8D8E5" transmission={0.86} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={0.34} side={THREE.DoubleSide} />
+                </mesh>
+                {/* Vertical pull handle */}
+                <mesh position={[doorW - 0.12, doorH * 0.45, 0.09]}>
+                  <boxGeometry args={[0.03, Math.min(0.9, doorH * 0.42), 0.03]} />
+                  <meshStandardMaterial color="#2A2A2A" metalness={0.95} roughness={0.20} />
+                </mesh>
+              </group>
+            </>
           ) : (
             // frosted_glass — aluminum frame + semi-transparent glass panel
             <>
