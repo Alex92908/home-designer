@@ -3445,18 +3445,21 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
     const isCurtainWall = exteriorFacadeSystem === "curtain-wall" || !!exteriorFacadeGlass;
     if (!isCurtainWall) return undefined;
     const fp = { roomFacadeFaces, roomWallsHidden: fpRoomWallsHidden };
+    // Walls that have a door keep their door hole — don't apply glass curtain
+    // treatment to them (the door frame/panel must remain visible).
+    const doorWallSet = new Set(allDoors.map((d) => d.wall as WallSide));
     const sides: WallSide[] = ["N", "S", "E", "W"];
     const glassSet = new Set<WallSide>();
     for (const side of sides) {
-      // Only treat a wall as glass curtain if it has a window — windows
-      // are only placed on exterior faces, so this filters out interior walls.
+      // Only treat a wall as glass curtain if it has a window but no door —
+      // windows mark exterior-facing walls; doors must keep their hole/frame.
       const hasWindow = roomWindows.some((w) => w.wall === side);
-      if (hasWindow && resolveFacadeLayer(fp, activeRoom, side, "glass", true)) {
+      if (hasWindow && !doorWallSet.has(side) && resolveFacadeLayer(fp, activeRoom, side, "glass", true)) {
         glassSet.add(side);
       }
     }
     return glassSet.size > 0 ? glassSet : undefined;
-  }, [exteriorFacadeSystem, exteriorFacadeGlass, roomFacadeFaces, fpRoomWallsHidden, roomWindows, activeRoom]);
+  }, [exteriorFacadeSystem, exteriorFacadeGlass, roomFacadeFaces, fpRoomWallsHidden, roomWindows, allDoors, activeRoom]);
 
   return (
     <>
