@@ -368,43 +368,50 @@ function RoomShell({
     curtainGlass?: boolean;
   }) {
     const holes = curtainGlass ? [] : holesForWall(lowerSide, wallLenM);
-    const resolvedOpacity = curtainGlass ? 0.35 : opacity;
-    const glassMat = curtainGlass
-      ? wallMatFor("#C4D8E8", "", wallLenM, H)
-      : null;
     const segments = splitWallAroundHoles(wallLenM, H, holes);
     const lowerMat = lower ? wallMatFor(lower.color, lower.id, wallLenM, splitH) : null;
-    // Gap between interior and exterior wall planes — keep tiny so the
-    // sandwich isn't visible at window/door cut edges (was 12mm which
-    // showed as a white strip when viewing the wall obliquely).
     const extOff = extOffsetSign * 0.003;
+
+    // Mullion positions for glass curtain walls — mirrors exterior system
+    const curtainMullions = curtainGlass ? (() => {
+      const sW = 0.085, mW = 0.07, bay = 1.5;
+      const bars: Array<{ x: number; w: number }> = [{ x: 0, w: sW }];
+      let bx = bay;
+      while (bx < wallLenM - 0.08) { bars.push({ x: bx, w: mW }); bx += bay; }
+      bars.push({ x: wallLenM, w: sW });
+      return { bars, sW };
+    })() : null;
 
     return (
       <group position={groupPos} rotation={groupRot}>
         {segments.flatMap((seg, si) =>
           splitAtWainscot(seg, splitH, !!lower).map((s, bi) => {
-            const mat = glassMat ?? (s.band === "lower" && lowerMat ? lowerMat : upperMat);
+            const mat = s.band === "lower" && lowerMat ? lowerMat : upperMat;
             return (
               <group key={`${si}-${bi}`}>
-                {/* Interior face (DoubleSide so it's still visible from
-                    outside when there's no exterior override). */}
                 <mesh
                   position={[s.x + s.w / 2 - wallLenM / 2, s.y + s.h / 2 - H / 2, 0]}
                   receiveShadow
                 >
                   <planeGeometry args={[s.w, s.h]} />
-                  <meshStandardMaterial
-                    {...mat}
-                    side={THREE.DoubleSide}
-                    transparent={resolvedOpacity < 1}
-                    opacity={resolvedOpacity}
-                    roughness={curtainGlass ? 0.05 : (mat as { roughness?: number }).roughness}
-                    metalness={curtainGlass ? 0.1 : (mat as { metalness?: number }).metalness}
-                  />
+                  {curtainGlass ? (
+                    <meshPhysicalMaterial
+                      color="#8AA6C2"
+                      transparent opacity={0.40}
+                      transmission={0.60} ior={1.45} thickness={0.012}
+                      roughness={0.05} metalness={0.0}
+                      reflectivity={0.5} envMapIntensity={2.0}
+                      side={THREE.DoubleSide}
+                    />
+                  ) : (
+                    <meshStandardMaterial
+                      {...mat}
+                      side={THREE.DoubleSide}
+                      transparent={opacity < 1}
+                      opacity={opacity}
+                    />
+                  )}
                 </mesh>
-                {/* Exterior face — only drawn when user picked a distinct
-                    exterior material. Offset along outward normal so it
-                    sits just beyond the interior plane. */}
                 {!curtainGlass && extMat && (
                   <mesh
                     position={[s.x + s.w / 2 - wallLenM / 2, s.y + s.h / 2 - H / 2, extOff]}
@@ -423,6 +430,30 @@ function RoomShell({
             );
           })
         )}
+        {/* Mullion grid — only on glass curtain walls, matches exterior frame system */}
+        {curtainMullions && (() => {
+          const { bars, sW } = curtainMullions;
+          const fC = "#1B1E24";
+          const depth = 0.064;
+          return (
+            <>
+              <mesh position={[0, H / 2 - sW / 2, 0.005]}>
+                <boxGeometry args={[wallLenM + sW, sW, depth]} />
+                <meshStandardMaterial color={fC} roughness={0.10} metalness={0.96} />
+              </mesh>
+              <mesh position={[0, -(H / 2 - sW / 2), 0.005]}>
+                <boxGeometry args={[wallLenM + sW, sW, depth]} />
+                <meshStandardMaterial color={fC} roughness={0.10} metalness={0.96} />
+              </mesh>
+              {bars.map((b, i) => (
+                <mesh key={`mul${i}`} position={[b.x - wallLenM / 2, 0, 0.005]}>
+                  <boxGeometry args={[b.w, H + 0.22, depth]} />
+                  <meshStandardMaterial color={fC} roughness={0.10} metalness={0.96} />
+                </mesh>
+              ))}
+            </>
+          );
+        })()}
       </group>
     );
   }
@@ -594,10 +625,12 @@ function RoomShell({
         <meshStandardMaterial color={skirtColor} roughness={0.7} />
       </mesh>
 
-      {/* Windows — positioned from store data */}
-      {windows.map(win => (
-        <RoomWindow key={win.id} win={win} W={W} D={D} H={H} />
-      ))}
+      {/* Windows — hide sash on glass curtain walls (the mullion grid replaces it) */}
+      {windows
+        .filter(win => !curtainGlassWalls?.has(win.wall as WallSide))
+        .map(win => (
+          <RoomWindow key={win.id} win={win} W={W} D={D} H={H} />
+        ))}
     </>
   );
 }
