@@ -2803,11 +2803,21 @@ export default function FloorPlanBuilding({
         const isHallway = room === "hallway";
         const bounds = floorBoundsArr[fi];
 
-        // 自动门（共用 pickAutoDoor）
-        const autoDoor: DoorConfig | null =
-          (!isStair && !isHallway && doors.length === 0 && bounds)
-            ? pickAutoDoor(fi, room, cx, cz, rW, rD, rWcm, rDcm, bounds)
-            : null;
+        // 自动门：优先级与 wallSegments/allSegs 完全一致：
+        //   roomDoorWall/Pos/Len 单门配置 > pickAutoDoor 自动门。
+        // 不同步会导致 wallSegment 的门洞位置与 WalkthroughDoor3D 渲染位置错位
+        // (用户：门洞和门没对应)。
+        const autoDoor: DoorConfig | null = (() => {
+          if (isStair || isHallway || doors.length > 0 || !bounds) return null;
+          const lw = fp.roomDoorWall?.[room];
+          if (lw) {
+            const wallLenCm = (lw === "W" || lw === "E") ? d.depth : d.width;
+            const dl = fp.roomDoorLen?.[room] ?? 80;
+            return { id: `cfg-${fi}-${room}`, wall: lw as import("@/lib/types").WallSide,
+              pos: fp.roomDoorPos?.[room] ?? Math.max(5, (wallLenCm - dl) / 2), len: dl, h: fp.roomDoorH?.[room] };
+          }
+          return pickAutoDoor(fi, room, cx, cz, rW, rD, rWcm, rDcm, bounds);
+        })();
 
         // 窗户方向修正：强制到不同于门的外墙，彻底避免门窗同墙重叠
         const doorWallForRoom = autoDoor?.wall ?? doors[0]?.wall;
@@ -4117,10 +4127,16 @@ export default function FloorPlanBuilding({
               // 既不该有玻璃幕墙、也不该有这堵奶油盒墙，否则隐藏后仍显示乳白墙
               // (用户：客厅 N 墙隐藏了却还显示乳白墙)。
               const _hid = floorPlans[fi]?.roomWallsHidden?.[room];
-              const skipS = !!_hid?.S || (!!_dm && _isGlassFace("h", (_pl?.y ?? 0) + (_dm?.depth ?? 0)));
-              const skipN = !!_hid?.N || _isGlassFace("h", _pl?.y ?? 0);
-              const skipE = !!_hid?.E || (!!_dm && _isGlassFace("v", (_pl?.x ?? 0) + (_dm?.width ?? 0)));
-              const skipW = !!_hid?.W || _isGlassFace("v", _pl?.x ?? 0);
+              // 也跳过有门的面：该面的 wallSegment 已有门洞，奶油背板会把洞堵死
+              // (用户：整片乳白，没门)。有门的面交给 wallSegments + WalkthroughDoor3D。
+              const _fpDoorWall = floorPlans[fi]?.roomDoorWall?.[room];
+              const _fpDoors    = floorPlans[fi]?.roomDoors?.[room] ?? [];
+              const _hasDoor    = (side: string) =>
+                _fpDoorWall === side || (_fpDoors as Array<{wall:string}>).some(d => d.wall === side);
+              const skipS = !!_hid?.S || (!!_dm && _isGlassFace("h", (_pl?.y ?? 0) + (_dm?.depth ?? 0))) || _hasDoor("S");
+              const skipN = !!_hid?.N || _isGlassFace("h", _pl?.y ?? 0) || _hasDoor("N");
+              const skipE = !!_hid?.E || (!!_dm && _isGlassFace("v", (_pl?.x ?? 0) + (_dm?.width ?? 0))) || _hasDoor("E");
+              const skipW = !!_hid?.W || _isGlassFace("v", _pl?.x ?? 0) || _hasDoor("W");
               return (
                 <group key={`gbox-${fi}-${room}`} position={[cx, cy, cz]}>
                   {/* 南墙 S（+Z 方向，朝 -Z 即朝室内）*/}
@@ -7708,6 +7724,7 @@ export default function FloorPlanBuilding({
               // 玻璃幕墙看进来变成立柱状)，但 perimeter 玻璃外立面上的「入户门」
               // 要照常渲染——那正是透过幕墙看到、且能点击推开的那道玻璃门。
               if (!insideBuilding && !_doorOnGlassFace
+                  && !glassRooms.has(`${fi}:${room}`)
                   && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) {
                 return null;
               }

@@ -12,7 +12,7 @@ import { useDesignerStore, RoomState } from "@/lib/store";
 import { useLocale, useLocaleStore } from "@/lib/i18n";
 const EMPTY_ROOM_STATE_RC: RoomState = { materials: {}, placedItems: [] };
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
-import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem, WallSide } from "@/lib/types";
+import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem, WallSide, resolveFacadeLayer } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
 import { DetailedDecor } from "./DetailedDecor";
@@ -159,6 +159,7 @@ function RoomShell({
   southWallOpacity,
   ceilingOpacity,
   wallsHidden,
+  curtainGlassWalls,
 }: {
   W: number; D: number; H: number;
   wallColor: string; floorColor: string;
@@ -183,10 +184,11 @@ function RoomShell({
   activeRoom: RoomType;
   southWallOpacity: number;
   ceilingOpacity: number;
-  /** Per-side hide flags. true = skip rendering that wall entirely.
-   *  Lets the user merge rooms visually. Door/window holes on a hidden
-   *  wall become moot (the wall isn't drawn anyway). */
+  /** Per-side hide flags. true = skip rendering that wall entirely. */
   wallsHidden?: Partial<Record<WallSide, boolean>>;
+  /** Walls that are glass curtain faces — rendered as transparent glass
+   *  panes to match the exterior glass curtain wall appearance. */
+  curtainGlassWalls?: Set<WallSide>;
 }) {
   const skirtColor = shade(wallColor, -18);
   const splitH = wallLower ? Math.max(0.2, Math.min(H - 0.2, (wallSplitCm ?? 110) / 100)) : 0;
@@ -298,10 +300,17 @@ function RoomShell({
         if (w.wall !== side) continue;
         const sillM  = (w.sill ?? 90) / 100;
         const winHM  = (w.h   ?? Math.min(H * 52, 150)) / 100;
+        const winLenM = w.len / 100;
+        // W wall: wall-local x=0 is at the south (+Z) end and increases
+        // northward, but win.pos is north-referenced (plan convention).
+        // Flip so the hole aligns with RoomWindow's north-referenced zc formula.
+        const holeX = side === "W"
+          ? wallLenM - w.pos / 100 - winLenM
+          : w.pos / 100;
         holes.push({
-          x: w.pos / 100,
+          x: holeX,
           y: sillM,
-          w: w.len / 100,
+          w: winLenM,
           h: Math.min(winHM, H - sillM - 0.05),
         });
       }
@@ -335,6 +344,7 @@ function RoomShell({
   // exterior material becomes visible.
   function WallWithHoles({
     side, wallLenM, groupPos, groupRot, upperMat, extMat, extOffsetSign = -1, lowerSide, opacity = 1,
+    curtainGlass = false,
   }: {
     side: { color: string; id: string };
     wallLenM: number;
@@ -352,8 +362,16 @@ function RoomShell({
     /** 0 = don't render, 0.5 = frosted glass, 1 = solid. Applied uniformly
      *  to every segment (upper, lower, all pieces around holes). */
     opacity?: number;
+    /** True when this wall is a glass curtain face — renders as a single
+     *  semi-transparent glass pane (no window holes) so the interior view
+     *  matches the exterior glass curtain wall appearance. */
+    curtainGlass?: boolean;
   }) {
-    const holes = holesForWall(lowerSide, wallLenM);
+    const holes = curtainGlass ? [] : holesForWall(lowerSide, wallLenM);
+    const resolvedOpacity = curtainGlass ? 0.35 : opacity;
+    const glassMat = curtainGlass
+      ? wallMatFor("#C4D8E8", "", wallLenM, H)
+      : null;
     const segments = splitWallAroundHoles(wallLenM, H, holes);
     const lowerMat = lower ? wallMatFor(lower.color, lower.id, wallLenM, splitH) : null;
     // Gap between interior and exterior wall planes — keep tiny so the
@@ -365,7 +383,7 @@ function RoomShell({
       <group position={groupPos} rotation={groupRot}>
         {segments.flatMap((seg, si) =>
           splitAtWainscot(seg, splitH, !!lower).map((s, bi) => {
-            const mat = s.band === "lower" && lowerMat ? lowerMat : upperMat;
+            const mat = glassMat ?? (s.band === "lower" && lowerMat ? lowerMat : upperMat);
             return (
               <group key={`${si}-${bi}`}>
                 {/* Interior face (DoubleSide so it's still visible from
@@ -378,14 +396,16 @@ function RoomShell({
                   <meshStandardMaterial
                     {...mat}
                     side={THREE.DoubleSide}
-                    transparent={opacity < 1}
-                    opacity={opacity}
+                    transparent={resolvedOpacity < 1}
+                    opacity={resolvedOpacity}
+                    roughness={curtainGlass ? 0.05 : (mat as { roughness?: number }).roughness}
+                    metalness={curtainGlass ? 0.1 : (mat as { metalness?: number }).metalness}
                   />
                 </mesh>
                 {/* Exterior face — only drawn when user picked a distinct
                     exterior material. Offset along outward normal so it
                     sits just beyond the interior plane. */}
-                {extMat && (
+                {!curtainGlass && extMat && (
                   <mesh
                     position={[s.x + s.w / 2 - wallLenM / 2, s.y + s.h / 2 - H / 2, extOff]}
                     receiveShadow
@@ -431,6 +451,7 @@ function RoomShell({
           })()}
           extOffsetSign={-1}
           lowerSide="N"
+          curtainGlass={curtainGlassWalls?.has("N")}
         />
       )}
 
@@ -446,6 +467,7 @@ function RoomShell({
           })()}
           extOffsetSign={-1}
           lowerSide="W"
+          curtainGlass={curtainGlassWalls?.has("W")}
         />
       )}
 
@@ -461,6 +483,7 @@ function RoomShell({
           })()}
           extOffsetSign={-1}
           lowerSide="E"
+          curtainGlass={curtainGlassWalls?.has("E")}
         />
       )}
 
@@ -482,6 +505,7 @@ function RoomShell({
             extOffsetSign={1}
             lowerSide="S"
             opacity={southWallOpacity}
+            curtainGlass={curtainGlassWalls?.has("S")}
           />
         );
       })()}
@@ -3396,6 +3420,10 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const lightPos = useDesignerStore((s) => s.lightPosByRoom[s.activeRoom]);
   const wallsHiddenForActive = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWallsHidden?.[activeRoom]);
   const roomShape = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomShapes?.[activeRoom]);
+  const exteriorFacadeSystem = useDesignerStore((s) => s.exterior?.facadeSystem);
+  const exteriorFacadeGlass  = useDesignerStore((s) => s.exterior?.facadeGlass);
+  const roomFacadeFaces = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomFacadeFaces);
+  const fpRoomWallsHidden = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWallsHidden);
   const def = ROOM_DEFS[activeRoom];
 
   // Use store dimensions (reflects global plan resizes), fall back to ROOM_DEFS
@@ -3409,6 +3437,26 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const floorId    = roomState.materials.floor?.id    ?? "";
   const lightColor = roomState.materials.light?.color ?? "#FFE8A0";
   const lightId    = roomState.materials.light?.id    ?? "";
+
+  // Walls that should render as glass curtain in 室内装修图 — a wall is a
+  // glass face when the project is in curtain-wall mode AND it has a window
+  // on it (windows mark exterior-facing walls; interior walls have no windows).
+  const curtainGlassWalls = useMemo(() => {
+    const isCurtainWall = exteriorFacadeSystem === "curtain-wall" || !!exteriorFacadeGlass;
+    if (!isCurtainWall) return undefined;
+    const fp = { roomFacadeFaces, roomWallsHidden: fpRoomWallsHidden };
+    const sides: WallSide[] = ["N", "S", "E", "W"];
+    const glassSet = new Set<WallSide>();
+    for (const side of sides) {
+      // Only treat a wall as glass curtain if it has a window — windows
+      // are only placed on exterior faces, so this filters out interior walls.
+      const hasWindow = roomWindows.some((w) => w.wall === side);
+      if (hasWindow && resolveFacadeLayer(fp, activeRoom, side, "glass", true)) {
+        glassSet.add(side);
+      }
+    }
+    return glassSet.size > 0 ? glassSet : undefined;
+  }, [exteriorFacadeSystem, exteriorFacadeGlass, roomFacadeFaces, fpRoomWallsHidden, roomWindows, activeRoom]);
 
   return (
     <>
@@ -3531,6 +3579,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
           southWallOpacity={southWallOpacity}
           ceilingOpacity={ceilingOpacity}
           wallsHidden={wallsHiddenForActive}
+          curtainGlassWalls={curtainGlassWalls}
         />
       )}
 
