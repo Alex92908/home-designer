@@ -406,7 +406,7 @@ function RoomShell({
           const spanInHole = holes.some(h => spanMid > h.x + 0.005 && spanMid < h.x + h.w - 0.005);
           if (!spanInHole) {
             let bx = x + bay;
-            while (bx < x1 - 0.04) { bars.push({ x: bx, w: mW }); bx += bay; }
+            while (bx < x1 - bay * 0.4) { bars.push({ x: bx, w: mW }); bx += bay; }
           }
         }
       }
