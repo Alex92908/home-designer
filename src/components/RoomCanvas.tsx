@@ -376,13 +376,42 @@ function RoomShell({
     const lowerMat = lower ? wallMatFor(lower.color, lower.id, wallLenM, splitH) : null;
     const extOff = extOffsetSign * 0.003;
 
-    // Mullion positions for glass curtain walls — mirrors exterior system
+    // Mullion grid for glass curtain walls.
+    // Hard positions (wall ends + hole edges) get a bar; remaining spans are
+    // filled with bay-spaced intermediate mullions so the grid aligns with
+    // every door and window opening rather than drifting past them.
     const curtainMullions = curtainGlass ? (() => {
       const sW = 0.085, mW = 0.07, bay = 1.5;
-      const bars: Array<{ x: number; w: number }> = [{ x: 0, w: sW }];
-      let bx = bay;
-      while (bx < wallLenM - 0.08) { bars.push({ x: bx, w: mW }); bx += bay; }
-      bars.push({ x: wallLenM, w: sW });
+
+      // Collect hard x positions: wall ends + both edges of each hole.
+      const hardSet = new Set<number>([0, wallLenM]);
+      for (const h of holes) { hardSet.add(h.x); hardSet.add(h.x + h.w); }
+      const hardX = Array.from(hardSet).sort((a, b) => a - b);
+
+      const bars: Array<{ x: number; w: number }> = [];
+
+      for (let i = 0; i < hardX.length; i++) {
+        const x = hardX[i];
+        // Skip positions that fall inside a hole (hole edges still get a bar).
+        const insideHole = holes.some(h => x > h.x + 0.005 && x < h.x + h.w - 0.005);
+        if (!insideHole) {
+          bars.push({ x, w: (x === 0 || x === wallLenM) ? sW : mW });
+        }
+
+        // Fill span to next hard position with bay-spaced mullions, unless
+        // the span is entirely inside a hole.
+        if (i < hardX.length - 1) {
+          const x1 = hardX[i + 1];
+          const spanMid = (x + x1) / 2;
+          const spanInHole = holes.some(h => spanMid > h.x + 0.005 && spanMid < h.x + h.w - 0.005);
+          if (!spanInHole) {
+            let bx = x + bay;
+            while (bx < x1 - 0.04) { bars.push({ x: bx, w: mW }); bx += bay; }
+          }
+        }
+      }
+
+      bars.sort((a, b) => a.x - b.x);
       return { bars, sW };
     })() : null;
 

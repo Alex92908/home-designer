@@ -2126,6 +2126,8 @@ export default function FloorPlan() {
                     { key: "frosted_glass", label: t.fpDoorStyleFrosted },
                     { key: "sliding_barn",  label: t.fpDoorStyleBarn },
                     { key: "french_double", label: t.fpDoorStyleFrench },
+                    { key: "glass_swing",   label: t.fpDoorStyleGlassSwing },
+                    { key: "glass_slide",   label: t.fpDoorStyleGlassSlide },
                   ] as const).map(s => {
                     const active = dStyle === s.key;
                     return (
@@ -2221,6 +2223,7 @@ export default function FloorPlan() {
                 {([
                   { key: "sliding",  label: t.fpWindowStyleSliding },
                   { key: "casement", label: t.fpWindowStyleCasement },
+                  { key: "awning",   label: t.fpWindowStyleAwning },
                   { key: "fixed",    label: t.fpWindowStyleFixed },
                   { key: "louvered", label: t.fpWindowStyleLouvered },
                   { key: "security", label: t.fpWindowStyleSecurity },
