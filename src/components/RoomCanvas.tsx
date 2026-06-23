@@ -977,19 +977,22 @@ function RoomDoor3D({
 
   return (
     <group position={groupPos} rotation={groupRot}>
-      {/* Door frame (stays fixed, inside the wall hole) */}
-      <mesh position={[doorW / 2, doorH + frameT / 2, 0]}>
-        <boxGeometry args={[doorW + frameT * 2, frameT, 0.05]} />
-        <meshStandardMaterial color={frameColor} roughness={frameRoughness} metalness={frameMetalness} />
-      </mesh>
-      <mesh position={[-frameT / 2, doorH / 2, 0]}>
-        <boxGeometry args={[frameT, doorH, 0.05]} />
-        <meshStandardMaterial color={frameColor} roughness={frameRoughness} metalness={frameMetalness} />
-      </mesh>
-      <mesh position={[doorW + frameT / 2, doorH / 2, 0]}>
-        <boxGeometry args={[frameT, doorH, 0.05]} />
-        <meshStandardMaterial color={frameColor} roughness={frameRoughness} metalness={frameMetalness} />
-      </mesh>
+      {/* Door frame — omitted for glass curtain styles; their panel already
+          has a perimeter frame, so rendering both creates a double-frame. */}
+      {!isGlassCurtainDoor && (<>
+        <mesh position={[doorW / 2, doorH + frameT / 2, 0]}>
+          <boxGeometry args={[doorW + frameT * 2, frameT, 0.05]} />
+          <meshStandardMaterial color={frameColor} roughness={frameRoughness} metalness={frameMetalness} />
+        </mesh>
+        <mesh position={[-frameT / 2, doorH / 2, 0]}>
+          <boxGeometry args={[frameT, doorH, 0.05]} />
+          <meshStandardMaterial color={frameColor} roughness={frameRoughness} metalness={frameMetalness} />
+        </mesh>
+        <mesh position={[doorW + frameT / 2, doorH / 2, 0]}>
+          <boxGeometry args={[frameT, doorH, 0.05]} />
+          <meshStandardMaterial color={frameColor} roughness={frameRoughness} metalness={frameMetalness} />
+        </mesh>
+      </>)}
 
       {/* Door panel (rotates around hinge at local X=0) */}
       {doorStyle === "sliding_barn" ? (
