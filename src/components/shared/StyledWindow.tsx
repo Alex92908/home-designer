@@ -52,7 +52,8 @@ export function gltfSpecForStyle(style: WindowStyle): GltfWindowSpec | null {
     case "wooden":
       return { url: WOODEN_WINDOW_URL };
     case "casement":
-      return null;
+    case "awning":
+      return null;   // 平开/上悬都用程序化扇(带开关动画),不走 glTF
   }
 }
 
@@ -150,6 +151,9 @@ export type StyledWindowProps = {
   glassIor?: number;
   /** Local +Z offset of glazing/frame from the wall plane. */
   wallOffset?: number;
+  /** 窗框料宽(米)。默认 0.025(2.5cm 细框)。幕墙上悬开启扇用更宽的铝框
+   *  (≈0.06,贴近实拍系统窗)——参考图开启扇是粗壮铝框 + 执手。 */
+  frameWidth?: number;
   /** Disable glTF assets (force procedural). */
   enableGltf?: boolean;
   /** 百叶窗(louvered)是否在叶片后加一层玻璃背板。室内（效果图/漫游）默认 false
@@ -179,6 +183,7 @@ export function StyledWindow({
   wallOffset = 0.015,
   enableGltf = ENABLE_GLTF_WINDOW,
   glassBehindLouver = false,
+  frameWidth,
 }: StyledWindowProps) {
   // Animation refs (mirror RoomCanvas RoomWindow):
   //  - sashRef: sliding (translate) / casement + wooden (rotate around hinge)
@@ -188,9 +193,13 @@ export function StyledWindow({
   const slatRefs = useRef<Array<THREE.Mesh | null>>([]);
   const slatAngleRef = useRef(-0.25);
   useFrame((_, delta) => {
-    if (style === "sliding" || style === "casement" || style === "wooden") {
+    if (style === "sliding" || style === "casement" || style === "wooden" || style === "awning") {
       const target = isOpen
-        ? (style === "sliding" ? winLen / 2 : -Math.PI / 4)
+        ? (style === "sliding" ? winLen / 2
+          // 上悬窗:绕顶部铰链向外(+Z)顶开 ~26°。pivot 在顶边,负 rotation.x 使
+          // 底边转向 +Z(室外)。其余(平开/木窗)绕中心 swing ~45°。
+          : style === "awning" ? -Math.PI / 7
+          : -Math.PI / 4)
         : 0;
       const speed = style === "sliding" ? 2.2 : 3.8;
       const current = sashAngleRef.current;
@@ -201,6 +210,8 @@ export function StyledWindow({
         if (sashRef.current) {
           if (style === "sliding") {
             sashRef.current.position.x = -winLen / 4 + sashAngleRef.current;
+          } else if (style === "awning") {
+            sashRef.current.rotation.x = sashAngleRef.current;
           } else {
             sashRef.current.rotation.y = sashAngleRef.current;
           }
@@ -220,7 +231,7 @@ export function StyledWindow({
     }
   });
 
-  const FRAME_THIN = 0.025;
+  const FRAME_THIN = frameWidth ?? 0.025;
   const WALL_OFFSET = wallOffset;
 
   const frameBars = (
@@ -323,7 +334,9 @@ export function StyledWindow({
 
   const proceduralWindow = (
     <>
-      {frameBars}
+      {/* 上悬扇自带一圈 sash 粗框,不再叠外框(frameBars),否则「框中框」过粗、接缝大
+          (用户:粗细不合理 / 接缝太大)。其余窗型保留外框。 */}
+      {style !== "awning" && frameBars}
       {style === "sliding" ? (
         <>
           {/* Fixed right panel */}
@@ -342,6 +355,47 @@ export function StyledWindow({
             {halfPanel}
           </group>
         </>
+      ) : style === "awning" ? (
+        // 上悬窗:铰链在顶边,整扇绕顶边向外(+Z)顶开。外层 group 把支点平移到
+        // 顶边,sashRef 绕 X 轴旋转,内层把内容移回中心坐标。开启扇自带一圈粗铝框
+        // (sash frame) + 底部执手,参考实拍系统窗——粗框 + 执手才读得出是开启扇。
+        (() => {
+          const SF = Math.max(0.045, FRAME_THIN);   // sash 料宽(粗框)
+          const sashBar = (w: number, h: number, x: number, y: number) => (
+            <mesh position={[x, y, WALL_OFFSET + 0.012]} castShadow>
+              <boxGeometry args={[w, h, 0.03]} />
+              <meshStandardMaterial color={frameColor} roughness={0.45} metalness={0.55} />
+            </mesh>
+          );
+          const hLen = Math.min(0.34, winLen * 0.42);
+          return (
+            <group position={[0, winH / 2, 0]}>
+              <group ref={sashRef} onClick={(e) => { e.stopPropagation(); onToggle(); }}>
+                <group position={[0, -winH / 2, 0]}>
+                  {glass}
+                  {/* 开启扇四周一圈完整 sash 框(用户:窗户四周都要有框)。
+                      上/下横挺 + 左/右竖挺,勾出完整开启扇矩形。侧挺略向内收
+                      (SF/2),让它读成窗自己的框、贴在幕墙竖挺内侧而非完全重叠。 */}
+                  {sashBar(winLen, SF, 0, winH / 2 - SF / 2)}
+                  {sashBar(winLen, SF, 0, -winH / 2 + SF / 2)}
+                  {sashBar(SF, winH - SF * 2, -winLen / 2 + SF / 2, 0)}
+                  {sashBar(SF, winH - SF * 2, winLen / 2 - SF / 2, 0)}
+                  {/* 执手(把手):底框中部一块底座 + 一根横拉杆(室内侧凸出) */}
+                  <group position={[0, -winH / 2 + SF + 0.05, -0.04]}>
+                    <mesh position={[0, 0, 0]}>
+                      <boxGeometry args={[0.05, 0.05, 0.03]} />
+                      <meshStandardMaterial color={frameColor} roughness={0.35} metalness={0.7} />
+                    </mesh>
+                    <mesh position={[0, -0.02, -0.04]}>
+                      <boxGeometry args={[hLen, 0.03, 0.03]} />
+                      <meshStandardMaterial color={frameColor} roughness={0.3} metalness={0.8} />
+                    </mesh>
+                  </group>
+                </group>
+              </group>
+            </group>
+          );
+        })()
       ) : (
         <group
           ref={sashRef}
@@ -363,7 +417,7 @@ export function StyledWindow({
     </ArchWindowFallback>
   ) : null;
 
-  const animatesOpen = style === "sliding" || style === "casement" || style === "wooden";
+  const animatesOpen = style === "sliding" || style === "casement" || style === "wooden" || style === "awning";
   if (gltfContent) {
     return animatesOpen ? (
       <group ref={sashRef} onClick={(e) => { e.stopPropagation(); onToggle(); }}>

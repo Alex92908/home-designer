@@ -902,6 +902,7 @@ export interface DoorConfig {
 export type WindowStyle =
   | "sliding"   // 推拉窗（中间一条竖轨，国内最常见）
   | "casement"  // 平开窗（单整块玻璃，向外开）
+  | "awning"    // 上悬窗（顶部水平铰链，底边向外顶开——幕墙通风扇常见）
   | "fixed"     // 固定观景窗（无分隔）
   | "louvered"  // 百叶窗（水平条）
   | "security"  // 防盗窗（铁艺栏栅，不可开启）
@@ -1151,7 +1152,9 @@ export type DoorStyle =
   | "wood_panel"     // 实木门板（默认，带面板线条）
   | "frosted_glass"  // 磨砂玻璃木框门
   | "sliding_barn"   // 谷仓推拉门
-  | "french_double"; // 法式对开玻璃门
+  | "french_double"  // 法式对开玻璃门
+  | "glass_swing"    // 通透玻璃平开门（细框大玻璃 + 竖把手，幕墙别墅用）
+  | "glass_slide";   // 通透玻璃推拉门（细框大玻璃 + 顶轨竖把手，左右滑动）
 
 // For wall/floor area estimation (m²)
 export function getRoomArea(room: RoomType): { wall: number; floor: number } {

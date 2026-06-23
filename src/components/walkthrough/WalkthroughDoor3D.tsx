@@ -134,12 +134,14 @@ export function WalkthroughDoor3D({
   // use, e.g. clamping doorH).
   void H;
   const panelRef = useRef<THREE.Group>(null);
+  // 第二扇(玻璃平开双开门的右扇)绕自己外侧边、反向对开。glass_swing 专用。
+  const panelRef2 = useRef<THREE.Group>(null);
   // Animated value, smoothed each frame toward the target.
   // For hinged doors: used as rotation angle (0 → -π/2).
   // For sliding doors: used as translation distance (0 → -doorW).
   const animRef = useRef(0);
   useFrame((_, delta) => {
-    const isSliding = doorStyle === "sliding_barn";
+    const isSliding = doorStyle === "sliding_barn" || doorStyle === "glass_slide";
     const target = isOpen ? (isSliding ? -(doorLenCm / 100) : -Math.PI / 2) : 0;
     // Exponential smoothing — feels far snappier than the old linear
     // ramp at the same average speed. Higher k = faster catch-up; the
@@ -157,6 +159,8 @@ export function WalkthroughDoor3D({
         if (isSliding) panelRef.current.position.x = animRef.current;
         else panelRef.current.rotation.y = animRef.current;
       }
+      // 玻璃平开双开门右扇：绕外侧边反向对开(+angle)。
+      if (panelRef2.current) panelRef2.current.rotation.y = -animRef.current;
     } else if (animRef.current !== target) {
       // Snap to target so the door doesn't sit at 99.999 % forever.
       animRef.current = target;
@@ -164,6 +168,7 @@ export function WalkthroughDoor3D({
         if (isSliding) panelRef.current.position.x = target;
         else panelRef.current.rotation.y = target;
       }
+      if (panelRef2.current) panelRef2.current.rotation.y = -target;
     }
   });
 
@@ -222,7 +227,11 @@ export function WalkthroughDoor3D({
 
   return (
     <group position={groupPos} rotation={groupRot}>
-      {/* Door frame (stays fixed, inside the wall hole) */}
+      {/* Door frame (stays fixed, inside the wall hole).
+          幕墙玻璃门(glass_swing/glass_slide)不画自带门框 —— 它正好填满幕墙的一格,
+          左右两侧由幕墙竖挺(mullion/钢筋)充当门框,上方由楼层横梁充当门楣。再画一圈
+          自带框就会和幕墙竖挺重叠成「双框」(用户:你没用红色位置的钢筋啊)。 */}
+      {!(doorStyle === "glass_swing" || doorStyle === "glass_slide") && (<>
       <mesh position={[doorW / 2, doorH + frameT / 2, 0]}>
         <boxGeometry args={[doorW + frameT * 2, frameT, 0.05]} />
         <meshStandardMaterial color={frameColor} roughness={0.6} />
@@ -235,9 +244,93 @@ export function WalkthroughDoor3D({
         <boxGeometry args={[frameT, doorH, 0.05]} />
         <meshStandardMaterial color={frameColor} roughness={0.6} />
       </mesh>
+      </>)}
 
       {/* Door panel (rotates around hinge at local X=0) */}
-      {doorStyle === "sliding_barn" ? (
+      {doorStyle === "glass_swing" ? (
+        // 通透玻璃平开双扇门：每扇 = 大玻璃 + 细边框(frameColor) + 中缝竖把手。
+        // 左扇在 panelRef 里绕铰链旋开(useFrame 旋转 panelRef.rotation.y),可点击。
+        (() => {
+          const lw = doorW / 2;                 // 单扇宽
+          // 门扇局部 +z 朝室内、-z 朝室外(四面墙旋转后都成立)。把手主体放门外侧
+          // (-z),另在室内侧(+z)也放一根,内外都看得见。把手随门扇一起开合。
+          const extZ = -0.09;                   // 门外侧(从立面外能看到)
+          const intZ = 0.09;                    // 门内侧(漫游时看到)
+          const barH = Math.min(1.15, doorH * 0.42);
+          const cy   = doorH * 0.46;
+          // 一对竖向长拉手(内外双面),x = 中缝附近。
+          const Handles = ({ x }: { x: number }) => (
+            <>
+              {[extZ, intZ].map((hz, hi) => (
+                <group key={hi} position={[x, cy, hz]}>
+                  <mesh><boxGeometry args={[0.035, barH, 0.035]} /><meshStandardMaterial color={handleColor} metalness={0.95} roughness={0.16} /></mesh>
+                  {[barH / 2 - 0.04, -barH / 2 + 0.04].map((sy, si) => (
+                    <mesh key={si} position={[0, sy, hz > 0 ? -0.05 : 0.05]}><boxGeometry args={[0.022, 0.022, 0.075]} /><meshStandardMaterial color={handleColor} metalness={0.95} roughness={0.2} /></mesh>
+                  ))}
+                </group>
+              ))}
+            </>
+          );
+          // 单扇 = 整片通透玻璃(左右无框,由幕墙竖挺当框) + 内侧中缝细挺 + 把手。
+          const Leaf = ({ glassCenterX, stileX, handleX }: { glassCenterX: number; stileX: number; handleX: number }) => (
+            <>
+              <mesh position={[glassCenterX, doorH / 2, 0]}>
+                <boxGeometry args={[lw - 0.012, doorH - 0.02, 0.012]} />
+                <meshPhysicalMaterial color="#C8D8E5" transmission={0.86} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={0.34} side={THREE.DoubleSide} />
+              </mesh>
+              <mesh position={[stileX, doorH / 2, 0]} castShadow>
+                <boxGeometry args={[0.04, doorH - 0.02, 0.035]} />
+                <meshStandardMaterial color={frameColor} roughness={0.3} metalness={0.7} />
+              </mesh>
+              <Handles x={handleX} />
+            </>
+          );
+          return (
+            <group position={[0, 0, 0.01]}>
+              {/* 左扇:铰链在外侧左边(x=0),玻璃 0..lw,中缝/把手在内侧(x≈lw)。
+                  panelRef 绕 x=0 旋开。 */}
+              <group ref={panelRef}>
+                <group onClick={(e) => { e.stopPropagation(); onToggle(); }}>
+                  <Leaf glassCenterX={lw / 2} stileX={lw - 0.02} handleX={lw - 0.085} />
+                </group>
+              </group>
+              {/* 右扇:铰链在外侧右边(x=doorW),组放在 doorW、玻璃 -lw..0,中缝/把手
+                  在内侧(x≈-lw)。panelRef2 绕 x=doorW 反向旋开(双开对称)。 */}
+              <group ref={panelRef2} position={[doorW, 0, 0]}>
+                <group onClick={(e) => { e.stopPropagation(); onToggle(); }}>
+                  <Leaf glassCenterX={-lw / 2} stileX={-lw + 0.02} handleX={-lw + 0.085} />
+                </group>
+              </group>
+            </group>
+          );
+        })()
+      ) : doorStyle === "glass_slide" ? (
+        // 通透玻璃推拉门：一扇玻璃滑动扇 + 顶轨 + 细框 + 竖把手。点击后沿顶轨
+        // 向左滑开(isSliding → useFrame 平移 panelRef.position.x)。
+        <group position={[0, 0, 0.01]}>
+          {/* 顶轨(不动) */}
+          <mesh position={[doorW / 2, doorH + 0.04, 0]}>
+            <boxGeometry args={[doorW * 1.06, 0.045, 0.05]} />
+            <meshStandardMaterial color="#2A2A2A" metalness={0.6} roughness={0.4} />
+          </mesh>
+          <group ref={panelRef}>
+            <group onClick={(e) => { e.stopPropagation(); onToggle(); }}>
+              {/* 整片玻璃滑动扇(无自带边框,门洞两侧幕墙竖挺充当框) */}
+              <mesh position={[doorW / 2, doorH / 2, 0]} castShadow receiveShadow>
+                <boxGeometry args={[doorW - 0.02, doorH - 0.03, 0.012]} />
+                <meshPhysicalMaterial color="#C8D8E5" transmission={0.86} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={0.34} side={THREE.DoubleSide} />
+              </mesh>
+              {/* 外置竖向长拉手 + 上下支座 */}
+              <group position={[doorW - 0.12, doorH * 0.45, 0.09]}>
+                <mesh><boxGeometry args={[0.03, Math.min(0.9, doorH * 0.42), 0.03]} /><meshStandardMaterial color={handleColor} metalness={0.95} roughness={0.2} /></mesh>
+                {[Math.min(0.9, doorH * 0.42) / 2 - 0.03, -Math.min(0.9, doorH * 0.42) / 2 + 0.03].map((sy, si) => (
+                  <mesh key={si} position={[0, sy, -0.05]}><boxGeometry args={[0.02, 0.02, 0.07]} /><meshStandardMaterial color={handleColor} metalness={0.95} roughness={0.2} /></mesh>
+                ))}
+              </group>
+            </group>
+          </group>
+        </group>
+      ) : doorStyle === "sliding_barn" ? (
         // Sliding barn door: slides left (no swing). panelRef unused for rotation;
         // instead translate via useFrame (we already drive angleRef — reuse as
         // slide ratio 0→1 mapped to translation).
