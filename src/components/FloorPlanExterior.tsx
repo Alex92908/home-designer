@@ -2529,12 +2529,22 @@ export default function FloorPlanBuilding({
         const cx = (p.x + dd.width  / 2 - planOffset.minX) * CM - W / 2;
         const cz = (p.y + dd.depth / 2 - planOffset.minY) * CM - D / 2;
 
-        // 门：有配置门用配置门，否则用自动门(循环空间不自动加门)
+        // 门优先级（与 2D 平面图 / 室内漫游 HouseCanvas 一致）：
+        //   roomDoors 显式数组 > roomDoorWall/Pos/Len 单门配置 > pickAutoDoor 自动门。
+        // 原来只认 roomDoors + pickAutoDoor，漏了平面图实际用的 roomDoorWall/Pos →
+        // 配在内墙(如厨房 S 朝走廊)的门外观图里根本不画(用户:门洞都没有、门也没有)。
         const configuredDoors = fp.roomDoors?.[r] ?? [];
         if (configuredDoors.length > 0) {
           mergedDoors[r] = configuredDoors;
-        } else if (bounds && !isCirc) {
-          mergedDoors[r] = [pickAutoDoor(fi, r, cx, cz, rW, rD, dd.width, dd.depth, bounds)];
+        } else if (bounds && !isCirc && fp.roomHasDoor?.[r] !== false) {
+          const lw = fp.roomDoorWall?.[r];
+          if (lw) {
+            const wallLenCm = (lw === "W" || lw === "E") ? dd.depth : dd.width;
+            const dl = fp.roomDoorLen?.[r] ?? 80;
+            mergedDoors[r] = [{ id: `cfg-${fi}-${r}`, wall: lw, pos: fp.roomDoorPos?.[r] ?? Math.max(5, (wallLenCm - dl) / 2), len: dl, h: fp.roomDoorH?.[r] }];
+          } else {
+            mergedDoors[r] = [pickAutoDoor(fi, r, cx, cz, rW, rD, dd.width, dd.depth, bounds)];
+          }
         }
 
         // 窗：修正到外墙，且不与门在同一面墙
@@ -2952,12 +2962,20 @@ export default function FloorPlanBuilding({
         const isCircRoom = room === "stair" || room === "hallway";
         let doorsArr = configuredDoors;
         if (!isCircRoom && configuredDoors.length === 0 && fp.roomHasDoor?.[room] !== false) {
-          const bounds = floorBoundsArr[fi];
-          if (bounds) {
-            const rW = d.width * CM; const rD = d.depth * CM;
-            const cx = (p.x + d.width  / 2 - planOffset.minX) * CM - W / 2;
-            const cz = (p.y + d.depth / 2 - planOffset.minY) * CM - D / 2;
-            doorsArr = [pickAutoDoor(fi, room, cx, cz, rW, rD, d.width, d.depth, bounds)];
+          // 与 facade(mergedDoors)同优先级:roomDoorWall/Pos/Len 单门配置 > pickAutoDoor。
+          const lw = fp.roomDoorWall?.[room];
+          if (lw) {
+            const wallLenCm = (lw === "W" || lw === "E") ? d.depth : d.width;
+            const dl = fp.roomDoorLen?.[room] ?? 80;
+            doorsArr = [{ id: `cfg-${fi}-${room}`, wall: lw, pos: fp.roomDoorPos?.[room] ?? Math.max(5, (wallLenCm - dl) / 2), len: dl, h: fp.roomDoorH?.[room] }];
+          } else {
+            const bounds = floorBoundsArr[fi];
+            if (bounds) {
+              const rW = d.width * CM; const rD = d.depth * CM;
+              const cx = (p.x + d.width  / 2 - planOffset.minX) * CM - W / 2;
+              const cz = (p.y + d.depth / 2 - planOffset.minY) * CM - D / 2;
+              doorsArr = [pickAutoDoor(fi, room, cx, cz, rW, rD, d.width, d.depth, bounds)];
+            }
           }
         }
         const winsArr = fp.roomWindows?.[room] ?? [];
