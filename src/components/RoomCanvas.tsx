@@ -367,7 +367,11 @@ function RoomShell({
      *  matches the exterior glass curtain wall appearance. */
     curtainGlass?: boolean;
   }) {
-    const holes = curtainGlass ? [] : holesForWall(lowerSide, wallLenM);
+    // Glass curtain: skip window holes (glass plane replaces them) but keep
+    // the door hole so the door panel remains visible inside the curtain wall.
+    const holes = curtainGlass
+      ? holesForWall(lowerSide, wallLenM, { skipWindows: true })
+      : holesForWall(lowerSide, wallLenM);
     const segments = splitWallAroundHoles(wallLenM, H, holes);
     const lowerMat = lower ? wallMatFor(lower.color, lower.id, wallLenM, splitH) : null;
     const extOff = extOffsetSign * 0.003;
@@ -3478,16 +3482,18 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
     const isCurtainWall = exteriorFacadeSystem === "curtain-wall" || !!exteriorFacadeGlass;
     if (!isCurtainWall) return undefined;
     const fp = { roomFacadeFaces, roomWallsHidden: fpRoomWallsHidden };
-    // Walls that have a door keep their door hole — don't apply glass curtain
-    // treatment to them (the door frame/panel must remain visible).
-    const doorWallSet = new Set(allDoors.map((d) => d.wall as WallSide));
     const sides: WallSide[] = ["N", "S", "E", "W"];
     const glassSet = new Set<WallSide>();
     for (const side of sides) {
-      // Only treat a wall as glass curtain if it has a window but no door —
-      // windows mark exterior-facing walls; doors must keep their hole/frame.
-      const hasWindow = roomWindows.some((w) => w.wall === side);
-      if (hasWindow && !doorWallSet.has(side) && resolveFacadeLayer(fp, activeRoom, side, "glass", true)) {
+      // A wall is an exterior glass-curtain face if it has a window OR a
+      // door (sliding glass door counts). Windows alone can't be the only
+      // signal — the S wall often only has a glass door entry, no separate
+      // window entry. Door holes are preserved in WallWithHoles via
+      // skipWindows=true so the door panel stays visible inside the curtain.
+      const hasWindowOrDoor =
+        roomWindows.some((w) => w.wall === side) ||
+        allDoors.some((d) => (d.wall as WallSide) === side);
+      if (hasWindowOrDoor && resolveFacadeLayer(fp, activeRoom, side, "glass", true)) {
         glassSet.add(side);
       }
     }
