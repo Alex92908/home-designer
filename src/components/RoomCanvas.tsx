@@ -156,7 +156,8 @@ function CurtainWallWindowOverlay({
   const sashRef    = useRef<THREE.Group>(null);
   const angleRef   = useRef(0);
   useFrame((_, delta) => {
-    const target = isOpen ? -Math.PI / 7 : 0;
+    // positive rotation.x = bottom swings toward exterior (outward awning open)
+    const target = isOpen ? Math.PI / 7 : 0;
     const diff = target - angleRef.current;
     if (Math.abs(diff) > 0.002) {
       angleRef.current += Math.sign(diff) * Math.min(Math.abs(diff), 3.8 * delta);
@@ -165,26 +166,43 @@ function CurtainWallWindowOverlay({
   });
 
   const winLen = win.len / 100;
-  const winH   = win.h    !== undefined ? win.h   / 100 : Math.min(wallH * 0.52, 1.5);
   const sill   = win.sill !== undefined ? win.sill / 100 : 0.9;
+  // Match holesForWall clamping so overlay exactly fills its hole
+  const winH   = Math.min(
+    win.h !== undefined ? win.h / 100 : Math.min(wallH * 0.52, 1.5),
+    wallH - sill - 0.05,
+  );
   const holeX  = lowerSide === "W" ? wallLenM - win.pos / 100 - winLen : win.pos / 100;
   const cx = holeX + winLen / 2 - wallLenM / 2;
   const cy = sill  + winH  / 2 - wallH    / 2;
-  // z: mullion front face ≈ 0.037 → sash at 0.040, slightly proud of mullion face
-  const SF = 0.045;   // sash bar width (matches StyledWindow default)
+  const SF = 0.045;   // sash bar width
   const BD  = 0.022;   // sash bar depth
-  const Z  = 0.040;
-  const mat = <meshStandardMaterial color="#1B1E24" roughness={0.12} metalness={0.90} />;
+  const Z  = 0.002;   // flush with wall glass plane
+  const barMat = <meshStandardMaterial color="#1B1E24" roughness={0.12} metalness={0.90} />;
   return (
     <group position={[cx, cy, 0]}>
-      {/* pivot group at top edge for awning tilt */}
+      {/* pivot at top edge; sash rotates outward (positive x = exterior) */}
       <group position={[0, winH / 2, Z]}>
         <group ref={sashRef} onClick={(e) => { e.stopPropagation(); toggleOpen(win.id); }}>
           <group position={[0, -winH / 2, 0]}>
-            {/* top */}  <mesh position={[0,  winH/2-SF/2, 0]}><boxGeometry args={[winLen, SF, BD]} />{mat}</mesh>
-            {/* bot */}  <mesh position={[0, -winH/2+SF/2, 0]}><boxGeometry args={[winLen, SF, BD]} />{mat}</mesh>
-            {/* left */} <mesh position={[-winLen/2+SF/2, 0, 0]}><boxGeometry args={[SF, winH-SF*2, BD]} />{mat}</mesh>
-            {/* right */}<mesh position={[ winLen/2-SF/2, 0, 0]}><boxGeometry args={[SF, winH-SF*2, BD]} />{mat}</mesh>
+            {/* top */}  <mesh position={[0,  winH/2-SF/2, 0]}><boxGeometry args={[winLen, SF, BD]} />{barMat}</mesh>
+            {/* bot */}  <mesh position={[0, -winH/2+SF/2, 0]}><boxGeometry args={[winLen, SF, BD]} />{barMat}</mesh>
+            {/* left */} <mesh position={[-winLen/2+SF/2, 0, 0]}><boxGeometry args={[SF, winH-SF*2, BD]} />{barMat}</mesh>
+            {/* right */}<mesh position={[ winLen/2-SF/2, 0, 0]}><boxGeometry args={[SF, winH-SF*2, BD]} />{barMat}</mesh>
+            {/* glass panel — fills the opening and swings with the sash */}
+            <mesh position={[0, 0, BD / 2]}>
+              <planeGeometry args={[winLen - SF * 2, winH - SF * 2]} />
+              <meshPhysicalMaterial
+                color="#8AA6C2" transparent opacity={0.40}
+                transmission={0.60} ior={1.45} thickness={0.012}
+                roughness={0.05} metalness={0.0} side={THREE.DoubleSide}
+              />
+            </mesh>
+            {/* invisible hit area so clicking anywhere on the window registers */}
+            <mesh position={[0, 0, BD + 0.001]}>
+              <planeGeometry args={[winLen, winH]} />
+              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            </mesh>
           </group>
         </group>
       </group>
@@ -414,11 +432,9 @@ function RoomShell({
      *  matches the exterior glass curtain wall appearance. */
     curtainGlass?: boolean;
   }) {
-    // Glass curtain: skip window holes (glass plane replaces them) but keep
-    // the door hole so the door panel remains visible inside the curtain wall.
-    const holes = curtainGlass
-      ? holesForWall(lowerSide, wallLenM, { skipWindows: true })
-      : holesForWall(lowerSide, wallLenM);
+    // Glass curtain: include window holes so CurtainWallWindowOverlay can fill
+    // them with an animated opening panel; keep the door hole too.
+    const holes = holesForWall(lowerSide, wallLenM);
     const segments = splitWallAroundHoles(wallLenM, H, holes);
     const lowerMat = lower ? wallMatFor(lower.color, lower.id, wallLenM, splitH) : null;
     const extOff = extOffsetSign * 0.003;
