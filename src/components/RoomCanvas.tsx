@@ -145,6 +145,53 @@ function splitAtWainscot(seg: Rect, splitH: number, enabled: boolean): Array<Rec
   ];
 }
 
+// Renders an awning-style sash frame on a curtain-glass panel from the
+// interior side. Only the 4 sash bars are drawn — the curtain glass itself
+// acts as the window glazing. Must be top-level to call hooks.
+function CurtainWallWindowOverlay({
+  win, wallLenM, wallH, lowerSide,
+}: { win: WindowConfig; wallLenM: number; wallH: number; lowerSide: WallSide }) {
+  const isOpen     = useDesignerStore(s => !!s.windowOpenByWinId[win.id]);
+  const toggleOpen = useDesignerStore(s => s.toggleWindowOpen);
+  const sashRef    = useRef<THREE.Group>(null);
+  const angleRef   = useRef(0);
+  useFrame((_, delta) => {
+    const target = isOpen ? -Math.PI / 7 : 0;
+    const diff = target - angleRef.current;
+    if (Math.abs(diff) > 0.002) {
+      angleRef.current += Math.sign(diff) * Math.min(Math.abs(diff), 3.8 * delta);
+      if (sashRef.current) sashRef.current.rotation.x = angleRef.current;
+    }
+  });
+
+  const winLen = win.len / 100;
+  const winH   = win.h    !== undefined ? win.h   / 100 : Math.min(wallH * 0.52, 1.5);
+  const sill   = win.sill !== undefined ? win.sill / 100 : 0.9;
+  const holeX  = lowerSide === "W" ? wallLenM - win.pos / 100 - winLen : win.pos / 100;
+  const cx = holeX + winLen / 2 - wallLenM / 2;
+  const cy = sill  + winH  / 2 - wallH    / 2;
+  // z: mullion front face ≈ 0.037 → sash at 0.040, slightly proud of mullion face
+  const SF = 0.045;   // sash bar width (matches StyledWindow default)
+  const BD  = 0.022;   // sash bar depth
+  const Z  = 0.040;
+  const mat = <meshStandardMaterial color="#1B1E24" roughness={0.12} metalness={0.90} />;
+  return (
+    <group position={[cx, cy, 0]}>
+      {/* pivot group at top edge for awning tilt */}
+      <group position={[0, winH / 2, Z]}>
+        <group ref={sashRef} onClick={(e) => { e.stopPropagation(); toggleOpen(win.id); }}>
+          <group position={[0, -winH / 2, 0]}>
+            {/* top */}  <mesh position={[0,  winH/2-SF/2, 0]}><boxGeometry args={[winLen, SF, BD]} />{mat}</mesh>
+            {/* bot */}  <mesh position={[0, -winH/2+SF/2, 0]}><boxGeometry args={[winLen, SF, BD]} />{mat}</mesh>
+            {/* left */} <mesh position={[-winLen/2+SF/2, 0, 0]}><boxGeometry args={[SF, winH-SF*2, BD]} />{mat}</mesh>
+            {/* right */}<mesh position={[ winLen/2-SF/2, 0, 0]}><boxGeometry args={[SF, winH-SF*2, BD]} />{mat}</mesh>
+          </group>
+        </group>
+      </group>
+    </group>
+  );
+}
+
 function RoomShell({
   W, D, H,
   wallColor, floorColor,
@@ -487,6 +534,11 @@ function RoomShell({
             </>
           );
         })()}
+        {curtainMullions && windows
+          .filter(w => w.wall === lowerSide)
+          .map(win => (
+            <CurtainWallWindowOverlay key={win.id} win={win} wallLenM={wallLenM} wallH={H} lowerSide={lowerSide} />
+          ))}
       </group>
     );
   }
