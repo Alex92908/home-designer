@@ -430,27 +430,33 @@ function RoomShell({
     const curtainMullions = curtainGlass ? (() => {
       const sW = 0.085, mW = 0.07, bay = 1.5;
 
-      // Collect hard x positions: wall ends + both edges of each hole.
+      // 幕墙竖挺:窗口边缘作为硬边(与外观对齐)，无洞口的跨内均匀补挺。
+      const winHoles = windows
+        .filter(w => w.wall === lowerSide)
+        .map(win => {
+          const len = win.len / 100;
+          const x = lowerSide === "W" ? wallLenM - (win.pos ?? 0) / 100 - len : (win.pos ?? 0) / 100;
+          return { x, w: len };
+        });
+      const allHoles = [...holes, ...winHoles];
+
       const hardSet = new Set<number>([0, wallLenM]);
-      for (const h of holes) { hardSet.add(h.x); hardSet.add(h.x + h.w); }
+      for (const h of allHoles) { hardSet.add(h.x); hardSet.add(h.x + h.w); }
       const hardX = Array.from(hardSet).sort((a, b) => a - b);
 
       const bars: Array<{ x: number; w: number }> = [];
 
       for (let i = 0; i < hardX.length; i++) {
         const x = hardX[i];
-        // Skip positions that fall inside a hole (hole edges still get a bar).
-        const insideHole = holes.some(h => x > h.x + 0.005 && x < h.x + h.w - 0.005);
+        const insideHole = allHoles.some(h => x > h.x + 0.005 && x < h.x + h.w - 0.005);
         if (!insideHole) {
           bars.push({ x, w: (x === 0 || x === wallLenM) ? sW : mW });
         }
 
-        // Fill span to next hard position with bay-spaced mullions, unless
-        // the span is entirely inside a hole.
         if (i < hardX.length - 1) {
           const x1 = hardX[i + 1];
           const spanMid = (x + x1) / 2;
-          const spanInHole = holes.some(h => spanMid > h.x + 0.005 && spanMid < h.x + h.w - 0.005);
+          const spanInHole = allHoles.some(h => spanMid > h.x + 0.005 && spanMid < h.x + h.w - 0.005);
           if (!spanInHole) {
             let bx = x + bay;
             while (bx < x1 - bay * 0.4) { bars.push({ x: bx, w: mW }); bx += bay; }

@@ -291,14 +291,11 @@ function panelBlindHash(col: number, row: number): number {
 /**
  * 幕墙竖挺 + 分格的「单一真源」布局 —— 网格优先模型(用户:框架先均匀排布,门窗再选
  * 合适的格嵌进去,框架别太密)。供外观图(GlassCurtain)与门窗吸附(房间循环)共用:
- *   1. 竖挺先按 ~bay(默认 1.5m,不太密)均匀排满整段,与洞口无关。两端=承重粗框
- *      structW,中间=分格细挺 mullionW。
- *   2. 门:吸附到它覆盖的「整数个格」,跨格时只去掉门内部的中间挺(门=对齐网格的干净
- *      洞口),其余竖挺不动。
- *   3. 窗:选最近的「一个格」放一个适配该格的开启扇(玻璃仍为固定玻璃,开启扇嵌在格内、
- *      绝不跨挺),竖挺完全不动。
+ *   1. 硬边:两端 + 所有门/窗左右边 → 洞口边必有竖挺,严格对齐平面图位置。
+ *   2. 在无洞口的跨内均匀补挺(全局对齐,bay 默认 1.5m)。
+ *   3. 门洞内部竖挺删除;窗竖挺不动(窗边已是挺)。
  * 返回:mullions(最终竖挺,含两级宽) / cells(door=key 的格在外观图里抠掉玻璃,window
- *      的格保留固定玻璃) / openingBay(每个洞口吸附到的格区间,门=跨格区间、窗=单格)。
+ *      的格保留固定玻璃) / openingBay(每个洞口实际区间,严格对齐平面图)。
  * 纯函数、确定性:相同输入 → 相同输出,GlassCurtain 与吸附 memo 各自调用必然一致。
  */
 function buildCurtainLayout(
@@ -314,68 +311,60 @@ function buildCurtainLayout(
   const bay = Math.max(0.8, cfg.bay ?? 1.5);
   const structW = Math.max(0.04, cfg.structW ?? 0.085);
   const mullionW = Math.max(0.03, cfg.mullionW ?? 0.07);
-  // 1. 均匀网格 —— 全局对齐:内部挺落在「沿墙轴的全局倍数」网格线上(gridOriginM = 本块
-  //    沿墙轴起点 m)。这样同一面上相邻的多个立面块,挺落在同一组线上 → 交接处对齐、
-  //    不再重复/碎格(用户:中间门厅那道粗缝)。两端仍是承重挺。flip 对齐 S/E 翻转。
   const gridOriginM = cfg.gridOriginM ?? 0;
   const flip = cfg.flip ?? false;
-  const gridX: number[] = [-half, half];
-  {
-    const margin = bay * 0.5;                                       // 离块端不到半格不加挺(防碎格)
-    const startK = Math.ceil((gridOriginM + margin) / bay);
-    const endK = Math.floor((gridOriginM + segLen - margin) / bay);
-    for (let k = startK; k <= endK; k++) {
-      const run = k * bay - gridOriginM;     // 沿墙轴距块起点(米)
-      const lx = flip ? -(run - half) : (run - half);
-      gridX.push(lx);
-    }
-  }
-  gridX.sort((a, b) => a - b);
-  const n = gridX.length - 1;
-  const cellCenter = (i: number) => (gridX[i] + gridX[i + 1]) / 2;
 
   const ops = openings
     .map(o => ({ x0: Math.max(-half, o.cx - o.w / 2), x1: Math.min(half, o.cx + o.w / 2), cx: o.cx, key: o.key, kind: o.kind }))
     .filter(o => o.x1 - o.x0 > 0.05)
     .sort((a, b) => a.cx - b.cx);
 
-  const removed = new Set<number>();            // 被门吃掉的内部竖挺 index
-  const taken = new Array<string | null>(n).fill(null);
+  // 1. 硬边:两端 + 所有门/窗左右边 —— 洞口边必有竖挺,严格对齐平面图。
+  const hardSet = new Set<number>([-half, half]);
+  for (const o of ops) { hardSet.add(o.x0); hardSet.add(o.x1); }
+  const hardX = Array.from(hardSet).sort((a, b) => a - b);
+
+  // 2. 在无洞口的跨内均匀补挺(全局对齐,防碎格)。
+  const allXSet = new Set<number>(hardX);
+  for (let i = 0; i < hardX.length - 1; i++) {
+    const lx0 = hardX[i], lx1 = hardX[i + 1];
+    const spanMid = (lx0 + lx1) / 2;
+    if (ops.some(o => spanMid > o.x0 + 0.005 && spanMid < o.x1 - 0.005)) continue;
+    const x0w = lx0 + half, x1w = lx1 + half;
+    const margin = bay * 0.4;
+    const startK = Math.ceil((gridOriginM + x0w + margin) / bay);
+    const endK   = Math.floor((gridOriginM + x1w - margin) / bay);
+    for (let k = startK; k <= endK; k++) {
+      const run = k * bay - gridOriginM;
+      const lx = flip ? -(run - half) : (run - half);
+      if (lx > lx0 + 0.005 && lx < lx1 - 0.005) allXSet.add(lx);
+    }
+  }
+  // 近邻去重(洞口边与均匀挺重合时保留一根)
+  const rawX = Array.from(allXSet).sort((a, b) => a - b);
+  const gridX: number[] = [rawX[0]];
+  for (let i = 1; i < rawX.length; i++) {
+    if (rawX[i] - gridX[gridX.length - 1] > mullionW * 0.35) gridX.push(rawX[i]);
+  }
+
+  // 3. 洞口记录;门洞删内部挺,窗竖挺保持不动(窗边已是挺)。
+  const removedX = new Set<number>();
   const openingBay = new Map<string, { x0: number; x1: number; kind: "d" | "w" }>();
-
-  // 2. 门先吸附:覆盖中心落在门内的格;否则取最近格。跨格 → 去掉门内部竖挺。
-  for (const o of ops.filter(o => o.kind === "d")) {
-    let lo = -1, hi = -1;
-    for (let i = 0; i < n; i++) {
-      const cc = cellCenter(i);
-      if (cc > o.x0 && cc < o.x1) { if (lo < 0) lo = i; hi = i; }
+  for (const o of ops) {
+    openingBay.set(o.key, { x0: o.x0, x1: o.x1, kind: o.kind });
+    if (o.kind === "d") {
+      for (const x of gridX) {
+        if (x > o.x0 + 0.005 && x < o.x1 - 0.005) removedX.add(x);
+      }
     }
-    if (lo < 0) {
-      let best = 0, bd = Infinity;
-      for (let i = 0; i < n; i++) { const d = Math.abs(cellCenter(i) - o.cx); if (d < bd) { bd = d; best = i; } }
-      lo = hi = best;
-    }
-    for (let i = lo + 1; i <= hi; i++) removed.add(i);   // 门跨的内部竖挺去掉
-    for (let i = lo; i <= hi; i++) taken[i] = o.key;
-    openingBay.set(o.key, { x0: gridX[lo], x1: gridX[hi + 1], kind: "d" });
-  }
-  // 3. 窗后吸附:选最近的「空闲」格(没被门/别的窗占),竖挺不动。
-  for (const o of ops.filter(o => o.kind === "w")) {
-    let best = -1, bd = Infinity;
-    for (let i = 0; i < n; i++) { if (taken[i]) continue; const d = Math.abs(cellCenter(i) - o.cx); if (d < bd) { bd = d; best = i; } }
-    if (best < 0) { for (let i = 0; i < n; i++) { const d = Math.abs(cellCenter(i) - o.cx); if (d < bd) { bd = d; best = i; } } }
-    if (best < 0) continue;
-    taken[best] = o.key;
-    openingBay.set(o.key, { x0: gridX[best], x1: gridX[best + 1], kind: "w" });
   }
 
-  // 4. 最终竖挺(去掉门内部的),两级宽:端部 structW,其余 mullionW。
-  const mullions: Array<{ x: number; w: number }> = [];
-  for (let i = 0; i <= n; i++) {
-    if (removed.has(i)) continue;
-    mullions.push({ x: gridX[i], w: (i === 0 || i === n) ? structW : mullionW });
-  }
-  // 5. 分格:door 格(中心落在某门跨距内)在外观图抠掉玻璃;窗格保留玻璃。
+  // 4. 最终竖挺,两级宽:端部 structW,其余 mullionW。
+  const mullions: Array<{ x: number; w: number }> = gridX
+    .filter(x => !removedX.has(x))
+    .map(x => ({ x, w: (x <= -half + 0.001 || x >= half - 0.001) ? structW : mullionW }));
+
+  // 5. 分格:门格抠玻璃,窗格保留固定玻璃。
   const cells: Array<{ x0: number; x1: number; door: string | null }> = [];
   for (let i = 0; i < mullions.length - 1; i++) {
     const x0 = mullions[i].x, x1 = mullions[i + 1].x, mid = (x0 + x1) / 2;
@@ -2640,20 +2629,12 @@ export default function FloorPlanBuilding({
       for (const o of ops) {
         const baySpan = layout.openingBay.get(o.key);
         if (!baySpan) continue;
-        const bayCenter = (baySpan.x0 + baySpan.x1) / 2;                 // 立面局部:吸附到的格(中心)
-        const bayInner  = (baySpan.x1 - baySpan.x0) - mullW;            // 两挺内净宽
-        // 门、窗的开启扇都「填满它那一格的宽度」(贴住两侧竖挺,轻微交叠 2cm 消缝)——
-        // 窗不再做成格子里的浮动小框(四周留大缝 = 接缝太大),而是整格宽的开启扇,
-        // 高度仍按配置(底部开启扇 + 上部固定玻璃当横头),侧边无缝、框也不显厚。
-        const fillW = Math.max(0.4, bayInner + 0.02);
-        // 把立面局部格心(bayCenter)换算回房间循环用的「沿墙 pos」时,要用「世界向」翻转,
-        // 而不是网格/选格用的 flipX。原因:GlassCurtain 渲染竖挺时,W/S 面的 local+X
-        // 映射到世界轴方向与房间循环的 pos 方向相反(W: local+X→世界 -Z, 但 pos→+Z;
-        // S: local+X→世界 -X, 但 pos→+X),N/E 同向。flipX(=S||E) 只对 S 正确、对 W/E
-        // 颠倒 → 导致 W 面开启扇被镜像、半格错位、压在竖挺上。世界向翻转 = S||W。
+        const bayCenter = (baySpan.x0 + baySpan.x1) / 2;
+        // openingBay 现在直接返回平面图实际区间(buildCurtainLayout 已改为硬边对齐),
+        // 所以 lenCm/posCm 直接用实际宽度换算即可,不再需要 bayInner/fillW 收缩。
         const worldFlip = block.side === "S" || block.side === "W";
-        const rawTarget = worldFlip ? -bayCenter : bayCenter;           // 反「世界向」回 raw
-        const lenCm = fillW / CM;
+        const rawTarget = worldFlip ? -bayCenter : bayCenter;
+        const lenCm = o.w / CM;                                         // 平面图实际宽度
         const posCm = (rawTarget + segLen / 2) / CM - o.roomWallStart - lenCm / 2 + block.mergedStart;
         m.set(`${o.kind}:${block.floorIndex}:${o.room}:${o.wall}:${Math.round(o.pos)}`, { posCm, lenCm });
       }
