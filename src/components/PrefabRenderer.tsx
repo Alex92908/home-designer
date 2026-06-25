@@ -345,8 +345,7 @@ function PorteCochereMesh({ params, rot }: {
   params: ReturnType<typeof resolveParams<"porte_cochere">>;
   rot: number;
 }) {
-  const { carCount, pillarStyle, facingDir, carModel } = params;
-  const carSrc = `/models/vehicles/${carModel ?? "bmw_m3_e46.glb"}`;
+  const { carCount, pillarStyle, facingDir } = params;
 
   const W = carCount * 2.6 + 0.6;   // 2.6m per car + edge margin
   const D = 5.5;                     // car length + 1m of headroom
@@ -401,11 +400,7 @@ function PorteCochereMesh({ params, rot }: {
         <meshStandardMaterial color="#9C9690" roughness={0.85} />
       </mesh>
 
-      {/* Single car centred under canopy — one scene instance avoids GPU memory explosion.
-          No extra rotation: the outer group already handles facingDir; GLB faces +Z natively. */}
-      <Suspense fallback={null}>
-        <GlbStructure src={carSrc} sizeM={4.3} />
-      </Suspense>
+      {/* No embedded car — user places vehicles independently via the vehicle singleton library. */}
     </group>
   );
 }
