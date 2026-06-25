@@ -507,6 +507,7 @@ export default function FloorPlan() {
   const wallsHiddenOnRoom = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWallsHidden?.[activeRoom]);
   const toggleWallHidden  = useDesignerStore((s) => s.toggleWallHidden);
   const facadeFacesOnRoom = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomFacadeFaces?.[activeRoom]);
+  const exteriorStyleOnRoom = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomExteriorStyle?.[activeRoom]);
   const setFaceLayer      = useDesignerStore((s) => s.setFaceLayer);
   const setFaceOpacity    = useDesignerStore((s) => s.setFaceOpacity);
   // Curtain-wall mode? (drives per-face facade layer defaults + when to show
@@ -1407,6 +1408,7 @@ export default function FloorPlan() {
               const fpLike = {
                 roomFacadeFaces: { [activeRoom]: facadeFacesOnRoom },
                 roomWallsHidden: { [activeRoom]: wallsHiddenOnRoom },
+                roomExteriorStyle: { [activeRoom]: exteriorStyleOnRoom },
               } as Parameters<typeof resolveFacadeLayer>[0];
               const en = t.fpWallLabels.N === "N";
               const layers: { layer: FacadeLayer; label: string }[] = [
@@ -1483,6 +1485,28 @@ export default function FloorPlan() {
         >
           {/* Background */}
           <rect width={svgW} height={svgH} fill="#1a1c28" />
+
+          {/* 玻璃幕墙面标识：沿该面墙边画一条青色粗线，让 2D 平面图也能一眼看出
+              哪面是玻璃幕墙——判定与室内装修/外观图同一 resolveFacadeLayer(已并入
+              roomFacadeFaces + roomExteriorStyle + 全局模式)，三视图一致。矩形房
+              N=上/S=下/W=左/E=右；多边形房的逐边幕墙暂只在面板里调。 */}
+          {(() => {
+            const fpLike = {
+              roomFacadeFaces: { [activeRoom]: facadeFacesOnRoom },
+              roomWallsHidden: { [activeRoom]: wallsHiddenOnRoom },
+              roomExteriorStyle: { [activeRoom]: exteriorStyleOnRoom },
+            } as Parameters<typeof resolveFacadeLayer>[0];
+            const TW = 3, C = "#34D6C8";
+            return (["N", "S", "E", "W"] as const).map((side) => {
+              if (!resolveFacadeLayer(fpLike, activeRoom, side, "glass", curtainWall)) return null;
+              const r = side === "N" ? { x: 0, y: 0, width: svgW, height: TW }
+                : side === "S" ? { x: 0, y: svgH - TW, width: svgW, height: TW }
+                : side === "W" ? { x: 0, y: 0, width: TW, height: svgH }
+                : { x: svgW - TW, y: 0, width: TW, height: svgH };
+              return <rect key={`glassface-${side}`} {...r} fill={C} opacity={0.92}
+                style={{ pointerEvents: "none" }} />;
+            });
+          })()}
 
           {/* Grid */}
           {Array.from({ length: gridXCount + 1 }).map((_, i) => (
