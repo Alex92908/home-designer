@@ -19,7 +19,7 @@
  *   3. Add a case to <PrefabMesh> here.
  */
 
-import { useMemo } from "react";
+import { useMemo, Suspense } from "react";
 import * as THREE from "three";
 import { useGLTF } from "@react-three/drei";
 import type { YardPrefab, PrefabKind } from "@/lib/types";
@@ -51,12 +51,16 @@ function GlbStructure({ src, sizeM }: { src: string; sizeM: number }) {
 // GLB 真实得多；其余结构件用真实 GLB。
 import { Pool } from "./HouseCanvas";
 
-const PERGOLA_GLB = "/models/outdoor_structure/pergola/pergola.glb";
-const FOUNTAIN_GLB = "/models/outdoor_structure/water_fountain/water_fountain.glb";
-const GRILL_GLB    = "/models/outdoor_structure/outdoor_grill/outdoor_grill.glb";
+const PERGOLA_GLB   = "/models/outdoor_structure/pergola/pergola.glb";
+const FOUNTAIN_GLB  = "/models/outdoor_structure/water_fountain/water_fountain.glb";
+const GRILL_GLB     = "/models/outdoor_structure/outdoor_grill/outdoor_grill.glb";
+const SEDAN_GLB     = "/models/kenney_vehicles/sedan.glb";
+const SUV_GLB       = "/models/kenney_vehicles/suv-luxury.glb";
 useGLTF.preload(PERGOLA_GLB);
 useGLTF.preload(FOUNTAIN_GLB);
 useGLTF.preload(GRILL_GLB);
+useGLTF.preload(SEDAN_GLB);
+useGLTF.preload(SUV_GLB);
 
 const CM = 0.01;
 
@@ -399,6 +403,19 @@ function PorteCochereMesh({ params, rot }: {
         <boxGeometry args={[W, 0.10, 0.10]} />
         <meshStandardMaterial color="#9C9690" roughness={0.85} />
       </mesh>
+
+      {/* Cars — alternates sedan / SUV per slot, centered under canopy */}
+      {Array.from({ length: carCount }).map((_, i) => {
+        const slotX = carCount === 1 ? 0 : -((carCount - 1) / 2) * 2.6 + i * 2.6;
+        const usesSuv = i % 2 === 1;
+        return (
+          <Suspense key={i} fallback={null}>
+            <group position={[slotX, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+              <GlbStructure src={usesSuv ? SUV_GLB : SEDAN_GLB} sizeM={4.3} />
+            </group>
+          </Suspense>
+        );
+      })}
     </group>
   );
 }
