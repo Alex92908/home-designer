@@ -844,7 +844,7 @@ interface DesignerStore {
    *  shallow-merged at the call site. */
   updateYardItem: (
     id: string,
-    patch: { x?: number; z?: number; rot?: number; scale?: number; params?: Record<string, unknown>; subtype?: import("./types").ZoneSubtype | undefined },
+    patch: { x?: number; z?: number; rot?: number; scale?: number; params?: Record<string, unknown>; subtype?: import("./types").ZoneSubtype | undefined; footprintCm?: { w: number; d: number } },
   ) => void;
   /** Yard paths (walkways). Stored in yardPlan.paths[]. */
   addYardPath:    (path: NonNullable<import("./types").YardPlan["paths"]>[number]) => void;

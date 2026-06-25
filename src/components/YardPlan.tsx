@@ -718,6 +718,13 @@ export default function YardPlan() {
     setSharedSelectedId(id);
   };
   const [drag, setDrag] = useState<{ id: string; offsetX: number; offsetZ: number } | null>(null);
+  const [resize, setResize] = useState<{
+    id: string;
+    corner: "se" | "sw" | "ne" | "nw";
+    origFp: { w: number; d: number };
+    origX: number;
+    origZ: number;
+  } | null>(null);
 
   // ── Draw modes (fence / path) ──
   const [drawMode, setDrawMode] = useState<"select" | "fence" | "path">("select");
@@ -850,6 +857,27 @@ export default function YardPlan() {
       window.removeEventListener("pointerup", onUp);
     };
   }, [drag, updateYardItem, houseWm, houseDm, yardItems]);
+
+  useEffect(() => {
+    if (!resize) return;
+    const onMove = (ev: PointerEvent) => {
+      const { x: nx, z: nz } = svgPtToWorld(ev.clientX, ev.clientY);
+      const dx = nx - resize.origX;
+      const dz = nz - resize.origZ;
+      const signX = resize.corner === "se" || resize.corner === "ne" ? 1 : -1;
+      const signZ = resize.corner === "se" || resize.corner === "sw" ? 1 : -1;
+      const newW = Math.max(100, resize.origFp.w + signX * dx * 2);
+      const newD = Math.max(100, resize.origFp.d + signZ * dz * 2);
+      updateYardItem(resize.id, { footprintCm: { w: Math.round(newW), d: Math.round(newD) } });
+    };
+    const onUp = () => setResize(null);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [resize, updateYardItem]);
 
   // Keyboard: Delete key removes selected item, ESC exits draw mode
   useEffect(() => {
@@ -1566,9 +1594,10 @@ export default function YardPlan() {
             if (!def) return null;
             const sx = SVG_PX / 2 + prefab.x / CM_PER_PX;
             const sz = SVG_PX / 2 + prefab.z / CM_PER_PX;
+            const fpCm = prefab.footprintCm ?? def.defaultFootprintCm;
             const fpPx = {
-              w: def.defaultFootprintCm.w / CM_PER_PX,
-              d: def.defaultFootprintCm.d / CM_PER_PX,
+              w: fpCm.w / CM_PER_PX,
+              d: fpCm.d / CM_PER_PX,
             };
             const isSel = selectedId === prefab.id;
             return (
@@ -1601,6 +1630,24 @@ export default function YardPlan() {
                         fontSize={11} fill="white" fontWeight="bold"
                         style={{ pointerEvents: "none" }}>✕</text>
                     </g>
+                    {/* Resize handles — 4 corners */}
+                    {([ ["se", fpPx.w / 2, fpPx.d / 2], ["sw", -fpPx.w / 2, fpPx.d / 2], ["ne", fpPx.w / 2, -fpPx.d / 2], ["nw", -fpPx.w / 2, -fpPx.d / 2] ] as [string, number, number][]).map(([corner, cx, cz]) => (
+                      <circle key={corner} cx={cx} cy={cz} r={5}
+                        fill={SEL_INK} stroke="white" strokeWidth={1}
+                        style={{ cursor: "nwse-resize", pointerEvents: "auto" }}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          e.currentTarget.setPointerCapture(e.pointerId);
+                          const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+                          setResize({
+                            id: prefab.id,
+                            corner: corner as "se" | "sw" | "ne" | "nw",
+                            origFp: fpCm,
+                            origX: x,
+                            origZ: z,
+                          });
+                        }} />
+                    ))}
                   </g>
                 )}
               </g>

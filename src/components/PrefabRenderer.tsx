@@ -561,26 +561,32 @@ export function PrefabMesh({ prefab }: { prefab: YardPrefab }) {
     prefab.prefabKind === "fence_segment" ||
     prefab.prefabKind === "parking_area"
   ) {
+    const defaultFp = def.defaultFootprintCm ?? { w: 100, d: 100 };
+    const customFp  = prefab.footprintCm;
+    const scaleX = customFp ? customFp.w / defaultFp.w : 1;
+    const scaleZ = customFp ? customFp.d / defaultFp.d : 1;
     return (
       <group position={[wx, -0.5, wz]}>
-        {prefab.prefabKind === "social_island" && (
-          <SocialIslandMesh params={resolveParams("social_island", prefab.params)} rot={rot} />
-        )}
-        {prefab.prefabKind === "farm_box" && (
-          <FarmBoxMesh params={resolveParams("farm_box", prefab.params)} rot={rot} />
-        )}
-        {prefab.prefabKind === "porte_cochere" && (
-          <PorteCochereMesh params={resolveParams("porte_cochere", prefab.params)} rot={rot} />
-        )}
-        {prefab.prefabKind === "slat_wall" && (
-          <SlatWallMesh params={resolveParams("slat_wall", prefab.params)} rot={rot} />
-        )}
-        {prefab.prefabKind === "fence_segment" && (
-          <FenceSegmentMesh params={resolveParams("fence_segment", prefab.params)} rot={rot} />
-        )}
-        {prefab.prefabKind === "parking_area" && (
-          <ParkingAreaMesh params={resolveParams("parking_area", prefab.params)} rot={rot} />
-        )}
+        <group scale={[scaleX, 1, scaleZ]}>
+          {prefab.prefabKind === "social_island" && (
+            <SocialIslandMesh params={resolveParams("social_island", prefab.params)} rot={rot} />
+          )}
+          {prefab.prefabKind === "farm_box" && (
+            <FarmBoxMesh params={resolveParams("farm_box", prefab.params)} rot={rot} />
+          )}
+          {prefab.prefabKind === "porte_cochere" && (
+            <PorteCochereMesh params={resolveParams("porte_cochere", prefab.params)} rot={rot} />
+          )}
+          {prefab.prefabKind === "slat_wall" && (
+            <SlatWallMesh params={resolveParams("slat_wall", prefab.params)} rot={rot} />
+          )}
+          {prefab.prefabKind === "fence_segment" && (
+            <FenceSegmentMesh params={resolveParams("fence_segment", prefab.params)} rot={rot} />
+          )}
+          {prefab.prefabKind === "parking_area" && (
+            <ParkingAreaMesh params={resolveParams("parking_area", prefab.params)} rot={rot} />
+          )}
+        </group>
       </group>
     );
   }
@@ -604,14 +610,22 @@ export function PrefabMesh({ prefab }: { prefab: YardPrefab }) {
 
   // ─── Structural prefabs ── 泳池走程序化 Pool，廊架/烤架/喷泉走真实 GLB
   // （GlbStructure 按 footprint 缩放并落地居中），外层只管定位与旋转。
-  return (
-    <group position={[wx, 0, wz]} rotation={[0, rot, 0]}>
-      {prefab.prefabKind === "pool"            && <Pool x={0} z={0} />}
-      {prefab.prefabKind === "pergola_classic" && <GlbStructure src={PERGOLA_GLB} sizeM={5} />}
-      {prefab.prefabKind === "outdoor_kitchen" && <GlbStructure src={GRILL_GLB} sizeM={2.2} />}
-      {prefab.prefabKind === "fountain"        && <GlbStructure src={FOUNTAIN_GLB} sizeM={2.6} />}
-    </group>
-  );
+  {
+    const defaultFp = def.defaultFootprintCm ?? { w: 100, d: 100 };
+    const customFp  = prefab.footprintCm;
+    const scaleX = customFp ? customFp.w / defaultFp.w : 1;
+    const scaleZ = customFp ? customFp.d / defaultFp.d : 1;
+    return (
+      <group position={[wx, 0, wz]} rotation={[0, rot, 0]}>
+        <group scale={[scaleX, 1, scaleZ]}>
+          {prefab.prefabKind === "pool"            && <Pool x={0} z={0} />}
+          {prefab.prefabKind === "pergola_classic" && <GlbStructure src={PERGOLA_GLB} sizeM={5} />}
+          {prefab.prefabKind === "outdoor_kitchen" && <GlbStructure src={GRILL_GLB} sizeM={2.2} />}
+          {prefab.prefabKind === "fountain"        && <GlbStructure src={FOUNTAIN_GLB} sizeM={2.6} />}
+        </group>
+      </group>
+    );
+  }
 }
 
 /** Helper exported for tests / linting that just want to know which kinds

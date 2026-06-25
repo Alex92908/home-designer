@@ -72,6 +72,10 @@ export interface YardPrefab extends YardCommonFields {
   prefabKind: PrefabKind;
   /** Prefab-specific parameters. Each PrefabKind has its own schema. */
   params?: Record<string, unknown>;
+  /** Optional footprint override in centimetres. When set, overrides
+   *  the default footprint from PREFAB_REGISTRY for both the 2D plan
+   *  dashed box and the 3D mesh scale. */
+  footprintCm?: { w: number; d: number };
   /** For glb_model kind: URL to the GLTF/GLB file. */
   glbSrc?: string;
   /** For glb_model kind: optional tint colour for unlit parts. */
