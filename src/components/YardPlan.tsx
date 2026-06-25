@@ -2239,6 +2239,46 @@ export function YardPlanInspector() {
               </label>
             </div>
           </section>
+          {/* Zone size inputs — derived from bounding box of polygon */}
+          {(() => {
+            const xs = item.polygon.map(p => p[0]);
+            const zs = item.polygon.map(p => p[1]);
+            const w = Math.max(...xs) - Math.min(...xs);
+            const d = Math.max(...zs) - Math.min(...zs);
+            return (
+              <section>
+                <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>
+                  {locale === "en" ? "Size (m)" : "大小 (m)"}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex items-center gap-1">
+                    <span className="text-gray-400 w-3">W</span>
+                    <input type="number" step={0.25} min={1}
+                      value={(w / 100).toFixed(2)}
+                      onChange={e => {
+                        const newW = Math.max(100, Math.round(parseFloat(e.target.value) * 100));
+                        const scaleX = newW / w;
+                        const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+                        updateYardItem(item.id, { polygon: item.polygon.map(([px, pz]) => [cx + (px - cx) * scaleX, pz] as [number, number]) });
+                      }}
+                      className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <span className="text-gray-400 w-3">D</span>
+                    <input type="number" step={0.25} min={1}
+                      value={(d / 100).toFixed(2)}
+                      onChange={e => {
+                        const newD = Math.max(100, Math.round(parseFloat(e.target.value) * 100));
+                        const scaleZ = newD / d;
+                        const cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+                        updateYardItem(item.id, { polygon: item.polygon.map(([px, pz]) => [px, cz + (pz - cz) * scaleZ] as [number, number]) });
+                      }}
+                      className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
+                  </label>
+                </div>
+              </section>
+            );
+          })()}
           {/* §10.3 zone sub-type selector — refines the parent zoneKind
               for sun-aware placement + clearance sub-rules. Optional. */}
           <section>
