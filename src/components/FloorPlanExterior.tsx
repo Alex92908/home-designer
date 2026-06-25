@@ -4621,16 +4621,10 @@ export default function FloorPlanBuilding({
         // X轴翻转：south/east 的旋转使 local+X 方向反转
         const flipX   = side === "S" || side === "E";
 
-        // Facade treatment — per-room override has highest priority, then
-        // data-driven auto:
-        //  · Any room in this merged block set to "glass"    → glass curtain
-        //  · Any room set to "concrete" (and none to glass)  → concrete facade
-        //  · Otherwise: auto — windows >55% coverage ⇒ glass, else concrete.
-        const styleFP   = floorPlans[floorIndex];
-        const blockRoomStyles = block.rooms.map(r => styleFP?.roomExteriorStyle?.[r] ?? "auto");
-        const forceGlass    = blockRoomStyles.some(s => s === "glass");
-        const forceConcrete = !forceGlass && blockRoomStyles.some(s => s === "concrete");
-
+        // Facade treatment — 统一以 resolveFacadeLayer 的结果(block.fl，已并入
+        // per-face roomFacadeFaces + per-room roomExteriorStyle + 全局模式)为权威。
+        // 此前这里用 forceGlass/forceConcrete 直接读旧 roomExteriorStyle 并把优先级
+        // 压过 block.fl，导致「同面外观显实墙、室内显玻璃」——现已删除，三视图统一。
         const totalWinLen = winEntries.reduce((s, e) => s + e.w.len, 0);
         const winCoverage = segLen > 0 ? (totalWinLen * CM) / segLen : 0;
         // Stair/hallway rooms must always be solid — never auto-glass even on
@@ -4643,11 +4637,7 @@ export default function FloorPlanBuilding({
         // → 该面是实墙(或全开敞，已被 layeredSegs 过滤)，走实墙/ConcreteFacade。
         const viaLayers = block.fl.glass || block.fl.frame;
         let facade: "glass" | "concrete" | "wood";
-        if (forceGlass) {
-          facade = "glass";
-        } else if (forceConcrete) {
-          facade = "concrete";
-        } else if (viaLayers) {
+        if (viaLayers) {
           facade = "glass";
         } else if (curtainWall) {
           // 幕墙模式下某面被强制显示「实墙」(玻璃+框都隐藏)：交给真实外墙壳
@@ -4763,7 +4753,9 @@ export default function FloorPlanBuilding({
                    玻璃门(见下方 doorStyle 强制 french_double)，于是门能推开。 */
                 showEntranceDoor={!curtainWall}
                 opacityScale={exterior.glassOpacity ?? (curtainWall ? 1.1 : 1)}
-                glassTransparency={viaLayers && !curtainWall ? block.fl.opacity : undefined}
+                /* per-face 玻璃透明度在幕墙/普通两种模式下都生效(此前幕墙模式被旁路
+                   改用全局 glassOpacity，致单面透明度外观图不响应、与室内装修不一致)。 */
+                glassTransparency={viaLayers ? block.fl.opacity : undefined}
                 glassColor={exterior.glassColor}
                 spandrelColor={curtainWall ? slabBandColor : exterior.glassSpandrelColor}
                 entranceFrameColor={exterior.entranceFrameColor}

@@ -1129,12 +1129,19 @@ export function facadeLayerDefault(layer: FacadeLayer, curtainWall: boolean): bo
  *  Precedence: explicit per-face override (roomFacadeFaces) > legacy
  *  roomWallsHidden (wall layer only) > global mode default. */
 export function resolveFacadeLayer(
-  fp: Pick<FloorPlan, "roomFacadeFaces" | "roomWallsHidden"> | undefined,
+  fp: Pick<FloorPlan, "roomFacadeFaces" | "roomWallsHidden" | "roomExteriorStyle"> | undefined,
   room: RoomType, sideKey: string, layer: FacadeLayer, curtainWall: boolean,
 ): boolean {
   const ov = fp?.roomFacadeFaces?.[room]?.[sideKey]?.[layer];
   if (ov !== undefined) return ov;
   if (layer === "wall" && fp?.roomWallsHidden?.[room]?.[sideKey] === true) return false;
+  // 旧 per-room roomExteriorStyle 并入此处，让三视图(平面图/室内装修/外观图，都调
+  // 本函数)对它解释一致：glass → 实墙隐、玻璃+框显；concrete → 实墙显、玻璃+框隐。
+  // 此前仅外观图读 roomExteriorStyle 且优先级压过新机制，造成「同面外观显实墙、
+  // 室内显玻璃」。"auto"/未设 不特判，继续走 winCoverage 自动判定 / 全局模式默认。
+  const style = fp?.roomExteriorStyle?.[room];
+  if (style === "glass") return layer !== "wall";
+  if (style === "concrete") return layer === "wall";
   return facadeLayerDefault(layer, curtainWall);
 }
 

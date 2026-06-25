@@ -12,7 +12,14 @@ import { useDesignerStore, RoomState } from "@/lib/store";
 import { useLocale, useLocaleStore } from "@/lib/i18n";
 const EMPTY_ROOM_STATE_RC: RoomState = { materials: {}, placedItems: [] };
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
-import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem, WallSide, resolveFacadeLayer } from "@/lib/types";
+import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem, WallSide, resolveFacadeLayer, resolveFaceOpacity } from "@/lib/types";
+
+// 幕墙玻璃透明度统一口径(与 FloorPlanExterior 同源)：per-face 透明度 t∈[0,1]
+// (1=最通透)，DEFAULT 0.85 ≈ 通透外观；映射到 THREE material.opacity 用同一公式
+// paneAbs=(1-t)*0.88+0.04，使室内装修与外观图玻璃通透度一致。
+const DEFAULT_GLASS_TRANSPARENCY = 0.85;
+const glassTransparencyToOpacity = (t: number) =>
+  Math.max(0.04, Math.min(0.88, (1 - t) * 0.88 + 0.04));
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
 import { DetailedDecor } from "./DetailedDecor";
@@ -225,6 +232,7 @@ function RoomShell({
   ceilingOpacity,
   wallsHidden,
   curtainGlassWalls,
+  curtainMullion,
 }: {
   W: number; D: number; H: number;
   wallColor: string; floorColor: string;
@@ -251,9 +259,11 @@ function RoomShell({
   ceilingOpacity: number;
   /** Per-side hide flags. true = skip rendering that wall entirely. */
   wallsHidden?: Partial<Record<WallSide, boolean>>;
-  /** Walls that are glass curtain faces — rendered as transparent glass
-   *  panes to match the exterior glass curtain wall appearance. */
-  curtainGlassWalls?: Set<WallSide>;
+  /** Glass curtain faces → per-face 玻璃透明度(0..1, 1=最通透)。用 Map 携带
+   *  per-face opacity，与外观图同口径渲染玻璃通透度。 */
+  curtainGlassWalls?: Map<WallSide, number>;
+  /** 幕墙竖挺参数(与外观图 exterior.curtainMullion* 同源)。缺省回退默认值。 */
+  curtainMullion?: { bay: number; structW: number; mullionW: number };
 }) {
   const skirtColor = shade(wallColor, -18);
   const splitH = wallLower ? Math.max(0.2, Math.min(H - 0.2, (wallSplitCm ?? 110) / 100)) : 0;
@@ -444,7 +454,10 @@ function RoomShell({
     // filled with bay-spaced intermediate mullions so the grid aligns with
     // every door and window opening rather than drifting past them.
     const curtainMullions = curtainGlass ? (() => {
-      const sW = 0.085, mW = 0.07, bay = 1.5;
+      // 竖挺常量与外观图同源(exterior.curtainMullion*)，不再写死。
+      const sW = curtainMullion?.structW ?? 0.085;
+      const mW = curtainMullion?.mullionW ?? 0.07;
+      const bay = curtainMullion?.bay ?? 1.5;
 
       // 幕墙竖挺:窗口边缘作为硬边(与外观对齐)，无洞口的跨内均匀补挺。
       const winHoles = windows
@@ -499,7 +512,8 @@ function RoomShell({
                   {curtainGlass ? (
                     <meshPhysicalMaterial
                       color="#8AA6C2"
-                      transparent opacity={0.40}
+                      transparent
+                      opacity={glassTransparencyToOpacity(curtainGlassWalls?.get(lowerSide) ?? DEFAULT_GLASS_TRANSPARENCY)}
                       transmission={0.60} ior={1.45} thickness={0.012}
                       roughness={0.05} metalness={0.0}
                       reflectivity={0.5} envMapIntensity={2.0}
@@ -3652,6 +3666,12 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const exteriorFacadeGlass  = useDesignerStore((s) => s.exterior?.facadeGlass);
   const roomFacadeFaces = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomFacadeFaces);
   const fpRoomWallsHidden = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWallsHidden);
+  const fpRoomExteriorStyle = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomExteriorStyle);
+  // 幕墙竖挺参数(与外观图同源)，写死改读全局，三视图竖挺分格一致。
+  // 这几个字段未进 ExteriorSettings 类型(外观图也是 cast 访问)，此处同样 cast。
+  const exMullionBay     = useDesignerStore((s) => (s.exterior as { curtainMullionBay?: number })?.curtainMullionBay);
+  const exMullionStructW = useDesignerStore((s) => (s.exterior as { curtainStructFrameWidth?: number })?.curtainStructFrameWidth);
+  const exMullionWidth   = useDesignerStore((s) => (s.exterior as { curtainMullionWidth?: number })?.curtainMullionWidth);
   const def = ROOM_DEFS[activeRoom];
 
   // Use store dimensions (reflects global plan resizes), fall back to ROOM_DEFS
@@ -3672,9 +3692,11 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const curtainGlassWalls = useMemo(() => {
     const isCurtainWall = exteriorFacadeSystem === "curtain-wall" || !!exteriorFacadeGlass;
     if (!isCurtainWall) return undefined;
-    const fp = { roomFacadeFaces, roomWallsHidden: fpRoomWallsHidden };
+    // fp 含 roomExteriorStyle，使本视图与外观图对旧字段解释一致(resolveFacadeLayer
+    // 已并入)。值为 per-face 玻璃透明度(resolveFaceOpacity)，下游按统一公式映射。
+    const fp = { roomFacadeFaces, roomWallsHidden: fpRoomWallsHidden, roomExteriorStyle: fpRoomExteriorStyle };
     const sides: WallSide[] = ["N", "S", "E", "W"];
-    const glassSet = new Set<WallSide>();
+    const glassMap = new Map<WallSide, number>();
     for (const side of sides) {
       // A wall is an exterior glass-curtain face if it has a window OR a
       // door (sliding glass door counts). Windows alone can't be the only
@@ -3685,11 +3707,11 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
         roomWindows.some((w) => w.wall === side) ||
         allDoors.some((d) => (d.wall as WallSide) === side);
       if (hasWindowOrDoor && resolveFacadeLayer(fp, activeRoom, side, "glass", true)) {
-        glassSet.add(side);
+        glassMap.set(side, resolveFaceOpacity(fp, activeRoom, side, DEFAULT_GLASS_TRANSPARENCY));
       }
     }
-    return glassSet.size > 0 ? glassSet : undefined;
-  }, [exteriorFacadeSystem, exteriorFacadeGlass, roomFacadeFaces, fpRoomWallsHidden, roomWindows, allDoors, activeRoom]);
+    return glassMap.size > 0 ? glassMap : undefined;
+  }, [exteriorFacadeSystem, exteriorFacadeGlass, roomFacadeFaces, fpRoomWallsHidden, fpRoomExteriorStyle, roomWindows, allDoors, activeRoom]);
 
   return (
     <>
@@ -3813,6 +3835,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
           ceilingOpacity={ceilingOpacity}
           wallsHidden={wallsHiddenForActive}
           curtainGlassWalls={curtainGlassWalls}
+          curtainMullion={{ bay: exMullionBay ?? 1.5, structW: exMullionStructW ?? 0.085, mullionW: exMullionWidth ?? 0.07 }}
         />
       )}
 
