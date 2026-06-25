@@ -234,36 +234,13 @@ function PrefabGlyph({ kind, footprintPx, selected = false, params }: {
   const tagSize = Math.min(9, footprintPx.d * 0.22);
   const labelSize = Math.min(11, footprintPx.d * 0.28);
 
-  // PCH: top-down car silhouette centred in the footprint
-  const pchCar = kind === "porte_cochere" && halfD > 10 ? (() => {
-    const fd = (params?.facingDir as string | undefined) ?? "south";
-    const carRot = ({ north: 0, east: 90, south: 180, west: -90 } as Record<string, number>)[fd] ?? 180;
-    const cl = halfD * 1.30, cw = cl * 0.46;
-    const wl = cl * 0.24, ww = cw * 0.22;
-    const wx = cw / 2 + ww * 0.5, wz = cl * 0.30;
-    return (
-      <g transform={`rotate(${carRot})`}>
-        <rect x={-cw / 2} y={-cl / 2} width={cw} height={cl} rx={cw * 0.18}
-          fill={stroke} fillOpacity={0.10} stroke={stroke} strokeWidth={sw * 0.65} />
-        <rect x={-cw * 0.36} y={-cl * 0.08} width={cw * 0.72} height={cl * 0.40}
-          rx={cw * 0.10} fill="none" stroke={stroke} strokeWidth={sw * 0.45} />
-        {([ [-wx, -wz], [wx, -wz], [-wx, wz], [wx, wz] ] as [number, number][]).map(([cx, cy], i) => (
-          <rect key={i} x={cx - ww / 2} y={cy - wl / 2} width={ww} height={wl}
-            rx={ww * 0.3} fill={stroke} fillOpacity={0.45} />
-        ))}
-      </g>
-    );
-  })() : null;
-
   return (
     <g>
       {/* Translucent envelope — coloured per prefab category */}
       <rect x={-halfW} y={-halfD} width={footprintPx.w} height={footprintPx.d}
         fill={palette.fill}
         stroke={stroke} strokeWidth={sw} strokeDasharray="6 4" rx={4} />
-      {pchCar}
-      {/* Chinese label — shifted to top area when car is shown */}
-      <text x={0} y={pchCar ? -halfD * 0.65 : 0} textAnchor="middle" dominantBaseline="middle"
+      <text x={0} y={0} textAnchor="middle" dominantBaseline="middle"
         fontSize={labelSize} fontWeight={600} fill={stroke}
         style={{ userSelect: "none", pointerEvents: "none" }}>
         {locale === "en" ? def.labelEn : def.label}
