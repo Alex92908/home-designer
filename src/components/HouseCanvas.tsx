@@ -2538,8 +2538,9 @@ function SingletonItem({ item: it }: { item: import("@/lib/types").YardSingleton
   if (!asset.customGltfPath) return null;
 
   // SVG rotate() is clockwise; Three.js rotation.y is counter-clockwise.
-  // Negate rot for vehicles so 2D and 3D rotate in the same visual direction.
-  const rotY = asset.category === "vehicle" ? -rot : rot + yawJitter;
+  // Vehicles: flip π so the 2D "nose up = north" convention matches 3D
+  // (most car GLBs export facing +Z/south; π corrects that to -Z/north).
+  const rotY = asset.category === "vehicle" ? Math.PI - rot : rot + yawJitter;
   return (
     <group position={[wx, -0.5, wz]} rotation={[tilt, rotY, 0]}>
       {/* PbrErrorBoundary is OUTSIDE Suspense so it catches errors that
