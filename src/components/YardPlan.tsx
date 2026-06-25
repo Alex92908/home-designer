@@ -143,22 +143,28 @@ function AssetGlyph({ asset, r, selected = false }: {
     );
   }
   if (asset.category === "vehicle") {
-    // Top-down car silhouette: body rect + wheel arcs at four corners
-    const bw = r * 1.80, bd = r * 0.90; // body width (long axis) × depth
-    const wr = r * 0.22, wl = r * 0.28; // wheel radius / length
-    const wx = bw / 2 - wr * 0.6, wz = bd / 2 + wr * 0.2;
+    // Portrait top-down silhouette: long axis along Y (north-south), nose at top (-Y = north)
+    const bl = r * 1.75, bw = r * 0.82;  // body length (Y) × width (X)
+    const wl = r * 0.26, ww = r * 0.16;  // wheel: length (along car axis) × width
+    const wx = bw / 2 + ww * 0.5;        // wheel center X (outside body)
+    const wz = bl * 0.32;                 // wheel axle distance from car centre
     return (
       <g>
         {/* body */}
-        <rect x={-bw / 2} y={-bd / 2} width={bw} height={bd}
-          rx={r * 0.18} fill={asset.color} fillOpacity={0.18} stroke={stroke} strokeWidth={sw} />
-        {/* cabin (smaller inset rect) */}
-        <rect x={-bw * 0.25} y={-bd * 0.38} width={bw * 0.50} height={bd * 0.76}
-          rx={r * 0.10} fill="none" stroke={stroke} strokeWidth={sw * 0.6} />
-        {/* 4 wheels */}
-        {([ [-wx, -wz], [wx, -wz], [-wx, wz], [wx, wz] ] as [number,number][]).map(([cx,cy],i) => (
-          <rect key={i} x={cx - wr / 2} y={cy - wl / 2} width={wr} height={wl}
-            rx={wr * 0.3} fill={stroke} fillOpacity={0.55} />
+        <rect x={-bw / 2} y={-bl / 2} width={bw} height={bl}
+          rx={r * 0.16} fill={asset.color} fillOpacity={0.18} stroke={stroke} strokeWidth={sw} />
+        {/* cabin — front (upper) portion */}
+        <rect x={-bw * 0.36} y={-bl * 0.08} width={bw * 0.72} height={bl * 0.40}
+          rx={r * 0.10} fill="none" stroke={stroke} strokeWidth={sw * 0.55} />
+        {/* nose chevron — front = north = top of SVG */}
+        <polyline
+          points={`${-bw * 0.28},${-bl / 2 + r * 0.20} 0,${-bl / 2 + r * 0.04} ${bw * 0.28},${-bl / 2 + r * 0.20}`}
+          fill="none" stroke={stroke} strokeWidth={sw * 0.85}
+          strokeLinecap="round" strokeLinejoin="round" />
+        {/* 4 wheels: FL, FR, RL, RR */}
+        {([ [-wx, -wz], [wx, -wz], [-wx, wz], [wx, wz] ] as [number,number][]).map(([cx, cy], i) => (
+          <rect key={i} x={cx - ww / 2} y={cy - wl / 2} width={ww} height={wl}
+            rx={ww * 0.3} fill={stroke} fillOpacity={0.55} />
         ))}
       </g>
     );

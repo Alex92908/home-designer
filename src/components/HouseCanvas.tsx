@@ -2537,8 +2537,11 @@ function SingletonItem({ item: it }: { item: import("@/lib/types").YardSingleton
   // No Kenney fallback, no procedural fallback — fake geometry is worse than nothing.
   if (!asset.customGltfPath) return null;
 
+  // SVG rotate() is clockwise; Three.js rotation.y is counter-clockwise.
+  // Negate rot for vehicles so 2D and 3D rotate in the same visual direction.
+  const rotY = asset.category === "vehicle" ? -rot : rot + yawJitter;
   return (
-    <group position={[wx, -0.5, wz]} rotation={[tilt, rot + yawJitter, 0]}>
+    <group position={[wx, -0.5, wz]} rotation={[tilt, rotY, 0]}>
       {/* PbrErrorBoundary is OUTSIDE Suspense so it catches errors that
           propagate through async GLTF resolution (e.g. truncated .bin). */}
       <PbrErrorBoundary gltfPath={asset.customGltfPath}>
