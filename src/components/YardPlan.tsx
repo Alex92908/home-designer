@@ -1980,6 +1980,31 @@ export function YardPlanInspector() {
               </label>
             </div>
           </section>
+          {(() => {
+            const def2 = getPrefabDef(item.prefabKind);
+            const curFp = item.footprintCm ?? def2?.defaultFootprintCm ?? { w: 100, d: 100 };
+            return (
+              <section>
+                <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Size (m)" : "大小 (m)"}</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex items-center gap-1">
+                    <span className="text-gray-400 w-3">W</span>
+                    <input type="number" step={0.25} min={1}
+                      value={(curFp.w / 100).toFixed(2)}
+                      onChange={e => updateYardItem(item.id, { footprintCm: { ...curFp, w: Math.max(100, Math.round(parseFloat(e.target.value) * 100)) } })}
+                      className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <span className="text-gray-400 w-3">D</span>
+                    <input type="number" step={0.25} min={1}
+                      value={(curFp.d / 100).toFixed(2)}
+                      onChange={e => updateYardItem(item.id, { footprintCm: { ...curFp, d: Math.max(100, Math.round(parseFloat(e.target.value) * 100)) } })}
+                      className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
+                  </label>
+                </div>
+              </section>
+            );
+          })()}
           <section>
             <div className="flex items-center justify-between mb-1">
               <span className="font-semibold" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Rotation" : "旋转"}</span>
