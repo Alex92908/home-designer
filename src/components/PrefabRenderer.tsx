@@ -38,7 +38,7 @@ function GlbStructure({ src, sizeM }: { src: string; sizeM: number }) {
     const center = new THREE.Vector3(); box.getCenter(center);
     const footprint = Math.max(size.x, size.z) || 1;
     const s = sizeM / footprint;
-    c.position.set(-center.x, -box.min.y, -center.z); // 居中 + 落地
+    c.position.set(-center.x, -box.min.y, -center.z);
     const g = new THREE.Group();
     g.add(c);
     g.scale.setScalar(s);
@@ -54,13 +54,9 @@ import { Pool } from "./HouseCanvas";
 const PERGOLA_GLB   = "/models/outdoor_structure/pergola/pergola.glb";
 const FOUNTAIN_GLB  = "/models/outdoor_structure/water_fountain/water_fountain.glb";
 const GRILL_GLB     = "/models/outdoor_structure/outdoor_grill/outdoor_grill.glb";
-const SEDAN_GLB     = "/models/kenney_vehicles/sedan.glb";
-const SUV_GLB       = "/models/kenney_vehicles/suv-luxury.glb";
 useGLTF.preload(PERGOLA_GLB);
 useGLTF.preload(FOUNTAIN_GLB);
 useGLTF.preload(GRILL_GLB);
-useGLTF.preload(SEDAN_GLB);
-useGLTF.preload(SUV_GLB);
 
 const CM = 0.01;
 
@@ -349,7 +345,8 @@ function PorteCochereMesh({ params, rot }: {
   params: ReturnType<typeof resolveParams<"porte_cochere">>;
   rot: number;
 }) {
-  const { carCount, pillarStyle, facingDir } = params;
+  const { carCount, pillarStyle, facingDir, carModel } = params;
+  const carSrc = `/models/vehicles/${carModel ?? "bmw_m3_e46.glb"}`;
 
   const W = carCount * 2.6 + 0.6;   // 2.6m per car + edge margin
   const D = 5.5;                     // car length + 1m of headroom
@@ -404,18 +401,12 @@ function PorteCochereMesh({ params, rot }: {
         <meshStandardMaterial color="#9C9690" roughness={0.85} />
       </mesh>
 
-      {/* Cars — alternates sedan / SUV per slot, centered under canopy */}
-      {Array.from({ length: carCount }).map((_, i) => {
-        const slotX = carCount === 1 ? 0 : -((carCount - 1) / 2) * 2.6 + i * 2.6;
-        const usesSuv = i % 2 === 1;
-        return (
-          <Suspense key={i} fallback={null}>
-            <group position={[slotX, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-              <GlbStructure src={usesSuv ? SUV_GLB : SEDAN_GLB} sizeM={4.3} />
-            </group>
-          </Suspense>
-        );
-      })}
+      {/* Single car centred under canopy — one scene instance avoids GPU memory explosion */}
+      <Suspense fallback={null}>
+        <group position={[0, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <GlbStructure src={carSrc} sizeM={4.3} />
+        </group>
+      </Suspense>
     </group>
   );
 }

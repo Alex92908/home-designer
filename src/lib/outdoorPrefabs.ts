@@ -42,6 +42,10 @@ export interface PorteCochereParams {
   pillarStyle?: "round" | "square" | "none";
   /** Direction the cars face (relative to prefab pivot). Default "south". */
   facingDir?: "north" | "south" | "east" | "west";
+  /** Car body paint color. Default midnight blue. */
+  carColor?: string;
+  /** GLB filename (under /models/vehicles/). Default bmw_m3_e46.glb. */
+  carModel?: string;
 }
 
 export interface SlatWallParams {
@@ -152,6 +156,8 @@ export const PREFAB_REGISTRY: PrefabDef[] = [
       carCount: 2,
       pillarStyle: "round",
       facingDir: "south",
+      carColor: "#1a3a5c",
+      carModel: "bmw_m3_e46.glb",
     } satisfies PorteCochereParams,
     category: "core",
   },

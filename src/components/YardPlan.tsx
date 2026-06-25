@@ -1913,6 +1913,62 @@ export function YardPlanInspector() {
               onChange={e => updateYardItem(item.id, { rot: parseFloat(e.target.value) * Math.PI / 180 })}
               className="w-full accent-indigo-500" />
           </section>
+          {item.prefabKind === "porte_cochere" && (() => {
+            const CAR_MODELS = [
+              { file: "bmw_m3_e46.glb",                            label: "BMW M3 E46" },
+              { file: "bmw_m5_g90_2024__www.vecarz.com.glb",       label: "BMW M5 G90 2024" },
+              { file: "free_porsche_911_carrera_4s.glb",           label: "Porsche 911 Carrera 4S" },
+              { file: "2021_lamborghini_countach_lpi_800-4.glb",   label: "Lamborghini Countach 2021" },
+              { file: "cyberpunk_car.glb",                         label: "Cyberpunk Car" },
+              { file: "free_cyberpunk_hovercar.glb",               label: "Cyberpunk Hovercar" },
+              { file: "bmw_rr_1000.glb",                           label: "BMW R1000 (Motorcycle)" },
+              { file: "sport_touring_motorcycle_highpoly_3dmodel.glb", label: "Sport Motorcycle" },
+              { file: "vino.glb",                                  label: "Vino" },
+            ];
+            const currentModel = (item.params?.carModel as string | undefined) ?? "bmw_m3_e46.glb";
+            const CAR_COLORS = [
+              { hex: "#1a3a5c", label: locale === "en" ? "Midnight Blue" : "深海蓝" },
+              { hex: "#1c1c1e", label: locale === "en" ? "Graphite Black" : "炭黑" },
+              { hex: "#f0f0f0", label: locale === "en" ? "Pearl White" : "珍珠白" },
+              { hex: "#7d1a1a", label: locale === "en" ? "Crimson Red" : "深红" },
+              { hex: "#2d4a2d", label: locale === "en" ? "Forest Green" : "墨绿" },
+              { hex: "#c8a96e", label: locale === "en" ? "Champagne" : "香槟金" },
+            ];
+            const currentColor = (item.params?.carColor as string | undefined) ?? "#1a3a5c";
+            return (
+              <>
+              <section>
+                <div className="font-semibold mb-2" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Car Model" : "车型"}</div>
+                <select
+                  value={currentModel}
+                  onChange={e => updateYardItem(item.id, { params: { ...item.params, carModel: e.target.value } })}
+                  className="w-full px-2 py-1.5 rounded border text-[11px] outline-none focus:border-blue-400"
+                  style={{ borderColor: "var(--ds-border)", background: "var(--ds-surface)", color: "var(--ds-text)" }}>
+                  {CAR_MODELS.map(m => (
+                    <option key={m.file} value={m.file}>{m.label}</option>
+                  ))}
+                </select>
+              </section>
+              <section>
+                <div className="font-semibold mb-2" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Car Color" : "车漆颜色"}</div>
+                <div className="flex gap-1.5 flex-wrap">
+                  {CAR_COLORS.map(c => (
+                    <button key={c.hex} title={c.label}
+                      onClick={() => updateYardItem(item.id, { params: { ...item.params, carColor: c.hex } })}
+                      className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
+                      style={{ background: c.hex, borderColor: currentColor === c.hex ? "var(--ds-accent)" : "transparent", outline: currentColor === c.hex ? "2px solid var(--ds-accent)" : "none" }} />
+                  ))}
+                  <label title={locale === "en" ? "Custom" : "自定义"} className="w-7 h-7 rounded-full border-2 border-dashed flex items-center justify-center cursor-pointer" style={{ borderColor: "var(--ds-border)" }}>
+                    <input type="color" className="opacity-0 w-0 h-0 absolute"
+                      value={currentColor}
+                      onChange={e => updateYardItem(item.id, { params: { ...item.params, carColor: e.target.value } })} />
+                    <span style={{ fontSize: 12, color: "var(--ds-text-3)" }}>+</span>
+                  </label>
+                </div>
+              </section>
+              </>
+            );
+          })()}
           <section>
             <button onClick={() => { removeYardItem(item.id); setSharedSelectedId(null); }}
               className="w-full py-2 rounded-lg text-[12px] font-semibold transition-colors border"
