@@ -792,6 +792,15 @@ export default function YardPlan() {
     origZ: number;
   } | null>(null);
 
+  const [zoneResize, setZoneResize] = useState<{
+    id: string;
+    corner: "se" | "sw" | "ne" | "nw";
+    origPoly: Array<[number, number]>;
+    origCx: number; origCz: number;
+    origW: number; origD: number;
+    origX: number; origZ: number;
+  } | null>(null);
+
   // ── Draw modes (fence / path) ──
   const [drawMode, setDrawMode] = useState<"select" | "fence" | "path">("select");
   const [fenceDraw, setFenceDraw] = useState<{
@@ -944,6 +953,34 @@ export default function YardPlan() {
       window.removeEventListener("pointerup", onUp);
     };
   }, [resize, updateYardItem]);
+
+  useEffect(() => {
+    if (!zoneResize) return;
+    const onMove = (ev: PointerEvent) => {
+      const { x: nx, z: nz } = svgPtToWorld(ev.clientX, ev.clientY);
+      const dx = nx - zoneResize.origX;
+      const dz = nz - zoneResize.origZ;
+      const signX = zoneResize.corner === "se" || zoneResize.corner === "ne" ? 1 : -1;
+      const signZ = zoneResize.corner === "se" || zoneResize.corner === "sw" ? 1 : -1;
+      const newW = Math.max(100, zoneResize.origW + signX * dx * 2);
+      const newD = Math.max(100, zoneResize.origD + signZ * dz * 2);
+      const scaleX = newW / zoneResize.origW;
+      const scaleZ = newD / zoneResize.origD;
+      const { origCx, origCz, origPoly } = zoneResize;
+      const newPoly = origPoly.map(([px, pz]) => [
+        origCx + (px - origCx) * scaleX,
+        origCz + (pz - origCz) * scaleZ,
+      ] as [number, number]);
+      updateYardItem(zoneResize.id, { polygon: newPoly });
+    };
+    const onUp = () => setZoneResize(null);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [zoneResize, updateYardItem]);
 
   // Keyboard: Delete key removes selected item, ESC exits draw mode
   useEffect(() => {
@@ -1650,6 +1687,41 @@ export default function YardPlan() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <ZoneGlyph zone={zone} polygonPx={polyPx} selected={isSel} />
+                {isSel && (() => {
+                  const xs = polyPx.map(p => p[0]);
+                  const zs = polyPx.map(p => p[1]);
+                  const minX = Math.min(...xs), maxX = Math.max(...xs);
+                  const minZ = Math.min(...zs), maxZ = Math.max(...zs);
+                  return (
+                    <g style={{ pointerEvents: "auto" }}>
+                      {([ ["se", maxX, maxZ], ["sw", minX, maxZ], ["ne", maxX, minZ], ["nw", minX, minZ] ] as [string, number, number][]).map(([corner, cx, cz]) => (
+                        <circle key={corner} cx={cx} cy={cz} r={5}
+                          fill={SEL_INK} stroke="white" strokeWidth={1}
+                          style={{ cursor: "nwse-resize", pointerEvents: "auto" }}
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                            e.currentTarget.setPointerCapture(e.pointerId);
+                            const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+                            const poly = zone.polygon;
+                            const cxs = poly.map(p => p[0]), czs = poly.map(p => p[1]);
+                            const mnX = Math.min(...cxs), mxX = Math.max(...cxs);
+                            const mnZ = Math.min(...czs), mxZ = Math.max(...czs);
+                            setZoneResize({
+                              id: zone.id,
+                              corner: corner as "se" | "sw" | "ne" | "nw",
+                              origPoly: poly,
+                              origCx: (mnX + mxX) / 2,
+                              origCz: (mnZ + mxZ) / 2,
+                              origW: mxX - mnX,
+                              origD: mxZ - mnZ,
+                              origX: x,
+                              origZ: z,
+                            });
+                          }} />
+                      ))}
+                    </g>
+                  );
+                })()}
               </g>
             );
           })}
