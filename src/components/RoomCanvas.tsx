@@ -12,7 +12,7 @@ import { useDesignerStore, RoomState } from "@/lib/store";
 import { useLocale, useLocaleStore } from "@/lib/i18n";
 const EMPTY_ROOM_STATE_RC: RoomState = { materials: {}, placedItems: [] };
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
-import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem, WallSide, resolveFacadeLayer, resolveFaceOpacity, isExteriorWallSide } from "@/lib/types";
+import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem, WallSide, resolveFacadeLayer, resolveFaceOpacity } from "@/lib/types";
 
 // 幕墙玻璃透明度统一口径(与 FloorPlanExterior 同源)：per-face 透明度 t∈[0,1]
 // (1=最通透)，DEFAULT 0.85 ≈ 通透外观；映射到 THREE material.opacity 用同一公式
@@ -3697,28 +3697,22 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
 
   // Walls that should render as glass curtain in 室内装修图 — a wall is a
   // glass face when the project is in curtain-wall mode AND it has a window
-  // on it (windows mark exterior-facing walls; interior walls have no windows).
   const curtainGlassWalls = useMemo(() => {
     const isCurtainWall = exteriorFacadeSystem === "curtain-wall" || !!exteriorFacadeGlass;
     if (!isCurtainWall) return undefined;
-    const fp = { roomFacadeFaces, roomWallsHidden: fpRoomWallsHidden, roomExteriorStyle: fpRoomExteriorStyle };
-    const sides: WallSide[] = ["N", "S", "E", "W"];
+    const fp = {
+      roomFacadeFaces, roomWallsHidden: fpRoomWallsHidden, roomExteriorStyle: fpRoomExteriorStyle,
+      roomLayout: fpAllRoomLayout, roomDimensions: fpAllRoomDims, enabledRooms: fpEnabledRooms,
+    };
     const glassMap = new Map<WallSide, number>();
-    const fpAdj = { enabledRooms: fpEnabledRooms, roomLayout: fpAllRoomLayout, roomDimensions: fpAllRoomDims };
-
-    for (const side of sides) {
-      const hasWindow = roomWindows.some((w) => w.wall === side);
-      const hasDoor   = allDoors.some((d) => (d.wall as WallSide) === side);
-      // Windows always mark exterior walls. Doors may be on interior walls
-      // (corridor ↔ room), so only count a door when no neighbour is adjacent.
-      const isExteriorSignal = hasWindow || (hasDoor && isExteriorWallSide(fpAdj, activeRoom, side));
-      if (isExteriorSignal && resolveFacadeLayer(fp, activeRoom, side, "glass", true)) {
+    for (const side of ["N", "S", "E", "W"] as WallSide[]) {
+      if (resolveFacadeLayer(fp, activeRoom, side, "glass", true)) {
         glassMap.set(side, resolveFaceOpacity(fp, activeRoom, side, DEFAULT_GLASS_TRANSPARENCY));
       }
     }
     return glassMap.size > 0 ? glassMap : undefined;
   }, [exteriorFacadeSystem, exteriorFacadeGlass, roomFacadeFaces, fpRoomWallsHidden, fpRoomExteriorStyle,
-      roomWindows, allDoors, activeRoom, fpAllRoomLayout, fpAllRoomDims, fpEnabledRooms]);
+      activeRoom, fpAllRoomLayout, fpAllRoomDims, fpEnabledRooms]);
 
   return (
     <>

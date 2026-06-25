@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
-import { ROOM_DEFS, WindowConfig, WallSide, FacadeLayer, resolveFacadeLayer, resolveFaceOpacity, isExteriorWallSide } from "@/lib/types";
+import { ROOM_DEFS, WindowConfig, WallSide, FacadeLayer, resolveFacadeLayer, resolveFaceOpacity } from "@/lib/types";
 import { FloorPlanMinimap } from "./FloorPlanMinimap";
 import { getFurnitureById } from "@/lib/furniture";
 import { PlacedItem } from "@/lib/types";
@@ -1498,12 +1498,13 @@ export default function FloorPlan() {
               roomFacadeFaces: { [activeRoom]: facadeFacesOnRoom },
               roomWallsHidden: { [activeRoom]: wallsHiddenOnRoom },
               roomExteriorStyle: { [activeRoom]: exteriorStyleOnRoom },
+              roomLayout: fpAllRoomLayout,
+              roomDimensions: fpAllRoomDims,
+              enabledRooms: fpAllEnabledRooms,
             } as Parameters<typeof resolveFacadeLayer>[0];
-            const fpAdj = { enabledRooms: fpAllEnabledRooms, roomLayout: fpAllRoomLayout, roomDimensions: fpAllRoomDims };
             const TW = 3, C = "#34D6C8";
             return (["N", "S", "E", "W"] as const).map((side) => {
               if (!resolveFacadeLayer(fpLike, activeRoom, side, "glass", curtainWall)) return null;
-              if (!isExteriorWallSide(fpAdj, activeRoom, side)) return null;
               const r = side === "N" ? { x: 0, y: 0, width: svgW, height: TW }
                 : side === "S" ? { x: 0, y: svgH - TW, width: svgW, height: TW }
                 : side === "W" ? { x: 0, y: 0, width: TW, height: svgH }

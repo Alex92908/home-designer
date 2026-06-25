@@ -1126,22 +1126,36 @@ export function facadeLayerDefault(layer: FacadeLayer, curtainWall: boolean): bo
 }
 
 /** Resolve whether a facade layer is SHOWN on a given room face.
- *  Precedence: explicit per-face override (roomFacadeFaces) > legacy
- *  roomWallsHidden (wall layer only) > global mode default. */
+ *
+ *  Precedence (highest → lowest):
+ *  1. Explicit per-face override  (roomFacadeFaces[room][side][layer])
+ *  2. Legacy wall-hide flag       (roomWallsHidden — wall layer only)
+ *  3. Per-room exterior style     (roomExteriorStyle: "glass" | "concrete")
+ *  4. Physical adjacency default  (interior wall → solid; exterior wall → mode default)
+ *  5. Global mode default         (facadeLayerDefault)
+ *
+ *  Pass roomLayout / roomDimensions / enabledRooms to enable step 4 so that
+ *  interior walls (adjacent rooms in the floor plan) fall back to solid rather
+ *  than inheriting the global curtain-wall glass default. */
 export function resolveFacadeLayer(
-  fp: Pick<FloorPlan, "roomFacadeFaces" | "roomWallsHidden" | "roomExteriorStyle"> | undefined,
+  fp: (Pick<FloorPlan, "roomFacadeFaces" | "roomWallsHidden" | "roomExteriorStyle">
+     & Partial<Pick<FloorPlan, "enabledRooms" | "roomLayout" | "roomDimensions">>) | undefined,
   room: RoomType, sideKey: string, layer: FacadeLayer, curtainWall: boolean,
 ): boolean {
+  // 1. Explicit per-face override
   const ov = fp?.roomFacadeFaces?.[room]?.[sideKey]?.[layer];
   if (ov !== undefined) return ov;
+  // 2. Legacy wall-hide
   if (layer === "wall" && fp?.roomWallsHidden?.[room]?.[sideKey] === true) return false;
-  // 旧 per-room roomExteriorStyle 并入此处，让三视图(平面图/室内装修/外观图，都调
-  // 本函数)对它解释一致：glass → 实墙隐、玻璃+框显；concrete → 实墙显、玻璃+框隐。
-  // 此前仅外观图读 roomExteriorStyle 且优先级压过新机制，造成「同面外观显实墙、
-  // 室内显玻璃」。"auto"/未设 不特判，继续走 winCoverage 自动判定 / 全局模式默认。
+  // 3. Per-room style (glass/concrete beats mode default)
   const style = fp?.roomExteriorStyle?.[room];
   if (style === "glass") return layer !== "wall";
   if (style === "concrete") return layer === "wall";
+  // 4. Physical adjacency: interior wall → solid regardless of global mode
+  if (fp?.roomLayout && fp?.enabledRooms && !isExteriorWallSide(fp, room, sideKey)) {
+    return layer === "wall";
+  }
+  // 5. Global mode default
   return facadeLayerDefault(layer, curtainWall);
 }
 
