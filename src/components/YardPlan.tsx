@@ -32,6 +32,109 @@ import ModelImportCard from "./ModelImportCard";
 import { getShadowPolygon } from "@/lib/sunAnalysis";
 import { getOutdoorAssetByKind as _getAsset, PREFAB_PURCHASE } from "@/lib/outdoorAssets";
 
+// ─── GLB thumbnail generation ──────────────────────────────
+// Lazily renders each GLB asset into a 128×128 offscreen WebGL frame and
+// caches the JPEG data URL. One renderer is created and disposed per asset —
+// no persistent WebGL context.
+
+const _thumbCache = new Map<string, string>();
+// Serialise generation so we never run two THREE.WebGLRenderer instances at once
+let _thumbQueue = Promise.resolve();
+
+async function _renderGltfThumb(gltfPath: string): Promise<string> {
+  const THREE = await import("three");
+  const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setSize(128, 128);
+  renderer.setPixelRatio(1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.setClearColor(0x1a1d26);
+
+  const scene = new THREE.Scene();
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+  sun.position.set(3, 5, 3);
+  scene.add(sun);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.4);
+  fill.position.set(-2, 2, -2);
+  scene.add(fill);
+
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 200);
+
+  try {
+    const gltf = await new Promise<{ scene: import("three").Group }>((res, rej) =>
+      new GLTFLoader().load(gltfPath, res as (g: unknown) => void, undefined, rej),
+    );
+
+    const box = new THREE.Box3().setFromObject(gltf.scene);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+
+    // Normalise to ~1.6 units tall, stand on y=0
+    const s = 1.6 / maxDim;
+    gltf.scene.scale.setScalar(s);
+    gltf.scene.position.set(-center.x * s, -box.min.y * s, -center.z * s);
+    scene.add(gltf.scene);
+
+    // 3/4 front view from slightly above
+    camera.position.set(1.8, 1.4, 2.2);
+    camera.lookAt(0, 0.4, 0);
+
+    renderer.render(scene, camera);
+    const dataUrl = renderer.domElement.toDataURL("image/jpeg", 0.88);
+    return dataUrl;
+  } finally {
+    renderer.dispose();
+  }
+}
+
+function useGltfThumbnail(gltfPath: string | undefined): string | null {
+  const [url, setUrl] = useState<string | null>(() =>
+    gltfPath ? (_thumbCache.get(gltfPath) ?? null) : null,
+  );
+  useEffect(() => {
+    if (!gltfPath) return;
+    if (_thumbCache.has(gltfPath)) { setUrl(_thumbCache.get(gltfPath)!); return; }
+    // Enqueue (serialised) — prevent concurrent renderer instances
+    _thumbQueue = _thumbQueue.then(() =>
+      _renderGltfThumb(gltfPath)
+        .then(u => { _thumbCache.set(gltfPath, u); setUrl(u); })
+        .catch(() => { /* leave SVG fallback */ }),
+    );
+  }, [gltfPath]);
+  return url;
+}
+
+// Individual library card — needs to be its own component so hooks work per-item
+function AssetLibCard({ asset, locale }: {
+  asset: import("@/lib/outdoorAssets").OutdoorAsset;
+  locale: string;
+}) {
+  const thumbUrl = useGltfThumbnail(asset.customGltfPath);
+  const label = locale === "en" ? asset.labelEn : asset.label;
+  return (
+    <button
+      draggable
+      onDragStart={e => { e.dataTransfer.setData("text/yard-asset", asset.kind); e.dataTransfer.effectAllowed = "copy"; }}
+      className="group flex flex-col items-center gap-1 px-1 py-2 rounded-xl border transition-colors cursor-grab active:cursor-grabbing bg-gray-50 border-gray-100 hover:bg-blue-50 hover:border-blue-300"
+      title={label}
+    >
+      {thumbUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={thumbUrl} alt={label} width={44} height={44}
+          style={{ borderRadius: 4, objectFit: "cover", display: "block" }} />
+      ) : (
+        <svg viewBox="-32 -32 64 64" width="44" height="44" style={{ background: "#1A1D26", borderRadius: 4 }}>
+          <AssetGlyph asset={asset} r={26} />
+        </svg>
+      )}
+      <div className="text-[10px] text-center font-medium text-gray-700">{label}</div>
+    </button>
+  );
+}
+
 // ─── Constants ─────────────────────────────────────────────
 // World window the SVG renders (cm, centred on origin)
 const WIN_HALF_CM = 1500; // 30m × 30m visible area
@@ -545,21 +648,7 @@ export function YardPlanLibrary() {
       {tab !== "prefab" && tab !== "template" && items && (
         <div className="flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-1.5">
           {items.map(asset => (
-            <button key={asset.kind}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("text/yard-asset", asset.kind);
-                e.dataTransfer.effectAllowed = "copy";
-              }}
-              className="group flex flex-col items-center gap-1 px-1 py-2 rounded-xl border transition-colors cursor-grab active:cursor-grabbing bg-gray-50 border-gray-100 hover:bg-blue-50 hover:border-blue-300"
-              title={locale === "en" ? asset.labelEn : asset.label}
-            >
-              {/* Mini dark inset so the light SVG glyphs are visible */}
-              <svg viewBox="-32 -32 64 64" width="44" height="44" style={{ background: "#1A1D26", borderRadius: 4 }}>
-                <AssetGlyph asset={asset} r={26} />
-              </svg>
-              <div className="text-[10px] text-center font-medium text-gray-700">{locale === "en" ? asset.labelEn : asset.label}</div>
-            </button>
+            <AssetLibCard key={asset.kind} asset={asset} locale={locale} />
           ))}
         </div>
       )}
