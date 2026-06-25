@@ -43,7 +43,9 @@ let _thumbQueue = Promise.resolve();
 
 async function _renderGltfThumb(gltfPath: string): Promise<string> {
   const THREE = await import("three");
-  const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
+  const { GLTFLoader, DRACOLoader } = await import("three-stdlib");
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath("/draco/");
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   renderer.setSize(128, 128);
@@ -63,8 +65,10 @@ async function _renderGltfThumb(gltfPath: string): Promise<string> {
   const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 200);
 
   try {
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader(dracoLoader);
     const gltf = await new Promise<{ scene: import("three").Group }>((res, rej) =>
-      new GLTFLoader().load(gltfPath, res as (g: unknown) => void, undefined, rej),
+      loader.load(gltfPath, res as (g: unknown) => void, undefined, rej),
     );
 
     const box = new THREE.Box3().setFromObject(gltf.scene);
@@ -86,6 +90,7 @@ async function _renderGltfThumb(gltfPath: string): Promise<string> {
     const dataUrl = renderer.domElement.toDataURL("image/jpeg", 0.88);
     return dataUrl;
   } finally {
+    dracoLoader.dispose();
     renderer.dispose();
   }
 }
