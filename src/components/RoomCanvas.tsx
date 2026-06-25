@@ -3672,6 +3672,11 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const roomFacadeFaces = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomFacadeFaces);
   const fpRoomWallsHidden = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWallsHidden);
   const fpRoomExteriorStyle = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomExteriorStyle);
+  // Floor-plan layout for all rooms — used to detect interior walls (adjacent rooms).
+  const fpAllRoomLayout = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomLayout);
+  const fpAllRoomDims   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDimensions);
+  const fpEnabledRooms  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.enabledRooms);
+  const activeRoomPos   = fpAllRoomLayout?.[activeRoom];
   // 幕墙竖挺参数(与外观图同源)，写死改读全局，三视图竖挺分格一致。
   // 这几个字段未进 ExteriorSettings 类型(外观图也是 cast 访问)，此处同样 cast。
   const exMullionBay     = useDesignerStore((s) => (s.exterior as { curtainMullionBay?: number })?.curtainMullionBay);
@@ -3697,26 +3702,49 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const curtainGlassWalls = useMemo(() => {
     const isCurtainWall = exteriorFacadeSystem === "curtain-wall" || !!exteriorFacadeGlass;
     if (!isCurtainWall) return undefined;
-    // fp 含 roomExteriorStyle，使本视图与外观图对旧字段解释一致(resolveFacadeLayer
-    // 已并入)。值为 per-face 玻璃透明度(resolveFaceOpacity)，下游按统一公式映射。
     const fp = { roomFacadeFaces, roomWallsHidden: fpRoomWallsHidden, roomExteriorStyle: fpRoomExteriorStyle };
     const sides: WallSide[] = ["N", "S", "E", "W"];
     const glassMap = new Map<WallSide, number>();
+
+    // Returns true if another enabled room is physically adjacent on this side,
+    // meaning the wall is interior (shared with a neighbour), not exterior.
+    const isInteriorWall = (side: WallSide): boolean => {
+      if (!activeRoomPos || !fpAllRoomLayout || !fpEnabledRooms) return false;
+      const aw = (fpAllRoomDims?.[activeRoom]?.width  ?? ROOM_DEFS[activeRoom]?.width  ?? 300);
+      const ad = (fpAllRoomDims?.[activeRoom]?.depth  ?? ROOM_DEFS[activeRoom]?.depth  ?? 300);
+      const ax = activeRoomPos.x, ay = activeRoomPos.y;
+      const EPS = 15; // cm — snap tolerance for shared walls
+      for (const r of fpEnabledRooms) {
+        if (r === activeRoom) continue;
+        const rl = fpAllRoomLayout[r]; if (!rl) continue;
+        const rw = fpAllRoomDims?.[r]?.width  ?? ROOM_DEFS[r as RoomType]?.width  ?? 300;
+        const rd = fpAllRoomDims?.[r]?.depth  ?? ROOM_DEFS[r as RoomType]?.depth  ?? 300;
+        const rx = rl.x, ry = rl.y;
+        // Perpendicular overlap (rooms must share some wall length, not just touch at a corner)
+        const xOverlap = rx < ax + aw - EPS && rx + rw > ax + EPS;
+        const yOverlap = ry < ay + ad - EPS && ry + rd  > ay + EPS;
+        if (side === "N" && Math.abs((ry + rd) - ay) <= EPS && xOverlap) return true;
+        if (side === "S" && Math.abs(ry - (ay + ad))  <= EPS && xOverlap) return true;
+        if (side === "W" && Math.abs((rx + rw) - ax)  <= EPS && yOverlap) return true;
+        if (side === "E" && Math.abs(rx - (ax + aw))  <= EPS && yOverlap) return true;
+      }
+      return false;
+    };
+
     for (const side of sides) {
-      // A wall is an exterior glass-curtain face if it has a window OR a
-      // door (sliding glass door counts). Windows alone can't be the only
-      // signal — the S wall often only has a glass door entry, no separate
-      // window entry. Door holes are preserved in WallWithHoles via
-      // skipWindows=true so the door panel stays visible inside the curtain.
-      const hasWindowOrDoor =
-        roomWindows.some((w) => w.wall === side) ||
-        allDoors.some((d) => (d.wall as WallSide) === side);
-      if (hasWindowOrDoor && resolveFacadeLayer(fp, activeRoom, side, "glass", true)) {
+      const hasWindow = roomWindows.some((w) => w.wall === side);
+      const hasDoor   = allDoors.some((d) => (d.wall as WallSide) === side);
+      // Windows are always on exterior walls. Doors can be on interior walls
+      // (corridor ↔ room). Only treat a door as an exterior signal when there is
+      // no neighbouring room on that side (i.e. it is not an interior door).
+      const isExteriorSignal = hasWindow || (hasDoor && !isInteriorWall(side));
+      if (isExteriorSignal && resolveFacadeLayer(fp, activeRoom, side, "glass", true)) {
         glassMap.set(side, resolveFaceOpacity(fp, activeRoom, side, DEFAULT_GLASS_TRANSPARENCY));
       }
     }
     return glassMap.size > 0 ? glassMap : undefined;
-  }, [exteriorFacadeSystem, exteriorFacadeGlass, roomFacadeFaces, fpRoomWallsHidden, fpRoomExteriorStyle, roomWindows, allDoors, activeRoom]);
+  }, [exteriorFacadeSystem, exteriorFacadeGlass, roomFacadeFaces, fpRoomWallsHidden, fpRoomExteriorStyle,
+      roomWindows, allDoors, activeRoom, activeRoomPos, fpAllRoomLayout, fpAllRoomDims, fpEnabledRooms]);
 
   return (
     <>
