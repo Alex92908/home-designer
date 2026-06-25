@@ -662,7 +662,10 @@ function RoomShell({
         );
       })()}
 
-      {/* Door panel (3D, inside the wall's door hole) */}
+      {/* Door panel (3D, inside the wall's door hole)。幕墙玻璃面上的门：与外观图
+          同逻辑(FloorPlanExterior _doorOnGlassFace)——强制通透玻璃门(用户指定了
+          glass_slide/glass_swing 就用其一，否则默认 glass_swing)，使同一道幕墙门
+          三视图门型一致；其余面按用户 doorStyle。 */}
       {hasDoor && (
         <RoomDoor3D
           W={W} D={D} H={H}
@@ -671,7 +674,9 @@ function RoomShell({
           doorLenCm={doorLenCm}
           doorHCm={doorHCm}
           activeRoom={activeRoom}
-          doorStyle={doorStyle}
+          doorStyle={curtainGlassWalls?.has(doorWall)
+            ? (doorStyle === "glass_slide" || doorStyle === "glass_swing" ? doorStyle : "glass_swing")
+            : doorStyle}
         />
       )}
 

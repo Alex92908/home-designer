@@ -4750,7 +4750,8 @@ export default function FloorPlanBuilding({
                    可经 exterior.curtainBlinds 开启。 */
                 showBlinds={(exterior as { curtainBlinds?: boolean }).curtainBlinds ?? false}
                 /* 幕墙别墅：不画静态装饰门，门交给可点击开关的 WalkthroughDoor3D
-                   玻璃门(见下方 doorStyle 强制 french_double)，于是门能推开。 */
+                   通透玻璃门(见下方 _doorOnGlassFace → glass_swing/glass_slide，
+                   与室内装修门型一致)，于是门能推开。 */
                 showEntranceDoor={!curtainWall}
                 opacityScale={exterior.glassOpacity ?? (curtainWall ? 1.1 : 1)}
                 /* per-face 玻璃透明度在幕墙/普通两种模式下都生效(此前幕墙模式被旁路
