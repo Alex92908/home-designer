@@ -217,10 +217,11 @@ const PREFAB_PALETTE: Record<PrefabKind, { stroke: string; fill: string }> = {
   glb_model:       { stroke: "#818CF8", fill: "rgba(129,140,248,0.10)" }, // indigo (AI-generated)
 };
 
-function PrefabGlyph({ kind, footprintPx, selected = false }: {
+function PrefabGlyph({ kind, footprintPx, selected = false, params }: {
   kind: PrefabKind;
   footprintPx: { w: number; d: number };
   selected?: boolean;
+  params?: Record<string, unknown>;
 }) {
   const locale = useLocale();
   const def = getPrefabDef(kind);
@@ -230,17 +231,39 @@ function PrefabGlyph({ kind, footprintPx, selected = false }: {
   const sw = selected ? 1.8 : 1.1;
   const halfW = footprintPx.w / 2;
   const halfD = footprintPx.d / 2;
-  // Smaller monogram, primary readout is the Chinese label
   const tagSize = Math.min(9, footprintPx.d * 0.22);
   const labelSize = Math.min(11, footprintPx.d * 0.28);
+
+  // PCH: top-down car silhouette centred in the footprint
+  const pchCar = kind === "porte_cochere" && halfD > 10 ? (() => {
+    const fd = (params?.facingDir as string | undefined) ?? "south";
+    const carRot = ({ north: 0, east: 90, south: 180, west: -90 } as Record<string, number>)[fd] ?? 180;
+    const cl = halfD * 1.30, cw = cl * 0.46;
+    const wl = cl * 0.24, ww = cw * 0.22;
+    const wx = cw / 2 + ww * 0.5, wz = cl * 0.30;
+    return (
+      <g transform={`rotate(${carRot})`}>
+        <rect x={-cw / 2} y={-cl / 2} width={cw} height={cl} rx={cw * 0.18}
+          fill={stroke} fillOpacity={0.10} stroke={stroke} strokeWidth={sw * 0.65} />
+        <rect x={-cw * 0.36} y={-cl * 0.08} width={cw * 0.72} height={cl * 0.40}
+          rx={cw * 0.10} fill="none" stroke={stroke} strokeWidth={sw * 0.45} />
+        {([ [-wx, -wz], [wx, -wz], [-wx, wz], [wx, wz] ] as [number, number][]).map(([cx, cy], i) => (
+          <rect key={i} x={cx - ww / 2} y={cy - wl / 2} width={ww} height={wl}
+            rx={ww * 0.3} fill={stroke} fillOpacity={0.45} />
+        ))}
+      </g>
+    );
+  })() : null;
+
   return (
     <g>
       {/* Translucent envelope — coloured per prefab category */}
       <rect x={-halfW} y={-halfD} width={footprintPx.w} height={footprintPx.d}
         fill={palette.fill}
         stroke={stroke} strokeWidth={sw} strokeDasharray="6 4" rx={4} />
-      {/* Chinese label — primary readout */}
-      <text x={0} y={0} textAnchor="middle" dominantBaseline="middle"
+      {pchCar}
+      {/* Chinese label — shifted to top area when car is shown */}
+      <text x={0} y={pchCar ? -halfD * 0.65 : 0} textAnchor="middle" dominantBaseline="middle"
         fontSize={labelSize} fontWeight={600} fill={stroke}
         style={{ userSelect: "none", pointerEvents: "none" }}>
         {locale === "en" ? def.labelEn : def.label}
@@ -1560,7 +1583,8 @@ export default function YardPlan() {
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <PrefabGlyph kind={prefab.prefabKind} footprintPx={fpPx} selected={isSel} />
+                <PrefabGlyph kind={prefab.prefabKind} footprintPx={fpPx} selected={isSel}
+                  params={prefab.params as Record<string, unknown> | undefined} />
                 {isSel && (
                   <g style={{ pointerEvents: "auto" }}>
                     <g transform={`translate(${fpPx.w / 2 + 10} ${-fpPx.d / 2 - 10})`}
@@ -1964,8 +1988,27 @@ export function YardPlanInspector() {
               { hex: "#c8a96e", label: locale === "en" ? "Champagne" : "香槟金" },
             ];
             const currentColor = (item.params?.carColor as string | undefined) ?? "#1a3a5c";
+            const currentFacing = (item.params?.facingDir as string | undefined) ?? "south";
             return (
               <>
+              <section>
+                <div className="font-semibold mb-2" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Car Facing" : "车头朝向"}</div>
+                <div className="grid grid-cols-4 gap-1">
+                  {(["north","east","south","west"] as const).map(dir => {
+                    const arrow = ({ north:"↑", east:"→", south:"↓", west:"←" } as Record<string,string>)[dir];
+                    const label = ({ north:"北", east:"东", south:"南", west:"西" } as Record<string,string>)[dir];
+                    const isActive = currentFacing === dir;
+                    return (
+                      <button key={dir}
+                        onClick={() => updateYardItem(item.id, { params: { ...item.params, facingDir: dir } })}
+                        className={`py-1.5 rounded text-[11px] font-bold border transition-colors ${isActive ? "border-blue-500 text-white" : "border-gray-200 text-gray-600 hover:bg-blue-50"}`}
+                        style={isActive ? { background: "var(--ds-accent, #3B82F6)", borderColor: "var(--ds-accent, #3B82F6)" } : { background: "var(--ds-surface)" }}>
+                        {arrow}{locale === "en" ? "" : ` ${label}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
               <section>
                 <div className="font-semibold mb-2" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Car Model" : "车型"}</div>
                 <select

@@ -401,11 +401,10 @@ function PorteCochereMesh({ params, rot }: {
         <meshStandardMaterial color="#9C9690" roughness={0.85} />
       </mesh>
 
-      {/* Single car centred under canopy — one scene instance avoids GPU memory explosion */}
+      {/* Single car centred under canopy — one scene instance avoids GPU memory explosion.
+          No extra rotation: the outer group already handles facingDir; GLB faces +Z natively. */}
       <Suspense fallback={null}>
-        <group position={[0, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-          <GlbStructure src={carSrc} sizeM={4.3} />
-        </group>
+        <GlbStructure src={carSrc} sizeM={4.3} />
       </Suspense>
     </group>
   );
