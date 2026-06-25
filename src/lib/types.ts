@@ -1153,6 +1153,42 @@ export function resolveFaceOpacity(
   return fp?.roomFacadeFaces?.[room]?.[sideKey]?.opacity ?? globalOpacity;
 }
 
+/** Returns true if the given wall side of a room faces the building exterior —
+ *  i.e. no other enabled room is physically adjacent on that side.
+ *  Accepts a partial FloorPlan so callers can pass only what they have.
+ *  Falls back to true (assume exterior) whenever layout data is absent,
+ *  so glass is never wrongly suppressed on a real exterior face. */
+export function isExteriorWallSide(
+  fp: Partial<Pick<FloorPlan, "enabledRooms" | "roomLayout" | "roomDimensions">> | undefined | null,
+  room: RoomType,
+  side: string,
+): boolean {
+  const layout = fp?.roomLayout;
+  const dims   = fp?.roomDimensions;
+  const rooms  = fp?.enabledRooms;
+  if (!layout || !rooms) return true;
+  const pos = layout[room];
+  if (!pos) return true;
+  const aw = dims?.[room]?.width  ?? ROOM_DEFS[room]?.width  ?? 300;
+  const ad = dims?.[room]?.depth  ?? ROOM_DEFS[room]?.depth  ?? 300;
+  const ax = pos.x, ay = pos.y;
+  const EPS = 15; // cm — shared-wall snap tolerance
+  for (const r of rooms) {
+    if (r === room) continue;
+    const rl = layout[r]; if (!rl) continue;
+    const rw = dims?.[r]?.width  ?? ROOM_DEFS[r as RoomType]?.width  ?? 300;
+    const rd = dims?.[r]?.depth  ?? ROOM_DEFS[r as RoomType]?.depth  ?? 300;
+    const rx = rl.x, ry = rl.y;
+    const xOverlap = rx < ax + aw - EPS && rx + rw > ax + EPS;
+    const yOverlap = ry < ay + ad - EPS && ry + rd  > ay + EPS;
+    if (side === "N" && Math.abs((ry + rd) - ay) <= EPS && xOverlap) return false;
+    if (side === "S" && Math.abs(ry - (ay + ad))  <= EPS && xOverlap) return false;
+    if (side === "W" && Math.abs((rx + rw) - ax)  <= EPS && yOverlap) return false;
+    if (side === "E" && Math.abs(rx - (ax + aw))  <= EPS && yOverlap) return false;
+  }
+  return true;
+}
+
 /** Interior-door visual styles. Each variant is rendered differently by
  *  RoomDoor3D and listed in the door style picker (2D edit mode). */
 export type DoorStyle =
