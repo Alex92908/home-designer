@@ -1,0 +1,3768 @@
+{
+  "_version": 2,
+  "_coordSystem": "top-left",
+  "floorPlans": [
+    {
+      "rooms": {
+        "living": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_living_0_tvunit-float-white",
+              "furnitureId": "tvunit-float-white",
+              "x": 541.11067620594,
+              "z": 223.8350961286957,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_living_1_rug-nordic-geo",
+              "furnitureId": "rug-nordic-geo",
+              "x": 229.7515223734203,
+              "z": 199.87065677184228,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_living_2_coffee-marble-rect",
+              "furnitureId": "coffee-marble-rect",
+              "x": 269.7217014778148,
+              "z": 244.81073153103034,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_living_3_lamp-arc-gold",
+              "furnitureId": "lamp-arc-gold",
+              "x": 417.8614334853304,
+              "z": 447.4592840282565,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_living_4_plant-monstera",
+              "furnitureId": "plant-monstera",
+              "x": 14,
+              "z": 14,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_living_5_artwork-abstract",
+              "furnitureId": "artwork-abstract",
+              "x": 627.5,
+              "z": 249.56643379870837,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "master": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bedroom": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bedroom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bedroom3": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "kitchen": {
+          "materials": {
+            "wall": {
+              "id": "wall-tile-white",
+              "name": "白色大理石纹砖",
+              "brand": "釉面砖",
+              "price": 180,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#EFEFEF",
+              "texture": "repeating-linear-gradient(45deg, #e0e0e0 0px, #e0e0e0 1px, #EFEFEF 0px, #EFEFEF 50%)",
+              "tags": [
+                "轻奢",
+                "现代"
+              ],
+              "description": "天然大理石纹，奢华感十足"
+            },
+            "floor": {
+              "id": "floor-white-tile",
+              "name": "白色抛光砖",
+              "brand": "全抛釉砖",
+              "price": 150,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#F0EFEB",
+              "tags": [
+                "现代",
+                "北欧"
+              ],
+              "description": "大块白砖，空间感更强"
+            },
+            "light": {
+              "id": "light-linear-pendant",
+              "name": "线形长吊灯",
+              "brand": "线型灯具",
+              "price": 1200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#F5F0E0",
+              "tags": [
+                "现代",
+                "轻奢"
+              ],
+              "description": "餐桌上方首选，线条感强"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_kitchen_0_cabinet-lower-white",
+              "furnitureId": "cabinet-lower-white",
+              "x": 8,
+              "z": 8,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_kitchen_1_cabinet-upper-white",
+              "furnitureId": "cabinet-upper-white",
+              "x": 8,
+              "z": 72,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_kitchen_2_sink-double-steel",
+              "furnitureId": "sink-double-steel",
+              "x": 8.837499999999999,
+              "z": 12.715000000000003,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_kitchen_3_fridge-french-door",
+              "furnitureId": "fridge-french-door",
+              "x": 305.8575,
+              "z": 7.859999999999999,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_kitchen_4_hood-side-black",
+              "furnitureId": "hood-side-black",
+              "x": 155,
+              "z": 10,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bathroom": {
+          "materials": {
+            "wall": {
+              "id": "wall-tile-metro",
+              "name": "地铁砖（浴室/厨房）",
+              "brand": "全抛釉砖",
+              "price": 95,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#FAFAFA",
+              "texture": "repeating-linear-gradient(0deg, #E0E0E0 0px, #E0E0E0 1px, #FAFAFA 1px, #FAFAFA 8px)",
+              "tags": [
+                "现代",
+                "工业风"
+              ],
+              "description": "经典白色地铁砖，百搭"
+            },
+            "floor": {
+              "id": "floor-white-tile",
+              "name": "白色抛光砖",
+              "brand": "全抛釉砖",
+              "price": 150,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#F0EFEB",
+              "tags": [
+                "现代",
+                "北欧"
+              ],
+              "description": "大块白砖，空间感更强"
+            },
+            "light": {
+              "id": "light-smart-panel",
+              "name": "智能主灯面板",
+              "brand": "灯饰",
+              "price": 2280,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#FFFFFF",
+              "tags": [
+                "现代"
+              ],
+              "description": "方形 LED 主灯 + 可调色温"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_bathroom_0_toilet-wallhung",
+              "furnitureId": "toilet-wallhung",
+              "x": 10.239999999999988,
+              "z": 8.32,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_bathroom_1_vanity-double-marble",
+              "furnitureId": "vanity-double-marble",
+              "x": 7.030000000000001,
+              "z": 114.86452595587218,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_bathroom_2_bathtub-freestanding",
+              "furnitureId": "bathtub-freestanding",
+              "x": 64.70249999999999,
+              "z": 10.945000000000007,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "pi_2_ckjey",
+              "furnitureId": "toilet-standard",
+              "x": 173.00754458161867,
+              "z": 174.71879286694102,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bathroom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "dining": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-linear-pendant",
+              "name": "线形长吊灯",
+              "brand": "线型灯具",
+              "price": 1200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#F5F0E0",
+              "tags": [
+                "现代",
+                "轻奢"
+              ],
+              "description": "餐桌上方首选，线条感强"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_dining_0_dining-marble-round",
+              "furnitureId": "dining-marble-round",
+              "x": 132.49421875,
+              "z": 99.73234374999998,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_dining_1_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 179.0865625,
+              "z": 223.92609375,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_dining_2_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 169.11234375,
+              "z": 43.017812500000005,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_dining_3_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 80.94390625,
+              "z": 107.70499999999998,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_dining_4_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 259.934375,
+              "z": 103.78437500000001,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_dining_5_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 78.8109375,
+              "z": 162.72984375,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_dining_6_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 261.25984375,
+              "z": 157.95921875,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "study": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-linear-pendant",
+              "name": "线形长吊灯",
+              "brand": "线型灯具",
+              "price": 1200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#F5F0E0",
+              "tags": [
+                "现代",
+                "轻奢"
+              ],
+              "description": "餐桌上方首选，线条感强"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_study_0_desk-l-shape-white",
+              "furnitureId": "desk-l-shape-white",
+              "x": 76.155,
+              "z": 326.85046875,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_study_1_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 132.5,
+              "z": 297,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_study_2_bookshelf-solid-walnut",
+              "furnitureId": "bookshelf-solid-walnut",
+              "x": 244.5,
+              "z": 307.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "study2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "closet": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "balcony": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "balcony2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "yard": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "garage": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "gym": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "cinema": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom1": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom3": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom4": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom5": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "stair": {
+          "materials": {},
+          "placedItems": [
+            {
+              "instanceId": "pi_1_0iynr",
+              "furnitureId": "staircase-u-shaped",
+              "x": 0,
+              "z": 0,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "hallway": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "pool": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "terrace": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "deck": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "equipment_room": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        }
+      },
+      "enabledRooms": [
+        "kitchen",
+        "bathroom",
+        "dining",
+        "stair",
+        "hallway",
+        "living",
+        "study",
+        "closet"
+      ],
+      "roomLayout": {
+        "master": {
+          "x": 0,
+          "y": 0
+        },
+        "closet": {
+          "x": 1020,
+          "y": 560
+        },
+        "bathroom": {
+          "x": 400,
+          "y": 0
+        },
+        "bathroom2": {
+          "x": 620,
+          "y": 200
+        },
+        "study": {
+          "x": 680,
+          "y": 560
+        },
+        "study2": {
+          "x": 980,
+          "y": 640
+        },
+        "living": {
+          "x": 0,
+          "y": 520
+        },
+        "bedroom": {
+          "x": 500,
+          "y": 360
+        },
+        "bedroom2": {
+          "x": 500,
+          "y": 660
+        },
+        "bedroom3": {
+          "x": 500,
+          "y": 940
+        },
+        "dining": {
+          "x": 640,
+          "y": 0
+        },
+        "kitchen": {
+          "x": 0,
+          "y": 0
+        },
+        "balcony": {
+          "x": 0,
+          "y": 1100
+        },
+        "balcony2": {
+          "x": 500,
+          "y": 1100
+        },
+        "yard": {
+          "x": -860,
+          "y": 0
+        },
+        "garage": {
+          "x": -560,
+          "y": 0
+        },
+        "gym": {
+          "x": -560,
+          "y": 320
+        },
+        "cinema": {
+          "x": -560,
+          "y": 640
+        },
+        "custom1": {
+          "x": 820,
+          "y": 0
+        },
+        "custom2": {
+          "x": 820,
+          "y": 300
+        },
+        "custom3": {
+          "x": 820,
+          "y": 600
+        },
+        "custom4": {
+          "x": 820,
+          "y": 900
+        },
+        "custom5": {
+          "x": 820,
+          "y": 1200
+        },
+        "stair": {
+          "x": 1000,
+          "y": 0
+        },
+        "hallway": {
+          "x": 0,
+          "y": 320
+        },
+        "pool": {
+          "x": 1200,
+          "y": 400
+        },
+        "terrace": {
+          "x": 1200,
+          "y": 800
+        },
+        "deck": {
+          "x": 1200,
+          "y": 1100
+        },
+        "equipment_room": {
+          "x": 0,
+          "y": 900
+        }
+      },
+      "roomDimensions": {
+        "living": {
+          "width": 680,
+          "depth": 500
+        },
+        "master": {
+          "width": 400,
+          "depth": 360
+        },
+        "bedroom": {
+          "width": 320,
+          "depth": 300
+        },
+        "bedroom2": {
+          "width": 300,
+          "depth": 280
+        },
+        "bedroom3": {
+          "width": 280,
+          "depth": 260
+        },
+        "kitchen": {
+          "width": 400,
+          "depth": 320
+        },
+        "bathroom": {
+          "width": 240,
+          "depth": 320
+        },
+        "bathroom2": {
+          "width": 240,
+          "depth": 200
+        },
+        "dining": {
+          "width": 360,
+          "depth": 340
+        },
+        "study": {
+          "width": 340,
+          "depth": 460
+        },
+        "study2": {
+          "width": 300,
+          "depth": 260
+        },
+        "closet": {
+          "width": 220,
+          "depth": 460
+        },
+        "balcony": {
+          "width": 420,
+          "depth": 160
+        },
+        "balcony2": {
+          "width": 300,
+          "depth": 160
+        },
+        "yard": {
+          "width": 800,
+          "depth": 600
+        },
+        "garage": {
+          "width": 500,
+          "depth": 320
+        },
+        "gym": {
+          "width": 360,
+          "depth": 320
+        },
+        "cinema": {
+          "width": 420,
+          "depth": 320
+        },
+        "custom1": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom2": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom3": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom4": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom5": {
+          "width": 300,
+          "depth": 300
+        },
+        "stair": {
+          "width": 240,
+          "depth": 340
+        },
+        "hallway": {
+          "width": 1240,
+          "depth": 240
+        },
+        "pool": {
+          "width": 600,
+          "depth": 350
+        },
+        "terrace": {
+          "width": 500,
+          "depth": 300
+        },
+        "deck": {
+          "width": 400,
+          "depth": 250
+        },
+        "equipment_room": {
+          "width": 300,
+          "depth": 250
+        }
+      },
+      "roomWindows": {
+        "living": [
+          {
+            "id": "living-w1781488592842",
+            "wall": "W",
+            "pos": 125,
+            "len": 200,
+            "style": "sliding"
+          }
+        ],
+        "master": [
+          {
+            "id": "master-w2",
+            "wall": "E",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "bedroom": [
+          {
+            "id": "bedroom-w3",
+            "wall": "N",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "bedroom2": [
+          {
+            "id": "bedroom2-w4",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "bedroom3": [
+          {
+            "id": "bedroom3-w5",
+            "wall": "N",
+            "pos": 70,
+            "len": 126
+          }
+        ],
+        "kitchen": [
+          {
+            "id": "kitchen-w6",
+            "wall": "N",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "bathroom": [
+          {
+            "id": "bathroom-w1781100082556",
+            "wall": "N",
+            "pos": 60,
+            "len": 96
+          }
+        ],
+        "bathroom2": [],
+        "dining": [
+          {
+            "id": "dining-w1781100077342",
+            "wall": "N",
+            "pos": 90,
+            "len": 144
+          }
+        ],
+        "study": [
+          {
+            "id": "study-w1781100036097",
+            "wall": "S",
+            "pos": 85,
+            "len": 136
+          }
+        ],
+        "study2": [
+          {
+            "id": "study2-w9",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "closet": [
+          {
+            "id": "closet-w1781100056117",
+            "wall": "S",
+            "pos": 55,
+            "len": 88
+          }
+        ],
+        "balcony": [
+          {
+            "id": "balcony-w10",
+            "wall": "N",
+            "pos": 105,
+            "len": 189
+          }
+        ],
+        "balcony2": [
+          {
+            "id": "balcony2-w11",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "yard": [],
+        "garage": [
+          {
+            "id": "garage-w12",
+            "wall": "E",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "gym": [
+          {
+            "id": "gym-w13",
+            "wall": "N",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "cinema": [],
+        "custom1": [],
+        "custom2": [],
+        "custom3": [],
+        "custom4": [],
+        "custom5": [],
+        "stair": [
+          {
+            "id": "stair-w1781100070257",
+            "wall": "N",
+            "pos": 60,
+            "len": 96
+          }
+        ],
+        "hallway": [],
+        "pool": [],
+        "terrace": [],
+        "deck": [],
+        "pergola": [],
+        "equipment_room": []
+      },
+      "roomDoorPos": {
+        "living": 50,
+        "master": 40,
+        "bedroom": 32,
+        "bedroom2": 30,
+        "bedroom3": 28,
+        "kitchen": 36,
+        "bathroom": 26,
+        "bathroom2": 24,
+        "dining": 38,
+        "study": 32,
+        "study2": 30,
+        "closet": 26,
+        "balcony": 42,
+        "balcony2": 30,
+        "yard": 80,
+        "garage": 50,
+        "gym": 36,
+        "cinema": 42,
+        "custom1": 30,
+        "custom2": 30,
+        "custom3": 30,
+        "custom4": 30,
+        "custom5": 30,
+        "stair": 26,
+        "hallway": 12,
+        "pool": 60,
+        "terrace": 50,
+        "deck": 40,
+        "pergola": 30,
+        "equipment_room": 30
+      },
+      "roomHasDoor": {
+        "living": true,
+        "master": true,
+        "bedroom": true,
+        "bedroom2": true,
+        "bedroom3": true,
+        "kitchen": true,
+        "bathroom": true,
+        "bathroom2": true,
+        "dining": true,
+        "study": false,
+        "study2": true,
+        "closet": false,
+        "balcony": true,
+        "balcony2": true,
+        "yard": true,
+        "garage": true,
+        "gym": true,
+        "cinema": true,
+        "custom1": true,
+        "custom2": true,
+        "custom3": true,
+        "custom4": true,
+        "custom5": true,
+        "stair": false,
+        "hallway": false,
+        "pool": true,
+        "terrace": true,
+        "deck": true,
+        "rooftop_lounge": true,
+        "rooftop_pool": true,
+        "rooftop_garden": true,
+        "rooftop_bar": true,
+        "equipment_room": true
+      },
+      "roomDoorWall": {
+        "living": "S",
+        "master": "S",
+        "bedroom": "S",
+        "bedroom2": "S",
+        "bedroom3": "S",
+        "kitchen": "S",
+        "bathroom": "S",
+        "bathroom2": "S",
+        "dining": "S",
+        "study": "S",
+        "study2": "S",
+        "closet": "S",
+        "balcony": "S",
+        "balcony2": "S",
+        "yard": "S",
+        "garage": "S",
+        "gym": "S",
+        "cinema": "S",
+        "custom1": "S",
+        "custom2": "S",
+        "custom3": "S",
+        "custom4": "S",
+        "custom5": "S",
+        "stair": "S",
+        "hallway": "S",
+        "pool": "S",
+        "terrace": "S",
+        "deck": "S",
+        "pergola": "S",
+        "equipment_room": "S"
+      },
+      "roomShapes": {
+        "hallway": {
+          "preset": "rect",
+          "points": [
+            [
+              0,
+              0
+            ],
+            [
+              1200,
+              0
+            ],
+            [
+              1200,
+              240
+            ],
+            [
+              0,
+              240
+            ]
+          ]
+        }
+      },
+      "yardPlan": {
+        "items": [
+          {
+            "type": "zone",
+            "zoneKind": "utility",
+            "x": 0,
+            "z": -900,
+            "polygon": [
+              [
+                -500,
+                -300
+              ],
+              [
+                500,
+                -300
+              ],
+              [
+                500,
+                300
+              ],
+              [
+                -500,
+                300
+              ]
+            ],
+            "rot": 0,
+            "id": "modernVilla-561d50-0"
+          },
+          {
+            "type": "prefab",
+            "prefabKind": "porte_cochere",
+            "x": 0,
+            "z": -900,
+            "rot": 0,
+            "params": {
+              "carCount": 2,
+              "pillarStyle": "round",
+              "facingDir": "south"
+            },
+            "id": "modernVilla-561d50-1"
+          },
+          {
+            "type": "zone",
+            "zoneKind": "social",
+            "x": 0,
+            "z": 1125,
+            "polygon": [
+              [
+                -450,
+                -300
+              ],
+              [
+                450,
+                -300
+              ],
+              [
+                450,
+                300
+              ],
+              [
+                -450,
+                300
+              ]
+            ],
+            "rot": 0,
+            "id": "modernVilla-561d50-2"
+          },
+          {
+            "type": "prefab",
+            "prefabKind": "social_island",
+            "x": -325,
+            "z": 1025,
+            "rot": 0,
+            "params": {
+              "sizeM": {
+                "w": 5,
+                "d": 4
+              },
+              "fireFeature": "pit",
+              "kitchenFacing": "north",
+              "sunkenSeat": true
+            },
+            "id": "modernVilla-561d50-3"
+          },
+          {
+            "type": "prefab",
+            "prefabKind": "pool",
+            "x": 375,
+            "z": 1375,
+            "rot": 0,
+            "id": "modernVilla-561d50-4"
+          },
+          {
+            "type": "zone",
+            "zoneKind": "private",
+            "x": 1100,
+            "z": 0,
+            "polygon": [
+              [
+                -250,
+                -350
+              ],
+              [
+                250,
+                -350
+              ],
+              [
+                250,
+                350
+              ],
+              [
+                -250,
+                350
+              ]
+            ],
+            "rot": 0,
+            "id": "modernVilla-561d50-5"
+          },
+          {
+            "type": "prefab",
+            "prefabKind": "outdoor_kitchen",
+            "x": 1100,
+            "z": 0,
+            "rot": 0,
+            "id": "modernVilla-561d50-6"
+          },
+          {
+            "type": "prefab",
+            "prefabKind": "slat_wall",
+            "x": -1100,
+            "z": 0,
+            "rot": 1.5707963267948966,
+            "params": {
+              "lengthM": 8,
+              "heightM": 1.8,
+              "slatCm": 5,
+              "gapCm": 2,
+              "backWall": true
+            },
+            "id": "modernVilla-561d50-7"
+          },
+          {
+            "type": "singleton",
+            "kind": "tree.olive",
+            "x": -800,
+            "z": -200,
+            "scale": 1.4,
+            "id": "modernVilla-561d50-8"
+          },
+          {
+            "type": "singleton",
+            "kind": "tree.maple",
+            "x": 800,
+            "z": -500,
+            "scale": 1.4,
+            "id": "modernVilla-561d50-9"
+          }
+        ],
+        "paths": []
+      },
+      "roomDoorStyle": {},
+      "roomDoorLen": {},
+      "roomDoorH": {
+        "living": 200
+      },
+      "roomWallsHidden": {
+        "living": {
+          "N": true
+        },
+        "hallway": {
+          "N": true,
+          "S": true
+        },
+        "stair": {
+          "ceiling": true,
+          "S": true
+        }
+      },
+      "roomDoors": {
+        "study": [
+          {
+            "id": "study-d1779506223681",
+            "wall": "N",
+            "pos": 125,
+            "len": 80,
+            "h": 200,
+            "style": "wood_panel"
+          }
+        ],
+        "closet": [
+          {
+            "id": "closet-d1779506236630",
+            "wall": "N",
+            "pos": 68.015625,
+            "len": 80,
+            "h": 200,
+            "style": "wood_panel"
+          }
+        ]
+      }
+    },
+    {
+      "rooms": {
+        "living": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "master": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-linear-pendant",
+              "name": "线形长吊灯",
+              "brand": "线型灯具",
+              "price": 1200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#F5F0E0",
+              "tags": [
+                "现代",
+                "轻奢"
+              ],
+              "description": "餐桌上方首选，线条感强"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_master_0_nightstand-white",
+              "furnitureId": "nightstand-white",
+              "x": 75.85875,
+              "z": 7.965937500000003,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_master_1_nightstand-white",
+              "furnitureId": "nightstand-white",
+              "x": 366.0759895833333,
+              "z": 7.942604166666676,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_master_2_wardrobe-slide-white",
+              "furnitureId": "wardrobe-slide-white",
+              "x": 360.264375,
+              "z": 149.53796875,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_master_3_dresser-nordic-white",
+              "furnitureId": "dresser-nordic-white",
+              "x": 247.86114583333324,
+              "z": 364.7279687500001,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "pi_1_2okwm",
+              "furnitureId": "bed-fabric-beige",
+              "x": 143.4772916666667,
+              "z": 0.7167708333333138,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bedroom": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_bedroom_0_bed-fabric-beige",
+              "furnitureId": "bed-fabric-beige",
+              "x": 63.336562500000014,
+              "z": 192.00484374999996,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_bedroom_1_nightstand-white",
+              "furnitureId": "nightstand-white",
+              "x": 3.8703125000000007,
+              "z": 369.69953125,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_bedroom_2_wardrobe-slide-white",
+              "furnitureId": "wardrobe-slide-white",
+              "x": 230,
+              "z": 180.538125,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "pi_4_trp61",
+              "furnitureId": "nightstand-white",
+              "x": 270.58781250000004,
+              "z": 371.59515625,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bedroom2": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "pi_6_q3kle",
+              "furnitureId": "bed-leather-dark",
+              "x": 66.33734375,
+              "z": 190.58437500000002,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_10_7ec7a",
+              "furnitureId": "nightstand-oak",
+              "x": 5.345937500000005,
+              "z": 373.01140625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_11_qlagw",
+              "furnitureId": "nightstand-oak",
+              "x": 276.17046875000005,
+              "z": 374.53390625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_12_4atyl",
+              "furnitureId": "wardrobe-slide-white",
+              "x": 183.2078125,
+              "z": 96.16296875,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bedroom3": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "pi_16_iz1y1",
+              "furnitureId": "nightstand-white",
+              "x": 7.371718749999999,
+              "z": 375.31203125,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_17_yfuwe",
+              "furnitureId": "nightstand-white",
+              "x": 230,
+              "z": 373.97656250000006,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_18_krpyp",
+              "furnitureId": "bed-single-white",
+              "x": 83.1303125,
+              "z": 205.140625,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_19_hllkk",
+              "furnitureId": "wardrobe-slide-white",
+              "x": 124.45203125,
+              "z": 98.14937500000002,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "kitchen": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bathroom": {
+          "materials": {
+            "wall": {
+              "id": "wall-tile-metro",
+              "name": "地铁砖（浴室/厨房）",
+              "brand": "全抛釉砖",
+              "price": 95,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#FAFAFA",
+              "texture": "repeating-linear-gradient(0deg, #E0E0E0 0px, #E0E0E0 1px, #FAFAFA 1px, #FAFAFA 8px)",
+              "tags": [
+                "现代",
+                "工业风"
+              ],
+              "description": "经典白色地铁砖，百搭"
+            },
+            "floor": {
+              "id": "floor-white-tile",
+              "name": "白色抛光砖",
+              "brand": "全抛釉砖",
+              "price": 150,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#F0EFEB",
+              "tags": [
+                "现代",
+                "北欧"
+              ],
+              "description": "大块白砖，空间感更强"
+            },
+            "light": {
+              "id": "light-smart-panel",
+              "name": "智能主灯面板",
+              "brand": "灯饰",
+              "price": 2280,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#FFFFFF",
+              "tags": [
+                "现代"
+              ],
+              "description": "方形 LED 主灯 + 可调色温"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_bathroom_0_toilet-wallhung",
+              "furnitureId": "toilet-wallhung",
+              "x": 234,
+              "z": 6.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_bathroom_1_vanity-double-marble",
+              "furnitureId": "vanity-double-marble",
+              "x": 19.12654320987656,
+              "z": 293.4065072016461,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_bathroom_2_bathtub-freestanding",
+              "furnitureId": "bathtub-freestanding",
+              "x": 8,
+              "z": 8,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "pi_1_xczig",
+              "furnitureId": "toilet-squat",
+              "x": 198.2844650205761,
+              "z": 152.93145576131684,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_2_8ovyx",
+              "furnitureId": "shower-walkin",
+              "x": 5.972865226337447,
+              "z": 178.6021090534979,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bathroom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "dining": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "study": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-linear-pendant",
+              "name": "线形长吊灯",
+              "brand": "线型灯具",
+              "price": 1200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#F5F0E0",
+              "tags": [
+                "现代",
+                "轻奢"
+              ],
+              "description": "餐桌上方首选，线条感强"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "pi_20_ctk78",
+              "furnitureId": "bookshelf-open-white",
+              "x": 135,
+              "z": 90.91046874999998,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_21_hg2fv",
+              "furnitureId": "desk-l-shape-white",
+              "x": 16.64,
+              "z": 336.84687499999995,
+              "rotation": 180,
+              "scaleW": 0.8,
+              "scaleD": 0.65,
+              "scaleH": 0.9
+            },
+            {
+              "instanceId": "pi_23_1sifq",
+              "furnitureId": "chair-ergonomic",
+              "x": 67.2946875,
+              "z": 247.27734375,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "study2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "closet": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "pi_2_xjcrc",
+              "furnitureId": "wardrobe-open-rack",
+              "x": 111.90156250000001,
+              "z": 126.5221875,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_3_zgdzw",
+              "furnitureId": "closet-system-white",
+              "x": -89.51375,
+              "z": 106.83499999999998,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "balcony": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "balcony2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "yard": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "garage": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "gym": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "cinema": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom1": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom3": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom4": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom5": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "stair": {
+          "materials": {},
+          "placedItems": [
+            {
+              "instanceId": "pi_2_s2jgj",
+              "furnitureId": "staircase-u-shaped",
+              "x": 0,
+              "z": 6.549843750000008,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1.2,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "hallway": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "pool": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "terrace": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "deck": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "equipment_room": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        }
+      },
+      "enabledRooms": [
+        "master",
+        "closet",
+        "bathroom",
+        "stair",
+        "hallway",
+        "bedroom",
+        "bedroom2",
+        "bedroom3",
+        "study"
+      ],
+      "roomLayout": {
+        "master": {
+          "x": 0,
+          "y": 0
+        },
+        "closet": {
+          "x": 520,
+          "y": 0
+        },
+        "bathroom": {
+          "x": 720,
+          "y": 0
+        },
+        "bathroom2": {
+          "x": 620,
+          "y": 200
+        },
+        "study": {
+          "x": 1000,
+          "y": 600
+        },
+        "study2": {
+          "x": 660,
+          "y": 290
+        },
+        "living": {
+          "x": 0,
+          "y": 360
+        },
+        "bedroom": {
+          "x": 0,
+          "y": 600
+        },
+        "bedroom2": {
+          "x": 380,
+          "y": 600
+        },
+        "bedroom3": {
+          "x": 720,
+          "y": 600
+        },
+        "dining": {
+          "x": 0,
+          "y": 780
+        },
+        "kitchen": {
+          "x": 380,
+          "y": 780
+        },
+        "balcony": {
+          "x": 0,
+          "y": 1100
+        },
+        "balcony2": {
+          "x": 500,
+          "y": 1100
+        },
+        "yard": {
+          "x": -860,
+          "y": 0
+        },
+        "garage": {
+          "x": -560,
+          "y": 0
+        },
+        "gym": {
+          "x": -560,
+          "y": 320
+        },
+        "cinema": {
+          "x": -560,
+          "y": 640
+        },
+        "custom1": {
+          "x": 820,
+          "y": 0
+        },
+        "custom2": {
+          "x": 820,
+          "y": 300
+        },
+        "custom3": {
+          "x": 820,
+          "y": 600
+        },
+        "custom4": {
+          "x": 820,
+          "y": 900
+        },
+        "custom5": {
+          "x": 820,
+          "y": 1200
+        },
+        "stair": {
+          "x": 1000,
+          "y": 0
+        },
+        "hallway": {
+          "x": 0,
+          "y": 420
+        },
+        "pool": {
+          "x": 1200,
+          "y": 400
+        },
+        "terrace": {
+          "x": 1200,
+          "y": 800
+        },
+        "deck": {
+          "x": 1200,
+          "y": 1100
+        },
+        "equipment_room": {
+          "x": 0,
+          "y": 900
+        }
+      },
+      "roomDimensions": {
+        "living": {
+          "width": 500,
+          "depth": 420
+        },
+        "master": {
+          "width": 520,
+          "depth": 420
+        },
+        "bedroom": {
+          "width": 380,
+          "depth": 420
+        },
+        "bedroom2": {
+          "width": 340,
+          "depth": 420
+        },
+        "bedroom3": {
+          "width": 280,
+          "depth": 420
+        },
+        "kitchen": {
+          "width": 360,
+          "depth": 280
+        },
+        "bathroom": {
+          "width": 280,
+          "depth": 420
+        },
+        "bathroom2": {
+          "width": 240,
+          "depth": 200
+        },
+        "dining": {
+          "width": 380,
+          "depth": 320
+        },
+        "study": {
+          "width": 240,
+          "depth": 420
+        },
+        "study2": {
+          "width": 300,
+          "depth": 260
+        },
+        "closet": {
+          "width": 200,
+          "depth": 420
+        },
+        "balcony": {
+          "width": 420,
+          "depth": 160
+        },
+        "balcony2": {
+          "width": 300,
+          "depth": 160
+        },
+        "yard": {
+          "width": 800,
+          "depth": 600
+        },
+        "garage": {
+          "width": 500,
+          "depth": 320
+        },
+        "gym": {
+          "width": 360,
+          "depth": 320
+        },
+        "cinema": {
+          "width": 420,
+          "depth": 320
+        },
+        "custom1": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom2": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom3": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom4": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom5": {
+          "width": 300,
+          "depth": 300
+        },
+        "stair": {
+          "width": 240,
+          "depth": 420
+        },
+        "hallway": {
+          "width": 1240,
+          "depth": 180
+        },
+        "pool": {
+          "width": 600,
+          "depth": 350
+        },
+        "terrace": {
+          "width": 500,
+          "depth": 300
+        },
+        "deck": {
+          "width": 400,
+          "depth": 250
+        },
+        "equipment_room": {
+          "width": 300,
+          "depth": 250
+        }
+      },
+      "roomWindows": {
+        "living": [
+          {
+            "id": "living-w1",
+            "wall": "E",
+            "pos": 105,
+            "len": 189
+          }
+        ],
+        "master": [
+          {
+            "id": "master-w1781100099990",
+            "wall": "N",
+            "pos": 130,
+            "len": 208
+          }
+        ],
+        "bedroom": [
+          {
+            "id": "bedroom-w1781100125113",
+            "wall": "S",
+            "pos": 95,
+            "len": 152
+          }
+        ],
+        "bedroom2": [
+          {
+            "id": "bedroom2-w1781100133550",
+            "wall": "S",
+            "pos": 85,
+            "len": 136
+          }
+        ],
+        "bedroom3": [
+          {
+            "id": "bedroom3-w1781100140474",
+            "wall": "S",
+            "pos": 70,
+            "len": 112
+          }
+        ],
+        "kitchen": [
+          {
+            "id": "kitchen-w6",
+            "wall": "N",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "bathroom": [
+          {
+            "id": "bathroom-w1781100110825",
+            "wall": "N",
+            "pos": 70,
+            "len": 112
+          }
+        ],
+        "bathroom2": [],
+        "dining": [
+          {
+            "id": "dining-w7",
+            "wall": "E",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "study": [
+          {
+            "id": "study-w1781100148913",
+            "wall": "S",
+            "pos": 60,
+            "len": 96
+          }
+        ],
+        "study2": [
+          {
+            "id": "study2-w9",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "closet": [
+          {
+            "id": "closet-w1781100106621",
+            "wall": "N",
+            "pos": 50,
+            "len": 80
+          }
+        ],
+        "balcony": [
+          {
+            "id": "balcony-w10",
+            "wall": "N",
+            "pos": 105,
+            "len": 189
+          }
+        ],
+        "balcony2": [
+          {
+            "id": "balcony2-w11",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "yard": [],
+        "garage": [
+          {
+            "id": "garage-w12",
+            "wall": "E",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "gym": [
+          {
+            "id": "gym-w13",
+            "wall": "N",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "cinema": [],
+        "custom1": [],
+        "custom2": [],
+        "custom3": [],
+        "custom4": [],
+        "custom5": [],
+        "stair": [
+          {
+            "id": "stair-w1781100113871",
+            "wall": "N",
+            "pos": 60,
+            "len": 96
+          }
+        ],
+        "hallway": [],
+        "pool": [],
+        "terrace": [],
+        "deck": [],
+        "pergola": [],
+        "equipment_room": []
+      },
+      "roomDoorPos": {
+        "living": 50,
+        "master": 40,
+        "bedroom": 32,
+        "bedroom2": 30,
+        "bedroom3": 28,
+        "kitchen": 36,
+        "bathroom": 26,
+        "bathroom2": 24,
+        "dining": 38,
+        "study": 32,
+        "study2": 30,
+        "closet": 26,
+        "balcony": 42,
+        "balcony2": 30,
+        "yard": 80,
+        "garage": 50,
+        "gym": 36,
+        "cinema": 42,
+        "custom1": 30,
+        "custom2": 30,
+        "custom3": 30,
+        "custom4": 30,
+        "custom5": 30,
+        "stair": 26,
+        "hallway": 12,
+        "pool": 60,
+        "terrace": 50,
+        "deck": 40,
+        "pergola": 30,
+        "equipment_room": 30
+      },
+      "roomHasDoor": {
+        "living": true,
+        "master": true,
+        "bedroom": false,
+        "bedroom2": false,
+        "bedroom3": false,
+        "kitchen": true,
+        "bathroom": true,
+        "bathroom2": true,
+        "dining": true,
+        "study": false,
+        "study2": true,
+        "closet": true,
+        "balcony": true,
+        "balcony2": true,
+        "yard": true,
+        "garage": true,
+        "gym": true,
+        "cinema": true,
+        "custom1": true,
+        "custom2": true,
+        "custom3": true,
+        "custom4": true,
+        "custom5": true,
+        "stair": true,
+        "hallway": false,
+        "pool": true,
+        "terrace": true,
+        "deck": true,
+        "rooftop_lounge": true,
+        "rooftop_pool": true,
+        "rooftop_garden": true,
+        "rooftop_bar": true,
+        "equipment_room": true
+      },
+      "roomDoorWall": {
+        "living": "S",
+        "master": "S",
+        "bedroom": "S",
+        "bedroom2": "S",
+        "bedroom3": "S",
+        "kitchen": "S",
+        "bathroom": "S",
+        "bathroom2": "S",
+        "dining": "S",
+        "study": "S",
+        "study2": "S",
+        "closet": "S",
+        "balcony": "S",
+        "balcony2": "S",
+        "yard": "S",
+        "garage": "S",
+        "gym": "S",
+        "cinema": "S",
+        "custom1": "S",
+        "custom2": "S",
+        "custom3": "S",
+        "custom4": "S",
+        "custom5": "S",
+        "stair": "S",
+        "hallway": "S",
+        "pool": "S",
+        "terrace": "S",
+        "deck": "S",
+        "pergola": "S",
+        "equipment_room": "S"
+      },
+      "roomDoorStyle": {},
+      "roomDoorLen": {},
+      "roomShapes": {},
+      "roomDoors": {
+        "bedroom": [
+          {
+            "id": "bedroom-d1779506309280",
+            "wall": "N",
+            "pos": 150,
+            "len": 80,
+            "h": 200,
+            "style": "wood_panel"
+          }
+        ],
+        "bedroom2": [
+          {
+            "id": "bedroom2-d1779506346313",
+            "wall": "N",
+            "pos": 130,
+            "len": 80,
+            "h": 200,
+            "style": "wood_panel"
+          }
+        ],
+        "bedroom3": [
+          {
+            "id": "bedroom3-d1779506368846",
+            "wall": "N",
+            "pos": 100,
+            "len": 80,
+            "h": 200,
+            "style": "wood_panel"
+          }
+        ],
+        "study": [
+          {
+            "id": "study-d1779506387204",
+            "wall": "N",
+            "pos": 60,
+            "len": 80,
+            "h": 200,
+            "style": "wood_panel"
+          }
+        ]
+      },
+      "roomWallsHidden": {
+        "stair": {
+          "S": true,
+          "ceiling": true
+        }
+      }
+    },
+    {
+      "rooms": {
+        "living": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "master": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bedroom": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bedroom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bedroom3": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "kitchen": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bathroom": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bathroom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "dining": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "study": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "study2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "closet": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "balcony": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "balcony2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "yard": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "garage": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "gym": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "cinema": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom1": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom3": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom4": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom5": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "stair": {
+          "materials": {},
+          "placedItems": []
+        },
+        "hallway": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "pool": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "terrace": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "deck": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "equipment_room": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "pergola": {
+          "materials": {},
+          "placedItems": [
+            {
+              "instanceId": "pi_1_i0a9v",
+              "furnitureId": "pergola",
+              "x": 0,
+              "z": 0,
+              "rotation": 0
+            }
+          ],
+          "exteriorDecor": []
+        }
+      },
+      "enabledRooms": [
+        "stair",
+        "pergola"
+      ],
+      "roomLayout": {
+        "master": {
+          "x": 0,
+          "y": 0
+        },
+        "closet": {
+          "x": 400,
+          "y": 0
+        },
+        "bathroom": {
+          "x": 400,
+          "y": 200
+        },
+        "bathroom2": {
+          "x": 620,
+          "y": 200
+        },
+        "study": {
+          "x": 660,
+          "y": 0
+        },
+        "study2": {
+          "x": 660,
+          "y": 290
+        },
+        "living": {
+          "x": 0,
+          "y": 360
+        },
+        "bedroom": {
+          "x": 500,
+          "y": 360
+        },
+        "bedroom2": {
+          "x": 500,
+          "y": 660
+        },
+        "bedroom3": {
+          "x": 500,
+          "y": 940
+        },
+        "dining": {
+          "x": 0,
+          "y": 780
+        },
+        "kitchen": {
+          "x": 380,
+          "y": 780
+        },
+        "balcony": {
+          "x": 0,
+          "y": 1100
+        },
+        "balcony2": {
+          "x": 500,
+          "y": 1100
+        },
+        "yard": {
+          "x": -860,
+          "y": 0
+        },
+        "garage": {
+          "x": -560,
+          "y": 0
+        },
+        "gym": {
+          "x": -560,
+          "y": 320
+        },
+        "cinema": {
+          "x": -560,
+          "y": 640
+        },
+        "custom1": {
+          "x": 820,
+          "y": 0
+        },
+        "custom2": {
+          "x": 820,
+          "y": 300
+        },
+        "custom3": {
+          "x": 820,
+          "y": 600
+        },
+        "custom4": {
+          "x": 820,
+          "y": 900
+        },
+        "custom5": {
+          "x": 820,
+          "y": 1200
+        },
+        "stair": {
+          "x": 1000,
+          "y": 0
+        },
+        "hallway": {
+          "x": 380,
+          "y": 360
+        },
+        "pool": {
+          "x": 1200,
+          "y": 400
+        },
+        "terrace": {
+          "x": 1200,
+          "y": 800
+        },
+        "deck": {
+          "x": 1200,
+          "y": 1100
+        },
+        "equipment_room": {
+          "x": 0,
+          "y": 900
+        },
+        "pergola": {
+          "x": 300,
+          "y": 600
+        }
+      },
+      "roomDimensions": {
+        "living": {
+          "width": 500,
+          "depth": 420
+        },
+        "master": {
+          "width": 400,
+          "depth": 360
+        },
+        "bedroom": {
+          "width": 320,
+          "depth": 300
+        },
+        "bedroom2": {
+          "width": 300,
+          "depth": 280
+        },
+        "bedroom3": {
+          "width": 280,
+          "depth": 260
+        },
+        "kitchen": {
+          "width": 360,
+          "depth": 280
+        },
+        "bathroom": {
+          "width": 260,
+          "depth": 220
+        },
+        "bathroom2": {
+          "width": 240,
+          "depth": 200
+        },
+        "dining": {
+          "width": 380,
+          "depth": 320
+        },
+        "study": {
+          "width": 320,
+          "depth": 290
+        },
+        "study2": {
+          "width": 300,
+          "depth": 260
+        },
+        "closet": {
+          "width": 260,
+          "depth": 200
+        },
+        "balcony": {
+          "width": 420,
+          "depth": 160
+        },
+        "balcony2": {
+          "width": 300,
+          "depth": 160
+        },
+        "yard": {
+          "width": 800,
+          "depth": 600
+        },
+        "garage": {
+          "width": 500,
+          "depth": 320
+        },
+        "gym": {
+          "width": 360,
+          "depth": 320
+        },
+        "cinema": {
+          "width": 420,
+          "depth": 320
+        },
+        "custom1": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom2": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom3": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom4": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom5": {
+          "width": 300,
+          "depth": 300
+        },
+        "stair": {
+          "width": 240,
+          "depth": 420
+        },
+        "hallway": {
+          "width": 120,
+          "depth": 300
+        },
+        "pool": {
+          "width": 600,
+          "depth": 350
+        },
+        "terrace": {
+          "width": 500,
+          "depth": 300
+        },
+        "deck": {
+          "width": 400,
+          "depth": 250
+        },
+        "equipment_room": {
+          "width": 300,
+          "depth": 250
+        },
+        "pergola": {
+          "width": 300,
+          "depth": 300
+        }
+      },
+      "roomWindows": {
+        "living": [
+          {
+            "id": "living-w1",
+            "wall": "E",
+            "pos": 105,
+            "len": 189
+          }
+        ],
+        "master": [
+          {
+            "id": "master-w2",
+            "wall": "E",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "bedroom": [
+          {
+            "id": "bedroom-w3",
+            "wall": "N",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "bedroom2": [
+          {
+            "id": "bedroom2-w4",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "bedroom3": [
+          {
+            "id": "bedroom3-w5",
+            "wall": "N",
+            "pos": 70,
+            "len": 126
+          }
+        ],
+        "kitchen": [
+          {
+            "id": "kitchen-w6",
+            "wall": "N",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "bathroom": [],
+        "bathroom2": [],
+        "dining": [
+          {
+            "id": "dining-w7",
+            "wall": "E",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "study": [
+          {
+            "id": "study-w8",
+            "wall": "N",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "study2": [
+          {
+            "id": "study2-w9",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "closet": [],
+        "balcony": [
+          {
+            "id": "balcony-w10",
+            "wall": "N",
+            "pos": 105,
+            "len": 189
+          }
+        ],
+        "balcony2": [
+          {
+            "id": "balcony2-w11",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "yard": [],
+        "garage": [
+          {
+            "id": "garage-w12",
+            "wall": "E",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "gym": [
+          {
+            "id": "gym-w13",
+            "wall": "N",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "cinema": [],
+        "custom1": [],
+        "custom2": [],
+        "custom3": [],
+        "custom4": [],
+        "custom5": [],
+        "stair": [
+          {
+            "id": "stair-w1781100171639",
+            "wall": "N",
+            "pos": 60,
+            "len": 96
+          }
+        ],
+        "hallway": [],
+        "pool": [],
+        "terrace": [],
+        "deck": [],
+        "pergola": [],
+        "equipment_room": []
+      },
+      "roomDoorPos": {
+        "living": 50,
+        "master": 40,
+        "bedroom": 32,
+        "bedroom2": 30,
+        "bedroom3": 28,
+        "kitchen": 36,
+        "bathroom": 26,
+        "bathroom2": 24,
+        "dining": 38,
+        "study": 32,
+        "study2": 30,
+        "closet": 26,
+        "balcony": 42,
+        "balcony2": 30,
+        "yard": 80,
+        "garage": 50,
+        "gym": 36,
+        "cinema": 42,
+        "custom1": 30,
+        "custom2": 30,
+        "custom3": 30,
+        "custom4": 30,
+        "custom5": 30,
+        "stair": 26,
+        "hallway": 12,
+        "pool": 60,
+        "terrace": 50,
+        "deck": 40,
+        "pergola": 30,
+        "equipment_room": 30
+      },
+      "roomHasDoor": {
+        "living": true,
+        "master": true,
+        "bedroom": true,
+        "bedroom2": true,
+        "bedroom3": true,
+        "kitchen": true,
+        "bathroom": true,
+        "bathroom2": true,
+        "dining": true,
+        "study": true,
+        "study2": true,
+        "closet": true,
+        "balcony": true,
+        "balcony2": true,
+        "yard": true,
+        "garage": true,
+        "gym": true,
+        "cinema": true,
+        "custom1": true,
+        "custom2": true,
+        "custom3": true,
+        "custom4": true,
+        "custom5": true,
+        "stair": false,
+        "hallway": true,
+        "pool": true,
+        "terrace": true,
+        "deck": true,
+        "rooftop_lounge": true,
+        "rooftop_pool": true,
+        "rooftop_garden": true,
+        "rooftop_bar": true,
+        "equipment_room": true,
+        "pergola": true
+      },
+      "roomDoorWall": {
+        "living": "S",
+        "master": "S",
+        "bedroom": "S",
+        "bedroom2": "S",
+        "bedroom3": "S",
+        "kitchen": "S",
+        "bathroom": "S",
+        "bathroom2": "S",
+        "dining": "S",
+        "study": "S",
+        "study2": "S",
+        "closet": "S",
+        "balcony": "S",
+        "balcony2": "S",
+        "yard": "S",
+        "garage": "S",
+        "gym": "S",
+        "cinema": "S",
+        "custom1": "S",
+        "custom2": "S",
+        "custom3": "S",
+        "custom4": "S",
+        "custom5": "S",
+        "stair": "S",
+        "hallway": "S",
+        "pool": "S",
+        "terrace": "S",
+        "deck": "S",
+        "pergola": "S",
+        "equipment_room": "S"
+      },
+      "roomDoorLen": {},
+      "roomDoorStyle": {},
+      "roomShapes": {},
+      "roomDoors": {
+        "stair": [
+          {
+            "id": "stair-d1780777270704",
+            "wall": "S",
+            "pos": 80,
+            "len": 80,
+            "h": 240,
+            "style": "wood_panel"
+          }
+        ]
+      }
+    }
+  ],
+  "exterior": {
+    "preset": "custom",
+    "roofStyle": "flat",
+    "roofColor": "#2A2A2A",
+    "wallMaterial": "render",
+    "wallColor": "#CBE8F5",
+    "accentColor": "#1A1A1A",
+    "floors": 2,
+    "yardPreset": "pool",
+    "showPerimeterFence": false,
+    "fenceInsetMultiplier": 1.65,
+    "pilotisHeightM": 0,
+    "buildingType": "floor-plan-driven",
+    "hasRooftop": true,
+    "debugExposeScene": false,
+    "exteriorWindowGlassColor": "#8FA3B2",
+    "exteriorWindowGlassOpacity": 0.82,
+    "exteriorWindowGlassTransmission": 0,
+    "exteriorWindowGlassEnvMapIntensity": 0.6,
+    "exteriorWindowGlassRoughness": 0.12,
+    "wallBaseColor": "#F4F0E4",
+    "wallGrooveColor": "#B8AC98",
+    "wallPanelHSpacing": 0.95,
+    "wallPanelVSpacing": 0.9,
+    "wallPanelTwoTone": false,
+    "stoneBaseEnabled": true,
+    "windowGlassColor": "#34404E",
+    "windowFrameColor": "#2A1E16",
+    "windowSillEnabled": true,
+    "windowLintelEnabled": false,
+    "windowJambEnabled": true,
+    "windowJambDepthCm": 8,
+    "windowFlowerBoxFreq": 0,
+    "windowFrameStripVCm": 6,
+    "windowFrameStripHCm": 6,
+    "windowCenterMullionCm": 4,
+    "windowSillColor": "#3E2A1E",
+    "defaultWindowSill": 70,
+    "defaultWindowHeight": 170,
+    "frontEntranceStyle": "sliding_barn",
+    "doorFrameColor": "#3E2A1E",
+    "doorHandleColor": "#1E1E22",
+    "roomCeilingColor": "#FAF4E8",
+    "ceilingLightColor": "#FFE0A0",
+    "ceilingLightIntensity": 2.4,
+    "ceilingLightRadiusCm": 12,
+    "skirtingHeight": 8,
+    "skirtingThicknessCm": 1,
+    "skirtingColor": "#3E2A1E",
+    "roofOverhang": 1,
+    "roofOverhangSouthExtra": 0.6,
+    "parapetHeight": 0,
+    "parapetGlassEnabled": false,
+    "roofSlabColor": "#2A1E14",
+    "parapetColor": "#7A7068",
+    "stoneBaseHeight": 0.35,
+    "windowFlowerBoxColor": "#A0623E",
+    "flowerBloomColor": "#E85090",
+    "flowerFoliageColor": "#5A8A30",
+    "windowGlassTopColor": "#4A5C72",
+    "windowMullionPos": 0.5,
+    "windowMullionThicknessCm": 2.5,
+    "wallPanelGrooveOpacity": 0.25,
+    "lawnTint": "#7E8E6A",
+    "skyHaze": 0.2,
+    "windowRevealShadow": 0.65,
+    "treeColorJitter": 0.4,
+    "buildingBaseShadow": 1,
+    "eaveShadow": 0.45,
+    "wallVignette": 0.3,
+    "solarPanelsEnabled": false,
+    "hideInteriorWalls": true,
+    "bloomIntensity": 0.2,
+    "grassDensity": 0,
+    "exposure": 0.82,
+    "windowLintelColor": "#E0D0A8",
+    "wallZones": [
+      {
+        "material": "brick",
+        "color": "#B05030",
+        "heightFraction": 0.35
+      },
+      {
+        "material": "wood",
+        "color": "#A06030",
+        "heightFraction": 0.65
+      }
+    ],
+    "facades": {
+      "S": [
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "d1",
+              "type": "door",
+              "widthFraction": 0.18,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.68,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 4
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        },
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.86,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 5
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        }
+      ],
+      "N": [
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "d1",
+              "type": "door",
+              "widthFraction": 0.18,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.68,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 4
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        },
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.86,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 5
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        }
+      ],
+      "W": [
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "d1",
+              "type": "door",
+              "widthFraction": 0.18,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.68,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 4
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        },
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.86,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 5
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        }
+      ],
+      "E": [
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "d1",
+              "type": "door",
+              "widthFraction": 0.18,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.68,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 4
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        },
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.86,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 5
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "budget": 150000,
+  "customRoomMeta": {},
+  "customFurniture": [],
+  "scores": {
+    "style": 70,
+    "space": 77,
+    "light": 99,
+    "dominantStyle": "现代"
+  },
+  "blueprint": {
+    "image": null,
+    "naturalW": 0,
+    "naturalH": 0,
+    "opacity": 0.4,
+    "offsetX": 0,
+    "offsetY": 0,
+    "scale": 1
+  },
+  "savedAt": "2026-06-17T11:48:41.493Z"
+}
