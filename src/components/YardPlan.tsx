@@ -142,6 +142,27 @@ function AssetGlyph({ asset, r, selected = false }: {
       </g>
     );
   }
+  if (asset.category === "vehicle") {
+    // Top-down car silhouette: body rect + wheel arcs at four corners
+    const bw = r * 1.80, bd = r * 0.90; // body width (long axis) × depth
+    const wr = r * 0.22, wl = r * 0.28; // wheel radius / length
+    const wx = bw / 2 - wr * 0.6, wz = bd / 2 + wr * 0.2;
+    return (
+      <g>
+        {/* body */}
+        <rect x={-bw / 2} y={-bd / 2} width={bw} height={bd}
+          rx={r * 0.18} fill={asset.color} fillOpacity={0.18} stroke={stroke} strokeWidth={sw} />
+        {/* cabin (smaller inset rect) */}
+        <rect x={-bw * 0.25} y={-bd * 0.38} width={bw * 0.50} height={bd * 0.76}
+          rx={r * 0.10} fill="none" stroke={stroke} strokeWidth={sw * 0.6} />
+        {/* 4 wheels */}
+        {([ [-wx, -wz], [wx, -wz], [-wx, wz], [wx, wz] ] as [number,number][]).map(([cx,cy],i) => (
+          <rect key={i} x={cx - wr / 2} y={cy - wl / 2} width={wr} height={wl}
+            rx={wr * 0.3} fill={stroke} fillOpacity={0.55} />
+        ))}
+      </g>
+    );
+  }
   // feature — rectangle outline with sub-icon
   const featureLabelMap: Record<string, string> = {
     "feature.fence":      "FNC",
@@ -333,8 +354,8 @@ export function YardPlanLibrary() {
 
   // Tab labels — Chinese to match the rest of the app
   const tabLabels: Record<LibraryTab, string> = locale === "en"
-    ? { template: "Templates", prefab: "Blocks", tree: "Trees", plant: "Plants", rock: "Rocks", feature: "Features", furniture: "Furniture" }
-    : { template: "样板", prefab: "组件", tree: "树木", plant: "花卉", rock: "山石", feature: "设施", furniture: "家具" };
+    ? { template: "Templates", prefab: "Blocks", tree: "Trees", plant: "Plants", rock: "Rocks", feature: "Features", furniture: "Furniture", vehicle: "Vehicles" }
+    : { template: "样板", prefab: "组件", tree: "树木", plant: "花卉", rock: "山石", feature: "设施", furniture: "家具", vehicle: "车辆" };
   const allTabs: LibraryTab[] = ["template", "prefab", ...OUTDOOR_CATEGORIES.map(c => c.id)];
 
   // Apply preset action — needs store hooks at component scope
@@ -780,6 +801,8 @@ export default function YardPlan() {
         const dragScale = dragItem && "scale" in dragItem ? ((dragItem as { scale?: number }).scale ?? 1) : 1;
         const clearanceCm = dragKind.startsWith("tree.")
           ? Math.round((TREE_CANOPY_RADIUS_M[dragKind] ?? 3) * dragScale * 100)
+          : dragKind.startsWith("vehicle.")
+          ? Math.round((getOutdoorAssetByKind(dragKind)?.radiusCm ?? 230) * dragScale * 0.5)
           : 20;
         const clearance = checkHouseClearance(nx, nz, houseWm, houseDm, clearanceCm);
         if (!clearance.ok) {

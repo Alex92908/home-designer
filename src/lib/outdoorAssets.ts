@@ -14,7 +14,7 @@
  *   - color       — fallback colour used in the 2D plan circle
  */
 
-export type OutdoorCategory = "tree" | "plant" | "rock" | "feature" | "furniture";
+export type OutdoorCategory = "tree" | "plant" | "rock" | "feature" | "furniture" | "vehicle";
 
 export const OUTDOOR_CATEGORIES: Array<{ id: OutdoorCategory; label: string; labelEn: string; icon: string }> = [
   { id: "tree",      label: "树木", labelEn: "Trees",     icon: "🌳" },
@@ -22,6 +22,7 @@ export const OUTDOOR_CATEGORIES: Array<{ id: OutdoorCategory; label: string; lab
   { id: "rock",      label: "山石", labelEn: "Rocks",     icon: "🪨" },
   { id: "feature",   label: "设施", labelEn: "Facilities",icon: "🏛" },
   { id: "furniture", label: "家具", labelEn: "Furniture", icon: "🛋" },
+  { id: "vehicle",   label: "车辆", labelEn: "Vehicles",  icon: "🚗" },
 ];
 
 export interface OutdoorAsset {
@@ -204,6 +205,44 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
     customTargetHeightM: 0.75, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
     brand: "Unopiù", estimatedPriceCNY: 8800,
     purchaseUrl: "https://www.unopiu.com/en/pool-loungers" },
+
+  // ── Vehicles ──
+  { kind: "vehicle.bmw_m3_e46",    label: "BMW M3 E46",              labelEn: "BMW M3 E46",              icon: "🚗", category: "vehicle",
+    glb: "", scale: 1, radiusCm: 230, color: "#3B6FD4",
+    customGltfPath: "/models/vehicles/bmw_m3_e46.glb",
+    customTargetHeightM: 1.35, customGroundAlign: true },
+  { kind: "vehicle.bmw_m5_g90",    label: "BMW M5 G90 2024",         labelEn: "BMW M5 G90 2024",         icon: "🚗", category: "vehicle",
+    glb: "", scale: 1, radiusCm: 250, color: "#2C2C2C",
+    customGltfPath: "/models/vehicles/bmw_m5_g90_2024__www.vecarz.com.glb",
+    customTargetHeightM: 1.45, customGroundAlign: true },
+  { kind: "vehicle.porsche_911",   label: "Porsche 911 Carrera 4S",  labelEn: "Porsche 911 Carrera 4S",  icon: "🏎", category: "vehicle",
+    glb: "", scale: 1, radiusCm: 220, color: "#C0392B",
+    customGltfPath: "/models/vehicles/free_porsche_911_carrera_4s.glb",
+    customTargetHeightM: 1.30, customGroundAlign: true },
+  { kind: "vehicle.lamborghini",   label: "Lamborghini Countach 2021",labelEn: "Lamborghini Countach 2021",icon: "🏎", category: "vehicle",
+    glb: "", scale: 1, radiusCm: 220, color: "#E8C000",
+    customGltfPath: "/models/vehicles/2021_lamborghini_countach_lpi_800-4.glb",
+    customTargetHeightM: 1.15, customGroundAlign: true },
+  { kind: "vehicle.cyberpunk_car", label: "Cyberpunk Car",           labelEn: "Cyberpunk Car",           icon: "🚘", category: "vehicle",
+    glb: "", scale: 1, radiusCm: 240, color: "#7B2FBE",
+    customGltfPath: "/models/vehicles/cyberpunk_car.glb",
+    customTargetHeightM: 1.20, customGroundAlign: true },
+  { kind: "vehicle.hovercar",      label: "Cyberpunk Hovercar",      labelEn: "Cyberpunk Hovercar",      icon: "🛸", category: "vehicle",
+    glb: "", scale: 1, radiusCm: 240, color: "#00BCD4",
+    customGltfPath: "/models/vehicles/free_cyberpunk_hovercar.glb",
+    customTargetHeightM: 1.40, customGroundAlign: true },
+  { kind: "vehicle.bmw_rr1000",    label: "BMW R1000 摩托",           labelEn: "BMW R1000 Motorcycle",    icon: "🏍", category: "vehicle",
+    glb: "", scale: 1, radiusCm: 130, color: "#1A1A1A",
+    customGltfPath: "/models/vehicles/bmw_rr_1000.glb",
+    customTargetHeightM: 1.10, customGroundAlign: true },
+  { kind: "vehicle.sport_moto",    label: "运动摩托",                 labelEn: "Sport Motorcycle",        icon: "🏍", category: "vehicle",
+    glb: "", scale: 1, radiusCm: 130, color: "#E74C3C",
+    customGltfPath: "/models/vehicles/sport_touring_motorcycle_highpoly_3dmodel.glb",
+    customTargetHeightM: 1.15, customGroundAlign: true },
+  { kind: "vehicle.vino",          label: "Vino 摩托",                labelEn: "Vino Scooter",            icon: "🛵", category: "vehicle",
+    glb: "", scale: 1, radiusCm: 110, color: "#F39C12",
+    customGltfPath: "/models/vehicles/vino.glb",
+    customTargetHeightM: 1.05, customGroundAlign: true },
 ];
 
 // ─── Prefab purchase catalog ──────────────────────────────────────────────────

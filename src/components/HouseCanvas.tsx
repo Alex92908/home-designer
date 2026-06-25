@@ -2519,8 +2519,8 @@ function SingletonItem({ item: it }: { item: import("@/lib/types").YardSingleton
   const rot = it.rot ?? 0;
   const h1 = treeHash(it.x, it.z, 1);
   const h2 = treeHash(it.x, it.z, 7);
-  // Furniture: no organic tilt/jitter — placed items should be perfectly upright
-  const isFurniture = asset.category === "furniture";
+  // Furniture + vehicles: no organic tilt/jitter — placed items should be perfectly upright
+  const isFurniture = asset.category === "furniture" || asset.category === "vehicle";
   // ── Iter 4: per-instance variation driven by ExteriorSettings.treeColorJitter.
   // The factor scales both rotation and scale randomness. j=0 → identical clones,
   // j=1 → strong variation. Default 0.35 yields a quiet but visible variety
