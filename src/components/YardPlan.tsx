@@ -1638,7 +1638,7 @@ export default function YardPlan() {
             if (!asset) return null;
             const sx = SVG_PX / 2 + item.x / CM_PER_PX;
             const sz = SVG_PX / 2 + item.z / CM_PER_PX;
-            const r = Math.max(8, asset.radiusCm / CM_PER_PX);
+            const r = Math.max(8, asset.radiusCm / CM_PER_PX * (item.scale ?? 1));
             const isSel = selectedId === item.id;
             const itemViolations = violationMap.get(item.id) ?? [];
             const hasRequired = itemViolations.some(v => v.severity === "required");
