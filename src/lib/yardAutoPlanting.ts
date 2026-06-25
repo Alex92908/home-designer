@@ -129,13 +129,18 @@ export function autoScatterTrees(
     return s2 / 0xffffffff;
   };
 
+  // Maximum canopy radius among all scatter-eligible kinds (at max auto-scatter
+  // scale ~1.2). The tree trunk must be at least this far outside every wall so
+  // the 3D crown doesn't clip through the building. Maple at scale 1.2 = 6 m.
+  const MAX_SCATTER_CANOPY_M = Math.max(
+    ...SCATTER_KINDS.map(k => (TREE_CANOPY_RADIUS_M[k.kind] ?? 3) * 1.2),
+  ) + 0.5; // +0.5 m safety margin
+
   for (const p of samples) {
     if (accepted.length >= maxCount) break;
-    // House avoidance — leave a 2 m setback from house wall
-    const HOUSE_PAD = 2.0;
     if (
-      p.x >= houseM.minX - HOUSE_PAD && p.x <= houseM.maxX + HOUSE_PAD &&
-      p.z >= houseM.minZ - HOUSE_PAD && p.z <= houseM.maxZ + HOUSE_PAD
+      p.x >= houseM.minX - MAX_SCATTER_CANOPY_M && p.x <= houseM.maxX + MAX_SCATTER_CANOPY_M &&
+      p.z >= houseM.minZ - MAX_SCATTER_CANOPY_M && p.z <= houseM.maxZ + MAX_SCATTER_CANOPY_M
     ) continue;
     // Zone avoidance — trees go in open ground only
     let inZone = false;

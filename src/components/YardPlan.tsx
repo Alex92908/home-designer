@@ -25,7 +25,7 @@ import { ZONE_STYLES, polygonCentroid } from "@/lib/outdoorZones";
 import { evaluateYardPlan, violationsByItem, getEmptyStateHints } from "@/lib/outdoorClearance";
 import { autoGenerateYardPaths, houseHalfExtentsCm, clearYardItemsOfHouse } from "@/lib/yardAutoLayout";
 import { EXTERIOR_PRESETS } from "@/lib/exteriorPresets";
-import { autoScatterTrees, placeSunShadeTrees } from "@/lib/yardAutoPlanting";
+import { autoScatterTrees, placeSunShadeTrees, TREE_CANOPY_RADIUS_M } from "@/lib/yardAutoPlanting";
 import { useLocale } from "@/lib/i18n";
 import { snapToHouseWall, checkHouseClearance } from "@/lib/sceneToPrompt";
 import ModelImportCard from "./ModelImportCard";
@@ -773,8 +773,15 @@ export default function YardPlan() {
         nx = snapped.x;
         nz = snapped.z;
 
-        // 2. Clearance guard (避让) — prevent placing inside house footprint
-        const clearance = checkHouseClearance(nx, nz, houseWm, houseDm, 20);
+        // 2. Clearance guard (避让) — for trees use canopy radius so the 3D
+        //    crown never clips through the building wall; other items 20 cm.
+        const dragItem = yardItems.find(it => it.id === drag.id);
+        const dragKind = dragItem && "kind" in dragItem ? (dragItem as { kind: string }).kind : "";
+        const dragScale = dragItem && "scale" in dragItem ? ((dragItem as { scale?: number }).scale ?? 1) : 1;
+        const clearanceCm = dragKind.startsWith("tree.")
+          ? Math.round((TREE_CANOPY_RADIUS_M[dragKind] ?? 3) * dragScale * 100)
+          : 20;
+        const clearance = checkHouseClearance(nx, nz, houseWm, houseDm, clearanceCm);
         if (!clearance.ok) {
           nx += clearance.nudgeX;
           nz += clearance.nudgeZ;
@@ -790,7 +797,7 @@ export default function YardPlan() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [drag, updateYardItem, houseWm, houseDm]);
+  }, [drag, updateYardItem, houseWm, houseDm, yardItems]);
 
   // Keyboard: Delete key removes selected item, ESC exits draw mode
   useEffect(() => {
