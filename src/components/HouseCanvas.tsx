@@ -7280,17 +7280,16 @@ export default function HouseCanvas() {
           if (bld.floorPlans.length === 0) return null;
           // 副楼用与主楼同一渲染管线(FloorPlanBuilding，按建筑数据参数化)，渲出
           // 真实墙体/幕墙/天台/窗，而非旧的 SecondaryBuildingBody 简化色块。
-          // 相对激活楼栋偏移：激活楼栋恒在原点(HouseBody)，副楼按 (bld-activeBld)
-          // 摆位+自转。interactive=false → 点击不误改激活楼栋的 activeRoom/Floor。
-          const ax = buildings[activeBuilding]?.x ?? 0;
-          const az = buildings[activeBuilding]?.z ?? 0;
+          // 副楼用绝对坐标定位，与院子物品（pool/tree等）保持一致。
+          // 激活楼栋（HouseBody）始终在原点 = 主楼在设计坐标系中也是(0,0)，
+          // 所以直接用 bld.x/bld.z 不减偏移量即可。
           return (
             <FloorPlanBuilding
               key={bld.id}
               floorPlansOverride={bld.floorPlans}
               exteriorOverride={bld.exterior}
-              worldX={(bld.x - ax) / 100}
-              worldZ={(bld.z - az) / 100}
+              worldX={bld.x / 100}
+              worldZ={bld.z / 100}
               worldRot={bld.rot}
               interactive={false}
               insideBuilding={insideBuilding}
