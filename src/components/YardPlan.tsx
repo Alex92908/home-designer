@@ -758,6 +758,9 @@ export default function YardPlan() {
   const exteriorPreset = useDesignerStore(s => s.exterior.preset);
   const buildings          = useDesignerStore(s => s.buildings);
   const activeBuilding     = useDesignerStore(s => s.activeBuilding);
+  // 激活楼栋的工作副本(floorPlans 顶层 = buildings[activeBuilding] 的最新编辑)，
+  // 让激活副楼 footprint 反映未保存改动，而非 buildings[i] 旧快照。
+  const workingFp0         = useDesignerStore(s => s.floorPlans[0]);
   const updateBuildingPosition = useDesignerStore(s => s.updateBuildingPosition);
   const setActiveBuilding  = useDesignerStore(s => s.setActiveBuilding);
   const removeBuilding     = useDesignerStore(s => s.removeBuilding);
@@ -1722,8 +1725,10 @@ export default function YardPlan() {
           {/* Secondary buildings — buildings[1+] shown as dashed outlines at their yard positions */}
           {buildings.map((bld, bldIdx) => {
             if (bldIdx === 0) return null; // buildings[0] is always the main footprint above
-            if (!bld.floorPlans[0]) return null;
-            const { hw, hd } = houseHalfExtentsCm(bld.floorPlans[0]);
+            // 激活副楼用工作副本(最新)，其余用 buildings[i] 快照。
+            const fp0 = bldIdx === activeBuilding ? (workingFp0 ?? bld.floorPlans[0]) : bld.floorPlans[0];
+            if (!fp0) return null;
+            const { hw, hd } = houseHalfExtentsCm(fp0);
             const bx = SVG_PX / 2 + bld.x / CM_PER_PX;
             const bz = SVG_PX / 2 + bld.z / CM_PER_PX;
             const bwPx = hw * 2 / CM_PER_PX;

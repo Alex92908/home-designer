@@ -7280,10 +7280,14 @@ export default function HouseCanvas() {
         {buildings.map((bld, i) => {
           if (i === activeBuilding) return null; // active = full HouseBody above
           if (bld.floorPlans.length === 0) return null;
+          // 相对激活楼栋偏移：激活楼栋恒在原点(HouseBody)，副楼按 (bld-activeBld)
+          // 摆位。此前用绝对 bld.x/z → activeBuilding≠0 时与主楼重叠/其余错位。
+          const ax = buildings[activeBuilding]?.x ?? 0;
+          const az = buildings[activeBuilding]?.z ?? 0;
           return (
             <group
               key={bld.id}
-              position={[bld.x / 100, 0, bld.z / 100]}
+              position={[(bld.x - ax) / 100, 0, (bld.z - az) / 100]}
               rotation={[0, bld.rot, 0]}
             >
               <SecondaryBuildingBody floorPlans={bld.floorPlans} exterior={bld.exterior} />

@@ -1224,7 +1224,9 @@ export default function FloorPlanAll() {
               const bMaxX = rxs.length ? Math.max(...rxs) : 200;
               const bMaxY = rys.length ? Math.max(...rys) : 200;
               return (
-                <g key={bld.id} transform={`translate(${tx},${ty})`}
+                // 绕建筑中心 (bcx,bcy) 应用 bld.rot —— 此前漏旋转，副楼朝向与院子图
+                // (YardPlan 已带 rotate) 不一致。角度公式与 YardPlan 同：rot*180/π。
+                <g key={bld.id} transform={`translate(${tx},${ty}) rotate(${(bld.rot * 180) / Math.PI},${bcx},${bcy})`}
                   style={{ cursor: bldDragRef.current?.id === bld.id ? "grabbing" : "grab", opacity: 0.5 }}
                   onPointerDown={(e) => {
                     if (!svgRef.current) return;
