@@ -855,6 +855,56 @@ export default function YardPlan() {
     origX: number; origZ: number;
   } | null>(null);
 
+  // ── Overlap-aware selection (A: 叠放优先选最上层；B: 连点循环切换) ──
+  // 点中位置(世界 cm)下命中的所有院子物件，按绘制顺序的逆序排列（顶 → 底：
+  // singleton 顶、prefab 中、zone 底），让重叠时默认选中最上面那个。
+  const pointInRotRect = (px: number, pz: number, cx: number, cz: number, w: number, d: number, rot: number) => {
+    const dx = px - cx, dz = pz - cz, c = Math.cos(-rot), s = Math.sin(-rot);
+    const lx = dx * c - dz * s, lz = dx * s + dz * c;
+    return Math.abs(lx) <= w / 2 && Math.abs(lz) <= d / 2;
+  };
+  const pointInRotPoly = (px: number, pz: number, cx: number, cz: number, poly: Array<[number, number]>, rot: number) => {
+    const dx = px - cx, dz = pz - cz, c = Math.cos(-rot), s = Math.sin(-rot);
+    const lx = dx * c - dz * s, lz = dx * s + dz * c;
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, zi] = poly[i], [xj, zj] = poly[j];
+      if (((zi > lz) !== (zj > lz)) && (lx < ((xj - xi) * (lz - zi)) / (zj - zi) + xi)) inside = !inside;
+    }
+    return inside;
+  };
+  const yardItemsAtPoint = (wx: number, wz: number): YardItem[] => {
+    const hits: YardItem[] = [];
+    for (const it of yardItems) if (isYardSingleton(it)) {
+      const a = getOutdoorAssetByKind(it.kind);
+      const rad = (a?.radiusCm ?? 100) * ((it as { scale?: number }).scale ?? 1);
+      if (Math.hypot(wx - it.x, wz - it.z) <= rad) hits.push(it);
+    }
+    for (const it of yardItems) if (isYardPrefab(it)) {
+      const def = getPrefabDef(it.prefabKind);
+      const fp = it.footprintCm ?? def?.defaultFootprintCm ?? { w: 100, d: 100 };
+      if (pointInRotRect(wx, wz, it.x, it.z, fp.w, fp.d, it.rot ?? 0)) hits.push(it);
+    }
+    for (const it of yardItems) if (isYardZone(it)) {
+      if (pointInRotPoly(wx, wz, it.x, it.z, it.polygon, it.rot ?? 0)) hits.push(it);
+    }
+    return hits;
+  };
+  // 统一的"选中并起拖"：所有院子物件的 onPointerDown 都走它。叠放时默认选
+  // 最上层；若当前已选中栈里某个，则连点切到栈中下一个（循环），方便挑被
+  // 盖住的对象。fallbackId = 触发事件的那个物件（命中测试漏判时兜底）。
+  const selectAndStartDrag = (e: React.PointerEvent, fallbackId: string) => {
+    e.stopPropagation();
+    const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+    const stack = yardItemsAtPoint(x, z);
+    let chosenId = stack[0]?.id ?? fallbackId;
+    const curIdx = stack.findIndex(it => it.id === selectedId);
+    if (curIdx >= 0 && stack.length > 1) chosenId = stack[(curIdx + 1) % stack.length].id;
+    const chosen = yardItems.find(it => it.id === chosenId);
+    setSelectedId(chosenId);
+    if (chosen) setDrag({ id: chosenId, offsetX: x - chosen.x, offsetZ: z - chosen.z });
+  };
+
   // ── Draw modes (fence / path) ──
   const [drawMode, setDrawMode] = useState<"select" | "fence" | "path">("select");
   const [fenceDraw, setFenceDraw] = useState<{
@@ -1787,12 +1837,7 @@ export default function YardPlan() {
               <g key={zone.id}
                 transform={`translate(${sx} ${sz}) rotate(${((zone.rot ?? 0) * 180) / Math.PI})`}
                 style={{ cursor: drag?.id === zone.id ? "grabbing" : "grab" }}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  setSelectedId(zone.id);
-                  const { x, z } = svgPtToWorld(e.clientX, e.clientY);
-                  setDrag({ id: zone.id, offsetX: x - zone.x, offsetZ: z - zone.z });
-                }}
+                onPointerDown={(e) => selectAndStartDrag(e, zone.id)}
                 onClick={(e) => e.stopPropagation()}
               >
                 <ZoneGlyph zone={zone} polygonPx={polyPx} selected={isSel} />
@@ -1803,31 +1848,37 @@ export default function YardPlan() {
                   const minZ = Math.min(...zs), maxZ = Math.max(...zs);
                   return (
                     <g style={{ pointerEvents: "auto" }}>
-                      {([ ["se", maxX, maxZ], ["sw", minX, maxZ], ["ne", maxX, minZ], ["nw", minX, minZ] ] as [string, number, number][]).map(([corner, cx, cz]) => (
-                        <circle key={corner} cx={cx} cy={cz} r={5}
-                          fill={SEL_INK} stroke="white" strokeWidth={1}
-                          style={{ cursor: "nwse-resize", pointerEvents: "auto" }}
-                          onPointerDown={(e) => {
-                            e.stopPropagation();
-                            e.currentTarget.setPointerCapture(e.pointerId);
-                            const { x, z } = svgPtToWorld(e.clientX, e.clientY);
-                            const poly = zone.polygon;
-                            const cxs = poly.map(p => p[0]), czs = poly.map(p => p[1]);
-                            const mnX = Math.min(...cxs), mxX = Math.max(...cxs);
-                            const mnZ = Math.min(...czs), mxZ = Math.max(...czs);
-                            setZoneResize({
-                              id: zone.id,
-                              corner: corner as "se" | "sw" | "ne" | "nw",
-                              origPoly: poly,
-                              origCx: (mnX + mxX) / 2,
-                              origCz: (mnZ + mxZ) / 2,
-                              origW: mxX - mnX,
-                              origD: mxZ - mnZ,
-                              origX: x,
-                              origZ: z,
-                            });
-                          }} />
-                      ))}
+                      {([ ["se", maxX, maxZ], ["sw", minX, maxZ], ["ne", maxX, minZ], ["nw", minX, minZ] ] as [string, number, number][]).map(([corner, cx, cz]) => {
+                        const onDown = (e: React.PointerEvent) => {
+                          e.stopPropagation();
+                          e.currentTarget.setPointerCapture(e.pointerId);
+                          const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+                          const poly = zone.polygon;
+                          const cxs = poly.map(p => p[0]), czs = poly.map(p => p[1]);
+                          const mnX = Math.min(...cxs), mxX = Math.max(...cxs);
+                          const mnZ = Math.min(...czs), mxZ = Math.max(...czs);
+                          setZoneResize({
+                            id: zone.id,
+                            corner: corner as "se" | "sw" | "ne" | "nw",
+                            origPoly: poly,
+                            origCx: (mnX + mxX) / 2,
+                            origCz: (mnZ + mxZ) / 2,
+                            origW: mxX - mnX,
+                            origD: mxZ - mnZ,
+                            origX: x,
+                            origZ: z,
+                          });
+                        };
+                        return (
+                          <g key={corner}>
+                            <circle cx={cx} cy={cz} r={16} fill="transparent"
+                              style={{ cursor: "nwse-resize", pointerEvents: "auto" }}
+                              onPointerDown={onDown} />
+                            <circle cx={cx} cy={cz} r={7.5} fill={SEL_INK} stroke="white" strokeWidth={1.5}
+                              style={{ pointerEvents: "none" }} />
+                          </g>
+                        );
+                      })}
                     </g>
                   );
                 })()}
@@ -1851,12 +1902,7 @@ export default function YardPlan() {
               <g key={prefab.id}
                 transform={`translate(${sx} ${sz}) rotate(${((prefab.rot ?? 0) * 180) / Math.PI})`}
                 style={{ cursor: drag?.id === prefab.id ? "grabbing" : "grab" }}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  setSelectedId(prefab.id);
-                  const { x, z } = svgPtToWorld(e.clientX, e.clientY);
-                  setDrag({ id: prefab.id, offsetX: x - prefab.x, offsetZ: z - prefab.z });
-                }}
+                onPointerDown={(e) => selectAndStartDrag(e, prefab.id)}
                 onClick={(e) => e.stopPropagation()}
               >
                 <PrefabGlyph kind={prefab.prefabKind} footprintPx={fpPx} selected={isSel}
@@ -1877,23 +1923,26 @@ export default function YardPlan() {
                         fontSize={11} fill="white" fontWeight="bold"
                         style={{ pointerEvents: "none" }}>✕</text>
                     </g>
-                    {/* Resize handles — 4 corners */}
+                    {/* Resize handles — 4 corners. 透明大命中圈(易抓) + 可见小圆点。 */}
                     {([ ["se", fpPx.w / 2, fpPx.d / 2], ["sw", -fpPx.w / 2, fpPx.d / 2], ["ne", fpPx.w / 2, -fpPx.d / 2], ["nw", -fpPx.w / 2, -fpPx.d / 2] ] as [string, number, number][]).map(([corner, cx, cz]) => (
-                      <circle key={corner} cx={cx} cy={cz} r={5}
-                        fill={SEL_INK} stroke="white" strokeWidth={1}
-                        style={{ cursor: "nwse-resize", pointerEvents: "auto" }}
-                        onPointerDown={(e) => {
-                          e.stopPropagation();
-                          e.currentTarget.setPointerCapture(e.pointerId);
-                          const { x, z } = svgPtToWorld(e.clientX, e.clientY);
-                          setResize({
-                            id: prefab.id,
-                            corner: corner as "se" | "sw" | "ne" | "nw",
-                            origFp: fpCm,
-                            origX: x,
-                            origZ: z,
-                          });
-                        }} />
+                      <g key={corner}>
+                        <circle cx={cx} cy={cz} r={16} fill="transparent"
+                          style={{ cursor: "nwse-resize", pointerEvents: "auto" }}
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                            e.currentTarget.setPointerCapture(e.pointerId);
+                            const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+                            setResize({
+                              id: prefab.id,
+                              corner: corner as "se" | "sw" | "ne" | "nw",
+                              origFp: fpCm,
+                              origX: x,
+                              origZ: z,
+                            });
+                          }} />
+                        <circle cx={cx} cy={cz} r={7.5} fill={SEL_INK} stroke="white" strokeWidth={1.5}
+                          style={{ pointerEvents: "none" }} />
+                      </g>
                     ))}
                   </g>
                 )}
@@ -1917,12 +1966,7 @@ export default function YardPlan() {
               <g key={item.id}
                 transform={`translate(${sx} ${sz}) rotate(${((item.rot ?? 0) * 180) / Math.PI})`}
                 style={{ cursor: drag?.id === item.id ? "grabbing" : "grab" }}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  setSelectedId(item.id);
-                  const { x, z } = svgPtToWorld(e.clientX, e.clientY);
-                  setDrag({ id: item.id, offsetX: x - item.x, offsetZ: z - item.z });
-                }}
+                onPointerDown={(e) => selectAndStartDrag(e, item.id)}
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Warning halo — red ring for required, amber for recommended */}
