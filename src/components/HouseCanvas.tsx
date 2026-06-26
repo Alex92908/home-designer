@@ -498,10 +498,9 @@ function ExteriorCaptureSetup() {
 // ─── Camera ────────────────────────────────────────────────
 // Eye-level perspective — mirrors RoomCanvas style so the exterior feels
 // like a natural continuation of the interior room view, not a toy diorama.
-function CameraRig({ W, D, floors, buildingType, buildings, activeBuilding: activeBldIdx }: {
+function CameraRig({ W, D, floors, buildingType, buildings }: {
   W: number; D: number; floors: number; buildingType?: string;
   buildings?: Array<{ x: number; z: number }>;
-  activeBuilding?: number;
 }) {
   const { camera } = useThree();
   // Use a ref to track whether we've done the one-time initialisation.
@@ -522,10 +521,8 @@ function CameraRig({ W, D, floors, buildingType, buildings, activeBuilding: acti
       // Center the camera on the bounding box of ALL buildings in relative
       // coordinates (active building at origin, others offset by bld - active).
       const allBlds = buildings ?? [];
-      const ax0 = allBlds[activeBldIdx ?? 0]?.x ?? 0;
-      const az0 = allBlds[activeBldIdx ?? 0]?.z ?? 0;
-      const relXs = allBlds.map(b => (b.x - ax0) / 100);
-      const relZs = allBlds.map(b => (b.z - az0) / 100);
+      const relXs = allBlds.map(b => b.x / 100);
+      const relZs = allBlds.map(b => b.z / 100);
       const minX = Math.min(0, ...relXs), maxX = Math.max(0, ...relXs);
       const minZ = Math.min(0, ...relZs), maxZ = Math.max(0, ...relZs);
       const cx = (minX + maxX) / 2;
@@ -581,10 +578,8 @@ function CameraRig({ W, D, floors, buildingType, buildings, activeBuilding: acti
       }
     } else {
       const allBlds2 = buildings ?? [];
-      const ax2 = allBlds2[activeBldIdx ?? 0]?.x ?? 0;
-      const az2 = allBlds2[activeBldIdx ?? 0]?.z ?? 0;
-      const xs2 = allBlds2.map(b => (b.x - ax2) / 100);
-      const zs2 = allBlds2.map(b => (b.z - az2) / 100);
+      const xs2 = allBlds2.map(b => b.x / 100);
+      const zs2 = allBlds2.map(b => b.z / 100);
       const spanX2 = (Math.max(0, ...xs2) - Math.min(0, ...xs2)) + W;
       const spanZ2 = (Math.max(0, ...zs2) - Math.min(0, ...zs2)) + D;
       const span = Math.max(spanX2, spanZ2);
@@ -7038,7 +7033,7 @@ export default function HouseCanvas() {
         <ExteriorCaptureSetup />
         <ShaderPrecompiler />
         <ShadowFreezeOnOrbit isInteractingRef={isInteractingRef} />
-        {!walkthrough && <CameraRig W={W} D={D} floors={floors} buildingType={_buildingType} buildings={buildings} activeBuilding={activeBuilding} />}
+        {!walkthrough && <CameraRig W={W} D={D} floors={floors} buildingType={_buildingType} buildings={buildings} />}
         <InsideCameraAnimator
           active={!walkthrough && _buildingType === "floor-plan-driven"}
           camPos={outsideCamPos}
@@ -7297,17 +7292,15 @@ export default function HouseCanvas() {
         {buildings.map((bld, i) => {
           if (i === activeBuilding) return null; // active = full HouseBody above
           if (bld.floorPlans.length === 0) return null;
-          // 副楼相对于激活楼栋偏移：激活楼栋(HouseBody)恒在 Three.js 原点，
-          // 所有其他楼栋按 (bld - activeBld) 摆位，与 Three.js 参照系一致。
-          const ax = buildings[activeBuilding]?.x ?? 0;
-          const az = buildings[activeBuilding]?.z ?? 0;
+          // 绝对坐标：主楼恒在设计原点(0,0)，进入此视图已 reset activeBuilding=0，
+          // 所以 HouseBody 在 Three.js (0,0,0) = 主楼绝对位置，副楼用 bld.x/100 一致。
           return (
             <FloorPlanBuilding
               key={bld.id}
               floorPlansOverride={bld.floorPlans}
               exteriorOverride={bld.exterior}
-              worldX={(bld.x - ax) / 100}
-              worldZ={(bld.z - az) / 100}
+              worldX={bld.x / 100}
+              worldZ={bld.z / 100}
               worldRot={bld.rot}
               interactive={false}
               insideBuilding={insideBuilding}
