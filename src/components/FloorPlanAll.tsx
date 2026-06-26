@@ -414,7 +414,8 @@ export default function FloorPlanAll() {
   const buildings            = useDesignerStore(s => s.buildings);
   const activeBuilding       = useDesignerStore(s => s.activeBuilding);
   const setActiveBuilding    = useDesignerStore(s => s.setActiveBuilding);
-  const addBuilding          = useDesignerStore(s => s.addBuilding);
+  const addBuilding              = useDesignerStore(s => s.addBuilding);
+  const updateBuildingPosition   = useDesignerStore(s => s.updateBuildingPosition);
   // Which non-active floors are shown as ghost overlays (default: all visible)
   const [ghostFloors, setGhostFloors] = useState<Set<number>>(() => new Set([0, 1, 2, 3]));
   const applyFloorplanLayout  = useDesignerStore(s => s.applyFloorplanLayout);
@@ -701,6 +702,7 @@ export default function FloorPlanAll() {
 
   const svgRef  = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  const bldDragRef = useRef<{ id: string; bldIdx: number; sx: number; sy: number; ox: number; oz: number; hasMoved: boolean } | null>(null);
   // Room-tap tracker: first tap selects (active highlight), second tap
   // within DOUBLE_MS actually enters the room in 2D view. Prevents accidental
   // mode switches while moving / resizing rooms in the plan.
@@ -764,6 +766,20 @@ export default function FloorPlanAll() {
 
   // ── Pointer handlers ──
   const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    // Building drag (non-active buildings)
+    const bds = bldDragRef.current;
+    if (bds && svgRef.current) {
+      const pt = getSVGPoint(e, svgRef.current);
+      const dx = pt.x - bds.sx, dy = pt.y - bds.sy;
+      if (!bds.hasMoved && Math.sqrt(dx * dx + dy * dy) < 6) return;
+      bldDragRef.current = { ...bds, hasMoved: true };
+      updateBuildingPosition(bds.id, {
+        x: Math.round((bds.ox + dx) / SNAP) * SNAP,
+        z: Math.round((bds.oz + dy) / SNAP) * SNAP,
+      });
+      return;
+    }
+    // Room drag / resize
     const ds = dragRef.current;
     if (!ds || !svgRef.current) return;
     const pt = getSVGPoint(e, svgRef.current);
@@ -782,6 +798,12 @@ export default function FloorPlanAll() {
   };
 
   const handlePointerUp = () => {
+    // End building drag — if no movement, treat as click → switch active building
+    if (bldDragRef.current) {
+      if (!bldDragRef.current.hasMoved) setActiveBuilding(bldDragRef.current.bldIdx);
+      bldDragRef.current = null;
+      return;
+    }
     const ds = dragRef.current;
     if (ds?.type === "move" && !ds.hasMoved) {
       // 第一次点：只设激活房间；第二次在 400ms 内点同一间房才进入 2D
@@ -1203,8 +1225,14 @@ export default function FloorPlanAll() {
               const bMaxY = rys.length ? Math.max(...rys) : 200;
               return (
                 <g key={bld.id} transform={`translate(${tx},${ty})`}
-                  style={{ cursor: "pointer", opacity: 0.5 }}
-                  onClick={() => { setActiveBuilding(bldIdx); }}>
+                  style={{ cursor: bldDragRef.current?.id === bld.id ? "grabbing" : "grab", opacity: 0.5 }}
+                  onPointerDown={(e) => {
+                    if (!svgRef.current) return;
+                    e.stopPropagation();
+                    svgRef.current.setPointerCapture(e.pointerId);
+                    const pt = getSVGPoint(e, svgRef.current);
+                    bldDragRef.current = { id: bld.id, bldIdx, sx: pt.x, sy: pt.y, ox: bld.x, oz: bld.z, hasMoved: false };
+                  }}>
                   {/* Background fill so building is visually distinct */}
                   <rect x={bMinX - 6} y={bMinY - 6} width={bMaxX - bMinX + 12} height={bMaxY - bMinY + 12}
                     fill="#EFF6FF" stroke="#93C5FD" strokeWidth={1.5} strokeDasharray="6 3" rx={4}
