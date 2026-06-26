@@ -14,7 +14,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://zhuyahome.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "筑雅 ZHUYA · 惟吾德馨，筑雅而居",
+  title: "筑雅 ZHUYA",
   description: "筑雅 ZHUYA —— AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
   keywords: ["筑雅", "ZHUYA", "AI 装修", "3D 户型", "室内设计", "装修设计", "家装", "户型设计", "home design", "interior design"],
   applicationName: "筑雅 ZHUYA",
@@ -22,14 +22,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "筑雅 ZHUYA",
-    title: "筑雅 ZHUYA · 惟吾德馨，筑雅而居",
+    title: "筑雅 ZHUYA",
     description: "AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
     url: SITE_URL,
     locale: "zh_CN",
   },
   twitter: {
     card: "summary_large_image",
-    title: "筑雅 ZHUYA · 惟吾德馨，筑雅而居",
+    title: "筑雅 ZHUYA",
     description: "AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
   },
   // 站长验证码（无需改代码，按需在 Vercel 环境变量里填，未设则不渲染该标签）：
