@@ -14,22 +14,22 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://zhuyahome.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "筑雅 ZHUYA",
-  description: "筑雅 ZHUYA —— AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
+  title: "ZHUYA",
+  description: "ZHUYA —— AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
   keywords: ["筑雅", "ZHUYA", "AI 装修", "3D 户型", "室内设计", "装修设计", "家装", "户型设计", "home design", "interior design"],
-  applicationName: "筑雅 ZHUYA",
+  applicationName: "ZHUYA",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
-    siteName: "筑雅 ZHUYA",
-    title: "筑雅 ZHUYA",
+    siteName: "ZHUYA",
+    title: "ZHUYA",
     description: "AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
     url: SITE_URL,
     locale: "zh_CN",
   },
   twitter: {
     card: "summary_large_image",
-    title: "筑雅 ZHUYA",
+    title: "ZHUYA",
     description: "AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
   },
   // 站长验证码（无需改代码，按需在 Vercel 环境变量里填，未设则不渲染该标签）：
@@ -50,14 +50,14 @@ export const metadata: Metadata = {
 const JSON_LD = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "筑雅 ZHUYA",
+  name: "ZHUYA",
   alternateName: "ZHUYA 家装设计",
   applicationCategory: "DesignApplication",
   operatingSystem: "Web",
   url: SITE_URL,
   inLanguage: "zh-CN",
   description:
-    "筑雅 ZHUYA 是免费的在线 AI 家装设计工具：AI 文生户型、沉浸式 3D 装修与漫游、外观立面与庭院设计、实时装修报价、一键分享方案。",
+    "ZHUYA 是免费的在线 AI 家装设计工具：AI 文生户型、沉浸式 3D 装修与漫游、外观立面与庭院设计、实时装修报价、一键分享方案。",
   offers: { "@type": "Offer", price: "0", priceCurrency: "CNY" },
   featureList: [
     "AI 文生户型",
