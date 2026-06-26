@@ -4834,13 +4834,13 @@ function WalkthroughController({
    *  the rect belongs to so the 2D collision test only uses rooms on the
    *  player's current floor (otherwise stacked upper/lower rooms blur the
    *  wall positions and you walk straight through walls). */
-  walls: Array<AABB & { floor: number; room: string; hides?: Partial<Record<import("@/lib/types").WallSide, boolean>> }>;
+  walls: Array<AABB & { floor: number; room: string; bld?: number; hides?: Partial<Record<import("@/lib/types").WallSide, boolean>> }>;
   /** Metres per storey (FloorPlanExterior pitch). Used to derive the
    *  player's current floor index from camera.y. */
   storeyH: number;
   /** Rect regions on walls where movement is freely allowed (doors).
    *  blocksMovement checks these before declaring a wall crossing. */
-  doorPasses: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number }>;
+  doorPasses: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number; bld?: number }>;
   /** Live touch joystick output, -1..1 on each axis. Forward = +axisZ
    *  (same convention as WASD's dz). */
   joystick: { axisX: number; axisZ: number };
@@ -5033,8 +5033,32 @@ function WalkthroughController({
     // walls. Nearest-match always lands on a real, populated floor, so
     // collision can never silently disable.
     const footY = camera.position.y - 1.6;
+    // ── 多楼栋：先按玩家所在/最近楼栋分组 ──────────────────────────────
+    // 各楼的房间矩形被拍扁进同一数组(每条带 bld 标签)。若不分组，外壳 bbox 会
+    // 横跨两栋、把楼间空地当室内；内墙线相交也会混到别栋的墙。先选出玩家
+    // 当前楼栋(脚下 footprint 命中优先，否则取中心最近的一栋)。
+    let curBld = walls[0]?.bld ?? 0;
+    {
+      const bb = new Map<number, { minX: number; maxX: number; minZ: number; maxZ: number }>();
+      for (let i = 0; i < walls.length; i++) {
+        const r = walls[i]; const k = r.bld ?? 0; const e = bb.get(k);
+        if (!e) bb.set(k, { minX: r.minX, maxX: r.maxX, minZ: r.minZ, maxZ: r.maxZ });
+        else {
+          if (r.minX < e.minX) e.minX = r.minX; if (r.maxX > e.maxX) e.maxX = r.maxX;
+          if (r.minZ < e.minZ) e.minZ = r.minZ; if (r.maxZ > e.maxZ) e.maxZ = r.maxZ;
+        }
+      }
+      let best = Infinity;
+      for (const [k, e] of bb) {
+        const inside = x1 >= e.minX && x1 <= e.maxX && z1 >= e.minZ && z1 <= e.maxZ;
+        const cx = (e.minX + e.maxX) * 0.5, cz = (e.minZ + e.maxZ) * 0.5;
+        const d = inside ? -1 : Math.hypot(x1 - cx, z1 - cz);
+        if (d < best) { best = d; curBld = k; }
+      }
+    }
     let curFloorIdx = -1, bestFloorDist = Infinity;
     for (let i = 0; i < walls.length; i++) {
+      if ((walls[i].bld ?? 0) !== curBld) continue;
       const dist = Math.abs(walls[i].floor * storeyH - footY);
       if (dist < bestFloorDist) { bestFloorDist = dist; curFloorIdx = walls[i].floor; }
     }
@@ -5070,7 +5094,7 @@ function WalkthroughController({
     let shMinX = Infinity, shMaxX = -Infinity, shMinZ = Infinity, shMaxZ = -Infinity;
     for (let i = 0; i < walls.length; i++) {
       const r = walls[i];
-      if (r.floor !== curFloorIdx) continue;
+      if (r.floor !== curFloorIdx || (r.bld ?? 0) !== curBld) continue;
       if (r.minX < shMinX) shMinX = r.minX;
       if (r.maxX > shMaxX) shMaxX = r.maxX;
       if (r.minZ < shMinZ) shMinZ = r.minZ;
@@ -5081,7 +5105,7 @@ function WalkthroughController({
     if (inFootprint(x1, z1) !== inFootprint(x2, z2)) {
       const mxs = (x1 + x2) * 0.5, mzs = (z1 + z2) * 0.5;
       for (const pass of doorPasses) {
-        if (pass.floor !== curFloorIdx) continue;  // only THIS floor's doors open this floor's shell
+        if (pass.floor !== curFloorIdx || (pass.bld ?? 0) !== curBld) continue;  // only THIS floor's doors open this floor's shell
         if (x2 >= pass.minX && x2 <= pass.maxX && z2 >= pass.minZ && z2 <= pass.maxZ) return false;
         if (x1 >= pass.minX && x1 <= pass.maxX && z1 >= pass.minZ && z1 <= pass.maxZ) return false;
         if (mxs >= pass.minX && mxs <= pass.maxX && mzs >= pass.minZ && mzs <= pass.maxZ) return false;
@@ -5126,7 +5150,7 @@ function WalkthroughController({
     let crossed = false;
     for (let i = 0; i < walls.length && !crossed; i++) {
       const r = walls[i];
-      if (r.floor !== curFloorIdx) continue;
+      if (r.floor !== curFloorIdx || (r.bld ?? 0) !== curBld) continue;
       const isHall = r.room === "hallway";
       // N / S long sides — skipped for the hallway (neighbours render them).
       if (!isHall) {
@@ -5143,7 +5167,7 @@ function WalkthroughController({
     // doorPass rect. Doors auto-allow crossing the wall they're on.
     const mx = (x1 + x2) * 0.5, mz = (z1 + z2) * 0.5;
     for (const pass of doorPasses) {
-      if (pass.floor !== curFloorIdx) continue;  // a door only opens the wall on ITS floor
+      if (pass.floor !== curFloorIdx || (pass.bld ?? 0) !== curBld) continue;  // a door only opens the wall on ITS floor
       if (x2 >= pass.minX && x2 <= pass.maxX && z2 >= pass.minZ && z2 <= pass.maxZ) return false;
       if (x1 >= pass.minX && x1 <= pass.maxX && z1 >= pass.minZ && z1 <= pass.maxZ) return false;
       if (mx >= pass.minX && mx <= pass.maxX && mz >= pass.minZ && mz <= pass.maxZ) return false;
@@ -5431,65 +5455,6 @@ function FurniturePreloader() {
   return null;
 }
 
-// ─── Secondary building block renderer ──────────────────────
-// Renders a stylised solid mass for secondary buildings.
-// Uses the building's actual footprint (from floorPlans) and floor count.
-// The active building is rendered with full HouseBody detail; secondary
-// buildings show a correctly-sized massed volume so layout reads clearly.
-function SecondaryBuildingBody({
-  floorPlans,
-  exterior,
-}: {
-  floorPlans: import("@/lib/types").FloorPlan[];
-  exterior: import("@/lib/types").ExteriorSettings;
-}) {
-  const { houseHalfExtentsCm } = require("@/lib/yardAutoLayout") as typeof import("@/lib/yardAutoLayout");
-  const fp0 = floorPlans[0];
-  if (!fp0) return null;
-  const { hw, hd } = houseHalfExtentsCm(fp0);
-  const W = (hw * 2) / 100; // metres
-  const D = (hd * 2) / 100;
-  const nFloors = Math.max(1, floorPlans.length);
-  const FLOOR_H = 3.0;
-  const totalH = nFloors * FLOOR_H;
-  const wallColor = exterior.wallColor ?? "#F0EDE8";
-  const accentColor = exterior.accentColor ?? "#1A1A1A";
-  const roofColor = exterior.roofColor ?? "#2A2A2A";
-  return (
-    <group>
-      {/* Foundation slab */}
-      <mesh position={[0, -0.05, 0]} receiveShadow>
-        <boxGeometry args={[W + 0.1, 0.1, D + 0.1]} />
-        <meshStandardMaterial color="#C8C0B0" roughness={0.9} />
-      </mesh>
-      {/* Main building volume */}
-      <mesh position={[0, totalH / 2, 0]} castShadow receiveShadow>
-        <boxGeometry args={[W, totalH, D]} />
-        <meshStandardMaterial color={wallColor} roughness={0.75} metalness={0.02} />
-      </mesh>
-      {/* Horizontal floor bands */}
-      {Array.from({ length: nFloors - 1 }, (_, fi) => (
-        <mesh key={fi} position={[0, (fi + 1) * FLOOR_H, 0]}>
-          <boxGeometry args={[W + 0.04, 0.08, D + 0.04]} />
-          <meshStandardMaterial color={accentColor} roughness={0.6} />
-        </mesh>
-      ))}
-      {/* Window strip per floor on south face */}
-      {Array.from({ length: nFloors }, (_, fi) => (
-        <mesh key={fi} position={[0, fi * FLOOR_H + FLOOR_H * 0.55, D / 2 + 0.02]}>
-          <boxGeometry args={[W * 0.6, FLOOR_H * 0.35, 0.04]} />
-          <meshPhysicalMaterial color="#B0CCE0" transparent opacity={0.50} roughness={0.05} metalness={0.1} />
-        </mesh>
-      ))}
-      {/* Flat roof cap */}
-      <mesh position={[0, totalH + 0.05, 0]}>
-        <boxGeometry args={[W + 0.15, 0.1, D + 0.15]} />
-        <meshStandardMaterial color={roofColor} roughness={0.5} />
-      </mesh>
-    </group>
-  );
-}
-
 // ─── Time-of-day slider ─────────────────────────────────────
 // Isolated from the giant HouseCanvas tree on purpose. The 3D scene
 // re-renders on every committed sunHour change (~100ms for a full villa),
@@ -5622,78 +5587,79 @@ export default function HouseCanvas() {
   // the FloorPlan toolbar. Cardinal keys only — polygon edge-${i} hides
   // don't have a clean AABB-side mapping; users with polygon rooms still
   // need no-clip mode to walk through hidden polygon edges.
-  type WallRect = AABB & { floor: number; room: string; hides?: Partial<Record<import("@/lib/types").WallSide, boolean>> };
+  type WallRect = AABB & { floor: number; room: string; bld?: number; hides?: Partial<Record<import("@/lib/types").WallSide, boolean>> };
   const wallAABBs = useMemo<WallRect[]>(() => {
     const out: WallRect[] = [];
-    // House-wide bbox so each room's local center can be world-translated.
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
-      const fp = floorPlansForWalk[fi]; if (!fp) continue;
-      for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
-        const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
-        if (!p || !d) continue;
-        minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
-        maxX = Math.max(maxX, p.x + d.width); maxY = Math.max(maxY, p.y + d.depth);
+    const WALL_HALF = 0.06;
+    // 为一栋楼建室内碰撞矩形：以该楼自身房间 bbox 居中(局部系)，再加世界偏移
+    // (offX/offZ 米)。多楼栋共用此函数——激活楼栋 off=0，副楼按 (bld-activeBld) 偏移，
+    // 每条矩形打 bld 标签供 blocksMovement 按栋分组做外壳门控。rot=0 的副楼直接
+    // 偏移即对齐；旋转副楼不进碰撞(见下方调用处)，避免与渲染错位的"隐形墙"。
+    const pushBuilding = (fps: import("@/lib/types").FloorPlan[], hasRoof: boolean, offX: number, offZ: number, bldIdx: number) => {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (let fi = 0; fi < fps.length; fi++) {
+        const fp = fps[fi]; if (!fp) continue;
+        for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+          const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+          if (!p || !d) continue;
+          minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+          maxX = Math.max(maxX, p.x + d.width); maxY = Math.max(maxY, p.y + d.depth);
+        }
       }
-    }
-    if (!isFinite(minX)) return out;
-    const CM_local = 0.01;
-    const Wh = (maxX - minX) * CM_local;
-    const Dh = (maxY - minY) * CM_local;
-    for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
-      const fp = floorPlansForWalk[fi];
-      if (!fp) continue;
-      for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
-        const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
-        if (!p || !d) continue;
-        // World rect (NSWE convention, no Z-flip):
-        //   x ∈ [(p.x-minX)*CM - W/2, (p.x+w-minX)*CM - W/2]   W = -X, E = +X
-        //   z ∈ [(p.y-minY)*CM - D/2, (p.y+d-minY)*CM - D/2]   N = -Z, S = +Z
-        const wh = fp.roomWallsHidden?.[r];
-        const hides: WallRect["hides"] = wh ? {
-          N: wh.N === true || undefined,
-          S: wh.S === true || undefined,
-          W: wh.W === true || undefined,
-          E: wh.E === true || undefined,
-        } : undefined;
-        // Shrink the walkable AABB by the wall HALF-thickness on each
-        // side so the user collides at the visible interior wall surface
-        // — not 6 cm INTO the wall (which is where the raw room AABB
-        // edge sits). Must match FPE's WALL_T (0.12m).
-        const WALL_HALF = 0.06;
-        // No X-negation needed: new convention east = +X is correct without flip.
+      if (!isFinite(minX)) return;
+      const CM_local = 0.01;
+      const Wh = (maxX - minX) * CM_local;
+      const Dh = (maxY - minY) * CM_local;
+      for (let fi = 0; fi < fps.length; fi++) {
+        const fp = fps[fi];
+        if (!fp) continue;
+        for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+          const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+          if (!p || !d) continue;
+          const wh = fp.roomWallsHidden?.[r];
+          const hides: WallRect["hides"] = wh ? {
+            N: wh.N === true || undefined,
+            S: wh.S === true || undefined,
+            W: wh.W === true || undefined,
+            E: wh.E === true || undefined,
+          } : undefined;
+          out.push({
+            floor: fi,
+            room: r,
+            bld: bldIdx,
+            minX: (p.x - minX) * CM_local - Wh / 2 + WALL_HALF + offX,
+            maxX: (p.x + d.width - minX) * CM_local - Wh / 2 - WALL_HALF + offX,
+            minZ: (p.y - minY) * CM_local - Dh / 2 + WALL_HALF + offZ,
+            maxZ: (p.y + d.depth - minY) * CM_local - Dh / 2 - WALL_HALF + offZ,
+            hides,
+          });
+        }
+      }
+      // 天台满铺甲板碰撞矩形(见原注释：避免开阔屋顶凭空隔墙 + 楼层就近匹配)。
+      const roofFloorIdx = hasRoof ? fps.length - 1 : -1;
+      if (roofFloorIdx >= 0) {
         out.push({
-          floor: fi,
-          room: r,
-          minX: (p.x - minX) * CM_local - Wh / 2 + WALL_HALF,
-          maxX: (p.x + d.width - minX) * CM_local - Wh / 2 - WALL_HALF,
-          minZ: (p.y - minY) * CM_local - Dh / 2 + WALL_HALF,
-          maxZ: (p.y + d.depth - minY) * CM_local - Dh / 2 - WALL_HALF,
-          hides,
+          floor: roofFloorIdx, room: "__rooftop_deck__", bld: bldIdx,
+          minX: -Wh / 2 + WALL_HALF + offX, maxX: Wh / 2 - WALL_HALF + offX,
+          minZ: -Dh / 2 + WALL_HALF + offZ, maxZ: Dh / 2 - WALL_HALF + offZ,
         });
       }
-    }
-    // 天台层：露台是开放的，只有四周女儿墙（= 建筑外轮廓），内部无隔墙。屋顶板
-    // 满铺整个 footprint，人从任意位置（含东侧梯井口）爬上来都能站。所以这里给
-    // 天台层加“一整块满铺 footprint”的碰撞矩形，而不是按 rooftop 子房间——后者
-    // 会在开阔屋顶上凭空造出看不见的隔墙（天台房间在走查里根本不渲染墙）。没有
-    // 这一层，blocksMovement 的“就近匹配楼层”会把站在天台的人误判成还在顶层、
-    // 套用顶层室内墙，于是走不出梯井 → “从楼梯去不了天台”。
-    // 天台 = 最后一个楼层（按下标判定），不再依赖“天台专属房间类型”。
-    const roofFloorIdx = exterior.hasRooftop ? floorPlansForWalk.length - 1 : -1;
-    if (roofFloorIdx >= 0) {
-      const WALL_HALF = 0.06;
-      out.push({
-        floor: roofFloorIdx,
-        room: "__rooftop_deck__",
-        minX: -Wh / 2 + WALL_HALF,
-        maxX:  Wh / 2 - WALL_HALF,
-        minZ: -Dh / 2 + WALL_HALF,
-        maxZ:  Dh / 2 - WALL_HALF,
-      });
+    };
+    const ax = buildings[activeBuilding]?.x ?? 0;
+    const az = buildings[activeBuilding]?.z ?? 0;
+    // 激活楼栋：origin，数据 = 工作副本 floorPlansForWalk。
+    pushBuilding(floorPlansForWalk, !!exterior.hasRooftop, 0, 0, activeBuilding);
+    // 副楼：rot=0 的按 (bld-activeBld) 偏移加入碰撞；rot≠0 暂不加(偏移版限制，
+    // 旋转副楼可穿，后续补 OBB 局部坐标变换)。
+    for (let i = 0; i < buildings.length; i++) {
+      if (i === activeBuilding) continue;
+      const b = buildings[i];
+      if (!b.floorPlans?.length || b.rot) continue;
+      pushBuilding(b.floorPlans, !!(b.exterior as { hasRooftop?: boolean }).hasRooftop,
+        (b.x - ax) / 100, (b.z - az) / 100, i);
     }
     return out;
-  }, [floorPlansForWalk, exterior.hasRooftop]);
+  }, [floorPlansForWalk, exterior.hasRooftop, buildings, activeBuilding]);
 
   // Outer clamp box: extends BEYOND the building into the yard so the user
   // can walk out through the front-entrance door. Padding is 15 m on each
@@ -5722,11 +5688,17 @@ export default function HouseCanvas() {
   //   "N" → SVG top (small planY)  = small world-Z = room AABB minZ side (NORTH wall, -Z)
   //   "S" → SVG bottom (large planY) = large world-Z = room AABB maxZ side (SOUTH wall, +Z)
   // Matches FloorPlanExterior's door render convention.
-  const doorPasses = useMemo<Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number }>>(() => {
-    const out: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number }> = [];
+  const doorPasses = useMemo<Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number; bld?: number }>>(() => {
+    const out: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number; bld?: number }> = [];
+    const CM = 0.01;
+    const PAD = 0.4; // metres on either side of the wall — generous so users don't snag
+    const AUTO_DOOR_LEN_CM = 80;
+    const EPS_CM = 25; // 0.25 m: "interior" if dist to floor bound ≥ this
+    // 与 wallAABBs 同构：按楼栋建门洞通道，加世界偏移(offX/offZ 米)+bld 标签。
+    const pushBuilding = (fps: import("@/lib/types").FloorPlan[], offX: number, offZ: number, bldIdx: number) => {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
-      const fp = floorPlansForWalk[fi]; if (!fp) continue;
+    for (let fi = 0; fi < fps.length; fi++) {
+      const fp = fps[fi]; if (!fp) continue;
       for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
         const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
         if (!p || !d) continue;
@@ -5734,11 +5706,9 @@ export default function HouseCanvas() {
         maxX = Math.max(maxX, p.x + d.width); maxY = Math.max(maxY, p.y + d.depth);
       }
     }
-    if (!isFinite(minX)) return out;
-    const CM = 0.01;
+    if (!isFinite(minX)) return;
     const Wh = (maxX - minX) * CM;
     const Dh = (maxY - minY) * CM;
-    const PAD = 0.4; // metres on either side of the wall — generous so users don't snag
 
     const collect = (door: { wall: string; pos: number; len: number },
                      p: { x: number; y: number }, d: { width: number; depth: number },
@@ -5771,7 +5741,7 @@ export default function HouseCanvas() {
         const z1 = z0 + dLen;
         pass = { minX: rMaxX - PAD, maxX: rMaxX + PAD, minZ: z0, maxZ: z1 };
       }
-      if (pass) out.push({ ...pass, floor });
+      if (pass) out.push({ minX: pass.minX + offX, maxX: pass.maxX + offX, minZ: pass.minZ + offZ, maxZ: pass.maxZ + offZ, floor, bld: bldIdx });
     };
 
     // pickAutoDoor mirror: when a room has no stored doors, FloorPlanExterior
@@ -5781,8 +5751,6 @@ export default function HouseCanvas() {
     //   N = SVG top    = small plan-Y = small worldZ (rMinZ, north face, -Z)
     //   S = SVG bottom = large plan-Y = large worldZ (rMaxZ, south face, +Z)
     //   W = small plan-X = small worldX (-X);  E = large plan-X (+X)
-    const AUTO_DOOR_LEN_CM = 80;
-    const EPS_CM = 25; // 0.25 m: "interior" if dist to floor bound ≥ this
     const autoDoorFor = (fi: number, room: string,
                         p: { x: number; y: number }, d: { width: number; depth: number },
                         fb: { minX: number; minY: number; maxX: number; maxY: number }
@@ -5827,8 +5795,8 @@ export default function HouseCanvas() {
       return { wall: all[0][0], pos: centred(all[0][0]), len: AUTO_DOOR_LEN_CM };
     };
 
-    for (let fi = 0; fi < floorPlansForWalk.length; fi++) {
-      const fp = floorPlansForWalk[fi];
+    for (let fi = 0; fi < fps.length; fi++) {
+      const fp = fps[fi];
       if (!fp) continue;
       // Per-floor bounds in plan-cm — needed for the interior/exterior test.
       let fMinX = Infinity, fMinY = Infinity, fMaxX = -Infinity, fMaxY = -Infinity;
@@ -5869,8 +5837,18 @@ export default function HouseCanvas() {
         }
       }
     }
+    };
+    const ax = buildings[activeBuilding]?.x ?? 0;
+    const az = buildings[activeBuilding]?.z ?? 0;
+    pushBuilding(floorPlansForWalk, 0, 0, activeBuilding);
+    for (let i = 0; i < buildings.length; i++) {
+      if (i === activeBuilding) continue;
+      const b = buildings[i];
+      if (!b.floorPlans?.length || b.rot) continue;
+      pushBuilding(b.floorPlans, (b.x - ax) / 100, (b.z - az) / 100, i);
+    }
     return out;
-  }, [floorPlansForWalk]);
+  }, [floorPlansForWalk, buildings, activeBuilding]);
 
   // ── Listen for "enterWalkthrough" event from ExteriorRoomList (left panel) ──
   // ExteriorRoomList dispatches this when the user clicks a room item.
