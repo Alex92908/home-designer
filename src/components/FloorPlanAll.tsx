@@ -1180,28 +1180,72 @@ export default function FloorPlanAll() {
               />
             )}
 
-            {/* ── Secondary buildings — shown as dashed outlines at their relative positions ── */}
-            {secondaryBldOutlines.map(({ bld, bldIdx, hw, hd, svgCx, svgCy }) => (
-              <g key={bld.id} style={{ cursor: "pointer" }} onClick={() => setActiveBuilding(bldIdx)}>
-                <rect
-                  x={svgCx - hw} y={svgCy - hd} width={hw * 2} height={hd * 2}
-                  fill="#EFF6FF" fillOpacity={0.7}
-                  stroke="#2563EB" strokeWidth={2} strokeDasharray="8 4" rx={4}
-                />
-                <text x={svgCx} y={svgCy - 6} textAnchor="middle" fontSize={10}
-                  fill="#2563EB" fontFamily="ui-sans-serif,sans-serif" fontWeight={700}>
-                  {bld.label}
-                </text>
-                <text x={svgCx} y={svgCy + 8} textAnchor="middle" fontSize={8}
-                  fill="#60A5FA" fontFamily="ui-monospace,monospace">
-                  {Math.round(hw * 2 / 100 * 10) / 10}×{Math.round(hd * 2 / 100 * 10) / 10}m
-                </text>
-                <text x={svgCx} y={svgCy + hd + 14} textAnchor="middle" fontSize={7.5}
-                  fill="#93C5FD" fontFamily="ui-sans-serif,sans-serif">
-                  {locale === "en" ? "click to edit" : "点击切换编辑"}
-                </text>
-              </g>
-            ))}
+            {/* ── Other buildings — same-canvas rendering at their relative positions ── */}
+            {buildings.map((bld, bldIdx) => {
+              if (bldIdx === activeBuilding) return null;
+              const fp = bld.floorPlans[Math.min(activeFloor, bld.floorPlans.length - 1)];
+              if (!fp) return null;
+              const bldRooms = ALL_ROOMS.filter(r =>
+                (fp.enabledRooms ?? []).includes(r) && fp.roomDimensions?.[r] && fp.roomLayout?.[r]
+                && !ROOM_DEFS[r]?.isOutdoor
+              );
+              // Compute this building's local room-center so we can align it to its world position
+              const rxs = bldRooms.flatMap(r => [fp.roomLayout![r].x, fp.roomLayout![r].x + fp.roomDimensions![r].width]);
+              const rys = bldRooms.flatMap(r => [fp.roomLayout![r].y, fp.roomLayout![r].y + fp.roomDimensions![r].depth]);
+              const bcx = rxs.length ? (Math.min(...rxs) + Math.max(...rxs)) / 2 : 0;
+              const bcy = rys.length ? (Math.min(...rys) + Math.max(...rys)) / 2 : 0;
+              // Target SVG position: offset from active building's center by world-space distance
+              const tx = houseCenterX + (bld.x - activeBldPos.x) - bcx;
+              const ty = houseCenterY + (bld.z - activeBldPos.z) - bcy;
+              const bMinX = rxs.length ? Math.min(...rxs) : -200;
+              const bMinY = rys.length ? Math.min(...rys) : -200;
+              const bMaxX = rxs.length ? Math.max(...rxs) : 200;
+              const bMaxY = rys.length ? Math.max(...rys) : 200;
+              return (
+                <g key={bld.id} transform={`translate(${tx},${ty})`}
+                  style={{ cursor: "pointer", opacity: 0.5 }}
+                  onClick={() => { setActiveBuilding(bldIdx); }}>
+                  {/* Background fill so building is visually distinct */}
+                  <rect x={bMinX - 6} y={bMinY - 6} width={bMaxX - bMinX + 12} height={bMaxY - bMinY + 12}
+                    fill="#EFF6FF" stroke="#93C5FD" strokeWidth={1.5} strokeDasharray="6 3" rx={4}
+                  />
+                  {/* Room tiles */}
+                  {bldRooms.map(room => {
+                    const pos  = fp.roomLayout![room];
+                    const dims = fp.roomDimensions![room];
+                    const shape = fp.roomShapes?.[room];
+                    const isPolygon = shape && shape.preset !== "rect";
+                    const polyPts = isPolygon
+                      ? shape!.points.map(([px, pz]) => `${pos.x + px},${pos.y + pz}`).join(" ") : "";
+                    const roomName = ROOM_DEFS[room]?.name ?? room;
+                    return (
+                      <g key={room}>
+                        {isPolygon ? (
+                          <polygon points={polyPts} fill="#BFDBFE" stroke="#3B82F6" strokeWidth={1.5} />
+                        ) : (
+                          <rect x={pos.x} y={pos.y} width={dims.width} height={dims.depth}
+                            fill="#BFDBFE" stroke="#3B82F6" strokeWidth={1.5} rx={2} />
+                        )}
+                        <text x={pos.x + dims.width / 2} y={pos.y + dims.depth / 2 + 4}
+                          textAnchor="middle" fontSize={9} fill="#1E3A8A"
+                          fontFamily="ui-sans-serif,sans-serif">
+                          {roomName}
+                        </text>
+                      </g>
+                    );
+                  })}
+                  {/* Building label + hint */}
+                  <text x={(bMinX + bMaxX) / 2} y={bMinY - 14} textAnchor="middle" fontSize={10}
+                    fill="#2563EB" fontFamily="ui-sans-serif,sans-serif" fontWeight={700}>
+                    {bld.label}
+                  </text>
+                  <text x={(bMinX + bMaxX) / 2} y={bMaxY + 16} textAnchor="middle" fontSize={7.5}
+                    fill="#60A5FA" fontFamily="ui-sans-serif,sans-serif">
+                    {locale === "en" ? "click to edit" : "点击切换编辑"}
+                  </text>
+                </g>
+              );
+            })}
 
             {/* ── Ghost floor overlays — non-active floors shown semi-transparently ── */}
             {exterior.floors > 1 && Array.from({ length: exterior.floors }, (_, fi) => {
