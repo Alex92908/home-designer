@@ -142,9 +142,9 @@ function AssetLibCard({ asset, locale }: {
 
 // ─── Constants ─────────────────────────────────────────────
 // World window the SVG renders (cm, centred on origin)
-const WIN_HALF_CM = 1500; // 30m × 30m visible area
+const WIN_HALF_CM = 1500; // 30m × 30m lot boundary (fixed)
 const SVG_PX = 720;       // logical SVG pixel dimensions
-const CM_PER_PX = (WIN_HALF_CM * 2) / SVG_PX;
+// cmPerPx is now computed dynamically inside the component
 const SNAP_CM = 25;       // snap drag positions to 25cm grid
 
 // ─── Top-down asset symbols — TWO palette sets ─────────────────
@@ -807,6 +807,18 @@ export default function YardPlan() {
   // Quote sheet modal
   const [showQuote, setShowQuote] = useState(false);
 
+  // Dynamic viewport: auto-expand to show all buildings and yard items
+  const cmPerPx = (() => {
+    const hw = (footprint.maxX - footprint.minX) / 2;
+    const hd = (footprint.maxZ - footprint.minZ) / 2;
+    const needed = Math.max(
+      WIN_HALF_CM,
+      ...buildings.map(b => Math.max(Math.abs(b.x) + hw + 200, Math.abs(b.z) + hd + 200)),
+      ...yardItems.map(it => Math.max(Math.abs(it.x) + 200, Math.abs(it.z) + 200)),
+    );
+    return (needed * 2) / SVG_PX;
+  })();
+
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedId, _setSelectedId] = useState<string | null>(null);
   const setSelectedId = (id: string | null) => {
@@ -869,8 +881,8 @@ export default function YardPlan() {
     const px = vbOrigin + ((clientX - rect.left) / rect.width)  * vbSize;
     const py = vbOrigin + ((clientY - rect.top)  / rect.height) * vbSize;
     return {
-      x: (px - SVG_PX / 2) * CM_PER_PX,
-      z: (py - SVG_PX / 2) * CM_PER_PX,
+      x: (px - SVG_PX / 2) * cmPerPx,
+      z: (py - SVG_PX / 2) * cmPerPx,
     };
   };
 
@@ -921,6 +933,11 @@ export default function YardPlan() {
   // Shift key bypasses both (free move for manual fine-tuning).
   const houseWm = (footprint.maxX - footprint.minX) / 100;
   const houseDm = (footprint.maxZ - footprint.minZ) / 100;
+
+  // Keep yardItems accessible inside drag effect via ref (avoids re-registering listener on every position update)
+  const yardItemsRef = useRef(yardItems);
+  yardItemsRef.current = yardItems;
+
   useEffect(() => {
     if (!drag) return;
     const onMove = (ev: PointerEvent) => {
@@ -940,7 +957,7 @@ export default function YardPlan() {
 
         // 2. Clearance guard (避让) — for trees use canopy radius so the 3D
         //    crown never clips through the building wall; other items 20 cm.
-        const dragItem = yardItems.find(it => it.id === drag.id);
+        const dragItem = yardItemsRef.current.find(it => it.id === drag.id);
         const dragKind = dragItem && "kind" in dragItem ? (dragItem as { kind: string }).kind : "";
         const dragScale = dragItem && "scale" in dragItem ? ((dragItem as { scale?: number }).scale ?? 1) : 1;
         const clearanceCm = dragKind.startsWith("tree.")
@@ -964,7 +981,7 @@ export default function YardPlan() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [drag, updateYardItem, houseWm, houseDm, yardItems]);
+  }, [drag, updateYardItem, houseWm, houseDm]);
 
   useEffect(() => {
     if (!resize) return;
@@ -1596,16 +1613,16 @@ export default function YardPlan() {
           )}
           {/* Scale bar */}
           <g transform={`translate(20, ${SVG_PX - 24})`} style={{ pointerEvents: "none" }}>
-            <line x1={0} y1={0} x2={500 / CM_PER_PX} y2={0} stroke={INK} strokeWidth={1.2} />
+            <line x1={0} y1={0} x2={500 / cmPerPx} y2={0} stroke={INK} strokeWidth={1.2} />
             <line x1={0} y1={-3} x2={0} y2={3} stroke={INK} strokeWidth={1.2} />
-            <line x1={500 / CM_PER_PX} y1={-3} x2={500 / CM_PER_PX} y2={3} stroke={INK} strokeWidth={1.2} />
-            <text x={500 / CM_PER_PX / 2} y={14} textAnchor="middle" fontSize={9} fill={INK}>5.00 m</text>
+            <line x1={500 / cmPerPx} y1={-3} x2={500 / cmPerPx} y2={3} stroke={INK} strokeWidth={1.2} />
+            <text x={500 / cmPerPx / 2} y={14} textAnchor="middle" fontSize={9} fill={INK}>5.00 m</text>
           </g>
 
           {/* ── Lot boundary + setback overlay ── */}
           {(() => {
-            const lotPx = WIN_HALF_CM / CM_PER_PX;               // half-side of lot in SVG px
-            const setbackPx = setbackCm / CM_PER_PX;             // setback in SVG px
+            const lotPx = WIN_HALF_CM / cmPerPx;               // half-side of lot in SVG px
+            const setbackPx = setbackCm / cmPerPx;             // setback in SVG px
             const cx = SVG_PX / 2, cy = SVG_PX / 2;
             return (
               <g style={{ pointerEvents: "none" }}>
@@ -1643,7 +1660,7 @@ export default function YardPlan() {
               house silhouette always reads clearly on top. ── */}
           {shadowPoly && (() => {
             const pts = shadowPoly
-              .map(([sx, sz]) => `${SVG_PX / 2 + sx / CM_PER_PX},${SVG_PX / 2 + sz / CM_PER_PX}`)
+              .map(([sx, sz]) => `${SVG_PX / 2 + sx / cmPerPx},${SVG_PX / 2 + sz / cmPerPx}`)
               .join(" ");
             const cx = shadowPoly.reduce((s, [sx]) => s + sx, 0) / shadowPoly.length;
             const cz = shadowPoly.reduce((s, [, sz]) => s + sz, 0) / shadowPoly.length;
@@ -1657,8 +1674,8 @@ export default function YardPlan() {
                   strokeDasharray="5 3"
                 />
                 <text
-                  x={SVG_PX / 2 + cx / CM_PER_PX}
-                  y={SVG_PX / 2 + cz / CM_PER_PX}
+                  x={SVG_PX / 2 + cx / cmPerPx}
+                  y={SVG_PX / 2 + cz / cmPerPx}
                   textAnchor="middle" dominantBaseline="middle"
                   fontSize={8} fill="rgba(255,200,80,0.65)"
                   fontFamily="ui-monospace, Menlo, monospace"
@@ -1675,19 +1692,19 @@ export default function YardPlan() {
               ("north at top"). Yard items (trees, gate, fence) use the same +sz mapping. */}
           {(() => {
             const toSvg = ([x, z]: [number, number]): [number, number] => [
-              SVG_PX / 2 + x / CM_PER_PX,
-              SVG_PX / 2 + z / CM_PER_PX,
+              SVG_PX / 2 + x / cmPerPx,
+              SVG_PX / 2 + z / cmPerPx,
             ];
-            const cxBox = SVG_PX / 2 + (footprint.minX + footprint.maxX) / 2 / CM_PER_PX;
-            const cyBox = SVG_PX / 2 + (footprint.minZ + footprint.maxZ) / 2 / CM_PER_PX;
+            const cxBox = SVG_PX / 2 + (footprint.minX + footprint.maxX) / 2 / cmPerPx;
+            const cyBox = SVG_PX / 2 + (footprint.minZ + footprint.maxZ) / 2 / cmPerPx;
             return (
               <g style={{ pointerEvents: "none" }}>
                 {/* Subtle drop shadow */}
                 <rect
-                  x={SVG_PX / 2 + footprint.minX / CM_PER_PX + 4}
-                  y={SVG_PX / 2 + footprint.minZ / CM_PER_PX + 4}
-                  width={(footprint.maxX - footprint.minX) / CM_PER_PX}
-                  height={(footprint.maxZ - footprint.minZ) / CM_PER_PX}
+                  x={SVG_PX / 2 + footprint.minX / cmPerPx + 4}
+                  y={SVG_PX / 2 + footprint.minZ / cmPerPx + 4}
+                  width={(footprint.maxX - footprint.minX) / cmPerPx}
+                  height={(footprint.maxZ - footprint.minZ) / cmPerPx}
                   fill="rgba(0,0,0,0.4)" rx={2}
                 />
                 {/* Per-room slabs — soft white surface + hatch overlay */}
@@ -1703,10 +1720,10 @@ export default function YardPlan() {
                 })}
                 {/* Thick outer wall outline */}
                 <rect
-                  x={SVG_PX / 2 + footprint.minX / CM_PER_PX}
-                  y={SVG_PX / 2 + footprint.minZ / CM_PER_PX}
-                  width={(footprint.maxX - footprint.minX) / CM_PER_PX}
-                  height={(footprint.maxZ - footprint.minZ) / CM_PER_PX}
+                  x={SVG_PX / 2 + footprint.minX / cmPerPx}
+                  y={SVG_PX / 2 + footprint.minZ / cmPerPx}
+                  width={(footprint.maxX - footprint.minX) / cmPerPx}
+                  height={(footprint.maxZ - footprint.minZ) / cmPerPx}
                   fill="none" stroke={INK} strokeWidth={2.2} strokeLinejoin="round"
                 />
                 {/* Label — technical drawing typography */}
@@ -1729,10 +1746,10 @@ export default function YardPlan() {
             const fp0 = bldIdx === activeBuilding ? (workingFp0 ?? bld.floorPlans[0]) : bld.floorPlans[0];
             if (!fp0) return null;
             const { hw, hd } = houseHalfExtentsCm(fp0);
-            const bx = SVG_PX / 2 + bld.x / CM_PER_PX;
-            const bz = SVG_PX / 2 + bld.z / CM_PER_PX;
-            const bwPx = hw * 2 / CM_PER_PX;
-            const bdPx = hd * 2 / CM_PER_PX;
+            const bx = SVG_PX / 2 + bld.x / cmPerPx;
+            const bz = SVG_PX / 2 + bld.z / cmPerPx;
+            const bwPx = hw * 2 / cmPerPx;
+            const bdPx = hd * 2 / cmPerPx;
             const isSel = selectedBldId === bld.id;
             const isActive2 = bldIdx === activeBuilding;
             return (
@@ -1789,9 +1806,9 @@ export default function YardPlan() {
 
           {/* Zones — drawn UNDER everything else (paving) */}
           {yardItems.filter(isYardZone).map(zone => {
-            const sx = SVG_PX / 2 + zone.x / CM_PER_PX;
-            const sz = SVG_PX / 2 + zone.z / CM_PER_PX;
-            const polyPx = zone.polygon.map(([px, pz]) => [px / CM_PER_PX, pz / CM_PER_PX] as [number, number]);
+            const sx = SVG_PX / 2 + zone.x / cmPerPx;
+            const sz = SVG_PX / 2 + zone.z / cmPerPx;
+            const polyPx = zone.polygon.map(([px, pz]) => [px / cmPerPx, pz / cmPerPx] as [number, number]);
             const isSel = selectedId === zone.id;
             return (
               <g key={zone.id}
@@ -1849,12 +1866,12 @@ export default function YardPlan() {
           {yardItems.filter(isYardPrefab).map(prefab => {
             const def = getPrefabDef(prefab.prefabKind);
             if (!def) return null;
-            const sx = SVG_PX / 2 + prefab.x / CM_PER_PX;
-            const sz = SVG_PX / 2 + prefab.z / CM_PER_PX;
+            const sx = SVG_PX / 2 + prefab.x / cmPerPx;
+            const sz = SVG_PX / 2 + prefab.z / cmPerPx;
             const fpCm = prefab.footprintCm ?? def.defaultFootprintCm;
             const fpPx = {
-              w: fpCm.w / CM_PER_PX,
-              d: fpCm.d / CM_PER_PX,
+              w: fpCm.w / cmPerPx,
+              d: fpCm.d / cmPerPx,
             };
             const isSel = selectedId === prefab.id;
             return (
@@ -1916,9 +1933,9 @@ export default function YardPlan() {
           {yardItems.filter(isYardSingleton).map(item => {
             const asset = getOutdoorAssetByKind(item.kind);
             if (!asset) return null;
-            const sx = SVG_PX / 2 + item.x / CM_PER_PX;
-            const sz = SVG_PX / 2 + item.z / CM_PER_PX;
-            const r = Math.max(8, asset.radiusCm / CM_PER_PX * (item.scale ?? 1));
+            const sx = SVG_PX / 2 + item.x / cmPerPx;
+            const sz = SVG_PX / 2 + item.z / cmPerPx;
+            const r = Math.max(8, asset.radiusCm / cmPerPx * (item.scale ?? 1));
             const isSel = selectedId === item.id;
             const itemViolations = violationMap.get(item.id) ?? [];
             const hasRequired = itemViolations.some(v => v.severity === "required");
@@ -2006,11 +2023,11 @@ export default function YardPlan() {
           {yardPaths.map(path => {
             if (path.points.length < 2) return null;
             const pts = path.points.map(([x, z]) => {
-              const px = SVG_PX / 2 + x / CM_PER_PX;
-              const pz = SVG_PX / 2 + z / CM_PER_PX;
+              const px = SVG_PX / 2 + x / cmPerPx;
+              const pz = SVG_PX / 2 + z / cmPerPx;
               return `${px},${pz}`;
             }).join(" ");
-            const strokeW = Math.max(1, path.widthCm / CM_PER_PX);
+            const strokeW = Math.max(1, path.widthCm / cmPerPx);
             const matColors: Record<string, [string, string]> = {
               stone:  ["rgba(180,160,120,0.65)", "rgba(200,180,140,0.35)"],
               gravel: ["rgba(160,150,130,0.60)", "rgba(180,170,150,0.30)"],
@@ -2056,8 +2073,8 @@ export default function YardPlan() {
                 {(() => {
                   const [ax, az] = path.points[0];
                   const [bx, bz] = path.points[1];
-                  const mx = SVG_PX / 2 + (ax + bx) / 2 / CM_PER_PX;
-                  const mz = SVG_PX / 2 + (az + bz) / 2 / CM_PER_PX;
+                  const mx = SVG_PX / 2 + (ax + bx) / 2 / cmPerPx;
+                  const mz = SVG_PX / 2 + (az + bz) / 2 / cmPerPx;
                   return (
                     <g style={{ pointerEvents: "all", cursor: "pointer" }}
                       onPointerDown={(e) => e.stopPropagation()}
@@ -2083,11 +2100,11 @@ export default function YardPlan() {
             const allPts = pathPreview ? [...pathPts, pathPreview] : pathPts;
             if (allPts.length < 1) return null;
             const pts = allPts.map(([x, z]) => {
-              const px = SVG_PX / 2 + x / CM_PER_PX;
-              const pz = SVG_PX / 2 + z / CM_PER_PX;
+              const px = SVG_PX / 2 + x / cmPerPx;
+              const pz = SVG_PX / 2 + z / cmPerPx;
               return `${px},${pz}`;
             }).join(" ");
-            const strokeW = Math.max(1, pathWidthCm / CM_PER_PX);
+            const strokeW = Math.max(1, pathWidthCm / cmPerPx);
             return (
               <g style={{ pointerEvents: "none" }}>
                 <polyline points={pts} fill="none"
@@ -2097,14 +2114,14 @@ export default function YardPlan() {
                   stroke="#60A5FA" strokeWidth={1.5}
                   strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6 4" />
                 {pathPts.map(([x, z], i) => {
-                  const px = SVG_PX / 2 + x / CM_PER_PX;
-                  const pz = SVG_PX / 2 + z / CM_PER_PX;
+                  const px = SVG_PX / 2 + x / cmPerPx;
+                  const pz = SVG_PX / 2 + z / cmPerPx;
                   return <circle key={i} cx={px} cy={pz} r={4} fill="#60A5FA" stroke="white" strokeWidth={1.5} />;
                 })}
                 {pathPreview && (
                   <circle
-                    cx={SVG_PX / 2 + pathPreview[0] / CM_PER_PX}
-                    cy={SVG_PX / 2 + pathPreview[1] / CM_PER_PX}
+                    cx={SVG_PX / 2 + pathPreview[0] / cmPerPx}
+                    cy={SVG_PX / 2 + pathPreview[1] / cmPerPx}
                     r={3} fill="white" stroke="#60A5FA" strokeWidth={1.5} />
                 )}
                 <text x={SVG_PX / 2} y={SVG_PX - 20} textAnchor="middle"
@@ -2118,8 +2135,8 @@ export default function YardPlan() {
           {/* Fence rubber-band preview line */}
           {drawMode === "fence" && fenceDraw && fencePreviewEnd && (() => {
             const [sx, sz] = fenceDraw.startPx;
-            const ex = SVG_PX / 2 + fencePreviewEnd[0] / CM_PER_PX;
-            const ez = SVG_PX / 2 + fencePreviewEnd[1] / CM_PER_PX;
+            const ex = SVG_PX / 2 + fencePreviewEnd[0] / cmPerPx;
+            const ez = SVG_PX / 2 + fencePreviewEnd[1] / cmPerPx;
             const dx = fencePreviewEnd[0] - fenceDraw.startCm[0];
             const dz = fencePreviewEnd[1] - fenceDraw.startCm[1];
             const lenM = (Math.sqrt(dx * dx + dz * dz) / 100).toFixed(1);
