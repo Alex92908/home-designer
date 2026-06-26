@@ -2,7 +2,7 @@ import { create, useStore } from "zustand";
 import { persist } from "zustand/middleware";
 import { temporal } from "zundo";
 import type { TemporalState } from "zundo";
-import { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, ROOM_DEFS, StyleTag, getRoomArea, FurnitureItem, ExteriorSettings, WindowConfig, RoomState, FloorPlan, ExteriorWallDecorItem, ExteriorWall, WallSide, FacadeLayer } from "./types";
+import { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, ROOM_DEFS, StyleTag, getRoomArea, FurnitureItem, ExteriorSettings, WindowConfig, RoomState, FloorPlan, ExteriorWallDecorItem, ExteriorWall, WallSide, FacadeLayer, Building } from "./types";
 import { FURNITURE, getFurnitureById, registerFurniture } from "./furniture";
 import { MATERIALS } from "./data";
 import { getOutdoorAssetByKind } from "./outdoorAssets";
@@ -811,6 +811,22 @@ interface DesignerStore {
   activeFloor: number;
   setActiveFloor: (floor: number) => void;
 
+  // ── Multi-building ──────────────────────────────────────────────────────
+  /** All buildings on the plot. buildings[0] = main house (always at x=0,z=0).
+   *  Top-level `floorPlans` and `exterior` are mirrors of
+   *  buildings[activeBuilding].floorPlans / .exterior. */
+  buildings: Building[];
+  activeBuilding: number;
+  /** Switch to building at index idx. Saves current floorPlans/exterior into
+   *  buildings[activeBuilding] first so data is not lost. */
+  setActiveBuilding: (idx: number) => void;
+  /** Add a new building with a fresh default floor plan at the given yard position. */
+  addBuilding: (label: string, x: number, z: number) => void;
+  /** Remove a secondary building by id. Cannot remove buildings[0]. */
+  removeBuilding: (id: string) => void;
+  /** Update position/rotation of any building (including main house). */
+  updateBuildingPosition: (id: string, patch: { x?: number; z?: number; rot?: number; label?: string }) => void;
+
   // Windows per room (operate on current floor)
   setRoomWindows: (room: RoomType, windows: WindowConfig[]) => void;
   addWindow: (room: RoomType, win: WindowConfig) => void;
@@ -1080,6 +1096,74 @@ export const useDesignerStore = create<DesignerStore>()(
       customFurniture: [],
       exterior: { ...initialExterior, ...__defaultProject.exterior },
       activeFloor: 0,
+      buildings: [{
+        id: "main",
+        label: "主楼",
+        x: 0, z: 0, rot: 0,
+        floorPlans: __defaultProject.floorPlans,
+        exterior: { ...initialExterior, ...__defaultProject.exterior },
+      }],
+      activeBuilding: 0,
+
+      setActiveBuilding: (idx) => {
+        const s = get();
+        if (idx === s.activeBuilding) return;
+        const bld = s.buildings[idx];
+        if (!bld) return;
+        // Save current state back to active building before switching.
+        const saved = s.buildings.map((b, i) =>
+          i === s.activeBuilding ? { ...b, floorPlans: s.floorPlans, exterior: s.exterior } : b
+        );
+        set({
+          buildings: saved,
+          activeBuilding: idx,
+          floorPlans: bld.floorPlans,
+          exterior: bld.exterior,
+          activeFloor: 0,
+        });
+      },
+
+      addBuilding: (label, x, z) => {
+        const s = get();
+        // Save current state first.
+        const saved = s.buildings.map((b, i) =>
+          i === s.activeBuilding ? { ...b, floorPlans: s.floorPlans, exterior: s.exterior } : b
+        );
+        const newBuilding: Building = {
+          id: `bld_${Date.now()}`,
+          label,
+          x, z, rot: 0,
+          floorPlans: [makeDefaultFloorPlan()],
+          exterior: { ...initialExterior },
+        };
+        set({ buildings: [...saved, newBuilding] });
+      },
+
+      removeBuilding: (id) => {
+        const s = get();
+        if (id === "main") return; // cannot remove main house
+        const idx = s.buildings.findIndex(b => b.id === id);
+        if (idx <= 0) return;
+        const updated = s.buildings.filter(b => b.id !== id);
+        const newActive = s.activeBuilding >= updated.length ? 0 : s.activeBuilding;
+        set({
+          buildings: updated,
+          activeBuilding: newActive,
+          ...(s.activeBuilding === idx ? {
+            floorPlans: updated[newActive].floorPlans,
+            exterior: updated[newActive].exterior,
+            activeFloor: 0,
+          } : {}),
+        });
+      },
+
+      updateBuildingPosition: (id, patch) => {
+        const s = get();
+        set({
+          buildings: s.buildings.map(b => b.id === id ? { ...b, ...patch } : b),
+        });
+      },
+
       layoutHistory: [],
       activeTemplateId: null,
       cameraAndCapture: null,
@@ -3489,6 +3573,8 @@ export const useDesignerStore = create<DesignerStore>()(
         customFurniture: state.customFurniture,
         exterior: state.exterior,
         blueprint: state.blueprint,
+        buildings: state.buildings,
+        activeBuilding: state.activeBuilding,
       }),
       onRehydrateStorage: () => (state) => {
         // Re-register any custom furniture after hydration
@@ -3498,28 +3584,56 @@ export const useDesignerStore = create<DesignerStore>()(
         // Back-fill any room types added after a floor plan was first
         // persisted (e.g. "stair" added in a later release). Without this,
         // rooms[r] is undefined and any access crashes at runtime.
+        // Helper: back-fill missing room types in a single FloorPlan.
+        const backfillFP = (fp: FloorPlan): FloorPlan => {
+          const rooms = { ...fp.rooms };
+          for (const r of ALL_ROOM_TYPES) {
+            if (!rooms[r]) rooms[r] = emptyRoom();
+          }
+          const roomLayout     = { ...fp.roomLayout };
+          const roomDimensions = { ...fp.roomDimensions };
+          const roomWindows    = { ...fp.roomWindows };
+          const roomDoorPos    = { ...fp.roomDoorPos };
+          const roomHasDoor    = { ...fp.roomHasDoor };
+          const roomDoorWall   = { ...fp.roomDoorWall };
+          for (const r of ALL_ROOM_TYPES) {
+            if (!roomLayout[r])     roomLayout[r]     = DEFAULT_ROOM_LAYOUT[r]     ?? { x: 0, y: 0 };
+            if (!roomDimensions[r]) roomDimensions[r] = DEFAULT_ROOM_DIMENSIONS[r] ?? { width: 300, depth: 260 };
+            if (!roomWindows[r])    roomWindows[r]    = makeDefaultWindows(r);
+            if (roomDoorPos[r]    === undefined) roomDoorPos[r]  = DEFAULT_ROOM_DOOR_POS[r]  ?? 50;
+            if (roomHasDoor[r]    === undefined) roomHasDoor[r]  = DEFAULT_ROOM_HAS_DOOR[r]  ?? true;
+            if (!roomDoorWall[r]) roomDoorWall[r]   = DEFAULT_ROOM_DOOR_WALL[r] ?? "S";
+          }
+          return { ...fp, rooms, roomLayout, roomDimensions, roomWindows, roomDoorPos, roomHasDoor, roomDoorWall };
+        };
         if (state?.floorPlans) {
-          state.floorPlans = state.floorPlans.map(fp => {
-            const rooms = { ...fp.rooms };
-            for (const r of ALL_ROOM_TYPES) {
-              if (!rooms[r]) rooms[r] = emptyRoom();
-            }
-            const roomLayout     = { ...fp.roomLayout };
-            const roomDimensions = { ...fp.roomDimensions };
-            const roomWindows    = { ...fp.roomWindows };
-            const roomDoorPos    = { ...fp.roomDoorPos };
-            const roomHasDoor    = { ...fp.roomHasDoor };
-            const roomDoorWall   = { ...fp.roomDoorWall };
-            for (const r of ALL_ROOM_TYPES) {
-              if (!roomLayout[r])     roomLayout[r]     = DEFAULT_ROOM_LAYOUT[r]     ?? { x: 0, y: 0 };
-              if (!roomDimensions[r]) roomDimensions[r] = DEFAULT_ROOM_DIMENSIONS[r] ?? { width: 300, depth: 260 };
-              if (!roomWindows[r])    roomWindows[r]    = makeDefaultWindows(r);
-              if (roomDoorPos[r]    === undefined) roomDoorPos[r]  = DEFAULT_ROOM_DOOR_POS[r]  ?? 50;
-              if (roomHasDoor[r]    === undefined) roomHasDoor[r]  = DEFAULT_ROOM_HAS_DOOR[r]  ?? true;
-              if (!roomDoorWall[r]) roomDoorWall[r]   = DEFAULT_ROOM_DOOR_WALL[r] ?? "S";
-            }
-            return { ...fp, rooms, roomLayout, roomDimensions, roomWindows, roomDoorPos, roomHasDoor, roomDoorWall };
-          });
+          state.floorPlans = state.floorPlans.map(backfillFP);
+        }
+        // Multi-building migration: old saves have no `buildings` field.
+        // Initialise from top-level floorPlans + exterior.
+        if (state && (!state.buildings || state.buildings.length === 0)) {
+          state.buildings = [{
+            id: "main",
+            label: "主楼",
+            x: 0, z: 0, rot: 0,
+            floorPlans: state.floorPlans ?? [],
+            exterior: state.exterior ?? { ...initialExterior },
+          }];
+          state.activeBuilding = 0;
+        }
+        // Ensure each secondary building's floorPlans are also back-filled.
+        if (state?.buildings) {
+          state.buildings = state.buildings.map((b: Building, i: number) => ({
+            ...b,
+            floorPlans: i === (state.activeBuilding ?? 0)
+              ? (state.floorPlans ?? b.floorPlans)  // active building uses top-level (already backfilled)
+              : b.floorPlans.map(backfillFP),
+          }));
+          // Ensure buildings[0].floorPlans stays in sync with top-level floorPlans.
+          if (state.activeBuilding === 0 && state.buildings[0]) {
+            state.buildings[0].floorPlans = state.floorPlans ?? state.buildings[0].floorPlans;
+            state.buildings[0].exterior   = state.exterior   ?? state.buildings[0].exterior;
+          }
         }
       },
     }

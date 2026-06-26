@@ -670,11 +670,11 @@ export function YardPlanLibrary() {
 // system the 3D Exterior uses. Lets us draw a proper architectural plan
 // (filled rectangles per room) instead of one anonymous bounding box.
 function useHouseRooms() {
-  const activeFloor    = useDesignerStore(s => s.activeFloor);
-  const enabledRooms   = useDesignerStore(s => s.floorPlans[activeFloor].enabledRooms);
-  const roomLayout     = useDesignerStore(s => s.floorPlans[activeFloor].roomLayout);
-  const roomDimensions = useDesignerStore(s => s.floorPlans[activeFloor].roomDimensions);
-  const roomShapes     = useDesignerStore(s => s.floorPlans[activeFloor].roomShapes);
+  // Yard plan always shows the MAIN building (buildings[0]) regardless of activeBuilding
+  const enabledRooms   = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0]).enabledRooms);
+  const roomLayout     = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0]).roomLayout);
+  const roomDimensions = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0]).roomDimensions);
+  const roomShapes     = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0]).roomShapes);
   return useMemo(() => {
     const indoor = enabledRooms.filter(r => !ROOM_DEFS[r].isOutdoor);
     if (!indoor.length) return { rooms: [], bbox: { minX: -200, maxX: 200, minZ: -200, maxZ: 200 } };
@@ -728,17 +728,39 @@ export function useSharedSelectedYardId() {
   return _selectedId;
 }
 
+// Module-scope mini-store for selected building ID (same pattern as above).
+const bldSelListeners = new Set<() => void>();
+let _selectedBldId: string | null = null;
+function setSharedSelectedBldId(id: string | null) {
+  _selectedBldId = id;
+  bldSelListeners.forEach(l => l());
+}
+export function useSharedSelectedBldId() {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const fn = () => force(n => n + 1);
+    bldSelListeners.add(fn);
+    return () => { bldSelListeners.delete(fn); };
+  }, []);
+  return _selectedBldId;
+}
+
 export default function YardPlan() {
   const locale = useLocale();
   const activeFloor = useDesignerStore(s => s.activeFloor);
-  const yardItems   = useDesignerStore(s => s.floorPlans[0].yardPlan?.items ?? EMPTY_YARD_ITEMS);
-  const yardPaths   = useDesignerStore(s => s.floorPlans[0].yardPlan?.paths ?? EMPTY_YARD_PATHS);
+  const yardItems   = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0])?.yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const yardPaths   = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0])?.yardPlan?.paths ?? EMPTY_YARD_PATHS);
   const addYardItem = useDesignerStore(s => s.addYardItem);
   const removeYardItem = useDesignerStore(s => s.removeYardItem);
   const updateYardItem = useDesignerStore(s => s.updateYardItem);
   const addYardPath    = useDesignerStore(s => s.addYardPath);
   const removeYardPath = useDesignerStore(s => s.removeYardPath);
   const exteriorPreset = useDesignerStore(s => s.exterior.preset);
+  const buildings          = useDesignerStore(s => s.buildings);
+  const activeBuilding     = useDesignerStore(s => s.activeBuilding);
+  const updateBuildingPosition = useDesignerStore(s => s.updateBuildingPosition);
+  const setActiveBuilding  = useDesignerStore(s => s.setActiveBuilding);
+  const removeBuilding     = useDesignerStore(s => s.removeBuilding);
   const { rooms: houseRooms, bbox: footprint } = useHouseRooms();
 
   // 按当前外观风格一键铺满院子：复用 EXTERIOR_PRESETS 的 yardItems/yardPaths
@@ -789,6 +811,9 @@ export default function YardPlan() {
     setSharedSelectedId(id);
   };
   const [drag, setDrag] = useState<{ id: string; offsetX: number; offsetZ: number } | null>(null);
+  const [bldDrag, setBldDrag] = useState<{ id: string; offsetX: number; offsetZ: number } | null>(null);
+  const [selectedBldId, _setSelectedBldId] = useState<string | null>(null);
+  const setSelectedBldId = (id: string | null) => { _setSelectedBldId(id); setSharedSelectedBldId(id); };
   const [resize, setResize] = useState<{
     id: string;
     corner: "se" | "sw" | "ne" | "nw";
@@ -986,6 +1011,24 @@ export default function YardPlan() {
       window.removeEventListener("pointerup", onUp);
     };
   }, [zoneResize, updateYardItem]);
+
+  // Building drag — move a secondary building on the plot.
+  useEffect(() => {
+    if (!bldDrag) return;
+    const onMove = (ev: PointerEvent) => {
+      const { x, z } = svgPtToWorld(ev.clientX, ev.clientY);
+      const nx = Math.round((x - bldDrag.offsetX) / SNAP_CM) * SNAP_CM;
+      const nz = Math.round((z - bldDrag.offsetZ) / SNAP_CM) * SNAP_CM;
+      updateBuildingPosition(bldDrag.id, { x: nx, z: nz });
+    };
+    const onUp = () => setBldDrag(null);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [bldDrag, updateBuildingPosition]);
 
   // Keyboard: Delete key removes selected item, ESC exits draw mode
   useEffect(() => {
@@ -1349,6 +1392,7 @@ export default function YardPlan() {
             💰 {locale === "en" ? "Get quote" : "获取报价"}
           </button>
         )}
+
       </div>
 
       {/* ── Quote Sheet Modal ── */}
@@ -1454,7 +1498,7 @@ export default function YardPlan() {
               return;
             }
             // Click on empty SVG → deselect
-            if (e.target === svgRef.current) setSelectedId(null);
+            if (e.target === svgRef.current) { setSelectedId(null); setSelectedBldId(null); }
           }}
           onDoubleClick={(e) => {
             if (drawMode === "path" && pathPts.length >= 2) {
@@ -1664,7 +1708,9 @@ export default function YardPlan() {
                 />
                 {/* Label — technical drawing typography */}
                 <text x={cxBox} y={cyBox - 3} textAnchor="middle" fontSize={9}
-                  fill={INK} fontFamily="ui-monospace, Menlo, monospace" fontWeight={700} letterSpacing="0.15em">HOUSE</text>
+                  fill={INK} fontFamily="ui-monospace, Menlo, monospace" fontWeight={700} letterSpacing="0.15em">
+                  {buildings[0]?.label ?? "主楼"}
+                </text>
                 <text x={cxBox} y={cyBox + 10} textAnchor="middle" fontSize={8}
                   fill={INK_LIGHT} fontFamily="ui-monospace, Menlo, monospace">
                   {Math.round((footprint.maxX - footprint.minX) / 100 * 10) / 10} × {Math.round((footprint.maxZ - footprint.minZ) / 100 * 10) / 10} m
@@ -1672,6 +1718,69 @@ export default function YardPlan() {
               </g>
             );
           })()}
+
+          {/* Secondary buildings — buildings[1+] shown as dashed outlines at their yard positions */}
+          {buildings.map((bld, bldIdx) => {
+            if (bldIdx === 0) return null; // buildings[0] is always the main footprint above
+            if (!bld.floorPlans[0]) return null;
+            const { hw, hd } = houseHalfExtentsCm(bld.floorPlans[0]);
+            const bx = SVG_PX / 2 + bld.x / CM_PER_PX;
+            const bz = SVG_PX / 2 + bld.z / CM_PER_PX;
+            const bwPx = hw * 2 / CM_PER_PX;
+            const bdPx = hd * 2 / CM_PER_PX;
+            const isSel = selectedBldId === bld.id;
+            const isActive2 = bldIdx === activeBuilding;
+            return (
+              <g
+                key={bld.id}
+                transform={`translate(${bx} ${bz}) rotate(${(bld.rot * 180) / Math.PI})`}
+                style={{ cursor: bldDrag?.id === bld.id ? "grabbing" : "grab" }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setSelectedBldId(bld.id);
+                  setSelectedId(null);
+                  const { x, z } = svgPtToWorld(e.clientX, e.clientY);
+                  setBldDrag({ id: bld.id, offsetX: x - bld.x, offsetZ: z - bld.z });
+                }}
+                onDoubleClick={() => setActiveBuilding(bldIdx)}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Drop shadow */}
+                <rect x={-bwPx / 2 + 3} y={-bdPx / 2 + 3} width={bwPx} height={bdPx}
+                  fill="rgba(0,0,0,0.25)" rx={2} />
+                {/* Fill */}
+                <rect x={-bwPx / 2} y={-bdPx / 2} width={bwPx} height={bdPx}
+                  fill={isSel ? "rgba(99,179,255,0.12)" : "rgba(200,200,220,0.10)"} rx={2} />
+                {/* Hatch pattern */}
+                <rect x={-bwPx / 2} y={-bdPx / 2} width={bwPx} height={bdPx}
+                  fill="url(#house-hatch)" rx={2} />
+                {/* Border */}
+                <rect x={-bwPx / 2} y={-bdPx / 2} width={bwPx} height={bdPx}
+                  fill="none"
+                  stroke={isSel ? "#63B3FF" : "#8899BB"}
+                  strokeWidth={isSel ? 2.2 : 1.8}
+                  strokeDasharray={isActive2 ? "none" : "6 3"}
+                  rx={2}
+                />
+                {/* Label */}
+                <text textAnchor="middle" y={-4} fontSize={9} fill={isSel ? "#63B3FF" : "#8899BB"}
+                  fontFamily="ui-monospace, Menlo, monospace" fontWeight={700} letterSpacing="0.1em">
+                  {bld.label}
+                </text>
+                <text textAnchor="middle" y={8} fontSize={7} fill="rgba(136,153,187,0.75)"
+                  fontFamily="ui-monospace, Menlo, monospace">
+                  {Math.round(hw * 2 / 100 * 10) / 10}×{Math.round(hd * 2 / 100 * 10) / 10}m
+                </text>
+                {/* Double-click hint */}
+                {isSel && (
+                  <text textAnchor="middle" y={bdPx / 2 + 12} fontSize={7}
+                    fill="#63B3FF" fontFamily="ui-sans-serif, sans-serif">
+                    {locale === "en" ? "double-click to edit" : "双击切换编辑"}
+                  </text>
+                )}
+              </g>
+            );
+          })}
 
           {/* Zones — drawn UNDER everything else (paving) */}
           {yardItems.filter(isYardZone).map(zone => {
@@ -2091,14 +2200,88 @@ function YardPlanNavToExterior() {
 // ─── Right rail: inspector for the selected yard item ──────
 export function YardPlanInspector() {
   const selectedId = useSharedSelectedYardId();
+  const selectedBldId = useSharedSelectedBldId();
   const activeFloor = useDesignerStore(s => s.activeFloor);
-  const items      = useDesignerStore(s => s.floorPlans[0].yardPlan?.items ?? EMPTY_YARD_ITEMS);
-  const yardPaths  = useDesignerStore(s => s.floorPlans[0].yardPlan?.paths ?? EMPTY_YARD_PATHS);
+  const items      = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0])?.yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const yardPaths  = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0])?.yardPlan?.paths ?? EMPTY_YARD_PATHS);
   const updateYardItem = useDesignerStore(s => s.updateYardItem);
   const removeYardItem = useDesignerStore(s => s.removeYardItem);
   const addYardItem    = useDesignerStore(s => s.addYardItem);
+  const buildings          = useDesignerStore(s => s.buildings);
+  const updateBuildingPosition = useDesignerStore(s => s.updateBuildingPosition);
+  const removeBuilding     = useDesignerStore(s => s.removeBuilding);
+  const setActiveBuilding  = useDesignerStore(s => s.setActiveBuilding);
   const { bbox: footprint } = useHouseRooms();
   const locale = useLocale();
+
+  // Building inspector — shown when a secondary building is selected.
+  const selBld = selectedBldId ? buildings.find(b => b.id === selectedBldId) : null;
+  if (selBld) {
+    const bldIdx = buildings.findIndex(b => b.id === selBld.id);
+    return (
+      <aside className="h-full flex flex-col" style={{ background: "var(--ds-surface)", borderLeft: "1px solid var(--ds-border)" }}>
+        <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid var(--ds-border)" }}>
+          <div style={{ width: 36, height: 36, background: "rgba(99,179,255,0.15)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🏠</div>
+          <div>
+            <div className="text-xs font-bold" style={{ color: "var(--ds-text)" }}>{selBld.label}</div>
+            <div className="text-[10px]" style={{ color: "var(--ds-text-3)" }}>BUILDING · {selBld.id}</div>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-[11px]">
+          <section>
+            <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Label" : "名称"}</div>
+            <input type="text" value={selBld.label}
+              onChange={e => updateBuildingPosition(selBld.id, { label: e.target.value })}
+              className="w-full px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400 text-[11px]" />
+          </section>
+          <section>
+            <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Position (m)" : "位置 (m)"}</div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex items-center gap-1">
+                <span className="text-gray-400 w-3">X</span>
+                <input type="number" step={0.5}
+                  value={(selBld.x / 100).toFixed(1)}
+                  onChange={e => updateBuildingPosition(selBld.id, { x: Math.round(parseFloat(e.target.value) * 100) })}
+                  className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
+              </label>
+              <label className="flex items-center gap-1">
+                <span className="text-gray-400 w-3">Z</span>
+                <input type="number" step={0.5}
+                  value={(selBld.z / 100).toFixed(1)}
+                  onChange={e => updateBuildingPosition(selBld.id, { z: Math.round(parseFloat(e.target.value) * 100) })}
+                  className="flex-1 px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400" />
+              </label>
+            </div>
+          </section>
+          <section>
+            <div className="font-semibold mb-1.5" style={{ color: "var(--ds-text-2)" }}>{locale === "en" ? "Rotation (°)" : "旋转 (°)"}</div>
+            <input type="number" step={5}
+              value={Math.round(selBld.rot * 180 / Math.PI)}
+              onChange={e => updateBuildingPosition(selBld.id, { rot: parseFloat(e.target.value) * Math.PI / 180 })}
+              className="w-full px-2 py-1 rounded border border-gray-200 outline-none focus:border-blue-400 text-[11px]" />
+          </section>
+          <section>
+            <button
+              onClick={() => setActiveBuilding(bldIdx)}
+              className="w-full px-3 py-1.5 rounded-lg text-[11px] font-semibold"
+              style={{ background: "rgba(99,179,255,0.15)", color: "#63B3FF", border: "1px solid rgba(99,179,255,0.4)" }}>
+              {locale === "en" ? "✏️ Edit this building" : "✏️ 切换编辑此楼栋"}
+            </button>
+          </section>
+          {selBld.id !== "main" && (
+            <section>
+              <button
+                onClick={() => { removeBuilding(selBld.id); setSharedSelectedBldId(null); }}
+                className="w-full px-3 py-1.5 rounded-lg text-[11px] font-semibold"
+                style={{ background: "rgba(239,68,68,0.12)", color: "#F87171", border: "1px solid rgba(239,68,68,0.3)" }}>
+                {locale === "en" ? "🗑 Delete building" : "🗑 删除楼栋"}
+              </button>
+            </section>
+          )}
+        </div>
+      </aside>
+    );
+  }
 
   // Smart suggestions — same evaluator as the canvas overlay (now includes path connectivity)
   const violations = useMemo(() => evaluateYardPlan(items, footprint, yardPaths), [items, footprint, yardPaths]);

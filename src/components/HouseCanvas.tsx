@@ -2101,9 +2101,9 @@ function techColorForAsset(kind: string, category: string): string {
  *  singleton primitives (legacy), then prefabs (compound blocks on top). */
 const EMPTY_YARD_ITEMS_3D: import("@/lib/types").YardItem[] = [];
 function YardPlanItems3D() {
-  // 院子数据只存在 floor 0（store 约定：yardPlan 一律读写 floorPlans[0]）。
-  // 之前误读 activeFloor —— 用户切到二楼/天台后整个院子在外观图里凭空消失。
-  const items = useDesignerStore(s => s.floorPlans[0]?.yardPlan?.items ?? EMPTY_YARD_ITEMS_3D);
+  // 院子数据永远属于主楼（buildings[0]）的 floor 0。
+  // 切换副楼时 floorPlans 变为副楼数据，所以必须显式读 buildings[0]。
+  const items = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0])?.yardPlan?.items ?? EMPTY_YARD_ITEMS_3D);
 
   // Render order matters for visual layering:
   //   zones (paving) → singletons → prefabs (often the largest mass)
@@ -2149,8 +2149,8 @@ const PATH_LOOK: Record<string, { color: string; rough: number }> = {
   grass:  { color: "#6E8F58", rough: 0.95 },
 };
 function YardPathItems3D() {
-  // 同上：小径也一律读 floor 0。
-  const paths = useDesignerStore(s => s.floorPlans[0]?.yardPlan?.paths ?? EMPTY_YARD_PATHS_3D);
+  // 小径同上：永远读主楼（buildings[0]）的 floor 0。
+  const paths = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0])?.yardPlan?.paths ?? EMPTY_YARD_PATHS_3D);
 
   return (
     <group>
@@ -6218,10 +6218,71 @@ function FurniturePreloader() {
   return null;
 }
 
+// ─── Secondary building block renderer ──────────────────────
+// Renders a stylised solid mass for secondary buildings.
+// Uses the building's actual footprint (from floorPlans) and floor count.
+// The active building is rendered with full HouseBody detail; secondary
+// buildings show a correctly-sized massed volume so layout reads clearly.
+function SecondaryBuildingBody({
+  floorPlans,
+  exterior,
+}: {
+  floorPlans: import("@/lib/types").FloorPlan[];
+  exterior: import("@/lib/types").ExteriorSettings;
+}) {
+  const { houseHalfExtentsCm } = require("@/lib/yardAutoLayout") as typeof import("@/lib/yardAutoLayout");
+  const fp0 = floorPlans[0];
+  if (!fp0) return null;
+  const { hw, hd } = houseHalfExtentsCm(fp0);
+  const W = (hw * 2) / 100; // metres
+  const D = (hd * 2) / 100;
+  const nFloors = Math.max(1, floorPlans.length);
+  const FLOOR_H = 3.0;
+  const totalH = nFloors * FLOOR_H;
+  const wallColor = exterior.wallColor ?? "#F0EDE8";
+  const accentColor = exterior.accentColor ?? "#1A1A1A";
+  const roofColor = exterior.roofColor ?? "#2A2A2A";
+  return (
+    <group>
+      {/* Foundation slab */}
+      <mesh position={[0, -0.05, 0]} receiveShadow>
+        <boxGeometry args={[W + 0.1, 0.1, D + 0.1]} />
+        <meshStandardMaterial color="#C8C0B0" roughness={0.9} />
+      </mesh>
+      {/* Main building volume */}
+      <mesh position={[0, totalH / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[W, totalH, D]} />
+        <meshStandardMaterial color={wallColor} roughness={0.75} metalness={0.02} />
+      </mesh>
+      {/* Horizontal floor bands */}
+      {Array.from({ length: nFloors - 1 }, (_, fi) => (
+        <mesh key={fi} position={[0, (fi + 1) * FLOOR_H, 0]}>
+          <boxGeometry args={[W + 0.04, 0.08, D + 0.04]} />
+          <meshStandardMaterial color={accentColor} roughness={0.6} />
+        </mesh>
+      ))}
+      {/* Window strip per floor on south face */}
+      {Array.from({ length: nFloors }, (_, fi) => (
+        <mesh key={fi} position={[0, fi * FLOOR_H + FLOOR_H * 0.55, D / 2 + 0.02]}>
+          <boxGeometry args={[W * 0.6, FLOOR_H * 0.35, 0.04]} />
+          <meshPhysicalMaterial color="#B0CCE0" transmission={0.55} roughness={0.05} metalness={0.1} />
+        </mesh>
+      ))}
+      {/* Flat roof cap */}
+      <mesh position={[0, totalH + 0.05, 0]}>
+        <boxGeometry args={[W + 0.15, 0.1, D + 0.15]} />
+        <meshStandardMaterial color={roofColor} roughness={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
 // ─── Main export ────────────────────────────────────────────
 export default function HouseCanvas() {
   const locale        = useLocale();
   const exterior      = useDesignerStore(s => s.exterior);
+  const buildings     = useDesignerStore(s => s.buildings);
+  const activeBuilding = useDesignerStore(s => s.activeBuilding);
   // Use ground-floor footprint so CameraRig doesn't reset when user switches floors
   const { W, D }      = useGroundFloorFootprint();
   const { floors }    = exterior;
@@ -7213,6 +7274,22 @@ export default function HouseCanvas() {
             setWalkthroughSpawn([worldPos[0], worldPos[1], worldPos[2]]);
           }}
         />
+        {/* Secondary buildings — rendered at their yard positions.
+            The active building's full detail is handled above via HouseBody.
+            All other buildings show as accurate-footprint massed volumes. */}
+        {buildings.map((bld, i) => {
+          if (i === activeBuilding) return null; // active = full HouseBody above
+          if (bld.floorPlans.length === 0) return null;
+          return (
+            <group
+              key={bld.id}
+              position={[bld.x / 100, 0, bld.z / 100]}
+              rotation={[0, bld.rot, 0]}
+            >
+              <SecondaryBuildingBody floorPlans={bld.floorPlans} exterior={bld.exterior} />
+            </group>
+          );
+        })}
         {/* Wall decor — exterior-only (hidden in walkthrough where camera
             is inside the building most of the time and the decor would
             poke through walls). */}

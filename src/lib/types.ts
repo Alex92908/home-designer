@@ -1217,6 +1217,23 @@ export type DoorStyle =
   | "glass_swing"    // 通透玻璃平开门（细框大玻璃 + 竖把手，幕墙别墅用）
   | "glass_slide";   // 通透玻璃推拉门（细框大玻璃 + 顶轨竖把手，左右滑动）
 
+/** A distinct building on the same plot.
+ *  buildings[0] is always the "main house" at (x=0, z=0).
+ *  Secondary buildings are at their own (x, z, rot) offsets in yard-cm coords.
+ *  Each building has independent floor plans and exterior style. */
+export interface Building {
+  id: string;
+  /** Display label shown in building switcher and 2D/3D views. */
+  label: string;
+  /** Position relative to plot centre, in cm. Main house is always (0, 0). */
+  x: number;
+  z: number;
+  /** Y-axis rotation in radians. */
+  rot: number;
+  floorPlans: FloorPlan[];
+  exterior: ExteriorSettings;
+}
+
 // For wall/floor area estimation (m²)
 export function getRoomArea(room: RoomType): { wall: number; floor: number } {
   const def = ROOM_DEFS[room];

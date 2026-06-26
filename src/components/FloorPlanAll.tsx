@@ -12,6 +12,7 @@ import { getLayoutNameEn } from "@/locales/itemNames";
 import { getAiKey, setAiKey, getSelectedProvider, setSelectedProvider } from "@/lib/aiKeys";
 import { AiProviderId } from "@/lib/aiProviders";
 import ApiKeyPromptModal from "./ApiKeyPromptModal";
+import { houseHalfExtentsCm } from "@/lib/yardAutoLayout";
 
 function localizeLayoutName(layout: FloorplanLayout, locale: string): string {
   if (locale === "en") return getLayoutNameEn(layout.id) ?? layout.name;
@@ -409,6 +410,11 @@ export default function FloorPlanAll() {
   const setRoomShape         = useDesignerStore(s => s.setRoomShape);
   // All floors data — for ghost overlay rendering
   const allFloorPlans        = useDesignerStore(s => s.floorPlans);
+  // Multi-building
+  const buildings            = useDesignerStore(s => s.buildings);
+  const activeBuilding       = useDesignerStore(s => s.activeBuilding);
+  const setActiveBuilding    = useDesignerStore(s => s.setActiveBuilding);
+  const addBuilding          = useDesignerStore(s => s.addBuilding);
   // Which non-active floors are shown as ghost overlays (default: all visible)
   const [ghostFloors, setGhostFloors] = useState<Set<number>>(() => new Set([0, 1, 2, 3]));
   const applyFloorplanLayout  = useDesignerStore(s => s.applyFloorplanLayout);
@@ -729,9 +735,23 @@ export default function FloorPlanAll() {
   const houseCenterX = roomXs.length ? (Math.min(...roomXs) + Math.max(...roomXs)) / 2 : 0;
   const houseCenterY = roomYs.length ? (Math.min(...roomYs) + Math.max(...roomYs)) / 2 : 0;
 
-  // yardItemSVG removed — yard not shown in global plan view
-  const allXs = [...roomXs, ...bpXs];
-  const allYs = [...roomYs, ...bpYs];
+  // Secondary building outlines — positioned relative to the active building
+  const activeBldPos = buildings[activeBuilding] ?? { x: 0, z: 0 };
+  const secondaryBldOutlines = buildings
+    .map((bld, i) => {
+      if (i === activeBuilding) return null;
+      if (!bld.floorPlans[0]) return null;
+      const { hw, hd } = houseHalfExtentsCm(bld.floorPlans[0]);
+      const svgCx = houseCenterX + (bld.x - activeBldPos.x);
+      const svgCy = houseCenterY + (bld.z - activeBldPos.z);
+      return { bld, bldIdx: i, hw, hd, svgCx, svgCy };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  const bldXs = secondaryBldOutlines.flatMap(b => [b.svgCx - b.hw, b.svgCx + b.hw]);
+  const bldYs = secondaryBldOutlines.flatMap(b => [b.svgCy - b.hd, b.svgCy + b.hd]);
+  const allXs = [...roomXs, ...bpXs, ...bldXs];
+  const allYs = [...roomYs, ...bpYs, ...bldYs];
   const vbX1 = allXs.length ? Math.min(...allXs) - pad : 0;
   const vbY1 = allYs.length ? Math.min(...allYs) - pad : 0;
   const vbX2 = allXs.length ? Math.max(...allXs) + pad : 800;
@@ -824,6 +844,34 @@ export default function FloorPlanAll() {
               <span className="text-[9px] px-1 rounded-full bg-orange-100">{historyLen}</span>
             )}
           </button>
+          {/* Building switcher — add/switch buildings, manage positions */}
+          {buildings.length > 0 && (
+            <div className="flex items-center gap-1">
+              {buildings.map((bld, i) => (
+                <button
+                  key={bld.id}
+                  onClick={() => setActiveBuilding(i)}
+                  title={bld.label}
+                  className="px-2.5 py-0.5 text-[11px] font-bold rounded-full transition-all"
+                  style={i === activeBuilding
+                    ? { background: "#EFF6FF", color: "#2563EB", border: "1px solid #93C5FD" }
+                    : { background: "white", color: "#6B7280", border: "1px solid #E5E7EB" }
+                  }>
+                  {bld.label}
+                </button>
+              ))}
+              <button
+                onClick={() => {
+                  const label = locale === "en" ? `Bldg ${buildings.length + 1}` : `楼${buildings.length + 1}`;
+                  addBuilding(label, buildings.length * 1600, 0);
+                }}
+                title={locale === "en" ? "Add building" : "添加楼栋"}
+                className="w-5 h-5 flex items-center justify-center text-[13px] rounded-full transition-all"
+                style={{ background: "#EFF6FF", color: "#2563EB", border: "1px solid #93C5FD" }}>
+                +
+              </button>
+            </div>
+          )}
           {/* Floor switcher is now in the TopBar (unified across all views) */}
           <div className="ml-auto" />
           {roomClipboard && (
@@ -1131,6 +1179,29 @@ export default function FloorPlanAll() {
                 }}
               />
             )}
+
+            {/* ── Secondary buildings — shown as dashed outlines at their relative positions ── */}
+            {secondaryBldOutlines.map(({ bld, bldIdx, hw, hd, svgCx, svgCy }) => (
+              <g key={bld.id} style={{ cursor: "pointer" }} onClick={() => setActiveBuilding(bldIdx)}>
+                <rect
+                  x={svgCx - hw} y={svgCy - hd} width={hw * 2} height={hd * 2}
+                  fill="#EFF6FF" fillOpacity={0.7}
+                  stroke="#2563EB" strokeWidth={2} strokeDasharray="8 4" rx={4}
+                />
+                <text x={svgCx} y={svgCy - 6} textAnchor="middle" fontSize={10}
+                  fill="#2563EB" fontFamily="ui-sans-serif,sans-serif" fontWeight={700}>
+                  {bld.label}
+                </text>
+                <text x={svgCx} y={svgCy + 8} textAnchor="middle" fontSize={8}
+                  fill="#60A5FA" fontFamily="ui-monospace,monospace">
+                  {Math.round(hw * 2 / 100 * 10) / 10}×{Math.round(hd * 2 / 100 * 10) / 10}m
+                </text>
+                <text x={svgCx} y={svgCy + hd + 14} textAnchor="middle" fontSize={7.5}
+                  fill="#93C5FD" fontFamily="ui-sans-serif,sans-serif">
+                  {locale === "en" ? "click to edit" : "点击切换编辑"}
+                </text>
+              </g>
+            ))}
 
             {/* ── Ghost floor overlays — non-active floors shown semi-transparently ── */}
             {exterior.floors > 1 && Array.from({ length: exterior.floors }, (_, fi) => {
