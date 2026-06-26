@@ -41,6 +41,7 @@ type DragState =
   | { type: "resize"; room: RoomType; sx: number; sy: number; ow: number; od: number };
 
 const CUSTOM_SLOTS: RoomType[] = ["custom1","custom2","custom3","custom4","custom5"];
+const EMPTY_YARD_ITEMS: import("@/lib/types").YardItem[] = [];
 const ROOM_GROUP_ROOMS = [
   { key: "allGroupIndoor",   rooms: ["living","master","bedroom","bedroom2","bedroom3","kitchen","bathroom","bathroom2","dining","study","study2","closet","balcony","balcony2"] as RoomType[] },
   { key: "allGroupSpecial",  rooms: ["hallway","stair","yard","garage","gym","cinema","pool","terrace","deck","pergola","equipment_room"] as RoomType[] },
@@ -416,6 +417,8 @@ export default function FloorPlanAll() {
   const setActiveBuilding    = useDesignerStore(s => s.setActiveBuilding);
   const addBuilding              = useDesignerStore(s => s.addBuilding);
   const updateBuildingPosition   = useDesignerStore(s => s.updateBuildingPosition);
+  const yardPlanItems            = useDesignerStore(s => s.yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const updateYardItem           = useDesignerStore(s => s.updateYardItem);
   // Which non-active floors are shown as ghost overlays (default: all visible)
   const [ghostFloors, setGhostFloors] = useState<Set<number>>(() => new Set([0, 1, 2, 3]));
   const applyFloorplanLayout  = useDesignerStore(s => s.applyFloorplanLayout);
@@ -702,7 +705,8 @@ export default function FloorPlanAll() {
 
   const svgRef  = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragState | null>(null);
-  const bldDragRef = useRef<{ id: string; bldIdx: number; sx: number; sy: number; ox: number; oz: number; hasMoved: boolean } | null>(null);
+  const bldDragRef  = useRef<{ id: string; bldIdx: number; sx: number; sy: number; ox: number; oz: number; hasMoved: boolean } | null>(null);
+  const yardDragRef = useRef<{ id: string; sx: number; sy: number; ox: number; oz: number } | null>(null);
   // Room-tap tracker: first tap selects (active highlight), second tap
   // within DOUBLE_MS actually enters the room in 2D view. Prevents accidental
   // mode switches while moving / resizing rooms in the plan.
@@ -752,8 +756,11 @@ export default function FloorPlanAll() {
 
   const bldXs = secondaryBldOutlines.flatMap(b => [b.svgCx - b.hw, b.svgCx + b.hw]);
   const bldYs = secondaryBldOutlines.flatMap(b => [b.svgCy - b.hd, b.svgCy + b.hd]);
-  const allXs = [...roomXs, ...bpXs, ...bldXs];
-  const allYs = [...roomYs, ...bpYs, ...bldYs];
+  // Yard items — expand viewBox to include all items
+  const yardXs = yardPlanItems.map(it => houseCenterX + it.x);
+  const yardYs = yardPlanItems.map(it => houseCenterY + it.z);
+  const allXs = [...roomXs, ...bpXs, ...bldXs, ...yardXs];
+  const allYs = [...roomYs, ...bpYs, ...bldYs, ...yardYs];
   const vbX1 = allXs.length ? Math.min(...allXs) - pad : 0;
   const vbY1 = allYs.length ? Math.min(...allYs) - pad : 0;
   const vbX2 = allXs.length ? Math.max(...allXs) + pad : 800;
@@ -766,6 +773,17 @@ export default function FloorPlanAll() {
 
   // ── Pointer handlers ──
   const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    // Yard item drag (top-level shared items)
+    const yds = yardDragRef.current;
+    if (yds && svgRef.current) {
+      const pt = getSVGPoint(e, svgRef.current);
+      const dx = pt.x - yds.sx, dy = pt.y - yds.sy;
+      updateYardItem(yds.id, {
+        x: Math.round((yds.ox + dx) / SNAP) * SNAP,
+        z: Math.round((yds.oz + dy) / SNAP) * SNAP,
+      });
+      return;
+    }
     // Building drag (non-active buildings)
     const bds = bldDragRef.current;
     if (bds && svgRef.current) {
@@ -798,6 +816,7 @@ export default function FloorPlanAll() {
   };
 
   const handlePointerUp = () => {
+    if (yardDragRef.current) { yardDragRef.current = null; return; }
     // End building drag — if no movement, treat as click → switch active building
     if (bldDragRef.current) {
       if (!bldDragRef.current.hasMoved) setActiveBuilding(bldDragRef.current.bldIdx);
@@ -1807,6 +1826,36 @@ export default function FloorPlanAll() {
                 </text>
               ));
             })()} */}
+
+            {/* ── Yard items — top-level shared layer, draggable, above all buildings ── */}
+            {yardPlanItems.map(item => {
+              const R = ("footprintCm" in item && item.footprintCm) ? item.footprintCm.w / 2 : ("scale" in item && item.scale ? item.scale * 50 : 50);
+              const cx = houseCenterX + item.x;
+              const cy = houseCenterY + item.z;
+              const isDragging = yardDragRef.current?.id === item.id;
+              const label = ("subtype" in item ? item.subtype : undefined) ?? ("kind" in item ? item.kind : undefined) ?? item.id.split("-")[0];
+              return (
+                <g key={item.id}
+                  style={{ cursor: isDragging ? "grabbing" : "grab" }}
+                  onPointerDown={e => {
+                    e.stopPropagation();
+                    if (!svgRef.current) return;
+                    const pt = getSVGPoint(e, svgRef.current);
+                    svgRef.current.setPointerCapture(e.pointerId);
+                    yardDragRef.current = { id: item.id, sx: pt.x, sy: pt.y, ox: item.x, oz: item.z };
+                  }}
+                >
+                  <circle cx={cx} cy={cy} r={R}
+                    fill="rgba(16,185,129,0.18)" stroke="#10B981" strokeWidth={1.5}
+                    strokeDasharray="4 2" />
+                  <text x={cx} y={cy + 3} textAnchor="middle" fontSize={Math.max(7, Math.min(R * 0.45, 12))}
+                    fill="#065F46" fontFamily="ui-sans-serif,sans-serif"
+                    style={{ pointerEvents: "none", userSelect: "none" }}>
+                    {label}
+                  </text>
+                </g>
+              );
+            })}
           </svg>
           </div>
 

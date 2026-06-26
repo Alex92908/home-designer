@@ -13,6 +13,7 @@ const VALID_ROOF_TYPES = ["flat", "gable", "hip", "chinese"] as const;
 export function serializeCurrentDesign(
   floorPlans: FloorPlan[],
   exterior: ExteriorSettings,
+  yardPlanArg?: import("./types").YardPlan,
 ): AiDesignResult {
   const floors = Math.max(1, exterior.floors);
   const floorLayouts = [];
@@ -104,7 +105,7 @@ export function serializeCurrentDesign(
 
   // 院子（floor 0）现状：只回传 AI 能产出的两类——结构件 prefab 与单体 kind，
   // 取整坐标省 token。zone/glb 等复杂项不回传（AI 也不直接生成它们）。
-  const yardItems = floorPlans[0]?.yardPlan?.items ?? [];
+  const yardItems = yardPlanArg?.items ?? floorPlans[0]?.yardPlan?.items ?? [];
   const yardAdd: AiDesignYardItem[] =
     yardItems.flatMap((it): AiDesignYardItem[] => {
       if (it.type === "prefab") {

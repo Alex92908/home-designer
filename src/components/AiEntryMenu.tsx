@@ -70,6 +70,7 @@ export default function AiEntryMenu() {
   const viewMode    = useDesignerStore((s) => s.viewMode);
   const exterior    = useDesignerStore((s) => s.exterior);
   const floorPlans  = useDesignerStore((s) => s.floorPlans);
+  const yardPlan    = useDesignerStore((s) => s.yardPlan);
   const activeFloor = useDesignerStore((s) => s.activeFloor);
 
   // 配置在「打开菜单」「从设置返回」时按需刷新（不放 effect，避免级联渲染）
@@ -98,7 +99,7 @@ export default function AiEntryMenu() {
 
   const promptForView = () =>
     // 院子数据只存 floor 0（store 约定），别读 activeFloor。
-    buildViewPrompt({ viewMode, exterior, yardItems: floorPlans[0]?.yardPlan?.items ?? [] });
+    buildViewPrompt({ viewMode, exterior, yardItems: yardPlan?.items ?? [] });
 
   // ⚡ 一键：按当前视图推荐预设
   const runQuick = async () => {

@@ -2101,9 +2101,8 @@ function techColorForAsset(kind: string, category: string): string {
  *  singleton primitives (legacy), then prefabs (compound blocks on top). */
 const EMPTY_YARD_ITEMS_3D: import("@/lib/types").YardItem[] = [];
 function YardPlanItems3D() {
-  // 院子数据永远属于主楼（buildings[0]）的 floor 0。
-  // 切换副楼时 floorPlans 变为副楼数据，所以必须显式读 buildings[0]。
-  const items = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0])?.yardPlan?.items ?? EMPTY_YARD_ITEMS_3D);
+  // yardPlan 是顶层全局字段（v9+），所有楼栋共享。
+  const items = useDesignerStore(s => s.yardPlan?.items ?? EMPTY_YARD_ITEMS_3D);
 
   // Render order matters for visual layering:
   //   zones (paving) → singletons → prefabs (often the largest mass)
@@ -2149,8 +2148,7 @@ const PATH_LOOK: Record<string, { color: string; rough: number }> = {
   grass:  { color: "#6E8F58", rough: 0.95 },
 };
 function YardPathItems3D() {
-  // 小径同上：永远读主楼（buildings[0]）的 floor 0。
-  const paths = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0])?.yardPlan?.paths ?? EMPTY_YARD_PATHS_3D);
+  const paths = useDesignerStore(s => s.yardPlan?.paths ?? EMPTY_YARD_PATHS_3D);
 
   return (
     <group>

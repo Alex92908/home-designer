@@ -474,7 +474,7 @@ export function YardPlanLibrary() {
 
   // Apply preset action — needs store hooks at component scope
   const activeFloor    = useDesignerStore(s => s.activeFloor);
-  const yardItems      = useDesignerStore(s => s.floorPlans[0].yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const yardItems      = useDesignerStore(s => s.yardPlan?.items ?? EMPTY_YARD_ITEMS);
   const addYardItem    = useDesignerStore(s => s.addYardItem);
   const removeYardItem = useDesignerStore(s => s.removeYardItem);
   const applyPreset = (p: import("@/lib/outdoorAssets").YardPreset) => {
@@ -748,8 +748,8 @@ export function useSharedSelectedBldId() {
 export default function YardPlan() {
   const locale = useLocale();
   const activeFloor = useDesignerStore(s => s.activeFloor);
-  const yardItems   = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0])?.yardPlan?.items ?? EMPTY_YARD_ITEMS);
-  const yardPaths   = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0])?.yardPlan?.paths ?? EMPTY_YARD_PATHS);
+  const yardItems   = useDesignerStore(s => s.yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const yardPaths   = useDesignerStore(s => s.yardPlan?.paths ?? EMPTY_YARD_PATHS);
   const addYardItem = useDesignerStore(s => s.addYardItem);
   const removeYardItem = useDesignerStore(s => s.removeYardItem);
   const updateYardItem = useDesignerStore(s => s.updateYardItem);
@@ -2207,8 +2207,8 @@ export function YardPlanInspector() {
   const selectedId = useSharedSelectedYardId();
   const selectedBldId = useSharedSelectedBldId();
   const activeFloor = useDesignerStore(s => s.activeFloor);
-  const items      = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0])?.yardPlan?.items ?? EMPTY_YARD_ITEMS);
-  const yardPaths  = useDesignerStore(s => (s.buildings[0]?.floorPlans[0] ?? s.floorPlans[0])?.yardPlan?.paths ?? EMPTY_YARD_PATHS);
+  const items      = useDesignerStore(s => s.yardPlan?.items ?? EMPTY_YARD_ITEMS);
+  const yardPaths  = useDesignerStore(s => s.yardPlan?.paths ?? EMPTY_YARD_PATHS);
   const updateYardItem = useDesignerStore(s => s.updateYardItem);
   const removeYardItem = useDesignerStore(s => s.removeYardItem);
   const addYardItem    = useDesignerStore(s => s.addYardItem);

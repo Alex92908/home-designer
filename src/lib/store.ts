@@ -573,20 +573,15 @@ function syncDimsAndLayout(
   return { points, patch };
 }
 
-// ─── updateYardFloor helper — yard is ground-level, always floor 0 ───
-// The yard (outdoor space) is a physical ground-level feature shared by
-// all floors. Always read/write yardPlan from floorPlans[0] regardless
-// of which floor the user is currently editing.
+// ─── updateYardPlan helper — yard is now a top-level store field (v9+) ───
+// Previously lived in floorPlans[0].yardPlan; lifted to be shared across all buildings.
 function updateYardFloor(
   get: () => DesignerStore,
   set: (partial: Partial<DesignerStore> | ((s: DesignerStore) => Partial<DesignerStore>)) => void,
-  updater: (fp: FloorPlan) => Partial<FloorPlan>
+  updater: (yp: import("./types").YardPlan) => import("./types").YardPlan
 ) {
   const s = get();
-  const fp = s.floorPlans[0];
-  const updated = [...s.floorPlans];
-  updated[0] = { ...fp, ...updater(fp) };
-  set({ floorPlans: updated });
+  set({ yardPlan: updater(s.yardPlan ?? { items: [] }) });
 }
 
 // ─── Store interface ───────────────────────────────────────
@@ -851,9 +846,9 @@ interface DesignerStore {
   setDoorEdgeIdx: (room: RoomType, edgeIdx: number | null) => void;
 
   // ── Yard plan (outdoor 2D editor) ──
-  // Items in the yard plan are stored on the active floor's `yardPlan.items`
-  // array. The exterior 3D view auto-renders these. v2 schema (2026-04):
-  // items can be singletons, prefabs, or zones — see YardItem union.
+  // yardPlan is now a TOP-LEVEL store field (v9+), shared across all buildings.
+  // Previously lived in floorPlans[0].yardPlan; migrated via persist v8→v9.
+  yardPlan: import("./types").YardPlan;
   addYardItem:    (item: import("./types").YardItem) => void;
   removeYardItem: (id: string) => void;
   /** Patch is a structural subset — only fields shared across the union
@@ -986,7 +981,7 @@ const _dev_expose_store = (s: unknown) => {
 
 // 当前持久化 schema 版本。导入 JSON 回灌 localStorage 时必须打这个版本号，
 // 否则 zustand 会从 0 开始跑迁移链——其中 v0→v1 会把门窗整组抹成默认值。
-export const PERSIST_VERSION = 8;
+export const PERSIST_VERSION = 9;
 
 // 内置默认方案的版本号。存档里会戳上这个值。当老存档的戳 < 此值时，迁移会
 // 把「最新完备默认方案」灌进去（详见 migrate 的 v7→v8）。
@@ -1106,6 +1101,7 @@ export const useDesignerStore = create<DesignerStore>()(
         exterior: { ...initialExterior, ...__defaultProject.exterior },
       }],
       activeBuilding: 0,
+      yardPlan: __defaultProject.floorPlans[0]?.yardPlan ?? { items: [] },
 
       setActiveBuilding: (idx) => {
         const s = get();
@@ -2032,8 +2028,8 @@ export const useDesignerStore = create<DesignerStore>()(
             enabledRooms: enabled,
             roomLayout: layoutMap,
             roomDimensions: dimsMap,
-            // Attach the yard plan to floor 0 only
-            ...(fi === 0 ? { yardPlan: tpl.yardPlan } : {}),
+            // yardPlan is now top-level; skip per-floor attachment
+
           };
         });
 
@@ -2042,6 +2038,7 @@ export const useDesignerStore = create<DesignerStore>()(
           exterior: { ...s.exterior, ...tpl.exterior, floors },
           floorPlans: newFloorPlans,
           activeFloor: 0,
+          ...(tpl.yardPlan ? { yardPlan: tpl.yardPlan } : {}),
         });
 
         // 3. Apply style template (furniture + materials + doors/windows) to every floor
@@ -2140,20 +2137,17 @@ export const useDesignerStore = create<DesignerStore>()(
           // 物件/分区推出屋外（泳池压进客厅这类穿模就是这么来的）。
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const { houseHalfExtentsCm, clearYardItemsOfHouse } = require("./yardAutoLayout") as typeof import("./yardAutoLayout");
-          floorPlans = floorPlans.map((fp, fi) => {
-            if (fi !== 0 || !fp) return fp;
-            const { hw, hd } = houseHalfExtentsCm(fp);
-            return {
-              ...fp,
-              yardPlan: {
-                ...(fp.yardPlan ?? { items: [] }),
-                ...(preset.yardItems
-                  ? { items: clearYardItemsOfHouse(preset.yardItems, hw, hd) }
-                  : {}),
-                ...(preset.yardPaths ? { paths: preset.yardPaths } : {}),
-              },
+          const fp0 = floorPlans[0];
+          if (fp0) {
+            const { hw, hd } = houseHalfExtentsCm(fp0);
+            const curYp = s.yardPlan ?? { items: [] };
+            const newYp = {
+              ...curYp,
+              ...(preset.yardItems ? { items: clearYardItemsOfHouse(preset.yardItems, hw, hd) } : {}),
+              ...(preset.yardPaths ? { paths: preset.yardPaths } : {}),
             };
-          });
+            set({ yardPlan: newYp });
+          }
         }
 
         // 4) Commit + refresh scores for the active room.
@@ -2488,12 +2482,14 @@ export const useDesignerStore = create<DesignerStore>()(
         // （applyExteriorPreset 已提前到函数开头执行——必须先铺整包风格、
         //   再落 AI 点名的逐房材质，顺序反了会把后者冲掉。）
 
-        // 院子（floor 0）：在 preset 之后处理，避免被 preset 的整套院子覆盖。
+        // 院子：在 preset 之后处理，避免被 preset 的整套院子覆盖。
         // clear=先清空再加；否则在现有基础上追加（与 edit 模式语义一致）。
         if (design.yard) {
-          const fp0 = get().floorPlans[0];
+          const s2 = get();
+          const fp0 = s2.floorPlans[0];
           if (fp0) {
-            const existingItems = design.yard.clear ? [] : (fp0.yardPlan?.items ?? []);
+            const curYp = s2.yardPlan ?? { items: [] };
+            const existingItems = design.yard.clear ? [] : (curYp.items ?? []);
             // AI 给的/自动散开的落点也要避开房屋占地（大宅会盖住默认前院位）。
             // eslint-disable-next-line @typescript-eslint/no-require-imports
             const { houseHalfExtentsCm, clearYardItemsOfHouse } = require("./yardAutoLayout") as typeof import("./yardAutoLayout");
@@ -2513,20 +2509,13 @@ export const useDesignerStore = create<DesignerStore>()(
               }))
               .filter(p => p.points.length >= 2);
             set(state => ({
-              floorPlans: state.floorPlans.map((fp, fi) =>
-                fi === 0 && fp
-                  ? {
-                      ...fp,
-                      yardPlan: {
-                        ...(fp.yardPlan ?? { items: [] }),
-                        items: [...existingItems, ...added],
-                        ...(addedPaths.length
-                          ? { paths: [...(fp.yardPlan?.paths ?? []), ...addedPaths] }
-                          : {}),
-                      },
-                    }
-                  : fp,
-              ),
+              yardPlan: {
+                ...(state.yardPlan ?? { items: [] }),
+                items: [...existingItems, ...added],
+                ...(addedPaths.length
+                  ? { paths: [...(state.yardPlan?.paths ?? []), ...addedPaths] }
+                  : {}),
+              },
             }));
           }
         }
@@ -2865,40 +2854,23 @@ export const useDesignerStore = create<DesignerStore>()(
       },
 
       addYardItem: (item) => {
-        updateYardFloor(get, set, fp => {
-          const cur = fp.yardPlan?.items ?? [];
-          return { yardPlan: { ...(fp.yardPlan ?? { items: [] }), items: [...cur, item] } };
-        });
+        updateYardFloor(get, set, yp => ({ ...yp, items: [...(yp.items ?? []), item] }));
       },
       removeYardItem: (id) => {
-        updateYardFloor(get, set, fp => {
-          const cur = fp.yardPlan?.items ?? [];
-          return { yardPlan: { ...(fp.yardPlan ?? { items: [] }), items: cur.filter(i => i.id !== id) } };
-        });
+        updateYardFloor(get, set, yp => ({ ...yp, items: (yp.items ?? []).filter(i => i.id !== id) }));
       },
       updateYardItem: (id, patch) => {
-        updateYardFloor(get, set, fp => {
-          const cur = fp.yardPlan?.items ?? [];
-          return {
-            yardPlan: {
-              ...(fp.yardPlan ?? { items: [] }),
-              items: cur.map(i => i.id === id ? { ...i, ...patch } : i),
-            },
-          };
-        });
+        updateYardFloor(get, set, yp => ({
+          ...yp,
+          items: (yp.items ?? []).map(i => i.id === id ? { ...i, ...patch } : i),
+        }));
       },
 
       addYardPath: (path) => {
-        updateYardFloor(get, set, fp => {
-          const cur = fp.yardPlan?.paths ?? [];
-          return { yardPlan: { ...(fp.yardPlan ?? { items: [] }), paths: [...cur, path] } };
-        });
+        updateYardFloor(get, set, yp => ({ ...yp, paths: [...(yp.paths ?? []), path] }));
       },
       removeYardPath: (id) => {
-        updateYardFloor(get, set, fp => {
-          const cur = fp.yardPlan?.paths ?? [];
-          return { yardPlan: { ...(fp.yardPlan ?? { items: [] }), paths: cur.filter(p => p.id !== id) } };
-        });
+        updateYardFloor(get, set, yp => ({ ...yp, paths: (yp.paths ?? []).filter(p => p.id !== id) }));
       },
 
       addDoor: (room, door) => {
@@ -3549,6 +3521,16 @@ export const useDesignerStore = create<DesignerStore>()(
           if (st.activeRoom && DEAD.includes(st.activeRoom)) st.activeRoom = "living";
           console.info("[home-designer] migrated persist v6 → v7 (removed rooftop-only room types)");
         }
+        if (persistedVersion < 9) {
+          // v8 → v9: yardPlan lifted from floorPlans[0].yardPlan → top-level store field.
+          // Copy existing yardPlan data so yard items survive the migration.
+          const st = state as { floorPlans?: FloorPlan[]; yardPlan?: import("./types").YardPlan };
+          if (!st.yardPlan && Array.isArray(st.floorPlans) && st.floorPlans[0]?.yardPlan) {
+            st.yardPlan = st.floorPlans[0].yardPlan;
+          }
+          if (!st.yardPlan) st.yardPlan = { items: [] };
+          console.info("[home-designer] migrated persist v8 → v9 (yardPlan lifted to top-level)");
+        }
         if (persistedVersion < 8) {
           // v7 → v8: 给默认方案加版本戳。2026-6-16 之前的旧存档没有这个戳
           // （多是测试/半成品数据）—— 把「最新完备默认方案」(度假泳池别墅，
@@ -3591,6 +3573,7 @@ export const useDesignerStore = create<DesignerStore>()(
         blueprint: state.blueprint,
         buildings: state.buildings,
         activeBuilding: state.activeBuilding,
+        yardPlan: state.yardPlan,
       }),
       onRehydrateStorage: () => (state) => {
         // Re-register any custom furniture after hydration

@@ -99,8 +99,8 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
       if (aiImage) body.image = aiImage;
       if (mode === "edit") {
         setAiStatus(en ? "Packing the current design…" : "正在打包当前设计…");
-        const { floorPlans, exterior } = useDesignerStore.getState();
-        body.current = serializeCurrentDesign(floorPlans, exterior);
+        const { floorPlans, exterior, yardPlan } = useDesignerStore.getState();
+        body.current = serializeCurrentDesign(floorPlans, exterior, yardPlan);
       }
       // 进入「等大模型」阶段：启动秒级计时，让用户看到一直在跑
       startStatusTimer(genLabel);
