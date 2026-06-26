@@ -6296,6 +6296,10 @@ export default function HouseCanvas() {
   const exterior      = useDesignerStore(s => s.exterior);
   const buildings     = useDesignerStore(s => s.buildings);
   const activeBuilding = useDesignerStore(s => s.activeBuilding);
+  const setActiveBuilding = useDesignerStore(s => s.setActiveBuilding);
+  // 整体外观视图始终以主楼(index=0)为参照原点，
+  // 保证副楼坐标与院子物品（泳池等绝对坐标）一致。
+  useEffect(() => { if (activeBuilding !== 0) setActiveBuilding(0); }, []);
   // Use ground-floor footprint so CameraRig doesn't reset when user switches floors
   const { W, D }      = useGroundFloorFootprint();
   const { floors }    = exterior;
