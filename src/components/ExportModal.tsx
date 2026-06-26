@@ -99,9 +99,12 @@ export default function ExportModal() {
   const customRoomMeta  = useDesignerStore(s => s.customRoomMeta);
   const customFurniture = useDesignerStore(s => s.customFurniture);
   const blueprint       = useDesignerStore(s => s.blueprint);
-  const resetAll        = useDesignerStore(s => s.resetAll);
-  const wipeAll         = useDesignerStore(s => s.wipeAll);
-  const loadFromShare   = useDesignerStore(s => s.loadFromShare);
+  const resetAll            = useDesignerStore(s => s.resetAll);
+  const wipeAll             = useDesignerStore(s => s.wipeAll);
+  const loadFromShare       = useDesignerStore(s => s.loadFromShare);
+  const buildings           = useDesignerStore(s => s.buildings);
+  const activeBuilding      = useDesignerStore(s => s.activeBuilding);
+  const importIntoBuilding  = useDesignerStore(s => s.importIntoBuilding);
   const roomDimensions  = useDesignerStore(s => s.floorPlans[s.activeFloor].roomDimensions);
   const roomWindows     = useDesignerStore(s => s.floorPlans[s.activeFloor].roomWindows);
 
@@ -374,6 +377,77 @@ export default function ExportModal() {
           } else {
             alert(t.invalidFile);
           }
+        } catch {
+          alert(t.parseError);
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
+  const handleImportIntoBuilding = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target?.result as string);
+          const isTopLeft = data._coordSystem === "top-left";
+          const convertRooms = (roomsMap: Record<string, { placedItems: Array<{furnitureId:string;x:number;z:number;scaleW?:number;scaleD?:number}> }>) => {
+            if (!isTopLeft) return roomsMap;
+            return Object.fromEntries(Object.entries(roomsMap).map(([rid, rs]) => [rid, {
+              ...rs,
+              placedItems: rs.placedItems.map(p => {
+                const f = getFurnitureById(p.furnitureId);
+                if (!f) return p;
+                return { ...p, x: p.x + (f.width * (p.scaleW ?? 1)) / 2, z: p.z + (f.depth * (p.scaleD ?? 1)) / 2 };
+              }),
+            }]));
+          };
+
+          let floorPlans: import("@/lib/types").FloorPlan[] | null = null;
+          let exterior: import("@/lib/types").ExteriorSettings | null = null;
+
+          if (data._version === 2 && Array.isArray(data.floorPlans)) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            floorPlans = data.floorPlans.map((fp: any) => ({ ...fp, rooms: convertRooms(fp.rooms) }));
+            exterior = data.exterior ?? null;
+          } else if (data.rooms && data.enabledRooms) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            floorPlans = [{ rooms: convertRooms(data.rooms) as any,
+              enabledRooms: data.enabledRooms,
+              roomLayout: data.roomLayout ?? {},
+              roomDimensions: data.roomDimensions ?? {},
+              roomWindows: data.roomWindows ?? {},
+              roomDoorPos: data.roomDoorPos ?? {},
+              roomHasDoor: data.roomHasDoor ?? {},
+              roomDoorWall: data.roomDoorWall ?? {},
+              roomDoors: data.roomDoors ?? {},
+              roomDoorStyle: data.roomDoorStyle ?? {},
+              roomDoorLen: data.roomDoorLen ?? {},
+              roomDoorH: data.roomDoorH ?? {},
+              roomWallsHidden: data.roomWallsHidden ?? {},
+              roomShapes: data.roomShapes ?? {},
+              yardPlan: data.yardPlan ?? { items: [], paths: [] },
+            }];
+            exterior = data.exterior ?? null;
+          } else {
+            alert(t.invalidFile);
+            return;
+          }
+
+          const bld = buildings[activeBuilding];
+          const newExterior = exterior ?? bld.exterior;
+          importIntoBuilding(activeBuilding, floorPlans!, newExterior);
+          close();
+          alert(locale === "en"
+            ? `Imported into "${bld.label}" successfully.`
+            : `已成功导入到「${bld.label}」。`);
         } catch {
           alert(t.parseError);
         }
@@ -666,6 +740,30 @@ export default function ExportModal() {
                   {t.loadBtn}
                 </button>
               </div>
+
+              {/* 导入到指定楼栋 — 只替换当前激活楼的数据，不影响其他楼，无需 reload */}
+              {buildings.length > 1 && (
+                <div className="rounded-xl p-4 border" style={{ background: "linear-gradient(135deg,#F0FDF4,#ECFDF5)", borderColor: "#6EE7B7" }}>
+                  <div className="text-sm font-bold text-gray-800 mb-1">
+                    🏠 {locale === "en" ? `Import into "${buildings[activeBuilding]?.label}"` : `导入到「${buildings[activeBuilding]?.label}」`}
+                  </div>
+                  <div className="text-xs text-gray-500 mb-3">
+                    {locale === "en"
+                      ? "Load a .json plan file into this building only — other buildings stay untouched, no page reload."
+                      : "从 .json 文件载入平面图/外观，只替换当前楼栋数据，其他楼不受影响，无需刷新页面。"}
+                  </div>
+                  <div className="text-xs mb-3 px-2 py-1.5 rounded-lg font-mono" style={{ background: "rgba(16,185,129,0.08)", color: "#059669" }}>
+                    {locale === "en" ? "Active building: " : "当前楼栋："}{buildings[activeBuilding]?.label}
+                    {activeBuilding === 0 ? (locale === "en" ? " (main)" : "（主楼）") : ""}
+                  </div>
+                  <button onClick={handleImportIntoBuilding}
+                    className="w-full py-2.5 text-white text-sm font-bold rounded-xl transition-colors"
+                    style={{ background: "#059669" }}>
+                    {locale === "en" ? "Import into this building" : "导入到此楼栋"}
+                  </button>
+                </div>
+              )}
+
 
               {/* 导入 3D 模型——统一导入卡（压缩可选/本机路径），家具 tab /
                   院子图同款；这里导完放进院子并跳转过去 */}

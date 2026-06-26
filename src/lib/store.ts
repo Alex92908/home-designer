@@ -826,6 +826,8 @@ interface DesignerStore {
   removeBuilding: (id: string) => void;
   /** Update position/rotation of any building (including main house). */
   updateBuildingPosition: (id: string, patch: { x?: number; z?: number; rot?: number; label?: string }) => void;
+  /** Replace floorPlans + exterior of buildings[idx] in-place. Refreshes active mirrors if needed. No page reload. */
+  importIntoBuilding: (idx: number, floorPlans: FloorPlan[], exterior: ExteriorSettings) => void;
 
   // Windows per room (operate on current floor)
   setRoomWindows: (room: RoomType, windows: WindowConfig[]) => void;
@@ -1162,6 +1164,20 @@ export const useDesignerStore = create<DesignerStore>()(
         set({
           buildings: s.buildings.map(b => b.id === id ? { ...b, ...patch } : b),
         });
+      },
+
+      importIntoBuilding: (idx, floorPlans, exterior) => {
+        const s = get();
+        const updated = s.buildings.map((b, i) =>
+          i === idx ? { ...b, floorPlans, exterior } : b
+        );
+        const patch: Partial<DesignerStore> = { buildings: updated };
+        if (idx === s.activeBuilding) {
+          patch.floorPlans = floorPlans;
+          patch.exterior   = exterior;
+          patch.activeFloor = 0;
+        }
+        set(patch);
       },
 
       layoutHistory: [],
