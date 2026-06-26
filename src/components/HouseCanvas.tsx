@@ -498,8 +498,9 @@ function ExteriorCaptureSetup() {
 // ─── Camera ────────────────────────────────────────────────
 // Eye-level perspective — mirrors RoomCanvas style so the exterior feels
 // like a natural continuation of the interior room view, not a toy diorama.
-function CameraRig({ W, D, floors, buildingType }: {
+function CameraRig({ W, D, floors, buildingType, buildings }: {
   W: number; D: number; floors: number; buildingType?: string;
+  buildings?: Array<{ x: number; z: number }>;
 }) {
   const { camera } = useThree();
   // Use a ref to track whether we've done the one-time initialisation.
@@ -517,26 +518,29 @@ function CameraRig({ W, D, floors, buildingType }: {
     const isFloorPlanDriven = buildingType === "floor-plan-driven";
 
     if (isFloorPlanDriven) {
-      // Match GlobalCanvas camera setup EXACTLY so 外观图 default orientation
-      // === 全局3D default orientation. GlobalCanvas uses:
-      //   d3 = max(extent, totalH) * 1.1
-      //   position = (d3*0.85, lookH + d3*0.65, d3*0.85)   ← equal X & Z = 45° SE
-      //   target   = (0, lookH, 0)   where lookH = totalH * 0.5
-      const extent = Math.max(W, D);
+      // Center the camera on the bounding box of ALL buildings (not just the
+      // active one at origin) so secondary buildings are always in frame.
+      const allBlds = buildings ?? [];
+      const xs = allBlds.map(b => b.x / 100);
+      const zs = allBlds.map(b => b.z / 100);
+      const minX = Math.min(0, ...xs), maxX = Math.max(0, ...xs);
+      const minZ = Math.min(0, ...zs), maxZ = Math.max(0, ...zs);
+      const cx = (minX + maxX) / 2;
+      const cz = (minZ + maxZ) / 2;
+      const spanX = maxX - minX + W;
+      const spanZ = maxZ - minZ + D;
+      const extent = Math.max(spanX, spanZ);
       const totalH = h;
-      const d3     = Math.max(extent, totalH) * 1.1;
+      const d3     = Math.max(extent, totalH) * 1.25;
       const lookH  = totalH * 0.5;
-      const camX   = d3 * 0.85;
-      const camY   = lookH + d3 * 0.65;
-      const camZ   = d3 * 0.85;
 
-      camera.position.set(camX, camY, camZ);
+      camera.position.set(cx + d3 * 0.85, lookH + d3 * 0.65, cz + d3 * 0.85);
       (camera as THREE.PerspectiveCamera).fov = 45;
       (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
 
       if (controls) {
         const ctrl = controls as any;
-        ctrl.target.set(0, lookH, 0);
+        ctrl.target.set(cx, lookH, cz);
         ctrl.update();
       } else {
         return;
@@ -573,7 +577,13 @@ function CameraRig({ W, D, floors, buildingType }: {
         return;
       }
     } else {
-      const diag = Math.sqrt(W * W + D * D);
+      const allBlds2 = buildings ?? [];
+      const xs2 = allBlds2.map(b => b.x / 100);
+      const zs2 = allBlds2.map(b => b.z / 100);
+      const spanX2 = (Math.max(0, ...xs2) - Math.min(0, ...xs2)) + W;
+      const spanZ2 = (Math.max(0, ...zs2) - Math.min(0, ...zs2)) + D;
+      const span = Math.max(spanX2, spanZ2);
+      const diag = Math.sqrt(span * span + span * span);
       const dist = diag * 1.65 + 5;
       camera.position.set(-dist * 0.32, Math.max(h * 0.85, 5.5), dist * 1.15);
       (camera as THREE.PerspectiveCamera).fov = 45;
@@ -6978,7 +6988,7 @@ export default function HouseCanvas() {
             // Camera on south side (-Z), slightly left to show west wood face
             const fDist = W * 0.95 + 6;
             return {
-              fov: 50, near: 0.1, far: 300,
+              fov: 50, near: 0.1, far: 2000,
               position: [-W * 0.22, 4.5, -fDist] as [number, number, number],
             };
           }
@@ -6988,11 +6998,11 @@ export default function HouseCanvas() {
             const dist = diag * 1.15 + 5;
             const camY = floors * FLOOR_H * 0.65 + 1.8;
             return {
-              fov: 52, near: 0.1, far: 300,
+              fov: 52, near: 0.1, far: 2000,
               position: [-dist * 0.48, camY, +dist * 0.78] as [number, number, number],
             };
           }
-          return { fov: 58, near: 0.1, far: 300 };
+          return { fov: 58, near: 0.1, far: 2000 };
         })()}
       >
         <SceneRegistrar view="exterior" />
@@ -7019,7 +7029,7 @@ export default function HouseCanvas() {
         <ExteriorCaptureSetup />
         <ShaderPrecompiler />
         <ShadowFreezeOnOrbit isInteractingRef={isInteractingRef} />
-        {!walkthrough && <CameraRig W={W} D={D} floors={floors} buildingType={_buildingType} />}
+        {!walkthrough && <CameraRig W={W} D={D} floors={floors} buildingType={_buildingType} buildings={buildings} />}
         <InsideCameraAnimator
           active={!walkthrough && _buildingType === "floor-plan-driven"}
           camPos={outsideCamPos}
