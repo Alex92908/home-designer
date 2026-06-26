@@ -807,6 +807,10 @@ export default function YardPlan() {
   // Quote sheet modal
   const [showQuote, setShowQuote] = useState(false);
 
+  // yardItemsRef: always registered before IIFE so hook order is stable even if IIFE throws
+  const yardItemsRef = useRef(yardItems);
+  yardItemsRef.current = yardItems;
+
   // Dynamic viewport: auto-expand to show all buildings and yard items
   const cmPerPx = (() => {
     const hw = (footprint.maxX - footprint.minX) / 2;
@@ -933,10 +937,6 @@ export default function YardPlan() {
   // Shift key bypasses both (free move for manual fine-tuning).
   const houseWm = (footprint.maxX - footprint.minX) / 100;
   const houseDm = (footprint.maxZ - footprint.minZ) / 100;
-
-  // Keep yardItems accessible inside drag effect via ref (avoids re-registering listener on every position update)
-  const yardItemsRef = useRef(yardItems);
-  yardItemsRef.current = yardItems;
 
   useEffect(() => {
     if (!drag) return;
