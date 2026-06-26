@@ -807,12 +807,18 @@ export default function YardPlan() {
   // Quote sheet modal
   const [showQuote, setShowQuote] = useState(false);
 
-  // yardItemsRef: always registered before IIFE so hook order is stable even if IIFE throws
+  // Drag/bldDrag declared early so they can gate cmPerPx freeze below
+  const [drag, setDrag] = useState<{ id: string; offsetX: number; offsetZ: number } | null>(null);
+  const [bldDrag, setBldDrag] = useState<{ id: string; offsetX: number; offsetZ: number } | null>(null);
+
+  // yardItemsRef: ref so drag effect can read latest items without re-registering listener
   const yardItemsRef = useRef(yardItems);
   yardItemsRef.current = yardItems;
 
-  // Dynamic viewport: auto-expand to show all buildings and yard items
-  const cmPerPx = (() => {
+  // cmPerPxRef: frozen during drag to prevent coordinate feedback loop
+  // (dragging changes buildings → cmPerPx grows → svgPtToWorld returns larger coords → runaway)
+  const cmPerPxRef = useRef((WIN_HALF_CM * 2) / SVG_PX);
+  if (!drag && !bldDrag) {
     const hw = (footprint.maxX - footprint.minX) / 2;
     const hd = (footprint.maxZ - footprint.minZ) / 2;
     const needed = Math.max(
@@ -820,8 +826,9 @@ export default function YardPlan() {
       ...buildings.map(b => Math.max(Math.abs(b.x) + hw + 200, Math.abs(b.z) + hd + 200)),
       ...yardItems.map(it => Math.max(Math.abs(it.x) + 200, Math.abs(it.z) + 200)),
     );
-    return (needed * 2) / SVG_PX;
-  })();
+    cmPerPxRef.current = (needed * 2) / SVG_PX;
+  }
+  const cmPerPx = cmPerPxRef.current;
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedId, _setSelectedId] = useState<string | null>(null);
@@ -829,8 +836,6 @@ export default function YardPlan() {
     _setSelectedId(id);
     setSharedSelectedId(id);
   };
-  const [drag, setDrag] = useState<{ id: string; offsetX: number; offsetZ: number } | null>(null);
-  const [bldDrag, setBldDrag] = useState<{ id: string; offsetX: number; offsetZ: number } | null>(null);
   const [selectedBldId, _setSelectedBldId] = useState<string | null>(null);
   const setSelectedBldId = (id: string | null) => { _setSelectedBldId(id); setSharedSelectedBldId(id); };
   const [resize, setResize] = useState<{
@@ -2236,6 +2241,15 @@ export function YardPlanInspector() {
   const { bbox: footprint } = useHouseRooms();
   const locale = useLocale();
 
+  // Hooks that must come before any early return
+  const violations = useMemo(() => evaluateYardPlan(items, footprint, yardPaths), [items, footprint, yardPaths]);
+  const item = selectedId ? items.find(i => i.id === selectedId) : null;
+  const asset = item && isYardSingleton(item) ? getOutdoorAssetByKind(item.kind) : null;
+  const itemViolations = useMemo(
+    () => item ? violations.filter(v => v.itemId === item.id || v.otherId === item.id) : [],
+    [violations, item]
+  );
+
   // Building inspector — shown when a secondary building is selected.
   const selBld = selectedBldId ? buildings.find(b => b.id === selectedBldId) : null;
   if (selBld) {
@@ -2304,17 +2318,6 @@ export function YardPlanInspector() {
       </aside>
     );
   }
-
-  // Smart suggestions — same evaluator as the canvas overlay (now includes path connectivity)
-  const violations = useMemo(() => evaluateYardPlan(items, footprint, yardPaths), [items, footprint, yardPaths]);
-  const item = selectedId ? items.find(i => i.id === selectedId) : null;
-  // Asset lookup only makes sense for singletons; prefabs / zones get
-  // their own descriptor below.
-  const asset = item && isYardSingleton(item) ? getOutdoorAssetByKind(item.kind) : null;
-  const itemViolations = useMemo(
-    () => item ? violations.filter(v => v.itemId === item.id || v.otherId === item.id) : [],
-    [violations, item]
-  );
 
   // Prefab / Zone inspector — minimal: label + position + delete. The
   // common-fields inspector below handles X/Z/scale/rot for everyone.
