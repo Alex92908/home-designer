@@ -1921,14 +1921,18 @@ function AnimatedPoolCaustics({
 // ── 屋顶装饰层：读取屋顶平面图，按房间类型渲染真实 3D GLB 模型 ──
 function RooftopDecorations({
   W, D, surfaceY, planOffset, onEnterRoom: _onEnterRoom, roofFloorIdx, nightGlow,
+  floorPlansOverride,
 }: {
   W: number; D: number; surfaceY: number;
   planOffset: PlanOffset;
   onEnterRoom?: (room: RoomType, floorIndex: number, worldPos: [number, number, number]) => void;
   roofFloorIdx: number;
   nightGlow: number;
+  /** 多楼栋：渲染副楼天台时传入该楼 floorPlans，缺省读 store(激活楼栋)。 */
+  floorPlansOverride?: import("@/lib/types").FloorPlan[];
 }) {
-  const floorPlans = useDesignerStore(s => s.floorPlans);
+  const storeFloorPlans = useDesignerStore(s => s.floorPlans);
+  const floorPlans = floorPlansOverride ?? storeFloorPlans;
   const fp = floorPlans[roofFloorIdx];
   if (!fp) return null;
 
@@ -2209,6 +2213,8 @@ function WalkthroughWallPiece({
 export default function FloorPlanBuilding({
   insideBuilding = false, wallXray = false, hideInterior = false,
   onEnterRoom,
+  floorPlansOverride, exteriorOverride,
+  worldX = 0, worldZ = 0, worldRot = 0, interactive = true,
 }: {
   insideBuilding?: boolean;
   wallXray?: boolean;
@@ -2219,9 +2225,20 @@ export default function FloorPlanBuilding({
    *  walkthrough mode at that room's center (handled by HouseCanvas
    *  parent), instead of switching to the single-room 3D view. */
   onEnterRoom?: (room: RoomType, floorIndex: number, worldPos: [number, number, number]) => void;
+  /** 多楼栋：渲染「非激活楼栋」时传入该楼的 floorPlans/exterior + 在地块里的
+   *  位置(worldX/Z 米)与旋转(worldRot 弧度)。缺省 = 激活楼栋，读 store 全局、
+   *  置于原点，与单楼栋行为完全一致。interactive=false 时禁用点击进房(副楼只看)。 */
+  floorPlansOverride?: import("@/lib/types").FloorPlan[];
+  exteriorOverride?: import("@/lib/types").ExteriorSettings;
+  worldX?: number;
+  worldZ?: number;
+  worldRot?: number;
+  interactive?: boolean;
 }) {
-  const floorPlans     = useDesignerStore(s => s.floorPlans);
-  const exterior       = useDesignerStore(s => s.exterior);
+  const storeFloorPlans = useDesignerStore(s => s.floorPlans);
+  const storeExterior   = useDesignerStore(s => s.exterior);
+  const floorPlans     = floorPlansOverride ?? storeFloorPlans;
+  const exterior       = exteriorOverride ?? storeExterior;
   const showCompass    = useDesignerStore(s => s.showCompass);
   const floorCount     = Math.max(exterior.floors, 1);
   const setActiveRoom  = useDesignerStore(s => s.setActiveRoom);
@@ -2277,6 +2294,10 @@ export default function FloorPlanBuilding({
    *  - if onEnterRoom prop given: walkthrough mode at this room's centre
    *  - else: legacy behaviour (switch to single-room RoomCanvas view) */
   const enterRoom = useCallback((room: RoomType, floorIndex: number) => {
+    // 副楼(interactive=false)：点击不进房/不改激活房间——它的 floorPlans 是 override
+    // 而非 store 激活楼栋，若改 activeRoom/activeFloor 会错乱到激活楼栋。要进副楼
+    // 应先在 整体布局/院子图 切换 activeBuilding。
+    if (!interactive) return;
     setActiveFloor(floorIndex);
     setActiveRoom(room);
     if (onEnterRoom) {
@@ -2307,7 +2328,7 @@ export default function FloorPlanBuilding({
       }
     }
     setViewMode("3d");
-  }, [setActiveFloor, setActiveRoom, setViewMode, onEnterRoom, floorPlans]);
+  }, [setActiveFloor, setActiveRoom, setViewMode, onEnterRoom, floorPlans, interactive]);
 
   /** Track which block is hovered for tooltip */
   const [hoveredRoom, setHoveredRoom] = useState<{ room: RoomType; fi: number } | null>(null);
@@ -3060,7 +3081,7 @@ export default function FloorPlanBuilding({
   }, [floorPlans, floorCount, roomLoopMax, floorBoundsArr, planOffset, W, D, exterior.interiorDoorHeightCm]);
 
   return (
-    <group>
+    <group position={[worldX, 0, worldZ]} rotation={[0, worldRot, 0]}>
       {/* 地面基座 — 浅色石灰石平台（建筑基层）*/}
       <mesh position={[0, -0.04, 0]} receiveShadow>
         <boxGeometry args={[W + 0.55, 0.10, D + 0.55]} />
@@ -5675,6 +5696,7 @@ export default function FloorPlanBuilding({
           onEnterRoom={onEnterRoom}
           roofFloorIdx={exterior.floors}
           nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0}
+          floorPlansOverride={floorPlansOverride}
         />
       )}
 

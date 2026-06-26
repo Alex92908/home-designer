@@ -7280,18 +7280,24 @@ export default function HouseCanvas() {
         {buildings.map((bld, i) => {
           if (i === activeBuilding) return null; // active = full HouseBody above
           if (bld.floorPlans.length === 0) return null;
+          // 副楼用与主楼同一渲染管线(FloorPlanBuilding，按建筑数据参数化)，渲出
+          // 真实墙体/幕墙/天台/窗，而非旧的 SecondaryBuildingBody 简化色块。
           // 相对激活楼栋偏移：激活楼栋恒在原点(HouseBody)，副楼按 (bld-activeBld)
-          // 摆位。此前用绝对 bld.x/z → activeBuilding≠0 时与主楼重叠/其余错位。
+          // 摆位+自转。interactive=false → 点击不误改激活楼栋的 activeRoom/Floor。
           const ax = buildings[activeBuilding]?.x ?? 0;
           const az = buildings[activeBuilding]?.z ?? 0;
           return (
-            <group
+            <FloorPlanBuilding
               key={bld.id}
-              position={[(bld.x - ax) / 100, 0, (bld.z - az) / 100]}
-              rotation={[0, bld.rot, 0]}
-            >
-              <SecondaryBuildingBody floorPlans={bld.floorPlans} exterior={bld.exterior} />
-            </group>
+              floorPlansOverride={bld.floorPlans}
+              exteriorOverride={bld.exterior}
+              worldX={(bld.x - ax) / 100}
+              worldZ={(bld.z - az) / 100}
+              worldRot={bld.rot}
+              interactive={false}
+              insideBuilding={insideBuilding}
+              hideInterior={hideInterior}
+            />
           );
         })}
         {/* Wall decor — exterior-only (hidden in walkthrough where camera
