@@ -1631,15 +1631,6 @@ export default function YardPlan() {
             const cx = SVG_PX / 2, cy = SVG_PX / 2;
             return (
               <g style={{ pointerEvents: "none" }}>
-                {/* Outer lot boundary — dashed orange */}
-                <rect
-                  x={cx - lotPx} y={cy - lotPx}
-                  width={lotPx * 2} height={lotPx * 2}
-                  fill="none"
-                  stroke="rgba(251,146,60,0.55)"
-                  strokeWidth={1.5}
-                  strokeDasharray="8 5"
-                />
                 {/* Inner setback line — dashed lighter orange */}
                 <rect
                   x={cx - lotPx + setbackPx} y={cy - lotPx + setbackPx}
