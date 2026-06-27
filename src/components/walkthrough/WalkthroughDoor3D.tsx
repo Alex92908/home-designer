@@ -258,7 +258,7 @@ export function WalkthroughDoor3D({
               width={doorW}
               height={doorH}
               isOpen={isOpen}
-              position={[doorW / 2, doorH, 0]}
+              position={[0, 0, -0.1]}
               onClick={(e) => { e.stopPropagation(); onToggle(); }}
             />
           </Suspense>

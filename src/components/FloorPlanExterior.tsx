@@ -203,7 +203,7 @@ function widenGarageDoor(room: RoomType, door: DoorConfig, widthCm: number, dept
   const wallLen = (door.wall === "W" || door.wall === "E") ? depthCm : widthCm;
   const len = Math.max(door.len ?? 0, Math.min(wallLen - 40, 340));
   const pos = Math.max(5, (wallLen - len) / 2);
-  return { ...door, len, pos, h: Math.max(door.h ?? 0, 210) };
+  return { ...door, len, pos, h: Math.max(door.h ?? 0, 210), style: door.style ?? ("roller_shutter" as import("@/lib/types").DoorStyle) };
 }
 /** Default door height (cm) — garage doors are taller (~210). */
 function defaultDoorHCm(room: RoomType): number {
@@ -2356,7 +2356,49 @@ export default function FloorPlanBuilding({
   /** Track which block is hovered for tooltip */
   const [hoveredRoom, setHoveredRoom] = useState<{ room: RoomType; fi: number } | null>(null);
 
-  // 全局包围盒（所有楼层取并集）
+  // ── 房间聚类：找出不相连的房间分组（如车库与主楼分离）───────────────
+  // 用 union-find 把平面上重叠/相邻的房间归为一组；最大组 = 主楼，
+  // 其余 = 独立附属建筑（各自独立盖顶，不再强行一块大顶盖全场）。
+  type RoomRect = { room: string; x: number; y: number; w: number; d: number };
+  const roomClusters = useMemo(() => {
+    const rects: RoomRect[] = [];
+    const seen = new Set<string>();
+    for (let fi = 0; fi < floorCount; fi++) {
+      const fp = floorPlans[fi];
+      if (!fp) continue;
+      for (const r of (fp.enabledRooms ?? []).filter(r => !ROOM_DEFS[r]?.isOutdoor)) {
+        if (seen.has(r)) continue;
+        const p = fp.roomLayout?.[r]; const dm = fp.roomDimensions?.[r];
+        if (!p || !dm) continue;
+        seen.add(r);
+        rects.push({ room: r, x: p.x, y: p.y, w: dm.width, d: dm.depth });
+      }
+    }
+    if (rects.length === 0) return { main: [] as RoomRect[], detached: [] as RoomRect[][] };
+    const par = rects.map((_, i) => i);
+    const find = (i: number): number => par[i] === i ? i : (par[i] = find(par[i]));
+    const union = (a: number, b: number) => { par[find(a)] = find(b); };
+    const TOL = 5;
+    for (let i = 0; i < rects.length; i++) {
+      for (let j = i + 1; j < rects.length; j++) {
+        const a = rects[i], b = rects[j];
+        if (a.x - TOL < b.x + b.w && a.x + a.w + TOL > b.x &&
+            a.y - TOL < b.y + b.d && a.y + a.d + TOL > b.y) {
+          union(i, j);
+        }
+      }
+    }
+    const groups = new Map<number, RoomRect[]>();
+    for (let i = 0; i < rects.length; i++) {
+      const root = find(i);
+      if (!groups.has(root)) groups.set(root, []);
+      groups.get(root)!.push(rects[i]);
+    }
+    const sorted = [...groups.values()].sort((a, b) => b.length - a.length);
+    return { main: sorted[0], detached: sorted.slice(1) };
+  }, [floorPlans, floorCount]);
+
+  // 全局包围盒（所有楼层取并集）— 坐标原点，涵盖所有房间
   const planOffset = useMemo<PlanOffset>(() => {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (let fi = 0; fi < floorCount; fi++) {
@@ -2372,6 +2414,22 @@ export default function FloorPlanBuilding({
     if (!isFinite(minX)) return { minX: 0, minY: 0, W: 10, D: 8 };
     return { minX, minY, W: (maxX - minX) * CM, D: (maxY - minY) * CM };
   }, [floorPlans, floorCount]);
+
+  // 主楼屋顶范围（仅主聚类，不含车库等独立建筑）
+  const mainRoofBounds = useMemo(() => {
+    const rects = roomClusters.main;
+    if (rects.length === 0) return null;
+    let mnX = Infinity, mnY = Infinity, mxX = -Infinity, mxY = -Infinity;
+    for (const r of rects) {
+      mnX = Math.min(mnX, r.x); mnY = Math.min(mnY, r.y);
+      mxX = Math.max(mxX, r.x + r.w); mxY = Math.max(mxY, r.y + r.d);
+    }
+    const w = (mxX - mnX) * CM;
+    const d = (mxY - mnY) * CM;
+    const cx = ((mnX + mxX) / 2 - planOffset.minX) * CM - planOffset.W / 2;
+    const cz = ((mnY + mxY) / 2 - planOffset.minY) * CM - planOffset.D / 2;
+    return { w, d, cx, cz };
+  }, [roomClusters, planOffset]);
 
   const { W, D } = planOffset;
   const wallColor  = exterior.wallColor ?? "#F0EDE6";
@@ -4733,8 +4791,11 @@ export default function FloorPlanBuilding({
         }
 
         // 幕墙模式下的非玻璃面(实墙)：不画 ConcreteFacade 叠层，由真实外墙壳呈现。
-        // 例外：车库面(isGarageDoorBlock)要保留 ConcreteFacade 以渲染卷帘车库门板。
-        if (curtainWall && facade !== "glass" && !isGarageDoorBlock) return null;
+        // 车库门面：ConcreteFacade 是一块实心 12cm 盒子(无 CSG)，会把墙段的门洞
+        // 和 WalkthroughDoor3D 的卷帘门全挡住 → 跳过，由 wallSegments 的带洞墙
+        // + WalkthroughDoor3D 渲染门板。
+        if (isGarageDoorBlock) return null;
+        if (curtainWall && facade !== "glass") return null;
 
         // ── 位置 & 旋转（使用合并块中心坐标）──
         const midCoord = mergedStart + (mergedEnd - mergedStart) / 2;
@@ -5528,9 +5589,10 @@ export default function FloorPlanBuilding({
         );
       })()}
 
-      {!insideBuilding && (
+      {!insideBuilding && mainRoofBounds && (
+        <group position={[mainRoofBounds.cx, 0, mainRoofBounds.cz]}>
         <FlatRoof
-          W={W} D={D} roofY={totalH}
+          W={mainRoofBounds.w} D={mainRoofBounds.d} roofY={totalH}
           nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0}
           hasRooftop={exterior.hasRooftop}
           overhang={exterior.roofOverhang ?? 0.45}
@@ -5561,7 +5623,35 @@ export default function FloorPlanBuilding({
           penthouse={false}
           penthouseColor={exterior.penthouseColor ?? exterior.parapetColor ?? "#E8E4DE"}
         />
+        </group>
       )}
+
+      {/* 独立附属建筑（车库等）各自独立盖小顶 */}
+      {!insideBuilding && roomClusters.detached.map((cluster, ci) => {
+        let mnX = Infinity, mnY = Infinity, mxX = -Infinity, mxY = -Infinity;
+        let maxH = 0;
+        for (const r of cluster) {
+          mnX = Math.min(mnX, r.x); mnY = Math.min(mnY, r.y);
+          mxX = Math.max(mxX, r.x + r.w); mxY = Math.max(mxY, r.y + r.d);
+          const rd = ROOM_DEFS[r.room as RoomType];
+          if (rd) maxH = Math.max(maxH, (rd.height ?? 260) * CM);
+        }
+        const cw = (mxX - mnX) * CM;
+        const cd = (mxY - mnY) * CM;
+        const cx = ((mnX + mxX) / 2 - planOffset.minX) * CM - planOffset.W / 2;
+        const cz = ((mnY + mxY) / 2 - planOffset.minY) * CM - planOffset.D / 2;
+        const ov = 0.25;
+        const st = (exterior.roofSlabThicknessCm ?? 10) / 100;
+        const roofColor = exterior.roofSlabColor ?? "#F0EDE8";
+        return (
+          <group key={`detached-roof-${ci}`} position={[cx, maxH + 0.05, cz]}>
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[cw + ov * 2, st, cd + ov * 2]} />
+              <meshStandardMaterial color={roofColor} roughness={0.88} />
+            </mesh>
+          </group>
+        );
+      })}
 
       {/* ── DEBUG: NWES direction labels (code convention: north=-Z, south=+Z, east=+X, west=-X) ──
            Commented out for production; re-enable to debug coord directions in 外观图. */}
