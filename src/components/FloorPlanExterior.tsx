@@ -2888,6 +2888,10 @@ export default function FloorPlanBuilding({
      *  真正驱动外立面。未设外墙材质时为 undefined → 回落原行为（零回归）。 */
     extWallColor?: string;
     extWallId?: string;
+    /** True when this segment's room has an explicit roomFacadeFaces wall=true override.
+     *  When set, the exteriorPlanes suppression is skipped so mixed same-coordinate
+     *  walls (e.g. garage=solid + bedroom=glass on the same N plane) render correctly. */
+    wallOverridden?: boolean;
   };
   const wallSegments = useMemo<WallSeg[]>(() => {
     const map = new Map<string, WallSeg>();
@@ -3026,10 +3030,13 @@ export default function FloorPlanBuilding({
           const fk  = `${fi}|${s.axis}|${Math.round(s.fixed)}`;
           const seg = map.get(key);
           const holes = collectHoles(s.dataSide, doorsArr, winsArr);
+          // Explicit roomFacadeFaces wall=true on this room+side overrides exteriorPlanes suppression.
+          const wallOverridden = fp.roomFacadeFaces?.[room]?.[s.uiSide]?.wall === true;
           if (seg) {
-            // Exact range match: merge holes + hide flags.
+            // Exact range match: merge holes + hide flags + wallOverridden.
             addHole(seg, holes);
             if (wh?.[s.uiSide] === true) seg.hideAny = true;
+            if (wallOverridden) seg.wallOverridden = true;
           } else {
             // Check for partially- or fully-overlapping segments at the same
             // plan-Y (or plan-X for vertical walls). These come from rooms on
@@ -3049,6 +3056,7 @@ export default function FloorPlanBuilding({
                 .filter(h => h.x + h.w > 0 && h.x < e.b - e.a);
               addHole(e, clipped);
               if (wh?.[s.uiSide] === true) e.hideAny = true;
+              if (wallOverridden) e.wallOverridden = true;
             }
 
             // Create new segments only for sub-ranges not yet covered.
@@ -3066,6 +3074,7 @@ export default function FloorPlanBuilding({
                 holes: subHoles, hideAny: wh?.[s.uiSide] === true,
                 wallColor: wColor, wallId: wId,
                 extWallColor: extColor, extWallId: extId,
+                wallOverridden,
               }, subKey);
             };
             for (const e of sortedOvlp) {
@@ -7265,7 +7274,8 @@ export default function FloorPlanBuilding({
         // perimeter plane) keep their solid walls.
         if (
           curtainWall &&
-          exteriorPlanes.has(`${seg.fi}|${seg.axis}|${Math.round(seg.fixed)}`)
+          exteriorPlanes.has(`${seg.fi}|${seg.axis}|${Math.round(seg.fixed)}`) &&
+          !seg.wallOverridden
         ) return null;
         const CM_l = 0.01;
         const wH = FLOOR_H - 0.01;
