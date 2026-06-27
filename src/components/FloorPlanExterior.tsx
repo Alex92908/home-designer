@@ -2451,6 +2451,17 @@ export default function FloorPlanBuilding({
       return { id: `auto-${fi}-${room}-${wall}`, wall, pos, len: AUTO_DOOR_W, h: 200 };
     }
 
+    // 车库：选最近的外墙作为车库门（S→W→N→E 优先），门宽取房间宽度减 20cm
+    // 最小 220cm，确保能在外立面渲染卷帘车库门板。
+    if (room === "garage") {
+      const exteriorOrder: DoorConfig["wall"][] = ["S", "W", "N", "E"];
+      const picked = exteriorOrder.find(w => d[w] < EPS) ?? "S";
+      const wallLenCm = (picked === "W" || picked === "E") ? rDcm : rWcm;
+      const gdW = Math.max(220, Math.min(wallLenCm - 20, 300));
+      const pos = Math.max(0, (wallLenCm - gdW) / 2);
+      return { id: `auto-garage-${fi}-${picked}`, wall: picked, pos, len: gdW, h: 210 };
+    }
+
     // 其他房间：走廊侧门
     // 优先 Z 轴方向（N/S）的内墙 — 水平走廊布局中这两面墙朝向走廊
     // 若 Z 轴两面墙都是外墙，则回退到 X 轴内墙
