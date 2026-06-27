@@ -4665,7 +4665,7 @@ export default function FloorPlanBuilding({
         // Per-face facade layers (实墙/玻璃幕墙/框架) resolved on the block.
         // 玻璃 OR 框 显示 → 渲染幕墙(下面按 showGlass/showFrame 分层)；都不显示
         // → 该面是实墙(或全开敞，已被 layeredSegs 过滤)，走实墙/ConcreteFacade。
-        const viaLayers = block.fl.glass || block.fl.frame;
+        let viaLayers = block.fl.glass || block.fl.frame;
         let facade: "glass" | "concrete" | "wood";
         if (viaLayers) {
           facade = "glass";
@@ -4688,7 +4688,8 @@ export default function FloorPlanBuilding({
             && (block.rooms.includes("garage")
                 || doorEntries.some(({ d }) => d.len * CM >= (exterior.garageDoorMinWidth ?? 2.0)));
           if (!hasGarageDoor) return null;
-          facade = "glass"; // let the glass branch run so the garage-door JSX fires
+          facade = "glass";   // enter the glass branch so garage-door JSX fires
+          viaLayers = true;   // showGlass/showFrame will read block.fl (both false) → no curtain wall rendered
         }
 
         // ── 位置 & 旋转（使用合并块中心坐标）──
