@@ -4689,9 +4689,17 @@ export default function FloorPlanBuilding({
         // Per-face facade layers (实墙/玻璃幕墙/框架) resolved on the block.
         // 玻璃 OR 框 显示 → 渲染幕墙(下面按 showGlass/showFrame 分层)；都不显示
         // → 该面是实墙(或全开敞，已被 layeredSegs 过滤)，走实墙/ConcreteFacade。
-        let viaLayers = block.fl.glass || block.fl.frame;
+        const viaLayers = block.fl.glass || block.fl.frame;
+        // 车库（有门）永远是实墙 + 卷帘车库门，绝不做玻璃幕墙 —— 即使整楼是玻璃别墅
+        // 模式(isGlassVilla)或南向自动玻璃。卷帘车库门板在 concrete 分支渲染，所以
+        // 必须把车库面强制为 concrete，否则它落进 glass 分支 → 门板永远不出现
+        // (用户：车库有洞没有门)。
+        const isGarageDoorBlock = floorIndex === 0 && block.rooms.includes("garage")
+          && doorEntries.length > 0;
         let facade: "glass" | "concrete" | "wood";
-        if (viaLayers) {
+        if (isGarageDoorBlock) {
+          facade = "concrete";
+        } else if (viaLayers) {
           facade = "glass";
         } else if (curtainWall) {
           // 幕墙模式下某面被强制显示「实墙」(玻璃+框都隐藏)：交给真实外墙壳
@@ -4706,15 +4714,8 @@ export default function FloorPlanBuilding({
         }
 
         // 幕墙模式下的非玻璃面(实墙)：不画 ConcreteFacade 叠层，由真实外墙壳呈现。
-        // 例外：车库房间有门时仍需渲染卷帘车库门板，进入 glass 路径但 showGlass/showFrame=false。
-        if (curtainWall && facade !== "glass") {
-          const hasGarageDoor = floorIndex === 0 && doorEntries.length > 0
-            && (block.rooms.includes("garage")
-                || doorEntries.some(({ d }) => d.len * CM >= (exterior.garageDoorMinWidth ?? 2.0)));
-          if (!hasGarageDoor) return null;
-          facade = "glass";   // enter the glass branch so garage-door JSX fires
-          viaLayers = true;   // showGlass/showFrame will read block.fl (both false) → no curtain wall rendered
-        }
+        // 例外：车库面(isGarageDoorBlock)要保留 ConcreteFacade 以渲染卷帘车库门板。
+        if (curtainWall && facade !== "glass" && !isGarageDoorBlock) return null;
 
         // ── 位置 & 旋转（使用合并块中心坐标）──
         const midCoord = mergedStart + (mergedEnd - mergedStart) / 2;
