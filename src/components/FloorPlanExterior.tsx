@@ -24,7 +24,7 @@ import * as THREE from "three";
 import { Html, useGLTF, Clone, Instances, Instance, Text } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
 import { overlayMaterialProps } from "@/lib/zLayer";
-import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem, resolveFacadeLayer, resolveFaceOpacity } from "@/lib/types";
+import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem, resolveFacadeLayer, resolveFaceOpacity, isExteriorWallSide } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { InteriorRoomDetail } from "./InteriorRoomDetail";
 import { PlacedItemMesh, LightFixtureInner } from "./RoomCanvas";
@@ -2512,25 +2512,32 @@ export default function FloorPlanBuilding({
     win: WindowConfig,
     cx: number, cz: number, rW: number, rD: number, rWcm: number, rDcm: number,
     bounds: { minX: number; maxX: number; minZ: number; maxZ: number },
-    doorWall?: DoorConfig["wall"]
+    doorWall?: DoorConfig["wall"],
+    // True if `side` is a genuine exterior wall of this room (no neighbour covering
+    // it). Preferred over bounding-box distance: a detached/offset room (e.g. an
+    // offset garage) has exterior walls that are FAR from the building's bbox edge,
+    // so the distance test wrongly relocates its windows (用户:车库窗户位置不对).
+    isExtWall?: (side: WindowConfig["wall"]) => boolean,
   ): WindowConfig {
     const d = calcWallDists(cx, cz, rW, rD, bounds);
-    const configuredDist = d[win.wall as keyof typeof d] ?? Infinity;
+    const onExterior = (side: WindowConfig["wall"]): boolean =>
+      isExtWall ? isExtWall(side) : ((d[side as keyof typeof d] ?? Infinity) < WIN_EPS);
 
-    // If configured wall is on the exterior (dist < WIN_EPS) and not the door wall,
+    // If configured wall is on the exterior and not the door wall,
     // keep it there — only clamp the position within the wall to avoid overflow.
-    if (configuredDist < WIN_EPS && win.wall !== doorWall) {
+    if (onExterior(win.wall) && win.wall !== doorWall) {
       const wallLen = (win.wall === "W" || win.wall === "E") ? rDcm : rWcm;
       const safePos = Math.max(5, Math.min(win.pos ?? 0, wallLen - (win.len ?? 80) - 5));
       return { ...win, pos: safePos, len: Math.min(win.len, Math.round(wallLen * 0.70)) };
     }
 
     // Configured wall is interior or is the door wall — pick best exterior wall.
+    // Genuine exterior walls (isExtWall) rank first, then by bbox distance.
     const ranked = (["N", "S", "W", "E"] as const)
-      .map(w => ({ w, dist: d[w] ?? Infinity }))
-      .sort((a, b) => a.dist - b.dist);
+      .map(w => ({ w, dist: d[w] ?? Infinity, ext: onExterior(w) }))
+      .sort((a, b) => (a.ext === b.ext ? a.dist - b.dist : (a.ext ? -1 : 1)));
 
-    const target = ranked.find(({ w, dist }) => dist < WIN_EPS && w !== doorWall)
+    const target = ranked.find(({ w, ext }) => ext && w !== doorWall)
       ?? ranked.find(({ w }) => w !== doorWall)
       ?? ranked[0];
 
@@ -2585,7 +2592,8 @@ export default function FloorPlanBuilding({
         const wins = fp.roomWindows?.[r] ?? [];
         const doorWall0 = mergedDoors[r]?.[0]?.wall;
         if (wins.length > 0 && bounds) {
-          mergedWindows[r] = wins.map(w => adjustWindowWall(w, cx, cz, rW, rD, dd.width, dd.depth, bounds, doorWall0));
+          const isExtWall = (side: WindowConfig["wall"]) => isExteriorWallSide(fp, r, side);
+          mergedWindows[r] = wins.map(w => adjustWindowWall(w, cx, cz, rW, rD, dd.width, dd.depth, bounds, doorWall0, isExtWall));
         } else {
           mergedWindows[r] = wins;
         }
@@ -2847,8 +2855,9 @@ export default function FloorPlanBuilding({
 
         // 窗户方向修正：强制到不同于门的外墙，彻底避免门窗同墙重叠
         const doorWallForRoom = autoDoor?.wall ?? doors[0]?.wall;
+        const isExtWallR = (side: WindowConfig["wall"]) => isExteriorWallSide(fp, room, side);
         const adjustedWindows = (bounds && windows.length > 0)
-          ? windows.map(w => adjustWindowWall(w, cx, cz, rW, rD, rWcm, rDcm, bounds, doorWallForRoom))
+          ? windows.map(w => adjustWindowWall(w, cx, cz, rW, rD, rWcm, rDcm, bounds, doorWallForRoom, isExtWallR))
           : windows;
 
         const wallsHidden = fp.roomWallsHidden?.[room];
@@ -5170,9 +5179,23 @@ export default function FloorPlanBuilding({
               const gdMetal   = { roughness: 0.20, metalness: 0.88, envMapIntensity: 2.4 };
               const isNightGD = sunHour < 6 || sunHour > 20;
               const isDuskGD  = !isNightGD && (sunHour < 8 || sunHour > 18);
+              // 可点击开关：卷帘门整片向上收起(roll up)露出门洞。状态存 openMap，
+              // 与普通门同一套机制；车库的 WalkthroughDoor3D 木门已被抑制(见下方
+              // effectiveDoors)，所以这片卷帘门就是唯一的、可交互的车库门。
+              const gdRoom = block.doorEntries[di]?.room ?? block.primaryRoom;
+              const gdKey  = `gdoor|${floorIndex}|${gdRoom}|${Math.round(d.cx * 1000)}`;
+              const gdOpen = openMap.get(gdKey) ?? false;
+              const gdLift = gdOpen ? gdH * 0.92 : 0;   // roll-up travel
 
               return (
                 <group key={`gd-${di}`} position={[d.cx, gdY, 0.065]}>
+                  {/* 卷帘门叶片(可上移收起)。轨道/键盘/开门器留在外层不动。 */}
+                  <group
+                    position-y={gdLift}
+                    onClick={(e) => { e.stopPropagation(); if (insideBuilding || (exterior.exteriorInteractiveOpenings ?? true)) toggleOpen(gdKey); }}
+                    onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = "pointer"; }}
+                    onPointerOut={() => { document.body.style.cursor = "auto"; }}
+                  >
                   {/* ── Perimeter frame ── */}
                   <mesh position={[0, 0, -0.010]} castShadow>
                     <boxGeometry args={[gdW + 0.07, gdH + 0.07, 0.045]} />
@@ -5309,6 +5332,7 @@ export default function FloorPlanBuilding({
                       castShadow={false}
                     />
                   )}
+                  </group>
                 </group>
               );
             })}
@@ -7738,6 +7762,15 @@ export default function FloorPlanBuilding({
                 非玻璃房间（主卧/书房）的门也会从邻居玻璃幕墙看进来变
                 "立柱"。门是内视角装饰，对外观无贡献，安全跳过。 */}
             {(!isStair || (exterior.renderStairOpenings ?? true)) && effectiveDoors.map((door, di) => {
+              // 车库宽门(≥2m)在外立面由「可点击卷帘车库门」(facadeBlocks 里)接管，
+              // 这里就别再渲染一道木质 WalkthroughDoor3D 叠在它后面(用户:门打不开——
+              // 点到的是没交互的卷帘片、能开的木门藏在后面)。仅当卷帘门确实会渲染
+              // (curtainWall 或 外观图非透明立面)时抑制，漫游实墙模式仍保留可走门。
+              const sectionalShown = curtainWall || (!insideBuilding && !(exterior.transparentExterior ?? true));
+              if (room === "garage" && sectionalShown
+                  && door.len * CM >= (exterior.garageDoorMinWidth ?? 2.0)) {
+                return null;
+              }
               // Use the SAME RoomDoor3D component the effect page uses
               // (shared module). Single source of truth for door visuals.
               const dHcm = door.h ?? (exterior.interiorDoorHeightCm ?? 240);
