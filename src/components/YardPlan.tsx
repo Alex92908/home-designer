@@ -1624,31 +1624,6 @@ export default function YardPlan() {
             <text x={500 / cmPerPx / 2} y={14} textAnchor="middle" fontSize={9} fill={INK}>5.00 m</text>
           </g>
 
-          {/* ── Lot boundary + setback overlay ── */}
-          {(() => {
-            const lotPx = WIN_HALF_CM / cmPerPx;               // half-side of lot in SVG px
-            const setbackPx = setbackCm / cmPerPx;             // setback in SVG px
-            const cx = SVG_PX / 2, cy = SVG_PX / 2;
-            return (
-              <g style={{ pointerEvents: "none" }}>
-                {/* Inner setback line — dashed lighter orange */}
-                <rect
-                  x={cx - lotPx + setbackPx} y={cy - lotPx + setbackPx}
-                  width={(lotPx - setbackPx) * 2} height={(lotPx - setbackPx) * 2}
-                  fill="none"
-                  stroke="rgba(251,146,60,0.30)"
-                  strokeWidth={1}
-                  strokeDasharray="4 5"
-                />
-                {/* Setback label */}
-                <text
-                  x={cx - lotPx + setbackPx + 4}
-                  y={cy - lotPx + setbackPx - 3}
-                  fontSize={8} fill="rgba(251,146,60,0.70)"
-                >setback {(setbackCm / 100).toFixed(1)} m</text>
-              </g>
-            );
-          })()}
 
           {/* ── Sun shadow overlay — semi-transparent dark polygon showing
               where the house casts shadow at the current sun hour.
