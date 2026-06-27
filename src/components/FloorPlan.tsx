@@ -2158,6 +2158,7 @@ export default function FloorPlan() {
                     { key: "french_double", label: t.fpDoorStyleFrench },
                     { key: "glass_swing",   label: t.fpDoorStyleGlassSwing },
                     { key: "glass_slide",   label: t.fpDoorStyleGlassSlide },
+                    { key: "roller_shutter", label: t.fpDoorStyleRoller ?? "卷帘门" },
                   ] as const).map(s => {
                     const active = dStyle === s.key;
                     return (

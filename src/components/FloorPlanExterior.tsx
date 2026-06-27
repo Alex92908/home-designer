@@ -195,6 +195,16 @@ function defaultDoorLenCm(room: RoomType, wallLenCm: number): number {
   if (room === "garage") return Math.max(240, Math.min(wallLenCm - 40, 300));
   return 80;
 }
+/** Force any garage door to a wide, centred garage-door size so the GLB roller
+ *  shutter fills the opening (a user's leftover 80cm pedestrian door would make
+ *  the shutter tiny). No-op for non-garage rooms / non-garage doors. */
+function widenGarageDoor(room: RoomType, door: DoorConfig, widthCm: number, depthCm: number): DoorConfig {
+  if (room !== "garage") return door;
+  const wallLen = (door.wall === "W" || door.wall === "E") ? depthCm : widthCm;
+  const len = Math.max(door.len ?? 0, Math.min(wallLen - 40, 340));
+  const pos = Math.max(5, (wallLen - len) / 2);
+  return { ...door, len, pos, h: Math.max(door.h ?? 0, 210) };
+}
 /** Default door height (cm) — garage doors are taller (~210). */
 function defaultDoorHCm(room: RoomType): number {
   return room === "garage" ? 210 : 200;
@@ -2576,7 +2586,7 @@ export default function FloorPlanBuilding({
         // 配在内墙(如厨房 S 朝走廊)的门外观图里根本不画(用户:门洞都没有、门也没有)。
         const configuredDoors = fp.roomDoors?.[r] ?? [];
         if (configuredDoors.length > 0) {
-          mergedDoors[r] = configuredDoors;
+          mergedDoors[r] = configuredDoors.map(d => widenGarageDoor(r, d, dd.width, dd.depth));
         } else if (bounds && !isCirc && fp.roomHasDoor?.[r] !== false) {
           const lw = fp.roomDoorWall?.[r];
           if (lw) {
@@ -3009,7 +3019,7 @@ export default function FloorPlanBuilding({
         // interior render drew NO door panel there → an open gap you could
         // see the yard grass through. A user-configured door still applies.
         const isCircRoom = room === "stair" || room === "hallway";
-        let doorsArr = configuredDoors;
+        let doorsArr = configuredDoors.map(dd0 => widenGarageDoor(room, dd0, d.width, d.depth));
         if (!isCircRoom && configuredDoors.length === 0 && fp.roomHasDoor?.[room] !== false) {
           // 与 facade(mergedDoors)同优先级:roomDoorWall/Pos/Len 单门配置 > pickAutoDoor。
           const lw = fp.roomDoorWall?.[room];
@@ -5081,7 +5091,9 @@ export default function FloorPlanBuilding({
             <group scale={[1, 1, -1]}>
             <ConcreteFacade
               width={segLen} height={FLOOR_H} windows={winInfos} windowGlow={interiorGlowWall}
-              doors={floorIndex === 0 ? doorInfos : []}
+              /* 车库门洞由真实 GLB 卷帘门填充，ConcreteFacade 不再画静态门板（否则
+                 灰门叠在卷帘门前面挡住）。门洞本身仍由 wallSegments 抠出。 */
+              doors={floorIndex === 0 && !isGarageDoorBlock ? doorInfos : []}
               doorColor={exterior.entranceDoorColor ?? ENTRANCE_DOOR_COLOR}
               doorHandleColor={exterior.entranceHandleColor ?? ENTRANCE_DOOR_HANDLE_COLOR}
               doorCasingColor={exterior.entranceCasingColor ?? ENTRANCE_DOOR_CASING_COLOR}
@@ -5151,191 +5163,8 @@ export default function FloorPlanBuilding({
                 </group>
               );
             })()}
-            {/* ── 车库门（garage door）——宽门（≥ 2m）渲染为高精度分节卷帘车库门 ──
-                 Modern raised-panel sectional garage door:
-                 • 8 narrow horizontal slat panels with 3D raised ridges
-                 • Top window strip — 4 frosted acrylic lite panels
-                 • Perimeter aluminium frame + side vertical tracks
-                 • Central T-handle bar + keypad box
-                 • Overhead opener motor rail unit
-                 • Bottom weather seal rubber strip
-                 • LED soffit strip at night */}
-            {floorIndex === 0 && doorInfos.filter((d, di) =>
-              d.w >= (exterior.garageDoorMinWidth ?? 2.0) ||
-              (block.rooms.includes("garage") && !!block.doorEntries[di])
-            ).map((d, di) => {
-              const gdW      = d.w;
-              const gdH      = Math.min(d.h, FLOOR_H * 0.85);
-              const gdY      = -FLOOR_H / 2 + gdH / 2;
-              const slats    = 8;
-              // Reserve top 18% for window strip
-              const winStripH = gdH * 0.18;
-              const slatZone  = gdH - winStripH;
-              const slatH     = slatZone / slats;
-              const gdColor   = "#22262E";   // dark anodized aluminium
-              const gdMid     = "#2E3340";   // mid tone slat face
-              const gdLight   = "#3A4052";   // highlight ridge
-              const gdReveal  = "#181B22";   // reveal shadow
-              const gdMetal   = { roughness: 0.20, metalness: 0.88, envMapIntensity: 2.4 };
-              const isNightGD = sunHour < 6 || sunHour > 20;
-              const isDuskGD  = !isNightGD && (sunHour < 8 || sunHour > 18);
-              // 可点击开关：卷帘门整片向上收起(roll up)露出门洞。状态存 openMap，
-              // 与普通门同一套机制；车库的 WalkthroughDoor3D 木门已被抑制(见下方
-              // effectiveDoors)，所以这片卷帘门就是唯一的、可交互的车库门。
-              const gdRoom = block.doorEntries[di]?.room ?? block.primaryRoom;
-              const gdKey  = `gdoor|${floorIndex}|${gdRoom}|${Math.round(d.cx * 1000)}`;
-              const gdOpen = openMap.get(gdKey) ?? false;
-              const gdLift = gdOpen ? gdH * 0.92 : 0;   // roll-up travel
-
-              return (
-                <group key={`gd-${di}`} position={[d.cx, gdY, 0.065]}>
-                  {/* 卷帘门叶片(可上移收起)。轨道/键盘/开门器留在外层不动。 */}
-                  <group
-                    position-y={gdLift}
-                    onClick={(e) => { e.stopPropagation(); if (insideBuilding || (exterior.exteriorInteractiveOpenings ?? true)) toggleOpen(gdKey); }}
-                    onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = "pointer"; }}
-                    onPointerOut={() => { document.body.style.cursor = "auto"; }}
-                  >
-                  {/* ── Perimeter frame ── */}
-                  <mesh position={[0, 0, -0.010]} castShadow>
-                    <boxGeometry args={[gdW + 0.07, gdH + 0.07, 0.045]} />
-                    <meshStandardMaterial color={gdColor} {...gdMetal} />
-                  </mesh>
-
-                  {/* ── 8 slat panels (lower zone) ── */}
-                  {Array.from({ length: slats }, (_, pi) => {
-                    const pyOffset = -gdH / 2 + winStripH + (pi + 0.5) * slatH;
-                    return (
-                      <group key={`slat-${pi}`} position={[0, pyOffset, 0]}>
-                        {/* Main panel face */}
-                        <mesh castShadow>
-                          <boxGeometry args={[gdW - 0.05, slatH - 0.010, 0.028]} />
-                          <meshStandardMaterial color={pi % 2 === 0 ? gdMid : gdColor} {...gdMetal} />
-                        </mesh>
-                        {/* Top raised ridge */}
-                        <mesh position={[0, slatH / 2 - 0.012, 0.018]}>
-                          <boxGeometry args={[gdW - 0.06, 0.014, 0.018]} />
-                          <meshStandardMaterial color={gdLight} roughness={0.16} metalness={0.92} envMapIntensity={2.6} />
-                        </mesh>
-                        {/* Bottom shadow reveal */}
-                        <mesh position={[0, -slatH / 2 + 0.004, 0.016]}>
-                          <boxGeometry args={[gdW - 0.06, 0.008, 0.012]} />
-                          <meshStandardMaterial color={gdReveal} roughness={0.35} metalness={0.80} />
-                        </mesh>
-                        {/* 3 vertical embossed lines per slat */}
-                        {[-gdW * 0.28, 0, gdW * 0.28].map((vx, vi) => (
-                          <mesh key={vi} position={[vx, 0, 0.016]}>
-                            <boxGeometry args={[0.012, slatH - 0.018, 0.010]} />
-                            <meshStandardMaterial color={gdReveal} roughness={0.30} metalness={0.82} />
-                          </mesh>
-                        ))}
-                      </group>
-                    );
-                  })}
-
-                  {/* ── Top window strip — 4 frosted acrylic lites ── */}
-                  {(() => {
-                    const winY = -gdH / 2 + winStripH / 2;
-                    const liteW = (gdW - 0.12) / 4;
-                    return (
-                      <group position={[0, winY, 0]}>
-                        {/* Window strip frame */}
-                        <mesh position={[0, 0, -0.002]} castShadow>
-                          <boxGeometry args={[gdW - 0.05, winStripH - 0.010, 0.030]} />
-                          <meshStandardMaterial color={gdColor} {...gdMetal} />
-                        </mesh>
-                        {/* 4 acrylic lites */}
-                        {Array.from({ length: 4 }, (_, li) => {
-                          const lx = -((gdW - 0.12) / 2) + li * liteW + liteW / 2;
-                          return (
-                            <mesh key={li} position={[lx, 0, 0.016]}>
-                              <boxGeometry args={[liteW - 0.025, winStripH - 0.030, 0.010]} />
-                              <meshPhysicalMaterial
-                                color="#C8D8E8"
-                                transparent opacity={0.42}
-                                roughness={0.12} metalness={0.05}
-                                transmission={0.25}
-                                emissive="#A8C0D8"
-                                emissiveIntensity={isNightGD ? 0.18 : 0.04}
-                              />
-                            </mesh>
-                          );
-                        })}
-                      </group>
-                    );
-                  })()}
-
-                  {/* ── Central T-handle pull bar ── */}
-                  <mesh position={[0, -gdH * 0.30, 0.024]}>
-                    <boxGeometry args={[gdW * 0.18, 0.022, 0.024]} />
-                    <meshStandardMaterial color="#C0C8D4" roughness={0.15} metalness={0.94} envMapIntensity={2.6} />
-                  </mesh>
-                  {/* Handle grip shaft */}
-                  <mesh position={[0, -gdH * 0.30 - 0.032, 0.026]}>
-                    <boxGeometry args={[0.028, 0.055, 0.022]} />
-                    <meshStandardMaterial color="#B0B8C4" roughness={0.18} metalness={0.92} envMapIntensity={2.4} />
-                  </mesh>
-
-                  {/* ── Keypad box (right of door) ── */}
-                  <mesh position={[gdW / 2 + 0.045, -gdH * 0.18, 0]}>
-                    <boxGeometry args={[0.060, 0.110, 0.045]} />
-                    <meshStandardMaterial color="#282C36" roughness={0.45} metalness={0.42} />
-                  </mesh>
-                  <mesh position={[gdW / 2 + 0.045, -gdH * 0.18, 0.024]}>
-                    <boxGeometry args={[0.040, 0.085, 0.006]} />
-                    <meshStandardMaterial color="#10121A" roughness={0.60} metalness={0.20}
-                      emissive="#003060" emissiveIntensity={isNightGD ? 0.80 : 0.08} />
-                  </mesh>
-
-                  {/* ── Vertical side tracks ── */}
-                  {([-gdW / 2 - 0.018, gdW / 2 + 0.018] as number[]).map((tx, ti) => (
-                    <mesh key={ti} position={[tx, gdH * 0.10, -0.022]} castShadow>
-                      <boxGeometry args={[0.032, gdH * 0.80, 0.024]} />
-                      <meshStandardMaterial color={gdColor} roughness={0.28} metalness={0.86} />
-                    </mesh>
-                  ))}
-
-                  {/* ── Overhead opener motor rail (above door, projecting inward) ── */}
-                  <mesh position={[0, gdH / 2 + 0.045, -0.28]} castShadow>
-                    <boxGeometry args={[0.060, 0.060, 0.55]} />
-                    <meshStandardMaterial color="#404850" roughness={0.50} metalness={0.50} />
-                  </mesh>
-                  {/* Motor head unit */}
-                  <mesh position={[0, gdH / 2 + 0.050, -0.08]}>
-                    <boxGeometry args={[0.22, 0.14, 0.28]} />
-                    <meshStandardMaterial color="#303840" roughness={0.45} metalness={0.55} />
-                  </mesh>
-                  {/* Opener light lens */}
-                  <mesh position={[0, gdH / 2 + 0.010, -0.12]}>
-                    <boxGeometry args={[0.080, 0.040, 0.060]} />
-                    <meshPhysicalMaterial
-                      color="#FFF8E0" transparent opacity={0.70}
-                      emissive="#FFF4C0"
-                      emissiveIntensity={isNightGD ? 2.5 : 0.06}
-                      roughness={0.10} metalness={0.05}
-                    />
-                  </mesh>
-
-                  {/* ── Bottom weather seal rubber strip ── */}
-                  <mesh position={[0, -gdH / 2 - 0.006, 0.012]}>
-                    <boxGeometry args={[gdW - 0.05, 0.014, 0.016]} />
-                    <meshStandardMaterial color="#101214" roughness={0.90} metalness={0.02} />
-                  </mesh>
-
-                  {/* ── LED soffit strip (night) ── */}
-                  {isNightGD && (
-                    <pointLight
-                      position={[0, -gdH * 0.45, 0.18]}
-                      intensity={isNightGD ? 3.0 : isDuskGD ? 1.5 : 0.0}
-                      distance={3.5} decay={2.0}
-                      color="#FFF4D0"
-                      castShadow={false}
-                    />
-                  )}
-                  </group>
-                </group>
-              );
-            })}
+            {/* 车库门不在这里画：门(含卷帘门 roller_shutter 样式)统一由下方
+                effectiveDoors 的 WalkthroughDoor3D 渲染，可点击开关。 */}
           </group>
         );
       })}
@@ -7443,8 +7272,10 @@ export default function FloorPlanBuilding({
         const wallOpacity = wallXray ? 0.13 : 1.0;
         const isXray = wallXray;
         // 走廊：无内墙、无天花板，仅地板；楼梯间：渲染楼梯几何体
-        // 有配置门优先用配置门，否则用自动生成门
-        const effectiveDoors = doors.length > 0 ? doors : autoDoor ? [autoDoor] : [];
+        // 有配置门优先用配置门，否则用自动生成门。车库门加宽到车库门尺寸
+        // (与 wallSegments 抠的门洞一致)，使卷帘门正好填满洞。
+        const effectiveDoors = (doors.length > 0 ? doors : autoDoor ? [autoDoor] : [])
+          .map(d => widenGarageDoor(room, d, rWcm, rDcm));
         return (
           // Fragment instead of <group> — the wrapper had no transform, so
           // it added 1 traversed Object3D per room × floor (~40 dead nodes)
@@ -7762,15 +7593,6 @@ export default function FloorPlanBuilding({
                 非玻璃房间（主卧/书房）的门也会从邻居玻璃幕墙看进来变
                 "立柱"。门是内视角装饰，对外观无贡献，安全跳过。 */}
             {(!isStair || (exterior.renderStairOpenings ?? true)) && effectiveDoors.map((door, di) => {
-              // 车库宽门(≥2m)在外立面由「可点击卷帘车库门」(facadeBlocks 里)接管，
-              // 这里就别再渲染一道木质 WalkthroughDoor3D 叠在它后面(用户:门打不开——
-              // 点到的是没交互的卷帘片、能开的木门藏在后面)。仅当卷帘门确实会渲染
-              // (curtainWall 或 外观图非透明立面)时抑制，漫游实墙模式仍保留可走门。
-              const sectionalShown = curtainWall || (!insideBuilding && !(exterior.transparentExterior ?? true));
-              if (room === "garage" && sectionalShown
-                  && door.len * CM >= (exterior.garageDoorMinWidth ?? 2.0)) {
-                return null;
-              }
               // Use the SAME RoomDoor3D component the effect page uses
               // (shared module). Single source of truth for door visuals.
               const dHcm = door.h ?? (exterior.interiorDoorHeightCm ?? 240);
@@ -7798,7 +7620,9 @@ export default function FloorPlanBuilding({
               // 外观模式 + 本层有玻璃房间：跳过「内部门」(非玻璃面的门会从邻居
               // 玻璃幕墙看进来变成立柱状)，但 perimeter 玻璃外立面上的「入户门」
               // 要照常渲染——那正是透过幕墙看到、且能点击推开的那道玻璃门。
-              if (!insideBuilding && !_doorOnGlassFace
+              // 车库例外：车库是实墙房间、它的门(尤其卷帘门)要照常渲染成可点击的
+              // WalkthroughDoor3D，不能被「本层有玻璃房间就跳过」误伤。
+              if (!insideBuilding && !_doorOnGlassFace && room !== "garage"
                   && !glassRooms.has(`${fi}:${room}`)
                   && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) {
                 return null;

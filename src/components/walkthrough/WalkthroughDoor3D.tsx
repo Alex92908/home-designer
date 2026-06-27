@@ -19,6 +19,7 @@ import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import type { DoorStyle } from "@/lib/types";
+import { RollerShutterDoor } from "@/components/shared/RollerShutterDoor";
 
 // ─── glTF door panel (for wood_panel style) ─────────────────
 // Uses witnessk's `door_with_frame` (CC-BY, 6 meshes — includes panel +
@@ -231,7 +232,7 @@ export function WalkthroughDoor3D({
           幕墙玻璃门(glass_swing/glass_slide)不画自带门框 —— 它正好填满幕墙的一格,
           左右两侧由幕墙竖挺(mullion/钢筋)充当门框,上方由楼层横梁充当门楣。再画一圈
           自带框就会和幕墙竖挺重叠成「双框」(用户:你没用红色位置的钢筋啊)。 */}
-      {!(doorStyle === "glass_swing" || doorStyle === "glass_slide") && (<>
+      {!(doorStyle === "glass_swing" || doorStyle === "glass_slide" || doorStyle === "roller_shutter") && (<>
       <mesh position={[doorW / 2, doorH + frameT / 2, 0]}>
         <boxGeometry args={[doorW + frameT * 2, frameT, 0.05]} />
         <meshStandardMaterial color={frameColor} roughness={0.6} />
@@ -247,7 +248,22 @@ export function WalkthroughDoor3D({
       </>)}
 
       {/* Door panel (rotates around hinge at local X=0) */}
-      {doorStyle === "glass_swing" ? (
+      {doorStyle === "roller_shutter" ? (
+        // 真实 GLB 卷帘门：填满门洞，顶端齐过梁(local y=doorH)，点击向上卷起。
+        // 错误边界 + Suspense + 组件内 try/catch 三重保护，GLB 加载/渲染/定位
+        // 失败都不会把整个 3D 场景拖黑。
+        <GltfDoorFallback fallback={null}>
+          <Suspense fallback={null}>
+            <RollerShutterDoor
+              width={doorW}
+              height={doorH}
+              isOpen={isOpen}
+              position={[doorW / 2, doorH, 0]}
+              onClick={(e) => { e.stopPropagation(); onToggle(); }}
+            />
+          </Suspense>
+        </GltfDoorFallback>
+      ) : doorStyle === "glass_swing" ? (
         // 通透玻璃平开双扇门：每扇 = 大玻璃 + 细边框(frameColor) + 中缝竖把手。
         // 左扇在 panelRef 里绕铰链旋开(useFrame 旋转 panelRef.rotation.y),可点击。
         (() => {

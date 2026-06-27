@@ -523,6 +523,7 @@ export const zh = {
   fpDoorStyleFrench:    "法式对开",
   fpDoorStyleGlassSwing:"玻璃平开",
   fpDoorStyleGlassSlide:"玻璃推拉",
+  fpDoorStyleRoller:"卷帘门",
   fpWindowStyleSliding: "推拉窗",
   fpWindowStyleCasement:"平开窗",
   fpWindowStyleFixed:   "固定观景",

@@ -523,6 +523,7 @@ export const en: Translations = {
   fpDoorStyleFrench:    "French double",
   fpDoorStyleGlassSwing:"Glass swing",
   fpDoorStyleGlassSlide:"Glass slide",
+  fpDoorStyleRoller:"Roller shutter",
   fpWindowStyleSliding: "Sliding",
   fpWindowStyleCasement:"Casement",
   fpWindowStyleFixed:   "Fixed",

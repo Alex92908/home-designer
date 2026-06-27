@@ -1216,7 +1216,8 @@ export type DoorStyle =
   | "sliding_barn"   // 谷仓推拉门
   | "french_double"  // 法式对开玻璃门
   | "glass_swing"    // 通透玻璃平开门（细框大玻璃 + 竖把手，幕墙别墅用）
-  | "glass_slide";   // 通透玻璃推拉门（细框大玻璃 + 顶轨竖把手，左右滑动）
+  | "glass_slide"    // 通透玻璃推拉门（细框大玻璃 + 顶轨竖把手，左右滑动）
+  | "roller_shutter"; // 真实卷帘门 GLB（车库门，向上卷起开启）
 
 /** A distinct building on the same plot.
  *  buildings[0] is always the "main house" at (x=0, z=0).
