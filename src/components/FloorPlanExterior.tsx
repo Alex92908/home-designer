@@ -4682,7 +4682,13 @@ export default function FloorPlanBuilding({
         }
 
         // 幕墙模式下的非玻璃面(实墙)：不画 ConcreteFacade 叠层，由真实外墙壳呈现。
-        if (curtainWall && facade !== "glass") return null;
+        // 例外：有宽车库门（≥2m）时仍需渲染门板，进入 glass 路径但 showGlass/showFrame=false。
+        if (curtainWall && facade !== "glass") {
+          const hasWideDoor = floorIndex === 0
+            && doorEntries.some(({ d }) => d.len * CM >= (exterior.garageDoorMinWidth ?? 2.0));
+          if (!hasWideDoor) return null;
+          facade = "glass"; // let the glass branch run so the garage-door JSX fires
+        }
 
         // ── 位置 & 旋转（使用合并块中心坐标）──
         const midCoord = mergedStart + (mergedEnd - mergedStart) / 2;
