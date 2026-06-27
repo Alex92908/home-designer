@@ -187,6 +187,19 @@ function sideToWinWall(side: WallSide): WindowConfig["wall"] {
   return side;
 }
 
+/** Default door span (cm) for a room when the user hasn't set roomDoorLen.
+ *  Garage gets a WIDE sectional door (most of the wall, min 240 / max 300),
+ *  so it reads as a real garage door and triggers the sectional-door render
+ *  (≥2m threshold). All other rooms get the standard 80cm single-leaf door. */
+function defaultDoorLenCm(room: RoomType, wallLenCm: number): number {
+  if (room === "garage") return Math.max(240, Math.min(wallLenCm - 40, 300));
+  return 80;
+}
+/** Default door height (cm) — garage doors are taller (~210). */
+function defaultDoorHCm(room: RoomType): number {
+  return room === "garage" ? 210 : 200;
+}
+
 // ── 外墙段检测 ─────────────────────────────────────────────────
 export function computeExteriorWalls(
   enabledRooms: RoomType[],
@@ -2561,8 +2574,8 @@ export default function FloorPlanBuilding({
           const lw = fp.roomDoorWall?.[r];
           if (lw) {
             const wallLenCm = (lw === "W" || lw === "E") ? dd.depth : dd.width;
-            const dl = fp.roomDoorLen?.[r] ?? 80;
-            mergedDoors[r] = [{ id: `cfg-${fi}-${r}`, wall: lw, pos: fp.roomDoorPos?.[r] ?? Math.max(5, (wallLenCm - dl) / 2), len: dl, h: fp.roomDoorH?.[r] }];
+            const dl = fp.roomDoorLen?.[r] ?? defaultDoorLenCm(r, wallLenCm);
+            mergedDoors[r] = [{ id: `cfg-${fi}-${r}`, wall: lw, pos: fp.roomDoorPos?.[r] ?? Math.max(5, (wallLenCm - dl) / 2), len: dl, h: fp.roomDoorH?.[r] ?? defaultDoorHCm(r) }];
           } else {
             mergedDoors[r] = [pickAutoDoor(fi, r, cx, cz, rW, rD, dd.width, dd.depth, bounds)];
           }
@@ -2825,9 +2838,9 @@ export default function FloorPlanBuilding({
           const lw = fp.roomDoorWall?.[room];
           if (lw) {
             const wallLenCm = (lw === "W" || lw === "E") ? d.depth : d.width;
-            const dl = fp.roomDoorLen?.[room] ?? 80;
+            const dl = fp.roomDoorLen?.[room] ?? defaultDoorLenCm(room, wallLenCm);
             return { id: `cfg-${fi}-${room}`, wall: lw as import("@/lib/types").WallSide,
-              pos: fp.roomDoorPos?.[room] ?? Math.max(5, (wallLenCm - dl) / 2), len: dl, h: fp.roomDoorH?.[room] };
+              pos: fp.roomDoorPos?.[room] ?? Math.max(5, (wallLenCm - dl) / 2), len: dl, h: fp.roomDoorH?.[room] ?? defaultDoorHCm(room) };
           }
           return pickAutoDoor(fi, room, cx, cz, rW, rD, rWcm, rDcm, bounds);
         })();
@@ -2993,8 +3006,8 @@ export default function FloorPlanBuilding({
           const lw = fp.roomDoorWall?.[room];
           if (lw) {
             const wallLenCm = (lw === "W" || lw === "E") ? d.depth : d.width;
-            const dl = fp.roomDoorLen?.[room] ?? 80;
-            doorsArr = [{ id: `cfg-${fi}-${room}`, wall: lw, pos: fp.roomDoorPos?.[room] ?? Math.max(5, (wallLenCm - dl) / 2), len: dl, h: fp.roomDoorH?.[room] }];
+            const dl = fp.roomDoorLen?.[room] ?? defaultDoorLenCm(room, wallLenCm);
+            doorsArr = [{ id: `cfg-${fi}-${room}`, wall: lw, pos: fp.roomDoorPos?.[room] ?? Math.max(5, (wallLenCm - dl) / 2), len: dl, h: fp.roomDoorH?.[room] ?? defaultDoorHCm(room) }];
           } else {
             const bounds = floorBoundsArr[fi];
             if (bounds) {
