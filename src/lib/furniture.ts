@@ -1328,8 +1328,18 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"pergola",      name:"凉亭",       brand:"景观木业", price:8800, unit:"元/座", category:"outdoor_hardscape", roomTypes:["yard","terrace","deck","pergola"], color:"#C8A070", width:300, depth:300, height:250, tags:["中式","日式"], description:"木制凉亭",    icon:"⛩️" },
   { id:"bbq-grill",    name:"BBQ烧烤台", brand:"户外生活", price:1200, unit:"元/台", category:"outdoor_hardscape", roomTypes:["yard"],                     color:"#444444", width:120, depth:60,  height:90,  tags:["现代"], description:"不锈钢烧烤架", icon:"🍖" },
   { id:"outdoor-sofa", name:"户外沙发组", brand:"户外生活", price:3800, unit:"元/组", category:"outdoor_hardscape", roomTypes:["yard","balcony","balcony2","terrace","deck"], color:"#888888", width:200, depth:80,  height:80,  tags:["现代","北欧"], description:"防水户外沙发组", icon:"🛋️", model3d:{ url:"/models/outdoor_furniture/outdoor_sofa/outdoor_sofa.glb" } },
-  { id:"parking-spot", name:"停车位",     brand:"-",        price:0,    unit:"-",     category:"outdoor_hardscape", roomTypes:["yard","garage"],             color:"#888880", width:250, depth:500, height:0,   tags:[], description:"停车位标线",    icon:"🚘" },
-  { id:"car",          name:"轿车",       brand:"示意",     price:0,    unit:"-",     category:"outdoor_hardscape", roomTypes:["yard","garage"],             color:"#4A90D9", width:200, depth:450, height:150, tags:[], description:"车位示意",      icon:"🚗" },
+  { id:"parking-spot", name:"停车位",     brand:"-",        price:0,    unit:"-",     category:"outdoor_hardscape", roomTypes:["yard"],                     color:"#888880", width:250, depth:500, height:0,   tags:[], description:"停车位标线",    icon:"🚘" },
+
+  // ─── 车辆（车库 + 院子）Vehicles ─────────────────────────────
+  { id:"vehicle.bmw_m3_e46",   name:"BMW M3 E46",              brand:"示意", price:0, unit:"-", category:"vehicle", roomTypes:["garage","yard"], color:"#3B6FD4", width:185, depth:450, height:135, tags:[], description:"BMW M3 E46", icon:"🚗", model3d:{ url:"/models/vehicles/bmw_m3_e46.glb" } },
+  { id:"vehicle.bmw_m5_g90",   name:"BMW M5 G90 2024",         brand:"示意", price:0, unit:"-", category:"vehicle", roomTypes:["garage","yard"], color:"#2C2C2C", width:195, depth:500, height:145, tags:[], description:"BMW M5 G90", icon:"🚗", model3d:{ url:"/models/vehicles/bmw_m5_g90_2024__www.vecarz.com.glb" } },
+  { id:"vehicle.porsche_911",  name:"Porsche 911 Carrera 4S",  brand:"示意", price:0, unit:"-", category:"vehicle", roomTypes:["garage","yard"], color:"#C0392B", width:180, depth:440, height:130, tags:[], description:"Porsche 911", icon:"🏎", model3d:{ url:"/models/vehicles/free_porsche_911_carrera_4s.glb" } },
+  { id:"vehicle.lamborghini",  name:"Lamborghini Countach",     brand:"示意", price:0, unit:"-", category:"vehicle", roomTypes:["garage","yard"], color:"#E8C000", width:200, depth:445, height:115, tags:[], description:"Lamborghini Countach 2021", icon:"🏎", model3d:{ url:"/models/vehicles/2021_lamborghini_countach_lpi_800-4.glb" } },
+  { id:"vehicle.cyberpunk_car",name:"Cyberpunk Car",            brand:"示意", price:0, unit:"-", category:"vehicle", roomTypes:["garage","yard"], color:"#7B2FBE", width:190, depth:480, height:120, tags:[], description:"Cyberpunk Car", icon:"🚘", model3d:{ url:"/models/vehicles/cyberpunk_car.glb" } },
+  { id:"vehicle.hovercar",     name:"Cyberpunk Hovercar",       brand:"示意", price:0, unit:"-", category:"vehicle", roomTypes:["garage","yard"], color:"#00BCD4", width:190, depth:480, height:140, tags:[], description:"Cyberpunk Hovercar", icon:"🛸", model3d:{ url:"/models/vehicles/free_cyberpunk_hovercar.glb" } },
+  { id:"vehicle.bmw_rr1000",   name:"BMW R1000 摩托",           brand:"示意", price:0, unit:"-", category:"vehicle", roomTypes:["garage","yard"], color:"#1A1A1A", width:90,  depth:215, height:110, tags:[], description:"BMW R1000", icon:"🏍", model3d:{ url:"/models/vehicles/bmw_rr_1000.glb" } },
+  { id:"vehicle.sport_moto",   name:"运动摩托",                 brand:"示意", price:0, unit:"-", category:"vehicle", roomTypes:["garage","yard"], color:"#E74C3C", width:85,  depth:210, height:115, tags:[], description:"运动摩托", icon:"🏍", model3d:{ url:"/models/vehicles/sport_touring_motorcycle_highpoly_3dmodel.glb" } },
+  { id:"vehicle.vino",         name:"Vino 摩托",                brand:"示意", price:0, unit:"-", category:"vehicle", roomTypes:["garage","yard"], color:"#F39C12", width:70,  depth:185, height:105, tags:[], description:"Vino Scooter", icon:"🛵", model3d:{ url:"/models/vehicles/vino.glb" } },
 
   // ─── 天台 / 户外家具（GLB）Rooftop & outdoor furniture ──────
   { id:"lounger-sun",       name:"太阳躺椅",   brand:"户外生活", price:1980, unit:"元/张", category:"outdoor_hardscape", roomTypes:["yard","balcony","balcony2","terrace","deck"], color:"#C8B89A", width:65,  depth:195, height:90,  tags:["现代","北欧"], description:"铝架可调躺椅",    icon:"🛋️", model3d:{ url:"/models/outdoor_furniture/sun_lounger/sun_lounger.glb" } },
@@ -1524,6 +1534,7 @@ export const FURNITURE_CATEGORIES: Array<{
   { id: "plumbing",          label: "给排水",   icon: "🚰" },
   { id: "outdoor_plant",     label: "户外植物", icon: "🌳" },
   { id: "outdoor_hardscape", label: "硬景观",   icon: "🪨" },
+  { id: "vehicle",           label: "车辆",     icon: "🚗" },
   { id: "outdoor_water",     label: "水景",     icon: "💧" },
   { id: "outdoor_structure", label: "户外建构", icon: "⛺" },
   { id: "pet",               label: "宠物",     icon: "🐾" },
