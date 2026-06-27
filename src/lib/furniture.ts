@@ -1369,7 +1369,7 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"pond",         name:"锦鲤鱼池",   brand:"水景专家", price:5800, unit:"元/座", category:"outdoor_water",     roomTypes:["yard"],                     color:"#4A90C0", width:300, depth:200, height:40,  tags:["日式","中式"], description:"锦鲤观赏鱼池", icon:"🐟" },
   { id:"fountain",     name:"喷水景观",   brand:"水景专家", price:3200, unit:"元/座", category:"outdoor_water",     roomTypes:["yard"],                     color:"#5AA8D8", width:150, depth:150, height:80,  tags:["现代","轻奢"], description:"循环喷水景观",  icon:"⛲" },
   { id:"pool",         name:"游泳池",     brand:"水景专家", price:58000,unit:"元/座", category:"outdoor_water",     roomTypes:["yard"],                     color:"#38B8E8", width:600, depth:300, height:120, tags:["轻奢","现代"], description:"标准游泳池",    icon:"🏊" },
-  { id:"hot-tub",      name:"按摩浴缸",   brand:"水景专家", price:28000,unit:"元/台", category:"outdoor_water",     roomTypes:["yard","balcony"],            color:"#2888B8", width:200, depth:200, height:80,  tags:["轻奢"], description:"户外按摩浴缸",  icon:"♨️" },
+  { id:"hot-tub-yard",  name:"按摩浴缸",   brand:"水景专家", price:28000,unit:"元/台", category:"outdoor_water",     roomTypes:["yard","balcony"],            color:"#2888B8", width:200, depth:200, height:80,  tags:["轻奢"], description:"户外按摩浴缸",  icon:"♨️" },
 
   // ─── 户外建构 Outdoor Structures ──────────────────────
   { id:"greenhouse",   name:"温室花房",   brand:"景观建构", price:12000,unit:"元/座", category:"outdoor_structure", roomTypes:["yard"],                     color:"#A8D8A8", width:300, depth:200, height:250, tags:["北欧"], description:"玻璃温室花房",  icon:"🌱" },
