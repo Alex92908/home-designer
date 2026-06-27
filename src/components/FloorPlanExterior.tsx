@@ -4682,11 +4682,12 @@ export default function FloorPlanBuilding({
         }
 
         // 幕墙模式下的非玻璃面(实墙)：不画 ConcreteFacade 叠层，由真实外墙壳呈现。
-        // 例外：有宽车库门（≥2m）时仍需渲染门板，进入 glass 路径但 showGlass/showFrame=false。
+        // 例外：车库房间有门时仍需渲染卷帘车库门板，进入 glass 路径但 showGlass/showFrame=false。
         if (curtainWall && facade !== "glass") {
-          const hasWideDoor = floorIndex === 0
-            && doorEntries.some(({ d }) => d.len * CM >= (exterior.garageDoorMinWidth ?? 2.0));
-          if (!hasWideDoor) return null;
+          const hasGarageDoor = floorIndex === 0 && doorEntries.length > 0
+            && (block.rooms.includes("garage")
+                || doorEntries.some(({ d }) => d.len * CM >= (exterior.garageDoorMinWidth ?? 2.0)));
+          if (!hasGarageDoor) return null;
           facade = "glass"; // let the glass branch run so the garage-door JSX fires
         }
 
@@ -5124,7 +5125,10 @@ export default function FloorPlanBuilding({
                  • Overhead opener motor rail unit
                  • Bottom weather seal rubber strip
                  • LED soffit strip at night */}
-            {floorIndex === 0 && doorInfos.filter(d => d.w >= (exterior.garageDoorMinWidth ?? 2.0)).map((d, di) => {
+            {floorIndex === 0 && doorInfos.filter((d, di) =>
+              d.w >= (exterior.garageDoorMinWidth ?? 2.0) ||
+              (block.rooms.includes("garage") && !!block.doorEntries[di])
+            ).map((d, di) => {
               const gdW      = d.w;
               const gdH      = Math.min(d.h, FLOOR_H * 0.85);
               const gdY      = -FLOOR_H / 2 + gdH / 2;
