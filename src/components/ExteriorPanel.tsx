@@ -7,7 +7,6 @@ import { useT, useLocale } from "@/lib/i18n";
 import DesignVariants from "./DesignVariants";
 import { EXTERIOR_PRESETS } from "@/lib/exteriorPresets";
 import FacadeEditor from "./FacadeEditor";
-import { getSampleGlassVillaFloorPlans, SAMPLE_GLASS_VILLA_EXTERIOR } from "@/lib/sampleGlassVilla";
 
 // NOTE: Exterior wall decor (壁灯/门牌/信箱/爬藤…) lives per-room and is
 // edited via RightPanel while in room view, not here. See
@@ -356,19 +355,12 @@ export default function ExteriorPanel() {
         </div>
 
         {/* ── 平面图驱动外观 ── */}
+        {/* 「重置为玻璃幕墙别墅样板」按钮已移除：它会把整个户型 + 外观替换成
+            样板别墅，与「外观跟随户型」的一致性理念冲突，且一次误点就清空用户
+            全部设计。需要重来时走顶部样板/导入流程更安全。 */}
         {(() => {
           const bt = (exterior as any).buildingType;
           const isActive = bt === "floor-plan-driven";
-
-          const loadGlassVillaSample = () => {
-            const newFloorPlans = getSampleGlassVillaFloorPlans();
-            useDesignerStore.setState(s => ({
-              floorPlans: newFloorPlans,
-              exterior: { ...s.exterior, ...(SAMPLE_GLASS_VILLA_EXTERIOR as Partial<typeof s.exterior>) },
-              activeFloor: 0,
-              activeRoom: "living" as const,
-            }));
-          };
 
           return (
             <div className="px-3 pb-3 flex flex-col gap-2">
@@ -396,23 +388,6 @@ export default function ExteriorPanel() {
                     <span className="text-white text-[8px]">✓</span>
                   </div>
                 )}
-              </button>
-
-              {/* ── 重置为初始样板 ── */}
-              <button
-                onClick={loadGlassVillaSample}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-all hover:shadow-md active:scale-[0.98]"
-                style={{
-                  background: "linear-gradient(135deg,#0F172A,#1E3A5F)",
-                  border: "1px solid rgba(99,102,241,0.4)",
-                  color: "#E0E7FF",
-                }}
-              >
-                <span className="text-xl shrink-0">🔄</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-bold truncate">{en ? "Reset to Glass-Curtain Villa Sample" : "重置为玻璃幕墙别墅样板"}</div>
-                  <div className="text-[9px] opacity-60 truncate">{en ? "Restore the original full 2-story scheme" : "恢复初始2层完整方案"}</div>
-                </div>
               </button>
             </div>
           );
