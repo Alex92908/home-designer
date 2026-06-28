@@ -42,10 +42,15 @@ export function RollerShutterDoor({
   const innerW = width - FRAME_THICKNESS * 2;
 
   useFrame((_, delta) => {
+    // frameloop="demand": after the scene sits idle, the first frame's delta is
+    // the whole idle gap (can be seconds). Un-clamped, delta*5 saturates to 1
+    // and the door snaps fully open in one step. Cap it so the very first frame
+    // still advances by only a normal slice.
+    const dt = Math.min(delta, 0.05);
     const target = isOpen ? 1 : 0;
     const diff = target - animProgress.current;
     if (Math.abs(diff) > 0.001) {
-      animProgress.current += diff * Math.min(1, delta * 5);
+      animProgress.current += diff * Math.min(1, dt * 5);
       invalidate(); // keep rendering until the roll finishes
     } else {
       animProgress.current = target;

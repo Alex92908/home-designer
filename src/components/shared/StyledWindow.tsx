@@ -195,6 +195,7 @@ export function StyledWindow({
   // demand-mode: keep requesting frames until the open/close lerp settles.
   const invalidate = useThree(s => s.invalidate);
   useFrame((_, delta) => {
+    const dt = Math.min(delta, 0.05); // demand-mode: cap the idle-gap first frame
     if (style === "sliding" || style === "casement" || style === "wooden" || style === "awning") {
       const target = isOpen
         ? (style === "sliding" ? winLen / 2
@@ -207,7 +208,7 @@ export function StyledWindow({
       const current = sashAngleRef.current;
       const diff = target - current;
       if (Math.abs(diff) > 0.002) {
-        const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
+        const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * dt);
         sashAngleRef.current = current + step;
         if (sashRef.current) {
           if (style === "sliding") {
@@ -225,7 +226,7 @@ export function StyledWindow({
       const current = slatAngleRef.current;
       const diff = target - current;
       if (Math.abs(diff) > 0.002) {
-        const step = Math.sign(diff) * Math.min(Math.abs(diff), 3.5 * delta);
+        const step = Math.sign(diff) * Math.min(Math.abs(diff), 3.5 * dt);
         slatAngleRef.current = current + step;
         for (const r of slatRefs.current) {
           if (r) r.rotation.x = slatAngleRef.current;

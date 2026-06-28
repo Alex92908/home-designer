@@ -111,13 +111,14 @@ export function RoomDoor3D({
   // demand-mode: request frames until the swing/slide settles (no-op in always).
   const invalidate = useThree(s => s.invalidate);
   useFrame((_, delta) => {
+    const dt = Math.min(delta, 0.05); // demand-mode: cap the idle-gap first frame
     const isSliding = doorStyle === "sliding_barn";
     const target = isOpen ? (isSliding ? -(doorLenCm / 100) : -Math.PI / 2) : 0;
     const speed = isSliding ? 2.4 : 5.5;
     const current = animRef.current;
     const diff = target - current;
     if (Math.abs(diff) > 0.002) {
-      const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
+      const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * dt);
       animRef.current = current + step;
       if (panelRef.current) {
         if (isSliding) panelRef.current.position.x = animRef.current;
