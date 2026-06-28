@@ -4346,7 +4346,7 @@ function HouseBody({ W, D, settings, insideBuilding = false, wallXray = false, h
     return <RichGlassVillaBuilding W={W} D={D} settings={settings} />;
   }
   if (buildingTypeHB === "floor-plan-driven") {
-    return <FloorPlanBuilding insideBuilding={insideBuilding} wallXray={wallXray} hideInter onEnterRoom={onEnterRoom} />;
+    return <FloorPlanBuilding insideBuilding={insideBuilding} wallXray={wallXray} onEnterRoom={onEnterRoom} />;
   }
 
   const { floors, roofStyle, roofColor, accentColor } = settings;
@@ -6457,7 +6457,6 @@ export default function HouseCanvas() {
         <HouseBody
           W={W} D={D} settings={exterior}
           insideBuilding={insideBuilding} wallXray={wallXray}
-          hideInter
           onEnterRoom={(_room, _fi, worldPos) => {
             setWalkthrough(true);
             setWalkthroughSpawn([worldPos[0], worldPos[1], worldPos[2]]);
@@ -6481,7 +6480,6 @@ export default function HouseCanvas() {
               worldRot={bld.rot}
               interactive={false}
               insideBuilding={insideBuilding}
-              hideInter
             />
           );
         })}

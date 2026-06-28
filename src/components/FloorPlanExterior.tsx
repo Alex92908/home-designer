@@ -7237,6 +7237,7 @@ export default function FloorPlanBuilding({
                 key={`wp-${pi}`}
                 position={[p.x + p.w / 2, p.y + p.h / 2, 0]}
                 w={p.w} h={p.h}
+                thickness={WALL_T}
                 pieceX={p.x} pieceY={p.y}
                 // In EXTERIOR view, when the user has set a building-wide
                 // wallBaseColor (Modern Minimal etc.), repaint every wall
