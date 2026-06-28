@@ -416,6 +416,7 @@ export default function FloorPlanAll() {
   const activeBuilding       = useDesignerStore(s => s.activeBuilding);
   const setActiveBuilding    = useDesignerStore(s => s.setActiveBuilding);
   const addBuilding              = useDesignerStore(s => s.addBuilding);
+  const removeBuilding           = useDesignerStore(s => s.removeBuilding);
   const updateBuildingPosition   = useDesignerStore(s => s.updateBuildingPosition);
   const yardPlanItems            = useDesignerStore(s => s.yardPlan?.items ?? EMPTY_YARD_ITEMS);
   const updateYardItem           = useDesignerStore(s => s.updateYardItem);
@@ -911,6 +912,24 @@ export default function FloorPlanAll() {
                 style={{ background: "#EFF6FF", color: "#2563EB", border: "1px solid #93C5FD" }}>
                 +
               </button>
+              {/* Delete the selected building. Only for secondary buildings —
+                  主楼 (buildings[0]) is the anchor and can't be removed. */}
+              {activeBuilding > 0 && buildings[activeBuilding] && (
+                <button
+                  onClick={() => {
+                    const bld = buildings[activeBuilding];
+                    void confirmDialog(
+                      locale === "en"
+                        ? `Delete building "${bld.label}"? Its floor plans and exterior will be removed.`
+                        : `删除楼栋「${bld.label}」？它的所有楼层平面图与外观将一并移除。`
+                    ).then(ok => { if (ok) removeBuilding(bld.id); });
+                  }}
+                  title={locale === "en" ? "Delete this building" : "删除该楼栋"}
+                  className="w-5 h-5 flex items-center justify-center text-[12px] rounded-full transition-all"
+                  style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FCA5A5" }}>
+                  🗑
+                </button>
+              )}
             </div>
           )}
           {/* Floor switcher is now in the TopBar (unified across all views) */}
