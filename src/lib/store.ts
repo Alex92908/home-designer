@@ -2566,6 +2566,48 @@ export const useDesignerStore = create<DesignerStore>()(
               ? { ...b, floorPlans: state.floorPlans, exterior: state.exterior }
               : b),
         }));
+
+        // ── Multi-building GENERATION: secondary buildings (副楼/庄园). The main
+        // design above is 主楼 (buildings[0]). Each spec becomes a real building
+        // at (x,z) with a default interior (refine later by switching to it and
+        // AI-designing). create 模式替换现有副楼；edit 模式追加。主楼始终保留。
+        if (Array.isArray(design.buildings) && design.buildings.length) {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { EXTERIOR_PRESETS } = require("./exteriorPresets") as typeof import("./exteriorPresets");
+          const MAX_SECONDARY = 6;
+          const secondaries: Building[] = design.buildings.slice(0, MAX_SECONDARY).map((spec, i) => {
+            const flrs = Math.max(1, Math.min(99, Math.round(spec.floors ?? 1)));
+            const presetSettings = spec.preset
+              ? (EXTERIOR_PRESETS.find(p => p.id === spec.preset)?.settings ?? {})
+              : {};
+            const ext: ExteriorSettings = {
+              ...initialExterior,
+              ...presetSettings,
+              ...(spec.preset ? { preset: spec.preset } : {}),
+              floors: flrs,
+              hasRooftop: false,
+              ...(spec.wallColor ? { wallColor: spec.wallColor } : {}),
+              ...(spec.roofType ? { roofStyle: spec.roofType as ExteriorSettings["roofStyle"] } : {}),
+              ...(spec.glassCurtain != null
+                ? { facadeSystem: (spec.glassCurtain ? "curtain-wall" : "punched-window") as ExteriorSettings["facadeSystem"] }
+                : {}),
+            };
+            return {
+              id: `bld_ai_${genId()}`,
+              label: spec.label || `楼${i + 2}`,
+              x: Math.round(Number.isFinite(spec.x) ? spec.x : (i + 1) * 1600),
+              z: Math.round(Number.isFinite(spec.z) ? spec.z : 0),
+              rot: 0,
+              floorPlans: Array.from({ length: flrs }, () => makeDefaultFloorPlan()),
+              exterior: ext,
+            };
+          });
+          set(state => ({
+            buildings: merge
+              ? [...state.buildings, ...secondaries]
+              : [state.buildings[0], ...secondaries],
+          }));
+        }
       },
 
       copyRoom: (room) => {

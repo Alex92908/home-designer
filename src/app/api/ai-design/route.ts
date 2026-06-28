@@ -134,6 +134,9 @@ SCHEMA:
       { "kind": "<social|private|utility|agro|lawn>", "x": <中心,cm>, "z": <中心,cm>, "widthCm": <宽>, "depthCm": <深> }
     ]
   },
+  "buildings": [
+    { "label": "<副楼名,如 客房楼/车库楼>", "x": <cm,相对主楼>, "z": <cm>, "floors": <可选,默认1>, "preset": "<可选,外观风格id>", "wallColor": "<可选 hex>", "roofType": "<可选 flat|gable|hip|chinese>", "glassCurtain": <可选 true|false> }
+  ],
   "summary": "<30字以内的中文描述，概括设计亮点>"
 }
 
@@ -287,6 +290,16 @@ EXTERIOR RULES (外墙材质/楼体轮廓 — exterior.wallMaterial / exterior.f
    {"material":"glass","color":"#C8E0F0","heightFraction":0.6}]。
   各带 heightFraction 和为 1。只有用户明确要分层墙面才给。
 
+MULTI-BUILDING RULES (多栋/庄园 — "buildings"):
+- 顶层的 floors/exterior/floorLayouts 永远描述【主楼】。只有用户明确要"多栋/
+  庄园/带副楼/客房楼/独立车库楼/分栋"时，才额外输出 "buildings" 数组（副楼）。
+- 每个副楼给：label(名字) + x/z(相对主楼中心的位置,cm,+x东+z南,两栋间至少隔
+  1200cm 别重叠) + 可选 floors/preset/wallColor/roofType/glassCurtain。
+- 副楼【只描述位置+体量+外观风格】，不要给副楼的室内房间——内部用默认布局，
+  用户之后可切到该副楼单独 AI 细化。
+- 例：「主楼带个一层的客房副楼放东边」→ "buildings":[{"label":"客房楼","x":1600,"z":0,"floors":1}]。
+- 普通单栋设计【不要】输出 "buildings"（整段省略）。
+
 YARD RULES (院子/花园/前后院 — "yard"，只作用于 floor 0):
 - 一致性主线：「日式庭院/地中海花园」这类"换庭院风格"的请求 → 输出对应的
   "exterior.preset"（japanese-zen / mediterranean…），preset 自带整套配齐的
@@ -404,6 +417,7 @@ const DESIGN_TOOL_PARAMS = {
     exterior: { type: "object" },
     floorLayouts: { type: "array" },
     yard: { type: "object" },
+    buildings: { type: "array" },
     summary: { type: "string" },
   },
   required: ["floorLayouts"],

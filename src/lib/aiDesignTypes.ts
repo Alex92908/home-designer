@@ -232,8 +232,31 @@ export interface AiDesignResult {
       material?: string;
     }>;
   };
+  /** Secondary buildings (副楼/配楼) on the same plot — for 庄园/多栋 designs.
+   *  The top-level design above describes the MAIN house (主楼); each entry here
+   *  is an additional building placed at (x, z). Their interiors get a default
+   *  layout (refine later by switching to that building and AI-designing it). */
+  buildings?: AiDesignSecondaryBuilding[];
   /** Short Chinese summary shown to the user after generation */
   summary?: string;
+}
+
+/** A secondary building spec (副楼). Position + massing + exterior style only;
+ *  interior is a default layout the user can refine per-building afterwards. */
+export interface AiDesignSecondaryBuilding {
+  /** Display label, e.g. "客房楼" / "车库楼" / "茶室". Default "楼N". */
+  label?: string;
+  /** Position in cm relative to plot center (主楼在 0,0). +x=东, +z=南. */
+  x: number;
+  z: number;
+  /** Floor count (1-99). Default 1. */
+  floors?: number;
+  /** Exterior preset id (与主楼同套或对比). */
+  preset?: string;
+  wallColor?: string;
+  roofType?: "flat" | "gable" | "hip" | "chinese";
+  /** 整屋玻璃幕墙立面. */
+  glassCurtain?: boolean;
 }
 
 /** Generation mode. "create" rebuilds from scratch; "edit" feeds the AI the
