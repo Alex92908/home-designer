@@ -35,6 +35,7 @@ export default function ShowcaseClient() {
   const backup = useRef<{
     floorPlans: unknown;
     exterior: unknown;
+    yardPlan: unknown;
     viewMode: unknown;
     activeFloor: number;
     ls: string | null;
@@ -46,6 +47,7 @@ export default function ShowcaseClient() {
     backup.current = {
       floorPlans: s.floorPlans,
       exterior: s.exterior,
+      yardPlan: s.yardPlan,
       viewMode: s.viewMode,
       activeFloor: s.activeFloor,
       ls: typeof window !== "undefined" ? window.localStorage.getItem(PERSIST_KEY) : null,
@@ -58,6 +60,7 @@ export default function ShowcaseClient() {
     useDesignerStore.setState({
       floorPlans: b.floorPlans as never,
       exterior: b.exterior as never,
+      yardPlan: b.yardPlan as never,
       viewMode: b.viewMode as never,
       activeFloor: b.activeFloor,
     });
@@ -92,7 +95,7 @@ export default function ShowcaseClient() {
 
   const openTemplate = (t: ShowcaseTemplate) => {
     ensureBackup();
-    const { floorPlans, exterior } = t.load();
+    const { floorPlans, exterior, yardPlan } = t.load();
     // REPLACE the exterior wholesale (load() returns a complete exterior built
     // from defaultProject). Merging over s.exterior leaked the previously-opened
     // template's facade — e.g. the glass-curtain template set facadeSystem:
@@ -101,6 +104,7 @@ export default function ShowcaseClient() {
     useDesignerStore.setState({
       floorPlans: floorPlans as never,
       exterior: exterior as never,
+      yardPlan: yardPlan as never,
       viewMode: "exterior" as never,
       activeFloor: 0,
     });

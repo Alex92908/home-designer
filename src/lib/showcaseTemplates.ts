@@ -11,7 +11,14 @@
  */
 import { makeDefaultProject } from "./defaultProject";
 import { EXTERIOR_PRESETS } from "./exteriorPresets";
-import type { FloorPlan, ExteriorSettings } from "./types";
+import type { FloorPlan, ExteriorSettings, YardPlan } from "./types";
+
+const EMPTY_YARD: YardPlan = { items: [], paths: [] };
+/** Yard for the showcase preview lives on floorPlans[0].yardPlan in the
+ *  default project (cold-start reads it the same way). */
+function defaultYard(p: { floorPlans: FloorPlan[] }): YardPlan {
+  return (p.floorPlans[0] as FloorPlan & { yardPlan?: YardPlan }).yardPlan ?? EMPTY_YARD;
+}
 
 export interface ShowcaseTemplate {
   id: string;
@@ -21,8 +28,9 @@ export interface ShowcaseTemplate {
   descEn: string;
   /** 标签（楼层数 / 风格等），画廊卡片上展示。 */
   tags: string[];
-  /** 返回可直接灌进 store 的方案（全新深拷贝）。 */
-  load: () => { floorPlans: FloorPlan[]; exterior: Partial<ExteriorSettings> };
+  /** 返回可直接灌进 store 的方案（全新深拷贝）。yardPlan 让样板预览也显示
+   *  院子（泳池套组等）。 */
+  load: () => { floorPlans: FloorPlan[]; exterior: Partial<ExteriorSettings>; yardPlan: YardPlan };
 }
 
 export const SHOWCASE_TEMPLATES: ShowcaseTemplate[] = [
@@ -30,12 +38,12 @@ export const SHOWCASE_TEMPLATES: ShowcaseTemplate[] = [
     id: "resort-pool-villa",
     nameZh: "度假泳池别墅",
     nameEn: "Resort Pool Villa",
-    descZh: "现代极简外立面 · 泳池度假庭院 · 三层布局",
-    descEn: "Modern minimal facade · Resort pool yard · 3 floors",
-    tags: ["3F", "现代极简", "泳池院"],
+    descZh: "通透玻璃幕墙立面 · 泳池套组庭院 · 两层带天台",
+    descEn: "Glass-curtain facade · Pool-set yard · 2 floors + rooftop",
+    tags: ["2F+天台", "玻璃幕墙", "泳池院"],
     load: () => {
       const p = makeDefaultProject();
-      return { floorPlans: p.floorPlans, exterior: p.exterior };
+      return { floorPlans: p.floorPlans, exterior: p.exterior, yardPlan: defaultYard(p) };
     },
   },
   {
@@ -49,7 +57,7 @@ export const SHOWCASE_TEMPLATES: ShowcaseTemplate[] = [
       // 同一套 defaultProject 户型，叠加 glass-curtain 外观预设 → 通透玻璃幕墙立面。
       const p = makeDefaultProject();
       const gc = EXTERIOR_PRESETS.find((x) => x.id === "glass-curtain")?.settings ?? {};
-      return { floorPlans: p.floorPlans, exterior: { ...p.exterior, ...gc, preset: "glass-curtain" } };
+      return { floorPlans: p.floorPlans, exterior: { ...p.exterior, ...gc, preset: "glass-curtain" }, yardPlan: defaultYard(p) };
     },
   },
   // ── 以后在此追加更多样板 / 用户投稿（也可改为运行时从 API 注入）──
