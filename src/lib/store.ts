@@ -409,6 +409,31 @@ function resolveAiYard(
   return out;
 }
 
+/** Resolve AI yard zones → YardZone items. Each is a rectangle (w×d) centred
+ *  at (x, z); polygon is relative to the zone origin (matches preset zones). */
+function resolveAiZones(
+  list: import("./aiDesignTypes").AiDesignYardZone[] | undefined,
+): import("./types").YardItem[] {
+  const VALID = ["social", "private", "utility", "agro", "lawn"] as const;
+  const out: import("./types").YardItem[] = [];
+  for (const z of list ?? []) {
+    if (!z || !(VALID as readonly string[]).includes(z.kind)) continue;
+    const w = Math.max(100, Math.min(4000, Math.round(z.widthCm)));
+    const d = Math.max(100, Math.min(4000, Math.round(z.depthCm)));
+    if (!Number.isFinite(z.x) || !Number.isFinite(z.z)) continue;
+    const hw = w / 2, hd = d / 2;
+    out.push({
+      id: `yard-zone-${genId()}`,
+      type: "zone",
+      zoneKind: z.kind,
+      x: Math.round(z.x), z: Math.round(z.z),
+      polygon: [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]],
+      rot: 0,
+    } as import("./types").YardZone);
+  }
+  return out;
+}
+
 const ALL_ROOM_TYPES: RoomType[] = ALL_POSSIBLE_ROOMS;
 
 // ─── makeDefaultFloorPlan ─────────────────────────────────
@@ -2494,8 +2519,13 @@ export const useDesignerStore = create<DesignerStore>()(
             // eslint-disable-next-line @typescript-eslint/no-require-imports
             const { houseHalfExtentsCm, clearYardItemsOfHouse } = require("./yardAutoLayout") as typeof import("./yardAutoLayout");
             const { hw, hd } = houseHalfExtentsCm(fp0);
-            const added = clearYardItemsOfHouse(
-              resolveAiYard(design.yard.add ?? [], existingItems.length), hw, hd);
+            // 功能分区（铺装）排在物件前面，作为其它物件的底铺。zone 也避让房屋。
+            const addedZones = clearYardItemsOfHouse(resolveAiZones(design.yard.zones), hw, hd);
+            const added = [
+              ...addedZones,
+              ...clearYardItemsOfHouse(
+                resolveAiYard(design.yard.add ?? [], existingItems.length), hw, hd),
+            ];
             // 小径：追加语义（clear 只清物件、不动小径，与注释口径一致）。
             const addedPaths = (design.yard.paths ?? [])
               .filter(p => Array.isArray(p?.points) && p.points.length >= 2)

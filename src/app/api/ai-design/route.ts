@@ -128,6 +128,9 @@ SCHEMA:
     ],
     "paths": [
       { "points": [[x1,z1],[x2,z2],...], "widthCm": <可选,默认80>, "material": "<可选 stone|gravel|grass|brick>" }
+    ],
+    "zones": [
+      { "kind": "<social|private|utility|agro|lawn>", "x": <中心,cm>, "z": <中心,cm>, "widthCm": <宽>, "depthCm": <深> }
     ]
   },
   "summary": "<30字以内的中文描述，概括设计亮点>"
@@ -288,7 +291,12 @@ YARD RULES (院子/花园/前后院 — "yard"，只作用于 floor 0):
 - "yard.add" 是要"加进"院子的物件：结构件给 "prefab"（pool/pergola_classic/
   outdoor_kitchen/fountain），植物/石头/装饰/户外家具给 "kind"（见下方目录的精确 id）。
   一个物件只给 prefab 或 kind 之一。
-- 「院子加个泳池」→ { "prefab": "pool" }；「种几棵橄榄树」→ 多个 { "kind": "tree.olive" }。
+- 「院子加个泳池」→ { "prefab": "pool" }（pool 结构件本身就是整套"泳池套组"：
+  泳池 + 两侧遮阳伞 + 躺椅，无需再手摆伞/椅）；「种几棵橄榄树」→ 多个 { "kind": "tree.olive" }。
+- "yard.zones" 功能分区（铺装区块，作为院子的"环"骨架）：social=社交核心(露台/餐区)、
+  private=私密休闲(廊架/茶歇)、utility=功能配套(车道/入户)、agro=菜园、lawn=草坪过渡。
+  从零规划院子时，先用 2-4 个 zones 划分区域，再把 prefab/植物落到对应分区里，
+  比一堆散件更像真实设计。每个 zone 给 kind + 中心 x/z + widthCm/depthCm。
 - 坐标 "x"/"z" 是世界坐标(cm)，原点=房子中心，+z=前院(南)、+x=右(东)。一般可省略，
   服务端会自动在前院散开摆放；只有用户明确说"放左边/门口"等才给坐标。
 - "clear": true 仅在用户要"清空院子/重做花园"时给；普通"加个X"不要给（默认在现有院子上追加）。

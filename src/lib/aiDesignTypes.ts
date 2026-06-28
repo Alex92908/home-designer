@@ -83,6 +83,20 @@ export interface AiDesignYardItem {
   scale?: number;
 }
 
+/** A paved functional zone the AI wants in the yard (院子分区). Rendered as a
+ *  rectangle (widthCm × depthCm) centred at (x, z). Drives default paving +
+ *  planting rules. */
+export interface AiDesignYardZone {
+  /** social(社交核心) | private(私密休闲) | utility(功能配套/车道) |
+   *  agro(菜园) | lawn(草坪过渡). */
+  kind: "social" | "private" | "utility" | "agro" | "lawn";
+  /** Centre in cm, origin = house center. +z=前院(南), +x=右(东). */
+  x: number;
+  z: number;
+  widthCm: number;
+  depthCm: number;
+}
+
 /** A room entry returned by the AI design API */
 export interface AiDesignRoom {
   type: RoomType;
@@ -203,6 +217,9 @@ export interface AiDesignResult {
     clear?: boolean;
     /** 要加进院子的物件列表。 */
     add?: AiDesignYardItem[];
+    /** 功能分区（铺装区块）。用真实设计师的「环」语汇组织院子：社交核心、
+     *  私密休闲、功能配套(车道)、菜园、草坪过渡。每个分区是一块矩形铺装。 */
+    zones?: AiDesignYardZone[];
     /** 要追加的小径/铺装。points 是世界坐标 cm 折线（原点=房子中心，
      *  +z=前院/南，+x=右/东）。material: stone(石板)|gravel(砾石)|
      *  grass(草径)|brick(砖路)，缺省 stone；widthCm 缺省 80。 */
