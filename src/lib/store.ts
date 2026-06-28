@@ -2519,6 +2519,19 @@ export const useDesignerStore = create<DesignerStore>()(
             }));
           }
         }
+
+        // ── Multi-building: persist the freshly-applied design to the ACTIVE
+        // building. Without this, AI-designing a secondary building (楼2/楼3)
+        // only updated the top-level mirrors; a reload (which reloads from
+        // buildings[activeBuilding]) would lose it — and exterior never synced
+        // back for index > 0 at all. Mirror floorPlans + exterior into the
+        // active building so the design round-trips on any building.
+        set(state => ({
+          buildings: state.buildings.map((b, i) =>
+            i === state.activeBuilding
+              ? { ...b, floorPlans: state.floorPlans, exterior: state.exterior }
+              : b),
+        }));
       },
 
       copyRoom: (room) => {
@@ -3628,10 +3641,13 @@ export const useDesignerStore = create<DesignerStore>()(
               ? (state.floorPlans ?? b.floorPlans)  // active building uses top-level (already backfilled)
               : b.floorPlans.map(backfillFP),
           }));
-          // Ensure buildings[0].floorPlans stays in sync with top-level floorPlans.
-          if (state.activeBuilding === 0 && state.buildings[0]) {
-            state.buildings[0].floorPlans = state.floorPlans ?? state.buildings[0].floorPlans;
-            state.buildings[0].exterior   = state.exterior   ?? state.buildings[0].exterior;
+          // Sync the ACTIVE building's exterior from the top-level mirror.
+          // (floorPlans already handled above.) Previously this only ran for
+          // index 0, so exterior edits / AI design on a secondary building were
+          // lost on reload. Generalised to whichever building is active.
+          const ab = state.activeBuilding ?? 0;
+          if (state.buildings[ab]) {
+            state.buildings[ab].exterior = state.exterior ?? state.buildings[ab].exterior;
           }
         }
       },
