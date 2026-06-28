@@ -18,7 +18,7 @@
 // overrides glass transmission/opacity for see-through navigation.
 
 import { useRef, useMemo, Component, ReactNode, Suspense } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import type { WindowStyle } from "@/lib/types";
@@ -192,6 +192,8 @@ export function StyledWindow({
   const sashAngleRef = useRef(0);
   const slatRefs = useRef<Array<THREE.Mesh | null>>([]);
   const slatAngleRef = useRef(-0.25);
+  // demand-mode: keep requesting frames until the open/close lerp settles.
+  const invalidate = useThree(s => s.invalidate);
   useFrame((_, delta) => {
     if (style === "sliding" || style === "casement" || style === "wooden" || style === "awning") {
       const target = isOpen
@@ -216,6 +218,7 @@ export function StyledWindow({
             sashRef.current.rotation.y = sashAngleRef.current;
           }
         }
+        invalidate();
       }
     } else if (style === "louvered") {
       const target = isOpen ? -Math.PI / 2 + 0.08 : -0.25;
@@ -227,6 +230,7 @@ export function StyledWindow({
         for (const r of slatRefs.current) {
           if (r) r.rotation.x = slatAngleRef.current;
         }
+        invalidate();
       }
     }
   });

@@ -3275,7 +3275,9 @@ export default function FloorPlanBuilding({
                   <circleGeometry args={[0.040, 8]} />
                   <meshStandardMaterial color="#C0C8D0" emissive="#A0C8E8" emissiveIntensity={ledI} roughness={0.5} />
                 </mesh>
-                <pointLight position={[0, 0.04, 0]} intensity={ledI * 0.5} distance={1.2} decay={2.5} color="#B8E0F8" />
+                {/* No pointLight per marker — these tile across the apron, so
+                    one light each is another night-only per-fragment tax. The
+                    emissive disc alone is the visible marker glow. */}
               </group>
             ))}
           </group>
@@ -3566,7 +3568,9 @@ export default function FloorPlanBuilding({
                         <boxGeometry args={[sw - 0.08, 0.010, 0.012]} />
                         <meshStandardMaterial color="#FFE8B0" emissive="#FFD880" emissiveIntensity={riserEmi} roughness={0.70} />
                       </mesh>
-                      <pointLight position={[0, sy - stepRise * 0.30, sz - stepRun / 2 - 0.02]} intensity={riserEmi * 0.8} distance={sw * 0.8} decay={2.0} color="#FFE080" />
+                      {/* No pointLight per step — a staircase × floors added
+                          a dozen-plus live lights at night (per-fragment cost).
+                          The emissive strip alone reads as a glowing riser. */}
                     </>
                   )}
                 </group>
@@ -4408,22 +4412,16 @@ export default function FloorPlanBuilding({
                   {/* 吊灯（仅 ≥12㎡ 的房间）— emissive 随时间动态增强 */}
                   {isLarge && (
                     <>
-                      {/* Pendant pointLight — ONLY at dusk/night. At day the
-                          previous 3.5-intensity light leaked through the 12 cm
-                          wall and produced a warm halo on the exterior wall at
-                          ground-floor corners (visible in the 外观 view as
-                          unexplained "bloom blobs"). Clamp distance to the
-                          room's longest side so far-floor leak doesn't reach
-                          adjacent exteriors either. */}
-                      {interiorGlowWall > 0 && (
-                        <pointLight
-                          position={[0, FLOOR_H / 2 - 0.50, 0]}
-                          intensity={interiorGlowWall > 1.20 ? 5.5 : 3.5}
-                          distance={Math.min(Math.max(iW, iD), 4.0)}
-                          decay={1.8}
-                          color="#FFF4D8"
-                        />
-                      )}
+                      {/* Pendant glow via emissive globe only — NO pointLight.
+                          A real per-room pointLight here multiplied by (rooms ×
+                          floors) added 20-40 live lights at night, and WebGL
+                          forward shading evaluates every light per fragment →
+                          severe night-only frame drops when scrubbing the time
+                          slider. The emissive globe + room-wall emissive
+                          (interiorGlowWall) already read as a lit room through
+                          the glass; the extra light pooling wasn't visible from
+                          outside anyway. (Same "glow via emissive, no pointLight
+                          for perf" rule used across this file.) */}
                       {/* Pendant cord */}
                       <mesh position={[0, FLOOR_H / 2 - 0.40, 0]}>
                         <cylinderGeometry args={[0.006, 0.006, 0.32, 6]} />
@@ -4442,18 +4440,8 @@ export default function FloorPlanBuilding({
                       {/* Second smaller pendant offset for large rooms */}
                       {Math.max(iW, iD) > 5 && (
                         <>
-                          {/* Same fix as the primary pendant — gate by
-                              dusk/night + clamp distance to room footprint
-                              so the light doesn't leak through walls. */}
-                          {interiorGlowWall > 0 && (
-                            <pointLight
-                              position={[iW * 0.30, FLOOR_H / 2 - 0.50, iD * 0.25]}
-                              intensity={interiorGlowWall > 1.20 ? 3.5 : 2.2}
-                              distance={Math.min(Math.max(iW, iD), 3.5)}
-                              decay={2.0}
-                              color="#FFF4D8"
-                            />
-                          )}
+                          {/* Second pendant: emissive globe only, no pointLight
+                              (see perf note on the primary pendant above). */}
                           <mesh position={[iW * 0.30, FLOOR_H / 2 - 0.56, iD * 0.25]}>
                             <sphereGeometry args={[0.10, 12, 8]} />
                             <meshStandardMaterial

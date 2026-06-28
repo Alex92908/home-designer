@@ -13,7 +13,7 @@
 // its original per-room behavior.
 
 import { useRef, useMemo, Component, ReactNode, Suspense } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import type { DoorStyle } from "@/lib/types";
@@ -108,6 +108,8 @@ export function RoomDoor3D({
   // For hinged doors: used as rotation angle (0 → -π/2).
   // For sliding doors: used as translation distance (0 → -doorW).
   const animRef = useRef(0);
+  // demand-mode: request frames until the swing/slide settles (no-op in always).
+  const invalidate = useThree(s => s.invalidate);
   useFrame((_, delta) => {
     const isSliding = doorStyle === "sliding_barn";
     const target = isOpen ? (isSliding ? -(doorLenCm / 100) : -Math.PI / 2) : 0;
@@ -121,6 +123,7 @@ export function RoomDoor3D({
         if (isSliding) panelRef.current.position.x = animRef.current;
         else panelRef.current.rotation.y = animRef.current;
       }
+      invalidate();
     }
   });
 

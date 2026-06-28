@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
 const SLAT_COUNT = 16;
@@ -29,6 +29,10 @@ export function RollerShutterDoor({
 }) {
   const slatRefs = useRef<(THREE.Mesh | null)[]>([]);
   const animProgress = useRef(0);
+  // Under frameloop="demand" the scene only renders on invalidate(); this
+  // open/close lerp must keep requesting frames until it settles, or the door
+  // freezes mid-roll. (No-op when frameloop is "always".)
+  const invalidate = useThree(s => s.invalidate);
 
   useEffect(() => {
     slatRefs.current = slatRefs.current.slice(0, SLAT_COUNT);
@@ -42,6 +46,7 @@ export function RollerShutterDoor({
     const diff = target - animProgress.current;
     if (Math.abs(diff) > 0.001) {
       animProgress.current += diff * Math.min(1, delta * 5);
+      invalidate(); // keep rendering until the roll finishes
     } else {
       animProgress.current = target;
     }

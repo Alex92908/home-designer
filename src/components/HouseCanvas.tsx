@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useEffect, useState, useCallback, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
+import { useRef, useMemo, useEffect, useState, useCallback, memo, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { SceneRegistrar } from "@/lib/sceneRegistry";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
 import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars, Instances, Instance, PerformanceMonitor, Loader } from "@react-three/drei";
@@ -5289,6 +5289,7 @@ function InsideCameraAnimator({ active, camPos, lookAt, teleport = false, isInte
 }) {
   const { camera } = useThree();
   const controls = useThree(s => s.controls) as any;
+  const invalidate = useThree(s => s.invalidate);
   const camV  = useMemo(() => new THREE.Vector3(...camPos),  [camPos[0], camPos[1], camPos[2]]);
   const lookV = useMemo(() => new THREE.Vector3(...lookAt), [lookAt[0], lookAt[1], lookAt[2]]);
   // done=true once we've finished the transition — after that OrbitControls takes over freely
@@ -5296,6 +5297,8 @@ function InsideCameraAnimator({ active, camPos, lookAt, teleport = false, isInte
   useEffect(() => {
     if (!active) { done.current = false; }
   }, [active]);
+  // Kick one frame whenever the animation (re)starts so demand-mode renders it.
+  useEffect(() => { if (active) invalidate(); }, [active, invalidate]);
   useFrame(() => {
     if (!active || done.current) return;
     // If the user has touched the orbit controls, give up: they own the
@@ -5320,6 +5323,8 @@ function InsideCameraAnimator({ active, camPos, lookAt, teleport = false, isInte
       camera.position.copy(camV);
       if (controls?.target) { controls.target.copy(lookV); controls.update?.(); }
       done.current = true;
+    } else {
+      invalidate(); // demand-mode: keep flying until we arrive
     }
   });
   return null;
@@ -5333,11 +5338,14 @@ function CameraFlyTo({ pos, tgt, onDone }: {
 }) {
   const { camera } = useThree();
   const controls = useThree(s => s.controls) as any;
+  const invalidate = useThree(s => s.invalidate);
   const doneRef = useRef(false);
   const posRef = useRef(pos);
   const tgtRef = useRef(tgt);
   posRef.current = pos;
   tgtRef.current = tgt;
+  // Kick the first frame so demand-mode starts the fly-through.
+  useEffect(() => { doneRef.current = false; invalidate(); }, [pos, tgt, invalidate]);
   useFrame(() => {
     if (doneRef.current) return;
     const p = posRef.current, t = tgtRef.current;
@@ -5348,6 +5356,8 @@ function CameraFlyTo({ pos, tgt, onDone }: {
       if (controls?.target) { controls.target.copy(t); controls.update?.(); }
       doneRef.current = true;
       onDone();
+    } else {
+      invalidate(); // demand-mode: keep flying until we arrive
     }
   });
   return null;
@@ -5479,6 +5489,69 @@ function SecondaryBuildingBody({
     </group>
   );
 }
+
+// ─── Time-of-day slider ─────────────────────────────────────
+// Isolated from the giant HouseCanvas tree on purpose. The 3D scene
+// re-renders on every committed sunHour change (~100ms for a full villa),
+// so writing the store on every drag tick locked the UI to ~8fps. Here the
+// thumb/label track the drag at 60fps via LOCAL state (only this tiny
+// component re-renders), while the heavy store commit — which re-renders the
+// whole scene — is throttled to ≤1 per 150ms and always settles on the exact
+// value at pointer-up. Dragging stays smooth; the scene steps through times.
+const TimeOfDaySlider = memo(function TimeOfDaySlider({
+  value, onCommit,
+}: { value: number; onCommit: (v: number) => void }) {
+  const [local, setLocal] = useState(value);
+  const draggingRef = useRef(false);
+  // Follow external (committed) value when not actively dragging.
+  useEffect(() => { if (!draggingRef.current) setLocal(value); }, [value]);
+  const theme = getSkyTheme(local);
+  // While dragging we DON'T touch the store — a full-villa scene re-render is
+  // ~100ms, so any mid-drag commit hitches. The thumb + time label track the
+  // finger via local state (cheap); the scene updates ONCE on release. Result:
+  // buttery slider, single update when you let go. A short idle-debounce also
+  // commits if the user pauses mid-drag, so a held-still thumb still previews.
+  const idleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onInput = (v: number) => {
+    draggingRef.current = true;
+    setLocal(v);                                              // cheap: only this component
+    if (idleRef.current) clearTimeout(idleRef.current);
+    idleRef.current = setTimeout(() => onCommit(v), 220);     // preview if they pause
+  };
+  const onRelease = () => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    if (idleRef.current) clearTimeout(idleRef.current);
+    onCommit(local);                                          // settle exactly on release
+  };
+  const dot = theme.phase === "night" ? "#B0C0FF" : "#F8C04A";
+  return (
+    <>
+      <span style={{ fontSize: 15, lineHeight: 1 }}>
+        {theme.phase === "night" ? "🌙" : theme.phase === "dawn" ? "🌅" : theme.phase === "dusk" ? "🌇" : "☀️"}
+      </span>
+      <span style={{ color: "#fff", fontSize: 12, fontFamily: "monospace", minWidth: 62, fontWeight: 700, letterSpacing: "0.03em", opacity: 0.92 }}>
+        {sunFormatHour(local)}
+      </span>
+      <div style={{ position: "relative", width: 200, height: 20, display: "flex", alignItems: "center" }}>
+        <div style={{ position: "absolute", left: 0, right: 0, top: "50%", transform: "translateY(-50%)", height: 5, borderRadius: 3, background: "linear-gradient(to right, #0A0F1E 0%, #1A0C28 8%, #D87850 22%, #87CEEB 42%, #4E8FCC 55%, #87CEEB 68%, #C86840 82%, #1A0C28 92%, #0A0F1E 100%)" }} />
+        <div style={{ position: "absolute", left: `${(local / 24) * 100}%`, top: "50%", transform: "translate(-50%, -50%)", width: 14, height: 14, borderRadius: "50%", background: dot, boxShadow: `0 0 8px 2px ${dot}88`, pointerEvents: "none", transition: "background 0.4s, box-shadow 0.4s" }} />
+        <input
+          type="range" min={0} max={24} step={0.25} value={local}
+          onChange={e => onInput(Number(e.target.value))}
+          onPointerUp={onRelease}
+          onPointerCancel={onRelease}
+          onBlur={onRelease}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "ew-resize", margin: 0, padding: 0 }}
+          aria-label="Time of day"
+        />
+      </div>
+      <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+        SHADOW
+      </span>
+    </>
+  );
+});
 
 // ─── Main export ────────────────────────────────────────────
 export default function HouseCanvas() {
@@ -5861,20 +5934,8 @@ export default function HouseCanvas() {
   // Sun analysis — read from global store so AiRenderModal + YardPlan share the value
   const sunHour     = useDesignerStore(s => s.sunHour);
   const setSunHour  = useDesignerStore(s => s.setSunHour);
-  // Slider drag throttle: a <input type=range> drag fires many onChange
-  // events per frame, and each setSunHour re-renders this (very large)
-  // component + the whole 3D scene → visible lag. Coalesce to at most one
-  // store write per animation frame so the drag stays smooth.
-  const sunRafRef     = useRef<number | null>(null);
-  const sunPendingRef = useRef<number | null>(null);
-  const onSunDrag = useCallback((v: number) => {
-    sunPendingRef.current = v;
-    if (sunRafRef.current != null) return;
-    sunRafRef.current = requestAnimationFrame(() => {
-      sunRafRef.current = null;
-      if (sunPendingRef.current != null) setSunHour(sunPendingRef.current);
-    });
-  }, [setSunHour]);
+  // Slider drag perf is handled inside <TimeOfDaySlider/> (local drag state +
+  // throttled store commit), so the heavy scene no longer re-renders per tick.
   const siteLatLng  = useDesignerStore(s => s.siteLatLng);
   const sunPos = getSunPosition3D(sunHour, siteLatLng);
   const theme  = getSkyTheme(sunHour);
@@ -6103,57 +6164,7 @@ export default function HouseCanvas() {
           boxShadow: "0 4px 28px rgba(0,0,0,0.45)",
         }}
       >
-        {/* Phase icon — updates as you drag */}
-        <span style={{ fontSize: 15, lineHeight: 1 }}>
-          {theme.phase === "night" ? "🌙" : theme.phase === "dawn" ? "🌅" : theme.phase === "dusk" ? "🌇" : "☀️"}
-        </span>
-
-        {/* Time readout */}
-        <span style={{
-          color: "#fff", fontSize: 12, fontFamily: "monospace",
-          minWidth: 62, fontWeight: 700, letterSpacing: "0.03em",
-          opacity: 0.92,
-        }}>
-          {sunFormatHour(sunHour)}
-        </span>
-
-        {/* Gradient track + invisible range input */}
-        <div style={{ position: "relative", width: 200, height: 20, display: "flex", alignItems: "center" }}>
-          {/* Colour gradient representing the day arc */}
-          <div style={{
-            position: "absolute", left: 0, right: 0, top: "50%", transform: "translateY(-50%)",
-            height: 5, borderRadius: 3,
-            background: "linear-gradient(to right, #0A0F1E 0%, #1A0C28 8%, #D87850 22%, #87CEEB 42%, #4E8FCC 55%, #87CEEB 68%, #C86840 82%, #1A0C28 92%, #0A0F1E 100%)",
-          }} />
-          {/* Sun thumb dot */}
-          <div style={{
-            position: "absolute",
-            left: `${(sunHour / 24) * 100}%`,
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 14, height: 14,
-            borderRadius: "50%",
-            background: theme.phase === "night" ? "#B0C0FF" : "#F8C04A",
-            boxShadow: `0 0 8px 2px ${theme.phase === "night" ? "#B0C0FF55" : "#F8C04A88"}`,
-            pointerEvents: "none",
-            transition: "background 0.4s, box-shadow 0.4s",
-          }} />
-          {/* Transparent range input — captures all drag events */}
-          <input
-            type="range" min={0} max={24} step={0.25} value={sunHour}
-            onChange={e => onSunDrag(Number(e.target.value))}
-            style={{
-              position: "absolute", inset: 0, width: "100%", height: "100%",
-              opacity: 0, cursor: "ew-resize", margin: 0, padding: 0,
-            }}
-            aria-label="Time of day"
-          />
-        </div>
-
-        {/* Label */}
-        <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-          SHADOW
-        </span>
+        <TimeOfDaySlider value={sunHour} onCommit={setSunHour} />
       </div>
       )}
 
@@ -6164,6 +6175,10 @@ export default function HouseCanvas() {
         // OrbitControls / setState / 点击都会自动 invalidate() 触发重绘；
         // 没有自定义动画时这是免费 win。如果发现某些动画停了，把这行
         // 改成 frameloop="always" 即可回滚。
+        // ⚠️ 这个 prop 之前丢了 → Canvas 默认回到 "always"，于是即便静止
+        // 也满帧重绘整个场景（夜间 ~73ms/帧 = 14fps），时间轴一拖就卡。
+        // 补回 demand：静止 0 渲染，拖时间轴时场景冻结、滑块丝滑，松手才渲一帧。
+        frameloop="demand"
         // Task 2: Adaptive DPR — dpr={[1, 2]} 配合 <AdaptiveDpr> 动态降级。
         dpr={[1, 2]}
         gl={{
