@@ -29,27 +29,77 @@ import { poissonRect } from "@/lib/poissonDisc";
 import { GlbPrefabMesh } from "./GlbPrefabMesh";
 // 院子结构件用真实 GLB 渲染：按包围盒把模型缩放到目标 footprint（米），
 // 并落地（base→y=0）、水平居中。比手搓几何真实得多。
-function GlbStructure({ src, sizeM }: { src: string; sizeM: number }) {
+function GlbStructure({ src, sizeM, sizeW, sizeD, alignTop }: { src: string; sizeM?: number; sizeW?: number; sizeD?: number; alignTop?: boolean }) {
   const { scene } = useGLTF(src);
   const obj = useMemo(() => {
     const c = scene.clone(true);
     const box = new THREE.Box3().setFromObject(c);
     const size = new THREE.Vector3(); box.getSize(size);
     const center = new THREE.Vector3(); box.getCenter(center);
-    const footprint = Math.max(size.x, size.z) || 1;
-    const s = sizeM / footprint;
+    let sx: number, sy: number, sz: number;
+    if (sizeW && sizeD) {
+      sx = sizeW / (size.x || 1);
+      sz = sizeD / (size.z || 1);
+      sy = Math.min(sx, sz);
+    } else {
+      const footprint = Math.max(size.x, size.z) || 1;
+      sx = sy = sz = (sizeM ?? footprint) / footprint;
+    }
+    const yAlign = alignTop ? -box.max.y : -box.min.y;
+    c.position.set(-center.x, yAlign, -center.z);
+    const g = new THREE.Group();
+    g.add(c);
+    g.scale.set(sx, sy, sz);
+    return g;
+  }, [scene, sizeM, sizeW, sizeD, alignTop]);
+  return <primitive object={obj} />;
+}
+
+// Height-normalised GLB (for furniture): scale so the model is `targetH`
+// metres tall, then drop its base to y=0 and centre it horizontally.
+function GlbFurniture({ src, targetH, rotY = 0 }: { src: string; targetH: number; rotY?: number }) {
+  const { scene } = useGLTF(src);
+  const obj = useMemo(() => {
+    const c = scene.clone(true);
+    const box = new THREE.Box3().setFromObject(c);
+    const size = new THREE.Vector3(); box.getSize(size);
+    const center = new THREE.Vector3(); box.getCenter(center);
+    const s = targetH / (size.y || 1);
     c.position.set(-center.x, -box.min.y, -center.z);
     const g = new THREE.Group();
     g.add(c);
     g.scale.setScalar(s);
+    g.rotation.y = rotY;
     return g;
-  }, [scene, sizeM]);
+  }, [scene, targetH, rotY]);
   return <primitive object={obj} />;
 }
 
-// 泳池保留程序化 Pool（无边泳池 + 按摩池 + 动画水面），比现有 904 面低模
-// GLB 真实得多；其余结构件用真实 GLB。
-import { Pool } from "./HouseCanvas";
+const POOL_GLB     = "/models/outdoor_furniture/swimming_pool/swimming_pool.glb";
+const LOUNGER_GLB  = "/models/outdoor_furniture/plastic_lounge_chair/plastic_lounge_chair.glb";
+const PARASOL_GLB  = "/models/outdoor_furniture/beach_parasol/beach_parasol_single.glb";
+
+// The pool ships as a SET: tiled pool + 3 loungers & 3 parasols per side, all
+// welded into the prefab's own group so move/rotate carries the whole scene.
+// Offsets are in metres, relative to the pool centre (deck level y=-0.5 in
+// the prefab's local space, matching the sunken pool GLB).
+function PoolFurniture() {
+  const dz = [-2.1, 0, 2.1];
+  return (
+    <group position={[0, -0.47, 0]}>
+      {dz.map((z, i) => (
+        <group key={i}>
+          <group position={[3.6, 0, z]}>  <GlbFurniture src={LOUNGER_GLB} targetH={0.9} rotY={-Math.PI / 2} /></group>
+          <group position={[-3.6, 0, z]}> <GlbFurniture src={LOUNGER_GLB} targetH={0.9} rotY={Math.PI / 2} /></group>
+          <group position={[4.8, 0, z]}>  <GlbFurniture src={PARASOL_GLB} targetH={1.7} /></group>
+          <group position={[-4.8, 0, z]}> <GlbFurniture src={PARASOL_GLB} targetH={1.7} /></group>
+        </group>
+      ))}
+    </group>
+  );
+}
+useGLTF.preload(LOUNGER_GLB);
+useGLTF.preload(PARASOL_GLB);
 
 const PERGOLA_GLB   = "/models/outdoor_structure/pergola/pergola.glb";
 const FOUNTAIN_GLB  = "/models/outdoor_structure/water_fountain/water_fountain.glb";
@@ -618,11 +668,14 @@ export function PrefabMesh({ prefab }: { prefab: YardPrefab }) {
     return (
       <group position={[wx, 0, wz]} rotation={[0, rot, 0]}>
         <group scale={[scaleX, 1, scaleZ]}>
-          {prefab.prefabKind === "pool"            && <Pool x={0} z={0} />}
+          {prefab.prefabKind === "pool"            && <group position={[0, -0.47, 0]}><GlbStructure src={POOL_GLB} sizeW={11} sizeD={15} alignTop /></group>}
           {prefab.prefabKind === "pergola_classic" && <GlbStructure src={PERGOLA_GLB} sizeM={5} />}
           {prefab.prefabKind === "outdoor_kitchen" && <GlbStructure src={GRILL_GLB} sizeM={2.2} />}
           {prefab.prefabKind === "fountain"        && <GlbStructure src={FOUNTAIN_GLB} sizeM={2.6} />}
         </group>
+        {/* Furniture rides OUTSIDE the footprint-scale group (so it never
+            stretches) but INSIDE the rotation group, so it follows rotation. */}
+        {prefab.prefabKind === "pool" && <PoolFurniture />}
       </group>
     );
   }

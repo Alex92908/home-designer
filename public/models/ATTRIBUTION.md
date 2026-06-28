@@ -149,6 +149,14 @@
 > Kenney 低面 GLB（technical-drawing 风格化），不会崩。运行
 > `node scripts/download-sketchfab.mjs` 一次性把上述户外模型拉下来。
 
+**户外泳池套组（pool 组件：泳池 + 遮阳伞 + 躺椅）**
+
+| 模型 | 作者 | 对应项目 kind | 链接 |
+|---|---|---|---|
+| Swimming Pool | Sketchfab CC-BY（作者见模型页） | prefab `pool`（瓷砖泳池本体；122MB→Draco+WebP 压成 1.8MB） | — |
+| Plastic Lounge Chair | Sketchfab CC-BY（作者见模型页） | furniture.plasticLounger（池畔躺椅） | — |
+| Parasol lowpoly - beach umbrella | Harold.Llanos | furniture.parasol（遮阳伞；原模型含 2 把，已抽取单把 `beach_parasol_single.glb`） | <https://sketchfab.com/3d-models/bac8486298ab41ab884fccb867f1527b> |
+
 ## 公共领域挂画（Wikimedia Commons）
 
 全部艺术品已过版权保护期（作者逝世 > 70 年 OR 作品 > 500 年），无需

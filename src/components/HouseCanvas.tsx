@@ -804,12 +804,9 @@ function WallSlab({ width, height, color, wallMaterial, yOffset = 0 }: {
       <mesh position={[0, yOffset, 0]} receiveShadow castShadow>
         <boxGeometry args={[width, height, WT * 0.5]} />
         <meshPhysicalMaterial
-          color="#CBE8F5"
-          transmission={0.82}
-          ior={1.52}
+          color="#CBE8F5" transparent opacity={0.25}
           roughness={0.04}
           metalness={0.05}
-          thickness={0.12}
           envMapIntensity={4.0}
           emissive="#FFF4CC"
           emissiveIntensity={0.08}
@@ -995,7 +992,7 @@ function SegmentedWallFace({ width, height, facade, accentColor, flip = false }:
                 </mesh>
                 <mesh position={[0, 0, 0.042]}>
                   <boxGeometry args={[winW, winH, 0.042]} />
-                  <meshPhysicalMaterial color="#C8E8F8" transmission={0.90} ior={1.52} roughness={0.02} metalness={0.0} thickness={0.08} envMapIntensity={3.8} emissive="#FFF4CC" emissiveIntensity={0.06} side={THREE.DoubleSide} />
+                  <meshPhysicalMaterial color="#C8E8F8" transparent opacity={0.25} roughness={0.02} metalness={0.0} envMapIntensity={3.8} emissive="#FFF4CC" emissiveIntensity={0.06} side={THREE.DoubleSide} />
                 </mesh>
                 {/* Horizontal divider rail */}
                 <mesh position={[0, 0, 0.052]}>
@@ -1024,8 +1021,8 @@ function SegmentedWallFace({ width, height, facade, accentColor, flip = false }:
                 <mesh position={[0, 0, 0.038]}>
                   <boxGeometry args={[doorW, doorH, 0.030]} />
                   <meshPhysicalMaterial
-                    color="#C8E8F8" transmission={0.78} ior={1.50}
-                    roughness={0.010} metalness={0.0} thickness={0.06}
+                    color="#C8E8F8" transparent opacity={0.25}
+                    roughness={0.010} metalness={0.0}
                     envMapIntensity={4.0} emissive="#2848A8" emissiveIntensity={0.12}
                     side={THREE.DoubleSide}
                   />
@@ -1130,7 +1127,7 @@ function WallFace({ width, height, color, accentColor, wallMaterial = "render", 
               {/* Glass — warm emissive simulates interior lighting glow */}
               <mesh position={[0, 0, glassDir * 0.04]}>
                 <boxGeometry args={[panelW - 0.02, glassH - 0.02, 0.04]} />
-                <meshPhysicalMaterial color="#CBE8F5" transmission={0.84} ior={1.52} roughness={0.02} metalness={0.0} thickness={0.10} envMapIntensity={4.0} emissive="#FFF0CC" emissiveIntensity={0.12} side={THREE.DoubleSide} />
+                <meshPhysicalMaterial color="#CBE8F5" transparent opacity={0.25} roughness={0.02} metalness={0.0} envMapIntensity={4.0} emissive="#FFF0CC" emissiveIntensity={0.12} side={THREE.DoubleSide} />
               </mesh>
               {isSlider && (
                 <mesh position={[0, -glassH * 0.18, glassDir * 0.06]}>
@@ -1177,7 +1174,7 @@ function WallFace({ width, height, color, accentColor, wallMaterial = "render", 
       {windowXs.map((x, i) => (
         <group key={i} position={[x, winY - height / 2, WT / 2 + 0.01]}>
           <mesh><boxGeometry args={[winW + 0.12, winH + 0.12, 0.06]} /><meshStandardMaterial color={accentColor} roughness={0.7} /></mesh>
-          <mesh position={[0, 0, 0.04]}><boxGeometry args={[winW, winH, 0.04]} /><meshPhysicalMaterial color="#C8E8F8" transmission={0.90} ior={1.52} roughness={0.02} metalness={0.0} thickness={0.08} envMapIntensity={3.5} /></mesh>
+          <mesh position={[0, 0, 0.04]}><boxGeometry args={[winW, winH, 0.04]} /><meshPhysicalMaterial color="#C8E8F8" transparent opacity={0.25} roughness={0.02} metalness={0.0} envMapIntensity={3.5} /></mesh>
           <mesh position={[0, 0, 0.05]}><boxGeometry args={[winW + 0.04, 0.04, 0.03]} /><meshStandardMaterial color={accentColor} roughness={0.7} /></mesh>
           <mesh position={[0, 0, 0.05]}><boxGeometry args={[0.04, winH + 0.04, 0.03]} /><meshStandardMaterial color={accentColor} roughness={0.7} /></mesh>
         </group>
@@ -1341,7 +1338,7 @@ function FloorShell({ floorIndex, W, D, settings, totalFloors }: {
           {/* Glass panel */}
           <mesh>
             <boxGeometry args={[W - 0.12, 1.05, 0.012]} />
-            <meshPhysicalMaterial color="#C0DCF0" transmission={0.78} ior={1.52} roughness={0.04} metalness={0.0} envMapIntensity={2.5} />
+            <meshPhysicalMaterial color="#C0DCF0" transparent opacity={0.25} roughness={0.04} metalness={0.0} envMapIntensity={2.5} />
           </mesh>
           {/* Top handrail — dark anodized aluminum */}
           <mesh position={[0, 0.525, 0.010]}>
@@ -2810,444 +2807,6 @@ function getWaterNormals() {
 //   • Animated normal map — ripples that REFRACT the view of the bottom + catch
 //     sky/building reflections (envMap) on the surface.
 // Borrows the glass MeshPhysicalMaterial pipeline rather than an opaque mirror.
-// Radial depth-gradient for the pool floor: bright turquoise tile at the rim,
-// absorbing to deep teal toward the centre — fakes a shallow→deep slope so a
-// flat-bottomed box still reads as a real pool with depth.
-let _poolFloorTex: THREE.CanvasTexture | null = null;
-function getPoolFloorTexture() {
-  if (_poolFloorTex) return _poolFloorTex;
-  const S = 256; const c = document.createElement("canvas"); c.width = c.height = S;
-  const ctx = c.getContext("2d")!;
-  const g = ctx.createRadialGradient(S / 2, S / 2, S * 0.05, S / 2, S / 2, S * 0.62);
-  g.addColorStop(0, "#0A4A58");   // deep centre
-  g.addColorStop(0.55, "#1C8DA0");
-  g.addColorStop(1, "#54C3D6");   // bright shallow rim
-  ctx.fillStyle = g; ctx.fillRect(0, 0, S, S);
-  // faint tile grid
-  ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 1;
-  for (let i = 1; i < 8; i++) { const p = (i / 8) * S; ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, S); ctx.moveTo(0, p); ctx.lineTo(S, p); ctx.stroke(); }
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  _poolFloorTex = tex; return tex;
-}
-
-export function PoolWater({ w, d }: { w: number; d: number }) {
-  const floorTex = useMemo(() => getPoolFloorTexture(), []);
-  const normals = useMemo(() => {
-    const t = getWaterNormals(); t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.repeat.set(Math.max(2, w / 2.2), Math.max(2, d / 2.2));
-    return t;
-  }, [w, d]);
-  useFrame((_, delta) => {
-    normals.offset.x += delta * 0.028;
-    normals.offset.y += delta * 0.018;
-  });
-  return (
-    <group>
-      {/* Bright turquoise mosaic bottom — seen THROUGH the transmissive water;
-          the water's volume absorption darkens it to teal with depth. */}
-      <mesh position={[0, -0.55, 0]} receiveShadow>
-        <boxGeometry args={[w + 0.02, 0.04, d + 0.02]} />
-        <meshStandardMaterial map={floorTex} roughness={0.4} metalness={0.0} />
-      </mesh>
-      {/* Transmissive water surface (glass-style) */}
-      <mesh position={[0, -0.12, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
-        <planeGeometry args={[w, d, 1, 1]} />
-        <meshPhysicalMaterial
-          color="#dff3f6"
-          roughness={0.06}
-          metalness={0}
-          transmission={1.0}
-          ior={1.333}
-          thickness={1.6}
-          attenuationColor={new THREE.Color("#0B5A68")}
-          attenuationDistance={1.6}
-          transparent
-          normalMap={normals}
-          normalScale={new THREE.Vector2(0.16, 0.16)}
-          envMapIntensity={1.1}
-          clearcoat={0.4}
-          clearcoatRoughness={0.06}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-    </group>
-  );
-}
-
-export function AnimatedWater({ w, d }: { w: number; d: number }) {
-  const surfaceRef = useRef<THREE.Mesh>(null);
-  // Procedural ripple maps — generated once via canvas. We build a seamless
-  // height field from a handful of interfering sine waves with *integer* wave
-  // numbers (so it tiles perfectly under RepeatWrapping), then derive:
-  //   • a tangent-space NORMAL map  → surface ripple shading
-  //   • a grayscale DISTORTION map  → wobbles the mirror reflection (the bit
-  //     that actually sells "real water" — reflections must shimmer, not sit
-  //     flat like a mirror tile).
-  const { rippleNormal, distortionMap } = useMemo(() => {
-    const SIZE = 256;
-    // Height field h[y][x] in [-1,1] from summed sines. Integer (kx,ky) keep
-    // it seamless; mixed frequencies/directions make it look organic.
-    const waves = [
-      { kx: 3, ky: 1, a: 1.0, ph: 0.0 },
-      { kx: 1, ky: 4, a: 0.8, ph: 1.7 },
-      { kx: 5, ky: 3, a: 0.5, ph: 3.1 },
-      { kx: 2, ky: 7, a: 0.35, ph: 0.6 },
-      { kx: 8, ky: 5, a: 0.22, ph: 2.2 },
-      { kx: 11, ky: 9, a: 0.14, ph: 4.0 },
-    ];
-    const norm = waves.reduce((s, v) => s + v.a, 0);
-    const h = new Float32Array(SIZE * SIZE);
-    const TWO_PI = Math.PI * 2;
-    for (let y = 0; y < SIZE; y++) {
-      for (let x = 0; x < SIZE; x++) {
-        let v = 0;
-        for (const wv of waves) {
-          v += wv.a * Math.sin((TWO_PI / SIZE) * (wv.kx * x + wv.ky * y) + wv.ph);
-        }
-        h[y * SIZE + x] = v / norm; // ~[-1,1]
-      }
-    }
-    const at = (x: number, y: number) => h[((y + SIZE) % SIZE) * SIZE + ((x + SIZE) % SIZE)];
-
-    const mkTex = (data: Uint8ClampedArray) => {
-      const c = document.createElement("canvas");
-      c.width = c.height = SIZE;
-      const ctx = c.getContext("2d")!;
-      const img = ctx.createImageData(SIZE, SIZE);
-      img.data.set(data);
-      ctx.putImageData(img, 0, 0);
-      const tex = new THREE.CanvasTexture(c);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.anisotropy = 8;
-      return tex;
-    };
-
-    // NORMAL map via central-difference gradient of the height field.
-    const nImg = new Uint8ClampedArray(SIZE * SIZE * 4);
-    const STRENGTH = 2.4;
-    for (let y = 0; y < SIZE; y++) {
-      for (let x = 0; x < SIZE; x++) {
-        const dx = (at(x + 1, y) - at(x - 1, y)) * STRENGTH;
-        const dy = (at(x, y + 1) - at(x, y - 1)) * STRENGTH;
-        // normalize (-dx,-dy,1)
-        const inv = 1 / Math.sqrt(dx * dx + dy * dy + 1);
-        const i = (y * SIZE + x) * 4;
-        nImg[i + 0] = (-dx * inv * 0.5 + 0.5) * 255;
-        nImg[i + 1] = (-dy * inv * 0.5 + 0.5) * 255;
-        nImg[i + 2] = (inv * 0.5 + 0.5) * 255;
-        nImg[i + 3] = 255;
-      }
-    }
-    // DISTORTION map = height as grayscale.
-    const dImg = new Uint8ClampedArray(SIZE * SIZE * 4);
-    for (let p = 0; p < SIZE * SIZE; p++) {
-      const g = (h[p] * 0.5 + 0.5) * 255;
-      dImg[p * 4 + 0] = dImg[p * 4 + 1] = dImg[p * 4 + 2] = g;
-      dImg[p * 4 + 3] = 255;
-    }
-
-    const rn = mkTex(nImg);
-    rn.repeat.set(Math.max(2, w / 2.2), Math.max(2, d / 2.2));
-    const dm = mkTex(dImg);
-    dm.repeat.set(Math.max(1.5, w / 3.0), Math.max(1.5, d / 3.0));
-    return { rippleNormal: rn, distortionMap: dm };
-  }, [w, d]);
-
-  useFrame((_, delta) => {
-    // Drift the two maps in slightly different directions/speeds so the
-    // ripple and the reflection-wobble never line up → livelier water.
-    rippleNormal.offset.x += delta * 0.035;
-    rippleNormal.offset.y += delta * 0.022;
-    distortionMap.offset.x -= delta * 0.018;
-    distortionMap.offset.y += delta * 0.030;
-    if (surfaceRef.current) {
-      surfaceRef.current.position.y = -0.12 + Math.sin(Date.now() * 0.0011) * 0.003;
-    }
-  });
-
-  return (
-    <group>
-      {/* Pool bottom — deep turquoise mosaic tile. Deeper hue gives the
-          "infinite pool depth" look; sun + sky light it through the surface. */}
-      <mesh position={[0, -0.42, 0]} receiveShadow>
-        <boxGeometry args={[w + 0.02, 0.04, d + 0.02]} />
-        {/* Deep teal mosaic bottom — dark so the water reads as deep even from
-            top-down (where the surface reflects bright sky). */}
-        <meshStandardMaterial color="#0A4F5A" roughness={0.20} metalness={0.05} />
-      </mesh>
-      {/* Reflective water surface: real-time planar reflection of sky/yard,
-          wobbled by the distortion map and rippled by the normal map. Lower
-          mirror + depth thresholds let the turquoise bottom show through near
-          the camera and reflections dominate at grazing angles (fresnel-ish). */}
-      <mesh ref={surfaceRef} position={[0, -0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[w, d, 1, 1]} />
-        <MeshReflectorMaterial
-          blur={[300, 110]}
-          resolution={1024}
-          mixBlur={1.0}
-          mixStrength={1.6}
-          mirror={0.62}
-          mixContrast={1.3}
-          roughness={0.55}
-          metalness={0.35}
-          color="#15677A"
-          distortion={0.5}
-          distortionMap={distortionMap}
-          normalMap={rippleNormal}
-          normalScale={new THREE.Vector2(0.5, 0.5)}
-          depthScale={1.2}
-          minDepthThreshold={0.8}
-          maxDepthThreshold={1.4}
-          depthToBlurRatioBias={0.25}
-          transparent
-          opacity={0.92}
-        />
-      </mesh>
-    </group>
-  );
-}
-
-// Procedural travertine PBR — cream stone with mottled veining + pores, plus a
-// derived normal map so the deck reads as real cut stone under the SSAO/HDRI
-// lighting instead of a flat color. Built once (module-level cache).
-let _travCache: { map: THREE.CanvasTexture; normal: THREE.CanvasTexture } | null = null;
-function getTravertineTextures() {
-  if (_travCache) return _travCache;
-  const S = 256;
-  // Height/value field: low-freq mottle + a few diagonal veins + fine pores.
-  const h = new Float32Array(S * S);
-  const rnd = (n: number) => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); };
-  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
-    let v = 0;
-    v += 0.5 * Math.sin((x / S) * Math.PI * 3 + Math.cos(y / S * Math.PI * 2));
-    v += 0.3 * Math.sin((x + y) / S * Math.PI * 7 + 1.3);
-    v += 0.18 * Math.sin((x - y * 0.6) / S * Math.PI * 13);
-    // fine pore speckle
-    v += (rnd(x * 3.1 + y * 7.7) - 0.5) * 0.22;
-    h[y * S + x] = v;
-  }
-  const at = (x: number, y: number) => h[((y + S) % S) * S + ((x + S) % S)];
-  const albedo = new Uint8ClampedArray(S * S * 4);
-  const nrm = new Uint8ClampedArray(S * S * 4);
-  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
-    const i = (y * S + x) * 4;
-    const v = at(x, y);                       // ~[-1,1]
-    const t = 0.5 + v * 0.16;                 // tone around mid
-    // cream travertine: warm off-white, veins slightly darker/warmer
-    albedo[i] = 238 * t + 14; albedo[i + 1] = 230 * t + 12; albedo[i + 2] = 214 * t + 10; albedo[i + 3] = 255;
-    const dx = (at(x + 1, y) - at(x - 1, y)) * 2.2;
-    const dy = (at(x, y + 1) - at(x, y - 1)) * 2.2;
-    const inv = 1 / Math.sqrt(dx * dx + dy * dy + 1);
-    nrm[i] = (-dx * inv * 0.5 + 0.5) * 255; nrm[i + 1] = (-dy * inv * 0.5 + 0.5) * 255; nrm[i + 2] = (inv * 0.5 + 0.5) * 255; nrm[i + 3] = 255;
-  }
-  const mk = (data: Uint8ClampedArray, srgb: boolean) => {
-    const c = document.createElement("canvas"); c.width = c.height = S;
-    const ctx = c.getContext("2d")!; const img = ctx.createImageData(S, S); img.data.set(data); ctx.putImageData(img, 0, 0);
-    const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = 8;
-    if (srgb) tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
-  };
-  _travCache = { map: mk(albedo, true), normal: mk(nrm, false) };
-  return _travCache;
-}
-
-// Luxury infinity-edge pool with travertine deck, spa, loungers, cabana
-export function Pool({ x, z, w = 9, d = 5 }: { x: number; z: number; w?: number; d?: number }) {
-  const trav = useMemo(() => getTravertineTextures(), []);
-  // Travertine deck tiles
-  const deckTiles = useMemo(() => {
-    const tiles: { tx: number; tz: number }[] = [];
-    const deckW = w + 3.0;
-    const deckD = d + 3.0;
-    const tileSize = 0.9;
-    const cols = Math.ceil(deckW / tileSize);
-    const rows = Math.ceil(deckD / tileSize);
-    for (let ci = 0; ci < cols; ci++) {
-      for (let ri = 0; ri < rows; ri++) {
-        const tx = -deckW / 2 + ci * tileSize + tileSize / 2;
-        const tz = -deckD / 2 + ri * tileSize + tileSize / 2;
-        // Skip over pool area
-        if (Math.abs(tx) < w / 2 + 0.1 && Math.abs(tz) < d / 2 + 0.1) continue;
-        tiles.push({ tx, tz });
-      }
-    }
-    return tiles;
-  }, [w, d]);
-
-  return (
-    <group position={[x, 0, z]}>
-      {/* Grout base — a slightly darker plane just under the deck tiles so the
-          ~4cm gaps between 86cm tiles read as joint lines (large-format stone
-          paving look from the reference), instead of a seamless flat deck. */}
-      <mesh position={[0, -0.035, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[w + 3.0, d + 3.0]} />
-        <meshStandardMaterial color="#BDB6A4" roughness={0.9} metalness={0} />
-      </mesh>
-      {/* ── Travertine deck (large-format tiles, 4cm grout reveal) ──
-          PBR: shared travertine albedo + normal map gives each tile real cut-
-          stone veining/pores; per-tile color tone keeps it from looking tiled. */}
-      {deckTiles.map((t, i) => (
-        <mesh key={i} position={[t.tx, -0.02, t.tz]} receiveShadow>
-          <boxGeometry args={[0.86, 0.04, 0.86]} />
-          <meshStandardMaterial
-            normalMap={trav.normal}
-            normalScale={new THREE.Vector2(0.22, 0.22)}
-            color={i % 2 === 0 ? "#EFEADB" : "#ECE6D6"}
-            roughness={0.82} metalness={0.02}
-          />
-        </mesh>
-      ))}
-
-      {/* ── Pool shell (travertine coping surround) ── */}
-      <mesh position={[0, -0.3, 0]} castShadow receiveShadow>
-        <boxGeometry args={[w + 0.7, 0.6, d + 0.7]} />
-        <meshStandardMaterial color="#E2DDD0" roughness={0.7} />
-      </mesh>
-
-      {/* ── Pool interior walls (blue plaster) ── */}
-      <mesh position={[0, -0.06, 0]}>
-        <boxGeometry args={[w - 0.05, 0.55, d - 0.05]} />
-        <meshStandardMaterial color="#85C8E0" roughness={0.25} />
-      </mesh>
-
-      {/* ── Water surface — official three Water (real reflection + ripples) ── */}
-      <PoolWater w={w - 0.15} d={d - 0.15} />
-
-      {/* ── Infinity edge: +z side overflow lip (slightly lower) ── */}
-      <mesh position={[0, -0.06, d / 2 + 0.18]} castShadow>
-        <boxGeometry args={[w + 0.7, 0.04, 0.36]} />
-        <meshStandardMaterial color="#C8C2B0" roughness={0.6} />
-      </mesh>
-      {/* Infinity wall below — dark, suggests water cascade */}
-      <mesh position={[0, -0.55, d / 2 + 0.36]}>
-        <boxGeometry args={[w + 0.7, 0.6, 0.12]} />
-        <meshStandardMaterial color="#1A3A50" roughness={0.4} metalness={0.15} />
-      </mesh>
-      {/* Thin water sheet on infinity wall */}
-      <mesh position={[0, -0.4, d / 2 + 0.43]}>
-        <boxGeometry args={[w + 0.5, 0.45, 0.03]} />
-        <meshPhysicalMaterial color="#0AACCC" transparent opacity={0.45} roughness={0.01} envMapIntensity={2.0} />
-      </mesh>
-
-      {/* ── Coping tiles (rim) — travertine ── */}
-      {([
-        { pos: [0, 0.02, -(d / 2 + 0.3)] as [number,number,number], args: [w + 0.8, 0.06, 0.55] as [number,number,number] },
-        { pos: [0, 0.02,  (d / 2 + 0.3)] as [number,number,number], args: [w + 0.8, 0.06, 0.55] as [number,number,number] },
-        { pos: [-(w / 2 + 0.3), 0.02, 0] as [number,number,number], args: [0.55, 0.06, d] as [number,number,number] },
-        { pos: [ (w / 2 + 0.3), 0.02, 0] as [number,number,number], args: [0.55, 0.06, d] as [number,number,number] },
-      ] as { pos: [number,number,number]; args: [number,number,number] }[]).map((t, i) => (
-        <mesh key={i} position={t.pos} receiveShadow>
-          <boxGeometry args={t.args} />
-          <meshStandardMaterial color="#F0EAD8" roughness={0.55} metalness={0.05} />
-        </mesh>
-      ))}
-
-      {/* ── Spa / hot tub (adjacent corner, slightly elevated) ── */}
-      <group position={[w / 2 + 1.8, 0.15, -(d / 2 + 0.5)]}>
-        {/* Spa shell */}
-        <mesh position={[0, -0.1, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[1.35, 1.45, 0.55, 18]} />
-          <meshStandardMaterial color="#E2DDD0" roughness={0.7} />
-        </mesh>
-        {/* Spa water */}
-        <mesh position={[0, 0.15, 0]}>
-          <cylinderGeometry args={[1.2, 1.2, 0.1, 18]} />
-          <meshPhysicalMaterial color="#30C8E0" transparent opacity={0.88} roughness={0.01} envMapIntensity={3.0} />
-        </mesh>
-        {/* Jets bubbles hint */}
-        {[0, 72, 144, 216, 288].map((deg, i) => {
-          const r = (deg * Math.PI) / 180;
-          return (
-            <mesh key={i} position={[Math.cos(r) * 0.75, 0.22, Math.sin(r) * 0.75]}>
-              <sphereGeometry args={[0.07, 6, 5]} />
-              <meshStandardMaterial color="#AAEEFF" transparent opacity={0.6} roughness={0.05} />
-            </mesh>
-          );
-        })}
-      </group>
-
-      {/* ── Lounger pairs with side tables and umbrellas ── */}
-      {/* Pair A — far side of pool */}
-      {([-1.0, 1.0] as number[]).map((lz, i) => (
-        <group key={i} position={[w / 2 + 2.6, 0, lz * 1.6]}>
-          {/* Lounger frame */}
-          <mesh position={[0, -0.38, 0]} castShadow>
-            <boxGeometry args={[2.1, 0.08, 0.72]} />
-            <meshStandardMaterial color="#F5EDD8" roughness={0.75} />
-          </mesh>
-          {/* Cushion */}
-          <mesh position={[0, -0.31, 0]}>
-            <boxGeometry args={[2.0, 0.06, 0.62]} />
-            <meshStandardMaterial color="#FFFFF0" roughness={0.9} />
-          </mesh>
-          {/* Backrest raised */}
-          <mesh position={[-0.7, -0.22, 0]} rotation={[0, 0, -0.35]} castShadow>
-            <boxGeometry args={[0.65, 0.06, 0.62]} />
-            <meshStandardMaterial color="#F5EDD8" roughness={0.75} />
-          </mesh>
-        </group>
-      ))}
-      {/* Side table A */}
-      <mesh position={[w / 2 + 2.6, -0.32, 0]} castShadow>
-        <cylinderGeometry args={[0.28, 0.28, 0.06, 10]} />
-        <meshStandardMaterial color="#C8C0A8" roughness={0.6} metalness={0.1} />
-      </mesh>
-      {/* Umbrella A */}
-      <group position={[w / 2 + 2.6, 0, 0]}>
-        <mesh position={[0, 0.5, 0]} castShadow>
-          <cylinderGeometry args={[0.04, 0.04, 2.0, 6]} />
-          <meshStandardMaterial color="#D8D0B8" roughness={0.8} />
-        </mesh>
-        <mesh position={[0, 1.45, 0]} rotation={[0.15, 0, 0]} castShadow>
-          <coneGeometry args={[1.4, 0.5, 16, 1, true]} />
-          <meshStandardMaterial color="#F8F4E8" roughness={0.9} side={THREE.DoubleSide} />
-        </mesh>
-      </group>
-
-      {/* Pair B — near side of pool */}
-      {([-1.0, 1.0] as number[]).map((lz, i) => (
-        <group key={i} position={[-(w / 2 + 2.6), 0, lz * 1.6]}>
-          <mesh position={[0, -0.38, 0]} castShadow>
-            <boxGeometry args={[2.1, 0.08, 0.72]} />
-            <meshStandardMaterial color="#F5EDD8" roughness={0.75} />
-          </mesh>
-          <mesh position={[0, -0.31, 0]}>
-            <boxGeometry args={[2.0, 0.06, 0.62]} />
-            <meshStandardMaterial color="#FFFFF0" roughness={0.9} />
-          </mesh>
-          <mesh position={[0.7, -0.22, 0]} rotation={[0, 0, 0.35]} castShadow>
-            <boxGeometry args={[0.65, 0.06, 0.62]} />
-            <meshStandardMaterial color="#F5EDD8" roughness={0.75} />
-          </mesh>
-        </group>
-      ))}
-      {/* Side table B */}
-      <mesh position={[-(w / 2 + 2.6), -0.32, 0]} castShadow>
-        <cylinderGeometry args={[0.28, 0.28, 0.06, 10]} />
-        <meshStandardMaterial color="#C8C0A8" roughness={0.6} metalness={0.1} />
-      </mesh>
-      {/* Umbrella B */}
-      <group position={[-(w / 2 + 2.6), 0, 0]}>
-        <mesh position={[0, 0.5, 0]} castShadow>
-          <cylinderGeometry args={[0.04, 0.04, 2.0, 6]} />
-          <meshStandardMaterial color="#D8D0B8" roughness={0.8} />
-        </mesh>
-        <mesh position={[0, 1.45, 0]} rotation={[-0.15, 0, 0]} castShadow>
-          <coneGeometry args={[1.4, 0.5, 16, 1, true]} />
-          <meshStandardMaterial color="#F8F4E8" roughness={0.9} side={THREE.DoubleSide} />
-        </mesh>
-      </group>
-
-      {/* ── 池畔小屋(cabana)已移除 ──
-          原本在泳池中心北侧 4.5m+ 处伸出一个带 4 根立柱的小屋（5.5×3.2m）。
-          泳池放进窄前院时（如 modern-minimal），小屋会伸进建筑内部，立柱落在
-          客厅里 → 漫游/外观图出现突兀白柱（用户反馈）。小屋是泳池最外缘、最易
-          穿模的附件，去掉后泳池仍保留 travertine 甲板 + 无边瀑布 + spa + 躺椅的
-          完整度假观感，且对所有用 pool 的风格（modern/地中海）都不再穿模。 */}
-    </group>
-  );
-}
-
 // ─── Pergola (replaces Gazebo) ───────────────────────────────
 export function Pergola({ x, z }: { x: number; z: number }) {
   // Architect-grade pergola: dark steel / aluminium frame on slim columns,
@@ -3554,12 +3113,77 @@ function useProceduralGrassTexture(): THREE.Texture {
   return useMemo(() => getProceduralGrassTexture(), []);
 }
 
+// Pools are sunken GLB models whose tiled basin sits BELOW the lawn plane.
+// If the lawn stayed solid, it would occlude the basin and you'd see grass
+// "through" the water. So we punch a rectangular hole in the lawn at each
+// pool footprint, letting the GLB's own tiled basin + water show through.
+const EMPTY_GRASS_POOLS: import("@/lib/types").YardItem[] = [];
 function GrassGroundTextured({ size, tint }: { size: number; tint: string }) {
   const texture = useProceduralGrassTexture();
+  const items = useDesignerStore(s => s.yardPlan?.items ?? EMPTY_GRASS_POOLS);
+
+  const geometry = useMemo(() => {
+    const pools = items.filter(isYardPrefab).filter(p => p.prefabKind === "pool");
+    const half = size / 2;
+    // No pools → plain plane (cheapest path, unchanged look).
+    if (pools.length === 0) {
+      return new THREE.PlaneGeometry(size, size);
+    }
+    // Shape lives in local XY. After the mesh's [-PI/2,0,0] rotation,
+    // local (x, y) maps to world (x, 0, -y). So a pool at world (px, pz)
+    // sits at shape coords (px, -pz).
+    const shape = new THREE.Shape();
+    shape.moveTo(-half, -half);
+    shape.lineTo( half, -half);
+    shape.lineTo( half,  half);
+    shape.lineTo(-half,  half);
+    shape.lineTo(-half, -half);
+    for (const p of pools) {
+      const fw = (p.footprintCm?.w ?? 1100) / 100;
+      const fd = (p.footprintCm?.d ?? 1500) / 100;
+      // Slightly smaller than the deck so the GLB's stone deck overlaps the
+      // hole edge (no void gap between lawn and deck).
+      const hw = (fw / 2) * 0.88;
+      const hd = (fd / 2) * 0.88;
+      const cx = p.x / 100;
+      const cy = -(p.z / 100);
+      const rot = p.rot ?? 0;
+      const cos = Math.cos(rot), sin = Math.sin(rot);
+      // Rectangle corners (local dx,dz) rotated by the pool's Y rotation,
+      // expressed in shape coords (worldX, -worldZ).
+      const corners: [number, number][] = [
+        [-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd],
+      ];
+      const hole = new THREE.Path();
+      corners.forEach(([dx, dz], i) => {
+        const wxr = cx + (dx * cos - dz * sin);
+        const wyr = cy + (dx * sin + dz * cos);
+        if (i === 0) hole.moveTo(wxr, wyr); else hole.lineTo(wxr, wyr);
+      });
+      hole.closePath();
+      shape.holes.push(hole);
+    }
+    const geo = new THREE.ShapeGeometry(shape);
+    // ShapeGeometry emits UVs equal to raw XY (metres). Remap to 0..1 across
+    // the plane so the grass texture tiles exactly like the old PlaneGeometry.
+    const pos = geo.attributes.position;
+    const uv = geo.attributes.uv;
+    for (let i = 0; i < pos.count; i++) {
+      uv.setXY(i, (pos.getX(i) + half) / size, (pos.getY(i) + half) / size);
+    }
+    uv.needsUpdate = true;
+    return geo;
+  }, [items, size]);
+
   // Task 1: 大草地 plane 永远在视野，跳过 frustum 测试
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.499, 0]} receiveShadow frustumCulled={false}>
-      <planeGeometry args={[size, size]} />
+    <mesh
+      geometry={geometry}
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[0, -0.499, 0]}
+      receiveShadow
+      frustumCulled={false}
+    >
       <meshStandardMaterial
         map={texture}
         color={tint}
@@ -4722,7 +4346,7 @@ function HouseBody({ W, D, settings, insideBuilding = false, wallXray = false, h
     return <RichGlassVillaBuilding W={W} D={D} settings={settings} />;
   }
   if (buildingTypeHB === "floor-plan-driven") {
-    return <FloorPlanBuilding insideBuilding={insideBuilding} wallXray={wallXray} hideInterior={hideInterior} onEnterRoom={onEnterRoom} />;
+    return <FloorPlanBuilding insideBuilding={insideBuilding} wallXray={wallXray} hideInter onEnterRoom={onEnterRoom} />;
   }
 
   const { floors, roofStyle, roofColor, accentColor } = settings;
@@ -5101,435 +4725,6 @@ function _formatHour(h: number) {
   const mm   = Math.round((h - hh) * 60);
   const ampm = hh < 12 ? "AM" : "PM";
   return `${hh % 12 || 12}:${mm.toString().padStart(2, "0")} ${ampm}`;
-}
-
-// ─── Villa yard: lawn + terrace + pool + loungers (modern preset) ────────────
-function VillaYard({ W, D, overrideW, xOff = 0 }: {
-  W: number; D: number;
-  overrideW?: number;   // for rich-glass-villa — use expanded visual width
-  xOff?: number;        // x-offset to centre pool under main block
-}) {
-  const effW = overrideW ?? W;
-
-  // ── Pool in FRONT of building (−Z, between camera and glass facade) ──────
-  // Reference photo: pool is between viewer and building, terrace closest to building.
-  const pw       = Math.min(effW * 0.62, 10.0);  // pool width ~62% of building — matches reference photo
-  const pd       = Math.max(pw * 1.65, 14.5);   // pool length toward camera
-  const gap      = 0.55;                         // gap between building front glass and terrace
-  const deckSide = 2.4;                          // travertine deck border around pool
-  const terrD    = 1.8;                          // stone terrace depth between building and pool
-
-  // All Z values NEGATIVE — pool is south of building (toward camera)
-  // Building front glass is at z = -(D/2). Terrace starts just beyond that.
-  const terrFrontZ = -(D / 2 + gap);             // terrace front edge (south face, touching building)
-  const terrBackZ  = terrFrontZ - terrD;         // terrace far edge (toward camera)
-  const poolBuildZ = terrBackZ - 0.20;           // pool north edge (closest to building)
-  const pz         = poolBuildZ - pd / 2;        // pool center Z
-  const poolFarZ   = pz - pd / 2;               // pool south edge (closest to camera)
-  const loungerZ   = poolFarZ - deckSide * 0.5; // loungers south of pool
-
-  return (
-    <group position={[xOff, 0, 0]}>
-
-      {/* ── Travertine terrace — stone patio between building glass and pool ── */}
-      {(() => {
-        const TW = 0.60, TD = 0.90, GAP = 0.012;
-        const deckW = effW + 1.2;
-        const cols  = Math.ceil(deckW / (TW + GAP)) + 1;
-        const rows  = Math.ceil(terrD  / (TD + GAP)) + 1;
-        const x0    = -(cols * (TW + GAP)) / 2 + TW / 2;
-        // startZ: northernmost tile centre (closest to building, most negative Z goes further out)
-        const z0    = terrFrontZ - TD / 2;
-        return Array.from({ length: cols }).flatMap((_, c) =>
-          Array.from({ length: rows }).map((_, r) => {
-            const bright = ((c + r) % 2 === 0) ? "#EAE0CC" : "#EFE5D4";
-            return (
-              <mesh key={`tr-${c}-${r}`}
-                rotation={[-Math.PI / 2, 0, 0]}
-                position={[x0 + c * (TW + GAP), -0.490, z0 - r * (TD + GAP)]}
-                receiveShadow>
-                <planeGeometry args={[TW, TD]} />
-                <meshStandardMaterial color={bright} roughness={0.80} metalness={0.02} />
-              </mesh>
-            );
-          })
-        );
-      })()}
-
-      {/* ── Entry steps — 2 risers stepping from terrace down to pool deck ── */}
-      {[0, 1].map(s => (
-        <mesh key={`step-${s}`}
-          position={[0, -s * 0.12, terrBackZ - 0.20 - s * 0.38]}
-          castShadow receiveShadow>
-          <boxGeometry args={[effW * 0.55, 0.13, 0.38]} />
-          <meshStandardMaterial color="#D8CEBC" roughness={0.70} metalness={0.04} />
-        </mesh>
-      ))}
-
-      {/* ── Pool surround deck — large travertine platform around the pool ── */}
-      {(() => {
-        const TW = 0.60, TD = 0.90, GAP = 0.012;
-        const dW = pw + deckSide * 2 + 0.4;
-        const dD = pd + deckSide * 2;
-        const cols  = Math.ceil(dW / (TW + GAP)) + 1;
-        const rows  = Math.ceil(dD / (TD + GAP)) + 1;
-        const x0    = -(cols * (TW + GAP)) / 2 + TW / 2;
-        const z0    = poolBuildZ + TD / 2;  // start just north of pool
-        return Array.from({ length: cols }).flatMap((_, c) =>
-          Array.from({ length: rows }).map((_, r) => {
-            const bright = ((c + r) % 2 === 0) ? "#EDE0C6" : "#F3E8D2";
-            return (
-              <mesh key={`pd-${c}-${r}`}
-                rotation={[-Math.PI / 2, 0, 0]}
-                position={[x0 + c * (TW + GAP), -0.488, z0 - r * (TD + GAP)]}
-                receiveShadow>
-                <planeGeometry args={[TW, TD]} />
-                <meshStandardMaterial color={bright} roughness={0.78} metalness={0.02} />
-              </mesh>
-            );
-          })
-        );
-      })()}
-
-      {/* ── Pool shell — concrete basin ── */}
-      <mesh position={[0, -0.30, pz]} receiveShadow castShadow>
-        <boxGeometry args={[pw + 0.38, 0.60, pd + 0.38]} />
-        <meshStandardMaterial color="#D4CABC" roughness={0.70} />
-      </mesh>
-
-      {/* ── Pool water — animated ripple reflector surface ── */}
-      {/* AnimatedWater provides its own turquoise bottom + animated reflective surface */}
-      <group position={[0, 0.08, pz]}>
-        <AnimatedWater w={pw - 0.06} d={pd - 0.06} />
-      </group>
-      {/* ── Pool underwater glow — turquoise point lights simulate submerged LEDs ── */}
-      <pointLight position={[0,            -0.10, pz]} intensity={7.0} distance={pw * 1.8 + 5} decay={1.6} color="#20C8DC" />
-      <pointLight position={[pw * 0.35,    -0.10, pz + pd * 0.28]} intensity={4.5} distance={pw * 1.4} decay={1.8} color="#18B4CC" />
-      <pointLight position={[-pw * 0.35,   -0.10, pz - pd * 0.28]} intensity={4.5} distance={pw * 1.4} decay={1.8} color="#18B4CC" />
-
-      {/* ── Pool coping — cream stone edge strips on all 4 sides ── */}
-      {/* ── Pool coping — 3 straight sides; south side handled by rounded cap ── */}
-      {([[-1,0],[1,0],[0,1]] as [number,number][]).map(([sx, sz], i) => {
-        const horiz = sz === 0;
-        const len   = horiz ? pd + 0.52 : pw + 0.52;
-        return (
-          <mesh key={i}
-            position={[sx * (pw/2 + 0.24), 0.05, pz + sz * (pd/2 + 0.24)]}
-            castShadow receiveShadow>
-            <boxGeometry args={horiz ? [0.38, 0.06, len] : [len, 0.06, 0.38]} />
-            <meshStandardMaterial color="#F0E8D8" roughness={0.60} />
-          </mesh>
-        );
-      })}
-
-      {/* ── Smooth rounded south cap — half-cylinder, camera-near end ── */}
-      {(() => {
-        const r  = pw / 2;
-        const capZ = poolFarZ;  // southernmost Z = pool south end
-        return (
-          <group position={[0, 0, capZ]}>
-            {/* Pool interior half-cylinder (turquoise plaster) */}
-            <mesh rotation={[0, Math.PI, 0]}>
-              <cylinderGeometry args={[r, r, 0.52, 40, 1, false, 0, Math.PI]} />
-              <meshStandardMaterial color="#0A6470" roughness={0.12} metalness={0.0} />
-            </mesh>
-            {/* Water surface half-disc */}
-            <mesh position={[0, 0.09, 0]} rotation={[0, Math.PI, 0]}>
-              <cylinderGeometry args={[r - 0.04, r - 0.04, 0.04, 40, 1, false, 0, Math.PI]} />
-              <meshStandardMaterial color="#5DC8E0" roughness={0.04} metalness={0.0} envMapIntensity={6.0}
-                emissive="#1A8AA0" emissiveIntensity={0.12} />
-            </mesh>
-            {/* Coping arc (cream stone) */}
-            <mesh position={[0, 0.06, 0]} rotation={[0, Math.PI, 0]}>
-              <cylinderGeometry args={[r + 0.24, r + 0.24, 0.06, 40, 1, false, 0, Math.PI]} />
-              <meshStandardMaterial color="#F0E8D8" roughness={0.60} />
-            </mesh>
-          </group>
-        );
-      })()}
-
-      {/* ── Modern steel pergola — shades the terrace between building and pool ── */}
-      {(() => {
-        const pgW   = effW * 0.72;   // pergola width (east-west)
-        const pgD   = terrD * 0.90;  // pergola depth (north-south)
-        const pgH   = 2.65;          // height of top beams
-        const pgCX  = 0;
-        const pgCZ  = (terrFrontZ + terrBackZ) / 2; // centred over terrace
-        const POST  = 0.085;         // post section
-        const BEAM  = 0.090;         // main beam height
-        const PURLIN = 0.055;        // purlin height
-        const purlinCount = Math.max(5, Math.round(pgW / 0.65));
-        const steelMat = { color: "#1E2028" as const, roughness: 0.14, metalness: 0.92, envMapIntensity: 2.0 as const };
-        return (
-          <group position={[pgCX, 0, pgCZ]}>
-            {/* 4 corner posts */}
-            {([-pgW/2+POST/2, pgW/2-POST/2] as number[]).flatMap(px2 =>
-              ([-pgD/2+POST/2, pgD/2-POST/2] as number[]).map((pz2, i) => (
-                <mesh key={`pp-${px2}-${i}`} position={[px2, pgH / 2, pz2]} castShadow>
-                  <boxGeometry args={[POST, pgH, POST]} />
-                  <meshStandardMaterial {...steelMat} />
-                </mesh>
-              ))
-            )}
-            {/* 2 main longitudinal beams (east-west) */}
-            {([-pgD/2, pgD/2] as number[]).map((bz2, i) => (
-              <mesh key={`pb-${i}`} position={[0, pgH, bz2]} castShadow>
-                <boxGeometry args={[pgW, BEAM, 0.050]} />
-                <meshStandardMaterial {...steelMat} />
-              </mesh>
-            ))}
-            {/* Purlins — parallel slats running north-south */}
-            {Array.from({ length: purlinCount }, (_, pi) => {
-              const px2 = -pgW/2 + (pi + 0.5) * (pgW / purlinCount);
-              return (
-                <mesh key={`pur-${pi}`} position={[px2, pgH + PURLIN / 2, 0]} castShadow>
-                  <boxGeometry args={[0.040, PURLIN, pgD + 0.06]} />
-                  <meshStandardMaterial {...steelMat} />
-                </mesh>
-              );
-            })}
-          </group>
-        );
-      })()}
-
-      {/* ── Sun loungers — 5 chairs on the BUILDING SIDE of pool (between pool + terrace) ── */}
-      {/* Reference: chairs face toward pool, backs toward building — terrace zone */}
-      {([-0.60, -0.30, 0, 0.30, 0.60] as number[]).map((xFrac, i) => {
-        const lx = xFrac * (pw - 1.0);
-        const lz = poolBuildZ + deckSide * 0.48;   // between pool north edge and terrace
-        // Alternate towel colors for visual variety
-        const towelColors = ["#1E6CB5", "#C84040", "#3A9650", "#D49030", "#7A3090"];
-        const towelColor = towelColors[i % towelColors.length];
-        return (
-          <group key={i} position={[lx, 0, lz]} rotation={[0, Math.PI, 0]}>
-            {/* Frame / mattress base */}
-            <mesh position={[0, 0.19, 0]} castShadow receiveShadow>
-              <boxGeometry args={[0.62, 0.06, 1.85]} />
-              <meshStandardMaterial color="#BEB080" roughness={0.75} metalness={0.10} />
-            </mesh>
-            {/* Cushion */}
-            <mesh position={[0, 0.26, 0]}>
-              <boxGeometry args={[0.54, 0.09, 1.68]} />
-              <meshStandardMaterial color="#F6F0E4" roughness={0.88} metalness={0.0} />
-            </mesh>
-            {/* Reclined head section */}
-            <mesh position={[0, 0.36, 0.55]} rotation={[-0.28, 0, 0]}>
-              <boxGeometry args={[0.52, 0.07, 0.65]} />
-              <meshStandardMaterial color="#F2EBD8" roughness={0.88} />
-            </mesh>
-            {/* 4 slim aluminium legs */}
-            {([-0.26, 0.26] as number[]).flatMap(lx2 =>
-              ([-0.78, 0.78] as number[]).map((lz2, li) => (
-                <mesh key={`${lx2}-${lz2}`} position={[lx2, 0.09, lz2]} castShadow>
-                  <boxGeometry args={[0.040, 0.18, 0.040]} />
-                  <meshStandardMaterial color="#B0B0B8" roughness={0.25} metalness={0.85} />
-                </mesh>
-              ))
-            )}
-            {/* Rolled towel at foot of lounger — colorful hotel-style accent */}
-            <mesh position={[0, 0.325, -0.72]}>
-              <cylinderGeometry args={[0.088, 0.088, 0.46, 10]} />
-              <meshStandardMaterial color={towelColor} roughness={0.90} />
-            </mesh>
-            {/* Towel fold end cap */}
-            <mesh position={[0, 0.325, -0.72]} rotation={[Math.PI / 2, 0, 0]}>
-              <circleGeometry args={[0.088, 10]} />
-              <meshStandardMaterial color={towelColor} roughness={0.90} />
-            </mesh>
-          </group>
-        );
-      })}
-
-      {/* ── Potted palm — accent planting flanking the spa ── */}
-      <group position={[pw * 0.50 + 3.8, 0, (poolBuildZ + terrBackZ) / 2]}>
-        {/* Large terracotta planter */}
-        <mesh position={[0, 0.28, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.30, 0.22, 0.56, 12]} />
-          <meshStandardMaterial color="#C06840" roughness={0.78} metalness={0.02} />
-        </mesh>
-        {/* Soil top */}
-        <mesh position={[0, 0.57, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <circleGeometry args={[0.29, 12]} />
-          <meshStandardMaterial color="#4A321C" roughness={0.98} />
-        </mesh>
-        {/* Palm trunk */}
-        <mesh position={[0, 1.50, 0]} castShadow>
-          <cylinderGeometry args={[0.08, 0.13, 1.88, 7]} />
-          <meshStandardMaterial color="#9A7040" roughness={0.88} />
-        </mesh>
-        {/* 6 palm fronds radiating from top */}
-        {[0, 60, 120, 180, 240, 300].map((deg, pi) => {
-          const rad = (deg * Math.PI) / 180;
-          return (
-            <mesh key={pi}
-              position={[Math.cos(rad) * 0.60, 2.60, Math.sin(rad) * 0.60]}
-              rotation={[0.50, rad, 0]}
-              castShadow>
-              <boxGeometry args={[1.40, 0.040, 0.28]} />
-              <meshStandardMaterial color="#2A6E34" roughness={0.88} />
-            </mesh>
-          );
-        })}
-      </group>
-
-      {/* ── Floating pool ring — colorful inflatable, adds life to the pool ── */}
-      <group position={[pw * 0.25, 0.10, pz + pd * 0.20]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0.4]}>
-          <torusGeometry args={[0.55, 0.13, 10, 24]} />
-          <meshStandardMaterial color="#FF6040" roughness={0.70} metalness={0.0} />
-        </mesh>
-        {/* Shadow under ring on water */}
-        <pointLight position={[0, -0.15, 0]} intensity={0.6} distance={1.5} decay={2} color="#40B8D0" />
-      </group>
-
-      {/* ── Raised spa / water feature — right side of terrace, between building and pool ── */}
-      <group position={[pw * 0.50 + 1.8, 0, (poolBuildZ + terrBackZ) / 2]}>
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[2.2, 0.55, 2.2]} />
-          <meshStandardMaterial map={getStoneTex()} color="#D8D0C0" roughness={0.65} />
-        </mesh>
-        <mesh position={[0, 0.30, 0]}>
-          <boxGeometry args={[1.85, 0.08, 1.85]} />
-          <meshPhysicalMaterial color="#50C8E0" transmission={0.60} roughness={0.02} ior={1.33} thickness={0.5} envMapIntensity={6.0} />
-        </mesh>
-        {/* Spa underwater LED glow */}
-        <pointLight position={[0, 0.10, 0]} intensity={4.5} distance={5.5} decay={1.8} color="#20C0DC" />
-      </group>
-
-      {/* ── Side tables between loungers (alternating) — polished concrete ── */}
-      {([0, 2] as number[]).map(i => {
-        const lx = (i - 1) * (pw - 1.0) * 0.30;  // every 2 loungers
-        const lz = poolBuildZ + deckSide * 0.48;
-        return (
-          <group key={`tbl-${i}`} position={[lx, 0, lz]}>
-            <mesh position={[0, 0.40, 0]} castShadow>
-              <cylinderGeometry args={[0.24, 0.22, 0.04, 12]} />
-              <meshStandardMaterial color="#E0DCD4" roughness={0.60} metalness={0.06} />
-            </mesh>
-            <mesh position={[0, 0.20, 0]} castShadow>
-              <cylinderGeometry args={[0.03, 0.03, 0.40, 8]} />
-              <meshStandardMaterial color="#B0B0B8" roughness={0.18} metalness={0.90} />
-            </mesh>
-          </group>
-        );
-      })}
-
-      {/* ── Terrace fire bowl — accent feature, warm evening focal point ── */}
-      <group position={[-pw * 0.40, 0, terrBackZ + deckSide * 0.55]}>
-        {/* Pedestal column */}
-        <mesh position={[0, 0.28, 0]} castShadow>
-          <cylinderGeometry args={[0.04, 0.06, 0.55, 8]} />
-          <meshStandardMaterial color="#3A3840" roughness={0.28} metalness={0.82} envMapIntensity={1.8} />
-        </mesh>
-        {/* Bowl (travertine dish) */}
-        <mesh position={[0, 0.60, 0]} castShadow>
-          <cylinderGeometry args={[0.34, 0.22, 0.14, 14]} />
-          <meshStandardMaterial color="#D4CCBA" roughness={0.68} />
-        </mesh>
-        {/* Fire / embers glow */}
-        <mesh position={[0, 0.70, 0]}>
-          <sphereGeometry args={[0.14, 10, 8]} />
-          <meshStandardMaterial color="#FF9030" emissive="#FF5800" emissiveIntensity={3.5} roughness={0.9} />
-        </mesh>
-        {/* Warm fire point light — orange glow on surroundings */}
-        <pointLight position={[0, 0.82, 0]} intensity={6.5} distance={10} decay={2.0} color="#FF8020" />
-      </group>
-
-      {/* ── Low terrace hedge border — formal clipped hedge along pool edge ── */}
-      <mesh position={[0, 0.20, terrBackZ - 0.30]} castShadow receiveShadow>
-        <boxGeometry args={[effW * 0.55, 0.40, 0.35]} />
-        <meshStandardMaterial color="#2A5820" roughness={0.94} />
-      </mesh>
-
-      {/* ── Formal boxwood hedges — long sides of pool (east + west), classic garden framing ── */}
-      {([-1, 1] as const).map((side) => {
-        const hx = side * (pw / 2 + deckSide * 0.55);
-        return (
-          <group key={side} position={[hx, 0, pz]}>
-            {/* Clipped box hedge strip */}
-            <mesh castShadow receiveShadow>
-              <boxGeometry args={[0.38, 0.65, pd + 0.30]} />
-              <meshStandardMaterial color="#2E6428" roughness={0.96} />
-            </mesh>
-            {/* Hedge top — slightly lighter for clipped flat-top effect */}
-            <mesh position={[0, 0.34, 0]} receiveShadow>
-              <boxGeometry args={[0.42, 0.05, pd + 0.32]} />
-              <meshStandardMaterial color="#367230" roughness={0.90} />
-            </mesh>
-          </group>
-        );
-      })}
-
-      {/* ── Pool wet bar — swim-up counter along east pool edge ── */}
-      {(() => {
-        const barX  = pw / 2 - 0.60;  // east side, inside pool coping
-        const barZ  = pz + pd * 0.28; // north third of pool
-        const barW  = 0.50;            // counter depth (east-west)
-        const barL  = Math.min(pw * 0.48, 3.8); // counter length
-        const barH  = 0.78;            // bar surface height above pool bottom
-        const ctrColor = "#D8D4C8";
-        const seatCount = 4;
-        return (
-          <group position={[barX, -0.25, barZ]}>
-            {/* Bar counter slab — travertine top */}
-            <mesh position={[barW / 2, barH, 0]} castShadow>
-              <boxGeometry args={[barW + 0.08, 0.08, barL]} />
-              <meshStandardMaterial color={ctrColor} roughness={0.60} metalness={0.04} envMapIntensity={0.8} />
-            </mesh>
-            {/* Counter body */}
-            <mesh position={[barW / 2, barH / 2, 0]} castShadow receiveShadow>
-              <boxGeometry args={[barW, barH, barL]} />
-              <meshStandardMaterial color="#C8C4B8" roughness={0.78} />
-            </mesh>
-            {/* Submerged bar stools — concrete discs at water level */}
-            {Array.from({ length: seatCount }, (_, si) => {
-              const sz = -barL / 2 + (si + 0.5) * (barL / seatCount);
-              return (
-                <group key={si} position={[-0.55, 0.52, sz]}>
-                  {/* Stool seat */}
-                  <mesh castShadow>
-                    <cylinderGeometry args={[0.18, 0.18, 0.04, 12]} />
-                    <meshStandardMaterial color="#D0CCBC" roughness={0.68} />
-                  </mesh>
-                  {/* Stool pedestal */}
-                  <mesh position={[0, -0.24, 0]} castShadow>
-                    <cylinderGeometry args={[0.04, 0.06, 0.48, 8]} />
-                    <meshStandardMaterial color="#B8B4AC" roughness={0.55} metalness={0.22} />
-                  </mesh>
-                </group>
-              );
-            })}
-            {/* Under-counter LED bar light strip */}
-            <mesh position={[barW / 2 + 0.002, barH - 0.05, 0]}>
-              <boxGeometry args={[0.012, 0.018, barL * 0.88]} />
-              <meshStandardMaterial color="#FFF6DC" emissive="#FFE880" emissiveIntensity={2.5} />
-            </mesh>
-            <pointLight position={[barW / 2 - 0.05, barH - 0.12, 0]} intensity={3.0} distance={5.0} decay={2.0} color="#FFE090" />
-          </group>
-        );
-      })()}
-
-      {/* ── Recessed deck step lights — warm amber strips along pool coping ── */}
-      {Array.from({ length: 5 }, (_, li) => {
-        const lz = pz - pd * 0.40 + li * (pd * 0.80 / 4);
-        return (
-          <group key={li}>
-            {/* West coping light */}
-            <mesh position={[-pw / 2 - 0.18, 0.03, lz]}>
-              <boxGeometry args={[0.06, 0.018, 0.18]} />
-              <meshStandardMaterial color="#FFE8B0" emissive="#FFD860" emissiveIntensity={1.8} />
-            </mesh>
-            {/* East coping light */}
-            <mesh position={[pw / 2 + 0.18, 0.03, lz]}>
-              <boxGeometry args={[0.06, 0.018, 0.18]} />
-              <meshStandardMaterial color="#FFE8B0" emissive="#FFD860" emissiveIntensity={1.8} />
-            </mesh>
-          </group>
-        );
-      })}
-
-    </group>
-  );
 }
 
 // ─── Inside-building camera animator ───────────────────────
@@ -6273,7 +5468,7 @@ function SecondaryBuildingBody({
       {Array.from({ length: nFloors }, (_, fi) => (
         <mesh key={fi} position={[0, fi * FLOOR_H + FLOOR_H * 0.55, D / 2 + 0.02]}>
           <boxGeometry args={[W * 0.6, FLOOR_H * 0.35, 0.04]} />
-          <meshPhysicalMaterial color="#B0CCE0" transmission={0.55} roughness={0.05} metalness={0.1} />
+          <meshPhysicalMaterial color="#B0CCE0" transparent opacity={0.50} roughness={0.05} metalness={0.1} />
         </mesh>
       ))}
       {/* Flat roof cap */}
@@ -7168,17 +6363,10 @@ export default function HouseCanvas() {
           if (k <= 0) return null;
           // 每层一组顶灯（楼层基准高度 = floor * FLOOR_H_M）
           return Array.from({ length: floors }).map((_, fl) => {
-            const yC = fl * FLOOR_H_M + FLOOR_H_M * 0.90; // 该层吊顶高度
-            const yF = fl * FLOOR_H_M + 0.6;              // 该层地面补光
+            const yC = fl * FLOOR_H_M + FLOOR_H_M * 0.90;
             return (
               <group key={`interior-fill-${fl}`}>
-                <pointLight position={[0,         yC, 0]}         intensity={5.0 * k} distance={W * 2.5} decay={1.8} color="#FFF8E8" />
-                <pointLight position={[-W * 0.30, yC, 0]}         intensity={3.5 * k} distance={W * 2.0} decay={1.8} color="#FFFAEC" />
-                <pointLight position={[ W * 0.30, yC, 0]}         intensity={3.5 * k} distance={W * 2.0} decay={1.8} color="#FFFAEC" />
-                <pointLight position={[0,         yC, -D * 0.28]} intensity={3.0 * k} distance={W * 1.8} decay={1.8} color="#FFFBF0" />
-                <pointLight position={[0,         yC,  D * 0.28]} intensity={3.0 * k} distance={W * 1.8} decay={1.8} color="#FFFBF0" />
-                {/* 地板高度补光 */}
-                <pointLight position={[0, yF, 0]} intensity={1.8 * k} distance={W * 1.6} decay={2} color="#FFF4E0" />
+                <pointLight position={[0, yC, 0]} intensity={8.0 * k} distance={Math.max(W, D) * 2.5} decay={1.5} color="#FFF8E8" />
               </group>
             );
           });
@@ -7197,7 +6385,7 @@ export default function HouseCanvas() {
         {!insideBuilding && (
           <directionalLight
             position={sunPos} intensity={theme.sunIntensity} color={theme.sunColor} castShadow
-            shadow-mapSize={[2048, 2048]}
+            shadow-mapSize={[1024, 1024]}
             shadow-camera-far={120}
             shadow-camera-left={-35} shadow-camera-right={35}
             shadow-camera-top={35} shadow-camera-bottom={-35}
@@ -7231,20 +6419,9 @@ export default function HouseCanvas() {
           if (fw <= 0) return null;
           return (
           <>
-            <pointLight position={[0, floors * FLOOR_H * 0.6, -D * 1.2]} intensity={8 * fw} distance={D * 4 + W * 2} decay={1.5} color="#FFF8F0" />
-            <pointLight position={[-W * 0.8, floors * FLOOR_H * 0.5, -D * 0.6]} intensity={5 * fw} distance={W * 3} decay={1.8} color="#FFF4E8" />
-            {/* Facade ground-wash uplights — dramatic upward wash on south glass curtain wall */}
-            {[-W * 0.35, 0, W * 0.35].map((lx, li) => (
-              <pointLight key={li} position={[lx, 0.2, -D / 2 - 0.6]} intensity={4.5 * fw} distance={floors * FLOOR_H + 3} decay={1.6} color="#FFF6E8" />
-            ))}
-            {/* Side facade wash — east/west edges */}
-            <pointLight position={[-W / 2 - 0.5, 0.2,  D * 0.10]} intensity={3.0 * fw} distance={floors * FLOOR_H + 2} decay={1.8} color="#FFF2E0" />
-            <pointLight position={[ W / 2 + 0.5, 0.2, -D * 0.10]} intensity={3.0 * fw} distance={floors * FLOOR_H + 2} decay={1.8} color="#FFF2E0" />
-            {/* Pool water bounce light — cool blue fill reflected from pool surface onto
-                building south face. Approximates the real pool position (D*1.8 south). */}
-            <pointLight position={[0, 1.2, -D * 1.8]} intensity={3.5 * fw} distance={D * 4 + W * 1.5} decay={1.6} color="#4AACCC" />
-            {/* Stone deck reflected fill — warm from travertine deck between building and pool */}
-            <pointLight position={[0, 0.5, -D * 0.85]} intensity={2.2 * fw} distance={D * 2 + W} decay={2.0} color="#E8D8B0" />
+            <pointLight position={[0, floors * FLOOR_H * 0.6, -D * 1.2]} intensity={10 * fw} distance={D * 4 + W * 2} decay={1.5} color="#FFF8F0" />
+            <pointLight position={[0, 0.2, -D / 2 - 0.6]} intensity={6 * fw} distance={floors * FLOOR_H + 3} decay={1.6} color="#FFF6E8" />
+            <pointLight position={[0, 1.0, -D * 1.5]} intensity={3.5 * fw} distance={D * 3 + W} decay={1.8} color="#80D0E0" />
           </>
           );
         })()}
@@ -7280,7 +6457,7 @@ export default function HouseCanvas() {
         <HouseBody
           W={W} D={D} settings={exterior}
           insideBuilding={insideBuilding} wallXray={wallXray}
-          hideInterior={hideInterior}
+          hideInter
           onEnterRoom={(_room, _fi, worldPos) => {
             setWalkthrough(true);
             setWalkthroughSpawn([worldPos[0], worldPos[1], worldPos[2]]);
@@ -7304,7 +6481,7 @@ export default function HouseCanvas() {
               worldRot={bld.rot}
               interactive={false}
               insideBuilding={insideBuilding}
-              hideInterior={hideInterior}
+              hideInter
             />
           );
         })}

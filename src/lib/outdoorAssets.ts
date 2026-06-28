@@ -169,9 +169,9 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
     customTargetHeightM: 0.90, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
     brand: "Dedon", estimatedPriceCNY: 28000,
     purchaseUrl: "https://www.dedon.de/en/outdoor-sofas" },
-  { kind: "furniture.parasol",       label: "遮阳伞",   labelEn: "Parasol",        icon: "⛱", category: "furniture",
+  { kind: "furniture.parasol",       label: "遮阳伞",   labelEn: "Beach Parasol",  icon: "⛱", category: "furniture",
     glb: "", scale: 1, radiusCm: 200, color: "#F5EDD8",
-    customGltfPath: "/models/outdoor_furniture/garden_parasol/garden_parasol.gltf",
+    customGltfPath: "/models/outdoor_furniture/beach_parasol/beach_parasol_single.glb",
     customTargetHeightM: 2.60, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
     brand: "Jardinico", estimatedPriceCNY: 9800,
     purchaseUrl: "https://www.jardinico.com/products/parasols" },
@@ -205,6 +205,18 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
     customTargetHeightM: 0.75, customGroundAlign: true, customAuthor: "Sketchfab CC-BY",
     brand: "Unopiù", estimatedPriceCNY: 8800,
     purchaseUrl: "https://www.unopiu.com/en/pool-loungers" },
+  { kind: "furniture.plasticLounger", label: "塑料躺椅", labelEn: "Plastic Lounge Chair", icon: "🏖", category: "furniture",
+    glb: "", scale: 1, radiusCm: 95, color: "#F0F0F0",
+    customGltfPath: "/models/outdoor_furniture/plastic_lounge_chair/plastic_lounge_chair.glb",
+    customTargetHeightM: 1.0, customGroundAlign: true, customAuthor: "Sketchfab",
+    brand: "Generic", estimatedPriceCNY: 380,
+    purchaseUrl: "" },
+  { kind: "furniture.swimmingPool", label: "泳池", labelEn: "Swimming Pool", icon: "🏊", category: "furniture",
+    glb: "", scale: 1, radiusCm: 500, color: "#40A0C8",
+    customGltfPath: "/models/outdoor_furniture/swimming_pool/swimming_pool.glb",
+    customTargetHeightM: 1.8, customGroundAlign: true, customAuthor: "Sketchfab",
+    brand: "Compass Pools", estimatedPriceCNY: 280000,
+    purchaseUrl: "https://www.compasspools.com" },
 
   // ── Vehicles ──
   { kind: "vehicle.bmw_m3_e46",    label: "BMW M3 E46",              labelEn: "BMW M3 E46",              icon: "🚗", category: "vehicle",
@@ -313,32 +325,15 @@ export const YARD_PRESETS: YardPreset[] = [
     desc: "三环叙事流：入户·社交·私享 — Prefab 主导",
     descEn: "Three-ring narrative: Entry·Social·Private — Prefab-led",
     items: [
-      // Utility ring (driveway zone behind the house, n side)
-      { type: "zone", zoneKind: "utility",
-        x: 0, z: -900,
-        polygon: rectZone(1000, 600), rot: 0 },
+      // Pool SET — the prefab itself renders the 6 loungers + 6 parasols as
+      // part of its own rotatable group, so just drop the one prefab.
+      // z=1320 keeps it clear of the house margin (deterministic placement).
+      { type: "prefab", prefabKind: "pool", x: 0, z: 1320, rot: 0 },
+      // Driveway
       { type: "prefab", prefabKind: "porte_cochere",
         x: 0, z: -900, rot: 0,
         params: { carCount: 2, pillarStyle: "round", facingDir: "south" } },
-      // Social ring (front patio + island)
-      { type: "zone", zoneKind: "social",
-        x: 0, z: 600,
-        polygon: rectZone(900, 600), rot: 0 },
-      { type: "prefab", prefabKind: "social_island",
-        x: -300, z: 600, rot: 0,
-        params: { sizeM: { w: 5, d: 4 }, fireFeature: "pit", kitchenFacing: "north", sunkenSeat: true } },
-      // Pool — the centerpiece of any modern villa, dropped as a draggable Prefab
-      { type: "prefab", prefabKind: "pool", x: 400, z: 700, rot: 0 },
-      // Private ring (right side wood deck) + outdoor kitchen
-      { type: "zone", zoneKind: "private",
-        x: 1100, z: 0,
-        polygon: rectZone(500, 700), rot: 0 },
-      { type: "prefab", prefabKind: "outdoor_kitchen", x: 1100, z: 0, rot: 0 },
-      // Boundary screen on the west side — long slat wall
-      { type: "prefab", prefabKind: "slat_wall",
-        x: -1100, z: 0, rot: Math.PI / 2,
-        params: { lengthM: 8, heightM: 1.8, slatCm: 5, gapCm: 2, backWall: true } },
-      // Hero trees — 1 olive (sculptural), 1 maple (autumn focal)
+      // Hero trees
       { type: "singleton", kind: "tree.olive", x: -800, z: -200, scale: 1.4 },
       { type: "singleton", kind: "tree.maple", x:  800, z: -500, scale: 1.4 },
     ],

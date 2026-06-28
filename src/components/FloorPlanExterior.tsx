@@ -585,7 +585,6 @@ function GlassCurtain({
                 <meshPhysicalMaterial
                   color={glassColor ?? "#8AA6C2"}
                   transparent opacity={op(0.24)}
-                  transmission={0.66} ior={1.45} thickness={0.012}
                   depthWrite={false} roughness={0.05} metalness={0.0}
                   reflectivity={0.5} envMapIntensity={2.0} side={THREE.DoubleSide}
                   {...overlayMaterialProps(2)}
@@ -620,7 +619,6 @@ function GlassCurtain({
                 <meshPhysicalMaterial
                   color={glassColor ?? "#93AEC8"}
                   transparent opacity={op(0.22)}
-                  transmission={0.68} ior={1.45} thickness={0.012}
                   depthWrite={false} roughness={0.04} metalness={0.0}
                   reflectivity={0.5} envMapIntensity={2.0} side={THREE.DoubleSide}
                   {...overlayMaterialProps(2)}
@@ -631,7 +629,6 @@ function GlassCurtain({
                 <meshPhysicalMaterial
                   color={glassColor ?? "#8AA6C2"}
                   transparent opacity={op(0.24)}
-                  transmission={0.66} ior={1.45} thickness={0.012}
                   depthWrite={false} roughness={0.05} metalness={0.0}
                   reflectivity={0.5} envMapIntensity={2.0} side={THREE.DoubleSide}
                   {...overlayMaterialProps(2)}
@@ -1118,7 +1115,6 @@ function ConcreteFacade({
             const glassMatFor = (col: string) => (
               <meshPhysicalMaterial
                 color={col}
-                transmission={windowGlow > 0.5 ? 0.22 : 0}
                 roughness={windowGlow > 0.5 ? 0.04 : 0.18}
                 metalness={0.05}
                 clearcoat={0.55} clearcoatRoughness={0.12}
@@ -1907,37 +1903,23 @@ function AnimatedPoolCaustics({
   useFrame((_, delta) => {
     t.current += delta;
     const tc = t.current;
-    // Three caustic lights move on different Lissajous-like paths inside the pool
-    const configs = [
-      { ax: poolW * 0.28, az: poolL * 0.22, fx: 0.31, fz: 0.19, phase: 0.0, baseI: 1.8 },
-      { ax: poolW * 0.35, az: poolL * 0.30, fx: 0.19, fz: 0.27, phase: 2.1, baseI: 1.4 },
-      { ax: poolW * 0.22, az: poolL * 0.38, fx: 0.25, fz: 0.15, phase: 4.2, baseI: 1.6 },
-    ];
-    lightsRef.current.forEach((light, i) => {
-      if (!light) return;
-      const cfg = configs[i];
-      light.position.x = Math.sin(tc * cfg.fx + cfg.phase) * cfg.ax;
-      light.position.z = Math.cos(tc * cfg.fz + cfg.phase) * cfg.az;
-      light.position.y = -poolDp * 0.55;
-      // Gently pulse each light independently
-      const pulse = 0.80 + 0.20 * Math.sin(tc * 1.3 + cfg.phase);
-      light.intensity = cfg.baseI * poolGlowI * pulse;
-    });
+    const light = lightsRef.current[0];
+    if (!light) return;
+    light.position.x = Math.sin(tc * 0.25) * poolW * 0.30;
+    light.position.z = Math.cos(tc * 0.18) * poolL * 0.25;
+    light.position.y = -poolDp * 0.55;
+    const pulse = 0.80 + 0.20 * Math.sin(tc * 1.3);
+    light.intensity = 2.0 * poolGlowI * pulse;
   });
 
   return (
-    <>
-      {[0, 1, 2].map((i) => (
-        <pointLight
-          key={i}
-          ref={(el) => { if (el) lightsRef.current[i] = el; }}
-          distance={poolW * 1.2}
-          decay={1.8}
-          color="#50D8F0"
-          castShadow={false}
-        />
-      ))}
-    </>
+    <pointLight
+      ref={(el) => { if (el) lightsRef.current[0] = el; }}
+      distance={poolW * 1.2}
+      decay={1.8}
+      color="#50D8F0"
+      castShadow={false}
+    />
   );
 }
 
@@ -2002,9 +1984,7 @@ function RooftopDecorations({
                 <PlacedItemMesh placed={p} def={ROOM_DEFS[rt]} roomW={rWm} roomD={rDm} room={rt} />
               </Suspense>
             ))}
-            {nightGlow > 0 && (
-              <pointLight position={[0, 2.2, 0]} intensity={nightGlow * 0.5} distance={Math.max(rWm, rDm) * 1.5} color="#FFE4A0" />
-            )}
+            {/* Rooftop ambient glow — emissive-only, no pointLight for perf */}
           </group>
         );
       })}
@@ -2200,8 +2180,6 @@ function WalkthroughWallPiece({
           color={glassFacadeColor ?? "#7E97AC"}
           transparent
           opacity={0.24}
-          transmission={0.35}
-          ior={1.42}
           roughness={0.05}
           metalness={0.0}
           clearcoat={1.0}
@@ -3376,15 +3354,7 @@ export default function FloorPlanBuilding({
               <boxGeometry args={[gapT, gapH, bD]} />
               <meshStandardMaterial color={color} emissive={color} emissiveIntensity={floatEmi} roughness={0.70} />
             </mesh>
-            {/* Corner point lights for volumetric halo */}
-            {floatLI > 0 && ([
-              [ bW / 2, 0,  bD / 2],
-              [-bW / 2, 0,  bD / 2],
-              [ bW / 2, 0, -bD / 2],
-              [-bW / 2, 0, -bD / 2],
-            ] as [number,number,number][]).map(([lx, ly, lz], li) => (
-              <pointLight key={li} position={[lx, ly, lz]} intensity={floatLI * 0.25} distance={bW * 0.7} decay={2.2} color="#FFE880" castShadow={false} />
-            ))}
+            {/* Corner glow handled by emissive materials — no pointLights for perf */}
           </group>
         );
       })()}
@@ -3470,16 +3440,7 @@ export default function FloorPlanBuilding({
                 </group>
               );
             })}
-            {/* 点光源（时间感知）*/}
-            {soffitLI > 0 && (
-              <pointLight
-                position={[0, canopyY - canopyT / 2 - 0.10, canopyZ - 0.05]}
-                intensity={soffitLI}
-                distance={5.5}
-                decay={1.6}
-                color="#FFF6D8"
-              />
-            )}
+            {/* Canopy soffit glow via emissive — no pointLight for perf */}
           </group>
         );
       })()}
@@ -3540,7 +3501,6 @@ export default function FloorPlanBuilding({
                         color="#C8E8F4"
                         transparent opacity={0.22}
                         roughness={0.02} metalness={0.04}
-                        transmission={0.78}
                         envMapIntensity={4.0}
                         emissive="#90C8E0" emissiveIntensity={glassEmiSW}
                         side={THREE.DoubleSide}
@@ -3648,7 +3608,7 @@ export default function FloorPlanBuilding({
                     <boxGeometry args={[wbW, 0.012, 0.014]} />
                     <meshStandardMaterial color="#80D8F0" emissive="#40C8E8" emissiveIntensity={1.4} />
                   </mesh>
-                  <pointLight position={[0, wbY + 0.05, wbZ]} intensity={2.0} distance={wbW} decay={2.0} color="#40C8E8" castShadow={false} />
+                  {/* Water blade glow via emissive strip — no pointLight for perf */}
                   {/* Stone coping on far (south) side of water trough */}
                   <mesh position={[0, wbY + 0.02, wbZ + 0.30]}>
                     <boxGeometry args={[wbW + 0.30, 0.055, 0.12]} />
@@ -3729,10 +3689,7 @@ export default function FloorPlanBuilding({
                           <cylinderGeometry args={[0.066, 0.055, 0.090, 8]} />
                           <meshStandardMaterial color="#D8E0E8" emissive="#FFF8E8" emissiveIntensity={bollardEmi} roughness={0.50} />
                         </mesh>
-                        {/* Point light when lit */}
-                        {bollardLI > 0 && (
-                          <pointLight position={[0, bollardH + 0.06, 0]} intensity={bollardLI} distance={2.5} decay={2} color="#FFF4E0" />
-                        )}
+                        {/* Bollard glow via emissive cap — no pointLight for perf */}
                       </group>
                     );
                   })}
@@ -3813,16 +3770,7 @@ export default function FloorPlanBuilding({
                                 />
                               </mesh>
                             )}
-                            {/* Submerged LED strip — underwater night glow */}
-                            {underLightI > 0 && (
-                              <pointLight
-                                position={[cx, slabY + 0.01, treadZ]}
-                                intensity={underLightI * 0.6}
-                                distance={0.9}
-                                decay={2}
-                                color="#30C0E8"
-                              />
-                            )}
+                            {/* Step LED glow via emissive — no pointLight for perf */}
                           </group>
                         );
                       })}
@@ -3856,15 +3804,7 @@ export default function FloorPlanBuilding({
                                 side={THREE.DoubleSide}
                               />
                             </mesh>
-                            {underLightI > 0 && (
-                              <pointLight
-                                position={[cx, poolFloorY + 0.04, poolZ]}
-                                intensity={underLightI}
-                                distance={1.2}
-                                decay={2}
-                                color="#28B8E0"
-                              />
-                            )}
+                            {/* Basin glow via emissive water surface — no pointLight for perf */}
                           </group>
                         );
                       })()}
@@ -3897,10 +3837,7 @@ export default function FloorPlanBuilding({
                       transparent opacity={0.95}
                     />
                   </mesh>
-                  {/* Subtle point light from plate (night) */}
-                  {interiorGlowWall > 1.0 && (
-                    <pointLight position={[0, 0, 0.10]} intensity={0.8} distance={1.2} decay={2} color="#FFF4E0" />
-                  )}
+                  {/* House number glow via emissive — no pointLight for perf */}
                 </group>
               );
             })()}
@@ -3937,10 +3874,7 @@ export default function FloorPlanBuilding({
                 <boxGeometry args={[0.10, 0.10, 0.08]} />
                 <meshStandardMaterial color="#E8E0C0" emissive="#FFE4A0" emissiveIntensity={sconceEmi} roughness={0.40} />
               </mesh>
-              {/* 点光源（夜间/黄昏才开启）*/}
-              {lightInt > 0 && (
-                <pointLight position={[0, -0.05, -0.22]} intensity={lightInt} distance={lightDist} decay={2} color="#FFF0D0" />
-              )}
+              {/* Sconce glow via emissive head — no pointLight for perf */}
             </group>
           ));
         });
@@ -4992,14 +4926,7 @@ export default function FloorPlanBuilding({
                         roughness={0.60} metalness={0.10}
                       />
                     </mesh>
-                    {ledEmi > 0 && (
-                      <pointLight
-                        position={[0, railH - 0.010, 0.040]}
-                        intensity={ledEmi * 0.8}
-                        distance={2.5} decay={2.0}
-                        color="#FFF4D0" castShadow={false}
-                      />
-                    )}
+                    {/* Rail LED glow via emissive — no pointLight for perf */}
                   </group>
                 );
               })()}
@@ -5576,15 +5503,7 @@ export default function FloorPlanBuilding({
               <boxGeometry args={[eaveW, eaveH, D + OV_S5 + OV5 - 0.10]} />
               <meshStandardMaterial color={eaveCol} emissive={eaveCol} emissiveIntensity={eaveEmi} roughness={0.70} />
             </mesh>
-            {/* Point lights at eave corners for volumetric glow */}
-            {eaveLI > 0 && ([
-              [ W / 2 + OV5 * 0.60, eaveY, D / 2 + OV_S5 * 0.60],
-              [-W / 2 - OV5 * 0.60, eaveY, D / 2 + OV_S5 * 0.60],
-              [ W / 2 + OV5 * 0.60, eaveY,  D / 2 + OV5 * 0.60],
-              [-W / 2 - OV5 * 0.60, eaveY,  D / 2 + OV5 * 0.60],
-            ] as [number,number,number][]).map(([lx, ly, lz], li) => (
-              <pointLight key={li} position={[lx, ly, lz]} intensity={eaveLI * 0.35} distance={W * 0.8} decay={2.0} color="#FFE4B0" castShadow={false} />
-            ))}
+            {/* Eave glow via emissive materials — no pointLights for perf */}
           </group>
         );
       })()}
@@ -6116,10 +6035,7 @@ export default function FloorPlanBuilding({
                 <boxGeometry args={[0.055, 0.040, 0.080]} />
                 <meshStandardMaterial color="#282C34" roughness={0.35} metalness={0.68} />
               </mesh>
-              {/* Interior light */}
-              {(isNightB || isDuskB) && (
-                <pointLight position={[0, 1.40, 0]} intensity={1.2} distance={2.5} decay={2.0} color="#FFE890" castShadow={false} />
-              )}
+              {/* Lantern glow via emissive — no pointLight for perf */}
             </group>
           </group>
         );
@@ -6153,10 +6069,7 @@ export default function FloorPlanBuilding({
                     rotY={rotY}
                   />
                 </Suspense>
-                {/* In-ground up-light at tree base (night/dusk) */}
-                {treeLI > 0 && (
-                  <pointLight position={[0.30, 0.04, 0]} intensity={treeLI} distance={tH + 1.5} decay={1.6} color="#FFF4D0" castShadow={false} />
-                )}
+                {/* Tree up-light via emissive — no pointLight for perf */}
               </group>
             ))}
           </group>
@@ -7323,7 +7236,7 @@ export default function FloorPlanBuilding({
               <WalkthroughWallPiece
                 key={`wp-${pi}`}
                 position={[p.x + p.w / 2, p.y + p.h / 2, 0]}
-                w={p.w} h={p.h} thickness={WALL_T}
+                w={p.w} h={p.h}
                 pieceX={p.x} pieceY={p.y}
                 // In EXTERIOR view, when the user has set a building-wide
                 // wallBaseColor (Modern Minimal etc.), repaint every wall

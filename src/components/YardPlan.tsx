@@ -911,6 +911,8 @@ export default function YardPlan() {
     const prefabKind = e.dataTransfer.getData("text/yard-prefab");
     const assetKind  = e.dataTransfer.getData("text/yard-asset");
     if (prefabKind) {
+      // The pool prefab already renders its loungers + parasols as part of
+      // its own (rotatable) group — drop just the prefab; no loose singletons.
       addYardItem({
         id,
         type: "prefab",

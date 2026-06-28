@@ -184,12 +184,12 @@ export const PREFAB_REGISTRY: PrefabDef[] = [
   // (pool size, pergola dimensions, outdoor kitchen layout).
   {
     kind: "pool",
-    label: "无边泳池",
-    labelEn: "Infinity Pool",
-    desc: "Travertine 露台 + 无边瀑布 + 按摩浴 + 4 张躺椅 + 池畔小屋",
-    descEn: "Travertine deck + infinity edge + spa + 4 loungers + poolside cabana",
+    label: "泳池套组",
+    labelEn: "Pool Set",
+    desc: "真实瓷砖泳池 + 石材露台 + 两侧各 3 把遮阳伞 + 6 张躺椅(整组拖入)",
+    descEn: "Tiled pool + stone deck + 3 parasols & 3 loungers per side (drops as a full set)",
     glyphTag: "POOL",
-    defaultFootprintCm: { w: 1200, d: 1100 },
+    defaultFootprintCm: { w: 1100, d: 1500 },
     defaultParams: {},
     category: "core",
   },
