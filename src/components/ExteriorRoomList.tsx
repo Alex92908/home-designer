@@ -16,6 +16,10 @@ export default function ExteriorRoomList() {
   const floorPlans     = useDesignerStore(s => s.floorPlans);
   const exterior       = useDesignerStore(s => s.exterior);
   const customRoomMeta = useDesignerStore(s => s.customRoomMeta);
+  const buildings        = useDesignerStore(s => s.buildings);
+  const activeBuilding   = useDesignerStore(s => s.activeBuilding);
+  const setActiveBuilding = useDesignerStore(s => s.setActiveBuilding);
+  const multiBuilding = (buildings?.length ?? 0) > 1;
   const floorCount = Math.max(exterior.floors, 1);
   // 天台层作为普通楼层并入列表：紧跟最高楼层，编号 = floorCount（0-based）。
   const roofFi      = exterior.hasRooftop ? floorCount : -1;
@@ -44,6 +48,32 @@ export default function ExteriorRoomList() {
         <div className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3)" }}>
           {locale === "en" ? "Click to walk inside" : "点击进入该房间漫游"}
         </div>
+
+        {/* 楼栋切换器 —— 多于 1 栋时显示。切换后下方房间列表自动换成该栋。 */}
+        {multiBuilding && (
+          <div className="flex gap-1 mt-2 overflow-x-auto pb-0.5">
+            {buildings.map((b, i) => {
+              const on = i === activeBuilding;
+              return (
+                <button
+                  key={b.id}
+                  onClick={() => { if (i !== activeBuilding) setActiveBuilding(i); }}
+                  className="shrink-0 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all"
+                  style={on ? {
+                    background: "var(--ds-primary)",
+                    color: "#fff",
+                  } : {
+                    background: "var(--ds-surface-2, var(--ds-surface))",
+                    color: "var(--ds-text-2)",
+                    border: "1px solid var(--ds-border-soft)",
+                  }}
+                >
+                  {b.label || (i === 0 ? (locale === "en" ? "Main" : "主楼") : `${locale === "en" ? "Bldg " : "楼"}${i + 1}`)}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-2">

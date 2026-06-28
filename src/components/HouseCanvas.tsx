@@ -6469,7 +6469,12 @@ export default function HouseCanvas() {
         {/* Coordinate convention: north = -Z (camera faces north at yaw=0),
             south = +Z, east = +X, west = -X. This matches the compass correctly:
             when facing north, screen-right = +X = east. No X-flip needed. */}
+        {/* key by activeBuilding: switching buildings swaps in a structurally
+            different floor plan (e.g. 2F→1F). Forcing a clean remount avoids
+            React reconciling mismatched subtrees ("Expected static flag was
+            missing" dev error from the R3F scene on building switch). */}
         <HouseBody
+          key={`active-bld-${activeBuilding}`}
           W={W} D={D} settings={exterior}
           insideBuilding={insideBuilding} wallXray={wallXray}
           onEnterRoom={(_room, _fi, worldPos) => {
