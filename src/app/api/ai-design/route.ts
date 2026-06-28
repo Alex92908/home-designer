@@ -79,6 +79,7 @@ SCHEMA:
     "footprintShape": "<rect|L|U|T — 可选, 改楼体轮廓才给>",
     "pilotis": <可选,米 0-4 — 架空层/吊脚楼高度>,
     "fence": <可选 true|false — 外围栅栏开关>,
+    "glassCurtain": <可选 true|false — 整屋玻璃幕墙立面开关>,
     "wallZones": [ { "material": "<render|brick|stone|wood|concrete|glass>", "color": "<hex>", "heightFraction": <0-1,各带占比和为1> } ]
   },
   "floorLayouts": [
@@ -276,6 +277,11 @@ EXTERIOR RULES (外墙材质/楼体轮廓 — exterior.wallMaterial / exterior.f
   只有用户明确说楼体形状才给；普通设计请求省略。
 - "pilotis" 架空层高度(米,0-4)：「吊脚楼/底层架空2米」→ 2。
 - "fence" 外围栅栏开关：「不要围墙」→ false。
+- "glassCurtain" 整屋玻璃幕墙：「做成玻璃幕墙别墅 / 通透玻璃外立面」→ true；
+  「改回实墙开窗」→ false。这是整楼宏开关；只想某一间(如客厅)玻璃幕墙时，
+  改用该房间的 "exteriorStyle":"glass"（逐房间立面），不要动整屋开关。
+- 隔间(室内)材质：用各房间的 "wall"/"wallLower"/"ceiling"/"floor" 材质 id 控制，
+  无需额外字段。
 - "wallZones" 分层外墙（自下而上）：「上面玻璃下面砖」→
   [{"material":"brick","color":"#B05030","heightFraction":0.4},
    {"material":"glass","color":"#C8E0F0","heightFraction":0.6}]。

@@ -203,6 +203,9 @@ export interface AiDesignResult {
     pilotis?: number;
     /** 是否渲染外围栅栏。缺省=不动。 */
     fence?: boolean;
+    /** 整屋玻璃幕墙：true=隐框玻璃幕墙立面（实墙隐藏、玻璃+框架显示）；
+     *  false=常规实墙开窗。缺省=不动。 */
+    glassCurtain?: boolean;
     /** 分层外墙（自下而上叠带）。如上玻璃下砖：
      *  [{material:"brick",color:"#B05030",heightFraction:0.4},
      *   {material:"glass",color:"#C8E0F0",heightFraction:0.6}]。

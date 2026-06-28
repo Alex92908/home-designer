@@ -2463,6 +2463,10 @@ export const useDesignerStore = create<DesignerStore>()(
           extUpdate.pilotisHeightM = Math.max(0, Math.min(4, design.exterior.pilotis));
         }
         if (design.exterior?.fence != null) extUpdate.showPerimeterFence = !!design.exterior.fence;
+        // 整屋玻璃幕墙开关 → facadeSystem。punched-window=常规实墙开窗。
+        if (design.exterior?.glassCurtain != null) {
+          extUpdate.facadeSystem = design.exterior.glassCurtain ? "curtain-wall" : "punched-window";
+        }
         // 分层外墙：解析每带材质、归一化高度占比；全带非法就不动。
         if (Array.isArray(design.exterior?.wallZones) && design.exterior.wallZones.length) {
           const zones = design.exterior.wallZones
