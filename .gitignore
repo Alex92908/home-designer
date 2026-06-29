@@ -51,3 +51,6 @@ agent-worktree/
 
 # 脚本误在 scripts/ 下跑时落的 public（应在仓库根 public/）
 scripts/public/
+
+# 未引用的超大模型(误下载)，禁止入库
+public/models/outdoor_tree/olive_tree_apostolos/
