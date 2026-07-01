@@ -43,11 +43,20 @@ export const SHOWCASE_TEMPLATES: ShowcaseTemplate[] = [
     tags: ["2F+天台", "实墙", "泳池院"],
     load: () => {
       // 与右边的玻璃幕墙别墅区分：同一套户型 + 院子，外观切成 punched-window
-      // （实墙开窗），做成"实墙立面"版样板。
+      // （实墙开窗）。transparentExterior:true 是关键——默认方案是玻璃幕墙、
+      // 存的 transparentExterior=false，直接切实墙会触发「两段式厚基座(看着像
+      // 两层地板) + 不透明静态窗(打不开)」；置 true 后是薄压边基座 + 透明可
+      // 开启的 StyledWindow/门（参考 6-17 实墙方案）。
       const p = makeDefaultProject();
       return {
         floorPlans: p.floorPlans,
-        exterior: { ...p.exterior, facadeSystem: "punched-window", facadeGlass: false, preset: undefined },
+        exterior: {
+          ...p.exterior,
+          facadeSystem: "punched-window",
+          facadeGlass: false,
+          transparentExterior: true,
+          preset: undefined,
+        },
         yardPlan: defaultYard(p),
       };
     },
