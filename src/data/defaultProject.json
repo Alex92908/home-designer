@@ -1234,14 +1234,6 @@
             "z": -200,
             "scale": 1.4,
             "id": "modernVilla-e349df-2"
-          },
-          {
-            "type": "singleton",
-            "kind": "tree.maple",
-            "x": 800,
-            "z": -610,
-            "scale": 1.4,
-            "id": "modernVilla-e349df-3"
           }
         ]
       },

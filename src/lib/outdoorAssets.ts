@@ -333,9 +333,8 @@ export const YARD_PRESETS: YardPreset[] = [
       { type: "prefab", prefabKind: "porte_cochere",
         x: 0, z: -900, rot: 0,
         params: { carCount: 2, pillarStyle: "round", facingDir: "south" } },
-      // Hero trees
+      // Hero tree — 橄榄树（枫树渲染成枯枝很假，去掉）
       { type: "singleton", kind: "tree.olive", x: -800, z: -200, scale: 1.4 },
-      { type: "singleton", kind: "tree.maple", x:  800, z: -500, scale: 1.4 },
     ],
   },
 
