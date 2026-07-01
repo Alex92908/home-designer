@@ -3115,8 +3115,16 @@ export default function FloorPlanBuilding({
           const fk  = `${fi}|${s.axis}|${Math.round(s.fixed)}`;
           const seg = map.get(key);
           const holes = collectHoles(s.dataSide, doorsArr, winsArr);
-          // Explicit roomFacadeFaces wall=true on this room+side overrides exteriorPlanes suppression.
-          const wallOverridden = fp.roomFacadeFaces?.[room]?.[s.uiSide]?.wall === true;
+          // Keep this face's opaque shell when it should read as SOLID wall —
+          // whether from an explicit roomFacadeFaces wall=true OR from
+          // resolveFacadeLayer (e.g. garage roomExteriorStyle="concrete", or an
+          // interior-adjacent wall). Without this, a solid face that shares a
+          // coordinate-plane with a glass room got dropped by the curtain-wall
+          // exteriorPlanes suppression → 车库 N 墙空白. (No-op in punched-window
+          // mode: the suppression itself is gated by curtainWall.)
+          const wallOverridden =
+            fp.roomFacadeFaces?.[room]?.[s.uiSide]?.wall === true
+            || resolveFacadeLayer(fp, room, s.uiSide, "wall", curtainWall) === true;
           if (seg) {
             // Exact range match: merge holes + hide flags + wallOverridden.
             addHole(seg, holes);
@@ -3172,7 +3180,7 @@ export default function FloorPlanBuilding({
       }
     }
     return [...map.values()];
-  }, [floorPlans, floorCount, roomLoopMax, floorBoundsArr, planOffset, W, D, exterior.interiorDoorHeightCm]);
+  }, [floorPlans, floorCount, roomLoopMax, floorBoundsArr, planOffset, W, D, exterior.interiorDoorHeightCm, curtainWall]);
 
   return (
     <group position={[worldX, 0, worldZ]} rotation={[0, worldRot, 0]}>
