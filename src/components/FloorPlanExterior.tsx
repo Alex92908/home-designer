@@ -3073,6 +3073,12 @@ export default function FloorPlanBuilding({
             }
           }
         }
+        // 车库门洞与门板必须同尺寸/同位置：门板侧(effectiveDoors)对每个门都过一遍
+        // widenGarageDoor（居中加宽到卷帘门尺寸），门洞侧此前只对"配置门"过、
+        // 自动门/roomDoorWall 单门配置漏了 → 门洞(≤300)比门板(≤340)窄且错位，
+        // 卷帘门对不上洞。这里统一补一遍（widenGarageDoor 对非车库房间是 no-op，
+        // 对已加宽的配置门幂等），保证两侧完全一致。
+        doorsArr = doorsArr.map(dd => widenGarageDoor(room, dd, d.width, d.depth));
         const winsArr = fp.roomWindows?.[room] ?? [];
         const wh = fp.roomWallsHidden?.[room];
         // Side keys are NSWE — same alphabet as door.wall + roomWallsHidden.
