@@ -95,6 +95,7 @@ export default function ExportModal() {
   const enabledRooms    = useDesignerStore(s => s.floorPlans[s.activeFloor]?.enabledRooms ?? []);
   const scores          = useDesignerStore(s => s.scores);
   const exterior        = useDesignerStore(s => s.exterior);
+  const yardPlan        = useDesignerStore(s => s.yardPlan);
   const budget          = useDesignerStore(s => s.budget);
   const customRoomMeta  = useDesignerStore(s => s.customRoomMeta);
   const customFurniture = useDesignerStore(s => s.customFurniture);
@@ -222,10 +223,20 @@ export default function ExportModal() {
         })
       ),
     }));
+    // 院子(yardPlan)是 v9+ 的顶层字段，floorPlans[0].yardPlan 只是可能过期的
+    // 旧镜像。导出时把「当前顶层 yardPlan」写进 floor0，否则导出的院子会缺物件/
+    // 位置错（用户：导入后少了树和摩托、树位置不对）。冷启动/样板都从
+    // floorPlans[0].yardPlan 读院子，写这里即可完整往返。
+    const exportFloorPlansWithYard = exportFloorPlans.map((fp, i) =>
+      i === 0 ? { ...fp, yardPlan } : fp
+    );
     const data = {
       _version: 2,
       _coordSystem: "top-left",
-      floorPlans: exportFloorPlans,
+      floorPlans: exportFloorPlansWithYard,
+      // 顶层也带一份院子（与 v1 格式约定一致、导入优先读它）；floor0 里那份供
+      // 冷启动/样板读取。两处同源，往返完整。
+      yardPlan,
       exterior,
       budget,
       customRoomMeta,
@@ -332,6 +343,10 @@ export default function ExportModal() {
               floorPlans: convertedFloorPlans,
               exterior: data.exterior,
               budget: data.budget,
+              // 院子提到顶层：渲染读的是顶层 yardPlan。导入版本号=当前，不会触发
+              // v8→v9 迁移去从 floor0 派生，所以这里显式读 floor0.yardPlan（导出已
+              // 写入当前院子），否则导入后院子空/缺物件（用户：少了树和摩托）。
+              yardPlan: data.yardPlan ?? data.floorPlans[0]?.yardPlan ?? { items: [], paths: [] },
               activeFloor: 0,
               activeRoom: data.floorPlans[0]?.enabledRooms?.[0] ?? "living",
               ...extraState,
