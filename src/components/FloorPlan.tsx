@@ -534,9 +534,25 @@ export default function FloorPlan() {
   const setDoorLen      = useDesignerStore((s) => s.setDoorLen);
   const setDoorH        = useDesignerStore((s) => s.setDoorH);
   const setDoorStyle    = useDesignerStore((s) => s.setDoorStyle);
-  // 车库门默认卷帘门（与 3D 渲染 widenGarageDoor 的默认一致；此前检查器默认
-  // 高亮"实木"却渲染卷帘门 → 用户困惑）。其它房间默认实木。
-  const doorStyle       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? (activeRoom === "garage" ? "roller_shutter" : "wood_panel"));
+  // 门款式默认与 3D 渲染同源，避免"检查器显实木、实际渲染另一种"：
+  //   · 车库 → 卷帘门（widenGarageDoor）
+  //   · 门所在墙是玻璃幕墙面 → 玻璃平开门（FloorPlanExterior 的 _doorOnGlassFace
+  //     分支默认 glass_swing）
+  //   · 其它 → 实木
+  const doorStyle       = useDesignerStore((s) => {
+    const fp = s.floorPlans[s.activeFloor];
+    const explicit = fp.roomDoorStyle?.[activeRoom];
+    if (explicit) return explicit;
+    if (activeRoom === "garage") return "roller_shutter";
+    const curtain = s.exterior?.facadeSystem === "curtain-wall"
+      || (s.exterior?.facadeSystem == null && (s.exterior?.facadeGlass ?? false));
+    if (curtain) {
+      const wall = fp.roomDoorWall?.[activeRoom] ?? "S";
+      // 该墙实墙层不显示 = 玻璃幕墙面 → 玻璃门
+      if (!resolveFacadeLayer(fp, activeRoom, wall, "wall", curtain)) return "glass_swing";
+    }
+    return "wood_panel";
+  });
   const doorEdgeIdx     = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorEdgeIdx?.[activeRoom]);
   const roomDoorsArr    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoors?.[activeRoom]);
   const addDoor         = useDesignerStore((s) => s.addDoor);
@@ -1427,6 +1443,12 @@ export default function FloorPlan() {
                 roomFacadeFaces: { [activeRoom]: facadeFacesOnRoom },
                 roomWallsHidden: { [activeRoom]: wallsHiddenOnRoom },
                 roomExteriorStyle: { [activeRoom]: exteriorStyleOnRoom },
+                // 带上完整布局，让 resolveFacadeLayer 的内墙相邻判定(step4)生效：
+                // 与邻室共用的内墙(如 客厅 E ↔ 餐厅)显示为「实墙」而非幕墙默认，
+                // 与真实渲染一致（此前缺这三项 → 内墙被误显示成玻璃幕墙面）。
+                roomLayout: fpAllRoomLayout,
+                enabledRooms: fpAllEnabledRooms,
+                roomDimensions: fpAllRoomDims,
               } as Parameters<typeof resolveFacadeLayer>[0];
               const en = t.fpWallLabels.N === "N";
               const layers: { layer: FacadeLayer; label: string }[] = [
