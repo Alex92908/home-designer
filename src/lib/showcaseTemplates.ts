@@ -38,12 +38,18 @@ export const SHOWCASE_TEMPLATES: ShowcaseTemplate[] = [
     id: "resort-pool-villa",
     nameZh: "度假泳池别墅",
     nameEn: "Resort Pool Villa",
-    descZh: "通透玻璃幕墙立面 · 泳池套组庭院 · 两层带天台",
-    descEn: "Glass-curtain facade · Pool-set yard · 2 floors + rooftop",
-    tags: ["2F+天台", "玻璃幕墙", "泳池院"],
+    descZh: "实墙开窗立面 · 泳池套组庭院 · 两层带天台",
+    descEn: "Solid-wall facade · Pool-set yard · 2 floors + rooftop",
+    tags: ["2F+天台", "实墙", "泳池院"],
     load: () => {
+      // 与右边的玻璃幕墙别墅区分：同一套户型 + 院子，外观切成 punched-window
+      // （实墙开窗），做成"实墙立面"版样板。
       const p = makeDefaultProject();
-      return { floorPlans: p.floorPlans, exterior: p.exterior, yardPlan: defaultYard(p) };
+      return {
+        floorPlans: p.floorPlans,
+        exterior: { ...p.exterior, facadeSystem: "punched-window", facadeGlass: false, preset: undefined },
+        yardPlan: defaultYard(p),
+      };
     },
   },
   {
