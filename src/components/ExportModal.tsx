@@ -327,6 +327,8 @@ export default function ExportModal() {
           // old file doesn't clobber what the user already has.
           const persisted = JSON.parse(localStorage.getItem("home-designer-v2") || '{"state":{}}').state ?? {};
           const extraState = {
+            // 导入后默认落到「整体外观」页，直接看整栋外观效果（含院子）。
+            viewMode: "exterior" as const,
             customRoomMeta:  data.customRoomMeta  ?? persisted.customRoomMeta  ?? {},
             customFurniture: data.customFurniture ?? persisted.customFurniture ?? [],
             scores:          data.scores          ?? persisted.scores          ?? { style: 0, space: 0, light: 0, dominantStyle: "" },
