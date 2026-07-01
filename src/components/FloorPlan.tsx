@@ -495,7 +495,20 @@ export default function FloorPlan() {
   const doorPosCm       = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorPos?.[activeRoom] ?? 0);
   const hasDoor         = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomHasDoor?.[activeRoom] ?? true);
   const doorWall        = useDesignerStore((s) => (s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "S") as DoorWall);
-  const doorLenCm       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
+  // 车库门默认宽度 = 与渲染 widenGarageDoor 同源（墙长-40，封顶 340cm），
+  // 否则检查器显示 0.80m 却渲染 ~3.4m。其它房间默认 80cm。
+  const doorLenCm       = useDesignerStore((s) => {
+    const fp = s.floorPlans[s.activeFloor];
+    const explicit = fp.roomDoorLen?.[activeRoom];
+    if (explicit != null) return explicit;
+    if (activeRoom === "garage") {
+      const dim = fp.roomDimensions?.[activeRoom];
+      const wall = fp.roomDoorWall?.[activeRoom] ?? "S";
+      const wallLen = (wall === "W" || wall === "E") ? (dim?.depth ?? 320) : (dim?.width ?? 500);
+      return Math.min(wallLen - 40, 340);
+    }
+    return 80;
+  });
   // Default interior-door opening height (cm). Mirrors the 3D render fallback
   // (RoomCanvas / FloorPlanExterior) so the editor shows the same value that
   // actually renders. Per-door / per-room overrides still win.
@@ -521,7 +534,9 @@ export default function FloorPlan() {
   const setDoorLen      = useDesignerStore((s) => s.setDoorLen);
   const setDoorH        = useDesignerStore((s) => s.setDoorH);
   const setDoorStyle    = useDesignerStore((s) => s.setDoorStyle);
-  const doorStyle       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? "wood_panel");
+  // 车库门默认卷帘门（与 3D 渲染 widenGarageDoor 的默认一致；此前检查器默认
+  // 高亮"实木"却渲染卷帘门 → 用户困惑）。其它房间默认实木。
+  const doorStyle       = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? (activeRoom === "garage" ? "roller_shutter" : "wood_panel"));
   const doorEdgeIdx     = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorEdgeIdx?.[activeRoom]);
   const roomDoorsArr    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoors?.[activeRoom]);
   const addDoor         = useDesignerStore((s) => s.addDoor);
