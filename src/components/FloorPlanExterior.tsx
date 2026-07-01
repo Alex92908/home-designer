@@ -7634,11 +7634,11 @@ export default function FloorPlanBuilding({
                 return null;
               }
               const _cfgDoorStyle = door.style ?? floorPlans[fi]?.roomDoorStyle?.[room];
-              const style: import("@/lib/types").DoorStyle = _doorOnGlassFace
-                // 幕墙玻璃面：用通透玻璃门。用户若指定了玻璃平开/玻璃推拉就用其一，
-                // 否则默认玻璃平开门(glass_swing)。两种都是新增的玻璃门样式。
-                ? (_cfgDoorStyle === "glass_slide" || _cfgDoorStyle === "glass_swing" ? _cfgDoorStyle : "glass_swing")
-                : (_cfgDoorStyle ?? "wood_panel");
+              // 设定值优先：用户显式选的门款式一律照用（与门检查器一致，避免"选了
+              // 实木却渲染玻璃门"）。仅当未设款式时，玻璃幕墙面默认玻璃平开门、
+              // 其它面默认实木——与 FloorPlan 门检查器的默认完全同源。
+              const style: import("@/lib/types").DoorStyle =
+                _cfgDoorStyle ?? (_doorOnGlassFace ? "glass_swing" : "wood_panel");
               // Wall mapping: FPE data → WalkthroughDoor3D — both use NSWE now.
               const doorWall: import("@/lib/types").WallSide = door.wall;
               // WalkthroughDoor3D "E" (east/right) measures pos from the large-Z (south) end.
@@ -7662,9 +7662,10 @@ export default function FloorPlanBuilding({
                     doorWall={doorWall}
                     doorPosCm={doorPosCm}
                     doorLenCm={_doorLenCm}
-                    doorHCm={_doorOnGlassFace
-                      // 幕墙玻璃门做成近满层高的落地玻璃门 —— 填满整格、消除门上方
-                      // 那段「空玻璃」(用户：门上方空的干嘛呢)。留 ~10cm 作顶横档。
+                    doorHCm={_doorOnGlassFace && door.h == null
+                      // 设定值优先：设了门高就照用（门上方是幕墙玻璃，本就通透，
+                      // 不会露空）。仅"未设高度"的玻璃门才默认落地高（近满层高、
+                      // 留 ~10cm 顶横档）。避免"设 2.30m 却渲染 2.60m"的不一致。
                       ? Math.round((FLOOR_H - 0.10) * 100)
                       : dHcm}
                     isOpen={isOpen}
@@ -7774,10 +7775,11 @@ export default function FloorPlanBuilding({
               // 把明亮的天空 HDR 反射成接近墙体的奶油白 → 窗户消失。
               const winKey = `window|${fi}|${room}|${wi}`;
               const winOpen = openMap.get(winKey) ?? false;
-              // 幕墙别墅:配置的窗统一做成「上悬开启扇」(顶铰、底边外顶,参考实拍幕墙
-              // 通风扇),带框 + 执手 + 开关动画。其余(非幕墙)按效果图配置的窗型。
+              // 设定值优先：用户显式选的窗型一律照用（避免"选了推拉却渲染上悬"）。
+              // 仅当未设窗型时，幕墙别墅默认「上悬开启扇」(顶铰、底边外顶,参考实拍
+              // 幕墙通风扇)、非幕墙默认推拉——与窗户检查器的默认同源。
               const winStyle: import("@/lib/types").WindowStyle =
-                curtainWall ? "awning" : (win.style ?? "sliding");
+                win.style ?? (curtainWall ? "awning" : "sliding");
               // 玻璃参数两套：
               // · 室内漫游（insideBuilding）：高通透（transmission 0.85 /
               //   opacity 0.35），便于透窗看院子，从里看本就对比强。
