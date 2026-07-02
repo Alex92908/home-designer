@@ -54,8 +54,8 @@
             {
               "instanceId": "tpl_living_0_tvunit-float-white",
               "furnitureId": "tvunit-float-white",
-              "x": 541.11067620594,
-              "z": 223.8350961286957,
+              "x": 561,
+              "z": 205,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1
@@ -63,8 +63,8 @@
             {
               "instanceId": "tpl_living_1_rug-nordic-geo",
               "furnitureId": "rug-nordic-geo",
-              "x": 229.7515223734203,
-              "z": 199.87065677184228,
+              "x": 290,
+              "z": 160,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1
@@ -72,8 +72,8 @@
             {
               "instanceId": "tpl_living_2_coffee-marble-rect",
               "furnitureId": "coffee-marble-rect",
-              "x": 269.7217014778148,
-              "z": 244.81073153103034,
+              "x": 355,
+              "z": 197.5,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1
@@ -99,35 +99,39 @@
             {
               "instanceId": "tpl_living_5_artwork-abstract",
               "furnitureId": "artwork-abstract",
-              "x": 627.5,
-              "z": 249.56643379870837,
-              "rotation": 270,
+              "x": 300,
+              "z": 7.5,
+              "rotation": 0,
               "scaleW": 1,
               "scaleD": 1
             },
             {
               "furnitureId": "sofa-fabric-gray",
-              "x": 100,
-              "z": 245,
-              "rotation": 270
+              "x": 160,
+              "z": 182.5,
+              "rotation": 270,
+              "instanceId": "tpl_living_6_sofa-fabric-gray"
             },
             {
-              "furnitureId": "curtain-modern-gray",
-              "x": 340,
-              "z": 490,
-              "rotation": 0
+              "furnitureId": "curtain-drape",
+              "x": -90,
+              "z": 217.5,
+              "rotation": 90,
+              "instanceId": "tpl_living_7_curtain-drape"
             },
             {
               "furnitureId": "plant-rubber-tree",
               "x": 625,
               "z": 455,
-              "rotation": 0
+              "rotation": 0,
+              "instanceId": "tpl_living_8_plant-rubber-tree"
             },
             {
               "furnitureId": "sideboard-walnut",
               "x": 340,
-              "z": 28,
-              "rotation": 0
+              "z": 9,
+              "rotation": 0,
+              "instanceId": "tpl_living_9_sideboard-walnut"
             }
           ],
           "exteriorDecor": []
@@ -306,7 +310,7 @@
               "instanceId": "tpl_bathroom_1_vanity-double-marble",
               "furnitureId": "vanity-double-marble",
               "x": 7.030000000000001,
-              "z": 114.86452595587218,
+              "z": 154,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1
@@ -511,9 +515,9 @@
             {
               "instanceId": "tpl_study_2_bookshelf-solid-walnut",
               "furnitureId": "bookshelf-solid-walnut",
-              "x": 244.5,
-              "z": 307.5,
-              "rotation": 270,
+              "x": 262.5,
+              "z": 240,
+              "rotation": 90,
               "scaleW": 1,
               "scaleD": 1
             }
@@ -1492,7 +1496,7 @@
             {
               "instanceId": "tpl_bedroom_0_bed-fabric-beige",
               "furnitureId": "bed-fabric-beige",
-              "x": 63.336562500000014,
+              "x": 10,
               "z": 192.00484374999996,
               "rotation": 90,
               "scaleW": 1,
@@ -1512,7 +1516,7 @@
               "furnitureId": "wardrobe-slide-white",
               "x": 230,
               "z": 180.538125,
-              "rotation": 270,
+              "rotation": 90,
               "scaleW": 1,
               "scaleD": 1
             },
@@ -1579,7 +1583,7 @@
             {
               "instanceId": "pi_6_q3kle",
               "furnitureId": "bed-leather-dark",
-              "x": 66.33734375,
+              "x": 0,
               "z": 190.58437500000002,
               "rotation": 180,
               "scaleW": 1,
@@ -1609,9 +1613,9 @@
             {
               "instanceId": "pi_12_4atyl",
               "furnitureId": "wardrobe-slide-white",
-              "x": 183.2078125,
+              "x": 190,
               "z": 96.16296875,
-              "rotation": 270,
+              "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -1689,7 +1693,7 @@
             {
               "instanceId": "pi_18_krpyp",
               "furnitureId": "bed-single-white",
-              "x": 83.1303125,
+              "x": 0,
               "z": 205.140625,
               "rotation": 180,
               "scaleW": 1,
@@ -1701,7 +1705,7 @@
               "furnitureId": "wardrobe-slide-white",
               "x": 124.45203125,
               "z": 98.14937500000002,
-              "rotation": 270,
+              "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -1851,7 +1855,7 @@
             {
               "instanceId": "pi_20_ctk78",
               "furnitureId": "bookshelf-open-white",
-              "x": 135,
+              "x": 175,
               "z": 90.91046874999998,
               "rotation": 90,
               "scaleW": 1,
@@ -1947,7 +1951,7 @@
               "instanceId": "pi_3_zgdzw",
               "furnitureId": "closet-system-white",
               "x": -89.51375,
-              "z": 106.83499999999998,
+              "z": 140,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,

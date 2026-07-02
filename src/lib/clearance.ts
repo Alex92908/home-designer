@@ -52,7 +52,8 @@ export const CLEARANCE_RULES: Partial<Record<FurnitureCategory, ClearanceRule>> 
 
   // 卧室
   bed:           { halo: 60, hugWall: 20, hugWallReason: "床头建议靠墙，有靠背更安心（风水与功能兼顾）", reason: "床两侧/床尾留 60cm 过道+铺床", severity: "required" },
-  nightstand:    { halo: 5, reason: "床头柜紧贴床，预留 5cm 调整空间", severity: "recommended" },
+  // 床头柜贴床贴墙都是常态，5cm halo 只会产生"超出房间 1cm"式噪音 → 不查
+  nightstand:    { halo: 0, reason: "", severity: "recommended" },
   wardrobe:      { frontAisle: 75, halo: 5, hugWall: 10, hugWallReason: "衣柜独立摆放易倾倒（危险！），必须贴墙或打膨胀螺丝", reason: "衣柜前留 75cm 开门+站人", severity: "required" },
   dresser:       { frontAisle: 75, halo: 5, hugWall: 20, hugWallReason: "梳妆台建议贴墙，镜面更稳定", reason: "梳妆台前留 75cm 坐凳", severity: "required" },
 
@@ -60,14 +61,16 @@ export const CLEARANCE_RULES: Partial<Record<FurnitureCategory, ClearanceRule>> 
   dining_table:  { halo: 75, reason: "餐桌四周 75cm 拉开椅子+走动", severity: "required" },
   dining_chair:  { halo: 0, reason: "", severity: "recommended" }, // 椅子跟随桌子，不单独校验
 
-  // 厨房
-  kitchen_cabinet: { frontAisle: 90, halo: 0, hugWall: 5,  hugWallReason: "橱柜须贴墙安装", reason: "橱柜前留 90cm 操作+开门", severity: "required" },
+  // 厨房（hugWall 15：模板/手摆常离墙 8-12cm，5cm 阈值几乎恒报）
+  kitchen_cabinet: { frontAisle: 90, halo: 0, hugWall: 15,  hugWallReason: "橱柜须贴墙安装", reason: "橱柜前留 90cm 操作+开门", severity: "required" },
   refrigerator:    { frontAisle: 90, halo: 5, hugWall: 20, hugWallReason: "冰箱建议贴墙（散热留 5-10cm），独立摆放浪费空间", reason: "冰箱前留 90cm 开门取物+散热", severity: "required" },
-  range_hood:      { halo: 0, hugWall: 5, hugWallReason: "油烟机须贴墙（与灶台对齐）", reason: "", severity: "recommended" },
-  kitchen_sink:    { frontAisle: 80, halo: 0, hugWall: 5, hugWallReason: "水槽须嵌入橱柜、贴墙安装", reason: "水槽前留 80cm 洗涮站位", severity: "required" },
+  range_hood:      { halo: 0, hugWall: 15, hugWallReason: "油烟机须贴墙（与灶台对齐）", reason: "", severity: "recommended" },
+  kitchen_sink:    { frontAisle: 80, halo: 0, hugWall: 15, hugWallReason: "水槽须嵌入橱柜、贴墙安装", reason: "水槽前留 80cm 洗涮站位", severity: "required" },
 
   // 卫生间
-  toilet:           { frontAisle: 50, halo: 20, hugWall: 10, hugWallReason: "马桶须贴墙（下水管位置固定）", reason: "马桶前留 50cm，两侧 20cm", severity: "required" },
+  // 注意：halo 是四向扩张，贴墙件（hugWall）背面的 halo 必然伸出墙外 →
+  // "预留空间超出房间"恒报。马桶改为只查正面 50cm（两侧靠 overlap 兜底）。
+  toilet:           { frontAisle: 50, halo: 0, hugWall: 10, hugWallReason: "马桶须贴墙（下水管位置固定）", reason: "马桶前留 50cm", severity: "required" },
   bathtub:          { frontAisle: 60, halo: 5, reason: "浴缸前留 60cm 进出+擦身", severity: "required" },
   shower:           { frontAisle: 60, halo: 5, reason: "淋浴房前留 60cm 进出", severity: "required" },
   bathroom_vanity:  { frontAisle: 75, halo: 5, hugWall: 10, hugWallReason: "洗手台须贴墙（上下水管位置固定）", reason: "洗手台前留 75cm 弯腰+站立", severity: "required" },
@@ -76,6 +79,21 @@ export const CLEARANCE_RULES: Partial<Record<FurnitureCategory, ClearanceRule>> 
   desk:          { frontAisle: 75, halo: 5, reason: "书桌前留 75cm 椅子+坐位", severity: "required" },
   office_chair:  { halo: 0, reason: "", severity: "recommended" },
   storage:       { frontAisle: 60, halo: 5, hugWall: 20, hugWallReason: "储物柜建议贴墙，节省空间+更稳", reason: "储物柜前留 60cm 开门", severity: "recommended" },
+};
+
+// ─── Companion pairs ─────────────────────────────────────────
+// 天然成组贴放的家具：椅子塞进餐桌 halo、床头柜紧贴床、水槽嵌进橱柜台面
+// 都是标准设计，互相之间不算"预留空间冲突"（否则每张餐桌恒报 6 条椅子冲突）。
+export const COMPANION_PAIRS: Partial<Record<FurnitureCategory, FurnitureCategory[]>> = {
+  dining_table: ["dining_chair"],
+  dining_chair: ["dining_table"],
+  bed: ["nightstand"],
+  nightstand: ["bed"],
+  desk: ["office_chair"],
+  office_chair: ["desk"],
+  kitchen_cabinet: ["kitchen_sink", "range_hood", "kitchen_cabinet", "appliance"],
+  kitchen_sink: ["kitchen_cabinet", "appliance"],
+  range_hood: ["kitchen_cabinet", "appliance"],
 };
 
 // ─── Geometry helpers ────────────────────────────────────────
@@ -282,10 +300,12 @@ export const RELATIONAL_RULES: RelationalRule[] = [
     a: "kitchen_sink",
     b: "refrigerator",
     minCm: 120,
-    maxCm: 270,
+    // 冰箱不在洗切热轴线上，工作三角单边上限常取 2.7-3.7m；270 会让
+    // "水槽西墙 + 冰箱东墙"的常规中型厨房恒报 → 放宽到 350。
+    maxCm: 350,
     requiresBoth: true,
     tooCloseReason: "水槽与冰箱过近（建议 ≥1.2m），开冰箱门易被水溅到",
-    tooFarReason: "水槽与冰箱过远（建议 ≤2.7m），洗切食材动线过长",
+    tooFarReason: "水槽与冰箱过远（建议 ≤3.5m），洗切食材动线过长",
     severity: "recommended",
   },
   {
@@ -439,11 +459,18 @@ export function evaluateRoom(
     ? doorSwingZone(door.wall, door.posCm, door.lenCm, roomW, roomD)
     : null;
 
+  // 平铺/挂墙装饰：地毯是 2cm 平面（茶几/沙发压地毯是标准设计）、挂画和
+  // 窗帘贴墙悬空——都不构成通行/开门障碍，既不参与别人的预留空间冲突，
+  // 也不算阻挡门开合。不排除会导致"茶几与地毯冲突""地毯挡门"式误报。
+  const FLAT_DECOR = new Set<string>(["rug", "artwork", "curtain"]);
+
   const evaluated: EvaluatedItem[] = items.map(it => {
     const violations: Violation[] = [];
 
     // Door-swing: anything whose footprint intrudes the swing area blocks the door.
-    if (swing && overlaps(swing.bbox, it.bbox, 1)) {
+    // 挂高件（上柜/油烟机等，底面高于 1.2m）不在门扇扫过范围内。
+    const hangsHigh = (it.placed.elevationY ?? 0) >= 120;
+    if (swing && !FLAT_DECOR.has(it.f.category) && !hangsHigh && overlaps(swing.bbox, it.bbox, 1)) {
       violations.push({
         instanceId: it.placed.instanceId,
         furnitureName: it.f.name,
@@ -456,12 +483,14 @@ export function evaluateRoom(
 
     // Window-block: furniture tall enough to rise above the sill AND
     // sitting inside the window strip → blocks daylight / airflow.
+    // 窗帘/挂画本来就挂在窗上或墙面高处，不参与此检查（否则窗帘恒报遮挡）。
     const fElev   = it.placed.elevationY ?? 0;
     const fScaleH = it.placed.scaleH ?? 1;
     const fTop    = fElev + it.f.height * fScaleH;
-    for (const win of windows) {
+    for (const win of FLAT_DECOR.has(it.f.category) ? [] : windows) {
       const sill = win.sill ?? 90;
-      if (fTop <= sill) continue;
+      // +40cm 宽容带：床头板/矮柜比窗台高出一点点不算实质遮挡
+      if (fTop <= sill + 40) continue;
       const strip = windowStripBBox(win, roomW, roomD);
       if (overlaps(strip, it.bbox, 1)) {
         violations.push({
@@ -508,7 +537,10 @@ export function evaluateRoom(
       const maxZ = it.zone.cz + it.zone.d / 2;
 
       // Compute deficit = how far the clearance is pushed past a wall.
-      const wallDeficit = Math.max(0, -minX, -minZ, maxX - roomW, maxZ - roomD);
+      // 贴墙件（hugWall）的 halo 是四向的，其背面 halo 必然压进墙里——
+      // 允许 halo 大小的超出，否则贴墙电视柜/边柜/衣柜恒报"超出房间 5cm"。
+      const wallTolerance = it.rule.hugWall != null ? (it.rule.halo ?? 0) : 0;
+      const wallDeficit = Math.max(0, -minX, -minZ, maxX - roomW, maxZ - roomD) - wallTolerance;
       if (wallDeficit > 1) {
         violations.push({
           instanceId: it.placed.instanceId,
@@ -521,8 +553,16 @@ export function evaluateRoom(
       }
 
       // Overlap with other items' footprints.
+      const itElev = it.placed.elevationY ?? 0;
+      const itTop  = itElev + it.f.height * (it.placed.scaleH ?? 1);
       for (const other of items) {
         if (other.placed.instanceId === it.placed.instanceId) continue;
+        if (FLAT_DECOR.has(other.f.category)) continue; // 地毯/挂画/窗帘不算障碍
+        if (COMPANION_PAIRS[it.f.category]?.includes(other.f.category)) continue; // 成组家具（椅↔桌、床头柜↔床…）
+        // Y 区间不相交（挂墙上柜/油烟机 vs 地面件）→ 不构成冲突
+        const oElev = other.placed.elevationY ?? 0;
+        const oTop  = oElev + other.f.height * (other.placed.scaleH ?? 1);
+        if (oElev >= itTop - 1 || itElev >= oTop - 1) continue;
         if (overlaps(it.zone, other.bbox, 1)) {
           violations.push({
             instanceId: it.placed.instanceId,

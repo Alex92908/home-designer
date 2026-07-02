@@ -165,7 +165,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "悬浮设计，视觉减负",
     icon: "📺",
-    model3d: { url: "/models/tv_unit/ClassicConsole_01/ClassicConsole_01_1k.glb" },
+    model3d: { url: "/models/tv_unit/tv_stand_modern/tv_stand_modern.glb", fit: "fill" },
   },
   {
     id: "tvunit-walnut",
@@ -201,7 +201,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "轻奢", "工业风"],
     description: "岩板台面，高级质感",
     icon: "📺",
-    model3d: { url: "/models/tv_unit/ClassicConsole_01/ClassicConsole_01_1k.glb" },
+    model3d: { url: "/models/tv_unit/tv_stand_showcase/tv_stand_showcase.glb", fit: "fill" },
     imageUrl: "/artworks/monet_impression_sunrise.jpg",
   },
 
