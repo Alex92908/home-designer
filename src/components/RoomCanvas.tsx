@@ -10,6 +10,7 @@ import { Suspense } from "react";
 import * as THREE from "three";
 import { useDesignerStore, RoomState } from "@/lib/store";
 import { useLocale, useLocaleStore } from "@/lib/i18n";
+import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
 const EMPTY_ROOM_STATE_RC: RoomState = { materials: {}, placedItems: [] };
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, PlacedItem, RoomDef, WindowConfig, MaterialItem, RoomType, ExteriorWallDecorItem, WallSide, resolveFacadeLayer, resolveFaceOpacity } from "@/lib/types";
@@ -4476,6 +4477,8 @@ export default function RoomCanvas() {
   // joystick state shape so the TouchJoystick widget can drive movement
   // alongside (or instead of) WASD on devices without a keyboard.
   const [joystick, setJoystick] = useState({ axisX: 0, axisZ: 0 });
+  // 首帧渲染完成 → 撤下加载幕布（SceneVeil）。
+  const [sceneReady, setSceneReady] = useState(false);
   const activeRoom     = useDesignerStore(s => s.activeRoom);
   const roomDimensions = useDesignerStore(s => s.floorPlans[s.activeFloor]?.roomDimensions?.[activeRoom]);
   // Fallbacks so the walkthrough still works if the room dims haven't
@@ -4522,6 +4525,8 @@ export default function RoomCanvas() {
         </>
       )}
 
+      {/* 加载幕布：盖住场景构建/GLB 解码期间的灰屏（详见 SceneVeil）。 */}
+      <SceneVeil ready={sceneReady} label={locale === "en" ? "Building room scene" : "正在构建房间场景"} />
       <ErrorBoundary>
         <Canvas
           gl={{
@@ -4549,7 +4554,9 @@ export default function RoomCanvas() {
           }}
           dpr={[1, 2]}
           shadows={{ type: THREE.PCFSoftShadowMap }}
-          camera={{ position: [0, 1.4, 6], fov: 58, near: 0.1, far: 80 }}
+          // z 6→4.8 / y 1.4→1.55：老机位太远，房间只占画面中间一小块、四周
+          // 大片灰背景（录屏构图差）。拉近让房间撑满视野。
+          camera={{ position: [0, 1.55, 4.8], fov: 58, near: 0.1, far: 80 }}
           style={{
             // 柔和中灰蓝：既不让白墙融进去（原来的 #E9EEF3），也不让
             // 白墙显得刺眼（上一版 #525B6A 太暗，墙看起来像纸片）。
@@ -4578,6 +4585,7 @@ export default function RoomCanvas() {
             joystick={joystick}
           />
           <Scene isIOS={isIOS} firstPerson={firstPerson} />
+          <FirstFrameNotifier onReady={() => setSceneReady(true)} />
         </Canvas>
       </ErrorBoundary>
     </div>

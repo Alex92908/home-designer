@@ -1076,7 +1076,9 @@ function CameraFit() {
     const totalH = exteriorFloors * FLOOR_H;
     const lookH  = totalH * 0.5;
     const d3     = Math.max(extent, totalH) * 1.1;
-    camera.position.set(d3 * 0.85, lookH + d3 * 0.65, d3 * 0.85);
+    // 高度系数 0.65→0.50：老值太俯视，首屏大半被天台平板占据、室内家具
+    // 存在感低；压低到侧斜视让"剖面样板房"更有层次（视频首帧更好看）。
+    camera.position.set(d3 * 0.85, lookH + d3 * 0.50, d3 * 0.85);
     camera.lookAt(0, lookH, 0);
     camera.updateProjectionMatrix();
     if (controls.current) {

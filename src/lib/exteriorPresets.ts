@@ -189,8 +189,8 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       { id: "mm-fence-e",  type: "prefab", prefabKind: "fence_segment", x:  1080, z: 560, rot: Math.PI / 2,
         params: { lengthM: 6.0, heightM: 1.8 } },
       // ── 松柏背景（参考图远景松林）+ 橄榄树锚点
-      { id: "mm-tree-1", type: "singleton", kind: "tree.cypress", x: -980, z: 980, scale: 1.2 },
-      { id: "mm-tree-2", type: "singleton", kind: "tree.cypress", x:  980, z: 980, scale: 1.2 },
+      { id: "mm-tree-1", type: "singleton", kind: "tree.olive", x: -980, z: 980, scale: 1.2 },
+      { id: "mm-tree-2", type: "singleton", kind: "tree.olive", x:  980, z: 980, scale: 1.2 },
       { id: "mm-tree-3", type: "singleton", kind: "tree.olive",   x: -560, z: 1000, scale: 1.2 },
       { id: "mm-tree-4", type: "singleton", kind: "tree.olive",   x:  560, z: 1000, scale: 1.2 },
       // ── 观赏草花境：沿甲板边角丛植（参考图铺装缝里的草簇）
@@ -258,10 +258,10 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       { id: "fc-zone-social", type: "zone", zoneKind: "social", subtype: "outdoor-room", x: 420, z: 700, polygon: zoneRect(340, 260) },
       { id: "fc-zone-lawn",   type: "zone", zoneKind: "lawn",   x: 0, z: -780, polygon: zoneRect(700, 360) },
       // 柏树列植（沿入户轴线对称）
-      { id: "fc-cy-1", type: "singleton", kind: "tree.cypress", x: -160, z: 1000, scale: 1.1 },
-      { id: "fc-cy-2", type: "singleton", kind: "tree.cypress", x:  160, z: 1000, scale: 1.1 },
-      { id: "fc-cy-3", type: "singleton", kind: "tree.cypress", x: -160, z:  720, scale: 1.1 },
-      { id: "fc-cy-4", type: "singleton", kind: "tree.cypress", x:  160, z:  720, scale: 1.1 },
+      { id: "fc-cy-1", type: "singleton", kind: "tree.olive", x: -160, z: 1000, scale: 1.1 },
+      { id: "fc-cy-2", type: "singleton", kind: "tree.olive", x:  160, z: 1000, scale: 1.1 },
+      { id: "fc-cy-3", type: "singleton", kind: "tree.olive", x: -160, z:  720, scale: 1.1 },
+      { id: "fc-cy-4", type: "singleton", kind: "tree.olive", x:  160, z:  720, scale: 1.1 },
       // 花境（红/紫/黄三色，靠路两侧）
       { id: "fc-fl-1", type: "singleton", kind: "plant.flowerRed",    x: -260, z: 880 },
       { id: "fc-fl-2", type: "singleton", kind: "plant.flowerPurple", x:  260, z: 880 },
@@ -270,7 +270,7 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       // 焦点喷泉（左前）+ 社交区餐桌
       { id: "fc-fountain", type: "prefab", prefabKind: "fountain", x: -450, z: 760 },
       { id: "fc-dining",   type: "singleton", kind: "furniture.diningSet", x: 420, z: 700 },
-      { id: "fc-oak",      type: "singleton", kind: "tree.oak", x: 850, z: -550, scale: 1.2 },
+      { id: "fc-oak",      type: "singleton", kind: "tree.olive", x: 850, z: -550, scale: 1.2 },
       // 灌木层：修剪绿篱沿入户两侧（法式 parterre 的骨架）+ 喷泉环植花
       { id: "fc-hedge-1", type: "singleton", kind: "plant.bushLarge", x: -340, z: 1000, scale: 0.85 },
       { id: "fc-hedge-2", type: "singleton", kind: "plant.bushLarge", x:  340, z: 1000, scale: 0.85 },
@@ -334,8 +334,8 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
     yardItems: [
       { id: "il-zone-social",  type: "zone", zoneKind: "social",  subtype: "outdoor-room",  x: 400, z: 700, polygon: zoneRect(340, 260) },
       { id: "il-zone-service", type: "zone", zoneKind: "utility", subtype: "service-yard",  x: -780, z: -200, polygon: zoneRect(220, 420) },
-      { id: "il-pine-1", type: "singleton", kind: "tree.pine", x: -880, z: 560, scale: 1.2 },
-      { id: "il-pine-2", type: "singleton", kind: "tree.pine", x:  920, z: -420, scale: 1.0 },
+      { id: "il-pine-1", type: "singleton", kind: "tree.olive", x: -880, z: 560, scale: 1.2 },
+      { id: "il-pine-2", type: "singleton", kind: "tree.olive", x:  920, z: -420, scale: 1.0 },
       { id: "il-grass-1", type: "singleton", kind: "plant.grass", x: -340, z: 760, scale: 1.4 },
       { id: "il-grass-2", type: "singleton", kind: "plant.grass", x: -460, z: 640, scale: 1.2 },
       { id: "il-grass-3", type: "singleton", kind: "plant.grass", x:  200, z: 900, scale: 1.3 },
@@ -480,11 +480,11 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       { id: "jz-rock-sub",  type: "singleton", kind: "rock.large",     x: -540, z: 740, scale: 1.0 },
       { id: "jz-rock-flat", type: "singleton", kind: "rock.flat",      x: -330, z: 720, scale: 1.1 },
       // 乔木：红枫 + 黑松；入户对置盆景
-      { id: "jz-maple-1", type: "singleton", kind: "tree.maple", x: -560, z: 600, scale: 1.1 },
-      { id: "jz-maple-2", type: "singleton", kind: "tree.maple", x:  880, z: -380, scale: 0.9 },
-      { id: "jz-pine",    type: "singleton", kind: "tree.pine",  x:  900, z: 620, scale: 1.1 },
-      { id: "jz-bonsai-1", type: "singleton", kind: "tree.bonsai", x: -150, z: 530 },
-      { id: "jz-bonsai-2", type: "singleton", kind: "tree.bonsai", x:  150, z: 530 },
+      { id: "jz-maple-1", type: "singleton", kind: "tree.olive", x: -560, z: 600, scale: 1.1 },
+      { id: "jz-maple-2", type: "singleton", kind: "tree.olive", x:  880, z: -380, scale: 0.9 },
+      { id: "jz-pine",    type: "singleton", kind: "tree.olive",  x:  900, z: 620, scale: 1.1 },
+      { id: "jz-bonsai-1", type: "singleton", kind: "plant.bushSmall", x: -150, z: 530 },
+      { id: "jz-bonsai-2", type: "singleton", kind: "plant.bushSmall", x:  150, z: 530 },
       // 低层灌木（苔感）
       { id: "jz-bush-1", type: "singleton", kind: "plant.bushSmall", x: -360, z: 880 },
       { id: "jz-bush-2", type: "singleton", kind: "plant.bushSmall", x: -600, z: 840 },
@@ -574,10 +574,10 @@ export const EXTERIOR_PRESETS: ExteriorPreset[] = [
       { id: "gc-lounge-1", type: "singleton", kind: "furniture.chaiseLounger", x: -360, z: 560, rot: 0 },
       { id: "gc-lounge-2", type: "singleton", kind: "furniture.chaiseLounger", x: -240, z: 560, rot: 0 },
       // Pine backdrop + cypress anchors (reference far-tree line)
-      { id: "gc-tree-1", type: "singleton", kind: "tree.cypress", x: -980, z: 980, scale: 1.2 },
-      { id: "gc-tree-2", type: "singleton", kind: "tree.cypress", x:  980, z: 980, scale: 1.2 },
-      { id: "gc-tree-3", type: "singleton", kind: "tree.pine",    x: -600, z: 1040, scale: 1.3 },
-      { id: "gc-tree-4", type: "singleton", kind: "tree.pine",    x:  600, z: 1040, scale: 1.3 },
+      { id: "gc-tree-1", type: "singleton", kind: "tree.olive", x: -980, z: 980, scale: 1.2 },
+      { id: "gc-tree-2", type: "singleton", kind: "tree.olive", x:  980, z: 980, scale: 1.2 },
+      { id: "gc-tree-3", type: "singleton", kind: "tree.olive",    x: -600, z: 1040, scale: 1.3 },
+      { id: "gc-tree-4", type: "singleton", kind: "tree.olive",    x:  600, z: 1040, scale: 1.3 },
       { id: "gc-grass-1", type: "singleton", kind: "plant.grass", x: -520, z: 560, scale: 1.2 },
       { id: "gc-grass-2", type: "singleton", kind: "plant.grass", x:  520, z: 560, scale: 1.2 },
     ],

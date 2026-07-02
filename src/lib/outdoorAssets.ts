@@ -76,15 +76,11 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
   // scripts/download-sketchfab.mjs). At runtime, if the file exists the
   // renderer uses the real PBR model; if not, falls back to the Kenney
   // GLB at `glb`. So the schema works in both states.
-  { kind: "tree.oak",      label: "橡树",   labelEn: "Oak",     icon: "🌳", category: "tree",    glb: "tree_oak",          scale: 4.5, radiusCm: 130, color: "#5C8A3F" },
-  { kind: "tree.pine",     label: "松树",   labelEn: "Pine",    icon: "🌲", category: "tree",    glb: "tree_pineDefaultA", scale: 5.0, radiusCm: 110, color: "#3F6B45" },
-  // PBR Sketchfab models are auto-normalised at render time. We just
-  // declare the desired real-world HEIGHT in metres (customTargetHeightM)
-  // and the renderer reads each model's bounding box and computes the
-  // scale. Bulletproof against the model's native units (cm, m, inches).
-  { kind: "tree.cypress",  label: "柏树",   labelEn: "Cypress", icon: "🌲", category: "tree",    glb: "tree_pineTallA",    scale: 6.0, radiusCm: 80,  color: "#345A2E",
-    customGltfPath: "/models/outdoor_tree/cypress_tree_lowpoly/cypress_tree_lowpoly.glb",
-    customTargetHeightM: 4.5, customAuthor: "Alan Zimmerman" },
+  //
+  // 2026-06 素材整治：只保留观感过关的两棵树（棕榈/橄榄，Sketchfab PBR）。
+  // 原 oak/pine/cypress/maple/bonsai（Kenney 低模或 lowpoly 风格）观感差，
+  // 已从库中下架；旧存档里的这些 kind 由 getOutdoorAssetByKind 兜底映射到
+  // 橄榄（bonsai → plant.bushSmall），预设/模板引用也已全部改写。
   // Palm: switched to `palm_tree_lowpoly` (Connor_Appleton) — opaque
   // foliage planes, no alpha cutout issues.
   { kind: "tree.palm",     label: "棕榈",   labelEn: "Palm",    icon: "🌴", category: "tree",    glb: "tree_palmTall",     scale: 5.5, radiusCm: 120, color: "#7BA058",
@@ -93,12 +89,6 @@ export const OUTDOOR_ASSET_LIBRARY: OutdoorAsset[] = [
   { kind: "tree.olive",    label: "橄榄",   labelEn: "Olive",   icon: "🫒", category: "tree",    glb: "tree_default",      scale: 4.0, radiusCm: 120, color: "#9FA078",
     customGltfPath: "/models/outdoor_tree/old_olive_tree/old_olive_tree.glb",
     customTargetHeightM: 5.0, customAuthor: "massive-graphisme" },
-  { kind: "tree.maple",    label: "枫树",   labelEn: "Maple",   icon: "🍁", category: "tree",    glb: "tree_oak",          scale: 4.5, radiusCm: 130, color: "#C97A3F",
-    customGltfPath: "/models/outdoor_tree/japanese_maple/japanese_maple.glb",
-    customTargetHeightM: 4.5, customAuthor: "OliverMatheGames" },
-  { kind: "tree.bonsai",   label: "盆栽",   labelEn: "Bonsai",  icon: "🪴", category: "tree",    glb: "tree_blocks",       scale: 2.8, radiusCm: 60,  color: "#5C8A3F",
-    customGltfPath: "/models/outdoor_tree/bonsai_lowpoly/bonsai_lowpoly.glb",
-    customTargetHeightM: 0.6, customAuthor: "Alice Ursu" },
 
   // ── Plants ──
   // shrub_01 .bin 截断 → 走程序化 fallback（同 crystalline_iceplant）
@@ -280,7 +270,13 @@ export const PREFAB_PURCHASE: Record<string, {
 };
 
 export function getOutdoorAssetByKind(kind: string): OutdoorAsset | undefined {
-  return OUTDOOR_ASSET_LIBRARY.find(a => a.kind === kind);
+  const hit = OUTDOOR_ASSET_LIBRARY.find(a => a.kind === kind);
+  if (hit) return hit;
+  // 旧存档兼容：已下架的差树 kind（oak/pine/cypress/maple/birch/apple）映射
+  // 到橄榄，bonsai 映射到小灌木——老项目里的树照常渲染，只是换成好模型。
+  if (kind === "tree.bonsai") return OUTDOOR_ASSET_LIBRARY.find(a => a.kind === "plant.bushSmall");
+  if (kind.startsWith("tree.")) return OUTDOOR_ASSET_LIBRARY.find(a => a.kind === "tree.olive");
+  return undefined;
 }
 
 /** Curated yard presets — one click drops a fully-staged scene into the
@@ -359,10 +355,10 @@ export const YARD_PRESETS: YardPreset[] = [
         x: 0, z: -700,
         polygon: rectZone(1400, 500), rot: 0 },
       // Cypress sentinels (formal axis along the front) — kept as singletons
-      { type: "singleton", kind: "tree.cypress", x: -700, z: -1000 },
-      { type: "singleton", kind: "tree.cypress", x: -350, z: -1000 },
-      { type: "singleton", kind: "tree.cypress", x:  350, z: -1000 },
-      { type: "singleton", kind: "tree.cypress", x:  700, z: -1000 },
+      { type: "singleton", kind: "tree.olive", x: -700, z: -1000 },
+      { type: "singleton", kind: "tree.olive", x: -350, z: -1000 },
+      { type: "singleton", kind: "tree.olive", x:  350, z: -1000 },
+      { type: "singleton", kind: "tree.olive", x:  700, z: -1000 },
       // Hero olive (left side, off-axis)
       { type: "singleton", kind: "tree.olive", x: -1000, z: 0, scale: 1.5 },
       { type: "singleton", kind: "tree.olive", x:  1000, z: 0, scale: 1.5 },
@@ -387,7 +383,7 @@ export const YARD_PRESETS: YardPreset[] = [
         x: 900, z: 0, rot: Math.PI / 2,
         params: { lengthM: 9, heightM: 2.0, slatCm: 4, gapCm: 3, backWall: false } },
       // Hero maple (focal point of the deck)
-      { type: "singleton", kind: "tree.maple", x: -300, z: 200, scale: 1.6 },
+      { type: "singleton", kind: "tree.olive", x: -300, z: 200, scale: 1.6 },
       // Bamboo grove behind the slat wall (legacy singletons, gives texture)
       { type: "singleton", kind: "feature.cropBamboo", x:  950, z: -200 },
       { type: "singleton", kind: "feature.cropBamboo", x: 1000, z:    0 },
@@ -432,10 +428,10 @@ export const YARD_PRESETS: YardPreset[] = [
         params: { sizeM: { w: 5, d: 3.5 }, fireFeature: "pit", kitchenFacing: "south", sunkenSeat: true } },
       // Boundary oaks (4 corners) — legacy singletons, gives the estate
       // its characteristic tree mass
-      { type: "singleton", kind: "tree.oak", x: -1200, z: -700, scale: 1.3 },
-      { type: "singleton", kind: "tree.oak", x:  1200, z: -700, scale: 1.3 },
-      { type: "singleton", kind: "tree.oak", x: -1200, z:  900, scale: 1.3 },
-      { type: "singleton", kind: "tree.oak", x:  1200, z:  900, scale: 1.3 },
+      { type: "singleton", kind: "tree.olive", x: -1200, z: -700, scale: 1.3 },
+      { type: "singleton", kind: "tree.olive", x:  1200, z: -700, scale: 1.3 },
+      { type: "singleton", kind: "tree.olive", x: -1200, z:  900, scale: 1.3 },
+      { type: "singleton", kind: "tree.olive", x:  1200, z:  900, scale: 1.3 },
     ],
   },
 
@@ -495,15 +491,15 @@ export const YARD_PRESETS: YardPreset[] = [
       { type: "singleton", kind: "tree.palm", x:  300, z:  700, scale: 1.5 },
       { type: "singleton", kind: "tree.palm", x:  700, z:  700, scale: 1.5 },
       // Boundary cypress — 4 corners, formal vertical accent
-      { type: "singleton", kind: "tree.cypress", x: -1300, z: -1300 },
-      { type: "singleton", kind: "tree.cypress", x:  1300, z: -1300 },
-      { type: "singleton", kind: "tree.cypress", x: -1300, z:  1300 },
-      { type: "singleton", kind: "tree.cypress", x:  1300, z:  1300 },
+      { type: "singleton", kind: "tree.olive", x: -1300, z: -1300 },
+      { type: "singleton", kind: "tree.olive", x:  1300, z: -1300 },
+      { type: "singleton", kind: "tree.olive", x: -1300, z:  1300 },
+      { type: "singleton", kind: "tree.olive", x:  1300, z:  1300 },
       // Boxwood parterre — low formal hedges flanking allée
-      { type: "singleton", kind: "tree.bonsai", x: -500, z: 0 },
-      { type: "singleton", kind: "tree.bonsai", x:  500, z: 0 },
-      { type: "singleton", kind: "tree.bonsai", x: -500, z: 400 },
-      { type: "singleton", kind: "tree.bonsai", x:  500, z: 400 },
+      { type: "singleton", kind: "plant.bushSmall", x: -500, z: 0 },
+      { type: "singleton", kind: "plant.bushSmall", x:  500, z: 0 },
+      { type: "singleton", kind: "plant.bushSmall", x: -500, z: 400 },
+      { type: "singleton", kind: "plant.bushSmall", x:  500, z: 400 },
     ],
   },
 
@@ -543,14 +539,14 @@ export const YARD_PRESETS: YardPreset[] = [
         x:  1150, z: 0, rot: Math.PI / 2,
         params: { lengthM: 18, heightM: 1.6, slatCm: 4, gapCm: 2, backWall: true } },
       // ── Cypress sentinels — perfect mirror, 8 trees ──
-      { type: "singleton", kind: "tree.cypress", x: -350, z: -800 },
-      { type: "singleton", kind: "tree.cypress", x:  350, z: -800 },
-      { type: "singleton", kind: "tree.cypress", x: -350, z: -400 },
-      { type: "singleton", kind: "tree.cypress", x:  350, z: -400 },
-      { type: "singleton", kind: "tree.cypress", x: -350, z:  400 },
-      { type: "singleton", kind: "tree.cypress", x:  350, z:  400 },
-      { type: "singleton", kind: "tree.cypress", x: -350, z:  800 },
-      { type: "singleton", kind: "tree.cypress", x:  350, z:  800 },
+      { type: "singleton", kind: "tree.olive", x: -350, z: -800 },
+      { type: "singleton", kind: "tree.olive", x:  350, z: -800 },
+      { type: "singleton", kind: "tree.olive", x: -350, z: -400 },
+      { type: "singleton", kind: "tree.olive", x:  350, z: -400 },
+      { type: "singleton", kind: "tree.olive", x: -350, z:  400 },
+      { type: "singleton", kind: "tree.olive", x:  350, z:  400 },
+      { type: "singleton", kind: "tree.olive", x: -350, z:  800 },
+      { type: "singleton", kind: "tree.olive", x:  350, z:  800 },
       // Boxwood parterre — many low bushes in geometric grid
       { type: "singleton", kind: "plant.bushSmall", x: -800, z: -600 },
       { type: "singleton", kind: "plant.bushSmall", x:  800, z: -600 },
@@ -606,13 +602,13 @@ export const YARD_PRESETS: YardPreset[] = [
       // Hero olives — sculptural, mature, off-axis (no formal allée)
       { type: "singleton", kind: "tree.olive", x: -900, z: -300, scale: 1.7 },
       { type: "singleton", kind: "tree.olive", x:  900, z: -400, scale: 1.6 },
-      { type: "singleton", kind: "tree.maple", x: -200, z: -500, scale: 1.5 },
+      { type: "singleton", kind: "tree.olive", x: -200, z: -500, scale: 1.5 },
       // Mass planting: 5 cypress in a loose curve
-      { type: "singleton", kind: "tree.cypress", x:  600, z:  300 },
-      { type: "singleton", kind: "tree.cypress", x:  900, z:  500 },
-      { type: "singleton", kind: "tree.cypress", x: 1100, z:  300 },
-      { type: "singleton", kind: "tree.cypress", x: -1100, z: -700 },
-      { type: "singleton", kind: "tree.cypress", x: -800, z: -800 },
+      { type: "singleton", kind: "tree.olive", x:  600, z:  300 },
+      { type: "singleton", kind: "tree.olive", x:  900, z:  500 },
+      { type: "singleton", kind: "tree.olive", x: 1100, z:  300 },
+      { type: "singleton", kind: "tree.olive", x: -1100, z: -700 },
+      { type: "singleton", kind: "tree.olive", x: -800, z: -800 },
       // Big boxwood masses for ground accent
       { type: "singleton", kind: "plant.bushLarge", x: -400, z: 400 },
       { type: "singleton", kind: "plant.bushLarge", x:  400, z: 400 },
@@ -658,8 +654,8 @@ export const YARD_PRESETS: YardPreset[] = [
       { type: "singleton", kind: "tree.olive", x: -700, z: -1100, scale: 1.3 },
       { type: "singleton", kind: "tree.olive", x:  700, z: -1100, scale: 1.3 },
       // Cypress markers (the iconic Tuscan vertical accent at the far end)
-      { type: "singleton", kind: "tree.cypress", x: -200, z:  1200 },
-      { type: "singleton", kind: "tree.cypress", x:  200, z:  1200 },
+      { type: "singleton", kind: "tree.olive", x: -200, z:  1200 },
+      { type: "singleton", kind: "tree.olive", x:  200, z:  1200 },
       // Bushes around the terrace edge
       { type: "singleton", kind: "plant.bushLarge", x: -700, z: 300 },
       { type: "singleton", kind: "plant.bushLarge", x:  700, z: 300 },
@@ -695,7 +691,7 @@ export const YARD_PRESETS: YardPreset[] = [
         x: -1200, z: 0, rot: Math.PI / 2,
         params: { lengthM: 14, heightM: 1.8, slatCm: 3, gapCm: 4, backWall: false } },
       // ── Hero pine + sculptural arrangement ──
-      { type: "singleton", kind: "tree.cypress", x: -400, z: -200, scale: 1.4 },
+      { type: "singleton", kind: "tree.olive", x: -400, z: -200, scale: 1.4 },
       // Iconic stone arrangement — 3 stones of varying heights (San-zon)
       { type: "singleton", kind: "rock.stoneTall", x: 200, z: 0, scale: 1.4 },
       { type: "singleton", kind: "rock.large",     x: 100, z: 100, scale: 1.2 },
@@ -710,8 +706,8 @@ export const YARD_PRESETS: YardPreset[] = [
       { type: "singleton", kind: "feature.cropBamboo", x: -1000, z:  100 },
       { type: "singleton", kind: "feature.cropBamboo", x: -1000, z:  300 },
       // Maple at the back for autumn focal
-      { type: "singleton", kind: "tree.maple", x: 600, z: -700, scale: 1.3 },
-      { type: "singleton", kind: "tree.bonsai", x: 800, z: 200 },
+      { type: "singleton", kind: "tree.olive", x: 600, z: -700, scale: 1.3 },
+      { type: "singleton", kind: "plant.bushSmall", x: 800, z: 200 },
     ],
   },
 
@@ -750,7 +746,7 @@ export const YARD_PRESETS: YardPreset[] = [
         x: 0, z: -400,
         polygon: rectZone(800, 200), rot: 0 },
       // Multi-stem tree in corner for neighbour screening
-      { type: "singleton", kind: "tree.birch", x: -400, z: 600, scale: 1.0 },
+      { type: "singleton", kind: "tree.olive", x: -400, z: 600, scale: 1.0 },
       // Low ornamental shrubs left edge
       { type: "singleton", kind: "shrub.lavender", x: -450, z: 200 },
       { type: "singleton", kind: "shrub.lavender", x: -450, z: 400 },
@@ -785,9 +781,9 @@ export const YARD_PRESETS: YardPreset[] = [
         x: 700, z: 0, rot: Math.PI / 2,
         params: {} },
       // Espalier / clipped trees along fence to filter light
-      { type: "singleton", kind: "tree.birch", x: -350, z: -150, scale: 0.8 },
-      { type: "singleton", kind: "tree.birch", x:   0,  z: -150, scale: 0.8 },
-      { type: "singleton", kind: "tree.birch", x:  350, z: -150, scale: 0.8 },
+      { type: "singleton", kind: "tree.olive", x: -350, z: -150, scale: 0.8 },
+      { type: "singleton", kind: "tree.olive", x:   0,  z: -150, scale: 0.8 },
+      { type: "singleton", kind: "tree.olive", x:  350, z: -150, scale: 0.8 },
     ],
   },
 
@@ -824,7 +820,7 @@ export const YARD_PRESETS: YardPreset[] = [
         x: -550, z: 0, rot: Math.PI / 2,
         params: { lengthM: 11, heightM: 2.0, slatCm: 4, gapCm: 3, backWall: false } },
       // Hero tree — single specimen, off-axis for asymmetric balance
-      { type: "singleton", kind: "tree.maple", x: -300, z: 100, scale: 1.5 },
+      { type: "singleton", kind: "tree.olive", x: -300, z: 100, scale: 1.5 },
       // Low ornamental shrubs along the planting border (back-left corner)
       { type: "singleton", kind: "shrub.lavender", x: -450, z: -450 },
       { type: "singleton", kind: "shrub.lavender", x: -450, z: -250 },
@@ -864,8 +860,8 @@ export const YARD_PRESETS: YardPreset[] = [
         x: 0, z: 750,
         polygon: rectZone(1200, 200), rot: 0 },
       // SW shade trees — cluster of 2 for late-afternoon canopy
-      { type: "singleton", kind: "tree.oak",   x: -700, z: -200, scale: 1.2 },
-      { type: "singleton", kind: "tree.birch", x: -600, z:    0, scale: 1.0 },
+      { type: "singleton", kind: "tree.olive",   x: -700, z: -200, scale: 1.2 },
+      { type: "singleton", kind: "tree.olive", x: -600, z:    0, scale: 1.0 },
       // Boundary planting accents
       { type: "singleton", kind: "shrub.lavender", x:  600, z: -400 },
       { type: "singleton", kind: "shrub.lavender", x:  600, z:    0 },
@@ -914,10 +910,10 @@ export const YARD_PRESETS: YardPreset[] = [
         x: 400, z: 800,
         polygon: rectZone(800, 400), rot: 0 },
       // Perimeter trees (4 corners, single specimen each)
-      { type: "singleton", kind: "tree.oak", x: -1100, z: -800, scale: 1.1 },
-      { type: "singleton", kind: "tree.oak", x:  1100, z: -800, scale: 1.1 },
-      { type: "singleton", kind: "tree.maple", x: -1100, z: 1000, scale: 1.0 },
-      { type: "singleton", kind: "tree.maple", x:  1100, z: 1000, scale: 1.0 },
+      { type: "singleton", kind: "tree.olive", x: -1100, z: -800, scale: 1.1 },
+      { type: "singleton", kind: "tree.olive", x:  1100, z: -800, scale: 1.1 },
+      { type: "singleton", kind: "tree.olive", x: -1100, z: 1000, scale: 1.0 },
+      { type: "singleton", kind: "tree.olive", x:  1100, z: 1000, scale: 1.0 },
     ],
   },
 
@@ -996,11 +992,11 @@ export const YARD_PRESETS: YardPreset[] = [
         x: 0, z: 300,
         polygon: rectZone(150, 1300), rot: 0 },
       // Scattered specimens — birch grove + single pine for vertical accent
-      { type: "singleton", kind: "tree.birch", x: -600, z:   0, scale: 0.9 },
-      { type: "singleton", kind: "tree.birch", x: -500, z: 200, scale: 0.9 },
-      { type: "singleton", kind: "tree.birch", x: -700, z: 350, scale: 0.9 },
-      { type: "singleton", kind: "tree.pine",  x:  700, z: 500, scale: 1.1 },
-      { type: "singleton", kind: "tree.pine",  x:  850, z: 100, scale: 1.0 },
+      { type: "singleton", kind: "tree.olive", x: -600, z:   0, scale: 0.9 },
+      { type: "singleton", kind: "tree.olive", x: -500, z: 200, scale: 0.9 },
+      { type: "singleton", kind: "tree.olive", x: -700, z: 350, scale: 0.9 },
+      { type: "singleton", kind: "tree.olive",  x:  700, z: 500, scale: 1.1 },
+      { type: "singleton", kind: "tree.olive",  x:  850, z: 100, scale: 1.0 },
       // Wildflower clusters dotting the meadow
       { type: "singleton", kind: "plant.flowerPurple", x: -300, z: -200 },
       { type: "singleton", kind: "plant.flowerYellow", x:  300, z: -200 },
@@ -1042,7 +1038,7 @@ export const YARD_PRESETS: YardPreset[] = [
       { type: "singleton", kind: "shrub.lavender", x:  150, z: -200 },
       { type: "singleton", kind: "shrub.lavender", x:  300, z: -200 },
       // Single specimen tree — off-axis on lawn for asymmetric balance
-      { type: "singleton", kind: "tree.maple", x: -400, z: -600, scale: 1.3 },
+      { type: "singleton", kind: "tree.olive", x: -400, z: -600, scale: 1.3 },
       // Front entry urn / planter (kept abstract)
       { type: "singleton", kind: "furniture.planter", x: -180, z: -300 },
       { type: "singleton", kind: "furniture.planter", x:  180, z: -300 },
@@ -1086,7 +1082,7 @@ export const YARD_PRESETS: YardPreset[] = [
       // Compost bay tucked in corner
       { type: "singleton", kind: "feature.compostBay", x: 350, z: 600, scale: 1.0 },
       // Single fruit tree (apple / quince) for shade + harvest
-      { type: "singleton", kind: "tree.apple", x: -350, z: 600, scale: 1.1 },
+      { type: "singleton", kind: "tree.olive", x: -350, z: 600, scale: 1.1 },
       // Low fence / wicker edging to keep paths clear
       { type: "prefab", prefabKind: "slat_wall",
         x: 0, z: 620, rot: 0,

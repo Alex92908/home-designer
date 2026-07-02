@@ -374,7 +374,10 @@ function ZoneGlyph({ zone, polygonPx, selected = false }: {
   const locale = useLocale();
   const style = ZONE_STYLES[zone.zoneKind];
   const ptsAttr = polygonPx.map(p => p.join(",")).join(" ");
-  const [cxLocal, czLocal] = polygonCentroid(polygonPx);
+  const [cxLocal] = polygonCentroid(polygonPx);
+  // 标签放分区"顶边内侧"而不是几何中心——分区常套着结构件（BBQ/泳池），
+  // 中心标签会和结构件标签叠成一团糊字。
+  const topY = Math.min(...polygonPx.map(p => p[1]));
   return (
     <g>
       <polygon points={ptsAttr}
@@ -382,7 +385,7 @@ function ZoneGlyph({ zone, polygonPx, selected = false }: {
         stroke={selected ? SEL_INK : style.planStroke}
         strokeWidth={selected ? 1.6 : 1.0}
         strokeDasharray="4 3" />
-      <text x={cxLocal} y={czLocal} textAnchor="middle" dominantBaseline="middle"
+      <text x={cxLocal} y={topY + 12} textAnchor="middle" dominantBaseline="middle"
         fontSize={10} fontWeight={600}
         fill={style.planStroke} letterSpacing="0.06em"
         style={{ userSelect: "none", pointerEvents: "none" }}>

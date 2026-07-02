@@ -20,31 +20,20 @@ import { getSunPosition3D, type LatLng } from "./sunAnalysis";
 /** Mature canopy radius (metres) per tree kind. Used both for spacing
  *  (Poisson minDist = 2 × radius) and as the "watering ring" UI hint.
  *  Numbers tuned to ASLA standard mature spread / 2. */
+// 2026-06 素材整治：树库只保留 棕榈/橄榄（其余低模树已下架，旧 kind 由
+// getOutdoorAssetByKind 兜底映射到橄榄）。冠幅/散布权重表随之收敛。
 export const TREE_CANOPY_RADIUS_M: Record<string, number> = {
-  "tree.apple":   3.0,
-  "tree.birch":   3.5,
-  "tree.bonsai":  0.8,
-  "tree.cypress": 2.0,
-  "tree.maple":   5.0,
-  "tree.oak":     7.0,
-  "tree.olive":   4.0,
-  "tree.palm":    3.0,
-  "tree.pine":    4.5,
+  "tree.olive":       4.0,
+  "tree.palm":        3.0,
+  "plant.bushSmall":  0.8,
 };
 
 /** Tree kinds eligible for auto-scatter, with a relative weight that
- *  biases the random choice. Smaller / ornamental trees are weighted
- *  higher so the auto result doesn't become a forest of giant oaks. */
-// Oak (r=7m) is too big for auto-scatter spacing — it forces an
-// 11+ m sep against any neighbour and produces near-empty yards. Drop
-// it from the rotation; users can place specimen oaks manually.
+ *  biases the random choice. */
 const SCATTER_KINDS: Array<{ kind: string; weight: number }> = [
-  { kind: "tree.birch",   weight: 3 },
-  { kind: "tree.apple",   weight: 2 },
-  { kind: "tree.cypress", weight: 2 },
-  { kind: "tree.maple",   weight: 1 },
-  { kind: "tree.pine",    weight: 1 },
-  { kind: "tree.olive",   weight: 1 },
+  { kind: "tree.olive",      weight: 3 },
+  { kind: "tree.palm",       weight: 2 },
+  { kind: "plant.bushSmall", weight: 2 },
 ];
 
 type Box = { minX: number; maxX: number; minZ: number; maxZ: number };
@@ -229,7 +218,7 @@ export function placeSunShadeTrees(
     out.push({
       id: `shade-tree-${Date.now()}-${i}`,
       type: "singleton",
-      kind: zone.polygon.length > 0 && halfDiagM > 4 ? "tree.oak" : "tree.maple",
+      kind: zone.polygon.length > 0 && halfDiagM > 4 ? "tree.olive" : "tree.olive",
       x: Math.round(treeX * 100),
       z: Math.round(treeZ * 100),
       scale: 1.1,

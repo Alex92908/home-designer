@@ -1107,7 +1107,7 @@ export const useDesignerStore = create<DesignerStore>()(
       setLightPos: (room, pos) => set(st => ({
         lightPosByRoom: { ...st.lightPosByRoom, [room]: pos },
       })),
-      budget: 150000,
+      budget: 350000,
       furnitureHistory: [],
       clipboard: [],
       roomClipboard: null,
@@ -3122,7 +3122,7 @@ export const useDesignerStore = create<DesignerStore>()(
         furnitureHistory: [],
         clipboard: [],
         roomClipboard: null,
-        budget: 150000,
+        budget: 350000,
         scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
         customRoomMeta: {},
         customFurniture: [],

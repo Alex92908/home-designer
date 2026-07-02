@@ -107,6 +107,7 @@ import { DetailedDecor } from "./DetailedDecor";
 import { PrefabMesh } from "./PrefabRenderer";
 import { ZoneMesh } from "./ZoneRenderer";
 import FloorPlanBuilding from "./FloorPlanExterior";
+import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
 
 // ─── Constants ─────────────────────────────────────────────
 const FLOOR_H = 2.8;
@@ -4823,10 +4824,12 @@ function TouchJoystick({ onChange }: { onChange: (axisX: number, axisZ: number) 
  *  - Mobile joystick: an external state can inject {axisX,axisZ}.
  *  - When `spawnPos` changes, teleports the camera there. */
 function WalkthroughController({
-  active, spawnPos, bbox, onExit, walls, doorPasses, joystick, noClip, storeyH,
+  active, spawnPos, spawnLook, bbox, onExit, walls, doorPasses, joystick, noClip, storeyH,
 }: {
   active: boolean;
   spawnPos: [number, number, number] | null;
+  /** 出生朝向（XZ 单位向量），默认 +Z。 */
+  spawnLook?: [number, number];
   bbox: { minX: number; maxX: number; minZ: number; maxZ: number; minY: number; maxY: number };
   onExit: () => void;
   /** Room footprints in world coords. Movement is blocked by any of these
@@ -4915,12 +4918,13 @@ function WalkthroughController({
     camera.position.set(spawnPos[0], spawnPos[1], spawnPos[2]);
     // Initialise floor tracker to spawn floor (eye height − 1.6 m)
     floorYRef.current = spawnPos[1] - 1.6;
-    // yaw=π → camera faces south (+Z), same interior-facing view as the old
-    // north=+Z convention (where yaw=0 happened to face the room interior).
-    yawRef.current = Math.PI;
+    // 朝向 spawnLook（XZ 单位向量，默认 +Z=南）。yaw 约定：yaw=π 面向 +Z，
+    // 故 forward=(-sin yaw, -cos yaw) → yaw=atan2(-dx,-dz)。
+    const [ldx, ldz] = spawnLook ?? [0, 1];
+    yawRef.current = Math.atan2(-ldx, -ldz);
     pitchRef.current = 0;
-    camera.lookAt(spawnPos[0], spawnPos[1] - 0.1, spawnPos[2] + 1);
-  }, [active, spawnPos, camera]);
+    camera.lookAt(spawnPos[0] + ldx, spawnPos[1] - 0.1, spawnPos[2] + ldz);
+  }, [active, spawnPos, spawnLook, camera]);
   useEffect(() => {
     if (!active) {
       spawnedRef.current = null;
@@ -5542,6 +5546,10 @@ export default function HouseCanvas() {
   const [walkthrough, setWalkthrough] = useState(false);
   const insideBuilding = walkthrough;
   const [walkthroughSpawn, setWalkthroughSpawn] = useState<[number, number, number] | null>(null);
+  // 出生朝向（XZ 单位向量）。默认 +Z；“进入室内漫游”按钮会设为客厅长轴方向。
+  const [walkSpawnLook, setWalkSpawnLook] = useState<[number, number]>([0, 1]);
+  // 首帧渲染完成 → 撤下加载幕布（SceneVeil）。
+  const [sceneReady, setSceneReady] = useState(false);
   const [wallXray, setWallXray] = useState(false);
 
   // ── Interaction-aware rendering ───────────────────────────────────────
@@ -5969,19 +5977,28 @@ export default function HouseCanvas() {
             onClick={() => {
               if (walkthrough) { exitWalkthrough(); }
               else {
-                // Spawn at the centre of the largest room (by area) so the
-                // camera lands inside a room rather than in a structural wall.
-                let bestX = 0, bestZ = 0, bestArea = -1;
-                for (const aabb of wallAABBs) {
-                  const area = (aabb.maxX - aabb.minX) * (aabb.maxZ - aabb.minZ);
-                  if (area > bestArea) {
-                    bestArea = area;
-                    bestX = (aabb.minX + aabb.maxX) / 2;
-                    bestZ = (aabb.minZ + aabb.maxZ) / 2;
+                // 出生点：优先 1F 客厅中心（首帧就是主秀场），否则 1F 最大
+                // 房间。老逻辑遍历所有楼层含天台满铺 deck（必然最大）——XZ 取
+                // 天台中心、y 却固定 1.6m，落回 1F 常是走廊/门口 → 贴脸白墙。
+                const groundRooms = wallAABBs.filter(a =>
+                  a.floor === 0 && a.room !== "__rooftop_deck__" && (a.bld ?? 0) === activeBuilding);
+                const living = groundRooms.find(a => a.room === "living");
+                let best = living ?? null;
+                if (!best) {
+                  let bestArea = -1;
+                  for (const a of groundRooms) {
+                    const area = (a.maxX - a.minX) * (a.maxZ - a.minZ);
+                    if (area > bestArea) { bestArea = area; best = a; }
                   }
                 }
+                const bestX = best ? (best.minX + best.maxX) / 2 : 0;
+                const bestZ = best ? (best.minZ + best.maxZ) / 2 : 0;
+                // 面朝房间长轴（开阔方向），避免开场怼墙。
+                const lookDir: [number, number] = best && (best.maxX - best.minX) >= (best.maxZ - best.minZ)
+                  ? [1, 0] : [0, 1];
                 setWalkNoClip(false); // always enter with solid walls; 穿墙 is opt-in
                 setWalkthrough(true);
+                setWalkSpawnLook(lookDir);
                 setWalkthroughSpawn([bestX, 1.6, bestZ]);
               }
             }}
@@ -6146,6 +6163,10 @@ export default function HouseCanvas() {
       </div>
       )}
 
+      {/* 加载幕布：Canvas 挂载即显示，首帧渲染完成后淡出（盖住场景构建/
+          Draco 解码/shader 编译的白屏窗口，dynamic loading 和 drei Loader
+          都盖不住这一段）。 */}
+      <SceneVeil ready={sceneReady} label={locale === "en" ? "Building 3D scene" : "正在构建 3D 场景"} />
       <Canvas
         style={{ touchAction: "none" }}
         shadows={{ type: THREE.PCFShadowMap, enabled: true }}
@@ -6261,6 +6282,7 @@ export default function HouseCanvas() {
         <WalkthroughController
           active={walkthrough}
           spawnPos={walkthroughSpawn ?? [0, 1.6, 0]}
+          spawnLook={walkSpawnLook}
           bbox={{
             minX: walkBbox.minX, maxX: walkBbox.maxX,
             minZ: walkBbox.minZ, maxZ: walkBbox.maxZ,
@@ -6558,6 +6580,7 @@ export default function HouseCanvas() {
         <AdaptiveDpr shadowSizeRef={shadowSizeRef} />
         <SceneDebugBridge enabled={exterior.debugExposeScene ?? false} />
         <CompassYawTracker onChange={setCompassDeg} />
+        <FirstFrameNotifier onReady={() => setSceneReady(true)} />
       </Canvas>
       {/* 整体外观首次加载大量院子/导入 GLB 时的全局进度条（drei Loader 监听
           所有 useGLTF/useTexture 的 useProgress）。资产缓存后二次访问几乎不出现。 */}

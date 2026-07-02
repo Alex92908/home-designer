@@ -146,9 +146,9 @@ const MODERN_POOL_VILLA: ProjectTemplate = {
       { id: "vt-olive4",   kind: "tree.olive", x:  1050, z:  200, rot: 0, scale: 0.90 },
 
       // ── Cypress trees (north boundary, privacy) ───────────────────────
-      { id: "vt-cyp1",     kind: "tree.cypress", x: -600, z:  880, rot: 0, scale: 1.0 },
-      { id: "vt-cyp2",     kind: "tree.cypress", x:    0, z:  900, rot: 0, scale: 1.0 },
-      { id: "vt-cyp3",     kind: "tree.cypress", x:  600, z:  880, rot: 0, scale: 1.0 },
+      { id: "vt-cyp1",     kind: "tree.olive", x: -600, z:  880, rot: 0, scale: 1.0 },
+      { id: "vt-cyp2",     kind: "tree.olive", x:    0, z:  900, rot: 0, scale: 1.0 },
+      { id: "vt-cyp3",     kind: "tree.olive", x:  600, z:  880, rot: 0, scale: 1.0 },
 
       // ── Feature rocks (entry garden) ──────────────────────────────────
       { id: "vt-rock1",    kind: "rock.tall",  x:  300, z: -640, rot: 0.4, scale: 0.8 },
@@ -290,23 +290,23 @@ const JAPANESE_ZEN_VILLA: ProjectTemplate = {
       { id: "jz-rock4", kind: "rock.flat",    x: -460, z: -320, rot: 0, scale: 1.1 },
 
       // Bonsai specimens (entry / corners)
-      { id: "jz-bonsai1", kind: "tree.bonsai", x:  200, z: -600, rot: 0, scale: 1.1 },
-      { id: "jz-bonsai2", kind: "tree.bonsai", x: -200, z: -620, rot: 0.3, scale: 1.0 },
-      { id: "jz-bonsai3", kind: "tree.bonsai", x:  400, z: -200, rot: 0, scale: 0.9 },
+      { id: "jz-bonsai1", kind: "plant.bushSmall", x:  200, z: -600, rot: 0, scale: 1.1 },
+      { id: "jz-bonsai2", kind: "plant.bushSmall", x: -200, z: -620, rot: 0.3, scale: 1.0 },
+      { id: "jz-bonsai3", kind: "plant.bushSmall", x:  400, z: -200, rot: 0, scale: 0.9 },
 
       // Maple trees (seasonal colour)
-      { id: "jz-maple1", kind: "tree.maple",   x: -900, z: -200, rot: 0, scale: 1.0 },
-      { id: "jz-maple2", kind: "tree.maple",   x:  900, z:  200, rot: 0, scale: 1.0 },
+      { id: "jz-maple1", kind: "tree.olive",   x: -900, z: -200, rot: 0, scale: 1.0 },
+      { id: "jz-maple2", kind: "tree.olive",   x:  900, z:  200, rot: 0, scale: 1.0 },
 
       // Pine trees (perimeter)
-      { id: "jz-pine1",  kind: "tree.pine",    x: -900, z:  600, rot: 0, scale: 1.2 },
-      { id: "jz-pine2",  kind: "tree.pine",    x:  900, z:  600, rot: 0, scale: 1.2 },
-      { id: "jz-pine3",  kind: "tree.pine",    x:    0, z:  950, rot: 0, scale: 1.3 },
+      { id: "jz-pine1",  kind: "tree.olive",    x: -900, z:  600, rot: 0, scale: 1.2 },
+      { id: "jz-pine2",  kind: "tree.olive",    x:  900, z:  600, rot: 0, scale: 1.2 },
+      { id: "jz-pine3",  kind: "tree.olive",    x:    0, z:  950, rot: 0, scale: 1.3 },
 
       // Bamboo-style cypresses (side screen)
-      { id: "jz-cyp1",   kind: "tree.cypress", x: -1050, z:   0, rot: 0, scale: 1.1 },
-      { id: "jz-cyp2",   kind: "tree.cypress", x: -1050, z: 300, rot: 0, scale: 1.1 },
-      { id: "jz-cyp3",   kind: "tree.cypress", x: -1050, z:-300, rot: 0, scale: 1.1 },
+      { id: "jz-cyp1",   kind: "tree.olive", x: -1050, z:   0, rot: 0, scale: 1.1 },
+      { id: "jz-cyp2",   kind: "tree.olive", x: -1050, z: 300, rot: 0, scale: 1.1 },
+      { id: "jz-cyp3",   kind: "tree.olive", x: -1050, z:-300, rot: 0, scale: 1.1 },
 
       // Low ground plants
       { id: "jz-grass1", kind: "plant.grass",  x: -300, z: -700, rot: 0, scale: 0.9 },
@@ -442,10 +442,10 @@ const MEDITERRANEAN_VILLA: ProjectTemplate = {
       { id: "med-olive4", kind: "tree.olive", x:  650, z:  400, rot: 0, scale: 1.0 },
 
       // Cypress columns (formal entry)
-      { id: "med-cyp1", kind: "tree.cypress", x: -150, z: -900, rot: 0, scale: 1.2 },
-      { id: "med-cyp2", kind: "tree.cypress", x:  150, z: -900, rot: 0, scale: 1.2 },
-      { id: "med-cyp3", kind: "tree.cypress", x: -1000, z:  -50, rot: 0, scale: 1.1 },
-      { id: "med-cyp4", kind: "tree.cypress", x:  1000, z:  -50, rot: 0, scale: 1.1 },
+      { id: "med-cyp1", kind: "tree.olive", x: -150, z: -900, rot: 0, scale: 1.2 },
+      { id: "med-cyp2", kind: "tree.olive", x:  150, z: -900, rot: 0, scale: 1.2 },
+      { id: "med-cyp3", kind: "tree.olive", x: -1000, z:  -50, rot: 0, scale: 1.1 },
+      { id: "med-cyp4", kind: "tree.olive", x:  1000, z:  -50, rot: 0, scale: 1.1 },
 
       // Flower borders
       { id: "med-fl1", kind: "plant.flowerRed",    x: -300, z: -780, rot: 0, scale: 0.9 },
@@ -648,10 +648,10 @@ const GLASS_CURTAIN_VILLA: ProjectTemplate = {
       { id: "gcv-olive4",  kind: "tree.olive", x:  1500, z:  500, rot: 0,   scale: 0.9 },
 
       // ── Cypress / tall pine — far back corners (sky framing, not blocking view) ─
-      { id: "gcv-cyp1",    kind: "tree.cypress", x: -900, z:  900, rot: 0, scale: 1.3 },
-      { id: "gcv-cyp2",    kind: "tree.cypress", x:    0, z: 1000, rot: 0, scale: 1.3 },
-      { id: "gcv-cyp3",    kind: "tree.cypress", x:  900, z:  900, rot: 0, scale: 1.2 },
-      { id: "gcv-cyp4",    kind: "tree.cypress", x: -1500, z: -400, rot: 0, scale: 1.1 },
+      { id: "gcv-cyp1",    kind: "tree.olive", x: -900, z:  900, rot: 0, scale: 1.3 },
+      { id: "gcv-cyp2",    kind: "tree.olive", x:    0, z: 1000, rot: 0, scale: 1.3 },
+      { id: "gcv-cyp3",    kind: "tree.olive", x:  900, z:  900, rot: 0, scale: 1.2 },
+      { id: "gcv-cyp4",    kind: "tree.olive", x: -1500, z: -400, rot: 0, scale: 1.1 },
 
       // ── Ornamental grasses + low plants (entry garden) ────────────────
       { id: "gcv-gr1",     kind: "plant.grass",      x:  380, z: -720, rot: 0,   scale: 1.0 },
@@ -862,10 +862,10 @@ const LUXURY_3F_GLASS_VILLA: ProjectTemplate = {
       { id: "l3g-olv4",     kind: "tree.olive", x:  1520, z:  520, rot: 0,   scale: 1.0 },
 
       // ── Cypress (rear boundary) ───────────────────────────────────────────
-      { id: "l3g-cyp1",     kind: "tree.cypress", x: -900, z:  920, rot: 0, scale: 1.4 },
-      { id: "l3g-cyp2",     kind: "tree.cypress", x:    0, z: 1000, rot: 0, scale: 1.4 },
-      { id: "l3g-cyp3",     kind: "tree.cypress", x:  900, z:  920, rot: 0, scale: 1.3 },
-      { id: "l3g-cyp4",     kind: "tree.cypress", x: -1500, z: -380, rot: 0, scale: 1.2 },
+      { id: "l3g-cyp1",     kind: "tree.olive", x: -900, z:  920, rot: 0, scale: 1.4 },
+      { id: "l3g-cyp2",     kind: "tree.olive", x:    0, z: 1000, rot: 0, scale: 1.4 },
+      { id: "l3g-cyp3",     kind: "tree.olive", x:  900, z:  920, rot: 0, scale: 1.3 },
+      { id: "l3g-cyp4",     kind: "tree.olive", x: -1500, z: -380, rot: 0, scale: 1.2 },
 
       // ── Entry garden (ornamental rocks + low plants) ──────────────────────
       { id: "l3g-rock1",    kind: "rock.tall",        x:  660, z: -560, rot: 0.5, scale: 0.9 },
@@ -1023,13 +1023,13 @@ const WOOD_ACCENT_POOL_VILLA: ProjectTemplate = {
       { id: "wapv-lnge6", kind: "furniture.chaiseLounger", x:  560, z: 1200,  rot: Math.PI,     scale: 1.0 },
 
       // ── 松树：前院左右各 2 棵（参考图背景） ─────────────────────────────
-      { id: "wapv-pine1", kind: "tree.pine", x: -1300, z:  800,  rot: 0.3,  scale: 1.2 },
-      { id: "wapv-pine2", kind: "tree.pine", x: -1500, z:  200,  rot: 0,    scale: 1.0 },
-      { id: "wapv-pine3", kind: "tree.pine", x:  1400, z:  600,  rot: -0.2, scale: 1.1 },
-      { id: "wapv-pine4", kind: "tree.pine", x:  1600, z: -100,  rot: 0.4,  scale: 1.0 },
+      { id: "wapv-pine1", kind: "tree.olive", x: -1300, z:  800,  rot: 0.3,  scale: 1.2 },
+      { id: "wapv-pine2", kind: "tree.olive", x: -1500, z:  200,  rot: 0,    scale: 1.0 },
+      { id: "wapv-pine3", kind: "tree.olive", x:  1400, z:  600,  rot: -0.2, scale: 1.1 },
+      { id: "wapv-pine4", kind: "tree.olive", x:  1600, z: -100,  rot: 0.4,  scale: 1.0 },
       // ── 松树：后院（北侧隐私围合） ──────────────────────────────────────
-      { id: "wapv-pine5", kind: "tree.pine", x: -1000, z: -600,  rot: 0.1,  scale: 0.9 },
-      { id: "wapv-pine6", kind: "tree.pine", x:  1100, z: -700,  rot: -0.3, scale: 0.95},
+      { id: "wapv-pine5", kind: "tree.olive", x: -1000, z: -600,  rot: 0.1,  scale: 0.9 },
+      { id: "wapv-pine6", kind: "tree.olive", x:  1100, z: -700,  rot: -0.3, scale: 0.95},
 
       // ── 橄榄树：建筑两侧近景 ────────────────────────────────────────────
       { id: "wapv-olv1",  kind: "tree.olive", x: -900, z:  500, rot: 0,   scale: 0.9 },
@@ -1228,14 +1228,14 @@ const MODERN_CANTILEVER_GLASS_VILLA: ProjectTemplate = {
       { id: "mcgv-lngr7",   kind: "furniture.swimmingLounger", x:  680, z: -1280, rot: -Math.PI / 2, scale: 1.0 },
 
       // ── 松柏背景（参考图：密植常绿，沿前院两侧 + 背面围合）──────────────
-      { id: "mcgv-pine1",   kind: "tree.pine", x: -1300, z: -1100, rot: 0.2,  scale: 1.3 },
-      { id: "mcgv-pine2",   kind: "tree.pine", x: -1450, z: -600,  rot: 0,    scale: 1.1 },
-      { id: "mcgv-pine3",   kind: "tree.pine", x:  1300, z: -1000, rot: -0.2, scale: 1.3 },
-      { id: "mcgv-pine4",   kind: "tree.pine", x:  1480, z: -500,  rot: 0.3,  scale: 1.1 },
+      { id: "mcgv-pine1",   kind: "tree.olive", x: -1300, z: -1100, rot: 0.2,  scale: 1.3 },
+      { id: "mcgv-pine2",   kind: "tree.olive", x: -1450, z: -600,  rot: 0,    scale: 1.1 },
+      { id: "mcgv-pine3",   kind: "tree.olive", x:  1300, z: -1000, rot: -0.2, scale: 1.3 },
+      { id: "mcgv-pine4",   kind: "tree.olive", x:  1480, z: -500,  rot: 0.3,  scale: 1.1 },
       // 背面（+Z）私密围合
-      { id: "mcgv-pine5",   kind: "tree.pine", x: -800, z:  900,  rot: 0.1,  scale: 1.2 },
-      { id: "mcgv-pine6",   kind: "tree.pine", x:    0, z: 1000,  rot: 0,    scale: 1.3 },
-      { id: "mcgv-pine7",   kind: "tree.pine", x:  800, z:  900,  rot: -0.1, scale: 1.2 },
+      { id: "mcgv-pine5",   kind: "tree.olive", x: -800, z:  900,  rot: 0.1,  scale: 1.2 },
+      { id: "mcgv-pine6",   kind: "tree.olive", x:    0, z: 1000,  rot: 0,    scale: 1.3 },
+      { id: "mcgv-pine7",   kind: "tree.olive", x:  800, z:  900,  rot: -0.1, scale: 1.2 },
 
       // ── 橄榄树（建筑两侧近景，柔化立面边缘）──────────────────────────────
       { id: "mcgv-olv1",    kind: "tree.olive", x: -880, z: -480, rot: 0,   scale: 0.95 },
@@ -1391,17 +1391,17 @@ const GLASS_POOL_VILLA_FROM_PLAN: ProjectTemplate = {
       { id: "gpvp-lngr5",   kind: "furniture.swimmingLounger", x:  320, z: -820, rot: 0, scale: 1.0 },
 
       // 松柏背景
-      { id: "gpvp-pine1",   kind: "tree.pine", x: -1300, z: -1120, rot: 0.2,  scale: 1.3 },
-      { id: "gpvp-pine2",   kind: "tree.pine", x: -1460, z: -640,  rot: 0,    scale: 1.1 },
-      { id: "gpvp-pine3",   kind: "tree.pine", x:  1300, z: -1020, rot: -0.2, scale: 1.3 },
-      { id: "gpvp-pine4",   kind: "tree.pine", x:  1480, z: -540,  rot: 0.3,  scale: 1.1 },
-      { id: "gpvp-pine5",   kind: "tree.pine", x: -800,  z:  960,  rot: 0.1,  scale: 1.2 },
-      { id: "gpvp-pine6",   kind: "tree.pine", x:    0,  z: 1040,  rot: 0,    scale: 1.3 },
-      { id: "gpvp-pine7",   kind: "tree.pine", x:  800,  z:  960,  rot: -0.1, scale: 1.2 },
+      { id: "gpvp-pine1",   kind: "tree.olive", x: -1300, z: -1120, rot: 0.2,  scale: 1.3 },
+      { id: "gpvp-pine2",   kind: "tree.olive", x: -1460, z: -640,  rot: 0,    scale: 1.1 },
+      { id: "gpvp-pine3",   kind: "tree.olive", x:  1300, z: -1020, rot: -0.2, scale: 1.3 },
+      { id: "gpvp-pine4",   kind: "tree.olive", x:  1480, z: -540,  rot: 0.3,  scale: 1.1 },
+      { id: "gpvp-pine5",   kind: "tree.olive", x: -800,  z:  960,  rot: 0.1,  scale: 1.2 },
+      { id: "gpvp-pine6",   kind: "tree.olive", x:    0,  z: 1040,  rot: 0,    scale: 1.3 },
+      { id: "gpvp-pine7",   kind: "tree.olive", x:  800,  z:  960,  rot: -0.1, scale: 1.2 },
 
       // 橄榄树 + 枫树（用户原方案树种）侧向点缀
       { id: "gpvp-olv1",    kind: "tree.olive", x: -900, z: -520, rot: 0,   scale: 0.95 },
-      { id: "gpvp-mpl1",    kind: "tree.maple", x:  900, z: -480, rot: 0.2, scale: 0.95 },
+      { id: "gpvp-mpl1",    kind: "tree.olive", x:  900, z: -480, rot: 0.2, scale: 0.95 },
 
       // 观赏草 + 灌木
       { id: "gpvp-gr1",     kind: "plant.grass",     x: -640, z: -1320, rot: 0,   scale: 1.0 },
@@ -1522,10 +1522,10 @@ const CLEAR_GLASS_CURTAIN_HOME: ProjectTemplate = {
       { id: "gc-parasol",  type: "singleton", kind: "furniture.parasol",        x: 820,  z: 700 },
       { id: "gc-lounge-1", type: "singleton", kind: "furniture.chaiseLounger",  x: -360, z: 610, rot: 0 },
       { id: "gc-lounge-2", type: "singleton", kind: "furniture.chaiseLounger",  x: -240, z: 610, rot: 0 },
-      { id: "gc-tree-1",   type: "singleton", kind: "tree.cypress", x: -980, z: 980,  scale: 1.2 },
-      { id: "gc-tree-2",   type: "singleton", kind: "tree.cypress", x: 980,  z: 980,  scale: 1.2 },
-      { id: "gc-tree-3",   type: "singleton", kind: "tree.pine",    x: -600, z: 1040, scale: 1.3 },
-      { id: "gc-tree-4",   type: "singleton", kind: "tree.pine",    x: 600,  z: 1040, scale: 1.3 },
+      { id: "gc-tree-1",   type: "singleton", kind: "tree.olive", x: -980, z: 980,  scale: 1.2 },
+      { id: "gc-tree-2",   type: "singleton", kind: "tree.olive", x: 980,  z: 980,  scale: 1.2 },
+      { id: "gc-tree-3",   type: "singleton", kind: "tree.olive",    x: -600, z: 1040, scale: 1.3 },
+      { id: "gc-tree-4",   type: "singleton", kind: "tree.olive",    x: 600,  z: 1040, scale: 1.3 },
       { id: "gc-grass-1",  type: "singleton", kind: "plant.grass",  x: -520, z: 610,  scale: 1.2 },
       { id: "gc-grass-2",  type: "singleton", kind: "plant.grass",  x: 520,  z: 610,  scale: 1.2 },
     ],

@@ -1767,7 +1767,25 @@ function StairPenthouse({ rW, rD, doorSide, wallColor, roofColor }: {
       side === "N" ? [0, H / 2, -rD / 2] : side === "S" ? [0, H / 2, rD / 2]
       : side === "W" ? [-rW / 2, H / 2, 0] : [rW / 2, H / 2, 0];
     const args: [number, number, number] = horiz ? [rW, H, WT] : [WT, H, rD];
-    return <mesh position={pos} castShadow receiveShadow><boxGeometry args={args} />{wallMat}</mesh>;
+    // 高位横向窄窗带：破掉"天台白盒子"的无开口体块感（外观图观感），
+    // 也给楼梯间自然采光。贴在墙外皮，避免开洞的几何复杂度。
+    const winLen = (horiz ? rW : rD) * 0.62;
+    const winArgs: [number, number, number] = horiz ? [winLen, 0.38, 0.03] : [0.03, 0.38, winLen];
+    const winPos: [number, number, number] =
+      side === "N" ? [0, H - 0.55, -rD / 2 - WT / 2 - 0.015]
+      : side === "S" ? [0, H - 0.55, rD / 2 + WT / 2 + 0.015]
+      : side === "W" ? [-rW / 2 - WT / 2 - 0.015, H - 0.55, 0]
+      : [rW / 2 + WT / 2 + 0.015, H - 0.55, 0];
+    return (
+      <>
+        <mesh position={pos} castShadow receiveShadow><boxGeometry args={args} />{wallMat}</mesh>
+        <mesh position={winPos}>
+          <boxGeometry args={winArgs} />
+          <meshPhysicalMaterial color="#8FB6D6" roughness={0.08} metalness={0.1}
+            transparent opacity={0.75} />
+        </mesh>
+      </>
+    );
   };
 
   const doorWall = (side: "N" | "S" | "E" | "W") => {

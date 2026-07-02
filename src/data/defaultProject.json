@@ -104,6 +104,30 @@
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1
+            },
+            {
+              "furnitureId": "sofa-fabric-gray",
+              "x": 115,
+              "z": 245,
+              "rotation": 270
+            },
+            {
+              "furnitureId": "curtain-modern-gray",
+              "x": 340,
+              "z": 490,
+              "rotation": 0
+            },
+            {
+              "furnitureId": "plant-rubber-tree",
+              "x": 625,
+              "z": 455,
+              "rotation": 0
+            },
+            {
+              "furnitureId": "sideboard-walnut",
+              "x": 340,
+              "z": 28,
+              "rotation": 0
             }
           ],
           "exteriorDecor": []
@@ -3684,7 +3708,7 @@
     "entranceFrameColor": "#15171B",
     "woodSoffit": true
   },
-  "budget": 150000,
+  "budget": 350000,
   "customRoomMeta": {},
   "customFurniture": [],
   "scores": {
