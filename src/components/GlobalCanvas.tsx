@@ -25,6 +25,7 @@ import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
 const EMPTY_ROOM_STATE_GC: RoomState = { materials: {}, placedItems: [] };
 import { PlacedItemMesh, LightFixtureInner } from "./RoomCanvas";
 import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
+import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
 import type { RoofStyle } from "@/lib/types";
 
 const CM = 0.01;       // cm → m
@@ -1172,6 +1173,8 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
   }, [hasRooftop]);
   const [showStairs, setShowStairs] = useState(true);
   const [stairPos, setStairPos] = useState<{ x: number; z: number } | null>(null);
+  // 首帧渲染完成 → 撤下加载幕布（SceneVeil）。
+  const [sceneReady, setSceneReady] = useState(false);
   // Compass yaw: degrees CW the compass SVG should rotate so world-N
   // (= world −Z) stays at the top of the dial as the OrbitControls
   // camera orbits around the building. Updated each frame from inside
@@ -1195,6 +1198,8 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
       className="w-full h-full relative"
       style={{ background: "linear-gradient(180deg, #C4CAD4 0%, #969EA8 55%, #6E7684 100%)" }}
     >
+      {/* 加载幕布：盖住场景构建/GLB 解码期间的灰屏（详见 SceneVeil）。 */}
+      <SceneVeil ready={sceneReady} label={locale === "en" ? "Building house 3D" : "正在构建全屋 3D"} />
       <Canvas
         shadows
         camera={{ position: [12, initY, 12], fov: 45 }}
@@ -1211,6 +1216,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
         <CameraFit />
         <ShaderPrecompiler />
         <CompassYawTracker onChange={setCompassDeg} />
+        <FirstFrameNotifier onReady={() => setSceneReady(true)} />
       </Canvas>
 
       {/* ── Hint bar ── */}

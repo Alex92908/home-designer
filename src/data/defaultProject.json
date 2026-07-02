@@ -107,7 +107,7 @@
             },
             {
               "furnitureId": "sofa-fabric-gray",
-              "x": 115,
+              "x": 100,
               "z": 245,
               "rotation": 270
             },
@@ -3168,6 +3168,22 @@
             "wall": "N",
             "pos": 60,
             "len": 96
+          },
+          {
+            "id": "stair-w-roof-e",
+            "wall": "E",
+            "pos": 120,
+            "len": 180,
+            "sill": 150,
+            "h": 60
+          },
+          {
+            "id": "stair-w-roof-w",
+            "wall": "W",
+            "pos": 120,
+            "len": 180,
+            "sill": 150,
+            "h": 60
           }
         ],
         "hallway": [],
