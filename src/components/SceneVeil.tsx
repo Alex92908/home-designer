@@ -29,10 +29,11 @@ export function FirstFrameNotifier({ onReady }: { onReady: () => void }) {
 }
 
 export default function SceneVeil({ ready, label }: { ready: boolean; label: string }) {
-  // ready 翻 true 后先播淡出动画，再从 DOM 移除。
+  // ready 翻 true 后先播淡出动画，再从 DOM 移除。（ready 在本组件生命周期内
+  // 只会 false→true 一次——视图卸载重挂时组件整个重建，无需反向重置。）
   const [gone, setGone] = useState(false);
   useEffect(() => {
-    if (!ready) { setGone(false); return; }
+    if (!ready) return;
     const t = setTimeout(() => setGone(true), 450);
     return () => clearTimeout(t);
   }, [ready]);
