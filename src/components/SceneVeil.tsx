@@ -43,7 +43,7 @@ export function FirstFrameNotifier({ onReady }: { onReady: () => void }) {
   return null;
 }
 
-export default function SceneVeil({ ready, label, image }: { ready: boolean; label: string; image?: string }) {
+export default function SceneVeil({ ready, label }: { ready: boolean; label: string }) {
   // ready 翻 true 后先播淡出动画，再从 DOM 移除。（ready 在本组件生命周期内
   // 只会 false→true 一次——视图卸载重挂时组件整个重建，无需反向重置。）
   const [gone, setGone] = useState(false);
@@ -53,28 +53,6 @@ export default function SceneVeil({ ready, label, image }: { ready: boolean; lab
     return () => clearTimeout(t);
   }, [ready]);
   if (gone) return null;
-  // 有预渲染图（如样板间）时：幕布直接显示该外观图，用户点进来"秒见成品"，
-  // 3D 就绪后原位淡入接管（两者同机位截图，几乎无缝）。仅底部保留小加载提示。
-  if (image) {
-    return (
-      <div
-        className="absolute inset-0 z-40 pointer-events-none select-none"
-        style={{ opacity: ready ? 0 : 1, transition: "opacity 0.45s ease", background: "#0f1117" }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        <div
-          className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full text-xs text-white/90"
-          style={{ background: "rgba(20,22,32,0.75)", backdropFilter: "blur(4px)" }}
-        >
-          <span className="inline-block w-3 h-3 rounded-full border-2 border-white/30 border-t-white/90"
-            style={{ animation: "zy-veil-spin 0.8s linear infinite" }} />
-          {label}…
-        </div>
-        <style>{`@keyframes zy-veil-spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
   return (
     <div
       className="absolute inset-0 z-40 flex flex-col items-center justify-center pointer-events-none select-none"

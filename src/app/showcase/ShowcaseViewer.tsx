@@ -18,11 +18,13 @@ import { SHOWCASE_TEMPLATES } from "@/lib/showcaseTemplates";
 
 const PERSIST_KEY = "home-designer-v2";
 
-// loading 置 null：chunk 下载期由 viewer 的预渲染图背景层兜底（见下方 <img>），
-// 挂载后 SceneVeil(image) 无缝接管同一张图，直到 3D 首帧。
 const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
   ssr: false,
-  loading: () => null,
+  loading: () => (
+    <div className="flex items-center justify-center h-screen bg-gray-900 text-gray-400 text-sm">
+      渲染外形图…
+    </div>
+  ),
 });
 
 export default function ShowcaseViewer({
@@ -124,27 +126,7 @@ export default function ShowcaseViewer({
 
   return (
     <div className="relative h-screen w-screen bg-gray-900 overflow-hidden">
-      {/* 预渲染外观图打底（同机位截图）：点进来秒见成品。盖住 three.js chunk
-          下载期（HouseCanvas 还没挂载）；挂载后 SceneVeil(image) 原图接管，
-          3D 首帧后淡出——全程无黑屏。 */}
-      {t?.image && (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={t.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
-          {/* 不设 z-index：HouseCanvas 挂载后按 DOM 顺序自然盖住本提示 */}
-          <div
-            className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full text-xs text-white/90"
-            style={{ background: "rgba(20,22,32,0.75)", backdropFilter: "blur(4px)" }}
-          >
-            <span className="inline-block w-3 h-3 rounded-full border-2 border-white/30 border-t-white/90"
-              style={{ animation: "zy-viewer-spin 0.8s linear infinite" }} />
-            {en ? "Building 3D scene" : "正在构建 3D 场景"}…
-          </div>
-          <style>{`@keyframes zy-viewer-spin { to { transform: rotate(360deg); } }`}</style>
-        </>
-      )}
-      {/* 加载幕布用该样板的预渲染外观图（同机位截图）——点进来秒见成品 */}
-      <HouseCanvas veilImage={t?.image} />
+      <HouseCanvas />
       <button
         onClick={onBack}
         className="absolute top-4 left-4 z-50 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-lg"
