@@ -21,6 +21,15 @@ const nextConfig: NextConfig = {
   // error. Disabling until r3f fixes the lifecycle. (Affects dev only;
   // production builds don't use StrictMode.)
   reactStrictMode: false,
+  // 别把 public/ 里的大体积静态资源打进 serverless 函数包。
+  // api/import-model 用 path.join(process.cwd(),"public","models",…) 引用了
+  // 该目录，Next 的输出文件追踪(nft)保守地把整个 public/models/**（300MB+ 的
+  // GLB）塞进函数 → Vercel「函数 334MB 超 250MB 上限」构建失败。这些 GLB/
+  // Draco 都是 CDN 直接服务的静态文件，没有任何函数需要它们进包，全局排除。
+  // （import-model 本就是本地/自托管功能：serverless 只读盘写文件必 500。）
+  outputFileTracingExcludes: {
+    "**": ["public/models/**", "public/draco/**"],
+  },
   // dev 路由指示器（那个圆形「N」徽标）默认钉在右下角，正好压住右下角的
   // 「AI 渲染」悬浮按钮。挪到左下角让开（仅 dev 生效，生产构建本就没有它）。
   devIndicators: { position: "bottom-left" },
