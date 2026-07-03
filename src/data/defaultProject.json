@@ -197,32 +197,10 @@
               "elevationY": 42
             },
             {
-              "instanceId": "deep_living_203_decor-tea-set",
-              "furnitureId": "decor-tea-set",
-              "x": 395,
-              "z": 200,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 40
-            },
-            {
-              "instanceId": "deep_living_204_decor-fruit-bowl",
-              "furnitureId": "decor-fruit-bowl",
-              "x": 397,
-              "z": 225,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 40
-            },
-            {
               "instanceId": "deep_living_205_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 355,
-              "z": 17,
+              "x": 345,
+              "z": 11,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -232,8 +210,8 @@
             {
               "instanceId": "deep_living_206_decor-camera-slr",
               "furnitureId": "decor-camera-slr",
-              "x": 422,
-              "z": 22,
+              "x": 392,
+              "z": 15,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -243,8 +221,8 @@
             {
               "instanceId": "deep_living_207_decor-vase-single",
               "furnitureId": "decor-vase-single",
-              "x": 391,
-              "z": 16,
+              "x": 372,
+              "z": 12,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
