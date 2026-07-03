@@ -468,8 +468,9 @@ export function evaluateRoom(
     const violations: Violation[] = [];
 
     // Door-swing: anything whose footprint intrudes the swing area blocks the door.
-    // 挂高件（上柜/油烟机等，底面高于 1.2m）不在门扇扫过范围内。
-    const hangsHigh = (it.placed.elevationY ?? 0) >= 120;
+    // 架高件（elevationY ≥40：挂墙柜、以及搁在沙发/台面上的毯子摆件——
+    // 它们坐在别的家具上，不独立构成开门障碍）不参与门区检查。
+    const hangsHigh = (it.placed.elevationY ?? 0) >= 40;
     if (swing && !FLAT_DECOR.has(it.f.category) && !hangsHigh && overlaps(swing.bbox, it.bbox, 1)) {
       violations.push({
         instanceId: it.placed.instanceId,
