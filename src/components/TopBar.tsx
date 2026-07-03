@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useDesignerStore, useTemporalStore } from "@/lib/store";
 import { useT, useLocaleStore , customRoomDisplayName} from "@/lib/i18n";
 import { ROOM_DEFS } from "@/lib/types";
@@ -395,15 +396,19 @@ export default function TopBar() {
         <span>⌘K</span>
       </button>
 
-      {/* 样板间入口（独立页 /showcase：精选方案的 3D 外形图画廊） */}
-      <a
+      {/* 样板间入口（独立页 /showcase：精选方案的 3D 外形图画廊）。
+          用 next/link 做客户端跳转 + 预取——比整页 <a> 跳转秒开、更可靠
+          （重 R3F 应用整页 reload 慢，dev 首访还要现编译，容易被误当成
+          "点了没反应"）。 */}
+      <Link
         href="/showcase"
+        prefetch
         className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all shrink-0"
         style={{ border: "1px solid var(--ds-border)", color: "var(--ds-text-2)", background: "var(--ds-surface)" }}
         title={locale === "en" ? "Showroom — exterior gallery" : "样板间 — 外形图画廊"}
       >
         {locale === "en" ? "🏝️ Showroom" : "🏝️ 样板间"}
-      </a>
+      </Link>
 
       {/* 反馈入口（mailto → 作者邮箱，零依赖） */}
       <a
