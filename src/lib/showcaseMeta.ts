@@ -16,6 +16,9 @@ export interface ShowcaseMeta {
   descEn: string;
   /** 标签（楼层数 / 风格等），画廊卡片上展示。 */
   tags: string[];
+  /** 预渲染外观图（public/showcase/ 下的静态 JPG）。画廊缩略图 + 点卡片
+   *  秒开的大图都用它；想交互旋转再点「进入实时 3D」加载 three.js。 */
+  image: string;
 }
 
 export const SHOWCASE_META: ShowcaseMeta[] = [
@@ -26,6 +29,7 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     descZh: "实墙开窗立面 · 泳池套组庭院 · 两层带天台",
     descEn: "Solid-wall facade · Pool-set yard · 2 floors + rooftop",
     tags: ["2F+天台", "实墙", "泳池院"],
+    image: "/showcase/resort-pool-villa.jpg",
   },
   {
     id: "clear-glass-curtain-villa",
@@ -34,6 +38,7 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     descZh: "通透玻璃幕墙 · 胡桃木挑檐 · 逐面可调立面 · 泳池庭院",
     descEn: "See-through glass curtain · walnut soffit · per-face facade · pool yard",
     tags: ["3F", "玻璃幕墙", "泳池院"],
+    image: "/showcase/clear-glass-curtain-villa.jpg",
   },
   // ── 以后在此追加更多样板卡片（load 工厂同步加到 showcaseTemplates.ts）──
 ];

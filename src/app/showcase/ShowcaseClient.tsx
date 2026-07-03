@@ -27,6 +27,8 @@ export default function ShowcaseClient() {
   const locale = useLocale();
   const en = locale === "en";
   const [activeId, setActiveId] = useState<string | null>(null);
+  // 点卡片先秒开「预渲染大图」（photo）；点「进入实时 3D」才挂重查看器（live）。
+  const [mode, setMode] = useState<"photo" | "live">("photo");
 
   // ── 预热查看器 ──
   // 「样板间→外观图」慢的下载大头是查看器的 ~711KB three.js 代码块。趁用户还在
@@ -53,9 +55,77 @@ export default function ShowcaseClient() {
     };
   }, []);
 
-  // ── 外形图查看器（重组件，动态加载）──
-  if (activeId) {
+  // 「在设计器中打开此方案」（photo 模式直达）：动态引入重模块，把方案灌进
+  // store + localStorage 后跳设计器。会替换用户当前设计，故先确认。
+  const openInDesigner = async (id: string) => {
+    const msg = en
+      ? "Open this design in the editor? It will replace your current design."
+      : "在设计器中打开此方案？这会替换你当前的设计。";
+    if (!window.confirm(msg)) return;
+    const [{ SHOWCASE_TEMPLATES }, { useDesignerStore }] = await Promise.all([
+      import("@/lib/showcaseTemplates"),
+      import("@/lib/store"),
+    ]);
+    const t = SHOWCASE_TEMPLATES.find((x) => x.id === id);
+    if (!t) return;
+    const { floorPlans, exterior, yardPlan } = t.load();
+    useDesignerStore.setState({
+      floorPlans: floorPlans as never,
+      exterior: exterior as never,
+      yardPlan: yardPlan as never,
+      viewMode: "3d" as never,
+      activeFloor: 0,
+    });
+    window.location.href = "/";
+  };
+
+  // ── 实时 3D 查看器（重组件，动态加载）──
+  if (activeId && mode === "live") {
     return <ShowcaseViewer templateId={activeId} onBack={() => setActiveId(null)} />;
+  }
+
+  // ── 预渲染外观大图（秒开）──
+  if (activeId) {
+    const t = SHOWCASE_META.find((x) => x.id === activeId);
+    if (t) {
+      return (
+        <div className="relative h-screen w-screen bg-gray-900 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={t.image} alt={en ? t.nameEn : t.nameZh} className="absolute inset-0 w-full h-full object-cover" />
+          <button
+            onClick={() => setActiveId(null)}
+            className="absolute top-4 left-4 z-50 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-lg"
+            style={{ background: "rgba(20,22,32,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}
+          >
+            ← {en ? "Back to gallery" : "返回样板间"}
+          </button>
+          <div
+            className="absolute top-4 right-4 z-50 px-4 py-2 rounded-xl text-sm text-white shadow-lg"
+            style={{ background: "rgba(20,22,32,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}
+          >
+            <div className="font-semibold">{en ? t.nameEn : t.nameZh}</div>
+            <div className="text-xs text-gray-300">{en ? t.descEn : t.descZh}</div>
+          </div>
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3">
+            {/* 进实时 3D（此时才下载 three.js；悬停预热已在后台跑过） */}
+            <button
+              onClick={() => setMode("live")}
+              className="px-5 py-3 rounded-xl text-sm font-semibold text-white shadow-xl"
+              style={{ background: "rgba(20,22,32,0.85)", border: "1px solid rgba(255,255,255,0.25)" }}
+            >
+              {en ? "🎮 Interactive 3D" : "🎮 进入实时 3D（可旋转）"}
+            </button>
+            <button
+              onClick={() => openInDesigner(t.id)}
+              className="px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-xl"
+              style={{ background: "#007AFF" }}
+            >
+              {en ? "Open in editor →" : "在设计器中打开此方案 →"}
+            </button>
+          </div>
+        </div>
+      );
+    }
   }
 
   // ── 画廊 ──
@@ -84,19 +154,15 @@ export default function ShowcaseClient() {
         {SHOWCASE_META.map((t) => (
           <button
             key={t.id}
-            onClick={() => setActiveId(t.id)}
+            onClick={() => { setMode("photo"); setActiveId(t.id); }}
             onMouseEnter={warmViewer}
             onFocus={warmViewer}
             onTouchStart={warmViewer}
             className="text-left rounded-2xl overflow-hidden border border-white/10 bg-gray-800/60 hover:bg-gray-800 transition shadow-lg"
           >
-            {/* 缩略占位（外形图缩略图后续可换成预渲染图） */}
-            <div
-              className="h-40 flex items-center justify-center text-5xl"
-              style={{ background: "linear-gradient(135deg,#2b3242,#1b2230)" }}
-            >
-              🏝️
-            </div>
+            {/* 预渲染外观缩略图（真实 3D 场景离线截图） */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={t.image} alt={en ? t.nameEn : t.nameZh} className="h-40 w-full object-cover" loading="lazy" />
             <div className="p-4">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span className="font-semibold">{en ? t.nameEn : t.nameZh}</span>
