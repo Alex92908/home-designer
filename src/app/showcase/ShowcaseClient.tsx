@@ -8,7 +8,7 @@
  * 时才通过 next/dynamic 懒加载 ShowcaseViewer 拉进来。这样 /showcase 落地几乎
  * 瞬间（静态 HTML + 极小 JS），而不是首屏就下整个 3D 应用。
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useLocale } from "@/lib/i18n";
 import { SHOWCASE_META } from "@/lib/showcaseMeta";
@@ -27,6 +27,31 @@ export default function ShowcaseClient() {
   const locale = useLocale();
   const en = locale === "en";
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // ── 预热查看器 ──
+  // 「样板间→外观图」慢的下载大头是查看器的 ~711KB three.js 代码块。趁用户还在
+  // 看画廊卡片时，后台把它（连同 store/HouseCanvas）+ 0.3MB 主外观模型预取进浏
+  // 览器缓存，点下去就少等一截。用 fetch 预热 glb 而不 import three，避免把重
+  // 依赖拉回画廊包。只跑一次。
+  const warmed = useRef(false);
+  const warmViewer = () => {
+    if (warmed.current) return;
+    warmed.current = true;
+    import("./ShowcaseViewer").catch(() => {});
+    fetch("/models/villa_pbr.glb").catch(() => {});
+  };
+  // 落地后空闲时也预热一次（不必等悬停）：首屏仍轻，进查看器却已就绪。
+  useEffect(() => {
+    const ric =
+      (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback ??
+      ((cb: () => void) => window.setTimeout(cb, 1500));
+    const id = ric(() => warmViewer());
+    return () => {
+      const cic = (window as Window & { cancelIdleCallback?: (h: number) => void }).cancelIdleCallback;
+      if (cic) cic(id);
+      else clearTimeout(id);
+    };
+  }, []);
 
   // ── 外形图查看器（重组件，动态加载）──
   if (activeId) {
@@ -60,6 +85,9 @@ export default function ShowcaseClient() {
           <button
             key={t.id}
             onClick={() => setActiveId(t.id)}
+            onMouseEnter={warmViewer}
+            onFocus={warmViewer}
+            onTouchStart={warmViewer}
             className="text-left rounded-2xl overflow-hidden border border-white/10 bg-gray-800/60 hover:bg-gray-800 transition shadow-lg"
           >
             {/* 缩略占位（外形图缩略图后续可换成预渲染图） */}
