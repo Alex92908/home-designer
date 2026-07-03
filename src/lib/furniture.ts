@@ -1794,6 +1794,9 @@ export const FURNITURE_CATEGORIES: Array<{
   { id: "outdoor_plant",     label: "户外植物", icon: "🌳" },
   { id: "outdoor_hardscape", label: "硬景观",   icon: "🪨" },
   { id: "vehicle",           label: "车辆",     icon: "🚗" },
+  // 楼梯：不在这个列表里的类目侧边栏根本不渲染（分组无兜底），漏挂导致
+  // 楼梯间里 4 款楼梯（直/L/转折/螺旋）无法被选到、没法换款式。
+  { id: "stair",             label: "楼梯",     icon: "🪜" },
   { id: "outdoor_water",     label: "水景",     icon: "💧" },
   { id: "outdoor_structure", label: "户外建构", icon: "⛺" },
   { id: "pet",               label: "宠物",     icon: "🐾" },
