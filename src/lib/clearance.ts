@@ -559,6 +559,9 @@ export function evaluateRoom(
         if (other.placed.instanceId === it.placed.instanceId) continue;
         if (FLAT_DECOR.has(other.f.category)) continue; // 地毯/挂画/窗帘不算障碍
         if (COMPANION_PAIRS[it.f.category]?.includes(other.f.category)) continue; // 成组家具（椅↔桌、床头柜↔床…）
+        // 台面/床上小摆件（架高 ≥40cm 的无规则小物）和贴地薄件（体重秤等
+        // ≤15cm）都不构成通行障碍——否则"洗手台与自己台面上的洗漱品冲突"。
+        if (!other.rule && ((other.placed.elevationY ?? 0) >= 40 || other.f.height <= 15)) continue;
         // Y 区间不相交（挂墙上柜/油烟机 vs 地面件）→ 不构成冲突
         const oElev = other.placed.elevationY ?? 0;
         const oTop  = oElev + other.f.height * (other.placed.scaleH ?? 1);

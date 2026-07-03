@@ -132,6 +132,36 @@
               "z": 9,
               "rotation": 0,
               "instanceId": "tpl_living_9_sideboard-walnut"
+            },
+            {
+              "instanceId": "enrich_living_1_appliance-robot-vacuum",
+              "furnitureId": "appliance-robot-vacuum",
+              "x": 582.5,
+              "z": 102.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_living_2_pet-dog-resting",
+              "furnitureId": "pet-dog-resting",
+              "x": 45,
+              "z": 52.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_living_3_decor-book-stack",
+              "furnitureId": "decor-book-stack",
+              "x": 627.5,
+              "z": 350,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
             }
           ],
           "exteriorDecor": []
@@ -247,6 +277,60 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1
+            },
+            {
+              "instanceId": "enrich_kitchen_4_appliance-cooktop",
+              "furnitureId": "appliance-cooktop",
+              "x": 162.5,
+              "z": 12,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 88
+            },
+            {
+              "instanceId": "enrich_kitchen_5_appliance-coffee-machine",
+              "furnitureId": "appliance-coffee-machine",
+              "x": 265,
+              "z": 22.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 88
+            },
+            {
+              "instanceId": "enrich_kitchen_6_appliance-kettle-electric",
+              "furnitureId": "appliance-kettle-electric",
+              "x": 154,
+              "z": 29,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 88
+            },
+            {
+              "instanceId": "enrich_kitchen_7_decor-copper-pots",
+              "furnitureId": "decor-copper-pots",
+              "x": 90,
+              "z": 25,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 88
+            },
+            {
+              "instanceId": "enrich_kitchen_8_decor-trash-bin",
+              "furnitureId": "decor-trash-bin",
+              "x": 365,
+              "z": 285,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
             }
           ],
           "exteriorDecor": []
@@ -323,6 +407,47 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1
+            },
+            {
+              "instanceId": "enrich_bathroom_9_bath_accessory-towel-rack",
+              "furnitureId": "bath_accessory-towel-rack",
+              "x": 200,
+              "z": 242.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bathroom_10_bath_accessory-toiletries",
+              "furnitureId": "bath_accessory-toiletries",
+              "x": 69.5,
+              "z": 175,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 85
+            },
+            {
+              "instanceId": "enrich_bathroom_11_decor-laundry-basket",
+              "furnitureId": "decor-laundry-basket",
+              "x": 187.5,
+              "z": 282.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bathroom_12_bath_accessory-scale",
+              "furnitureId": "bath_accessory-scale",
+              "x": 202.5,
+              "z": 165,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
             }
           ],
           "exteriorDecor": []
@@ -442,6 +567,28 @@
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1
+            },
+            {
+              "instanceId": "enrich_dining_13_decor-tableware",
+              "furnitureId": "decor-tableware",
+              "x": 167,
+              "z": 140,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "enrich_dining_15_decor-vase-set",
+              "furnitureId": "decor-vase-set",
+              "x": 210,
+              "z": 140,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
             }
           ],
           "exteriorDecor": []
@@ -520,6 +667,59 @@
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1
+            },
+            {
+              "instanceId": "enrich_study_16_elec-printer",
+              "furnitureId": "elec-printer",
+              "x": 287.5,
+              "z": 410,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_study_17_decor-globe",
+              "furnitureId": "decor-globe",
+              "x": 102.5,
+              "z": 382.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "enrich_study_18_lamp-desk-2",
+              "furnitureId": "lamp-desk-2",
+              "x": 220,
+              "z": 407.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "enrich_study_19_decor-book-stack-2",
+              "furnitureId": "decor-book-stack-2",
+              "x": 80,
+              "z": 421,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "enrich_study_20_toy-robot",
+              "furnitureId": "toy-robot",
+              "x": 25,
+              "z": 185,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
             }
           ],
           "exteriorDecor": []
@@ -575,7 +775,48 @@
               "description": "4 只嵌入式筒灯散布天花"
             }
           },
-          "placedItems": [],
+          "placedItems": [
+            {
+              "instanceId": "enrich_closet_21_decor-suitcase",
+              "furnitureId": "decor-suitcase",
+              "x": 17.5,
+              "z": 27.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_closet_22_storage-box",
+              "furnitureId": "storage-box",
+              "x": 170,
+              "z": 45,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_closet_23_decor-folded-clothes",
+              "furnitureId": "decor-folded-clothes",
+              "x": 90,
+              "z": 185,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_closet_24_storage-shoe-shelf",
+              "furnitureId": "storage-shoe-shelf",
+              "x": -23,
+              "z": 285,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
           "exteriorDecor": []
         },
         "balcony": {
@@ -604,6 +845,46 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 0.6,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_garage_25_storage-shelving",
+              "furnitureId": "storage-shelving",
+              "x": 380,
+              "z": 8,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_garage_26_electrical-fire-ext",
+              "furnitureId": "electrical-fire-ext",
+              "x": 470,
+              "z": 60,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_garage_27_storage-box",
+              "furnitureId": "storage-box",
+              "x": 455,
+              "z": 120,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_garage_28_toy-ride-car",
+              "furnitureId": "toy-ride-car",
+              "x": 140,
+              "z": 260,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
               "scaleH": 1
             }
           ],
@@ -706,7 +987,28 @@
               "description": "4 只嵌入式筒灯散布天花"
             }
           },
-          "placedItems": [],
+          "placedItems": [
+            {
+              "instanceId": "enrich_hallway_29_decor-umbrella-stand",
+              "furnitureId": "decor-umbrella-stand",
+              "x": 47.5,
+              "z": 27.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_hallway_30_decor-pedestal",
+              "furnitureId": "decor-pedestal",
+              "x": 185,
+              "z": 25,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
           "exteriorDecor": []
         },
         "pool": {
@@ -1442,6 +1744,59 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_master_31_rug-persian-wool",
+              "furnitureId": "rug-persian-wool",
+              "x": 123,
+              "z": 210,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_master_32_lamp-bedside",
+              "furnitureId": "lamp-bedside",
+              "x": 90,
+              "z": 17,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 50
+            },
+            {
+              "instanceId": "enrich_master_33_decor-wicker-box",
+              "furnitureId": "decor-wicker-box",
+              "x": 288,
+              "z": 382.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "enrich_master_34_toy-teddy",
+              "furnitureId": "toy-teddy",
+              "x": 228,
+              "z": 135,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 55
+            },
+            {
+              "instanceId": "enrich_master_35_decor-mirror-full",
+              "furnitureId": "decor-mirror-full",
+              "x": 475,
+              "z": 330,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
             }
           ],
           "exteriorDecor": []
@@ -1526,6 +1881,48 @@
               "x": 270.58781250000004,
               "z": 371.59515625,
               "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom_36_rug-boho",
+              "furnitureId": "rug-boho",
+              "x": 170,
+              "z": 230,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom_37_lamp-vintage",
+              "furnitureId": "lamp-vintage",
+              "x": 16.5,
+              "z": 377.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 50
+            },
+            {
+              "instanceId": "enrich_bedroom_38_toy-bunny",
+              "furnitureId": "toy-bunny",
+              "x": 97.5,
+              "z": 237.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 55
+            },
+            {
+              "instanceId": "enrich_bedroom_39_pet-cat-tree-2",
+              "furnitureId": "pet-cat-tree-2",
+              "x": 305,
+              "z": 25,
+              "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -1619,6 +2016,48 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom2_40_rug-qashqai",
+              "furnitureId": "rug-qashqai",
+              "x": 60,
+              "z": 105,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom2_41_lamp-marble",
+              "furnitureId": "lamp-marble",
+              "x": 15,
+              "z": 379,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 50
+            },
+            {
+              "instanceId": "enrich_bedroom2_42_decor-clothes-pile",
+              "furnitureId": "decor-clothes-pile",
+              "x": 290,
+              "z": 360,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom2_43_elec-laptop-2",
+              "furnitureId": "elec-laptop-2",
+              "x": 82.5,
+              "z": 287.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 60
             }
           ],
           "exteriorDecor": []
@@ -1681,16 +2120,6 @@
               "scaleH": 1
             },
             {
-              "instanceId": "pi_17_yfuwe",
-              "furnitureId": "nightstand-white",
-              "x": 230,
-              "z": 373.97656250000006,
-              "rotation": 180,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
               "instanceId": "pi_18_krpyp",
               "furnitureId": "bed-single-white",
               "x": 0,
@@ -1706,6 +2135,68 @@
               "x": 124.45203125,
               "z": 98.14937500000002,
               "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom3_44_rug-persian",
+              "furnitureId": "rug-persian",
+              "x": 20,
+              "z": 140,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom3_45_toy-blocks",
+              "furnitureId": "toy-blocks",
+              "x": 75,
+              "z": 85,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom3_46_toy-plush",
+              "furnitureId": "toy-plush",
+              "x": 47.5,
+              "z": 267.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 45
+            },
+            {
+              "instanceId": "enrich_bedroom3_47_toy-hunter",
+              "furnitureId": "toy-hunter",
+              "x": 19.5,
+              "z": 377.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 50
+            },
+            {
+              "instanceId": "enrich_bedroom3_48_desk-kids",
+              "furnitureId": "desk-kids",
+              "x": 180,
+              "z": 310,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom3_49_office_chair-kids",
+              "furnitureId": "office_chair-kids",
+              "x": 182.5,
+              "z": 317.5,
+              "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -1790,6 +2281,48 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1
+            },
+            {
+              "instanceId": "enrich_bathroom_50_decor-laundry-basket-2",
+              "furnitureId": "decor-laundry-basket-2",
+              "x": 227.5,
+              "z": 362.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bathroom_51_bath_accessory-supplies",
+              "furnitureId": "bath_accessory-supplies",
+              "x": 63,
+              "z": 200,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 85
+            },
+            {
+              "instanceId": "enrich_bathroom_52_bath_accessory-scale-2",
+              "furnitureId": "bath_accessory-scale-2",
+              "x": 184,
+              "z": 85,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bathroom_53_appliance-hairdryer-3",
+              "furnitureId": "appliance-hairdryer-3",
+              "x": 39,
+              "z": 175,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 85
             }
           ],
           "exteriorDecor": []
@@ -1881,6 +2414,38 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_study_54_elec-3d-printer",
+              "furnitureId": "elec-3d-printer",
+              "x": 180,
+              "z": 180,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_study_55_decor-book-stack",
+              "furnitureId": "decor-book-stack",
+              "x": 67.5,
+              "z": 390,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "enrich_study_56_lamp-generic-a",
+              "furnitureId": "lamp-generic-a",
+              "x": 147.5,
+              "z": 407.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
             }
           ],
           "exteriorDecor": []
@@ -1953,6 +2518,36 @@
               "x": -89.51375,
               "z": 140,
               "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_closet_57_decor-suitcase-2",
+              "furnitureId": "decor-suitcase-2",
+              "x": 160,
+              "z": 45,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_closet_58_decor-shoe-box",
+              "furnitureId": "decor-shoe-box",
+              "x": 122.5,
+              "z": 367.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_closet_59_decor-clothes-pile-2",
+              "furnitureId": "decor-clothes-pile-2",
+              "x": 140,
+              "z": 300,
+              "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
