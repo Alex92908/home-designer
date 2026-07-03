@@ -289,6 +289,28 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_living_320_decor-tea-set",
+              "furnitureId": "decor-tea-set",
+              "x": 395,
+              "z": 200,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 40
+            },
+            {
+              "instanceId": "deep2_living_321_decor-fruit-bowl",
+              "furnitureId": "decor-fruit-bowl",
+              "x": 397,
+              "z": 225,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 40
             }
           ],
           "exteriorDecor": []

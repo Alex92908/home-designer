@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useMemo, useState, useCallback, Component, ReactNode } from "react";
+import { useRef, useEffect, useMemo, useState, useCallback, useSyncExternalStore, Component, ReactNode } from "react";
 import { SceneRegistrar } from "@/lib/sceneRegistry";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { OrbitControls, Environment, Html, useGLTF, Text } from "@react-three/drei";
@@ -2738,14 +2738,50 @@ function PlumbingFixture({ item, w, d, h }: { item: FurnitureItem; w: number; d:
 // Errors during load fall back to the procedural mesh via <Suspense> +
 // <ErrorBoundary> in the parent.
 
+// ─── 台面吸附注册表 ───────────────────────────────────────────
+// GLB 经 contain 缩放后的真实高度往往低于声明高度（比例不匹配时取最小轴
+// 比），手写 elevationY 追不上 → 台面小件悬空。解法：每件落地家具渲染后
+// 把「实际顶面高度 + 占地范围」登记进表；架高小件（elevationY>0）渲染时
+// 查自己 XZ 正下方的承托面，自动把底面落上去。模型换了/缩放变了都会跟随。
+type SurfaceEntry = { x: number; z: number; halfW: number; halfD: number; topY: number };
+const surfaceRegistry = new Map<string, SurfaceEntry>();
+let surfaceVersion = 0;
+const surfaceListeners = new Set<() => void>();
+function publishSurface(key: string, entry: SurfaceEntry | null) {
+  if (entry) surfaceRegistry.set(key, entry);
+  else surfaceRegistry.delete(key);
+  surfaceVersion++;
+  surfaceListeners.forEach(l => l());
+}
+function subscribeSurfaces(l: () => void) { surfaceListeners.add(l); return () => { surfaceListeners.delete(l); }; }
+function getSurfaceVersion() { return surfaceVersion; }
+// 只有「平顶」家具的整体顶面才是可放置面：桌/柜/几/架。床和沙发的 bbox
+// 顶是床头板/靠背，不是垫面座面——它们上面的物件保留手调高度不吸附。
+const FLAT_TOP_CARRIERS = new Set<string>([
+  "coffee_table", "sideboard", "nightstand", "desk", "dresser", "tv_unit",
+  "kitchen_cabinet", "storage", "bookshelf", "dining_table", "bathroom_vanity",
+]);
+/** 找 (x,z) 正下方、顶面与期望高度 elevM 相差 ≤0.25m 的承托面，返回其顶面高。 */
+function snapToSurface(roomPrefix: string, selfKey: string, x: number, z: number, elevM: number): number | null {
+  let best: number | null = null, bestDiff = 0.25;
+  for (const [key, e] of surfaceRegistry) {
+    if (!key.startsWith(roomPrefix) || key === selfKey) continue;
+    if (Math.abs(x - e.x) > e.halfW + 0.08 || Math.abs(z - e.z) > e.halfD + 0.08) continue;
+    const diff = Math.abs(e.topY - elevM);
+    if (diff < bestDiff) { bestDiff = diff; best = e.topY; }
+  }
+  return best;
+}
+
 function GltfFurniture({
-  url, scale, rotation, yOffset, recolor, w, d, h, fit,
-}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile" }) {
+  url, scale, rotation, yOffset, recolor, w, d, h, fit, onMeasured,
+}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile"; onMeasured?: (m: { topY: number; w: number; d: number }) => void }) {
   const { scene } = useGLTF(url) as unknown as { scene: THREE.Object3D };
 
   // Clone so multiple instances don't share transforms or materials.
-  // Returns one or more positioned instances (tiling produces several).
-  const instances = useMemo(() => {
+  // Returns one or more positioned instances (tiling produces several),
+  // plus the ACTUAL rendered dims (post-fit) for the surface registry.
+  const { list: instances, measured } = useMemo(() => {
     // Per-mesh material fixups shared by every clone we build.
     const prep = (root: THREE.Object3D) => {
       root.traverse((obj) => {
@@ -2815,7 +2851,7 @@ function GltfFurniture({
     // Safety: if any dim is zero (broken model), skip auto-scale.
     if (!(size.x > 0 && size.y > 0 && size.z > 0)) {
       if (scale) base.scale.setScalar(scale);
-      return [{ obj: base, x: 0 }];
+      return { list: [{ obj: base, x: 0 }], measured: { topY: h, w, d } };
     }
 
     const mode = fit ?? "contain";
@@ -2830,7 +2866,7 @@ function GltfFurniture({
       base.position.x -= (b2.min.x + b2.max.x) / 2;
       base.position.z -= (b2.min.z + b2.max.z) / 2;
       base.position.y -= b2.min.y;
-      return [{ obj: base, x: 0 }];
+      return { list: [{ obj: base, x: 0 }], measured: { topY: h, w, d } };
     }
 
     if (mode === "tile") {
@@ -2846,7 +2882,7 @@ function GltfFurniture({
         const x = (i - (count - 1) / 2) * moduleW;
         out.push({ obj, x });
       }
-      return out;
+      return { list: out, measured: { topY: size.y * s, w: moduleW * count, d: size.z * s } };
     }
 
     // "contain" (default): uniform scale by the SMALLEST axis ratio so the
@@ -2854,8 +2890,14 @@ function GltfFurniture({
     // for organic/proportioned items (plants, sofas, chairs, lamps).
     const s = Math.min(w / size.x, h / size.y, d / size.z) * trim;
     const only = buildUniform(s);
-    return [{ obj: only.obj, x: 0 }];
+    return { list: [{ obj: only.obj, x: 0 }], measured: { topY: size.y * s, w: size.x * s, d: size.z * s } };
   }, [scene, w, d, h, scale, recolor, fit]);
+
+  // 实测尺寸上报（供台面吸附注册表使用）。ref 隔离回调身份，只在实测值
+  // 变化时触发。
+  const onMeasuredRef = useRef(onMeasured);
+  onMeasuredRef.current = onMeasured;
+  useEffect(() => { onMeasuredRef.current?.(measured); }, [measured]);
 
   return (
     <group rotation={[0, rotation ?? 0, 0]} position={[0, yOffset ?? 0, 0]}>
@@ -2886,11 +2928,36 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
   const roomWindows = useDesignerStore(s => s.floorPlans[activeFloor]?.roomWindows?.[roomKey] ?? EMPTY_WINDOWS);
   const doorWall    = useDesignerStore(s => s.floorPlans[activeFloor]?.roomDoorWall?.[roomKey] ?? "S");
 
-  if (!item) return null;
-
   // Convert floor plan cm coords to 3D world units using actual room dimensions
   const x3d = placed.x / 100 - roomW / 2;
   const z3d = placed.z / 100 - roomD / 2;
+
+  // ── 台面吸附（两端）──
+  // ① 落地家具（elevationY=0）把自己「实测顶面 + 占地」登记进注册表；
+  //    GLB 实测来自 onMeasured 回调，程序化盒子用声明尺寸。
+  // ② 架高小件（elevationY>0）查注册表，把底面自动落到正下方承托面上，
+  //    模型 contain 缩放后实际多高都能贴合，不再依赖手写高度猜测。
+  const surfKey = `${roomKey}:${placed.instanceId}`;
+  const [measured3d, setMeasured3d] = useState<{ topY: number; w: number; d: number } | null>(null);
+  const isCarrier = !!item && !placed.mountCeiling && (placed.elevationY ?? 0) === 0
+    && FLAT_TOP_CARRIERS.has(item.category);
+  useEffect(() => {
+    if (!isCarrier || !item) return;
+    const mw = measured3d?.w ?? (item.width  * (placed.scaleW ?? 1)) / 100;
+    const md = measured3d?.d ?? (item.depth  * (placed.scaleD ?? 1)) / 100;
+    const mt = measured3d?.topY ?? (item.height * (placed.scaleH ?? 1)) / 100;
+    const rot90 = placed.rotation === 90 || placed.rotation === 270;
+    publishSurface(surfKey, { x: x3d, z: z3d, halfW: (rot90 ? md : mw) / 2, halfD: (rot90 ? mw : md) / 2, topY: mt + (item.model3d?.yOffset ?? 0) });
+    return () => publishSurface(surfKey, null);
+  }, [isCarrier, item, measured3d, x3d, z3d, placed.rotation, placed.scaleW, placed.scaleD, placed.scaleH, surfKey]);
+  const surfVersion = useSyncExternalStore(subscribeSurfaces, getSurfaceVersion, getSurfaceVersion);
+  const snappedY = useMemo(() => {
+    if (!item || placed.mountCeiling || (placed.elevationY ?? 0) <= 0) return null;
+    return snapToSurface(`${roomKey}:`, surfKey, x3d, z3d, (placed.elevationY ?? 0) / 100);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [surfVersion, item, placed.mountCeiling, placed.elevationY, x3d, z3d, roomKey, surfKey]);
+
+  if (!item) return null;
 
   // Apply per-instance scale from the floor plan (scaleW/scaleD/scaleH default to 1)
   const fw = (item.width  * (placed.scaleW ?? 1)) / 100;
@@ -3099,7 +3166,7 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
   const roomH = def.height / 100;
   let baseY = placed.mountCeiling
     ? roomH - fh
-    : (placed.elevationY ?? 0) / 100;
+    : (snappedY ?? (placed.elevationY ?? 0) / 100);
 
   // Kitchen fixtures aren't floor-standing: a sink drops into the counter and
   // a range hood hangs on the wall above the cooktop. When the user hasn't
@@ -3180,6 +3247,7 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
           <GltfFurnitureWithFallback
             item={item}
             w={fw} d={fd} h={fh}
+            onMeasured={isCarrier ? setMeasured3d : undefined}
           />
         </Suspense>
       </group>
@@ -3315,7 +3383,7 @@ function CurtainInstance({
 }
 
 class GltfFurnitureWithFallback extends Component<
-  { item: FurnitureItem; w: number; d: number; h: number },
+  { item: FurnitureItem; w: number; d: number; h: number; onMeasured?: (m: { topY: number; w: number; d: number }) => void },
   { failed: boolean }
 > {
   state = { failed: false };
@@ -3324,7 +3392,7 @@ class GltfFurnitureWithFallback extends Component<
     console.warn(`[GltfFurniture] ${this.props.item.id}: ${err.message}`);
   }
   render() {
-    const { item, w, d, h } = this.props;
+    const { item, w, d, h, onMeasured } = this.props;
     if (this.state.failed || !item.model3d) {
       return <FurnitureMesh item={item} w={w} d={d} h={h} />;
     }
@@ -3337,6 +3405,7 @@ class GltfFurnitureWithFallback extends Component<
         recolor={item.model3d.recolor}
         fit={item.model3d.fit}
         w={w} d={d} h={h}
+        onMeasured={onMeasured}
       />
     );
   }
