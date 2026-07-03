@@ -162,6 +162,17 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
+            },
+            {
+              "instanceId": "enrich2_living_101_elec-tv-flat",
+              "furnitureId": "elec-tv-flat",
+              "x": 601,
+              "z": 218,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 50
             }
           ],
           "exteriorDecor": []
@@ -789,8 +800,8 @@
             {
               "instanceId": "enrich_closet_22_storage-box",
               "furnitureId": "storage-box",
-              "x": 170,
-              "z": 45,
+              "x": 80,
+              "z": 5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -799,8 +810,8 @@
             {
               "instanceId": "enrich_closet_23_decor-folded-clothes",
               "furnitureId": "decor-folded-clothes",
-              "x": 90,
-              "z": 185,
+              "x": 170,
+              "z": 385,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -812,6 +823,16 @@
               "x": -23,
               "z": 285,
               "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich2_closet_102_wardrobe-with-clothes",
+              "furnitureId": "wardrobe-with-clothes",
+              "x": 130,
+              "z": 120,
+              "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -1737,9 +1758,9 @@
             },
             {
               "instanceId": "pi_1_2okwm",
-              "furnitureId": "bed-fabric-beige",
-              "x": 143.4772916666667,
-              "z": 0.7167708333333138,
+              "furnitureId": "bed-lux",
+              "x": 153,
+              "z": -15,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -1850,9 +1871,9 @@
           "placedItems": [
             {
               "instanceId": "tpl_bedroom_0_bed-fabric-beige",
-              "furnitureId": "bed-fabric-beige",
-              "x": 10,
-              "z": 192.00484374999996,
+              "furnitureId": "bed-wood",
+              "x": 22.5,
+              "z": 199.5,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1
@@ -2121,10 +2142,10 @@
             },
             {
               "instanceId": "pi_18_krpyp",
-              "furnitureId": "bed-single-white",
+              "furnitureId": "bed-bunk-2",
               "x": 0,
-              "z": 205.140625,
-              "rotation": 180,
+              "z": 175,
+              "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -2141,9 +2162,9 @@
             },
             {
               "instanceId": "enrich_bedroom3_44_rug-persian",
-              "furnitureId": "rug-persian",
-              "x": 20,
-              "z": 140,
+              "furnitureId": "rug-boho",
+              "x": 80,
+              "z": 190,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2153,7 +2174,7 @@
               "instanceId": "enrich_bedroom3_45_toy-blocks",
               "furnitureId": "toy-blocks",
               "x": 75,
-              "z": 85,
+              "z": 20,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2672,7 +2693,38 @@
               "description": "4 只嵌入式筒灯散布天花"
             }
           },
-          "placedItems": [],
+          "placedItems": [
+            {
+              "instanceId": "enrich2_hallway_103_decor-mirror-ikea",
+              "furnitureId": "decor-mirror-ikea",
+              "x": 37.5,
+              "z": 15,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich2_hallway_104_plant-tropic-flowers",
+              "furnitureId": "plant-tropic-flowers",
+              "x": 160,
+              "z": 50,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich2_hallway_105_plant-monstera",
+              "furnitureId": "plant-monstera",
+              "x": 367.5,
+              "z": 57.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
           "exteriorDecor": []
         },
         "pool": {
@@ -3393,6 +3445,26 @@
               "x": 0,
               "z": 0,
               "rotation": 0
+            },
+            {
+              "instanceId": "enrich2_pergola_106_outdoor-sofa",
+              "furnitureId": "outdoor-sofa",
+              "x": 50,
+              "z": 20,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich2_pergola_107_garden-coffee-table",
+              "furnitureId": "garden-coffee-table",
+              "x": 105,
+              "z": 125,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
             }
           ],
           "exteriorDecor": []
@@ -3858,7 +3930,7 @@
         "rooftop_garden": true,
         "rooftop_bar": true,
         "equipment_room": true,
-        "pergola": true
+        "pergola": false
       },
       "roomDoorWall": {
         "living": "S",
