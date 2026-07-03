@@ -5523,7 +5523,10 @@ const TimeOfDaySlider = memo(function TimeOfDaySlider({
 });
 
 // ─── Main export ────────────────────────────────────────────
-export default function HouseCanvas() {
+/** veilImage：可选的预渲染外观图。传入时加载幕布显示该图（用户点进来
+ *  "秒见成品"，3D 就绪后原位淡入接管），不传则显示品牌深色幕布。
+ *  目前样板间查看器传（每套样板有离线截好的外观图），设计器/分享页不传。 */
+export default function HouseCanvas({ veilImage }: { veilImage?: string } = {}) {
   const locale        = useLocale();
   const exterior      = useDesignerStore(s => s.exterior);
   const buildings     = useDesignerStore(s => s.buildings);
@@ -6166,7 +6169,7 @@ export default function HouseCanvas() {
       {/* 加载幕布：Canvas 挂载即显示，首帧渲染完成后淡出（盖住场景构建/
           Draco 解码/shader 编译的白屏窗口，dynamic loading 和 drei Loader
           都盖不住这一段）。 */}
-      <SceneVeil ready={sceneReady} label={locale === "en" ? "Building 3D scene" : "正在构建 3D 场景"} />
+      <SceneVeil ready={sceneReady} label={locale === "en" ? "Building 3D scene" : "正在构建 3D 场景"} image={veilImage} />
       <Canvas
         style={{ touchAction: "none" }}
         shadows={{ type: THREE.PCFShadowMap, enabled: true }}
