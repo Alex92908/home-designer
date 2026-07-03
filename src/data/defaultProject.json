@@ -81,8 +81,8 @@
             {
               "instanceId": "tpl_living_3_lamp-arc-gold",
               "furnitureId": "lamp-arc-gold",
-              "x": 417.8614334853304,
-              "z": 447.4592840282565,
+              "x": 457.5,
+              "z": 447.5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1
@@ -172,7 +172,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 50
+              "elevationY": 45
             },
             {
               "instanceId": "deep_living_201_decor-pillows",
@@ -205,7 +205,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 48
+              "elevationY": 40
             },
             {
               "instanceId": "deep_living_204_decor-fruit-bowl",
@@ -216,7 +216,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 48
+              "elevationY": 40
             },
             {
               "instanceId": "deep_living_205_decor-books-pile",
@@ -227,7 +227,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 88
+              "elevationY": 85
             },
             {
               "instanceId": "deep_living_206_decor-camera-slr",
@@ -238,7 +238,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 88
+              "elevationY": 85
             },
             {
               "instanceId": "deep_living_207_decor-vase-single",
@@ -249,7 +249,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 88
+              "elevationY": 85
             },
             {
               "instanceId": "deep_living_208_elec-hifi",
@@ -284,9 +284,29 @@
             },
             {
               "instanceId": "deep_living_211_cat-tower",
-              "furnitureId": "cat-tower",
+              "furnitureId": "pet-cat-tree",
               "x": 40,
               "z": 400,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_living_301_sofa-armchair",
+              "furnitureId": "sofa-armchair",
+              "x": 350,
+              "z": 364,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_living_303_decor-vase-royal",
+              "furnitureId": "decor-vase-royal",
+              "x": 630,
+              "z": 35,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -416,7 +436,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 88
+              "elevationY": 85
             },
             {
               "instanceId": "enrich_kitchen_5_appliance-coffee-machine",
@@ -427,7 +447,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 88
+              "elevationY": 85
             },
             {
               "instanceId": "enrich_kitchen_6_appliance-kettle-electric",
@@ -438,7 +458,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 88
+              "elevationY": 85
             },
             {
               "instanceId": "enrich_kitchen_7_decor-copper-pots",
@@ -449,7 +469,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 88
+              "elevationY": 85
             },
             {
               "instanceId": "enrich_kitchen_8_decor-trash-bin",
@@ -470,7 +490,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 88
+              "elevationY": 85
             },
             {
               "instanceId": "deep_kitchen_213_appliance-toaster",
@@ -481,7 +501,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 88
+              "elevationY": 85
             },
             {
               "instanceId": "deep_kitchen_214_decor-utensils",
@@ -492,7 +512,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 88
+              "elevationY": 85
             }
           ],
           "exteriorDecor": []
@@ -795,6 +815,17 @@
               "scaleD": 1,
               "scaleH": 1,
               "elevationY": 75
+            },
+            {
+              "instanceId": "deep2_dining_307_decor-dinnerware",
+              "furnitureId": "decor-dinnerware",
+              "x": 162,
+              "z": 170,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
             }
           ],
           "exteriorDecor": []
@@ -950,17 +981,6 @@
               "elevationY": 75
             },
             {
-              "instanceId": "deep_study_221_elec-router",
-              "furnitureId": "elec-router",
-              "x": 229,
-              "z": 352.5,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 75
-            },
-            {
               "instanceId": "deep_study_222_decor-books-pack",
               "furnitureId": "decor-books-pack",
               "x": 282,
@@ -969,7 +989,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 100
+              "elevationY": 70
             },
             {
               "instanceId": "deep_study_223_decor-deer-statue",
@@ -980,7 +1000,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 160
+              "elevationY": 124
             },
             {
               "instanceId": "deep_study_224_elec-speaker",
@@ -1080,7 +1100,7 @@
             {
               "instanceId": "enrich_closet_24_storage-shoe-shelf",
               "furnitureId": "storage-shoe-shelf",
-              "x": -23,
+              "x": -14,
               "z": 285,
               "rotation": 270,
               "scaleW": 1,
@@ -1142,7 +1162,7 @@
               "instanceId": "pi_1_jgpzq",
               "furnitureId": "vehicle.bmw_m3_e46",
               "x": 163.8662510614671,
-              "z": 14.210969309991981,
+              "z": 150,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 0.6,
@@ -1150,7 +1170,7 @@
             },
             {
               "instanceId": "enrich_garage_25_storage-shelving",
-              "furnitureId": "storage-shelving",
+              "furnitureId": "bookshelf-open-white",
               "x": 380,
               "z": 8,
               "rotation": 0,
@@ -1161,8 +1181,8 @@
             {
               "instanceId": "enrich_garage_26_electrical-fire-ext",
               "furnitureId": "electrical-fire-ext",
-              "x": 470,
-              "z": 60,
+              "x": 420,
+              "z": 120,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1171,19 +1191,9 @@
             {
               "instanceId": "enrich_garage_27_storage-box",
               "furnitureId": "storage-box",
-              "x": 455,
-              "z": 120,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
-              "instanceId": "enrich_garage_28_toy-ride-car",
-              "furnitureId": "toy-ride-car",
-              "x": 140,
-              "z": 260,
-              "rotation": 0,
+              "x": 0,
+              "z": 185,
+              "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -1197,7 +1207,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 100
+              "elevationY": 60
             },
             {
               "instanceId": "deep_garage_228_decor-caliper",
@@ -1208,14 +1218,24 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 60
+              "elevationY": 30
             },
             {
               "instanceId": "deep_garage_229_toy-basketball",
               "furnitureId": "toy-basketball",
-              "x": 47.5,
-              "z": 47.5,
+              "x": 30,
+              "z": 140,
               "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_garage_304_vehicle.sport_moto",
+              "furnitureId": "vehicle.sport_moto",
+              "x": 117.5,
+              "z": -45,
+              "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -1366,6 +1386,16 @@
               "furnitureId": "decor-garden-urn",
               "x": 675,
               "z": 25,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_hallway_305_decor-statue-swan",
+              "furnitureId": "decor-statue-swan",
+              "x": 885,
+              "z": 20,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2127,7 +2157,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 50
+              "elevationY": 49
             },
             {
               "instanceId": "enrich_master_33_decor-wicker-box",
@@ -2138,7 +2168,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 75
+              "elevationY": 54
             },
             {
               "instanceId": "enrich_master_34_toy-teddy",
@@ -2149,7 +2179,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 55
+              "elevationY": 42
             },
             {
               "instanceId": "enrich_master_35_decor-mirror-full",
@@ -2180,7 +2210,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 60
+              "elevationY": 45
             },
             {
               "instanceId": "deep_master_235_decor-blanket",
@@ -2191,7 +2221,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 58
+              "elevationY": 42
             },
             {
               "instanceId": "deep_master_236_decor-phone-17",
@@ -2202,18 +2232,18 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 52
+              "elevationY": 49
             },
             {
               "instanceId": "deep_master_237_lamp-victorian",
-              "furnitureId": "lamp-victorian",
+              "furnitureId": "lamp-table-01",
               "x": 377,
               "z": 17,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 52
+              "elevationY": 49
             },
             {
               "instanceId": "deep_master_238_decor-books-pile",
@@ -2224,7 +2254,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 75
+              "elevationY": 54
             },
             {
               "instanceId": "deep_master_239_decor-mirror-bedroom",
@@ -2343,7 +2373,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 50
+              "elevationY": 49
             },
             {
               "instanceId": "enrich_bedroom_38_toy-bunny",
@@ -2354,7 +2384,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 55
+              "elevationY": 45
             },
             {
               "instanceId": "enrich_bedroom_39_pet-cat-tree-2",
@@ -2385,7 +2415,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 55
+              "elevationY": 45
             },
             {
               "instanceId": "deep_bedroom_242_decor-bed-clothes",
@@ -2396,7 +2426,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 50
+              "elevationY": 42
             },
             {
               "instanceId": "deep_bedroom_243_toy-pomeranian",
@@ -2407,7 +2437,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 52
+              "elevationY": 49
             },
             {
               "instanceId": "deep_bedroom_244_decor-book-single",
@@ -2418,7 +2448,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 52
+              "elevationY": 49
             }
           ],
           "exteriorDecor": []
@@ -2529,7 +2559,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 50
+              "elevationY": 60
             },
             {
               "instanceId": "enrich_bedroom2_42_decor-clothes-pile",
@@ -2543,14 +2573,14 @@
             },
             {
               "instanceId": "enrich_bedroom2_43_elec-laptop-2",
-              "furnitureId": "elec-laptop-2",
+              "furnitureId": "elec-laptop",
               "x": 82.5,
               "z": 287.5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 60
+              "elevationY": 47
             },
             {
               "instanceId": "deep_bedroom2_245_curtain-drape",
@@ -2571,7 +2601,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 55
+              "elevationY": 45
             },
             {
               "instanceId": "deep_bedroom2_247_decor-bed-clothes",
@@ -2582,7 +2612,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 50
+              "elevationY": 45
             },
             {
               "instanceId": "deep_bedroom2_248_decor-camera-exakta",
@@ -2593,18 +2623,29 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 52
+              "elevationY": 60
             },
             {
               "instanceId": "deep_bedroom2_249_toy-gamepads",
-              "furnitureId": "toy-gamepads",
+              "furnitureId": "toy-game-controller",
               "x": 122.5,
               "z": 342.5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 55
+              "elevationY": 48
+            },
+            {
+              "instanceId": "deep2_bedroom2_308_toy-game-portable",
+              "furnitureId": "decor-phone-14",
+              "x": 291,
+              "z": 392,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 60
             }
           ],
           "exteriorDecor": []
@@ -2715,7 +2756,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 45
+              "elevationY": 28
             },
             {
               "instanceId": "enrich_bedroom3_47_toy-hunter",
@@ -2726,12 +2767,12 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 50
+              "elevationY": 49
             },
             {
               "instanceId": "enrich_bedroom3_48_desk-kids",
               "furnitureId": "desk-kids",
-              "x": 180,
+              "x": 190,
               "z": 310,
               "rotation": 90,
               "scaleW": 1,
@@ -2767,7 +2808,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 45
+              "elevationY": 28
             },
             {
               "instanceId": "deep_bedroom3_252_toy-ink-bunny",
@@ -2778,7 +2819,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 95
+              "elevationY": 60
             }
           ],
           "exteriorDecor": []
@@ -3035,7 +3076,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 75
+              "elevationY": 63
             },
             {
               "instanceId": "enrich_study_56_lamp-generic-a",
@@ -3046,7 +3087,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 75
+              "elevationY": 63
             },
             {
               "instanceId": "deep_study_255_elec-laptop",
@@ -3057,7 +3098,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 75
+              "elevationY": 63
             },
             {
               "instanceId": "deep_study_256_decor-books-set",
@@ -3068,7 +3109,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 100
+              "elevationY": 60
             },
             {
               "instanceId": "deep_study_257_decor-tulip",
@@ -3079,7 +3120,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 75
+              "elevationY": 63
             },
             {
               "instanceId": "deep_study_258_elec-speaker",
@@ -3149,8 +3190,8 @@
             {
               "instanceId": "pi_2_xjcrc",
               "furnitureId": "wardrobe-open-rack",
-              "x": 111.90156250000001,
-              "z": 126.5221875,
+              "x": 147.5,
+              "z": 125,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -3381,6 +3422,16 @@
               "instanceId": "deep_hallway_262_decor-pedestal",
               "furnitureId": "decor-pedestal",
               "x": 985,
+              "z": 25,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_hallway_306_decor-garden-urn",
+              "furnitureId": "decor-garden-urn",
+              "x": 275,
               "z": 25,
               "rotation": 0,
               "scaleW": 1,
@@ -4110,16 +4161,6 @@
               "rotation": 0
             },
             {
-              "instanceId": "enrich2_pergola_106_outdoor-sofa",
-              "furnitureId": "outdoor-sofa",
-              "x": 50,
-              "z": 20,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
               "instanceId": "enrich2_pergola_107_garden-coffee-table",
               "furnitureId": "garden-coffee-table",
               "x": 105,
@@ -4138,13 +4179,23 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 48
+              "elevationY": 12
             },
             {
               "instanceId": "deep_pergola_264_planter-clay",
               "furnitureId": "planter-clay",
               "x": 20,
               "z": 240,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_pergola_310_decor-garden-urn",
+              "furnitureId": "decor-garden-urn",
+              "x": 230,
+              "z": 230,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
