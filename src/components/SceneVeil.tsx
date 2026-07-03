@@ -14,17 +14,32 @@
  * 开始前用户已经看到品牌加载画面。
  */
 import { useEffect, useRef, useState } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 
-/** Canvas 内组件：第一帧渲染完成后回调一次。 */
+/** Canvas 内组件：第一帧渲染完成后回调一次。
+ *
+ *  frameloop="demand" 下 useFrame 只在有帧真正渲染时触发。重资产流式加载 /
+ *  主线程被压满时第一帧可能迟迟不来，幕布就无限挂着（看着像卡死）——而资产
+ *  下载进度本就由 drei <Loader> 百分比条负责显示，幕布没必要陪跑到底。所以：
+ *  ① 挂载时主动 invalidate() 请求一帧（demand 模式下别干等）；
+ *  ② 12s 兜底强制回调——极端情况下宁可让用户看到逐步成形的场景 + Loader
+ *    进度条，也不要一块无限呼吸的幕布。 */
 export function FirstFrameNotifier({ onReady }: { onReady: () => void }) {
   const done = useRef(false);
-  useFrame(() => {
+  const invalidate = useThree((s) => s.invalidate);
+  const fire = () => {
     if (done.current) return;
     done.current = true;
     // 等这一帧真正提交到屏幕后再通知（下一宏任务）。
     setTimeout(onReady, 0);
-  });
+  };
+  useFrame(fire);
+  useEffect(() => {
+    invalidate();
+    const t = setTimeout(fire, 12000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return null;
 }
 
