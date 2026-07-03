@@ -1,27 +1,24 @@
 "use client";
 
 /**
- * ShowcaseClient — 样板间画廊 + 外形图查看器。
+ * ShowcaseClient — 样板间画廊（轻量）。
  *
- * 画廊：列出 SHOWCASE_TEMPLATES（现在 1 套，结构留口给以后用户投稿）。
- * 点卡片 → 把该方案临时灌进 store，全屏渲染 <HouseCanvas/> 外观图。
- *
- * 关键：查看样板会改动全局 store。为不破坏用户自己的设计，进入查看前备份
- * store 相关字段 + localStorage，返回/卸载/关页时还原。
+ * 只列卡片 + SEO 文案，依赖极少：只引 showcaseMeta（纯文案，零重依赖）。
+ * 绝不静态引 store / 家具目录 / three.js —— 那些几 MB 的东西只有点「查看外形」
+ * 时才通过 next/dynamic 懒加载 ShowcaseViewer 拉进来。这样 /showcase 落地几乎
+ * 瞬间（静态 HTML + 极小 JS），而不是首屏就下整个 3D 应用。
  */
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
-import { useDesignerStore } from "@/lib/store";
 import { useLocale } from "@/lib/i18n";
-import { SHOWCASE_TEMPLATES, type ShowcaseTemplate } from "@/lib/showcaseTemplates";
+import { SHOWCASE_META } from "@/lib/showcaseMeta";
 
-const PERSIST_KEY = "home-designer-v2";
-
-const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
+// 查看器（重：store + three.js）——点卡片才加载，ssr:false 避免进服务端/首屏包。
+const ShowcaseViewer = dynamic(() => import("./ShowcaseViewer"), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-screen bg-gray-900 text-gray-400 text-sm">
-      渲染外形图…
+      加载查看器…
     </div>
   ),
 });
@@ -31,136 +28,9 @@ export default function ShowcaseClient() {
   const en = locale === "en";
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // 备份用户当前 store（首次进入查看时拍一次）。
-  const backup = useRef<{
-    floorPlans: unknown;
-    exterior: unknown;
-    yardPlan: unknown;
-    viewMode: unknown;
-    activeFloor: number;
-    ls: string | null;
-  } | null>(null);
-
-  const ensureBackup = () => {
-    if (backup.current) return;
-    const s = useDesignerStore.getState();
-    backup.current = {
-      floorPlans: s.floorPlans,
-      exterior: s.exterior,
-      yardPlan: s.yardPlan,
-      viewMode: s.viewMode,
-      activeFloor: s.activeFloor,
-      ls: typeof window !== "undefined" ? window.localStorage.getItem(PERSIST_KEY) : null,
-    };
-  };
-
-  const restore = () => {
-    const b = backup.current;
-    if (!b) return;
-    useDesignerStore.setState({
-      floorPlans: b.floorPlans as never,
-      exterior: b.exterior as never,
-      yardPlan: b.yardPlan as never,
-      viewMode: b.viewMode as never,
-      activeFloor: b.activeFloor,
-    });
-    try {
-      if (b.ls != null) window.localStorage.setItem(PERSIST_KEY, b.ls);
-    } catch {
-      /* ignore */
-    }
-    backup.current = null;
-  };
-
-  // 卸载（路由切走）时还原；关页（beforeunload）时至少把 localStorage 写回，
-  // 避免用户设计被样板覆盖丢失。
-  useEffect(() => {
-    const onUnload = () => {
-      const b = backup.current;
-      if (b?.ls != null) {
-        try {
-          window.localStorage.setItem(PERSIST_KEY, b.ls);
-        } catch {
-          /* ignore */
-        }
-      }
-    };
-    window.addEventListener("beforeunload", onUnload);
-    return () => {
-      window.removeEventListener("beforeunload", onUnload);
-      restore();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const openTemplate = (t: ShowcaseTemplate) => {
-    ensureBackup();
-    const { floorPlans, exterior, yardPlan } = t.load();
-    // REPLACE the exterior wholesale (load() returns a complete exterior built
-    // from defaultProject). Merging over s.exterior leaked the previously-opened
-    // template's facade — e.g. the glass-curtain template set facadeSystem:
-    // "curtain-wall" globally, so switching back to the modern-minimal villa
-    // (whose exterior doesn't set facadeSystem) still rendered as glass.
-    useDesignerStore.setState({
-      floorPlans: floorPlans as never,
-      exterior: exterior as never,
-      yardPlan: yardPlan as never,
-      viewMode: "exterior" as never,
-      activeFloor: 0,
-    });
-    setActiveId(t.id);
-  };
-
-  const backToGallery = () => {
-    restore();
-    setActiveId(null);
-  };
-
-  // 「在设计器中打开此方案」：把当前查看的模板据为己有 —— 清掉备份（卸载时
-  // 不再还原），让模板数据留在 store + localStorage，跳到设计器编辑。会替换
-  // 用户当前设计，故先确认。
-  const openInDesigner = () => {
-    const msg = en
-      ? "Open this design in the editor? It will replace your current design."
-      : "在设计器中打开此方案？这会替换你当前的设计。";
-    if (!window.confirm(msg)) return;
-    backup.current = null; // 不还原 → 模板成为用户的新工作设计
-    useDesignerStore.setState({ viewMode: "3d" as never, activeFloor: 0 });
-    window.location.href = "/";
-  };
-
-  // ── 外形图查看器 ──
+  // ── 外形图查看器（重组件，动态加载）──
   if (activeId) {
-    const t = SHOWCASE_TEMPLATES.find((x) => x.id === activeId);
-    return (
-      <div className="relative h-screen w-screen bg-gray-900 overflow-hidden">
-        <HouseCanvas />
-        <button
-          onClick={backToGallery}
-          className="absolute top-4 left-4 z-50 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-lg"
-          style={{ background: "rgba(20,22,32,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}
-        >
-          ← {en ? "Back to gallery" : "返回样板间"}
-        </button>
-        {t && (
-          <div
-            className="absolute top-4 right-4 z-50 px-4 py-2 rounded-xl text-sm text-white shadow-lg"
-            style={{ background: "rgba(20,22,32,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}
-          >
-            <div className="font-semibold">{en ? t.nameEn : t.nameZh}</div>
-            <div className="text-xs text-gray-300">{en ? t.descEn : t.descZh}</div>
-          </div>
-        )}
-        {/* 在设计器中打开此方案（fork 成自己的设计去编辑） */}
-        <button
-          onClick={openInDesigner}
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-xl"
-          style={{ background: "#007AFF" }}
-        >
-          {en ? "Open this design in the editor →" : "在设计器中打开此方案 →"}
-        </button>
-      </div>
-    );
+    return <ShowcaseViewer templateId={activeId} onBack={() => setActiveId(null)} />;
   }
 
   // ── 画廊 ──
@@ -173,6 +43,9 @@ export default function ShowcaseClient() {
             {en ? "Browse the 3D exterior of curated home designs" : "浏览精选住宅设计的 3D 外观"}
           </p>
         </div>
+        {/* 故意用整页跳转 <a> 而非 <Link>：<Link href="/"> 会在画廊空闲时预取
+            整个设计器首页包（几 MB three.js），正是本页要避免的负担。 */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a
           href="/"
           className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
@@ -183,10 +56,10 @@ export default function ShowcaseClient() {
       </header>
 
       <main className="p-6 grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {SHOWCASE_TEMPLATES.map((t) => (
+        {SHOWCASE_META.map((t) => (
           <button
             key={t.id}
-            onClick={() => openTemplate(t)}
+            onClick={() => setActiveId(t.id)}
             className="text-left rounded-2xl overflow-hidden border border-white/10 bg-gray-800/60 hover:bg-gray-800 transition shadow-lg"
           >
             {/* 缩略占位（外形图缩略图后续可换成预渲染图） */}
@@ -274,6 +147,7 @@ export default function ShowcaseClient() {
         </div>
 
         <div className="mt-10">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/" className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white inline-block" style={{ background: "#007AFF" }}>
             {en ? "Start designing for free →" : "免费开始设计 →"}
           </a>
