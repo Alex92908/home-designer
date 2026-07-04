@@ -156,12 +156,13 @@
             {
               "instanceId": "enrich_living_3_decor-book-stack",
               "furnitureId": "decor-book-stack",
-              "x": 629.5,
-              "z": 350,
+              "x": 433,
+              "z": 200,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 40
             },
             {
               "instanceId": "enrich2_living_101_elec-tv-flat",
@@ -750,17 +751,6 @@
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1
-            },
-            {
-              "instanceId": "enrich_dining_13_decor-tableware",
-              "furnitureId": "decor-tableware",
-              "x": 173.5,
-              "z": 140,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 75
             },
             {
               "instanceId": "enrich_dining_15_decor-vase-set",
@@ -3057,8 +3047,8 @@
             {
               "instanceId": "enrich_study_55_decor-book-stack",
               "furnitureId": "decor-book-stack",
-              "x": 69.5,
-              "z": 390,
+              "x": 57,
+              "z": 392,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -3067,9 +3057,9 @@
             },
             {
               "instanceId": "enrich_study_56_lamp-generic-a",
-              "furnitureId": "lamp-generic-a",
-              "x": 156.5,
-              "z": 417,
+              "furnitureId": "lamp-table-01",
+              "x": 146,
+              "z": 404,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -3104,20 +3094,21 @@
               "x": 167,
               "z": 407,
               "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
+              "scaleW": 0.65,
+              "scaleD": 0.65,
+              "scaleH": 0.65,
               "elevationY": 63
             },
             {
               "instanceId": "deep_study_258_elec-speaker",
               "furnitureId": "elec-speaker",
-              "x": 17.5,
-              "z": 17.5,
+              "x": 187.5,
+              "z": 80,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 64
             }
           ],
           "exteriorDecor": []
