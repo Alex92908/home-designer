@@ -716,7 +716,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "滑轨推拉，节省开门空间",
     icon: "🚪",
-    model3d: { url: "/models/wardrobe/wardrobe_dylanheyes/wardrobe_dylanheyes.glb", fit: "fill" },
+    model3d: { url: "/models/wardrobe/wardrobe_dylanheyes/wardrobe_dylanheyes.glb", fit: "fill", rotation: 3.1415927 },
   },
   {
     id: "wardrobe-solid-walnut",

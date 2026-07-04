@@ -3224,14 +3224,15 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
       const doorWallCanon = doorWall;
 
       const ranked = [...wallEntries].sort((a, b) => {
-        // 1. Never put curtain on door wall (obstructs movement / looks wrong)
-        const aDoor = a.name === doorWallCanon ? 1 : 0;
-        const bDoor = b.name === doorWallCanon ? 1 : 0;
-        if (aDoor !== bDoor) return aDoor - bDoor;
-        // 2. Prefer walls that have windows
+        // 1. 有窗的墙绝对优先——窗帘就是挂窗上的，即使那面墙恰好有门
+        //    （roomDoorWall 缺省 "S" 曾把 S 窗墙排除，窗帘被赶去无窗墙）。
         const aWin = windowWalls.has(a.name) ? 0 : 1;
         const bWin = windowWalls.has(b.name) ? 0 : 1;
         if (aWin !== bWin) return aWin - bWin;
+        // 2. 都无窗/都有窗时避开门墙
+        const aDoor = a.name === doorWallCanon ? 1 : 0;
+        const bDoor = b.name === doorWallCanon ? 1 : 0;
+        if (aDoor !== bDoor) return aDoor - bDoor;
         // 3. Nearest wall as tiebreak
         return a.dist - b.dist;
       });

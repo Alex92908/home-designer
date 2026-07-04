@@ -2189,7 +2189,7 @@
               "x": 178,
               "z": 0.5,
               "rotation": 0,
-              "scaleW": 1,
+              "scaleW": 1.85,
               "scaleD": 1,
               "scaleH": 1
             },
@@ -3221,22 +3221,24 @@
             {
               "instanceId": "enrich_closet_59_decor-clothes-pile-2",
               "furnitureId": "decor-clothes-pile-2",
-              "x": 150.5,
-              "z": 310.5,
+              "x": 10,
+              "z": 200,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 45
             },
             {
               "instanceId": "deep_closet_259_decor-folded-clothes",
               "furnitureId": "decor-folded-clothes",
-              "x": 150,
-              "z": 225,
+              "x": 10,
+              "z": 135,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 45
             }
           ],
           "exteriorDecor": []
