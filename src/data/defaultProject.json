@@ -4148,27 +4148,6 @@
               "rotation": 0
             },
             {
-              "instanceId": "enrich2_pergola_107_garden-coffee-table",
-              "furnitureId": "garden-coffee-table",
-              "x": 105.5,
-              "z": 125,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
-              "instanceId": "deep_pergola_263_decor-cocktail",
-              "furnitureId": "decor-cocktail",
-              "x": 145,
-              "z": 160,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 12
-            },
-            {
               "instanceId": "deep_pergola_264_planter-clay",
               "furnitureId": "planter-clay",
               "x": 20,

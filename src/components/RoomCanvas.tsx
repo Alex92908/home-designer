@@ -3229,15 +3229,36 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
         return a.dist - b.dist;
       });
 
-      const { cx, cz, ry: autoRotY } = ranked[0];
+      const best = ranked[0];
+      let { cx, cz } = best;
+      const autoRotY = best.ry;
 
+      // 对准窗户：吸附墙上有窗时，把沿墙坐标移到最近窗的中点（否则窗帘
+      // 挂在墙上却错开窗洞——"位置不对"的主因）。
+      const wallWins = roomWindows.filter(win => win.wall === best.name);
+      if (wallWins.length) {
+        const along = (best.name === "N" || best.name === "S") ? x3d : z3d;
+        let bestWin = wallWins[0], bestDist = Infinity;
+        for (const win of wallWins) {
+          const mid = (win.pos + win.len / 2) / 100 - ((best.name === "N" || best.name === "S") ? roomW : roomD) / 2;
+          const dist = Math.abs(mid - along);
+          if (dist < bestDist) { bestDist = dist; bestWin = win; }
+        }
+        const mid = (bestWin.pos + bestWin.len / 2) / 100 - ((best.name === "N" || best.name === "S") ? roomW : roomD) / 2;
+        if (best.name === "N" || best.name === "S") cx = mid; else cz = mid;
+      }
+
+      // 卷帘（roller blind 模型）：不落地拉满，挂窗上沿向下罩住窗洞。
+      const isRoller = ROLLER_CURTAIN_IDS.has(item.id);
+      const rollerH = 1.6;                       // 帘体高（底 0.7m，顶 2.3m 盖住窗）
       return (
         <CurtainInstance
           instanceId={placed.instanceId}
-          position={[cx, 0, cz]}
+          position={[cx, isRoller ? 2.3 - rollerH : 0, cz]}
           rotation={[0, autoRotY, 0]}
           item={item}
-          w={fw} d={fd} h={curtainH}
+          w={fw} d={fd} h={isRoller ? rollerH : curtainH}
+          roller={isRoller}
         />
       );
     }
@@ -3337,14 +3358,18 @@ function CurtainGltf({ item, w, d, h }: { item: FurnitureItem; w: number; d: num
  *  covers full width) and 0.35 (open, gathered to the hinge side) and
  *  offsets its position so the "gather" stays at the left edge — like
  *  real curtains pulled aside. */
+// 卷帘造型的窗帘模型：开合是「上下卷」而不是布帘的「左右拢」。
+const ROLLER_CURTAIN_IDS = new Set<string>(["curtain-drape"]);
+
 function CurtainInstance({
-  instanceId, position, rotation, item, w, d, h,
+  instanceId, position, rotation, item, w, d, h, roller,
 }: {
   instanceId: string;
   position: [number, number, number];
   rotation: [number, number, number];
   item: FurnitureItem;
   w: number; d: number; h: number;
+  roller?: boolean;
 }) {
   const isOpen = useDesignerStore(s => !!s.curtainOpenByInstanceId[instanceId]);
   const toggle = useDesignerStore(s => s.toggleCurtainOpen);
@@ -3359,6 +3384,13 @@ function CurtainInstance({
     openRef.current = cur + step;
     const g = innerRef.current;
     if (!g) return;
+    if (roller) {
+      // 卷帘：向上卷起（顶部固定，帘体纵向收到 15%）。
+      const scaleY = 1 - openRef.current * 0.85;
+      g.scale.y = scaleY;
+      g.position.y = h * (1 - scaleY);
+      return;
+    }
     // Open state: gather curtain to ~55% width (was 35% — too thin,
     // looked like a paper sliver). Still clearly "opened" but visually
     // believable as a bunched fabric.
