@@ -470,7 +470,7 @@ export function evaluateRoom(
     // Door-swing: anything whose footprint intrudes the swing area blocks the door.
     // 架高件（elevationY ≥40：挂墙柜、以及搁在沙发/台面上的毯子摆件——
     // 它们坐在别的家具上，不独立构成开门障碍）不参与门区检查。
-    const hangsHigh = (it.placed.elevationY ?? 0) >= 40;
+    const hangsHigh = (it.placed.elevationY ?? 0) >= 40 || !!it.placed.mountCeiling;
     if (swing && !FLAT_DECOR.has(it.f.category) && !hangsHigh && overlaps(swing.bbox, it.bbox, 1)) {
       violations.push({
         instanceId: it.placed.instanceId,
@@ -559,6 +559,7 @@ export function evaluateRoom(
       for (const other of items) {
         if (other.placed.instanceId === it.placed.instanceId) continue;
         if (FLAT_DECOR.has(other.f.category)) continue; // 地毯/挂画/窗帘不算障碍
+        if (other.placed.mountCeiling) continue; // 吸顶吊灯挂天花板，不占地面
         if (COMPANION_PAIRS[it.f.category]?.includes(other.f.category)) continue; // 成组家具（椅↔桌、床头柜↔床…）
         // 台面/床上小摆件（架高 ≥25cm 的无规则小物——低床铺面约 28cm）和
         // 贴地薄件（体重秤等 ≤15cm）都不构成通行障碍——否则"洗手台与自己

@@ -312,6 +312,17 @@
               "scaleD": 1,
               "scaleH": 1,
               "elevationY": 30
+            },
+            {
+              "instanceId": "pk4_living_503_lamp-pendant-saturno",
+              "furnitureId": "lamp-pendant-saturno",
+              "x": 311,
+              "z": 220,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
             }
           ],
           "exteriorDecor": []
@@ -413,8 +424,8 @@
             {
               "instanceId": "tpl_kitchen_3_fridge-french-door",
               "furnitureId": "fridge-french-door",
-              "x": 305.8575,
-              "z": 7.859999999999999,
+              "x": 309.3575,
+              "z": 0,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1
@@ -801,6 +812,28 @@
               "furnitureId": "decor-dinnerware",
               "x": 184,
               "z": 188.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "pk4_dining_501_lamp-chandelier-osgona",
+              "furnitureId": "lamp-chandelier-osgona",
+              "x": 175,
+              "z": 132.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "pk4_dining_502_decor-dinnerware-glossy",
+              "furnitureId": "decor-dinnerware-glossy",
+              "x": 172,
+              "z": 186,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2172,8 +2205,8 @@
             },
             {
               "instanceId": "deep_master_233_curtain-drape",
-              "furnitureId": "curtain-drape",
-              "x": 134,
+              "furnitureId": "curtain-victorian",
+              "x": 178,
               "z": 0.5,
               "rotation": 0,
               "scaleW": 1,
@@ -2552,8 +2585,8 @@
             },
             {
               "instanceId": "deep_bedroom2_245_curtain-drape",
-              "furnitureId": "curtain-drape",
-              "x": 53,
+              "furnitureId": "curtain-brown-modern",
+              "x": 28.5,
               "z": 404.5,
               "rotation": 180,
               "scaleW": 1,
@@ -4141,8 +4174,8 @@
             {
               "instanceId": "deep_pergola_264_planter-clay",
               "furnitureId": "planter-clay",
-              "x": 20,
-              "z": 240,
+              "x": 10,
+              "z": 0,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -4151,29 +4184,19 @@
             {
               "instanceId": "deep2_pergola_310_decor-garden-urn",
               "furnitureId": "decor-garden-urn",
-              "x": 230,
-              "z": 230,
+              "x": 240,
+              "z": 5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
             },
             {
-              "instanceId": "fill_pergola_407_dining_chair-bar-stool",
-              "furnitureId": "dining_chair-bar-stool",
-              "x": 80,
-              "z": 150,
-              "rotation": 90,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
-              "instanceId": "fill_pergola_408_dining_chair-bar-stool",
-              "furnitureId": "dining_chair-bar-stool",
-              "x": 180,
-              "z": 150,
-              "rotation": 270,
+              "instanceId": "pk4_pergola_504_outdoor-patio-set",
+              "furnitureId": "outdoor-patio-set",
+              "x": 40,
+              "z": 40,
+              "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
