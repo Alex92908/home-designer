@@ -1007,15 +1007,23 @@ function RoomDoor3D({
   const animRef = useRef(0);
   useFrame((_, delta) => {
     const isSliding = doorStyle === "sliding_barn" || doorStyle === "glass_slide";
-    const target = isOpen ? (isSliding ? -(doorLenCm / 100) : -Math.PI / 2) : 0;
-    const speed = isSliding ? 2.4 : 5.5;
+    const isRoller = doorStyle === "roller_shutter";
+    const target = isOpen
+      ? (isRoller ? 0.92 : isSliding ? -(doorLenCm / 100) : -Math.PI / 2)
+      : 0;
+    const speed = isRoller ? 1.2 : isSliding ? 2.4 : 5.5;
     const current = animRef.current;
     const diff = target - current;
     if (Math.abs(diff) > 0.002) {
       const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
       animRef.current = current + step;
       if (panelRef.current) {
-        if (isSliding) panelRef.current.position.x = animRef.current;
+        if (isRoller) {
+          // 卷帘：顶部固定，帘体向上卷起（scale 缩 + 底沿上移）。
+          panelRef.current.scale.y = 1 - animRef.current;
+          panelRef.current.position.y = (doorHCm / 100) * animRef.current;
+        }
+        else if (isSliding) panelRef.current.position.x = animRef.current;
         else panelRef.current.rotation.y = animRef.current;
       }
       // Right leaf of glass_swing swings in the opposite direction.
@@ -1094,7 +1102,37 @@ function RoomDoor3D({
       </>)}
 
       {/* Door panel (rotates around hinge at local X=0) */}
-      {doorStyle === "sliding_barn" ? (
+      {doorStyle === "roller_shutter" ? (
+        // 卷帘门：顶部卷筒箱（固定）+ 横条帘板（点击向上卷起，
+        // useFrame 里 scale.y 收缩且底沿上移、顶固定）。
+        <>
+          <mesh position={[doorW / 2, doorH + 0.10, 0]} castShadow>
+            <boxGeometry args={[doorW + 0.12, 0.22, 0.20]} />
+            <meshStandardMaterial color="#B8B8B8" metalness={0.45} roughness={0.45} />
+          </mesh>
+          <group ref={panelRef}>
+            <group
+              onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
+            >
+              {Array.from({ length: Math.max(6, Math.round(doorH / 0.22)) }, (_v: unknown, i: number) => {
+                const slatCount = Math.max(6, Math.round(doorH / 0.22));
+                const slatH = doorH / slatCount;
+                return (
+                  <mesh key={i} position={[doorW / 2, slatH * (i + 0.5), 0]} castShadow receiveShadow>
+                    <boxGeometry args={[doorW, slatH - 0.012, 0.045]} />
+                    <meshStandardMaterial color={i % 2 ? "#D8D8D6" : "#CFCFCC"} metalness={0.35} roughness={0.5} />
+                  </mesh>
+                );
+              })}
+              {/* 底沿加重条 */}
+              <mesh position={[doorW / 2, 0.03, 0.01]}>
+                <boxGeometry args={[doorW, 0.06, 0.055]} />
+                <meshStandardMaterial color="#8A8A8A" metalness={0.6} roughness={0.35} />
+              </mesh>
+            </group>
+          </group>
+        </>
+      ) : doorStyle === "sliding_barn" ? (
         // Sliding barn door: slides left (no swing). panelRef unused for rotation;
         // instead translate via useFrame (we already drive angleRef — reuse as
         // slide ratio 0→1 mapped to translation).
