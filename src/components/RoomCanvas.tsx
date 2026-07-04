@@ -396,17 +396,19 @@ function RoomShell({
     }
     // Door wall + window wall now share the NSWE alphabet — no remap.
     if (hasDoor && doorWall === side) {
+      const dw = Math.min(doorLenCm / 100, wallLenM);
       holes.push({
-        x: doorPosCm / 100,
+        x: Math.max(0, Math.min(doorPosCm / 100, wallLenM - dw)),
         y: 0,
-        w: doorLenCm / 100,
+        w: dw,
         h: doorHCm / 100,
       });
     }
-    // 额外门的墙洞（多门房间）
+    // 额外门的墙洞（多门房间）——同样宽度优先、位置回推
     for (const d of extraDoors ?? []) {
       if (d.wall !== side) continue;
-      holes.push({ x: d.pos / 100, y: 0, w: d.len / 100, h: (d.h ?? doorHCm) / 100 });
+      const dw = Math.min(d.len / 100, wallLenM);
+      holes.push({ x: Math.max(0, Math.min(d.pos / 100, wallLenM - dw)), y: 0, w: dw, h: (d.h ?? doorHCm) / 100 });
     }
     // Clamp all holes to wall bounds
     return holes.map(h => ({
@@ -1057,11 +1059,11 @@ function RoomDoor3D({
     }
   });
 
-  // 门宽受所在墙物理长度约束（与墙洞的 clamp 口径一致）：配 3.4m 门在
-  // 3.2m 墙上时，洞和板同步夹到墙内，不再出现"板比洞宽/超出墙"。
+  // 门宽受所在墙物理长度约束：宽度优先，位置回推——配 3.4m 门在 3.2m
+  // 墙上时门顶满整面墙，而不是被"墙长-位置"剪成窄条。
   const wallLenForDoor = (doorWall === "N" || doorWall === "S") ? W : D;
-  const doorPos = doorPosCm / 100;
-  const doorW = Math.max(0.5, Math.min(doorLenCm / 100, wallLenForDoor - doorPos));
+  const doorW = Math.max(0.5, Math.min(doorLenCm / 100, wallLenForDoor));
+  const doorPos = Math.max(0, Math.min(doorPosCm / 100, wallLenForDoor - doorW));
   const doorH = doorHCm / 100;
   const frameT = 0.04; // frame thickness
 
