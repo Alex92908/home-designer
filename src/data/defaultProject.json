@@ -583,8 +583,8 @@
             {
               "instanceId": "enrich_bathroom_10_bath_accessory-toiletries",
               "furnitureId": "bath_accessory-toiletries",
-              "x": 68.5,
-              "z": 173,
+              "x": 63,
+              "z": 193,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -614,8 +614,8 @@
             {
               "instanceId": "deep_bathroom_215_appliance-hairdryer",
               "furnitureId": "appliance-hairdryer",
-              "x": 50,
-              "z": 176,
+              "x": 38,
+              "z": 190,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2582,7 +2582,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 70
+              "elevationY": 48
             },
             {
               "instanceId": "deep2_bedroom2_308_toy-game-portable",
@@ -2873,8 +2873,8 @@
             {
               "instanceId": "enrich_bathroom_51_bath_accessory-supplies",
               "furnitureId": "bath_accessory-supplies",
-              "x": 55,
-              "z": 196,
+              "x": 75,
+              "z": 209,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2894,8 +2894,8 @@
             {
               "instanceId": "enrich_bathroom_53_appliance-hairdryer-3",
               "furnitureId": "appliance-hairdryer-3",
-              "x": 39,
-              "z": 203,
+              "x": 37.5,
+              "z": 223,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2917,7 +2917,7 @@
               "instanceId": "deep_bathroom_254_decor-vase-single",
               "furnitureId": "decor-vase-single",
               "x": 133,
-              "z": 212.5,
+              "z": 218.5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
