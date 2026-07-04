@@ -228,6 +228,7 @@ function RoomShell({
   wallExterior, wallBackExterior, wallFrontExterior, wallLeftExterior, wallRightExterior,
   ceiling,
   hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle,
+  extraDoors,
   activeRoom,
   southWallOpacity,
   ceilingOpacity,
@@ -255,6 +256,8 @@ function RoomShell({
   doorLenCm: number;
   doorHCm: number;
   doorStyle: import("@/lib/types").DoorStyle;
+  /** 多门房间的第 2..n 扇门（如车库人行门 + 卷帘大门）。 */
+  extraDoors?: Array<{ wall: WallSide; pos: number; len: number; h?: number; style?: import("@/lib/types").DoorStyle }>;
   activeRoom: RoomType;
   southWallOpacity: number;
   ceilingOpacity: number;
@@ -399,6 +402,11 @@ function RoomShell({
         w: doorLenCm / 100,
         h: doorHCm / 100,
       });
+    }
+    // 额外门的墙洞（多门房间）
+    for (const d of extraDoors ?? []) {
+      if (d.wall !== side) continue;
+      holes.push({ x: d.pos / 100, y: 0, w: d.len / 100, h: (d.h ?? doorHCm) / 100 });
     }
     // Clamp all holes to wall bounds
     return holes.map(h => ({
@@ -680,6 +688,22 @@ function RoomShell({
             : doorStyle}
         />
       )}
+      {/* 额外门（多门房间：如车库的人行门 + 卷帘大门）——此前只渲染
+          allDoors[0]，其余门在室内视图整扇消失。 */}
+      {(extraDoors ?? []).map((d, i) => (
+        <RoomDoor3D
+          key={`xdoor-${i}`}
+          W={W} D={D} H={H}
+          doorWall={d.wall}
+          doorPosCm={d.pos}
+          doorLenCm={d.len}
+          doorHCm={d.h ?? doorHCm}
+          activeRoom={activeRoom}
+          doorStyle={curtainGlassWalls?.has(d.wall)
+            ? ((d.style === "glass_slide" || d.style === "glass_swing") ? d.style : "glass_swing")
+            : (d.style ?? "wood_panel")}
+        />
+      ))}
 
       {/* Chair rail — thin horizontal trim at the split line (if any) */}
       {lower && (
@@ -3981,6 +4005,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
           doorLenCm={allDoors.length > 0 ? allDoors[0].len : doorLenCm}
           doorHCm={allDoors.length > 0 ? (allDoors[0].h ?? doorHDefault) : doorHCm}
           doorStyle={allDoors.length > 0 ? (allDoors[0].style ?? "wood_panel") : doorStyle}
+          extraDoors={allDoors.slice(1).map(d => ({ wall: d.wall as WallSide, pos: d.pos, len: d.len, h: d.h, style: d.style }))}
           activeRoom={activeRoom}
           ceiling={roomState.materials.ceiling}
           southWallOpacity={southWallOpacity}
