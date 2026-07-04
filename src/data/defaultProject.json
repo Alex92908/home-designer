@@ -1938,10 +1938,11 @@
         ]
       },
       "roomDoorStyle": {
-        "garage": "wood_panel"
+        "garage": "roller_shutter"
       },
       "roomDoorLen": {
-        "living": 145
+        "living": 145,
+        "garage": 340
       },
       "roomDoorH": {
         "living": 260
