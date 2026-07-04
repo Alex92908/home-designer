@@ -1350,6 +1350,9 @@ function ProceduralWoodDoor({
 }
 
 // ─── Light fixture ─────────────────────────────────────────
+// 露天房间（无天花）：默认吊灯/吸顶灯在这些房间无处可挂。
+const OPEN_AIR_ROOMS = new Set<string>(["pergola", "terrace", "deck", "pool", "yard"]);
+
 export function LightFixture({ H, lightColor, lightId, lightX = 0, lightZ = 0, room }: {
   H: number; lightColor: string; lightId: string;
   lightX?: number; lightZ?: number;
@@ -1370,6 +1373,10 @@ export function LightFixture({ H, lightColor, lightId, lightX = 0, lightZ = 0, r
       ref.current.rotation.y += delta * 0.15;
     }
   });
+  // 露天房间（凉亭/露台/泳池等）没有天花：未指定顶灯材料时不渲染默认
+  // 吊灯——否则灯泡按"天花高度"挂出来会垂穿台面浮在半空。
+  const OPEN_AIR: ReadonlySet<string> = OPEN_AIR_ROOMS;
+  if (!lightId && OPEN_AIR.has(roomId)) return null;
   return (
     <group position={[lightX, 0, lightZ]}>
       {/* Invisible hit proxy — a big sphere just below the ceiling that
