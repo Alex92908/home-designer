@@ -8,6 +8,7 @@ import { EffectComposer, N8AO, Bloom, Vignette, SMAA } from "@react-three/postpr
 import { BlendFunction } from "postprocessing";
 import { Suspense } from "react";
 import * as THREE from "three";
+import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { useDesignerStore, RoomState } from "@/lib/store";
 import { useLocale, useLocaleStore } from "@/lib/i18n";
 import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
@@ -933,7 +934,7 @@ const WOODEN_DOOR_URL = "/models/_arch_door/door_with_frame/door_with_frame.glb"
 function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number; onClick: () => void }) {
   const { scene } = useGLTF(WOODEN_DOOR_URL) as unknown as { scene: THREE.Object3D };
   const cloned = useMemo(() => {
-    const c = scene.clone(true);
+    const c = skeletonClone(scene);
     c.traverse(obj => {
       const m = obj as THREE.Mesh;
       if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; }
@@ -2899,7 +2900,7 @@ function GltfFurniture({
     // Scale a fresh clone uniformly by `s`, then recenter footprint on the
     // X/Z origin and drop its base to Y=0 (matches procedural-box convention).
     const buildUniform = (s: number) => {
-      const c = scene.clone(true);
+      const c = skeletonClone(scene);
       prep(c);
       c.scale.setScalar(s);
       c.updateMatrixWorld(true);
@@ -2912,7 +2913,7 @@ function GltfFurniture({
 
     // Measure the asset's native bounding box from a prepped clone so we can
     // scale to our declared furniture size (width/depth/height in meters).
-    const base = scene.clone(true);
+    const base = skeletonClone(scene);
     prep(base);
     const box = new THREE.Box3().setFromObject(base);
     const size = new THREE.Vector3();
@@ -3374,7 +3375,7 @@ function CurtainGltf({ item, w, d, h }: { item: FurnitureItem; w: number; d: num
   const url = item.model3d!.url;
   const { scene } = useGLTF(url) as unknown as { scene: THREE.Object3D };
   const cloned = useMemo(() => {
-    const c = scene.clone(true);
+    const c = skeletonClone(scene);
     // 1) Drop the bundled "Wall" backdrop
     const toRemove: THREE.Object3D[] = [];
     c.traverse(obj => {
