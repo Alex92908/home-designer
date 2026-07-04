@@ -514,17 +514,6 @@
               "scaleD": 1,
               "scaleH": 1,
               "elevationY": 85
-            },
-            {
-              "instanceId": "deep_kitchen_214_decor-utensils",
-              "furnitureId": "decor-utensils",
-              "x": 45,
-              "z": 30,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 85
             }
           ],
           "exteriorDecor": []
@@ -611,7 +600,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 85
+              "elevationY": 78
             },
             {
               "instanceId": "enrich_bathroom_11_decor-laundry-basket",
@@ -642,7 +631,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 85
+              "elevationY": 78
             }
           ],
           "exteriorDecor": []
@@ -797,17 +786,6 @@
               "elevationY": 75
             },
             {
-              "instanceId": "deep_dining_218_decor-cutlery",
-              "furnitureId": "decor-cutlery",
-              "x": 169,
-              "z": 109.5,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 75
-            },
-            {
               "instanceId": "deep2_dining_307_decor-dinnerware",
               "furnitureId": "decor-dinnerware",
               "x": 184,
@@ -921,8 +899,8 @@
             {
               "instanceId": "enrich_study_16_elec-printer",
               "furnitureId": "elec-printer",
-              "x": 287.5,
-              "z": 410,
+              "x": 281.5,
+              "z": 406.5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1018,12 +996,13 @@
             {
               "instanceId": "deep_study_224_elec-speaker",
               "furnitureId": "elec-speaker",
-              "x": 17.5,
-              "z": 417.5,
+              "x": 287.5,
+              "z": 241.5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 35
             }
           ],
           "exteriorDecor": []
@@ -1094,7 +1073,7 @@
               "instanceId": "enrich_closet_22_storage-box",
               "furnitureId": "storage-box",
               "x": 73.5,
-              "z": -1.5,
+              "z": 0,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1204,7 +1183,7 @@
             {
               "instanceId": "enrich_garage_27_storage-box",
               "furnitureId": "storage-box",
-              "x": -6.5,
+              "x": 0,
               "z": 178.5,
               "rotation": 270,
               "scaleW": 1,
@@ -1354,20 +1333,10 @@
               "scaleH": 1
             },
             {
-              "instanceId": "enrich_hallway_30_decor-pedestal",
-              "furnitureId": "decor-pedestal",
-              "x": 835,
-              "z": 30.5,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
               "instanceId": "deep_hallway_230_decor-statue-elephant",
               "furnitureId": "decor-statue-elephant",
-              "x": 286.5,
-              "z": 16,
+              "x": 280,
+              "z": 4,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2921,7 +2890,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 85
+              "elevationY": 78
             },
             {
               "instanceId": "enrich_bathroom_52_bath_accessory-scale-2",
@@ -2942,7 +2911,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 85
+              "elevationY": 78
             },
             {
               "instanceId": "deep_bathroom_253_bath_accessory-tp-holder",
@@ -2964,7 +2933,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 85
+              "elevationY": 78
             },
             {
               "instanceId": "fill_bathroom_409_appliance-washer",
