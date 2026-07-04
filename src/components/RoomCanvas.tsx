@@ -3211,12 +3211,15 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
       // S (front, plan-bot) = z = +halfD, curtain faces -Z.
       // W (left)            = x = -halfW, curtain faces +X.
       // E (right)           = x = +halfW, curtain faces -X.
+      // 贴墙偏移 = 2cm 缝隙 + 帘体半厚——帘模型以中心贴墙会把一半厚度
+      // 穿到墙/玻璃幕墙外面（从室外能看到半条帘飘着）。
+      const inset = 0.02 + fd / 2;
       type WallEntry = { name: WallSide; dist: number; cx: number; cz: number; ry: number };
       const wallEntries: WallEntry[] = [
-        { name: "N", dist: Math.abs(z3d - (-halfD)), cx: x3d,        cz: -halfD + 0.02, ry: 0 },
-        { name: "S", dist: Math.abs(z3d - ( halfD)), cx: x3d,        cz:  halfD - 0.02, ry: Math.PI },
-        { name: "W", dist: Math.abs(x3d - (-halfW)), cx: -halfW + 0.02, cz: z3d,        ry: -Math.PI / 2 },
-        { name: "E", dist: Math.abs(x3d - ( halfW)), cx:  halfW - 0.02, cz: z3d,        ry:  Math.PI / 2 },
+        { name: "N", dist: Math.abs(z3d - (-halfD)), cx: x3d,        cz: -halfD + inset, ry: 0 },
+        { name: "S", dist: Math.abs(z3d - ( halfD)), cx: x3d,        cz:  halfD - inset, ry: Math.PI },
+        { name: "W", dist: Math.abs(x3d - (-halfW)), cx: -halfW + inset, cz: z3d,        ry: -Math.PI / 2 },
+        { name: "E", dist: Math.abs(x3d - ( halfW)), cx:  halfW - inset, cz: z3d,        ry:  Math.PI / 2 },
       ];
 
       // Prefer walls that have windows; avoid the door wall.
