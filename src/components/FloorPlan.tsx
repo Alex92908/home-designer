@@ -2034,7 +2034,12 @@ export default function FloorPlan() {
           />
 
           {/* Placed furniture */}
-          {roomState.placedItems.map((placed) => (
+          {/* 按占地面积降序绘制：大件（地毯/电视柜/床）在下层，小件（音箱/
+              摆件）在上层——否则小件卡片被大件盖住，看不见也点不到。 */}
+          {[...roomState.placedItems].sort((a, b) => {
+            const fa = getFurnitureById(a.furnitureId), fb = getFurnitureById(b.furnitureId);
+            return (fb ? fb.width * fb.depth : 0) - (fa ? fa.width * fa.depth : 0);
+          }).map((placed) => (
             <PlacedItemSVG
               key={placed.instanceId}
               placed={placed}
