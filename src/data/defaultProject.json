@@ -581,17 +581,6 @@
               "scaleD": 1
             },
             {
-              "instanceId": "enrich_bathroom_10_bath_accessory-toiletries",
-              "furnitureId": "bath_accessory-toiletries",
-              "x": 58.5,
-              "z": 190.5,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 78
-            },
-            {
               "instanceId": "enrich_bathroom_11_decor-laundry-basket",
               "furnitureId": "decor-laundry-basket",
               "x": 189,
@@ -610,17 +599,6 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
-            },
-            {
-              "instanceId": "deep_bathroom_215_appliance-hairdryer",
-              "furnitureId": "appliance-hairdryer",
-              "x": 35,
-              "z": 189,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 78
             }
           ],
           "exteriorDecor": []
@@ -2873,13 +2851,13 @@
             {
               "instanceId": "enrich_bathroom_51_bath_accessory-supplies",
               "furnitureId": "bath_accessory-supplies",
-              "x": 65,
-              "z": 204,
+              "x": 112,
+              "z": 366,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 75
+              "elevationY": 85
             },
             {
               "instanceId": "enrich_bathroom_52_bath_accessory-scale-2",
@@ -2890,17 +2868,6 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
-            },
-            {
-              "instanceId": "enrich_bathroom_53_appliance-hairdryer-3",
-              "furnitureId": "appliance-hairdryer-3",
-              "x": 34,
-              "z": 221,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 75
             },
             {
               "instanceId": "deep_bathroom_253_bath_accessory-tp-holder",
@@ -2916,13 +2883,13 @@
             {
               "instanceId": "deep_bathroom_254_decor-vase-single",
               "furnitureId": "decor-vase-single",
-              "x": 133,
-              "z": 218.5,
+              "x": 177.5,
+              "z": 128.5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 75
+              "elevationY": 0
             },
             {
               "instanceId": "fill_bathroom_409_appliance-washer",
