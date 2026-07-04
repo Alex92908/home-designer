@@ -1057,9 +1057,12 @@ function RoomDoor3D({
     }
   });
 
-  const doorW = doorLenCm / 100;
-  const doorH = doorHCm / 100;
+  // 门宽受所在墙物理长度约束（与墙洞的 clamp 口径一致）：配 3.4m 门在
+  // 3.2m 墙上时，洞和板同步夹到墙内，不再出现"板比洞宽/超出墙"。
+  const wallLenForDoor = (doorWall === "N" || doorWall === "S") ? W : D;
   const doorPos = doorPosCm / 100;
+  const doorW = Math.max(0.5, Math.min(doorLenCm / 100, wallLenForDoor - doorPos));
+  const doorH = doorHCm / 100;
   const frameT = 0.04; // frame thickness
 
   // Group positioning: put a parent group at the hinge line (inner-room
