@@ -1764,7 +1764,7 @@ export default function FloorPlan() {
           })}
 
           {/* Doors — multi-door, each rendered with cardinal or polygon-edge geometry */}
-          {allDoors.map(d => {
+          {allDoors.map((d, di) => {
             // Resolve polygon edge for inner-edge doors
             let polygonEdge: { x1: number; z1: number; x2: number; z2: number; length: number; nx: number; nz: number } | undefined;
             if (d.edgeIndex != null && roomShape && roomShape.preset !== "rect") {
@@ -1775,7 +1775,7 @@ export default function FloorPlan() {
             // Cardinal-wall coord — DoorSVG now speaks the same NSWE names.
             const cardinalDoorWall: DoorWall = d.wall as DoorWall;
             return (
-              <g key={d.id}>
+              <g key={d.id ?? `door-${di}`}>
                 <DoorSVG
                   svgW={svgW} svgH={svgH}
                   doorPosCm={d.pos} doorLenCm={d.len}

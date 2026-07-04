@@ -2965,7 +2965,9 @@ export const useDesignerStore = create<DesignerStore>()(
       addDoor: (room, door) => {
         updateFloor(get, set, fp => {
           const cur = fp.roomDoors?.[room] ?? [];
-          return { roomDoors: { ...(fp.roomDoors ?? {}), [room]: [...cur, door] } };
+          // 兜底生成唯一 id——外部传入缺 id 的门会导致 React 重复 key 报错
+          const withId = door.id ? door : { ...door, id: `door-${genId()}` };
+          return { roomDoors: { ...(fp.roomDoors ?? {}), [room]: [...cur, withId] } };
         });
       },
       removeDoor: (room, id) => {
