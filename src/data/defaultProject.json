@@ -1003,6 +1003,17 @@
               "scaleD": 1,
               "scaleH": 1,
               "elevationY": 35
+            },
+            {
+              "instanceId": "fix_study_601_decor-books-set",
+              "furnitureId": "decor-books-set",
+              "x": 297,
+              "z": 233.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 35
             }
           ],
           "exteriorDecor": []
@@ -2699,8 +2710,8 @@
             {
               "instanceId": "enrich_bedroom3_45_toy-blocks",
               "furnitureId": "toy-blocks",
-              "x": 75,
-              "z": 20,
+              "x": 15,
+              "z": 15,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2890,7 +2901,7 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 78
+              "elevationY": 75
             },
             {
               "instanceId": "enrich_bathroom_52_bath_accessory-scale-2",
@@ -2906,12 +2917,12 @@
               "instanceId": "enrich_bathroom_53_appliance-hairdryer-3",
               "furnitureId": "appliance-hairdryer-3",
               "x": 42,
-              "z": 175,
+              "z": 205,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 78
+              "elevationY": 75
             },
             {
               "instanceId": "deep_bathroom_253_bath_accessory-tp-holder",
@@ -2928,12 +2939,12 @@
               "instanceId": "deep_bathroom_254_decor-vase-single",
               "furnitureId": "decor-vase-single",
               "x": 74,
-              "z": 231,
+              "z": 208,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
-              "elevationY": 78
+              "elevationY": 75
             },
             {
               "instanceId": "fill_bathroom_409_appliance-washer",
@@ -3190,8 +3201,8 @@
             {
               "instanceId": "enrich_closet_57_decor-suitcase-2",
               "furnitureId": "decor-suitcase-2",
-              "x": 171,
-              "z": 45,
+              "x": 167,
+              "z": 39.5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -3200,8 +3211,8 @@
             {
               "instanceId": "enrich_closet_58_decor-shoe-box",
               "furnitureId": "decor-shoe-box",
-              "x": 122.5,
-              "z": 367.5,
+              "x": 162.5,
+              "z": 17.5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
