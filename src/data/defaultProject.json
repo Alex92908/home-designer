@@ -1,1 +1,4992 @@
-{"_version":2,"_coordSystem":"top-left","floorPlans":[{"rooms":{"living":{"materials":{"wall":{"id":"wall-white","name":"哑光白墙漆","brand":"水性内墙漆","price":35,"unit":"元/㎡","category":"wall","color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白，适合所有风格"},"floor":{"id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木，纹理清晰耐用"},"light":{"id":"light-recessed","name":"嵌入筒灯（组）","brand":"灯饰","price":320,"unit":"元/组","category":"light","color":"#FFF0C8","tags":["现代"],"description":"4 只嵌入式筒灯散布天花"}},"placedItems":[{"instanceId":"tpl_living_0_tvunit-float-white","furnitureId":"tvunit-float-white","x":561,"z":205,"rotation":90,"scaleW":1,"scaleD":1},{"instanceId":"tpl_living_1_rug-nordic-geo","furnitureId":"rug-nordic-geo","x":290,"z":160,"rotation":90,"scaleW":1,"scaleD":1},{"instanceId":"tpl_living_2_coffee-marble-rect","furnitureId":"coffee-marble-rect","x":355,"z":197.5,"rotation":90,"scaleW":1,"scaleD":1},{"instanceId":"tpl_living_3_lamp-arc-gold","furnitureId":"lamp-arc-gold","x":457.5,"z":447.5,"rotation":0,"scaleW":1,"scaleD":1},{"instanceId":"tpl_living_4_plant-monstera","furnitureId":"plant-monstera","x":14,"z":14,"rotation":0,"scaleW":1,"scaleD":1},{"instanceId":"tpl_living_5_artwork-abstract","furnitureId":"artwork-abstract","x":637.5,"z":95.02595831428135,"rotation":90,"scaleW":1,"scaleD":1},{"furnitureId":"sofa-fabric-gray","x":160,"z":182.5,"rotation":90,"instanceId":"tpl_living_6_sofa-fabric-gray"},{"furnitureId":"curtain-drape","x":-90,"z":217.5,"rotation":90,"instanceId":"tpl_living_7_curtain-drape"},{"furnitureId":"plant-rubber-tree","x":622.7006747547806,"z":448,"rotation":0,"instanceId":"tpl_living_8_plant-rubber-tree"},{"furnitureId":"sideboard-walnut","x":340,"z":9,"rotation":0,"instanceId":"tpl_living_9_sideboard-walnut"},{"instanceId":"enrich_living_1_appliance-robot-vacuum","furnitureId":"appliance-robot-vacuum","x":573.2678303321183,"z":13.991182111466749,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_living_2_pet-dog-resting","furnitureId":"pet-dog-resting","x":93.20734560756743,"z":17.37039656683433,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_living_3_decor-book-stack","furnitureId":"decor-book-stack","x":433,"z":200,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":40},{"instanceId":"enrich2_living_101_elec-tv-flat","furnitureId":"elec-tv-flat","x":601,"z":218,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":45},{"instanceId":"deep_living_202_decor-blanket","furnitureId":"decor-blanket","x":232.5,"z":266.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":42},{"instanceId":"deep_living_205_decor-books-pile","furnitureId":"decor-books-pile","x":351,"z":11,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":85},{"instanceId":"deep_living_206_decor-camera-slr","furnitureId":"decor-camera-slr","x":396,"z":18,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":85},{"instanceId":"deep_living_208_elec-hifi","furnitureId":"elec-hifi","x":643.421237023489,"z":74.80211349895849,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_living_209_elec-hifi","furnitureId":"elec-hifi","x":643.0243209029788,"z":332.35217785229213,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_living_210_toy-game-retro","furnitureId":"toy-game-retro","x":646,"z":170,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":50},{"instanceId":"deep_living_211_cat-tower","furnitureId":"pet-cat-tree","x":166.87423792104858,"z":13.852213839353851,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep2_living_301_sofa-armchair","furnitureId":"sofa-armchair","x":301.1484375,"z":359.5625,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep2_living_303_decor-vase-royal","furnitureId":"decor-vase-royal","x":636.7629358932836,"z":12.498750640358011,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep2_living_320_decor-tea-set","furnitureId":"decor-tea-set","x":400,"z":200,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":40},{"instanceId":"deep2_living_321_decor-fruit-bowl","furnitureId":"decor-fruit-bowl","x":406,"z":235,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":40},{"instanceId":"fill_living_401_appliance-ac-indoor","furnitureId":"appliance-ac-indoor","x":620.2532797879829,"z":407.68647894764376,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":30},{"instanceId":"pk4_living_503_lamp-pendant-saturno","furnitureId":"lamp-pendant-saturno","x":311,"z":220,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"mountCeiling":true}],"exteriorDecor":[]},"master":{"materials":{},"placedItems":[],"exteriorDecor":[]},"bedroom":{"materials":{},"placedItems":[],"exteriorDecor":[]},"bedroom2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"bedroom3":{"materials":{},"placedItems":[],"exteriorDecor":[]},"kitchen":{"materials":{"wall":{"id":"wall-tile-white","name":"白色大理石纹砖","brand":"釉面砖","price":180,"unit":"元/㎡","category":"wall","color":"#EFEFEF","texture":"repeating-linear-gradient(45deg, #e0e0e0 0px, #e0e0e0 1px, #EFEFEF 0px, #EFEFEF 50%)","tags":["轻奢","现代"],"description":"天然大理石纹，奢华感十足"},"floor":{"id":"floor-white-tile","name":"白色抛光砖","brand":"全抛釉砖","price":150,"unit":"元/㎡","category":"floor","color":"#F0EFEB","tags":["现代","北欧"],"description":"大块白砖，空间感更强"},"light":{"id":"light-linear-pendant","name":"线形长吊灯","brand":"线型灯具","price":1200,"unit":"元/件","category":"light","color":"#F5F0E0","tags":["现代","轻奢"],"description":"餐桌上方首选，线条感强"}},"placedItems":[{"instanceId":"tpl_kitchen_0_cabinet-lower-white","furnitureId":"cabinet-lower-white","x":8,"z":8,"rotation":0,"scaleW":1,"scaleD":1},{"instanceId":"tpl_kitchen_3_fridge-french-door","furnitureId":"fridge-french-door","x":309.3575,"z":0,"rotation":0,"scaleW":1,"scaleD":1},{"instanceId":"tpl_kitchen_4_hood-side-black","furnitureId":"hood-side-black","x":155,"z":10,"rotation":0,"scaleW":1,"scaleD":1},{"instanceId":"enrich_kitchen_4_appliance-cooktop","furnitureId":"appliance-cooktop","x":162.5,"z":16,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":85},{"instanceId":"enrich_kitchen_6_appliance-kettle-electric","furnitureId":"appliance-kettle-electric","x":41,"z":29,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":85},{"instanceId":"enrich_kitchen_7_decor-copper-pots","furnitureId":"appliance-microwave","x":56.51826733457105,"z":16.12740403660952,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":85},{"instanceId":"enrich_kitchen_8_decor-trash-bin","furnitureId":"decor-trash-bin","x":365,"z":291,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_kitchen_212_decor-spice-rack","furnitureId":"decor-spice-rack","x":107.53885428381082,"z":9.50941292451057,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":85},{"instanceId":"deep_kitchen_213_appliance-toaster","furnitureId":"appliance-toaster","x":18.6825,"z":27.3275,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":85},{"instanceId":"pi_4_1nqgw","furnitureId":"kitchen_cabinet-island-sink","x":6.538358056604466,"z":90,"rotation":180,"scaleW":1,"scaleD":1,"scaleH":2.9}],"exteriorDecor":[]},"bathroom":{"materials":{"wall":{"id":"wall-tile-metro","name":"地铁砖（浴室/厨房）","brand":"全抛釉砖","price":95,"unit":"元/㎡","category":"wall","color":"#FAFAFA","texture":"repeating-linear-gradient(0deg, #E0E0E0 0px, #E0E0E0 1px, #FAFAFA 1px, #FAFAFA 8px)","tags":["现代","工业风"],"description":"经典白色地铁砖，百搭"},"floor":{"id":"floor-white-tile","name":"白色抛光砖","brand":"全抛釉砖","price":150,"unit":"元/㎡","category":"floor","color":"#F0EFEB","tags":["现代","北欧"],"description":"大块白砖，空间感更强"},"light":{"id":"light-smart-panel","name":"智能主灯面板","brand":"灯饰","price":2280,"unit":"元/件","category":"light","color":"#FFFFFF","tags":["现代"],"description":"方形 LED 主灯 + 可调色温"}},"placedItems":[{"instanceId":"tpl_bathroom_1_vanity-double-marble","furnitureId":"vanity-double-marble","x":-52.37666971498247,"z":191.9910082304527,"rotation":90,"scaleW":1,"scaleD":1},{"instanceId":"enrich_bathroom_12_bath_accessory-scale","furnitureId":"bath_accessory-scale","x":208.0547300621327,"z":186.5249709641299,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"pi_2_xzxjj","furnitureId":"toilet-sit","x":5.718424286562652,"z":9.902870127514774,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"pi_3_z0dai","furnitureId":"shower-cabin-glass","x":113.05376174711986,"z":6.823356682580027,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1}],"exteriorDecor":[]},"bathroom2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"dining":{"materials":{"wall":{"id":"wall-white","name":"哑光白墙漆","brand":"水性内墙漆","price":35,"unit":"元/㎡","category":"wall","color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白，适合所有风格"},"floor":{"id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木，纹理清晰耐用"},"light":{"id":"light-linear-pendant","name":"线形长吊灯","brand":"线型灯具","price":1200,"unit":"元/件","category":"light","color":"#F5F0E0","tags":["现代","轻奢"],"description":"餐桌上方首选，线条感强"}},"placedItems":[{"instanceId":"tpl_dining_0_dining-marble-round","furnitureId":"dining-marble-round","x":132.49421875,"z":99.73234374999998,"rotation":0,"scaleW":1,"scaleD":1},{"instanceId":"tpl_dining_1_chair-modern-gray","furnitureId":"chair-modern-gray","x":179.0865625,"z":223.92609375,"rotation":180,"scaleW":1,"scaleD":1},{"instanceId":"tpl_dining_2_chair-modern-gray","furnitureId":"chair-modern-gray","x":169.11234375,"z":43.017812500000005,"rotation":0,"scaleW":1,"scaleD":1},{"instanceId":"tpl_dining_3_chair-modern-gray","furnitureId":"chair-modern-gray","x":80.94390625,"z":107.70499999999998,"rotation":90,"scaleW":1,"scaleD":1},{"instanceId":"tpl_dining_4_chair-modern-gray","furnitureId":"chair-modern-gray","x":259.934375,"z":103.78437500000001,"rotation":270,"scaleW":1,"scaleD":1},{"instanceId":"tpl_dining_5_chair-modern-gray","furnitureId":"chair-modern-gray","x":78.8109375,"z":162.72984375,"rotation":90,"scaleW":1,"scaleD":1},{"instanceId":"tpl_dining_6_chair-modern-gray","furnitureId":"chair-modern-gray","x":261.25984375,"z":157.95921875,"rotation":270,"scaleW":1,"scaleD":1},{"instanceId":"enrich_dining_15_decor-vase-set","furnitureId":"decor-vase-set","x":175.12213039485763,"z":110.593185644322,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":75},{"instanceId":"deep_dining_216_decor-tea-set","furnitureId":"decor-tea-set","x":141.72988536695047,"z":145.26578006408462,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":75},{"instanceId":"deep_dining_217_decor-fruit-bowl","furnitureId":"decor-fruit-bowl","x":202.64140128264393,"z":155.55142481121928,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":75},{"instanceId":"pk4_dining_501_lamp-chandelier-osgona","furnitureId":"lamp-chandelier-osgona","x":175,"z":132.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"mountCeiling":true}],"exteriorDecor":[]},"study":{"materials":{"wall":{"id":"wall-white","name":"哑光白墙漆","brand":"水性内墙漆","price":35,"unit":"元/㎡","category":"wall","color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白，适合所有风格"},"floor":{"id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木，纹理清晰耐用"},"light":{"id":"light-linear-pendant","name":"线形长吊灯","brand":"线型灯具","price":1200,"unit":"元/件","category":"light","color":"#F5F0E0","tags":["现代","轻奢"],"description":"餐桌上方首选，线条感强"}},"placedItems":[{"instanceId":"tpl_study_0_desk-l-shape-white","furnitureId":"desk-l-shape-white","x":76.155,"z":326.85046875,"rotation":180,"scaleW":1,"scaleD":1},{"instanceId":"tpl_study_1_chair-ergonomic","furnitureId":"chair-ergonomic","x":148.25852363809122,"z":252.79918111449115,"rotation":0,"scaleW":1,"scaleD":1},{"instanceId":"tpl_study_2_bookshelf-solid-walnut","furnitureId":"bookshelf-solid-walnut","x":281,"z":240,"rotation":270,"scaleW":1,"scaleD":1},{"instanceId":"enrich_study_16_elec-printer","furnitureId":"elec-printer","x":300.0746627383766,"z":118.57240516704621,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_study_17_decor-globe","furnitureId":"decor-globe","x":240.78796016782167,"z":398.89910888356815,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":75},{"instanceId":"enrich_study_18_lamp-desk-2","furnitureId":"lamp-desk-2","x":206.5583561957019,"z":407.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":75},{"instanceId":"enrich_study_19_decor-book-stack-2","furnitureId":"decor-book-stack-2","x":83.5,"z":422.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":75},{"instanceId":"enrich_study_20_toy-robot","furnitureId":"toy-robot","x":10.434220679012345,"z":137.0079089506173,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_study_219_elec-monitor","furnitureId":"elec-laptop","x":118.21112241375184,"z":380.10073432584994,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":75},{"instanceId":"deep_study_220_elec-keyboard","furnitureId":"elec-keyboard","x":109.62924382716048,"z":352.279899691358,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":75},{"instanceId":"deep_study_222_decor-books-pack","furnitureId":"decor-books-pack","x":305,"z":230.5,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":70},{"instanceId":"deep_study_223_decor-deer-statue","furnitureId":"decor-deer-statue","x":312,"z":277,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":124},{"instanceId":"deep_study_224_elec-speaker","furnitureId":"elec-speaker","x":81.2561636562387,"z":385.1186757657268,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":0},{"instanceId":"fix_study_601_decor-books-set","furnitureId":"decor-books-set","x":297,"z":233.5,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":35}],"exteriorDecor":[]},"study2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"closet":{"materials":{"wall":{"id":"wall-white","name":"哑光白墙漆","brand":"水性内墙漆","price":35,"unit":"元/㎡","category":"wall","color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白，适合所有风格"},"floor":{"id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木，纹理清晰耐用"},"light":{"id":"light-recessed","name":"嵌入筒灯（组）","brand":"灯饰","price":320,"unit":"元/组","category":"light","color":"#FFF0C8","tags":["现代"],"description":"4 只嵌入式筒灯散布天花"}},"placedItems":[{"instanceId":"enrich_closet_21_decor-suitcase","furnitureId":"decor-suitcase","x":7.09734375,"z":29.553906249999997,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_closet_22_storage-box","furnitureId":"storage-box","x":5.322968750000001,"z":70.61359375,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_closet_23_decor-folded-clothes","furnitureId":"decor-folded-clothes","x":183.01697530864195,"z":417.41769547325106,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_closet_24_storage-shoe-shelf","furnitureId":"storage-shoe-shelf","x":-14,"z":285,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich2_closet_102_wardrobe-with-clothes","furnitureId":"wardrobe-with-clothes","x":128.6703125,"z":116.01453125,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_closet_225_decor-clothes-pile-2","furnitureId":"decor-clothes-pile-2","x":100.5,"z":430.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_closet_226_decor-suitcase-2","furnitureId":"decor-suitcase-2","x":31,"z":419,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1}],"exteriorDecor":[]},"balcony":{"materials":{},"placedItems":[],"exteriorDecor":[]},"balcony2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"yard":{"materials":{},"placedItems":[],"exteriorDecor":[]},"garage":{"materials":{},"placedItems":[{"instanceId":"pi_1_jgpzq","furnitureId":"vehicle.bmw_m3_e46","x":195.72979518019332,"z":26.21653404880047,"rotation":0,"scaleW":1,"scaleD":0.6,"scaleH":1},{"instanceId":"enrich_garage_26_electrical-fire-ext","furnitureId":"electrical-fire-ext","x":470.72269069664907,"z":13.10171406525572,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep2_garage_304_vehicle.sport_moto","furnitureId":"vehicle.sport_moto","x":69.68989659633631,"z":27.869684083497248,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1}],"exteriorDecor":[]},"gym":{"materials":{},"placedItems":[],"exteriorDecor":[]},"cinema":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom1":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom3":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom4":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom5":{"materials":{},"placedItems":[],"exteriorDecor":[]},"stair":{"materials":{},"placedItems":[{"instanceId":"pi_1_0iynr","furnitureId":"staircase-u-shaped","x":0,"z":0,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1}],"exteriorDecor":[]},"hallway":{"materials":{"wall":{"id":"wall-white","name":"哑光白墙漆","brand":"水性内墙漆","price":35,"unit":"元/㎡","category":"wall","color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白，适合所有风格"},"floor":{"id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木，纹理清晰耐用"},"light":{"id":"light-recessed","name":"嵌入筒灯（组）","brand":"灯饰","price":320,"unit":"元/组","category":"light","color":"#FFF0C8","tags":["现代"],"description":"4 只嵌入式筒灯散布天花"}},"placedItems":[{"instanceId":"enrich_hallway_29_decor-umbrella-stand","furnitureId":"decor-umbrella-stand","x":47.5,"z":27.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_hallway_230_decor-statue-elephant","furnitureId":"decor-statue-elephant","x":280,"z":4,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_hallway_231_plant-monstera","furnitureId":"plant-monstera","x":467.5,"z":17.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_hallway_232_decor-garden-urn","furnitureId":"decor-garden-urn","x":675,"z":25,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep2_hallway_305_decor-statue-swan","furnitureId":"decor-statue-swan","x":885,"z":20,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"fill_hallway_406_sideboard-euro","furnitureId":"sideboard-euro","x":925,"z":2.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1}],"exteriorDecor":[]},"pool":{"materials":{},"placedItems":[],"exteriorDecor":[]},"terrace":{"materials":{},"placedItems":[],"exteriorDecor":[]},"deck":{"materials":{},"placedItems":[],"exteriorDecor":[]},"equipment_room":{"materials":{},"placedItems":[],"exteriorDecor":[]}},"enabledRooms":["kitchen","bathroom","dining","stair","hallway","living","study","closet","garage"],"roomLayout":{"master":{"x":0,"y":0},"closet":{"x":1020,"y":560},"bathroom":{"x":400,"y":0},"bathroom2":{"x":620,"y":200},"study":{"x":680,"y":560},"study2":{"x":980,"y":640},"living":{"x":0,"y":520},"bedroom":{"x":500,"y":360},"bedroom2":{"x":500,"y":660},"bedroom3":{"x":500,"y":940},"dining":{"x":640,"y":0},"kitchen":{"x":0,"y":0},"balcony":{"x":0,"y":1100},"balcony2":{"x":500,"y":1100},"yard":{"x":-860,"y":0},"garage":{"x":-700,"y":0},"gym":{"x":-560,"y":320},"cinema":{"x":-560,"y":640},"custom1":{"x":820,"y":0},"custom2":{"x":820,"y":300},"custom3":{"x":820,"y":600},"custom4":{"x":820,"y":900},"custom5":{"x":820,"y":1200},"stair":{"x":1000,"y":0},"hallway":{"x":0,"y":320},"pool":{"x":1200,"y":400},"terrace":{"x":1200,"y":800},"deck":{"x":1200,"y":1100},"equipment_room":{"x":0,"y":900}},"roomDimensions":{"living":{"width":680,"depth":500},"master":{"width":400,"depth":360},"bedroom":{"width":320,"depth":300},"bedroom2":{"width":300,"depth":280},"bedroom3":{"width":280,"depth":260},"kitchen":{"width":400,"depth":320},"bathroom":{"width":240,"depth":320},"bathroom2":{"width":240,"depth":200},"dining":{"width":360,"depth":340},"study":{"width":340,"depth":460},"study2":{"width":300,"depth":260},"closet":{"width":220,"depth":460},"balcony":{"width":420,"depth":160},"balcony2":{"width":300,"depth":160},"yard":{"width":800,"depth":600},"garage":{"width":500,"depth":320},"gym":{"width":360,"depth":320},"cinema":{"width":420,"depth":320},"custom1":{"width":300,"depth":300},"custom2":{"width":300,"depth":300},"custom3":{"width":300,"depth":300},"custom4":{"width":300,"depth":300},"custom5":{"width":300,"depth":300},"stair":{"width":240,"depth":340},"hallway":{"width":1240,"depth":240},"pool":{"width":600,"depth":350},"terrace":{"width":500,"depth":300},"deck":{"width":400,"depth":250},"equipment_room":{"width":300,"depth":250}},"roomWindows":{"living":[{"id":"living-w1782222340521","wall":"W","pos":125,"len":200}],"master":[{"id":"master-w2","wall":"E","pos":90,"len":162}],"bedroom":[{"id":"bedroom-w3","wall":"N","pos":80,"len":144}],"bedroom2":[{"id":"bedroom2-w4","wall":"N","pos":75,"len":135}],"bedroom3":[{"id":"bedroom3-w5","wall":"N","pos":70,"len":126}],"kitchen":[{"id":"kitchen-w6","wall":"N","pos":90,"len":162}],"bathroom":[{"id":"bathroom-w1781100082556","wall":"N","pos":60,"len":96}],"bathroom2":[],"dining":[{"id":"dining-w1781100077342","wall":"N","pos":90,"len":144}],"study":[{"id":"study-w1781100036097","wall":"S","pos":85,"len":136}],"study2":[{"id":"study2-w9","wall":"N","pos":75,"len":135}],"closet":[{"id":"closet-w1781100056117","wall":"S","pos":55,"len":88}],"balcony":[{"id":"balcony-w10","wall":"N","pos":105,"len":189}],"balcony2":[{"id":"balcony2-w11","wall":"N","pos":75,"len":135}],"yard":[],"garage":[{"id":"garage-w1782915017300","wall":"W","pos":80,"len":128}],"gym":[{"id":"gym-w13","wall":"N","pos":90,"len":162}],"cinema":[],"custom1":[],"custom2":[],"custom3":[],"custom4":[],"custom5":[],"stair":[{"id":"stair-w1781100070257","wall":"N","pos":60,"len":96}],"hallway":[],"pool":[],"terrace":[],"deck":[],"pergola":[],"equipment_room":[]},"roomDoorPos":{"living":136.10898480907088,"master":40,"bedroom":32,"bedroom2":30,"bedroom3":28,"kitchen":36,"bathroom":74.83802761080815,"bathroom2":24,"dining":38,"study":32,"study2":30,"closet":26,"balcony":42,"balcony2":30,"yard":80,"garage":44.71204181664229,"gym":36,"cinema":42,"custom1":30,"custom2":30,"custom3":30,"custom4":30,"custom5":30,"stair":26,"hallway":12,"pool":60,"terrace":50,"deck":40,"pergola":30,"equipment_room":30},"roomHasDoor":{"living":true,"master":true,"bedroom":true,"bedroom2":true,"bedroom3":true,"kitchen":true,"bathroom":true,"bathroom2":true,"dining":true,"study":false,"study2":true,"closet":false,"balcony":true,"balcony2":true,"yard":true,"garage":true,"gym":true,"cinema":true,"custom1":true,"custom2":true,"custom3":true,"custom4":true,"custom5":true,"stair":false,"hallway":false,"pool":true,"terrace":true,"deck":true,"rooftop_lounge":true,"rooftop_pool":true,"rooftop_garden":true,"rooftop_bar":true,"equipment_room":true},"roomDoorWall":{"living":"S","master":"S","bedroom":"S","bedroom2":"S","bedroom3":"S","kitchen":"S","bathroom":"S","bathroom2":"S","dining":"S","study":"S","study2":"S","closet":"S","balcony":"S","balcony2":"S","yard":"S","garage":"S","gym":"S","cinema":"S","custom1":"S","custom2":"S","custom3":"S","custom4":"S","custom5":"S","stair":"S","hallway":"S","pool":"S","terrace":"S","deck":"S","pergola":"S","equipment_room":"S"},"roomShapes":{"hallway":{"preset":"rect","points":[[0,0],[1200,0],[1200,240],[0,240]]}},"yardPlan":{"items":[{"type":"prefab","prefabKind":"pool","x":0,"z":1320,"rot":0,"id":"modernVilla-e349df-0"},{"type":"prefab","prefabKind":"porte_cochere","x":25,"z":-875,"rot":0,"params":{"carCount":2,"pillarStyle":"round","facingDir":"south"},"id":"modernVilla-e349df-1"},{"type":"singleton","kind":"tree.olive","x":-1460,"z":-325,"scale":1.4,"id":"modernVilla-e349df-2"},{"id":"y-mr2blrl3-meh4u","type":"singleton","kind":"tree.palm","x":1425,"z":-325,"rot":0,"scale":1.3},{"id":"y-mr2bnt14-tvtjf","type":"singleton","kind":"vehicle.bmw_rr1000","x":28,"z":-853,"rot":0,"scale":1.2}]},"roomDoorStyle":{"garage":"roller_shutter"},"roomDoorLen":{"living":145,"garage":340},"roomDoorH":{"living":260},"roomWallsHidden":{"living":{"N":true},"hallway":{"N":true,"S":true},"stair":{"ceiling":true,"S":true}},"roomDoors":{"study":[{"id":"study-d1779506223681","wall":"N","pos":125,"len":80,"h":200,"style":"wood_panel"}],"closet":[{"id":"closet-d1779506236630","wall":"N","pos":68.015625,"len":80,"h":200,"style":"wood_panel"}]},"roomExteriorStyle":{"garage":"concrete"}},{"rooms":{"living":{"materials":{},"placedItems":[],"exteriorDecor":[]},"master":{"materials":{"wall":{"id":"wall-white","name":"哑光白墙漆","brand":"水性内墙漆","price":35,"unit":"元/㎡","category":"wall","color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白，适合所有风格"},"floor":{"id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木，纹理清晰耐用"},"light":{"id":"light-linear-pendant","name":"线形长吊灯","brand":"线型灯具","price":1200,"unit":"元/件","category":"light","color":"#F5F0E0","tags":["现代","轻奢"],"description":"餐桌上方首选，线条感强"}},"placedItems":[{"instanceId":"tpl_master_0_nightstand-white","furnitureId":"nightstand-white","x":75.85875,"z":7.965937500000003,"rotation":0,"scaleW":1,"scaleD":1},{"instanceId":"tpl_master_1_nightstand-white","furnitureId":"nightstand-white","x":366.0759895833333,"z":7.942604166666676,"rotation":0,"scaleW":1,"scaleD":1},{"instanceId":"tpl_master_2_wardrobe-slide-white","furnitureId":"wardrobe-slide-white","x":360.264375,"z":149.53796875,"rotation":270,"scaleW":1,"scaleD":1},{"instanceId":"tpl_master_3_dresser-nordic-white","furnitureId":"dresser-nordic-white","x":247.86114583333324,"z":364.7279687500001,"rotation":180,"scaleW":1,"scaleD":1},{"instanceId":"pi_1_2okwm","furnitureId":"bed-lux","x":153,"z":-15,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_master_31_rug-persian-wool","furnitureId":"rug-persian-wool","x":139.17322530864197,"z":184.5570987654321,"rotation":0,"scaleW":2.2,"scaleD":1.05,"scaleH":0.3},{"instanceId":"enrich_master_32_lamp-bedside","furnitureId":"lamp-bedside","x":90,"z":17,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":49},{"instanceId":"enrich_master_33_decor-wicker-box","furnitureId":"decor-wicker-box","x":280.85781249999997,"z":381.8546875,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":54},{"instanceId":"enrich_master_34_toy-teddy","furnitureId":"toy-teddy","x":194.5358920351162,"z":75.0132059610298,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":42},{"instanceId":"enrich_master_35_decor-mirror-full","furnitureId":"decor-mirror-full","x":475,"z":341.5,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_master_233_curtain-drape","furnitureId":"curtain-victorian","x":133.53883744855972,"z":0,"rotation":0,"scaleW":1.85,"scaleD":1,"scaleH":1},{"instanceId":"deep_master_235_decor-blanket","furnitureId":"decor-blanket","x":195.5,"z":106.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":42},{"instanceId":"deep_master_236_decor-phone-17","furnitureId":"decor-phone-17","x":84,"z":27,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":49},{"instanceId":"deep_master_237_lamp-victorian","furnitureId":"lamp-table-01","x":377,"z":17,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":49},{"instanceId":"deep_master_238_decor-books-pile","furnitureId":"decor-books-pile","x":309.0416666666667,"z":377.05729166666663,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":54},{"instanceId":"fill_master_402_appliance-ac-indoor","furnitureId":"appliance-ac-indoor","x":464,"z":329,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":30}],"exteriorDecor":[]},"bedroom":{"materials":{"wall":{"id":"wall-white","name":"哑光白墙漆","brand":"水性内墙漆","price":35,"unit":"元/㎡","category":"wall","color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白，适合所有风格"},"floor":{"id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木，纹理清晰耐用"},"light":{"id":"light-recessed","name":"嵌入筒灯（组）","brand":"灯饰","price":320,"unit":"元/组","category":"light","color":"#FFF0C8","tags":["现代"],"description":"4 只嵌入式筒灯散布天花"}},"placedItems":[{"instanceId":"tpl_bedroom_0_bed-fabric-beige","furnitureId":"bed-wood","x":20,"z":213.44296875000003,"rotation":90,"scaleW":1,"scaleD":1},{"instanceId":"tpl_bedroom_1_nightstand-white","furnitureId":"nightstand-white","x":3.8703125000000007,"z":369.69953125,"rotation":180,"scaleW":1,"scaleD":1},{"instanceId":"tpl_bedroom_2_wardrobe-slide-white","furnitureId":"wardrobe-slide-white","x":230,"z":180.538125,"rotation":270,"scaleW":1,"scaleD":1},{"instanceId":"pi_4_trp61","furnitureId":"nightstand-white","x":270.58781250000004,"z":371.59515625,"rotation":180,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_bedroom_36_rug-boho","furnitureId":"rug-boho","x":147.23468750000004,"z":74.13078124999998,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_bedroom_37_lamp-vintage","furnitureId":"lamp-vintage","x":20.5,"z":381.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":49},{"instanceId":"enrich_bedroom_38_toy-bunny","furnitureId":"toy-bunny","x":144.60934799382716,"z":317.1200828363944,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":30},{"instanceId":"enrich_bedroom_39_pet-cat-tree-2","furnitureId":"pet-cat-tree-2","x":305,"z":25,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_bedroom_240_curtain-drape","furnitureId":"curtain-drape","x":71,"z":404.5,"rotation":180,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_bedroom_243_toy-pomeranian","furnitureId":"toy-pomeranian","x":285,"z":381,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":49},{"instanceId":"deep_bedroom_244_decor-book-single","furnitureId":"decor-book-single","x":21.5,"z":369,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":49},{"instanceId":"fill_bedroom_403_appliance-ac-indoor","furnitureId":"appliance-ac-indoor","x":-34,"z":89,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":30}],"exteriorDecor":[]},"bedroom2":{"materials":{"wall":{"id":"wall-white","name":"哑光白墙漆","brand":"水性内墙漆","price":35,"unit":"元/㎡","category":"wall","color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白，适合所有风格"},"floor":{"id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木，纹理清晰耐用"},"light":{"id":"light-recessed","name":"嵌入筒灯（组）","brand":"灯饰","price":320,"unit":"元/组","category":"light","color":"#FFF0C8","tags":["现代"],"description":"4 只嵌入式筒灯散布天花"}},"placedItems":[{"instanceId":"pi_6_q3kle","furnitureId":"bed-leather-dark","x":60,"z":233,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"pi_10_7ec7a","furnitureId":"nightstand-oak","x":6.217968749999997,"z":338.49921875,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"pi_11_qlagw","furnitureId":"nightstand-oak","x":266.14970240230065,"z":338.38778284803516,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"pi_12_4atyl","furnitureId":"wardrobe-slide-white","x":100,"z":0,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_bedroom2_40_rug-qashqai","furnitureId":"rug-qashqai","x":39.92993055555553,"z":52.84235725308645,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_bedroom2_41_lamp-marble","furnitureId":"lamp-marble","x":15.20015625,"z":346.9159375,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":60},{"instanceId":"enrich_bedroom2_42_decor-clothes-pile","furnitureId":"decor-clothes-pile","x":198.52398465500326,"z":277.88646449408793,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":40},{"instanceId":"deep_bedroom2_245_curtain-drape","furnitureId":"curtain-brown-modern","x":28.5,"z":399,"rotation":180,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_bedroom2_247_decor-bed-clothes","furnitureId":"decor-bed-clothes","x":47.425463467180606,"z":243.07359437571526,"rotation":90,"scaleW":0.8,"scaleD":0.85,"scaleH":1,"elevationY":45},{"instanceId":"deep_bedroom2_248_decor-camera-exakta","furnitureId":"decor-camera-exakta","x":44,"z":385,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":60},{"instanceId":"deep_bedroom2_249_toy-gamepads","furnitureId":"toy-game-controller","x":52,"z":355,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":48},{"instanceId":"deep2_bedroom2_308_toy-game-portable","furnitureId":"decor-phone-14","x":221,"z":389,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":60}],"exteriorDecor":[]},"bedroom3":{"materials":{"wall":{"id":"wall-white","name":"哑光白墙漆","brand":"水性内墙漆","price":35,"unit":"元/㎡","category":"wall","color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白，适合所有风格"},"floor":{"id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木，纹理清晰耐用"},"light":{"id":"light-recessed","name":"嵌入筒灯（组）","brand":"灯饰","price":320,"unit":"元/组","category":"light","color":"#FFF0C8","tags":["现代"],"description":"4 只嵌入式筒灯散布天花"}},"placedItems":[{"instanceId":"pi_16_iz1y1","furnitureId":"nightstand-white","x":7.371718749999999,"z":375.31203125,"rotation":180,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"pi_18_krpyp","furnitureId":"bed-bunk-2","x":3.818918350168353,"z":221.84816919191923,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"pi_19_hllkk","furnitureId":"wardrobe-slide-white","x":124.45203125,"z":98.14937500000002,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_bedroom3_44_rug-persian","furnitureId":"rug-boho","x":120.63962542087538,"z":159.29619107744105,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_bedroom3_45_toy-blocks","furnitureId":"toy-blocks","x":15,"z":15,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_bedroom3_46_toy-plush","furnitureId":"toy-plush","x":47.5,"z":267.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":28},{"instanceId":"enrich_bedroom3_47_toy-hunter","furnitureId":"toy-hunter","x":19.5,"z":377.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":49},{"instanceId":"enrich_bedroom3_48_desk-kids","furnitureId":"desk-kids","x":190,"z":310,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_bedroom3_49_office_chair-kids","furnitureId":"office_chair-kids","x":178,"z":374.93637831504344,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_bedroom3_250_curtain-drape","furnitureId":"curtain-drape","x":26,"z":404.5,"rotation":180,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_bedroom3_251_toy-wooden-horse","furnitureId":"toy-wooden-horse","x":210,"z":261.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":0},{"instanceId":"deep_bedroom3_252_toy-ink-bunny","furnitureId":"toy-ink-bunny","x":44,"z":235,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":60},{"instanceId":"fill_bedroom3_410_storage-box","furnitureId":"storage-box","x":11,"z":73,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1}],"exteriorDecor":[]},"kitchen":{"materials":{},"placedItems":[],"exteriorDecor":[]},"bathroom":{"materials":{"wall":{"id":"wall-tile-metro","name":"地铁砖（浴室/厨房）","brand":"全抛釉砖","price":95,"unit":"元/㎡","category":"wall","color":"#FAFAFA","texture":"repeating-linear-gradient(0deg, #E0E0E0 0px, #E0E0E0 1px, #FAFAFA 1px, #FAFAFA 8px)","tags":["现代","工业风"],"description":"经典白色地铁砖，百搭"},"floor":{"id":"floor-white-tile","name":"白色抛光砖","brand":"全抛釉砖","price":150,"unit":"元/㎡","category":"floor","color":"#F0EFEB","tags":["现代","北欧"],"description":"大块白砖，空间感更强"},"light":{"id":"light-smart-panel","name":"智能主灯面板","brand":"灯饰","price":2280,"unit":"元/件","category":"light","color":"#FFFFFF","tags":["现代"],"description":"方形 LED 主灯 + 可调色温"}},"placedItems":[{"instanceId":"tpl_bathroom_1_vanity-double-marble","furnitureId":"vanity-double-marble","x":-49.648176726108815,"z":241.5,"rotation":90,"scaleW":1,"scaleD":1},{"instanceId":"enrich_bathroom_50_decor-laundry-basket-2","furnitureId":"decor-laundry-basket-2","x":232.5,"z":362.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_bathroom_51_bath_accessory-supplies","furnitureId":"bath_accessory-supplies","x":-13.189362186027616,"z":249.49569976397197,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":65},{"instanceId":"enrich_bathroom_52_bath_accessory-scale-2","furnitureId":"bath_accessory-scale-2","x":242.25544302983536,"z":215.80247120770463,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_bathroom_253_bath_accessory-tp-holder","furnitureId":"bath_accessory-tp-holder","x":267.5,"z":95,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":60},{"instanceId":"fill_bathroom_409_appliance-washer","furnitureId":"appliance-washer","x":213.5576365693743,"z":266.7196345383415,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"pi_5_xtz84","furnitureId":"toilet-smart","x":234.5340625,"z":5.318749999999994,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"pi_6_k1dif","furnitureId":"shower-unit-modern","x":5.287499999999994,"z":9.71421875,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1}],"exteriorDecor":[]},"bathroom2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"dining":{"materials":{},"placedItems":[],"exteriorDecor":[]},"study":{"materials":{"wall":{"id":"wall-white","name":"哑光白墙漆","brand":"水性内墙漆","price":35,"unit":"元/㎡","category":"wall","color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白，适合所有风格"},"floor":{"id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木，纹理清晰耐用"},"light":{"id":"light-linear-pendant","name":"线形长吊灯","brand":"线型灯具","price":1200,"unit":"元/件","category":"light","color":"#F5F0E0","tags":["现代","轻奢"],"description":"餐桌上方首选，线条感强"}},"placedItems":[{"instanceId":"pi_20_ctk78","furnitureId":"bookshelf-open-white","x":192,"z":90.91046874999998,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"pi_21_hg2fv","furnitureId":"desk-l-shape-white","x":16.64,"z":336.84687499999995,"rotation":180,"scaleW":0.8,"scaleD":0.65,"scaleH":0.9},{"instanceId":"pi_23_1sifq","furnitureId":"chair-ergonomic","x":67.2946875,"z":247.27734375,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_study_54_elec-3d-printer","furnitureId":"elec-3d-printer","x":20.801641456654117,"z":147.11339870718973,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":60},{"instanceId":"enrich_study_55_decor-book-stack","furnitureId":"decor-book-stack","x":109.31247661803218,"z":389.42444223378567,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":63},{"instanceId":"enrich_study_56_lamp-generic-a","furnitureId":"lamp-table-01","x":146.32734754956977,"z":387.1641839268102,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":63},{"instanceId":"deep_study_255_elec-laptop","furnitureId":"elec-laptop","x":62.5,"z":387.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":63},{"instanceId":"deep_study_256_decor-books-set","furnitureId":"decor-books-set","x":200,"z":122,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":35},{"instanceId":"deep_study_257_decor-tulip","furnitureId":"decor-tulip","x":151.06244685916403,"z":355.2132988130463,"rotation":0,"scaleW":0.65,"scaleD":0.65,"scaleH":0.65,"elevationY":63},{"instanceId":"deep_study_258_elec-speaker","furnitureId":"elec-speaker","x":212.5,"z":91.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":64},{"instanceId":"pi_7_95v4l","furnitureId":"desk-standing","x":-24,"z":124,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1}],"exteriorDecor":[]},"study2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"closet":{"materials":{"wall":{"id":"wall-white","name":"哑光白墙漆","brand":"水性内墙漆","price":35,"unit":"元/㎡","category":"wall","color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白，适合所有风格"},"floor":{"id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木，纹理清晰耐用"},"light":{"id":"light-recessed","name":"嵌入筒灯（组）","brand":"灯饰","price":320,"unit":"元/组","category":"light","color":"#FFF0C8","tags":["现代"],"description":"4 只嵌入式筒灯散布天花"}},"placedItems":[{"instanceId":"pi_2_xjcrc","furnitureId":"wardrobe-open-rack","x":147.5,"z":125,"rotation":270,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"pi_3_zgdzw","furnitureId":"closet-system-white","x":-27.51375,"z":140,"rotation":90,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_closet_57_decor-suitcase-2","furnitureId":"decor-suitcase-2","x":167,"z":39.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_closet_58_decor-shoe-box","furnitureId":"decor-shoe-box","x":162.5,"z":17.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich_closet_59_decor-clothes-pile-2","furnitureId":"decor-clothes-pile-2","x":10,"z":200,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":45},{"instanceId":"deep_closet_259_decor-folded-clothes","furnitureId":"decor-folded-clothes","x":10,"z":135,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1,"elevationY":45}],"exteriorDecor":[]},"balcony":{"materials":{},"placedItems":[],"exteriorDecor":[]},"balcony2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"yard":{"materials":{},"placedItems":[],"exteriorDecor":[]},"garage":{"materials":{},"placedItems":[],"exteriorDecor":[]},"gym":{"materials":{},"placedItems":[],"exteriorDecor":[]},"cinema":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom1":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom3":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom4":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom5":{"materials":{},"placedItems":[],"exteriorDecor":[]},"stair":{"materials":{},"placedItems":[{"instanceId":"pi_2_s2jgj","furnitureId":"staircase-u-shaped","x":0,"z":6.549843750000008,"rotation":0,"scaleW":1,"scaleD":1.2,"scaleH":1}],"exteriorDecor":[]},"hallway":{"materials":{"wall":{"id":"wall-white","name":"哑光白墙漆","brand":"水性内墙漆","price":35,"unit":"元/㎡","category":"wall","color":"#F5F5F0","tags":["现代","北欧","日式"],"description":"经典哑光白，适合所有风格"},"floor":{"id":"floor-oak","name":"橡木原色地板","brand":"强化复合地板","price":280,"unit":"元/㎡","category":"floor","color":"#C8A882","tags":["北欧","日式","现代"],"description":"天然橡木，纹理清晰耐用"},"light":{"id":"light-recessed","name":"嵌入筒灯（组）","brand":"灯饰","price":320,"unit":"元/组","category":"light","color":"#FFF0C8","tags":["现代"],"description":"4 只嵌入式筒灯散布天花"}},"placedItems":[{"instanceId":"enrich2_hallway_103_decor-mirror-ikea","furnitureId":"decor-mirror-full","x":30,"z":16.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich2_hallway_104_plant-tropic-flowers","furnitureId":"plant-tropic-flowers","x":160,"z":50,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"enrich2_hallway_105_plant-monstera","furnitureId":"plant-monstera","x":367.5,"z":57.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_hallway_260_toy-rocking-horse","furnitureId":"toy-rocking-horse","x":560,"z":75,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_hallway_261_decor-statue-lion","furnitureId":"decor-statue-lion","x":783.5,"z":25,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep_hallway_262_decor-pedestal","furnitureId":"decor-pedestal","x":985,"z":30.5,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep2_hallway_306_decor-garden-urn","furnitureId":"decor-garden-urn","x":275,"z":25,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1}],"exteriorDecor":[]},"pool":{"materials":{},"placedItems":[],"exteriorDecor":[]},"terrace":{"materials":{},"placedItems":[],"exteriorDecor":[]},"deck":{"materials":{},"placedItems":[],"exteriorDecor":[]},"equipment_room":{"materials":{},"placedItems":[],"exteriorDecor":[]}},"enabledRooms":["master","closet","bathroom","stair","hallway","bedroom","bedroom2","bedroom3","study"],"roomLayout":{"master":{"x":0,"y":0},"closet":{"x":520,"y":0},"bathroom":{"x":720,"y":0},"bathroom2":{"x":620,"y":200},"study":{"x":1000,"y":600},"study2":{"x":660,"y":290},"living":{"x":0,"y":360},"bedroom":{"x":0,"y":600},"bedroom2":{"x":380,"y":600},"bedroom3":{"x":720,"y":600},"dining":{"x":0,"y":780},"kitchen":{"x":380,"y":780},"balcony":{"x":0,"y":1100},"balcony2":{"x":500,"y":1100},"yard":{"x":-860,"y":0},"garage":{"x":-560,"y":0},"gym":{"x":-560,"y":320},"cinema":{"x":-560,"y":640},"custom1":{"x":820,"y":0},"custom2":{"x":820,"y":300},"custom3":{"x":820,"y":600},"custom4":{"x":820,"y":900},"custom5":{"x":820,"y":1200},"stair":{"x":1000,"y":0},"hallway":{"x":0,"y":420},"pool":{"x":1200,"y":400},"terrace":{"x":1200,"y":800},"deck":{"x":1200,"y":1100},"equipment_room":{"x":0,"y":900}},"roomDimensions":{"living":{"width":500,"depth":420},"master":{"width":520,"depth":420},"bedroom":{"width":380,"depth":420},"bedroom2":{"width":340,"depth":420},"bedroom3":{"width":280,"depth":420},"kitchen":{"width":360,"depth":280},"bathroom":{"width":280,"depth":420},"bathroom2":{"width":240,"depth":200},"dining":{"width":380,"depth":320},"study":{"width":240,"depth":420},"study2":{"width":300,"depth":260},"closet":{"width":200,"depth":420},"balcony":{"width":420,"depth":160},"balcony2":{"width":300,"depth":160},"yard":{"width":800,"depth":600},"garage":{"width":500,"depth":320},"gym":{"width":360,"depth":320},"cinema":{"width":420,"depth":320},"custom1":{"width":300,"depth":300},"custom2":{"width":300,"depth":300},"custom3":{"width":300,"depth":300},"custom4":{"width":300,"depth":300},"custom5":{"width":300,"depth":300},"stair":{"width":240,"depth":420},"hallway":{"width":1240,"depth":180},"pool":{"width":600,"depth":350},"terrace":{"width":500,"depth":300},"deck":{"width":400,"depth":250},"equipment_room":{"width":300,"depth":250}},"roomWindows":{"living":[{"id":"living-w1","wall":"E","pos":105,"len":189}],"master":[{"id":"master-w1781100099990","wall":"N","pos":130,"len":208}],"bedroom":[{"id":"bedroom-w1781100125113","wall":"S","pos":95,"len":152}],"bedroom2":[{"id":"bedroom2-w1781100133550","wall":"S","pos":85,"len":136}],"bedroom3":[{"id":"bedroom3-w1781100140474","wall":"S","pos":70,"len":112}],"kitchen":[{"id":"kitchen-w6","wall":"N","pos":90,"len":162}],"bathroom":[{"id":"bathroom-w1781100110825","wall":"N","pos":70,"len":112}],"bathroom2":[],"dining":[{"id":"dining-w7","wall":"E","pos":80,"len":144}],"study":[{"id":"study-w1781100148913","wall":"S","pos":60,"len":96},{"id":"study-e-win-1","wall":"E","pos":142,"len":96}],"study2":[{"id":"study2-w9","wall":"N","pos":75,"len":135}],"closet":[{"id":"closet-w1781100106621","wall":"N","pos":50,"len":80}],"balcony":[{"id":"balcony-w10","wall":"N","pos":105,"len":189}],"balcony2":[{"id":"balcony2-w11","wall":"N","pos":75,"len":135}],"yard":[],"garage":[{"id":"garage-w12","wall":"E","pos":80,"len":144}],"gym":[{"id":"gym-w13","wall":"N","pos":90,"len":162}],"cinema":[],"custom1":[],"custom2":[],"custom3":[],"custom4":[],"custom5":[],"stair":[{"id":"stair-w1781100113871","wall":"N","pos":60,"len":96}],"hallway":[],"pool":[],"terrace":[],"deck":[],"pergola":[],"equipment_room":[]},"roomDoorPos":{"living":50,"master":40,"bedroom":32,"bedroom2":30,"bedroom3":28,"kitchen":36,"bathroom":26,"bathroom2":24,"dining":38,"study":32,"study2":30,"closet":26,"balcony":42,"balcony2":30,"yard":80,"garage":50,"gym":36,"cinema":42,"custom1":30,"custom2":30,"custom3":30,"custom4":30,"custom5":30,"stair":26,"hallway":12,"pool":60,"terrace":50,"deck":40,"pergola":30,"equipment_room":30},"roomHasDoor":{"living":true,"master":true,"bedroom":false,"bedroom2":false,"bedroom3":false,"kitchen":true,"bathroom":true,"bathroom2":true,"dining":true,"study":false,"study2":true,"closet":true,"balcony":true,"balcony2":true,"yard":true,"garage":true,"gym":true,"cinema":true,"custom1":true,"custom2":true,"custom3":true,"custom4":true,"custom5":true,"stair":true,"hallway":false,"pool":true,"terrace":true,"deck":true,"rooftop_lounge":true,"rooftop_pool":true,"rooftop_garden":true,"rooftop_bar":true,"equipment_room":true},"roomDoorWall":{"living":"S","master":"S","bedroom":"S","bedroom2":"S","bedroom3":"S","kitchen":"S","bathroom":"S","bathroom2":"S","dining":"S","study":"S","study2":"S","closet":"S","balcony":"S","balcony2":"S","yard":"S","garage":"S","gym":"S","cinema":"S","custom1":"S","custom2":"S","custom3":"S","custom4":"S","custom5":"S","stair":"S","hallway":"S","pool":"S","terrace":"S","deck":"S","pergola":"S","equipment_room":"S"},"roomDoorStyle":{},"roomDoorLen":{},"roomShapes":{},"roomDoors":{"bedroom":[{"id":"bedroom-d1779506309280","wall":"N","pos":150,"len":80,"h":200,"style":"wood_panel"}],"bedroom2":[{"id":"bedroom2-d1779506346313","wall":"N","pos":130,"len":80,"h":200,"style":"wood_panel"}],"bedroom3":[{"id":"bedroom3-d1779506368846","wall":"N","pos":100,"len":80,"h":200,"style":"wood_panel"}],"study":[{"id":"study-d1779506387204","wall":"N","pos":60,"len":80,"h":200,"style":"wood_panel"}]},"roomWallsHidden":{"stair":{"S":true,"ceiling":true},"hallway":{"N":true,"S":true}}},{"rooms":{"living":{"materials":{},"placedItems":[],"exteriorDecor":[]},"master":{"materials":{},"placedItems":[],"exteriorDecor":[]},"bedroom":{"materials":{},"placedItems":[],"exteriorDecor":[]},"bedroom2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"bedroom3":{"materials":{},"placedItems":[],"exteriorDecor":[]},"kitchen":{"materials":{},"placedItems":[],"exteriorDecor":[]},"bathroom":{"materials":{},"placedItems":[],"exteriorDecor":[]},"bathroom2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"dining":{"materials":{},"placedItems":[],"exteriorDecor":[]},"study":{"materials":{},"placedItems":[],"exteriorDecor":[]},"study2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"closet":{"materials":{},"placedItems":[],"exteriorDecor":[]},"balcony":{"materials":{},"placedItems":[],"exteriorDecor":[]},"balcony2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"yard":{"materials":{},"placedItems":[],"exteriorDecor":[]},"garage":{"materials":{},"placedItems":[],"exteriorDecor":[]},"gym":{"materials":{},"placedItems":[],"exteriorDecor":[]},"cinema":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom1":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom2":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom3":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom4":{"materials":{},"placedItems":[],"exteriorDecor":[]},"custom5":{"materials":{},"placedItems":[],"exteriorDecor":[]},"stair":{"materials":{},"placedItems":[]},"hallway":{"materials":{},"placedItems":[],"exteriorDecor":[]},"pool":{"materials":{},"placedItems":[],"exteriorDecor":[]},"terrace":{"materials":{},"placedItems":[],"exteriorDecor":[]},"deck":{"materials":{},"placedItems":[],"exteriorDecor":[]},"equipment_room":{"materials":{},"placedItems":[],"exteriorDecor":[]},"pergola":{"materials":{},"placedItems":[{"instanceId":"pi_1_i0a9v","furnitureId":"pergola","x":0,"z":0,"rotation":0},{"instanceId":"deep_pergola_264_planter-clay","furnitureId":"planter-clay","x":29.54218750000001,"z":22.162499999999994,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"deep2_pergola_310_decor-garden-urn","furnitureId":"decor-garden-urn","x":221.54062499999998,"z":24.70625000000002,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1},{"instanceId":"pk4_pergola_504_outdoor-patio-set","furnitureId":"outdoor-patio-set","x":40,"z":40,"rotation":0,"scaleW":1,"scaleD":1,"scaleH":1}],"exteriorDecor":[]}},"enabledRooms":["stair","pergola"],"roomLayout":{"master":{"x":0,"y":0},"closet":{"x":400,"y":0},"bathroom":{"x":400,"y":200},"bathroom2":{"x":620,"y":200},"study":{"x":660,"y":0},"study2":{"x":660,"y":290},"living":{"x":0,"y":360},"bedroom":{"x":500,"y":360},"bedroom2":{"x":500,"y":660},"bedroom3":{"x":500,"y":940},"dining":{"x":0,"y":780},"kitchen":{"x":380,"y":780},"balcony":{"x":0,"y":1100},"balcony2":{"x":500,"y":1100},"yard":{"x":-860,"y":0},"garage":{"x":-560,"y":0},"gym":{"x":-560,"y":320},"cinema":{"x":-560,"y":640},"custom1":{"x":820,"y":0},"custom2":{"x":820,"y":300},"custom3":{"x":820,"y":600},"custom4":{"x":820,"y":900},"custom5":{"x":820,"y":1200},"stair":{"x":1000,"y":0},"hallway":{"x":380,"y":360},"pool":{"x":1200,"y":400},"terrace":{"x":1200,"y":800},"deck":{"x":1200,"y":1100},"equipment_room":{"x":0,"y":900},"pergola":{"x":300,"y":600}},"roomDimensions":{"living":{"width":500,"depth":420},"master":{"width":400,"depth":360},"bedroom":{"width":320,"depth":300},"bedroom2":{"width":300,"depth":280},"bedroom3":{"width":280,"depth":260},"kitchen":{"width":360,"depth":280},"bathroom":{"width":260,"depth":220},"bathroom2":{"width":240,"depth":200},"dining":{"width":380,"depth":320},"study":{"width":320,"depth":290},"study2":{"width":300,"depth":260},"closet":{"width":260,"depth":200},"balcony":{"width":420,"depth":160},"balcony2":{"width":300,"depth":160},"yard":{"width":800,"depth":600},"garage":{"width":500,"depth":320},"gym":{"width":360,"depth":320},"cinema":{"width":420,"depth":320},"custom1":{"width":300,"depth":300},"custom2":{"width":300,"depth":300},"custom3":{"width":300,"depth":300},"custom4":{"width":300,"depth":300},"custom5":{"width":300,"depth":300},"stair":{"width":240,"depth":420},"hallway":{"width":120,"depth":300},"pool":{"width":600,"depth":350},"terrace":{"width":500,"depth":300},"deck":{"width":400,"depth":250},"equipment_room":{"width":300,"depth":250},"pergola":{"width":300,"depth":300}},"roomWindows":{"living":[{"id":"living-w1","wall":"E","pos":105,"len":189}],"master":[{"id":"master-w2","wall":"E","pos":90,"len":162}],"bedroom":[{"id":"bedroom-w3","wall":"N","pos":80,"len":144}],"bedroom2":[{"id":"bedroom2-w4","wall":"N","pos":75,"len":135}],"bedroom3":[{"id":"bedroom3-w5","wall":"N","pos":70,"len":126}],"kitchen":[{"id":"kitchen-w6","wall":"N","pos":90,"len":162}],"bathroom":[],"bathroom2":[],"dining":[{"id":"dining-w7","wall":"E","pos":80,"len":144}],"study":[{"id":"study-w8","wall":"N","pos":80,"len":144}],"study2":[{"id":"study2-w9","wall":"N","pos":75,"len":135}],"closet":[],"balcony":[{"id":"balcony-w10","wall":"N","pos":105,"len":189}],"balcony2":[{"id":"balcony2-w11","wall":"N","pos":75,"len":135}],"yard":[],"garage":[{"id":"garage-w12","wall":"E","pos":80,"len":144}],"gym":[{"id":"gym-w13","wall":"N","pos":90,"len":162}],"cinema":[],"custom1":[],"custom2":[],"custom3":[],"custom4":[],"custom5":[],"stair":[{"id":"stair-w1781100171639","wall":"N","pos":60,"len":96},{"id":"stair-w-roof-e","wall":"E","pos":120,"len":180,"sill":150,"h":60},{"id":"stair-w-roof-w","wall":"W","pos":120,"len":180,"sill":150,"h":60}],"hallway":[],"pool":[],"terrace":[],"deck":[],"pergola":[],"equipment_room":[]},"roomDoorPos":{"living":50,"master":40,"bedroom":32,"bedroom2":30,"bedroom3":28,"kitchen":36,"bathroom":26,"bathroom2":24,"dining":38,"study":32,"study2":30,"closet":26,"balcony":42,"balcony2":30,"yard":80,"garage":50,"gym":36,"cinema":42,"custom1":30,"custom2":30,"custom3":30,"custom4":30,"custom5":30,"stair":26,"hallway":12,"pool":60,"terrace":50,"deck":40,"pergola":30,"equipment_room":30},"roomHasDoor":{"living":true,"master":true,"bedroom":true,"bedroom2":true,"bedroom3":true,"kitchen":true,"bathroom":true,"bathroom2":true,"dining":true,"study":true,"study2":true,"closet":true,"balcony":true,"balcony2":true,"yard":true,"garage":true,"gym":true,"cinema":true,"custom1":true,"custom2":true,"custom3":true,"custom4":true,"custom5":true,"stair":false,"hallway":true,"pool":true,"terrace":true,"deck":true,"rooftop_lounge":true,"rooftop_pool":true,"rooftop_garden":true,"rooftop_bar":true,"equipment_room":true,"pergola":false},"roomDoorWall":{"living":"S","master":"S","bedroom":"S","bedroom2":"S","bedroom3":"S","kitchen":"S","bathroom":"S","bathroom2":"S","dining":"S","study":"S","study2":"S","closet":"S","balcony":"S","balcony2":"S","yard":"S","garage":"S","gym":"S","cinema":"S","custom1":"S","custom2":"S","custom3":"S","custom4":"S","custom5":"S","stair":"S","hallway":"S","pool":"S","terrace":"S","deck":"S","pergola":"S","equipment_room":"S"},"roomDoorLen":{},"roomDoorStyle":{},"roomShapes":{},"roomDoors":{"stair":[{"id":"stair-d1780777270704","wall":"S","pos":80,"len":80,"h":240,"style":"wood_panel"}]}}],"yardPlan":{"items":[{"type":"prefab","prefabKind":"pool","x":0,"z":1320,"rot":0,"id":"modernVilla-e349df-0"},{"type":"prefab","prefabKind":"porte_cochere","x":25,"z":-875,"rot":0,"params":{"carCount":2,"pillarStyle":"round","facingDir":"south"},"id":"modernVilla-e349df-1"},{"type":"singleton","kind":"tree.olive","x":-1460,"z":-325,"scale":1.4,"id":"modernVilla-e349df-2"},{"id":"y-mr2blrl3-meh4u","type":"singleton","kind":"tree.palm","x":1425,"z":-325,"rot":0,"scale":1.3},{"id":"y-mr2bnt14-tvtjf","type":"singleton","kind":"vehicle.bmw_rr1000","x":28,"z":-853,"rot":0,"scale":1.2}]},"exterior":{"roofStyle":"flat","roofColor":"#2A2A2A","wallMaterial":"render","wallColor":"#CBE8F5","accentColor":"#1A1A1A","floors":2,"yardPreset":"pool","showPerimeterFence":false,"fenceInsetMultiplier":1.65,"pilotisHeightM":0,"buildingType":"floor-plan-driven","hasRooftop":true,"debugExposeScene":true,"exteriorWindowGlassColor":"#8FA3B2","exteriorWindowGlassOpacity":0.82,"exteriorWindowGlassTransmission":0,"exteriorWindowGlassEnvMapIntensity":0.6,"exteriorWindowGlassRoughness":0.12,"wallBaseColor":"#F2EFE8","wallGrooveColor":"#F2EFE8","wallPanelHSpacing":99,"wallPanelVSpacing":99,"wallPanelTwoTone":false,"stoneBaseEnabled":false,"windowGlassColor":"#34404E","windowFrameColor":"#15171B","windowSillEnabled":true,"windowLintelEnabled":false,"windowJambEnabled":true,"windowJambDepthCm":8,"windowFlowerBoxFreq":0,"windowFrameStripVCm":6,"windowFrameStripHCm":6,"windowCenterMullionCm":4,"windowSillColor":"#3E2A1E","defaultWindowSill":70,"defaultWindowHeight":170,"frontEntranceStyle":"sliding_barn","doorFrameColor":"#3E2A1E","doorHandleColor":"#1E1E22","roomCeilingColor":"#FAF4E8","ceilingLightColor":"#FFE0A0","ceilingLightIntensity":2.4,"ceilingLightRadiusCm":12,"skirtingHeight":8,"skirtingThicknessCm":1,"skirtingColor":"#3E2A1E","roofOverhang":1.2,"roofOverhangSouthExtra":0.9,"parapetHeight":0,"parapetGlassEnabled":false,"roofSlabColor":"#EAE7E0","parapetColor":"#7A7068","stoneBaseHeight":0.35,"windowFlowerBoxColor":"#A0623E","flowerBloomColor":"#E85090","flowerFoliageColor":"#5A8A30","windowGlassTopColor":"#4A5C72","windowMullionPos":0.5,"windowMullionThicknessCm":2.5,"wallPanelGrooveOpacity":0.25,"lawnTint":"#7E8E6A","skyHaze":0.2,"windowRevealShadow":0.65,"treeColorJitter":0.4,"buildingBaseShadow":1,"eaveShadow":0.45,"wallVignette":0.3,"solarPanelsEnabled":false,"hideInteriorWalls":true,"bloomIntensity":0.2,"grassDensity":0,"exposure":0.84,"windowLintelColor":"#E0D0A8","wallZones":[{"material":"brick","color":"#B05030","heightFraction":0.35},{"material":"wood","color":"#A06030","heightFraction":0.65}],"facades":{"S":[{"segments":[{"id":"c1","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"},{"id":"d1","type":"door","widthFraction":0.18,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"},{"id":"g1","type":"glass","widthFraction":0.68,"color":"#CBE8F5","frameColor":"#1C1C1C","panelCount":4},{"id":"c2","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"}]},{"segments":[{"id":"c1","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"},{"id":"g1","type":"glass","widthFraction":0.86,"color":"#CBE8F5","frameColor":"#1C1C1C","panelCount":5},{"id":"c2","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"}]}],"N":[{"segments":[{"id":"c1","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"},{"id":"d1","type":"door","widthFraction":0.18,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"},{"id":"g1","type":"glass","widthFraction":0.68,"color":"#CBE8F5","frameColor":"#1C1C1C","panelCount":4},{"id":"c2","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"}]},{"segments":[{"id":"c1","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"},{"id":"g1","type":"glass","widthFraction":0.86,"color":"#CBE8F5","frameColor":"#1C1C1C","panelCount":5},{"id":"c2","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"}]}],"W":[{"segments":[{"id":"c1","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"},{"id":"d1","type":"door","widthFraction":0.18,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"},{"id":"g1","type":"glass","widthFraction":0.68,"color":"#CBE8F5","frameColor":"#1C1C1C","panelCount":4},{"id":"c2","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"}]},{"segments":[{"id":"c1","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"},{"id":"g1","type":"glass","widthFraction":0.86,"color":"#CBE8F5","frameColor":"#1C1C1C","panelCount":5},{"id":"c2","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"}]}],"E":[{"segments":[{"id":"c1","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"},{"id":"d1","type":"door","widthFraction":0.18,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"},{"id":"g1","type":"glass","widthFraction":0.68,"color":"#CBE8F5","frameColor":"#1C1C1C","panelCount":4},{"id":"c2","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"}]},{"segments":[{"id":"c1","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"},{"id":"g1","type":"glass","widthFraction":0.86,"color":"#CBE8F5","frameColor":"#1C1C1C","panelCount":5},{"id":"c2","type":"column","widthFraction":0.07,"color":"#F2EFE8","material":"render","frameColor":"#1C1C1C"}]}]},"facadeSystem":"punched-window","transparentExterior":true,"glassShellColor":"#33414E","glassSpandrelColor":"#EDEAE3","glassColor":"#73899B","glassOpacity":1,"entranceFrameColor":"#15171B","woodSoffit":true,"facadeGlass":false},"budget":350000,"customRoomMeta":{},"customFurniture":[],"scores":{"style":55,"space":68,"light":95,"dominantStyle":"现代"},"blueprint":{"image":null,"naturalW":0,"naturalH":0,"opacity":0.4,"offsetX":0,"offsetY":0,"scale":1},"savedAt":"2026-07-07T11:39:11.994Z"}
+{
+  "_version": 2,
+  "_coordSystem": "top-left",
+  "floorPlans": [
+    {
+      "rooms": {
+        "living": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_living_0_tvunit-float-white",
+              "furnitureId": "tvunit-float-white",
+              "x": 561,
+              "z": 205,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_living_1_rug-nordic-geo",
+              "furnitureId": "rug-nordic-geo",
+              "x": 290,
+              "z": 160,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_living_2_coffee-marble-rect",
+              "furnitureId": "coffee-marble-rect",
+              "x": 355,
+              "z": 197.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_living_3_lamp-arc-gold",
+              "furnitureId": "lamp-arc-gold",
+              "x": 457.5,
+              "z": 447.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_living_4_plant-monstera",
+              "furnitureId": "plant-monstera",
+              "x": 14,
+              "z": 14,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_living_5_artwork-abstract",
+              "furnitureId": "artwork-abstract",
+              "x": 637.5,
+              "z": 95.02595831428135,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "furnitureId": "sofa-fabric-gray",
+              "x": 160,
+              "z": 182.5,
+              "rotation": 90,
+              "instanceId": "tpl_living_6_sofa-fabric-gray"
+            },
+            {
+              "furnitureId": "curtain-drape",
+              "x": -90,
+              "z": 217.5,
+              "rotation": 90,
+              "instanceId": "tpl_living_7_curtain-drape"
+            },
+            {
+              "furnitureId": "plant-rubber-tree",
+              "x": 622.7006747547806,
+              "z": 448,
+              "rotation": 0,
+              "instanceId": "tpl_living_8_plant-rubber-tree"
+            },
+            {
+              "furnitureId": "sideboard-walnut",
+              "x": 340,
+              "z": 9,
+              "rotation": 0,
+              "instanceId": "tpl_living_9_sideboard-walnut"
+            },
+            {
+              "instanceId": "enrich_living_1_appliance-robot-vacuum",
+              "furnitureId": "appliance-robot-vacuum",
+              "x": 573.2678303321183,
+              "z": 13.991182111466749,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_living_2_pet-dog-resting",
+              "furnitureId": "pet-dog-resting",
+              "x": 93.20734560756743,
+              "z": 17.37039656683433,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_living_3_decor-book-stack",
+              "furnitureId": "decor-book-stack",
+              "x": 433,
+              "z": 200,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 40
+            },
+            {
+              "instanceId": "deep_living_202_decor-blanket",
+              "furnitureId": "decor-blanket",
+              "x": 232.5,
+              "z": 266.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 42
+            },
+            {
+              "instanceId": "deep_living_205_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 351,
+              "z": 11,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 85
+            },
+            {
+              "instanceId": "deep_living_206_decor-camera-slr",
+              "furnitureId": "decor-camera-slr",
+              "x": 396,
+              "z": 18,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 85
+            },
+            {
+              "instanceId": "deep_living_208_elec-hifi",
+              "furnitureId": "elec-hifi",
+              "x": 643.421237023489,
+              "z": 74.80211349895849,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_living_209_elec-hifi",
+              "furnitureId": "elec-hifi",
+              "x": 643.0243209029788,
+              "z": 332.35217785229213,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_living_210_toy-game-retro",
+              "furnitureId": "toy-game-retro",
+              "x": 646,
+              "z": 170,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 50
+            },
+            {
+              "instanceId": "deep_living_211_cat-tower",
+              "furnitureId": "pet-cat-tree",
+              "x": 166.87423792104858,
+              "z": 13.852213839353851,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_living_301_sofa-armchair",
+              "furnitureId": "sofa-armchair",
+              "x": 301.1484375,
+              "z": 359.5625,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_living_303_decor-vase-royal",
+              "furnitureId": "decor-vase-royal",
+              "x": 636.7629358932836,
+              "z": 12.498750640358011,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_living_320_decor-tea-set",
+              "furnitureId": "decor-tea-set",
+              "x": 400,
+              "z": 200,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 40
+            },
+            {
+              "instanceId": "deep2_living_321_decor-fruit-bowl",
+              "furnitureId": "decor-fruit-bowl",
+              "x": 406,
+              "z": 235,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 40
+            },
+            {
+              "instanceId": "fill_living_401_appliance-ac-indoor",
+              "furnitureId": "appliance-ac-indoor",
+              "x": 620.2532797879829,
+              "z": 407.68647894764376,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 30
+            },
+            {
+              "instanceId": "pk4_living_503_lamp-pendant-saturno",
+              "furnitureId": "lamp-pendant-saturno",
+              "x": 311,
+              "z": 220,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "pi_1_wv8ey",
+              "furnitureId": "elec-tv-curved",
+              "x": 594,
+              "z": 226.6230281207133,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "master": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bedroom": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bedroom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bedroom3": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "kitchen": {
+          "materials": {
+            "wall": {
+              "id": "wall-tile-white",
+              "name": "白色大理石纹砖",
+              "brand": "釉面砖",
+              "price": 180,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#EFEFEF",
+              "texture": "repeating-linear-gradient(45deg, #e0e0e0 0px, #e0e0e0 1px, #EFEFEF 0px, #EFEFEF 50%)",
+              "tags": [
+                "轻奢",
+                "现代"
+              ],
+              "description": "天然大理石纹，奢华感十足"
+            },
+            "floor": {
+              "id": "floor-white-tile",
+              "name": "白色抛光砖",
+              "brand": "全抛釉砖",
+              "price": 150,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#F0EFEB",
+              "tags": [
+                "现代",
+                "北欧"
+              ],
+              "description": "大块白砖，空间感更强"
+            },
+            "light": {
+              "id": "light-linear-pendant",
+              "name": "线形长吊灯",
+              "brand": "线型灯具",
+              "price": 1200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#F5F0E0",
+              "tags": [
+                "现代",
+                "轻奢"
+              ],
+              "description": "餐桌上方首选，线条感强"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_kitchen_0_cabinet-lower-white",
+              "furnitureId": "cabinet-lower-white",
+              "x": 8,
+              "z": 8,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_kitchen_3_fridge-french-door",
+              "furnitureId": "fridge-french-door",
+              "x": 309.3575,
+              "z": 0,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_kitchen_4_hood-side-black",
+              "furnitureId": "hood-side-black",
+              "x": 155,
+              "z": 10,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "enrich_kitchen_4_appliance-cooktop",
+              "furnitureId": "appliance-cooktop",
+              "x": 162.5,
+              "z": 16,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 85
+            },
+            {
+              "instanceId": "enrich_kitchen_6_appliance-kettle-electric",
+              "furnitureId": "appliance-kettle-electric",
+              "x": 41,
+              "z": 29,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 85
+            },
+            {
+              "instanceId": "enrich_kitchen_7_decor-copper-pots",
+              "furnitureId": "appliance-microwave",
+              "x": 56.51826733457105,
+              "z": 16.12740403660952,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 85
+            },
+            {
+              "instanceId": "enrich_kitchen_8_decor-trash-bin",
+              "furnitureId": "decor-trash-bin",
+              "x": 365,
+              "z": 291,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_kitchen_212_decor-spice-rack",
+              "furnitureId": "decor-spice-rack",
+              "x": 107.53885428381082,
+              "z": 9.50941292451057,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 85
+            },
+            {
+              "instanceId": "deep_kitchen_213_appliance-toaster",
+              "furnitureId": "appliance-toaster",
+              "x": 18.6825,
+              "z": 27.3275,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 85
+            },
+            {
+              "instanceId": "pi_4_1nqgw",
+              "furnitureId": "kitchen_cabinet-island-sink",
+              "x": 6.538358056604466,
+              "z": 90,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 2.9
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bathroom": {
+          "materials": {
+            "wall": {
+              "id": "wall-tile-metro",
+              "name": "地铁砖（浴室/厨房）",
+              "brand": "全抛釉砖",
+              "price": 95,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#FAFAFA",
+              "texture": "repeating-linear-gradient(0deg, #E0E0E0 0px, #E0E0E0 1px, #FAFAFA 1px, #FAFAFA 8px)",
+              "tags": [
+                "现代",
+                "工业风"
+              ],
+              "description": "经典白色地铁砖，百搭"
+            },
+            "floor": {
+              "id": "floor-white-tile",
+              "name": "白色抛光砖",
+              "brand": "全抛釉砖",
+              "price": 150,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#F0EFEB",
+              "tags": [
+                "现代",
+                "北欧"
+              ],
+              "description": "大块白砖，空间感更强"
+            },
+            "light": {
+              "id": "light-smart-panel",
+              "name": "智能主灯面板",
+              "brand": "灯饰",
+              "price": 2280,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#FFFFFF",
+              "tags": [
+                "现代"
+              ],
+              "description": "方形 LED 主灯 + 可调色温"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_bathroom_1_vanity-double-marble",
+              "furnitureId": "vanity-double-marble",
+              "x": -52.37666971498247,
+              "z": 191.9910082304527,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "enrich_bathroom_12_bath_accessory-scale",
+              "furnitureId": "bath_accessory-scale",
+              "x": 208.0547300621327,
+              "z": 186.5249709641299,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_2_xzxjj",
+              "furnitureId": "toilet-sit",
+              "x": 5.718424286562652,
+              "z": 9.902870127514774,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_3_z0dai",
+              "furnitureId": "shower-cabin-glass",
+              "x": 113.05376174711986,
+              "z": 6.823356682580027,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bathroom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "dining": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-linear-pendant",
+              "name": "线形长吊灯",
+              "brand": "线型灯具",
+              "price": 1200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#F5F0E0",
+              "tags": [
+                "现代",
+                "轻奢"
+              ],
+              "description": "餐桌上方首选，线条感强"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_dining_0_dining-marble-round",
+              "furnitureId": "dining-marble-round",
+              "x": 132.49421875,
+              "z": 99.73234374999998,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_dining_1_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 179.0865625,
+              "z": 223.92609375,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_dining_2_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 169.11234375,
+              "z": 43.017812500000005,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_dining_3_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 80.94390625,
+              "z": 107.70499999999998,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_dining_4_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 259.934375,
+              "z": 103.78437500000001,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_dining_5_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 78.8109375,
+              "z": 162.72984375,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_dining_6_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 261.25984375,
+              "z": 157.95921875,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "enrich_dining_15_decor-vase-set",
+              "furnitureId": "decor-vase-set",
+              "x": 175.12213039485763,
+              "z": 110.593185644322,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "deep_dining_216_decor-tea-set",
+              "furnitureId": "decor-tea-set",
+              "x": 141.72988536695047,
+              "z": 145.26578006408462,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "deep_dining_217_decor-fruit-bowl",
+              "furnitureId": "decor-fruit-bowl",
+              "x": 202.64140128264393,
+              "z": 155.55142481121928,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "pk4_dining_501_lamp-chandelier-osgona",
+              "furnitureId": "lamp-chandelier-osgona",
+              "x": 175,
+              "z": 132.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "study": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-linear-pendant",
+              "name": "线形长吊灯",
+              "brand": "线型灯具",
+              "price": 1200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#F5F0E0",
+              "tags": [
+                "现代",
+                "轻奢"
+              ],
+              "description": "餐桌上方首选，线条感强"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_study_0_desk-l-shape-white",
+              "furnitureId": "desk-l-shape-white",
+              "x": 76.155,
+              "z": 326.85046875,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_study_1_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 148.25852363809122,
+              "z": 252.79918111449115,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_study_2_bookshelf-solid-walnut",
+              "furnitureId": "bookshelf-solid-walnut",
+              "x": 281,
+              "z": 240,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "enrich_study_16_elec-printer",
+              "furnitureId": "elec-printer",
+              "x": 300.0746627383766,
+              "z": 118.57240516704621,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_study_17_decor-globe",
+              "furnitureId": "decor-globe",
+              "x": 240.78796016782167,
+              "z": 398.89910888356815,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "enrich_study_18_lamp-desk-2",
+              "furnitureId": "lamp-desk-2",
+              "x": 206.5583561957019,
+              "z": 407.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "enrich_study_19_decor-book-stack-2",
+              "furnitureId": "decor-book-stack-2",
+              "x": 83.5,
+              "z": 422.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "enrich_study_20_toy-robot",
+              "furnitureId": "toy-robot",
+              "x": 10.434220679012345,
+              "z": 137.0079089506173,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_study_219_elec-monitor",
+              "furnitureId": "elec-laptop",
+              "x": 118.21112241375184,
+              "z": 380.10073432584994,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "deep_study_220_elec-keyboard",
+              "furnitureId": "elec-keyboard",
+              "x": 109.62924382716048,
+              "z": 352.279899691358,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "deep_study_222_decor-books-pack",
+              "furnitureId": "decor-books-pack",
+              "x": 305,
+              "z": 230.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 70
+            },
+            {
+              "instanceId": "deep_study_223_decor-deer-statue",
+              "furnitureId": "decor-deer-statue",
+              "x": 312,
+              "z": 277,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 124
+            },
+            {
+              "instanceId": "deep_study_224_elec-speaker",
+              "furnitureId": "elec-speaker",
+              "x": 81.2561636562387,
+              "z": 385.1186757657268,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 0
+            },
+            {
+              "instanceId": "fix_study_601_decor-books-set",
+              "furnitureId": "decor-books-set",
+              "x": 297,
+              "z": 233.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 35
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "study2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "closet": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "enrich_closet_21_decor-suitcase",
+              "furnitureId": "decor-suitcase",
+              "x": 7.09734375,
+              "z": 29.553906249999997,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_closet_22_storage-box",
+              "furnitureId": "storage-box",
+              "x": 5.322968750000001,
+              "z": 70.61359375,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_closet_23_decor-folded-clothes",
+              "furnitureId": "decor-folded-clothes",
+              "x": 183.01697530864195,
+              "z": 417.41769547325106,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_closet_24_storage-shoe-shelf",
+              "furnitureId": "storage-shoe-shelf",
+              "x": -3.35171875,
+              "z": 285,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich2_closet_102_wardrobe-with-clothes",
+              "furnitureId": "wardrobe-with-clothes",
+              "x": 128.6703125,
+              "z": 116.01453125,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_closet_225_decor-clothes-pile-2",
+              "furnitureId": "decor-clothes-pile-2",
+              "x": 100.5,
+              "z": 430.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_closet_226_decor-suitcase-2",
+              "furnitureId": "decor-suitcase-2",
+              "x": 31,
+              "z": 419,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "balcony": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "balcony2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "yard": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "garage": {
+          "materials": {},
+          "placedItems": [
+            {
+              "instanceId": "pi_1_jgpzq",
+              "furnitureId": "vehicle.bmw_m3_e46",
+              "x": 195.72979518019332,
+              "z": 26.21653404880047,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 0.6,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_garage_26_electrical-fire-ext",
+              "furnitureId": "electrical-fire-ext",
+              "x": 470.72269069664907,
+              "z": 13.10171406525572,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_garage_304_vehicle.sport_moto",
+              "furnitureId": "vehicle.sport_moto",
+              "x": 69.68989659633631,
+              "z": 27.869684083497248,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "gym": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "cinema": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom1": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom3": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom4": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom5": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "stair": {
+          "materials": {},
+          "placedItems": [
+            {
+              "instanceId": "pi_1_0iynr",
+              "furnitureId": "staircase-u-shaped",
+              "x": 0,
+              "z": 0,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "hallway": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "enrich_hallway_29_decor-umbrella-stand",
+              "furnitureId": "decor-umbrella-stand",
+              "x": 47.5,
+              "z": 27.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_hallway_230_decor-statue-elephant",
+              "furnitureId": "decor-statue-elephant",
+              "x": 280,
+              "z": 4,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_hallway_231_plant-monstera",
+              "furnitureId": "plant-monstera",
+              "x": 467.5,
+              "z": 17.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_hallway_232_decor-garden-urn",
+              "furnitureId": "decor-garden-urn",
+              "x": 675,
+              "z": 25,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_hallway_305_decor-statue-swan",
+              "furnitureId": "decor-statue-swan",
+              "x": 885,
+              "z": 20,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "fill_hallway_406_sideboard-euro",
+              "furnitureId": "sideboard-euro",
+              "x": 925,
+              "z": 2.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "pool": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "terrace": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "deck": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "equipment_room": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        }
+      },
+      "enabledRooms": [
+        "kitchen",
+        "bathroom",
+        "dining",
+        "stair",
+        "hallway",
+        "living",
+        "study",
+        "closet",
+        "garage"
+      ],
+      "roomLayout": {
+        "master": {
+          "x": 0,
+          "y": 0
+        },
+        "closet": {
+          "x": 1020,
+          "y": 560
+        },
+        "bathroom": {
+          "x": 400,
+          "y": 0
+        },
+        "bathroom2": {
+          "x": 620,
+          "y": 200
+        },
+        "study": {
+          "x": 680,
+          "y": 560
+        },
+        "study2": {
+          "x": 980,
+          "y": 640
+        },
+        "living": {
+          "x": 0,
+          "y": 520
+        },
+        "bedroom": {
+          "x": 500,
+          "y": 360
+        },
+        "bedroom2": {
+          "x": 500,
+          "y": 660
+        },
+        "bedroom3": {
+          "x": 500,
+          "y": 940
+        },
+        "dining": {
+          "x": 640,
+          "y": 0
+        },
+        "kitchen": {
+          "x": 0,
+          "y": 0
+        },
+        "balcony": {
+          "x": 0,
+          "y": 1100
+        },
+        "balcony2": {
+          "x": 500,
+          "y": 1100
+        },
+        "yard": {
+          "x": -860,
+          "y": 0
+        },
+        "garage": {
+          "x": -700,
+          "y": 0
+        },
+        "gym": {
+          "x": -560,
+          "y": 320
+        },
+        "cinema": {
+          "x": -560,
+          "y": 640
+        },
+        "custom1": {
+          "x": 820,
+          "y": 0
+        },
+        "custom2": {
+          "x": 820,
+          "y": 300
+        },
+        "custom3": {
+          "x": 820,
+          "y": 600
+        },
+        "custom4": {
+          "x": 820,
+          "y": 900
+        },
+        "custom5": {
+          "x": 820,
+          "y": 1200
+        },
+        "stair": {
+          "x": 1000,
+          "y": 0
+        },
+        "hallway": {
+          "x": 0,
+          "y": 320
+        },
+        "pool": {
+          "x": 1200,
+          "y": 400
+        },
+        "terrace": {
+          "x": 1200,
+          "y": 800
+        },
+        "deck": {
+          "x": 1200,
+          "y": 1100
+        },
+        "equipment_room": {
+          "x": 0,
+          "y": 900
+        }
+      },
+      "roomDimensions": {
+        "living": {
+          "width": 680,
+          "depth": 500
+        },
+        "master": {
+          "width": 400,
+          "depth": 360
+        },
+        "bedroom": {
+          "width": 320,
+          "depth": 300
+        },
+        "bedroom2": {
+          "width": 300,
+          "depth": 280
+        },
+        "bedroom3": {
+          "width": 280,
+          "depth": 260
+        },
+        "kitchen": {
+          "width": 400,
+          "depth": 320
+        },
+        "bathroom": {
+          "width": 240,
+          "depth": 320
+        },
+        "bathroom2": {
+          "width": 240,
+          "depth": 200
+        },
+        "dining": {
+          "width": 360,
+          "depth": 340
+        },
+        "study": {
+          "width": 340,
+          "depth": 460
+        },
+        "study2": {
+          "width": 300,
+          "depth": 260
+        },
+        "closet": {
+          "width": 220,
+          "depth": 460
+        },
+        "balcony": {
+          "width": 420,
+          "depth": 160
+        },
+        "balcony2": {
+          "width": 300,
+          "depth": 160
+        },
+        "yard": {
+          "width": 800,
+          "depth": 600
+        },
+        "garage": {
+          "width": 500,
+          "depth": 320
+        },
+        "gym": {
+          "width": 360,
+          "depth": 320
+        },
+        "cinema": {
+          "width": 420,
+          "depth": 320
+        },
+        "custom1": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom2": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom3": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom4": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom5": {
+          "width": 300,
+          "depth": 300
+        },
+        "stair": {
+          "width": 240,
+          "depth": 340
+        },
+        "hallway": {
+          "width": 1240,
+          "depth": 240
+        },
+        "pool": {
+          "width": 600,
+          "depth": 350
+        },
+        "terrace": {
+          "width": 500,
+          "depth": 300
+        },
+        "deck": {
+          "width": 400,
+          "depth": 250
+        },
+        "equipment_room": {
+          "width": 300,
+          "depth": 250
+        }
+      },
+      "roomWindows": {
+        "living": [
+          {
+            "id": "living-w1782222340521",
+            "wall": "W",
+            "pos": 125,
+            "len": 200
+          }
+        ],
+        "master": [
+          {
+            "id": "master-w2",
+            "wall": "E",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "bedroom": [
+          {
+            "id": "bedroom-w3",
+            "wall": "N",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "bedroom2": [
+          {
+            "id": "bedroom2-w4",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "bedroom3": [
+          {
+            "id": "bedroom3-w5",
+            "wall": "N",
+            "pos": 70,
+            "len": 126
+          }
+        ],
+        "kitchen": [
+          {
+            "id": "kitchen-w6",
+            "wall": "N",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "bathroom": [
+          {
+            "id": "bathroom-w1781100082556",
+            "wall": "N",
+            "pos": 60,
+            "len": 96
+          }
+        ],
+        "bathroom2": [],
+        "dining": [
+          {
+            "id": "dining-w1781100077342",
+            "wall": "N",
+            "pos": 90,
+            "len": 144
+          }
+        ],
+        "study": [
+          {
+            "id": "study-w1781100036097",
+            "wall": "S",
+            "pos": 85,
+            "len": 136
+          }
+        ],
+        "study2": [
+          {
+            "id": "study2-w9",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "closet": [
+          {
+            "id": "closet-w1781100056117",
+            "wall": "S",
+            "pos": 55,
+            "len": 88
+          }
+        ],
+        "balcony": [
+          {
+            "id": "balcony-w10",
+            "wall": "N",
+            "pos": 105,
+            "len": 189
+          }
+        ],
+        "balcony2": [
+          {
+            "id": "balcony2-w11",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "yard": [],
+        "garage": [
+          {
+            "id": "garage-w1782915017300",
+            "wall": "W",
+            "pos": 80,
+            "len": 128
+          }
+        ],
+        "gym": [
+          {
+            "id": "gym-w13",
+            "wall": "N",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "cinema": [],
+        "custom1": [],
+        "custom2": [],
+        "custom3": [],
+        "custom4": [],
+        "custom5": [],
+        "stair": [
+          {
+            "id": "stair-w1781100070257",
+            "wall": "N",
+            "pos": 60,
+            "len": 96
+          }
+        ],
+        "hallway": [],
+        "pool": [],
+        "terrace": [],
+        "deck": [],
+        "pergola": [],
+        "equipment_room": []
+      },
+      "roomDoorPos": {
+        "living": 136.10898480907088,
+        "master": 40,
+        "bedroom": 32,
+        "bedroom2": 30,
+        "bedroom3": 28,
+        "kitchen": 36,
+        "bathroom": 74.83802761080815,
+        "bathroom2": 24,
+        "dining": 38,
+        "study": 32,
+        "study2": 30,
+        "closet": 26,
+        "balcony": 42,
+        "balcony2": 30,
+        "yard": 80,
+        "garage": 44.71204181664229,
+        "gym": 36,
+        "cinema": 42,
+        "custom1": 30,
+        "custom2": 30,
+        "custom3": 30,
+        "custom4": 30,
+        "custom5": 30,
+        "stair": 26,
+        "hallway": 12,
+        "pool": 60,
+        "terrace": 50,
+        "deck": 40,
+        "pergola": 30,
+        "equipment_room": 30
+      },
+      "roomHasDoor": {
+        "living": true,
+        "master": true,
+        "bedroom": true,
+        "bedroom2": true,
+        "bedroom3": true,
+        "kitchen": true,
+        "bathroom": true,
+        "bathroom2": true,
+        "dining": true,
+        "study": false,
+        "study2": true,
+        "closet": false,
+        "balcony": true,
+        "balcony2": true,
+        "yard": true,
+        "garage": true,
+        "gym": true,
+        "cinema": true,
+        "custom1": true,
+        "custom2": true,
+        "custom3": true,
+        "custom4": true,
+        "custom5": true,
+        "stair": false,
+        "hallway": false,
+        "pool": true,
+        "terrace": true,
+        "deck": true,
+        "rooftop_lounge": true,
+        "rooftop_pool": true,
+        "rooftop_garden": true,
+        "rooftop_bar": true,
+        "equipment_room": true
+      },
+      "roomDoorWall": {
+        "living": "S",
+        "master": "S",
+        "bedroom": "S",
+        "bedroom2": "S",
+        "bedroom3": "S",
+        "kitchen": "S",
+        "bathroom": "S",
+        "bathroom2": "S",
+        "dining": "S",
+        "study": "S",
+        "study2": "S",
+        "closet": "S",
+        "balcony": "S",
+        "balcony2": "S",
+        "yard": "S",
+        "garage": "S",
+        "gym": "S",
+        "cinema": "S",
+        "custom1": "S",
+        "custom2": "S",
+        "custom3": "S",
+        "custom4": "S",
+        "custom5": "S",
+        "stair": "S",
+        "hallway": "S",
+        "pool": "S",
+        "terrace": "S",
+        "deck": "S",
+        "pergola": "S",
+        "equipment_room": "S"
+      },
+      "roomShapes": {
+        "hallway": {
+          "preset": "rect",
+          "points": [
+            [
+              0,
+              0
+            ],
+            [
+              1200,
+              0
+            ],
+            [
+              1200,
+              240
+            ],
+            [
+              0,
+              240
+            ]
+          ]
+        }
+      },
+      "yardPlan": {
+        "items": [
+          {
+            "type": "prefab",
+            "prefabKind": "pool",
+            "x": 0,
+            "z": 1320,
+            "rot": 0,
+            "id": "modernVilla-e349df-0"
+          },
+          {
+            "type": "prefab",
+            "prefabKind": "porte_cochere",
+            "x": 25,
+            "z": -875,
+            "rot": 0,
+            "params": {
+              "carCount": 2,
+              "pillarStyle": "round",
+              "facingDir": "south"
+            },
+            "id": "modernVilla-e349df-1"
+          },
+          {
+            "type": "singleton",
+            "kind": "tree.olive",
+            "x": -1460,
+            "z": -325,
+            "scale": 1.4,
+            "id": "modernVilla-e349df-2"
+          },
+          {
+            "id": "y-mr2blrl3-meh4u",
+            "type": "singleton",
+            "kind": "tree.palm",
+            "x": 1425,
+            "z": -325,
+            "rot": 0,
+            "scale": 1.3
+          },
+          {
+            "id": "y-mr2bnt14-tvtjf",
+            "type": "singleton",
+            "kind": "vehicle.bmw_rr1000",
+            "x": 28,
+            "z": -853,
+            "rot": 0,
+            "scale": 1.2
+          }
+        ]
+      },
+      "roomDoorStyle": {
+        "garage": "roller_shutter"
+      },
+      "roomDoorLen": {
+        "living": 145,
+        "garage": 340
+      },
+      "roomDoorH": {
+        "living": 260
+      },
+      "roomWallsHidden": {
+        "living": {
+          "N": true
+        },
+        "hallway": {
+          "N": true,
+          "S": true
+        },
+        "stair": {
+          "ceiling": true,
+          "S": true
+        }
+      },
+      "roomDoors": {
+        "study": [
+          {
+            "id": "study-d1779506223681",
+            "wall": "N",
+            "pos": 125,
+            "len": 80,
+            "h": 200,
+            "style": "wood_panel"
+          }
+        ],
+        "closet": [
+          {
+            "id": "closet-d1779506236630",
+            "wall": "N",
+            "pos": 68.015625,
+            "len": 80,
+            "h": 200,
+            "style": "wood_panel"
+          }
+        ]
+      },
+      "roomExteriorStyle": {
+        "garage": "concrete"
+      }
+    },
+    {
+      "rooms": {
+        "living": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "master": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-linear-pendant",
+              "name": "线形长吊灯",
+              "brand": "线型灯具",
+              "price": 1200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#F5F0E0",
+              "tags": [
+                "现代",
+                "轻奢"
+              ],
+              "description": "餐桌上方首选，线条感强"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_master_0_nightstand-white",
+              "furnitureId": "nightstand-white",
+              "x": 75.85875,
+              "z": 7.965937500000003,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_master_1_nightstand-white",
+              "furnitureId": "nightstand-white",
+              "x": 366.0759895833333,
+              "z": 7.942604166666676,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_master_2_wardrobe-slide-white",
+              "furnitureId": "wardrobe-slide-white",
+              "x": 360.264375,
+              "z": 149.53796875,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_master_3_dresser-nordic-white",
+              "furnitureId": "dresser-nordic-white",
+              "x": 247.86114583333324,
+              "z": 364.7279687500001,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "pi_1_2okwm",
+              "furnitureId": "bed-lux",
+              "x": 153,
+              "z": -15,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_master_31_rug-persian-wool",
+              "furnitureId": "rug-persian-wool",
+              "x": 139.17322530864197,
+              "z": 184.5570987654321,
+              "rotation": 0,
+              "scaleW": 2.2,
+              "scaleD": 1.05,
+              "scaleH": 0.3
+            },
+            {
+              "instanceId": "enrich_master_32_lamp-bedside",
+              "furnitureId": "lamp-bedside",
+              "x": 90,
+              "z": 17,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 49
+            },
+            {
+              "instanceId": "enrich_master_33_decor-wicker-box",
+              "furnitureId": "decor-wicker-box",
+              "x": 280.85781249999997,
+              "z": 381.8546875,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 54
+            },
+            {
+              "instanceId": "enrich_master_34_toy-teddy",
+              "furnitureId": "toy-teddy",
+              "x": 194.5358920351162,
+              "z": 75.0132059610298,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 42
+            },
+            {
+              "instanceId": "enrich_master_35_decor-mirror-full",
+              "furnitureId": "decor-mirror-full",
+              "x": 475,
+              "z": 341.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_master_233_curtain-drape",
+              "furnitureId": "curtain-victorian",
+              "x": 133.53883744855972,
+              "z": 0,
+              "rotation": 0,
+              "scaleW": 1.85,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_master_235_decor-blanket",
+              "furnitureId": "decor-blanket",
+              "x": 195.5,
+              "z": 106.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 42
+            },
+            {
+              "instanceId": "deep_master_236_decor-phone-17",
+              "furnitureId": "decor-phone-17",
+              "x": 84,
+              "z": 27,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 49
+            },
+            {
+              "instanceId": "deep_master_237_lamp-victorian",
+              "furnitureId": "lamp-table-01",
+              "x": 377,
+              "z": 17,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 49
+            },
+            {
+              "instanceId": "deep_master_238_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 309.0416666666667,
+              "z": 377.05729166666663,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 54
+            },
+            {
+              "instanceId": "fill_master_402_appliance-ac-indoor",
+              "furnitureId": "appliance-ac-indoor",
+              "x": 464,
+              "z": 329,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 30
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bedroom": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_bedroom_0_bed-fabric-beige",
+              "furnitureId": "bed-wood",
+              "x": 20,
+              "z": 213.44296875000003,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_bedroom_1_nightstand-white",
+              "furnitureId": "nightstand-white",
+              "x": 3.8703125000000007,
+              "z": 369.69953125,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "tpl_bedroom_2_wardrobe-slide-white",
+              "furnitureId": "wardrobe-slide-white",
+              "x": 230,
+              "z": 180.538125,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "pi_4_trp61",
+              "furnitureId": "nightstand-white",
+              "x": 270.58781250000004,
+              "z": 371.59515625,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom_36_rug-boho",
+              "furnitureId": "rug-boho",
+              "x": 147.23468750000004,
+              "z": 74.13078124999998,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom_37_lamp-vintage",
+              "furnitureId": "lamp-vintage",
+              "x": 20.5,
+              "z": 381.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 49
+            },
+            {
+              "instanceId": "enrich_bedroom_38_toy-bunny",
+              "furnitureId": "toy-bunny",
+              "x": 144.60934799382716,
+              "z": 317.1200828363944,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 30
+            },
+            {
+              "instanceId": "enrich_bedroom_39_pet-cat-tree-2",
+              "furnitureId": "pet-cat-tree-2",
+              "x": 305,
+              "z": 25,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_bedroom_240_curtain-drape",
+              "furnitureId": "curtain-drape",
+              "x": 71,
+              "z": 404.5,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_bedroom_243_toy-pomeranian",
+              "furnitureId": "toy-pomeranian",
+              "x": 285,
+              "z": 381,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 49
+            },
+            {
+              "instanceId": "deep_bedroom_244_decor-book-single",
+              "furnitureId": "decor-book-single",
+              "x": 21.5,
+              "z": 369,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 49
+            },
+            {
+              "instanceId": "fill_bedroom_403_appliance-ac-indoor",
+              "furnitureId": "appliance-ac-indoor",
+              "x": -34,
+              "z": 89,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 30
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bedroom2": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "pi_6_q3kle",
+              "furnitureId": "bed-leather-dark",
+              "x": 60,
+              "z": 233,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_10_7ec7a",
+              "furnitureId": "nightstand-oak",
+              "x": 6.217968749999997,
+              "z": 338.49921875,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_11_qlagw",
+              "furnitureId": "nightstand-oak",
+              "x": 266.14970240230065,
+              "z": 338.38778284803516,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_12_4atyl",
+              "furnitureId": "wardrobe-slide-white",
+              "x": 100,
+              "z": 0,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom2_40_rug-qashqai",
+              "furnitureId": "rug-qashqai",
+              "x": 39.92993055555553,
+              "z": 52.84235725308645,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom2_41_lamp-marble",
+              "furnitureId": "lamp-marble",
+              "x": 15.20015625,
+              "z": 346.9159375,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 60
+            },
+            {
+              "instanceId": "enrich_bedroom2_42_decor-clothes-pile",
+              "furnitureId": "decor-clothes-pile",
+              "x": 198.5239846550033,
+              "z": 277.88646449408793,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 40
+            },
+            {
+              "instanceId": "deep_bedroom2_245_curtain-drape",
+              "furnitureId": "curtain-brown-modern",
+              "x": 28.5,
+              "z": 399,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_bedroom2_247_decor-bed-clothes",
+              "furnitureId": "decor-bed-clothes",
+              "x": 47.425463467180606,
+              "z": 243.07359437571532,
+              "rotation": 90,
+              "scaleW": 0.8,
+              "scaleD": 0.85,
+              "scaleH": 1,
+              "elevationY": 45
+            },
+            {
+              "instanceId": "deep_bedroom2_248_decor-camera-exakta",
+              "furnitureId": "decor-camera-exakta",
+              "x": 44,
+              "z": 385,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 60
+            },
+            {
+              "instanceId": "deep_bedroom2_249_toy-gamepads",
+              "furnitureId": "toy-game-controller",
+              "x": 52,
+              "z": 355,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 48
+            },
+            {
+              "instanceId": "deep2_bedroom2_308_toy-game-portable",
+              "furnitureId": "decor-phone-14",
+              "x": 221,
+              "z": 389,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 60
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bedroom3": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "pi_16_iz1y1",
+              "furnitureId": "nightstand-white",
+              "x": 7.371718749999999,
+              "z": 375.31203125,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_18_krpyp",
+              "furnitureId": "bed-bunk-2",
+              "x": 3.818918350168353,
+              "z": 221.84816919191923,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_19_hllkk",
+              "furnitureId": "wardrobe-slide-white",
+              "x": 124.45203125,
+              "z": 98.14937500000002,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom3_44_rug-persian",
+              "furnitureId": "rug-boho",
+              "x": 120.63962542087538,
+              "z": 159.29619107744105,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom3_45_toy-blocks",
+              "furnitureId": "toy-blocks",
+              "x": 15,
+              "z": 15,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom3_46_toy-plush",
+              "furnitureId": "toy-plush",
+              "x": 47.5,
+              "z": 267.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 28
+            },
+            {
+              "instanceId": "enrich_bedroom3_47_toy-hunter",
+              "furnitureId": "toy-hunter",
+              "x": 19.5,
+              "z": 377.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 49
+            },
+            {
+              "instanceId": "enrich_bedroom3_48_desk-kids",
+              "furnitureId": "desk-kids",
+              "x": 190,
+              "z": 310,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bedroom3_49_office_chair-kids",
+              "furnitureId": "office_chair-kids",
+              "x": 178,
+              "z": 374.93637831504344,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_bedroom3_250_curtain-drape",
+              "furnitureId": "curtain-drape",
+              "x": 26,
+              "z": 404.5,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_bedroom3_251_toy-wooden-horse",
+              "furnitureId": "toy-wooden-horse",
+              "x": 210,
+              "z": 261.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 0
+            },
+            {
+              "instanceId": "deep_bedroom3_252_toy-ink-bunny",
+              "furnitureId": "toy-ink-bunny",
+              "x": 44,
+              "z": 235,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 60
+            },
+            {
+              "instanceId": "fill_bedroom3_410_storage-box",
+              "furnitureId": "storage-box",
+              "x": 11,
+              "z": 73,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "kitchen": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bathroom": {
+          "materials": {
+            "wall": {
+              "id": "wall-tile-metro",
+              "name": "地铁砖（浴室/厨房）",
+              "brand": "全抛釉砖",
+              "price": 95,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#FAFAFA",
+              "texture": "repeating-linear-gradient(0deg, #E0E0E0 0px, #E0E0E0 1px, #FAFAFA 1px, #FAFAFA 8px)",
+              "tags": [
+                "现代",
+                "工业风"
+              ],
+              "description": "经典白色地铁砖，百搭"
+            },
+            "floor": {
+              "id": "floor-white-tile",
+              "name": "白色抛光砖",
+              "brand": "全抛釉砖",
+              "price": 150,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#F0EFEB",
+              "tags": [
+                "现代",
+                "北欧"
+              ],
+              "description": "大块白砖，空间感更强"
+            },
+            "light": {
+              "id": "light-smart-panel",
+              "name": "智能主灯面板",
+              "brand": "灯饰",
+              "price": 2280,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#FFFFFF",
+              "tags": [
+                "现代"
+              ],
+              "description": "方形 LED 主灯 + 可调色温"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_bathroom_1_vanity-double-marble",
+              "furnitureId": "vanity-double-marble",
+              "x": -49.648176726108815,
+              "z": 241.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1
+            },
+            {
+              "instanceId": "enrich_bathroom_50_decor-laundry-basket-2",
+              "furnitureId": "decor-laundry-basket-2",
+              "x": 232.5,
+              "z": 362.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_bathroom_51_bath_accessory-supplies",
+              "furnitureId": "bath_accessory-supplies",
+              "x": -13.189362186027616,
+              "z": 249.49569976397197,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "enrich_bathroom_52_bath_accessory-scale-2",
+              "furnitureId": "bath_accessory-scale-2",
+              "x": 242.25544302983536,
+              "z": 215.80247120770463,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_bathroom_253_bath_accessory-tp-holder",
+              "furnitureId": "bath_accessory-tp-holder",
+              "x": 267.5,
+              "z": 95,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 60
+            },
+            {
+              "instanceId": "fill_bathroom_409_appliance-washer",
+              "furnitureId": "appliance-washer",
+              "x": 213.5576365693743,
+              "z": 266.7196345383415,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_5_xtz84",
+              "furnitureId": "toilet-smart",
+              "x": 234.5340625,
+              "z": 5.318749999999994,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_6_k1dif",
+              "furnitureId": "shower-unit-modern",
+              "x": 5.287499999999994,
+              "z": 9.71421875,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bathroom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "dining": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "study": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-linear-pendant",
+              "name": "线形长吊灯",
+              "brand": "线型灯具",
+              "price": 1200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#F5F0E0",
+              "tags": [
+                "现代",
+                "轻奢"
+              ],
+              "description": "餐桌上方首选，线条感强"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "pi_20_ctk78",
+              "furnitureId": "bookshelf-open-white",
+              "x": 192,
+              "z": 90.91046874999998,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_21_hg2fv",
+              "furnitureId": "desk-l-shape-white",
+              "x": 16.64,
+              "z": 336.84687499999995,
+              "rotation": 180,
+              "scaleW": 0.8,
+              "scaleD": 0.65,
+              "scaleH": 0.9
+            },
+            {
+              "instanceId": "pi_23_1sifq",
+              "furnitureId": "chair-ergonomic",
+              "x": 67.2946875,
+              "z": 247.27734375,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_study_54_elec-3d-printer",
+              "furnitureId": "elec-3d-printer",
+              "x": 20.801641456654117,
+              "z": 147.11339870718973,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 60
+            },
+            {
+              "instanceId": "enrich_study_55_decor-book-stack",
+              "furnitureId": "decor-book-stack",
+              "x": 109.31247661803218,
+              "z": 389.42444223378567,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 63
+            },
+            {
+              "instanceId": "enrich_study_56_lamp-generic-a",
+              "furnitureId": "lamp-table-01",
+              "x": 146.32734754956977,
+              "z": 387.1641839268102,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 63
+            },
+            {
+              "instanceId": "deep_study_255_elec-laptop",
+              "furnitureId": "elec-laptop",
+              "x": 62.5,
+              "z": 387.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 63
+            },
+            {
+              "instanceId": "deep_study_256_decor-books-set",
+              "furnitureId": "decor-books-set",
+              "x": 200,
+              "z": 122,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 35
+            },
+            {
+              "instanceId": "deep_study_257_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 151.06244685916403,
+              "z": 355.2132988130463,
+              "rotation": 0,
+              "scaleW": 0.65,
+              "scaleD": 0.65,
+              "scaleH": 0.65,
+              "elevationY": 63
+            },
+            {
+              "instanceId": "deep_study_258_elec-speaker",
+              "furnitureId": "elec-speaker",
+              "x": 212.5,
+              "z": 91.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 64
+            },
+            {
+              "instanceId": "pi_7_95v4l",
+              "furnitureId": "desk-standing",
+              "x": -24,
+              "z": 124,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "study2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "closet": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "pi_2_xjcrc",
+              "furnitureId": "wardrobe-open-rack",
+              "x": 147.5,
+              "z": 125,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_3_zgdzw",
+              "furnitureId": "closet-system-white",
+              "x": -27.51375,
+              "z": 140,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_closet_57_decor-suitcase-2",
+              "furnitureId": "decor-suitcase-2",
+              "x": 167,
+              "z": 39.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_closet_58_decor-shoe-box",
+              "furnitureId": "decor-shoe-box",
+              "x": 162.5,
+              "z": 17.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich_closet_59_decor-clothes-pile-2",
+              "furnitureId": "decor-clothes-pile-2",
+              "x": 10,
+              "z": 200,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 45
+            },
+            {
+              "instanceId": "deep_closet_259_decor-folded-clothes",
+              "furnitureId": "decor-folded-clothes",
+              "x": 10,
+              "z": 135,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 45
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "balcony": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "balcony2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "yard": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "garage": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "gym": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "cinema": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom1": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom3": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom4": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom5": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "stair": {
+          "materials": {},
+          "placedItems": [
+            {
+              "instanceId": "pi_2_s2jgj",
+              "furnitureId": "staircase-u-shaped",
+              "x": 0,
+              "z": 6.549843750000008,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1.2,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "hallway": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-recessed",
+              "name": "嵌入筒灯（组）",
+              "brand": "灯饰",
+              "price": 320,
+              "unit": "元/组",
+              "category": "light",
+              "color": "#FFF0C8",
+              "tags": [
+                "现代"
+              ],
+              "description": "4 只嵌入式筒灯散布天花"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "enrich2_hallway_103_decor-mirror-ikea",
+              "furnitureId": "decor-mirror-full",
+              "x": 30,
+              "z": 16.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich2_hallway_104_plant-tropic-flowers",
+              "furnitureId": "plant-tropic-flowers",
+              "x": 160,
+              "z": 50,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "enrich2_hallway_105_plant-monstera",
+              "furnitureId": "plant-monstera",
+              "x": 367.5,
+              "z": 57.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_hallway_260_toy-rocking-horse",
+              "furnitureId": "toy-rocking-horse",
+              "x": 560,
+              "z": 75,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_hallway_261_decor-statue-lion",
+              "furnitureId": "decor-statue-lion",
+              "x": 783.5,
+              "z": 25,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep_hallway_262_decor-pedestal",
+              "furnitureId": "decor-pedestal",
+              "x": 985,
+              "z": 30.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_hallway_306_decor-garden-urn",
+              "furnitureId": "decor-garden-urn",
+              "x": 275,
+              "z": 25,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "pool": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "terrace": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "deck": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "equipment_room": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        }
+      },
+      "enabledRooms": [
+        "master",
+        "closet",
+        "bathroom",
+        "stair",
+        "hallway",
+        "bedroom",
+        "bedroom2",
+        "bedroom3",
+        "study"
+      ],
+      "roomLayout": {
+        "master": {
+          "x": 0,
+          "y": 0
+        },
+        "closet": {
+          "x": 520,
+          "y": 0
+        },
+        "bathroom": {
+          "x": 720,
+          "y": 0
+        },
+        "bathroom2": {
+          "x": 620,
+          "y": 200
+        },
+        "study": {
+          "x": 1000,
+          "y": 600
+        },
+        "study2": {
+          "x": 660,
+          "y": 290
+        },
+        "living": {
+          "x": 0,
+          "y": 360
+        },
+        "bedroom": {
+          "x": 0,
+          "y": 600
+        },
+        "bedroom2": {
+          "x": 380,
+          "y": 600
+        },
+        "bedroom3": {
+          "x": 720,
+          "y": 600
+        },
+        "dining": {
+          "x": 0,
+          "y": 780
+        },
+        "kitchen": {
+          "x": 380,
+          "y": 780
+        },
+        "balcony": {
+          "x": 0,
+          "y": 1100
+        },
+        "balcony2": {
+          "x": 500,
+          "y": 1100
+        },
+        "yard": {
+          "x": -860,
+          "y": 0
+        },
+        "garage": {
+          "x": -560,
+          "y": 0
+        },
+        "gym": {
+          "x": -560,
+          "y": 320
+        },
+        "cinema": {
+          "x": -560,
+          "y": 640
+        },
+        "custom1": {
+          "x": 820,
+          "y": 0
+        },
+        "custom2": {
+          "x": 820,
+          "y": 300
+        },
+        "custom3": {
+          "x": 820,
+          "y": 600
+        },
+        "custom4": {
+          "x": 820,
+          "y": 900
+        },
+        "custom5": {
+          "x": 820,
+          "y": 1200
+        },
+        "stair": {
+          "x": 1000,
+          "y": 0
+        },
+        "hallway": {
+          "x": 0,
+          "y": 420
+        },
+        "pool": {
+          "x": 1200,
+          "y": 400
+        },
+        "terrace": {
+          "x": 1200,
+          "y": 800
+        },
+        "deck": {
+          "x": 1200,
+          "y": 1100
+        },
+        "equipment_room": {
+          "x": 0,
+          "y": 900
+        }
+      },
+      "roomDimensions": {
+        "living": {
+          "width": 500,
+          "depth": 420
+        },
+        "master": {
+          "width": 520,
+          "depth": 420
+        },
+        "bedroom": {
+          "width": 380,
+          "depth": 420
+        },
+        "bedroom2": {
+          "width": 340,
+          "depth": 420
+        },
+        "bedroom3": {
+          "width": 280,
+          "depth": 420
+        },
+        "kitchen": {
+          "width": 360,
+          "depth": 280
+        },
+        "bathroom": {
+          "width": 280,
+          "depth": 420
+        },
+        "bathroom2": {
+          "width": 240,
+          "depth": 200
+        },
+        "dining": {
+          "width": 380,
+          "depth": 320
+        },
+        "study": {
+          "width": 240,
+          "depth": 420
+        },
+        "study2": {
+          "width": 300,
+          "depth": 260
+        },
+        "closet": {
+          "width": 200,
+          "depth": 420
+        },
+        "balcony": {
+          "width": 420,
+          "depth": 160
+        },
+        "balcony2": {
+          "width": 300,
+          "depth": 160
+        },
+        "yard": {
+          "width": 800,
+          "depth": 600
+        },
+        "garage": {
+          "width": 500,
+          "depth": 320
+        },
+        "gym": {
+          "width": 360,
+          "depth": 320
+        },
+        "cinema": {
+          "width": 420,
+          "depth": 320
+        },
+        "custom1": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom2": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom3": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom4": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom5": {
+          "width": 300,
+          "depth": 300
+        },
+        "stair": {
+          "width": 240,
+          "depth": 420
+        },
+        "hallway": {
+          "width": 1240,
+          "depth": 180
+        },
+        "pool": {
+          "width": 600,
+          "depth": 350
+        },
+        "terrace": {
+          "width": 500,
+          "depth": 300
+        },
+        "deck": {
+          "width": 400,
+          "depth": 250
+        },
+        "equipment_room": {
+          "width": 300,
+          "depth": 250
+        }
+      },
+      "roomWindows": {
+        "living": [
+          {
+            "id": "living-w1",
+            "wall": "E",
+            "pos": 105,
+            "len": 189
+          }
+        ],
+        "master": [
+          {
+            "id": "master-w1781100099990",
+            "wall": "N",
+            "pos": 130,
+            "len": 208
+          }
+        ],
+        "bedroom": [
+          {
+            "id": "bedroom-w1781100125113",
+            "wall": "S",
+            "pos": 95,
+            "len": 152
+          }
+        ],
+        "bedroom2": [
+          {
+            "id": "bedroom2-w1781100133550",
+            "wall": "S",
+            "pos": 85,
+            "len": 136
+          }
+        ],
+        "bedroom3": [
+          {
+            "id": "bedroom3-w1781100140474",
+            "wall": "S",
+            "pos": 70,
+            "len": 112
+          }
+        ],
+        "kitchen": [
+          {
+            "id": "kitchen-w6",
+            "wall": "N",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "bathroom": [
+          {
+            "id": "bathroom-w1781100110825",
+            "wall": "N",
+            "pos": 70,
+            "len": 112
+          }
+        ],
+        "bathroom2": [],
+        "dining": [
+          {
+            "id": "dining-w7",
+            "wall": "E",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "study": [
+          {
+            "id": "study-w1781100148913",
+            "wall": "S",
+            "pos": 60,
+            "len": 96
+          },
+          {
+            "id": "study-e-win-1",
+            "wall": "E",
+            "pos": 142,
+            "len": 96
+          }
+        ],
+        "study2": [
+          {
+            "id": "study2-w9",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "closet": [
+          {
+            "id": "closet-w1781100106621",
+            "wall": "N",
+            "pos": 50,
+            "len": 80
+          }
+        ],
+        "balcony": [
+          {
+            "id": "balcony-w10",
+            "wall": "N",
+            "pos": 105,
+            "len": 189
+          }
+        ],
+        "balcony2": [
+          {
+            "id": "balcony2-w11",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "yard": [],
+        "garage": [
+          {
+            "id": "garage-w12",
+            "wall": "E",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "gym": [
+          {
+            "id": "gym-w13",
+            "wall": "N",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "cinema": [],
+        "custom1": [],
+        "custom2": [],
+        "custom3": [],
+        "custom4": [],
+        "custom5": [],
+        "stair": [
+          {
+            "id": "stair-w1781100113871",
+            "wall": "N",
+            "pos": 60,
+            "len": 96
+          }
+        ],
+        "hallway": [],
+        "pool": [],
+        "terrace": [],
+        "deck": [],
+        "pergola": [],
+        "equipment_room": []
+      },
+      "roomDoorPos": {
+        "living": 50,
+        "master": 40,
+        "bedroom": 32,
+        "bedroom2": 30,
+        "bedroom3": 28,
+        "kitchen": 36,
+        "bathroom": 26,
+        "bathroom2": 24,
+        "dining": 38,
+        "study": 32,
+        "study2": 30,
+        "closet": 26,
+        "balcony": 42,
+        "balcony2": 30,
+        "yard": 80,
+        "garage": 50,
+        "gym": 36,
+        "cinema": 42,
+        "custom1": 30,
+        "custom2": 30,
+        "custom3": 30,
+        "custom4": 30,
+        "custom5": 30,
+        "stair": 26,
+        "hallway": 12,
+        "pool": 60,
+        "terrace": 50,
+        "deck": 40,
+        "pergola": 30,
+        "equipment_room": 30
+      },
+      "roomHasDoor": {
+        "living": true,
+        "master": true,
+        "bedroom": false,
+        "bedroom2": false,
+        "bedroom3": false,
+        "kitchen": true,
+        "bathroom": true,
+        "bathroom2": true,
+        "dining": true,
+        "study": false,
+        "study2": true,
+        "closet": true,
+        "balcony": true,
+        "balcony2": true,
+        "yard": true,
+        "garage": true,
+        "gym": true,
+        "cinema": true,
+        "custom1": true,
+        "custom2": true,
+        "custom3": true,
+        "custom4": true,
+        "custom5": true,
+        "stair": true,
+        "hallway": false,
+        "pool": true,
+        "terrace": true,
+        "deck": true,
+        "rooftop_lounge": true,
+        "rooftop_pool": true,
+        "rooftop_garden": true,
+        "rooftop_bar": true,
+        "equipment_room": true
+      },
+      "roomDoorWall": {
+        "living": "S",
+        "master": "S",
+        "bedroom": "S",
+        "bedroom2": "S",
+        "bedroom3": "S",
+        "kitchen": "S",
+        "bathroom": "S",
+        "bathroom2": "S",
+        "dining": "S",
+        "study": "S",
+        "study2": "S",
+        "closet": "S",
+        "balcony": "S",
+        "balcony2": "S",
+        "yard": "S",
+        "garage": "S",
+        "gym": "S",
+        "cinema": "S",
+        "custom1": "S",
+        "custom2": "S",
+        "custom3": "S",
+        "custom4": "S",
+        "custom5": "S",
+        "stair": "S",
+        "hallway": "S",
+        "pool": "S",
+        "terrace": "S",
+        "deck": "S",
+        "pergola": "S",
+        "equipment_room": "S"
+      },
+      "roomDoorStyle": {},
+      "roomDoorLen": {},
+      "roomShapes": {},
+      "roomDoors": {
+        "bedroom": [
+          {
+            "id": "bedroom-d1779506309280",
+            "wall": "N",
+            "pos": 150,
+            "len": 80,
+            "h": 200,
+            "style": "wood_panel"
+          }
+        ],
+        "bedroom2": [
+          {
+            "id": "bedroom2-d1779506346313",
+            "wall": "N",
+            "pos": 130,
+            "len": 80,
+            "h": 200,
+            "style": "wood_panel"
+          }
+        ],
+        "bedroom3": [
+          {
+            "id": "bedroom3-d1779506368846",
+            "wall": "N",
+            "pos": 100,
+            "len": 80,
+            "h": 200,
+            "style": "wood_panel"
+          }
+        ],
+        "study": [
+          {
+            "id": "study-d1779506387204",
+            "wall": "N",
+            "pos": 60,
+            "len": 80,
+            "h": 200,
+            "style": "wood_panel"
+          }
+        ]
+      },
+      "roomWallsHidden": {
+        "stair": {
+          "S": true,
+          "ceiling": true
+        },
+        "hallway": {
+          "N": true,
+          "S": true
+        }
+      }
+    },
+    {
+      "rooms": {
+        "living": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "master": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bedroom": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bedroom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bedroom3": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "kitchen": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bathroom": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "bathroom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "dining": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "study": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "study2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "closet": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "balcony": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "balcony2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "yard": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "garage": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "gym": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "cinema": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom1": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom2": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom3": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom4": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "custom5": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "stair": {
+          "materials": {},
+          "placedItems": []
+        },
+        "hallway": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "pool": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "terrace": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "deck": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "equipment_room": {
+          "materials": {},
+          "placedItems": [],
+          "exteriorDecor": []
+        },
+        "pergola": {
+          "materials": {},
+          "placedItems": [
+            {
+              "instanceId": "pi_1_i0a9v",
+              "furnitureId": "pergola",
+              "x": 0,
+              "z": 0,
+              "rotation": 0
+            },
+            {
+              "instanceId": "deep_pergola_264_planter-clay",
+              "furnitureId": "planter-clay",
+              "x": 29.54218750000001,
+              "z": 22.162499999999994,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "deep2_pergola_310_decor-garden-urn",
+              "furnitureId": "decor-garden-urn",
+              "x": 221.540625,
+              "z": 24.70625000000002,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pk4_pergola_504_outdoor-patio-set",
+              "furnitureId": "outdoor-patio-set",
+              "x": 40,
+              "z": 40,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        }
+      },
+      "enabledRooms": [
+        "stair",
+        "pergola"
+      ],
+      "roomLayout": {
+        "master": {
+          "x": 0,
+          "y": 0
+        },
+        "closet": {
+          "x": 400,
+          "y": 0
+        },
+        "bathroom": {
+          "x": 400,
+          "y": 200
+        },
+        "bathroom2": {
+          "x": 620,
+          "y": 200
+        },
+        "study": {
+          "x": 660,
+          "y": 0
+        },
+        "study2": {
+          "x": 660,
+          "y": 290
+        },
+        "living": {
+          "x": 0,
+          "y": 360
+        },
+        "bedroom": {
+          "x": 500,
+          "y": 360
+        },
+        "bedroom2": {
+          "x": 500,
+          "y": 660
+        },
+        "bedroom3": {
+          "x": 500,
+          "y": 940
+        },
+        "dining": {
+          "x": 0,
+          "y": 780
+        },
+        "kitchen": {
+          "x": 380,
+          "y": 780
+        },
+        "balcony": {
+          "x": 0,
+          "y": 1100
+        },
+        "balcony2": {
+          "x": 500,
+          "y": 1100
+        },
+        "yard": {
+          "x": -860,
+          "y": 0
+        },
+        "garage": {
+          "x": -560,
+          "y": 0
+        },
+        "gym": {
+          "x": -560,
+          "y": 320
+        },
+        "cinema": {
+          "x": -560,
+          "y": 640
+        },
+        "custom1": {
+          "x": 820,
+          "y": 0
+        },
+        "custom2": {
+          "x": 820,
+          "y": 300
+        },
+        "custom3": {
+          "x": 820,
+          "y": 600
+        },
+        "custom4": {
+          "x": 820,
+          "y": 900
+        },
+        "custom5": {
+          "x": 820,
+          "y": 1200
+        },
+        "stair": {
+          "x": 1000,
+          "y": 0
+        },
+        "hallway": {
+          "x": 380,
+          "y": 360
+        },
+        "pool": {
+          "x": 1200,
+          "y": 400
+        },
+        "terrace": {
+          "x": 1200,
+          "y": 800
+        },
+        "deck": {
+          "x": 1200,
+          "y": 1100
+        },
+        "equipment_room": {
+          "x": 0,
+          "y": 900
+        },
+        "pergola": {
+          "x": 300,
+          "y": 600
+        }
+      },
+      "roomDimensions": {
+        "living": {
+          "width": 500,
+          "depth": 420
+        },
+        "master": {
+          "width": 400,
+          "depth": 360
+        },
+        "bedroom": {
+          "width": 320,
+          "depth": 300
+        },
+        "bedroom2": {
+          "width": 300,
+          "depth": 280
+        },
+        "bedroom3": {
+          "width": 280,
+          "depth": 260
+        },
+        "kitchen": {
+          "width": 360,
+          "depth": 280
+        },
+        "bathroom": {
+          "width": 260,
+          "depth": 220
+        },
+        "bathroom2": {
+          "width": 240,
+          "depth": 200
+        },
+        "dining": {
+          "width": 380,
+          "depth": 320
+        },
+        "study": {
+          "width": 320,
+          "depth": 290
+        },
+        "study2": {
+          "width": 300,
+          "depth": 260
+        },
+        "closet": {
+          "width": 260,
+          "depth": 200
+        },
+        "balcony": {
+          "width": 420,
+          "depth": 160
+        },
+        "balcony2": {
+          "width": 300,
+          "depth": 160
+        },
+        "yard": {
+          "width": 800,
+          "depth": 600
+        },
+        "garage": {
+          "width": 500,
+          "depth": 320
+        },
+        "gym": {
+          "width": 360,
+          "depth": 320
+        },
+        "cinema": {
+          "width": 420,
+          "depth": 320
+        },
+        "custom1": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom2": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom3": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom4": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom5": {
+          "width": 300,
+          "depth": 300
+        },
+        "stair": {
+          "width": 240,
+          "depth": 420
+        },
+        "hallway": {
+          "width": 120,
+          "depth": 300
+        },
+        "pool": {
+          "width": 600,
+          "depth": 350
+        },
+        "terrace": {
+          "width": 500,
+          "depth": 300
+        },
+        "deck": {
+          "width": 400,
+          "depth": 250
+        },
+        "equipment_room": {
+          "width": 300,
+          "depth": 250
+        },
+        "pergola": {
+          "width": 300,
+          "depth": 300
+        }
+      },
+      "roomWindows": {
+        "living": [
+          {
+            "id": "living-w1",
+            "wall": "E",
+            "pos": 105,
+            "len": 189
+          }
+        ],
+        "master": [
+          {
+            "id": "master-w2",
+            "wall": "E",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "bedroom": [
+          {
+            "id": "bedroom-w3",
+            "wall": "N",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "bedroom2": [
+          {
+            "id": "bedroom2-w4",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "bedroom3": [
+          {
+            "id": "bedroom3-w5",
+            "wall": "N",
+            "pos": 70,
+            "len": 126
+          }
+        ],
+        "kitchen": [
+          {
+            "id": "kitchen-w6",
+            "wall": "N",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "bathroom": [],
+        "bathroom2": [],
+        "dining": [
+          {
+            "id": "dining-w7",
+            "wall": "E",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "study": [
+          {
+            "id": "study-w8",
+            "wall": "N",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "study2": [
+          {
+            "id": "study2-w9",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "closet": [],
+        "balcony": [
+          {
+            "id": "balcony-w10",
+            "wall": "N",
+            "pos": 105,
+            "len": 189
+          }
+        ],
+        "balcony2": [
+          {
+            "id": "balcony2-w11",
+            "wall": "N",
+            "pos": 75,
+            "len": 135
+          }
+        ],
+        "yard": [],
+        "garage": [
+          {
+            "id": "garage-w12",
+            "wall": "E",
+            "pos": 80,
+            "len": 144
+          }
+        ],
+        "gym": [
+          {
+            "id": "gym-w13",
+            "wall": "N",
+            "pos": 90,
+            "len": 162
+          }
+        ],
+        "cinema": [],
+        "custom1": [],
+        "custom2": [],
+        "custom3": [],
+        "custom4": [],
+        "custom5": [],
+        "stair": [
+          {
+            "id": "stair-w1781100171639",
+            "wall": "N",
+            "pos": 60,
+            "len": 96
+          },
+          {
+            "id": "stair-w-roof-e",
+            "wall": "E",
+            "pos": 120,
+            "len": 180,
+            "sill": 150,
+            "h": 60
+          },
+          {
+            "id": "stair-w-roof-w",
+            "wall": "W",
+            "pos": 120,
+            "len": 180,
+            "sill": 150,
+            "h": 60
+          }
+        ],
+        "hallway": [],
+        "pool": [],
+        "terrace": [],
+        "deck": [],
+        "pergola": [],
+        "equipment_room": []
+      },
+      "roomDoorPos": {
+        "living": 50,
+        "master": 40,
+        "bedroom": 32,
+        "bedroom2": 30,
+        "bedroom3": 28,
+        "kitchen": 36,
+        "bathroom": 26,
+        "bathroom2": 24,
+        "dining": 38,
+        "study": 32,
+        "study2": 30,
+        "closet": 26,
+        "balcony": 42,
+        "balcony2": 30,
+        "yard": 80,
+        "garage": 50,
+        "gym": 36,
+        "cinema": 42,
+        "custom1": 30,
+        "custom2": 30,
+        "custom3": 30,
+        "custom4": 30,
+        "custom5": 30,
+        "stair": 26,
+        "hallway": 12,
+        "pool": 60,
+        "terrace": 50,
+        "deck": 40,
+        "pergola": 30,
+        "equipment_room": 30
+      },
+      "roomHasDoor": {
+        "living": true,
+        "master": true,
+        "bedroom": true,
+        "bedroom2": true,
+        "bedroom3": true,
+        "kitchen": true,
+        "bathroom": true,
+        "bathroom2": true,
+        "dining": true,
+        "study": true,
+        "study2": true,
+        "closet": true,
+        "balcony": true,
+        "balcony2": true,
+        "yard": true,
+        "garage": true,
+        "gym": true,
+        "cinema": true,
+        "custom1": true,
+        "custom2": true,
+        "custom3": true,
+        "custom4": true,
+        "custom5": true,
+        "stair": false,
+        "hallway": true,
+        "pool": true,
+        "terrace": true,
+        "deck": true,
+        "rooftop_lounge": true,
+        "rooftop_pool": true,
+        "rooftop_garden": true,
+        "rooftop_bar": true,
+        "equipment_room": true,
+        "pergola": false
+      },
+      "roomDoorWall": {
+        "living": "S",
+        "master": "S",
+        "bedroom": "S",
+        "bedroom2": "S",
+        "bedroom3": "S",
+        "kitchen": "S",
+        "bathroom": "S",
+        "bathroom2": "S",
+        "dining": "S",
+        "study": "S",
+        "study2": "S",
+        "closet": "S",
+        "balcony": "S",
+        "balcony2": "S",
+        "yard": "S",
+        "garage": "S",
+        "gym": "S",
+        "cinema": "S",
+        "custom1": "S",
+        "custom2": "S",
+        "custom3": "S",
+        "custom4": "S",
+        "custom5": "S",
+        "stair": "S",
+        "hallway": "S",
+        "pool": "S",
+        "terrace": "S",
+        "deck": "S",
+        "pergola": "S",
+        "equipment_room": "S"
+      },
+      "roomDoorLen": {},
+      "roomDoorStyle": {},
+      "roomShapes": {},
+      "roomDoors": {
+        "stair": [
+          {
+            "id": "stair-d1780777270704",
+            "wall": "S",
+            "pos": 80,
+            "len": 80,
+            "h": 240,
+            "style": "wood_panel"
+          }
+        ]
+      }
+    }
+  ],
+  "yardPlan": {
+    "items": [
+      {
+        "type": "prefab",
+        "prefabKind": "pool",
+        "x": 0,
+        "z": 1320,
+        "rot": 0,
+        "id": "modernVilla-e349df-0"
+      },
+      {
+        "type": "prefab",
+        "prefabKind": "porte_cochere",
+        "x": 25,
+        "z": -875,
+        "rot": 0,
+        "params": {
+          "carCount": 2,
+          "pillarStyle": "round",
+          "facingDir": "south"
+        },
+        "id": "modernVilla-e349df-1"
+      },
+      {
+        "type": "singleton",
+        "kind": "tree.olive",
+        "x": -1460,
+        "z": -325,
+        "scale": 1.4,
+        "id": "modernVilla-e349df-2"
+      },
+      {
+        "id": "y-mr2blrl3-meh4u",
+        "type": "singleton",
+        "kind": "tree.palm",
+        "x": 1425,
+        "z": -325,
+        "rot": 0,
+        "scale": 1.3
+      },
+      {
+        "id": "y-mr2bnt14-tvtjf",
+        "type": "singleton",
+        "kind": "vehicle.bmw_rr1000",
+        "x": 28,
+        "z": -853,
+        "rot": 0,
+        "scale": 1.2
+      }
+    ]
+  },
+  "exterior": {
+    "preset": "modern",
+    "roofStyle": "flat",
+    "roofColor": "#2A2A2A",
+    "wallMaterial": "render",
+    "wallColor": "#CBE8F5",
+    "accentColor": "#1A1A1A",
+    "floors": 2,
+    "yardPreset": "pool",
+    "showPerimeterFence": false,
+    "fenceInsetMultiplier": 1.65,
+    "pilotisHeightM": 0,
+    "buildingType": "floor-plan-driven",
+    "hasRooftop": true,
+    "debugExposeScene": true,
+    "exteriorWindowGlassColor": "#8FA3B2",
+    "exteriorWindowGlassOpacity": 0.82,
+    "exteriorWindowGlassTransmission": 0,
+    "exteriorWindowGlassEnvMapIntensity": 0.6,
+    "exteriorWindowGlassRoughness": 0.12,
+    "wallBaseColor": "#F2EFE8",
+    "wallGrooveColor": "#F2EFE8",
+    "wallPanelHSpacing": 99,
+    "wallPanelVSpacing": 99,
+    "wallPanelTwoTone": false,
+    "stoneBaseEnabled": false,
+    "windowGlassColor": "#34404E",
+    "windowFrameColor": "#15171B",
+    "windowSillEnabled": true,
+    "windowLintelEnabled": false,
+    "windowJambEnabled": true,
+    "windowJambDepthCm": 8,
+    "windowFlowerBoxFreq": 0,
+    "windowFrameStripVCm": 6,
+    "windowFrameStripHCm": 6,
+    "windowCenterMullionCm": 4,
+    "windowSillColor": "#3E2A1E",
+    "defaultWindowSill": 70,
+    "defaultWindowHeight": 170,
+    "frontEntranceStyle": "sliding_barn",
+    "doorFrameColor": "#3E2A1E",
+    "doorHandleColor": "#1E1E22",
+    "roomCeilingColor": "#FAF4E8",
+    "ceilingLightColor": "#FFE0A0",
+    "ceilingLightIntensity": 2.4,
+    "ceilingLightRadiusCm": 12,
+    "skirtingHeight": 8,
+    "skirtingThicknessCm": 1,
+    "skirtingColor": "#3E2A1E",
+    "roofOverhang": 1.2,
+    "roofOverhangSouthExtra": 0.9,
+    "parapetHeight": 0,
+    "parapetGlassEnabled": false,
+    "roofSlabColor": "#EAE7E0",
+    "parapetColor": "#7A7068",
+    "stoneBaseHeight": 0.35,
+    "windowFlowerBoxColor": "#A0623E",
+    "flowerBloomColor": "#E85090",
+    "flowerFoliageColor": "#5A8A30",
+    "windowGlassTopColor": "#4A5C72",
+    "windowMullionPos": 0.5,
+    "windowMullionThicknessCm": 2.5,
+    "wallPanelGrooveOpacity": 0.25,
+    "lawnTint": "#7E8E6A",
+    "skyHaze": 0.2,
+    "windowRevealShadow": 0.65,
+    "treeColorJitter": 0.4,
+    "buildingBaseShadow": 1,
+    "eaveShadow": 0.45,
+    "wallVignette": 0.3,
+    "solarPanelsEnabled": false,
+    "hideInteriorWalls": true,
+    "bloomIntensity": 0.2,
+    "grassDensity": 0,
+    "exposure": 0.84,
+    "windowLintelColor": "#E0D0A8",
+    "wallZones": [
+      {
+        "material": "brick",
+        "color": "#B05030",
+        "heightFraction": 0.35
+      },
+      {
+        "material": "wood",
+        "color": "#A06030",
+        "heightFraction": 0.65
+      }
+    ],
+    "facades": {
+      "S": [
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "d1",
+              "type": "door",
+              "widthFraction": 0.18,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.68,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 4
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        },
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.86,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 5
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        }
+      ],
+      "N": [
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "d1",
+              "type": "door",
+              "widthFraction": 0.18,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.68,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 4
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        },
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.86,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 5
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        }
+      ],
+      "W": [
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "d1",
+              "type": "door",
+              "widthFraction": 0.18,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.68,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 4
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        },
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.86,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 5
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        }
+      ],
+      "E": [
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "d1",
+              "type": "door",
+              "widthFraction": 0.18,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.68,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 4
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        },
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.86,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 5
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        }
+      ]
+    },
+    "facadeSystem": "punched-window",
+    "transparentExterior": true,
+    "glassShellColor": "#33414E",
+    "glassSpandrelColor": "#EDEAE3",
+    "glassColor": "#73899B",
+    "glassOpacity": 1,
+    "entranceFrameColor": "#15171B",
+    "woodSoffit": true,
+    "facadeGlass": false
+  },
+  "budget": 350000,
+  "customRoomMeta": {},
+  "customFurniture": [],
+  "scores": {
+    "style": 56,
+    "space": 68,
+    "light": 95,
+    "dominantStyle": "现代"
+  },
+  "blueprint": {
+    "image": null,
+    "naturalW": 0,
+    "naturalH": 0,
+    "opacity": 0.4,
+    "offsetX": 0,
+    "offsetY": 0,
+    "scale": 1
+  },
+  "savedAt": "2026-07-07T22:55:30.589Z"
+}

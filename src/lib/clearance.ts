@@ -94,6 +94,10 @@ export const COMPANION_PAIRS: Partial<Record<FurnitureCategory, FurnitureCategor
   kitchen_cabinet: ["kitchen_sink", "range_hood", "kitchen_cabinet", "appliance"],
   kitchen_sink: ["kitchen_cabinet", "appliance"],
   range_hood: ["kitchen_cabinet", "appliance"],
+  // 电视(electronics)立在电视柜前/上、音箱贴柜是标准组合 ——
+  // 不与电视柜的 5cm 布线 halo 互报冲突。
+  tv_unit: ["electronics"],
+  electronics: ["tv_unit"],
 };
 
 // ─── Geometry helpers ────────────────────────────────────────
