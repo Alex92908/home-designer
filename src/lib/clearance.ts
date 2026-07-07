@@ -144,19 +144,20 @@ export function clearanceBBox(placed: PlacedItem, f: FurnitureItem, rule: Cleara
   const front = rule.frontAisle ?? 0;
   const back  = rule.backAisle  ?? 0;
   const r = ((placed.rotation ?? 0) % 360 + 360) % 360;
+  // 与渲染端一致：rotation.y=+θ，rot90 时本地 +Z（前方）转到 +X（东）。
   const applyFront = (dir: 0 | 90 | 180 | 270, amount: number) => {
     if (amount <= 0) return;
     if (dir === 0)        maxZ += amount;
-    else if (dir === 90)  minX -= amount;
+    else if (dir === 90)  maxX += amount;
     else if (dir === 180) minZ -= amount;
-    else                  maxX += amount;
+    else                  minX -= amount;
   };
   const applyBack = (dir: 0 | 90 | 180 | 270, amount: number) => {
     if (amount <= 0) return;
     if (dir === 0)        minZ -= amount;
-    else if (dir === 90)  maxX += amount;
+    else if (dir === 90)  minX -= amount;
     else if (dir === 180) maxZ += amount;
-    else                  minX -= amount;
+    else                  maxX += amount;
   };
   const dir = (r as 0 | 90 | 180 | 270);
   applyFront(dir, front);

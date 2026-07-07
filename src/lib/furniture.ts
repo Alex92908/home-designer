@@ -716,7 +716,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代", "北欧"],
     description: "滑轨推拉，节省开门空间",
     icon: "🚪",
-    model3d: { url: "/models/wardrobe/wardrobe_dylanheyes/wardrobe_dylanheyes.glb", fit: "fill", rotation: 3.1415927 },
+    model3d: { url: "/models/wardrobe/wardrobe_dylanheyes/wardrobe_dylanheyes.glb", fit: "fill" },
   },
   {
     id: "wardrobe-solid-walnut",
@@ -1219,7 +1219,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "双台盆，岩板台面奢华",
     icon: "🪥",
-    model3d: { url: "/models/bathroom_vanity/double_sink_vanity/double_sink_vanity.glb", rotation: 3.1415927 },
+    model3d: { url: "/models/bathroom_vanity/double_sink_vanity/double_sink_vanity.glb" },
   },
 
   // ─── 书桌 Desk ────────────────────────────────────────
@@ -1272,7 +1272,7 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["现代"],
     description: "电动升降，久坐不累",
     icon: "🖥️",
-    model3d: { url: "/models/desk/adjustable_desk/adjustable_desk.glb", rotation: 3.1415927 },
+    model3d: { url: "/models/desk/adjustable_desk/adjustable_desk.glb" },
   },
 
   // ─── 办公椅 Office Chair ──────────────────────────────
@@ -1650,7 +1650,7 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"decor-laundry-basket", name:"洗衣篮", brand:"品质家居", price:120, unit:"元/件", category:"decor", roomTypes:["bathroom","bedroom","closet"], color:"#C8C0B4", width:42, depth:35, height:21, tags:[], description:"洗衣篮", icon:"🧺", model3d:{ url:"/models/indoor_decor/laundry_basket/laundry_basket.glb", fit:"contain" } },
   { id:"decor-folded-clothes", name:"叠放衣物", brand:"品质家居", price:0, unit:"-", category:"decor", roomTypes:["bedroom","closet"], color:"#C8C0B4", width:20, depth:30, height:9, tags:[], description:"叠放衣物", icon:"👕", model3d:{ url:"/models/indoor_decor/folded_clothes/folded_clothes.glb", fit:"contain" } },
   { id:"decor-clothes-pile", name:"衣物堆", brand:"品质家居", price:0, unit:"-", category:"decor", roomTypes:["bedroom","closet"], color:"#C8C0B4", width:40, depth:39, height:7, tags:[], description:"衣物堆", icon:"👕", model3d:{ url:"/models/indoor_decor/clothes_pile/clothes_pile.glb", fit:"contain" } },
-  { id:"wardrobe-with-clothes", name:"带衣物衣柜", brand:"品质家居", price:3800, unit:"元/件", category:"wardrobe", roomTypes:["bedroom","master","closet"], color:"#C8C0B4", width:120, depth:60, height:200, tags:[], description:"带衣物衣柜", icon:"🚪", model3d:{ url:"/models/indoor_decor/wardrobe_clothes/wardrobe_clothes.glb", fit:"fill", rotation:3.1415927 } },
+  { id:"wardrobe-with-clothes", name:"带衣物衣柜", brand:"品质家居", price:3800, unit:"元/件", category:"wardrobe", roomTypes:["bedroom","master","closet"], color:"#C8C0B4", width:120, depth:60, height:200, tags:[], description:"带衣物衣柜", icon:"🚪", model3d:{ url:"/models/indoor_decor/wardrobe_clothes/wardrobe_clothes.glb", fit:"fill" } },
   { id:"wardrobe-coat-hanger", name:"落地衣帽架", brand:"品质家居", price:380, unit:"元/件", category:"wardrobe", roomTypes:["bedroom","hallway","closet"], color:"#C8C0B4", width:50, depth:50, height:180, tags:[], description:"落地衣帽架", icon:"🧥", model3d:{ url:"/models/indoor_decor/coat_hanger/coat_hanger.glb", fit:"contain" } },
   { id:"appliance-robot-vacuum", name:"扫地机器人", brand:"品质家居", price:1600, unit:"元/件", category:"appliance", roomTypes:["living","bedroom","study"], color:"#C8C0B4", width:35, depth:35, height:10, tags:[], description:"扫地机器人", icon:"🤖", model3d:{ url:"/models/indoor_decor/robot_vacuum/robot_vacuum.glb", fit:"contain" } },
   { id:"decor-trash-bin", name:"垃圾桶", brand:"品质家居", price:120, unit:"元/件", category:"decor", roomTypes:["kitchen","bathroom","study"], color:"#C8C0B4", width:30, depth:18, height:39, tags:[], description:"垃圾桶", icon:"🗑️", model3d:{ url:"/models/indoor_decor/trash_bin/trash_bin.glb", fit:"contain" } },
