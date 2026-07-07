@@ -21,8 +21,11 @@ const PERSIST_KEY = "home-designer-v2";
 const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
   ssr: false,
   loading: () => (
-    <div className="flex items-center justify-center h-screen bg-gray-900 text-gray-400 text-sm">
-      渲染外形图…
+    <div className="flex flex-col items-center justify-center gap-3 h-screen bg-gray-900 text-gray-400 text-sm">
+      <div className="animate-pulse">渲染外形图…</div>
+      <div className="text-xs text-gray-500 max-w-[260px] text-center leading-relaxed">
+        首次打开需下载 3D 引擎，慢网络约需十几秒；模型随后按需逐件加载
+      </div>
     </div>
   ),
 });

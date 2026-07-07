@@ -36,9 +36,15 @@ if (typeof window !== "undefined") {
   // drei default = gstatic CDN, sometimes slow/blocked from mainland China.
   try { useGLTF.setDecoderPath("/draco/"); } catch { /* noop */ }
 
+  // 移动端跳过批量预载：手机带宽/内存都紧张，10 个 GLB 预载会挤占
+  // 关键 JS chunk 的下载（样板间卡"渲染外形图…"的帮凶），且解码后的
+  // 几何/纹理常驻内存加速 iOS 杀页。移动端按需加载（Suspense 逐件进）。
+  const isMobile = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
   // Small defer so the initial document/CSS get priority on the network
   // queue. 150ms ≈ one LCP frame on mid-range hardware.
-  setTimeout(() => {
+  if (!isMobile) setTimeout(() => {
     for (const url of HOT_URLS) {
       try {
         // useGLTF.preload returns a thenable that rejects on 404 etc.

@@ -10,6 +10,7 @@ import { Suspense } from "react";
 import * as THREE from "three";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { useDesignerStore, RoomState } from "@/lib/store";
+import { canvasDpr } from "@/lib/device";
 import { useLocale, useLocaleStore } from "@/lib/i18n";
 import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
 const EMPTY_ROOM_STATE_RC: RoomState = { materials: {}, placedItems: [] };
@@ -4741,7 +4742,7 @@ export default function RoomCanvas() {
             depth: true,
             powerPreference: "default",
           }}
-          dpr={[1, 2]}
+          dpr={canvasDpr()}  // 移动端封顶 1.5，防 iOS 内存杀页
           shadows={{ type: THREE.PCFSoftShadowMap }}
           // z 6→4.8 / y 1.4→1.55：老机位太远，房间只占画面中间一小块、四周
           // 大片灰背景（录屏构图差）。拉近让房间撑满视野。

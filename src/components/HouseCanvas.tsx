@@ -60,6 +60,7 @@ function AdaptiveDpr({ shadowSizeRef }: { shadowSizeRef?: React.MutableRefObject
   );
 }
 import { useDesignerStore } from "@/lib/store";
+import { canvasDpr } from "@/lib/device";
 import { useLocale } from "@/lib/i18n";
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 
@@ -6204,8 +6205,9 @@ export default function HouseCanvas() {
         // 也满帧重绘整个场景（夜间 ~73ms/帧 = 14fps），时间轴一拖就卡。
         // 补回 demand：静止 0 渲染，拖时间轴时场景冻结、滑块丝滑，松手才渲一帧。
         frameloop="demand"
-        // Task 2: Adaptive DPR — dpr={[1, 2]} 配合 <AdaptiveDpr> 动态降级。
-        dpr={[1, 2]}
+        // Task 2: Adaptive DPR — 配合 <AdaptiveDpr> 动态降级；移动端封顶 1.5
+        // （iOS WebKit 内存硬上限，dpr=2 的帧缓冲已足以在大户型上被杀页）。
+        dpr={canvasDpr()}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
           // exposure = theme baseline × user dial. Dial < 1 darkens the

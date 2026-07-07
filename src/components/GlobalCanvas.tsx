@@ -19,6 +19,7 @@ import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
+import { canvasDpr, isMobileDevice } from "@/lib/device";
 import { RoomState } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
@@ -1203,7 +1204,10 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
       <Canvas
         shadows
         camera={{ position: [12, initY, 12], fov: 45 }}
-        gl={{ antialias: true, alpha: true }}
+        // 移动端 dpr 封顶 1.5：此前未设 dpr → iPhone 按 devicePixelRatio=3
+        // 全分辨率渲染，帧缓冲内存是 1.5 档的 4 倍，iOS 直接杀页。
+        dpr={canvasDpr()}
+        gl={{ antialias: !isMobileDevice(), alpha: true }}
       >
         <SceneRegistrar view="global3d" />
         <Scene
