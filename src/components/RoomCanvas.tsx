@@ -2932,10 +2932,18 @@ function GltfFurniture({
     const mode = fit ?? "contain";
     const trim = scale ?? 1;
 
+    // model3d.rotation 是绕 Y 的预旋转（换轴模型：宽度长在 Z 轴上的 GLB）。
+    // fit 必须按「旋转后的世界轴」取原生尺寸，否则 contain 会拿"声明厚度 ÷
+    // 原生宽度"当最小比例，把模型缩成一丁点（曲面电视 1.6m → 12cm）。
+    const swapXZ = Math.abs(Math.round((rotation ?? 0) / (Math.PI / 2))) % 2 === 1;
+    const nx = swapXZ ? size.z : size.x;   // 世界 X 向原生尺寸
+    const nz = swapXZ ? size.x : size.z;   // 世界 Z 向原生尺寸
+
     if (mode === "fill") {
       // Non-uniform: exactly fill W×D×H. Best for boxy appliances whose
       // declared size IS the real product size (fridge/sink/range hood).
-      base.scale.set((w / size.x) * trim, (h / size.y) * trim, (d / size.z) * trim);
+      // 换轴模型：本地 X 轴要填的是世界 D（旋转后转到 Z），反之亦然。
+      base.scale.set(((swapXZ ? d : w) / size.x) * trim, (h / size.y) * trim, ((swapXZ ? w : d) / size.z) * trim);
       base.updateMatrixWorld(true);
       const b2 = new THREE.Box3().setFromObject(base);
       base.position.x -= (b2.min.x + b2.max.x) / 2;
@@ -2947,7 +2955,7 @@ function GltfFurniture({
     if (mode === "tile") {
       // Fit a single module by depth+height (its real cabinet cross-section),
       // keep the module's own width, then repeat it along the run to fill `w`.
-      const s = Math.min(h / size.y, d / size.z) * trim;
+      const s = Math.min(h / size.y, d / nz) * trim;
       const first = buildUniform(s);
       const moduleW = first.box.max.x - first.box.min.x;
       const count = Math.max(1, Math.round(w / Math.max(moduleW, 1e-3)));
@@ -2963,10 +2971,10 @@ function GltfFurniture({
     // "contain" (default): uniform scale by the SMALLEST axis ratio so the
     // model keeps its real proportions and never bursts past the box. Best
     // for organic/proportioned items (plants, sofas, chairs, lamps).
-    const s = Math.min(w / size.x, h / size.y, d / size.z) * trim;
+    const s = Math.min(w / nx, h / size.y, d / nz) * trim;
     const only = buildUniform(s);
-    return { list: [{ obj: only.obj, x: 0 }], measured: { topY: size.y * s, w: size.x * s, d: size.z * s } };
-  }, [scene, w, d, h, scale, recolor, fit]);
+    return { list: [{ obj: only.obj, x: 0 }], measured: { topY: size.y * s, w: nx * s, d: nz * s } };
+  }, [scene, w, d, h, scale, recolor, fit, rotation]);
 
   // 实测尺寸上报（供台面吸附注册表使用）。ref 隔离回调身份，只在实测值
   // 变化时触发。
