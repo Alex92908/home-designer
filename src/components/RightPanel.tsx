@@ -63,14 +63,15 @@ export default function RightPanel() {
   const doorWall  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "S");
   const doorPosCm = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorPos?.[activeRoom] ?? 0);
   const doorLenCm = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorLen?.[activeRoom] ?? 80);
+  const doorStyle = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorStyle?.[activeRoom]);
   const roomWindows = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows[activeRoom] ?? EMPTY_WINDOWS);
   const evaluation = useMemo(
     () => evaluateRoom(
       placedItems, getFurnitureById, roomW, roomD,
-      hasDoor ? { hasDoor, wall: doorWall as import("@/lib/clearance").DoorWall, posCm: doorPosCm, lenCm: doorLenCm } : undefined,
+      hasDoor ? { hasDoor, wall: doorWall as import("@/lib/clearance").DoorWall, posCm: doorPosCm, lenCm: doorLenCm, style: doorStyle } : undefined,
       roomWindows,
     ),
-    [placedItems, roomW, roomD, hasDoor, doorWall, doorPosCm, doorLenCm, roomWindows]
+    [placedItems, roomW, roomD, hasDoor, doorWall, doorPosCm, doorLenCm, doorStyle, roomWindows]
   );
   const evaluated = evaluation.items;
   const violations = useMemo(

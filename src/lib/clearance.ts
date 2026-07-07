@@ -363,6 +363,8 @@ export interface DoorInfo {
   wall: DoorWall;
   posCm: number;
   lenCm: number;
+  /** 门样式：卷帘/推拉类开合不占地面，不生成门前开合区。 */
+  style?: string;
 }
 
 /** A visual link between two points (e.g. TV ↔ sofa viewing distance,
@@ -455,7 +457,8 @@ export function evaluateRoom(
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  const swing = door && door.hasDoor
+  const NO_SWING_DOORS = new Set(["roller_shutter", "sliding_barn", "glass_slide"]);
+  const swing = door && door.hasDoor && !NO_SWING_DOORS.has(door.style ?? "")
     ? doorSwingZone(door.wall, door.posCm, door.lenCm, roomW, roomD)
     : null;
 
@@ -488,7 +491,7 @@ export function evaluateRoom(
     const fElev   = it.placed.elevationY ?? 0;
     const fScaleH = it.placed.scaleH ?? 1;
     const fTop    = fElev + it.f.height * fScaleH;
-    for (const win of FLAT_DECOR.has(it.f.category) ? [] : windows) {
+    for (const win of (FLAT_DECOR.has(it.f.category) || it.f.category === "shower") ? [] : windows) {
       const sill = win.sill ?? 90;
       // +40cm 宽容带：床头板/矮柜比窗台高出一点点不算实质遮挡
       if (fTop <= sill + 40) continue;

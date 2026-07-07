@@ -670,7 +670,7 @@ export default function FloorPlan() {
   const evaluation = useMemo(
     () => evaluateRoom(
       roomState.placedItems, getFurnitureById, roomW, roomD,
-      hasDoor ? { hasDoor, wall: doorWall as ClearanceDoorWall, posCm: doorPosCm, lenCm: doorLenCm } : undefined,
+      hasDoor ? { hasDoor, wall: doorWall as ClearanceDoorWall, posCm: doorPosCm, lenCm: doorLenCm, style: doorStyle } : undefined,
       roomWindows,
     ),
     [roomState.placedItems, roomW, roomD, hasDoor, doorWall, doorPosCm, doorLenCm, roomWindows]
