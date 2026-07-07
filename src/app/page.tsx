@@ -11,7 +11,7 @@ import "@/lib/preload";
 const _VISITED_KEY = "home-designer-visited";
 let _sampleLoadedThisSession = false;
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { Component, useEffect, useState, type ReactNode } from "react";
 import LeftPanel from "@/components/LeftPanel";
 import RightPanel from "@/components/RightPanel";
 import ExteriorPanel from "@/components/ExteriorPanel";
@@ -43,6 +43,38 @@ function CanvasLoading({ bg, msgKey }: { bg: string; msgKey: "loading3dScene" | 
       <div className="text-gray-400 text-sm animate-pulse">{t[msgKey]}</div>
     </div>
   );
+}
+
+/** 3D 画布局部错误边界 —— 重场景（外观图整院 GLB）加载太久/偶发失败时，
+ *  异常原来一路抛到 app/error.tsx，整页被换成错误页（用户：外观图加载太久
+ *  页面报错）。在画布这层截住：应用外壳、顶栏、面板都还活着，就地给
+ *  「重试」（换 key 重挂载画布重新加载）。 */
+class CanvasBoundary extends Component<{ children: ReactNode }, { failed: boolean; attempt: number }> {
+  state = { failed: false, attempt: 0 };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err: Error) { console.error("[CanvasBoundary]", err); }
+  retry = () => this.setState(s => ({ failed: false, attempt: s.attempt + 1 }));
+  render() {
+    if (this.state.failed) {
+      const zh = typeof navigator === "undefined" || navigator.language.startsWith("zh");
+      return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-900 text-white">
+          <div className="text-3xl">🏗️</div>
+          <div className="text-sm font-semibold">{zh ? "3D 场景加载出错" : "3D scene failed to load"}</div>
+          <div className="text-xs opacity-60 max-w-xs text-center leading-relaxed">
+            {zh ? "多为网络较慢导致模型加载超时，点重试重新加载。" : "Usually a slow network timing out a model download — retry to reload."}
+          </div>
+          <button
+            onClick={this.retry}
+            className="mt-1 px-4 py-1.5 rounded-lg text-xs font-bold bg-white/10 border border-white/25 hover:bg-white/20 transition-all"
+          >
+            {zh ? "重试" : "Retry"}
+          </button>
+        </div>
+      );
+    }
+    return <div key={this.state.attempt} className="absolute inset-0">{this.props.children}</div>;
+  }
 }
 
 const RoomCanvas = dynamic(() => import("@/components/RoomCanvas"), {
@@ -395,12 +427,12 @@ export default function Home() {
             <PanelToggle side="right" open={rightOpen} onClick={() => setRightOpen(v => !v)} />
           )}
 
-          {viewMode === "3d"  && <RoomCanvas />}
+          {viewMode === "3d"  && <CanvasBoundary><RoomCanvas /></CanvasBoundary>}
           {viewMode === "2d"  && <FloorPlan />}
           {isAll      && <FloorPlanAll />}
-          {isGlobal3d && <GlobalCanvas />}
+          {isGlobal3d && <CanvasBoundary><GlobalCanvas /></CanvasBoundary>}
           {isExterior && viewMode === "yard2d" && <YardPlan />}
-          {viewMode === "exterior" && <HouseCanvas />}
+          {viewMode === "exterior" && <CanvasBoundary><HouseCanvas /></CanvasBoundary>}
 
           {/* 统一 AI 入口 — 六站全覆盖：单按钮 + 分层菜单（⚡一键 / 🎨选预设 / ✨生成式精修 / 📷导入参考图）。
               ✨ 与 📷 通过 openAiRender / openImport window 事件触发（与 TopBar 一致）。 */}

@@ -240,11 +240,15 @@ export default function TopBar() {
 
   return (
     <header
-      className="h-12 flex items-center px-4 gap-3 shrink-0"
+      // 窄屏（手机）放不下全部工具时允许横向滑动，而不是把右侧按钮裁掉。
+      // scrollbarWidth:none 隐藏滚动条，overscroll-x-contain 防止把整页拖走。
+      className="h-12 flex items-center px-2 sm:px-4 gap-2 sm:gap-3 shrink-0 overflow-x-auto overflow-y-hidden overscroll-x-contain"
       style={{
         background: "var(--ds-surface)",
         borderBottom: "1px solid var(--ds-border)",
         boxShadow: "0 1px 0 var(--ds-border-soft), var(--ds-shadow-sm)",
+        scrollbarWidth: "none",
+        WebkitOverflowScrolling: "touch",
       }}
     >
       {/* Logo */}
@@ -366,7 +370,7 @@ export default function TopBar() {
             color: showCompass ? "#DB2777" : "var(--ds-text-3)",
           }}
         >
-          🧭 NSWE
+          🧭<span className="hidden sm:inline">&nbsp;NSWE</span>
         </button>
       )}
 
@@ -407,7 +411,7 @@ export default function TopBar() {
         style={{ border: "1px solid var(--ds-border)", color: "var(--ds-text-2)", background: "var(--ds-surface)" }}
         title={locale === "en" ? "Showroom — exterior gallery" : "样板间 — 外形图画廊"}
       >
-        {locale === "en" ? "🏝️ Showroom" : "🏝️ 样板间"}
+        🏝️<span className="hidden sm:inline">&nbsp;{locale === "en" ? "Showroom" : "样板间"}</span>
       </Link>
 
       {/* 反馈入口（mailto → 作者邮箱，零依赖） */}
