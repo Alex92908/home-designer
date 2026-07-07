@@ -1839,15 +1839,41 @@ class SingletonErrorBoundary extends Component<
 }
 
 // ─── Foundation ─────────────────────────────────────────────
+// 逐房间画地基块，而不是整层 bbox 一整块 —— 车库等独立房间与主楼分离时，
+// bbox 大板会把两者之间的空地铺成一片突兀的深色"地板"（用户：外面地板奇怪）。
 function Foundation({ W, D, color }: { W: number; D: number; color: string }) {
-  // Task 1: frustumCulled=false —— Foundation 是建筑底盘，从任何相机
-  // 角度都在视野内（除非相机在地下/超远），跳过 sphere-vs-frustum 测试
-  // 反而省 projectObject 里的 1 次浮点开销。
+  const enabledRooms   = useDesignerStore(s => s.floorPlans[0]?.enabledRooms   ?? s.floorPlans[s.activeFloor].enabledRooms);
+  const roomLayout     = useDesignerStore(s => s.floorPlans[0]?.roomLayout     ?? s.floorPlans[s.activeFloor].roomLayout);
+  const roomDimensions = useDesignerStore(s => s.floorPlans[0]?.roomDimensions ?? s.floorPlans[s.activeFloor].roomDimensions);
+  const indoor = enabledRooms.filter(r => !ROOM_DEFS[r].isOutdoor && roomLayout[r] && roomDimensions[r]);
+  if (!indoor.length) {
+    return (
+      <mesh position={[0, -0.25, 0]} receiveShadow frustumCulled={false}>
+        <boxGeometry args={[W + 0.3, 0.5, D + 0.3]} />
+        <meshStandardMaterial color={color} roughness={0.95} />
+      </mesh>
+    );
+  }
+  const xs = indoor.flatMap(r => [roomLayout[r].x, roomLayout[r].x + roomDimensions[r].width]);
+  const zs = indoor.flatMap(r => [roomLayout[r].y, roomLayout[r].y + roomDimensions[r].depth]);
+  const minX = Math.min(...xs), minZ = Math.min(...zs);
+  const fpW = (Math.max(...xs) - minX) / 100, fpD = (Math.max(...zs) - minZ) / 100;
   return (
-    <mesh position={[0, -0.25, 0]} receiveShadow frustumCulled={false}>
-      <boxGeometry args={[W + 0.3, 0.5, D + 0.3]} />
-      <meshStandardMaterial color={color} roughness={0.95} />
-    </mesh>
+    <group>
+      {indoor.map((r, i) => {
+        const p = roomLayout[r], d = roomDimensions[r];
+        const cx = (p.x + d.width / 2 - minX) / 100 - fpW / 2;
+        const cz = (p.y + d.depth / 2 - minZ) / 100 - fpD / 2;
+        // 相邻房间的地基块外扩 15cm 后互相压边，顶面共面会 z-fight ——
+        // 每块按序号微降 0.4mm，肉眼不可见但深度可分。
+        return (
+          <mesh key={r} position={[cx, -0.25 - i * 0.0004, cz]} receiveShadow frustumCulled={false}>
+            <boxGeometry args={[d.width / 100 + 0.3, 0.5, d.depth / 100 + 0.3]} />
+            <meshStandardMaterial color={color} roughness={0.95} />
+          </mesh>
+        );
+      })}
+    </group>
   );
 }
 

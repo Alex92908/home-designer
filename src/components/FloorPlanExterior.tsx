@@ -3200,13 +3200,48 @@ export default function FloorPlanBuilding({
     return [...map.values()];
   }, [floorPlans, floorCount, roomLoopMax, floorBoundsArr, planOffset, W, D, exterior.interiorDoorHeightCm, curtainWall]);
 
+  // ── 基座簇：把 F0 室内房间按「矩形相邻(≤20cm 缝)」并成连通簇，基座/压边
+  // 按簇画而不是整层 bbox 一块 —— 独立车库等分离体量与主楼之间的空地
+  // 不再被 bbox 大板铺成一片突兀的"深色地板"（用户：外面地板奇怪）。
+  const baseClusters = useMemo(() => {
+    const fp = floorPlans[0];
+    const rects = ((fp?.enabledRooms ?? []) as RoomType[])
+      .filter(r => !ROOM_DEFS[r]?.isOutdoor)
+      .map(r => ({ p: fp!.roomLayout?.[r], d: fp!.roomDimensions?.[r] }))
+      .filter((x): x is { p: { x: number; y: number }; d: { width: number; depth: number } } => !!x.p && !!x.d);
+    if (!rects.length) return [{ cx: 0, cz: 0, w: W, d: D }];
+    const n = rects.length;
+    const parent = Array.from({ length: n }, (_, i) => i);
+    const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      const A = rects[i], B = rects[j];
+      const gapX = Math.max(A.p.x, B.p.x) - Math.min(A.p.x + A.d.width,  B.p.x + B.d.width);
+      const gapY = Math.max(A.p.y, B.p.y) - Math.min(A.p.y + A.d.depth, B.p.y + B.d.depth);
+      if (gapX <= 20 && gapY <= 20) parent[find(i)] = find(j);
+    }
+    const groups = new Map<number, typeof rects>();
+    rects.forEach((r, i) => { const k = find(i); if (!groups.has(k)) groups.set(k, []); groups.get(k)!.push(r); });
+    return [...groups.values()].map(g => {
+      const minX = Math.min(...g.map(r => r.p.x)), maxX = Math.max(...g.map(r => r.p.x + r.d.width));
+      const minY = Math.min(...g.map(r => r.p.y)), maxY = Math.max(...g.map(r => r.p.y + r.d.depth));
+      return {
+        cx: ((minX + maxX) / 2 - planOffset.minX) * CM - W / 2,
+        cz: ((minY + maxY) / 2 - planOffset.minY) * CM - D / 2,
+        w:  (maxX - minX) * CM,
+        d:  (maxY - minY) * CM,
+      };
+    });
+  }, [floorPlans, planOffset, W, D]);
+
   return (
     <group position={[worldX, 0, worldZ]} rotation={[0, worldRot, 0]}>
-      {/* 地面基座 — 浅色石灰石平台（建筑基层）*/}
-      <mesh position={[0, -0.04, 0]} receiveShadow>
-        <boxGeometry args={[W + 0.55, 0.10, D + 0.55]} />
-        <meshStandardMaterial color="#D4CCBA" roughness={0.72} metalness={0.03} envMapIntensity={0.35} />
-      </mesh>
+      {/* 地面基座 — 浅色石灰石平台（建筑基层，按簇）*/}
+      {baseClusters.map((c, ci) => (
+        <mesh key={`base-${ci}`} position={[c.cx, -0.04, c.cz]} receiveShadow>
+          <boxGeometry args={[c.w + 0.55, 0.10, c.d + 0.55]} />
+          <meshStandardMaterial color="#D4CCBA" roughness={0.72} metalness={0.03} envMapIntensity={0.35} />
+        </mesh>
+      ))}
 
       {/* ── 北面室外空调冷凝器（outdoor HVAC condensing units）—— 背面服务区 ── */}
       {!insideBuilding && isGlassVilla && (() => {
@@ -3327,27 +3362,35 @@ export default function FloorPlanBuilding({
            露出、像地板下多了两层暗带(用户：普通立面地板也有两层/暗带)，故同样
            压成薄边。只有完全不透明的实心立面(transparentExterior=false)才保留
            原两段式厚基座。 */
-        <mesh position={[0, 0.01, 0]} castShadow>
-          <boxGeometry args={[W + 0.06, 0.02, D + 0.06]} />
-          <meshStandardMaterial color="#3A3E48" roughness={0.30} metalness={0.55} envMapIntensity={1.6} />
-        </mesh>
+        <>
+          {baseClusters.map((c, ci) => (
+            <mesh key={`edging-${ci}`} position={[c.cx, 0.01, c.cz]} castShadow>
+              <boxGeometry args={[c.w + 0.06, 0.02, c.d + 0.06]} />
+              <meshStandardMaterial color="#3A3E48" roughness={0.30} metalness={0.55} envMapIntensity={1.6} />
+            </mesh>
+          ))}
+        </>
       ) : (
         <>
-          {/* 下段：黑色花岗岩（低粗糙度，轻微抛光反射）*/}
-          <mesh position={[0, 0.10, 0]} castShadow>
-            <boxGeometry args={[W + 0.10, 0.20, D + 0.10]} />
-            <meshStandardMaterial color="#1A1C22" roughness={0.42} metalness={0.28} envMapIntensity={1.4} />
-          </mesh>
-          {/* 上段：深灰玄武岩（稍浅，形成两段阴影层次）*/}
-          <mesh position={[0, 0.30, 0]} castShadow>
-            <boxGeometry args={[W + 0.06, 0.20, D + 0.06]} />
-            <meshStandardMaterial color="#272B33" roughness={0.55} metalness={0.18} envMapIntensity={1.0} />
-          </mesh>
-          {/* 基座顶面金属压边（薄钢条，视觉分割线）*/}
-          <mesh position={[0, 0.405, 0]}>
-            <boxGeometry args={[W + 0.07, 0.010, D + 0.07]} />
-            <meshStandardMaterial color="#3A3E48" roughness={0.18} metalness={0.92} envMapIntensity={2.0} />
-          </mesh>
+          {baseClusters.map((c, ci) => (
+            <group key={`plinth-${ci}`}>
+              {/* 下段：黑色花岗岩（低粗糙度，轻微抛光反射）*/}
+              <mesh position={[c.cx, 0.10, c.cz]} castShadow>
+                <boxGeometry args={[c.w + 0.10, 0.20, c.d + 0.10]} />
+                <meshStandardMaterial color="#1A1C22" roughness={0.42} metalness={0.28} envMapIntensity={1.4} />
+              </mesh>
+              {/* 上段：深灰玄武岩（稍浅，形成两段阴影层次）*/}
+              <mesh position={[c.cx, 0.30, c.cz]} castShadow>
+                <boxGeometry args={[c.w + 0.06, 0.20, c.d + 0.06]} />
+                <meshStandardMaterial color="#272B33" roughness={0.55} metalness={0.18} envMapIntensity={1.0} />
+              </mesh>
+              {/* 基座顶面金属压边（薄钢条，视觉分割线）*/}
+              <mesh position={[c.cx, 0.405, c.cz]}>
+                <boxGeometry args={[c.w + 0.07, 0.010, c.d + 0.07]} />
+                <meshStandardMaterial color="#3A3E48" roughness={0.18} metalness={0.92} envMapIntensity={2.0} />
+              </mesh>
+            </group>
+          ))}
         </>
       ))}
       {/* ── 基座悬浮灯带（floating building LED gap）——
