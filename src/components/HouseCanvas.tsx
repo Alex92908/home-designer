@@ -60,7 +60,7 @@ function AdaptiveDpr({ shadowSizeRef }: { shadowSizeRef?: React.MutableRefObject
   );
 }
 import { useDesignerStore } from "@/lib/store";
-import { canvasDpr, isMobileDevice, shrinkSceneTexturesForMobile } from "@/lib/device";
+import { canvasDprHeavy, isMobileDevice, mobileLiteScene, shrinkSceneTexturesForMobile } from "@/lib/device";
 import { useLocale } from "@/lib/i18n";
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 
@@ -6197,7 +6197,8 @@ export default function HouseCanvas() {
       <SceneVeil ready={sceneReady} label={locale === "en" ? "Building 3D scene" : "正在构建 3D 场景"} />
       <Canvas
         style={{ touchAction: "none" }}
-        shadows={{ type: THREE.PCFShadowMap, enabled: true }}
+        // 移动端关阴影：阴影贴图是额外大帧缓冲 + 一遍渲染，是 iOS 杀页大头。
+        shadows={mobileLiteScene() ? false : { type: THREE.PCFShadowMap, enabled: true }}
         // Plan A: frameloop="demand" —— 静止时 0 CPU/GPU 渲染。
         // OrbitControls / setState / 点击都会自动 invalidate() 触发重绘；
         // 没有自定义动画时这是免费 win。如果发现某些动画停了，把这行
@@ -6206,9 +6207,8 @@ export default function HouseCanvas() {
         // 也满帧重绘整个场景（夜间 ~73ms/帧 = 14fps），时间轴一拖就卡。
         // 补回 demand：静止 0 渲染，拖时间轴时场景冻结、滑块丝滑，松手才渲一帧。
         frameloop="demand"
-        // Task 2: Adaptive DPR — 配合 <AdaptiveDpr> 动态降级；移动端封顶 1.5
-        // （iOS WebKit 内存硬上限，dpr=2 的帧缓冲已足以在大户型上被杀页）。
-        dpr={canvasDpr()}
+        // 重型外观场景：移动端 dpr 锁 1（比 1.5 再省 ~2.25x 帧缓冲）。
+        dpr={canvasDprHeavy()}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
           // exposure = theme baseline × user dial. Dial < 1 darkens the
@@ -6352,16 +6352,21 @@ export default function HouseCanvas() {
           );
         })()}
         {insideBuilding && <color attach="background" args={["#D8D4CC"]} />}
-        <HouseEnvironmentFallback>
-          <Suspense fallback={null}>
-            <Environment
-              files={theme.hdr}
-              background={false}
-              backgroundBlurriness={0.04}
-              backgroundIntensity={theme.phase === "day" ? 0.65 : 0.80}
-            />
-          </Suspense>
-        </HouseEnvironmentFallback>
+        {/* 移动端跳过 HDR 环境光：equirect 贴图 + 生成的 PMREM 立方图常驻
+            十几 MB 显存，是 iOS 杀页大头。改用已有的 ambient+hemisphere 打光，
+            金属/玻璃反射略平但不崩。 */}
+        {!mobileLiteScene() && (
+          <HouseEnvironmentFallback>
+            <Suspense fallback={null}>
+              <Environment
+                files={theme.hdr}
+                background={false}
+                backgroundBlurriness={0.04}
+                backgroundIntensity={theme.phase === "day" ? 0.65 : 0.80}
+              />
+            </Suspense>
+          </HouseEnvironmentFallback>
+        )}
         {/* Night sky sphere + star field */}
         {theme.phase === "night" && (
           <>

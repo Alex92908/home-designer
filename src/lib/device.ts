@@ -30,6 +30,18 @@ export function canvasDpr(): [number, number] {
   return isMobileDevice() ? [1, 1.5] : [1, 2];
 }
 
+/** 重型场景（外观图/全屋3D：整栋 + 院子 + 树/车/泳池几十个 GLB）移动端
+ *  dpr 锁 1（帧缓冲比 1.5 再省 ~2.25x），桌面 [1, 2]。 */
+export function canvasDprHeavy(): [number, number] {
+  return isMobileDevice() ? [1, 1] : [1, 2];
+}
+
+/** 移动端关阴影/HDR 环境光：阴影贴图是额外的大帧缓冲 + 一遍渲染，HDR
+ *  的 PMREM 立方图常驻十几 MB 显存 —— 都是 iOS 杀页大头。桌面保留。 */
+export function mobileLiteScene(): boolean {
+  return isMobileDevice();
+}
+
 // ── 移动端纹理瘦身 ───────────────────────────────────────────
 // GLB 里 1024² 的 WebP 解码上传 GPU 后是 RGBA + mipmap ≈ 5.3MB/张，
 // 一个房间几十个模型 × 每模型多张贴图 → 数百 MB GPU 内存，iOS 直接杀页。

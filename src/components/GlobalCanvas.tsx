@@ -19,7 +19,7 @@ import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
-import { canvasDpr, isMobileDevice } from "@/lib/device";
+import { canvasDprHeavy, isMobileDevice, mobileLiteScene } from "@/lib/device";
 import { RoomState } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
@@ -1202,11 +1202,11 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
       {/* 加载幕布：盖住场景构建/GLB 解码期间的灰屏（详见 SceneVeil）。 */}
       <SceneVeil ready={sceneReady} label={locale === "en" ? "Building house 3D" : "正在构建全屋 3D"} />
       <Canvas
-        shadows
+        // 移动端关阴影 + dpr 锁 1：全屋 3D 是重型场景，阴影贴图和高分帧缓冲
+        // 都是 iOS 杀页大头。
+        shadows={!mobileLiteScene()}
         camera={{ position: [12, initY, 12], fov: 45 }}
-        // 移动端 dpr 封顶 1.5：此前未设 dpr → iPhone 按 devicePixelRatio=3
-        // 全分辨率渲染，帧缓冲内存是 1.5 档的 4 倍，iOS 直接杀页。
-        dpr={canvasDpr()}
+        dpr={canvasDprHeavy()}
         gl={{ antialias: !isMobileDevice(), alpha: true }}
       >
         <SceneRegistrar view="global3d" />
