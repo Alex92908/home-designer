@@ -3728,6 +3728,9 @@ export const useDesignerStore = create<DesignerStore>()(
             state.buildings[ab].exterior = state.exterior ?? state.buildings[ab].exterior;
           }
         }
+        // 移动端「重型视图崩溃循环」的降级在 page.tsx 挂载 effect 里做
+        // （setViewMode + setMounted 批处理成一次渲染，重型 Canvas 从不
+        //  挂载）。此处直接改 state.viewMode 不触发重渲染，故不在这里做。
       },
     }
   ),
