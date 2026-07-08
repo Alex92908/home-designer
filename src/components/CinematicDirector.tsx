@@ -33,11 +33,16 @@ import {
   CINE_PRESETS, RENDER_STYLES, getCinePreset, makeShot, makeActor,
   type Shot, type Actor, type RenderStyle, type SceneEnvelope,
 } from "@/lib/cinematic";
+import { runRender } from "@/lib/useAiRender";
+import { getAiRenderConfig, localizeWorkflowName, type RenderWorkflow } from "@/lib/aiRenderConfig";
 
 /** 播放头（模块级可变对象，ActorsLayer 在 useFrame 里直读，避免每帧 setState） */
 export const cinePlayhead = { t: 0, active: false };
 
 interface QueueItem { shot: Shot; style: RenderStyle; }
+
+/** 逐镜成片的单镜状态（phase 沿用 useAiRender 的 RenderPhase 语义） */
+interface GenEntry { phase: string; msg?: string; outputs?: string[]; }
 
 interface CineState {
   /** 分镜（持久化） */
@@ -59,6 +64,18 @@ interface CineState {
   placePoint: (p: [number, number]) => void;
   cancelAddActor: () => void;
   removeActor: (id: string) => void;
+
+  /** 实景首帧留存（shotId → dataURL，易失）——「逐镜成片」的输入图 */
+  takes: Record<string, string>;
+  _setTake: (shotId: string, dataUrl: string) => void;
+
+  /** 逐镜成片（走既有「AI 出图设置」的后端/工作流体系） */
+  genWorkflowId: string;
+  setGenWorkflowId: (id: string) => void;
+  genRunning: boolean;
+  genState: Record<string, GenEntry>;
+  _setGenRunning: (v: boolean) => void;
+  _setGen: (shotId: string, patch: GenEntry) => void;
 
   /** 录制队列：null = 空闲。快拍 = 单镜实景；分镜 = shots × styles。 */
   queue: QueueItem[] | null;
@@ -112,6 +129,17 @@ export const useCineStore = create<CineState>()(
       cancelAddActor: () => set({ addActorMode: false, pendingFrom: null }),
       removeActor: (id) => set({ actors: get().actors.filter((a) => a.id !== id) }),
 
+      takes: {},
+      _setTake: (shotId, dataUrl) => set({ takes: { ...get().takes, [shotId]: dataUrl } }),
+
+      genWorkflowId: "",
+      setGenWorkflowId: (id) => set({ genWorkflowId: id }),
+      genRunning: false,
+      genState: {},
+      _setGenRunning: (v) => set({ genRunning: v }),
+      _setGen: (shotId, patch) =>
+        set({ genState: { ...get().genState, [shotId]: { ...get().genState[shotId], ...patch } } }),
+
       queue: null,
       queueIdx: 0,
       batch: false,
@@ -133,8 +161,8 @@ export const useCineStore = create<CineState>()(
       _finish: () => set({ queue: null, queueIdx: 0, progress: 0 }),
       _setProgress: (p) => set({ progress: p }),
     }),
-    // 只持久化创作数据；录制态易失
-    { name: "zhuya-cine-shots-v1", partialize: (s) => ({ shots: s.shots, actors: s.actors, styles: s.styles }) },
+    // 只持久化创作数据；录制态/首帧/生成态易失
+    { name: "zhuya-cine-shots-v1", partialize: (s) => ({ shots: s.shots, actors: s.actors, styles: s.styles, genWorkflowId: s.genWorkflowId }) },
   ),
 );
 
@@ -163,12 +191,13 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 /** 同步渲一帧并从帧缓冲读出 PNG（preserveDrawingBuffer:false 下
- *  toDataURL 读到陈旧缓冲，必须 readPixels——外观截图管线验证过的做法） */
+ *  toDataURL 读到陈旧缓冲，必须 readPixels——外观截图管线验证过的做法）。
+ *  同时返回 dataURL：实景首帧要留在内存里给「逐镜成片」当输入图。 */
 function captureFramePNG(
   gl: THREE.WebGLRenderer,
   scene: THREE.Scene,
   camera: THREE.Camera,
-): Promise<Blob | null> {
+): Promise<{ blob: Blob | null; dataUrl: string }> {
   gl.render(scene, camera);
   const ctx = gl.getContext();
   const cv = gl.domElement;
@@ -183,7 +212,8 @@ function captureFramePNG(
     img.data.set(buf.subarray((h - 1 - y) * w * 4, (h - 1 - y) * w * 4 + w * 4), y * w * 4);
   }
   g2.putImageData(img, 0, 0);
-  return new Promise((resolve) => c2.toBlob(resolve, "image/png"));
+  const dataUrl = c2.toDataURL("image/png");
+  return new Promise((resolve) => c2.toBlob((blob) => resolve({ blob, dataUrl }), "image/png"));
 }
 
 /** 近白远黑的线性深度材质（MiDaS 习惯；VACE/ControlNet 深度输入） */
@@ -237,6 +267,53 @@ function applyStyle(scene: THREE.Scene, style: RenderStyle, env: SceneEnvelope):
 }
 
 const STYLE_SUFFIX: Record<RenderStyle, string> = { beauty: "", clay: "_clay", depth: "_depth" };
+
+// ─── 逐镜成片（M4-A）────────────────────────────────────────
+// 复用「AI 出图设置」的后端/工作流体系（本地 ComfyUI / 自建 / RunningHub），
+// 每镜：实景首帧为输入图 + 本镜提示词 → runRender（上传/提交/轮询/取产出）。
+// 串行执行（别挤爆用户 GPU）；菜单关了也继续跑（状态在 store）。
+const genCancelFlag = { current: false };
+
+async function runStoryboardGen() {
+  const st0 = useCineStore.getState();
+  if (st0.genRunning) return;
+  const cfg = getAiRenderConfig();
+  const wf = cfg.workflows.find((w) => w.id === st0.genWorkflowId);
+  if (!wf || !st0.shots.length) return;
+  genCancelFlag.current = false;
+  st0._setGenRunning(true);
+  for (const shot of st0.shots) {
+    if (genCancelFlag.current) break;
+    const st = useCineStore.getState();
+    const preset = getCinePreset(shot.presetId);
+    const image = st.takes[shot.id];
+    if (wf.needsImage && !image) {
+      st._setGen(shot.id, { phase: "error", msg: "缺首帧——先「拍摄全部」（含实景风格）留住首帧" });
+      continue;
+    }
+    // 提示词：用户写了用用户的；空则给一句带运镜语义的兜底
+    const prompt = shot.prompt.trim()
+      || `cinematic ${preset?.nameEn ?? "camera"} shot of a modern villa, photorealistic, high quality`;
+    st._setGen(shot.id, { phase: "submitting", msg: undefined, outputs: undefined });
+    const res = await runRender(
+      { workflow: wf, prompt, image },
+      {
+        onPhase: (p) => useCineStore.getState()._setGen(shot.id, { phase: p }),
+        cancelRef: genCancelFlag,
+        timeoutMs: 20 * 60_000, // 视频工作流慢，放宽到 20 分钟
+      },
+    );
+    if (res === null) { useCineStore.getState()._setGen(shot.id, { phase: "idle", msg: "已取消" }); break; }
+    if ("error" in res) useCineStore.getState()._setGen(shot.id, { phase: "error", msg: res.error });
+    else useCineStore.getState()._setGen(shot.id, { phase: "done", outputs: res.images });
+  }
+  useCineStore.getState()._setGenRunning(false);
+}
+
+const GEN_PHASE_ZH: Record<string, string> = {
+  uploading: "上传首帧…", submitting: "提交任务…", rendering: "生成中…",
+  done: "完成", error: "失败", idle: "—",
+};
 
 /** Canvas 内组件：镜头×风格队列驱动相机 + 录制 + 产物下载。 */
 export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
@@ -367,7 +444,11 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
     const run = async () => {
       applySample(0);
       const first = await captureFramePNG(gl, scene, camera);
-      if (first && !cancelled) downloadBlob(first, files.first);
+      if (first.blob && !cancelled) downloadBlob(first.blob, files.first);
+      // 实景首帧留在内存：给「逐镜成片」当输入图（needsImage 工作流）
+      if (item.style === "beauty" && !cancelled) {
+        useCineStore.getState()._setTake(item.shot.id, first.dataUrl);
+      }
       if (cancelled) return;
       recorder.start();
 
@@ -382,7 +463,7 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
           rafId = requestAnimationFrame(tick);
         } else {
           const last = await captureFramePNG(gl, scene, camera);
-          if (last && !cancelled) downloadBlob(last, files.last);
+          if (last.blob && !cancelled) downloadBlob(last.blob, files.last);
           if (recorder.state !== "inactive") recorder.stop();
           if (cancelled) return;
           if (isLast) finishAll();
@@ -507,6 +588,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
     actors, addActorMode, pendingFrom, beginAddActor, cancelAddActor, removeActor,
     queue, queueIdx, progress, menuOpen,
     startQuick, startStoryboard, cancel, setMenuOpen,
+    genWorkflowId, setGenWorkflowId, genRunning, genState,
   } = useCineStore();
   const en = locale === "en";
 
@@ -679,6 +761,82 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
               ? `Shoot all (${shots.length}×${styles.length})`
               : `拍摄全部（${shots.length} 镜 × ${styles.length} 风格）`}
           </button>
+
+          {/* 逐镜成片（M4-A：走「AI 出图设置」的后端/工作流，本地 ComfyUI / RunningHub 通吃） */}
+          <div className="px-1 pt-2 text-[10px] tracking-widest text-white/40 border-t border-white/10 mt-1">
+            {en ? "GENERATE (MY COMFYUI)" : "逐镜成片（我的 ComfyUI）"}
+          </div>
+          {(() => {
+            const cfg = getAiRenderConfig();
+            const wfs = cfg.workflows;
+            if (!wfs.length) {
+              return (
+                <div className="px-2 py-1.5 text-white/45 leading-relaxed">
+                  {en
+                    ? "No workflows yet — add backends & workflows in AI Assistant → Render Settings (local ComfyUI supported), then pick one here."
+                    : "还没有工作流——先到「AI 助手 → 出图设置」配置后端（支持本地 ComfyUI）并导入/添加工作流，再回这里选用。"}
+                </div>
+              );
+            }
+            return (
+              <>
+                <select
+                  value={genWorkflowId}
+                  onChange={(e) => setGenWorkflowId(e.target.value)}
+                  className="mx-1 bg-white/10 rounded-lg px-2 py-1.5 outline-none"
+                  style={{ colorScheme: "dark" }}
+                >
+                  <option value="">{en ? "Choose a workflow…" : "选择工作流…"}</option>
+                  {wfs.map((w: RenderWorkflow) => (
+                    <option key={w.id} value={w.id}>
+                      {localizeWorkflowName(w, en ? "en" : "zh")}{w.needsImage ? "" : en ? " (no image)" : "（不吃图）"}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => (genRunning ? (genCancelFlag.current = true) : void runStoryboardGen())}
+                  disabled={!genRunning && (!shots.length || !genWorkflowId)}
+                  className="px-3 py-2 rounded-lg text-center font-semibold disabled:opacity-30"
+                  style={{ background: genRunning ? "rgba(239,68,68,0.8)" : "rgba(45,212,191,0.28)", border: "1px solid rgba(45,212,191,0.5)" }}
+                >
+                  {genRunning
+                    ? (en ? "⏹ Stop" : "⏹ 停止")
+                    : `🎞 ${en ? `Generate ${shots.length} shots` : `逐镜生成（${shots.length} 镜）`}`}
+                </button>
+                {shots.map((s, i) => {
+                  const g = genState[s.id];
+                  if (!g) return null;
+                  const p = getCinePreset(s.presetId);
+                  return (
+                    <div key={s.id} className="px-2 py-1 rounded-lg bg-white/5 flex flex-col gap-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white/40 tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+                        <span className="flex-1 truncate">{en ? p?.nameEn : p?.nameZh}</span>
+                        <span className={g.phase === "error" ? "text-red-400" : g.phase === "done" ? "text-teal-300" : "text-white/60"}>
+                          {en ? g.phase : (GEN_PHASE_ZH[g.phase] ?? g.phase)}
+                        </span>
+                      </div>
+                      {g.msg && <div className="text-[10px] text-red-300/80 leading-snug">{g.msg}</div>}
+                      {!!g.outputs?.length && (
+                        <div className="flex gap-2 flex-wrap">
+                          {g.outputs.map((u, j) => (
+                            <a key={j} href={u} target="_blank" rel="noreferrer" className="text-teal-300 underline">
+                              {en ? "Output" : "产出"}{g.outputs!.length > 1 ? ` ${j + 1}` : ""} ↗
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                <div className="px-2 text-[10px] leading-relaxed text-white/40">
+                  {en
+                    ? "Uses your existing render backends (local ComfyUI / RunningHub). Shoot first (beauty style) to capture first frames; each shot = first frame + its prompt."
+                    : "走「AI 出图设置」里的后端（本地 ComfyUI / RunningHub）。先「拍摄全部」（含实景）留住首帧；每镜 = 首帧 + 本镜提示词。"}
+                </div>
+              </>
+            );
+          })()}
           <div className="px-2 pt-1 pb-0.5 text-[10px] leading-relaxed text-white/40">
             {en
               ? "Each shot × style exports video + first/last frames; storyboard.json bundles metadata — the control pack for AI video models"
