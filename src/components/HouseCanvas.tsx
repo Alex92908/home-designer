@@ -60,7 +60,7 @@ function AdaptiveDpr({ shadowSizeRef }: { shadowSizeRef?: React.MutableRefObject
   );
 }
 import { useDesignerStore } from "@/lib/store";
-import { canvasDpr } from "@/lib/device";
+import { canvasDpr, isMobileDevice, shrinkSceneTexturesForMobile } from "@/lib/device";
 import { useLocale } from "@/lib/i18n";
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 
@@ -3528,6 +3528,7 @@ function SlatFence({ W, D, insetX, insetZ }: { W: number; D: number; insetX: num
 function GlbVillaMesh({ W, D }: { W: number; D: number }) {
   const { scene } = useGLTF("/models/villa_pbr.glb");
   const cloned = useMemo(() => {
+    shrinkSceneTexturesForMobile(scene);
     const c = scene.clone(true);
     // Compute bounding box and auto-scale + centre
     const box = new THREE.Box3().setFromObject(c);
@@ -6556,7 +6557,7 @@ export default function HouseCanvas() {
            BrightnessContrast: slight contrast lift for that "rendered" punch.
            SMAA: temporal anti-aliasing for clean edges. */}
         {/* Skip heavy post-processing when inside — SSAO with empty depth buffer causes white washout */}
-        {!insideBuilding && (
+        {!insideBuilding && !isMobileDevice() && (
           <EffectComposer multisampling={0} enableNormalPass>
             <SSAO
               blendFunction={BlendFunction.MULTIPLY}

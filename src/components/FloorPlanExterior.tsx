@@ -19,6 +19,7 @@
  */
 
 import React, { useMemo, useCallback, useEffect, useState, useRef, Suspense } from "react";
+import { shrinkSceneTexturesForMobile } from "@/lib/device";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Html, useGLTF, Clone, Instances, Instance, Text } from "@react-three/drei";
@@ -1843,6 +1844,7 @@ function GltfPlant({
 }) {
   const { scene } = useGLTF(path);
   const { yOff, s } = useMemo(() => {
+    shrinkSceneTexturesForMobile(scene);
     let cached = _gltfBboxCache.get(path);
     if (!cached) {
       const box = new THREE.Box3().setFromObject(scene);

@@ -20,6 +20,7 @@
  */
 
 import { useMemo, Suspense } from "react";
+import { shrinkSceneTexturesForMobile } from "@/lib/device";
 import * as THREE from "three";
 import { useGLTF } from "@react-three/drei";
 import type { YardPrefab, PrefabKind } from "@/lib/types";
@@ -32,6 +33,7 @@ import { GlbPrefabMesh } from "./GlbPrefabMesh";
 function GlbStructure({ src, sizeM, sizeW, sizeD, alignTop }: { src: string; sizeM?: number; sizeW?: number; sizeD?: number; alignTop?: boolean }) {
   const { scene } = useGLTF(src);
   const obj = useMemo(() => {
+    shrinkSceneTexturesForMobile(scene);
     const c = scene.clone(true);
     const box = new THREE.Box3().setFromObject(c);
     const size = new THREE.Vector3(); box.getSize(size);
@@ -60,6 +62,7 @@ function GlbStructure({ src, sizeM, sizeW, sizeD, alignTop }: { src: string; siz
 function GlbFurniture({ src, targetH, rotY = 0 }: { src: string; targetH: number; rotY?: number }) {
   const { scene } = useGLTF(src);
   const obj = useMemo(() => {
+    shrinkSceneTexturesForMobile(scene);
     const c = scene.clone(true);
     const box = new THREE.Box3().setFromObject(c);
     const size = new THREE.Vector3(); box.getSize(size);
