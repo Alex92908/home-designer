@@ -1,5 +1,8 @@
 import type { MetadataRoute } from "next";
 
+// output: export（静态导出）要求元数据路由显式声明静态，否则 build 失败。
+export const dynamic = "force-static";
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://zhuyahome.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {

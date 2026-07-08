@@ -10,11 +10,12 @@
  * 关键：查看样板会改动全局 store。为不破坏用户自己的设计，进入前备份 store
  * 相关字段 + localStorage，返回/卸载/关页时还原。
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useDesignerStore } from "@/lib/store";
 import { useLocale } from "@/lib/i18n";
 import { SHOWCASE_TEMPLATES } from "@/lib/showcaseTemplates";
+import { isMobileDevice } from "@/lib/device";
 
 const PERSIST_KEY = "home-designer-v2";
 
@@ -39,6 +40,11 @@ export default function ShowcaseViewer({
 }) {
   const locale = useLocale();
   const en = locale === "en";
+  // 移动端不挂载 live HouseCanvas —— 整栋 + 院子几十个 GLB 的重型 WebGL 场景
+  // 会把内存吃紧的 iPhone 渲染进程撑爆（用户：进样板间外观崩溃）。改为直接
+  // 展示预渲染外观图（画廊卡片同款），零 WebGL = 零崩溃。想要实时 3D 走
+  // 「在设计器中打开」（设计器在移动端落地轻量 2D，见 page.tsx）。
+  const [isMobile] = useState(() => isMobileDevice());
   const t = SHOWCASE_TEMPLATES.find((x) => x.id === templateId);
 
   // 备份用户当前 store（进入查看时拍一次）。
@@ -123,13 +129,28 @@ export default function ShowcaseViewer({
       : "在设计器中打开此方案？这会替换你当前的设计。";
     if (!window.confirm(msg)) return;
     backup.current = null; // 不还原 → 模板成为用户的新工作设计
-    useDesignerStore.setState({ viewMode: "3d" as never, activeFloor: 0 });
+    // 移动端进设计器落地轻量 2D（page.tsx 也会兜底降级），桌面进 3D。
+    useDesignerStore.setState({ viewMode: (isMobile ? "2d" : "3d") as never, activeFloor: 0 });
     window.location.href = "/";
   };
 
   return (
     <div className="relative h-screen w-screen bg-gray-900 overflow-hidden">
-      <HouseCanvas />
+      {isMobile ? (
+        // 移动端：预渲染外观图，零 WebGL 零崩溃。
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          {t?.image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={t.image} alt={t ? (en ? t.nameEn : t.nameZh) : ""} className="w-full h-full object-contain" />
+          )}
+          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-[11px] text-white/80 whitespace-nowrap"
+               style={{ background: "rgba(20,22,32,0.7)", border: "1px solid rgba(255,255,255,0.14)" }}>
+            {en ? "Pre-rendered preview · open on desktop for live 3D" : "手机端为预渲染外观图 · 实时 3D 请用电脑打开"}
+          </div>
+        </div>
+      ) : (
+        <HouseCanvas />
+      )}
       <button
         onClick={onBack}
         className="absolute top-4 left-4 z-50 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-lg"
