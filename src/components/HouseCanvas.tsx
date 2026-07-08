@@ -109,6 +109,7 @@ import { PrefabMesh } from "./PrefabRenderer";
 import { ZoneMesh } from "./ZoneRenderer";
 import FloorPlanBuilding from "./FloorPlanExterior";
 import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
+import { CinematicPanel, CameraPathPlayer, ActorsLayer } from "./CinematicDirector";
 
 // ─── Constants ─────────────────────────────────────────────
 const FLOOR_H = 2.8;
@@ -6190,6 +6191,9 @@ export default function HouseCanvas() {
       </div>
       )}
 
+      {/* 🎬 一键出短片（studio-mvp）：机位预设 → 录短片 + 首尾帧，喂 AI 视频模型 */}
+      {!walkthrough && <CinematicPanel locale={locale} />}
+
       {/* 加载幕布：Canvas 挂载即显示，首帧渲染完成后淡出（盖住场景构建/
           Draco 解码/shader 编译的白屏窗口，dynamic loading 和 drei Loader
           都盖不住这一段）。 */}
@@ -6609,6 +6613,10 @@ export default function HouseCanvas() {
         <SceneDebugBridge enabled={exterior.debugExposeScene ?? false} />
         <CompassYawTracker onChange={setCompassDeg} />
         <FirstFrameNotifier onReady={() => setSceneReady(true)} />
+        {/* 🎬 机位路径播放器（录制时接管相机，详见 CinematicDirector） */}
+        <CameraPathPlayer env={{ W, D, floors }} />
+        {/* 🚶 演员走位层（占位方块人 + 地面点选路径 + 录制时行走） */}
+        <ActorsLayer />
       </Canvas>
       {/* 整体外观首次加载大量院子/导入 GLB 时的全局进度条（drei Loader 监听
           所有 useGLTF/useTexture 的 useProgress）。资产缓存后二次访问几乎不出现。 */}
