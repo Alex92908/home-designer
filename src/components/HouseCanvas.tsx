@@ -6011,10 +6011,11 @@ export default function HouseCanvas() {
            which hid the essential 退出漫游 / 墙体透视 / 实墙 controls when a
            walkthrough was entered via the room list). The enter button is
            harmless in the exploded 全局3D view and gives a one-click way in. */}
-      {/* 移动端隐藏：室内漫游会加载整套室内家具 GLB，不适合轻量移动视图，
-          且按钮挤在顶部标题附近显乱。 */}
-      {!isMobileDevice() && (
-        <div className="absolute top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
+      {/* 漫游在移动端也可用：家具走占位盒（见 FloorPlanExterior 的
+          !isMobileDevice 门控），漫游内也是零 GLB，不会崩。移动端把按钮下移到
+          标题卡之下(top-28)避免和左上返回键/标题重叠。 */}
+      {true && (
+        <div className="absolute top-28 sm:top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
           <button
             onClick={() => {
               if (walkthrough) { exitWalkthrough(); }
