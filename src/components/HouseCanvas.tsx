@@ -3570,6 +3570,15 @@ function GlbVillaMesh({ W, D }: { W: number; D: number }) {
 }
 
 function GlbVillaBuilding({ W, D }: { W: number; D: number }) {
+  // 移动端跳过 villa GLB —— 用素色程序化体块占位，零 GLB 显存。
+  if (mobileLiteScene()) {
+    return (
+      <mesh position={[0, 3, 0]}>
+        <boxGeometry args={[W * 1.5, 6, D]} />
+        <meshStandardMaterial color="#EDEAE3" roughness={0.85} />
+      </mesh>
+    );
+  }
   return (
     <Suspense fallback={
       // While GLB loads, show a simple placeholder so the scene isn't blank
@@ -6543,8 +6552,9 @@ export default function HouseCanvas() {
         {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
         {/* Yard items + paths — always rendered. Walkthrough now lets the
             user step out the front door, so the yard must be visible. */}
-        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}
-        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPathItems3D />}
+        {/* 移动端轻量外观：跳过院子 GLB（树/车/泳池/遮阳伞等几十个模型是显存大头）。 */}
+        {!mobileLiteScene() && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}
+        {!mobileLiteScene() && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPathItems3D />}
         {/* VillaYard 自动院（池 + 露台 + 躺椅）已移除 ——
             尺寸全部锚定建筑 W/D，用户不能调整也不能换 GLB。
             院子家具走 YardPlan（用户自由摆放）。 */}

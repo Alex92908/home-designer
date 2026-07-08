@@ -19,7 +19,7 @@
  */
 
 import React, { useMemo, useCallback, useEffect, useState, useRef, Suspense } from "react";
-import { shrinkSceneTexturesForMobile } from "@/lib/device";
+import { shrinkSceneTexturesForMobile, isMobileDevice } from "@/lib/device";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Html, useGLTF, Clone, Instances, Instance, Text } from "@react-three/drei";
@@ -1999,7 +1999,8 @@ function RooftopDecorations({
         const items = fp.rooms?.[rt]?.placedItems ?? [];
         return (
           <group key={rt} position={[cx, y, cz]}>
-            {items.map((p) => (
+            {/* 移动端跳过天台家具 GLB（轻量外观模式）。 */}
+            {!isMobileDevice() && items.map((p) => (
               <Suspense key={p.instanceId} fallback={null}>
                 <PlacedItemMesh placed={p} def={ROOM_DEFS[rt]} roomW={rWm} roomD={rDm} room={rt} />
               </Suspense>
@@ -8003,7 +8004,7 @@ export default function FloorPlanBuilding({
                       </mesh>
                     );
                   })();
-                  if (needsPlacedMesh) {
+                  if (needsPlacedMesh && !isMobileDevice()) {
                     // 地毯专属抬升：地毯是贴地薄片(1.5cm)，PlacedItemMesh 把它放在
                     // group 的 yBase 上 → 整片沉在真实楼板(yBase+0.025)之下被盖住。
                     // 只把「地毯」抬到楼板面之上(0.03)，配合 Rug 材质的 polygonOffset

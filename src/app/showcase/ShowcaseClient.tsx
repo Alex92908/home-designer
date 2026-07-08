@@ -39,12 +39,10 @@ export default function ShowcaseClient() {
     if (warmed.current) return;
     warmed.current = true;
     import("./ShowcaseViewer").catch(() => {});
-    // 移动端查看器只展示预渲染静态图，永不挂载 HouseCanvas —— 别预热那几 MB
-    // 的 three.js 大块和 villa GLB（白白吃流量/内存）。仅桌面预热。
-    if (!isMobileDevice()) {
-      import("@/components/HouseCanvas").catch(() => {});
-      fetch("/models/villa_pbr.glb").catch(() => {});
-    }
+    // 查看器里 HouseCanvas 是另一个 next/dynamic，预热这块 three.js 代码。
+    import("@/components/HouseCanvas").catch(() => {});
+    // villa GLB 只有桌面完整模式用；移动端轻量外观跳过所有 GLB，不预取。
+    if (!isMobileDevice()) fetch("/models/villa_pbr.glb").catch(() => {});
   };
   // 落地后空闲时也预热一次（不必等悬停）：首屏仍轻，进查看器却已就绪。
   useEffect(() => {

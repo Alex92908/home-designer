@@ -136,20 +136,16 @@ export default function ShowcaseViewer({
 
   return (
     <div className="relative h-screen w-screen bg-gray-900 overflow-hidden">
-      {isMobile ? (
-        // 移动端：预渲染外观图，零 WebGL 零崩溃。
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          {t?.image && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={t.image} alt={t ? (en ? t.nameEn : t.nameZh) : ""} className="w-full h-full object-contain" />
-          )}
-          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-[11px] text-white/80 whitespace-nowrap"
-               style={{ background: "rgba(20,22,32,0.7)", border: "1px solid rgba(255,255,255,0.14)" }}>
-            {en ? "Pre-rendered preview · open on desktop for live 3D" : "手机端为预渲染外观图 · 实时 3D 请用电脑打开"}
-          </div>
+      {/* 移动端也渲染实时 3D，但走「轻量外观」模式：HouseCanvas 在移动端
+          跳过所有 GLB（家具/院子树车泳池/villa 模型），只画程序化建筑体块 +
+          门窗玻璃 + 透过玻璃可见的程序化房间/家具占位盒，可自由旋转，显存
+          极低。桌面照常渲染完整 GLB 场景。 */}
+      <HouseCanvas />
+      {isMobile && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-[11px] text-white/80 whitespace-nowrap pointer-events-none"
+             style={{ background: "rgba(20,22,32,0.7)", border: "1px solid rgba(255,255,255,0.14)" }}>
+          {en ? "Lite exterior (no furniture/plants) · open on desktop for full detail" : "轻量外观（不含家具/植物）· 完整效果请用电脑打开"}
         </div>
-      ) : (
-        <HouseCanvas />
       )}
       <button
         onClick={onBack}
