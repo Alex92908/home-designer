@@ -2141,9 +2141,12 @@ function YardPlanItems3D() {
 
   // Render order matters for visual layering:
   //   zones (paving) → singletons → prefabs (often the largest mass)
-  const zones    = items.filter(isYardZone);
-  const prefabs  = items.filter(isYardPrefab);
-  const singles  = items.filter(it => !isYardZone(it) && !isYardPrefab(it));
+  // 移动端轻量外观：只保留泳池这一个招牌 GLB，跳过铺装/树/车/车棚等其余
+  // 院子 GLB（显存大头）。泳池贴图已在 GlbStructure 里降到 512。
+  const mLite    = mobileLiteScene();
+  const zones    = mLite ? [] : items.filter(isYardZone);
+  const prefabs  = items.filter(isYardPrefab).filter(p => !mLite || p.prefabKind === "pool");
+  const singles  = mLite ? [] : items.filter(it => !isYardZone(it) && !isYardPrefab(it));
 
   return (
     <group>
@@ -6552,8 +6555,9 @@ export default function HouseCanvas() {
         {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
         {/* Yard items + paths — always rendered. Walkthrough now lets the
             user step out the front door, so the yard must be visible. */}
-        {/* 移动端轻量外观：跳过院子 GLB（树/车/泳池/遮阳伞等几十个模型是显存大头）。 */}
-        {!mobileLiteScene() && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}
+        {/* 院子：移动端只渲染泳池一个 GLB（YardPlanItems3D 内部过滤），其余
+            树/车/车棚/铺装跳过；路径也跳过。桌面渲染全部。 */}
+        {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}
         {!mobileLiteScene() && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPathItems3D />}
         {/* VillaYard 自动院（池 + 露台 + 躺椅）已移除 ——
             尺寸全部锚定建筑 W/D，用户不能调整也不能换 GLB。
