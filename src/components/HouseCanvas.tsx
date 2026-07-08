@@ -6189,7 +6189,9 @@ export default function HouseCanvas() {
            Hidden during walkthrough: the sun-angle / shadow control only
            affects the exterior daylight read, which is meaningless while
            walking inside. */}
-      {!walkthrough && (
+      {/* 移动端隐藏时间轴/阴影条：手机上很少调时段，且它占着底部中央会和
+          样板间「在设计器中打开」按钮重叠（用户：下面按钮也重叠了）。 */}
+      {!walkthrough && !isMobileDevice() && (
       <div
         className="absolute bottom-4 left-1/2 z-10 flex items-center gap-3 select-none"
         style={{
