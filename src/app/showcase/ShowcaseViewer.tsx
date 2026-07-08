@@ -135,42 +135,56 @@ export default function ShowcaseViewer({
   };
 
   return (
-    <div className="relative h-screen w-screen bg-gray-900 overflow-hidden">
+    // 用 100dvh 而非 h-screen：dvh 是「可见视口」，随 Safari 上下工具栏
+    // 收缩，底部控件不会被浏览器工具栏挡住（用户：挡住东西了）。
+    <div className="relative w-screen bg-gray-900 overflow-hidden" style={{ height: "100dvh" }}>
       {/* 移动端也渲染实时 3D，但走「轻量外观」模式：HouseCanvas 在移动端
-          跳过所有 GLB（家具/院子树车泳池/villa 模型），只画程序化建筑体块 +
-          门窗玻璃 + 透过玻璃可见的程序化房间/家具占位盒，可自由旋转，显存
-          极低。桌面照常渲染完整 GLB 场景。 */}
+          跳过绝大多数 GLB（家具/树/车/villa），只画程序化建筑 + 门窗 +
+          透过玻璃的占位盒 + 泳池 GLB，可自由旋转，显存极低。 */}
       <HouseCanvas />
-      {isMobile && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-[11px] text-white/80 whitespace-nowrap pointer-events-none"
-             style={{ background: "rgba(20,22,32,0.7)", border: "1px solid rgba(255,255,255,0.14)" }}>
-          {en ? "Lite exterior (no furniture/plants) · open on desktop for full detail" : "轻量外观（不含家具/植物）· 完整效果请用电脑打开"}
-        </div>
-      )}
+
+      {/* 返回键（左上）*/}
       <button
         onClick={onBack}
-        className="absolute top-4 left-4 z-50 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-lg"
+        className="absolute top-4 left-4 z-50 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold text-white shadow-lg"
         style={{ background: "rgba(20,22,32,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}
       >
-        ← {en ? "Back to gallery" : "返回样板间"}
+        ← {en ? "Back" : "返回"}
       </button>
+
+      {/* 标题卡：移动端另起一行(top-16)、整行宽度，避免和返回键重叠；
+          桌面回到右上角。 */}
       {t && (
         <div
-          className="absolute top-4 right-4 z-50 px-4 py-2 rounded-xl text-sm text-white shadow-lg"
+          className="absolute z-40 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-white shadow-lg
+                     top-[4.25rem] left-4 right-4 sm:top-4 sm:left-auto sm:right-4 sm:max-w-xs"
           style={{ background: "rgba(20,22,32,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}
         >
-          <div className="font-semibold">{en ? t.nameEn : t.nameZh}</div>
+          <div className="font-semibold text-sm">{en ? t.nameEn : t.nameZh}</div>
           <div className="text-xs text-gray-300">{en ? t.descEn : t.descZh}</div>
         </div>
       )}
-      {/* 在设计器中打开此方案（fork 成自己的设计去编辑） */}
-      <button
-        onClick={openInDesigner}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-xl"
-        style={{ background: "#007AFF" }}
+
+      {/* 底部控件：提示 + 打开按钮竖向堆叠，带安全区内边距，避开浏览器
+          工具栏；容器不吃指针事件(不挡旋转)，按钮单独可点。 */}
+      <div
+        className="absolute inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 px-4 pointer-events-none"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
       >
-        {en ? "Open this design in the editor →" : "在设计器中打开此方案 →"}
-      </button>
+        {isMobile && (
+          <div className="px-3 py-1.5 rounded-full text-[11px] text-white/80 text-center max-w-full"
+               style={{ background: "rgba(20,22,32,0.72)", border: "1px solid rgba(255,255,255,0.14)" }}>
+            {en ? "Lite view · full detail on desktop" : "轻量外观 · 完整效果请用电脑打开"}
+          </div>
+        )}
+        <button
+          onClick={openInDesigner}
+          className="pointer-events-auto px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-xl"
+          style={{ background: "#007AFF" }}
+        >
+          {en ? "Open in the editor →" : "在设计器中打开此方案 →"}
+        </button>
+      </div>
     </div>
   );
 }
