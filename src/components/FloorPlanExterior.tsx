@@ -1958,6 +1958,7 @@ function RooftopDecorations({
 }) {
   const storeFloorPlans = useDesignerStore(s => s.floorPlans);
   const floorPlans = floorPlansOverride ?? storeFloorPlans;
+  const glbRoom = useDesignerStore(s => s.mobileGlbRoom);
   const fp = floorPlans[roofFloorIdx];
   if (!fp) return null;
 
@@ -2000,7 +2001,7 @@ function RooftopDecorations({
         return (
           <group key={rt} position={[cx, y, cz]}>
             {/* 移动端默认跳过天台家具 GLB；开完整细节后加载。 */}
-            {mobileFurnitureGlbAllowed(rt) && items.map((p) => (
+            {mobileFurnitureGlbAllowed(rt, glbRoom) && items.map((p) => (
               <Suspense key={p.instanceId} fallback={null}>
                 <PlacedItemMesh placed={p} def={ROOM_DEFS[rt]} roomW={rWm} roomD={rDm} room={rt} />
               </Suspense>
@@ -2267,6 +2268,9 @@ export default function FloorPlanBuilding({
   const setViewMode    = useDesignerStore(s => s.setViewMode);
   const setActiveFloor = useDesignerStore(s => s.setActiveFloor);
   const sunHour        = useDesignerStore(s => s.sunHour);
+  // 移动端「逐房间家具 GLB」当前点亮的房型（响应式：切换即重渲家具层，
+  // 无需重挂 Canvas → 同一 WebGL context，不 churn context/不失败）。
+  const glbRoom        = useDesignerStore(s => s.mobileGlbRoom);
 
   // ── Walkthrough door/window open-close state ──────────────────────────
   // Map<key, open>. Key format: `door|${fi}|${room}|${di}` /
@@ -8004,7 +8008,7 @@ export default function FloorPlanBuilding({
                       </mesh>
                     );
                   })();
-                  if (needsPlacedMesh && mobileFurnitureGlbAllowed(room)) {
+                  if (needsPlacedMesh && mobileFurnitureGlbAllowed(room, glbRoom)) {
                     // 地毯专属抬升：地毯是贴地薄片(1.5cm)，PlacedItemMesh 把它放在
                     // group 的 yBase 上 → 整片沉在真实楼板(yBase+0.025)之下被盖住。
                     // 只把「地毯」抬到楼板面之上(0.03)，配合 Rug 材质的 polygonOffset

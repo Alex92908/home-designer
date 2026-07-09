@@ -15,8 +15,10 @@ import dynamic from "next/dynamic";
 import { useDesignerStore } from "@/lib/store";
 import { useLocale } from "@/lib/i18n";
 import { SHOWCASE_TEMPLATES } from "@/lib/showcaseTemplates";
-import { isMobileDevice, setMobileGlbRoom } from "@/lib/device";
+import { isMobileDevice } from "@/lib/device";
 import { ROOM_DEFS, type RoomType } from "@/lib/types";
+import { getFurnitureById } from "@/lib/furniture";
+import { useGLTF } from "@react-three/drei";
 
 const PERSIST_KEY = "home-designer-v2";
 
@@ -46,19 +48,46 @@ export default function ShowcaseViewer({
   // 展示预渲染外观图（画廊卡片同款），零 WebGL = 零崩溃。想要实时 3D 走
   // 「在设计器中打开」（设计器在移动端落地轻量 2D，见 page.tsx）。
   const [isMobile] = useState(() => isMobileDevice());
-  // 移动端「逐房间家具 GLB」：默认无（室内全占位盒，可靠打开）；点房间 chip
-  // 只加载那一间的完整家具 GLB，换 key 重挂 Canvas 释放上一间显存。院子 GLB
-  // 始终全渲染。崩了刷新退回列表，不锁死。
-  const [glbRoom, setGlbRoom] = useState<string | null>(null);
-  const [canvasKey, setCanvasKey] = useState(0);
-  const pickRoom = (room: string | null) => {
-    setMobileGlbRoom(room);
-    setGlbRoom(room);
-    setCanvasKey((k) => k + 1); // 重挂 Canvas：加载新一间、释放上一间 GPU 资源
+  // 移动端「逐房间家具 GLB」：当前点亮的房型存 store（响应式）。默认 null =
+  // 室内全占位盒（可靠打开）。点 chip 切房型 —— 不重挂 Canvas（同一 WebGL
+  // context，避免 iOS context 数量上限导致的「有概率加载失败」），而是响应式
+  // 重渲家具层，并在切走时显式 useGLTF.clear 上一间的模型（真正释放显存）。
+  const glbRoom = useDesignerStore((s) => s.mobileGlbRoom);
+  const setGlbRoomStore = useDesignerStore((s) => s.setMobileGlbRoom);
+  const customFurniture = useDesignerStore((s) => s.customFurniture);
+  const floorPlans = useDesignerStore((s) => s.floorPlans);
+
+  // 某房型的家具 GLB url 集合（跨楼层）——切走该房间时用于 useGLTF.clear。
+  const roomGlbUrls = (room: string): string[] => {
+    const urls = new Set<string>();
+    for (const fp of floorPlans) {
+      for (const p of fp.rooms?.[room as RoomType]?.placedItems ?? []) {
+        const f = getFurnitureById(p.furnitureId) ?? customFurniture.find((c) => c.id === p.furnitureId);
+        const u = f?.model3d?.url;
+        if (u) urls.add(u);
+      }
+    }
+    return [...urls];
   };
+  const pickRoom = (room: string | null) => setGlbRoomStore(room);
+  // 切走某房间后（re-render 提交、上一间家具层已卸载）再 dispose 它的 GLB：
+  // 只清「上一间独有、新一间不用」的 url，避免误伤新房间正在加载的共用模型。
+  const prevRoomRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevRoomRef.current;
+    prevRoomRef.current = glbRoom;
+    if (!prev || prev === glbRoom) return;
+    const keep = new Set(glbRoom ? roomGlbUrls(glbRoom) : []);
+    for (const u of roomGlbUrls(prev)) {
+      if (!keep.has(u)) {
+        try { (useGLTF as unknown as { clear: (u: string) => void }).clear(u); } catch { /* noop */ }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [glbRoom]);
+
   const t = SHOWCASE_TEMPLATES.find((x) => x.id === templateId);
   // 模板灌进 store 后，取「有家具的室内房型」列表做选择器（跨楼层去重）。
-  const floorPlans = useDesignerStore((s) => s.floorPlans);
   const furnishedRooms = Array.from(
     new Set(
       floorPlans.flatMap((fp) =>
@@ -122,6 +151,7 @@ export default function ShowcaseViewer({
       yardPlan: yardPlan as never,
       viewMode: "exterior" as never,
       activeFloor: 0,
+      mobileGlbRoom: null, // 进入模板：室内家具从「关」开始（可靠打开）
     });
 
     const onUnload = () => {
@@ -137,7 +167,7 @@ export default function ShowcaseViewer({
     window.addEventListener("beforeunload", onUnload);
     return () => {
       window.removeEventListener("beforeunload", onUnload);
-      setMobileGlbRoom(null); // 离开查看器时复位，避免泄漏到其他视图
+      useDesignerStore.getState().setMobileGlbRoom(null); // 离开查看器时复位
       restore();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -161,10 +191,10 @@ export default function ShowcaseViewer({
     // 用 100dvh 而非 h-screen：dvh 是「可见视口」，随 Safari 上下工具栏
     // 收缩，底部控件不会被浏览器工具栏挡住（用户：挡住东西了）。
     <div className="relative w-screen bg-gray-900 overflow-hidden" style={{ height: "100dvh" }}>
-      {/* 移动端默认「安全模式」：建筑 + 门窗 + 透窗占位盒 + 泳池 GLB（真机
-          可靠打开）。点底部「加载完整细节」切到全 GLB（换 key 重挂生效）。
-          桌面永远全量高精度。 */}
-      <HouseCanvas key={canvasKey} />
+      {/* 移动端默认：建筑 + 门窗 + 全院子 GLB + 室内占位盒（可靠打开）。
+          底部房间 chip 点亮某间的完整家具 GLB —— 同一 Canvas 响应式切换、
+          切走时 dispose 上一间，一次只亮一间。桌面永远全量高精度。 */}
+      <HouseCanvas />
 
       {/* 返回键（左上）*/}
       <button

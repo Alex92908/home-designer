@@ -620,6 +620,10 @@ interface DesignerStore {
   // 用户可一键显示或隐藏。持久化保存偏好。
   showCompass: boolean;
   toggleCompass: () => void;
+  // 移动端「逐房间家具 GLB」：当前点亮完整家具的房型（null=全占位盒）。
+  // 响应式驱动外观图家具渲染；不持久化（每次进查看器从 null 开始）。
+  mobileGlbRoom: string | null;
+  setMobileGlbRoom: (room: string | null) => void;
   selectedInstanceId: string | null;
   selectedInstanceIds: string[];
   budget: number;
@@ -1238,6 +1242,8 @@ export const useDesignerStore = create<DesignerStore>()(
 
       setViewMode: (mode) => set({ viewMode: mode }),
       toggleCompass: () => set(s => ({ showCompass: !s.showCompass })),
+      mobileGlbRoom: null,
+      setMobileGlbRoom: (room) => set({ mobileGlbRoom: room }),
 
       setMaterial: (material) => {
         const s = get();
