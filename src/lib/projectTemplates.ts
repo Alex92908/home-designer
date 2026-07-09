@@ -10,8 +10,18 @@
  * Applied via store.applyProjectTemplate(id).
  */
 
-import type { ExteriorSettings, YardPlan } from "./types";
+import type { ExteriorSettings, YardPlan, RoomType } from "./types";
 import type { FloorplanLayout } from "./floorplanLayouts";
+
+/** furnitureOverrides 里的一件家具（room-local 中心坐标 cm；rotation 度） */
+export interface TemplatePlacedItem {
+  furnitureId: string;
+  x: number;
+  z: number;
+  rotation?: number;
+  scaleW?: number;
+  scaleD?: number;
+}
 
 export interface ProjectTemplate {
   id: string;
@@ -35,6 +45,12 @@ export interface ProjectTemplate {
    * Applied to every floor after layout is set up.
    */
   styleTemplateId: string;
+  /**
+   * 片场级显式摆放（可选）：风格模板铺完基础材质/家具后，逐房间**整体替换**
+   * placedItems——非住宅片场（咖啡馆/办公室…）的家具不是"住宅风格"能推出来
+   * 的，必须显式声明。数组每项对应一层楼；缺省/缺房间 = 保留风格模板的摆放。
+   */
+  furnitureOverrides?: Array<Partial<Record<RoomType, TemplatePlacedItem[]>>>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1533,6 +1549,277 @@ const CLEAR_GLASS_CURTAIN_HOME: ProjectTemplate = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 片场系列（云横店 studio-mvp）——非住宅拍摄场景。单层小体量、玻璃门面、
+// furnitureOverrides 显式摆放（住宅风格模板推不出咖啡馆/办公室的家具）。
+// 坐标：room-local 中心 cm，(0,0)=房间西北角，z 向南增。
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CAFE_SET: ProjectTemplate = {
+  id: "set-cafe",
+  name: "咖啡馆片场",
+  nameEn: "Café Set",
+  emoji: "☕",
+  description: "片场 · 单层 · 玻璃门面 · 吧台+四组卡座 · 拍对话/日常戏",
+  descriptionEn: "Film set · 1F · Glass storefront · Bar + 4 tables · Dialogue scenes",
+  areaSqm: 78,
+  palette: ["#F2EFE8", "#3A3A3A", "#8A6040"],
+  styleTemplateId: "modern-villa",
+
+  exterior: {
+    preset: "glass-curtain",
+    facadeSystem: "curtain-wall",
+    roofStyle: "flat",
+    floors: 1,
+    hasRooftop: false,
+    buildingType: "floor-plan-driven",
+    wallColor: "#F4F3EE",
+    wallBaseColor: "#F2EFE8",
+    glassColor: "#AEC4D2",
+    glassOpacity: 1,
+    windowFrameColor: "#15171B",
+    entranceFrameColor: "#15171B",
+    woodSoffit: true,
+    roofOverhang: 0.8,
+    parapetHeight: 0,
+    roofSlabColor: "#3A3A3A",
+    roofColor: "#3A3A3A",
+    stoneBaseEnabled: false,
+    showPerimeterFence: false,
+    yardPreset: "minimal",
+  },
+
+  floorLayouts: [
+    {
+      id: "cafe-f1",
+      name: "咖啡馆",
+      area: 78,
+      rooms: [
+        // 西侧吧台区（kitchen 语义=有操作台/设备的区域）
+        { room: "kitchen",  x: 0,   y: 0, width: 300, depth: 600 },
+        // 大堂（东侧主空间）
+        { room: "living",   x: 300, y: 0, width: 660, depth: 600 },
+        // 洗手间（东北角外挂）
+        { room: "bathroom", x: 960, y: 0, width: 240, depth: 220 },
+      ],
+    },
+  ],
+  yardPlan: { items: [], paths: [] },
+
+  furnitureOverrides: [
+    {
+      kitchen: [
+        // 吧台横在区中央偏南，朝向大堂
+        { furnitureId: "dining_table-bar-counter", x: 150, z: 330, rotation: 0 },
+        // 后场设备沿北墙
+        { furnitureId: "appliance-coffee-machine", x: 70,  z: 60 },
+        { furnitureId: "appliance-coffee",         x: 160, z: 55 },
+        { furnitureId: "fridge-single-white",      x: 255, z: 70 },
+        { furnitureId: "storage-shelving-2",       x: 60,  z: 160, rotation: 90 },
+        { furnitureId: "decor-coffee-cups",        x: 150, z: 250 },
+        { furnitureId: "lamp-pendant-ikea4",       x: 150, z: 330 },
+      ],
+      living: [
+        // 四组桌位（两圆两方）
+        { furnitureId: "dining-marble-round",  x: 170, z: 170 },
+        { furnitureId: "chair-nordic-oak",     x: 170, z: 80,  rotation: 180 },
+        { furnitureId: "chair-nordic-oak",     x: 170, z: 260, rotation: 0 },
+        { furnitureId: "dining-marble-round",  x: 170, z: 450 },
+        { furnitureId: "chair-nordic-oak",     x: 170, z: 360, rotation: 180 },
+        { furnitureId: "chair-nordic-oak",     x: 170, z: 540, rotation: 0 },
+        { furnitureId: "dining-black-metal",   x: 430, z: 130, rotation: 0 },
+        { furnitureId: "chair-industrial-black", x: 355, z: 130, rotation: 90 },
+        { furnitureId: "chair-industrial-black", x: 505, z: 130, rotation: 270 },
+        { furnitureId: "dining-black-metal",   x: 430, z: 470, rotation: 0 },
+        { furnitureId: "chair-industrial-black", x: 355, z: 470, rotation: 90 },
+        { furnitureId: "chair-industrial-black", x: 505, z: 470, rotation: 270 },
+        // 东墙软座角（沙发 + 茶几 + 地毯）
+        { furnitureId: "rug-nordic-geo",       x: 560, z: 300 },
+        { furnitureId: "sofa-nordic-blue",     x: 610, z: 300, rotation: 270 },
+        { furnitureId: "coffee-oak-round",     x: 480, z: 300 },
+        // 氛围陈设
+        { furnitureId: "bookshelf-with-books", x: 620, z: 60,  rotation: 0 },
+        { furnitureId: "plant-rubber-tree",    x: 40,  z: 60 },
+        { furnitureId: "plant-rubber-tree",    x: 620, z: 540 },
+        { furnitureId: "artwork-impression",   x: 330, z: 20,  rotation: 0 },
+        { furnitureId: "lamp-pendant-saturno", x: 170, z: 300 },
+        { furnitureId: "lamp-pendant-modern",  x: 430, z: 300 },
+      ],
+      // bathroom 留给风格模板默认卫浴
+    },
+  ],
+};
+
+const OFFICE_SET: ProjectTemplate = {
+  id: "set-office",
+  name: "办公室片场",
+  nameEn: "Office Set",
+  emoji: "💼",
+  description: "片场 · 单层 · 开放工位+会议室+茶水间 · 拍职场戏",
+  descriptionEn: "Film set · 1F · Open desks + meeting room + pantry · Workplace scenes",
+  areaSqm: 92,
+  palette: ["#F0F0EE", "#2A2A2A", "#3A5A8A"],
+  styleTemplateId: "modern-villa",
+
+  exterior: {
+    preset: "glass-curtain",
+    facadeSystem: "curtain-wall",
+    roofStyle: "flat",
+    floors: 1,
+    hasRooftop: false,
+    buildingType: "floor-plan-driven",
+    wallColor: "#F0F0EE",
+    glassColor: "#9FB6C8",
+    glassOpacity: 1,
+    windowFrameColor: "#15171B",
+    entranceFrameColor: "#15171B",
+    roofOverhang: 0.6,
+    parapetHeight: 0.4,
+    roofColor: "#2A2A2A",
+    stoneBaseEnabled: false,
+    showPerimeterFence: false,
+    yardPreset: "minimal",
+  },
+
+  floorLayouts: [
+    {
+      id: "office-f1",
+      name: "办公室",
+      area: 92,
+      rooms: [
+        { room: "living",   x: 0,   y: 0,   width: 700, depth: 600 }, // 开放办公区
+        { room: "dining",   x: 700, y: 0,   width: 400, depth: 380 }, // 会议室
+        { room: "kitchen",  x: 700, y: 380, width: 400, depth: 220 }, // 茶水间
+        { room: "bathroom", x: 0,   y: 600, width: 240, depth: 200 },
+      ],
+    },
+  ],
+  yardPlan: { items: [], paths: [] },
+
+  furnitureOverrides: [
+    {
+      living: [
+        // 2×2 工位阵（升降桌+办公椅+显示器，显示器靠台面吸附落桌面）
+        { furnitureId: "desk-standing",       x: 200, z: 150, rotation: 0 },
+        { furnitureId: "chair-simple-fabric", x: 200, z: 240, rotation: 0 },
+        { furnitureId: "elec-monitor",        x: 200, z: 140 },
+        { furnitureId: "desk-standing",       x: 500, z: 150, rotation: 0 },
+        { furnitureId: "chair-simple-fabric", x: 500, z: 240, rotation: 0 },
+        { furnitureId: "elec-monitor",        x: 500, z: 140 },
+        { furnitureId: "desk-standing",       x: 200, z: 420, rotation: 180 },
+        { furnitureId: "chair-simple-fabric", x: 200, z: 330, rotation: 180 },
+        { furnitureId: "elec-laptop",         x: 200, z: 430 },
+        { furnitureId: "desk-standing",       x: 500, z: 420, rotation: 180 },
+        { furnitureId: "chair-simple-fabric", x: 500, z: 330, rotation: 180 },
+        { furnitureId: "elec-monitor",        x: 500, z: 430 },
+        // 周边
+        { furnitureId: "bookshelf-wood-lp",   x: 60,  z: 60,  rotation: 90 },
+        { furnitureId: "storage-shelving",    x: 650, z: 60 },
+        { furnitureId: "elec-printer",        x: 650, z: 140 },
+        { furnitureId: "plant-rubber-tree",   x: 60,  z: 540 },
+        { furnitureId: "artwork-abstract",    x: 350, z: 20 },
+        { furnitureId: "lamp-pendant-modern", x: 350, z: 290 },
+      ],
+      dining: [
+        // 会议室：大圆桌 + 六椅 + 展示墙
+        { furnitureId: "dining_table-round-set", x: 200, z: 190 },
+        { furnitureId: "chair-modern-gray", x: 200, z: 70,  rotation: 180 },
+        { furnitureId: "chair-modern-gray", x: 200, z: 310, rotation: 0 },
+        { furnitureId: "chair-modern-gray", x: 90,  z: 130, rotation: 135 },
+        { furnitureId: "chair-modern-gray", x: 310, z: 130, rotation: 225 },
+        { furnitureId: "chair-modern-gray", x: 90,  z: 250, rotation: 45 },
+        { furnitureId: "chair-modern-gray", x: 310, z: 250, rotation: 315 },
+        { furnitureId: "artwork-abstract",  x: 200, z: 15 },
+        { furnitureId: "lamp-pendant-saturno", x: 200, z: 190 },
+      ],
+      kitchen: [
+        // 茶水间
+        { furnitureId: "fridge-single-white",      x: 60,  z: 70 },
+        { furnitureId: "appliance-coffee",         x: 160, z: 55 },
+        { furnitureId: "storage-shelving-2",       x: 340, z: 60 },
+        { furnitureId: "dining_table-bar",         x: 200, z: 150 },
+      ],
+    },
+  ],
+};
+
+const RESTAURANT_SET: ProjectTemplate = {
+  id: "set-restaurant",
+  name: "小餐馆片场",
+  nameEn: "Bistro Set",
+  emoji: "🍜",
+  description: "片场 · 单层 · 四桌堂食+后厨 · 拍聚餐/市井戏",
+  descriptionEn: "Film set · 1F · 4-table dining + kitchen · Dinner scenes",
+  areaSqm: 86,
+  palette: ["#EFE8DC", "#4A3A2A", "#B0503A"],
+  styleTemplateId: "modern-villa",
+
+  exterior: {
+    preset: "modern-minimal",
+    roofStyle: "flat",
+    floors: 1,
+    hasRooftop: false,
+    buildingType: "floor-plan-driven",
+    wallMaterial: "render",
+    wallColor: "#EFE8DC",
+    roofColor: "#4A3A2A",
+    accentColor: "#B0503A",
+    windowFrameColor: "#3A2A1A",
+    stoneBaseEnabled: false,
+    showPerimeterFence: false,
+    yardPreset: "minimal",
+  },
+
+  floorLayouts: [
+    {
+      id: "resto-f1",
+      name: "小餐馆",
+      area: 86,
+      rooms: [
+        { room: "living",   x: 0,   y: 0, width: 700, depth: 600 }, // 堂食区
+        { room: "kitchen",  x: 700, y: 0, width: 380, depth: 600 }, // 后厨
+        { room: "bathroom", x: 0,   y: 600, width: 220, depth: 200 },
+      ],
+    },
+  ],
+  yardPlan: { items: [], paths: [] },
+
+  furnitureOverrides: [
+    {
+      living: [
+        // 四桌堂食
+        { furnitureId: "dining-oak-rect",      x: 190, z: 170 },
+        { furnitureId: "chair-nordic-oak",     x: 190, z: 65,  rotation: 180 },
+        { furnitureId: "chair-nordic-oak",     x: 190, z: 275, rotation: 0 },
+        { furnitureId: "chair-nordic-oak",     x: 85,  z: 170, rotation: 90 },
+        { furnitureId: "chair-nordic-oak",     x: 295, z: 170, rotation: 270 },
+        { furnitureId: "dining-oak-rect",      x: 520, z: 170 },
+        { furnitureId: "chair-modern-gray",    x: 520, z: 65,  rotation: 180 },
+        { furnitureId: "chair-modern-gray",    x: 520, z: 275, rotation: 0 },
+        { furnitureId: "chair-modern-gray",    x: 415, z: 170, rotation: 90 },
+        { furnitureId: "chair-modern-gray",    x: 625, z: 170, rotation: 270 },
+        { furnitureId: "dining-black-metal",   x: 190, z: 470 },
+        { furnitureId: "chair-industrial-black", x: 115, z: 470, rotation: 90 },
+        { furnitureId: "chair-industrial-black", x: 265, z: 470, rotation: 270 },
+        { furnitureId: "dining-black-metal",   x: 520, z: 470 },
+        { furnitureId: "chair-industrial-black", x: 445, z: 470, rotation: 90 },
+        { furnitureId: "chair-industrial-black", x: 595, z: 470, rotation: 270 },
+        // 氛围
+        { furnitureId: "mural-great-wave",     x: 350, z: 20 },
+        { furnitureId: "plant-rubber-tree",    x: 55,  z: 545 },
+        { furnitureId: "lamp-pendant-ikea4",   x: 190, z: 300 },
+        { furnitureId: "lamp-pendant-ikea4",   x: 520, z: 300 },
+      ],
+      kitchen: [
+        // 后厨：中岛+设备（橱柜由风格模板铺）
+        { furnitureId: "kitchen_cabinet-island-pan", x: 190, z: 300, rotation: 90 },
+        { furnitureId: "fridge-french-door",         x: 80,  z: 80 },
+        { furnitureId: "kitchen_cabinet-island-sink",x: 320, z: 100, rotation: 270 },
+      ],
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   MODERN_CANTILEVER_GLASS_VILLA,  // ← 参考照片专属：宽体玻璃幕墙 + 胡桃木挑檐 + 前院泳池
   CLEAR_GLASS_CURTAIN_HOME,       // ← 第二个：用户当前设计（通透玻璃幕墙 + 真实户型）
@@ -1543,4 +1830,8 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   MODERN_POOL_VILLA,
   JAPANESE_ZEN_VILLA,
   MEDITERRANEAN_VILLA,
+  // ── 片场系列（云横店）──
+  CAFE_SET,
+  OFFICE_SET,
+  RESTAURANT_SET,
 ];

@@ -2080,6 +2080,35 @@ export const useDesignerStore = create<DesignerStore>()(
           const bestRoom = preferredRooms.find(r => floor0Rooms.includes(r)) ?? floor0Rooms[0] ?? "living" as RoomType;
           set({ activeFloor: 0, activeRoom: bestRoom });
         }
+
+        // 4. 片场级显式摆放（可选）：风格模板铺完后，逐房间整体替换 placedItems。
+        //    非住宅片场（咖啡馆/办公室…）的家具不是住宅风格能推出来的。
+        //    坐标即 store 内部格式（room-local 中心 cm），直接落。
+        if (tpl.furnitureOverrides) {
+          const plans = get().floorPlans.map((fp, fi) => {
+            const overrides = tpl.furnitureOverrides![fi];
+            if (!overrides) return fp;
+            const rooms = { ...fp.rooms };
+            for (const [roomId, items] of Object.entries(overrides)) {
+              const rid = roomId as RoomType;
+              if (!rooms[rid] || !items) continue;
+              rooms[rid] = {
+                ...rooms[rid],
+                placedItems: items.map((it, i) => ({
+                  instanceId: `tpl_${tpl.id}_${rid}_${i}_${it.furnitureId}`,
+                  furnitureId: it.furnitureId,
+                  x: it.x,
+                  z: it.z,
+                  rotation: it.rotation ?? 0,
+                  scaleW: it.scaleW ?? 1,
+                  scaleD: it.scaleD ?? 1,
+                })),
+              };
+            }
+            return { ...fp, rooms };
+          });
+          set({ floorPlans: plans });
+        }
       },
 
       applyExteriorPreset: (presetId) => {
