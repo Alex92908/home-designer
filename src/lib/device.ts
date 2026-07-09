@@ -45,12 +45,13 @@ export function mobileLiteScene(): boolean {
 // ── 移动端纹理瘦身 ───────────────────────────────────────────
 // GLB 里 1024² 的 WebP 解码上传 GPU 后是 RGBA + mipmap ≈ 5.3MB/张，
 // 一个房间几十个模型 × 每模型多张贴图 → 数百 MB GPU 内存，iOS 直接杀页。
-// 移动端在首次上传前把 >512 的贴图用 canvas 重采样到 512（内存降到 1/4）。
-// 纹理对象在 useGLTF 缓存里共享，就地改一次全部实例受益；WeakSet 防重复。
+// 移动端在首次上传前把贴图重采样到 256（相对 1024 省 16 倍显存）——手机
+// 屏幕小、贴图很少显示超过 256px，画质损失几乎看不出，却能塞下多得多的
+// GLB。纹理对象在 useGLTF 缓存里共享，就地改一次全部实例受益；WeakSet 防重复。
 const _shrunk = new WeakSet<object>();
 const TEX_KEYS = ["map", "normalMap", "roughnessMap", "metalnessMap", "aoMap", "emissiveMap"] as const;
 
-export function shrinkSceneTexturesForMobile(root: { traverse: (cb: (o: unknown) => void) => void }, maxSize = 512): void {
+export function shrinkSceneTexturesForMobile(root: { traverse: (cb: (o: unknown) => void) => void }, maxSize = 256): void {
   if (!isMobileDevice()) return;
   root.traverse((obj) => {
     const mesh = obj as { isMesh?: boolean; material?: unknown };

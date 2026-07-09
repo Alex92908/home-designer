@@ -174,7 +174,7 @@ export default function ShowcaseViewer({
         {isMobile && (
           <div className="px-3 py-1.5 rounded-full text-[11px] text-white/80 text-center max-w-full"
                style={{ background: "rgba(20,22,32,0.72)", border: "1px solid rgba(255,255,255,0.14)" }}>
-            {en ? "Lite view · full detail on desktop" : "轻量外观 · 完整效果请用电脑打开"}
+            {en ? "Mobile-optimized · best on desktop" : "手机已优化显示 · 电脑端更精细"}
           </div>
         )}
         <button
