@@ -15,7 +15,8 @@ import dynamic from "next/dynamic";
 import { useDesignerStore } from "@/lib/store";
 import { useLocale } from "@/lib/i18n";
 import { SHOWCASE_TEMPLATES } from "@/lib/showcaseTemplates";
-import { isMobileDevice } from "@/lib/device";
+import { isMobileDevice, setMobileGlbRoom } from "@/lib/device";
+import { ROOM_DEFS, type RoomType } from "@/lib/types";
 
 const PERSIST_KEY = "home-designer-v2";
 
@@ -45,7 +46,28 @@ export default function ShowcaseViewer({
   // 展示预渲染外观图（画廊卡片同款），零 WebGL = 零崩溃。想要实时 3D 走
   // 「在设计器中打开」（设计器在移动端落地轻量 2D，见 page.tsx）。
   const [isMobile] = useState(() => isMobileDevice());
+  // 移动端「逐房间家具 GLB」：默认无（室内全占位盒，可靠打开）；点房间 chip
+  // 只加载那一间的完整家具 GLB，换 key 重挂 Canvas 释放上一间显存。院子 GLB
+  // 始终全渲染。崩了刷新退回列表，不锁死。
+  const [glbRoom, setGlbRoom] = useState<string | null>(null);
+  const [canvasKey, setCanvasKey] = useState(0);
+  const pickRoom = (room: string | null) => {
+    setMobileGlbRoom(room);
+    setGlbRoom(room);
+    setCanvasKey((k) => k + 1); // 重挂 Canvas：加载新一间、释放上一间 GPU 资源
+  };
   const t = SHOWCASE_TEMPLATES.find((x) => x.id === templateId);
+  // 模板灌进 store 后，取「有家具的室内房型」列表做选择器（跨楼层去重）。
+  const floorPlans = useDesignerStore((s) => s.floorPlans);
+  const furnishedRooms = Array.from(
+    new Set(
+      floorPlans.flatMap((fp) =>
+        (fp.enabledRooms ?? []).filter(
+          (r) => !ROOM_DEFS[r]?.isOutdoor && (fp.rooms?.[r]?.placedItems?.length ?? 0) > 0,
+        ),
+      ),
+    ),
+  ) as RoomType[];
 
   // 备份用户当前 store（进入查看时拍一次）。
   const backup = useRef<{
@@ -115,6 +137,7 @@ export default function ShowcaseViewer({
     window.addEventListener("beforeunload", onUnload);
     return () => {
       window.removeEventListener("beforeunload", onUnload);
+      setMobileGlbRoom(null); // 离开查看器时复位，避免泄漏到其他视图
       restore();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,10 +161,10 @@ export default function ShowcaseViewer({
     // 用 100dvh 而非 h-screen：dvh 是「可见视口」，随 Safari 上下工具栏
     // 收缩，底部控件不会被浏览器工具栏挡住（用户：挡住东西了）。
     <div className="relative w-screen bg-gray-900 overflow-hidden" style={{ height: "100dvh" }}>
-      {/* 移动端也渲染实时 3D，但走「轻量外观」模式：HouseCanvas 在移动端
-          跳过绝大多数 GLB（家具/树/车/villa），只画程序化建筑 + 门窗 +
-          透过玻璃的占位盒 + 泳池 GLB，可自由旋转，显存极低。 */}
-      <HouseCanvas />
+      {/* 移动端默认「安全模式」：建筑 + 门窗 + 透窗占位盒 + 泳池 GLB（真机
+          可靠打开）。点底部「加载完整细节」切到全 GLB（换 key 重挂生效）。
+          桌面永远全量高精度。 */}
+      <HouseCanvas key={canvasKey} />
 
       {/* 返回键（左上）*/}
       <button
@@ -165,16 +188,39 @@ export default function ShowcaseViewer({
         </div>
       )}
 
-      {/* 底部控件：提示 + 打开按钮竖向堆叠，带安全区内边距，避开浏览器
-          工具栏；容器不吃指针事件(不挡旋转)，按钮单独可点。 */}
+      {/* 底部控件：房间选择器 + 提示 + 打开按钮竖向堆叠，带安全区内边距，
+          避开浏览器工具栏；容器不吃指针事件(不挡旋转)，控件单独可点。 */}
       <div
-        className="absolute inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 px-4 pointer-events-none"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+        className="absolute inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 px-3 pointer-events-none"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
       >
-        {isMobile && (
-          <div className="px-3 py-1.5 rounded-full text-[11px] text-white/80 text-center max-w-full"
-               style={{ background: "rgba(20,22,32,0.72)", border: "1px solid rgba(255,255,255,0.14)" }}>
-            {en ? "Mobile-optimized · best on desktop" : "手机已优化显示 · 电脑端更精细"}
+        {/* 逐房间家具开关（仅移动端、且有带家具的房间时显示）。一次点亮一间，
+            释放上一间显存。 */}
+        {isMobile && furnishedRooms.length > 0 && (
+          <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto max-w-full pb-1"
+               style={{ scrollbarWidth: "none" }}>
+            <span className="text-[10px] text-white/50 shrink-0 pr-0.5">{en ? "Furniture:" : "看家具:"}</span>
+            <button
+              onClick={() => pickRoom(null)}
+              className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all"
+              style={glbRoom === null
+                ? { background: "#007AFF", color: "#fff" }
+                : { background: "rgba(20,22,32,0.8)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.14)" }}
+            >
+              {en ? "Off" : "关"}
+            </button>
+            {furnishedRooms.map((r) => (
+              <button
+                key={r}
+                onClick={() => pickRoom(r)}
+                className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap"
+                style={glbRoom === r
+                  ? { background: "#007AFF", color: "#fff" }
+                  : { background: "rgba(20,22,32,0.8)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.14)" }}
+              >
+                {ROOM_DEFS[r]?.icon} {ROOM_DEFS[r]?.name ?? r}
+              </button>
+            ))}
           </div>
         )}
         <button

@@ -42,6 +42,19 @@ export function mobileLiteScene(): boolean {
   return isMobileDevice();
 }
 
+// ── 移动端「逐房间家具 GLB」开关 ─────────────────────────────
+// iOS 内存有限，室内几十个不同家具 GLB 一次全上会杀页。策略：院子 GLB
+// （泳池/车/树，模型少）默认全渲染；室内家具默认全用占位盒，只有「当前
+// 点亮的那一间」才加载完整家具 GLB —— 一次只亮一间，显存有界。切换房间
+// 时重挂 Canvas 释放上一间的 GPU 资源。桌面永远全量（下面带 isMobileDevice）。
+let _mobileGlbRoom: string | null = null;
+export function setMobileGlbRoom(r: string | null): void { _mobileGlbRoom = r; }
+export function mobileGlbRoom(): string | null { return _mobileGlbRoom; }
+/** 家具 GLB 是否为该房间渲染：桌面恒真；移动端仅「当前点亮的房间」。 */
+export function mobileFurnitureGlbAllowed(room: string): boolean {
+  return !isMobileDevice() || _mobileGlbRoom === room;
+}
+
 // ── 移动端纹理瘦身 ───────────────────────────────────────────
 // GLB 里 1024² 的 WebP 解码上传 GPU 后是 RGBA + mipmap ≈ 5.3MB/张，
 // 一个房间几十个模型 × 每模型多张贴图 → 数百 MB GPU 内存，iOS 直接杀页。
