@@ -1617,28 +1617,29 @@ const CAFE_SET: ProjectTemplate = {
         { furnitureId: "appliance-coffee-grinder", x: 70,  z: 260 },              // 磨豆机（台面）
         { furnitureId: "electronics-pos",          x: 70,  z: 320 },              // 收银机（台面）
         { furnitureId: "decor-coffee-mug",         x: 70,  z: 350 },              // 马克杯
-        // back bar：柜台身后（西墙）置物架
-        { furnitureId: "storage-shelving-2",       x: 25,  z: 150, rotation: 90 },
-        { furnitureId: "storage-shelving",         x: 25,  z: 420, rotation: 90 },
+        // 甜品展示冷柜（点单柜台旁，顾客侧），back bar 冷藏饮料柜
+        { furnitureId: "counter-cake-display",     x: 190, z: 500, rotation: 0 },
+        { furnitureId: "appliance-drink-fridge",   x: 25,  z: 130 },
+        { furnitureId: "counter-bakery-display",   x: 25,  z: 420, rotation: 90 },
         // 立式菜单黑板（点单区旁，朝向大堂）
-        { furnitureId: "decor-menu-chalkboard",    x: 130, z: 90,  rotation: 90 },
+        { furnitureId: "decor-menu-chalkboard",    x: 150, z: 90,  rotation: 90 },
         // ── 窗边高脚位（南侧玻璃门面）：直线吧台 + 单体吧凳 ──
-        { furnitureId: "counter-bar-straight",     x: 360, z: 560, rotation: 0 },
-        { furnitureId: "seat-bar-stool",           x: 280, z: 500 },
-        { furnitureId: "seat-bar-stool",           x: 360, z: 500 },
-        { furnitureId: "seat-bar-stool",           x: 440, z: 500 },
-        // ── 中部两组 2 人桌（密度贴近真实咖啡馆）──
-        { furnitureId: "dining-black-metal",       x: 300, z: 170, rotation: 0 },
-        { furnitureId: "chair-industrial-black",   x: 225, z: 170, rotation: 90 },
-        { furnitureId: "chair-industrial-black",   x: 375, z: 170, rotation: 270 },
-        { furnitureId: "dining-black-metal",       x: 300, z: 340, rotation: 0 },
-        { furnitureId: "chair-industrial-black",   x: 225, z: 340, rotation: 90 },
-        { furnitureId: "chair-industrial-black",   x: 375, z: 340, rotation: 270 },
-        // ── 东墙卡座（自带餐桌的软座）+ 软座角落 ──
+        { furnitureId: "counter-bar-straight",     x: 400, z: 560, rotation: 0 },
+        { furnitureId: "seat-bar-stool",           x: 330, z: 505 },
+        { furnitureId: "seat-bar-stool",           x: 400, z: 505 },
+        { furnitureId: "seat-bar-stool",           x: 470, z: 505 },
+        // ── 中部两组咖啡小圆桌（每桌两椅，真咖啡馆密度）──
+        { furnitureId: "dining_table-cafe-small",  x: 300, z: 170 },
+        { furnitureId: "chair-nordic-oak",         x: 235, z: 170, rotation: 90 },
+        { furnitureId: "chair-nordic-oak",         x: 365, z: 170, rotation: 270 },
+        { furnitureId: "dining_table-cafe-marble", x: 300, z: 340 },
+        { furnitureId: "chair-nordic-oak",         x: 235, z: 340, rotation: 90 },
+        { furnitureId: "chair-nordic-oak",         x: 365, z: 340, rotation: 270 },
+        // ── 东墙卡座（自带餐桌的软座）+ 做旧圆桌散座 ──
         { furnitureId: "seat-diner-booth",         x: 560, z: 180, rotation: 270 },
-        { furnitureId: "rug-persian",              x: 545, z: 400 },
-        { furnitureId: "sofa-nordic-blue",         x: 605, z: 400, rotation: 270 },
-        { furnitureId: "coffee-oak-round",         x: 500, z: 400 },
+        { furnitureId: "dining_table-cafe-rustic", x: 540, z: 420 },
+        { furnitureId: "chair-nordic-oak",         x: 470, z: 420, rotation: 90 },
+        { furnitureId: "chair-nordic-oak",         x: 610, z: 420, rotation: 270 },
         // ── 氛围（挂画/绿植/低垂吊灯）──
         { furnitureId: "artwork-impression",       x: 300, z: 18 },
         { furnitureId: "plant-rubber-tree",        x: 40,  z: 555 },
@@ -1806,10 +1807,10 @@ const RESTAURANT_SET: ProjectTemplate = {
         { furnitureId: "chair-modern-gray",    x: 520, z: 275, rotation: 0 },
         { furnitureId: "chair-modern-gray",    x: 415, z: 170, rotation: 90 },
         { furnitureId: "chair-modern-gray",    x: 625, z: 170, rotation: 270 },
-        { furnitureId: "dining-black-metal",   x: 190, z: 470 },
+        { furnitureId: "dining_table-cafe-rustic", x: 190, z: 470 },
         { furnitureId: "chair-industrial-black", x: 115, z: 470, rotation: 90 },
         { furnitureId: "chair-industrial-black", x: 265, z: 470, rotation: 270 },
-        { furnitureId: "dining-black-metal",   x: 520, z: 470 },
+        { furnitureId: "dining_table-cafe-rustic", x: 520, z: 470 },
         { furnitureId: "chair-industrial-black", x: 445, z: 470, rotation: 90 },
         { furnitureId: "chair-industrial-black", x: 595, z: 470, rotation: 270 },
         // 东墙卡座（自带餐桌的软座）
