@@ -1640,19 +1640,16 @@ const CAFE_SET: ProjectTemplate = {
         { furnitureId: "seat-bar-stool",           x: 530, z: 500 },
         { furnitureId: "seat-bar-stool",           x: 610, z: 500 },
 
-        // ═══ 中部密集桌位（每桌两椅 + 桌面卡布奇诺/郁金香）═══
-        { furnitureId: "dining_table-cafe-small",  x: 150, z: 240 },
-        { furnitureId: "chair-nordic-oak",         x: 95,  z: 240, rotation: 90 },
-        { furnitureId: "chair-nordic-oak",         x: 205, z: 240, rotation: 270 },
-        { furnitureId: "decor-cappuccino",         x: 150, z: 240 },
+        // ═══ 中部密集桌位（cafe-small 桌凳套自带 ottoman、难摆，弃用）═══
+        { furnitureId: "dining_table-cafe-rustic", x: 150, z: 320 },
+        { furnitureId: "chair-nordic-oak",         x: 85,  z: 320, rotation: 90 },
+        { furnitureId: "chair-nordic-oak",         x: 215, z: 320, rotation: 270 },
+        { furnitureId: "decor-cappuccino",         x: 150, z: 320 },
+        // 两张大理石小圆桌（纯桌，每桌两椅）
         { furnitureId: "dining_table-cafe-marble", x: 340, z: 220 },
         { furnitureId: "chair-modern-gray",        x: 285, z: 220, rotation: 90 },
         { furnitureId: "chair-modern-gray",        x: 395, z: 220, rotation: 270 },
         { furnitureId: "decor-tulip",              x: 340, z: 220 },
-        { furnitureId: "dining_table-cafe-small",  x: 150, z: 400 },
-        { furnitureId: "chair-nordic-oak",         x: 95,  z: 400, rotation: 90 },
-        { furnitureId: "chair-nordic-oak",         x: 205, z: 400, rotation: 270 },
-        { furnitureId: "decor-cappuccino",         x: 150, z: 400 },
         { furnitureId: "dining_table-cafe-marble", x: 340, z: 400 },
         { furnitureId: "chair-modern-gray",        x: 285, z: 400, rotation: 90 },
         { furnitureId: "chair-modern-gray",        x: 395, z: 400, rotation: 270 },
