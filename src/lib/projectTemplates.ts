@@ -1675,13 +1675,14 @@ const CAFE_SET: ProjectTemplate = {
         { furnitureId: "plant-hanging-pothos",     x: 340, z: 300 },
         { furnitureId: "artwork-impression",       x: 640, z: 400, rotation: 270 },
 
-        // ═══ 吊灯成排（柜台上方 + 每桌上方）═══
-        { furnitureId: "lamp-pendant-modern",      x: 200, z: 60 },
-        { furnitureId: "lamp-pendant-modern",      x: 420, z: 60 },
+        // ═══ 吊灯成排（柜台上方 + 每桌上方）——统一用 ikea4（modern/mantra
+        //     模型 native 39×29×3.6 太扁，contain 后渲成 4cm 薄片，不能用）═══
+        { furnitureId: "lamp-pendant-ikea4",       x: 200, z: 60 },
+        { furnitureId: "lamp-pendant-ikea4",       x: 420, z: 60 },
         { furnitureId: "lamp-pendant-ikea4",       x: 150, z: 240 },
         { furnitureId: "lamp-pendant-ikea4",       x: 340, z: 220 },
-        { furnitureId: "lamp-pendant-modern",      x: 150, z: 400 },
-        { furnitureId: "lamp-pendant-modern",      x: 340, z: 400 },
+        { furnitureId: "lamp-pendant-ikea4",       x: 150, z: 400 },
+        { furnitureId: "lamp-pendant-ikea4",       x: 340, z: 400 },
         { furnitureId: "lamp-pendant-ikea4",       x: 520, z: 300 },
       ],
       kitchen: [
