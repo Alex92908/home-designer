@@ -1613,7 +1613,6 @@ const CAFE_SET: ProjectTemplate = {
       living: [
         // ── 点单服务区（西墙）：专用点单柜台，台面上台面件靠吸附落台 ──
         { furnitureId: "counter-cafe",             x: 70,  z: 270, rotation: 90 }, // 柜台，长边沿 z
-        { furnitureId: "appliance-coffee-machine", x: 70,  z: 210 },              // 咖啡机（台面）
         { furnitureId: "appliance-coffee-grinder", x: 70,  z: 260 },              // 磨豆机（台面）
         { furnitureId: "electronics-pos",          x: 70,  z: 320 },              // 收银机（台面）
         { furnitureId: "decor-coffee-mug",         x: 70,  z: 350 },              // 马克杯
@@ -1640,9 +1639,20 @@ const CAFE_SET: ProjectTemplate = {
         { furnitureId: "dining_table-cafe-rustic", x: 540, z: 420 },
         { furnitureId: "chair-nordic-oak",         x: 470, z: 420, rotation: 90 },
         { furnitureId: "chair-nordic-oak",         x: 610, z: 420, rotation: 270 },
-        // ── 氛围（挂画/绿植/低垂吊灯）──
+        // 商用咖啡机 + 咖啡豆罐落点单柜台面；后吧酒架靠西墙
+        { furnitureId: "appliance-coffee-brewer",  x: 95,  z: 230 },
+        { furnitureId: "decor-coffee-jar",         x: 95,  z: 295 },
+        { furnitureId: "counter-back-bar-bottles", x: 25,  z: 260, rotation: 90 },
+        // 门口立牌（A 字黑板 + 欢迎牌，南门两侧）
+        { furnitureId: "decor-aframe-chalkboard",  x: 240, z: 555 },
+        { furnitureId: "decor-welcome-sign",       x: 560, z: 555 },
+        // 桌面卡布奇诺（散座氛围）
+        { furnitureId: "decor-cappuccino",         x: 300, z: 170 },
+        { furnitureId: "decor-cappuccino",         x: 300, z: 340 },
+        // ── 氛围（挂画/吊植/盆栽/低垂吊灯）──
         { furnitureId: "artwork-impression",       x: 300, z: 18 },
-        { furnitureId: "plant-rubber-tree",        x: 40,  z: 555 },
+        { furnitureId: "plant-hanging-pothos",     x: 470, z: 60 },
+        { furnitureId: "plant-potted-pack",        x: 40,  z: 555 },
         { furnitureId: "plant-rubber-tree",        x: 640, z: 60 },
         { furnitureId: "lamp-pendant-saturno",     x: 300, z: 255 },
         { furnitureId: "lamp-pendant-ikea4",       x: 360, z: 545 },
