@@ -16,9 +16,12 @@ export interface ShowcaseMeta {
   descEn: string;
   /** 标签（楼层数 / 风格等），画廊卡片上展示。 */
   tags: string[];
-  /** 预渲染外观图（public/showcase/ 下的静态 JPG）。画廊缩略图 + 点卡片
-   *  秒开的大图都用它；想交互旋转再点「进入实时 3D」加载 three.js。 */
+  /** 预渲染外观图（public/showcase/ 下的静态 JPG）。以 "/" 开头视为图片路径；
+   *  否则当 emoji 占位（片场卡暂用 emoji，预览图以后补）。 */
   image: string;
+  /** 片场类样板：查看器改调 store.applyProjectTemplate(该 id) 构建场景，
+   *  而非 showcaseTemplates 的 load()。住宅样板不填此项。 */
+  projectTemplateId?: string;
 }
 
 export const SHOWCASE_META: ShowcaseMeta[] = [
@@ -40,5 +43,35 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     tags: ["3F", "玻璃幕墙", "泳池院"],
     image: "/showcase/clear-glass-curtain-villa.jpg",
   },
-  // ── 以后在此追加更多样板卡片（load 工厂同步加到 showcaseTemplates.ts）──
+  // ── 片场系列（云横店）：查看器走 applyProjectTemplate，缩略图暂用 emoji ──
+  {
+    id: "set-cafe",
+    nameZh: "咖啡馆片场",
+    nameEn: "Café Set",
+    descZh: "玻璃门面 · 点单柜台+展示柜 · 密集桌位 · 书架墙",
+    descEn: "Glass storefront · counter + display · dense tables · book wall",
+    tags: ["片场", "咖啡馆", "单层"],
+    image: "☕",
+    projectTemplateId: "set-cafe",
+  },
+  {
+    id: "set-office",
+    nameZh: "办公室片场",
+    nameEn: "Office Set",
+    descZh: "开放工位 · 会议室 · 茶水间 · 玻璃幕墙",
+    descEn: "Open desks · meeting room · pantry · glass facade",
+    tags: ["片场", "办公室", "单层"],
+    image: "💼",
+    projectTemplateId: "set-office",
+  },
+  {
+    id: "set-restaurant",
+    nameZh: "小餐馆片场",
+    nameEn: "Bistro Set",
+    descZh: "四桌堂食 · 后厨中岛 · 市井暖调",
+    descEn: "4-table dining · kitchen island · warm bistro",
+    tags: ["片场", "餐馆", "单层"],
+    image: "🍜",
+    projectTemplateId: "set-restaurant",
+  },
 ];

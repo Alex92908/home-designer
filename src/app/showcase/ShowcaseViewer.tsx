@@ -82,19 +82,26 @@ export default function ShowcaseViewer({
       activeFloor: s.activeFloor,
       ls: typeof window !== "undefined" ? window.localStorage.getItem(PERSIST_KEY) : null,
     };
-    const { floorPlans, exterior, yardPlan } = t.load();
-    // REPLACE the exterior wholesale (load() returns a complete exterior built
-    // from defaultProject). Merging over s.exterior leaked the previously-opened
-    // template's facade — e.g. the glass-curtain template set facadeSystem:
-    // "curtain-wall" globally, so switching back to the modern-minimal villa
-    // (whose exterior doesn't set facadeSystem) still rendered as glass.
-    useDesignerStore.setState({
-      floorPlans: floorPlans as never,
-      exterior: exterior as never,
-      yardPlan: yardPlan as never,
-      viewMode: "exterior" as never,
-      activeFloor: 0,
-    });
+    if (t.projectTemplateId) {
+      // 片场类：走完整的项目模板管线（户型+风格家具+furnitureOverrides），
+      // 再切外观视角。备份已在上面拍好，卸载时还原。
+      useDesignerStore.getState().applyProjectTemplate(t.projectTemplateId);
+      useDesignerStore.setState({ viewMode: "exterior" as never, activeFloor: 0 });
+    } else {
+      const { floorPlans, exterior, yardPlan } = t.load!();
+      // REPLACE the exterior wholesale (load() returns a complete exterior built
+      // from defaultProject). Merging over s.exterior leaked the previously-opened
+      // template's facade — e.g. the glass-curtain template set facadeSystem:
+      // "curtain-wall" globally, so switching back to the modern-minimal villa
+      // (whose exterior doesn't set facadeSystem) still rendered as glass.
+      useDesignerStore.setState({
+        floorPlans: floorPlans as never,
+        exterior: exterior as never,
+        yardPlan: yardPlan as never,
+        viewMode: "exterior" as never,
+        activeFloor: 0,
+      });
+    }
 
     const onUnload = () => {
       const b = backup.current;
