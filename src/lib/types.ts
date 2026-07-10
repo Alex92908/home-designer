@@ -798,6 +798,7 @@ export type FurnitureCategory =
   | "outdoor_plant" | "outdoor_hardscape" | "outdoor_water" | "outdoor_structure"
   | "vehicle"
   | "stair"
+  | "counter"
   | "pet" | "livestock";
 
 export interface MaterialItem {

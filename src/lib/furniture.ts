@@ -1752,6 +1752,19 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"decor-tableware-full", name:"全套餐具摆台", brand:"品质家居", price:380, unit:"元/件", category:"decor", roomTypes:["dining"], color:"#E0E0E0", width:32, depth:50, height:4, tags:[], description:"全套餐具摆台", icon:"🍽️", model3d:{ url:"/models/indoor_decor/tableware_full/tableware_full.glb", fit:"contain" } },
   { id:"decor-spoons-golden", name:"金勺三件组", brand:"品质家居", price:120, unit:"元/件", category:"decor", roomTypes:["dining","kitchen"], color:"#C9A24B", width:15, depth:25, height:3, tags:[], description:"金勺三件组", icon:"🥄", model3d:{ url:"/models/indoor_decor/spoons_golden/spoons_golden.glb", fit:"contain" } },
   { id:"appliance-washer-2", name:"洗衣机（滚筒）", brand:"品质家居", price:2800, unit:"元/件", category:"appliance", roomTypes:["bathroom","balcony","balcony2","kitchen"], color:"#C8C0B4", width:60, depth:60, height:85, tags:[], description:"洗衣机（滚筒）", icon:"🌀", model3d:{ url:"/models/indoor_decor/washing_machine_2/washing_machine_2.glb", fit:"contain" } },
+  // ── 片场系列（云横店 studio-mvp）：咖啡馆/餐厅/办公室拍摄道具 ──
+  { id:"counter-cafe", name:"咖啡馆点单柜台", brand:"片场道具", price:6800, unit:"元/件", category:"counter", roomTypes:["living","kitchen","dining"], color:"#7A5A3A", width:180, depth:70, height:110, tags:[], description:"咖啡馆点单服务柜台", icon:"🍹", model3d:{ url:"/models/filmset/cafe_counter/cafe_counter.glb", fit:"contain" } },
+  { id:"counter-bar-straight", name:"直线吧台", brand:"片场道具", price:7200, unit:"元/件", category:"counter", roomTypes:["living","kitchen","dining"], color:"#5A4A3A", width:220, depth:60, height:110, tags:[], description:"直线服务吧台", icon:"🍹", model3d:{ url:"/models/filmset/bar_counter_straight/bar_counter_straight.glb", fit:"contain" } },
+  { id:"counter-bar-wood", name:"木质吧台", brand:"片场道具", price:7600, unit:"元/件", category:"counter", roomTypes:["living","kitchen","dining"], color:"#6A4A2A", width:240, depth:65, height:110, tags:[], description:"木质酒吧吧台", icon:"🍹", model3d:{ url:"/models/filmset/bar_counter_wood/bar_counter_wood.glb", fit:"contain" } },
+  { id:"seat-diner-booth", name:"餐厅卡座（含桌）", brand:"片场道具", price:5200, unit:"元/件", category:"sofa", roomTypes:["living","dining","kitchen"], color:"#8A3A2A", width:180, depth:120, height:120, tags:[], description:"餐厅卡座软座含餐桌", icon:"🛋️", model3d:{ url:"/models/filmset/diner_booth/diner_booth.glb", fit:"contain" } },
+  { id:"seat-bar-stool", name:"复古吧凳", brand:"片场道具", price:520, unit:"元/件", category:"dining_chair", roomTypes:["living","dining","kitchen"], color:"#4A3A2A", width:40, depth:40, height:75, tags:[], description:"复古高脚吧凳", icon:"🪑", model3d:{ url:"/models/filmset/bar_stool/bar_stool.glb", fit:"contain" } },
+  { id:"table-conference", name:"复古会议桌", brand:"片场道具", price:4800, unit:"元/件", category:"dining_table", roomTypes:["living","dining","study"], color:"#6A5A3A", width:240, depth:100, height:75, tags:[], description:"1980s 复古长会议桌", icon:"⬜", model3d:{ url:"/models/filmset/conference_table/conference_table.glb", fit:"contain" } },
+  { id:"electronics-pos", name:"收银机 POS", brand:"片场道具", price:2200, unit:"元/件", category:"electronics", roomTypes:["living","kitchen","dining"], color:"#2A2A2A", width:32, depth:38, height:34, tags:[], description:"数字收银机 POS 终端", icon:"🖥️", model3d:{ url:"/models/filmset/pos_register/pos_register.glb", fit:"contain" } },
+  { id:"appliance-coffee-grinder", name:"复古磨豆机", brand:"片场道具", price:1600, unit:"元/件", category:"appliance", roomTypes:["living","kitchen","dining"], color:"#7A2A1A", width:22, depth:22, height:38, tags:[], description:"复古咖啡磨豆机", icon:"⚙️", model3d:{ url:"/models/filmset/coffee_grinder/coffee_grinder.glb", fit:"contain" } },
+  { id:"appliance-water-dispenser", name:"饮水机", brand:"片场道具", price:980, unit:"元/件", category:"appliance", roomTypes:["living","kitchen","study","dining"], color:"#D8D8D8", width:32, depth:32, height:100, tags:[], description:"立式饮水机", icon:"🚰", model3d:{ url:"/models/filmset/water_dispenser/water_dispenser.glb", fit:"contain" } },
+  { id:"decor-menu-chalkboard", name:"菜单黑板", brand:"片场道具", price:420, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining"], color:"#1A1A1A", width:60, depth:50, height:150, tags:[], description:"餐厅立式菜单黑板", icon:"📋", model3d:{ url:"/models/filmset/menu_chalkboard/menu_chalkboard.glb", fit:"contain" } },
+  { id:"decor-whiteboard", name:"办公白板", brand:"片场道具", price:680, unit:"元/件", category:"decor", roomTypes:["living","study","dining"], color:"#EDEDED", width:120, depth:45, height:180, tags:[], description:"立式办公白板", icon:"📋", model3d:{ url:"/models/filmset/whiteboard/whiteboard.glb", fit:"contain" } },
+  { id:"decor-coffee-mug", name:"咖啡马克杯", brand:"片场道具", price:0, unit:"-", category:"decor", roomTypes:["living","kitchen","dining","study"], color:"#3A3A3A", width:12, depth:9, height:10, tags:[], description:"桌面咖啡马克杯", icon:"☕", model3d:{ url:"/models/filmset/coffee_mug/coffee_mug.glb", fit:"contain" } },
 ];
 
 // Helper: get furniture by ID
@@ -1821,6 +1834,7 @@ export const FURNITURE_CATEGORIES: Array<{
   // 楼梯：不在这个列表里的类目侧边栏根本不渲染（分组无兜底），漏挂导致
   // 楼梯间里 4 款楼梯（直/L/转折/螺旋）无法被选到、没法换款式。
   { id: "stair",             label: "楼梯",     icon: "🪜" },
+  { id: "counter",           label: "柜台吧台", icon: "🍹" },
   { id: "outdoor_water",     label: "水景",     icon: "💧" },
   { id: "outdoor_structure", label: "户外建构", icon: "⛺" },
   { id: "pet",               label: "宠物",     icon: "🐾" },
