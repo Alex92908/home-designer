@@ -471,6 +471,8 @@ export default function FloorPlan() {
   const selectedInstanceIds  = useDesignerStore((s) => s.selectedInstanceIds);
   const moveItem             = useDesignerStore((s) => s.moveItem);
   const rotateItem           = useDesignerStore((s) => s.rotateItem);
+  const toggleItemMirror     = useDesignerStore((s) => s.toggleItemMirror);
+  const setItemLabel         = useDesignerStore((s) => s.setItemLabel);
   const removeItem           = useDesignerStore((s) => s.removeItem);
   const setSelection         = useDesignerStore((s) => s.setSelection);
   const duplicateItems       = useDesignerStore((s) => s.duplicateItems);
@@ -2388,6 +2390,16 @@ export default function FloorPlan() {
                 className="px-2 py-1 bg-blue-600/80 active:bg-blue-600 text-white text-[11px] font-semibold rounded-lg">
                 ↻ {t.fpRotateItem}
               </button>
+              <button onClick={() => toggleItemMirror(selectedItem.instanceId, "x")}
+                className="px-2 py-1 text-white text-[11px] font-semibold rounded-lg"
+                style={{ background: selectedItem.mirrorX ? "rgba(0,122,255,0.95)" : "rgba(255,255,255,0.12)" }}>
+                ⇋ {t.fpMirrorH}
+              </button>
+              <button onClick={() => toggleItemMirror(selectedItem.instanceId, "z")}
+                className="px-2 py-1 text-white text-[11px] font-semibold rounded-lg"
+                style={{ background: selectedItem.mirrorZ ? "rgba(0,122,255,0.95)" : "rgba(255,255,255,0.12)" }}>
+                ⇅ {t.fpMirrorV}
+              </button>
               <button onClick={() => copyToClipboard([selectedItem.instanceId])}
                 className="px-2 py-1 text-white text-[11px] font-semibold rounded-lg"
                 style={{ background: "rgba(0,122,255,0.7)" }}>
@@ -2501,6 +2513,20 @@ export default function FloorPlan() {
               <span className="text-[9px] text-gray-600">200cm</span>
             </div>
           </div>
+
+          {/* 店招灯箱：店名文字输入 */}
+          {selectedFurniture.id === "sign-shop-fascia" && (
+            <div>
+              <div className="text-[10px] text-gray-400 mb-1">🪧 {locale === "en" ? "Sign text" : "店招文字"}</div>
+              <input
+                type="text"
+                value={selectedItem.label ?? ""}
+                placeholder={locale === "en" ? "CAFÉ" : "店名，如 云横咖啡"}
+                onChange={e => setItemLabel(selectedItem.instanceId, e.target.value)}
+                className="w-full px-2 py-1.5 rounded-lg text-[12px] text-white bg-gray-800/80 border border-white/10 outline-none focus:border-blue-500"
+              />
+            </div>
+          )}
 
           <div className="flex justify-between items-center">
             <button onClick={() => { resizeItem(selectedItem.instanceId, 1, 1, 1); setElevation(selectedItem.instanceId, 0); }}

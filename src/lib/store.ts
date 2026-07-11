@@ -752,6 +752,8 @@ interface DesignerStore {
   /** Toggle a placed item between floor-mounted and ceiling-mounted.
    *  Ceiling-mounted items render with their top at ceiling height. */
   toggleItemMountCeiling: (instanceId: string) => void;
+  toggleItemMirror: (instanceId: string, axis: "x" | "z") => void;
+  setItemLabel: (instanceId: string, label: string) => void;
   removeItem: (instanceId: string) => void;
   selectInstance: (instanceId: string | null) => void;
   setSelection: (ids: string[]) => void;
@@ -1406,6 +1408,35 @@ export const useDesignerStore = create<DesignerStore>()(
         if (!fp?.rooms[activeRoom]) return;
         const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
           p.instanceId === instanceId ? { ...p, mountCeiling: !p.mountCeiling } : p
+        );
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...fp.rooms[activeRoom], placedItems: updatedPlaced } } };
+        set({ floorPlans });
+      },
+
+      // 镜像翻转（横向 X / 纵向 Z）：翻转选中家具的对应轴，做成对对称摆件。
+      toggleItemMirror: (instanceId, axis) => {
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
+        const key = axis === "x" ? "mirrorX" : "mirrorZ";
+        const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
+          p.instanceId === instanceId ? { ...p, [key]: !p[key] } : p
+        );
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...fp.rooms[activeRoom], placedItems: updatedPlaced } } };
+        set({ floorPlans });
+      },
+
+      // 店招灯箱等道具的显示文字。
+      setItemLabel: (instanceId, label) => {
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
+        const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
+          p.instanceId === instanceId ? { ...p, label } : p
         );
         const floorPlans = [...s.floorPlans];
         floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...fp.rooms[activeRoom], placedItems: updatedPlaced } } };
@@ -2102,6 +2133,12 @@ export const useDesignerStore = create<DesignerStore>()(
                   rotation: it.rotation ?? 0,
                   scaleW: it.scaleW ?? 1,
                   scaleD: it.scaleD ?? 1,
+                  scaleH: it.scaleH ?? 1,
+                  // 垂直摆放：台面小件（elevationY 落桌/柜面）+ 吊挂件（mountCeiling
+                  // 顶贴天花）。之前漏透传→咖啡杯掉地上、吊灯/绿萝站地上。
+                  ...(it.elevationY != null ? { elevationY: Math.max(0, Math.round(it.elevationY)) } : {}),
+                  ...(it.mountCeiling ? { mountCeiling: true } : {}),
+                  ...(it.label != null ? { label: it.label } : {}),
                 })),
               };
             }

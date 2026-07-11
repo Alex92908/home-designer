@@ -21,6 +21,15 @@ export interface TemplatePlacedItem {
   rotation?: number;
   scaleW?: number;
   scaleD?: number;
+  scaleH?: number;
+  /** 架高 cm：小件（杯/花/道具）离地高度。正下方有承托面（桌/柜/书架等
+   *  FLAT_TOP_CARRIERS 类别）时自动吸附到其顶面；无承托面则直接按此高度悬置
+   *  （柜台面件用，counter 类别不是承托面，需显式给柜台高度）。默认 0=落地。 */
+  elevationY?: number;
+  /** 吸顶：顶面贴天花板（吊灯/吊挂绿萝），忽略 elevationY。 */
+  mountCeiling?: boolean;
+  /** 店招灯箱等道具的显示文字。 */
+  label?: string;
 }
 
 export interface ProjectTemplate {
@@ -1615,72 +1624,93 @@ const CAFE_SET: ProjectTemplate = {
     // living-local：(0,0)=西北角，x→东(0-660)，z→南(0-600)。
     {
       living: [
-        // ═══ 北长墙：点单服务线（柜台一字排开 + back bar 贴墙）═══
-        { furnitureId: "counter-back-bar-bottles", x: 240, z: 20,  rotation: 0 },   // 后吧酒架贴北墙
-        { furnitureId: "counter-cafe",             x: 160, z: 60,  rotation: 0 },   // 点单柜台①
-        { furnitureId: "counter-cafe",             x: 360, z: 60,  rotation: 0 },   // 点单柜台②（接续）
-        { furnitureId: "counter-cake-display",     x: 560, z: 62,  rotation: 0 },   // 甜品展示冷柜（东端）
-        { furnitureId: "appliance-drink-fridge",   x: 635, z: 60 },                 // 冷藏饮料柜（东北角）
-        // 台面件（吸附落柜台面）
-        { furnitureId: "appliance-coffee-brewer",  x: 150, z: 55 },
-        { furnitureId: "appliance-coffee-grinder", x: 230, z: 55 },
-        { furnitureId: "electronics-pos",          x: 360, z: 55 },
-        { furnitureId: "decor-coffee-jar",         x: 300, z: 52 },
-        { furnitureId: "decor-coffee-mug",         x: 420, z: 52 },
-        // 菜单黑板（柜台西端立地，朝大堂）
-        { furnitureId: "decor-menu-chalkboard",    x: 55,  z: 90,  rotation: 90 },
+        // ★垂直摆放约定（关键，之前全踩坑）：
+        //   · 台面小件（咖啡机/杯/花）默认落地→看不见。柜台面件给 elevationY:110
+        //     （counter 类别非承托面，直接按柜台高悬置）；桌面件给 elevationY≈桌高
+        //     （rustic 74→75 / marble 55；正下方是 dining_table 承托面，会自动吸附贴顶）。
+        //   · 吊灯/吊挂绿萝给 mountCeiling:true（顶贴天花，垂下来），别站地上。
 
-        // ═══ 南玻璃：两段窗边高脚位（中间 x280-390 留门）═══
-        { furnitureId: "counter-bar-straight",     x: 140, z: 558, rotation: 0 },
+        // ═══ 北长墙：点单服务线（后吧酒架贴墙 + 前置连续实木吧台，中间留吧台内通道）═══
+        { furnitureId: "counter-back-bar-bottles", x: 190, z: 22,  rotation: 0 },   // 后吧酒架贴北墙（前移吧台后完整可见）
+        { furnitureId: "counter-wooden-bar",       x: 190, z: 125, rotation: 0 },   // 连续实木吧台前移到 z125（与后吧留 ~45cm 吧台内通道）
+        { furnitureId: "counter-cake-display",     x: 415, z: 120, rotation: 0 },   // 甜品展示冷柜（与吧台同一前线）
+        { furnitureId: "appliance-drink-fridge",   x: 550, z: 120 },                // 冷藏饮料柜
+        // 吧台面件只留 4 件工作道具（别堆满——放不下）elevationY:115 落吧台面
+        { furnitureId: "appliance-coffee-brewer",  x: 130, z: 122, elevationY: 115 },
+        { furnitureId: "appliance-coffee-grinder", x: 185, z: 122, elevationY: 115 },
+        { furnitureId: "electronics-pos",          x: 265, z: 128, elevationY: 115 },
+        { furnitureId: "decor-coffee-cups",        x: 225, z: 130, elevationY: 115 },  // 外带杯塔
+        // 店招灯箱（北墙高处，发光横招；文字可在编辑面板改）+ 墙面菜单牌 + 门口立地招牌
+        { furnitureId: "sign-shop-fascia",         x: 200, z: 14, elevationY: 205, label: "云横咖啡" },
+        { furnitureId: "decor-coffee-menu",        x: 470, z: 12, elevationY: 150 },  // 北墙菜单板
+        { furnitureId: "decor-welcome-sign",       x: 300, z: 470, rotation: 0 },     // 门口立地招牌
+
+        // ═══ 南玻璃：两段窗边高脚位（counter-bar-wood 干净吧台，无自带椅 → 配独立吧凳；
+        //     直线吧台 bar_counter_straight 自带凳，弃用）中间 x260-400 留门 ═══
+        { furnitureId: "counter-bar-wood",         x: 140, z: 560, rotation: 0 },
         { furnitureId: "seat-bar-stool",           x: 70,  z: 500 },
         { furnitureId: "seat-bar-stool",           x: 150, z: 500 },
         { furnitureId: "seat-bar-stool",           x: 230, z: 500 },
-        { furnitureId: "counter-bar-straight",     x: 520, z: 558, rotation: 0 },
+        { furnitureId: "decor-cappuccino",         x: 110, z: 545, elevationY: 105 },  // 窗吧台面咖啡
+        { furnitureId: "counter-bar-wood",         x: 520, z: 560, rotation: 0 },
         { furnitureId: "seat-bar-stool",           x: 450, z: 500 },
         { furnitureId: "seat-bar-stool",           x: 530, z: 500 },
         { furnitureId: "seat-bar-stool",           x: 610, z: 500 },
+        { furnitureId: "decor-coffee-mug",         x: 555, z: 545, elevationY: 105 },  // 窗吧台面马克杯
 
-        // ═══ 中部密集桌位（cafe-small 桌凳套自带 ottoman、难摆，弃用）═══
-        { furnitureId: "dining_table-cafe-rustic", x: 150, z: 320 },
+        // ═══ 中部密集桌位（每桌两椅 + 桌面咖啡/花，elevationY 落桌顶）═══
+        { furnitureId: "dining_table-cafe-rustic", x: 150, z: 320 },                   // 桌顶 74cm
         { furnitureId: "chair-nordic-oak",         x: 85,  z: 320, rotation: 90 },
         { furnitureId: "chair-nordic-oak",         x: 215, z: 320, rotation: 270 },
-        { furnitureId: "decor-cappuccino",         x: 150, z: 320 },
-        // 两张大理石小圆桌（纯桌，每桌两椅）
+        { furnitureId: "decor-cappuccino",         x: 138, z: 320, elevationY: 75 },
+        { furnitureId: "decor-coffee-mug",         x: 165, z: 328, elevationY: 75 },
+        // 两张大理石小圆桌（桌顶 55cm；桌面咖啡杯——花瓶 vase-single 渲染成透明
+        // 鬼影，弃用，改摆咖啡马克杯）
         { furnitureId: "dining_table-cafe-marble", x: 340, z: 220 },
         { furnitureId: "chair-modern-gray",        x: 285, z: 220, rotation: 90 },
         { furnitureId: "chair-modern-gray",        x: 395, z: 220, rotation: 270 },
-        { furnitureId: "decor-tulip",              x: 340, z: 220 },
+        { furnitureId: "decor-tulip",              x: 340, z: 220, elevationY: 55 },
+        { furnitureId: "decor-coffee-cups",        x: 355, z: 228, elevationY: 55 },
         { furnitureId: "dining_table-cafe-marble", x: 340, z: 400 },
         { furnitureId: "chair-modern-gray",        x: 285, z: 400, rotation: 90 },
         { furnitureId: "chair-modern-gray",        x: 395, z: 400, rotation: 270 },
-        { furnitureId: "decor-tulip",              x: 340, z: 400 },
-        // 东侧做旧圆桌（4 人）+ 卡座
+        { furnitureId: "decor-cappuccino",         x: 328, z: 400, elevationY: 55 },
+        { furnitureId: "decor-coffee-mug",         x: 352, z: 408, elevationY: 55 },
+        // 东侧做旧圆桌（桌顶 74cm）+ 卡座
         { furnitureId: "dining_table-cafe-rustic", x: 520, z: 300 },
         { furnitureId: "chair-industrial-black",   x: 450, z: 300, rotation: 90 },
         { furnitureId: "chair-industrial-black",   x: 590, z: 300, rotation: 270 },
-        { furnitureId: "decor-cappuccino",         x: 520, z: 300 },
-        { furnitureId: "seat-diner-booth",         x: 600, z: 440, rotation: 270 },
+        { furnitureId: "decor-coffee-mug",         x: 508, z: 300, elevationY: 75 },
+        { furnitureId: "decor-tulip",              x: 532, z: 308, elevationY: 75 },
+        // 卡座 seat-diner-booth 弃用（fill 后 120cm 太高、比例失真；座位已够）
 
-        // ═══ 东墙：整面书架墙 ═══
-        { furnitureId: "bookshelf-with-books",     x: 640, z: 170, rotation: 270 },
-        { furnitureId: "bookshelf-solid-walnut",   x: 640, z: 250, rotation: 270 },
-        { furnitureId: "bookshelf-open-white",     x: 640, z: 560, rotation: 270 },
+        // ═══ 东墙：书架墙（2 个塞满书的款，别摆满——留白）+ 挂画 ═══
+        { furnitureId: "bookshelf-with-books",     x: 640, z: 200, rotation: 270 },
+        { furnitureId: "bookshelf-with-books",     x: 640, z: 340, rotation: 270 },
+        { furnitureId: "artwork-impression",       x: 640, z: 480, rotation: 270 },
 
-        // ═══ 绿植 / 挂画 ═══
-        { furnitureId: "plant-rubber-tree",        x: 60,  z: 300 },
-        { furnitureId: "plant-potted-pack",        x: 60,  z: 555 },
-        { furnitureId: "plant-hanging-pothos",     x: 340, z: 300 },
-        { furnitureId: "artwork-impression",       x: 640, z: 400, rotation: 270 },
+        // ═══ 西墙：复古展示桌（新导入道具集中摆一桌，别挤吧台）+ 留声机 + 绿植 ═══
+        { furnitureId: "dining_table-cafe-rustic", x: 70,  z: 185 },                   // 展示桌（桌顶 74）
+        { furnitureId: "decor-record-player",      x: 70,  z: 185, elevationY: 75 },   // 黑胶唱机
+        { furnitureId: "decor-victorian-clock",    x: 95,  z: 193, elevationY: 75 },   // 维多利亚座钟
+        { furnitureId: "decor-radio-vintage",      x: 46,  z: 193, elevationY: 75 },   // VEF 收音机
+        { furnitureId: "decor-gramophone",         x: 62,  z: 300 },                   // 留声机立展示桌旁
+        { furnitureId: "plant-monstera",           x: 60,  z: 410 },                   // 西墙绿植
 
-        // ═══ 吊灯成排（柜台上方 + 每桌上方）——统一用 ikea4（modern/mantra
-        //     模型 native 39×29×3.6 太扁，contain 后渲成 4cm 薄片，不能用）═══
-        { furnitureId: "lamp-pendant-ikea4",       x: 200, z: 60 },
-        { furnitureId: "lamp-pendant-ikea4",       x: 420, z: 60 },
-        { furnitureId: "lamp-pendant-ikea4",       x: 150, z: 240 },
-        { furnitureId: "lamp-pendant-ikea4",       x: 340, z: 220 },
-        { furnitureId: "lamp-pendant-ikea4",       x: 150, z: 400 },
-        { furnitureId: "lamp-pendant-ikea4",       x: 340, z: 400 },
-        { furnitureId: "lamp-pendant-ikea4",       x: 520, z: 300 },
+        // ═══ 吊挂绿萝（mountCeiling 顶贴天花垂下）═══
+        { furnitureId: "plant-hanging-pothos",     x: 300, z: 300, mountCeiling: true },  // 大堂中央垂萝
+        { furnitureId: "plant-hanging-pothos",     x: 560, z: 470, mountCeiling: true },  // 东南角垂萝
+
+        // ═══ 卡座角氛围补光 ═══
+        { furnitureId: "floor_lamp-modern",        x: 615, z: 510 },               // 落地灯补氛围层
+
+        // ═══ 吊灯成排（mountCeiling 顶贴天花垂下；柜台上方 + 每桌上方）═══
+        { furnitureId: "lamp-pendant-ikea4",       x: 200, z: 60,  mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4",       x: 420, z: 60,  mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4",       x: 150, z: 320, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4",       x: 340, z: 220, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4",       x: 340, z: 400, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4",       x: 520, z: 300, mountCeiling: true },
       ],
       kitchen: [
         // 后场备货区（3×6m，沿墙摆满、中间留通道；玻璃外能瞥见）

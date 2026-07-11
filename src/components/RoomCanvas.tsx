@@ -2994,6 +2994,57 @@ function GltfFurniture({
   );
 }
 
+/** 店招灯箱（程序化）：横向发光招牌盒 + canvas 贴图文字（支持中文，用系统字体）。
+ *  面朝 +Z（局部），靠 placedItem 的 rotation 转向。文字/底色可改。 */
+function SignboardMesh({ w, d, h, color, label }: { w: number; d: number; h: number; color: string; label: string }) {
+  const faceTex = useMemo(() => {
+    if (typeof document === "undefined") return null;
+    const cw = 1024, ch = Math.max(128, Math.round((h / w) * cw));
+    const cv = document.createElement("canvas");
+    cv.width = cw; cv.height = ch;
+    const ctx = cv.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, cw, ch);
+    // 上下细描边，做灯箱边框感
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.fillRect(0, 0, cw, ch * 0.06); ctx.fillRect(0, ch * 0.94, cw, ch * 0.06);
+    const text = (label || "CAFÉ").slice(0, 24);
+    // 自适应字号：按可用宽度收缩
+    let fs = Math.round(ch * 0.55);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    do {
+      ctx.font = `700 ${fs}px "PingFang SC","Microsoft YaHei",system-ui,sans-serif`;
+      if (ctx.measureText(text).width <= cw * 0.9) break;
+      fs -= 6;
+    } while (fs > 20);
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "rgba(0,0,0,0.45)"; ctx.shadowBlur = fs * 0.08;
+    ctx.fillText(text, cw / 2, ch / 2 + fs * 0.02);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.anisotropy = 4; tex.needsUpdate = true;
+    return tex;
+  }, [w, h, color, label]);
+  useEffect(() => () => { faceTex?.dispose(); }, [faceTex]);
+  const halfD = d / 2;
+  return (
+    <group>
+      {/* 灯箱盒体 */}
+      <mesh castShadow position={[0, h / 2, 0]}>
+        <boxGeometry args={[w, h, d]} />
+        <meshStandardMaterial color="#141414" roughness={0.55} metalness={0.35} />
+      </mesh>
+      {/* 发光面板（略突出正面 +Z）；toneMapped=false 让它稳定发亮 */}
+      <mesh position={[0, h / 2, halfD + 0.006]}>
+        <planeGeometry args={[w * 0.965, h * 0.84]} />
+        <meshStandardMaterial
+          {...(faceTex ? { map: faceTex, emissiveMap: faceTex } : { color })}
+          emissive="#ffffff" emissiveIntensity={0.85} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
 export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: PlacedItem; def: RoomDef; roomW: number; roomD: number; room?: RoomType }) {
   // 内置家具走静态 FURNITURE（getFurnitureById）；用户导入的家具改为
   // 响应式订阅 store.customFurniture —— 它是持久化状态，刷新后随 store
@@ -3267,6 +3318,19 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
     }
   }
 
+  // 镜像翻转：负缩放某个局部轴。scale 在 three 的 T*R*S 里最先作用，
+  // 等价于「先把模型镜像、再旋转摆放」，符合直觉。
+  const mirScale: [number, number, number] = [placed.mirrorX ? -1 : 1, 1, placed.mirrorZ ? -1 : 1];
+
+  // 店招灯箱：程序化发光招牌 + 可改文字（默认贴顶挂高，可用离地高度/吸顶调位）。
+  if (item.id === "sign-shop-fascia") {
+    return (
+      <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]} scale={mirScale}>
+        <SignboardMesh w={fw} d={fd} h={fh} color={item.color || "#C0392B"} label={placed.label ?? "CAFÉ"} />
+      </group>
+    );
+  }
+
   // If the furniture item has a real 3D asset, render it; else fall
   // back to procedural box mesh. Suspense handles async glb load; if
   // loading throws (404, CORS, malformed) the ErrorBoundary higher up
@@ -3351,7 +3415,7 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
       );
     }
     return (
-      <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]}>
+      <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]} scale={mirScale}>
         <Suspense fallback={<FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} room={room} />}>
           <GltfFurnitureWithFallback
             item={item}
@@ -3364,7 +3428,7 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
   }
 
   return (
-    <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]}>
+    <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]} scale={mirScale}>
       <FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} room={room} />
     </group>
   );

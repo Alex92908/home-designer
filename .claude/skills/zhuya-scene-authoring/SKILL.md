@@ -117,6 +117,27 @@ store
 - 应用顺序（`store.applyProjectTemplate`）：exterior → 房间布局 → styleTemplate 家具
   → **furnitureOverrides 逐房间覆盖**。
 
+### ★垂直摆放（血泪坑）：台面件/吊挂件必须给 elevationY / mountCeiling
+`placedItems`/`TemplatePlacedItem` 除 x,z 外还有**垂直**字段，漏了小件全掉地板上：
+- **台面小件**（咖啡杯/马克杯/花瓶/咖啡机/收银）→ 给 `elevationY:<台面高cm>`。
+  正下方若是 `FLAT_TOP_CARRIERS` 类别（`dining_table/desk/sideboard/nightstand/
+  bookshelf/kitchen_cabinet/storage/dresser/tv_unit/bathroom_vanity`）会**自动吸附**贴顶面
+  （elevationY 只要落在台顶 ±25cm 内即精确贴合）；**`counter` 类别不是承托面**，
+  台面件要**直接给柜台高**（咖啡柜台 110），不吸附、按此高度悬置。
+- **吊挂件**（吊灯/吊挂绿萝）→ 给 `mountCeiling:true`（顶贴天花垂下，忽略 elevationY）。
+  不给的话吊灯/绿萝会**站在地板上**（绿萝变矮草丛、吊灯变落地怪柱）。
+- 常见台面高：cafe-rustic 74 / cafe-marble 55 / 咖啡柜台 110 / 窗边吧台 ~105 / 书桌 75。
+- 桌上放 2 件时把 x 各偏 ±12cm 免叠。
+- **坑**：`store.applyProjectTemplate` 的 `furnitureOverrides` 落库映射曾**漏透传**
+  elevationY/mountCeiling/scaleH（2026-07 修复，store.ts ~2097）——若这些字段又「不生效」，
+  先查该映射有没有拷贝这几个字段。
+- **坑（吊挂/竖向件调大了还是小）**：`fit:"contain"` 按**最受限轴**等比缩放。若模型
+  native 的**最长轴不是你想要的竖直轴**（如吊挂绿萝 native 18.76×20.57×39.86，最长是
+  「深度」而非高度→藤蔓水平铺开），contain 会被短轴卡住缩小，且缩后真实高 ≠ 声明高，
+  mountCeiling 锚点还留空档→又小又飘。**改 `fit:"fill"`**：非均匀填满声明盒子，真实尺寸
+  =声明值、锚点对齐；有机体（植物/织物）轻微拉伸不违和。**先看 `[GltfFurniture]` 的
+  native 日志判断长轴朝向**，别盲目加大声明尺寸。
+
 ### 真实空间的动线要点（调研沉淀，摆之前默念）
 - **咖啡馆**：点单柜台沿**一面长墙一字排开**（柜台→柜台→甜品展示柜），back bar 贴墙
   摆罐/杯/咖啡器具；南玻璃**窗边高脚位**（吧台+吧凳，中间留门）；中部+靠墙**密集桌位**

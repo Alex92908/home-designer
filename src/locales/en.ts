@@ -168,6 +168,8 @@ export const en: Translations = {
   fpcBtnExit: "🚶 Exit",
   fpcBtnEnter: "🚶 First-person",
   fpRotateItem: "Rotate",
+  fpMirrorH: "Mirror H",
+  fpMirrorV: "Mirror V",
   fpCopyItem: "Copy",
   fpDeleteItem: "Delete",
   fpWidth: "Width",

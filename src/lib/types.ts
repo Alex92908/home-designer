@@ -929,6 +929,12 @@ export interface PlacedItem {
    *  Renderer anchors the item's TOP at ceiling (elevationY ignored).
    *  Use for 吊灯/吊扇/吸顶装饰 etc. */
   mountCeiling?: boolean;
+  /** 横向镜像：沿局部 X 轴翻转（scale.x *= -1）。做左右对称的成对家具。 */
+  mirrorX?: boolean;
+  /** 纵向镜像：沿局部 Z 轴翻转（scale.z *= -1）。做前后对称。 */
+  mirrorZ?: boolean;
+  /** 店招灯箱等可写字道具的显示文字（如店名）。 */
+  label?: string;
 }
 
 /** Which of the 4 walls an override applies to. Cardinal-direction
