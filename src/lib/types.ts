@@ -1158,6 +1158,13 @@ export function resolveFacadeLayer(
   // 1. Explicit per-face override
   const ov = fp?.roomFacadeFaces?.[room]?.[sideKey]?.[layer];
   if (ov !== undefined) return ov;
+  // 1b. 实墙 ↔ 幕墙 互斥：某面显式设了幕墙(glass=true)，实墙层自动关；反之亦然。
+  //     一个面要么是实墙要么是玻璃幕墙——若不互斥，不透明实墙(尤其内墙相邻 step4
+  //     强制的 solid)会盖在玻璃前面，用户设了幕墙却看到白墙。frame 不参与互斥
+  //     （玻璃幕墙本就带框）。
+  const face = fp?.roomFacadeFaces?.[room]?.[sideKey];
+  if (layer === "wall"  && face?.glass === true) return false;
+  if (layer === "glass" && face?.wall  === true) return false;
   // 2. 隐藏墙 = 整面开敞：实墙/玻璃幕墙/框架三层全隐（不只去实墙）。
   //    用户在「隐藏」里勾掉某面，期望那面彻底没墙——旧逻辑只隐 wall 层，
   //    玻璃/框架仍按幕墙默认显示，导致走廊隐藏墙后外观仍是玻璃盒子。
