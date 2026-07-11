@@ -799,6 +799,7 @@ export type FurnitureCategory =
   | "vehicle"
   | "stair"
   | "counter"
+  | "person"
   | "pet" | "livestock";
 
 export interface MaterialItem {
@@ -871,6 +872,12 @@ export interface FurnitureItem {
      *  flat color shows cleanly. Best for untextured models; on textured ones
      *  it trades surface detail for a correct color. */
     recolor?: string;
+    /** 预旋转（度，绕本地 X 轴），在测量包围盒 + fit 缩放【之前】施加，用于把
+     *  「换轴/躺着建模」的 GLB（深度当高度、Z 轴朝上）扶正到 Y 朝上。扶正后
+     *  fit 才按正确朝向缩放。仅 contain 支持（fill 会畸变，换轴模型用 contain）。 */
+    preRotX?: number;
+    /** 预旋转（度，绕本地 Z 轴），同 preRotX，用于横倒的模型。 */
+    preRotZ?: number;
   };
 }
 

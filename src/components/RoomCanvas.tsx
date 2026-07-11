@@ -2850,8 +2850,11 @@ function snapToSurface(roomPrefix: string, selfKey: string, x: number, z: number
 }
 
 function GltfFurniture({
-  url, scale, rotation, yOffset, recolor, w, d, h, fit, onMeasured,
-}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile"; onMeasured?: (m: { topY: number; w: number; d: number }) => void }) {
+  url, scale, rotation, yOffset, recolor, w, d, h, fit, preRotX, preRotZ, onMeasured,
+}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile"; preRotX?: number; preRotZ?: number; onMeasured?: (m: { topY: number; w: number; d: number }) => void }) {
+  // 预旋转（度→弧度）：在测量包围盒 + fit 之前把「换轴/躺着」模型扶正。
+  const preRX = ((preRotX ?? 0) * Math.PI) / 180;
+  const preRZ = ((preRotZ ?? 0) * Math.PI) / 180;
   const { scene } = useGLTF(url) as unknown as { scene: THREE.Object3D };
 
   // Clone so multiple instances don't share transforms or materials.
@@ -2903,7 +2906,9 @@ function GltfFurniture({
     const buildUniform = (s: number) => {
       const c = skeletonClone(scene);
       prep(c);
-      c.scale.setScalar(s);
+      if (preRX) c.rotation.x = preRX;
+      if (preRZ) c.rotation.z = preRZ;
+      c.scale.setScalar(s);   // 均匀缩放与旋转可交换，扶正后 contain 缩放正确
       c.updateMatrixWorld(true);
       const b = new THREE.Box3().setFromObject(c);
       c.position.x -= (b.min.x + b.max.x) / 2;
@@ -2916,6 +2921,11 @@ function GltfFurniture({
     // scale to our declared furniture size (width/depth/height in meters).
     const base = skeletonClone(scene);
     prep(base);
+    // 预旋转扶正后再测量原生尺寸（size 变为扶正朝向）→ contain/fit 按正确朝向缩放。
+    // fill 模型不设 preRot，故此处不影响既有 fill 资产。
+    if (preRX) base.rotation.x = preRX;
+    if (preRZ) base.rotation.z = preRZ;
+    if (preRX || preRZ) base.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(base);
     const size = new THREE.Vector3();
     box.getSize(size);
@@ -2975,7 +2985,7 @@ function GltfFurniture({
     const s = Math.min(w / nx, h / size.y, d / nz) * trim;
     const only = buildUniform(s);
     return { list: [{ obj: only.obj, x: 0 }], measured: { topY: size.y * s, w: nx * s, d: nz * s } };
-  }, [scene, w, d, h, scale, recolor, fit, rotation]);
+  }, [scene, w, d, h, scale, recolor, fit, rotation, preRX, preRZ]);
 
   // 实测尺寸上报（供台面吸附注册表使用）。ref 隔离回调身份，只在实测值
   // 变化时触发。
@@ -3588,6 +3598,8 @@ class GltfFurnitureWithFallback extends Component<
         yOffset={item.model3d.yOffset}
         recolor={item.model3d.recolor}
         fit={item.model3d.fit}
+        preRotX={item.model3d.preRotX}
+        preRotZ={item.model3d.preRotZ}
         w={w} d={d} h={h}
         onMeasured={onMeasured}
       />

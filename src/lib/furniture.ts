@@ -1800,6 +1800,19 @@ export const FURNITURE: FurnitureItem[] = [
   // 店招灯箱（程序化，无 GLB）：横向发光招牌，颜色可改、文字在编辑面板里改（默认「CAFÉ」）。
   // 通用/虚构店名，规避真实品牌商标风险。SignboardMesh 用 canvas 贴图渲染文字（支持中文）。
   { id:"sign-shop-fascia", name:"店招灯箱", brand:"片场道具", price:1500, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining","yard","balcony"], color:"#C0392B", width:200, depth:16, height:46, tags:[], description:"横向发光店招灯箱（文字/颜色可改）", icon:"🪧" },
+  // ── glbs 批（2026-07）：复古咖啡道具 + 桌几 + 人物群演。尺寸初值待 [GltfFurniture] native 日志校正。──
+  { id:"decor-coffee-for-two", name:"双人咖啡套", brand:"片场道具", price:0, unit:"-", category:"decor", roomTypes:["living","kitchen","dining","study"], color:"#C8B0A0", width:42, depth:42, height:9, tags:[], description:"托盘双杯咖啡套", icon:"☕", model3d:{ url:"/models/filmset/coffee_for_two/coffee_for_two.glb", fit:"contain" } },
+  { id:"decor-japanese-sign", name:"日式店招", brand:"片场道具", price:900, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining","yard","balcony"], color:"#8A2A2A", width:11, depth:45, height:120, tags:[], description:"日式吊挂店招/暖帘", icon:"🏮", model3d:{ url:"/models/filmset/japanese_shop_sign/japanese_shop_sign.glb", fit:"contain" } },
+  { id:"dining_table-mahogany", name:"红木餐桌", brand:"片场道具", price:5200, unit:"元/件", category:"dining_table", roomTypes:["living","dining"], color:"#6A3A2A", width:160, depth:95, height:76, tags:[], description:"红木长餐桌", icon:"🍽️", model3d:{ url:"/models/filmset/mahogany_table/mahogany_table.glb", fit:"contain" } },
+  { id:"coffee_table-retro70b", name:"复古茶几（70s·B）", brand:"片场道具", price:1300, unit:"元/件", category:"coffee_table", roomTypes:["living","study"], color:"#8A5B3A", width:110, depth:55, height:30, tags:[], description:"另一款 70 年代复古茶几", icon:"🛋️", model3d:{ url:"/models/filmset/retro_coffee_table_70s/retro_coffee_table_70s.glb", fit:"contain" } },
+  { id:"dining_table-bar-square", name:"方吧桌", brand:"片场道具", price:1100, unit:"元/件", category:"dining_table", roomTypes:["living","dining","kitchen"], color:"#5A4A3A", width:55, depth:55, height:62, tags:[], description:"高脚方吧桌", icon:"🍸", model3d:{ url:"/models/filmset/bar_square_table/bar_square_table.glb", fit:"contain" } },
+  { id:"person-victorian-gentleman", name:"维多利亚绅士", brand:"片场群演", price:0, unit:"-", category:"person", roomTypes:["living","dining","kitchen","study","yard","balcony"], color:"#3A3A3A", width:58, depth:49, height:180, tags:[], description:"维多利亚时代绅士（片场群演）", icon:"🎩", model3d:{ url:"/models/filmset/victorian_gentleman/victorian_gentleman.glb", fit:"contain" } },
+  { id:"person-victorian-woman", name:"维多利亚女士", brand:"片场群演", price:0, unit:"-", category:"person", roomTypes:["living","dining","kitchen","study","yard","balcony"], color:"#5A3A4A", width:92, depth:82, height:165, tags:[], description:"维多利亚时代女士（片场群演）", icon:"👗", model3d:{ url:"/models/filmset/victorian_woman/victorian_woman.glb", fit:"contain" } },
+  { id:"person-woman-gray", name:"灰裙女士", brand:"片场群演", price:0, unit:"-", category:"person", roomTypes:["living","dining","kitchen","study","yard","balcony"], color:"#8A8A8A", width:48, depth:45, height:170, tags:[], description:"现代灰裙女士（片场群演）", icon:"🧍", model3d:{ url:"/models/filmset/woman_gray_dress/woman_gray_dress.glb", fit:"contain" } },
+  // 换轴模型（躺着建的，深度当高度）：用 preRotX 扶正。数值待渲染校正。
+  { id:"appliance-espresso", name:"商用咖啡机", brand:"片场道具", price:8800, unit:"元/件", category:"appliance", roomTypes:["living","kitchen","dining"], color:"#3A3A3A", width:34, depth:30, height:60, tags:[], description:"意式商用咖啡机", icon:"☕", model3d:{ url:"/models/filmset/espresso_machine/espresso_machine.glb", fit:"contain", preRotX:-90 } },
+  { id:"electronics-card-terminal", name:"刷卡终端", brand:"片场道具", price:600, unit:"元/件", category:"electronics", roomTypes:["living","kitchen","dining"], color:"#2A2A2A", width:16, depth:12, height:20, tags:[], description:"POS 刷卡支付终端", icon:"💳", model3d:{ url:"/models/filmset/payment_terminal/payment_terminal.glb", fit:"contain", preRotX:-90 } },
+  { id:"coffee_table-victorian", name:"维多利亚茶几", brand:"片场道具", price:2200, unit:"元/件", category:"coffee_table", roomTypes:["living","study"], color:"#7A4A2A", width:50, depth:110, height:50, tags:[], description:"维多利亚雕花茶几", icon:"🛋️", model3d:{ url:"/models/filmset/victorian_coffee_table/victorian_coffee_table.glb", fit:"contain" } },
 ];
 
 // Helper: get furniture by ID
@@ -1870,6 +1883,7 @@ export const FURNITURE_CATEGORIES: Array<{
   // 楼梯间里 4 款楼梯（直/L/转折/螺旋）无法被选到、没法换款式。
   { id: "stair",             label: "楼梯",     icon: "🪜" },
   { id: "counter",           label: "柜台吧台", icon: "🍹" },
+  { id: "person",            label: "人物",     icon: "🧍" },
   { id: "outdoor_water",     label: "水景",     icon: "💧" },
   { id: "outdoor_structure", label: "户外建构", icon: "⛺" },
   { id: "pet",               label: "宠物",     icon: "🐾" },
