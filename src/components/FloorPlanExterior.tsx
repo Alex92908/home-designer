@@ -218,7 +218,10 @@ export function computeExteriorWalls(
   winMap:   Record<string, WindowConfig[]>,
   floorIndex: number,
   doorMap?: Record<string, DoorConfig[]>,
+  wallsHidden?: Record<string, Partial<Record<string, boolean>> | undefined>,
 ): ExteriorWallSeg[] {
+  // 邻居「朝本房间那面墙」= 本面的对面侧（本 S ↔ 邻 N，本 E ↔ 邻 W）。
+  const OPPOSITE_SIDE = { N: "S", S: "N", E: "W", W: "E" } as const;
   const rooms = enabledRooms.filter(r => !ROOM_DEFS[r]?.isOutdoor);
   const result: ExteriorWallSeg[] = [];
 
@@ -250,6 +253,10 @@ export function computeExteriorWalls(
         if (other === room) continue;
         const op = layout[other]; const od = dims[other];
         if (!op || !od) continue;
+        // 开敞邻居不算覆盖：若 other「朝本房间那面墙」(对面侧)被隐藏，它就没有
+        // 墙挡在这里 → 本面对着开敞空间 = 真外墙，应纳入外壳立面（用户把走廊放
+        // 客厅/厨房南边并隐藏走廊墙，想让客厅/厨房南墙做玻璃店面 = 骑楼效果）。
+        if (wallsHidden?.[other]?.[OPPOSITE_SIDE[side]] === true) continue;
         let onOuterSide: boolean, oStart: number, oEnd: number;
         if (axis === "x") {
           // N/S 面：外侧在 y 方向
@@ -2663,7 +2670,7 @@ export default function FloorPlanBuilding({
         }
       }
 
-      result.push(...computeExteriorWalls(rooms, fp.roomLayout ?? {}, fp.roomDimensions ?? {}, mergedWindows, fi, mergedDoors));
+      result.push(...computeExteriorWalls(rooms, fp.roomLayout ?? {}, fp.roomDimensions ?? {}, mergedWindows, fi, mergedDoors, fp.roomWallsHidden));
     }
     return result;
   }, [floorPlans, floorCount, floorBoundsArr, planOffset, W, D]);
