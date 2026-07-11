@@ -1158,8 +1158,11 @@ export function resolveFacadeLayer(
   // 1. Explicit per-face override
   const ov = fp?.roomFacadeFaces?.[room]?.[sideKey]?.[layer];
   if (ov !== undefined) return ov;
-  // 2. Legacy wall-hide
-  if (layer === "wall" && fp?.roomWallsHidden?.[room]?.[sideKey] === true) return false;
+  // 2. 隐藏墙 = 整面开敞：实墙/玻璃幕墙/框架三层全隐（不只去实墙）。
+  //    用户在「隐藏」里勾掉某面，期望那面彻底没墙——旧逻辑只隐 wall 层，
+  //    玻璃/框架仍按幕墙默认显示，导致走廊隐藏墙后外观仍是玻璃盒子。
+  //    需保留玻璃外壳的「开敞但带玻璃」用 roomFacadeFaces 显式 override（第 1 步优先）。
+  if (fp?.roomWallsHidden?.[room]?.[sideKey] === true) return false;
   // 3. Per-room style (glass/concrete beats mode default)
   const style = fp?.roomExteriorStyle?.[room];
   if (style === "glass") return layer !== "wall";
