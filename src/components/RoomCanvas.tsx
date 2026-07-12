@@ -2850,11 +2850,12 @@ function snapToSurface(roomPrefix: string, selfKey: string, x: number, z: number
 }
 
 function GltfFurniture({
-  url, scale, rotation, yOffset, recolor, w, d, h, fit, preRotX, preRotZ, onMeasured,
-}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile"; preRotX?: number; preRotZ?: number; onMeasured?: (m: { topY: number; w: number; d: number }) => void }) {
+  url, scale, rotation, yOffset, recolor, w, d, h, fit, preRotX, preRotZ, dropMeshNames, onMeasured,
+}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile"; preRotX?: number; preRotZ?: number; dropMeshNames?: string[]; onMeasured?: (m: { topY: number; w: number; d: number }) => void }) {
   // 预旋转（度→弧度）：在测量包围盒 + fit 之前把「换轴/躺着」模型扶正。
   const preRX = ((preRotX ?? 0) * Math.PI) / 180;
   const preRZ = ((preRotZ ?? 0) * Math.PI) / 180;
+  const dropSet = useMemo(() => new Set(dropMeshNames ?? []), [dropMeshNames]);
   const { scene } = useGLTF(url) as unknown as { scene: THREE.Object3D };
 
   // Clone so multiple instances don't share transforms or materials.
@@ -2900,6 +2901,15 @@ function GltfFurniture({
           }
         }
       });
+      // 剔除焊死的多余部件（自带凳的吧台/桌等）：按名匹配 mesh 或其所在 node，
+      // 在测量包围盒 + fit 之前移除，fit 只按剩余部件缩放。
+      if (dropSet.size) {
+        const toRemove: THREE.Object3D[] = [];
+        root.traverse((obj) => {
+          if (dropSet.has(obj.name) && obj !== root) toRemove.push(obj);
+        });
+        for (const o of toRemove) o.removeFromParent();
+      }
     };
     // Scale a fresh clone uniformly by `s`, then recenter footprint on the
     // X/Z origin and drop its base to Y=0 (matches procedural-box convention).
@@ -2985,7 +2995,7 @@ function GltfFurniture({
     const s = Math.min(w / nx, h / size.y, d / nz) * trim;
     const only = buildUniform(s);
     return { list: [{ obj: only.obj, x: 0 }], measured: { topY: size.y * s, w: nx * s, d: nz * s } };
-  }, [scene, w, d, h, scale, recolor, fit, rotation, preRX, preRZ]);
+  }, [scene, w, d, h, scale, recolor, fit, rotation, preRX, preRZ, dropSet]);
 
   // 实测尺寸上报（供台面吸附注册表使用）。ref 隔离回调身份，只在实测值
   // 变化时触发。
@@ -3600,6 +3610,7 @@ class GltfFurnitureWithFallback extends Component<
         fit={item.model3d.fit}
         preRotX={item.model3d.preRotX}
         preRotZ={item.model3d.preRotZ}
+        dropMeshNames={item.model3d.dropMeshNames}
         w={w} d={d} h={h}
         onMeasured={onMeasured}
       />

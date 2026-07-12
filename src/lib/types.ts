@@ -878,6 +878,10 @@ export interface FurnitureItem {
     preRotX?: number;
     /** 预旋转（度，绕本地 Z 轴），同 preRotX，用于横倒的模型。 */
     preRotZ?: number;
+    /** 加载时剔除的网格名（在测量包围盒 + fit 之前移除）。用于去掉 GLB 里焊死的
+     *  多余部件——自带凳的吧台/桌、自带背景墙的窗帘等（名字看 GLB 的 mesh/node，
+     *  如 Sketchfab 导出的 "Object_0"）。剔除后 fit 只按剩余部件缩放。 */
+    dropMeshNames?: string[];
   };
 }
 
