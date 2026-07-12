@@ -3243,7 +3243,11 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
     const distLeft  = xCm;
     const distRight = wallW - xCm;
     const minDist = Math.min(distBack, distFront, distLeft, distRight);
-    const y = def.height / 100 * 0.52;
+    // 挂高：设了「离地高度」elevationY 就用它当挂画中心高（滑块生效）；
+    // 未设时回退到墙高 52% 的默认画廊高度。
+    const y = (placed.elevationY ?? 0) > 0
+      ? (placed.elevationY ?? 0) / 100
+      : def.height / 100 * 0.52;
     // GAP must clear the inner face of the wall AND the frame back
     // (2.5 cm). FPE walkthrough walls are 12 cm thick → inner face at
     // 6 cm from boundary. Frame back is GAP − 1.25 cm from boundary,
