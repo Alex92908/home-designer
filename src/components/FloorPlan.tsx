@@ -589,6 +589,7 @@ export default function FloorPlan() {
   const insertRoomShapePoint = useDesignerStore((s) => s.insertRoomShapePoint);
   const deleteRoomShapePoint = useDesignerStore((s) => s.deleteRoomShapePoint);
   const rectifyRoomShape     = useDesignerStore((s) => s.rectifyRoomShape);
+  const normalizeRoomShape   = useDesignerStore((s) => s.normalizeRoomShape);
   const def             = ROOM_DEFS[activeRoom];
 
   // Effective dimensions: store override if different from default, else ROOM_DEFS
@@ -1214,6 +1215,11 @@ export default function FloorPlan() {
                       pushLayoutHistory();
                       setRoomShape(activeRoom, "rect"); // creates editable rect points
                     }
+                  } else {
+                    // Exiting edit mode: normalize any negative-coord drags
+                    // (shift polygon+layout+furniture+openings back into the
+                    // positive quadrant — half the views assume local ≥ 0).
+                    normalizeRoomShape(activeRoom);
                   }
                   setEditShape(v => !v);
                 }}

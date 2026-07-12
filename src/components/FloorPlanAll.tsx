@@ -409,6 +409,7 @@ export default function FloorPlanAll() {
   const deleteRoomShapePoint  = useDesignerStore(s => s.deleteRoomShapePoint);
   const addRoom2             = useDesignerStore(s => s.addRoom);
   const setRoomShape         = useDesignerStore(s => s.setRoomShape);
+  const normalizeRoomShape   = useDesignerStore(s => s.normalizeRoomShape);
   // All floors data — for ghost overlay rendering
   const allFloorPlans        = useDesignerStore(s => s.floorPlans);
   // Multi-building
@@ -1599,6 +1600,8 @@ export default function FloorPlanAll() {
                         onPointerDown={e => {
                           e.stopPropagation();
                           if (isEditing) {
+                            // 退出编辑：负坐标规范化（平移多边形+layout+家具+门窗回正象限）
+                            normalizeRoomShape(room);
                             setShapeEditRoom(null);
                           } else {
                             // Init rect polygon if no custom shape yet

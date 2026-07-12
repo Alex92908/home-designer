@@ -791,6 +791,12 @@ interface DesignerStore {
    *  choosing the dominant axis per edge. Useful after noisy vertex
    *  drags produced slightly tilted walls. */
   rectifyRoomShape: (room: RoomType) => void;
+  /** 轮廓编辑收尾规范化：把拖出负坐标的多边形整体平移回正象限，
+   *  并同步 roomLayout / roomDimensions / 家具 / 门窗偏移（历史坑：
+   *  只平移多边形不平移家具门窗 → 门跳墙、家具错位）。世界位置不变。
+   *  多数视图假设房间局部坐标 ≥0（单房间平面图从原点画 → 负坐标区被
+   *  切掉），编辑轮廓退出时必须调用。 */
+  normalizeRoomShape: (room: RoomType) => void;
   toggleRoom: (room: RoomType) => void;
   addRoom: (room: RoomType) => void;
   removeRoom: (room: RoomType) => void;
@@ -1817,6 +1823,46 @@ export const useDesignerStore = create<DesignerStore>()(
               [room]: { preset: "custom", points: cleaned },
             },
           };
+        });
+      },
+
+      normalizeRoomShape: (room: RoomType) => {
+        updateFloor(get, set, fp => {
+          const cur = fp.roomShapes?.[room];
+          if (!cur || cur.points.length < 3) return {};
+          let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
+          for (const [x, z] of cur.points) {
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+          }
+          // 只在拖出了负坐标时平移（正常编辑零开销、零影响）
+          const dx = minX < 0 ? -minX : 0;
+          const dz = minZ < 0 ? -minZ : 0;
+          if (dx === 0 && dz === 0) return {};
+          const points = cur.points.map(([x, z]) =>
+            [Math.round(x + dx), Math.round(z + dz)] as [number, number]);
+          const lay = fp.roomLayout[room] ?? { x: 0, y: 0 };
+          const patch: Partial<FloorPlan> = {
+            roomShapes: { ...(fp.roomShapes ?? {}), [room]: { preset: cur.preset, points } },
+            // 原点左移/上移 dx,dz → roomLayout 反向补偿，房间世界位置不变
+            roomLayout: { ...fp.roomLayout, [room]: { x: Math.round(lay.x - dx), y: Math.round(lay.y - dz) } },
+            // 尺寸 = 平移后 bbox 全跨度
+            roomDimensions: { ...fp.roomDimensions, [room]: { width: Math.round(maxX - minX), depth: Math.round(maxZ - minZ) } },
+          };
+          // 家具同步平移（局部坐标 +dx,+dz = 世界位置不动）
+          const rs = fp.rooms[room];
+          if (rs?.placedItems?.length) {
+            patch.rooms = { ...fp.rooms, [room]: { ...rs, placedItems: rs.placedItems.map(p => ({ ...p, x: p.x + dx, z: p.z + dz })) } };
+          }
+          // 门窗偏移：pos 沿墙起点计 → N/S 墙 +dx、W/E 墙 +dz；
+          // edgeIndex 绑定的沿边偏移随顶点整体平移，不用动。
+          const shiftPos = <T extends { wall: string; pos: number; edgeIndex?: number }>(c: T): T =>
+            c.edgeIndex != null ? c : { ...c, pos: c.pos + ((c.wall === "N" || c.wall === "S") ? dx : dz) };
+          const wins = fp.roomWindows?.[room];
+          if (wins?.length) patch.roomWindows = { ...fp.roomWindows, [room]: wins.map(shiftPos) };
+          const doors = fp.roomDoors?.[room];
+          if (doors?.length) patch.roomDoors = { ...fp.roomDoors, [room]: doors.map(shiftPos) };
+          return patch;
         });
       },
 

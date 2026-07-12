@@ -38,6 +38,24 @@ import {
 import { splitWallAroundHoles } from "@/lib/wallGeom";
 import { paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize, getStuccoTexture, getStuccoNormal } from "@/lib/textures";
+import { polygonBounds, type RoomShape } from "@/lib/roomGeometry";
+
+/** Effective rectangular footprint (cm, same frame as roomLayout) that fully
+ *  encloses a room's polygon. Rect/undefined shapes return the raw rect
+ *  unchanged (byte-identical), so only reshaped rooms are affected. */
+function effRect(
+  layout: { x: number; y: number },
+  dims: { width: number; depth: number },
+  shape?: RoomShape,
+): { x: number; y: number; width: number; depth: number } {
+  if (!shape || shape.preset === "rect" || !shape.points?.length) {
+    return { x: layout.x, y: layout.y, width: dims.width, depth: dims.depth };
+  }
+  const b = polygonBounds(shape.points);
+  const lminX = Math.min(0, b.minX), lmaxX = Math.max(dims.width, b.maxX);
+  const lminZ = Math.min(0, b.minZ), lmaxZ = Math.max(dims.depth, b.maxZ);
+  return { x: layout.x + lminX, y: layout.y + lminZ, width: lmaxX - lminX, depth: lmaxZ - lminZ };
+}
 
 /** 漫游/室内模式下的房间灯具：复用 效果图 的同一套灯具造型
  *  （LightFixtureInner，visualOnly=只出网格、不出投影灯——漫游里
@@ -2374,7 +2392,8 @@ export default function FloorPlanBuilding({
         const p = fp.roomLayout?.[r]; const dm = fp.roomDimensions?.[r];
         if (!p || !dm) continue;
         seen.add(r);
-        rects.push({ room: r, x: p.x, y: p.y, w: dm.width, d: dm.depth });
+        const e = effRect(p, dm, fp.roomShapes?.[r]);
+        rects.push({ room: r, x: e.x, y: e.y, w: e.width, d: e.depth });
       }
     }
     if (rects.length === 0) return { main: [] as RoomRect[], detached: [] as RoomRect[][] };
@@ -2410,8 +2429,9 @@ export default function FloorPlanBuilding({
       for (const r of (fp.enabledRooms ?? []).filter(r => !ROOM_DEFS[r]?.isOutdoor)) {
         const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
         if (!p || !d) continue;
-        minX = Math.min(minX, p.x);           minY = Math.min(minY, p.y);
-        maxX = Math.max(maxX, p.x + d.width); maxY = Math.max(maxY, p.y + d.depth);
+        const e = effRect(p, d, fp.roomShapes?.[r]);
+        minX = Math.min(minX, e.x);           minY = Math.min(minY, e.y);
+        maxX = Math.max(maxX, e.x + e.width); maxY = Math.max(maxY, e.y + e.depth);
       }
     }
     if (!isFinite(minX)) return { minX: 0, minY: 0, W: 10, D: 8 };
@@ -2469,8 +2489,9 @@ export default function FloorPlanBuilding({
       for (const r of (fp2.enabledRooms ?? []).filter(r => !ROOM_DEFS[r]?.isOutdoor)) {
         const p2 = fp2.roomLayout?.[r]; const d2 = fp2.roomDimensions?.[r];
         if (!p2 || !d2) continue;
-        bMinX = Math.min(bMinX, p2.x); bMinY = Math.min(bMinY, p2.y);
-        bMaxX = Math.max(bMaxX, p2.x + d2.width); bMaxY = Math.max(bMaxY, p2.y + d2.depth);
+        const e2 = effRect(p2, d2, fp2.roomShapes?.[r]);
+        bMinX = Math.min(bMinX, e2.x); bMinY = Math.min(bMinY, e2.y);
+        bMaxX = Math.max(bMaxX, e2.x + e2.width); bMaxY = Math.max(bMaxY, e2.y + e2.depth);
       }
       if (!isFinite(bMinX)) { arr.push(null); continue; }
       arr.push({
@@ -2670,7 +2691,19 @@ export default function FloorPlanBuilding({
         }
       }
 
-      result.push(...computeExteriorWalls(rooms, fp.roomLayout ?? {}, fp.roomDimensions ?? {}, mergedWindows, fi, mergedDoors, fp.roomWallsHidden));
+      // 用「有效外接矩形」喂 computeExteriorWalls：异形房间(凸/L/自定义)
+      // 的多边形若探出其 AABB，外墙检测按有效矩形闭合，避免突出部分无墙。
+      // 矩形房间 effRect 返回原始矩形，行为逐字节不变。
+      const effLayout: Record<string, { x: number; y: number }> = {};
+      const effDims: Record<string, { width: number; depth: number }> = {};
+      for (const r of rooms) {
+        const rp = fp.roomLayout?.[r]; const rd = fp.roomDimensions?.[r];
+        if (!rp || !rd) continue;
+        const e = effRect(rp, rd, fp.roomShapes?.[r]);
+        effLayout[r] = { x: e.x, y: e.y };
+        effDims[r] = { width: e.width, depth: e.depth };
+      }
+      result.push(...computeExteriorWalls(rooms, effLayout, effDims, mergedWindows, fi, mergedDoors, fp.roomWallsHidden));
     }
     return result;
   }, [floorPlans, floorCount, floorBoundsArr, planOffset, W, D]);
@@ -2893,10 +2926,11 @@ export default function FloorPlanBuilding({
       for (const room of (fp.enabledRooms ?? []).filter(r => !ROOM_DEFS[r]?.isOutdoor) as RoomType[]) {
         const p = fp.roomLayout?.[room]; const d = fp.roomDimensions?.[room];
         if (!p || !d) continue;
-        const rW = d.width * CM; const rD = d.depth * CM;
-        const rWcm = d.width; const rDcm = d.depth;
-        const cx = (p.x + d.width  / 2 - planOffset.minX) * CM - W / 2;
-        const cz = (p.y + d.depth / 2 - planOffset.minY) * CM - D / 2;
+        const e = effRect(p, d, fp.roomShapes?.[room]);
+        const rW = e.width * CM; const rD = e.depth * CM;
+        const rWcm = e.width; const rDcm = e.depth;
+        const cx = (e.x + e.width  / 2 - planOffset.minX) * CM - W / 2;
+        const cz = (e.y + e.depth / 2 - planOffset.minY) * CM - D / 2;
         const yBase = fi === roofFi ? roofDeckY : fi * (FLOOR_H + SLAB_T);
         const mats = fp.rooms?.[room]?.materials;
         const floorColor = mats?.floor?.color ?? ROOM_DEFS[room]?.defaultFloorColor ?? "#C8A882";
@@ -3064,6 +3098,9 @@ export default function FloorPlanBuilding({
         const onlyShortEnds = room === "hallway";
         const p = fp.roomLayout?.[room]; const d = fp.roomDimensions?.[room];
         if (!p || !d) continue;
+        // 外墙实体壳按「有效外接矩形」的四条边闭合（异形房间探出 AABB 的
+        // 部分也有墙）；门/窗仍按原始房间(p/d)定位，pos 是墙内局部偏移不变。
+        const e = effRect(p, d, fp.roomShapes?.[room]);
         const wColor = fp.rooms?.[room]?.materials?.wall?.color ?? ROOM_DEFS[room]?.defaultWallColor ?? "#EDE8E0";
         const wId = fp.rooms?.[room]?.materials?.wall?.id ?? "";
         const configuredDoors = fp.roomDoors?.[room] ?? [];
@@ -3116,10 +3153,10 @@ export default function FloorPlanBuilding({
         }> = [
           // N (back, -Z) = SVG top = small plan-Y (fixed: p.y).
           // S (front, +Z) = SVG bottom = large plan-Y (fixed: p.y + d.depth).
-          { uiSide: "N", dataSide: "N", axis: "h", fixed: p.y,          a: p.x,          b: p.x + d.width },
-          { uiSide: "S", dataSide: "S", axis: "h", fixed: p.y + d.depth, a: p.x,          b: p.x + d.width },
-          { uiSide: "W", dataSide: "W", axis: "v", fixed: p.x,          a: p.y,          b: p.y + d.depth },
-          { uiSide: "E", dataSide: "E", axis: "v", fixed: p.x + d.width, a: p.y,          b: p.y + d.depth },
+          { uiSide: "N", dataSide: "N", axis: "h", fixed: e.y,          a: e.x,          b: e.x + e.width },
+          { uiSide: "S", dataSide: "S", axis: "h", fixed: e.y + e.depth, a: e.x,          b: e.x + e.width },
+          { uiSide: "W", dataSide: "W", axis: "v", fixed: e.x,          a: e.y,          b: e.y + e.depth },
+          { uiSide: "E", dataSide: "E", axis: "v", fixed: e.x + e.width, a: e.y,          b: e.y + e.depth },
         ];
         const segMats = fp.rooms?.[room]?.materials;
         for (const s of sides) {
@@ -3214,7 +3251,12 @@ export default function FloorPlanBuilding({
     const fp = floorPlans[0];
     const rects = ((fp?.enabledRooms ?? []) as RoomType[])
       .filter(r => !ROOM_DEFS[r]?.isOutdoor)
-      .map(r => ({ p: fp!.roomLayout?.[r], d: fp!.roomDimensions?.[r] }))
+      .map(r => {
+        const p0 = fp!.roomLayout?.[r]; const d0 = fp!.roomDimensions?.[r];
+        if (!p0 || !d0) return { p: undefined, d: undefined };
+        const e = effRect(p0, d0, fp!.roomShapes?.[r]);
+        return { p: { x: e.x, y: e.y }, d: { width: e.width, depth: e.depth } };
+      })
       .filter((x): x is { p: { x: number; y: number }; d: { width: number; depth: number } } => !!x.p && !!x.d);
     if (!rects.length) return [{ cx: 0, cz: 0, w: W, d: D }];
     const n = rects.length;
