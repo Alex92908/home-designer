@@ -3629,7 +3629,7 @@ class GltfFurnitureWithFallback extends Component<
 // the wall between them is filled with box segments.
 function PolygonShell({
   points, H, wallColor, floorColor, ceilingColor, ceilingOpacity,
-  doors, windows, activeRoom, wallsHidden,
+  doors, windows, activeRoom, wallsHidden, curtainGlassWalls,
 }: {
   points: Array<[number, number]>; // cm, back-left origin
   H: number;                       // meters
@@ -3649,6 +3649,9 @@ function PolygonShell({
    *  in the FloorPlan single-room toolbar. Hidden edges skip wall +
    *  door + window rendering on that edge. */
   wallsHidden?: Partial<Record<string, boolean>>;
+  /** 幕墙玻璃面 → 透明度（与矩形路径 curtainGlassWalls 同源）。多边形边按
+   *  facing 匹配：命中的边整段换玻璃材质 + 竖挺，内墙/未命中边保持实墙。 */
+  curtainGlassWalls?: Map<WallSide, number>;
 }) {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { getEdges, findEdgeForWall, polygonBounds } = require("@/lib/roomGeometry") as typeof import("@/lib/roomGeometry");
@@ -3685,7 +3688,7 @@ function PolygonShell({
   // with a door-sized gap; otherwise a single wall box.
   const WALL_THICK = 0.08; // 8 cm thick visual walls
 
-  const { wallSegments, doorPlacements, windowPlacements } = useMemo(() => {
+  const { wallSegments, doorPlacements, windowPlacements, mullionPosts } = useMemo(() => {
     const edges = getEdges(points);
     const bbox = polygonBounds(points);
 
@@ -3707,11 +3710,26 @@ function PolygonShell({
     };
     const doorPlacements: DoorPlacement[] = [];
     const isEdgeHidden = (i: number) => wallsHidden?.[`edge-${i}`] === true;
+    // 洞口定位对齐外观图(FPE)约定：wall 键的 pos 沿世界轴从坐标较小端起算
+    // (N/S 墙 = x 较小的西端，E/W 墙 = z 较小的北端)；findEdgeForWall 的
+    // startCm 却从边的起点顶点起算。CCW 多边形的边走向常与世界轴反向
+    // (如 S 边东→西)，不换算时洞口沿边反向展开 → 室内门位与外观镜像错位。
+    // edgeIndex 显式指定的洞本就是边相对坐标，保持原样。
+    const alignHoleStart = (
+      hit: { startCm: number; edge: import("@/lib/roomGeometry").EdgeInfo },
+      lenCm: number,
+      hasEdgeIndex: boolean,
+    ) => {
+      if (hasEdgeIndex) return hit.startCm;
+      const e = hit.edge;
+      const reversed = (e.facing === "N" || e.facing === "S") ? e.x2 < e.x1 : e.z2 < e.z1;
+      return reversed ? Math.max(0, hit.startCm - lenCm) : hit.startCm;
+    };
     for (const d of (doors ?? [])) {
       const hit = findEdgeForWall(points, d.wall, d.posCm, d.lenCm, bbox, d.edgeIndex);
       if (!hit) continue;
       if (isEdgeHidden(hit.edgeIndex)) continue; // wall gone → no door
-      const startM = hit.startCm / 100;
+      const startM = alignHoleStart(hit, d.lenCm, d.edgeIndex != null) / 100;
       const lenM = d.lenCm / 100;
       const hM = d.hCm / 100;
       const arr = holesByEdge.get(hit.edgeIndex) ?? [];
@@ -3739,7 +3757,7 @@ function PolygonShell({
       const hit = findEdgeForWall(points, w.wall, w.pos, w.len, bbox, w.edgeIndex);
       if (!hit) continue;
       if (isEdgeHidden(hit.edgeIndex)) continue; // wall gone → no window
-      const startM = hit.startCm / 100;
+      const startM = alignHoleStart(hit, w.len, w.edgeIndex != null) / 100;
       const lenM = w.len / 100;
       const sillM = (w.sill ?? 90) / 100;
       const hM = (w.h ?? 150) / 100;
@@ -3762,10 +3780,17 @@ function PolygonShell({
     }
 
     // ── Build wall segments: between/around holes ──
-    type Seg = { cx: number; cy: number; cz: number; len: number; angle: number; h: number; yBottom: number };
+    type Seg = {
+      cx: number; cy: number; cz: number; len: number; angle: number; h: number; yBottom: number;
+      /** 幕墙玻璃边：该段换玻璃材质，值为透明度(0..1)；实墙段为 undefined。 */
+      glassT?: number;
+    };
     const segs: Seg[] = [];
+    // 幕墙竖挺（仅玻璃边）：全高深色立柱，沿边均匀分格 ~1.1m，跳过门洞内的柱位。
+    const mullionPosts: Array<{ cx: number; cz: number; angle: number }> = [];
     for (const e of edges) {
       if (isEdgeHidden(e.i)) continue; // skip entire edge → no wall, no door, no window
+      const glassT = curtainGlassWalls?.get(e.facing);
       const wx1 = e.x1 / 100 - W / 2, wz1 = e.z1 / 100 - D / 2;
       const wx2 = e.x2 / 100 - W / 2, wz2 = e.z2 / 100 - D / 2;
       const dxm = wx2 - wx1, dzm = wz2 - wz1;
@@ -3780,6 +3805,7 @@ function PolygonShell({
           cy: yBottom + h / 2,
           cz: wz1 + dzm * tMid,
           len: subLenM, angle, h, yBottom,
+          glassT,
         });
       };
 
@@ -3792,9 +3818,21 @@ function PolygonShell({
         cursor = h.startM + h.lenM;
       }
       mkSeg(cursor, lenM - cursor, H, 0);                           // remainder
+
+      if (glassT !== undefined && lenM > 0.01) {
+        const doorSpans = holes.filter(h => h.kind === "door")
+          .map(h => [h.startM, h.startM + h.lenM] as const);
+        const count = Math.max(1, Math.round(lenM / 1.1)); // 均分 ≈1.0-1.2m 一档
+        for (let k = 0; k <= count; k++) {
+          const s = (lenM * k) / count;
+          if (doorSpans.some(([a, b]) => s > a + 0.03 && s < b - 0.03)) continue; // 门洞内不落柱
+          const t = s / lenM;
+          mullionPosts.push({ cx: wx1 + dxm * t, cz: wz1 + dzm * t, angle });
+        }
+      }
     }
-    return { wallSegments: segs, doorPlacements, windowPlacements: winPlacements };
-  }, [points, W, D, H, doors, windows, getEdges, findEdgeForWall, polygonBounds, wallsHidden]);
+    return { wallSegments: segs, doorPlacements, windowPlacements: winPlacements, mullionPosts };
+  }, [points, W, D, H, doors, windows, getEdges, findEdgeForWall, polygonBounds, wallsHidden, curtainGlassWalls]);
 
   return (
     <>
@@ -3819,11 +3857,32 @@ function PolygonShell({
       </mesh>
 
       {/* Walls — one box per polygon-edge segment. Holes split edges into
-          segments of varying height (sill / lintel / above door). */}
+          segments of varying height (sill / lintel / above door).
+          幕墙玻璃边同几何换玻璃材质（参数与矩形路径 WallWithHoles 幕墙面一致）。 */}
       {wallSegments.map((w, i) => (
         <mesh key={i} position={[w.cx, w.cy, w.cz]} rotation={[0, w.angle, 0]} castShadow receiveShadow>
           <boxGeometry args={[w.len, w.h, WALL_THICK]} />
-          <meshStandardMaterial color={wallColor} roughness={0.85} />
+          {w.glassT !== undefined ? (
+            <meshPhysicalMaterial
+              color="#8AA6C2"
+              transparent
+              opacity={glassTransparencyToOpacity(w.glassT)}
+              transmission={0.60} ior={1.45} thickness={0.012}
+              roughness={0.05} metalness={0.0}
+              reflectivity={0.5} envMapIntensity={2.0}
+              side={THREE.DoubleSide}
+            />
+          ) : (
+            <meshStandardMaterial color={wallColor} roughness={0.85} />
+          )}
+        </mesh>
+      ))}
+
+      {/* 幕墙竖挺 — 仅玻璃边，深色金属立柱与矩形路径竖挺同色同质感 */}
+      {mullionPosts.map((m, i) => (
+        <mesh key={`mul${i}`} position={[m.cx, H / 2, m.cz]} rotation={[0, m.angle, 0]} castShadow>
+          <boxGeometry args={[0.06, H, 0.10]} />
+          <meshStandardMaterial color="#1B1E24" roughness={0.10} metalness={0.96} />
         </mesh>
       ))}
 
@@ -3859,6 +3918,7 @@ function PolygonShell({
           lenM={dp.lenM}
           hM={dp.hM}
           room={activeRoom}
+          style={dp.style}
         />
       ))}
     </>
@@ -3866,43 +3926,136 @@ function PolygonShell({
 }
 
 /** Minimal hinged door panel rendered inside a polygon-shell door hole.
- *  Hinge is at the "start" end of the opening; swings inward by ~90°. */
+ *  Hinge is at the "start" end of the opening; swings inward by ~90°.
+ *  按 DoorStyle 分型渲染（与矩形路径 RoomDoor3D 同款材质参数），
+ *  glass_swing / french_double 双扇对开、glass_slide 沿墙平移，
+ *  其余门型保持原木板单扇。 */
 function PolygonDoorPanel({
-  wx, wz, angle, lenM, hM, room,
+  wx, wz, angle, lenM, hM, room, style,
 }: {
   wx: number; wz: number; angle: number;   // edge-start world position + edge angle
   startM: number; lenM: number; hM: number;
   room: RoomType;
+  style?: import("@/lib/types").DoorStyle;
 }) {
   const isOpen = useDesignerStore(s => !!s.doorOpenByRoom[room]);
   const toggleDoorOpen = useDesignerStore(s => s.toggleDoorOpen);
   const panelRef = useRef<THREE.Group>(null);
+  const panelRightRef = useRef<THREE.Group>(null); // 对开门右扇（反向摆动）
   const animRef = useRef(0);
+  const isSlide  = style === "glass_slide";
+  const isDouble = style === "glass_swing" || style === "french_double";
   useFrame((_, delta) => {
-    const target = isOpen ? -Math.PI / 2 : 0;
+    // 滑门：anim 为沿墙平移距离(0 → -lenM)；其余：铰链转角(0 → -π/2)。
+    const target = isOpen ? (isSlide ? -lenM : -Math.PI / 2) : 0;
+    const speed = isSlide ? 2.4 : 5.5;
     const diff = target - animRef.current;
     if (Math.abs(diff) > 0.002) {
-      animRef.current += Math.sign(diff) * Math.min(Math.abs(diff), 5.5 * delta);
-      if (panelRef.current) panelRef.current.rotation.y = animRef.current;
+      animRef.current += Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
+      if (panelRef.current) {
+        if (isSlide) panelRef.current.position.x = animRef.current;
+        else panelRef.current.rotation.y = animRef.current;
+      }
+      if (isDouble && panelRightRef.current) {
+        panelRightRef.current.rotation.y = -animRef.current;
+      }
     }
   });
+  const onClick = (e: { stopPropagation: () => void }) => { e.stopPropagation(); toggleDoorOpen(room); };
   // Place a group at the hinge (edge-start, on the wall inner face).
   // Inside the group the panel extends in local +X (along edge direction)
   // and rotation-Y swings it into the room.
   return (
     <group position={[wx, 0, wz]} rotation={[0, angle, 0]}>
-      <group ref={panelRef}>
-        {/* Frame (stays still) */}
-        <mesh position={[lenM / 2, hM / 2, 0]} onClick={(e) => { e.stopPropagation(); toggleDoorOpen(room); }}>
-          <boxGeometry args={[lenM - 0.02, hM - 0.02, 0.04]} />
-          <meshStandardMaterial color="#8B6F47" roughness={0.75} />
-        </mesh>
-        {/* Handle */}
-        <mesh position={[lenM - 0.12, hM * 0.5, 0.03]}>
-          <sphereGeometry args={[0.025, 10, 8]} />
-          <meshStandardMaterial color="#C0A060" metalness={0.7} roughness={0.3} />
-        </mesh>
-      </group>
+      {isDouble ? (
+        // 双扇对开：左扇铰链在 x=0，右扇铰链在 x=lenM 且反向摆动。
+        // glass_swing 用深色铝框(#1B1E24)配幕墙竖挺，french_double 用暖白木作框(#F0EEEA)。
+        (() => {
+          const isGlass = style === "glass_swing";
+          const fC = isGlass ? "#1B1E24" : "#F0EEEA";
+          const lw = lenM / 2;
+          const barH = Math.min(1.15, hM * 0.42); const cy = hM * 0.46;
+          const Leaf = ({ mirror }: { mirror: boolean }) => {
+            const sx = mirror ? -1 : 1; // 右扇沿 -X 展开
+            return (
+              <group onClick={onClick}>
+                <mesh position={[sx * lw / 2, hM / 2, 0]}>
+                  <boxGeometry args={[lw - 0.012, hM - 0.02, 0.012]} />
+                  <meshPhysicalMaterial color="#C8D8E5" transmission={isGlass ? 0.86 : 0.75} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={isGlass ? 0.34 : 0.6} side={THREE.DoubleSide} />
+                </mesh>
+                {/* 边框：合缝立梃 + 铰链侧立梃 + 上下横档 */}
+                <mesh position={[sx * (lw - 0.02), hM / 2, 0]} castShadow>
+                  <boxGeometry args={[0.04, hM - 0.02, 0.035]} />
+                  <meshStandardMaterial color={fC} roughness={isGlass ? 0.3 : 0.5} metalness={isGlass ? 0.7 : 0.0} />
+                </mesh>
+                <mesh position={[sx * 0.02, hM / 2, 0]} castShadow>
+                  <boxGeometry args={[0.04, hM - 0.02, 0.035]} />
+                  <meshStandardMaterial color={fC} roughness={isGlass ? 0.3 : 0.5} metalness={isGlass ? 0.7 : 0.0} />
+                </mesh>
+                {[0.02, hM - 0.03].map((y, i) => (
+                  <mesh key={i} position={[sx * lw / 2, y, 0]}>
+                    <boxGeometry args={[lw - 0.012, 0.04, 0.035]} />
+                    <meshStandardMaterial color={fC} roughness={isGlass ? 0.3 : 0.5} metalness={isGlass ? 0.7 : 0.0} />
+                  </mesh>
+                ))}
+                {/* 拉手：玻璃门双面立杆，木作门中缝球形把手 */}
+                {isGlass ? [-0.09, 0.09].map((hz, i) => (
+                  <mesh key={`h${i}`} position={[sx * (lw - 0.085), cy, hz]}>
+                    <boxGeometry args={[0.035, barH, 0.035]} />
+                    <meshStandardMaterial color="#2A2A2A" metalness={0.95} roughness={0.16} />
+                  </mesh>
+                )) : (
+                  <mesh position={[sx * (lw - 0.06), hM * 0.45, 0.03]}>
+                    <sphereGeometry args={[0.02, 10, 10]} />
+                    <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.2} />
+                  </mesh>
+                )}
+              </group>
+            );
+          };
+          return (
+            <group position={[0, 0, 0.01]}>
+              <group ref={panelRef}><Leaf mirror={false} /></group>
+              <group ref={panelRightRef} position={[lenM, 0, 0]}><Leaf mirror /></group>
+            </group>
+          );
+        })()
+      ) : isSlide ? (
+        // 玻璃滑门：整片玻璃沿墙平移 lenM（对齐 WalkthroughDoor3D 滑门分支）。
+        <>
+          {/* 顶部滑轨（固定不动） */}
+          <mesh position={[lenM / 2, hM + 0.04, 0]}>
+            <boxGeometry args={[lenM * 1.06, 0.045, 0.05]} />
+            <meshStandardMaterial color="#2A2A2A" metalness={0.6} roughness={0.4} />
+          </mesh>
+          <group ref={panelRef}>
+            <group onClick={onClick}>
+              <mesh position={[lenM / 2, hM / 2, 0]} castShadow receiveShadow>
+                <boxGeometry args={[lenM - 0.02, hM - 0.03, 0.012]} />
+                <meshPhysicalMaterial color="#C8D8E5" transmission={0.86} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={0.34} side={THREE.DoubleSide} />
+              </mesh>
+              {/* 竖向拉手 */}
+              <mesh position={[lenM - 0.12, hM * 0.45, 0.09]}>
+                <boxGeometry args={[0.03, Math.min(0.9, hM * 0.42), 0.03]} />
+                <meshStandardMaterial color="#2A2A2A" metalness={0.95} roughness={0.20} />
+              </mesh>
+            </group>
+          </group>
+        </>
+      ) : (
+        <group ref={panelRef}>
+          {/* Frame (stays still) */}
+          <mesh position={[lenM / 2, hM / 2, 0]} onClick={onClick}>
+            <boxGeometry args={[lenM - 0.02, hM - 0.02, 0.04]} />
+            <meshStandardMaterial color="#8B6F47" roughness={0.75} />
+          </mesh>
+          {/* Handle */}
+          <mesh position={[lenM - 0.12, hM * 0.5, 0.03]}>
+            <sphereGeometry args={[0.025, 10, 8]} />
+            <meshStandardMaterial color="#C0A060" metalness={0.7} roughness={0.3} />
+          </mesh>
+        </group>
+      )}
     </group>
   );
 }
@@ -4079,12 +4232,16 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
             posCm: d.pos,
             lenCm: d.len,
             hCm: d.h ?? doorHDefault,
-            style: d.style ?? "wood_panel",
+            // 幕墙玻璃面上的门与矩形路径同逻辑：强制通透玻璃门型，三视图一致。
+            style: curtainGlassWalls?.has(d.wall)
+              ? ((d.style === "glass_slide" || d.style === "glass_swing") ? d.style : "glass_swing")
+              : (d.style ?? "wood_panel"),
             edgeIndex: d.edgeIndex,
           }))}
           windows={roomWindows}
           activeRoom={activeRoom}
           wallsHidden={wallsHiddenForActive}
+          curtainGlassWalls={curtainGlassWalls}
         />
       ) : (
         <RoomShell
@@ -4399,7 +4556,7 @@ function RoomDecorWallFrame({
  *    thin and bright
  *  - default → colored box with standard PBR material
  *  Called from both RoomCanvas and HouseCanvas. */
-function ExteriorDecorItem({
+export function ExteriorDecorItem({
   decor, wallW, wallH, selected, onPointerDown,
 }: {
   decor: ExteriorWallDecorItem;
@@ -4448,7 +4605,13 @@ function ExteriorDecorItem({
       onPointerDown={onPointerDown}
       onClick={isLightFixture ? (e) => { e.stopPropagation(); toggleFixture(decor.instanceId); } : undefined}
     >
-      {detailed ? detailed : canvasTex ? (
+      {item.id === "sign-cafe-wall" ? (
+        // 店招灯箱：复用 SignboardMesh（局部 +Z 即墙外法向，文字面朝外无需旋转）。
+        // SignboardMesh 盒体底边在 y=0、z 居中，故下移半高、外移半厚防止埋墙。
+        <group position={[0, -h / 2, getLayerOffset("exteriorDecor") + 0.08]}>
+          <SignboardMesh w={w} d={0.16} h={h} color={item.color} label={decor.label ?? "云横咖啡"} />
+        </group>
+      ) : detailed ? detailed : canvasTex ? (
         <mesh position={[0, 0, 0.005 + getLayerOffset("exteriorDecor")]}>
           <planeGeometry args={[w, h]} />
           <meshBasicMaterial

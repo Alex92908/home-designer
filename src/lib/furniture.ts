@@ -1219,7 +1219,8 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "双台盆，岩板台面奢华",
     icon: "🪥",
-    model3d: { url: "/models/bathroom_vanity/double_sink_vanity/double_sink_vanity.glb" },
+    // fill：三轴独立缩放(所见即所得)。contain 会被最窄轴卡住——用户拉高度滑块无效。
+    model3d: { url: "/models/bathroom_vanity/double_sink_vanity/double_sink_vanity.glb", fit: "fill" },
   },
 
   // ─── 书桌 Desk ────────────────────────────────────────
@@ -1472,6 +1473,9 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"mailbox-modern",      name:"现代信箱",             brand:"五金",   price:580, unit:"元/个", category:"exterior_wall_decor", roomTypes:[], color:"#4A4A4A", width:35, depth:12, height:45, tags:["现代"], description:"壁挂式不锈钢信箱", icon:"📬" },
   { id:"ac-condenser",        name:"空调外机",             brand:"美的",   price:1280,unit:"元/台", category:"exterior_wall_decor", roomTypes:[], color:"#E8E8E8", width:85, depth:35, height:55, tags:[],       description:"分体式空调室外机", icon:"🌬️" },
 
+  // 店招 — 程序化发光灯箱（SignboardMesh），文字走 ExteriorWallDecorItem.label
+  { id:"sign-cafe-wall",      name:"店招灯箱（外墙）",     brand:"定制",   price:1500,unit:"元/块", category:"exterior_wall_decor", roomTypes:[], color:"#C0392B", width:200, depth:16, height:46, tags:["现代"], description:"横向发光店招灯箱，贴装外墙面（文字可改）", icon:"🪧" },
+
   // 爬藤 — 半透绿叶贴图
   { id:"climbing-vine",       name:"爬藤（常春藤）",       brand:"园艺",   price:480, unit:"元/片", category:"exterior_wall_decor", roomTypes:[], color:"#2D5A2A", width:120, depth:4, height:200, tags:["中式"], description:"绿色墙面攀爬植物", icon:"🌿", imageUrl:"/decor/ivy.svg" },
 
@@ -1711,6 +1715,7 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"elec-pc-desk", name:"电脑桌套装", brand:"品质家居", price:8800, unit:"元/件", category:"electronics", roomTypes:["study","study2","bedroom"], color:"#C8C0B4", width:72, depth:70, height:27, tags:[], description:"电脑桌套装", icon:"🖥️", model3d:{ url:"/models/indoor_decor/pc_desk_2/pc_desk_2.glb", fit:"contain" } },
   { id:"decor-trash-bin-2", name:"办公垃圾桶", brand:"品质家居", price:90, unit:"元/件", category:"decor", roomTypes:["study","study2","living"], color:"#C8C0B4", width:28, depth:28, height:45, tags:[], description:"办公垃圾桶", icon:"🗑️", model3d:{ url:"/models/indoor_decor/trash_office/trash_office.glb", fit:"contain" } },
   { id:"decor-bin-black", name:"垃圾桶（黑）", brand:"品质家居", price:120, unit:"元/件", category:"decor", roomTypes:["hallway","living","kitchen","yard","balcony","balcony2","terrace","deck"], color:"#1A1A1A", width:30, depth:30, height:55, tags:[], description:"黑色街边/室内垃圾桶（recolor 整体染黑）", icon:"🗑️", model3d:{ url:"/models/indoor_decor/trash_office/trash_office.glb", fit:"contain", recolor:"#1A1A1A" } },
+  { id:"partition-stall", name:"卫生间隔断板", brand:"品质家居", price:480, unit:"元/件", category:"decor", roomTypes:["bathroom","bathroom2"], color:"#D6D3CC", width:10, depth:150, height:200, tags:[], description:"公共卫生间隔间隔断板（无模型，按色盒渲染成一面薄墙）", icon:"🚻" },
   { id:"lamp-street", name:"英式复古路灯", brand:"品质家居", price:1600, unit:"元/件", category:"lamp", roomTypes:["yard","garage"], color:"#C8C0B4", width:40, depth:40, height:300, tags:[], description:"英式复古路灯", icon:"🏮", model3d:{ url:"/models/indoor_decor/street_lamp/street_lamp.glb", fit:"contain" } },
   { id:"decor-clothes-pile-2", name:"衣物堆（小）", brand:"品质家居", price:0, unit:"-", category:"decor", roomTypes:["bedroom","closet"], color:"#C8C0B4", width:19, depth:19, height:20, tags:[], description:"衣物堆（小）", icon:"👕", model3d:{ url:"/models/indoor_decor/clothes_pile_2/clothes_pile_2.glb", fit:"contain" } },
   { id:"toy-plush", name:"毛绒玩具", brand:"品质家居", price:120, unit:"元/件", category:"toy", roomTypes:["bedroom","living"], color:"#C8C0B4", width:25, depth:14, height:26, tags:[], description:"毛绒玩具", icon:"🧸", model3d:{ url:"/models/indoor_decor/toy_plush/toy_plush.glb", fit:"contain" } },

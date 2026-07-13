@@ -779,6 +779,8 @@ export interface ExteriorWallDecorItem {
   scaleH?: number;
   /** In-plane rotation in degrees (0 = upright). */
   rotation?: number;
+  /** 店招/文字类装饰的自定义文字（如灯箱店名）。 */
+  label?: string;
 }
 
 export type StyleTag = "现代" | "北欧" | "中式" | "日式" | "轻奢" | "工业风";

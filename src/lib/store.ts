@@ -2170,6 +2170,50 @@ export const useDesignerStore = create<DesignerStore>()(
           set({ activeFloor: 0, activeRoom: bestRoom });
         }
 
+        // 3.5 房间级立面/门（floorLayouts.rooms[].exteriorStyle / doors）——
+        //     放在 styleTemplate 之后应用，免得被其默认门窗覆盖。
+        //     卫生间/后场声明 concrete 实墙、临街大堂声明 glass + 加宽大门。
+        {
+          const plans = get().floorPlans.map((fp, fi) => {
+            const layout = tpl.floorLayouts[fi];
+            if (!layout) return fp;
+            const exStyle = { ...(fp.roomExteriorStyle ?? {}) };
+            const doorsMap = { ...(fp.roomDoors ?? {}) };
+            let rooms = fp.rooms;
+            let touched = false;
+            for (const r of layout.rooms) {
+              if (r.exteriorStyle) { exStyle[r.room] = r.exteriorStyle; touched = true; }
+              if (r.doors?.length) {
+                doorsMap[r.room] = r.doors.map((d, i) => ({
+                  id: `tpl_door_${r.room}_${i}`, wall: d.wall, pos: d.pos, len: d.len,
+                  ...(d.style ? { style: d.style } : {}), ...(d.h != null ? { h: d.h } : {}),
+                }));
+                touched = true;
+              }
+              // 外墙装饰（店招/壁画/壁灯）→ RoomState.exteriorDecor；
+              // 未声明 wallDecor 的房间不动其现有装饰。
+              if (r.wallDecor?.length && rooms[r.room]) {
+                rooms = {
+                  ...rooms,
+                  [r.room]: {
+                    ...rooms[r.room],
+                    exteriorDecor: r.wallDecor.map((d, i) => ({
+                      instanceId: `tpl_decor_${r.room}_${i}`,
+                      furnitureId: d.furnitureId, wall: d.wall, u: d.u, v: d.v,
+                      ...(d.scaleW ? { scaleW: d.scaleW } : {}),
+                      ...(d.scaleH ? { scaleH: d.scaleH } : {}),
+                      ...(d.label ? { label: d.label } : {}),
+                    })),
+                  },
+                };
+                touched = true;
+              }
+            }
+            return touched ? { ...fp, roomExteriorStyle: exStyle, roomDoors: doorsMap, rooms } : fp;
+          });
+          set({ floorPlans: plans });
+        }
+
         // 4. 片场级显式摆放（可选）：风格模板铺完后，逐房间整体替换 placedItems。
         //    非住宅片场（咖啡馆/办公室…）的家具不是住宅风格能推出来的。
         //    坐标即 store 内部格式（room-local 中心 cm），直接落。

@@ -22,6 +22,16 @@ export interface LayoutTemplateRoom {
   /** 需要隐藏的墙面（开放式/骑楼露天区，如咖啡馆沿街走廊）。
    *  applyProjectTemplate 会写进 roomWallsHidden。 */
   wallsHidden?: Array<"N" | "S" | "E" | "W">;
+  /** 本房间外立面：glass=玻璃幕墙 / concrete=实墙。卫生间、厨房库房等
+   *  隐私/后场房间应显式给 concrete。applyProjectTemplate 写进
+   *  roomExteriorStyle（styleTemplate 应用后生效，不被其覆盖）。 */
+  exteriorStyle?: "glass" | "concrete" | "auto";
+  /** 显式门（如临街大门加宽双开）。applyProjectTemplate 写进 roomDoors。 */
+  doors?: Array<{ wall: "N" | "S" | "E" | "W"; pos: number; len: number;
+    style?: import("./types").DoorStyle; h?: number }>;
+  /** 外墙装饰——店招/壁画/壁灯等，写进 RoomState.exteriorDecor。 */
+  wallDecor?: Array<{ furnitureId: string; wall: "N" | "S" | "E" | "W";
+    u: number; v: number; scaleW?: number; scaleH?: number; label?: string }>;
 }
 
 export interface FloorplanLayout {

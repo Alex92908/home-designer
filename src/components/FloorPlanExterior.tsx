@@ -27,7 +27,7 @@ import { overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem, resolveFacadeLayer, resolveFaceOpacity, isExteriorWallSide } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
 import { InteriorRoomDetail } from "./InteriorRoomDetail";
-import { PlacedItemMesh, LightFixtureInner } from "./RoomCanvas";
+import { PlacedItemMesh, LightFixtureInner, ExteriorDecorItem } from "./RoomCanvas";
 import { STAIR_FURNITURE_IDS } from "./Staircase";
 import { WalkthroughDoor3D } from "@/components/walkthrough/WalkthroughDoor3D";
 import { StyledWindow } from "@/components/shared/StyledWindow";
@@ -7381,6 +7381,35 @@ export default function FloorPlanBuilding({
                 wallXray={wallXray}
               />
             ))}
+          </group>
+        );
+      })}
+      {/* 外墙装饰(RoomState.exteriorDecor)：店招/壁画/壁灯等，贴各房间外墙外皮。
+          渲染器复用效果图的 ExteriorDecorItem，墙面局部系与 RoomExteriorDecorLayer
+          完全一致(局部 +X = 从外看的右、+Z = 外法向)；外观图仅展示，不接选中/拖拽。
+          墙厚 12cm 居中于边界 → 外皮 0.06m，再留 1cm 防 z-fight。 */}
+      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD }) => {
+        const decorList = floorPlans[fi]?.rooms?.[room]?.exteriorDecor;
+        if (!decorList || decorList.length === 0) return null;
+        const DEC_OFF = 0.07;
+        const yMid = yBase + FLOOR_H / 2;
+        const specs: Record<string, { position: [number, number, number]; rotation: [number, number, number]; wallW: number }> = {
+          N: { position: [cx, yMid, cz - rD / 2 - DEC_OFF], rotation: [0, Math.PI, 0],      wallW: rW },
+          S: { position: [cx, yMid, cz + rD / 2 + DEC_OFF], rotation: [0, 0, 0],            wallW: rW },
+          W: { position: [cx - rW / 2 - DEC_OFF, yMid, cz], rotation: [0, -Math.PI / 2, 0], wallW: rD },
+          E: { position: [cx + rW / 2 + DEC_OFF, yMid, cz], rotation: [0,  Math.PI / 2, 0], wallW: rD },
+        };
+        return (
+          <group key={`xdecor-${fi}-${room}`}>
+            {decorList.map(dec => {
+              const spec = specs[dec.wall];
+              if (!spec) return null;
+              return (
+                <group key={dec.instanceId} position={spec.position} rotation={spec.rotation}>
+                  <ExteriorDecorItem decor={dec} wallW={spec.wallW} wallH={FLOOR_H} selected={false} onPointerDown={() => {}} />
+                </group>
+              );
+            })}
           </group>
         );
       })}

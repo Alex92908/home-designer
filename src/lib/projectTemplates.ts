@@ -1605,13 +1605,27 @@ const CAFE_SET: ProjectTemplate = {
       rooms: [
         // 2026-07 按用户实景固化：客厅拉成凸字形（兜着厨房/卫生间两缺口），
         // 走廊 = 沿街露天座位区（四面墙隐藏 = 骑楼人行道）。
-        // 西北后场（kitchen 语义=有操作台/设备的区域）
-        { room: "kitchen",  x: 0,   y: 0,   width: 280,  depth: 260 },
-        // 大堂（凸字形，多边形 room-local cm；缺口分别被厨房/卫生间填占）
+        // 西北后场（kitchen 语义=厨房+库房；后场隐私 → 实墙）
+        { room: "kitchen",  x: 0,   y: 0,   width: 280,  depth: 260, exteriorStyle: "concrete" },
+        // 大堂（凸字形，多边形 room-local cm；缺口分别被厨房/卫生间填占；
+        // 临街玻璃幕墙 + 南墙 160cm 法式对开大门）
         { room: "living",   x: 9,   y: 13,  width: 1179, depth: 592,
-          shape: { preset: "custom", points: [[272, 0], [944, 0], [945, 213], [1179, 216], [1178, 592], [276, 591], [0, 592], [3, 256], [268, 254]] } },
-        // 洗手间（东北角外挂）
-        { room: "bathroom", x: 960, y: 0,   width: 240,  depth: 220 },
+          // 东北角绕出男女厕之间的洗手走廊(x1031..1111 通到北端)
+          shape: { preset: "custom", points: [[272, 0], [936, 0], [936, 137], [1031, 137], [1031, 0], [1111, 0], [1111, 137], [1178, 137], [1178, 592], [276, 591], [0, 592], [3, 256], [268, 254]] },
+          exteriorStyle: "glass",
+          // glass_swing=两扇各绕外侧边对开；french_double 在本渲染器是整扇单铰(会整体甩到一边)
+          doors: [{ wall: "S", pos: 520, len: 160, style: "glass_swing", h: 210 }],
+          // 门楣店招：外墙装饰(RoomState.exteriorDecor)——单一事实来源，
+          // 效果图/外观图共用同一渲染器；u/v 使灯箱悬在南门正上方。
+          wallDecor: [{ furnitureId: "sign-cafe-wall", wall: "S", u: 0.51, v: 0.85, label: "云横咖啡" }] },
+        // 女厕（独立房间；门朝中间洗手走廊开，走廊侧外墙装饰挂「女」标识）
+        { room: "bathroom",  x: 945,  y: 0, width: 95, depth: 150, exteriorStyle: "concrete",
+          doors: [{ wall: "E", pos: 60, len: 70 }],
+          wallDecor: [{ furnitureId: "sign-cafe-wall", wall: "E", u: 0.5, v: 0.78, scaleW: 0.3, label: "女" }] },
+        // 男厕（独立房间；门朝走廊，挂「男」标识）
+        { room: "bathroom2", x: 1120, y: 0, width: 80, depth: 150, exteriorStyle: "concrete",
+          doors: [{ wall: "W", pos: 60, len: 70 }],
+          wallDecor: [{ furnitureId: "sign-cafe-wall", wall: "W", u: 0.5, v: 0.78, scaleW: 0.3, label: "男" }] },
         // 沿街露天座位区（走廊语义；全墙隐藏成骑楼露台）
         { room: "hallway",  x: 0,   y: 600, width: 1200, depth: 180, wallsHidden: ["N", "S", "E", "W"] },
       ],
@@ -1759,7 +1773,7 @@ const CAFE_SET: ProjectTemplate = {
         { furnitureId: "decor-cappuccino", x: 1031, z: 490, rotation: 20, elevationY: 74 },
         { furnitureId: "decor-coffee-mug", x: 1079, z: 492, rotation: 200, elevationY: 74 },
         { furnitureId: "lamp-pendant-ikea4", x: 1055, z: 500, mountCeiling: true },
-        { furnitureId: "floor_lamp-modern", x: 1150, z: 265 },
+        { furnitureId: "floor_lamp-modern", x: 985, z: 175 },
 
         // ═══ 吊挂绿萝 + 主区吊灯成排（mountCeiling 顶贴天花）═══
         { furnitureId: "plant-hanging-pothos", x: 521, z: 157, mountCeiling: true },
@@ -1770,6 +1784,10 @@ const CAFE_SET: ProjectTemplate = {
         { furnitureId: "lamp-pendant-ikea4", x: 611, z: 227, mountCeiling: true },
         { furnitureId: "lamp-pendant-ikea4", x: 611, z: 408, mountCeiling: true },
         { furnitureId: "lamp-pendant-ikea4", x: 791, z: 307, mountCeiling: true },
+
+        // ═══ 东北开放洗手区：双盆岩板浴室柜贴东墙纵放(面朝西)——
+        //     出走廊即洗手，不挡两扇厕所门(横放会堵死走廊口，教训) ═══
+        { furnitureId: "vanity-double-marble", x: 1160, z: 215, rotation: 270 },
       ],
       hallway: [
         // ★沿街露天座位区（1200×180，四面墙由 floorLayouts.wallsHidden 隐藏=骑楼人行道）：
@@ -1789,25 +1807,31 @@ const CAFE_SET: ProjectTemplate = {
         { furnitureId: "plant-rubber-tree", x: 926, z: 132 },
       ],
       kitchen: [
-        // 后场备货区（3×6m，沿墙摆满、中间留通道；玻璃外能瞥见）
-        { furnitureId: "dining_table-bar-counter", x: 150, z: 130, rotation: 0 },  // 操作台
-        { furnitureId: "appliance-coffee",         x: 120, z: 120 },               // 备用咖啡机（台面）
-        { furnitureId: "appliance-drink-fridge",   x: 255, z: 65 },                // 立式冷藏
-        { furnitureId: "fridge-single-white",      x: 60,  z: 70 },
-        { furnitureId: "storage-shelving",         x: 45,  z: 260, rotation: 90 },
-        { furnitureId: "storage-shelving-2",       x: 45,  z: 430, rotation: 90 },
-        { furnitureId: "storage-crate",            x: 150, z: 300 },
-        { furnitureId: "storage-box",              x: 240, z: 320 },
-        { furnitureId: "storage-crate",            x: 155, z: 380 },
-        { furnitureId: "decor-trash-bin",          x: 250, z: 450 },
-        { furnitureId: "decor-books-pile",         x: 250, z: 250 },
-        { furnitureId: "plant-potted-pack",        x: 250, z: 540 },
+        // ★厨房+库房(galley 后场,2026-07 调研重排)：北墙冷藏+洗涤区，
+        //   东墙备餐台(让出中央通道)，西墙干货金属架，西南角储物箱堆叠。
+        { furnitureId: "fridge-single-white", x: 42, z: 45 },
+        { furnitureId: "appliance-drink-fridge", x: 108, z: 45 },
+        // 双槽水槽嵌进备餐台台面(kitchen_sink 类自动锚定台面高——单独落地会悬浮,教训)
+        { furnitureId: "sink-double-steel", x: 225, z: 215, rotation: 90 },
+        { furnitureId: "dining_table-bar-counter", x: 225, z: 155, rotation: 90 },
+        { furnitureId: "appliance-coffee", x: 225, z: 120, elevationY: 105 },
+        { furnitureId: "decor-books-pile", x: 225, z: 190, elevationY: 105 },
+        { furnitureId: "storage-shelving", x: 25, z: 120, rotation: 90 },
+        { furnitureId: "storage-shelving-2", x: 25, z: 175, rotation: 90 },
+        { furnitureId: "storage-crate", x: 45, z: 228 },
+        { furnitureId: "storage-box", x: 45, z: 228, elevationY: 50 },
+        { furnitureId: "storage-crate", x: 112, z: 232, rotation: 90 },
+        { furnitureId: "decor-trash-bin", x: 160, z: 242 },
       ],
       bathroom: [
-        // 小 WC（240×220）：只放坐便 + 立柱盆 + 镜，别塞住宅整套卫浴
-        { furnitureId: "toilet-sit",               x: 60,  z: 160, rotation: 0 },
-        { furnitureId: "bathroom_vanity-pedestal", x: 180, z: 60,  rotation: 0 },
-        { furnitureId: "mirror-cabinet",           x: 180, z: 20,  rotation: 0 },
+        // 女厕：坐便贴北墙 + 角落垃圾桶（门/标识在 floorLayouts 声明）
+        { furnitureId: "toilet-sit", x: 47, z: 38, rotation: 180 },
+        { furnitureId: "decor-trash-bin-3", x: 32, z: 116 },
+      ],
+      bathroom2: [
+        // 男厕
+        { furnitureId: "toilet-sit", x: 40, z: 38, rotation: 180 },
+        { furnitureId: "decor-trash-bin-3", x: 20, z: 117 },
       ],
     },
   ],
