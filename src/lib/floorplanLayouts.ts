@@ -19,6 +19,9 @@ export interface LayoutTemplateRoom {
   width: number;       // cm
   depth: number;
   shape?: RoomShape;
+  /** 需要隐藏的墙面（开放式/骑楼露天区，如咖啡馆沿街走廊）。
+   *  applyProjectTemplate 会写进 roomWallsHidden。 */
+  wallsHidden?: Array<"N" | "S" | "E" | "W">;
 }
 
 export interface FloorplanLayout {

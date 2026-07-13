@@ -1603,12 +1603,17 @@ const CAFE_SET: ProjectTemplate = {
       name: "咖啡馆",
       area: 78,
       rooms: [
-        // 西侧吧台区（kitchen 语义=有操作台/设备的区域）
-        { room: "kitchen",  x: 0,   y: 0, width: 300, depth: 600 },
-        // 大堂（东侧主空间）
-        { room: "living",   x: 300, y: 0, width: 660, depth: 600 },
+        // 2026-07 按用户实景固化：客厅拉成凸字形（兜着厨房/卫生间两缺口），
+        // 走廊 = 沿街露天座位区（四面墙隐藏 = 骑楼人行道）。
+        // 西北后场（kitchen 语义=有操作台/设备的区域）
+        { room: "kitchen",  x: 0,   y: 0,   width: 280,  depth: 260 },
+        // 大堂（凸字形，多边形 room-local cm；缺口分别被厨房/卫生间填占）
+        { room: "living",   x: 9,   y: 13,  width: 1179, depth: 592,
+          shape: { preset: "custom", points: [[272, 0], [944, 0], [945, 213], [1179, 216], [1178, 592], [276, 591], [0, 592], [3, 256], [268, 254]] } },
         // 洗手间（东北角外挂）
-        { room: "bathroom", x: 960, y: 0, width: 240, depth: 220 },
+        { room: "bathroom", x: 960, y: 0,   width: 240,  depth: 220 },
+        // 沿街露天座位区（走廊语义；全墙隐藏成骑楼露台）
+        { room: "hallway",  x: 0,   y: 600, width: 1200, depth: 180, wallsHidden: ["N", "S", "E", "W"] },
       ],
     },
   ],
@@ -1624,130 +1629,153 @@ const CAFE_SET: ProjectTemplate = {
     // living-local：(0,0)=西北角，x→东(0-660)，z→南(0-600)。
     {
       living: [
-        // ★本布局 2026-07 从用户浏览器实景「按现在固化」而来（整体替换旧版）：
-        //   5 张四人桌（rustic 圆桌+四椅+桌面盆花&咖啡）两排 + 墙面 6 幅艺术画 + 吊挂绿萝，中央留空。
-        //   坐标 living-local：(0,0)=西北角，x→东(0-660)，z→南(0-600)。
-        //   垂直约定：柜台面件 elevationY≈85；桌面件 elevationY:74（rustic 桌顶，自动吸附）；
-        //   挂画 elevationY=挂画中心高；吊灯/吊挂绿萝 mountCeiling:true。
+        // ★2026-07 按用户实景二次固化：凸字形大堂（1179×592，多边形见 floorLayouts）。
+        //   主区 5 张四人桌两排 + 西翼/东翼各 1-2 张四人桌 + 墙面挂画 + 吊挂绿萝。
+        //   坐标 living-local：(0,0)=多边形包围盒西北角，x→东(0-1179)，z→南(0-592)。
+        //   垂直约定：柜台面件 elevationY≈85；桌面件 elevationY:74；挂画 elevationY=中心高；
+        //   吊灯/绿萝 mountCeiling:true。
 
-        // ═══ 西墙：甜品冷柜 + 饮料柜 ═══
-        { furnitureId: "counter-cake-display", x: 41, z: 206, rotation: 90 },
-        { furnitureId: "appliance-drink-fridge", x: 37, z: 377, rotation: 90 },
-
-        // ═══ 北长墙：点单服务线（连续实木吧台 + 台面工作道具 + 菜单板 + 吧凳）═══
-        { furnitureId: "counter-bar-wood", x: 208, z: 97 },
-        { furnitureId: "counter-bar-wood", x: 451, z: 97 },
-        { furnitureId: "appliance-coffee-brewer", x: 111, z: 90, elevationY: 85 },
-        { furnitureId: "appliance-coffee-grinder", x: 146, z: 111, elevationY: 85 },
-        { furnitureId: "electronics-pos", x: 542, z: 92, rotation: 180, elevationY: 85 },
-        { furnitureId: "decor-coffee-cups", x: 260, z: 116, elevationY: 85 },
-        { furnitureId: "decor-coffee-menu", x: 470, z: 12, elevationY: 150 },
-        { furnitureId: "dining_chair-bar-stool", x: 165, z: 39, rotation: 270 },
-        { furnitureId: "dining_chair-bar-stool", x: 283, z: 41, rotation: 270 },
-        { furnitureId: "dining_chair-bar-stool", x: 373, z: 42, rotation: 270 },
-        { furnitureId: "dining_chair-bar-stool", x: 493, z: 44, rotation: 270 },
+        // ═══ 北服务线（贴厨房隔墙的甜品柜/饮料柜 + 连续实木吧台 + 台面道具 + 吧凳）═══
+        { furnitureId: "counter-cake-display", x: 312, z: 213, rotation: 90 },
+        { furnitureId: "appliance-drink-fridge", x: 308, z: 95, rotation: 90 },
+        { furnitureId: "counter-bar-wood", x: 479, z: 104 },
+        { furnitureId: "counter-bar-wood", x: 722, z: 105 },
+        { furnitureId: "appliance-coffee-brewer", x: 383, z: 97, elevationY: 85 },
+        { furnitureId: "appliance-coffee-grinder", x: 417, z: 118, elevationY: 85 },
+        { furnitureId: "electronics-pos", x: 813, z: 99, rotation: 180, elevationY: 85 },
+        { furnitureId: "decor-coffee-cups", x: 531, z: 124, elevationY: 85 },
+        { furnitureId: "decor-coffee-menu", x: 741, z: 19, elevationY: 150 },
+        { furnitureId: "dining_chair-bar-stool", x: 436, z: 46, rotation: 270 },
+        { furnitureId: "dining_chair-bar-stool", x: 554, z: 48, rotation: 270 },
+        { furnitureId: "dining_chair-bar-stool", x: 644, z: 50, rotation: 270 },
+        { furnitureId: "dining_chair-bar-stool", x: 764, z: 51, rotation: 270 },
 
         // ═══ 南玻璃：两段直线吧台 + 窗边高脚位 ═══
-        { furnitureId: "counter-bar-straight", x: 149, z: 563, rotation: 180 },
-        { furnitureId: "counter-bar-straight", x: 522, z: 563, rotation: 180 },
-        { furnitureId: "seat-bar-stool", x: 70, z: 500 },
-        { furnitureId: "seat-bar-stool", x: 150, z: 500 },
-        { furnitureId: "seat-bar-stool", x: 230, z: 500 },
-        { furnitureId: "seat-bar-stool", x: 450, z: 500 },
-        { furnitureId: "seat-bar-stool", x: 530, z: 500 },
-        { furnitureId: "seat-bar-stool", x: 610, z: 500 },
+        { furnitureId: "counter-bar-straight", x: 420, z: 562, rotation: 180 },
+        { furnitureId: "counter-bar-straight", x: 793, z: 562, rotation: 180 },
+        { furnitureId: "seat-bar-stool", x: 341, z: 507 },
+        { furnitureId: "seat-bar-stool", x: 421, z: 507 },
+        { furnitureId: "seat-bar-stool", x: 501, z: 507 },
+        { furnitureId: "seat-bar-stool", x: 721, z: 507 },
+        { furnitureId: "seat-bar-stool", x: 801, z: 507 },
+        { furnitureId: "seat-bar-stool", x: 881, z: 507 },
 
-        // ═══ 东墙：书架墙 + 边柜 + 复古道具 + 挂画（elevationY=挂画中心高）═══
-        { furnitureId: "sideboard-euro", x: 633, z: 170, rotation: 270 },
-        { furnitureId: "bookshelf-with-books", x: 641, z: 402, rotation: 270 },
-        { furnitureId: "bookshelf-wood-lp", x: 644, z: 306, rotation: 270 },
-        { furnitureId: "decor-gramophone", x: 635, z: 214, rotation: 90 },
-        { furnitureId: "decor-victorian-clock", x: 642, z: 327, rotation: 90, elevationY: 75 },
-        { furnitureId: "decor-radio-vintage", x: 646, z: 424, rotation: 90, elevationY: 75 },
-        { furnitureId: "artwork-abstract", x: 656, z: 147, rotation: 90, elevationY: 175 },
-        { furnitureId: "artwork-impression", x: 646, z: 509, rotation: 270 },
+        // ═══ 东北隔断带（旧东墙线：边柜 + 留声机 + 绿植）═══
+        { furnitureId: "sideboard-euro", x: 906, z: 146, rotation: 270 },
+        { furnitureId: "decor-gramophone", x: 910, z: 184, rotation: 90 },
+        { furnitureId: "plant-monstera", x: 899, z: 42 },
+        { furnitureId: "plant-monstera", x: 309, z: 46 },
 
-        // ═══ 墙面艺术画（北墙 + 西墙）═══
-        { furnitureId: "artwork-seurat", x: 250, z: 14, elevationY: 175 },
-        { furnitureId: "artwork-kandinsky", x: 573, z: 11, elevationY: 175 },
-        { furnitureId: "artwork-red-fuji", x: 14, z: 120, rotation: 90, elevationY: 155 },
-        { furnitureId: "artwork-degas", x: 14, z: 470, rotation: 90, elevationY: 155 },
+        // ═══ 墙面艺术画（北墙 + 西翼西墙 + 东翼东墙）═══
+        { furnitureId: "artwork-seurat", x: 521, z: 21, elevationY: 175 },
+        { furnitureId: "artwork-kandinsky", x: 844, z: 18, elevationY: 175 },
+        { furnitureId: "artwork-red-fuji", x: 10, z: 330, rotation: 90, elevationY: 155 },
+        { furnitureId: "artwork-vangogh", x: 3, z: 502, rotation: 90 },
+        { furnitureId: "artwork-degas", x: 1170, z: 300, rotation: 270, elevationY: 155 },
+        { furnitureId: "artwork-impression", x: 1174, z: 532, rotation: 270, elevationY: 150 },
 
-        // ═══ 角落绿植 ═══
-        { furnitureId: "plant-monstera", x: 628, z: 35 },
-        { furnitureId: "plant-monstera", x: 38, z: 39 },
+        // ═══ 主区四人桌 ×5（rustic 圆桌 + 四面各一椅）═══
+        { furnitureId: "dining_table-cafe-rustic", x: 431, z: 207 },
+        { furnitureId: "chair-nordic-oak", x: 431, z: 141 },
+        { furnitureId: "chair-nordic-oak", x: 431, z: 273, rotation: 180 },
+        { furnitureId: "chair-nordic-oak", x: 365, z: 207, rotation: 90 },
+        { furnitureId: "chair-nordic-oak", x: 497, z: 207, rotation: 270 },
+        { furnitureId: "dining_table-cafe-rustic", x: 616, z: 207 },
+        { furnitureId: "chair-modern-gray", x: 616, z: 141 },
+        { furnitureId: "chair-modern-gray", x: 616, z: 273, rotation: 180 },
+        { furnitureId: "chair-modern-gray", x: 550, z: 207, rotation: 90 },
+        { furnitureId: "chair-modern-gray", x: 682, z: 207, rotation: 270 },
+        { furnitureId: "dining_table-cafe-rustic", x: 801, z: 207 },
+        { furnitureId: "chair-industrial-black", x: 801, z: 141 },
+        { furnitureId: "chair-industrial-black", x: 801, z: 273, rotation: 180 },
+        { furnitureId: "chair-industrial-black", x: 735, z: 207, rotation: 90 },
+        { furnitureId: "chair-industrial-black", x: 867, z: 207, rotation: 270 },
+        { furnitureId: "dining_table-cafe-rustic", x: 431, z: 402 },
+        { furnitureId: "chair-modern-gray", x: 431, z: 336 },
+        { furnitureId: "chair-modern-gray", x: 431, z: 468, rotation: 180 },
+        { furnitureId: "chair-modern-gray", x: 365, z: 402, rotation: 90 },
+        { furnitureId: "chair-modern-gray", x: 497, z: 402, rotation: 270 },
+        { furnitureId: "dining_table-cafe-rustic", x: 801, z: 402 },
+        { furnitureId: "chair-nordic-oak", x: 801, z: 336 },
+        { furnitureId: "chair-nordic-oak", x: 801, z: 468, rotation: 180 },
+        { furnitureId: "chair-nordic-oak", x: 735, z: 402, rotation: 90 },
+        { furnitureId: "chair-nordic-oak", x: 867, z: 402, rotation: 270 },
 
-        // ═══ 四人桌 ×5（rustic 圆桌 + 四面各一椅）═══
-        // 后排 3 张（贴北柜台）
-        { furnitureId: "dining_table-cafe-rustic", x: 160, z: 200 },
-        { furnitureId: "chair-nordic-oak", x: 160, z: 134 },
-        { furnitureId: "chair-nordic-oak", x: 160, z: 266, rotation: 180 },
-        { furnitureId: "chair-nordic-oak", x: 94, z: 200, rotation: 90 },
-        { furnitureId: "chair-nordic-oak", x: 226, z: 200, rotation: 270 },
-        { furnitureId: "dining_table-cafe-rustic", x: 345, z: 200 },
-        { furnitureId: "chair-modern-gray", x: 345, z: 134 },
-        { furnitureId: "chair-modern-gray", x: 345, z: 266, rotation: 180 },
-        { furnitureId: "chair-modern-gray", x: 279, z: 200, rotation: 90 },
-        { furnitureId: "chair-modern-gray", x: 411, z: 200, rotation: 270 },
-        { furnitureId: "dining_table-cafe-rustic", x: 530, z: 200 },
-        { furnitureId: "chair-industrial-black", x: 530, z: 134 },
-        { furnitureId: "chair-industrial-black", x: 530, z: 266, rotation: 180 },
-        { furnitureId: "chair-industrial-black", x: 464, z: 200, rotation: 90 },
-        { furnitureId: "chair-industrial-black", x: 596, z: 200, rotation: 270 },
-        // 前排 2 张（靠南窗）
-        { furnitureId: "dining_table-cafe-rustic", x: 160, z: 395 },
-        { furnitureId: "chair-modern-gray", x: 160, z: 329 },
-        { furnitureId: "chair-modern-gray", x: 160, z: 461, rotation: 180 },
-        { furnitureId: "chair-modern-gray", x: 94, z: 395, rotation: 90 },
-        { furnitureId: "chair-modern-gray", x: 226, z: 395, rotation: 270 },
-        { furnitureId: "dining_table-cafe-rustic", x: 530, z: 395 },
-        { furnitureId: "chair-nordic-oak", x: 530, z: 329 },
-        { furnitureId: "chair-nordic-oak", x: 530, z: 461, rotation: 180 },
-        { furnitureId: "chair-nordic-oak", x: 464, z: 395, rotation: 90 },
-        { furnitureId: "chair-nordic-oak", x: 596, z: 395, rotation: 270 },
+        // ═══ 主区桌面件（每桌盆花 + 咖啡，elevationY:74 吸附桌顶）═══
+        { furnitureId: "decor-tulip", x: 431, z: 207, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 407, z: 197, rotation: 20, elevationY: 74 },
+        { furnitureId: "decor-coffee-mug", x: 455, z: 199, rotation: 200, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 433, z: 233, rotation: 90, elevationY: 74 },
+        { furnitureId: "decor-tulip", x: 616, z: 207, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 592, z: 197, rotation: 20, elevationY: 74 },
+        { furnitureId: "decor-coffee-mug", x: 640, z: 199, rotation: 200, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 618, z: 233, rotation: 90, elevationY: 74 },
+        { furnitureId: "decor-tulip", x: 801, z: 207, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 777, z: 197, rotation: 20, elevationY: 74 },
+        { furnitureId: "decor-coffee-mug", x: 825, z: 199, rotation: 200, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 803, z: 233, rotation: 90, elevationY: 74 },
+        { furnitureId: "decor-tulip", x: 431, z: 402, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 407, z: 392, rotation: 20, elevationY: 74 },
+        { furnitureId: "decor-coffee-mug", x: 455, z: 394, rotation: 200, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 433, z: 428, rotation: 90, elevationY: 74 },
+        { furnitureId: "decor-tulip", x: 801, z: 402, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 777, z: 392, rotation: 20, elevationY: 74 },
+        { furnitureId: "decor-coffee-mug", x: 825, z: 394, rotation: 200, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 803, z: 428, rotation: 90, elevationY: 74 },
+        { furnitureId: "decor-coffee-cups", x: 626, z: 235, elevationY: 55 },
 
-        // ═══ 桌面件：每桌中央郁金香盆花 + 3 杯咖啡（elevationY:74 吸附桌顶）═══
-        { furnitureId: "decor-tulip", x: 160, z: 200, elevationY: 74 },
-        { furnitureId: "decor-cappuccino", x: 136, z: 190, rotation: 20, elevationY: 74 },
-        { furnitureId: "decor-coffee-mug", x: 184, z: 192, rotation: 200, elevationY: 74 },
-        { furnitureId: "decor-cappuccino", x: 162, z: 226, rotation: 90, elevationY: 74 },
-        { furnitureId: "decor-tulip", x: 345, z: 200, elevationY: 74 },
-        { furnitureId: "decor-cappuccino", x: 321, z: 190, rotation: 20, elevationY: 74 },
-        { furnitureId: "decor-coffee-mug", x: 369, z: 192, rotation: 200, elevationY: 74 },
-        { furnitureId: "decor-cappuccino", x: 347, z: 226, rotation: 90, elevationY: 74 },
-        { furnitureId: "decor-tulip", x: 530, z: 200, elevationY: 74 },
-        { furnitureId: "decor-cappuccino", x: 506, z: 190, rotation: 20, elevationY: 74 },
-        { furnitureId: "decor-coffee-mug", x: 554, z: 192, rotation: 200, elevationY: 74 },
-        { furnitureId: "decor-cappuccino", x: 532, z: 226, rotation: 90, elevationY: 74 },
-        { furnitureId: "decor-tulip", x: 160, z: 395, elevationY: 74 },
-        { furnitureId: "decor-cappuccino", x: 136, z: 385, rotation: 20, elevationY: 74 },
-        { furnitureId: "decor-coffee-mug", x: 184, z: 387, rotation: 200, elevationY: 74 },
-        { furnitureId: "decor-cappuccino", x: 162, z: 421, rotation: 90, elevationY: 74 },
-        { furnitureId: "decor-tulip", x: 530, z: 395, elevationY: 74 },
-        { furnitureId: "decor-cappuccino", x: 506, z: 385, rotation: 20, elevationY: 74 },
-        { furnitureId: "decor-coffee-mug", x: 554, z: 387, rotation: 200, elevationY: 74 },
-        { furnitureId: "decor-cappuccino", x: 532, z: 421, rotation: 90, elevationY: 74 },
-        // 散落桌面件
-        { furnitureId: "decor-coffee-cups", x: 355, z: 228, elevationY: 55 },
+        // ═══ 西翼（厨房下方 2.7×3.4m）：四人桌 + 书架角 + 复古小件 ═══
+        { furnitureId: "dining_table-cafe-rustic", x: 140, z: 450 },
+        { furnitureId: "chair-nordic-oak", x: 140, z: 384 },
+        { furnitureId: "chair-nordic-oak", x: 140, z: 516, rotation: 180 },
+        { furnitureId: "chair-nordic-oak", x: 74, z: 450, rotation: 90 },
+        { furnitureId: "chair-nordic-oak", x: 206, z: 450, rotation: 270 },
+        { furnitureId: "decor-tulip", x: 140, z: 450, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 116, z: 440, rotation: 20, elevationY: 74 },
+        { furnitureId: "decor-coffee-mug", x: 164, z: 442, rotation: 200, elevationY: 74 },
+        { furnitureId: "lamp-pendant-ikea4", x: 140, z: 450, mountCeiling: true },
+        { furnitureId: "bookshelf-with-books", x: 202, z: 282 },
+        { furnitureId: "bookshelf-wood-lp", x: 82, z: 269 },
+        { furnitureId: "decor-victorian-clock", x: 48, z: 273, rotation: 180, elevationY: 75 },
+        { furnitureId: "decor-radio-vintage", x: 178, z: 278, rotation: 180, elevationY: 75 },
+        { furnitureId: "plant-monstera", x: 85, z: 530 },
 
-        // ═══ 吊挂绿萝（mountCeiling 顶贴天花垂下）═══
-        { furnitureId: "plant-hanging-pothos", x: 250, z: 150, mountCeiling: true },
-        { furnitureId: "plant-hanging-pothos", x: 440, z: 150, mountCeiling: true },
+        // ═══ 东翼（卫生间下方 2.3×3.8m）：两张四人桌 + 落地灯 ═══
+        { furnitureId: "dining_table-cafe-rustic", x: 1055, z: 330 },
+        { furnitureId: "chair-industrial-black", x: 1055, z: 264 },
+        { furnitureId: "chair-industrial-black", x: 1055, z: 396, rotation: 180 },
+        { furnitureId: "chair-industrial-black", x: 989, z: 330, rotation: 90 },
+        { furnitureId: "chair-industrial-black", x: 1121, z: 330, rotation: 270 },
+        { furnitureId: "decor-tulip", x: 1055, z: 330, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 1031, z: 320, rotation: 20, elevationY: 74 },
+        { furnitureId: "decor-coffee-mug", x: 1079, z: 322, rotation: 200, elevationY: 74 },
+        { furnitureId: "lamp-pendant-ikea4", x: 1055, z: 330, mountCeiling: true },
+        { furnitureId: "dining_table-cafe-rustic", x: 1055, z: 500 },
+        { furnitureId: "chair-modern-gray", x: 1055, z: 434 },
+        { furnitureId: "chair-modern-gray", x: 1055, z: 566, rotation: 180 },
+        { furnitureId: "chair-modern-gray", x: 989, z: 500, rotation: 90 },
+        { furnitureId: "chair-modern-gray", x: 1121, z: 500, rotation: 270 },
+        { furnitureId: "decor-tulip", x: 1055, z: 500, elevationY: 74 },
+        { furnitureId: "decor-cappuccino", x: 1031, z: 490, rotation: 20, elevationY: 74 },
+        { furnitureId: "decor-coffee-mug", x: 1079, z: 492, rotation: 200, elevationY: 74 },
+        { furnitureId: "lamp-pendant-ikea4", x: 1055, z: 500, mountCeiling: true },
+        { furnitureId: "floor_lamp-modern", x: 1150, z: 265 },
 
-        // ═══ 吊灯成排（mountCeiling 顶贴天花；柜台上方 + 每桌上方）═══
-        { furnitureId: "lamp-pendant-ikea4", x: 200, z: 60, mountCeiling: true },
-        { furnitureId: "lamp-pendant-ikea4", x: 420, z: 60, mountCeiling: true },
-        { furnitureId: "lamp-pendant-ikea4", x: 150, z: 320, mountCeiling: true },
-        { furnitureId: "lamp-pendant-ikea4", x: 340, z: 220, mountCeiling: true },
-        { furnitureId: "lamp-pendant-ikea4", x: 340, z: 400, mountCeiling: true },
-        { furnitureId: "lamp-pendant-ikea4", x: 520, z: 300, mountCeiling: true },
+        // ═══ 吊挂绿萝 + 主区吊灯成排（mountCeiling 顶贴天花）═══
+        { furnitureId: "plant-hanging-pothos", x: 521, z: 157, mountCeiling: true },
+        { furnitureId: "plant-hanging-pothos", x: 711, z: 157, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4", x: 471, z: 67, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4", x: 691, z: 67, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4", x: 421, z: 327, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4", x: 611, z: 227, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4", x: 611, z: 408, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4", x: 791, z: 307, mountCeiling: true },
       ],
       hallway: [
-        // ★沿街露天座位区（960×160 开放式带状，四面墙隐藏=露天骑楼/人行道）：
-        //   4 组太阳伞桌椅横排（北缘贴玻璃店面、南侧溢向人行道）+ 西端咖啡推车 +
-        //   菜单黑板 + 欢迎牌 + 黑色垃圾桶 + 橡皮树点缀。坐标 hallway-local(x 0-960)。
-        //   坑：outdoor-patio-set 是 fill 一体件；counter-coffee-cart 也是 fill——
-        //   这类一体件保持 rotation:0，加 Y 旋转会触发 swapXZ 把车身/伞压扁。
+        // ★沿街露天座位区（1200×180，四面墙由 floorLayouts.wallsHidden 隐藏=骑楼人行道）：
+        //   4 组太阳伞桌椅横排 + 西端咖啡推车 + 菜单黑板 + 欢迎牌 + 黑桶 + 橡皮树。
+        //   坑：outdoor-patio-set / counter-coffee-cart 是 fill 一体件——保持 rotation:0，
+        //   加 Y 旋转会触发 swapXZ 压扁。
         { furnitureId: "outdoor-patio-set", x: 180, z: 115 },
         { furnitureId: "outdoor-patio-set", x: 484, z: 112 },
         { furnitureId: "outdoor-patio-set", x: 780, z: 115 },

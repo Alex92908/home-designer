@@ -2121,15 +2121,27 @@ export const useDesignerStore = create<DesignerStore>()(
           const enabled  = layout.rooms.map(r => r.room);
           const layoutMap = { ...existing.roomLayout };
           const dimsMap   = { ...existing.roomDimensions };
+          const shapesMap = { ...(existing.roomShapes ?? {}) };
+          const hiddenMap = { ...(existing.roomWallsHidden ?? {}) };
           for (const r of layout.rooms) {
             layoutMap[r.room] = { x: r.x, y: r.y };
             dimsMap[r.room]   = { width: r.width, depth: r.depth };
+            // 模板声明了非矩形轮廓就应用；没声明则清掉旧项目残留的自定义形状
+            if (r.shape) shapesMap[r.room] = r.shape; else delete shapesMap[r.room];
+            // 模板声明了隐藏墙（开放式/骑楼）就应用；没声明则清掉残留
+            if (r.wallsHidden?.length) {
+              hiddenMap[r.room] = Object.fromEntries(r.wallsHidden.map(sd => [sd, true]));
+            } else {
+              delete hiddenMap[r.room];
+            }
           }
           return {
             ...existing,
             enabledRooms: enabled,
             roomLayout: layoutMap,
             roomDimensions: dimsMap,
+            roomShapes: shapesMap,
+            roomWallsHidden: hiddenMap,
             // yardPlan is now top-level; skip per-floor attachment
 
           };
