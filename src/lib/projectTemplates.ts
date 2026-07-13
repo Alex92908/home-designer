@@ -1816,11 +1816,8 @@ const CAFE_SET: ProjectTemplate = {
         { furnitureId: "dining_table-bar-counter", x: 225, z: 155, rotation: 90 },
         { furnitureId: "appliance-coffee", x: 225, z: 120, elevationY: 105 },
         { furnitureId: "decor-books-pile", x: 225, z: 190, elevationY: 105 },
-        { furnitureId: "storage-shelving", x: 25, z: 120, rotation: 90 },
-        { furnitureId: "storage-shelving-2", x: 25, z: 175, rotation: 90 },
-        { furnitureId: "storage-crate", x: 45, z: 228 },
-        { furnitureId: "storage-box", x: 45, z: 228, elevationY: 50 },
-        { furnitureId: "storage-crate", x: 112, z: 232, rotation: 90 },
+        { furnitureId: "storage-shelving", x: 25, z: 117, rotation: 90 },
+        { furnitureId: "storage-shelving-2", x: 25, z: 170, rotation: 90 },
         { furnitureId: "decor-trash-bin", x: 160, z: 242 },
       ],
       bathroom: [
