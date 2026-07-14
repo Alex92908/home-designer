@@ -1617,7 +1617,7 @@ const CAFE_SET: ProjectTemplate = {
           doors: [{ wall: "S", pos: 520, len: 160, style: "glass_swing", h: 210 }],
           // 门楣店招：外墙装饰(RoomState.exteriorDecor)——单一事实来源，
           // 效果图/外观图共用同一渲染器；u/v 使灯箱悬在南门正上方。
-          wallDecor: [{ furnitureId: "sign-cafe-wall", wall: "S", u: 0.51, v: 0.85, label: "云横咖啡" }] },
+          wallDecor: [{ furnitureId: "sign-cafe-wall", wall: "S", u: 0.52, v: 0.92, label: "云横咖啡" }] },
         // 女厕（独立房间；门朝中间洗手走廊开，走廊侧外墙装饰挂「女」标识）
         { room: "bathroom",  x: 945,  y: 0, width: 95, depth: 150, exteriorStyle: "concrete",
           doors: [{ wall: "E", pos: 60, len: 70 }],
@@ -1773,7 +1773,6 @@ const CAFE_SET: ProjectTemplate = {
         { furnitureId: "decor-cappuccino", x: 1031, z: 490, rotation: 20, elevationY: 74 },
         { furnitureId: "decor-coffee-mug", x: 1079, z: 492, rotation: 200, elevationY: 74 },
         { furnitureId: "lamp-pendant-ikea4", x: 1055, z: 500, mountCeiling: true },
-        { furnitureId: "floor_lamp-modern", x: 985, z: 175 },
 
         // ═══ 吊挂绿萝 + 主区吊灯成排（mountCeiling 顶贴天花）═══
         { furnitureId: "plant-hanging-pothos", x: 521, z: 157, mountCeiling: true },
