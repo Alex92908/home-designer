@@ -102,6 +102,7 @@ import { HouseStairs } from "./StairGeometry";
 import { SSGIPostProcessing } from "./SSGIPostProcessing";
 import { getSunPosition3D, formatHour as sunFormatHour } from "@/lib/sunAnalysis";
 import { ROOM_DEFS, ExteriorSettings, ExteriorWall, isYardPrefab, isYardZone } from "@/lib/types";
+import { getRoomDoors } from "@/lib/roomDoors";
 import { getFurnitureById } from "@/lib/furniture";
 import { getOutdoorAssetByKind } from "@/lib/outdoorAssets";
 import { DetailedDecor } from "./DetailedDecor";
@@ -5854,22 +5855,20 @@ export default function HouseCanvas() {
         // rooms. The old wholesale `if (stair||hallway) continue` dropped the
         // stair's configured door too, so the rooftop stairwell rendered a
         // visible door but had NO walkable opening → "天台楼梯间出不去".
+        // 门列表统一走 lib/roomDoors.getRoomDoors —— 唯一真源，四视图共用。
+        // 原来这里是一份手写镜像，且有个真 bug：旧版单门字段存在时会**同时**
+        // collect 自动门和单门，给同一个房间开出两个通行口（其中一个墙上没有门）。
+        // getRoomDoors 的优先级是 显式数组 > 旧版单门 > 自动门，三选一。
+        // 碰撞只关心 wall/pos/len，故不需要传 interiorDoorHeightCm / curtainWall。
         const isCirc = r === "hallway" || r === "stair";
-        const stored = fp.roomDoors?.[r];
-        if (stored && stored.length > 0) {
-          for (const door of stored) collect({ wall: door.wall, pos: door.pos, len: door.len }, p, d, fi);
-        } else if (!isCirc && fp.roomHasDoor?.[r] !== false) {
-          // No stored doors → FPE synthesizes via pickAutoDoor. Mirror it.
-          const auto = autoDoorFor(fi, r, p, d, fb);
-          collect(auto, p, d, fi);
-          // Also handle the legacy single-door fields if set
-          if (fp.roomDoorWall?.[r]) {
-            // Stored value is already NSWE post v1→v2 migration.
-            const wall = fp.roomDoorWall[r] as import("@/lib/types").WallSide;
-            const pos = fp.roomDoorPos?.[r] ?? auto.pos;
-            const len = fp.roomDoorLen?.[r] ?? auto.len;
-            collect({ wall, pos, len }, p, d, fi);
-          }
+        const doorsForCollision = getRoomDoors(fp, r, {
+          widthCm: d.width, depthCm: d.depth,
+          autoDoor: !isCirc
+            ? () => ({ id: `auto-${fi}-${r}`, ...autoDoorFor(fi, r, p, d, fb) })
+            : undefined,
+        });
+        for (const door of doorsForCollision) {
+          collect({ wall: door.wall, pos: door.pos, len: door.len }, p, d, fi);
         }
       }
     }

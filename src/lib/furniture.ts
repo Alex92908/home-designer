@@ -1474,7 +1474,7 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"ac-condenser",        name:"空调外机",             brand:"美的",   price:1280,unit:"元/台", category:"exterior_wall_decor", roomTypes:[], color:"#E8E8E8", width:85, depth:35, height:55, tags:[],       description:"分体式空调室外机", icon:"🌬️" },
 
   // 店招 — 程序化发光灯箱（SignboardMesh），文字走 ExteriorWallDecorItem.label
-  { id:"sign-cafe-wall",      name:"店招灯箱（外墙）",     brand:"定制",   price:1500,unit:"元/块", category:"exterior_wall_decor", roomTypes:[], color:"#C0392B", width:200, depth:16, height:46, tags:["现代"], description:"横向发光店招灯箱，贴装外墙面（文字可改）", icon:"🪧" },
+  { id:"sign-cafe-wall",      name:"店招（外墙）",         brand:"定制",   price:1500,unit:"元/块", category:"exterior_wall_decor", roomTypes:[], color:"#23262B", width:200, depth:16, height:46, tags:["现代"], description:"横向店招，深底暖白字，贴装外墙面（文字支持 \"LATIN|中文\" 双行）", icon:"🪧" },
 
   // 爬藤 — 半透绿叶贴图
   { id:"climbing-vine",       name:"爬藤（常春藤）",       brand:"园艺",   price:480, unit:"元/片", category:"exterior_wall_decor", roomTypes:[], color:"#2D5A2A", width:120, depth:4, height:200, tags:["中式"], description:"绿色墙面攀爬植物", icon:"🌿", imageUrl:"/decor/ivy.svg" },
@@ -1805,7 +1805,7 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"counter-wooden-bar", name:"木质吧台", brand:"片场道具", price:2400, unit:"元/件", category:"counter", roomTypes:["living","kitchen","dining"], color:"#6A4A2A", width:230, depth:66, height:115, tags:[], description:"实木吧台", icon:"🍺", model3d:{ url:"/models/filmset/wooden_bar/wooden_bar.glb", fit:"fill" } },
   // 店招灯箱（程序化，无 GLB）：横向发光招牌，颜色可改、文字在编辑面板里改（默认「CAFÉ」）。
   // 通用/虚构店名，规避真实品牌商标风险。SignboardMesh 用 canvas 贴图渲染文字（支持中文）。
-  { id:"sign-shop-fascia", name:"店招灯箱", brand:"片场道具", price:1500, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining","yard","balcony"], color:"#C0392B", width:200, depth:16, height:46, tags:[], description:"横向发光店招灯箱（文字/颜色可改）", icon:"🪧" },
+  { id:"sign-shop-fascia", name:"店招", brand:"片场道具", price:1500, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining","yard","balcony"], color:"#23262B", width:200, depth:16, height:46, tags:[], description:"横向店招（文字支持 \"LATIN|中文\" 双行，颜色可改）", icon:"🪧" },
   // ── glbs 批（2026-07）：复古咖啡道具 + 桌几 + 人物群演。尺寸初值待 [GltfFurniture] native 日志校正。──
   { id:"decor-coffee-for-two", name:"双人咖啡套", brand:"片场道具", price:0, unit:"-", category:"decor", roomTypes:["living","kitchen","dining","study"], color:"#C8B0A0", width:42, depth:42, height:9, tags:[], description:"托盘双杯咖啡套", icon:"☕", model3d:{ url:"/models/filmset/coffee_for_two/coffee_for_two.glb", fit:"contain" } },
   { id:"decor-japanese-sign", name:"日式店招", brand:"片场道具", price:900, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining","yard","balcony"], color:"#8A2A2A", width:11, depth:45, height:120, tags:[], description:"日式吊挂店招/暖帘", icon:"🏮", model3d:{ url:"/models/filmset/japanese_shop_sign/japanese_shop_sign.glb", fit:"contain" } },

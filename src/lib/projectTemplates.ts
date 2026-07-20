@@ -1607,25 +1607,18 @@ const CAFE_SET: ProjectTemplate = {
         // 走廊 = 沿街露天座位区（四面墙隐藏 = 骑楼人行道）。
         // 西北后场（kitchen 语义=厨房+库房；后场隐私 → 实墙）
         { room: "kitchen",  x: 0,   y: 0,   width: 280,  depth: 260, exteriorStyle: "concrete" },
-        // 大堂（凸字形，多边形 room-local cm；缺口分别被厨房/卫生间填占；
+        // 大堂（L 形，多边形 room-local cm；西北缺口被厨房填占；
         // 临街玻璃幕墙 + 南墙 160cm 法式对开大门）
         { room: "living",   x: 9,   y: 13,  width: 1179, depth: 592,
-          // 东北角绕出男女厕之间的洗手走廊(x1031..1111 通到北端)
-          shape: { preset: "custom", points: [[272, 0], [936, 0], [936, 137], [1031, 137], [1031, 0], [1111, 0], [1111, 137], [1178, 137], [1178, 592], [276, 591], [0, 592], [3, 256], [268, 254]] },
+          // 2026-07 东北角原为男女厕+洗手走廊，因厕所直冲用餐区(最近的椅子仅 84cm)
+          // 且占掉临街玻璃的采光角，整体移除并填平 → 该角改做窗边吧台座。
+          shape: { preset: "custom", points: [[272, 0], [1178, 0], [1178, 592], [276, 591], [0, 592], [3, 256], [268, 254]] },
           exteriorStyle: "glass",
           // glass_swing=两扇各绕外侧边对开；french_double 在本渲染器是整扇单铰(会整体甩到一边)
           doors: [{ wall: "S", pos: 520, len: 160, style: "glass_swing", h: 210 }],
           // 门楣店招：外墙装饰(RoomState.exteriorDecor)——单一事实来源，
           // 效果图/外观图共用同一渲染器；u/v 使灯箱悬在南门正上方。
-          wallDecor: [{ furnitureId: "sign-cafe-wall", wall: "S", u: 0.52, v: 0.92, label: "云横咖啡" }] },
-        // 女厕（独立房间；门朝中间洗手走廊开，走廊侧外墙装饰挂「女」标识）
-        { room: "bathroom",  x: 945,  y: 0, width: 95, depth: 150, exteriorStyle: "concrete",
-          doors: [{ wall: "E", pos: 60, len: 70 }],
-          wallDecor: [{ furnitureId: "sign-cafe-wall", wall: "E", u: 0.5, v: 0.78, scaleW: 0.3, label: "女" }] },
-        // 男厕（独立房间；门朝走廊，挂「男」标识）
-        { room: "bathroom2", x: 1120, y: 0, width: 80, depth: 150, exteriorStyle: "concrete",
-          doors: [{ wall: "W", pos: 60, len: 70 }],
-          wallDecor: [{ furnitureId: "sign-cafe-wall", wall: "W", u: 0.5, v: 0.78, scaleW: 0.3, label: "男" }] },
+          wallDecor: [{ furnitureId: "sign-cafe-wall", wall: "S", u: 0.52, v: 0.92, label: "YUNHENG COFFEE|云横咖啡" }] },
         // 沿街露天座位区（走廊语义；全墙隐藏成骑楼露台）
         { room: "hallway",  x: 0,   y: 600, width: 1200, depth: 180, wallsHidden: ["N", "S", "E", "W"] },
       ],
@@ -1677,13 +1670,17 @@ const CAFE_SET: ProjectTemplate = {
 
         // ═══ 东北隔断带（旧东墙线：边柜 + 留声机 + 绿植）═══
         { furnitureId: "sideboard-euro", x: 906, z: 146, rotation: 270 },
-        { furnitureId: "decor-gramophone", x: 910, z: 184, rotation: 90 },
+        // 留声机移出餐边柜脚印：sideboard-euro 高 190cm，留声机没有 elevationY 就
+        // 落在地面、整个埋进柜体里（原 x910 与柜脚印 x878~934 完全重叠）。
+        { furnitureId: "decor-gramophone", x: 840, z: 184, rotation: 90 },
         { furnitureId: "plant-monstera", x: 899, z: 42 },
         { furnitureId: "plant-monstera", x: 309, z: 46 },
 
         // ═══ 墙面艺术画（北墙 + 西翼西墙 + 东翼东墙）═══
-        { furnitureId: "artwork-seurat", x: 521, z: 21, elevationY: 175 },
-        { furnitureId: "artwork-kandinsky", x: 844, z: 18, elevationY: 175 },
+        // 北墙不再挂画：这面墙整条是服务区——后吧酒瓶柜高 180、冷藏饮料柜高 190，
+        // 原来 elevationY:175 的两幅画正好嵌进柜体里（画 x521 撞后吧 x330~530／
+        // 画 x844 撞饮料柜 x770~830）。该墙的视觉信息由 3 块高挂菜单(elevationY:200,
+        // 在柜顶之上)承担，再挂画本来也重复。挂画保留在东/西两面实墙。
         { furnitureId: "artwork-red-fuji", x: 10, z: 330, rotation: 90, elevationY: 155 },
         { furnitureId: "artwork-vangogh", x: 3, z: 502, rotation: 90 },
         { furnitureId: "artwork-degas", x: 1170, z: 300, rotation: 270, elevationY: 155 },
@@ -1785,26 +1782,33 @@ const CAFE_SET: ProjectTemplate = {
         { furnitureId: "lamp-pendant-ikea4", x: 431, z: 402, mountCeiling: true },
         { furnitureId: "lamp-pendant-ikea4", x: 801, z: 402, mountCeiling: true },
 
-        // ═══ 东北开放洗手区：双盆岩板浴室柜贴东墙纵放(面朝西)——
-        //     出走廊即洗手，不挡两扇厕所门(横放会堵死走廊口，教训) ═══
-        { furnitureId: "vanity-double-marble", x: 1160, z: 215, rotation: 270 },
+        // ═══ 东北窗边吧台座（原男女厕/洗手走廊拆除后腾出的临街玻璃采光角）：
+        //     吧台贴北面幕墙横放(rotation:0=面朝南)，3 张吧凳在南侧，客人面窗而坐。
+        //     与南墙那道窗边吧台同构(那边 counter z562 rot180 + 凳 z507)，此处镜像。
+        //     counter-bar-straight 实为 220×60，正好塞进 x936..1178 这段。 ═══
+        { furnitureId: "counter-bar-straight", x: 1055, z: 35 },
+        { furnitureId: "seat-bar-stool", x: 975,  z: 95 },
+        { furnitureId: "seat-bar-stool", x: 1055, z: 95 },
+        { furnitureId: "seat-bar-stool", x: 1135, z: 95 },
       ],
       hallway: [
         // ★沿街露天座位区（1200×180，四面墙由 floorLayouts.wallsHidden 隐藏=骑楼人行道）：
         //   4 组太阳伞桌椅横排 + 西端咖啡推车 + 菜单黑板 + 欢迎牌 + 黑桶 + 橡皮树。
         //   坑：outdoor-patio-set / counter-coffee-cart 是 fill 一体件——保持 rotation:0，
         //   加 Y 旋转会触发 swapXZ 压扁。
-        { furnitureId: "outdoor-patio-set", x: 180, z: 115 },
-        { furnitureId: "outdoor-patio-set", x: 484, z: 112 },
-        { furnitureId: "outdoor-patio-set", x: 780, z: 115 },
-        { furnitureId: "outdoor-patio-set", x: 1081, z: 119 },
-        { furnitureId: "counter-coffee-cart", x: 90, z: 95 },
-        { furnitureId: "decor-menu-chalkboard", x: 165, z: 35 },
-        { furnitureId: "decor-welcome-sign", x: 340, z: 30 },
-        { furnitureId: "decor-bin-black", x: 20, z: 130 },
-        { furnitureId: "plant-rubber-tree", x: 331, z: 137 },
-        { furnitureId: "plant-rubber-tree", x: 637, z: 140 },
-        { furnitureId: "plant-rubber-tree", x: 926, z: 132 },
+        //   2026-07 重排：原来 4 组伞桌椅(220×220)塞不进 1200×180 的走廊——
+        //   既超出走廊进深，第一组还整个压住了咖啡推车和菜单黑板。
+        //   改成 3 组 + scale 0.8(176×176，进深放得下)，西端留给推车/黑板，
+        //   其余空当放迎宾牌和橡皮树，彼此不重叠。
+        { furnitureId: "counter-coffee-cart", x: 70, z: 95 },
+        { furnitureId: "decor-bin-black", x: 20, z: 155 },
+        { furnitureId: "decor-menu-chalkboard", x: 175, z: 35 },
+        { furnitureId: "outdoor-patio-set", x: 350, z: 90, scaleW: 0.8, scaleD: 0.8 },
+        { furnitureId: "decor-welcome-sign", x: 505, z: 40 },
+        { furnitureId: "outdoor-patio-set", x: 660, z: 90, scaleW: 0.8, scaleD: 0.8 },
+        { furnitureId: "plant-rubber-tree", x: 815, z: 140 },
+        { furnitureId: "outdoor-patio-set", x: 970, z: 90, scaleW: 0.8, scaleD: 0.8 },
+        { furnitureId: "plant-rubber-tree", x: 1125, z: 140 },
       ],
       kitchen: [
         // ★厨房+库房(galley 后场,2026-07 调研重排)：北墙冷藏+洗涤区，
@@ -1819,16 +1823,6 @@ const CAFE_SET: ProjectTemplate = {
         { furnitureId: "storage-shelving", x: 25, z: 117, rotation: 90 },
         { furnitureId: "storage-shelving-2", x: 25, z: 170, rotation: 90 },
         { furnitureId: "decor-trash-bin", x: 160, z: 242 },
-      ],
-      bathroom: [
-        // 女厕：坐便贴北墙 + 角落垃圾桶（门/标识在 floorLayouts 声明）
-        { furnitureId: "toilet-sit", x: 47, z: 38, rotation: 180 },
-        { furnitureId: "decor-trash-bin-3", x: 32, z: 116 },
-      ],
-      bathroom2: [
-        // 男厕
-        { furnitureId: "toilet-sit", x: 40, z: 38, rotation: 180 },
-        { furnitureId: "decor-trash-bin-3", x: 20, z: 117 },
       ],
     },
   ],

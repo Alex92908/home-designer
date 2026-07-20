@@ -25,6 +25,7 @@ const glassTransparencyToOpacity = (t: number) =>
   Math.max(0.04, Math.min(0.88, (1 - t) * 0.88 + 0.04));
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
+import { getRoomDoors } from "@/lib/roomDoors";
 import { DetailedDecor } from "./DetailedDecor";
 import { FirstPersonControls, TouchJoystick } from "./FirstPersonControls";
 import { getFloorTexture, getWallTexture, getRugTexture, floorTileSize, wallTileSize } from "@/lib/textures";
@@ -3024,23 +3025,44 @@ function SignboardMesh({ w, d, h, color, label }: { w: number; d: number; h: num
     cv.width = cw; cv.height = ch;
     const ctx = cv.getContext("2d");
     if (!ctx) return null;
+    // 深色哑光底（精品咖啡馆常见做法）。红底整面发光=街边快餐灯箱，观感很廉价。
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, cw, ch);
-    // 上下细描边，做灯箱边框感
-    ctx.fillStyle = "rgba(0,0,0,0.28)";
-    ctx.fillRect(0, 0, cw, ch * 0.06); ctx.fillRect(0, ch * 0.94, cw, ch * 0.06);
-    const text = (label || "CAFÉ").slice(0, 24);
-    // 自适应字号：按可用宽度收缩
-    let fs = Math.round(ch * 0.55);
+    // 米白内嵌细边框，比黑描边更像金属/木质招牌
+    ctx.strokeStyle = "rgba(242,234,216,0.32)";
+    ctx.lineWidth = Math.max(2, ch * 0.016);
+    const inset = ch * 0.11;
+    ctx.strokeRect(inset, inset, cw - inset * 2, ch - inset * 2);
+
+    // label 支持 "LATIN|中文"：主行拉丁字标（大字号+字距），副行中文小一号。
+    // 只给一段文字时按单行居中排。
+    const [mainRaw, subRaw] = (label || "CAFÉ").split("|");
+    const main = (mainRaw || "").trim().slice(0, 28);
+    const sub = (subRaw || "").trim().slice(0, 16);
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    do {
-      ctx.font = `700 ${fs}px "PingFang SC","Microsoft YaHei",system-ui,sans-serif`;
-      if (ctx.measureText(text).width <= cw * 0.9) break;
-      fs -= 6;
-    } while (fs > 20);
-    ctx.fillStyle = "#ffffff";
-    ctx.shadowColor = "rgba(0,0,0,0.45)"; ctx.shadowBlur = fs * 0.08;
-    ctx.fillText(text, cw / 2, ch / 2 + fs * 0.02);
+    ctx.fillStyle = "#F2EAD8";
+    /** 按可用宽度收缩字号；spacing=字距占字号比例 */
+    const fitFont = (text: string, startPx: number, weight: number, spacing: number) => {
+      let fs = startPx;
+      do {
+        if ("letterSpacing" in ctx) ctx.letterSpacing = `${Math.round(fs * spacing)}px`;
+        ctx.font = `${weight} ${fs}px "Optima","Futura","Avenir Next","PingFang SC","Microsoft YaHei",system-ui,sans-serif`;
+        if (ctx.measureText(text).width <= cw * 0.82) break;
+        fs -= 4;
+      } while (fs > 16);
+    };
+    if (sub) {
+      fitFont(main, Math.round(ch * 0.38), 600, 0.14);
+      ctx.fillText(main, cw / 2, ch * 0.41);
+      fitFont(sub, Math.round(ch * 0.19), 400, 0.30);
+      ctx.globalAlpha = 0.75;
+      ctx.fillText(sub, cw / 2, ch * 0.72);
+      ctx.globalAlpha = 1;
+    } else {
+      fitFont(main, Math.round(ch * 0.50), 600, 0.14);
+      ctx.fillText(main, cw / 2, ch / 2);
+    }
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
     const tex = new THREE.CanvasTexture(cv);
     tex.anisotropy = 4; tex.needsUpdate = true;
     return tex;
@@ -3054,12 +3076,14 @@ function SignboardMesh({ w, d, h, color, label }: { w: number; d: number; h: num
         <boxGeometry args={[w, h, d]} />
         <meshStandardMaterial color="#141414" roughness={0.55} metalness={0.35} />
       </mesh>
-      {/* 发光面板（略突出正面 +Z）；toneMapped=false 让它稳定发亮 */}
+      {/* 发光面板（略突出正面 +Z）；toneMapped=false 让它稳定发亮。
+          暖白低强度：深底几乎不发光、只有米白字发亮 = 通道字招牌观感；
+          原 #ffffff/0.85 会把整块底色一起点亮，就是廉价灯箱那种感觉。 */}
       <mesh position={[0, h / 2, halfD + 0.006]}>
         <planeGeometry args={[w * 0.965, h * 0.84]} />
         <meshStandardMaterial
           {...(faceTex ? { map: faceTex, emissiveMap: faceTex } : { color })}
-          emissive="#ffffff" emissiveIntensity={0.85} toneMapped={false} />
+          emissive="#FFE7C4" emissiveIntensity={0.55} toneMapped={false} />
       </mesh>
     </group>
   );
@@ -4072,30 +4096,26 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const doorWall   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "S");
   const doorPosCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorPos?.[activeRoom] ?? 0);
   const doorLenCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
-  // Global default interior-door opening height (cm). Mirrors the walkthrough
-  // (FloorPlanExterior) fallback so the door reads the same height in 效果图
-  // and 漫游. Per-door `h` and per-room `roomDoorH` still win when set.
   const doorHDefault = useDesignerStore((s) => s.exterior?.interiorDoorHeightCm ?? 240);
   const doorHCm    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom]) ?? doorHDefault;
   const doorStyle  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? "wood_panel");
-  const doorEdgeIdx = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorEdgeIdx?.[activeRoom]);
-  // Select the raw doors array — stable reference if unchanged.
-  const roomDoorsArr = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoors?.[activeRoom]);
-  // Compute the effective door list with legacy fallback. useMemo keeps
-  // the array reference stable across re-renders to avoid infinite loops.
-  const allDoors = useMemo(() => {
-    if (roomDoorsArr && roomDoorsArr.length > 0) return roomDoorsArr;
-    if (!hasDoor) return [];
-    return [{
-      id: `${activeRoom}-legacy-door`,
-      wall: doorWall as WallSide,
-      pos: doorPosCm,
-      len: doorLenCm,
-      h: doorHCm,
-      style: doorStyle,
-      edgeIndex: doorEdgeIdx,
-    }];
-  }, [roomDoorsArr, hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle, doorEdgeIdx, activeRoom]);
+
+  // 门列表统一走 lib/roomDoors.getRoomDoors —— 唯一真源，四视图共用。
+  // 这里原来是一份手写镜像：一律 `?? 80` / `?? "wood_panel"`，缺车库特判
+  // （车库门在效果图里退化成 80cm 实木门）、缺幕墙玻璃门推导，与 2D 平面图 /
+  // 外观图对不上。详见 lib/roomDoors.ts 顶部说明。
+  const fpForDoors = useDesignerStore((s) => s.floorPlans[s.activeFloor]);
+  const interiorDoorH = useDesignerStore((s) => s.exterior?.interiorDoorHeightCm);
+  const curtainWallForDoors = useDesignerStore((s) =>
+    s.exterior?.facadeSystem === "curtain-wall"
+    || (s.exterior?.facadeSystem == null && (s.exterior?.facadeGlass ?? false)));
+  const allDoors = useMemo(
+    () => getRoomDoors(fpForDoors, activeRoom, {
+      interiorDoorHeightCm: interiorDoorH,
+      curtainWall: curtainWallForDoors,
+    }),
+    [fpForDoors, activeRoom, interiorDoorH, curtainWallForDoors],
+  );
   const southWallOpacity = useDesignerStore((s) => s.southWallOpacity);
   const ceilingOpacity = useDesignerStore((s) => s.ceilingOpacity);
   const lightPos = useDesignerStore((s) => s.lightPosByRoom[s.activeRoom]);
@@ -4609,7 +4629,7 @@ export function ExteriorDecorItem({
         // 店招灯箱：复用 SignboardMesh（局部 +Z 即墙外法向，文字面朝外无需旋转）。
         // SignboardMesh 盒体底边在 y=0、z 居中，故下移半高、外移半厚防止埋墙。
         <group position={[0, -h / 2, getLayerOffset("exteriorDecor") + 0.08]}>
-          <SignboardMesh w={w} d={0.16} h={h} color={item.color} label={decor.label ?? "云横咖啡"} />
+          <SignboardMesh w={w} d={0.16} h={h} color={item.color} label={decor.label ?? "YUNHENG COFFEE|云横咖啡"} />
         </group>
       ) : detailed ? detailed : canvasTex ? (
         <mesh position={[0, 0, 0.005 + getLayerOffset("exteriorDecor")]}>

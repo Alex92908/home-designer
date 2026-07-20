@@ -6,6 +6,7 @@ import { ROOM_DEFS, WindowConfig, WallSide, FacadeLayer, resolveFacadeLayer, res
 import { FloorPlanMinimap } from "./FloorPlanMinimap";
 import { getFurnitureById } from "@/lib/furniture";
 import { PlacedItem } from "@/lib/types";
+import { getRoomDoors } from "@/lib/roomDoors";
 import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
 import { getFurnitureNameEn } from "@/locales/itemNames";
 import { evaluateRoom, type EvaluatedItem, type DoorWall as ClearanceDoorWall } from "@/lib/clearance";
@@ -562,21 +563,17 @@ export default function FloorPlan() {
   const updateDoor      = useDesignerStore((s) => s.updateDoor);
   const updateWindow    = useDesignerStore((s) => s.updateWindow);
 
-  // Multi-door: prefer roomDoors[], fall back to legacy single-door fields.
-  // Stable reference via useMemo to avoid render loops.
-  const allDoors = useMemo(() => {
-    if (roomDoorsArr && roomDoorsArr.length > 0) return roomDoorsArr;
-    if (!hasDoor) return [];
-    return [{
-      id: `${activeRoom}-legacy-door`,
-      wall: doorWall as WallSide,
-      pos: doorPosCm,
-      len: doorLenCm,
-      h: doorHCm,
-      style: doorStyle,
-      edgeIndex: doorEdgeIdx,
-    }];
-  }, [roomDoorsArr, hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle, doorEdgeIdx, activeRoom]);
+  // 门列表统一走 lib/roomDoors.getRoomDoors —— 唯一真源，四视图共用。
+  // （上面那些 doorWall/doorLenCm/doorStyle 等单值选择器仍保留，是检查器 UI 的
+  //   受控字段；渲染用的门列表以本函数为准。）
+  const fpForDoors = useDesignerStore((s) => s.floorPlans[s.activeFloor]);
+  const allDoors = useMemo(
+    () => getRoomDoors(fpForDoors, activeRoom, {
+      interiorDoorHeightCm: doorHDefault,
+      curtainWall,
+    }),
+    [fpForDoors, activeRoom, doorHDefault, curtainWall],
+  );
 
   const t      = useT();
   const locale = useLocale();

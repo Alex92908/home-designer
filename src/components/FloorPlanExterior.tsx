@@ -25,6 +25,7 @@ import { Html, useGLTF, Clone, Instances, Instance, Text } from "@react-three/dr
 import { useDesignerStore } from "@/lib/store";
 import { overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem, resolveFacadeLayer, resolveFaceOpacity, isExteriorWallSide } from "@/lib/types";
+import { getRoomDoors } from "@/lib/roomDoors";
 import { getFurnitureById } from "@/lib/furniture";
 import { InteriorRoomDetail } from "./InteriorRoomDetail";
 import { PlacedItemMesh, LightFixtureInner, ExteriorDecorItem } from "./RoomCanvas";
@@ -2666,19 +2667,18 @@ export default function FloorPlanBuilding({
         //   roomDoors 显式数组 > roomDoorWall/Pos/Len 单门配置 > pickAutoDoor 自动门。
         // 原来只认 roomDoors + pickAutoDoor，漏了平面图实际用的 roomDoorWall/Pos →
         // 配在内墙(如厨房 S 朝走廊)的门外观图里根本不画(用户:门洞都没有、门也没有)。
-        const configuredDoors = fp.roomDoors?.[r] ?? [];
-        if (configuredDoors.length > 0) {
-          mergedDoors[r] = configuredDoors.map(d => widenGarageDoor(r, d, dd.width, dd.depth));
-        } else if (bounds && !isCirc && fp.roomHasDoor?.[r] !== false) {
-          const lw = fp.roomDoorWall?.[r];
-          if (lw) {
-            const wallLenCm = (lw === "W" || lw === "E") ? dd.depth : dd.width;
-            const dl = fp.roomDoorLen?.[r] ?? defaultDoorLenCm(r, wallLenCm);
-            mergedDoors[r] = [{ id: `cfg-${fi}-${r}`, wall: lw, pos: fp.roomDoorPos?.[r] ?? Math.max(5, (wallLenCm - dl) / 2), len: dl, h: fp.roomDoorH?.[r] ?? defaultDoorHCm(r) }];
-          } else {
-            mergedDoors[r] = [pickAutoDoor(fi, r, cx, cz, rW, rD, dd.width, dd.depth, bounds)];
-          }
-        }
+        // 门列表统一走 lib/roomDoors.getRoomDoors —— 唯一真源，四视图共用。
+        // 原来这里是一份手写镜像，与 2D/效果图的默认值分叉：门高 200(另两处 240)、
+        // 车库门 widenGarageDoor 无条件把 pos 覆盖成居中(吃掉用户拖动)。
+        // 自动门仍由本文件的 pickAutoDoor 提供（只有这里算得出房间在整栋楼的位置）。
+        mergedDoors[r] = getRoomDoors(fp, r, {
+          interiorDoorHeightCm: exterior?.interiorDoorHeightCm,
+          curtainWall,
+          widthCm: dd.width, depthCm: dd.depth,
+          autoDoor: (bounds && !isCirc)
+            ? () => pickAutoDoor(fi, r, cx, cz, rW, rD, dd.width, dd.depth, bounds)
+            : undefined,
+        });
 
         // 窗：修正到外墙，且不与门在同一面墙
         const wins = fp.roomWindows?.[r] ?? [];
@@ -2936,27 +2936,27 @@ export default function FloorPlanBuilding({
         const floorColor = mats?.floor?.color ?? ROOM_DEFS[room]?.defaultFloorColor ?? "#C8A882";
         const wallColor  = mats?.wall?.color  ?? ROOM_DEFS[room]?.defaultWallColor  ?? "#EDE8E0";
         const placedItems = fp.rooms?.[room]?.placedItems ?? [];
-        const doors = fp.roomDoors?.[room] ?? [];
         const windows = fp.roomWindows?.[room] ?? [];
         const isStair = room === "stair";
         const isHallway = room === "hallway";
         const bounds = floorBoundsArr[fi];
 
-        // 自动门：优先级与 wallSegments/allSegs 完全一致：
-        //   roomDoorWall/Pos/Len 单门配置 > pickAutoDoor 自动门。
-        // 不同步会导致 wallSegment 的门洞位置与 WalkthroughDoor3D 渲染位置错位
-        // (用户：门洞和门没对应)。
-        const autoDoor: DoorConfig | null = (() => {
-          if (isStair || isHallway || doors.length > 0 || !bounds) return null;
-          const lw = fp.roomDoorWall?.[room];
-          if (lw) {
-            const wallLenCm = (lw === "W" || lw === "E") ? d.depth : d.width;
-            const dl = fp.roomDoorLen?.[room] ?? defaultDoorLenCm(room, wallLenCm);
-            return { id: `cfg-${fi}-${room}`, wall: lw as import("@/lib/types").WallSide,
-              pos: fp.roomDoorPos?.[room] ?? Math.max(5, (wallLenCm - dl) / 2), len: dl, h: fp.roomDoorH?.[room] ?? defaultDoorHCm(room) };
-          }
-          return pickAutoDoor(fi, room, cx, cz, rW, rD, rWcm, rDcm, bounds);
-        })();
+        // 门列表统一走 lib/roomDoors.getRoomDoors —— 唯一真源，四视图共用。
+        // 保留 doors / autoDoor 两个下游变量的原有形状（doors=显式配置门，
+        // autoDoor=没有配置门时兜底的那一扇），但两者都已按统一默认值规范化，
+        // 不再各自 `?? defaultDoorHCm(200)` / 强制居中。
+        const configuredDoorsRaw = fp.roomDoors?.[room] ?? [];
+        const resolvedDoors = getRoomDoors(fp, room, {
+          interiorDoorHeightCm: exterior?.interiorDoorHeightCm,
+          curtainWall,
+          widthCm: d.width, depthCm: d.depth,
+          autoDoor: (bounds && !isStair && !isHallway)
+            ? () => pickAutoDoor(fi, room, cx, cz, rW, rD, rWcm, rDcm, bounds)
+            : undefined,
+        });
+        const doors = configuredDoorsRaw.length > 0 ? resolvedDoors : [];
+        const autoDoor: DoorConfig | null =
+          configuredDoorsRaw.length > 0 ? null : (resolvedDoors[0] ?? null);
 
         // 窗户方向修正：强制到不同于门的外墙，彻底避免门窗同墙重叠
         const doorWallForRoom = autoDoor?.wall ?? doors[0]?.wall;
@@ -3116,31 +3116,24 @@ export default function FloorPlanBuilding({
         // phantom door hole into the stairwell's exterior wall while the
         // interior render drew NO door panel there → an open gap you could
         // see the yard grass through. A user-configured door still applies.
+        // 门洞侧与门板侧必须**完全同源**，否则门洞和门对不上（尤其车库卷帘门）。
+        // 两侧现在都走 lib/roomDoors.getRoomDoors，规范化后的 len/pos/h/style 一致，
+        // 不再需要 widenGarageDoor 这层"事后补正"（它无条件强制居中，会吃掉用户拖动）。
         const isCircRoom = room === "stair" || room === "hallway";
-        let doorsArr = configuredDoors.map(dd0 => widenGarageDoor(room, dd0, d.width, d.depth));
-        if (!isCircRoom && configuredDoors.length === 0 && fp.roomHasDoor?.[room] !== false) {
-          // 与 facade(mergedDoors)同优先级:roomDoorWall/Pos/Len 单门配置 > pickAutoDoor。
-          const lw = fp.roomDoorWall?.[room];
-          if (lw) {
-            const wallLenCm = (lw === "W" || lw === "E") ? d.depth : d.width;
-            const dl = fp.roomDoorLen?.[room] ?? defaultDoorLenCm(room, wallLenCm);
-            doorsArr = [{ id: `cfg-${fi}-${room}`, wall: lw, pos: fp.roomDoorPos?.[room] ?? Math.max(5, (wallLenCm - dl) / 2), len: dl, h: fp.roomDoorH?.[room] ?? defaultDoorHCm(room) }];
-          } else {
-            const bounds = floorBoundsArr[fi];
-            if (bounds) {
-              const rW = d.width * CM; const rD = d.depth * CM;
-              const cx = (p.x + d.width  / 2 - planOffset.minX) * CM - W / 2;
-              const cz = (p.y + d.depth / 2 - planOffset.minY) * CM - D / 2;
-              doorsArr = [pickAutoDoor(fi, room, cx, cz, rW, rD, d.width, d.depth, bounds)];
-            }
-          }
-        }
-        // 车库门洞与门板必须同尺寸/同位置：门板侧(effectiveDoors)对每个门都过一遍
-        // widenGarageDoor（居中加宽到卷帘门尺寸），门洞侧此前只对"配置门"过、
-        // 自动门/roomDoorWall 单门配置漏了 → 门洞(≤300)比门板(≤340)窄且错位，
-        // 卷帘门对不上洞。这里统一补一遍（widenGarageDoor 对非车库房间是 no-op，
-        // 对已加宽的配置门幂等），保证两侧完全一致。
-        doorsArr = doorsArr.map(dd => widenGarageDoor(room, dd, d.width, d.depth));
+        const boundsForHole = floorBoundsArr[fi];
+        const doorsArr = getRoomDoors(fp, room, {
+          interiorDoorHeightCm: exterior?.interiorDoorHeightCm,
+          curtainWall,
+          widthCm: d.width, depthCm: d.depth,
+          autoDoor: (boundsForHole && !isCircRoom)
+            ? () => {
+                const rW = d.width * CM; const rD = d.depth * CM;
+                const cx = (p.x + d.width  / 2 - planOffset.minX) * CM - W / 2;
+                const cz = (p.y + d.depth / 2 - planOffset.minY) * CM - D / 2;
+                return pickAutoDoor(fi, room, cx, cz, rW, rD, d.width, d.depth, boundsForHole);
+              }
+            : undefined,
+        });
         const winsArr = fp.roomWindows?.[room] ?? [];
         const wh = fp.roomWallsHidden?.[room];
         // Side keys are NSWE — same alphabet as door.wall + roomWallsHidden.
@@ -7419,8 +7412,9 @@ export default function FloorPlanBuilding({
         // 走廊：无内墙、无天花板，仅地板；楼梯间：渲染楼梯几何体
         // 有配置门优先用配置门，否则用自动生成门。车库门加宽到车库门尺寸
         // (与 wallSegments 抠的门洞一致)，使卷帘门正好填满洞。
-        const effectiveDoors = (doors.length > 0 ? doors : autoDoor ? [autoDoor] : [])
-          .map(d => widenGarageDoor(room, d, rWcm, rDcm));
+        // doors / autoDoor 都已由 getRoomDoors 规范化（含车库加宽 + 卷帘门款式），
+        // 与门洞侧同源，无需再过 widenGarageDoor。
+        const effectiveDoors = doors.length > 0 ? doors : autoDoor ? [autoDoor] : [];
         return (
           // Fragment instead of <group> — the wrapper had no transform, so
           // it added 1 traversed Object3D per room × floor (~40 dead nodes)
