@@ -1232,7 +1232,11 @@ export default function FloorPlan() {
                     // Exiting edit mode: normalize any negative-coord drags
                     // (shift polygon+layout+furniture+openings back into the
                     // positive quadrant — half the views assume local ≥ 0).
-                    normalizeRoomShape(activeRoom);
+                    // 先正交化再归正：外观图/全屋3D 的墙体引擎是「轴对齐边 = 一个面」的一维
+                            // 模型，表达不了斜边（会被跳过 → 那条边没墙）。自由拖拽能拖出斜边，
+                            // 所以退出编辑时统一吸附成水平/垂直，与预设形状保持同一不变式。
+                            rectifyRoomShape(activeRoom);
+                            normalizeRoomShape(activeRoom);
                   }
                   setEditShape(v => !v);
                 }}

@@ -92,10 +92,13 @@ export interface GetRoomDoorsOpts {
   /** 自动门回调：仅外观图/全屋3D 有足够几何信息实现。返回 null 表示不生成。 */
   autoDoor?: () => DoorConfig | null;
   /**
-   * 外接矩形投影。**只有按"外接矩形四面"渲染的视图**（外观图 FloorPlanExterior /
-   * 全屋3D HouseCanvas）才传这个：它们不认多边形 `edgeIndex`，需要把沿边坐标折算
-   * 成外框坐标，否则 L/凸字形房间内凹边上的门会跑到外框上。
-   * 2D 平面图和室内效果图**不要传**——它们原生支持沿边基准，折算反而丢精度。
+   * 外接矩形投影。**只有仍按"外接矩形四面"工作的消费者**才传这个：把沿边坐标
+   * 折算成外框坐标，否则 L/凸字形房间内凹边上的门会跑到外框上。
+   *
+   * 现状：只剩 `HouseCanvas` 的**漫游碰撞墙**在用（那条路径仍是 AABB 墙）。
+   * 外观图 FloorPlanExterior 已经改成按每条轴对齐边展开成面、原生消费 edgeIndex，
+   * 不再折算；2D 平面图和室内效果图本来就原生支持沿边基准。
+   * 折算是有损的（凹角被压回外框），能不用就不用。
    */
   rectProject?: (door: DoorConfig) => { wall: WallSide; pos: number } | null;
 }

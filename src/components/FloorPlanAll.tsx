@@ -483,6 +483,7 @@ export default function FloorPlanAll() {
   const addRoom2             = useDesignerStore(s => s.addRoom);
   const setRoomShape         = useDesignerStore(s => s.setRoomShape);
   const normalizeRoomShape   = useDesignerStore(s => s.normalizeRoomShape);
+  const rectifyRoomShapeFPA  = useDesignerStore(s => s.rectifyRoomShape);
   // All floors data — for ghost overlay rendering
   const allFloorPlans        = useDesignerStore(s => s.floorPlans);
   // Multi-building
@@ -1772,6 +1773,10 @@ export default function FloorPlanAll() {
                           e.stopPropagation();
                           if (isEditing) {
                             // 退出编辑：负坐标规范化（平移多边形+layout+家具+门窗回正象限）
+                            // 先正交化再归正：外观图/全屋3D 的墙体引擎是「轴对齐边 = 一个面」的一维
+                            // 模型，表达不了斜边（会被跳过 → 那条边没墙）。自由拖拽能拖出斜边，
+                            // 所以退出编辑时统一吸附成水平/垂直，与预设形状保持同一不变式。
+                            rectifyRoomShapeFPA(room);
                             normalizeRoomShape(room);
                             setShapeEditRoom(null);
                           } else {

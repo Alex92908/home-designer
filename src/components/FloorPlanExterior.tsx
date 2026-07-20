@@ -39,21 +39,21 @@ import {
 import { splitWallAroundHoles } from "@/lib/wallGeom";
 import { paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize, getStuccoTexture, getStuccoNormal } from "@/lib/textures";
-import { polygonBounds, edgeHoleToRectPos, type RoomShape } from "@/lib/roomGeometry";
+import { polygonBounds, getEdges, polygonSpansAtLine, offsetRectilinearPolygon, findEdgeForWall, type RoomShape, type WallFacing, resolveHoleOnPolygon } from "@/lib/roomGeometry";
 
-/** 本视图按"外接矩形四面"渲染，不认多边形 edgeIndex。这个工厂返回一个把
- *  edgeIndex 绑定的洞口折算到外框坐标的函数，供 getRoomDoors 的 rectProject
- *  以及窗户折算共用。详见 roomGeometry.edgeHoleToRectPos 的说明。 */
-function makeRectProject(
-  shape: RoomShape | undefined,
-  roomOrigin: { x: number; y: number },
-  rect: { x: number; y: number; width: number; depth: number },
-) {
-  if (!shape?.points?.length || shape.preset === "rect") return undefined;
-  return (h: { wall: string; pos: number; len: number; edgeIndex?: number }) =>
-    h.edgeIndex == null ? null
-      : edgeHoleToRectPos(shape.points!, h.edgeIndex, h.pos, h.len, roomOrigin, rect);
-}
+/** 一条边是否按"水平"处理：取**主轴**，而不是按容差判断是否严格轴对齐。
+ *
+ *  历史教训：原来写的是 `|dz| <= 1cm 才算水平，否则跳过`。咖啡馆客厅的多边形
+ *  是手工调过的，西墙那条边 x 差 3cm、凹口两条边差 2/4cm，全部超差被当成斜边
+ *  **跳过 → 整面西墙消失**，窗户也没有面可挂（用户实拍：窗框横跨幕墙和实墙、
+ *  厨房没有门）。
+ *
+ *  跳过 = 丢墙，是最糟的失败模式。改成按主轴投影：永远产出一个面，最多引入几
+ *  厘米的位置误差（墙本身就有 10–20cm 厚，看不出来），但绝不会少一堵墙。 */
+const isHorizEdge = (dx: number, dz: number) => Math.abs(dz) <= Math.abs(dx);
+/** 退化边（长度≈0）才跳过。 */
+const DEGENERATE_CM = 0.5;
+
 
 /** Effective rectangular footprint (cm, same frame as roomLayout) that fully
  *  encloses a room's polygon. Rect/undefined shapes return the raw rect
@@ -175,6 +175,19 @@ export interface ExteriorWallSeg {
   room:       RoomType;
   side:       WallSide;
   roomX: number; roomY: number; roomW: number; roomD: number;
+  /** 该面所在的**常量坐标**（N/S 面是 z，E/W 面是 x），以及该面沿墙的起止。
+   *
+   *  为什么必须显式带上：这三个值 `computeExteriorWalls` 内部本来就算好了，
+   *  但以前 push 时被丢掉，下游 `buildFacadeBlocks` 和 `exteriorPlanes` 各自
+   *  从 roomX/roomY/roomW/roomD **重新推**（推的是房间外接矩形的四条边）。
+   *  一旦一个房间在同一朝向上有**多个面**（L/凸字形多边形的两条 N 边），
+   *  重推会得出完全相同的 wc → 分组键相撞 → 两段被一维邻接合并成一条
+   *  横跨凹口的墙。带上真值后，不同面自然分到不同平面组。
+   *
+   *  faceId 用于洞口归属：以前按 `d.wall === side` 字母比较，同朝向多个面
+   *  会把同一扇门复制到每个面上。 */
+  wallCoord: number; wallStart: number; wallEnd: number;
+  faceId: string;
   segStart: number; segEnd: number;
   windows: WindowConfig[];
   doors:   DoorConfig[];
@@ -220,28 +233,6 @@ function sideToWinWall(side: WallSide): WindowConfig["wall"] {
   return side;
 }
 
-/** Default door span (cm) for a room when the user hasn't set roomDoorLen.
- *  Garage gets a WIDE sectional door (most of the wall, min 240 / max 300),
- *  so it reads as a real garage door and triggers the sectional-door render
- *  (≥2m threshold). All other rooms get the standard 80cm single-leaf door. */
-function defaultDoorLenCm(room: RoomType, wallLenCm: number): number {
-  if (room === "garage") return Math.max(240, Math.min(wallLenCm - 40, 300));
-  return 80;
-}
-/** Force any garage door to a wide, centred garage-door size so the GLB roller
- *  shutter fills the opening (a user's leftover 80cm pedestrian door would make
- *  the shutter tiny). No-op for non-garage rooms / non-garage doors. */
-function widenGarageDoor(room: RoomType, door: DoorConfig, widthCm: number, depthCm: number): DoorConfig {
-  if (room !== "garage") return door;
-  const wallLen = (door.wall === "W" || door.wall === "E") ? depthCm : widthCm;
-  const len = Math.max(door.len ?? 0, Math.min(wallLen - 40, 340));
-  const pos = Math.max(5, (wallLen - len) / 2);
-  return { ...door, len, pos, h: Math.max(door.h ?? 0, 210), style: door.style ?? ("roller_shutter" as import("@/lib/types").DoorStyle) };
-}
-/** Default door height (cm) — garage doors are taller (~210). */
-function defaultDoorHCm(room: RoomType): number {
-  return room === "garage" ? 210 : 200;
-}
 
 // ── 外墙段检测 ─────────────────────────────────────────────────
 export function computeExteriorWalls(
@@ -252,6 +243,14 @@ export function computeExteriorWalls(
   floorIndex: number,
   doorMap?: Record<string, DoorConfig[]>,
   wallsHidden?: Record<string, Partial<Record<string, boolean>> | undefined>,
+  /** 房间多边形轮廓。给了就按**每条轴对齐边一个面**展开（凹角能抠出来）；
+   *  不给或 preset==="rect" 时退回原来的「外接矩形四个面」，逐字节不变。 */
+  shapes?: Record<string, RoomShape | undefined>,
+  /** 多边形点位的坐标原点 = 原始 roomLayout。
+   *  ⚠️ 注意本函数的 `layout` 参数收到的是 **effRect**（有效外接矩形），
+   *  对多边形房间它与 roomLayout **不同**（多边形探出 AABB 时 effRect 会外扩/左移）。
+   *  多边形点是相对 roomLayout 的，所以必须单独传原始 layout，不能拿 effRect 顶替。 */
+  originLayout?: Record<string, { x: number; y: number }>,
 ): ExteriorWallSeg[] {
   // 邻居「朝本房间那面墙」= 本面的对面侧（本 S ↔ 邻 N，本 E ↔ 邻 W）。
   const OPPOSITE_SIDE = { N: "S", S: "N", E: "W", W: "E" } as const;
@@ -264,14 +263,58 @@ export function computeExteriorWalls(
     const { x: rx, y: ry } = p;
     const { width: rw, depth: rd } = d;
 
-    const sides = [
+    // 一个"外墙面"：轴对齐，故有常量坐标 wallCoord + 沿墙一维区间。
+    // edgeIndex 只有多边形展开出来的面才有，用于洞口归属。
+    type Face = {
+      side: WallSide; wallCoord: number; axis: "x" | "y";
+      wallStart: number; wallEnd: number; edgeIndex?: number;
+    };
+    // 矩形房间的四个面（原行为，保持不变）。
+    const rectSides: Face[] = [
       { side: "S" as WallSide, wallCoord: ry + rd, axis: "x" as const, wallStart: rx,     wallEnd: rx + rw },
       { side: "N" as WallSide, wallCoord: ry,      axis: "x" as const, wallStart: rx,     wallEnd: rx + rw },
       { side: "E"  as WallSide, wallCoord: rx + rw, axis: "y" as const, wallStart: ry,     wallEnd: ry + rd },
       { side: "W"  as WallSide, wallCoord: rx,      axis: "y" as const, wallStart: ry,     wallEnd: ry + rd },
     ];
 
-    for (const { side, wallCoord, axis, wallStart, wallEnd } of sides) {
+    // 多边形房间：**每条轴对齐边就是一个面**。这是本次改造的核心 —— 一条水平边
+    // 天然给出 {side=facing, wallCoord=该边的 z, axis:"x", 沿 x 的起止}，与上面
+    // 矩形四个面的结构完全同构，所以下游（buildFacadeBlocks 的 side:wallCoord
+    // 分组、subtractIntervals 的一维差集、buildCurtainLayout 的一维分格、
+    // exteriorPlanes 的平面键）**全部不用改**，只是面数从 4 变成 N。
+    // 凹角因此能真正抠出来，而不再是外接矩形兜底。
+    const shape = shapes?.[room];
+    const origin = originLayout?.[room];
+    const sides = (() => {
+      if (!shape?.points?.length || shape.preset === "rect" || !origin) return rectSides;
+      const out: Face[] = [];
+      for (const e of getEdges(shape.points)) {
+        const dxE = e.x2 - e.x1, dzE = e.z2 - e.z1;
+        if (Math.hypot(dxE, dzE) < DEGENERATE_CM) continue;   // 退化边才跳过
+        const horiz = isHorizEdge(dxE, dzE);
+        if (horiz) {
+          out.push({
+            side: e.facing, axis: "x" as const,
+            wallCoord: origin.y + (e.z1 + e.z2) / 2,
+            wallStart: origin.x + Math.min(e.x1, e.x2),
+            wallEnd:   origin.x + Math.max(e.x1, e.x2),
+            edgeIndex: e.i,
+          });
+        } else {
+          out.push({
+            side: e.facing, axis: "y" as const,
+            wallCoord: origin.x + (e.x1 + e.x2) / 2,
+            wallStart: origin.y + Math.min(e.z1, e.z2),
+            wallEnd:   origin.y + Math.max(e.z1, e.z2),
+            edgeIndex: e.i,
+          });
+        }
+      }
+      // 兜底：多边形全是斜边 / 点位异常时退回外接矩形，宁可近似也不要没有墙。
+      return out.length >= 3 ? out : rectSides;
+    })();
+
+    for (const { side, wallCoord, axis, wallStart, wallEnd, edgeIndex } of sides) {
       // 「被相邻房间覆盖」= 内墙；剩下的才是真正的建筑外周面。
       // 旧逻辑只认「边缘精确对齐」(other 的对面边 == wallCoord)，一旦相邻
       // 房间与本房间在该轴上有重叠/错位(如默认户型里走廊 y320–560 压进
@@ -290,6 +333,28 @@ export function computeExteriorWalls(
         // 墙挡在这里 → 本面对着开敞空间 = 真外墙，应纳入外壳立面（用户把走廊放
         // 客厅/厨房南边并隐藏走廊墙，想让客厅/厨房南墙做玻璃店面 = 骑楼效果）。
         if (wallsHidden?.[other]?.[OPPOSITE_SIDE[side]] === true) continue;
+
+        // 邻居本身是多边形时，用**扫描线求交**取它在本墙外侧那条线上的真实覆盖区间。
+        // 原来一律拿邻居的外接矩形算，L/凸字形邻居的 AABB 比实体大 → 凹角处把本该
+        // 露出来的外墙误判成内墙、整段立面消失。矩形邻居仍走下面的原路径（逐字节不变）。
+        const oShape = shapes?.[other];
+        const oOrigin = originLayout?.[other];
+        if (oShape?.points?.length && oShape.preset !== "rect" && oOrigin) {
+          const outer = axis === "x"
+            ? (side === "S" ? wallCoord + PROBE : wallCoord - PROBE)   // N/S：外侧在 z
+            : (side === "E" ? wallCoord + PROBE : wallCoord - PROBE);  // E/W：外侧在 x
+          // 扫描线换算到邻居局部坐标
+          const cLocal = axis === "x" ? outer - oOrigin.y : outer - oOrigin.x;
+          const spans = polygonSpansAtLine(oShape.points, axis === "x", cLocal);
+          const shift = axis === "x" ? oOrigin.x : oOrigin.y;
+          for (const [s0, s1] of spans) {
+            const overS = Math.max(wallStart, s0 + shift);
+            const overE = Math.min(wallEnd,   s1 + shift);
+            if (overE - overS > TOLE) covered.push([overS, overE]);
+          }
+          continue;
+        }
+
         let onOuterSide: boolean, oStart: number, oEnd: number;
         if (axis === "x") {
           // N/S 面：外侧在 y 方向
@@ -317,9 +382,61 @@ export function computeExteriorWalls(
 
       const exterior = subtractIntervals([[wallStart, wallEnd]], covered);
       const winWall  = sideToWinWall(side);
-      const roomWins = (winMap[room] ?? []).filter(w => w.wall === winWall);
-      const allDoors = doorMap?.[room] ?? [];
-      const roomDoors = allDoors.filter(d => d.wall === winWall);
+
+      // 洞口归属：**统一走 roomGeometry.findEdgeForWall** —— 这是 2D 平面图和
+      // 室内效果图一直在用的唯一真源，同时处理两种情况：
+      //   · 绑了 edgeIndex → 直接认那条边，pos 已是沿边坐标
+      //   · 老式 cardinal  → 把 (wall,pos) 投影到 bbox 周边，再找穿过该点的边
+      //
+      // 历史教训（用户实拍：窗框横跨幕墙和实墙、位置歪掉）：我一开始没用这个真源，
+      // 自己在立面侧写了 belongsHere（按中心点落在面区间内）、在门洞侧写了
+      // onThisFace（cardinal 洞口对每个面都返回 true）。两套规则不一致 →
+      // 立面把窗丢了、门洞却照样开洞，于是墙上出现一个没有玻璃、位置还不对的框。
+      //
+      const origin0 = origin ?? { x: rx, y: ry };
+      const holeFace = (h: { pos?: number; len?: number; edgeIndex?: number }):
+          { onThisFace: boolean; posOnFace: number } => {
+        if (!shape?.points?.length || shape.preset === "rect" || edgeIndex == null) {
+          // 矩形房间：pos 本来就是从房间西/北端量的 → 加上房间原点即绝对坐标。
+          const oa = (side === "N" || side === "S") ? origin0.x : origin0.y;
+          return { onThisFace: true, posOnFace: oa + (h.pos ?? 0) };
+        }
+        const hit = resolveHoleOnPolygon(
+          shape.points, side as WallFacing, h.pos ?? 0, h.len ?? 0,
+          { maxX: d.width, maxZ: d.depth }, h.edgeIndex,
+        );
+        if (hit) {
+          // hit.alongCm 已由 resolveHoleOnPolygon 统一换算成「多边形局部、从世界
+          // 小端量」；面的 wallStart 是 `origin + min(边端点)`（见 sides 构造），
+          // 两者同口径，直接相减就是洞口在本面上的偏移。
+          // 别再在这里自己推 cardinal / edgeIndex 两套公式——那正是今天把客厅大门
+          // 挪偏 276cm 的原因，换算只允许存在于 resolveHoleOnPolygon 一处。
+          // 返回**平面图上的绝对坐标**（N/S 给 x，E/W 给 y），不是"相对某个面的偏移"。
+          // 基准只在这里定义一次；消费侧直接用，不许再 `roomWallStart + pos` 自己拼。
+          // 之前 pos 的基准在 holeFace / collectHoles / rawX 三处各推一遍
+          // （面起点 285 vs 房间西端 9），差 276cm —— 就是"门对了门洞错了"的来源。
+          const originAlong = (side === "N" || side === "S") ? origin0.x : origin0.y;
+          return { onThisFace: hit.edgeIndex === edgeIndex, posOnFace: originAlong + hit.alongCm };
+        }
+        // 打不到任何边（洞口投影落在凹口里、那段根本没有本房间的墙）→ **不画**。
+        // 不要兜底"挂到第一个同朝向的面并夹紧"：效果图/漫游走同一个 findEdgeForWall，
+        // 它们那边一样打不到边、一样不画。兜底只会让外观图凭空多出一扇别的视图
+        // 没有的窗（用户实拍：外观图显示窗户了、室内装修没显示）。
+        // 三个视图一起不画 = 一致；一个画一个不画 = 分叉。
+        return { onThisFace: false, posOnFace: h.pos ?? 0 };
+      };
+      const resolveHoles = <T extends { pos?: number; len?: number; edgeIndex?: number }>(list: T[]): T[] => {
+        const out: T[] = [];
+        for (const h of list) {
+          const r = holeFace(h);
+          if (r.onThisFace) out.push({ ...h, pos: r.posOnFace });
+        }
+        return out;
+      };
+
+      const roomWins  = resolveHoles((winMap[room] ?? []).filter(w => w.wall === winWall));
+      const allDoors  = doorMap?.[room] ?? [];
+      const roomDoors = resolveHoles(allDoors.filter(d => d.wall === winWall));
 
       for (const [segStart, segEnd] of exterior) {
         if (segEnd - segStart < 20) continue;
@@ -334,7 +451,12 @@ export function computeExteriorWalls(
           const dS = wallStart + (d.pos ?? 0);
           return dS + d.len > segStart + 5 && dS < segEnd - 5 && d.len >= 60;
         });
-        result.push({ floorIndex, room, side, roomX: rx, roomY: ry, roomW: rw, roomD: rd, segStart, segEnd, windows: segWins, doors: segDoors });
+        result.push({
+          floorIndex, room, side, roomX: rx, roomY: ry, roomW: rw, roomD: rd,
+          wallCoord, wallStart, wallEnd,
+          faceId: `${room}:${side}:${Math.round(wallCoord)}:${edgeIndex ?? "r"}`,
+          segStart, segEnd, windows: segWins, doors: segDoors,
+        });
       }
     }
   }
@@ -624,9 +746,15 @@ function GlassCurtain({
                 <boxGeometry args={[cw, ph - 0.004, 0.008]} />
                 <meshPhysicalMaterial
                   color={glassColor ?? "#8AA6C2"}
-                  transparent opacity={op(0.24)}
-                  depthWrite={false} roughness={0.05} metalness={0.0}
-                  reflectivity={0.5} envMapIntensity={2.0} side={THREE.DoubleSide}
+                  transparent opacity={op(0.32)}
+                  depthWrite={false} roughness={0.03} metalness={0.0}
+                  // 反光增强（用户：幕墙不反光）：transparent 材质的环境反射会随
+                  // opacity 一起被稀释，0.24 时几乎看不出。抬 opacity 到 0.32 +
+                  // envMapIntensity 3.2 + clearcoat 镜面层，天空/HDR 才能在玻璃上
+                  // 拉出可见的高光渐变。HDR 由 HouseCanvas 场景级 <Environment> 提供。
+                  reflectivity={0.9} envMapIntensity={3.2}
+                  clearcoat={1} clearcoatRoughness={0.06}
+                  side={THREE.DoubleSide}
                   {...overlayMaterialProps(2)}
                 />
               </mesh>
@@ -1329,11 +1457,11 @@ function buildFacadeBlocks(segs: ExteriorWallSeg[]): FacadeBlock[] {
   // Group by (floorIndex, side, wallCoord)
   const planes = new Map<string, { fi: number; side: WallSide; wc: number; segs: ExteriorWallSeg[] }>();
   for (const seg of segs) {
-    const wc = seg.side === "S" ? seg.roomY + seg.roomD
-             : seg.side === "N" ? seg.roomY
-             : seg.side === "E"  ? seg.roomX + seg.roomW
-             :                        seg.roomX;
-    const key = `${seg.floorIndex}:${seg.side}:${wc}`;
+    // 直接读 seg.wallCoord（computeExteriorWalls 已算好）。
+    // 原来在这里从房间外接矩形重推，多边形房间同朝向的多个面会推出同一个 wc、
+    // 撞进同一组，被下面的一维邻接合并成一条横跨凹口的墙。
+    const wc = seg.wallCoord;
+    const key = `${seg.floorIndex}:${seg.side}:${Math.round(wc)}`;
     if (!planes.has(key)) planes.set(key, { fi: seg.floorIndex, side: seg.side, wc, segs: [] });
     planes.get(key)!.segs.push(seg);
   }
@@ -1369,14 +1497,13 @@ function buildFacadeBlocks(segs: ExteriorWallSeg[]): FacadeBlock[] {
     for (const grp of groups) {
       const mergedStart = Math.min(...grp.map(s => s.segStart));
       const mergedEnd   = Math.max(...grp.map(s => s.segEnd));
-      const doorEntries = grp.flatMap(seg => {
-        const rws = isHoriz ? seg.roomX : seg.roomY;
-        return seg.doors.map(d => ({ roomWallStart: rws, d, room: seg.room }));
-      });
-      const winEntries = grp.flatMap(seg => {
-        const rws = isHoriz ? seg.roomX : seg.roomY;
-        return seg.windows.map(w => ({ roomWallStart: rws, w, room: seg.room }));
-      });
+      // 洞口的沿墙基准 = 该面自己的起点(seg.wallStart)，不再用房间外接矩形的
+      // roomX/roomY。矩形房间两者恒等；多边形房间的内凹边起点与外框不同，
+      // 用外框会让门窗整体偏移。
+      const doorEntries = grp.flatMap(seg =>
+        seg.doors.map(d => ({ roomWallStart: seg.wallStart, d, room: seg.room })));
+      const winEntries = grp.flatMap(seg =>
+        seg.windows.map(w => ({ roomWallStart: seg.wallStart, w, room: seg.room })));
       const primaryRoom = grp[0].room;
       const rooms = Array.from(new Set(grp.map(s => s.room)));
       result.push({ floorIndex: fi, side, wallCoord: wc, mergedStart, mergedEnd, primaryRoom, rooms, doorEntries, winEntries, fl: grp[0].fl ?? DEFAULT_FL });
@@ -1403,8 +1530,23 @@ function FlatRoof({
   stairWallsHidden = null,
   penthouse = false,
   penthouseColor = "#E8E4DE",
+  footprints = null,
+  perimeterSegs = null,
 }: {
   W: number; D: number; roofY: number;
+  /** 建筑真实轮廓（逐房间多边形，建筑中心坐标系，米）。给了就按轮廓出屋面板
+   *  （凹角镂空）；null ⇒ 沿用原来的 W×D 整块矩形板，矩形户型逐字节不变。
+   *
+   *  为什么必须做：墙体已经沿多边形边抠出凹角了，屋面板若还是外接矩形，
+   *  凹口会被整块屋顶盖住 —— 从外面和俯视都看不出抠形，白改。 */
+  footprints?: Array<Array<[number, number]>> | null;
+  /** 建筑外周墙段（建筑中心坐标系，米）。给了就沿这些段砌女儿墙，而不是
+   *  绕外接矩形砌一圈。
+   *
+   *  为什么用外周段而不是逐房间多边形：房间多边形包含**共墙**，逐房间画会在
+   *  屋面中间冒出一道道内部女儿墙。allSegs 是已经做过去重 + 剔除内墙的
+   *  「真·建筑外周」，正是女儿墙该走的线。 */
+  perimeterSegs?: Array<{ x1: number; z1: number; x2: number; z2: number }> | null;
   nightGlow?: number; hasRooftop?: boolean;
   overhang?: number;
   overhangSouthExtra?: number;
@@ -1458,12 +1600,43 @@ function FlatRoof({
     <group>
       {/* 屋面板 — 厚度由 ExteriorSettings.roofSlabThicknessCm 控制；
           天台层绕开楼梯井开口（4 块矩形拼接）*/}
-      {carve(W + OV * 2, D + OV_S + OV, 0, -(OV_S - OV) / 2).map((p) => (
-        <mesh key={p.key} position={[p.x, roofSlab, p.z]} castShadow receiveShadow>
-          <boxGeometry args={[p.w, ST, p.d]} />
-          <meshStandardMaterial color={roofColor} roughness={0.88} />
-        </mesh>
-      ))}
+      {footprints && footprints.length > 0
+        // 异形建筑：逐房间轮廓外扩一个挑檐宽度后拉伸成板。相邻房间的板在共墙
+        // 处重叠是无害的（同色、共面），与 HouseCanvas.PolygonFlatRoof 同一策略。
+        ? footprints.map((poly, i) => {
+            const off = offsetRectilinearPolygon(poly, OV);
+            const shape = new THREE.Shape(off.map(([px, pz]) => new THREE.Vector2(px, pz)));
+            // 楼梯井开洞：矩形分支用 4 块板绕开(carveRect)，多边形分支直接用
+            // THREE.Shape 的 holes 挖，更直接。只在开口中心落在本房间轮廓内时挖，
+            // 否则每块板都会被挖一个洞。
+            if (opening) {
+              const cxs = off.map(p => p[0]), czs = off.map(p => p[1]);
+              const inX = opening.cx >= Math.min(...cxs) && opening.cx <= Math.max(...cxs);
+              const inZ = opening.cz >= Math.min(...czs) && opening.cz <= Math.max(...czs);
+              if (inX && inZ) {
+                const hw = opening.w / 2, hd = opening.d / 2;
+                shape.holes.push(new THREE.Path([
+                  new THREE.Vector2(opening.cx - hw, opening.cz - hd),
+                  new THREE.Vector2(opening.cx + hw, opening.cz - hd),
+                  new THREE.Vector2(opening.cx + hw, opening.cz + hd),
+                  new THREE.Vector2(opening.cx - hw, opening.cz + hd),
+                ]));
+              }
+            }
+            return (
+              <mesh key={`rf-poly-${i}`} position={[0, roofSlab + ST / 2, 0]}
+                    rotation={[Math.PI / 2, 0, 0]} castShadow receiveShadow>
+                <extrudeGeometry args={[shape, { depth: ST, bevelEnabled: false }]} />
+                <meshStandardMaterial color={roofColor} roughness={0.88} side={THREE.DoubleSide} />
+              </mesh>
+            );
+          })
+        : carve(W + OV * 2, D + OV_S + OV, 0, -(OV_S - OV) / 2).map((p) => (
+            <mesh key={p.key} position={[p.x, roofSlab, p.z]} castShadow receiveShadow>
+              <boxGeometry args={[p.w, ST, p.d]} />
+              <meshStandardMaterial color={roofColor} roughness={0.88} />
+            </mesh>
+          ))}
       {/* 楼梯井开口安全护栏（天台开洞时）：在朝天台内侧（未贴女儿墙）
           的一侧留缺口，作为人从楼梯上来踏出天台的出入口。 */}
       {opening && (() => {
@@ -1495,8 +1668,28 @@ function FlatRoof({
           </group>
         );
       })()}
-      {/* 女儿墙 — 四边（仅 PH > 0 时渲染）*/}
-      {PH > 0.01 && (
+      {/* 女儿墙（仅 PH > 0 时渲染）。
+          给了 perimeterSegs 就沿真实外周砌（异形楼的凹角能跟上）；
+          否则沿用原来绕外接矩形砌一圈——矩形户型逐字节不变。 */}
+      {PH > 0.01 && (perimeterSegs && perimeterSegs.length > 0 ? (
+        <>
+          {perimeterSegs.map((s, i) => {
+            const dx = s.x2 - s.x1, dz = s.z2 - s.z1;
+            const len = Math.hypot(dx, dz);
+            if (len < 0.05) return null;
+            // 段是轴对齐的：横段沿 X、竖段沿 Z。端头各外扩半个厚度，让转角闭合不留缺口。
+            const horiz = Math.abs(dz) <= Math.abs(dx);
+            return (
+              <mesh key={`pp-${i}`}
+                    position={[(s.x1 + s.x2) / 2, roofSlab + 0.05 + PH / 2, (s.z1 + s.z2) / 2]}
+                    castShadow>
+                <boxGeometry args={horiz ? [len + PT, PH, PT] : [PT, PH, len + PT]} />
+                <meshStandardMaterial color={parapetColor} roughness={0.85} />
+              </mesh>
+            );
+          })}
+        </>
+      ) : (
         <>
           <mesh position={[0,   roofSlab + 0.05 + PH / 2,  D / 2]} castShadow>
             <boxGeometry args={[W, PH, PT]} />
@@ -1515,7 +1708,7 @@ function FlatRoof({
             <meshStandardMaterial color={parapetColor} roughness={0.85} />
           </mesh>
         </>
-      )}
+      ))}
       {/* 屋顶边缘影线（同样绕开楼梯井开口） */}
       {carve(W + OV * 2 + 0.005, D + OV_S + OV + 0.005, 0, -(OV_S - OV) / 2).map((p) => (
         <mesh key={p.key} position={[p.x, roofY - 0.005, p.z]}>
@@ -2056,10 +2249,13 @@ function RooftopDecorations({
 // walkthrough the same wood-floor look as the effect page. ───────────
 function WalkthroughFloor({
   cx, cz, yBase, rW, rD, floorColor, floorId, insideBuilding,
-  bleed = 0, depthRank = 0, underlayMargin = 0,
+  bleed = 0, depthRank = 0, underlayMargin = 0, shapePts,
 }: {
   cx: number; cz: number; yBase: number; rW: number; rD: number;
   floorColor: string; floorId: string; insideBuilding: boolean;
+  /** 多边形轮廓（以房间中心为原点的米）。给了就按真实轮廓裁剪地板，
+   *  否则凹口里会露出一块悬空的楼板。矩形房间为 undefined，走原矩形路径。 */
+  shapePts?: Array<[number, number]>;
   /** Per-edge overscan (m). Room floors are exact width×depth rectangles.
    *  At the open room↔corridor boundary (the corridor has no interior wall)
    *  the two floors are separated by the wall-thickness strip, so a gap
@@ -2143,7 +2339,11 @@ function WalkthroughFloor({
           floors are coplanar (no Y stagger → no lit edge); the per-room
           `depthRank` polygonOffset breaks z-fight ties cleanly. */}
       <mesh position={[cx, yBase + 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[fW, fD]} />
+        {/* 多边形房间按真实轮廓裁剪（凹角镂空）。bleed 对多边形不适用——
+            它是给矩形边界补缝用的，多边形这里先不外扩，需要再单独处理。 */}
+        {shapePts
+          ? <shapeGeometry args={[new THREE.Shape(shapePts.map(([sx, sz]) => new THREE.Vector2(sx, sz)))]} />
+          : <planeGeometry args={[fW, fD]} />}
         <meshStandardMaterial
           color={floorColor}
           roughness={insideBuilding ? 0.42 : 0.70}
@@ -2519,150 +2719,6 @@ export default function FloorPlanBuilding({
     return arr;
   }, [floorPlans, floorCount, planOffset, W, D]);
 
-  // ── 自动门 / 窗户方向修正工具（外墙段 + 室内共用）──────────────────────────
-  const AUTO_DOOR_W = 80; // cm
-  const WIN_EPS = 0.25;   // metres: wall is "on exterior" if distance < this
-
-  function calcWallDists(
-    cx: number, cz: number, rW: number, rD: number,
-    bounds: { minX: number; maxX: number; minZ: number; maxZ: number }
-  ): Record<"N" | "S" | "W" | "E", number> {
-    // N = -Z (back, SVG top), S = +Z (front, SVG bottom).
-    // W = -X (left), E = +X (right).
-    return {
-      N: (cz - rD / 2) - bounds.minZ,
-      S: bounds.maxZ   - (cz + rD / 2),
-      W: (cx - rW / 2) - bounds.minX,
-      E: bounds.maxX   - (cx + rW / 2),
-    };
-  }
-
-  function pickAutoDoor(
-    fi: number, room: RoomType,
-    cx: number, cz: number, rW: number, rD: number, rWcm: number, rDcm: number,
-    bounds: { minX: number; maxX: number; minZ: number; maxZ: number }
-  ): DoorConfig {
-    const d = calcWallDists(cx, cz, rW, rD, bounds);
-    const EPS = 0.25; // metres: wall is "on exterior" if distance < this
-
-    // 一楼客厅大门：传统正门朝南（S, +Z）。
-    // 优先级：S → N → W → E，只要这面墙是外墙（距离 < EPS）。
-    // 没有任何外墙时，回退到"最接近外边界"（升序最小距离）。
-    // 这样可以避免浮点并列导致门钉到侧墙。
-    if ((exterior.livingEntryDoor ?? true) && fi === 0 && room === "living") {
-      const wallsByPriority: DoorConfig["wall"][] = ["S", "N", "W", "E"];
-      const pickFrontFirst = wallsByPriority.find(w => d[w] < EPS);
-      const wall: DoorConfig["wall"] = pickFrontFirst ?? (() => {
-        const all: [DoorConfig["wall"], number][] = [
-          ["N", d.N], ["S", d.S], ["W", d.W], ["E", d.E],
-        ];
-        all.sort((a, b) => a[1] - b[1]);
-        return all[0][0];
-      })();
-      const wallLenCm = (wall === "W" || wall === "E") ? rDcm : rWcm;
-      const pos = Math.max(0, (wallLenCm - AUTO_DOOR_W) / 2);
-      // eslint-disable-next-line no-console
-      console.log(
-        `[pickAutoDoor:living] picked=${wall} pos=${pos.toFixed(0)}cm`
-        + ` | dists: N=${d.N.toFixed(2)} S=${d.S.toFixed(2)} W=${d.W.toFixed(2)} E=${d.E.toFixed(2)}`
-        + ` | bounds: x=[${bounds.minX.toFixed(2)},${bounds.maxX.toFixed(2)}] z=[${bounds.minZ.toFixed(2)},${bounds.maxZ.toFixed(2)}]`
-        + ` | room: cx=${cx.toFixed(2)} cz=${cz.toFixed(2)} rW=${rW.toFixed(2)} rD=${rD.toFixed(2)}`
-      );
-      return { id: `auto-${fi}-${room}-${wall}`, wall, pos, len: AUTO_DOOR_W, h: 200 };
-    }
-
-    // 车库：选最近的外墙作为车库门（S→W→N→E 优先），门宽取房间宽度减 20cm
-    // 最小 220cm，确保能在外立面渲染卷帘车库门板。
-    if (room === "garage") {
-      const exteriorOrder: DoorConfig["wall"][] = ["S", "W", "N", "E"];
-      const picked = exteriorOrder.find(w => d[w] < EPS) ?? "S";
-      const wallLenCm = (picked === "W" || picked === "E") ? rDcm : rWcm;
-      const gdW = Math.max(220, Math.min(wallLenCm - 20, 300));
-      const pos = Math.max(0, (wallLenCm - gdW) / 2);
-      return { id: `auto-garage-${fi}-${picked}`, wall: picked, pos, len: gdW, h: 210 };
-    }
-
-    // 其他房间：走廊侧门
-    // 优先 Z 轴方向（N/S）的内墙 — 水平走廊布局中这两面墙朝向走廊
-    // 若 Z 轴两面墙都是外墙，则回退到 X 轴内墙
-    const yWalls: [DoorConfig["wall"], number, number][] = (
-      [["N", d.N, Math.max(0, (rWcm - AUTO_DOOR_W) / 2)],
-       ["S", d.S, Math.max(0, (rWcm - AUTO_DOOR_W) / 2)]] as [DoorConfig["wall"], number, number][]
-    ).filter(([, dist]) => (dist as number) >= EPS);
-
-    const xWalls: [DoorConfig["wall"], number, number][] = (
-      [["W", d.W, Math.max(0, (rDcm - AUTO_DOOR_W) / 2)],
-       ["E", d.E, Math.max(0, (rDcm - AUTO_DOOR_W) / 2)]] as [DoorConfig["wall"], number, number][]
-    ).filter(([, dist]) => (dist as number) >= EPS);
-
-    const candidates = yWalls.length > 0 ? yWalls : xWalls;
-    if (candidates.length > 0) {
-      // 在候选中选最大距离（走廊侧通常是离外边界最远的内墙）
-      candidates.sort((a, b) => b[1] - a[1]);
-      const [wall, , pos] = candidates[0];
-      return { id: `auto-${fi}-${room}-${wall}`, wall, pos, len: AUTO_DOOR_W, h: 200 };
-    }
-
-    // 回退：全外墙房间，用最近外墙（角落房间）
-    const all: [DoorConfig["wall"], number, number][] = [
-      ["N", d.N, Math.max(0, (rWcm - AUTO_DOOR_W) / 2)],
-      ["S", d.S, Math.max(0, (rWcm - AUTO_DOOR_W) / 2)],
-      ["W", d.W, Math.max(0, (rDcm - AUTO_DOOR_W) / 2)],
-      ["E", d.E, Math.max(0, (rDcm - AUTO_DOOR_W) / 2)],
-    ];
-    all.sort((a, b) => a[1] - b[1]);
-    const [wall, , pos] = all[0];
-    return { id: `auto-${fi}-${room}-${wall}`, wall, pos, len: AUTO_DOOR_W, h: 200 };
-  }
-
-  function adjustWindowWall(
-    win: WindowConfig,
-    cx: number, cz: number, rW: number, rD: number, rWcm: number, rDcm: number,
-    bounds: { minX: number; maxX: number; minZ: number; maxZ: number },
-    doorWall?: DoorConfig["wall"],
-    // True if `side` is a genuine exterior wall of this room (no neighbour covering
-    // it). Preferred over bounding-box distance: a detached/offset room (e.g. an
-    // offset garage) has exterior walls that are FAR from the building's bbox edge,
-    // so the distance test wrongly relocates its windows (用户:车库窗户位置不对).
-    isExtWall?: (side: WindowConfig["wall"]) => boolean,
-  ): WindowConfig {
-    const d = calcWallDists(cx, cz, rW, rD, bounds);
-    const onExterior = (side: WindowConfig["wall"]): boolean =>
-      isExtWall ? isExtWall(side) : ((d[side as keyof typeof d] ?? Infinity) < WIN_EPS);
-
-    // 配置的墙就是外墙 → **原样保留**。
-    // 原来这里即使命中"保留"分支，也仍会把 len 砍到墙长 70%、并把 pos 夹进
-    // [5, wallLen-len-5]。用户在 2D 里拉满整面墙的宽窗，外观图里会莫名变窄；
-    // 而且这个改写**不回写 store**，2D 平面图 / 效果图永远显示原值 →
-    // 同一扇窗三个视图三个样。现在只在真正越界(窗跑到墙外)时做最小 clamp。
-    if (onExterior(win.wall)) {
-      const wallLen = (win.wall === "W" || win.wall === "E") ? rDcm : rWcm;
-      const len = Math.min(win.len ?? 80, wallLen);          // 只防超过整面墙
-      const pos = Math.max(0, Math.min(win.pos ?? 0, wallLen - len));
-      return (len === win.len && pos === win.pos) ? win : { ...win, pos, len };
-    }
-
-    // Configured wall is interior or is the door wall — pick best exterior wall.
-    // Genuine exterior walls (isExtWall) rank first, then by bbox distance.
-    const ranked = (["N", "S", "W", "E"] as const)
-      .map(w => ({ w, dist: d[w] ?? Infinity, ext: onExterior(w) }))
-      .sort((a, b) => (a.ext === b.ext ? a.dist - b.dist : (a.ext ? -1 : 1)));
-
-    const target = ranked.find(({ w, ext }) => ext && w !== doorWall)
-      ?? ranked.find(({ w }) => w !== doorWall)
-      ?? ranked[0];
-
-    // 配置的墙是内墙 → 这面根本不在立面上，窗只能挪到最近的外墙，否则整扇窗消失。
-    // 但**尽量少改**：保留原宽度(仅在放不下时才缩)，位置按原墙上的比例平移过去，
-    // 而不是原来那样一律 pos=墙长15% / len 砍到 65%。
-    const extWall = target.w;
-    const wallLen = (extWall === "W" || extWall === "E") ? rDcm : rWcm;
-    const srcWallLen = (win.wall === "W" || win.wall === "E") ? rDcm : rWcm;
-    const len = Math.min(win.len ?? 80, wallLen);
-    const ratio = srcWallLen > 0 ? (win.pos ?? 0) / srcWallLen : 0;
-    const pos = Math.max(0, Math.min(Math.round(ratio * wallLen), wallLen - len));
-    return { ...win, wall: extWall, pos, len };
-  }
 
   // 外墙段检测（用于覆盖材质）
   const allSegs = useMemo<ExteriorWallSeg[]>(() => {
@@ -2696,27 +2752,23 @@ export default function FloorPlanBuilding({
         // 原来这里是一份手写镜像，与 2D/效果图的默认值分叉：门高 200(另两处 240)、
         // 车库门 widenGarageDoor 无条件把 pos 覆盖成居中(吃掉用户拖动)。
         // 自动门仍由本文件的 pickAutoDoor 提供（只有这里算得出房间在整栋楼的位置）。
-        // rectProject：把 edgeIndex 绑定的洞口折算到外框坐标（本视图不认多边形边）。
-        const rectProj = makeRectProject(fp.roomShapes?.[r], p, effRect(p, dd, fp.roomShapes?.[r]));
         mergedDoors[r] = getRoomDoors(fp, r, {
           interiorDoorHeightCm: exterior?.interiorDoorHeightCm,
           curtainWall,
           widthCm: dd.width, depthCm: dd.depth,
-          rectProject: rectProj,
-          autoDoor: (bounds && !isCirc)
-            ? () => pickAutoDoor(fi, r, cx, cz, rW, rD, dd.width, dd.depth, bounds)
-            : undefined,
+          // 不再传 autoDoor：平面图是唯一真源，用户没画门就不该凭空长一扇。
+          // A1 之后每个房间都有 legacy 单门默认值，正常情况下也轮不到自动门。
         });
 
-        // 窗：edgeIndex 折算 → 再修正到外墙
-        const wins = (fp.roomWindows?.[r] ?? []).map(w => {
-          const m = rectProj?.(w);
-          return m ? { ...w, wall: m.wall as WindowConfig["wall"], pos: m.pos, edgeIndex: undefined } : w;
-        });
+        // 窗：直接沿用原始配置（含 edgeIndex）。computeExteriorWalls 现在按
+        // 每条轴对齐边展开成面，会自己把洞口归属到正确的那个面，不再需要
+        // 把沿边坐标折算回外接矩形。
+        const wins = fp.roomWindows?.[r] ?? [];
         const doorWall0 = mergedDoors[r]?.[0]?.wall;
         if (wins.length > 0 && bounds) {
-          const isExtWall = (side: WindowConfig["wall"]) => isExteriorWallSide(fp, r, side);
-          mergedWindows[r] = wins.map(w => adjustWindowWall(w, cx, cz, rW, rD, dd.width, dd.depth, bounds, doorWall0, isExtWall));
+          // 不再"修正"窗户：平面图配在哪面就渲染在哪面。配在内墙上 → 立面本来就
+          // 没有那一段外墙段，自然不会画出来，与效果图一致。
+          mergedWindows[r] = wins;
         } else {
           mergedWindows[r] = wins;
         }
@@ -2734,7 +2786,13 @@ export default function FloorPlanBuilding({
         effLayout[r] = { x: e.x, y: e.y };
         effDims[r] = { width: e.width, depth: e.depth };
       }
-      result.push(...computeExteriorWalls(rooms, effLayout, effDims, mergedWindows, fi, mergedDoors, fp.roomWallsHidden));
+      // 多边形房间按每条轴对齐边展开成多个面（凹角抠形）。注意第二个参数是
+      // effRect，而多边形点的原点是原始 roomLayout，两者对异形房间不同 → 必须
+      // 把 roomLayout 单独作为 originLayout 传进去。
+      result.push(...computeExteriorWalls(
+        rooms, effLayout, effDims, mergedWindows, fi, mergedDoors, fp.roomWallsHidden,
+        fp.roomShapes, fp.roomLayout,
+      ));
     }
     return result;
   }, [floorPlans, floorCount, floorBoundsArr, planOffset, W, D]);
@@ -2794,23 +2852,28 @@ export default function FloorPlanBuilding({
       const flipX = block.side === "S" || block.side === "E";
       // 立面局部洞口列表 —— 必须与传给 GlassCurtain 的 doors/windows 完全同序同坐标,
       // 这样吸附用的 buildCurtainLayout 与外观图渲染用的 layout 必然一致。
-      const ops: Array<{ cx: number; w: number; key: string; kind: "d" | "w"; room: RoomType; wall: string; pos: number; roomWallStart: number }> = [];
+      // edgeIndex 进键：多边形房间同一朝向可能有多个面，只用 (room, wall, pos)
+      // 会让两个面上位置相近的洞口撞键、后写覆盖前写 → 门吸附到错误的分格。
+      // 矩形房间恒为 "r"，键与改动前一致。
+      const ops: Array<{ cx: number; w: number; key: string; kind: "d" | "w"; room: RoomType; wall: string; pos: number; roomWallStart: number; edge: string; oid: string }> = [];
       if (block.floorIndex === 0) {
         block.doorEntries.forEach(({ roomWallStart, d, room }, i) => {
           const dPos = d.pos ?? 0, dLen = d.len;
-          const rawX = (roomWallStart + dPos + dLen / 2 - block.mergedStart) * CM - segLen / 2;
+          // dPos 已是平面图绝对坐标（见 holeFace），直接减 mergedStart 即块内位置。
+          const rawX = (dPos + dLen / 2 - block.mergedStart) * CM - segLen / 2;
           const flipped = flipX ? -rawX : rawX;
           const dLenM = dLen * CM;
           // 与 doorInfos 同样夹紧到段内。
           const cx = Math.max(-segLen / 2 + dLenM / 2, Math.min(segLen / 2 - dLenM / 2, flipped));
-          ops.push({ cx, w: dLenM, key: `d${i}`, kind: "d", room, wall: d.wall, pos: dPos, roomWallStart });
+          ops.push({ cx, w: dLenM, key: `d${i}`, kind: "d", room, wall: d.wall, pos: dPos, roomWallStart, edge: String(d.edgeIndex ?? "r"), oid: d.id });
         });
       }
       block.winEntries.forEach(({ roomWallStart, w, room }, i) => {
         const wPos = w.pos ?? 0;
-        const rawX = (roomWallStart + wPos + w.len / 2 - block.mergedStart) * CM - segLen / 2;
+        // wPos 已是平面图绝对坐标（见 holeFace），与门同源。
+        const rawX = (wPos + w.len / 2 - block.mergedStart) * CM - segLen / 2;
         const cx = flipX ? -rawX : rawX;
-        ops.push({ cx, w: w.len * CM, key: `w${i}`, kind: "w", room, wall: w.wall, pos: wPos, roomWallStart });
+        ops.push({ cx, w: w.len * CM, key: `w${i}`, kind: "w", room, wall: w.wall, pos: wPos, roomWallStart, edge: String(w.edgeIndex ?? "r"), oid: w.id });
       });
       if (!ops.length) continue;
       const layout = buildCurtainLayout(segLen, ops.map(o => ({ cx: o.cx, w: o.w, key: o.key, kind: o.kind })), { bay, structW, mullionW: mullW, gridOriginM: block.mergedStart * CM, flip: flipX });
@@ -2823,8 +2886,23 @@ export default function FloorPlanBuilding({
         const worldFlip = block.side === "S" || block.side === "W";
         const rawTarget = worldFlip ? -bayCenter : bayCenter;
         const lenCm = o.w / CM;                                         // 平面图实际宽度
-        const posCm = (rawTarget + segLen / 2) / CM - o.roomWallStart - lenCm / 2 + block.mergedStart;
-        m.set(`${o.kind}:${block.floorIndex}:${o.room}:${o.wall}:${Math.round(o.pos)}`, { posCm, lenCm });
+        // 基准必须是**房间 bbox 原点**(roomLayout)，不是面的 wallStart：消费侧
+        // (WalkthroughDoor3D) 按房间局部坐标摆门。多边形房间的面起点(如客厅 S 长边
+        // 285)≠房间西端(9)，用 wallStart 会把门整体搬 276cm(用户：门的位置不对)。
+        // 矩形房间两者相等，行为不变。
+        const lay = floorPlans[block.floorIndex]?.roomLayout?.[o.room];
+        const baseAlong = (block.side === "N" || block.side === "S")
+          ? (lay?.x ?? o.roomWallStart) : (lay?.y ?? o.roomWallStart);
+        const posCm = (rawTarget + segLen / 2) / CM - baseAlong - lenCm / 2 + block.mergedStart;
+        // 键沿用「房间+墙+边+原始pos」组合。
+        //
+        // 别改成按 o.oid（洞口 id）匹配！我试过，结果是灾难：改成 id 后键**匹配上了**，
+        // 于是这里算的 posCm 真的生效——但它的基准是 `o.roomWallStart`（面的起点），
+        // 而消费侧 WalkthroughDoor3D 用的是房间局部坐标。客厅是凹多边形，S 面起点
+        // 285 ≠ 房间西端 9，门当场被平移 276cm（用户实拍：客厅的门的位置不对）。
+        // 组合键匹配不上时 snap 静默失效、门落在原始 pos 上——那才是正确位置。
+        // 要真正启用幕墙分格吸附，得先把 posCm 的基准改成房间原点并实测，别顺手改键。
+        m.set(`${o.kind}:${block.floorIndex}:${o.room}:${o.wall}:${o.edge}:${Math.round(o.pos)}`, { posCm, lenCm });
       }
     }
     return m;
@@ -2876,11 +2954,9 @@ export default function FloorPlanBuilding({
       const wallShown = resolveFacadeLayer(floorPlans[s.floorIndex], s.room, s.side, "wall", curtainWall);
       if (wallShown) continue;
       const axis = s.side === "N" || s.side === "S" ? "h" : "v";
-      const wc = s.side === "S" ? s.roomY + s.roomD
-               : s.side === "N" ? s.roomY
-               : s.side === "E" ? s.roomX + s.roomW
-               :                  s.roomX;
-      set.add(`${s.floorIndex}|${axis}|${Math.round(wc)}`);
+      // 直接读 s.wallCoord（第三处从房间外接矩形重推的地方，同样会让多边形
+      // 房间的多个同朝向面塌成一个平面键 → 抑制错墙 / 玻璃后露白墙）。
+      set.add(`${s.floorIndex}|${axis}|${Math.round(s.wallCoord)}`);
     }
     return set;
   }, [allSegs, floorPlans, curtainWall]);
@@ -2942,6 +3018,8 @@ export default function FloorPlanBuilding({
       floorColor: string; wallColor: string;
       placedItems: PlacedItem[];
       doors: DoorConfig[];
+      /** 多边形轮廓（以房间中心为原点的米）。矩形房间为 undefined。 */
+      shapePts?: Array<[number, number]>;
       windows: WindowConfig[];
       isStair: boolean;
       isHallway: boolean;
@@ -2976,16 +3054,12 @@ export default function FloorPlanBuilding({
         // 保留 doors / autoDoor 两个下游变量的原有形状（doors=显式配置门，
         // autoDoor=没有配置门时兜底的那一扇），但两者都已按统一默认值规范化，
         // 不再各自 `?? defaultDoorHCm(200)` / 强制居中。
-        const rectProjR = makeRectProject(fp.roomShapes?.[room], p, e);
         const configuredDoorsRaw = fp.roomDoors?.[room] ?? [];
         const resolvedDoors = getRoomDoors(fp, room, {
           interiorDoorHeightCm: exterior?.interiorDoorHeightCm,
           curtainWall,
           widthCm: d.width, depthCm: d.depth,
-          rectProject: rectProjR,
-          autoDoor: (bounds && !isStair && !isHallway)
-            ? () => pickAutoDoor(fi, room, cx, cz, rW, rD, rWcm, rDcm, bounds)
-            : undefined,
+          // 同上：不再凭空造门。
         });
         const doors = configuredDoorsRaw.length > 0 ? resolvedDoors : [];
         const autoDoor: DoorConfig | null =
@@ -2994,14 +3068,10 @@ export default function FloorPlanBuilding({
         // 窗户方向修正：强制到不同于门的外墙，彻底避免门窗同墙重叠
         const doorWallForRoom = autoDoor?.wall ?? doors[0]?.wall;
         const isExtWallR = (side: WindowConfig["wall"]) => isExteriorWallSide(fp, room, side);
-        // 先把 edgeIndex 绑定的窗折算到外框坐标，再做外墙修正。
-        const winsProjected = windows.map(w => {
-          const m = rectProjR?.(w);
-          return m ? { ...w, wall: m.wall as WindowConfig["wall"], pos: m.pos, edgeIndex: undefined } : w;
-        });
-        const adjustedWindows = (bounds && winsProjected.length > 0)
-          ? winsProjected.map(w => adjustWindowWall(w, cx, cz, rW, rD, rWcm, rDcm, bounds, doorWallForRoom, isExtWallR))
-          : winsProjected;
+        // 窗直接沿用原始配置（含 edgeIndex），不再折算回外接矩形。
+        const winsProjected = windows;
+        // 同上：不再搬窗/裁窗，原样渲染平面图。
+        const adjustedWindows = winsProjected;
 
         const wallsHidden = fp.roomWallsHidden?.[room];
         // 地板/天花板显隐复用 roomWallsHidden 的「单面显隐」机制，只是把可隐藏
@@ -3031,7 +3101,18 @@ export default function FloorPlanBuilding({
               : (isStair
                  && !(exterior.circulationDecor ?? false)
                  && !(isTopStair && topHasRoof)));
-        result.push({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows: adjustedWindows, isStair, isHallway, autoDoor, wallsHidden, floorHidden, ceilingHidden });
+        // 多边形房间的地板/天花按真实轮廓裁剪。墙已经沿多边形边抠出凹角了，
+        // 地板/天花若还是外接矩形，凹口里就会露出一块悬空的楼板+天花夹层。
+        // 坐标：换算成**以房间中心 (cx,cz) 为原点的米**，与墙体同一套局部系。
+        const shpI = fp.roomShapes?.[room];
+        const shapePts: Array<[number, number]> | undefined =
+          shpI?.points?.length && shpI.preset !== "rect"
+            ? shpI.points.map(([px, pz]) => [
+                (p.x + px - planOffset.minX) * CM - W / 2 - cx,
+                (p.y + pz - planOffset.minY) * CM - D / 2 - cz,
+              ] as [number, number])
+            : undefined;
+        result.push({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows: adjustedWindows, isStair, isHallway, autoDoor, wallsHidden, floorHidden, ceilingHidden, shapePts });
       }
     }
     return result;
@@ -3099,19 +3180,45 @@ export default function FloorPlanBuilding({
       side: import("@/lib/types").WallSide,
       effDoors: import("@/lib/types").DoorConfig[],
       windows: import("@/lib/types").WindowConfig[],
+      /** 本面对应的多边形边（矩形房间为 undefined）+ 该房间的多边形与尺寸。
+       *  归属规则**与立面侧完全同源**：都走 roomGeometry.findEdgeForWall。
+       *  历史教训：这里原来对没绑 edgeIndex 的 cardinal 洞口一律返回 true，
+       *  而立面侧却按区间判定把它丢了 → 墙上开了洞、外面却没有对应的窗/门。 */
+      faceEdge?: number,
+      polyCtx?: { points: Array<[number, number]>; width: number; depth: number } | null,
     ): WallHole[] => {
+      const onThisFace = (h: { pos?: number; len?: number; edgeIndex?: number }) => {
+        if (faceEdge == null || !polyCtx) return true;
+        const hit = resolveHoleOnPolygon(polyCtx.points, side as WallFacing,
+          h.pos ?? 0, h.len ?? 0, { maxX: polyCtx.width, maxZ: polyCtx.depth }, h.edgeIndex);
+        // 打不到边 → 不在任何面上开洞，与立面侧同一判断（见 holeFace 的说明）。
+        return hit ? hit.edgeIndex === faceEdge : false;
+      };
+      /** 洞口在本面上的沿边位置（与立面侧同源）。 */
+      const posOn = (h: { pos?: number; len?: number; edgeIndex?: number }) => {
+        if (faceEdge == null || !polyCtx) return h.pos ?? 0;
+        const hit = resolveHoleOnPolygon(polyCtx.points, side as WallFacing,
+          h.pos ?? 0, h.len ?? 0, { maxX: polyCtx.width, maxZ: polyCtx.depth }, h.edgeIndex);
+        if (!hit) return h.pos ?? 0;
+        // 与立面侧 holeFace 同一真源、同一口径：都返回「相对本面起点(世界小端)」的
+        // 偏移。两侧口径不一致 → 门洞和门板错位，这是必须同源的原因。
+        const e = hit.edge;
+        const smallEnd = (side === "N" || side === "S")
+          ? Math.min(e.x1, e.x2) : Math.min(e.z1, e.z2);
+        return hit.alongCm - smallEnd;
+      };
       const out: WallHole[] = [];
       for (const d of effDoors) {
-        if (d.wall !== side) continue;
+        if (d.wall !== side || !onThisFace(d)) continue;
         // Door hole goes ALL the way to the floor (y=0), not raised 1cm.
         // The 1cm sill earlier made the doorway look like a window. The
         // X axis is shrunk by 1cm on each side to match RoomDoor3D's
         // panel inset (doorW-2cm wide) — closed door covers hole cleanly.
-        out.push({ x: d.pos + 1, y: 0, w: Math.max(1, d.len - 2), h: d.h ?? (exterior.interiorDoorHeightCm ?? 240) });
+        out.push({ x: posOn(d) + 1, y: 0, w: Math.max(1, d.len - 2), h: d.h ?? (exterior.interiorDoorHeightCm ?? 240) });
       }
       for (const w of windows) {
-        if (w.wall !== side) continue;
-        out.push({ x: w.pos, y: w.sill ?? defWinSill, w: w.len, h: w.h ?? defWinH });
+        if (w.wall !== side || !onThisFace(w)) continue;
+        out.push({ x: posOn(w), y: w.sill ?? defWinSill, w: w.len, h: w.h ?? defWinH });
       }
       return out;
     };
@@ -3163,16 +3270,7 @@ export default function FloorPlanBuilding({
           interiorDoorHeightCm: exterior?.interiorDoorHeightCm,
           curtainWall,
           widthCm: d.width, depthCm: d.depth,
-          // 门洞侧必须与门板侧同样折算，否则多边形房间的门洞和门又对不上。
-          rectProject: makeRectProject(fp.roomShapes?.[room], p, effRect(p, d, fp.roomShapes?.[room])),
-          autoDoor: (boundsForHole && !isCircRoom)
-            ? () => {
-                const rW = d.width * CM; const rD = d.depth * CM;
-                const cx = (p.x + d.width  / 2 - planOffset.minX) * CM - W / 2;
-                const cz = (p.y + d.depth / 2 - planOffset.minY) * CM - D / 2;
-                return pickAutoDoor(fi, room, cx, cz, rW, rD, d.width, d.depth, boundsForHole);
-              }
-            : undefined,
+          // 同上：门洞侧也不再凭空造门。
         });
         const winsArr = fp.roomWindows?.[room] ?? [];
         const wh = fp.roomWallsHidden?.[room];
@@ -3183,14 +3281,44 @@ export default function FloorPlanBuilding({
           axis: "h" | "v";
           fixed: number;
           a: number; b: number;
-        }> = [
-          // N (back, -Z) = SVG top = small plan-Y (fixed: p.y).
-          // S (front, +Z) = SVG bottom = large plan-Y (fixed: p.y + d.depth).
-          { uiSide: "N", dataSide: "N", axis: "h", fixed: e.y,          a: e.x,          b: e.x + e.width },
-          { uiSide: "S", dataSide: "S", axis: "h", fixed: e.y + e.depth, a: e.x,          b: e.x + e.width },
-          { uiSide: "W", dataSide: "W", axis: "v", fixed: e.x,          a: e.y,          b: e.y + e.depth },
-          { uiSide: "E", dataSide: "E", axis: "v", fixed: e.x + e.width, a: e.y,          b: e.y + e.depth },
-        ];
+          edgeIndex?: number;
+        }> = (() => {
+          const rectFour = [
+            // N (back, -Z) = SVG top = small plan-Y (fixed: p.y).
+            // S (front, +Z) = SVG bottom = large plan-Y (fixed: p.y + d.depth).
+            { uiSide: "N" as const, dataSide: "N" as const, axis: "h" as const, fixed: e.y,           a: e.x, b: e.x + e.width },
+            { uiSide: "S" as const, dataSide: "S" as const, axis: "h" as const, fixed: e.y + e.depth, a: e.x, b: e.x + e.width },
+            { uiSide: "W" as const, dataSide: "W" as const, axis: "v" as const, fixed: e.x,           a: e.y, b: e.y + e.depth },
+            { uiSide: "E" as const, dataSide: "E" as const, axis: "v" as const, fixed: e.x + e.width, a: e.y, b: e.y + e.depth },
+          ];
+          // 与 computeExteriorWalls 同样的「每条轴对齐边一个面」展开。
+          // 门洞侧必须和立面侧同源，否则墙上开的洞和外面画的门对不上。
+          const shp = fp.roomShapes?.[room];
+          if (!shp?.points?.length || shp.preset === "rect") return rectFour;
+          const out: typeof rectFour extends Array<infer U> ? U[] : never = [] as never[];
+          for (const ed of getEdges(shp.points)) {
+            const dxE = ed.x2 - ed.x1, dzE = ed.z2 - ed.z1;
+            if (Math.hypot(dxE, dzE) < DEGENERATE_CM) continue;
+            const horiz = isHorizEdge(dxE, dzE);
+            const f = horiz
+              ? { uiSide: ed.facing, dataSide: ed.facing, axis: "h" as const,
+                  fixed: p.y + (ed.z1 + ed.z2) / 2,
+                  a: p.x + Math.min(ed.x1, ed.x2), b: p.x + Math.max(ed.x1, ed.x2) }
+              : { uiSide: ed.facing, dataSide: ed.facing, axis: "v" as const,
+                  fixed: p.x + (ed.x1 + ed.x2) / 2,
+                  a: p.y + Math.min(ed.z1, ed.z2), b: p.y + Math.max(ed.z1, ed.z2) };
+            (out as Array<typeof f & { edgeIndex?: number }>).push({ ...f, edgeIndex: ed.i });
+          }
+          return out.length >= 3 ? out : rectFour;
+        })();
+        // 逐边隐藏：多边形房间同一朝向可能有多条边，2D 平面图按 `edge-${i}` 存
+        // 单条边的显隐（RoomCanvas 的 isEdgeHidden 也用这个键）。只认 NSWE 卡片键
+        // 的话，用户隐掉一条边会把该朝向的所有边一起隐掉；反过来漫游碰撞已经认
+        // edge- 键了，不同步就会出现「走得过去但墙还画着」。
+        const faceHidden = (f: { uiSide: import("@/lib/types").WallSide; edgeIndex?: number }) =>
+          (f.edgeIndex != null && wh?.[`edge-${f.edgeIndex}`] !== undefined)
+            ? wh[`edge-${f.edgeIndex}`] === true
+            : wh?.[f.uiSide] === true;
         const segMats = fp.rooms?.[room]?.materials;
         for (const s of sides) {
           // For hallway, skip N + S (let neighbours contribute those).
@@ -3209,7 +3337,10 @@ export default function FloorPlanBuilding({
           const key = `${fi}|${s.axis}|${Math.round(s.fixed)}|${Math.round(lo)}|${Math.round(hi)}`;
           const fk  = `${fi}|${s.axis}|${Math.round(s.fixed)}`;
           const seg = map.get(key);
-          const holes = collectHoles(s.dataSide, doorsArr, winsArr);
+          const shpH = fp.roomShapes?.[room];
+          const polyCtxH = (shpH?.points?.length && shpH.preset !== "rect")
+            ? { points: shpH.points, width: d.width, depth: d.depth } : null;
+          const holes = collectHoles(s.dataSide, doorsArr, winsArr, s.edgeIndex, polyCtxH);
           // Keep this face's opaque shell when it should read as SOLID wall —
           // whether from an explicit roomFacadeFaces wall=true OR from
           // resolveFacadeLayer (e.g. garage roomExteriorStyle="concrete", or an
@@ -3223,7 +3354,7 @@ export default function FloorPlanBuilding({
           if (seg) {
             // Exact range match: merge holes + hide flags + wallOverridden.
             addHole(seg, holes);
-            if (wh?.[s.uiSide] === true) seg.hideAny = true;
+            if (faceHidden(s)) seg.hideAny = true;
             if (wallOverridden) seg.wallOverridden = true;
           } else {
             // Check for partially- or fully-overlapping segments at the same
@@ -3243,7 +3374,7 @@ export default function FloorPlanBuilding({
                 .map(h => ({ x: h.x - offsetX, y: h.y, w: h.w, h: h.h }))
                 .filter(h => h.x + h.w > 0 && h.x < e.b - e.a);
               addHole(e, clipped);
-              if (wh?.[s.uiSide] === true) e.hideAny = true;
+              if (faceHidden(s)) e.hideAny = true;
               if (wallOverridden) e.wallOverridden = true;
             }
 
@@ -3259,7 +3390,7 @@ export default function FloorPlanBuilding({
                 .filter(h => h.x + h.w > 0 && h.x < subHi - subLo);
               registerSeg({
                 fi, axis: s.axis, fixed: s.fixed, a: subLo, b: subHi,
-                holes: subHoles, hideAny: wh?.[s.uiSide] === true,
+                holes: subHoles, hideAny: faceHidden(s),
                 wallColor: wColor, wallId: wId,
                 extWallColor: extColor, extWallId: extId,
                 wallOverridden,
@@ -4904,10 +5035,13 @@ export default function FloorPlanBuilding({
         }
 
         // ── 门坐标换算（基于合并块起点）──
-        const doorInfos = doorEntries.map(({ roomWallStart, d }) => {
+        // d.pos / w.pos 已是**平面图绝对坐标**（见 holeFace 的说明），不要再加
+        // roomWallStart —— 那会把洞口按"面起点"再偏移一次（客厅 S 面 285 vs 房间
+        // 西端 9，差 276cm），正是"门对了、门洞错了"的成因。
+        const doorInfos = doorEntries.map(({ d }) => {
           const dPos    = d.pos ?? 0;
           const dLen    = d.len;
-          const rawX    = (roomWallStart + dPos + dLen / 2 - mergedStart) * CM - segLen / 2;
+          const rawX    = (dPos + dLen / 2 - mergedStart) * CM - segLen / 2;
           const flipped = flipX ? -rawX : rawX;
           const dLenM   = dLen * CM;
           return {
@@ -4918,8 +5052,8 @@ export default function FloorPlanBuilding({
         });
 
         // ── 窗坐标换算（基于合并块起点）──
-        const winInfos = winEntries.map(({ roomWallStart, w }) => {
-          const rawX    = (roomWallStart + (w.pos ?? 0) + w.len / 2 - mergedStart) * CM - segLen / 2;
+        const winInfos = winEntries.map(({ w }) => {
+          const rawX    = ((w.pos ?? 0) + w.len / 2 - mergedStart) * CM - segLen / 2;
           const localX  = flipX ? -rawX : rawX;
           return {
             localX,
@@ -5656,6 +5790,37 @@ export default function FloorPlanBuilding({
       {!insideBuilding && mainRoofBounds && (
         <group position={[mainRoofBounds.cx, 0, mainRoofBounds.cz]}>
         <FlatRoof
+          // 建筑真实轮廓：只有存在异形房间时才传，矩形户型仍走原来的整块矩形板。
+          // 用 interiorRooms 里已算好的 shapePts（以房间中心为原点的米）平移回
+          // 建筑中心坐标系即可，不必再从 roomLayout 重推一遍。
+          footprints={(() => {
+            const f0 = interiorRooms.filter(r => r.fi === 0);
+            if (!f0.some(r => r.shapePts)) return null;
+            return f0.map(r => r.shapePts
+              ? r.shapePts.map(([sx, sz]) => [r.cx + sx, r.cz + sz] as [number, number])
+              // 该层里的矩形房间也要出板，否则只有异形房间有屋顶
+              : [[r.cx - r.rW / 2, r.cz - r.rD / 2], [r.cx + r.rW / 2, r.cz - r.rD / 2],
+                 [r.cx + r.rW / 2, r.cz + r.rD / 2], [r.cx - r.rW / 2, r.cz + r.rD / 2]] as Array<[number, number]>);
+          })()}
+          // 女儿墙沿真实外周（异形楼才需要；矩形楼传 null 走原来的四边写死）。
+          // 用 allSegs 而不是逐房间多边形：allSegs 已去重且剔掉了内墙，
+          // 逐房间画会在屋面中央冒出内部女儿墙。
+          perimeterSegs={(() => {
+            const f0 = interiorRooms.filter(r => r.fi === 0);
+            if (!f0.some(r => r.shapePts)) return null;
+            const topFi = usedFloors - 1;
+            return allSegs.filter(s => s.floorIndex === topFi).map(s => {
+              const horiz = s.side === "N" || s.side === "S";
+              const c  = (s.wallCoord - (horiz ? planOffset.minY : planOffset.minX)) * CM
+                       - (horiz ? D : W) / 2;
+              const a  = (s.segStart - (horiz ? planOffset.minX : planOffset.minY)) * CM
+                       - (horiz ? W : D) / 2;
+              const b  = (s.segEnd   - (horiz ? planOffset.minX : planOffset.minY)) * CM
+                       - (horiz ? W : D) / 2;
+              return horiz ? { x1: a, z1: c, x2: b, z2: c }
+                           : { x1: c, z1: a, x2: c, z2: b };
+            });
+          })()}
           W={mainRoofBounds.w} D={mainRoofBounds.d} roofY={totalH}
           nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0}
           hasRooftop={exterior.hasRooftop}
@@ -7446,7 +7611,7 @@ export default function FloorPlanBuilding({
           </group>
         );
       })}
-      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, wallsHidden, floorHidden, ceilingHidden }, ridx) => {
+      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, wallsHidden, floorHidden, ceilingHidden, shapePts }, ridx) => {
         const wallOpacity = wallXray ? 0.13 : 1.0;
         const isXray = wallXray;
         // 走廊：无内墙、无天花板，仅地板；楼梯间：渲染楼梯几何体
@@ -7480,6 +7645,7 @@ export default function FloorPlanBuilding({
                 bleed={Math.max(0, (exterior.walkthroughFloorBleedCm ?? 0) / 100)}
                 depthRank={ridx}
                 underlayMargin={Math.max(0, (exterior.walkthroughFloorUnderlayCm ?? 20) / 100)}
+                shapePts={shapePts}
               />
             )}
             {/* ── per-room NSWE wall labels rendered as flat 3D Text
@@ -7623,7 +7789,12 @@ export default function FloorPlanBuilding({
                 interiorRooms 构建处——楼梯/走廊默认隐藏）。不再特判 isStair。*/}
             {!ceilingHidden && (
               <mesh position={[cx, yBase + FLOOR_H - 0.025, cz]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
-                <planeGeometry args={[rW - 0.04, rD - 0.04]} />
+                {/* 多边形房间按真实轮廓裁剪，否则凹口里会露出悬空的天花片。
+                    注意 ShapeGeometry 在 XY 平面构建，本 mesh 已绕 X 转 -90°，
+                    所以第二个分量传 +z（转完正好落到世界 z）。 */}
+                {shapePts
+                  ? <shapeGeometry args={[new THREE.Shape(shapePts.map(([sx, sz]) => new THREE.Vector2(sx, sz)))]} />
+                  : <planeGeometry args={[rW - 0.04, rD - 0.04]} />}
                 <meshStandardMaterial color={exterior.roomCeilingColor ?? "#F5F2EE"} roughness={0.88} side={THREE.DoubleSide}
                   emissive="#FFFDF8" emissiveIntensity={insideBuilding ? 0.08 : 0.02}
                   transparent={isXray} opacity={isXray ? 0.08 : 1} depthWrite={!isXray} />
@@ -7796,16 +7967,12 @@ export default function FloorPlanBuilding({
                            :                      _dpl.x;
                 return exteriorPlanes.has(`${fi}|${_dax}|${Math.round(_dwc)}`);
               })();
-              // 外观模式 + 本层有玻璃房间：跳过「内部门」(非玻璃面的门会从邻居
-              // 玻璃幕墙看进来变成立柱状)，但 perimeter 玻璃外立面上的「入户门」
-              // 要照常渲染——那正是透过幕墙看到、且能点击推开的那道玻璃门。
-              // 车库例外：车库是实墙房间、它的门(尤其卷帘门)要照常渲染成可点击的
-              // WalkthroughDoor3D，不能被「本层有玻璃房间就跳过」误伤。
-              if (!insideBuilding && !_doorOnGlassFace && room !== "garage"
-                  && !glassRooms.has(`${fi}:${room}`)
-                  && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))) {
-                return null;
-              }
+              // 【已删除】原来这里有一条「外观模式 + 本层有任何玻璃房间 → 跳过所有
+              // 非玻璃面的内部门」的规则，理由是"门从邻居幕墙看进来像立柱、对外观
+              // 无贡献"。但它是按视图猜的启发式，直接违反「平面图是唯一真源」：
+              // 咖啡馆客厅是幕墙房间 → 全层触发 → 厨房那扇通客厅的 S 门被整个吃掉，
+              // 从厨房北窗看进去就是一堵没有门的墙（用户连续三次反馈"看不到厨房门"）。
+              // 平面图里有门就渲染门，视觉噪音不是删数据的理由。
               const _cfgDoorStyle = door.style ?? floorPlans[fi]?.roomDoorStyle?.[room];
               // 设定值优先：用户显式选的门款式一律照用（与门检查器一致，避免"选了
               // 实木却渲染玻璃门"）。仅当未设款式时，玻璃幕墙面默认玻璃平开门、
@@ -7819,7 +7986,7 @@ export default function FloorPlanBuilding({
               // "W" (west/left) is direct: both measure from the small-Z (north) end.
               // 幕墙玻璃门:吸附到所在竖挺分格(填满整格、左右贴住竖挺当门框)。
               const _snap = _doorOnGlassFace
-                ? curtainOpeningSnap.get(`d:${fi}:${room}:${door.wall}:${Math.round(door.pos)}`)
+                ? curtainOpeningSnap.get(`d:${fi}:${room}:${door.wall}:${door.edgeIndex ?? "r"}:${Math.round(door.pos)}`)
                 : undefined;
               const _basePos = _snap ? _snap.posCm : door.pos;
               const doorPosCm = door.wall === "E"
@@ -7896,33 +8063,49 @@ export default function FloorPlanBuilding({
               // 幕墙玻璃面上的窗:吸附到它所在的竖挺分格(填满整格、左右贴竖挺),
               // 与 GlassCurtain 用同一套 buildCurtainLayout → 永远不跨挺、不留缝。
               const _winSnap = _winOnGlassFace
-                ? curtainOpeningSnap.get(`w:${fi}:${room}:${win.wall}:${Math.round(win.pos)}`)
+                ? curtainOpeningSnap.get(`w:${fi}:${room}:${win.wall}:${win.edgeIndex ?? "r"}:${Math.round(win.pos)}`)
                 : undefined;
               const wW   = _winSnap ? _winSnap.lenCm * CM : win.len * CM;
               const wH   = (win.h    ?? defWinH) * CM;
               const wSill = (win.sill ?? defWinSill)  * CM;
               const wPos  = (_winSnap ? _winSnap.posCm : win.pos) * CM;
               // wPos and wW are already in metres — no extra * CM needed
+              // 【按平面图落位】多边形房间的窗必须贴在**它真正所在的那条多边形边**上，
+              // 不能拿外接矩形的四个平面凑。咖啡馆客厅西侧其实是两段墙——
+              // 西墙2(x≈270, z 0–254) 和 西墙1(x≈1.5, z 256–592)，中间 z=254~256
+              // 是厨房凹进去的缺口、根本没有西墙。用 bbox 西平面(x=0)摆窗，会把窗框
+              // 放到离真墙 2.7m 的空气里：洞开在真墙上、窗却在别处 = 用户实拍的
+              // 「有窗洞没窗户」。这里与挖洞侧共用 resolveHoleOnPolygon 同一真源。
+              const _wpoly = floorPlans[fi]?.roomShapes?.[room];
+              const _wEdge = (_wpoly?.points?.length && _wpoly.preset !== "rect")
+                ? resolveHoleOnPolygon(_wpoly.points, win.wall as WallFacing,
+                    win.pos, win.len, { maxX: rWcm, maxZ: rDcm }, win.edgeIndex)
+                : null;
+              // 沿墙中心（米）：多边形用边上的真实位置，矩形房间回落原 bbox 口径
+              // （两者在矩形下恒等，行为不变）。
+              const _alongM = _wEdge ? _wEdge.alongCm * CM + wW / 2 : wPos + wW / 2;
+              // 墙面所在平面（米，相对房间 bbox 西北角）；null = 用 bbox 平面。
+              const _faceM  = _wEdge ? _wEdge.wallCoordCm * CM : null;
               let wx = 0, wz = 0, rotY = 0;
               if (win.wall === "N") {
                 // N = SVG top = small planY = small worldZ (north wall, -Z face)
-                wz = cz - rD / 2 + 0.012;
-                wx = cx + wPos + wW / 2 - rW / 2;
+                wz = (_faceM != null ? cz - rD / 2 + _faceM : cz - rD / 2) + 0.012;
+                wx = cx - rW / 2 + _alongM;
                 rotY = Math.PI;
               } else if (win.wall === "S") {
                 // S = SVG bottom = large planY = large worldZ (south wall, +Z face)
-                wz = cz + rD / 2 - 0.012;
-                wx = cx + wPos + wW / 2 - rW / 2;
+                wz = (_faceM != null ? cz - rD / 2 + _faceM : cz + rD / 2) - 0.012;
+                wx = cx - rW / 2 + _alongM;
                 rotY = 0;
               } else if (win.wall === "W") {
                 // pos grows from N (small-Z) end
-                wx = cx - rW / 2 + 0.012;
-                wz = cz - rD / 2 + wPos + wW / 2;
+                wx = (_faceM != null ? cx - rW / 2 + _faceM : cx - rW / 2) + 0.012;
+                wz = cz - rD / 2 + _alongM;
                 rotY = -Math.PI / 2;
               } else {
                 // pos grows from N (small-Z) end
-                wx = cx + rW / 2 - 0.012;
-                wz = cz - rD / 2 + wPos + wW / 2;
+                wx = (_faceM != null ? cx - rW / 2 + _faceM : cx + rW / 2) - 0.012;
+                wz = cz - rD / 2 + _alongM;
                 rotY = Math.PI / 2;
               }
               const frameCy   = yBase + wSill + wH / 2;

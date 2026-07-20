@@ -2123,9 +2123,29 @@ export const useDesignerStore = create<DesignerStore>()(
           const dimsMap   = { ...existing.roomDimensions };
           const shapesMap = { ...(existing.roomShapes ?? {}) };
           const hiddenMap = { ...(existing.roomWallsHidden ?? {}) };
+          // 门窗数据**按模板从头生成**，不继承上一个方案（用户实拍：从别墅切到咖啡馆时，
+          // 别墅那扇位置离谱、还横跨幕墙与实墙的窗被带了过来；30 个房间的 legacy 门字段
+          // 同理）。没有任何项目模板定义 windows，全部靠下面按房间尺寸/立面重新算。
+          // 这才是「一键加载模板 = 替换所有平面图」该有的行为。
+          const winMap: Record<string, WindowConfig[]> = {};
+          const dWallMap = { ...DEFAULT_ROOM_DOOR_WALL };
+          const dPosMap  = { ...DEFAULT_ROOM_DOOR_POS };
+          const dHasMap  = { ...DEFAULT_ROOM_HAS_DOOR };
+          // 循环空间（走廊/楼梯间）靠开口连通，不该有门。全局默认是每房一扇 S 门，
+          // 不排除的话走廊会凭空长出一扇门（用户：走廊你放个门吃屎啊）。
+          dHasMap.hallway = false;
+          dHasMap.stair = false;
           for (const r of layout.rooms) {
             layoutMap[r.room] = { x: r.x, y: r.y };
             dimsMap[r.room]   = { width: r.width, depth: r.depth };
+            // 窗户：**保留用户在平面图里配置的窗**，模板不生成也不清除。
+            //
+            // 这里原本会按 ROOM_DEFS 给每个房间凭空造一扇窗、并把 exteriorStyle
+            // ==="glass" 的房间强制清空。那是为了解决「切模板后残留上一个模板的窗」，
+            // 但代价是用户自己画的窗每次都被删（用户：我明明平面图设置了窗户，
+            // 为什么吃掉了）。用户的数据 > 我猜的整洁度：模板只搬自己声明的东西，
+            // 窗户归平面图管。残留窗只在「该房间本模板根本没有」时才由下面统一清掉。
+            if (existing.roomWindows?.[r.room]) winMap[r.room] = existing.roomWindows[r.room];
             // 模板声明了非矩形轮廓就应用；没声明则清掉旧项目残留的自定义形状
             if (r.shape) shapesMap[r.room] = r.shape; else delete shapesMap[r.room];
             // 模板声明了隐藏墙（开放式/骑楼）就应用；没声明则清掉残留
@@ -2142,6 +2162,15 @@ export const useDesignerStore = create<DesignerStore>()(
             roomDimensions: dimsMap,
             roomShapes: shapesMap,
             roomWallsHidden: hiddenMap,
+            // 门窗从头生成，不继承旧方案（见上）。legacy 单门字段回到全局默认，
+            // 让 getRoomDoors 走"每房一扇 S 墙门"，而不是继承别墅 30 房间的旧值。
+            roomWindows: winMap,
+            roomDoorWall: dWallMap,
+            roomDoorPos: dPosMap,
+            roomHasDoor: dHasMap,
+            roomDoors: {},
+            roomDoorStyle: {},
+            roomDoorLen: {},
             // yardPlan is now top-level; skip per-floor attachment
 
           };
@@ -2395,13 +2424,26 @@ export const useDesignerStore = create<DesignerStore>()(
           const layoutMap = { ...existing.roomLayout };
           const dimsMap   = { ...existing.roomDimensions };
           const roomsMap  = { ...existing.rooms };
-          const windowsMap = { ...existing.roomWindows };
-          const doorsMap = { ...(existing.roomDoors ?? {}) };
-          const doorStyleMap = { ...(existing.roomDoorStyle ?? {}) };
-          const doorWallMap = { ...existing.roomDoorWall };
-          const doorPosMap = { ...existing.roomDoorPos };
-          const doorLenMap = { ...(existing.roomDoorLen ?? {}) };
-          const hasDoorMap = { ...existing.roomHasDoor };
+          // 重建模式（merge=false，= "一键加载某个项目模板"）**不继承**上一个方案的
+          // 门窗数据。
+          //
+          // 历史坑（用户实拍：外观图冒出一扇位置离谱、还横跨幕墙与实墙的幽灵窗）：
+          // 这几个 map 原来一律 `{ ...existing }`。而**没有任何项目模板定义 windows**
+          // （全部来自 makeDefaultWindows / 用户手改），于是从别墅切到咖啡馆时，
+          // 别墅的窗户和 30 个房间的 legacy 门字段被整套带过去 —— 平面图本身就是脏的，
+          // 三个 3D 视图再怎么改都是在下游擦屁股。
+          //
+          // 弹窗写的就是「将替换所有楼层平面图」，重建就该是重建。
+          // 增量模式（merge=true，AI 局部改动）仍然保留原样，那才是"没提到的别动"。
+          const windowsMap = merge ? { ...existing.roomWindows } : {} as typeof existing.roomWindows;
+          const doorsMap = merge ? { ...(existing.roomDoors ?? {}) } : {} as NonNullable<typeof existing.roomDoors>;
+          const doorStyleMap = merge ? { ...(existing.roomDoorStyle ?? {}) } : {} as NonNullable<typeof existing.roomDoorStyle>;
+          // legacy 单门字段同理：重建模式回到全局默认，而不是继承上一个方案的
+          // 30 个房间的旧值（咖啡馆用不到的卧室/车库门也会被带过来）。
+          const doorWallMap = merge ? { ...existing.roomDoorWall } : { ...DEFAULT_ROOM_DOOR_WALL };
+          const doorPosMap  = merge ? { ...existing.roomDoorPos }  : { ...DEFAULT_ROOM_DOOR_POS };
+          const doorLenMap  = merge ? { ...(existing.roomDoorLen ?? {}) } : {} as NonNullable<typeof existing.roomDoorLen>;
+          const hasDoorMap  = merge ? { ...existing.roomHasDoor } : { ...DEFAULT_ROOM_HAS_DOOR };
           const shapesMap = { ...(existing.roomShapes ?? {}) };
           const extStyleMap = { ...(existing.roomExteriorStyle ?? {}) };
           const wallsHiddenMap: NonNullable<typeof existing.roomWallsHidden> = { ...(existing.roomWallsHidden ?? {}) };
@@ -2562,6 +2604,25 @@ export const useDesignerStore = create<DesignerStore>()(
             // 房间外立面（玻璃幕墙/实墙/自动）。
             const extStyle = resolveAiExteriorStyle(r.exteriorStyle);
             if (extStyle) extStyleMap[rt] = extStyle;
+            // 重建模式下窗户不再继承（见上方 windowsMap 初始化），这里按房间补默认窗：
+            //   · 玻璃幕墙房间 → **不给窗**。整面墙本身就是窗，再叠一扇打孔窗没有物理
+            //     意义，还会在立面上留下一个框（咖啡馆客厅的幽灵窗就是这么来的）。
+            //   · 其余房间 → 按 ROOM_DEFS 的开窗规则生成，但**按模板给的实际尺寸**换算，
+            //     而不是用 ROOM_DEFS 的默认宽深（否则 11.8m 宽的客厅会拿到按 6.8m 算的窗）。
+            // 模板显式给了 r.windows 时，下面的分支会覆盖这里。
+            if (!merge && windowsMap[rt] === undefined) {
+              const wdef = ROOM_DEFS[rt];
+              if (extStyle === "glass" || !wdef?.hasWindow || wdef.windowWall === "none") {
+                windowsMap[rt] = [];
+              } else {
+                const ww = wdef.windowWall as "N" | "E" | "W";
+                const wallLen = ww === "N" ? width : depth;
+                windowsMap[rt] = [{
+                  id: `${rt}-w-${genId()}`, wall: ww,
+                  pos: Math.round(wallLen * 0.25), len: Math.round(wallLen * 0.45),
+                }];
+              }
+            }
             // 改名：沿用现有图标，只换显示名。
             if (r.name && r.name.trim()) {
               renamePatch[rt] = {

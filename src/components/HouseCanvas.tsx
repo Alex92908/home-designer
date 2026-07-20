@@ -107,7 +107,7 @@ import { ROOM_DEFS, ExteriorSettings, ExteriorWall, isYardPrefab, isYardZone, re
 // 都在它内部处理），避免这里再写一份会漏字段的简化版。
 import { PlacedItemMesh } from "./RoomCanvas";
 import { STAIR_FURNITURE_IDS } from "./Staircase";
-import { polygonBounds, edgeHoleToRectPos, type RoomShape } from "@/lib/roomGeometry";
+import { polygonBounds, getEdges, type RoomShape } from "@/lib/roomGeometry";
 import { getRoomDoors } from "@/lib/roomDoors";
 import { getFurnitureById } from "@/lib/furniture";
 import { getOutdoorAssetByKind } from "@/lib/outdoorAssets";
@@ -4388,19 +4388,62 @@ function effRectHC(
   return { x: layout.x + lminX, y: layout.y + lminZ, width: lmaxX - lminX, depth: lmaxZ - lminZ };
 }
 
-/** 本文件的门/窗一律按「外接矩形 + NSWE 四面」处理，不认多边形 edgeIndex。
- *  这个工厂返回一个把 edgeIndex 绑定的洞口折算到外框坐标的函数，供
- *  getRoomDoors 的 rectProject 用。与 FloorPlanExterior.makeRectProject 同源。
- *  矩形房间返回 undefined（零开销，行为逐字节不变）。 */
-function makeRectProjectHC(
+/** 与 FloorPlanExterior.isHorizEdge 同义：按**主轴**判定，不按容差跳过。
+ *  原来 1cm 容差会把手工调过的多边形（顶点差几厘米）的整条边判成斜边跳过，
+ *  直接丢掉一堵碰撞墙。跳过=丢墙，宁可有几厘米误差。 */
+const isHorizEdgeHC = (dx: number, dz: number) => Math.abs(dz) <= Math.abs(dx);
+const DEGENERATE_CM_HC = 0.5;
+
+/** 多边形房间的一个「墙面」：轴对齐，故有常量坐标 c + 沿墙一维区间 [lo, hi]。
+ *  坐标系 = plan-cm（与 roomLayout 同系），不是房间局部坐标。 */
+type PolyFaceHC = {
+  /** 对应多边形的边序号，用于 `edge-${i}` 隐藏键 / 门的 edgeIndex 归属。 */
+  edgeIndex: number;
+  facing: import("@/lib/types").WallSide;
+  /** true = 水平边（常量 z，沿 x 展开）；false = 竖直边（常量 x，沿 z 展开）。 */
+  horiz: boolean;
+  c: number;
+  lo: number; hi: number;
+  /** 边的有向端点（plan-cm）。CCW 走向，门的 pos 是从 (x1,z1) 起算的沿边距离。 */
+  x1: number; z1: number; x2: number; z2: number; length: number;
+};
+
+/**
+ * 把房间多边形展开成「每条轴对齐边一个面」（plan-cm）。
+ *
+ * 为什么：漫游碰撞墙原来一律拿房间的**外接矩形**建四面 AABB 墙，而外观图
+ * (FloorPlanExterior.computeExteriorWalls) 已经改成沿多边形逐边出墙。两边不同源 →
+ * L/凸字形房间凸出的那块，视觉上有墙、碰撞上是矩形：用户能从凸出部分穿墙走出去，
+ * 或在凹角处撞到一堵看不见的墙。这里照 computeExteriorWalls 里 `const sides = (() => {`
+ * 那段的同一套规则展开，让碰撞与渲染同源。
+ *
+ * 与外观图一致的兜底：斜边（既不水平也不竖直）跳过——本引擎的一维墙模型表达不了；
+ * 展开结果不足 3 个面时返回 null，调用方回退到原来的外接矩形四面。
+ *
+ * @param origin 多边形点位的坐标原点 = 原始 `roomLayout[room]`。
+ *   ⚠️ 不能用 effRect 顶替：多边形探出 AABB 时 effRect 会外扩/左移，两者不同。
+ */
+function polyFacesHC(
   shape: RoomShape | undefined,
-  roomOrigin: { x: number; y: number },
-  rect: { x: number; y: number; width: number; depth: number },
-) {
-  if (!shape?.points?.length || shape.preset === "rect") return undefined;
-  return (h: { wall: string; pos: number; len: number; edgeIndex?: number }) =>
-    h.edgeIndex == null ? null
-      : edgeHoleToRectPos(shape.points!, h.edgeIndex, h.pos, h.len, roomOrigin, rect);
+  origin: { x: number; y: number },
+): PolyFaceHC[] | null {
+  if (!shape?.points?.length || shape.preset === "rect") return null;
+  const out: PolyFaceHC[] = [];
+  for (const e of getEdges(shape.points)) {
+    const dxE = e.x2 - e.x1, dzE = e.z2 - e.z1;
+    if (Math.hypot(dxE, dzE) < DEGENERATE_CM_HC) continue;
+    const horiz = isHorizEdgeHC(dxE, dzE);
+    const x1 = origin.x + e.x1, z1 = origin.y + e.z1;
+    const x2 = origin.x + e.x2, z2 = origin.y + e.z2;
+    out.push({
+      edgeIndex: e.i, facing: e.facing, horiz,
+      c:  horiz ? (z1 + z2) / 2 : (x1 + x2) / 2,
+      lo: horiz ? Math.min(x1, x2) : Math.min(z1, z2),
+      hi: horiz ? Math.max(x1, x2) : Math.max(z1, z2),
+      x1, z1, x2, z2, length: e.length,
+    });
+  }
+  return out.length >= 3 ? out : null;
 }
 
 /**
@@ -5044,7 +5087,11 @@ function WalkthroughController({
    *  the rect belongs to so the 2D collision test only uses rooms on the
    *  player's current floor (otherwise stacked upper/lower rooms blur the
    *  wall positions and you walk straight through walls). */
-  walls: Array<AABB & { floor: number; room: string; bld?: number; hides?: Partial<Record<import("@/lib/types").WallSide, boolean>> }>;
+  // segs：多边形房间的逐边碰撞墙线（世界米）。给了就代替 AABB 的四条边做穿墙
+  // 判定，见 blocksMovement。矩形房间不带 segs，走原来的四边路径。
+  walls: Array<AABB & { floor: number; room: string; bld?: number;
+    hides?: Partial<Record<import("@/lib/types").WallSide, boolean>>;
+    segs?: Array<{ horiz: boolean; c: number; lo: number; hi: number; hidden: boolean; facing: import("@/lib/types").WallSide }> }>;
   /** Metres per storey (FloorPlanExterior pitch). Used to derive the
    *  player's current floor index from camera.y. */
   storeyH: number;
@@ -5363,6 +5410,17 @@ function WalkthroughController({
       const r = walls[i];
       if (r.floor !== curFloorIdx || (r.bld ?? 0) !== curBld) continue;
       const isHall = r.room === "hallway";
+      // 多边形房间：沿**每条轴对齐边**判定，而不是外接矩形的四条边。这样
+      // L/凸字形的凸出部分有墙拦得住、凹角处不会有隐形墙——与外观图的墙体同源。
+      if (r.segs) {
+        for (const s of r.segs) {
+          if (s.hidden) continue;
+          // 走廊照旧不出 N/S 长边（由邻居房间贡献那两道墙），与下面矩形路径一致。
+          if (isHall && (s.facing === "N" || s.facing === "S")) continue;
+          if (s.horiz ? crossesH(s.c, s.lo, s.hi) : crossesV(s.c, s.lo, s.hi)) { crossed = true; break; }
+        }
+        continue;
+      }
       // N / S long sides — skipped for the hallway (neighbours render them).
       if (!isHall) {
         if (!r.hides?.N && crossesH(r.minZ, r.minX, r.maxX)) { crossed = true; break; }
@@ -5802,7 +5860,12 @@ export default function HouseCanvas() {
   // the FloorPlan toolbar. Cardinal keys only — polygon edge-${i} hides
   // don't have a clean AABB-side mapping; users with polygon rooms still
   // need no-clip mode to walk through hidden polygon edges.
-  type WallRect = AABB & { floor: number; room: string; bld?: number; hides?: Partial<Record<import("@/lib/types").WallSide, boolean>> };
+  // segs：多边形房间沿**每条轴对齐边**的墙线（世界米）。给了就用它代替下面
+  // AABB 的四条边做穿墙判定 —— 与外观图的墙体同源，凹角/凸出都对得上。
+  // AABB 本身仍然保留（且对多边形房间取 effRect），因为它还被外壳 bbox
+  // (inFootprint) 用来圈整层的可行走范围。
+  type WallSeg = { horiz: boolean; c: number; lo: number; hi: number; hidden: boolean; facing: import("@/lib/types").WallSide };
+  type WallRect = AABB & { floor: number; room: string; bld?: number; hides?: Partial<Record<import("@/lib/types").WallSide, boolean>>; segs?: WallSeg[] };
   const wallAABBs = useMemo<WallRect[]>(() => {
     const out: WallRect[] = [];
     const WALL_HALF = 0.06;
@@ -5849,15 +5912,46 @@ export default function HouseCanvas() {
             N: sideHidden("N"), S: sideHidden("S"),
             W: sideHidden("W"), E: sideHidden("E"),
           };
+          // 多边形房间用**有效外接矩形**(effRect)当 AABB：多边形凸出 AABB 时
+          // effRect 会外扩，原来直接用 roomDimensions 会让凸出那块落在整层
+          // 外壳 bbox 之外，被 inFootprint 当成"走出建筑"直接挡住。
+          // 矩形房间 effRect === 原矩形，逐字节不变。
+          const shape = fp.roomShapes?.[r];
+          const eR = effRectHC(p, d, shape);
+          // plan-cm → 世界米。CM_local 已含 cm→m，Wh/Dh 是整栋 footprint 尺寸(米)。
+          const toWX = (cx: number) => (cx - minX) * CM_local - Wh / 2 + offX;
+          const toWZ = (cz: number) => (cz - minY) * CM_local - Dh / 2 + offZ;
+
+          // 沿多边形逐边生成碰撞墙线。原点必须是 roomLayout(p)，不是 effRect。
+          const faces = polyFacesHC(shape, p);
+          const segs: WallSeg[] | undefined = faces?.map(f => {
+            // 每个面照矩形路径的老规矩内缩 WALL_HALF：常量坐标沿内法线推进，
+            // 两端各缩 WALL_HALF。矩形多边形上这与老的四边内缩完全等价。
+            const inward = (f.facing === "N" || f.facing === "W") ? 1 : -1;
+            const c  = f.horiz ? toWZ(f.c) : toWX(f.c);
+            const lo = (f.horiz ? toWX(f.lo) : toWZ(f.lo)) + WALL_HALF;
+            const hi = (f.horiz ? toWX(f.hi) : toWZ(f.hi)) - WALL_HALF;
+            // 优先认这条边自己的 `edge-${i}` 隐藏/外墙面设置（2D 平面图给多边形
+            // 房间的墙开关就是按边存的）；没有显式设置时回落到该边朝向的 NSWE 面。
+            const edgeKey = `edge-${f.edgeIndex}`;
+            const hasEdgeCfg = fp.roomFacadeFaces?.[r]?.[edgeKey] != null
+              || fp.roomWallsHidden?.[r]?.[edgeKey] != null;
+            const hidden = hasEdgeCfg
+              ? (!resolveFacadeLayer(fp, r, edgeKey, "wall", curtainWall)
+                 && !resolveFacadeLayer(fp, r, edgeKey, "glass", curtainWall))
+              : !!hides[f.facing];
+            return { horiz: f.horiz, c: c + inward * WALL_HALF, lo, hi, hidden, facing: f.facing };
+          });
           out.push({
             floor: fi,
             room: r,
             bld: bldIdx,
-            minX: (p.x - minX) * CM_local - Wh / 2 + WALL_HALF + offX,
-            maxX: (p.x + d.width - minX) * CM_local - Wh / 2 - WALL_HALF + offX,
-            minZ: (p.y - minY) * CM_local - Dh / 2 + WALL_HALF + offZ,
-            maxZ: (p.y + d.depth - minY) * CM_local - Dh / 2 - WALL_HALF + offZ,
+            minX: toWX(eR.x) + WALL_HALF,
+            maxX: toWX(eR.x + eR.width) - WALL_HALF,
+            minZ: toWZ(eR.y) + WALL_HALF,
+            maxZ: toWZ(eR.y + eR.depth) - WALL_HALF,
             hides,
+            segs,
           });
         }
       }
@@ -5942,6 +6036,47 @@ export default function HouseCanvas() {
     if (!isFinite(minX)) return;
     const Wh = (maxX - minX) * CM;
     const Dh = (maxY - minY) * CM;
+    // plan-cm → 世界米（含楼栋偏移），与 wallAABBs 的同名换算一致。
+    const toWX = (cx: number) => (cx - minX) * CM - Wh / 2 + offX;
+    const toWZ = (cz: number) => (cz - minY) * CM - Dh / 2 + offZ;
+
+    // 沿多边形某条边开通行口。碰撞墙已经改成逐边生成（见 wallAABBs 的 segs），
+    // 门洞也必须落在同一条边上，否则用户看得见门却走不过去。
+    // faces 由 polyFacesHC 给出（plan-cm）；door.pos 的含义分两种：
+    //   · edgeIndex 有值 → pos 是**沿边**距离，从边的起点 (x1,z1) 量起；
+    //   · edgeIndex 为空（老式 cardinal 门）→ pos 是从外接矩形该面的西/北端量起，
+    //     按洞口中心落在哪个同朝向的面上来归属（与外观图 belongsHere 同规则）。
+    const collectPoly = (door: { wall: string; pos: number; len: number; edgeIndex?: number },
+                         faces: PolyFaceHC[],
+                         eR: { x: number; y: number; width: number; depth: number },
+                         floor: number): boolean => {
+      let f: PolyFaceHC | undefined;
+      let a: number, b: number;   // 洞口沿墙的一维区间（plan-cm）
+      if (door.edgeIndex != null) {
+        f = faces.find(x => x.edgeIndex === door.edgeIndex);
+        if (!f || f.length < 1e-3) return false;
+        const ux = (f.x2 - f.x1) / f.length, uz = (f.z2 - f.z1) / f.length;
+        const p0 = f.horiz ? f.x1 + ux * door.pos : f.z1 + uz * door.pos;
+        const p1 = f.horiz ? f.x1 + ux * (door.pos + door.len)
+                           : f.z1 + uz * (door.pos + door.len);
+        a = Math.min(p0, p1); b = Math.max(p0, p1);
+      } else {
+        const horizWall = door.wall === "N" || door.wall === "S";
+        const base = horizWall ? eR.x : eR.y;      // 外接矩形该面的起量点
+        a = base + door.pos; b = a + door.len;
+        const mid = (a + b) / 2;
+        f = faces.find(x => x.facing === door.wall && x.horiz === horizWall
+                            && mid >= x.lo - 1 && mid <= x.hi + 1);
+        if (!f) return false;   // 该朝向没有对应的边 → 回退矩形路径，门不会消失
+      }
+      const c = f.horiz ? toWZ(f.c) : toWX(f.c);
+      const lo = f.horiz ? toWX(a) : toWZ(a);
+      const hi = f.horiz ? toWX(b) : toWZ(b);
+      out.push(f.horiz
+        ? { minX: lo, maxX: hi, minZ: c - PAD, maxZ: c + PAD, floor, bld: bldIdx }
+        : { minX: c - PAD, maxX: c + PAD, minZ: lo, maxZ: hi, floor, bld: bldIdx });
+      return true;
+    };
 
     const collect = (door: { wall: string; pos: number; len: number },
                      p: { x: number; y: number }, d: { width: number; depth: number },
@@ -6057,17 +6192,15 @@ export default function HouseCanvas() {
         // getRoomDoors 的优先级是 显式数组 > 旧版单门 > 自动门，三选一。
         // 碰撞只关心 wall/pos/len，故不需要传 interiorDoorHeightCm / curtainWall。
         const isCirc = r === "hallway" || r === "stair";
-        // rectProject：L/凸字形房间的门可以绑在多边形的某条边(edgeIndex)上，
-        // 而本文件的通行口一律按「外接矩形四面」算。不折算的话，内凹边上的门
-        // 会被当成 wall/pos 的字面值投影到外框上 —— 通行口开在墙的错误位置，
-        // 用户看得见门却走不过去（或在旁边一段实墙上凭空能穿过）。
-        // 折算失败(edgeIndex 失效)时 getRoomDoors 会回退原 wall/pos，门不会消失。
+        // 不再传 rectProject：碰撞墙已经沿多边形逐边生成，门洞也直接沿边开
+        // （collectPoly 原生消费 edgeIndex）。折算回外接矩形是有损的——凹角上的
+        // 门会被压到外框上，通行口开在墙的错误位置。
         const eR = effRectHC(p, d, fp.roomShapes?.[r]);
+        const faces = polyFacesHC(fp.roomShapes?.[r], p);
         const doorsForCollision = getRoomDoors(fp, r, {
-          // widthCm/depthCm 也用 effRect：getRoomDoors 拿它给旧版单门算居中默认
+          // widthCm/depthCm 用 effRect：getRoomDoors 拿它给旧版单门算居中默认
           // 位置并做 clamp，同样必须落在 collect 使用的 effRect 坐标系里。
           widthCm: eR.width, depthCm: eR.depth,
-          rectProject: makeRectProjectHC(fp.roomShapes?.[r], p, eR),
           autoDoor: !isCirc
             // 自动门也喂有效外接矩形：它算出的 pos 会和上面折算后的门一起
             // 交给 collect(eR)，两者必须同一坐标系，否则多边形房间的自动门
@@ -6076,8 +6209,13 @@ export default function HouseCanvas() {
             : undefined,
         });
         for (const door of doorsForCollision) {
-          // 用有效外接矩形(而非 roomDimensions)喂 collect：折算后的 pos 是以
-          // effRect 为基准的，两者必须同一坐标系。矩形房间 effRect === 原矩形，
+          // 多边形房间先走沿边路径；沿边归属失败（edgeIndex 失效 / 该朝向没有
+          // 对应的边）才回退到外接矩形，宁可位置近似也不要让门彻底走不过去。
+          if (faces && collectPoly(
+                { wall: door.wall, pos: door.pos ?? 0, len: door.len ?? 0, edgeIndex: door.edgeIndex },
+                faces, eR, fi)) continue;
+          // 用有效外接矩形(而非 roomDimensions)喂 collect：pos 是以 effRect 为
+          // 基准的，两者必须同一坐标系。矩形房间 effRect === 原矩形，
           // 行为逐字节不变。
           collect({ wall: door.wall, pos: door.pos, len: door.len },
                   { x: eR.x, y: eR.y }, { width: eR.width, depth: eR.depth }, fi);
