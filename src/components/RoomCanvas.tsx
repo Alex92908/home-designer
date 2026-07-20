@@ -4153,14 +4153,19 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   // glass face when the project is in curtain-wall mode AND it has a window
   const curtainGlassWalls = useMemo(() => {
     const isCurtainWall = exteriorFacadeSystem === "curtain-wall" || !!exteriorFacadeGlass;
-    if (!isCurtainWall) return undefined;
+    // 不能在这里因「全局不是幕墙模式」就 return undefined。
+    // resolveFacadeLayer 的优先级（types.ts）里，第 1 步的逐面显式覆盖
+    // (roomFacadeFaces) 和第 3 步的 roomExteriorStyle==="glass" 都**压过**全局模式：
+    // 用户在打孔窗全局模式下把某个房间单独设成玻璃幕墙，2D 平面图和外观图都会渲染
+    // 玻璃，唯独效果图在这里提前退出、看不到 → 三视图分叉。
+    // 把 isCurtainWall 作为参数交给 resolveFacadeLayer 自己判，不要提前拦。
     const fp = {
       roomFacadeFaces, roomWallsHidden: fpRoomWallsHidden, roomExteriorStyle: fpRoomExteriorStyle,
       roomLayout: fpAllRoomLayout, roomDimensions: fpAllRoomDims, enabledRooms: fpEnabledRooms,
     };
     const glassMap = new Map<WallSide, number>();
     for (const side of ["N", "S", "E", "W"] as WallSide[]) {
-      if (resolveFacadeLayer(fp, activeRoom, side, "glass", true)) {
+      if (resolveFacadeLayer(fp, activeRoom, side, "glass", isCurtainWall)) {
         glassMap.set(side, resolveFaceOpacity(fp, activeRoom, side, DEFAULT_GLASS_TRANSPARENCY));
       }
     }

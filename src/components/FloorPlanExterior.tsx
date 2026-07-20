@@ -39,7 +39,21 @@ import {
 import { splitWallAroundHoles } from "@/lib/wallGeom";
 import { paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize, getStuccoTexture, getStuccoNormal } from "@/lib/textures";
-import { polygonBounds, type RoomShape } from "@/lib/roomGeometry";
+import { polygonBounds, edgeHoleToRectPos, type RoomShape } from "@/lib/roomGeometry";
+
+/** 本视图按"外接矩形四面"渲染，不认多边形 edgeIndex。这个工厂返回一个把
+ *  edgeIndex 绑定的洞口折算到外框坐标的函数，供 getRoomDoors 的 rectProject
+ *  以及窗户折算共用。详见 roomGeometry.edgeHoleToRectPos 的说明。 */
+function makeRectProject(
+  shape: RoomShape | undefined,
+  roomOrigin: { x: number; y: number },
+  rect: { x: number; y: number; width: number; depth: number },
+) {
+  if (!shape?.points?.length || shape.preset === "rect") return undefined;
+  return (h: { wall: string; pos: number; len: number; edgeIndex?: number }) =>
+    h.edgeIndex == null ? null
+      : edgeHoleToRectPos(shape.points!, h.edgeIndex, h.pos, h.len, roomOrigin, rect);
+}
 
 /** Effective rectangular footprint (cm, same frame as roomLayout) that fully
  *  encloses a room's polygon. Rect/undefined shapes return the raw rect
@@ -2616,12 +2630,16 @@ export default function FloorPlanBuilding({
     const onExterior = (side: WindowConfig["wall"]): boolean =>
       isExtWall ? isExtWall(side) : ((d[side as keyof typeof d] ?? Infinity) < WIN_EPS);
 
-    // If configured wall is on the exterior and not the door wall,
-    // keep it there — only clamp the position within the wall to avoid overflow.
-    if (onExterior(win.wall) && win.wall !== doorWall) {
+    // 配置的墙就是外墙 → **原样保留**。
+    // 原来这里即使命中"保留"分支，也仍会把 len 砍到墙长 70%、并把 pos 夹进
+    // [5, wallLen-len-5]。用户在 2D 里拉满整面墙的宽窗，外观图里会莫名变窄；
+    // 而且这个改写**不回写 store**，2D 平面图 / 效果图永远显示原值 →
+    // 同一扇窗三个视图三个样。现在只在真正越界(窗跑到墙外)时做最小 clamp。
+    if (onExterior(win.wall)) {
       const wallLen = (win.wall === "W" || win.wall === "E") ? rDcm : rWcm;
-      const safePos = Math.max(5, Math.min(win.pos ?? 0, wallLen - (win.len ?? 80) - 5));
-      return { ...win, pos: safePos, len: Math.min(win.len, Math.round(wallLen * 0.70)) };
+      const len = Math.min(win.len ?? 80, wallLen);          // 只防超过整面墙
+      const pos = Math.max(0, Math.min(win.pos ?? 0, wallLen - len));
+      return (len === win.len && pos === win.pos) ? win : { ...win, pos, len };
     }
 
     // Configured wall is interior or is the door wall — pick best exterior wall.
@@ -2634,9 +2652,16 @@ export default function FloorPlanBuilding({
       ?? ranked.find(({ w }) => w !== doorWall)
       ?? ranked[0];
 
+    // 配置的墙是内墙 → 这面根本不在立面上，窗只能挪到最近的外墙，否则整扇窗消失。
+    // 但**尽量少改**：保留原宽度(仅在放不下时才缩)，位置按原墙上的比例平移过去，
+    // 而不是原来那样一律 pos=墙长15% / len 砍到 65%。
     const extWall = target.w;
     const wallLen = (extWall === "W" || extWall === "E") ? rDcm : rWcm;
-    return { ...win, wall: extWall, pos: Math.round(wallLen * 0.15), len: Math.min(win.len, Math.round(wallLen * 0.65)) };
+    const srcWallLen = (win.wall === "W" || win.wall === "E") ? rDcm : rWcm;
+    const len = Math.min(win.len ?? 80, wallLen);
+    const ratio = srcWallLen > 0 ? (win.pos ?? 0) / srcWallLen : 0;
+    const pos = Math.max(0, Math.min(Math.round(ratio * wallLen), wallLen - len));
+    return { ...win, wall: extWall, pos, len };
   }
 
   // 外墙段检测（用于覆盖材质）
@@ -2671,17 +2696,23 @@ export default function FloorPlanBuilding({
         // 原来这里是一份手写镜像，与 2D/效果图的默认值分叉：门高 200(另两处 240)、
         // 车库门 widenGarageDoor 无条件把 pos 覆盖成居中(吃掉用户拖动)。
         // 自动门仍由本文件的 pickAutoDoor 提供（只有这里算得出房间在整栋楼的位置）。
+        // rectProject：把 edgeIndex 绑定的洞口折算到外框坐标（本视图不认多边形边）。
+        const rectProj = makeRectProject(fp.roomShapes?.[r], p, effRect(p, dd, fp.roomShapes?.[r]));
         mergedDoors[r] = getRoomDoors(fp, r, {
           interiorDoorHeightCm: exterior?.interiorDoorHeightCm,
           curtainWall,
           widthCm: dd.width, depthCm: dd.depth,
+          rectProject: rectProj,
           autoDoor: (bounds && !isCirc)
             ? () => pickAutoDoor(fi, r, cx, cz, rW, rD, dd.width, dd.depth, bounds)
             : undefined,
         });
 
-        // 窗：修正到外墙，且不与门在同一面墙
-        const wins = fp.roomWindows?.[r] ?? [];
+        // 窗：edgeIndex 折算 → 再修正到外墙
+        const wins = (fp.roomWindows?.[r] ?? []).map(w => {
+          const m = rectProj?.(w);
+          return m ? { ...w, wall: m.wall as WindowConfig["wall"], pos: m.pos, edgeIndex: undefined } : w;
+        });
         const doorWall0 = mergedDoors[r]?.[0]?.wall;
         if (wins.length > 0 && bounds) {
           const isExtWall = (side: WindowConfig["wall"]) => isExteriorWallSide(fp, r, side);
@@ -2945,11 +2976,13 @@ export default function FloorPlanBuilding({
         // 保留 doors / autoDoor 两个下游变量的原有形状（doors=显式配置门，
         // autoDoor=没有配置门时兜底的那一扇），但两者都已按统一默认值规范化，
         // 不再各自 `?? defaultDoorHCm(200)` / 强制居中。
+        const rectProjR = makeRectProject(fp.roomShapes?.[room], p, e);
         const configuredDoorsRaw = fp.roomDoors?.[room] ?? [];
         const resolvedDoors = getRoomDoors(fp, room, {
           interiorDoorHeightCm: exterior?.interiorDoorHeightCm,
           curtainWall,
           widthCm: d.width, depthCm: d.depth,
+          rectProject: rectProjR,
           autoDoor: (bounds && !isStair && !isHallway)
             ? () => pickAutoDoor(fi, room, cx, cz, rW, rD, rWcm, rDcm, bounds)
             : undefined,
@@ -2961,9 +2994,14 @@ export default function FloorPlanBuilding({
         // 窗户方向修正：强制到不同于门的外墙，彻底避免门窗同墙重叠
         const doorWallForRoom = autoDoor?.wall ?? doors[0]?.wall;
         const isExtWallR = (side: WindowConfig["wall"]) => isExteriorWallSide(fp, room, side);
-        const adjustedWindows = (bounds && windows.length > 0)
-          ? windows.map(w => adjustWindowWall(w, cx, cz, rW, rD, rWcm, rDcm, bounds, doorWallForRoom, isExtWallR))
-          : windows;
+        // 先把 edgeIndex 绑定的窗折算到外框坐标，再做外墙修正。
+        const winsProjected = windows.map(w => {
+          const m = rectProjR?.(w);
+          return m ? { ...w, wall: m.wall as WindowConfig["wall"], pos: m.pos, edgeIndex: undefined } : w;
+        });
+        const adjustedWindows = (bounds && winsProjected.length > 0)
+          ? winsProjected.map(w => adjustWindowWall(w, cx, cz, rW, rD, rWcm, rDcm, bounds, doorWallForRoom, isExtWallR))
+          : winsProjected;
 
         const wallsHidden = fp.roomWallsHidden?.[room];
         // 地板/天花板显隐复用 roomWallsHidden 的「单面显隐」机制，只是把可隐藏
@@ -3125,6 +3163,8 @@ export default function FloorPlanBuilding({
           interiorDoorHeightCm: exterior?.interiorDoorHeightCm,
           curtainWall,
           widthCm: d.width, depthCm: d.depth,
+          // 门洞侧必须与门板侧同样折算，否则多边形房间的门洞和门又对不上。
+          rectProject: makeRectProject(fp.roomShapes?.[room], p, effRect(p, d, fp.roomShapes?.[room])),
           autoDoor: (boundsForHole && !isCircRoom)
             ? () => {
                 const rW = d.width * CM; const rD = d.depth * CM;

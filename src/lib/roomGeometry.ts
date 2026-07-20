@@ -203,6 +203,50 @@ export function findEdgeForWall(
   return null;
 }
 
+/**
+ * 把 `edgeIndex` 绑定的门/窗，换算成"外接矩形 + NSWE 四面"坐标系下的等价 (wall, pos)。
+ *
+ * 为什么需要：外观图(FloorPlanExterior)和全屋3D(HouseCanvas)的墙体引擎是按房间的
+ * **外接矩形四面**工作的（effRect），全文不认 `edgeIndex`。于是用户在 L 型 / 凸字形
+ * 房间的**内凹边**上放的门窗，在 2D 平面图和室内效果图里位置正确（它们走
+ * findEdgeForWall 的沿边基准），到了外观图/全屋3D 却被投影到外接矩形的外框上，
+ * 位置整个跑偏。这个函数把沿边坐标折算回外框坐标，让两套引擎对上。
+ *
+ * 注意这是**投影近似**：内凹边被折算到它所朝向的那面外框上。真正做到"沿多边形边
+ * 渲染墙体"是另一个量级的改造（整套幕墙/门窗/墙体都要改），这里先消掉肉眼可见的错位。
+ *
+ * @param points     房间多边形（room-local cm，(0,0)=房间左上角）
+ * @param roomOrigin 房间左上角在平面图坐标系里的位置（= roomLayout[room]）
+ * @param rect       该房间的有效外接矩形（= effRect，平面图坐标系 cm）
+ * @returns null 表示 edgeIndex 失效（多边形被改过），调用方应回退到原 wall/pos
+ */
+export function edgeHoleToRectPos(
+  points: Array<[number, number]>,
+  edgeIndex: number,
+  posCm: number,
+  lenCm: number,
+  roomOrigin: { x: number; y: number },
+  rect: { x: number; y: number; width: number; depth: number },
+): { wall: WallFacing; pos: number } | null {
+  const e = getEdges(points).find(x => x.i === edgeIndex);
+  if (!e || e.length < 1e-3) return null;
+
+  // 洞口两端沿边的 room-local 坐标
+  const ux = (e.x2 - e.x1) / e.length, uz = (e.z2 - e.z1) / e.length;
+  const ax = e.x1 + ux * posCm,            az = e.z1 + uz * posCm;
+  const bx = e.x1 + ux * (posCm + lenCm),  bz = e.z1 + uz * (posCm + lenCm);
+
+  // 折算到平面图坐标，再取外框那一面的起点偏移。
+  // 外框约定与 FloorPlanExterior 一致：N/S 从西端量起，W/E 从北端量起；
+  // 边的走向可能与世界轴相反（CCW 多边形的 S 边是东→西），故取两端的较小值。
+  if (e.facing === "N" || e.facing === "S") {
+    const pos = Math.min(roomOrigin.x + ax, roomOrigin.x + bx) - rect.x;
+    return { wall: e.facing, pos: Math.max(0, Math.min(pos, Math.max(0, rect.width - lenCm))) };
+  }
+  const pos = Math.min(roomOrigin.y + az, roomOrigin.y + bz) - rect.y;
+  return { wall: e.facing, pos: Math.max(0, Math.min(pos, Math.max(0, rect.depth - lenCm))) };
+}
+
 /** Shape picker label / icon for UI. */
 export const SHAPE_PRESETS: Array<{ preset: ShapePreset; name: string; icon: string }> = [
   { preset: "rect",    name: "矩形",  icon: "▭" },

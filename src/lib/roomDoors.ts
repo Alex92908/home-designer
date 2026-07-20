@@ -91,6 +91,13 @@ export interface GetRoomDoorsOpts {
   depthCm?: number;
   /** 自动门回调：仅外观图/全屋3D 有足够几何信息实现。返回 null 表示不生成。 */
   autoDoor?: () => DoorConfig | null;
+  /**
+   * 外接矩形投影。**只有按"外接矩形四面"渲染的视图**（外观图 FloorPlanExterior /
+   * 全屋3D HouseCanvas）才传这个：它们不认多边形 `edgeIndex`，需要把沿边坐标折算
+   * 成外框坐标，否则 L/凸字形房间内凹边上的门会跑到外框上。
+   * 2D 平面图和室内效果图**不要传**——它们原生支持沿边基准，折算反而丢精度。
+   */
+  rectProject?: (door: DoorConfig) => { wall: WallSide; pos: number } | null;
 }
 
 /**
@@ -112,8 +119,17 @@ export function getRoomDoors(
   const curtainWall = opts.curtainWall ?? false;
   const widthCm = opts.widthCm ?? fp.roomDimensions?.[room]?.width ?? 400;
   const depthCm = opts.depthCm ?? fp.roomDimensions?.[room]?.depth ?? 300;
-  const norm = (d: DoorConfig, centerIfUnset = false) =>
-    normalizeDoor(d, room, widthCm, depthCm, fp, curtainWall, opts.interiorDoorHeightCm, centerIfUnset);
+  const norm = (d: DoorConfig, centerIfUnset = false) => {
+    const n = normalizeDoor(d, room, widthCm, depthCm, fp, curtainWall,
+                            opts.interiorDoorHeightCm, centerIfUnset);
+    // edgeIndex → 外框坐标折算（只有外观图/全屋3D 会传 rectProject）。
+    // 折算失败（多边形被改过、edgeIndex 失效）时保留原值，不至于让门消失。
+    if (n.edgeIndex != null && opts.rectProject) {
+      const m = opts.rectProject(n);
+      if (m) return { ...n, wall: m.wall, pos: m.pos, edgeIndex: undefined };
+    }
+    return n;
+  };
 
   // 1. 显式多门数组
   const explicit = fp.roomDoors?.[room];

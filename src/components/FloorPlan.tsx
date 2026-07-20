@@ -10,7 +10,7 @@ import { getRoomDoors } from "@/lib/roomDoors";
 import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
 import { getFurnitureNameEn } from "@/locales/itemNames";
 import { evaluateRoom, type EvaluatedItem, type DoorWall as ClearanceDoorWall } from "@/lib/clearance";
-import { pointInPolygon, getEdges } from "@/lib/roomGeometry";
+import { pointInPolygon, getEdges, polygonBounds, findEdgeForWall, type WallFacing } from "@/lib/roomGeometry";
 
 const EMPTY_WINDOWS: never[] = [];
 import { RoomState } from "@/lib/store";
@@ -162,15 +162,31 @@ function PlacedItemSVG({ placed, scale, isSelected, isBlocked, hasViolation, vio
           style={{ pointerEvents: "none", animation: "fpBlockedPulse 0.4s ease-out infinite alternate" }}
         />
       )}
-      {glbPreview ? (
-        <image href={glbPreview} x={-w / 2 + 2} y={-d / 2 + 2} width={Math.max(0, w - 4)} height={Math.max(0, d - 4)}
-          preserveAspectRatio="xMidYMid meet" style={{ pointerEvents: "none" }}
-          onError={() => setImgFailed(true)} />
-      ) : fontSize > 5 && (
-        <text x={0} y={d > 30 ? -3 : 0} textAnchor="middle" dominantBaseline="middle"
-          fontSize={Math.min(fontSize, 18)} style={{ userSelect: "none", pointerEvents: "none" }}>
-          {furniture.icon}
-        </text>
+      {/* 镜像：mirrorX/mirrorZ 在 2401 附近有开关 UI、3D 里也翻转了模型，但 2D 图形
+          一直没响应，用户点了开关平面图纹丝不动、以为没生效。这里对图形层（预览图 /
+          图标）做 scale(-1) 翻转；外框矩形本身对称、名称标签不翻（翻了读不了）。 */}
+      <g transform={`scale(${placed.mirrorX ? -1 : 1},${placed.mirrorZ ? -1 : 1})`}>
+        {glbPreview ? (
+          <image href={glbPreview} x={-w / 2 + 2} y={-d / 2 + 2} width={Math.max(0, w - 4)} height={Math.max(0, d - 4)}
+            preserveAspectRatio="xMidYMid meet" style={{ pointerEvents: "none" }}
+            onError={() => setImgFailed(true)} />
+        ) : fontSize > 5 && (
+          <text x={0} y={d > 30 ? -3 : 0} textAnchor="middle" dominantBaseline="middle"
+            fontSize={Math.min(fontSize, 18)} style={{ userSelect: "none", pointerEvents: "none" }}>
+            {furniture.icon}
+          </text>
+        )}
+      </g>
+      {/* 镜像角标：emoji 图标本身左右对称，翻了看不出来，给个明确的状态提示 */}
+      {(placed.mirrorX || placed.mirrorZ) && w > 24 && d > 20 && (
+        <g transform={`translate(${-w / 2 + 1},${-d / 2 + 1}) rotate(${-placed.rotation})`}>
+          <rect x={0} y={0} width={13} height={9} rx={2} fill="#0EA5E9" opacity={0.95} />
+          <text x={6.5} y={4.8} textAnchor="middle" dominantBaseline="middle"
+            fontSize={6} fill="white" fontWeight="bold"
+            style={{ userSelect: "none", pointerEvents: "none" }}>
+            {placed.mirrorX ? "↔" : ""}{placed.mirrorZ ? "↕" : ""}
+          </text>
+        </g>
       )}
       {nameLines && (() => {
         const totalH = nameLines.length * LINE_H;
@@ -1772,10 +1788,30 @@ export default function FloorPlan() {
           {allDoors.map((d, di) => {
             // Resolve polygon edge for inner-edge doors
             let polygonEdge: { x1: number; z1: number; x2: number; z2: number; length: number; nx: number; nz: number } | undefined;
-            if (d.edgeIndex != null && roomShape && roomShape.preset !== "rect") {
+            // 沿边的起点偏移。polygonEdge 存在时 DoorSVG 用它而不是 d.pos。
+            let edgePosCm = d.pos;
+            if (roomShape && roomShape.preset !== "rect") {
               const edges = getEdges(roomShape.points);
-              const e = edges.find(x => x.i === d.edgeIndex);
-              if (e) polygonEdge = { x1: e.x1, z1: e.z1, x2: e.x2, z2: e.z2, length: e.length, nx: e.nx, nz: e.nz };
+              if (d.edgeIndex != null) {
+                const e = edges.find(x => x.i === d.edgeIndex);
+                if (e) polygonEdge = { x1: e.x1, z1: e.z1, x2: e.x2, z2: e.z2, length: e.length, nx: e.nx, nz: e.nz };
+              } else {
+                // 移植 RoomCanvas.tsx:3741 的 alignHoleStart 修正。
+                // 根因：cardinal 绑定的门 pos 是"从世界坐标较小端"量起的（N/S 从西端，
+                // E/W 从北端，见 roomGeometry.findEdgeForWall 的 legacy 分支），而这里
+                // 原来直接把 d.pos 交给 DoorSVG 按 bbox 外框画。多边形房间的边并不都
+                // 落在 bbox 上，且 CCW 多边形有些边走向与世界轴相反（如 S 边东→西），
+                // 于是 2D 门位与 3D 效果图左右镜像错位。改成：先用 findEdgeForWall 找到
+                // 门真正所在的边，再把 startCm 换算成沿边方向的起点。
+                const bbox = polygonBounds(roomShape.points);
+                const hit = findEdgeForWall(roomShape.points, d.wall as WallFacing, d.pos, d.len, bbox);
+                if (hit) {
+                  const e = hit.edge;
+                  const reversed = (e.facing === "N" || e.facing === "S") ? e.x2 < e.x1 : e.z2 < e.z1;
+                  edgePosCm = reversed ? Math.max(0, hit.startCm - d.len) : hit.startCm;
+                  polygonEdge = { x1: e.x1, z1: e.z1, x2: e.x2, z2: e.z2, length: e.length, nx: e.nx, nz: e.nz };
+                }
+              }
             }
             // Cardinal-wall coord — DoorSVG now speaks the same NSWE names.
             const cardinalDoorWall: DoorWall = d.wall as DoorWall;
@@ -1783,7 +1819,7 @@ export default function FloorPlan() {
               <g key={d.id ?? `door-${di}`}>
                 <DoorSVG
                   svgW={svgW} svgH={svgH}
-                  doorPosCm={d.pos} doorLenCm={d.len}
+                  doorPosCm={edgePosCm} doorLenCm={d.len}
                   roomWidthCm={roomW} roomDepthCm={roomD}
                   doorWall={cardinalDoorWall}
                   scale={scale}
@@ -1821,7 +1857,7 @@ export default function FloorPlan() {
                   if (polygonEdge) {
                     const ux = (polygonEdge.x2 - polygonEdge.x1) / polygonEdge.length;
                     const uz = (polygonEdge.z2 - polygonEdge.z1) / polygonEdge.length;
-                    const tMid = d.pos + d.len / 2;
+                    const tMid = edgePosCm + d.len / 2;   // 与门体同一套沿边坐标
                     const mx = (polygonEdge.x1 + ux * tMid) * scale;
                     const my = (polygonEdge.z1 + uz * tMid) * scale;
                     dx = clampX(mx + polygonEdge.nx * 15);
