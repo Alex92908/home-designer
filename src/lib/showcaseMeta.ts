@@ -58,10 +58,10 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     id: "set-office",
     nameZh: "办公室片场",
     nameEn: "Office Set",
-    descZh: "开放工位 · 会议室 · 茶水间 · 玻璃幕墙",
-    descEn: "Open desks · meeting room · pantry · glass facade",
+    descZh: "回字形大厅环绕 · 开放工位 · 会议室 · 独立办公室 · 茶水间",
+    descEn: "Ring lobby wrap · open desks · meeting room · private office · pantry",
     tags: ["片场", "办公室", "单层"],
-    image: "💼",
+    image: "/showcase/set-office.jpg",
     projectTemplateId: "set-office",
   },
   {
