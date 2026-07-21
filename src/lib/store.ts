@@ -2208,6 +2208,7 @@ export const useDesignerStore = create<DesignerStore>()(
             if (!layout) return fp;
             const exStyle = { ...(fp.roomExteriorStyle ?? {}) };
             const doorsMap = { ...(fp.roomDoors ?? {}) };
+            const windowsMap = { ...(fp.roomWindows ?? {}) };
             let rooms = fp.rooms;
             let touched = false;
             for (const r of layout.rooms) {
@@ -2216,6 +2217,16 @@ export const useDesignerStore = create<DesignerStore>()(
                 doorsMap[r.room] = r.doors.map((d, i) => ({
                   id: `tpl_door_${r.room}_${i}`, wall: d.wall, pos: d.pos, len: d.len,
                   ...(d.style ? { style: d.style } : {}), ...(d.h != null ? { h: d.h } : {}),
+                }));
+                touched = true;
+              }
+              // 显式窗（如咖啡馆西墙1幕墙上悬窗，edgeIndex 绑定多边形边）→ roomWindows。
+              // 第一趟已把 roomWindows 设为「保留用户既有窗」，这里再叠加模板声明的窗。
+              if (r.windows?.length) {
+                windowsMap[r.room] = r.windows.map((w, i) => ({
+                  id: `tpl_win_${r.room}_${i}`, wall: w.wall, pos: w.pos, len: w.len,
+                  ...(w.h != null ? { h: w.h } : {}), ...(w.sill != null ? { sill: w.sill } : {}),
+                  ...(w.style ? { style: w.style } : {}), ...(w.edgeIndex != null ? { edgeIndex: w.edgeIndex } : {}),
                 }));
                 touched = true;
               }
@@ -2238,7 +2249,7 @@ export const useDesignerStore = create<DesignerStore>()(
                 touched = true;
               }
             }
-            return touched ? { ...fp, roomExteriorStyle: exStyle, roomDoors: doorsMap, rooms } : fp;
+            return touched ? { ...fp, roomExteriorStyle: exStyle, roomDoors: doorsMap, roomWindows: windowsMap, rooms } : fp;
           });
           set({ floorPlans: plans });
         }

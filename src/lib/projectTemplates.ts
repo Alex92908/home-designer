@@ -1616,6 +1616,9 @@ const CAFE_SET: ProjectTemplate = {
           exteriorStyle: "glass",
           // glass_swing=两扇各绕外侧边对开；french_double 在本渲染器是整扇单铰(会整体甩到一边)
           doors: [{ wall: "S", pos: 520, len: 160, style: "glass_swing", h: 210 }],
+          // 西墙1（幕墙面，多边形 edge 4：室内-local x≈1.5、z 256–592）开一扇上悬窗。
+          // edgeIndex=4 直接绑定那条边，避免按外接矩形投影落到凹口（用户实机固化）。
+          windows: [{ wall: "W", pos: 88, len: 160, edgeIndex: 4 }],
           // 门楣店招：外墙装饰(RoomState.exteriorDecor)——单一事实来源，
           // 效果图/外观图共用同一渲染器；u/v 使灯箱悬在南门正上方。
           wallDecor: [{ furnitureId: "sign-cafe-wall", wall: "S", u: 0.52, v: 0.92, label: "YUNHENG COFFEE|云横咖啡" }] },
@@ -1746,8 +1749,8 @@ const CAFE_SET: ProjectTemplate = {
         { furnitureId: "decor-coffee-mug", x: 164, z: 442, rotation: 200, elevationY: 74 },
         { furnitureId: "lamp-pendant-ikea4", x: 140, z: 450, mountCeiling: true },
         { furnitureId: "bookshelf-with-books", x: 202, z: 282 },
-        { furnitureId: "bookshelf-wood-lp", x: 82, z: 269 },
-        { furnitureId: "decor-victorian-clock", x: 48, z: 273, rotation: 180, elevationY: 75 },
+        // bookshelf-wood-lp (x82,z269) 已移除——它正对厨房 S 门(世界 x≈36-116)，挡住门口通行（用户去掉）。
+        // decor-victorian-clock 原摆在 wood-lp 上(x48,z273,elevationY75)，书架没了会悬空，一并移除。
         { furnitureId: "decor-radio-vintage", x: 178, z: 278, rotation: 180, elevationY: 75 },
         { furnitureId: "plant-monstera", x: 85, z: 530 },
 

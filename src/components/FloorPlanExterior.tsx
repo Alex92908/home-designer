@@ -443,13 +443,16 @@ export function computeExteriorWalls(
         if (segEnd - segStart < 20) continue;
         const segWins = roomWins.filter(w => {
           // 按窗户「中心点」归属到唯一墙段，避免横跨切割点的宽窗被相邻两段
-          // 各画一遍（重复窗框/窗梃错位叠加 → 多余竖线、下方拖线）。门已用
-          // 同样的「落在段内」思路（见下方 segDoors）。
-          const wCenter = wallStart + (w.pos ?? 0) + w.len / 2;
+          // 各画一遍（重复窗框/窗梃错位叠加 → 多余竖线、下方拖线）。
+          // w.pos 经 resolveHoles→holeFace 已是**平面图绝对坐标**（与 segStart/
+          // segEnd 同坐标系＝subtractIntervals([[wallStart,wallEnd]],…)），不要再加
+          // wallStart——那会重复计一次，把窗中心推到段外被过滤掉（用户实拍：幕墙
+          // 有窗户没洞，winEntries=0）。这是 91f7687 改绝对坐标时漏掉的消费端。
+          const wCenter = (w.pos ?? 0) + w.len / 2;
           return wCenter >= segStart && wCenter < segEnd;
         });
         const segDoors = roomDoors.filter(d => {
-          const dS = wallStart + (d.pos ?? 0);
+          const dS = (d.pos ?? 0);   // 同上：已是绝对坐标，勿加 wallStart
           return dS + d.len > segStart + 5 && dS < segEnd - 5 && d.len >= 60;
         });
         result.push({

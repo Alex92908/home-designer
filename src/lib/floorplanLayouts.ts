@@ -29,6 +29,10 @@ export interface LayoutTemplateRoom {
   /** 显式门（如临街大门加宽双开）。applyProjectTemplate 写进 roomDoors。 */
   doors?: Array<{ wall: "N" | "S" | "E" | "W"; pos: number; len: number;
     style?: import("./types").DoorStyle; h?: number }>;
+  /** 显式窗。applyProjectTemplate 写进 roomWindows。多边形房间的窗用 edgeIndex
+   *  绑定到具体那条边（pos = 从边起点沿边偏移 cm），否则按外接矩形四面定位。 */
+  windows?: Array<{ wall: "N" | "S" | "E" | "W"; pos: number; len: number;
+    h?: number; sill?: number; style?: import("./types").WindowStyle; edgeIndex?: number }>;
   /** 外墙装饰——店招/壁画/壁灯等，写进 RoomState.exteriorDecor。 */
   wallDecor?: Array<{ furnitureId: string; wall: "N" | "S" | "E" | "W";
     u: number; v: number; scaleW?: number; scaleH?: number; label?: string }>;
