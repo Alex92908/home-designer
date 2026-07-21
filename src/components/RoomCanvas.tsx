@@ -26,6 +26,7 @@ const glassTransparencyToOpacity = (t: number) =>
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
 import { getRoomDoors } from "@/lib/roomDoors";
+import { getRoomWindows } from "@/lib/roomWindows";
 import { DetailedDecor } from "./DetailedDecor";
 import { FirstPersonControls, TouchJoystick } from "./FirstPersonControls";
 import { getFloorTexture, getWallTexture, getRugTexture, floorTileSize, wallTileSize } from "@/lib/textures";
@@ -380,8 +381,11 @@ function RoomShell({
     if (!opts?.skipWindows) {
       for (const w of windows) {
         if (w.wall !== side) continue;
+        // sill/h 已由 lib/roomWindows.getRoomWindows 统一补全（默认 90 / 150），
+        // 不再在这里各自 `?? 90` / `?? Math.min(H*52,150)`——去掉随房高缩放，
+        // 与外观图/2D 的固定默认对齐。
         const sillM  = (w.sill ?? 90) / 100;
-        const winHM  = (w.h   ?? Math.min(H * 52, 150)) / 100;
+        const winHM  = (w.h   ?? 150) / 100;
         const winLenM = w.len / 100;
         // W wall: wall-local x=0 is at the south (+Z) end and increases
         // northward, but win.pos is north-referenced (plan convention).
@@ -3734,26 +3738,17 @@ function PolygonShell({
     };
     const doorPlacements: DoorPlacement[] = [];
     const isEdgeHidden = (i: number) => wallsHidden?.[`edge-${i}`] === true;
-    // 洞口定位对齐外观图(FPE)约定：wall 键的 pos 沿世界轴从坐标较小端起算
-    // (N/S 墙 = x 较小的西端，E/W 墙 = z 较小的北端)；findEdgeForWall 的
-    // startCm 却从边的起点顶点起算。CCW 多边形的边走向常与世界轴反向
-    // (如 S 边东→西)，不换算时洞口沿边反向展开 → 室内门位与外观镜像错位。
-    // edgeIndex 显式指定的洞本就是边相对坐标，保持原样。
-    const alignHoleStart = (
-      hit: { startCm: number; edge: import("@/lib/roomGeometry").EdgeInfo },
-      lenCm: number,
-      hasEdgeIndex: boolean,
-    ) => {
-      if (hasEdgeIndex) return hit.startCm;
-      const e = hit.edge;
-      const reversed = (e.facing === "N" || e.facing === "S") ? e.x2 < e.x1 : e.z2 < e.z1;
-      return reversed ? Math.max(0, hit.startCm - lenCm) : hit.startCm;
-    };
+    // 洞口沿边起点直接用 findEdgeForWall 的 startCm —— 它**已经**把 CCW 多边形反向边
+    // (如客厅 S 边东→西) 的翻转算进去了(见 roomGeometry.findEdgeForWall 内 `startAlong =
+    // aligned ? t : t - lenCm`，注释：客厅 S 门 pos520 曾被放到 360 的那处修复)。
+    // 平面图/外观图走的 resolveHoleOnPolygon 也是**基于同一个 startCm**再换算世界坐标。
+    // 这里原来又自己写了一层 alignHoleStart 反向校正 → 反向边被**校正两遍**，门在效果图
+    // 里比平面图多偏一个门宽(用户:S 门位置错了)。删掉这层，与平面图同源。
     for (const d of (doors ?? [])) {
       const hit = findEdgeForWall(points, d.wall, d.posCm, d.lenCm, bbox, d.edgeIndex);
       if (!hit) continue;
       if (isEdgeHidden(hit.edgeIndex)) continue; // wall gone → no door
-      const startM = alignHoleStart(hit, d.lenCm, d.edgeIndex != null) / 100;
+      const startM = hit.startCm / 100;
       const lenM = d.lenCm / 100;
       const hM = d.hCm / 100;
       const arr = holesByEdge.get(hit.edgeIndex) ?? [];
@@ -3776,12 +3771,13 @@ function PolygonShell({
       winId: string; edgeIndex: number;
       wx: number; wz: number; angle: number;   // hole-start position
       lenM: number; sillM: number; hM: number;
+      style: import("@/lib/types").WindowStyle;
     }> = [];
     for (const w of windows) {
       const hit = findEdgeForWall(points, w.wall, w.pos, w.len, bbox, w.edgeIndex);
       if (!hit) continue;
       if (isEdgeHidden(hit.edgeIndex)) continue; // wall gone → no window
-      const startM = alignHoleStart(hit, w.len, w.edgeIndex != null) / 100;
+      const startM = hit.startCm / 100;
       const lenM = w.len / 100;
       const sillM = (w.sill ?? 90) / 100;
       const hM = (w.h ?? 150) / 100;
@@ -3800,6 +3796,7 @@ function PolygonShell({
         wz: wz1 + (wz2 - wz1) * t0,
         angle: Math.atan2(-(wz2 - wz1), wx2 - wx1),
         lenM, sillM, hM,
+        style: w.style ?? "sliding",
       });
     }
 
@@ -3911,25 +3908,17 @@ function PolygonShell({
       ))}
 
       {/* Window glass — a thin plane in each window opening */}
-      {windowPlacements.map(w => {
-        // Position: hole-start + lenM/2 along edge, at mid-height of opening
-        const cx = w.wx + Math.cos(w.angle) * (w.lenM / 2);
-        const cz = w.wz - Math.sin(w.angle) * (w.lenM / 2);
-        const cy = w.sillM + w.hM / 2;
-        return (
-          <mesh key={w.winId} position={[cx, cy, cz]} rotation={[0, w.angle, 0]}>
-            <boxGeometry args={[w.lenM - 0.04, w.hM - 0.04, 0.02]} />
-            <meshPhysicalMaterial
-              color="#B8D4E8"
-              transparent opacity={0.35}
-              roughness={0.05}
-              metalness={0}
-              transmission={0.85}
-              ior={1.45}
-            />
-          </mesh>
-        );
-      })}
+      {windowPlacements.map(w => (
+        // 多边形房间的窗改用与矩形路径/外观图**同一个** StyledWindow(带窗框+竖挺+玻璃)，
+        // 不再是原来那块无框、35% 透明的裸玻璃板——它嵌在玻璃幕墙西墙上时**完全看不见**
+        // (用户:W 窗看不到)。同源后效果图的窗与平面图/外观图一致。
+        <PolygonWindowPane
+          key={w.winId}
+          wx={w.wx} wz={w.wz} angle={w.angle}
+          lenM={w.lenM} sillM={w.sillM} hM={w.hM}
+          winId={w.winId} style={w.style}
+        />
+      ))}
 
       {/* Door panels — one per door. Clicking toggles the room's
           door-open state (shared across all doors of this room). */}
@@ -3946,6 +3935,35 @@ function PolygonShell({
         />
       ))}
     </>
+  );
+}
+
+/** 多边形房间的窗：把共享的 <StyledWindow>(与矩形路径/外观图同款窗框+竖挺+玻璃)
+ *  摆到洞口中心。开关状态按 win.id 存 store，与矩形窗/外观图同源。 */
+function PolygonWindowPane({
+  wx, wz, angle, lenM, sillM, hM, winId, style,
+}: {
+  wx: number; wz: number; angle: number;   // hole-start world position + edge angle
+  lenM: number; sillM: number; hM: number;
+  winId: string;
+  style: import("@/lib/types").WindowStyle;
+}) {
+  const isOpen = useDesignerStore(s => !!s.windowOpenByWinId[winId]);
+  const toggleWinOpen = useDesignerStore(s => s.toggleWindowOpen);
+  // 洞口中心 = 沿边起点 + 半个洞长；竖直中心 = 窗台 + 半个窗高。
+  const cx = wx + Math.cos(angle) * (lenM / 2);
+  const cz = wz - Math.sin(angle) * (lenM / 2);
+  const cy = sillM + hM / 2;
+  return (
+    <group position={[cx, cy, cz]} rotation={[0, angle, 0]}>
+      <StyledWindow
+        winLen={lenM}
+        winH={hM}
+        style={style}
+        isOpen={isOpen}
+        onToggle={() => toggleWinOpen(winId)}
+      />
+    </group>
   );
 }
 
@@ -4090,7 +4108,6 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const activeRoom    = useDesignerStore((s) => s.activeRoom);
   const showCompass   = useDesignerStore((s) => s.showCompass);
   const roomState     = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom] ?? EMPTY_ROOM_STATE_RC);
-  const roomWindows   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWindows?.[activeRoom] ?? EMPTY_WINDOWS);
   const roomDimensions = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDimensions?.[activeRoom]);
   const hasDoor    = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomHasDoor?.[activeRoom] ?? true);
   const doorWall   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "S");
@@ -4115,6 +4132,20 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
       curtainWall: curtainWallForDoors,
     }),
     [fpForDoors, activeRoom, interiorDoorH, curtainWallForDoors],
+  );
+  // 窗列表统一走 lib/roomWindows.getRoomWindows —— sill/h/style 在这里一次性补全，
+  // 下游 RoomShell/RoomPolygon 的 holesForWall / RoomWindow 不再各自 `?? 90 / ?? 150`。
+  // 效果图按 curtainGlassWalls 逐面判玻璃，不存在房间级 curtainWall 标记，故这里
+  // 传 curtainWall:false（= 现行 `win.style ?? "sliding"`），保持本视图渲染不变。
+  const defWinSill = useDesignerStore((s) => s.exterior?.defaultWindowSill);
+  const defWinH    = useDesignerStore((s) => s.exterior?.defaultWindowHeight);
+  const roomWindows = useMemo(
+    () => getRoomWindows(fpForDoors, activeRoom, {
+      defaultSillCm: defWinSill,
+      defaultHeightCm: defWinH,
+      curtainWall: false,
+    }),
+    [fpForDoors, activeRoom, defWinSill, defWinH],
   );
   const southWallOpacity = useDesignerStore((s) => s.southWallOpacity);
   const ceilingOpacity = useDesignerStore((s) => s.ceilingOpacity);

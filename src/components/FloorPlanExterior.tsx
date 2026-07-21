@@ -26,6 +26,7 @@ import { useDesignerStore } from "@/lib/store";
 import { overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem, resolveFacadeLayer, resolveFaceOpacity, isExteriorWallSide } from "@/lib/types";
 import { getRoomDoors } from "@/lib/roomDoors";
+import { getRoomWindows } from "@/lib/roomWindows";
 import { getFurnitureById } from "@/lib/furniture";
 import { InteriorRoomDetail } from "./InteriorRoomDetail";
 import { PlacedItemMesh, LightFixtureInner, ExteriorDecorItem } from "./RoomCanvas";
@@ -2763,7 +2764,13 @@ export default function FloorPlanBuilding({
         // 窗：直接沿用原始配置（含 edgeIndex）。computeExteriorWalls 现在按
         // 每条轴对齐边展开成面，会自己把洞口归属到正确的那个面，不再需要
         // 把沿边坐标折算回外接矩形。
-        const wins = fp.roomWindows?.[r] ?? [];
+        // 窗列表统一走 lib/roomWindows.getRoomWindows —— sill/h/style 一次性补全，
+        // 与效果图/2D 同源。传 clamped 的 defWinSill/defWinH（= 现行内联回落值），
+        // 保证渲染值逐字节不变。
+        const wins = getRoomWindows(fp, r, {
+          defaultSillCm: defWinSill, defaultHeightCm: defWinH,
+          curtainWall, widthCm: dd.width, depthCm: dd.depth,
+        });
         const doorWall0 = mergedDoors[r]?.[0]?.wall;
         if (wins.length > 0 && bounds) {
           // 不再"修正"窗户：平面图配在哪面就渲染在哪面。配在内墙上 → 立面本来就
@@ -3045,7 +3052,11 @@ export default function FloorPlanBuilding({
         const floorColor = mats?.floor?.color ?? ROOM_DEFS[room]?.defaultFloorColor ?? "#C8A882";
         const wallColor  = mats?.wall?.color  ?? ROOM_DEFS[room]?.defaultWallColor  ?? "#EDE8E0";
         const placedItems = fp.rooms?.[room]?.placedItems ?? [];
-        const windows = fp.roomWindows?.[room] ?? [];
+        // 窗列表统一走 lib/roomWindows.getRoomWindows —— sill/h/style 一次性补全。
+        const windows = getRoomWindows(fp, room, {
+          defaultSillCm: defWinSill, defaultHeightCm: defWinH,
+          curtainWall, widthCm: d.width, depthCm: d.depth,
+        });
         const isStair = room === "stair";
         const isHallway = room === "hallway";
         const bounds = floorBoundsArr[fi];
@@ -3272,7 +3283,11 @@ export default function FloorPlanBuilding({
           widthCm: d.width, depthCm: d.depth,
           // 同上：门洞侧也不再凭空造门。
         });
-        const winsArr = fp.roomWindows?.[room] ?? [];
+        // 窗列表统一走 lib/roomWindows.getRoomWindows —— 门洞侧与窗渲染同源。
+        const winsArr = getRoomWindows(fp, room, {
+          defaultSillCm: defWinSill, defaultHeightCm: defWinH,
+          curtainWall, widthCm: d.width, depthCm: d.depth,
+        });
         const wh = fp.roomWallsHidden?.[room];
         // Side keys are NSWE — same alphabet as door.wall + roomWallsHidden.
         const sides: Array<{
@@ -3335,7 +3350,6 @@ export default function FloorPlanBuilding({
           const extId    = extMat?.id;
           const lo = Math.min(s.a, s.b), hi = Math.max(s.a, s.b);
           const key = `${fi}|${s.axis}|${Math.round(s.fixed)}|${Math.round(lo)}|${Math.round(hi)}`;
-          const fk  = `${fi}|${s.axis}|${Math.round(s.fixed)}`;
           const seg = map.get(key);
           const shpH = fp.roomShapes?.[room];
           const polyCtxH = (shpH?.points?.length && shpH.preset !== "rect")
@@ -3363,8 +3377,23 @@ export default function FloorPlanBuilding({
             // a duplicate slab on top of them — instead distribute holes into
             // the overlapping segments and only create new segments for the
             // sub-ranges that aren't covered yet.
-            const existing = fixedSegs.get(fk) ?? [];
-            const overlapping = existing.filter(e => e.a < hi && e.b > lo);
+            // 近乎重合的隔墙也算「同一道墙」：两个房间背靠背共用一道隔墙时，平面图
+            // 里两条边本应完全重合(0 缝)。但模板/用户可能把两个房间画偏几厘米——
+            // 例如厨房矩形 S 墙 plan y260 与大堂多边形缺口边 plan y267 差 7cm——两者
+            // 取整平面(fk)不同、dedup 不合并，于是各自生成一道墙：带门洞的那道被另一
+            // 道无门实墙贴面挡住，外观图开门只见实墙、看不到里面(用户:根据平面图渲染，
+            // 渲染器不该自成一套)。因此重叠检测放宽到 ±SNAP_CM：附近平面上、沿墙区间
+            // 相交的段视为同一道墙，把本墙的洞并进去、不再另铺实体板。SNAP 取 15cm
+            // (< 任何真实房间进深，只吃授权误差；共用隔墙本是 0 缝，恒在容差内)。
+            const SNAP_CM = 15;
+            const fRound = Math.round(s.fixed);
+            const existing: WallSeg[] = [];
+            for (let df = fRound - SNAP_CM; df <= fRound + SNAP_CM; df++) {
+              const bucket = fixedSegs.get(`${fi}|${s.axis}|${df}`);
+              if (bucket) existing.push(...bucket);
+            }
+            const overlapping = existing.filter(e =>
+              e.a < hi && e.b > lo && Math.abs(e.fixed - s.fixed) <= SNAP_CM);
 
             // Distribute holes from this wall into every overlapping segment
             // (adjusting x so it's local to each segment's own [a..b] span).

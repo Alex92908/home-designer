@@ -7,6 +7,7 @@ import { FloorPlanMinimap } from "./FloorPlanMinimap";
 import { getFurnitureById } from "@/lib/furniture";
 import { PlacedItem } from "@/lib/types";
 import { getRoomDoors } from "@/lib/roomDoors";
+import { getRoomWindows } from "@/lib/roomWindows";
 import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
 import { getFurnitureNameEn } from "@/locales/itemNames";
 import { evaluateRoom, type EvaluatedItem, type DoorWall as ClearanceDoorWall } from "@/lib/clearance";
@@ -589,6 +590,20 @@ export default function FloorPlan() {
       curtainWall,
     }),
     [fpForDoors, activeRoom, doorHDefault, curtainWall],
+  );
+
+  // 窗渲染同样以 lib/roomWindows.getRoomWindows 为默认值真源（sill/h/style），
+  // 与效果图/外观图统一。**只用于渲染**：drag/edit 与检查器仍读写上面那个未规范化
+  // 的 roomWindows（把默认值写回成显式值会污染"留空=跟随全局默认"的语义）。
+  // 2D 平面图的 WindowSVG 本身只画 pos/len（不消费 sill/h/style），故这一步对
+  // 当前 SVG 输出是幂等的，只是把默认值来源收敛到同一个函数，杜绝未来分叉。
+  const winDefSill = useDesignerStore((s) => s.exterior?.defaultWindowSill);
+  const winDefH    = useDesignerStore((s) => s.exterior?.defaultWindowHeight);
+  const roomWindowsRender = useMemo(
+    () => getRoomWindows(fpForDoors, activeRoom, {
+      defaultSillCm: winDefSill, defaultHeightCm: winDefH, curtainWall,
+    }),
+    [fpForDoors, activeRoom, winDefSill, winDefH, curtainWall],
   );
 
   const t      = useT();
@@ -1696,8 +1711,8 @@ export default function FloorPlan() {
             </>
           )}
 
-          {/* Windows */}
-          {roomWindows.map(win => {
+          {/* Windows —— 渲染读走规范化后的 roomWindowsRender（默认值同源）。 */}
+          {roomWindowsRender.map(win => {
             // Resolve polygon edge for inner-edge windows
             let polygonEdge: { x1: number; z1: number; x2: number; z2: number; length: number } | undefined;
             if (win.edgeIndex != null && roomShape && roomShape.preset !== "rect") {
