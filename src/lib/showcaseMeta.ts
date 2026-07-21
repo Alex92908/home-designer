@@ -51,7 +51,7 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     descZh: "玻璃门面 · 点单柜台+展示柜 · 密集桌位 · 书架墙",
     descEn: "Glass storefront · counter + display · dense tables · book wall",
     tags: ["片场", "咖啡馆", "单层"],
-    image: "☕",
+    image: "/showcase/set-cafe.jpg",
     projectTemplateId: "set-cafe",
   },
   {
