@@ -611,7 +611,7 @@ const GLASS_CURTAIN_VILLA: ProjectTemplate = {
     {
       id: "gcv-f2",
       name: "二层",
-      area: 140,
+      area: 166,
       rooms: [
         // Master suite (south-facing glass wall, generous)
         { room: "master",    x: 0,    y: 0,   width: 620, depth: 460 },
@@ -1365,7 +1365,7 @@ const GLASS_POOL_VILLA_FROM_PLAN: ProjectTemplate = {
     {
       id: "gpvp-f1",
       name: "首层 (源自方案)",
-      area: 140,
+      area: 166,
       rooms: [
         { room: "kitchen",  x: 0,    y: 0,   width: 400,  depth: 320 },
         { room: "bathroom", x: 400,  y: 0,   width: 240,  depth: 320 },
@@ -1843,20 +1843,20 @@ const OFFICE_SET: ProjectTemplate = {
   styleTemplateId: "modern-villa",
 
   exterior: {
-    preset: "glass-curtain",
-    facadeSystem: "curtain-wall",
+    // 实墙 + 大窗户（去玻璃幕墙）。现代简约写真外立面。
+    preset: "modern-minimal",
+    facadeSystem: "punched-window",
     roofStyle: "flat",
     floors: 1,
     hasRooftop: false,
     buildingType: "floor-plan-driven",
-    wallColor: "#F0F0EE",
-    glassColor: "#9FB6C8",
-    glassOpacity: 1,
-    windowFrameColor: "#15171B",
+    wallMaterial: "render",
+    wallColor: "#EDEBE6",
+    windowFrameColor: "#2A2C30",
     entranceFrameColor: "#15171B",
-    roofOverhang: 0.6,
+    roofOverhang: 0.5,
     parapetHeight: 0.4,
-    roofColor: "#2A2A2A",
+    roofColor: "#3A3A3C",
     stoneBaseEnabled: false,
     showPerimeterFence: false,
     yardPreset: "minimal",
@@ -1865,13 +1865,42 @@ const OFFICE_SET: ProjectTemplate = {
   floorLayouts: [
     {
       id: "office-f1",
-      name: "办公室",
-      area: 92,
+      name: "办公楼层",
+      area: 166,
+      // 实墙 + 大窗户（非玻璃幕墙）。回字形：大厅=整层矩形框架(1700×1120)挖中央洞，
+      // 9 个私密房间(上排4+中央走廊+下排4)填洞；进门即大厅，四面留宽边等候/开放工位。
       rooms: [
-        { room: "living",   x: 0,   y: 0,   width: 700, depth: 600 }, // 开放办公区
-        { room: "dining",   x: 700, y: 0,   width: 400, depth: 380 }, // 会议室
-        { room: "kitchen",  x: 700, y: 380, width: 400, depth: 220 }, // 茶水间
-        { room: "bathroom", x: 0,   y: 600, width: 240, depth: 200 },
+        // ═══ 大厅 living：整层外框 1700×1120，中央挖洞 x350-1350 / y180-760 ═══
+        { room: "living", x: 0, y: 0, width: 1700, depth: 1120,
+          name: "大厅", icon: "🏛️",
+          shape: { preset: "custom",
+            points: [[0,0],[1700,0],[1700,1120],[0,1120]],
+            holes: [[[350,180],[1350,180],[1350,760],[350,760]]] },
+          doors: [{ wall: "S", pos: 775, len: 150, style: "glass_swing", h: 220 }],
+          windows: [{ wall: "N", pos: 200, len: 500 }, { wall: "N", pos: 1000, len: 500 },
+            { wall: "W", pos: 300, len: 520 }, { wall: "E", pos: 300, len: 520 },
+            { wall: "S", pos: 150, len: 400 }, { wall: "S", pos: 1150, len: 400 }] },
+        // ── 洞内·上排 y180-400（门朝南通走廊）──
+        { room: "dining",  x: 350,  y: 180, width: 350, depth: 220,
+          name: "会议室", icon: "📊", doors: [{ wall: "S", pos: 130, len: 100 }] },
+        { room: "master",  x: 700,  y: 180, width: 250, depth: 220,
+          name: "独立办公室", icon: "💼", doors: [{ wall: "S", pos: 80, len: 90 }] },
+        { room: "kitchen", x: 950,  y: 180, width: 230, depth: 220,
+          name: "茶水间", icon: "☕", doors: [{ wall: "S", pos: 70, len: 90 }] },
+        { room: "bathroom", x: 1180, y: 180, width: 170, depth: 220,
+          name: "男洗手间", icon: "🚹", doors: [{ wall: "S", pos: 45, len: 80 }] },
+        // ── 中央走廊 hallway y400-500，两端(W/E)敞开通大厅 ──
+        { room: "hallway", x: 350, y: 400, width: 1000, depth: 100,
+          name: "走廊", icon: "🚶", wallsHidden: ["W", "E"] },
+        // ── 洞内·下排 y500-760（门朝北通走廊，与上排对向）──
+        { room: "custom2", x: 350, y: 500, width: 250, depth: 260,
+          name: "吸烟室", icon: "🚬", doors: [{ wall: "N", pos: 85, len: 80 }] },
+        { room: "equipment_room", x: 600, y: 500, width: 250, depth: 260,
+          name: "机房", icon: "🖧", doors: [{ wall: "N", pos: 85, len: 80 }] },
+        { room: "closet", x: 850, y: 500, width: 250, depth: 260,
+          name: "库房", icon: "📦", doors: [{ wall: "N", pos: 85, len: 80 }] },
+        { room: "bathroom2", x: 1100, y: 500, width: 250, depth: 260,
+          name: "女洗手间", icon: "🚺", doors: [{ wall: "N", pos: 85, len: 80 }] },
       ],
     },
   ],
@@ -1879,47 +1908,155 @@ const OFFICE_SET: ProjectTemplate = {
 
   furnitureOverrides: [
     {
+      // ═══ 大厅 living（回字形外框 1700×1120）：四边留宽边=开放工位+入口前台+等候 ═══
+      // N条(z0-180)/W条(x0-350)/E条(x1350-1700) 放开放工位；S条(z760-1120) 前台+等候。
       living: [
-        // 2×2 工位阵（升降桌+办公椅+显示器，显示器靠台面吸附落桌面）
-        { furnitureId: "desk-standing",       x: 200, z: 150, rotation: 0 },
-        { furnitureId: "chair-simple-fabric", x: 200, z: 240, rotation: 0 },
-        { furnitureId: "elec-monitor",        x: 200, z: 140 },
-        { furnitureId: "desk-standing",       x: 500, z: 150, rotation: 0 },
-        { furnitureId: "chair-simple-fabric", x: 500, z: 240, rotation: 0 },
-        { furnitureId: "elec-monitor",        x: 500, z: 140 },
-        { furnitureId: "desk-standing",       x: 200, z: 420, rotation: 180 },
-        { furnitureId: "chair-simple-fabric", x: 200, z: 330, rotation: 180 },
-        { furnitureId: "elec-laptop",         x: 200, z: 430 },
-        { furnitureId: "desk-standing",       x: 500, z: 420, rotation: 180 },
-        { furnitureId: "chair-simple-fabric", x: 500, z: 330, rotation: 180 },
-        { furnitureId: "elec-monitor",        x: 500, z: 430 },
-        // 周边
-        { furnitureId: "bookshelf-wood-lp",   x: 60,  z: 60,  rotation: 90 },
-        { furnitureId: "storage-shelving",    x: 650, z: 60 },
-        { furnitureId: "elec-printer",        x: 650, z: 140 },
-        { furnitureId: "decor-whiteboard",    x: 350, z: 25 },  // 立式白板
-        { furnitureId: "plant-rubber-tree",   x: 60,  z: 540 },
-        { furnitureId: "lamp-pendant-modern", x: 350, z: 290 },
+        // ── N 条：4 个开放工位（贴北窗）──
+        { furnitureId: "desk-standing",   x: 220,  z: 55, rotation: 180 },
+        { furnitureId: "chair-ergonomic", x: 220,  z: 112, rotation: 0 },
+        { furnitureId: "elec-monitor",    x: 220,  z: 43, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 620,  z: 55, rotation: 180 },
+        { furnitureId: "chair-ergonomic", x: 620,  z: 112, rotation: 0 },
+        { furnitureId: "elec-monitor",    x: 620,  z: 43, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 1080, z: 55, rotation: 180 },
+        { furnitureId: "chair-ergonomic", x: 1080, z: 112, rotation: 0 },
+        { furnitureId: "elec-laptop",     x: 1080, z: 43, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 1480, z: 55, rotation: 180 },
+        { furnitureId: "chair-ergonomic", x: 1480, z: 112, rotation: 0 },
+        { furnitureId: "elec-monitor",    x: 1480, z: 43, elevationY: 66 },
+        { furnitureId: "lamp-ceiling-long", x: 420,  z: 90, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-long", x: 1280, z: 90, mountCeiling: true },
+        { furnitureId: "rug-modern-gray",   x: 850, z: 100, scaleW: 3.2, scaleD: 1.2 },
+        // ── W 条：2 个开放工位 + 书架 + 绿植 ──
+        { furnitureId: "desk-standing",   x: 70, z: 320, rotation: 90 },
+        { furnitureId: "chair-ergonomic", x: 135, z: 320, rotation: 270 },
+        { furnitureId: "elec-monitor",    x: 48, z: 320, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 70, z: 560, rotation: 90 },
+        { furnitureId: "chair-ergonomic", x: 135, z: 560, rotation: 270 },
+        { furnitureId: "elec-monitor",    x: 48, z: 560, elevationY: 66 },
+        { furnitureId: "bookshelf-open-white", x: 30, z: 700, rotation: 90 },
+        { furnitureId: "plant-rubber-tree", x: 300, z: 220 },
+        { furnitureId: "lamp-ceiling-long", x: 90, z: 440, mountCeiling: true },
+        // ── E 条：2 个开放工位 + 绿植 + 落地灯 ──
+        { furnitureId: "desk-standing",   x: 1630, z: 320, rotation: 270 },
+        { furnitureId: "chair-ergonomic", x: 1565, z: 320, rotation: 90 },
+        { furnitureId: "elec-monitor",    x: 1652, z: 320, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 1630, z: 560, rotation: 270 },
+        { furnitureId: "chair-ergonomic", x: 1565, z: 560, rotation: 90 },
+        { furnitureId: "elec-monitor",    x: 1652, z: 560, elevationY: 66 },
+        { furnitureId: "plant-monstera",  x: 1400, z: 220 },
+        { furnitureId: "floor_lamp-modern", x: 1660, z: 700 },
+        { furnitureId: "lamp-ceiling-long", x: 1610, z: 440, mountCeiling: true },
+        // ── S 条：入口前台（居中近门 x775）+ 两侧等候区 ──
+        { furnitureId: "counter-bar-straight", x: 775, z: 850, rotation: 180 },
+        { furnitureId: "chair-ergonomic",   x: 775, z: 815, rotation: 0 },
+        { furnitureId: "decor-welcome-sign",x: 720, z: 850, elevationY: 100 },
+        { furnitureId: "plant-rubber-tree", x: 620, z: 800 },
+        { furnitureId: "plant-rubber-tree", x: 930, z: 800 },
+        // 左等候
+        { furnitureId: "sofa-modern-pillows", x: 260, z: 1000, rotation: 0 },
+        { furnitureId: "coffee-oak-round",  x: 260, z: 905 },
+        { furnitureId: "sofa-armchair",     x: 470, z: 970, rotation: 270 },
+        { furnitureId: "rug-modern-gray",   x: 320, z: 960, scaleW: 2.0, scaleD: 1.6 },
+        { furnitureId: "plant-monstera",    x: 60, z: 1060 },
+        // 右等候
+        { furnitureId: "sofa-modern-pillows", x: 1440, z: 1000, rotation: 0 },
+        { furnitureId: "coffee-oak-round",  x: 1440, z: 905 },
+        { furnitureId: "sofa-armchair",     x: 1230, z: 970, rotation: 90 },
+        { furnitureId: "rug-modern-gray",   x: 1380, z: 960, scaleW: 2.0, scaleD: 1.6 },
+        { furnitureId: "plant-rubber-tree", x: 1640, z: 1060 },
+        { furnitureId: "lamp-ceiling-modern", x: 775, z: 880, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-modern", x: 320, z: 960, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-modern", x: 1380, z: 960, mountCeiling: true },
       ],
+      // ═══ 会议室 dining（350×220，门朝南 x130）═══
       dining: [
-        // 会议室：长会议桌 + 六椅 + 白板
-        { furnitureId: "table-conference",  x: 200, z: 190, rotation: 0 },
-        { furnitureId: "chair-modern-gray", x: 90,  z: 110, rotation: 135 },
-        { furnitureId: "chair-modern-gray", x: 200, z: 90,  rotation: 180 },
-        { furnitureId: "chair-modern-gray", x: 310, z: 110, rotation: 225 },
-        { furnitureId: "chair-modern-gray", x: 90,  z: 270, rotation: 45 },
-        { furnitureId: "chair-modern-gray", x: 200, z: 290, rotation: 0 },
-        { furnitureId: "chair-modern-gray", x: 310, z: 270, rotation: 315 },
-        { furnitureId: "decor-whiteboard",  x: 200, z: 20 },
-        { furnitureId: "lamp-pendant-saturno", x: 200, z: 190 },
+        { furnitureId: "table-conference",  x: 175, z: 105, rotation: 0 },
+        { furnitureId: "chair-modern-gray", x: 110, z: 50, rotation: 180 },
+        { furnitureId: "chair-modern-gray", x: 240, z: 50, rotation: 180 },
+        { furnitureId: "chair-modern-gray", x: 110, z: 160, rotation: 0 },
+        { furnitureId: "chair-modern-gray", x: 240, z: 160, rotation: 0 },
+        { furnitureId: "decor-book-stack",  x: 155, z: 100, elevationY: 75 },
+        { furnitureId: "decor-coffee-mug",  x: 210, z: 112, elevationY: 75 },
+        { furnitureId: "elec-tv-flat",      x: 342, z: 105, rotation: 270, elevationY: 130 },
+        { furnitureId: "plant-sansevieria", x: 315, z: 190 },
+        { furnitureId: "rug-nordic-geo",    x: 175, z: 105, scaleW: 1.6, scaleD: 1.2 },
+        { furnitureId: "lamp-ceiling-long", x: 175, z: 105, mountCeiling: true },
       ],
+      // ═══ 独立办公室 master（250×220，门朝南 x80）═══
+      master: [
+        { furnitureId: "desk-standing",     x: 125, z: 55, rotation: 180 },
+        { furnitureId: "chair-ergonomic",   x: 125, z: 108, rotation: 0 },
+        { furnitureId: "elec-monitor",      x: 125, z: 43, elevationY: 66 },
+        { furnitureId: "chair-modern-gray", x: 180, z: 175, rotation: 90 },
+        { furnitureId: "plant-rubber-tree", x: 215, z: 55 },
+        { furnitureId: "rug-nordic-geo",    x: 125, z: 120, scaleW: 1.1, scaleD: 1.0 },
+        { furnitureId: "lamp-ceiling-modern", x: 125, z: 120, mountCeiling: true },
+      ],
+      // ═══ 茶水间 kitchen（230×220，门朝南 x70）═══
       kitchen: [
-        // 茶水间：饮水机 + 冰箱 + 咖啡机 + 备货架
-        { furnitureId: "appliance-water-dispenser", x: 60,  z: 60 },
-        { furnitureId: "fridge-single-white",       x: 150, z: 70 },
-        { furnitureId: "appliance-coffee",          x: 250, z: 55 },
-        { furnitureId: "storage-shelving-2",        x: 340, z: 60 },
-        { furnitureId: "dining_table-bar",          x: 200, z: 160 },
+        { furnitureId: "counter-bar-straight", x: 115, z: 35, rotation: 0 },
+        { furnitureId: "cabinet-upper-white",  x: 115, z: 12, elevationY: 150 },
+        { furnitureId: "appliance-coffee",     x: 60,  z: 35, elevationY: 110 },
+        { furnitureId: "decor-coffee-jar",     x: 170, z: 35, elevationY: 110 },
+        { furnitureId: "fridge-single-white",  x: 200, z: 60 },
+        { furnitureId: "dining_table-bar",     x: 90,  z: 150, rotation: 0 },
+        { furnitureId: "seat-bar-stool",       x: 40,  z: 150, rotation: 90 },
+        { furnitureId: "seat-bar-stool",       x: 140, z: 150, rotation: 270 },
+        { furnitureId: "plant-monstera",       x: 200, z: 190 },
+        { furnitureId: "lamp-ceiling-modern",  x: 115, z: 120, mountCeiling: true },
+      ],
+      // ═══ 男洗手间 bathroom（170×220，门朝南 x45）═══
+      bathroom: [
+        { furnitureId: "toilet-standard",     x: 50,  z: 55, rotation: 0 },
+        { furnitureId: "vanity-single-white", x: 125, z: 50, rotation: 0 },
+        { furnitureId: "decor-trash-bin",     x: 45,  z: 185 },
+        { furnitureId: "plant-sansevieria",   x: 140, z: 185 },
+        { furnitureId: "lamp-ceiling-modern", x: 85,  z: 110, mountCeiling: true },
+      ],
+      // ═══ 吸烟室 custom2（250×260，门朝北 x85）═══
+      custom2: [
+        { furnitureId: "dining_table-bar", x: 160, z: 150, rotation: 0 },
+        { furnitureId: "seat-bar-stool",   x: 160, z: 210, rotation: 0 },
+        { furnitureId: "decor-cigarettes", x: 160, z: 150, elevationY: 97 },
+        { furnitureId: "exhaust-vent",     x: 220, z: 235, elevationY: 200 },
+        { furnitureId: "plant-sansevieria",x: 210, z: 230 },
+        { furnitureId: "decor-trash-bin-2",x: 50,  z: 230 },
+        { furnitureId: "lamp-ceiling-modern", x: 160, z: 150, mountCeiling: true },
+      ],
+      // ═══ 机房 equipment_room（250×260，门朝北 x85）═══
+      equipment_room: [
+        { furnitureId: "storage-shelving",   x: 50,  z: 130, rotation: 90 },
+        { furnitureId: "storage-shelving",   x: 50,  z: 210, rotation: 90 },
+        { furnitureId: "storage-shelving-2", x: 200, z: 130, rotation: 270 },
+        { furnitureId: "storage-shelving-2", x: 200, z: 210, rotation: 270 },
+        { furnitureId: "elec-router",        x: 125, z: 60, elevationY: 70 },
+        { furnitureId: "decor-trash-bin",    x: 210, z: 235 },
+        { furnitureId: "lamp-ceiling-led",   x: 125, z: 150, mountCeiling: true },
+      ],
+      // ═══ 库房 closet（250×260，门朝北 x85）═══
+      closet: [
+        { furnitureId: "storage-shelving",   x: 50,  z: 130, rotation: 90 },
+        { furnitureId: "storage-shelving",   x: 50,  z: 210, rotation: 90 },
+        { furnitureId: "storage-shelving-2", x: 200, z: 130, rotation: 270 },
+        { furnitureId: "storage-shelving-2", x: 200, z: 210, rotation: 270 },
+        { furnitureId: "storage-box",        x: 125, z: 150 },
+        { furnitureId: "storage-crate",      x: 125, z: 225 },
+        { furnitureId: "lamp-ceiling-led",   x: 125, z: 150, mountCeiling: true },
+      ],
+      // ═══ 女洗手间 bathroom2（250×260，门朝北 x85）═══
+      bathroom2: [
+        { furnitureId: "toilet-standard",     x: 60,  z: 205, rotation: 180 },
+        { furnitureId: "vanity-single-white", x: 180, z: 205, rotation: 180 },
+        { furnitureId: "decor-trash-bin",     x: 210, z: 70 },
+        { furnitureId: "plant-sansevieria",   x: 60,  z: 70 },
+        { furnitureId: "lamp-ceiling-modern", x: 125, z: 150, mountCeiling: true },
+      ],
+      // ═══ 走廊 hallway（1000×100，两端通大厅）═══
+      hallway: [
+        { furnitureId: "plant-sansevieria", x: 40,  z: 50 },
+        { furnitureId: "plant-sansevieria", x: 960, z: 50 },
+        { furnitureId: "lamp-ceiling-led",  x: 500, z: 50, mountCeiling: true },
       ],
     },
   ],

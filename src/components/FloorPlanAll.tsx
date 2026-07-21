@@ -1466,8 +1466,12 @@ export default function FloorPlanAll() {
               // Render as polygon for any non-rect preset, OR a rect-preset room that
               // has been shape-initialized (points exist) and the user is actively editing it.
               const isPolygon = shape && (shape.preset !== "rect" || shapeEditRoom === room);
-              const polyPts = isPolygon
-                ? shape!.points.map(([px, pz]) => `${x + px},${y + pz}`).join(" ")
+              // 回字形内洞：用 evenodd path（外环 + 各内洞子路径）替代 polygon，
+              // 使地板/底色在洞处镂空，露出洞内嵌套房间。
+              const polyPathD = isPolygon
+                ? "M" + shape!.points.map(([px, pz]) => `${x + px},${y + pz}`).join("L") + "Z"
+                  + (shape!.holes ?? []).map(h =>
+                      "M" + h.map(([px, pz]) => `${x + px},${y + pz}`).join("L") + "Z").join("")
                 : "";
 
               // ── 墙面状态 / 门窗定位（与其它三个视图同一真源）──────────
@@ -1536,7 +1540,7 @@ export default function FloorPlanAll() {
                       效果图/外观图里已经开敞或透明，唯独全局平面图还是一堵实墙。 */}
                   {isPolygon && (
                     /* 多边形先铺一层底，避免逐边墙带在凹角处露出锯齿缝 */
-                    <polygon points={polyPts} fill="#374151" opacity={0.9} />
+                    <path d={polyPathD} fillRule="evenodd" fill="#374151" opacity={0.9} />
                   )}
                   {wallSegs.map(s => {
                     const sgn = inwardSign(s.frame);
@@ -1552,8 +1556,8 @@ export default function FloorPlanAll() {
                   })}
                   {/* Floor */}
                   {isPolygon ? (
-                    <polygon
-                      points={polyPts}
+                    <path
+                      d={polyPathD} fillRule="evenodd"
                       fill={(rooms[room] ?? {materials:{}}).materials?.floor?.color ?? def.defaultFloorColor}
                       opacity={0.93}
                       style={{ pointerEvents: "none" }}

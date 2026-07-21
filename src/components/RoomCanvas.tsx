@@ -3656,10 +3656,11 @@ class GltfFurnitureWithFallback extends Component<
 // Multiple holes per edge are allowed; they get sorted by offset and
 // the wall between them is filled with box segments.
 function PolygonShell({
-  points, H, wallColor, floorColor, ceilingColor, ceilingOpacity,
+  points, holes, H, wallColor, floorColor, ceilingColor, ceilingOpacity,
   doors, windows, activeRoom, wallsHidden, curtainGlassWalls,
 }: {
   points: Array<[number, number]>; // cm, back-left origin
+  holes?: Array<Array<[number, number]>>; // cm, 回字形内洞（仅挖地板/天花）
   H: number;                       // meters
   wallColor: string;
   floorColor: string;
@@ -3708,8 +3709,20 @@ function PolygonShell({
       else s.lineTo(wx, wz);
     });
     s.closePath();
+    if (holes) for (const h of holes) {
+      if (h.length < 3) continue;
+      const path = new THREE.Path();
+      h.forEach(([x, z], i) => {
+        const wx = x / 100 - W / 2;
+        const wz = z / 100 - D / 2;
+        if (i === 0) path.moveTo(wx, wz);
+        else path.lineTo(wx, wz);
+      });
+      path.closePath();
+      s.holes.push(path);
+    }
     return s;
-  }, [points, W, D]);
+  }, [points, holes, W, D]);
 
   // Compute polygon edges in cm, then build wall segments. If the active
   // door lives on a given edge, that edge gets split into [left | lintel | right]
@@ -4278,6 +4291,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
       {roomShape && roomShape.preset !== "rect" ? (
         <PolygonShell
           points={roomShape.points}
+          holes={roomShape.holes}
           H={H}
           wallColor={wallColor}
           floorColor={floorColor}

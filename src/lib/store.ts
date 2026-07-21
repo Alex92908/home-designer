@@ -2138,14 +2138,19 @@ export const useDesignerStore = create<DesignerStore>()(
           for (const r of layout.rooms) {
             layoutMap[r.room] = { x: r.x, y: r.y };
             dimsMap[r.room]   = { width: r.width, depth: r.depth };
-            // 窗户：**保留用户在平面图里配置的窗**，模板不生成也不清除。
+            // 窗户：**仅当该房间落位/尺寸与旧方案完全一致时**才保留用户在平面图里
+            // 画的窗；否则丢弃。
             //
-            // 这里原本会按 ROOM_DEFS 给每个房间凭空造一扇窗、并把 exteriorStyle
-            // ==="glass" 的房间强制清空。那是为了解决「切模板后残留上一个模板的窗」，
-            // 但代价是用户自己画的窗每次都被删（用户：我明明平面图设置了窗户，
-            // 为什么吃掉了）。用户的数据 > 我猜的整洁度：模板只搬自己声明的东西，
-            // 窗户归平面图管。残留窗只在「该房间本模板根本没有」时才由下面统一清掉。
-            if (existing.roomWindows?.[r.room]) winMap[r.room] = existing.roomWindows[r.room];
+            // 两个矛盾诉求的折中：① 用户实拍「我平面图设置了窗户为什么吃掉了」——
+            // 同一形状下重设/微调模板不该删窗；② 切片场模板时整层房间被重排、改尺寸
+            // （如办公室茶水间从临街厨房变成回字形内岛），旧窗几何意义全失、还会落到
+            // 内墙上。footprint 变了 = 旧窗作废；footprint 没变 = 用户的窗留着。
+            const exWin = existing.roomWindows?.[r.room];
+            const oldDim = existing.roomDimensions?.[r.room];
+            const oldPos = existing.roomLayout?.[r.room];
+            const sameFootprint = oldDim?.width === r.width && oldDim?.depth === r.depth
+              && oldPos?.x === r.x && oldPos?.y === r.y;
+            if (exWin && sameFootprint) winMap[r.room] = exWin;
             // 模板声明了非矩形轮廓就应用；没声明则清掉旧项目残留的自定义形状
             if (r.shape) shapesMap[r.room] = r.shape; else delete shapesMap[r.room];
             // 模板声明了隐藏墙（开放式/骑楼）就应用；没声明则清掉残留
@@ -2203,15 +2208,29 @@ export const useDesignerStore = create<DesignerStore>()(
         //     放在 styleTemplate 之后应用，免得被其默认门窗覆盖。
         //     卫生间/后场声明 concrete 实墙、临街大堂声明 glass + 加宽大门。
         {
+          const nameMeta: Record<string, { name: string; icon: string }> = {};
           const plans = get().floorPlans.map((fp, fi) => {
             const layout = tpl.floorLayouts[fi];
             if (!layout) return fp;
-            const exStyle = { ...(fp.roomExteriorStyle ?? {}) };
+            // roomExteriorStyle **重置**（不合并旧值）：模板显式声明的 glass/concrete
+            // 会在下面的循环里重新设上；没声明的房间回到默认(实墙/auto)。
+            // 不重置的话切模板会粘住上一个模板的 per-room 立面——如办公室大厅粘着
+            // 咖啡馆时代设的 glass，室内立面莫名变玻璃幕墙（用户：整个办公区不是
+            // 幕墙，为什么大厅是幕墙）。与门窗数据同样「模板自持、不继承」。
+            const exStyle: NonNullable<typeof fp.roomExteriorStyle> = {};
             const doorsMap = { ...(fp.roomDoors ?? {}) };
             const windowsMap = { ...(fp.roomWindows ?? {}) };
             let rooms = fp.rooms;
             let touched = false;
             for (const r of layout.rooms) {
+              // 自定义房间显示名/图标（片场把通用房间槽显示成"前台大厅/会议室/男洗手间"）。
+              // customRoomMeta 是工程级、跨楼层，只在 fi===0 收集一次即可。
+              if (fi === 0 && (r.name || r.icon)) {
+                nameMeta[r.room] = {
+                  name: r.name ?? ROOM_DEFS[r.room]?.name ?? r.room,
+                  icon: r.icon ?? ROOM_DEFS[r.room]?.icon ?? "🏠",
+                };
+              }
               if (r.exteriorStyle) { exStyle[r.room] = r.exteriorStyle; touched = true; }
               if (r.doors?.length) {
                 doorsMap[r.room] = r.doors.map((d, i) => ({
@@ -2252,6 +2271,10 @@ export const useDesignerStore = create<DesignerStore>()(
             return touched ? { ...fp, roomExteriorStyle: exStyle, roomDoors: doorsMap, roomWindows: windowsMap, rooms } : fp;
           });
           set({ floorPlans: plans });
+          // 房间自定义显示名/图标（前台大厅/会议室/男洗手间…）。没声明的房间保持既有 meta。
+          if (Object.keys(nameMeta).length) {
+            set(s => ({ customRoomMeta: { ...s.customRoomMeta, ...nameMeta } }));
+          }
         }
 
         // 4. 片场级显式摆放（可选）：风格模板铺完后，逐房间整体替换 placedItems。

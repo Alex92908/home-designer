@@ -2248,18 +2248,31 @@ function RooftopDecorations({
 }
 
 
+/** 由外轮廓 pts + 可选内洞 holes 建 THREE.Shape（用于地板/天花板抠回字形洞）。
+ *  坐标：以房间中心为原点的米。holes 每条 ≥3 点才算数。 */
+function makeShapeWithHoles(
+  pts: Array<[number, number]>, holes?: Array<Array<[number, number]>>,
+): THREE.Shape {
+  const shape = new THREE.Shape(pts.map(([sx, sz]) => new THREE.Vector2(sx, sz)));
+  if (holes) for (const h of holes) {
+    if (h.length >= 3) shape.holes.push(new THREE.Path(h.map(([hx, hz]) => new THREE.Vector2(hx, hz))));
+  }
+  return shape;
+}
+
 // ─── Walkthrough floor with proper texture (wood planks or registered
 // tile texture). Mirrors RoomShell's floor material — gives the
 // walkthrough the same wood-floor look as the effect page. ───────────
 function WalkthroughFloor({
   cx, cz, yBase, rW, rD, floorColor, floorId, insideBuilding,
-  bleed = 0, depthRank = 0, underlayMargin = 0, shapePts,
+  bleed = 0, depthRank = 0, underlayMargin = 0, shapePts, shapeHoles,
 }: {
   cx: number; cz: number; yBase: number; rW: number; rD: number;
   floorColor: string; floorId: string; insideBuilding: boolean;
   /** 多边形轮廓（以房间中心为原点的米）。给了就按真实轮廓裁剪地板，
    *  否则凹口里会露出一块悬空的楼板。矩形房间为 undefined，走原矩形路径。 */
   shapePts?: Array<[number, number]>;
+  shapeHoles?: Array<Array<[number, number]>>;
   /** Per-edge overscan (m). Room floors are exact width×depth rectangles.
    *  At the open room↔corridor boundary (the corridor has no interior wall)
    *  the two floors are separated by the wall-thickness strip, so a gap
@@ -2346,7 +2359,7 @@ function WalkthroughFloor({
         {/* 多边形房间按真实轮廓裁剪（凹角镂空）。bleed 对多边形不适用——
             它是给矩形边界补缝用的，多边形这里先不外扩，需要再单独处理。 */}
         {shapePts
-          ? <shapeGeometry args={[new THREE.Shape(shapePts.map(([sx, sz]) => new THREE.Vector2(sx, sz)))]} />
+          ? <shapeGeometry args={[makeShapeWithHoles(shapePts, shapeHoles)]} />
           : <planeGeometry args={[fW, fD]} />}
         <meshStandardMaterial
           color={floorColor}
@@ -3030,6 +3043,7 @@ export default function FloorPlanBuilding({
       doors: DoorConfig[];
       /** 多边形轮廓（以房间中心为原点的米）。矩形房间为 undefined。 */
       shapePts?: Array<[number, number]>;
+      shapeHoles?: Array<Array<[number, number]>>;
       windows: WindowConfig[];
       isStair: boolean;
       isHallway: boolean;
@@ -3119,14 +3133,20 @@ export default function FloorPlanBuilding({
         // 地板/天花若还是外接矩形，凹口里就会露出一块悬空的楼板+天花夹层。
         // 坐标：换算成**以房间中心 (cx,cz) 为原点的米**，与墙体同一套局部系。
         const shpI = fp.roomShapes?.[room];
+        const toLocal = ([px, pz]: [number, number]): [number, number] => [
+          (p.x + px - planOffset.minX) * CM - W / 2 - cx,
+          (p.y + pz - planOffset.minY) * CM - D / 2 - cz,
+        ];
         const shapePts: Array<[number, number]> | undefined =
           shpI?.points?.length && shpI.preset !== "rect"
-            ? shpI.points.map(([px, pz]) => [
-                (p.x + px - planOffset.minX) * CM - W / 2 - cx,
-                (p.y + pz - planOffset.minY) * CM - D / 2 - cz,
-              ] as [number, number])
+            ? shpI.points.map(toLocal)
             : undefined;
-        result.push({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows: adjustedWindows, isStair, isHallway, autoDoor, wallsHidden, floorHidden, ceilingHidden, shapePts });
+        // 内洞（回字形大厅）：地板/天花板抠掉，避免与洞里嵌的独立房间重叠。
+        const shapeHoles: Array<Array<[number, number]>> | undefined =
+          shapePts && shpI?.holes?.length
+            ? shpI.holes.map(h => h.map(toLocal))
+            : undefined;
+        result.push({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows: adjustedWindows, isStair, isHallway, autoDoor, wallsHidden, floorHidden, ceilingHidden, shapePts, shapeHoles });
       }
     }
     return result;
@@ -7643,7 +7663,7 @@ export default function FloorPlanBuilding({
           </group>
         );
       })}
-      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, wallsHidden, floorHidden, ceilingHidden, shapePts }, ridx) => {
+      {interiorRooms.map(({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows, isStair, isHallway, autoDoor, wallsHidden, floorHidden, ceilingHidden, shapePts, shapeHoles }, ridx) => {
         const wallOpacity = wallXray ? 0.13 : 1.0;
         const isXray = wallXray;
         // 走廊：无内墙、无天花板，仅地板；楼梯间：渲染楼梯几何体
@@ -7678,6 +7698,7 @@ export default function FloorPlanBuilding({
                 depthRank={ridx}
                 underlayMargin={Math.max(0, (exterior.walkthroughFloorUnderlayCm ?? 20) / 100)}
                 shapePts={shapePts}
+                shapeHoles={shapeHoles}
               />
             )}
             {/* ── per-room NSWE wall labels rendered as flat 3D Text
@@ -7825,7 +7846,7 @@ export default function FloorPlanBuilding({
                     注意 ShapeGeometry 在 XY 平面构建，本 mesh 已绕 X 转 -90°，
                     所以第二个分量传 +z（转完正好落到世界 z）。 */}
                 {shapePts
-                  ? <shapeGeometry args={[new THREE.Shape(shapePts.map(([sx, sz]) => new THREE.Vector2(sx, sz)))]} />
+                  ? <shapeGeometry args={[makeShapeWithHoles(shapePts, shapeHoles)]} />
                   : <planeGeometry args={[rW - 0.04, rD - 0.04]} />}
                 <meshStandardMaterial color={exterior.roomCeilingColor ?? "#F5F2EE"} roughness={0.88} side={THREE.DoubleSide}
                   emissive="#FFFDF8" emissiveIntensity={insideBuilding ? 0.08 : 0.02}
@@ -8268,6 +8289,12 @@ export default function FloorPlanBuilding({
                     const fItem = getFurnitureById(p.furnitureId);
                     if (fItem?.category === "curtain") return false;
                   }
+                  // 外观图里，**非幕墙建筑**(实墙/punched-window)的天花吊挂件
+                  // (吊灯/吸顶灯)不渲染：实墙楼从外面本就不看室内天花，这些
+                  // mountCeiling 件定位在近天花高度、屋顶剖切后会浮在屋顶外空中
+                  // （用户实拍：一排灯飘在楼顶上方）。幕墙楼(如咖啡馆)是通透玻璃、
+                  // 成排吊灯是外观特色，curtainWall 下保留。
+                  if (!insideBuilding && !curtainWall && p.mountCeiling) return false;
                   return true;
                 })
                 .map(p => {

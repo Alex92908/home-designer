@@ -18,6 +18,13 @@ export interface RoomShape {
   preset: ShapePreset;
   /** CCW polygon, cm, origin at room back-left. */
   points: Array<[number, number]>;
+  /**
+   * 内洞（回字形/环形房间）。每个洞是一条闭合轮廓(cm，同 points 坐标系)。
+   * **只影响地板/天花板**：地板/天花板按 THREE.Shape + holes 抠掉洞区，避免与洞里
+   * 嵌的独立房间(如办公室大厅中间的会议室/机房岛)重叠。墙/门/窗/碰撞仍只走外轮廓
+   * points，洞四周的墙由洞里那些独立房间自己提供，大厅不在洞边生成墙。
+   */
+  holes?: Array<Array<[number, number]>>;
 }
 
 /** Plain rectangle for the given dims (fallback / "rect" preset). */
