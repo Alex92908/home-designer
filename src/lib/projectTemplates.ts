@@ -1867,40 +1867,43 @@ const OFFICE_SET: ProjectTemplate = {
       id: "office-f1",
       name: "办公楼层",
       area: 240,
-      // 实墙 + 大窗户（非玻璃幕墙）。回字形放大版(2200×1500)：大厅=整层外框挖中央洞，
-      // 四边大留白(边距 330-550cm)；9 个私密房间(上排4+走廊+下排4)填洞。追求大气雅致、不拥挤。
+      // 回字形(2200×1500)：大厅=整层外框挖中央洞(6 个房间填洞)；洗手间不在岛内，
+      // 移到东北角落(贴 N/E 边墙)、前置敞开过道从大厅走进，与其他房间用大厅空间隔开。
       rooms: [
-        // ═══ 大厅 living：整层外框 2200×1500，中央挖洞 x550-1650 / y330-1030 ═══
+        // ═══ 大厅 living：外框挖中央洞 x550-1650/y330-1030 + 东北角开口 x1750-2200/y0-460 ═══
         { room: "living", x: 0, y: 0, width: 2200, depth: 1500,
           name: "大厅", icon: "🏛️",
           shape: { preset: "custom",
-            points: [[0,0],[2200,0],[2200,1500],[0,1500]],
+            points: [[0,0],[1750,0],[1750,460],[2200,460],[2200,1500],[0,1500]],
             holes: [[[550,330],[1650,330],[1650,1030],[550,1030]]] },
           doors: [{ wall: "S", pos: 1100, len: 160, style: "glass_swing", h: 220 }],
-          windows: [{ wall: "N", pos: 260, len: 640 }, { wall: "N", pos: 1300, len: 640 },
-            { wall: "W", pos: 420, len: 660 }, { wall: "E", pos: 420, len: 660 },
+          windows: [{ wall: "N", pos: 260, len: 640 }, { wall: "N", pos: 1080, len: 520 },
+            { wall: "W", pos: 420, len: 660 }, { wall: "E", pos: 560, len: 620 },
             { wall: "S", pos: 220, len: 520 }, { wall: "S", pos: 1460, len: 520 }] },
         // ── 洞内·上排 y330-590（门朝南通走廊）──
-        { room: "dining",  x: 550,  y: 330, width: 330, depth: 260,
-          name: "会议室", icon: "📊", doors: [{ wall: "S", pos: 150, len: 100 }] },
-        { room: "master",  x: 880,  y: 330, width: 250, depth: 260,
-          name: "独立办公室", icon: "💼", doors: [{ wall: "S", pos: 110, len: 90 }] },
-        { room: "kitchen", x: 1130, y: 330, width: 270, depth: 260,
-          name: "茶水间", icon: "☕", doors: [{ wall: "S", pos: 120, len: 90 }] },
-        { room: "bathroom", x: 1400, y: 330, width: 250, depth: 260,
-          name: "男洗手间", icon: "🚹", doors: [{ wall: "S", pos: 110, len: 90 }] },
-        // ── 中央走廊 hallway y590-730（加宽 140），两端(W/E)敞开通大厅 ──
+        { room: "dining",  x: 550,  y: 330, width: 400, depth: 260,
+          name: "会议室", icon: "📊", doors: [{ wall: "S", pos: 180, len: 100 }] },
+        { room: "master",  x: 950,  y: 330, width: 350, depth: 260,
+          name: "独立办公室", icon: "💼", doors: [{ wall: "S", pos: 160, len: 90 }] },
+        { room: "kitchen", x: 1300, y: 330, width: 350, depth: 260,
+          name: "茶水间", icon: "☕", doors: [{ wall: "S", pos: 160, len: 90 }] },
+        // ── 中央走廊 hallway y590-730，两端(W/E)敞开通大厅 ──
         { room: "hallway", x: 550, y: 590, width: 1100, depth: 140,
           name: "走廊", icon: "🚶", wallsHidden: ["W", "E"] },
-        // ── 洞内·下排 y730-1030（门朝北通走廊，与上排对向）──
-        { room: "custom2", x: 550, y: 730, width: 280, depth: 300,
-          name: "吸烟室", icon: "🚬", doors: [{ wall: "N", pos: 100, len: 90 }] },
-        { room: "equipment_room", x: 830, y: 730, width: 280, depth: 300,
-          name: "机房", icon: "🖧", doors: [{ wall: "N", pos: 100, len: 90 }] },
-        { room: "closet", x: 1110, y: 730, width: 280, depth: 300,
-          name: "库房", icon: "📦", doors: [{ wall: "N", pos: 100, len: 90 }] },
-        { room: "bathroom2", x: 1390, y: 730, width: 260, depth: 300,
-          name: "女洗手间", icon: "🚺", doors: [{ wall: "N", pos: 100, len: 90 }] },
+        // ── 洞内·下排 y730-1030（门朝北通走廊）──
+        { room: "custom2", x: 550, y: 730, width: 370, depth: 300,
+          name: "吸烟室", icon: "🚬", doors: [{ wall: "N", pos: 140, len: 90 }] },
+        { room: "equipment_room", x: 920, y: 730, width: 370, depth: 300,
+          name: "机房", icon: "🖧", doors: [{ wall: "N", pos: 140, len: 90 }] },
+        { room: "closet", x: 1290, y: 730, width: 360, depth: 300,
+          name: "库房", icon: "📦", doors: [{ wall: "N", pos: 140, len: 90 }] },
+        // ── 东北角落 洗手间区：男/女洗贴 N 边墙，过道 S 面敞开通大厅（可直接走进）──
+        { room: "bathroom", x: 1750, y: 0, width: 220, depth: 260,
+          name: "男洗手间", icon: "🚹", doors: [{ wall: "S", pos: 110, len: 90 }] },
+        { room: "bathroom2", x: 1970, y: 0, width: 230, depth: 260,
+          name: "女洗手间", icon: "🚺", doors: [{ wall: "S", pos: 115, len: 90 }] },
+        { room: "bedroom", x: 1750, y: 260, width: 450, depth: 200,
+          name: "洗手间过道", icon: "🚻", wallsHidden: ["S"] },
       ],
     },
   ],
@@ -1960,23 +1963,18 @@ const OFFICE_SET: ProjectTemplate = {
         { furnitureId: "plant-rubber-tree", x: 275, z: 370 },
         { furnitureId: "lamp-ceiling-long", x: 105, z: 680, mountCeiling: true },
         { furnitureId: "lamp-ceiling-long", x: 445, z: 680, mountCeiling: true },
-        // ── E 条：开放办公 2×2（4 工位）+ 绿植 + 落地灯 ──
-        { furnitureId: "desk-standing",   x: 2095, z: 500, rotation: 270 },
-        { furnitureId: "chair-ergonomic", x: 2025, z: 500, rotation: 90 },
-        { furnitureId: "elec-monitor",    x: 2122, z: 500, elevationY: 66 },
+        // ── E 条：开放办公 ×2（z860 一排）+ 东北洗手间区入口绿植隔断 ──
         { furnitureId: "desk-standing",   x: 2095, z: 860, rotation: 270 },
         { furnitureId: "chair-ergonomic", x: 2025, z: 860, rotation: 90 },
         { furnitureId: "elec-monitor",    x: 2122, z: 860, elevationY: 66 },
-        { furnitureId: "desk-standing",   x: 1755, z: 500, rotation: 90 },
-        { furnitureId: "chair-ergonomic", x: 1825, z: 500, rotation: 270 },
-        { furnitureId: "elec-monitor",    x: 1732, z: 500, elevationY: 66 },
         { furnitureId: "desk-standing",   x: 1755, z: 860, rotation: 90 },
         { furnitureId: "chair-ergonomic", x: 1825, z: 860, rotation: 270 },
         { furnitureId: "elec-monitor",    x: 1732, z: 860, elevationY: 66 },
-        { furnitureId: "plant-monstera",  x: 1925, z: 370 },
-        { furnitureId: "floor_lamp-modern", x: 2140, z: 680 },
-        { furnitureId: "lamp-ceiling-long", x: 2095, z: 680, mountCeiling: true },
-        { furnitureId: "lamp-ceiling-long", x: 1755, z: 680, mountCeiling: true },
+        // 洗手间过道口(z460)南侧绿植隔断，与工位拉开距离
+        { furnitureId: "plant-rubber-tree", x: 1820, z: 580 },
+        { furnitureId: "plant-monstera",    x: 2120, z: 580 },
+        { furnitureId: "floor_lamp-modern", x: 2140, z: 700 },
+        { furnitureId: "lamp-ceiling-long", x: 1925, z: 860, mountCeiling: true },
       ],
       // ═══ 会议室 dining（330×260，门朝南 x150）═══
       dining: [
@@ -2015,12 +2013,11 @@ const OFFICE_SET: ProjectTemplate = {
         { furnitureId: "plant-monstera",       x: 235, z: 220 },
         { furnitureId: "lamp-ceiling-modern",  x: 135, z: 135, mountCeiling: true },
       ],
-      // ═══ 男洗手间 bathroom（250×260，门朝南 x110）═══
+      // ═══ 男洗手间 bathroom（220×260，东北角贴北墙，门朝南通过道）═══
       bathroom: [
-        { furnitureId: "toilet-standard",     x: 60,  z: 70, rotation: 0 },
-        { furnitureId: "vanity-single-white", x: 175, z: 60, rotation: 0 },
-        { furnitureId: "decor-trash-bin",     x: 55,  z: 220 },
-        { furnitureId: "plant-sansevieria",   x: 200, z: 220 },
+        { furnitureId: "toilet-standard",     x: 55,  z: 55, rotation: 180 },
+        { furnitureId: "vanity-single-white", x: 175, z: 140, rotation: 270 },
+        { furnitureId: "decor-trash-bin",     x: 55,  z: 200 },
         { furnitureId: "lamp-ceiling-modern", x: 125, z: 130, mountCeiling: true },
       ],
       // ═══ 吸烟室 custom2（280×300，门朝北 x100）═══
@@ -2053,13 +2050,19 @@ const OFFICE_SET: ProjectTemplate = {
         { furnitureId: "storage-crate",      x: 140, z: 255 },
         { furnitureId: "lamp-ceiling-led",   x: 140, z: 175, mountCeiling: true },
       ],
-      // ═══ 女洗手间 bathroom2（260×300，门朝北 x100）═══
+      // ═══ 女洗手间 bathroom2（230×260，东北角贴北墙，门朝南通过道）═══
       bathroom2: [
-        { furnitureId: "toilet-standard",     x: 65,  z: 235, rotation: 180 },
-        { furnitureId: "vanity-single-white", x: 190, z: 235, rotation: 180 },
-        { furnitureId: "decor-trash-bin",     x: 230, z: 80 },
-        { furnitureId: "plant-sansevieria",   x: 65,  z: 80 },
-        { furnitureId: "lamp-ceiling-modern", x: 130, z: 175, mountCeiling: true },
+        { furnitureId: "toilet-standard",     x: 55,  z: 55, rotation: 180 },
+        { furnitureId: "vanity-single-white", x: 180, z: 140, rotation: 270 },
+        { furnitureId: "plant-sansevieria",   x: 55,  z: 200 },
+        { furnitureId: "lamp-ceiling-modern", x: 125, z: 130, mountCeiling: true },
+      ],
+      // ═══ 洗手间过道 bedroom（450×200 横条，S 面敞开通大厅）═══
+      bedroom: [
+        { furnitureId: "plant-sansevieria", x: 60,  z: 90 },
+        { furnitureId: "plant-sansevieria", x: 390, z: 90 },
+        { furnitureId: "lamp-ceiling-led",  x: 150, z: 90, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-led",  x: 300, z: 90, mountCeiling: true },
       ],
       // ═══ 走廊 hallway（1100×140，两端通大厅）═══
       hallway: [
