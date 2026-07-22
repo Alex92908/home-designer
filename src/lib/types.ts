@@ -619,6 +619,9 @@ export interface ExteriorSettings {
    *  (= 650 blades, mostly near building). 0 disables the carpet
    *  (use when the blades read as falling rain at low camera angles). */
   grassDensity?: number;
+  /** 建筑外地面材质。默认 "grass"（草坪，别墅/住宅原行为不变）；"tile" = 青地砖
+   *  铺装广场（商业片场如咖啡馆用，青灰哑光砖）。见 HouseCanvas.Ground。 */
+  groundType?: "grass" | "tile";
   /** Show the cobblestone entry driveway leading south from the building.
    *  Default false — the procedural floor-plan-driven yard is meant to be
    *  1:1 with the user's YardPlan, so the auto-added driveway reads as an

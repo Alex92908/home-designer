@@ -3154,11 +3154,11 @@ function useProceduralGrassTexture(): THREE.Texture {
 // "through" the water. So we punch a rectangular hole in the lawn at each
 // pool footprint, letting the GLB's own tiled basin + water show through.
 const EMPTY_GRASS_POOLS: import("@/lib/types").YardItem[] = [];
-function GrassGroundTextured({ size, tint }: { size: number; tint: string }) {
-  const texture = useProceduralGrassTexture();
+// 地面几何：默认整块 plane；有泳池时按泳池脚印抠矩形洞，让 GLB 泳池盆/水面透出。
+// 草地与青地砖两种地面共用（复用抠洞逻辑，避免青砖模式丢泳池洞）。
+function usePoolHoleGroundGeometry(size: number): THREE.BufferGeometry {
   const items = useDesignerStore(s => s.yardPlan?.items ?? EMPTY_GRASS_POOLS);
-
-  const geometry = useMemo(() => {
+  return useMemo(() => {
     const pools = items.filter(isYardPrefab).filter(p => p.prefabKind === "pool");
     const half = size / 2;
     // No pools → plain plane (cheapest path, unchanged look).
@@ -3210,7 +3210,11 @@ function GrassGroundTextured({ size, tint }: { size: number; tint: string }) {
     uv.needsUpdate = true;
     return geo;
   }, [items, size]);
+}
 
+function GrassGroundTextured({ size, tint }: { size: number; tint: string }) {
+  const texture = useProceduralGrassTexture();
+  const geometry = usePoolHoleGroundGeometry(size);
   // Task 1: 大草地 plane 永远在视野，跳过 frustum 测试
   return (
     <mesh
@@ -3227,6 +3231,61 @@ function GrassGroundTextured({ size, tint }: { size: number; tint: string }) {
         metalness={0.0}
         envMapIntensity={0.12}
       />
+    </mesh>
+  );
+}
+
+// 程序青地砖纹理：青灰/黛绿哑光地砖 + 深青灰缝，逐砖轻微色差（无外部资源，画布生成）。
+// 青地砖比原来的暖白砖稳重，和深色门框+玻璃幕墙的现代调子更配（用户：是不是应该青地砖）。
+function useTileTexture(): THREE.Texture {
+  return useMemo(() => {
+    const N = 1024, tiles = 8;
+    const grout = Math.max(3, Math.round((N / tiles) * 0.04));
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = N;
+    const ctx = cv.getContext("2d")!;
+    ctx.fillStyle = "#5E6E68"; // 深青灰缝
+    ctx.fillRect(0, 0, N, N);
+    const cell = N / tiles;
+    for (let ty = 0; ty < tiles; ty++) {
+      for (let tx = 0; tx < tiles; tx++) {
+        const j = ((tx * 7 + ty * 13) % 13) - 6;   // -6..+6 逐砖色差
+        const r = 150 + j, g = 168 + j, b = 160 + j;  // 青灰/黛绿
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(tx * cell + grout / 2, ty * cell + grout / 2, cell - grout, cell - grout);
+      }
+    }
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.anisotropy = 8;
+    return tex;
+  }, []);
+}
+
+// 整块青地砖地面（商业片场）：复用泳池抠洞几何 + 青地砖纹理。
+function TileGroundTextured({ size }: { size: number }) {
+  const geometry = usePoolHoleGroundGeometry(size);
+  const tex = useTileTexture();
+  // 几何 UV 已重映射成 0..1 覆盖整块 size×size；8 砖/画布、目标单砖 ~0.6m
+  // → repeat = size /(8*0.6) ≈ size/4.8，铺满整个地面。
+  const map = useMemo(() => {
+    const t = tex.clone();
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    const r = Math.max(8, Math.round(size / 4.8));
+    t.repeat.set(r, r);
+    t.needsUpdate = true;
+    return t;
+  }, [tex, size]);
+  return (
+    <mesh
+      geometry={geometry}
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[0, -0.499, 0]}
+      receiveShadow
+      frustumCulled={false}
+    >
+      <meshStandardMaterial map={map} roughness={0.55} metalness={0.02} envMapIntensity={0.5} />
     </mesh>
   );
 }
@@ -3271,7 +3330,7 @@ function EntryPath({ W, D }: { W: number; D: number }) {
   );
 }
 
-function Ground({ W, D, lawnTint, grassDensity }: { W: number; D: number; lawnTint?: string; grassDensity?: number }) {
+function Ground({ W, D, lawnTint, grassDensity, groundType }: { W: number; D: number; lawnTint?: string; grassDensity?: number; groundType?: "grass" | "tile" }) {
   // Single large plane — no seam between "far" and "near" zones.
   // Sized to fill the camera frustum; PBR texture loads async via Suspense.
   const size = Math.max(W, D) * 7 + 40;
@@ -3280,13 +3339,14 @@ function Ground({ W, D, lawnTint, grassDensity }: { W: number; D: number; lawnTi
   // hide the procedural ground plane edge for a typical 10 m villa.
   const grassRadius = Math.min(22, Math.max(W, D) * 1.6 + 8);
   const tint = lawnTint ?? "#7E8E6A";
-  // Fallback colour is the tint × a mid-grass green so the unloaded state
-  // doesn't flash bright kindergarten green. Multiplied via THREE.Color.
+  const isTile = groundType === "tile";   // 青地砖广场（商业片场）vs 默认草坪
+  // Fallback colour: 草地用 tint × 中绿；青砖用青灰，避免加载瞬间闪绿。
   const fallbackCol = useMemo(() => {
+    if (isTile) return new THREE.Color("#96A49C");
     const c = new THREE.Color(tint);
     c.multiply(new THREE.Color("#5F7A48"));
     return c;
-  }, [tint]);
+  }, [tint, isTile]);
   return (
     <>
       <Suspense fallback={
@@ -3295,7 +3355,9 @@ function Ground({ W, D, lawnTint, grassDensity }: { W: number; D: number; lawnTi
           <meshStandardMaterial color={fallbackCol} roughness={0.96} />
         </mesh>
       }>
-        <GrassGroundTextured size={size} tint={tint} />
+        {isTile
+          ? <TileGroundTextured size={size} />
+          : <GrassGroundTextured size={size} tint={tint} />}
       </Suspense>
       {/* Instanced grass blades around building — skips building footprint.
           Count is scaled by ExteriorSettings.grassDensity (0..2).
@@ -3304,8 +3366,9 @@ function Ground({ W, D, lawnTint, grassDensity }: { W: number; D: number; lawnTi
           / dark speckles against the sky, which the user explicitly rejected.
           The textured ground plane (GrassGroundTextured) already gives a
           convincing lawn on its own. Users who want close-up 3D blades can
-          opt back in via ExteriorSettings.grassDensity (0..2). */}
-      {(grassDensity ?? 0) > 0 && (
+          opt back in via ExteriorSettings.grassDensity (0..2).
+          青地砖模式不撒草叶。 */}
+      {!isTile && (grassDensity ?? 0) > 0 && (
         <GrassCarpet W={W} D={D}
           count={Math.round(650 * Math.max(0, Math.min(2, grassDensity ?? 0)))}
           radius={grassRadius} lawnTint={tint} />
@@ -6830,8 +6893,8 @@ export default function HouseCanvas() {
              so it can't z-fight with room floors at y=0.025. Walkthrough
              needs Ground so the user can step through the front door and
              roam the yard without falling into the void. ── */}
-        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} />}
-        {!isRichGlassVilla && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} />}
+        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} groundType={exterior.groundType} />}
+        {!isRichGlassVilla && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} groundType={exterior.groundType} />}
         {!insideBuilding && !isRichGlassVilla && (exterior.entryPathEnabled ?? false) && <EntryPath W={W} D={D} />}
         {/* rich-glass-villa (non-FPD): minimal stone plaza only */}
         {!insideBuilding && isRichGlassVilla && _buildingType !== "floor-plan-driven" && (
