@@ -8017,8 +8017,15 @@ export default function FloorPlanBuilding({
               // 替代原来 GlassCurtain 的静态装饰门(用户：幕墙门能推开吗)。
               // 其余面(普通实墙/内门)仍按效果图门样式。
               const _doorOnGlassFace = curtainWall && (() => {
-                const _dpl = floorPlans[fi]?.roomLayout?.[room];
-                const _ddm = floorPlans[fi]?.roomDimensions?.[room];
+                const _fpX = floorPlans[fi];
+                if (!_fpX) return false;
+                // 面是否玻璃幕墙:语义直判(免坐标)。原来拿**外接矩形**坐标撞
+                // exteriorPlanes 的**真实边**坐标键，多边形房间(凸/L 形)对不上
+                // → 门被判成非幕墙面、拿不到玻璃门样式/竖挺吸附(见 polygon
+                // bbox-vs-edge 教训)。OR 上原坐标法，矩形房间零回归。
+                if (resolveFacadeLayer(_fpX, room, door.wall, "glass", curtainWall)) return true;
+                const _dpl = _fpX.roomLayout?.[room];
+                const _ddm = _fpX.roomDimensions?.[room];
                 if (!_dpl || !_ddm) return false;
                 const _dax = (door.wall === "N" || door.wall === "S") ? "h" : "v";
                 const _dwc = door.wall === "S" ? _dpl.y + _ddm.depth
@@ -8110,8 +8117,14 @@ export default function FloorPlanBuilding({
               // 该窗是否落在「玻璃幕墙面」(exteriorPlanes)——是则参与幕墙竖挺分格、
               // 吸附到它那一格(与门同理);否则是普通实墙上的窗,保持原 pos/len。
               const _winOnGlassFace = curtainWall && (() => {
-                const _wpl = floorPlans[fi]?.roomLayout?.[room];
-                const _wdm = floorPlans[fi]?.roomDimensions?.[room];
+                const _fpX = floorPlans[fi];
+                if (!_fpX) return false;
+                // 面是否玻璃幕墙:语义直判(免坐标),与门/盒墙同口径。原坐标法对多边形
+                // 房间会对不上(外接矩形 vs 真实边)→ 窗拿不到竖挺分格吸附。OR 保底、
+                // 矩形房间零回归。
+                if (resolveFacadeLayer(_fpX, room, win.wall, "glass", curtainWall)) return true;
+                const _wpl = _fpX.roomLayout?.[room];
+                const _wdm = _fpX.roomDimensions?.[room];
                 if (!_wpl || !_wdm) return false;
                 const _wax = (win.wall === "N" || win.wall === "S") ? "h" : "v";
                 const _wwc = win.wall === "S" ? _wpl.y + _wdm.depth
