@@ -2067,23 +2067,32 @@ const RESTAURANT_SET: ProjectTemplate = {
   name: "小餐馆片场",
   nameEn: "Bistro Set",
   emoji: "🍜",
-  description: "片场 · 单层 · 四桌堂食+后厨 · 拍聚餐/市井戏",
-  descriptionEn: "Film set · 1F · 4-table dining + kitchen · Dinner scenes",
-  areaSqm: 86,
+  description: "片场 · 单层 · 玻璃门面 · 开放后厨+卡座+密集桌位 · 拍聚餐/市井戏",
+  descriptionEn: "Film set · 1F · Glass storefront · Open kitchen + booths + tables",
+  areaSqm: 96,
   palette: ["#EFE8DC", "#4A3A2A", "#B0503A"],
   styleTemplateId: "modern-villa",
 
+  // 对标咖啡馆：临街玻璃门面 + 骑楼露天座；暖木/陶土色的市井小馆调性。
   exterior: {
-    preset: "modern-minimal",
+    preset: "glass-curtain",
+    facadeSystem: "curtain-wall",
     roofStyle: "flat",
     floors: 1,
     hasRooftop: false,
     buildingType: "floor-plan-driven",
-    wallMaterial: "render",
-    wallColor: "#EFE8DC",
+    wallColor: "#F0E9DD",
+    wallBaseColor: "#EFE8DC",
+    glassColor: "#C4D2CB",
+    glassOpacity: 1,
+    windowFrameColor: "#2A2018",
+    entranceFrameColor: "#2A2018",
+    woodSoffit: true,
+    roofOverhang: 0.8,
+    parapetHeight: 0,
+    roofSlabColor: "#4A3A2A",
     roofColor: "#4A3A2A",
     accentColor: "#B0503A",
-    windowFrameColor: "#3A2A1A",
     stoneBaseEnabled: false,
     showPerimeterFence: false,
     yardPreset: "minimal",
@@ -2093,11 +2102,28 @@ const RESTAURANT_SET: ProjectTemplate = {
     {
       id: "resto-f1",
       name: "小餐馆",
-      area: 86,
+      area: 96,
+      // 咖啡馆式布局：大堂 L 形（兜西北后厨/卫生间两缺口），临街玻璃门面（南+东），
+      // 走廊=沿街骑楼露天座；后厨半开放（E 墙拆开=开放式厨房+出餐口）。
       rooms: [
-        { room: "living",   x: 0,   y: 0, width: 700, depth: 600 }, // 堂食区
-        { room: "kitchen",  x: 700, y: 0, width: 380, depth: 600 }, // 后厨
-        { room: "bathroom", x: 0,   y: 600, width: 220, depth: 200 },
+        // 西北后厨（半开放：拆 E 墙对着大堂；后场隐私→实墙立面）
+        { room: "kitchen",  x: 0, y: 0, width: 300, depth: 300,
+          name: "后厨", icon: "🍳", exteriorStyle: "concrete", wallsHidden: ["E"] },
+        // 西侧卫生间（小 WC；实墙立面；E 墙开门通大堂）
+        { room: "bathroom", x: 0, y: 300, width: 300, depth: 200,
+          name: "洗手间", icon: "🚻", exteriorStyle: "concrete",
+          doors: [{ wall: "E", pos: 100, len: 90 }] },
+        // 大堂 L 形（1200×620，兜西北 300×500 缺口）；临街玻璃门面 + 南墙大门 + 门楣店招
+        { room: "living",   x: 0, y: 0, width: 1200, depth: 620,
+          name: "大堂", icon: "🍽️", exteriorStyle: "glass",
+          shape: { preset: "custom",
+            points: [[300,0],[1200,0],[1200,620],[0,620],[0,500],[300,500]] },
+          doors: [{ wall: "S", pos: 600, len: 160, style: "glass_swing", h: 210 }],
+          wallDecor: [{ furnitureId: "sign-cafe-wall", wall: "S", u: 0.5, v: 0.92,
+            label: "市井小馆|SHIJING BISTRO" }] },
+        // 沿街骑楼露天座（走廊语义；四面墙隐藏成露台）
+        { room: "hallway",  x: 0, y: 620, width: 1200, depth: 180,
+          name: "露天座", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
       ],
     },
   ],
@@ -2105,38 +2131,107 @@ const RESTAURANT_SET: ProjectTemplate = {
 
   furnitureOverrides: [
     {
+      // ═══ 大堂 living（L 形 1200×620，西北 300×500 缺口=后厨/卫生间）═══
+      // 坐标 living-local：(0,0)=包围盒西北角，x→东(0-1200)，z→南(0-620)。
+      // 服务脊线沿缺口东缘(x300)一字排开：出餐口→收银；密集桌位居中；卡座沿东墙。
       living: [
-        // 四桌堂食
-        { furnitureId: "dining-oak-rect",      x: 190, z: 170 },
-        { furnitureId: "chair-nordic-oak",     x: 190, z: 65,  rotation: 180 },
-        { furnitureId: "chair-nordic-oak",     x: 190, z: 275, rotation: 0 },
-        { furnitureId: "chair-nordic-oak",     x: 85,  z: 170, rotation: 90 },
-        { furnitureId: "chair-nordic-oak",     x: 295, z: 170, rotation: 270 },
-        { furnitureId: "dining-oak-rect",      x: 520, z: 170 },
-        { furnitureId: "chair-modern-gray",    x: 520, z: 65,  rotation: 180 },
-        { furnitureId: "chair-modern-gray",    x: 520, z: 275, rotation: 0 },
-        { furnitureId: "chair-modern-gray",    x: 415, z: 170, rotation: 90 },
-        { furnitureId: "chair-modern-gray",    x: 625, z: 170, rotation: 270 },
-        { furnitureId: "dining_table-cafe-rustic", x: 190, z: 470 },
-        { furnitureId: "chair-industrial-black", x: 115, z: 470, rotation: 90 },
-        { furnitureId: "chair-industrial-black", x: 265, z: 470, rotation: 270 },
-        { furnitureId: "dining_table-cafe-rustic", x: 520, z: 470 },
-        { furnitureId: "chair-industrial-black", x: 445, z: 470, rotation: 90 },
-        { furnitureId: "chair-industrial-black", x: 595, z: 470, rotation: 270 },
-        // 东墙卡座（自带餐桌的软座）
-        { furnitureId: "seat-diner-booth",     x: 620, z: 250, rotation: 270 },
-        // 氛围
-        { furnitureId: "mural-great-wave",     x: 350, z: 20 },
-        { furnitureId: "decor-menu-chalkboard",x: 60,  z: 300, rotation: 90 },
-        { furnitureId: "plant-rubber-tree",    x: 55,  z: 545 },
-        { furnitureId: "lamp-pendant-ikea4",   x: 190, z: 300 },
-        { furnitureId: "lamp-pendant-ikea4",   x: 520, z: 300 },
+        // ── 服务脊线（缺口东缘 x300，面朝大堂）：出餐口 + 收银 ──
+        { furnitureId: "counter-bar-wood",   x: 345, z: 130, rotation: 90 },
+        { furnitureId: "decor-copper-pots",  x: 345, z: 70,  rotation: 90, elevationY: 110 },
+        { furnitureId: "decor-pots-pans",    x: 345, z: 190, rotation: 90, elevationY: 110 },
+        { furnitureId: "counter-wooden-bar", x: 345, z: 400, rotation: 90 },
+        { furnitureId: "electronics-pos",    x: 360, z: 400, rotation: 90, elevationY: 118 },
+        { furnitureId: "decor-welcome-sign", x: 360, z: 330, elevationY: 118 },
+        { furnitureId: "plant-rubber-tree",  x: 345, z: 560 },
+
+        // ── 密集桌位：4-6 人长桌 ×2（西）+ 2-4 人圆桌 ×2（中）──
+        { furnitureId: "dining_table-mahogany", x: 620, z: 160 },
+        { furnitureId: "chair-nordic-oak", x: 560, z: 95,  rotation: 180 },
+        { furnitureId: "chair-nordic-oak", x: 680, z: 95,  rotation: 180 },
+        { furnitureId: "chair-nordic-oak", x: 560, z: 225, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 680, z: 225, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 522, z: 160, rotation: 90 },
+        { furnitureId: "chair-nordic-oak", x: 718, z: 160, rotation: 270 },
+        { furnitureId: "decor-cutlery", x: 575, z: 145, elevationY: 76 },
+        { furnitureId: "decor-cutlery", x: 665, z: 175, rotation: 180, elevationY: 76 },
+        { furnitureId: "decor-tulip",   x: 620, z: 160, elevationY: 76 },
+
+        { furnitureId: "dining_table-mahogany", x: 620, z: 450 },
+        { furnitureId: "chair-modern-gray", x: 560, z: 385, rotation: 180 },
+        { furnitureId: "chair-modern-gray", x: 680, z: 385, rotation: 180 },
+        { furnitureId: "chair-modern-gray", x: 560, z: 515, rotation: 0 },
+        { furnitureId: "chair-modern-gray", x: 680, z: 515, rotation: 0 },
+        { furnitureId: "chair-modern-gray", x: 522, z: 450, rotation: 90 },
+        { furnitureId: "chair-modern-gray", x: 718, z: 450, rotation: 270 },
+        { furnitureId: "decor-cutlery", x: 575, z: 435, elevationY: 76 },
+        { furnitureId: "decor-cutlery", x: 665, z: 465, rotation: 180, elevationY: 76 },
+        { furnitureId: "decor-tea-set", x: 620, z: 450, elevationY: 76 },
+
+        { furnitureId: "dining_table-cafe-rustic", x: 880, z: 160 },
+        { furnitureId: "chair-industrial-black", x: 880, z: 94,  rotation: 180 },
+        { furnitureId: "chair-industrial-black", x: 880, z: 226, rotation: 0 },
+        { furnitureId: "chair-industrial-black", x: 814, z: 160, rotation: 90 },
+        { furnitureId: "chair-industrial-black", x: 946, z: 160, rotation: 270 },
+        { furnitureId: "decor-tulip",       x: 880, z: 160, elevationY: 74 },
+        { furnitureId: "decor-fruit-bowl",  x: 855, z: 172, elevationY: 74 },
+
+        { furnitureId: "dining_table-cafe-rustic", x: 880, z: 450 },
+        { furnitureId: "chair-industrial-black", x: 880, z: 384, rotation: 180 },
+        { furnitureId: "chair-industrial-black", x: 880, z: 516, rotation: 0 },
+        { furnitureId: "chair-industrial-black", x: 814, z: 450, rotation: 90 },
+        { furnitureId: "chair-industrial-black", x: 946, z: 450, rotation: 270 },
+        { furnitureId: "decor-tulip",       x: 880, z: 450, elevationY: 74 },
+        { furnitureId: "decor-cutlery",     x: 855, z: 462, elevationY: 74 },
+
+        // ── 沿东墙卡座 ×2（自带餐桌软座，开口朝西）──
+        { furnitureId: "seat-diner-booth", x: 1095, z: 175, rotation: 270 },
+        { furnitureId: "decor-vase-single", x: 1095, z: 175, elevationY: 74 },
+        { furnitureId: "seat-diner-booth", x: 1095, z: 445, rotation: 270 },
+        { furnitureId: "decor-vase-single", x: 1095, z: 445, elevationY: 74 },
+
+        // ── 装饰墙 + 绿植 + 成排暖光吊灯 ──
+        { furnitureId: "mural-inkwash",  x: 780, z: 12 },
+        { furnitureId: "plant-monstera", x: 1160, z: 40 },
+        { furnitureId: "plant-rubber-tree", x: 1160, z: 585 },
+        { furnitureId: "plant-hanging-pothos", x: 750, z: 300, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4", x: 620, z: 160, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4", x: 620, z: 450, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4", x: 880, z: 160, mountCeiling: true },
+        { furnitureId: "lamp-pendant-ikea4", x: 880, z: 450, mountCeiling: true },
+        { furnitureId: "lamp-pendant-modern", x: 345, z: 400, mountCeiling: true },
       ],
+      // ═══ 后厨 kitchen（300×300，开放式，E 墙拆开对大堂）═══
       kitchen: [
-        // 后厨：中岛+设备（橱柜由风格模板铺）
-        { furnitureId: "kitchen_cabinet-island-pan", x: 190, z: 300, rotation: 90 },
-        { furnitureId: "fridge-french-door",         x: 80,  z: 80 },
-        { furnitureId: "kitchen_cabinet-island-sink",x: 320, z: 100, rotation: 270 },
+        { furnitureId: "kitchen_cabinet-island-pan", x: 150, z: 100, rotation: 0 },
+        { furnitureId: "appliance-cooktop",   x: 150, z: 100, elevationY: 90 },
+        { furnitureId: "decor-pots-pans",     x: 110, z: 95,  elevationY: 90 },
+        { furnitureId: "appliance-hood-caple",x: 150, z: 40,  elevationY: 175 },
+        { furnitureId: "kitchen_cabinet-island-sink", x: 255, z: 90, rotation: 0 },
+        { furnitureId: "fridge-french-door",  x: 65,  z: 250 },
+        { furnitureId: "storage-shelving",    x: 40,  z: 90,  rotation: 90 },
+        { furnitureId: "lamp-ceiling-led",    x: 150, z: 150, mountCeiling: true },
+      ],
+      // ═══ 洗手间 bathroom（300×200，小 WC）═══
+      bathroom: [
+        { furnitureId: "toilet-standard",     x: 60,  z: 100, rotation: 90 },
+        { furnitureId: "vanity-single-white", x: 210, z: 50 },
+        { furnitureId: "decor-trash-bin",     x: 60,  z: 175 },
+        { furnitureId: "plant-sansevieria",   x: 265, z: 175 },
+        { furnitureId: "lamp-ceiling-modern", x: 150, z: 100, mountCeiling: true },
+      ],
+      // ═══ 露天座 hallway（1200×180 骑楼）：小圆桌 + 绿植 ═══
+      hallway: [
+        { furnitureId: "dining_table-cafe-marble", x: 300, z: 90 },
+        { furnitureId: "chair-modern-gray", x: 240, z: 90, rotation: 90 },
+        { furnitureId: "chair-modern-gray", x: 360, z: 90, rotation: 270 },
+        { furnitureId: "dining_table-cafe-marble", x: 640, z: 90 },
+        { furnitureId: "chair-modern-gray", x: 580, z: 90, rotation: 90 },
+        { furnitureId: "chair-modern-gray", x: 700, z: 90, rotation: 270 },
+        { furnitureId: "dining_table-cafe-marble", x: 980, z: 90 },
+        { furnitureId: "chair-modern-gray", x: 920, z: 90, rotation: 90 },
+        { furnitureId: "chair-modern-gray", x: 1040, z: 90, rotation: 270 },
+        { furnitureId: "plant-rubber-tree", x: 60,  z: 90 },
+        { furnitureId: "plant-rubber-tree", x: 1140, z: 90 },
       ],
     },
   ],
