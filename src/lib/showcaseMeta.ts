@@ -71,7 +71,7 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     descZh: "玻璃门面 · 开放后厨 · 沿墙卡座 · 骑楼露天座 · 市井暖调",
     descEn: "Glass storefront · open kitchen · wall booths · patio seating",
     tags: ["片场", "餐馆", "单层"],
-    image: "🍜",
+    image: "/showcase/set-restaurant.jpg",
     projectTemplateId: "set-restaurant",
   },
 ];
