@@ -1897,11 +1897,11 @@ const OFFICE_SET: ProjectTemplate = {
           name: "机房", icon: "🖧", doors: [{ wall: "N", pos: 140, len: 90 }] },
         { room: "closet", x: 1290, y: 730, width: 360, depth: 300,
           name: "库房", icon: "📦", doors: [{ wall: "N", pos: 140, len: 90 }] },
-        // ── 东北角落 洗手间区：男/女洗贴 N 边墙，过道 S 面敞开通大厅（可直接走进）──
+        // ── 东北角落 洗手间区：男/女洗贴 N 边墙、门开在各自外侧，盥洗台居中放过道 ──
         { room: "bathroom", x: 1750, y: 0, width: 220, depth: 260,
-          name: "男洗手间", icon: "🚹", doors: [{ wall: "S", pos: 110, len: 90 }] },
+          name: "男洗手间", icon: "🚹", doors: [{ wall: "S", pos: 55, len: 90 }] },
         { room: "bathroom2", x: 1970, y: 0, width: 230, depth: 260,
-          name: "女洗手间", icon: "🚺", doors: [{ wall: "S", pos: 115, len: 90 }] },
+          name: "女洗手间", icon: "🚺", doors: [{ wall: "S", pos: 175, len: 90 }] },
         { room: "bedroom", x: 1750, y: 260, width: 450, depth: 200,
           name: "洗手间过道", icon: "🚻", wallsHidden: ["S"] },
       ],
@@ -2013,12 +2013,11 @@ const OFFICE_SET: ProjectTemplate = {
         { furnitureId: "plant-monstera",       x: 235, z: 220 },
         { furnitureId: "lamp-ceiling-modern",  x: 135, z: 135, mountCeiling: true },
       ],
-      // ═══ 男洗手间 bathroom（220×260，东北角贴北墙，门朝南通过道）═══
+      // ═══ 男洗手间 bathroom（220×260，隔间只留坐便，盥洗在过道）═══
       bathroom: [
-        { furnitureId: "toilet-standard",     x: 55,  z: 55, rotation: 180 },
-        { furnitureId: "vanity-single-white", x: 175, z: 140, rotation: 270 },
-        { furnitureId: "decor-trash-bin",     x: 55,  z: 200 },
-        { furnitureId: "lamp-ceiling-modern", x: 125, z: 130, mountCeiling: true },
+        { furnitureId: "toilet-standard",     x: 110, z: 70, rotation: 180 },
+        { furnitureId: "decor-trash-bin",     x: 55,  z: 205 },
+        { furnitureId: "lamp-ceiling-modern", x: 110, z: 130, mountCeiling: true },
       ],
       // ═══ 吸烟室 custom2（280×300，门朝北 x100）═══
       custom2: [
@@ -2050,19 +2049,22 @@ const OFFICE_SET: ProjectTemplate = {
         { furnitureId: "storage-crate",      x: 140, z: 255 },
         { furnitureId: "lamp-ceiling-led",   x: 140, z: 175, mountCeiling: true },
       ],
-      // ═══ 女洗手间 bathroom2（230×260，东北角贴北墙，门朝南通过道）═══
+      // ═══ 女洗手间 bathroom2（230×260，隔间只留坐便，盥洗在过道）═══
       bathroom2: [
-        { furnitureId: "toilet-standard",     x: 55,  z: 55, rotation: 180 },
-        { furnitureId: "vanity-single-white", x: 180, z: 140, rotation: 270 },
-        { furnitureId: "plant-sansevieria",   x: 55,  z: 200 },
-        { furnitureId: "lamp-ceiling-modern", x: 125, z: 130, mountCeiling: true },
+        { furnitureId: "toilet-standard",     x: 115, z: 70, rotation: 180 },
+        { furnitureId: "plant-sansevieria",   x: 55,  z: 205 },
+        { furnitureId: "lamp-ceiling-modern", x: 115, z: 130, mountCeiling: true },
       ],
-      // ═══ 洗手间过道 bedroom（450×200 横条，S 面敞开通大厅）═══
+      // ═══ 洗手间过道 bedroom（450×200 横条，S 面敞开通大厅）：盥洗台居中(男女门在两侧) ═══
       bedroom: [
-        { furnitureId: "plant-sansevieria", x: 60,  z: 90 },
-        { furnitureId: "plant-sansevieria", x: 390, z: 90 },
-        { furnitureId: "lamp-ceiling-led",  x: 150, z: 90, mountCeiling: true },
-        { furnitureId: "lamp-ceiling-led",  x: 300, z: 90, mountCeiling: true },
+        { furnitureId: "vanity-double-marble", x: 225, z: 32, rotation: 0 },
+        { furnitureId: "mirror-cabinet",       x: 225, z: 10, elevationY: 140 },
+        { furnitureId: "faucet-basin",         x: 190, z: 30, elevationY: 82 },
+        { furnitureId: "faucet-basin",         x: 260, z: 30, elevationY: 82 },
+        { furnitureId: "plant-sansevieria",    x: 55,  z: 150 },
+        { furnitureId: "plant-sansevieria",    x: 395, z: 150 },
+        { furnitureId: "lamp-ceiling-led",     x: 150, z: 100, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-led",     x: 300, z: 100, mountCeiling: true },
       ],
       // ═══ 走廊 hallway（1100×140，两端通大厅）═══
       hallway: [
@@ -2134,15 +2136,16 @@ const RESTAURANT_SET: ProjectTemplate = {
           name: "VIP 包间", icon: "👑", exteriorStyle: "concrete",
           doors: [{ wall: "S", pos: 280, len: 110 }] },
         // ── 东北角 洗手间区（与 VIP 间隔 x2020-2380 绿植缓冲）──
-        // 过道：矩形横条(y260-440)，S 面整面敞开通大堂→可直接走进；男女厕在其北侧贴边墙
+        // 过道：矩形横条(y260-440)，S 面整面敞开通大堂→可直接走进；男女厕门开在各自外侧，
+        // 盥洗台居中放过道；男女厕在其北侧贴边墙
         { room: "bedroom",  x: 2380, y: 260, width: 620, depth: 180,
           name: "洗手间过道", icon: "🚻", exteriorStyle: "concrete", wallsHidden: ["S"] },
         { room: "bathroom", x: 2380, y: 0, width: 310, depth: 260,
           name: "男洗手间", icon: "🚹", exteriorStyle: "concrete",
-          doors: [{ wall: "S", pos: 155, len: 100 }] },
+          doors: [{ wall: "S", pos: 65, len: 100 }] },
         { room: "bathroom2", x: 2690, y: 0, width: 310, depth: 260,
           name: "女洗手间", icon: "🚺", exteriorStyle: "concrete",
-          doors: [{ wall: "S", pos: 155, len: 100 }] },
+          doors: [{ wall: "S", pos: 245, len: 100 }] },
         // ── 大堂 多边形（floor 3000；兜西北后场块 x0-2020 + 东北洗手间块 x2380-3000，
         //     中间隔断缓冲 x2020-2380 通到北墙）；玻璃门面 + 南门 + 店招 ──
         { room: "living",   x: 0, y: 0, width: 3000, depth: 1020,
@@ -2365,28 +2368,30 @@ const RESTAURANT_SET: ProjectTemplate = {
         { furnitureId: "plant-monstera",   x: 490, z: 390 },
         { furnitureId: "lamp-pendant-saturno", x: 230, z: 205, mountCeiling: true },
       ],
-      // ═══ 洗手间过道 bedroom（620×180 横条，S 面整面敞开通大堂）═══
+      // ═══ 洗手间过道 bedroom（620×180 横条，S 面敞开）：盥洗台居中(男女门在两侧) ═══
       bedroom: [
-        { furnitureId: "plant-sansevieria",  x: 60,  z: 90 },
-        { furnitureId: "plant-sansevieria",  x: 560, z: 90 },
-        { furnitureId: "lamp-ceiling-led",   x: 220, z: 90, mountCeiling: true },
-        { furnitureId: "lamp-ceiling-led",   x: 420, z: 90, mountCeiling: true },
+        { furnitureId: "vanity-double-marble", x: 310, z: 32, rotation: 0 },
+        { furnitureId: "mirror-cabinet",       x: 310, z: 10, elevationY: 140 },
+        { furnitureId: "faucet-basin",         x: 275, z: 30, elevationY: 82 },
+        { furnitureId: "faucet-basin",         x: 345, z: 30, elevationY: 82 },
+        { furnitureId: "plant-sansevieria",    x: 70,  z: 130 },
+        { furnitureId: "plant-sansevieria",    x: 550, z: 130 },
+        { furnitureId: "lamp-ceiling-led",     x: 180, z: 100, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-led",     x: 440, z: 100, mountCeiling: true },
       ],
-      // ═══ 男洗手间 bathroom（310×260，2 隔间贴北墙 + 洗手台，门朝南通过道）═══
+      // ═══ 男洗手间 bathroom（310×260，2 隔间贴北墙，盥洗在过道）═══
       bathroom: [
-        { furnitureId: "toilet-standard",     x: 90,  z: 55, rotation: 180 },
-        { furnitureId: "toilet-standard",     x: 200, z: 55, rotation: 180 },
-        { furnitureId: "vanity-single-white", x: 280, z: 140, rotation: 270 },
+        { furnitureId: "toilet-standard",     x: 120, z: 55, rotation: 180 },
+        { furnitureId: "toilet-standard",     x: 230, z: 55, rotation: 180 },
         { furnitureId: "decor-trash-bin",     x: 60,  z: 210 },
-        { furnitureId: "lamp-ceiling-modern", x: 160, z: 130, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-modern", x: 170, z: 130, mountCeiling: true },
       ],
-      // ═══ 女洗手间 bathroom2（310×260，2 隔间贴北墙 + 洗手台，门朝南通过道）═══
+      // ═══ 女洗手间 bathroom2（310×260，2 隔间贴北墙，盥洗在过道）═══
       bathroom2: [
-        { furnitureId: "toilet-standard",     x: 90,  z: 55, rotation: 180 },
-        { furnitureId: "toilet-standard",     x: 200, z: 55, rotation: 180 },
-        { furnitureId: "vanity-single-white", x: 280, z: 140, rotation: 270 },
+        { furnitureId: "toilet-standard",     x: 120, z: 55, rotation: 180 },
+        { furnitureId: "toilet-standard",     x: 230, z: 55, rotation: 180 },
         { furnitureId: "plant-sansevieria",   x: 60,  z: 210 },
-        { furnitureId: "lamp-ceiling-modern", x: 160, z: 130, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-modern", x: 170, z: 130, mountCeiling: true },
       ],
       // ═══ 露天座 hallway（3000×200 骑楼）：小圆桌 ×7 + 绿植 ═══
       hallway: [
