@@ -4513,6 +4513,13 @@ export default function FloorPlanBuilding({
               const _dm = floorPlans[fi]?.roomDimensions?.[room];
               const _isGlassFace = (axis: "h" | "v", wc: number) =>
                 !!_pl && !!_dm && exteriorPlanes.has(`${fi}|${axis}|${Math.round(wc)}`);
+              // 按「边坐标」匹配 exteriorPlanes 对**多边形**房间不可靠：房间盒子是外接
+              // 矩形(用 _pl.x/_pl.x+width)，而 exteriorPlanes 的玻璃键是多边形**真实边**
+              // 坐标(凸/L 形的 W/E 边常内缩 1~2cm)→ 键对不上 → 玻璃后露奶白盒墙
+              // (用户：WE 墙从里看是实墙)。这里补一条**免坐标**的直判：该面实墙层不显示
+              // (=玻璃/框/开敞)就跳过奶油盒墙。与上面坐标法 OR，矩形房间行为零回归。
+              const _sideNotSolid = (side: import("@/lib/types").WallSide) =>
+                resolveFacadeLayer(fp, room, side, "wall", curtainWall) === false;
               // 也要跳过「用户在平面图里隐藏掉的面」(roomWallsHidden)——隐藏=开口，
               // 既不该有玻璃幕墙、也不该有这堵奶油盒墙，否则隐藏后仍显示乳白墙
               // (用户：客厅 N 墙隐藏了却还显示乳白墙)。
@@ -4523,10 +4530,10 @@ export default function FloorPlanBuilding({
               const _fpDoors    = floorPlans[fi]?.roomDoors?.[room] ?? [];
               const _hasDoor    = (side: string) =>
                 _fpDoorWall === side || (_fpDoors as Array<{wall:string}>).some(d => d.wall === side);
-              const skipS = !!_hid?.S || (!!_dm && _isGlassFace("h", (_pl?.y ?? 0) + (_dm?.depth ?? 0))) || _hasDoor("S");
-              const skipN = !!_hid?.N || _isGlassFace("h", _pl?.y ?? 0) || _hasDoor("N");
-              const skipE = !!_hid?.E || (!!_dm && _isGlassFace("v", (_pl?.x ?? 0) + (_dm?.width ?? 0))) || _hasDoor("E");
-              const skipW = !!_hid?.W || _isGlassFace("v", _pl?.x ?? 0) || _hasDoor("W");
+              const skipS = !!_hid?.S || _sideNotSolid("S") || (!!_dm && _isGlassFace("h", (_pl?.y ?? 0) + (_dm?.depth ?? 0))) || _hasDoor("S");
+              const skipN = !!_hid?.N || _sideNotSolid("N") || _isGlassFace("h", _pl?.y ?? 0) || _hasDoor("N");
+              const skipE = !!_hid?.E || _sideNotSolid("E") || (!!_dm && _isGlassFace("v", (_pl?.x ?? 0) + (_dm?.width ?? 0))) || _hasDoor("E");
+              const skipW = !!_hid?.W || _sideNotSolid("W") || _isGlassFace("v", _pl?.x ?? 0) || _hasDoor("W");
               return (
                 <group key={`gbox-${fi}-${room}`} position={[cx, cy, cz]}>
                   {/* 南墙 S（+Z 方向，朝 -Z 即朝室内）*/}
