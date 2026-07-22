@@ -2113,24 +2113,25 @@ const RESTAURANT_SET: ProjectTemplate = {
       id: "resto-f1",
       name: "小餐馆",
       area: 330,
-      // 大餐馆：后场一排(y0-440)=商用后厨 + 包间×2 + 男女洗手间 + VIP 包间，全朝南开门通大堂；
-      // 大堂 = 兜住这排后场的 L 形大厅(bbox 2800×1020)，临街玻璃门面；南接骑楼露天座。
+      // 大餐馆：后场排(y0-440)分区——西北角=BOH(后厨+男女洗手间聚一起，远离客用)，
+      // 东侧=客用私密区(包间一/二 + VIP)。全朝南开门通大堂；大堂 L 形兜住(bbox 2800×1020)。
       rooms: [
-        // ── 后场一排（y0-440，各房朝南开门/开口通大堂）──
+        // ── 西北角 BOH 区（后厨 + 男女洗手间聚一起）──
         { room: "kitchen",  x: 0, y: 0, width: 780, depth: 440,
           name: "后厨", icon: "🍳", exteriorStyle: "concrete", wallsHidden: ["S"] },
-        { room: "dining",   x: 780, y: 0, width: 320, depth: 440,
-          name: "包间一", icon: "🍱", exteriorStyle: "concrete",
-          doors: [{ wall: "S", pos: 160, len: 100 }] },
-        { room: "master",   x: 1100, y: 0, width: 320, depth: 440,
-          name: "包间二", icon: "🍷", exteriorStyle: "concrete",
-          doors: [{ wall: "S", pos: 160, len: 100 }] },
-        { room: "bathroom", x: 1420, y: 0, width: 220, depth: 440,
+        { room: "bathroom", x: 780, y: 0, width: 220, depth: 440,
           name: "男洗手间", icon: "🚹", exteriorStyle: "concrete",
           doors: [{ wall: "S", pos: 110, len: 90 }] },
-        { room: "bathroom2", x: 1640, y: 0, width: 220, depth: 440,
+        { room: "bathroom2", x: 1000, y: 0, width: 220, depth: 440,
           name: "女洗手间", icon: "🚺", exteriorStyle: "concrete",
           doors: [{ wall: "S", pos: 110, len: 90 }] },
+        // ── 东侧客用私密区（包间一/二 + VIP，远离后厨洗手间）──
+        { room: "dining",   x: 1220, y: 0, width: 320, depth: 440,
+          name: "包间一", icon: "🍱", exteriorStyle: "concrete",
+          doors: [{ wall: "S", pos: 160, len: 100 }] },
+        { room: "master",   x: 1540, y: 0, width: 320, depth: 440,
+          name: "包间二", icon: "🍷", exteriorStyle: "concrete",
+          doors: [{ wall: "S", pos: 160, len: 100 }] },
         { room: "study",    x: 1860, y: 0, width: 540, depth: 440,
           name: "VIP 包间", icon: "👑", exteriorStyle: "concrete",
           doors: [{ wall: "S", pos: 270, len: 110 }] },
