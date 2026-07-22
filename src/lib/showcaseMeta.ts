@@ -70,7 +70,7 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     nameEn: "Restaurant Set",
     descZh: "大堂散座 · 包间×2+VIP · 商用后厨 · 男女洗手间 · 骑楼露天",
     descEn: "Dining hall · 2 private + VIP rooms · pro kitchen · M/F WC · patio",
-    tags: ["片场", "大餐馆", "单层"],
+    tags: ["片场", "餐馆", "单层"],
     image: "/showcase/set-restaurant.jpg",
     projectTemplateId: "set-restaurant",
   },
