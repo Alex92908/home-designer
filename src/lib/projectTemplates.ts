@@ -2079,7 +2079,7 @@ const RESTAURANT_SET: ProjectTemplate = {
   emoji: "🍽️",
   description: "片场 · 单层 · 大堂散座+卡座+吧台 · 包间×2+VIP包间 · 商用后厨 · 男女洗手间 · 骑楼露天",
   descriptionEn: "Film set · 1F · Dining hall + booths + bar · 2 private + VIP rooms · pro kitchen · M/F WC",
-  areaSqm: 330,
+  areaSqm: 345,
   palette: ["#EFE8DC", "#4A3A2A", "#B0503A"],
   styleTemplateId: "modern-villa",
 
@@ -2112,39 +2112,47 @@ const RESTAURANT_SET: ProjectTemplate = {
     {
       id: "resto-f1",
       name: "小餐馆",
-      area: 330,
-      // 大餐馆：后场排(y0-440)分区——西北角=BOH(后厨+男女洗手间聚一起，远离客用)，
-      // 东侧=客用私密区(包间一/二 + VIP)。全朝南开门通大堂；大堂 L 形兜住(bbox 2800×1020)。
+      area: 345,
+      // 大餐馆(floor 3000×1220)分区：西北角=后厨(BOH，开口 S 出餐)；中段=客用私密区
+      // (包间一/二 + VIP)；东北角落=洗手间，前置一条 L 形过道(从大堂进→往北→拐弯才到
+      // 男女洗手间，厕所从大堂看不见)；VIP 与过道之间留一段大堂缺口(x2020-2420)做隔离。
       rooms: [
-        // ── 西北角 BOH 区（后厨 + 男女洗手间聚一起）──
+        // ── 西北角 后厨（开口 S 出餐）──
         { room: "kitchen",  x: 0, y: 0, width: 780, depth: 440,
           name: "后厨", icon: "🍳", exteriorStyle: "concrete", wallsHidden: ["S"] },
-        { room: "bathroom", x: 780, y: 0, width: 220, depth: 440,
-          name: "男洗手间", icon: "🚹", exteriorStyle: "concrete",
-          doors: [{ wall: "S", pos: 110, len: 90 }] },
-        { room: "bathroom2", x: 1000, y: 0, width: 220, depth: 440,
-          name: "女洗手间", icon: "🚺", exteriorStyle: "concrete",
-          doors: [{ wall: "S", pos: 110, len: 90 }] },
-        // ── 东侧客用私密区（包间一/二 + VIP，远离后厨洗手间）──
-        { room: "dining",   x: 1220, y: 0, width: 320, depth: 440,
+        // ── 中段 客用私密区（包间一/二 + VIP）──
+        { room: "dining",   x: 780, y: 0, width: 340, depth: 440,
           name: "包间一", icon: "🍱", exteriorStyle: "concrete",
-          doors: [{ wall: "S", pos: 160, len: 100 }] },
-        { room: "master",   x: 1540, y: 0, width: 320, depth: 440,
+          doors: [{ wall: "S", pos: 170, len: 100 }] },
+        { room: "master",   x: 1120, y: 0, width: 340, depth: 440,
           name: "包间二", icon: "🍷", exteriorStyle: "concrete",
-          doors: [{ wall: "S", pos: 160, len: 100 }] },
-        { room: "study",    x: 1860, y: 0, width: 540, depth: 440,
+          doors: [{ wall: "S", pos: 170, len: 100 }] },
+        { room: "study",    x: 1460, y: 0, width: 560, depth: 440,
           name: "VIP 包间", icon: "👑", exteriorStyle: "concrete",
-          doors: [{ wall: "S", pos: 270, len: 110 }] },
-        // ── 大堂 L 形（bbox 2800×1020，兜西北 2400×440 后场排）；玻璃门面 + 南门 + 门楣店招 ──
-        { room: "living",   x: 0, y: 0, width: 2800, depth: 1020,
+          doors: [{ wall: "S", pos: 280, len: 110 }] },
+        // ── 东北角落 洗手间区（隔缺口 x2020-2420 与 VIP 分开）──
+        // 洗手间过道：L 形(顶横条 y0-120 + 右竖条 localx440-580/y120-440)，S 端通大堂
+        { room: "bedroom",  x: 2420, y: 0, width: 580, depth: 440,
+          name: "洗手间过道", icon: "🚻", exteriorStyle: "concrete", wallsHidden: ["S"],
+          shape: { preset: "custom",
+            points: [[0,0],[580,0],[580,440],[440,440],[440,120],[0,120]] } },
+        { room: "bathroom", x: 2420, y: 120, width: 220, depth: 320,
+          name: "男洗手间", icon: "🚹", exteriorStyle: "concrete",
+          doors: [{ wall: "N", pos: 110, len: 90 }] },
+        { room: "bathroom2", x: 2640, y: 120, width: 220, depth: 320,
+          name: "女洗手间", icon: "🚺", exteriorStyle: "concrete",
+          doors: [{ wall: "N", pos: 110, len: 90 }] },
+        // ── 大堂 多边形（floor 3000×1020，兜西北后场块 x0-2020 + 东北洗手间块 x2420-3000，
+        //     中间缺口 x2020-2420 通到北墙）；玻璃门面 + 南门 + 门楣店招 ──
+        { room: "living",   x: 0, y: 0, width: 3000, depth: 1020,
           name: "大堂", icon: "🍽️", exteriorStyle: "glass",
           shape: { preset: "custom",
-            points: [[2400,0],[2800,0],[2800,1020],[0,1020],[0,440],[2400,440]] },
-          doors: [{ wall: "S", pos: 1300, len: 200, style: "glass_swing", h: 210 }],
+            points: [[0,440],[2020,440],[2020,0],[2420,0],[2420,440],[3000,440],[3000,1020],[0,1020]] },
+          doors: [{ wall: "S", pos: 1400, len: 200, style: "glass_swing", h: 210 }],
           wallDecor: [{ furnitureId: "sign-cafe-wall", wall: "S", u: 0.5, v: 0.93,
             label: "宴福楼|YANFU RESTAURANT" }] },
         // ── 沿街骑楼露天座 ──
-        { room: "hallway",  x: 0, y: 1020, width: 2800, depth: 200,
+        { room: "hallway",  x: 0, y: 1020, width: 3000, depth: 200,
           name: "露天座", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
       ],
     },
@@ -2269,22 +2277,28 @@ const RESTAURANT_SET: ProjectTemplate = {
         { furnitureId: "decor-tulip",   x: 2440, z: 900, elevationY: 74 },
         { furnitureId: "lamp-pendant-ikea4", x: 2440, z: 900, mountCeiling: true },
 
-        // ── 东厢卡座 ×4（右上角 2 + 东墙 2，开口朝西）──
-        { furnitureId: "seat-diner-booth", x: 2700, z: 150, rotation: 270 },
-        { furnitureId: "decor-vase-single", x: 2700, z: 150, elevationY: 74 },
-        { furnitureId: "seat-diner-booth", x: 2700, z: 350, rotation: 270 },
-        { furnitureId: "decor-vase-single", x: 2700, z: 350, elevationY: 74 },
-        { furnitureId: "seat-diner-booth", x: 2700, z: 640, rotation: 270 },
-        { furnitureId: "decor-vase-single", x: 2700, z: 640, elevationY: 74 },
-        { furnitureId: "seat-diner-booth", x: 2700, z: 880, rotation: 270 },
-        { furnitureId: "decor-vase-single", x: 2700, z: 880, elevationY: 74 },
+        // ── 东墙卡座 ×2（开口朝西，避开洗手间过道入口 y440-680）──
+        { furnitureId: "seat-diner-booth", x: 2900, z: 760, rotation: 270 },
+        { furnitureId: "decor-vase-single", x: 2900, z: 760, elevationY: 74 },
+        { furnitureId: "seat-diner-booth", x: 2900, z: 930, rotation: 270 },
+        { furnitureId: "decor-vase-single", x: 2900, z: 930, elevationY: 74 },
 
-        // ── 装饰墙 + 大绿植点睛 + 吊挂绿萝 ──
-        { furnitureId: "mural-inkwash",  x: 2600, z: 14 },
+        // ── 中间缺口北窗雅座（x2020-2420 通到北墙）+ 水墨装饰墙 ──
+        { furnitureId: "mural-inkwash",  x: 2220, z: 14 },
+        { furnitureId: "dining_table-cafe-rustic", x: 2220, z: 300 },
+        { furnitureId: "chair-modern-gray", x: 2220, z: 234, rotation: 180 },
+        { furnitureId: "chair-modern-gray", x: 2220, z: 366, rotation: 0 },
+        { furnitureId: "chair-modern-gray", x: 2154, z: 300, rotation: 90 },
+        { furnitureId: "chair-modern-gray", x: 2286, z: 300, rotation: 270 },
+        { furnitureId: "decor-tulip",   x: 2220, z: 300, elevationY: 74 },
+        { furnitureId: "lamp-pendant-ikea4", x: 2220, z: 300, mountCeiling: true },
+
+        // ── 大绿植点睛 + 吊挂绿萝 ──
         { furnitureId: "plant-rubber-tree", x: 60, z: 980 },
+        { furnitureId: "plant-rubber-tree", x: 2950, z: 980 },
         { furnitureId: "plant-hanging-pothos", x: 1000, z: 740, mountCeiling: true },
         { furnitureId: "plant-hanging-pothos", x: 1560, z: 900, mountCeiling: true },
-        { furnitureId: "plant-hanging-pothos", x: 2440, z: 740, mountCeiling: true },
+        { furnitureId: "plant-hanging-pothos", x: 2500, z: 740, mountCeiling: true },
       ],
       // ═══ 后厨 kitchen（780×440 商用后厨，S 开口=出餐口）═══
       kitchen: [
@@ -2355,23 +2369,30 @@ const RESTAURANT_SET: ProjectTemplate = {
         { furnitureId: "plant-monstera",   x: 490, z: 390 },
         { furnitureId: "lamp-pendant-saturno", x: 230, z: 205, mountCeiling: true },
       ],
-      // ═══ 男洗手间 bathroom（220×440，2 隔间 + 洗手台）═══
+      // ═══ 洗手间过道 bedroom（L 形，从大堂进→拐弯到男女洗手间）═══
+      bedroom: [
+        { furnitureId: "plant-sansevieria",  x: 60,  z: 60 },
+        { furnitureId: "plant-monstera",     x: 510, z: 385 },
+        { furnitureId: "lamp-ceiling-led",   x: 260, z: 60, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-led",   x: 510, z: 280, mountCeiling: true },
+      ],
+      // ═══ 男洗手间 bathroom（220×320，2 隔间 + 洗手台，门朝北通过道）═══
       bathroom: [
-        { furnitureId: "toilet-standard",     x: 55, z: 90, rotation: 0 },
-        { furnitureId: "toilet-standard",     x: 55, z: 230, rotation: 0 },
-        { furnitureId: "vanity-single-white", x: 150, z: 385, rotation: 180 },
-        { furnitureId: "decor-trash-bin",     x: 55, z: 385 },
-        { furnitureId: "lamp-ceiling-modern", x: 110, z: 220, mountCeiling: true },
+        { furnitureId: "toilet-standard",     x: 55, z: 130, rotation: 0 },
+        { furnitureId: "toilet-standard",     x: 55, z: 250, rotation: 0 },
+        { furnitureId: "vanity-single-white", x: 165, z: 255, rotation: 180 },
+        { furnitureId: "decor-trash-bin",     x: 165, z: 120 },
+        { furnitureId: "lamp-ceiling-modern", x: 110, z: 190, mountCeiling: true },
       ],
-      // ═══ 女洗手间 bathroom2（220×440，2 隔间 + 洗手台）═══
+      // ═══ 女洗手间 bathroom2（220×320，2 隔间 + 洗手台，门朝北通过道）═══
       bathroom2: [
-        { furnitureId: "toilet-standard",     x: 55, z: 90, rotation: 0 },
-        { furnitureId: "toilet-standard",     x: 55, z: 230, rotation: 0 },
-        { furnitureId: "vanity-single-white", x: 150, z: 385, rotation: 180 },
-        { furnitureId: "plant-sansevieria",   x: 175, z: 95 },
-        { furnitureId: "lamp-ceiling-modern", x: 110, z: 220, mountCeiling: true },
+        { furnitureId: "toilet-standard",     x: 55, z: 130, rotation: 0 },
+        { furnitureId: "toilet-standard",     x: 55, z: 250, rotation: 0 },
+        { furnitureId: "vanity-single-white", x: 165, z: 255, rotation: 180 },
+        { furnitureId: "plant-sansevieria",   x: 165, z: 120 },
+        { furnitureId: "lamp-ceiling-modern", x: 110, z: 190, mountCeiling: true },
       ],
-      // ═══ 露天座 hallway（2800×200 骑楼）：小圆桌 ×6 + 绿植 ═══
+      // ═══ 露天座 hallway（3000×200 骑楼）：小圆桌 ×7 + 绿植 ═══
       hallway: [
         { furnitureId: "dining_table-cafe-marble", x: 300, z: 100 },
         { furnitureId: "chair-modern-gray", x: 240, z: 100, rotation: 90 },
@@ -2391,8 +2412,11 @@ const RESTAURANT_SET: ProjectTemplate = {
         { furnitureId: "dining_table-cafe-marble", x: 2560, z: 100 },
         { furnitureId: "chair-modern-gray", x: 2500, z: 100, rotation: 90 },
         { furnitureId: "chair-modern-gray", x: 2620, z: 100, rotation: 270 },
+        { furnitureId: "dining_table-cafe-marble", x: 2860, z: 100 },
+        { furnitureId: "chair-modern-gray", x: 2800, z: 100, rotation: 90 },
+        { furnitureId: "chair-modern-gray", x: 2920, z: 100, rotation: 270 },
         { furnitureId: "plant-rubber-tree", x: 70,   z: 100 },
-        { furnitureId: "plant-rubber-tree", x: 2740, z: 100 },
+        { furnitureId: "plant-rubber-tree", x: 2960, z: 100 },
       ],
     },
   ],
