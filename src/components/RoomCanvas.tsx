@@ -3282,48 +3282,23 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
   // Rotate so the image faces the room interior. Eye-level height at
   // 52% of room height (~1.45m in a 2.8m room).
   if (item.category === "artwork") {
-    const xCm = placed.x;
-    const zCm = placed.z;
-    const wallW = roomW * 100;
-    const wallD = roomD * 100;
-    const distBack  = zCm;               // 0 = flush with back wall
-    const distFront = wallD - zCm;
-    const distLeft  = xCm;
-    const distRight = wallW - xCm;
-    const minDist = Math.min(distBack, distFront, distLeft, distRight);
     // 挂高：设了「离地高度」elevationY 就用它当挂画中心高（滑块生效）；
     // 未设时回退到墙高 52% 的默认画廊高度。
     const y = (placed.elevationY ?? 0) > 0
       ? (placed.elevationY ?? 0) / 100
       : def.height / 100 * 0.52;
-    // GAP must clear the inner face of the wall AND the frame back
-    // (2.5 cm). FPE walkthrough walls are 12 cm thick → inner face at
-    // 6 cm from boundary. Frame back is GAP − 1.25 cm from boundary,
-    // so GAP ≥ 7.25 cm is the absolute minimum. Past versions used
-    // 4 cm (buried) and 10 cm (still failed for shared walls in the
-    // walkthrough — likely because of OR-merged door/window holes
-    // overlapping the artwork at sub-mm precision). 15 cm gives the
-    // frame a clean 7.5 cm of air in front of the wall face — well
-    // outside any z-fight band and any wall-mounted obstacle.
-    //
-    // Trade-off: the painting reads as protruding a bit off the wall
-    // rather than flush. That's the price for shared-wall robustness.
-    const GAP = 0.15;
-    let position: [number, number, number];
-    let rotation: [number, number, number];
-    if (minDist === distBack) {
-      position = [x3d, y, -roomD / 2 + GAP];
-      rotation = [0, 0, 0];              // faces +Z
-    } else if (minDist === distFront) {
-      position = [x3d, y, roomD / 2 - GAP];
-      rotation = [0, Math.PI, 0];        // faces -Z
-    } else if (minDist === distLeft) {
-      position = [-roomW / 2 + GAP, y, placed.z / 100 - roomD / 2];
-      rotation = [0, Math.PI / 2, 0];    // faces +X
-    } else {
-      position = [roomW / 2 - GAP, y, placed.z / 100 - roomD / 2];
-      rotation = [0, -Math.PI / 2, 0];   // faces -X
-    }
+    // 画的位置 + 朝向**直接沿用 2D 的 placed.x/z/rotation**，与 2D 平面同源。
+    // 原来这里"吸附到最近的外接矩形墙(bbox 四面 roomW/roomD)"，凸/L 形房间的
+    // 公共墙/缺口墙是**内部多边形边、不在 bbox 四面里**，画就被吸到错误的 bbox
+    // 墙上、朝向也被重算成垂直（用户：2D 放公共墙，3D 里位置错/垂直支楞出来）。
+    // rotation(度)→Y 旋转，与 2D 的 rotate(placed.rotation) 一致：
+    //   0=朝+Z(贴N墙) · 90=朝+X(贴W墙) · 180=朝-Z(贴S墙) · 270=朝-X(贴E墙)。
+    // GAP 沿朝向法向轻推 3cm 入室，避免与墙面 z-fight（画本就薄，够用）。
+    const rotY = ((placed.rotation ?? 0) * Math.PI) / 180;
+    const GAP = 0.03;
+    const fx = Math.sin(rotY), fz = Math.cos(rotY);   // 朝向(入室)单位向量
+    const position: [number, number, number] = [x3d + fx * GAP, y, z3d + fz * GAP];
+    const rotation: [number, number, number] = [0, rotY, 0];
     return (
       // renderOrder=10 makes the painting composite AFTER walls (default 0)
       // so the depth sort can't accidentally put a shared-wall mesh on
@@ -4201,9 +4176,25 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const exMullionWidth   = useDesignerStore((s) => (s.exterior as { curtainMullionWidth?: number })?.curtainMullionWidth);
   const def = ROOM_DEFS[activeRoom];
 
-  // Use store dimensions (reflects global plan resizes), fall back to ROOM_DEFS
-  const W = (roomDimensions?.width  ?? def.width)  / 100;
-  const D = (roomDimensions?.depth  ?? def.depth)  / 100;
+  // Use store dimensions (reflects global plan resizes), fall back to ROOM_DEFS.
+  // 多边形房间(L/凸字形)：W/D 改用**多边形 bbox 跨度**，与墙体(PolygonShell:3716)
+  // 和 2D 平面(FloorPlan:633)同口径。原来一律用 roomDimensions，而墙体用的是多边形
+  // bbox——两者一旦不同步(编辑过户型/加窗后 roomDimensions 常与 bbox 漂开)，家具
+  // (PlacedItemMesh 用 W/D 居中)就相对墙体和 2D 偏移：同一件家具在 2D 放的位置，到
+  // 效果图里跑偏(用户反馈：2D 放的家具在效果图位置不一致)。矩形房间 roomShape 为空
+  // 或 preset==="rect"，仍用 roomDimensions，行为零回归。
+  const polyWD = useMemo(() => {
+    const pts = roomShape && roomShape.preset !== "rect" ? roomShape.points : null;
+    if (!pts || pts.length < 3) return null;
+    let minX = pts[0][0], maxX = minX, minZ = pts[0][1], maxZ = minZ;
+    for (const [px, pz] of pts) {
+      if (px < minX) minX = px; if (px > maxX) maxX = px;
+      if (pz < minZ) minZ = pz; if (pz > maxZ) maxZ = pz;
+    }
+    return { W: (maxX - minX) / 100, D: (maxZ - minZ) / 100 };
+  }, [roomShape]);
+  const W = polyWD ? polyWD.W : (roomDimensions?.width  ?? def.width)  / 100;
+  const D = polyWD ? polyWD.D : (roomDimensions?.depth  ?? def.depth)  / 100;
   const H = def.height / 100;
 
   const wallColor  = roomState.materials.wall?.color  ?? def.defaultWallColor;
