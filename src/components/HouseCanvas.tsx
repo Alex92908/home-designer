@@ -107,7 +107,7 @@ import { ROOM_DEFS, ExteriorSettings, ExteriorWall, isYardPrefab, isYardZone, re
 // 都在它内部处理），避免这里再写一份会漏字段的简化版。
 import { PlacedItemMesh } from "./RoomCanvas";
 import { STAIR_FURNITURE_IDS } from "./Staircase";
-import { polygonBounds, getEdges, type RoomShape } from "@/lib/roomGeometry";
+import { polygonBounds, getEdges, effectiveRoomShape, type RoomShape } from "@/lib/roomGeometry";
 import { getRoomDoors } from "@/lib/roomDoors";
 import { getFurnitureById } from "@/lib/furniture";
 import { getOutdoorAssetByKind } from "@/lib/outdoorAssets";
@@ -4778,22 +4778,29 @@ function PolygonFlatRoof({ color }: { color: string }) {
 
   const slabs = useMemo(() => {
     const out: Array<{ shape: THREE.Shape }> = [];
+    const fpLite = { enabledRooms, roomLayout, roomDimensions, roomShapes };
     for (const room of enabledRooms) {
       if (ROOM_DEFS[room].isOutdoor) continue;
       const dims = roomDimensions[room];
       const lay  = roomLayout[room];
-      const s = roomShapes?.[room];
+      // 有效轮廓+洞：eff 为 null = 无洞普通矩形。非 null 时按外环 + 自动挖洞
+      // （里面嵌的普通房间）铺楼板，露出嵌套房间。
+      const eff = effectiveRoomShape(fpLite, room);
       const cmPts: Array<[number, number]> =
-        s && s.preset !== "rect"
-          ? s.points
-          : [[0, 0], [dims.width, 0], [dims.width, dims.depth], [0, dims.depth]];
+        eff ? eff.points : [[0, 0], [dims.width, 0], [dims.width, dims.depth], [0, dims.depth]];
+      const toW = ([lx, lz]: [number, number]): [number, number] => [
+        (lay.x + lx - minX) / 100 - houseW / 2,
+        (lay.y + lz - minZ) / 100 - houseD / 2,
+      ];
       const shp = new THREE.Shape();
-      cmPts.forEach(([lx, lz], i) => {
-        const wx = (lay.x + lx - minX) / 100 - houseW / 2;
-        const wz = (lay.y + lz - minZ) / 100 - houseD / 2;
-        i === 0 ? shp.moveTo(wx, wz) : shp.lineTo(wx, wz);
-      });
+      cmPts.forEach((pt, i) => { const [wx, wz] = toW(pt); i === 0 ? shp.moveTo(wx, wz) : shp.lineTo(wx, wz); });
       shp.closePath();
+      for (const hole of eff?.holes ?? []) {
+        const hp = new THREE.Path();
+        hole.forEach((pt, i) => { const [wx, wz] = toW(pt); i === 0 ? hp.moveTo(wx, wz) : hp.lineTo(wx, wz); });
+        hp.closePath();
+        shp.holes.push(hp);
+      }
       out.push({ shape: shp });
     }
     return out;
@@ -4848,17 +4855,18 @@ function PolygonHouseShell({ floors, settings }: { floors: number; settings: Ext
       edges: Array<{ x1: number; z1: number; x2: number; z2: number }>;
       // polygon in world meters for the floor slab
       shapePoints: Array<[number, number]>;
+      // 内洞（world meters）——自动挖洞：里面嵌的普通房间轮廓，楼板在此镂空。
+      holes: Array<Array<[number, number]>>;
     }> = [];
+    const fpLite = { enabledRooms, roomLayout, roomDimensions, roomShapes };
     for (const room of enabledRooms) {
       if (ROOM_DEFS[room].isOutdoor) continue;
       const dims = roomDimensions[room];
       const lay  = roomLayout[room];
-      const shape = roomShapes?.[room];
-      // cm polygon (room-local, origin = back-left)
+      // 有效轮廓+洞（合并手写 holes 与自动挖洞）。null = 无洞普通矩形。
+      const eff = effectiveRoomShape(fpLite, room);
       const cmPts: Array<[number, number]> =
-        shape && shape.preset !== "rect"
-          ? shape.points
-          : [[0, 0], [dims.width, 0], [dims.width, dims.depth], [0, dims.depth]];
+        eff ? eff.points : [[0, 0], [dims.width, 0], [dims.width, dims.depth], [0, dims.depth]];
       // Convert to world meters (house centered on origin)
       const toWorld = ([lx, lz]: [number, number]): [number, number] => [
         (lay.x + lx - minX) / 100 - houseW / 2,
@@ -4871,14 +4879,15 @@ function PolygonHouseShell({ floors, settings }: { floors: number; settings: Ext
         const [x2, z2] = worldPts[(i + 1) % worldPts.length];
         edges.push({ x1, z1, x2, z2 });
       }
-      result.push({ room, edges, shapePoints: worldPts });
+      // 墙只沿外轮廓（洞四周的墙由洞里那间房自己出）；洞仅用于楼板镂空。
+      result.push({ room, edges, shapePoints: worldPts, holes: (eff?.holes ?? []).map(h => h.map(toWorld)) });
     }
     return result;
   }, [enabledRooms, roomLayout, roomDimensions, roomShapes, minX, minZ, houseW, houseD]);
 
   return (
     <group>
-      {roomPolys.map(({ room, edges, shapePoints }) => (
+      {roomPolys.map(({ room, edges, shapePoints, holes }) => (
         <group key={room}>
           {/* Floor slabs — one per storey.
               楼梯井：stair 房间在第二层及以上不渲染楼板，让楼梯从下层
@@ -4891,6 +4900,13 @@ function PolygonHouseShell({ floors, settings }: { floors: number; settings: Ext
               i === 0 ? shp.moveTo(x, z) : shp.lineTo(x, z);
             });
             shp.closePath();
+            // 自动挖洞：把嵌套房间轮廓从楼板抠掉，露出里面那间房。
+            for (const hole of holes) {
+              const hp = new THREE.Path();
+              hole.forEach(([x, z], i) => { i === 0 ? hp.moveTo(x, z) : hp.lineTo(x, z); });
+              hp.closePath();
+              shp.holes.push(hp);
+            }
             return (
               <mesh
                 key={`floor-${f}`}

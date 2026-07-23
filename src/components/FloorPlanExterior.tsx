@@ -41,7 +41,7 @@ import {
 import { splitWallAroundHoles } from "@/lib/wallGeom";
 import { paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize, getStuccoTexture, getStuccoNormal } from "@/lib/textures";
-import { polygonBounds, getEdges, polygonSpansAtLine, offsetRectilinearPolygon, findEdgeForWall, type RoomShape, type WallFacing, resolveHoleOnPolygon } from "@/lib/roomGeometry";
+import { polygonBounds, getEdges, polygonSpansAtLine, offsetRectilinearPolygon, findEdgeForWall, effectiveRoomShape, type RoomShape, type WallFacing, resolveHoleOnPolygon } from "@/lib/roomGeometry";
 
 /** 一条边是否按"水平"处理：取**主轴**，而不是按容差判断是否严格轴对齐。
  *
@@ -3139,20 +3139,18 @@ export default function FloorPlanBuilding({
         // 多边形房间的地板/天花按真实轮廓裁剪。墙已经沿多边形边抠出凹角了，
         // 地板/天花若还是外接矩形，凹口里就会露出一块悬空的楼板+天花夹层。
         // 坐标：换算成**以房间中心 (cx,cz) 为原点的米**，与墙体同一套局部系。
-        const shpI = fp.roomShapes?.[room];
         const toLocal = ([px, pz]: [number, number]): [number, number] => [
           (p.x + px - planOffset.minX) * CM - W / 2 - cx,
           (p.y + pz - planOffset.minY) * CM - D / 2 - cz,
         ];
+        // 有效轮廓+洞：合并手写 holes（模板回字形）与**自动挖洞**（里面嵌的
+        // 普通房间）。null = 无洞普通矩形，仍走原矩形地板路径。非 null 时即便本
+        // 房间是矩形也要按带洞多边形铺地板/天花，露出嵌套房间。
+        const eff = effectiveRoomShape(fp, room);
         const shapePts: Array<[number, number]> | undefined =
-          shpI?.points?.length && shpI.preset !== "rect"
-            ? shpI.points.map(toLocal)
-            : undefined;
-        // 内洞（回字形大厅）：地板/天花板抠掉，避免与洞里嵌的独立房间重叠。
+          eff ? eff.points.map(toLocal) : undefined;
         const shapeHoles: Array<Array<[number, number]>> | undefined =
-          shapePts && shpI?.holes?.length
-            ? shpI.holes.map(h => h.map(toLocal))
-            : undefined;
+          eff && eff.holes.length ? eff.holes.map(h => h.map(toLocal)) : undefined;
         result.push({ room, fi, cx, cz, yBase, rW, rD, rWcm, rDcm, floorColor, wallColor, placedItems, doors, windows: adjustedWindows, isStair, isHallway, autoDoor, wallsHidden, floorHidden, ceilingHidden, shapePts, shapeHoles });
       }
     }

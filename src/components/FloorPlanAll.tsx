@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { ROOM_DEFS, RoomType, WallSide, resolveFacadeLayer } from "@/lib/types";
 import { getRoomDoors } from "@/lib/roomDoors";
-import { getEdges, polygonBounds, findEdgeForWall, type EdgeInfo } from "@/lib/roomGeometry";
+import { getEdges, polygonBounds, findEdgeForWall, effectiveRoomShape, type EdgeInfo } from "@/lib/roomGeometry";
 import { ALL_POSSIBLE_ROOMS, DEFAULT_ENABLED } from "@/lib/store";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
@@ -1466,11 +1466,16 @@ export default function FloorPlanAll() {
               // Render as polygon for any non-rect preset, OR a rect-preset room that
               // has been shape-initialized (points exist) and the user is actively editing it.
               const isPolygon = shape && (shape.preset !== "rect" || shapeEditRoom === room);
-              // 回字形内洞：用 evenodd path（外环 + 各内洞子路径）替代 polygon，
-              // 使地板/底色在洞处镂空，露出洞内嵌套房间。
-              const polyPathD = isPolygon
-                ? "M" + shape!.points.map(([px, pz]) => `${x + px},${y + pz}`).join("L") + "Z"
-                  + (shape!.holes ?? []).map(h =>
+              // 地板镂空路径：外环 + 各内洞子路径（evenodd）。洞 = 手写 holes（模板回字形）
+              // ∪ **自动挖洞**（完全落在本房间里的其它普通房间）。矩形房间嵌了别的房间
+              // 也照样抠——「大房间套小房间」不是特判，就是普通房间叠进来自动镂空。
+              const eff = effectiveRoomShape(fpAll, room);
+              const floorOuter = eff ? eff.points : (isPolygon ? shape!.points : null);
+              const floorHoles = eff ? eff.holes : [];
+              const useHolePath = !!floorOuter;
+              const polyPathD = floorOuter
+                ? "M" + floorOuter.map(([px, pz]) => `${x + px},${y + pz}`).join("L") + "Z"
+                  + floorHoles.map(h =>
                       "M" + h.map(([px, pz]) => `${x + px},${y + pz}`).join("L") + "Z").join("")
                 : "";
 
@@ -1538,7 +1543,7 @@ export default function FloorPlanAll() {
                   {/* 墙体：按面解析实墙 / 玻璃幕墙 / 隐藏，不再一律深灰实心。
                       根因：原来无条件 fill #374151，用户把某面设成隐藏墙或玻璃幕墙后，
                       效果图/外观图里已经开敞或透明，唯独全局平面图还是一堵实墙。 */}
-                  {isPolygon && (
+                  {useHolePath && (
                     /* 多边形先铺一层底，避免逐边墙带在凹角处露出锯齿缝 */
                     <path d={polyPathD} fillRule="evenodd" fill="#374151" opacity={0.9} />
                   )}
@@ -1555,7 +1560,7 @@ export default function FloorPlanAll() {
                     );
                   })}
                   {/* Floor */}
-                  {isPolygon ? (
+                  {useHolePath ? (
                     <path
                       d={polyPathD} fillRule="evenodd"
                       fill={(rooms[room] ?? {materials:{}}).materials?.floor?.color ?? def.defaultFloorColor}

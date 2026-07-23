@@ -123,6 +123,66 @@ export function pointInPolygon(pts: Array<[number, number]>, x: number, z: numbe
   return inside;
 }
 
+// ─── Auto-nesting: 大房间套小房间（自动挖洞，非特判）──────────────
+//
+// 「包含」不是特殊房间类型，就是一间普通房间的轮廓**完全落在**另一间的轮廓里。
+// 这里在渲染时自动推导：大房间的地板/天花按里面那些房间的轮廓抠空，露出嵌套房间。
+// 小房间照常用移位/尺寸/多边形工具编辑，无需任何「挖洞」操作或手写 holes 数据。
+// 与手写 holes（模板里固化的回字形）取并集，故不影响既有模板。
+
+/** 最小结构：从 floorPlan 里取自动挖洞所需字段（避免耦合整个 FloorPlan 类型）。 */
+export interface AutoHoleFP {
+  enabledRooms: string[];
+  roomLayout: Record<string, { x: number; y: number } | undefined>;
+  roomDimensions: Record<string, { width: number; depth: number } | undefined>;
+  roomShapes?: Record<string, RoomShape | undefined>;
+}
+
+/** 房间外轮廓（room-local cm，NW 原点）。有自定义多边形用之，否则按尺寸给矩形。 */
+export function roomOuterPolygonLocal(fp: AutoHoleFP, room: string): Array<[number, number]> {
+  const s = fp.roomShapes?.[room];
+  if (s?.points?.length) return s.points;
+  const d = fp.roomDimensions[room];
+  if (!d) return [[0, 0], [0, 0], [0, 0]];
+  return [[0, 0], [d.width, 0], [d.width, d.depth], [0, d.depth]];
+}
+
+/** 自动挖洞：返回「完全落在 room 轮廓内」的其它启用房间的轮廓（room-local cm）。
+ *  判据：候选房间的 AABB 严格内含于 room 的 AABB（±EPS），且其所有顶点在 room 多边形内。
+ *  相邻/共边房间因 AABB 不严格内含而不会被误挖。 */
+export function autoContainedHoles(fp: AutoHoleFP, room: string): Array<Array<[number, number]>> {
+  const rPos = fp.roomLayout[room];
+  if (!rPos) return [];
+  const rAbs = roomOuterPolygonLocal(fp, room).map(([x, z]) => [x + rPos.x, z + rPos.y] as [number, number]);
+  const rb = polygonBounds(rAbs);
+  const EPS = 1; // cm，避开共边/贴边的假阳性
+  const holes: Array<Array<[number, number]>> = [];
+  for (const other of fp.enabledRooms) {
+    if (other === room) continue;
+    const oPos = fp.roomLayout[other];
+    if (!oPos) continue;
+    const oAbs = roomOuterPolygonLocal(fp, other).map(([x, z]) => [x + oPos.x, z + oPos.y] as [number, number]);
+    const ob = polygonBounds(oAbs);
+    if (!(ob.minX > rb.minX + EPS && ob.maxX < rb.maxX - EPS && ob.minZ > rb.minZ + EPS && ob.maxZ < rb.maxZ - EPS)) continue;
+    if (!oAbs.every(([x, z]) => pointInPolygon(rAbs, x, z))) continue;
+    holes.push(oAbs.map(([x, z]) => [x - rPos.x, z - rPos.y] as [number, number]));
+  }
+  return holes;
+}
+
+/** 房间的**有效**轮廓+洞（合并手写 holes 与自动挖洞）。
+ *  返回 null ⇒ 就是一个无洞的普通矩形，调用方走原来的快速矩形路径。
+ *  非 null ⇒ 需按「带洞多边形」渲染地板/天花（THREE.Shape + holes / evenodd path）。 */
+export function effectiveRoomShape(
+  fp: AutoHoleFP, room: string,
+): { points: Array<[number, number]>; holes: Array<Array<[number, number]>> } | null {
+  const s = fp.roomShapes?.[room];
+  const holes = [...(s?.holes ?? []), ...autoContainedHoles(fp, room)];
+  const isPoly = !!(s && s.preset !== "rect" && s.points?.length);
+  if (!isPoly && holes.length === 0) return null;
+  return { points: roomOuterPolygonLocal(fp, room), holes };
+}
+
 // ─── Edge helpers (for placing doors/windows on polygon walls) ──
 
 export type WallFacing = "N" | "S" | "W" | "E";
