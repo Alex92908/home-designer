@@ -1946,49 +1946,87 @@ const OFFICE_SET: ProjectTemplate = {
         { furnitureId: "plant-rubber-tree",  x: 1520, z: 130 },
         { furnitureId: "plant-monstera",     x: 680,  z: 130 },
         { furnitureId: "lamp-ceiling-modern", x: 1100, z: 180, mountCeiling: true },
-        // ── W 条：开放办公 2×2（4 工位，双排对坐，中留宽过道）+ 书架 + 绿植 ──
-        { furnitureId: "desk-standing",   x: 105, z: 500, rotation: 90 },
-        { furnitureId: "chair-ergonomic", x: 175, z: 500, rotation: 270 },
-        { furnitureId: "elec-monitor",    x: 78,  z: 500, elevationY: 66 },
-        { furnitureId: "desk-standing",   x: 105, z: 860, rotation: 90 },
-        { furnitureId: "chair-ergonomic", x: 175, z: 860, rotation: 270 },
-        { furnitureId: "elec-monitor",    x: 78,  z: 860, elevationY: 66 },
-        { furnitureId: "desk-standing",   x: 445, z: 500, rotation: 270 },
-        { furnitureId: "chair-ergonomic", x: 375, z: 500, rotation: 90 },
-        { furnitureId: "elec-monitor",    x: 468, z: 500, elevationY: 66 },
-        { furnitureId: "desk-standing",   x: 445, z: 860, rotation: 270 },
-        { furnitureId: "chair-ergonomic", x: 375, z: 860, rotation: 90 },
-        { furnitureId: "elec-laptop",     x: 468, z: 860, elevationY: 66 },
-        { furnitureId: "bookshelf-open-white", x: 40, z: 680, rotation: 90 },
-        { furnitureId: "plant-rubber-tree", x: 275, z: 370 },
-        { furnitureId: "lamp-ceiling-long", x: 105, z: 680, mountCeiling: true },
-        { furnitureId: "lamp-ceiling-long", x: 445, z: 680, mountCeiling: true },
-        // ── E 条：开放办公 ×2（z860 一排）+ 东北洗手间区入口绿植隔断 ──
-        { furnitureId: "desk-standing",   x: 2095, z: 860, rotation: 270 },
-        { furnitureId: "chair-ergonomic", x: 2025, z: 860, rotation: 90 },
-        { furnitureId: "elec-monitor",    x: 2122, z: 860, elevationY: 66 },
-        { furnitureId: "desk-standing",   x: 1755, z: 860, rotation: 90 },
-        { furnitureId: "chair-ergonomic", x: 1825, z: 860, rotation: 270 },
-        { furnitureId: "elec-monitor",    x: 1732, z: 860, elevationY: 66 },
+        // ── W 条：密集开放工位（两列背靠背 ×4 排 = 8 工位，中央过道 x203~347）──
+        //   每工位 = 升降桌(136×72,rot90/270)+ 人体工学椅 + 显示器(elev66 吸桌顶)。
+        //   西列(x100)人朝西、东列(x450)人朝东，背对背，椅子落在中央过道两侧。
+        // 西列 ×4
+        { furnitureId: "desk-standing",   x: 100, z: 380, rotation: 90 },
+        { furnitureId: "chair-ergonomic", x: 170, z: 380, rotation: 270 },
+        { furnitureId: "elec-monitor",    x: 73,  z: 380, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 100, z: 560, rotation: 90 },
+        { furnitureId: "chair-ergonomic", x: 170, z: 560, rotation: 270 },
+        { furnitureId: "elec-monitor",    x: 73,  z: 560, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 100, z: 740, rotation: 90 },
+        { furnitureId: "chair-ergonomic", x: 170, z: 740, rotation: 270 },
+        { furnitureId: "elec-monitor",    x: 73,  z: 740, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 100, z: 920, rotation: 90 },
+        { furnitureId: "chair-ergonomic", x: 170, z: 920, rotation: 270 },
+        { furnitureId: "elec-monitor",    x: 73,  z: 920, elevationY: 66 },
+        // 东列 ×4
+        { furnitureId: "desk-standing",   x: 450, z: 380, rotation: 270 },
+        { furnitureId: "chair-ergonomic", x: 380, z: 380, rotation: 90 },
+        { furnitureId: "elec-monitor",    x: 477, z: 380, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 450, z: 560, rotation: 270 },
+        { furnitureId: "chair-ergonomic", x: 380, z: 560, rotation: 90 },
+        { furnitureId: "elec-monitor",    x: 477, z: 560, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 450, z: 740, rotation: 270 },
+        { furnitureId: "chair-ergonomic", x: 380, z: 740, rotation: 90 },
+        { furnitureId: "elec-monitor",    x: 477, z: 740, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 450, z: 920, rotation: 270 },
+        { furnitureId: "chair-ergonomic", x: 380, z: 920, rotation: 90 },
+        { furnitureId: "elec-laptop",     x: 477, z: 920, elevationY: 66 },
+        { furnitureId: "bookshelf-open-white", x: 40, z: 1050, rotation: 90 },
+        { furnitureId: "plant-rubber-tree", x: 275, z: 300 },
+        { furnitureId: "lamp-ceiling-long", x: 275, z: 470, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-long", x: 275, z: 830, mountCeiling: true },
+        // ── E 条：密集开放工位（两列背靠背 ×3 排 = 6 工位，避开东北洗手间区 z<460）──
+        // 西列(x1750)人朝西、东列(x2100)人朝东，中央过道 x1853~1997。
+        { furnitureId: "desk-standing",   x: 1750, z: 560, rotation: 90 },
+        { furnitureId: "chair-ergonomic", x: 1820, z: 560, rotation: 270 },
+        { furnitureId: "elec-monitor",    x: 1723, z: 560, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 1750, z: 760, rotation: 90 },
+        { furnitureId: "chair-ergonomic", x: 1820, z: 760, rotation: 270 },
+        { furnitureId: "elec-monitor",    x: 1723, z: 760, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 1750, z: 960, rotation: 90 },
+        { furnitureId: "chair-ergonomic", x: 1820, z: 960, rotation: 270 },
+        { furnitureId: "elec-monitor",    x: 1723, z: 960, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 2100, z: 560, rotation: 270 },
+        { furnitureId: "chair-ergonomic", x: 2030, z: 560, rotation: 90 },
+        { furnitureId: "elec-monitor",    x: 2127, z: 560, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 2100, z: 760, rotation: 270 },
+        { furnitureId: "chair-ergonomic", x: 2030, z: 760, rotation: 90 },
+        { furnitureId: "elec-monitor",    x: 2127, z: 760, elevationY: 66 },
+        { furnitureId: "desk-standing",   x: 2100, z: 960, rotation: 270 },
+        { furnitureId: "chair-ergonomic", x: 2030, z: 960, rotation: 90 },
+        { furnitureId: "elec-monitor",    x: 2127, z: 960, elevationY: 66 },
         // 洗手间过道口(z460)南侧绿植隔断，与工位拉开距离
-        { furnitureId: "plant-rubber-tree", x: 1820, z: 580 },
-        { furnitureId: "plant-monstera",    x: 2120, z: 580 },
-        { furnitureId: "floor_lamp-modern", x: 2140, z: 700 },
-        { furnitureId: "lamp-ceiling-long", x: 1925, z: 860, mountCeiling: true },
+        { furnitureId: "plant-rubber-tree", x: 1925, z: 480 },
+        { furnitureId: "lamp-ceiling-long", x: 1925, z: 620, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-long", x: 1925, z: 900, mountCeiling: true },
       ],
-      // ═══ 会议室 dining（330×260，门朝南 x150）═══
+      // ═══ 会议室 dining（400×260，门朝南）：居中长会议桌 + 两排各4椅 + 西主位 + 东墙大屏 ═══
       dining: [
-        { furnitureId: "table-conference",  x: 165, z: 120, rotation: 0 },
-        { furnitureId: "chair-modern-gray", x: 105, z: 55, rotation: 180 },
-        { furnitureId: "chair-modern-gray", x: 225, z: 55, rotation: 180 },
-        { furnitureId: "chair-modern-gray", x: 105, z: 185, rotation: 0 },
-        { furnitureId: "chair-modern-gray", x: 225, z: 185, rotation: 0 },
-        { furnitureId: "decor-book-stack",  x: 145, z: 115, elevationY: 75 },
-        { furnitureId: "decor-coffee-mug",  x: 200, z: 127, elevationY: 75 },
-        { furnitureId: "elec-tv-flat",      x: 322, z: 120, rotation: 270, elevationY: 130 },
-        { furnitureId: "plant-sansevieria", x: 295, z: 225 },
-        { furnitureId: "rug-nordic-geo",    x: 165, z: 120, scaleW: 1.7, scaleD: 1.4 },
-        { furnitureId: "lamp-ceiling-long", x: 165, z: 120, mountCeiling: true },
+        { furnitureId: "table-conference",  x: 200, z: 120, rotation: 0 },
+        // 北排 ×4（朝南入座）
+        { furnitureId: "chair-modern-gray", x: 100, z: 52, rotation: 180 },
+        { furnitureId: "chair-modern-gray", x: 165, z: 52, rotation: 180 },
+        { furnitureId: "chair-modern-gray", x: 235, z: 52, rotation: 180 },
+        { furnitureId: "chair-modern-gray", x: 300, z: 52, rotation: 180 },
+        // 南排 ×4（朝北入座）
+        { furnitureId: "chair-modern-gray", x: 100, z: 188, rotation: 0 },
+        { furnitureId: "chair-modern-gray", x: 165, z: 188, rotation: 0 },
+        { furnitureId: "chair-modern-gray", x: 235, z: 188, rotation: 0 },
+        { furnitureId: "chair-modern-gray", x: 300, z: 188, rotation: 0 },
+        // 西主位（朝东，正对东墙大屏）
+        { furnitureId: "chair-modern-gray", x: 48,  z: 120, rotation: 90 },
+        // 桌面文件 + 水杯
+        { furnitureId: "decor-book-stack",  x: 150, z: 110, elevationY: 75 },
+        { furnitureId: "decor-coffee-mug",  x: 250, z: 130, elevationY: 75 },
+        // 东短墙演示大屏（朝西对着长桌）
+        { furnitureId: "elec-tv-flat",      x: 388, z: 120, rotation: 270, elevationY: 130 },
+        { furnitureId: "plant-sansevieria", x: 360, z: 228 },
+        { furnitureId: "rug-nordic-geo",    x: 200, z: 120, scaleW: 2.4, scaleD: 1.6 },
+        { furnitureId: "lamp-ceiling-long", x: 200, z: 120, mountCeiling: true },
       ],
       // ═══ 独立办公室 master（250×260，门朝南 x110）═══
       master: [
@@ -2013,11 +2051,19 @@ const OFFICE_SET: ProjectTemplate = {
         { furnitureId: "plant-monstera",       x: 235, z: 220 },
         { furnitureId: "lamp-ceiling-modern",  x: 135, z: 135, mountCeiling: true },
       ],
-      // ═══ 男洗手间 bathroom（220×260，隔间只留坐便，盥洗在过道）═══
+      // ═══ 男洗手间 bathroom（220×260）：N 墙一排小便池 ×3 + 西南坐便隔间 + 东墙洗手盆 ═══
+      //   ⚠️ 目录暂无 urinal 素材，小便池先用 toilet-wallhung（壁挂洁具）替身；
+      //   真 urinal 模型入库后仅需替换这三行的 furnitureId（坐标/朝向不变）。
       bathroom: [
-        { furnitureId: "toilet-standard",     x: 110, z: 70, rotation: 180 },
-        { furnitureId: "decor-trash-bin",     x: 55,  z: 205 },
-        { furnitureId: "lamp-ceiling-modern", x: 110, z: 130, mountCeiling: true },
+        // N 墙「小便池」一排 ×3（背贴北墙、面朝室内）
+        { furnitureId: "toilet-wallhung",     x: 45,  z: 32, rotation: 180 },
+        { furnitureId: "toilet-wallhung",     x: 110, z: 32, rotation: 180 },
+        { furnitureId: "toilet-wallhung",     x: 175, z: 32, rotation: 180 },
+        // 西南角坐便隔间（避开南门）+ 东墙洗手盆
+        { furnitureId: "toilet-standard",     x: 42,  z: 200, rotation: 90 },
+        { furnitureId: "kitchen_sink-basin",  x: 188, z: 150, rotation: 270 },
+        { furnitureId: "decor-trash-bin",     x: 188, z: 222 },
+        { furnitureId: "lamp-ceiling-modern", x: 110, z: 140, mountCeiling: true },
       ],
       // ═══ 吸烟室 custom2（280×300，门朝北 x100）═══
       custom2: [
