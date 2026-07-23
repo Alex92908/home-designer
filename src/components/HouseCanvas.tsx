@@ -108,6 +108,7 @@ import { ROOM_DEFS, ExteriorSettings, ExteriorWall, isYardPrefab, isYardZone, re
 import { PlacedItemMesh } from "./RoomCanvas";
 import { STAIR_FURNITURE_IDS } from "./Staircase";
 import { polygonBounds, getEdges, effectiveRoomShape, type RoomShape } from "@/lib/roomGeometry";
+import { ThirdPersonAvatar, type AvatarState } from "./ThirdPersonAvatar";
 import { getRoomDoors } from "@/lib/roomDoors";
 import { getFurnitureById } from "@/lib/furniture";
 import { getOutdoorAssetByKind } from "@/lib/outdoorAssets";
@@ -5168,6 +5169,7 @@ function TouchJoystick({ onChange }: { onChange: (axisX: number, axisZ: number) 
  *  - When `spawnPos` changes, teleports the camera there. */
 function WalkthroughController({
   active, spawnPos, spawnLook, bbox, onExit, walls, doorPasses, openPasses, joystick, noClip, storeyH,
+  thirdPerson, avatarStateRef,
 }: {
   active: boolean;
   spawnPos: [number, number, number] | null;
@@ -5194,6 +5196,9 @@ function WalkthroughController({
   /** 隐藏外墙段(开敞口)的通行矩形——骑楼露台/开放式店面这类「隐藏墙+无门」的开敞
    *  外墙，外壳门控放行。与 doorPasses 同构。 */
   openPasses: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number; bld?: number }>;
+  /** 第三人称：true 时把相机拉到人物身后(弹簧臂)，并每帧把化身状态写入 avatarStateRef。 */
+  thirdPerson: boolean;
+  avatarStateRef: React.MutableRefObject<AvatarState>;
   /** Live touch joystick output, -1..1 on each axis. Forward = +axisZ
    *  (same convention as WASD's dz). */
   joystick: { axisX: number; axisZ: number };
@@ -5253,6 +5258,10 @@ function WalkthroughController({
   // 趋近目标(加速/减速)，起步、停步、转向都有缓冲。疾跑 FOV 从基准 50 缓动到 58。
   const velRef = useMemo(() => new THREE.Vector3(), []);
   const fovRef = useRef(50);
+  // 第三人称：headRef = 玩家「头/眼」的世界坐标。移动与地面吸附始终作用在 head 上，
+  // 相机再从 head 拉到身后(弹簧臂)。headingWalkRef = 化身面向(随移动方向平滑转)。
+  const headRef = useMemo(() => new THREE.Vector3(), []);
+  const headingWalkRef = useRef(0);
 
   // Teleport on spawnPos change
   useEffect(() => {
@@ -5279,8 +5288,10 @@ function WalkthroughController({
     pitchRef.current = 0;
     velRef.set(0, 0, 0);      // 出生时清空惯性，避免上次遗留速度把人推走
     fovRef.current = 50;
+    headRef.set(spawnPos[0], spawnPos[1], spawnPos[2]);  // 第三人称：head 从出生点起
+    headingWalkRef.current = Math.atan2(ldx, ldz);       // 化身初始面向 = 出生朝向
     camera.lookAt(spawnPos[0] + ldx, spawnPos[1] - 0.1, spawnPos[2] + ldz);
-  }, [active, spawnPos, spawnLook, camera, velRef, fovRef]);
+  }, [active, spawnPos, spawnLook, camera, velRef, fovRef, headRef, headingWalkRef]);
   useEffect(() => {
     if (!active) {
       spawnedRef.current = null;
@@ -5377,6 +5388,7 @@ function WalkthroughController({
   const right = useMemo(() => new THREE.Vector3(), []);
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const downV = useMemo(() => new THREE.Vector3(0, -1, 0), []);
+  const tpBackV = useMemo(() => new THREE.Vector3(), []);  // 第三人称弹簧臂：视线反向
 
   /** Returns true if the segment (x1,z1)→(x2,z2) crosses any wall edge
    *  (perimeter of an AABB). Movement that crosses → blocked. Allow if
@@ -5559,6 +5571,11 @@ function WalkthroughController({
   useFrame((_, delta) => {
     if (!active) return;
 
+    // 把相机还原到玩家「头」的位置，让下面的移动/碰撞/地面吸附照常作用在玩家身上
+    // （第三人称时相机上一帧被拉到了身后；切回第一人称的那一帧也要从身后拉回头部）。
+    // 第一人称时 headRef 每帧都跟随 camera（见 postFrame），故此拷贝是无副作用的 no-op。
+    camera.position.copy(headRef);
+
     // ── 1. Compose movement input (keys + joystick) ──
     const keys = keysRef.current;
     let dz = 0, dx = 0;
@@ -5615,6 +5632,7 @@ function WalkthroughController({
     if (Math.abs(mvX) < 1e-6 && Math.abs(mvZ) < 1e-6) {
       // 已停稳：仅地面吸附保持 y 正确
       raycastFloor(delta);
+      postFrame();
       return;
     }
 
@@ -5657,7 +5675,37 @@ function WalkthroughController({
     // ── 4. Floor snap: raycast straight down to find walkable surface,
     //      set camera.y = floor.y + 1.6m. Handles stairs and multi-storey. ──
     raycastFloor(delta);
+    postFrame();
   });
+
+  // 第三人称收尾：此刻 camera.position 正是玩家「头」。存进 headRef，算化身状态，
+  // 再把相机拉到身后(弹簧臂 + 碰墙缩短)。第一人称时只把化身隐藏、head 同步。
+  function postFrame() {
+    headRef.copy(camera.position);
+    const speed = Math.hypot(velRef.x, velRef.z);
+    if (speed > 0.15) headingWalkRef.current = Math.atan2(velRef.x, velRef.z); // 模型默认朝 +Z
+    const s = avatarStateRef.current;
+    if (!thirdPerson) { s.active = false; return; }
+    s.x = headRef.x; s.y = floorYRef.current; s.z = headRef.z;
+    s.heading = headingWalkRef.current; s.speed = speed; s.active = true;
+    // 弹簧臂：相机沿「视线反方向」拉到身后 BOOM 米；碰墙则缩短。
+    const yaw = yawRef.current, pitch = pitchRef.current, cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const fx = -Math.sin(yaw) * cp, fy = sp, fz = -Math.cos(yaw) * cp;   // 视线单位向量
+    const BOOM = 3.4;
+    tpBackV.set(-fx, -fy, -fz);
+    raycaster.set(headRef, tpBackV);
+    let dist = BOOM;
+    for (const h of raycaster.intersectObjects(scene.children, true)) {
+      // 跳过太近(化身自身 ~0.5m 内)与场地地面；命中墙则在其前 0.25m 停。
+      if (h.distance < 0.6) continue;
+      if ((h.object.userData as { isSiteGround?: boolean })?.isSiteGround) continue;
+      dist = Math.min(BOOM, h.distance - 0.25);
+      break;
+    }
+    dist = Math.max(0.8, dist);
+    camera.position.set(headRef.x - fx * dist, headRef.y - fy * dist, headRef.z - fz * dist);
+    camera.lookAt(headRef.x, headRef.y + 0.1, headRef.z);
+  }
 
   function raycastFloor(dt: number) {
     // Cast from just above the camera (not from the ceiling) so a lower floor's
@@ -6472,6 +6520,11 @@ export default function HouseCanvas() {
   // "你不要穿墙过" preference; toggle still available for when the user
   // is wedged in a corner and wants to escape.
   const [walkNoClip, setWalkNoClip] = useState(false);
+  // 第三人称人物漫游：开 = 镜头拉到人物身后(弹簧臂)+ 显示会走路的骨骼化身。
+  // 默认关(第一人称)，纯附加、不影响原第一人称漫游。avatarStateRef 由控制器每帧
+  // 写、ThirdPersonAvatar 每帧读（免每帧 setState）。
+  const [thirdPerson, setThirdPerson] = useState(false);
+  const avatarStateRef = useRef<AvatarState>({ x: 0, y: 0, z: 0, heading: 0, speed: 0, active: false });
   // Compass yaw — degrees CW for the HTML compass overlay. Updated each
   // frame by <CompassYawTracker/> inside the Canvas so the dial spins
   // with the orbit / walkthrough camera and N stays at world −Z.
@@ -6605,6 +6658,22 @@ export default function HouseCanvas() {
                 }}
               >
                 {walkNoClip ? (locale === "en" ? "👻 No-clip: ON" : "👻 穿墙：开") : (locale === "en" ? "🧱 No-clip: OFF" : "🧱 穿墙：关")}
+              </button>
+              <button
+                onClick={() => setThirdPerson(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
+                title={thirdPerson
+                  ? (locale === "en" ? "Third-person is ON — camera follows behind a walking character. Click for first-person." : "第三人称已开 — 镜头跟在会走路的人物身后。点击切回第一人称。")
+                  : (locale === "en" ? "First-person view. Click for third-person: a walking character with the camera behind." : "当前第一人称。点击切第三人称：镜头跟在会走路的人物身后。")}
+                style={{
+                  background: thirdPerson
+                    ? "linear-gradient(135deg,rgba(59,130,246,0.92),rgba(37,99,235,0.92))"
+                    : "linear-gradient(135deg,rgba(55,65,81,0.88),rgba(31,41,55,0.88))",
+                  backdropFilter: "blur(12px)",
+                  border: `1px solid ${thirdPerson ? "rgba(191,219,254,0.5)" : "rgba(255,255,255,0.15)"}`,
+                }}
+              >
+                {thirdPerson ? (locale === "en" ? "🧍 3rd-person: ON" : "🧍 第三人称：开") : (locale === "en" ? "👁 1st-person" : "👁 第一人称")}
               </button>
             </>
           )}
@@ -6866,7 +6935,11 @@ export default function HouseCanvas() {
           noClip={walkNoClip}
           storeyH={WALK_FLOOR_H}
           onExit={exitWalkthrough}
+          thirdPerson={thirdPerson}
+          avatarStateRef={avatarStateRef}
         />
+        {/* 第三人称化身：只在漫游中挂载；未激活时组件内部自隐。 */}
+        {walkthrough && <ThirdPersonAvatar stateRef={avatarStateRef} />}
         {/* HDR as both IBL lighting AND photorealistic sky background.
             backgroundBlurriness softens the HDR to remove distracting detail
             while keeping the sky colour/gradient. Night mode keeps a dark
