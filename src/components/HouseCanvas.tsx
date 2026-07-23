@@ -3341,7 +3341,7 @@ function Ground({ W, D, lawnTint, grassDensity, groundType }: { W: number; D: nu
   // hide the procedural ground plane edge for a typical 10 m villa.
   const grassRadius = Math.min(22, Math.max(W, D) * 1.6 + 8);
   const tint = lawnTint ?? "#7E8E6A";
-  const isTile = groundType === "tile";   // 青地砖广场（商业片场）vs 默认草坪
+  const isTile = groundType === "tile";   // 青地砖广场（模板显式设 tile）vs 默认草坪
   // Fallback colour: 草地用 tint × 中绿；青砖用青灰，避免加载瞬间闪绿。
   const fallbackCol = useMemo(() => {
     if (isTile) return new THREE.Color("#96A49C");
@@ -5228,6 +5228,9 @@ function WalkthroughController({
   const yawRef   = useRef(0);
   const pitchRef = useRef(0);
   const dragRef  = useRef<{ x: number; y: number; captured: boolean; target: HTMLElement } | null>(null);
+  // 指针锁定（PUBG 式自由鼠标看）：点击画布锁定 → 移动鼠标即转视角、无需按住拖。
+  // 锁定失败（iframe/预览沙箱/移动端）自动回落到拖拽看。lockedRef 为真时 Esc 先释放锁。
+  const lockedRef = useRef(false);
 
   // Teleport on spawnPos change
   useEffect(() => {
@@ -5268,6 +5271,9 @@ function WalkthroughController({
     if (!active) return;
     const onDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        // 指针锁定中：Esc 让浏览器释放锁（pointerlockchange 会把 lockedRef 置假），
+        // 此时不退出漫游；再按一次 Esc（已解锁）才退出。
+        if (lockedRef.current) return;
         onExit();
         return;
       }
@@ -5306,7 +5312,28 @@ function WalkthroughController({
       pitchRef.current = Math.max(-Math.PI / 2.6, Math.min(Math.PI / 2.6, pitchRef.current));
       d.x = e.clientX; d.y = e.clientY;
     };
-    const onPUp = () => { dragRef.current = null; };
+    const lockEl = gl.domElement;
+    const onPUp = () => {
+      const d = dragRef.current;
+      // 静态点击（未越过拖拽阈值）且当前未锁定 → 请求指针锁定（PUBG 式）。
+      // 拖拽（d.captured）不锁；已锁定时点击交给场景（E 键开门仍可用）。
+      if (d && !d.captured && !lockedRef.current) {
+        try {
+          const p = lockEl.requestPointerLock?.() as unknown as Promise<void> | undefined;
+          if (p && typeof p.catch === "function") p.catch(() => { /* iframe/预览拒绝 → 拖拽看兜底 */ });
+        } catch { /* 老浏览器同步抛错 → 拖拽看兜底 */ }
+      }
+      dragRef.current = null;
+    };
+    // 指针锁定状态 + 锁定态鼠标移动 → 直接转视角（无需按住拖）。
+    const onLockChange = () => { lockedRef.current = document.pointerLockElement === lockEl; };
+    const onLockErr = () => { lockedRef.current = false; };
+    const onLockedMove = (e: MouseEvent) => {
+      if (!lockedRef.current) return;
+      yawRef.current   -= e.movementX * 0.0022;
+      pitchRef.current -= e.movementY * 0.0022;
+      pitchRef.current = Math.max(-Math.PI / 2.6, Math.min(Math.PI / 2.6, pitchRef.current));
+    };
     // Wheel-zoom: changes camera FOV (narrower = zoom in, wider = zoom out).
     // FOV-based zoom is more natural than moving the camera forward (which
     // would clip through walls). Clamped 25°–80°.
@@ -5329,6 +5356,9 @@ function WalkthroughController({
     window.addEventListener("pointerup", onPUp);
     window.addEventListener("pointercancel", onPUp);
     window.addEventListener("wheel", onWheel, { passive: false });
+    document.addEventListener("pointerlockchange", onLockChange);
+    document.addEventListener("pointerlockerror", onLockErr);
+    document.addEventListener("mousemove", onLockedMove);
     return () => {
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
@@ -5337,10 +5367,15 @@ function WalkthroughController({
       window.removeEventListener("pointerup", onPUp);
       window.removeEventListener("pointercancel", onPUp);
       window.removeEventListener("wheel", onWheel);
+      document.removeEventListener("pointerlockchange", onLockChange);
+      document.removeEventListener("pointerlockerror", onLockErr);
+      document.removeEventListener("mousemove", onLockedMove);
+      if (document.pointerLockElement === lockEl) document.exitPointerLock();
+      lockedRef.current = false;
       keysRef.current = {};
       dragRef.current = null;
     };
-  }, [active, onExit, camera]);
+  }, [active, onExit, camera, gl]);
 
   const fwd = useMemo(() => new THREE.Vector3(), []);
   const right = useMemo(() => new THREE.Vector3(), []);
@@ -5550,7 +5585,7 @@ function WalkthroughController({
       return;
     }
     const magnitude = Math.min(1, Math.hypot(dx, dz));
-    const speed = (keys.shift ? 6 : 3) * delta * magnitude;
+    const speed = (keys.shift ? 8 : 3) * delta * magnitude; // Shift 疾跑 6→8m/s，与 3m/s 走路拉开更明显
     fwd.set(-Math.sin(yaw), 0, -Math.cos(yaw));    // camera forward in XZ
     right.set(Math.cos(yaw), 0, -Math.sin(yaw));
     const mvX = fwd.x * dz / Math.hypot(dx, dz) * speed + right.x * dx / Math.hypot(dx, dz) * speed;
@@ -5607,7 +5642,11 @@ function WalkthroughController({
       //   • below the camera eye level (not a ceiling/shelf above)
       //   • within 2.5 m below — covers one full floor height (2.8 m) + step approach
       //   • above the basement floor (avoid terrain/sky far below)
-      if (hy < camera.position.y - 0.1 && hy > camera.position.y - 2.5 && hy > bbox.minY - 1) {
+      // 只接受「当前地面 + 一个台阶高(≤0.35m)」以内的面：楼梯踏步(~0.25m)照常能上，
+      // 但家具/马桶/柜台顶面(≥0.4m)会被跳过 → 射线继续找其正下方的真地面，人不再
+      // 被抬上家具（用户："碰到东西怎么变成爬上去了，又不是楼梯"）。向下无限制(下楼/落地正常)。
+      if (hy < camera.position.y - 0.1 && hy > camera.position.y - 2.5 && hy > bbox.minY - 1
+          && hy <= floorYRef.current + 0.35) {
         floorMissRef.current = 0;
         floorYRef.current = hy;   // remember this floor for the fallback
         const target = hy + 1.6;
@@ -6524,7 +6563,7 @@ export default function HouseCanvas() {
               letterSpacing: "0.04em",
               whiteSpace: "nowrap",
             }}>
-            {locale === "en" ? "🖱 Drag to look · WASD to move · Shift to sprint · walk up stairs/rooftop · ESC to exit" : "🖱 左键拖动转视角 · WASD 行走 · Shift 疾跑 · 走上楼梯/天台 · ESC 退出"}
+            {locale === "en" ? "🖱 Click to lock mouse-look (Esc to release) · or drag to look · WASD move · Shift sprint · E open door · walk up stairs/rooftop · ESC exit" : "🖱 点击锁定鼠标看（Esc 释放）· 或左键拖动转视角 · WASD 行走 · Shift 疾跑 · E 开门 · 走上楼梯/天台 · ESC 退出"}
           </div>
           {/* Touch joystick — bottom-left, only useful with finger but
               always rendered (mouse drag also works on it). */}

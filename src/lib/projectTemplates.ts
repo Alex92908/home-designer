@@ -86,6 +86,7 @@ const MODERN_POOL_VILLA: ProjectTemplate = {
     roofStyle: "flat",
     wallMaterial: "render",
     wallColor: "#F5F2EC",
+    groundType: "tile", // 样板默认青砖广场地面（写入模板数据）
     roofColor: "#2A2A2A",
     accentColor: "#8A6040",
     floors: 2,
@@ -270,6 +271,7 @@ const JAPANESE_ZEN_VILLA: ProjectTemplate = {
 
   exterior: {
     preset: "japanese-zen",
+    groundType: "tile", // 样板默认青砖广场地面（写入模板数据）
     roofStyle: "chinese",
     wallMaterial: "wood",
     wallColor: "#F0EDE8",
@@ -418,6 +420,7 @@ const MEDITERRANEAN_VILLA: ProjectTemplate = {
 
   exterior: {
     preset: "mediterranean",
+    groundType: "tile", // 样板默认青砖广场地面（写入模板数据）
     roofStyle: "hip",
     wallMaterial: "render",
     wallColor: "#FFF8E8",
@@ -588,6 +591,7 @@ const GLASS_CURTAIN_VILLA: ProjectTemplate = {
     fenceInsetMultiplier: 1.65,
     pilotisHeightM: 0,
     buildingType: "rich-glass-villa",  // → GlbVillaBuilding (villa_pbr.glb)
+    groundType: "tile",  // 样板默认青砖广场地面（写入模板数据，不靠全局默认）
     facades: {},
   },
 
@@ -775,6 +779,7 @@ const LUXURY_3F_GLASS_VILLA: ProjectTemplate = {
     fenceInsetMultiplier: 1.65,
     pilotisHeightM: 0,
     buildingType: "floor-plan-driven",
+    groundType: "tile",  // 样板默认青砖广场地面（写入模板数据，不靠全局默认）
   },
 
   floorLayouts: [
@@ -980,6 +985,7 @@ const WOOD_ACCENT_POOL_VILLA: ProjectTemplate = {
     fenceInsetMultiplier: 1.5,
     pilotisHeightM: 0,
     buildingType: "floor-plan-driven",
+    groundType: "tile",  // 样板默认青砖广场地面（写入模板数据，不靠全局默认）
   },
 
   // ── 1F: 社交开放层 ─────────────────────────────────────────────────────────
@@ -1180,6 +1186,7 @@ const MODERN_CANTILEVER_GLASS_VILLA: ProjectTemplate = {
     fenceInsetMultiplier: 1.6,
     pilotisHeightM: 0,
     buildingType: "rich-glass-villa",  // → RichGlassVillaBuilding（逐物件还原参考图）
+    groundType: "tile",  // 样板默认青砖广场地面（写入模板数据，不靠全局默认）
     facades: {},
   },
 
@@ -1346,6 +1353,7 @@ const GLASS_POOL_VILLA_FROM_PLAN: ProjectTemplate = {
     fenceInsetMultiplier: 1.65,
     pilotisHeightM: 0,
     buildingType: "floor-plan-driven",
+    groundType: "tile",  // 样板默认青砖广场地面（写入模板数据，不靠全局默认）
     roofOverhang: 1.0,
     roofOverhangSouthExtra: 0.6,
     parapetHeight: 0,
@@ -1489,6 +1497,7 @@ const CLEAR_GLASS_CURTAIN_HOME: ProjectTemplate = {
     floors: 2,
     hasRooftop: true,
     buildingType: "floor-plan-driven",
+    groundType: "tile",  // 样板默认青砖广场地面（写入模板数据，不靠全局默认）
     wallColor: "#F4F3EE",
     wallBaseColor: "#F2EFE8",
     glassColor: "#AEC4D2",
@@ -1585,6 +1594,7 @@ const CAFE_SET: ProjectTemplate = {
     floors: 1,
     hasRooftop: false,
     buildingType: "floor-plan-driven",
+    groundType: "tile",  // 样板默认青砖广场地面（写入模板数据，不靠全局默认）
     wallColor: "#F4F3EE",
     wallBaseColor: "#F2EFE8",
     glassColor: "#AEC4D2",
@@ -1854,6 +1864,7 @@ const OFFICE_SET: ProjectTemplate = {
     floors: 1,
     hasRooftop: false,
     buildingType: "floor-plan-driven",
+    groundType: "tile",  // 样板默认青砖广场地面（写入模板数据，不靠全局默认）
     wallMaterial: "render",
     wallColor: "#EDEBE6",
     windowFrameColor: "#2A2C30",
@@ -2165,6 +2176,7 @@ const RESTAURANT_SET: ProjectTemplate = {
     floors: 1,
     hasRooftop: false,
     buildingType: "floor-plan-driven",
+    groundType: "tile",  // 样板默认青砖广场地面（写入模板数据，不靠全局默认）
     wallColor: "#F0E9DD",
     wallBaseColor: "#EFE8DC",
     glassColor: "#C4D2CB",

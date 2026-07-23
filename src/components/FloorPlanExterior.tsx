@@ -1991,7 +1991,7 @@ function StairPenthouse({ rW, rD, doorSide, wallColor, roofColor }: {
   wallColor: string; roofColor: string;
 }) {
   const H     = 2.30;  // 墙净高 m
-  const WT    = 0.12;  // 墙厚 m
+  const WT    = 0.18;  // 墙厚 m（12→18cm，更有体量感，墙向外增厚、室内不变）
   const RT    = 0.12;  // 屋面板厚 m
   const OV    = 0.12;  // 屋面出挑 m
   const doorW = Math.min(1.0, Math.min(rW, rD) * 0.55);
@@ -7593,7 +7593,7 @@ export default function FloorPlanBuilding({
         // room. Floor is flush to boundary (no inset) so it covers the
         // wall's bottom face. WalkthroughDoor3D panel offset (0.08m)
         // sits the door panel ~2cm past the wall's interior face.
-        const WALL_T = 0.12;
+        const WALL_T = 0.18; // 漫游墙厚 12→18cm（不再像纸片）
         const holesM = seg.holes
           .map(h => ({ x: h.x * CM_l, y: h.y * CM_l, w: h.w * CM_l, h: h.h * CM_l }))
           // 竖墙(v)洞方向修正：collectHoles 的 hole.x 从 seg.a(北/小-Z 端)量起，

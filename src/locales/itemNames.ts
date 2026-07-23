@@ -76,6 +76,8 @@ export const FURNITURE_NAMES_EN: Record<string, string> = {
   "toilet-smart":            "Smart Integrated Toilet",
   "toilet-standard":         "Standard Toilet",
   "toilet-wallhung":         "Wall-Hung Toilet",
+  "urinal-wall":             "Wall-Hung Urinal",
+  "stall-door":              "Toilet Stall Door (openable)",
   // Bathtub & Shower
   "bathtub-freestanding":    "Freestanding Bathtub",
   "bathtub-builtin":         "Built-in Bathtub",
