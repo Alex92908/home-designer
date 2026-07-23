@@ -19,6 +19,9 @@ import { useGLTF, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
 
 const SOLDIER = "/models/person/soldier/soldier.glb";
+// 模型默认朝向修正：Soldier.glb 网格朝 -Z，而 heading=atan2(vx,vz) 以 +Z 为 0，
+// 直接用会前后反 180°（用户实测："前后错了"）。整体 +π 扶正到面朝移动方向。
+const MODEL_FACING = Math.PI;
 
 /** 由 WalkthroughController 每帧写、本组件每帧读的化身状态。 */
 export interface AvatarState {
@@ -59,7 +62,7 @@ export function ThirdPersonAvatar({ stateRef }: { stateRef: React.MutableRefObje
     while (d > Math.PI) d -= Math.PI * 2;
     while (d < -Math.PI) d += Math.PI * 2;
     headingRef.current += d * (1 - Math.exp(-12 * delta));
-    g.rotation.y = headingRef.current;
+    g.rotation.y = headingRef.current + MODEL_FACING;
     // 速度 → 动画：Idle(<0.3) / Walk(<4.2) / Run(≥4.2)。0.2s 交叉淡化。
     const want: "Idle" | "Walk" | "Run" = s.speed < 0.3 ? "Idle" : s.speed < 4.2 ? "Walk" : "Run";
     if (want !== curClip.current && actions) {
