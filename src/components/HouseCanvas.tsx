@@ -5167,7 +5167,7 @@ function TouchJoystick({ onChange }: { onChange: (axisX: number, axisZ: number) 
  *  - Mobile joystick: an external state can inject {axisX,axisZ}.
  *  - When `spawnPos` changes, teleports the camera there. */
 function WalkthroughController({
-  active, spawnPos, spawnLook, bbox, onExit, walls, doorPasses, joystick, noClip, storeyH,
+  active, spawnPos, spawnLook, bbox, onExit, walls, doorPasses, openPasses, joystick, noClip, storeyH,
 }: {
   active: boolean;
   spawnPos: [number, number, number] | null;
@@ -5191,6 +5191,9 @@ function WalkthroughController({
   /** Rect regions on walls where movement is freely allowed (doors).
    *  blocksMovement checks these before declaring a wall crossing. */
   doorPasses: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number; bld?: number }>;
+  /** 隐藏外墙段(开敞口)的通行矩形——骑楼露台/开放式店面这类「隐藏墙+无门」的开敞
+   *  外墙，外壳门控放行。与 doorPasses 同构。 */
+  openPasses: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number; bld?: number }>;
   /** Live touch joystick output, -1..1 on each axis. Forward = +axisZ
    *  (same convention as WASD's dz). */
   joystick: { axisX: number; axisZ: number };
@@ -5465,13 +5468,19 @@ function WalkthroughController({
       x >= shMinX && x <= shMaxX && z >= shMinZ && z <= shMaxZ;
     if (inFootprint(x1, z1) !== inFootprint(x2, z2)) {
       const mxs = (x1 + x2) * 0.5, mzs = (z1 + z2) * 0.5;
-      for (const pass of doorPasses) {
-        if (pass.floor !== curFloorIdx || (pass.bld ?? 0) !== curBld) continue;  // only THIS floor's doors open this floor's shell
-        if (x2 >= pass.minX && x2 <= pass.maxX && z2 >= pass.minZ && z2 <= pass.maxZ) return false;
-        if (x1 >= pass.minX && x1 <= pass.maxX && z1 >= pass.minZ && z1 <= pass.maxZ) return false;
-        if (mxs >= pass.minX && mxs <= pass.maxX && mzs >= pass.minZ && mzs <= pass.maxZ) return false;
-      }
-      return true;  // crossing the outer shell away from a door — blocked
+      const coveredBy = (list: typeof doorPasses) => {
+        for (const pass of list) {
+          if (pass.floor !== curFloorIdx || (pass.bld ?? 0) !== curBld) continue;  // only THIS floor's openings open this floor's shell
+          if (x2 >= pass.minX && x2 <= pass.maxX && z2 >= pass.minZ && z2 <= pass.maxZ) return true;
+          if (x1 >= pass.minX && x1 <= pass.maxX && z1 >= pass.minZ && z1 <= pass.maxZ) return true;
+          if (mxs >= pass.minX && mxs <= pass.maxX && mzs >= pass.minZ && mzs <= pass.maxZ) return true;
+        }
+        return false;
+      };
+      // 门洞放行；**隐藏的外墙段(开敞口)也放行**——骑楼露台/开放式店面这类「隐藏墙+无门」
+      // 的开敞外墙，看不见墙但外壳门控原来一律当实墙挡住(用户："咖啡厅走廊隐形的墙挡住了")。
+      if (coveredBy(doorPasses) || coveredBy(openPasses)) return false;
+      return true;  // crossing the solid outer shell (not a door / not an open wall) — blocked
     }
 
     // ── Interior wall collision: cross a SOLID rendered wall LINE → block ──
@@ -6379,6 +6388,35 @@ export default function HouseCanvas() {
     return out;
   }, [floorPlansForWalk, buildings, activeBuilding]);
 
+  // ── Open passages: 隐藏外墙段(开敞口) → 供外壳门控放行 ──────────────
+  // 从 wallAABBs 派生：每面/每条被隐藏的墙对应一个通行矩形（骑楼露台、开放式
+  // 店面这类「隐藏墙+无门」的开敞外墙）。外壳门控原来只认门洞(doorPasses)，会把
+  // 这些看不见的开敞外墙当实墙挡住（用户："咖啡厅走廊隐形的墙挡住了"）。
+  const openPasses = useMemo<Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number; bld?: number }>>(() => {
+    const out: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number; bld?: number }> = [];
+    const PAD = 0.4;
+    for (const r of wallAABBs) {
+      if (r.room === "__rooftop_deck__") continue;
+      if (r.segs) {
+        // 多边形房间：逐边，隐藏段建开口矩形。seg.c=常量坐标(horiz→世界Z / 竖→世界X)，
+        // lo/hi=另一轴的段两端。
+        for (const s of r.segs) {
+          if (!s.hidden) continue;
+          const lo = Math.min(s.lo, s.hi), hi = Math.max(s.lo, s.hi);
+          if (s.horiz) out.push({ minX: lo, maxX: hi, minZ: s.c - PAD, maxZ: s.c + PAD, floor: r.floor, bld: r.bld });
+          else         out.push({ minX: s.c - PAD, maxX: s.c + PAD, minZ: lo, maxZ: hi, floor: r.floor, bld: r.bld });
+        }
+      } else if (r.hides) {
+        // 矩形房间：按 hides 的每一面沿房间 bbox 边建开口矩形。
+        if (r.hides.N) out.push({ minX: r.minX, maxX: r.maxX, minZ: r.minZ - PAD, maxZ: r.minZ + PAD, floor: r.floor, bld: r.bld });
+        if (r.hides.S) out.push({ minX: r.minX, maxX: r.maxX, minZ: r.maxZ - PAD, maxZ: r.maxZ + PAD, floor: r.floor, bld: r.bld });
+        if (r.hides.W) out.push({ minX: r.minX - PAD, maxX: r.minX + PAD, minZ: r.minZ, maxZ: r.maxZ, floor: r.floor, bld: r.bld });
+        if (r.hides.E) out.push({ minX: r.maxX - PAD, maxX: r.maxX + PAD, minZ: r.minZ, maxZ: r.maxZ, floor: r.floor, bld: r.bld });
+      }
+    }
+    return out;
+  }, [wallAABBs]);
+
   // ── Listen for "enterWalkthrough" event from ExteriorRoomList (left panel) ──
   // ExteriorRoomList dispatches this when the user clicks a room item.
   // We compute the room centre in world coords and teleport the camera there.
@@ -6823,6 +6861,7 @@ export default function HouseCanvas() {
           }}
           walls={wallAABBs}
           doorPasses={doorPasses}
+          openPasses={openPasses}
           joystick={joystick}
           noClip={walkNoClip}
           storeyH={WALK_FLOOR_H}
