@@ -5168,7 +5168,7 @@ function TouchJoystick({ onChange }: { onChange: (axisX: number, axisZ: number) 
  *  - Mobile joystick: an external state can inject {axisX,axisZ}.
  *  - When `spawnPos` changes, teleports the camera there. */
 function WalkthroughController({
-  active, spawnPos, spawnLook, bbox, onExit, walls, doorPasses, openPasses, joystick, noClip, storeyH,
+  active, spawnPos, spawnLook, bbox, onExit, walls, doorPasses, openPasses, furnitureColliders, joystick, noClip, storeyH,
   thirdPerson, avatarStateRef,
 }: {
   active: boolean;
@@ -5196,6 +5196,8 @@ function WalkthroughController({
   /** 隐藏外墙段(开敞口)的通行矩形——骑楼露台/开放式店面这类「隐藏墙+无门」的开敞
    *  外墙，外壳门控放行。与 doorPasses 同构。 */
   openPasses: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number; bld?: number }>;
+  /** 家具实体碰撞盒(世界米)：像墙一样挡住，撞到绕行，避免走上桌子/穿过沙发。 */
+  furnitureColliders: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number; bld?: number }>;
   /** 第三人称：true 时把相机拉到人物身后(弹簧臂)，并每帧把化身状态写入 avatarStateRef。 */
   thirdPerson: boolean;
   avatarStateRef: React.MutableRefObject<AvatarState>;
@@ -5437,6 +5439,15 @@ function WalkthroughController({
       if ((walls[i].bld ?? 0) !== curBld) continue;
       const dist = Math.abs(walls[i].floor * storeyH - footY);
       if (dist < bestFloorDist) { bestFloorDist = dist; curFloorIdx = walls[i].floor; }
+    }
+    // ── 家具实体碰撞(PUBG 式)：进入家具 AABB 就挡，绕行；已在里面(卡住)允许出来 ──
+    // 放在墙体判定之前：撞到桌子/沙发直接停，不再穿进去被地面射线抬到桌面上。
+    for (const fc of furnitureColliders) {
+      if (fc.floor !== curFloorIdx || (fc.bld ?? 0) !== curBld) continue;
+      const inNext = x2 >= fc.minX && x2 <= fc.maxX && z2 >= fc.minZ && z2 <= fc.maxZ;
+      if (!inNext) continue;
+      const inNow = x1 >= fc.minX && x1 <= fc.maxX && z1 >= fc.minZ && z1 <= fc.maxZ;
+      if (!inNow) return true;   // 从外面撞进家具 → 挡住(slide 逻辑会让你沿边绕行)
     }
     // ── Building-shell gate (fixes joystick "出到房屋外面") ──────────
     // The walkable room rects are each shrunk inward by WALL_HALF, so a thin
@@ -6465,6 +6476,63 @@ export default function HouseCanvas() {
     return out;
   }, [wallAABBs]);
 
+  // ── Furniture colliders：家具实体碰撞盒(PUBG 式) ─────────────────
+  // 家具原来只有渲染没有碰撞 → 漫游能穿过桌子，走进去后地面射线打到桌面把人抬上去
+  //（用户："第三人称会走到桌子上去"）。这里给「实心可撞」的家具建世界 AABB，喂给
+  // blocksMovement 像墙一样挡住 → 撞到家具停下/绕行，根本上不去。排除：楼梯(要走上去)、
+  // 吊顶件、地毯/挂画/人物、以及矮薄件(<25cm，如地垫)。坐标变换与 wallAABBs 同构。
+  const furnitureColliders = useMemo<Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number; bld?: number }>>(() => {
+    const out: Array<{ minX: number; maxX: number; minZ: number; maxZ: number; floor: number; bld?: number }> = [];
+    const CM = 0.01;
+    const push = (fps: import("@/lib/types").FloorPlan[], offX: number, offZ: number, bldIdx: number) => {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const fp of fps) {
+        if (!fp) continue;
+        for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+          const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+          if (!p || !d) continue;
+          minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+          maxX = Math.max(maxX, p.x + d.width); maxY = Math.max(maxY, p.y + d.depth);
+        }
+      }
+      if (!isFinite(minX)) return;
+      const Wh = (maxX - minX) * CM, Dh = (maxY - minY) * CM;
+      const toWX = (cx: number) => (cx - minX) * CM - Wh / 2 + offX;
+      const toWZ = (cz: number) => (cz - minY) * CM - Dh / 2 + offZ;
+      for (let fi = 0; fi < fps.length; fi++) {
+        const fp = fps[fi]; if (!fp) continue;
+        for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+          const p = fp.roomLayout?.[r]; if (!p) continue;
+          for (const it of (fp.rooms?.[r]?.placedItems ?? [])) {
+            const f = getFurnitureById(it.furnitureId); if (!f) continue;
+            if (STAIR_FURNITURE_IDS.has(f.id)) continue;   // 楼梯要走上去，不挡
+            if (it.mountCeiling) continue;                 // 吊顶件在头顶
+            if (f.category === "rug" || f.category === "artwork" || f.category === "person") continue;
+            const fh = f.height * (it.scaleH ?? 1);
+            if (fh < 25) continue;                          // 矮薄件(地垫等)可踩过，不挡
+            const fw = f.width * (it.scaleW ?? 1) * CM, fd = f.depth * (it.scaleD ?? 1) * CM;
+            const cxw = toWX(p.x + it.x), czw = toWZ(p.y + it.z);
+            // 旋转 → 轴对齐外接框：|cos|/|sin| 扩展半宽半深。再内收 8cm，免得贴边就卡。
+            const rot = ((it.rotation ?? 0) * Math.PI) / 180, ca = Math.abs(Math.cos(rot)), sa = Math.abs(Math.sin(rot));
+            const halfW = Math.max(0.05, (fw * ca + fd * sa) / 2 - 0.08);
+            const halfD = Math.max(0.05, (fw * sa + fd * ca) / 2 - 0.08);
+            out.push({ minX: cxw - halfW, maxX: cxw + halfW, minZ: czw - halfD, maxZ: czw + halfD, floor: fi, bld: bldIdx });
+          }
+        }
+      }
+    };
+    const ax = buildings[activeBuilding]?.x ?? 0;
+    const az = buildings[activeBuilding]?.z ?? 0;
+    push(floorPlansForWalk, 0, 0, activeBuilding);
+    for (let i = 0; i < buildings.length; i++) {
+      if (i === activeBuilding) continue;
+      const b = buildings[i];
+      if (!b.floorPlans?.length || b.rot) continue;
+      push(b.floorPlans, (b.x - ax) / 100, (b.z - az) / 100, i);
+    }
+    return out;
+  }, [floorPlansForWalk, buildings, activeBuilding]);
+
   // ── Listen for "enterWalkthrough" event from ExteriorRoomList (left panel) ──
   // ExteriorRoomList dispatches this when the user clicks a room item.
   // We compute the room centre in world coords and teleport the camera there.
@@ -6931,6 +6999,7 @@ export default function HouseCanvas() {
           walls={wallAABBs}
           doorPasses={doorPasses}
           openPasses={openPasses}
+          furnitureColliders={furnitureColliders}
           joystick={joystick}
           noClip={walkNoClip}
           storeyH={WALK_FLOOR_H}
