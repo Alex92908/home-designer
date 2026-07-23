@@ -5657,20 +5657,8 @@ function WalkthroughController({
       new THREE.Vector3(camera.position.x, camera.position.y + 0.5, camera.position.z),
       downV
     );
-    // 「上台阶」上限：室内/房间楼板(≈0.1)与场地地面(-0.5)之间差约 0.5m 的地基台阶。
-    // 平时 0.35m 上限(防爬家具)会挡住从场地跨回建筑 → 人被困室外。放宽到 0.7m 的两种情形：
-    //   • atDoor：站在门洞 doorPass 里（有门的出入口）；
-    //   • onGround：当前正站在**场地地面**上（floorY≈-0.5）——建筑坐落在地面上，从地面
-    //     跨上它的地基楼板天经地义。开敞露台(骑楼、无门)靠这条跨回。
-    // 离开这两种情形仍是 0.35，室内家具照样爬不上（不回退防爬家具修复）。
-    // 另外：命中的是**场地地面**本身时，无条件可站（踏下地面永远允许）。
-    const ex = camera.position.x, ez = camera.position.z;
-    let atDoor = false;
-    for (const p of doorPasses) {
-      if (ex >= p.minX && ex <= p.maxX && ez >= p.minZ && ez <= p.maxZ) { atDoor = true; break; }
-    }
-    const onGround = floorYRef.current < -0.3;  // 场地地面在 y≈-0.5
-    const stepUp = (atDoor || onGround) ? 0.7 : 0.35;
+    // 命中的是**场地地面**(userData.isSiteGround)时无条件可站——踏下到院子地面永远允许。
+    // 上台阶上限仍固定 0.35m（防爬家具/桌面，不放宽，避免站地面时误爬桌椅）。
     const hits = raycaster.intersectObjects(scene.children, true);
     for (const h of hits) {
       const hy = h.point.y;
@@ -5688,7 +5676,7 @@ function WalkthroughController({
       // 会顺着 0.5m 台阶落到院子地面站稳（眼睛 1.6→1.1）。室内仍取最近命中的室内楼板
       // (射线自上而下先中室内楼板)，不受影响；上层/天台更高，同样在阈内。
       if (hy < camera.position.y - 0.1 && hy > camera.position.y - 2.5 && hy > -1.0
-          && (isGround || hy <= floorYRef.current + stepUp)) {
+          && (isGround || hy <= floorYRef.current + 0.35)) {
         floorMissRef.current = 0;
         floorYRef.current = hy;   // remember this floor for the fallback
         const target = hy + 1.6;
