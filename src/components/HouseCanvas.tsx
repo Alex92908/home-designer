@@ -108,7 +108,7 @@ import { ROOM_DEFS, ExteriorSettings, ExteriorWall, isYardPrefab, isYardZone, re
 import { PlacedItemMesh } from "./RoomCanvas";
 import { STAIR_FURNITURE_IDS } from "./Staircase";
 import { polygonBounds, getEdges, effectiveRoomShape, type RoomShape } from "@/lib/roomGeometry";
-import { ThirdPersonAvatar, type AvatarState } from "./ThirdPersonAvatar";
+import { ThirdPersonAvatar, AVATARS, DEFAULT_AVATAR_ID, type AvatarState } from "./ThirdPersonAvatar";
 import { getRoomDoors } from "@/lib/roomDoors";
 import { getFurnitureById } from "@/lib/furniture";
 import { getOutdoorAssetByKind } from "@/lib/outdoorAssets";
@@ -6608,6 +6608,8 @@ export default function HouseCanvas() {
   // 默认关(第一人称)，纯附加、不影响原第一人称漫游。avatarStateRef 由控制器每帧
   // 写、ThirdPersonAvatar 每帧读（免每帧 setState）。
   const [thirdPerson, setThirdPerson] = useState(false);
+  const [avatarId, setAvatarId] = useState<string>(DEFAULT_AVATAR_ID);
+  const selectedAvatar = AVATARS.find(a => a.id === avatarId) ?? AVATARS[0];
   const avatarStateRef = useRef<AvatarState>({ x: 0, y: 0, z: 0, heading: 0, speed: 0, active: false });
   // Compass yaw — degrees CW for the HTML compass overlay. Updated each
   // frame by <CompassYawTracker/> inside the Canvas so the dial spins
@@ -6759,6 +6761,23 @@ export default function HouseCanvas() {
               >
                 {thirdPerson ? (locale === "en" ? "🧍 3rd-person: ON" : "🧍 第三人称：开") : (locale === "en" ? "👁 1st-person" : "👁 第一人称")}
               </button>
+              {/* 化身选择器：第三人称开时出现，点选切换角色。加更多形象只需往 AVATARS 加一条。 */}
+              {thirdPerson && AVATARS.map(a => (
+                <button
+                  key={a.id}
+                  onClick={() => setAvatarId(a.id)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold shadow-xl transition-all active:scale-95 select-none"
+                  style={{
+                    background: avatarId === a.id
+                      ? "linear-gradient(135deg,rgba(16,185,129,0.92),rgba(5,150,105,0.92))"
+                      : "linear-gradient(135deg,rgba(55,65,81,0.72),rgba(31,41,55,0.72))",
+                    backdropFilter: "blur(12px)",
+                    border: `1px solid ${avatarId === a.id ? "rgba(167,243,208,0.6)" : "rgba(255,255,255,0.12)"}`,
+                  }}
+                >
+                  🧑 {a.name}
+                </button>
+              ))}
             </>
           )}
         </div>
@@ -7023,8 +7042,8 @@ export default function HouseCanvas() {
           thirdPerson={thirdPerson}
           avatarStateRef={avatarStateRef}
         />
-        {/* 第三人称化身：只在漫游中挂载；未激活时组件内部自隐。 */}
-        {walkthrough && <ThirdPersonAvatar stateRef={avatarStateRef} />}
+        {/* 第三人称化身：只在漫游+第三人称时挂载；换角色 = 换 avatar 配置。 */}
+        {walkthrough && thirdPerson && <ThirdPersonAvatar avatar={selectedAvatar} stateRef={avatarStateRef} />}
         {/* HDR as both IBL lighting AND photorealistic sky background.
             backgroundBlurriness softens the HDR to remove distracting detail
             while keeping the sky colour/gradient. Night mode keeps a dark
