@@ -1111,6 +1111,23 @@ export const FURNITURE: FurnitureItem[] = [
     icon: "🚽",
     model3d: { url: "/models/toilet/wallhung_toilet_fss/wallhung_toilet_fss.glb" },
   },
+  {
+    id: "urinal-wall",
+    name: "壁挂小便池",
+    brand: "卫浴洁具",
+    price: 1200,
+    unit: "元/件",
+    category: "toilet",
+    roomTypes: ["bathroom"],
+    color: "#F5F5F5",
+    width: 38,
+    depth: 40,
+    height: 65,
+    tags: ["现代"],
+    description: "男洗手间壁挂小便池",
+    icon: "🚹",
+    model3d: { url: "/models/toilet/urinal/urinal.glb" },
+  },
 
   // ─── 浴缸 Bathtub ─────────────────────────────────────
   {
@@ -1716,6 +1733,7 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"decor-trash-bin-2", name:"办公垃圾桶", brand:"品质家居", price:90, unit:"元/件", category:"decor", roomTypes:["study","study2","living"], color:"#C8C0B4", width:28, depth:28, height:45, tags:[], description:"办公垃圾桶", icon:"🗑️", model3d:{ url:"/models/indoor_decor/trash_office/trash_office.glb", fit:"contain" } },
   { id:"decor-bin-black", name:"垃圾桶（黑）", brand:"品质家居", price:120, unit:"元/件", category:"decor", roomTypes:["hallway","living","kitchen","yard","balcony","balcony2","terrace","deck"], color:"#1A1A1A", width:30, depth:30, height:55, tags:[], description:"黑色街边/室内垃圾桶（recolor 整体染黑）", icon:"🗑️", model3d:{ url:"/models/indoor_decor/trash_office/trash_office.glb", fit:"contain", recolor:"#1A1A1A" } },
   { id:"partition-stall", name:"卫生间隔断板", brand:"品质家居", price:480, unit:"元/件", category:"decor", roomTypes:["bathroom","bathroom2"], color:"#D6D3CC", width:10, depth:150, height:200, tags:[], description:"公共卫生间隔间隔断板（无模型，按色盒渲染成一面薄墙）", icon:"🚻" },
+  { id:"stall-door", name:"隔间门（可开合）", brand:"五金", price:600, unit:"元/件", category:"decor", roomTypes:["bathroom","bathroom2"], color:"#D9D6CF", width:85, depth:5, height:190, tags:["现代"], description:"公共卫生间隔间门，点击 / 漫游 E 键可开合（StallDoor3D 渲染）", icon:"🚪" },
   { id:"lamp-street", name:"英式复古路灯", brand:"品质家居", price:1600, unit:"元/件", category:"lamp", roomTypes:["yard","garage"], color:"#C8C0B4", width:40, depth:40, height:300, tags:[], description:"英式复古路灯", icon:"🏮", model3d:{ url:"/models/indoor_decor/street_lamp/street_lamp.glb", fit:"contain" } },
   { id:"decor-clothes-pile-2", name:"衣物堆（小）", brand:"品质家居", price:0, unit:"-", category:"decor", roomTypes:["bedroom","closet"], color:"#C8C0B4", width:19, depth:19, height:20, tags:[], description:"衣物堆（小）", icon:"👕", model3d:{ url:"/models/indoor_decor/clothes_pile_2/clothes_pile_2.glb", fit:"contain" } },
   { id:"toy-plush", name:"毛绒玩具", brand:"品质家居", price:120, unit:"元/件", category:"toy", roomTypes:["bedroom","living"], color:"#C8C0B4", width:25, depth:14, height:26, tags:[], description:"毛绒玩具", icon:"🧸", model3d:{ url:"/models/indoor_decor/toy_plush/toy_plush.glb", fit:"contain" } },

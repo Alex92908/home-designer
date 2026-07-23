@@ -2303,6 +2303,8 @@ export const useDesignerStore = create<DesignerStore>()(
                   // 顶贴天花）。之前漏透传→咖啡杯掉地上、吊灯/绿萝站地上。
                   ...(it.elevationY != null ? { elevationY: Math.max(0, Math.round(it.elevationY)) } : {}),
                   ...(it.mountCeiling ? { mountCeiling: true } : {}),
+                  ...(it.mirrorX ? { mirrorX: true } : {}),
+                  ...(it.mirrorZ ? { mirrorZ: true } : {}),
                   ...(it.label != null ? { label: it.label } : {}),
                 })),
               };

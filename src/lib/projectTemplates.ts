@@ -28,6 +28,10 @@ export interface TemplatePlacedItem {
   elevationY?: number;
   /** 吸顶：顶面贴天花板（吊灯/吊挂绿萝），忽略 elevationY。 */
   mountCeiling?: boolean;
+  /** 沿局部 X/Z 轴镜像（scale = -1）。做左右/前后对称的成对家具，
+   *  隔间门用它换铰链侧+开向（男女厕镜像对开门）。 */
+  mirrorX?: boolean;
+  mirrorZ?: boolean;
   /** 店招灯箱等道具的显示文字。 */
   label?: string;
 }
@@ -1870,11 +1874,13 @@ const OFFICE_SET: ProjectTemplate = {
       // 回字形(2200×1500)：大厅=整层外框挖中央洞(6 个房间填洞)；洗手间不在岛内，
       // 移到东北角落(贴 N/E 边墙)、前置敞开过道从大厅走进，与其他房间用大厅空间隔开。
       rooms: [
-        // ═══ 大厅 living：外框挖中央洞 x550-1650/y330-1030 + 东北角开口 x1750-2200/y0-460 ═══
+        // ═══ 大厅 living：外框挖中央洞 x550-1650/y330-1030 + 东北角开口 x1650-2200/y0-620 ═══
+        //   洗手间区放大：缺口西界 x1750→x1650（贴回字岛 E 边）、进深 460→620（拆东侧 6 工位腾出），
+        //   两间洗手间各 275×620，facing 布局走道 ~120cm、隔间/走道宽松不挤。
         { room: "living", x: 0, y: 0, width: 2200, depth: 1500,
           name: "大厅", icon: "🏛️",
           shape: { preset: "custom",
-            points: [[0,0],[1750,0],[1750,460],[2200,460],[2200,1500],[0,1500]],
+            points: [[0,0],[1650,0],[1650,620],[2200,620],[2200,1500],[0,1500]],
             holes: [[[550,330],[1650,330],[1650,1030],[550,1030]]] },
           doors: [{ wall: "S", pos: 1100, len: 160, style: "glass_swing", h: 220 }],
           windows: [{ wall: "N", pos: 260, len: 640 }, { wall: "N", pos: 1080, len: 520 },
@@ -1897,13 +1903,12 @@ const OFFICE_SET: ProjectTemplate = {
           name: "机房", icon: "🖧", doors: [{ wall: "N", pos: 140, len: 90 }] },
         { room: "closet", x: 1290, y: 730, width: 360, depth: 300,
           name: "库房", icon: "📦", doors: [{ wall: "N", pos: 140, len: 90 }] },
-        // ── 东北角落 洗手间区：男/女洗贴 N 边墙、门开在各自外侧，盥洗台居中放过道 ──
-        { room: "bathroom", x: 1750, y: 0, width: 220, depth: 260,
-          name: "男洗手间", icon: "🚹", doors: [{ wall: "S", pos: 55, len: 90 }] },
-        { room: "bathroom2", x: 1970, y: 0, width: 230, depth: 260,
-          name: "女洗手间", icon: "🚺", doors: [{ wall: "S", pos: 175, len: 90 }] },
-        { room: "bedroom", x: 1750, y: 260, width: 450, depth: 200,
-          name: "洗手间过道", icon: "🚻", wallsHidden: ["S"] },
+        // ── 东北角落 洗手间区：男/女各占满进深(225×460)，门开在近中缝一侧、并排通大厅 ──
+        //   每间沿外墙一列 4 个封闭坑位 + 走道；男厕北墙留小便池排、女厕北墙做盥洗台。
+        { room: "bathroom", x: 1650, y: 0, width: 275, depth: 620,
+          name: "男洗手间", icon: "🚹", doors: [{ wall: "S", pos: 175, len: 70 }] },
+        { room: "bathroom2", x: 1925, y: 0, width: 275, depth: 620,
+          name: "女洗手间", icon: "🚺", doors: [{ wall: "S", pos: 80, len: 70 }] },
       ],
     },
   ],
@@ -1979,30 +1984,12 @@ const OFFICE_SET: ProjectTemplate = {
         { furnitureId: "plant-rubber-tree", x: 275, z: 300 },
         { furnitureId: "lamp-ceiling-long", x: 275, z: 470, mountCeiling: true },
         { furnitureId: "lamp-ceiling-long", x: 275, z: 830, mountCeiling: true },
-        // ── E 条：密集开放工位（两列背靠背 ×3 排 = 6 工位，避开东北洗手间区 z<460）──
-        // 西列(x1750)人朝西、东列(x2100)人朝东，中央过道 x1853~1997。
-        { furnitureId: "desk-standing",   x: 1750, z: 560, rotation: 90 },
-        { furnitureId: "chair-ergonomic", x: 1820, z: 560, rotation: 270 },
-        { furnitureId: "elec-monitor",    x: 1723, z: 560, elevationY: 66 },
-        { furnitureId: "desk-standing",   x: 1750, z: 760, rotation: 90 },
-        { furnitureId: "chair-ergonomic", x: 1820, z: 760, rotation: 270 },
-        { furnitureId: "elec-monitor",    x: 1723, z: 760, elevationY: 66 },
-        { furnitureId: "desk-standing",   x: 1750, z: 960, rotation: 90 },
-        { furnitureId: "chair-ergonomic", x: 1820, z: 960, rotation: 270 },
-        { furnitureId: "elec-monitor",    x: 1723, z: 960, elevationY: 66 },
-        { furnitureId: "desk-standing",   x: 2100, z: 560, rotation: 270 },
-        { furnitureId: "chair-ergonomic", x: 2030, z: 560, rotation: 90 },
-        { furnitureId: "elec-monitor",    x: 2127, z: 560, elevationY: 66 },
-        { furnitureId: "desk-standing",   x: 2100, z: 760, rotation: 270 },
-        { furnitureId: "chair-ergonomic", x: 2030, z: 760, rotation: 90 },
-        { furnitureId: "elec-monitor",    x: 2127, z: 760, elevationY: 66 },
-        { furnitureId: "desk-standing",   x: 2100, z: 960, rotation: 270 },
-        { furnitureId: "chair-ergonomic", x: 2030, z: 960, rotation: 90 },
-        { furnitureId: "elec-monitor",    x: 2127, z: 960, elevationY: 66 },
-        // 洗手间过道口(z460)南侧绿植隔断，与工位拉开距离
-        { furnitureId: "plant-rubber-tree", x: 1925, z: 480 },
-        { furnitureId: "lamp-ceiling-long", x: 1925, z: 620, mountCeiling: true },
-        { furnitureId: "lamp-ceiling-long", x: 1925, z: 900, mountCeiling: true },
+        // ── 东北洗手间区已加深至 z620（占满 x1650-2200/z0-620）；原东侧 6 工位拆除，
+        //    其南侧 z620-1030 留作开阔前厅，放绿植点缀 + 吸顶灯，别的家具留白 ──
+        { furnitureId: "plant-rubber-tree", x: 1770, z: 720 },
+        { furnitureId: "plant-monstera",    x: 2110, z: 760 },
+        { furnitureId: "lamp-ceiling-long", x: 1925, z: 760, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-long", x: 1925, z: 960, mountCeiling: true },
       ],
       // ═══ 会议室 dining（400×260，门朝南）：居中长会议桌 + 两排各4椅 + 西主位 + 东墙大屏 ═══
       dining: [
@@ -2051,19 +2038,42 @@ const OFFICE_SET: ProjectTemplate = {
         { furnitureId: "plant-monstera",       x: 235, z: 220 },
         { furnitureId: "lamp-ceiling-modern",  x: 135, z: 135, mountCeiling: true },
       ],
-      // ═══ 男洗手间 bathroom（220×260）：N 墙一排小便池 ×3 + 西南坐便隔间 + 东墙洗手盆 ═══
-      //   ⚠️ 目录暂无 urinal 素材，小便池先用 toilet-wallhung（壁挂洁具）替身；
-      //   真 urinal 模型入库后仅需替换这三行的 furnitureId（坐标/朝向不变）。
+      // ═══ 男洗手间 bathroom（275×620）：北半 W墙4隔间 ↔ E墙3小便池；南半大片留白；S墙盥洗台 ═══
+      //   加长的进深留作「隔间/小便池」与「南墙洗手台」之间的宽间隔(z370~583 约210cm留白)。
+      //   隔间保持紧凑各90(门85正好填满不裂)；洗手台在南墙、门在南墙东角。
       bathroom: [
-        // N 墙「小便池」一排 ×3（背贴北墙、面朝室内）
-        { furnitureId: "toilet-wallhung",     x: 45,  z: 32, rotation: 180 },
-        { furnitureId: "toilet-wallhung",     x: 110, z: 32, rotation: 180 },
-        { furnitureId: "toilet-wallhung",     x: 175, z: 32, rotation: 180 },
-        // 西南角坐便隔间（避开南门）+ 东墙洗手盆
-        { furnitureId: "toilet-standard",     x: 42,  z: 200, rotation: 90 },
-        { furnitureId: "kitchen_sink-basin",  x: 188, z: 150, rotation: 270 },
-        { furnitureId: "decor-trash-bin",     x: 188, z: 222 },
-        { furnitureId: "lamp-ceiling-modern", x: 110, z: 140, mountCeiling: true },
+        // 北半 · W 墙 4 隔间(z10~370，各90)：侧隔板 + 可开合门(85填满) + 坐便(朝东) + 隔间内小桶
+        { furnitureId: "partition-stall", x: 58, z: 10,  rotation: 90, scaleD: 0.77 },
+        { furnitureId: "partition-stall", x: 58, z: 100, rotation: 90, scaleD: 0.77 },
+        { furnitureId: "partition-stall", x: 58, z: 190, rotation: 90, scaleD: 0.77 },
+        { furnitureId: "partition-stall", x: 58, z: 280, rotation: 90, scaleD: 0.77 },
+        { furnitureId: "partition-stall", x: 58, z: 370, rotation: 90, scaleD: 0.77 },
+        { furnitureId: "stall-door", x: 115, z: 55,  rotation: 90 },
+        { furnitureId: "stall-door", x: 115, z: 145, rotation: 90 },
+        { furnitureId: "stall-door", x: 115, z: 235, rotation: 90 },
+        { furnitureId: "stall-door", x: 115, z: 325, rotation: 90 },
+        { furnitureId: "toilet-standard", x: 50, z: 55,  rotation: 90 },
+        { furnitureId: "toilet-standard", x: 50, z: 145, rotation: 90 },
+        { furnitureId: "toilet-standard", x: 50, z: 235, rotation: 90 },
+        { furnitureId: "toilet-standard", x: 50, z: 325, rotation: 90 },
+        { furnitureId: "decor-trash-bin", x: 95, z: 55 },
+        { furnitureId: "decor-trash-bin", x: 95, z: 145 },
+        { furnitureId: "decor-trash-bin", x: 95, z: 235 },
+        { furnitureId: "decor-trash-bin", x: 95, z: 325 },
+        // 北半 · E 墙小便池 ×3（面朝西 rot90）+ 之间短隔板（rot90,scaleD0.4→伸出 60cm）
+        { furnitureId: "urinal-wall", x: 255, z: 70,  rotation: 90 },
+        { furnitureId: "urinal-wall", x: 255, z: 160, rotation: 90 },
+        { furnitureId: "urinal-wall", x: 255, z: 250, rotation: 90 },
+        { furnitureId: "partition-stall", x: 245, z: 25,  rotation: 90, scaleD: 0.4 },
+        { furnitureId: "partition-stall", x: 245, z: 115, rotation: 90, scaleD: 0.4 },
+        { furnitureId: "partition-stall", x: 245, z: 205, rotation: 90, scaleD: 0.4 },
+        // 南半留白(z370~) + 点缀绿植（东侧开阔处）
+        { furnitureId: "plant-rubber-tree", x: 225, z: 480 },
+        // W 墙盥洗台（双盆浴室柜，面朝东 rot90，落在隔间南侧 z450~600 段）+ 大脚踏垃圾桶
+        { furnitureId: "vanity-double-marble", x: 19, z: 525, rotation: 90 },
+        { furnitureId: "decor-trash-bin-3",   x: 70, z: 590 },
+        { furnitureId: "lamp-ceiling-modern", x: 155, z: 190, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-modern", x: 155, z: 470, mountCeiling: true },
       ],
       // ═══ 吸烟室 custom2（280×300，门朝北 x100）═══
       custom2: [
@@ -2095,22 +2105,35 @@ const OFFICE_SET: ProjectTemplate = {
         { furnitureId: "storage-crate",      x: 140, z: 255 },
         { furnitureId: "lamp-ceiling-led",   x: 140, z: 175, mountCeiling: true },
       ],
-      // ═══ 女洗手间 bathroom2（230×260，隔间只留坐便，盥洗在过道）═══
+      // ═══ 女洗手间 bathroom2（275×620）：北半 E墙4隔间；南半大片留白；S墙盥洗台，门在南墙西角 ═══
+      //   加长的进深留作「隔间」与「南墙洗手台」之间的宽间隔(z370~583 约210cm留白)。
+      //   隔间保持紧凑各90(门85正好填满不裂)；洗手台在南墙、门在南墙西角。
       bathroom2: [
-        { furnitureId: "toilet-standard",     x: 115, z: 70, rotation: 180 },
-        { furnitureId: "plant-sansevieria",   x: 55,  z: 205 },
-        { furnitureId: "lamp-ceiling-modern", x: 115, z: 130, mountCeiling: true },
-      ],
-      // ═══ 洗手间过道 bedroom（450×200 横条，S 面敞开通大厅）：盥洗台居中(男女门在两侧) ═══
-      bedroom: [
-        { furnitureId: "vanity-double-marble", x: 225, z: 32, rotation: 0 },
-        { furnitureId: "mirror-cabinet",       x: 225, z: 10, elevationY: 140 },
-        { furnitureId: "faucet-basin",         x: 190, z: 30, elevationY: 82 },
-        { furnitureId: "faucet-basin",         x: 260, z: 30, elevationY: 82 },
-        { furnitureId: "plant-sansevieria",    x: 55,  z: 150 },
-        { furnitureId: "plant-sansevieria",    x: 395, z: 150 },
-        { furnitureId: "lamp-ceiling-led",     x: 150, z: 100, mountCeiling: true },
-        { furnitureId: "lamp-ceiling-led",     x: 300, z: 100, mountCeiling: true },
+        // 北半 · E 墙 4 隔间(z10~370，各90)：侧隔板 + 可开合门(85填满) + 坐便(朝西) + 隔间内小桶
+        { furnitureId: "partition-stall", x: 217, z: 10,  rotation: 90, scaleD: 0.77 },
+        { furnitureId: "partition-stall", x: 217, z: 100, rotation: 90, scaleD: 0.77 },
+        { furnitureId: "partition-stall", x: 217, z: 190, rotation: 90, scaleD: 0.77 },
+        { furnitureId: "partition-stall", x: 217, z: 280, rotation: 90, scaleD: 0.77 },
+        { furnitureId: "partition-stall", x: 217, z: 370, rotation: 90, scaleD: 0.77 },
+        { furnitureId: "stall-door", x: 160, z: 55,  rotation: 90, mirrorX: true },
+        { furnitureId: "stall-door", x: 160, z: 145, rotation: 90, mirrorX: true },
+        { furnitureId: "stall-door", x: 160, z: 235, rotation: 90, mirrorX: true },
+        { furnitureId: "stall-door", x: 160, z: 325, rotation: 90, mirrorX: true },
+        { furnitureId: "toilet-standard", x: 225, z: 55,  rotation: 270 },
+        { furnitureId: "toilet-standard", x: 225, z: 145, rotation: 270 },
+        { furnitureId: "toilet-standard", x: 225, z: 235, rotation: 270 },
+        { furnitureId: "toilet-standard", x: 225, z: 325, rotation: 270 },
+        { furnitureId: "decor-trash-bin", x: 180, z: 55 },
+        { furnitureId: "decor-trash-bin", x: 180, z: 145 },
+        { furnitureId: "decor-trash-bin", x: 180, z: 235 },
+        { furnitureId: "decor-trash-bin", x: 180, z: 325 },
+        // 南半留白(z370~) + 点缀绿植（中部开阔处）
+        { furnitureId: "plant-rubber-tree", x: 130, z: 480 },
+        // E 墙盥洗台（双盆浴室柜，面朝西 rot270，z450~600 段，镜像男厕）+ 大脚踏垃圾桶
+        { furnitureId: "vanity-double-marble", x: 256, z: 525, rotation: 270 },
+        { furnitureId: "decor-trash-bin-3",   x: 205, z: 590 },
+        { furnitureId: "lamp-ceiling-modern", x: 120, z: 200, mountCeiling: true },
+        { furnitureId: "lamp-ceiling-modern", x: 120, z: 470, mountCeiling: true },
       ],
       // ═══ 走廊 hallway（1100×140，两端通大厅）═══
       hallway: [

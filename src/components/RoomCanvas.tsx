@@ -28,6 +28,7 @@ import { FurnitureItem } from "@/lib/types";
 import { getRoomDoors } from "@/lib/roomDoors";
 import { getRoomWindows } from "@/lib/roomWindows";
 import { DetailedDecor } from "./DetailedDecor";
+import { StallDoor3D } from "./StallDoor3D";
 import { FirstPersonControls, TouchJoystick } from "./FirstPersonControls";
 import { getFloorTexture, getWallTexture, getRugTexture, floorTileSize, wallTileSize } from "@/lib/textures";
 import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
@@ -3192,6 +3193,23 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
     return (
       <group position={[stX, stairBaseY, stZ]} rotation={[0, rotY, 0]}>
         <StaircaseMesh item={item} fw={stW} fd={stD} fh={fh} />
+      </group>
+    );
+  }
+
+  // ── 可开合隔间门（stall-door）──
+  // 自包含门扇组件：位置/朝向/尺寸走通用家具手柄，门扇沿本地 +X 展开、铰链在 -X。
+  // 点击 / 漫游 E 键开合，本地状态、不接房间门管线（零回归）。
+  // mirrorX/mirrorZ 沿局部轴翻转 → 换铰链侧/开向（做男女厕左右镜像的对开门）。
+  if (item.id === "stall-door") {
+    const doorBaseY = (placed.elevationY ?? 0) / 100;
+    return (
+      <group
+        position={[x3d, doorBaseY, z3d]}
+        rotation={[0, rotY, 0]}
+        scale={[placed.mirrorX ? -1 : 1, 1, placed.mirrorZ ? -1 : 1]}
+      >
+        <StallDoor3D fw={fw} fh={fh} leafColor={item.color} />
       </group>
     );
   }
