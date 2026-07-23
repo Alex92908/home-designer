@@ -10,11 +10,15 @@
  * 关键：查看样板会改动全局 store。为不破坏用户自己的设计，进入前备份 store
  * 相关字段 + localStorage，返回/卸载/关页时还原。
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useDesignerStore } from "@/lib/store";
 import { useLocale } from "@/lib/i18n";
 import { SHOWCASE_TEMPLATES } from "@/lib/showcaseTemplates";
+import { isMobileDevice } from "@/lib/device";
+import { ROOM_DEFS, type RoomType } from "@/lib/types";
+import { getFurnitureById } from "@/lib/furniture";
+import { useGLTF } from "@react-three/drei";
 
 const PERSIST_KEY = "home-designer-v2";
 
@@ -39,7 +43,60 @@ export default function ShowcaseViewer({
 }) {
   const locale = useLocale();
   const en = locale === "en";
+  // 移动端不挂载 live HouseCanvas —— 整栋 + 院子几十个 GLB 的重型 WebGL 场景
+  // 会把内存吃紧的 iPhone 渲染进程撑爆（用户：进样板间外观崩溃）。改为直接
+  // 展示预渲染外观图（画廊卡片同款），零 WebGL = 零崩溃。想要实时 3D 走
+  // 「在设计器中打开」（设计器在移动端落地轻量 2D，见 page.tsx）。
+  const [isMobile] = useState(() => isMobileDevice());
+  // 移动端「逐房间家具 GLB」：当前点亮的房型存 store（响应式）。默认 null =
+  // 室内全占位盒（可靠打开）。点 chip 切房型 —— 不重挂 Canvas（同一 WebGL
+  // context，避免 iOS context 数量上限导致的「有概率加载失败」），而是响应式
+  // 重渲家具层，并在切走时显式 useGLTF.clear 上一间的模型（真正释放显存）。
+  const glbRoom = useDesignerStore((s) => s.mobileGlbRoom);
+  const setGlbRoomStore = useDesignerStore((s) => s.setMobileGlbRoom);
+  const customFurniture = useDesignerStore((s) => s.customFurniture);
+  const floorPlans = useDesignerStore((s) => s.floorPlans);
+
+  // 某房型的家具 GLB url 集合（跨楼层）——切走该房间时用于 useGLTF.clear。
+  const roomGlbUrls = (room: string): string[] => {
+    const urls = new Set<string>();
+    for (const fp of floorPlans) {
+      for (const p of fp.rooms?.[room as RoomType]?.placedItems ?? []) {
+        const f = getFurnitureById(p.furnitureId) ?? customFurniture.find((c) => c.id === p.furnitureId);
+        const u = f?.model3d?.url;
+        if (u) urls.add(u);
+      }
+    }
+    return [...urls];
+  };
+  const pickRoom = (room: string | null) => setGlbRoomStore(room);
+  // 切走某房间后（re-render 提交、上一间家具层已卸载）再 dispose 它的 GLB：
+  // 只清「上一间独有、新一间不用」的 url，避免误伤新房间正在加载的共用模型。
+  const prevRoomRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevRoomRef.current;
+    prevRoomRef.current = glbRoom;
+    if (!prev || prev === glbRoom) return;
+    const keep = new Set(glbRoom ? roomGlbUrls(glbRoom) : []);
+    for (const u of roomGlbUrls(prev)) {
+      if (!keep.has(u)) {
+        try { (useGLTF as unknown as { clear: (u: string) => void }).clear(u); } catch { /* noop */ }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [glbRoom]);
+
   const t = SHOWCASE_TEMPLATES.find((x) => x.id === templateId);
+  // 模板灌进 store 后，取「有家具的室内房型」列表做选择器（跨楼层去重）。
+  const furnishedRooms = Array.from(
+    new Set(
+      floorPlans.flatMap((fp) =>
+        (fp.enabledRooms ?? []).filter(
+          (r) => !ROOM_DEFS[r]?.isOutdoor && (fp.rooms?.[r]?.placedItems?.length ?? 0) > 0,
+        ),
+      ),
+    ),
+  ) as RoomType[];
 
   // 备份用户当前 store（进入查看时拍一次）。
   const backup = useRef<{
@@ -86,7 +143,11 @@ export default function ShowcaseViewer({
       // 片场类：走完整的项目模板管线（户型+风格家具+furnitureOverrides），
       // 再切外观视角。备份已在上面拍好，卸载时还原。
       useDesignerStore.getState().applyProjectTemplate(t.projectTemplateId);
-      useDesignerStore.setState({ viewMode: "exterior" as never, activeFloor: 0 });
+      useDesignerStore.setState({
+        viewMode: "exterior" as never,
+        activeFloor: 0,
+        mobileGlbRoom: null, // 进入模板：室内家具从「关」开始（可靠打开）
+      });
     } else {
       const { floorPlans, exterior, yardPlan } = t.load!();
       // REPLACE the exterior wholesale (load() returns a complete exterior built
@@ -100,6 +161,7 @@ export default function ShowcaseViewer({
         yardPlan: yardPlan as never,
         viewMode: "exterior" as never,
         activeFloor: 0,
+        mobileGlbRoom: null, // 进入模板：室内家具从「关」开始（可靠打开）
       });
     }
 
@@ -116,6 +178,7 @@ export default function ShowcaseViewer({
     window.addEventListener("beforeunload", onUnload);
     return () => {
       window.removeEventListener("beforeunload", onUnload);
+      useDesignerStore.getState().setMobileGlbRoom(null); // 离开查看器时复位
       restore();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -130,37 +193,85 @@ export default function ShowcaseViewer({
       : "在设计器中打开此方案？这会替换你当前的设计。";
     if (!window.confirm(msg)) return;
     backup.current = null; // 不还原 → 模板成为用户的新工作设计
-    useDesignerStore.setState({ viewMode: "3d" as never, activeFloor: 0 });
+    // 移动端进设计器落地轻量 2D（page.tsx 也会兜底降级），桌面进 3D。
+    useDesignerStore.setState({ viewMode: (isMobile ? "2d" : "3d") as never, activeFloor: 0 });
     window.location.href = "/";
   };
 
   return (
-    <div className="relative h-screen w-screen bg-gray-900 overflow-hidden">
+    // 用 100dvh 而非 h-screen：dvh 是「可见视口」，随 Safari 上下工具栏
+    // 收缩，底部控件不会被浏览器工具栏挡住（用户：挡住东西了）。
+    <div className="relative w-screen bg-gray-900 overflow-hidden" style={{ height: "100dvh" }}>
+      {/* 移动端默认：建筑 + 门窗 + 全院子 GLB + 室内占位盒（可靠打开）。
+          底部房间 chip 点亮某间的完整家具 GLB —— 同一 Canvas 响应式切换、
+          切走时 dispose 上一间，一次只亮一间。桌面永远全量高精度。 */}
       <HouseCanvas />
+
+      {/* 返回键（左上）*/}
       <button
         onClick={onBack}
-        className="absolute top-4 left-4 z-50 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-lg"
+        className="absolute top-4 left-4 z-50 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold text-white shadow-lg"
         style={{ background: "rgba(20,22,32,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}
       >
-        ← {en ? "Back to gallery" : "返回样板间"}
+        ← {en ? "Back" : "返回"}
       </button>
+
+      {/* 标题卡：移动端另起一行(top-16)、整行宽度，避免和返回键重叠；
+          桌面回到右上角。 */}
       {t && (
         <div
-          className="absolute top-4 right-4 z-50 px-4 py-2 rounded-xl text-sm text-white shadow-lg"
+          className="absolute z-40 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-white shadow-lg
+                     top-[4.25rem] left-4 right-4 sm:top-4 sm:left-auto sm:right-4 sm:max-w-xs"
           style={{ background: "rgba(20,22,32,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}
         >
-          <div className="font-semibold">{en ? t.nameEn : t.nameZh}</div>
+          <div className="font-semibold text-sm">{en ? t.nameEn : t.nameZh}</div>
           <div className="text-xs text-gray-300">{en ? t.descEn : t.descZh}</div>
         </div>
       )}
-      {/* 在设计器中打开此方案（fork 成自己的设计去编辑） */}
-      <button
-        onClick={openInDesigner}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-xl"
-        style={{ background: "#007AFF" }}
+
+      {/* 底部控件：房间选择器 + 提示 + 打开按钮竖向堆叠，带安全区内边距，
+          避开浏览器工具栏；容器不吃指针事件(不挡旋转)，控件单独可点。 */}
+      <div
+        className="absolute inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 px-3 pointer-events-none"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
       >
-        {en ? "Open this design in the editor →" : "在设计器中打开此方案 →"}
-      </button>
+        {/* 逐房间家具开关（仅移动端、且有带家具的房间时显示）。一次点亮一间，
+            释放上一间显存。 */}
+        {isMobile && furnishedRooms.length > 0 && (
+          <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto max-w-full pb-1"
+               style={{ scrollbarWidth: "none" }}>
+            <span className="text-[10px] text-white/50 shrink-0 pr-0.5">{en ? "Furniture:" : "看家具:"}</span>
+            <button
+              onClick={() => pickRoom(null)}
+              className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all"
+              style={glbRoom === null
+                ? { background: "#007AFF", color: "#fff" }
+                : { background: "rgba(20,22,32,0.8)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.14)" }}
+            >
+              {en ? "Off" : "关"}
+            </button>
+            {furnishedRooms.map((r) => (
+              <button
+                key={r}
+                onClick={() => pickRoom(r)}
+                className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap"
+                style={glbRoom === r
+                  ? { background: "#007AFF", color: "#fff" }
+                  : { background: "rgba(20,22,32,0.8)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.14)" }}
+              >
+                {ROOM_DEFS[r]?.icon} {ROOM_DEFS[r]?.name ?? r}
+              </button>
+            ))}
+          </div>
+        )}
+        <button
+          onClick={openInDesigner}
+          className="pointer-events-auto px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-xl"
+          style={{ background: "#007AFF" }}
+        >
+          {en ? "Open in the editor →" : "在设计器中打开此方案 →"}
+        </button>
+      </div>
     </div>
   );
 }

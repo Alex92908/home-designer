@@ -35,6 +35,7 @@ import { useT, useLocale, useLocaleStore } from "@/lib/i18n";
 import { decodeShare } from "@/lib/share";
 import { decodeSnapshot } from "@/lib/shareUrl";
 import { getSampleGlassVillaFloorPlans, SAMPLE_GLASS_VILLA_EXTERIOR } from "@/lib/sampleGlassVilla";
+import { isMobileDevice } from "@/lib/device";
 
 function CanvasLoading({ bg, msgKey }: { bg: string; msgKey: "loading3dScene" | "loadingExteriorScene" | "global3dLoading" }) {
   const t = useT();
@@ -222,6 +223,18 @@ export default function Home() {
   // On first-ever visit (no persisted state), load the glass-villa sample so
   // new users immediately see a complete coherent design across all views.
   useEffect(() => {
+    // ── 移动端防「重型视图崩溃循环」──────────────────────────
+    // viewMode 持久化：上次停在 3D/全屋3D/外观 的用户刷新即恢复该重型
+    // WebGL 视图。内存吃紧的 iPhone 挂载时就 OOM → 渲染进程被杀 →
+    //「无法打开此网页」→ 重载又恢复同一视图 → 再崩，用户无法自救。
+    // 在 setMounted(true) 之前把落地视图降级到轻量 2D —— 二者在同一
+    // effect 里批处理成一次渲染，重型 Canvas（受 !mounted 门控）从不
+    // 挂载。用户随后可显式点开 3D（此时已有降配渲染设置）。
+    if (isMobileDevice()) {
+      const HEAVY = new Set(["3d", "global3d", "exterior"]);
+      const vm = useDesignerStore.getState().viewMode;
+      if (HEAVY.has(vm)) useDesignerStore.getState().setViewMode("2d");
+    }
     setMounted(true);
     if (window.innerWidth < 768) {
       setLeftOpen(false);

@@ -19,6 +19,7 @@
  */
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { shrinkSceneTexturesForMobile } from "@/lib/device";
 import { useGLTF, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useT } from "@/lib/i18n";
@@ -82,6 +83,7 @@ function GlbInner({
 
   // Clone the scene so multiple instances don't share materials
   const cloned = useMemo(() => {
+    shrinkSceneTexturesForMobile(scene);
     const c = scene.clone(true);
     // Enable shadows on every mesh
     c.traverse((child) => {

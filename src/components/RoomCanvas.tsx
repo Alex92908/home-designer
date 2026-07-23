@@ -10,7 +10,7 @@ import { Suspense } from "react";
 import * as THREE from "three";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { useDesignerStore, RoomState } from "@/lib/store";
-import { canvasDpr } from "@/lib/device";
+import { canvasDpr, isMobileDevice, shrinkSceneTexturesForMobile } from "@/lib/device";
 import { useLocale, useLocaleStore } from "@/lib/i18n";
 import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
 const EMPTY_ROOM_STATE_RC: RoomState = { materials: {}, placedItems: [] };
@@ -2870,6 +2870,8 @@ function GltfFurniture({
   const { list: instances, measured } = useMemo(() => {
     // Per-mesh material fixups shared by every clone we build.
     const prep = (root: THREE.Object3D) => {
+      // 移动端：>512 的贴图重采样到 512（GPU 内存 1/4），防 iOS 杀页。
+      shrinkSceneTexturesForMobile(root);
       root.traverse((obj) => {
         const mesh = obj as THREE.Mesh;
         if (!mesh.isMesh) return;
@@ -4973,12 +4975,15 @@ function makeCanvasDecorTexture(item: FurnitureItem): THREE.CanvasTexture | null
 function PostFX() {
   const { gl } = useThree();
   const [ready, setReady] = useState(false);
+  // 移动端跳过整套后处理：N8AO/Bloom/SMAA 各需多张全分辨率浮点缓冲
+  // （iPhone 上一张就是几十 MB GPU 内存），是 iOS 杀页的主力之一。
+  const mobile = useMemo(() => isMobileDevice(), []);
   useEffect(() => {
     // Wait one frame for Canvas to fully wire up the WebGL context.
     const id = requestAnimationFrame(() => setReady(true));
     return () => cancelAnimationFrame(id);
   }, []);
-  if (!ready || !gl) return null;
+  if (!ready || !gl || mobile) return null;
   return (
     <EffectComposer multisampling={0}>
       <N8AO aoRadius={0.35} intensity={2.6} distanceFalloff={0.8} quality="medium" />

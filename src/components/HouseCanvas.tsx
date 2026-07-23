@@ -60,7 +60,7 @@ function AdaptiveDpr({ shadowSizeRef }: { shadowSizeRef?: React.MutableRefObject
   );
 }
 import { useDesignerStore } from "@/lib/store";
-import { canvasDpr } from "@/lib/device";
+import { canvasDprHeavy, isMobileDevice, mobileLiteScene, shrinkSceneTexturesForMobile } from "@/lib/device";
 import { useLocale } from "@/lib/i18n";
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 
@@ -2149,6 +2149,8 @@ function YardPlanItems3D() {
 
   // Render order matters for visual layering:
   //   zones (paving) → singletons → prefabs (often the largest mass)
+  // 院子 GLB（泳池/车/树，模型数少）移动端也全渲染 —— 用户策略：院子全 GLB，
+  // 室内家具才逐房间开关。贴图已降 256、相同模型实例共享几何。
   const zones    = items.filter(isYardZone);
   const prefabs  = items.filter(isYardPrefab);
   const singles  = items.filter(it => !isYardZone(it) && !isYardPrefab(it));
@@ -3599,6 +3601,7 @@ function SlatFence({ W, D, insetX, insetZ }: { W: number; D: number; insetX: num
 function GlbVillaMesh({ W, D }: { W: number; D: number }) {
   const { scene } = useGLTF("/models/villa_pbr.glb");
   const cloned = useMemo(() => {
+    shrinkSceneTexturesForMobile(scene);
     const c = scene.clone(true);
     // Compute bounding box and auto-scale + centre
     const box = new THREE.Box3().setFromObject(c);
@@ -3640,6 +3643,15 @@ function GlbVillaMesh({ W, D }: { W: number; D: number }) {
 }
 
 function GlbVillaBuilding({ W, D }: { W: number; D: number }) {
+  // 移动端跳过 villa GLB —— 用素色程序化体块占位，零 GLB 显存。
+  if (mobileLiteScene()) {
+    return (
+      <mesh position={[0, 3, 0]}>
+        <boxGeometry args={[W * 1.5, 6, D]} />
+        <meshStandardMaterial color="#EDEAE3" roughness={0.85} />
+      </mesh>
+    );
+  }
   return (
     <Suspense fallback={
       // While GLB loads, show a simple placeholder so the scene isn't blank
@@ -6411,8 +6423,11 @@ export default function HouseCanvas() {
            which hid the essential 退出漫游 / 墙体透视 / 实墙 controls when a
            walkthrough was entered via the room list). The enter button is
            harmless in the exploded 全局3D view and gives a one-click way in. */}
+      {/* 漫游在移动端也可用：家具走占位盒（见 FloorPlanExterior 的
+          !isMobileDevice 门控），漫游内也是零 GLB，不会崩。移动端把按钮下移到
+          标题卡之下(top-28)避免和左上返回键/标题重叠。 */}
       {true && (
-        <div className="absolute top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
+        <div className="absolute top-28 sm:top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
           <button
             onClick={() => {
               if (walkthrough) { exitWalkthrough(); }
@@ -6586,7 +6601,9 @@ export default function HouseCanvas() {
            Hidden during walkthrough: the sun-angle / shadow control only
            affects the exterior daylight read, which is meaningless while
            walking inside. */}
-      {!walkthrough && (
+      {/* 移动端隐藏时间轴/阴影条：手机上很少调时段，且它占着底部中央会和
+          样板间「在设计器中打开」按钮重叠（用户：下面按钮也重叠了）。 */}
+      {!walkthrough && !isMobileDevice() && (
       <div
         className="absolute bottom-4 left-1/2 z-10 flex items-center gap-3 select-none"
         style={{
@@ -6612,7 +6629,8 @@ export default function HouseCanvas() {
       <SceneVeil ready={sceneReady} label={locale === "en" ? "Building 3D scene" : "正在构建 3D 场景"} />
       <Canvas
         style={{ touchAction: "none" }}
-        shadows={{ type: THREE.PCFShadowMap, enabled: true }}
+        // 移动端关阴影：阴影贴图是额外大帧缓冲 + 一遍渲染，是 iOS 杀页大头。
+        shadows={mobileLiteScene() ? false : { type: THREE.PCFShadowMap, enabled: true }}
         // Plan A: frameloop="demand" —— 静止时 0 CPU/GPU 渲染。
         // OrbitControls / setState / 点击都会自动 invalidate() 触发重绘；
         // 没有自定义动画时这是免费 win。如果发现某些动画停了，把这行
@@ -6621,9 +6639,8 @@ export default function HouseCanvas() {
         // 也满帧重绘整个场景（夜间 ~73ms/帧 = 14fps），时间轴一拖就卡。
         // 补回 demand：静止 0 渲染，拖时间轴时场景冻结、滑块丝滑，松手才渲一帧。
         frameloop="demand"
-        // Task 2: Adaptive DPR — 配合 <AdaptiveDpr> 动态降级；移动端封顶 1.5
-        // （iOS WebKit 内存硬上限，dpr=2 的帧缓冲已足以在大户型上被杀页）。
-        dpr={canvasDpr()}
+        // 重型外观场景：移动端 dpr 锁 1（比 1.5 再省 ~2.25x 帧缓冲）。
+        dpr={canvasDprHeavy()}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
           // exposure = theme baseline × user dial. Dial < 1 darkens the
@@ -6767,16 +6784,21 @@ export default function HouseCanvas() {
           );
         })()}
         {insideBuilding && <color attach="background" args={["#D8D4CC"]} />}
-        <HouseEnvironmentFallback>
-          <Suspense fallback={null}>
-            <Environment
-              files={theme.hdr}
-              background={false}
-              backgroundBlurriness={0.04}
-              backgroundIntensity={theme.phase === "day" ? 0.65 : 0.80}
-            />
-          </Suspense>
-        </HouseEnvironmentFallback>
+        {/* 移动端跳过 HDR 环境光：equirect 贴图 + 生成的 PMREM 立方图常驻
+            十几 MB 显存，是 iOS 杀页大头。改用已有的 ambient+hemisphere 打光，
+            金属/玻璃反射略平但不崩。 */}
+        {!mobileLiteScene() && (
+          <HouseEnvironmentFallback>
+            <Suspense fallback={null}>
+              <Environment
+                files={theme.hdr}
+                background={false}
+                backgroundBlurriness={0.04}
+                backgroundIntensity={theme.phase === "day" ? 0.65 : 0.80}
+              />
+            </Suspense>
+          </HouseEnvironmentFallback>
+        )}
         {/* Night sky sphere + star field */}
         {theme.phase === "night" && (
           <>
@@ -6953,6 +6975,7 @@ export default function HouseCanvas() {
         {!insideBuilding && (!isRichGlassVilla || _buildingType === "floor-plan-driven") && <WallDecorLayer W={W} D={D} orbitRef={orbitRef} />}
         {/* Yard items + paths — always rendered. Walkthrough now lets the
             user step out the front door, so the yard must be visible. */}
+        {/* 院子 GLB + 路径：移动端也全渲染（院子全 GLB 策略）。 */}
         {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPlanItems3D />}
         {(!isRichGlassVilla || _buildingType === "floor-plan-driven") && <YardPathItems3D />}
         {/* VillaYard 自动院（池 + 露台 + 躺椅）已移除 ——
@@ -6972,7 +6995,7 @@ export default function HouseCanvas() {
            BrightnessContrast: slight contrast lift for that "rendered" punch.
            SMAA: temporal anti-aliasing for clean edges. */}
         {/* Skip heavy post-processing when inside — SSAO with empty depth buffer causes white washout */}
-        {!insideBuilding && (
+        {!insideBuilding && !isMobileDevice() && (
           <EffectComposer multisampling={0} enableNormalPass>
             <SSAO
               blendFunction={BlendFunction.MULTIPLY}

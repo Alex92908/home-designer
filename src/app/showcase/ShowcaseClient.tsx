@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useLocale } from "@/lib/i18n";
 import { SHOWCASE_META } from "@/lib/showcaseMeta";
+import { isMobileDevice } from "@/lib/device";
 
 // 查看器（重：store + three.js）——点卡片才加载，ssr:false 避免进服务端/首屏包。
 const ShowcaseViewer = dynamic(() => import("./ShowcaseViewer"), {
@@ -38,11 +39,10 @@ export default function ShowcaseClient() {
     if (warmed.current) return;
     warmed.current = true;
     import("./ShowcaseViewer").catch(() => {});
-    // HouseCanvas 是查看器里另一个 next/dynamic —— 它的内层 import 要等
-    // 渲染时才发起，光预热 ShowcaseViewer 壳不会把 three.js 大块拉下来
-    // （移动端点进去卡"渲染外形图…"的正是这块）。这里显式预热。
+    // 查看器里 HouseCanvas 是另一个 next/dynamic，预热这块 three.js 代码。
     import("@/components/HouseCanvas").catch(() => {});
-    fetch("/models/villa_pbr.glb").catch(() => {});
+    // villa GLB 只有桌面完整模式用；移动端轻量外观跳过所有 GLB，不预取。
+    if (!isMobileDevice()) fetch("/models/villa_pbr.glb").catch(() => {});
   };
   // 落地后空闲时也预热一次（不必等悬停）：首屏仍轻，进查看器却已就绪。
   useEffect(() => {
