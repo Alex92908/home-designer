@@ -2168,6 +2168,14 @@ export const useDesignerStore = create<DesignerStore>()(
           }
           return {
             ...existing,
+            // 「完整方案模板」= 整屋替换：家具/材质**不继承**上一个模板。每个房间
+            // 从空房重建（makeDefaultFloorPlan 给全空房底子，并把上一楼层的楼梯家具
+            // 续接过来，保证漫游还能上下楼），随后由风格模板 loadTemplate +
+            // furnitureOverrides 重铺。风格模板走另一条路（只叠加风格、不清空），
+            // 定位不同，故此清空只发生在模板页的完整模板入口。
+            // 之前 `...existing` 会把上一个模板的 placedItems/materials 带过来：切到
+            // 新模板时，某个同名房间若两处都没声明家具，就残留旧模板的家具（串味）。
+            rooms: makeDefaultFloorPlan(existing).rooms,
             enabledRooms: enabled,
             roomLayout: layoutMap,
             roomDimensions: dimsMap,
