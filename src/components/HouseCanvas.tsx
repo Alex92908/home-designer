@@ -5228,9 +5228,6 @@ function WalkthroughController({
   const yawRef   = useRef(0);
   const pitchRef = useRef(0);
   const dragRef  = useRef<{ x: number; y: number; captured: boolean; target: HTMLElement } | null>(null);
-  // 指针锁定（PUBG 式自由鼠标看）：点击画布锁定 → 移动鼠标即转视角、无需按住拖。
-  // 锁定失败（iframe/预览沙箱/移动端）自动回落到拖拽看。lockedRef 为真时 Esc 先释放锁。
-  const lockedRef = useRef(false);
   // PUBG 式移动惯性：世界坐标 XZ 速度(m/s)。不再「一按满速一松急停」——速度平滑
   // 趋近目标(加速/减速)，起步、停步、转向都有缓冲。疾跑 FOV 从基准 50 缓动到 58。
   const velRef = useMemo(() => new THREE.Vector3(), []);
@@ -5277,9 +5274,6 @@ function WalkthroughController({
     if (!active) return;
     const onDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        // 指针锁定中：Esc 让浏览器释放锁（pointerlockchange 会把 lockedRef 置假），
-        // 此时不退出漫游；再按一次 Esc（已解锁）才退出。
-        if (lockedRef.current) return;
         onExit();
         return;
       }
@@ -5318,27 +5312,10 @@ function WalkthroughController({
       pitchRef.current = Math.max(-Math.PI / 2.6, Math.min(Math.PI / 2.6, pitchRef.current));
       d.x = e.clientX; d.y = e.clientY;
     };
-    const lockEl = gl.domElement;
     const onPUp = () => {
-      const d = dragRef.current;
-      // 静态点击（未越过拖拽阈值）且当前未锁定 → 请求指针锁定（PUBG 式）。
-      // 拖拽（d.captured）不锁；已锁定时点击交给场景（E 键开门仍可用）。
-      if (d && !d.captured && !lockedRef.current) {
-        try {
-          const p = lockEl.requestPointerLock?.() as unknown as Promise<void> | undefined;
-          if (p && typeof p.catch === "function") p.catch(() => { /* iframe/预览拒绝 → 拖拽看兜底 */ });
-        } catch { /* 老浏览器同步抛错 → 拖拽看兜底 */ }
-      }
+      // 只用「按住拖动看」——不请求指针锁定，光标始终可见、不被吞
+      // （用户：漫游不要锁死鼠标光标）。静态点击直接交给场景（E/点击开门可用）。
       dragRef.current = null;
-    };
-    // 指针锁定状态 + 锁定态鼠标移动 → 直接转视角（无需按住拖）。
-    const onLockChange = () => { lockedRef.current = document.pointerLockElement === lockEl; };
-    const onLockErr = () => { lockedRef.current = false; };
-    const onLockedMove = (e: MouseEvent) => {
-      if (!lockedRef.current) return;
-      yawRef.current   -= e.movementX * 0.0022;
-      pitchRef.current -= e.movementY * 0.0022;
-      pitchRef.current = Math.max(-Math.PI / 2.6, Math.min(Math.PI / 2.6, pitchRef.current));
     };
     // Wheel-zoom: changes camera FOV (narrower = zoom in, wider = zoom out).
     // FOV-based zoom is more natural than moving the camera forward (which
@@ -5362,9 +5339,6 @@ function WalkthroughController({
     window.addEventListener("pointerup", onPUp);
     window.addEventListener("pointercancel", onPUp);
     window.addEventListener("wheel", onWheel, { passive: false });
-    document.addEventListener("pointerlockchange", onLockChange);
-    document.addEventListener("pointerlockerror", onLockErr);
-    document.addEventListener("mousemove", onLockedMove);
     return () => {
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
@@ -5373,11 +5347,6 @@ function WalkthroughController({
       window.removeEventListener("pointerup", onPUp);
       window.removeEventListener("pointercancel", onPUp);
       window.removeEventListener("wheel", onWheel);
-      document.removeEventListener("pointerlockchange", onLockChange);
-      document.removeEventListener("pointerlockerror", onLockErr);
-      document.removeEventListener("mousemove", onLockedMove);
-      if (document.pointerLockElement === lockEl) document.exitPointerLock();
-      lockedRef.current = false;
       keysRef.current = {};
       dragRef.current = null;
     };
@@ -6598,7 +6567,7 @@ export default function HouseCanvas() {
               letterSpacing: "0.04em",
               whiteSpace: "nowrap",
             }}>
-            {locale === "en" ? "🖱 Click to lock mouse-look (Esc to release) · or drag to look · WASD move · Shift sprint · E open door · walk up stairs/rooftop · ESC exit" : "🖱 点击锁定鼠标看（Esc 释放）· 或左键拖动转视角 · WASD 行走 · Shift 疾跑 · E 开门 · 走上楼梯/天台 · ESC 退出"}
+            {locale === "en" ? "🖱 Drag to look · WASD move · Shift sprint · E open door · walk up stairs/rooftop · ESC exit" : "🖱 左键拖动转视角 · WASD 行走 · Shift 疾跑 · E 开门 · 走上楼梯/天台 · ESC 退出"}
           </div>
           {/* Touch joystick — bottom-left, only useful with finger but
               always rendered (mouse drag also works on it). */}
