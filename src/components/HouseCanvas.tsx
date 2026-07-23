@@ -5655,6 +5655,15 @@ function WalkthroughController({
       new THREE.Vector3(camera.position.x, camera.position.y + 0.5, camera.position.z),
       downV
     );
+    // 门槛处放宽「上台阶」上限：室内楼板(≈0.1)与院子地面(-0.5)差约 0.5m 的地基台阶，
+    // 平时的 0.35m 上限(防爬家具)会挡住从院子跨回室内 → 人被困院子。站在门洞 doorPass
+    // 里时放宽到 0.7m，正好跨过地基进出；离开门口仍是 0.35，家具照样爬不上。
+    const ex = camera.position.x, ez = camera.position.z;
+    let atDoor = false;
+    for (const p of doorPasses) {
+      if (ex >= p.minX && ex <= p.maxX && ez >= p.minZ && ez <= p.maxZ) { atDoor = true; break; }
+    }
+    const stepUp = atDoor ? 0.7 : 0.35;
     const hits = raycaster.intersectObjects(scene.children, true);
     for (const h of hits) {
       const hy = h.point.y;
@@ -5665,7 +5674,12 @@ function WalkthroughController({
       // 只接受「当前地面 + 一个台阶高(≤0.35m)」以内的面：楼梯踏步(~0.25m)照常能上，
       // 但家具/马桶/柜台顶面(≥0.4m)会被跳过 → 射线继续找其正下方的真地面，人不再
       // 被抬上家具（用户："碰到东西怎么变成爬上去了，又不是楼梯"）。向下无限制(下楼/落地正常)。
-      if (hy < camera.position.y - 0.1 && hy > camera.position.y - 2.5 && hy > bbox.minY - 1
+      // 下限 -1.0m：院子地面在 y=-0.499（草坪/青砖 plane）。原来用 bbox.minY-1(=0.6)
+      // 把院子地面也拒了 → 踏出房子时找不到可站面 → 兜底把眼睛保持在室内楼板高度 →
+      // 人悬浮在下沉院子上方约 2m（用户："院子不支持漫游"）。放宽到 -1.0 后，踏出房子
+      // 会顺着 0.5m 台阶落到院子地面站稳（眼睛 1.6→1.1）。室内仍取最近命中的室内楼板
+      // (射线自上而下先中室内楼板)，不受影响；上层/天台更高，同样在阈内。
+      if (hy < camera.position.y - 0.1 && hy > camera.position.y - 2.5 && hy > -1.0
           && hy <= floorYRef.current + 0.35) {
         floorMissRef.current = 0;
         floorYRef.current = hy;   // remember this floor for the fallback
