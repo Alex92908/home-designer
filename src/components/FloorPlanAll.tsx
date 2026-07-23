@@ -2,7 +2,9 @@
 
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
-import { ROOM_DEFS, RoomType } from "@/lib/types";
+import { ROOM_DEFS, RoomType, WallSide, resolveFacadeLayer } from "@/lib/types";
+import { getRoomDoors } from "@/lib/roomDoors";
+import { getEdges, polygonBounds, findEdgeForWall, type EdgeInfo } from "@/lib/roomGeometry";
 import { ALL_POSSIBLE_ROOMS, DEFAULT_ENABLED } from "@/lib/store";
 import { getFurnitureById } from "@/lib/furniture";
 import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
@@ -28,6 +30,70 @@ const HANDLE   = 28;   // resize handle size cm
 const ALL_ROOMS = ALL_POSSIBLE_ROOMS;
 
 function snap(v: number) { return Math.round(v / SNAP) * SNAP; }
+
+// ─── 墙体 / 门洞几何（全局平面图）─────────────────────────────
+// 根因：全局平面图原来把每个房间画成"一块深灰实心底 + 四条 bbox 边"，既不认
+// 隐藏墙/玻璃幕墙，也完全不画门，多边形内凹边上的窗还会被投到 bbox 外框上。
+// 下面这组 helper 让它与 单房间平面图 / 效果图 / 外观图 共用同一批真源：
+//   · resolveFacadeLayer —— 墙层(实墙/玻璃)可见性
+//   · findEdgeForWall    —— 门窗 pos 的基准约定（edgeIndex → 边起点；否则 bbox 投影）
+
+/** 一段墙 / 一个洞口在图纸(cm)坐标里的定位：起点 + 沿墙单位向量 + 朝内单位法线。 */
+interface SegFrame { sx: number; sy: number; ux: number; uy: number; nx: number; ny: number; wallLen: number }
+
+/** 矩形房间某面墙的定位。基准与 findEdgeForWall 的 legacy 分支严格一致：
+ *  N/S 沿 +x 从"西端"起算，W/E 沿 +z 从"北端"起算——否则 2D 与 3D 会左右镜像。 */
+function rectWallFrame(side: WallSide, x: number, y: number, w: number, d: number): SegFrame {
+  if (side === "N") return { sx: x,         sy: y,         ux: 1, uy: 0, nx: 0, ny:  1, wallLen: w };
+  if (side === "S") return { sx: x,         sy: y + d,     ux: 1, uy: 0, nx: 0, ny: -1, wallLen: w };
+  if (side === "W") return { sx: x,         sy: y,         ux: 0, uy: 1, nx:  1, ny: 0, wallLen: d };
+  return              { sx: x + w,     sy: y,         ux: 0, uy: 1, nx: -1, ny: 0, wallLen: d };
+}
+
+/** 多边形某条边的定位（roomGeometry 的 EdgeInfo 已给出 CCW 朝内法线）。 */
+function edgeFrame(e: EdgeInfo, x: number, y: number): SegFrame {
+  return {
+    sx: x + e.x1, sy: y + e.z1,
+    ux: (e.x2 - e.x1) / e.length, uy: (e.z2 - e.z1) / e.length,
+    nx: e.nx, ny: e.nz, wallLen: e.length,
+  };
+}
+
+/** RoomCanvas.tsx:3741 的同名修正搬过来。
+ *  CCW 多边形的边走向常与世界轴反向（例如 S 边是东→西），而 cardinal 绑定的
+ *  pos 是"从世界坐标较小端"量起的；不换算就会让洞口沿边反向展开，2D 与 3D 左右镜像。
+ *  edgeIndex 显式指定的洞本来就是边相对坐标，保持原样。 */
+function alignHoleStart(startCm: number, e: EdgeInfo, lenCm: number, hasEdgeIndex: boolean): number {
+  if (hasEdgeIndex) return startCm;
+  const reversed = (e.facing === "N" || e.facing === "S") ? e.x2 < e.x1 : e.z2 < e.z1;
+  return reversed ? Math.max(0, startCm - lenCm) : startCm;
+}
+
+/** 全局平面图里的一扇门：门洞缺口 + 开启弧线 + 门扇。
+ *  画法照搬 FloorPlan.tsx 的 DoorSVG，但改成"沿任意墙向量"的通用形式，
+ *  这样 cardinal 墙和多边形斜边/内凹边用同一段代码。 */
+function DoorGlyph({ frame, posCm, lenCm, glass, inward }: {
+  frame: SegFrame; posCm: number; lenCm: number; glass: boolean;
+  /** 墙带画在朝内一侧(矩形房)还是朝外一侧(多边形房)——门洞缺口必须落在同一侧才盖得住。 */
+  inward: boolean;
+}) {
+  const len = Math.max(1, Math.min(lenCm, frame.wallLen));
+  const sx = frame.sx + frame.ux * posCm;
+  const sy = frame.sy + frame.uy * posCm;
+  const deg = Math.atan2(frame.uy, frame.ux) * 180 / Math.PI;
+  // 朝内法线在"沿墙为 +x"的局部坐标里的 y 分量，决定门往哪一侧开。
+  const s = (-frame.nx * frame.uy + frame.ny * frame.ux) >= 0 ? 1 : -1;
+  const gapY = inward ? (s > 0 ? 0 : -WALL) : (s > 0 ? -WALL : 0);
+  return (
+    <g transform={`translate(${sx} ${sy}) rotate(${deg})`} style={{ pointerEvents: "none" }}>
+      {/* 门洞缺口：盖掉这一段墙，与 2D 单房间图同色 */}
+      <rect x={0} y={gapY} width={len} height={WALL} fill={glass ? "#7DD3FC" : "#1E2030"} />
+      <path d={`M0,0 A${len},${len} 0 0,${s < 0 ? 1 : 0} ${len},${s * len}`}
+        fill="none" stroke="#9CA3AF" strokeWidth={2} strokeDasharray="8,6" />
+      <line x1={0} y1={0} x2={len} y2={s * len} stroke="#9CA3AF" strokeWidth={3} />
+    </g>
+  );
+}
 
 function getSVGPoint(e: { clientX: number; clientY: number }, svg: SVGSVGElement) {
   const pt = svg.createSVGPoint();
@@ -384,6 +450,13 @@ export default function FloorPlanAll() {
   const pasteAsNewRoom      = useDesignerStore(s => s.pasteAsNewRoom);
   const exterior            = useDesignerStore(s => s.exterior);
   const setExterior         = useDesignerStore(s => s.setExterior);
+  // 整份 FloorPlan：门合成(getRoomDoors)与墙层解析(resolveFacadeLayer)都需要
+  // roomFacadeFaces / roomWallsHidden / roomExteriorStyle / roomLayout 等一整组
+  // 字段，逐个订阅既啰嗦又容易漏（漏一个就退化成"处处实墙"）。
+  const fpAll               = useDesignerStore(s => s.floorPlans[s.activeFloor]);
+  // 幕墙模式判定与 FloorPlan.tsx / 外观图同一套写法（facadeSystem 未设时回落旧字段）。
+  const curtainWall = exterior?.facadeSystem === "curtain-wall"
+    || (exterior?.facadeSystem == null && (exterior?.facadeGlass ?? false));
   const blueprint           = useDesignerStore(s => s.blueprint);
   const setBlueprint        = useDesignerStore(s => s.setBlueprint);
   // yardItems removed — yard not shown in FloorPlanAll; edit in 院子图 view
@@ -409,6 +482,8 @@ export default function FloorPlanAll() {
   const deleteRoomShapePoint  = useDesignerStore(s => s.deleteRoomShapePoint);
   const addRoom2             = useDesignerStore(s => s.addRoom);
   const setRoomShape         = useDesignerStore(s => s.setRoomShape);
+  const normalizeRoomShape   = useDesignerStore(s => s.normalizeRoomShape);
+  const rectifyRoomShapeFPA  = useDesignerStore(s => s.rectifyRoomShape);
   // All floors data — for ghost overlay rendering
   const allFloorPlans        = useDesignerStore(s => s.floorPlans);
   // Multi-building
@@ -1391,25 +1466,98 @@ export default function FloorPlanAll() {
               // Render as polygon for any non-rect preset, OR a rect-preset room that
               // has been shape-initialized (points exist) and the user is actively editing it.
               const isPolygon = shape && (shape.preset !== "rect" || shapeEditRoom === room);
-              const polyPts = isPolygon
-                ? shape!.points.map(([px, pz]) => `${x + px},${y + pz}`).join(" ")
+              // 回字形内洞：用 evenodd path（外环 + 各内洞子路径）替代 polygon，
+              // 使地板/底色在洞处镂空，露出洞内嵌套房间。
+              const polyPathD = isPolygon
+                ? "M" + shape!.points.map(([px, pz]) => `${x + px},${y + pz}`).join("L") + "Z"
+                  + (shape!.holes ?? []).map(h =>
+                      "M" + h.map(([px, pz]) => `${x + px},${y + pz}`).join("L") + "Z").join("")
                 : "";
+
+              // ── 墙面状态 / 门窗定位（与其它三个视图同一真源）──────────
+              // 传整份 fp（而不是只挑 roomFacadeFaces）是为了让 resolveFacadeLayer
+              // 的第 4 步"内墙相邻 → 强制实墙"能拿到 roomLayout/roomDimensions/
+              // enabledRooms；缺了这几个字段，幕墙模式下连户内隔墙都会变成玻璃。
+              const fpFacade = fpAll as Parameters<typeof resolveFacadeLayer>[0];
+              const wallKindOf = (sideKey: string): "solid" | "glass" | "hidden" => {
+                if (resolveFacadeLayer(fpFacade, room, sideKey, "wall", curtainWall)) return "solid";
+                if (resolveFacadeLayer(fpFacade, room, sideKey, "glass", curtainWall)) return "glass";
+                return "hidden";   // 三层全隐 = 这面彻底开敞，不该再画墙
+              };
+              const polyPoints = isPolygon ? shape!.points : null;
+              const polyEdges  = polyPoints ? getEdges(polyPoints) : null;
+              const polyBBox   = polyPoints ? polygonBounds(polyPoints) : null;
+              // 多边形逐边：先认 `edge-i` 这个键（与 RoomCanvas 的 isEdgeHidden /
+              // 逐边幕墙设置同键），没有逐边设置时回落到该边朝向的 cardinal 面。
+              const edgeKind = (e: EdgeInfo): "solid" | "glass" | "hidden" => {
+                const k = `edge-${e.i}`;
+                if (fpAll.roomWallsHidden?.[room]?.[k] === true) return "hidden";
+                if (fpAll.roomFacadeFaces?.[room]?.[k]) return wallKindOf(k);
+                return wallKindOf(e.facing);
+              };
+              /** 把 (wall, pos) 解析成"墙段 + 段内起点"。多边形房间必须走
+               *  findEdgeForWall，否则内凹边上的洞会被投到 bbox 外框上。 */
+              const resolveHole = (wall: WallSide, posCm: number, lenCm: number, edgeIndex?: number)
+                : { frame: SegFrame; startCm: number } | null => {
+                if (polyPoints && polyBBox) {
+                  const hit = findEdgeForWall(polyPoints, wall, posCm, lenCm, polyBBox, edgeIndex);
+                  if (!hit || edgeKind(hit.edge) === "hidden") return null;
+                  return {
+                    frame: edgeFrame(hit.edge, x, y),
+                    startCm: alignHoleStart(hit.startCm, hit.edge, lenCm, edgeIndex != null),
+                  };
+                }
+                if (wallKindOf(wall) === "hidden") return null;
+                return { frame: rectWallFrame(wall, x, y, w, d), startCm: posCm };
+              };
+              // 待画的墙段：隐藏面直接不进列表；玻璃幕墙面用青色区别于实墙深灰。
+              const wallSegs: Array<{ key: string; frame: SegFrame; glass: boolean; inward: boolean }> = [];
+              if (polyEdges) {
+                for (const e of polyEdges) {
+                  const k = edgeKind(e);
+                  if (k === "hidden") continue;
+                  // 多边形的地板是整块 polygon 盖在墙上，墙带只能朝外画，否则被盖住。
+                  wallSegs.push({ key: `edge-${e.i}`, frame: edgeFrame(e, x, y), glass: k === "glass", inward: false });
+                }
+              } else {
+                for (const side of ["N", "S", "W", "E"] as WallSide[]) {
+                  const k = wallKindOf(side);
+                  if (k === "hidden") continue;
+                  // 矩形房的地板本来就内缩了 WALL，墙带朝内画正好接上，不留缝。
+                  wallSegs.push({ key: side, frame: rectWallFrame(side, x, y, w, d), glass: k === "glass", inward: true });
+                }
+              }
+              /** 沿墙段的局部坐标系：+x 沿墙，band 的 y 起点取决于朝内/朝外。 */
+              const segTransform = (f: SegFrame) =>
+                `translate(${f.sx} ${f.sy}) rotate(${Math.atan2(f.uy, f.ux) * 180 / Math.PI})`;
+              /** 朝内法线在"沿墙为 +x"局部坐标里的 y 分量符号。 */
+              const inwardSign = (f: SegFrame) => (-f.nx * f.uy + f.ny * f.ux) >= 0 ? 1 : -1;
+
               return (
                 <g key={room}>
-                  {/* Wall background — polygon for L型/凸字型, rect otherwise */}
-                  {isPolygon ? (
-                    <polygon
-                      points={polyPts}
-                      fill="#374151"
-                      stroke="#374151" strokeWidth={WALL * 2} strokeLinejoin="round"
-                    />
-                  ) : (
-                    <rect x={x} y={y} width={w} height={d} fill="#374151" rx={2} />
+                  {/* 墙体：按面解析实墙 / 玻璃幕墙 / 隐藏，不再一律深灰实心。
+                      根因：原来无条件 fill #374151，用户把某面设成隐藏墙或玻璃幕墙后，
+                      效果图/外观图里已经开敞或透明，唯独全局平面图还是一堵实墙。 */}
+                  {isPolygon && (
+                    /* 多边形先铺一层底，避免逐边墙带在凹角处露出锯齿缝 */
+                    <path d={polyPathD} fillRule="evenodd" fill="#374151" opacity={0.9} />
                   )}
+                  {wallSegs.map(s => {
+                    const sgn = inwardSign(s.frame);
+                    const yTop = s.inward ? (sgn > 0 ? 0 : -WALL) : (sgn > 0 ? -WALL : 0);
+                    return (
+                      <g key={`wall-${room}-${s.key}`} transform={segTransform(s.frame)}>
+                        <rect x={0} y={yTop} width={s.frame.wallLen} height={WALL}
+                          fill={s.glass ? "#34D6C8" : "#374151"}
+                          opacity={s.glass ? 0.92 : 1}
+                          style={{ pointerEvents: "none" }} />
+                      </g>
+                    );
+                  })}
                   {/* Floor */}
                   {isPolygon ? (
-                    <polygon
-                      points={polyPts}
+                    <path
+                      d={polyPathD} fillRule="evenodd"
                       fill={(rooms[room] ?? {materials:{}}).materials?.floor?.color ?? def.defaultFloorColor}
                       opacity={0.93}
                       style={{ pointerEvents: "none" }}
@@ -1423,27 +1571,43 @@ export default function FloorPlanAll() {
                       style={{ pointerEvents: "none" }}
                     />
                   )}
-                  {/* Window indicators */}
+                  {/* 窗：走 findEdgeForWall 定位，不再只认 N/S/W/E 四个 bbox 分支。
+                      根因：多边形房间的内凹边不在 bbox 外框上，原实现把这些窗一律
+                      画到最外层矩形边上，位置与效果图/外观图对不上。隐藏面上的窗
+                      跟着不画（那面墙根本不存在）。 */}
                   {(roomWindows[room] ?? []).map(win => {
-                    const s2 = w / (roomDimensions[room].width);
-                    const s3 = d / (roomDimensions[room].depth);
-                    if (win.wall === "N") {
-                      const wx = x + win.pos * s2, ww = win.len * s2;
-                      return <rect key={win.id} x={wx} y={y + 2} width={ww} height={6} fill="#7DD3FC" opacity={0.6} rx={2} style={{ pointerEvents: "none" }} />;
-                    }
-                    if (win.wall === "S") {
-                      const wx = x + win.pos * s2, ww = win.len * s2;
-                      return <rect key={win.id} x={wx} y={y + d - 8} width={ww} height={6} fill="#7DD3FC" opacity={0.6} rx={2} style={{ pointerEvents: "none" }} />;
-                    }
-                    if (win.wall === "E") {
-                      const wy = y + win.pos * s3, wh = win.len * s3;
-                      return <rect key={win.id} x={x + w - 8} y={wy} width={6} height={wh} fill="#7DD3FC" opacity={0.6} rx={2} style={{ pointerEvents: "none" }} />;
-                    }
-                    if (win.wall === "W") {
-                      const wy = y + win.pos * s3, wh = win.len * s3;
-                      return <rect key={win.id} x={x + 2} y={wy} width={6} height={wh} fill="#7DD3FC" opacity={0.6} rx={2} style={{ pointerEvents: "none" }} />;
-                    }
-                    return null;
+                    const hole = resolveHole(win.wall as WallSide, win.pos, win.len, win.edgeIndex);
+                    if (!hole) return null;
+                    const { frame: f, startCm } = hole;
+                    const sgn = inwardSign(f);
+                    const len = Math.max(1, Math.min(win.len, f.wallLen));
+                    // 窗带贴着墙的内侧画，厚度取墙厚的一半，视觉上是"墙里嵌了段玻璃"
+                    const th = WALL * 0.55;
+                    const yTop = sgn > 0 ? 0 : -th;
+                    return (
+                      <g key={win.id} transform={`${segTransform(f)} translate(${startCm} 0)`}
+                        style={{ pointerEvents: "none" }}>
+                        <rect x={0} y={yTop} width={len} height={th} fill="#7DD3FC" opacity={0.85} rx={2} />
+                      </g>
+                    );
+                  })}
+
+                  {/* 门：全局平面图原来一扇门都不画（全文无 door 渲染），
+                      与 2D 单房间图 / 效果图 / 外观图 都对不上。门列表统一取自
+                      lib/roomDoors.getRoomDoors —— 门合成的唯一真源。 */}
+                  {getRoomDoors(fpAll, room, {
+                    curtainWall,
+                    interiorDoorHeightCm: exterior?.interiorDoorHeightCm,
+                    widthCm: w, depthCm: d,
+                  }).map((dr, di) => {
+                    const lenCm = dr.len ?? 80;
+                    const hole = resolveHole(dr.wall, dr.pos ?? 0, lenCm, dr.edgeIndex);
+                    if (!hole) return null;
+                    return (
+                      <DoorGlyph key={dr.id ?? `door-${room}-${di}`}
+                        frame={hole.frame} posCm={hole.startCm} lenCm={lenCm}
+                        glass={dr.style === "glass_swing"} inward={!isPolygon} />
+                    );
                   })}
 
                   {/* ── DEBUG: per-room NSWE wall labels (code convention) ── */}
@@ -1477,17 +1641,30 @@ export default function FloorPlanAll() {
                   )}
 
 
-                  {/* Furniture icons */}
+                  {/* 家具：画出真实占地矩形（按 rotation / scaleW / scaleD），emoji 叠在矩形中心。
+                      根因：原来只在 (x+p.x, y+p.z) 落一个 emoji，既不含旋转也不含缩放，
+                      看不出家具实际占多大地方——而 2D 单房间图与效果图都是按占地画的，
+                      于是"全局图看着放得下、进房间发现塞不下"。 */}
                   {(rooms[room]?.placedItems ?? []).map(p => {
                     const f = getFurnitureById(p.furnitureId);
                     if (!f) return null;
+                    const fw = f.width * (p.scaleW ?? 1);
+                    const fd = f.depth * (p.scaleD ?? 1);
+                    const rot = p.rotation ?? 0;
+                    // emoji 只跟着平移、不跟着旋转（旋转后的字形不可读），
+                    // 所以在组内反向旋转回来。
+                    const fs = Math.min(Math.min(fw, fd) * 0.6, Math.min(w, d) * 0.12);
                     return (
-                      <text key={p.instanceId}
-                        x={x + p.x} y={y + p.z}
-                        textAnchor="middle" dominantBaseline="middle"
-                        fontSize={Math.min(w, d) * 0.12}
-                        style={{ pointerEvents: "none", userSelect: "none" }}
-                      >{f.icon}</text>
+                      <g key={p.instanceId}
+                        transform={`translate(${x + p.x} ${y + p.z}) rotate(${rot})`}
+                        style={{ pointerEvents: "none", userSelect: "none" }}>
+                        <rect x={-fw / 2} y={-fd / 2} width={fw} height={fd} rx={4}
+                          fill={f.color} fillOpacity={0.8}
+                          stroke="rgba(255,255,255,0.45)" strokeWidth={2} />
+                        <g transform={`rotate(${-rot})`}>
+                          <text x={0} y={0} textAnchor="middle" dominantBaseline="middle" fontSize={fs}>{f.icon}</text>
+                        </g>
+                      </g>
                     );
                   })}
 
@@ -1599,6 +1776,12 @@ export default function FloorPlanAll() {
                         onPointerDown={e => {
                           e.stopPropagation();
                           if (isEditing) {
+                            // 退出编辑：负坐标规范化（平移多边形+layout+家具+门窗回正象限）
+                            // 先正交化再归正：外观图/全屋3D 的墙体引擎是「轴对齐边 = 一个面」的一维
+                            // 模型，表达不了斜边（会被跳过 → 那条边没墙）。自由拖拽能拖出斜边，
+                            // 所以退出编辑时统一吸附成水平/垂直，与预设形状保持同一不变式。
+                            rectifyRoomShapeFPA(room);
+                            normalizeRoomShape(room);
                             setShapeEditRoom(null);
                           } else {
                             // Init rect polygon if no custom shape yet

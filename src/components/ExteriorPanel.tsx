@@ -499,6 +499,29 @@ export default function ExteriorPanel() {
           </div>
         </div>
 
+        {/* ── 地面材质 (ground surface) ── 草坪 / 青砖铺装，见 HouseCanvas.Ground */}
+        <div className="px-3 pt-4">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{en ? "GROUND" : "地面"}</div>
+          <div className="flex gap-1">
+            {([
+              { id: "grass", icon: "🌿", label: en ? "Lawn"  : "草地" },
+              { id: "tile",  icon: "🟦", label: en ? "Tile"  : "青砖" },
+            ] as const).map(g => {
+              const active = (exterior.groundType ?? "grass") === g.id;
+              return (
+                <button key={g.id}
+                  onClick={() => setExterior({ groundType: g.id })}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl border transition-all ${
+                    active ? "border-blue-500 bg-blue-50" : "border-gray-100 hover:border-gray-200 bg-gray-50"
+                  }`}>
+                  <span className="text-base">{g.icon}</span>
+                  <span className="text-xs font-semibold text-gray-700">{g.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* ── 整屋玻璃幕墙开关 (whole-building glass curtain wall) ── */}
         <div className="px-3 pt-4">
           <button

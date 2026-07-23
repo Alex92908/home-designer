@@ -96,9 +96,15 @@ export default function ShowcaseClient() {
             onTouchStart={warmViewer}
             className="text-left rounded-2xl overflow-hidden border border-white/10 bg-gray-800/60 hover:bg-gray-800 transition shadow-lg"
           >
-            {/* 预渲染外观缩略图（真实 3D 场景离线截图） */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={t.image} alt={en ? t.nameEn : t.nameZh} className="h-40 w-full object-cover" loading="lazy" />
+            {/* 缩略图：以 "/" 开头是预渲染 JPG；否则当 emoji 占位（片场卡） */}
+            {t.image.startsWith("/") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={t.image} alt={en ? t.nameEn : t.nameZh} className="h-40 w-full object-cover" loading="lazy" />
+            ) : (
+              <div className="h-40 w-full flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 text-6xl select-none">
+                {t.image}
+              </div>
+            )}
             <div className="p-4">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span className="font-semibold">{en ? t.nameEn : t.nameZh}</span>

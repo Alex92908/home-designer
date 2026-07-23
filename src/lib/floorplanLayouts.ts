@@ -18,7 +18,28 @@ export interface LayoutTemplateRoom {
   y: number;
   width: number;       // cm
   depth: number;
+  /** 自定义房间显示名/图标（写进 customRoomMeta）。用于片场把通用房间槽
+   *  （living/study/master…）显示成"前台大厅/开放办公区/会议室/男洗手间"等。 */
+  name?: string;
+  icon?: string;
   shape?: RoomShape;
+  /** 需要隐藏的墙面（开放式/骑楼露天区，如咖啡馆沿街走廊）。
+   *  applyProjectTemplate 会写进 roomWallsHidden。 */
+  wallsHidden?: Array<"N" | "S" | "E" | "W">;
+  /** 本房间外立面：glass=玻璃幕墙 / concrete=实墙。卫生间、厨房库房等
+   *  隐私/后场房间应显式给 concrete。applyProjectTemplate 写进
+   *  roomExteriorStyle（styleTemplate 应用后生效，不被其覆盖）。 */
+  exteriorStyle?: "glass" | "concrete" | "auto";
+  /** 显式门（如临街大门加宽双开）。applyProjectTemplate 写进 roomDoors。 */
+  doors?: Array<{ wall: "N" | "S" | "E" | "W"; pos: number; len: number;
+    style?: import("./types").DoorStyle; h?: number }>;
+  /** 显式窗。applyProjectTemplate 写进 roomWindows。多边形房间的窗用 edgeIndex
+   *  绑定到具体那条边（pos = 从边起点沿边偏移 cm），否则按外接矩形四面定位。 */
+  windows?: Array<{ wall: "N" | "S" | "E" | "W"; pos: number; len: number;
+    h?: number; sill?: number; style?: import("./types").WindowStyle; edgeIndex?: number }>;
+  /** 外墙装饰——店招/壁画/壁灯等，写进 RoomState.exteriorDecor。 */
+  wallDecor?: Array<{ furnitureId: string; wall: "N" | "S" | "E" | "W";
+    u: number; v: number; scaleW?: number; scaleH?: number; label?: string }>;
 }
 
 export interface FloorplanLayout {

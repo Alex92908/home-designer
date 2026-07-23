@@ -193,11 +193,15 @@ export async function POST(req: NextRequest) {
         const images: string[] = [];
         const outputs = entry?.outputs ?? {};
         for (const nodeId of Object.keys(outputs)) {
-          const imgs: Array<{ filename?: string; subfolder?: string; type?: string }> = outputs[nodeId]?.images ?? [];
-          for (const im of imgs) {
-            if (!im.filename) continue;
-            const q = new URLSearchParams({ filename: im.filename, subfolder: im.subfolder ?? "", type: im.type ?? "output" });
-            images.push(`${base}/view?${q.toString()}`);
+          // 视频工作流（VHS VideoCombine 等）把产物放在 gifs/videos 键，
+          // 图片工作流放 images——三个键都收，云横店分镜成片要吃视频产出。
+          for (const key of ["images", "gifs", "videos"] as const) {
+            const files: Array<{ filename?: string; subfolder?: string; type?: string }> = outputs[nodeId]?.[key] ?? [];
+            for (const im of files) {
+              if (!im.filename) continue;
+              const q = new URLSearchParams({ filename: im.filename, subfolder: im.subfolder ?? "", type: im.type ?? "output" });
+              images.push(`${base}/view?${q.toString()}`);
+            }
           }
         }
         return NextResponse.json({ images });

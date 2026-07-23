@@ -25,7 +25,10 @@ const glassTransparencyToOpacity = (t: number) =>
   Math.max(0.04, Math.min(0.88, (1 - t) * 0.88 + 0.04));
 import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
+import { getRoomDoors } from "@/lib/roomDoors";
+import { getRoomWindows } from "@/lib/roomWindows";
 import { DetailedDecor } from "./DetailedDecor";
+import { StallDoor3D } from "./StallDoor3D";
 import { FirstPersonControls, TouchJoystick } from "./FirstPersonControls";
 import { getFloorTexture, getWallTexture, getRugTexture, floorTileSize, wallTileSize } from "@/lib/textures";
 import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
@@ -379,8 +382,11 @@ function RoomShell({
     if (!opts?.skipWindows) {
       for (const w of windows) {
         if (w.wall !== side) continue;
+        // sill/h 已由 lib/roomWindows.getRoomWindows 统一补全（默认 90 / 150），
+        // 不再在这里各自 `?? 90` / `?? Math.min(H*52,150)`——去掉随房高缩放，
+        // 与外观图/2D 的固定默认对齐。
         const sillM  = (w.sill ?? 90) / 100;
-        const winHM  = (w.h   ?? Math.min(H * 52, 150)) / 100;
+        const winHM  = (w.h   ?? 150) / 100;
         const winLenM = w.len / 100;
         // W wall: wall-local x=0 is at the south (+Z) end and increases
         // northward, but win.pos is north-referenced (plan convention).
@@ -2850,8 +2856,12 @@ function snapToSurface(roomPrefix: string, selfKey: string, x: number, z: number
 }
 
 function GltfFurniture({
-  url, scale, rotation, yOffset, recolor, w, d, h, fit, onMeasured,
-}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile"; onMeasured?: (m: { topY: number; w: number; d: number }) => void }) {
+  url, scale, rotation, yOffset, recolor, w, d, h, fit, preRotX, preRotZ, dropMeshNames, onMeasured,
+}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile"; preRotX?: number; preRotZ?: number; dropMeshNames?: string[]; onMeasured?: (m: { topY: number; w: number; d: number }) => void }) {
+  // 预旋转（度→弧度）：在测量包围盒 + fit 之前把「换轴/躺着」模型扶正。
+  const preRX = ((preRotX ?? 0) * Math.PI) / 180;
+  const preRZ = ((preRotZ ?? 0) * Math.PI) / 180;
+  const dropSet = useMemo(() => new Set(dropMeshNames ?? []), [dropMeshNames]);
   const { scene } = useGLTF(url) as unknown as { scene: THREE.Object3D };
 
   // Clone so multiple instances don't share transforms or materials.
@@ -2899,13 +2909,24 @@ function GltfFurniture({
           }
         }
       });
+      // 剔除焊死的多余部件（自带凳的吧台/桌等）：按名匹配 mesh 或其所在 node，
+      // 在测量包围盒 + fit 之前移除，fit 只按剩余部件缩放。
+      if (dropSet.size) {
+        const toRemove: THREE.Object3D[] = [];
+        root.traverse((obj) => {
+          if (dropSet.has(obj.name) && obj !== root) toRemove.push(obj);
+        });
+        for (const o of toRemove) o.removeFromParent();
+      }
     };
     // Scale a fresh clone uniformly by `s`, then recenter footprint on the
     // X/Z origin and drop its base to Y=0 (matches procedural-box convention).
     const buildUniform = (s: number) => {
       const c = skeletonClone(scene);
       prep(c);
-      c.scale.setScalar(s);
+      if (preRX) c.rotation.x = preRX;
+      if (preRZ) c.rotation.z = preRZ;
+      c.scale.setScalar(s);   // 均匀缩放与旋转可交换，扶正后 contain 缩放正确
       c.updateMatrixWorld(true);
       const b = new THREE.Box3().setFromObject(c);
       c.position.x -= (b.min.x + b.max.x) / 2;
@@ -2918,6 +2939,11 @@ function GltfFurniture({
     // scale to our declared furniture size (width/depth/height in meters).
     const base = skeletonClone(scene);
     prep(base);
+    // 预旋转扶正后再测量原生尺寸（size 变为扶正朝向）→ contain/fit 按正确朝向缩放。
+    // fill 模型不设 preRot，故此处不影响既有 fill 资产。
+    if (preRX) base.rotation.x = preRX;
+    if (preRZ) base.rotation.z = preRZ;
+    if (preRX || preRZ) base.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(base);
     const size = new THREE.Vector3();
     box.getSize(size);
@@ -2977,7 +3003,7 @@ function GltfFurniture({
     const s = Math.min(w / nx, h / size.y, d / nz) * trim;
     const only = buildUniform(s);
     return { list: [{ obj: only.obj, x: 0 }], measured: { topY: size.y * s, w: nx * s, d: nz * s } };
-  }, [scene, w, d, h, scale, recolor, fit, rotation]);
+  }, [scene, w, d, h, scale, recolor, fit, rotation, preRX, preRZ, dropSet]);
 
   // 实测尺寸上报（供台面吸附注册表使用）。ref 隔离回调身份，只在实测值
   // 变化时触发。
@@ -2992,6 +3018,80 @@ function GltfFurniture({
           <primitive object={inst.obj} />
         </group>
       ))}
+    </group>
+  );
+}
+
+/** 店招灯箱（程序化）：横向发光招牌盒 + canvas 贴图文字（支持中文，用系统字体）。
+ *  面朝 +Z（局部），靠 placedItem 的 rotation 转向。文字/底色可改。 */
+function SignboardMesh({ w, d, h, color, label }: { w: number; d: number; h: number; color: string; label: string }) {
+  const faceTex = useMemo(() => {
+    if (typeof document === "undefined") return null;
+    const cw = 1024, ch = Math.max(128, Math.round((h / w) * cw));
+    const cv = document.createElement("canvas");
+    cv.width = cw; cv.height = ch;
+    const ctx = cv.getContext("2d");
+    if (!ctx) return null;
+    // 深色哑光底（精品咖啡馆常见做法）。红底整面发光=街边快餐灯箱，观感很廉价。
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, cw, ch);
+    // 米白内嵌细边框，比黑描边更像金属/木质招牌
+    ctx.strokeStyle = "rgba(242,234,216,0.32)";
+    ctx.lineWidth = Math.max(2, ch * 0.016);
+    const inset = ch * 0.11;
+    ctx.strokeRect(inset, inset, cw - inset * 2, ch - inset * 2);
+
+    // label 支持 "LATIN|中文"：主行拉丁字标（大字号+字距），副行中文小一号。
+    // 只给一段文字时按单行居中排。
+    const [mainRaw, subRaw] = (label || "CAFÉ").split("|");
+    const main = (mainRaw || "").trim().slice(0, 28);
+    const sub = (subRaw || "").trim().slice(0, 16);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "#F2EAD8";
+    /** 按可用宽度收缩字号；spacing=字距占字号比例 */
+    const fitFont = (text: string, startPx: number, weight: number, spacing: number) => {
+      let fs = startPx;
+      do {
+        if ("letterSpacing" in ctx) ctx.letterSpacing = `${Math.round(fs * spacing)}px`;
+        ctx.font = `${weight} ${fs}px "Optima","Futura","Avenir Next","PingFang SC","Microsoft YaHei",system-ui,sans-serif`;
+        if (ctx.measureText(text).width <= cw * 0.82) break;
+        fs -= 4;
+      } while (fs > 16);
+    };
+    if (sub) {
+      fitFont(main, Math.round(ch * 0.38), 600, 0.14);
+      ctx.fillText(main, cw / 2, ch * 0.41);
+      fitFont(sub, Math.round(ch * 0.19), 400, 0.30);
+      ctx.globalAlpha = 0.75;
+      ctx.fillText(sub, cw / 2, ch * 0.72);
+      ctx.globalAlpha = 1;
+    } else {
+      fitFont(main, Math.round(ch * 0.50), 600, 0.14);
+      ctx.fillText(main, cw / 2, ch / 2);
+    }
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+    const tex = new THREE.CanvasTexture(cv);
+    tex.anisotropy = 4; tex.needsUpdate = true;
+    return tex;
+  }, [w, h, color, label]);
+  useEffect(() => () => { faceTex?.dispose(); }, [faceTex]);
+  const halfD = d / 2;
+  return (
+    <group>
+      {/* 灯箱盒体 */}
+      <mesh castShadow position={[0, h / 2, 0]}>
+        <boxGeometry args={[w, h, d]} />
+        <meshStandardMaterial color="#141414" roughness={0.55} metalness={0.35} />
+      </mesh>
+      {/* 发光面板（略突出正面 +Z）；toneMapped=false 让它稳定发亮。
+          暖白低强度：深底几乎不发光、只有米白字发亮 = 通道字招牌观感；
+          原 #ffffff/0.85 会把整块底色一起点亮，就是廉价灯箱那种感觉。 */}
+      <mesh position={[0, h / 2, halfD + 0.006]}>
+        <planeGeometry args={[w * 0.965, h * 0.84]} />
+        <meshStandardMaterial
+          {...(faceTex ? { map: faceTex, emissiveMap: faceTex } : { color })}
+          emissive="#FFE7C4" emissiveIntensity={0.55} toneMapped={false} />
+      </mesh>
     </group>
   );
 }
@@ -3099,6 +3199,23 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
     );
   }
 
+  // ── 可开合隔间门（stall-door）──
+  // 自包含门扇组件：位置/朝向/尺寸走通用家具手柄，门扇沿本地 +X 展开、铰链在 -X。
+  // 点击 / 漫游 E 键开合，本地状态、不接房间门管线（零回归）。
+  // mirrorX/mirrorZ 沿局部轴翻转 → 换铰链侧/开向（做男女厕左右镜像的对开门）。
+  if (item.id === "stall-door") {
+    const doorBaseY = (placed.elevationY ?? 0) / 100;
+    return (
+      <group
+        position={[x3d, doorBaseY, z3d]}
+        rotation={[0, rotY, 0]}
+        scale={[placed.mirrorX ? -1 : 1, 1, placed.mirrorZ ? -1 : 1]}
+      >
+        <StallDoor3D fw={fw} fh={fh} leafColor={item.color} />
+      </group>
+    );
+  }
+
   // ── 光伏阵列（solar-panel-array）──
   // 完全当成一件普通家具：位置/朝向走 placedItem 的 x/z/rotation，尺寸走家具
   // 自身的宽×深（含缩放手柄 scaleW/scaleD）。面板按家具占地自动平铺出列×行，
@@ -3174,7 +3291,11 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
     const distLeft  = xCm;
     const distRight = wallW - xCm;
     const minDist = Math.min(distBack, distFront, distLeft, distRight);
-    const y = def.height / 100 * 0.52;
+    // 挂高：设了「离地高度」elevationY 就用它当挂画中心高（滑块生效）；
+    // 未设时回退到墙高 52% 的默认画廊高度。
+    const y = (placed.elevationY ?? 0) > 0
+      ? (placed.elevationY ?? 0) / 100
+      : def.height / 100 * 0.52;
     // GAP must clear the inner face of the wall AND the frame back
     // (2.5 cm). FPE walkthrough walls are 12 cm thick → inner face at
     // 6 cm from boundary. Frame back is GAP − 1.25 cm from boundary,
@@ -3269,6 +3390,19 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
     }
   }
 
+  // 镜像翻转：负缩放某个局部轴。scale 在 three 的 T*R*S 里最先作用，
+  // 等价于「先把模型镜像、再旋转摆放」，符合直觉。
+  const mirScale: [number, number, number] = [placed.mirrorX ? -1 : 1, 1, placed.mirrorZ ? -1 : 1];
+
+  // 店招灯箱：程序化发光招牌 + 可改文字（默认贴顶挂高，可用离地高度/吸顶调位）。
+  if (item.id === "sign-shop-fascia") {
+    return (
+      <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]} scale={mirScale}>
+        <SignboardMesh w={fw} d={fd} h={fh} color={item.color || "#C0392B"} label={placed.label ?? "CAFÉ"} />
+      </group>
+    );
+  }
+
   // If the furniture item has a real 3D asset, render it; else fall
   // back to procedural box mesh. Suspense handles async glb load; if
   // loading throws (404, CORS, malformed) the ErrorBoundary higher up
@@ -3353,7 +3487,7 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
       );
     }
     return (
-      <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]}>
+      <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]} scale={mirScale}>
         <Suspense fallback={<FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} room={room} />}>
           <GltfFurnitureWithFallback
             item={item}
@@ -3366,7 +3500,7 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
   }
 
   return (
-    <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]}>
+    <group position={[x3d, baseY, z3d]} rotation={[0, rotY, 0]} scale={mirScale}>
       <FurnitureMesh item={item} w={fw} d={fd} h={fh} instanceId={placed.instanceId} room={room} />
     </group>
   );
@@ -3526,6 +3660,9 @@ class GltfFurnitureWithFallback extends Component<
         yOffset={item.model3d.yOffset}
         recolor={item.model3d.recolor}
         fit={item.model3d.fit}
+        preRotX={item.model3d.preRotX}
+        preRotZ={item.model3d.preRotZ}
+        dropMeshNames={item.model3d.dropMeshNames}
         w={w} d={d} h={h}
         onMeasured={onMeasured}
       />
@@ -3539,10 +3676,11 @@ class GltfFurnitureWithFallback extends Component<
 // Multiple holes per edge are allowed; they get sorted by offset and
 // the wall between them is filled with box segments.
 function PolygonShell({
-  points, H, wallColor, floorColor, ceilingColor, ceilingOpacity,
-  doors, windows, activeRoom, wallsHidden,
+  points, holes, H, wallColor, floorColor, ceilingColor, ceilingOpacity,
+  doors, windows, activeRoom, wallsHidden, curtainGlassWalls,
 }: {
   points: Array<[number, number]>; // cm, back-left origin
+  holes?: Array<Array<[number, number]>>; // cm, 回字形内洞（仅挖地板/天花）
   H: number;                       // meters
   wallColor: string;
   floorColor: string;
@@ -3560,6 +3698,9 @@ function PolygonShell({
    *  in the FloorPlan single-room toolbar. Hidden edges skip wall +
    *  door + window rendering on that edge. */
   wallsHidden?: Partial<Record<string, boolean>>;
+  /** 幕墙玻璃面 → 透明度（与矩形路径 curtainGlassWalls 同源）。多边形边按
+   *  facing 匹配：命中的边整段换玻璃材质 + 竖挺，内墙/未命中边保持实墙。 */
+  curtainGlassWalls?: Map<WallSide, number>;
 }) {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { getEdges, findEdgeForWall, polygonBounds } = require("@/lib/roomGeometry") as typeof import("@/lib/roomGeometry");
@@ -3588,15 +3729,27 @@ function PolygonShell({
       else s.lineTo(wx, wz);
     });
     s.closePath();
+    if (holes) for (const h of holes) {
+      if (h.length < 3) continue;
+      const path = new THREE.Path();
+      h.forEach(([x, z], i) => {
+        const wx = x / 100 - W / 2;
+        const wz = z / 100 - D / 2;
+        if (i === 0) path.moveTo(wx, wz);
+        else path.lineTo(wx, wz);
+      });
+      path.closePath();
+      s.holes.push(path);
+    }
     return s;
-  }, [points, W, D]);
+  }, [points, holes, W, D]);
 
   // Compute polygon edges in cm, then build wall segments. If the active
   // door lives on a given edge, that edge gets split into [left | lintel | right]
   // with a door-sized gap; otherwise a single wall box.
   const WALL_THICK = 0.08; // 8 cm thick visual walls
 
-  const { wallSegments, doorPlacements, windowPlacements } = useMemo(() => {
+  const { wallSegments, doorPlacements, windowPlacements, mullionPosts } = useMemo(() => {
     const edges = getEdges(points);
     const bbox = polygonBounds(points);
 
@@ -3618,6 +3771,12 @@ function PolygonShell({
     };
     const doorPlacements: DoorPlacement[] = [];
     const isEdgeHidden = (i: number) => wallsHidden?.[`edge-${i}`] === true;
+    // 洞口沿边起点直接用 findEdgeForWall 的 startCm —— 它**已经**把 CCW 多边形反向边
+    // (如客厅 S 边东→西) 的翻转算进去了(见 roomGeometry.findEdgeForWall 内 `startAlong =
+    // aligned ? t : t - lenCm`，注释：客厅 S 门 pos520 曾被放到 360 的那处修复)。
+    // 平面图/外观图走的 resolveHoleOnPolygon 也是**基于同一个 startCm**再换算世界坐标。
+    // 这里原来又自己写了一层 alignHoleStart 反向校正 → 反向边被**校正两遍**，门在效果图
+    // 里比平面图多偏一个门宽(用户:S 门位置错了)。删掉这层，与平面图同源。
     for (const d of (doors ?? [])) {
       const hit = findEdgeForWall(points, d.wall, d.posCm, d.lenCm, bbox, d.edgeIndex);
       if (!hit) continue;
@@ -3645,6 +3804,7 @@ function PolygonShell({
       winId: string; edgeIndex: number;
       wx: number; wz: number; angle: number;   // hole-start position
       lenM: number; sillM: number; hM: number;
+      style: import("@/lib/types").WindowStyle;
     }> = [];
     for (const w of windows) {
       const hit = findEdgeForWall(points, w.wall, w.pos, w.len, bbox, w.edgeIndex);
@@ -3669,14 +3829,22 @@ function PolygonShell({
         wz: wz1 + (wz2 - wz1) * t0,
         angle: Math.atan2(-(wz2 - wz1), wx2 - wx1),
         lenM, sillM, hM,
+        style: w.style ?? "sliding",
       });
     }
 
     // ── Build wall segments: between/around holes ──
-    type Seg = { cx: number; cy: number; cz: number; len: number; angle: number; h: number; yBottom: number };
+    type Seg = {
+      cx: number; cy: number; cz: number; len: number; angle: number; h: number; yBottom: number;
+      /** 幕墙玻璃边：该段换玻璃材质，值为透明度(0..1)；实墙段为 undefined。 */
+      glassT?: number;
+    };
     const segs: Seg[] = [];
+    // 幕墙竖挺（仅玻璃边）：全高深色立柱，沿边均匀分格 ~1.1m，跳过门洞内的柱位。
+    const mullionPosts: Array<{ cx: number; cz: number; angle: number }> = [];
     for (const e of edges) {
       if (isEdgeHidden(e.i)) continue; // skip entire edge → no wall, no door, no window
+      const glassT = curtainGlassWalls?.get(e.facing);
       const wx1 = e.x1 / 100 - W / 2, wz1 = e.z1 / 100 - D / 2;
       const wx2 = e.x2 / 100 - W / 2, wz2 = e.z2 / 100 - D / 2;
       const dxm = wx2 - wx1, dzm = wz2 - wz1;
@@ -3691,6 +3859,7 @@ function PolygonShell({
           cy: yBottom + h / 2,
           cz: wz1 + dzm * tMid,
           len: subLenM, angle, h, yBottom,
+          glassT,
         });
       };
 
@@ -3703,9 +3872,21 @@ function PolygonShell({
         cursor = h.startM + h.lenM;
       }
       mkSeg(cursor, lenM - cursor, H, 0);                           // remainder
+
+      if (glassT !== undefined && lenM > 0.01) {
+        const doorSpans = holes.filter(h => h.kind === "door")
+          .map(h => [h.startM, h.startM + h.lenM] as const);
+        const count = Math.max(1, Math.round(lenM / 1.1)); // 均分 ≈1.0-1.2m 一档
+        for (let k = 0; k <= count; k++) {
+          const s = (lenM * k) / count;
+          if (doorSpans.some(([a, b]) => s > a + 0.03 && s < b - 0.03)) continue; // 门洞内不落柱
+          const t = s / lenM;
+          mullionPosts.push({ cx: wx1 + dxm * t, cz: wz1 + dzm * t, angle });
+        }
+      }
     }
-    return { wallSegments: segs, doorPlacements, windowPlacements: winPlacements };
-  }, [points, W, D, H, doors, windows, getEdges, findEdgeForWall, polygonBounds, wallsHidden]);
+    return { wallSegments: segs, doorPlacements, windowPlacements: winPlacements, mullionPosts };
+  }, [points, W, D, H, doors, windows, getEdges, findEdgeForWall, polygonBounds, wallsHidden, curtainGlassWalls]);
 
   return (
     <>
@@ -3730,34 +3911,47 @@ function PolygonShell({
       </mesh>
 
       {/* Walls — one box per polygon-edge segment. Holes split edges into
-          segments of varying height (sill / lintel / above door). */}
+          segments of varying height (sill / lintel / above door).
+          幕墙玻璃边同几何换玻璃材质（参数与矩形路径 WallWithHoles 幕墙面一致）。 */}
       {wallSegments.map((w, i) => (
         <mesh key={i} position={[w.cx, w.cy, w.cz]} rotation={[0, w.angle, 0]} castShadow receiveShadow>
           <boxGeometry args={[w.len, w.h, WALL_THICK]} />
-          <meshStandardMaterial color={wallColor} roughness={0.85} />
+          {w.glassT !== undefined ? (
+            <meshPhysicalMaterial
+              color="#8AA6C2"
+              transparent
+              opacity={glassTransparencyToOpacity(w.glassT)}
+              transmission={0.60} ior={1.45} thickness={0.012}
+              roughness={0.05} metalness={0.0}
+              reflectivity={0.5} envMapIntensity={2.0}
+              side={THREE.DoubleSide}
+            />
+          ) : (
+            <meshStandardMaterial color={wallColor} roughness={0.85} />
+          )}
+        </mesh>
+      ))}
+
+      {/* 幕墙竖挺 — 仅玻璃边，深色金属立柱与矩形路径竖挺同色同质感 */}
+      {mullionPosts.map((m, i) => (
+        <mesh key={`mul${i}`} position={[m.cx, H / 2, m.cz]} rotation={[0, m.angle, 0]} castShadow>
+          <boxGeometry args={[0.06, H, 0.10]} />
+          <meshStandardMaterial color="#1B1E24" roughness={0.10} metalness={0.96} />
         </mesh>
       ))}
 
       {/* Window glass — a thin plane in each window opening */}
-      {windowPlacements.map(w => {
-        // Position: hole-start + lenM/2 along edge, at mid-height of opening
-        const cx = w.wx + Math.cos(w.angle) * (w.lenM / 2);
-        const cz = w.wz - Math.sin(w.angle) * (w.lenM / 2);
-        const cy = w.sillM + w.hM / 2;
-        return (
-          <mesh key={w.winId} position={[cx, cy, cz]} rotation={[0, w.angle, 0]}>
-            <boxGeometry args={[w.lenM - 0.04, w.hM - 0.04, 0.02]} />
-            <meshPhysicalMaterial
-              color="#B8D4E8"
-              transparent opacity={0.35}
-              roughness={0.05}
-              metalness={0}
-              transmission={0.85}
-              ior={1.45}
-            />
-          </mesh>
-        );
-      })}
+      {windowPlacements.map(w => (
+        // 多边形房间的窗改用与矩形路径/外观图**同一个** StyledWindow(带窗框+竖挺+玻璃)，
+        // 不再是原来那块无框、35% 透明的裸玻璃板——它嵌在玻璃幕墙西墙上时**完全看不见**
+        // (用户:W 窗看不到)。同源后效果图的窗与平面图/外观图一致。
+        <PolygonWindowPane
+          key={w.winId}
+          wx={w.wx} wz={w.wz} angle={w.angle}
+          lenM={w.lenM} sillM={w.sillM} hM={w.hM}
+          winId={w.winId} style={w.style}
+        />
+      ))}
 
       {/* Door panels — one per door. Clicking toggles the room's
           door-open state (shared across all doors of this room). */}
@@ -3770,50 +3964,173 @@ function PolygonShell({
           lenM={dp.lenM}
           hM={dp.hM}
           room={activeRoom}
+          style={dp.style}
         />
       ))}
     </>
   );
 }
 
+/** 多边形房间的窗：把共享的 <StyledWindow>(与矩形路径/外观图同款窗框+竖挺+玻璃)
+ *  摆到洞口中心。开关状态按 win.id 存 store，与矩形窗/外观图同源。 */
+function PolygonWindowPane({
+  wx, wz, angle, lenM, sillM, hM, winId, style,
+}: {
+  wx: number; wz: number; angle: number;   // hole-start world position + edge angle
+  lenM: number; sillM: number; hM: number;
+  winId: string;
+  style: import("@/lib/types").WindowStyle;
+}) {
+  const isOpen = useDesignerStore(s => !!s.windowOpenByWinId[winId]);
+  const toggleWinOpen = useDesignerStore(s => s.toggleWindowOpen);
+  // 洞口中心 = 沿边起点 + 半个洞长；竖直中心 = 窗台 + 半个窗高。
+  const cx = wx + Math.cos(angle) * (lenM / 2);
+  const cz = wz - Math.sin(angle) * (lenM / 2);
+  const cy = sillM + hM / 2;
+  return (
+    <group position={[cx, cy, cz]} rotation={[0, angle, 0]}>
+      <StyledWindow
+        winLen={lenM}
+        winH={hM}
+        style={style}
+        isOpen={isOpen}
+        onToggle={() => toggleWinOpen(winId)}
+      />
+    </group>
+  );
+}
+
 /** Minimal hinged door panel rendered inside a polygon-shell door hole.
- *  Hinge is at the "start" end of the opening; swings inward by ~90°. */
+ *  Hinge is at the "start" end of the opening; swings inward by ~90°.
+ *  按 DoorStyle 分型渲染（与矩形路径 RoomDoor3D 同款材质参数），
+ *  glass_swing / french_double 双扇对开、glass_slide 沿墙平移，
+ *  其余门型保持原木板单扇。 */
 function PolygonDoorPanel({
-  wx, wz, angle, lenM, hM, room,
+  wx, wz, angle, lenM, hM, room, style,
 }: {
   wx: number; wz: number; angle: number;   // edge-start world position + edge angle
   startM: number; lenM: number; hM: number;
   room: RoomType;
+  style?: import("@/lib/types").DoorStyle;
 }) {
   const isOpen = useDesignerStore(s => !!s.doorOpenByRoom[room]);
   const toggleDoorOpen = useDesignerStore(s => s.toggleDoorOpen);
   const panelRef = useRef<THREE.Group>(null);
+  const panelRightRef = useRef<THREE.Group>(null); // 对开门右扇（反向摆动）
   const animRef = useRef(0);
+  const isSlide  = style === "glass_slide";
+  const isDouble = style === "glass_swing" || style === "french_double";
   useFrame((_, delta) => {
-    const target = isOpen ? -Math.PI / 2 : 0;
+    // 滑门：anim 为沿墙平移距离(0 → -lenM)；其余：铰链转角(0 → -π/2)。
+    const target = isOpen ? (isSlide ? -lenM : -Math.PI / 2) : 0;
+    const speed = isSlide ? 2.4 : 5.5;
     const diff = target - animRef.current;
     if (Math.abs(diff) > 0.002) {
-      animRef.current += Math.sign(diff) * Math.min(Math.abs(diff), 5.5 * delta);
-      if (panelRef.current) panelRef.current.rotation.y = animRef.current;
+      animRef.current += Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
+      if (panelRef.current) {
+        if (isSlide) panelRef.current.position.x = animRef.current;
+        else panelRef.current.rotation.y = animRef.current;
+      }
+      if (isDouble && panelRightRef.current) {
+        panelRightRef.current.rotation.y = -animRef.current;
+      }
     }
   });
+  const onClick = (e: { stopPropagation: () => void }) => { e.stopPropagation(); toggleDoorOpen(room); };
   // Place a group at the hinge (edge-start, on the wall inner face).
   // Inside the group the panel extends in local +X (along edge direction)
   // and rotation-Y swings it into the room.
   return (
     <group position={[wx, 0, wz]} rotation={[0, angle, 0]}>
-      <group ref={panelRef}>
-        {/* Frame (stays still) */}
-        <mesh position={[lenM / 2, hM / 2, 0]} onClick={(e) => { e.stopPropagation(); toggleDoorOpen(room); }}>
-          <boxGeometry args={[lenM - 0.02, hM - 0.02, 0.04]} />
-          <meshStandardMaterial color="#8B6F47" roughness={0.75} />
-        </mesh>
-        {/* Handle */}
-        <mesh position={[lenM - 0.12, hM * 0.5, 0.03]}>
-          <sphereGeometry args={[0.025, 10, 8]} />
-          <meshStandardMaterial color="#C0A060" metalness={0.7} roughness={0.3} />
-        </mesh>
-      </group>
+      {isDouble ? (
+        // 双扇对开：左扇铰链在 x=0，右扇铰链在 x=lenM 且反向摆动。
+        // glass_swing 用深色铝框(#1B1E24)配幕墙竖挺，french_double 用暖白木作框(#F0EEEA)。
+        (() => {
+          const isGlass = style === "glass_swing";
+          const fC = isGlass ? "#1B1E24" : "#F0EEEA";
+          const lw = lenM / 2;
+          const barH = Math.min(1.15, hM * 0.42); const cy = hM * 0.46;
+          const Leaf = ({ mirror }: { mirror: boolean }) => {
+            const sx = mirror ? -1 : 1; // 右扇沿 -X 展开
+            return (
+              <group onClick={onClick}>
+                <mesh position={[sx * lw / 2, hM / 2, 0]}>
+                  <boxGeometry args={[lw - 0.012, hM - 0.02, 0.012]} />
+                  <meshPhysicalMaterial color="#C8D8E5" transmission={isGlass ? 0.86 : 0.75} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={isGlass ? 0.34 : 0.6} side={THREE.DoubleSide} />
+                </mesh>
+                {/* 边框：合缝立梃 + 铰链侧立梃 + 上下横档 */}
+                <mesh position={[sx * (lw - 0.02), hM / 2, 0]} castShadow>
+                  <boxGeometry args={[0.04, hM - 0.02, 0.035]} />
+                  <meshStandardMaterial color={fC} roughness={isGlass ? 0.3 : 0.5} metalness={isGlass ? 0.7 : 0.0} />
+                </mesh>
+                <mesh position={[sx * 0.02, hM / 2, 0]} castShadow>
+                  <boxGeometry args={[0.04, hM - 0.02, 0.035]} />
+                  <meshStandardMaterial color={fC} roughness={isGlass ? 0.3 : 0.5} metalness={isGlass ? 0.7 : 0.0} />
+                </mesh>
+                {[0.02, hM - 0.03].map((y, i) => (
+                  <mesh key={i} position={[sx * lw / 2, y, 0]}>
+                    <boxGeometry args={[lw - 0.012, 0.04, 0.035]} />
+                    <meshStandardMaterial color={fC} roughness={isGlass ? 0.3 : 0.5} metalness={isGlass ? 0.7 : 0.0} />
+                  </mesh>
+                ))}
+                {/* 拉手：玻璃门双面立杆，木作门中缝球形把手 */}
+                {isGlass ? [-0.09, 0.09].map((hz, i) => (
+                  <mesh key={`h${i}`} position={[sx * (lw - 0.085), cy, hz]}>
+                    <boxGeometry args={[0.035, barH, 0.035]} />
+                    <meshStandardMaterial color="#2A2A2A" metalness={0.95} roughness={0.16} />
+                  </mesh>
+                )) : (
+                  <mesh position={[sx * (lw - 0.06), hM * 0.45, 0.03]}>
+                    <sphereGeometry args={[0.02, 10, 10]} />
+                    <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.2} />
+                  </mesh>
+                )}
+              </group>
+            );
+          };
+          return (
+            <group position={[0, 0, 0.01]}>
+              <group ref={panelRef}><Leaf mirror={false} /></group>
+              <group ref={panelRightRef} position={[lenM, 0, 0]}><Leaf mirror /></group>
+            </group>
+          );
+        })()
+      ) : isSlide ? (
+        // 玻璃滑门：整片玻璃沿墙平移 lenM（对齐 WalkthroughDoor3D 滑门分支）。
+        <>
+          {/* 顶部滑轨（固定不动） */}
+          <mesh position={[lenM / 2, hM + 0.04, 0]}>
+            <boxGeometry args={[lenM * 1.06, 0.045, 0.05]} />
+            <meshStandardMaterial color="#2A2A2A" metalness={0.6} roughness={0.4} />
+          </mesh>
+          <group ref={panelRef}>
+            <group onClick={onClick}>
+              <mesh position={[lenM / 2, hM / 2, 0]} castShadow receiveShadow>
+                <boxGeometry args={[lenM - 0.02, hM - 0.03, 0.012]} />
+                <meshPhysicalMaterial color="#C8D8E5" transmission={0.86} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={0.34} side={THREE.DoubleSide} />
+              </mesh>
+              {/* 竖向拉手 */}
+              <mesh position={[lenM - 0.12, hM * 0.45, 0.09]}>
+                <boxGeometry args={[0.03, Math.min(0.9, hM * 0.42), 0.03]} />
+                <meshStandardMaterial color="#2A2A2A" metalness={0.95} roughness={0.20} />
+              </mesh>
+            </group>
+          </group>
+        </>
+      ) : (
+        <group ref={panelRef}>
+          {/* Frame (stays still) */}
+          <mesh position={[lenM / 2, hM / 2, 0]} onClick={onClick}>
+            <boxGeometry args={[lenM - 0.02, hM - 0.02, 0.04]} />
+            <meshStandardMaterial color="#8B6F47" roughness={0.75} />
+          </mesh>
+          {/* Handle */}
+          <mesh position={[lenM - 0.12, hM * 0.5, 0.03]}>
+            <sphereGeometry args={[0.025, 10, 8]} />
+            <meshStandardMaterial color="#C0A060" metalness={0.7} roughness={0.3} />
+          </mesh>
+        </group>
+      )}
     </group>
   );
 }
@@ -3824,36 +4141,45 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const activeRoom    = useDesignerStore((s) => s.activeRoom);
   const showCompass   = useDesignerStore((s) => s.showCompass);
   const roomState     = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.rooms[activeRoom] ?? EMPTY_ROOM_STATE_RC);
-  const roomWindows   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWindows?.[activeRoom] ?? EMPTY_WINDOWS);
   const roomDimensions = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDimensions?.[activeRoom]);
   const hasDoor    = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomHasDoor?.[activeRoom] ?? true);
   const doorWall   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "S");
   const doorPosCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorPos?.[activeRoom] ?? 0);
   const doorLenCm  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorLen?.[activeRoom] ?? 80);
-  // Global default interior-door opening height (cm). Mirrors the walkthrough
-  // (FloorPlanExterior) fallback so the door reads the same height in 效果图
-  // and 漫游. Per-door `h` and per-room `roomDoorH` still win when set.
   const doorHDefault = useDesignerStore((s) => s.exterior?.interiorDoorHeightCm ?? 240);
   const doorHCm    = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorH?.[activeRoom]) ?? doorHDefault;
   const doorStyle  = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorStyle?.[activeRoom] ?? "wood_panel");
-  const doorEdgeIdx = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoorEdgeIdx?.[activeRoom]);
-  // Select the raw doors array — stable reference if unchanged.
-  const roomDoorsArr = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomDoors?.[activeRoom]);
-  // Compute the effective door list with legacy fallback. useMemo keeps
-  // the array reference stable across re-renders to avoid infinite loops.
-  const allDoors = useMemo(() => {
-    if (roomDoorsArr && roomDoorsArr.length > 0) return roomDoorsArr;
-    if (!hasDoor) return [];
-    return [{
-      id: `${activeRoom}-legacy-door`,
-      wall: doorWall as WallSide,
-      pos: doorPosCm,
-      len: doorLenCm,
-      h: doorHCm,
-      style: doorStyle,
-      edgeIndex: doorEdgeIdx,
-    }];
-  }, [roomDoorsArr, hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle, doorEdgeIdx, activeRoom]);
+
+  // 门列表统一走 lib/roomDoors.getRoomDoors —— 唯一真源，四视图共用。
+  // 这里原来是一份手写镜像：一律 `?? 80` / `?? "wood_panel"`，缺车库特判
+  // （车库门在效果图里退化成 80cm 实木门）、缺幕墙玻璃门推导，与 2D 平面图 /
+  // 外观图对不上。详见 lib/roomDoors.ts 顶部说明。
+  const fpForDoors = useDesignerStore((s) => s.floorPlans[s.activeFloor]);
+  const interiorDoorH = useDesignerStore((s) => s.exterior?.interiorDoorHeightCm);
+  const curtainWallForDoors = useDesignerStore((s) =>
+    s.exterior?.facadeSystem === "curtain-wall"
+    || (s.exterior?.facadeSystem == null && (s.exterior?.facadeGlass ?? false)));
+  const allDoors = useMemo(
+    () => getRoomDoors(fpForDoors, activeRoom, {
+      interiorDoorHeightCm: interiorDoorH,
+      curtainWall: curtainWallForDoors,
+    }),
+    [fpForDoors, activeRoom, interiorDoorH, curtainWallForDoors],
+  );
+  // 窗列表统一走 lib/roomWindows.getRoomWindows —— sill/h/style 在这里一次性补全，
+  // 下游 RoomShell/RoomPolygon 的 holesForWall / RoomWindow 不再各自 `?? 90 / ?? 150`。
+  // 效果图按 curtainGlassWalls 逐面判玻璃，不存在房间级 curtainWall 标记，故这里
+  // 传 curtainWall:false（= 现行 `win.style ?? "sliding"`），保持本视图渲染不变。
+  const defWinSill = useDesignerStore((s) => s.exterior?.defaultWindowSill);
+  const defWinH    = useDesignerStore((s) => s.exterior?.defaultWindowHeight);
+  const roomWindows = useMemo(
+    () => getRoomWindows(fpForDoors, activeRoom, {
+      defaultSillCm: defWinSill,
+      defaultHeightCm: defWinH,
+      curtainWall: false,
+    }),
+    [fpForDoors, activeRoom, defWinSill, defWinH],
+  );
   const southWallOpacity = useDesignerStore((s) => s.southWallOpacity);
   const ceilingOpacity = useDesignerStore((s) => s.ceilingOpacity);
   const lightPos = useDesignerStore((s) => s.lightPosByRoom[s.activeRoom]);
@@ -3891,14 +4217,19 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   // glass face when the project is in curtain-wall mode AND it has a window
   const curtainGlassWalls = useMemo(() => {
     const isCurtainWall = exteriorFacadeSystem === "curtain-wall" || !!exteriorFacadeGlass;
-    if (!isCurtainWall) return undefined;
+    // 不能在这里因「全局不是幕墙模式」就 return undefined。
+    // resolveFacadeLayer 的优先级（types.ts）里，第 1 步的逐面显式覆盖
+    // (roomFacadeFaces) 和第 3 步的 roomExteriorStyle==="glass" 都**压过**全局模式：
+    // 用户在打孔窗全局模式下把某个房间单独设成玻璃幕墙，2D 平面图和外观图都会渲染
+    // 玻璃，唯独效果图在这里提前退出、看不到 → 三视图分叉。
+    // 把 isCurtainWall 作为参数交给 resolveFacadeLayer 自己判，不要提前拦。
     const fp = {
       roomFacadeFaces, roomWallsHidden: fpRoomWallsHidden, roomExteriorStyle: fpRoomExteriorStyle,
       roomLayout: fpAllRoomLayout, roomDimensions: fpAllRoomDims, enabledRooms: fpEnabledRooms,
     };
     const glassMap = new Map<WallSide, number>();
     for (const side of ["N", "S", "E", "W"] as WallSide[]) {
-      if (resolveFacadeLayer(fp, activeRoom, side, "glass", true)) {
+      if (resolveFacadeLayer(fp, activeRoom, side, "glass", isCurtainWall)) {
         glassMap.set(side, resolveFaceOpacity(fp, activeRoom, side, DEFAULT_GLASS_TRANSPARENCY));
       }
     }
@@ -3980,6 +4311,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
       {roomShape && roomShape.preset !== "rect" ? (
         <PolygonShell
           points={roomShape.points}
+          holes={roomShape.holes}
           H={H}
           wallColor={wallColor}
           floorColor={floorColor}
@@ -3990,12 +4322,16 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
             posCm: d.pos,
             lenCm: d.len,
             hCm: d.h ?? doorHDefault,
-            style: d.style ?? "wood_panel",
+            // 幕墙玻璃面上的门与矩形路径同逻辑：强制通透玻璃门型，三视图一致。
+            style: curtainGlassWalls?.has(d.wall)
+              ? ((d.style === "glass_slide" || d.style === "glass_swing") ? d.style : "glass_swing")
+              : (d.style ?? "wood_panel"),
             edgeIndex: d.edgeIndex,
           }))}
           windows={roomWindows}
           activeRoom={activeRoom}
           wallsHidden={wallsHiddenForActive}
+          curtainGlassWalls={curtainGlassWalls}
         />
       ) : (
         <RoomShell
@@ -4310,7 +4646,7 @@ function RoomDecorWallFrame({
  *    thin and bright
  *  - default → colored box with standard PBR material
  *  Called from both RoomCanvas and HouseCanvas. */
-function ExteriorDecorItem({
+export function ExteriorDecorItem({
   decor, wallW, wallH, selected, onPointerDown,
 }: {
   decor: ExteriorWallDecorItem;
@@ -4359,7 +4695,13 @@ function ExteriorDecorItem({
       onPointerDown={onPointerDown}
       onClick={isLightFixture ? (e) => { e.stopPropagation(); toggleFixture(decor.instanceId); } : undefined}
     >
-      {detailed ? detailed : canvasTex ? (
+      {item.id === "sign-cafe-wall" ? (
+        // 店招灯箱：复用 SignboardMesh（局部 +Z 即墙外法向，文字面朝外无需旋转）。
+        // SignboardMesh 盒体底边在 y=0、z 居中，故下移半高、外移半厚防止埋墙。
+        <group position={[0, -h / 2, getLayerOffset("exteriorDecor") + 0.08]}>
+          <SignboardMesh w={w} d={0.16} h={h} color={item.color} label={decor.label ?? "YUNHENG COFFEE|云横咖啡"} />
+        </group>
+      ) : detailed ? detailed : canvasTex ? (
         <mesh position={[0, 0, 0.005 + getLayerOffset("exteriorDecor")]}>
           <planeGeometry args={[w, h]} />
           <meshBasicMaterial

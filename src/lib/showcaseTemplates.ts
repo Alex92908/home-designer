@@ -25,7 +25,8 @@ function defaultYard(p: { floorPlans: FloorPlan[] }): YardPlan {
 export interface ShowcaseTemplate extends ShowcaseMeta {
   /** 返回可直接灌进 store 的方案（全新深拷贝）。yardPlan 让样板预览也显示
    *  院子（泳池套组等）。 */
-  load: () => { floorPlans: FloorPlan[]; exterior: Partial<ExteriorSettings>; yardPlan: YardPlan };
+  /** 住宅样板的方案工厂；片场样板（projectTemplateId）不用它，故可选。 */
+  load?: () => { floorPlans: FloorPlan[]; exterior: Partial<ExteriorSettings>; yardPlan: YardPlan };
 }
 
 /** 按 id 挂 load 工厂；顺序/文案以 SHOWCASE_META 为准（单一数据源）。 */

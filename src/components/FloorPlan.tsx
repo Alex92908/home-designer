@@ -6,10 +6,12 @@ import { ROOM_DEFS, WindowConfig, WallSide, FacadeLayer, resolveFacadeLayer, res
 import { FloorPlanMinimap } from "./FloorPlanMinimap";
 import { getFurnitureById } from "@/lib/furniture";
 import { PlacedItem } from "@/lib/types";
+import { getRoomDoors } from "@/lib/roomDoors";
+import { getRoomWindows } from "@/lib/roomWindows";
 import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
 import { getFurnitureNameEn } from "@/locales/itemNames";
 import { evaluateRoom, type EvaluatedItem, type DoorWall as ClearanceDoorWall } from "@/lib/clearance";
-import { pointInPolygon, getEdges } from "@/lib/roomGeometry";
+import { pointInPolygon, getEdges, polygonBounds, findEdgeForWall, type WallFacing } from "@/lib/roomGeometry";
 
 const EMPTY_WINDOWS: never[] = [];
 import { RoomState } from "@/lib/store";
@@ -161,15 +163,31 @@ function PlacedItemSVG({ placed, scale, isSelected, isBlocked, hasViolation, vio
           style={{ pointerEvents: "none", animation: "fpBlockedPulse 0.4s ease-out infinite alternate" }}
         />
       )}
-      {glbPreview ? (
-        <image href={glbPreview} x={-w / 2 + 2} y={-d / 2 + 2} width={Math.max(0, w - 4)} height={Math.max(0, d - 4)}
-          preserveAspectRatio="xMidYMid meet" style={{ pointerEvents: "none" }}
-          onError={() => setImgFailed(true)} />
-      ) : fontSize > 5 && (
-        <text x={0} y={d > 30 ? -3 : 0} textAnchor="middle" dominantBaseline="middle"
-          fontSize={Math.min(fontSize, 18)} style={{ userSelect: "none", pointerEvents: "none" }}>
-          {furniture.icon}
-        </text>
+      {/* 镜像：mirrorX/mirrorZ 在 2401 附近有开关 UI、3D 里也翻转了模型，但 2D 图形
+          一直没响应，用户点了开关平面图纹丝不动、以为没生效。这里对图形层（预览图 /
+          图标）做 scale(-1) 翻转；外框矩形本身对称、名称标签不翻（翻了读不了）。 */}
+      <g transform={`scale(${placed.mirrorX ? -1 : 1},${placed.mirrorZ ? -1 : 1})`}>
+        {glbPreview ? (
+          <image href={glbPreview} x={-w / 2 + 2} y={-d / 2 + 2} width={Math.max(0, w - 4)} height={Math.max(0, d - 4)}
+            preserveAspectRatio="xMidYMid meet" style={{ pointerEvents: "none" }}
+            onError={() => setImgFailed(true)} />
+        ) : fontSize > 5 && (
+          <text x={0} y={d > 30 ? -3 : 0} textAnchor="middle" dominantBaseline="middle"
+            fontSize={Math.min(fontSize, 18)} style={{ userSelect: "none", pointerEvents: "none" }}>
+            {furniture.icon}
+          </text>
+        )}
+      </g>
+      {/* 镜像角标：emoji 图标本身左右对称，翻了看不出来，给个明确的状态提示 */}
+      {(placed.mirrorX || placed.mirrorZ) && w > 24 && d > 20 && (
+        <g transform={`translate(${-w / 2 + 1},${-d / 2 + 1}) rotate(${-placed.rotation})`}>
+          <rect x={0} y={0} width={13} height={9} rx={2} fill="#0EA5E9" opacity={0.95} />
+          <text x={6.5} y={4.8} textAnchor="middle" dominantBaseline="middle"
+            fontSize={6} fill="white" fontWeight="bold"
+            style={{ userSelect: "none", pointerEvents: "none" }}>
+            {placed.mirrorX ? "↔" : ""}{placed.mirrorZ ? "↕" : ""}
+          </text>
+        </g>
       )}
       {nameLines && (() => {
         const totalH = nameLines.length * LINE_H;
@@ -471,6 +489,8 @@ export default function FloorPlan() {
   const selectedInstanceIds  = useDesignerStore((s) => s.selectedInstanceIds);
   const moveItem             = useDesignerStore((s) => s.moveItem);
   const rotateItem           = useDesignerStore((s) => s.rotateItem);
+  const toggleItemMirror     = useDesignerStore((s) => s.toggleItemMirror);
+  const setItemLabel         = useDesignerStore((s) => s.setItemLabel);
   const removeItem           = useDesignerStore((s) => s.removeItem);
   const setSelection         = useDesignerStore((s) => s.setSelection);
   const duplicateItems       = useDesignerStore((s) => s.duplicateItems);
@@ -560,21 +580,31 @@ export default function FloorPlan() {
   const updateDoor      = useDesignerStore((s) => s.updateDoor);
   const updateWindow    = useDesignerStore((s) => s.updateWindow);
 
-  // Multi-door: prefer roomDoors[], fall back to legacy single-door fields.
-  // Stable reference via useMemo to avoid render loops.
-  const allDoors = useMemo(() => {
-    if (roomDoorsArr && roomDoorsArr.length > 0) return roomDoorsArr;
-    if (!hasDoor) return [];
-    return [{
-      id: `${activeRoom}-legacy-door`,
-      wall: doorWall as WallSide,
-      pos: doorPosCm,
-      len: doorLenCm,
-      h: doorHCm,
-      style: doorStyle,
-      edgeIndex: doorEdgeIdx,
-    }];
-  }, [roomDoorsArr, hasDoor, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle, doorEdgeIdx, activeRoom]);
+  // 门列表统一走 lib/roomDoors.getRoomDoors —— 唯一真源，四视图共用。
+  // （上面那些 doorWall/doorLenCm/doorStyle 等单值选择器仍保留，是检查器 UI 的
+  //   受控字段；渲染用的门列表以本函数为准。）
+  const fpForDoors = useDesignerStore((s) => s.floorPlans[s.activeFloor]);
+  const allDoors = useMemo(
+    () => getRoomDoors(fpForDoors, activeRoom, {
+      interiorDoorHeightCm: doorHDefault,
+      curtainWall,
+    }),
+    [fpForDoors, activeRoom, doorHDefault, curtainWall],
+  );
+
+  // 窗渲染同样以 lib/roomWindows.getRoomWindows 为默认值真源（sill/h/style），
+  // 与效果图/外观图统一。**只用于渲染**：drag/edit 与检查器仍读写上面那个未规范化
+  // 的 roomWindows（把默认值写回成显式值会污染"留空=跟随全局默认"的语义）。
+  // 2D 平面图的 WindowSVG 本身只画 pos/len（不消费 sill/h/style），故这一步对
+  // 当前 SVG 输出是幂等的，只是把默认值来源收敛到同一个函数，杜绝未来分叉。
+  const winDefSill = useDesignerStore((s) => s.exterior?.defaultWindowSill);
+  const winDefH    = useDesignerStore((s) => s.exterior?.defaultWindowHeight);
+  const roomWindowsRender = useMemo(
+    () => getRoomWindows(fpForDoors, activeRoom, {
+      defaultSillCm: winDefSill, defaultHeightCm: winDefH, curtainWall,
+    }),
+    [fpForDoors, activeRoom, winDefSill, winDefH, curtainWall],
+  );
 
   const t      = useT();
   const locale = useLocale();
@@ -587,6 +617,7 @@ export default function FloorPlan() {
   const insertRoomShapePoint = useDesignerStore((s) => s.insertRoomShapePoint);
   const deleteRoomShapePoint = useDesignerStore((s) => s.deleteRoomShapePoint);
   const rectifyRoomShape     = useDesignerStore((s) => s.rectifyRoomShape);
+  const normalizeRoomShape   = useDesignerStore((s) => s.normalizeRoomShape);
   const def             = ROOM_DEFS[activeRoom];
 
   // Effective dimensions: store override if different from default, else ROOM_DEFS
@@ -1212,6 +1243,15 @@ export default function FloorPlan() {
                       pushLayoutHistory();
                       setRoomShape(activeRoom, "rect"); // creates editable rect points
                     }
+                  } else {
+                    // Exiting edit mode: normalize any negative-coord drags
+                    // (shift polygon+layout+furniture+openings back into the
+                    // positive quadrant — half the views assume local ≥ 0).
+                    // 先正交化再归正：外观图/全屋3D 的墙体引擎是「轴对齐边 = 一个面」的一维
+                            // 模型，表达不了斜边（会被跳过 → 那条边没墙）。自由拖拽能拖出斜边，
+                            // 所以退出编辑时统一吸附成水平/垂直，与预设形状保持同一不变式。
+                            rectifyRoomShape(activeRoom);
+                            normalizeRoomShape(activeRoom);
                   }
                   setEditShape(v => !v);
                 }}
@@ -1671,8 +1711,8 @@ export default function FloorPlan() {
             </>
           )}
 
-          {/* Windows */}
-          {roomWindows.map(win => {
+          {/* Windows —— 渲染读走规范化后的 roomWindowsRender（默认值同源）。 */}
+          {roomWindowsRender.map(win => {
             // Resolve polygon edge for inner-edge windows
             let polygonEdge: { x1: number; z1: number; x2: number; z2: number; length: number } | undefined;
             if (win.edgeIndex != null && roomShape && roomShape.preset !== "rect") {
@@ -1767,10 +1807,30 @@ export default function FloorPlan() {
           {allDoors.map((d, di) => {
             // Resolve polygon edge for inner-edge doors
             let polygonEdge: { x1: number; z1: number; x2: number; z2: number; length: number; nx: number; nz: number } | undefined;
-            if (d.edgeIndex != null && roomShape && roomShape.preset !== "rect") {
+            // 沿边的起点偏移。polygonEdge 存在时 DoorSVG 用它而不是 d.pos。
+            let edgePosCm = d.pos;
+            if (roomShape && roomShape.preset !== "rect") {
               const edges = getEdges(roomShape.points);
-              const e = edges.find(x => x.i === d.edgeIndex);
-              if (e) polygonEdge = { x1: e.x1, z1: e.z1, x2: e.x2, z2: e.z2, length: e.length, nx: e.nx, nz: e.nz };
+              if (d.edgeIndex != null) {
+                const e = edges.find(x => x.i === d.edgeIndex);
+                if (e) polygonEdge = { x1: e.x1, z1: e.z1, x2: e.x2, z2: e.z2, length: e.length, nx: e.nx, nz: e.nz };
+              } else {
+                // 移植 RoomCanvas.tsx:3741 的 alignHoleStart 修正。
+                // 根因：cardinal 绑定的门 pos 是"从世界坐标较小端"量起的（N/S 从西端，
+                // E/W 从北端，见 roomGeometry.findEdgeForWall 的 legacy 分支），而这里
+                // 原来直接把 d.pos 交给 DoorSVG 按 bbox 外框画。多边形房间的边并不都
+                // 落在 bbox 上，且 CCW 多边形有些边走向与世界轴相反（如 S 边东→西），
+                // 于是 2D 门位与 3D 效果图左右镜像错位。改成：先用 findEdgeForWall 找到
+                // 门真正所在的边，再把 startCm 换算成沿边方向的起点。
+                const bbox = polygonBounds(roomShape.points);
+                const hit = findEdgeForWall(roomShape.points, d.wall as WallFacing, d.pos, d.len, bbox);
+                if (hit) {
+                  const e = hit.edge;
+                  const reversed = (e.facing === "N" || e.facing === "S") ? e.x2 < e.x1 : e.z2 < e.z1;
+                  edgePosCm = reversed ? Math.max(0, hit.startCm - d.len) : hit.startCm;
+                  polygonEdge = { x1: e.x1, z1: e.z1, x2: e.x2, z2: e.z2, length: e.length, nx: e.nx, nz: e.nz };
+                }
+              }
             }
             // Cardinal-wall coord — DoorSVG now speaks the same NSWE names.
             const cardinalDoorWall: DoorWall = d.wall as DoorWall;
@@ -1778,7 +1838,7 @@ export default function FloorPlan() {
               <g key={d.id ?? `door-${di}`}>
                 <DoorSVG
                   svgW={svgW} svgH={svgH}
-                  doorPosCm={d.pos} doorLenCm={d.len}
+                  doorPosCm={edgePosCm} doorLenCm={d.len}
                   roomWidthCm={roomW} roomDepthCm={roomD}
                   doorWall={cardinalDoorWall}
                   scale={scale}
@@ -1816,7 +1876,7 @@ export default function FloorPlan() {
                   if (polygonEdge) {
                     const ux = (polygonEdge.x2 - polygonEdge.x1) / polygonEdge.length;
                     const uz = (polygonEdge.z2 - polygonEdge.z1) / polygonEdge.length;
-                    const tMid = d.pos + d.len / 2;
+                    const tMid = edgePosCm + d.len / 2;   // 与门体同一套沿边坐标
                     const mx = (polygonEdge.x1 + ux * tMid) * scale;
                     const my = (polygonEdge.z1 + uz * tMid) * scale;
                     dx = clampX(mx + polygonEdge.nx * 15);
@@ -2388,6 +2448,16 @@ export default function FloorPlan() {
                 className="px-2 py-1 bg-blue-600/80 active:bg-blue-600 text-white text-[11px] font-semibold rounded-lg">
                 ↻ {t.fpRotateItem}
               </button>
+              <button onClick={() => toggleItemMirror(selectedItem.instanceId, "x")}
+                className="px-2 py-1 text-white text-[11px] font-semibold rounded-lg"
+                style={{ background: selectedItem.mirrorX ? "rgba(0,122,255,0.95)" : "rgba(255,255,255,0.12)" }}>
+                ⇋ {t.fpMirrorH}
+              </button>
+              <button onClick={() => toggleItemMirror(selectedItem.instanceId, "z")}
+                className="px-2 py-1 text-white text-[11px] font-semibold rounded-lg"
+                style={{ background: selectedItem.mirrorZ ? "rgba(0,122,255,0.95)" : "rgba(255,255,255,0.12)" }}>
+                ⇅ {t.fpMirrorV}
+              </button>
               <button onClick={() => copyToClipboard([selectedItem.instanceId])}
                 className="px-2 py-1 text-white text-[11px] font-semibold rounded-lg"
                 style={{ background: "rgba(0,122,255,0.7)" }}>
@@ -2501,6 +2571,20 @@ export default function FloorPlan() {
               <span className="text-[9px] text-gray-600">200cm</span>
             </div>
           </div>
+
+          {/* 店招灯箱：店名文字输入 */}
+          {selectedFurniture.id === "sign-shop-fascia" && (
+            <div>
+              <div className="text-[10px] text-gray-400 mb-1">🪧 {locale === "en" ? "Sign text" : "店招文字"}</div>
+              <input
+                type="text"
+                value={selectedItem.label ?? ""}
+                placeholder={locale === "en" ? "CAFÉ" : "店名，如 云横咖啡"}
+                onChange={e => setItemLabel(selectedItem.instanceId, e.target.value)}
+                className="w-full px-2 py-1.5 rounded-lg text-[12px] text-white bg-gray-800/80 border border-white/10 outline-none focus:border-blue-500"
+              />
+            </div>
+          )}
 
           <div className="flex justify-between items-center">
             <button onClick={() => { resizeItem(selectedItem.instanceId, 1, 1, 1); setElevation(selectedItem.instanceId, 0); }}

@@ -68,6 +68,102 @@ function friendlyRenderError(raw: string | undefined, en: boolean): string {
   return raw;
 }
 
+/** 可复用的单次出图/出片编排（非 hook 版）——AiRenderModal 的 hook 与
+ *  云横店分镜「逐镜成片」共用同一实现。上传 → 提交 → 轮询 → 取产出。
+ *  返回 { images } 或 { error }；cancelRef.current=true 中途取消（返回 null）。 */
+export async function runRender(
+  args: RenderArgs,
+  opts: {
+    onPhase?: (p: RenderPhase) => void;
+    cancelRef?: { current: boolean };
+    /** 轮询上限（毫秒）。图片默认 5 分钟；视频工作流建议传 20 分钟。 */
+    timeoutMs?: number;
+  } = {},
+): Promise<{ images: string[] } | { error: string } | null> {
+  const { onPhase, cancelRef, timeoutMs = 5 * 60 * 1000 } = opts;
+  const en = useLocaleStore.getState().locale === "en";
+
+  const config = getAiRenderConfig();
+  const backend: RenderBackend | undefined = getBackend(config, args.workflow.backendId);
+  if (!backend) {
+    return { error: en ? "This workflow isn't bound to a valid backend. Check the settings."
+                       : "该工作流未绑定有效后端，请在设置里检查。" };
+  }
+  if (backend.kind === "runninghub" && !backend.apiKey?.trim()) {
+    return { error: en ? "The RunningHub backend is missing an API key. Add it in settings first."
+                       : "RunningHub 后端缺少 API Key，请先在设置里填写。" };
+  }
+
+  const base = {
+    kind: backend.kind,
+    baseUrl: backend.baseUrl,
+    apiKey: backend.apiKey,
+  };
+
+  // 1) 上传输入图
+  let imageFilename: string | undefined;
+  if (args.workflow.needsImage && args.image) {
+    onPhase?.("uploading");
+    const up = await callProxy<{ fileName: string }>({ ...base, action: "upload", image: args.image });
+    if (cancelRef?.current) return null;
+    if (!up.ok || !up.data?.fileName) {
+      return { error: up.error ?? (en ? "Image upload failed" : "图片上传失败") };
+    }
+    imageFilename = up.data.fileName;
+  }
+
+  // 2) 提交任务
+  onPhase?.("submitting");
+  // comfyui 系：若工作流来自素材包预设，按需 fetch 原始 JSON（避免塞 localStorage）
+  let workflowJson = args.workflow.workflowJson;
+  if (!workflowJson && args.workflow.presetPath && backend.kind !== "runninghub") {
+    try {
+      const r = await fetch(args.workflow.presetPath);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      workflowJson = await r.text();
+    } catch (e) {
+      return { error: `${en ? "Failed to load preset workflow: " : "读取预设工作流失败："}${e instanceof Error ? e.message : String(e)}` };
+    }
+  }
+  const submitted = await callProxy<{ taskId: string }>({
+    ...base,
+    action: "submit",
+    workflowId: args.workflow.workflowId,
+    workflowJson,
+    mapping: args.workflow.mapping,
+    prompt: args.prompt,
+    imageFilename,
+  });
+  if (cancelRef?.current) return null;
+  if (!submitted.ok || !submitted.data?.taskId) {
+    return { error: friendlyRenderError(submitted.error, en) };
+  }
+  const taskId = submitted.data.taskId;
+
+  // 3) 轮询状态
+  onPhase?.("rendering");
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (cancelRef?.current) return null;
+    await sleep(4000);
+    const st = await callProxy<{ status: string }>({ ...base, action: "status", taskId });
+    if (cancelRef?.current) return null;
+    const status = String(st.data?.status ?? "").toUpperCase();
+    if (status === "SUCCESS") break;
+    if (status === "FAILED" || status === "ERROR") {
+      return { error: en ? "Render failed (backend returned FAILED)" : "渲染失败（后端返回 FAILED）" };
+    }
+  }
+
+  // 4) 取产出
+  const out = await callProxy<{ images: string[] }>({ ...base, action: "outputs", taskId });
+  if (cancelRef?.current) return null;
+  if (!out.ok || !out.data?.images?.length) {
+    return { error: out.error ?? (en ? "No output image (may still be queued — try again later)" : "未取到产出图（可能仍在排队，稍后重试）") };
+  }
+  return { images: out.data.images };
+}
+
 export function useAiRender() {
   const [phase, setPhase] = useState<RenderPhase>("idle");
   const [images, setImages] = useState<string[]>([]);
@@ -87,103 +183,16 @@ export function useAiRender() {
     cancelledRef.current = false;
     setError(null);
     setImages([]);
-    const en = useLocaleStore.getState().locale === "en";
-
-    const config = getAiRenderConfig();
-    const backend: RenderBackend | undefined = getBackend(config, args.workflow.backendId);
-    if (!backend) {
-      setError(en ? "This workflow isn't bound to a valid backend. Check the settings."
-                  : "该工作流未绑定有效后端，请在设置里检查。");
+    const result = await runRender(args, { onPhase: setPhase, cancelRef: cancelledRef });
+    if (result === null) return null; // 用户取消
+    if ("error" in result) {
+      setError(result.error);
       setPhase("error");
       return null;
     }
-    if (backend.kind === "runninghub" && !backend.apiKey?.trim()) {
-      setError(en ? "The RunningHub backend is missing an API key. Add it in settings first."
-                  : "RunningHub 后端缺少 API Key，请先在设置里填写。");
-      setPhase("error");
-      return null;
-    }
-
-    const base = {
-      kind: backend.kind,
-      baseUrl: backend.baseUrl,
-      apiKey: backend.apiKey,
-    };
-
-    // 1) 上传输入图
-    let imageFilename: string | undefined;
-    if (args.workflow.needsImage && args.image) {
-      setPhase("uploading");
-      const up = await callProxy<{ fileName: string }>({ ...base, action: "upload", image: args.image });
-      if (cancelledRef.current) return null;
-      if (!up.ok || !up.data?.fileName) {
-        setError(up.error ?? (en ? "Image upload failed" : "图片上传失败"));
-        setPhase("error");
-        return null;
-      }
-      imageFilename = up.data.fileName;
-    }
-
-    // 2) 提交任务
-    setPhase("submitting");
-    // comfyui 系：若工作流来自素材包预设，按需 fetch 原始 JSON（避免塞 localStorage）
-    let workflowJson = args.workflow.workflowJson;
-    if (!workflowJson && args.workflow.presetPath && backend.kind !== "runninghub") {
-      try {
-        const r = await fetch(args.workflow.presetPath);
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        workflowJson = await r.text();
-      } catch (e) {
-        setError(`${en ? "Failed to load preset workflow: " : "读取预设工作流失败："}${e instanceof Error ? e.message : String(e)}`);
-        setPhase("error");
-        return null;
-      }
-    }
-    const submitted = await callProxy<{ taskId: string }>({
-      ...base,
-      action: "submit",
-      workflowId: args.workflow.workflowId,
-      workflowJson,
-      mapping: args.workflow.mapping,
-      prompt: args.prompt,
-      imageFilename,
-    });
-    if (cancelledRef.current) return null;
-    if (!submitted.ok || !submitted.data?.taskId) {
-      setError(friendlyRenderError(submitted.error, en));
-      setPhase("error");
-      return null;
-    }
-    const taskId = submitted.data.taskId;
-
-    // 3) 轮询状态（最多约 5 分钟）
-    setPhase("rendering");
-    const deadline = Date.now() + 5 * 60 * 1000;
-    while (Date.now() < deadline) {
-      if (cancelledRef.current) return null;
-      await sleep(4000);
-      const st = await callProxy<{ status: string }>({ ...base, action: "status", taskId });
-      if (cancelledRef.current) return null;
-      const status = String(st.data?.status ?? "").toUpperCase();
-      if (status === "SUCCESS") break;
-      if (status === "FAILED" || status === "ERROR") {
-        setError(en ? "Render failed (backend returned FAILED)" : "渲染失败（后端返回 FAILED）");
-        setPhase("error");
-        return null;
-      }
-    }
-
-    // 4) 取产出
-    const out = await callProxy<{ images: string[] }>({ ...base, action: "outputs", taskId });
-    if (cancelledRef.current) return null;
-    if (!out.ok || !out.data?.images?.length) {
-      setError(out.error ?? (en ? "No output image (may still be queued — try again later)" : "未取到产出图（可能仍在排队，稍后重试）"));
-      setPhase("error");
-      return null;
-    }
-    setImages(out.data.images);
+    setImages(result.images);
     setPhase("done");
-    return out.data.images;
+    return result.images;
   }, []);
 
   return { phase, images, error, generate, reset, cancel };

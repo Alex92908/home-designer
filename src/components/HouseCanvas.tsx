@@ -101,7 +101,14 @@ import { hasWebGPUSupport } from "@/lib/webgpuRenderer";
 import { HouseStairs } from "./StairGeometry";
 import { SSGIPostProcessing } from "./SSGIPostProcessing";
 import { getSunPosition3D, formatHour as sunFormatHour } from "@/lib/sunAnalysis";
-import { ROOM_DEFS, ExteriorSettings, ExteriorWall, isYardPrefab, isYardZone } from "@/lib/types";
+import { ROOM_DEFS, ExteriorSettings, ExteriorWall, isYardPrefab, isYardZone, resolveFacadeLayer } from "@/lib/types";
+// 全屋3D 的家具渲染复用 RoomCanvas 的 PlacedItemMesh（单一真源：
+// x/z/rotation/scaleW/D/H/elevationY/mountCeiling/mirrorX/mirrorZ 全部字段
+// 都在它内部处理），避免这里再写一份会漏字段的简化版。
+import { PlacedItemMesh } from "./RoomCanvas";
+import { STAIR_FURNITURE_IDS } from "./Staircase";
+import { polygonBounds, getEdges, type RoomShape } from "@/lib/roomGeometry";
+import { getRoomDoors } from "@/lib/roomDoors";
 import { getFurnitureById } from "@/lib/furniture";
 import { getOutdoorAssetByKind } from "@/lib/outdoorAssets";
 import { DetailedDecor } from "./DetailedDecor";
@@ -109,6 +116,7 @@ import { PrefabMesh } from "./PrefabRenderer";
 import { ZoneMesh } from "./ZoneRenderer";
 import FloorPlanBuilding from "./FloorPlanExterior";
 import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
+import { CinematicPanel, CameraPathPlayer, ActorsLayer } from "./CinematicDirector";
 
 // ─── Constants ─────────────────────────────────────────────
 const FLOOR_H = 2.8;
@@ -3148,11 +3156,11 @@ function useProceduralGrassTexture(): THREE.Texture {
 // "through" the water. So we punch a rectangular hole in the lawn at each
 // pool footprint, letting the GLB's own tiled basin + water show through.
 const EMPTY_GRASS_POOLS: import("@/lib/types").YardItem[] = [];
-function GrassGroundTextured({ size, tint }: { size: number; tint: string }) {
-  const texture = useProceduralGrassTexture();
+// 地面几何：默认整块 plane；有泳池时按泳池脚印抠矩形洞，让 GLB 泳池盆/水面透出。
+// 草地与青地砖两种地面共用（复用抠洞逻辑，避免青砖模式丢泳池洞）。
+function usePoolHoleGroundGeometry(size: number): THREE.BufferGeometry {
   const items = useDesignerStore(s => s.yardPlan?.items ?? EMPTY_GRASS_POOLS);
-
-  const geometry = useMemo(() => {
+  return useMemo(() => {
     const pools = items.filter(isYardPrefab).filter(p => p.prefabKind === "pool");
     const half = size / 2;
     // No pools → plain plane (cheapest path, unchanged look).
@@ -3204,7 +3212,11 @@ function GrassGroundTextured({ size, tint }: { size: number; tint: string }) {
     uv.needsUpdate = true;
     return geo;
   }, [items, size]);
+}
 
+function GrassGroundTextured({ size, tint }: { size: number; tint: string }) {
+  const texture = useProceduralGrassTexture();
+  const geometry = usePoolHoleGroundGeometry(size);
   // Task 1: 大草地 plane 永远在视野，跳过 frustum 测试
   return (
     <mesh
@@ -3221,6 +3233,61 @@ function GrassGroundTextured({ size, tint }: { size: number; tint: string }) {
         metalness={0.0}
         envMapIntensity={0.12}
       />
+    </mesh>
+  );
+}
+
+// 程序青地砖纹理：青灰/黛绿哑光地砖 + 深青灰缝，逐砖轻微色差（无外部资源，画布生成）。
+// 青地砖比原来的暖白砖稳重，和深色门框+玻璃幕墙的现代调子更配（用户：是不是应该青地砖）。
+function useTileTexture(): THREE.Texture {
+  return useMemo(() => {
+    const N = 1024, tiles = 8;
+    const grout = Math.max(3, Math.round((N / tiles) * 0.04));
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = N;
+    const ctx = cv.getContext("2d")!;
+    ctx.fillStyle = "#5E6E68"; // 深青灰缝
+    ctx.fillRect(0, 0, N, N);
+    const cell = N / tiles;
+    for (let ty = 0; ty < tiles; ty++) {
+      for (let tx = 0; tx < tiles; tx++) {
+        const j = ((tx * 7 + ty * 13) % 13) - 6;   // -6..+6 逐砖色差
+        const r = 150 + j, g = 168 + j, b = 160 + j;  // 青灰/黛绿
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(tx * cell + grout / 2, ty * cell + grout / 2, cell - grout, cell - grout);
+      }
+    }
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.anisotropy = 8;
+    return tex;
+  }, []);
+}
+
+// 整块青地砖地面（商业片场）：复用泳池抠洞几何 + 青地砖纹理。
+function TileGroundTextured({ size }: { size: number }) {
+  const geometry = usePoolHoleGroundGeometry(size);
+  const tex = useTileTexture();
+  // 几何 UV 已重映射成 0..1 覆盖整块 size×size；8 砖/画布、目标单砖 ~0.6m
+  // → repeat = size /(8*0.6) ≈ size/4.8，铺满整个地面。
+  const map = useMemo(() => {
+    const t = tex.clone();
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    const r = Math.max(8, Math.round(size / 4.8));
+    t.repeat.set(r, r);
+    t.needsUpdate = true;
+    return t;
+  }, [tex, size]);
+  return (
+    <mesh
+      geometry={geometry}
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[0, -0.499, 0]}
+      receiveShadow
+      frustumCulled={false}
+    >
+      <meshStandardMaterial map={map} roughness={0.55} metalness={0.02} envMapIntensity={0.5} />
     </mesh>
   );
 }
@@ -3265,7 +3332,7 @@ function EntryPath({ W, D }: { W: number; D: number }) {
   );
 }
 
-function Ground({ W, D, lawnTint, grassDensity }: { W: number; D: number; lawnTint?: string; grassDensity?: number }) {
+function Ground({ W, D, lawnTint, grassDensity, groundType }: { W: number; D: number; lawnTint?: string; grassDensity?: number; groundType?: "grass" | "tile" }) {
   // Single large plane — no seam between "far" and "near" zones.
   // Sized to fill the camera frustum; PBR texture loads async via Suspense.
   const size = Math.max(W, D) * 7 + 40;
@@ -3274,13 +3341,14 @@ function Ground({ W, D, lawnTint, grassDensity }: { W: number; D: number; lawnTi
   // hide the procedural ground plane edge for a typical 10 m villa.
   const grassRadius = Math.min(22, Math.max(W, D) * 1.6 + 8);
   const tint = lawnTint ?? "#7E8E6A";
-  // Fallback colour is the tint × a mid-grass green so the unloaded state
-  // doesn't flash bright kindergarten green. Multiplied via THREE.Color.
+  const isTile = groundType === "tile";   // 青地砖广场（商业片场）vs 默认草坪
+  // Fallback colour: 草地用 tint × 中绿；青砖用青灰，避免加载瞬间闪绿。
   const fallbackCol = useMemo(() => {
+    if (isTile) return new THREE.Color("#96A49C");
     const c = new THREE.Color(tint);
     c.multiply(new THREE.Color("#5F7A48"));
     return c;
-  }, [tint]);
+  }, [tint, isTile]);
   return (
     <>
       <Suspense fallback={
@@ -3289,7 +3357,9 @@ function Ground({ W, D, lawnTint, grassDensity }: { W: number; D: number; lawnTi
           <meshStandardMaterial color={fallbackCol} roughness={0.96} />
         </mesh>
       }>
-        <GrassGroundTextured size={size} tint={tint} />
+        {isTile
+          ? <TileGroundTextured size={size} />
+          : <GrassGroundTextured size={size} tint={tint} />}
       </Suspense>
       {/* Instanced grass blades around building — skips building footprint.
           Count is scaled by ExteriorSettings.grassDensity (0..2).
@@ -3298,8 +3368,9 @@ function Ground({ W, D, lawnTint, grassDensity }: { W: number; D: number; lawnTi
           / dark speckles against the sky, which the user explicitly rejected.
           The textured ground plane (GrassGroundTextured) already gives a
           convincing lawn on its own. Users who want close-up 3D blades can
-          opt back in via ExteriorSettings.grassDensity (0..2). */}
-      {(grassDensity ?? 0) > 0 && (
+          opt back in via ExteriorSettings.grassDensity (0..2).
+          青地砖模式不撒草叶。 */}
+      {!isTile && (grassDensity ?? 0) > 0 && (
         <GrassCarpet W={W} D={D}
           count={Math.round(650 * Math.max(0, Math.min(2, grassDensity ?? 0)))}
           radius={grassRadius} lawnTint={tint} />
@@ -4373,6 +4444,216 @@ function RichGlassVillaBuilding({ W, D, settings }: {
 }
 
 // ─── House body ──────────────────────────────────────────────
+/** 房间的「有效外接矩形」（cm，与 roomLayout 同坐标系）。
+ *  与 FloorPlanExterior.effRect 逐字节一致：矩形/未设形状的房间原样返回，
+ *  只有被改成多边形(L型/凸型)的房间才会扩到能包住多边形的外接矩形。
+ *  家具的房间局部坐标(placed.x/z)是以这个有效矩形为基准的，所以世界坐标
+ *  换算必须用 effRect 而不是 roomDimensions，否则多边形房间的家具会整体偏移。 */
+function effRectHC(
+  layout: { x: number; y: number },
+  dims: { width: number; depth: number },
+  shape?: RoomShape,
+): { x: number; y: number; width: number; depth: number } {
+  if (!shape || shape.preset === "rect" || !shape.points?.length) {
+    return { x: layout.x, y: layout.y, width: dims.width, depth: dims.depth };
+  }
+  const b = polygonBounds(shape.points);
+  const lminX = Math.min(0, b.minX), lmaxX = Math.max(dims.width, b.maxX);
+  const lminZ = Math.min(0, b.minZ), lmaxZ = Math.max(dims.depth, b.maxZ);
+  return { x: layout.x + lminX, y: layout.y + lminZ, width: lmaxX - lminX, depth: lmaxZ - lminZ };
+}
+
+/** 与 FloorPlanExterior.isHorizEdge 同义：按**主轴**判定，不按容差跳过。
+ *  原来 1cm 容差会把手工调过的多边形（顶点差几厘米）的整条边判成斜边跳过，
+ *  直接丢掉一堵碰撞墙。跳过=丢墙，宁可有几厘米误差。 */
+const isHorizEdgeHC = (dx: number, dz: number) => Math.abs(dz) <= Math.abs(dx);
+const DEGENERATE_CM_HC = 0.5;
+
+/** 多边形房间的一个「墙面」：轴对齐，故有常量坐标 c + 沿墙一维区间 [lo, hi]。
+ *  坐标系 = plan-cm（与 roomLayout 同系），不是房间局部坐标。 */
+type PolyFaceHC = {
+  /** 对应多边形的边序号，用于 `edge-${i}` 隐藏键 / 门的 edgeIndex 归属。 */
+  edgeIndex: number;
+  facing: import("@/lib/types").WallSide;
+  /** true = 水平边（常量 z，沿 x 展开）；false = 竖直边（常量 x，沿 z 展开）。 */
+  horiz: boolean;
+  c: number;
+  lo: number; hi: number;
+  /** 边的有向端点（plan-cm）。CCW 走向，门的 pos 是从 (x1,z1) 起算的沿边距离。 */
+  x1: number; z1: number; x2: number; z2: number; length: number;
+};
+
+/**
+ * 把房间多边形展开成「每条轴对齐边一个面」（plan-cm）。
+ *
+ * 为什么：漫游碰撞墙原来一律拿房间的**外接矩形**建四面 AABB 墙，而外观图
+ * (FloorPlanExterior.computeExteriorWalls) 已经改成沿多边形逐边出墙。两边不同源 →
+ * L/凸字形房间凸出的那块，视觉上有墙、碰撞上是矩形：用户能从凸出部分穿墙走出去，
+ * 或在凹角处撞到一堵看不见的墙。这里照 computeExteriorWalls 里 `const sides = (() => {`
+ * 那段的同一套规则展开，让碰撞与渲染同源。
+ *
+ * 与外观图一致的兜底：斜边（既不水平也不竖直）跳过——本引擎的一维墙模型表达不了；
+ * 展开结果不足 3 个面时返回 null，调用方回退到原来的外接矩形四面。
+ *
+ * @param origin 多边形点位的坐标原点 = 原始 `roomLayout[room]`。
+ *   ⚠️ 不能用 effRect 顶替：多边形探出 AABB 时 effRect 会外扩/左移，两者不同。
+ */
+function polyFacesHC(
+  shape: RoomShape | undefined,
+  origin: { x: number; y: number },
+): PolyFaceHC[] | null {
+  if (!shape?.points?.length || shape.preset === "rect") return null;
+  const out: PolyFaceHC[] = [];
+  for (const e of getEdges(shape.points)) {
+    const dxE = e.x2 - e.x1, dzE = e.z2 - e.z1;
+    if (Math.hypot(dxE, dzE) < DEGENERATE_CM_HC) continue;
+    const horiz = isHorizEdgeHC(dxE, dzE);
+    const x1 = origin.x + e.x1, z1 = origin.y + e.z1;
+    const x2 = origin.x + e.x2, z2 = origin.y + e.z2;
+    out.push({
+      edgeIndex: e.i, facing: e.facing, horiz,
+      c:  horiz ? (z1 + z2) / 2 : (x1 + x2) / 2,
+      lo: horiz ? Math.min(x1, x2) : Math.min(z1, z2),
+      hi: horiz ? Math.max(x1, x2) : Math.max(z1, z2),
+      x1, z1, x2, z2, length: e.length,
+    });
+  }
+  return out.length >= 3 ? out : null;
+}
+
+/**
+ * 全屋3D 的家具层。
+ *
+ * 根因：HouseCanvas 通用外壳路径（FloorShell / PolygonHouseShell，即
+ * buildingType 未设成 "floor-plan-driven" 的所有项目）从来没有渲染过
+ * placedItems —— 文件里 placedItems 只被 FurniturePreloader 读去预热 GLTF，
+ * 真正的渲染调用根本不存在。结果：全屋3D 里每个房间都是空壳，和单房间3D /
+ * 效果图的数据完全不一致。这里把它补上。
+ *
+ * 坐标约定：与 FloorPlanExterior 一致 —— 以**所有楼层**室内房间 effRect 的
+ * 并集包围盒为原点居中（不是 activeFloor 单层，也不是 useFootprint 那个带
+ * Math.max(4,…) 下限的值）。这样家具与 wallAABBs（漫游碰撞墙，同样用全楼层
+ * 包围盒）严格对齐，漫游时不会出现「人穿过桌子/桌子嵌在墙里」。
+ * Y 用 HouseCanvas 自己的层高堆叠 fi * FLOOR_H（FPE 用 FLOOR_H+SLAB_T，
+ * 是另一套外壳，不能照抄）。
+ *
+ * 分级(LOD)策略 —— 全屋可能有几百件家具，一次性加载几百个 GLTF 会卡死主线程，
+ * 所以照搬 FPE 的做法：
+ *  • 外观(非漫游)模式：一律用 furn.color 的低 LOD 彩色 box 占位，零加载开销；
+ *  • 漫游(insideBuilding)模式：用全精度 PlacedItemMesh，且逐件 <Suspense>，
+ *    fallback 就是那个 box —— GLTF 流式加载时先显示 box，加载完原地替换，
+ *    避免几百个 GLTF 同时解析造成的长时间白屏；
+ *  • 无论哪种模式，画框(artwork)/上柜(cabinet-upper)/楼梯 一律走 PlacedItemMesh：
+ *    它们是挂墙/特殊定位件，box 占位会摆错位置，而且它们本身很轻
+ *    （画框只加载一张贴图，上柜是程序化盒子）。
+ */
+function HouseFurnitureLayer({ insideBuilding }: { insideBuilding: boolean }) {
+  const floorPlans = useDesignerStore(s => s.floorPlans);
+
+  // 全楼层室内包围盒 —— 世界原点。与 FPE 的 planOffset 同构。
+  const planOffset = useMemo(() => {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const fp of floorPlans) {
+      if (!fp) continue;
+      for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
+        const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
+        if (!p || !d) continue;
+        const e = effRectHC(p, d, fp.roomShapes?.[r]);
+        minX = Math.min(minX, e.x);           minY = Math.min(minY, e.y);
+        maxX = Math.max(maxX, e.x + e.width); maxY = Math.max(maxY, e.y + e.depth);
+      }
+    }
+    if (!isFinite(minX)) return null;
+    return { minX, minY, W: (maxX - minX) / 100, D: (maxY - minY) / 100 };
+  }, [floorPlans]);
+
+  if (!planOffset) return null;
+  const { minX, minY, W, D } = planOffset;
+
+  return (
+    <group>
+      {floorPlans.map((fp, fi) => {
+        if (!fp) return null;
+        return (fp.enabledRooms ?? [])
+          .filter(r => !ROOM_DEFS[r]?.isOutdoor)
+          .map(room => {
+            const p = fp.roomLayout?.[room]; const d = fp.roomDimensions?.[room];
+            if (!p || !d) return null;
+            const items = fp.rooms?.[room]?.placedItems ?? [];
+            if (!items.length) return null;
+            const e = effRectHC(p, d, fp.roomShapes?.[room]);
+            // 房间中心 → 世界坐标（米）。PlacedItemMesh 内部按
+            // x/100 - roomW/2 把房间局部坐标转成以房间中心为原点，
+            // 所以这里 group 必须落在房间中心。
+            const rW = e.width / 100, rD = e.depth / 100;
+            const cx = (e.x + e.width / 2 - minX) / 100 - W / 2;
+            const cz = (e.y + e.depth / 2 - minY) / 100 - D / 2;
+            const yBase = fi * FLOOR_H;
+            return (
+              <group key={`hf-${fi}-${room}`} position={[cx, yBase, cz]}>
+                {items.map(pi => {
+                  const fItem = getFurnitureById(pi.furnitureId);
+                  if (!fItem) return null;
+                  // 低 LOD 占位 box：尺寸/位置算法与 PlacedItemMesh 内部保持一致
+                  // （含 scaleW/D/H、elevationY、mountCeiling、rotation）。
+                  // 注意 mirrorX/mirrorZ 只影响模型朝向，对轴对齐盒子无意义，
+                  // 所以 box 不处理它们 —— 真实模型走 PlacedItemMesh 时会正确镜像。
+                  const proxyBox = (() => {
+                    const fw = (fItem.width  * (pi.scaleW ?? 1)) / 100;
+                    const fd = (fItem.depth  * (pi.scaleD ?? 1)) / 100;
+                    const fh = (fItem.height * (pi.scaleH ?? 1)) / 100;
+                    const x3d = pi.x / 100 - rW / 2;
+                    const z3d = pi.z / 100 - rD / 2;
+                    const FLOOR_SURFACE = 0.025; // 楼板面比 yBase 高 2.5cm
+                    const baseY = pi.mountCeiling
+                      ? (FLOOR_H - fh)
+                      : FLOOR_SURFACE + (pi.elevationY ?? 0) / 100;
+                    const rotY = (pi.rotation * Math.PI) / 180;
+                    const boxColor = fItem.color ?? "#A8A8A8";
+                    return (
+                      <mesh
+                        position={[x3d, baseY + fh / 2, z3d]}
+                        rotation={[0, rotY, 0]}
+                        castShadow receiveShadow
+                      >
+                        <boxGeometry args={[fw, fh, fd]} />
+                        <meshStandardMaterial
+                          color={boxColor}
+                          emissive={boxColor}
+                          emissiveIntensity={0.18}
+                          roughness={0.7}
+                          metalness={0.05}
+                        />
+                      </mesh>
+                    );
+                  })();
+                  const needsPlacedMesh =
+                    insideBuilding
+                    || fItem.category === "artwork"
+                    || STAIR_FURNITURE_IDS.has(fItem.id)
+                    || fItem.id.includes("cabinet-upper");
+                  if (!needsPlacedMesh) {
+                    return <group key={pi.instanceId}>{proxyBox}</group>;
+                  }
+                  // 地毯专属抬升：地毯是贴地薄片，PlacedItemMesh 把它放在 group
+                  // 的 yBase 上 → 会沉在楼板(yBase+0.025)之下被盖住。抬 3cm。
+                  const rugLiftY = fItem.category === "rug" ? 0.03 : 0;
+                  return (
+                    <Suspense key={pi.instanceId} fallback={proxyBox}>
+                      <group position={[0, rugLiftY, 0]}>
+                        <PlacedItemMesh placed={pi} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} />
+                      </group>
+                    </Suspense>
+                  );
+                })}
+              </group>
+            );
+          });
+      })}
+    </group>
+  );
+}
+
 function HouseBody({ W, D, settings, insideBuilding = false, wallXray = false, hideInterior = false, onEnterRoom }: {
   W: number; D: number; settings: ExteriorSettings;
   insideBuilding?: boolean; wallXray?: boolean; hideInterior?: boolean;
@@ -4456,6 +4737,11 @@ function HouseBody({ W, D, settings, insideBuilding = false, wallXray = false, h
             ))
           )
         )}
+        {/* 家具层 —— 之前这条通用外壳路径完全不渲染 placedItems，全屋3D 里
+            每个房间都是空壳。放在 pilotis group 内部，这样架空层抬升时家具
+            跟着楼板一起抬。"floor-plan-driven" 路径在上面已 return，由
+            FloorPlanExterior 自己渲染家具，不会重复。 */}
+        <HouseFurnitureLayer insideBuilding={insideBuilding} />
         <group position={[0, totalH, 0]}>
           {hasPolygonRoom && roofStyle === "flat"
             ? <PolygonFlatRoof color={roofColor} />
@@ -4876,7 +5162,11 @@ function WalkthroughController({
    *  the rect belongs to so the 2D collision test only uses rooms on the
    *  player's current floor (otherwise stacked upper/lower rooms blur the
    *  wall positions and you walk straight through walls). */
-  walls: Array<AABB & { floor: number; room: string; bld?: number; hides?: Partial<Record<import("@/lib/types").WallSide, boolean>> }>;
+  // segs：多边形房间的逐边碰撞墙线（世界米）。给了就代替 AABB 的四条边做穿墙
+  // 判定，见 blocksMovement。矩形房间不带 segs，走原来的四边路径。
+  walls: Array<AABB & { floor: number; room: string; bld?: number;
+    hides?: Partial<Record<import("@/lib/types").WallSide, boolean>>;
+    segs?: Array<{ horiz: boolean; c: number; lo: number; hi: number; hidden: boolean; facing: import("@/lib/types").WallSide }> }>;
   /** Metres per storey (FloorPlanExterior pitch). Used to derive the
    *  player's current floor index from camera.y. */
   storeyH: number;
@@ -5195,6 +5485,17 @@ function WalkthroughController({
       const r = walls[i];
       if (r.floor !== curFloorIdx || (r.bld ?? 0) !== curBld) continue;
       const isHall = r.room === "hallway";
+      // 多边形房间：沿**每条轴对齐边**判定，而不是外接矩形的四条边。这样
+      // L/凸字形的凸出部分有墙拦得住、凹角处不会有隐形墙——与外观图的墙体同源。
+      if (r.segs) {
+        for (const s of r.segs) {
+          if (s.hidden) continue;
+          // 走廊照旧不出 N/S 长边（由邻居房间贡献那两道墙），与下面矩形路径一致。
+          if (isHall && (s.facing === "N" || s.facing === "S")) continue;
+          if (s.horiz ? crossesH(s.c, s.lo, s.hi) : crossesV(s.c, s.lo, s.hi)) { crossed = true; break; }
+        }
+        continue;
+      }
       // N / S long sides — skipped for the hallway (neighbours render them).
       if (!isHall) {
         if (!r.hides?.N && crossesH(r.minZ, r.minX, r.maxX)) { crossed = true; break; }
@@ -5634,7 +5935,12 @@ export default function HouseCanvas() {
   // the FloorPlan toolbar. Cardinal keys only — polygon edge-${i} hides
   // don't have a clean AABB-side mapping; users with polygon rooms still
   // need no-clip mode to walk through hidden polygon edges.
-  type WallRect = AABB & { floor: number; room: string; bld?: number; hides?: Partial<Record<import("@/lib/types").WallSide, boolean>> };
+  // segs：多边形房间沿**每条轴对齐边**的墙线（世界米）。给了就用它代替下面
+  // AABB 的四条边做穿墙判定 —— 与外观图的墙体同源，凹角/凸出都对得上。
+  // AABB 本身仍然保留（且对多边形房间取 effRect），因为它还被外壳 bbox
+  // (inFootprint) 用来圈整层的可行走范围。
+  type WallSeg = { horiz: boolean; c: number; lo: number; hi: number; hidden: boolean; facing: import("@/lib/types").WallSide };
+  type WallRect = AABB & { floor: number; room: string; bld?: number; hides?: Partial<Record<import("@/lib/types").WallSide, boolean>>; segs?: WallSeg[] };
   const wallAABBs = useMemo<WallRect[]>(() => {
     const out: WallRect[] = [];
     const WALL_HALF = 0.06;
@@ -5642,7 +5948,9 @@ export default function HouseCanvas() {
     // (offX/offZ 米)。多楼栋共用此函数——激活楼栋 off=0，副楼按 (bld-activeBld) 偏移，
     // 每条矩形打 bld 标签供 blocksMovement 按栋分组做外壳门控。rot=0 的副楼直接
     // 偏移即对齐；旋转副楼不进碰撞(见下方调用处)，避免与渲染错位的"隐形墙"。
-    const pushBuilding = (fps: import("@/lib/types").FloorPlan[], hasRoof: boolean, offX: number, offZ: number, bldIdx: number) => {
+    // curtainWall 逐楼栋传入：resolveFacadeLayer 的第 5 步全局默认依赖它，
+    // 副楼有自己的 exterior 设置，不能借用主楼的。
+    const pushBuilding = (fps: import("@/lib/types").FloorPlan[], hasRoof: boolean, offX: number, offZ: number, bldIdx: number, curtainWall: boolean) => {
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       for (let fi = 0; fi < fps.length; fi++) {
         const fp = fps[fi]; if (!fp) continue;
@@ -5663,22 +5971,62 @@ export default function HouseCanvas() {
         for (const r of (fp.enabledRooms ?? []).filter(rr => !ROOM_DEFS[rr]?.isOutdoor)) {
           const p = fp.roomLayout?.[r]; const d = fp.roomDimensions?.[r];
           if (!p || !d) continue;
-          const wh = fp.roomWallsHidden?.[r];
-          const hides: WallRect["hides"] = wh ? {
-            N: wh.N === true || undefined,
-            S: wh.S === true || undefined,
-            W: wh.W === true || undefined,
-            E: wh.E === true || undefined,
-          } : undefined;
+          // 之前这里只读旧的 fp.roomWallsHidden，完全不认「外墙样式」面板写入的
+          // roomFacadeFaces 覆盖 —— 用户显式把某一面设成开敞/实墙，全屋3D 不响应。
+          // 改为统一走 resolveFacadeLayer（和 FloorPlan / FloorPlanExterior 同一个
+          // 真源），并把整个 fp 传进去，让它的第 4 步「内墙相邻判定」生效：
+          // 相邻房间之间的面强制算实墙，不会被幕墙全局默认误判成通透。
+          //
+          // 注意判定条件是「实墙层和玻璃层都不显示」才算可穿行，而不是
+          // 「实墙层不显示」—— 幕墙模式下外墙的 wall=false 但 glass=true，
+          // 玻璃幕墙依然是物理屏障，若只看 wall 层会让人直接走出玻璃墙。
+          const sideHidden = (side: "N" | "S" | "W" | "E") =>
+            (!resolveFacadeLayer(fp, r, side, "wall", curtainWall)
+              && !resolveFacadeLayer(fp, r, side, "glass", curtainWall)) || undefined;
+          const hides: WallRect["hides"] = {
+            N: sideHidden("N"), S: sideHidden("S"),
+            W: sideHidden("W"), E: sideHidden("E"),
+          };
+          // 多边形房间用**有效外接矩形**(effRect)当 AABB：多边形凸出 AABB 时
+          // effRect 会外扩，原来直接用 roomDimensions 会让凸出那块落在整层
+          // 外壳 bbox 之外，被 inFootprint 当成"走出建筑"直接挡住。
+          // 矩形房间 effRect === 原矩形，逐字节不变。
+          const shape = fp.roomShapes?.[r];
+          const eR = effRectHC(p, d, shape);
+          // plan-cm → 世界米。CM_local 已含 cm→m，Wh/Dh 是整栋 footprint 尺寸(米)。
+          const toWX = (cx: number) => (cx - minX) * CM_local - Wh / 2 + offX;
+          const toWZ = (cz: number) => (cz - minY) * CM_local - Dh / 2 + offZ;
+
+          // 沿多边形逐边生成碰撞墙线。原点必须是 roomLayout(p)，不是 effRect。
+          const faces = polyFacesHC(shape, p);
+          const segs: WallSeg[] | undefined = faces?.map(f => {
+            // 每个面照矩形路径的老规矩内缩 WALL_HALF：常量坐标沿内法线推进，
+            // 两端各缩 WALL_HALF。矩形多边形上这与老的四边内缩完全等价。
+            const inward = (f.facing === "N" || f.facing === "W") ? 1 : -1;
+            const c  = f.horiz ? toWZ(f.c) : toWX(f.c);
+            const lo = (f.horiz ? toWX(f.lo) : toWZ(f.lo)) + WALL_HALF;
+            const hi = (f.horiz ? toWX(f.hi) : toWZ(f.hi)) - WALL_HALF;
+            // 优先认这条边自己的 `edge-${i}` 隐藏/外墙面设置（2D 平面图给多边形
+            // 房间的墙开关就是按边存的）；没有显式设置时回落到该边朝向的 NSWE 面。
+            const edgeKey = `edge-${f.edgeIndex}`;
+            const hasEdgeCfg = fp.roomFacadeFaces?.[r]?.[edgeKey] != null
+              || fp.roomWallsHidden?.[r]?.[edgeKey] != null;
+            const hidden = hasEdgeCfg
+              ? (!resolveFacadeLayer(fp, r, edgeKey, "wall", curtainWall)
+                 && !resolveFacadeLayer(fp, r, edgeKey, "glass", curtainWall))
+              : !!hides[f.facing];
+            return { horiz: f.horiz, c: c + inward * WALL_HALF, lo, hi, hidden, facing: f.facing };
+          });
           out.push({
             floor: fi,
             room: r,
             bld: bldIdx,
-            minX: (p.x - minX) * CM_local - Wh / 2 + WALL_HALF + offX,
-            maxX: (p.x + d.width - minX) * CM_local - Wh / 2 - WALL_HALF + offX,
-            minZ: (p.y - minY) * CM_local - Dh / 2 + WALL_HALF + offZ,
-            maxZ: (p.y + d.depth - minY) * CM_local - Dh / 2 - WALL_HALF + offZ,
+            minX: toWX(eR.x) + WALL_HALF,
+            maxX: toWX(eR.x + eR.width) - WALL_HALF,
+            minZ: toWZ(eR.y) + WALL_HALF,
+            maxZ: toWZ(eR.y + eR.depth) - WALL_HALF,
             hides,
+            segs,
           });
         }
       }
@@ -5694,8 +6042,13 @@ export default function HouseCanvas() {
     };
     const ax = buildings[activeBuilding]?.x ?? 0;
     const az = buildings[activeBuilding]?.z ?? 0;
+    // facadeSystem 是权威开关，facadeGlass 只是旧的兼容别名 —— 与
+    // FloorPlanExterior 的 curtainWall 推导逐字节一致。
+    const curtainWallOf = (ex: ExteriorSettings) =>
+      ex.facadeSystem === "curtain-wall"
+      || (ex.facadeSystem == null && (ex.facadeGlass ?? false));
     // 激活楼栋：origin，数据 = 工作副本 floorPlansForWalk。
-    pushBuilding(floorPlansForWalk, !!exterior.hasRooftop, 0, 0, activeBuilding);
+    pushBuilding(floorPlansForWalk, !!exterior.hasRooftop, 0, 0, activeBuilding, curtainWallOf(exterior));
     // 副楼：rot=0 的按 (bld-activeBld) 偏移加入碰撞；rot≠0 暂不加(偏移版限制，
     // 旋转副楼可穿，后续补 OBB 局部坐标变换)。
     for (let i = 0; i < buildings.length; i++) {
@@ -5703,10 +6056,12 @@ export default function HouseCanvas() {
       const b = buildings[i];
       if (!b.floorPlans?.length || b.rot) continue;
       pushBuilding(b.floorPlans, !!(b.exterior as { hasRooftop?: boolean }).hasRooftop,
-        (b.x - ax) / 100, (b.z - az) / 100, i);
+        (b.x - ax) / 100, (b.z - az) / 100, i, curtainWallOf(b.exterior as ExteriorSettings));
     }
     return out;
-  }, [floorPlansForWalk, exterior.hasRooftop, buildings, activeBuilding]);
+    // facadeSystem/facadeGlass 现在参与碰撞计算（curtainWall → resolveFacadeLayer），
+    // 必须进依赖，否则切换幕墙模式后碰撞墙不刷新。
+  }, [floorPlansForWalk, exterior.hasRooftop, exterior.facadeSystem, exterior.facadeGlass, buildings, activeBuilding]);
 
   // Outer clamp box: extends BEYOND the building into the yard so the user
   // can walk out through the front-entrance door. Padding is 15 m on each
@@ -5756,6 +6111,47 @@ export default function HouseCanvas() {
     if (!isFinite(minX)) return;
     const Wh = (maxX - minX) * CM;
     const Dh = (maxY - minY) * CM;
+    // plan-cm → 世界米（含楼栋偏移），与 wallAABBs 的同名换算一致。
+    const toWX = (cx: number) => (cx - minX) * CM - Wh / 2 + offX;
+    const toWZ = (cz: number) => (cz - minY) * CM - Dh / 2 + offZ;
+
+    // 沿多边形某条边开通行口。碰撞墙已经改成逐边生成（见 wallAABBs 的 segs），
+    // 门洞也必须落在同一条边上，否则用户看得见门却走不过去。
+    // faces 由 polyFacesHC 给出（plan-cm）；door.pos 的含义分两种：
+    //   · edgeIndex 有值 → pos 是**沿边**距离，从边的起点 (x1,z1) 量起；
+    //   · edgeIndex 为空（老式 cardinal 门）→ pos 是从外接矩形该面的西/北端量起，
+    //     按洞口中心落在哪个同朝向的面上来归属（与外观图 belongsHere 同规则）。
+    const collectPoly = (door: { wall: string; pos: number; len: number; edgeIndex?: number },
+                         faces: PolyFaceHC[],
+                         eR: { x: number; y: number; width: number; depth: number },
+                         floor: number): boolean => {
+      let f: PolyFaceHC | undefined;
+      let a: number, b: number;   // 洞口沿墙的一维区间（plan-cm）
+      if (door.edgeIndex != null) {
+        f = faces.find(x => x.edgeIndex === door.edgeIndex);
+        if (!f || f.length < 1e-3) return false;
+        const ux = (f.x2 - f.x1) / f.length, uz = (f.z2 - f.z1) / f.length;
+        const p0 = f.horiz ? f.x1 + ux * door.pos : f.z1 + uz * door.pos;
+        const p1 = f.horiz ? f.x1 + ux * (door.pos + door.len)
+                           : f.z1 + uz * (door.pos + door.len);
+        a = Math.min(p0, p1); b = Math.max(p0, p1);
+      } else {
+        const horizWall = door.wall === "N" || door.wall === "S";
+        const base = horizWall ? eR.x : eR.y;      // 外接矩形该面的起量点
+        a = base + door.pos; b = a + door.len;
+        const mid = (a + b) / 2;
+        f = faces.find(x => x.facing === door.wall && x.horiz === horizWall
+                            && mid >= x.lo - 1 && mid <= x.hi + 1);
+        if (!f) return false;   // 该朝向没有对应的边 → 回退矩形路径，门不会消失
+      }
+      const c = f.horiz ? toWZ(f.c) : toWX(f.c);
+      const lo = f.horiz ? toWX(a) : toWZ(a);
+      const hi = f.horiz ? toWX(b) : toWZ(b);
+      out.push(f.horiz
+        ? { minX: lo, maxX: hi, minZ: c - PAD, maxZ: c + PAD, floor, bld: bldIdx }
+        : { minX: c - PAD, maxX: c + PAD, minZ: lo, maxZ: hi, floor, bld: bldIdx });
+      return true;
+    };
 
     const collect = (door: { wall: string; pos: number; len: number },
                      p: { x: number; y: number }, d: { width: number; depth: number },
@@ -5865,22 +6261,39 @@ export default function HouseCanvas() {
         // rooms. The old wholesale `if (stair||hallway) continue` dropped the
         // stair's configured door too, so the rooftop stairwell rendered a
         // visible door but had NO walkable opening → "天台楼梯间出不去".
+        // 门列表统一走 lib/roomDoors.getRoomDoors —— 唯一真源，四视图共用。
+        // 原来这里是一份手写镜像，且有个真 bug：旧版单门字段存在时会**同时**
+        // collect 自动门和单门，给同一个房间开出两个通行口（其中一个墙上没有门）。
+        // getRoomDoors 的优先级是 显式数组 > 旧版单门 > 自动门，三选一。
+        // 碰撞只关心 wall/pos/len，故不需要传 interiorDoorHeightCm / curtainWall。
         const isCirc = r === "hallway" || r === "stair";
-        const stored = fp.roomDoors?.[r];
-        if (stored && stored.length > 0) {
-          for (const door of stored) collect({ wall: door.wall, pos: door.pos, len: door.len }, p, d, fi);
-        } else if (!isCirc && fp.roomHasDoor?.[r] !== false) {
-          // No stored doors → FPE synthesizes via pickAutoDoor. Mirror it.
-          const auto = autoDoorFor(fi, r, p, d, fb);
-          collect(auto, p, d, fi);
-          // Also handle the legacy single-door fields if set
-          if (fp.roomDoorWall?.[r]) {
-            // Stored value is already NSWE post v1→v2 migration.
-            const wall = fp.roomDoorWall[r] as import("@/lib/types").WallSide;
-            const pos = fp.roomDoorPos?.[r] ?? auto.pos;
-            const len = fp.roomDoorLen?.[r] ?? auto.len;
-            collect({ wall, pos, len }, p, d, fi);
-          }
+        // 不再传 rectProject：碰撞墙已经沿多边形逐边生成，门洞也直接沿边开
+        // （collectPoly 原生消费 edgeIndex）。折算回外接矩形是有损的——凹角上的
+        // 门会被压到外框上，通行口开在墙的错误位置。
+        const eR = effRectHC(p, d, fp.roomShapes?.[r]);
+        const faces = polyFacesHC(fp.roomShapes?.[r], p);
+        const doorsForCollision = getRoomDoors(fp, r, {
+          // widthCm/depthCm 用 effRect：getRoomDoors 拿它给旧版单门算居中默认
+          // 位置并做 clamp，同样必须落在 collect 使用的 effRect 坐标系里。
+          widthCm: eR.width, depthCm: eR.depth,
+          autoDoor: !isCirc
+            // 自动门也喂有效外接矩形：它算出的 pos 会和上面折算后的门一起
+            // 交给 collect(eR)，两者必须同一坐标系，否则多边形房间的自动门
+            // 通行口会整体偏移。
+            ? () => ({ id: `auto-${fi}-${r}`, ...autoDoorFor(fi, r, { x: eR.x, y: eR.y }, { width: eR.width, depth: eR.depth }, fb) })
+            : undefined,
+        });
+        for (const door of doorsForCollision) {
+          // 多边形房间先走沿边路径；沿边归属失败（edgeIndex 失效 / 该朝向没有
+          // 对应的边）才回退到外接矩形，宁可位置近似也不要让门彻底走不过去。
+          if (faces && collectPoly(
+                { wall: door.wall, pos: door.pos ?? 0, len: door.len ?? 0, edgeIndex: door.edgeIndex },
+                faces, eR, fi)) continue;
+          // 用有效外接矩形(而非 roomDimensions)喂 collect：pos 是以 effRect 为
+          // 基准的，两者必须同一坐标系。矩形房间 effRect === 原矩形，
+          // 行为逐字节不变。
+          collect({ wall: door.wall, pos: door.pos, len: door.len },
+                  { x: eR.x, y: eR.y }, { width: eR.width, depth: eR.depth }, fi);
         }
       }
     }
@@ -6207,6 +6620,9 @@ export default function HouseCanvas() {
       </div>
       )}
 
+      {/* 🎬 一键出短片（studio-mvp）：机位预设 → 录短片 + 首尾帧，喂 AI 视频模型 */}
+      {!walkthrough && <CinematicPanel locale={locale} />}
+
       {/* 加载幕布：Canvas 挂载即显示，首帧渲染完成后淡出（盖住场景构建/
           Draco 解码/shader 编译的白屏窗口，dynamic loading 和 drei Loader
           都盖不住这一段）。 */}
@@ -6499,8 +6915,8 @@ export default function HouseCanvas() {
              so it can't z-fight with room floors at y=0.025. Walkthrough
              needs Ground so the user can step through the front door and
              roam the yard without falling into the void. ── */}
-        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} />}
-        {!isRichGlassVilla && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} />}
+        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} groundType={exterior.groundType} />}
+        {!isRichGlassVilla && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} groundType={exterior.groundType} />}
         {!insideBuilding && !isRichGlassVilla && (exterior.entryPathEnabled ?? false) && <EntryPath W={W} D={D} />}
         {/* rich-glass-villa (non-FPD): minimal stone plaza only */}
         {!insideBuilding && isRichGlassVilla && _buildingType !== "floor-plan-driven" && (
@@ -6632,6 +7048,10 @@ export default function HouseCanvas() {
         <SceneDebugBridge enabled={exterior.debugExposeScene ?? false} />
         <CompassYawTracker onChange={setCompassDeg} />
         <FirstFrameNotifier onReady={() => setSceneReady(true)} />
+        {/* 🎬 机位路径播放器（录制时接管相机，详见 CinematicDirector） */}
+        <CameraPathPlayer env={{ W, D, floors }} />
+        {/* 🚶 演员走位层（占位方块人 + 地面点选路径 + 录制时行走） */}
+        <ActorsLayer />
       </Canvas>
       {/* 整体外观首次加载大量院子/导入 GLB 时的全局进度条（drei Loader 监听
           所有 useGLTF/useTexture 的 useProgress）。资产缓存后二次访问几乎不出现。 */}

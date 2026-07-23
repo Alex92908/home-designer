@@ -756,6 +756,8 @@ interface DesignerStore {
   /** Toggle a placed item between floor-mounted and ceiling-mounted.
    *  Ceiling-mounted items render with their top at ceiling height. */
   toggleItemMountCeiling: (instanceId: string) => void;
+  toggleItemMirror: (instanceId: string, axis: "x" | "z") => void;
+  setItemLabel: (instanceId: string, label: string) => void;
   removeItem: (instanceId: string) => void;
   selectInstance: (instanceId: string | null) => void;
   setSelection: (ids: string[]) => void;
@@ -793,6 +795,12 @@ interface DesignerStore {
    *  choosing the dominant axis per edge. Useful after noisy vertex
    *  drags produced slightly tilted walls. */
   rectifyRoomShape: (room: RoomType) => void;
+  /** 轮廓编辑收尾规范化：把拖出负坐标的多边形整体平移回正象限，
+   *  并同步 roomLayout / roomDimensions / 家具 / 门窗偏移（历史坑：
+   *  只平移多边形不平移家具门窗 → 门跳墙、家具错位）。世界位置不变。
+   *  多数视图假设房间局部坐标 ≥0（单房间平面图从原点画 → 负坐标区被
+   *  切掉），编辑轮廓退出时必须调用。 */
+  normalizeRoomShape: (room: RoomType) => void;
   toggleRoom: (room: RoomType) => void;
   addRoom: (room: RoomType) => void;
   removeRoom: (room: RoomType) => void;
@@ -1418,6 +1426,35 @@ export const useDesignerStore = create<DesignerStore>()(
         set({ floorPlans });
       },
 
+      // 镜像翻转（横向 X / 纵向 Z）：翻转选中家具的对应轴，做成对对称摆件。
+      toggleItemMirror: (instanceId, axis) => {
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
+        const key = axis === "x" ? "mirrorX" : "mirrorZ";
+        const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
+          p.instanceId === instanceId ? { ...p, [key]: !p[key] } : p
+        );
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...fp.rooms[activeRoom], placedItems: updatedPlaced } } };
+        set({ floorPlans });
+      },
+
+      // 店招灯箱等道具的显示文字。
+      setItemLabel: (instanceId, label) => {
+        const s = get();
+        const { activeRoom, activeFloor } = s;
+        const fp = s.floorPlans[activeFloor];
+        if (!fp?.rooms[activeRoom]) return;
+        const updatedPlaced = fp.rooms[activeRoom].placedItems.map(p =>
+          p.instanceId === instanceId ? { ...p, label } : p
+        );
+        const floorPlans = [...s.floorPlans];
+        floorPlans[activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...fp.rooms[activeRoom], placedItems: updatedPlaced } } };
+        set({ floorPlans });
+      },
+
       removeItem: (instanceId) => {
         const s = get();
         const { activeRoom, activeFloor, selectedInstanceId, selectedInstanceIds } = s;
@@ -1795,6 +1832,46 @@ export const useDesignerStore = create<DesignerStore>()(
         });
       },
 
+      normalizeRoomShape: (room: RoomType) => {
+        updateFloor(get, set, fp => {
+          const cur = fp.roomShapes?.[room];
+          if (!cur || cur.points.length < 3) return {};
+          let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
+          for (const [x, z] of cur.points) {
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+          }
+          // 只在拖出了负坐标时平移（正常编辑零开销、零影响）
+          const dx = minX < 0 ? -minX : 0;
+          const dz = minZ < 0 ? -minZ : 0;
+          if (dx === 0 && dz === 0) return {};
+          const points = cur.points.map(([x, z]) =>
+            [Math.round(x + dx), Math.round(z + dz)] as [number, number]);
+          const lay = fp.roomLayout[room] ?? { x: 0, y: 0 };
+          const patch: Partial<FloorPlan> = {
+            roomShapes: { ...(fp.roomShapes ?? {}), [room]: { preset: cur.preset, points } },
+            // 原点左移/上移 dx,dz → roomLayout 反向补偿，房间世界位置不变
+            roomLayout: { ...fp.roomLayout, [room]: { x: Math.round(lay.x - dx), y: Math.round(lay.y - dz) } },
+            // 尺寸 = 平移后 bbox 全跨度
+            roomDimensions: { ...fp.roomDimensions, [room]: { width: Math.round(maxX - minX), depth: Math.round(maxZ - minZ) } },
+          };
+          // 家具同步平移（局部坐标 +dx,+dz = 世界位置不动）
+          const rs = fp.rooms[room];
+          if (rs?.placedItems?.length) {
+            patch.rooms = { ...fp.rooms, [room]: { ...rs, placedItems: rs.placedItems.map(p => ({ ...p, x: p.x + dx, z: p.z + dz })) } };
+          }
+          // 门窗偏移：pos 沿墙起点计 → N/S 墙 +dx、W/E 墙 +dz；
+          // edgeIndex 绑定的沿边偏移随顶点整体平移，不用动。
+          const shiftPos = <T extends { wall: string; pos: number; edgeIndex?: number }>(c: T): T =>
+            c.edgeIndex != null ? c : { ...c, pos: c.pos + ((c.wall === "N" || c.wall === "S") ? dx : dz) };
+          const wins = fp.roomWindows?.[room];
+          if (wins?.length) patch.roomWindows = { ...fp.roomWindows, [room]: wins.map(shiftPos) };
+          const doors = fp.roomDoors?.[room];
+          if (doors?.length) patch.roomDoors = { ...fp.roomDoors, [room]: doors.map(shiftPos) };
+          return patch;
+        });
+      },
+
       updateRoomShapePoint: (room: RoomType, idx: number, x: number, z: number) => {
         updateFloor(get, set, fp => {
           const cur = fp.roomShapes?.[room];
@@ -2050,15 +2127,61 @@ export const useDesignerStore = create<DesignerStore>()(
           const enabled  = layout.rooms.map(r => r.room);
           const layoutMap = { ...existing.roomLayout };
           const dimsMap   = { ...existing.roomDimensions };
+          const shapesMap = { ...(existing.roomShapes ?? {}) };
+          const hiddenMap = { ...(existing.roomWallsHidden ?? {}) };
+          // 门窗数据**按模板从头生成**，不继承上一个方案（用户实拍：从别墅切到咖啡馆时，
+          // 别墅那扇位置离谱、还横跨幕墙与实墙的窗被带了过来；30 个房间的 legacy 门字段
+          // 同理）。没有任何项目模板定义 windows，全部靠下面按房间尺寸/立面重新算。
+          // 这才是「一键加载模板 = 替换所有平面图」该有的行为。
+          const winMap: Record<string, WindowConfig[]> = {};
+          const dWallMap = { ...DEFAULT_ROOM_DOOR_WALL };
+          const dPosMap  = { ...DEFAULT_ROOM_DOOR_POS };
+          const dHasMap  = { ...DEFAULT_ROOM_HAS_DOOR };
+          // 循环空间（走廊/楼梯间）靠开口连通，不该有门。全局默认是每房一扇 S 门，
+          // 不排除的话走廊会凭空长出一扇门（用户：走廊你放个门吃屎啊）。
+          dHasMap.hallway = false;
+          dHasMap.stair = false;
           for (const r of layout.rooms) {
             layoutMap[r.room] = { x: r.x, y: r.y };
             dimsMap[r.room]   = { width: r.width, depth: r.depth };
+            // 窗户：**仅当该房间落位/尺寸与旧方案完全一致时**才保留用户在平面图里
+            // 画的窗；否则丢弃。
+            //
+            // 两个矛盾诉求的折中：① 用户实拍「我平面图设置了窗户为什么吃掉了」——
+            // 同一形状下重设/微调模板不该删窗；② 切片场模板时整层房间被重排、改尺寸
+            // （如办公室茶水间从临街厨房变成回字形内岛），旧窗几何意义全失、还会落到
+            // 内墙上。footprint 变了 = 旧窗作废；footprint 没变 = 用户的窗留着。
+            const exWin = existing.roomWindows?.[r.room];
+            const oldDim = existing.roomDimensions?.[r.room];
+            const oldPos = existing.roomLayout?.[r.room];
+            const sameFootprint = oldDim?.width === r.width && oldDim?.depth === r.depth
+              && oldPos?.x === r.x && oldPos?.y === r.y;
+            if (exWin && sameFootprint) winMap[r.room] = exWin;
+            // 模板声明了非矩形轮廓就应用；没声明则清掉旧项目残留的自定义形状
+            if (r.shape) shapesMap[r.room] = r.shape; else delete shapesMap[r.room];
+            // 模板声明了隐藏墙（开放式/骑楼）就应用；没声明则清掉残留
+            if (r.wallsHidden?.length) {
+              hiddenMap[r.room] = Object.fromEntries(r.wallsHidden.map(sd => [sd, true]));
+            } else {
+              delete hiddenMap[r.room];
+            }
           }
           return {
             ...existing,
             enabledRooms: enabled,
             roomLayout: layoutMap,
             roomDimensions: dimsMap,
+            roomShapes: shapesMap,
+            roomWallsHidden: hiddenMap,
+            // 门窗从头生成，不继承旧方案（见上）。legacy 单门字段回到全局默认，
+            // 让 getRoomDoors 走"每房一扇 S 墙门"，而不是继承别墅 30 房间的旧值。
+            roomWindows: winMap,
+            roomDoorWall: dWallMap,
+            roomDoorPos: dPosMap,
+            roomHasDoor: dHasMap,
+            roomDoors: {},
+            roomDoorStyle: {},
+            roomDoorLen: {},
             // yardPlan is now top-level; skip per-floor attachment
 
           };
@@ -2085,6 +2208,116 @@ export const useDesignerStore = create<DesignerStore>()(
           const preferredRooms: RoomType[] = ["living", "master", "bedroom", "kitchen", "dining", "bathroom"];
           const bestRoom = preferredRooms.find(r => floor0Rooms.includes(r)) ?? floor0Rooms[0] ?? "living" as RoomType;
           set({ activeFloor: 0, activeRoom: bestRoom });
+        }
+
+        // 3.5 房间级立面/门（floorLayouts.rooms[].exteriorStyle / doors）——
+        //     放在 styleTemplate 之后应用，免得被其默认门窗覆盖。
+        //     卫生间/后场声明 concrete 实墙、临街大堂声明 glass + 加宽大门。
+        {
+          const nameMeta: Record<string, { name: string; icon: string }> = {};
+          const plans = get().floorPlans.map((fp, fi) => {
+            const layout = tpl.floorLayouts[fi];
+            if (!layout) return fp;
+            // roomExteriorStyle **重置**（不合并旧值）：模板显式声明的 glass/concrete
+            // 会在下面的循环里重新设上；没声明的房间回到默认(实墙/auto)。
+            // 不重置的话切模板会粘住上一个模板的 per-room 立面——如办公室大厅粘着
+            // 咖啡馆时代设的 glass，室内立面莫名变玻璃幕墙（用户：整个办公区不是
+            // 幕墙，为什么大厅是幕墙）。与门窗数据同样「模板自持、不继承」。
+            const exStyle: NonNullable<typeof fp.roomExteriorStyle> = {};
+            const doorsMap = { ...(fp.roomDoors ?? {}) };
+            const windowsMap = { ...(fp.roomWindows ?? {}) };
+            let rooms = fp.rooms;
+            let touched = false;
+            for (const r of layout.rooms) {
+              // 自定义房间显示名/图标（片场把通用房间槽显示成"前台大厅/会议室/男洗手间"）。
+              // customRoomMeta 是工程级、跨楼层，只在 fi===0 收集一次即可。
+              if (fi === 0 && (r.name || r.icon)) {
+                nameMeta[r.room] = {
+                  name: r.name ?? ROOM_DEFS[r.room]?.name ?? r.room,
+                  icon: r.icon ?? ROOM_DEFS[r.room]?.icon ?? "🏠",
+                };
+              }
+              if (r.exteriorStyle) { exStyle[r.room] = r.exteriorStyle; touched = true; }
+              if (r.doors?.length) {
+                doorsMap[r.room] = r.doors.map((d, i) => ({
+                  id: `tpl_door_${r.room}_${i}`, wall: d.wall, pos: d.pos, len: d.len,
+                  ...(d.style ? { style: d.style } : {}), ...(d.h != null ? { h: d.h } : {}),
+                }));
+                touched = true;
+              }
+              // 显式窗（如咖啡馆西墙1幕墙上悬窗，edgeIndex 绑定多边形边）→ roomWindows。
+              // 第一趟已把 roomWindows 设为「保留用户既有窗」，这里再叠加模板声明的窗。
+              if (r.windows?.length) {
+                windowsMap[r.room] = r.windows.map((w, i) => ({
+                  id: `tpl_win_${r.room}_${i}`, wall: w.wall, pos: w.pos, len: w.len,
+                  ...(w.h != null ? { h: w.h } : {}), ...(w.sill != null ? { sill: w.sill } : {}),
+                  ...(w.style ? { style: w.style } : {}), ...(w.edgeIndex != null ? { edgeIndex: w.edgeIndex } : {}),
+                }));
+                touched = true;
+              }
+              // 外墙装饰（店招/壁画/壁灯）→ RoomState.exteriorDecor；
+              // 未声明 wallDecor 的房间不动其现有装饰。
+              if (r.wallDecor?.length && rooms[r.room]) {
+                rooms = {
+                  ...rooms,
+                  [r.room]: {
+                    ...rooms[r.room],
+                    exteriorDecor: r.wallDecor.map((d, i) => ({
+                      instanceId: `tpl_decor_${r.room}_${i}`,
+                      furnitureId: d.furnitureId, wall: d.wall, u: d.u, v: d.v,
+                      ...(d.scaleW ? { scaleW: d.scaleW } : {}),
+                      ...(d.scaleH ? { scaleH: d.scaleH } : {}),
+                      ...(d.label ? { label: d.label } : {}),
+                    })),
+                  },
+                };
+                touched = true;
+              }
+            }
+            return touched ? { ...fp, roomExteriorStyle: exStyle, roomDoors: doorsMap, roomWindows: windowsMap, rooms } : fp;
+          });
+          set({ floorPlans: plans });
+          // 房间自定义显示名/图标（前台大厅/会议室/男洗手间…）。没声明的房间保持既有 meta。
+          if (Object.keys(nameMeta).length) {
+            set(s => ({ customRoomMeta: { ...s.customRoomMeta, ...nameMeta } }));
+          }
+        }
+
+        // 4. 片场级显式摆放（可选）：风格模板铺完后，逐房间整体替换 placedItems。
+        //    非住宅片场（咖啡馆/办公室…）的家具不是住宅风格能推出来的。
+        //    坐标即 store 内部格式（room-local 中心 cm），直接落。
+        if (tpl.furnitureOverrides) {
+          const plans = get().floorPlans.map((fp, fi) => {
+            const overrides = tpl.furnitureOverrides![fi];
+            if (!overrides) return fp;
+            const rooms = { ...fp.rooms };
+            for (const [roomId, items] of Object.entries(overrides)) {
+              const rid = roomId as RoomType;
+              if (!rooms[rid] || !items) continue;
+              rooms[rid] = {
+                ...rooms[rid],
+                placedItems: items.map((it, i) => ({
+                  instanceId: `tpl_${tpl.id}_${rid}_${i}_${it.furnitureId}`,
+                  furnitureId: it.furnitureId,
+                  x: it.x,
+                  z: it.z,
+                  rotation: it.rotation ?? 0,
+                  scaleW: it.scaleW ?? 1,
+                  scaleD: it.scaleD ?? 1,
+                  scaleH: it.scaleH ?? 1,
+                  // 垂直摆放：台面小件（elevationY 落桌/柜面）+ 吊挂件（mountCeiling
+                  // 顶贴天花）。之前漏透传→咖啡杯掉地上、吊灯/绿萝站地上。
+                  ...(it.elevationY != null ? { elevationY: Math.max(0, Math.round(it.elevationY)) } : {}),
+                  ...(it.mountCeiling ? { mountCeiling: true } : {}),
+                  ...(it.mirrorX ? { mirrorX: true } : {}),
+                  ...(it.mirrorZ ? { mirrorZ: true } : {}),
+                  ...(it.label != null ? { label: it.label } : {}),
+                })),
+              };
+            }
+            return { ...fp, rooms };
+          });
+          set({ floorPlans: plans });
         }
       },
 
@@ -2233,13 +2466,26 @@ export const useDesignerStore = create<DesignerStore>()(
           const layoutMap = { ...existing.roomLayout };
           const dimsMap   = { ...existing.roomDimensions };
           const roomsMap  = { ...existing.rooms };
-          const windowsMap = { ...existing.roomWindows };
-          const doorsMap = { ...(existing.roomDoors ?? {}) };
-          const doorStyleMap = { ...(existing.roomDoorStyle ?? {}) };
-          const doorWallMap = { ...existing.roomDoorWall };
-          const doorPosMap = { ...existing.roomDoorPos };
-          const doorLenMap = { ...(existing.roomDoorLen ?? {}) };
-          const hasDoorMap = { ...existing.roomHasDoor };
+          // 重建模式（merge=false，= "一键加载某个项目模板"）**不继承**上一个方案的
+          // 门窗数据。
+          //
+          // 历史坑（用户实拍：外观图冒出一扇位置离谱、还横跨幕墙与实墙的幽灵窗）：
+          // 这几个 map 原来一律 `{ ...existing }`。而**没有任何项目模板定义 windows**
+          // （全部来自 makeDefaultWindows / 用户手改），于是从别墅切到咖啡馆时，
+          // 别墅的窗户和 30 个房间的 legacy 门字段被整套带过去 —— 平面图本身就是脏的，
+          // 三个 3D 视图再怎么改都是在下游擦屁股。
+          //
+          // 弹窗写的就是「将替换所有楼层平面图」，重建就该是重建。
+          // 增量模式（merge=true，AI 局部改动）仍然保留原样，那才是"没提到的别动"。
+          const windowsMap = merge ? { ...existing.roomWindows } : {} as typeof existing.roomWindows;
+          const doorsMap = merge ? { ...(existing.roomDoors ?? {}) } : {} as NonNullable<typeof existing.roomDoors>;
+          const doorStyleMap = merge ? { ...(existing.roomDoorStyle ?? {}) } : {} as NonNullable<typeof existing.roomDoorStyle>;
+          // legacy 单门字段同理：重建模式回到全局默认，而不是继承上一个方案的
+          // 30 个房间的旧值（咖啡馆用不到的卧室/车库门也会被带过来）。
+          const doorWallMap = merge ? { ...existing.roomDoorWall } : { ...DEFAULT_ROOM_DOOR_WALL };
+          const doorPosMap  = merge ? { ...existing.roomDoorPos }  : { ...DEFAULT_ROOM_DOOR_POS };
+          const doorLenMap  = merge ? { ...(existing.roomDoorLen ?? {}) } : {} as NonNullable<typeof existing.roomDoorLen>;
+          const hasDoorMap  = merge ? { ...existing.roomHasDoor } : { ...DEFAULT_ROOM_HAS_DOOR };
           const shapesMap = { ...(existing.roomShapes ?? {}) };
           const extStyleMap = { ...(existing.roomExteriorStyle ?? {}) };
           const wallsHiddenMap: NonNullable<typeof existing.roomWallsHidden> = { ...(existing.roomWallsHidden ?? {}) };
@@ -2400,6 +2646,25 @@ export const useDesignerStore = create<DesignerStore>()(
             // 房间外立面（玻璃幕墙/实墙/自动）。
             const extStyle = resolveAiExteriorStyle(r.exteriorStyle);
             if (extStyle) extStyleMap[rt] = extStyle;
+            // 重建模式下窗户不再继承（见上方 windowsMap 初始化），这里按房间补默认窗：
+            //   · 玻璃幕墙房间 → **不给窗**。整面墙本身就是窗，再叠一扇打孔窗没有物理
+            //     意义，还会在立面上留下一个框（咖啡馆客厅的幽灵窗就是这么来的）。
+            //   · 其余房间 → 按 ROOM_DEFS 的开窗规则生成，但**按模板给的实际尺寸**换算，
+            //     而不是用 ROOM_DEFS 的默认宽深（否则 11.8m 宽的客厅会拿到按 6.8m 算的窗）。
+            // 模板显式给了 r.windows 时，下面的分支会覆盖这里。
+            if (!merge && windowsMap[rt] === undefined) {
+              const wdef = ROOM_DEFS[rt];
+              if (extStyle === "glass" || !wdef?.hasWindow || wdef.windowWall === "none") {
+                windowsMap[rt] = [];
+              } else {
+                const ww = wdef.windowWall as "N" | "E" | "W";
+                const wallLen = ww === "N" ? width : depth;
+                windowsMap[rt] = [{
+                  id: `${rt}-w-${genId()}`, wall: ww,
+                  pos: Math.round(wallLen * 0.25), len: Math.round(wallLen * 0.45),
+                }];
+              }
+            }
             // 改名：沿用现有图标，只换显示名。
             if (r.name && r.name.trim()) {
               renamePatch[rt] = {

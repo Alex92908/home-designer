@@ -168,6 +168,8 @@ export const zh = {
   fpcBtnExit: "🚶 退出漫游",
   fpcBtnEnter: "🚶 第一人称",
   fpRotateItem: "旋转",
+  fpMirrorH: "横向镜像",
+  fpMirrorV: "纵向镜像",
   fpCopyItem: "复制",
   fpDeleteItem: "删除",
   fpWidth: "宽度",

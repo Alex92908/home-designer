@@ -1111,6 +1111,23 @@ export const FURNITURE: FurnitureItem[] = [
     icon: "🚽",
     model3d: { url: "/models/toilet/wallhung_toilet_fss/wallhung_toilet_fss.glb" },
   },
+  {
+    id: "urinal-wall",
+    name: "壁挂小便池",
+    brand: "卫浴洁具",
+    price: 1200,
+    unit: "元/件",
+    category: "toilet",
+    roomTypes: ["bathroom"],
+    color: "#F5F5F5",
+    width: 38,
+    depth: 40,
+    height: 65,
+    tags: ["现代"],
+    description: "男洗手间壁挂小便池",
+    icon: "🚹",
+    model3d: { url: "/models/toilet/urinal/urinal.glb" },
+  },
 
   // ─── 浴缸 Bathtub ─────────────────────────────────────
   {
@@ -1219,7 +1236,8 @@ export const FURNITURE: FurnitureItem[] = [
     tags: ["轻奢", "现代"],
     description: "双台盆，岩板台面奢华",
     icon: "🪥",
-    model3d: { url: "/models/bathroom_vanity/double_sink_vanity/double_sink_vanity.glb" },
+    // fill：三轴独立缩放(所见即所得)。contain 会被最窄轴卡住——用户拉高度滑块无效。
+    model3d: { url: "/models/bathroom_vanity/double_sink_vanity/double_sink_vanity.glb", fit: "fill" },
   },
 
   // ─── 书桌 Desk ────────────────────────────────────────
@@ -1472,6 +1490,9 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"mailbox-modern",      name:"现代信箱",             brand:"五金",   price:580, unit:"元/个", category:"exterior_wall_decor", roomTypes:[], color:"#4A4A4A", width:35, depth:12, height:45, tags:["现代"], description:"壁挂式不锈钢信箱", icon:"📬" },
   { id:"ac-condenser",        name:"空调外机",             brand:"美的",   price:1280,unit:"元/台", category:"exterior_wall_decor", roomTypes:[], color:"#E8E8E8", width:85, depth:35, height:55, tags:[],       description:"分体式空调室外机", icon:"🌬️" },
 
+  // 店招 — 程序化发光灯箱（SignboardMesh），文字走 ExteriorWallDecorItem.label
+  { id:"sign-cafe-wall",      name:"店招（外墙）",         brand:"定制",   price:1500,unit:"元/块", category:"exterior_wall_decor", roomTypes:[], color:"#23262B", width:200, depth:16, height:46, tags:["现代"], description:"横向店招，深底暖白字，贴装外墙面（文字支持 \"LATIN|中文\" 双行）", icon:"🪧" },
+
   // 爬藤 — 半透绿叶贴图
   { id:"climbing-vine",       name:"爬藤（常春藤）",       brand:"园艺",   price:480, unit:"元/片", category:"exterior_wall_decor", roomTypes:[], color:"#2D5A2A", width:120, depth:4, height:200, tags:["中式"], description:"绿色墙面攀爬植物", icon:"🌿", imageUrl:"/decor/ivy.svg" },
 
@@ -1710,11 +1731,14 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"elec-gamer-setup-2", name:"电竞桌套装（豪华）", brand:"品质家居", price:12000, unit:"元/件", category:"electronics", roomTypes:["study","study2","bedroom"], color:"#C8C0B4", width:160, depth:80, height:140, tags:[], description:"电竞桌套装（豪华）", icon:"🖥️", model3d:{ url:"/models/indoor_decor/gaming_setup_2/gaming_setup_2.glb", fit:"contain" } },
   { id:"elec-pc-desk", name:"电脑桌套装", brand:"品质家居", price:8800, unit:"元/件", category:"electronics", roomTypes:["study","study2","bedroom"], color:"#C8C0B4", width:72, depth:70, height:27, tags:[], description:"电脑桌套装", icon:"🖥️", model3d:{ url:"/models/indoor_decor/pc_desk_2/pc_desk_2.glb", fit:"contain" } },
   { id:"decor-trash-bin-2", name:"办公垃圾桶", brand:"品质家居", price:90, unit:"元/件", category:"decor", roomTypes:["study","study2","living"], color:"#C8C0B4", width:28, depth:28, height:45, tags:[], description:"办公垃圾桶", icon:"🗑️", model3d:{ url:"/models/indoor_decor/trash_office/trash_office.glb", fit:"contain" } },
+  { id:"decor-bin-black", name:"垃圾桶（黑）", brand:"品质家居", price:120, unit:"元/件", category:"decor", roomTypes:["hallway","living","kitchen","yard","balcony","balcony2","terrace","deck"], color:"#1A1A1A", width:30, depth:30, height:55, tags:[], description:"黑色街边/室内垃圾桶（recolor 整体染黑）", icon:"🗑️", model3d:{ url:"/models/indoor_decor/trash_office/trash_office.glb", fit:"contain", recolor:"#1A1A1A" } },
+  { id:"partition-stall", name:"卫生间隔断板", brand:"品质家居", price:480, unit:"元/件", category:"decor", roomTypes:["bathroom","bathroom2"], color:"#D6D3CC", width:10, depth:150, height:200, tags:[], description:"公共卫生间隔间隔断板（无模型，按色盒渲染成一面薄墙）", icon:"🚻" },
+  { id:"stall-door", name:"隔间门（可开合）", brand:"五金", price:600, unit:"元/件", category:"decor", roomTypes:["bathroom","bathroom2"], color:"#D9D6CF", width:85, depth:5, height:190, tags:["现代"], description:"公共卫生间隔间门，点击 / 漫游 E 键可开合（StallDoor3D 渲染）", icon:"🚪" },
   { id:"lamp-street", name:"英式复古路灯", brand:"品质家居", price:1600, unit:"元/件", category:"lamp", roomTypes:["yard","garage"], color:"#C8C0B4", width:40, depth:40, height:300, tags:[], description:"英式复古路灯", icon:"🏮", model3d:{ url:"/models/indoor_decor/street_lamp/street_lamp.glb", fit:"contain" } },
   { id:"decor-clothes-pile-2", name:"衣物堆（小）", brand:"品质家居", price:0, unit:"-", category:"decor", roomTypes:["bedroom","closet"], color:"#C8C0B4", width:19, depth:19, height:20, tags:[], description:"衣物堆（小）", icon:"👕", model3d:{ url:"/models/indoor_decor/clothes_pile_2/clothes_pile_2.glb", fit:"contain" } },
   { id:"toy-plush", name:"毛绒玩具", brand:"品质家居", price:120, unit:"元/件", category:"toy", roomTypes:["bedroom","living"], color:"#C8C0B4", width:25, depth:14, height:26, tags:[], description:"毛绒玩具", icon:"🧸", model3d:{ url:"/models/indoor_decor/toy_plush/toy_plush.glb", fit:"contain" } },
   { id:"toy-pomeranian", name:"博美毛绒玩具", brand:"品质家居", price:150, unit:"元/件", category:"toy", roomTypes:["bedroom","living"], color:"#C8C0B4", width:22, depth:22, height:28, tags:[], description:"博美毛绒玩具", icon:"🧸", model3d:{ url:"/models/indoor_decor/toy_pomeranian/toy_pomeranian.glb", fit:"contain" } },
-  { id:"bookshelf-wood-lp", name:"木质书架", brand:"品质家居", price:1200, unit:"元/件", category:"bookshelf", roomTypes:["study","living","bedroom"], color:"#C8C0B4", width:80, depth:30, height:180, tags:[], description:"木质书架", icon:"📚", model3d:{ url:"/models/indoor_decor/bookshelf_wood/bookshelf_wood.glb", fit:"contain" } },
+  { id:"bookshelf-wood-lp", name:"木质书架", brand:"品质家居", price:1200, unit:"元/件", category:"bookshelf", roomTypes:["study","living","bedroom"], color:"#C8C0B4", width:90, depth:15, height:105, tags:[], description:"木质书架", icon:"📚", model3d:{ url:"/models/indoor_decor/bookshelf_wood/bookshelf_wood.glb", fit:"contain", rotation:-1.5708 } },
   { id:"toy-ink-bunny", name:"兔子玩偶", brand:"品质家居", price:130, unit:"元/件", category:"toy", roomTypes:["bedroom","living"], color:"#C8C0B4", width:22, depth:15, height:27, tags:[], description:"兔子玩偶", icon:"🐰", model3d:{ url:"/models/indoor_decor/toy_ink_bunny/toy_ink_bunny.glb", fit:"contain" } },
   { id:"appliance-robot-vacuum-3", name:"扫地机器人（方）", brand:"品质家居", price:1500, unit:"元/件", category:"appliance", roomTypes:["living","bedroom"], color:"#C8C0B4", width:34, depth:34, height:10, tags:[], description:"扫地机器人（方）", icon:"🤖", model3d:{ url:"/models/indoor_decor/vacuum_robvac/vacuum_robvac.glb", fit:"contain" } },
   { id:"bath_accessory-scale-3", name:"体重秤（机械）", brand:"品质家居", price:110, unit:"元/件", category:"bath_accessory", roomTypes:["bathroom","bathroom2"], color:"#C8C0B4", width:10, depth:9, height:6, tags:[], description:"体重秤（机械）", icon:"⚖️", model3d:{ url:"/models/indoor_decor/scale_body_2/scale_body_2.glb", fit:"contain" } },
@@ -1752,6 +1776,67 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"decor-tableware-full", name:"全套餐具摆台", brand:"品质家居", price:380, unit:"元/件", category:"decor", roomTypes:["dining"], color:"#E0E0E0", width:32, depth:50, height:4, tags:[], description:"全套餐具摆台", icon:"🍽️", model3d:{ url:"/models/indoor_decor/tableware_full/tableware_full.glb", fit:"contain" } },
   { id:"decor-spoons-golden", name:"金勺三件组", brand:"品质家居", price:120, unit:"元/件", category:"decor", roomTypes:["dining","kitchen"], color:"#C9A24B", width:15, depth:25, height:3, tags:[], description:"金勺三件组", icon:"🥄", model3d:{ url:"/models/indoor_decor/spoons_golden/spoons_golden.glb", fit:"contain" } },
   { id:"appliance-washer-2", name:"洗衣机（滚筒）", brand:"品质家居", price:2800, unit:"元/件", category:"appliance", roomTypes:["bathroom","balcony","balcony2","kitchen"], color:"#C8C0B4", width:60, depth:60, height:85, tags:[], description:"洗衣机（滚筒）", icon:"🌀", model3d:{ url:"/models/indoor_decor/washing_machine_2/washing_machine_2.glb", fit:"contain" } },
+  // ── 片场系列（云横店 studio-mvp）：咖啡馆/餐厅/办公室拍摄道具 ──
+  { id:"counter-cafe", name:"咖啡馆点单柜台", brand:"片场道具", price:6800, unit:"元/件", category:"counter", roomTypes:["living","kitchen","dining"], color:"#7A5A3A", width:180, depth:70, height:110, tags:[], description:"咖啡馆点单服务柜台", icon:"🍹", model3d:{ url:"/models/filmset/cafe_counter/cafe_counter.glb", fit:"fill" } },
+  { id:"counter-bar-straight", name:"直线吧台", brand:"片场道具", price:7200, unit:"元/件", category:"counter", roomTypes:["living","kitchen","dining"], color:"#5A4A3A", width:220, depth:60, height:110, tags:[], description:"直线服务吧台（已剔除自带吧凳，配独立吧凳）", icon:"🍹", model3d:{ url:"/models/filmset/bar_counter_straight/bar_counter_straight.glb", fit:"fill", dropMeshNames:["Object_4","Object_18"] } },
+  { id:"counter-bar-wood", name:"木质吧台", brand:"片场道具", price:7600, unit:"元/件", category:"counter", roomTypes:["living","kitchen","dining"], color:"#6A4A2A", width:240, depth:65, height:110, tags:[], description:"木质酒吧吧台", icon:"🍹", model3d:{ url:"/models/filmset/bar_counter_wood/bar_counter_wood.glb", fit:"fill" } },
+  { id:"seat-diner-booth", name:"餐厅卡座（含桌）", brand:"片场道具", price:5200, unit:"元/件", category:"sofa", roomTypes:["living","dining","kitchen"], color:"#8A3A2A", width:180, depth:120, height:120, tags:[], description:"餐厅卡座软座含餐桌", icon:"🛋️", model3d:{ url:"/models/filmset/diner_booth/diner_booth.glb", fit:"fill" } },
+  { id:"seat-bar-stool", name:"复古吧凳", brand:"片场道具", price:520, unit:"元/件", category:"dining_chair", roomTypes:["living","dining","kitchen"], color:"#4A3A2A", width:42, depth:42, height:75, tags:[], description:"复古高脚吧凳", icon:"🪑", model3d:{ url:"/models/filmset/bar_stool/bar_stool.glb", fit:"fill" } },
+  { id:"table-conference", name:"复古会议桌", brand:"片场道具", price:4800, unit:"元/件", category:"dining_table", roomTypes:["living","dining","study"], color:"#6A5A3A", width:240, depth:100, height:75, tags:[], description:"1980s 复古长会议桌", icon:"⬜", model3d:{ url:"/models/filmset/conference_table/conference_table.glb", fit:"contain" } },
+  { id:"electronics-pos", name:"收银机 POS", brand:"片场道具", price:2200, unit:"元/件", category:"electronics", roomTypes:["living","kitchen","dining"], color:"#2A2A2A", width:32, depth:38, height:34, tags:[], description:"数字收银机 POS 终端", icon:"🖥️", model3d:{ url:"/models/filmset/pos_register/pos_register.glb", fit:"contain" } },
+  { id:"appliance-coffee-grinder", name:"复古磨豆机", brand:"片场道具", price:1600, unit:"元/件", category:"appliance", roomTypes:["living","kitchen","dining"], color:"#7A2A1A", width:22, depth:22, height:38, tags:[], description:"复古咖啡磨豆机", icon:"⚙️", model3d:{ url:"/models/filmset/coffee_grinder/coffee_grinder.glb", fit:"contain" } },
+  { id:"appliance-water-dispenser", name:"饮水机", brand:"片场道具", price:980, unit:"元/件", category:"appliance", roomTypes:["living","kitchen","study","dining"], color:"#D8D8D8", width:32, depth:32, height:100, tags:[], description:"立式饮水机", icon:"🚰", model3d:{ url:"/models/filmset/water_dispenser/water_dispenser.glb", fit:"contain" } },
+  { id:"decor-menu-chalkboard", name:"菜单黑板", brand:"片场道具", price:420, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining"], color:"#1A1A1A", width:60, depth:50, height:150, tags:[], description:"餐厅立式菜单黑板", icon:"📋", model3d:{ url:"/models/filmset/menu_chalkboard/menu_chalkboard.glb", fit:"contain" } },
+  { id:"decor-whiteboard", name:"办公白板", brand:"片场道具", price:680, unit:"元/件", category:"decor", roomTypes:["living","study","dining"], color:"#EDEDED", width:120, depth:45, height:180, tags:[], description:"立式办公白板", icon:"📋", model3d:{ url:"/models/filmset/whiteboard/whiteboard.glb", fit:"contain" } },
+  { id:"decor-coffee-mug", name:"咖啡马克杯", brand:"片场道具", price:0, unit:"-", category:"decor", roomTypes:["living","kitchen","dining","study"], color:"#3A3A3A", width:18, depth:14, height:15, tags:[], description:"桌面咖啡马克杯", icon:"☕", model3d:{ url:"/models/filmset/coffee_mug/coffee_mug.glb", fit:"contain" } },
+  // ── 片场第二批：展示柜 + 咖啡馆小桌（补 P0 缺口）──
+  { id:"counter-cake-display", name:"甜品展示冷柜", brand:"片场道具", price:5800, unit:"元/件", category:"counter", roomTypes:["living","kitchen","dining"], color:"#D8D8D8", width:120, depth:70, height:125, tags:[], description:"玻璃甜品展示冷柜", icon:"🍰", model3d:{ url:"/models/filmset/cake_display/cake_display.glb", fit:"fill" } },
+  { id:"counter-bakery-display", name:"面包展示柜", brand:"片场道具", price:4600, unit:"元/件", category:"counter", roomTypes:["living","kitchen","dining"], color:"#C8B08A", width:100, depth:60, height:150, tags:[], description:"面包糕点展示柜", icon:"🥐", model3d:{ url:"/models/filmset/bakery_display/bakery_display.glb", fit:"fill" } },
+  { id:"appliance-drink-fridge", name:"冷藏饮料柜", brand:"片场道具", price:3800, unit:"元/件", category:"appliance", roomTypes:["living","kitchen","dining"], color:"#2A3A4A", width:60, depth:60, height:190, tags:[], description:"立式玻璃门冷藏饮料柜", icon:"🧊", model3d:{ url:"/models/filmset/drink_fridge/drink_fridge.glb", fit:"fill" } },
+  { id:"dining_table-cafe-small", name:"咖啡桌凳套（自带凳）", brand:"片场道具", price:2400, unit:"元/件", category:"dining_table", roomTypes:["living","dining","kitchen"], color:"#4A3A2A", width:170, depth:124, height:96, tags:[], description:"communal 咖啡桌 + 自带坐墩套件（模型含 ottoman 座位，别再另摆椅子）", icon:"☕", model3d:{ url:"/models/filmset/cafe_table_small/cafe_table_small.glb", fit:"contain" } },
+  { id:"dining_table-cafe-marble", name:"大理石小圆桌", brand:"片场道具", price:920, unit:"元/件", category:"dining_table", roomTypes:["living","dining","kitchen"], color:"#E0E0E0", width:55, depth:55, height:55, tags:[], description:"大理石台面小圆桌", icon:"⭕", model3d:{ url:"/models/filmset/cafe_table_marble/cafe_table_marble.glb", fit:"fill" } },
+  { id:"dining_table-cafe-set", name:"咖啡桌椅套", brand:"片场道具", price:1800, unit:"元/件", category:"dining_table", roomTypes:["living","dining","kitchen"], color:"#5A4A3A", width:110, depth:70, height:75, tags:[], description:"咖啡馆桌椅一体套", icon:"☕", model3d:{ url:"/models/filmset/cafe_table_set/cafe_table_set.glb", fit:"contain" } },
+  { id:"dining_table-cafe-rustic", name:"做旧圆桌", brand:"片场道具", price:1400, unit:"元/件", category:"dining_table", roomTypes:["living","dining","kitchen"], color:"#6A5A4A", width:90, depth:90, height:74, tags:[], description:"做旧金属面木腿圆桌", icon:"⭕", model3d:{ url:"/models/filmset/cafe_table_rustic/cafe_table_rustic.glb", fit:"contain" } },
+  // ── 片场第三批：咖啡馆生活道具（后吧/推车/立牌/吊植/杯罐）──
+  { id:"counter-back-bar-bottles", name:"酒瓶后吧", brand:"片场道具", price:5200, unit:"元/件", category:"counter", roomTypes:["living","kitchen","dining"], color:"#3A2A1A", width:200, depth:45, height:180, tags:[], description:"带酒瓶的后吧酒架", icon:"🍾", model3d:{ url:"/models/filmset/back_bar_bottles/back_bar_bottles.glb", fit:"fill" } },
+  { id:"counter-coffee-cart", name:"咖啡推车", brand:"片场道具", price:3600, unit:"元/件", category:"counter", roomTypes:["living","kitchen","dining","yard","balcony"], color:"#5A3A2A", width:120, depth:70, height:130, tags:[], description:"移动式咖啡推车摊", icon:"🛒", model3d:{ url:"/models/filmset/coffee_cart/coffee_cart.glb", fit:"fill" } },
+  { id:"appliance-coffee-brewer", name:"商用咖啡机", brand:"片场道具", price:3200, unit:"元/件", category:"appliance", roomTypes:["living","kitchen","dining"], color:"#2A2A2A", width:40, depth:45, height:45, tags:[], description:"商用意式咖啡机", icon:"☕", model3d:{ url:"/models/filmset/coffee_brewer/coffee_brewer.glb", fit:"contain" } },
+  { id:"decor-coffee-jar", name:"咖啡豆罐", brand:"片场道具", price:0, unit:"-", category:"decor", roomTypes:["living","kitchen","dining"], color:"#8A6A4A", width:14, depth:14, height:22, tags:[], description:"咖啡豆密封罐", icon:"🫙", model3d:{ url:"/models/filmset/coffee_jar/coffee_jar.glb", fit:"contain" } },
+  { id:"decor-cappuccino", name:"卡布奇诺", brand:"片场道具", price:0, unit:"-", category:"decor", roomTypes:["living","kitchen","dining","study"], color:"#C8B0A0", width:22, depth:18, height:13, tags:[], description:"带碟卡布奇诺咖啡杯", icon:"☕", model3d:{ url:"/models/filmset/cappuccino_cup/cappuccino_cup.glb", fit:"contain" } },
+  { id:"decor-welcome-sign", name:"餐厅欢迎牌", brand:"片场道具", price:280, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining"], color:"#5A3A2A", width:50, depth:45, height:100, tags:[], description:"立式餐厅欢迎立牌", icon:"🪧", model3d:{ url:"/models/filmset/welcome_sign/welcome_sign.glb", fit:"contain" } },
+  { id:"decor-wet-floor-sign", name:"小心地滑牌", brand:"片场道具", price:60, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining","bathroom"], color:"#E8B000", width:30, depth:30, height:62, tags:[], description:"黄色小心地滑警示牌", icon:"⚠️", model3d:{ url:"/models/filmset/wet_floor_sign/wet_floor_sign.glb", fit:"contain" } },
+  { id:"decor-aframe-chalkboard", name:"A字黑板招牌", brand:"片场道具", price:220, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining","yard","balcony"], color:"#2A2A2A", width:55, depth:45, height:90, tags:[], description:"A 字立式黑板招牌", icon:"🪧", model3d:{ url:"/models/filmset/aframe_chalkboard/aframe_chalkboard.glb", fit:"contain" } },
+  { id:"decor-coffee-menu", name:"咖啡菜单牌", brand:"片场道具", price:180, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining"], color:"#4A3A2A", width:50, depth:6, height:70, tags:[], description:"咖啡菜单展示牌", icon:"📋", model3d:{ url:"/models/filmset/coffee_menu/coffee_menu.glb", fit:"contain" } },
+  { id:"plant-hanging-pothos", name:"吊挂绿萝", brand:"片场道具", price:180, unit:"元/件", category:"plant", roomTypes:["living","kitchen","dining","study","bedroom","balcony"], color:"#4A7A3A", width:42, depth:88, height:46, tags:[], description:"吊挂绿萝垂植", icon:"🪴", model3d:{ url:"/models/filmset/hanging_pothos/hanging_pothos.glb", fit:"contain" } },
+  { id:"plant-potted-pack", name:"盆栽组合", brand:"片场道具", price:360, unit:"元/件", category:"plant", roomTypes:["living","kitchen","dining","study","balcony","yard"], color:"#5A7A4A", width:80, depth:40, height:60, tags:[], description:"多株盆栽组合", icon:"🪴", model3d:{ url:"/models/filmset/potted_plants_pack/potted_plants_pack.glb", fit:"contain" } },
+  // ── 复古/片场道具第三批（2026-07 glbnew；尺寸初值待 [GltfFurniture] native 日志校正）──
+  { id:"decor-gramophone", name:"留声机", brand:"片场道具", price:680, unit:"元/件", category:"decor", roomTypes:["living","dining","study","bedroom"], color:"#7A5A3A", width:66, depth:46, height:72, tags:[], description:"复古号角留声机", icon:"🎙️", model3d:{ url:"/models/filmset/gramophone/gramophone.glb", fit:"contain" } },
+  { id:"dining_table-bar-round", name:"圆吧桌", brand:"片场道具", price:1200, unit:"元/件", category:"dining_table", roomTypes:["living","dining","kitchen"], color:"#3A3A3A", width:66, depth:66, height:102, tags:[], description:"高脚圆吧桌", icon:"🍸", model3d:{ url:"/models/filmset/bar_round_table/bar_round_table.glb", fit:"contain" } },
+  { id:"decor-record-player", name:"黑胶唱机", brand:"片场道具", price:520, unit:"元/件", category:"decor", roomTypes:["living","dining","study","bedroom"], color:"#5A4A3A", width:72, depth:60, height:55, tags:[], description:"老式黑胶唱机", icon:"💿", model3d:{ url:"/models/filmset/old_recordplayer/old_recordplayer.glb", fit:"contain" } },
+  { id:"decor-radio-vintage", name:"复古收音机", brand:"片场道具", price:280, unit:"元/件", category:"decor", roomTypes:["living","dining","study","bedroom","kitchen"], color:"#6A5A4A", width:52, depth:19, height:46, tags:[], description:"VEF 复古便携收音机", icon:"📻", model3d:{ url:"/models/filmset/radio_vef202/radio_vef202.glb", fit:"contain" } },
+  { id:"decor-victorian-clock", name:"维多利亚座钟", brand:"片场道具", price:460, unit:"元/件", category:"decor", roomTypes:["living","dining","study","bedroom"], color:"#8A6A3A", width:34, depth:22, height:52, tags:[], description:"复古维多利亚座钟", icon:"🕰️", model3d:{ url:"/models/filmset/victorian_clock/victorian_clock.glb", fit:"contain" } },
+  { id:"decor-nutcracker", name:"胡桃夹子兵", brand:"片场道具", price:180, unit:"元/件", category:"decor", roomTypes:["living","dining","study","bedroom"], color:"#B02A2A", width:26, depth:26, height:58, tags:[], description:"圣诞胡桃夹子木偶兵", icon:"🥜", model3d:{ url:"/models/filmset/nutcracker/nutcracker.glb", fit:"contain" } },
+  { id:"decor-vintage-phone", name:"复古转盘电话", brand:"片场道具", price:220, unit:"元/件", category:"decor", roomTypes:["living","dining","study","bedroom"], color:"#2A2A2A", width:40, depth:30, height:23, tags:[], description:"老式转盘电话", icon:"☎️", model3d:{ url:"/models/filmset/vintage_phone/vintage_phone.glb", fit:"contain" } },
+  { id:"decor-restaurant-sign", name:"餐厅招牌", brand:"片场道具", price:520, unit:"元/件", category:"decor", roomTypes:["living","dining","kitchen","yard"], color:"#C03A2A", width:100, depth:43, height:132, tags:[], description:"立地餐厅招牌", icon:"🪧", model3d:{ url:"/models/filmset/restaurant_sign/restaurant_sign.glb", fit:"contain" } },
+  { id:"decor-telescope", name:"古董望远镜", brand:"片场道具", price:880, unit:"元/件", category:"decor", roomTypes:["living","study","bedroom","balcony"], color:"#8A7A3A", width:74, depth:65, height:150, tags:[], description:"三脚架古董天文望远镜", icon:"🔭", model3d:{ url:"/models/filmset/medieval_telescope/medieval_telescope.glb", fit:"contain" } },
+  { id:"decor-speed-camera", name:"老式相机", brand:"片场道具", price:320, unit:"元/件", category:"decor", roomTypes:["living","dining","study","bedroom"], color:"#3A3A3A", width:34, depth:28, height:44, tags:[], description:"Speed Graphic 老式相机", icon:"📷", model3d:{ url:"/models/filmset/speed_graphic_camera/speed_graphic_camera.glb", fit:"contain" } },
+  { id:"counter-wooden-bar", name:"木质吧台", brand:"片场道具", price:2400, unit:"元/件", category:"counter", roomTypes:["living","kitchen","dining"], color:"#6A4A2A", width:230, depth:66, height:115, tags:[], description:"实木吧台", icon:"🍺", model3d:{ url:"/models/filmset/wooden_bar/wooden_bar.glb", fit:"fill" } },
+  // 店招灯箱（程序化，无 GLB）：横向发光招牌，颜色可改、文字在编辑面板里改（默认「CAFÉ」）。
+  // 通用/虚构店名，规避真实品牌商标风险。SignboardMesh 用 canvas 贴图渲染文字（支持中文）。
+  { id:"sign-shop-fascia", name:"店招", brand:"片场道具", price:1500, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining","yard","balcony"], color:"#23262B", width:200, depth:16, height:46, tags:[], description:"横向店招（文字支持 \"LATIN|中文\" 双行，颜色可改）", icon:"🪧" },
+  // ── glbs 批（2026-07）：复古咖啡道具 + 桌几 + 人物群演。尺寸初值待 [GltfFurniture] native 日志校正。──
+  { id:"decor-coffee-for-two", name:"双人咖啡套", brand:"片场道具", price:0, unit:"-", category:"decor", roomTypes:["living","kitchen","dining","study"], color:"#C8B0A0", width:42, depth:42, height:9, tags:[], description:"托盘双杯咖啡套", icon:"☕", model3d:{ url:"/models/filmset/coffee_for_two/coffee_for_two.glb", fit:"contain" } },
+  { id:"decor-japanese-sign", name:"日式店招", brand:"片场道具", price:900, unit:"元/件", category:"decor", roomTypes:["living","kitchen","dining","yard","balcony"], color:"#8A2A2A", width:11, depth:45, height:120, tags:[], description:"日式吊挂店招/暖帘", icon:"🏮", model3d:{ url:"/models/filmset/japanese_shop_sign/japanese_shop_sign.glb", fit:"contain" } },
+  { id:"dining_table-mahogany", name:"红木餐桌", brand:"片场道具", price:5200, unit:"元/件", category:"dining_table", roomTypes:["living","dining"], color:"#6A3A2A", width:160, depth:95, height:76, tags:[], description:"红木长餐桌", icon:"🍽️", model3d:{ url:"/models/filmset/mahogany_table/mahogany_table.glb", fit:"contain" } },
+  { id:"coffee_table-retro70b", name:"复古茶几（70s·B）", brand:"片场道具", price:1300, unit:"元/件", category:"coffee_table", roomTypes:["living","study"], color:"#8A5B3A", width:110, depth:55, height:30, tags:[], description:"另一款 70 年代复古茶几", icon:"🛋️", model3d:{ url:"/models/filmset/retro_coffee_table_70s/retro_coffee_table_70s.glb", fit:"contain" } },
+  { id:"dining_table-bar-square", name:"方吧桌", brand:"片场道具", price:1100, unit:"元/件", category:"dining_table", roomTypes:["living","dining","kitchen"], color:"#5A4A3A", width:55, depth:55, height:62, tags:[], description:"高脚方吧桌", icon:"🍸", model3d:{ url:"/models/filmset/bar_square_table/bar_square_table.glb", fit:"contain" } },
+  { id:"person-victorian-gentleman", name:"维多利亚绅士", brand:"片场群演", price:0, unit:"-", category:"person", roomTypes:["living","dining","kitchen","study","yard","balcony"], color:"#3A3A3A", width:58, depth:49, height:180, tags:[], description:"维多利亚时代绅士（片场群演）", icon:"🎩", model3d:{ url:"/models/filmset/victorian_gentleman/victorian_gentleman.glb", fit:"contain" } },
+  { id:"person-victorian-woman", name:"维多利亚女士", brand:"片场群演", price:0, unit:"-", category:"person", roomTypes:["living","dining","kitchen","study","yard","balcony"], color:"#5A3A4A", width:92, depth:82, height:165, tags:[], description:"维多利亚时代女士（片场群演）", icon:"👗", model3d:{ url:"/models/filmset/victorian_woman/victorian_woman.glb", fit:"contain" } },
+  { id:"person-woman-gray", name:"灰裙女士", brand:"片场群演", price:0, unit:"-", category:"person", roomTypes:["living","dining","kitchen","study","yard","balcony"], color:"#8A8A8A", width:48, depth:45, height:170, tags:[], description:"现代灰裙女士（片场群演）", icon:"🧍", model3d:{ url:"/models/filmset/woman_gray_dress/woman_gray_dress.glb", fit:"contain" } },
+  // 换轴模型（躺着建的，深度当高度）：用 preRotX 扶正。数值待渲染校正。
+  { id:"appliance-espresso", name:"商用咖啡机", brand:"片场道具", price:8800, unit:"元/件", category:"appliance", roomTypes:["living","kitchen","dining"], color:"#3A3A3A", width:34, depth:30, height:60, tags:[], description:"意式商用咖啡机", icon:"☕", model3d:{ url:"/models/filmset/espresso_machine/espresso_machine.glb", fit:"contain", preRotX:-90 } },
+  { id:"electronics-card-terminal", name:"刷卡终端", brand:"片场道具", price:600, unit:"元/件", category:"electronics", roomTypes:["living","kitchen","dining"], color:"#2A2A2A", width:16, depth:12, height:20, tags:[], description:"POS 刷卡支付终端", icon:"💳", model3d:{ url:"/models/filmset/payment_terminal/payment_terminal.glb", fit:"contain", preRotX:-90 } },
+  { id:"coffee_table-victorian", name:"维多利亚茶几", brand:"片场道具", price:2200, unit:"元/件", category:"coffee_table", roomTypes:["living","study"], color:"#7A4A2A", width:50, depth:110, height:50, tags:[], description:"维多利亚雕花茶几", icon:"🛋️", model3d:{ url:"/models/filmset/victorian_coffee_table/victorian_coffee_table.glb", fit:"contain" } },
 ];
 
 // Helper: get furniture by ID
@@ -1821,6 +1906,8 @@ export const FURNITURE_CATEGORIES: Array<{
   // 楼梯：不在这个列表里的类目侧边栏根本不渲染（分组无兜底），漏挂导致
   // 楼梯间里 4 款楼梯（直/L/转折/螺旋）无法被选到、没法换款式。
   { id: "stair",             label: "楼梯",     icon: "🪜" },
+  { id: "counter",           label: "柜台吧台", icon: "🍹" },
+  { id: "person",            label: "人物",     icon: "🧍" },
   { id: "outdoor_water",     label: "水景",     icon: "💧" },
   { id: "outdoor_structure", label: "户外建构", icon: "⛺" },
   { id: "pet",               label: "宠物",     icon: "🐾" },

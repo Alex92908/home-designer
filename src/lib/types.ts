@@ -619,6 +619,9 @@ export interface ExteriorSettings {
    *  (= 650 blades, mostly near building). 0 disables the carpet
    *  (use when the blades read as falling rain at low camera angles). */
   grassDensity?: number;
+  /** 建筑外地面材质。默认 "grass"（草坪，别墅/住宅原行为不变）；"tile" = 青地砖
+   *  铺装广场（商业片场如咖啡馆用，青灰哑光砖）。见 HouseCanvas.Ground。 */
+  groundType?: "grass" | "tile";
   /** Show the cobblestone entry driveway leading south from the building.
    *  Default false — the procedural floor-plan-driven yard is meant to be
    *  1:1 with the user's YardPlan, so the auto-added driveway reads as an
@@ -779,6 +782,8 @@ export interface ExteriorWallDecorItem {
   scaleH?: number;
   /** In-plane rotation in degrees (0 = upright). */
   rotation?: number;
+  /** 店招/文字类装饰的自定义文字（如灯箱店名）。 */
+  label?: string;
 }
 
 export type StyleTag = "现代" | "北欧" | "中式" | "日式" | "轻奢" | "工业风";
@@ -798,6 +803,8 @@ export type FurnitureCategory =
   | "outdoor_plant" | "outdoor_hardscape" | "outdoor_water" | "outdoor_structure"
   | "vehicle"
   | "stair"
+  | "counter"
+  | "person"
   | "pet" | "livestock";
 
 export interface MaterialItem {
@@ -870,6 +877,16 @@ export interface FurnitureItem {
      *  flat color shows cleanly. Best for untextured models; on textured ones
      *  it trades surface detail for a correct color. */
     recolor?: string;
+    /** 预旋转（度，绕本地 X 轴），在测量包围盒 + fit 缩放【之前】施加，用于把
+     *  「换轴/躺着建模」的 GLB（深度当高度、Z 轴朝上）扶正到 Y 朝上。扶正后
+     *  fit 才按正确朝向缩放。仅 contain 支持（fill 会畸变，换轴模型用 contain）。 */
+    preRotX?: number;
+    /** 预旋转（度，绕本地 Z 轴），同 preRotX，用于横倒的模型。 */
+    preRotZ?: number;
+    /** 加载时剔除的网格名（在测量包围盒 + fit 之前移除）。用于去掉 GLB 里焊死的
+     *  多余部件——自带凳的吧台/桌、自带背景墙的窗帘等（名字看 GLB 的 mesh/node，
+     *  如 Sketchfab 导出的 "Object_0"）。剔除后 fit 只按剩余部件缩放。 */
+    dropMeshNames?: string[];
   };
 }
 
@@ -928,6 +945,12 @@ export interface PlacedItem {
    *  Renderer anchors the item's TOP at ceiling (elevationY ignored).
    *  Use for 吊灯/吊扇/吸顶装饰 etc. */
   mountCeiling?: boolean;
+  /** 横向镜像：沿局部 X 轴翻转（scale.x *= -1）。做左右对称的成对家具。 */
+  mirrorX?: boolean;
+  /** 纵向镜像：沿局部 Z 轴翻转（scale.z *= -1）。做前后对称。 */
+  mirrorZ?: boolean;
+  /** 店招灯箱等可写字道具的显示文字（如店名）。 */
+  label?: string;
 }
 
 /** Which of the 4 walls an override applies to. Cardinal-direction
@@ -1151,8 +1174,18 @@ export function resolveFacadeLayer(
   // 1. Explicit per-face override
   const ov = fp?.roomFacadeFaces?.[room]?.[sideKey]?.[layer];
   if (ov !== undefined) return ov;
-  // 2. Legacy wall-hide
-  if (layer === "wall" && fp?.roomWallsHidden?.[room]?.[sideKey] === true) return false;
+  // 1b. 实墙 ↔ 幕墙 互斥：某面显式设了幕墙(glass=true)，实墙层自动关；反之亦然。
+  //     一个面要么是实墙要么是玻璃幕墙——若不互斥，不透明实墙(尤其内墙相邻 step4
+  //     强制的 solid)会盖在玻璃前面，用户设了幕墙却看到白墙。frame 不参与互斥
+  //     （玻璃幕墙本就带框）。
+  const face = fp?.roomFacadeFaces?.[room]?.[sideKey];
+  if (layer === "wall"  && face?.glass === true) return false;
+  if (layer === "glass" && face?.wall  === true) return false;
+  // 2. 隐藏墙 = 整面开敞：实墙/玻璃幕墙/框架三层全隐（不只去实墙）。
+  //    用户在「隐藏」里勾掉某面，期望那面彻底没墙——旧逻辑只隐 wall 层，
+  //    玻璃/框架仍按幕墙默认显示，导致走廊隐藏墙后外观仍是玻璃盒子。
+  //    需保留玻璃外壳的「开敞但带玻璃」用 roomFacadeFaces 显式 override（第 1 步优先）。
+  if (fp?.roomWallsHidden?.[room]?.[sideKey] === true) return false;
   // 3. Per-room style (glass/concrete beats mode default)
   const style = fp?.roomExteriorStyle?.[room];
   if (style === "glass") return layer !== "wall";
