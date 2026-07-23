@@ -13,8 +13,8 @@
  * 只此一处用 Soldier.glb，故直接在 useGLTF 的 scene 上跑 AnimationMixer（无需 clone）。
  * 想换更「真人」的形象：用 Ready Player Me 出同骨骼 GLB 换掉 SOLDIER 路径即可，本文件不动。
  */
-import { useRef, useEffect } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useRef, useEffect, useMemo } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -22,6 +22,9 @@ const SOLDIER = "/models/person/soldier/soldier.glb";
 // 模型默认朝向修正：Soldier.glb 网格朝 -Z，而 heading=atan2(vx,vz) 以 +Z 为 0，
 // 直接用会前后反 180°（用户实测："前后错了"）。整体 +π 扶正到面朝移动方向。
 const MODEL_FACING = Math.PI;
+// 脚底微调(米)：自身贴地射线把脚底落到地面后，若模型原点不完全在脚底可用此兜底
+// 抬/降。Soldier.glb 原点≈脚底，默认 0；实测若仍陷/浮，改这一个数即可。
+const MODEL_FOOT_LIFT = 0;
 
 /** 由 WalkthroughController 每帧写、本组件每帧读的化身状态。 */
 export interface AvatarState {
@@ -33,23 +36,22 @@ export interface AvatarState {
 
 export function ThirdPersonAvatar({ stateRef }: { stateRef: React.MutableRefObject<AvatarState> }) {
   const { scene, animations } = useGLTF(SOLDIER);
+  const rootScene = useThree(s => s.scene);
   const group = useRef<THREE.Group>(null);
   const { actions } = useAnimations(animations, group);
   const curClip = useRef<"Idle" | "Walk" | "Run">("Idle");
   const headingRef = useRef(0);
+  const groundRc = useMemo(() => new THREE.Raycaster(), []);
+  const rcOrigin = useMemo(() => new THREE.Vector3(), []);
+  const rcDown = useMemo(() => new THREE.Vector3(0, -1, 0), []);
 
-  // 让模型自身投影 + 关掉视锥剔除（骨骼动画包围盒不随动，避免走出初始盒子被剔除消失）；
-  // 并把**脚底对齐到 group 原点 y=0**：Soldier.glb 原点不在脚底，直接放 floorYRef 会让
-  // 腿陷进地板（用户："腿陷进去了"）。测包围盒把最低点抬到 0，与具体模型无关——以后换
-  // Ready Player Me 等任意骨骼角色也自动对齐脚底。
+  // 让模型自身投影 + 关掉视锥剔除（骨骼动画包围盒不随动，避免走出初始盒子被剔除消失）。
+  // 脚底对齐改用运行时向下射线（见 useFrame）：骨骼模型 Box3 不准，改让化身自己贴地。
   useEffect(() => {
     scene.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; }
     });
-    scene.position.y = 0;
-    const box = new THREE.Box3().setFromObject(scene);
-    if (isFinite(box.min.y)) scene.position.y = -box.min.y;
   }, [scene]);
 
   useEffect(() => {
@@ -62,7 +64,25 @@ export function ThirdPersonAvatar({ stateRef }: { stateRef: React.MutableRefObje
     if (!g) return;
     g.visible = s.active;
     if (!s.active) return;
-    g.position.set(s.x, s.y, s.z);
+    // 自身贴地：从化身上方向下打射线，找脚下**真实地板网格**并把脚底落上去。
+    // 跳过化身自身与「不可站立」家具。这样脚底不依赖 floorYRef 是否准、也不依赖骨骼
+    // 模型盒算不算得准——命中什么真地面就站在什么上，不再陷进/浮起。找不到就回落 s.y。
+    let footY = s.y;
+    rcOrigin.set(s.x, s.y + 2.0, s.z);
+    groundRc.set(rcOrigin, rcDown);
+    for (const h of groundRc.intersectObjects(rootScene.children, true)) {
+      let anc: THREE.Object3D | null = h.object, skip = false;
+      while (anc) {
+        if (anc === g) { skip = true; break; }                              // 自身网格
+        if ((anc.userData as { notWalkable?: boolean })?.notWalkable) { skip = true; break; } // 家具
+        anc = anc.parent;
+      }
+      if (skip) continue;
+      if (h.point.y > s.y + 1.5) continue;   // 别吸到头顶天花板
+      footY = h.point.y;
+      break;
+    }
+    g.position.set(s.x, footY + MODEL_FOOT_LIFT, s.z);
     // 朝向平滑转（最短弧）——避免瞬间掉头
     let d = s.heading - headingRef.current;
     while (d > Math.PI) d -= Math.PI * 2;
