@@ -2277,10 +2277,12 @@ export const useDesignerStore = create<DesignerStore>()(
             return touched ? { ...fp, roomExteriorStyle: exStyle, roomDoors: doorsMap, roomWindows: windowsMap, rooms } : fp;
           });
           set({ floorPlans: plans });
-          // 房间自定义显示名/图标（前台大厅/会议室/男洗手间…）。没声明的房间保持既有 meta。
-          if (Object.keys(nameMeta).length) {
-            set(s => ({ customRoomMeta: { ...s.customRoomMeta, ...nameMeta } }));
-          }
+          // 房间自定义显示名/图标（前台大厅/会议室/男洗手间…）——**替换、不合并**。
+          // 合并会让切模板时上一个模板的房名残留：切到别墅仍显示办公室/餐厅的
+          // 「会议室/VIP包间/男洗手间」（用户：别墅为什么会有这样的命名）。没显式命名
+          // 的房间不入 meta → UI 回落 ROOM_DEFS 默认名/图标（客厅/主卧/卫生间…）。
+          // 与门窗/立面数据同样「模板自持、不继承」。
+          set({ customRoomMeta: nameMeta });
         }
 
         // 4. 片场级显式摆放（可选）：风格模板铺完后，逐房间整体替换 placedItems。

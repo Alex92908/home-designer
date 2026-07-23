@@ -162,6 +162,7 @@ export default function ShowcaseViewer({
         viewMode: "exterior" as never,
         activeFloor: 0,
         mobileGlbRoom: null, // 进入模板：室内家具从「关」开始（可靠打开）
+        customRoomMeta: {} as never, // 清掉上一个模板残留的自定义房名（别墅不该显示会议室/VIP包间/男洗手间）
       });
     }
 

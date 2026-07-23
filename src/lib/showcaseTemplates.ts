@@ -46,6 +46,7 @@ const LOADERS: Record<string, ShowcaseTemplate["load"]> = {
         facadeGlass: false,
         transparentExterior: true,
         preset: undefined,
+        groundType: "tile", // 样板默认青砖广场地面（写入模板数据）
       },
       yardPlan: defaultYard(p),
     };
@@ -54,7 +55,7 @@ const LOADERS: Record<string, ShowcaseTemplate["load"]> = {
     // 同一套 defaultProject 户型，叠加 glass-curtain 外观预设 → 通透玻璃幕墙立面。
     const p = makeDefaultProject();
     const gc = EXTERIOR_PRESETS.find((x) => x.id === "glass-curtain")?.settings ?? {};
-    return { floorPlans: p.floorPlans, exterior: { ...p.exterior, ...gc, preset: "glass-curtain" }, yardPlan: defaultYard(p) };
+    return { floorPlans: p.floorPlans, exterior: { ...p.exterior, ...gc, preset: "glass-curtain", groundType: "tile" }, yardPlan: defaultYard(p) };
   },
 };
 
