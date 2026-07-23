@@ -4635,15 +4635,25 @@ function HouseFurnitureLayer({ insideBuilding }: { insideBuilding: boolean }) {
                     || fItem.category === "artwork"
                     || STAIR_FURNITURE_IDS.has(fItem.id)
                     || fItem.id.includes("cabinet-upper");
+                  // 「不可站立」标记：漫游地面吸附的射线会跳过带此标记的家具网格 →
+                  // 人不再被抬到桌面/柜顶/吧台上（用户："第三人称走到桌上然后上去了"）。
+                  // 楼梯要走上去、地毯贴地、挂画/人物不挡 → 不打标记。矮薄件(<25cm)可踩过。
+                  const notWalkable =
+                    !STAIR_FURNITURE_IDS.has(fItem.id)
+                    && !pi.mountCeiling
+                    && fItem.category !== "rug"
+                    && fItem.category !== "artwork"
+                    && fItem.category !== "person"
+                    && fItem.height * (pi.scaleH ?? 1) >= 25;
                   if (!needsPlacedMesh) {
-                    return <group key={pi.instanceId}>{proxyBox}</group>;
+                    return <group key={pi.instanceId} userData={{ notWalkable }}>{proxyBox}</group>;
                   }
                   // 地毯专属抬升：地毯是贴地薄片，PlacedItemMesh 把它放在 group
                   // 的 yBase 上 → 会沉在楼板(yBase+0.025)之下被盖住。抬 3cm。
                   const rugLiftY = fItem.category === "rug" ? 0.03 : 0;
                   return (
-                    <Suspense key={pi.instanceId} fallback={proxyBox}>
-                      <group position={[0, rugLiftY, 0]}>
+                    <Suspense key={pi.instanceId} fallback={<group userData={{ notWalkable }}>{proxyBox}</group>}>
+                      <group position={[0, rugLiftY, 0]} userData={{ notWalkable }}>
                         <PlacedItemMesh placed={pi} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} />
                       </group>
                     </Suspense>
@@ -5729,6 +5739,12 @@ function WalkthroughController({
     // 上台阶上限仍固定 0.35m（防爬家具/桌面，不放宽，避免站地面时误爬桌椅）。
     const hits = raycaster.intersectObjects(scene.children, true);
     for (const h of hits) {
+      // 跳过「不可站立」的家具（桌/柜/吧台…）：命中的网格或其任一祖先带 notWalkable
+      // 就略过这次命中，射线继续找下方真地面 → 人保持在地板高度，绝不被抬上家具。
+      let anc: THREE.Object3D | null = h.object;
+      let onFurniture = false;
+      while (anc) { if ((anc.userData as { notWalkable?: boolean })?.notWalkable) { onFurniture = true; break; } anc = anc.parent; }
+      if (onFurniture) continue;
       const hy = h.point.y;
       const isGround = (h.object.userData as { isSiteGround?: boolean })?.isSiteGround === true;
       // Accept only surfaces that are:

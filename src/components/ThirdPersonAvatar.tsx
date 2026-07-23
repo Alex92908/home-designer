@@ -38,12 +38,18 @@ export function ThirdPersonAvatar({ stateRef }: { stateRef: React.MutableRefObje
   const curClip = useRef<"Idle" | "Walk" | "Run">("Idle");
   const headingRef = useRef(0);
 
-  // 让模型自身投影 + 关掉视锥剔除（骨骼动画包围盒不随动，避免走出初始盒子被剔除消失）
+  // 让模型自身投影 + 关掉视锥剔除（骨骼动画包围盒不随动，避免走出初始盒子被剔除消失）；
+  // 并把**脚底对齐到 group 原点 y=0**：Soldier.glb 原点不在脚底，直接放 floorYRef 会让
+  // 腿陷进地板（用户："腿陷进去了"）。测包围盒把最低点抬到 0，与具体模型无关——以后换
+  // Ready Player Me 等任意骨骼角色也自动对齐脚底。
   useEffect(() => {
     scene.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; }
     });
+    scene.position.y = 0;
+    const box = new THREE.Box3().setFromObject(scene);
+    if (isFinite(box.min.y)) scene.position.y = -box.min.y;
   }, [scene]);
 
   useEffect(() => {
