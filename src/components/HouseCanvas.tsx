@@ -5231,6 +5231,10 @@ function WalkthroughController({
   // 指针锁定（PUBG 式自由鼠标看）：点击画布锁定 → 移动鼠标即转视角、无需按住拖。
   // 锁定失败（iframe/预览沙箱/移动端）自动回落到拖拽看。lockedRef 为真时 Esc 先释放锁。
   const lockedRef = useRef(false);
+  // PUBG 式移动惯性：世界坐标 XZ 速度(m/s)。不再「一按满速一松急停」——速度平滑
+  // 趋近目标(加速/减速)，起步、停步、转向都有缓冲。疾跑 FOV 从基准 50 缓动到 58。
+  const velRef = useMemo(() => new THREE.Vector3(), []);
+  const fovRef = useRef(50);
 
   // Teleport on spawnPos change
   useEffect(() => {
@@ -5255,8 +5259,10 @@ function WalkthroughController({
     const [ldx, ldz] = spawnLook ?? [0, 1];
     yawRef.current = Math.atan2(-ldx, -ldz);
     pitchRef.current = 0;
+    velRef.set(0, 0, 0);      // 出生时清空惯性，避免上次遗留速度把人推走
+    fovRef.current = 50;
     camera.lookAt(spawnPos[0] + ldx, spawnPos[1] - 0.1, spawnPos[2] + ldz);
-  }, [active, spawnPos, spawnLook, camera]);
+  }, [active, spawnPos, spawnLook, camera, velRef, fovRef]);
   useEffect(() => {
     if (!active) {
       spawnedRef.current = null;
@@ -5579,17 +5585,42 @@ function WalkthroughController({
     camera.rotation.x = pitch;
     camera.rotation.z = 0;
 
-    if (dx === 0 && dz === 0) {
-      // Still floor-snap so y stays right even without movement
+    // ── 2b. 目标速度 → 惯性平滑（PUBG 手感的核心）──
+    // 输入方向(世界 XZ 单位向量) × 最高速度 = 目标速度；无输入时目标 0。
+    // 当前速度用指数插值趋近目标（帧率无关）：加速快=按键即有反馈，松手/换向时
+    // 略慢的刹车让运动「滑一点」而不是瞬停——起步、停步、转身都有缓冲，顺滑。
+    const magnitude = Math.min(1, Math.hypot(dx, dz));
+    const sprinting = keys.shift && magnitude > 0.01;
+    const maxSpeed = sprinting ? 7 : 3;            // m/s（走 3 / 疾跑 7）
+    fwd.set(-Math.sin(yaw), 0, -Math.cos(yaw));    // camera forward in XZ
+    right.set(Math.cos(yaw), 0, -Math.sin(yaw));
+    let tvx = 0, tvz = 0;
+    if (magnitude > 1e-4) {
+      const inv = 1 / Math.hypot(dx, dz);          // 归一化，斜走不超速
+      tvx = (fwd.x * dz + right.x * dx) * inv * maxSpeed;
+      tvz = (fwd.z * dz + right.z * dx) * inv * maxSpeed;
+    }
+    // 有输入→加速较快(12)，无输入→刹车稍缓(8)，制造「收油滑行」的顺滑收尾。
+    const accelK = magnitude > 1e-4 ? 12 : 8;
+    const smooth = 1 - Math.exp(-accelK * delta);
+    velRef.x += (tvx - velRef.x) * smooth;
+    velRef.z += (tvz - velRef.z) * smooth;
+    if (Math.hypot(velRef.x, velRef.z) < 0.02) { velRef.x = 0; velRef.z = 0; } // 抹掉滑行残尾
+
+    // ── 2c. 疾跑 FOV 微推（50→58）给速度冲击感，缓入缓出，退出时还原 50 ──
+    const targetFov = sprinting && Math.hypot(velRef.x, velRef.z) > 3.5 ? 58 : 50;
+    fovRef.current += (targetFov - fovRef.current) * (1 - Math.exp(-6 * delta));
+    const pcam = camera as THREE.PerspectiveCamera;
+    if (pcam.isPerspectiveCamera && Math.abs(pcam.fov - fovRef.current) > 0.02) {
+      pcam.fov = fovRef.current; pcam.updateProjectionMatrix();
+    }
+
+    const mvX = velRef.x * delta, mvZ = velRef.z * delta;
+    if (Math.abs(mvX) < 1e-6 && Math.abs(mvZ) < 1e-6) {
+      // 已停稳：仅地面吸附保持 y 正确
       raycastFloor(delta);
       return;
     }
-    const magnitude = Math.min(1, Math.hypot(dx, dz));
-    const speed = (keys.shift ? 8 : 3) * delta * magnitude; // Shift 疾跑 6→8m/s，与 3m/s 走路拉开更明显
-    fwd.set(-Math.sin(yaw), 0, -Math.cos(yaw));    // camera forward in XZ
-    right.set(Math.cos(yaw), 0, -Math.sin(yaw));
-    const mvX = fwd.x * dz / Math.hypot(dx, dz) * speed + right.x * dx / Math.hypot(dx, dz) * speed;
-    const mvZ = fwd.z * dz / Math.hypot(dx, dz) * speed + right.z * dx / Math.hypot(dx, dz) * speed;
 
     // ── 3. Wall collision: try full move, then X-only, then Z-only, else block ──
     // `blocked` probes WALL_STANDOFF beyond the destination along the travel
@@ -5620,6 +5651,10 @@ function WalkthroughController({
         else                          { nx = cx; nz = cz; }
       }
     }
+    // 碰墙时把「撞向墙的那个分量」速度清零，否则惯性会持续顶着墙、松键后还往墙里滑。
+    // 未被取消的分量保留 → 贴墙时仍能沿墙平滑滑行（PUBG 擦墙手感）。
+    if (Math.abs(nx - cx) < 1e-6) velRef.x = 0;
+    if (Math.abs(nz - cz) < 1e-6) velRef.z = 0;
     camera.position.x = nx;
     camera.position.z = nz;
 
