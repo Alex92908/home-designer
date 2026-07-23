@@ -32,7 +32,7 @@ export const AVATARS: AvatarDef[] = [
   { id: "soldier", name: "士兵", url: "/models/person/soldier/soldier.glb",
     facing: Math.PI, footLift: 0, clips: { idle: "Idle", walk: "Walk", run: "Run" } },
   { id: "xbot", name: "素体人", url: "/models/person/xbot/xbot.glb",
-    facing: Math.PI, footLift: 0, clips: { idle: "idle", walk: "walk", run: "run" } },
+    facing: 0, footLift: 0, clips: { idle: "idle", walk: "walk", run: "run" } },
 ];
 export const DEFAULT_AVATAR_ID = "soldier";
 
@@ -106,10 +106,13 @@ export function ThirdPersonAvatar({ avatar, stateRef }: {
     headingRef.current += d * (1 - Math.exp(-12 * delta));
     g.rotation.y = headingRef.current + avatar.facing;
     // 速度 → 动画：idle(<0.3) / walk(<4.2) / run(≥4.2)，0.2s 交叉淡化。
+    // 自愈：不只在 want 变化时切——只要目标动画没在播就补播(兜住初始 effect 没抓住
+    // 时机 / 换角色 mixer 重建的情况，避免停在 T-pose 不动)。
     const want = s.speed < 0.3 ? avatar.clips.idle : s.speed < 4.2 ? avatar.clips.walk : avatar.clips.run;
-    if (want !== curClip.current && actions) {
-      actions[curClip.current]?.fadeOut(0.2);
-      actions[want]?.reset().fadeIn(0.2).play();
+    const wantAction = actions?.[want];
+    if (wantAction && !wantAction.isRunning()) {
+      if (curClip.current !== want) actions?.[curClip.current]?.fadeOut(0.2);
+      wantAction.reset().fadeIn(0.2).play();
       curClip.current = want;
     }
   });

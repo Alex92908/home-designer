@@ -7043,7 +7043,7 @@ export default function HouseCanvas() {
           avatarStateRef={avatarStateRef}
         />
         {/* 第三人称化身：只在漫游+第三人称时挂载；换角色 = 换 avatar 配置。 */}
-        {walkthrough && thirdPerson && <ThirdPersonAvatar avatar={selectedAvatar} stateRef={avatarStateRef} />}
+        {walkthrough && thirdPerson && <ThirdPersonAvatar key={selectedAvatar.id} avatar={selectedAvatar} stateRef={avatarStateRef} />}
         {/* HDR as both IBL lighting AND photorealistic sky background.
             backgroundBlurriness softens the HDR to remove distracting detail
             while keeping the sky colour/gradient. Night mode keeps a dark
