@@ -17,6 +17,7 @@ import { useDesignerStore } from "./store";
 import { getAiKey, setAiKey, getSelectedProvider, setSelectedProvider } from "./aiKeys";
 import type { AiProviderId } from "./aiProviders";
 import { serializeCurrentDesign } from "./aiDesignSerialize";
+import { matchProjectTemplate } from "./matchProjectTemplate";
 import type { AiDesignMode } from "./aiDesignTypes";
 import { useLocale } from "./i18n";
 
@@ -97,13 +98,30 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
     try {
       const body: Record<string, unknown> = { description: desc, provider, apiKey: key, mode };
       if (aiImage) body.image = aiImage;
+      // 「模板底子 + AI 增量」：从零生成前先看描述是否命中精修模板（咖啡馆/餐厅/
+      // 办公/各风格别墅）。命中 → 秒套模板当底子，再序列化成 current 转 edit 模式，
+      // AI 只按描述里的具体要求调整——借鉴模板数据 + 结合用户想法，而不是从零瞎生成
+      // （用户实拍：说"临街咖啡馆"给了个带泳池的别墅）。没命中才走原从零生成。
+      let baseTpl: ReturnType<typeof matchProjectTemplate> = null;
+      if (mode === "create" && !aiImage) {
+        baseTpl = matchProjectTemplate(desc);
+        if (baseTpl) {
+          setAiStatus(en ? `Applying "${baseTpl.nameEn}" as the base…` : `已套用「${baseTpl.name}」模板作底子…`);
+          useDesignerStore.getState().applyProjectTemplate(baseTpl.id);
+          const { floorPlans, exterior, yardPlan } = useDesignerStore.getState();
+          body.mode = "edit";
+          body.current = serializeCurrentDesign(floorPlans, exterior, yardPlan);
+        }
+      }
       if (mode === "edit") {
         setAiStatus(en ? "Packing the current design…" : "正在打包当前设计…");
         const { floorPlans, exterior, yardPlan } = useDesignerStore.getState();
         body.current = serializeCurrentDesign(floorPlans, exterior, yardPlan);
       }
       // 进入「等大模型」阶段：启动秒级计时，让用户看到一直在跑
-      startStatusTimer(genLabel);
+      startStatusTimer(baseTpl
+        ? (en ? `Tuning the "${baseTpl.nameEn}" base to your description…` : `AI 正在「${baseTpl.name}」底子上按你的描述调整…`)
+        : genLabel);
       const res = await fetch("/api/ai-design", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -117,12 +135,18 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
           setKeyPrompt({ run: (p, k) => void doGenerate(p, k, mode) });
           return;
         }
-        setAiError(data.error ?? (en ? "AI generation failed, please retry" : "AI 生成失败，请重试"));
+        // 模板底子已经落在画布上——AI 调整失败也不白跑，如实告知。
+        setAiError(baseTpl
+          ? (en ? `Applied the "${baseTpl.nameEn}" template, but the AI tweak failed — retry or edit manually.` : `已套用「${baseTpl.name}」模板，但 AI 调整失败——可重试或手动微调。`)
+          : (data.error ?? (en ? "AI generation failed, please retry" : "AI 生成失败，请重试")));
         return;
       }
       setAiStatus(en ? "Applying to the canvas…" : "正在应用到画布…");
-      applyAiDesign(data, { merge: mode === "edit" });
-      setAiSummary(data.summary ?? (en ? "Design applied!" : "设计已应用！"));
+      // 模板底子路径实际发的是 edit —— 增量合并到刚套的模板上，别整套覆盖。
+      applyAiDesign(data, { merge: mode === "edit" || !!baseTpl });
+      setAiSummary(baseTpl
+        ? (en ? `Based on the "${baseTpl.nameEn}" template: ${data.summary ?? "applied!"}` : `已基于「${baseTpl.name}」模板：${data.summary ?? "设计已应用！"}`)
+        : (data.summary ?? (en ? "Design applied!" : "设计已应用！")));
       // 增量微调：留在用户当前所在的房间/视图，别跳到外观图打断他。
       // 仅「从零重建」才切到外观图总览。
       if (mode !== "edit") setViewMode("exterior");

@@ -13,6 +13,8 @@ import { PROJECT_TEMPLATES } from "@/lib/projectTemplates";
 import { getLayoutNameEn } from "@/locales/itemNames";
 import { getAiKey, setAiKey, getSelectedProvider, setSelectedProvider } from "@/lib/aiKeys";
 import { AiProviderId } from "@/lib/aiProviders";
+import { matchProjectTemplate } from "@/lib/matchProjectTemplate";
+import { serializeCurrentDesign } from "@/lib/aiDesignSerialize";
 import ApiKeyPromptModal from "./ApiKeyPromptModal";
 import { houseHalfExtentsCm } from "@/lib/yardAutoLayout";
 
@@ -532,10 +534,20 @@ export default function FloorPlanAll() {
     setAiError(null);
     setAiSummary(null);
     try {
+      // 「模板底子 + AI 增量」（与 useAiDesign 同策略）：描述命中精修模板就先秒套
+      // 当底子，序列化成 current 转 edit —— AI 只按描述调整，不再从零瞎生成。
+      const baseTpl = matchProjectTemplate(desc);
+      const body: Record<string, unknown> = { description: desc, provider, apiKey: key };
+      if (baseTpl) {
+        useDesignerStore.getState().applyProjectTemplate(baseTpl.id);
+        const { floorPlans: fps, exterior: ext, yardPlan: yp } = useDesignerStore.getState();
+        body.mode = "edit";
+        body.current = serializeCurrentDesign(fps, ext, yp);
+      }
       const res = await fetch("/api/ai-design", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ description: desc, provider, apiKey: key }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok || data.error) {
@@ -545,11 +557,15 @@ export default function FloorPlanAll() {
           setKeyPrompt({ run: (p, k) => void doAiGenerate(p, k) });
           return;
         }
-        setAiError(data.error ?? (locale === "en" ? "AI generation failed, please retry" : "AI 生成失败，请重试"));
+        setAiError(baseTpl
+          ? (locale === "en" ? `Applied the "${baseTpl.nameEn}" template, but the AI tweak failed — retry or edit manually.` : `已套用「${baseTpl.name}」模板，但 AI 调整失败——可重试或手动微调。`)
+          : (data.error ?? (locale === "en" ? "AI generation failed, please retry" : "AI 生成失败，请重试")));
         return;
       }
-      applyAiDesign(data);
-      setAiSummary(data.summary ?? (locale === "en" ? "Design generated!" : "设计已生成！"));
+      applyAiDesign(data, { merge: !!baseTpl });
+      setAiSummary(baseTpl
+        ? (locale === "en" ? `Based on the "${baseTpl.nameEn}" template: ${data.summary ?? "applied!"}` : `已基于「${baseTpl.name}」模板：${data.summary ?? "设计已应用！"}`)
+        : (data.summary ?? (locale === "en" ? "Design generated!" : "设计已生成！")));
       setLayoutPickerOpen(false);
       setViewMode("exterior");
     } catch {
