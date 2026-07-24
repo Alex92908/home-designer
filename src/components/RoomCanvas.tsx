@@ -405,8 +405,12 @@ function RoomShell({
     // Door wall + window wall now share the NSWE alphabet — no remap.
     if (hasDoor && doorWall === side) {
       const dw = Math.min(doorLenCm / 100, wallLenM);
+      // 角落留边：门贴到墙角(pos≈0 或 pos≈墙长-门宽)时,门洞直抵角落,相邻墙若在
+      // dollhouse 里被隐藏就会从角缝透出一条竖白条(用户实拍)。留 DOOR_CORNER_MARGIN
+      // 的墙料封住角落;墙太窄则按半宽收缩。门板渲染用同一 clamp(见 RoomDoor3D)。
+      const m = Math.min(DOOR_CORNER_MARGIN, Math.max(0, (wallLenM - dw) / 2));
       holes.push({
-        x: Math.max(0, Math.min(doorPosCm / 100, wallLenM - dw)),
+        x: Math.max(m, Math.min(doorPosCm / 100, wallLenM - dw - m)),
         y: 0,
         w: dw,
         h: doorHCm / 100,
@@ -930,6 +934,10 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   return null;
 }
 
+// 门离墙角的最小留边(米)。门贴角落时门洞直抵角缝,相邻墙在 dollhouse 里隐藏
+// 就会透出竖白条(用户实拍)。留 6cm 墙料封角;holesForWall 与 RoomDoor3D 共用。
+const DOOR_CORNER_MARGIN = 0.06;
+
 // ─── glTF door panel (for wood_panel style) ─────────────────
 // Uses witnessk's `door_with_frame` (CC-BY, 6 meshes — includes panel +
 // frame + handle, a complete door unit). Uniform scale by height (not
@@ -1080,7 +1088,10 @@ function RoomDoor3D({
   // 墙上时门顶满整面墙，而不是被"墙长-位置"剪成窄条。
   const wallLenForDoor = (doorWall === "N" || doorWall === "S") ? W : D;
   const doorW = Math.max(0.5, Math.min(doorLenCm / 100, wallLenForDoor));
-  const doorPos = Math.max(0, Math.min(doorPosCm / 100, wallLenForDoor - doorW));
+  // 与 holesForWall 同一角落留边 clamp：门板落位必须与墙洞完全对齐,否则一边
+  // 露墙料、一边露白条。
+  const doorCornerM = Math.min(DOOR_CORNER_MARGIN, Math.max(0, (wallLenForDoor - doorW) / 2));
+  const doorPos = Math.max(doorCornerM, Math.min(doorPosCm / 100, wallLenForDoor - doorW - doorCornerM));
   const doorH = doorHCm / 100;
   const frameT = 0.04; // frame thickness
 
