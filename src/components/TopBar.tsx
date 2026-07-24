@@ -6,6 +6,7 @@ import { useDesignerStore, useTemporalStore } from "@/lib/store";
 import { useT, useLocaleStore , customRoomDisplayName} from "@/lib/i18n";
 import { ROOM_DEFS } from "@/lib/types";
 import ShareButton from "./ShareButton";
+import { useMcpBridge } from "@/lib/useMcpBridge";
 
 const FLOOR_COLORS = ["#2563EB", "#7C3AED", "#059669", "#D97706", "#0891B2", "#BE185D"];
 
@@ -175,23 +176,9 @@ function FloorSwitcher() {
   );
 }
 
-// Sync design state to MCP server so AI agents can query/modify it
-function useMCPSync() {
-  const exterior = useDesignerStore(s => s.exterior);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetch("/api/mcp/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ exterior }),
-      }).catch(() => { /* silent — MCP sync is best-effort */ });
-    }, 1500); // debounce
-    return () => clearTimeout(timer);
-  }, [exterior]);
-}
-
 export default function TopBar() {
-  useMCPSync();
+  // MCP 命令桥：推送完整设计快照 + 拉取外部 agent（Claude Code 等）的设计命令并应用。
+  useMcpBridge();
   const viewMode          = useDesignerStore((s) => s.viewMode);
   const setViewMode       = useDesignerStore((s) => s.setViewMode);
   const showCompass       = useDesignerStore((s) => s.showCompass);
