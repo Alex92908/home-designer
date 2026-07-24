@@ -22,6 +22,7 @@ import { useDesignerStore } from "@/lib/store";
 import { canvasDprHeavy, isMobileDevice, mobileLiteScene } from "@/lib/device";
 import { RoomState } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
+import { getRoomDoors } from "@/lib/roomDoors";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
 const EMPTY_ROOM_STATE_GC: RoomState = { materials: {}, placedItems: [] };
 import { PlacedItemMesh, LightFixtureInner } from "./RoomCanvas";
@@ -182,6 +183,18 @@ function RoomGroup({
   // Per-room hide flags (cardinal: back/front/left/right OR polygon: edge-${i}).
   const wallsHidden = useDesignerStore(s => s.floorPlans[floorIndex]?.roomWallsHidden?.[room]);
 
+  // 全屋3D 原来一扇门都不画（GlobalCanvas 无任何门渲染，用户反馈"全屋3D 不显示门"）。
+  // 取共享真源 getRoomDoors（与 2D/效果图同一 pos 约定：N/S 从西端、W/E 从北端量），
+  // 在各面墙上贴一块可见门板。dollhouse 概览用短墙，门板取同高、木色、略凸即可，
+  // 不做挖洞/开关动画。
+  const fpForDoors = useDesignerStore(s => s.floorPlans[floorIndex]);
+  const doorList = useMemo(
+    () => getRoomDoors(fpForDoors, room, {
+      widthCm: Math.round(W / CM), depthCm: Math.round(D / CM),
+    }),
+    [fpForDoors, room, W, D],
+  );
+
   // Center of the room's bounding box, in world coords
   const cx = originX + W / 2;
   const cz = originZ + D / 2;
@@ -226,6 +239,35 @@ function RoomGroup({
           <mesh key={i} position={[w.cx, WALL_H / 2, w.cz]} rotation={[0, w.angle, 0]} castShadow receiveShadow>
             <boxGeometry args={[w.len, WALL_H, WALL]} />
             <meshStandardMaterial color={wallColor} roughness={0.85} />
+          </mesh>
+        );
+      })}
+
+      {/* 门板（概览用可见门标）：只画 cardinal 面(N/S/E/W)的门；房间居中坐标系
+          与效果图同(N=-D/2, S=+D/2, W=-W/2, E=+W/2)，pos 北参照。隐藏的墙不画门。 */}
+      {doorList.map((d, di) => {
+        const wall = d.wall;
+        if (wall !== "N" && wall !== "S" && wall !== "E" && wall !== "W") return null;
+        if (wallsHidden?.[wall] === true) return null;
+        const lenM = Math.max(0.4, (d.len ?? 90) * CM);
+        const posM = (d.pos ?? 0) * CM;
+        const dh = Math.min(WALL_H, (d.h ?? 240) * CM);
+        const along = wall === "N" || wall === "S"
+          ? posM + lenM / 2 - W / 2   // N/S: 沿 x, 从西端
+          : posM + lenM / 2 - D / 2;  // W/E: 沿 z, 从北端
+        const pos: [number, number, number] =
+          wall === "N" ? [along, dh / 2, -D / 2]
+          : wall === "S" ? [along, dh / 2, D / 2]
+          : wall === "W" ? [-W / 2, dh / 2, along]
+          : [W / 2, dh / 2, along];
+        const size: [number, number, number] =
+          wall === "N" || wall === "S"
+            ? [lenM, dh, WALL * 1.6]
+            : [WALL * 1.6, dh, lenM];
+        return (
+          <mesh key={`door-${di}`} position={pos} castShadow receiveShadow>
+            <boxGeometry args={size} />
+            <meshStandardMaterial color="#8B6B47" roughness={0.7} metalness={0.02} />
           </mesh>
         );
       })}
