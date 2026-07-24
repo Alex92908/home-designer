@@ -275,7 +275,11 @@ function RoomShell({
   curtainMullion?: { bay: number; structW: number; mullionW: number };
 }) {
   const skirtColor = shade(wallColor, -18);
-  const splitH = wallLower ? Math.max(0.2, Math.min(H - 0.2, (wallSplitCm ?? 110) / 100)) : 0;
+  // 墙裙与主墙「同料同色」= 没有真正的墙裙。此时绝不能分带、更不能画腰线——否则会
+  // 冒出一条与墙同色、毫无意义却横穿整屋门窗的白色横条(用户实拍:整屋一根横条,还压
+  // 在窗户上)。只有墙裙**在视觉上确实不同**(id 或颜色不同)才当作有墙裙。
+  const hasWainscot = !!wallLower && !(wallLower.id === wallId && wallLower.color === wallColor);
+  const splitH = hasWainscot ? Math.max(0.2, Math.min(H - 0.2, (wallSplitCm ?? 110) / 100)) : 0;
 
   // ── Floor textures ─────────────────────────────────────────────────
   const floorTex = useMemo(() => {
@@ -368,7 +372,7 @@ function RoomShell({
   const sB = resolveSide(wallBack);
   const sL = resolveSide(wallLeft);
   const sR = resolveSide(wallRight);
-  const lower = wallLower ? { color: wallLower.color, id: wallLower.id } : null;
+  const lower = hasWainscot ? { color: wallLower!.color, id: wallLower!.id } : null;
 
   // Build the list of rectangular holes (in wall-local cm coordinates:
   // x from left end of wall, y from floor) for a given wall side.
