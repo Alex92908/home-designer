@@ -3344,7 +3344,9 @@ function Ground({ W, D, lawnTint, grassDensity, groundType }: { W: number; D: nu
   // hide the procedural ground plane edge for a typical 10 m villa.
   const grassRadius = Math.min(22, Math.max(W, D) * 1.6 + 8);
   const tint = lawnTint ?? "#7E8E6A";
-  const isTile = groundType === "tile";   // 青地砖广场（模板显式设 tile）vs 默认草坪
+  // 默认改青地砖广场：只有显式设 "grass" 才铺草。原默认(undefined)=草坪,新项目
+  // 一进来就一片绿地,配现代极简建筑显廉价(用户:不要绿地了,默认青地砖)。
+  const isTile = groundType !== "grass";
   // Fallback colour: 草地用 tint × 中绿；青砖用青灰，避免加载瞬间闪绿。
   const fallbackCol = useMemo(() => {
     if (isTile) return new THREE.Color("#96A49C");

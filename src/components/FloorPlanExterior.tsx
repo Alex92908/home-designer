@@ -3644,20 +3644,16 @@ export default function FloorPlanBuilding({
         <>
           {baseClusters.map((c, ci) => (
             <group key={`plinth-${ci}`}>
-              {/* 下段：黑色花岗岩（低粗糙度，轻微抛光反射）*/}
-              <mesh position={[c.cx, 0.10, c.cz]} castShadow>
-                <boxGeometry args={[c.w + 0.10, 0.20, c.d + 0.10]} />
-                <meshStandardMaterial color="#1A1C22" roughness={0.42} metalness={0.28} envMapIntensity={1.4} />
+              {/* 现代极简：单段薄浅色石材勒脚（原两段式 0.4m 深黑基座太厚重、显廉价，
+                  用户:厚深色基座丑）。0.14m 浅暖灰石灰华,轻微凸出,配薄钢压边。 */}
+              <mesh position={[c.cx, 0.07, c.cz]} castShadow>
+                <boxGeometry args={[c.w + 0.08, 0.14, c.d + 0.08]} />
+                <meshStandardMaterial color="#CBC6BC" roughness={0.72} metalness={0.06} envMapIntensity={0.9} />
               </mesh>
-              {/* 上段：深灰玄武岩（稍浅，形成两段阴影层次）*/}
-              <mesh position={[c.cx, 0.30, c.cz]} castShadow>
-                <boxGeometry args={[c.w + 0.06, 0.20, c.d + 0.06]} />
-                <meshStandardMaterial color="#272B33" roughness={0.55} metalness={0.18} envMapIntensity={1.0} />
-              </mesh>
-              {/* 基座顶面金属压边（薄钢条，视觉分割线）*/}
-              <mesh position={[c.cx, 0.405, c.cz]}>
-                <boxGeometry args={[c.w + 0.07, 0.010, c.d + 0.07]} />
-                <meshStandardMaterial color="#3A3E48" roughness={0.18} metalness={0.92} envMapIntensity={2.0} />
+              {/* 顶面薄钢压边（视觉分割线，接墙脚）*/}
+              <mesh position={[c.cx, 0.145, c.cz]}>
+                <boxGeometry args={[c.w + 0.05, 0.008, c.d + 0.05]} />
+                <meshStandardMaterial color="#8A8E96" roughness={0.28} metalness={0.85} envMapIntensity={1.6} />
               </mesh>
             </group>
           ))}
@@ -5888,8 +5884,8 @@ export default function FloorPlanBuilding({
           W={mainRoofBounds.w} D={mainRoofBounds.d} roofY={totalH}
           nightGlow={interiorGlowWall > 1.20 ? 1.0 : interiorGlowWall > 0.92 ? 0.5 : 0}
           hasRooftop={exterior.hasRooftop}
-          overhang={exterior.roofOverhang ?? 0.45}
-          overhangSouthExtra={exterior.roofOverhangSouthExtra ?? 0.30}
+          overhang={exterior.roofOverhang ?? 0.18}
+          overhangSouthExtra={exterior.roofOverhangSouthExtra ?? 0.10}
           parapetH={exterior.parapetHeight ?? 0.30}
           parapetGlass={exterior.parapetGlassEnabled ?? true}
           slabColor={exterior.roofSlabColor ?? "#F0EDE8"}
