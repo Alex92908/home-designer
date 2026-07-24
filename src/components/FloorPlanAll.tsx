@@ -576,7 +576,20 @@ export default function FloorPlanAll() {
         ? (locale === "en" ? `Based on the "${baseTpl.nameEn}" template: ${data.summary ?? "applied!"}` : `已基于「${baseTpl.name}」模板：${data.summary ?? "设计已应用！"}`)
         : (data.summary ?? (locale === "en" ? "Design generated!" : "设计已生成！")));
       setLayoutPickerOpen(false);
-      setViewMode("exterior");
+      // 单个带家具房间的成果 → 跳进那间房效果图（与 useAiDesign 同策略，
+      // 免得家具落在别的楼层房间、视图留在原地像「什么都没生成」）。
+      const furnished: Array<{ floor: number; room: string }> = [];
+      for (const fl of ((data as { floorLayouts?: Array<{ floorIndex?: number; rooms?: Array<{ type: string; furniture?: unknown[] }> }> }).floorLayouts ?? [])) {
+        for (const r of fl.rooms ?? []) {
+          if (r.furniture && r.furniture.length > 0) furnished.push({ floor: fl.floorIndex ?? 0, room: r.type });
+        }
+      }
+      if (furnished.length === 1) {
+        useDesignerStore.setState({ activeFloor: furnished[0].floor, activeRoom: furnished[0].room as never });
+        setViewMode("3d");
+      } else {
+        setViewMode("exterior");
+      }
     } catch {
       setAiError(locale === "en" ? "Network error, please check your connection and retry" : "网络错误，请检查连接后重试");
     } finally {

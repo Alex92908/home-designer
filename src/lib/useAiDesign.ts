@@ -165,9 +165,23 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
       setAiSummary(baseTpl
         ? (en ? `Based on the "${baseTpl.nameEn}" template: ${data.summary ?? "applied!"}` : `已基于「${baseTpl.name}」模板：${data.summary ?? "设计已应用！"}`)
         : (data.summary ?? (en ? "Design applied!" : "设计已应用！")));
-      // 增量微调：留在用户当前所在的房间/视图，别跳到外观图打断他。
-      // 仅「从零重建」才切到外观图总览。
-      if (mode !== "edit") setViewMode("exterior");
+      // 视图去向：
+      //   成果恰好是**单个带家具的房间**（照片复刻/单房生成的典型形态）→ 直接跳进那间房
+      //   的效果图。否则家具可能落在别的楼层房间而视图留在原地，看起来像「什么都没生成」
+      //   （用户实拍：清空后按参考图生成酒店房，家具落在 2 楼主卧，视图停在空的次卧）。
+      //   多房间成果：从零重建切外观图总览；增量微调留在原地不打断。
+      const furnished: Array<{ floor: number; room: string }> = [];
+      for (const fl of ((data as { floorLayouts?: Array<{ floorIndex?: number; rooms?: Array<{ type: string; furniture?: unknown[] }> }> }).floorLayouts ?? [])) {
+        for (const r of fl.rooms ?? []) {
+          if (r.furniture && r.furniture.length > 0) furnished.push({ floor: fl.floorIndex ?? 0, room: r.type });
+        }
+      }
+      if (furnished.length === 1) {
+        useDesignerStore.setState({ activeFloor: furnished[0].floor, activeRoom: furnished[0].room as never });
+        setViewMode("3d");
+      } else if (mode !== "edit") {
+        setViewMode("exterior");
+      }
       opts?.onApplied?.();
     } catch (e) {
       const aborted = e instanceof DOMException && e.name === "AbortError";
