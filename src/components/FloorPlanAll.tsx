@@ -544,11 +544,20 @@ export default function FloorPlanAll() {
         body.mode = "edit";
         body.current = serializeCurrentDesign(fps, ext, yp);
       }
-      const res = await fetch("/api/ai-design", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      // 3 分钟超时：BYOK 模型偶发挂死，请求不能无限等（弹窗会一直转）。
+      const ctrl = new AbortController();
+      const timeoutTimer = setTimeout(() => ctrl.abort(), 180_000);
+      let res: Response;
+      try {
+        res = await fetch("/api/ai-design", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+          signal: ctrl.signal,
+        });
+      } finally {
+        clearTimeout(timeoutTimer);
+      }
       const data = await res.json();
       if (!res.ok || data.error) {
         // 401 = key 缺失/失效：清掉该平台本地 key 并重新弹窗

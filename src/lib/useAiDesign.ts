@@ -35,6 +35,8 @@ export interface UseAiDesign {
   clearMessages: () => void;
   /** 触发生成：create=重建，edit=在当前设计上增量改 */
   generate: (mode: AiDesignMode) => void;
+  /** 取消进行中的生成（中止请求并复位 loading）。模板底子若已套用会保留。 */
+  cancel: () => void;
   /** 非 null 时上层应渲染 ApiKeyPromptModal */
   keyPrompt: { run: (provider: AiProviderId, key: string) => void } | null;
   onKeySave: (provider: AiProviderId, key: string) => void;
@@ -60,6 +62,10 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
     useState<{ run: (provider: AiProviderId, key: string) => void } | null>(null);
   // 计时器：生成中每秒刷新「已用 Ns」，让进度条不像卡死
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // 进行中请求的中止控制器 + 中止原因（区分「用户取消」和「超时」的提示文案）。
+  // 之前 fetch 无超时也不可取消：BYOK 模型卡住时弹窗 239s 干转、还关不掉（用户实拍）。
+  const abortRef = useRef<AbortController | null>(null);
+  const abortReasonRef = useRef<"user" | "timeout" | null>(null);
 
   // 启动一个秒级计时器，把 label + 已用秒数写进 aiStatus
   const startStatusTimer = (label: string) => {
@@ -122,11 +128,23 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
       startStatusTimer(baseTpl
         ? (en ? `Tuning the "${baseTpl.nameEn}" base to your description…` : `AI 正在「${baseTpl.name}」底子上按你的描述调整…`)
         : genLabel);
-      const res = await fetch("/api/ai-design", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      // 可取消 + 3 分钟超时：BYOK 模型偶发挂死，请求必须能中止。
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
+      abortReasonRef.current = null;
+      const timeoutTimer = setTimeout(() => { abortReasonRef.current = "timeout"; ctrl.abort(); }, 180_000);
+      let res: Response;
+      try {
+        res = await fetch("/api/ai-design", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+          signal: ctrl.signal,
+        });
+      } finally {
+        clearTimeout(timeoutTimer);
+        abortRef.current = null;
+      }
       const data = await res.json();
       if (!res.ok || data.error) {
         // 401 = key 缺失/失效：清掉该平台本地 key 并重新弹窗
@@ -151,13 +169,31 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
       // 仅「从零重建」才切到外观图总览。
       if (mode !== "edit") setViewMode("exterior");
       opts?.onApplied?.();
-    } catch {
-      setAiError(en ? "Network error, please check your connection and retry" : "网络错误，请检查连接后重试");
+    } catch (e) {
+      const aborted = e instanceof DOMException && e.name === "AbortError";
+      if (aborted) {
+        const why = abortReasonRef.current === "timeout"
+          ? (en ? "Timed out after 3 min — request aborted." : "生成超过 3 分钟已中止。")
+          : (en ? "Cancelled." : "已取消。");
+        setAiError(en
+          ? `${why}${" The template base (if any) is already on the canvas — retry or edit manually."}`
+          : `${why}模板底子（若已套用）仍在画布上——可重试或手动微调。`);
+      } else {
+        setAiError(en ? "Network error, please check your connection and retry" : "网络错误，请检查连接后重试");
+      }
     } finally {
       stopStatusTimer();
       setAiLoading(false);
     }
   }
+
+  /** 取消进行中的生成：中止 fetch（catch 里给出「已取消」提示并复位 loading）。 */
+  const cancel = () => {
+    if (abortRef.current) {
+      abortReasonRef.current = "user";
+      abortRef.current.abort();
+    }
+  };
 
   const generate = (mode: AiDesignMode) => {
     if (!aiInput.trim() && !aiImage) return;
@@ -183,6 +219,6 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
 
   return {
     aiInput, setAiInput, aiImage, setAiImage, aiLoading, aiStatus, aiError, aiSummary,
-    clearMessages, generate, keyPrompt, onKeySave, onKeyClose, onKeyRemove, configureKey,
+    clearMessages, generate, cancel, keyPrompt, onKeySave, onKeyClose, onKeyRemove, configureKey,
   };
 }

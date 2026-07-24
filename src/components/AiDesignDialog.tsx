@@ -23,7 +23,7 @@ export default function AiDesignDialog() {
 
   const {
     aiInput, setAiInput, aiImage, setAiImage, aiLoading, aiStatus, aiError, aiSummary,
-    clearMessages, generate, keyPrompt, onKeySave, onKeyClose, onKeyRemove, configureKey,
+    clearMessages, generate, cancel, keyPrompt, onKeySave, onKeyClose, onKeyRemove, configureKey,
   } = useAiDesign();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -178,7 +178,16 @@ export default function AiDesignDialog() {
                   className="inline-block w-3 h-3 rounded-full border-2 border-teal-500 border-t-transparent animate-spin"
                   aria-hidden
                 />
-                <span>{aiStatus ?? (en ? "Working…" : "处理中…")}</span>
+                <span className="flex-1 min-w-0">{aiStatus ?? (en ? "Working…" : "处理中…")}</span>
+                {/* 随时可取消：中止请求、复位 loading（模板底子若已套用保留在画布）。
+                    之前请求无超时也不可取消 → 模型挂死时弹窗干转 200+ 秒还关不掉。 */}
+                <button
+                  onClick={cancel}
+                  className="shrink-0 px-2 py-0.5 rounded-md text-[11px] font-semibold"
+                  style={{ border: "1px solid #99f6e4", background: "#fff", color: "#0f766e" }}
+                >
+                  {en ? "Cancel" : "取消"}
+                </button>
               </div>
             )}
             {aiSummary && (
