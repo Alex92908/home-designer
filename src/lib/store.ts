@@ -3431,13 +3431,19 @@ export const useDesignerStore = create<DesignerStore>()(
       }),
 
       wipeAll: () => {
-        // 先跑 resetAll，再把所有 floorPlan 的 enabledRooms 清空 +
-        // roomShapes 清掉，只剩一张白纸
+        // 先跑 resetAll，再把**每一层**都铺成白纸（enabledRooms 空 + roomShapes 空）。
+        // 之前写死 `floorPlans: [empty]` 只留一层，而 exterior.floors 仍是 2 →
+        // 切到 2F 时数据缺失、被懒创建成**默认 9 房户型** —— 看起来就是「二楼清不掉」
+        // （用户实拍）。白纸要按当前层数每层一张。
         get().resetAll();
-        const empty = makeDefaultFloorPlan();
-        empty.enabledRooms = [];
-        empty.roomShapes = {};
-        set({ floorPlans: [empty] });
+        const floors = Math.max(1, get().exterior.floors);
+        const plans = Array.from({ length: floors }, () => {
+          const empty = makeDefaultFloorPlan();
+          empty.enabledRooms = [];
+          empty.roomShapes = {};
+          return empty;
+        });
+        set({ floorPlans: plans, activeFloor: 0 });
       },
 
       loadFromShare: (snapshot) => {
