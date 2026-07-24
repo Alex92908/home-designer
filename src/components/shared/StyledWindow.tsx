@@ -30,7 +30,6 @@ import {
 
 // ─── glTF arch-window assets ─────────────────────────────────
 const ENABLE_GLTF_WINDOW = true;
-const ARCH_WINDOW_URL = "/models/_arch_window/modern_window_archviz/scene.glb";
 const IRON_BAR_WINDOW_URL = "/models/_arch_window/iron_bar_window/iron_bar_window.glb";
 const WOODEN_WINDOW_URL = "/models/_arch_window/wooden_window/scene.glb";
 
@@ -46,7 +45,11 @@ export function gltfSpecForStyle(style: WindowStyle): GltfWindowSpec | null {
     case "louvered":
       return null;
     case "fixed":
-      return { url: ARCH_WINDOW_URL };
+      // 固定观景窗改走程序化（整面净玻璃 + 细框，无分隔条）。原来映射的
+      // modern_window_archviz GLB 名叫 modern 实为**粗木框窗**，被 AI 的落地
+      // 观景窗（len 可达 5m）拉伸后满墙笨重木框（用户："老是这个窗户，观感
+      // 很不好"）。观景窗的本义就是极简大玻璃——程序化分支正好如此。
+      return null;
     case "security":
       return { url: IRON_BAR_WINDOW_URL };
     case "wooden":
@@ -437,6 +440,5 @@ export function StyledWindow({
   return proceduralWindow;
 }
 
-useGLTF.preload(ARCH_WINDOW_URL);
 useGLTF.preload(IRON_BAR_WINDOW_URL);
 useGLTF.preload(WOODEN_WINDOW_URL);
