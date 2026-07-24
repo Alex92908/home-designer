@@ -1,0 +1,186 @@
+/**
+ * aiPlacementTidy — AI 摆位校正 pass（确定性规则，弱模型乱摆的兜底）。
+ *
+ * 背景：文生/照片复刻的家具落点全看 BYOK 模型当次发挥，弱模型常见病（用户实拍）：
+ * 床飘在房间正中不靠墙、床头柜孤零零丢在角落或跑到床尾、衣柜浮在房间中部、挂画躺
+ * 在地板上。识别（选什么家具）通常是准的，摆位（放哪）不可靠——所以在
+ * resolveAiFurniture 落库前跑一遍规则修正，把下限兜住：
+ *
+ *   1. 床贴墙：吸附到 N 墙（床头朝墙 rot 0），沿墙保持模型给的横向位置
+ *   2. 床头柜配对：吸到床头两侧（第 1 个左、第 2 个右；没有床则退化为贴墙件）
+ *   3. 柜类贴墙：衣柜/梳妆台/书柜/边柜/电视柜/储物按「最近的墙」吸附，背贴墙、面朝室内
+ *   4. 挂画上墙：吸附最近墙 + 默认挂高（不许躺地上）；窗帘同样贴墙
+ *   5. 重叠推开：实体件之间 AABB 分离（贴墙件只沿墙滑，不离墙）
+ *   6. 全部钳制在房间内
+ *
+ * 纯函数、零依赖（家具尺寸/类目由调用方注入），可直接用 node 跑测试。
+ * 坐标系：房间局部 cm，NW 原点，x→东，z→南；rot 0=面朝 S(+z)，背靠墙的朝向映射：
+ * 背N→0、背E→90、背S→180、背W→270（与精修模板同约定）。
+ */
+
+export interface TidyItem {
+  furnitureId: string;
+  x: number;            // 中心，cm
+  z: number;
+  rotation: number;     // 0/90/180/270
+  elevationY?: number;
+  mountCeiling?: boolean;
+  scaleW?: number;
+  scaleD?: number;
+  scaleH?: number;
+}
+
+export interface TidyDef {
+  width: number;        // cm（未缩放）
+  depth: number;
+  category: string;
+}
+
+const GAP = 6;          // 贴墙缝隙 cm
+const PAIR_GAP = 8;     // 床头柜与床的间隙
+
+/** 背靠某面墙时的朝向（面朝室内）。 */
+const WALL_ROT: Record<"N" | "E" | "S" | "W", number> = { N: 0, E: 90, S: 180, W: 270 };
+
+/** 贴墙件（背必须靠墙的柜类）。 */
+const WALL_HUGGERS = new Set([
+  "wardrobe", "dresser", "bookshelf", "sideboard", "tv_unit", "storage",
+  "kitchen_cabinet", "refrigerator", "desk",
+]);
+/** 上墙件（挂着的，不占地）。 */
+const WALL_MOUNTED = new Set(["artwork", "mirror", "curtain"]);
+/** 不参与碰撞的（贴地薄片/挂件/吊顶）。 */
+const NO_COLLIDE = new Set(["rug", "artwork", "mirror", "curtain"]);
+
+/** 旋转后的轴对齐占地（90/270 交换宽深）。 */
+function footprint(def: TidyDef, it: TidyItem): { w: number; d: number } {
+  const w = def.width * (it.scaleW ?? 1);
+  const d = def.depth * (it.scaleD ?? 1);
+  return (it.rotation % 180 === 90) ? { w: d, d: w } : { w, d };
+}
+
+function nearestWall(it: TidyItem, roomW: number, roomD: number): "N" | "E" | "S" | "W" {
+  const dists: Array<["N" | "E" | "S" | "W", number]> = [
+    ["N", it.z], ["S", roomD - it.z], ["W", it.x], ["E", roomW - it.x],
+  ];
+  dists.sort((a, b) => a[1] - b[1]);
+  return dists[0][0];
+}
+
+/** 把 it 背贴到 wall 上（改坐标 + 朝向），沿墙方向的位置保留并钳制。 */
+function snapToWall(it: TidyItem, def: TidyDef, wall: "N" | "E" | "S" | "W", roomW: number, roomD: number): void {
+  it.rotation = WALL_ROT[wall];
+  const fp = footprint(def, it);
+  if (wall === "N") { it.z = fp.d / 2 + GAP; it.x = clamp(it.x, fp.w / 2 + GAP, roomW - fp.w / 2 - GAP); }
+  if (wall === "S") { it.z = roomD - fp.d / 2 - GAP; it.x = clamp(it.x, fp.w / 2 + GAP, roomW - fp.w / 2 - GAP); }
+  if (wall === "W") { it.x = fp.w / 2 + GAP; it.z = clamp(it.z, fp.d / 2 + GAP, roomD - fp.d / 2 - GAP); }
+  if (wall === "E") { it.x = roomW - fp.w / 2 - GAP; it.z = clamp(it.z, fp.d / 2 + GAP, roomD - fp.d / 2 - GAP); }
+}
+
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+export function tidyAiPlacements(
+  items: TidyItem[],
+  roomW: number,
+  roomD: number,
+  getDef: (furnitureId: string) => TidyDef | undefined,
+): TidyItem[] {
+  const defs = new Map<TidyItem, TidyDef>();
+  for (const it of items) {
+    const d = getDef(it.furnitureId);
+    if (d) defs.set(it, d);
+  }
+  const of = (it: TidyItem) => defs.get(it);
+
+  // ── 1. 床贴 N 墙（床头朝墙）──
+  const beds = items.filter(it => of(it)?.category === "bed" && !it.mountCeiling);
+  for (const bed of beds) {
+    const def = of(bed)!;
+    bed.rotation = 0;
+    const fp = footprint(def, bed);
+    bed.z = fp.d / 2 + GAP;
+    bed.x = clamp(bed.x, fp.w / 2 + GAP, roomW - fp.w / 2 - GAP);
+  }
+
+  // ── 2. 床头柜配对到床头两侧 ──
+  const stands = items.filter(it => of(it)?.category === "nightstand" && !it.mountCeiling);
+  if (beds.length > 0) {
+    const bed = beds[0];
+    const bfp = footprint(of(bed)!, bed);
+    stands.forEach((ns, i) => {
+      const nfp = footprint(of(ns)!, ns);
+      ns.rotation = 0;
+      const side = i % 2 === 0 ? -1 : 1;   // 第1个左、第2个右
+      ns.x = clamp(bed.x + side * (bfp.w / 2 + nfp.w / 2 + PAIR_GAP), nfp.w / 2 + GAP, roomW - nfp.w / 2 - GAP);
+      ns.z = nfp.d / 2 + GAP;              // 与床头同线（贴 N 墙）
+    });
+  } else {
+    for (const ns of stands) snapToWall(ns, of(ns)!, nearestWall(ns, roomW, roomD), roomW, roomD);
+  }
+
+  // ── 3. 柜类贴最近墙 ──
+  for (const it of items) {
+    const def = of(it);
+    if (!def || it.mountCeiling) continue;
+    if (WALL_HUGGERS.has(def.category)) {
+      snapToWall(it, def, nearestWall(it, roomW, roomD), roomW, roomD);
+    }
+  }
+
+  // ── 4. 挂画/镜子/窗帘上墙 ──
+  for (const it of items) {
+    const def = of(it);
+    if (!def || it.mountCeiling) continue;
+    if (WALL_MOUNTED.has(def.category)) {
+      snapToWall(it, def, nearestWall(it, roomW, roomD), roomW, roomD);
+      if ((def.category === "artwork" || def.category === "mirror") && it.elevationY == null) {
+        it.elevationY = 110;   // 默认挂高（与精修模板惯例一致）
+      }
+    }
+  }
+
+  // ── 5. 实体件重叠推开（贴墙件只沿墙滑）──
+  const solids = items.filter(it => {
+    const def = of(it);
+    return def && !it.mountCeiling && !NO_COLLIDE.has(def.category);
+  });
+  const isHugger = (it: TidyItem) => {
+    const c = of(it)!.category;
+    return WALL_HUGGERS.has(c) || c === "bed" || c === "nightstand";
+  };
+  for (let iter = 0; iter < 6; iter++) {
+    let moved = false;
+    for (let a = 0; a < solids.length; a++) {
+      for (let b = a + 1; b < solids.length; b++) {
+        const A = solids[a], B = solids[b];
+        const fa = footprint(of(A)!, A), fb = footprint(of(B)!, B);
+        const ox = (fa.w + fb.w) / 2 - Math.abs(A.x - B.x);
+        const oz = (fa.d + fb.d) / 2 - Math.abs(A.z - B.z);
+        if (ox <= 0 || oz <= 0) continue;   // 无重叠
+        // 推「后到的 B」；贴墙件沿墙滑（贴 N/S 墙的沿 x 推,贴 W/E 的沿 z 推）
+        const bHug = isHugger(B);
+        const bWall = bHug ? nearestWall(B, roomW, roomD) : null;
+        const pushAxis = bWall === "N" || bWall === "S" ? "x"
+          : bWall === "W" || bWall === "E" ? "z"
+          : (ox < oz ? "x" : "z");
+        const dir = pushAxis === "x" ? (B.x >= A.x ? 1 : -1) : (B.z >= A.z ? 1 : -1);
+        if (pushAxis === "x") B.x = clamp(B.x + dir * (ox + 2), fb.w / 2 + GAP, roomW - fb.w / 2 - GAP);
+        else B.z = clamp(B.z + dir * (oz + 2), fb.d / 2 + GAP, roomD - fb.d / 2 - GAP);
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+
+  // ── 6. 收尾钳制 ──
+  for (const it of items) {
+    const def = of(it);
+    if (!def) continue;
+    const fp = footprint(def, it);
+    it.x = clamp(it.x, fp.w / 2, roomW - fp.w / 2);
+    it.z = clamp(it.z, fp.d / 2, roomD - fp.d / 2);
+  }
+  return items;
+}

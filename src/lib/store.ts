@@ -4,6 +4,7 @@ import { temporal } from "zundo";
 import type { TemporalState } from "zundo";
 import { RoomType, ViewMode, MaterialItem, PlacedItem, RoomMaterials, ROOM_DEFS, StyleTag, getRoomArea, FurnitureItem, ExteriorSettings, WindowConfig, RoomState, FloorPlan, ExteriorWallDecorItem, ExteriorWall, WallSide, FacadeLayer, Building } from "./types";
 import { FURNITURE, getFurnitureById, registerFurniture } from "./furniture";
+import { tidyAiPlacements } from "./aiPlacementTidy";
 import { MATERIALS } from "./data";
 import { getOutdoorAssetByKind } from "./outdoorAssets";
 import { ALL_TEMPLATES, buildTemplateRoomState, buildEmbeddedRoomState } from "./templates";
@@ -258,6 +259,13 @@ function resolveAiFurniture(
       ...(entry.elevationY != null ? { elevationY: Math.max(0, Math.round(entry.elevationY)) } : {}),
     });
   }
+  // 摆位校正 pass：弱模型的落点不可靠（床飘房中、床头柜跑床尾、衣柜浮空、挂画躺地——
+  // 用户实拍），落库前按确定性规则修正：床贴墙、床头柜配对、柜类贴墙、挂画上墙、
+  // 重叠推开。识别交给模型，摆位下限由规则兜住。
+  tidyAiPlacements(items, roomW, roomD, (fid) => {
+    const f = getFurnitureById(fid);
+    return f ? { width: f.width, depth: f.depth, category: f.category } : undefined;
+  });
   return items;
 }
 
