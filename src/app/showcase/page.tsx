@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import ShowcaseClient from "./ShowcaseClient";
+import LocalizedLoading from "@/components/LocalizedLoading";
 
 export const metadata = {
   title: "样板间 · 筑雅 ZHUYA AI 家装设计",
@@ -19,13 +20,7 @@ export const metadata = {
 
 export default function ShowcasePage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center h-screen bg-gray-900">
-          <div className="text-gray-400 text-sm">加载中…</div>
-        </div>
-      }
-    >
+    <Suspense fallback={<LocalizedLoading />}>
       <ShowcaseClient />
     </Suspense>
   );

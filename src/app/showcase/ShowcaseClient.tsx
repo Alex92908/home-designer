@@ -108,7 +108,7 @@ export default function ShowcaseClient() {
             <div className="p-4">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span className="font-semibold">{en ? t.nameEn : t.nameZh}</span>
-                {t.tags.map((tag) => (
+                {(en ? t.tagsEn : t.tagsZh).map((tag) => (
                   <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-300">
                     {tag}
                   </span>

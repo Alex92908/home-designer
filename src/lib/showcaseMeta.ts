@@ -14,8 +14,9 @@ export interface ShowcaseMeta {
   nameEn: string;
   descZh: string;
   descEn: string;
-  /** 标签（楼层数 / 风格等），画廊卡片上展示。 */
-  tags: string[];
+  /** 标签（楼层数 / 风格等），画廊卡片上展示。中英各一份，按 locale 选。 */
+  tagsZh: string[];
+  tagsEn: string[];
   /** 预渲染外观图（public/showcase/ 下的静态 JPG）。以 "/" 开头视为图片路径；
    *  否则当 emoji 占位（片场卡暂用 emoji，预览图以后补）。 */
   image: string;
@@ -31,7 +32,8 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     nameEn: "Resort Pool Villa",
     descZh: "实墙开窗立面 · 泳池套组庭院 · 两层带天台",
     descEn: "Solid-wall facade · Pool-set yard · 2 floors + rooftop",
-    tags: ["2F+天台", "实墙", "泳池院"],
+    tagsZh: ["2F+天台", "实墙", "泳池院"],
+    tagsEn: ["2F + rooftop", "Solid wall", "Pool yard"],
     image: "/showcase/resort-pool-villa.jpg",
   },
   {
@@ -40,7 +42,8 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     nameEn: "Clear Glass-Curtain Villa",
     descZh: "通透玻璃幕墙 · 胡桃木挑檐 · 逐面可调立面 · 泳池庭院",
     descEn: "See-through glass curtain · walnut soffit · per-face facade · pool yard",
-    tags: ["3F", "玻璃幕墙", "泳池院"],
+    tagsZh: ["3F", "玻璃幕墙", "泳池院"],
+    tagsEn: ["3F", "Glass curtain", "Pool yard"],
     image: "/showcase/clear-glass-curtain-villa.jpg",
   },
   // ── 片场系列（云横店）：查看器走 applyProjectTemplate，缩略图暂用 emoji ──
@@ -50,7 +53,8 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     nameEn: "Café Set",
     descZh: "玻璃门面 · 点单柜台+展示柜 · 密集桌位 · 书架墙",
     descEn: "Glass storefront · counter + display · dense tables · book wall",
-    tags: ["片场", "咖啡馆", "单层"],
+    tagsZh: ["片场", "咖啡馆", "单层"],
+    tagsEn: ["Set", "Café", "Single floor"],
     image: "/showcase/set-cafe.jpg",
     projectTemplateId: "set-cafe",
   },
@@ -60,7 +64,8 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     nameEn: "Office Set",
     descZh: "回字形大厅环绕 · 开放工位 · 会议室 · 独立办公室 · 茶水间",
     descEn: "Ring lobby wrap · open desks · meeting room · private office · pantry",
-    tags: ["片场", "办公室", "单层"],
+    tagsZh: ["片场", "办公室", "单层"],
+    tagsEn: ["Set", "Office", "Single floor"],
     image: "/showcase/set-office.jpg",
     projectTemplateId: "set-office",
   },
@@ -70,7 +75,8 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     nameEn: "Restaurant Set",
     descZh: "大堂散座 · 包间×2+VIP · 商用后厨 · 男女洗手间 · 骑楼露天",
     descEn: "Dining hall · 2 private + VIP rooms · pro kitchen · M/F WC · patio",
-    tags: ["片场", "餐馆", "单层"],
+    tagsZh: ["片场", "餐馆", "单层"],
+    tagsEn: ["Set", "Restaurant", "Single floor"],
     image: "/showcase/set-restaurant.jpg",
     projectTemplateId: "set-restaurant",
   },

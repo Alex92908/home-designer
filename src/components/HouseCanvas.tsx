@@ -6775,7 +6775,7 @@ export default function HouseCanvas() {
                     border: `1px solid ${avatarId === a.id ? "rgba(167,243,208,0.6)" : "rgba(255,255,255,0.12)"}`,
                   }}
                 >
-                  🧑 {a.name}
+                  🧑 {locale === "en" ? a.nameEn : a.name}
                 </button>
               ))}
             </>

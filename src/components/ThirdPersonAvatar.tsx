@@ -20,7 +20,8 @@ import * as THREE from "three";
 /** 一个可选化身的配置。clips 给出该 GLB 里 idle/walk/run 三段动画的**实际名字**。 */
 export interface AvatarDef {
   id: string;
-  name: string;          // UI 显示名
+  name: string;          // UI 显示名(中文)
+  nameEn: string;        // UI 显示名(英文)
   url: string;
   facing: number;        // 朝向修正(弧度)：模型默认朝向 → 面朝移动方向(+Z 为 0)
   footLift: number;      // 脚底微调(米)：原点不在脚底时兜底抬/降
@@ -29,9 +30,9 @@ export interface AvatarDef {
 
 /** 化身目录。加更多角色 = 加一条（同骨骼即可，代码不动）。 */
 export const AVATARS: AvatarDef[] = [
-  { id: "soldier", name: "士兵", url: "/models/person/soldier/soldier.glb",
+  { id: "soldier", name: "士兵", nameEn: "Soldier", url: "/models/person/soldier/soldier.glb",
     facing: Math.PI, footLift: 0, clips: { idle: "Idle", walk: "Walk", run: "Run" } },
-  { id: "xbot", name: "素体人", url: "/models/person/xbot/xbot.glb",
+  { id: "xbot", name: "素体人", nameEn: "Mannequin", url: "/models/person/xbot/xbot.glb",
     facing: 0, footLift: 0, clips: { idle: "idle", walk: "walk", run: "run" } },
 ];
 export const DEFAULT_AVATAR_ID = "soldier";

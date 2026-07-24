@@ -22,16 +22,24 @@ import { useGLTF } from "@react-three/drei";
 
 const PERSIST_KEY = "home-designer-v2";
 
-const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
-  ssr: false,
-  loading: () => (
+/** 外形查看器的双语加载占位（走 locale，不再写死中文）。 */
+function ExteriorViewerLoading() {
+  const en = useLocale() === "en";
+  return (
     <div className="flex flex-col items-center justify-center gap-3 h-screen bg-gray-900 text-gray-400 text-sm">
-      <div className="animate-pulse">渲染外形图…</div>
+      <div className="animate-pulse">{en ? "Rendering exterior…" : "渲染外形图…"}</div>
       <div className="text-xs text-gray-500 max-w-[260px] text-center leading-relaxed">
-        首次打开需下载 3D 引擎，慢网络约需十几秒；模型随后按需逐件加载
+        {en
+          ? "First open downloads the 3D engine (~10s on slow networks); models then stream in on demand."
+          : "首次打开需下载 3D 引擎，慢网络约需十几秒；模型随后按需逐件加载"}
       </div>
     </div>
-  ),
+  );
+}
+
+const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
+  ssr: false,
+  loading: () => <ExteriorViewerLoading />,
 });
 
 export default function ShowcaseViewer({
