@@ -407,6 +407,13 @@ function RoomShell({
       }
     }
     // Door wall + window wall now share the NSWE alphabet — no remap.
+    // W 墙翻转：门 pos 与窗一样是北参照(2D plan 约定,见上方窗洞 side==="W" 分支
+    // 及 findEdgeForWall),但 W 墙 wall-local x=0 在南端(+Z)向北递增。所以 W 墙必须
+    // 把 pos 翻成 `wallLen - pos - 宽` 才和窗/2D 对齐。原来门直接用 raw pos → 门在
+    // 3D 里落到与 2D 相反的一端(用户实拍:门位置渲染错了/3D 与 2D 不一致)。E 墙
+    // wall-local x=0 恰在北端,已与北参照一致,无需翻转。门板 RoomDoor3D 同此翻转。
+    const doorPosForWall = (posM: number, lenM: number) =>
+      side === "W" ? wallLenM - posM - lenM : posM;
     if (hasDoor && doorWall === side) {
       const dw = Math.min(doorLenCm / 100, wallLenM);
       // 角落留边：门贴到墙角(pos≈0 或 pos≈墙长-门宽)时,门洞直抵角落,相邻墙若在
@@ -414,17 +421,17 @@ function RoomShell({
       // 的墙料封住角落;墙太窄则按半宽收缩。门板渲染用同一 clamp(见 RoomDoor3D)。
       const m = Math.min(DOOR_CORNER_MARGIN, Math.max(0, (wallLenM - dw) / 2));
       holes.push({
-        x: Math.max(m, Math.min(doorPosCm / 100, wallLenM - dw - m)),
+        x: Math.max(m, Math.min(doorPosForWall(doorPosCm / 100, dw), wallLenM - dw - m)),
         y: 0,
         w: dw,
         h: doorHCm / 100,
       });
     }
-    // 额外门的墙洞（多门房间）——同样宽度优先、位置回推
+    // 额外门的墙洞（多门房间）——同样宽度优先、位置回推 + W 墙翻转
     for (const d of extraDoors ?? []) {
       if (d.wall !== side) continue;
       const dw = Math.min(d.len / 100, wallLenM);
-      holes.push({ x: Math.max(0, Math.min(d.pos / 100, wallLenM - dw)), y: 0, w: dw, h: (d.h ?? doorHCm) / 100 });
+      holes.push({ x: Math.max(0, Math.min(doorPosForWall(d.pos / 100, dw), wallLenM - dw)), y: 0, w: dw, h: (d.h ?? doorHCm) / 100 });
     }
     // Clamp all holes to wall bounds
     return holes.map(h => ({
@@ -1095,7 +1102,11 @@ function RoomDoor3D({
   // 与 holesForWall 同一角落留边 clamp：门板落位必须与墙洞完全对齐,否则一边
   // 露墙料、一边露白条。
   const doorCornerM = Math.min(DOOR_CORNER_MARGIN, Math.max(0, (wallLenForDoor - doorW) / 2));
-  const doorPos = Math.max(doorCornerM, Math.min(doorPosCm / 100, wallLenForDoor - doorW - doorCornerM));
+  // W 墙翻转：与 holesForWall 同步——门 pos 是北参照,而 W 墙 wall-local x 从南端起,
+  // 故 W 墙把 pos 翻成 `墙长-pos-门宽`,再套 `D/2 - doorPos` 就落到北参照的正确位置。
+  // E/N/S 无需翻转。原来门板与门洞都用 raw pos,3D 落位与 2D/窗相反(用户实拍)。
+  const rawDoorPos = doorWall === "W" ? wallLenForDoor - doorPosCm / 100 - doorW : doorPosCm / 100;
+  const doorPos = Math.max(doorCornerM, Math.min(rawDoorPos, wallLenForDoor - doorW - doorCornerM));
   const doorH = doorHCm / 100;
   const frameT = 0.04; // frame thickness
 
