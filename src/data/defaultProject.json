@@ -4513,11 +4513,11 @@
     "paths": []
   },
   "exterior": {
-    "preset": "modern",
+    "preset": "glass-curtain",
     "roofStyle": "flat",
-    "roofColor": "#2A2A2A",
+    "roofColor": "#3A3A3A",
     "wallMaterial": "render",
-    "wallColor": "#CBE8F5",
+    "wallColor": "#F4F3EE",
     "accentColor": "#1A1A1A",
     "floors": 2,
     "yardPreset": "minimal",
@@ -4566,7 +4566,7 @@
     "groundType": "tile",
     "parapetHeight": 0,
     "parapetGlassEnabled": false,
-    "roofSlabColor": "#EAE7E0",
+    "roofSlabColor": "#3A3A3A",
     "parapetColor": "#7A7068",
     "stoneBaseHeight": 0.35,
     "windowFlowerBoxColor": "#A0623E",
@@ -4867,15 +4867,15 @@
         }
       ]
     },
-    "facadeSystem": "punched-window",
+    "facadeSystem": "curtain-wall",
     "transparentExterior": true,
-    "glassShellColor": "#33414E",
+    "glassShellColor": "#AEC4D2",
     "glassSpandrelColor": "#EDEAE3",
-    "glassColor": "#73899B",
+    "glassColor": "#AEC4D2",
     "glassOpacity": 1,
     "entranceFrameColor": "#15171B",
     "woodSoffit": true,
-    "facadeGlass": false
+    "facadeGlass": true
   },
   "budget": 350000,
   "customRoomMeta": {},
