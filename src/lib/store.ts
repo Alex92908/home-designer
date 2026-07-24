@@ -3461,7 +3461,10 @@ export const useDesignerStore = create<DesignerStore>()(
           empty.roomShapes = {};
           return empty;
         });
-        set({ floorPlans: plans, activeFloor: 0 });
+        // 院子也清空：yardPlan 是顶层地块级字段,resetAll/原 wipeAll 都没碰它,于是
+        // 彻底清空后上一套(别墅模板)的泳池/树/遮阳伞仍留在院子里,外观图/漫游照实
+        // 渲染 → 用户实拍「无端多了泳池和树」。白纸就该连院子一起白。
+        set({ floorPlans: plans, activeFloor: 0, yardPlan: { items: [], paths: [] } });
       },
 
       loadFromShare: (snapshot) => {
