@@ -82,11 +82,31 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
 
+/** 房门（禁放区来源）：pos=沿墙起点 cm，len=门宽 cm。 */
+export interface TidyDoor {
+  wall: "N" | "E" | "S" | "W";
+  pos: number;
+  len: number;
+}
+
+/** 门的禁放矩形：门洞沿墙 ±10cm 余量，向室内伸出「门宽+40cm」的开扇区。 */
+function doorRect(d: TidyDoor, roomW: number, roomD: number): { minX: number; maxX: number; minZ: number; maxZ: number } {
+  const lo = d.pos - 10, hi = d.pos + d.len + 10;
+  const swing = d.len + 40;
+  switch (d.wall) {
+    case "N": return { minX: lo, maxX: hi, minZ: 0, maxZ: swing };
+    case "S": return { minX: lo, maxX: hi, minZ: roomD - swing, maxZ: roomD };
+    case "W": return { minX: 0, maxX: swing, minZ: lo, maxZ: hi };
+    case "E": return { minX: roomW - swing, maxX: roomW, minZ: lo, maxZ: hi };
+  }
+}
+
 export function tidyAiPlacements(
   items: TidyItem[],
   roomW: number,
   roomD: number,
   getDef: (furnitureId: string) => TidyDef | undefined,
+  doors: TidyDoor[] = [],
 ): TidyItem[] {
   const defs = new Map<TidyItem, TidyDef>();
   for (const it of items) {
@@ -160,8 +180,33 @@ export function tidyAiPlacements(
     const c = of(it)!.category;
     return WALL_HUGGERS.has(c) || c === "bed" || c === "nightstand";
   };
+  const doorRects = doors.map(d => doorRect(d, roomW, roomD));
   for (let iter = 0; iter < 6; iter++) {
     let moved = false;
+    // 5a. 先避门：任何实体件不得压住门洞/开扇区（门被家具堵死是最扎眼的
+    // 「门总是错的」观感）。贴墙件沿自己的墙滑开，其余沿重叠小的轴推离门区。
+    for (const it of solids) {
+      const def = of(it)!;
+      const fp = footprint(def, it);
+      for (const dr of doorRects) {
+        const ox = Math.min(it.x + fp.w / 2, dr.maxX) - Math.max(it.x - fp.w / 2, dr.minX);
+        const oz = Math.min(it.z + fp.d / 2, dr.maxZ) - Math.max(it.z - fp.d / 2, dr.minZ);
+        if (ox <= 0 || oz <= 0) continue;
+        const hug = isHugger(it) ? nearestWall(it, roomW, roomD) : null;
+        const axis = hug === "N" || hug === "S" ? "x"
+          : hug === "W" || hug === "E" ? "z"
+          : (ox < oz ? "x" : "z");
+        const rcx = (dr.minX + dr.maxX) / 2, rcz = (dr.minZ + dr.maxZ) / 2;
+        if (axis === "x") {
+          const dir = it.x >= rcx ? 1 : -1;
+          it.x = clamp(it.x + dir * (ox + 2), fp.w / 2 + GAP, roomW - fp.w / 2 - GAP);
+        } else {
+          const dir = it.z >= rcz ? 1 : -1;
+          it.z = clamp(it.z + dir * (oz + 2), fp.d / 2 + GAP, roomD - fp.d / 2 - GAP);
+        }
+        moved = true;
+      }
+    }
     for (let a = 0; a < solids.length; a++) {
       for (let b = a + 1; b < solids.length; b++) {
         const A = solids[a], B = solids[b];

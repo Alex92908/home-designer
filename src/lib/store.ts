@@ -259,13 +259,8 @@ function resolveAiFurniture(
       ...(entry.elevationY != null ? { elevationY: Math.max(0, Math.round(entry.elevationY)) } : {}),
     });
   }
-  // 摆位校正 pass：弱模型的落点不可靠（床飘房中、床头柜跑床尾、衣柜浮空、挂画躺地——
-  // 用户实拍），落库前按确定性规则修正：床贴墙、床头柜配对、柜类贴墙、挂画上墙、
-  // 重叠推开。识别交给模型，摆位下限由规则兜住。
-  tidyAiPlacements(items, roomW, roomD, (fid) => {
-    const f = getFurnitureById(fid);
-    return f ? { width: f.width, depth: f.depth, category: f.category } : undefined;
-  });
+  // 注：摆位校正 pass 不在这里跑——门数据在调用方随后才解析，校正需要门区禁放，
+  // 故由 applyAiDesign 在该房间门解析完成后调用 tidyAiPlacements（见彼处）。
   return items;
 }
 
@@ -2650,6 +2645,21 @@ export const useDesignerStore = create<DesignerStore>()(
             // 3) hasDoor=false → 旧字段关掉之外，多门数组也得清空（数组优先）。
             if (r.hasDoor != null) hasDoorMap[rt] = r.hasDoor;
             if (r.hasDoor === false && doorsMap[rt]?.length) doorsMap[rt] = [];
+            // ── AI 摆位校正（门解析完成后才跑，门区作禁放区）──
+            // 弱模型落点不可靠（床飘房中/床头柜跑床尾/衣柜浮空/挂画躺地/家具堵门——
+            // 均用户实拍）。识别交给模型、方位遵从图片意图，规则只修物理无效 + 让
+            // 实体件避开门洞与开扇区。
+            if (hasFurniture && roomsMap[rt]?.placedItems?.length) {
+              const doorZones: import("./aiPlacementTidy").TidyDoor[] = (doorsMap[rt]?.length
+                ? doorsMap[rt]!.map(d => ({ wall: d.wall as "N" | "E" | "S" | "W", pos: d.pos, len: d.len ?? 80 }))
+                : (hasDoorMap[rt]
+                  ? [{ wall: doorWallMap[rt] as "N" | "E" | "S" | "W", pos: doorPosMap[rt] ?? 40, len: doorLenMap[rt] ?? 80 }]
+                  : []));
+              tidyAiPlacements(roomsMap[rt].placedItems as import("./aiPlacementTidy").TidyItem[], width, depth, (fid) => {
+                const f = getFurnitureById(fid);
+                return f ? { width: f.width, depth: f.depth, category: f.category } : undefined;
+              }, doorZones);
+            }
             // 房间形状：按当前宽深重建预设多边形；rect=清掉多边形回矩形。
             const shapePreset = resolveAiRoomShape(r.shape);
             if (shapePreset) {
