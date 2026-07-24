@@ -998,15 +998,35 @@ interface DesignerStore {
   setIpAdapterWeight: (w: number) => void;
 }
 
+// 彻底清空/恢复默认(resetAll/wipeAll) 都重置到这里——所以它就是「默认外观」的真源。
+// 定成咖啡厅那种通透玻璃亭:玻璃幕墙 + 暖木檐底薄屋面 + 青砖广场,单层、不带泳池。
+// (defaultProject.json 只在**首个新用户**首次加载时叠加,清空/重置不走它,故真源在此。)
 const initialExterior: ExteriorSettings = {
-  preset: "modern",
+  preset: "glass-curtain",
+  facadeSystem: "curtain-wall",
+  facadeGlass: true,
   roofStyle: "flat",
-  roofColor: "#2A2A2A",
+  roofColor: "#3A3A3A",
+  roofSlabColor: "#3A3A3A",
   wallMaterial: "render",
-  wallColor: "#F4F2EE",
+  wallColor: "#F4F3EE",
+  wallBaseColor: "#F2EFE8",
+  glassColor: "#AEC4D2",
+  glassShellColor: "#AEC4D2",
+  glassOpacity: 1,
+  windowFrameColor: "#15171B",
+  entranceFrameColor: "#15171B",
   accentColor: "#1A1A1A",
-  floors: 2,
-  yardPreset: "pool",
+  woodSoffit: true,
+  parapetHeight: 0,
+  stoneBaseEnabled: false,
+  roofOverhang: 0.6,
+  roofOverhangSouthExtra: 0.2,
+  transparentExterior: true,
+  groundType: "tile",
+  floors: 1,
+  hasRooftop: false,
+  yardPreset: "minimal",
   showPerimeterFence: false,
 };
 
