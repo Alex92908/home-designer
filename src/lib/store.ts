@@ -3475,16 +3475,26 @@ export const useDesignerStore = create<DesignerStore>()(
         // （用户实拍）。白纸要按当前层数每层一张。
         get().resetAll();
         const floors = Math.max(1, get().exterior.floors);
-        const plans = Array.from({ length: floors }, () => {
+        // 彻底清空 = 一间空玻璃屋（用户要的默认）：不是「零房间」——零房间时外观图
+        // 只能兜底画一个实心带窗的盒子(用户实拍「还是这个鬼东西」)。留 1F 一间空的
+        // living,标 exteriorStyle:"glass" → 幕墙渲染成通透玻璃亭(基座也随玻璃面收薄)。
+        // 其余楼层留白。家具为空。
+        const plans = Array.from({ length: floors }, (_, fi) => {
           const empty = makeDefaultFloorPlan();
-          empty.enabledRooms = [];
           empty.roomShapes = {};
+          if (fi === 0) {
+            empty.enabledRooms = ["living"];
+            empty.rooms.living = { materials: {}, placedItems: [] };
+            empty.roomExteriorStyle = { living: "glass" };
+          } else {
+            empty.enabledRooms = [];
+          }
           return empty;
         });
         // 院子也清空：yardPlan 是顶层地块级字段,resetAll/原 wipeAll 都没碰它,于是
         // 彻底清空后上一套(别墅模板)的泳池/树/遮阳伞仍留在院子里,外观图/漫游照实
         // 渲染 → 用户实拍「无端多了泳池和树」。白纸就该连院子一起白。
-        set({ floorPlans: plans, activeFloor: 0, yardPlan: { items: [], paths: [] } });
+        set({ floorPlans: plans, activeFloor: 0, activeRoom: "living", yardPlan: { items: [], paths: [] } });
       },
 
       loadFromShare: (snapshot) => {
