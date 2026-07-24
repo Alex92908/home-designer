@@ -972,7 +972,16 @@ function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number
 
   return (
     <group onClick={(e) => { e.stopPropagation(); onClick(); }}>
-      <primitive object={cloned} />
+      {/* 正反面校正：WOODEN_DOOR_URL 资产的雕花/门面朝 -z 导出，而本工程约定
+          门板局部 +z = 室内侧（程序化 ProceduralWoodDoor 的浮雕/门把就在 +z，是对的）。
+          绕门板竖向中轴翻 180°，让雕花面朝室内——铰链(父组 x=0 支点)与摆位不变，
+          门把另由上层在闩边双面补绘(见调用处)，故这里翻转不影响把手位置。
+          用户实拍确认「门正反面反了」。 */}
+      <group position={[doorW / 2, 0, 0]} rotation={[0, Math.PI, 0]}>
+        <group position={[-doorW / 2, 0, 0]}>
+          <primitive object={cloned} />
+        </group>
+      </group>
     </group>
   );
 }

@@ -78,7 +78,13 @@ function GltfDoorPanel({ doorW, doorH, exterior = false, onClick }: { doorW: num
 
   return (
     <group onClick={(e) => { e.stopPropagation(); onClick(); }}>
-      <primitive object={cloned} />
+      {/* 正反面校正：door_with_frame.glb 雕花面朝 -z 导出，本工程约定门板 +z=室内。
+          绕竖向中轴翻 180° 使门面朝室内；铰链(父组 x=0)与摆位不变。见 RoomCanvas 同注。 */}
+      <group position={[doorW / 2, 0, 0]} rotation={[0, Math.PI, 0]}>
+        <group position={[-doorW / 2, 0, 0]}>
+          <primitive object={cloned} />
+        </group>
+      </group>
     </group>
   );
 }
