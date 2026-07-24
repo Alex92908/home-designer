@@ -6,8 +6,9 @@
  * 在地板上。识别（选什么家具）通常是准的，摆位（放哪）不可靠——所以在
  * resolveAiFurniture 落库前跑一遍规则修正，把下限兜住：
  *
- *   1. 床贴墙：吸附到 N 墙（床头朝墙 rot 0），沿墙保持模型给的横向位置
- *   2. 床头柜配对：吸到床头两侧（第 1 个左、第 2 个右；没有床则退化为贴墙件）
+ *   1. 床贴墙：吸附到**模型所选的最近墙**（参考图床靠哪面、模型坐标就偏向哪面——
+ *      遵从这个意图，只修「悬空不贴墙」的物理无效，不写死某面墙）
+ *   2. 床头柜配对：按床的实际墙别在床头线沿墙分列两侧（没有床则退化为贴墙件）
  *   3. 柜类贴墙：衣柜/梳妆台/书柜/边柜/电视柜/储物按「最近的墙」吸附，背贴墙、面朝室内
  *   4. 挂画上墙：吸附最近墙 + 默认挂高（不许躺地上）；窗帘同样贴墙
  *   5. 重叠推开：实体件之间 AABB 分离（贴墙件只沿墙滑，不离墙）
@@ -94,27 +95,36 @@ export function tidyAiPlacements(
   }
   const of = (it: TidyItem) => defs.get(it);
 
-  // ── 1. 床贴 N 墙（床头朝墙）──
+  // ── 1. 床贴「模型所选的最近墙」（床头朝墙）──
+  // 不写死某面墙：参考图里床靠哪面、视觉模型就会把坐标放向那边——遵从这个意图，
+  // 只把「悬空不贴墙」这种物理无效修掉（用户：不要写死，应该遵从图片的效果）。
   const beds = items.filter(it => of(it)?.category === "bed" && !it.mountCeiling);
+  const bedWall = beds.length ? nearestWall(beds[0], roomW, roomD) : null;
   for (const bed of beds) {
-    const def = of(bed)!;
-    bed.rotation = 0;
-    const fp = footprint(def, bed);
-    bed.z = fp.d / 2 + GAP;
-    bed.x = clamp(bed.x, fp.w / 2 + GAP, roomW - fp.w / 2 - GAP);
+    snapToWall(bed, of(bed)!, nearestWall(bed, roomW, roomD), roomW, roomD);
   }
 
-  // ── 2. 床头柜配对到床头两侧 ──
+  // ── 2. 床头柜按床的实际墙别，在床头线沿墙分列两侧 ──
   const stands = items.filter(it => of(it)?.category === "nightstand" && !it.mountCeiling);
-  if (beds.length > 0) {
+  if (beds.length > 0 && bedWall) {
     const bed = beds[0];
     const bfp = footprint(of(bed)!, bed);
+    const alongX = bedWall === "N" || bedWall === "S";      // 沿墙轴：N/S→x，W/E→z
+    const bedAlongHalf = alongX ? bfp.w / 2 : bfp.d / 2;
     stands.forEach((ns, i) => {
-      const nfp = footprint(of(ns)!, ns);
-      ns.rotation = 0;
-      const side = i % 2 === 0 ? -1 : 1;   // 第1个左、第2个右
-      ns.x = clamp(bed.x + side * (bfp.w / 2 + nfp.w / 2 + PAIR_GAP), nfp.w / 2 + GAP, roomW - nfp.w / 2 - GAP);
-      ns.z = nfp.d / 2 + GAP;              // 与床头同线（贴 N 墙）
+      const ndef = of(ns)!;
+      ns.rotation = WALL_ROT[bedWall];
+      const nfp = footprint(ndef, ns);
+      const nsAlongHalf = alongX ? nfp.w / 2 : nfp.d / 2;
+      const side = i % 2 === 0 ? -1 : 1;                     // 第1个一侧、第2个另一侧
+      const along = (alongX ? bed.x : bed.z) + side * (bedAlongHalf + nsAlongHalf + PAIR_GAP);
+      if (alongX) {
+        ns.x = clamp(along, nfp.w / 2 + GAP, roomW - nfp.w / 2 - GAP);
+        ns.z = bedWall === "N" ? nfp.d / 2 + GAP : roomD - nfp.d / 2 - GAP;
+      } else {
+        ns.z = clamp(along, nfp.d / 2 + GAP, roomD - nfp.d / 2 - GAP);
+        ns.x = bedWall === "W" ? nfp.w / 2 + GAP : roomW - nfp.w / 2 - GAP;
+      }
     });
   } else {
     for (const ns of stands) snapToWall(ns, of(ns)!, nearestWall(ns, roomW, roomD), roomW, roomD);
