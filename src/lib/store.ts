@@ -1041,7 +1041,7 @@ const _dev_expose_store = (s: unknown) => {
 
 // 当前持久化 schema 版本。导入 JSON 回灌 localStorage 时必须打这个版本号，
 // 否则 zustand 会从 0 开始跑迁移链——其中 v0→v1 会把门窗整组抹成默认值。
-export const PERSIST_VERSION = 9;
+export const PERSIST_VERSION = 10;
 
 // 内置默认方案的版本号。存档里会戳上这个值。当老存档的戳 < 此值时，迁移会
 // 把「最新完备默认方案」灌进去（详见 migrate 的 v7→v8）。
@@ -1062,7 +1062,7 @@ export const useDesignerStore = create<DesignerStore>()(
       floorPlans: __defaultProject.floorPlans,
       activeRoom: "living",
       viewMode: "3d",
-      showCompass: true,
+      showCompass: false,
       selectedInstanceId: null,
       selectedInstanceIds: [],
       doorOpenByRoom: {},
@@ -3983,6 +3983,12 @@ export const useDesignerStore = create<DesignerStore>()(
           } else {
             console.info("[home-designer] persist v7 → v8 (default already current; kept user data)");
           }
+        }
+        if (persistedVersion < 10) {
+          // v9 → v10: NSWE 方位标识默认隐藏。老存档里多是开着的 —— 一次性
+          // 复位到新默认（隐藏）；用户需要时仍可用顶栏开关打开（之后会持久化）。
+          (state as { showCompass?: boolean }).showCompass = false;
+          console.info("[home-designer] migrated persist v9 → v10 (NSWE compass hidden by default)");
         }
         return state as unknown as DesignerStore;
       },
