@@ -1620,7 +1620,9 @@ const CAFE_SET: ProjectTemplate = {
         // 2026-07 按用户实景固化：客厅拉成凸字形（兜着厨房/卫生间两缺口），
         // 走廊 = 沿街露天座位区（四面墙隐藏 = 骑楼人行道）。
         // 西北后场（kitchen 语义=厨房+库房；后场隐私 → 实墙）
-        { room: "kitchen",  x: 0,   y: 0,   width: 280,  depth: 260, exteriorStyle: "concrete" },
+        // 2026-07 用户在后场北墙加了一扇推拉窗（导出方案固化）——临街采光，透见红色饮料柜。
+        { room: "kitchen",  x: 0,   y: 0,   width: 280,  depth: 260, exteriorStyle: "concrete",
+          windows: [{ wall: "N", pos: 70, len: 112 }] },
         // 大堂（L 形，多边形 room-local cm；西北缺口被厨房填占；
         // 临街玻璃幕墙 + 南墙 160cm 法式对开大门）
         { room: "living",   x: 9,   y: 13,  width: 1179, depth: 592,
