@@ -721,6 +721,11 @@ export const BRAND_NAMES_EN: Record<string, string> = {
   "屋面绿化":     "Rooftop Greenery",
   "楼梯定制":     "Custom Staircase",
   "绿能光伏":     "Solar PV",
+  // ── 2026-07 补全:家具中文品牌 ──
+  "品质家居": "Quality Home",
+  "片场道具": "Set Prop",
+  "示意": "Placeholder",
+  "片场群演": "Set Extras",
 };
 
 export function getFurnitureNameEn(id: string): string | undefined {
