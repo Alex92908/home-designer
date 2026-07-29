@@ -14,7 +14,6 @@ import { MaterialItem, FurnitureItem, StyleTag } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 import { formatUnitPrice, formatPrice } from "@/lib/currency";
-import { useCatalogThumbnail } from "@/lib/catalogThumbnails";
 
 // ─── Material card ─────────────────────────────────────────
 function MatCard({ item }: { item: MaterialItem }) {
@@ -78,8 +77,6 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
   const locale = useLocale();
   const displayName = locale === "en" ? (getFurnitureNameEn(item.id) ?? item.name) : item.name;
   const displayBrand = locale === "en" ? getBrandNameEn(item.brand) : item.brand;
-  // 有 GLB 的家具：离屏烤一张真实预览图替掉 emoji（烤好前先显示 emoji）。
-  const thumb = useCatalogThumbnail(item.model3d?.url, item.model3d?.recolor);
 
   return (
     <button
@@ -100,16 +97,6 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
       }
       title={displayName}
     >
-      <div
-        className="w-full h-9 rounded-lg flex items-center justify-center text-lg overflow-hidden"
-        style={{ background: thumb ? "var(--ds-surface-2)" : item.color }}
-      >
-        {thumb ? (
-          <img src={thumb} alt="" className="w-full h-full object-contain" draggable={false} />
-        ) : (
-          <span style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.3))" }}>{item.icon}</span>
-        )}
-      </div>
       <span className="text-[11px] font-semibold leading-tight line-clamp-1" style={{ color: "var(--ds-text)" }}>
         {displayName}
       </span>
