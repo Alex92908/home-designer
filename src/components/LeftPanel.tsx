@@ -14,6 +14,7 @@ import { MaterialItem, FurnitureItem, StyleTag } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 import { formatUnitPrice, formatPrice } from "@/lib/currency";
+import { useCatalogThumbnail } from "@/lib/catalogThumbnails";
 
 // ─── Material card ─────────────────────────────────────────
 function MatCard({ item }: { item: MaterialItem }) {
@@ -77,6 +78,8 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
   const locale = useLocale();
   const displayName = locale === "en" ? (getFurnitureNameEn(item.id) ?? item.name) : item.name;
   const displayBrand = locale === "en" ? getBrandNameEn(item.brand) : item.brand;
+  // 只在有真实 3D 预览图时显示缩略图块；没有的（emoji 占位）不再渲染色块。
+  const thumb = useCatalogThumbnail(item.model3d?.url, item.model3d?.recolor);
 
   return (
     <button
@@ -97,6 +100,14 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
       }
       title={displayName}
     >
+      {thumb && (
+        <div
+          className="w-full h-9 rounded-lg overflow-hidden"
+          style={{ background: "var(--ds-surface-2)" }}
+        >
+          <img src={thumb} alt="" className="w-full h-full object-contain" draggable={false} />
+        </div>
+      )}
       <span className="text-[11px] font-semibold leading-tight line-clamp-1" style={{ color: "var(--ds-text)" }}>
         {displayName}
       </span>
