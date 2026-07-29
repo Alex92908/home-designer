@@ -1,7 +1,7 @@
 import attribution from "@/data/attribution.json";
 
 export const metadata = {
-  title: "素材致谢 · 筑雅 ZHUYA",
+  title: "素材致谢 · ZHUYA",
   description: "筑雅 ZHUYA 使用的开源 3D 模型与素材来源、作者与许可。",
   alternates: { canonical: "/credits" },
 };

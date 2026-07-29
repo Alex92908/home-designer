@@ -21,15 +21,15 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
-    siteName: "筑雅 ZHUYA",
-    title: "筑雅 ZHUYA · AI 一句话设计你的家",
+    siteName: "ZHUYA",
+    title: "ZHUYA",
     description: "AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
     url: SITE_URL,
     locale: "zh_CN",
   },
   twitter: {
     card: "summary_large_image",
-    title: "筑雅 ZHUYA · AI 一句话设计你的家",
+    title: "ZHUYA",
     description: "AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
   },
   // 站长验证码（无需改代码，按需在 Vercel 环境变量里填，未设则不渲染该标签）：
