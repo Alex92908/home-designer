@@ -8301,15 +8301,10 @@ export default function FloorPlanBuilding({
                 && (curtainWall || !(!insideBuilding && (floorPlans[fi]?.enabledRooms ?? []).some(r => glassRooms.has(`${fi}:${r}`))))
                 && placedItems
                 .filter(p => {
-                  // Curtains: hide in low-LOD 效果图 ONLY when the facade is
-                  // opaque (legacy isGlassVilla / punched-window) — they'd be
-                  // invisible behind a solid wall anyway. In curtain-wall mode
-                  // the glass is see-through, so curtains SHOULD show through it
-                  // (user request). Walkthrough always renders them.
-                  if (!insideBuilding && !curtainWall) {
-                    const fItem = getFurnitureById(p.furnitureId);
-                    if (fItem?.category === "curtain") return false;
-                  }
+                  // 窗帘:曾在「外观图 + 非幕墙」下整体隐藏（以为躲在实墙后看不见）。
+                  // 但窗帘恰恰挂在窗口处——实墙开窗(punched-window)后透过窗户就能
+                  // 看到窗帘（用户实拍:外观图窗户里没帘、漫游/室内却有）。实墙段本就
+                  // 被外墙自然遮挡、窗口处正确透出，故不再特判隐藏，与漫游/室内一致。
                   // 外观图里，**非幕墙建筑**(实墙/punched-window)的天花吊挂件
                   // (吊灯/吸顶灯)不渲染：实墙楼从外面本就不看室内天花，这些
                   // mountCeiling 件定位在近天花高度、屋顶剖切后会浮在屋顶外空中
