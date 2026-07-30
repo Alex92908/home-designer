@@ -128,6 +128,8 @@ export const FURNITURE_NAMES_EN: Record<string, string> = {
   "dog-large":              "Large Dog",
   "dog-small":              "Small Dog",
   "cat":                    "Cat",
+  "cat-curious":            "Cat (Curious)",
+  "cat-lounge":             "Cat (Lounging)",
   "cat-tower":              "Cat Tree",
   "dog-house":              "Pet House",
   "rabbit":                 "Rabbit",
