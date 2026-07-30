@@ -37,17 +37,18 @@
               "description": "天然橡木，纹理清晰耐用"
             },
             "light": {
-              "id": "light-recessed",
-              "name": "嵌入筒灯（组）",
+              "id": "light-ring-modern",
+              "name": "现代环形吊灯",
               "brand": "灯饰",
-              "price": 320,
-              "unit": "元/组",
+              "price": 1280,
+              "unit": "元/件",
               "category": "light",
-              "color": "#FFF0C8",
+              "color": "#FFE8A8",
               "tags": [
-                "现代"
+                "现代",
+                "轻奢"
               ],
-              "description": "4 只嵌入式筒灯散布天花"
+              "description": "LED 圆环 + 金属支架"
             }
           },
           "placedItems": [
@@ -65,15 +66,6 @@
               "furnitureId": "rug-nordic-geo",
               "x": 290,
               "z": 160,
-              "rotation": 90,
-              "scaleW": 1,
-              "scaleD": 1
-            },
-            {
-              "instanceId": "tpl_living_2_coffee-marble-rect",
-              "furnitureId": "coffee-marble-rect",
-              "x": 355,
-              "z": 197.5,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1
@@ -101,7 +93,7 @@
               "furnitureId": "artwork-abstract",
               "x": 637.5,
               "z": 95.02595831428135,
-              "rotation": 90,
+              "rotation": 270,
               "scaleW": 1,
               "scaleD": 1
             },
@@ -113,25 +105,11 @@
               "instanceId": "tpl_living_6_sofa-fabric-gray"
             },
             {
-              "furnitureId": "curtain-drape",
-              "x": -90,
-              "z": 217.5,
-              "rotation": 90,
-              "instanceId": "tpl_living_7_curtain-drape"
-            },
-            {
               "furnitureId": "plant-rubber-tree",
               "x": 622.7006747547806,
               "z": 448,
               "rotation": 0,
               "instanceId": "tpl_living_8_plant-rubber-tree"
-            },
-            {
-              "furnitureId": "sideboard-walnut",
-              "x": 340,
-              "z": 9,
-              "rotation": 0,
-              "instanceId": "tpl_living_9_sideboard-walnut"
             },
             {
               "instanceId": "enrich_living_1_appliance-robot-vacuum",
@@ -156,8 +134,8 @@
             {
               "instanceId": "enrich_living_3_decor-book-stack",
               "furnitureId": "decor-book-stack",
-              "x": 433,
-              "z": 200,
+              "x": 422.80078125,
+              "z": 180.49609375,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -174,28 +152,6 @@
               "scaleD": 1,
               "scaleH": 1,
               "elevationY": 42
-            },
-            {
-              "instanceId": "deep_living_205_decor-books-pile",
-              "furnitureId": "decor-books-pile",
-              "x": 351,
-              "z": 11,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 85
-            },
-            {
-              "instanceId": "deep_living_206_decor-camera-slr",
-              "furnitureId": "decor-camera-slr",
-              "x": 396,
-              "z": 18,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 85
             },
             {
               "instanceId": "deep_living_208_elec-hifi",
@@ -261,8 +217,8 @@
             {
               "instanceId": "deep2_living_320_decor-tea-set",
               "furnitureId": "decor-tea-set",
-              "x": 400,
-              "z": 200,
+              "x": 423.93359375,
+              "z": 215.99609375,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -272,8 +228,8 @@
             {
               "instanceId": "deep2_living_321_decor-fruit-bowl",
               "furnitureId": "decor-fruit-bowl",
-              "x": 406,
-              "z": 235,
+              "x": 434.16796875,
+              "z": 270.25,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -308,6 +264,36 @@
               "x": 594,
               "z": 226.6230281207133,
               "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_2_l0unx",
+              "furnitureId": "curtain-brown-sheer",
+              "x": -86.45703125,
+              "z": 213.96484375,
+              "rotation": 90,
+              "scaleW": 0.65,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_3_lwg3n",
+              "furnitureId": "coffee_table-marble-lg",
+              "x": 371.03515625,
+              "z": 201.20703125,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_6_liif1",
+              "furnitureId": "cat",
+              "x": 231.72265625,
+              "z": 12.62109375,
+              "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -4513,7 +4499,6 @@
     "paths": []
   },
   "exterior": {
-    "preset": "glass-curtain",
     "roofStyle": "flat",
     "roofColor": "#3A3A3A",
     "wallMaterial": "render",
@@ -4867,7 +4852,7 @@
         }
       ]
     },
-    "facadeSystem": "curtain-wall",
+    "facadeSystem": "punched-window",
     "transparentExterior": true,
     "glassShellColor": "#AEC4D2",
     "glassSpandrelColor": "#EDEAE3",
@@ -4875,15 +4860,15 @@
     "glassOpacity": 1,
     "entranceFrameColor": "#15171B",
     "woodSoffit": true,
-    "facadeGlass": true
+    "facadeGlass": false
   },
-  "budget": 350000,
+  "budget": 150000,
   "customRoomMeta": {},
   "customFurniture": [],
   "scores": {
-    "style": 56,
+    "style": 57,
     "space": 68,
-    "light": 95,
+    "light": 93,
     "dominantStyle": "现代"
   },
   "blueprint": {
@@ -4895,5 +4880,5 @@
     "offsetY": 0,
     "scale": 1
   },
-  "savedAt": "2026-07-07T22:55:30.589Z"
+  "savedAt": "2026-07-30T00:28:47.452Z"
 }
