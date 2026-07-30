@@ -887,6 +887,11 @@ export interface FurnitureItem {
      *  多余部件——自带凳的吧台/桌、自带背景墙的窗帘等（名字看 GLB 的 mesh/node，
      *  如 Sketchfab 导出的 "Object_0"）。剔除后 fit 只按剩余部件缩放。 */
     dropMeshNames?: string[];
+    /** 漫游/厚墙渲染时沿朝向向室内的额外偏移（cm）。用于「屏幕内凹」的贴墙件
+     *  （曲面/平板电视）：效果图是 0 厚度平面墙、屏幕在墙前正常；漫游是 10cm 厚
+     *  盒子墙，凹进的屏幕中心落进墙里被深度遮挡、只剩边框。厚墙渲染路径把电视沿
+     *  朝向推出这么多让屏幕清出墙面；效果图不加此偏移（保持贴墙）。 */
+    wallClearanceCm?: number;
   };
 }
 

@@ -3131,7 +3131,7 @@ function SignboardMesh({ w, d, h, color, label }: { w: number; d: number; h: num
   );
 }
 
-export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: PlacedItem; def: RoomDef; roomW: number; roomD: number; room?: RoomType }) {
+export function PlacedItemMesh({ placed, def, roomW, roomD, room, wallClearance = false }: { placed: PlacedItem; def: RoomDef; roomW: number; roomD: number; room?: RoomType; wallClearance?: boolean }) {
   // 内置家具走静态 FURNITURE（getFurnitureById）；用户导入的家具改为
   // 响应式订阅 store.customFurniture —— 它是持久化状态，刷新后随 store
   // rehydrate 立即可用，且变化会触发重渲染。之前只查模块级 _customItems
@@ -3149,9 +3149,15 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room }: { placed: Pl
   const roomWindows = useDesignerStore(s => s.floorPlans[activeFloor]?.roomWindows?.[roomKey] ?? EMPTY_WINDOWS);
   const doorWall    = useDesignerStore(s => s.floorPlans[activeFloor]?.roomDoorWall?.[roomKey] ?? "S");
 
-  // Convert floor plan cm coords to 3D world units using actual room dimensions
-  const x3d = placed.x / 100 - roomW / 2;
-  const z3d = placed.z / 100 - roomD / 2;
+  // Convert floor plan cm coords to 3D world units using actual room dimensions.
+  // 厚墙渲染路径（漫游/外观，wallClearance=true）对「屏幕内凹」的贴墙电视沿朝向
+  // 向室内偏移 model3d.wallClearanceCm，让凹进的屏幕中心清出 10cm 厚墙、不被深度
+  // 遮挡（实测根因：曲面电视凹面屏中心落在墙里→只剩边框）。效果图不传此标志，保持贴墙。
+  // 朝向向量 = (sin rotY, cos rotY)：rotation 0=+Z(N墙朝室内)、90=+X、180=-Z、270=-X。
+  const _clrM = (wallClearance && item?.model3d?.wallClearanceCm) ? item.model3d.wallClearanceCm / 100 : 0;
+  const _clrRot = ((placed.rotation ?? 0) * Math.PI) / 180;
+  const x3d = placed.x / 100 - roomW / 2 + Math.sin(_clrRot) * _clrM;
+  const z3d = placed.z / 100 - roomD / 2 + Math.cos(_clrRot) * _clrM;
 
   // ── 台面吸附（两端）──
   // ① 落地家具（elevationY=0）把自己「实测顶面 + 占地」登记进注册表；

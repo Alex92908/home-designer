@@ -4656,7 +4656,7 @@ function HouseFurnitureLayer({ insideBuilding }: { insideBuilding: boolean }) {
                   return (
                     <Suspense key={pi.instanceId} fallback={<group userData={{ notWalkable }}>{proxyBox}</group>}>
                       <group position={[0, rugLiftY, 0]} userData={{ notWalkable }}>
-                        <PlacedItemMesh placed={pi} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} />
+                        <PlacedItemMesh placed={pi} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} wallClearance />
                       </group>
                     </Suspense>
                   );

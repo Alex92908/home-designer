@@ -2240,7 +2240,7 @@ function RooftopDecorations({
             {/* 移动端默认跳过天台家具 GLB；开完整细节后加载。 */}
             {mobileFurnitureGlbAllowed(rt, glbRoom) && items.map((p) => (
               <Suspense key={p.instanceId} fallback={null}>
-                <PlacedItemMesh placed={p} def={ROOM_DEFS[rt]} roomW={rWm} roomD={rDm} room={rt} />
+                <PlacedItemMesh placed={p} def={ROOM_DEFS[rt]} roomW={rWm} roomD={rDm} room={rt} wallClearance />
               </Suspense>
             ))}
             {/* Rooftop ambient glow — emissive-only, no pointLight for perf */}
@@ -8381,7 +8381,7 @@ export default function FloorPlanBuilding({
                     return (
                       <Suspense key={p.instanceId} fallback={proxyBox}>
                         <group position={[0, rugLiftY, 0]}>
-                          <PlacedItemMesh placed={modP} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} />
+                          <PlacedItemMesh placed={modP} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} wallClearance />
                         </group>
                       </Suspense>
                     );
