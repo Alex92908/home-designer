@@ -2448,8 +2448,8 @@ function snapToSurface(roomPrefix: string, selfKey: string, x: number, z: number
 }
 
 function GltfFurniture({
-  url, scale, rotation, yOffset, recolor, w, d, h, fit, preRotX, preRotZ, dropMeshNames, onMeasured,
-}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile"; preRotX?: number; preRotZ?: number; dropMeshNames?: string[]; onMeasured?: (m: { topY: number; w: number; d: number }) => void }) {
+  url, scale, rotation, yOffset, recolor, w, d, h, fit, preRotX, preRotZ, dropMeshNames, selfLit, onMeasured,
+}: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile"; preRotX?: number; preRotZ?: number; dropMeshNames?: string[]; selfLit?: number; onMeasured?: (m: { topY: number; w: number; d: number }) => void }) {
   // 预旋转（度→弧度）：在测量包围盒 + fit 之前把「换轴/躺着」模型扶正。
   const preRX = ((preRotX ?? 0) * Math.PI) / 180;
   const preRZ = ((preRotZ ?? 0) * Math.PI) / 180;
@@ -2498,6 +2498,19 @@ function GltfFurniture({
           if (sm?.transparent && sm.depthWrite === false) {
             sm.depthWrite = true;
             sm.needsUpdate = true;
+          }
+          // 自发光（model3d.selfLit）：把自身 base-color 贴图接到 emissiveMap，让
+          // 贴图很暗、又摆在背光暗兜里的模型（后吧酒架）自透出细节，不糊死看不见。
+          // 玻璃/高透材质跳过（瓶身发光会过曝）。仅当材质有 map 时才接（纯色件无意义）。
+          if (selfLit && sm && sm.map && sm.emissive) {
+            const phys = sm as unknown as { transmission?: number };
+            const isGlass = (phys.transmission ?? 0) > 0.1 || (sm.transparent && sm.opacity < 0.6);
+            if (!isGlass) {
+              sm.emissiveMap = sm.map;
+              sm.emissive.setRGB(1, 1, 1);
+              sm.emissiveIntensity = selfLit;
+              sm.needsUpdate = true;
+            }
           }
         }
       });
@@ -2595,7 +2608,7 @@ function GltfFurniture({
     const s = Math.min(w / nx, h / size.y, d / nz) * trim;
     const only = buildUniform(s);
     return { list: [{ obj: only.obj, x: 0 }], measured: { topY: size.y * s, w: nx * s, d: nz * s } };
-  }, [scene, w, d, h, scale, recolor, fit, rotation, preRX, preRZ, dropSet]);
+  }, [scene, w, d, h, scale, recolor, fit, rotation, preRX, preRZ, dropSet, selfLit]);
 
   // 实测尺寸上报（供台面吸附注册表使用）。ref 隔离回调身份，只在实测值
   // 变化时触发。
@@ -3240,6 +3253,7 @@ class GltfFurnitureWithFallback extends Component<
         preRotX={item.model3d.preRotX}
         preRotZ={item.model3d.preRotZ}
         dropMeshNames={item.model3d.dropMeshNames}
+        selfLit={item.model3d.selfLit}
         w={w} d={d} h={h}
         onMeasured={onMeasured}
       />
