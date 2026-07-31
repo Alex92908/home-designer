@@ -22,7 +22,7 @@ import React, { useMemo, useCallback, useEffect, useState, useRef, Suspense } fr
 import { shrinkSceneTexturesForMobile, mobileFurnitureGlbAllowed } from "@/lib/device";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { Html, useGLTF, Clone, Instances, Instance, Text } from "@react-three/drei";
+import { Html, useGLTF, Clone, Instances, Instance } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
 import { overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem, resolveFacadeLayer, resolveFaceOpacity, isExteriorWallSide } from "@/lib/types";
@@ -33,6 +33,7 @@ import { InteriorRoomDetail } from "./InteriorRoomDetail";
 import { PlacedItemMesh, LightFixtureInner, ExteriorDecorItem } from "./RoomCanvas";
 import { STAIR_FURNITURE_IDS } from "./Staircase";
 import { WalkthroughDoor3D } from "@/components/walkthrough/WalkthroughDoor3D";
+import { WallCompassDecal } from "@/components/shared/WallCompassDecal";
 import { StyledWindow } from "@/components/shared/StyledWindow";
 import {
   WINDOW_GLASS_COLOR, WINDOW_FRAME_COLOR,
@@ -1714,8 +1715,12 @@ function FlatRoof({
           </mesh>
         </>
       ))}
-      {/* 屋顶边缘影线（同样绕开楼梯井开口） */}
-      {carve(W + OV * 2 + 0.005, D + OV_S + OV + 0.005, 0, -(OV_S - OV) / 2).map((p) => (
+      {/* 屋顶边缘影线（同样绕开楼梯井开口）。
+          ⚠️ 这条用的是外接矩形 carve(W+OV*2)——异形/错层楼(传了 footprints，主屋面板
+          已按真实逐房间轮廓出板)会让这条矩形影线在凹处伸出建筑外，成一块悬挑薄板
+          (用户实测东北楼梯间处那块 0.01m 薄板伸到 x=10.8)。故仅矩形楼(无 footprints)
+          才画这条矩形影线；异形楼靠主屋面板本身的边即可。 */}
+      {!(footprints && footprints.length > 0) && carve(W + OV * 2 + 0.005, D + OV_S + OV + 0.005, 0, -(OV_S - OV) / 2).map((p) => (
         <mesh key={p.key} position={[p.x, roofY - 0.005, p.z]}>
           <boxGeometry args={[p.w, 0.01, p.d]} />
           <meshStandardMaterial color="#D8D4CE" roughness={0.85} />
@@ -3503,13 +3508,23 @@ export default function FloorPlanBuilding({
     });
   }, [floorPlans, planOffset, W, D]);
 
+  // 外观视图整栋下移 0.45m 贴地：楼板原在 y=0、庭院地面在 y≈-0.5 → 一层门窗离地 0.5m、
+  // 看着"楼层很高"(用户)。下移到接近地面(配合墙色墙脚基座落地)。
+  // ⚠️ 仅外观(!insideBuilding)下移；漫游(insideBuilding)保持 y=0，避免打乱漫游相机/
+  // 地面吸附/家具对齐(它们都以楼板 y=0 为基准)。
   return (
-    <group position={[worldX, 0, worldZ]} rotation={[0, worldRot, 0]}>
-      {/* 地面基座 — 浅色石灰石平台（建筑基层，按簇）*/}
-      {baseClusters.map((c, ci) => (
-        <mesh key={`base-${ci}`} position={[c.cx, -0.04, c.cz]} receiveShadow>
-          <boxGeometry args={[c.w + 0.55, 0.10, c.d + 0.55]} />
-          <meshStandardMaterial color="#D4CCBA" roughness={0.72} metalness={0.03} envMapIntensity={0.35} />
+    <group position={[worldX, insideBuilding ? 0 : -0.45, worldZ]} rotation={[0, worldRot, 0]}>
+      {/* 地面基座（建筑基层，按簇）——**与外墙同色、齐平**，从庭院地面(y≈-0.5)长到
+          楼板线(y=0.01)。这样外墙看起来一直延伸到地面(建筑长在地上):既不悬空(旧设计
+          在楼板下留 0.4m 空当当"悬浮盒子",用户嫌是基座缝),也不是一道突兀的厚浅色地板
+          (我上一版加厚+浅色+外扩 0.55 → 用户嫌厚)。齐平同色 = 就是墙脚,不显基座。
+          底部落到 -0.51(略入地面)封住空当。
+          ⚠️ 仅外观(!insideBuilding)渲染:基座顶面升到 y=0.045(为盖住楼板边)会盖过
+          室内橡木地板 → 漫游里地板变白(用户)。基座是外观专用元素,漫游不需要。 */}
+      {!insideBuilding && baseClusters.map((c, ci) => (
+        <mesh key={`base-${ci}`} position={[c.cx, -0.225, c.cz]} receiveShadow>
+          <boxGeometry args={[c.w + 0.04, 0.57, c.d + 0.04]} />
+          <meshStandardMaterial color={wallColor} roughness={0.82} metalness={0.01} />
         </mesh>
       ))}
 
@@ -3626,7 +3641,10 @@ export default function FloorPlanBuilding({
           「通透玻璃幕墙落地」的卖点冲突（用户：基座暗带挡住地面家具）。
           故 curtainWall 模式下把基座压成贴地的 2cm 薄压边——保留干净的
           落地线，但不再遮挡室内地面家具。非幕墙(实墙)建筑保留原两段式基座。 */}
-      {!insideBuilding && ((curtainWall || (exterior.transparentExterior ?? true)) ? (
+      {/* ⛔ 已停用：这道基座压边/勒脚是「悬浮盒子」设计的装饰线(近黑 2cm 压边外凸 3cm，
+          或 0.14m 浅石勒脚)。建筑已改为墙色基座直接落地(见上方 baseClusters 墙脚)，
+          再叠这条压边就成一道显眼的深色/浅色基座带(用户:那么厚的地板/还是一样)。 */}
+      {false && !insideBuilding && ((curtainWall || (exterior.transparentExterior ?? true)) ? (
         /* 幕墙 / 透明立面：贴地薄压边（高 2cm，顶面 0.02m，低于地板 0.025）。
            透明立面(默认)能透过门窗看到室内，0.4m 两段式深色基座会从门窗下方
            露出、像地板下多了两层暗带(用户：普通立面地板也有两层/暗带)，故同样
@@ -4862,9 +4880,13 @@ export default function FloorPlanBuilding({
           });
       })}
 
-      {/* ── 3. 层间楼板（室内模式下隐藏）── */}
-      {/* 楼梯井贯穿楼板，用4块矩形绕开开口，避免堵住楼梯 */}
-      {!insideBuilding && (() => {
+      {/* ── 3. 层间楼板 ── */}
+      {/* 楼梯井贯穿楼板，用4块矩形绕开开口，避免堵住楼梯。
+          曾经 `!insideBuilding` 把楼板在漫游里藏了 → 楼层间那圈 0.2m(SLAB_T)结构空腔
+          (floor1 墙顶 y=3.0 ↔ floor2 墙底 y=3.2)完全敞开,从外/漫游斜看直接看穿到室内
+          (用户:接缝太大)。楼板恰好嵌在室内天花(y≈2.98)与上层地板(y≈3.21)之间的空腔里、
+          不 z-fight,故漫游里也渲染以封住这圈缝。 */}
+      {(() => {
         // 楼梯井位置（取 fi=0 的楼梯间，各层水平位置相同）
         const stairEntry = interiorRooms.find(r => r.isStair && r.fi === 0);
         // 层间楼板颜色：略深于外墙，产生分层阴影感（precast concrete）
@@ -5854,13 +5876,24 @@ export default function FloorPlanBuilding({
           // 用 interiorRooms 里已算好的 shapePts（以房间中心为原点的米）平移回
           // 建筑中心坐标系即可，不必再从 roomLayout 重推一遍。
           footprints={(() => {
-            const f0 = interiorRooms.filter(r => r.fi === 0);
-            if (!f0.some(r => r.shapePts)) return null;
-            return f0.map(r => r.shapePts
+            // 屋面按**真实外轮廓逐房间出板**，而非 mainRoofBounds 的「跨层并集外接
+            // 矩形」——错层/L 形楼(如本别墅:一楼带车库更宽、顶层更窄)用矩形板会在
+            // 凹处悬挑出黑舌头(用户实测东北楼梯间处)。
+            // ① 取**顶层活动楼层**(usedFloors-1)的房间轮廓:屋面/天台板正是这层的顶,
+            //    且只在 floor0 的车库天然被排除(不会被主屋面盖到 6.2m 高处)。
+            // ② 坐标换算到 FlatRoof 组局部系:组挂在 [mainRoofBounds.cx, mainRoofBounds.cz]
+            //    (本例 cx≈3.5),而 r.cx/r.cz 是建筑中心坐标 → 必须减去组偏移,否则整块
+            //    屋面平移错位(footprints 分支原来漏减，是潜在 bug，一并修正)。
+            if (!mainRoofBounds) return null;
+            const topFi = usedFloors - 1;
+            const top = interiorRooms.filter(r => r.fi === topFi);
+            if (top.length === 0) return null;
+            const ox = mainRoofBounds.cx, oz = mainRoofBounds.cz;
+            return top.map(r => (r.shapePts
               ? r.shapePts.map(([sx, sz]) => [r.cx + sx, r.cz + sz] as [number, number])
-              // 该层里的矩形房间也要出板，否则只有异形房间有屋顶
               : [[r.cx - r.rW / 2, r.cz - r.rD / 2], [r.cx + r.rW / 2, r.cz - r.rD / 2],
-                 [r.cx + r.rW / 2, r.cz + r.rD / 2], [r.cx - r.rW / 2, r.cz + r.rD / 2]] as Array<[number, number]>);
+                 [r.cx + r.rW / 2, r.cz + r.rD / 2], [r.cx - r.rW / 2, r.cz + r.rD / 2]] as Array<[number, number]>
+            ).map(([x, z]) => [x - ox, z - oz] as [number, number]));
           })()}
           // 女儿墙沿真实外周（异形楼才需要；矩形楼传 null 走原来的四边写死）。
           // 用 allSegs 而不是逐房间多边形：allSegs 已去重且剔掉了内墙，
@@ -7736,33 +7769,10 @@ export default function FloorPlanBuilding({
               let hash = 0;
               for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
               const col = palette[hash % palette.length];
-              // Bumped from 0.20 → 0.32 so labels are legible at typical
-              // walkthrough distance (3–6 m). Plate scales with font.
-              const fontSize = 0.32;
-              const plaqueSize = fontSize * 1.8;
-              const common = {
-                fontSize,
-                color: col,
-                outlineWidth: fontSize * 0.10,
-                outlineColor: '#ffffff',
-                anchorX: 'center' as const,
-                anchorY: 'middle' as const,
-              };
-              // Backing plate occludes anything behind (e.g. the neighbour
-              // room's mirrored text on a shared wall). renderOrder=50 makes
-              // the decal group composite AFTER walls within the same depth
-              // bucket so it wins z-sorting at sub-mm distances.
-              const Decal = ({
-                letter, pos, rot,
-              }: { letter: string; pos: [number, number, number]; rot: [number, number, number] }) => (
-                <group position={pos} rotation={rot} renderOrder={50}>
-                  <mesh position={[0, 0, -0.01]} raycast={() => null}>
-                    <planeGeometry args={[plaqueSize, plaqueSize]} />
-                    <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} toneMapped={false} />
-                  </mesh>
-                  <Text {...common}>{letter}</Text>
-                </group>
-              );
+              // 外观图方位标:远看 32cm、分房间配色。方牌+字母走共享 WallCompassDecal
+              // (结构与效果图同一份、不再各写一套);renderOrder 50 让方牌在同深度桶里
+              // 压过相邻墙的镜像字。视觉参数(字号/牌比例/配色)按远看距离在此传。
+              const P = { color: col, fontSize: 0.32, plaqueRatio: 1.8, outlineRatio: 0.10, plateZ: -0.01, renderOrder: 50 } as const;
               // Anchor strategy: try 25% from the NW corner first, but if
               // the resulting decal would land inside a door/window hole
               // contributed by EITHER room sharing this wall (after the
@@ -7836,13 +7846,13 @@ export default function FloorPlanBuilding({
               return (
                 <group>
                   {/* N wall: back, -Z, faces +Z */}
-                  <Decal letter="N" pos={[xQ_N, lblY, cz - rD / 2 + eps]} rot={[0, 0, 0]} />
+                  <WallCompassDecal letter="N" pos={[xQ_N, lblY, cz - rD / 2 + eps]} rot={[0, 0, 0]} {...P} />
                   {/* S wall: front, +Z, faces -Z */}
-                  <Decal letter="S" pos={[xQ_S, lblY, cz + rD / 2 - eps]} rot={[0, Math.PI, 0]} />
+                  <WallCompassDecal letter="S" pos={[xQ_S, lblY, cz + rD / 2 - eps]} rot={[0, Math.PI, 0]} {...P} />
                   {/* W wall: left, -X, faces +X */}
-                  <Decal letter="W" pos={[cx - rW / 2 + eps, lblY, zQ_W]} rot={[0, Math.PI / 2, 0]} />
+                  <WallCompassDecal letter="W" pos={[cx - rW / 2 + eps, lblY, zQ_W]} rot={[0, Math.PI / 2, 0]} {...P} />
                   {/* E wall: right, +X, faces -X */}
-                  <Decal letter="E" pos={[cx + rW / 2 - eps, lblY, zQ_E]} rot={[0, -Math.PI / 2, 0]} />
+                  <WallCompassDecal letter="E" pos={[cx + rW / 2 - eps, lblY, zQ_E]} rot={[0, -Math.PI / 2, 0]} {...P} />
                 </group>
               );
             })()}

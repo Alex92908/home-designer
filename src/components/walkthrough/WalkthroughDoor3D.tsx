@@ -19,6 +19,7 @@ import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import type { DoorStyle } from "@/lib/types";
+import { computeDoorTransform } from "@/lib/doorTransform";
 import { RollerShutterDoor } from "@/components/shared/RollerShutterDoor";
 
 // ─── glTF door panel (for wood_panel style) ─────────────────
@@ -59,12 +60,16 @@ function GltfDoorPanel({ doorW, doorH, exterior = false, onClick }: { doorW: num
     const size = new THREE.Vector3();
     box.getSize(size);
     if (size.x > 0 && size.y > 0 && size.z > 0) {
-      // Uniform scale by height. This preserves the door's natural
-      // width:height:depth ratio instead of stretching it to match our
-      // doorW × doorH (which distorts). Slight width mismatch is
-      // acceptable — a 75cm real door rendered as ~72cm is fine.
-      const s = doorH / size.y;
-      c.scale.setScalar(s);
+      // Fill the door opening: width→doorW, height→doorH. door_with_frame's
+      // own frame then lines the wall hole exactly. The earlier uniform
+      // height-scale left this slender GLB ~13% narrower than the opening →
+      // a visible gap between the GLB's frame and the surrounding jamb
+      // ("门洞比门宽太多"). The GLB aspect is close to a real door opening's,
+      // so the mild non-uniform stretch reads as a normal door; depth is
+      // scaled to the smaller factor to keep it from ballooning in-wall.
+      const sx = doorW / size.x;
+      const sy = doorH / size.y;
+      c.scale.set(sx, sy, Math.min(sx, sy));
       c.updateMatrixWorld(true);
       const box2 = new THREE.Box3().setFromObject(c);
       // Base at Y=0, X-centered, then shift right so left edge = hinge
@@ -79,11 +84,13 @@ function GltfDoorPanel({ doorW, doorH, exterior = false, onClick }: { doorW: num
   return (
     <group onClick={(e) => { e.stopPropagation(); onClick(); }}>
       {/* 正反面校正：door_with_frame.glb 雕花面朝 -z 导出，本工程约定门板 +z=室内。
-          绕竖向中轴翻 180° 使门面朝室内；铰链(父组 x=0)与摆位不变。见 RoomCanvas 同注。 */}
-      <group position={[doorW / 2, 0, 0]} rotation={[0, Math.PI, 0]}>
-        <group position={[-doorW / 2, 0, 0]}>
-          <primitive object={cloned} />
-        </group>
+          铰链在父组 x=0，门把手须在锁边(x≈doorW)。GLB 原生把手就在锁边侧。
+          曾用 180°Y 旋转翻正反面，但 Y 旋转会**左右镜像** → 把手被甩到铰链侧
+          (几何实测:门局部 handleX 从 0.58 变 0.22)。改用 scale z=-1 只翻正反面、
+          不镜像左右，把手留在原生锁边(handleX≈0.58)。GLB 已 z 居中,绕 z=0 翻转位置不变;
+          负缩放的正反面剔除由 three.js 按矩阵行列式自动翻正。 */}
+      <group scale={[1, 1, -1]}>
+        <primitive object={cloned} />
       </group>
     </group>
   );
@@ -119,6 +126,8 @@ export function WalkthroughDoor3D({
   frameColor = "#F0EEEA",
   handleColor = "#B8A060",
   outwardProtrude = 0,
+  wallInset = 0.08,
+  frameT = 0.08,
 }: {
   W: number; D: number; H: number;
   doorWall: "N" | "S" | "W" | "E";
@@ -130,6 +139,10 @@ export function WalkthroughDoor3D({
   frameColor?: string;
   /** Handle / knob metal color. Default '#B8A060' (brass). */
   handleColor?: string;
+  /** 门板贴墙内缩(米)：厚盒子墙(漫游/外观)0.08 / 薄平面墙(效果图)0.02。 */
+  wallInset?: number;
+  /** 门框料厚(米)：厚墙 0.08 / 薄墙 0.04。 */
+  frameT?: number;
   /** 把整扇门沿墙体外法线方向往外推的距离（米）。默认 0（室内漫游不动）。
    *  外观图用：门默认坐在墙内侧 8cm（D/2-0.08），落在墙体厚度后方 → 大白天
    *  斜视角下被墙挡住（实测关 depthTest 才看得到）。往外推到墙体前表面之外
@@ -179,66 +192,24 @@ export function WalkthroughDoor3D({
     }
   });
 
-  const doorW = doorLenCm / 100;
   const doorH = doorHCm / 100;
-  const doorPos = doorPosCm / 100;
-  const frameT = 0.08; // frame thickness
 
-  // Group positioning: put a parent group at the hinge line (inner-room
-  // side of the wall, at the door's left edge). All internal pieces are
-  // positioned relative to the hinge so rotating the group swings the door.
-  let groupPos: [number, number, number];
-  let groupRot: [number, number, number];
-  let hingeOffset: number; // direction the panel extends in local +X when closed
-  switch (doorWall) {
-    // OFFSET = 0.08 (vs 0.02 in shared/RoomDoor3D): pushes the panel
-    // PAST the 10cm-thick box wall so the door isn't buried in the slab.
-    // 0.08 means the group sits 7cm into the room from the boundary; with
-    // the panel at local z = -0.02 (or thickness 0.035), the panel front
-    // face lands ~2cm inside the room from the wall's interior face.
-    case "N": // back wall (z = -D/2)
-      groupPos = [doorPos - W / 2, 0, -D / 2 + 0.08];
-      groupRot = [0, 0, 0];
-      hingeOffset = 1;
-      break;
-    case "S": // front wall (z = +D/2)
-      // Rotate 180° around Y so door faces room interior (-Z).
-      groupPos = [-W / 2 + doorPos + doorW, 0, D / 2 - 0.08];
-      groupRot = [0, Math.PI, 0];
-      hingeOffset = 1;
-      break;
-    case "W":
-      groupPos = [-W / 2 + 0.08, 0, doorPos - D / 2];
-      groupRot = [0, Math.PI / 2, 0];
-      hingeOffset = 1;
-      break;
-    case "E":
-      groupPos = [W / 2 - 0.08, 0, -(doorPos - D / 2) - doorW];
-      groupRot = [0, -Math.PI / 2, 0];
-      hingeOffset = 1;
-      break;
-    default:
-      return null;
-  }
-
-  // 外观图：把整扇门沿墙体外法线往外推 outwardProtrude（米），使门凸出墙面、
-  // 不再被墙体厚度遮挡。每面墙的外法线方向不同（N=-Z, S=+Z, W=-X, E=+X）。
-  if (outwardProtrude !== 0) {
-    switch (doorWall) {
-      case "N": groupPos = [groupPos[0], groupPos[1], groupPos[2] - outwardProtrude]; break;
-      case "S": groupPos = [groupPos[0], groupPos[1], groupPos[2] + outwardProtrude]; break;
-      case "W": groupPos = [groupPos[0] - outwardProtrude, groupPos[1], groupPos[2]]; break;
-      case "E": groupPos = [groupPos[0] + outwardProtrude, groupPos[1], groupPos[2]]; break;
-    }
-  }
+  // 定位走共享真源 computeDoorTransform（wallInset：厚墙 0.08 / 薄墙 0.02；外观图
+  // outwardProtrude 让门凸出墙面）。W 墙翻转 + 角落 clamp 与效果图统一——修掉漫游/
+  // 外观里 W 墙门原本无翻转导致的错位(「关着的门 + 旁边空洞」)。
+  const _dt = computeDoorTransform(doorWall, W, D, doorPosCm, doorLenCm, wallInset, outwardProtrude);
+  if (!_dt) return null;
+  const { groupPos, groupRot, hingeOffset, doorW } = _dt;
 
   return (
     <group position={groupPos} rotation={groupRot}>
       {/* Door frame (stays fixed, inside the wall hole).
           幕墙玻璃门(glass_swing/glass_slide)不画自带门框 —— 它正好填满幕墙的一格,
           左右两侧由幕墙竖挺(mullion/钢筋)充当门框,上方由楼层横梁充当门楣。再画一圈
-          自带框就会和幕墙竖挺重叠成「双框」(用户:你没用红色位置的钢筋啊)。 */}
-      {!(doorStyle === "glass_swing" || doorStyle === "glass_slide" || doorStyle === "roller_shutter") && (<>
+          自带框就会和幕墙竖挺重叠成「双框」(用户:你没用红色位置的钢筋啊)。
+          wood_panel 用 door_with_frame.glb —— 自带完整门框且已缩放填满门洞,再画程序
+          框就成「双框」且比 GLB 宽 → 门洞比门宽的空当(用户实测)。故木门也跳过。 */}
+      {!(doorStyle === "wood_panel" || doorStyle === "glass_swing" || doorStyle === "glass_slide" || doorStyle === "roller_shutter") && (<>
       <mesh position={[doorW / 2, doorH + frameT / 2, 0]}>
         <boxGeometry args={[doorW + frameT * 2, frameT, 0.05]} />
         <meshStandardMaterial color={frameColor} roughness={0.6} />
@@ -447,17 +418,9 @@ export function WalkthroughDoor3D({
                     <GltfDoorPanel doorW={doorW} doorH={doorH} exterior={outwardProtrude > 0} onClick={() => onToggle()} />
                   </Suspense>
                 </GltfDoorFallback>
-                {/* Extra handle on both faces of the door so it's always
-                    visible regardless of which way the glTF asset was
-                    exported. Two small spheres + short stem. */}
-                <mesh position={[doorW - 0.1, doorH * 0.45, 0.035]}>
-                  <sphereGeometry args={[0.032, 14, 14]} />
-                  <meshStandardMaterial color={handleColor} metalness={0.85} roughness={0.25} />
-                </mesh>
-                <mesh position={[doorW - 0.1, doorH * 0.45, -0.035]}>
-                  <sphereGeometry args={[0.032, 14, 14]} />
-                  <meshStandardMaterial color={handleColor} metalness={0.85} roughness={0.25} />
-                </mesh>
+                {/* 门把手：门自带 GLB 已含锁边把手（scale z=-1 校正后落在开门侧），
+                    不再叠加程序球形把手 —— 旧的球形把手在锁边、GLB 把手被 Y 翻转甩到
+                    铰链侧，两者一左一右对不上（用户："把手没挨着门开的位置"）。 */}
               </>
             ) : (
               <ProceduralWoodDoor

@@ -26,6 +26,7 @@ import { getRoomDoors } from "@/lib/roomDoors";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
 const EMPTY_ROOM_STATE_GC: RoomState = { materials: {}, placedItems: [] };
 import { PlacedItemMesh, LightFixtureInner } from "./RoomCanvas";
+import { WalkthroughDoor3D } from "./walkthrough/WalkthroughDoor3D";
 import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
 import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
 import type { RoofStyle } from "@/lib/types";
@@ -195,6 +196,18 @@ function RoomGroup({
     [fpForDoors, room, W, D],
   );
 
+  // 方案 B：cardinal 墙上有门则挖洞（拆左右段）+ 洞里放共享 styled 门，
+  // 让全屋3D 的门也和效果图/漫游/外观一致（不再是简化木色门标）。
+  const doorsByCardinal = useMemo(() => {
+    const m: Partial<Record<"N" | "S" | "W" | "E", typeof doorList>> = {};
+    for (const d of doorList) {
+      if (d.wall === "N" || d.wall === "S" || d.wall === "E" || d.wall === "W") {
+        (m[d.wall] ??= [] as typeof doorList).push(d);
+      }
+    }
+    return m;
+  }, [doorList]);
+
   // Center of the room's bounding box, in world coords
   const cx = originX + W / 2;
   const cz = originZ + D / 2;
@@ -235,6 +248,46 @@ function RoomGroup({
           (w.cardinal && wallsHidden?.[w.cardinal] === true) ||
           (wallsHidden?.[`edge-${w.edgeIdx}`] === true);
         if (hidden) return null;
+        // 有门的 cardinal 墙：沿墙拆成「门洞之间」的实心段留出洞（短墙、门满高、无门楣）。
+        const doors = w.cardinal ? (doorsByCardinal[w.cardinal] ?? []) : [];
+        if (w.cardinal && doors.length) {
+          const wall = w.cardinal;
+          const halfAlong = (wall === "N" || wall === "S") ? W / 2 : D / 2;
+          const gaps = doors.map(d => {
+            const lenM = Math.max(0.4, (d.len ?? 90) * CM);
+            const c = (d.pos ?? 0) * CM + lenM / 2 - halfAlong; // 门中心（沿墙）
+            return [c - lenM / 2, c + lenM / 2] as [number, number];
+          }).sort((a, b) => a[0] - b[0]);
+          const segs: [number, number][] = [];
+          let cursor = -halfAlong;
+          for (const [g0, g1] of gaps) {
+            if (g0 > cursor) segs.push([cursor, g0]);
+            cursor = Math.max(cursor, g1);
+          }
+          if (cursor < halfAlong) segs.push([cursor, halfAlong]);
+          return (
+            <group key={i}>
+              {segs.map(([a, b], si) => {
+                const center = (a + b) / 2;
+                const len = b - a;
+                if (len < 0.01) return null;
+                const pos: [number, number, number] =
+                  wall === "N" ? [center, WALL_H / 2, -D / 2]
+                  : wall === "S" ? [center, WALL_H / 2, D / 2]
+                  : wall === "W" ? [-W / 2, WALL_H / 2, center]
+                  : [W / 2, WALL_H / 2, center];
+                const size: [number, number, number] =
+                  (wall === "N" || wall === "S") ? [len, WALL_H, WALL] : [WALL, WALL_H, len];
+                return (
+                  <mesh key={si} position={pos} castShadow receiveShadow>
+                    <boxGeometry args={size} />
+                    <meshStandardMaterial color={wallColor} roughness={0.85} />
+                  </mesh>
+                );
+              })}
+            </group>
+          );
+        }
         return (
           <mesh key={i} position={[w.cx, WALL_H / 2, w.cz]} rotation={[0, w.angle, 0]} castShadow receiveShadow>
             <boxGeometry args={[w.len, WALL_H, WALL]} />
@@ -243,32 +296,25 @@ function RoomGroup({
         );
       })}
 
-      {/* 门板（概览用可见门标）：只画 cardinal 面(N/S/E/W)的门；房间居中坐标系
-          与效果图同(N=-D/2, S=+D/2, W=-W/2, E=+W/2)，pos 北参照。隐藏的墙不画门。 */}
+      {/* 门：共享 styled 门组件（与效果图/漫游/外观同一套）；高度 clamp 到短墙 WALL_H，
+          wallInset=WALL/2 让门坐在洞的内面。全屋3D 概览不需要开合交互，isOpen 固定 false。 */}
       {doorList.map((d, di) => {
         const wall = d.wall;
         if (wall !== "N" && wall !== "S" && wall !== "E" && wall !== "W") return null;
         if (wallsHidden?.[wall] === true) return null;
-        const lenM = Math.max(0.4, (d.len ?? 90) * CM);
-        const posM = (d.pos ?? 0) * CM;
-        const dh = Math.min(WALL_H, (d.h ?? 240) * CM);
-        const along = wall === "N" || wall === "S"
-          ? posM + lenM / 2 - W / 2   // N/S: 沿 x, 从西端
-          : posM + lenM / 2 - D / 2;  // W/E: 沿 z, 从北端
-        const pos: [number, number, number] =
-          wall === "N" ? [along, dh / 2, -D / 2]
-          : wall === "S" ? [along, dh / 2, D / 2]
-          : wall === "W" ? [-W / 2, dh / 2, along]
-          : [W / 2, dh / 2, along];
-        const size: [number, number, number] =
-          wall === "N" || wall === "S"
-            ? [lenM, dh, WALL * 1.6]
-            : [WALL * 1.6, dh, lenM];
         return (
-          <mesh key={`door-${di}`} position={pos} castShadow receiveShadow>
-            <boxGeometry args={size} />
-            <meshStandardMaterial color="#8B6B47" roughness={0.7} metalness={0.02} />
-          </mesh>
+          <WalkthroughDoor3D
+            key={`door-${di}`}
+            W={W} D={D} H={WALL_H}
+            doorWall={wall}
+            doorPosCm={d.pos ?? 0}
+            doorLenCm={d.len ?? 90}
+            doorHCm={Math.min(d.h ?? 200, Math.round(WALL_H / CM))}
+            doorStyle={d.style ?? "wood_panel"}
+            isOpen={false}
+            onToggle={() => {}}
+            wallInset={WALL / 2}
+          />
         );
       })}
 

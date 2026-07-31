@@ -7112,7 +7112,9 @@ export default function HouseCanvas() {
         {!insideBuilding && (
           <hemisphereLight args={[theme.hemiSky, theme.hemiGround, theme.hemiIntensity]} />
         )}
-        <ambientLight intensity={insideBuilding ? 0.82 : theme.ambient} />
+        {/* 室内 ambient 向效果图(RoomCanvas 0.38)靠拢——原 0.82 叠强点光+HDR 使
+            墙面过曝发白、与效果图不是一个调子；压到 0.55 由室内点光补光，观感更一致。 */}
+        <ambientLight intensity={insideBuilding ? 0.55 : theme.ambient} />
         {/* Interior ceiling lights — warm downlights.
             · 室内漫游（insideBuilding）：始终全亮（k=1），让室内可读。
             · 外观图（!insideBuilding + 透明立面 transparentExterior）：也点亮
@@ -7134,7 +7136,18 @@ export default function HouseCanvas() {
             const yC = fl * FLOOR_H_M + FLOOR_H_M * 0.90;
             return (
               <group key={`interior-fill-${fl}`}>
-                <pointLight position={[0, yC, 0]} intensity={8.0 * k} distance={Math.max(W, D) * 2.5} decay={1.5} color="#FFF8E8" />
+                {/* 漫游里给这盏全局补光开投影 —— 否则它不投影 → 光穿过实墙照到隔壁房间
+                    地板,冲出过曝白斑(用户:实墙不该透光)。墙体已 castShadow、地板已
+                    receiveShadow,开了投影墙就能挡住它。仅漫游(litInside)开,外观透明立面
+                    补光不开(省 6 面立方体阴影的开销)。 */}
+                <pointLight
+                  position={[0, yC, 0]} intensity={8.0 * k} distance={Math.max(W, D) * 2.5}
+                  decay={1.5} color="#FFF8E8"
+                  castShadow={litInside}
+                  shadow-mapSize={[1024, 1024]}
+                  shadow-camera-near={0.2}
+                  shadow-bias={-0.0015}
+                />
               </group>
             );
           });
@@ -7313,7 +7326,9 @@ export default function HouseCanvas() {
                 the cream facade keeps its form and windows punch through.
                 Placed after Bloom (which works in HDR) and before the LDR
                 colour-grade effects below. */}
-            <ToneMapping mode={ToneMappingMode.AGX} />
+            {/* 与效果图统一用 ACES：ACES 平滑滚降高光、保留墙面/屏幕层次；AGX 会把
+                高亮往白里去饱和，是漫游偏白、和效果图不一个调子的主因之一。 */}
+            <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
             {/* HueSaturation — vivid architectural renders with rich pool/sky blues */}
             <HueSaturation
               saturation={theme.phase === "night" ? -0.05 : theme.phase === "day" ? 0.18 : 0.10}

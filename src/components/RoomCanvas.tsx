@@ -3,7 +3,7 @@
 import { useRef, useEffect, useMemo, useState, useCallback, useSyncExternalStore, Component, ReactNode } from "react";
 import { SceneRegistrar } from "@/lib/sceneRegistry";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, Html, useGLTF, Text } from "@react-three/drei";
+import { OrbitControls, Environment, Html, useGLTF } from "@react-three/drei";
 import { EffectComposer, N8AO, Bloom, Vignette, SMAA } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import { Suspense } from "react";
@@ -27,6 +27,9 @@ import { getFurnitureById } from "@/lib/furniture";
 import { FurnitureItem } from "@/lib/types";
 import { getRoomDoors } from "@/lib/roomDoors";
 import { getRoomWindows } from "@/lib/roomWindows";
+import { DOOR_CORNER_MARGIN } from "@/lib/doorTransform";
+import { WalkthroughDoor3D } from "@/components/walkthrough/WalkthroughDoor3D";
+import { WallCompassDecal } from "@/components/shared/WallCompassDecal";
 import { DetailedDecor } from "./DetailedDecor";
 import { StallDoor3D } from "./StallDoor3D";
 import { FirstPersonControls, TouchJoystick } from "./FirstPersonControls";
@@ -945,82 +948,12 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   return null;
 }
 
-// 门离墙角的最小留边(米)。门贴角落时门洞直抵角缝,相邻墙在 dollhouse 里隐藏
-// 就会透出竖白条(用户实拍)。留 6cm 墙料封角;holesForWall 与 RoomDoor3D 共用。
-const DOOR_CORNER_MARGIN = 0.06;
+// DOOR_CORNER_MARGIN 现由 lib/doorTransform 单一定义并导入（holesForWall 与门定位共用）。
 
 // ─── glTF door panel (for wood_panel style) ─────────────────
-// Uses witnessk's `door_with_frame` (CC-BY, 6 meshes — includes panel +
-// frame + handle, a complete door unit). Uniform scale by height (not
-// non-uniform XYZ fit — that distorted the earlier keam.wf asset into a
-// "plank stack").
-const ENABLE_GLTF_DOOR = true;
-const WOODEN_DOOR_URL = "/models/_arch_door/door_with_frame/door_with_frame.glb";
-
-function GltfDoorPanel({ doorW, doorH, onClick }: { doorW: number; doorH: number; onClick: () => void }) {
-  const { scene } = useGLTF(WOODEN_DOOR_URL) as unknown as { scene: THREE.Object3D };
-  const cloned = useMemo(() => {
-    const c = skeletonClone(scene);
-    c.traverse(obj => {
-      const m = obj as THREE.Mesh;
-      if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; }
-    });
-    c.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(c);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    // eslint-disable-next-line no-console
-    console.log(`[GltfDoorPanel] native ${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m target ${doorW.toFixed(2)}×${doorH.toFixed(2)}m`);
-    if (size.x > 0 && size.y > 0 && size.z > 0) {
-      // Uniform scale by height. This preserves the door's natural
-      // width:height:depth ratio instead of stretching it to match our
-      // doorW × doorH (which distorts). Slight width mismatch is
-      // acceptable — a 75cm real door rendered as ~72cm is fine.
-      const s = doorH / size.y;
-      c.scale.setScalar(s);
-      c.updateMatrixWorld(true);
-      const box2 = new THREE.Box3().setFromObject(c);
-      // Base at Y=0, X-centered, then shift right so left edge = hinge
-      c.position.x -= (box2.min.x + box2.max.x) / 2;
-      c.position.y -= box2.min.y;
-      c.position.z -= (box2.min.z + box2.max.z) / 2;
-      c.position.x += doorW / 2;
-    }
-    return c;
-  }, [scene, doorW, doorH]);
-
-  return (
-    <group onClick={(e) => { e.stopPropagation(); onClick(); }}>
-      {/* 正反面校正：WOODEN_DOOR_URL 资产的雕花/门面朝 -z 导出，而本工程约定
-          门板局部 +z = 室内侧（程序化 ProceduralWoodDoor 的浮雕/门把就在 +z，是对的）。
-          绕门板竖向中轴翻 180°，让雕花面朝室内——铰链(父组 x=0 支点)与摆位不变，
-          门把另由上层在闩边双面补绘(见调用处)，故这里翻转不影响把手位置。
-          用户实拍确认「门正反面反了」。 */}
-      <group position={[doorW / 2, 0, 0]} rotation={[0, Math.PI, 0]}>
-        <group position={[-doorW / 2, 0, 0]}>
-          <primitive object={cloned} />
-        </group>
-      </group>
-    </group>
-  );
-}
-
-// Enable DRACO-less caching for this asset
-// (useGLTF.preload would help on route prefetch but not required here)
-
-class GltfDoorFallback extends Component<
-  { children: ReactNode; fallback: ReactNode },
-  { failed: boolean }
-> {
-  state = { failed: false };
-  static getDerivedStateFromError() { return { failed: true }; }
-  componentDidCatch(err: Error) {
-    console.warn(`[GltfDoorPanel] fallback: ${err.message}`);
-  }
-  render() {
-    return this.state.failed ? this.props.fallback : this.props.children;
-  }
-}
+// 门的 GLB/程序化助手（GltfDoorPanel / GltfDoorFallback / ProceduralWoodDoor /
+// ENABLE_GLTF_DOOR / WOODEN_DOOR_URL）已随「门共享化」迁至共享门组件
+// (walkthrough/WalkthroughDoor3D)。RoomDoor3D 现为其薄壳。
 
 /** 3-blade ceiling fan that spins continuously. */
 function CeilingFanBlades() {
@@ -1048,6 +981,9 @@ function CeilingFanBlades() {
 // on its left edge (opens inward 90°). Click toggles open/closed; a
 // useFrame interpolation gives a ~350ms ease. Open state is per-room
 // ephemeral state in the store (doorOpenByRoom).
+// 效果图门 = 共享 WalkthroughDoor3D 的薄壳：只适配 store 开合状态 + 薄平面墙参数
+// (wallInset 0.02 / frameT 0.04)。门板/动画/把手/门型全部走共享组件，两图不再各写一套。
+// 玻璃幕墙门框/把手用深色（与原效果图一致）；其余用暖白框 + 黄铜把手。
 function RoomDoor3D({
   W, D, H,
   doorWall, doorPosCm, doorLenCm, doorHCm,
@@ -1061,401 +997,22 @@ function RoomDoor3D({
 }) {
   const isOpen = useDesignerStore(s => !!s.doorOpenByRoom[activeRoom]);
   const toggleDoorOpen = useDesignerStore(s => s.toggleDoorOpen);
-  const panelRef = useRef<THREE.Group>(null);
-  const panelRightRef = useRef<THREE.Group>(null); // right leaf for glass_swing double door
-  // Animated value, smoothed each frame toward the target.
-  // For hinged doors: used as rotation angle (0 → -π/2).
-  // For sliding doors: used as translation distance (0 → -doorW).
-  const animRef = useRef(0);
-  useFrame((_, delta) => {
-    const isSliding = doorStyle === "sliding_barn" || doorStyle === "glass_slide";
-    const isRoller = doorStyle === "roller_shutter";
-    const target = isOpen
-      ? (isRoller ? 0.92 : isSliding ? -(doorLenCm / 100) : -Math.PI / 2)
-      : 0;
-    const speed = isRoller ? 1.2 : isSliding ? 2.4 : 5.5;
-    const current = animRef.current;
-    const diff = target - current;
-    if (Math.abs(diff) > 0.002) {
-      const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
-      animRef.current = current + step;
-      if (panelRef.current) {
-        if (isRoller) {
-          // 卷帘：顶部固定，帘体向上卷起（scale 缩 + 底沿上移）。
-          panelRef.current.scale.y = 1 - animRef.current;
-          panelRef.current.position.y = (doorHCm / 100) * animRef.current;
-        }
-        else if (isSliding) panelRef.current.position.x = animRef.current;
-        else panelRef.current.rotation.y = animRef.current;
-      }
-      // Right leaf of glass_swing swings in the opposite direction.
-      if (doorStyle === "glass_swing" && panelRightRef.current) {
-        panelRightRef.current.rotation.y = -animRef.current;
-      }
-    }
-  });
-
-  // 门宽受所在墙物理长度约束：宽度优先，位置回推——配 3.4m 门在 3.2m
-  // 墙上时门顶满整面墙，而不是被"墙长-位置"剪成窄条。
-  const wallLenForDoor = (doorWall === "N" || doorWall === "S") ? W : D;
-  const doorW = Math.max(0.5, Math.min(doorLenCm / 100, wallLenForDoor));
-  // 与 holesForWall 同一角落留边 clamp：门板落位必须与墙洞完全对齐,否则一边
-  // 露墙料、一边露白条。
-  const doorCornerM = Math.min(DOOR_CORNER_MARGIN, Math.max(0, (wallLenForDoor - doorW) / 2));
-  // W 墙翻转：与 holesForWall 同步——门 pos 是北参照,而 W 墙 wall-local x 从南端起,
-  // 故 W 墙把 pos 翻成 `墙长-pos-门宽`,再套 `D/2 - doorPos` 就落到北参照的正确位置。
-  // E/N/S 无需翻转。原来门板与门洞都用 raw pos,3D 落位与 2D/窗相反(用户实拍)。
-  const rawDoorPos = doorWall === "W" ? wallLenForDoor - doorPosCm / 100 - doorW : doorPosCm / 100;
-  const doorPos = Math.max(doorCornerM, Math.min(rawDoorPos, wallLenForDoor - doorW - doorCornerM));
-  const doorH = doorHCm / 100;
-  const frameT = 0.04; // frame thickness
-
-  // Group positioning: put a parent group at the hinge line (inner-room
-  // side of the wall, at the door's left edge). All internal pieces are
-  // positioned relative to the hinge so rotating the group swings the door.
-  let groupPos: [number, number, number];
-  let groupRot: [number, number, number];
-  let hingeOffset: number; // direction the panel extends in local +X when closed
-  switch (doorWall) {
-    case "N": // back wall (z = -D/2)
-      groupPos = [doorPos - W / 2, 0, -D / 2 + 0.02];
-      groupRot = [0, 0, 0];
-      hingeOffset = 1;
-      break;
-    case "S": // front wall (z = +D/2) — normally hidden wall but
-      // door itself should still render so it's visible in dollhouse.
-      // Rotate 180° around Y so door faces room interior (-Z).
-      groupPos = [-W / 2 + doorPos + doorW, 0, D / 2 - 0.02];
-      groupRot = [0, Math.PI, 0];
-      hingeOffset = 1;
-      break;
-    case "W":
-      // 西墙：墙洞在 WallWithHoles 里以「wall-local x=0 在南端(+Z)、向北(-Z)递增」
-      // 落位，门洞世界 z 区间 = [D/2 - doorPos - doorW, D/2 - doorPos]。门板组旋转
-      // +π/2 后局部 +X 映射到世界 -Z，因此铰链(组原点)须落在门洞的「+Z 南缘」=
-      // D/2 - doorPos，门板再沿 -Z 填满门洞。原来的 doorPos - D/2 是符号写反，导致
-      // 门板整体偏出门洞一个门宽 → 出现「关着的门 + 旁边一个空洞」。E 墙是对的镜像。
-      groupPos = [-W / 2 + 0.02, 0, D / 2 - doorPos];
-      groupRot = [0, Math.PI / 2, 0];
-      hingeOffset = 1;
-      break;
-    case "E":
-      groupPos = [W / 2 - 0.02, 0, -(doorPos - D / 2) - doorW];
-      groupRot = [0, -Math.PI / 2, 0];
-      hingeOffset = 1;
-      break;
-    default:
-      return null;
-  }
-
-  // Glass curtain door styles use dark aluminium frame matching the mullion grid.
   const isGlassCurtainDoor = doorStyle === "glass_swing" || doorStyle === "glass_slide";
-  const frameColor = isGlassCurtainDoor ? "#1B1E24" : "#F0EEEA";
-  const frameRoughness = isGlassCurtainDoor ? 0.10 : 0.6;
-  const frameMetalness = isGlassCurtainDoor ? 0.96 : 0.0;
-
   return (
-    <group position={groupPos} rotation={groupRot}>
-      {/* Door frame — omitted for glass curtain styles; their panel already
-          has a perimeter frame, so rendering both creates a double-frame. */}
-      {!isGlassCurtainDoor && (<>
-        <mesh position={[doorW / 2, doorH + frameT / 2, 0]}>
-          <boxGeometry args={[doorW + frameT * 2, frameT, 0.05]} />
-          <meshStandardMaterial color={frameColor} roughness={frameRoughness} metalness={frameMetalness} />
-        </mesh>
-        <mesh position={[-frameT / 2, doorH / 2, 0]}>
-          <boxGeometry args={[frameT, doorH, 0.05]} />
-          <meshStandardMaterial color={frameColor} roughness={frameRoughness} metalness={frameMetalness} />
-        </mesh>
-        <mesh position={[doorW + frameT / 2, doorH / 2, 0]}>
-          <boxGeometry args={[frameT, doorH, 0.05]} />
-          <meshStandardMaterial color={frameColor} roughness={frameRoughness} metalness={frameMetalness} />
-        </mesh>
-      </>)}
-
-      {/* Door panel (rotates around hinge at local X=0) */}
-      {doorStyle === "roller_shutter" ? (
-        // 卷帘门：顶部卷筒箱（固定）+ 横条帘板（点击向上卷起，
-        // useFrame 里 scale.y 收缩且底沿上移、顶固定）。
-        <>
-          <mesh position={[doorW / 2, doorH + 0.10, 0]} castShadow>
-            <boxGeometry args={[doorW + 0.12, 0.22, 0.20]} />
-            <meshStandardMaterial color="#B8B8B8" metalness={0.45} roughness={0.45} />
-          </mesh>
-          <group ref={panelRef}>
-            <group
-              onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
-            >
-              {Array.from({ length: Math.max(6, Math.round(doorH / 0.22)) }, (_v: unknown, i: number) => {
-                const slatCount = Math.max(6, Math.round(doorH / 0.22));
-                const slatH = doorH / slatCount;
-                return (
-                  <mesh key={i} position={[doorW / 2, slatH * (i + 0.5), 0]} castShadow receiveShadow>
-                    <boxGeometry args={[doorW, slatH - 0.012, 0.045]} />
-                    <meshStandardMaterial color={i % 2 ? "#D8D8D6" : "#CFCFCC"} metalness={0.35} roughness={0.5} />
-                  </mesh>
-                );
-              })}
-              {/* 底沿加重条 */}
-              <mesh position={[doorW / 2, 0.03, 0.01]}>
-                <boxGeometry args={[doorW, 0.06, 0.055]} />
-                <meshStandardMaterial color="#8A8A8A" metalness={0.6} roughness={0.35} />
-              </mesh>
-            </group>
-          </group>
-        </>
-      ) : doorStyle === "sliding_barn" ? (
-        // Sliding barn door: slides left (no swing). panelRef unused for rotation;
-        // instead translate via useFrame (we already drive angleRef — reuse as
-        // slide ratio 0→1 mapped to translation).
-        <group ref={panelRef} position={[0, 0, 0.01]}>
-          {/* Top slide rail (doesn't move) */}
-          <mesh position={[doorW, doorH + 0.08, 0]}>
-            <boxGeometry args={[doorW * 2.1, 0.06, 0.04]} />
-            <meshStandardMaterial color="#2A2A2A" metalness={0.6} roughness={0.4} />
-          </mesh>
-          {/* Sliding panel */}
-          <mesh
-            position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]}
-            onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
-            castShadow receiveShadow
-          >
-            <boxGeometry args={[doorW - 0.02, doorH - 0.02, 0.04]} />
-            <meshStandardMaterial color="#7A5438" roughness={0.85} />
-          </mesh>
-          {/* Barn door: 3 horizontal planks + iron strap */}
-          {[0.25, 0.5, 0.75].map((r, i) => (
-            <mesh key={i} position={[doorW / 2, doorH * r, 0.005]}>
-              <boxGeometry args={[doorW - 0.04, 0.015, 0.008]} />
-              <meshStandardMaterial color="#5C3E28" roughness={0.9} />
-            </mesh>
-          ))}
-          {/* Handle: long iron bar */}
-          <mesh position={[doorW - 0.12, doorH * 0.45, 0.03]}>
-            <boxGeometry args={[0.14, 0.03, 0.015]} />
-            <meshStandardMaterial color="#2A2A2A" metalness={0.8} roughness={0.35} />
-          </mesh>
-        </group>
-      ) : doorStyle === "french_double" ? (
-        // French double: two glass panels hinged from each outer edge.
-        <group ref={panelRef} position={[0, 0, 0.01]}>
-          {/* Left panel (hinged at x=0) */}
-          <group
-            onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
-          >
-            <mesh position={[doorW / 4, doorH / 2, -0.02]} castShadow>
-              <boxGeometry args={[doorW / 2 - 0.01, doorH - 0.02, 0.025]} />
-              <meshStandardMaterial color="#F0F0F0" roughness={0.5} />
-            </mesh>
-            <mesh position={[doorW / 4, doorH / 2, -0.005]}>
-              <planeGeometry args={[doorW / 2 - 0.1, doorH - 0.15]} />
-              <meshPhysicalMaterial color="#C8D8E5" transmission={0.75} roughness={0.05} thickness={0.02} transparent opacity={0.6} />
-            </mesh>
-          </group>
-          {/* Right panel */}
-          <mesh position={[doorW * 0.75, doorH / 2, -0.02]} castShadow>
-            <boxGeometry args={[doorW / 2 - 0.01, doorH - 0.02, 0.025]} />
-            <meshStandardMaterial color="#F0F0F0" roughness={0.5} />
-          </mesh>
-          <mesh position={[doorW * 0.75, doorH / 2, -0.005]}>
-            <planeGeometry args={[doorW / 2 - 0.1, doorH - 0.15]} />
-            <meshPhysicalMaterial color="#C8D8E5" transmission={0.75} roughness={0.05} thickness={0.02} transparent opacity={0.6} />
-          </mesh>
-          {/* Two knobs at center */}
-          <mesh position={[doorW / 2 - 0.04, doorH * 0.45, 0.02]}>
-            <sphereGeometry args={[0.02, 10, 10]} />
-            <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.2} />
-          </mesh>
-          <mesh position={[doorW / 2 + 0.04, doorH * 0.45, 0.02]}>
-            <sphereGeometry args={[0.02, 10, 10]} />
-            <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.2} />
-          </mesh>
-        </group>
-      ) : doorStyle === "glass_swing" ? (
-        // Double glass swing door — mirrors WalkthroughDoor3D.
-        // Left leaf: hinge at x=0, glass fills 0..lw, ONE inner stile at meeting edge.
-        // Right leaf: hinge at x=doorW, glass fills doorW..lw, ONE inner stile at meeting edge.
-        // No outer frame — curtain wall mullions serve as the door frame.
-        (() => {
-          const fC = "#1B1E24"; const lw = doorW / 2;
-          const barH = Math.min(1.15, doorH * 0.42); const cy = doorH * 0.46;
-          return (
-            <group position={[0, 0, 0.01]}>
-              {/* Left leaf: hinge at x=0 */}
-              <group ref={panelRef}>
-                <group onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}>
-                  <mesh position={[lw / 2, doorH / 2, 0]}>
-                    <boxGeometry args={[lw - 0.012, doorH - 0.02, 0.012]} />
-                    <meshPhysicalMaterial color="#C8D8E5" transmission={0.86} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={0.34} side={THREE.DoubleSide} />
-                  </mesh>
-                  {/* Inner stile at meeting edge */}
-                  <mesh position={[lw - 0.02, doorH / 2, 0]} castShadow>
-                    <boxGeometry args={[0.04, doorH - 0.02, 0.035]} />
-                    <meshStandardMaterial color={fC} roughness={0.3} metalness={0.7} />
-                  </mesh>
-                  {[-0.09, 0.09].map((hz, i) => (
-                    <mesh key={i} position={[lw - 0.085, cy, hz]}>
-                      <boxGeometry args={[0.035, barH, 0.035]} />
-                      <meshStandardMaterial color="#2A2A2A" metalness={0.95} roughness={0.16} />
-                    </mesh>
-                  ))}
-                </group>
-              </group>
-              {/* Right leaf: hinge at x=doorW, extends leftward */}
-              <group ref={panelRightRef} position={[doorW, 0, 0]}>
-                <group onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}>
-                  <mesh position={[-lw / 2, doorH / 2, 0]}>
-                    <boxGeometry args={[lw - 0.012, doorH - 0.02, 0.012]} />
-                    <meshPhysicalMaterial color="#C8D8E5" transmission={0.86} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={0.34} side={THREE.DoubleSide} />
-                  </mesh>
-                  {/* Inner stile at meeting edge */}
-                  <mesh position={[-lw + 0.02, doorH / 2, 0]} castShadow>
-                    <boxGeometry args={[0.04, doorH - 0.02, 0.035]} />
-                    <meshStandardMaterial color={fC} roughness={0.3} metalness={0.7} />
-                  </mesh>
-                  {[-0.09, 0.09].map((hz, i) => (
-                    <mesh key={i} position={[-lw + 0.085, cy, hz]}>
-                      <boxGeometry args={[0.035, barH, 0.035]} />
-                      <meshStandardMaterial color="#2A2A2A" metalness={0.95} roughness={0.16} />
-                    </mesh>
-                  ))}
-                </group>
-              </group>
-            </group>
-          );
-        })()
-      ) : (
-        // Default: wood_panel uses real glTF; frosted_glass uses procedural
-        // (it's a glass-look tinted box — glTF wouldn't match semantics).
-        <group ref={panelRef} position={[0, 0, 0.01]}>
-          {doorStyle === "wood_panel" ? (
-            ENABLE_GLTF_DOOR ? (
-              <>
-                <GltfDoorFallback
-                  fallback={
-                    <ProceduralWoodDoor
-                      doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
-                      onClick={() => toggleDoorOpen(activeRoom)}
-                    />
-                  }
-                >
-                  <Suspense fallback={
-                    <ProceduralWoodDoor
-                      doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
-                      onClick={() => toggleDoorOpen(activeRoom)}
-                    />
-                  }>
-                    <GltfDoorPanel doorW={doorW} doorH={doorH} onClick={() => toggleDoorOpen(activeRoom)} />
-                  </Suspense>
-                </GltfDoorFallback>
-                {/* Extra handle on both faces of the door so it's always
-                    visible regardless of which way the glTF asset was
-                    exported. Two small spheres + short stem. */}
-                <mesh position={[doorW - 0.1, doorH * 0.45, 0.035]}>
-                  <sphereGeometry args={[0.032, 14, 14]} />
-                  <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.25} />
-                </mesh>
-                <mesh position={[doorW - 0.1, doorH * 0.45, -0.035]}>
-                  <sphereGeometry args={[0.032, 14, 14]} />
-                  <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.25} />
-                </mesh>
-              </>
-            ) : (
-              <ProceduralWoodDoor
-                doorW={doorW} doorH={doorH} hingeOffset={hingeOffset}
-                onClick={() => toggleDoorOpen(activeRoom)}
-              />
-            )
-          ) : doorStyle === "glass_slide" ? (
-            // glass_slide — matches WalkthroughDoor3D: full-glass sliding panel, no outer
-            // frame (curtain mullions serve as frame), top rail, vertical pull handle.
-            <>
-              {/* Top rail (fixed, not part of animated group) */}
-              <mesh position={[doorW / 2, doorH + 0.04, 0]}>
-                <boxGeometry args={[doorW * 1.06, 0.045, 0.05]} />
-                <meshStandardMaterial color="#2A2A2A" metalness={0.6} roughness={0.4} />
-              </mesh>
-              <group onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}>
-                <mesh position={[doorW / 2, doorH / 2, 0]} castShadow receiveShadow>
-                  <boxGeometry args={[doorW - 0.02, doorH - 0.03, 0.012]} />
-                  <meshPhysicalMaterial color="#C8D8E5" transmission={0.86} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={0.34} side={THREE.DoubleSide} />
-                </mesh>
-                {/* Vertical pull handle */}
-                <mesh position={[doorW - 0.12, doorH * 0.45, 0.09]}>
-                  <boxGeometry args={[0.03, Math.min(0.9, doorH * 0.42), 0.03]} />
-                  <meshStandardMaterial color="#2A2A2A" metalness={0.95} roughness={0.20} />
-                </mesh>
-              </group>
-            </>
-          ) : (
-            // frosted_glass — aluminum frame + semi-transparent glass panel
-            <>
-              {/* Aluminum frame around the edge — makes the door outline
-                  clearly visible even when glass is semi-transparent */}
-              <mesh position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]} castShadow receiveShadow>
-                <boxGeometry args={[doorW - 0.02, doorH - 0.02, 0.035]} />
-                <meshStandardMaterial color="#A8AEB4" metalness={0.7} roughness={0.3} />
-              </mesh>
-              {/* Glass inset — slightly smaller than frame, semi-transparent */}
-              <mesh
-                position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]}
-                onClick={(e) => { e.stopPropagation(); toggleDoorOpen(activeRoom); }}
-              >
-                <boxGeometry args={[doorW - 0.12, doorH - 0.15, 0.04]} />
-                <meshPhysicalMaterial color="#D8E0E8" transmission={0.65} roughness={0.4} thickness={0.03} ior={1.45} transparent opacity={0.75} />
-              </mesh>
-              {/* Lever-style handle on both faces */}
-              <mesh position={[doorW - 0.12, doorH * 0.45, 0.03]}>
-                <boxGeometry args={[0.08, 0.018, 0.02]} />
-                <meshStandardMaterial color="#9A9A9E" metalness={0.85} roughness={0.25} />
-              </mesh>
-              <mesh position={[doorW - 0.08, doorH * 0.45, 0.025]}>
-                <cylinderGeometry args={[0.018, 0.018, 0.02, 10]} />
-                <meshStandardMaterial color="#9A9A9E" metalness={0.85} roughness={0.25} />
-              </mesh>
-              <mesh position={[doorW - 0.12, doorH * 0.45, -0.05]}>
-                <boxGeometry args={[0.08, 0.018, 0.02]} />
-                <meshStandardMaterial color="#9A9A9E" metalness={0.85} roughness={0.25} />
-              </mesh>
-              <mesh position={[doorW - 0.08, doorH * 0.45, -0.045]}>
-                <cylinderGeometry args={[0.018, 0.018, 0.02, 10]} />
-                <meshStandardMaterial color="#9A9A9E" metalness={0.85} roughness={0.25} />
-              </mesh>
-            </>
-          )}
-        </group>
-      )}
-    </group>
-  );
-}
-
-/** Procedural wood-panel door — used as fallback when glTF fails. */
-function ProceduralWoodDoor({
-  doorW, doorH, hingeOffset, onClick,
-}: { doorW: number; doorH: number; hingeOffset: number; onClick: () => void }) {
-  return (
-    <>
-      <mesh
-        position={[doorW / 2 * hingeOffset, doorH / 2, -0.02]}
-        onClick={(e) => { e.stopPropagation(); onClick(); }}
-        castShadow receiveShadow
-      >
-        <boxGeometry args={[doorW - 0.02, doorH - 0.02, 0.035]} />
-        <meshStandardMaterial color="#C79A6A" roughness={0.55} metalness={0.02} />
-      </mesh>
-      <mesh position={[doorW / 2, doorH * 0.72, 0.003]}>
-        <planeGeometry args={[doorW * 0.62, doorH * 0.26]} />
-        <meshStandardMaterial color="#B0824E" roughness={0.7} />
-      </mesh>
-      <mesh position={[doorW / 2, doorH * 0.35, 0.003]}>
-        <planeGeometry args={[doorW * 0.62, doorH * 0.32]} />
-        <meshStandardMaterial color="#B0824E" roughness={0.7} />
-      </mesh>
-      <mesh position={[doorW - 0.1, doorH * 0.45, 0.02]}>
-        <sphereGeometry args={[0.03, 12, 12]} />
-        <meshStandardMaterial color="#A8A8A8" metalness={0.85} roughness={0.25} />
-      </mesh>
-    </>
+    <WalkthroughDoor3D
+      W={W} D={D} H={H}
+      doorWall={doorWall}
+      doorPosCm={doorPosCm}
+      doorLenCm={doorLenCm}
+      doorHCm={doorHCm}
+      doorStyle={doorStyle}
+      isOpen={isOpen}
+      onToggle={() => toggleDoorOpen(activeRoom)}
+      wallInset={0.02}
+      frameT={0.04}
+      frameColor={isGlassCurtainDoor ? "#1B1E24" : "#F0EEEA"}
+      handleColor={isGlassCurtainDoor ? "#2A2A2A" : "#B8A060"}
+    />
   );
 }
 
@@ -3336,7 +2893,11 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room, wallClearance 
     //   0=朝+Z(贴N墙) · 90=朝+X(贴W墙) · 180=朝-Z(贴S墙) · 270=朝-X(贴E墙)。
     // GAP 沿朝向法向轻推 3cm 入室，避免与墙面 z-fight（画本就薄，够用）。
     const rotY = ((placed.rotation ?? 0) * Math.PI) / 180;
-    const GAP = 0.03;
+    // 效果图 0 厚平面墙：3cm 微推入室、避免 z-fight 即可。
+    // 漫游/外观厚墙视图(wallClearance=true)：墙是 10cm 厚盒子，画本坐在墙边(如
+    // z=5cm)，3cm 推不出墙体内表面 → 画被埋进厚墙、从室内看不见(与贴墙电视同类
+    // 深度遮挡)。厚墙视图下加大到 10cm，把画推到墙面之前、稳定可见。
+    const GAP = wallClearance ? 0.10 : 0.03;
     const fx = Math.sin(rotY), fz = Math.cos(rotY);   // 朝向(入室)单位向量
     const position: [number, number, number] = [x3d + fx * GAP, y, z3d + fz * GAP];
     const rotation: [number, number, number] = [0, rotY, 0];
@@ -4283,34 +3844,17 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
       {showCompass && (() => {
         const lblY    = 1.5;
         const eps     = 0.08;          // clear interior wall surface
-        const fontSize   = 0.20;       // 20 cm tall letter
-        const plaqueSize = fontSize * 1.5;
+        // 效果图方位标:近看 20cm 粉字。方牌+字母走共享 WallCompassDecal(结构与
+        // 外观图同一份,视觉参数按近看距离各传)。
         const xQ = -W * 0.25;          // 25 % from W (-X) end, along X
         const zQ = -D * 0.25;          // 25 % from N (-Z) end, along Z
-        const common = {
-          fontSize, color: '#FF1493',
-          outlineWidth: fontSize * 0.06, outlineColor: '#ffffff',
-          anchorX: 'center' as const, anchorY: 'middle' as const,
-        };
-        const Decal = ({
-          letter, pos, rot,
-        }: { letter: string; pos: [number, number, number]; rot: [number, number, number] }) => (
-          <group position={pos} rotation={rot}>
-            {/* Opaque white plate behind text — kills mirrored leak through
-                the back face since troika-text ignores material-side. */}
-            <mesh position={[0, 0, -0.005]} raycast={() => null}>
-              <planeGeometry args={[plaqueSize, plaqueSize]} />
-              <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} toneMapped={false} />
-            </mesh>
-            <Text {...common}>{letter}</Text>
-          </group>
-        );
+        const P = { color: "#FF1493", fontSize: 0.20, plaqueRatio: 1.5, outlineRatio: 0.06, plateZ: -0.005 } as const;
         return (
           <group>
-            <Decal letter="N" pos={[xQ, lblY, -D / 2 + eps]} rot={[0, 0, 0]} />
-            <Decal letter="S" pos={[xQ, lblY,  D / 2 - eps]} rot={[0, Math.PI, 0]} />
-            <Decal letter="W" pos={[-W / 2 + eps, lblY, zQ]} rot={[0, Math.PI / 2, 0]} />
-            <Decal letter="E" pos={[ W / 2 - eps, lblY, zQ]} rot={[0, -Math.PI / 2, 0]} />
+            <WallCompassDecal letter="N" pos={[xQ, lblY, -D / 2 + eps]} rot={[0, 0, 0]} {...P} />
+            <WallCompassDecal letter="S" pos={[xQ, lblY,  D / 2 - eps]} rot={[0, Math.PI, 0]} {...P} />
+            <WallCompassDecal letter="W" pos={[-W / 2 + eps, lblY, zQ]} rot={[0, Math.PI / 2, 0]} {...P} />
+            <WallCompassDecal letter="E" pos={[ W / 2 - eps, lblY, zQ]} rot={[0, -Math.PI / 2, 0]} {...P} />
           </group>
         );
       })()}
