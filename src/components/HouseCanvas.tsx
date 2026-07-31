@@ -3215,7 +3215,7 @@ function usePoolHoleGroundGeometry(size: number): THREE.BufferGeometry {
   }, [items, size]);
 }
 
-function GrassGroundTextured({ size, tint }: { size: number; tint: string }) {
+function GrassGroundTextured({ size, tint, groundY = -0.499 }: { size: number; tint: string; groundY?: number }) {
   const texture = useProceduralGrassTexture();
   const geometry = usePoolHoleGroundGeometry(size);
   // Task 1: 大草地 plane 永远在视野，跳过 frustum 测试
@@ -3223,7 +3223,7 @@ function GrassGroundTextured({ size, tint }: { size: number; tint: string }) {
     <mesh
       geometry={geometry}
       rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, -0.499, 0]}
+      position={[0, groundY, 0]}
       receiveShadow
       frustumCulled={false}
       userData={{ isSiteGround: true }}
@@ -3268,7 +3268,7 @@ function useTileTexture(): THREE.Texture {
 }
 
 // 整块青地砖地面（商业片场）：复用泳池抠洞几何 + 青地砖纹理。
-function TileGroundTextured({ size }: { size: number }) {
+function TileGroundTextured({ size, groundY = -0.499 }: { size: number; groundY?: number }) {
   const geometry = usePoolHoleGroundGeometry(size);
   const tex = useTileTexture();
   // 几何 UV 已重映射成 0..1 覆盖整块 size×size；8 砖/画布、目标单砖 ~0.6m
@@ -3285,7 +3285,7 @@ function TileGroundTextured({ size }: { size: number }) {
     <mesh
       geometry={geometry}
       rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, -0.499, 0]}
+      position={[0, groundY, 0]}
       receiveShadow
       frustumCulled={false}
       userData={{ isSiteGround: true }}
@@ -3335,7 +3335,7 @@ function EntryPath({ W, D }: { W: number; D: number }) {
   );
 }
 
-function Ground({ W, D, lawnTint, grassDensity, groundType }: { W: number; D: number; lawnTint?: string; grassDensity?: number; groundType?: "grass" | "tile" }) {
+function Ground({ W, D, lawnTint, grassDensity, groundType, groundY = -0.499 }: { W: number; D: number; lawnTint?: string; grassDensity?: number; groundType?: "grass" | "tile"; groundY?: number }) {
   // Single large plane — no seam between "far" and "near" zones.
   // Sized to fill the camera frustum; PBR texture loads async via Suspense.
   const size = Math.max(W, D) * 7 + 40;
@@ -3357,14 +3357,14 @@ function Ground({ W, D, lawnTint, grassDensity, groundType }: { W: number; D: nu
   return (
     <>
       <Suspense fallback={
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.500, 0]} receiveShadow userData={{ isSiteGround: true }}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, groundY, 0]} receiveShadow userData={{ isSiteGround: true }}>
           <planeGeometry args={[size, size]} />
           <meshStandardMaterial color={fallbackCol} roughness={0.96} />
         </mesh>
       }>
         {isTile
-          ? <TileGroundTextured size={size} />
-          : <GrassGroundTextured size={size} tint={tint} />}
+          ? <TileGroundTextured size={size} groundY={groundY} />
+          : <GrassGroundTextured size={size} tint={tint} groundY={groundY} />}
       </Suspense>
       {/* Instanced grass blades around building — skips building footprint.
           Count is scaled by ExteriorSettings.grassDensity (0..2).
@@ -5761,8 +5761,14 @@ function WalkthroughController({
       // 人悬浮在下沉院子上方约 2m（用户："院子不支持漫游"）。放宽到 -1.0 后，踏出房子
       // 会顺着 0.5m 台阶落到院子地面站稳（眼睛 1.6→1.1）。室内仍取最近命中的室内楼板
       // (射线自上而下先中室内楼板)，不受影响；上层/天台更高，同样在阈内。
-      if (hy < camera.position.y - 0.1 && hy > camera.position.y - 2.5 && hy > -1.0
-          && (isGround || hy <= floorYRef.current + 0.35)) {
+      // isGround(场地地面)不受「≤2.5m 窗口」限制：人若到了高处(踏上高家具/结构顶、
+      // 或走到室外边缘)，其正下方若无室内楼板，应当直接落回场地地面，而不是因地面超出
+      // 2.5m 窗口被拒 → 全部 miss → 兜底把眼睛吊在最后的高 floorY 处半空下不来
+      //（用户:走到远处地面再回来就去空中了）。室内/多层正常时，射线自上而下先命中最近
+      // 的室内楼板并 return，根本够不到下方地面，故此放宽不影响室内与上层。
+      const withinStepWindow = hy > camera.position.y - 2.5;
+      if (hy < camera.position.y - 0.1 && hy > -1.0
+          && (isGround || (withinStepWindow && hy <= floorYRef.current + 0.35))) {
         floorMissRef.current = 0;
         floorYRef.current = hy;   // remember this floor for the fallback
         const target = hy + 1.6;
@@ -7215,8 +7221,12 @@ export default function HouseCanvas() {
              so it can't z-fight with room floors at y=0.025. Walkthrough
              needs Ground so the user can step through the front door and
              roam the yard without falling into the void. ── */}
-        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} groundType={exterior.groundType} />}
-        {!isRichGlassVilla && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} groundType={exterior.groundType} />}
+        {/* 漫游(insideBuilding)时把庭院地面从 -0.499 抬到 -0.05：楼板在 y=0，原来 0.5m
+            落差 > 上台阶上限 0.35m → 人踏出/踏入或站到无地板处会陷到楼板下面(用户:漫游陷进
+            地板)。抬到贴楼板下方后台阶只剩 5cm，随处都能自然迈上/踏下。纯几何、不碰上台阶
+            上限 → 不会像放宽上限那样沿未标记结构件(幕墙梃/廊架)逐级爬上去悬浮。外观仍 -0.499。 */}
+        {_buildingType === "floor-plan-driven" && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} groundType={exterior.groundType} groundY={insideBuilding ? -0.05 : -0.499} />}
+        {!isRichGlassVilla && <Ground W={W} D={D} lawnTint={exterior.lawnTint} grassDensity={exterior.grassDensity} groundType={exterior.groundType} groundY={insideBuilding ? -0.05 : -0.499} />}
         {!insideBuilding && !isRichGlassVilla && (exterior.entryPathEnabled ?? false) && <EntryPath W={W} D={D} />}
         {/* rich-glass-villa (non-FPD): minimal stone plaza only */}
         {!insideBuilding && isRichGlassVilla && _buildingType !== "floor-plan-driven" && (

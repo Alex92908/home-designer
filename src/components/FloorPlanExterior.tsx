@@ -8341,11 +8341,16 @@ export default function FloorPlanBuilding({
                   // 而非低 LOD 彩色 box。其余外观房间(盒子仍在、看不到内部)保留 box 省开销。
                   const seeThroughRoom = !insideBuilding
                     && (glassRooms.has(`${fi}:${room}`) || openingRooms.has(`${fi}:${room}`));
+                  // 楼梯要走上去，漫游射线不能跳过它；其余家具(桌/椅/柜/伞/展柜…)都
+                  // 标 notWalkable，让漫游落地射线跳过其顶面 → 人永远站真地板、爬不上家具。
+                  // （尤其室外露台家具:水平碰撞盒按 !isOutdoor 排除了→能穿过，若再可站就会
+                  // 被人当楼梯一级级爬到半空。用户:走到远处露台再回来就去空中了。）
+                  const isStair = !!fItem && STAIR_FURNITURE_IDS.has(fItem.id);
                   const needsPlacedMesh =
                     insideBuilding
                     || seeThroughRoom
                     || fItem?.category === "artwork"
-                    || (fItem ? STAIR_FURNITURE_IDS.has(fItem.id) : false)
+                    || isStair
                     || fItem?.id?.includes("cabinet-upper");
                   // Low-LOD box proxy（也作 GLTF 的 Suspense fallback）。
                   // 位置/尺寸算法和 PlacedItemMesh 内部保持一致。
@@ -8390,7 +8395,7 @@ export default function FloorPlanBuilding({
                     const rugLiftY = fItem?.category === "rug" ? 0.03 : 0;
                     return (
                       <Suspense key={p.instanceId} fallback={proxyBox}>
-                        <group position={[0, rugLiftY, 0]}>
+                        <group position={[0, rugLiftY, 0]} userData={{ notWalkable: !isStair }}>
                           <PlacedItemMesh placed={modP} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} wallClearance />
                         </group>
                       </Suspense>
