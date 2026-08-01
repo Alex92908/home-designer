@@ -1,0 +1,827 @@
+[
+  {
+    "kitchen": [
+      {
+        "furnitureId": "fridge-single-white",
+        "x": 32,
+        "z": 34
+      },
+      {
+        "furnitureId": "appliance-coffee",
+        "x": 233,
+        "z": 96,
+        "rotation": 270,
+        "elevationY": 105
+      },
+      {
+        "furnitureId": "storage-shelving",
+        "x": 188,
+        "z": 20
+      },
+      {
+        "furnitureId": "decor-trash-bin",
+        "x": 180,
+        "z": 248
+      },
+      {
+        "furnitureId": "appliance-dishwasher",
+        "x": 247,
+        "z": 40,
+        "rotation": 270,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "kitchen_cabinet-island-sink",
+        "x": 112,
+        "z": 29,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "cabinet-lower-white",
+        "x": 247,
+        "z": 130,
+        "rotation": 270,
+        "scaleW": 0.95
+      },
+      {
+        "furnitureId": "decor-coffee-jar",
+        "x": 247,
+        "z": 200,
+        "elevationY": 105
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 259,
+        "z": 226,
+        "elevationY": 100
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 240,
+        "z": 225,
+        "elevationY": 100
+      },
+      {
+        "furnitureId": "appliance-coffee-machine",
+        "x": 239,
+        "z": 146,
+        "rotation": 270,
+        "elevationY": 105
+      }
+    ],
+    "living": [
+      {
+        "furnitureId": "counter-back-bar-bottles",
+        "x": 430,
+        "z": 25
+      },
+      {
+        "furnitureId": "counter-back-bar-bottles",
+        "x": 640,
+        "z": 25
+      },
+      {
+        "furnitureId": "decor-coffee-menu",
+        "x": 430,
+        "z": 8,
+        "elevationY": 200
+      },
+      {
+        "furnitureId": "decor-coffee-menu",
+        "x": 535,
+        "z": 8,
+        "elevationY": 200
+      },
+      {
+        "furnitureId": "decor-coffee-menu",
+        "x": 640,
+        "z": 8,
+        "elevationY": 200
+      },
+      {
+        "furnitureId": "appliance-drink-fridge",
+        "x": 800,
+        "z": 30
+      },
+      {
+        "furnitureId": "appliance-coffee-brewer",
+        "x": 408,
+        "z": 142,
+        "elevationY": 110
+      },
+      {
+        "furnitureId": "appliance-coffee-grinder",
+        "x": 399,
+        "z": 187,
+        "elevationY": 110
+      },
+      {
+        "furnitureId": "counter-cake-display",
+        "x": 1064,
+        "z": 181
+      },
+      {
+        "furnitureId": "electronics-pos",
+        "x": 779,
+        "z": 159,
+        "rotation": 180,
+        "elevationY": 110
+      },
+      {
+        "furnitureId": "decor-coffee-cups",
+        "x": 469,
+        "z": 206,
+        "elevationY": 110
+      },
+      {
+        "furnitureId": "counter-bar-straight",
+        "x": 420,
+        "z": 562,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "counter-bar-straight",
+        "x": 793,
+        "z": 562,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 341,
+        "z": 507
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 421,
+        "z": 507
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 501,
+        "z": 507
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 721,
+        "z": 507
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 801,
+        "z": 507
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 881,
+        "z": 507
+      },
+      {
+        "furnitureId": "sideboard-euro",
+        "x": 906,
+        "z": 146,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "plant-monstera",
+        "x": 899,
+        "z": 42
+      },
+      {
+        "furnitureId": "plant-monstera",
+        "x": 309,
+        "z": 46
+      },
+      {
+        "furnitureId": "artwork-red-fuji",
+        "x": 279,
+        "z": 160,
+        "rotation": 90,
+        "elevationY": 155
+      },
+      {
+        "furnitureId": "artwork-vangogh",
+        "x": 237,
+        "z": 589,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "artwork-degas",
+        "x": 1170,
+        "z": 300,
+        "rotation": 270,
+        "elevationY": 155
+      },
+      {
+        "furnitureId": "artwork-impression",
+        "x": 1174,
+        "z": 532,
+        "rotation": 270,
+        "elevationY": 150
+      },
+      {
+        "furnitureId": "dining_table-cafe-rustic",
+        "x": 375,
+        "z": 300
+      },
+      {
+        "furnitureId": "chair-nordic-oak",
+        "x": 375,
+        "z": 234
+      },
+      {
+        "furnitureId": "chair-nordic-oak",
+        "x": 375,
+        "z": 366,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-nordic-oak",
+        "x": 309,
+        "z": 300,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "chair-nordic-oak",
+        "x": 441,
+        "z": 300,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "dining_table-cafe-rustic",
+        "x": 855,
+        "z": 300
+      },
+      {
+        "furnitureId": "chair-industrial-black",
+        "x": 855,
+        "z": 234
+      },
+      {
+        "furnitureId": "chair-industrial-black",
+        "x": 855,
+        "z": 366,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-industrial-black",
+        "x": 789,
+        "z": 300,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "chair-industrial-black",
+        "x": 921,
+        "z": 300,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "dining_table-cafe-rustic",
+        "x": 616,
+        "z": 330
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 616,
+        "z": 264
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 616,
+        "z": 396,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 550,
+        "z": 330,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 682,
+        "z": 330,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "dining_table-cafe-rustic",
+        "x": 454,
+        "z": 406
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 460,
+        "z": 344
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 451,
+        "z": 468,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 395,
+        "z": 414,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 522,
+        "z": 402,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "dining_table-cafe-rustic",
+        "x": 767,
+        "z": 401
+      },
+      {
+        "furnitureId": "chair-nordic-oak",
+        "x": 768,
+        "z": 336
+      },
+      {
+        "furnitureId": "chair-nordic-oak",
+        "x": 772,
+        "z": 467,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-nordic-oak",
+        "x": 709,
+        "z": 401,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "chair-nordic-oak",
+        "x": 823,
+        "z": 406,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 375,
+        "z": 300,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 351,
+        "z": 290,
+        "rotation": 20,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 399,
+        "z": 292,
+        "rotation": 200,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 377,
+        "z": 326,
+        "rotation": 90,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 855,
+        "z": 300,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 831,
+        "z": 290,
+        "rotation": 20,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 879,
+        "z": 292,
+        "rotation": 200,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 857,
+        "z": 326,
+        "rotation": 90,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 616,
+        "z": 330,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 592,
+        "z": 320,
+        "rotation": 20,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 640,
+        "z": 322,
+        "rotation": 200,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 618,
+        "z": 356,
+        "rotation": 90,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 472,
+        "z": 404,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 431,
+        "z": 396,
+        "rotation": 20,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 469,
+        "z": 384,
+        "rotation": 200,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 433,
+        "z": 428,
+        "rotation": 90,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 774,
+        "z": 403,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 777,
+        "z": 392,
+        "rotation": 20,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 794,
+        "z": 415,
+        "rotation": 200,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 787,
+        "z": 422,
+        "rotation": 90,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "dining_table-cafe-rustic",
+        "x": 140,
+        "z": 450
+      },
+      {
+        "furnitureId": "chair-nordic-oak",
+        "x": 140,
+        "z": 384
+      },
+      {
+        "furnitureId": "chair-nordic-oak",
+        "x": 140,
+        "z": 516,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-nordic-oak",
+        "x": 74,
+        "z": 450,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "chair-nordic-oak",
+        "x": 206,
+        "z": 450,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 140,
+        "z": 450,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 116,
+        "z": 440,
+        "rotation": 20,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 164,
+        "z": 442,
+        "rotation": 200,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "lamp-pendant-ikea4",
+        "x": 140,
+        "z": 450,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "bookshelf-with-books",
+        "x": 202,
+        "z": 282
+      },
+      {
+        "furnitureId": "decor-radio-vintage",
+        "x": 222,
+        "z": 271,
+        "rotation": 180,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "plant-monstera",
+        "x": 85,
+        "z": 530
+      },
+      {
+        "furnitureId": "dining_table-cafe-rustic",
+        "x": 1055,
+        "z": 330
+      },
+      {
+        "furnitureId": "chair-industrial-black",
+        "x": 1055,
+        "z": 264
+      },
+      {
+        "furnitureId": "chair-industrial-black",
+        "x": 1055,
+        "z": 396,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-industrial-black",
+        "x": 989,
+        "z": 330,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "chair-industrial-black",
+        "x": 1121,
+        "z": 330,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 1055,
+        "z": 330,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 1031,
+        "z": 320,
+        "rotation": 20,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 1079,
+        "z": 322,
+        "rotation": 200,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "lamp-pendant-ikea4",
+        "x": 1055,
+        "z": 330,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "dining_table-cafe-rustic",
+        "x": 1055,
+        "z": 500
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 1055,
+        "z": 434
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 1055,
+        "z": 566,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 989,
+        "z": 500,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 1121,
+        "z": 500,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 1055,
+        "z": 500,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 1031,
+        "z": 490,
+        "rotation": 20,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 1079,
+        "z": 492,
+        "rotation": 200,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "lamp-pendant-ikea4",
+        "x": 1055,
+        "z": 500,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "plant-hanging-pothos",
+        "x": 521,
+        "z": 157,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "plant-hanging-pothos",
+        "x": 711,
+        "z": 157,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-pendant-ikea4",
+        "x": 471,
+        "z": 67,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-pendant-ikea4",
+        "x": 691,
+        "z": 67,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-pendant-ikea4",
+        "x": 375,
+        "z": 300,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-pendant-ikea4",
+        "x": 855,
+        "z": 300,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-pendant-ikea4",
+        "x": 616,
+        "z": 330,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-pendant-ikea4",
+        "x": 431,
+        "z": 402,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-pendant-ikea4",
+        "x": 762,
+        "z": 397,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "counter-bar-straight",
+        "x": 1055,
+        "z": 35
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 975,
+        "z": 95
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 1055,
+        "z": 95
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 1135,
+        "z": 95
+      },
+      {
+        "furnitureId": "counter-modular-bar",
+        "x": 589,
+        "z": 168,
+        "rotation": 180,
+        "scaleW": 1.45
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 465,
+        "z": 89
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 577,
+        "z": 88
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 686,
+        "z": 88
+      }
+    ],
+    "hallway": [
+      {
+        "furnitureId": "counter-coffee-cart",
+        "x": 70,
+        "z": 95
+      },
+      {
+        "furnitureId": "decor-bin-black",
+        "x": 20,
+        "z": 155
+      },
+      {
+        "furnitureId": "decor-menu-chalkboard",
+        "x": 175,
+        "z": 35
+      },
+      {
+        "furnitureId": "outdoor-patio-set",
+        "x": 350,
+        "z": 92,
+        "scaleW": 0.8,
+        "scaleD": 0.8
+      },
+      {
+        "furnitureId": "decor-welcome-sign",
+        "x": 473,
+        "z": 38,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "outdoor-patio-set",
+        "x": 743,
+        "z": 91,
+        "scaleW": 0.8,
+        "scaleD": 0.8
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 872,
+        "z": 146
+      },
+      {
+        "furnitureId": "outdoor-patio-set",
+        "x": 1029,
+        "z": 88,
+        "scaleW": 0.8,
+        "scaleD": 0.8
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 1160,
+        "z": 139
+      }
+    ]
+  }
+]

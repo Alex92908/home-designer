@@ -1,0 +1,1019 @@
+[
+  {
+    "living": [
+      {
+        "furnitureId": "counter-wooden-bar",
+        "x": 1100,
+        "z": 1200,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-ergonomic",
+        "x": 1100,
+        "z": 1155,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "decor-welcome-sign",
+        "x": 1030,
+        "z": 1200,
+        "elevationY": 118
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 930,
+        "z": 1180
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 1270,
+        "z": 1180
+      },
+      {
+        "furnitureId": "lamp-ceiling-modern",
+        "x": 1100,
+        "z": 1200,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "rug-modern-gray",
+        "x": 330,
+        "z": 1300,
+        "scaleW": 2.8,
+        "scaleD": 2.6
+      },
+      {
+        "furnitureId": "sofa-modern-pillows",
+        "x": 330,
+        "z": 1410,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "coffee-oak-round",
+        "x": 330,
+        "z": 1280
+      },
+      {
+        "furnitureId": "sofa-armchair",
+        "x": 235,
+        "z": 1160,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "sofa-armchair",
+        "x": 425,
+        "z": 1160,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "plant-monstera",
+        "x": 110,
+        "z": 1130
+      },
+      {
+        "furnitureId": "lamp-ceiling-modern",
+        "x": 330,
+        "z": 1300,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "rug-modern-gray",
+        "x": 1870,
+        "z": 1300,
+        "scaleW": 2.8,
+        "scaleD": 2.6
+      },
+      {
+        "furnitureId": "sofa-modern-pillows",
+        "x": 1870,
+        "z": 1410,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "coffee-oak-round",
+        "x": 1870,
+        "z": 1280
+      },
+      {
+        "furnitureId": "sofa-armchair",
+        "x": 1775,
+        "z": 1160,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "sofa-armchair",
+        "x": 1965,
+        "z": 1160,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 2090,
+        "z": 1130
+      },
+      {
+        "furnitureId": "lamp-ceiling-modern",
+        "x": 1870,
+        "z": 1300,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "mural-inkwash",
+        "x": 1100,
+        "z": 14
+      },
+      {
+        "furnitureId": "rug-nordic-geo",
+        "x": 1100,
+        "z": 180,
+        "scaleW": 2,
+        "scaleD": 1.5
+      },
+      {
+        "furnitureId": "coffee-oak-round",
+        "x": 1100,
+        "z": 180
+      },
+      {
+        "furnitureId": "sofa-armchair",
+        "x": 960,
+        "z": 180,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "sofa-armchair",
+        "x": 1240,
+        "z": 180,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 1520,
+        "z": 130
+      },
+      {
+        "furnitureId": "plant-monstera",
+        "x": 680,
+        "z": 130
+      },
+      {
+        "furnitureId": "lamp-ceiling-modern",
+        "x": 1100,
+        "z": 180,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "desk-standing",
+        "x": 100,
+        "z": 380,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "chair-ergonomic",
+        "x": 170,
+        "z": 380,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "elec-monitor",
+        "x": 73,
+        "z": 380,
+        "elevationY": 66
+      },
+      {
+        "furnitureId": "desk-standing",
+        "x": 100,
+        "z": 560,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "chair-ergonomic",
+        "x": 170,
+        "z": 560,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "elec-monitor",
+        "x": 73,
+        "z": 560,
+        "elevationY": 66
+      },
+      {
+        "furnitureId": "desk-standing",
+        "x": 100,
+        "z": 740,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "chair-ergonomic",
+        "x": 170,
+        "z": 740,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "elec-monitor",
+        "x": 73,
+        "z": 740,
+        "elevationY": 66
+      },
+      {
+        "furnitureId": "desk-standing",
+        "x": 100,
+        "z": 920,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "chair-ergonomic",
+        "x": 170,
+        "z": 920,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "elec-monitor",
+        "x": 73,
+        "z": 920,
+        "elevationY": 66
+      },
+      {
+        "furnitureId": "desk-standing",
+        "x": 450,
+        "z": 380,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "chair-ergonomic",
+        "x": 380,
+        "z": 380,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "elec-monitor",
+        "x": 477,
+        "z": 380,
+        "elevationY": 66
+      },
+      {
+        "furnitureId": "desk-standing",
+        "x": 450,
+        "z": 560,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "chair-ergonomic",
+        "x": 380,
+        "z": 560,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "elec-monitor",
+        "x": 477,
+        "z": 560,
+        "elevationY": 66
+      },
+      {
+        "furnitureId": "desk-standing",
+        "x": 450,
+        "z": 740,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "chair-ergonomic",
+        "x": 380,
+        "z": 740,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "elec-monitor",
+        "x": 477,
+        "z": 740,
+        "elevationY": 66
+      },
+      {
+        "furnitureId": "desk-standing",
+        "x": 450,
+        "z": 920,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "chair-ergonomic",
+        "x": 380,
+        "z": 920,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "elec-laptop",
+        "x": 477,
+        "z": 920,
+        "elevationY": 66
+      },
+      {
+        "furnitureId": "bookshelf-open-white",
+        "x": 40,
+        "z": 1050,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 275,
+        "z": 300
+      },
+      {
+        "furnitureId": "lamp-ceiling-long",
+        "x": 275,
+        "z": 470,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-ceiling-long",
+        "x": 275,
+        "z": 830,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 1770,
+        "z": 720
+      },
+      {
+        "furnitureId": "plant-monstera",
+        "x": 2110,
+        "z": 760
+      },
+      {
+        "furnitureId": "lamp-ceiling-long",
+        "x": 1925,
+        "z": 760,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-ceiling-long",
+        "x": 1925,
+        "z": 960,
+        "mountCeiling": true
+      }
+    ],
+    "dining": [
+      {
+        "furnitureId": "table-conference",
+        "x": 200,
+        "z": 120,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 100,
+        "z": 52,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 165,
+        "z": 52,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 235,
+        "z": 52,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 300,
+        "z": 52,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 100,
+        "z": 188,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 165,
+        "z": 188,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 235,
+        "z": 188,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 300,
+        "z": 188,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 48,
+        "z": 120,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "decor-book-stack",
+        "x": 150,
+        "z": 110,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 250,
+        "z": 130,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "elec-tv-flat",
+        "x": 388,
+        "z": 120,
+        "rotation": 270,
+        "elevationY": 130
+      },
+      {
+        "furnitureId": "plant-sansevieria",
+        "x": 360,
+        "z": 228
+      },
+      {
+        "furnitureId": "rug-nordic-geo",
+        "x": 200,
+        "z": 120,
+        "scaleW": 2.4,
+        "scaleD": 1.6
+      },
+      {
+        "furnitureId": "lamp-ceiling-long",
+        "x": 200,
+        "z": 120,
+        "mountCeiling": true
+      }
+    ],
+    "master": [
+      {
+        "furnitureId": "desk-standing",
+        "x": 125,
+        "z": 60,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "chair-ergonomic",
+        "x": 125,
+        "z": 115,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "elec-monitor",
+        "x": 125,
+        "z": 48,
+        "elevationY": 66
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 185,
+        "z": 205,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 215,
+        "z": 60
+      },
+      {
+        "furnitureId": "rug-nordic-geo",
+        "x": 125,
+        "z": 135,
+        "scaleW": 1.2,
+        "scaleD": 1.1
+      },
+      {
+        "furnitureId": "lamp-ceiling-modern",
+        "x": 125,
+        "z": 135,
+        "mountCeiling": true
+      }
+    ],
+    "kitchen": [
+      {
+        "furnitureId": "counter-bar-straight",
+        "x": 135,
+        "z": 40,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "cabinet-upper-white",
+        "x": 135,
+        "z": 14,
+        "elevationY": 150
+      },
+      {
+        "furnitureId": "appliance-coffee",
+        "x": 70,
+        "z": 40,
+        "elevationY": 110
+      },
+      {
+        "furnitureId": "decor-coffee-jar",
+        "x": 200,
+        "z": 40,
+        "elevationY": 110
+      },
+      {
+        "furnitureId": "fridge-single-white",
+        "x": 235,
+        "z": 70
+      },
+      {
+        "furnitureId": "dining_table-bar",
+        "x": 100,
+        "z": 175,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 45,
+        "z": 175,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 155,
+        "z": 175,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "plant-monstera",
+        "x": 235,
+        "z": 220
+      },
+      {
+        "furnitureId": "lamp-ceiling-modern",
+        "x": 135,
+        "z": 135,
+        "mountCeiling": true
+      }
+    ],
+    "bathroom": [
+      {
+        "furnitureId": "partition-stall",
+        "x": 58,
+        "z": 10,
+        "rotation": 90,
+        "scaleD": 0.77
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 58,
+        "z": 100,
+        "rotation": 90,
+        "scaleD": 0.77
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 58,
+        "z": 190,
+        "rotation": 90,
+        "scaleD": 0.77
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 58,
+        "z": 280,
+        "rotation": 90,
+        "scaleD": 0.77
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 58,
+        "z": 370,
+        "rotation": 90,
+        "scaleD": 0.77
+      },
+      {
+        "furnitureId": "stall-door",
+        "x": 115,
+        "z": 55,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "stall-door",
+        "x": 115,
+        "z": 145,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "stall-door",
+        "x": 115,
+        "z": 235,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "stall-door",
+        "x": 115,
+        "z": 325,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "toilet-standard",
+        "x": 50,
+        "z": 55,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "toilet-standard",
+        "x": 50,
+        "z": 145,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "toilet-standard",
+        "x": 50,
+        "z": 235,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "toilet-standard",
+        "x": 50,
+        "z": 325,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "decor-trash-bin",
+        "x": 95,
+        "z": 55
+      },
+      {
+        "furnitureId": "decor-trash-bin",
+        "x": 95,
+        "z": 145
+      },
+      {
+        "furnitureId": "decor-trash-bin",
+        "x": 95,
+        "z": 235
+      },
+      {
+        "furnitureId": "decor-trash-bin",
+        "x": 95,
+        "z": 325
+      },
+      {
+        "furnitureId": "urinal-wall",
+        "x": 255,
+        "z": 70,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "urinal-wall",
+        "x": 255,
+        "z": 160,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "urinal-wall",
+        "x": 255,
+        "z": 250,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 245,
+        "z": 25,
+        "rotation": 90,
+        "scaleD": 0.4
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 245,
+        "z": 115,
+        "rotation": 90,
+        "scaleD": 0.4
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 245,
+        "z": 205,
+        "rotation": 90,
+        "scaleD": 0.4
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 225,
+        "z": 480
+      },
+      {
+        "furnitureId": "vanity-double-marble",
+        "x": 19,
+        "z": 525,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "decor-trash-bin-3",
+        "x": 70,
+        "z": 590
+      },
+      {
+        "furnitureId": "lamp-ceiling-modern",
+        "x": 155,
+        "z": 190,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-ceiling-modern",
+        "x": 155,
+        "z": 470,
+        "mountCeiling": true
+      }
+    ],
+    "custom2": [
+      {
+        "furnitureId": "dining_table-bar",
+        "x": 170,
+        "z": 175,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 170,
+        "z": 240,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "decor-cigarettes",
+        "x": 170,
+        "z": 175,
+        "elevationY": 97
+      },
+      {
+        "furnitureId": "exhaust-vent",
+        "x": 240,
+        "z": 270,
+        "elevationY": 200
+      },
+      {
+        "furnitureId": "plant-sansevieria",
+        "x": 235,
+        "z": 265
+      },
+      {
+        "furnitureId": "decor-trash-bin-2",
+        "x": 55,
+        "z": 265
+      },
+      {
+        "furnitureId": "lamp-ceiling-modern",
+        "x": 170,
+        "z": 175,
+        "mountCeiling": true
+      }
+    ],
+    "equipment_room": [
+      {
+        "furnitureId": "storage-shelving",
+        "x": 55,
+        "z": 155,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "storage-shelving",
+        "x": 55,
+        "z": 245,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "storage-shelving-2",
+        "x": 225,
+        "z": 155,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "storage-shelving-2",
+        "x": 225,
+        "z": 245,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "elec-router",
+        "x": 140,
+        "z": 70,
+        "elevationY": 70
+      },
+      {
+        "furnitureId": "decor-trash-bin",
+        "x": 235,
+        "z": 270
+      },
+      {
+        "furnitureId": "lamp-ceiling-led",
+        "x": 140,
+        "z": 175,
+        "mountCeiling": true
+      }
+    ],
+    "closet": [
+      {
+        "furnitureId": "storage-shelving",
+        "x": 55,
+        "z": 155,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "storage-shelving",
+        "x": 55,
+        "z": 245,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "storage-shelving-2",
+        "x": 225,
+        "z": 155,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "storage-shelving-2",
+        "x": 225,
+        "z": 245,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "storage-box",
+        "x": 140,
+        "z": 165
+      },
+      {
+        "furnitureId": "storage-crate",
+        "x": 140,
+        "z": 255
+      },
+      {
+        "furnitureId": "lamp-ceiling-led",
+        "x": 140,
+        "z": 175,
+        "mountCeiling": true
+      }
+    ],
+    "bathroom2": [
+      {
+        "furnitureId": "partition-stall",
+        "x": 217,
+        "z": 10,
+        "rotation": 90,
+        "scaleD": 0.77
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 217,
+        "z": 100,
+        "rotation": 90,
+        "scaleD": 0.77
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 217,
+        "z": 190,
+        "rotation": 90,
+        "scaleD": 0.77
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 217,
+        "z": 280,
+        "rotation": 90,
+        "scaleD": 0.77
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 217,
+        "z": 370,
+        "rotation": 90,
+        "scaleD": 0.77
+      },
+      {
+        "furnitureId": "stall-door",
+        "x": 160,
+        "z": 55,
+        "rotation": 90,
+        "mirrorX": true
+      },
+      {
+        "furnitureId": "stall-door",
+        "x": 160,
+        "z": 145,
+        "rotation": 90,
+        "mirrorX": true
+      },
+      {
+        "furnitureId": "stall-door",
+        "x": 160,
+        "z": 235,
+        "rotation": 90,
+        "mirrorX": true
+      },
+      {
+        "furnitureId": "stall-door",
+        "x": 160,
+        "z": 325,
+        "rotation": 90,
+        "mirrorX": true
+      },
+      {
+        "furnitureId": "toilet-standard",
+        "x": 225,
+        "z": 55,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "toilet-standard",
+        "x": 225,
+        "z": 145,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "toilet-standard",
+        "x": 225,
+        "z": 235,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "toilet-standard",
+        "x": 225,
+        "z": 325,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "decor-trash-bin",
+        "x": 180,
+        "z": 55
+      },
+      {
+        "furnitureId": "decor-trash-bin",
+        "x": 180,
+        "z": 145
+      },
+      {
+        "furnitureId": "decor-trash-bin",
+        "x": 180,
+        "z": 235
+      },
+      {
+        "furnitureId": "decor-trash-bin",
+        "x": 180,
+        "z": 325
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 130,
+        "z": 480
+      },
+      {
+        "furnitureId": "vanity-double-marble",
+        "x": 256,
+        "z": 525,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "decor-trash-bin-3",
+        "x": 205,
+        "z": 590
+      },
+      {
+        "furnitureId": "lamp-ceiling-modern",
+        "x": 120,
+        "z": 200,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-ceiling-modern",
+        "x": 120,
+        "z": 470,
+        "mountCeiling": true
+      }
+    ],
+    "hallway": [
+      {
+        "furnitureId": "plant-sansevieria",
+        "x": 55,
+        "z": 70
+      },
+      {
+        "furnitureId": "plant-sansevieria",
+        "x": 1045,
+        "z": 70
+      },
+      {
+        "furnitureId": "lamp-ceiling-led",
+        "x": 330,
+        "z": 70,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-ceiling-led",
+        "x": 770,
+        "z": 70,
+        "mountCeiling": true
+      }
+    ]
+  }
+]
