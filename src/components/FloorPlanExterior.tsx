@@ -5889,11 +5889,31 @@ export default function FloorPlanBuilding({
             const top = interiorRooms.filter(r => r.fi === topFi);
             if (top.length === 0) return null;
             const ox = mainRoofBounds.cx, oz = mainRoofBounds.cz;
-            return top.map(r => (r.shapePts
+            // 每个房间的建筑中心坐标多边形（shapePts 优先，否则矩形）。
+            const polys = top.map(r => (r.shapePts
               ? r.shapePts.map(([sx, sz]) => [r.cx + sx, r.cz + sz] as [number, number])
               : [[r.cx - r.rW / 2, r.cz - r.rD / 2], [r.cx + r.rW / 2, r.cz - r.rD / 2],
-                 [r.cx + r.rW / 2, r.cz + r.rD / 2], [r.cx - r.rW / 2, r.cz + r.rD / 2]] as Array<[number, number]>
-            ).map(([x, z]) => [x - ox, z - oz] as [number, number]));
+                 [r.cx + r.rW / 2, r.cz + r.rD / 2], [r.cx - r.rW / 2, r.cz + r.rD / 2]] as Array<[number, number]>));
+            const toLocal = (poly: Array<[number, number]>) =>
+              poly.map(([x, z]) => [x - ox, z - oz] as [number, number]);
+            // ③ **填充率判据**：顶层房间实际面积 ÷ 其外接矩形面积。房间基本填满外接
+            //    矩形(>0.9，如咖啡厅 kitchen+living 拼成近似矩形)时，逐房间出板会把
+            //    房间间 ~cm 级的真实错位(如 kitchen x=0 / living x=9)暴露成屋面外沿
+            //    的台阶状缺口(俯视可见，用户在意)。此时改出**一整块外接矩形板**，
+            //    外沿一条干净直线、无缺口。真凹形楼(填充率低)仍逐房间出板，避免凹
+            //    处悬挑黑舌头(错层别墅东北楼梯间)。
+            let mnX = Infinity, mxX = -Infinity, mnZ = Infinity, mxZ = -Infinity, filled = 0;
+            for (const p of polys) {
+              for (const [x, z] of p) { mnX = Math.min(mnX, x); mxX = Math.max(mxX, x); mnZ = Math.min(mnZ, z); mxZ = Math.max(mxZ, z); }
+              let a = 0;
+              for (let j = 0; j < p.length; j++) { const [x1, z1] = p[j], [x2, z2] = p[(j + 1) % p.length]; a += x1 * z2 - x2 * z1; }
+              filled += Math.abs(a) / 2;
+            }
+            const bboxArea = (mxX - mnX) * (mxZ - mnZ);
+            if (bboxArea > 0 && filled / bboxArea > 0.9) {
+              return [toLocal([[mnX, mnZ], [mxX, mnZ], [mxX, mxZ], [mnX, mxZ]])];
+            }
+            return polys.map(toLocal);
           })()}
           // 女儿墙沿真实外周（异形楼才需要；矩形楼传 null 走原来的四边写死）。
           // 用 allSegs 而不是逐房间多边形：allSegs 已去重且剔掉了内墙，
