@@ -1697,7 +1697,7 @@ const OFFICE_SET: ProjectTemplate = {
         //   洗手间区放大：缺口西界 x1750→x1650（贴回字岛 E 边）、进深 460→620（拆东侧 6 工位腾出），
         //   两间洗手间各 275×620，facing 布局走道 ~120cm、隔间/走道宽松不挤。
         { room: "living", x: 0, y: 0, width: 2200, depth: 1500,
-          name: "大厅", icon: "🏛️",
+          name: "大厅", nameEn: "Open Office", icon: "🏛️",
           shape: { preset: "custom",
             points: [[0,0],[1650,0],[1650,620],[2200,620],[2200,1500],[0,1500]],
             holes: [[[550,330],[1650,330],[1650,1030],[550,1030]]] },
@@ -1707,27 +1707,27 @@ const OFFICE_SET: ProjectTemplate = {
             { wall: "S", pos: 220, len: 520 }, { wall: "S", pos: 1460, len: 520 }] },
         // ── 洞内·上排 y330-590（门朝南通走廊）──
         { room: "dining",  x: 550,  y: 330, width: 400, depth: 260,
-          name: "会议室", icon: "📊", doors: [{ wall: "S", pos: 180, len: 100 }] },
+          name: "会议室", nameEn: "Meeting Room", icon: "📊", doors: [{ wall: "S", pos: 180, len: 100 }] },
         { room: "master",  x: 950,  y: 330, width: 350, depth: 260,
-          name: "独立办公室", icon: "💼", doors: [{ wall: "S", pos: 160, len: 90 }] },
+          name: "独立办公室", nameEn: "Private Office", icon: "💼", doors: [{ wall: "S", pos: 160, len: 90 }] },
         { room: "kitchen", x: 1300, y: 330, width: 350, depth: 260,
-          name: "茶水间", icon: "☕", doors: [{ wall: "S", pos: 160, len: 90 }] },
+          name: "茶水间", nameEn: "Tea Room", icon: "☕", doors: [{ wall: "S", pos: 160, len: 90 }] },
         // ── 中央走廊 hallway y590-730，两端(W/E)敞开通大厅 ──
         { room: "hallway", x: 550, y: 590, width: 1100, depth: 140,
-          name: "走廊", icon: "🚶", wallsHidden: ["W", "E"] },
+          name: "走廊", nameEn: "Corridor", icon: "🚶", wallsHidden: ["W", "E"] },
         // ── 洞内·下排 y730-1030（门朝北通走廊）──
         { room: "custom2", x: 550, y: 730, width: 370, depth: 300,
-          name: "吸烟室", icon: "🚬", doors: [{ wall: "N", pos: 140, len: 90 }] },
+          name: "吸烟室", nameEn: "Smoking Room", icon: "🚬", doors: [{ wall: "N", pos: 140, len: 90 }] },
         { room: "equipment_room", x: 920, y: 730, width: 370, depth: 300,
-          name: "机房", icon: "🖧", doors: [{ wall: "N", pos: 140, len: 90 }] },
+          name: "机房", nameEn: "Server Room", icon: "🖧", doors: [{ wall: "N", pos: 140, len: 90 }] },
         { room: "closet", x: 1290, y: 730, width: 360, depth: 300,
-          name: "库房", icon: "📦", doors: [{ wall: "N", pos: 140, len: 90 }] },
+          name: "库房", nameEn: "Storage", icon: "📦", doors: [{ wall: "N", pos: 140, len: 90 }] },
         // ── 东北角落 洗手间区：男/女各占满进深(225×460)，门开在近中缝一侧、并排通大厅 ──
         //   每间沿外墙一列 4 个封闭坑位 + 走道；男厕北墙留小便池排、女厕北墙做盥洗台。
         { room: "bathroom", x: 1650, y: 0, width: 275, depth: 620,
-          name: "男洗手间", icon: "🚹", doors: [{ wall: "S", pos: 175, len: 70 }] },
+          name: "男洗手间", nameEn: "Men's Room", icon: "🚹", doors: [{ wall: "S", pos: 175, len: 70 }] },
         { room: "bathroom2", x: 1925, y: 0, width: 275, depth: 620,
-          name: "女洗手间", icon: "🚺", doors: [{ wall: "S", pos: 80, len: 70 }] },
+          name: "女洗手间", nameEn: "Women's Room", icon: "🚺", doors: [{ wall: "S", pos: 80, len: 70 }] },
       ],
     },
   ],
@@ -1784,32 +1784,32 @@ const RESTAURANT_SET: ProjectTemplate = {
       rooms: [
         // ── 西北角 后厨（开口 S 出餐）──
         { room: "kitchen",  x: 0, y: 0, width: 780, depth: 440,
-          name: "后厨", icon: "🍳", exteriorStyle: "concrete", wallsHidden: ["S"] },
+          name: "后厨", nameEn: "Kitchen", icon: "🍳", exteriorStyle: "concrete", wallsHidden: ["S"] },
         // ── 中段 客用私密区（包间一/二 + VIP）──
         { room: "dining",   x: 780, y: 0, width: 340, depth: 440,
-          name: "包间一", icon: "🍱", exteriorStyle: "concrete",
+          name: "包间一", nameEn: "Private Room 1", icon: "🍱", exteriorStyle: "concrete",
           doors: [{ wall: "S", pos: 170, len: 100 }] },
         { room: "master",   x: 1120, y: 0, width: 340, depth: 440,
-          name: "包间二", icon: "🍷", exteriorStyle: "concrete",
+          name: "包间二", nameEn: "Private Room 2", icon: "🍷", exteriorStyle: "concrete",
           doors: [{ wall: "S", pos: 170, len: 100 }] },
         { room: "study",    x: 1460, y: 0, width: 560, depth: 440,
-          name: "VIP 包间", icon: "👑", exteriorStyle: "concrete",
+          name: "VIP 包间", nameEn: "VIP Room", icon: "👑", exteriorStyle: "concrete",
           doors: [{ wall: "S", pos: 280, len: 110 }] },
         // ── 东北角 洗手间区（与 VIP 间隔 x2020-2380 绿植缓冲）──
         // 过道：矩形横条(y260-440)，S 面整面敞开通大堂→可直接走进；男女厕门开在各自外侧，
         // 盥洗台居中放过道；男女厕在其北侧贴边墙
         { room: "bedroom",  x: 2380, y: 260, width: 620, depth: 180,
-          name: "洗手间过道", icon: "🚻", exteriorStyle: "concrete", wallsHidden: ["S"] },
+          name: "洗手间过道", nameEn: "Restroom Hall", icon: "🚻", exteriorStyle: "concrete", wallsHidden: ["S"] },
         { room: "bathroom", x: 2380, y: 0, width: 310, depth: 260,
-          name: "男洗手间", icon: "🚹", exteriorStyle: "concrete",
+          name: "男洗手间", nameEn: "Men's Room", icon: "🚹", exteriorStyle: "concrete",
           doors: [{ wall: "S", pos: 65, len: 100 }] },
         { room: "bathroom2", x: 2690, y: 0, width: 310, depth: 260,
-          name: "女洗手间", icon: "🚺", exteriorStyle: "concrete",
+          name: "女洗手间", nameEn: "Women's Room", icon: "🚺", exteriorStyle: "concrete",
           doors: [{ wall: "S", pos: 245, len: 100 }] },
         // ── 大堂 多边形（floor 3000；兜西北后场块 x0-2020 + 东北洗手间块 x2380-3000，
         //     中间隔断缓冲 x2020-2380 通到北墙）；玻璃门面 + 南门 + 店招 ──
         { room: "living",   x: 0, y: 0, width: 3000, depth: 1020,
-          name: "大堂", icon: "🍽️", exteriorStyle: "glass",
+          name: "大堂", nameEn: "Dining Hall", icon: "🍽️", exteriorStyle: "glass",
           shape: { preset: "custom",
             points: [[0,440],[2020,440],[2020,0],[2380,0],[2380,440],[3000,440],[3000,1020],[0,1020]] },
           doors: [{ wall: "S", pos: 1400, len: 200, style: "glass_swing", h: 210 }],
@@ -1817,7 +1817,7 @@ const RESTAURANT_SET: ProjectTemplate = {
             label: "宴福楼|YANFU RESTAURANT" }] },
         // ── 沿街骑楼露天座 ──
         { room: "hallway",  x: 0, y: 1020, width: 3000, depth: 200,
-          name: "露天座", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
+          name: "露天座", nameEn: "Terrace Seating", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
       ],
     },
   ],

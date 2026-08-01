@@ -813,7 +813,7 @@ export default function FloorPlanAll() {
   const getRoomLabel = (room: RoomType) => {
     const meta = customRoomMeta[room];
     const def  = ROOM_DEFS[room];
-    const baseName = meta?.name ?? (locale === "en" ? (t.roomNames[room] ?? def.name) : def.name);
+    const baseName = customRoomDisplayName(meta, locale) ?? (locale === "en" ? (t.roomNames[room] ?? def.name) : def.name);
     return { name: baseName, icon: meta?.icon ?? def.icon };
   };
 

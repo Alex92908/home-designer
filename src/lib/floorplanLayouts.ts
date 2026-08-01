@@ -21,6 +21,8 @@ export interface LayoutTemplateRoom {
   /** 自定义房间显示名/图标（写进 customRoomMeta）。用于片场把通用房间槽
    *  （living/study/master…）显示成"前台大厅/开放办公区/会议室/男洗手间"等。 */
   name?: string;
+  /** 英文显示名。英文 locale 下优先用它（customRoomDisplayName），否则回退中文 name。 */
+  nameEn?: string;
   icon?: string;
   shape?: RoomShape;
   /** 需要隐藏的墙面（开放式/骑楼露天区，如咖啡馆沿街走廊）。

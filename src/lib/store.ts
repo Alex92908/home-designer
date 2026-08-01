@@ -2266,6 +2266,7 @@ export const useDesignerStore = create<DesignerStore>()(
                 nameMeta[r.room] = {
                   name: r.name ?? ROOM_DEFS[r.room]?.name ?? r.room,
                   icon: r.icon ?? ROOM_DEFS[r.room]?.icon ?? "🏠",
+                  ...(r.nameEn?.trim() ? { nameEn: r.nameEn.trim() } : {}),
                 };
               }
               if (r.exteriorStyle) { exStyle[r.room] = r.exteriorStyle; touched = true; }
