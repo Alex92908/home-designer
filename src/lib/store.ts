@@ -1743,11 +1743,44 @@ export const useDesignerStore = create<DesignerStore>()(
         if (!fp?.rooms[activeRoom]) return;
         const prevItems = fp.rooms[activeRoom].placedItems;
         const def = ROOM_DEFS[activeRoom];
+        // 用实际房间尺寸（roomDimensions），不是 ROOM_DEFS 默认尺寸——否则大房间
+        // （如开放办公区 2200×1500）粘贴时被默认尺寸夹到左上角，整组塌陷/偏移。
+        const dims = fp.roomDimensions?.[activeRoom];
+        const roomW = dims?.width ?? def.width;
+        const roomD = dims?.depth ?? def.depth;
+        // 副本整组挪到原件「旁边」，与本体留 60cm 净间隙、明显分开不重叠。
+        // 按实际占地（含半身位、考虑旋转）算整组包围盒；优先放右侧，放不下
+        // 依次试左/下/上；都放不下才小幅错位并夹回房内。统一偏移，排布不变形。
+        const ext = clipboard.map(c => {
+          const f = getFurnitureById(c.furnitureId);
+          const r90 = c.rotation === 90 || c.rotation === 270;
+          const halfX = ((r90 ? (f?.depth ?? 100) * c.scaleD : (f?.width ?? 100) * c.scaleW)) / 2;
+          const halfZ = ((r90 ? (f?.width ?? 100) * c.scaleW : (f?.depth ?? 100) * c.scaleD)) / 2;
+          return { minX: c.x - halfX, maxX: c.x + halfX, minZ: c.z - halfZ, maxZ: c.z + halfZ };
+        });
+        const gMinX = Math.min(...ext.map(e => e.minX));
+        const gMaxX = Math.max(...ext.map(e => e.maxX));
+        const gMinZ = Math.min(...ext.map(e => e.minZ));
+        const gMaxZ = Math.max(...ext.map(e => e.maxZ));
+        const groupW = gMaxX - gMinX, groupD = gMaxZ - gMinZ;
+        const GAP = 60;
+        let offX = 0, offZ = 0;
+        if (gMaxX + groupW + GAP <= roomW)      offX =  groupW + GAP;   // 右
+        else if (gMinX - groupW - GAP >= 0)     offX = -(groupW + GAP); // 左
+        else if (gMaxZ + groupD + GAP <= roomD) offZ =  groupD + GAP;   // 下
+        else if (gMinZ - groupD - GAP >= 0)     offZ = -(groupD + GAP); // 上
+        else {                                                          // 无空位 → 小幅错位后夹回
+          offX = 60; offZ = 60;
+          if (gMaxX + offX > roomW) offX = roomW - gMaxX;
+          if (gMinX + offX < 0)     offX = -gMinX;
+          if (gMaxZ + offZ > roomD) offZ = roomD - gMaxZ;
+          if (gMinZ + offZ < 0)     offZ = -gMinZ;
+        }
         const copies: PlacedItem[] = clipboard.map(c => ({
           instanceId: genId(),
           furnitureId: c.furnitureId,
-          x: Math.min(c.x + 50, def.width * 0.9),
-          z: Math.min(c.z + 50, def.depth * 0.9),
+          x: c.x + offX,
+          z: c.z + offZ,
           rotation: c.rotation,
           scaleW: c.scaleW,
           scaleD: c.scaleD,

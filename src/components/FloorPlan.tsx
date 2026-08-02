@@ -70,6 +70,8 @@ interface PlacedItemSVGProps {
   isBlocked?: boolean;
   hasViolation?: boolean;
   violationSeverity?: "required" | "recommended";
+  /** 间距把控线开关：false 时隐藏违规红框 + ↑cm 抬升徽标。 */
+  showClearance?: boolean;
   onPointerDown: (e: React.PointerEvent<SVGGElement>) => void;
 }
 
@@ -94,7 +96,7 @@ function splitNameLines(name: string, maxPx: number): [string] | [string, string
   return [line1, line2];
 }
 
-function PlacedItemSVG({ placed, scale, isSelected, isBlocked, hasViolation, violationSeverity, onPointerDown }: PlacedItemSVGProps) {
+function PlacedItemSVG({ placed, scale, isSelected, isBlocked, hasViolation, violationSeverity, showClearance = true, onPointerDown }: PlacedItemSVGProps) {
   // 内置家具走静态 FURNITURE；导入家具响应式订阅 store.customFurniture，
   // 否则刷新后查非响应式的 _customItems 拿不到（同 RoomCanvas PlacedItemMesh）。
   const customFurniture = useDesignerStore(s => s.customFurniture);
@@ -130,7 +132,7 @@ function PlacedItemSVG({ placed, scale, isSelected, isBlocked, hasViolation, vio
       onPointerDown={onPointerDown}
     >
       <rect x={-w / 2 + 2} y={-d / 2 + 2} width={w} height={d} rx={4} fill="rgba(0,0,0,0.3)" />
-      {hasViolation && (
+      {showClearance && hasViolation && (
         <rect
           x={-w / 2 - 3} y={-d / 2 - 3} width={w + 6} height={d + 6} rx={6}
           fill="none"
@@ -209,8 +211,8 @@ function PlacedItemSVG({ placed, scale, isSelected, isBlocked, hasViolation, vio
           <rect x={w / 2 - 8} y={d / 2 - 8} width={8} height={8} rx={2} fill="#3B82F6" opacity={0.9} />
         </>
       )}
-      {/* Elevation badge — shown when item is lifted off floor */}
-      {(placed.elevationY ?? 0) > 0 && (
+      {/* Elevation badge — shown when item is lifted off floor (gated by 间距把控线开关) */}
+      {showClearance && (placed.elevationY ?? 0) > 0 && (
         <g transform={`translate(${w / 2 - 2}, ${-d / 2 - 1}) rotate(${-placed.rotation})`}>
           <rect x={-22} y={-9} width={22} height={9} rx={3} fill="#F59E0B" opacity={0.95} />
           <text x={-11} y={-4.5} textAnchor="middle" dominantBaseline="middle"
@@ -462,6 +464,10 @@ export default function FloorPlan() {
   const [editWindows, setEditWindows] = useState(false);
   const [editShape, setEditShape] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0);
+  // 显隐「间距把控线」（距离标注 + 间距/门开合校验框）。默认显示。
+  const [showClearance, setShowClearance] = useState(true);
+  // 框选：拖矩形选中多个家具（SVG 像素坐标）。拖完交给既有的组拖拽移动。
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const [isLandscape, setIsLandscape] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia("(orientation: landscape)");
@@ -998,6 +1004,80 @@ export default function FloorPlan() {
     [setSelection]
   );
 
+  // ─── Marquee box-select (drag a rectangle on empty canvas → multi-select) ──
+  // 家具项的 onPointerDown 会 stopPropagation，所以在空白/地面/墙上按下才会
+  // 落到这里。拖出矩形则实时选中框内家具；只是点一下（没拖动）则清空选择。
+  // 选中后，既有的组拖拽（handleItemPointerDown）即可整体移动。
+  const handleSVGPointerDown = useCallback(
+    (e: React.PointerEvent<SVGSVGElement>) => {
+      const svg = svgRef.current;
+      if (!svg || e.button !== 0) return;
+      if (editWindows || editShape) return;               // 编辑墙窗/形状时不框选
+      if (useDesignerStore.getState().routingMode) return; // 走管模式不框选
+      if ((e.target as Element).closest('[data-furniture="true"]')) return;
+
+      const start = getSVGPoint(e, svg, zoomLevel);
+      const itemsSvg = roomState.placedItems.map(p => ({ id: p.instanceId, sx: p.x * scale, sy: p.z * scale }));
+      let moved = false;
+
+      const onMove = (ev: PointerEvent) => {
+        const rect = svg.getBoundingClientRect();
+        const cx = (ev.clientX - rect.left) / zoomLevel;
+        const cy = (ev.clientY - rect.top)  / zoomLevel;
+        if (!moved && (Math.abs(cx - start.x) > 3 || Math.abs(cy - start.y) > 3)) moved = true;
+        if (!moved) return;
+        const x0 = Math.min(start.x, cx), x1 = Math.max(start.x, cx);
+        const y0 = Math.min(start.y, cy), y1 = Math.max(start.y, cy);
+        setMarquee({ x0, y0, x1, y1 });
+        const inside = itemsSvg
+          .filter(it => it.sx >= x0 && it.sx <= x1 && it.sy >= y0 && it.sy <= y1)
+          .map(it => it.id);
+        setSelection(inside);
+      };
+      const onUp = () => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+        setMarquee(null);
+        if (!moved) setSelection([]);   // 空白处单击 → 清空选择
+      };
+      window.addEventListener("pointermove", onMove, { passive: false });
+      window.addEventListener("pointerup", onUp, { once: true });
+      window.addEventListener("pointercancel", onUp, { once: true });
+    },
+    [zoomLevel, scale, roomState.placedItems, setSelection, editWindows, editShape]
+  );
+
+  // ─── 整组旋转：绕选中家具的包围盒中心整体旋转 90°（顺时针），
+  //     各件位置绕中心重排 + 自身朝向 +90°，整簇像一个整体转动。──
+  const handleRotateGroup = useCallback(() => {
+    const ids = selectedInstanceIds;
+    if (ids.length < 2) return;
+    const items = roomState.placedItems.filter(p => ids.includes(p.instanceId));
+    if (items.length < 2) return;
+    const xs = items.map(p => p.x), zs = items.map(p => p.z);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+    pushFurnitureHistory();
+    const idSet = new Set(ids);
+    useDesignerStore.setState(s => {
+      const fp = s.floorPlans[s.activeFloor];
+      const room = fp?.rooms[activeRoom];
+      if (!room) return {} as Partial<typeof s>;
+      const updated = room.placedItems.map(p => {
+        if (!idSet.has(p.instanceId)) return p;
+        const dx = p.x - cx, dz = p.z - cz;
+        // 90° 顺时针：(dx,dz) → (-dz, dx)
+        const nx = Math.max(0, Math.min(roomW, cx - dz));
+        const nz = Math.max(0, Math.min(roomD, cz + dx));
+        return { ...p, x: nx, z: nz, rotation: (p.rotation + 90) % 360 };
+      });
+      const plans = [...s.floorPlans];
+      plans[s.activeFloor] = { ...fp, rooms: { ...fp.rooms, [activeRoom]: { ...room, placedItems: updated } } };
+      return { floorPlans: plans };
+    });
+  }, [selectedInstanceIds, roomState.placedItems, activeRoom, roomW, roomD, pushFurnitureHistory]);
+
   // ─── Keyboard shortcuts ──────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1215,6 +1295,22 @@ export default function FloorPlan() {
             >
               <span>↻</span>
               <span>{t.fpRotate}</span>
+            </button>
+
+            {/* 间距把控线 显隐开关 */}
+            <button
+              onClick={() => setShowClearance(v => !v)}
+              className="text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all"
+              style={
+                showClearance
+                  ? { color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", background: "transparent" }
+                  : { background: "#F59E0B", color: "#fff" }
+              }
+              title={locale === "en" ? "Show/hide spacing & distance guides" : "显示/隐藏间距把控线（距离标注与校验框）"}
+            >
+              {showClearance
+                ? (locale === "en" ? "Hide spacing" : "隐藏间距")
+                : (locale === "en" ? "Show spacing" : "显示间距")}
             </button>
 
             {/* Window/door edit toggle */}
@@ -1557,7 +1653,8 @@ export default function FloorPlan() {
         <svg
           ref={svgRef}
           width={svgW} height={svgH}
-          style={{ display: "block", marginLeft: 30, cursor: dragState ? "grabbing" : "default" }}
+          style={{ display: "block", marginLeft: 30, cursor: dragState ? "grabbing" : (marquee ? "crosshair" : "default") }}
+          onPointerDown={handleSVGPointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
@@ -1957,8 +2054,8 @@ export default function FloorPlan() {
             </g>
           )}
 
-          {/* Door-swing zone — always shown when door exists */}
-          {doorSwing && (() => {
+          {/* Door-swing zone — shown when door exists (gated by 间距把控线开关) */}
+          {showClearance && doorSwing && (() => {
             const { bbox, wall } = doorSwing;
             const x = (bbox.cx - bbox.w / 2) * scale;
             const y = (bbox.cz - bbox.d / 2) * scale;
@@ -1990,8 +2087,8 @@ export default function FloorPlan() {
             );
           })()}
 
-          {/* Clearance zones — show for (a) selected items and (b) any item with violations */}
-          {evaluated.map(({ placed, zone, violations }) => {
+          {/* Clearance zones — selected items + violations (gated by 间距把控线开关) */}
+          {showClearance && evaluated.map(({ placed, zone, violations }) => {
             if (!zone) return null;
             const isSel = selectedInstanceIds.includes(placed.instanceId);
             const hasViol = violations.length > 0;
@@ -2108,12 +2205,13 @@ export default function FloorPlan() {
               isBlocked={dragState?.blockedIds?.includes(placed.instanceId)}
               hasViolation={violatingIds.has(placed.instanceId)}
               violationSeverity={violatingIds.get(placed.instanceId)}
+              showClearance={showClearance}
               onPointerDown={(e) => handleItemPointerDown(e, placed.instanceId)}
             />
           ))}
 
-          {/* Relational links (e.g. TV ↔ sofa viewing distance, desk ↔ window) */}
-          {links.map((link, i) => {
+          {/* Relational links (距离标注 + 白色数字，gated by 间距把控线开关) */}
+          {showClearance && links.map((link, i) => {
             const a = roomState.placedItems.find(p => p.instanceId === link.fromInstanceId);
             if (!a) return null;
             let x2: number, y2: number;
@@ -2174,6 +2272,17 @@ export default function FloorPlan() {
               </text>
             ));
           })()}
+          {/* Marquee 框选矩形 */}
+          {marquee && (
+            <rect
+              x={marquee.x0} y={marquee.y0}
+              width={marquee.x1 - marquee.x0} height={marquee.y1 - marquee.y0}
+              fill="#3B82F6" fillOpacity={0.12}
+              stroke="#3B82F6" strokeOpacity={0.85} strokeWidth={1}
+              strokeDasharray="4 3"
+              style={{ pointerEvents: "none" }}
+            />
+          )}
         </svg>
       </div>
       </div>{/* end zoom wrapper */}
@@ -2395,6 +2504,13 @@ export default function FloorPlan() {
             className="px-2.5 py-1 bg-blue-600/80 hover:bg-blue-600 text-white text-[11px] font-semibold rounded-lg transition-colors"
           >
             {t.fpMultiCopy}
+          </button>
+          <button
+            onClick={handleRotateGroup}
+            className="px-2.5 py-1 bg-blue-600/80 hover:bg-blue-600 text-white text-[11px] font-semibold rounded-lg transition-colors"
+            title={locale === "en" ? "Rotate the whole selection 90°" : "整组绕中心旋转 90°"}
+          >
+            {locale === "en" ? "↻ Rotate" : "↻ 旋转"}
           </button>
           <button
             onClick={() => removeItems(selectedInstanceIds)}
