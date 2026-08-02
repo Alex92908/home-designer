@@ -8,9 +8,8 @@
       },
       {
         "furnitureId": "decor-welcome-sign",
-        "x": 1030,
-        "z": 1200,
-        "elevationY": 118
+        "x": 1025,
+        "z": 1291
       },
       {
         "furnitureId": "plant-rubber-tree",
@@ -35,8 +34,8 @@
       },
       {
         "furnitureId": "plant-rubber-tree",
-        "x": 2090,
-        "z": 1130
+        "x": 2091,
+        "z": 1215
       },
       {
         "furnitureId": "mural-inkwash",
@@ -630,14 +629,14 @@
       },
       {
         "furnitureId": "appliance-water-dispenser",
-        "x": 450,
-        "z": 150,
+        "x": 543,
+        "z": 170,
         "rotation": 180
       },
       {
         "furnitureId": "elec-printer",
-        "x": 400,
-        "z": 150,
+        "x": 545,
+        "z": 91,
         "rotation": 180
       },
       {
@@ -660,14 +659,14 @@
       },
       {
         "furnitureId": "elec-printer",
-        "x": 2050,
-        "z": 1000,
+        "x": 2136,
+        "z": 1099,
         "rotation": 90
       },
       {
         "furnitureId": "appliance-water-dispenser",
-        "x": 1750,
-        "z": 720,
+        "x": 2131,
+        "z": 1008,
         "rotation": 90
       },
       {
@@ -712,20 +711,20 @@
       },
       {
         "furnitureId": "sofa-armchair",
-        "x": 500,
-        "z": 1370,
+        "x": 503,
+        "z": 1356,
         "rotation": 45
       },
       {
         "furnitureId": "sofa-armchair",
-        "x": 700,
-        "z": 1370,
+        "x": 701,
+        "z": 1357,
         "rotation": 315
       },
       {
         "furnitureId": "coffee-oak-round",
-        "x": 600,
-        "z": 1420
+        "x": 594,
+        "z": 1410
       },
       {
         "furnitureId": "desk-standing",
@@ -831,10 +830,10 @@
         "furnitureId": "plant-potted-pack",
         "x": 208,
         "z": 248,
+        "elevationY": 65,
         "scaleW": 0.35,
         "scaleD": 0.35,
-        "scaleH": 0.55,
-        "elevationY": 65
+        "scaleH": 0.55
       },
       {
         "furnitureId": "decor-books-pile",
@@ -858,10 +857,10 @@
         "furnitureId": "plant-potted-pack",
         "x": 208,
         "z": 408,
+        "elevationY": 65,
         "scaleW": 0.35,
         "scaleD": 0.35,
-        "scaleH": 0.55,
-        "elevationY": 65
+        "scaleH": 0.55
       },
       {
         "furnitureId": "decor-books-vintage",
@@ -885,10 +884,10 @@
         "furnitureId": "plant-potted-pack",
         "x": 208,
         "z": 568,
+        "elevationY": 65,
         "scaleW": 0.35,
         "scaleD": 0.35,
-        "scaleH": 0.55,
-        "elevationY": 65
+        "scaleH": 0.55
       },
       {
         "furnitureId": "decor-books-pile",
@@ -912,10 +911,10 @@
         "furnitureId": "plant-potted-pack",
         "x": 208,
         "z": 728,
+        "elevationY": 65,
         "scaleW": 0.35,
         "scaleD": 0.35,
-        "scaleH": 0.55,
-        "elevationY": 65
+        "scaleH": 0.55
       },
       {
         "furnitureId": "decor-books-vintage",
@@ -939,10 +938,10 @@
         "furnitureId": "plant-potted-pack",
         "x": 208,
         "z": 848,
+        "elevationY": 65,
         "scaleW": 0.35,
         "scaleD": 0.35,
-        "scaleH": 0.55,
-        "elevationY": 65
+        "scaleH": 0.55
       },
       {
         "furnitureId": "decor-books-pile",
@@ -966,10 +965,10 @@
         "furnitureId": "plant-potted-pack",
         "x": 208,
         "z": 1008,
+        "elevationY": 65,
         "scaleW": 0.35,
         "scaleD": 0.35,
-        "scaleH": 0.55,
-        "elevationY": 65
+        "scaleH": 0.55
       },
       {
         "furnitureId": "decor-books-vintage",
@@ -993,10 +992,10 @@
         "furnitureId": "plant-potted-pack",
         "x": 208,
         "z": 1168,
+        "elevationY": 65,
         "scaleW": 0.35,
         "scaleD": 0.35,
-        "scaleH": 0.55,
-        "elevationY": 65
+        "scaleH": 0.55
       },
       {
         "furnitureId": "decor-books-pile",
@@ -1020,10 +1019,10 @@
         "furnitureId": "plant-potted-pack",
         "x": 208,
         "z": 1328,
+        "elevationY": 65,
         "scaleW": 0.35,
         "scaleD": 0.35,
-        "scaleH": 0.55,
-        "elevationY": 65
+        "scaleH": 0.55
       },
       {
         "furnitureId": "decor-books-vintage",
@@ -1047,10 +1046,10 @@
         "furnitureId": "plant-potted-pack",
         "x": 1828,
         "z": 828,
+        "elevationY": 65,
         "scaleW": 0.35,
         "scaleD": 0.35,
-        "scaleH": 0.55,
-        "elevationY": 65
+        "scaleH": 0.55
       },
       {
         "furnitureId": "decor-books-pile",
@@ -1074,10 +1073,10 @@
         "furnitureId": "plant-potted-pack",
         "x": 1828,
         "z": 988,
+        "elevationY": 65,
         "scaleW": 0.35,
         "scaleD": 0.35,
-        "scaleH": 0.55,
-        "elevationY": 65
+        "scaleH": 0.55
       },
       {
         "furnitureId": "decor-books-vintage",
@@ -1101,10 +1100,10 @@
         "furnitureId": "plant-potted-pack",
         "x": 1878,
         "z": 1198,
+        "elevationY": 65,
         "scaleW": 0.35,
         "scaleD": 0.35,
-        "scaleH": 0.55,
-        "elevationY": 65
+        "scaleH": 0.55
       },
       {
         "furnitureId": "decor-books-pile",
@@ -1128,10 +1127,10 @@
         "furnitureId": "plant-potted-pack",
         "x": 1878,
         "z": 1398,
+        "elevationY": 65,
         "scaleW": 0.35,
         "scaleD": 0.35,
-        "scaleH": 0.55,
-        "elevationY": 65
+        "scaleH": 0.55
       },
       {
         "furnitureId": "decor-books-vintage",
@@ -1150,6 +1149,11 @@
         "x": 1920,
         "z": 1396,
         "elevationY": 65
+      },
+      {
+        "furnitureId": "chair-ergonomic",
+        "x": 1111,
+        "z": 1114
       }
     ],
     "dining": [
@@ -1225,7 +1229,7 @@
         "x": 388,
         "z": 120,
         "rotation": 270,
-        "elevationY": 130
+        "elevationY": 55
       },
       {
         "furnitureId": "plant-sansevieria",
@@ -1248,45 +1252,100 @@
     ],
     "master": [
       {
-        "furnitureId": "desk-standing",
-        "x": 125,
-        "z": 60,
+        "furnitureId": "chair-ergonomic",
+        "x": 184,
+        "z": 123,
         "rotation": 180
       },
       {
-        "furnitureId": "chair-ergonomic",
-        "x": 125,
-        "z": 115
-      },
-      {
-        "furnitureId": "elec-monitor",
-        "x": 125,
-        "z": 48,
-        "elevationY": 66
-      },
-      {
-        "furnitureId": "chair-modern-gray",
-        "x": 185,
-        "z": 205,
-        "rotation": 90
-      },
-      {
         "furnitureId": "plant-rubber-tree",
-        "x": 215,
-        "z": 60
+        "x": 37,
+        "z": 34
       },
       {
         "furnitureId": "rug-nordic-geo",
-        "x": 125,
-        "z": 135,
-        "scaleW": 1.2,
-        "scaleD": 1.1
+        "x": 175,
+        "z": 129,
+        "scaleW": 1.7,
+        "scaleD": 1.8
       },
       {
         "furnitureId": "lamp-ceiling-modern",
         "x": 125,
         "z": 135,
         "mountCeiling": true
+      },
+      {
+        "furnitureId": "elec-personal-computer",
+        "x": 184,
+        "z": 47,
+        "elevationY": 65
+      },
+      {
+        "furnitureId": "appliance-water-dispenser",
+        "x": 310,
+        "z": 20
+      },
+      {
+        "furnitureId": "artwork-vangogh",
+        "x": 5,
+        "z": 144,
+        "rotation": 90,
+        "elevationY": 160
+      },
+      {
+        "furnitureId": "desk-l-shape-white",
+        "x": 174,
+        "z": 64
+      },
+      {
+        "furnitureId": "decor-books-pack",
+        "x": 120,
+        "z": 72
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 91,
+        "z": 25
+      },
+      {
+        "furnitureId": "decor-globe",
+        "x": 245,
+        "z": 26
+      },
+      {
+        "furnitureId": "decor-trash-bin-3",
+        "x": 327,
+        "z": 225
+      },
+      {
+        "furnitureId": "decor-whiteboard",
+        "x": 326,
+        "z": 123,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 160,
+        "z": 82
+      },
+      {
+        "furnitureId": "toy-hunter",
+        "x": 239,
+        "z": 66
+      },
+      {
+        "furnitureId": "artwork-hokusai",
+        "x": 347,
+        "z": 140,
+        "rotation": 270,
+        "elevationY": 190
+      },
+      {
+        "furnitureId": "elec-display-stand",
+        "x": 40,
+        "z": 172,
+        "rotation": 90
       }
     ],
     "kitchen": [
@@ -1315,13 +1374,8 @@
       },
       {
         "furnitureId": "fridge-single-white",
-        "x": 235,
-        "z": 70
-      },
-      {
-        "furnitureId": "dining_table-bar",
-        "x": 100,
-        "z": 175
+        "x": 318,
+        "z": 37
       },
       {
         "furnitureId": "seat-bar-stool",
@@ -1337,8 +1391,8 @@
       },
       {
         "furnitureId": "plant-monstera",
-        "x": 235,
-        "z": 220
+        "x": 313,
+        "z": 222
       },
       {
         "furnitureId": "lamp-ceiling-modern",
@@ -1369,24 +1423,9 @@
         "x": 770,
         "z": 70,
         "mountCeiling": true
-      },
-      {
-        "furnitureId": "office_chair-vintage",
-        "x": 151,
-        "z": 66
       }
     ],
     "custom2": [
-      {
-        "furnitureId": "dining_table-bar",
-        "x": 170,
-        "z": 175
-      },
-      {
-        "furnitureId": "seat-bar-stool",
-        "x": 170,
-        "z": 240
-      },
       {
         "furnitureId": "decor-cigarettes",
         "x": 170,
@@ -1395,8 +1434,8 @@
       },
       {
         "furnitureId": "exhaust-vent",
-        "x": 240,
-        "z": 270,
+        "x": 267,
+        "z": 277,
         "elevationY": 200
       },
       {
@@ -1608,57 +1647,50 @@
       {
         "furnitureId": "urinal-wall",
         "x": 255,
-        "z": 70,
+        "z": 54,
         "rotation": 90
       },
       {
         "furnitureId": "urinal-wall",
-        "x": 255,
-        "z": 160,
+        "x": 253,
+        "z": 137,
         "rotation": 90
       },
       {
         "furnitureId": "urinal-wall",
-        "x": 255,
-        "z": 250,
+        "x": 254,
+        "z": 227,
         "rotation": 90
       },
       {
         "furnitureId": "partition-stall",
         "x": 245,
-        "z": 25,
+        "z": 96,
         "rotation": 90,
         "scaleD": 0.4
       },
       {
         "furnitureId": "partition-stall",
         "x": 245,
-        "z": 115,
-        "rotation": 90,
-        "scaleD": 0.4
-      },
-      {
-        "furnitureId": "partition-stall",
-        "x": 245,
-        "z": 205,
+        "z": 183,
         "rotation": 90,
         "scaleD": 0.4
       },
       {
         "furnitureId": "plant-rubber-tree",
-        "x": 225,
-        "z": 480
+        "x": 84,
+        "z": 407
       },
       {
         "furnitureId": "vanity-double-marble",
-        "x": 19,
-        "z": 525,
+        "x": 30,
+        "z": 528,
         "rotation": 90
       },
       {
         "furnitureId": "decor-trash-bin-3",
-        "x": 70,
-        "z": 590
+        "x": 25,
+        "z": 403
       },
       {
         "furnitureId": "lamp-ceiling-modern",
@@ -1671,6 +1703,26 @@
         "x": 155,
         "z": 470,
         "mountCeiling": true
+      },
+      {
+        "furnitureId": "urinal-wall",
+        "x": 248,
+        "z": 314,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 245,
+        "z": 268,
+        "rotation": 90,
+        "scaleD": 0.4
+      },
+      {
+        "furnitureId": "partition-stall",
+        "x": 244,
+        "z": 356,
+        "rotation": 90,
+        "scaleD": 0.4
       }
     ],
     "bathroom2": [
@@ -1783,8 +1835,8 @@
       },
       {
         "furnitureId": "plant-rubber-tree",
-        "x": 130,
-        "z": 480
+        "x": 236,
+        "z": 411
       },
       {
         "furnitureId": "vanity-double-marble",
@@ -1794,8 +1846,8 @@
       },
       {
         "furnitureId": "decor-trash-bin-3",
-        "x": 205,
-        "z": 590
+        "x": 180,
+        "z": 405
       },
       {
         "furnitureId": "lamp-ceiling-modern",

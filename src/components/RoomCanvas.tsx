@@ -2447,6 +2447,21 @@ function snapToSurface(roomPrefix: string, selfKey: string, x: number, z: number
   return best;
 }
 
+// 桌面小件类别：elevationY=0 时若正落在桌/柜等承托面轮廓内，自动爬到台面顶（无需手写抬升）。
+const TABLETOP_CLIMB_CATS = new Set<string>(["decor", "toy", "electronics"]);
+/** elevationY=0 的桌面小件：找正下方任意承托面（中心须清楚落在轮廓内，不限高度差），
+ *  返回其中最高的顶面高。让马克杯/书/摆件直接放到桌上就落到桌面，而不是掉地板。 */
+function climbToSurface(roomPrefix: string, selfKey: string, x: number, z: number): number | null {
+  let best: number | null = null;
+  for (const [key, e] of surfaceRegistry) {
+    if (!key.startsWith(roomPrefix) || key === selfKey) continue;
+    // 中心须落在轮廓内（含 5cm 边缘容差）；放在桌沿的件也能爬，桌旁地面件仍不误爬。
+    if (Math.abs(x - e.x) > e.halfW + 0.05 || Math.abs(z - e.z) > e.halfD + 0.05) continue;
+    if (best == null || e.topY > best) best = e.topY;
+  }
+  return best;
+}
+
 function GltfFurniture({
   url, scale, rotation, yOffset, recolor, w, d, h, fit, preRotX, preRotZ, dropMeshNames, selfLit, onMeasured,
 }: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile"; preRotX?: number; preRotZ?: number; dropMeshNames?: string[]; selfLit?: number; onMeasured?: (m: { topY: number; w: number; d: number }) => void }) {
@@ -2749,8 +2764,14 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room, wallClearance 
   }, [isCarrier, item, measured3d, x3d, z3d, placed.rotation, placed.scaleW, placed.scaleD, placed.scaleH, surfKey]);
   const surfVersion = useSyncExternalStore(subscribeSurfaces, getSurfaceVersion, getSurfaceVersion);
   const snappedY = useMemo(() => {
-    if (!item || placed.mountCeiling || (placed.elevationY ?? 0) <= 0) return null;
-    return snapToSurface(`${roomKey}:`, surfKey, x3d, z3d, (placed.elevationY ?? 0) / 100);
+    if (!item || placed.mountCeiling) return null;
+    const elev = placed.elevationY ?? 0;
+    if (elev > 0) return snapToSurface(`${roomKey}:`, surfKey, x3d, z3d, elev / 100);
+    // elevationY=0 且是小型桌面装饰：正落在桌/柜上方就自动爬到台面（垃圾桶等落地件排除）。
+    if (TABLETOP_CLIMB_CATS.has(item.category) && item.height <= 55 && !item.id.includes("trash")) {
+      return climbToSurface(`${roomKey}:`, surfKey, x3d, z3d);
+    }
+    return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [surfVersion, item, placed.mountCeiling, placed.elevationY, x3d, z3d, roomKey, surfKey]);
 
