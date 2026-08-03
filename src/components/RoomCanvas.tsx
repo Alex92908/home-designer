@@ -4456,43 +4456,45 @@ function makeCanvasDecorTexture(item: FurnitureItem): THREE.CanvasTexture | null
     ctx.strokeStyle = "#FFFFFF";
     ctx.lineWidth = 14;
     ctx.strokeRect(20, 20, W - 40, H - 40);
-    // 小人图标（白色剪影）
+    // 小人图标（白色剪影，上移压紧给底部两行文字腾位）
     ctx.fillStyle = "#FFFFFF";
     const cx = W / 2;
-    const headR = 34, headY = 118;
+    const headR = 30, headY = 92;
     ctx.beginPath();
     ctx.arc(cx, headY, headR, 0, Math.PI * 2);
     ctx.fill();
     if (gender === "men") {
       // 梯形躯干（宽肩）
       ctx.beginPath();
-      ctx.moveTo(cx - 50, headY + headR + 4);
-      ctx.lineTo(cx + 50, headY + headR + 4);
-      ctx.lineTo(cx + 34, headY + 172);
-      ctx.lineTo(cx - 34, headY + 172);
+      ctx.moveTo(cx - 46, headY + headR + 4);
+      ctx.lineTo(cx + 46, headY + headR + 4);
+      ctx.lineTo(cx + 32, headY + 138);
+      ctx.lineTo(cx - 32, headY + 138);
       ctx.closePath();
       ctx.fill();
       // 双腿
-      ctx.fillRect(cx - 33, headY + 168, 27, 100);
-      ctx.fillRect(cx + 6, headY + 168, 27, 100);
+      ctx.fillRect(cx - 31, headY + 134, 25, 80);
+      ctx.fillRect(cx + 6, headY + 134, 25, 80);
     } else {
       // 三角连衣裙
       ctx.beginPath();
       ctx.moveTo(cx, headY + headR + 2);
-      ctx.lineTo(cx - 64, headY + 190);
-      ctx.lineTo(cx + 64, headY + 190);
+      ctx.lineTo(cx - 58, headY + 152);
+      ctx.lineTo(cx + 58, headY + 152);
       ctx.closePath();
       ctx.fill();
       // 双腿
-      ctx.fillRect(cx - 26, headY + 186, 20, 82);
-      ctx.fillRect(cx + 6, headY + 186, 20, 82);
+      ctx.fillRect(cx - 24, headY + 148, 18, 66);
+      ctx.fillRect(cx + 6, headY + 148, 18, 66);
     }
-    // 男 / 女 字
+    // 底部两行：男/女 + MEN/WOMEN
     ctx.fillStyle = "#FFFFFF";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = `bold 92px "Heiti SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif`;
-    ctx.fillText(gender === "men" ? "男" : "女", cx, H - 74);
+    ctx.font = `bold 78px "Heiti SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif`;
+    ctx.fillText(gender === "men" ? "男" : "女", cx, 388);
+    ctx.font = `bold 40px "Arial", "Helvetica Neue", sans-serif`;
+    ctx.fillText(gender === "men" ? "MEN" : "WOMEN", cx, 452);
   };
 
   const drawMeander = () => {
