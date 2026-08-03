@@ -4446,6 +4446,55 @@ function makeCanvasDecorTexture(item: FurnitureItem): THREE.CanvasTexture | null
     ctx.fillText(text, W / 2, H / 2 + 6);
   };
 
+  const drawRestroomSign = (gender: "men" | "women") => {
+    const W = 400, H = 512;
+    c.width = W; c.height = H;
+    const bg = gender === "men" ? "#1E5AA8" : "#C83A6A";
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    // 白色内边框
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 14;
+    ctx.strokeRect(20, 20, W - 40, H - 40);
+    // 小人图标（白色剪影）
+    ctx.fillStyle = "#FFFFFF";
+    const cx = W / 2;
+    const headR = 34, headY = 118;
+    ctx.beginPath();
+    ctx.arc(cx, headY, headR, 0, Math.PI * 2);
+    ctx.fill();
+    if (gender === "men") {
+      // 梯形躯干（宽肩）
+      ctx.beginPath();
+      ctx.moveTo(cx - 50, headY + headR + 4);
+      ctx.lineTo(cx + 50, headY + headR + 4);
+      ctx.lineTo(cx + 34, headY + 172);
+      ctx.lineTo(cx - 34, headY + 172);
+      ctx.closePath();
+      ctx.fill();
+      // 双腿
+      ctx.fillRect(cx - 33, headY + 168, 27, 100);
+      ctx.fillRect(cx + 6, headY + 168, 27, 100);
+    } else {
+      // 三角连衣裙
+      ctx.beginPath();
+      ctx.moveTo(cx, headY + headR + 2);
+      ctx.lineTo(cx - 64, headY + 190);
+      ctx.lineTo(cx + 64, headY + 190);
+      ctx.closePath();
+      ctx.fill();
+      // 双腿
+      ctx.fillRect(cx - 26, headY + 186, 20, 82);
+      ctx.fillRect(cx + 6, headY + 186, 20, 82);
+    }
+    // 男 / 女 字
+    ctx.fillStyle = "#FFFFFF";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold 92px "Heiti SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif`;
+    ctx.fillText(gender === "men" ? "男" : "女", cx, H - 74);
+  };
+
   const drawMeander = () => {
     const W = 1200, H = 100;
     c.width = W; c.height = H;
@@ -4566,6 +4615,10 @@ function makeCanvasDecorTexture(item: FurnitureItem): THREE.CanvasTexture | null
     drawPlate("888", ["#D0D2D4", "#E8EAEC", "#A8ABAE"], "#1A1C1E");
   } else if (item.id === "nameplate-family") {
     drawPlate("之家", ["#D4A85A", "#F0C878", "#8A6528"], "#3A2410");
+  } else if (item.id === "sign-restroom-men") {
+    drawRestroomSign("men");
+  } else if (item.id === "sign-restroom-women") {
+    drawRestroomSign("women");
   } else if (item.id === "border-meander") {
     drawMeander();
   } else if (item.id === "border-floral") {

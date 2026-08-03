@@ -1488,6 +1488,10 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"house-number",        name:"门牌号（888）",       brand:"五金",   price:120, unit:"元/块", category:"exterior_wall_decor", roomTypes:[], color:"#D0D2D4", width:40, depth:2, height:15, tags:["现代"], description:"拉丝不锈钢数字牌", icon:"🔢", imageUrl:"/decor/house_number.svg" },
   { id:"nameplate-family",    name:"姓氏门牌（之家）",     brand:"定制",   price:350, unit:"元/块", category:"exterior_wall_decor", roomTypes:[], color:"#D4A85A", width:45, depth:2, height:15, tags:["中式"], description:"黄铜刻字家门牌", icon:"🏷️", imageUrl:"/decor/nameplate_family.svg" },
 
+  // 卫生间指示牌 — 程序化平面贴图（makeCanvasDecorTexture），小人图标 + 男/女字
+  { id:"sign-restroom-men",   name:"男厕标识",             brand:"标识",   price:60,  unit:"元/块", category:"exterior_wall_decor", roomTypes:[], color:"#1E5AA8", width:25, depth:2, height:32, tags:["现代","公共"], description:"男卫生间指示牌（蓝底小人+男字）", icon:"🚹" },
+  { id:"sign-restroom-women", name:"女厕标识",             brand:"标识",   price:60,  unit:"元/块", category:"exterior_wall_decor", roomTypes:[], color:"#C83A6A", width:25, depth:2, height:32, tags:["现代","公共"], description:"女卫生间指示牌（红底小人+女字）", icon:"🚺" },
+
   // 盒子类 — 程序化
   { id:"mailbox-modern",      name:"现代信箱",             brand:"五金",   price:580, unit:"元/个", category:"exterior_wall_decor", roomTypes:[], color:"#4A4A4A", width:35, depth:12, height:45, tags:["现代"], description:"壁挂式不锈钢信箱", icon:"📬" },
   { id:"ac-condenser",        name:"空调外机",             brand:"美的",   price:1280,unit:"元/台", category:"exterior_wall_decor", roomTypes:[], color:"#E8E8E8", width:85, depth:35, height:55, tags:[],       description:"分体式空调室外机", icon:"🌬️" },
