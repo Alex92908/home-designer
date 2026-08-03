@@ -1,0 +1,4893 @@
+{
+  "_version": 2,
+  "_coordSystem": "top-left",
+  "floorPlans": [
+    {
+      "rooms": {
+        "living": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-chandelier",
+              "name": "水晶吊灯",
+              "brand": "水晶吊灯",
+              "price": 3200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#FFFACD",
+              "tags": [
+                "轻奢",
+                "中式"
+              ],
+              "description": "水晶折射，奢华氛围"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_set-office_living_0_counter-wooden-bar",
+              "furnitureId": "counter-wooden-bar",
+              "x": 985,
+              "z": 1167,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_1_decor-welcome-sign",
+              "furnitureId": "decor-welcome-sign",
+              "x": 1000,
+              "z": 1268.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_2_plant-rubber-tree",
+              "furnitureId": "plant-rubber-tree",
+              "x": 902.5,
+              "z": 1154,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_3_plant-rubber-tree",
+              "furnitureId": "plant-rubber-tree",
+              "x": 1242.5,
+              "z": 1154,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_4_lamp-ceiling-modern",
+              "furnitureId": "lamp-ceiling-modern",
+              "x": 1070,
+              "z": 1172,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "tpl_set-office_living_5_plant-monstera",
+              "furnitureId": "plant-monstera",
+              "x": 570.5,
+              "z": 1202.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_6_plant-rubber-tree",
+              "furnitureId": "plant-rubber-tree",
+              "x": 2063.5,
+              "z": 1189,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_7_mural-inkwash",
+              "furnitureId": "mural-inkwash",
+              "x": 1060,
+              "z": 11.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_8_rug-nordic-geo",
+              "furnitureId": "rug-nordic-geo",
+              "x": 900,
+              "z": 75,
+              "rotation": 0,
+              "scaleW": 2,
+              "scaleD": 1.5,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_9_coffee-oak-round",
+              "furnitureId": "coffee-oak-round",
+              "x": 1060,
+              "z": 140,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_10_sofa-armchair",
+              "furnitureId": "sofa-armchair",
+              "x": 920,
+              "z": 139,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_11_sofa-armchair",
+              "furnitureId": "sofa-armchair",
+              "x": 1200,
+              "z": 139,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_12_plant-rubber-tree",
+              "furnitureId": "plant-rubber-tree",
+              "x": 1492.5,
+              "z": 104,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_13_plant-monstera",
+              "furnitureId": "plant-monstera",
+              "x": 647.5,
+              "z": 97.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_14_lamp-ceiling-modern",
+              "furnitureId": "lamp-ceiling-modern",
+              "x": 1070,
+              "z": 152,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "tpl_set-office_living_15_bookshelf-open-white",
+              "furnitureId": "bookshelf-open-white",
+              "x": 1367,
+              "z": 40,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_16_plant-rubber-tree",
+              "furnitureId": "plant-rubber-tree",
+              "x": 247.5,
+              "z": 274,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_17_lamp-ceiling-long",
+              "furnitureId": "lamp-ceiling-long",
+              "x": 247.5,
+              "z": 462,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "tpl_set-office_living_18_lamp-ceiling-long",
+              "furnitureId": "lamp-ceiling-long",
+              "x": 247.5,
+              "z": 822,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "tpl_set-office_living_19_plant-rubber-tree",
+              "furnitureId": "plant-rubber-tree",
+              "x": 1810.439732142857,
+              "z": 788.015625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_20_plant-monstera",
+              "furnitureId": "plant-monstera",
+              "x": 2077.5,
+              "z": 727.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_21_lamp-ceiling-long",
+              "furnitureId": "lamp-ceiling-long",
+              "x": 1965.439732142857,
+              "z": 846.015625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "tpl_set-office_living_22_lamp-ceiling-long",
+              "furnitureId": "lamp-ceiling-long",
+              "x": 1965.439732142857,
+              "z": 1046.015625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "tpl_set-office_living_23_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 126,
+              "z": 164,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_24_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 89.5,
+              "z": 167.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_25_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 165,
+              "z": 181.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_26_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 169,
+              "z": 153,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_27_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 198,
+              "z": 164,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_28_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 305.5,
+              "z": 167.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_29_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 237,
+              "z": 181.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_30_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 273,
+              "z": 153,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_31_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 126,
+              "z": 324,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_32_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 89.5,
+              "z": 327.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_33_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 165,
+              "z": 341.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_34_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 169,
+              "z": 313,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_35_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 198,
+              "z": 324,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_36_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 305.5,
+              "z": 327.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_37_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 237,
+              "z": 341.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_38_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 273,
+              "z": 313,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_39_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 126,
+              "z": 484,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_40_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 89.5,
+              "z": 487.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_41_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 165,
+              "z": 501.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_42_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 169,
+              "z": 473,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_43_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 198,
+              "z": 484,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_44_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 305.5,
+              "z": 487.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_45_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 237,
+              "z": 501.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_46_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 273,
+              "z": 473,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_47_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 126,
+              "z": 644,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_48_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 89.5,
+              "z": 647.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_49_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 165,
+              "z": 661.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_50_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 169,
+              "z": 633,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_51_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 198,
+              "z": 644,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_52_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 305.5,
+              "z": 647.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_53_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 237,
+              "z": 661.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_54_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 273,
+              "z": 633,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_55_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 126,
+              "z": 764,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_56_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 89.5,
+              "z": 767.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_57_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 165,
+              "z": 781.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_58_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 169,
+              "z": 753,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_59_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 198,
+              "z": 764,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_60_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 305.5,
+              "z": 767.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_61_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 237,
+              "z": 781.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_62_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 273,
+              "z": 753,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_63_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 126,
+              "z": 924,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_64_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 89.5,
+              "z": 927.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_65_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 165,
+              "z": 941.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_66_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 169,
+              "z": 913,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_67_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 198,
+              "z": 924,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_68_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 305.5,
+              "z": 927.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_69_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 237,
+              "z": 941.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_70_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 273,
+              "z": 913,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_71_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 126,
+              "z": 1084,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_72_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 89.5,
+              "z": 1087.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_73_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 165,
+              "z": 1101.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_74_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 169,
+              "z": 1073,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_75_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 198,
+              "z": 1084,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_76_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 305.5,
+              "z": 1087.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_77_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 237,
+              "z": 1101.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_78_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 273,
+              "z": 1073,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_79_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 126,
+              "z": 1244,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_80_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 89.5,
+              "z": 1247.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_81_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 165,
+              "z": 1261.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_82_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 169,
+              "z": 1233,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_83_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 198,
+              "z": 1244,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_84_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 305.5,
+              "z": 1247.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_85_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 237,
+              "z": 1261.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_86_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 273,
+              "z": 1233,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_87_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 1813.939732142857,
+              "z": 838.015625,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_88_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 1777.439732142857,
+              "z": 841.515625,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_89_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 1852.939732142857,
+              "z": 855.515625,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_90_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 1856.939732142857,
+              "z": 827.015625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_91_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 1885.939732142857,
+              "z": 838.015625,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_92_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 1993.439732142857,
+              "z": 841.515625,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_93_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 1924.939732142857,
+              "z": 855.515625,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_94_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 1960.939732142857,
+              "z": 827.015625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_95_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 1813.939732142857,
+              "z": 998.015625,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_96_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 1777.439732142857,
+              "z": 1001.515625,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_97_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 1852.939732142857,
+              "z": 1015.515625,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_98_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 1856.939732142857,
+              "z": 987.015625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_99_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 1885.939732142857,
+              "z": 998.015625,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_100_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 1993.439732142857,
+              "z": 1001.515625,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_101_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 1924.939732142857,
+              "z": 1015.515625,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_102_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 1960.939732142857,
+              "z": 987.015625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_103_appliance-water-dispenser",
+              "furnitureId": "appliance-water-dispenser",
+              "x": 517,
+              "z": 153.5,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_104_elec-printer",
+              "furnitureId": "elec-printer",
+              "x": 512,
+              "z": 66,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_105_decor-whiteboard",
+              "furnitureId": "decor-whiteboard",
+              "x": 293,
+              "z": 17,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_106_bookshelf-with-books",
+              "furnitureId": "bookshelf-with-books",
+              "x": 2065,
+              "z": 762.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_107_bookshelf-with-books",
+              "furnitureId": "bookshelf-with-books",
+              "x": 2065,
+              "z": 882.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_108_elec-printer",
+              "furnitureId": "elec-printer",
+              "x": 2103,
+              "z": 1074,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_109_appliance-water-dispenser",
+              "furnitureId": "appliance-water-dispenser",
+              "x": 2105,
+              "z": 991.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_110_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 400,
+              "z": 280,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_111_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 400,
+              "z": 680,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_112_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 400,
+              "z": 1080,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_113_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 30,
+              "z": 480,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_114_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 0,
+              "z": 981,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_115_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 1680,
+              "z": 1030,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_116_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 2040,
+              "z": 680,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_117_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 1560,
+              "z": 1330,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_118_sofa-armchair",
+              "furnitureId": "sofa-armchair",
+              "x": 463,
+              "z": 1315,
+              "rotation": 45,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_119_sofa-armchair",
+              "furnitureId": "sofa-armchair",
+              "x": 661,
+              "z": 1316,
+              "rotation": 315,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_120_coffee-oak-round",
+              "furnitureId": "coffee-oak-round",
+              "x": 554,
+              "z": 1370,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_121_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 1824.6908482142856,
+              "z": 1173.3214285714284,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_122_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 1788.1908482142856,
+              "z": 1176.8214285714284,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_123_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 1863.6908482142856,
+              "z": 1190.8214285714284,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_124_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 1867.6908482142856,
+              "z": 1162.3214285714284,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_125_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 1896.6908482142856,
+              "z": 1173.3214285714284,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_126_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 2004.1908482142856,
+              "z": 1176.8214285714284,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_127_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 1935.6908482142856,
+              "z": 1190.8214285714284,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_128_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 1971.6908482142856,
+              "z": 1162.3214285714284,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_129_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 1821.8426339285713,
+              "z": 1340.6529017857142,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_130_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 1785.3426339285713,
+              "z": 1344.1529017857142,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_131_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 1860.8426339285713,
+              "z": 1358.1529017857142,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_132_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 1864.8426339285713,
+              "z": 1329.6529017857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_133_desk-standing",
+              "furnitureId": "desk-standing",
+              "x": 1893.8426339285713,
+              "z": 1340.6529017857142,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_134_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 2001.3426339285713,
+              "z": 1344.1529017857142,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_living_135_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 1932.8426339285713,
+              "z": 1358.1529017857142,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_136_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 1968.8426339285713,
+              "z": 1329.6529017857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_137_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 194,
+              "z": 241,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_138_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 169,
+              "z": 235,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_139_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 267,
+              "z": 235,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_140_decor-books-set",
+              "furnitureId": "decor-books-set",
+              "x": 225,
+              "z": 239.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_141_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 194,
+              "z": 401,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_142_decor-books-vintage",
+              "furnitureId": "decor-books-vintage",
+              "x": 158,
+              "z": 391,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_143_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 267,
+              "z": 395,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_144_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 241,
+              "z": 395,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_145_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 194,
+              "z": 561,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_146_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 169,
+              "z": 555,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_147_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 267,
+              "z": 555,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_148_decor-books-set",
+              "furnitureId": "decor-books-set",
+              "x": 225,
+              "z": 559.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_149_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 194,
+              "z": 721,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_150_decor-books-vintage",
+              "furnitureId": "decor-books-vintage",
+              "x": 158,
+              "z": 711,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_151_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 267,
+              "z": 715,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_152_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 241,
+              "z": 715,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_153_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 194,
+              "z": 841,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_154_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 169,
+              "z": 835,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_155_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 267,
+              "z": 835,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_156_decor-books-set",
+              "furnitureId": "decor-books-set",
+              "x": 225,
+              "z": 839.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_157_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 194,
+              "z": 1001,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_158_decor-books-vintage",
+              "furnitureId": "decor-books-vintage",
+              "x": 158,
+              "z": 991,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_159_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 267,
+              "z": 995,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_160_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 241,
+              "z": 995,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_161_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 194,
+              "z": 1161,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_162_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 169,
+              "z": 1155,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_163_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 267,
+              "z": 1155,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_164_decor-books-set",
+              "furnitureId": "decor-books-set",
+              "x": 225,
+              "z": 1159.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_165_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 194,
+              "z": 1321,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_166_decor-books-vintage",
+              "furnitureId": "decor-books-vintage",
+              "x": 158,
+              "z": 1311,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_167_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 267,
+              "z": 1315,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_168_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 241,
+              "z": 1315,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_169_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 1881.939732142857,
+              "z": 915.015625,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_170_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 1856.939732142857,
+              "z": 909.015625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_171_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 1954.939732142857,
+              "z": 909.015625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_172_decor-books-set",
+              "furnitureId": "decor-books-set",
+              "x": 1912.939732142857,
+              "z": 913.515625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_173_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 1881.939732142857,
+              "z": 1075.015625,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_174_decor-books-vintage",
+              "furnitureId": "decor-books-vintage",
+              "x": 1845.939732142857,
+              "z": 1065.015625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_175_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 1954.939732142857,
+              "z": 1069.015625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_176_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 1928.939732142857,
+              "z": 1069.015625,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_177_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 1889.8426339285713,
+              "z": 1217.6529017857142,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_178_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 1864.8426339285713,
+              "z": 1211.6529017857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_179_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 1962.8426339285713,
+              "z": 1211.6529017857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_180_decor-books-set",
+              "furnitureId": "decor-books-set",
+              "x": 1920.8426339285713,
+              "z": 1216.1529017857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_181_plant-potted-pack",
+              "furnitureId": "plant-potted-pack",
+              "x": 1864,
+              "z": 1391,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_182_decor-books-vintage",
+              "furnitureId": "decor-books-vintage",
+              "x": 1828,
+              "z": 1381,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_183_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 1937,
+              "z": 1385,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_184_decor-books-pile",
+              "furnitureId": "decor-books-pile",
+              "x": 1911,
+              "z": 1385,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_living_185_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 1078.5,
+              "z": 1081.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_1_e4rje",
+              "furnitureId": "plant-rubber-tree",
+              "x": 1503.3604910714287,
+              "z": 1123.4419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_2_8qscb",
+              "furnitureId": "lamp-ceiling-long",
+              "x": 1658.3604910714287,
+              "z": 1181.4419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_3_plyfk",
+              "furnitureId": "lamp-ceiling-long",
+              "x": 1658.3604910714287,
+              "z": 1381.4419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_4_kifse",
+              "furnitureId": "desk-standing",
+              "x": 1506.8604910714287,
+              "z": 1173.4419642857142,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_5_zmo0a",
+              "furnitureId": "chair-ergonomic",
+              "x": 1470.3604910714287,
+              "z": 1176.9419642857142,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_6_dvc0w",
+              "furnitureId": "elec-personal-computer",
+              "x": 1545.8604910714287,
+              "z": 1190.9419642857142,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_7_rd8q9",
+              "furnitureId": "decor-coffee-mug",
+              "x": 1549.8604910714287,
+              "z": 1162.4419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_8_9oooy",
+              "furnitureId": "desk-standing",
+              "x": 1578.8604910714287,
+              "z": 1173.4419642857142,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_9_zatj5",
+              "furnitureId": "chair-ergonomic",
+              "x": 1686.3604910714287,
+              "z": 1176.9419642857142,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_10_fi0t2",
+              "furnitureId": "elec-personal-computer",
+              "x": 1617.8604910714287,
+              "z": 1190.9419642857142,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_11_s1pwu",
+              "furnitureId": "decor-coffee-mug",
+              "x": 1653.8604910714287,
+              "z": 1162.4419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_12_bxi54",
+              "furnitureId": "desk-standing",
+              "x": 1506.8604910714287,
+              "z": 1333.4419642857142,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_13_xf2pp",
+              "furnitureId": "chair-ergonomic",
+              "x": 1470.3604910714287,
+              "z": 1336.9419642857142,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_14_3f0lo",
+              "furnitureId": "elec-personal-computer",
+              "x": 1545.8604910714287,
+              "z": 1350.9419642857142,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_15_yapzk",
+              "furnitureId": "decor-coffee-mug",
+              "x": 1549.8604910714287,
+              "z": 1322.4419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_16_j31dv",
+              "furnitureId": "desk-standing",
+              "x": 1578.8604910714287,
+              "z": 1333.4419642857142,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_17_qpyti",
+              "furnitureId": "chair-ergonomic",
+              "x": 1686.3604910714287,
+              "z": 1336.9419642857142,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_18_n06ze",
+              "furnitureId": "elec-personal-computer",
+              "x": 1617.8604910714287,
+              "z": 1350.9419642857142,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_19_ycr27",
+              "furnitureId": "decor-coffee-mug",
+              "x": 1653.8604910714287,
+              "z": 1322.4419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_20_emydt",
+              "furnitureId": "plant-potted-pack",
+              "x": 1574.8604910714287,
+              "z": 1250.4419642857142,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55
+            },
+            {
+              "instanceId": "pi_21_ho1y3",
+              "furnitureId": "decor-books-pile",
+              "x": 1549.8604910714287,
+              "z": 1244.4419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_22_dxk70",
+              "furnitureId": "decor-tulip",
+              "x": 1647.8604910714287,
+              "z": 1244.4419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_23_4t1xc",
+              "furnitureId": "decor-books-set",
+              "x": 1605.8604910714287,
+              "z": 1248.9419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_24_xtqpj",
+              "furnitureId": "plant-potted-pack",
+              "x": 1574.8604910714287,
+              "z": 1410.4419642857142,
+              "rotation": 0,
+              "scaleW": 0.35,
+              "scaleD": 0.35,
+              "scaleH": 0.55
+            },
+            {
+              "instanceId": "pi_25_taxc0",
+              "furnitureId": "decor-books-vintage",
+              "x": 1538.8604910714287,
+              "z": 1400.4419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_26_o65uo",
+              "furnitureId": "decor-tulip",
+              "x": 1647.8604910714287,
+              "z": 1404.4419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_27_sqxq0",
+              "furnitureId": "decor-books-pile",
+              "x": 1621.8604910714287,
+              "z": 1404.4419642857142,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "master": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-chandelier",
+              "name": "水晶吊灯",
+              "brand": "水晶吊灯",
+              "price": 3200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#FFFACD",
+              "tags": [
+                "轻奢",
+                "中式"
+              ],
+              "description": "水晶折射，奢华氛围"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_set-office_master_0_chair-ergonomic",
+              "furnitureId": "chair-ergonomic",
+              "x": 151.5,
+              "z": 90.5,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_master_1_plant-rubber-tree",
+              "furnitureId": "plant-rubber-tree",
+              "x": 9.5,
+              "z": 8,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_master_2_rug-nordic-geo",
+              "furnitureId": "rug-nordic-geo",
+              "x": 5,
+              "z": 3,
+              "rotation": 0,
+              "scaleW": 1.7,
+              "scaleD": 1.8,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_master_3_lamp-ceiling-modern",
+              "furnitureId": "lamp-ceiling-modern",
+              "x": 95,
+              "z": 107,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "tpl_set-office_master_4_elec-personal-computer",
+              "furnitureId": "elec-personal-computer",
+              "x": 155,
+              "z": 28.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "instanceId": "tpl_set-office_master_5_appliance-water-dispenser",
+              "furnitureId": "appliance-water-dispenser",
+              "x": 284,
+              "z": 3.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_master_6_artwork-vangogh",
+              "furnitureId": "artwork-vangogh",
+              "x": -50,
+              "z": 141.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 160
+            },
+            {
+              "instanceId": "tpl_set-office_master_7_desk-l-shape-white",
+              "furnitureId": "desk-l-shape-white",
+              "x": 74,
+              "z": 4,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_master_8_decor-books-pack",
+              "furnitureId": "decor-books-pack",
+              "x": 103,
+              "z": 62.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_master_9_decor-tulip",
+              "furnitureId": "decor-tulip",
+              "x": 78,
+              "z": 12,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_master_10_decor-globe",
+              "furnitureId": "decor-globe",
+              "x": 227.5,
+              "z": 8.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_master_11_decor-trash-bin-3",
+              "furnitureId": "decor-trash-bin-3",
+              "x": 312,
+              "z": 210,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_master_12_decor-whiteboard",
+              "furnitureId": "decor-whiteboard",
+              "x": 259,
+              "z": 100,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_master_13_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 151,
+              "z": 75,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_master_14_toy-hunter",
+              "furnitureId": "toy-hunter",
+              "x": 226.5,
+              "z": 58,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_master_15_artwork-hokusai",
+              "furnitureId": "artwork-hokusai",
+              "x": 297,
+              "z": 137.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 190
+            },
+            {
+              "instanceId": "tpl_set-office_master_16_elec-display-stand",
+              "furnitureId": "elec-display-stand",
+              "x": -23.5,
+              "z": 147.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bedroom": {
+          "materials": {},
+          "placedItems": []
+        },
+        "bedroom2": {
+          "materials": {},
+          "placedItems": []
+        },
+        "bedroom3": {
+          "materials": {},
+          "placedItems": []
+        },
+        "kitchen": {
+          "materials": {
+            "wall": {
+              "id": "wall-tile-white",
+              "name": "白色大理石纹砖",
+              "brand": "釉面砖",
+              "price": 180,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#EFEFEF",
+              "texture": "repeating-linear-gradient(45deg, #e0e0e0 0px, #e0e0e0 1px, #EFEFEF 0px, #EFEFEF 50%)",
+              "tags": [
+                "轻奢",
+                "现代"
+              ],
+              "description": "天然大理石纹，奢华感十足"
+            },
+            "floor": {
+              "id": "floor-white-tile",
+              "name": "白色抛光砖",
+              "brand": "全抛釉砖",
+              "price": 150,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#F0EFEB",
+              "tags": [
+                "现代",
+                "北欧"
+              ],
+              "description": "大块白砖，空间感更强"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "pi_z4p6iwa",
+              "furnitureId": "cabinet-lower-white",
+              "x": 4.085156250000011,
+              "z": 3.899218750000003,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_t5y5dwu",
+              "furnitureId": "cabinet-upper-white",
+              "x": 90,
+              "z": 1.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 140
+            },
+            {
+              "instanceId": "pi_9kgdp7o",
+              "furnitureId": "appliance-microwave",
+              "x": 125.11781250000001,
+              "z": 11,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 85
+            },
+            {
+              "instanceId": "pi_arkt6t7",
+              "furnitureId": "appliance-coffee-machine",
+              "x": 200,
+              "z": 12.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 85
+            },
+            {
+              "instanceId": "pi_1ujhbrn",
+              "furnitureId": "appliance-water-dispenser",
+              "x": -7.637343749999999,
+              "z": 126.52875,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_6xsl9ss",
+              "furnitureId": "decor-trash-bin-2",
+              "x": 3.2131423611111494,
+              "z": 171.62166666666664,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_p6sz3sa",
+              "furnitureId": "dining_table-cafe-small",
+              "x": 92.04071969696972,
+              "z": 129.25880331088663,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_alx737r",
+              "furnitureId": "lamp-ceiling-modern",
+              "x": 145,
+              "z": 102,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "pi_2_8xgvv",
+              "furnitureId": "fridge-french-door",
+              "x": 267,
+              "z": 2.354062500000005,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_4_jtvk6",
+              "furnitureId": "decor-tissue-box",
+              "x": 237.76025707975612,
+              "z": 15.7687792355458,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_t2iuhhd",
+              "furnitureId": "kitchen_sink-real",
+              "x": 6.68055555555555,
+              "z": 6.44392361111111,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 0
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "bathroom": {
+          "materials": {
+            "wall": {
+              "id": "wall-tile-white",
+              "name": "白色大理石纹砖",
+              "brand": "釉面砖",
+              "price": 180,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#EFEFEF",
+              "texture": "repeating-linear-gradient(45deg, #e0e0e0 0px, #e0e0e0 1px, #EFEFEF 0px, #EFEFEF 50%)",
+              "tags": [
+                "轻奢",
+                "现代"
+              ],
+              "description": "天然大理石纹，奢华感十足"
+            },
+            "floor": {
+              "id": "floor-white-tile",
+              "name": "白色抛光砖",
+              "brand": "全抛釉砖",
+              "price": 150,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#F0EFEB",
+              "tags": [
+                "现代",
+                "北欧"
+              ],
+              "description": "大块白砖，空间感更强"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_set-office_bathroom_0_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 53,
+              "z": -47.75,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.77,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_1_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 53,
+              "z": 42.25,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.77,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_2_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 53,
+              "z": 132.25,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.77,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_3_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 53,
+              "z": 222.25,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.77,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_4_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 53,
+              "z": 312.25,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.77,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_5_stall-door",
+              "furnitureId": "stall-door",
+              "x": 72.5,
+              "z": 52.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_6_stall-door",
+              "furnitureId": "stall-door",
+              "x": 72.5,
+              "z": 142.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_7_stall-door",
+              "furnitureId": "stall-door",
+              "x": 72.5,
+              "z": 232.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_8_stall-door",
+              "furnitureId": "stall-door",
+              "x": 72.5,
+              "z": 322.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_9_toilet-standard",
+              "furnitureId": "toilet-standard",
+              "x": 30,
+              "z": 26,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_10_toilet-standard",
+              "furnitureId": "toilet-standard",
+              "x": 30,
+              "z": 116,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_11_toilet-standard",
+              "furnitureId": "toilet-standard",
+              "x": 30,
+              "z": 206,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_12_toilet-standard",
+              "furnitureId": "toilet-standard",
+              "x": 30,
+              "z": 296,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_13_decor-trash-bin",
+              "furnitureId": "decor-trash-bin",
+              "x": 80,
+              "z": 46,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_14_decor-trash-bin",
+              "furnitureId": "decor-trash-bin",
+              "x": 80,
+              "z": 136,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_15_decor-trash-bin",
+              "furnitureId": "decor-trash-bin",
+              "x": 80,
+              "z": 226,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_16_decor-trash-bin",
+              "furnitureId": "decor-trash-bin",
+              "x": 80,
+              "z": 316,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_17_urinal-wall",
+              "furnitureId": "urinal-wall",
+              "x": 236,
+              "z": 34,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_18_urinal-wall",
+              "furnitureId": "urinal-wall",
+              "x": 234,
+              "z": 117,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_19_urinal-wall",
+              "furnitureId": "urinal-wall",
+              "x": 235,
+              "z": 207,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_20_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 240,
+              "z": 66,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.4,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_21_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 240,
+              "z": 153,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.4,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_22_plant-rubber-tree",
+              "furnitureId": "plant-rubber-tree",
+              "x": 56.5,
+              "z": 381,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_23_vanity-double-marble",
+              "furnitureId": "vanity-double-marble",
+              "x": -45,
+              "z": 509.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_24_decor-trash-bin-3",
+              "furnitureId": "decor-trash-bin-3",
+              "x": 10,
+              "z": 388,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_25_lamp-ceiling-modern",
+              "furnitureId": "lamp-ceiling-modern",
+              "x": 125,
+              "z": 162,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_26_lamp-ceiling-modern",
+              "furnitureId": "lamp-ceiling-modern",
+              "x": 125,
+              "z": 442,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_27_urinal-wall",
+              "furnitureId": "urinal-wall",
+              "x": 229,
+              "z": 294,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_28_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 240,
+              "z": 238,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.4,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom_29_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 239,
+              "z": 326,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.4,
+              "scaleH": 1
+            }
+          ],
+          "exteriorDecor": [
+            {
+              "instanceId": "ed_1785752032847_308",
+              "furnitureId": "sign-restroom-men",
+              "wall": "S",
+              "u": 0.17111009471464605,
+              "v": 0.7880212841229212
+            }
+          ]
+        },
+        "bathroom2": {
+          "materials": {},
+          "placedItems": [
+            {
+              "instanceId": "tpl_set-office_bathroom2_0_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 212,
+              "z": -47.75,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.77,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_1_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 212,
+              "z": 42.25,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.77,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_2_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 212,
+              "z": 132.25,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.77,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_3_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 212,
+              "z": 222.25,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.77,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_4_partition-stall",
+              "furnitureId": "partition-stall",
+              "x": 212,
+              "z": 312.25,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 0.77,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_5_stall-door",
+              "furnitureId": "stall-door",
+              "x": 117.5,
+              "z": 52.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mirrorX": true
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_6_stall-door",
+              "furnitureId": "stall-door",
+              "x": 117.5,
+              "z": 142.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mirrorX": true
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_7_stall-door",
+              "furnitureId": "stall-door",
+              "x": 117.5,
+              "z": 232.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mirrorX": true
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_8_stall-door",
+              "furnitureId": "stall-door",
+              "x": 117.5,
+              "z": 322.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mirrorX": true
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_9_toilet-standard",
+              "furnitureId": "toilet-standard",
+              "x": 205,
+              "z": 26,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_10_toilet-standard",
+              "furnitureId": "toilet-standard",
+              "x": 205,
+              "z": 116,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_11_toilet-standard",
+              "furnitureId": "toilet-standard",
+              "x": 205,
+              "z": 206,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_12_toilet-standard",
+              "furnitureId": "toilet-standard",
+              "x": 205,
+              "z": 296,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_13_decor-trash-bin",
+              "furnitureId": "decor-trash-bin",
+              "x": 165,
+              "z": 46,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_14_decor-trash-bin",
+              "furnitureId": "decor-trash-bin",
+              "x": 165,
+              "z": 136,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_15_decor-trash-bin",
+              "furnitureId": "decor-trash-bin",
+              "x": 165,
+              "z": 226,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_16_decor-trash-bin",
+              "furnitureId": "decor-trash-bin",
+              "x": 165,
+              "z": 316,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_17_plant-rubber-tree",
+              "furnitureId": "plant-rubber-tree",
+              "x": 208.5,
+              "z": 385,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_18_vanity-double-marble",
+              "furnitureId": "vanity-double-marble",
+              "x": 181,
+              "z": 506.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_19_decor-trash-bin-3",
+              "furnitureId": "decor-trash-bin-3",
+              "x": 165,
+              "z": 390,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_20_lamp-ceiling-modern",
+              "furnitureId": "lamp-ceiling-modern",
+              "x": 90,
+              "z": 172,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "tpl_set-office_bathroom2_21_lamp-ceiling-modern",
+              "furnitureId": "lamp-ceiling-modern",
+              "x": 90,
+              "z": 442,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            }
+          ],
+          "exteriorDecor": [
+            {
+              "instanceId": "ed_1785752018311_121",
+              "furnitureId": "sign-restroom-women",
+              "wall": "S",
+              "u": 0.7605584474438587,
+              "v": 0.7616634948131673
+            }
+          ]
+        },
+        "dining": {
+          "materials": {
+            "wall": {
+              "id": "wall-white",
+              "name": "哑光白墙漆",
+              "brand": "水性内墙漆",
+              "price": 35,
+              "unit": "元/㎡",
+              "category": "wall",
+              "color": "#F5F5F0",
+              "tags": [
+                "现代",
+                "北欧",
+                "日式"
+              ],
+              "description": "经典哑光白，适合所有风格"
+            },
+            "floor": {
+              "id": "floor-oak",
+              "name": "橡木原色地板",
+              "brand": "强化复合地板",
+              "price": 280,
+              "unit": "元/㎡",
+              "category": "floor",
+              "color": "#C8A882",
+              "tags": [
+                "北欧",
+                "日式",
+                "现代"
+              ],
+              "description": "天然橡木，纹理清晰耐用"
+            },
+            "light": {
+              "id": "light-chandelier",
+              "name": "水晶吊灯",
+              "brand": "水晶吊灯",
+              "price": 3200,
+              "unit": "元/件",
+              "category": "light",
+              "color": "#FFFACD",
+              "tags": [
+                "轻奢",
+                "中式"
+              ],
+              "description": "水晶折射，奢华氛围"
+            }
+          },
+          "placedItems": [
+            {
+              "instanceId": "tpl_set-office_dining_0_table-conference",
+              "furnitureId": "table-conference",
+              "x": 80,
+              "z": 70,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_dining_1_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 77.5,
+              "z": 27,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_dining_2_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 142.5,
+              "z": 27,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_dining_3_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 212.5,
+              "z": 27,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_dining_4_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 277.5,
+              "z": 27,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_dining_5_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 77.5,
+              "z": 163,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_dining_6_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 142.5,
+              "z": 163,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_dining_7_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 212.5,
+              "z": 163,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_dining_8_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 277.5,
+              "z": 163,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_dining_9_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 25.5,
+              "z": 95,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_dining_10_decor-book-stack",
+              "furnitureId": "decor-book-stack",
+              "x": 139.5,
+              "z": 100,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "tpl_set-office_dining_11_decor-coffee-mug",
+              "furnitureId": "decor-coffee-mug",
+              "x": 241,
+              "z": 123,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 75
+            },
+            {
+              "instanceId": "tpl_set-office_dining_12_elec-tv-flat",
+              "furnitureId": "elec-tv-flat",
+              "x": 328,
+              "z": 107.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 55
+            },
+            {
+              "instanceId": "tpl_set-office_dining_13_plant-sansevieria",
+              "furnitureId": "plant-sansevieria",
+              "x": 346.5,
+              "z": 213,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_dining_14_rug-nordic-geo",
+              "furnitureId": "rug-nordic-geo",
+              "x": 30,
+              "z": 22,
+              "rotation": 0,
+              "scaleW": 1.7,
+              "scaleD": 1.4,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_dining_15_lamp-ceiling-long",
+              "furnitureId": "lamp-ceiling-long",
+              "x": 172.5,
+              "z": 112,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            }
+          ]
+        },
+        "study": {
+          "materials": {},
+          "placedItems": []
+        },
+        "study2": {
+          "materials": {},
+          "placedItems": []
+        },
+        "closet": {
+          "materials": {},
+          "placedItems": [
+            {
+              "instanceId": "pi_agxr5d3",
+              "furnitureId": "rug-nordic-geo",
+              "x": 35.28125,
+              "z": 124.74921875000001,
+              "rotation": 0,
+              "scaleW": 1.3,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_58sp3lt",
+              "furnitureId": "table-conference",
+              "x": 45.28125,
+              "z": 144.74921875,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_rd9nk1n",
+              "furnitureId": "chair-modern-gray",
+              "x": 216.28125,
+              "z": 93.24921874999998,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_ya0hfhu",
+              "furnitureId": "chair-modern-gray",
+              "x": 144.28125,
+              "z": 93.24921874999998,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_i96x8z4",
+              "furnitureId": "chair-modern-gray",
+              "x": 69.28125,
+              "z": 93.24921874999998,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_d5zw4cp",
+              "furnitureId": "chair-modern-gray",
+              "x": 216.84884005232942,
+              "z": 246.11426726902658,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_so33dt2",
+              "furnitureId": "chair-modern-gray",
+              "x": 141.84884005232942,
+              "z": 246.11426726902658,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_r8pkwq6",
+              "furnitureId": "chair-modern-gray",
+              "x": 69.84884005232942,
+              "z": 246.11426726902658,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_ow1a60s",
+              "furnitureId": "elec-tv-flat",
+              "x": 287.5,
+              "z": 135.30161535563366,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 120
+            },
+            {
+              "instanceId": "pi_tf7y3f2",
+              "furnitureId": "plant-monstera",
+              "x": 292.5,
+              "z": 229.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_7v03xvy",
+              "furnitureId": "lamp-ceiling-modern",
+              "x": 135.28125,
+              "z": 166.74921875,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            }
+          ],
+          "exteriorDecor": []
+        },
+        "balcony": {
+          "materials": {},
+          "placedItems": []
+        },
+        "balcony2": {
+          "materials": {},
+          "placedItems": []
+        },
+        "yard": {
+          "materials": {},
+          "placedItems": []
+        },
+        "garage": {
+          "materials": {},
+          "placedItems": []
+        },
+        "gym": {
+          "materials": {},
+          "placedItems": []
+        },
+        "cinema": {
+          "materials": {},
+          "placedItems": []
+        },
+        "custom1": {
+          "materials": {},
+          "placedItems": []
+        },
+        "custom2": {
+          "materials": {},
+          "placedItems": [
+            {
+              "instanceId": "tpl_set-office_custom2_0_rug-nordic-geo",
+              "furnitureId": "rug-nordic-geo",
+              "x": 55,
+              "z": 80,
+              "rotation": 0,
+              "scaleW": 1.3,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_custom2_1_table-conference",
+              "furnitureId": "table-conference",
+              "x": 65,
+              "z": 100,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_custom2_2_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 87.5,
+              "z": 47,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_custom2_3_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 162.5,
+              "z": 47,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_custom2_4_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 237.5,
+              "z": 47,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_custom2_5_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 87.6359375,
+              "z": 203,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_custom2_6_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 162.5,
+              "z": 203,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_custom2_7_chair-modern-gray",
+              "furnitureId": "chair-modern-gray",
+              "x": 237.5,
+              "z": 203,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_custom2_8_elec-tv-flat",
+              "furnitureId": "elec-tv-flat",
+              "x": 295.95859375000003,
+              "z": 135.21440972222223,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 120
+            },
+            {
+              "instanceId": "tpl_set-office_custom2_9_plant-monstera",
+              "furnitureId": "plant-monstera",
+              "x": 302.5,
+              "z": 229.5,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_custom2_10_lamp-ceiling-modern",
+              "furnitureId": "lamp-ceiling-modern",
+              "x": 155,
+              "z": 122,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            }
+          ]
+        },
+        "custom3": {
+          "materials": {},
+          "placedItems": []
+        },
+        "custom4": {
+          "materials": {},
+          "placedItems": []
+        },
+        "custom5": {
+          "materials": {},
+          "placedItems": []
+        },
+        "stair": {
+          "materials": {},
+          "placedItems": []
+        },
+        "hallway": {
+          "materials": {},
+          "placedItems": [
+            {
+              "instanceId": "tpl_set-office_hallway_0_plant-sansevieria",
+              "furnitureId": "plant-sansevieria",
+              "x": 41.5,
+              "z": 55,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_hallway_1_plant-sansevieria",
+              "furnitureId": "plant-sansevieria",
+              "x": 1031.5,
+              "z": 55,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "tpl_set-office_hallway_2_lamp-ceiling-led",
+              "furnitureId": "lamp-ceiling-led",
+              "x": 308.5,
+              "z": 45,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            },
+            {
+              "instanceId": "tpl_set-office_hallway_3_lamp-ceiling-led",
+              "furnitureId": "lamp-ceiling-led",
+              "x": 748.5,
+              "z": 45,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "mountCeiling": true
+            }
+          ]
+        },
+        "pool": {
+          "materials": {},
+          "placedItems": []
+        },
+        "terrace": {
+          "materials": {},
+          "placedItems": []
+        },
+        "deck": {
+          "materials": {},
+          "placedItems": []
+        },
+        "pergola": {
+          "materials": {},
+          "placedItems": []
+        },
+        "equipment_room": {
+          "materials": {},
+          "placedItems": [
+            {
+              "instanceId": "pi_wuueyze",
+              "furnitureId": "elec-server-rack",
+              "x": 10.83288323045268,
+              "z": 49.01713605967076,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_3_lo93v",
+              "furnitureId": "elec-server-rack",
+              "x": 294.8125,
+              "z": 51.7241512345679,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_4_mhyw6",
+              "furnitureId": "elec-server-rack",
+              "x": 296.0900848765432,
+              "z": 130.44200102880657,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_5_9pwc0",
+              "furnitureId": "elec-server-rack",
+              "x": 296.992991255144,
+              "z": 214.14895190329213,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_6_18lhu",
+              "furnitureId": "elec-server-rack",
+              "x": 12.08996277151644,
+              "z": 216.21964179796848,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_7_0qzu7",
+              "furnitureId": "elec-server-rack",
+              "x": 10.653706918724282,
+              "z": 130.4686599794239,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "instanceId": "pi_11_gfyz4",
+              "furnitureId": "elec-data-center-rack",
+              "x": 131.54266332304528,
+              "z": 187.5809220679012,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            }
+          ]
+        }
+      },
+      "enabledRooms": [
+        "living",
+        "dining",
+        "master",
+        "kitchen",
+        "custom2",
+        "equipment_room",
+        "closet",
+        "bathroom",
+        "bathroom2"
+      ],
+      "roomLayout": {
+        "master": {
+          "x": 1520,
+          "y": 680
+        },
+        "closet": {
+          "x": 1480,
+          "y": 1080
+        },
+        "bathroom": {
+          "x": 2320,
+          "y": 320
+        },
+        "bathroom2": {
+          "x": 2580,
+          "y": 320
+        },
+        "study": {
+          "x": 680,
+          "y": 560
+        },
+        "study2": {
+          "x": 980,
+          "y": 640
+        },
+        "living": {
+          "x": 660,
+          "y": 320
+        },
+        "bedroom": {
+          "x": 500,
+          "y": 360
+        },
+        "bedroom2": {
+          "x": 500,
+          "y": 660
+        },
+        "bedroom3": {
+          "x": 500,
+          "y": 940
+        },
+        "dining": {
+          "x": 1120,
+          "y": 680
+        },
+        "kitchen": {
+          "x": 1860,
+          "y": 680
+        },
+        "balcony": {
+          "x": 0,
+          "y": 1100
+        },
+        "balcony2": {
+          "x": 500,
+          "y": 1100
+        },
+        "yard": {
+          "x": -860,
+          "y": 0
+        },
+        "garage": {
+          "x": -700,
+          "y": 0
+        },
+        "gym": {
+          "x": -560,
+          "y": 320
+        },
+        "cinema": {
+          "x": -560,
+          "y": 640
+        },
+        "custom1": {
+          "x": 820,
+          "y": 0
+        },
+        "custom2": {
+          "x": 1120,
+          "y": 1080
+        },
+        "custom3": {
+          "x": 820,
+          "y": 600
+        },
+        "custom4": {
+          "x": 820,
+          "y": 900
+        },
+        "custom5": {
+          "x": 820,
+          "y": 1200
+        },
+        "stair": {
+          "x": 1000,
+          "y": 0
+        },
+        "hallway": {
+          "x": 1120,
+          "y": 940
+        },
+        "pool": {
+          "x": 1200,
+          "y": 400
+        },
+        "terrace": {
+          "x": 1200,
+          "y": 800
+        },
+        "deck": {
+          "x": 1200,
+          "y": 1100
+        },
+        "equipment_room": {
+          "x": 1840,
+          "y": 1080
+        }
+      },
+      "roomDimensions": {
+        "living": {
+          "width": 2200,
+          "depth": 1500
+        },
+        "master": {
+          "width": 350,
+          "depth": 260
+        },
+        "bedroom": {
+          "width": 320,
+          "depth": 300
+        },
+        "bedroom2": {
+          "width": 300,
+          "depth": 280
+        },
+        "bedroom3": {
+          "width": 280,
+          "depth": 260
+        },
+        "kitchen": {
+          "width": 350,
+          "depth": 260
+        },
+        "bathroom": {
+          "width": 275,
+          "depth": 620
+        },
+        "bathroom2": {
+          "width": 275,
+          "depth": 620
+        },
+        "dining": {
+          "width": 400,
+          "depth": 260
+        },
+        "study": {
+          "width": 340,
+          "depth": 460
+        },
+        "study2": {
+          "width": 300,
+          "depth": 260
+        },
+        "closet": {
+          "width": 360,
+          "depth": 300
+        },
+        "balcony": {
+          "width": 420,
+          "depth": 160
+        },
+        "balcony2": {
+          "width": 300,
+          "depth": 160
+        },
+        "yard": {
+          "width": 800,
+          "depth": 600
+        },
+        "garage": {
+          "width": 500,
+          "depth": 320
+        },
+        "gym": {
+          "width": 360,
+          "depth": 320
+        },
+        "cinema": {
+          "width": 420,
+          "depth": 320
+        },
+        "custom1": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom2": {
+          "width": 370,
+          "depth": 300
+        },
+        "custom3": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom4": {
+          "width": 300,
+          "depth": 300
+        },
+        "custom5": {
+          "width": 300,
+          "depth": 300
+        },
+        "stair": {
+          "width": 240,
+          "depth": 340
+        },
+        "hallway": {
+          "width": 1100,
+          "depth": 140
+        },
+        "pool": {
+          "width": 600,
+          "depth": 350
+        },
+        "terrace": {
+          "width": 500,
+          "depth": 300
+        },
+        "deck": {
+          "width": 400,
+          "depth": 250
+        },
+        "equipment_room": {
+          "width": 370,
+          "depth": 300
+        }
+      },
+      "roomWindows": {
+        "living": [
+          {
+            "id": "tpl_win_living_0",
+            "wall": "N",
+            "pos": 260,
+            "len": 640
+          },
+          {
+            "id": "tpl_win_living_1",
+            "wall": "N",
+            "pos": 1080,
+            "len": 520
+          },
+          {
+            "id": "tpl_win_living_2",
+            "wall": "W",
+            "pos": 420,
+            "len": 660
+          },
+          {
+            "id": "tpl_win_living_3",
+            "wall": "E",
+            "pos": 560,
+            "len": 620
+          },
+          {
+            "id": "tpl_win_living_4",
+            "wall": "S",
+            "pos": 220,
+            "len": 520
+          },
+          {
+            "id": "tpl_win_living_5",
+            "wall": "S",
+            "pos": 1460,
+            "len": 520
+          }
+        ]
+      },
+      "roomDoorPos": {
+        "living": 50,
+        "master": 40,
+        "bedroom": 32,
+        "bedroom2": 30,
+        "bedroom3": 28,
+        "kitchen": 36,
+        "bathroom": 26,
+        "bathroom2": 24,
+        "dining": 38,
+        "study": 32,
+        "study2": 30,
+        "closet": 26,
+        "balcony": 42,
+        "balcony2": 30,
+        "yard": 80,
+        "garage": 50,
+        "gym": 36,
+        "cinema": 42,
+        "custom1": 30,
+        "custom2": 30,
+        "custom3": 30,
+        "custom4": 30,
+        "custom5": 30,
+        "stair": 26,
+        "hallway": 12,
+        "pool": 60,
+        "terrace": 50,
+        "deck": 40,
+        "pergola": 30,
+        "equipment_room": 30
+      },
+      "roomHasDoor": {
+        "living": true,
+        "master": true,
+        "bedroom": true,
+        "bedroom2": true,
+        "bedroom3": true,
+        "kitchen": false,
+        "bathroom": true,
+        "bathroom2": true,
+        "dining": true,
+        "study": true,
+        "study2": true,
+        "closet": true,
+        "balcony": true,
+        "balcony2": true,
+        "yard": true,
+        "garage": true,
+        "gym": true,
+        "cinema": true,
+        "custom1": true,
+        "custom2": true,
+        "custom3": true,
+        "custom4": true,
+        "custom5": true,
+        "stair": false,
+        "hallway": false,
+        "pool": true,
+        "terrace": true,
+        "deck": true,
+        "pergola": true,
+        "equipment_room": true
+      },
+      "roomDoorWall": {
+        "living": "S",
+        "master": "S",
+        "bedroom": "S",
+        "bedroom2": "S",
+        "bedroom3": "S",
+        "kitchen": "S",
+        "bathroom": "S",
+        "bathroom2": "S",
+        "dining": "S",
+        "study": "S",
+        "study2": "S",
+        "closet": "S",
+        "balcony": "S",
+        "balcony2": "S",
+        "yard": "S",
+        "garage": "S",
+        "gym": "S",
+        "cinema": "S",
+        "custom1": "S",
+        "custom2": "S",
+        "custom3": "S",
+        "custom4": "S",
+        "custom5": "S",
+        "stair": "S",
+        "hallway": "S",
+        "pool": "S",
+        "terrace": "S",
+        "deck": "S",
+        "pergola": "S",
+        "equipment_room": "S"
+      },
+      "roomShapes": {
+        "living": {
+          "preset": "custom",
+          "points": [
+            [
+              0,
+              0
+            ],
+            [
+              1650,
+              0
+            ],
+            [
+              1650,
+              620
+            ],
+            [
+              2200,
+              620
+            ],
+            [
+              2200,
+              1500
+            ],
+            [
+              0,
+              1500
+            ]
+          ]
+        },
+        "bathroom": {
+          "preset": "rect",
+          "points": [
+            [
+              0,
+              0
+            ],
+            [
+              275,
+              0
+            ],
+            [
+              275,
+              620
+            ],
+            [
+              0,
+              620
+            ]
+          ]
+        },
+        "dining": {
+          "preset": "rect",
+          "points": [
+            [
+              0,
+              0
+            ],
+            [
+              400,
+              0
+            ],
+            [
+              400,
+              260
+            ],
+            [
+              0,
+              260
+            ]
+          ]
+        }
+      },
+      "yardPlan": {
+        "items": [],
+        "paths": []
+      },
+      "roomDoorStyle": {},
+      "roomDoorLen": {},
+      "roomDoorH": {
+        "living": 260
+      },
+      "roomWallsHidden": {
+        "hallway": {
+          "W": true,
+          "E": true
+        },
+        "stair": {
+          "ceiling": true,
+          "S": true
+        },
+        "kitchen": {
+          "S": true
+        }
+      },
+      "roomDoors": {
+        "living": [
+          {
+            "id": "tpl_door_living_0",
+            "wall": "S",
+            "pos": 1100,
+            "len": 160,
+            "style": "glass_swing",
+            "h": 220
+          }
+        ],
+        "dining": [
+          {
+            "id": "tpl_door_dining_0",
+            "wall": "S",
+            "pos": 180,
+            "len": 100
+          }
+        ],
+        "master": [
+          {
+            "id": "tpl_door_master_0",
+            "wall": "S",
+            "pos": 160,
+            "len": 90
+          }
+        ],
+        "kitchen": [],
+        "custom2": [
+          {
+            "id": "tpl_door_custom2_0",
+            "wall": "N",
+            "pos": 140,
+            "len": 90
+          }
+        ],
+        "equipment_room": [
+          {
+            "id": "tpl_door_equipment_room_0",
+            "wall": "N",
+            "pos": 140,
+            "len": 90
+          }
+        ],
+        "closet": [
+          {
+            "id": "tpl_door_closet_0",
+            "wall": "N",
+            "pos": 140,
+            "len": 90
+          }
+        ],
+        "bathroom": [
+          {
+            "id": "tpl_door_bathroom_0",
+            "wall": "S",
+            "pos": 175,
+            "len": 70
+          }
+        ],
+        "bathroom2": [
+          {
+            "id": "tpl_door_bathroom2_0",
+            "wall": "S",
+            "pos": 80,
+            "len": 70
+          }
+        ]
+      },
+      "roomExteriorStyle": {}
+    }
+  ],
+  "yardPlan": {
+    "items": [],
+    "paths": []
+  },
+  "exterior": {
+    "roofStyle": "flat",
+    "roofColor": "#2A2A2A",
+    "wallMaterial": "render",
+    "wallColor": "#F4F2EE",
+    "accentColor": "#1A1A1A",
+    "floors": 1,
+    "yardPreset": "pool",
+    "showPerimeterFence": false,
+    "fenceInsetMultiplier": 1.65,
+    "pilotisHeightM": 0,
+    "buildingType": "floor-plan-driven",
+    "hasRooftop": false,
+    "debugExposeScene": true,
+    "exteriorWindowGlassColor": "#BFD4E0",
+    "exteriorWindowGlassOpacity": 0.5,
+    "exteriorWindowGlassTransmission": 0.55,
+    "exteriorWindowGlassEnvMapIntensity": 1.4,
+    "exteriorWindowGlassRoughness": 0.06,
+    "wallBaseColor": "#F2EFE8",
+    "wallGrooveColor": "#F2EFE8",
+    "wallPanelHSpacing": 99,
+    "wallPanelVSpacing": 99,
+    "wallPanelTwoTone": false,
+    "stoneBaseEnabled": false,
+    "windowGlassColor": "#34404E",
+    "windowFrameColor": "#2A2C30",
+    "windowSillEnabled": true,
+    "windowLintelEnabled": false,
+    "windowJambEnabled": true,
+    "windowJambDepthCm": 8,
+    "windowFlowerBoxFreq": 0,
+    "windowFrameStripVCm": 6,
+    "windowFrameStripHCm": 6,
+    "windowCenterMullionCm": 4,
+    "windowSillColor": "#3E2A1E",
+    "defaultWindowSill": 70,
+    "defaultWindowHeight": 170,
+    "frontEntranceStyle": "sliding_barn",
+    "doorFrameColor": "#3E2A1E",
+    "doorHandleColor": "#1E1E22",
+    "roomCeilingColor": "#FAF4E8",
+    "ceilingLightColor": "#FFE0A0",
+    "ceilingLightIntensity": 2.4,
+    "ceilingLightRadiusCm": 12,
+    "skirtingHeight": 8,
+    "skirtingThicknessCm": 1,
+    "skirtingColor": "#3E2A1E",
+    "roofOverhang": 0.5,
+    "roofOverhangSouthExtra": 0.05,
+    "groundType": "tile",
+    "parapetHeight": 0.4,
+    "parapetGlassEnabled": false,
+    "roofSlabColor": "#3A3A3A",
+    "parapetColor": "#7A7068",
+    "stoneBaseHeight": 0.35,
+    "windowFlowerBoxColor": "#A0623E",
+    "flowerBloomColor": "#E85090",
+    "flowerFoliageColor": "#5A8A30",
+    "windowGlassTopColor": "#4A5C72",
+    "windowMullionPos": 0.5,
+    "windowMullionThicknessCm": 2.5,
+    "wallPanelGrooveOpacity": 0.25,
+    "lawnTint": "#7E8E6A",
+    "skyHaze": 0.2,
+    "windowRevealShadow": 0.65,
+    "treeColorJitter": 0.4,
+    "buildingBaseShadow": 1,
+    "eaveShadow": 0.45,
+    "wallVignette": 0.3,
+    "solarPanelsEnabled": false,
+    "hideInteriorWalls": true,
+    "bloomIntensity": 0.2,
+    "grassDensity": 0,
+    "exposure": 0.84,
+    "windowLintelColor": "#E0D0A8",
+    "wallZones": [
+      {
+        "material": "brick",
+        "color": "#B05030",
+        "heightFraction": 0.35
+      },
+      {
+        "material": "wood",
+        "color": "#A06030",
+        "heightFraction": 0.65
+      }
+    ],
+    "facades": {
+      "S": [
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "d1",
+              "type": "door",
+              "widthFraction": 0.18,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.68,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 4
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        },
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.86,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 5
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        }
+      ],
+      "N": [
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "d1",
+              "type": "door",
+              "widthFraction": 0.18,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.68,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 4
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        },
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.86,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 5
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        }
+      ],
+      "W": [
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "d1",
+              "type": "door",
+              "widthFraction": 0.18,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.68,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 4
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        },
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.86,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 5
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        }
+      ],
+      "E": [
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "d1",
+              "type": "door",
+              "widthFraction": 0.18,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.68,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 4
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        },
+        {
+          "segments": [
+            {
+              "id": "c1",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            },
+            {
+              "id": "g1",
+              "type": "glass",
+              "widthFraction": 0.86,
+              "color": "#CBE8F5",
+              "frameColor": "#1C1C1C",
+              "panelCount": 5
+            },
+            {
+              "id": "c2",
+              "type": "column",
+              "widthFraction": 0.07,
+              "color": "#F2EFE8",
+              "material": "render",
+              "frameColor": "#1C1C1C"
+            }
+          ]
+        }
+      ]
+    },
+    "facadeSystem": "punched-window",
+    "transparentExterior": true,
+    "glassShellColor": "#AEC4D2",
+    "glassSpandrelColor": "#EDEAE3",
+    "glassColor": "#AEC4D2",
+    "glassOpacity": 1,
+    "entranceFrameColor": "#15171B",
+    "woodSoffit": true,
+    "facadeGlass": false,
+    "preset": "modern"
+  },
+  "budget": 350000,
+  "customRoomMeta": {
+    "living": {
+      "name": "大厅",
+      "icon": "🏛️",
+      "nameEn": "Open Office"
+    },
+    "dining": {
+      "name": "会议室",
+      "icon": "📊",
+      "nameEn": "Meeting Room"
+    },
+    "master": {
+      "name": "独立办公室",
+      "icon": "💼",
+      "nameEn": "Private Office"
+    },
+    "kitchen": {
+      "name": "茶水间",
+      "icon": "☕",
+      "nameEn": "Tea Room"
+    },
+    "hallway": {
+      "name": "走廊",
+      "icon": "🚶",
+      "nameEn": "Corridor"
+    },
+    "custom2": {
+      "name": "小会议室",
+      "icon": "💬",
+      "nameEn": "Small Meeting Room"
+    },
+    "equipment_room": {
+      "name": "机房",
+      "icon": "🖧",
+      "nameEn": "Server Room"
+    },
+    "closet": {
+      "name": "洽谈室",
+      "icon": "💬",
+      "nameEn": "Meeting Room"
+    },
+    "bathroom": {
+      "name": "男洗手间",
+      "icon": "🚹",
+      "nameEn": "Men's Room"
+    },
+    "bathroom2": {
+      "name": "女洗手间",
+      "icon": "🚺",
+      "nameEn": "Women's Room"
+    }
+  },
+  "customFurniture": [],
+  "scores": {
+    "style": 96,
+    "space": 68,
+    "light": 97,
+    "dominantStyle": "现代"
+  },
+  "blueprint": {
+    "image": null,
+    "naturalW": 0,
+    "naturalH": 0,
+    "opacity": 0.4,
+    "offsetX": 0,
+    "offsetY": 0,
+    "scale": 1
+  },
+  "savedAt": "2026-08-03T11:02:28.317Z"
+}

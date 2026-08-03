@@ -13,8 +13,9 @@
 import type { ExteriorSettings, YardPlan, RoomType } from "./types";
 import type { FloorplanLayout } from "./floorplanLayouts";
 import setCafeOverrides from "@/data/templates/set-cafe.json";
-import setOfficeOverrides from "@/data/templates/set-office.json";
 import setRestaurantOverrides from "@/data/templates/set-restaurant.json";
+// 办公室：数据驱动，房间几何 + 家具都从 office-snapshot.json 生成（见 officeTemplate.ts）。
+import { OFFICE_ROOMS, OFFICE_FURNITURE_OVERRIDES } from "./officeTemplate";
 
 /** furnitureOverrides 里的一件家具（room-local 中心坐标 cm；rotation 度） */
 export interface TemplatePlacedItem {
@@ -1690,53 +1691,14 @@ const OFFICE_SET: ProjectTemplate = {
       id: "office-f1",
       name: "办公楼层",
       area: 240,
-      // 回字形(2200×1500)：大厅=整层外框挖中央洞(6 个房间填洞)；洗手间不在岛内，
-      // 移到东北角落(贴 N/E 边墙)、前置敞开过道从大厅走进，与其他房间用大厅空间隔开。
-      rooms: [
-        // 房间布局整套同步自用户导出「装修方案_2026-8-3(2)」(roomLayout 归一到 living=0,0)：
-        //   · 内部房间群(会议室/独立办/茶水间/走廊/小会议室/洽谈室/机房)相对洗手间左移 ~95cm，
-        //     右侧空出大厅地面 → 茶水间与男/女洗手间之间的间距。
-        //   · 机房移到下排右端(1180-1550)、洽谈室居中(820-1180)。
-        //   · 茶水间(kitchen)拆南墙(wallsHidden S)、无门，直接开向走廊。
-        //   · living 无中央洞(用户设计如此)；如渲染出双层地面再按内圈补 holes。
-        { room: "living", x: 0, y: 0, width: 2200, depth: 1500,
-          name: "大厅", nameEn: "Open Office", icon: "🏛️",
-          shape: { preset: "custom", points: [[0, 0], [1650, 0], [1650, 620], [2200, 620], [2200, 1500], [0, 1500]] },
-          doors: [{ wall: "S", pos: 1100, len: 160, style: "glass_swing", h: 220 }],
-          windows: [{ wall: "N", pos: 260, len: 640 }, { wall: "N", pos: 1080, len: 520 }, { wall: "W", pos: 420, len: 660 }, { wall: "E", pos: 560, len: 620 }, { wall: "S", pos: 220, len: 520 }, { wall: "S", pos: 1460, len: 520 }] },
-        { room: "dining", x: 460, y: 360, width: 400, depth: 260,
-          name: "会议室", nameEn: "Meeting Room", icon: "📊",
-          doors: [{ wall: "S", pos: 180, len: 100 }] },
-        { room: "master", x: 860, y: 360, width: 350, depth: 260,
-          name: "独立办公室", nameEn: "Private Office", icon: "💼",
-          doors: [{ wall: "S", pos: 160, len: 90 }] },
-        { room: "kitchen", x: 1200, y: 360, width: 350, depth: 260,
-          name: "茶水间", nameEn: "Tea Room", icon: "☕",
-          wallsHidden: ["S"] },
-        { room: "hallway", x: 460, y: 620, width: 1100, depth: 140,
-          name: "走廊", nameEn: "Corridor", icon: "🚶", hideFromSwitcher: true,
-          wallsHidden: ["E", "W"] },
-        { room: "custom2", x: 460, y: 760, width: 370, depth: 300,
-          name: "小会议室", nameEn: "Small Meeting Room", icon: "💬",
-          doors: [{ wall: "N", pos: 140, len: 90 }] },
-        { room: "equipment_room", x: 1180, y: 760, width: 370, depth: 300,
-          name: "机房", nameEn: "Server Room", icon: "🖧",
-          doors: [{ wall: "N", pos: 140, len: 90 }] },
-        { room: "closet", x: 820, y: 760, width: 360, depth: 300,
-          name: "洽谈室", nameEn: "Meeting Room", icon: "💬",
-          doors: [{ wall: "N", pos: 140, len: 90 }] },
-        { room: "bathroom", x: 1660, y: 0, width: 275, depth: 620,
-          name: "男洗手间", nameEn: "Men's Room", icon: "🚹",
-          doors: [{ wall: "S", pos: 175, len: 70 }] },
-        { room: "bathroom2", x: 1920, y: 0, width: 275, depth: 620,
-          name: "女洗手间", nameEn: "Women's Room", icon: "🚺",
-          doors: [{ wall: "S", pos: 80, len: 70 }] },
-      ],
+      // 房间几何数据驱动：从 office-snapshot.json 生成（见 officeTemplate.ts）。
+      // 用户改布局后替换该快照即可，无需手改这里。房名/图标/顺序在 ROOM_META。
+      rooms: OFFICE_ROOMS,
     },
   ],
   yardPlan: { items: [], paths: [] },
 
-  furnitureOverrides: setOfficeOverrides as unknown as ProjectTemplate["furnitureOverrides"],
+  furnitureOverrides: OFFICE_FURNITURE_OVERRIDES,
 };
 
 const RESTAURANT_SET: ProjectTemplate = {
