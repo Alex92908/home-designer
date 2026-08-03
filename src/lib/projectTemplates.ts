@@ -1718,9 +1718,11 @@ const OFFICE_SET: ProjectTemplate = {
         // ── 洞内·下排 y730-1030（门朝北通走廊）──
         { room: "custom2", x: 550, y: 730, width: 370, depth: 300,
           name: "小会议室", nameEn: "Small Meeting Room", icon: "💬", doors: [{ wall: "N", pos: 140, len: 90 }] },
-        { room: "equipment_room", x: 920, y: 730, width: 370, depth: 300,
+        // 用户在 Chrome 里把机房↔洽谈室对调（机房移到右端）：洽谈室占中槽 920-1280，
+        // 机房占右槽 1280-1650（正好贴回字岛右洞边）。切换栏顺序仍按数组序 机房→洽谈室。
+        { room: "equipment_room", x: 1280, y: 730, width: 370, depth: 300,
           name: "机房", nameEn: "Server Room", icon: "🖧", doors: [{ wall: "N", pos: 140, len: 90 }] },
-        { room: "closet", x: 1290, y: 730, width: 360, depth: 300,
+        { room: "closet", x: 920, y: 730, width: 360, depth: 300,
           name: "洽谈室", nameEn: "Meeting Room", icon: "💬", doors: [{ wall: "N", pos: 140, len: 90 }] },
         // ── 东北角落 洗手间区：男/女各占满进深(225×460)，门开在近中缝一侧、并排通大厅 ──
         //   每间沿外墙一列 4 个封闭坑位 + 走道；男厕北墙留小便池排、女厕北墙做盥洗台。
