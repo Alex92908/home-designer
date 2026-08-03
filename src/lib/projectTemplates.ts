@@ -1717,11 +1717,11 @@ const OFFICE_SET: ProjectTemplate = {
           name: "走廊", nameEn: "Corridor", icon: "🚶", wallsHidden: ["W", "E"] },
         // ── 洞内·下排 y730-1030（门朝北通走廊）──
         { room: "custom2", x: 550, y: 730, width: 370, depth: 300,
-          name: "吸烟室", nameEn: "Smoking Room", icon: "🚬", doors: [{ wall: "N", pos: 140, len: 90 }] },
+          name: "小会议室", nameEn: "Small Meeting Room", icon: "💬", doors: [{ wall: "N", pos: 140, len: 90 }] },
         { room: "equipment_room", x: 920, y: 730, width: 370, depth: 300,
           name: "机房", nameEn: "Server Room", icon: "🖧", doors: [{ wall: "N", pos: 140, len: 90 }] },
         { room: "closet", x: 1290, y: 730, width: 360, depth: 300,
-          name: "库房", nameEn: "Storage", icon: "📦", doors: [{ wall: "N", pos: 140, len: 90 }] },
+          name: "洽谈室", nameEn: "Meeting Room", icon: "💬", doors: [{ wall: "N", pos: 140, len: 90 }] },
         // ── 东北角落 洗手间区：男/女各占满进深(225×460)，门开在近中缝一侧、并排通大厅 ──
         //   每间沿外墙一列 4 个封闭坑位 + 走道；男厕北墙留小便池排、女厕北墙做盥洗台。
         { room: "bathroom", x: 1650, y: 0, width: 275, depth: 620,

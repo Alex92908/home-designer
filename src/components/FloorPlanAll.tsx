@@ -105,7 +105,9 @@ function getSVGPoint(e: { clientX: number; clientY: number }, svg: SVGSVGElement
 
 // ─── Types ─────────────────────────────────────────────────
 type DragState =
-  | { type: "move";   room: RoomType; sx: number; sy: number; ox: number; oy: number; hasMoved: boolean }
+  | { type: "move";   room: RoomType; sx: number; sy: number; ox: number; oy: number; hasMoved: boolean;
+      /** 多选整组移动：一并平移的房间及其起始坐标（含被拖的这间）。 */
+      group?: Array<{ room: RoomType; ox: number; oy: number }> }
   | { type: "resize"; room: RoomType; sx: number; sy: number; ow: number; od: number };
 
 const CUSTOM_SLOTS: RoomType[] = ["custom1","custom2","custom3","custom4","custom5"];
@@ -468,7 +470,7 @@ export default function FloorPlanAll() {
   //   "trace"  — drag the blueprint image to reposition
   //   "ruler"  — click two points → prompt real distance → auto-set scale
   //   "draw"   — click corners to define a new room polygon
-  const [tool, setTool] = useState<"browse" | "trace" | "ruler" | "draw">("browse");
+  const [tool, setTool] = useState<"browse" | "trace" | "ruler" | "draw" | "select">("browse");
   const traceMode = tool === "trace";
   const [blueprintPanelOpen, setBlueprintPanelOpen] = useState(false);
   // Ruler: first-clicked point waiting for the second click
@@ -826,6 +828,9 @@ export default function FloorPlanAll() {
   // mode switches while moving / resizing rooms in the plan.
   const lastRoomTapRef = useRef<{ room: RoomType; t: number } | null>(null);
   const DOUBLE_MS = 400;
+  // 多选房间 + 框选矩形（SVG/cm 坐标）。框选后拖任一选中房间可整组移动。
+  const [selectedRooms, setSelectedRooms] = useState<RoomType[]>([]);
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
 
   // Compute viewBox from enabled rooms on current floor + optional blueprint
   // Guard: only include rooms that have both layout and dimensions data
@@ -920,7 +925,11 @@ export default function FloorPlanAll() {
       if (!ds.hasMoved && Math.sqrt(dx*dx + dy*dy) < 8) return;
       if (!ds.hasMoved) pushLayoutHistory();
       dragRef.current = { ...ds, hasMoved: true };
-      updateRoomLayout(ds.room, snap(ds.ox + dx), snap(ds.oy + dy));
+      if (ds.group) {
+        for (const g of ds.group) updateRoomLayout(g.room, snap(g.ox + dx), snap(g.oy + dy));
+      } else {
+        updateRoomLayout(ds.room, snap(ds.ox + dx), snap(ds.oy + dy));
+      }
     } else {
       updateRoomDimension(ds.room,
         Math.max(MIN_W, snap(ds.ow + dx)),
@@ -954,12 +963,107 @@ export default function FloorPlanAll() {
     dragRef.current = null;
   };
 
+  // 框选：拖矩形，选中「完全落在框内」的房间（故不会误选横跨整栋的大厅）。
+  // select 工具模式下即使起点在房间上也走这里；框完自动退出 select 模式，接着就能拖整组。
+  const beginBoxSelect = (svg: SVGSVGElement, start: { x: number; y: number }) => {
+    const boxes = visibleRooms.map(r => ({
+      room: r,
+      x0: roomLayout[r].x, y0: roomLayout[r].y,
+      x1: roomLayout[r].x + roomDimensions[r].width,
+      y1: roomLayout[r].y + roomDimensions[r].depth,
+    }));
+    let moved = false;
+    const onMove = (ev: PointerEvent) => {
+      const p = getSVGPoint(ev, svg);
+      if (!moved && (Math.abs(p.x - start.x) > 6 || Math.abs(p.y - start.y) > 6)) moved = true;
+      if (!moved) return;
+      const x0 = Math.min(start.x, p.x), x1 = Math.max(start.x, p.x);
+      const y0 = Math.min(start.y, p.y), y1 = Math.max(start.y, p.y);
+      setMarquee({ x0, y0, x1, y1 });
+      // 「框覆盖房间面积 ≥50% 即选中」——不必完美罩住，宽容好选；而巨型大厅只被
+      // 覆盖一丁点(占比远 <50%)，天然被排除，不会误选。
+      setSelectedRooms(boxes.filter(b => {
+        const ix = Math.max(0, Math.min(b.x1, x1) - Math.max(b.x0, x0));
+        const iy = Math.max(0, Math.min(b.y1, y1) - Math.max(b.y0, y0));
+        const area = (b.x1 - b.x0) * (b.y1 - b.y0);
+        return area > 0 && (ix * iy) / area >= 0.5;
+      }).map(b => b.room));
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      setMarquee(null);
+      if (!moved) setSelectedRooms([]);   // 单击(没拖) → 清空多选
+      setTool("browse");                   // 框选一次即退出 select 模式，接着可直接拖整组
+    };
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp, { once: true });
+    window.addEventListener("pointercancel", onUp, { once: true });
+  };
+
   const startMove = (e: React.PointerEvent, room: RoomType) => {
     e.stopPropagation();
     if (!svgRef.current) return;
+    // ⌘/Ctrl + 拖，或框选模式：即使按在房间上也不移动房间，改为拖框选中。
+    if (tool === "select" || e.metaKey || e.ctrlKey) { beginBoxSelect(svgRef.current, getSVGPoint(e, svgRef.current)); return; }
     svgRef.current.setPointerCapture(e.pointerId);
     const pt = getSVGPoint(e, svgRef.current);
-    dragRef.current = { type: "move", room, sx: pt.x, sy: pt.y, ox: roomLayout[room].x, oy: roomLayout[room].y, hasMoved: false };
+    // 拖的这间在多选组内 → 整组一起移动；否则清空多选，走单间。
+    const isGroup = selectedRooms.length > 1 && selectedRooms.includes(room);
+    const group = isGroup
+      ? selectedRooms.filter(r => roomLayout[r]).map(r => ({ room: r, ox: roomLayout[r].x, oy: roomLayout[r].y }))
+      : undefined;
+    if (!isGroup && selectedRooms.length) setSelectedRooms([]);
+    dragRef.current = { type: "move", room, sx: pt.x, sy: pt.y, ox: roomLayout[room].x, oy: roomLayout[room].y, hasMoved: false, group };
+  };
+
+  // 空白处拖矩形框选多个房间（房间 hit-rect 会 stopPropagation，故只在背景触发）。
+  // 框选后拖任一选中房间即可整组移动（见 startMove/handlePointerMove）。
+  const startMarquee = (e: React.PointerEvent<SVGSVGElement>) => {
+    const svg = svgRef.current;
+    if (!svg || e.button !== 0) return;
+    if (tool === "ruler" || tool === "draw") return;                 // 工具模式不框选
+    if (dragRef.current || bldDragRef.current || yardDragRef.current) return; // 已在拖房间/院子/楼栋
+    const start = getSVGPoint(e, svg);
+
+    // ⌘/Ctrl + 拖：强制框选（跳过下面的「选区内整组拖动」，总是重新框选）。
+    if (e.metaKey || e.ctrlKey) { beginBoxSelect(svg, start); return; }
+
+    // 已有多选、且按下点落在选区包围盒内 → 直接整组拖动（参照家具多选：选完在选区上
+    // 随手一拖即走，不必精准抓某间房；抓到房间间隙也不会误触发新框选）。window 级
+    // 监听，拖动顺滑；按在选区外才进入下面的框选。（框选模式下不走此路，总是重新框选。）
+    if (tool !== "select" && selectedRooms.length > 1) {
+      const sel = selectedRooms.filter(r => roomLayout[r] && roomDimensions[r]);
+      const bx0 = Math.min(...sel.map(r => roomLayout[r].x));
+      const by0 = Math.min(...sel.map(r => roomLayout[r].y));
+      const bx1 = Math.max(...sel.map(r => roomLayout[r].x + roomDimensions[r].width));
+      const by1 = Math.max(...sel.map(r => roomLayout[r].y + roomDimensions[r].depth));
+      const M = 40; // 边缘容差
+      if (start.x >= bx0 - M && start.x <= bx1 + M && start.y >= by0 - M && start.y <= by1 + M) {
+        const starts = sel.map(r => ({ room: r, ox: roomLayout[r].x, oy: roomLayout[r].y }));
+        let gMoved = false;
+        const gMove = (ev: PointerEvent) => {
+          const p = getSVGPoint(ev, svg);
+          const dx = p.x - start.x, dy = p.y - start.y;
+          if (!gMoved && Math.sqrt(dx*dx + dy*dy) < 6) return;
+          if (!gMoved) { gMoved = true; pushLayoutHistory(); }
+          for (const s of starts) updateRoomLayout(s.room, snap(s.ox + dx), snap(s.oy + dy));
+        };
+        const gUp = () => {
+          window.removeEventListener("pointermove", gMove);
+          window.removeEventListener("pointerup", gUp);
+          window.removeEventListener("pointercancel", gUp);
+          if (!gMoved) setSelectedRooms([]); // 选区内单击(没拖) → 清空多选
+        };
+        window.addEventListener("pointermove", gMove, { passive: false });
+        window.addEventListener("pointerup", gUp, { once: true });
+        window.addEventListener("pointercancel", gUp, { once: true });
+        return;
+      }
+    }
+
+    beginBoxSelect(svg, start);
   };
 
   const startResize = (e: React.PointerEvent, room: RoomType) => {
@@ -1081,6 +1185,17 @@ export default function FloorPlanAll() {
             title={locale === "en" ? "Open 3D exterior design" : "进入 3D 外观设计"}
           >
             🏠 {locale === "en" ? "Exterior" : "外观"}
+          </button>
+          {/* 框选房间：开启后拖框圈住多个房间批量选中，再整组拖动。始终可见（不依赖图纸）。 */}
+          <button
+            onClick={() => setTool(tool === "select" ? "browse" : "select")}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all"
+            style={tool === "select"
+              ? { background: "#10B981", color: "#fff", border: "1px solid #10B981" }
+              : { border: "1px solid #10B981", color: "#059669", background: "white" }}
+            title={locale === "en" ? "Box-select rooms (or hold ⌘/Ctrl and drag): drag a box over rooms to multi-select, then drag to move them together" : "框选房间（也可按住 ⌘/Ctrl 直接拖框）：拖框圈住多个房间批量选中，再整组拖动"}
+          >
+            ⬚ {locale === "en" ? "Box-select" : "框选"}
           </button>
           {/* Blueprint tracing: upload image, adjust, toggle trace mode */}
           {!blueprint.image ? (
@@ -1259,9 +1374,10 @@ export default function FloorPlanAll() {
             viewBox={viewBox}
             style={{
               width: "100%", maxWidth: 580, display: "block", flexShrink: 0, touchAction: "none",
-              cursor: tool === "ruler" || tool === "draw" ? "crosshair" : "default",
+              cursor: tool === "ruler" || tool === "draw" || tool === "select" ? "crosshair" : "default",
             }}
             preserveAspectRatio="xMidYMin meet"
+            onPointerDown={startMarquee}
             onPointerMove={(e) => {
               handlePointerMove(e);
               if ((tool === "ruler" && rulerPt) || tool === "draw") {
@@ -1683,6 +1799,12 @@ export default function FloorPlanAll() {
                     </>
                   )}
 
+                  {/* 多选高亮（框选整组移动）——绿色虚线，区别于蓝色激活房间 */}
+                  {selectedRooms.includes(room) && !isActive && (
+                    <rect x={x-3} y={y-3} width={w+6} height={d+6}
+                      fill="#10B981" fillOpacity={0.14} stroke="#10B981" strokeWidth={6}
+                      strokeDasharray="10 6" rx={3} style={{ pointerEvents: "none" }} />
+                  )}
 
                   {/* 家具：画出真实占地矩形（按 rotation / scaleW / scaleD），emoji 叠在矩形中心。
                       根因：原来只在 (x+p.x, y+p.z) 落一个 emoji，既不含旋转也不含缩放，
@@ -2101,6 +2223,14 @@ export default function FloorPlanAll() {
                 </g>
               );
             })}
+
+            {/* 框选矩形 */}
+            {marquee && (
+              <rect x={Math.min(marquee.x0, marquee.x1)} y={Math.min(marquee.y0, marquee.y1)}
+                width={Math.abs(marquee.x1 - marquee.x0)} height={Math.abs(marquee.y1 - marquee.y0)}
+                fill="#10B981" fillOpacity={0.10} stroke="#10B981" strokeWidth={3}
+                strokeDasharray="8 5" style={{ pointerEvents: "none" }} />
+            )}
           </svg>
           </div>
 

@@ -478,6 +478,9 @@ export default function FloorPlan() {
   }, []);
   // Ref mirror of dragState to avoid stale closures in callbacks
   const dragStateRef = useRef<DragState | null>(null);
+  // 框选拖动结束后，浏览器会补发一次 click（落点可能命中 svg 背景）→ handleSVGClick
+  // 会把刚框好的选择清空。用此标记吞掉紧随框选的那一次 click。
+  const suppressSvgClickRef = useRef(false);
 
   // ─── Inspector drag ──────────────────────────────────────
   const inspectorRef = useRef<HTMLDivElement>(null);
@@ -704,13 +707,19 @@ export default function FloorPlan() {
   const svgH = roomD * scale;
 
   // ── Clearance evaluation (ergonomic aisle / furniture-fit check) ──
+  // 门开合校验用**真门**（allDoors = getRoomDoors 唯一真源，取首扇），不再读遗留
+  // 单门字段 roomDoorWall/Pos —— 否则北门房间(机房/洽谈室等)会画出一个不存在的
+  // 默认南门开合弧（遗留字段默认 "S"）。检查器 UI 仍读遗留字段不受影响。
   const evaluation = useMemo(
-    () => evaluateRoom(
-      roomState.placedItems, getFurnitureById, roomW, roomD,
-      hasDoor ? { hasDoor, wall: doorWall as ClearanceDoorWall, posCm: doorPosCm, lenCm: doorLenCm, style: doorStyle } : undefined,
-      roomWindows,
-    ),
-    [roomState.placedItems, roomW, roomD, hasDoor, doorWall, doorPosCm, doorLenCm, roomWindows]
+    () => {
+      const d0 = allDoors[0];
+      return evaluateRoom(
+        roomState.placedItems, getFurnitureById, roomW, roomD,
+        d0 ? { hasDoor: true, wall: d0.wall as ClearanceDoorWall, posCm: d0.pos ?? 0, lenCm: d0.len ?? 80, style: d0.style } : undefined,
+        roomWindows,
+      );
+    },
+    [roomState.placedItems, roomW, roomD, allDoors, roomWindows]
   );
   const evaluated: EvaluatedItem[] = evaluation.items;
   const doorSwing = evaluation.doorSwing;
@@ -999,6 +1008,7 @@ export default function FloorPlan() {
 
   const handleSVGClick = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
+      if (suppressSvgClickRef.current) { suppressSvgClickRef.current = false; return; } // 吞掉框选后的补发 click
       if (e.target === svgRef.current) setSelection([]);
     },
     [setSelection]
@@ -1016,6 +1026,7 @@ export default function FloorPlan() {
       if (useDesignerStore.getState().routingMode) return; // 走管模式不框选
       if ((e.target as Element).closest('[data-furniture="true"]')) return;
 
+      suppressSvgClickRef.current = false;
       const start = getSVGPoint(e, svg, zoomLevel);
       const itemsSvg = roomState.placedItems.map(p => ({ id: p.instanceId, sx: p.x * scale, sy: p.z * scale }));
       let moved = false;
@@ -1039,7 +1050,8 @@ export default function FloorPlan() {
         window.removeEventListener("pointerup", onUp);
         window.removeEventListener("pointercancel", onUp);
         setMarquee(null);
-        if (!moved) setSelection([]);   // 空白处单击 → 清空选择
+        if (moved) suppressSvgClickRef.current = true; // 框好了 → 吞掉紧随的补发 click，别清空
+        else setSelection([]);                          // 空白处单击 → 清空选择
       };
       window.addEventListener("pointermove", onMove, { passive: false });
       window.addEventListener("pointerup", onUp, { once: true });
