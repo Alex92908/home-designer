@@ -24,6 +24,10 @@ export interface LayoutTemplateRoom {
   /** 英文显示名。英文 locale 下优先用它（customRoomDisplayName），否则回退中文 name。 */
   nameEn?: string;
   icon?: string;
+  /** 从房间切换栏(RoomSidebar/enabledRooms)隐藏，但仍生成几何(楼板/墙)。
+   *  用于走廊这类"是空间不是可选房间"的槽：过道地面要在，但不该出现在左侧房间列表。
+   *  applyProjectTemplate 只把它排除出 enabledRooms，roomLayout/roomDimensions 照常写。 */
+  hideFromSwitcher?: boolean;
   shape?: RoomShape;
   /** 需要隐藏的墙面（开放式/骑楼露天区，如咖啡馆沿街走廊）。
    *  applyProjectTemplate 会写进 roomWallsHidden。 */

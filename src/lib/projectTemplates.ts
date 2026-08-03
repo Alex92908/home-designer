@@ -1714,7 +1714,7 @@ const OFFICE_SET: ProjectTemplate = {
           name: "茶水间", nameEn: "Tea Room", icon: "☕", doors: [{ wall: "S", pos: 160, len: 90 }] },
         // ── 中央走廊 hallway y590-730，两端(W/E)敞开通大厅 ──
         { room: "hallway", x: 550, y: 590, width: 1100, depth: 140,
-          name: "走廊", nameEn: "Corridor", icon: "🚶", wallsHidden: ["W", "E"] },
+          name: "走廊", nameEn: "Corridor", icon: "🚶", wallsHidden: ["W", "E"], hideFromSwitcher: true },
         // ── 洞内·下排 y730-1030（门朝北通走廊）──
         { room: "custom2", x: 550, y: 730, width: 370, depth: 300,
           name: "小会议室", nameEn: "Small Meeting Room", icon: "💬", doors: [{ wall: "N", pos: 140, len: 90 }] },

@@ -2180,7 +2180,9 @@ export const useDesignerStore = create<DesignerStore>()(
         const newFloorPlans = Array.from({ length: floors }, (_, fi) => {
           const existing = s.floorPlans[fi] ?? makeDefaultFloorPlan();
           const layout   = tpl.floorLayouts[fi];
-          const enabled  = layout.rooms.map(r => r.room);
+          // hideFromSwitcher 的房间(走廊等)不进 enabledRooms/切换栏，但下面的
+          // 循环照常写 roomLayout/roomDimensions，其楼板/墙几何仍生成。
+          const enabled  = layout.rooms.filter(r => !r.hideFromSwitcher).map(r => r.room);
           const layoutMap = { ...existing.roomLayout };
           const dimsMap   = { ...existing.roomDimensions };
           const shapesMap = { ...(existing.roomShapes ?? {}) };
