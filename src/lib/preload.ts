@@ -7,7 +7,7 @@
  *
  * Triggered from app/layout.tsx via a side-effectful import.
  */
-import { useGLTF } from "@react-three/drei";
+import { useGLTF } from "@/lib/drei";
 
 // One representative GLTF per common furniture category. Deliberately small
 // list — preloading too many will saturate the network and hurt TTFB.
@@ -32,6 +32,29 @@ const HOT_URLS = [
 // All client-only side effects. Gate on window so SSR / hydration pass
 // doesn't trigger drei internals that might touch browser-only APIs.
 if (typeof window !== "undefined") {
+  // ── crypto.randomUUID 兜底(治真机崩溃)──────────────────────────────
+  // crypto.randomUUID 只在「安全上下文」(HTTPS 或 localhost)存在。通过明文
+  // http + 局域网 IP(如 http://192.168.x.x:3000)访问时它是 undefined，代码里
+  // 十几处直接调用会抛 "crypto.randomUUID is not a function" → 整页错误边界。
+  // 用不安全上下文也有的 getRandomValues 补一个 RFC4122 v4 实现。放最前，早于
+  // 任何 useEffect/事件里的调用。(线上 HTTPS 有原生实现，guard 会跳过。)
+  try {
+    const c = globalThis.crypto as (Crypto & { randomUUID?: () => string }) | undefined;
+    if (c && typeof c.randomUUID !== "function" && typeof c.getRandomValues === "function") {
+      (c as { randomUUID: () => string }).randomUUID = function randomUUID() {
+        const b = c.getRandomValues(new Uint8Array(16));
+        b[6] = (b[6] & 0x0f) | 0x40;
+        b[8] = (b[8] & 0x3f) | 0x80;
+        const h: string[] = [];
+        for (let i = 0; i < 16; i++) h.push(b[i].toString(16).padStart(2, "0"));
+        return `${h[0]}${h[1]}${h[2]}${h[3]}-${h[4]}${h[5]}-${h[6]}${h[7]}-${h[8]}${h[9]}-${h[10]}${h[11]}${h[12]}${h[13]}${h[14]}${h[15]}`;
+      };
+    }
+  } catch { /* ignore */ }
+
+  // 全分辨率不再靠「解码降分」——纹理走 KTX2(GPU 压缩、压缩态常驻显存),
+  // 全分辨率也装得下。见 gltfKtx2.ts。
+
   // Point DRACOLoader at self-hosted decoder files (public/draco/*).
   // drei default = gstatic CDN, sometimes slow/blocked from mainland China.
   try { useGLTF.setDecoderPath("/draco/"); } catch { /* noop */ }

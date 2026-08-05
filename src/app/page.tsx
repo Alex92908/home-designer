@@ -290,7 +290,7 @@ export default function Home() {
           <span style="font-size:22px;flex-shrink:0">🏡</span>
           <div style="flex:1;min-width:0">
             <div style="font-weight:700;font-size:12px;color:#BFDBFE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${locale === "en" ? "Modern Glass-Curtain Villa · sample loaded" : "现代玻璃幕墙别墅 · 样板已加载"}</div>
-            <div style="font-size:10px;color:rgba(191,219,254,0.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${locale === "en" ? "Click the tabs in order → Floor Plan → Render → Global 3D → Exterior" : "依次点击标签探索 → 平面图 → 效果图 → 全局3D → 外观"}</div>
+            <div style="font-size:10px;color:rgba(191,219,254,0.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${locale === "en" ? "Click the tabs in order → Floor Plan → Decorate → House 3D → Exterior" : "依次点击标签探索 → 房间平面 → 室内装修 → 全屋3D → 整体外观"}</div>
           </div>
           <button id="sample-banner-close" style="flex-shrink:0;width:20px;height:20px;border:none;background:rgba(255,255,255,0.1);border-radius:50%;color:white;font-size:9px;cursor:pointer;opacity:0.6;display:flex;align-items:center;justify-content:center">✕</button>
         `;

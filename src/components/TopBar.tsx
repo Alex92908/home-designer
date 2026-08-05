@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useDesignerStore, useTemporalStore } from "@/lib/store";
 import { useT, useLocaleStore , customRoomDisplayName} from "@/lib/i18n";
 import { ROOM_DEFS } from "@/lib/types";
 import ShareButton from "./ShareButton";
 import { useMcpBridge } from "@/lib/useMcpBridge";
+import { useMemHudOpen, setMemHudOpen } from "@/lib/sceneDiag";
 
 const FLOOR_COLORS = ["#2563EB", "#7C3AED", "#059669", "#D97706", "#0891B2", "#BE185D"];
 
@@ -183,6 +185,11 @@ export default function TopBar() {
   const setViewMode       = useDesignerStore((s) => s.setViewMode);
   const showCompass       = useDesignerStore((s) => s.showCompass);
   const toggleCompass     = useDesignerStore((s) => s.toggleCompass);
+  // ⚙ 显示设置菜单(NSWE 方位标识 / 内存诊断面板)
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsBtnRef    = useRef<HTMLButtonElement>(null);
+  const [settingsPos, setSettingsPos] = useState({ left: 0, top: 0 });
+  const memHudOpen        = useMemHudOpen();
   const roomClipboard     = useDesignerStore((s) => s.roomClipboard);
   const activeRoom        = useDesignerStore((s) => s.activeRoom);
   const exterior          = useDesignerStore((s) => s.exterior);
@@ -290,9 +297,12 @@ export default function TopBar() {
         })}
       </div>
 
-      {/* Unified floor switcher — visible in all non-exterior views when multi-floor */}
+      {/* Unified floor switcher — visible in all non-exterior views when multi-floor.
+          原来是 hidden sm:flex —— 手机上楼层(1F/2F/天台)和当前房间名整块消失(用户实拍),
+          而手机左栏可收起、没有别处显示楼层,反而更需要它。改为始终显示;顶栏本身横向
+          可滚动,窄屏放得下。 */}
       {showFloorSwitcher && (
-        <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <FloorSwitcher />
           {/* Room label badge — only for 2d/3d where user is in a specific room */}
           {showRoomCtx && (
@@ -342,24 +352,104 @@ export default function TopBar() {
         </button>
       </div>
 
-      {/* NSWE 方位标识显隐开关 —— 控制平面图/效果图/漫游图各墙上的
-          N/S/W/E 标签。仅在会出现这些标签的视图（平面图/效果图/外观漫游）显示。 */}
-      {(viewMode === "2d" || viewMode === "3d" || viewMode === "exterior") && (
+      {/* ⚙ 设置菜单 —— 收纳零散的显示开关(NSWE 方位标识、内存诊断面板),
+          避免顶栏被小按钮占满。点外部或选完自动关闭。 */}
+      <div className="relative shrink-0">
         <button
-          onClick={() => toggleCompass()}
-          title={locale === "en"
-            ? (showCompass ? "Hide NSWE direction labels" : "Show NSWE direction labels")
-            : (showCompass ? "隐藏 NSWE 方位标识" : "显示 NSWE 方位标识")}
-          className="flex items-center justify-center px-2 h-7 rounded-lg text-[11px] font-bold transition-all shrink-0"
+          ref={settingsBtnRef}
+          onClick={() => {
+            // 顶栏是横向可滚动容器,absolute 子元素会被 overflow 裁掉(实测弹窗只剩空框)。
+            // 故用 fixed + 按钮实时坐标定位,脱离裁剪。
+            const r = settingsBtnRef.current?.getBoundingClientRect();
+            if (r) {
+              // 钳到视口内:手机上 ⚙ 常在顶栏靠右(x≈335/屏宽375),不钳的话 256px 宽的
+              // 弹窗整块溢出屏幕外,看起来就像「没弹出/被盖住」(用户实拍)。
+              const W = 256, M = 8;
+              const left = Math.max(M, Math.min(r.left, window.innerWidth - W - M));
+              setSettingsPos({ left, top: r.bottom + 6 });
+            }
+            setSettingsOpen(o => !o);
+          }}
+          title={locale === "en" ? "Display settings" : "显示设置"}
+          className="flex items-center justify-center px-2 h-7 rounded-lg text-[11px] font-bold transition-all"
           style={{
-            background: showCompass ? "#FCE7F3" : "transparent",
-            border: showCompass ? "1px solid #FBCFE8" : "1px solid var(--ds-border)",
-            color: showCompass ? "#DB2777" : "var(--ds-text-3)",
+            background: settingsOpen ? "var(--ds-bg-2)" : "transparent",
+            border: "1px solid var(--ds-border)",
+            color: "var(--ds-text-3)",
           }}
         >
-          🧭<span className="hidden sm:inline">&nbsp;NSWE</span>
+          ⚙<span className="hidden sm:inline">&nbsp;{locale === "en" ? "View" : "显示"}</span>
         </button>
-      )}
+        {/* 用 Portal 挂到 body:顶栏带 backdrop-filter,是定位+层叠上下文 —— 放在里面的
+            absolute 会被 overflow 裁成空框(PC 实拍),即使改 fixed 也被困在该上下文里、
+            被外面的浮层盖住(手机实拍)。Portal 到 body 才彻底脱离两者。 */}
+        {settingsOpen && createPortal(
+          <>
+            {/* 点外部关闭 */}
+            <div className="fixed inset-0" style={{ zIndex: 99998 }} onClick={() => setSettingsOpen(false)} />
+            {/* 样式对齐 AiEntryMenu(AI 助手弹窗):白卡 + 分节标题 + 图标/标题/副标题行。
+                注意 CSS 变量必须带兜底值(--ds-surface, #fff),否则变量不存在时白底白字看不见。 */}
+            <div
+              className="fixed w-64 rounded-2xl overflow-hidden"
+              style={{
+                left: settingsPos.left, top: settingsPos.top, zIndex: 99999,
+                background: "var(--ds-surface, #fff)",
+                border: "1px solid var(--ds-border, #e5e7eb)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              }}
+            >
+              <div
+                className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest"
+                style={{ color: "var(--ds-text-3, #9ca3af)", borderBottom: "1px solid var(--ds-border, #e5e7eb)" }}
+              >
+                {locale === "en" ? "Display" : "显示设置"}
+              </div>
+
+              {/* NSWE 方位标识:平面图/效果图/漫游图各墙上的 N/S/W/E 标签。
+                  这是**全局显示偏好**,菜单里常驻 —— 原先按 viewMode 条件显示,
+                  切到「整体布局」等视图时整个开关就消失了(用户实拍),很难找。 */}
+              <button
+                onClick={() => { toggleCompass(); setSettingsOpen(false); }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors hover:bg-teal-50"
+                style={{ borderBottom: "1px solid var(--ds-border-soft, #f3f4f6)" }}
+              >
+                <span className="text-xl w-7 text-center shrink-0">🧭</span>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-xs font-semibold leading-tight" style={{ color: "var(--ds-text, #111)" }}>
+                    {locale === "en" ? "NSWE labels" : "NSWE 方位标识"}
+                  </span>
+                  <span className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3, #9ca3af)" }}>
+                    {locale === "en" ? "Direction labels on walls" : "各面墙上的东南西北标签"}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold shrink-0" style={{ color: showCompass ? "#DB2777" : "var(--ds-text-3, #9ca3af)" }}>
+                  {showCompass ? (locale === "en" ? "ON" : "开") : (locale === "en" ? "OFF" : "关")}
+                </span>
+              </button>
+
+              {/* 内存诊断面板:GPU/CPU贴图/帧缓冲/已下载分项,定位移动端 OOM */}
+              <button
+                onClick={() => { setMemHudOpen(!memHudOpen); setSettingsOpen(false); }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors hover:bg-indigo-50"
+              >
+                <span className="text-xl w-7 text-center shrink-0">📊</span>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-xs font-semibold leading-tight" style={{ color: "var(--ds-text, #111)" }}>
+                    {locale === "en" ? "Memory panel" : "内存面板"}
+                  </span>
+                  <span className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3, #9ca3af)" }}>
+                    {locale === "en" ? "GPU / textures / framebuffer" : "显存 · 贴图 · 帧缓冲分项"}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold shrink-0" style={{ color: memHudOpen ? "#DB2777" : "var(--ds-text-3, #9ca3af)" }}>
+                  {memHudOpen ? (locale === "en" ? "ON" : "开") : (locale === "en" ? "OFF" : "关")}
+                </span>
+              </button>
+            </div>
+          </>,
+          document.body,
+        )}
+      </div>
 
       {/* 风格评分徽章已下线 —— 完整评分（风格/空间/采光 + 主导风格）已在
           右侧 RightPanel 常驻展示，顶栏不再重复占位。 */}

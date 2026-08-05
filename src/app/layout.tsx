@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+import ClientBoot from "./ClientBoot";
 
 // next/font/google (Geist) conflicts with Turbopack in Next.js 16 —
 // resolves @vercel/turbopack-next/internal/font/google/font which doesn't
@@ -82,6 +83,7 @@ export default function RootLayout({
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
         />
+        <ClientBoot />
         {children}
         <Analytics />
       </body>

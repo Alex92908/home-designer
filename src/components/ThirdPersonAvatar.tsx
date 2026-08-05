@@ -14,7 +14,8 @@
  */
 import { useRef, useEffect, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, useAnimations } from "@react-three/drei";
+import { useAnimations } from "@react-three/drei";
+import { useGLTF } from "@/lib/drei";
 import * as THREE from "three";
 
 /** 一个可选化身的配置。clips 给出该 GLB 里 idle/walk/run 三段动画的**实际名字**。 */

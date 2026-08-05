@@ -22,7 +22,7 @@
 import { useMemo, Suspense } from "react";
 import { shrinkSceneTexturesForMobile } from "@/lib/device";
 import * as THREE from "three";
-import { useGLTF } from "@react-three/drei";
+import { useGLTF } from "@/lib/drei";
 import type { YardPrefab, PrefabKind } from "@/lib/types";
 import { getPrefabDef, resolveParams } from "@/lib/outdoorPrefabs";
 import { getOutdoorTexture, outdoorTileSize } from "@/lib/textures";

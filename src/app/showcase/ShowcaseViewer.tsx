@@ -18,7 +18,7 @@ import { SHOWCASE_TEMPLATES } from "@/lib/showcaseTemplates";
 import { isMobileDevice } from "@/lib/device";
 import { ROOM_DEFS, type RoomType } from "@/lib/types";
 import { getFurnitureById } from "@/lib/furniture";
-import { useGLTF } from "@react-three/drei";
+import { useGLTF } from "@/lib/drei";
 
 const PERSIST_KEY = "home-designer-v2";
 
@@ -187,8 +187,23 @@ export default function ShowcaseViewer({
     window.addEventListener("beforeunload", onUnload);
     return () => {
       window.removeEventListener("beforeunload", onUnload);
+      // 收集本次样板加载的家具 GLB url —— 卸载后 dispose,防止反复开关样板导致
+      // 已加载模型在 useGLTF 全局缓存里越攒越多 → iOS 显存超顶(用户:5-6 次后闪退)。
+      const urls = new Set<string>();
+      try {
+        for (const fp of useDesignerStore.getState().floorPlans)
+          for (const r of Object.values(fp.rooms ?? {}))
+            for (const p of (r as { placedItems?: Array<{ furnitureId: string }> }).placedItems ?? []) {
+              const f = getFurnitureById(p.furnitureId) ?? customFurniture.find((c) => c.id === p.furnitureId);
+              if (f?.model3d?.url) urls.add(f.model3d.url);
+            }
+      } catch { /* ignore */ }
       useDesignerStore.getState().setMobileGlbRoom(null); // 离开查看器时复位
       restore();
+      // 延迟到 Canvas 卸载、不再引用这些 GLB 后再清缓存(清 = 释放几何/纹理显存)。
+      setTimeout(() => {
+        urls.forEach((u) => { try { (useGLTF as unknown as { clear: (u: string) => void }).clear(u); } catch { /* noop */ } });
+      }, 400);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateId]);
@@ -241,12 +256,16 @@ export default function ShowcaseViewer({
       {/* 底部控件：房间选择器 + 提示 + 打开按钮竖向堆叠，带安全区内边距，
           避开浏览器工具栏；容器不吃指针事件(不挡旋转)，控件单独可点。 */}
       <div
-        className="absolute inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 px-3 pointer-events-none"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
+        // 移动端(pb-3):主按钮贴底成整条,「出短片」/缩放键各自上移一层让位(见
+        //   CinematicDirector 与 HouseCanvas);日照时间条在移动端不显示,无需留位。
+        // 桌面(sm:pb-[76px]):日照时间条仍在 bottom-4、约 40px 高,必须留出,
+        //   否则主按钮直接压在 10:30 / SHADOW 上(用户实拍)。
+        className="absolute inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 px-3 pointer-events-none
+                   pb-[calc(env(safe-area-inset-bottom,0px)+12px)] sm:pb-[76px]"
       >
-        {/* 逐房间家具开关（仅移动端、且有带家具的房间时显示）。一次点亮一间，
-            释放上一间显存。 */}
-        {isMobile && furnishedRooms.length > 0 && (
+        {/* 逐房间家具开关已弃用：移动端外观改为「逐间渐进自动加载」全屋家具
+            （见 FloorPlanExterior），不再需要手动一次一间的 chip。保留代码，条件置否。 */}
+        {false && isMobile && furnishedRooms.length > 0 && (
           <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto max-w-full pb-1"
                style={{ scrollbarWidth: "none" }}>
             <span className="text-[10px] text-white/50 shrink-0 pr-0.5">{en ? "Furniture:" : "看家具:"}</span>
@@ -275,7 +294,7 @@ export default function ShowcaseViewer({
         )}
         <button
           onClick={openInDesigner}
-          className="pointer-events-auto px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-xl"
+          className="pointer-events-auto w-full sm:w-auto px-6 py-3.5 sm:py-3 rounded-2xl sm:rounded-xl text-sm font-semibold text-white shadow-xl active:scale-[0.99] transition-transform"
           style={{ background: "#007AFF" }}
         >
           {en ? "Open in the editor →" : "在设计器中打开此方案 →"}

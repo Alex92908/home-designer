@@ -13,6 +13,8 @@ import * as THREE from "three";
 import { useDesignerStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
+import { isMobileDevice } from "@/lib/device";
+import { SceneDiag, SceneDiagHUD } from "@/lib/sceneDiag";
 
 // ── Constants ─────────────────────────────────────────────────
 const WALL    = 14;    // wall thickness cm (matches FloorPlanAll)
@@ -348,11 +350,21 @@ export default function FloorPlanSlabs({
       className="w-full h-full relative"
       style={{ background: "linear-gradient(170deg,#C0C8D2 0%,#888FA0 100%)" }}
     >
-      <Canvas shadows camera={{ position: [10, 10, 14], fov: 42 }} gl={{ antialias: true }}>
+      {/* 移动端:dpr 锁 [1,1.5] + 关 antialias(MSAA)—— iPhone dpr=3 时全屏帧缓冲
+          是 dpr1 的 9 倍、再叠 MSAA,是 iOS 杀页的隐藏大头。
+          桌面:dpr 不传(跟随设备,不封顶)+ 保留 antialias —— 桌面不缺内存,不降画质。*/}
+      <Canvas
+        shadows
+        camera={{ position: [10, 10, 14], fov: 42 }}
+        dpr={isMobileDevice() ? ([1, 1.5] as [number, number]) : undefined}
+        gl={{ antialias: !isMobileDevice() }}
+      >
         <Scene floorCount={floorCount} floorVisible={floorVisible} />
         <OrbitControls makeDefault enableDamping dampingFactor={0.08} minDistance={2} maxDistance={60} />
         <CameraFit floorCount={floorCount} />
+        <SceneDiag />
       </Canvas>
+      <SceneDiagHUD />
 
       {/* Hint */}
       <div

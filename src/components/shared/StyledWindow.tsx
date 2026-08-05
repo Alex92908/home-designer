@@ -19,7 +19,7 @@
 
 import { useRef, useMemo, Component, ReactNode, Suspense } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useGLTF } from "@react-three/drei";
+import { useGLTF } from "@/lib/drei";
 import * as THREE from "three";
 import type { WindowStyle } from "@/lib/types";
 import {

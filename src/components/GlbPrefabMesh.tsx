@@ -20,7 +20,8 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { shrinkSceneTexturesForMobile } from "@/lib/device";
-import { useGLTF, Html } from "@react-three/drei";
+import { Html } from "@react-three/drei";
+import { useGLTF } from "@/lib/drei";
 import * as THREE from "three";
 import { useT } from "@/lib/i18n";
 import { isIdbGlbSrc, resolveGlbSrc } from "@/lib/glbStorage";

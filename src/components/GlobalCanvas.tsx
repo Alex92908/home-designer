@@ -20,6 +20,9 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
 import { canvasDprHeavy, isMobileDevice, mobileLiteScene } from "@/lib/device";
+import { Ktx2Detect } from "@/lib/gltfKtx2";
+import { MobileTextureShrink } from "@/lib/mobileTexShrink";
+import { SceneDiag, SceneDiagHUD } from "@/lib/sceneDiag";
 import { RoomState } from "@/lib/store";
 import { ROOM_DEFS, RoomType } from "@/lib/types";
 import { getRoomDoors } from "@/lib/roomDoors";
@@ -587,10 +590,37 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
   // 1 秒后（或 idle）再加载家具 —— 避免并发下载 10+ 个 GLTF 把
   // 主线程卡成 PPT。
   const [renderAllFurniture, setRenderAllFurniture] = useState(false);
+  // 移动端:全屋3D 不一次性加载全屋家具(几百 GLB 同时解码会爆 iOS 内存),而是
+  // 逐间放开。放行不再掐表(时间驱动看不到真实内存、弱机照样超顶),改由 Canvas
+  // 内的 <FurnitureWaveDriver> 读 renderer.info 显存计数按【预算】放行:未到预算才
+  // 加载下一间,到预算就停(远处房间留空),内存封顶不崩。furnitureWave=已放开间数。
+  const [furnitureWave, setFurnitureWave] = useState(0);
+  const totalFurnRooms = (floorPlans[activeFloor]?.enabledRooms ?? []).length + 2;
   useEffect(() => {
+    if (isMobileDevice()) return; // 移动端走下面的「显存预算」逐间放行
     const t = setTimeout(() => setRenderAllFurniture(true), 900);
     return () => clearTimeout(t);
   }, []);
+  // 移动端:按【显存预算】逐间放行家具,而非掐表(时间驱动看不到真实内存,弱机照样
+  // 超顶)。renderer.info.memory.textures = 已上传 GPU 的纹理数(iOS 无直接显存 API,
+  // 用它近似);每 ~0.6s 评估:低于预算就放行下一间,到预算就停(远处房间留空),
+  // 内存封顶不崩。0.6s 间隔留给上一批纹理上传完再判断,避免一次冲过头。
+  const { gl: glBudget } = useThree();
+  const waveAcc = useRef(0);
+  useFrame((_s, delta) => {
+    if (!isMobileDevice()) return;
+    waveAcc.current += delta;
+    if (waveAcc.current < 0.6) return;
+    waveAcc.current = 0;
+    setFurnitureWave((w) => {
+      if (w >= totalFurnRooms) return w;
+      const tex = (glBudget.info?.memory?.textures as number | undefined) ?? 0;
+      // 预算放宽到 400:原来的 150 是「CPU 侧贴图副本没释放」时代的保守值(那时每件家具
+      // 真实代价极高)。加上 texCpuRelease(CPU 残留 546MB→44MB)+ 贴图缩放后,同样件数
+      // 便宜一大截,外观视图已在真机验证 400 不崩。150 是全局3D「很多房间没家具」的原因。
+      return tex < 400 ? w + 1 : w;
+    });
+  });
 
   // Bounding box from the active floor's layout (all floors share the
   // same footprint, so this centres the stacked view correctly).
@@ -821,7 +851,7 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
               </Html>
 
               {/* Rooms on this floor */}
-              {visible.map(r => {
+              {visible.map((r, ri) => {
                 const lpos = fpLayout[r];
                 const ldim = fpDims[r];
                 if (!lpos || !ldim) return null;
@@ -836,7 +866,7 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
                     isActive={r === activeRoom && fi === activeFloor}
                     isHover={hover === key}
                     setHover={hov => setHover(hov ? key : null)}
-                    showFurniture={(r === activeRoom && fi === activeFloor) || renderAllFurniture}
+                    showFurniture={(r === activeRoom && fi === activeFloor) || renderAllFurniture || ri < furnitureWave}
                     onPick={() => {
                       const now = Date.now();
                       const last = lastPickRef.current;
@@ -1298,6 +1328,9 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
         gl={{ antialias: !isMobileDevice(), alpha: true }}
       >
         <SceneRegistrar view="global3d" />
+        <Ktx2Detect />
+        <MobileTextureShrink />
+        <SceneDiag />
         <Scene
           floorVisible={floorVisible}
           showRoof={showRoof}
@@ -1310,6 +1343,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
         <CompassYawTracker onChange={setCompassDeg} />
         <FirstFrameNotifier onReady={() => setSceneReady(true)} />
       </Canvas>
+      <SceneDiagHUD />
 
       {/* ── Hint bar ── */}
       <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold shadow pointer-events-none"

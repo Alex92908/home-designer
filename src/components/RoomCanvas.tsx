@@ -3,7 +3,11 @@
 import { useRef, useEffect, useMemo, useState, useCallback, useSyncExternalStore, Component, ReactNode } from "react";
 import { SceneRegistrar } from "@/lib/sceneRegistry";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, Html, useGLTF } from "@react-three/drei";
+import { OrbitControls, Environment, Html } from "@react-three/drei";
+import { useGLTF } from "@/lib/drei";
+import { Ktx2Detect } from "@/lib/gltfKtx2";
+import { MobileTextureShrink } from "@/lib/mobileTexShrink";
+import { SceneDiag, SceneDiagHUD } from "@/lib/sceneDiag";
 import { EffectComposer, N8AO, Bloom, Vignette, SMAA } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import { Suspense } from "react";
@@ -4767,6 +4771,9 @@ export default function RoomCanvas() {
           }}
         >
           <SceneRegistrar view="interior" />
+          <Ktx2Detect />
+          <MobileTextureShrink />
+          <SceneDiag />
           {!firstPerson && (
             <OrbitControls
               makeDefault
@@ -4790,6 +4797,7 @@ export default function RoomCanvas() {
           <Scene isIOS={isIOS} firstPerson={firstPerson} />
           <FirstFrameNotifier onReady={() => setSceneReady(true)} />
         </Canvas>
+        <SceneDiagHUD />
       </ErrorBoundary>
     </div>
   );

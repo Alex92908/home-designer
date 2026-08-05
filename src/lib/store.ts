@@ -627,6 +627,12 @@ interface DesignerStore {
   // 响应式驱动外观图家具渲染；不持久化（每次进查看器从 null 开始）。
   mobileGlbRoom: string | null;
   setMobileGlbRoom: (room: string | null) => void;
+  // 移动端外观/漫游「逐间渐进加载」已放开完整家具的房型列表（累积增长），
+  // 由 FloorPlanExterior 的驱动 effect 每 ~450ms 加一间，摊开加载峰值。
+  // 移动端外观:已放开完整家具 GLB 的「家具实例 id」前缀集合(按件串行揭开,
+  // 并发=1,把 Draco 解压 + KTX2 转码的瞬时峰值压到单件,防 iOS 杀页)。
+  mobileReadyItemIds: string[];
+  setMobileReadyItemIds: (ids: string[]) => void;
   selectedInstanceId: string | null;
   selectedInstanceIds: string[];
   budget: number;
@@ -1275,6 +1281,8 @@ export const useDesignerStore = create<DesignerStore>()(
       toggleCompass: () => set(s => ({ showCompass: !s.showCompass })),
       mobileGlbRoom: null,
       setMobileGlbRoom: (room) => set({ mobileGlbRoom: room }),
+      mobileReadyItemIds: [],
+      setMobileReadyItemIds: (ids) => set({ mobileReadyItemIds: ids }),
 
       setMaterial: (material) => {
         const s = get();

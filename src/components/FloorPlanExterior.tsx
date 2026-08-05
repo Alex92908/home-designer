@@ -19,10 +19,11 @@
  */
 
 import React, { useMemo, useCallback, useEffect, useState, useRef, Suspense } from "react";
-import { shrinkSceneTexturesForMobile, mobileFurnitureGlbAllowed } from "@/lib/device";
-import { useFrame } from "@react-three/fiber";
+import { shrinkSceneTexturesForMobile, mobileFurnitureGlbAllowed, isMobileDevice } from "@/lib/device";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { Html, useGLTF, Clone, Instances, Instance } from "@react-three/drei";
+import { Html, Clone, Instances, Instance } from "@react-three/drei";
+import { useGLTF } from "@/lib/drei";
 import { useDesignerStore } from "@/lib/store";
 import { overlayMaterialProps } from "@/lib/zLayer";
 import { ROOM_DEFS, RoomType, WindowConfig, DoorConfig, PlacedItem, resolveFacadeLayer, resolveFaceOpacity, isExteriorWallSide } from "@/lib/types";
@@ -31,6 +32,7 @@ import { getRoomWindows } from "@/lib/roomWindows";
 import { getFurnitureById } from "@/lib/furniture";
 import { InteriorRoomDetail } from "./InteriorRoomDetail";
 import { PlacedItemMesh, LightFixtureInner, ExteriorDecorItem } from "./RoomCanvas";
+import { isKtx2Ready } from "@/lib/gltfKtx2";
 import { STAIR_FURNITURE_IDS } from "./Staircase";
 import { WalkthroughDoor3D } from "@/components/walkthrough/WalkthroughDoor3D";
 import { WallCompassDecal } from "@/components/shared/WallCompassDecal";
@@ -43,6 +45,30 @@ import { splitWallAroundHoles } from "@/lib/wallGeom";
 import { paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
 import { getFloorTexture, floorTileSize, getWallTexture, wallTileSize, getStuccoTexture, getStuccoNormal } from "@/lib/textures";
 import { polygonBounds, getEdges, polygonSpansAtLine, offsetRectilinearPolygon, findEdgeForWall, effectiveRoomShape, type RoomShape, type WallFacing, resolveHoleOnPolygon } from "@/lib/roomGeometry";
+
+// ─── 移动端外观:家具 GLB 串行加载控制器 ───────────────────────────────────────
+// iPhone 上「查看外形」两层别墅崩溃的真因:剖面视图一层几十件家具的 Suspense 一次性
+// 挂载 → 几十个 GLB 的 Draco 解压 + KTX2 转码**并发进行**,瞬时缓冲(JS 堆 + wasm)
+// 峰值直接顶爆 iOS 单页内存上限(连 8GB 的 15 Pro 都崩)。gl.info.memory.textures 只
+// 数「已上传 GPU 的纹理」,看不见这段瞬时解码缓冲,所以按显存计数门控拦不住。
+//
+// 解法:把 GLB 解码并发压到 1 件 —— 逐件揭开,上一件真正加载完(其 <Suspense> 边界
+// resolve)才揭下一件。检测「加载完」用一个兄弟哨兵组件 <OnLoadPing>:React Suspense
+// 语义保证边界内所有子节点在 resolve 前都不挂载,故哨兵的 useEffect 恰好在该件 GLB
+// 加载完那一刻触发,无需侵入 PlacedItemMesh 内部。控制器是模块级单例,跨「主楼层」与
+// 「天台」两个渲染组件共享(它们各自渲染家具,但共用同一条串行队列)。
+const furnitureSeq = {
+  loaded: new Set<string>(),          // 已加载完(哨兵已触发)的家具实例 id
+  notify(id: string) { this.loaded.add(id); },
+  reset() { this.loaded.clear(); },
+};
+
+/** 兄弟哨兵:放在家具 <Suspense> 内,与真正的 GLB 组件同级。Suspense 未 resolve 时
+ *  整棵子树都不挂载,故本组件 mount === 该件加载完(或出错回退,同样算完成,不卡队列)。*/
+function OnLoadPing({ id }: { id: string }): null {
+  useEffect(() => { furnitureSeq.notify(id); }, [id]);
+  return null;
+}
 
 /** 一条边是否按"水平"处理：取**主轴**，而不是按容差判断是否严格轴对齐。
  *
@@ -2201,6 +2227,7 @@ function RooftopDecorations({
   const storeFloorPlans = useDesignerStore(s => s.floorPlans);
   const floorPlans = floorPlansOverride ?? storeFloorPlans;
   const glbRoom = useDesignerStore(s => s.mobileGlbRoom);
+  const mobileReadyItemIds = useDesignerStore(s => s.mobileReadyItemIds);
   const fp = floorPlans[roofFloorIdx];
   if (!fp) return null;
 
@@ -2242,11 +2269,15 @@ function RooftopDecorations({
         const items = fp.rooms?.[rt]?.placedItems ?? [];
         return (
           <group key={rt} position={[cx, y, cz]}>
-            {/* 移动端默认跳过天台家具 GLB；开完整细节后加载。 */}
-            {mobileFurnitureGlbAllowed(rt, glbRoom) && items.map((p) => (
-              <Suspense key={p.instanceId} fallback={null}>
-                <PlacedItemMesh placed={p} def={ROOM_DEFS[rt]} roomW={rWm} roomD={rDm} room={rt} wallClearance />
-              </Suspense>
+            {/* 移动端:天台家具也走同一条串行队列,逐件揭开(mobileReadyItemIds),
+                轮到才加载完整 GLB;OnLoadPing 通知驱动器推进。桌面全量加载。 */}
+            {items.map((p) => (
+              (mobileFurnitureGlbAllowed(rt, glbRoom) || mobileReadyItemIds.includes(p.instanceId)) ? (
+                <Suspense key={p.instanceId} fallback={null}>
+                  <OnLoadPing id={p.instanceId} />
+                  <PlacedItemMesh placed={p} def={ROOM_DEFS[rt]} roomW={rWm} roomD={rDm} room={rt} wallClearance />
+                </Suspense>
+              ) : null
             ))}
             {/* Rooftop ambient glow — emissive-only, no pointLight for perf */}
           </group>
@@ -2533,6 +2564,84 @@ export default function FloorPlanBuilding({
   // 移动端「逐房间家具 GLB」当前点亮的房型（响应式：切换即重渲家具层，
   // 无需重挂 Canvas → 同一 WebGL context，不 churn context/不失败）。
   const glbRoom        = useDesignerStore(s => s.mobileGlbRoom);
+  const setMobileReadyItemIds = useDesignerStore(s => s.setMobileReadyItemIds);
+  const glForBudget = useThree((s) => s.gl);
+  // 外观剖面视图渲染**所有楼层 + 天台**的家具(透过玻璃都看得见,与电脑端一致),
+  // 故串行队列要覆盖全部可见家具。按 楼层→天台、间内顺序拍平成实例 id 队列。
+  const furnOrder = useMemo(() => {
+    const ids: string[] = [];
+    const roofIdx = exterior.hasRooftop ? floorCount : -1;
+    const maxFi = roofIdx >= 0 ? roofIdx : floorCount - 1;
+    for (let fi = 0; fi <= maxFi; fi++) {
+      const fp = floorPlans[fi];
+      if (!fp) continue;
+      for (const rt of ((fp.enabledRooms ?? []) as RoomType[])) {
+        for (const p of (fp.rooms?.[rt]?.placedItems ?? [])) ids.push(p.instanceId);
+      }
+    }
+    return ids;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [floorPlans, floorCount, exterior.hasRooftop]);
+  // 移动端外观:家具 GLB **逐件串行**揭开(并发=1)+ **真实渲染器状态**硬预算。
+  // 关键教训:我先前按「场景显存 MB 估算」设预算失败了 —— 那个估算数的是**材质引用到的
+  // 贴图**(含尚未上传 GPU 的),严重失真:真机实测 452MB/已上传21张=全白膜时**没崩**,
+  // 442MB/已上传241张=满家具时**崩了**。可见真正的崩溃驱动量是 **renderer.info 里已上传
+  // 的纹理数**(≈已加载的家具 GLB 数,连带其真实上传纹理 + GLB 源/解码占的 JS 堆),而非
+  // 我那套失真 MB。故改用 gl.info.memory.textures 真实计数当预算:实测崩点 241 → 保守封
+  // 在 140,到顶停揭(远处家具留占位盒,**保证不崩**)。两层满屋家具本就逼近这台机的
+  // Safari 单页上限,能装多少装多少、绝不崩优先。
+  useEffect(() => {
+    if (!isMobileDevice()) return;
+    if (!interactive) return; // 只主楼跑串行驱动;副楼(interactive=false)不抢同一条队列/store
+    const order = furnOrder;
+    // 已上传纹理数上限(真实渲染器状态)。这个数字随「每张纹理的真实成本」一路放宽:
+    //   120  → CPU 贴图副本没释放的年代(每件家具极贵,实测崩点 241 张 / JS 堆 1.1GB)
+    //   400  → 加上 texCpuRelease(CPU 残留 546MB→7MB)后
+    // 真机实测:400 张时总计 ~658MB、稳定不崩;放开到 900(配合运行时降 mip)虽然家具
+    // 能全出,但降 mip 会触发整批重新上传导致概率性崩溃,已回退(见 mobileTexShrink)。
+    // 故回到实测安全值 400。代价:这台设备装不下整栋两层的全部家具,较远的会留占位盒。
+    // 要彻底去掉占位盒,应在**离线编码**时把家具贴图出成 512(见 scripts/ktx2-encode.mjs),
+    // 而不是运行时动纹理。
+    const TEX_CAP = 400;
+    let frontier = 0;
+    let stallTicks = 0;
+    furnitureSeq.reset();
+    setMobileReadyItemIds([]);
+
+    // 定时器逐拍推进,每拍**最多揭 1 件**,且 setState 在计时器回调里(脱离 React 提交
+    // 级联)—— 这是不触发 "Maximum update depth"(#185)的关键。
+    const id = setInterval(() => {
+      if (frontier >= order.length) { clearInterval(id); return; }
+      // 关键:等 KTX2 用真实渲染器探好压缩格式再开揭 —— 否则首批家具会在探测完成前转码、
+      // 退回 RGBA 未压。isKtx2Ready 由 <Ktx2Detect/> 在 Canvas 挂载时置真。
+      if (!isKtx2Ready()) return;
+      // 已揭开的都必须加载完(哨兵 ping);否则等 —— 但防网络挂死加看门狗:连续多拍无
+      // 进展就强制把队首标记完成推进(出错件走 GltfFurnitureWithFallback 回退,正常会 ping)。
+      let allLoaded = true;
+      for (let k = 0; k < frontier; k++) {
+        if (!furnitureSeq.loaded.has(order[k])) { allLoaded = false; break; }
+      }
+      if (!allLoaded) {
+        stallTicks += 1;
+        if (stallTicks < 18) return;        // ~2.5s 宽限
+        if (frontier > 0) furnitureSeq.loaded.add(order[frontier - 1]); // 强制解卡
+      }
+      stallTicks = 0;
+      const texN = (glForBudget?.info?.memory?.textures as number | undefined) ?? 0;
+      if (texN >= TEX_CAP) { clearInterval(id); return; } // 到真实纹理预算,停止揭开,保证不崩
+      frontier += 1;
+      setMobileReadyItemIds(order.slice(0, frontier));
+    }, 140);
+
+    return () => {
+      clearInterval(id);
+      furnitureSeq.reset();
+      setMobileReadyItemIds([]);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [furnOrder]);
+  // 渲染门控读它:某件 id 在集合里 = 已揭开、可加载完整 GLB。
+  const mobileReadyItemIds = useDesignerStore(s => s.mobileReadyItemIds);
 
   // ── Walkthrough door/window open-close state ──────────────────────────
   // Map<key, open>. Key format: `door|${fi}|${room}|${di}` /
@@ -3521,12 +3630,13 @@ export default function FloorPlanBuilding({
           底部落到 -0.51(略入地面)封住空当。
           ⚠️ 仅外观(!insideBuilding)渲染:基座顶面升到 y=0.045(为盖住楼板边)会盖过
           室内橡木地板 → 漫游里地板变白(用户)。基座是外观专用元素,漫游不需要。 */}
-      {!insideBuilding && baseClusters.map((c, ci) => (
-        <mesh key={`base-${ci}`} position={[c.cx, -0.225, c.cz]} receiveShadow>
-          <boxGeometry args={[c.w + 0.04, 0.57, c.d + 0.04]} />
-          <meshStandardMaterial color={wallColor} roughness={0.82} metalness={0.01} />
-        </mesh>
-      ))}
+      {/* 【已移除】地面基座 —— 用户要求直接去掉。
+          它的顶面在 y=+0.045、比楼板面(y=+0.025)高 2cm,车库这类敞口房间里,这块与墙
+          同色的板会从车轮底部横切过去 → 看起来像"车轮陷进地里"(用户连续三次实拍反馈)。
+          真凶是基座高于楼板,不是家具落地高度,所以此前抬家具怎么调都没用。
+          代价:外墙到地面之间露出约 7.7cm 的楼板边(庭院地面 y≈-0.502,楼板面 y=-0.425)。
+          若嫌这道边突兀,不必恢复整块基座——把上面那版的顶面从 0.045 降到 0.025(与楼板
+          齐平)即可,既遮边又不会切到家具。 */}
 
       {/* ── 北面室外空调冷凝器（outdoor HVAC condensing units）—— 背面服务区 ── */}
       {!insideBuilding && isGlassVilla && (() => {
@@ -8406,15 +8516,24 @@ export default function FloorPlanBuilding({
                       </mesh>
                     );
                   })();
-                  if (needsPlacedMesh && mobileFurnitureGlbAllowed(room, glbRoom)) {
-                    // 地毯专属抬升：地毯是贴地薄片(1.5cm)，PlacedItemMesh 把它放在
-                    // group 的 yBase 上 → 整片沉在真实楼板(yBase+0.025)之下被盖住。
-                    // 只把「地毯」抬到楼板面之上(0.03)，配合 Rug 材质的 polygonOffset
-                    // 让它稳定画在楼板前面，外观图里就能透过落地玻璃看到。其余家具
-                    // 够高，不抬，避免悬空。
-                    const rugLiftY = fItem?.category === "rug" ? 0.03 : 0;
+                  // 移动端:逐件串行揭开 —— 只有 mobileReadyItemIds 里的实例才加载完整
+                  // GLB(其余先显示占位盒,轮到才升级)。桌面 mobileFurnitureGlbAllowed=true
+                  // 全量加载,不受影响。
+                  const glbRevealed = mobileFurnitureGlbAllowed(room, glbRoom)
+                    || mobileReadyItemIds.includes(p.instanceId);
+                  if (needsPlacedMesh && glbRevealed) {
+                    // 落地高度必须和上面的占位盒一致:楼板面画在 group 的 yBase **之上**
+                    // FLOOR_SURFACE(0.025)处,而 PlacedItemMesh 把模型底面放在 yBase 上
+                    // → 所有 GLB 家具都陷进楼板 2.5cm。沙发/柜子有裙边看不出来,车和摩托
+                    // 的圆轮子一眼就露馅(用户实拍:车轮陷进车库地面)。
+                    // 地毯是贴地薄片(1.5cm),再高一点点(0.03)配合 Rug 材质的 polygonOffset,
+                    // 稳定画在楼板前面,外观图里透过落地玻璃能看到。
+                    const rugLiftY = fItem?.category === "rug" ? 0.03 : 0.025;
                     return (
+                      // OnLoadPing 与 GLB 同在一个 <Suspense> 内:边界 resolve(该件真正
+                      // 加载完/出错回退)前都不挂载,故它 mount === 加载完 → 通知驱动器揭下一件。
                       <Suspense key={p.instanceId} fallback={proxyBox}>
+                        <OnLoadPing id={p.instanceId} />
                         <group position={[0, rugLiftY, 0]} userData={{ notWalkable: !isStair }}>
                           <PlacedItemMesh placed={modP} def={ROOM_DEFS[room]} roomW={rW} roomD={rD} room={room} wallClearance />
                         </group>
@@ -8422,7 +8541,14 @@ export default function FloorPlanBuilding({
                     );
                   }
                   if (!fItem) return null;
-                  return <group key={p.instanceId}>{proxyBox}</group>;
+                  // 盒子路径:!needsPlacedMesh 的「永远不加载 GLB」件立刻 ping,让串行队列
+                  // 快速跳过它;needsPlacedMesh 但尚未轮到的件保持盒子、不 ping(还在排队)。
+                  return (
+                    <group key={p.instanceId}>
+                      {!needsPlacedMesh && <OnLoadPing id={p.instanceId} />}
+                      {proxyBox}
+                    </group>
+                  );
                 })}
             </group>
             {/* ── §10 walkthrough LOD detail: crown molding + 吸顶灯。Only

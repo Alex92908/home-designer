@@ -28,22 +28,24 @@ export interface ShowcaseMeta {
 export const SHOWCASE_META: ShowcaseMeta[] = [
   {
     id: "resort-pool-villa",
-    nameZh: "度假泳池别墅",
-    nameEn: "Resort Pool Villa",
-    descZh: "实墙开窗立面 · 泳池套组庭院 · 两层带天台",
-    descEn: "Solid-wall facade · Pool-set yard · 2 floors + rooftop",
-    tagsZh: ["2F+天台", "实墙", "泳池院"],
-    tagsEn: ["2F + rooftop", "Solid wall", "Pool yard"],
+    // 文案按实际渲染校正：院子里已无泳池，改述真实卖点(独立车库/天台露台)。
+    // id 与图片文件名保留原样，避免改动路由/资源引用。
+    nameZh: "度假别墅",
+    nameEn: "Resort Villa",
+    descZh: "实墙开窗立面 · 独立车库 · 两层带天台露台",
+    descEn: "Solid-wall facade · Detached garage · 2 floors + rooftop terrace",
+    tagsZh: ["2F+天台", "实墙", "车库"],
+    tagsEn: ["2F + rooftop", "Solid wall", "Garage"],
     image: "/showcase/resort-pool-villa.jpg",
   },
   {
     id: "clear-glass-curtain-villa",
     nameZh: "通透玻璃幕墙别墅",
     nameEn: "Clear Glass-Curtain Villa",
-    descZh: "通透玻璃幕墙 · 胡桃木挑檐 · 逐面可调立面 · 泳池庭院",
-    descEn: "See-through glass curtain · walnut soffit · per-face facade · pool yard",
-    tagsZh: ["3F", "玻璃幕墙", "泳池院"],
-    tagsEn: ["3F", "Glass curtain", "Pool yard"],
+    descZh: "通透玻璃幕墙 · 胡桃木挑檐 · 逐面可调立面 · 独立车库",
+    descEn: "See-through glass curtain · walnut soffit · per-face facade · garage",
+    tagsZh: ["3F", "玻璃幕墙", "车库"],
+    tagsEn: ["3F", "Glass curtain", "Garage"],
     image: "/showcase/clear-glass-curtain-villa.jpg",
   },
   // ── 片场系列（云横店）：查看器走 applyProjectTemplate，缩略图暂用 emoji ──

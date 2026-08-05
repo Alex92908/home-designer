@@ -3,7 +3,11 @@
 import { useRef, useMemo, useEffect, useState, useCallback, memo, Fragment, Suspense, Component, type ReactElement, type ReactNode } from "react";
 import { SceneRegistrar } from "@/lib/sceneRegistry";
 import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, Html, MeshReflectorMaterial, useGLTF, Clone, Sky, Stars, Instances, Instance, PerformanceMonitor, Loader } from "@react-three/drei";
+import { OrbitControls, Environment, Html, MeshReflectorMaterial, Clone, Sky, Stars, Instances, Instance, PerformanceMonitor, Loader } from "@react-three/drei";
+import { useGLTF } from "@/lib/drei";
+import { Ktx2Detect } from "@/lib/gltfKtx2";
+import { SceneDiag, SceneDiagHUD } from "@/lib/sceneDiag";
+import { MobileTextureShrink } from "@/lib/mobileTexShrink";
 import { EffectComposer, SSAO, Bloom, Vignette, BrightnessContrast, SMAA, HueSaturation, ToneMapping } from "@react-three/postprocessing";
 import { BlendFunction, ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
@@ -6678,10 +6682,11 @@ export default function HouseCanvas() {
            walkthrough was entered via the room list). The enter button is
            harmless in the exploded 全局3D view and gives a one-click way in. */}
       {/* 漫游在移动端也可用：家具走占位盒（见 FloorPlanExterior 的
-          !isMobileDevice 门控），漫游内也是零 GLB，不会崩。移动端把按钮下移到
-          标题卡之下(top-28)避免和左上返回键/标题重叠。 */}
+          !isMobileDevice 门控），漫游内也是零 GLB，不会崩。
+          移动端按钮下移到标题卡**之下**:标题卡从 top-[4.25rem](68px) 起、约 56px 高,
+          原来的 top-28(112px)正好压在卡片上(用户实拍),故改 top-[9.5rem]。 */}
       {true && (
-        <div className="absolute top-28 sm:top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
+        <div className="absolute top-[9.5rem] sm:top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
           <button
             onClick={() => {
               if (walkthrough) { exitWalkthrough(); }
@@ -6819,9 +6824,11 @@ export default function HouseCanvas() {
         </>
       )}
 
-      {/* ── Zoom + view buttons ── bottom-right ── */}
+      {/* ── Zoom + view buttons ── bottom-right ──
+           移动端抬高(bottom-36):底部让位给「出短片」+ 整条主按钮,
+           否则缩放键悬在楼体中间(用户实拍)。 */}
       {!walkthrough && (
-        <div className="absolute bottom-20 right-4 z-20 flex flex-col gap-1 select-none">
+        <div className="absolute bottom-36 sm:bottom-20 right-4 z-20 flex flex-col gap-1 select-none">
           {([
             { label: "+", title: locale === "en" ? "Zoom in" : "放大", factor: 0.88 },
             { label: "−", title: locale === "en" ? "Zoom out" : "缩小", factor: 1.14 },
@@ -6967,6 +6974,9 @@ export default function HouseCanvas() {
         })()}
       >
         <SceneRegistrar view="exterior" />
+        <Ktx2Detect />
+        <MobileTextureShrink />
+        <SceneDiag />
         {/* Fog disabled when inside — would darken interior surfaces */}
         {!insideBuilding && <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />}
         {!walkthrough && flyTick !== 0 && (() => {
@@ -7365,6 +7375,7 @@ export default function HouseCanvas() {
         {/* 🚶 演员走位层（占位方块人 + 地面点选路径 + 录制时行走） */}
         <ActorsLayer />
       </Canvas>
+      <SceneDiagHUD />
       {/* 整体外观首次加载大量院子/导入 GLB 时的全局进度条（drei Loader 监听
           所有 useGLTF/useTexture 的 useProgress）。资产缓存后二次访问几乎不出现。 */}
       <Loader
