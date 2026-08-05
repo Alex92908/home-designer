@@ -111,7 +111,9 @@ function SouthWallToggle() {
   return (
     <button
       onClick={() => setOpacity(next)}
-      className="absolute bottom-4 left-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-lg transition-all active:scale-95"
+      // 竖屏手机上 bottom-4 会被 Safari 底部工具栏吃掉(用户实拍);横屏底栏很细所以没事,
+      // 故只在窄屏抬高,sm 以上保持原位。
+      className="absolute bottom-24 sm:bottom-4 left-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-lg transition-all active:scale-95"
       style={{
         background: bg,
         color: "white",
@@ -139,7 +141,8 @@ function CeilingToggle() {
   return (
     <button
       onClick={() => setOpacity(next)}
-      className="absolute bottom-14 left-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-lg transition-all active:scale-95"
+      // 同上:竖屏手机抬到 Safari 底栏之上,始终叠在「南墙」开关正上方。
+      className="absolute bottom-[8.5rem] sm:bottom-14 left-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-lg transition-all active:scale-95"
       style={{
         background: bg,
         color: "white",
@@ -452,7 +455,8 @@ export default function Home() {
           {/* z-40：要盖过单间平面图右下角的楼层小地图（FloorPlanMinimap z-30）。
               菜单弹层自身虽是 z-50，但它在本容器的堆叠上下文内，容器若 < 小地图
               就整体被压下去 → 弹层被小地图挡住。把容器抬到 40 让整棵子树都在上面。 */}
-          <div className="absolute bottom-4 right-4 z-40 flex flex-col gap-2 items-end transition-opacity duration-200 opacity-100">
+          {/* 竖屏手机同样抬到 Safari 底栏之上(与左下角两个开关齐平),横屏/桌面保持原位。 */}
+          <div className="absolute bottom-24 sm:bottom-4 right-4 z-40 flex flex-col gap-2 items-end transition-opacity duration-200 opacity-100">
             <AiDesignDialog />
             <AiEntryMenu />
           </div>
@@ -466,8 +470,9 @@ export default function Home() {
             const hasUp   = activeFloor < floorPlans.length - 1 && floorPlans[activeFloor + 1]?.enabledRooms?.includes("stair" as const);
             const hasDown = activeFloor > 0 && floorPlans[activeFloor - 1]?.enabledRooms?.includes("stair" as const);
             if (!hasUp && !hasDown) return null;
+            // 上下楼按钮同样避开竖屏 Safari 底栏(80px 仍在其覆盖范围内)。
             return (
-              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 flex gap-3">
+              <div className="absolute bottom-40 sm:bottom-20 left-1/2 -translate-x-1/2 z-30 flex gap-3">
                 {hasUp && (
                   <button
                     onClick={() => { setActiveFloor(activeFloor + 1); setActiveRoom("stair"); }}
