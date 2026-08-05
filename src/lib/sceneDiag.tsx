@@ -12,6 +12,7 @@
 import { useThree } from "@react-three/fiber";
 import { useEffect, useSyncExternalStore } from "react";
 import { estimateSceneMemoryMB } from "@/lib/sceneMemory";
+import { useDesignerStore } from "@/lib/store";
 
 type Diag = {
   texN?: number; geoN?: number; calls?: number; tris?: number; programs?: number;
@@ -107,6 +108,7 @@ export function SceneDiag(): null {
 
 export function SceneDiagHUD(): React.ReactElement {
   const open = useOpen();
+  const showcase = useDesignerStore((s) => s.showcaseMode);
   const d = useSyncExternalStore(
     (cb) => { _subs.add(cb); return () => { _subs.delete(cb); }; },
     () => _diag,
@@ -119,8 +121,10 @@ export function SceneDiagHUD(): React.ReactElement {
         <div style={{
           // 用 absolute 相对**画布容器**(各 Canvas 外层都是 w-full h-full relative)定位,
           // 而不是 fixed 相对视口 —— fixed 会随视口固定,左侧房间栏展开时被压住(用户实拍)。
-          // 贴画布自身左上角:天然避开顶栏和左栏,栏收起/展开都不重叠。
-          position: "absolute", top: 8, left: 8, zIndex: 30,
+          // 位置按场景自适应:样板间左上角自上而下是「返回」→标题卡→「进入室内漫游」,
+          // 得让到这一摞之下(200);设计器里那块是空的,贴顶即可(8)。
+          // 之前一刀切,先后被返回键、标题卡、漫游按钮挡了三次(用户实拍)。
+          position: "absolute", top: showcase ? 200 : 8, left: 8, zIndex: 30,
           background: "rgba(0,0,0,0.82)", color: "#0f0", font: "11px/1.35 monospace",
           padding: "5px 7px", borderRadius: 5, pointerEvents: "none", whiteSpace: "pre",
           maxWidth: "calc(100vw - 8px)", overflow: "hidden",

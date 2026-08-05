@@ -63,6 +63,51 @@ const furnitureSeq = {
   reset() { this.loaded.clear(); },
 };
 
+/** 漫游(移动端)自动跟随相机切换「当前房间」—— 只有该房间加载完整家具 GLB,其余留占位。
+ *
+ *  为什么这么做:漫游里 needsPlacedMesh 对每一件都为真,整屋放行 = 全量 GLB → 真机必崩;
+ *  但全留占位盒就是空房子,更不能接受(用户)。而漫游本质是「站在一间屋里看」,只需要
+ *  眼前这间是真的。复用既有的 mobileGlbRoom 机制(原先靠手点 chip),改为按相机位置自动切,
+ *  内存只占一间的量,走到哪加载哪。
+ *  同层判定用 yBase,避免楼上楼下同名房间抢。 */
+function WalkRoomTracker({ rooms }: {
+  rooms: Array<{ room: string; cx: number; cz: number; rW: number; rD: number; yBase: number }>;
+}): null {
+  const setMobileGlbRooms = useDesignerStore((s) => s.setMobileGlbRooms);
+  const acc = useRef(0);
+  const cur = useRef("");
+  useFrame(({ camera, gl }, delta) => {
+    acc.current += delta;
+    if (acc.current < 0.35) return;   // 别每帧算,0.35s 足够跟上走路
+    acc.current = 0;
+    // ⚠️ 内存闸:走过的房间,其 GLB 会留在 drei 解析缓存里(即使已不渲染),
+    // 走得越多累积越高 → 崩溃概率随走动上升。到预算就不再扩,保证走多远都不崩。
+    const texN = (gl.info?.memory?.textures as number | undefined) ?? 0;
+    const RADIUS = texN >= 520 ? 0 : 7;   // 米:到顶就只保当前这间
+    const p = camera.position;
+    const near: string[] = [];
+    let best: string | null = null;
+    let bestD = Infinity;
+    for (const r of rooms) {
+      const dy = p.y - r.yBase;
+      if (dy < -0.6 || dy > FLOOR_H + 0.6) continue;          // 只看相机所在楼层
+      const dx = Math.max(Math.abs(p.x - r.cx) - r.rW / 2, 0); // 到矩形的距离(内部=0)
+      const dz = Math.max(Math.abs(p.z - r.cz) - r.rD / 2, 0);
+      const d = Math.hypot(dx, dz);
+      if (d < bestD) { bestD = d; best = r.room; }
+      if (d <= RADIUS && !near.includes(r.room)) near.push(r.room);
+    }
+    // 当前所在(或最近)那间永远在列 —— 否则站在走廊等未登记区域会整屋变盒子。
+    if (best && !near.includes(best)) near.push(best);
+    const key = near.join("|");
+    if (key !== cur.current) {
+      cur.current = key;
+      setMobileGlbRooms(near);
+    }
+  });
+  return null;
+}
+
 /** 兄弟哨兵:放在家具 <Suspense> 内,与真正的 GLB 组件同级。Suspense 未 resolve 时
  *  整棵子树都不挂载,故本组件 mount === 该件加载完(或出错回退,同样算完成,不卡队列)。*/
 function OnLoadPing({ id }: { id: string }): null {
@@ -2597,12 +2642,13 @@ export default function FloorPlanBuilding({
     // 已上传纹理数上限(真实渲染器状态)。这个数字随「每张纹理的真实成本」一路放宽:
     //   120  → CPU 贴图副本没释放的年代(每件家具极贵,实测崩点 241 张 / JS 堆 1.1GB)
     //   400  → 加上 texCpuRelease(CPU 残留 546MB→7MB)后
-    // 真机实测:400 张时总计 ~658MB、稳定不崩;放开到 900(配合运行时降 mip)虽然家具
-    // 能全出,但降 mip 会触发整批重新上传导致概率性崩溃,已回退(见 mobileTexShrink)。
-    // 故回到实测安全值 400。代价:这台设备装不下整栋两层的全部家具,较远的会留占位盒。
-    // 要彻底去掉占位盒,应在**离线编码**时把家具贴图出成 512(见 scripts/ktx2-encode.mjs),
-    // 而不是运行时动纹理。
-    const TEX_CAP = 400;
+    // 上限随「每张纹理的真实成本」一路放宽,每次都以真机 HUD 实测为准:
+    //   120 → CPU 副本没释放的年代(崩点 241 张 / JS 堆 1.1GB)
+    //   400 → 加上 texCpuRelease 之后
+    //   800 → 换上手机专用资产(贴图 512 + 网格简化 50%)之后
+    // 依据:真机实测 403 张时合计仅 323MB,而 658MB 是已验证的稳定水位、954MB 才崩。
+    // 400 太保守,串行加载在二楼走廊之前就触顶停住 → 那边永远是白膜(用户实拍)。
+    const TEX_CAP = 800;
     let frontier = 0;
     let stallTicks = 0;
     furnitureSeq.reset();
@@ -2642,6 +2688,8 @@ export default function FloorPlanBuilding({
   }, [furnOrder]);
   // 渲染门控读它:某件 id 在集合里 = 已揭开、可加载完整 GLB。
   const mobileReadyItemIds = useDesignerStore(s => s.mobileReadyItemIds);
+  // 漫游:相机附近的房间(WalkRoomTracker 维护),这些房间加载完整家具。
+  const mobileGlbRooms = useDesignerStore(s => s.mobileGlbRooms);
 
   // ── Walkthrough door/window open-close state ──────────────────────────
   // Map<key, open>. Key format: `door|${fi}|${room}|${di}` /
@@ -3623,6 +3671,8 @@ export default function FloorPlanBuilding({
   // 地面吸附/家具对齐(它们都以楼板 y=0 为基准)。
   return (
     <group position={[worldX, insideBuilding ? 0 : -0.45, worldZ]} rotation={[0, worldRot, 0]}>
+      {/* 漫游(移动端):按相机所在房间自动放行该间的完整家具,其余留占位 —— 见 WalkRoomTracker */}
+      {insideBuilding && interactive && isMobileDevice() && <WalkRoomTracker rooms={interiorRooms} />}
       {/* 地面基座（建筑基层，按簇）——**与外墙同色、齐平**，从庭院地面(y≈-0.5)长到
           楼板线(y=0.01)。这样外墙看起来一直延伸到地面(建筑长在地上):既不悬空(旧设计
           在楼板下留 0.4m 空当当"悬浮盒子",用户嫌是基座缝),也不是一道突兀的厚浅色地板
@@ -8519,8 +8569,12 @@ export default function FloorPlanBuilding({
                   // 移动端:逐件串行揭开 —— 只有 mobileReadyItemIds 里的实例才加载完整
                   // GLB(其余先显示占位盒,轮到才升级)。桌面 mobileFurnitureGlbAllowed=true
                   // 全量加载,不受影响。
+                  // ⚠️ 漫游(insideBuilding)在移动端保持**零 GLB、全占位盒**的原设计:
+                  // 漫游里 needsPlacedMesh 对每一件都为真,一旦放行就是整屋 GLB 全量加载
+                  // → 真机必崩(用户实拍)。逐件串行放行只用于**外观剖面图**。
                   const glbRevealed = mobileFurnitureGlbAllowed(room, glbRoom)
-                    || mobileReadyItemIds.includes(p.instanceId);
+                    || (insideBuilding && mobileGlbRooms.includes(room))
+                    || (!insideBuilding && mobileReadyItemIds.includes(p.instanceId));
                   if (needsPlacedMesh && glbRevealed) {
                     // 落地高度必须和上面的占位盒一致:楼板面画在 group 的 yBase **之上**
                     // FLOOR_SURFACE(0.025)处,而 PlacedItemMesh 把模型底面放在 yBase 上

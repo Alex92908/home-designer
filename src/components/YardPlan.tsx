@@ -67,6 +67,9 @@ async function _renderGltfThumb(gltfPath: string): Promise<string> {
   try {
     const loader = new GLTFLoader();
     loader.setDRACOLoader(dracoLoader);
+    // 同 glbThumbnail:模型是 KTX2,不挂 KTX2Loader 缩略图烤不出来。
+    const { extendKtx2 } = await import("@/lib/gltfKtx2");
+    extendKtx2(loader);
     const gltf = await new Promise<{ scene: import("three").Group }>((res, rej) =>
       loader.load(gltfPath, res as (g: unknown) => void, undefined, rej),
     );

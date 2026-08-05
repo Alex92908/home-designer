@@ -67,6 +67,10 @@ export function releaseCpuAfterUpload(tex: THREE.Texture): void {
     } catch { /* 释放失败不影响渲染 */ }
     tex.onUpdate = null;
   };
-  // 已经上传过的贴图不会再触发 onUpdate,推一次重新上传以走到钩子。
-  tex.needsUpdate = true;
+  // ⚠️ 这里**不能**写 tex.needsUpdate = true 来「逼已上传的纹理再传一次好走到钩子」:
+  // 并发加载多时,很多纹理的数据还没解码完就被这行逼着上传了一次空内容 → onUpdate 触发
+  // → 我们把 CPU 数据清掉 → 真数据永远传不上去 → 家具大面积变黑(用户实拍:放宽纹理
+  // 预算、并发件数翻倍后尤其明显)。
+  // 只挂钩子、不催上传:绝大多数纹理在首次上传前就被扫描到(解码比 0.4s 扫描周期慢),
+  // 照样能释放;个别漏网的保留 CPU 副本即可 —— 内存早已不是瓶颈(实测合计仅 323MB)。
 }

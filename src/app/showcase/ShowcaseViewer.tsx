@@ -60,6 +60,13 @@ export default function ShowcaseViewer({
   // 室内全占位盒（可靠打开）。点 chip 切房型 —— 不重挂 Canvas（同一 WebGL
   // context，避免 iOS context 数量上限导致的「有概率加载失败」），而是响应式
   // 重渲家具层，并在切走时显式 useGLTF.clear 上一间的模型（真正释放显存）。
+  const walkthroughActive = useDesignerStore((s) => s.walkthroughActive);
+  // 告诉画布内的浮层:这里是样板间,左上角有返回键/标题卡要避让(设计器里不用)。
+  const setShowcaseMode = useDesignerStore((s) => s.setShowcaseMode);
+  useEffect(() => {
+    setShowcaseMode(true);
+    return () => setShowcaseMode(false);
+  }, [setShowcaseMode]);
   const glbRoom = useDesignerStore((s) => s.mobileGlbRoom);
   const setGlbRoomStore = useDesignerStore((s) => s.setMobileGlbRoom);
   const customFurniture = useDesignerStore((s) => s.customFurniture);
@@ -231,6 +238,10 @@ export default function ShowcaseViewer({
           切走时 dispose 上一间，一次只亮一间。桌面永远全量高精度。 */}
       <HouseCanvas />
 
+      {/* 漫游时收起样板间自己的浮层(返回 / 标题卡 / 主按钮)—— 漫游有自己的控制条
+          (退出漫游/墙体透视/穿墙/第一人称)+ 摇杆,两套叠在一起完全糊住(用户实拍)。
+          退出漫游后自动恢复。 */}
+      {!walkthroughActive && <>
       {/* 返回键（左上）*/}
       <button
         onClick={onBack}
@@ -300,6 +311,7 @@ export default function ShowcaseViewer({
           {en ? "Open in the editor →" : "在设计器中打开此方案 →"}
         </button>
       </div>
+      </>}
     </div>
   );
 }

@@ -627,6 +627,18 @@ interface DesignerStore {
   // 响应式驱动外观图家具渲染；不持久化（每次进查看器从 null 开始）。
   mobileGlbRoom: string | null;
   setMobileGlbRoom: (room: string | null) => void;
+  /** 漫游(移动端)时相机附近、需要加载完整家具的房间。只放行**一间**会导致
+   *  从门口望向隔壁全是占位盒(用户实拍),故按距离放行邻近几间。 */
+  mobileGlbRooms: string[];
+  setMobileGlbRooms: (rooms: string[]) => void;
+  /** 是否在样板间查看器里(它自带返回键/标题卡,占住画布左上角)。设计器里那块是空的,
+   *  浮层不必为它们让位 —— 内存面板和漫游按钮据此自适应,避免互相遮挡。 */
+  showcaseMode: boolean;
+  setShowcaseMode: (v: boolean) => void;
+  /** 是否正处于第一人称漫游。样板间据此收起自己的浮层(返回/标题卡/主按钮),
+   *  否则会和漫游控制条叠在一起(用户实拍)。 */
+  walkthroughActive: boolean;
+  setWalkthroughActive: (v: boolean) => void;
   // 移动端外观/漫游「逐间渐进加载」已放开完整家具的房型列表（累积增长），
   // 由 FloorPlanExterior 的驱动 effect 每 ~450ms 加一间，摊开加载峰值。
   // 移动端外观:已放开完整家具 GLB 的「家具实例 id」前缀集合(按件串行揭开,
@@ -1281,6 +1293,12 @@ export const useDesignerStore = create<DesignerStore>()(
       toggleCompass: () => set(s => ({ showCompass: !s.showCompass })),
       mobileGlbRoom: null,
       setMobileGlbRoom: (room) => set({ mobileGlbRoom: room }),
+      mobileGlbRooms: [],
+      setMobileGlbRooms: (rooms) => set({ mobileGlbRooms: rooms }),
+      showcaseMode: false,
+      setShowcaseMode: (v) => set({ showcaseMode: v }),
+      walkthroughActive: false,
+      setWalkthroughActive: (v) => set({ walkthroughActive: v }),
       mobileReadyItemIds: [],
       setMobileReadyItemIds: (ids) => set({ mobileReadyItemIds: ids }),
 

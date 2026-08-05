@@ -44,6 +44,10 @@ async function getSingletons(): Promise<Singletons | null> {
       const draco = new DRACOLoader();
       draco.setDecoderPath("/draco/");
       loader.setDRACOLoader(draco);
+      // 目录模型现在是 KTX2(KHR_texture_basisu 标了 required),不挂 KTX2Loader 会直接
+      // 加载失败 → 家具卡片缩略图全烤不出来。这条路径不走 @/lib/drei 包装,得单独挂。
+      const { extendKtx2 } = await import("./gltfKtx2");
+      extendKtx2(loader);
 
       return { THREE, renderer, envTex, loader: loader as unknown as Singletons["loader"] } as Singletons;
     } catch {

@@ -5144,8 +5144,11 @@ function TouchJoystick({ onChange }: { onChange: (axisX: number, axisZ: number) 
       onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerCancel={onUp}
-      className="absolute bottom-32 left-6 z-20 select-none"
+      // 原来 bottom-32(离底 128px)在手机上悬得太高、挡住画面(用户实拍);
+      // 压到底部安全区之上,拇指自然位置。
+      className="absolute left-6 z-20 select-none"
       style={{
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
         width: radius * 2, height: radius * 2,
         borderRadius: "50%",
         background: "rgba(0,0,0,0.32)",
@@ -6050,6 +6053,14 @@ export default function HouseCanvas() {
   // branches still flip correctly.
   const [walkthrough, setWalkthrough] = useState(false);
   const insideBuilding = walkthrough;
+  // 同步到 store,供样板间在漫游时收起自己的浮层(见 ShowcaseViewer)。
+  const setWalkthroughActive = useDesignerStore((s) => s.setWalkthroughActive);
+  // 样板间才有返回键/标题卡占着左上角,需要让位;设计器里贴顶即可。
+  const showcaseMode = useDesignerStore((s) => s.showcaseMode);
+  useEffect(() => {
+    setWalkthroughActive(walkthrough);
+    return () => setWalkthroughActive(false);
+  }, [walkthrough, setWalkthroughActive]);
   const [walkthroughSpawn, setWalkthroughSpawn] = useState<[number, number, number] | null>(null);
   // 出生朝向（XZ 单位向量）。默认 +Z；“进入室内漫游”按钮会设为客厅长轴方向。
   const [walkSpawnLook, setWalkSpawnLook] = useState<[number, number]>([0, 1]);
@@ -6684,9 +6695,14 @@ export default function HouseCanvas() {
       {/* 漫游在移动端也可用：家具走占位盒（见 FloorPlanExterior 的
           !isMobileDevice 门控），漫游内也是零 GLB，不会崩。
           移动端按钮下移到标题卡**之下**:标题卡从 top-[4.25rem](68px) 起、约 56px 高,
-          原来的 top-28(112px)正好压在卡片上(用户实拍),故改 top-[9.5rem]。 */}
+          原来的 top-28(112px)正好压在卡片上(用户实拍),故改 top-[9.5rem]。
+          漫游态有 4 个按钮(退出/透视/穿墙/第一人称),窄屏被挤到换行 → 又高又胖(用户实拍),
+          故:不换行 + 整条横向可滚,放不下就滑;且进入漫游后贴顶(此时没有标题卡要让位)。 */}
       {true && (
-        <div className="absolute top-[9.5rem] sm:top-3 left-1/2 z-20 flex items-center gap-2" style={{ transform: "translateX(-50%)" }}>
+        <div
+          className={`absolute ${walkthrough || !showcaseMode ? "top-2" : "top-[9.5rem]"} sm:top-3 left-1/2 z-20 flex items-center gap-2 max-w-[96vw] overflow-x-auto [&::-webkit-scrollbar]:hidden [&>button]:whitespace-nowrap [&>button]:shrink-0`}
+          style={{ transform: "translateX(-50%)", scrollbarWidth: "none" }}
+        >
           <button
             onClick={() => {
               if (walkthrough) { exitWalkthrough(); }
@@ -6816,7 +6832,11 @@ export default function HouseCanvas() {
               letterSpacing: "0.04em",
               whiteSpace: "nowrap",
             }}>
-            {locale === "en" ? "🖱 Drag to look · WASD move · Shift sprint · E open door · walk up stairs/rooftop · ESC exit" : "🖱 左键拖动转视角 · WASD 行走 · Shift 疾跑 · E 开门 · 走上楼梯/天台 · ESC 退出"}
+            {/* 手机上没有鼠标/键盘,原来照搬桌面的「左键拖动 · WASD · Shift · ESC」是无效提示
+                (用户实拍),按设备给对应说明。 */}
+            {isMobileDevice()
+              ? (locale === "en" ? "👆 Drag to look · joystick to move · tap door to open" : "👆 拖动屏幕转视角 · 左下摇杆行走 · 点门开门")
+              : (locale === "en" ? "🖱 Drag to look · WASD move · Shift sprint · E open door · walk up stairs/rooftop · ESC exit" : "🖱 左键拖动转视角 · WASD 行走 · Shift 疾跑 · E 开门 · 走上楼梯/天台 · ESC 退出")}
           </div>
           {/* Touch joystick — bottom-left, only useful with finger but
               always rendered (mouse drag also works on it). */}
