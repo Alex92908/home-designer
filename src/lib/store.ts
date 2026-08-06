@@ -2899,7 +2899,31 @@ export const useDesignerStore = create<DesignerStore>()(
           const fp0 = s2.floorPlans[0];
           if (fp0) {
             const curYp = s2.yardPlan ?? { items: [] };
-            const existingItems = design.yard.clear ? [] : (curYp.items ?? []);
+            // remove:按 kind / prefabKind / id 选择性删除。
+            // 之前只有 clear(全清)和 add,没有"删掉某几件"的语义 —— AI 想删院子里的
+            // 太阳伞时无从下手,apply_design 照样返回 ok,它就误报"已移除"(用户实拍)。
+            const removeKeys = new Set((design.yard.remove ?? []).map(k => String(k).trim()).filter(Boolean));
+            const matches = (it: Record<string, unknown>, key: string) =>
+              key === String(it.kind ?? "") || key === String(it.prefabKind ?? "")
+              || key === String(it.zoneKind ?? "") || key === String(it.id ?? "");
+            const keep = (it: Record<string, unknown>) => ![...removeKeys].some(k => matches(it, k));
+            let existingItems = design.yard.clear
+              ? []
+              : (curYp.items ?? []).filter(it => keep(it as unknown as Record<string, unknown>));
+            // move:挪动已有物件(同 target 有多件时按出现顺序依次套用坐标)
+            for (const mv of (design.yard.move ?? [])) {
+              const target = String(mv?.target ?? "").trim();
+              if (!target) continue;
+              // 每条 move 只挪**一件**:index 指定同名里的第几件(缺省 0)。
+              // 这样「4 棵树分散开」= 写 4 条 move、index 0..3、各给坐标。
+              const want = Math.max(0, Math.floor(Number(mv.index ?? 0)));
+              let seen = -1;
+              existingItems = existingItems.map(it => {
+                if (!matches(it as unknown as Record<string, unknown>, target)) return it;
+                seen++;
+                return seen === want ? { ...it, x: Number(mv.x), z: Number(mv.z) } : it;
+              });
+            }
             // AI 给的/自动散开的落点也要避开房屋占地（大宅会盖住默认前院位）。
             // eslint-disable-next-line @typescript-eslint/no-require-imports
             const { houseHalfExtentsCm, clearYardItemsOfHouse } = require("./yardAutoLayout") as typeof import("./yardAutoLayout");
@@ -2927,9 +2951,13 @@ export const useDesignerStore = create<DesignerStore>()(
               yardPlan: {
                 ...(state.yardPlan ?? { items: [] }),
                 items: [...existingItems, ...added],
-                ...(addedPaths.length
-                  ? { paths: [...(state.yardPlan?.paths ?? []), ...addedPaths] }
-                  : {}),
+                // clearPaths:小径本来只能追加、清不掉(clear 只清物件)。想重铺动线时
+                // 没有它就只能靠用户手动删。
+                ...(design.yard?.clearPaths
+                  ? { paths: addedPaths }
+                  : addedPaths.length
+                    ? { paths: [...(state.yardPlan?.paths ?? []), ...addedPaths] }
+                    : {}),
               },
             }));
           }
@@ -4149,7 +4177,22 @@ export const useDesignerStore = create<DesignerStore>()(
       floorPlans: state.floorPlans,
       exterior: state.exterior,
       budget: state.budget,
+      // 院子也要能撤销:AI agent 现在能增删改院子物件(yard.add/remove/move),
+      // 不跟踪的话「把太阳伞删了」这类改动**撤不回来**,只能手动一件件加回去。
+      yardPlan: state.yardPlan,
     }),
+    // ⚠️ 没有 equality 时 zundo **每次 set() 都记一条历史**,哪怕被跟踪的那部分没变。
+    // 而一个动作内部常有多次 set —— 例如 applyAiDesign 依次写 floorPlans → yardPlan →
+    // buildings(buildings 不在跟踪范围内)。结果:按一次撤销只退回到「院子已改、
+    // buildings 未改」那一刻,画面看着纹丝不动,要连按两三次才真的回退(实测:
+    // AI 加了 3 棵树,撤销一次树还在)。
+    // 用引用比较只在**跟踪内容真的变了**时记一条 —— zustand 是不可变更新,引用变即内容变。
+    // 效果:一次可见操作 = 一步撤销。
+    equality: (a, b) =>
+      a.floorPlans === b.floorPlans
+      && a.exterior === b.exterior
+      && a.budget === b.budget
+      && a.yardPlan === b.yardPlan,
   }
   )
 );

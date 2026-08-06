@@ -220,6 +220,19 @@ export interface AiDesignResult {
     clear?: boolean;
     /** 要加进院子的物件列表。 */
     add?: AiDesignYardItem[];
+    /** 要从院子里删掉的物件:填 kind(如 "parasol")、prefabKind(如 "pool")、
+     *  zoneKind(分区)或具体 id。同 kind 的会全部删除。没有它的话只能 clear 全清再重建
+     *  —— AI 想删单类物件(「把树之间的太阳伞去掉」)会无从下手却误报成功。 */
+    remove?: string[];
+    /** 挪动院子里已有的物件。**每条只挪一件**(不是同名全挪):
+     *  target 同 remove 的匹配口径(kind/prefabKind/zoneKind/id);
+     *  index 指定挪同名里的第几件(从 0 起,缺省 0)。
+     *  想把 4 棵树分散开,就写 4 条 move、index 依次 0/1/2/3、各给不同坐标。
+     *  ⚠️ 这一点务必在文档里说清楚:早先写成「同名全挪」,模型以为分散不了,
+     *  在「移动」和「分散」之间反复纠结直到死循环(用户实拍)。 */
+    move?: Array<{ target: string; index?: number; x: number; z: number }>;
+    /** 清空所有小径/铺装。clear 只清物件、不动小径,想重铺得用它。 */
+    clearPaths?: boolean;
     /** 功能分区（铺装区块）。用真实设计师的「环」语汇组织院子：社交核心、
      *  私密休闲、功能配套(车道)、菜园、草坪过渡。每个分区是一块矩形铺装。 */
     zones?: AiDesignYardZone[];

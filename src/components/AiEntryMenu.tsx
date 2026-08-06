@@ -153,6 +153,22 @@ export default function AiEntryMenu() {
             <button onClick={() => { setOpen(false); setSettingsOpen(true); }} title={t.aiEntry.settingsTitle} className="text-sm opacity-70 hover:opacity-100">⚙️</button>
           </div>
 
+          {/* 💬 对话式设计 agent —— 多轮改画布(读契约→套模板→增量微调→核对),
+              区别于下面「文生设计」的单发生成。见 AiAgentPanel / /api/ai-agent。 */}
+          <button onClick={() => { setOpen(false); window.dispatchEvent(new Event("openAiAgent")); }}
+            className="flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors hover:bg-indigo-50"
+            style={{ borderBottom: "1px solid var(--ds-border-soft, #f3f4f6)" }}>
+            <span className="text-xl w-7 text-center shrink-0">💬</span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold leading-tight" style={{ color: "var(--ds-text, #111)" }}>
+                {locale === "en" ? "Design agent (chat)" : "对话式设计 agent"}
+              </span>
+              <span className="text-[10px] mt-0.5" style={{ color: "var(--ds-text-3, #9ca3af)" }}>
+                {locale === "en" ? "Multi-turn · edits the canvas step by step" : "多轮对话 · 边看边改画布"}
+              </span>
+            </div>
+          </button>
+
           {/* 🏠 文生设计（统一入口：右下角只此一个 AI 按钮，设计/出图都从这进） */}
           <button onClick={() => { setOpen(false); window.dispatchEvent(new Event("openAiDesign")); }}
             className="flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors hover:bg-teal-50"

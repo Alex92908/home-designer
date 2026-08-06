@@ -24,6 +24,7 @@ import ShareModal from "@/components/ShareModal";
 import FloorPlan from "@/components/FloorPlan";
 import AiEntryMenu from "@/components/AiEntryMenu";
 import AiDesignDialog from "@/components/AiDesignDialog";
+import { AiAgentPanelHost } from "@/components/AiAgentPanel";
 import FloorPlanAll, { RoomPanel as FloorPlanAllRoomPanel } from "@/components/FloorPlanAll";
 import YardPlan, { YardPlanLibrary, YardPlanInspector } from "@/components/YardPlan";
 // import OnboardingOverlay from "@/components/OnboardingOverlay";  // TODO: enable when ready
@@ -458,6 +459,8 @@ export default function Home() {
           {/* 竖屏手机同样抬到 Safari 底栏之上(与左下角两个开关齐平),横屏/桌面保持原位。 */}
           <div className="absolute bottom-24 sm:bottom-4 right-4 z-40 flex flex-col gap-2 items-end transition-opacity duration-200 opacity-100">
             <AiDesignDialog />
+            {/* 对话式设计 agent(多轮工具调用改画布)—— 由 AI 助手菜单的 openAiAgent 事件打开 */}
+            <AiAgentPanelHost />
             <AiEntryMenu />
           </div>
 

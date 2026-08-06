@@ -111,6 +111,9 @@ SCHEMA:
   ],
   "yard": {
     "clear": <可选 true|false — true=先清空现有院子物件再加>,
+    "remove": [ "<可选 — 要删掉的物件:kind(如 parasol)/prefab(如 pool)/分区 kind/具体 id;同名全删>" ],
+    "move": [ { "target": "<同 remove 的匹配口径>", "index": <可选,同名里的第几件,从0起,缺省0>, "x": <cm>, "z": <cm> } ],
+    "clearPaths": <可选 true|false — true=清空所有小径(clear 只清物件、不动小径)>,
     "add": [
       { "prefab": "<pool|pergola_classic|outdoor_kitchen|fountain — 结构件，二选一>", "x": <可选,cm 世界坐标>, "z": <可选,cm 世界坐标>, "scale": <可选> },
       { "kind": "<单体素材 id，如 tree.olive>", "x": <可选>, "z": <可选>, "scale": <可选> }
@@ -287,6 +290,20 @@ MULTI-BUILDING RULES (多栋/庄园 — "buildings"):
   用户之后可切到该副楼单独 AI 细化。
 - 例：「主楼带个一层的客房副楼放东边」→ "buildings":[{"label":"客房楼","x":1600,"z":0,"floors":1}]。
 - 普通单栋设计【不要】输出 "buildings"（整段省略）。
+
+YARD CRUD (院子的增删改):
+- 增:yard.add / yard.zones / yard.paths
+- 删:yard.remove(按 kind/prefab/分区 kind/id,同名全删)、yard.clear(全清物件)、
+  yard.clearPaths(清小径)。**不要**为了删一件东西就 clear 全清再重建 —— 会丢掉
+  用户手工摆的东西。
+- 改:yard.move(挪动已有物件到新坐标)。挪动优先于「删掉再加一个」。
+  **每条 move 只挪一件**,不是"同名全挪到同一坐标"。同名有多件时用 index 选第几件
+  (从 0 起)。想把 4 棵 tree.olive 分散到院子四角,就写 4 条 move、index 0~3、各给一个
+  角落的坐标(具体数值按当前房子尺寸和你的设计意图定,别照抄示例数字)。
+- ⚠️ 坐标落在房子占地范围内的院子物件会被**静默丢弃**。房子的半宽/半深见
+  get_design_state 的 yardSummary,按实际尺寸取值;拿不准就省略 x/z 让系统自动散摆。
+- 查:get_design_state 的 design.yard(仅你能生成的那几类)+ yardSummary(含分区/小径/
+  导入模型的现场清单)。两者要一起看,只看 design.yard 会误以为院子是空的。
 
 YARD RULES (院子/花园/前后院 — "yard"，只作用于 floor 0):
 - 一致性主线：「日式庭院/地中海花园」这类"换庭院风格"的请求 → 输出对应的

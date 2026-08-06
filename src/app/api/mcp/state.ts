@@ -12,7 +12,7 @@
 
 export interface McpCommand {
   id: string;
-  type: "apply_template" | "apply_design";
+  type: "apply_template" | "apply_design" | "check_layout" | "auto_fix_layout";
   payload: Record<string, unknown>;
   enqueuedAt: number;
 }
@@ -27,6 +27,8 @@ interface Bridge {
   /** 浏览器最近一次推送的完整设计快照（serializeCurrentDesign 的输出）。 */
   design: unknown | null;
   designAt: number;
+  /** 院子只读摘要(分区/小径/导入模型等 apply 契约覆盖不到的部分)。 */
+  yardSummary: string;
   queue: McpCommand[];
   results: Map<string, CommandResult>;
   /** 桥租约：同一时刻只有一个标签页是「执行者」（推快照+拉命令）。多标签同开时
@@ -42,7 +44,7 @@ interface Bridge {
 // 无人拉取超时）。globalThis 单例让所有 route bundle 共享同一座桥（prisma 同款模式）。
 const g = globalThis as unknown as { __zhuyaMcpBridge?: Bridge };
 const bridge: Bridge = g.__zhuyaMcpBridge
-  ?? (g.__zhuyaMcpBridge = { design: null, designAt: 0, queue: [], results: new Map(), leaseTabId: null, leaseAt: 0 });
+  ?? (g.__zhuyaMcpBridge = { design: null, designAt: 0, yardSummary: "", queue: [], results: new Map(), leaseTabId: null, leaseAt: 0 });
 
 /** 租约有效期：超过没心跳就允许易主（标签页关闭/切走后新标签接管）。 */
 const LEASE_MS = 6_000;
@@ -58,17 +60,30 @@ export function acquireLease(tabId: string): boolean {
   return false;
 }
 
+/** 强制把租约交给指定标签 —— App 内 agent 专用。
+ *
+ *  租约本是「先到先得」,给外部 CLI(Claude Code)用没问题:同一时刻只该有一个画布
+ *  执行命令。但 App 内的 agent 是**从某个标签里发起的**,用户当然期望改的是自己这一页;
+ *  若此刻租约在别的标签手里(比如另开的预览页),命令会落到那边,自己的画布纹丝不动,
+ *  而 get_design_state 读到的还是对方的快照 → 模型看到的状态自相矛盾(实测踩过)。
+ *  故 agent 每次调工具前把租约拽回发起方。 */
+export function forceLease(tabId: string): void {
+  bridge.leaseTabId = tabId;
+  bridge.leaseAt = Date.now();
+}
+
 /** 浏览器视为「在线」的窗口：最近 15s 内推送过快照。 */
 const CONNECTED_MS = 15_000;
 
-export function pushDesign(design: unknown): void {
+export function pushDesign(design: unknown, yardSummary?: string): void {
   bridge.design = design;
   bridge.designAt = Date.now();
+  if (typeof yardSummary === "string") bridge.yardSummary = yardSummary;
 }
 
-export function getDesign(): { design: unknown | null; ageMs: number; connected: boolean } {
+export function getDesign(): { design: unknown | null; ageMs: number; connected: boolean; yardSummary: string } {
   const ageMs = bridge.designAt ? Date.now() - bridge.designAt : Infinity;
-  return { design: bridge.design, ageMs, connected: ageMs < CONNECTED_MS };
+  return { design: bridge.design, ageMs, connected: ageMs < CONNECTED_MS, yardSummary: bridge.yardSummary };
 }
 
 export function isConnected(): boolean {

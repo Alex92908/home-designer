@@ -29,6 +29,10 @@ export interface AiProvider {
   helpUrl: string;      // 申请链接
   /** 文生设计结构化输出档位，缺省按 "text" 处理。 */
   output?: AiOutputMode;
+  /** AI agent(多轮 function calling)用的模型档位。
+   *  不填 = 该平台暂不支持 agent 模式(入口会置灰),避免用工具能力弱的轻量档跑出
+   *  「一直不调工具 / 参数乱填」的体验。 */
+  agentModel?: string;
   /** 文生设计单次 max_tokens 上限（平台输出 token 硬顶）。缺省 8000。
    *  例：glm-4-flash 输出上限 4095，传 8000 会被平台直接 400 拒掉。 */
   maxTokens?: number;
@@ -53,6 +57,8 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     maxTokens: 4000,
     // glm-4v-flash 视觉档更紧：max_tokens 限 [1,1024]。
     visionMaxTokens: 1024,
+    // agent 要多轮 function calling:glm-4-flash 工具能力弱,换 glm-4-plus。
+    agentModel: "glm-4-plus",
   },
   openai: {
     id: "openai",
@@ -63,6 +69,7 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     keyHint: "在 OpenAI Platform「API keys」页面创建。",
     helpUrl: "https://platform.openai.com/api-keys",
     output: "native",
+    agentModel: "gpt-4o",
   },
   qwen: {
     id: "qwen",
@@ -73,6 +80,7 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     keyHint: "在阿里云百炼 DashScope 控制台创建 API-KEY。",
     helpUrl: "https://bailian.console.aliyun.com/?apiKey=1#/api-key",
     output: "native",
+    agentModel: "qwen-plus",
   },
   moonshot: {
     id: "moonshot",
@@ -85,6 +93,7 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     keyHint: "在 Moonshot 开放平台「API Key 管理」页面创建。",
     helpUrl: "https://platform.moonshot.cn/console/api-keys",
     output: "native",
+    agentModel: "moonshot-v1-32k",
   },
   gemini: {
     id: "gemini",
@@ -117,6 +126,7 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     keyHint: "在 Anthropic Console「API Keys」创建。",
     helpUrl: "https://console.anthropic.com/settings/keys",
     output: "native",
+    agentModel: "claude-sonnet-4-5",
   },
   deepseek: {
     id: "deepseek",
@@ -129,6 +139,7 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     keyHint: "在 DeepSeek 开放平台「API keys」页面创建（注：暂不支持视觉解析）。",
     helpUrl: "https://platform.deepseek.com/api_keys",
     output: "native",
+    agentModel: "deepseek-chat",
   },
 };
 
@@ -138,4 +149,18 @@ export const DEFAULT_AI_PROVIDER: AiProviderId = "zhipu";
 /** 容错查表：未知 / 缺省 id 一律回退到默认平台 */
 export function getAiProvider(id: string | undefined | null): AiProvider {
   return AI_PROVIDERS[(id ?? "") as AiProviderId] ?? AI_PROVIDERS[DEFAULT_AI_PROVIDER];
+}
+
+/** AI agent(/api/ai-agent)用的模型档位。
+ *
+ *  agent 要靠 function calling 多轮调工具,和「文生设计」单发一份 JSON 的要求不同:
+ *  textModel 里有几个是为**免费额度/便宜**挑的轻量档(如 glm-4-flash),工具调用能力弱
+ *  甚至不支持,拿来跑 agent 会一直不调工具或调错参数。这里单独指定能用的档位。 */
+export function agentModelOf(p: AiProvider): string {
+  return p.agentModel ?? p.textModel;
+}
+
+/** 该平台是否具备跑 agent 的条件(有明确可用的 function calling 档位)。 */
+export function supportsAgent(p: AiProvider): boolean {
+  return !!p.agentModel;
 }

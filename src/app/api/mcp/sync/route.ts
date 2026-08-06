@@ -13,6 +13,8 @@ export async function POST(req: NextRequest) {
   let body: {
     tabId?: string;
     design?: unknown;
+    /** 院子只读摘要:分区/小径/导入模型不在 apply 契约里,单独回传给 agent 看现状。 */
+    yardSummary?: string;
     ack?: { id: string; ok: boolean; message?: string } | Array<{ id: string; ok: boolean; message?: string }>;
   };
   try {
@@ -29,6 +31,6 @@ export async function POST(req: NextRequest) {
     if (a && typeof a.id === "string") ack(a.id, !!a.ok, a.message);
   }
   if (!leader) return NextResponse.json({ ok: true, leader: false, commands: [] });
-  if (body.design !== undefined) pushDesign(body.design);
+  if (body.design !== undefined) pushDesign(body.design, typeof body.yardSummary === "string" ? body.yardSummary : undefined);
   return NextResponse.json({ ok: true, leader: true, commands: drainCommands() });
 }
