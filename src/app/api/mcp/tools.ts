@@ -69,6 +69,20 @@ export const TOOLS = [
     inputSchema: { type: "object" as const, properties: {}, required: [] as string[] },
   },
   {
+    name: "yard_auto_layout",
+    description:
+      "Lets the APP compose the yard for you — this is how you get a GOOD-LOOKING yard. mode=preset applies a designer-authored yard package (zones + planting + features, presetId from the error message if unknown); mode=plant scatters N trees with proper spacing away from the house; mode=paths auto-routes walkways between zones. PREFER THIS over hand-writing yard.add coordinates: collision checks only prevent overlap, they cannot make a layout look designed.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        mode: { type: "string", description: "preset | plant | paths" },
+        presetId: { type: "string", description: "for mode=preset; call with a wrong id to list the available packages" },
+        count: { type: "number", description: "for mode=plant; how many trees (default 6)" },
+      },
+      required: ["mode"] as string[],
+    },
+  },
+  {
     name: "open_preview",
     description: "Returns the preview URL and how to view the design (exterior orbit, per-room views, first/third-person walkthrough).",
     inputSchema: { type: "object" as const, properties: {}, required: [] as string[] },
@@ -141,6 +155,14 @@ export async function callTool(name: string, args: Record<string, unknown>): Pro
       return r
         ? JSON.stringify({ ok: r.ok, report: r.message })
         : JSON.stringify({ ok: false, error: "Timed out waiting for the browser to auto-fix the layout." });
+    }
+    case "yard_auto_layout": {
+      const id = enqueue("yard_auto", args);
+      if (!isConnected()) return JSON.stringify({ ok: false, queued: true, error: NOT_CONNECTED_MSG });
+      const r = await waitResult(id, 20_000);
+      return r
+        ? JSON.stringify({ ok: r.ok, report: r.message })
+        : JSON.stringify({ ok: false, error: "Timed out waiting for the browser to run the yard auto-layout." });
     }
     case "check_layout": {
       // 真实几何校验只能在浏览器里跑(要当前 store 的房间尺寸/门窗 + 家具目录的实际长宽高),

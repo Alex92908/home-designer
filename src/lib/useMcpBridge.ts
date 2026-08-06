@@ -15,13 +15,16 @@ import { useDesignerStore } from "./store";
 import { serializeCurrentDesign } from "./aiDesignSerialize";
 import type { AiDesignResult } from "./aiDesignTypes";
 import { evaluateRoom, itemBBox } from "./clearance";
+import { YARD_PRESETS } from "./outdoorAssets";
+import { autoScatterTrees } from "./yardAutoPlanting";
+import { autoGenerateYardPaths, houseHalfExtentsCm } from "./yardAutoLayout";
 import { evaluateYardPlan } from "./outdoorClearance";
-import { houseHalfExtentsCm } from "./yardAutoLayout";
+
 import { getFurnitureById } from "./furniture";
 
 interface BridgeCommand {
   id: string;
-  type: "apply_template" | "apply_design" | "check_layout" | "auto_fix_layout";
+  type: "apply_template" | "apply_design" | "check_layout" | "auto_fix_layout" | "yard_auto";
   payload: Record<string, unknown>;
 }
 
@@ -59,6 +62,59 @@ function summarizeYard(
   if (paths.length) parts.push(`小径×${paths.length}`);
   return `院子现有:${parts.join("、")}。${houseInfo}` +
     `(注:分区/小径/导入模型只能读、不能通过 apply_design 生成)`;
+}
+
+/** 院子的「自动布局」能力 —— 把构图交给项目自带的引擎,而不是让模型手写坐标。
+ *
+ *  这是布局质量的分水岭:碰撞校验只能保证"不重叠",保证不了"合理"。好看的院子来自
+ *  设计师调过的庭院包(YARD_PRESETS)和散植/动线算法,不是模型逐点算出来的坐标
+ *  (实测让它手摆,树会堆成两坨)。所以:模型负责**选**(要哪种风格、种什么、几棵),
+ *  引擎负责**摆**。
+ */
+function runYardAuto(payload: Record<string, unknown>): string {
+  const s = useDesignerStore.getState();
+  const { hw, hd } = houseHalfExtentsCm(s.floorPlans[0]);
+  const house = { minX: -hw, maxX: hw, minZ: -hd, maxZ: hd };
+  const mode = String(payload.mode ?? "");
+
+  if (mode === "preset") {
+    const id = String(payload.presetId ?? "");
+    const preset = YARD_PRESETS.find(p => p.id === id);
+    if (!preset) {
+      return `未知庭院包 "${id}"。可选:${YARD_PRESETS.map(p => `${p.id}(${p.label})`).join("、")}`;
+    }
+    const stamp = Date.now();
+    // 与 UI 的「自动设计」同一条路径:整包物件(分区+植物+设施)一次性落地。
+    preset.items.forEach((it, i) => {
+      s.addYardItem({ ...it, id: `${preset.id}-${stamp}-${i}` } as never);
+    });
+    return `已套用庭院包「${preset.label}」:${preset.items.length} 件(含分区/植物/设施,位置由设计包给定)。`;
+  }
+
+  if (mode === "plant") {
+    const count = Math.max(1, Math.min(20, Number(payload.count ?? 6)));
+    const items = (s.yardPlan?.items ?? []) as never[];
+    const trees = autoScatterTrees(items, house, 1500, 7, count);
+    if (!trees.length) return "没有可用的种植位(院子太挤或已种满),未新增。";
+    trees.forEach(t => s.addYardItem(t as never));
+    return `已按散植算法种下 ${trees.length} 棵树:自动避开房子、彼此间距 ≥7m、分布均匀。`;
+  }
+
+  if (mode === "paths") {
+    const items = (s.yardPlan?.items ?? []) as never[];
+    const paths = autoGenerateYardPaths(items, house);
+    if (!paths.length) return "当前院子没有可连接的分区,未生成小径(先套庭院包或加分区)。";
+    useDesignerStore.setState(state => ({
+      yardPlan: {
+        ...(state.yardPlan ?? { items: [] }),
+        items: state.yardPlan?.items ?? [],
+        paths: [...(state.yardPlan?.paths ?? []), ...paths],
+      },
+    }));
+    return `已自动生成 ${paths.length} 条动线小径(连接各功能分区与入口)。`;
+  }
+
+  return `未知的自动布局模式 "${mode}"。可选:preset / plant / paths`;
 }
 
 /** 应用前后的可比计数:院子按 kind 计数 + 每间房家具数。用来回报真实差异。 */
@@ -331,6 +387,9 @@ export function useMcpBridge() {
               st.applyAiDesign(cmd.payload.design as AiDesignResult, { merge: cmd.payload.merge !== false });
               const after = countDesign(useDesignerStore.getState());
               acks.push({ id: cmd.id, ok: true, message: diffReport(before, after, cmd.payload.design as AiDesignResult) });
+            } else if (cmd.type === "yard_auto") {
+              const report = runYardAuto(cmd.payload);
+              acks.push({ id: cmd.id, ok: !report.startsWith("未知"), message: report });
             } else if (cmd.type === "auto_fix_layout") {
               const report = runAutoFix();
               acks.push({ id: cmd.id, ok: report.startsWith("OK:"), message: report });

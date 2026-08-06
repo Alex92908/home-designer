@@ -14,7 +14,7 @@ import { Suspense } from "react";
 import * as THREE from "three";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { useDesignerStore, RoomState } from "@/lib/store";
-import { canvasDpr, isMobileDevice, shrinkSceneTexturesForMobile } from "@/lib/device";
+import { canvasDpr, isMobileDevice, shrinkSceneTexturesForMobile, exposureBoost } from "@/lib/device";
 import { useLocale, useLocaleStore } from "@/lib/i18n";
 import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
 const EMPTY_ROOM_STATE_RC: RoomState = { materials: {}, placedItems: [] };
@@ -80,7 +80,7 @@ function ExposureController() {
   const activeRoom = useDesignerStore(s => s.activeRoom);
   const exposure = useDesignerStore(s => s.roomExposureByRoom[activeRoom] ?? 1.2);
   useEffect(() => {
-    if (gl) gl.toneMappingExposure = exposure;
+    if (gl) gl.toneMappingExposure = exposure * exposureBoost();
   }, [gl, exposure]);
   return null;
 }
@@ -4741,7 +4741,7 @@ export default function RoomCanvas() {
             antialias: !isIOS,
             // iOS Metal GLSL compiler fails on ACESFilmicToneMapping → use Linear
             toneMapping: isIOS ? THREE.LinearToneMapping : THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 1.2,
+            toneMappingExposure: 1.2 * exposureBoost(),
             // FIX: preserveDrawingBuffer=true causes frame-accumulation
             // ghosting in walkthrough — the painting smears into 5–6
             // copies cascading across the wall because the previous

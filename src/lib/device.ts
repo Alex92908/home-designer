@@ -25,6 +25,32 @@ export function isMobileDevice(): boolean {
   );
 }
 
+/** 移动端曝光补偿系数。
+ *
+ *  桌面走 EffectComposer(Bloom + BrightnessContrast + ToneMapping),那条链顺带把画面
+ *  提亮提对比;移动端为省内存**整条跳过**,于是同一个场景在手机上明显更暗更平
+ *  (用户实拍)。后处理不能开(几张全分辨率浮点缓冲是 iOS 杀页的老账),就用曝光补偿
+ *  换回亮度 —— 零额外缓冲、零性能代价。
+ *  配合 toneMappingFor 的 Linear(本身比 ACES 亮),补偿系数取小值免过曝。 */
+export function exposureBoost(): number {
+  return isMobileDevice() ? 1.08 : 1;
+}
+
+/** 移动端色调映射:用 Linear 取代 ACES。
+ *
+ *  为什么发灰:ACES 会压中间调、去饱和,桌面靠后处理链里的 BrightnessContrast +
+ *  HueSaturation 找补回来,移动端整条链被跳过(那几张全分辨率浮点缓冲是 iOS 杀页的
+ *  老账),于是又暗又灰。只提曝光只能提亮,治不了灰。
+ *  为什么选 Linear 而不是更"高级"的 Neutral:RoomCanvas 早有实践记录 ——
+ *  **iOS 的 Metal GLSL 编译器在 ACESFilmicToneMapping 上会失败**,该视图为此已改用
+ *  Linear。既然 Linear 是这个项目在 iOS 上唯一验证过安全的档,就沿用它,不去赌
+ *  Neutral(更新更复杂的着色器)会不会同样踩编译坑。 */
+export function toneMappingFor<T extends number>(desktop: T): T {
+  // 1 = THREE.LinearToneMapping(不在此文件引入 three,保持 device.ts 零依赖;
+  // 泛型回传调用方的枚举类型,免去 three 的 ToneMapping 类型不匹配)
+  return (isMobileDevice() ? 1 : desktop) as T;
+}
+
 /** 移动端 [1, 1.5]，桌面 [1, 2] —— 直接喂给 <Canvas dpr={...}>。 */
 export function canvasDpr(): [number, number] {
   return isMobileDevice() ? [1, 1.5] : [1, 2];

@@ -19,7 +19,7 @@ import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import { useDesignerStore } from "@/lib/store";
-import { canvasDprHeavy, isMobileDevice, mobileLiteScene } from "@/lib/device";
+import { canvasDprHeavy, isMobileDevice, mobileLiteScene, exposureBoost, toneMappingFor } from "@/lib/device";
 import { Ktx2Detect } from "@/lib/gltfKtx2";
 import { MobileTextureShrink } from "@/lib/mobileTexShrink";
 import { SceneDiag, SceneDiagHUD } from "@/lib/sceneDiag";
@@ -1325,7 +1325,7 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
         shadows={!mobileLiteScene()}
         camera={{ position: [12, initY, 12], fov: 45 }}
         dpr={canvasDprHeavy()}
-        gl={{ antialias: !isMobileDevice(), alpha: true }}
+        gl={{ antialias: !isMobileDevice(), alpha: true, toneMappingExposure: exposureBoost(), toneMapping: toneMappingFor(THREE.ACESFilmicToneMapping) }}
       >
         <SceneRegistrar view="global3d" />
         <Ktx2Detect />

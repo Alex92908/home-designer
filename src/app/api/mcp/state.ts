@@ -12,7 +12,7 @@
 
 export interface McpCommand {
   id: string;
-  type: "apply_template" | "apply_design" | "check_layout" | "auto_fix_layout";
+  type: "apply_template" | "apply_design" | "check_layout" | "auto_fix_layout" | "yard_auto";
   payload: Record<string, unknown>;
   enqueuedAt: number;
 }

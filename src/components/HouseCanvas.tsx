@@ -64,7 +64,7 @@ function AdaptiveDpr({ shadowSizeRef }: { shadowSizeRef?: React.MutableRefObject
   );
 }
 import { useDesignerStore } from "@/lib/store";
-import { canvasDprHeavy, isMobileDevice, mobileLiteScene, shrinkSceneTexturesForMobile } from "@/lib/device";
+import { canvasDprHeavy, isMobileDevice, mobileLiteScene, shrinkSceneTexturesForMobile, exposureBoost, toneMappingFor } from "@/lib/device";
 import { useLocale } from "@/lib/i18n";
 import { getLayerOffset, overlayMaterialProps } from "@/lib/zLayer";
 
@@ -6956,12 +6956,13 @@ export default function HouseCanvas() {
         // 重型外观场景：移动端 dpr 锁 1（比 1.5 再省 ~2.25x 帧缓冲）。
         dpr={canvasDprHeavy()}
         gl={{
-          toneMapping: THREE.ACESFilmicToneMapping,
+          // 移动端换 Neutral:ACES 压中间调+去饱和,而手机没有后处理链找补 → 发灰
+          toneMapping: toneMappingFor(THREE.ACESFilmicToneMapping),
           // exposure = theme baseline × user dial. Dial < 1 darkens the
           // whole scene + tames ACES roll-off near sun-lit walls; > 1
           // brightens. Default 1 keeps the legacy look. Modern Minimal
           // uses 0.85 for a cooler, less blown-out architectural mood.
-          toneMappingExposure: theme.exposure * (exterior.exposure ?? 1),
+          toneMappingExposure: theme.exposure * (exterior.exposure ?? 1) * exposureBoost(),
           // FIX: preserveDrawingBuffer:true forces GPU→CPU sync every frame on Apple
           // Metal/ANGLE (~130ms/frame = 58% of frame time wasted). The AI capture
           // calls gl.render() + toDataURL() synchronously so false is safe here.
@@ -7145,12 +7146,16 @@ export default function HouseCanvas() {
             daytime) which painted every white tile floor in walkthrough
             visibly blue — the interior has its own warm hemi below that
             handles the indoor fill light. */}
+        {/* 移动端补光:上面 <Environment>(IBL)在 mobileLiteScene 下被整个关掉以省显存,
+            但**没有任何补偿** —— PBR 材质失去主要光源,画面又暗又平(用户:比效果图灰)。
+            效果图早就这么补过了(RoomCanvas: ambient 0.38 → iOS 0.9),这里照做。
+            纯灯光参数,零显存零性能代价。 */}
         {!insideBuilding && (
-          <hemisphereLight args={[theme.hemiSky, theme.hemiGround, theme.hemiIntensity]} />
+          <hemisphereLight args={[theme.hemiSky, theme.hemiGround, theme.hemiIntensity * (mobileLiteScene() ? 1.9 : 1)]} />
         )}
         {/* 室内 ambient 向效果图(RoomCanvas 0.38)靠拢——原 0.82 叠强点光+HDR 使
             墙面过曝发白、与效果图不是一个调子；压到 0.55 由室内点光补光，观感更一致。 */}
-        <ambientLight intensity={insideBuilding ? 0.55 : theme.ambient} />
+        <ambientLight intensity={(insideBuilding ? 0.55 : theme.ambient) * (mobileLiteScene() ? 2.4 : 1)} />
         {/* Interior ceiling lights — warm downlights.
             · 室内漫游（insideBuilding）：始终全亮（k=1），让室内可读。
             · 外观图（!insideBuilding + 透明立面 transparentExterior）：也点亮
