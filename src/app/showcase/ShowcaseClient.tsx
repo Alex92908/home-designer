@@ -10,6 +10,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { useLocale } from "@/lib/i18n";
 import { SHOWCASE_META } from "@/lib/showcaseMeta";
 import { isMobileDevice } from "@/lib/device";
@@ -27,7 +28,17 @@ const ShowcaseViewer = dynamic(() => import("./ShowcaseViewer"), {
 export default function ShowcaseClient() {
   const locale = useLocale();
   const en = locale === "en";
+  const searchParams = useSearchParams();
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // ── 直达链接 ?id= ──
+  // /showcase?id=set-cafe 这类链接直接打开对应场景的查看器；id 非法或缺失时
+  // 回落到画廊。只在挂载时读一次，不改现有的点卡片逻辑。
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id && SHOWCASE_META.some((t) => t.id === id)) setActiveId(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── 预热查看器 ──
   // 「样板间→外观图」慢的下载大头是查看器的 ~711KB three.js 代码块。趁用户还在
