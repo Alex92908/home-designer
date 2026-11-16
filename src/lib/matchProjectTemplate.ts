@@ -20,7 +20,56 @@ export interface TemplateMatch {
 const RULES: Array<TemplateMatch & { re: RegExp }> = [
   // ── 业态（片场）──
   { id: "set-cafe", name: "咖啡馆片场", nameEn: "Café set", re: /咖啡|café|cafe|coffee/i },
+  // 学校饭堂：饭堂直指；带学校/校园/公司限定的食堂也归饭堂（裸"食堂"仍归餐厅，见下条）。
+  { id: "set-school-cafeteria", name: "学校饭堂片场", nameEn: "School cafeteria set", re: /饭堂|(学校|校园|公司).*食堂|食堂.*(学校|校园|公司)|school\s*(canteen|cafeteria)|canteen|cafeteria/i },
   { id: "set-restaurant", name: "餐厅片场", nameEn: "Restaurant set", re: /餐厅|餐馆|饭店|食堂|小吃|火锅|hotpot|restaurant|diner|bistro|eatery/i },
+  // ── 高频日常场景（学校/家庭/公司/联想补充）：具体词在前，泛词在后 ──
+  // 学校操场：操场/运动场直指；田径场/跑道另见下条。
+  { id: "set-school-playground", name: "学校操场片场", nameEn: "School playground set", re: /操场|运动场|playground/i },
+  // 学校图书馆：图书馆直指。
+  { id: "set-school-library", name: "学校图书馆片场", nameEn: "School library set", re: /图书馆|图书室|library/i },
+  // 学校水房：水房/开水房直指；与茶水间不同（茶水间是办公室茶水区，水房是打热水的房间）。
+  { id: "set-school-waterroom", name: "学校水房片场", nameEn: "School water room set", re: /水房|开水房|开水间|打水房|water\s*room|boiler\s*room/i },
+  // 学校浴室：须带学校/校园限定或澡堂；裸"浴室/淋浴"归家庭卫生间（见下条）。
+  { id: "set-school-bathroom", name: "学校浴室片场", nameEn: "School bathroom set", re: /(学校|校园).*(浴室|澡堂|淋浴|洗澡间)|(浴室|澡堂|淋浴|洗澡间).*(学校|校园)|澡堂|学校浴室|学校淋浴|school\s*(bath|shower)/i },
+  // 学校停车场：停车场直指。
+  { id: "set-school-parking", name: "学校停车场片场", nameEn: "School parking lot set", re: /停车场|停车库|parking|car\s*park/i },
+  // 学校田径场：田径场/跑道直指；裸"track"须整词（避开 soundtrack）。
+  { id: "set-school-track", name: "学校田径场片场", nameEn: "School track field set", re: /田径场|跑道|athletics|running\s*track|track\s*field|\btrack\b/i },
+  // 学生宿舍：宿舍/寝室直指；裸"公寓"仍归公寓客厅（见下条）。
+  { id: "set-dormitory", name: "学生宿舍片场", nameEn: "Student dormitory set", re: /宿舍|寝室|dormitory|\bdorm\b/i },
+  // 酒店房间：酒店/宾馆直指；须在公司大堂之前（"酒店大堂"归酒店）。
+  { id: "set-hotel-room", name: "酒店房间片场", nameEn: "Hotel room set", re: /酒店|宾馆|hotel|motel/i },
+  // 卧室：裸"卧室"归家庭卧室；"酒店卧室"已由酒店抢先。
+  { id: "set-home-bedroom", name: "卧室片场", nameEn: "Bedroom set", re: /卧室|主卧|bedroom/i },
+  // 卫生间：裸"浴室/淋浴"归此；学校浴室已由上条抢先。
+  { id: "set-home-bathroom", name: "卫生间片场", nameEn: "Bathroom set", re: /卫生间|浴室|洗手间|淋浴|洗澡间|bathroom|shower/i },
+  // 厨房：裸"厨房"归此；"餐厅厨房"已由餐厅抢先（餐厅在前）。
+  { id: "set-home-kitchen", name: "厨房片场", nameEn: "Kitchen set", re: /厨房|灶台|kitchen/i },
+  // 总裁办公室：总裁/霸总直指；须在办公室之前（"总裁办公室"含"办公"）。
+  { id: "set-office-ceo", name: "总裁办公室片场", nameEn: "CEO office set", re: /总裁|霸总|ceo\s*office|executive\s*office/i },
+  // 会议室：须在办公室之前（办公室规则也含"会议室"）。
+  { id: "set-office-meeting", name: "会议室片场", nameEn: "Meeting room set", re: /会议室|会议厅|meeting\s*room|boardroom|conference\s*room/i },
+  // 公司大堂：前台/大堂直指；"酒店大堂"已由酒店抢先。
+  { id: "set-office-lobby", name: "公司大堂片场", nameEn: "Office lobby set", re: /前台|大堂|公司.*lobby|lobby|reception/i },
+  // 茶水间：须与学校水房区分（水房是打热水的房间，茶水间是办公室茶水区）。
+  { id: "set-office-pantry", name: "茶水间片场", nameEn: "Office pantry set", re: /茶水间|茶水房|pantry|break\s*room|tea\s*room/i },
+  // 电梯：电梯直指；"楼梯间"不含"电梯"，不命中。
+  { id: "set-office-elevator", name: "电梯片场", nameEn: "Elevator set", re: /电梯|elevator|\blift\b/i },
+  // 警局：警局/派出所/警察直指。
+  { id: "set-police", name: "警局片场", nameEn: "Police station set", re: /警局|派出所|警察局|警察|police/i },
+  // 法庭：法庭/法院直指；裸"court"不用（basketball court 会误撞）。
+  { id: "set-courtroom", name: "法庭片场", nameEn: "Courtroom set", re: /法庭|法院|courtroom|law\s*court/i },
+  // 酒吧：酒吧直指；英文 bar 须整词（避开 barbecue/barista）。
+  { id: "set-bar", name: "酒吧片场", nameEn: "Bar set", re: /酒吧|酒吧间|\bbar\b|\bpub\b|nightclub/i },
+  // 健身房：健身房/健身直指。
+  { id: "set-gym", name: "健身房片场", nameEn: "Gym set", re: /健身房|健身|gym|fitness/i },
+  // 超市：超市直指；便利店暂归超市（小卖部场景的近似）。
+  { id: "set-supermarket", name: "超市片场", nameEn: "Supermarket set", re: /超市|便利店|supermarket|grocery/i },
+  // KTV：KTV/卡拉OK直指。
+  { id: "set-ktv", name: "KTV片场", nameEn: "KTV set", re: /KTV|ktv|卡拉OK|卡拉ok|karaoke/i },
+  // 婚礼宴会厅：须带婚礼/婚宴限定；裸"宴会厅"仍归唐宫（见唐宫条）；须在唐宫之前。
+  { id: "set-wedding", name: "婚礼宴会厅片场", nameEn: "Wedding banquet hall set", re: /婚礼|婚宴|婚礼宴会厅|wedding|banquet\s*hall/i },
   { id: "set-office", name: "办公室片场", nameEn: "Office set", re: /办公|职场|工位|会议室|office|workplace|workspace/i },
   // 公寓客厅：公寓/起居室/living room 直指本片场；裸"客厅"太泛（别墅也有
   // 客厅），只在带户型词（小户型/两居/三居/一居）时才算公寓意图。

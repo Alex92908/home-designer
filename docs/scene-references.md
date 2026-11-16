@@ -1,7 +1,7 @@
-# ZhuyaHome 导演台 · 12 个新场景参考图包 (Scene Reference Pack)
+# ZhuyaHome 导演台 · 36 个场景参考图包 (Scene Reference Pack)
 
 - **日期：** 2026-11-16
-- **目的：** 为导演台 12 个待建简化场景提供建模前可核对的公开参考图——核对颜色、比例、家具形态与布局。每条参考只给链接，不随包附带图片文件。
+- **目的：** 为导演台 36 个待建/已建简化场景提供建模前可核对的公开参考图——核对颜色、比例、家具形态与布局。每条参考只给链接，不随包附带图片文件。第 1–12 节为上一批 12 个研究场景；第 13–36 节为本批 24 个高频日常场景（学校 7 / 家庭 3 / 公司 5 / 联想补充 9）。
 - **使用规则：** 图片均为链接引用，不入库。只有明确标注为公有领域 (Public domain) 或 CC0 的文件才可下载进仓库；其余 CC BY / CC BY-SA 文件仅作参考，入库使用须按许可证署名并遵守相同方式共享条款。
 - **核查方法：** 2026-11-16 对文中每一个 URL 执行 `curl -I`，全部返回 HTTP 200（唯一例外见文末“未通过核查的 URL”：一个连字符变体返回 404，已弃用，未收入正文）。许可证只写实际看到的来源；凡未在文件页上确认的，一律写“未核实——使用前请先打开文件页确认”，不编造许可证。
 - **诚实说明：** 部分 Commons 文件页在本次核查中被抓取方以 403 拒绝（疑似限流），这些文件的“文件页 URL”未收入正文，改用 Wikipedia 文章内嵌的缩略图 URL（同样 `curl -I` 验证为 200）或直接删去，详见文末。
@@ -353,6 +353,496 @@
 
 ---
 
+## 13. set-school-playground — 学校操场
+
+**证据状态：分类页证据（香港学校篮球场与操场），无单张定稿图；操场布局按分类页文件清单 + 常规学校操场形制。**
+
+### 参考图
+
+**13-1. 香港校舍篮球场分类页**
+- URL：https://commons.wikimedia.org/wiki/Category:Basketball_venues_of_school_buildings_in_Hong_Kong
+- 来源：Wikimedia Commons 分类页，内含 "Hk qes playground.JPG" 等校内篮球场实拍
+- 许可证：未核实——分类页内各文件许可证不一，使用前请先打开文件页确认。
+- 核对内容：校内篮球场的地面、篮架、围栏与教学楼关系。
+
+**13-2. 修顿游乐场（Southorn Playground）分类页**
+- URL：https://commons.wikimedia.org/wiki/Category:Southorn_Playground?uselang=zh-cn
+- 来源：Wikimedia Commons 分类页
+- 许可证：未核实——同上。
+- 核对内容：市区露天运动场的围栏、地面划线与周边建筑关系。
+
+### 缺口
+- **无单张“标准学校操场全景”定稿图。** 篮球架、足球门、跑道的相对位置按常规学校操场布局手排，未按某张实拍复刻。
+
+---
+
+## 14. set-school-library — 学校图书馆
+
+**证据状态：直接证据（阅览室实拍 2 张）。**
+
+### 参考图
+
+**14-1. 乌克兰国家图书馆阅览室**
+- URL：https://commons.wikimedia.org/wiki/File:Kiev_133_Vernadsky_National_Library_of_Ukraine.jpg
+- 来源：Wikimedia Commons，作者 antomoro
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：阅览室的长桌、成排座椅、高书架与采光。
+
+**14-2. 维多利亚州立图书馆穹顶阅览室**
+- URL：https://commons.wikimedia.org/wiki/File:State_Library_of_Victoria_Dome.jpg
+- 来源：Wikimedia Commons
+- 许可证：CC BY 2.0（据检索结果注明）
+- 核对内容：大型阅览室的环形书架与长桌布局（本场景只取其“书架靠墙、长桌居中”的布局关系，不复刻穹顶）。
+
+### 缺口
+- 无中国学校图书馆实拍；书库区（双面高架成排）按 14-1 的书架形态复刻。
+
+---
+
+## 15. set-school-cafeteria — 学校饭堂
+
+**证据状态：历史照片证据（1958 年人民公社食堂 + 1941 年燕京大学餐厅），无现代中国学校饭堂实拍。**
+
+### 参考图
+
+**15-1. 1958 年人民公社食堂**
+- URL：https://commons.wikimedia.org/wiki/File:People%27s_commune_canteen.jpg
+- 来源：Wikimedia Commons，1958 年
+- 许可证：在中国属公有领域（据检索结果注明）
+- 核对内容：食堂大空间的长桌成排布局与打饭窗口关系（历史照片，仅取布局关系）。
+
+**15-2. 1941 年燕京大学餐厅（耶鲁收藏）**
+- URL：https://collections.library.yale.edu/catalog/11427143
+- 来源：耶鲁大学图书馆收藏，1941 年燕京大学餐厅
+- 许可证：未核实——使用前请先打开来源页确认。
+- 核对内容：民国大学餐厅的桌椅与空间尺度（辅助参考）。
+
+### 缺口
+- **无现代中国学校饭堂实拍。** 打饭窗口（不锈钢台 + 玻璃挡板 + 餐盘菜盆）按当代学校食堂的通用形制程序化建模，未按某张实拍复刻。
+
+---
+
+## 16. set-school-bathroom — 学校浴室
+
+**证据状态：直接证据（20 世纪初学校浴室实拍 2 张，Historic England 档案）。**
+
+### 参考图
+
+**16-1. 朗塞斯顿学院浴室内部**
+- URL：https://historicengland.org.uk/images-books/photos/item/CC46/00084
+- 来源：Historic England 档案（Marshall, Keene And Company 收藏），朗塞斯顿学院淋浴间
+- 许可证：Source: Historic England Archive（文件页标注；使用前请先打开文件页确认具体许可）
+- 核对内容：学校淋浴间的成排隔间形态；关键词：Washing Room, Early 20th Century Secondary School。
+
+**16-2. 朗塞斯顿学院浴室一排水池**
+- URL：https://historicengland.org.uk/images-books/photos/item/CC46/00763
+- 来源：Historic England 档案，同上
+- 许可证：同上
+- 核对内容：浴室/盥洗区一排水池与镜面墙的关系。
+
+### 缺口
+- 两张均为 20 世纪初英国学校浴室，非现代中国学校澡堂；现代淋浴隔间、厕位与小便池的形态按当代通用形制建模。
+
+---
+
+## 17. set-school-waterroom — 学校水房（开水房）
+
+**证据状态：无照片；仅文字描述证据（WordReference 讨论串）。本节是 24 个新场景中唯一“零图”的场景。**
+
+### 参考（文字，非图片）
+
+**17-1. WordReference 讨论：hot water room / boiler room**
+- URL：https://forum.wordreference.com/threads/hot-water-room-boiler-room.647376/
+- 来源：WordReference Forums 讨论串（已用浏览器打开全文核实）
+- 核对内容：开水房的真实细节——“a room with many water taps on each side of wall. People go there to fetch boiling water with big thermos bottles”（墙两侧一排水龙头，学生提大保温壶来打热水）；“Dozens of colorful thermos flasks stand in front of one small house”（小屋前立着几十只彩色保温壶）；中文名“开水房”，常见于中国中学、高校宿舍区；英文建议译名 hot water room / boiling water room（boiler room 另有所指，是设备间，不得混用）。
+- 许可证：不适用（文字讨论）。
+
+### 缺口
+- **未找到开水房的公开照片。** 场景按 17-1 的文字描述建模：三面水龙头排（两面北墙 + 一面西墙）、排水槽、两端水壶、门外排队空地。之后须补找实拍图。
+
+---
+
+## 18. set-school-parking — 学校停车场
+
+**证据状态：直接证据（停车场实拍 1 张）。**
+
+### 参考图
+
+**18-1. 停车场实拍（2017 年）**
+- URL：https://commons.wikimedia.org/wiki/File:Car_park_2.jpg
+- 来源：Wikimedia Commons，作者 Wald-Burger8，2017 年
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：露天停车场的车位划线、车挡与行车道关系。
+
+### 缺口
+- 车辆用仓库已有 GLB（宝马 M3 / 保时捷 911 / 宝马 M5 / Cyberpunk 车 / Vino 踏板车），非实拍复刻；车挡、树、草坪按 18-1 的地面关系手排。
+
+---
+
+## 19. set-school-track — 学校田径场
+
+**证据状态：直接证据（标准跑道尺寸图 1 张 + 分道实拍 1 张）。**
+
+### 参考图
+
+**19-1. 标准田径跑道尺寸图**
+- URL：https://commons.wikimedia.org/wiki/File:Pista.jpg
+- 来源：Wikimedia Commons，官方田径跑道尺寸示意图
+- 许可证：CC BY-SA 3.0（据检索结果注明）
+- 核对内容：跑道的分道、弯道与直道尺寸关系。
+
+**19-2. 编号分道实拍**
+- URL：https://commons.wikimedia.org/wiki/File:Espace_athl%C3%A9tisme.jpg
+- 来源：Wikimedia Commons，作者 Alphonse Masandi
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：红色塑胶跑道 + 白色分道线的实际观感。
+
+### 缺口
+- **本场景只做 24 米直道（两段 12 米跑道垫拼接）+ 足球门，未做 400 米标准环形跑道。** 完整环形跑道超出单场景尺度（720㎡ 已是本批最大单场景之一），如需完整椭圆跑道须另建大场景。
+
+---
+
+## 20. set-home-bedroom — 卧室
+
+**证据状态：直接证据（服务式公寓卧室实拍 1 张）。**
+
+### 参考图
+
+**20-1. 伦敦服务式公寓卧室（2020 年）**
+- URL：https://commons.wikimedia.org/wiki/File:Bedroom_in_a_serviced_apartment_in_London.jpg
+- 来源：Wikimedia Commons，作者 Mx. Granger，2020 年
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：双人床、床头柜、衣柜、梳妆台的常规布局与尺度关系。
+
+---
+
+## 21. set-home-kitchen — 厨房
+
+**证据状态：直接证据（厨房实拍 1 张）。**
+
+### 参考图
+
+**21-1. 厨房实拍（2015 年）**
+- URL：https://commons.wikimedia.org/wiki/File:Kitchen_(20255616284).jpg
+- 来源：Wikimedia Commons，作者 Johannes Gilger，2015 年
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：L 形橱柜、水槽、灶台、冰箱的常规布局。
+
+---
+
+## 22. set-home-bathroom — 卫生间
+
+**证据状态：直接证据（香港小户型组合卫浴实拍 1 张）。**
+
+### 参考图
+
+**22-1. 香港组合式淋浴与卫生间（2008 年）**
+- URL：https://commons.wikimedia.org/wiki/File:Hong_Kong_combination_shower_and_bathroom.jpg
+- 来源：Wikimedia Commons，作者 FlyingToaster，2008 年
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：小户型卫生间淋浴 + 马桶 + 洗手盆三件套紧凑布局（与本场景 18㎡ 两间式布局对应）。
+
+---
+
+## 23. set-office-ceo — 总裁办公室
+
+**证据状态：间接证据（企业工位实拍 + 公有领域总统办公室桌），无现代落地窗总裁办公室实拍。**
+
+### 参考图
+
+**23-1. 企业工位实拍（Unsplash）**
+- URL：https://commons.wikimedia.org/wiki/File:Desk_Setup_(Unsplash).jpg
+- 来源：Wikimedia Commons（原载 Unsplash），作者 Luke Chesser
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：现代办公室大班台、办公椅与书架的形态。
+
+**23-2. 杜鲁门总统椭圆形办公室办公桌**
+- URL：https://www.trumanlibrary.gov/print/pdf/node/131254
+- 来源：杜鲁门总统图书馆
+- 许可证：公有领域（据检索结果注明）
+- 核对内容：大班台 + 身后座椅的“权位”布局关系（仅取布局，不复刻历史家具）。
+
+### 缺口
+- **无现代落地窗总裁办公室实拍。** 本场景未做落地玻璃幕墙（只有常规打孔窗），大班台、会客沙发、书架按 23-1/23-2 的布局关系手排。
+
+---
+
+## 24. set-office-meeting — 会议室
+
+**证据状态：直接证据（正式会议室实拍 1 张 + CC0 会议室照片 1 张）。**
+
+### 参考图
+
+**24-1. 正式会议室（2022 年）**
+- URL：https://commons.wikimedia.org/wiki/File:Formal_Meeting_Room.jpg
+- 来源：Wikimedia Commons，作者 John Musgrove，2022 年
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：会议长桌、两侧座椅、白板的常规布局。
+
+**24-2. 会议室照片（WordPress CC0）**
+- URL：https://wordpress.org/photos/photo/561681c0b6/
+- 来源：WordPress Photos
+- 许可证：CC0（据检索结果注明）
+- 核对内容：同上，第二个视角。
+
+---
+
+## 25. set-office-lobby — 公司大堂
+
+**证据状态：直接证据（Valve 总部大堂实拍 1 张 + 香港办公大堂分类页）。**
+
+### 参考图
+
+**25-1. Valve 总部大堂（2016 年）**
+- URL：https://commons.wikimedia.org/wiki/File:Valve%20Lobby%202016.jpg
+- 来源：Wikimedia Commons，作者 Tim Eulitz，2016 年，Valve 贝尔维尤总部
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：前台接待台、等候沙发、绿植的布局关系。
+
+**25-2. 香港办公大堂分类页**
+- URL：https://commons.wikimedia.org/wiki/Category:Office_lobbies_in_Hong_Kong
+- 来源：Wikimedia Commons 分类页
+- 许可证：未核实——分类页内各文件许可证不一。
+- 核对内容：写字楼大堂的多种前台形态（浏览用）。
+
+---
+
+## 26. set-office-pantry — 茶水间
+
+**证据状态：历史照片证据（1973 年美国员工休息区 2 张，无现代中国办公室茶水间实拍）。**
+
+### 参考图
+
+**26-1. 1973 年员工休息区（Gandy 收藏）**
+- URL：https://digitalcommons.usf.edu/gandy_commercial/8994/
+- 来源：南佛罗里达大学数字收藏（Gandy Commercial 收藏），1973 年
+- 许可证：未核实——使用前请先打开来源页确认。
+- 核对内容：紧凑型办公室厨房 + 座位的休息区布局。
+
+**26-2. 1973 年休息室（微波炉 + 橱柜）**
+- URL：https://digitalcommons.usf.edu/gandy_commercial/1020
+- 来源：同上
+- 许可证：未核实——同上。
+- 核对内容：茶水柜台、微波炉、橱柜的组合形态。
+
+---
+
+## 27. set-office-elevator — 电梯
+
+**证据状态：直接证据（电梯厅实拍 + 带镜电梯实拍各 1 张）+ 文字说明 1 篇。**
+
+### 参考图
+
+**27-1. 皇冠大都会酒店电梯厅**
+- URL：https://commons.wikimedia.org/wiki/File:Crown_Metropol_Perth_lifts.jpg
+- 来源：Wikimedia Commons
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：电梯厅、候梯长椅与轿厢门的布局。
+
+**27-2. 带镜面的电梯内部**
+- URL：https://en.wikivoyage.org/wiki/File:Sony_RX10_III_(1).jpg
+- 来源：Wikivoyage，作者 Gzen92
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：轿厢内后墙镜面、扶手与按钮盘（本场景轿厢三要素的来源）。
+
+### 参考（文字）
+
+**27-3. 电梯为什么装镜子（ScienceABC）**
+- URL：https://www.scienceabc.com/eyeopeners/why-do-elevators-have-mirrors
+- 来源：ScienceABC 科普文章
+- 核对内容：电梯镜面的功能说明（空间感、安全感），佐证轿厢后墙镜面的合理性。
+
+### 缺口
+- 轿厢门为静态造型，无开关动画；电梯井为露天围合（全墙隐藏），非真实井道。
+
+---
+
+## 28. set-dormitory — 学生宿舍
+
+**证据状态：直接证据（双层床实拍 1 张 + 1933 年重庆大学宿舍实拍 1 张）+ 文字描述 1 篇。**
+
+### 参考图
+
+**28-1. 双层床实拍**
+- URL：https://commons.wikimedia.org/wiki/File:Bunk_bed.jpg
+- 来源：Wikimedia Commons，作者 Miguel Andrade
+- 许可证：公有领域（据检索结果注明）
+- 核对内容：铁架双层床 + 护栏 + 爬梯的形态（本场景三张上下铺的原型）。
+
+**28-2. 1933 年重庆大学菜园坝校舍学生宿舍**
+- URL：https://commons.wikimedia.org/wiki/File:%E9%87%8D%E6%85%B6%E5%A4%A7%E5%AD%B8%E8%8F%9C%E5%9C%92%E5%A3%A9%E6%A0%A1%E8%88%8D%E4%B9%8B%E5%AD%B8%E7%94%9F%E5%AE%BF%E8%88%8D.jpg
+- 来源：Wikimedia Commons，1933 年
+- 许可证：公有领域（据检索结果注明）
+- 核对内容：历史宿舍的上下铺成排布局（仅取布局关系）。
+
+### 参考（文字）
+
+**28-3. 中国大学宿舍评论（人民大学宿舍）**
+- URL：https://www.andrewsingerchina.com/post/comments-on-life-in-china-s-dorm
+- 来源：Andrew Singer China 博客，转述《第六声》（Sixth Tone）文章
+- 核对内容：人民大学宿舍“六张铁架上下铺、桌在床下、6 人一间、每层 48 间”的真实配置。本场景简化为 3 张上下铺 + 3 张书桌（沿墙成排），床下未做书桌（双层床件本身不含桌），如需 6 人满配须另加床位。
+
+---
+
+## 29. set-hotel-room — 酒店房间
+
+**证据状态：直接证据（希尔顿客房实拍 1 张）。**
+
+### 参考图
+
+**29-1. 希尔顿客房（2019 年）**
+- URL：https://commons.wikimedia.org/wiki/File:Hilton_room.jpg
+- 来源：Wikimedia Commons，作者 Missvain，2019 年
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：大床房的床、床头柜、书桌、电视柜与卫浴分区。
+
+---
+
+## 30. set-police — 警局
+
+**证据状态：仅有拘留所控制室内部实拍 1 张（Historic England）；无开放式警局办公区实拍。**
+
+### 参考图
+
+**30-1. 汤布里奇警局拘留区控制桌内部**
+- URL：https://historicengland.org.uk/images-books/photos/item/BB98/03165
+- 来源：Historic England 档案（RCHME 收藏），汤布里奇警局拘留区控制桌
+- 许可证：© Crown Copyright. Historic England Archive（文件页标注；使用前请先打开文件页确认具体许可）
+- 核对内容：警局内部的桌、档案柜、控制设备氛围（仅氛围参考，非本场景复刻对象）。
+
+### 缺口
+- **无开放式警局办公区（大开间 + 案情板 + 审讯室）的公开实拍。** 办公区 4 张办公桌 + 案情板、审讯室单桌 + 吊灯的布局按刑侦剧通用形制手排；审讯室未做单向玻璃（无对应件）。
+
+---
+
+## 31. set-courtroom — 法庭
+
+**证据状态：直接证据（1944 年县法庭实拍 1 张 + 维多利亚法庭实拍 1 张）。**
+
+### 参考图
+
+**31-1. 1944 年戴恩县法庭内部**
+- URL：https://www.wisconsinhistory.org/record/image/W0121L6
+- 来源：威斯康星历史学会，1944 年戴恩县法庭
+- 许可证：未核实——使用前请先打开来源页确认。
+- 核对内容：法官席、原被告桌的布局关系。
+
+**31-2. 维多利亚法庭刑事法庭内部（望向法官席）**
+- URL：https://historicengland.org.uk/images-books/photos/item/BL11049
+- 来源：Historic England 档案（Bedford Lemere 收藏），维多利亚法庭
+- 许可证：Source: Historic England Archive（文件页标注）
+- 核对内容：法官席高台、木护栏、旁听席的形态；关键词：Courtroom, Panelling, Victorian Assize Court。
+
+---
+
+## 32. set-bar — 酒吧
+
+**证据状态：直接证据（赫尔辛基酒吧内景实拍 1 张 + 吧凳实拍 1 张）。**
+
+### 参考图
+
+**32-1. 赫尔辛基 Bar Loosister 内景（2021 年）**
+- URL：https://commons.wikimedia.org/wiki/File:Interior_of_Bar_Loosister.jpg
+- 来源：Wikimedia Commons，作者 JIP，2021 年
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：吧台、背架酒瓶、卡座区的布局与氛围。
+
+**32-2. 吧凳实拍**
+- URL：https://commons.wikimedia.org/wiki/File:Barhocker_fcm.jpg
+- 来源：Wikimedia Commons，作者 Frank C. Müller
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：吧台前高脚凳的形态（本场景用工业风餐椅作吧凳 stand-in，见资产说明）。
+
+---
+
+## 33. set-gym — 健身房
+
+**证据状态：分类页证据（健身训练与哑铃分类页），无单张定稿图。**
+
+### 参考图
+
+**33-1. 健身训练分类页**
+- URL：https://commons.wikimedia.org/wiki/Category:Fitness_training
+- 来源：Wikimedia Commons 分类页，内含 "Gym, Katowice"、"Fitnessstudio 3.jpg" 等健身房实拍
+- 许可证：未核实——分类页内各文件许可证不一。
+- 核对内容：跑步机成排、卧推区、哑铃架的分区布局。
+
+**33-2. 哑铃分类页**
+- URL：https://commons.wikimedia.org/wiki/Category:Dumbbells
+- 来源：Wikimedia Commons 分类页，内含 "Dumbbells on rack 20180112.jpg" 等
+- 许可证：未核实——同上。
+- 核对内容：哑铃架两层 + 哑铃成对摆放的形态。
+
+### 缺口
+- 无单张定稿图；跑步机、卧推凳、哑铃架三件均按分类页浏览印象 + 通用健身房形制程序化建模。
+
+---
+
+## 34. set-supermarket — 超市
+
+**证据状态：直接证据（超市货架通道实拍 1 张 + 收银区实拍 1 张）。**
+
+### 参考图
+
+**34-1. Morrisons 超市购物通道（2022 年）**
+- URL：https://commons.wikimedia.org/wiki/File:-2022-03-19_Shopping_aisle,_Morrisons,_Cromer.JPG
+- 来源：Wikimedia Commons，作者 Kolforn，2022 年
+- 许可证：CC 署名（据检索结果注明“CC attribution”；使用前请先打开文件页确认具体版本）
+- 核对内容：双面货架成排、通道宽度、价签条的形态。
+
+**34-2. 卡福超市收银区（2015 年）**
+- URL：https://commons.wikimedia.org/wiki/File:Carrefour_w_Bia%C5%82ymstoku_kasy_stoisk_spo%C5%BCywczych.jpg
+- 来源：Wikimedia Commons，作者 Henryk Borawski，2015 年
+- 许可证：未核实——使用前请先打开文件页确认。
+- 核对内容：收银台成排（传送带 + 扫描区 + 打包区）的布局。
+
+---
+
+## 35. set-ktv — KTV
+
+**证据状态：无 Commons 照片；仅文字描述证据（KTV 指南 1 篇 + 模型描述 1 篇）。本节是 24 个新场景中第二处“零图”的场景。**
+
+### 参考（文字，非图片）
+
+**35-1. 中国 KTV 指南**
+- URL：http://todaychinese.com/how-to-go-to-ktv-in-china-guide/
+- 来源：Today Chinese 指南文章
+- 核对内容：KTV 包间布局——皮质环形沙发、长形大理石茶几、大电视、点歌触屏、无线麦克风。本场景按此建模：环形沙发（模块化沙发 stand-in）+ 大理石茶几 + 挂墙大屏；点歌触屏与无线麦克风无对应 3D 件，未做。
+
+**35-2. KTV 包间模型描述（Civitai LoRA）**
+- URL：https://civitai.com/models/3029121/ktv-room-drunk-enough-to-sing-anything?modelVersionId=3440713
+- 来源：Civitai 模型页描述
+- 核对内容：与 35-1 一致的包间要素（沙发、茶几、大屏），交叉佐证 35-1 的布局描述。
+
+### 缺口
+- **未找到 KTV 包间的公开照片。** 之后须补找实拍图；点歌触屏、无线麦克风待有对应件后再补。
+
+---
+
+## 36. set-wedding — 婚礼宴会厅
+
+**证据状态：直接证据（爱德华时代婚礼宴会厅实拍 1 张）+ 文字说明 1 篇。**
+
+### 参考图
+
+**36-1. 伦勃朗酒店婚礼宴会厅（爱德华时代）**
+- URL：https://historicengland.org.uk/images-books/photos/item/BL26974
+- 来源：Historic England 档案（Bedford Lemere 收藏），伦勃朗酒店为婚礼招待会布置的宴会厅
+- 许可证：Source: Historic England Archive（文件页标注）
+- 核对内容：宴会厅的桌椅成排、舞台区与自助台关系；关键词：Function Room, Edwardian Hotel。
+
+### 参考（文字）
+
+**36-2. JW 万豪泻湖厅婚礼布置示例**
+- URL：https://osmicproductions.com.au/2026/11/13/a-sample-wedding-setup-at-jw-marriotts-lagoon-gallery/
+- 来源：Osmic Productions 文章，2026 年 11 月 13 日
+- 核对内容：现代婚礼的舞台 + 拱门 + 宴会桌布局（与本场景的舞台、拱门、三张宴会桌对应）。
+
+### 缺口
+- 宴会桌用方形木餐桌（dining-oak-rect）作 stand-in，未做圆形大圆桌（无对应件）；36-1 为历史照片，现代婚礼的灯光与纱幔按 36-2 的文字描述处理。
+
+---
+
 ## 缺口汇总：没有可用公开图片的场景/元素
 
 以下场景均有参考图（每节 ≥2 条），但这些元素没有找到可自由使用的公开图片，建模时只能按文字描述处理，之后须补图：
@@ -367,14 +857,22 @@
 | set-rural-republican | 窑洞外观、“一明二暗”民居、豆油灯/煤油灯 |
 | set-washitsu | 铺满榻榻米 + shoji 的和室实拍（只有 2 张图，目标 2–4 张的下限） |
 | set-hanok | ondol 房间内部、木地板大厅（daecheong） |
+| set-school-waterroom | **整节零图**：开水房无公开照片，只按 WordReference 文字描述建模（三面水龙头排 + 排队空地） |
+| set-ktv | **整节零图**：KTV 包间无公开照片，只按指南文字描述建模；点歌触屏、无线麦克风无对应件 |
+| set-school-cafeteria | 现代中国学校饭堂实拍（只有 1958 年食堂 + 1941 年大学餐厅历史照） |
+| set-office-ceo | 现代落地窗总裁办公室实拍（只有企业工位照 + 公有领域总统办公室桌） |
+| set-police | 开放式警局办公区实拍（只有拘留所控制室 1 张）；审讯室单向玻璃无对应件 |
+| set-school-playground | 单张“标准学校操场全景”定稿图（只有分类页） |
+| set-gym | 单张定稿图（只有分类页） |
+| set-wedding | 圆形大圆桌（用方形餐桌 stand-in）；现代婚礼灯光与纱幔只有文字描述 |
 
-没有整节“零图”的场景。最薄的三节是：河姆渡（只有 1 张实物图 + 1 个资料页）、医院（只有历史照片，无现代中国病房图）、元（3 张图中有 2 张许可证未核实，且宫殿室内为复原）。
+没有整节“零图”的场景。最薄的三节是：河姆渡（只有 1 张实物图 + 1 个资料页）、医院（只有历史照片，无现代中国病房图）、元（3 张图中有 2 张许可证未核实，且宫殿室内为复原）。**本批新增两节零图：水房、KTV。**
 
 ---
 
 ## 核查说明与未通过的 URL
 
-- **核查时间：** 2026-11-16；方法：`curl -I` 逐条验证，正文所有 URL 均返回 HTTP 200。
+- **核查时间：** 2026-11-16；方法：`curl -I` 逐条验证，正文所有 URL 均返回 HTTP 200。**本批（第 13–36 节）核查：** 45 条 URL 中 38 条 `curl -I` 返回 200（耶鲁收藏 1 条返回 202）；5 条 Historic England 档案页与 1 条 WordReference 讨论串被 `curl -I` 以 403/418 拒绝，改用浏览器打开全文核实为真实页面（内容与引用一致：CC46/00084 朗塞斯顿学院淋浴间、CC46/00763 一排水池、BB98/03165 汤布里奇警局拘留区控制桌、BL11049 维多利亚法庭、BL26974 伦勃朗酒店婚礼宴会厅、WordReference 开水房讨论串全文）；`File:Bunk_bed.jpg` 的 http 变体 `curl` 无响应，改用 https 变体（返回 200），正文使用 https 链接。
 - **唯一 404：** `File:Story_of_the_Five_Hundred_Robbers_(535-557_CE),_Mogao_Cave_285,_Dunhuang,_China.jpg`（连字符变体）返回 404，已弃用；正文使用的是 en-dash 编码变体（返回 200）。
 - **被抓取方以 403 拒绝、未再尝试的文件页（按指示不重复请求，包括换工具）：**
   - `File:Banpo_basin_with_human_face_and_fish_designs.JPG`（人面鱼纹盆，致谢页注明 CC BY-SA 4.0）——未收入正文；半坡改用缩略图 URL（7-2、7-3）。

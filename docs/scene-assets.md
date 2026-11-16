@@ -1,18 +1,23 @@
 # 导演台新场景 · 3D 资产说明 (Scene Assets)
 
 - **日期：** 2026-11-16
-- **范围：** 12 个新片场（set-villa-suburban / set-school / set-hospital /
-  set-qinhan / set-weijin / set-yuan / set-banpo / set-hemudu /
-  set-rural-republican / set-versailles / set-washitsu / set-hanok）
+- **范围：** 36 个片场（上一批 12 个研究场景 set-villa-suburban /
+  set-school / set-hospital / set-qinhan / set-weijin / set-yuan /
+  set-banpo / set-hemudu / set-rural-republican / set-versailles /
+  set-washitsu / set-hanok；本批 24 个高频日常场景：学校 7 /
+  家庭 3 / 公司 5 / 联想补充 9）
 
 ## 结论先行：零外部下载，全部程序化 + 复用现有目录
 
-本次 12 个场景的时代家具**没有下载任何外部 3D 模型**。原因：
+本次 24 个场景的家具**没有下载任何外部 3D 模型**。原因：
 
 1. 程序化是既定第一优先级（可靠、零许可风险、离线可用、体积零增长）；
 2. Sketchfab / NVIDIA 开源资产对这批器物（汉榻/案/几、胡床、蒙古包、
-   干栏屋、半地穴屋、博古架、榻榻米/床の間、温突地板）没有尺寸、风格、
-   许可证三者都合用的现成模型；逐个谈许可证与格式转换的成本远高于
+   干栏屋、半地穴屋、博古架、榻榻米/床の間、温突地板；本批：双层床、
+   图书馆书架、打饭窗口、开水房水龙头排、篮球架、足球门、跑道、
+   总裁大班台、会议长桌、前台、电梯轿厢、法官席、酒吧吧台、跑步机、
+   超市货架、收银台、KTV 大屏、婚礼舞台等）没有尺寸、风格、许可证
+   三者都合用的现成模型；逐个谈许可证与格式转换的成本远高于
    程序化建模，且会引入二进制体积与来源维护负担；
 3. 其余家具全部复用仓库已有 587 件目录（GLB 模型已在仓库内）。
 
@@ -23,7 +28,7 @@ NVIDIA 开源许可才可用，许可证 + 来源 URL 随模型登记”的规�
 参考图包见 `docs/scene-references.md`（图片均为链接引用，不入库；
 只有明确标注公有领域 / CC0 的文件才可下载进仓库）。
 
-## 程序化家具一览（46 件，id 以 `proc-` 开头）
+## 程序化家具一览（76 件，id 以 `proc-` 开头）
 
 几何：`src/lib/proceduralFurniture.ts`（纯 three.js，无 JSX，可被
 node harness 直接验证）；目录登记：`src/lib/furniture.ts`（无
@@ -79,6 +84,60 @@ node harness 直接验证）；目录登记：`src/lib/furniture.ts`（无
 | proc-ondol-table | 韩屋小桌 | 韩屋 | coffee_table（承托面） |
 | proc-ondol-floor | 温突地板 | 韩屋温突房 | rug |
 | proc-hanok-stove | 韩屋灶口 | 韩屋厨房 | kitchen_cabinet（承托面） |
+| proc-bunk-bed | 双层床（上下铺+护栏+爬梯） | 宿舍 | bed |
+| proc-library-shelf | 图书馆书架（双面五层） | 图书馆 | bookshelf |
+| proc-cafeteria-table | 饭堂长桌（+两侧长凳） | 饭堂 | dining_table |
+| proc-serving-counter | 打饭窗口柜台（玻璃挡板+餐盘菜盆） | 饭堂打饭区 | kitchen_cabinet |
+| proc-water-tap-row | 开水房水龙头排（8 龙头+排水槽） | 水房 | kitchen_cabinet（承托面） |
+| proc-basketball-hoop | 篮球架（篮板+篮筐+篮网） | 操场 | outdoor_structure |
+| proc-goal-post | 足球门（+球网） | 操场、田径场 | outdoor_structure |
+| proc-track-lane | 田径跑道（12m 直道垫+分道线） | 田径场 | rug |
+| proc-parking-stop | 停车挡（水泥+黄条） | 停车场 | outdoor_hardscape |
+| proc-outdoor-bench | 户外长椅 | 操场、浴室、停车场、水房、宿舍、大堂、电梯、法庭、婚礼 | outdoor_structure |
+| proc-ceo-desk | 总裁大班台（皮面嵌+抽屉柜） | 总裁办公室 | desk（承托面） |
+| proc-meeting-table | 会议长桌（线盒+话筒） | 会议室 | dining_table |
+| proc-reception-desk | 前台接待台（石材台面+金色标识板） | 公司大堂 | storage |
+| proc-elevator-car | 电梯轿厢（门+后墙镜+扶手+按钮盘） | 电梯 | storage |
+| proc-pantry-counter | 茶水间柜台（水槽+水壶+微波炉） | 茶水间 | kitchen_cabinet（承托面） |
+| proc-whiteboard | 白板（挂墙） | 饭堂（菜单板）、会议室 | decor |
+| proc-evidence-board | 案情板（照片+红线，挂墙） | 警局 | decor |
+| proc-bar-counter | 酒吧吧台（背架酒瓶两层+脚踏杆） | 酒吧 | kitchen_cabinet |
+| proc-judge-bench | 法官席（高台+法槌） | 法庭 | desk |
+| proc-witness-stand | 证人席（围栏+话筒） | 法庭 | desk |
+| proc-gym-treadmill | 跑步机（控制台+扶手） | 健身房 | appliance |
+| proc-gym-bench | 卧推凳（+杠铃+杠铃片） | 健身房 | appliance |
+| proc-dumbbell-rack | 哑铃架（两层+6 对哑铃） | 健身房 | appliance |
+| proc-supermarket-shelf | 超市货架（双面四层+商品+价签） | 超市 | bookshelf |
+| proc-checkout-counter | 收银台（传送带+收银屏） | 超市 | kitchen_cabinet |
+| proc-shopping-cart | 购物车（筐+把手+四轮） | 超市 | storage |
+| proc-ktv-screen | KTV 大屏（发光屏面+歌词行，挂墙） | KTV | electronics |
+| proc-wedding-arch | 婚礼拱门（花球+飘带） | 婚礼宴会厅 | decor |
+| proc-wedding-stage | 婚礼舞台（低台+纱幔+顶梁） | 婚礼宴会厅 | outdoor_structure |
+| proc-cooktop | 灶台面板（玻璃+四炉头圈） | 厨房（放橱柜上） | appliance |
+
+**程序化件总数：46 + 30 = 76 件。**
+
+## 本批复用的上一批程序化件（6 件）
+
+| id | 件 | 用在本批场景 | 备注 |
+|---|---|---|---|
+| proc-thermos | 保温壶 | 宿舍书桌、水房水龙头排上、卧室床头柜、茶水间柜台上、KTV 茶几上 | 小件放承托面，elevationY = 承托面高度 |
+| proc-basin | 脸盆 | 宿舍书桌、厨房南侧橱柜上、卫生间/酒店洗手盆上 | 同上 |
+| proc-mirror-wall | 镜墙（200×280cm 落地） | 健身房北墙、卫生间洗手盆上方 | 落地件，elevationY=0 |
+| proc-chandelier-crystal | 水晶吊灯 | 婚礼宴会厅 ×3 | mountCeiling（吸顶，凡尔赛同款） |
+| proc-gilt-chair | 鎏金扶手椅 | 法庭旁听席 ×4、婚礼舞台两侧 ×2 | **stand-in**：法庭旁听席本应用普通木椅，金椅是凡尔赛件复用，视觉偏华丽，已注明 |
+| proc-wood-stool | 木凳 | 警局审讯室、酒吧卡座区 | 通用小凳复用 |
+
+## 本批复用的仓库已有 GLB / 目录件（按场景，节选关键件）
+
+- 学校：车辆 5 件（停车场：bmw_m3_e46 / porsche_911 / bmw_m5_g90 /
+  cyberpunk_car / vino 踏板车，均为仓库已有 GLB）；树、草坪、石径、
+  淋浴间、马桶、小便池、洗手盆、冰箱、植物（目录件复用）。
+- 家庭/公司/联想：床、床头柜、衣柜、梳妆台、沙发、茶几、餐桌椅、
+  办公桌椅、书架、橱柜、冰箱、油烟机、马桶、浴缸、淋浴间、洗手盆、
+  地毯、落地灯、植物（全部为目录已有件，未新增 GLB）。
+- **油烟机（hood-side-black）**：挂墙件，已加入 harness 的墙挂白名单
+  （与白板/案情板/KTV 屏同类处理），放灶台上方 elevationY=150。
 
 ## 被程序化件取代的旧 stand-in（上一批 6 场景留下的）
 
@@ -103,6 +162,25 @@ node harness 直接验证）；目录登记：`src/lib/furniture.ts`（无
 - 凡尔赛：镜厅只做 5 面镜墙 + 南墙 3 窗示意“窗镜成对”，未复刻 17 对；
   天顶画未做（无对应画件）。
 - 和室：榻榻米颜色与障子透光以文字描述 + 程序化近似为准（参考包缺口）。
+- 水房：无公开照片，整节按 WordReference 文字描述建模（见参考包 17 节）。
+- KTV：无公开照片，整节按指南文字描述建模；点歌触屏、无线麦克风无对应
+  3D 件，未做；环形沙发用模块化沙发（sofa-modular-green）stand-in。
+- 田径场：只做 24 米直道 + 足球门，未做 400 米标准环形跑道（超出单场
+  景尺度）。
+- 总裁办公室：未做落地玻璃幕墙（只有常规打孔窗）；无现代落地窗总裁办
+  公室实拍（见参考包 23 节缺口）。
+- 宿舍：简化为 3 张上下铺 + 3 张书桌；真实中国大学宿舍常为 6 人一间
+  （人民大学例：六张铁架上下铺、桌在床下），床下书桌未做（双层床件
+  本身不含桌），如需 6 人满配须另加床位。
+- 警局：无开放式办公区实拍；审讯室未做单向玻璃（无对应件）。
+- 法庭：旁听席用鎏金扶手椅（凡尔赛件）stand-in，视觉偏华丽；法官席
+  法槌、铭牌为程序化近似。
+- 酒吧：吧凳用工业风餐椅（chair-industrial-black）stand-in，未做专用
+  高脚吧凳。
+- 婚礼：宴会桌用方形木餐桌（dining-oak-rect）stand-in，未做圆形大圆桌。
+- 电梯：轿厢门静态，无开关动画；电梯井为露天围合（全墙隐藏），非真实井道。
+- 超市：收银传送带、价签条为程序化近似；无生鲜/冷柜区。
+- 饭堂：无现代中国学校饭堂实拍，打饭窗口按当代通用形制建模。
 
 ## 时代锁自查（每场景模板注释中亦有说明）
 
@@ -115,3 +193,12 @@ node harness 直接验证）；目录登记：`src/lib/furniture.ts`（无
 - 凡尔赛：无现代卫生间/马桶/浴缸。
 - 和室：床の間不放物不坐人、不穿鞋上榻榻米、不做固定西式床。
 - 韩屋：院子留空（模板里就是 `[]`）、不用中式假山石。
+
+## 本批时代锁自查（现代场景无古代时代锁；以下为“不得声称已复刻”的简化点）
+
+- 现代场景（学校/家庭/公司/联想补充）：无古代器物时代锁；但不得声称
+  “按实拍复刻”——除参考包各节注明有实拍的布局关系外，其余均为手排
+  简化场景（程序化件 + 目录件拼搭），非 1:1 建模。
+- 宿舍：不得声称“6 人标准间已复刻”（本批为 3 床简化版）。
+- 田径场：不得声称“400 米标准跑道”（本批为 24 米直道）。
+- KTV / 水房：不得声称“有实拍依据”（本批为文字描述建模，已在参考包注明）。

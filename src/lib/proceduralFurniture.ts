@@ -857,6 +857,619 @@ function buildHanokStove(g: THREE.Group, w: number, d: number, h: number, c: str
   cyl(g, potR * 0.88, potR * 0.88, 0.02, 0, h * 0.98, 0, iron, 18); // 锅盖
 }
 
+// ─── 高频日常场景（学校/家庭/公司/联想补充）───────────────────────────
+
+/** 双层床（宿舍标配）：上下铺 + 护栏 + 爬梯 + 枕头。 */
+function buildBunkBed(g: THREE.Group, w: number, d: number, h: number, c: string, s?: string): void {
+  const frame = std(c, 0.7, 0.2);
+  const mattress = std(s || "#E8E8E8", 0.95);
+  const px = w / 2 - 0.03, pz = d / 2 - 0.03;
+  // 四根立柱
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as Array<[number, number]>) {
+    box(g, 0.06, h, 0.06, sx * px, 0, sz * pz, frame);
+  }
+  // 下铺（0.35）与上铺（1.25）床板 + 床垫 + 枕头
+  for (const y of [0.35, 1.25]) {
+    box(g, w - 0.06, 0.06, d - 0.06, 0, y, 0, frame);
+    box(g, w - 0.12, 0.12, d - 0.12, 0, y + 0.06, 0, mattress);
+    box(g, w * 0.5, 0.08, 0.3, 0, y + 0.18, -d / 2 + 0.25, std("#F5F5F0", 0.95));
+  }
+  // 上铺护栏（两侧长边）
+  for (const sz of [-1, 1]) {
+    box(g, w - 0.06, 0.28, 0.04, 0, 1.43, sz * (d / 2 - 0.05), frame);
+  }
+  // 爬梯（床尾）：两竖杆 + 三横档
+  const lx = w / 2 - 0.1;
+  box(g, 0.04, 1.25, 0.04, lx, 0, d / 2 - 0.21, frame);
+  box(g, 0.04, 1.25, 0.04, lx, 0, d / 2 - 0.03, frame);
+  for (const y of [0.4, 0.8, 1.15]) {
+    box(g, 0.04, 0.04, 0.22, lx, y, d / 2 - 0.12, frame);
+  }
+}
+
+/** 图书馆书架：双面高架 + 五层 + 书脊（两面都有书）。 */
+function buildLibraryShelf(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c, 0.7);
+  const t = 0.04;
+  box(g, t, h, d, -w / 2 + t / 2, 0, 0, wood); // 侧板
+  box(g, t, h, d, w / 2 - t / 2, 0, 0, wood);
+  box(g, w, t, d, 0, 0, 0, wood); // 底板
+  box(g, w, t, d, 0, h - t, 0, wood); // 顶板
+  const shelfY = [0.35, 0.72, 1.09, 1.46, 1.8];
+  const bookColors = ["#8B2010", "#2A4A6A", "#3A5A3A", "#C8A860", "#5A3A6A", "#7A6A3A"];
+  for (const y of shelfY) {
+    box(g, w - 2 * t, 0.03, d - 0.02, 0, y, 0, wood);
+    // 每层两面各一排书脊（高低错落）
+    for (const sz of [-1, 1]) {
+      let x = -w / 2 + 0.12;
+      let i = 0;
+      while (x < w / 2 - 0.2) {
+        const bw = 0.05 + (i % 3) * 0.015;
+        const bh = 0.2 + (i % 3) * 0.03;
+        box(g, bw, bh, 0.14, x + bw / 2, y + 0.03, sz * (d / 2 - 0.1), std(bookColors[i % bookColors.length], 0.85));
+        x += bw + 0.012;
+        i++;
+      }
+    }
+  }
+}
+
+/** 饭堂长桌：长桌 + 两侧长凳一体。 */
+function buildCafeteriaTable(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const top = std(c, 0.6);
+  const legM = std("#5A5A5A", 0.5, 0.5);
+  const tableH = h * 0.95;
+  box(g, w, 0.04, d * 0.62, 0, tableH - 0.04, 0, top); // 桌面
+  box(g, 0.06, tableH - 0.04, d * 0.5, -w / 2 + 0.15, 0, 0, legM); // 桌腿板
+  box(g, 0.06, tableH - 0.04, d * 0.5, w / 2 - 0.15, 0, 0, legM);
+  // 两侧长凳
+  for (const sz of [-1, 1]) {
+    const bz = sz * d * 0.42;
+    box(g, w * 0.92, 0.05, d * 0.16, 0, h * 0.56, bz, std("#A08050", 0.8));
+    box(g, 0.05, h * 0.56, 0.05, -w / 2 + 0.12, 0, bz, legM);
+    box(g, 0.05, h * 0.56, 0.05, w / 2 - 0.12, 0, bz, legM);
+  }
+}
+
+/** 打饭窗口柜台：不锈钢台身 + 玻璃防飞沫挡板 + 餐盘。 */
+function buildServingCounter(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const steel = std(c || "#C8C8C8", 0.35, 0.7);
+  const glass = new THREE.MeshStandardMaterial({
+    color: "#DCE8E8", roughness: 0.1, metalness: 0, transparent: true, opacity: 0.4,
+  });
+  box(g, w, 0.9, d, 0, 0, 0, steel); // 台身
+  box(g, w, 0.04, d * 1.04, 0, 0.9, 0, std("#E8E8E8", 0.3, 0.6)); // 台面
+  // 玻璃挡板（后沿立起）
+  box(g, w * 0.98, 0.35, 0.015, 0, 0.94, -d / 2 + 0.06, glass);
+  // 餐盘 ×3 + 菜盆 ×2
+  for (let i = 0; i < 3; i++) {
+    box(g, 0.5, 0.02, 0.32, -w * 0.3 + i * w * 0.3, 0.94, d * 0.12, std("#F5F5F0", 0.5));
+  }
+  box(g, 0.4, 0.1, 0.3, -w * 0.2, 0.94, -d * 0.1, std("#B0503A", 0.6));
+  box(g, 0.4, 0.1, 0.3, w * 0.2, 0.94, -d * 0.1, std("#3A5A3A", 0.6));
+}
+
+/**
+ * 开水房水龙头排：中国学校/宿舍的 communal hot-water room（开水房）：
+ * 长台 + 一排水龙头（热水）+ 排水槽 + 两端水壶。学生排队打水，
+ * 保温壶放在台面。无对应照片见参考包缺口，布局据文字描述。
+ */
+function buildWaterTapRow(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const steel = std(c || "#C8C8C8", 0.35, 0.7);
+  const brass = std("#B08A3A", 0.4, 0.7);
+  box(g, w, 0.85, d, 0, 0, 0, steel); // 台身
+  box(g, w, 0.03, d * 1.02, 0, 0.85, 0, std("#E8E8E8", 0.3, 0.6)); // 台面
+  box(g, w, 0.15, 0.03, 0, 0.85, -d / 2 + 0.015, steel); // 后挡水板
+  // 排水槽（台面前沿深色条）
+  box(g, w * 0.94, 0.012, 0.1, 0, 0.885, d * 0.22, std("#5A5A5A", 0.6));
+  // 4 个热水龙头：立管 + 横出水嘴（朝前）
+  for (const fx of [-0.375, -0.125, 0.125, 0.375]) {
+    const x = fx * w;
+    cyl(g, 0.02, 0.02, 0.12, x, 0.88, -d / 2 + 0.08, brass, 10);
+    const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.2, 8), brass);
+    spout.rotation.x = Math.PI / 2;
+    spout.position.set(x, 0.98, -d / 2 + 0.16);
+    add(g, spout);
+    // 红色热水标识钮
+    sphere(g, 0.02, x, 1.01, -d / 2 + 0.08, std("#C02020", 0.5));
+  }
+  // 两端水壶（保温壶/暖水瓶）：圆柱壶身 + 壶盖 + 提手
+  for (const sx of [-1, 1]) {
+    const x = sx * (w / 2 - 0.16);
+    cyl(g, 0.085, 0.095, 0.16, x, 0.88, 0, std("#C03028", 0.5, 0.2), 16);
+    cyl(g, 0.05, 0.055, 0.03, x, 1.04, 0, std("#2A2A2A", 0.6), 12);
+  }
+}
+
+/** 篮球架：底座 + 立柱 + 篮板 + 篮筐 + 篮网。 */
+function buildBasketballHoop(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const steel = std(c || "#2A5A8A", 0.5, 0.6);
+  const boardM = std("#F5F5F0", 0.5);
+  box(g, 0.9, 0.15, 0.6, 0, 0, -d / 2 + 0.3, std("#3A3A3A", 0.6)); // 配重底座
+  cyl(g, 0.06, 0.07, 3.3, 0, 0.15, -d / 2 + 0.15, steel, 12); // 立柱
+  box(g, 0.08, 0.08, 0.5, 0, 3.4, -d / 2 + 0.32, steel); // 伸臂
+  box(g, 1.05, 0.75, 0.05, 0, 3.05, 0.1, boardM); // 篮板
+  box(g, 0.45, 0.4, 0.01, 0, 3.18, 0.13, std("#C02020", 0.6)); // 篮板内框线
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.015, 8, 24), std("#C06020", 0.4, 0.7));
+  rim.rotation.x = Math.PI / 2;
+  rim.position.set(0, 3.05, 0.32);
+  add(g, rim);
+  cone(g, 0.2, 0.3, 0, 2.75, 0.32, new THREE.MeshStandardMaterial({
+    color: "#F5F5F0", roughness: 0.9, transparent: true, opacity: 0.55,
+  }), 12); // 篮网
+}
+
+/** 足球门：两立柱 + 横梁 + 球网（半透明网面）。 */
+function buildGoalPost(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const post = std(c || "#F5F5F0", 0.5);
+  const net = new THREE.MeshStandardMaterial({
+    color: "#FFFFFF", roughness: 0.9, transparent: true, opacity: 0.3, side: THREE.DoubleSide,
+  });
+  for (const sx of [-1, 1]) {
+    cyl(g, 0.05, 0.05, h, sx * (w / 2 - 0.05), 0, 0, post, 10);
+  }
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, w - 0.1, 10), post);
+  bar.rotation.z = Math.PI / 2;
+  bar.position.set(0, h - 0.05, 0);
+  add(g, bar);
+  // 球网：后网 + 两侧 + 顶网
+  box(g, w - 0.1, h - 0.1, 0.02, 0, 0, -d / 2 + 0.05, net);
+  box(g, 0.02, h - 0.1, d - 0.1, -w / 2 + 0.05, 0, 0, net);
+  box(g, 0.02, h - 0.1, d - 0.1, w / 2 - 0.05, 0, 0, net);
+  box(g, w - 0.1, 0.02, d - 0.1, 0, h - 0.1, 0, net);
+}
+
+/** 田径跑道：红色塑胶道面 + 白色分道线（平铺地面垫）。 */
+function buildTrackLane(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const track = std(c || "#B0503A", 0.95);
+  const line = std("#F5F5F0", 0.9);
+  box(g, w, h, d, 0, 0, 0, track);
+  for (let i = 0; i <= 4; i++) {
+    const z = -d / 2 + (d * i) / 4;
+    box(g, w * 0.98, 0.005, 0.05, 0, h, z, line);
+  }
+  // 起跑线（横向白线）
+  box(g, 0.06, 0.005, d * 0.96, -w * 0.42, h, 0, line);
+}
+
+/** 停车挡：水泥车位挡块 + 黄色警示条。 */
+function buildParkingStop(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const concrete = std(c || "#9A9A9A", 0.95);
+  box(g, w, h * 0.85, d, 0, 0, 0, concrete);
+  box(g, w * 0.96, h * 0.15, d * 0.96, 0, h * 0.85, 0, std("#C8A020", 0.8));
+}
+
+/** 户外长椅：木条座面 + 靠背 + 铁架。 */
+function buildOutdoorBench(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c, 0.8);
+  const iron = std("#3A3A3A", 0.5, 0.6);
+  box(g, w, 0.06, d * 0.8, 0, 0.42, d * 0.05, wood); // 座面
+  box(g, w, 0.4, 0.05, 0, 0.48, -d / 2 + 0.04, wood); // 靠背
+  for (const sx of [-1, 1]) {
+    const x = sx * (w / 2 - 0.12);
+    box(g, 0.06, 0.42, 0.06, x, 0, d * 0.28, iron); // 前腿
+    box(g, 0.06, 0.88, 0.06, x, 0, -d / 2 + 0.06, iron); // 后腿兼靠背支柱
+    box(g, 0.06, 0.05, d * 0.8, x, 0.2, 0, iron); // 侧撑
+  }
+}
+
+/** 总裁大班台：大桌面 + 皮面嵌 + 两侧抽屉柜 + 前挡板。 */
+function buildCeoDesk(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c, 0.55);
+  const dark = std("#2A2018", 0.7);
+  box(g, w, 0.05, d, 0, h - 0.05, 0, wood); // 桌面
+  box(g, w * 0.64, 0.012, d * 0.6, 0, h - 0.038, 0, std("#1A3A2A", 0.9)); // 皮面嵌
+  box(g, w * 0.92, h * 0.78, 0.04, 0, 0.08, -d / 2 + 0.05, dark); // 前挡板
+  for (const sx of [-1, 1]) {
+    const x = sx * (w / 2 - 0.28);
+    box(g, 0.52, h - 0.1, d * 0.9, x, 0, 0, wood); // 抽屉柜
+    for (let i = 0; i < 3; i++) {
+      box(g, 0.46, 0.16, 0.02, x, 0.12 + i * 0.2, d * 0.45 + 0.005, std("#6A4A2A", 0.65));
+      box(g, 0.1, 0.02, 0.02, x, 0.2 + i * 0.2, d * 0.45 + 0.015, std("#C8A24A", 0.4, 0.8));
+    }
+  }
+}
+
+/** 会议长桌：长桌 + 板式桌腿 + 线盒 + 两支话筒。 */
+function buildMeetingTable(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c, 0.55);
+  const dark = std("#3A3A3A", 0.5, 0.5);
+  box(g, w, 0.05, d, 0, h - 0.05, 0, wood); // 桌面
+  for (const sx of [-1, 1]) {
+    box(g, 0.08, h - 0.05, d * 0.85, sx * (w / 2 - 0.25), 0, 0, dark);
+  }
+  box(g, 0.6, 0.05, 0.3, 0, h - 0.025, 0, dark); // 线盒
+  for (const sx of [-1, 1]) {
+    const x = sx * w * 0.22;
+    cyl(g, 0.012, 0.012, 0.14, x, h, 0, dark, 8); // 话筒杆
+    sphere(g, 0.03, x, h + 0.16, 0, dark); // 话筒头
+  }
+}
+
+/** 前台接待台：高前挡 + 台面 + 背面工作台 + 金色标识板。 */
+function buildReceptionDesk(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const front = std(c, 0.6);
+  const stone = std("#E8E4DC", 0.4);
+  box(g, w, 1.1, 0.06, 0, 0, d / 2 - 0.03, front); // 前挡
+  box(g, w, 0.05, d, 0, 1.1, 0, stone); // 台面
+  box(g, w * 0.86, 0.71, 0.5, 0, 0, -d / 2 + 0.28, std("#5A4A3A", 0.7)); // 背面工作台
+  // 金色标识板（前挡中央）
+  box(g, w * 0.4, 0.25, 0.02, 0, 0.55, d / 2 + 0.01, std("#C8A24A", 0.35, 0.85));
+  box(g, w * 0.3, 0.04, 0.022, 0, 0.55, d / 2 + 0.012, std("#2A2A2A", 0.5));
+}
+
+/**
+ * 电梯轿厢：轿厢本身即围合（不锈钢门 + 后墙镜 + 扶手 + 按钮盘 +
+ * 顶灯）。放在四墙隐藏的房间里，轿厢就是房间的墙。
+ */
+function buildElevatorCar(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const steel = std(c || "#B8B8B8", 0.35, 0.8);
+  const darkSteel = std("#8A8A8A", 0.4, 0.8);
+  const mirror = new THREE.MeshStandardMaterial({
+    color: "#DCE4E8", roughness: 0.06, metalness: 1,
+  });
+  box(g, w, 0.04, d, 0, 0, 0, darkSteel); // 轿底
+  box(g, w, 0.04, d, 0, h - 0.04, 0, steel); // 轿顶
+  box(g, w, h, 0.05, 0, 0, -d / 2 + 0.025, steel); // 后墙
+  box(g, 0.05, h, d, -w / 2 + 0.025, 0, 0, steel); // 左墙
+  box(g, 0.05, h, d, w / 2 - 0.025, 0, 0, steel); // 右墙
+  // 前门：两扇闭合不锈钢门 + 中缝
+  box(g, w / 2 - 0.03, h - 0.08, 0.04, -w / 4, 0.04, d / 2 - 0.02, steel);
+  box(g, w / 2 - 0.03, h - 0.08, 0.04, w / 4, 0.04, d / 2 - 0.02, steel);
+  box(g, 0.02, h - 0.08, 0.045, 0, 0.04, d / 2 - 0.02, darkSteel);
+  // 后墙镜 + 扶手
+  box(g, w * 0.6, h * 0.7, 0.02, 0, h * 0.22, -d / 2 + 0.06, mirror);
+  const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, w * 0.86, 10), darkSteel);
+  rail.rotation.z = Math.PI / 2;
+  rail.position.set(0, 0.9, -d / 2 + 0.12);
+  add(g, rail);
+  // 右墙按钮盘（楼层钮 ×4 + 开关门）
+  box(g, 0.03, 0.4, 0.15, w / 2 - 0.06, 1.0, d * 0.28, darkSteel);
+  for (let i = 0; i < 4; i++) {
+    const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.015, 10), std(i === 0 ? "#C02020" : "#E8E8E8", 0.4));
+    btn.rotation.z = Math.PI / 2;
+    btn.position.set(w / 2 - 0.08, 1.08 + i * 0.08, d * 0.28);
+    add(g, btn);
+  }
+  // 顶灯（微发光）
+  box(g, w * 0.4, 0.02, d * 0.22, 0, h - 0.06, 0, glow("#FFFFFF", "#FFF2CC", 0.8));
+}
+
+/** 茶水间柜台：柜体 + 水槽 + 龙头 + 电水壶 + 微波炉 + 杯子。 */
+function buildPantryCounter(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const body = std(c, 0.7);
+  const steel = std("#C8C8C8", 0.35, 0.7);
+  box(g, w, 0.86, d, 0, 0, 0, body); // 柜体
+  box(g, w, 0.04, d * 1.03, 0, 0.86, 0, std("#E8E4DC", 0.4)); // 台面
+  // 水槽（左）+ 龙头
+  box(g, 0.6, 0.02, 0.4, -w * 0.25, 0.9, 0, std("#5A5A5A", 0.5, 0.5));
+  cyl(g, 0.015, 0.015, 0.18, -w * 0.25, 0.9, -d * 0.28, steel, 8);
+  const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.18, 8), steel);
+  spout.rotation.x = Math.PI / 2;
+  spout.position.set(-w * 0.25, 1.06, -d * 0.18);
+  add(g, spout);
+  // 电水壶（中）
+  cyl(g, 0.08, 0.09, 0.2, 0, 0.9, 0, std("#2A2A2A", 0.5, 0.3), 14);
+  cyl(g, 0.045, 0.05, 0.03, 0, 1.1, 0, steel, 12);
+  // 微波炉（右）
+  box(g, 0.5, 0.3, 0.35, w * 0.28, 0.9, 0, std("#E8E8E8", 0.4, 0.3));
+  box(g, 0.34, 0.2, 0.02, w * 0.28, 0.95, d * 0.18, std("#2A2A2A", 0.3));
+  // 杯子 ×3
+  for (let i = 0; i < 3; i++) {
+    cyl(g, 0.035, 0.03, 0.08, -w * 0.05 + i * 0.14, 0.9, d * 0.28, std(["#C03028", "#2A4A6A", "#3A5A3A"][i], 0.6), 10);
+  }
+}
+
+/** 白板：白板面 + 铝框 + 笔槽 + 两支白板笔（挂墙，见 allowlist）。 */
+function buildWhiteboard(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const board = std(c || "#F5F5F0", 0.5);
+  const frame = std("#9A9A9A", 0.4, 0.7);
+  box(g, w, h, 0.03, 0, 0, 0, board);
+  box(g, w, 0.04, d, 0, -0.02, 0, frame);
+  box(g, w, 0.04, d, 0, h - 0.02, 0, frame);
+  box(g, 0.04, h, d, -w / 2 + 0.02, 0, 0, frame);
+  box(g, 0.04, h, d, w / 2 - 0.02, 0, 0, frame);
+  box(g, w * 0.6, 0.03, 0.07, 0, -0.03, d / 2 + 0.01, frame); // 笔槽
+  for (const [mx, mc] of [[-0.15, "#C02020"], [-0.05, "#2A2A2A"]] as Array<[number, string]>) {
+    const marker = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.12, 8), std(mc, 0.6));
+    marker.rotation.z = Math.PI / 2;
+    marker.position.set(mx * w, -0.01, d / 2 + 0.02);
+    add(g, marker);
+  }
+  // 板书字迹（几道灰线示意）
+  box(g, w * 0.5, 0.015, 0.006, -w * 0.1, h * 0.65, d / 2 + 0.004, std("#8A8A8A", 0.8));
+  box(g, w * 0.35, 0.015, 0.006, -w * 0.15, h * 0.45, d / 2 + 0.004, std("#8A8A8A", 0.8));
+}
+
+/** 案情板：软木板 + 照片卡 + 红线串联（挂墙，见 allowlist）。 */
+function buildEvidenceBoard(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const cork = std(c || "#B08A5A", 0.95);
+  const frame = std("#5A3A22", 0.7);
+  box(g, w, h, 0.03, 0, 0, 0, cork);
+  box(g, w, 0.04, d, 0, -0.02, 0, frame);
+  box(g, w, 0.04, d, 0, h - 0.02, 0, frame);
+  box(g, 0.04, h, d, -w / 2 + 0.02, 0, 0, frame);
+  box(g, 0.04, h, d, w / 2 - 0.02, 0, 0, frame);
+  // 6 张照片卡（白底 + 深色人像剪影块）
+  const spots: Array<[number, number]> = [
+    [-0.32, 0.68], [0, 0.72], [0.32, 0.66],
+    [-0.3, 0.3], [0.05, 0.26], [0.33, 0.32],
+  ];
+  const red = std("#C02020", 0.6);
+  for (const [fx, fy] of spots) {
+    const x = fx * w, y = fy * h;
+    box(g, 0.2, 0.26, 0.012, x, y, d / 2 + 0.004, std("#F5F5F0", 0.8));
+    box(g, 0.12, 0.14, 0.004, x, y + 0.04, d / 2 + 0.012, std("#3A3A3A", 0.8));
+    sphere(g, 0.012, x, y + 0.14, d / 2 + 0.014, red); // 图钉
+  }
+  // 红线：两段对角连线（薄盒旋转）
+  const line1 = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.008, 0.008), red);
+  line1.position.set(-w * 0.08, h * 0.55, d / 2 + 0.014);
+  line1.rotation.z = 0.5;
+  add(g, line1);
+  const line2 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.008, 0.008), red);
+  line2.position.set(w * 0.12, h * 0.42, d / 2 + 0.014);
+  line2.rotation.z = -0.35;
+  add(g, line2);
+}
+
+/** 酒吧吧台：高前挡 + 台面 + 背架酒瓶（两层）+ 脚踏杆。 */
+function buildBarCounter(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const front = std(c, 0.55);
+  box(g, w, 1.05, 0.06, 0, 0, d / 2 - 0.03, front); // 前挡
+  box(g, w, 0.05, d, 0, 1.05, 0, std("#2A2018", 0.5)); // 台面
+  // 背架：两根立柱（立于台面）+ 一层层板 + 两层酒瓶
+  for (const sx of [-1, 1]) {
+    box(g, 0.04, 0.3, 0.04, sx * (w / 2 - 0.06), 1.1, -d / 2 + 0.12, std("#3A2A1A", 0.7));
+  }
+  box(g, w * 0.9, 0.03, 0.22, 0, 1.28, -d / 2 + 0.12, std("#3A2A1A", 0.7)); // 层板
+  const bottleColors = ["#2A5A2A", "#5A3A1A", "#3A3A2A", "#7A2A2A"];
+  for (let i = 0; i < 4; i++) {
+    const x = -w * 0.36 + i * w * 0.24;
+    cyl(g, 0.04, 0.045, 0.22, x, 1.1, -d / 2 + 0.12, std(bottleColors[i], 0.3, 0.2), 10); // 台面一层
+    cyl(g, 0.035, 0.04, 0.18, x + w * 0.06, 1.31, -d / 2 + 0.12, std(bottleColors[(i + 2) % 4], 0.3, 0.2), 10); // 层板二层
+  }
+  // 台面酒杯 ×3
+  for (let i = 0; i < 3; i++) {
+    cyl(g, 0.035, 0.03, 0.1, -w * 0.25 + i * w * 0.25, 1.1, d * 0.15, std("#D8C890", 0.3), 10);
+  }
+  // 脚踏杆（前沿）
+  const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, w * 0.94, 10), std("#C8A24A", 0.4, 0.8));
+  rail.rotation.z = Math.PI / 2;
+  rail.position.set(0, 0.15, d / 2 + 0.05);
+  add(g, rail);
+}
+
+/** 法官席：高台 + 法官桌 + 前挡板 + 法槌。 */
+function buildJudgeBench(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c, 0.6);
+  const dark = std("#2A2018", 0.7);
+  box(g, w, 0.25, d, 0, 0, 0, wood); // 高台
+  box(g, w * 0.94, 0.75, d * 0.78, 0, 0.25, -d * 0.06, wood); // 桌身
+  box(g, w, 0.05, d * 0.84, 0, 1.0, -d * 0.06, dark); // 桌面
+  box(g, w, 1.0, 0.05, 0, 0.25, d / 2 - 0.025, dark); // 前挡板
+  box(g, w * 0.3, 0.12, 0.02, 0, 0.7, d / 2 + 0.005, std("#C8A24A", 0.35, 0.85)); // 铭牌
+  // 法槌 + 槌座（桌面）
+  cyl(g, 0.04, 0.04, 0.12, -w * 0.3, 1.05, 0, dark, 10);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.25, 8), dark);
+  handle.rotation.z = Math.PI / 2;
+  handle.position.set(-w * 0.3 + 0.16, 1.07, 0);
+  add(g, handle);
+  cyl(g, 0.06, 0.07, 0.02, -w * 0.15, 1.05, 0, wood, 12); // 槌座
+}
+
+/** 证人席：小高台 + 围栏 + 座位 + 话筒。 */
+function buildWitnessStand(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c, 0.6);
+  box(g, w, 0.2, d, 0, 0, 0, wood); // 高台
+  box(g, w, 0.5, 0.05, 0, 0.7, d / 2 - 0.025, wood); // 前围栏
+  box(g, 0.05, 0.5, d, -w / 2 + 0.025, 0.7, 0, wood); // 侧栏
+  box(g, 0.05, 0.5, d, w / 2 - 0.025, 0.7, 0, wood);
+  box(g, w * 0.6, 0.06, d * 0.5, 0, 0.55, -d * 0.15, std("#5A3A22", 0.7)); // 座位
+  box(g, w * 0.6, 0.4, 0.05, 0, 0.61, -d / 2 + 0.05, std("#5A3A22", 0.7)); // 靠背
+  cyl(g, 0.012, 0.012, 0.14, -w * 0.25, 1.2, d * 0.3, std("#2A2A2A", 0.5), 8); // 话筒
+  sphere(g, 0.025, -w * 0.25, 1.28, d * 0.3, std("#2A2A2A", 0.5));
+}
+
+/** 跑步机：跑带底座 + 立柱 + 控制台 + 扶手。 */
+function buildGymTreadmill(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const frame = std(c || "#2A2A2A", 0.5, 0.4);
+  const belt = std("#1A1A1A", 0.9);
+  box(g, w * 0.88, 0.12, d * 0.88, 0, 0, 0, frame); // 底座
+  box(g, w * 0.75, 0.02, d * 0.78, 0, 0.12, 0, belt); // 跑带
+  for (const sx of [-1, 1]) {
+    cyl(g, 0.03, 0.03, 1.15, sx * w * 0.38, 0.1, -d / 2 + 0.12, frame, 10); // 立柱
+    box(g, 0.04, 0.04, d * 0.62, sx * w * 0.38, 0.88, d * 0.05, frame); // 侧扶手
+  }
+  const console = box(g, w * 0.75, 0.32, 0.08, 0, 1.22, -d / 2 + 0.12, std("#3A3A3A", 0.4, 0.5));
+  console.rotation.x = -0.28;
+  box(g, w * 0.5, 0.14, 0.02, 0, 1.26, -d / 2 + 0.16, glow("#2A4A6A", "#3A6A9A", 0.7)); // 显示屏
+}
+
+/** 卧推凳：卧推凳 + 杠铃架 + 杠铃 + 杠铃片。 */
+function buildGymBench(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const frame = std(c || "#3A3A3A", 0.5, 0.6);
+  const pad = std("#2A2A2A", 0.9);
+  box(g, w * 0.92, 0.08, 0.4, 0, 0.37, 0, pad); // 凳面
+  for (const sx of [-1, 1]) {
+    box(g, 0.06, 0.37, 0.06, sx * w * 0.42, 0, 0, frame); // 凳腿
+  }
+  // 杠铃架立柱（床头端 x=-0.5）
+  for (const sz of [-1, 1]) {
+    box(g, 0.05, 0.55, 0.05, -w * 0.42, 0, sz * d * 0.38, frame);
+  }
+  // 杠铃杆（沿 z）+ 杠铃片
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, d * 0.92, 10), std("#C8C8C8", 0.35, 0.8));
+  bar.rotation.x = Math.PI / 2;
+  bar.position.set(-w * 0.42, 0.55, 0);
+  add(g, bar);
+  for (const sz of [-1, 1]) {
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 20), std("#1A1A1A", 0.6, 0.4));
+    plate.rotation.x = Math.PI / 2;
+    plate.position.set(-w * 0.42, 0.55, sz * d * 0.42);
+    add(g, plate);
+  }
+}
+
+/** 哑铃架：两层架 + 6 对哑铃。 */
+function buildDumbbellRack(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const frame = std(c || "#3A3A3A", 0.5, 0.6);
+  for (const sx of [-1, 1]) {
+    box(g, 0.05, h, d, sx * (w / 2 - 0.025), 0, 0, frame); // 侧框
+  }
+  const tiers: Array<[number, number]> = [[0.28, 0], [0.62, 0]];
+  for (const [y] of tiers) {
+    box(g, w, 0.04, d * 0.9, 0, y, 0, frame);
+  }
+  // 哑铃：横杆（沿 z）+ 两端球头
+  const iron = std("#1A1A1A", 0.55, 0.5);
+  for (let t = 0; t < 2; t++) {
+    const y = tiers[t][0] + 0.06;
+    for (let i = 0; i < 3; i++) {
+      const x = -w * 0.3 + i * w * 0.3;
+      const b = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.3, 8), iron);
+      b.rotation.x = Math.PI / 2;
+      b.position.set(x, y, 0);
+      add(g, b);
+      sphere(g, 0.06, x, y, -0.15, iron);
+      sphere(g, 0.06, x, y, 0.15, iron);
+    }
+  }
+}
+
+/** 超市货架：双面货架 + 四层 + 商品盒。 */
+function buildSupermarketShelf(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const frame = std(c || "#5A6A7A", 0.5, 0.4);
+  const t = 0.04;
+  box(g, t, h, d, -w / 2 + t / 2, 0, 0, frame); // 侧板
+  box(g, t, h, d, w / 2 - t / 2, 0, 0, frame);
+  box(g, w, 0.1, d, 0, 0, 0, frame); // 底座
+  box(g, w, t, d, 0, h - t, 0, frame); // 顶板
+  const shelfY = [0.35, 0.7, 1.05, 1.4];
+  const goods = ["#C03028", "#2A6A2A", "#C8A020", "#2A4A8A", "#E8E8E8", "#8B2010"];
+  for (const y of shelfY) {
+    box(g, w - 2 * t, 0.03, d - 0.04, 0, y, 0, frame);
+    for (const sz of [-1, 1]) {
+      let x = -w / 2 + 0.2;
+      let i = 0;
+      while (x < w / 2 - 0.35) {
+        const gw = 0.24 + (i % 2) * 0.06;
+        const gh = 0.16 + (i % 3) * 0.05;
+        box(g, gw, gh, 0.16, x + gw / 2, y + 0.03, sz * (d / 2 - 0.12), std(goods[i % goods.length], 0.7));
+        x += gw + 0.04;
+        i++;
+      }
+    }
+    // 价签条
+    box(g, w - 2 * t, 0.03, 0.012, 0, y + 0.015, d / 2 - 0.01, std("#F5D020", 0.7));
+    box(g, w - 2 * t, 0.03, 0.012, 0, y + 0.015, -d / 2 + 0.01, std("#F5D020", 0.7));
+  }
+}
+
+/** 收银台：传送带 + 扫描区 + 打包区 + 收银屏。 */
+function buildCheckoutCounter(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const body = std(c || "#8A8A8A", 0.5, 0.4);
+  const belt = std("#1A1A1A", 0.9);
+  box(g, w * 0.6, 0.85, d * 0.66, -w * 0.18, 0, -d * 0.12, body); // 主柜（传送带段）
+  box(g, w * 0.6, 0.03, d * 0.6, -w * 0.18, 0.85, -d * 0.12, belt); // 传送带
+  box(g, w * 0.32, 0.85, d * 0.66, w * 0.32, 0, -d * 0.12, std("#5A5A5A", 0.5, 0.4)); // 打包区
+  // 分隔杆
+  cyl(g, 0.02, 0.02, 0.3, w * 0.1, 0.88, -d * 0.12, std("#C8A24A", 0.4, 0.8), 8);
+  // 收银屏（立柱 + 屏）
+  cyl(g, 0.025, 0.025, 0.25, -w * 0.42, 0.88, -d * 0.3, body, 8);
+  box(g, 0.34, 0.26, 0.02, -w * 0.42, 1.12, -d * 0.3, glow("#2A4A6A", "#3A6A9A", 0.6));
+  // 商品 ×2 在传送带上
+  box(g, 0.18, 0.14, 0.12, -w * 0.05, 0.88, -d * 0.12, std("#C03028", 0.7));
+  box(g, 0.14, 0.2, 0.12, w * 0.08, 0.88, -d * 0.05, std("#2A6A2A", 0.7));
+}
+
+/** 购物车：筐体 + 把手 + 四轮。 */
+function buildShoppingCart(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const frame = std(c || "#8A8A8A", 0.4, 0.7);
+  box(g, w * 0.84, 0.02, d * 0.78, 0, 0.55, 0, frame); // 筐底
+  box(g, 0.02, 0.35, d * 0.78, -w * 0.42, 0.55, 0, frame); // 筐侧
+  box(g, 0.02, 0.35, d * 0.78, w * 0.42, 0.55, 0, frame);
+  box(g, w * 0.84, 0.35, 0.02, 0, 0.55, -d * 0.39, frame); // 筐端
+  box(g, w * 0.84, 0.35, 0.02, 0, 0.55, d * 0.39, frame);
+  // 把手
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, w * 0.8, 8), frame);
+  handle.rotation.z = Math.PI / 2;
+  handle.position.set(0, 0.95, d / 2 + 0.02);
+  add(g, handle);
+  // 腿 + 轮
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as Array<[number, number]>) {
+    box(g, 0.03, 0.55, 0.03, sx * w * 0.35, 0, sz * d * 0.32, frame);
+    sphere(g, 0.04, sx * w * 0.35, 0.04, sz * d * 0.32, std("#2A2A2A", 0.6));
+  }
+  // 筐内商品 ×2
+  box(g, 0.2, 0.16, 0.16, -w * 0.12, 0.57, 0, std("#C03028", 0.7));
+  box(g, 0.16, 0.2, 0.14, w * 0.15, 0.57, -d * 0.08, std("#2A6A2A", 0.7));
+}
+
+/** KTV 大屏：大屏 + 发光屏面 + 边框（挂墙，见 allowlist）。 */
+function buildKtvScreen(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const frame = std("#1A1A1A", 0.4);
+  box(g, w, h, 0.04, 0, 0, 0, frame);
+  box(g, w * 0.96, h * 0.94, 0.012, 0, h * 0.03, d / 2 + 0.004, glow("#1A2A4A", "#2A4A8A", 0.9));
+  // 歌词行（亮色横条示意）
+  box(g, w * 0.5, 0.04, 0.006, -w * 0.1, h * 0.55, d / 2 + 0.012, std("#F5F5F0", 0.8));
+  box(g, w * 0.35, 0.04, 0.006, -w * 0.18, h * 0.42, d / 2 + 0.012, std("#F5D020", 0.8));
+  box(g, w * 0.6, 0.03, 0.006, -w * 0.05, h * 0.3, d / 2 + 0.012, std("#8AB0E8", 0.8));
+}
+
+/** 婚礼拱门：双柱 + 顶梁 + 花球 + 飘带。 */
+function buildWeddingArch(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const post = std(c || "#F5F0E8", 0.7);
+  const flower = std("#E8A0B0", 0.9);
+  const leaf = std("#3A5A3A", 0.9);
+  for (const sx of [-1, 1]) {
+    box(g, 0.08, h * 0.96, 0.08, sx * (w / 2 - 0.06), 0, 0, post);
+  }
+  box(g, w, 0.12, 0.12, 0, h * 0.96, 0, post); // 顶梁
+  // 花球：沿顶梁 ×5 + 柱顶 ×2
+  for (let i = 0; i < 5; i++) {
+    const x = -w * 0.36 + i * w * 0.18;
+    sphere(g, 0.13, x, h * 0.96 + 0.06, 0, i % 2 === 0 ? flower : std("#F5F5F0", 0.9));
+    sphere(g, 0.08, x, h * 0.96 - 0.08, 0.08, leaf);
+  }
+  sphere(g, 0.14, -w / 2 + 0.06, h * 0.96 + 0.08, 0, flower);
+  sphere(g, 0.14, w / 2 - 0.06, h * 0.96 + 0.08, 0, flower);
+  // 飘带 ×3（顶梁垂下）
+  for (const fx of [-0.25, 0, 0.25]) {
+    box(g, 0.07, 0.5, 0.01, fx * w, h * 0.9 - 0.25, 0.08, std("#F5E8D8", 0.9));
+  }
+}
+
+/** 婚礼舞台：低台 + 背景纱幔 + 顶梁。 */
+function buildWeddingStage(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const platform = std(c || "#F5F0E8", 0.7);
+  box(g, w, 0.4, d, 0, 0, 0, platform); // 低台
+  box(g, w * 0.98, 0.02, d * 0.98, 0, 0.4, 0, std("#FFFFFF", 0.9)); // 台面
+  // 背景架：两立柱 + 顶梁 + 纱幔
+  for (const sx of [-1, 1]) {
+    box(g, 0.08, h - 0.4, 0.08, sx * (w / 2 - 0.3), 0.4, -d / 2 + 0.08, std("#C8A24A", 0.4, 0.8));
+  }
+  box(g, w - 0.6, 0.15, 0.1, 0, h - 0.15, -d / 2 + 0.08, std("#C8A24A", 0.4, 0.8));
+  box(g, w - 0.6, h - 0.7, 0.02, 0, 0.5, -d / 2 + 0.06, new THREE.MeshStandardMaterial({
+    color: "#F5E8E8", roughness: 0.9, transparent: true, opacity: 0.75, side: THREE.DoubleSide,
+  }));
+  // 台上花球 ×2
+  sphere(g, 0.15, -w * 0.3, 0.55, d * 0.2, std("#E8A0B0", 0.9));
+  sphere(g, 0.15, w * 0.3, 0.55, d * 0.2, std("#F5F5F0", 0.9));
+}
+
+/** 灶台面板：黑色玻璃面板 + 四个炉头圈（放橱柜上，elevationY=柜高）。 */
+function buildCooktop(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const glass = std(c || "#1A1A1A", 0.25, 0.3);
+  box(g, w, h * 0.8, d, 0, 0, 0, glass);
+  for (const [sx, sz, r] of [[-1, -1, 0.09], [1, -1, 0.09], [-1, 1, 0.07], [1, 1, 0.07]] as Array<[number, number, number]>) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.008, 8, 24), std("#3A3A3A", 0.4, 0.7));
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(sx * w * 0.24, h * 0.8 + 0.004, sz * d * 0.24);
+    add(g, ring);
+  }
+}
+
 // ─── 登记 ──────────────────────────────────────────────────────────────────
 
 const PROCEDURAL_BUILDERS: Record<string, Builder> = {
@@ -906,6 +1519,37 @@ const PROCEDURAL_BUILDERS: Record<string, Builder> = {
   "proc-ondol-table": buildOndolTable,
   "proc-ondol-floor": buildOndolFloor,
   "proc-hanok-stove": buildHanokStove,
+  // ── 高频日常场景（学校/家庭/公司/联想补充）──
+  "proc-bunk-bed": buildBunkBed,
+  "proc-library-shelf": buildLibraryShelf,
+  "proc-cafeteria-table": buildCafeteriaTable,
+  "proc-serving-counter": buildServingCounter,
+  "proc-water-tap-row": buildWaterTapRow,
+  "proc-basketball-hoop": buildBasketballHoop,
+  "proc-goal-post": buildGoalPost,
+  "proc-track-lane": buildTrackLane,
+  "proc-parking-stop": buildParkingStop,
+  "proc-outdoor-bench": buildOutdoorBench,
+  "proc-ceo-desk": buildCeoDesk,
+  "proc-meeting-table": buildMeetingTable,
+  "proc-reception-desk": buildReceptionDesk,
+  "proc-elevator-car": buildElevatorCar,
+  "proc-pantry-counter": buildPantryCounter,
+  "proc-whiteboard": buildWhiteboard,
+  "proc-evidence-board": buildEvidenceBoard,
+  "proc-bar-counter": buildBarCounter,
+  "proc-judge-bench": buildJudgeBench,
+  "proc-witness-stand": buildWitnessStand,
+  "proc-gym-treadmill": buildGymTreadmill,
+  "proc-gym-bench": buildGymBench,
+  "proc-dumbbell-rack": buildDumbbellRack,
+  "proc-supermarket-shelf": buildSupermarketShelf,
+  "proc-checkout-counter": buildCheckoutCounter,
+  "proc-shopping-cart": buildShoppingCart,
+  "proc-ktv-screen": buildKtvScreen,
+  "proc-wedding-arch": buildWeddingArch,
+  "proc-wedding-stage": buildWeddingStage,
+  "proc-cooktop": buildCooktop,
 };
 
 /** 全部程序化家具 id（目录/模板/渲染分流/harness 共用）。 */
