@@ -46,7 +46,7 @@ import {
   type Shot, type Actor, type ActorAction, type RenderStyle, type SceneEnvelope,
 } from "@/lib/cinematic";
 import {
-  DIRECTOR_STYLES, getDirectorStyle, directorStyleDefaults,
+  DIRECTOR_STYLES, DIRECTOR_STYLE_GENRES, getDirectorStyle, directorStyleDefaults,
 } from "@/lib/directorStyles";
 import {
   ACTION_REGISTRY, actionDef, actorStateAt, makeSegment, makeWaypoint,
@@ -2202,9 +2202,18 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
               title={en ? "Pick a director style as the default for new shots — existing shots and actors are untouched" : "选一位导演的拍法当新镜的默认值——已有分镜和演员不动"}
             >
               <option value="">{en ? "None — plain defaults" : "无——plain 默认"}</option>
-              {DIRECTOR_STYLES.map((s) => (
-                <option key={s.id} value={s.id}>{en ? s.labelEn : s.labelZh}</option>
-              ))}
+              {/* 按类型分组（DIRECTOR_STYLE_GENRES 的顺序）；只有已有预设的分组才显示 */}
+              {DIRECTOR_STYLE_GENRES.map((g) => {
+                const inGroup = DIRECTOR_STYLES.filter((s) => s.genreZh === g.zh);
+                if (!inGroup.length) return null;
+                return (
+                  <optgroup key={g.zh} label={en ? g.en : g.zh}>
+                    {inGroup.map((s) => (
+                      <option key={s.id} value={s.id}>{en ? s.labelEn : s.labelZh}</option>
+                    ))}
+                  </optgroup>
+                );
+              })}
             </select>
             {directorStyle ? (
               <>

@@ -2,7 +2,7 @@
  * check-director-styles — 导演风格预设逻辑校验（node 直接跑，不用打包）。
  *
  * 校验（全部用真实注册表交叉引用，不用假数据）：
- *  1. 每个预设都有全部必填字段（label/description/camera/lighting/
+ *  1. 每个预设都有全部必填字段（label/genre/description/camera/lighting/
  *     shotOrder/suggestedSets/suggestedCostumes/suggestedActions/
  *     beats/playbook/gaps），且 id 唯一、非空。
  *  2. 每个预设引用的机位/灯光/片场/服装/动作 id 都真实存在
@@ -17,6 +17,8 @@
  *     只 set { directorStyleId, sceneLightingId }，见组件源码注释）。
  *  6. shotOrder 非空、全部是真实机位 id；suggestedSets/Costumes/Actions
  *     非空（每套预设至少给一个建议）。
+ *  7. 类型分组：每个预设的 genre 都在 DIRECTOR_STYLE_GENRES 表里，
+ *     且 genreZh→genreEn 与表一致；分组表无重复。
  *
  * 用法（在仓库根目录）：
  *   npx tsc scripts/check-director-styles.ts --outDir /tmp/ds-check \
@@ -27,7 +29,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { DIRECTOR_STYLES, getDirectorStyle, directorStyleDefaults, isDirectorStyleId, PLAIN_DEFAULTS } from "../src/lib/directorStyles";
+import { DIRECTOR_STYLES, DIRECTOR_STYLE_GENRES, getDirectorStyle, directorStyleDefaults, isDirectorStyleId, PLAIN_DEFAULTS } from "../src/lib/directorStyles";
 import { CINE_PRESETS } from "../src/lib/cinematic";
 import { LIGHTING_PRESETS } from "../src/lib/lighting";
 import { COSTUMES } from "../src/lib/characters";
@@ -71,6 +73,7 @@ for (const s of DIRECTOR_STYLES) {
   check(!seen.has(s.id), `${s.id}: id unique`);
   seen.add(s.id);
   check(!!s.labelZh && !!s.labelEn, `${s.id}: label zh+en`);
+  check(!!s.genreZh && !!s.genreEn, `${s.id}: genre zh+en`);
   check(!!s.descriptionZh && !!s.descriptionEn, `${s.id}: description zh+en`);
   check(typeof s.cameraPresetId === "string" && s.cameraPresetId.length > 0, `${s.id}: cameraPresetId`);
   check(typeof s.lightingId === "string" && s.lightingId.length > 0, `${s.id}: lightingId`);
@@ -138,6 +141,21 @@ for (const s of DIRECTOR_STYLES) {
   d.shotOrder.push("MUTATION-PROBE");
   check(!d2.shotOrder.includes("MUTATION-PROBE"), `${s.id}: shotOrder is a fresh copy per call (no shared mutation)`);
 }
+
+// 6. 类型分组：每个预设的 genre 都在分组表里，且中英文对应一致；
+//    分组表本身无重复（选择器按它分组，只显示已有预设的分组）。
+console.log("\n[6] genre grouping (picker optgroups)");
+const GENRE_BY_ZH = new Map(DIRECTOR_STYLE_GENRES.map((g) => [g.zh, g.en]));
+check(
+  new Set(DIRECTOR_STYLE_GENRES.map((g) => g.zh)).size === DIRECTOR_STYLE_GENRES.length,
+  `genre list has no duplicate zh (${DIRECTOR_STYLE_GENRES.length} genres)`,
+);
+for (const s of DIRECTOR_STYLES) {
+  check(GENRE_BY_ZH.has(s.genreZh), `${s.id}: genre ${s.genreZh} is in DIRECTOR_STYLE_GENRES`);
+  check(GENRE_BY_ZH.get(s.genreZh) === s.genreEn, `${s.id}: genreEn ${s.genreEn} matches the genre list`, `list says ${GENRE_BY_ZH.get(s.genreZh)}`);
+}
+const usedGenres = new Set(DIRECTOR_STYLES.map((s) => s.genreZh));
+console.log(`  genres used: ${[...usedGenres].join(" / ")} (${usedGenres.size} of ${DIRECTOR_STYLE_GENRES.length} listed)`);
 
 console.log(`\n${pass} passed, ${fail} failed.`);
 process.exit(fail ? 1 : 0);
