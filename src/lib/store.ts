@@ -1138,6 +1138,22 @@ export const DEFAULT_PROJECT_VERSION = 1;
 // 取一份深拷贝即可（整轮会话只用这一份引用）。
 const __defaultProject = makeDefaultProject();
 
+// ─── wholeHouseBreakdown memo ──────────────────────────────────
+// RightPanel subscribes to wholeHouseBreakdown() via useDesignerStore.
+// Zustand 5's useStore wraps React.useSyncExternalStore with an UNcached
+// getSnapshot (() => selector(getState())). If the selector returns a NEW
+// object on every call, React sees the snapshot change on every render
+// and forces another render → "Maximum update depth exceeded" (React
+// error #185). wholeHouseBreakdown() used to build a fresh {…} + rooms[]
+// on every call, which crashed the homepage the moment RightPanel
+// mounted (3D / 2D / 全屋3D views). Cache the result keyed on the two
+// inputs (floorPlans + laborRate references); the computation is pure
+// given those inputs (calcRoomCost + getRoomArea are pure), and the
+// store always replaces floorPlans immutably, so a reference change is
+// a reliable invalidation signal.
+type WholeHouseBreakdown = ReturnType<DesignerStore["wholeHouseBreakdown"]>;
+let _wholeHouseCache: { floorPlans: FloorPlan[]; laborRate: number; result: WholeHouseBreakdown } | null = null;
+
 export const useDesignerStore = create<DesignerStore>()(
   temporal(
   persist(
@@ -3860,6 +3876,12 @@ export const useDesignerStore = create<DesignerStore>()(
       wholeHouseBreakdown: () => {
         const s = get();
         const laborRate = s.laborRate ?? 0.4;
+        // Memoized: same inputs → same object reference (see _wholeHouseCache
+        // above). Without this, RightPanel's useDesignerStore selector gets a
+        // new object on every getSnapshot call and React #185-loops.
+        if (_wholeHouseCache && _wholeHouseCache.floorPlans === s.floorPlans && _wholeHouseCache.laborRate === laborRate) {
+          return _wholeHouseCache.result;
+        }
         let furniture = 0;
         let materials = 0;
         let wiring = 0;
@@ -3878,7 +3900,9 @@ export const useDesignerStore = create<DesignerStore>()(
         });
         const labor = Math.round(materials * laborRate);
         const total = furniture + materials + wiring + labor;
-        return { furniture, materials, wiring, labor, total, rooms };
+        const result = { furniture, materials, wiring, labor, total, rooms };
+        _wholeHouseCache = { floorPlans: s.floorPlans, laborRate, result };
+        return result;
       },
 
       totalCostAll: () => {
