@@ -7433,9 +7433,12 @@ export default function HouseCanvas() {
       </Canvas>
       <SceneDiagHUD />
       {/* 整体外观首次加载大量院子/导入 GLB 时的全局进度条（drei Loader 监听
-          所有 useGLTF/useTexture 的 useProgress）。资产缓存后二次访问几乎不出现。 */}
+          所有 useGLTF/useTexture 的 useProgress）。资产缓存后二次访问几乎不出现。
+          pointer-events: none — 进度条只是指示器，绝不能挡住画布点击；
+          否则某个资产加载迟迟不完成时（active 一直为 true），整个地面点选
+          （加演员/路点/特技道具）都会被遮罩吃掉。 */}
       <Loader
-        containerStyles={{ background: "rgba(17,24,39,0.55)", backdropFilter: "blur(2px)" }}
+        containerStyles={{ background: "rgba(17,24,39,0.55)", backdropFilter: "blur(2px)", pointerEvents: "none" }}
         innerStyles={{ width: 200, height: 4, background: "rgba(255,255,255,0.18)" }}
         barStyles={{ background: "#2dd4bf", height: 4 }}
         dataStyles={{ color: "#fff", fontSize: 13, marginTop: 14, fontFamily: "inherit" }}

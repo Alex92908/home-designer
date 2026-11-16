@@ -52,7 +52,7 @@ export const en: Translations = {
   wholeHouseMaterials: "Materials",
   wholeHouseWiring: "Wiring",
   wholeHouseLabor: "Labor",
-  wholeHouseLaborNote: "Labor at 40% of materials, adjustable (quote basis 30–50%)",
+  wholeHouseLaborNote: "Labor at {rate}% of materials, adjustable (quote basis 30–50%)",
   wholeHousePerRoom: "Per-room breakdown",
   wholeHouseApplied: "Applied",
   wholeHouseAppliedTotal: "Whole-house total (incl. labor)",

@@ -52,7 +52,7 @@ export const zh = {
   wholeHouseMaterials: "材料",
   wholeHouseWiring: "布线",
   wholeHouseLabor: "人工费",
-  wholeHouseLaborNote: "人工费按材料费 40%，可调（报价单口径 30–50%）",
+  wholeHouseLaborNote: "人工费按材料费 {rate}%，可调（报价单口径 30–50%）",
   wholeHousePerRoom: "分房间明细",
   wholeHouseApplied: "已应用",
   wholeHouseAppliedTotal: "整屋总价（含人工）",

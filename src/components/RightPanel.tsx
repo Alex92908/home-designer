@@ -179,7 +179,7 @@ export default function RightPanel() {
             style={{ accentColor: "#007AFF" }}
           />
           <div className="text-[9px] mt-0.5" style={{ color: "var(--ds-text-3)" }}>
-            {t.wholeHouseLaborNote}
+            {t.wholeHouseLaborNote.replace("{rate}", String(Math.round((mounted ? laborRateRaw : 0.4) * 100)))}
           </div>
         </div>
         {/* Per-room breakdown (expandable) */}
