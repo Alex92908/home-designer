@@ -22,6 +22,9 @@ const RULES: Array<TemplateMatch & { re: RegExp }> = [
   { id: "set-cafe", name: "咖啡馆片场", nameEn: "Café set", re: /咖啡|café|cafe|coffee/i },
   { id: "set-restaurant", name: "餐厅片场", nameEn: "Restaurant set", re: /餐厅|餐馆|饭店|食堂|小吃|restaurant|diner|bistro|eatery/i },
   { id: "set-office", name: "办公室片场", nameEn: "Office set", re: /办公|职场|工位|会议室|office|workplace|workspace/i },
+  // 公寓客厅：公寓/起居室/living room 直指本片场；裸"客厅"太泛（别墅也有
+  // 客厅），只在带户型词（小户型/两居/三居/一居）时才算公寓意图。
+  { id: "set-apartment", name: "公寓客厅片场", nameEn: "Apartment set", re: /公寓|起居室|loft|apartment|condo|living\s*room|(小户型|两居|三居|一居).*客厅|客厅.*(小户型|两居|三居|一居)/i },
   // ── 风格别墅（具体风格在前）──
   { id: "japanese-zen-villa", name: "日式禅意庭院", nameEn: "Japanese zen villa", re: /日式|禅|枯山水|zen|japanese/i },
   { id: "mediterranean-villa", name: "地中海庭院别墅", nameEn: "Mediterranean villa", re: /地中海|mediterranean/i },

@@ -1,7 +1,9 @@
 "use client";
 
 /**
- * CinematicDirector —— 分镜工作台 + 多风格录制 + 演员走位（云横店 M1-M3）。
+ * CinematicDirector —— 分镜工作台 + 多风格录制 + 演员走位（云横店 M1-M3）
+ * ＋ 导演台 MVP：一键搭片场、室内机位、具名角色走位、轴线、打斗单节 beat、
+ * 9:16 取景框、带角色信息的控制包导出。
  *
  * 产品原子是 Shot（镜头）：机位预设 + 时长 + 提示词。用户排一组镜头（分镜），
  * 勾选导出风格（实景/白模/深度），一键批量拍摄——队列按「镜头 × 风格」展开，
@@ -23,7 +25,7 @@
  * frameloop="demand" 下靠每帧 invalidate() 驱动渲染。
  * 分镜/演员 persist 到 localStorage。
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import * as THREE from "three";
@@ -31,8 +33,12 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
 import {
   CINE_PRESETS, RENDER_STYLES, getCinePreset, makeShot, makeActor,
-  type Shot, type Actor, type RenderStyle, type SceneEnvelope,
+  actorDisplayName, actorFacing, actorAction, ACTOR_ACTIONS, shotCrossesAxis,
+  type Shot, type Actor, type ActorAction, type RenderStyle, type SceneEnvelope,
 } from "@/lib/cinematic";
+import { SCENE_SETS } from "@/lib/sceneSets";
+import { matchProjectTemplate } from "@/lib/matchProjectTemplate";
+import { useDesignerStore } from "@/lib/store";
 import { runRender } from "@/lib/useAiRender";
 import { getAiRenderConfig, localizeWorkflowName, type RenderWorkflow } from "@/lib/aiRenderConfig";
 
@@ -50,7 +56,7 @@ interface CineState {
   addShot: (presetId: string) => void;
   removeShot: (id: string) => void;
   moveShot: (id: string, dir: -1 | 1) => void;
-  updateShot: (id: string, patch: Partial<Pick<Shot, "duration" | "prompt">>) => void;
+  updateShot: (id: string, patch: Partial<Pick<Shot, "duration" | "prompt" | "targetActorId">>) => void;
 
   /** 导出风格（至少保留一个） */
   styles: RenderStyle[];
@@ -60,10 +66,18 @@ interface CineState {
   actors: Actor[];
   addActorMode: boolean;
   pendingFrom: [number, number] | null;
+  /** 重设走位中（点两下改该演员的起点→终点，名字/角色/动作保留） */
+  replaceActorId: string | null;
   beginAddActor: () => void;
+  beginReplaceActor: (id: string) => void;
   placePoint: (p: [number, number]) => void;
   cancelAddActor: () => void;
   removeActor: (id: string) => void;
+  updateActor: (id: string, patch: Partial<Actor>) => void;
+
+  /** 9:16 竖屏取景框（易失，画布上的安全框覆盖层） */
+  show916: boolean;
+  toggle916: () => void;
 
   /** 实景首帧留存（shotId → dataURL，易失）——「逐镜成片」的输入图 */
   takes: Record<string, string>;
@@ -96,7 +110,10 @@ export const useCineStore = create<CineState>()(
   persist(
     (set, get) => ({
       shots: [],
-      addShot: (presetId) => set({ shots: [...get().shots, makeShot(presetId)] }),
+      addShot: (presetId) => {
+        const first = get().actors[0];
+        set({ shots: [...get().shots, makeShot(presetId, first ? { targetActorId: first.id } : undefined)] });
+      },
       removeShot: (id) => set({ shots: get().shots.filter((s) => s.id !== id) }),
       moveShot: (id, dir) => {
         const arr = [...get().shots];
@@ -119,15 +136,36 @@ export const useCineStore = create<CineState>()(
       actors: [],
       addActorMode: false,
       pendingFrom: null,
-      beginAddActor: () => set({ addActorMode: true, pendingFrom: null }),
+      replaceActorId: null,
+      beginAddActor: () => set({ addActorMode: true, pendingFrom: null, replaceActorId: null }),
+      beginReplaceActor: (id) => set({ addActorMode: true, pendingFrom: null, replaceActorId: id }),
       placePoint: (p) => {
-        const { addActorMode, pendingFrom, actors } = get();
+        const { addActorMode, pendingFrom, actors, replaceActorId } = get();
         if (!addActorMode) return;
-        if (!pendingFrom) set({ pendingFrom: p });
-        else set({ actors: [...actors, makeActor(pendingFrom, p)], pendingFrom: null, addActorMode: false });
+        if (!pendingFrom) { set({ pendingFrom: p }); return; }
+        if (replaceActorId) {
+          // 重设走位：只改 from/to，名字/角色/动作/朝向保留
+          set({
+            actors: actors.map((a) => (a.id === replaceActorId ? { ...a, from: pendingFrom, to: p } : a)),
+            pendingFrom: null, addActorMode: false, replaceActorId: null,
+          });
+          return;
+        }
+        // 新演员默认名：演员N（跳过已占用的号）
+        let n = actors.length + 1;
+        while (actors.some((a) => a.name === `演员${n}`)) n++;
+        set({
+          actors: [...actors, makeActor(pendingFrom, p, { name: `演员${n}` })],
+          pendingFrom: null, addActorMode: false,
+        });
       },
-      cancelAddActor: () => set({ addActorMode: false, pendingFrom: null }),
+      cancelAddActor: () => set({ addActorMode: false, pendingFrom: null, replaceActorId: null }),
       removeActor: (id) => set({ actors: get().actors.filter((a) => a.id !== id) }),
+      updateActor: (id, patch) =>
+        set({ actors: get().actors.map((a) => (a.id === id ? { ...a, ...patch } : a)) }),
+
+      show916: false,
+      toggle916: () => set({ show916: !get().show916 }),
 
       takes: {},
       _setTake: (shotId, dataUrl) => set({ takes: { ...get().takes, [shotId]: dataUrl } }),
@@ -366,7 +404,14 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
     };
 
     const applySample = (t: number) => {
-      const s = preset.sample(t, envRef.current);
+      // 室内机位要框人：本镜的 targetActorId → 演员（缺省第一个演员）；
+      // 室外预设忽略第三个参数（向后兼容）。
+      const st = useCineStore.getState();
+      const actor = st.actors.find((a) => a.id === item.shot.targetActorId) ?? st.actors[0];
+      const target = actor
+        ? { from: actor.from, to: actor.to, facing: actorFacing(actor) }
+        : undefined;
+      const s = preset.sample(t, envRef.current, target);
       cam.position.set(...s.pos);
       cam.lookAt(...s.lookAt);
       if (cam.fov !== s.fov) { cam.fov = s.fov; cam.updateProjectionMatrix(); }
@@ -407,12 +452,21 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
         const stylesUsed = st.styles;
         const meta = {
           tool: "zhuya-cinematic",
-          version: 2,
+          version: 3,
           createdAt: new Date().toISOString(),
           scene: envRef.current,
           fps: 30,
           styles: stylesUsed,
-          actors: st.actors.map((a) => ({ from: a.from, to: a.to })),
+          // 导演台 v3：演员带名字/角色/朝向/动作（旧存档缺失字段按默认值解析）
+          actors: st.actors.map((a, i) => ({
+            id: a.id,
+            name: actorDisplayName(a, i),
+            role: a.role ?? "",
+            from: a.from,
+            to: a.to,
+            facing: actorFacing(a),
+            action: actorAction(a),
+          })),
           shots: st.shots.map((s, i) => {
             const p = getCinePreset(s.presetId)!;
             const n = String(i + 1).padStart(2, "0");
@@ -422,7 +476,26 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
                 return [sty, { video: `${b}.${ext}`, first: `${b}_first.png`, last: `${b}_last.png` }];
               }),
             );
-            return { index: i + 1, preset: p.id, name: p.nameZh, duration: s.duration, prompt: s.prompt, files: filesByStyle };
+            const targetIdx = st.actors.findIndex((a) => a.id === s.targetActorId);
+            const target = targetIdx >= 0 ? st.actors[targetIdx] : st.actors[0];
+            return {
+              index: i + 1,
+              preset: p.id,
+              name: p.nameZh,
+              indoor: !!p.indoor,
+              duration: s.duration,
+              prompt: s.prompt,
+              targetActorId: target?.id ?? null,
+              targetActorName: target ? actorDisplayName(target, targetIdx >= 0 ? targetIdx : 0) : null,
+              // 本镜在场的角色（MVP：场景里全部演员都在场，镜头框住 target）
+              characters: st.actors.map((a, ai) => ({
+                id: a.id,
+                name: actorDisplayName(a, ai),
+                role: a.role ?? "",
+                action: actorAction(a),
+              })),
+              files: filesByStyle,
+            };
           }),
         };
         downloadBlob(
@@ -492,13 +565,76 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
   return null;
 }
 
-/** Canvas 内组件：演员放置（地面点两下：起点→终点）+ 渲染 + 录制时行走。 */
+/** 打斗单节 beat：逼近→收→再扑→收（t∈[0,1] 上的冲量系数曲线）。
+ *  纯摆拍：位置在"朝对手冲出 70% → 收回 → 再扑 80% → 收"之间往复，
+ *  无接触、无编舞时间轴——完整 beats/phrases/reset 系统不在 MVP 范围。 */
+const FIGHT_BEAT: Array<[number, number]> = [[0, 0], [0.25, 0.7], [0.5, 0.2], [0.75, 0.8], [1, 0.1]];
+function fightBeat(t: number): number {
+  for (let i = 1; i < FIGHT_BEAT.length; i++) {
+    if (t <= FIGHT_BEAT[i][0]) {
+      const [t0, v0] = FIGHT_BEAT[i - 1];
+      const [t1, v1] = FIGHT_BEAT[i];
+      return v0 + (v1 - v0) * ((t - t0) / (t1 - t0));
+    }
+  }
+  return FIGHT_BEAT[FIGHT_BEAT.length - 1][1];
+}
+
+/** Canvas 内组件：演员放置（地面点两下：起点→终点）+ 渲染 + 录制时行走。
+ *  拖拽调整：按住演员拖动，from/to 一起平移（期间禁用轨道控制，松手恢复）。
+ *  轴线：前两位演员起点连线（180 度轴线，橙色虚线 + "轴线"标牌）。 */
 export function ActorsLayer() {
   const actors = useCineStore((s) => s.actors);
   const addMode = useCineStore((s) => s.addActorMode);
   const pendingFrom = useCineStore((s) => s.pendingFrom);
   const groupRefs = useRef(new Map<string, THREE.Group>());
-  const { invalidate } = useThree();
+  const { invalidate, controls } = useThree();
+  // 拖拽时禁用轨道控制：经 ref 间接改 enabled（直接改 useThree 返回值会
+  // 触发 react-hooks/immutability lint；本文件旧代码已有同类报错，不再新增）。
+  const controlsRef = useRef<typeof controls | null>(null);
+  useEffect(() => { controlsRef.current = controls; }, [controls]);
+  const setControlsEnabled = (v: boolean) => {
+    const ctl = controlsRef.current as unknown as { enabled: boolean } | null;
+    if (ctl) ctl.enabled = v;
+  };
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const dragRef = useRef<{
+    id: string; start: [number, number];
+    origFrom: [number, number]; origTo: [number, number];
+  } | null>(null);
+
+  // 轴线标牌（CanvasTexture 精灵，离线可用，不依赖在线字体）
+  const axisLabelTex = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 256; c.height = 96;
+    const g = c.getContext("2d")!;
+    g.fillStyle = "rgba(20,22,32,0.88)";
+    g.fillRect(8, 16, 240, 64);
+    g.strokeStyle = "#f59e0b";
+    g.lineWidth = 4;
+    g.strokeRect(8, 16, 240, 64);
+    g.fillStyle = "#fbbf24";
+    g.font = "bold 40px sans-serif";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText("轴 线", 128, 50);
+    return new THREE.CanvasTexture(c);
+  }, []);
+  useEffect(() => () => axisLabelTex.dispose(), [axisLabelTex]);
+
+  const endDrag = () => {
+    setControlsEnabled(true);
+    dragRef.current = null;
+    setDraggingId(null);
+  };
+  // 指针在画布外松开也要结束拖拽
+  useEffect(() => {
+    if (!draggingId) return;
+    const up = () => endDrag();
+    window.addEventListener("pointerup", up);
+    return () => window.removeEventListener("pointerup", up);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draggingId]);
 
   // Esc 取消放置
   useEffect(() => {
@@ -508,20 +644,61 @@ export function ActorsLayer() {
     return () => window.removeEventListener("keydown", onKey);
   }, [addMode]);
 
-  // 行走：播放头驱动（frameloop=demand 下由录制循环的 invalidate 带动）
+  // 行走/跑/打斗：播放头驱动（frameloop=demand 下由录制循环的 invalidate 带动）
   useFrame(() => {
     const ph = cinePlayhead;
-    for (const a of useCineStore.getState().actors) {
+    const list = useCineStore.getState().actors;
+    const t = ph.active ? ph.t : 0;
+    for (const a of list) {
       const g = groupRefs.current.get(a.id);
       if (!g) continue;
-      const t = ph.active ? ph.t : 0;
+      const action = actorAction(a);
+      if (action === "fight") {
+        // 对手：最近的另一位打斗演员；没有则最近的其他演员；再没有则用 to 点
+        const others = list.filter((o) => o.id !== a.id);
+        const fighters = others.filter((o) => actorAction(o) === "fight");
+        const pool = fighters.length ? fighters : others;
+        let px = a.to[0], pz = a.to[1];
+        if (pool.length) {
+          let best = pool[0], bd = Infinity;
+          for (const o of pool) {
+            const ox = o.from[0] + (o.to[0] - o.from[0]) * t;
+            const oz = o.from[1] + (o.to[1] - o.from[1]) * t;
+            const d = (ox - a.from[0]) ** 2 + (oz - a.from[1]) ** 2;
+            if (d < bd) { bd = d; best = o; }
+          }
+          px = best.from[0] + (best.to[0] - best.from[0]) * t;
+          pz = best.from[1] + (best.to[1] - best.from[1]) * t;
+        }
+        if (!ph.active) {
+          // 静止：站在起点，面向对手
+          g.position.set(a.from[0], 0, a.from[1]);
+          g.rotation.set(0, Math.atan2(px - a.from[0], pz - a.from[1]), 0);
+          continue;
+        }
+        // 逼近→收→再扑→收：朝对手方向冲出再收回（摆拍，无接触）
+        const beat = fightBeat(t);
+        const k = 0.12 + 0.55 * beat;
+        const x = a.from[0] + (px - a.from[0]) * k;
+        const z = a.from[1] + (pz - a.from[1]) * k;
+        const bob = Math.abs(Math.sin(t * Math.PI * 14)) * 0.06;
+        g.position.set(x, bob, z);
+        g.rotation.set(0.1 + 0.12 * beat, Math.atan2(px - x, pz - z), 0);
+        continue;
+      }
       const x = a.from[0] + (a.to[0] - a.from[0]) * t;
       const z = a.from[1] + (a.to[1] - a.from[1]) * t;
-      // 步频起伏（走路感）；静止时落地
-      const bob = ph.active ? Math.abs(Math.sin(t * Math.PI * 10)) * 0.05 : 0;
-      g.position.set(x, bob, z);
-      const dx = a.to[0] - a.from[0], dz = a.to[1] - a.from[1];
-      if (dx !== 0 || dz !== 0) g.rotation.y = Math.atan2(dx, dz);
+      if (action === "run") {
+        // 跑：步频更快 + 身体前倾
+        const bob = ph.active ? Math.abs(Math.sin(t * Math.PI * 16)) * 0.07 : 0;
+        g.position.set(x, bob, z);
+        g.rotation.set(ph.active ? 0.12 : 0, actorFacing(a), 0);
+      } else {
+        // 走：步频起伏；静止时落地
+        const bob = ph.active ? Math.abs(Math.sin(t * Math.PI * 10)) * 0.05 : 0;
+        g.position.set(x, bob, z);
+        g.rotation.set(0, actorFacing(a), 0);
+      }
     }
   });
 
@@ -542,12 +719,54 @@ export function ActorsLayer() {
           <meshBasicMaterial transparent opacity={0.06} color="#2dd4bf" depthWrite={false} />
         </mesh>
       )}
+      {/* 拖拽中：铺一张接住指针移动的地面，演员 from/to 跟着平移 */}
+      {draggingId && (
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, 0.02, 0]}
+          onPointerMove={(e) => {
+            const d = dragRef.current;
+            if (!d) return;
+            e.stopPropagation();
+            const dx = e.point.x - d.start[0];
+            const dz = e.point.z - d.start[1];
+            useCineStore.getState().updateActor(d.id, {
+              from: [d.origFrom[0] + dx, d.origFrom[1] + dz],
+              to: [d.origTo[0] + dx, d.origTo[1] + dz],
+            });
+            invalidate();
+          }}
+          onPointerUp={() => endDrag()}
+        >
+          <planeGeometry args={[500, 500]} />
+          <meshBasicMaterial transparent opacity={0.04} color="#2dd4bf" depthWrite={false} />
+        </mesh>
+      )}
       {/* 起点已定，等终点 */}
       {pendingFrom && (
         <mesh position={[pendingFrom[0], 0.06, pendingFrom[1]]}>
           <cylinderGeometry args={[0.28, 0.28, 0.1, 16]} />
           <meshBasicMaterial color="#2dd4bf" />
         </mesh>
+      )}
+      {/* 180 度轴线：前两位演员起点连线 + 标牌（分镜越轴警告的基准） */}
+      {actors.length >= 2 && (
+        <group>
+          <Line
+            points={[[actors[0].from[0], 0.06, actors[0].from[1]], [actors[1].from[0], 0.06, actors[1].from[1]]]}
+            color="#f59e0b" dashed dashSize={0.3} gapSize={0.2} lineWidth={1.5}
+          />
+          <sprite
+            position={[
+              (actors[0].from[0] + actors[1].from[0]) / 2,
+              0.55,
+              (actors[0].from[1] + actors[1].from[1]) / 2,
+            ]}
+            scale={[1.4, 0.55, 1]}
+          >
+            <spriteMaterial map={axisLabelTex} transparent depthTest={false} />
+          </sprite>
+        </group>
       )}
       {actors.map((a) => (
         <group key={a.id}>
@@ -560,14 +779,27 @@ export function ActorsLayer() {
             <ringGeometry args={[0.2, 0.32, 20]} />
             <meshBasicMaterial color="#2dd4bf" side={THREE.DoubleSide} />
           </mesh>
-          {/* 方块人：胶囊身 + 球头（白模/深度 pass 会被 override 一起处理——正是走位入 previz 的意义） */}
+          {/* 方块人：胶囊身 + 球头（白模/深度 pass 会被 override 一起处理——正是走位入 previz 的意义）。
+              按住可拖动调整走位（from/to 一起平移）。 */}
           <group
             ref={(g) => { if (g) groupRefs.current.set(a.id, g); else groupRefs.current.delete(a.id); }}
             position={[a.from[0], 0, a.from[1]]}
+            onPointerDown={(e) => {
+              if (addMode) return;
+              e.stopPropagation();
+              setControlsEnabled(false);
+              dragRef.current = {
+                id: a.id,
+                start: [e.point.x, e.point.z],
+                origFrom: [...a.from],
+                origTo: [...a.to],
+              };
+              setDraggingId(a.id);
+            }}
           >
             <mesh position={[0, 0.75, 0]} castShadow>
               <capsuleGeometry args={[0.22, 0.8, 4, 12]} />
-              <meshStandardMaterial color="#a8b0bc" roughness={0.85} />
+              <meshStandardMaterial color={actorAction(a) === "fight" ? "#e07856" : "#a8b0bc"} roughness={0.85} />
             </mesh>
             <mesh position={[0, 1.52, 0]} castShadow>
               <sphereGeometry args={[0.17, 16, 12]} />
@@ -580,35 +812,85 @@ export function ActorsLayer() {
   );
 }
 
+/** 9:16 竖屏取景框：fixed 覆盖层，居中 9:16 安全框 + 四角标记 + 标签。
+ *  pointer-events-none，不拦截画布操作；不改 HouseCanvas，面板自带。 */
+function Frame916Overlay() {
+  const corner: CSSProperties = { position: "absolute", width: 28, height: 28, borderColor: "#2dd4bf", borderStyle: "solid" };
+  return (
+    <div
+      className="pointer-events-none"
+      style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <div
+        className="relative"
+        style={{ aspectRatio: "9 / 16", height: "100%", maxWidth: "100%", border: "2px solid rgba(45,212,191,0.9)", boxShadow: "0 0 0 9999px rgba(0,0,0,0.35)" }}
+      >
+        <div style={{ ...corner, top: -2, left: -2, borderWidth: "4px 0 0 4px" }} />
+        <div style={{ ...corner, top: -2, right: -2, borderWidth: "4px 4px 0 0" }} />
+        <div style={{ ...corner, bottom: -2, left: -2, borderWidth: "0 0 4px 4px" }} />
+        <div style={{ ...corner, bottom: -2, right: -2, borderWidth: "0 4px 4px 0" }} />
+        <div
+          className="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap"
+          style={{ background: "rgba(20,22,32,0.85)", color: "#2dd4bf" }}
+        >
+          9:16 安全框
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** DOM 覆盖层：🎬 入口 + 快拍 + 分镜 + 风格 + 演员 + 录制进度。 */
 export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
   const {
     shots, addShot, removeShot, moveShot, updateShot,
     styles, toggleStyle,
-    actors, addActorMode, pendingFrom, beginAddActor, cancelAddActor, removeActor,
+    actors, addActorMode, pendingFrom, beginAddActor, beginReplaceActor, cancelAddActor, removeActor, updateActor,
     queue, queueIdx, progress, menuOpen,
     startQuick, startStoryboard, cancel, setMenuOpen,
     genWorkflowId, setGenWorkflowId, genRunning, genState,
+    show916, toggle916,
   } = useCineStore();
   const en = locale === "en";
+  // 片场选择（本地态：刚应用的片场打 ✓；描述匹配结果文案）
+  const [appliedSetId, setAppliedSetId] = useState<string | null>(null);
+  const [setQuery, setSetQuery] = useState("");
+  const [setMatchMsg, setSetMatchMsg] = useState("");
+  const applySet = (id: string) => {
+    useDesignerStore.getState().applyProjectTemplate(id);
+    setAppliedSetId(id);
+    setSetMatchMsg("");
+  };
+  const matchSetQuery = () => {
+    const hit = matchProjectTemplate(setQuery);
+    if (hit) {
+      applySet(hit.id);
+      setSetMatchMsg(en ? `Matched: ${hit.nameEn}` : `已匹配：${hit.name}`);
+    } else {
+      setSetMatchMsg(en ? "No set matched — try: café / office / apartment living room" : "未匹配到片场，试试：咖啡馆 / 办公室 / 公寓客厅");
+    }
+  };
 
   // ── 演员放置提示（独立于菜单，放置时始终可见）──
   if (addActorMode) {
     return (
-      <div
-        className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-white shadow-xl"
-        style={{ background: "rgba(20,22,32,0.88)", border: "1px solid rgba(45,212,191,0.5)" }}
-      >
-        <span>🚶</span>
-        <span>
-          {pendingFrom
-            ? (en ? "Click the ground: end point" : "在地面点击：终点")
-            : (en ? "Click the ground: start point" : "在地面点击：起点")}
-        </span>
-        <button onClick={cancelAddActor} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10">
-          {en ? "Cancel" : "取消"}
-        </button>
-      </div>
+      <>
+        {show916 && <Frame916Overlay />}
+        <div
+          className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-white shadow-xl"
+          style={{ background: "rgba(20,22,32,0.88)", border: "1px solid rgba(45,212,191,0.5)" }}
+        >
+          <span>🚶</span>
+          <span>
+            {pendingFrom
+              ? (en ? "Click the ground: end point" : "在地面点击：终点")
+              : (en ? "Click the ground: start point" : "在地面点击：起点")}
+          </span>
+          <button onClick={cancelAddActor} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10">
+            {en ? "Cancel" : "取消"}
+          </button>
+        </div>
+      </>
     );
   }
 
@@ -618,37 +900,84 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
     const preset = item ? getCinePreset(item.shot.presetId) : undefined;
     const styleName = item ? RENDER_STYLES.find((s) => s.id === item.style) : undefined;
     return (
-      <div
-        className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-white shadow-xl"
-        style={{ background: "rgba(20,22,32,0.88)", border: "1px solid rgba(255,255,255,0.18)" }}
-      >
-        <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-        <span>
-          {queueIdx + 1}/{queue.length}：{en ? preset?.nameEn : preset?.nameZh}
-          {item && item.style !== "beauty" && (
-            <span className="text-white/50">（{en ? styleName?.nameEn : styleName?.nameZh}）</span>
-          )}
-        </span>
-        <div className="w-32 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.15)" }}>
-          <div className="h-full rounded-full" style={{ width: `${progress}%`, background: "#2dd4bf", transition: "width 0.1s linear" }} />
+      <>
+        {show916 && <Frame916Overlay />}
+        <div
+          className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-white shadow-xl"
+          style={{ background: "rgba(20,22,32,0.88)", border: "1px solid rgba(255,255,255,0.18)" }}
+        >
+          <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          <span>
+            {queueIdx + 1}/{queue.length}：{en ? preset?.nameEn : preset?.nameZh}
+            {item && item.style !== "beauty" && (
+              <span className="text-white/50">（{en ? styleName?.nameEn : styleName?.nameZh}）</span>
+            )}
+          </span>
+          <div className="w-32 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.15)" }}>
+            <div className="h-full rounded-full" style={{ width: `${progress}%`, background: "#2dd4bf", transition: "width 0.1s linear" }} />
+          </div>
+          <span className="tabular-nums w-8 text-right">{progress}%</span>
+          <button onClick={cancel} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10" title={en ? "Cancel" : "取消"}>
+            ✕
+          </button>
         </div>
-        <span className="tabular-nums w-8 text-right">{progress}%</span>
-        <button onClick={cancel} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10" title={en ? "Cancel" : "取消"}>
-          ✕
-        </button>
-      </div>
+      </>
     );
   }
 
   // ── 空闲：🎬 按钮 + 面板（左下角——右下角被页面级 AI 入口占用）──
   return (
-    // 移动端抬高一层:样板间底部是整条主按钮「在设计器中打开此方案」,贴 bottom-5 会重叠。
+    <>
+    {show916 && <Frame916Overlay />}
+    {/* 移动端抬高一层:样板间底部是整条主按钮「在设计器中打开此方案」,贴 bottom-5 会重叠。 */}
     <div className="absolute bottom-20 sm:bottom-5 left-4 z-50 flex flex-col items-start gap-2">
       {menuOpen && (
         <div
           className="flex flex-col gap-1 p-2 rounded-xl shadow-xl text-xs text-white w-[256px] max-h-[62vh] overflow-y-auto"
           style={{ background: "rgba(20,22,32,0.92)", border: "1px solid rgba(255,255,255,0.18)" }}
         >
+          {/* 一键搭片场：点选片场即加载；或输一句描述匹配最合适的片场 */}
+          <div className="px-1 pt-1 text-[10px] tracking-widest text-white/40">{en ? "SET" : "片场"}</div>
+          {SCENE_SETS.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => applySet(s.id)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/10 text-left"
+              title={en ? s.descriptionEn : s.description}
+            >
+              <span>{s.emoji}</span>
+              <span className="flex-1 truncate">{en ? s.nameEn : s.name}</span>
+              <span className="text-white/40 tabular-nums">{s.areaSqm}㎡</span>
+              {appliedSetId === s.id && <span className="text-teal-300">✓</span>}
+            </button>
+          ))}
+          <div className="flex gap-1 px-1">
+            <input
+              type="text"
+              value={setQuery}
+              placeholder={en ? "Describe a set: e.g. apartment living room" : "描述片场，如：公寓客厅 / 咖啡馆"}
+              onChange={(e) => setSetQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") matchSetQuery(); }}
+              className="flex-1 min-w-0 bg-white/10 rounded-lg px-2 py-1.5 outline-none placeholder:text-white/25"
+            />
+            <button
+              onClick={matchSetQuery}
+              className="px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 whitespace-nowrap"
+            >
+              {en ? "Match" : "匹配"}
+            </button>
+          </div>
+          {setMatchMsg && <div className="px-2 text-[10px] leading-relaxed text-teal-300/90">{setMatchMsg}</div>}
+
+          {/* 9:16 竖屏取景框 */}
+          <button
+            onClick={toggle916}
+            className="flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-white/10 text-left border-t border-white/10 mt-1 pt-2"
+          >
+            <span>📱 {en ? "9:16 frame" : "9:16 取景框"}</span>
+            <span className={show916 ? "text-teal-300" : "text-white/40"}>{show916 ? (en ? "On" : "开") : (en ? "Off" : "关")}</span>
+          </button>
+
           {/* 快拍：单镜实景立即录 */}
           <div className="px-1 pt-1 text-[10px] tracking-widest text-white/40">{en ? "QUICK SHOT" : "快拍"}</div>
           {CINE_PRESETS.map((p) => (
@@ -657,7 +986,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
               onClick={() => startQuick(p.id)}
               className="flex items-center justify-between gap-4 px-3 py-1.5 rounded-lg hover:bg-white/10 text-left"
             >
-              <span>{en ? p.nameEn : p.nameZh}</span>
+              <span>{en ? p.nameEn : p.nameZh}{p.indoor && <span className="ml-1 text-[10px] text-teal-300/80">{en ? "indoor" : "室内"}</span>}</span>
               <span className="text-white/40">{p.duration}s</span>
             </button>
           ))}
@@ -668,11 +997,17 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
           </div>
           {shots.map((s, i) => {
             const p = getCinePreset(s.presetId);
+            const crosses = i > 0 && shotCrossesAxis(s, shots[i - 1], actors);
             return (
               <div key={s.id} className="rounded-lg px-2 py-1.5 bg-white/5 flex flex-col gap-1">
                 <div className="flex items-center gap-1.5">
                   <span className="text-white/40 tabular-nums">{String(i + 1).padStart(2, "0")}</span>
                   <span className="flex-1 truncate">{en ? p?.nameEn : p?.nameZh}</span>
+                  {crosses && (
+                    <span className="px-1 py-0.5 rounded text-[10px] whitespace-nowrap" style={{ background: "rgba(245,158,11,0.25)", color: "#fbbf24" }} title={en ? "Camera crosses the 180° axis vs the previous indoor shot" : "本镜机位与上一室内镜分处轴线两侧，可能越轴"}>
+                      ⚠️ {en ? "Axis cross" : "可能越轴"}
+                    </span>
+                  )}
                   <input
                     type="number" min={2} max={15} value={s.duration}
                     onChange={(e) => updateShot(s.id, { duration: Math.max(2, Math.min(15, Number(e.target.value) || 2)) })}
@@ -686,6 +1021,22 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
                     className="px-1 rounded hover:bg-white/10 disabled:opacity-25">↓</button>
                   <button onClick={() => removeShot(s.id)} className="px-1 rounded hover:bg-white/10 text-white/60">✕</button>
                 </div>
+                {/* 本镜框住的角色（室内镜跟拍用；缺省第一个演员） */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-white/40 whitespace-nowrap">{en ? "Frames" : "框住"}</span>
+                  <select
+                    value={s.targetActorId ?? actors[0]?.id ?? ""}
+                    onChange={(e) => updateShot(s.id, { targetActorId: e.target.value || undefined })}
+                    className="flex-1 min-w-0 bg-white/10 rounded px-1 py-1 outline-none"
+                    style={{ colorScheme: "dark" }}
+                    disabled={!actors.length}
+                  >
+                    {!actors.length && <option value="">{en ? "No actors yet" : "还没有演员"}</option>}
+                    {actors.map((a, ai) => (
+                      <option key={a.id} value={a.id}>{actorDisplayName(a, ai)}{a.role ? `（${a.role}）` : ""}</option>
+                    ))}
+                  </select>
+                </div>
                 <input
                   type="text" value={s.prompt} placeholder={en ? "Prompt (optional)" : "本镜提示词（可选，随控制包导出）"}
                   onChange={(e) => updateShot(s.id, { prompt: e.target.value })}
@@ -694,15 +1045,15 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
               </div>
             );
           })}
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             {CINE_PRESETS.map((p) => (
               <button
                 key={p.id}
                 onClick={() => addShot(p.id)}
-                className="flex-1 px-1 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-center"
+                className="px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-center"
                 title={en ? `Add ${p.nameEn}` : `加一镜：${p.nameZh}`}
               >
-                ＋{(en ? p.nameEn : p.nameZh).slice(0, en ? 5 : 2)}
+                ＋{en ? p.nameEn : p.nameZh}
               </button>
             ))}
           </div>
@@ -732,25 +1083,77 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
             })}
           </div>
 
-          {/* 演员走位 */}
+          {/* 演员走位：名字/角色/动作/朝向可编；按住 3D 里的人可拖动调整走位 */}
           <div className="px-1 pt-2 text-[10px] tracking-widest text-white/40 border-t border-white/10 mt-1">
             {en ? "ACTORS" : "演员走位"}
           </div>
-          {actors.map((a, i) => (
-            <div key={a.id} className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/5">
-              <span>🚶</span>
-              <span className="flex-1 text-white/70 tabular-nums truncate">
-                {en ? "Actor" : "演员"}{i + 1}：({a.from[0].toFixed(1)},{a.from[1].toFixed(1)})→({a.to[0].toFixed(1)},{a.to[1].toFixed(1)})
-              </span>
-              <button onClick={() => removeActor(a.id)} className="px-1 rounded hover:bg-white/10 text-white/60">✕</button>
-            </div>
-          ))}
+          {actors.map((a, i) => {
+            const facingDeg = Math.round(((actorFacing(a) * 180) / Math.PI) % 360 + 360) % 360;
+            return (
+              <div key={a.id} className="rounded-lg px-2 py-1.5 bg-white/5 flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
+                  <span>🚶</span>
+                  <input
+                    type="text" value={actorDisplayName(a, i)}
+                    onChange={(e) => updateActor(a.id, { name: e.target.value })}
+                    className="w-16 bg-white/10 rounded px-1.5 py-0.5 outline-none"
+                    title={en ? "Character name" : "角色名"}
+                  />
+                  <input
+                    type="text" value={a.role ?? ""}
+                    placeholder={en ? "Role (e.g. owner)" : "角色（如店主）"}
+                    onChange={(e) => updateActor(a.id, { role: e.target.value })}
+                    className="flex-1 min-w-0 bg-white/10 rounded px-1.5 py-0.5 outline-none placeholder:text-white/25"
+                  />
+                  <button onClick={() => removeActor(a.id)} className="px-1 rounded hover:bg-white/10 text-white/60">✕</button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={actorAction(a)}
+                    onChange={(e) => updateActor(a.id, { action: e.target.value as ActorAction })}
+                    className="bg-white/10 rounded px-1 py-0.5 outline-none"
+                    style={{ colorScheme: "dark" }}
+                    title={en ? "Action" : "动作"}
+                  >
+                    {ACTOR_ACTIONS.map((ac) => (
+                      <option key={ac.id} value={ac.id}>{en ? ac.nameEn : ac.nameZh}</option>
+                    ))}
+                  </select>
+                  <span className="text-white/40 whitespace-nowrap">{en ? "Facing" : "朝向"}</span>
+                  <input
+                    type="range" min={0} max={359} value={facingDeg}
+                    onChange={(e) => updateActor(a.id, { facing: (Number(e.target.value) * Math.PI) / 180 })}
+                    className="flex-1 min-w-0 accent-teal-400"
+                    title={en ? "Facing direction (degrees)" : "朝向（度）"}
+                  />
+                  <span className="text-white/50 tabular-nums w-9 text-right">{facingDeg}°</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="flex-1 text-white/50 tabular-nums truncate">
+                    ({a.from[0].toFixed(1)},{a.from[1].toFixed(1)})→({a.to[0].toFixed(1)},{a.to[1].toFixed(1)})
+                  </span>
+                  <button
+                    onClick={() => { beginReplaceActor(a.id); setMenuOpen(false); }}
+                    className="px-1.5 py-0.5 rounded hover:bg-white/10 text-white/70 whitespace-nowrap"
+                    title={en ? "Click ground twice to reset this actor's path" : "地面点两下，重设该演员的起点→终点"}
+                  >
+                    {en ? "↻ Reset path" : "↻ 重设走位"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
           <button
             onClick={() => { beginAddActor(); setMenuOpen(false); }}
             className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-left"
           >
             🚶 {en ? "+ Add actor (click ground: start → end)" : "＋加演员（地面点两下：起点→终点）"}
           </button>
+          <div className="px-2 text-[10px] leading-relaxed text-white/40">
+            {en
+              ? "Drag an actor in 3D to shift their path. With 2+ actors, the orange dashed axis line appears; indoor shots on opposite sides of it get an axis-cross warning."
+              : "按住 3D 里的演员可拖动平移走位。两人以上出现橙色轴线虚线；室内镜机位若与上一镜分处轴线两侧，会标「可能越轴」。"}
+          </div>
 
           <button
             onClick={startStoryboard}
@@ -854,5 +1257,6 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
         🎬 {en ? "Shots" : "出短片"}
       </button>
     </div>
+    </>
   );
 }

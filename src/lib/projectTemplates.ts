@@ -1791,6 +1791,92 @@ const RESTAURANT_SET: ProjectTemplate = {
   furnitureOverrides: setRestaurantOverrides as unknown as ProjectTemplate["furnitureOverrides"],
 };
 
+// ── 现代都市公寓片场（导演台 MVP 新增；简版）────────────────────────────
+// 80㎡ 两居：大客厅（拍家庭/日常对话戏的主场）+ 餐厅 + 厨房 + 主卧 +
+// 次卧 + 卫生间。房间几何为手写矩形拼贴；客厅/餐厅家具显式摆放（复用
+// 北欧风格现有家具 id），其余房间走 modern-villa 风格模板默认铺设——
+// 不是全新 3D 建模，是一套"用现成家具搭出来的公寓客厅片场"。
+const APARTMENT_SET: ProjectTemplate = {
+  id: "set-apartment",
+  name: "公寓客厅片场",
+  nameEn: "Apartment Set",
+  emoji: "🛋️",
+  description: "片场 · 单层 · 两居 80㎡ · 大客厅+餐厅 · 拍家庭/日常对话戏",
+  descriptionEn: "Film set · 1F · 2-bed 80㎡ · Big living room + dining · Family / daily dialogue",
+  areaSqm: 80,
+  palette: ["#F2EFE9", "#3A3A3C", "#C8A882"],
+  styleTemplateId: "modern-villa",
+
+  exterior: {
+    preset: "modern-minimal",
+    facadeSystem: "punched-window",
+    roofStyle: "flat",
+    floors: 1,
+    hasRooftop: false,
+    buildingType: "floor-plan-driven",
+    groundType: "tile",
+    wallColor: "#F2EFE9",
+    windowFrameColor: "#2A2C30",
+    entranceFrameColor: "#15171B",
+    roofOverhang: 0.5,
+    parapetHeight: 0.4,
+    roofColor: "#3A3A3C",
+    stoneBaseEnabled: false,
+    showPerimeterFence: false,
+    yardPreset: "minimal",
+  },
+
+  floorLayouts: [
+    {
+      id: "apt-f1",
+      name: "都市公寓",
+      area: 80,
+      // 1000×800cm 矩形拼贴（无缺口）：
+      // 上排：客厅 620×480 | 厨房 380×300 + 餐厅 380×180
+      // 下排：主卧 500×320 | 卫生间 220×320 | 次卧 280×320
+      rooms: [
+        { room: "living",   x: 0,   y: 0,   width: 620, depth: 480,
+          name: "客厅", nameEn: "Living Room", icon: "🛋️",
+          windows: [{ wall: "S", pos: 200, len: 240 }] },
+        { room: "kitchen",  x: 620, y: 0,   width: 380, depth: 300,
+          name: "厨房", nameEn: "Kitchen", icon: "🍳" },
+        { room: "dining",   x: 620, y: 300, width: 380, depth: 180,
+          name: "餐厅", nameEn: "Dining Room", icon: "🍽️" },
+        { room: "master",   x: 0,   y: 480, width: 500, depth: 320,
+          name: "主卧", nameEn: "Master Bedroom", icon: "🛏️" },
+        { room: "bathroom", x: 500, y: 480, width: 220, depth: 320,
+          name: "卫生间", nameEn: "Bathroom", icon: "🚿" },
+        { room: "bedroom",  x: 720, y: 480, width: 280, depth: 320,
+          name: "次卧", nameEn: "Bedroom", icon: "🛏️" },
+      ],
+    },
+  ],
+  yardPlan: { items: [], paths: [] },
+
+  // 客厅/餐厅显式摆放（room-local cm；复用北欧风格现有家具）；
+  // 厨房/主卧/卫生间/次卧缺省 = 保留 modern-villa 风格模板的摆放。
+  furnitureOverrides: [
+    {
+      living: [
+        { furnitureId: "tvunit-float-white", x: 310, z: 19, rotation: 0 },
+        { furnitureId: "sofa-nordic-blue",   x: 310, z: 300, rotation: 180 },
+        { furnitureId: "coffee-oak-round",   x: 310, z: 185, rotation: 0 },
+        { furnitureId: "rug-nordic-geo",     x: 310, z: 215, rotation: 0 },
+        { furnitureId: "lamp-arc-gold",      x: 60,  z: 280, rotation: 0 },
+        { furnitureId: "plant-monstera",     x: 580, z: 440, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "dining-oak-rect", x: 190, z: 90, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 120, z: 40, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 260, z: 40, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 120, z: 140, rotation: 180 },
+        { furnitureId: "chair-nordic-oak", x: 260, z: 140, rotation: 180 },
+        { furnitureId: "plant-rubber-tree", x: 350, z: 150, rotation: 0 },
+      ],
+    },
+  ],
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   MODERN_CANTILEVER_GLASS_VILLA,  // ← 参考照片专属：宽体玻璃幕墙 + 胡桃木挑檐 + 前院泳池
@@ -1806,4 +1892,5 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   CAFE_SET,
   OFFICE_SET,
   RESTAURANT_SET,
+  APARTMENT_SET,
 ];
