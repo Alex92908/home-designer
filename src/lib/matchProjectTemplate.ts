@@ -107,6 +107,38 @@ const RULES: Array<TemplateMatch & { re: RegExp }> = [
   { id: "set-ktv", name: "KTV片场", nameEn: "KTV set", re: /KTV|ktv|卡拉OK|卡拉ok|karaoke/i },
   // 婚礼宴会厅：须带婚礼/婚宴限定；裸"宴会厅"仍归唐宫（见唐宫条）；须在唐宫之前。
   { id: "set-wedding", name: "婚礼宴会厅片场", nameEn: "Wedding banquet hall set", re: /婚礼|婚宴|婚礼宴会厅|wedding|banquet\s*hall/i },
+  // ── 室外片场（26）：具体词在前，泛词在后 ──
+  // 竹林在森林之前（"bamboo forest" 含 forest）；桃花林不含"森林"但同属林地，放前；
+  // 雪山在山之前（"雪山"含"山"）；茶园在花园之前（"tea garden"含 garden）；
+  // 马场在农场之前；古镇街道在现代街道之前；集市在超市之前（"market"须整词，避开 supermarket）；
+  // 公园在停车场之后（停车场规则在前，"car park"已抢先）；湖：江湖/湖南/湖北/湖州不命中；
+  // 山：江山/火山/山庄/山寨/山村/山东/山西/山洞不命中。
+  { id: "set-bamboo", name: "竹林片场", nameEn: "Bamboo forest set", re: /竹林|竹海|bamboo/i },
+  { id: "set-peach", name: "桃花林片场", nameEn: "Peach blossom grove set", re: /桃花林|桃花|peach\s*blossom/i },
+  { id: "set-snow", name: "雪山片场", nameEn: "Snow mountain set", re: /雪山|雪地|雪原|雪景|下雪|大雪|snow/i },
+  { id: "set-forest", name: "森林片场", nameEn: "Forest set", re: /森林|密林|forest/i },
+  { id: "set-grassland", name: "草原片场", nameEn: "Grassland set", re: /草原|大草原|草地|grassland|prairie|steppe/i },
+  { id: "set-desert", name: "沙漠片场", nameEn: "Desert set", re: /沙漠|沙丘|大漠|desert|dune/i },
+  { id: "set-tea", name: "茶园片场", nameEn: "Tea plantation set", re: /茶园|茶山|tea\s*(plantation|garden|farm)/i },
+  { id: "set-mountain", name: "山片场", nameEn: "Mountain set", re: /(?<!江|火)山(?!庄|寨|村|东|西|南|北|洞)|登山|mountain/i },
+  { id: "set-cliff", name: "悬崖片场", nameEn: "Cliff set", re: /悬崖|崖边|峭壁|cliff/i },
+  { id: "set-waterfall", name: "瀑布片场", nameEn: "Waterfall set", re: /瀑布|waterfall/i },
+  { id: "set-lake", name: "湖片场", nameEn: "Lake set", re: /(?<!江)湖(?!南|北|州)|湖泊|湖畔|湖边|lake/i },
+  { id: "set-beach", name: "海滩片场", nameEn: "Beach set", re: /海滩|沙滩|海边|beach|seaside/i },
+  { id: "set-flower-field", name: "花海片场", nameEn: "Flower field set", re: /花海|花田|薰衣草|油菜花|flower\s*field|lavender/i },
+  { id: "set-garden", name: "庭院花园片场", nameEn: "Courtyard garden set", re: /庭院花园|花园|garden/i },
+  { id: "set-rice-field", name: "稻田片场", nameEn: "Rice paddy set", re: /稻田|水稻田|rice\s*(paddy|field)/i },
+  { id: "set-horse-ranch", name: "马场片场", nameEn: "Horse ranch set", re: /马场|跑马场|骑马场|马术|horse\s*ranch|horse\s*stable/i },
+  { id: "set-farm", name: "农场片场", nameEn: "Farm set", re: /农场|农庄|\bfarm\b/i },
+  { id: "set-ancient-street", name: "古镇街道片场", nameEn: "Ancient town street set", re: /古镇|古街|老街|古城|ancient\s*(town|street)/i },
+  { id: "set-street", name: "街道片场", nameEn: "Street set", re: /街道|街头|街景|\bstreet\b/i },
+  { id: "set-park", name: "公园片场", nameEn: "Park set", re: /公园|\bpark\b/i },
+  { id: "set-bridge", name: "桥片场", nameEn: "Bridge set", re: /桥|bridge/i },
+  { id: "set-station", name: "火车站片场", nameEn: "Train station set", re: /火车站|高铁站|车站|train\s*station|railway\s*station/i },
+  { id: "set-market", name: "集市片场", nameEn: "Market set", re: /集市|市集|赶集|\bmarket\b/i },
+  { id: "set-battlefield", name: "战场片场", nameEn: "Battlefield set", re: /战场|古战场|battlefield/i },
+  { id: "set-military-camp", name: "军营片场", nameEn: "Military camp set", re: /军营|兵营|军帐|military\s*camp|army\s*camp/i },
+  { id: "set-city-wall", name: "城墙片场", nameEn: "City wall set", re: /城墙|边关|长城|city\s*wall|great\s*wall/i },
   { id: "set-office", name: "办公室片场", nameEn: "Office set", re: /办公|职场|工位|会议室|office|workplace|workspace/i },
   // 公寓客厅：公寓/起居室/living room 直指本片场；裸"客厅"太泛（别墅也有
   // 客厅），只在带户型词（小户型/两居/三居/一居）时才算公寓意图。

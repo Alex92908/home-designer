@@ -14,7 +14,7 @@
  *     elevationY>0 的件正下方 30cm 内须有承托物（或在墙挂白名单里）。
  *  5. 房间全覆盖：新场景每个房间都在 furnitureOverrides 里出现（不漏给
  *     风格模板去铺现代家具串味；空房间用 [] 显式清空）。
- *  6. 关键词：24 个高频场景 + 22 个成对场景（11 对繁荣/衰败）各命中、
+ *  6. 关键词：24 个高频场景 + 22 个成对场景（11 对繁荣/衰败）+ 26 个室外场景各命中、
  *     旧 22 个场景不回归（尤其 民国农村 vs 石库门、近郊别墅 vs 泛别墅、
  *     半坡 vs 河姆渡、裸客厅不劫持；新增：浴室（学校/家庭）、厨房
  *     （家庭/餐厅）、卧室（家庭/公寓/酒店）、大堂（公司/酒店）、茶水间
@@ -23,7 +23,7 @@
  *     长安/靖康后汴京/火烧圆明园/大明宫废墟/罗马陷落/庞贝废墟/楼兰废墟/
  *     废弃商场/破败老宅/废弃学校/空心村），裸“学校/长安/宋朝/明代/清朝/
  *     农村/商场/豪宅/村庄”不劫持旧场景）。
- *  7. 清单：SCENE_SETS 总数 = 68，含全部 24 个高频 id + 22 个成对 id；
+ *  7. 清单：SCENE_SETS 总数 = 94，含全部 24 个高频 id + 22 个成对 id + 26 个室外 id；
  *     旧 22 个场景仍在清单里、关键词仍命中（旧场景的拼贴/摆放不查：
  *     咖啡馆/办公室/餐厅用多边形房间与墙挂件，矩形拼贴与“正下方承托”
  *     规则对它们不适用，且本次未动它们的代码——回归只查清单与关键词）。
@@ -49,6 +49,14 @@ const NEW_SET_IDS = [
   "set-office-lobby", "set-office-pantry", "set-office-elevator",
   "set-dormitory", "set-hotel-room", "set-police", "set-courtroom",
   "set-bar", "set-gym", "set-supermarket", "set-ktv", "set-wedding",
+  // ── 室外片场（26）──
+  "set-forest", "set-bamboo", "set-grassland", "set-desert",
+  "set-mountain", "set-cliff", "set-waterfall", "set-lake",
+  "set-beach", "set-snow", "set-flower-field", "set-peach",
+  "set-garden", "set-tea", "set-rice-field", "set-horse-ranch",
+  "set-farm", "set-street", "set-park", "set-bridge",
+  "set-station", "set-ancient-street", "set-market", "set-battlefield",
+  "set-military-camp", "set-city-wall",
 ];
 const OLD_SET_IDS = [
   "set-cafe", "set-office", "set-restaurant", "set-apartment",
@@ -394,7 +402,96 @@ const MATCH_CASES = [
   ["清朝", "set-qing-sanxitang"],
   ["学校", "set-school"],
   ["农村", "set-rural-hall"],
+  // ── 室外片场（26）──
+  ["竹林", "set-bamboo"],
+  ["bamboo forest", "set-bamboo"],
+  ["竹海", "set-bamboo"],
+  ["桃花林", "set-peach"],
+  ["桃花", "set-peach"],
+  ["peach blossom", "set-peach"],
+  ["雪山", "set-snow"],
+  ["雪地", "set-snow"],
+  ["下雪", "set-snow"],
+  ["snow", "set-snow"],
+  ["雪山登山", "set-snow"],
+  ["森林", "set-forest"],
+  ["forest", "set-forest"],
+  ["密林", "set-forest"],
+  ["森林公园", "set-forest"],
+  ["草原", "set-grassland"],
+  ["grassland", "set-grassland"],
+  ["草地", "set-grassland"],
+  ["沙漠", "set-desert"],
+  ["desert", "set-desert"],
+  ["沙丘", "set-desert"],
+  ["登山", "set-mountain"],
+  ["山顶", "set-mountain"],
+  ["mountain", "set-mountain"],
+  ["爬山", "set-mountain"],
+  ["悬崖", "set-cliff"],
+  ["cliff", "set-cliff"],
+  ["峭壁", "set-cliff"],
+  ["瀑布", "set-waterfall"],
+  ["waterfall", "set-waterfall"],
+  ["湖", "set-lake"],
+  ["湖边", "set-lake"],
+  ["lake", "set-lake"],
+  ["西湖", "set-lake"],
+  ["海滩", "set-beach"],
+  ["沙滩", "set-beach"],
+  ["beach", "set-beach"],
+  ["海边", "set-beach"],
+  ["花海", "set-flower-field"],
+  ["薰衣草", "set-flower-field"],
+  ["花田", "set-flower-field"],
+  ["花园", "set-garden"],
+  ["庭院花园", "set-garden"],
+  ["garden", "set-garden"],
+  ["茶园", "set-tea"],
+  ["tea plantation", "set-tea"],
+  ["茶山", "set-tea"],
+  ["tea garden", "set-tea"],
+  ["稻田", "set-rice-field"],
+  ["rice paddy", "set-rice-field"],
+  ["马场", "set-horse-ranch"],
+  ["跑马场", "set-horse-ranch"],
+  ["horse ranch", "set-horse-ranch"],
+  ["农场", "set-farm"],
+  ["farm", "set-farm"],
+  ["农庄", "set-farm"],
+  ["古镇街道", "set-ancient-street"],
+  ["古镇", "set-ancient-street"],
+  ["古街", "set-ancient-street"],
+  ["老街", "set-ancient-street"],
+  ["街道", "set-street"],
+  ["street", "set-street"],
+  ["街头", "set-street"],
+  ["公园", "set-park"],
+  ["park", "set-park"],
+  ["中央公园", "set-park"],
+  ["桥", "set-bridge"],
+  ["bridge", "set-bridge"],
+  ["鹊桥", "set-bridge"],
+  ["火车站", "set-station"],
+  ["车站", "set-station"],
+  ["train station", "set-station"],
+  ["高铁站", "set-station"],
+  ["集市", "set-market"],
+  ["赶集", "set-market"],
+  ["market", "set-market"],
+  ["市集", "set-market"],
+  ["战场", "set-battlefield"],
+  ["battlefield", "set-battlefield"],
+  ["军营", "set-military-camp"],
+  ["military camp", "set-military-camp"],
+  ["城墙", "set-city-wall"],
+  ["长城", "set-city-wall"],
+  ["边关", "set-city-wall"],
+  ["great wall", "set-city-wall"],
   // 不回归
+  ["car park", "set-school-parking"],
+  ["central park", "set-park"],
+  ["farmhouse", "set-rural-hall"],
   ["咖啡馆", "set-cafe"],
   ["火锅店", "set-restaurant"],
   ["办公室", "set-office"],
@@ -414,6 +511,16 @@ for (const [input, expected] of MATCH_CASES) {
   ok(got === expected, `match(${JSON.stringify(input)}) = ${got} (want ${expected})`);
 }
 ok(matchProjectTemplate("客厅") === null, `match("客厅") = null (bare living room hijacks nothing)`);
+ok(matchProjectTemplate("江湖") === null, `match("江湖") = null (lake guard: jianghu is not a lake)`);
+ok(matchProjectTemplate("湖南") === null, `match("湖南") = null (lake guard: province)`);
+ok(matchProjectTemplate("湖北") === null, `match("湖北") = null (lake guard: province)`);
+ok(matchProjectTemplate("山东") === null, `match("山东") = null (mountain guard: province)`);
+ok(matchProjectTemplate("山西") === null, `match("山西") = null (mountain guard: province)`);
+ok(matchProjectTemplate("山村") === null, `match("山村") = null (mountain guard: village)`);
+ok(matchProjectTemplate("火山") === null, `match("火山") = null (mountain guard: volcano)`);
+ok(matchProjectTemplate("江山") === null, `match("江山") = null (mountain guard: jiangshan)`);
+ok(matchProjectTemplate("雪糕") === null, `match("雪糕") = null (snow guard: ice cream)`);
+
 ok(matchProjectTemplate("上海") === null, `match("上海") = null`);
 ok(matchProjectTemplate("楼梯间") === null, `match("楼梯间") = null (stairs are not the elevator)`);
 ok(matchProjectTemplate("barbecue") === null, `match("barbecue") = null (word-boundary bar)`);
@@ -421,7 +528,7 @@ ok(matchProjectTemplate("basketball court") === null, `match("basketball court")
 
 // ── 7. 清单 ─────────────────────────────────────────────────────
 section("7. manifest");
-ok(SCENE_SETS.length === 68, `SCENE_SETS total = ${SCENE_SETS.length} (want 68)`);
+ok(SCENE_SETS.length === 94, `SCENE_SETS total = ${SCENE_SETS.length} (want 94)`);
 for (const id of [...OLD_SET_IDS, ...NEW_SET_IDS, ...PAIR_SET_IDS]) {
   ok(SCENE_SETS.some((s) => s.id === id), `manifest contains ${id}`);
 }

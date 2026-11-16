@@ -33,6 +33,14 @@ const NEW_IDS = [
   "set-mansion-prosperous", "set-mansion-ruined",
   "set-school-prosperous", "set-school-abandoned",
   "set-village-prosperous", "set-village-hollow",
+  // 室外片场（26）
+  "set-forest", "set-bamboo", "set-grassland", "set-desert",
+  "set-mountain", "set-cliff", "set-waterfall", "set-lake",
+  "set-beach", "set-snow", "set-flower-field", "set-peach",
+  "set-garden", "set-tea", "set-rice-field", "set-horse-ranch",
+  "set-farm", "set-street", "set-park", "set-bridge",
+  "set-station", "set-ancient-street", "set-market", "set-battlefield",
+  "set-military-camp", "set-city-wall",
 ];
 const OLD_IDS = ["set-school", "set-office", "set-cafe"];
 

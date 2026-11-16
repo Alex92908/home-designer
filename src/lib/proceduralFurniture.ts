@@ -1745,6 +1745,390 @@ function buildToppledShelf(g: THREE.Group, w: number, d: number, h: number, c: s
   }
 }
 
+// ─── 户外场景（第六批：室外片场 26 个）──────────────────────────────────────
+// 植被/地形/水体/户外构筑全部程序化：室外场景的地面、树木、山水在 587 件
+// 目录里没有可用模型（tree-oak 等只有素盒子回退），且 Sketchfab 同类模型
+// 许可证与尺寸均不合用。builder 只用 w/d/h 相对尺寸，包围盒落在声明尺寸内
+// （harness 第 1 节逐项核对）；颜色取目录 color（树冠/花色/铺面色），
+// 树干/石材等固定色写死在 builder 里。
+
+/** 阔叶乔木：树干 + 三层错开树冠球（颜色 = 树冠色）。 */
+function buildTree(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const m = Math.min(w, d);
+  const trunk = std("#6A4A2A", 0.9);
+  const leaf = std(c || "#2D6A1F", 0.9);
+  cyl(g, m * 0.07, m * 0.09, h * 0.45, 0, 0, 0, trunk);
+  sphere(g, m * 0.30, 0, h * 0.60, 0, leaf);
+  sphere(g, m * 0.26, w * 0.12, h * 0.74, 0, leaf);
+  sphere(g, m * 0.22, -w * 0.10, h * 0.84, d * 0.08, leaf);
+}
+
+/** 松树：树干 + 三层叠锥（颜色 = 针叶色；雪松用白色目录色）。 */
+function buildPine(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const m = Math.min(w, d);
+  const leaf = std(c || "#1E5022", 0.9);
+  cyl(g, m * 0.06, m * 0.08, h * 0.20, 0, 0, 0, std("#5A3A22", 0.9));
+  cone(g, m * 0.42, h * 0.42, 0, h * 0.18, 0, leaf);
+  cone(g, m * 0.34, h * 0.36, 0, h * 0.42, 0, leaf);
+  cone(g, m * 0.25, h * 0.32, 0, h * 0.64, 0, leaf);
+}
+
+/** 棕榈树：微倾树干 + 六片平铺放射叶 + 椰果。 */
+function buildPalm(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const m = Math.min(w, d);
+  const leaf = std(c || "#3D7A2A", 0.9);
+  const trunk = cyl(g, m * 0.045, m * 0.06, h * 0.72, 0, 0, 0, std("#8A7A5A", 0.9));
+  trunk.rotation.z = 0.06;
+  for (let i = 0; i < 6; i++) {
+    const a = (i * Math.PI) / 3;
+    const frond = new THREE.Mesh(new THREE.BoxGeometry(w * 0.42, 0.02, d * 0.09), leaf);
+    frond.position.set(Math.cos(a) * w * 0.17, h * 0.74, Math.sin(a) * w * 0.17);
+    frond.rotation.y = -a;
+    add(g, frond);
+  }
+  for (const [sx, sz] of [[-1, 0], [1, 0], [0, 1]] as Array<[number, number]>) {
+    sphere(g, m * 0.045, sx * m * 0.05, h * 0.70, sz * m * 0.05, std("#6A4A2A", 0.9));
+  }
+}
+
+/** 竹丛：五竿细竹（微倾）+ 竿顶叶簇。 */
+function buildBambooClump(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const culm = std("#4A8A3A", 0.7);
+  const leaf = std(c || "#3A8A3A", 0.9);
+  const spots: Array<[number, number, number]> = [
+    [-0.28, -0.22, 0.95], [0.24, -0.28, 1.0], [0.0, 0.05, 0.88],
+    [-0.22, 0.26, 0.92], [0.28, 0.24, 0.98],
+  ];
+  for (const [fx, fz, fh] of spots) {
+    const m = cyl(g, 0.03, 0.035, h * fh, fx * w, 0, fz * d, culm, 10);
+    m.rotation.z = fx * 0.08;
+    sphere(g, 0.12, fx * w, h * fh * 0.96, fz * d, leaf);
+  }
+}
+
+/** 岩石：低多面体（十二面体压扁），颜色 = 目录色。 */
+function buildRock(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), std(c || "#8A8A80", 0.95));
+  mesh.scale.set(w * 0.42, h * 0.45, d * 0.42);
+  mesh.position.set(0, h * 0.42, 0);
+  mesh.rotation.y = 0.5;
+  add(g, mesh);
+}
+
+/** 灌木丛：三球交叠叶丛。 */
+function buildBush(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const m = Math.min(w, d);
+  const leaf = std(c || "#3A6A2A", 0.9);
+  sphere(g, m * 0.28, 0, h * 0.30, 0, leaf);
+  sphere(g, m * 0.24, w * 0.14, h * 0.45, d * 0.06, leaf);
+  sphere(g, m * 0.22, -w * 0.12, h * 0.42, -d * 0.08, leaf);
+}
+
+/** 草丛：七束锥形草叶。 */
+function buildGrassTuft(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const leaf = std(c || "#5A9E3A", 0.9);
+  const spots: Array<[number, number]> = [
+    [0, 0], [-0.28, -0.2], [0.26, -0.24], [-0.24, 0.26], [0.28, 0.22], [0.05, -0.3], [-0.05, 0.3],
+  ];
+  for (const [fx, fz] of spots) cone(g, 0.04, h * 0.85, fx * w, 0, fz * d, leaf, 8);
+}
+
+/** 花丛：五茎 + 顶花球（颜色 = 花色），茎叶固定绿。 */
+function buildFlowerCluster(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const flower = std(c || "#E88AA0", 0.9);
+  const stem = std("#3A6A2A", 0.9);
+  const spots: Array<[number, number]> = [[0, 0], [-0.26, -0.2], [0.26, -0.22], [-0.22, 0.26], [0.24, 0.24]];
+  for (const [fx, fz] of spots) {
+    cyl(g, 0.012, 0.012, h * 0.5, fx * w, 0, fz * d, stem, 6);
+    sphere(g, 0.05, fx * w, h * 0.55, fz * d, flower);
+  }
+  sphere(g, 0.07, -w * 0.1, h * 0.25, 0, stem);
+  sphere(g, 0.06, w * 0.12, h * 0.22, d * 0.1, stem);
+}
+
+/** 地面铺面：5cm 薄板（草/沙/雪/石/干草），颜色 = 目录色，靠 scaleW/D 放大铺满。 */
+function buildGroundPatch(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  box(g, w, h, d, 0, 0, 0, std(c || "#5A9E3A", 0.95));
+}
+
+/** 水面：半透明蓝色薄板（平面示意，非水体模拟）。 */
+function buildWaterPlane(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({
+    color: c || "#3A90C0", roughness: 0.25, metalness: 0.1,
+    transparent: true, opacity: 0.85,
+  }));
+  mesh.position.set(0, h / 2, 0);
+  add(g, mesh);
+}
+
+/** 远山：锥形山体 + 白色雪顶。 */
+function buildMountain(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const m = Math.min(w, d);
+  cone(g, m * 0.48, h * 0.85, 0, 0, 0, std(c || "#6A7A8A", 0.95));
+  cone(g, m * 0.48 * 0.42, h * 0.30, 0, h * 0.62, 0, std("#F0F4F8", 0.95));
+}
+
+/** 沙丘：扁球形沙堆（下半埋入地下，只露上半）。 */
+function buildDune(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 12), std(c || "#D8C090", 0.95));
+  mesh.scale.set(w * 0.48, h * 0.5, d * 0.48);
+  mesh.position.set(0, h * 0.5, 0);
+  add(g, mesh);
+}
+
+
+/** 路灯：立柱 + 顶灯头（发光）。 */
+function buildStreetLamp(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  cyl(g, 0.035, 0.045, h * 0.92, 0, 0, 0, std("#3A3A3A", 0.4, 0.7), 10);
+  box(g, w * 0.5, 0.06, d * 0.5, 0, h * 0.92, 0, std("#2A2A2A", 0.4, 0.7));
+  box(g, w * 0.4, 0.03, d * 0.4, 0, h * 0.92 - 0.045, 0, glow("#F5E8C8", "#F5D890", 0.9));
+}
+
+
+/** 帐篷：地布 + 双坡篷布（两块斜板）+ 脊杆。 */
+function buildTent(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const cloth = std(c || "#8A7A5A", 0.95);
+  box(g, w, 0.03, d, 0, 0, 0, std("#7A6A4A", 0.95)); // 地布
+  const ridgeH = h * 0.9;
+  const slope = Math.hypot(w / 2, ridgeH);
+  const ang = Math.atan2(ridgeH, w / 2);
+  for (const s of [-1, 1]) {
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(slope, 0.04, d), cloth);
+    panel.position.set((s * w) / 4, ridgeH / 2, 0);
+    panel.rotation.z = -s * ang;
+    add(g, panel);
+  }
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, d, 8), std("#6A4A2A", 0.9));
+  pole.rotation.x = Math.PI / 2;
+  pole.position.set(0, ridgeH, 0);
+  add(g, pole);
+}
+
+/** 旗帜：旗杆 + 旗面 + 顶球。 */
+function buildBanner(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  cyl(g, 0.035, 0.045, h * 0.92, 0, 0, 0, std("#6A4A2A", 0.9), 10);
+  box(g, w * 0.44, h * 0.22, 0.02, w * 0.24, h * 0.78, 0, std(c || "#B03030", 0.9));
+  sphere(g, 0.05, 0, h * 0.94, 0, std("#C8A24A", 0.4, 0.8));
+}
+
+/** 城墙段：墙体 + 马道 + 一排垛口。 */
+function buildCityWall(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const stone = std(c || "#8A7A6A", 0.95);
+  box(g, w, h * 0.72, d, 0, 0, 0, stone);
+  box(g, w, 0.04, d * 0.9, 0, h * 0.72, 0, std("#7A6A5A", 0.95));
+  for (let i = 0; i < 8; i++) {
+    const x = -w * 0.44 + (i * w * 0.88) / 7;
+    box(g, w * 0.06, h * 0.16, d * 0.2, x, h * 0.76, d * 0.32, stone);
+  }
+}
+
+/** 城门：双塔 + 横梁 + 顶盖，中空门洞（不做拱券减法，横梁在门洞上方）。 */
+function buildCityGate(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const stone = std(c || "#8A7A6A", 0.95);
+  for (const sx of [-1, 1]) {
+    box(g, w * 0.28, h * 0.78, d, sx * w * 0.36, 0, 0, stone);
+  }
+  box(g, w, h * 0.14, d * 0.9, 0, h * 0.78, 0, stone); // 横梁
+  box(g, w * 0.98, 0.05, d * 0.98, 0, h * 0.92, 0, std("#7A6A5A", 0.95)); // 顶盖
+}
+
+/** 拱桥：五级阶梯桥面 + 两侧栏杆（斜栏杆段 + 立柱）。 */
+function buildArchBridge(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c || "#A08050", 0.9);
+  const ys = [0.10, 0.45, 0.70, 0.45, 0.10];
+  const xs = [-0.4, -0.2, 0, 0.2, 0.4].map((f) => f * w);
+  for (let i = 0; i < 5; i++) {
+    box(g, w * 0.22, 0.08, d, xs[i], ys[i] * h, 0, wood);
+  }
+  for (const sz of [-1, 1]) {
+    for (let i = 0; i < 4; i++) {
+      const x0 = xs[i], x1 = xs[i + 1];
+      const y0 = (ys[i] + 0.08) * h + 0.55, y1 = (ys[i + 1] + 0.08) * h + 0.55;
+      const len = Math.hypot(x1 - x0, y1 - y0);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.04, 0.04), wood);
+      rail.position.set((x0 + x1) / 2, (y0 + y1) / 2, sz * d * 0.44);
+      rail.rotation.z = Math.atan2(y1 - y0, x1 - x0);
+      add(g, rail);
+    }
+    for (let i = 0; i < 5; i++) {
+      box(g, 0.05, 0.55, 0.05, xs[i], (ys[i] + 0.08) * h, sz * d * 0.44, wood);
+    }
+  }
+}
+
+/** 木船：船体 + 翘首尾 + 桅杆 + 篷顶（渡船/湖船）。 */
+function buildWoodenBoat(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c || "#6A4A2A", 0.9);
+  box(g, w * 0.85, h * 0.35, d * 0.55, 0, 0, 0, wood); // 船体
+  for (const s of [-1, 1]) {
+    const end = new THREE.Mesh(new THREE.BoxGeometry(w * 0.1, h * 0.45, d * 0.5), wood);
+    end.position.set(s * w * 0.39, h * 0.3, 0);
+    end.rotation.z = -s * 0.5;
+    add(g, end);
+  }
+  cyl(g, 0.04, 0.05, h * 0.6, 0, h * 0.35, 0, std("#5A3A22", 0.9), 10); // 桅杆
+  for (const sx of [-1, 1]) cyl(g, 0.03, 0.03, h * 0.27, sx * w * 0.2, h * 0.35, 0, wood, 8);
+  box(g, w * 0.5, 0.04, d * 0.6, 0, h * 0.62, 0, std("#8A7A5A", 0.9)); // 篷顶
+}
+
+/** 临街店面（现代）：墙体 + 玻璃橱窗 + 雨篷 + 招牌板。 */
+function buildShopFacade(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  box(g, w, h, d, 0, 0, 0, std(c || "#C8C8C8", 0.9));
+  box(g, w * 0.7, h * 0.45, 0.04, 0, h * 0.05, d / 2, std("#8AB0C8", 0.25, 0.4));
+  box(g, w * 0.8, 0.04, d * 0.3, 0, h * 0.55, d * 0.35, std("#3A3A3A", 0.8));
+  box(g, w * 0.6, h * 0.12, 0.04, 0, h * 0.8, d / 2, std("#2A2A2A", 0.7));
+}
+
+/** 木构店面（古镇）：木墙 + 双坡顶 + 招牌 + 灯笼。 */
+function buildTimberFacade(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c || "#6A4A2A", 0.9);
+  box(g, w, h * 0.7, d * 0.6, 0, 0, -d * 0.2, wood);
+  const rise = h * 0.3;
+  const slope = Math.hypot(w / 2, rise);
+  const ang = Math.atan2(rise, w / 2);
+  for (const s of [-1, 1]) {
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(slope, 0.04, d * 0.9), std("#5A3A22", 0.9));
+    panel.position.set((s * w) / 4, h * 0.7 + rise / 2, 0);
+    panel.rotation.z = -s * ang;
+    add(g, panel);
+  }
+  box(g, w * 0.5, h * 0.1, 0.03, 0, h * 0.5, d * 0.12, std("#3A2A1A", 0.9));
+  sphere(g, 0.07, w * 0.3, h * 0.5, d * 0.35, glow("#C03028", "#C03028", 0.7));
+}
+
+/** 茶树行：四丛压扁弧形茶树。 */
+function buildTeaRow(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const leaf = std(c || "#3A6A2A", 0.9);
+  for (const fx of [-0.375, -0.125, 0.125, 0.375]) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(d * 0.45, 14, 10), leaf);
+    m.scale.set(1, 0.7, 1);
+    m.position.set(fx * w, h * 0.45, 0);
+    add(g, m);
+  }
+}
+
+/** 稻田块：浅水底 + 十二丛秧苗。 */
+function buildRicePaddy(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  box(g, w, 0.05, d, 0, 0, 0, std("#8AB090", 0.4));
+  const shoot = std(c || "#7AB060", 0.9);
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 3; j++) {
+      cone(g, 0.03, 0.18, -w * 0.36 + i * w * 0.24, 0.05, -d * 0.3 + j * d * 0.3, shoot, 6);
+    }
+  }
+}
+
+/** 作物行：两排幼苗锥。 */
+function buildCropRow(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const crop = std(c || "#5A8A3A", 0.9);
+  for (let i = 0; i < 6; i++) {
+    for (const sz of [-1, 1]) {
+      cone(g, 0.05, h * 0.5, -w * 0.4 + i * w * 0.16, 0, sz * d * 0.25, crop, 6);
+    }
+  }
+}
+
+/** 谷仓：红板墙 + 双坡顶 + 大门。 */
+function buildBarn(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  box(g, w, h * 0.62, d, 0, 0, 0, std(c || "#A03028", 0.9));
+  const rise = h * 0.38;
+  const slope = Math.hypot(w / 2, rise);
+  const ang = Math.atan2(rise, w / 2);
+  for (const s of [-1, 1]) {
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(slope, 0.05, d), std("#6A4A2A", 0.9));
+    panel.position.set((s * w) / 4, h * 0.62 + rise / 2, 0);
+    panel.rotation.z = -s * ang;
+    add(g, panel);
+  }
+  box(g, w * 0.3, h * 0.45, 0.04, 0, 0, d / 2, std("#5A3A22", 0.9));
+}
+
+/** 马厩：四柱 + 顶盖 + 两道隔栏 + 食槽。 */
+function buildStable(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c || "#8A6A42", 0.9);
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as Array<[number, number]>) {
+    box(g, 0.08, h * 0.75, 0.08, sx * w * 0.42, 0, sz * d * 0.42, wood);
+  }
+  box(g, w, 0.05, d, 0, h * 0.75, 0, std("#6A4A2A", 0.9));
+  for (const sx of [-1, 1]) box(g, 0.04, h * 0.4, d * 0.8, sx * w * 0.15, 0, 0, wood);
+  box(g, w * 0.8, h * 0.15, d * 0.2, 0, 0, -d * 0.35, std("#5A3A22", 0.9));
+}
+
+/** 草垛：圆柱底 + 圆锥顶。 */
+function buildHaystack(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const hay = std(c || "#D8B060", 0.95);
+  const m = Math.min(w, d);
+  cyl(g, m * 0.4, m * 0.42, h * 0.25, 0, 0, 0, hay, 14);
+  cone(g, m * 0.42, h * 0.75, 0, h * 0.25, 0, hay, 14);
+}
+
+/** 站台：台面 + 四柱雨棚 + 站牌。 */
+function buildPlatform(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  box(g, w, h * 0.28, d, 0, 0, 0, std(c || "#C8C8C8", 0.9));
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as Array<[number, number]>) {
+    cyl(g, 0.05, 0.05, h * 0.6, sx * w * 0.45, h * 0.28, sz * d * 0.4, std("#5A5A5A", 0.4, 0.7), 10);
+  }
+  box(g, w, 0.05, d, 0, h * 0.88, 0, std("#8A8A8A", 0.9));
+  box(g, w * 0.3, h * 0.08, 0.03, 0, h * 0.7, d / 2, std("#2A5A8A", 0.7));
+}
+
+/** 铁轨：道砟底 + 十根轨枕 + 双轨。 */
+function buildRailTrack(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  box(g, w, 0.03, d, 0, 0, 0, std("#6A6A60", 0.95));
+  for (let i = 0; i < 10; i++) {
+    box(g, 0.18, 0.03, d * 0.8, -w * 0.45 + (i * w * 0.9) / 9, 0.03, 0, std("#4A3A2A", 0.9));
+  }
+  for (const sz of [-1, 1]) {
+    box(g, w, 0.04, 0.08, 0, h * 0.55, sz * d * 0.3, std("#8A8A8A", 0.3, 0.8));
+  }
+}
+
+/** 石灯笼：基座 + 柱 + 灯室 + 四棱宝珠顶。 */
+function buildStoneLantern(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const stone = std(c || "#8A8A80", 0.95);
+  box(g, w * 0.5, h * 0.12, d * 0.5, 0, 0, 0, stone);
+  box(g, w * 0.25, h * 0.5, d * 0.25, 0, h * 0.12, 0, stone);
+  box(g, w * 0.4, h * 0.25, d * 0.4, 0, h * 0.62, 0, stone);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(w * 0.35, h * 0.13, 4), stone);
+  cap.position.set(0, h * 0.87 + h * 0.065, 0);
+  cap.rotation.y = Math.PI / 4;
+  add(g, cap);
+}
+
+
+/** 瀑布：岩壁 + 半透明落水 + 前方水潭。 */
+function buildWaterfall(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  box(g, w, h, d * 0.45, 0, 0, -d * 0.275, std(c || "#7A8A8A", 0.95));
+  const water = new THREE.Mesh(
+    new THREE.BoxGeometry(w * 0.55, h * 0.85, 0.04),
+    new THREE.MeshStandardMaterial({
+      color: "#D8ECF8", roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.8,
+    }));
+  water.position.set(0, h * 0.08 + h * 0.425, d * 0.2);
+  add(g, water);
+  cyl(g, Math.min(w, d) * 0.32, Math.min(w, d) * 0.32, 0.05, 0, 0, d * 0.15,
+    new THREE.MeshStandardMaterial({
+      color: "#3A90C0", roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.85,
+    }), 20);
+}
+
+/** 花架亭：四柱 + 两横梁 + 五根顶条。 */
+function buildPergola(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c || "#C8A070", 0.9);
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as Array<[number, number]>) {
+    box(g, 0.09, h * 0.8, 0.09, sx * w * 0.44, 0, sz * d * 0.44, wood);
+  }
+  for (const sz of [-1, 1]) box(g, w, 0.06, 0.08, 0, h * 0.8, sz * d * 0.44, wood);
+  for (let i = 0; i < 5; i++) {
+    box(g, 0.07, 0.04, d, -w * 0.4 + (i * w * 0.8) / 4, h * 0.86, 0, wood);
+  }
+}
+
+/** 长枪：枪杆 + 枪尖（插地竖立）。 */
+function buildSpear(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  cyl(g, 0.02, 0.025, h * 0.9, 0, 0, 0, std("#8A6A42", 0.9), 8);
+  cone(g, 0.035, h * 0.1, 0, h * 0.9, 0, std("#8A8A8A", 0.3, 0.8), 8);
+}
 // ─── 登记 ──────────────────────────────────────────────────────────────────
 
 const PROCEDURAL_BUILDERS: Record<string, Builder> = {
@@ -1824,6 +2208,53 @@ const PROCEDURAL_BUILDERS: Record<string, Builder> = {
   "proc-ktv-screen": buildKtvScreen,
   "proc-wedding-arch": buildWeddingArch,
   "proc-wedding-stage": buildWeddingStage,
+  "proc-cooktop": buildCooktop,
+  // ── 户外场景（室外片场 26 个）──
+  "proc-tree-oak": buildTree,
+  "proc-tree-peach": buildTree,
+  "proc-pine": buildPine,
+  "proc-pine-snow": buildPine,
+  "proc-palm": buildPalm,
+  "proc-bamboo-clump": buildBambooClump,
+  "proc-rock": buildRock,
+  "proc-rock-big": buildRock,
+  "proc-bush": buildBush,
+  "proc-bush-snow": buildBush,
+  "proc-grass-tuft": buildGrassTuft,
+  "proc-flower-lavender": buildFlowerCluster,
+  "proc-flower-mixed": buildFlowerCluster,
+  "proc-flower-rapeseed": buildFlowerCluster,
+  "proc-ground-grass": buildGroundPatch,
+  "proc-ground-sand": buildGroundPatch,
+  "proc-ground-snow": buildGroundPatch,
+  "proc-ground-stone": buildGroundPatch,
+  "proc-ground-dry": buildGroundPatch,
+  "proc-water-plane": buildWaterPlane,
+  "proc-sea-plane": buildWaterPlane,
+  "proc-mountain": buildMountain,
+  "proc-mountain-snow": buildMountain,
+  "proc-dune": buildDune,
+  "proc-street-lamp": buildStreetLamp,
+  "proc-tent": buildTent,
+  "proc-banner": buildBanner,
+  "proc-city-wall": buildCityWall,
+  "proc-city-gate": buildCityGate,
+  "proc-arch-bridge": buildArchBridge,
+  "proc-wooden-boat": buildWoodenBoat,
+  "proc-shop-facade": buildShopFacade,
+  "proc-timber-facade": buildTimberFacade,
+  "proc-tea-row": buildTeaRow,
+  "proc-rice-paddy": buildRicePaddy,
+  "proc-crop-row": buildCropRow,
+  "proc-barn": buildBarn,
+  "proc-stable": buildStable,
+  "proc-haystack": buildHaystack,
+  "proc-platform": buildPlatform,
+  "proc-rail-track": buildRailTrack,
+  "proc-stone-lantern": buildStoneLantern,
+  "proc-waterfall": buildWaterfall,
+  "proc-pergola": buildPergola,
+  "proc-spear": buildSpear,
   "proc-cooktop": buildCooktop,
   // ── 繁荣/衰败成对场景（第 5 批）──
   "proc-rubble-pile": buildRubblePile,

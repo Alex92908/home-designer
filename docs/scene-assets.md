@@ -1,17 +1,18 @@
 # 导演台新场景 · 3D 资产说明 (Scene Assets)
 
 - **日期：** 2026-11-16
-- **范围：** 47 个参考节 / 68 个片场（上一批 12 个研究场景 set-villa-suburban /
+- **范围：** 73 个参考节 / 94 个片场（上一批 12 个研究场景 set-villa-suburban /
   set-school / set-hospital / set-qinhan / set-weijin / set-yuan /
   set-banpo / set-hemudu / set-rural-republican / set-versailles /
   set-washitsu / set-hanok；本批 24 个高频日常场景：学校 7 /
   家庭 3 / 公司 5 / 联想补充 9；成对场景 11 对 = 22 个片场：
   唐长安 / 宋汴京 / 圆明园 / 大明宫 / 罗马 / 庞贝 / 楼兰 / 商场 /
-  豪宅 / 学校 / 村庄，各一繁荣态 + 一衰败态）
+  豪宅 / 学校 / 村庄，各一繁荣态 + 一衰败态；室外片场 26 个：自然 12 / 植物园艺 3 /
+  动物相关 2 / 城市户外 4 / 古代户外 5）
 
 ## 结论先行：零外部下载，全部程序化 + 复用现有目录
 
-本次 24 个场景 + 成对 22 个场景的家具**没有下载任何外部 3D 模型**。原因：
+本次 24 个场景 + 成对 22 个场景 + 室外 26 个场景的家具**没有下载任何外部 3D 模型**。原因：
 
 1. 程序化是既定第一优先级（可靠、零许可风险、离线可用、体积零增长）；
 2. Sketchfab / NVIDIA 开源资产对这批器物（汉榻/案/几、胡床、蒙古包、
@@ -20,7 +21,8 @@
    总裁大班台、会议长桌、前台、电梯轿厢、法官席、酒吧吧台、跑步机、
    超市货架、收银台、KTV 大屏、婚礼舞台等；成对场景：瓦砾堆、断裂桌案、
    蛛网、杂草、坍塌墙、集市摊位、灯笼杆、罗马柱、牌楼、石井、焦梁、
-   枯树、太湖石、倒塌货架等）没有尺寸、风格、许可证
+   枯树、太湖石、倒塌货架等；室外场景：树木/竹丛/山体/水面/帐篷/城墙/谷仓/
+   铁轨/店面/拱桥等）没有尺寸、风格、许可证
    三者都合用的现成模型；逐个谈许可证与格式转换的成本远高于
    程序化建模，且会引入二进制体积与来源维护负担；
 3. 其余家具全部复用仓库已有 587 件目录（GLB 模型已在仓库内）。
@@ -29,10 +31,20 @@
 刻意为零。如未来某件确实需要外部模型，再按“CC0 / CC-BY / MIT /
 NVIDIA 开源许可才可用，许可证 + 来源 URL 随模型登记”的规则补登记。
 
+复用既有件（未新增）：蒙古包 proc-yurt（草原）、半坡火塘 proc-banpo-firepit（战场/军营篝火）、
+粟束 proc-millet-sheaf（农场）、稻束 proc-rice-sheaf（稻田）、木箱 proc-wood-chest（集市）、
+户外长椅 proc-outdoor-bench（湖/海滩/街道/公园/火车站）；目录件：木质围栏 fence（花海/马场/
+农场/军营/火车站）、石板小路 stone-path（森林/竹林/山/桃花林/庭院花园/公园/街道/古镇）。
+复用成对场景批的件：集市摊位 proc-market-stall（集市/古镇街道）、枯树 proc-dead-tree（沙漠/
+战场）、灯笼杆 proc-lantern-pole（古镇街道/集市/桥）、石井 proc-stone-well（古镇街道/集市/农场）。
+未建模故缺席：马匹（程序化动物不可行，马场/农场均为空场）、列车（火车站无车）、
+古代兵器甲胄战车（战场只有长枪示意）、假山/曲廊（庭院花园）、辕门望楼拒马（军营）、
+瓮城角楼拱券城门（城墙为简化形）。
+
 参考图包见 `docs/scene-references.md`（图片均为链接引用，不入库；
 只有明确标注公有领域 / CC0 的文件才可下载进仓库）。
 
-## 程序化家具一览（92 件，id 以 `proc-` 开头）
+## 程序化家具一览（137 件，id 以 `proc-` 开头）
 
 几何：`src/lib/proceduralFurniture.ts`（纯 three.js，无 JSX，可被
 node harness 直接验证）；目录登记：`src/lib/furniture.ts`（无
@@ -134,6 +146,51 @@ node harness 直接验证）；目录登记：`src/lib/furniture.ts`（无
 | proc-dead-tree | 枯树（主干+五条秃枝） | 全部衰败态（室外/门廊） | outdoor_plant |
 | proc-rockery | 太湖石（三层叠石） | 圆明园两态（衰败态留存） | decor |
 | proc-toppled-shelf | 倒塌货架（侧倒+商品散落） | 商场/学校衰败态 | bookshelf |
+| proc-tree-oak | 橡树 | 森林、湖、公园、街道、农场等 | outdoor_plant |
+| proc-tree-peach | 桃树 | 桃花林 | outdoor_plant |
+| proc-pine | 松树 | 森林、山、悬崖 | outdoor_plant |
+| proc-pine-snow | 雪松 | 雪山 | outdoor_plant |
+| proc-palm | 棕榈树 | 海滩 | outdoor_plant |
+| proc-bamboo-clump | 竹丛 | 竹林、庭院花园 | outdoor_plant |
+| proc-rock | 岩石 | 各自然场景 | outdoor_hardscape |
+| proc-rock-big | 巨石 | 沙漠、山、悬崖 | outdoor_hardscape |
+| proc-bush | 灌木丛 | 各自然场景 | outdoor_plant |
+| proc-bush-snow | 雪灌木 | 雪山 | outdoor_plant |
+| proc-grass-tuft | 草丛 | 各自然场景 | outdoor_plant |
+| proc-flower-lavender | 薰衣草丛 | 花海 | outdoor_plant |
+| proc-flower-mixed | 野花丛 | 花海、公园、庭院花园 | outdoor_plant |
+| proc-flower-rapeseed | 油菜花丛 | 花海 | outdoor_plant |
+| proc-ground-grass | 草地铺面 | 各草地场景（缩放铺满） | outdoor_hardscape |
+| proc-ground-sand | 沙地铺面 | 沙漠、海滩、马场骑乘圈 | outdoor_hardscape |
+| proc-ground-snow | 雪地铺面 | 雪山 | outdoor_hardscape |
+| proc-ground-stone | 石地铺面 | 悬崖、街道、火车站、古镇、城墙 | outdoor_hardscape |
+| proc-ground-dry | 干草地铺面 | 草原、战场、军营、农场场院 | outdoor_hardscape |
+| proc-water-plane | 水面 | 瀑布水潭、湖、庭院池塘、公园水面、桥下水道 | outdoor_water |
+| proc-sea-plane | 海面 | 海滩 | outdoor_water |
+| proc-mountain | 远山 | 山、森林、草原、茶园、稻田、战场 | outdoor_hardscape |
+| proc-mountain-snow | 雪山 | 雪山、山 | outdoor_hardscape |
+| proc-dune | 沙丘 | 沙漠、海滩 | outdoor_hardscape |
+| proc-street-lamp | 路灯 | 街道、公园、火车站 | decor |
+| proc-tent | 帐篷 | 草原、战场、军营、城墙 | outdoor_structure |
+| proc-banner | 旗帜 | 草原、战场、军营、城墙、悬崖、马场 | decor |
+| proc-city-wall | 城墙段 | 城墙 | outdoor_hardscape |
+| proc-city-gate | 城门 | 城墙 | outdoor_hardscape |
+| proc-arch-bridge | 拱桥 | 桃花林、庭院花园、桥 | outdoor_structure |
+| proc-wooden-boat | 木船 | 湖、海滩 | outdoor_structure |
+| proc-shop-facade | 临街店面 | 街道、火车站（作站房） | outdoor_structure |
+| proc-timber-facade | 木构店面 | 古镇街道、集市 | outdoor_structure |
+| proc-tea-row | 茶树行 | 茶园 | outdoor_plant |
+| proc-rice-paddy | 稻田块 | 稻田 | outdoor_plant |
+| proc-crop-row | 作物行 | 农场 | outdoor_plant |
+| proc-barn | 谷仓 | 农场 | outdoor_structure |
+| proc-stable | 马厩 | 马场 | outdoor_structure |
+| proc-haystack | 草垛 | 马场、农场 | outdoor_plant |
+| proc-platform | 站台 | 火车站 | outdoor_structure |
+| proc-rail-track | 铁轨 | 火车站 | outdoor_hardscape |
+| proc-stone-lantern | 石灯笼 | 竹林、湖、公园、桃花林、庭院花园 | decor |
+| proc-waterfall | 瀑布 | 瀑布 | outdoor_water |
+| proc-pergola | 花架亭 | 庭院花园、公园 | outdoor_structure |
+| proc-spear | 长枪 | 战场、军营、城墙 | decor |
 
 **程序化件总数：46 + 30 + 16 = 92 件。**
 

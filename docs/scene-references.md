@@ -1,7 +1,7 @@
-# ZhuyaHome 导演台 · 47 个场景参考图包 (Scene Reference Pack)
+# ZhuyaHome 导演台 · 73 个场景参考图包 (Scene Reference Pack)
 
 - **日期：** 2026-11-16
-- **目的：** 为导演台 47 个待建/已建简化场景提供建模前可核对的公开参考图——核对颜色、比例、家具形态与布局。每条参考只给链接，不随包附带图片文件。第 1–12 节为上一批 12 个研究场景；第 13–36 节为本批 24 个高频日常场景（学校 7 / 家庭 3 / 公司 5 / 联想补充 9）；第 37–47 节为成对繁荣/衰败场景（11 对，唐长安/宋汴京/圆明园/大明宫/罗马/庞贝/楼兰/商场/豪宅/学校/村庄）。
+- **目的：** 为导演台 47 个待建/已建简化场景提供建模前可核对的公开参考图——核对颜色、比例、家具形态与布局。每条参考只给链接，不随包附带图片文件。第 1–12 节为上一批 12 个研究场景；第 13–36 节为本批 24 个高频日常场景（学校 7 / 家庭 3 / 公司 5 / 联想补充 9）；第 37–47 节为成对繁荣/衰败场景（11 对，唐长安/宋汴京/圆明园/大明宫/罗马/庞贝/楼兰/商场/豪宅/学校/村庄）。第 48–73 节为本批 26 个室外片场（自然 12 / 植物园艺 3 / 动物相关 2 / 城市户外 4 / 古代户外 5）。
 - **使用规则：** 图片均为链接引用，不入库。只有明确标注为公有领域 (Public domain) 或 CC0 的文件才可下载进仓库；其余 CC BY / CC BY-SA 文件仅作参考，入库使用须按许可证署名并遵守相同方式共享条款。
 - **核查方法：** 2026-11-16 对文中每一个 URL 执行 `curl -I`，全部返回 HTTP 200（唯一例外见文末“未通过核查的 URL”：一个连字符变体返回 404，已弃用，未收入正文）。许可证只写实际看到的来源；凡未在文件页上确认的，一律写“未核实——使用前请先打开文件页确认”，不编造许可证。
 - **诚实说明：** 部分 Commons 文件页在本次核查中被抓取方以 403 拒绝（疑似限流），这些文件的“文件页 URL”未收入正文，改用 Wikipedia 文章内嵌的缩略图 URL（同样 `curl -I` 验证为 200）或直接删去，详见文末。
@@ -1129,6 +1129,785 @@
 
 ---
 
+## 48. set-forest — 森林
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**48-1. Spring_forest_Yyteri_3.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Spring_forest_Yyteri_3.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：阔叶林密度与林间光斑：树冠交叠程度、林下空地尺度（本场景中央留空地供演员走位）。
+
+
+### 缺口
+- 林间小径只用两块石板示意，未按图做连续林间路；树种未按图分落叶/针叶混交。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁（现代与古装通用）。
+
+
+---
+
+## 49. set-bamboo — 竹林
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**49-1. Bamboo Forest, Arashiyama, Kyoto, Japan.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Bamboo_Forest%2C_Arashiyama%2C_Kyoto%2C_Japan.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：竹林密度与竿高：竹竿成丛直立、竿顶叶簇、林下石灯笼与小径（与本场景的竹丛+石灯笼+石板路对应）。
+
+
+### 缺口
+- 竹竿未做竹节环纹（程序化圆柱无节）；京都竹林为游步道景观，武侠片场的竹林打斗空地按本场景中央留空处理。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁；竹林本身古今通用，石灯笼为日式园林件，古装中式场景使用时按庭院石灯笼理解。
+
+
+---
+
+## 50. set-grassland — 草原
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**50-1. Steppe, Grassland, Rostov-on-Don, Russia.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Steppe%2C_Grassland%2C_Rostov-on-Don%2C_Russia.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：草原地貌：平坦干草地、远处地平线、草色枯黄绿相间（与本场景干草地铺面+草丛对应）。
+
+
+### 缺口
+- 图中无蒙古包；蒙古包形态另见元代场景研究（proc-yurt 已有据可依），此处复用。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁；蒙古包为游牧民族居所，现代草原旅游场景亦可用。
+
+
+---
+
+## 51. set-desert — 沙漠
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**51-1. Mesquite Sand Dunes in Death Valley.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Mesquite_Sand_Dunes_in_Death_Valley.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 3.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：沙丘形态：平滑风蚀沙丘曲线、沙色（与本场景沙地铺面+扁球沙丘对应）；枯树为点缀。
+
+
+### 缺口
+- 图中无枯树；枯树形态按通用枯枝剪影处理，未另找参考。驼队、商队不在本场景内。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁。
+
+
+---
+
+## 52. set-mountain — 山
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**52-1. Cholatse Peak, Nepal, Himalayas.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Cholatse_Peak%2C_Nepal%2C_Himalayas.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：山体形态：锥形山峰、雪线以上岩壁与雪顶分界（与本场景锥形远山+雪顶对应）。
+
+
+### 缺口
+- 图中为高海拔雪山；本场景的无雪远山用同形灰蓝色锥体，雪线位置按图中山顶雪盖比例处理。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁。
+
+
+---
+
+## 53. set-cliff — 悬崖
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**53-1. Gaztelugache, Bermeo, País Vasco, España, 2019-08-13, DD 14.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Gaztelugache%2C_Bermeo%2C_Pa%C3%ADs_Vasco%2C_Espa%C3%B1a%2C_2019-08-13%2C_DD_14.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：崖体形态：海蚀崖壁、崖顶草地与石块、崖边视野开阔（与本场景崖顶石地+巨石+松树对应）。
+
+
+### 缺口
+- 图中为海崖，本场景为通用山崖（无海）；崖下深度不做建模，演员只在崖顶活动。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁。注意：崖边无护栏是设计如此（剧情需要），须在导演台安全提示中说明。
+
+
+---
+
+## 54. set-waterfall — 瀑布
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**54-1. Montmorency waterfall, Québec, Québec.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Montmorency_waterfall%2C_Qu%C3%A9bec%2C_Qu%C3%A9bec.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：瀑布形态：宽幅岩壁落水、水雾、水潭（与本场景岩壁+落水+水潭对应）。
+
+
+### 缺口
+- 落水为半透明薄板示意，无水流动态；瀑布后山洞不在本场景内（洞穴候选未建）。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁。
+
+
+---
+
+## 55. set-lake — 湖
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**55-1. On the shore of lake Valdai.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:On_the_shore_of_lake_Valdai.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：湖岸形态：平静湖面、岸边草地与树木、湖畔小径（与本场景湖岸+湖面+木船对应）。
+
+
+### 缺口
+- 图中无木船；木船形态按通用湖船（船体+翘首尾+篷顶）处理，未另找参考。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁。
+
+
+---
+
+## 56. set-beach — 海滩
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**56-1. Parasols, Evening, Beach, Rincon de la Victoria, Andalusia, Spain.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Parasols%2C_Evening%2C_Beach%2C_Rincon_de_la_Victoria%2C_Andalusia%2C_Spain.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：海滩形态：沙滩、海面、傍晚光线（与本场景沙地+海面+棕榈树对应）。
+
+
+### 缺口
+- 图中遮阳伞未建模（现代海滩道具，后续可补）；本场景的木船为搁浅小船示意。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁；现代海滩场景。
+
+
+---
+
+## 57. set-snow — 雪山
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**57-1. Snowy Rocky Mountain peak (6452977243).jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Snowy_Rocky_Mountain_peak_%286452977243%29.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY 2.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：雪山形态：雪顶山峰、雪原、雪松剪影（与本场景雪地+雪松+雪顶远山对应）。
+
+
+### 缺口
+- 雪地脚印、雪堆起伏未做（铺面为平板）；雪松为白色树冠的松树复用。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁。
+
+
+---
+
+## 58. set-flower-field — 花海
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**58-1. Lavender field in bloom.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Lavender_field_in_bloom.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：花田形态：成片薰衣草行、紫色花带、地平线（与本场景薰衣草丛+野花丛+油菜花丛对应）。
+
+
+### 缺口
+- 图中为单一种植薰衣草；本场景混种三色花丛（薰衣草/野花/油菜花），行距按花丛散布处理，未严格成行。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁。
+
+
+---
+
+## 59. set-peach — 桃花林
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**59-1. Asian peach blossom.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Asian_peach_blossom.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：桃花形态：粉色五瓣花、花枝密集（与本场景粉色花冠桃树对应）。
+
+
+### 缺口
+- 图中为单枝特写，未见整片桃林；桃林密度与林间空地按本场景中央留空处理。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁；仙侠/古装场景。桃树花期为春季，夏季剧情使用时按“桃花源”意境处理。
+
+
+---
+
+## 60. set-garden — 庭院花园
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**60-1. Chinese garden - Diergaarde Blijdorp - Rotterdam - spring 2021.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Chinese_garden_-_Diergaarde_Blijdorp_-_Rotterdam_-_spring_2021.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：中式园林形态：池塘、拱桥、亭、花木配植（与本场景池塘+拱桥+花架亭+竹丛对应）。
+
+
+### 缺口
+- 图中为荷兰仿中式园林；正宗江南园林的假山、曲廊未建模（假山候选未建）。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁；中式园林场景，勿混入日式枯山水元素。
+
+
+---
+
+## 61. set-tea — 茶园
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**61-1. Tea garden at Nagri in the Kangra Valley of Himachal Pradesh, India.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Tea_garden_at_Nagri_in_the_Kangra_Valley_of_Himachal_Pradesh%2C_India.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：茶园形态：等高线茶树行、山坡、远山（与本场景成行茶树+远山对应）。
+
+
+### 缺口
+- 图中为印度山坡茶园；中式茶园的梯田形态未单独建模，茶树行按平地行列处理。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁。
+
+
+---
+
+## 62. set-rice-field — 稻田
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**62-1. Green rice sheaves planted in a paddy field with long shadows at golden hour in Don Det Laos.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Green_rice_sheaves_planted_in_a_paddy_field_with_long_shadows_at_golden_hour_in_Don_Det_Laos.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：稻田形态：水田倒影、秧苗行、田埂（与本场景浅水稻田块+秧苗丛对应）。
+
+
+### 缺口
+- 图中为插秧后水田；成熟金黄稻田未另找参考，稻束形态复用河姆渡稻束。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁。
+
+
+---
+
+## 63. set-horse-ranch — 马场
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**63-1. Bonnie Springs horse stable 2.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Bonnie_Springs_horse_stable_2.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：马厩形态：木构马厩、围栏、沙地（与本场景马厩+围栏+沙地骑乘圈对应）。
+
+
+### 缺口
+- 马匹本身未建模（程序化动物不可行）；马厩内无马，场景为空马场，演员骑马动作由动作系统处理。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁。注意：场景中无马，拍摄骑马镜头须用演员动作+后期。
+
+
+---
+
+## 64. set-farm — 农场
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**64-1. Elmwood Stock Farm Barn Douglas Co KS east and south elevations.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Elmwood_Stock_Farm_Barn_Douglas_Co_KS_east_and_south_elevations.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 4.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：谷仓形态：红色木板谷仓、双坡顶、大门（与本场景红谷仓对应）。
+
+
+### 缺口
+- 图中为美式谷仓；中式农家院的土坯房未建模，本场景为通用农场（美式谷仓+中式水井混搭已注明为简化处理）。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁。注意：谷仓为美式形制，中式农村剧情使用时以农场整体意境为准。
+
+
+---
+
+## 65. set-street — 街道
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**65-1. Shop Street, Galway.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Shop_Street%2C_Galway.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：Public domain（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：临街店面形态：连续店面、招牌、行人道（与本场景临街店面+路灯+长椅对应）。
+
+
+### 缺口
+- 图中为欧洲石砌街面；本场景店面为通用现代灰调，未按图做石砌立面。
+
+
+### 时代锁（不得出现）
+- 现代场景。勿出现古装元素。
+
+
+---
+
+## 66. set-park — 公园
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**66-1. Central Park New York City New York 23 cropped.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Central_Park_New_York_City_New_York_23_cropped.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：Public domain（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：公园形态：草坪、湖面、林木、步道（与本场景草坪+水面+花架亭对应）。
+
+
+### 缺口
+- 图中为大型城市公园全景；本场景为简化袖珍公园，湖面与草坪比例压缩。
+
+
+### 时代锁（不得出现）
+- 现代场景。
+
+
+---
+
+## 67. set-bridge — 桥
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**67-1. Moon Bridge at Kubota Garden (15878996645).jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Moon_Bridge_at_Kubota_Garden_%2815878996645%29.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY 2.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：拱桥形态：高拱桥身、倒影、水面（与本场景五级阶梯拱桥+水面对应）。
+
+
+### 缺口
+- 图中为日式庭院月桥；本场景拱桥为通用木拱桥（中式石拱桥的石材拱券未建模，用阶梯木桥示意）。
+
+
+### 时代锁（不得出现）
+- 无历史时代锁；中式园林与日式庭院通用。注意：桥面为阶梯式，演员上下桥须走台阶。
+
+
+---
+
+## 68. set-station — 火车站
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**68-1. Tokyo-Station-2005-7-21 4.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Tokyo-Station-2005-7-21_4.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 3.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：火车站形态：站台、铁轨、站房立面（与本站台+铁轨+临街店面作站房对应）。
+
+
+### 缺口
+- 图中为东京站红砖站房；本场景站房为通用灰调店面立面，未按图做红砖欧式站房。列车本身未建模。
+
+
+### 时代锁（不得出现）
+- 现代场景。注意：场景中无列车，站台追车镜头须用演员跑动+后期。
+
+
+---
+
+## 69. set-ancient-street — 古镇街道
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**69-1. Qingyan Ancient Town, Guiyang.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Qingyan_Ancient_Town%2C_Guiyang.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY 2.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：古镇街道形态：石板路、木构临街店面、青瓦（与本场景木构店面+石板路+灯笼对应）。
+
+
+### 缺口
+- 图中为青岩古镇石砌街面；本场景店面为木构+双坡顶，未按图做石砌墙体与青瓦细节。
+
+
+### 时代锁（不得出现）
+- 古代场景。勿出现现代招牌、路灯、电线。
+
+
+---
+
+## 70. set-market — 集市
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**70-1. Dewsbury Market stalls - geograph.org.uk - 7526656.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Dewsbury_Market_stalls_-_geograph.org.uk_-_7526656.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 2.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：集市摊位形态：顶篷、柜台、货物陈列（与本场景六摊+顶篷+柜台+货物对应）。
+
+
+### 缺口
+- 图中为英式露天市场；中式集市的挑担、竹筐未单独建模，货物用色块箱示意。
+
+
+### 时代锁（不得出现）
+- 古代/民国市集场景亦可用；现代菜市场须另加现代元素（未建）。
+
+
+---
+
+## 71. set-battlefield — 战场
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**71-1. Gettysburg Battlefield, Pennsylvania, US (09).jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Gettysburg_Battlefield%2C_Pennsylvania%2C_US_%2809%29.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 3.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：战场形态：开阔草地、远处树线、纪念性空旷感（与本场景干草地+帐篷+旗帜对应）。
+
+
+### 缺口
+- 图中为南北战争遗址草地，无古代战场实物；古代战场的兵器、甲胄、战车未建模，只用帐篷+旗帜+插地长枪示意。
+
+
+### 时代锁（不得出现）
+- 古代战场场景。勿出现现代武器、现代军装。
+
+
+---
+
+## 72. set-military-camp — 军营
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**72-1. Military Camp in Křečhoř 16.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Military_Camp_in_K%C5%99e%C4%8Dho%C5%99_16.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 3.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：军营形态：帐篷群、围栏、营地空地（与本场景帐篷+围栏+篝火对应）。
+
+
+### 缺口
+- 图中为现代重演活动营地；古代军营的辕门、望楼、拒马未建模，只用帐篷+围栏+旗帜示意。
+
+
+### 时代锁（不得出现）
+- 古代军营场景。勿出现现代帐篷、现代军装。
+
+
+---
+
+## 73. set-city-wall — 城墙
+
+
+**证据状态：** 直接证据（实拍照片）。
+
+
+### 参考图
+
+
+**73-1. Badaling China Great-Wall-of-China-01.jpg**
+
+- URL：https://commons.wikimedia.org/wiki/File:Badaling_China_Great-Wall-of-China-01.jpg
+
+- 来源：Wikimedia Commons
+
+- 许可证：CC BY-SA 3.0（据 Commons API extmetadata，本次未在文件页上逐项复核原文）
+
+- 核对内容：城墙形态：夯土/砖石墙体、垛口、城门楼（与本场景城墙段+城门+垛口对应）。
+
+
+### 缺口
+- 图中为八达岭长城（山地长城）；平原城墙的瓮城、角楼未建模，城门为双塔+横梁简化形（无拱券）。
+
+
+### 时代锁（不得出现）
+- 古代场景。勿出现现代建筑、现代旗帜。
+
+
+---
 ## 缺口汇总：没有可用公开图片的场景/元素
 
 以下场景均有参考图（每节 ≥2 条），但这些元素没有找到可自由使用的公开图片，建模时只能按文字描述处理，之后须补图：
@@ -1163,6 +1942,33 @@
 | set-school-prosperous / set-school-abandoned | 废弃学校内部实拍未核实；废弃态黑板已撤去 |
 | set-village-prosperous / set-village-hollow | **空心村无独立词条、无实拍**：只按 rural flight + ghost town 文字描述建模 |
 
+| set-forest | 林间连续小径、树种混交（落叶/针叶） |
+| set-bamboo | 竹节环纹、京都竹林以外的武侠竹林实拍 |
+| set-grassland | 蒙古包内部、草原篝火 |
+| set-desert | 枯树、驼队/商队 |
+| set-mountain | 无雪山体的近景、登山小径 |
+| set-cliff | 山崖（非海崖）崖壁、崖下深度 |
+| set-waterfall | 瀑布后山洞、水流动态 |
+| set-lake | 木船 |
+| set-beach | 遮阳伞等现代海滩道具 |
+| set-snow | 雪地脚印、雪堆起伏 |
+| set-flower-field | 整片桃林外的混种花田 |
+| set-peach | 整片桃林全景（只有单枝特写） |
+| set-garden | 假山、曲廊等正宗江南园林元素 |
+| set-tea | 中式梯田茶园 |
+| set-rice-field | 成熟金黄稻田 |
+| set-horse-ranch | **马匹本身未建模**（程序化动物不可行）；马厩内无马 |
+| set-farm | 中式农家土坯房（谷仓为美式形制） |
+| set-street | 石砌立面细节 |
+| set-park | 大型城市公园全景压缩后的比例 |
+| set-bridge | 中式石拱桥石材拱券（用阶梯木桥示意） |
+| set-station | **列车本身未建模**；红砖欧式站房 |
+| set-ancient-street | 石砌墙体与青瓦细节 |
+| set-market | 挑担、竹筐等中式集市器具 |
+| set-battlefield | 古代兵器、甲胄、战车（只有帐篷+旗帜+长枪示意） |
+| set-military-camp | 辕门、望楼、拒马 |
+| set-city-wall | 瓮城、角楼、拱券城门（城门为双塔+横梁简化形） |
+
 没有整节“零图”的场景。最薄的三节是：河姆渡（只有 1 张实物图 + 1 个资料页）、医院（只有历史照片，无现代中国病房图）、元（3 张图中有 2 张许可证未核实，且宫殿室内为复原）。**本批新增两节零图：水房、KTV。成对场景（第 37–47 节）11 节均为维基百科文章文字参考（文章内含照片，但未核实到可直接引用的公开照片文件页），按“文字参考”计，不计入零图。**
 
 ---
@@ -1179,4 +1985,5 @@
   - `File:Banpo_bowl.jpg`（文件页）——未收入正文；改用其缩略图 URL（7-2）。
   - 上述缩略图 URL 与文件页 URL 是不同地址，均已 `curl -I` 验证为 200；其许可证未在文件页上确认，正文已如实标注。
 - **许可证标注原则：** 凡写“未核实”的，都是本次确实没在文件页上看到许可证名称（多为抓取到的页面未渲染许可证模板，或根本没打开文件页），不是“没有许可证”——所有 Commons 文件都有许可证，使用前打开文件页确认即可。
+- **本批（第 48–73 节）核查：** 26 条 URL 全部 `curl -I` 返回 200（2026-11-16）；许可证取自 Commons API（`imageinfo` 的 `extmetadata.LicenseShortName`），未在文件页上逐项复核原文，正文已如实标注；使用前打开文件页确认即可。
 - **未核实项：** 各场景“缺口”小节列出的元素均未核实有无公开图片；文中“约 1 米”“17–19cm”“12–14cm”等尺寸均引自任务给定的研究结论，本次未独立复核考古报告原文。
