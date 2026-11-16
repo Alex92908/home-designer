@@ -4,7 +4,7 @@
  * ShowcaseViewer — 样板外形图查看器（重组件，仅在点「查看外形」时动态加载）。
  *
  * 承担所有重依赖：store（全家具目录）+ <HouseCanvas/>（three.js 全家桶）+
- * showcaseTemplates 的 load() 方案工厂。画廊（ShowcaseClient）绝不静态引它，
+ * showcaseTemplates 的 load() 方案工厂。画廊（ShowcaseShell）绝不静态引它，
  * 用 next/dynamic({ ssr:false }) 懒加载 → 画廊落地不必下载这几 MB。
  *
  * 关键：查看样板会改动全局 store。为不破坏用户自己的设计，进入前备份 store

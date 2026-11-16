@@ -10,28 +10,44 @@ import ClientBoot from "./ClientBoot";
 // No network request, no build error, faster TTFB.
 
 // 站点根 URL（用于 sitemap / robots / OG 绝对地址）。部署后可在 Vercel 环境
-// 变量 NEXT_PUBLIC_SITE_URL 覆盖；默认线上域名。
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://zhuyahome.com";
+// 变量 NEXT_PUBLIC_SITE_URL 覆盖；默认线上域名（www——裸域名 308 跳转到 www，
+// canonical 与 OG 必须直接指 www，否则 canonical 指向一个会跳转的地址）。
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.zhuyahome.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "ZHUYA",
-  description: "筑雅 ZHUYA —— AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
-  keywords: ["筑雅", "ZHUYA", "AI 装修", "3D 户型", "室内设计", "装修设计", "家装", "户型设计", "home design", "interior design"],
+  title: "ZHUYA 筑雅 | 免费 AI 家装设计 — AI 文生户型 + 3D 装修",
+  description:
+    "筑雅 ZHUYA 是免费的在线 AI 家装设计工具：输入一句话或一张户型照片，AI 生成户型；在浏览器里 3D 装修、沉浸式漫游房间、设计建筑外观立面与庭院景观，装修实时报价，一键分享整套方案。无需下载，完全免费。",
+  keywords: ["筑雅", "ZHUYA", "AI 装修", "3D 户型", "室内设计", "装修设计", "家装", "户型设计", "AI 文生户型", "3D 装修", "免费家装设计", "home design", "interior design", "AI interior design"],
   applicationName: "ZHUYA",
-  alternates: { canonical: "/" },
+  alternates: {
+    canonical: "/",
+    // 注意：本站语言（中/英文界面）目前存在 localStorage / zustand（hd-locale）
+    // 而非 URL 中，因此中英文没有各自独立的可索引 URL。这里的 hreflang 是
+    // 最小标注：同一首页同时服务中英文，x-default 指向中文首页。
+    // 若后续做 URL 级 i18n 路由（如 /en/），需把这里改成对应语言的独立 URL。
+    languages: {
+      "zh-CN": SITE_URL,
+      en: SITE_URL,
+      "x-default": SITE_URL,
+    },
+  },
   openGraph: {
     type: "website",
     siteName: "ZHUYA",
-    title: "ZHUYA",
-    description: "AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
+    title: "ZHUYA 筑雅 | 免费 AI 家装设计 — AI 文生户型 + 3D 装修",
+    description:
+      "免费在线 AI 家装设计：AI 文生户型、沉浸式 3D 装修与漫游、外观立面与庭院设计、实时装修报价、一键分享。",
     url: SITE_URL,
     locale: "zh_CN",
+    alternateLocale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ZHUYA",
-    description: "AI 文生户型 + 沉浸式 3D 装修，实时报价，一键分享",
+    title: "ZHUYA 筑雅 | 免费 AI 家装设计 — AI 文生户型 + 3D 装修",
+    description:
+      "免费在线 AI 家装设计：AI 文生户型、沉浸式 3D 装修与漫游、外观立面与庭院设计、实时装修报价、一键分享。",
   },
   // 站长验证码（无需改代码，按需在 Vercel 环境变量里填，未设则不渲染该标签）：
   //   · Google Search Console → GOOGLE_SITE_VERIFICATION

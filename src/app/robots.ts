@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 // output: export（静态导出）要求元数据路由显式声明静态，否则 build 失败。
 export const dynamic = "force-static";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://zhuyahome.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.zhuyahome.com";
 
 // 显式欢迎主流 AI / 搜索爬虫（默认就允许，这里列出来让意图明确、也便于审计）。
 const AI_BOTS = [

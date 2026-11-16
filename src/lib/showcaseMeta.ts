@@ -17,7 +17,7 @@ export interface ShowcaseMeta {
   /** 标签（楼层数 / 风格等），画廊卡片上展示。中英各一份，按 locale 选。 */
   tagsZh: string[];
   tagsEn: string[];
-  /** 预渲染外观图（public/showcase/ 下的静态 JPG）。以 "/" 开头视为图片路径；
+  /** 预渲染外观图（public/showcase/ 下的静态 WebP）。以 "/" 开头视为图片路径；
    *  否则当 emoji 占位（片场卡暂用 emoji，预览图以后补）。 */
   image: string;
   /** 片场类样板：查看器改调 store.applyProjectTemplate(该 id) 构建场景，
@@ -36,7 +36,7 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     descEn: "Solid-wall facade · Detached garage · 2 floors + rooftop terrace",
     tagsZh: ["2F+天台", "实墙", "车库"],
     tagsEn: ["2F + rooftop", "Solid wall", "Garage"],
-    image: "/showcase/resort-pool-villa.jpg",
+    image: "/showcase/resort-pool-villa.webp",
   },
   {
     id: "clear-glass-curtain-villa",
@@ -46,7 +46,7 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     descEn: "See-through glass curtain · walnut soffit · per-face facade · garage",
     tagsZh: ["3F", "玻璃幕墙", "车库"],
     tagsEn: ["3F", "Glass curtain", "Garage"],
-    image: "/showcase/clear-glass-curtain-villa.jpg",
+    image: "/showcase/clear-glass-curtain-villa.webp",
   },
   // ── 片场系列（云横店）：查看器走 applyProjectTemplate，缩略图暂用 emoji ──
   {
@@ -57,7 +57,7 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     descEn: "Glass storefront · counter + display · dense tables · book wall",
     tagsZh: ["片场", "咖啡馆", "单层"],
     tagsEn: ["Set", "Café", "Single floor"],
-    image: "/showcase/set-cafe.jpg",
+    image: "/showcase/set-cafe.webp",
     projectTemplateId: "set-cafe",
   },
   {
@@ -68,7 +68,7 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     descEn: "Ring lobby wrap · open desks · meeting room · private office · pantry",
     tagsZh: ["片场", "办公室", "单层"],
     tagsEn: ["Set", "Office", "Single floor"],
-    image: "/showcase/set-office.jpg",
+    image: "/showcase/set-office.webp",
     projectTemplateId: "set-office",
   },
   {
@@ -79,7 +79,7 @@ export const SHOWCASE_META: ShowcaseMeta[] = [
     descEn: "Dining hall · 2 private + VIP rooms · pro kitchen · M/F WC · patio",
     tagsZh: ["片场", "餐馆", "单层"],
     tagsEn: ["Set", "Restaurant", "Single floor"],
-    image: "/showcase/set-restaurant.jpg",
+    image: "/showcase/set-restaurant.webp",
     projectTemplateId: "set-restaurant",
   },
 ];
