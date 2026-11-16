@@ -46,6 +46,9 @@ import {
   type Shot, type Actor, type ActorAction, type RenderStyle, type SceneEnvelope,
 } from "@/lib/cinematic";
 import {
+  DIRECTOR_STYLES, getDirectorStyle, directorStyleDefaults,
+} from "@/lib/directorStyles";
+import {
   ACTION_REGISTRY, actionDef, actorStateAt, makeSegment, makeWaypoint,
   segmentAt, type ActionId, type ActionSegment, type Waypoint,
 } from "@/lib/actions";
@@ -64,7 +67,7 @@ import {
 } from "@/lib/stuntProps";
 import {
   ARCHETYPES, costumesForArchetype, defaultCostumeForArchetype, eraWarningFor,
-  resolveActorCostume, resolveActorArchetype,
+  resolveActorCostume, resolveActorArchetype, resolveCostume,
   type CostumeDef,
 } from "@/lib/characters";
 import {
@@ -180,6 +183,10 @@ interface CineState {
   /** 场景默认灯光（持久化；新镜继承；旧存档缺省 = 白天） */
   sceneLightingId: LightingId;
   setSceneLightingId: (id: LightingId) => void;
+  /** 导演风格预设（持久化；directorStyles.ts 的 id，null = 无预设；
+   *  旧存档缺省 = null。选预设只改场景默认灯光 + 面板建议，不动已有镜/演员） */
+  directorStyleId: string | null;
+  setDirectorStyleId: (id: string | null) => void;
   /** 用户在面板里点选预览的灯光（易失；模拟/录制开始即交出控制权） */
   previewLightingId: LightingId | null;
   setPreviewLightingId: (id: LightingId | null) => void;
@@ -281,6 +288,15 @@ export const useCineStore = create<CineState>()(
       shots: [],
       sceneLightingId: "day",
       setSceneLightingId: (id) => set({ sceneLightingId: id }),
+      // 导演风格预设：选 = 应用它的默认值（场景灯光改成预设的灯光；
+      // 已有镜各自存了 lightingId，不受影响；演员/走位/分镜一律不动）。
+      // 清除 / 未知 id = 回到 plain 默认（灯光 day），同样不删任何内容。
+      directorStyleId: null,
+      setDirectorStyleId: (id) => {
+        const style = getDirectorStyle(id);
+        const d = directorStyleDefaults(style?.id ?? null);
+        set({ directorStyleId: style ? style.id : null, sceneLightingId: d.lightingId });
+      },
       previewLightingId: null,
       setPreviewLightingId: (id) => set({ previewLightingId: id }),
       soundOn: true,
@@ -564,7 +580,7 @@ export const useCineStore = create<CineState>()(
       _setProgress: (p) => set({ progress: p }),
     }),
     // 只持久化创作数据；录制态/首帧/生成态/模拟态/灯光预览易失
-    { name: "zhuya-cine-shots-v1", partialize: (s) => ({ shots: s.shots, actors: s.actors, styles: s.styles, genWorkflowId: s.genWorkflowId, fights: s.fights, stuntProps: s.stuntProps, sceneLightingId: s.sceneLightingId, soundOn: s.soundOn, scriptText: s.scriptText, scriptSetOverrides: s.scriptSetOverrides }) },
+    { name: "zhuya-cine-shots-v1", partialize: (s) => ({ shots: s.shots, actors: s.actors, styles: s.styles, genWorkflowId: s.genWorkflowId, fights: s.fights, stuntProps: s.stuntProps, sceneLightingId: s.sceneLightingId, directorStyleId: s.directorStyleId, soundOn: s.soundOn, scriptText: s.scriptText, scriptSetOverrides: s.scriptSetOverrides }) },
   ),
 );
 
@@ -870,6 +886,11 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
           styles: stylesUsed,
           // 场景默认灯光（新镜继承；缺省 = 白天）
           sceneLighting: resolveShotLightingId(undefined, st.sceneLightingId),
+          // 导演风格预设（附加字段，版本仍为 4）：选中的风格 id + 中文名；
+          // 未选时为 null。下游按此还原机位/灯光默认值。
+          directorStyle: st.directorStyleId
+            ? { id: st.directorStyleId, name: getDirectorStyle(st.directorStyleId)?.labelZh ?? st.directorStyleId }
+            : null,
           // 声音（Part 3，附加字段，版本仍为 4）：音效是 WebAudio 合成的，
           // 只在拍摄模拟里响，不进导出文件；配乐不捆绑音频，每镜只给推荐
           // （去哪里下 + 许可证），用户按推荐下载后配进成片。
@@ -1807,6 +1828,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
   const {
     shots, addShot, removeShot, moveShot, updateShot,
     sceneLightingId, setSceneLightingId, previewLightingId, setPreviewLightingId,
+    directorStyleId, setDirectorStyleId,
     soundOn, setSoundOn,
     styles, toggleStyle,
     actors, addActorMode, pendingFrom, beginAddActor, beginReplaceActor, cancelAddActor, removeActor, updateActor,
@@ -1979,6 +2001,8 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
   // 未加载任何模板时为 null → 时代锁不警告。
   const activeTemplateId = useDesignerStore((s) => s.activeTemplateId);
   const currentSetId = activeTemplateId ?? appliedSetId;
+  // 当前选中的导演风格预设（null = 无预设）；下拉框可扩展到 30+ 套，不硬编码按钮。
+  const directorStyle = getDirectorStyle(directorStyleId);
 
   // ── 演员放置提示（独立于菜单，放置时始终可见）──
   if (addActorMode) {
@@ -2163,6 +2187,131 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
             </button>
           </div>
           {setMatchMsg && <div className="px-2 text-[10px] leading-relaxed text-teal-300/90">{setMatchMsg}</div>}
+
+          {/* 导演风格预设：选一位导演的整套拍法当默认值（机位/灯光/片场/服装/
+              动作建议）。只改场景默认灯光 + 展示建议，不动已有分镜/演员/走位；
+              清除回到 plain 默认（灯光 day），同样不删任何内容。 */}
+          <div className="px-1 pt-1 text-[10px] tracking-widest text-white/40 border-t border-white/10 mt-1">
+            {en ? "DIRECTOR STYLE" : "导演风格"}
+          </div>
+          <div className="rounded-lg px-2 py-1.5 bg-white/5 flex flex-col gap-1.5">
+            <select
+              value={directorStyleId ?? ""}
+              onChange={(e) => setDirectorStyleId(e.target.value || null)}
+              className="w-full bg-white/10 rounded-lg px-2 py-1.5 outline-none"
+              title={en ? "Pick a director style as the default for new shots — existing shots and actors are untouched" : "选一位导演的拍法当新镜的默认值——已有分镜和演员不动"}
+            >
+              <option value="">{en ? "None — plain defaults" : "无——plain 默认"}</option>
+              {DIRECTOR_STYLES.map((s) => (
+                <option key={s.id} value={s.id}>{en ? s.labelEn : s.labelZh}</option>
+              ))}
+            </select>
+            {directorStyle ? (
+              <>
+                <div className="text-[11px] leading-relaxed text-white/70">
+                  {en ? directorStyle.descriptionEn : directorStyle.descriptionZh}
+                </div>
+                {/* 推荐片场：点一下即加载该片场（和上面 SET 列表同一入口） */}
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-white/40">{en ? "Sets:" : "片场："}</span>
+                  {directorStyle.suggestedSets.map((sid) => {
+                    const s = getSceneSet(sid);
+                    return (
+                      <button
+                        key={sid}
+                        onClick={() => applySet(sid)}
+                        className="px-1.5 py-0.5 rounded-md bg-white/10 hover:bg-white/20 whitespace-nowrap"
+                        title={en ? `Load set ${s ? s.nameEn : sid}` : `加载片场${s ? s.name : sid}`}
+                      >
+                        {s ? `${s.emoji} ${en ? s.nameEn : s.name}` : sid}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* 机位顺序：点一下按该机位加一镜；也可一键按顺序生成整组分镜 */}
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-white/40">{en ? "Shots:" : "机位："}</span>
+                  {directorStyle.shotOrder.map((pid, i) => {
+                    const p = getCinePreset(pid);
+                    return (
+                      <button
+                        key={`${pid}-${i}`}
+                        onClick={() => addShot(pid)}
+                        className="px-1.5 py-0.5 rounded-md bg-white/10 hover:bg-white/20 whitespace-nowrap"
+                        title={en ? `Add a shot with ${p ? p.nameEn : pid}` : `按${p ? p.nameZh : pid}加一镜`}
+                      >
+                        {p ? (en ? p.nameEn : p.nameZh) : pid}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* 推荐服装：点一下给第一个演员换上（无演员时只作提示） */}
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-white/40">{en ? "Costumes:" : "服装："}</span>
+                  {directorStyle.suggestedCostumes.map((cid) => {
+                    const c = resolveCostume(cid);
+                    return (
+                      <button
+                        key={cid}
+                        disabled={!actors.length}
+                        onClick={() => {
+                          const first = actors[0];
+                          if (!first) return;
+                          updateActor(first.id, { ...(c.archetypeId ? { archetypeId: c.archetypeId } : {}), costumeId: c.id });
+                        }}
+                        className="px-1.5 py-0.5 rounded-md bg-white/10 hover:bg-white/20 whitespace-nowrap disabled:opacity-40"
+                        title={actors.length ? (en ? `Dress the first actor in ${c.labelEn}` : `给第一个演员换上${c.labelZh}`) : (en ? "Add an actor first" : "先加一个演员")}
+                      >
+                        {en ? c.labelEn : c.labelZh}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* 推荐动作：点一下设为第一个演员的默认动作（无演员时只作提示） */}
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-white/40">{en ? "Actions:" : "动作："}</span>
+                  {directorStyle.suggestedActions.map((aid) => (
+                    <button
+                      key={aid}
+                      disabled={!actors.length}
+                      onClick={() => {
+                        const first = actors[0];
+                        if (!first) return;
+                        updateActor(first.id, { action: aid as ActorAction });
+                      }}
+                      className="px-1.5 py-0.5 rounded-md bg-white/10 hover:bg-white/20 whitespace-nowrap disabled:opacity-40"
+                      title={actors.length ? (en ? `Set the first actor's default action to ${actionDef(aid as ActorAction).nameEn}` : `把第一个演员的默认动作设为${actionDef(aid as ActorAction).nameZh}`) : (en ? "Add an actor first" : "先加一个演员")}
+                    >
+                      {actionDef(aid as ActorAction).nameZh}
+                    </button>
+                  ))}
+                </div>
+                {/* 拍法提示 + 暂不支持的拍法（诚实标注） */}
+                <div className="text-[11px] leading-relaxed text-white/50">
+                  {(en ? directorStyle.beatsEn : directorStyle.beatsZh).map((b, i) => (
+                    <div key={i}>· {b}</div>
+                  ))}
+                </div>
+                {directorStyle.gapsZh.length > 0 && (
+                  <div className="text-[10px] leading-relaxed text-amber-200/60">
+                    {en ? "Not yet in the console: " : "导演台暂不支持："}
+                    {(en ? directorStyle.gapsEn : directorStyle.gapsZh).join("；")}
+                  </div>
+                )}
+                <button
+                  onClick={() => directorStyle.shotOrder.forEach((pid) => addShot(pid))}
+                  className="px-2 py-1.5 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-200 text-left"
+                  title={en ? "Append one shot per step of this style's shot order (existing shots kept)" : "按此风格的机位顺序追加一组分镜（已有镜保留）"}
+                >
+                  {en ? "Build shots in this style's order" : "按此风格生成分镜"}
+                </button>
+              </>
+            ) : (
+              <div className="text-[11px] leading-relaxed text-white/50">
+                {en ? "Pick a style to apply a director's defaults (camera, lighting, set / costume / action suggestions). Existing shots and actors are never changed." : "选一位导演，把他的拍法当默认值（机位、灯光、片场/服装/动作建议）。已有分镜和演员永远不动。"}
+              </div>
+            )}
+          </div>
 
           {/* 9:16 竖屏取景框 */}
           <button
