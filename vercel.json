@@ -2,6 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "buildCommand": "next build",
+  "git": {
+    "deploymentEnabled": true
+  },
   "functions": {
     "src/app/api/**/route.ts": {
       "maxDuration": 60
