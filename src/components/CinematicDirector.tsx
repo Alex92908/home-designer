@@ -1997,10 +1997,13 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
       setSetMatchMsg(en ? "No set matched — try: café / office / apartment living room" : "未匹配到片场，试试：咖啡馆 / 办公室 / 公寓客厅");
     }
   };
-  // 当前片场（时代锁用）：以设计器实际加载的模板为准，本面板刚应用的片场兜底。
+  // 当前片场（时代锁用）：以本面板刚应用的片场为准，设计器实际加载的模板兜底。
+  // 注意 activeTemplateId 是「风格模板」id（如 现代极简），不是片场 id；
+  // applyProjectTemplate 会经 loadTemplate 把它设成风格模板 id，若优先用它，
+  // setEra() 查不到时代记录 → 时代锁永远不警告。片场 id 只存在 appliedSetId 里。
   // 未加载任何模板时为 null → 时代锁不警告。
   const activeTemplateId = useDesignerStore((s) => s.activeTemplateId);
-  const currentSetId = activeTemplateId ?? appliedSetId;
+  const currentSetId = appliedSetId ?? activeTemplateId;
   // 当前选中的导演风格预设（null = 无预设）；下拉框可扩展到 30+ 套，不硬编码按钮。
   const directorStyle = getDirectorStyle(directorStyleId);
 
