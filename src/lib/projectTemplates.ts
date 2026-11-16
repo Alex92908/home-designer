@@ -1877,6 +1877,673 @@ const APARTMENT_SET: ProjectTemplate = {
   ],
 };
 
+// ── 农村自建房堂屋片场（导演台新增；简版）────────────────────────────
+// 当代农村 ground floor：堂屋（仪式+社交中心，大圆桌+神龛）+ 厨房 +
+// 卧房 + 院子（摩托/鸡/石板路）。房间几何为手写矩形拼贴；堂屋/厨房/
+// 卧房/院子家具显式摆放（复用现有家具 id），神龛为边柜+供品拼搭——
+// 不是全新 3D 建模，是一套"用现成家具搭出来的农村堂屋片场"。
+const RURAL_HALL_SET: ProjectTemplate = {
+  id: "set-rural-hall",
+  name: "农村堂屋片场",
+  nameEn: "Rural Hall Set",
+  emoji: "🏮",
+  description: "片场 · 单层 · 堂屋+厨房+卧房+院子 · 108㎡ · 拍农村家庭/乡土戏",
+  descriptionEn: "Film set · 1F · Main hall + kitchen + bedroom + courtyard · 108㎡ · Rural family scenes",
+  areaSqm: 108,
+  palette: ["#EFE8DC", "#4A3A2A", "#B0503A"],
+  styleTemplateId: "chinese",
+
+  exterior: {
+    preset: "modern-minimal",
+    facadeSystem: "punched-window",
+    roofStyle: "flat",
+    floors: 1,
+    hasRooftop: false,
+    buildingType: "floor-plan-driven",
+    groundType: "tile",
+    wallColor: "#EFE8DC",
+    windowFrameColor: "#2A2C30",
+    entranceFrameColor: "#15171B",
+    roofOverhang: 0.5,
+    parapetHeight: 0.4,
+    roofColor: "#4A3A2A",
+    stoneBaseEnabled: false,
+    showPerimeterFence: false,
+    yardPreset: "minimal",
+  },
+
+  floorLayouts: [
+    {
+      id: "rural-f1",
+      name: "农村自建房",
+      area: 108,
+      // 1200×900cm 矩形拼贴（无缺口）：
+      // 上排：堂屋 700×560 | 厨房 500×280 + 卧房 500×280
+      // 下排：院子 1200×340（全墙隐藏 = 露天院子）
+      rooms: [
+        { room: "living",   x: 0,   y: 0,   width: 700, depth: 560,
+          name: "堂屋", nameEn: "Main Hall", icon: "🏮",
+          doors: [{ wall: "S", pos: 270, len: 160, style: "wood_panel", h: 210 }],
+          windows: [
+            { wall: "E", pos: 180, len: 200, style: "wooden", h: 150, sill: 90 },
+            { wall: "W", pos: 180, len: 200, style: "wooden", h: 150, sill: 90 },
+          ],
+          wallDecor: [
+            { furnitureId: "couplet-spring",     wall: "S", u: 0.35, v: 0.52, scaleH: 1.1 },
+            { furnitureId: "couplet-prosperity", wall: "S", u: 0.65, v: 0.52, scaleH: 1.1 },
+            { furnitureId: "nameplate-family",   wall: "S", u: 0.5,  v: 0.9 },
+          ] },
+        { room: "kitchen",  x: 700, y: 0,   width: 500, depth: 280,
+          name: "厨房", nameEn: "Kitchen", icon: "🍳", exteriorStyle: "concrete" },
+        { room: "bedroom",  x: 700, y: 280, width: 500, depth: 280,
+          name: "卧房", nameEn: "Bedroom", icon: "🛏️" },
+        // 院子：走廊语义；全墙隐藏成露天院子（咖啡馆沿街座位区同款做法）。
+        { room: "hallway",  x: 0,   y: 560, width: 1200, depth: 340,
+          name: "院子", nameEn: "Courtyard", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
+      ],
+    },
+  ],
+  yardPlan: { items: [], paths: [] },
+
+  // 堂屋：神龛（边柜+花瓶/果盘供品拼搭）+ 大圆桌 + 沙发电视；厨房/卧房/
+  // 院子显式摆放；其余房间无。全部房间都在 overrides 里，风格模板的默认
+  // 家具不会漏进来。
+  furnitureOverrides: [
+    {
+      living: [
+        // 神龛（拼搭）：北墙正中边柜 + 瓶花 + 果盘供品
+        { furnitureId: "sideboard-walnut",  x: 350, z: 25,  rotation: 0 },
+        { furnitureId: "decor-vase-single", x: 330, z: 25,  rotation: 0, elevationY: 85 },
+        { furnitureId: "decor-fruit-bowl",  x: 370, z: 25,  rotation: 0, elevationY: 85 },
+        // 大圆桌 + 餐具
+        { furnitureId: "dining_table-round-set", x: 350, z: 260, rotation: 0 },
+        { furnitureId: "decor-dinnerware",  x: 320, z: 260, rotation: 0, elevationY: 75 },
+        { furnitureId: "decor-fruit-bowl",  x: 380, z: 260, rotation: 0, elevationY: 75 },
+        // 沙发 + 电视（朝北，背对院子门）
+        { furnitureId: "tvunit-walnut",     x: 350, z: 390, rotation: 0 },
+        { furnitureId: "elec-tv-flat",      x: 350, z: 390, rotation: 0, elevationY: 55 },
+        { furnitureId: "sofa-fabric-gray",  x: 350, z: 490, rotation: 180 },
+        { furnitureId: "plant-monstera",    x: 650, z: 60,  rotation: 0 },
+        { furnitureId: "storage-shoe-rack", x: 80,  z: 520, rotation: 0 },
+      ],
+      kitchen: [
+        { furnitureId: "kitchen_cabinet-full",   x: 250, z: 35, rotation: 0 },
+        { furnitureId: "appliance-cooktop",      x: 180, z: 35, rotation: 0, elevationY: 85 },
+        { furnitureId: "appliance-rice-cooker-2", x: 320, z: 35, rotation: 0, elevationY: 85 },
+        { furnitureId: "fridge-single-white",    x: 460, z: 40, rotation: 0 },
+      ],
+      bedroom: [
+        { furnitureId: "bed-wood-nordic",        x: 250, z: 140, rotation: 0 },
+        { furnitureId: "nightstand-oak",         x: 110, z: 30,  rotation: 0 },
+        { furnitureId: "wardrobe-solid-walnut",  x: 460, z: 60,  rotation: 90 },
+        { furnitureId: "plant-sansevieria",      x: 40,  z: 240, rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "vehicle.vino",           x: 300, z: 170, rotation: 90 },
+        { furnitureId: "chicken",                x: 700, z: 100, rotation: 0 },
+        { furnitureId: "chicken",                x: 800, z: 220, rotation: 0 },
+        { furnitureId: "plant-tropic-flowers",   x: 1100, z: 80, rotation: 0 },
+        { furnitureId: "stone-path",             x: 600, z: 170, rotation: 90 },
+      ],
+    },
+  ],
+};
+
+// ── 明代厅堂片场（导演台新增；简版）────────────────────────────────────
+// 明式厅堂：正厅（交椅+案居中、圈椅茶几左右对称、中轴线）+ 内室（架子床）
+// + 前廊。家具为现有 id 拼搭：案=胡桃长柜、交椅/圈椅=单人扶手椅、架子床=
+// 原木床（无床顶架）；不用太师椅（清式）、不用青花/玻璃/电灯。
+const MING_HALL_SET: ProjectTemplate = {
+  id: "set-ming-hall",
+  name: "明代厅堂片场",
+  nameEn: "Ming Hall Set",
+  emoji: "🏛️",
+  description: "片场 · 单层 · 正厅+内室+前廊 · 112㎡ · 明式厅堂 · 拍古装/宅斗戏",
+  descriptionEn: "Film set · 1F · Main hall + inner chamber + porch · 112㎡ · Ming hall · Period / family drama",
+  areaSqm: 112,
+  palette: ["#EDE6D6", "#3A2E22", "#8B3A20"],
+  styleTemplateId: "chinese",
+
+  exterior: {
+    preset: "modern-minimal",
+    facadeSystem: "punched-window",
+    roofStyle: "flat",
+    floors: 1,
+    hasRooftop: false,
+    buildingType: "floor-plan-driven",
+    groundType: "tile",
+    wallColor: "#EDE6D6",
+    windowFrameColor: "#2A2018",
+    entranceFrameColor: "#2A2018",
+    roofOverhang: 0.5,
+    parapetHeight: 0.4,
+    roofColor: "#3A2E22",
+    stoneBaseEnabled: false,
+    showPerimeterFence: false,
+    yardPreset: "minimal",
+  },
+
+  floorLayouts: [
+    {
+      id: "ming-f1",
+      name: "明代厅堂",
+      area: 112,
+      // 1400×800cm 矩形拼贴（无缺口）：
+      // 上排：正厅 900×560 | 内室 500×560
+      // 下排：前廊 1400×240（全墙隐藏 = 露天前廊）
+      rooms: [
+        { room: "living",   x: 0,   y: 0,   width: 900, depth: 560,
+          name: "正厅", nameEn: "Main Hall", icon: "🏛️",
+          doors: [{ wall: "S", pos: 370, len: 160, style: "wood_panel", h: 210 }],
+          windows: [
+            { wall: "E", pos: 180, len: 200, style: "wooden", h: 150, sill: 90 },
+            { wall: "W", pos: 180, len: 200, style: "wooden", h: 150, sill: 90 },
+          ],
+          wallDecor: [
+            { furnitureId: "wall-lamp-lantern", wall: "S", u: 0.3, v: 0.7 },
+            { furnitureId: "wall-lamp-lantern", wall: "S", u: 0.7, v: 0.7 },
+          ] },
+        { room: "master",   x: 900, y: 0,   width: 500, depth: 560,
+          name: "内室", nameEn: "Inner Chamber", icon: "🛏️",
+          doors: [{ wall: "W", pos: 230, len: 100, style: "wood_panel", h: 200 }] },
+        { room: "hallway",  x: 0,   y: 560, width: 1400, depth: 240,
+          name: "前廊", nameEn: "Front Porch", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
+      ],
+    },
+  ],
+  yardPlan: { items: [], paths: [] },
+
+  // 正厅严格中轴对称（轴线 x=450）：案+主座居北，两对圈椅+两茶几左右对称，
+  // 灯笼/狮子/花瓶成对；只用烛台吊灯，不用电灯。
+  furnitureOverrides: [
+    {
+      living: [
+        // 案 + 瓶花（北墙正中）
+        { furnitureId: "tvunit-walnut",     x: 450, z: 28,  rotation: 0 },
+        { furnitureId: "decor-vase-single", x: 380, z: 28,  rotation: 0, elevationY: 55 },
+        { furnitureId: "decor-vase-single", x: 520, z: 28,  rotation: 0, elevationY: 55 },
+        // 主座交椅（朝南）+ 左右圈椅
+        { furnitureId: "sofa-armchair",     x: 450, z: 105, rotation: 0 },
+        { furnitureId: "sofa-armchair",     x: 300, z: 105, rotation: 0 },
+        { furnitureId: "sofa-armchair",     x: 600, z: 105, rotation: 0 },
+        // 茶几 + 茶具（两对圈椅之间）
+        { furnitureId: "coffee-oak-round",  x: 300, z: 200, rotation: 0 },
+        { furnitureId: "coffee-oak-round",  x: 600, z: 200, rotation: 0 },
+        { furnitureId: "decor-tea-set",     x: 300, z: 200, rotation: 0, elevationY: 30 },
+        { furnitureId: "decor-tea-set",     x: 600, z: 200, rotation: 0, elevationY: 30 },
+        // 第二对圈椅（向心而坐）
+        { furnitureId: "sofa-armchair",     x: 300, z: 290, rotation: 90 },
+        { furnitureId: "sofa-armchair",     x: 600, z: 290, rotation: 270 },
+        // 挂画（北墙）+ 落地花瓶 + 狮子（南门两侧）
+        { furnitureId: "artwork-inkwash",   x: 150, z: 6,   rotation: 0 },
+        { furnitureId: "artwork-inkwash",   x: 750, z: 6,   rotation: 0 },
+        { furnitureId: "decor-vase-royal",  x: 60,  z: 60,  rotation: 0 },
+        { furnitureId: "decor-vase-royal",  x: 840, z: 60,  rotation: 0 },
+        { furnitureId: "decor-statue-lion", x: 80,  z: 510, rotation: 0 },
+        { furnitureId: "decor-statue-lion", x: 820, z: 510, rotation: 0 },
+        // 烛台吊灯（吸顶，非电灯具）
+        { furnitureId: "lamp-chandelier-antique", x: 450, z: 300, rotation: 0, mountCeiling: true },
+      ],
+      master: [
+        { furnitureId: "bed-wood-nordic",       x: 250, z: 220, rotation: 0 },
+        { furnitureId: "nightstand-oak",        x: 100, z: 40,  rotation: 0 },
+        { furnitureId: "nightstand-oak",        x: 400, z: 40,  rotation: 0 },
+        { furnitureId: "wardrobe-solid-walnut", x: 460, z: 120, rotation: 270 },
+        { furnitureId: "plant-sansevieria",     x: 40,  z: 520, rotation: 0 },
+        { furnitureId: "artwork-inkwash",       x: 250, z: 6,   rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "plant-monstera", x: 200,  z: 120, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 1200, z: 120, rotation: 0 },
+        { furnitureId: "stone-path",     x: 700,  z: 120, rotation: 90 },
+      ],
+    },
+  ],
+};
+
+// ── 清宫三希堂片场（导演台新增；简版）──────────────────────────────────
+// 乾隆书房三希堂：书斋（火炕+小紫檀书案+太师椅+自鸣钟）+ 外间 + 藏书间
+// + 耳房。真实三希堂仅约 8㎡，为可拍性书斋放大到 420×360（约 15㎡）并加
+// 外间走位空间——尺度是折中，不是原样复刻。炕=榻榻米矮床横放缩放，书案=
+// 学习桌缩放至 70×31×38，自鸣钟=维多利亚座钟；不用电灯。
+const QING_SANXITANG_SET: ProjectTemplate = {
+  id: "set-qing-sanxitang",
+  name: "清宫三希堂片场",
+  nameEn: "Qing Sanxitang Set",
+  emoji: "📜",
+  description: "片场 · 单层 · 三希堂书斋+外间+藏书间+耳房 · 54㎡ · 小而精的宫廷书房 · 拍清宫/帝王戏",
+  descriptionEn: "Film set · 1F · Sanxitang study + antechamber + book room · 54㎡ · Intimate palace study · Qing court drama",
+  areaSqm: 54,
+  palette: ["#E8DCC8", "#5A2E22", "#C8A882"],
+  styleTemplateId: "chinese",
+
+  exterior: {
+    preset: "modern-minimal",
+    facadeSystem: "punched-window",
+    roofStyle: "flat",
+    floors: 1,
+    hasRooftop: false,
+    buildingType: "floor-plan-driven",
+    groundType: "tile",
+    wallColor: "#E8DCC8",
+    windowFrameColor: "#5A2E22",
+    entranceFrameColor: "#2A2018",
+    roofOverhang: 0.5,
+    parapetHeight: 0.4,
+    roofColor: "#5A2E22",
+    stoneBaseEnabled: false,
+    showPerimeterFence: false,
+    yardPreset: "minimal",
+  },
+
+  floorLayouts: [
+    {
+      id: "qing-f1",
+      name: "清宫三希堂",
+      area: 54,
+      // 900×600cm 矩形拼贴（无缺口）：
+      // 上排：三希堂 420×360 | 外间 480×360
+      // 下排：藏书间 420×240 | 耳房 480×240
+      rooms: [
+        { room: "study",   x: 0,   y: 0,   width: 420, depth: 360,
+          name: "三希堂", nameEn: "Sanxitang Study", icon: "📜",
+          doors: [{ wall: "S", pos: 170, len: 80, style: "wood_panel", h: 200 }],
+          windows: [{ wall: "E", pos: 100, len: 120, style: "wooden", h: 120, sill: 100 }],
+          wallDecor: [
+            { furnitureId: "wall-lamp-lantern", wall: "S", u: 0.3, v: 0.7 },
+            { furnitureId: "wall-lamp-lantern", wall: "S", u: 0.7, v: 0.7 },
+          ] },
+        { room: "hallway", x: 420, y: 0,   width: 480, depth: 360,
+          name: "外间", nameEn: "Antechamber", icon: "🚪",
+          doors: [{ wall: "W", pos: 140, len: 80, style: "wood_panel", h: 200 }] },
+        { room: "study2",  x: 0,   y: 360, width: 420, depth: 240,
+          name: "藏书间", nameEn: "Book Room", icon: "📚" },
+        { room: "bedroom", x: 420, y: 360, width: 480, depth: 240,
+          name: "耳房", nameEn: "Side Room", icon: "🛏️" },
+      ],
+    },
+  ],
+  yardPlan: { items: [], paths: [] },
+
+  furnitureOverrides: [
+    {
+      study: [
+        // 火炕（北墙）：榻榻米矮床横放，scaleW 0.81 → 210×114（长×宽与史实炕同）
+        { furnitureId: "bed-tatami",           x: 210, z: 57,  rotation: 90, scaleW: 0.81 },
+        // 小紫檀书案（炕前）：学习桌缩至 70×31×38；座钟+茶具在案上
+        { furnitureId: "desk-study",           x: 210, z: 200, rotation: 0, scaleW: 0.58, scaleD: 0.52, scaleH: 0.5 },
+        { furnitureId: "decor-victorian-clock", x: 195, z: 200, rotation: 0, elevationY: 38 },
+        { furnitureId: "decor-tea-set",         x: 230, z: 200, rotation: 0, elevationY: 38 },
+        // 太师椅（朝北向案）
+        { furnitureId: "sofa-armchair",         x: 210, z: 290, rotation: 180 },
+        // 炕上旧书册 + 边柜青花 + 书架 + 挂画
+        { furnitureId: "decor-books-vintage",   x: 130, z: 60,  rotation: 0, elevationY: 23 },
+        { furnitureId: "sideboard-walnut",      x: 380, z: 50,  rotation: 270 },
+        { furnitureId: "decor-vase-kangxi",     x: 380, z: 50,  rotation: 0, elevationY: 85 },
+        { furnitureId: "bookshelf-solid-walnut", x: 390, z: 200, rotation: 270 },
+        { furnitureId: "artwork-inkwash",       x: 60,  z: 8,   rotation: 0 },
+        { furnitureId: "lamp-chandelier-antique", x: 210, z: 180, rotation: 0, mountCeiling: true },
+      ],
+      hallway: [
+        { furnitureId: "sofa-armchair",         x: 120, z: 120, rotation: 90 },
+        { furnitureId: "sofa-armchair",         x: 120, z: 240, rotation: 90 },
+        { furnitureId: "coffee-oak-round",      x: 240, z: 180, rotation: 0 },
+        { furnitureId: "decor-tea-set",         x: 240, z: 180, rotation: 0, elevationY: 30 },
+        { furnitureId: "bookshelf-with-books",  x: 440, z: 60,  rotation: 270 },
+        { furnitureId: "plant-monstera",        x: 420, z: 300, rotation: 0 },
+        { furnitureId: "lamp-chandelier-antique", x: 240, z: 180, rotation: 0, mountCeiling: true },
+      ],
+      study2: [
+        { furnitureId: "bookshelf-with-books",  x: 100, z: 60,  rotation: 0 },
+        { furnitureId: "bookshelf-with-books",  x: 300, z: 60,  rotation: 0 },
+        { furnitureId: "desk-study",            x: 210, z: 170, rotation: 0 },
+        { furnitureId: "decor-books-pile",      x: 210, z: 170, rotation: 0, elevationY: 75 },
+        { furnitureId: "plant-sansevieria",     x: 380, z: 200, rotation: 0 },
+      ],
+      bedroom: [
+        { furnitureId: "wardrobe-solid-walnut", x: 80,  z: 60,  rotation: 0 },
+        { furnitureId: "sideboard-walnut",      x: 240, z: 50,  rotation: 0 },
+        { furnitureId: "decor-vase-single",     x: 240, z: 50,  rotation: 0, elevationY: 85 },
+        { furnitureId: "bed-single-white",      x: 350, z: 130, rotation: 0 },
+        { furnitureId: "plant-rubber-tree",     x: 440, z: 30,  rotation: 0 },
+      ],
+    },
+  ],
+};
+
+// ── 唐宫宴会厅片场（导演台新增；简版）──────────────────────────────────
+// 唐代宴饮：宴会厅（长案拼桌+白瓷+金器+低坐茶席）+ 偏厅 + 前廊。高低并
+// 存（高桌宴饮 + 低坐茶席），长案=三张学习桌拼合；不用明式圈椅/太师椅、
+// 不用青花、不用玻璃窗。
+const TANG_PALACE_SET: ProjectTemplate = {
+  id: "set-tang-palace",
+  name: "唐宫宴会厅片场",
+  nameEn: "Tang Palace Set",
+  emoji: "🏮",
+  description: "片场 · 单层 · 宴会厅+偏厅+前廊 · 126㎡ · 拍唐宫/宴饮/宫廷戏",
+  descriptionEn: "Film set · 1F · Banquet hall + side hall + porch · 126㎡ · Tang palace banquet",
+  areaSqm: 126,
+  palette: ["#E8DCC8", "#3A2A1A", "#C8A882"],
+  styleTemplateId: "chinese",
+
+  exterior: {
+    preset: "modern-minimal",
+    facadeSystem: "punched-window",
+    roofStyle: "flat",
+    floors: 1,
+    hasRooftop: false,
+    buildingType: "floor-plan-driven",
+    groundType: "tile",
+    wallColor: "#E8DCC8",
+    windowFrameColor: "#3A2A1A",
+    entranceFrameColor: "#2A2018",
+    roofOverhang: 0.5,
+    parapetHeight: 0.4,
+    roofColor: "#3A2A1A",
+    stoneBaseEnabled: false,
+    showPerimeterFence: false,
+    yardPreset: "minimal",
+  },
+
+  floorLayouts: [
+    {
+      id: "tang-f1",
+      name: "唐宫宴会厅",
+      area: 126,
+      // 1400×900cm 矩形拼贴（无缺口）：
+      // 上排：宴会厅 900×600 | 偏厅 500×600
+      // 下排：前廊 1400×300（全墙隐藏 = 露天前廊）
+      rooms: [
+        { room: "living",   x: 0,   y: 0,   width: 900, depth: 600,
+          name: "宴会厅", nameEn: "Banquet Hall", icon: "🏮",
+          doors: [{ wall: "S", pos: 350, len: 200, style: "wood_panel", h: 210 }],
+          windows: [
+            { wall: "E", pos: 180, len: 240, style: "wooden", h: 150, sill: 90 },
+            { wall: "W", pos: 180, len: 240, style: "wooden", h: 150, sill: 90 },
+          ],
+          wallDecor: [
+            { furnitureId: "wall-lamp-lantern", wall: "S", u: 0.3, v: 0.7 },
+            { furnitureId: "wall-lamp-lantern", wall: "S", u: 0.7, v: 0.7 },
+          ] },
+        { room: "dining",   x: 900, y: 0,   width: 500, depth: 600,
+          name: "偏厅", nameEn: "Side Hall", icon: "🍽️",
+          doors: [{ wall: "W", pos: 250, len: 100, style: "wood_panel", h: 200 }] },
+        { room: "hallway",  x: 0,   y: 600, width: 1400, depth: 300,
+          name: "前廊", nameEn: "Front Porch", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
+      ],
+    },
+  ],
+  yardPlan: { items: [], paths: [] },
+
+  furnitureOverrides: [
+    {
+      living: [
+        // 长案（三张学习桌拼合）+ 白瓷餐盘 + 金勺
+        { furnitureId: "desk-study",            x: 330, z: 200, rotation: 0 },
+        { furnitureId: "desk-study",            x: 450, z: 200, rotation: 0 },
+        { furnitureId: "desk-study",            x: 570, z: 200, rotation: 0 },
+        { furnitureId: "decor-dinnerware-glossy", x: 450, z: 200, rotation: 0, elevationY: 75 },
+        { furnitureId: "decor-spoons-golden",   x: 330, z: 200, rotation: 0, elevationY: 75 },
+        { furnitureId: "decor-spoons-golden",   x: 570, z: 200, rotation: 0, elevationY: 75 },
+        // 宴饮座椅（长案两侧）
+        { furnitureId: "chair-nordic-oak",      x: 390, z: 140, rotation: 0 },
+        { furnitureId: "chair-nordic-oak",      x: 510, z: 140, rotation: 0 },
+        { furnitureId: "chair-nordic-oak",      x: 390, z: 260, rotation: 180 },
+        { furnitureId: "chair-nordic-oak",      x: 510, z: 260, rotation: 180 },
+        // 低坐茶席（高低并存）：矮几 + 两面低坐 + 煎茶具
+        { furnitureId: "coffee-oak-round",      x: 450, z: 450, rotation: 0 },
+        { furnitureId: "sofa-japanese",         x: 450, z: 370, rotation: 0 },
+        { furnitureId: "sofa-japanese",         x: 450, z: 530, rotation: 180 },
+        { furnitureId: "decor-tea-set",         x: 450, z: 450, rotation: 0, elevationY: 30 },
+        // 挂画 + 落地花瓶 + 烛台吊灯 ×2
+        { furnitureId: "artwork-inkwash",       x: 100, z: 6,   rotation: 0 },
+        { furnitureId: "artwork-inkwash",       x: 800, z: 6,   rotation: 0 },
+        { furnitureId: "decor-vase-royal",      x: 60,  z: 60,  rotation: 0 },
+        { furnitureId: "decor-vase-royal",      x: 840, z: 60,  rotation: 0 },
+        { furnitureId: "lamp-chandelier-antique", x: 300, z: 300, rotation: 0, mountCeiling: true },
+        { furnitureId: "lamp-chandelier-antique", x: 600, z: 300, rotation: 0, mountCeiling: true },
+      ],
+      dining: [
+        { furnitureId: "dining-marble-round",   x: 250, z: 200, rotation: 0 },
+        { furnitureId: "decor-fruit-bowl",      x: 250, z: 200, rotation: 0, elevationY: 75 },
+        { furnitureId: "chair-nordic-oak",      x: 250, z: 110, rotation: 0 },
+        { furnitureId: "chair-nordic-oak",      x: 250, z: 290, rotation: 180 },
+        { furnitureId: "chair-nordic-oak",      x: 160, z: 200, rotation: 90 },
+        { furnitureId: "chair-nordic-oak",      x: 340, z: 200, rotation: 270 },
+        { furnitureId: "sideboard-walnut",      x: 450, z: 40,  rotation: 270 },
+        { furnitureId: "decor-copper-pots",     x: 450, z: 40,  rotation: 0, elevationY: 85 },
+        { furnitureId: "plant-rubber-tree",     x: 40,  z: 550, rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "plant-monstera", x: 200,  z: 150, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 1200, z: 150, rotation: 0 },
+        { furnitureId: "stone-path",     x: 700,  z: 150, rotation: 90 },
+      ],
+    },
+  ],
+};
+
+// ── 宋代书斋片场（导演台新增；简版）────────────────────────────────────
+// 宋式文人书斋：书斋（书案+点茶+三轴挂画+插花）+ 内室 + 庭院。只挂三轴画
+// （研究：每室三四轴）；点茶具在案上；不用唐金银、不用明硬木、不用青花。
+const SONG_STUDY_SET: ProjectTemplate = {
+  id: "set-song-study",
+  name: "宋代书斋片场",
+  nameEn: "Song Study Set",
+  emoji: "📖",
+  description: "片场 · 单层 · 书斋+内室+庭院 · 70㎡ · 文人四艺 · 拍宋式文人/书生戏",
+  descriptionEn: "Film set · 1F · Study + inner chamber + garden · 70㎡ · Literati study · Song scholar drama",
+  areaSqm: 70,
+  palette: ["#EDEBE6", "#6B6257", "#8A9A7A"],
+  styleTemplateId: "chinese",
+
+  exterior: {
+    preset: "modern-minimal",
+    facadeSystem: "punched-window",
+    roofStyle: "flat",
+    floors: 1,
+    hasRooftop: false,
+    buildingType: "floor-plan-driven",
+    groundType: "tile",
+    wallColor: "#EDEBE6",
+    windowFrameColor: "#6B6257",
+    entranceFrameColor: "#2A2A2A",
+    roofOverhang: 0.5,
+    parapetHeight: 0.4,
+    roofColor: "#6B6257",
+    stoneBaseEnabled: false,
+    showPerimeterFence: false,
+    yardPreset: "minimal",
+  },
+
+  floorLayouts: [
+    {
+      id: "song-f1",
+      name: "宋代书斋",
+      area: 70,
+      // 1000×700cm 矩形拼贴（无缺口）：
+      // 上排：书斋 600×420 | 内室 400×420
+      // 下排：庭院 1000×280（全墙隐藏 = 露天庭院）
+      rooms: [
+        { room: "study",   x: 0,   y: 0,   width: 600, depth: 420,
+          name: "书斋", nameEn: "Study", icon: "📖",
+          doors: [{ wall: "S", pos: 250, len: 100, style: "wood_panel", h: 200 }],
+          windows: [
+            { wall: "E", pos: 130, len: 160, style: "wooden", h: 140, sill: 90 },
+            { wall: "W", pos: 130, len: 160, style: "wooden", h: 140, sill: 90 },
+          ],
+          wallDecor: [{ furnitureId: "mural-inkwash", wall: "S", u: 0.5, v: 0.55 }] },
+        { room: "master",  x: 600, y: 0,   width: 400, depth: 420,
+          name: "内室", nameEn: "Inner Chamber", icon: "🛏️",
+          doors: [{ wall: "W", pos: 160, len: 90, style: "wood_panel", h: 200 }] },
+        { room: "hallway", x: 0,   y: 420, width: 1000, depth: 280,
+          name: "庭院", nameEn: "Garden", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
+      ],
+    },
+  ],
+  yardPlan: { items: [], paths: [] },
+
+  furnitureOverrides: [
+    {
+      study: [
+        // 书案 + 点茶 + 旧书册
+        { furnitureId: "desk-study",            x: 300, z: 100, rotation: 0 },
+        { furnitureId: "chair-nordic-oak",      x: 300, z: 190, rotation: 180 },
+        { furnitureId: "decor-tea-set",         x: 270, z: 100, rotation: 0, elevationY: 75 },
+        { furnitureId: "decor-books-vintage",   x: 330, z: 100, rotation: 0, elevationY: 75 },
+        // 书架（东西墙）+ 三轴挂画（北墙，仅三轴）
+        { furnitureId: "bookshelf-solid-walnut", x: 40,  z: 60,  rotation: 90 },
+        { furnitureId: "bookshelf-solid-walnut", x: 560, z: 60,  rotation: 270 },
+        { furnitureId: "artwork-inkwash",       x: 150, z: 6,   rotation: 0 },
+        { furnitureId: "artwork-inkwash",       x: 300, z: 6,   rotation: 0 },
+        { furnitureId: "artwork-inkwash",       x: 450, z: 6,   rotation: 0 },
+        // 插花（圆几花架 + 花瓶）+ 烛台吊灯
+        { furnitureId: "sideboard-round-stand", x: 520, z: 350, rotation: 0 },
+        { furnitureId: "decor-vase-single",     x: 520, z: 350, rotation: 0, elevationY: 75 },
+        { furnitureId: "plant-sansevieria",     x: 60,  z: 380, rotation: 0 },
+        { furnitureId: "lamp-chandelier-antique", x: 300, z: 210, rotation: 0, mountCeiling: true },
+      ],
+      master: [
+        { furnitureId: "bed-wood-nordic",       x: 200, z: 180, rotation: 0 },
+        { furnitureId: "nightstand-oak",        x: 80,  z: 40,  rotation: 0 },
+        { furnitureId: "nightstand-oak",        x: 320, z: 40,  rotation: 0 },
+        { furnitureId: "wardrobe-solid-walnut", x: 360, z: 120, rotation: 270 },
+        { furnitureId: "plant-sansevieria",     x: 40,  z: 380, rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "plant-monstera",        x: 150, z: 140, rotation: 0 },
+        { furnitureId: "plant-tropic-flowers",  x: 850, z: 140, rotation: 0 },
+        { furnitureId: "stone-path",            x: 500, z: 140, rotation: 90 },
+      ],
+    },
+  ],
+};
+
+// ── 民国石库门片场（导演台新增；简版）──────────────────────────────────
+// 1930 年代上海石库门：客堂间（八仙桌+西式沙发+留声机+收音机+梳妆台）+
+// 天井 + 亭子间（作家小间：书桌+钢笔+古董相机+单人床）+ 灶间 + 卧房 +
+// 后天井。海派=中式硬木+西式舒适；不用冰箱/电视（1950 年代后才有）、
+// 不用空调、不用现代办公椅。
+const SHIKUMEN_SET: ProjectTemplate = {
+  id: "set-shikumen",
+  name: "民国石库门片场",
+  nameEn: "Shikumen Set",
+  emoji: "🏠",
+  description: "片场 · 单层 · 客堂间+亭子间+灶间+卧房+前后天井 · 80㎡ · 拍民国上海/海派戏",
+  descriptionEn: "Film set · 1F · Main room + mezzanine + kitchen + bedroom + lightwells · 80㎡ · Republican Shanghai",
+  areaSqm: 80,
+  palette: ["#9A938A", "#2A2A2A", "#8B3A20"],
+  styleTemplateId: "chinese",
+
+  exterior: {
+    preset: "modern-minimal",
+    facadeSystem: "punched-window",
+    roofStyle: "flat",
+    floors: 1,
+    hasRooftop: false,
+    buildingType: "floor-plan-driven",
+    groundType: "tile",
+    wallColor: "#9A938A",
+    windowFrameColor: "#2A2A2A",
+    entranceFrameColor: "#15171B",
+    roofOverhang: 0.5,
+    parapetHeight: 0.4,
+    roofColor: "#3A3A3A",
+    stoneBaseEnabled: false,
+    showPerimeterFence: false,
+    yardPreset: "minimal",
+  },
+
+  floorLayouts: [
+    {
+      id: "shikumen-f1",
+      name: "民国石库门",
+      area: 80,
+      // 1000×800cm 矩形拼贴（无缺口）：
+      // 上排：客堂间 600×440 | 亭子间 400×280 + 灶间 400×160
+      // 中排：天井 600×160 | 卧房 400×360（卧房跨中下两排）
+      // 下排：后天井 600×200 | 卧房 400×360
+      rooms: [
+        { room: "living",   x: 0,   y: 0,   width: 600, depth: 440,
+          name: "客堂间", nameEn: "Main Room", icon: "🏠",
+          doors: [{ wall: "S", pos: 240, len: 120, style: "wood_panel", h: 200 }],
+          windows: [{ wall: "N", pos: 200, len: 200, style: "wooden", h: 140, sill: 90 }] },
+        { room: "study2",  x: 600, y: 0,   width: 400, depth: 280,
+          name: "亭子间", nameEn: "Mezzanine Room", icon: "✒️",
+          doors: [{ wall: "S", pos: 150, len: 80, style: "wood_panel", h: 190 }] },
+        { room: "kitchen", x: 600, y: 280, width: 400, depth: 160,
+          name: "灶间", nameEn: "Kitchen", icon: "🍳", exteriorStyle: "concrete" },
+        { room: "hallway", x: 0,   y: 440, width: 600, depth: 160,
+          name: "天井", nameEn: "Lightwell", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
+        { room: "master",  x: 600, y: 440, width: 400, depth: 360,
+          name: "卧房", nameEn: "Bedroom", icon: "🛏️",
+          doors: [{ wall: "W", pos: 60, len: 90, style: "wood_panel", h: 200 }] },
+        { room: "custom1", x: 0,   y: 600, width: 600, depth: 200,
+          name: "后天井", nameEn: "Rear Lightwell", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
+      ],
+    },
+  ],
+  yardPlan: { items: [], paths: [] },
+
+  // 客堂间：八仙桌（150cm 圆桌代）+ 西式皮沙发 + 留声机（大理石几上）+
+  // 收音机（酒柜上，横放）+ 梳妆台与座钟；亭子间：书桌+钢笔+古董相机+
+  // 单人床+做旧台灯。灶间无冰箱（时代锁）。
+  furnitureOverrides: [
+    {
+      living: [
+        { furnitureId: "dining-oak-rect",       x: 300, z: 150, rotation: 0 },
+        { furnitureId: "chair-nordic-oak",      x: 300, z: 50,  rotation: 0 },
+        { furnitureId: "chair-nordic-oak",      x: 300, z: 250, rotation: 180 },
+        { furnitureId: "chair-nordic-oak",      x: 200, z: 150, rotation: 90 },
+        { furnitureId: "chair-nordic-oak",      x: 400, z: 150, rotation: 270 },
+        { furnitureId: "sofa-leather-brown",    x: 300, z: 360, rotation: 180 },
+        // 留声机（大理石茶几当留声机柜）
+        { furnitureId: "coffee-marble-rect",    x: 80,  z: 80,  rotation: 0 },
+        { furnitureId: "decor-gramophone",      x: 80,  z: 80,  rotation: 0, elevationY: 45 },
+        // 收音机（酒柜上，横放才放得下）
+        { furnitureId: "sideboard-wine",        x: 560, z: 80,  rotation: 270 },
+        { furnitureId: "decor-radio-vintage",   x: 560, z: 80,  rotation: 90, elevationY: 103 },
+        // 玻璃镜梳妆台 + 座钟
+        { furnitureId: "dresser-nordic-white",  x: 520, z: 400, rotation: 180 },
+        { furnitureId: "decor-victorian-clock", x: 520, z: 400, rotation: 0, elevationY: 54 },
+        // 中西挂画各一（海派）
+        { furnitureId: "artwork-impression",    x: 150, z: 6,   rotation: 0 },
+        { furnitureId: "artwork-inkwash",       x: 450, z: 6,   rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "plant-tropic-flowers",  x: 100, z: 80,  rotation: 0 },
+        { furnitureId: "stone-path",            x: 300, z: 80,  rotation: 90 },
+      ],
+      study2: [
+        { furnitureId: "desk-study",            x: 200, z: 100, rotation: 0 },
+        { furnitureId: "chair-nordic-oak",      x: 200, z: 180, rotation: 180 },
+        { furnitureId: "decor-pen",             x: 170, z: 100, rotation: 0, elevationY: 75 },
+        { furnitureId: "decor-camera-exakta",   x: 205, z: 100, rotation: 0, elevationY: 75 },
+        { furnitureId: "decor-book-single",     x: 235, z: 100, rotation: 0, elevationY: 75 },
+        { furnitureId: "bed-single-white",      x: 320, z: 190, rotation: 0 },
+        { furnitureId: "nightstand-oak",        x: 220, z: 255, rotation: 0 },
+        { furnitureId: "lamp-table-rust",       x: 220, z: 255, rotation: 0, elevationY: 60 },
+      ],
+      kitchen: [
+        { furnitureId: "cabinet-lower-gray",    x: 200, z: 35,  rotation: 0 },
+        { furnitureId: "appliance-cooktop",     x: 150, z: 35,  rotation: 0, elevationY: 85 },
+        { furnitureId: "appliance-rice-cooker-2", x: 250, z: 35, rotation: 0, elevationY: 85 },
+      ],
+      master: [
+        { furnitureId: "bed-fabric-beige",      x: 200, z: 180, rotation: 0 },
+        { furnitureId: "nightstand-oak",        x: 80,  z: 40,  rotation: 0 },
+        { furnitureId: "nightstand-oak",        x: 320, z: 40,  rotation: 0 },
+        { furnitureId: "wardrobe-solid-walnut", x: 360, z: 120, rotation: 270 },
+        { furnitureId: "plant-sansevieria",     x: 40,  z: 320, rotation: 0 },
+      ],
+      custom1: [
+        { furnitureId: "plant-tropic-flowers",  x: 100, z: 100, rotation: 0 },
+        { furnitureId: "stone-path",            x: 300, z: 100, rotation: 90 },
+      ],
+    },
+  ],
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   MODERN_CANTILEVER_GLASS_VILLA,  // ← 参考照片专属：宽体玻璃幕墙 + 胡桃木挑檐 + 前院泳池
@@ -1893,4 +2560,10 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   OFFICE_SET,
   RESTAURANT_SET,
   APARTMENT_SET,
+  RURAL_HALL_SET,
+  MING_HALL_SET,
+  QING_SANXITANG_SET,
+  TANG_PALACE_SET,
+  SONG_STUDY_SET,
+  SHIKUMEN_SET,
 ];
