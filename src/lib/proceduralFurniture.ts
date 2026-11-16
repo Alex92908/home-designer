@@ -2255,7 +2255,6 @@ const PROCEDURAL_BUILDERS: Record<string, Builder> = {
   "proc-waterfall": buildWaterfall,
   "proc-pergola": buildPergola,
   "proc-spear": buildSpear,
-  "proc-cooktop": buildCooktop,
   // ── 繁荣/衰败成对场景（第 5 批）──
   "proc-rubble-pile": buildRubblePile,
   "proc-broken-table": buildBrokenTable,

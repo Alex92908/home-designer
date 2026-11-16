@@ -133,10 +133,10 @@ async function fetchAsBase64(url: string, authHeader?: string): Promise<string> 
 
 async function saveGlbPublic(glbBuf: Buffer, baseUrl: string): Promise<{ url: string; filePath: string }> {
   const tmpDir  = path.join(process.cwd(), "public", "models", "temp");
-  await mkdir(tmpDir, { recursive: true });
+  await mkdir(/* turbopackIgnore: true */ tmpDir, { recursive: true });
   const filename = `pbr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.glb`;
   const filePath = path.join(tmpDir, filename);
-  await writeFile(filePath, glbBuf);
+  await writeFile(/* turbopackIgnore: true */ filePath, glbBuf);
   return { url: `${baseUrl}/models/temp/${filename}`, filePath };
 }
 
@@ -192,7 +192,7 @@ async function runMeshyTexture(
     }
     throw new Error("Meshy: timeout");
   } finally {
-    unlink(filePath).catch(() => {});
+    unlink(/* turbopackIgnore: true */ filePath).catch(() => {});
   }
 }
 

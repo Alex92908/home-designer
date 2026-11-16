@@ -194,10 +194,10 @@ async function fetchAsBase64(url: string, token: string | undefined): Promise<st
 async function saveToDisk(b64: string, id: string, suffix: string): Promise<string | null> {
   try {
     const dir = path.join(process.cwd(), "public", "models", "generated");
-    await mkdir(dir, { recursive: true });
+    await mkdir(/* turbopackIgnore: true */ dir, { recursive: true });
     const raw = b64.replace(/^data:[^;]+;base64,/, "");
     const fp = path.join(dir, `${id}_${suffix}.glb`);
-    await writeFile(fp, Buffer.from(raw, "base64"));
+    await writeFile(/* turbopackIgnore: true */ fp, Buffer.from(raw, "base64"));
     return `/models/generated/${id}_${suffix}.glb`;
   } catch {
     return null;

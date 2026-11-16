@@ -23,6 +23,13 @@ const execFileAsync = promisify(execFile);
  * 导入永不因压缩挂掉。Draco 解码器已自托管（public/draco/）。
  *
  * 只读环境（serverless）写文件会 500，客户端 persistGlb() 自动退 IndexedDB。
+ *
+ * 注意：下面所有 fs 调用（stat/readFile/writeFile/readdir/mkdir/rm/copyFile）
+ * 的路径参数都带 turbopackIgnore 标记（写在路径参数前的行内注释里）——
+ * 否则 Turbopack 的静态分析无法把动态路径收敛到 public/models/imported/，
+ * 会把整个项目（含 491MB 的 public/）都追踪进 server 函数包，Vercel 构建
+ * 因超 250MB 上限失败。这些路径运行时解析不变，只是告诉打包器不要追踪
+ * 它们。别删那些标记。
  */
 
 const MAX_SIZE = 50 * 1024 * 1024;
@@ -34,23 +41,23 @@ type ModelMeta = { nameZh?: string; nameEn?: string; previewUrl?: string };
 async function readManifest(): Promise<Record<string, ModelMeta>> {
   try {
     const { readFile } = await import("fs/promises");
-    return JSON.parse(await readFile(MANIFEST(), "utf8"));
+    return JSON.parse(await readFile(/* turbopackIgnore: true */ MANIFEST(), "utf8"));
   } catch { return {}; }
 }
 async function writeManifest(m: Record<string, ModelMeta>): Promise<void> {
-  await mkdir(IMPORT_DIR(), { recursive: true });
-  await writeFile(MANIFEST(), JSON.stringify(m, null, 2));
+  await mkdir(/* turbopackIgnore: true */ IMPORT_DIR(), { recursive: true });
+  await writeFile(/* turbopackIgnore: true */ MANIFEST(), JSON.stringify(m, null, 2));
 }
 
 /** GET：列出已导入的模型（含中英文名 + 预览图，库列表用）。 */
 export async function GET() {
   try {
     const dir = IMPORT_DIR();
-    const files = await readdir(dir).catch(() => [] as string[]);
+    const files = await readdir(/* turbopackIgnore: true */ dir).catch(() => [] as string[]);
     const manifest = await readManifest();
     const models = await Promise.all(
       files.filter(f => /\.glb$/i.test(f)).map(async f => {
-        const st = await stat(path.join(dir, f));
+        const st = await stat(/* turbopackIgnore: true */ path.join(dir, f));
         const meta = manifest[f] ?? {};
         const fallback = f.replace(/\.glb$/i, "").replace(/_\d{13}$/, "");
         return {
@@ -89,7 +96,7 @@ export async function PATCH(req: NextRequest) {
       const png = Buffer.from(preview.slice("data:image/png;base64,".length), "base64");
       if (png.length <= 512 * 1024) {
         const pf = `${file}.preview.png`;
-        await writeFile(path.join(IMPORT_DIR(), pf), png);
+        await writeFile(/* turbopackIgnore: true */ path.join(IMPORT_DIR(), pf), png);
         meta.previewUrl = `/models/imported/${pf}`;
       }
     }
@@ -113,8 +120,8 @@ export async function DELETE(req: NextRequest) {
     if (!/^[^/\\]+\.glb$/i.test(file)) {
       return NextResponse.json({ error: "invalid file" }, { status: 400 });
     }
-    await rm(path.join(IMPORT_DIR(), file), { force: true });
-    await rm(path.join(IMPORT_DIR(), `${file}.preview.png`), { force: true });
+    await rm(/* turbopackIgnore: true */ path.join(IMPORT_DIR(), file), { force: true });
+    await rm(/* turbopackIgnore: true */ path.join(IMPORT_DIR(), `${file}.preview.png`), { force: true });
     const manifest = await readManifest();
     if (manifest[file]) { delete manifest[file]; await writeManifest(manifest); }
     return NextResponse.json({ ok: true });
@@ -135,7 +142,7 @@ function sanitizeBase(name: string): string {
 
 /** gltf-transform optimize（与批量压缩脚本同参）。成功且更小 → 替换原文件。 */
 async function compressInPlace(filePath: string): Promise<{ before: number; after: number }> {
-  const before = (await stat(filePath)).size;
+  const before = (await stat(/* turbopackIgnore: true */ filePath)).size;
   const tmp = path.join(os.tmpdir(), `glb-opt-${Date.now()}.glb`);
   try {
     await execFileAsync("npx", [
@@ -144,16 +151,16 @@ async function compressInPlace(filePath: string): Promise<{ before: number; afte
       "--texture-compress", "webp",
       "--texture-size", "1024",
     ], { timeout: 120_000 });
-    const after = (await stat(tmp)).size;
+    const after = (await stat(/* turbopackIgnore: true */ tmp)).size;
     if (after > 0 && after < before) {
-      await copyFile(tmp, filePath);
-      await rm(tmp, { force: true });
+      await copyFile(/* turbopackIgnore: true */ tmp, /* turbopackIgnore: true */ filePath);
+      await rm(/* turbopackIgnore: true */ tmp, { force: true });
       return { before, after };
     }
-    await rm(tmp, { force: true });
+    await rm(/* turbopackIgnore: true */ tmp, { force: true });
     return { before, after: before };
   } catch {
-    await rm(tmp, { force: true }).catch(() => {});
+    await rm(/* turbopackIgnore: true */ tmp, { force: true }).catch(() => {});
     return { before, after: before }; // 压缩失败保留原件
   }
 }
@@ -161,7 +168,7 @@ async function compressInPlace(filePath: string): Promise<{ before: number; afte
 export async function POST(req: NextRequest) {
   try {
     const dir = path.join(process.cwd(), "public", "models", "imported");
-    await mkdir(dir, { recursive: true });
+    await mkdir(/* turbopackIgnore: true */ dir, { recursive: true });
 
     let base: string;
     let destPath: string;
@@ -175,7 +182,7 @@ export async function POST(req: NextRequest) {
       if (typeof localPath !== "string" || !/\.(glb|gltf)$/i.test(localPath)) {
         return NextResponse.json({ error: "localPath（.glb/.gltf）is required" }, { status: 400 });
       }
-      const st = await stat(localPath).catch(() => null);
+      const st = await stat(/* turbopackIgnore: true */ localPath).catch(() => null);
       if (!st?.isFile()) {
         return NextResponse.json({ error: `文件不存在：${localPath}` }, { status: 404 });
       }
@@ -195,7 +202,7 @@ export async function POST(req: NextRequest) {
           : ["--yes", "@gltf-transform/cli", "copy", localPath, destPath],
         { timeout: 120_000 });
       } else {
-        await copyFile(localPath, destPath);
+        await copyFile(/* turbopackIgnore: true */ localPath, /* turbopackIgnore: true */ destPath);
       }
     } else {
       // ── 浏览器上传 ──
@@ -210,13 +217,13 @@ export async function POST(req: NextRequest) {
       }
       base = sanitizeBase(file.name);
       destPath = path.join(dir, `${base}_${Date.now()}.glb`);
-      await writeFile(destPath, Buffer.from(await file.arrayBuffer()));
+      await writeFile(/* turbopackIgnore: true */ destPath, Buffer.from(await file.arrayBuffer()));
     }
 
     // 统一压缩（用户勾选才跑；本地 .gltf 已在打包时压过，重复跑只是 no-op）
     const { before, after } = compress
       ? await compressInPlace(destPath)
-      : await stat(destPath).then(s => ({ before: s.size, after: s.size }));
+      : await stat(/* turbopackIgnore: true */ destPath).then(s => ({ before: s.size, after: s.size }));
 
     return NextResponse.json({
       url: `/models/imported/${path.basename(destPath)}`,
