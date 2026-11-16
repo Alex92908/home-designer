@@ -36,6 +36,8 @@ import { WalkthroughDoor3D } from "@/components/walkthrough/WalkthroughDoor3D";
 import { WallCompassDecal } from "@/components/shared/WallCompassDecal";
 import { DetailedDecor } from "./DetailedDecor";
 import { StallDoor3D } from "./StallDoor3D";
+import { ProceduralFurnitureMesh } from "./ProceduralFurnitureMesh";
+import { isProceduralFurnitureId } from "@/lib/proceduralFurniture";
 import { FirstPersonControls, TouchJoystick } from "./FirstPersonControls";
 import { getFloorTexture, getWallTexture, getRugTexture, floorTileSize, wallTileSize } from "@/lib/textures";
 import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
@@ -2201,6 +2203,12 @@ function GenericBox({ color, w, d, h, category }: MeshProps & { category?: strin
 // ─── Placed furniture mesh dispatcher ─────────────────────
 
 function FurnitureMesh({ item, w, d, h, instanceId, room }: { item: FurnitureItem; w: number; d: number; h: number; instanceId?: string; room?: RoomType }) {
+  // 程序化时代家具（id 以 proc- 开头，见 src/lib/proceduralFurniture.ts）：
+  // 在类别分流之前拦截——与 sign-shop-fascia / stall-door 的 id 特例同一路数。
+  // 类别仍保留语义（承托面吸附/桌面爬升走 category），几何全由 builder 生成。
+  if (isProceduralFurnitureId(item.id)) {
+    return <ProceduralFurnitureMesh item={item} w={w} d={d} h={h} />;
+  }
   const props: MeshProps = { color: item.color, sc: item.secondaryColor, w, d, h };
   switch (item.category) {
     case "sofa":             return <Sofa {...props} />;
