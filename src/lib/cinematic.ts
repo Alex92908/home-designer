@@ -256,6 +256,11 @@ export interface Actor {
   facing?: number;
   /** 默认动作，缺省 "walk" */
   action?: ActorAction;
+  /** 角色原型（characters.ts 的 ARCHETYPES id，如 "ceo"），缺省 = 未选原型 */
+  archetypeId?: string;
+  /** 服装（characters.ts 的 COSTUMES id，如 "ceo-suit"），缺省 = 原型默认；
+   *  全部缺失/未知时按默认素体（default）解释——旧存档照常读，绝不丢数据 */
+  costumeId?: string;
   /** 动态走位：[{x, z, y?, facing?, t}]，t 为镜内秒数；缺省 = from→to 两点 */
   waypoints?: Waypoint[];
   /** 动作时间轴：[{action, start, duration, targetPos?, targetY?, arc?, …}] */
@@ -265,7 +270,7 @@ export interface Actor {
 export function makeActor(
   from: [number, number],
   to: [number, number],
-  opts?: { name?: string; role?: string; facing?: number; action?: ActorAction; waypoints?: Waypoint[]; timeline?: ActionSegment[] },
+  opts?: { name?: string; role?: string; facing?: number; action?: ActorAction; archetypeId?: string; costumeId?: string; waypoints?: Waypoint[]; timeline?: ActionSegment[] },
 ): Actor {
   return {
     id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
@@ -275,6 +280,8 @@ export function makeActor(
     ...(opts?.role !== undefined ? { role: opts.role } : {}),
     ...(opts?.facing !== undefined ? { facing: opts.facing } : {}),
     ...(opts?.action !== undefined ? { action: opts.action } : {}),
+    ...(opts?.archetypeId !== undefined ? { archetypeId: opts.archetypeId } : {}),
+    ...(opts?.costumeId !== undefined ? { costumeId: opts.costumeId } : {}),
     ...(opts?.waypoints ? { waypoints: opts.waypoints } : {}),
     ...(opts?.timeline ? { timeline: opts.timeline } : {}),
   };

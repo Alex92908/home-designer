@@ -59,6 +59,11 @@ import {
   STUNT_PROP_LIST, STUNT_ACTION_PROPS, makeStuntProp, stuntPropDef,
   type StuntProp, type StuntPropKind,
 } from "@/lib/stuntProps";
+import {
+  ARCHETYPES, costumesForArchetype, defaultCostumeForArchetype, eraWarningFor,
+  resolveActorCostume, resolveActorArchetype,
+  type CostumeDef,
+} from "@/lib/characters";
 import { StuntPropMesh, FlyingVehicleMesh, WireMesh } from "@/components/StuntProps";
 import { SCENE_SETS } from "@/lib/sceneSets";
 import { matchProjectTemplate } from "@/lib/matchProjectTemplate";
@@ -741,12 +746,18 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
           styles: stylesUsed,
           // 导演台 v4：演员带名字/角色/朝向/默认动作 + 走位时间轴 + 动作时间轴；
           // 打斗编舞（phrases/beats/reset/安全）与特技道具单列。
-          // v3 字段全部保留——旧存档（无 waypoints/timeline/fights/stuntProps）
+          // v4 字段全部保留——旧存档（无 waypoints/timeline/fights/stuntProps）
           // 按默认值解析，绝不因升级丢数据。
+          // 角色库（characters.ts）：archetypeId/costumeId/costume 随演员导出；
+          // 旧存档（无服装字段）导出时 costumeId 为解析后的默认素体 "default"。
           actors: st.actors.map((a, i) => ({
             id: a.id,
             name: actorDisplayName(a, i),
             role: a.role ?? "",
+            archetypeId: a.archetypeId ?? null,
+            archetype: resolveActorArchetype(a)?.nameZh ?? "",
+            costumeId: resolveActorCostume(a).id,
+            costume: resolveActorCostume(a).labelZh,
             from: a.from,
             to: a.to,
             facing: actorFacing(a),
@@ -810,6 +821,8 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
                 id: a.id,
                 name: actorDisplayName(a, ai),
                 role: a.role ?? "",
+                archetypeId: a.archetypeId ?? null,
+                costumeId: resolveActorCostume(a).id,
                 action: actorAction(a),
               })),
               // 本镜的打斗编舞 id（无则 null）
@@ -990,6 +1003,123 @@ function waypointLabelTex(n: number): THREE.CanvasTexture {
   const tex = new THREE.CanvasTexture(c);
   wpLabelCache.set(n, tex);
   return tex;
+}
+
+/** 服装配件（程序化几何，见 characters.ts 的 CostumeDef.accessory）。
+ *  全部是小几何体，不导入模型文件；位置按方块人尺寸定（头顶 y≈1.52，
+ *  胸前 z≈+0.21 为正面，背后 z≈-0.26）。 */
+function CostumeAccessoryMesh({ costume }: { costume: CostumeDef }) {
+  const c = costume.accessoryColor ?? costume.colors.torso;
+  const mat = (color: string) => <meshStandardMaterial color={color} roughness={0.85} />;
+  switch (costume.accessory) {
+    case "none":
+      return null;
+    case "tie":
+      return (
+        <mesh position={[0, 1.02, 0.215]} castShadow>
+          <boxGeometry args={[0.09, 0.5, 0.02]} />
+          {mat(c)}
+        </mesh>
+      );
+    case "cap":
+      return (
+        <group>
+          <mesh position={[0, 1.66, 0]} castShadow>
+            <cylinderGeometry args={[0.19, 0.19, 0.07, 16]} />
+            {mat(c)}
+          </mesh>
+          <mesh position={[0, 1.63, 0.17]}>
+            <boxGeometry args={[0.22, 0.02, 0.14]} />
+            {mat(c)}
+          </mesh>
+        </group>
+      );
+    case "strawHat":
+      return (
+        <mesh position={[0, 1.66, 0]} castShadow>
+          <coneGeometry args={[0.34, 0.14, 16]} />
+          {mat(c)}
+        </mesh>
+      );
+    case "crown":
+      return (
+        <group>
+          <mesh position={[0, 1.68, 0]} castShadow>
+            <cylinderGeometry args={[0.13, 0.13, 0.1, 12]} />
+            {mat(c)}
+          </mesh>
+          {[-0.08, 0, 0.08].map((x) => (
+            <mesh key={x} position={[x, 1.76, 0]}>
+              <sphereGeometry args={[0.035, 8, 8]} />
+              {mat(c)}
+            </mesh>
+          ))}
+        </group>
+      );
+    case "chefHat":
+      return (
+        <group>
+          <mesh position={[0, 1.7, 0]} castShadow>
+            <cylinderGeometry args={[0.15, 0.15, 0.2, 12]} />
+            {mat(c)}
+          </mesh>
+          <mesh position={[0, 1.79, 0]}>
+            <cylinderGeometry args={[0.17, 0.15, 0.08, 12]} />
+            {mat(c)}
+          </mesh>
+        </group>
+      );
+    case "helmet":
+      return (
+        <mesh position={[0, 1.56, 0]} scale={[1, 0.75, 1]} castShadow>
+          <sphereGeometry args={[0.2, 16, 12]} />
+          {mat(c)}
+        </mesh>
+      );
+    case "sword":
+      return (
+        <group>
+          <mesh position={[-0.3, 0.62, 0.08]} rotation={[0, 0, 0.5]} castShadow>
+            <boxGeometry args={[0.05, 0.75, 0.02]} />
+            {mat(c)}
+          </mesh>
+          <mesh position={[-0.3, 0.95, 0.08]} rotation={[0, 0, 0.5]}>
+            <boxGeometry args={[0.14, 0.03, 0.03]} />
+            {mat(c)}
+          </mesh>
+        </group>
+      );
+    case "apron":
+      return (
+        <mesh position={[0, 0.72, 0.21]} castShadow>
+          <boxGeometry args={[0.36, 0.72, 0.03]} />
+          {mat(c)}
+        </mesh>
+      );
+    case "backpack":
+      return (
+        <mesh position={[0, 0.95, -0.26]} castShadow>
+          <boxGeometry args={[0.36, 0.48, 0.14]} />
+          {mat(c)}
+        </mesh>
+      );
+    case "headband":
+      return (
+        <mesh position={[0, 1.56, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.175, 0.025, 8, 20]} />
+          {mat(c)}
+        </mesh>
+      );
+    case "badge":
+      return (
+        <mesh position={[0.1, 1.08, 0.21]}>
+          <boxGeometry args={[0.09, 0.11, 0.02]} />
+          {mat(c)}
+        </mesh>
+      );
+    default:
+      return null;
+  }
 }
 
 /** Canvas 内组件：演员放置（地面点两下：起点→终点）+ 渲染 + 播放时表演。
@@ -1210,6 +1340,10 @@ export function ActorsLayer() {
       {actors.map((a) => {
         const wps = (a.waypoints ?? []).slice().sort((x, y) => x.t - y.t);
         const hasWps = wps.length >= 2;
+        // 服装：按演员的 archetypeId/costumeId 解析；旧存档（无服装字段）
+        // 与未知 id 一律回落默认素体（与 MVP 旧方块人同色）。
+        const costume = resolveActorCostume(a);
+        const torsoColor = costume.id === "default" && actorAction(a) === "fight" ? "#e07856" : costume.colors.torso;
         return (
           <group key={a.id}>
             {/* 走位路径：有路点画路点连线 + 编号标牌；没有则画旧的 from→to 虚线 + 终点环 */}
@@ -1256,7 +1390,8 @@ export function ActorsLayer() {
                 </mesh>
               </group>
             )}
-            {/* 方块人：胶囊身 + 球头 + 双臂（肩部为支点）+ 飞行载具/威亚。
+            {/* 方块人：胶囊身 + 球头 + 双臂（肩部为支点）+ 服装裙摆/配件 +
+                飞行载具/威亚。颜色与配件由服装库驱动（见 characters.ts）。
                 按住可拖动调整走位（from/to 一起平移）。 */}
             <group
               ref={(g) => { if (g) groupRefs.current.set(a.id, g); else groupRefs.current.delete(a.id); }}
@@ -1277,19 +1412,26 @@ export function ActorsLayer() {
             >
               <mesh position={[0, 0.75, 0]} castShadow>
                 <capsuleGeometry args={[0.22, 0.8, 4, 12]} />
-                <meshStandardMaterial color={actorAction(a) === "fight" ? "#e07856" : "#a8b0bc"} roughness={0.85} />
+                <meshStandardMaterial color={torsoColor} roughness={0.85} />
               </mesh>
+              {costume.skirt && (
+                <mesh position={[0, 0.36, 0]} castShadow>
+                  <cylinderGeometry args={[0.24, 0.44, 0.72, 12]} />
+                  <meshStandardMaterial color={costume.colors.torso} roughness={0.85} />
+                </mesh>
+              )}
               <mesh position={[0, 1.52, 0]} castShadow>
                 <sphereGeometry args={[0.17, 16, 12]} />
-                <meshStandardMaterial color="#c2c9d4" roughness={0.85} />
+                <meshStandardMaterial color={costume.colors.skin} roughness={0.85} />
               </mesh>
+              <CostumeAccessoryMesh costume={costume} />
               <group
                 ref={(gr) => { const m = armRefs.current.get(a.id) ?? { l: null, r: null }; m.l = gr; armRefs.current.set(a.id, m); }}
                 position={[-0.28, 1.28, 0]}
               >
                 <mesh position={[0, -0.42, 0]} castShadow>
                   <capsuleGeometry args={[0.08, 0.7, 4, 8]} />
-                  <meshStandardMaterial color="#98a0ac" roughness={0.85} />
+                  <meshStandardMaterial color={costume.colors.arms} roughness={0.85} />
                 </mesh>
               </group>
               <group
@@ -1298,7 +1440,7 @@ export function ActorsLayer() {
               >
                 <mesh position={[0, -0.42, 0]} castShadow>
                   <capsuleGeometry args={[0.08, 0.7, 4, 8]} />
-                  <meshStandardMaterial color="#98a0ac" roughness={0.85} />
+                  <meshStandardMaterial color={costume.colors.arms} roughness={0.85} />
                 </mesh>
               </group>
               {/* 飞行载具 / 威亚：useFrame 按当前段切换 visible（初始全藏） */}
@@ -1535,6 +1677,10 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
       setSetMatchMsg(en ? "No set matched — try: café / office / apartment living room" : "未匹配到片场，试试：咖啡馆 / 办公室 / 公寓客厅");
     }
   };
+  // 当前片场（时代锁用）：以设计器实际加载的模板为准，本面板刚应用的片场兜底。
+  // 未加载任何模板时为 null → 时代锁不警告。
+  const activeTemplateId = useDesignerStore((s) => s.activeTemplateId);
+  const currentSetId = activeTemplateId ?? appliedSetId;
 
   // ── 演员放置提示（独立于菜单，放置时始终可见）──
   if (addActorMode) {
@@ -1828,6 +1974,55 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
                   />
                   <button onClick={() => removeActor(a.id)} className="px-1 rounded hover:bg-white/10 text-white/60">✕</button>
                 </div>
+                {/* 角色原型 + 服装：选原型后服装默认该原型第一件；换服装只改服装。
+                    时代锁：服装时代与当前片场时代不符时出琥珀警告（只警告、不拦截），
+                    与「可能越轴」徽章同款式；未加载片场或片场未分类时不警告。 */}
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={a.archetypeId ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (!v) updateActor(a.id, { archetypeId: undefined, costumeId: undefined });
+                      else updateActor(a.id, { archetypeId: v, costumeId: defaultCostumeForArchetype(v).id });
+                    }}
+                    className="flex-1 min-w-0 bg-white/10 rounded px-1 py-0.5 outline-none"
+                    style={{ colorScheme: "dark" }}
+                    title={en ? "Character archetype" : "角色原型"}
+                  >
+                    <option value="">{en ? "No archetype" : "未选原型"}</option>
+                    {ARCHETYPES.map((t) => (
+                      <option key={t.id} value={t.id} title={en ? t.whyEn : t.whyZh}>{en ? t.nameEn : t.nameZh}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={resolveActorCostume(a).id}
+                    disabled={!a.archetypeId}
+                    onChange={(e) => updateActor(a.id, { costumeId: e.target.value })}
+                    className="flex-1 min-w-0 bg-white/10 rounded px-1 py-0.5 outline-none disabled:opacity-40"
+                    style={{ colorScheme: "dark" }}
+                    title={en ? "Costume" : "服装"}
+                  >
+                    {a.archetypeId ? (
+                      costumesForArchetype(a.archetypeId).map((c) => (
+                        <option key={c.id} value={c.id}>{en ? c.labelEn : c.labelZh}</option>
+                      ))
+                    ) : (
+                      <option value="default">{en ? "Default outfit" : "默认现代装"}</option>
+                    )}
+                  </select>
+                </div>
+                {(() => {
+                  const w = eraWarningFor(resolveActorCostume(a).id, currentSetId);
+                  return w ? (
+                    <span
+                      className="px-1 py-0.5 rounded text-[10px] whitespace-normal leading-snug"
+                      style={{ background: "rgba(245,158,11,0.25)", color: "#fbbf24" }}
+                      title={en ? "Costume era does not match this set's era (warning only — not blocked)" : "服装时代与当前片场时代不符（仅警告，不拦截）"}
+                    >
+                      ⚠️ {en ? w.messageEn : w.messageZh}
+                    </span>
+                  ) : null;
+                })()}
                 <div className="flex items-center gap-1.5">
                   <select
                     value={actorAction(a)}
