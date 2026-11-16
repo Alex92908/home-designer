@@ -152,6 +152,49 @@ function emptyRoom(): RoomState {
   return { materials: {}, placedItems: [] };
 }
 
+/** Per-room cost breakdown — the single source of truth for quote math.
+ *  Mirrors the historical `totalCost()` computation exactly (materials by
+ *  area, furniture by unit price, wiring by routing length), split into
+ *  three lines so the whole-house quote can itemize them. `area` comes
+ *  from `getRoomArea(room)` (default room sizes, same as totalCost). */
+export interface RoomCostBreakdown {
+  materials: number;
+  furniture: number;
+  wiring: number;
+  total: number;
+}
+
+export function calcRoomCost(
+  room: RoomState | undefined,
+  area: { wall: number; floor: number },
+): RoomCostBreakdown {
+  if (!room) return { materials: 0, furniture: 0, wiring: 0, total: 0 };
+  const { materials, placedItems } = room;
+  let mat = 0;
+  if (materials.wall) mat += materials.wall.price * area.wall;
+  if (materials.floor) mat += materials.floor.price * area.floor;
+  if (materials.ceiling) mat += materials.ceiling.price * area.floor;
+  if (materials.tile) mat += materials.tile.price * area.floor;
+  if (materials.light) {
+    mat += materials.light.price * (materials.light.id === "light-spot" ? 8 : 1);
+  }
+  let furn = 0;
+  for (const placed of placedItems) {
+    const f = getFurnitureById(placed.furnitureId);
+    if (f) furn += f.price;
+  }
+  // Routing cost — sum of (manhattan length × per-meter price) for
+  // every connection in this room.
+  let wiring = 0;
+  const conns = room.connections ?? [];
+  if (conns.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { routingCost } = require("./routingValidation") as typeof import("./routingValidation");
+    wiring = routingCost(placedItems, conns);
+  }
+  return { materials: mat, furniture: furn, wiring, total: mat + furn + wiring };
+}
+
 // ─── AI 文生设计：家具分类 → 具体家具 id ─────────────────────────────
 // 模型只给分类（如 "bookshelf"），这里挑一件最贴合该房间的真实家具。
 function pickFurnitureForCategory(category: string, room: RoomType): string | undefined {
@@ -976,6 +1019,28 @@ interface DesignerStore {
   currentRoom: () => RoomState;
   totalCost: () => number;
   isOverBudget: () => boolean;
+  /** Labor rate as a fraction of materials cost (0.40 = 40%).
+   *  Default 40% is the midpoint of the 30–50% range already documented
+   *  in exportPdf.ts ("人工费约为材料费的30–50%"). It is a starting
+   *  point the user can adjust — NOT a verified market rate. */
+  laborRate: number;
+  setLaborRate: (rate: number) => void;
+  /** Cost breakdown for one room on one floor (materials / furniture /
+   *  wiring / total), using the same math as totalCost(). */
+  roomCostBreakdown: (floorIndex: number, room: RoomType) => RoomCostBreakdown;
+  /** Whole-house quote: sums every enabled room on every floor, plus a
+   *  labor line (laborRate × materials). Returns the four lines, the
+   *  overall total, and a per-room breakdown. */
+  wholeHouseBreakdown: () => {
+    furniture: number;
+    materials: number;
+    wiring: number;
+    labor: number;
+    total: number;
+    rooms: Array<{ floor: number; room: RoomType; furniture: number; materials: number; wiring: number; total: number }>;
+  };
+  /** Whole-house overall total (materials + furniture + wiring + labor). */
+  totalCostAll: () => number;
 
   // Camera-move-and-capture (ephemeral — registered by RoomCanvas, called by AiRenderModal)
   cameraAndCapture: ((pos: [number, number, number], lookAt: [number, number, number]) => string) | null;
@@ -1161,6 +1226,10 @@ export const useDesignerStore = create<DesignerStore>()(
         lightPosByRoom: { ...st.lightPosByRoom, [room]: pos },
       })),
       budget: 350000,
+      /** Labor rate (fraction of materials). Default 0.40 = 40%, the
+       *  midpoint of the 30–50% range documented in exportPdf.ts. */
+      laborRate: 0.4,
+      setLaborRate: (rate) => set({ laborRate: Math.max(0.3, Math.min(0.5, rate)) }),
       furnitureHistory: [],
       clipboard: [],
       roomClipboard: null,
@@ -3534,6 +3603,7 @@ export const useDesignerStore = create<DesignerStore>()(
         clipboard: [],
         roomClipboard: null,
         budget: 350000,
+        laborRate: 0.4,
         scores: { style: 0, space: 0, light: 0, dominantStyle: "" },
         customRoomMeta: {},
         customFurniture: [],
@@ -3776,33 +3846,43 @@ export const useDesignerStore = create<DesignerStore>()(
         const fp = s.floorPlans[s.activeFloor];
         const room = fp?.rooms[s.activeRoom];
         if (!room) return 0;
-        const { materials, placedItems } = room;
-        const area = getRoomArea(s.activeRoom);
-        let total = 0;
+        return calcRoomCost(room, getRoomArea(s.activeRoom)).total;
+      },
 
-        if (materials.wall) total += materials.wall.price * area.wall;
-        if (materials.floor) total += materials.floor.price * area.floor;
-        if (materials.ceiling) total += materials.ceiling.price * area.floor;
-        if (materials.tile) total += materials.tile.price * area.floor;
-        if (materials.light) {
-          total += materials.light.price * (materials.light.id === "light-spot" ? 8 : 1);
-        }
+      roomCostBreakdown: (floorIndex, room) => {
+        const s = get();
+        const fp = s.floorPlans[floorIndex];
+        const roomState = fp?.rooms[room];
+        if (!roomState) return { materials: 0, furniture: 0, wiring: 0, total: 0 };
+        return calcRoomCost(roomState, getRoomArea(room));
+      },
 
-        for (const placed of placedItems) {
-          const f = getFurnitureById(placed.furnitureId);
-          if (f) total += f.price;
-        }
+      wholeHouseBreakdown: () => {
+        const s = get();
+        const laborRate = s.laborRate ?? 0.4;
+        let furniture = 0;
+        let materials = 0;
+        let wiring = 0;
+        const rooms: Array<{ floor: number; room: RoomType; furniture: number; materials: number; wiring: number; total: number }> = [];
+        s.floorPlans.forEach((fp, floorIndex) => {
+          const enabled = fp.enabledRooms ?? [];
+          for (const room of enabled) {
+            const roomState = fp.rooms[room];
+            if (!roomState) continue;
+            const b = calcRoomCost(roomState, getRoomArea(room));
+            furniture += b.furniture;
+            materials += b.materials;
+            wiring += b.wiring;
+            rooms.push({ floor: floorIndex, room, furniture: b.furniture, materials: b.materials, wiring: b.wiring, total: b.total });
+          }
+        });
+        const labor = Math.round(materials * laborRate);
+        const total = furniture + materials + wiring + labor;
+        return { furniture, materials, wiring, labor, total, rooms };
+      },
 
-        // Routing cost — sum of (manhattan length × per-meter price) for
-        // every connection in this room.
-        const conns = room.connections ?? [];
-        if (conns.length > 0) {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const { routingCost } = require("./routingValidation") as typeof import("./routingValidation");
-          total += routingCost(placedItems, conns);
-        }
-
-        return total;
+      totalCostAll: () => {
+        return get().wholeHouseBreakdown().total;
       },
 
       isOverBudget: () => {

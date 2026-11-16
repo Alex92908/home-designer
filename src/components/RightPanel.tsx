@@ -41,6 +41,11 @@ export default function RightPanel() {
   const budgetRaw = useDesignerStore((s) => s.budget);
   const setBudget = useDesignerStore((s) => s.setBudget);
   const isOverBudgetRaw = useDesignerStore((s) => s.isOverBudget());
+  // Whole-house overall total (all floors + all enabled rooms, incl. labor)
+  const wholeHouse = useDesignerStore((s) => s.wholeHouseBreakdown());
+  const laborRateRaw = useDesignerStore((s) => s.laborRate);
+  const setLaborRate = useDesignerStore((s) => s.setLaborRate);
+  const [showWholeRooms, setShowWholeRooms] = useState(false);
 
   // Use stable defaults until after hydration to prevent mismatch
   const totalCost = mounted ? totalCostRaw : 0;
@@ -132,6 +137,75 @@ export default function RightPanel() {
         {isOverBudget && (
           <div className="mt-2 text-xs font-semibold rounded-lg px-2 py-1" style={{ background: "#FEE2E2", color: "var(--ds-danger)" }}>
             ⚠️ {t.overBudget} {formatPrice(totalCost - budget, locale)}
+          </div>
+        )}
+      </div>
+
+      {/* Whole-house overall total （整屋总价） — all floors + all enabled
+          rooms, itemized into furniture / materials / wiring / labor. */}
+      <div className="px-4 py-3 shrink-0" style={{ borderBottom: "1px solid var(--ds-border-soft)", background: "var(--ds-surface-muted)" }}>
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] font-bold" style={{ color: "var(--ds-text)" }}>
+            {t.wholeHouseTitle}
+          </div>
+          <div className="text-xl font-black" style={{ color: "var(--ds-text)" }}>
+            {formatPrice(mounted ? wholeHouse.total : 0, locale)}
+          </div>
+        </div>
+        <div className="mt-2 flex flex-col gap-1">
+          {[
+            { label: t.wholeHouseFurniture, val: wholeHouse.furniture },
+            { label: t.wholeHouseMaterials, val: wholeHouse.materials },
+            { label: t.wholeHouseWiring, val: wholeHouse.wiring },
+            { label: t.wholeHouseLabor, val: wholeHouse.labor },
+          ].map(({ label, val }) => (
+            <div key={label} className="flex items-center justify-between text-[11px]" style={{ color: "var(--ds-text-2)" }}>
+              <span>{label}</span>
+              <span className="font-bold" style={{ color: "var(--ds-text)" }}>{formatPrice(mounted ? val : 0, locale)}</span>
+            </div>
+          ))}
+        </div>
+        {/* Labor rate — default 40% (midpoint of the 30–50% range in the
+            quote footnote), user-adjustable. */}
+        <div className="mt-2">
+          <div className="flex items-center justify-between text-[10px] mb-0.5" style={{ color: "var(--ds-text-2)" }}>
+            <span>{t.wholeHouseLabor} · {Math.round((mounted ? laborRateRaw : 0.4) * 100)}%</span>
+            <span className="font-bold" style={{ color: "var(--ds-text)" }}>{formatPrice(mounted ? wholeHouse.labor : 0, locale)}</span>
+          </div>
+          <input
+            type="range" min={0.3} max={0.5} step={0.05} value={mounted ? laborRateRaw : 0.4}
+            onChange={(e) => setLaborRate(Number(e.target.value))}
+            className="w-full h-1.5"
+            style={{ accentColor: "#007AFF" }}
+          />
+          <div className="text-[9px] mt-0.5" style={{ color: "var(--ds-text-3)" }}>
+            {t.wholeHouseLaborNote}
+          </div>
+        </div>
+        {/* Per-room breakdown (expandable) */}
+        {wholeHouse.rooms.length > 0 && (
+          <div className="mt-2">
+            <button
+              onClick={() => setShowWholeRooms(!showWholeRooms)}
+              className="text-[10px] font-semibold"
+              style={{ color: "#007AFF" }}
+            >
+              {showWholeRooms ? "▾" : "▸"} {t.wholeHousePerRoom} ({wholeHouse.rooms.length})
+            </button>
+            {showWholeRooms && (
+              <div className="mt-1 flex flex-col gap-1">
+                {wholeHouse.rooms.map((r) => {
+                  const roomName = customRoomDisplayName(customRoomMeta[r.room], locale) ?? t.roomNames[r.room] ?? ROOM_DEFS[r.room]?.name ?? r.room;
+                  const floorLabel = locale === "en" ? `F${r.floor + 1}` : `${r.floor + 1}层`;
+                  return (
+                    <div key={`${r.floor}-${r.room}`} className="flex items-center justify-between text-[10px]" style={{ color: "var(--ds-text-2)" }}>
+                      <span>{floorLabel} · {roomName}</span>
+                      <span className="font-bold" style={{ color: "var(--ds-text)" }}>{formatPrice(r.total, locale)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

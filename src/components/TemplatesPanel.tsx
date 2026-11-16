@@ -6,6 +6,7 @@ import { ALL_TEMPLATES, StyleTemplate } from "@/lib/templates";
 import { PROJECT_TEMPLATES, type ProjectTemplate } from "@/lib/projectTemplates";
 import { MATERIALS } from "@/lib/data";
 import { useLocale } from "@/lib/i18n";
+import { formatPrice } from "@/lib/currency";
 
 interface Props {
   onLoaded?: () => void;
@@ -47,6 +48,10 @@ export default function TemplatesPanel({ onLoaded }: Props) {
 
   const [loading,    setLoading]    = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  // Closed-loop result banner: after a style is applied, show the
+  // whole-house overall total (incl. labor) so the user sees the quote
+  // immediately instead of hunting for it in the right panel.
+  const [appliedBanner, setAppliedBanner] = useState<{ name: string; total: number } | null>(null);
 
   // Style template handler
   const handleStyleClick = (id: string) => {
@@ -57,6 +62,10 @@ export default function TemplatesPanel({ onLoaded }: Props) {
         loadTemplate(id);
         setLoading(null);
         setViewMode("3d");
+        const tpl = ALL_TEMPLATES.find(t => t.id === id);
+        const total = useDesignerStore.getState().wholeHouseBreakdown().total;
+        setAppliedBanner({ name: locale === "en" ? (tpl?.nameEn ?? id) : (tpl?.name ?? id), total });
+        window.setTimeout(() => setAppliedBanner(null), 8000);
         onLoaded?.();
       }, 60);
     } else {
@@ -87,6 +96,34 @@ export default function TemplatesPanel({ onLoaded }: Props) {
 
   return (
     <div className="px-3 py-2 flex flex-col gap-5">
+
+      {/* One-click result: style applied → whole-house total (incl. labor) */}
+      {appliedBanner && (
+        <div
+          className="p-3 rounded-xl shrink-0"
+          style={{ background: "#E8F1FF", border: "1px solid #CCE4FF" }}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-[12px] font-bold" style={{ color: "#0055B3" }}>
+                ✅ {locale === "en" ? "Applied" : "已应用"} {appliedBanner.name}
+              </div>
+              <div className="text-[11px] mt-0.5" style={{ color: "#0055B3" }}>
+                {locale === "en" ? "Whole-house total (incl. labor): " : "整屋总价（含人工）："}
+                <span className="font-black">{formatPrice(appliedBanner.total, locale)}</span>
+              </div>
+              <div className="text-[9px] mt-0.5" style={{ color: "rgba(0,85,179,0.65)" }}>
+                {locale === "en" ? "See the itemized breakdown in the right panel." : "分项明细见右侧报价面板。"}
+              </div>
+            </div>
+            <button
+              onClick={() => setAppliedBanner(null)}
+              className="text-xs shrink-0"
+              style={{ color: "#0055B3" }}
+            >✕</button>
+          </div>
+        </div>
+      )}
 
       {/* ════════════════════ 房屋样板 ════════════════════ */}
       <section>
