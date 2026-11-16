@@ -4,6 +4,8 @@
  * CinematicDirector —— 分镜工作台 + 多风格录制 + 演员走位（云横店 M1-M3）
  * ＋ 导演台 MVP：一键搭片场、室内机位、具名角色走位、轴线、打斗单节 beat、
  * 9:16 取景框、带角色信息的控制包导出。
+ * ＋ 灯光预设（lighting.ts：10 套灯光，每镜一个 lightingId + 场景默认，
+ * 拍摄模拟/录制按镜切换，HouseCanvas 把生效预设写进 Three.js 灯光）。
  * ＋ 动作系统（action system）：30 个动作的注册表（actions.ts，含特技/
  * 特殊位置：跳/爬/贴/骑/御剑/扫帚/威亚/躲藏/躺/轻功/索降/游泳）、
  * 打斗编舞（fightChoreo.ts：phrase × beat + reset + 安全字段）、
@@ -64,6 +66,10 @@ import {
   resolveActorCostume, resolveActorArchetype,
   type CostumeDef,
 } from "@/lib/characters";
+import {
+  LIGHTING_PRESETS, resolveLightingPreset, resolveShotLightingId,
+  type LightingId,
+} from "@/lib/lighting";
 import { StuntPropMesh, FlyingVehicleMesh, WireMesh } from "@/components/StuntProps";
 import { SCENE_SETS } from "@/lib/sceneSets";
 import { matchProjectTemplate } from "@/lib/matchProjectTemplate";
@@ -110,7 +116,14 @@ interface CineState {
   addShot: (presetId: string) => void;
   removeShot: (id: string) => void;
   moveShot: (id: string, dir: -1 | 1) => void;
-  updateShot: (id: string, patch: Partial<Pick<Shot, "duration" | "prompt" | "targetActorId">>) => void;
+  updateShot: (id: string, patch: Partial<Pick<Shot, "duration" | "prompt" | "targetActorId" | "lightingId">>) => void;
+
+  /** 场景默认灯光（持久化；新镜继承；旧存档缺省 = 白天） */
+  sceneLightingId: LightingId;
+  setSceneLightingId: (id: LightingId) => void;
+  /** 用户在面板里点选预览的灯光（易失；模拟/录制开始即交出控制权） */
+  previewLightingId: LightingId | null;
+  setPreviewLightingId: (id: LightingId | null) => void;
 
   /** 导出风格（至少保留一个） */
   styles: RenderStyle[];
@@ -203,9 +216,15 @@ export const useCineStore = create<CineState>()(
   persist(
     (set, get) => ({
       shots: [],
+      sceneLightingId: "day",
+      setSceneLightingId: (id) => set({ sceneLightingId: id }),
+      previewLightingId: null,
+      setPreviewLightingId: (id) => set({ previewLightingId: id }),
       addShot: (presetId) => {
         const first = get().actors[0];
-        set({ shots: [...get().shots, makeShot(presetId, first ? { targetActorId: first.id } : undefined)] });
+        // 新镜继承场景默认灯光（显式存下，之后改默认不影响已有镜；
+        // 想跟随默认的镜在面板里选「跟随场景」即可）
+        set({ shots: [...get().shots, makeShot(presetId, { ...(first ? { targetActorId: first.id } : {}), lightingId: get().sceneLightingId })] });
       },
       removeShot: (id) => set({
         shots: get().shots.filter((s) => s.id !== id),
@@ -400,12 +419,13 @@ export const useCineStore = create<CineState>()(
         simClock.timeSec = 0;
         simClock.shotDuration = st.shots[0].duration;
         simClock.shotId = st.shots[0].id;
-        set({ sim: { active: true, playing: true, shotIdx: 0, timeSec: 0 } });
+        // 模拟接管灯光：每镜按自己的 lightingId 切，面板预览即刻失效
+        set({ sim: { active: true, playing: true, shotIdx: 0, timeSec: 0 }, previewLightingId: null });
       },
       stopSim: () => {
         simClock.active = false;
         simClock.playing = false;
-        set({ sim: null });
+        set({ sim: null, previewLightingId: null });
       },
       setSim: (patch) => {
         const cur = get().sim;
@@ -444,7 +464,7 @@ export const useCineStore = create<CineState>()(
       progress: 0,
       menuOpen: false,
       startQuick: (presetId) =>
-        set({ queue: [{ shot: makeShot(presetId), style: "beauty" }], queueIdx: 0, batch: false, progress: 0, menuOpen: false }),
+        set({ queue: [{ shot: makeShot(presetId, { lightingId: get().sceneLightingId }), style: "beauty" }], queueIdx: 0, batch: false, progress: 0, menuOpen: false }),
       startStoryboard: () => {
         const { shots, styles } = get();
         if (!shots.length) return;
@@ -459,10 +479,29 @@ export const useCineStore = create<CineState>()(
       _finish: () => set({ queue: null, queueIdx: 0, progress: 0 }),
       _setProgress: (p) => set({ progress: p }),
     }),
-    // 只持久化创作数据；录制态/首帧/生成态/模拟态易失
-    { name: "zhuya-cine-shots-v1", partialize: (s) => ({ shots: s.shots, actors: s.actors, styles: s.styles, genWorkflowId: s.genWorkflowId, fights: s.fights, stuntProps: s.stuntProps }) },
+    // 只持久化创作数据；录制态/首帧/生成态/模拟态/灯光预览易失
+    { name: "zhuya-cine-shots-v1", partialize: (s) => ({ shots: s.shots, actors: s.actors, styles: s.styles, genWorkflowId: s.genWorkflowId, fights: s.fights, stuntProps: s.stuntProps, sceneLightingId: s.sceneLightingId }) },
   ),
 );
+
+/** HouseCanvas 用的生效灯光 id（zustand selector，返回 LightingId|null）：
+ *  优先级：录制队列当前镜 > 拍摄模拟当前镜 > 面板点选预览；三者皆无 =
+ *  不覆盖（走原有 sunHour 主题，默认外观不变）。返回原始字符串，只有
+ *  换镜/换预览时才变，不会每帧触发 HouseCanvas 重渲染。 */
+export function selectActiveCineLightingId(
+  s: Pick<CineState, "queue" | "queueIdx" | "sim" | "shots" | "sceneLightingId" | "previewLightingId">,
+): LightingId | null {
+  const q = s.queue;
+  if (q && q.length) {
+    const item = q[s.queueIdx];
+    if (item) return resolveShotLightingId(item.shot.lightingId, s.sceneLightingId);
+  }
+  if (s.sim?.active) {
+    const shot = s.shots[s.sim.shotIdx];
+    if (shot) return resolveShotLightingId(shot.lightingId, s.sceneLightingId);
+  }
+  return s.previewLightingId ?? null;
+}
 
 /** 挑一个当前浏览器支持的视频封装（Safari 走 mp4，Chrome/Edge 走 webm） */
 function pickMime(): { mime: string; ext: string } {
@@ -589,9 +628,10 @@ async function runStoryboardGen() {
       st._setGen(shot.id, { phase: "error", msg: "缺首帧——先「拍摄全部」（含实景风格）留住首帧" });
       continue;
     }
-    // 提示词：用户写了用用户的；空则给一句带运镜语义的兜底
+    // 提示词：用户写了用用户的；空则给一句带运镜 + 灯光语义的兜底
+    const lighting = resolveLightingPreset(resolveShotLightingId(shot.lightingId, st.sceneLightingId));
     const prompt = shot.prompt.trim()
-      || `cinematic ${preset?.nameEn ?? "camera"} shot of a modern villa, photorealistic, high quality`;
+      || `cinematic ${preset?.nameEn ?? "camera"} shot of a modern villa, ${lighting.nameEn} lighting, photorealistic, high quality`;
     st._setGen(shot.id, { phase: "submitting", msg: undefined, outputs: undefined });
     const res = await runRender(
       { workflow: wf, prompt, image },
@@ -744,6 +784,8 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
           scene: envRef.current,
           fps: 30,
           styles: stylesUsed,
+          // 场景默认灯光（新镜继承；缺省 = 白天）
+          sceneLighting: resolveShotLightingId(undefined, st.sceneLightingId),
           // 导演台 v4：演员带名字/角色/朝向/默认动作 + 走位时间轴 + 动作时间轴；
           // 打斗编舞（phrases/beats/reset/安全）与特技道具单列。
           // v4 字段全部保留——旧存档（无 waypoints/timeline/fights/stuntProps）
@@ -814,6 +856,9 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
               indoor: !!p.indoor,
               duration: s.duration,
               prompt: s.prompt,
+              // 本镜灯光（缺省 = 跟随场景默认；控制包下游按此还原光线）
+              lighting: resolveShotLightingId(s.lightingId, st.sceneLightingId),
+              lightingName: resolveLightingPreset(resolveShotLightingId(s.lightingId, st.sceneLightingId)).nameZh,
               targetActorId: target?.id ?? null,
               targetActorName: target ? actorDisplayName(target, targetIdx >= 0 ? targetIdx : 0) : null,
               // 本镜在场的角色（MVP：场景里全部演员都在场，镜头框住 target）
@@ -1610,6 +1655,7 @@ function applyParsedInstructions(instructions: ParsedInstruction[]): string {
 export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
   const {
     shots, addShot, removeShot, moveShot, updateShot,
+    sceneLightingId, setSceneLightingId, previewLightingId, setPreviewLightingId,
     styles, toggleStyle,
     actors, addActorMode, pendingFrom, beginAddActor, beginReplaceActor, cancelAddActor, removeActor, updateActor,
     waypointMode, beginWaypointMode, cancelWaypointMode, updateWaypoint, removeWaypoint,
@@ -1777,6 +1823,17 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
             {sim.playing ? "⏸" : "▶"}
           </button>
           <span className="tabular-nums whitespace-nowrap">Shot {sim.shotIdx + 1}/{shots.length}</span>
+          {/* 本镜灯光：模拟播放时画布正按此预设打光 */}
+          {(() => {
+            const cur = shots[sim.shotIdx];
+            if (!cur) return null;
+            const lp = resolveLightingPreset(resolveShotLightingId(cur.lightingId, sceneLightingId));
+            return (
+              <span className="whitespace-nowrap text-white/70" title={en ? lp.moodEn : lp.moodZh}>
+                {lp.emoji} {en ? lp.nameEn : lp.nameZh}
+              </span>
+            );
+          })()}
           <input
             type="range" min={0} max={simTotal} step={0.1} value={simAbs}
             onChange={(e) => scrubTo(Number(e.target.value))}
@@ -1862,6 +1919,41 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
           <div className="px-1 pt-2 text-[10px] tracking-widest text-white/40 border-t border-white/10 mt-1">
             {en ? "STORYBOARD" : "分镜"}
           </div>
+          {/* 场景默认灯光：新镜继承；点选即在画布上预览（退出预览恢复原有光线） */}
+          <div className="rounded-lg px-2 py-1.5 bg-white/5 flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <span className="whitespace-nowrap">💡 {en ? "Scene lighting" : "场景灯光"}</span>
+              <select
+                value={sceneLightingId}
+                onChange={(e) => {
+                  const v = e.target.value as LightingId;
+                  setSceneLightingId(v);
+                  setPreviewLightingId(v);
+                }}
+                className="flex-1 min-w-0 bg-white/10 rounded px-1 py-1 outline-none"
+                style={{ colorScheme: "dark" }}
+                title={en ? "Default lighting for new shots — pick to preview it on the canvas" : "新镜继承的默认灯光；点选即在画布上预览"}
+              >
+                {LIGHTING_PRESETS.map((lp) => (
+                  <option key={lp.id} value={lp.id} title={en ? lp.moodEn : lp.moodZh}>
+                    {lp.emoji} {en ? lp.nameEn : lp.nameZh}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => setPreviewLightingId(previewLightingId ? null : sceneLightingId)}
+                className="px-2 py-1 rounded-md hover:bg-white/10 whitespace-nowrap"
+                style={{ color: previewLightingId ? "#5eead4" : undefined }}
+                title={en ? "Preview the scene lighting on the canvas (or exit preview)" : "在画布上预览场景灯光（再点退出预览）"}
+              >
+                {previewLightingId ? (en ? "👁 Exit preview" : "👁 退出预览") : (en ? "👁 Preview" : "👁 预览")}
+              </button>
+            </div>
+            <span className="text-white/40 text-[11px] leading-snug">
+              {en ? resolveLightingPreset(sceneLightingId).moodEn : resolveLightingPreset(sceneLightingId).moodZh}
+              {en ? " — new shots inherit this." : "——新镜继承此灯光。"}
+            </span>
+          </div>
           {shots.map((s, i) => {
             const p = getCinePreset(s.presetId);
             const crosses = i > 0 && shotCrossesAxis(s, shots[i - 1], actors);
@@ -1901,6 +1993,30 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
                     {!actors.length && <option value="">{en ? "No actors yet" : "还没有演员"}</option>}
                     {actors.map((a, ai) => (
                       <option key={a.id} value={a.id}>{actorDisplayName(a, ai)}{a.role ? `（${a.role}）` : ""}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* 本镜灯光：缺省 = 跟随场景；点选即在画布上预览 */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-white/40 whitespace-nowrap">💡 {en ? "Lighting" : "灯光"}</span>
+                  <select
+                    value={s.lightingId ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      updateShot(s.id, { lightingId: v ? (v as LightingId) : undefined });
+                      setPreviewLightingId(resolveShotLightingId(v || undefined, sceneLightingId));
+                    }}
+                    className="flex-1 min-w-0 bg-white/10 rounded px-1 py-1 outline-none"
+                    style={{ colorScheme: "dark" }}
+                    title={en ? "Lighting for this shot (follow scene default, or pick one — pick to preview)" : "本镜灯光（跟随场景，或自选；点选即在画布上预览）"}
+                  >
+                    <option value="">
+                      {en ? `Follow scene (${resolveLightingPreset(sceneLightingId).nameEn})` : `跟随场景（${resolveLightingPreset(sceneLightingId).nameZh}）`}
+                    </option>
+                    {LIGHTING_PRESETS.map((lp) => (
+                      <option key={lp.id} value={lp.id} title={en ? lp.moodEn : lp.moodZh}>
+                        {lp.emoji} {en ? lp.nameEn : lp.nameZh}
+                      </option>
                     ))}
                   </select>
                 </div>

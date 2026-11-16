@@ -17,6 +17,7 @@ import {
   type ActionSegment,
   type Waypoint,
 } from "./actions";
+import type { LightingId } from "./lighting";
 
 export interface CameraSample {
   /** 世界坐标相机位置 */
@@ -333,9 +334,12 @@ export interface Shot {
   prompt: string;
   /** 本镜框住的角色（导演台：每镜下拉选一个演员；缺省为第一个演员） */
   targetActorId?: string;
+  /** 本镜灯光（lighting.ts 的 LightingId；缺省 = 跟随场景默认灯光；
+   *  旧存档无此字段时按场景默认解释，绝不因升级丢数据） */
+  lightingId?: LightingId;
 }
 
-export function makeShot(presetId: string, opts?: { targetActorId?: string }): Shot {
+export function makeShot(presetId: string, opts?: { targetActorId?: string; lightingId?: LightingId }): Shot {
   const preset = getCinePreset(presetId);
   return {
     id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
@@ -343,6 +347,7 @@ export function makeShot(presetId: string, opts?: { targetActorId?: string }): S
     duration: preset?.duration ?? 8,
     prompt: "",
     ...(opts?.targetActorId ? { targetActorId: opts.targetActorId } : {}),
+    ...(opts?.lightingId ? { lightingId: opts.lightingId } : {}),
   };
 }
 

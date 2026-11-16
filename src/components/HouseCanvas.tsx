@@ -121,7 +121,8 @@ import { PrefabMesh } from "./PrefabRenderer";
 import { ZoneMesh } from "./ZoneRenderer";
 import FloorPlanBuilding from "./FloorPlanExterior";
 import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
-import { CinematicPanel, CameraPathPlayer, ActorsLayer } from "./CinematicDirector";
+import { CinematicPanel, CameraPathPlayer, ActorsLayer, useCineStore, selectActiveCineLightingId } from "./CinematicDirector";
+import { resolveLightingPreset } from "@/lib/lighting";
 
 // ─── Constants ─────────────────────────────────────────────
 const FLOOR_H = 2.8;
@@ -6646,6 +6647,14 @@ export default function HouseCanvas() {
   const siteLatLng  = useDesignerStore(s => s.siteLatLng);
   const sunPos = getSunPosition3D(sunHour, siteLatLng);
   const theme  = getSkyTheme(sunHour);
+  // ── 导演台灯光覆盖（lighting.ts）：只在导演台需要时生效——录制队列当前镜
+  //  > 拍摄模拟当前镜 > 面板点选预览；三者皆无时 cineLight 为 null，画面走
+  //  原有 sunHour 主题，默认外观一个像素都不变。选择器返回原始 id，只有
+  //  换镜/换预览时才变，不会每帧触发本组件重渲染。
+  const cineLightingId = useCineStore(selectActiveCineLightingId);
+  const cineLight = cineLightingId ? resolveLightingPreset(cineLightingId) : null;
+  // 灯光覆盖时的主光位置（补光位置由它镜像推导；Sky 隐藏时不用 sunPos）
+  const sunPosEff: [number, number, number] = cineLight ? cineLight.directional.position : sunPos;
   void _rgbHex; // skyHex no longer needed — Sky component handles gradient
   const _buildingType    = (exterior as ExteriorSettings & { buildingType?: string }).buildingType;
   // 'Rich glass villa' is deprecated — glass facades are now just regular
@@ -6962,7 +6971,8 @@ export default function HouseCanvas() {
           // whole scene + tames ACES roll-off near sun-lit walls; > 1
           // brightens. Default 1 keeps the legacy look. Modern Minimal
           // uses 0.85 for a cooler, less blown-out architectural mood.
-          toneMappingExposure: theme.exposure * (exterior.exposure ?? 1) * exposureBoost(),
+          // 导演台灯光覆盖时用预设的绝对曝光值（白天预设 1.0 ≈ 原主题值）。
+          toneMappingExposure: (cineLight ? cineLight.exposure : theme.exposure) * (exterior.exposure ?? 1) * exposureBoost(),
           // FIX: preserveDrawingBuffer:true forces GPU→CPU sync every frame on Apple
           // Metal/ANGLE (~130ms/frame = 58% of frame time wasted). The AI capture
           // calls gl.render() + toDataURL() synchronously so false is safe here.
@@ -6998,8 +7008,9 @@ export default function HouseCanvas() {
         <Ktx2Detect />
         <MobileTextureShrink />
         <SceneDiag />
-        {/* Fog disabled when inside — would darken interior surfaces */}
-        {!insideBuilding && <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />}
+        {/* Fog disabled when inside — would darken interior surfaces.
+            导演台灯光覆盖时雾色用预设值。 */}
+        {!insideBuilding && <fog attach="fog" args={[cineLight ? cineLight.fogColor : theme.fogColor, theme.fogNear, theme.fogFar]} />}
         {!walkthrough && flyTick !== 0 && (() => {
           const h = floors * FLOOR_H;
           const done = () => setFlyTick(0);
@@ -7088,8 +7099,10 @@ export default function HouseCanvas() {
             while keeping the sky colour/gradient. Night mode keeps a dark
             sphere instead since the night HDR is just a coloured gradient. */}
         {/* Sky — physically-based Preetham atmospheric scattering (day/dawn/dusk).
-            Hidden during walkthrough — causes visual artifacts from inside. */}
-        {!insideBuilding && theme.phase !== "night" && (() => {
+            Hidden during walkthrough — causes visual artifacts from inside.
+            导演台灯光覆盖时隐藏 Sky，改用预设的纯色背景（夜/霓虹/烛光等
+            预设的天色与 sunHour 的 Sky 渐变不一致，不能同框）。 */}
+        {!insideBuilding && !cineLight && theme.phase !== "night" && (() => {
           // ── Iter 5: skyHaze (0..1) bumps turbidity + rayleigh toward an
           // overcast / urban-haze look. Bigger turbidity = milkier sky;
           // smaller rayleigh = less blue saturation. Default 0.15. ─────
@@ -7107,7 +7120,9 @@ export default function HouseCanvas() {
             />
           );
         })()}
-        {insideBuilding && <color attach="background" args={["#D8D4CC"]} />}
+        {insideBuilding && <color attach="background" args={[cineLight ? cineLight.background : "#D8D4CC"]} />}
+        {/* 室外灯光覆盖时的纯色天（取代 Sky；室内分支见上一行） */}
+        {!insideBuilding && cineLight && <color attach="background" args={[cineLight.background]} />}
         {/* 移动端跳过 HDR 环境光：equirect 贴图 + 生成的 PMREM 立方图常驻
             十几 MB 显存，是 iOS 杀页大头。改用已有的 ambient+hemisphere 打光，
             金属/玻璃反射略平但不崩。 */}
@@ -7119,12 +7134,17 @@ export default function HouseCanvas() {
                 background={false}
                 backgroundBlurriness={0.04}
                 backgroundIntensity={theme.phase === "day" ? 0.65 : 0.80}
+                // 导演台灯光覆盖时按预设压低/抬高 HDR 环境光强度（暗预设
+                // 不压 IBL 的话，白天 HDR 会把夜戏照亮；undefined = 默认 1）
+                environmentIntensity={cineLight ? cineLight.environmentIntensity : undefined}
               />
             </Suspense>
           </HouseEnvironmentFallback>
         )}
-        {/* Night sky sphere + star field */}
-        {theme.phase === "night" && (
+        {/* Night sky sphere + star field.
+            灯光覆盖时：白天主题 + 夜/月光预设也显示星空；反之夜主题 + 非夜
+            预设（预览白天时）不显示，免得亮天配星星。 */}
+        {((theme.phase === "night" && !cineLight) || (cineLight?.stars ?? false)) && (
           <>
             <mesh scale={[280, 280, 280]}>
               <sphereGeometry args={[1, 32, 24]} />
@@ -7151,11 +7171,19 @@ export default function HouseCanvas() {
             效果图早就这么补过了(RoomCanvas: ambient 0.38 → iOS 0.9),这里照做。
             纯灯光参数,零显存零性能代价。 */}
         {!insideBuilding && (
-          <hemisphereLight args={[theme.hemiSky, theme.hemiGround, theme.hemiIntensity * (mobileLiteScene() ? 1.9 : 1)]} />
+          <hemisphereLight args={cineLight
+            ? [cineLight.hemi.sky, cineLight.hemi.ground, cineLight.hemi.intensity * (mobileLiteScene() ? 1.9 : 1)]
+            : [theme.hemiSky, theme.hemiGround, theme.hemiIntensity * (mobileLiteScene() ? 1.9 : 1)]} />
         )}
         {/* 室内 ambient 向效果图(RoomCanvas 0.38)靠拢——原 0.82 叠强点光+HDR 使
-            墙面过曝发白、与效果图不是一个调子；压到 0.55 由室内点光补光，观感更一致。 */}
-        <ambientLight intensity={(insideBuilding ? 0.55 : theme.ambient) * (mobileLiteScene() ? 2.4 : 1)} />
+            墙面过曝发白、与效果图不是一个调子；压到 0.55 由室内点光补光，观感更一致。
+            导演台灯光覆盖时用预设值（室内外基准不同：室内用 indoorAmbientIntensity）。 */}
+        <ambientLight
+          color={cineLight ? cineLight.ambient.color : "#FFFFFF"}
+          intensity={(cineLight
+            ? (insideBuilding ? cineLight.indoorAmbientIntensity : cineLight.ambient.intensity)
+            : (insideBuilding ? 0.55 : theme.ambient)) * (mobileLiteScene() ? 2.4 : 1)}
+        />
         {/* Interior ceiling lights — warm downlights.
             · 室内漫游（insideBuilding）：始终全亮（k=1），让室内可读。
             · 外观图（!insideBuilding + 透明立面 transparentExterior）：也点亮
@@ -7182,8 +7210,8 @@ export default function HouseCanvas() {
                     receiveShadow,开了投影墙就能挡住它。仅漫游(litInside)开,外观透明立面
                     补光不开(省 6 面立方体阴影的开销)。 */}
                 <pointLight
-                  position={[0, yC, 0]} intensity={8.0 * k} distance={Math.max(W, D) * 2.5}
-                  decay={1.5} color="#FFF8E8"
+                  position={[0, yC, 0]} intensity={(cineLight ? cineLight.interiorPoint.intensity : 8.0) * k} distance={Math.max(W, D) * 2.5}
+                  decay={1.5} color={cineLight ? cineLight.interiorPoint.color : "#FFF8E8"}
                   castShadow={litInside}
                   shadow-mapSize={[1024, 1024]}
                   shadow-camera-near={0.2}
@@ -7206,7 +7234,7 @@ export default function HouseCanvas() {
             gets the full sun for the facade renderings. */}
         {!insideBuilding && (
           <directionalLight
-            position={sunPos} intensity={theme.sunIntensity} color={theme.sunColor} castShadow
+            position={sunPosEff} intensity={cineLight ? cineLight.directional.intensity : theme.sunIntensity} color={cineLight ? cineLight.directional.color : theme.sunColor} castShadow={cineLight ? cineLight.shadows : true}
             shadow-mapSize={[1024, 1024]}
             shadow-camera-far={120}
             shadow-camera-left={-35} shadow-camera-right={35}
@@ -7218,16 +7246,19 @@ export default function HouseCanvas() {
         {/* Sky fill from opposite side — also outside only. */}
         {!insideBuilding && (
           <directionalLight
-            position={[-sunPos[0] * 0.4, 20, -sunPos[2] * 0.4]}
-            intensity={theme.fillIntensity}
-            color={theme.fillColor}
+            position={[-sunPosEff[0] * 0.4, 20, -sunPosEff[2] * 0.4]}
+            intensity={cineLight ? cineLight.fill.intensity : theme.fillIntensity}
+            color={cineLight ? cineLight.fill.color : theme.fillColor}
           />
         )}
         {/* Indoor sky fill — soft non-directional boost to compensate
             for losing the direct sun. Stays bright enough to read room
-            colors and textures, but creates no projections. */}
+            colors and textures, but creates no projections.
+            灯光覆盖时用预设的室内半球光。 */}
         {insideBuilding && (
-          <hemisphereLight args={["#FFF8EC", "#D0CFC8", 1.2]} />
+          <hemisphereLight args={cineLight
+            ? [cineLight.hemi.sky, cineLight.hemi.ground, cineLight.indoorHemiIntensity]
+            : ["#FFF8EC", "#D0CFC8", 1.2]} />
         )}
 
         {/* 玻璃幕墙建筑：室外补光点灯（从南面和西面打亮玻璃，增强立面质感）。
