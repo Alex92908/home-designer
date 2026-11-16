@@ -6,12 +6,10 @@
  * 9:16 取景框、带角色信息的控制包导出。
  * ＋ 灯光预设（lighting.ts：10 套灯光，每镜一个 lightingId + 场景默认，
  * 拍摄模拟/录制按镜切换，HouseCanvas 把生效预设写进 Three.js 灯光）。
- * ＋ 动作系统（action system）：30 个动作的注册表（actions.ts，含特技/
- * 特殊位置：跳/爬/贴/骑/御剑/扫帚/威亚/躲藏/躺/轻功/索降/游泳）、
- * 打斗编舞（fightChoreo.ts：phrase × beat + reset + 安全字段）、
- * 动态走位（waypoints，带高度 y）、动作时间轴、拍摄模拟（SimPlayer）、
- * 文字催动动作（actionParser.ts，规则解析）、特技道具（stuntProps.ts，
- * 程序化几何）。控制包 storyboard.json v4。
+ * ＋ 声音/音乐（soundLibrary.ts：10 种情绪配乐库，每镜推荐一首，下
+ *  载来源 + 许可证逐条写明，不捆绑音频；soundEffects.ts：WebAudio 合
+ *  成音效，出拳/踢/脚步/剑风/关门等，拍摄模拟按时间窗触发 + 音效开关）。
+ *  控制包 storyboard.json v4（music 字段为附加字段，版本不变）。
  *
  * 产品原子是 Shot（镜头）：机位预设 + 时长 + 提示词。用户排一组镜头（分镜），
  * 勾选导出风格（实景/白模/深度），一键批量拍摄——队列按「镜头 × 风格」展开，
@@ -70,6 +68,14 @@ import {
   LIGHTING_PRESETS, resolveLightingPreset, resolveShotLightingId,
   type LightingId,
 } from "@/lib/lighting";
+import {
+  MUSIC_MOODS, suggestMusicForShot,
+  type MusicMood,
+} from "@/lib/soundLibrary";
+import {
+  SOUND_EFFECTS, collectDueSounds, createSimSoundCursor, ensureAudioContext,
+  playSoundEffect, type SimSoundCursor, type SoundEffectId,
+} from "@/lib/soundEffects";
 import { StuntPropMesh, FlyingVehicleMesh, WireMesh } from "@/components/StuntProps";
 import { SCENE_SETS } from "@/lib/sceneSets";
 import { matchProjectTemplate } from "@/lib/matchProjectTemplate";
@@ -83,6 +89,42 @@ export const cinePlayhead = { t: 0, timeSec: 0, shotDuration: 8, shotId: null as
 
 /** 拍摄模拟时钟（模块级，SimPlayer 写、ActorsLayer 读；UI 用的节流状态在 store） */
 export const simClock = { timeSec: 0, shotIdx: 0, shotDuration: 8, shotId: null as string | null, active: false, playing: false };
+
+/** 拍摄模拟音效游标（模块级，SimPlayer 每帧推进；换镜/scrub 时重置，
+ *  见 soundEffects.ts 的 collectDueSounds）。 */
+const simSfxCursor: SimSoundCursor = createSimSoundCursor();
+
+/** 清音效游标（开始/停止模拟、scrub 跳播时调：回拨后重新播到该段时
+ *  该段会再响一次）。 */
+export function resetSimSfxCursor(): void {
+  simSfxCursor.shotId = null;
+  simSfxCursor.lastT = 0;
+  simSfxCursor.firedSegs.clear();
+  simSfxCursor.firedBeats.clear();
+  simSfxCursor.firedDefaults.clear();
+  simSfxCursor.nextStepAt.clear();
+}
+
+/** 一镜的配乐推断输入：显式 mood + 生效灯光 + 有无打斗 + 演员动作。
+ *  与 storyboard.json 导出共用同一推断（面板显示与控制包一致）。 */
+export function shotMusicInput(
+  shot: Shot,
+  sceneLightingId: LightingId,
+  fights: Fight[],
+  actors: Actor[],
+): { musicMood?: MusicMood; lightingId: LightingId; hasFight: boolean; actions: string[] } {
+  const actions: string[] = [];
+  for (const a of actors) {
+    if (a.action) actions.push(a.action);
+    for (const s of a.timeline ?? []) actions.push(s.action);
+  }
+  return {
+    ...(shot.musicMood ? { musicMood: shot.musicMood } : {}),
+    lightingId: resolveShotLightingId(shot.lightingId, sceneLightingId),
+    hasFight: fights.some((f) => f.shotId === shot.id),
+    actions,
+  };
+}
 
 /** 场景包络（SimPlayer 用）：从 designer store 的 floorPlans 现算 */
 export function envelopeFromStore(): SceneEnvelope {
@@ -116,7 +158,7 @@ interface CineState {
   addShot: (presetId: string) => void;
   removeShot: (id: string) => void;
   moveShot: (id: string, dir: -1 | 1) => void;
-  updateShot: (id: string, patch: Partial<Pick<Shot, "duration" | "prompt" | "targetActorId" | "lightingId">>) => void;
+  updateShot: (id: string, patch: Partial<Pick<Shot, "duration" | "prompt" | "targetActorId" | "lightingId" | "musicMood">>) => void;
 
   /** 场景默认灯光（持久化；新镜继承；旧存档缺省 = 白天） */
   sceneLightingId: LightingId;
@@ -124,6 +166,10 @@ interface CineState {
   /** 用户在面板里点选预览的灯光（易失；模拟/录制开始即交出控制权） */
   previewLightingId: LightingId | null;
   setPreviewLightingId: (id: LightingId | null) => void;
+
+  /** 拍摄模拟音效开关（持久化；缺省开；关掉时模拟只走时间、不发声） */
+  soundOn: boolean;
+  setSoundOn: (v: boolean) => void;
 
   /** 导出风格（至少保留一个） */
   styles: RenderStyle[];
@@ -220,6 +266,8 @@ export const useCineStore = create<CineState>()(
       setSceneLightingId: (id) => set({ sceneLightingId: id }),
       previewLightingId: null,
       setPreviewLightingId: (id) => set({ previewLightingId: id }),
+      soundOn: true,
+      setSoundOn: (v) => set({ soundOn: v }),
       addShot: (presetId) => {
         const first = get().actors[0];
         // 新镜继承场景默认灯光（显式存下，之后改默认不影响已有镜；
@@ -413,18 +461,24 @@ export const useCineStore = create<CineState>()(
       startSim: () => {
         const st = get();
         if (!st.shots.length) return;
+        // 用户手势里建 AudioContext：浏览器只允许手势后出声；
+        // 建失败也不影响模拟（playSoundEffect 会静默）。
+        ensureAudioContext();
         simClock.active = true;
         simClock.playing = true;
         simClock.shotIdx = 0;
         simClock.timeSec = 0;
         simClock.shotDuration = st.shots[0].duration;
         simClock.shotId = st.shots[0].id;
+        // 音效游标从头开始（上一轮的 fired 记录清掉）
+        resetSimSfxCursor();
         // 模拟接管灯光：每镜按自己的 lightingId 切，面板预览即刻失效
         set({ sim: { active: true, playing: true, shotIdx: 0, timeSec: 0 }, previewLightingId: null });
       },
       stopSim: () => {
         simClock.active = false;
         simClock.playing = false;
+        resetSimSfxCursor();
         set({ sim: null, previewLightingId: null });
       },
       setSim: (patch) => {
@@ -480,7 +534,7 @@ export const useCineStore = create<CineState>()(
       _setProgress: (p) => set({ progress: p }),
     }),
     // 只持久化创作数据；录制态/首帧/生成态/模拟态/灯光预览易失
-    { name: "zhuya-cine-shots-v1", partialize: (s) => ({ shots: s.shots, actors: s.actors, styles: s.styles, genWorkflowId: s.genWorkflowId, fights: s.fights, stuntProps: s.stuntProps, sceneLightingId: s.sceneLightingId }) },
+    { name: "zhuya-cine-shots-v1", partialize: (s) => ({ shots: s.shots, actors: s.actors, styles: s.styles, genWorkflowId: s.genWorkflowId, fights: s.fights, stuntProps: s.stuntProps, sceneLightingId: s.sceneLightingId, soundOn: s.soundOn }) },
   ),
 );
 
@@ -786,6 +840,13 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
           styles: stylesUsed,
           // 场景默认灯光（新镜继承；缺省 = 白天）
           sceneLighting: resolveShotLightingId(undefined, st.sceneLightingId),
+          // 声音（Part 3，附加字段，版本仍为 4）：音效是 WebAudio 合成的，
+          // 只在拍摄模拟里响，不进导出文件；配乐不捆绑音频，每镜只给推荐
+          // （去哪里下 + 许可证），用户按推荐下载后配进成片。
+          sound: {
+            sfx: "WebAudio synthesized in shoot simulation only (no audio files bundled)",
+            musicNote: "Music is not bundled — download per-shot recommendation from its source and check the license before use",
+          },
           // 导演台 v4：演员带名字/角色/朝向/默认动作 + 走位时间轴 + 动作时间轴；
           // 打斗编舞（phrases/beats/reset/安全）与特技道具单列。
           // v4 字段全部保留——旧存档（无 waypoints/timeline/fights/stuntProps）
@@ -859,6 +920,23 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
               // 本镜灯光（缺省 = 跟随场景默认；控制包下游按此还原光线）
               lighting: resolveShotLightingId(s.lightingId, st.sceneLightingId),
               lightingName: resolveLightingPreset(resolveShotLightingId(s.lightingId, st.sceneLightingId)).nameZh,
+              // 本镜配乐推荐（显式 mood 优先，否则按打斗/动作/灯光推断；
+              // 只给推荐 + 来源 + 许可，不捆绑音频，见 soundLibrary.ts）
+              music: (() => {
+                const m = suggestMusicForShot(shotMusicInput(s, st.sceneLightingId, st.fights, st.actors));
+                return {
+                  mood: m.mood,
+                  name: m.nameZh,
+                  nameEn: m.nameEn,
+                  instrument: m.instrumentZh,
+                  feel: m.feelZh,
+                  source: m.source.name,
+                  sourceUrl: m.source.url,
+                  license: m.source.license,
+                  searchHint: m.searchHintZh,
+                  ...(m.exampleTrack ? { exampleTrack: `${m.exampleTrack.title} — ${m.exampleTrack.artist}` } : {}),
+                };
+              })(),
               targetActorId: target?.id ?? null,
               targetActorName: target ? actorDisplayName(target, targetIdx >= 0 ? targetIdx : 0) : null,
               // 本镜在场的角色（MVP：场景里全部演员都在场，镜头框住 target）
@@ -1001,6 +1079,7 @@ export function SimPlayer() {
     if (sim.playing) {
       const shot = st.shots[simClock.shotIdx];
       if (!shot) { st.stopSim(); return; }
+      const prevT = simClock.timeSec;
       simClock.timeSec += Math.min(delta, 0.1); // 掉帧时不跳太远
       if (simClock.timeSec >= shot.duration) {
         if (simClock.shotIdx + 1 >= st.shots.length) {
@@ -1018,6 +1097,25 @@ export function SimPlayer() {
       if (tick !== lastTickRef.current || simClock.shotIdx !== st.sim?.shotIdx) {
         lastTickRef.current = tick;
         st.setSim({ shotIdx: simClock.shotIdx, timeSec: simClock.timeSec });
+      }
+      // 音效：按 (prevT, curT] 时间窗算该响的（段开始/beat 开始/脚步步频），
+      // 开关关时只推进游标、不发声——重开时不补响一串。
+      // collectDueSounds 内部处理换镜/scrub 跳播（静默重置），绝不抛错。
+      const curShot = st.shots[simClock.shotIdx];
+      if (curShot) {
+        const due = collectDueSounds({
+          shotId: curShot.id,
+          shotDuration: curShot.duration,
+          actors: st.actors,
+          fights: st.fights,
+          targetActorId: curShot.targetActorId,
+          prevT,
+          curT: simClock.timeSec,
+          cursor: simSfxCursor,
+        });
+        if (st.soundOn) {
+          for (const id of due) playSoundEffect(id);
+        }
       }
     }
     const shot = st.shots[simClock.shotIdx];
@@ -1656,6 +1754,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
   const {
     shots, addShot, removeShot, moveShot, updateShot,
     sceneLightingId, setSceneLightingId, previewLightingId, setPreviewLightingId,
+    soundOn, setSoundOn,
     styles, toggleStyle,
     actors, addActorMode, pendingFrom, beginAddActor, beginReplaceActor, cancelAddActor, removeActor, updateActor,
     waypointMode, beginWaypointMode, cancelWaypointMode, updateWaypoint, removeWaypoint,
@@ -1676,6 +1775,8 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
     let acc = 0;
     for (let i = 0; i < shots.length; i++) {
       if (abs <= acc + shots[i].duration || i === shots.length - 1) {
+        // 跳播 = 音效游标清掉：回拨后重新播到该段时该段再响，不补响一串
+        resetSimSfxCursor();
         setSim({ shotIdx: i, timeSec: Math.max(0, Math.min(shots[i].duration, abs - acc)) });
         return;
       }
@@ -1703,6 +1804,8 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
   };
   // 特技道具（本地态：选中的种类）
   const [propKind, setPropKind] = useState<StuntPropKind>("tree");
+  // 音效试听（本地态：选中的音效；开关本身在 store 里持久化）
+  const [previewEffect, setPreviewEffect] = useState<SoundEffectId>("punch");
   // 动作时间轴（本地态：每演员新增段的动作）
   const [newSegAction, setNewSegAction] = useState<Record<string, ActionId>>({});
   // 片场选择（本地态：刚应用的片场打 ✓；描述匹配结果文案）
@@ -1834,6 +1937,25 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
               </span>
             );
           })()}
+          {/* 本镜配乐推荐（显式 mood 优先，否则按打斗/动作/灯光推断） */}
+          {(() => {
+            const cur = shots[sim.shotIdx];
+            if (!cur) return null;
+            const m = suggestMusicForShot(shotMusicInput(cur, sceneLightingId, fights, actors));
+            return (
+              <span className="whitespace-nowrap text-white/70" title={en ? `${m.nameEn} · ${m.instrumentEn} · ${m.source.name} (${m.source.license})` : `${m.nameZh} · ${m.instrumentZh} · ${m.source.nameZh}（${m.source.licenseZh}）`}>
+                🎵 {en ? m.nameEn : m.nameZh}
+              </span>
+            );
+          })()}
+          <button
+            onClick={() => setSoundOn(!soundOn)}
+            className="px-2 py-1 rounded-md hover:bg-white/10 text-base leading-none"
+            style={{ color: soundOn ? undefined : "#94a3b8" }}
+            title={soundOn ? (en ? "Sound effects on — click to mute" : "音效开——点一下静音") : (en ? "Sound effects off — click to enable" : "音效关——点一下打开")}
+          >
+            {soundOn ? "🔊" : "🔇"}
+          </button>
           <input
             type="range" min={0} max={simTotal} step={0.1} value={simAbs}
             onChange={(e) => scrubTo(Number(e.target.value))}
@@ -1954,6 +2076,43 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
               {en ? " — new shots inherit this." : "——新镜继承此灯光。"}
             </span>
           </div>
+          {/* 音效开关 + 试听：开关持久化（store.soundOn）；试听只播合成音效，不出片。
+              关门暂无对应动作（动作库里没有开/关门），在这里试听 */}
+          <div className="rounded-lg px-2 py-1.5 bg-white/5 flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setSoundOn(!soundOn)}
+                className="px-2 py-1 rounded-md hover:bg-white/10 whitespace-nowrap"
+                style={{ color: soundOn ? "#5eead4" : undefined }}
+                title={soundOn ? (en ? "Sound effects on — click to mute (saved)" : "音效开——点一下静音（已保存）") : (en ? "Sound effects off — click to enable (saved)" : "音效关——点一下打开（已保存）")}
+              >
+                {soundOn ? "🔊" : "🔇"} {en ? "Sound FX" : "音效"} {soundOn ? (en ? "On" : "开") : (en ? "Off" : "关")}
+              </button>
+              <select
+                value={previewEffect}
+                onChange={(e) => setPreviewEffect(e.target.value as SoundEffectId)}
+                className="flex-1 min-w-0 bg-white/10 rounded px-1 py-1 outline-none"
+                style={{ colorScheme: "dark" }}
+                title={en ? "Pick an effect to preview" : "选一个音效试听"}
+              >
+                {SOUND_EFFECTS.map((s) => (
+                  <option key={s.id} value={s.id}>{en ? s.nameEn : s.nameZh}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => { ensureAudioContext(); playSoundEffect(previewEffect); }}
+                className="px-2 py-1 rounded-md hover:bg-white/10 whitespace-nowrap"
+                title={en ? "Preview the selected effect (WebAudio synthesis, no audio file)" : "试听所选音效（WebAudio 合成，无音频文件）"}
+              >
+                {en ? "▶ Preview" : "▶ 试听"}
+              </button>
+            </div>
+            <span className="text-white/40 text-[11px] leading-snug">
+              {en
+                ? "Synthesized with WebAudio — no audio files. Effects play during shoot simulation; door-close has no action yet, preview it here."
+                : "WebAudio 合成，无音频文件；模拟播放时按动作响。关门暂无对应动作，可在这里试听。"}
+            </span>
+          </div>
           {shots.map((s, i) => {
             const p = getCinePreset(s.presetId);
             const crosses = i > 0 && shotCrossesAxis(s, shots[i - 1], actors);
@@ -2020,6 +2179,38 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
                     ))}
                   </select>
                 </div>
+                {/* 本镜配乐：缺省自动推断（打斗/动作/灯光），也可自选情绪；
+                    下方显示推荐曲目 + 乐器 + 来源 + 许可（只给推荐，不捆绑音频） */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-white/40 whitespace-nowrap">🎵 {en ? "Music" : "配乐"}</span>
+                  <select
+                    value={s.musicMood ?? ""}
+                    onChange={(e) => updateShot(s.id, { musicMood: e.target.value ? (e.target.value as MusicMood) : undefined })}
+                    className="flex-1 min-w-0 bg-white/10 rounded px-1 py-1 outline-none"
+                    style={{ colorScheme: "dark" }}
+                    title={en ? "Music mood for this shot (auto = inferred from fight / actions / lighting)" : "本镜配乐情绪（自动 = 按打斗/动作/灯光推断）"}
+                  >
+                    <option value="">
+                      {en ? `Auto (${suggestMusicForShot(shotMusicInput(s, sceneLightingId, fights, actors)).nameEn})` : `自动（${suggestMusicForShot(shotMusicInput(s, sceneLightingId, fights, actors)).nameZh}）`}
+                    </option>
+                    {MUSIC_MOODS.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.emoji} {en ? m.nameEn : m.nameZh}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {(() => {
+                  const m = suggestMusicForShot(shotMusicInput(s, sceneLightingId, fights, actors));
+                  return (
+                    <div
+                      className="text-white/40 text-[11px] leading-snug"
+                      title={en ? m.searchHintEn : m.searchHintZh}
+                    >
+                      🎵 {en ? m.nameEn : m.nameZh} · {en ? m.instrumentEn : m.instrumentZh} · {en ? m.source.name : m.source.nameZh}（{en ? m.source.license : m.source.licenseZh}）
+                    </div>
+                  );
+                })()}
                 <input
                   type="text" value={s.prompt} placeholder={en ? "Prompt (optional)" : "本镜提示词（可选，随控制包导出）"}
                   onChange={(e) => updateShot(s.id, { prompt: e.target.value })}

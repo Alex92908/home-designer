@@ -18,6 +18,7 @@ import {
   type Waypoint,
 } from "./actions";
 import type { LightingId } from "./lighting";
+import type { MusicMood } from "./soundLibrary";
 
 export interface CameraSample {
   /** 世界坐标相机位置 */
@@ -337,9 +338,13 @@ export interface Shot {
   /** 本镜灯光（lighting.ts 的 LightingId；缺省 = 跟随场景默认灯光；
    *  旧存档无此字段时按场景默认解释，绝不因升级丢数据） */
   lightingId?: LightingId;
+  /** 本镜配乐情绪（soundLibrary.ts 的 MusicMood；缺省 = 自动推断：
+   *  打斗 > 剑类飞行 > 灯光情绪 > 默认温馨；旧存档无此字段时按自动
+   *  解释，绝不因升级丢数据） */
+  musicMood?: MusicMood;
 }
 
-export function makeShot(presetId: string, opts?: { targetActorId?: string; lightingId?: LightingId }): Shot {
+export function makeShot(presetId: string, opts?: { targetActorId?: string; lightingId?: LightingId; musicMood?: MusicMood }): Shot {
   const preset = getCinePreset(presetId);
   return {
     id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
@@ -348,6 +353,7 @@ export function makeShot(presetId: string, opts?: { targetActorId?: string; ligh
     prompt: "",
     ...(opts?.targetActorId ? { targetActorId: opts.targetActorId } : {}),
     ...(opts?.lightingId ? { lightingId: opts.lightingId } : {}),
+    ...(opts?.musicMood ? { musicMood: opts.musicMood } : {}),
   };
 }
 
