@@ -23,6 +23,43 @@ const RULES: Array<TemplateMatch & { re: RegExp }> = [
   // 学校饭堂：饭堂直指；带学校/校园/公司限定的食堂也归饭堂（裸"食堂"仍归餐厅，见下条）。
   { id: "set-school-cafeteria", name: "学校饭堂片场", nameEn: "School cafeteria set", re: /饭堂|(学校|校园|公司).*食堂|食堂.*(学校|校园|公司)|school\s*(canteen|cafeteria)|canteen|cafeteria/i },
   { id: "set-restaurant", name: "餐厅片场", nameEn: "Restaurant set", re: /餐厅|餐馆|饭店|食堂|小吃|火锅|hotpot|restaurant|diner|bistro|eatery/i },
+  // ── 繁荣/衰败成对场景（第 5 批）：每对先写衰败态、再写繁荣态（衰败词
+  //   含繁荣词的地名，如“安史之乱后长安”含“长安”，衰败须抢先）；整块放在
+  //   学校/唐宫/宋斋/明厅/清宫/农村堂屋之前，裸“学校/长安/宋朝/明代/清朝/
+  //   农村”仍落到原来的单态场景（见 harness 不回归用例）。
+  // 唐长安：盛唐/长安 → 繁荣；安史/萧条/废墟 + 长安 → 衰败。裸“大唐”仍归唐宫。
+  { id: "set-tang-changan-ruined", name: "安史后长安片场", nameEn: "Ruined Tang Chang'an set", re: /安史|长安.*(萧条|废墟|战后|衰败|破败)|(萧条|废墟|战后|衰败).*长安|ruined chang'an|chang'an (in )?ruins|after the an lushan/i },
+  { id: "set-tang-changan-prosperous", name: "盛唐长安片场", nameEn: "Prosperous Tang Chang'an set", re: /盛唐|长安|prosperous chang'an|chang'an in its prime|tang chang'an/i },
+  // 宋汴京：汴京/汴梁/清明上河 → 繁荣；靖康/萧条/废墟 + 汴京 → 衰败。裸“宋朝”仍归宋斋。
+  { id: "set-song-bianjing-ruined", name: "靖康后汴京片场", nameEn: "Ruined Song Bianjing set", re: /靖康|汴京.*(萧条|废墟|衰败|破败)|(萧条|废墟|衰败).*汴京|汴梁.*(萧条|废墟)|ruined bianjing|bianjing ruins|jingkang/i },
+  { id: "set-song-bianjing-prosperous", name: "北宋汴京片场", nameEn: "Prosperous Song Bianjing set", re: /北宋汴京|汴京|汴梁|东京汴梁|清明上河|prosperous bianjing|bianjing in its prime/i },
+  // 圆明园：裸圆明园 → 繁荣；火烧/废墟/遗址 + 圆明园 → 衰败。裸“清朝”仍归三希堂。
+  { id: "set-qing-garden-ruined", name: "火烧圆明园后片场", nameEn: "Ruined Yuanmingyuan set", re: /火烧圆明园|圆明园.*(废墟|遗址|萧条|衰败|大火|火烧)|(废墟|遗址).*圆明园|yuanmingyuan ruins|burning of yuanmingyuan|old summer palace ruins/i },
+  { id: "set-qing-garden-prosperous", name: "圆明园盛时片场", nameEn: "Prosperous Yuanmingyuan set", re: /圆明园|old summer palace|yuanmingyuan/i },
+  // 大明宫：裸大明宫 → 繁荣；废墟/遗址 + 大明宫 → 衰败。裸“明代”仍归明厅。
+  { id: "set-ming-palace-ruined", name: "大明宫废墟片场", nameEn: "Ruined Daming Palace set", re: /大明宫.*(废墟|遗址|萧条|衰败|破败)|(废墟|遗址).*大明宫|daming palace ruins|ruined daming/i },
+  { id: "set-ming-palace-prosperous", name: "大明宫盛时片场", nameEn: "Prosperous Daming Palace set", re: /大明宫|daming palace/i },
+  // 罗马：裸罗马 → 繁荣；陷落/废墟/衰落 + 罗马 → 衰败。
+  { id: "set-rome-ruined", name: "罗马陷落后片场", nameEn: "Ruined Rome set", re: /罗马.*(陷落|废墟|遗址|衰落|衰败|灭亡)|(陷落|废墟).*罗马|fall of rome|rome (in )?ruins|ruined rome|sack of rome/i },
+  { id: "set-rome-prosperous", name: "罗马鼎盛片场", nameEn: "Prosperous Rome set", re: /罗马|\brome\b/i },
+  // 庞贝：裸庞贝 → 繁荣；废墟/遗址/火山 + 庞贝 → 衰败。
+  { id: "set-pompeii-ruined", name: "庞贝废墟片场", nameEn: "Ruined Pompeii set", re: /庞贝.*(废墟|遗址|火山|埋没|毁灭)|(废墟|遗址).*庞贝|pompeii ruins|ruined pompeii|vesuvius/i },
+  { id: "set-pompeii-prosperous", name: "庞贝繁华片场", nameEn: "Prosperous Pompeii set", re: /庞贝|pompeii/i },
+  // 楼兰：裸楼兰 → 繁荣；废墟/遗址/沙漠 + 楼兰 → 衰败。
+  { id: "set-loulan-ruined", name: "楼兰废墟片场", nameEn: "Ruined Loulan set", re: /楼兰.*(废墟|遗址|沙漠|消失|干涸)|(废墟|遗址).*楼兰|loulan ruins|ruined loulan/i },
+  { id: "set-loulan-prosperous", name: "楼兰繁华片场", nameEn: "Prosperous Loulan set", re: /楼兰|loulan/i },
+  // 商场：裸商场/商城/购物中心 → 繁华；废弃/倒闭/空荡 + 商场 → 衰败。裸“超市”仍归超市。
+  { id: "set-mall-ruined", name: "废弃商场片场", nameEn: "Abandoned mall set", re: /废弃商场|倒闭商场|商场.*(废墟|废弃|倒闭|空荡|萧条)|(废弃|倒闭).*商场|商城.*(废弃|倒闭)|dead mall|abandoned mall|abandoned shopping mall/i },
+  { id: "set-mall-prosperous", name: "繁华商场片场", nameEn: "Prosperous mall set", re: /繁华商场|商场|商城|购物中心|热闹商场|shopping mall|\bmall\b/i },
+  // 豪宅：裸豪宅 → 繁荣；破败老宅/废弃豪宅/老宅 → 衰败。裸“别墅”仍归现代泳池别墅。
+  { id: "set-mansion-ruined", name: "破败老宅片场", nameEn: "Derelict old mansion set", re: /破败老宅|破败豪宅|废弃豪宅|豪宅.*(破败|废弃|衰败|萧条)|老宅|ruined mansion|abandoned mansion|derelict mansion/i },
+  { id: "set-mansion-prosperous", name: "豪宅片场", nameEn: "Prosperous mansion set", re: /豪宅|\bmansion\b/i },
+  // 学校：须带繁华/废弃限定；裸“学校”仍归学校教室（见下条）。“废弃学校操场”也归废弃学校。
+  { id: "set-school-abandoned", name: "废弃学校片场", nameEn: "Abandoned school set", re: /废弃学校|荒废学校|学校.*(废弃|荒废|废墟)|(废弃|荒废).*学校|abandoned school|derelict school/i },
+  { id: "set-school-prosperous", name: "繁华学校片场", nameEn: "Prosperous school set", re: /繁华学校|热闹学校|学校.*繁华|prosperous school/i },
+  // 村庄：裸村庄/村子 → 繁荣；空心村/荒废/废弃 + 村庄 → 空心。裸“农村”仍归农村堂屋。
+  { id: "set-village-hollow", name: "空心村片场", nameEn: "Hollowed-out village set", re: /空心村|空心化|村庄.*(空心|荒废|废弃|萧条)|(荒废|废弃).*村庄|村子.*(空心|荒废|废弃)|hollow village|hollowed-out village|abandoned village/i },
+  { id: "set-village-prosperous", name: "繁华村庄片场", nameEn: "Prosperous village set", re: /繁华村庄|村庄|村子|热闹村|prosperous village/i },
   // ── 高频日常场景（学校/家庭/公司/联想补充）：具体词在前，泛词在后 ──
   // 学校操场：操场/运动场直指；田径场/跑道另见下条。
   { id: "set-school-playground", name: "学校操场片场", nameEn: "School playground set", re: /操场|运动场|playground/i },

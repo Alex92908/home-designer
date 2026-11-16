@@ -14,15 +14,20 @@
  *     elevationY>0 的件正下方 30cm 内须有承托物（或在墙挂白名单里）。
  *  5. 房间全覆盖：新场景每个房间都在 furnitureOverrides 里出现（不漏给
  *     风格模板去铺现代家具串味；空房间用 [] 显式清空）。
- *  6. 关键词：24 个新场景各命中、旧 22 个场景不回归（尤其 民国农村 vs
- *     石库门、近郊别墅 vs 泛别墅、半坡 vs 河姆渡、裸客厅不劫持；新增：
- *     浴室（学校/家庭）、厨房（家庭/餐厅）、卧室（家庭/公寓/酒店）、
- *     大堂（公司/酒店）、茶水间（公司）vs 水房（学校）、宿舍 vs 公寓、
- *     电梯 vs 楼梯间、宴会厅（婚礼/唐宫）、食堂（饭堂/餐厅））。
- *  7. 清单：SCENE_SETS 总数 = 46，含全部 24 个新 id；旧 22 个场景仍
- *     在清单里、关键词仍命中（旧场景的拼贴/摆放不查：咖啡馆/办公室/
- *     餐厅用多边形房间与墙挂件，矩形拼贴与“正下方承托”规则对它们不适用，
- *     且本次未动它们的代码——回归只查清单与关键词）。
+ *  6. 关键词：24 个高频场景 + 22 个成对场景（11 对繁荣/衰败）各命中、
+ *     旧 22 个场景不回归（尤其 民国农村 vs 石库门、近郊别墅 vs 泛别墅、
+ *     半坡 vs 河姆渡、裸客厅不劫持；新增：浴室（学校/家庭）、厨房
+ *     （家庭/餐厅）、卧室（家庭/公寓/酒店）、大堂（公司/酒店）、茶水间
+ *     （公司）vs 水房（学校）、宿舍 vs 公寓、电梯 vs 楼梯间、宴会厅
+ *     （婚礼/唐宫）、食堂（饭堂/餐厅）；成对场景新增：衰败态抢先（安史后
+ *     长安/靖康后汴京/火烧圆明园/大明宫废墟/罗马陷落/庞贝废墟/楼兰废墟/
+ *     废弃商场/破败老宅/废弃学校/空心村），裸“学校/长安/宋朝/明代/清朝/
+ *     农村/商场/豪宅/村庄”不劫持旧场景）。
+ *  7. 清单：SCENE_SETS 总数 = 68，含全部 24 个高频 id + 22 个成对 id；
+ *     旧 22 个场景仍在清单里、关键词仍命中（旧场景的拼贴/摆放不查：
+ *     咖啡馆/办公室/餐厅用多边形房间与墙挂件，矩形拼贴与“正下方承托”
+ *     规则对它们不适用，且本次未动它们的代码——回归只查清单与关键词）。
+ *  8. 成对：每对两态的 floorLayouts 完全一致（同一地点的前后两态）。
  */
 import { createJiti } from "jiti";
 
@@ -53,10 +58,37 @@ const OLD_SET_IDS = [
   "set-weijin", "set-yuan", "set-banpo", "set-hemudu",
   "set-rural-republican", "set-versailles", "set-washitsu", "set-hanok",
 ];
+// 成对场景（第 5 批；11 对 = 22 个片场）：每对两态共用同一 floorLayouts。
+const PAIR_SET_IDS = [
+  "set-tang-changan-prosperous", "set-tang-changan-ruined",
+  "set-song-bianjing-prosperous", "set-song-bianjing-ruined",
+  "set-qing-garden-prosperous", "set-qing-garden-ruined",
+  "set-ming-palace-prosperous", "set-ming-palace-ruined",
+  "set-rome-prosperous", "set-rome-ruined",
+  "set-pompeii-prosperous", "set-pompeii-ruined",
+  "set-loulan-prosperous", "set-loulan-ruined",
+  "set-mall-prosperous", "set-mall-ruined",
+  "set-mansion-prosperous", "set-mansion-ruined",
+  "set-school-prosperous", "set-school-abandoned",
+  "set-village-prosperous", "set-village-hollow",
+];
+const PAIRS = [
+  ["set-tang-changan-prosperous", "set-tang-changan-ruined"],
+  ["set-song-bianjing-prosperous", "set-song-bianjing-ruined"],
+  ["set-qing-garden-prosperous", "set-qing-garden-ruined"],
+  ["set-ming-palace-prosperous", "set-ming-palace-ruined"],
+  ["set-rome-prosperous", "set-rome-ruined"],
+  ["set-pompeii-prosperous", "set-pompeii-ruined"],
+  ["set-loulan-prosperous", "set-loulan-ruined"],
+  ["set-mall-prosperous", "set-mall-ruined"],
+  ["set-mansion-prosperous", "set-mansion-ruined"],
+  ["set-school-prosperous", "set-school-abandoned"],
+  ["set-village-prosperous", "set-village-hollow"],
+];
 // 墙挂/悬置件：正下方无承托物是设计如此（黑板/设备带挂墙；漆碗在干栏
 // 长屋架空地板上，地板本身不是一件家具；白板/案情板/KTV 屏挂墙；
-// 侧吸油烟机挂墙在灶台上方）。
-const SUSPENDED_ALLOWLIST = new Set(["proc-blackboard", "proc-med-strip", "proc-lacquer-bowl", "proc-whiteboard", "proc-evidence-board", "proc-ktv-screen", "hood-side-black"]);
+// 侧吸油烟机挂墙在灶台上方；蛛网挂墙角）。
+const SUSPENDED_ALLOWLIST = new Set(["proc-blackboard", "proc-med-strip", "proc-lacquer-bowl", "proc-whiteboard", "proc-evidence-board", "proc-ktv-screen", "hood-side-black", "proc-cobweb"]);
 
 let failures = 0;
 let checks = 0;
@@ -128,8 +160,8 @@ function rectsOverlap(a, b) {
   return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.depth && b.y < a.y + a.depth;
 }
 for (const tpl of PROJECT_TEMPLATES) {
-  const isNew = NEW_SET_IDS.includes(tpl.id);
-  if (!isNew) continue; // 只查新 12 场景（旧场景见文件头说明）
+  const isNew = NEW_SET_IDS.includes(tpl.id) || PAIR_SET_IDS.includes(tpl.id);
+  if (!isNew) continue; // 只查新场景（旧场景见文件头说明）
   ok(tpl.id.startsWith("set-"), `${tpl.id}: id has set- prefix`);
   ok(STYLE_IDS.has(tpl.styleTemplateId), `${tpl.id}: styleTemplateId ${tpl.styleTemplateId} known`);
   for (let fi = 0; fi < tpl.floorLayouts.length; fi++) {
@@ -303,6 +335,65 @@ const MATCH_CASES = [
   ["婚礼", "set-wedding"],
   ["婚宴", "set-wedding"],
   ["宴会厅", "set-tang-palace"],
+  // ── 成对场景（11 对；衰败态抢先 + 裸地名不劫持旧场景）──
+  ["盛唐长安", "set-tang-changan-prosperous"],
+  ["长安", "set-tang-changan-prosperous"],
+  ["繁华长安", "set-tang-changan-prosperous"],
+  ["安史之乱后长安", "set-tang-changan-ruined"],
+  ["战后长安", "set-tang-changan-ruined"],
+  ["萧条长安", "set-tang-changan-ruined"],
+  ["安史之乱", "set-tang-changan-ruined"],
+  ["北宋汴京", "set-song-bianjing-prosperous"],
+  ["汴京", "set-song-bianjing-prosperous"],
+  ["清明上河", "set-song-bianjing-prosperous"],
+  ["靖康之变后汴京", "set-song-bianjing-ruined"],
+  ["汴京废墟", "set-song-bianjing-ruined"],
+  ["靖康之变", "set-song-bianjing-ruined"],
+  ["圆明园", "set-qing-garden-prosperous"],
+  ["圆明园盛时", "set-qing-garden-prosperous"],
+  ["火烧圆明园", "set-qing-garden-ruined"],
+  ["圆明园废墟", "set-qing-garden-ruined"],
+  ["圆明园遗址", "set-qing-garden-ruined"],
+  ["大明宫", "set-ming-palace-prosperous"],
+  ["大明宫盛时", "set-ming-palace-prosperous"],
+  ["大明宫废墟", "set-ming-palace-ruined"],
+  ["大明宫遗址", "set-ming-palace-ruined"],
+  ["罗马", "set-rome-prosperous"],
+  ["罗马鼎盛", "set-rome-prosperous"],
+  ["罗马陷落", "set-rome-ruined"],
+  ["罗马废墟", "set-rome-ruined"],
+  ["fall of rome", "set-rome-ruined"],
+  ["庞贝", "set-pompeii-prosperous"],
+  ["庞贝繁华", "set-pompeii-prosperous"],
+  ["庞贝废墟", "set-pompeii-ruined"],
+  ["庞贝遗址", "set-pompeii-ruined"],
+  ["楼兰", "set-loulan-prosperous"],
+  ["楼兰古城", "set-loulan-prosperous"],
+  ["楼兰废墟", "set-loulan-ruined"],
+  ["繁华商场", "set-mall-prosperous"],
+  ["商场", "set-mall-prosperous"],
+  ["购物中心", "set-mall-prosperous"],
+  ["废弃商场", "set-mall-ruined"],
+  ["倒闭商场", "set-mall-ruined"],
+  ["abandoned mall", "set-mall-ruined"],
+  ["dead mall", "set-mall-ruined"],
+  ["豪宅", "set-mansion-prosperous"],
+  ["破败老宅", "set-mansion-ruined"],
+  ["老宅", "set-mansion-ruined"],
+  ["废弃豪宅", "set-mansion-ruined"],
+  ["繁华学校", "set-school-prosperous"],
+  ["废弃学校", "set-school-abandoned"],
+  ["荒废学校", "set-school-abandoned"],
+  ["繁华村庄", "set-village-prosperous"],
+  ["村庄", "set-village-prosperous"],
+  ["空心村", "set-village-hollow"],
+  ["荒废村庄", "set-village-hollow"],
+  // 不回归（成对规则不得劫持旧场景）
+  ["大唐", "set-tang-palace"],
+  ["宋朝", "set-song-study"],
+  ["清朝", "set-qing-sanxitang"],
+  ["学校", "set-school"],
+  ["农村", "set-rural-hall"],
   // 不回归
   ["咖啡馆", "set-cafe"],
   ["火锅店", "set-restaurant"],
@@ -330,9 +421,22 @@ ok(matchProjectTemplate("basketball court") === null, `match("basketball court")
 
 // ── 7. 清单 ─────────────────────────────────────────────────────
 section("7. manifest");
-ok(SCENE_SETS.length === 46, `SCENE_SETS total = ${SCENE_SETS.length} (want 46)`);
-for (const id of [...OLD_SET_IDS, ...NEW_SET_IDS]) {
+ok(SCENE_SETS.length === 68, `SCENE_SETS total = ${SCENE_SETS.length} (want 68)`);
+for (const id of [...OLD_SET_IDS, ...NEW_SET_IDS, ...PAIR_SET_IDS]) {
   ok(SCENE_SETS.some((s) => s.id === id), `manifest contains ${id}`);
+}
+
+// ── 8. 成对：两态 floorLayouts 完全一致 ──────────────────────────
+section("8. pairs share layout");
+for (const [a, b] of PAIRS) {
+  const ta = PROJECT_TEMPLATES.find((t) => t.id === a);
+  const tb = PROJECT_TEMPLATES.find((t) => t.id === b);
+  ok(!!ta && !!tb, `pair ${a} / ${b} both exist`);
+  if (ta && tb) {
+    ok(JSON.stringify(ta.floorLayouts) === JSON.stringify(tb.floorLayouts),
+      `pair ${a} / ${b}: floorLayouts identical`);
+    ok(ta.areaSqm === tb.areaSqm, `pair ${a} / ${b}: areaSqm ${ta.areaSqm} = ${tb.areaSqm}`);
+  }
 }
 
 console.log(`\n${checks} checks, ${failures} failures`);

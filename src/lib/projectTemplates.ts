@@ -5386,6 +5386,1334 @@ const WEDDING_SET: ProjectTemplate = {
   ],
 };
 
+// ── 繁荣/衰败成对场景（第 5 批；11 对 = 22 个片场）───────────────────────
+// 每对共用一个 floorLayouts 工厂函数（同一地点的前后两态， footprint 与
+// 房间拼贴完全一致，只有 furnitureOverrides / palette / 描述不同）；
+// 衰败态只用本批新增的衰败通用件 + 少量残留旧件，不引入对时代锁的破
+// 坏（毁坏的唐长安不出现清代雕花与电灯，毁坏的圆明园不出现现代家具）。
+function pairExterior(wallColor: string, roofColor: string): Partial<ExteriorSettings> {
+  return {
+    preset: "modern-minimal",
+    facadeSystem: "punched-window",
+    roofStyle: "flat",
+    floors: 1,
+    hasRooftop: false,
+    buildingType: "floor-plan-driven",
+    groundType: "tile",
+    wallColor,
+    windowFrameColor: "#2A2C30",
+    entranceFrameColor: "#15171B",
+    roofOverhang: 0.5,
+    parapetHeight: 0.4,
+    roofColor,
+    stoneBaseEnabled: false,
+    showPerimeterFence: false,
+    yardPreset: "minimal",
+  };
+}
+
+// ── 1. 盛唐长安 / 安史后长安 ─────────────────────────────────────────────
+// 朱雀大街（露天）+ 东市 + 西市，1800×1200 = 216㎡。盛唐：牌楼、摊位、
+// 灯笼杆、石板路；安史后：牌楼倒塌消失，断墙、瓦砾、焦梁、枯树、荒草。
+function tangChanganLayout(): FloorplanLayout {
+  return {
+    id: "tang-changan-f1",
+    name: "唐长安",
+    area: 216,
+    rooms: [
+      { room: "yard", x: 0, y: 0, width: 1800, depth: 700,
+        name: "朱雀大街", nameEn: "Zhuque Avenue", icon: "🛣️",
+        wallsHidden: ["N", "S", "E", "W"] },
+      { room: "living", x: 0, y: 700, width: 900, depth: 500,
+        name: "东市", nameEn: "East Market", icon: "🏪",
+        doors: [{ wall: "N", pos: 450, len: 150, style: "wood_panel", h: 210 }] },
+      { room: "dining", x: 900, y: 700, width: 900, depth: 500,
+        name: "西市", nameEn: "West Market", icon: "🏪",
+        doors: [{ wall: "N", pos: 450, len: 150, style: "wood_panel", h: 210 }] },
+    ],
+  };
+}
+
+const TANG_CHANGAN_PROSPEROUS_SET: ProjectTemplate = {
+  id: "set-tang-changan-prosperous",
+  name: "盛唐长安片场",
+  nameEn: "Prosperous Tang Chang'an Set",
+  emoji: "🏮",
+  description: "片场 · 单层 · 朱雀大街+东市+西市 · 216㎡ · 盛唐长安 · 拍长安繁华/市集/灯会戏",
+  descriptionEn: "Film set · 1F · Zhuque Avenue + East/West Markets · 216㎡ · Tang Chang'an in its prime",
+  areaSqm: 216,
+  palette: ["#E8DCC8", "#3A2A1A", "#C03028"],
+  styleTemplateId: "chinese",
+  exterior: pairExterior("#E8DCC8", "#3A2A1A"),
+  floorLayouts: [tangChanganLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      yard: [
+        { furnitureId: "proc-pailou", x: 900, z: 350, rotation: 0 },
+        { furnitureId: "proc-market-stall", x: 450, z: 350, rotation: 0 },
+        { furnitureId: "proc-market-stall", x: 1350, z: 350, rotation: 0 },
+        { furnitureId: "proc-lantern-pole", x: 250, z: 120, rotation: 0 },
+        { furnitureId: "proc-lantern-pole", x: 1550, z: 120, rotation: 0 },
+        { furnitureId: "proc-lantern-pole", x: 250, z: 580, rotation: 0 },
+        { furnitureId: "proc-lantern-pole", x: 1550, z: 580, rotation: 0 },
+        { furnitureId: "stone-path", x: 150, z: 350, rotation: 90 },
+        { furnitureId: "stone-path", x: 1650, z: 350, rotation: 90 },
+        { furnitureId: "storage-crate", x: 650, z: 150, rotation: 0 },
+        { furnitureId: "storage-crate", x: 1150, z: 150, rotation: 0 },
+      ],
+      living: [
+        { furnitureId: "proc-market-stall", x: 250, z: 250, rotation: 0 },
+        { furnitureId: "proc-market-stall", x: 650, z: 250, rotation: 0 },
+        { furnitureId: "storage-crate", x: 450, z: 120, rotation: 0 },
+        { furnitureId: "storage-crate", x: 450, z: 400, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 150, z: 420, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 750, z: 420, rotation: 0 },
+        { furnitureId: "decor-vase-royal", x: 60, z: 60, rotation: 0 },
+        { furnitureId: "decor-vase-royal", x: 840, z: 60, rotation: 0 },
+        { furnitureId: "proc-wood-chest", x: 450, z: 60, rotation: 0 },
+        { furnitureId: "proc-oil-lamp", x: 450, z: 60, rotation: 0, elevationY: 60 },
+      ],
+      dining: [
+        { furnitureId: "proc-market-stall", x: 250, z: 250, rotation: 0 },
+        { furnitureId: "proc-market-stall", x: 650, z: 250, rotation: 0 },
+        { furnitureId: "storage-crate", x: 450, z: 120, rotation: 0 },
+        { furnitureId: "storage-crate", x: 450, z: 400, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 150, z: 420, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 750, z: 420, rotation: 0 },
+        { furnitureId: "decor-vase-royal", x: 60, z: 60, rotation: 0 },
+        { furnitureId: "decor-vase-royal", x: 840, z: 60, rotation: 0 },
+        { furnitureId: "proc-wood-chest", x: 450, z: 60, rotation: 0 },
+        { furnitureId: "proc-oil-lamp", x: 450, z: 60, rotation: 0, elevationY: 60 },
+      ],
+    },
+  ],
+};
+
+const TANG_CHANGAN_RUINED_SET: ProjectTemplate = {
+  id: "set-tang-changan-ruined",
+  name: "安史后长安片场",
+  nameEn: "Ruined Tang Chang'an Set",
+  emoji: "🏚️",
+  description: "片场 · 单层 · 朱雀大街+东市+西市 · 216㎡ · 安史之乱后长安 · 拍战后萧条/废墟/流亡戏",
+  descriptionEn: "Film set · 1F · Zhuque Avenue + East/West Markets · 216㎡ · Chang'an after the An Lushan rebellion",
+  areaSqm: 216,
+  palette: ["#8A8378", "#4A4038", "#6A5A42"],
+  styleTemplateId: "chinese",
+  exterior: pairExterior("#8A8378", "#4A4038"),
+  floorLayouts: [tangChanganLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      yard: [
+        { furnitureId: "proc-broken-wall", x: 300, z: 150, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 1500, z: 550, rotation: 90 },
+        { furnitureId: "proc-rubble-pile", x: 450, z: 350, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 900, z: 200, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 1350, z: 450, rotation: 0 },
+        { furnitureId: "proc-dead-tree", x: 900, z: 600, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 600, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1650, z: 120, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1150, z: 120, rotation: 0 },
+        { furnitureId: "proc-burnt-beam", x: 650, z: 350, rotation: 0 },
+      ],
+      living: [
+        { furnitureId: "proc-broken-table", x: 450, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 200, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 700, z: 250, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 450, z: 420, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 100, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 800, z: 420, rotation: 0 },
+        { furnitureId: "proc-wood-chest", x: 450, z: 60, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "proc-broken-table", x: 450, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 200, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 700, z: 250, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 200, z: 420, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 800, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 650, z: 420, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 150, z: 150, rotation: 90 },
+      ],
+    },
+  ],
+};
+
+// ── 2. 北宋汴京 / 靖康后汴京 ───────────────────────────────────────────────
+// 御街（露天）+ 樊楼酒肆 + 茶肆书场，1800×1200 = 216㎡。北宋：牌楼、摊
+// 位、灯笼、酒肆茶案；靖康后：断墙、瓦砾、焦梁、枯树、荒草。
+function songBianjingLayout(): FloorplanLayout {
+  return {
+    id: "song-bianjing-f1",
+    name: "宋汴京",
+    area: 216,
+    rooms: [
+      { room: "yard", x: 0, y: 0, width: 1800, depth: 700,
+        name: "御街", nameEn: "Imperial Avenue", icon: "🛣️",
+        wallsHidden: ["N", "S", "E", "W"] },
+      { room: "living", x: 0, y: 700, width: 900, depth: 500,
+        name: "樊楼酒肆", nameEn: "Fanlou Tavern", icon: "🍶",
+        doors: [{ wall: "N", pos: 450, len: 150, style: "wood_panel", h: 210 }] },
+      { room: "dining", x: 900, y: 700, width: 900, depth: 500,
+        name: "茶肆书场", nameEn: "Teahouse & Storytelling", icon: "🍵",
+        doors: [{ wall: "N", pos: 450, len: 150, style: "wood_panel", h: 210 }] },
+    ],
+  };
+}
+
+const SONG_BIANJING_PROSPEROUS_SET: ProjectTemplate = {
+  id: "set-song-bianjing-prosperous",
+  name: "北宋汴京片场",
+  nameEn: "Prosperous Song Bianjing Set",
+  emoji: "🎆",
+  description: "片场 · 单层 · 御街+樊楼酒肆+茶肆书场 · 216㎡ · 北宋汴京 · 拍清明上河/市井/酒楼戏",
+  descriptionEn: "Film set · 1F · Imperial Avenue + Fanlou Tavern + Teahouse · 216㎡ · Northern Song Bianjing in its prime",
+  areaSqm: 216,
+  palette: ["#EDEBE6", "#6B6257", "#A03028"],
+  styleTemplateId: "chinese",
+  exterior: pairExterior("#EDEBE6", "#6B6257"),
+  floorLayouts: [songBianjingLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      yard: [
+        { furnitureId: "proc-pailou", x: 900, z: 350, rotation: 0 },
+        { furnitureId: "proc-market-stall", x: 450, z: 350, rotation: 0 },
+        { furnitureId: "proc-market-stall", x: 1350, z: 350, rotation: 0 },
+        { furnitureId: "proc-lantern-pole", x: 250, z: 120, rotation: 0 },
+        { furnitureId: "proc-lantern-pole", x: 1550, z: 120, rotation: 0 },
+        { furnitureId: "proc-lantern-pole", x: 250, z: 580, rotation: 0 },
+        { furnitureId: "proc-lantern-pole", x: 1550, z: 580, rotation: 0 },
+        { furnitureId: "stone-path", x: 150, z: 350, rotation: 90 },
+        { furnitureId: "stone-path", x: 1650, z: 350, rotation: 90 },
+        { furnitureId: "storage-crate", x: 650, z: 150, rotation: 0 },
+        { furnitureId: "storage-crate", x: 1150, z: 150, rotation: 0 },
+      ],
+      living: [
+        { furnitureId: "desk-study", x: 300, z: 200, rotation: 0 },
+        { furnitureId: "desk-study", x: 600, z: 200, rotation: 0 },
+        { furnitureId: "desk-study", x: 450, z: 380, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 300, z: 130, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 300, z: 270, rotation: 180 },
+        { furnitureId: "chair-nordic-oak", x: 600, z: 130, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 600, z: 270, rotation: 180 },
+        { furnitureId: "proc-wood-stool", x: 380, z: 320, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 520, z: 320, rotation: 0 },
+        { furnitureId: "decor-tea-set", x: 300, z: 200, rotation: 0, elevationY: 75 },
+        { furnitureId: "proc-celadon-vase", x: 600, z: 200, rotation: 0, elevationY: 75 },
+        { furnitureId: "proc-boshanlu", x: 450, z: 380, rotation: 0, elevationY: 75 },
+        { furnitureId: "proc-bogujia", x: 450, z: 60, rotation: 0 },
+        { furnitureId: "decor-vase-royal", x: 60, z: 60, rotation: 0 },
+        { furnitureId: "decor-vase-royal", x: 840, z: 60, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "desk-study", x: 250, z: 200, rotation: 0 },
+        { furnitureId: "desk-study", x: 650, z: 200, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 250, z: 130, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 250, z: 270, rotation: 180 },
+        { furnitureId: "chair-nordic-oak", x: 650, z: 130, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 650, z: 270, rotation: 180 },
+        { furnitureId: "proc-wood-stool", x: 450, z: 400, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 450, z: 320, rotation: 0 },
+        { furnitureId: "decor-tea-set", x: 250, z: 200, rotation: 0, elevationY: 75 },
+        { furnitureId: "proc-lacquer-bowl", x: 650, z: 200, rotation: 0, elevationY: 75 },
+        { furnitureId: "proc-bogujia", x: 450, z: 60, rotation: 0 },
+        { furnitureId: "decor-vase-royal", x: 60, z: 60, rotation: 0 },
+        { furnitureId: "decor-vase-royal", x: 840, z: 60, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+const SONG_BIANJING_RUINED_SET: ProjectTemplate = {
+  id: "set-song-bianjing-ruined",
+  name: "靖康后汴京片场",
+  nameEn: "Ruined Song Bianjing Set",
+  emoji: "🏚️",
+  description: "片场 · 单层 · 御街+樊楼酒肆+茶肆书场 · 216㎡ · 靖康之变后汴京 · 拍国破/萧条/流亡戏",
+  descriptionEn: "Film set · 1F · Imperial Avenue + Fanlou Tavern + Teahouse · 216㎡ · Bianjing after the Jingkang Incident",
+  areaSqm: 216,
+  palette: ["#8A8378", "#4A4038", "#5A5A4A"],
+  styleTemplateId: "chinese",
+  exterior: pairExterior("#8A8378", "#4A4038"),
+  floorLayouts: [songBianjingLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      yard: [
+        { furnitureId: "proc-broken-wall", x: 300, z: 550, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 1500, z: 150, rotation: 90 },
+        { furnitureId: "proc-rubble-pile", x: 450, z: 350, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 900, z: 200, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 1350, z: 450, rotation: 0 },
+        { furnitureId: "proc-dead-tree", x: 900, z: 600, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 120, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1650, z: 600, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1150, z: 580, rotation: 0 },
+        { furnitureId: "proc-burnt-beam", x: 1150, z: 350, rotation: 0 },
+      ],
+      living: [
+        { furnitureId: "proc-broken-table", x: 450, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 200, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 700, z: 250, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 200, z: 420, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 100, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 800, z: 420, rotation: 0 },
+        { furnitureId: "proc-burnt-beam", x: 450, z: 80, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "proc-broken-table", x: 450, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 200, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 700, z: 250, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 450, z: 420, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 800, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 650, z: 420, rotation: 0 },
+        { furnitureId: "proc-wood-chest", x: 450, z: 60, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+// ── 3. 圆明园盛时 / 火烧圆明园后 ──────────────────────────────────────────
+// 正大光明殿 + 长春园书房 + 后湖园林，1600×1000 = 160㎡。盛时：鎏金椅、
+// 博古架、青花、太湖石、喷泉；火烧后：焦梁、断椅、瓦砾、枯树、倒塌石柱
+// （西洋楼大水法残柱之意），喷泉干涸撤去。
+function qingGardenLayout(): FloorplanLayout {
+  return {
+    id: "qing-garden-f1",
+    name: "圆明园",
+    area: 160,
+    rooms: [
+      { room: "living", x: 0, y: 0, width: 1000, depth: 600,
+        name: "正大光明殿", nameEn: "Hall of Rectitude", icon: "🏯",
+        doors: [{ wall: "S", pos: 500, len: 150, style: "wood_panel", h: 210 }] },
+      { room: "dining", x: 1000, y: 0, width: 600, depth: 600,
+        name: "长春园书房", nameEn: "Changchun Garden Study", icon: "📖",
+        doors: [{ wall: "W", pos: 300, len: 100, style: "wood_panel", h: 200 }] },
+      { room: "yard", x: 0, y: 600, width: 1600, depth: 400,
+        name: "后湖园林", nameEn: "Back Lake Garden", icon: "🌿",
+        wallsHidden: ["N", "S", "E", "W"] },
+    ],
+  };
+}
+
+const QING_GARDEN_PROSPEROUS_SET: ProjectTemplate = {
+  id: "set-qing-garden-prosperous",
+  name: "圆明园盛时片场",
+  nameEn: "Prosperous Yuanmingyuan Set",
+  emoji: "🌸",
+  description: "片场 · 单层 · 正大光明殿+长春园书房+后湖园林 · 160㎡ · 圆明园盛时 · 拍清宫/园林/盛世戏",
+  descriptionEn: "Film set · 1F · Hall of Rectitude + Garden Study + Back Lake · 160㎡ · Yuanmingyuan in its prime",
+  areaSqm: 160,
+  palette: ["#E8E4D8", "#3A4A2A", "#C8A24A"],
+  styleTemplateId: "chinese",
+  exterior: pairExterior("#E8E4D8", "#3A4A2A"),
+  floorLayouts: [qingGardenLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      living: [
+        { furnitureId: "proc-gilt-chair", x: 300, z: 200, rotation: 0 },
+        { furnitureId: "proc-gilt-chair", x: 700, z: 200, rotation: 0 },
+        { furnitureId: "proc-gilt-chair", x: 300, z: 400, rotation: 180 },
+        { furnitureId: "proc-gilt-chair", x: 700, z: 400, rotation: 180 },
+        { furnitureId: "proc-bogujia", x: 500, z: 60, rotation: 0 },
+        { furnitureId: "proc-bluewhite-vase", x: 150, z: 60, rotation: 0 },
+        { furnitureId: "proc-bluewhite-vase", x: 850, z: 60, rotation: 0 },
+        { furnitureId: "rug-persian", x: 500, z: 300, rotation: 0 },
+        { furnitureId: "proc-chandelier-crystal", x: 500, z: 300, rotation: 0, mountCeiling: true },
+      ],
+      dining: [
+        { furnitureId: "desk-study", x: 300, z: 250, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 300, z: 170, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 300, z: 330, rotation: 180 },
+        { furnitureId: "proc-celadon-vase", x: 300, z: 250, rotation: 0, elevationY: 75 },
+        { furnitureId: "proc-bogujia", x: 300, z: 60, rotation: 0 },
+        { furnitureId: "sideboard-walnut", x: 550, z: 300, rotation: 270 },
+        { furnitureId: "proc-bluewhite-vase", x: 550, z: 300, rotation: 0, elevationY: 85 },
+        { furnitureId: "plant-monstera", x: 60, z: 540, rotation: 0 },
+      ],
+      yard: [
+        { furnitureId: "fountain", x: 800, z: 200, rotation: 0 },
+        { furnitureId: "proc-rockery", x: 300, z: 200, rotation: 0 },
+        { furnitureId: "proc-rockery", x: 1300, z: 200, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 150, z: 200, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 1450, z: 200, rotation: 0 },
+        { furnitureId: "stone-path", x: 550, z: 200, rotation: 90 },
+        { furnitureId: "stone-path", x: 1050, z: 200, rotation: 90 },
+      ],
+    },
+  ],
+};
+
+const QING_GARDEN_RUINED_SET: ProjectTemplate = {
+  id: "set-qing-garden-ruined",
+  name: "火烧圆明园后片场",
+  nameEn: "Ruined Yuanmingyuan Set",
+  emoji: "🏚️",
+  description: "片场 · 单层 · 正大光明殿+长春园书房+后湖园林 · 160㎡ · 火烧圆明园后废墟 · 拍劫后/废墟/凭吊戏",
+  descriptionEn: "Film set · 1F · Hall of Rectitude + Garden Study + Back Lake · 160㎡ · Yuanmingyuan ruins after the burning",
+  areaSqm: 160,
+  palette: ["#7A7668", "#3A3630", "#5A5A4A"],
+  styleTemplateId: "chinese",
+  exterior: pairExterior("#7A7668", "#3A3630"),
+  floorLayouts: [qingGardenLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      living: [
+        { furnitureId: "proc-burnt-beam", x: 500, z: 300, rotation: 0 },
+        { furnitureId: "proc-burnt-beam", x: 500, z: 450, rotation: 90 },
+        { furnitureId: "proc-broken-chair", x: 250, z: 200, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 750, z: 200, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 250, z: 450, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 750, z: 450, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 100, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-broken-wall", x: 500, z: 80, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "proc-broken-table", x: 300, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 150, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 450, z: 250, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 300, z: 450, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 550, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 500, z: 500, rotation: 0 },
+      ],
+      yard: [
+        { furnitureId: "proc-rockery", x: 300, z: 200, rotation: 0 },
+        { furnitureId: "proc-dead-tree", x: 800, z: 200, rotation: 0 },
+        { furnitureId: "proc-fallen-column", x: 1200, z: 200, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 200, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1450, z: 200, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 600, z: 300, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 1000, z: 300, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+// ── 4. 大明宫盛时 / 大明宫废墟 ─────────────────────────────────────────────
+// 含元殿 + 宣政殿偏殿 + 丹凤门前廊，1400×900 = 126㎡。盛时：长案宴饮、
+// 鎏金椅、青花、石狮、灯笼杆；废墟：断椅、瓦砾、焦梁、倒塌石柱、枯树。
+function mingPalaceLayout(): FloorplanLayout {
+  return {
+    id: "ming-palace-f1",
+    name: "大明宫",
+    area: 126,
+    rooms: [
+      { room: "living", x: 0, y: 0, width: 900, depth: 600,
+        name: "含元殿", nameEn: "Hanyuan Hall", icon: "🏯",
+        doors: [{ wall: "S", pos: 450, len: 150, style: "wood_panel", h: 210 }] },
+      { room: "dining", x: 900, y: 0, width: 500, depth: 600,
+        name: "宣政殿偏殿", nameEn: "Xuanzheng Side Hall", icon: "🍽️",
+        doors: [{ wall: "W", pos: 300, len: 100, style: "wood_panel", h: 200 }] },
+      { room: "hallway", x: 0, y: 600, width: 1400, depth: 300,
+        name: "丹凤门前廊", nameEn: "Danfeng Gate Porch", icon: "🌿",
+        wallsHidden: ["N", "S", "E", "W"] },
+    ],
+  };
+}
+
+const MING_PALACE_PROSPEROUS_SET: ProjectTemplate = {
+  id: "set-ming-palace-prosperous",
+  name: "大明宫盛时片场",
+  nameEn: "Prosperous Daming Palace Set",
+  emoji: "👑",
+  description: "片场 · 单层 · 含元殿+宣政殿偏殿+丹凤门前廊 · 126㎡ · 大明宫盛时 · 拍宫廷/朝会/宴饮戏",
+  descriptionEn: "Film set · 1F · Hanyuan Hall + Xuanzheng Side Hall + Porch · 126㎡ · Daming Palace in its prime",
+  areaSqm: 126,
+  palette: ["#E8DCC8", "#8A2010", "#C8A24A"],
+  styleTemplateId: "chinese",
+  exterior: pairExterior("#E8DCC8", "#8A2010"),
+  floorLayouts: [mingPalaceLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      living: [
+        { furnitureId: "desk-study", x: 330, z: 200, rotation: 0 },
+        { furnitureId: "desk-study", x: 450, z: 200, rotation: 0 },
+        { furnitureId: "desk-study", x: 570, z: 200, rotation: 0 },
+        { furnitureId: "decor-dinnerware-glossy", x: 450, z: 200, rotation: 0, elevationY: 75 },
+        { furnitureId: "decor-spoons-golden", x: 330, z: 200, rotation: 0, elevationY: 75 },
+        { furnitureId: "decor-spoons-golden", x: 570, z: 200, rotation: 0, elevationY: 75 },
+        { furnitureId: "chair-nordic-oak", x: 390, z: 140, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 510, z: 140, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 390, z: 260, rotation: 180 },
+        { furnitureId: "chair-nordic-oak", x: 510, z: 260, rotation: 180 },
+        { furnitureId: "proc-gilt-chair", x: 150, z: 450, rotation: 0 },
+        { furnitureId: "proc-gilt-chair", x: 750, z: 450, rotation: 0 },
+        { furnitureId: "proc-bogujia", x: 450, z: 60, rotation: 0 },
+        { furnitureId: "proc-bluewhite-vase", x: 100, z: 60, rotation: 0 },
+        { furnitureId: "proc-bluewhite-vase", x: 800, z: 60, rotation: 0 },
+        { furnitureId: "rug-persian", x: 450, z: 350, rotation: 0 },
+        { furnitureId: "lamp-chandelier-antique", x: 300, z: 300, rotation: 0, mountCeiling: true },
+        { furnitureId: "lamp-chandelier-antique", x: 600, z: 300, rotation: 0, mountCeiling: true },
+      ],
+      dining: [
+        { furnitureId: "dining-marble-round", x: 250, z: 200, rotation: 0 },
+        { furnitureId: "decor-fruit-bowl", x: 250, z: 200, rotation: 0, elevationY: 75 },
+        { furnitureId: "chair-nordic-oak", x: 250, z: 110, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 250, z: 290, rotation: 180 },
+        { furnitureId: "chair-nordic-oak", x: 160, z: 200, rotation: 90 },
+        { furnitureId: "chair-nordic-oak", x: 340, z: 200, rotation: 270 },
+        { furnitureId: "sideboard-walnut", x: 450, z: 40, rotation: 270 },
+        { furnitureId: "decor-copper-pots", x: 450, z: 40, rotation: 0, elevationY: 85 },
+        { furnitureId: "plant-rubber-tree", x: 40, z: 550, rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "proc-lantern-pole", x: 200, z: 150, rotation: 0 },
+        { furnitureId: "proc-lantern-pole", x: 1200, z: 150, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 500, z: 150, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 900, z: 150, rotation: 0 },
+        { furnitureId: "stone-path", x: 700, z: 150, rotation: 90 },
+        { furnitureId: "decor-statue-lion", x: 100, z: 150, rotation: 0 },
+        { furnitureId: "decor-statue-lion", x: 1300, z: 150, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+const MING_PALACE_RUINED_SET: ProjectTemplate = {
+  id: "set-ming-palace-ruined",
+  name: "大明宫废墟片场",
+  nameEn: "Ruined Daming Palace Set",
+  emoji: "🏚️",
+  description: "片场 · 单层 · 含元殿+宣政殿偏殿+丹凤门前廊 · 126㎡ · 大明宫废墟 · 拍王朝倾覆/废墟/凭吊戏",
+  descriptionEn: "Film set · 1F · Hanyuan Hall + Xuanzheng Side Hall + Porch · 126㎡ · Daming Palace ruins",
+  areaSqm: 126,
+  palette: ["#8A8378", "#4A3A30", "#6A5A42"],
+  styleTemplateId: "chinese",
+  exterior: pairExterior("#8A8378", "#4A3A30"),
+  floorLayouts: [mingPalaceLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      living: [
+        { furnitureId: "proc-broken-table", x: 450, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 200, z: 200, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 700, z: 200, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 200, z: 400, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 700, z: 400, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 450, z: 450, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 100, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-burnt-beam", x: 450, z: 100, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 700, z: 550, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "proc-broken-table", x: 250, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 150, z: 400, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 250, z: 450, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 450, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 400, z: 100, rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "proc-fallen-column", x: 450, z: 150, rotation: 0 },
+        { furnitureId: "proc-dead-tree", x: 1000, z: 150, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 150, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1250, z: 150, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 700, z: 150, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+// ── 5. 罗马鼎盛 / 罗马陷落后 ───────────────────────────────────────────────
+// 罗马广场（露天）+ 元老院议事厅 + 市集廊柱，1600×1000 = 160㎡。鼎盛：
+// 罗马柱、喷泉、摊位、长椅；陷落后：倒塌石柱、瓦砾、断墙、枯树、荒草。
+function romeLayout(): FloorplanLayout {
+  return {
+    id: "rome-f1",
+    name: "罗马",
+    area: 160,
+    rooms: [
+      { room: "yard", x: 0, y: 0, width: 1600, depth: 600,
+        name: "罗马广场", nameEn: "Roman Forum", icon: "🏛️",
+        wallsHidden: ["N", "S", "E", "W"] },
+      { room: "living", x: 0, y: 600, width: 800, depth: 400,
+        name: "元老院议事厅", nameEn: "Senate Hall", icon: "🏛️",
+        doors: [{ wall: "N", pos: 400, len: 150, style: "wood_panel", h: 210 }] },
+      { room: "dining", x: 800, y: 600, width: 800, depth: 400,
+        name: "市集廊柱", nameEn: "Market Colonnade", icon: "🏪",
+        doors: [{ wall: "N", pos: 400, len: 150, style: "wood_panel", h: 210 }] },
+    ],
+  };
+}
+
+const ROME_PROSPEROUS_SET: ProjectTemplate = {
+  id: "set-rome-prosperous",
+  name: "罗马鼎盛片场",
+  nameEn: "Prosperous Rome Set",
+  emoji: "🏛️",
+  description: "片场 · 单层 · 罗马广场+元老院议事厅+市集廊柱 · 160㎡ · 罗马鼎盛 · 拍罗马/元老院/市集戏",
+  descriptionEn: "Film set · 1F · Roman Forum + Senate Hall + Market Colonnade · 160㎡ · Rome in its prime",
+  areaSqm: 160,
+  palette: ["#E8E0D0", "#8A7A5A", "#C8A24A"],
+  styleTemplateId: "modern-villa",
+  exterior: pairExterior("#E8E0D0", "#8A7A5A"),
+  floorLayouts: [romeLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      yard: [
+        { furnitureId: "proc-roman-column", x: 200, z: 120, rotation: 0 },
+        { furnitureId: "proc-roman-column", x: 600, z: 120, rotation: 0 },
+        { furnitureId: "proc-roman-column", x: 1000, z: 120, rotation: 0 },
+        { furnitureId: "proc-roman-column", x: 1400, z: 120, rotation: 0 },
+        { furnitureId: "fountain", x: 800, z: 350, rotation: 0 },
+        { furnitureId: "proc-market-stall", x: 350, z: 400, rotation: 0 },
+        { furnitureId: "proc-market-stall", x: 1250, z: 400, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 800, z: 120, rotation: 0 },
+        { furnitureId: "storage-crate", x: 500, z: 500, rotation: 0 },
+        { furnitureId: "storage-crate", x: 1100, z: 500, rotation: 0 },
+      ],
+      living: [
+        { furnitureId: "proc-roman-column", x: 150, z: 100, rotation: 0 },
+        { furnitureId: "proc-roman-column", x: 650, z: 100, rotation: 0 },
+        { furnitureId: "proc-meeting-table", x: 400, z: 220, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 400, z: 80, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 400, z: 360, rotation: 180 },
+      ],
+      dining: [
+        { furnitureId: "proc-market-stall", x: 250, z: 200, rotation: 0 },
+        { furnitureId: "proc-market-stall", x: 550, z: 200, rotation: 0 },
+        { furnitureId: "storage-crate", x: 400, z: 80, rotation: 0 },
+        { furnitureId: "storage-crate", x: 400, z: 330, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 120, z: 350, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 680, z: 350, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+const ROME_RUINED_SET: ProjectTemplate = {
+  id: "set-rome-ruined",
+  name: "罗马陷落后片场",
+  nameEn: "Ruined Rome Set",
+  emoji: "🏚️",
+  description: "片场 · 单层 · 罗马广场+元老院议事厅+市集廊柱 · 160㎡ · 罗马陷落后 · 拍帝国倾覆/废墟/蛮族戏",
+  descriptionEn: "Film set · 1F · Roman Forum + Senate Hall + Market Colonnade · 160㎡ · Rome after the fall",
+  areaSqm: 160,
+  palette: ["#8A8378", "#5A5348", "#6A6A5A"],
+  styleTemplateId: "modern-villa",
+  exterior: pairExterior("#8A8378", "#5A5348"),
+  floorLayouts: [romeLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      yard: [
+        { furnitureId: "proc-fallen-column", x: 350, z: 200, rotation: 0 },
+        { furnitureId: "proc-fallen-column", x: 1250, z: 200, rotation: 0 },
+        { furnitureId: "proc-fallen-column", x: 800, z: 450, rotation: 90 },
+        { furnitureId: "proc-rubble-pile", x: 800, z: 200, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 200, z: 450, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 1400, z: 450, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 600, z: 80, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 1000, z: 520, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 300, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1450, z: 300, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 800, z: 550, rotation: 0 },
+        { furnitureId: "proc-dead-tree", x: 1400, z: 120, rotation: 0 },
+      ],
+      living: [
+        { furnitureId: "proc-broken-table", x: 400, z: 200, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 150, z: 300, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 60, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-fallen-column", x: 400, z: 80, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "proc-fallen-column", x: 400, z: 200, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 150, z: 300, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 650, z: 320, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 740, z: 8, rotation: 0, elevationY: 150 },
+      ],
+    },
+  ],
+};
+
+// ── 6. 庞贝繁华 / 庞贝废墟 ─────────────────────────────────────────────────
+// 庞贝民居中庭 + 面包房商铺 + 石板街道，1400×900 = 126㎡。繁华：中庭喷
+// 泉（impluvium）、罗马柱、摊位；火山爆发后：灰色瓦砾、倒塌石柱、断墙。
+function pompeiiLayout(): FloorplanLayout {
+  return {
+    id: "pompeii-f1",
+    name: "庞贝",
+    area: 126,
+    rooms: [
+      { room: "living", x: 0, y: 0, width: 800, depth: 500,
+        name: "庞贝民居中庭", nameEn: "Pompeian Atrium", icon: "🏺",
+        doors: [{ wall: "S", pos: 400, len: 120, style: "wood_panel", h: 210 }] },
+      { room: "dining", x: 800, y: 0, width: 600, depth: 500,
+        name: "面包房商铺", nameEn: "Bakery Shop", icon: "🍞",
+        doors: [{ wall: "W", pos: 250, len: 100, style: "wood_panel", h: 200 }] },
+      { room: "yard", x: 0, y: 500, width: 1400, depth: 400,
+        name: "石板街道", nameEn: "Stone-paved Street", icon: "🛣️",
+        wallsHidden: ["N", "S", "E", "W"] },
+    ],
+  };
+}
+
+const POMPEII_PROSPEROUS_SET: ProjectTemplate = {
+  id: "set-pompeii-prosperous",
+  name: "庞贝繁华片场",
+  nameEn: "Prosperous Pompeii Set",
+  emoji: "🏺",
+  description: "片场 · 单层 · 庞贝民居中庭+面包房商铺+石板街道 · 126㎡ · 庞贝繁华 · 拍罗马市井/家庭戏",
+  descriptionEn: "Film set · 1F · Pompeian Atrium + Bakery Shop + Stone Street · 126㎡ · Pompeii in its prime",
+  areaSqm: 126,
+  palette: ["#E8DCC8", "#A06030", "#C03028"],
+  styleTemplateId: "modern-villa",
+  exterior: pairExterior("#E8DCC8", "#A06030"),
+  floorLayouts: [pompeiiLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      living: [
+        { furnitureId: "fountain", x: 400, z: 250, rotation: 0 },
+        { furnitureId: "proc-roman-column", x: 120, z: 120, rotation: 0 },
+        { furnitureId: "proc-roman-column", x: 680, z: 120, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 200, z: 420, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 600, z: 420, rotation: 0 },
+        { furnitureId: "storage-crate", x: 120, z: 300, rotation: 0 },
+        { furnitureId: "storage-crate", x: 680, z: 300, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "proc-market-stall", x: 300, z: 250, rotation: 0 },
+        { furnitureId: "storage-crate", x: 100, z: 100, rotation: 0 },
+        { furnitureId: "storage-crate", x: 500, z: 100, rotation: 0 },
+        { furnitureId: "storage-crate", x: 100, z: 420, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 150, z: 400, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 450, z: 400, rotation: 0 },
+      ],
+      yard: [
+        { furnitureId: "stone-path", x: 350, z: 200, rotation: 90 },
+        { furnitureId: "stone-path", x: 700, z: 200, rotation: 90 },
+        { furnitureId: "stone-path", x: 1050, z: 200, rotation: 90 },
+        { furnitureId: "proc-roman-column", x: 150, z: 200, rotation: 0 },
+        { furnitureId: "proc-roman-column", x: 1250, z: 200, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 700, z: 80, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 700, z: 330, rotation: 180 },
+      ],
+    },
+  ],
+};
+
+const POMPEII_RUINED_SET: ProjectTemplate = {
+  id: "set-pompeii-ruined",
+  name: "庞贝废墟片场",
+  nameEn: "Ruined Pompeii Set",
+  emoji: "🌋",
+  description: "片场 · 单层 · 庞贝民居中庭+面包房商铺+石板街道 · 126㎡ · 火山爆发后庞贝 · 拍灾难/废墟/考古戏",
+  descriptionEn: "Film set · 1F · Pompeian Atrium + Bakery Shop + Stone Street · 126㎡ · Pompeii after the eruption",
+  areaSqm: 126,
+  palette: ["#7A7668", "#3A3630", "#8A8A8A"],
+  styleTemplateId: "modern-villa",
+  exterior: pairExterior("#7A7668", "#3A3630"),
+  floorLayouts: [pompeiiLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      living: [
+        { furnitureId: "proc-rubble-pile", x: 400, z: 250, rotation: 0 },
+        { furnitureId: "proc-fallen-column", x: 400, z: 120, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 150, z: 420, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 650, z: 420, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 650, z: 300, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "proc-broken-table", x: 300, z: 250, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 150, z: 420, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 550, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 450, z: 100, rotation: 0 },
+      ],
+      yard: [
+        { furnitureId: "proc-rubble-pile", x: 350, z: 200, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 1050, z: 200, rotation: 0 },
+        { furnitureId: "proc-dead-tree", x: 700, z: 200, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 200, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1250, z: 200, rotation: 0 },
+        { furnitureId: "proc-fallen-column", x: 700, z: 330, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 1200, z: 80, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+// ── 7. 楼兰繁华 / 楼兰废墟 ─────────────────────────────────────────────────
+// 丝路集市（露天）+ 客栈驼队院 + 胡商铺面，1600×1000 = 160㎡。繁华：摊
+// 位、石井、粮草、胡商铺面；废墟：瓦砾、断墙、枯树、荒草，石井干涸留存。
+function loulanLayout(): FloorplanLayout {
+  return {
+    id: "loulan-f1",
+    name: "楼兰",
+    area: 160,
+    rooms: [
+      { room: "yard", x: 0, y: 0, width: 1600, depth: 600,
+        name: "丝路集市", nameEn: "Silk Road Bazaar", icon: "🐫",
+        wallsHidden: ["N", "S", "E", "W"] },
+      { room: "living", x: 0, y: 600, width: 800, depth: 400,
+        name: "客栈驼队院", nameEn: "Caravanserai Courtyard", icon: "🏠",
+        doors: [{ wall: "N", pos: 400, len: 150, style: "wood_panel", h: 210 }] },
+      { room: "dining", x: 800, y: 600, width: 800, depth: 400,
+        name: "胡商铺面", nameEn: "Merchant Shopfront", icon: "🏪",
+        doors: [{ wall: "N", pos: 400, len: 150, style: "wood_panel", h: 210 }] },
+    ],
+  };
+}
+
+const LOULAN_PROSPEROUS_SET: ProjectTemplate = {
+  id: "set-loulan-prosperous",
+  name: "楼兰繁华片场",
+  nameEn: "Prosperous Loulan Set",
+  emoji: "🐫",
+  description: "片场 · 单层 · 丝路集市+客栈驼队院+胡商铺面 · 160㎡ · 楼兰繁华 · 拍丝路/胡商/驼队戏",
+  descriptionEn: "Film set · 1F · Silk Road Bazaar + Caravanserai + Merchant Shopfront · 160㎡ · Loulan in its prime",
+  areaSqm: 160,
+  palette: ["#E8D8B8", "#8A6A42", "#2A6A8A"],
+  styleTemplateId: "chinese",
+  exterior: pairExterior("#E8D8B8", "#8A6A42"),
+  floorLayouts: [loulanLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      yard: [
+        { furnitureId: "proc-market-stall", x: 300, z: 300, rotation: 0 },
+        { furnitureId: "proc-market-stall", x: 800, z: 300, rotation: 0 },
+        { furnitureId: "proc-market-stall", x: 1300, z: 300, rotation: 0 },
+        { furnitureId: "proc-stone-well", x: 800, z: 120, rotation: 0 },
+        { furnitureId: "storage-crate", x: 150, z: 500, rotation: 0 },
+        { furnitureId: "storage-crate", x: 1450, z: 500, rotation: 0 },
+        { furnitureId: "storage-crate", x: 550, z: 500, rotation: 0 },
+        { furnitureId: "proc-millet-sheaf", x: 500, z: 120, rotation: 0 },
+        { furnitureId: "proc-millet-sheaf", x: 1100, z: 120, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 800, z: 500, rotation: 0 },
+      ],
+      living: [
+        { furnitureId: "proc-han-an", x: 400, z: 200, rotation: 0 },
+        { furnitureId: "proc-floor-cushion", x: 300, z: 200, rotation: 0 },
+        { furnitureId: "proc-floor-cushion", x: 500, z: 200, rotation: 0 },
+        { furnitureId: "proc-lacquer-bowl", x: 400, z: 200, rotation: 0, elevationY: 13 },
+        { furnitureId: "proc-futon", x: 400, z: 320, rotation: 0 },
+        { furnitureId: "proc-wood-chest", x: 150, z: 80, rotation: 0 },
+        { furnitureId: "proc-wood-chest", x: 650, z: 80, rotation: 0 },
+        { furnitureId: "proc-oil-lamp", x: 150, z: 80, rotation: 0, elevationY: 60 },
+      ],
+      dining: [
+        { furnitureId: "proc-market-stall", x: 400, z: 200, rotation: 0 },
+        { furnitureId: "storage-crate", x: 150, z: 100, rotation: 0 },
+        { furnitureId: "storage-crate", x: 650, z: 100, rotation: 0 },
+        { furnitureId: "storage-crate", x: 150, z: 320, rotation: 0 },
+        { furnitureId: "storage-crate", x: 650, z: 320, rotation: 0 },
+        { furnitureId: "decor-vase-royal", x: 400, z: 80, rotation: 0 },
+        { furnitureId: "decor-vase-royal", x: 400, z: 330, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 200, z: 330, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 600, z: 330, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+const LOULAN_RUINED_SET: ProjectTemplate = {
+  id: "set-loulan-ruined",
+  name: "楼兰废墟片场",
+  nameEn: "Ruined Loulan Set",
+  emoji: "🏚️",
+  description: "片场 · 单层 · 丝路集市+客栈驼队院+胡商铺面 · 160㎡ · 楼兰沙漠废墟 · 拍丝路湮没/沙漠/考古戏",
+  descriptionEn: "Film set · 1F · Silk Road Bazaar + Caravanserai + Merchant Shopfront · 160㎡ · Loulan desert ruins",
+  areaSqm: 160,
+  palette: ["#C8B898", "#6A5A42", "#8A8378"],
+  styleTemplateId: "chinese",
+  exterior: pairExterior("#C8B898", "#6A5A42"),
+  floorLayouts: [loulanLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      yard: [
+        { furnitureId: "proc-rubble-pile", x: 300, z: 300, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 800, z: 300, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 1300, z: 300, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 500, z: 120, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 1100, z: 480, rotation: 0 },
+        { furnitureId: "proc-dead-tree", x: 800, z: 500, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 120, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1450, z: 120, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 500, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1450, z: 500, rotation: 0 },
+        { furnitureId: "proc-stone-well", x: 800, z: 120, rotation: 0 },
+      ],
+      living: [
+        { furnitureId: "proc-broken-table", x: 400, z: 200, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 150, z: 300, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 60, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 650, z: 320, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "proc-broken-table", x: 400, z: 200, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 650, z: 300, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 740, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 320, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+// ── 8. 繁华商场 / 废弃商场 ─────────────────────────────────────────────────
+// 中庭 + 品牌店 + 扶梯走廊，1800×1000 = 180㎡。繁华：货架、收银台、购物
+// 车、绿植；废弃：倒塌货架、瓦砾、荒草、蛛网、遗弃的购物车。
+function mallLayout(): FloorplanLayout {
+  return {
+    id: "mall-f1",
+    name: "商场",
+    area: 180,
+    rooms: [
+      { room: "living", x: 0, y: 0, width: 1000, depth: 600,
+        name: "中庭", nameEn: "Atrium", icon: "🛍️",
+        doors: [{ wall: "S", pos: 500, len: 150, style: "wood_panel", h: 210 }] },
+      { room: "dining", x: 1000, y: 0, width: 800, depth: 600,
+        name: "品牌店", nameEn: "Brand Store", icon: "🏬",
+        doors: [{ wall: "W", pos: 300, len: 100, style: "wood_panel", h: 200 }] },
+      { room: "hallway", x: 0, y: 600, width: 1800, depth: 400,
+        name: "扶梯走廊", nameEn: "Escalator Corridor", icon: "🚶",
+        wallsHidden: ["N", "S", "E", "W"] },
+    ],
+  };
+}
+
+const MALL_PROSPEROUS_SET: ProjectTemplate = {
+  id: "set-mall-prosperous",
+  name: "繁华商场片场",
+  nameEn: "Prosperous Mall Set",
+  emoji: "🛍️",
+  description: "片场 · 单层 · 中庭+品牌店+扶梯走廊 · 180㎡ · 繁华商场 · 拍逛街/约会/都市戏",
+  descriptionEn: "Film set · 1F · Atrium + Brand Store + Corridor · 180㎡ · Busy shopping mall",
+  areaSqm: 180,
+  palette: ["#F5F2EC", "#2A2A2A", "#2A6AC8"],
+  styleTemplateId: "modern-villa",
+  exterior: pairExterior("#F5F2EC", "#2A2A2A"),
+  floorLayouts: [mallLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      living: [
+        { furnitureId: "proc-supermarket-shelf", x: 200, z: 150, rotation: 0 },
+        { furnitureId: "proc-supermarket-shelf", x: 500, z: 150, rotation: 0 },
+        { furnitureId: "proc-supermarket-shelf", x: 800, z: 150, rotation: 0 },
+        { furnitureId: "proc-checkout-counter", x: 500, z: 450, rotation: 0 },
+        { furnitureId: "proc-shopping-cart", x: 200, z: 450, rotation: 0 },
+        { furnitureId: "proc-shopping-cart", x: 800, z: 450, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 60, z: 550, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 940, z: 550, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 500, z: 300, rotation: 0 },
+        { furnitureId: "proc-chandelier-crystal", x: 250, z: 300, rotation: 0, mountCeiling: true },
+      ],
+      dining: [
+        { furnitureId: "proc-supermarket-shelf", x: 250, z: 150, rotation: 0 },
+        { furnitureId: "proc-supermarket-shelf", x: 550, z: 150, rotation: 0 },
+        { furnitureId: "proc-reception-desk", x: 400, z: 450, rotation: 0 },
+        { furnitureId: "proc-shopping-cart", x: 150, z: 450, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 60, z: 60, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 740, z: 60, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 400, z: 300, rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "proc-outdoor-bench", x: 300, z: 200, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 900, z: 200, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 1500, z: 200, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 600, z: 200, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 1200, z: 200, rotation: 0 },
+        { furnitureId: "proc-shopping-cart", x: 150, z: 200, rotation: 0 },
+        { furnitureId: "proc-shopping-cart", x: 1650, z: 200, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+const MALL_RUINED_SET: ProjectTemplate = {
+  id: "set-mall-ruined",
+  name: "废弃商场片场",
+  nameEn: "Abandoned Mall Set",
+  emoji: "🏚️",
+  description: "片场 · 单层 · 中庭+品牌店+扶梯走廊 · 180㎡ · 废弃商场 · 拍末世/探险/悬疑戏",
+  descriptionEn: "Film set · 1F · Atrium + Brand Store + Corridor · 180㎡ · Abandoned shopping mall",
+  areaSqm: 180,
+  palette: ["#8A8A88", "#3A3A3A", "#5A5A5A"],
+  styleTemplateId: "modern-villa",
+  exterior: pairExterior("#8A8A88", "#3A3A3A"),
+  floorLayouts: [mallLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      living: [
+        { furnitureId: "proc-toppled-shelf", x: 250, z: 150, rotation: 0 },
+        { furnitureId: "proc-toppled-shelf", x: 750, z: 150, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 500, z: 350, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 450, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 850, z: 450, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 60, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-shopping-cart", x: 500, z: 500, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 800, z: 350, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "proc-toppled-shelf", x: 400, z: 200, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 150, z: 450, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 740, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 650, z: 450, rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "proc-rubble-pile", x: 450, z: 200, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 1350, z: 200, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 200, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 900, z: 200, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1650, z: 200, rotation: 0 },
+        { furnitureId: "proc-dead-tree", x: 750, z: 200, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 1200, z: 200, rotation: 90 },
+      ],
+    },
+  ],
+};
+
+// ── 9. 豪宅 / 破败老宅 ─────────────────────────────────────────────────────
+// 客厅 + 餐厅 + 门廊，1500×900 = 135㎡。同一栋房子前后两态：豪宅是布艺
+// 沙发、水晶灯、波斯毯、大理石圆桌；破败后是断椅、瓦砾、蛛网、荒草、枯树。
+function mansionLayout(): FloorplanLayout {
+  return {
+    id: "mansion-f1",
+    name: "豪宅",
+    area: 135,
+    rooms: [
+      { room: "living", x: 0, y: 0, width: 900, depth: 600,
+        name: "客厅", nameEn: "Living Room", icon: "🛋️",
+        doors: [{ wall: "S", pos: 450, len: 120, style: "wood_panel", h: 210 }] },
+      { room: "dining", x: 900, y: 0, width: 600, depth: 600,
+        name: "餐厅", nameEn: "Dining Room", icon: "🍽️",
+        doors: [{ wall: "W", pos: 300, len: 100, style: "wood_panel", h: 200 }] },
+      { room: "hallway", x: 0, y: 600, width: 1500, depth: 300,
+        name: "门廊", nameEn: "Porch", icon: "🚪",
+        wallsHidden: ["N", "S", "E", "W"] },
+    ],
+  };
+}
+
+const MANSION_PROSPEROUS_SET: ProjectTemplate = {
+  id: "set-mansion-prosperous",
+  name: "豪宅片场",
+  nameEn: "Prosperous Mansion Set",
+  emoji: "🏰",
+  description: "片场 · 单层 · 客厅+餐厅+门廊 · 135㎡ · 豪宅 · 拍豪门/婚恋/家族戏",
+  descriptionEn: "Film set · 1F · Living Room + Dining Room + Porch · 135㎡ · Luxury mansion",
+  areaSqm: 135,
+  palette: ["#F5F0E8", "#2A2A2A", "#C8A24A"],
+  styleTemplateId: "luxury",
+  exterior: pairExterior("#F5F0E8", "#2A2A2A"),
+  floorLayouts: [mansionLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      living: [
+        { furnitureId: "sofa-modern-pillows", x: 450, z: 350, rotation: 0 },
+        { furnitureId: "sofa-armchair", x: 200, z: 350, rotation: 90 },
+        { furnitureId: "sofa-armchair", x: 700, z: 350, rotation: 270 },
+        { furnitureId: "rug-persian", x: 450, z: 350, rotation: 0 },
+        { furnitureId: "proc-chandelier-crystal", x: 450, z: 200, rotation: 0, mountCeiling: true },
+        { furnitureId: "sideboard-walnut", x: 450, z: 60, rotation: 0 },
+        { furnitureId: "proc-bluewhite-vase", x: 450, z: 60, rotation: 0, elevationY: 85 },
+        { furnitureId: "proc-gilt-chair", x: 150, z: 150, rotation: 0 },
+        { furnitureId: "proc-gilt-chair", x: 750, z: 150, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "dining-marble-round", x: 300, z: 250, rotation: 0 },
+        { furnitureId: "decor-fruit-bowl", x: 300, z: 250, rotation: 0, elevationY: 75 },
+        { furnitureId: "chair-nordic-oak", x: 300, z: 160, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 300, z: 340, rotation: 180 },
+        { furnitureId: "chair-nordic-oak", x: 210, z: 250, rotation: 90 },
+        { furnitureId: "chair-nordic-oak", x: 390, z: 250, rotation: 270 },
+        { furnitureId: "sideboard-walnut", x: 550, z: 60, rotation: 270 },
+        { furnitureId: "decor-copper-pots", x: 550, z: 60, rotation: 0, elevationY: 85 },
+        { furnitureId: "plant-monstera", x: 60, z: 540, rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "plant-monstera", x: 200, z: 150, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 1300, z: 150, rotation: 0 },
+        { furnitureId: "stone-path", x: 750, z: 150, rotation: 90 },
+        { furnitureId: "decor-vase-royal", x: 500, z: 150, rotation: 0 },
+        { furnitureId: "decor-vase-royal", x: 1000, z: 150, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+const MANSION_RUINED_SET: ProjectTemplate = {
+  id: "set-mansion-ruined",
+  name: "破败老宅片场",
+  nameEn: "Derelict Old Mansion Set",
+  emoji: "🏚️",
+  description: "片场 · 单层 · 客厅+餐厅+门廊 · 135㎡ · 破败老宅 · 拍落魄/鬼宅/悬疑/寻亲戏",
+  descriptionEn: "Film set · 1F · Living Room + Dining Room + Porch · 135㎡ · Derelict old mansion (same house, after the fall)",
+  areaSqm: 135,
+  palette: ["#8A8378", "#3A3630", "#5A5A42"],
+  styleTemplateId: "luxury",
+  exterior: pairExterior("#8A8378", "#3A3630"),
+  floorLayouts: [mansionLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      living: [
+        { furnitureId: "proc-broken-chair", x: 250, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 650, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-table", x: 450, z: 350, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 450, z: 500, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 60, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-cobweb", x: 840, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 500, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "proc-broken-table", x: 300, z: 300, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 150, z: 450, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 550, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 450, z: 500, rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "proc-dead-tree", x: 750, z: 150, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 200, z: 150, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1300, z: 150, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 1100, z: 150, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 400, z: 150, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+// ── 10. 繁华学校 / 废弃学校 ────────────────────────────────────────────────
+// 教室 + 图书角 + 走廊，1500×800 = 120㎡。繁华：六张课桌、黑板、书架、
+// 阅览桌；废弃：断裂课桌（断裂桌案同尺寸代用）、倒塌书架、瓦砾、蛛网。
+function schoolPairLayout(): FloorplanLayout {
+  return {
+    id: "school-pair-f1",
+    name: "学校",
+    area: 120,
+    rooms: [
+      { room: "study", x: 0, y: 0, width: 900, depth: 500,
+        name: "教室", nameEn: "Classroom", icon: "🏫",
+        doors: [{ wall: "S", pos: 450, len: 100, style: "wood_panel", h: 200 }] },
+      { room: "study2", x: 900, y: 0, width: 600, depth: 500,
+        name: "图书角", nameEn: "Reading Corner", icon: "📚",
+        doors: [{ wall: "W", pos: 250, len: 100, style: "wood_panel", h: 200 }] },
+      { room: "hallway", x: 0, y: 500, width: 1500, depth: 300,
+        name: "走廊", nameEn: "Corridor", icon: "🚶",
+        wallsHidden: ["N", "S", "E", "W"] },
+    ],
+  };
+}
+
+const SCHOOL_PROSPEROUS_SET: ProjectTemplate = {
+  id: "set-school-prosperous",
+  name: "繁华学校片场",
+  nameEn: "Prosperous School Set",
+  emoji: "🎒",
+  description: "片场 · 单层 · 教室+图书角+走廊 · 120㎡ · 繁华学校 · 拍校园/青春/师生戏",
+  descriptionEn: "Film set · 1F · Classroom + Reading Corner + Corridor · 120㎡ · Bustling school",
+  areaSqm: 120,
+  palette: ["#E8E4DC", "#B0503A", "#2A5A8A"],
+  styleTemplateId: "modern-villa",
+  exterior: pairExterior("#E8E4DC", "#B0503A"),
+  floorLayouts: [schoolPairLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      study: [
+        { furnitureId: "proc-blackboard", x: 450, z: 8, rotation: 0, elevationY: 90 },
+        { furnitureId: "proc-school-desk", x: 250, z: 180, rotation: 0 },
+        { furnitureId: "proc-school-desk", x: 450, z: 180, rotation: 0 },
+        { furnitureId: "proc-school-desk", x: 650, z: 180, rotation: 0 },
+        { furnitureId: "proc-school-desk", x: 250, z: 320, rotation: 0 },
+        { furnitureId: "proc-school-desk", x: 450, z: 320, rotation: 0 },
+        { furnitureId: "proc-school-desk", x: 650, z: 320, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 250, z: 250, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 450, z: 250, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 650, z: 250, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 250, z: 390, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 450, z: 390, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 650, z: 390, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 60, z: 60, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 840, z: 60, rotation: 0 },
+      ],
+      study2: [
+        { furnitureId: "proc-library-shelf", x: 150, z: 25, rotation: 0 },
+        { furnitureId: "proc-library-shelf", x: 450, z: 25, rotation: 0 },
+        { furnitureId: "dining-oak-rect", x: 300, z: 300, rotation: 0 },
+        { furnitureId: "chair-nordic-oak", x: 225, z: 300, rotation: 90 },
+        { furnitureId: "chair-nordic-oak", x: 375, z: 300, rotation: 270 },
+        { furnitureId: "plant-rubber-tree", x: 550, z: 450, rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "proc-outdoor-bench", x: 300, z: 150, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 1200, z: 150, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 600, z: 150, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 900, z: 150, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+const SCHOOL_ABANDONED_SET: ProjectTemplate = {
+  id: "set-school-abandoned",
+  name: "废弃学校片场",
+  nameEn: "Abandoned School Set",
+  emoji: "🏚️",
+  description: "片场 · 单层 · 教室+图书角+走廊 · 120㎡ · 废弃学校 · 拍悬疑/恐怖/寻访旧址戏",
+  descriptionEn: "Film set · 1F · Classroom + Reading Corner + Corridor · 120㎡ · Abandoned school",
+  areaSqm: 120,
+  palette: ["#8A8378", "#4A4038", "#5A6A3A"],
+  styleTemplateId: "modern-villa",
+  exterior: pairExterior("#8A8378", "#4A4038"),
+  floorLayouts: [schoolPairLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      study: [
+        { furnitureId: "proc-broken-table", x: 250, z: 200, rotation: 0 },
+        { furnitureId: "proc-broken-table", x: 450, z: 200, rotation: 0 },
+        { furnitureId: "proc-broken-table", x: 650, z: 200, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 250, z: 400, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 650, z: 400, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 100, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 450, z: 400, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 450, z: 300, rotation: 0 },
+      ],
+      study2: [
+        { furnitureId: "proc-toppled-shelf", x: 300, z: 150, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 300, z: 400, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 550, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 100, z: 400, rotation: 0 },
+      ],
+      hallway: [
+        { furnitureId: "proc-weed-clump", x: 200, z: 150, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1300, z: 150, rotation: 0 },
+        { furnitureId: "proc-dead-tree", x: 750, z: 150, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 1100, z: 150, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 450, z: 150, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+// ── 11. 繁华村庄 / 空心村 ──────────────────────────────────────────────────
+// 村口晒场（露天）+ 堂屋 + 灶房，1800×1200 = 216㎡。繁华：石井、粮草、
+// 火炕、木箱、油灯；空心村：人去屋空，只剩火炕、断桌、瓦砾、蛛网、荒草。
+function villageLayout(): FloorplanLayout {
+  return {
+    id: "village-f1",
+    name: "村庄",
+    area: 216,
+    rooms: [
+      { room: "yard", x: 0, y: 0, width: 1800, depth: 700,
+        name: "村口晒场", nameEn: "Village Threshing Ground", icon: "🌾",
+        wallsHidden: ["N", "S", "E", "W"] },
+      { room: "living", x: 0, y: 700, width: 900, depth: 500,
+        name: "堂屋", nameEn: "Main Hall", icon: "🏠",
+        doors: [{ wall: "N", pos: 450, len: 150, style: "wood_panel", h: 210 }] },
+      { room: "dining", x: 900, y: 700, width: 900, depth: 500,
+        name: "灶房", nameEn: "Kitchen", icon: "🍳",
+        doors: [{ wall: "N", pos: 450, len: 150, style: "wood_panel", h: 210 }] },
+    ],
+  };
+}
+
+const VILLAGE_PROSPEROUS_SET: ProjectTemplate = {
+  id: "set-village-prosperous",
+  name: "繁华村庄片场",
+  nameEn: "Prosperous Village Set",
+  emoji: "🌾",
+  description: "片场 · 单层 · 村口晒场+堂屋+灶房 · 216㎡ · 繁华村庄 · 拍乡村/乡愁/丰收戏",
+  descriptionEn: "Film set · 1F · Threshing Ground + Main Hall + Kitchen · 216㎡ · Bustling village",
+  areaSqm: 216,
+  palette: ["#E8DCC8", "#6B4A2A", "#8A9A5A"],
+  styleTemplateId: "chinese",
+  exterior: pairExterior("#E8DCC8", "#6B4A2A"),
+  floorLayouts: [villageLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      yard: [
+        { furnitureId: "proc-stone-well", x: 900, z: 350, rotation: 0 },
+        { furnitureId: "proc-millet-sheaf", x: 300, z: 200, rotation: 0 },
+        { furnitureId: "proc-millet-sheaf", x: 1500, z: 200, rotation: 0 },
+        { furnitureId: "proc-millet-sheaf", x: 300, z: 500, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 600, z: 550, rotation: 0 },
+        { furnitureId: "proc-outdoor-bench", x: 1200, z: 550, rotation: 0 },
+        { furnitureId: "storage-crate", x: 500, z: 200, rotation: 0 },
+        { furnitureId: "storage-crate", x: 1300, z: 200, rotation: 0 },
+        { furnitureId: "stone-path", x: 900, z: 550, rotation: 90 },
+        { furnitureId: "stone-path", x: 450, z: 350, rotation: 90 },
+        { furnitureId: "stone-path", x: 1350, z: 350, rotation: 90 },
+      ],
+      living: [
+        { furnitureId: "proc-kang", x: 450, z: 150, rotation: 0 },
+        { furnitureId: "proc-wood-chest", x: 150, z: 400, rotation: 0 },
+        { furnitureId: "proc-wood-chest", x: 750, z: 400, rotation: 0 },
+        { furnitureId: "proc-oil-lamp", x: 150, z: 400, rotation: 0, elevationY: 60 },
+        { furnitureId: "dining-oak-rect", x: 450, z: 380, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 375, z: 380, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 525, z: 380, rotation: 0 },
+        { furnitureId: "proc-lacquer-bowl", x: 450, z: 380, rotation: 0, elevationY: 75 },
+      ],
+      dining: [
+        { furnitureId: "proc-wood-chest", x: 450, z: 100, rotation: 0 },
+        { furnitureId: "proc-kerosene-lamp", x: 450, z: 100, rotation: 0, elevationY: 60 },
+        { furnitureId: "storage-crate", x: 150, z: 150, rotation: 0 },
+        { furnitureId: "storage-crate", x: 750, z: 150, rotation: 0 },
+        { furnitureId: "proc-rice-sheaf", x: 150, z: 400, rotation: 0 },
+        { furnitureId: "proc-rice-sheaf", x: 750, z: 400, rotation: 0 },
+        { furnitureId: "proc-wood-stool", x: 450, z: 300, rotation: 0 },
+      ],
+    },
+  ],
+};
+
+const VILLAGE_HOLLOW_SET: ProjectTemplate = {
+  id: "set-village-hollow",
+  name: "空心村片场",
+  nameEn: "Hollowed-out Village Set",
+  emoji: "🏚️",
+  description: "片场 · 单层 · 村口晒场+堂屋+灶房 · 216㎡ · 空心村 · 拍留守/归乡/乡村凋敝戏",
+  descriptionEn: "Film set · 1F · Threshing Ground + Main Hall + Kitchen · 216㎡ · Hollowed-out village",
+  areaSqm: 216,
+  palette: ["#8A8378", "#4A4038", "#6A6A3A"],
+  styleTemplateId: "chinese",
+  exterior: pairExterior("#8A8378", "#4A4038"),
+  floorLayouts: [villageLayout()],
+  yardPlan: { items: [], paths: [] },
+  furnitureOverrides: [
+    {
+      yard: [
+        { furnitureId: "proc-dead-tree", x: 900, z: 350, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 300, z: 200, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1500, z: 200, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 300, z: 500, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 1500, z: 500, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 500, z: 350, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 1300, z: 350, rotation: 0 },
+        { furnitureId: "proc-broken-wall", x: 900, z: 120, rotation: 0 },
+        { furnitureId: "proc-stone-well", x: 900, z: 600, rotation: 0 },
+      ],
+      living: [
+        { furnitureId: "proc-broken-table", x: 450, z: 350, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 200, z: 250, rotation: 0 },
+        { furnitureId: "proc-broken-chair", x: 700, z: 250, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 200, z: 420, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 100, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-kang", x: 450, z: 150, rotation: 0 },
+        { furnitureId: "proc-weed-clump", x: 750, z: 420, rotation: 0 },
+      ],
+      dining: [
+        { furnitureId: "proc-broken-table", x: 450, z: 250, rotation: 0 },
+        { furnitureId: "proc-rubble-pile", x: 650, z: 400, rotation: 0 },
+        { furnitureId: "proc-cobweb", x: 800, z: 8, rotation: 0, elevationY: 150 },
+        { furnitureId: "proc-weed-clump", x: 150, z: 400, rotation: 0 },
+      ],
+    },
+  ],
+};
+
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   MODERN_CANTILEVER_GLASS_VILLA,  // ← 参考照片专属：宽体玻璃幕墙 + 胡桃木挑檐 + 前院泳池
   CLEAR_GLASS_CURTAIN_HOME,       // ← 第二个：用户当前设计（通透玻璃幕墙 + 真实户型）
@@ -5444,4 +6772,27 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   SUPERMARKET_SET,
   KTV_SET,
   WEDDING_SET,
+  // ── 繁荣/衰败成对场景（第 5 批；11 对 = 22 个片场）──
+  TANG_CHANGAN_PROSPEROUS_SET,
+  TANG_CHANGAN_RUINED_SET,
+  SONG_BIANJING_PROSPEROUS_SET,
+  SONG_BIANJING_RUINED_SET,
+  QING_GARDEN_PROSPEROUS_SET,
+  QING_GARDEN_RUINED_SET,
+  MING_PALACE_PROSPEROUS_SET,
+  MING_PALACE_RUINED_SET,
+  ROME_PROSPEROUS_SET,
+  ROME_RUINED_SET,
+  POMPEII_PROSPEROUS_SET,
+  POMPEII_RUINED_SET,
+  LOULAN_PROSPEROUS_SET,
+  LOULAN_RUINED_SET,
+  MALL_PROSPEROUS_SET,
+  MALL_RUINED_SET,
+  MANSION_PROSPEROUS_SET,
+  MANSION_RUINED_SET,
+  SCHOOL_PROSPEROUS_SET,
+  SCHOOL_ABANDONED_SET,
+  VILLAGE_PROSPEROUS_SET,
+  VILLAGE_HOLLOW_SET,
 ];

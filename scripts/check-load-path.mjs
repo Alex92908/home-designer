@@ -21,6 +21,18 @@ const NEW_IDS = [
   "set-office-lobby", "set-office-pantry", "set-office-elevator",
   "set-dormitory", "set-hotel-room", "set-police", "set-courtroom",
   "set-bar", "set-gym", "set-supermarket", "set-ktv", "set-wedding",
+  // 成对场景（第 5 批；11 对 = 22 个片场）
+  "set-tang-changan-prosperous", "set-tang-changan-ruined",
+  "set-song-bianjing-prosperous", "set-song-bianjing-ruined",
+  "set-qing-garden-prosperous", "set-qing-garden-ruined",
+  "set-ming-palace-prosperous", "set-ming-palace-ruined",
+  "set-rome-prosperous", "set-rome-ruined",
+  "set-pompeii-prosperous", "set-pompeii-ruined",
+  "set-loulan-prosperous", "set-loulan-ruined",
+  "set-mall-prosperous", "set-mall-ruined",
+  "set-mansion-prosperous", "set-mansion-ruined",
+  "set-school-prosperous", "set-school-abandoned",
+  "set-village-prosperous", "set-village-hollow",
 ];
 const OLD_IDS = ["set-school", "set-office", "set-cafe"];
 

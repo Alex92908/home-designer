@@ -1470,6 +1470,281 @@ function buildCooktop(g: THREE.Group, w: number, d: number, h: number, c: string
   }
 }
 
+// ─── 繁荣/衰败成对场景（第 5 批）─────────────────────────────────────────
+// 衰败态通用件：瓦砾、断裂家具、蛛网、杂草、坍塌墙、焦梁、枯树、倒塌柱；
+// 繁荣态通用件：集市摊位、灯笼杆、罗马柱、牌楼、石井、太湖石、倒塌货架
+// （倒塌货架是衰败态的商场件，归在此批）。
+// 倾斜件的角度都按声明尺寸反推过：包围盒落在 w/d/h 的 15%+10cm 容差内
+// （harness 第 1 节会逐件验算）。
+
+/** 瓦砾堆：碎石板 + 断砖 + 碎瓦， deterministic 摆法（可复现）。 */
+function buildRubblePile(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const grey = std("#8A8378", 0.95);
+  const dark = std("#5A5348", 0.95);
+  const brick = std("#8A4A30", 0.9);
+  const tile = std("#4A3A30", 0.9);
+  box(g, w * 0.94, 0.08, d * 0.94, 0, 0, 0, grey); // 底板
+  const chunks: Array<[number, number, number, number, number, number, Mat]> = [
+    [0.42, 0.16, 0.4, -0.4, 0.08, -0.35, grey],
+    [0.5, 0.2, 0.44, 0.35, 0.08, -0.3, dark],
+    [0.38, 0.14, 0.36, -0.1, 0.08, 0.35, brick],
+    [0.44, 0.18, 0.4, 0.42, 0.08, 0.32, grey],
+    [0.36, 0.2, 0.34, -0.05, 0.24, -0.05, dark],
+    [0.3, 0.14, 0.3, 0.3, 0.26, 0.05, tile],
+    [0.28, 0.12, 0.26, -0.35, 0.26, 0.2, grey],
+  ];
+  for (const [sx, sy, sz, cx, y0, cz, m] of chunks) box(g, sx, sy, sz, cx, y0, cz, m);
+  cone(g, 0.16, 0.22, 0.05, 0.42, -0.35, tile); // 碎瓦尖
+  box(g, 0.3, 0.1, 0.24, 0.1, 0.42, 0.28, brick); // 顶层断砖
+}
+
+/** 断裂桌案：桌面倾斜 10° + 缺一条腿（断茬）+ 一条断腿横在桌下。 */
+function buildBrokenTable(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c || "#6A4A2A", 0.7);
+  const dark = std("#3A2A1A", 0.8);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, d), wood);
+  top.position.set(0, h - 0.05, 0);
+  top.rotation.x = -0.17; // 前沿下沉约 10°
+  add(g, top);
+  const legH = h - 0.1;
+  const hx = w / 2 - 0.06, hz = d / 2 - 0.06;
+  box(g, 0.06, legH, 0.06, -hx, 0, -hz, wood);
+  box(g, 0.06, legH, 0.06, hx, 0, -hz, wood);
+  box(g, 0.06, legH, 0.06, -hx, 0, hz, wood);
+  box(g, 0.06, 0.22, 0.06, hx, 0, hz, dark); // 断茬短桩（第四条腿只剩一截）
+  box(g, legH, 0.06, 0.06, 0.05, 0.03, -hz + 0.02, dark); // 断腿横在桌下（沿 X 向）
+}
+
+/** 断裂椅子：座面微斜 + 靠背歪斜 + 缺一条腿。 */
+function buildBrokenChair(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c || "#6A4A2A", 0.7);
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(w * 0.92, 0.05, d * 0.88), wood);
+  seat.position.set(0, 0.42, 0);
+  seat.rotation.z = 0.12; // 座面微斜
+  add(g, seat);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, 0.42, 0.04), wood);
+  back.position.set(0.02, 0.66, -d / 2 + 0.04);
+  back.rotation.z = 0.1; // 靠背歪斜
+  add(g, back);
+  box(g, 0.05, 0.42, 0.05, -w / 2 + 0.06, 0, -d / 2 + 0.06, wood);
+  box(g, 0.05, 0.42, 0.05, w / 2 - 0.06, 0, -d / 2 + 0.06, wood);
+  box(g, 0.05, 0.42, 0.05, -w / 2 + 0.06, 0, d / 2 - 0.06, wood);
+  box(g, 0.05, 0.14, 0.05, w / 2 - 0.06, 0, d / 2 - 0.06, std("#3A2A1A", 0.8)); // 断腿短桩
+}
+
+/** 蛛网：墙角扇形网（挂墙件，harness 白名单，elevationY 挂墙）。 */
+function buildCobweb(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const web = std("#D8D8D8", 0.9);
+  const cx = -w / 2 + 0.02, cy = 0.02; // 扇形原点：左下角
+  const spokes: Array<[number, number]> = [[0.35, 0.5], [0.7, 0.42], [1.05, 0.55], [1.35, 0.7], [1.57, 0.78]];
+  for (const [ang, len] of spokes) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(len, 0.012, 0.012), web);
+    m.position.set(cx + (len / 2) * Math.cos(ang), cy + (len / 2) * Math.sin(ang), 0);
+    m.rotation.z = ang;
+    add(g, m);
+  }
+  // 两道弧：用短直段近似
+  for (const r of [0.3, 0.55]) {
+    for (let i = 0; i < 4; i++) {
+      const a0 = 0.35 + i * 0.3, a1 = a0 + 0.3;
+      const mx = cx + r * Math.cos((a0 + a1) / 2), my = cy + r * Math.sin((a0 + a1) / 2);
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(r * 0.3 + 0.02, 0.01, 0.01), web);
+      seg.position.set(mx, my, 0);
+      seg.rotation.z = (a0 + a1) / 2 + Math.PI / 2;
+      add(g, seg);
+    }
+  }
+}
+
+/** 杂草丛：枯黄草叶 + 土丘。 */
+function buildWeedClump(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const dry = std("#8A8A4A", 0.95);
+  const green = std("#5A6A3A", 0.95);
+  const brown = std("#7A6A3A", 0.95);
+  box(g, w * 0.7, 0.08, d * 0.7, 0, 0, 0, std("#6A5A42", 0.95)); // 土丘
+  const blades: Array<[number, number, number, number, number, Mat]> = [
+    [0, 0, 0.6, 0, 0, dry], [0.12, 0.1, 0.5, 0.2, 0.1, green],
+    [-0.12, -0.08, 0.55, -0.18, -0.12, dry], [0.08, -0.14, 0.45, 0.15, -0.2, brown],
+    [-0.06, 0.14, 0.48, -0.1, 0.18, green], [0.16, 0.02, 0.4, 0.22, 0.05, dry],
+    [-0.16, 0.05, 0.42, -0.22, 0.08, brown], [0.03, 0.18, 0.38, 0.05, 0.25, green],
+  ];
+  for (const [bx, bz, len, tx, tz, m] of blades) {
+    const blade = new THREE.Mesh(new THREE.ConeGeometry(0.025, len, 6), m);
+    blade.position.set(bx + tx / 2, 0.06 + len / 2, bz + tz / 2);
+    blade.rotation.z = -tx / len;
+    blade.rotation.x = tz / len;
+    add(g, blade);
+  }
+}
+
+/** 坍塌墙段：矮墙基 + 高低错落的断墙头 + 露砖。 */
+function buildBrokenWall(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const plaster = std(c || "#B8A894", 0.95);
+  const brick = std("#8A4A30", 0.9);
+  box(g, w, 0.5, d * 0.9, 0, 0, 0, plaster); // 墙基
+  const tops: Array<[number, number, number]> = [
+    [-0.75, 0.4, 0.45], [-0.25, 0.6, 0.45], [0.25, 0.3, 0.45], [0.75, 0.5, 0.45],
+  ];
+  for (const [cx, th, tw] of tops) box(g, tw, th, d * 0.9, cx, 0.5, 0, plaster);
+  box(g, 0.3, 0.28, 0.02, -0.25, 0.55, d * 0.45 + 0.005, brick); // 露砖补丁
+  box(g, 0.24, 0.2, 0.02, 0.75, 0.55, d * 0.45 + 0.005, brick);
+  box(g, 0.2, 0.16, 0.02, 0.1, 0.6, -d * 0.45 - 0.005, brick);
+}
+
+/** 集市摊位：柜台 + 四柱 + 顶篷 + 前布 + 柜上货物（货物做进件内，不另摆小件）。 */
+function buildMarketStall(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std("#7A5A38", 0.7);
+  const cloth = std(c || "#A03028", 0.85);
+  const post = std("#5A3A22", 0.7);
+  box(g, w * 0.95, 0.85, d * 0.75, 0, 0, 0, wood); // 柜台
+  box(g, w * 0.95, 0.6, 0.03, 0, 0.12, d * 0.38, cloth); // 前布
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    box(g, 0.07, 2.2, 0.07, sx * (w / 2 - 0.08), 0, sz * (d / 2 - 0.08), post);
+  }
+  box(g, w, 0.06, d, 0, 2.2, 0, cloth); // 顶篷
+  box(g, w, 0.22, 0.03, 0, 1.98, d / 2 - 0.02, cloth); // 篷沿
+  const goods = ["#C03028", "#2A6A2A", "#C8A020", "#2A4A8A", "#E8E8E8", "#8B2010"];
+  for (let i = 0; i < 6; i++) {
+    const gx = -w * 0.36 + i * w * 0.145;
+    box(g, 0.22, 0.16 + (i % 3) * 0.05, 0.2, gx, 0.85, -0.1 + (i % 2) * 0.25, std(goods[i % goods.length], 0.7));
+  }
+  box(g, 0.3, 0.12, 0.24, -w * 0.3, 0.85, 0.28, std("#D8B060", 0.7));
+  box(g, 0.26, 0.18, 0.22, w * 0.32, 0.85, -0.28, std("#2A6A2A", 0.7));
+}
+
+/** 灯笼杆：立柱 + 横挑 + 垂挂红灯笼（发光）。 */
+function buildLanternPole(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const pole = std("#3A2A1A", 0.7);
+  box(g, 0.4, 0.15, 0.4, 0, 0, 0, std("#6A6A6A", 0.6)); // 底座
+  cyl(g, 0.05, 0.06, 2.9, 0, 0.15, 0, pole, 10);
+  box(g, 0.5, 0.06, 0.06, 0, 2.78, 0, pole); // 横挑
+  cyl(g, 0.008, 0.008, 0.1, 0.22, 2.68, 0, pole, 6); // 垂绳
+  const red = glow("#C03028", "#A02020", 0.9);
+  const gold = std("#C8A24A", 0.4, 0.8);
+  const body = lathe(g, [[0.001, 0], [0.14, 0.02], [0.19, 0.12], [0.19, 0.22], [0.14, 0.32], [0.001, 0.34]], red);
+  body.position.set(0.22, 2.34, 0);
+  cyl(g, 0.05, 0.05, 0.04, 0.22, 2.68, 0, gold, 8); // 顶盖
+  cyl(g, 0.05, 0.05, 0.04, 0.22, 2.3, 0, gold, 8); // 底盖
+  cyl(g, 0.02, 0.015, 0.12, 0.22, 2.18, 0, std("#E8C020", 0.7), 8); // 流苏
+}
+
+/** 罗马柱：方形基座 + 圆柱身 + 柱头。 */
+function buildRomanColumn(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const stone = std(c || "#D8D0C0", 0.85);
+  const darker = std("#B8B0A0", 0.85);
+  box(g, w, 0.25, d, 0, 0, 0, darker); // 基座
+  box(g, w * 0.85, 0.12, d * 0.85, 0, 0.25, 0, stone); // 柱础
+  cyl(g, 0.26, 0.3, 2.78, 0, 0.37, 0, stone, 20); // 柱身
+  box(g, w * 0.88, 0.18, d * 0.88, 0, 3.15, 0, stone); // 柱头
+  box(g, w * 0.98, 0.1, d * 0.98, 0, 3.33, 0, darker); // 顶板
+}
+
+/** 倒塌石柱：横倒的柱身 + 一节断鼓 + 柱头残块。 */
+function buildFallenColumn(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const stone = std(c || "#C8C0B0", 0.9);
+  const darker = std("#9A9284", 0.9);
+  const shaft = cyl(g, 0.26, 0.28, 2.2, 0, 0, 0, stone, 18);
+  shaft.rotation.z = Math.PI / 2;
+  shaft.position.set(0, 0.27, 0);
+  const drum = cyl(g, 0.26, 0.26, 0.25, 0, 0, 0, darker, 18);
+  drum.rotation.z = Math.PI / 2;
+  drum.position.set(1.35, 0.27, 0.08);
+  box(g, 0.6, 0.15, 0.6, -1.3, 0, 0.12, darker); // 柱头残块
+  box(g, 0.5, 0.12, 0.5, -1.32, 0.15, 0.12, stone);
+}
+
+/** 牌楼：双柱 + 额枋 + 双层檐顶（简化：无翘角）。 */
+function buildPailou(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const red = std(c || "#A03028", 0.6);
+  const tile = std("#3A2A1A", 0.7);
+  const gold = std("#C8A24A", 0.4, 0.8);
+  for (const sx of [-1, 1]) {
+    box(g, 0.5, 0.4, 0.5, sx * 1.7, 0, 0, std("#8A8A80", 0.9)); // 柱础石
+    box(g, 0.28, 3.6, 0.28, sx * 1.7, 0.4, 0, red); // 柱
+  }
+  box(g, w * 0.96, 0.3, 0.25, 0, 3.6, 0, red); // 额枋
+  box(g, 0.9, 0.5, 0.06, 0, 3.0, 0.14, gold); // 匾额
+  box(g, w * 0.96, 0.12, 0.9, 0, 3.95, 0, tile); // 下檐
+  box(g, w * 0.72, 0.12, 0.7, 0, 4.25, 0, tile); // 上檐
+  box(g, w * 0.72, 0.1, 0.15, 0, 4.37, 0, tile); // 正脊
+}
+
+/** 石井：石环 + 井口 + 双柱小顶。 */
+function buildStoneWell(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const stone = std(c || "#9A9488", 0.95);
+  cyl(g, 0.55, 0.58, 0.85, 0, 0, 0, stone, 20); // 井环
+  cyl(g, 0.45, 0.45, 0.02, 0, 0.8, 0, std("#1A2A30", 0.95), 20); // 井口（暗水面）
+  cyl(g, 0.58, 0.58, 0.06, 0, 0.85, 0, std("#7A7468", 0.95), 20); // 井沿
+  for (const sx of [-1, 1]) box(g, 0.08, 0.85, 0.08, sx * 0.45, 0.85, 0, std("#5A3A22", 0.7));
+  for (const sz of [-1, 1]) {
+    const slope = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.05, 0.6), std("#3A2A1A", 0.7));
+    slope.position.set(0, 1.62, sz * 0.28);
+    slope.rotation.x = sz * 0.35;
+    add(g, slope);
+  }
+}
+
+/** 焦黑断梁：横倒的焦木主梁 + 碎木。 */
+function buildBurntBeam(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const char = std("#1A1512", 0.95);
+  const ash = std("#4A4440", 0.95);
+  box(g, w * 0.93, 0.32, 0.32, 0, 0.04, 0, char); // 主梁
+  box(g, 0.5, 0.14, 0.2, -0.7, 0.36, 0.05, ash); // 碎木
+  box(g, 0.4, 0.12, 0.18, 0.6, 0.36, -0.04, char);
+  box(g, 0.34, 0.1, 0.16, 0.1, 0.36, 0.08, ash);
+}
+
+/** 枯树：主干 + 五条秃枝（无叶）。 */
+function buildDeadTree(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const bark = std(c || "#4A3A28", 0.95);
+  cyl(g, 0.07, 0.13, 2.2, 0, 0, 0, bark, 10); // 主干
+  const branches: Array<[number, number, number, number]> = [
+    // [倾角(rad), 绕Z还是绕X(0=Z,1=X), 方向, 长度]
+    [0.6, 0, 1, 1.1], [0.7, 0, -1, 1.0], [0.5, 1, 1, 1.05], [0.65, 1, -1, 0.95], [0.15, 0, 1, 0.9],
+  ];
+  for (const [ang, axis, dir, len] of branches) {
+    const br = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.04, len, 8), bark);
+    const baseY = 2.0;
+    if (axis === 0) {
+      br.rotation.z = -dir * ang;
+      br.position.set(dir * (len / 2) * Math.sin(ang), baseY + (len / 2) * Math.cos(ang), 0);
+    } else {
+      br.rotation.x = dir * ang;
+      br.position.set(0, baseY + (len / 2) * Math.cos(ang), dir * (len / 2) * Math.sin(ang));
+    }
+    add(g, br);
+  }
+}
+
+/** 太湖石：三层叠石（只绕 Y 轴转，包围盒可控）。 */
+function buildRockery(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const rock = std(c || "#8A8A80", 0.95);
+  const dark = std("#6A6A60", 0.95);
+  const s1 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.7, 0.9), rock);
+  s1.position.set(0, 0.35, 0); s1.rotation.y = 0.2; add(g, s1);
+  const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.7), dark);
+  s2.position.set(-0.05, 1.0, 0.05); s2.rotation.y = -0.3; add(g, s2);
+  const s3 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.5), rock);
+  s3.position.set(0.05, 1.55, -0.05); s3.rotation.y = 0.5; add(g, s3);
+  const s4 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.4), dark);
+  s4.position.set(0.45, 0.4, 0.25); s4.rotation.y = 0.4; add(g, s4);
+}
+
+/** 倒塌货架：侧倒的货架（板层叠落 + 商品散落）。 */
+function buildToppledShelf(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const frame = std(c || "#5A6A7A", 0.5, 0.4);
+  box(g, w * 0.95, 0.1, d * 0.85, 0, 0, 0, frame); // 倒下的侧板
+  box(g, w * 0.9, 0.05, d * 0.7, 0.04, 0.12, 0.02, frame); // 板层 ×2
+  box(g, w * 0.9, 0.05, d * 0.7, -0.03, 0.2, -0.02, frame);
+  box(g, 0.08, 0.3, d * 0.7, -w / 2 + 0.1, 0.1, 0, frame); // 立柱残段
+  box(g, 0.08, 0.3, d * 0.7, w / 2 - 0.12, 0.1, 0, frame);
+  const goods = ["#C03028", "#2A6A2A", "#C8A020", "#E8E8E8"];
+  for (let i = 0; i < 5; i++) {
+    const gx = -w * 0.35 + i * w * 0.18;
+    box(g, 0.2, 0.14 + (i % 2) * 0.06, 0.18, gx, 0.26, (i % 2 === 0 ? 0.28 : -0.28), std(goods[i % goods.length], 0.7));
+  }
+}
+
 // ─── 登记 ──────────────────────────────────────────────────────────────────
 
 const PROCEDURAL_BUILDERS: Record<string, Builder> = {
@@ -1550,6 +1825,23 @@ const PROCEDURAL_BUILDERS: Record<string, Builder> = {
   "proc-wedding-arch": buildWeddingArch,
   "proc-wedding-stage": buildWeddingStage,
   "proc-cooktop": buildCooktop,
+  // ── 繁荣/衰败成对场景（第 5 批）──
+  "proc-rubble-pile": buildRubblePile,
+  "proc-broken-table": buildBrokenTable,
+  "proc-broken-chair": buildBrokenChair,
+  "proc-cobweb": buildCobweb,
+  "proc-weed-clump": buildWeedClump,
+  "proc-broken-wall": buildBrokenWall,
+  "proc-market-stall": buildMarketStall,
+  "proc-lantern-pole": buildLanternPole,
+  "proc-roman-column": buildRomanColumn,
+  "proc-fallen-column": buildFallenColumn,
+  "proc-pailou": buildPailou,
+  "proc-stone-well": buildStoneWell,
+  "proc-burnt-beam": buildBurntBeam,
+  "proc-dead-tree": buildDeadTree,
+  "proc-rockery": buildRockery,
+  "proc-toppled-shelf": buildToppledShelf,
 };
 
 /** 全部程序化家具 id（目录/模板/渲染分流/harness 共用）。 */
