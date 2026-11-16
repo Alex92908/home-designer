@@ -4,6 +4,12 @@
  * CinematicDirector —— 分镜工作台 + 多风格录制 + 演员走位（云横店 M1-M3）
  * ＋ 导演台 MVP：一键搭片场、室内机位、具名角色走位、轴线、打斗单节 beat、
  * 9:16 取景框、带角色信息的控制包导出。
+ * ＋ 动作系统（action system）：30 个动作的注册表（actions.ts，含特技/
+ * 特殊位置：跳/爬/贴/骑/御剑/扫帚/威亚/躲藏/躺/轻功/索降/游泳）、
+ * 打斗编舞（fightChoreo.ts：phrase × beat + reset + 安全字段）、
+ * 动态走位（waypoints，带高度 y）、动作时间轴、拍摄模拟（SimPlayer）、
+ * 文字催动动作（actionParser.ts，规则解析）、特技道具（stuntProps.ts，
+ * 程序化几何）。控制包 storyboard.json v4。
  *
  * 产品原子是 Shot（镜头）：机位预设 + 时长 + 提示词。用户排一组镜头（分镜），
  * 勾选导出风格（实景/白模/深度），一键批量拍摄——队列按「镜头 × 风格」展开，
@@ -33,17 +39,60 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
 import {
   CINE_PRESETS, RENDER_STYLES, getCinePreset, makeShot, makeActor,
-  actorDisplayName, actorFacing, actorAction, ACTOR_ACTIONS, shotCrossesAxis,
+  actorDisplayName, actorFacing, actorAction, actorTargetAt, shotCrossesAxis,
   type Shot, type Actor, type ActorAction, type RenderStyle, type SceneEnvelope,
 } from "@/lib/cinematic";
+import {
+  ACTION_REGISTRY, actionDef, actorStateAt, makeSegment, makeWaypoint,
+  segmentAt, type ActionId, type ActionSegment, type Waypoint,
+} from "@/lib/actions";
+import {
+  makeFight, makeBeat, makePhrase, validateFight, fightDuration,
+  fightBeatAt, evaluateFightState, fightCameraSample,
+  type Fight, type FightBeat,
+} from "@/lib/fightChoreo";
+import {
+  buildSceneContext, parseActionText, SUPPORTED_PATTERNS,
+  type ParsedInstruction, type SceneContext,
+} from "@/lib/actionParser";
+import {
+  STUNT_PROP_LIST, STUNT_ACTION_PROPS, makeStuntProp, stuntPropDef,
+  type StuntProp, type StuntPropKind,
+} from "@/lib/stuntProps";
+import { StuntPropMesh, FlyingVehicleMesh, WireMesh } from "@/components/StuntProps";
 import { SCENE_SETS } from "@/lib/sceneSets";
 import { matchProjectTemplate } from "@/lib/matchProjectTemplate";
 import { useDesignerStore } from "@/lib/store";
 import { runRender } from "@/lib/useAiRender";
 import { getAiRenderConfig, localizeWorkflowName, type RenderWorkflow } from "@/lib/aiRenderConfig";
 
-/** 播放头（模块级可变对象，ActorsLayer 在 useFrame 里直读，避免每帧 setState） */
-export const cinePlayhead = { t: 0, active: false };
+/** 播放头（模块级可变对象，ActorsLayer 在 useFrame 里直读，避免每帧 setState）。
+ *  timeSec 为本镜内的秒数；shotId 供 ActorsLayer 找本镜的打斗编舞。 */
+export const cinePlayhead = { t: 0, timeSec: 0, shotDuration: 8, shotId: null as string | null, active: false };
+
+/** 拍摄模拟时钟（模块级，SimPlayer 写、ActorsLayer 读；UI 用的节流状态在 store） */
+export const simClock = { timeSec: 0, shotIdx: 0, shotDuration: 8, shotId: null as string | null, active: false, playing: false };
+
+/** 场景包络（SimPlayer 用）：从 designer store 的 floorPlans 现算 */
+export function envelopeFromStore(): SceneEnvelope {
+  const fps = useDesignerStore.getState().floorPlans ?? [];
+  let W = 12, D = 10;
+  for (const fp of fps) {
+    const rooms = fp.enabledRooms ?? [];
+    const xs: number[] = [], zs: number[] = [];
+    for (const r of rooms) {
+      const lay = fp.roomLayout?.[r], dims = fp.roomDimensions?.[r];
+      if (!lay || !dims) continue;
+      xs.push(lay.x, lay.x + dims.width);
+      zs.push(lay.y, lay.y + dims.depth);
+    }
+    if (xs.length) {
+      W = Math.max(W, (Math.max(...xs) - Math.min(...xs)) / 100);
+      D = Math.max(D, (Math.max(...zs) - Math.min(...zs)) / 100);
+    }
+  }
+  return { W, D, floors: Math.max(1, fps.length) };
+}
 
 interface QueueItem { shot: Shot; style: RenderStyle; }
 
@@ -74,6 +123,45 @@ interface CineState {
   cancelAddActor: () => void;
   removeActor: (id: string) => void;
   updateActor: (id: string, patch: Partial<Actor>) => void;
+
+  /** 动态走位：点选加路点（持久化在 actor.waypoints 里） */
+  waypointMode: string | null; // 正在编路点的演员 id
+  beginWaypointMode: (actorId: string) => void;
+  cancelWaypointMode: () => void;
+  addWaypoint: (actorId: string, p: [number, number]) => void;
+  updateWaypoint: (actorId: string, idx: number, patch: Partial<Waypoint>) => void;
+  removeWaypoint: (actorId: string, idx: number) => void;
+
+  /** 动作时间轴（持久化在 actor.timeline 里） */
+  addTimelineSegment: (actorId: string, seg: ActionSegment) => void;
+  updateTimelineSegment: (actorId: string, segId: string, patch: Partial<ActionSegment>) => void;
+  removeTimelineSegment: (actorId: string, segId: string) => void;
+
+  /** 打斗编舞（持久化；每段 fight 挂在一个 shot 上） */
+  fights: Fight[];
+  addFight: (shotId: string) => void;
+  removeFight: (id: string) => void;
+  updateFight: (id: string, patch: Partial<Fight>) => void;
+  addPhrase: (fightId: string) => void;
+  removePhrase: (fightId: string, phraseId: string) => void;
+  addBeat: (fightId: string, phraseId: string) => void;
+  updateBeat: (fightId: string, phraseId: string, beatId: string, patch: Partial<FightBeat>) => void;
+  removeBeat: (fightId: string, phraseId: string, beatId: string) => void;
+
+  /** 特技道具（持久化） */
+  stuntProps: StuntProp[];
+  propPlaceKind: StuntPropKind | null; // 正在点选放道具的种类
+  beginPropPlace: (kind: StuntPropKind) => void;
+  cancelPropPlace: () => void;
+  placeStuntProp: (p: [number, number]) => void;
+  addStuntProp: (kind: StuntPropKind, x: number, z: number) => StuntProp;
+  removeStuntProp: (id: string) => void;
+
+  /** 拍摄模拟（易失；UI 用的节流状态，逐帧时钟在 simClock） */
+  sim: { active: boolean; playing: boolean; shotIdx: number; timeSec: number } | null;
+  startSim: () => void;
+  stopSim: () => void;
+  setSim: (patch: Partial<{ playing: boolean; shotIdx: number; timeSec: number }>) => void;
 
   /** 9:16 竖屏取景框（易失，画布上的安全框覆盖层） */
   show916: boolean;
@@ -114,7 +202,10 @@ export const useCineStore = create<CineState>()(
         const first = get().actors[0];
         set({ shots: [...get().shots, makeShot(presetId, first ? { targetActorId: first.id } : undefined)] });
       },
-      removeShot: (id) => set({ shots: get().shots.filter((s) => s.id !== id) }),
+      removeShot: (id) => set({
+        shots: get().shots.filter((s) => s.id !== id),
+        fights: get().fights.filter((f) => f.shotId !== id), // 挂在该镜上的打斗一起清掉
+      }),
       moveShot: (id, dir) => {
         const arr = [...get().shots];
         const i = arr.findIndex((s) => s.id === id);
@@ -160,9 +251,173 @@ export const useCineStore = create<CineState>()(
         });
       },
       cancelAddActor: () => set({ addActorMode: false, pendingFrom: null, replaceActorId: null }),
-      removeActor: (id) => set({ actors: get().actors.filter((a) => a.id !== id) }),
+      removeActor: (id) => set({
+        actors: get().actors.filter((a) => a.id !== id),
+        // 该演员参与的打斗：把他从攻/守方里摘掉；没人了的打斗删掉
+        fights: get().fights
+          .map((f) => ({
+            ...f,
+            attackerId: f.attackerId === id ? "" : f.attackerId,
+            defenderId: f.defenderId === id ? "" : f.defenderId,
+          }))
+          .filter((f) => f.attackerId && f.defenderId),
+      }),
       updateActor: (id, patch) =>
         set({ actors: get().actors.map((a) => (a.id === id ? { ...a, ...patch } : a)) }),
+
+      // ── 动态走位 ──
+      waypointMode: null,
+      beginWaypointMode: (actorId) => set({ waypointMode: actorId, addActorMode: false, propPlaceKind: null }),
+      cancelWaypointMode: () => set({ waypointMode: null }),
+      addWaypoint: (actorId, p) => {
+        const a = get().actors.find((x) => x.id === actorId);
+        if (!a) return;
+        const wps = (a.waypoints ?? []).slice().sort((x, y) => x.t - y.t);
+        // 首个路点：若演员还没有走位时间轴，先以 from→to 建两个点（t=0 / t=镜长）
+        let base = wps;
+        if (!base.length) {
+          const dur = get().shots[0]?.duration ?? 8;
+          base = [
+            makeWaypoint(a.from[0], a.from[1], 0),
+            makeWaypoint(a.to[0], a.to[1], dur),
+          ];
+        }
+        const t = base.length ? base[base.length - 1].t + 2 : 0;
+        const next = [...base, makeWaypoint(p[0], p[1], t)];
+        get().updateActor(actorId, { waypoints: next });
+      },
+      updateWaypoint: (actorId, idx, patch) => {
+        const a = get().actors.find((x) => x.id === actorId);
+        if (!a || !a.waypoints) return;
+        const next = a.waypoints
+          .map((w, i) => (i === idx ? { ...w, ...patch } : w))
+          .sort((x, y) => x.t - y.t); // 改时间后保持按时间排序
+        get().updateActor(actorId, { waypoints: next });
+      },
+      removeWaypoint: (actorId, idx) => {
+        const a = get().actors.find((x) => x.id === actorId);
+        if (!a || !a.waypoints) return;
+        const next = a.waypoints.filter((_, i) => i !== idx);
+        get().updateActor(actorId, { waypoints: next.length >= 2 ? next : undefined });
+      },
+
+      // ── 动作时间轴 ──
+      addTimelineSegment: (actorId, seg) => {
+        const a = get().actors.find((x) => x.id === actorId);
+        if (!a) return;
+        get().updateActor(actorId, { timeline: [...(a.timeline ?? []), seg] });
+      },
+      updateTimelineSegment: (actorId, segId, patch) => {
+        const a = get().actors.find((x) => x.id === actorId);
+        if (!a || !a.timeline) return;
+        get().updateActor(actorId, {
+          timeline: a.timeline.map((s) => (s.id === segId ? { ...s, ...patch } : s)),
+        });
+      },
+      removeTimelineSegment: (actorId, segId) => {
+        const a = get().actors.find((x) => x.id === actorId);
+        if (!a || !a.timeline) return;
+        get().updateActor(actorId, { timeline: a.timeline.filter((s) => s.id !== segId) });
+      },
+
+      // ── 打斗编舞 ──
+      fights: [],
+      addFight: (shotId) => {
+        const st = get();
+        const atk = st.actors[0], def = st.actors[1] ?? st.actors[0];
+        if (!atk || !def) return;
+        const f: Fight = {
+          ...makeFight(atk.id, def.id, { shotId }),
+          phrases: [makePhrase([
+            makeBeat("punch", atk.id, def.id, { duration: 0.8, reaction: "后仰" }),
+            makeBeat("block", atk.id, def.id, { duration: 0.8 }),
+            makeBeat("punch", atk.id, def.id, { duration: 0.8, reaction: "踉跄" }),
+          ])],
+        };
+        set({ fights: [...st.fights, f] });
+      },
+      removeFight: (id) => set({ fights: get().fights.filter((f) => f.id !== id) }),
+      updateFight: (id, patch) =>
+        set({ fights: get().fights.map((f) => (f.id === id ? { ...f, ...patch } : f)) }),
+      addPhrase: (fightId) => set({
+        fights: get().fights.map((f) =>
+          f.id === fightId ? { ...f, phrases: [...f.phrases, makePhrase([makeBeat("punch", f.attackerId, f.defenderId, {})])] } : f),
+      }),
+      removePhrase: (fightId, phraseId) => set({
+        fights: get().fights.map((f) =>
+          f.id === fightId ? { ...f, phrases: f.phrases.filter((p) => p.id !== phraseId) } : f),
+      }),
+      addBeat: (fightId, phraseId) => set({
+        fights: get().fights.map((f) =>
+          f.id === fightId
+            ? { ...f, phrases: f.phrases.map((p) => (p.id === phraseId ? { ...p, beats: [...p.beats, makeBeat("punch", f.attackerId, f.defenderId, {})] } : p)) }
+            : f),
+      }),
+      updateBeat: (fightId, phraseId, beatId, patch) => set({
+        fights: get().fights.map((f) =>
+          f.id === fightId
+            ? { ...f, phrases: f.phrases.map((p) => (p.id === phraseId ? { ...p, beats: p.beats.map((b) => (b.id === beatId ? { ...b, ...patch } : b)) } : p)) }
+            : f),
+      }),
+      removeBeat: (fightId, phraseId, beatId) => set({
+        fights: get().fights.map((f) =>
+          f.id === fightId
+            ? { ...f, phrases: f.phrases.map((p) => (p.id === phraseId ? { ...p, beats: p.beats.filter((b) => b.id !== beatId) } : p)) }
+            : f),
+      }),
+
+      // ── 特技道具 ──
+      stuntProps: [],
+      propPlaceKind: null,
+      beginPropPlace: (kind) => set({ propPlaceKind: kind, addActorMode: false, waypointMode: null }),
+      cancelPropPlace: () => set({ propPlaceKind: null }),
+      placeStuntProp: (p) => {
+        const kind = get().propPlaceKind;
+        if (!kind) return;
+        get().addStuntProp(kind, p[0], p[1]);
+        set({ propPlaceKind: null });
+      },
+      addStuntProp: (kind, x, z) => {
+        const prop = makeStuntProp(kind, x, z);
+        set({ stuntProps: [...get().stuntProps, prop] });
+        return prop;
+      },
+      removeStuntProp: (id) => set({ stuntProps: get().stuntProps.filter((p) => p.id !== id) }),
+
+      // ── 拍摄模拟 ──
+      sim: null,
+      startSim: () => {
+        const st = get();
+        if (!st.shots.length) return;
+        simClock.active = true;
+        simClock.playing = true;
+        simClock.shotIdx = 0;
+        simClock.timeSec = 0;
+        simClock.shotDuration = st.shots[0].duration;
+        simClock.shotId = st.shots[0].id;
+        set({ sim: { active: true, playing: true, shotIdx: 0, timeSec: 0 } });
+      },
+      stopSim: () => {
+        simClock.active = false;
+        simClock.playing = false;
+        set({ sim: null });
+      },
+      setSim: (patch) => {
+        const cur = get().sim;
+        if (!cur) return;
+        const next = { ...cur, ...patch };
+        // 同步逐帧时钟（scrub 时）
+        if (patch.shotIdx !== undefined || patch.timeSec !== undefined) {
+          const shots = get().shots;
+          const shot = shots[next.shotIdx];
+          simClock.shotIdx = next.shotIdx;
+          simClock.timeSec = next.timeSec;
+          simClock.shotDuration = shot?.duration ?? 8;
+          simClock.shotId = shot?.id ?? null;
+        }
+        if (patch.playing !== undefined) simClock.playing = patch.playing;
+        set({ sim: next });
+      },
 
       show916: false,
       toggle916: () => set({ show916: !get().show916 }),
@@ -199,8 +454,8 @@ export const useCineStore = create<CineState>()(
       _finish: () => set({ queue: null, queueIdx: 0, progress: 0 }),
       _setProgress: (p) => set({ progress: p }),
     }),
-    // 只持久化创作数据；录制态/首帧/生成态易失
-    { name: "zhuya-cine-shots-v1", partialize: (s) => ({ shots: s.shots, actors: s.actors, styles: s.styles, genWorkflowId: s.genWorkflowId }) },
+    // 只持久化创作数据；录制态/首帧/生成态/模拟态易失
+    { name: "zhuya-cine-shots-v1", partialize: (s) => ({ shots: s.shots, actors: s.actors, styles: s.styles, genWorkflowId: s.genWorkflowId, fights: s.fights, stuntProps: s.stuntProps }) },
   ),
 );
 
@@ -353,6 +608,40 @@ const GEN_PHASE_ZH: Record<string, string> = {
   done: "完成", error: "失败", idle: "—",
 };
 
+/** 一镜的机位采样（录制与拍摄模拟共用）：预设机位框住 target 演员
+ *  （走位时间轴 + 动作时间轴 + 高度）；本镜有打斗编舞且正在播时，
+ *  beat 的机位（默认 punch-axis cheat）覆盖预设机位。 */
+function applyShotCamera(cam: THREE.PerspectiveCamera, shot: Shot, timeSec: number, env: SceneEnvelope) {
+  const preset = getCinePreset(shot.presetId);
+  if (!preset) return;
+  const st = useCineStore.getState();
+  const actor = st.actors.find((a) => a.id === shot.targetActorId) ?? st.actors[0];
+  const target = actor ? actorTargetAt(actor, shot.duration) : undefined;
+  const t = Math.min(1, Math.max(0, timeSec / Math.max(0.1, shot.duration)));
+  let s = preset.sample(t, env, target);
+  const fight = st.fights.find((f) => f.shotId === shot.id);
+  if (fight && actor) {
+    const atk = st.actors.find((a) => a.id === fight.attackerId);
+    const def = st.actors.find((a) => a.id === fight.defenderId);
+    if (atk && def) {
+      const atkBase = actorStateAt(atk, 0, shot.duration);
+      const defBase = actorStateAt(def, 0, shot.duration);
+      const fs = evaluateFightState(fight, timeSec, [atkBase.x, atkBase.z, atkBase.elev], [defBase.x, defBase.z, defBase.elev]);
+      const cur = fightBeatAt(fight, timeSec);
+      if (fs.active && cur && cur.beat.camera !== "wide") {
+        const camSample = fightCameraSample(cur.beat.camera ?? "cheat", [fs.attacker.x, fs.attacker.z], [fs.defender.x, fs.defender.z]);
+        if (camSample) {
+          s = { pos: [camSample.pos[0], camSample.pos[1], camSample.pos[2]], lookAt: [camSample.lookAt[0], camSample.lookAt[1], camSample.lookAt[2]], fov: 45 };
+        }
+      }
+    }
+  }
+  cam.position.set(...s.pos);
+  cam.lookAt(...s.lookAt);
+  if (cam.fov !== s.fov) { cam.fov = s.fov; cam.updateProjectionMatrix(); }
+  cam.updateMatrixWorld();
+}
+
 /** Canvas 内组件：镜头×风格队列驱动相机 + 录制 + 产物下载。 */
 export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
   const queue = useCineStore((s) => s.queue);
@@ -404,19 +693,12 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
     };
 
     const applySample = (t: number) => {
-      // 室内机位要框人：本镜的 targetActorId → 演员（缺省第一个演员）；
-      // 室外预设忽略第三个参数（向后兼容）。
-      const st = useCineStore.getState();
-      const actor = st.actors.find((a) => a.id === item.shot.targetActorId) ?? st.actors[0];
-      const target = actor
-        ? { from: actor.from, to: actor.to, facing: actorFacing(actor) }
-        : undefined;
-      const s = preset.sample(t, envRef.current, target);
-      cam.position.set(...s.pos);
-      cam.lookAt(...s.lookAt);
-      if (cam.fov !== s.fov) { cam.fov = s.fov; cam.updateProjectionMatrix(); }
-      cam.updateMatrixWorld();
+      const timeSec = t * item.shot.duration;
+      applyShotCamera(cam, item.shot, timeSec, envRef.current);
       cinePlayhead.t = t;
+      cinePlayhead.timeSec = timeSec;
+      cinePlayhead.shotDuration = item.shot.duration;
+      cinePlayhead.shotId = item.shot.id;
       cinePlayhead.active = true;
     };
 
@@ -452,12 +734,15 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
         const stylesUsed = st.styles;
         const meta = {
           tool: "zhuya-cinematic",
-          version: 3,
+          version: 4,
           createdAt: new Date().toISOString(),
           scene: envRef.current,
           fps: 30,
           styles: stylesUsed,
-          // 导演台 v3：演员带名字/角色/朝向/动作（旧存档缺失字段按默认值解析）
+          // 导演台 v4：演员带名字/角色/朝向/默认动作 + 走位时间轴 + 动作时间轴；
+          // 打斗编舞（phrases/beats/reset/安全）与特技道具单列。
+          // v3 字段全部保留——旧存档（无 waypoints/timeline/fights/stuntProps）
+          // 按默认值解析，绝不因升级丢数据。
           actors: st.actors.map((a, i) => ({
             id: a.id,
             name: actorDisplayName(a, i),
@@ -466,6 +751,39 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
             to: a.to,
             facing: actorFacing(a),
             action: actorAction(a),
+            waypoints: a.waypoints ?? [],
+            timeline: a.timeline ?? [],
+          })),
+          fights: st.fights.map((f) => ({
+            id: f.id,
+            name: f.name,
+            shotId: f.shotId,
+            attackerId: f.attackerId,
+            defenderId: f.defenderId,
+            duration: fightDuration(f),
+            safety: f.safety,
+            phrases: f.phrases.map((p) => ({
+              id: p.id,
+              reset: p.reset ?? 1.0,
+              beats: p.beats.map((b) => ({
+                id: b.id,
+                move: b.move,
+                attackerId: b.attackerId ?? f.attackerId,
+                defenderId: b.defenderId ?? f.defenderId,
+                duration: b.duration,
+                reaction: b.reaction ?? "",
+                camera: b.camera ?? "cheat",
+              })),
+            })),
+          })),
+          stuntProps: st.stuntProps.map((p) => ({
+            id: p.id,
+            kind: p.kind,
+            name: stuntPropDef(p.kind)?.nameZh ?? p.kind,
+            x: p.x,
+            z: p.z,
+            rotation: p.rotation ?? 0,
+            scale: p.scale ?? 1,
           })),
           shots: st.shots.map((s, i) => {
             const p = getCinePreset(s.presetId)!;
@@ -494,6 +812,8 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
                 role: a.role ?? "",
                 action: actorAction(a),
               })),
+              // 本镜的打斗编舞 id（无则 null）
+              fights: st.fights.filter((f) => f.shotId === s.id).map((f) => f.id),
               files: filesByStyle,
             };
           }),
@@ -565,29 +885,129 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
   return null;
 }
 
-/** 打斗单节 beat：逼近→收→再扑→收（t∈[0,1] 上的冲量系数曲线）。
- *  纯摆拍：位置在"朝对手冲出 70% → 收回 → 再扑 80% → 收"之间往复，
- *  无接触、无编舞时间轴——完整 beats/phrases/reset 系统不在 MVP 范围。 */
-const FIGHT_BEAT: Array<[number, number]> = [[0, 0], [0.25, 0.7], [0.5, 0.2], [0.75, 0.8], [1, 0.1]];
-function fightBeat(t: number): number {
-  for (let i = 1; i < FIGHT_BEAT.length; i++) {
-    if (t <= FIGHT_BEAT[i][0]) {
-      const [t0, v0] = FIGHT_BEAT[i - 1];
-      const [t1, v1] = FIGHT_BEAT[i];
-      return v0 + (v1 - v0) * ((t - t0) / (t1 - t0));
+/** Canvas 内组件：拍摄模拟（previs 回放，不是视频导出）。
+ *  按分镜顺序播：每镜机位移到该镜预设，演员走走位时间轴 + 动作时间轴 +
+ *  打斗编舞，播完本镜时长切下一镜。播放/暂停/ scrub 由面板控制
+ *  （store.sim 节流状态 + 模块级 simClock 逐帧时钟）。
+ *  开始时备份用户视角并禁用轨道控制，停止时还原。 */
+export function SimPlayer() {
+  const sim = useCineStore((s) => s.sim);
+  const { camera, controls, invalidate } = useThree();
+  const savedRef = useRef<{
+    pos: THREE.Vector3; quat: THREE.Quaternion; fov: number; target: THREE.Vector3 | null;
+  } | null>(null);
+  const envRef = useRef<SceneEnvelope>({ W: 12, D: 10, floors: 1 });
+  const lastTickRef = useRef(-1);
+  // 经 ref 间接取相机/轨道控制：直接改 useThree 返回值会触发
+  // react-hooks/immutability lint（CameraPathPlayer 已有同类报错，不再新增）。
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<{ enabled: boolean; target: THREE.Vector3; update: () => void } | null>(null);
+  useEffect(() => {
+    cameraRef.current = camera as THREE.PerspectiveCamera;
+    controlsRef.current = controls as unknown as { enabled: boolean; target: THREE.Vector3; update: () => void } | null;
+  }, [camera, controls]);
+
+  useEffect(() => {
+    const cam = cameraRef.current;
+    const ctl = controlsRef.current;
+    if (!cam) return;
+    if (sim?.active) {
+      savedRef.current = {
+        pos: cam.position.clone(),
+        quat: cam.quaternion.clone(),
+        fov: cam.fov,
+        target: ctl ? ctl.target.clone() : null,
+      };
+      if (ctl) ctl.enabled = false;
+      envRef.current = envelopeFromStore();
+      lastTickRef.current = -1;
+    } else if (savedRef.current) {
+      const saved = savedRef.current;
+      cam.position.copy(saved.pos);
+      cam.quaternion.copy(saved.quat);
+      if (cam.fov !== saved.fov) { cam.fov = saved.fov; cam.updateProjectionMatrix(); }
+      if (ctl) {
+        if (saved.target) ctl.target.copy(saved.target);
+        ctl.enabled = true;
+        ctl.update();
+      }
+      savedRef.current = null;
+      invalidate();
     }
-  }
-  return FIGHT_BEAT[FIGHT_BEAT.length - 1][1];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sim?.active]);
+
+  useFrame((_, delta) => {
+    if (!sim?.active) return;
+    const st = useCineStore.getState();
+    if (sim.playing) {
+      const shot = st.shots[simClock.shotIdx];
+      if (!shot) { st.stopSim(); return; }
+      simClock.timeSec += Math.min(delta, 0.1); // 掉帧时不跳太远
+      if (simClock.timeSec >= shot.duration) {
+        if (simClock.shotIdx + 1 >= st.shots.length) {
+          st.stopSim();
+          return;
+        }
+        simClock.shotIdx += 1;
+        simClock.timeSec = 0;
+        const next = st.shots[simClock.shotIdx];
+        simClock.shotDuration = next.duration;
+        simClock.shotId = next.id;
+      }
+      // 节流同步到 store（UI 用）：每 0.1s 或换镜时
+      const tick = Math.floor(simClock.timeSec * 10);
+      if (tick !== lastTickRef.current || simClock.shotIdx !== st.sim?.shotIdx) {
+        lastTickRef.current = tick;
+        st.setSim({ shotIdx: simClock.shotIdx, timeSec: simClock.timeSec });
+      }
+    }
+    const shot = st.shots[simClock.shotIdx];
+    if (shot) {
+      applyShotCamera(camera as THREE.PerspectiveCamera, shot, simClock.timeSec, envRef.current);
+      invalidate();
+    }
+  });
+
+  return null;
 }
 
-/** Canvas 内组件：演员放置（地面点两下：起点→终点）+ 渲染 + 录制时行走。
+/** 路点编号标牌（CanvasTexture，缓存复用） */
+const wpLabelCache = new Map<number, THREE.CanvasTexture>();
+function waypointLabelTex(n: number): THREE.CanvasTexture {
+  const cached = wpLabelCache.get(n);
+  if (cached) return cached;
+  const c = document.createElement("canvas");
+  c.width = 128; c.height = 128;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#2dd4bf";
+  g.beginPath(); g.arc(64, 64, 56, 0, Math.PI * 2); g.fill();
+  g.fillStyle = "#0f172a";
+  g.font = "bold 64px sans-serif";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText(String(n), 64, 68);
+  const tex = new THREE.CanvasTexture(c);
+  wpLabelCache.set(n, tex);
+  return tex;
+}
+
+/** Canvas 内组件：演员放置（地面点两下：起点→终点）+ 渲染 + 播放时表演。
  *  拖拽调整：按住演员拖动，from/to 一起平移（期间禁用轨道控制，松手恢复）。
- *  轴线：前两位演员起点连线（180 度轴线，橙色虚线 + "轴线"标牌）。 */
+ *  轴线：前两位演员起点连线（180 度轴线，橙色虚线 + "轴线"标牌）。
+ *  动作系统：每帧用 actorStateAt（走位时间轴 + 动作时间轴 + 高度）算姿态，
+ *  本镜有打斗编舞时参与者改用 evaluateFightState；手臂/飞行载具/威亚
+ *  按当前段切换。路点模式点地面加路点，拖路点标牌移动它。 */
 export function ActorsLayer() {
   const actors = useCineStore((s) => s.actors);
   const addMode = useCineStore((s) => s.addActorMode);
   const pendingFrom = useCineStore((s) => s.pendingFrom);
+  const waypointMode = useCineStore((s) => s.waypointMode);
+  const propPlaceKind = useCineStore((s) => s.propPlaceKind);
+  const stuntProps = useCineStore((s) => s.stuntProps);
   const groupRefs = useRef(new Map<string, THREE.Group>());
+  const armRefs = useRef(new Map<string, { l: THREE.Group | null; r: THREE.Group | null }>());
+  const vehicleRefs = useRef(new Map<string, { sword: THREE.Group | null; broom: THREE.Group | null; flyboard: THREE.Group | null; wire: THREE.Group | null }>());
   const { invalidate, controls } = useThree();
   // 拖拽时禁用轨道控制：经 ref 间接改 enabled（直接改 useThree 返回值会
   // 触发 react-hooks/immutability lint；本文件旧代码已有同类报错，不再新增）。
@@ -599,8 +1019,13 @@ export function ActorsLayer() {
   };
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const dragRef = useRef<{
-    id: string; start: [number, number];
-    origFrom: [number, number]; origTo: [number, number];
+    kind: "actor" | "waypoint";
+    id: string;
+    wpIdx?: number;
+    start: [number, number];
+    origFrom: [number, number];
+    origTo: [number, number];
+    origWp?: Waypoint;
   } | null>(null);
 
   // 轴线标牌（CanvasTexture 精灵，离线可用，不依赖在线字体）
@@ -644,74 +1069,77 @@ export function ActorsLayer() {
     return () => window.removeEventListener("keydown", onKey);
   }, [addMode]);
 
-  // 行走/跑/打斗：播放头驱动（frameloop=demand 下由录制循环的 invalidate 带动）
+  // 动作系统：每帧按镜内时间算每个演员的状态（走位时间轴 + 动作时间轴 +
+  // 高度 + 姿态），本镜有打斗编舞时参与者改用编舞状态。
+  // 时间源：拍摄模拟优先，其次录制播放头，否则静止（t=0）。
+  // frameloop=demand 下由录制循环 / 模拟循环的 invalidate 带动。
   useFrame(() => {
-    const ph = cinePlayhead;
-    const list = useCineStore.getState().actors;
-    const t = ph.active ? ph.t : 0;
+    const st = useCineStore.getState();
+    const list = st.actors;
+    let timeSec = 0, shotDuration = 8, shotId: string | null = null;
+    if (simClock.active) {
+      timeSec = simClock.timeSec; shotDuration = simClock.shotDuration; shotId = simClock.shotId;
+    } else if (cinePlayhead.active) {
+      timeSec = cinePlayhead.timeSec; shotDuration = cinePlayhead.shotDuration; shotId = cinePlayhead.shotId;
+    }
+    const playing = simClock.active ? simClock.playing : cinePlayhead.active;
+    // 本镜的打斗编舞：参与者状态覆盖时间轴
+    const fight = shotId ? st.fights.find((f) => f.shotId === shotId) : undefined;
+    const fightStates = new Map<string, { x: number; z: number; elev: number; facing: number; pose: import("@/lib/actions").Pose; action: ActionId }>();
+    if (fight && playing) {
+      const atk = list.find((a) => a.id === fight.attackerId);
+      const def = list.find((a) => a.id === fight.defenderId);
+      if (atk && def) {
+        const atkBase = actorStateAt(atk, 0, shotDuration);
+        const defBase = actorStateAt(def, 0, shotDuration);
+        const fs = evaluateFightState(fight, timeSec, [atkBase.x, atkBase.z, atkBase.elev], [defBase.x, defBase.z, defBase.elev]);
+        if (fs.active) {
+          fightStates.set(atk.id, fs.attacker);
+          fightStates.set(def.id, fs.defender);
+        }
+      }
+    }
     for (const a of list) {
       const g = groupRefs.current.get(a.id);
       if (!g) continue;
-      const action = actorAction(a);
-      if (action === "fight") {
-        // 对手：最近的另一位打斗演员；没有则最近的其他演员；再没有则用 to 点
-        const others = list.filter((o) => o.id !== a.id);
-        const fighters = others.filter((o) => actorAction(o) === "fight");
-        const pool = fighters.length ? fighters : others;
-        let px = a.to[0], pz = a.to[1];
-        if (pool.length) {
-          let best = pool[0], bd = Infinity;
-          for (const o of pool) {
-            const ox = o.from[0] + (o.to[0] - o.from[0]) * t;
-            const oz = o.from[1] + (o.to[1] - o.from[1]) * t;
-            const d = (ox - a.from[0]) ** 2 + (oz - a.from[1]) ** 2;
-            if (d < bd) { bd = d; best = o; }
-          }
-          px = best.from[0] + (best.to[0] - best.from[0]) * t;
-          pz = best.from[1] + (best.to[1] - best.from[1]) * t;
-        }
-        if (!ph.active) {
-          // 静止：站在起点，面向对手
-          g.position.set(a.from[0], 0, a.from[1]);
-          g.rotation.set(0, Math.atan2(px - a.from[0], pz - a.from[1]), 0);
-          continue;
-        }
-        // 逼近→收→再扑→收：朝对手方向冲出再收回（摆拍，无接触）
-        const beat = fightBeat(t);
-        const k = 0.12 + 0.55 * beat;
-        const x = a.from[0] + (px - a.from[0]) * k;
-        const z = a.from[1] + (pz - a.from[1]) * k;
-        const bob = Math.abs(Math.sin(t * Math.PI * 14)) * 0.06;
-        g.position.set(x, bob, z);
-        g.rotation.set(0.1 + 0.12 * beat, Math.atan2(px - x, pz - z), 0);
-        continue;
+      const fs = fightStates.get(a.id);
+      const state = fs ?? actorStateAt(a, timeSec, shotDuration);
+      // 高度 = 走位/跳跃/飞行高度 + 姿态偏移（坐下/蹲/躺是负偏移）
+      g.position.set(state.x, state.elev + state.pose.y, state.z);
+      g.rotation.set(state.pose.rotX, state.facing, state.pose.rotZ);
+      // 手臂（肩部为支点）
+      const arms = armRefs.current.get(a.id);
+      if (arms) {
+        if (arms.l) arms.l.rotation.set(state.pose.armL[0], 0, state.pose.armL[1]);
+        if (arms.r) arms.r.rotation.set(state.pose.armR[0], 0, state.pose.armR[1]);
       }
-      const x = a.from[0] + (a.to[0] - a.from[0]) * t;
-      const z = a.from[1] + (a.to[1] - a.from[1]) * t;
-      if (action === "run") {
-        // 跑：步频更快 + 身体前倾
-        const bob = ph.active ? Math.abs(Math.sin(t * Math.PI * 16)) * 0.07 : 0;
-        g.position.set(x, bob, z);
-        g.rotation.set(ph.active ? 0.12 : 0, actorFacing(a), 0);
-      } else {
-        // 走：步频起伏；静止时落地
-        const bob = ph.active ? Math.abs(Math.sin(t * Math.PI * 10)) * 0.05 : 0;
-        g.position.set(x, bob, z);
-        g.rotation.set(0, actorFacing(a), 0);
+      // 飞行载具 / 威亚：按当前段的道具切换（静止时按默认动作）
+      const seg = segmentAt(a, timeSec);
+      const pk = seg?.propKind ?? STUNT_ACTION_PROPS[state.action]?.prop ?? null;
+      const veh = vehicleRefs.current.get(a.id);
+      if (veh) {
+        if (veh.sword) veh.sword.visible = pk === "sword";
+        if (veh.broom) veh.broom.visible = pk === "broom";
+        if (veh.flyboard) veh.flyboard.visible = pk === "flyboard";
+        if (veh.wire) veh.wire.visible = state.action === "wireFly";
       }
     }
   });
 
   return (
     <>
-      {/* 放置模式：铺一张接收点击的地面（微透明示意可点） */}
-      {addMode && (
+      <SimPlayer />
+      {/* 放置模式：铺一张接收点击的地面（加演员 / 加路点 / 放特技道具三用） */}
+      {(addMode || waypointMode || propPlaceKind) && (
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
           position={[0, 0.02, 0]}
           onPointerDown={(e) => {
             e.stopPropagation();
-            useCineStore.getState().placePoint([e.point.x, e.point.z]);
+            const st = useCineStore.getState();
+            if (st.addActorMode) st.placePoint([e.point.x, e.point.z]);
+            else if (st.waypointMode) st.addWaypoint(st.waypointMode, [e.point.x, e.point.z]);
+            else if (st.propPlaceKind) st.placeStuntProp([e.point.x, e.point.z]);
             invalidate();
           }}
         >
@@ -719,7 +1147,7 @@ export function ActorsLayer() {
           <meshBasicMaterial transparent opacity={0.06} color="#2dd4bf" depthWrite={false} />
         </mesh>
       )}
-      {/* 拖拽中：铺一张接住指针移动的地面，演员 from/to 跟着平移 */}
+      {/* 拖拽中：铺一张接住指针移动的地面（演员 from/to 平移 或 路点移动） */}
       {draggingId && (
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
@@ -730,10 +1158,17 @@ export function ActorsLayer() {
             e.stopPropagation();
             const dx = e.point.x - d.start[0];
             const dz = e.point.z - d.start[1];
-            useCineStore.getState().updateActor(d.id, {
-              from: [d.origFrom[0] + dx, d.origFrom[1] + dz],
-              to: [d.origTo[0] + dx, d.origTo[1] + dz],
-            });
+            if (d.kind === "actor") {
+              useCineStore.getState().updateActor(d.id, {
+                from: [d.origFrom[0] + dx, d.origFrom[1] + dz],
+                to: [d.origTo[0] + dx, d.origTo[1] + dz],
+              });
+            } else if (d.kind === "waypoint" && d.origWp && d.wpIdx !== undefined) {
+              useCineStore.getState().updateWaypoint(d.id, d.wpIdx, {
+                x: d.origWp.x + dx,
+                z: d.origWp.z + dz,
+              });
+            }
             invalidate();
           }}
           onPointerUp={() => endDrag()}
@@ -768,46 +1203,133 @@ export function ActorsLayer() {
           </sprite>
         </group>
       )}
-      {actors.map((a) => (
-        <group key={a.id}>
-          {/* 走位路径（虚线）+ 终点环 */}
-          <Line
-            points={[[a.from[0], 0.05, a.from[1]], [a.to[0], 0.05, a.to[1]]]}
-            color="#2dd4bf" dashed dashSize={0.35} gapSize={0.22} lineWidth={1.5}
-          />
-          <mesh position={[a.to[0], 0.04, a.to[1]]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.2, 0.32, 20]} />
-            <meshBasicMaterial color="#2dd4bf" side={THREE.DoubleSide} />
-          </mesh>
-          {/* 方块人：胶囊身 + 球头（白模/深度 pass 会被 override 一起处理——正是走位入 previz 的意义）。
-              按住可拖动调整走位（from/to 一起平移）。 */}
-          <group
-            ref={(g) => { if (g) groupRefs.current.set(a.id, g); else groupRefs.current.delete(a.id); }}
-            position={[a.from[0], 0, a.from[1]]}
-            onPointerDown={(e) => {
-              if (addMode) return;
-              e.stopPropagation();
-              setControlsEnabled(false);
-              dragRef.current = {
-                id: a.id,
-                start: [e.point.x, e.point.z],
-                origFrom: [...a.from],
-                origTo: [...a.to],
-              };
-              setDraggingId(a.id);
-            }}
-          >
-            <mesh position={[0, 0.75, 0]} castShadow>
-              <capsuleGeometry args={[0.22, 0.8, 4, 12]} />
-              <meshStandardMaterial color={actorAction(a) === "fight" ? "#e07856" : "#a8b0bc"} roughness={0.85} />
-            </mesh>
-            <mesh position={[0, 1.52, 0]} castShadow>
-              <sphereGeometry args={[0.17, 16, 12]} />
-              <meshStandardMaterial color="#c2c9d4" roughness={0.85} />
-            </mesh>
-          </group>
-        </group>
+      {/* 特技道具（程序化几何） */}
+      {stuntProps.map((p) => (
+        <StuntPropMesh key={p.id} prop={p} />
       ))}
+      {actors.map((a) => {
+        const wps = (a.waypoints ?? []).slice().sort((x, y) => x.t - y.t);
+        const hasWps = wps.length >= 2;
+        return (
+          <group key={a.id}>
+            {/* 走位路径：有路点画路点连线 + 编号标牌；没有则画旧的 from→to 虚线 + 终点环 */}
+            {hasWps ? (
+              <group>
+                <Line
+                  points={wps.map((w) => [w.x, (w.y ?? 0) + 0.05, w.z] as [number, number, number])}
+                  color="#2dd4bf" dashed dashSize={0.35} gapSize={0.22} lineWidth={1.5}
+                />
+                {wps.map((w, i) => (
+                  <sprite
+                    key={i}
+                    position={[w.x, (w.y ?? 0) + 0.9, w.z]}
+                    scale={[0.55, 0.55, 1]}
+                    onPointerDown={(e) => {
+                      if (waypointMode !== a.id) return;
+                      e.stopPropagation();
+                      setControlsEnabled(false);
+                      dragRef.current = {
+                        kind: "waypoint",
+                        id: a.id,
+                        wpIdx: i,
+                        start: [e.point.x, e.point.z],
+                        origFrom: [...a.from],
+                        origTo: [...a.to],
+                        origWp: { ...w },
+                      };
+                      setDraggingId(`${a.id}:wp${i}`);
+                    }}
+                  >
+                    <spriteMaterial map={waypointLabelTex(i + 1)} transparent depthTest={false} />
+                  </sprite>
+                ))}
+              </group>
+            ) : (
+              <group>
+                <Line
+                  points={[[a.from[0], 0.05, a.from[1]], [a.to[0], 0.05, a.to[1]]]}
+                  color="#2dd4bf" dashed dashSize={0.35} gapSize={0.22} lineWidth={1.5}
+                />
+                <mesh position={[a.to[0], 0.04, a.to[1]]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <ringGeometry args={[0.2, 0.32, 20]} />
+                  <meshBasicMaterial color="#2dd4bf" side={THREE.DoubleSide} />
+                </mesh>
+              </group>
+            )}
+            {/* 方块人：胶囊身 + 球头 + 双臂（肩部为支点）+ 飞行载具/威亚。
+                按住可拖动调整走位（from/to 一起平移）。 */}
+            <group
+              ref={(g) => { if (g) groupRefs.current.set(a.id, g); else groupRefs.current.delete(a.id); }}
+              position={[a.from[0], 0, a.from[1]]}
+              onPointerDown={(e) => {
+                if (addMode) return;
+                e.stopPropagation();
+                setControlsEnabled(false);
+                dragRef.current = {
+                  kind: "actor",
+                  id: a.id,
+                  start: [e.point.x, e.point.z],
+                  origFrom: [...a.from],
+                  origTo: [...a.to],
+                };
+                setDraggingId(a.id);
+              }}
+            >
+              <mesh position={[0, 0.75, 0]} castShadow>
+                <capsuleGeometry args={[0.22, 0.8, 4, 12]} />
+                <meshStandardMaterial color={actorAction(a) === "fight" ? "#e07856" : "#a8b0bc"} roughness={0.85} />
+              </mesh>
+              <mesh position={[0, 1.52, 0]} castShadow>
+                <sphereGeometry args={[0.17, 16, 12]} />
+                <meshStandardMaterial color="#c2c9d4" roughness={0.85} />
+              </mesh>
+              <group
+                ref={(gr) => { const m = armRefs.current.get(a.id) ?? { l: null, r: null }; m.l = gr; armRefs.current.set(a.id, m); }}
+                position={[-0.28, 1.28, 0]}
+              >
+                <mesh position={[0, -0.42, 0]} castShadow>
+                  <capsuleGeometry args={[0.08, 0.7, 4, 8]} />
+                  <meshStandardMaterial color="#98a0ac" roughness={0.85} />
+                </mesh>
+              </group>
+              <group
+                ref={(gr) => { const m = armRefs.current.get(a.id) ?? { l: null, r: null }; m.r = gr; armRefs.current.set(a.id, m); }}
+                position={[0.28, 1.28, 0]}
+              >
+                <mesh position={[0, -0.42, 0]} castShadow>
+                  <capsuleGeometry args={[0.08, 0.7, 4, 8]} />
+                  <meshStandardMaterial color="#98a0ac" roughness={0.85} />
+                </mesh>
+              </group>
+              {/* 飞行载具 / 威亚：useFrame 按当前段切换 visible（初始全藏） */}
+              <group
+                ref={(gr) => { const m = vehicleRefs.current.get(a.id) ?? { sword: null, broom: null, flyboard: null, wire: null }; m.sword = gr; vehicleRefs.current.set(a.id, m); }}
+                visible={false}
+              >
+                <FlyingVehicleMesh kind="sword" />
+              </group>
+              <group
+                ref={(gr) => { const m = vehicleRefs.current.get(a.id) ?? { sword: null, broom: null, flyboard: null, wire: null }; m.broom = gr; vehicleRefs.current.set(a.id, m); }}
+                visible={false}
+              >
+                <FlyingVehicleMesh kind="broom" />
+              </group>
+              <group
+                ref={(gr) => { const m = vehicleRefs.current.get(a.id) ?? { sword: null, broom: null, flyboard: null, wire: null }; m.flyboard = gr; vehicleRefs.current.set(a.id, m); }}
+                visible={false}
+              >
+                <FlyingVehicleMesh kind="flyboard" />
+              </group>
+              <group
+                ref={(gr) => { const m = vehicleRefs.current.get(a.id) ?? { sword: null, broom: null, flyboard: null, wire: null }; m.wire = gr; vehicleRefs.current.set(a.id, m); }}
+                visible={false}
+              >
+                <WireMesh />
+              </group>
+            </group>
+          </group>
+        );
+      })}
     </>
   );
 }
@@ -840,18 +1362,161 @@ function Frame916Overlay() {
   );
 }
 
+/** 动作分类（UI 分组用） */
+const ACTION_CATEGORY_ORDER = ["move", "pose", "gesture", "fight", "stunt"] as const;
+const ACTION_CATEGORY_ZH: Record<string, string> = { move: "移动", pose: "姿态", gesture: "手势", fight: "打斗", stunt: "特技" };
+const ACTION_CATEGORY_EN: Record<string, string> = { move: "Move", pose: "Pose", gesture: "Gesture", fight: "Fight", stunt: "Stunt" };
+
+/** 文字解析结果 → 时间轴：按演员现有时间轴的末尾续接。
+ *  飞行类无目标时朝当前朝向飞 4 米、升到 2.5 米；打/踢没点名对手时
+ *  取最近的其他演员并面向他；姿态动作有目标且离得远时先走过去再做。
+ *  缺的特技道具自动补一个（放在目标位置）。返回给人看的一句话。 */
+function applyParsedInstructions(instructions: ParsedInstruction[]): string {
+  const st = useCineStore.getState();
+  const done: string[] = [];
+  const endState = (a: Actor): { time: number; pos: [number, number]; elev: number; facing: number } => {
+    const segEnd = (a.timeline ?? []).reduce((m, s) => Math.max(m, s.start + s.duration), 0);
+    const wpEnd = (a.waypoints ?? []).reduce((m, w) => Math.max(m, w.t), 0);
+    const t = Math.max(segEnd, wpEnd);
+    const s = actorStateAt(a, t, Math.max(8, t + 1));
+    return { time: t, pos: [s.x, s.z], elev: s.elev, facing: s.facing };
+  };
+  const isMove = (action: ActionId): boolean =>
+    ["walk", "run", "jump", "climb", "leap", "flySword", "flyBroom", "wireFly", "rappel", "swim"].includes(action);
+  for (const ins of instructions) {
+    const a = st.actors.find((x) => x.id === ins.actorId);
+    if (!a) continue;
+    const end = endState(a);
+    // 1) 特技道具：缺的自动补一个；飞行载具随人走，已有同类就挂上去
+    let propId: string | undefined;
+    if (ins.needProp) {
+      const px = ins.targetPos?.[0] ?? end.pos[0] + 1.5;
+      const pz = ins.targetPos?.[1] ?? end.pos[1];
+      propId = st.addStuntProp(ins.needProp, px, pz).id;
+    } else if (ins.propKind) {
+      propId = st.stuntProps.find((p) => p.kind === ins.propKind)?.id;
+    }
+    // 2) 目标：飞行类无目标 → 朝当前朝向飞 4 米、升到 2.5 米
+    let targetPos = ins.targetPos;
+    let targetY = ins.targetY;
+    if ((ins.action === "flySword" || ins.action === "flyBroom" || ins.action === "wireFly") && !targetPos) {
+      targetPos = [end.pos[0] + Math.sin(end.facing) * 4, end.pos[1] + Math.cos(end.facing) * 4];
+      targetY = 2.5;
+    }
+    // 3) 打/踢：对手缺省为最近的其他演员，并面向他
+    let targetActorId = ins.targetActorId;
+    let facing = ins.facing;
+    if ((ins.action === "punch" || ins.action === "kick") && !targetActorId) {
+      let best: Actor | null = null, bd = Infinity;
+      for (const o of st.actors) {
+        if (o.id === a.id) continue;
+        const os = endState(o);
+        const d = (os.pos[0] - end.pos[0]) ** 2 + (os.pos[1] - end.pos[1]) ** 2;
+        if (d < bd) { bd = d; best = o; }
+      }
+      if (best) {
+        targetActorId = best.id;
+        const bs = endState(best);
+        facing = Math.atan2(bs.pos[0] - end.pos[0], bs.pos[1] - end.pos[1]);
+      }
+    }
+    if (ins.action === "turn" && targetPos) {
+      facing = Math.atan2(targetPos[0] - end.pos[0], targetPos[1] - end.pos[1]);
+    }
+    const start = end.time;
+    const segs: ActionSegment[] = [];
+    if (isMove(ins.action) && targetPos) {
+      const dist = Math.hypot(targetPos[0] - end.pos[0], targetPos[1] - end.pos[1]);
+      const speed = ins.action === "run" ? 3 : ins.action === "walk" ? 1.2 : 2;
+      const dur = ins.action === "flySword" || ins.action === "flyBroom" || ins.action === "wireFly"
+        ? 4
+        : Math.max(1, dist / speed);
+      segs.push(makeSegment(ins.action, start, {
+        duration: dur, targetPos, targetY, arc: ins.arc, safety: ins.safety,
+        propKind: ins.propKind, propId, facing, targetActorId,
+      }));
+    } else if (!isMove(ins.action)) {
+      if (targetPos) {
+        const dist = Math.hypot(targetPos[0] - end.pos[0], targetPos[1] - end.pos[1]);
+        if (dist > 0.5) {
+          const dur = Math.max(1, dist / 1.2);
+          segs.push(makeSegment("walk", start, { duration: dur, targetPos, targetY }));
+          segs.push(makeSegment(ins.action, start + dur, {
+            duration: actionDef(ins.action).duration, targetY, safety: ins.safety,
+            propKind: ins.propKind, propId, facing, targetActorId,
+          }));
+        } else {
+          segs.push(makeSegment(ins.action, start, {
+            duration: actionDef(ins.action).duration, targetY, safety: ins.safety,
+            propKind: ins.propKind, propId, facing, targetActorId,
+          }));
+        }
+      } else {
+        segs.push(makeSegment(ins.action, start, {
+          duration: actionDef(ins.action).duration, safety: ins.safety,
+          propKind: ins.propKind, propId, facing, targetActorId,
+        }));
+      }
+    }
+    for (const s of segs) st.addTimelineSegment(a.id, s);
+    done.push(`${ins.actorName}${actionDef(ins.action).nameZh}`);
+  }
+  return done.length ? `已加入时间轴：${done.join("、")}` : "没有可加的动作";
+}
+
 /** DOM 覆盖层：🎬 入口 + 快拍 + 分镜 + 风格 + 演员 + 录制进度。 */
 export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
   const {
     shots, addShot, removeShot, moveShot, updateShot,
     styles, toggleStyle,
     actors, addActorMode, pendingFrom, beginAddActor, beginReplaceActor, cancelAddActor, removeActor, updateActor,
+    waypointMode, beginWaypointMode, cancelWaypointMode, updateWaypoint, removeWaypoint,
+    addTimelineSegment, updateTimelineSegment, removeTimelineSegment,
+    fights, addFight, removeFight, updateFight, addPhrase, removePhrase, addBeat, updateBeat, removeBeat,
+    stuntProps, propPlaceKind, beginPropPlace, cancelPropPlace, removeStuntProp,
+    sim, startSim, stopSim, setSim,
     queue, queueIdx, progress, menuOpen,
     startQuick, startStoryboard, cancel, setMenuOpen,
     genWorkflowId, setGenWorkflowId, genRunning, genState,
     show916, toggle916,
   } = useCineStore();
   const en = locale === "en";
+  // 拍摄模拟：总时长 = 各镜时长之和（scrub 用绝对秒数）
+  const simTotal = shots.reduce((m, s) => m + s.duration, 0);
+  const simAbs = sim ? shots.slice(0, sim.shotIdx).reduce((m, s) => m + s.duration, 0) + sim.timeSec : 0;
+  const scrubTo = (abs: number) => {
+    let acc = 0;
+    for (let i = 0; i < shots.length; i++) {
+      if (abs <= acc + shots[i].duration || i === shots.length - 1) {
+        setSim({ shotIdx: i, timeSec: Math.max(0, Math.min(shots[i].duration, abs - acc)) });
+        return;
+      }
+      acc += shots[i].duration;
+    }
+  };
+  // 文字催动（本地态）
+  const [textInput, setTextInput] = useState("");
+  const [textMsg, setTextMsg] = useState("");
+  const [showPatterns, setShowPatterns] = useState(false);
+  const runTextParse = () => {
+    const d = useDesignerStore.getState();
+    const ctx: SceneContext = {
+      ...buildSceneContext(d.floorPlans, d.activeFloor),
+      actors: actors.map((a) => ({ id: a.id, name: actorDisplayName(a, actors.indexOf(a)), role: a.role })),
+      stuntProps: stuntProps.map((p) => ({ kind: p.kind, x: p.x, z: p.z })),
+    };
+    const res = parseActionText(textInput, ctx);
+    if (!res.ok) {
+      setTextMsg(res.message);
+      return;
+    }
+    const applied = applyParsedInstructions(res.instructions);
+    setTextMsg(`${res.message}。${applied}`);
+  };
+  // 特技道具（本地态：选中的种类）
+  const [propKind, setPropKind] = useState<StuntPropKind>("tree");
+  // 动作时间轴（本地态：每演员新增段的动作）
+  const [newSegAction, setNewSegAction] = useState<Record<string, ActionId>>({});
   // 片场选择（本地态：刚应用的片场打 ✓；描述匹配结果文案）
   const [appliedSetId, setAppliedSetId] = useState<string | null>(null);
   const [setQuery, setSetQuery] = useState("");
@@ -918,6 +1583,62 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
           </div>
           <span className="tabular-nums w-8 text-right">{progress}%</span>
           <button onClick={cancel} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10" title={en ? "Cancel" : "取消"}>
+            ✕
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  // ── 路点/道具放置提示（独立于菜单，放置时始终可见）──
+  if (waypointMode || propPlaceKind) {
+    const wpActor = waypointMode ? actors.find((a) => a.id === waypointMode) : undefined;
+    return (
+      <>
+        {show916 && <Frame916Overlay />}
+        <div
+          className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-white shadow-xl"
+          style={{ background: "rgba(20,22,32,0.88)", border: "1px solid rgba(45,212,191,0.5)" }}
+        >
+          <span>📍</span>
+          <span>
+            {waypointMode
+              ? (en ? `Click the ground: add waypoint for ${wpActor ? actorDisplayName(wpActor, actors.indexOf(wpActor)) : ""} (drag a marker to move it)` : `在地面点击：给${wpActor ? actorDisplayName(wpActor, actors.indexOf(wpActor)) : "演员"}加路点（拖标牌可移动）`)
+              : (en ? `Click the ground: place ${stuntPropDef(propPlaceKind!)?.nameEn ?? propPlaceKind}` : `在地面点击：放${stuntPropDef(propPlaceKind!)?.nameZh ?? propPlaceKind}`)}
+          </span>
+          <button onClick={() => { cancelWaypointMode(); cancelPropPlace(); }} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10">
+            {en ? "Cancel" : "取消"}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  // ── 拍摄模拟中：播放/暂停 + 进度条（可 scrub）+ 镜号 + 停止 ──
+  if (sim?.active) {
+    return (
+      <>
+        {show916 && <Frame916Overlay />}
+        <div
+          className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-white shadow-xl"
+          style={{ background: "rgba(20,22,32,0.88)", border: "1px solid rgba(45,212,191,0.5)" }}
+        >
+          <button
+            onClick={() => setSim({ playing: !sim.playing })}
+            className="px-2 py-1 rounded-md hover:bg-white/10 text-base leading-none"
+            title={sim.playing ? (en ? "Pause" : "暂停") : (en ? "Play" : "播放")}
+          >
+            {sim.playing ? "⏸" : "▶"}
+          </button>
+          <span className="tabular-nums whitespace-nowrap">Shot {sim.shotIdx + 1}/{shots.length}</span>
+          <input
+            type="range" min={0} max={simTotal} step={0.1} value={simAbs}
+            onChange={(e) => scrubTo(Number(e.target.value))}
+            className="w-40 sm:w-64 accent-teal-400"
+            title={en ? "Scrub the shoot" : "拖动跳转到任意镜/时间"}
+          />
+          <span className="tabular-nums whitespace-nowrap">{simAbs.toFixed(1)}s / {simTotal.toFixed(0)}s</span>
+          <button onClick={stopSim} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10" title={en ? "Stop simulation" : "停止模拟"}>
             ✕
           </button>
         </div>
@@ -1113,10 +1834,14 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
                     onChange={(e) => updateActor(a.id, { action: e.target.value as ActorAction })}
                     className="bg-white/10 rounded px-1 py-0.5 outline-none"
                     style={{ colorScheme: "dark" }}
-                    title={en ? "Action" : "动作"}
+                    title={en ? "Default action" : "默认动作"}
                   >
-                    {ACTOR_ACTIONS.map((ac) => (
-                      <option key={ac.id} value={ac.id}>{en ? ac.nameEn : ac.nameZh}</option>
+                    {ACTION_CATEGORY_ORDER.map((cat) => (
+                      <optgroup key={cat} label={en ? ACTION_CATEGORY_EN[cat] : ACTION_CATEGORY_ZH[cat]}>
+                        {Object.values(ACTION_REGISTRY).filter((d) => d.category === cat).map((d) => (
+                          <option key={d.id} value={d.id}>{en ? d.nameEn : d.nameZh}</option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                   <span className="text-white/40 whitespace-nowrap">{en ? "Facing" : "朝向"}</span>
@@ -1140,6 +1865,88 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
                     {en ? "↻ Reset path" : "↻ 重设走位"}
                   </button>
                 </div>
+                {/* 动态走位：路点时间轴（位置/高度/时间；拖 3D 里的标牌可移动） */}
+                <div className="flex flex-col gap-1 border-t border-white/10 pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-white/40 whitespace-nowrap">{en ? "Waypoints" : "走位时间轴"}</span>
+                    <button
+                      onClick={() => { beginWaypointMode(a.id); setMenuOpen(false); }}
+                      className="px-1.5 py-0.5 rounded hover:bg-white/10 text-white/70 whitespace-nowrap"
+                    >
+                      {en ? "＋ Click ground to add" : "＋地面点选加路点"}
+                    </button>
+                    {a.waypoints && a.waypoints.length >= 2 && (
+                      <button
+                        onClick={() => updateActor(a.id, { waypoints: undefined })}
+                        className="px-1.5 py-0.5 rounded hover:bg-white/10 text-white/50"
+                        title={en ? "Clear waypoints (back to start→end)" : "清空路点（回到起点→终点）"}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  {(a.waypoints ?? []).slice().sort((x, y) => x.t - y.t).map((w, wi) => (
+                    <div key={wi} className="flex items-center gap-1">
+                      <span className="text-teal-300 tabular-nums w-4 text-center">{wi + 1}</span>
+                      <input type="number" step={0.1} value={Number(w.x.toFixed(1))} onChange={(e) => updateWaypoint(a.id, wi, { x: Number(e.target.value) || 0 })} className="w-12 bg-white/10 rounded px-1 py-0.5 text-right tabular-nums outline-none" title="x" />
+                      <input type="number" step={0.1} value={Number(w.z.toFixed(1))} onChange={(e) => updateWaypoint(a.id, wi, { z: Number(e.target.value) || 0 })} className="w-12 bg-white/10 rounded px-1 py-0.5 text-right tabular-nums outline-none" title="z" />
+                      <input type="number" step={0.1} value={Number((w.y ?? 0).toFixed(1))} onChange={(e) => updateWaypoint(a.id, wi, { y: Number(e.target.value) || 0 })} className="w-11 bg-white/10 rounded px-1 py-0.5 text-right tabular-nums outline-none" title={en ? "Height (m)" : "高度（米）"} />
+                      <input type="number" step={0.5} min={0} value={w.t} onChange={(e) => updateWaypoint(a.id, wi, { t: Math.max(0, Number(e.target.value) || 0) })} className="w-11 bg-white/10 rounded px-1 py-0.5 text-right tabular-nums outline-none" title={en ? "Time (s)" : "时间（秒）"} />
+                      <span className="text-white/40">s</span>
+                      <button onClick={() => removeWaypoint(a.id, wi)} className="px-1 rounded hover:bg-white/10 text-white/60">✕</button>
+                    </div>
+                  ))}
+                </div>
+                {/* 动作时间轴：一段一段排动作（移动段插值到目标，姿态段原地做） */}
+                <div className="flex flex-col gap-1 border-t border-white/10 pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-white/40 whitespace-nowrap">{en ? "Timeline" : "动作时间轴"}</span>
+                    <select
+                      value={newSegAction[a.id] ?? "walk"}
+                      onChange={(e) => setNewSegAction({ ...newSegAction, [a.id]: e.target.value as ActionId })}
+                      className="bg-white/10 rounded px-1 py-0.5 outline-none"
+                      style={{ colorScheme: "dark" }}
+                    >
+                      {ACTION_CATEGORY_ORDER.map((cat) => (
+                        <optgroup key={cat} label={en ? ACTION_CATEGORY_EN[cat] : ACTION_CATEGORY_ZH[cat]}>
+                          {Object.values(ACTION_REGISTRY).filter((d) => d.category === cat).map((d) => (
+                            <option key={d.id} value={d.id}>{en ? d.nameEn : d.nameZh}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        const act = newSegAction[a.id] ?? "walk";
+                        const start = Math.max(
+                          (a.timeline ?? []).reduce((m, s) => Math.max(m, s.start + s.duration), 0),
+                          (a.waypoints ?? []).reduce((m, w) => Math.max(m, w.t), 0),
+                        );
+                        const def = actionDef(act);
+                        const sp = STUNT_ACTION_PROPS[act];
+                        addTimelineSegment(a.id, makeSegment(act, start, {
+                          duration: def.duration,
+                          safety: sp?.safety,
+                          propKind: sp?.prop ?? undefined,
+                        }));
+                      }}
+                      className="px-1.5 py-0.5 rounded hover:bg-white/10 text-white/70 whitespace-nowrap"
+                    >
+                      {en ? "＋ Add" : "＋加一段"}
+                    </button>
+                  </div>
+                  {(a.timeline ?? []).slice().sort((x, y) => x.start - y.start).map((s) => (
+                    <div key={s.id} className="flex items-center gap-1">
+                      <span className="flex-1 truncate">{en ? actionDef(s.action).nameEn : actionDef(s.action).nameZh}</span>
+                      <input type="number" step={0.5} min={0} value={s.start} onChange={(e) => updateTimelineSegment(a.id, s.id, { start: Math.max(0, Number(e.target.value) || 0) })} className="w-11 bg-white/10 rounded px-1 py-0.5 text-right tabular-nums outline-none" title={en ? "Start (s)" : "开始（秒）"} />
+                      <span className="text-white/40">–</span>
+                      <input type="number" step={0.5} min={0.2} value={s.duration} onChange={(e) => updateTimelineSegment(a.id, s.id, { duration: Math.max(0.2, Number(e.target.value) || 0.2) })} className="w-11 bg-white/10 rounded px-1 py-0.5 text-right tabular-nums outline-none" title={en ? "Duration (s)" : "时长（秒）"} />
+                      <span className="text-white/40">s</span>
+                      {s.safety && <span className="text-amber-300/80 text-[10px] whitespace-nowrap" title={en ? "Safety note" : "安全备注"}>⚠ {s.safety}</span>}
+                      <button onClick={() => removeTimelineSegment(a.id, s.id)} className="px-1 rounded hover:bg-white/10 text-white/60">✕</button>
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           })}
@@ -1153,6 +1960,215 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
             {en
               ? "Drag an actor in 3D to shift their path. With 2+ actors, the orange dashed axis line appears; indoor shots on opposite sides of it get an axis-cross warning."
               : "按住 3D 里的演员可拖动平移走位。两人以上出现橙色轴线虚线；室内镜机位若与上一镜分处轴线两侧，会标「可能越轴」。"}
+          </div>
+
+          {/* 拍摄模拟：按分镜顺序预演（不是视频导出） */}
+          <div className="px-1 pt-2 text-[10px] tracking-widest text-white/40 border-t border-white/10 mt-1">
+            {en ? "SHOOT SIMULATION" : "拍摄模拟"}
+          </div>
+          <button
+            onClick={() => { startSim(); setMenuOpen(false); }}
+            disabled={!shots.length}
+            className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-left disabled:opacity-30"
+            title={en ? "Preview the shoot in order: camera moves to each shot, actors perform blocking + actions + fights" : "按分镜顺序预演：机位移到每镜，演员走走位+动作+打斗，播完切下一镜"}
+          >
+            ▶ {en ? `Simulate shoot (${shots.length} shots)` : `模拟拍摄（${shots.length} 镜）`}
+          </button>
+          <div className="px-2 text-[10px] leading-relaxed text-white/40">
+            {en
+              ? "Preview only — no video is exported. Play/pause, scrub, and the shot counter appear while simulating."
+              : "只是预演，不导出视频。模拟时有播放/暂停、进度条（可拖到任意镜/时间）和镜号。"}
+          </div>
+
+          {/* 文字催动动作：规则解析，不调 AI */}
+          <div className="px-1 pt-2 text-[10px] tracking-widest text-white/40 border-t border-white/10 mt-1">
+            {en ? "TEXT-DRIVEN ACTIONS" : "文字催动动作"}
+          </div>
+          <div className="flex gap-1 px-1">
+            <input
+              type="text"
+              value={textInput}
+              placeholder={en ? "e.g. 男主走到窗边坐下 / 男主御剑飞行" : "如：男主走到窗边坐下 / 男主御剑飞行"}
+              onChange={(e) => setTextInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") runTextParse(); }}
+              className="flex-1 min-w-0 bg-white/10 rounded-lg px-2 py-1.5 outline-none placeholder:text-white/25"
+            />
+            <button
+              onClick={runTextParse}
+              className="px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 whitespace-nowrap"
+            >
+              {en ? "Parse" : "解析"}
+            </button>
+          </div>
+          {textMsg && <div className="px-2 text-[10px] leading-relaxed text-teal-300/90">{textMsg}</div>}
+          <button
+            onClick={() => setShowPatterns(!showPatterns)}
+            className="px-2 text-[10px] text-white/40 hover:text-white/70 text-left"
+          >
+            {showPatterns ? "▾" : "▸"} {en ? "Supported sentence patterns (rule-based, not AI)" : "支持的句式（规则匹配，不是 AI）"}
+          </button>
+          {showPatterns && (
+            <div className="px-2 flex flex-col gap-0.5">
+              {SUPPORTED_PATTERNS.map((p, i) => (
+                <div key={i} className="text-[10px] leading-relaxed text-white/50">
+                  <span className="text-white/70">{p.pattern}</span> — {p.example}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 打斗编舞：phrase × beat，beat 间 reset，安全是数据字段 */}
+          <div className="px-1 pt-2 text-[10px] tracking-widest text-white/40 border-t border-white/10 mt-1">
+            {en ? "FIGHT CHOREOGRAPHY" : "打斗编舞"}
+          </div>
+          {fights.map((f) => {
+            const atk = actors.find((a) => a.id === f.attackerId);
+            const def = actors.find((a) => a.id === f.defenderId);
+            const shot = shots.find((s) => s.id === f.shotId);
+            const warn = validateFight(f);
+            return (
+              <div key={f.id} className="rounded-lg px-2 py-1.5 bg-white/5 flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="flex-1 truncate">🥊 {f.name || (en ? "Fight" : "打斗")}</span>
+                  <select
+                    value={f.shotId}
+                    onChange={(e) => updateFight(f.id, { shotId: e.target.value })}
+                    className="bg-white/10 rounded px-1 py-0.5 outline-none"
+                    style={{ colorScheme: "dark" }}
+                    title={en ? "Shot this fight belongs to" : "挂在哪一镜"}
+                  >
+                    {shots.map((s, si) => (
+                      <option key={s.id} value={s.id}>#{si + 1} {en ? getCinePreset(s.presetId)?.nameEn : getCinePreset(s.presetId)?.nameZh}</option>
+                    ))}
+                  </select>
+                  <button onClick={() => removeFight(f.id)} className="px-1 rounded hover:bg-white/10 text-white/60">✕</button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={f.attackerId}
+                    onChange={(e) => updateFight(f.id, { attackerId: e.target.value })}
+                    className="flex-1 min-w-0 bg-white/10 rounded px-1 py-0.5 outline-none"
+                    style={{ colorScheme: "dark" }}
+                    title={en ? "Attacker" : "攻方"}
+                  >
+                    {actors.map((a, ai) => (<option key={a.id} value={a.id}>{actorDisplayName(a, ai)}</option>))}
+                  </select>
+                  <span className="text-white/40">vs</span>
+                  <select
+                    value={f.defenderId}
+                    onChange={(e) => updateFight(f.id, { defenderId: e.target.value })}
+                    className="flex-1 min-w-0 bg-white/10 rounded px-1 py-0.5 outline-none"
+                    style={{ colorScheme: "dark" }}
+                    title={en ? "Defender" : "守方"}
+                  >
+                    {actors.map((a, ai) => (<option key={a.id} value={a.id}>{actorDisplayName(a, ai)}</option>))}
+                  </select>
+                  <span className="text-white/50 tabular-nums whitespace-nowrap">{fightDuration(f).toFixed(1)}s</span>
+                </div>
+                {warn.length > 0 && (
+                  <div className="text-[10px] leading-relaxed text-amber-300/90">{warn.join("；")}</div>
+                )}
+                {f.phrases.map((ph, pi) => (
+                  <div key={ph.id} className="flex flex-col gap-1 rounded bg-white/5 px-1.5 py-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-white/50">{en ? `Phrase ${pi + 1}` : `第 ${pi + 1} 段`}</span>
+                      <span className="flex-1 text-white/40 text-[10px]">{en ? `reset ${ph.reset ?? 1}s after` : `段后回位 ${ph.reset ?? 1} 秒`}</span>
+                      <button onClick={() => addBeat(f.id, ph.id)} className="px-1.5 py-0.5 rounded hover:bg-white/10 text-white/70">＋beat</button>
+                      <button onClick={() => removePhrase(f.id, ph.id)} className="px-1 rounded hover:bg-white/10 text-white/50">✕</button>
+                    </div>
+                    {ph.beats.map((b, bi) => (
+                      <div key={b.id} className="flex items-center gap-1">
+                        <span className="text-white/40 tabular-nums w-4 text-center">{bi + 1}</span>
+                        <select
+                          value={b.move}
+                          onChange={(e) => updateBeat(f.id, ph.id, b.id, { move: e.target.value as FightBeat["move"] })}
+                          className="bg-white/10 rounded px-1 py-0.5 outline-none"
+                          style={{ colorScheme: "dark" }}
+                        >
+                          {(["punch", "kick", "block", "dodge", "fall", "getUp"] as const).map((m) => (
+                            <option key={m} value={m}>{en ? { punch: "Punch", kick: "Kick", block: "Block", dodge: "Dodge", fall: "Fall", getUp: "Get up" }[m] : { punch: "出拳", kick: "踢", block: "格挡", dodge: "闪避", fall: "倒地", getUp: "起身" }[m]}</option>
+                          ))}
+                        </select>
+                        <input type="number" step={0.1} min={0.2} value={b.duration} onChange={(e) => updateBeat(f.id, ph.id, b.id, { duration: Math.max(0.2, Number(e.target.value) || 0.2) })} className="w-11 bg-white/10 rounded px-1 py-0.5 text-right tabular-nums outline-none" title={en ? "Duration (s)" : "时长（秒）"} />
+                        <span className="text-white/40">s</span>
+                        <input type="text" value={b.reaction ?? ""} placeholder={en ? "Reaction" : "反应（如后仰）"} onChange={(e) => updateBeat(f.id, ph.id, b.id, { reaction: e.target.value })} className="flex-1 min-w-0 bg-white/10 rounded px-1 py-0.5 outline-none placeholder:text-white/25" />
+                        <select
+                          value={b.camera ?? "cheat"}
+                          onChange={(e) => updateBeat(f.id, ph.id, b.id, { camera: e.target.value as FightBeat["camera"] })}
+                          className="bg-white/10 rounded px-1 py-0.5 outline-none"
+                          style={{ colorScheme: "dark" }}
+                          title={en ? "Camera: cheat = behind attacker's shoulder (default, never side-on)" : "机位：cheat = 攻方肩后（默认，绝不侧拍）"}
+                        >
+                          <option value="cheat">{en ? "Cheat" : "肩后"}</option>
+                          <option value="wide">{en ? "Wide" : "全景"}</option>
+                          <option value="closeup">{en ? "Close-up" : "特写"}</option>
+                        </select>
+                        <button onClick={() => removeBeat(f.id, ph.id, b.id)} className="px-1 rounded hover:bg-white/10 text-white/60">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                <div className="flex items-center gap-1">
+                  <button onClick={() => addPhrase(f.id)} className="px-1.5 py-0.5 rounded hover:bg-white/10 text-white/70">＋{en ? "Phrase" : "加一段"}</button>
+                  <input type="text" value={f.safety.props} placeholder={en ? "Props (foam/rubber)" : "道具（泡沫/橡胶）"} onChange={(e) => updateFight(f.id, { safety: { ...f.safety, props: e.target.value } })} className="flex-1 min-w-0 bg-white/10 rounded px-1 py-0.5 outline-none placeholder:text-white/25" title={en ? "Safety: props" : "安全：道具"} />
+                  <input type="text" value={f.safety.rehearsal} placeholder={en ? "Rehearsal (half-speed)" : "排练（半速）"} onChange={(e) => updateFight(f.id, { safety: { ...f.safety, rehearsal: e.target.value } })} className="flex-1 min-w-0 bg-white/10 rounded px-1 py-0.5 outline-none placeholder:text-white/25" title={en ? "Safety: rehearsal" : "安全：排练"} />
+                </div>
+                <input type="text" value={f.safety.notes} placeholder={en ? "Safety notes…" : "安全备注…"} onChange={(e) => updateFight(f.id, { safety: { ...f.safety, notes: e.target.value } })} className="w-full bg-white/10 rounded px-2 py-0.5 outline-none placeholder:text-white/25" title={en ? "Safety notes" : "安全备注"} />
+                {!shot && <div className="text-[10px] text-amber-300/90">{en ? "This fight's shot was deleted." : "这段打斗挂的镜已删。"}</div>}
+                {atk && def && atk.id === def.id && <div className="text-[10px] text-amber-300/90">{en ? "Attacker and defender are the same actor." : "攻方和守方是同一个人。"}</div>}
+              </div>
+            );
+          })}
+          <button
+            onClick={() => { if (shots.length && actors.length >= 2) addFight(shots[0].id); }}
+            disabled={!shots.length || actors.length < 2}
+            className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-left disabled:opacity-30"
+            title={en ? "Needs at least 1 shot and 2 actors" : "需要至少 1 镜 + 2 个演员"}
+          >
+            🥊 {en ? "+ Add fight (3-beat phrase template)" : "＋加一段打斗（3 拍模板）"}
+          </button>
+          <div className="px-2 text-[10px] leading-relaxed text-white/40">
+            {en
+              ? "A fight = phrases of 3–8 beats; fighters reset between phrases. No real contact — punches pass 15–30cm in front of the face; the camera defaults to the punch-axis cheat (behind the attacker's shoulder), never side-on."
+              : "一段打斗 = 若干段（phrase），每段 3–8 拍（beat），段间回位。无真实接触——拳从脸前 15–30cm 擦过；机位默认肩后骗位（攻方肩后），绝不默认侧拍。"}
+          </div>
+
+          {/* 特技道具：程序化几何，场景里没有的特殊位置靠它 */}
+          <div className="px-1 pt-2 text-[10px] tracking-widest text-white/40 border-t border-white/10 mt-1">
+            {en ? "STUNT PROPS" : "特技道具"}
+          </div>
+          <div className="flex gap-1 px-1">
+            <select
+              value={propKind}
+              onChange={(e) => setPropKind(e.target.value as StuntPropKind)}
+              className="flex-1 min-w-0 bg-white/10 rounded-lg px-2 py-1.5 outline-none"
+              style={{ colorScheme: "dark" }}
+            >
+              {STUNT_PROP_LIST.map((d) => (
+                <option key={d.kind} value={d.kind}>{en ? d.nameEn : d.nameZh}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => { beginPropPlace(propKind); setMenuOpen(false); }}
+              className="px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 whitespace-nowrap"
+            >
+              {en ? "Place on ground" : "地面点选放置"}
+            </button>
+          </div>
+          {stuntProps.map((p) => {
+            const def = stuntPropDef(p.kind);
+            return (
+              <div key={p.id} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5">
+                <span className="flex-1 truncate">{en ? def?.nameEn : def?.nameZh}</span>
+                <span className="text-white/50 tabular-nums">({p.x.toFixed(1)}, {p.z.toFixed(1)})</span>
+                <button onClick={() => removeStuntProp(p.id)} className="px-1 rounded hover:bg-white/10 text-white/60">✕</button>
+              </div>
+            );
+          })}
+          <div className="px-2 text-[10px] leading-relaxed text-white/40">
+            {en
+              ? "Special positions need something to stand/cling/ride on: a tree, a car, a train car, a sword, a broom, a rooftop platform… Props are simple procedural geometry — no model files. Text commands auto-add a missing prop and say so."
+              : "特殊位置总要站/贴/骑在什么上：树、车、火车车厢、剑、扫帚、屋顶平台……道具是程序化几何，不引模型文件。文字指令缺道具时会自动补一个并明说。"}
           </div>
 
           <button

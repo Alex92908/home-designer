@@ -8,6 +8,15 @@
  * 产物用途：外观图里按路径播放并用 MediaRecorder 录成短片 + 首/尾帧 PNG，
  * 直接可喂即梦/Kling 的图生视频、首尾帧模式。
  */
+import {
+  ACTION_REGISTRY,
+  actorPositionAt,
+  actorStateAt,
+  resolveAction,
+  type ActionId,
+  type ActionSegment,
+  type Waypoint,
+} from "./actions";
 
 export interface CameraSample {
   /** 世界坐标相机位置 */
@@ -50,21 +59,29 @@ function easeInOut(t: number): number {
 
 /** 室内机位要框的目标（一个演员的走位段）。
  *  from/to 为地面世界坐标 [x, z]；facing 为朝向（弧度，0 = +Z，
- *  与 ActorsLayer 的 rotation.y = atan2(dx, dz) 同约定）。 */
+ *  与 ActorsLayer 的 rotation.y = atan2(dx, dz) 同约定）。
+ *  at 可选：给定归一化时间 t∈[0,1] 返回演员当时的实际位置/高度/朝向
+ *  （走位时间轴 + 动作时间轴 + 打斗编舞算出），优先于 from→to 线性插值。 */
 export interface ActorTarget {
   from: [number, number];
   to: [number, number];
   facing?: number;
   /** 目标身高（米），缺省 1.7——仅作注视点高度参考 */
   height?: number;
+  at?: (t: number) => { x: number; z: number; y?: number; facing: number };
 }
 
-/** 室内机位：随 t 跟住目标（from→to 平滑插值），返回目标位置 + 朝向 */
-function trackTarget(t: number, target?: ActorTarget): { x: number; z: number; facing: number } {
+/** 室内机位：随 t 跟住目标（at 优先，否则 from→to 平滑插值），返回目标位置 + 高度 + 朝向 */
+function trackTarget(t: number, target?: ActorTarget): { x: number; y: number; z: number; facing: number } {
+  if (target?.at) {
+    const s = target.at(t);
+    return { x: s.x, y: s.y ?? 0, z: s.z, facing: s.facing };
+  }
   const tg = target ?? { from: [0, 0] as [number, number], to: [0, 0] as [number, number], facing: 0 };
   const e = easeInOut(t);
   return {
     x: tg.from[0] + (tg.to[0] - tg.from[0]) * e,
+    y: 0,
     z: tg.from[1] + (tg.to[1] - tg.from[1]) * e,
     facing: tg.facing ?? 0,
   };
@@ -142,8 +159,8 @@ export const CINE_PRESETS: CinePreset[] = [
       const a = s.facing + (t - 0.5) * 0.12; // 缓慢弧移，有呼吸感
       const d = 5;
       return {
-        pos: [s.x - Math.sin(a) * d, 1.8, s.z - Math.cos(a) * d],
-        lookAt: [s.x, 1.2, s.z],
+        pos: [s.x - Math.sin(a) * d, 1.8 + s.y, s.z - Math.cos(a) * d],
+        lookAt: [s.x, 1.2 + s.y, s.z],
         fov: 50,
       };
     },
@@ -159,8 +176,8 @@ export const CINE_PRESETS: CinePreset[] = [
       const a = s.facing + (t - 0.5) * 0.08;
       const d = 2.8;
       return {
-        pos: [s.x - Math.sin(a) * d, 1.5, s.z - Math.cos(a) * d],
-        lookAt: [s.x, 1.4, s.z],
+        pos: [s.x - Math.sin(a) * d, 1.5 + s.y, s.z - Math.cos(a) * d],
+        lookAt: [s.x, 1.4 + s.y, s.z],
         fov: 45,
       };
     },
@@ -175,8 +192,8 @@ export const CINE_PRESETS: CinePreset[] = [
       const s = trackTarget(t, target);
       const d = 1.3;
       return {
-        pos: [s.x - Math.sin(s.facing) * d, 1.55, s.z - Math.cos(s.facing) * d],
-        lookAt: [s.x, 1.5, s.z],
+        pos: [s.x - Math.sin(s.facing) * d, 1.55 + s.y, s.z - Math.cos(s.facing) * d],
+        lookAt: [s.x, 1.5 + s.y, s.z],
         fov: 40,
       };
     },
@@ -191,8 +208,8 @@ export const CINE_PRESETS: CinePreset[] = [
       const s = trackTarget(t, target);
       const d = 1.2; // 站在人后 1.2m
       return {
-        pos: [s.x + Math.sin(s.facing) * d, 1.6, s.z + Math.cos(s.facing) * d],
-        lookAt: [s.x + Math.sin(s.facing) * 2, 1.4, s.z + Math.cos(s.facing) * 2],
+        pos: [s.x + Math.sin(s.facing) * d, 1.6 + s.y, s.z + Math.cos(s.facing) * d],
+        lookAt: [s.x + Math.sin(s.facing) * 2, 1.4 + s.y, s.z + Math.cos(s.facing) * 2],
         fov: 45,
       };
     },
@@ -214,17 +231,17 @@ export const RENDER_STYLES: Array<{ id: RenderStyle; nameZh: string; nameEn: str
   { id: "depth", nameZh: "深度", nameEn: "Depth" },
 ];
 
-/** 演员动作：走 / 跑 / 打斗（单节 staged beat，不是完整编舞） */
-export type ActorAction = "walk" | "run" | "fight";
+/** 演员动作库：见 actions.ts（数据驱动注册表，30 个动作）。
+ *  旧的 walk/run/fight 是其中三项——旧存档（action 只有这三项）照常读。 */
+export type ActorAction = ActionId;
 
-export const ACTOR_ACTIONS: Array<{ id: ActorAction; nameZh: string; nameEn: string }> = [
-  { id: "walk", nameZh: "走路", nameEn: "Walk" },
-  { id: "run", nameZh: "跑", nameEn: "Run" },
-  { id: "fight", nameZh: "打斗", nameEn: "Fight" },
-];
+export const ACTOR_ACTIONS: Array<{ id: ActorAction; nameZh: string; nameEn: string }> =
+  Object.values(ACTION_REGISTRY).map((d) => ({ id: d.id, nameZh: d.nameZh, nameEn: d.nameEn }));
 
 /** 演员占位（方块人级别即可——AI 上色阶段会替换成真人）。
  *  from/to 为地面世界坐标 [x, z]，录制时随播放头 t 从 from 走到 to。
+ *  waypoints（动态走位时间轴）优先于 from→to；timeline（动作时间轴）
+ *  又优先于 waypoints。两者都缺时就是旧的 from→to。
  *  name/role/facing/action 为导演台新增的可选字段——旧存档（只有 id/from/to）
  *  照常读，缺失时按默认值解释，绝不因升级丢数据。 */
 export interface Actor {
@@ -237,14 +254,18 @@ export interface Actor {
   role?: string;
   /** 朝向（弧度，0 = +Z），缺省沿 from→to 方向 */
   facing?: number;
-  /** 动作，缺省 "walk" */
+  /** 默认动作，缺省 "walk" */
   action?: ActorAction;
+  /** 动态走位：[{x, z, y?, facing?, t}]，t 为镜内秒数；缺省 = from→to 两点 */
+  waypoints?: Waypoint[];
+  /** 动作时间轴：[{action, start, duration, targetPos?, targetY?, arc?, …}] */
+  timeline?: ActionSegment[];
 }
 
 export function makeActor(
   from: [number, number],
   to: [number, number],
-  opts?: { name?: string; role?: string; facing?: number; action?: ActorAction },
+  opts?: { name?: string; role?: string; facing?: number; action?: ActorAction; waypoints?: Waypoint[]; timeline?: ActionSegment[] },
 ): Actor {
   return {
     id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
@@ -254,6 +275,8 @@ export function makeActor(
     ...(opts?.role !== undefined ? { role: opts.role } : {}),
     ...(opts?.facing !== undefined ? { facing: opts.facing } : {}),
     ...(opts?.action !== undefined ? { action: opts.action } : {}),
+    ...(opts?.waypoints ? { waypoints: opts.waypoints } : {}),
+    ...(opts?.timeline ? { timeline: opts.timeline } : {}),
   };
 }
 
@@ -270,9 +293,27 @@ export function actorFacing(a: Actor): number {
   return Math.atan2(dx, dz);
 }
 
-/** 旧存档兼容：动作缺省 "walk" */
+/** 旧存档兼容：动作缺省 "walk"，未知 id 安全回落到 "walk" */
 export function actorAction(a: Actor): ActorAction {
-  return a.action ?? "walk";
+  return resolveAction(a.action);
+}
+
+/**
+ * 某镜的框人目标：用 actorStateAt 把走位时间轴 + 动作时间轴算出来，
+ * 再包成 ActorTarget.at——机位跟拍时直接跟演员的真实位置/高度/朝向。
+ * （打斗编舞的瞬间位置由 CameraPathPlayer 的 fight 相机覆盖处理。）
+ */
+export function actorTargetAt(a: Actor, shotDuration: number): ActorTarget {
+  return {
+    from: a.from,
+    to: a.to,
+    facing: actorFacing(a),
+    // at 取归一化 t∈[0,1]（机位预设的采样约定），这里换算成镜内秒再算状态
+    at: (tNorm: number) => {
+      const st = actorStateAt(a, tNorm * shotDuration, shotDuration);
+      return { x: st.x, z: st.z, y: st.elev, facing: st.facing };
+    },
+  };
 }
 
 /** 分镜里的一个镜头（Shot——产品的原子单位，见云横店蓝图 §三） */
@@ -306,12 +347,8 @@ export function sideOfLine(px: number, pz: number, ax: number, az: number, bx: n
   return 0;
 }
 
-function actorPosAt(a: Actor, t: number): [number, number] {
-  return [a.from[0] + (a.to[0] - a.from[0]) * t, a.from[1] + (a.to[1] - a.from[1]) * t];
-}
-
 /** 越轴判断（只看室内镜）：本镜与上一镜的机位是否落在轴线两侧。
- *  轴线 = 前两位演员在 t=0.5 时的位置连线；机位取各镜中点采样。
+ *  轴线 = 前两位演员在镜中点的位置连线（按走位时间轴算）；机位取各镜中点采样。
  *  室外预设绕建筑转，轴线概念不适用，一律返回 false。 */
 export function shotCrossesAxis(shot: Shot, prevShot: Shot, actors: Actor[]): boolean {
   const preset = getCinePreset(shot.presetId);
@@ -321,12 +358,12 @@ export function shotCrossesAxis(shot: Shot, prevShot: Shot, actors: Actor[]): bo
   const target = actors.find((a) => a.id === shot.targetActorId) ?? actors[0];
   const prevTarget = actors.find((a) => a.id === prevShot.targetActorId) ?? actors[0];
   if (!target || !prevTarget) return false;
-  const axisA = actorPosAt(actors[0], 0.5);
-  const axisB = actorPosAt(actors[1], 0.5);
+  const axisA = actorPositionAt(actors[0], shot.duration / 2, shot.duration);
+  const axisB = actorPositionAt(actors[1], shot.duration / 2, shot.duration);
   if (axisA[0] === axisB[0] && axisA[1] === axisB[1]) return false;
   const env: SceneEnvelope = { W: 0, D: 0, floors: 1 };
-  const cam = preset.sample(0.5, env, { from: target.from, to: target.to, facing: actorFacing(target) });
-  const prevCam = prevPreset.sample(0.5, env, { from: prevTarget.from, to: prevTarget.to, facing: actorFacing(prevTarget) });
+  const cam = preset.sample(0.5, env, actorTargetAt(target, shot.duration));
+  const prevCam = prevPreset.sample(0.5, env, actorTargetAt(prevTarget, prevShot.duration));
   const s1 = sideOfLine(cam.pos[0], cam.pos[2], axisA[0], axisA[1], axisB[0], axisB[1]);
   const s2 = sideOfLine(prevCam.pos[0], prevCam.pos[2], axisA[0], axisA[1], axisB[0], axisB[1]);
   return s1 !== 0 && s2 !== 0 && s1 !== s2;
