@@ -9,6 +9,9 @@
  * ＋ 声音/音乐（soundLibrary.ts：10 种情绪配乐库，每镜推荐一首，下
  *  载来源 + 许可证逐条写明，不捆绑音频；soundEffects.ts：WebAudio 合
  *  成音效，出拳/踢/脚步/剑风/关门等，拍摄模拟按时间窗触发 + 音效开关）。
+ * ＋ 剧本（script.ts：写剧本/粘贴导入 .txt → 规则拆解场次/台词/动作
+ *  → 片场匹配 → 「从剧本生成分镜」按剧本顺序建镜，台词与动作随镜走；
+ *  认不出的行保留原文并明说，不乱指派）。
  *  控制包 storyboard.json v4（music 字段为附加字段，版本不变）。
  *
  * 产品原子是 Shot（镜头）：机位预设 + 时长 + 提示词。用户排一组镜头（分镜），
@@ -77,7 +80,12 @@ import {
   playSoundEffect, type SimSoundCursor, type SoundEffectId,
 } from "@/lib/soundEffects";
 import { StuntPropMesh, FlyingVehicleMesh, WireMesh } from "@/components/StuntProps";
-import { SCENE_SETS } from "@/lib/sceneSets";
+import { SCENE_SETS, getSceneSet } from "@/lib/sceneSets";
+import {
+  SCRIPT_FORMAT_HINT, UNASSIGNED_MESSAGE,
+  parseScript, enrichScriptActions, planShotsFromScript,
+  type ParsedScript,
+} from "@/lib/script";
 import { matchProjectTemplate } from "@/lib/matchProjectTemplate";
 import { useDesignerStore } from "@/lib/store";
 import { runRender } from "@/lib/useAiRender";
@@ -158,7 +166,16 @@ interface CineState {
   addShot: (presetId: string) => void;
   removeShot: (id: string) => void;
   moveShot: (id: string, dir: -1 | 1) => void;
-  updateShot: (id: string, patch: Partial<Pick<Shot, "duration" | "prompt" | "targetActorId" | "lightingId" | "musicMood">>) => void;
+  updateShot: (id: string, patch: Partial<Pick<Shot, "duration" | "prompt" | "dialogue" | "targetActorId" | "lightingId" | "musicMood">>) => void;
+  /** 剧本生成的镜：替换之前由剧本生成的镜（带 scriptScene 的），保留手工镜 */
+  setScriptShots: (scriptShots: Shot[]) => void;
+
+  /** 剧本正文（持久化；与 shots 同一个 localStorage 键；旧存档无此字段 = ""） */
+  scriptText: string;
+  setScriptText: (t: string) => void;
+  /** 剧本场次 → 手动指定的片场 id（持久化；场次号 → set id；未指定时用解析的匹配结果） */
+  scriptSetOverrides: Record<number, string>;
+  setScriptSetOverride: (sceneNumber: number, setId: string | null) => void;
 
   /** 场景默认灯光（持久化；新镜继承；旧存档缺省 = 白天） */
   sceneLightingId: LightingId;
@@ -288,6 +305,19 @@ export const useCineStore = create<CineState>()(
       },
       updateShot: (id, patch) =>
         set({ shots: get().shots.map((s) => (s.id === id ? { ...s, ...patch } : s)) }),
+      setScriptShots: (scriptShots) =>
+        set({ shots: [...get().shots.filter((s) => s.scriptScene === undefined), ...scriptShots] }),
+
+      // ── 剧本（Part 4）：正文 + 场次手动片场（持久化；旧存档缺省 = 空剧本）──
+      scriptText: "",
+      setScriptText: (t) => set({ scriptText: t }),
+      scriptSetOverrides: {},
+      setScriptSetOverride: (sceneNumber, setId) => {
+        const next = { ...get().scriptSetOverrides };
+        if (setId) next[sceneNumber] = setId;
+        else delete next[sceneNumber];
+        set({ scriptSetOverrides: next });
+      },
 
       styles: ["beauty"],
       toggleStyle: (s) => {
@@ -534,7 +564,7 @@ export const useCineStore = create<CineState>()(
       _setProgress: (p) => set({ progress: p }),
     }),
     // 只持久化创作数据；录制态/首帧/生成态/模拟态/灯光预览易失
-    { name: "zhuya-cine-shots-v1", partialize: (s) => ({ shots: s.shots, actors: s.actors, styles: s.styles, genWorkflowId: s.genWorkflowId, fights: s.fights, stuntProps: s.stuntProps, sceneLightingId: s.sceneLightingId, soundOn: s.soundOn }) },
+    { name: "zhuya-cine-shots-v1", partialize: (s) => ({ shots: s.shots, actors: s.actors, styles: s.styles, genWorkflowId: s.genWorkflowId, fights: s.fights, stuntProps: s.stuntProps, sceneLightingId: s.sceneLightingId, soundOn: s.soundOn, scriptText: s.scriptText, scriptSetOverrides: s.scriptSetOverrides }) },
   ),
 );
 
@@ -847,6 +877,22 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
             sfx: "WebAudio synthesized in shoot simulation only (no audio files bundled)",
             musicNote: "Music is not bundled — download per-shot recommendation from its source and check the license before use",
           },
+          // 剧本（Part 4，附加字段，版本仍为 4）：剧本正文非空时附场次摘要
+          // （场次号/地点/日夜/内外/片场/行数）；每镜的台词与剧本来源见 shots。
+          ...(st.scriptText.trim()
+            ? {
+                script: {
+                  scenes: parseScript(st.scriptText).scenes.map((sc) => ({
+                    scene: sc.number,
+                    location: sc.location,
+                    timeOfDay: sc.timeOfDay ?? null,
+                    interior: sc.interior ?? null,
+                    setId: st.scriptSetOverrides[sc.number] ?? sc.setId ?? null,
+                    lines: sc.lines.length,
+                  })),
+                },
+              }
+            : {}),
           // 导演台 v4：演员带名字/角色/朝向/默认动作 + 走位时间轴 + 动作时间轴；
           // 打斗编舞（phrases/beats/reset/安全）与特技道具单列。
           // v4 字段全部保留——旧存档（无 waypoints/timeline/fights/stuntProps）
@@ -917,6 +963,13 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
               indoor: !!p.indoor,
               duration: s.duration,
               prompt: s.prompt,
+              // 剧本来源（Part 4，附加字段；手工镜无此字段）：台词 + 角色 +
+              // 场次号 + 来源行 + 动作，随控制包一起给下游 AI 视频模型。
+              ...(s.dialogue ? { dialogue: s.dialogue } : {}),
+              ...(s.scriptCharacter ? { scriptCharacter: s.scriptCharacter } : {}),
+              ...(s.scriptScene !== undefined ? { scriptScene: s.scriptScene } : {}),
+              ...(s.scriptLine ? { scriptLine: s.scriptLine } : {}),
+              ...(s.scriptAction ? { scriptAction: s.scriptAction } : {}),
               // 本镜灯光（缺省 = 跟随场景默认；控制包下游按此还原光线）
               lighting: resolveShotLightingId(s.lightingId, st.sceneLightingId),
               lightingName: resolveLightingPreset(resolveShotLightingId(s.lightingId, st.sceneLightingId)).nameZh,
@@ -1766,6 +1819,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
     startQuick, startStoryboard, cancel, setMenuOpen,
     genWorkflowId, setGenWorkflowId, genRunning, genState,
     show916, toggle916,
+    scriptText, setScriptText, scriptSetOverrides, setScriptSetOverride,
   } = useCineStore();
   const en = locale === "en";
   // 拍摄模拟：总时长 = 各镜时长之和（scrub 用绝对秒数）
@@ -1801,6 +1855,101 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
     }
     const applied = applyParsedInstructions(res.instructions);
     setTextMsg(`${res.message}。${applied}`);
+  };
+  // 剧本（本地态：解析结果 + 提示；正文与场次手动片场在 store 里持久化）
+  const [parsed, setParsed] = useState<ParsedScript | null>(null);
+  const [scriptMsg, setScriptMsg] = useState("");
+  const scriptFileRef = useRef<HTMLInputElement | null>(null);
+  const scriptAutoParsed = useRef(false);
+  const buildActionCtx = (): SceneContext => {
+    const d = useDesignerStore.getState();
+    return {
+      ...buildSceneContext(d.floorPlans, d.activeFloor),
+      actors: actors.map((a) => ({ id: a.id, name: actorDisplayName(a, actors.indexOf(a)), role: a.role })),
+      stuntProps: stuntProps.map((p) => ({ kind: p.kind, x: p.x, z: p.z })),
+    };
+  };
+  const runScriptParse = (text: string) => {
+    const enriched = enrichScriptActions(parseScript(text), buildActionCtx());
+    setParsed(enriched);
+    if (!enriched.scenes.length) {
+      setScriptMsg(en ? "Script is empty — write a few lines or import a .txt file." : "剧本是空的——先写几行，或导入一个 .txt。");
+      return;
+    }
+    const unmatched = enriched.scenes.filter((s) => !s.setId).length;
+    setScriptMsg(
+      en
+        ? `Parsed: ${enriched.summary}.${unmatched ? ` ${unmatched} scene(s) without a matched set — pick one below.` : " Every scene matched a set."}`
+        : `已拆解：${enriched.summary}。${unmatched ? `其中 ${unmatched} 场未匹配片场，可在下面手动选。` : "各场次已匹配片场。"}`,
+    );
+  };
+  // 旧存档/刷新后：正文已持久化，进来就拆一次，不用再点解析
+  useEffect(() => {
+    if (!scriptAutoParsed.current && scriptText.trim()) {
+      scriptAutoParsed.current = true;
+      runScriptParse(scriptText);
+    }
+    // 只在挂载时跑一次（解析结果随正文改动失效，改完再点「解析剧本」）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const importScriptFile = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === "string" ? reader.result : "";
+      setScriptText(text);
+      setParsed(null);
+      runScriptParse(text);
+    };
+    reader.readAsText(file);
+  };
+  const generateShotsFromScript = () => {
+    if (!parsed) {
+      setScriptMsg(en ? "Parse the script first, then build shots." : "先点「解析剧本」，拆解没问题再生成分镜。");
+      return;
+    }
+    const st = useCineStore.getState();
+    const cast = st.actors.map((a, i) => ({ id: a.id, name: actorDisplayName(a, i), role: a.role }));
+    const plans = planShotsFromScript(parsed, cast);
+    if (!plans.length) {
+      setScriptMsg(en ? "No lines can become shots (only dialogue/action lines do — fix the unassigned lines first)." : "这段剧本没有可成镜的行（只有台词/动作行才成镜；未认出的行先修正）。");
+      return;
+    }
+    const created = plans.map((p) => makeShot(p.presetId, {
+      targetActorId: p.targetActorId,
+      lightingId: st.sceneLightingId,
+      ...(p.dialogue ? { dialogue: p.dialogue } : {}),
+      ...(p.character ? { scriptCharacter: p.character } : {}),
+      scriptScene: p.sceneNumber,
+      scriptLine: p.scriptLine,
+      ...(p.actionId ? { scriptAction: p.actionId } : {}),
+      prompt: p.prompt ?? "",
+    }));
+    st.setScriptShots(created);
+    // 动作行：走「文字催动动作」同一入口上演员时间轴（走/跑/打/飞都一样），
+    // 这样模拟拍摄时演员真的会演出来；重复生成会重复上轴（见提示）。
+    const ctx = buildActionCtx();
+    const allIns: ParsedInstruction[] = [];
+    for (const p of plans) {
+      if (!p.actionId) continue;
+      const res = parseActionText(p.scriptLine, ctx);
+      if (res.ok) allIns.push(...res.instructions);
+    }
+    const applied = allIns.length ? applyParsedInstructions(allIns) : "";
+    const missingNames = [...new Set(plans.map((p) => p.character).filter((c): c is string => !!c))]
+      .filter((name) => !cast.some((a) => a.name === name || a.name.includes(name) || (a.role ?? "").includes(name)));
+    const unassigned = parsed.scenes.flatMap((s) => s.lines).filter((l) => l.kind === "unassigned").length;
+    setScriptMsg(
+      (en
+        ? `Built ${created.length} shots (replaced shots previously built from the script; hand-made shots kept; dialogue = close-up, action = medium).`
+        : `已生成 ${created.length} 镜（替换了之前由剧本生成的镜，手工镜保留；台词行=特写，动作行=中景）。`) +
+      (applied ? ` ${applied}。` : "") +
+      (unassigned ? (en ? ` ${unassigned} line(s) unassigned — no shot built for them.` : `另有 ${unassigned} 行未认出，未生成镜头。`) : "") +
+      (missingNames.length
+        ? (en ? ` Character(s) ${missingNames.map((n) => `「${n}」`).join("")} not in the cast — dialogue is saved on the shot; add a same-named actor to frame them.` : `角色${missingNames.map((n) => `「${n}」`).join("")}不在演员表里——台词已写进镜里，在「演员走位」加同名演员即可框住他。`)
+        : "") +
+      (en ? " Generating again re-applies actions to the timeline." : "重复点生成会重复给动作上时间轴。"),
+    );
   };
   // 特技道具（本地态：选中的种类）
   const [propKind, setPropKind] = useState<StuntPropKind>("tree");
@@ -2216,6 +2365,27 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
                   onChange={(e) => updateShot(s.id, { prompt: e.target.value })}
                   className="w-full bg-white/10 rounded px-2 py-1 outline-none placeholder:text-white/25"
                 />
+                {/* 剧本来源（Part 4）：只在剧本生成的镜上出现——场次/角色/动作 +
+                    台词可改，随控制包导出 */}
+                {(s.dialogue !== undefined || s.scriptScene !== undefined) && (
+                  <>
+                    <div className="flex items-center gap-1.5 text-[11px]">
+                      <span className="text-white/40 whitespace-nowrap">📜 {en ? "Script" : "剧本"}</span>
+                      {s.scriptScene !== undefined && (
+                        <span className="text-teal-300/90 whitespace-nowrap">{en ? `Scene ${s.scriptScene}` : `第 ${s.scriptScene} 场`}</span>
+                      )}
+                      {s.scriptCharacter && <span className="text-white/70 truncate">{s.scriptCharacter}</span>}
+                      {s.scriptAction && (
+                        <span className="text-white/50 truncate">{en ? actionDef(s.scriptAction).nameEn : actionDef(s.scriptAction).nameZh}</span>
+                      )}
+                    </div>
+                    <input
+                      type="text" value={s.dialogue ?? ""} placeholder={en ? "Dialogue (optional)" : "台词（可选，随控制包导出）"}
+                      onChange={(e) => updateShot(s.id, { dialogue: e.target.value || undefined })}
+                      className="w-full bg-white/10 rounded px-2 py-1 outline-none placeholder:text-white/25"
+                    />
+                  </>
+                )}
               </div>
             );
           })}
@@ -2518,6 +2688,134 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
               ))}
             </div>
           )}
+
+          {/* 剧本：写/粘贴/导入 .txt → 规则拆解 → 片场匹配 → 生成分镜。
+              动作行复用「文字催动动作」的解析器；认不出的行保留原文并
+              明说，不乱指派；生成分镜时台词行=特写、动作行=中景。 */}
+          <div className="px-1 pt-2 text-[10px] tracking-widest text-white/40 border-t border-white/10 mt-1">
+            {en ? "SCRIPT" : "剧本"}
+          </div>
+          <div className="px-2 text-[10px] leading-relaxed text-white/40">
+            {en ? "Headings: Scene 1 Café Day Interior / 1. Café-Day-Interior / 【Café Day Interior】. Dialogue: Lead (angry): You're late. Other lines are actions, e.g. Lead walks to the window and sits." : SCRIPT_FORMAT_HINT}
+          </div>
+          <textarea
+            value={scriptText}
+            onChange={(e) => { setScriptText(e.target.value); setParsed(null); setScriptMsg(""); }}
+            rows={8}
+            placeholder={en ? "Scene 1 Café Day Interior\nLead (angry): You're late.\nLead walks to the window and sits." : "第1场 咖啡馆 日 内\n男主（愤怒）：你来晚了。\n男主走到窗边坐下"}
+            className="mx-1 w-[calc(100%-8px)] bg-white/10 rounded-lg px-2 py-1.5 outline-none placeholder:text-white/25 resize-y"
+          />
+          <div className="flex flex-wrap gap-1 px-1">
+            <button
+              onClick={() => runScriptParse(scriptText)}
+              className="px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 whitespace-nowrap"
+            >
+              {en ? "Parse script" : "解析剧本"}
+            </button>
+            <button
+              onClick={generateShotsFromScript}
+              disabled={!parsed}
+              className="px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 whitespace-nowrap disabled:opacity-30"
+              title={en ? "Build shots from the parsed script, in order (dialogue = close-up, action = medium)" : "按剧本顺序生成分镜（台词行=特写，动作行=中景）；替换之前由剧本生成的镜，手工镜保留"}
+            >
+              🎬 {en ? "Build shots from script" : "从剧本生成分镜"}
+            </button>
+            <button
+              onClick={() => scriptFileRef.current?.click()}
+              className="px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 whitespace-nowrap"
+              title={en ? "Import a plain-text (.txt) script" : "导入纯文本（.txt）剧本"}
+            >
+              📄 {en ? "Import .txt" : "导入 .txt"}
+            </button>
+            <input
+              ref={scriptFileRef}
+              type="file"
+              accept=".txt,text/plain"
+              className="hidden"
+              onChange={(e) => { importScriptFile(e.target.files?.[0]); e.target.value = ""; }}
+            />
+            <button
+              onClick={() => { setScriptText(""); setParsed(null); setScriptMsg(""); }}
+              className="px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 whitespace-nowrap"
+            >
+              {en ? "Clear" : "清空"}
+            </button>
+          </div>
+          {scriptMsg && <div className="px-2 text-[10px] leading-relaxed text-teal-300/90">{scriptMsg}</div>}
+          {parsed && parsed.preamble.length > 0 && (
+            <div className="px-2 text-[10px] leading-relaxed text-white/40">
+              {en ? `Note: ${parsed.preamble.length} line(s) before the first scene — kept as-is, no shots built for them.` : `场前 ${parsed.preamble.length} 行（不属于任何场次，已保留，不生成镜头）。`}
+            </div>
+          )}
+          {parsed && parsed.scenes.map((sc) => {
+            const override = scriptSetOverrides[sc.number];
+            const effId = override ?? sc.setId;
+            const effSet = effId ? getSceneSet(effId) : undefined;
+            const effName = effSet ? (en ? effSet.nameEn : effSet.name) : (sc.setName ?? effId ?? "");
+            return (
+              <div key={sc.number} className="rounded-lg px-2 py-1.5 bg-white/5 flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="flex-1 truncate">
+                    {en ? `Scene ${sc.number}` : `第 ${sc.number} 场`}
+                    {sc.location ? ` · ${sc.location}` : (en ? " · (no location)" : " · （未写地点）")}
+                    {sc.timeOfDay ? (sc.timeOfDay === "day" ? (en ? " · Day" : " · 日") : (en ? " · Night" : " · 夜")) : ""}
+                    {sc.interior !== undefined ? (sc.interior ? (en ? " · Interior" : " · 内") : (en ? " · Exterior" : " · 外")) : ""}
+                  </span>
+                  {effId
+                    ? <span className="text-teal-300 whitespace-nowrap">🎬 {effName}</span>
+                    : <span className="text-amber-300 whitespace-nowrap">⚠️ {en ? "No set matched" : "未匹配片场"}</span>}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={override ?? ""}
+                    onChange={(e) => setScriptSetOverride(sc.number, e.target.value || null)}
+                    className="flex-1 min-w-0 bg-white/10 rounded px-1 py-0.5 outline-none"
+                    style={{ colorScheme: "dark" }}
+                    title={en ? "Pick this scene's set manually (overrides the parsed match)" : "手动指定本场片场（覆盖解析的匹配结果）"}
+                  >
+                    <option value="">
+                      {sc.setId
+                        ? (en ? `Auto: ${sc.setName}` : `自动：${sc.setName}`)
+                        : (en ? "Pick a set…" : "手动选片场…")}
+                    </option>
+                    {SCENE_SETS.map((s) => (
+                      <option key={s.id} value={s.id}>{en ? s.nameEn : s.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => { if (effId) applySet(effId); }}
+                    disabled={!effId}
+                    className="px-1.5 py-0.5 rounded hover:bg-white/10 text-white/70 whitespace-nowrap disabled:opacity-30"
+                    title={en ? "Load this set into the designer" : "把这场片场加载进设计器"}
+                  >
+                    {en ? "Build set" : "搭片场"}
+                  </button>
+                </div>
+                {sc.lines.map((l) => (
+                  <div key={l.id} className="flex flex-col gap-0.5 rounded bg-white/5 px-1.5 py-1">
+                    <div className="flex items-start gap-1.5 text-[11px] leading-snug">
+                      <span
+                        className="whitespace-nowrap px-1 rounded"
+                        style={{
+                          background: l.kind === "dialogue" ? "rgba(45,212,191,0.2)" : l.kind === "action" ? "rgba(59,130,246,0.2)" : "rgba(245,158,11,0.25)",
+                          color: l.kind === "dialogue" ? "#5eead4" : l.kind === "action" ? "#93c5fd" : "#fbbf24",
+                        }}
+                      >
+                        {l.kind === "dialogue" ? (en ? "Line" : "台词") : l.kind === "action" ? (en ? "Action" : "动作") : (en ? "Unassigned" : UNASSIGNED_MESSAGE)}
+                      </span>
+                      <span className="flex-1 text-white/80 break-words">{l.raw}</span>
+                    </div>
+                    {l.kind === "action" && l.actionSummary && (
+                      <div className="text-[10px] text-teal-300/80 pl-1">✓ {l.actionSummary}</div>
+                    )}
+                    {l.kind === "unassigned" && l.unassignedReason && (
+                      <div className="text-[10px] text-amber-300/90 pl-1">⚠️ {l.unassignedReason}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
 
           {/* 打斗编舞：phrase × beat，beat 间 reset，安全是数据字段 */}
           <div className="px-1 pt-2 text-[10px] tracking-widest text-white/40 border-t border-white/10 mt-1">

@@ -342,18 +342,35 @@ export interface Shot {
    *  打斗 > 剑类飞行 > 灯光情绪 > 默认温馨；旧存档无此字段时按自动
    *  解释，绝不因升级丢数据） */
   musicMood?: MusicMood;
+  /** 剧本来源（script.ts，Part 4 附加字段；旧存档/手工镜无此字段 =
+   *  非剧本生成的镜，照常读，绝不因升级丢数据） */
+  /** 本镜台词原文，如 "男主（愤怒）：你来晚了。" */
+  dialogue?: string;
+  /** 台词/动作的角色名（如 "男主"） */
+  scriptCharacter?: string;
+  /** 来源剧本场次号（第 N 场） */
+  scriptScene?: number;
+  /** 来源剧本行原文（动作行 = 动作描述） */
+  scriptLine?: string;
+  /** 来源动作行的动作 id（动作库注册表 id，如 "walk"） */
+  scriptAction?: ActionId;
 }
 
-export function makeShot(presetId: string, opts?: { targetActorId?: string; lightingId?: LightingId; musicMood?: MusicMood }): Shot {
+export function makeShot(presetId: string, opts?: { targetActorId?: string; lightingId?: LightingId; musicMood?: MusicMood; prompt?: string; dialogue?: string; scriptCharacter?: string; scriptScene?: number; scriptLine?: string; scriptAction?: ActionId }): Shot {
   const preset = getCinePreset(presetId);
   return {
     id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
     presetId,
     duration: preset?.duration ?? 8,
-    prompt: "",
+    prompt: opts?.prompt ?? "",
     ...(opts?.targetActorId ? { targetActorId: opts.targetActorId } : {}),
     ...(opts?.lightingId ? { lightingId: opts.lightingId } : {}),
     ...(opts?.musicMood ? { musicMood: opts.musicMood } : {}),
+    ...(opts?.dialogue ? { dialogue: opts.dialogue } : {}),
+    ...(opts?.scriptCharacter ? { scriptCharacter: opts.scriptCharacter } : {}),
+    ...(opts?.scriptScene !== undefined ? { scriptScene: opts.scriptScene } : {}),
+    ...(opts?.scriptLine ? { scriptLine: opts.scriptLine } : {}),
+    ...(opts?.scriptAction ? { scriptAction: opts.scriptAction } : {}),
   };
 }
 
