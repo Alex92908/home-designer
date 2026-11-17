@@ -5992,7 +5992,7 @@ const QING_GARDEN_PROSPEROUS_SET: ProjectTemplate = {
       ],
       yard: [
         { furnitureId: "fountain", x: 800, z: 200, rotation: 0 },
-        { furnitureId: "proc-water-plane", x: 800, z: 200, rotation: 0, scaleW: 1.2, scaleD: 0.35 },
+        { furnitureId: "proc-water-plane", x: 800, z: 200, rotation: 0, scaleW: 0.6, scaleD: 0.2 },
         { furnitureId: "proc-rockery", x: 300, z: 200, rotation: 0 },
         { furnitureId: "proc-rockery", x: 1300, z: 200, rotation: 0 },
         { furnitureId: "plant-monstera", x: 150, z: 200, rotation: 0 },
