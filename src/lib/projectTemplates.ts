@@ -1837,17 +1837,20 @@ const APARTMENT_SET: ProjectTemplate = {
       rooms: [
         { room: "living",   x: 0,   y: 0,   width: 620, depth: 480,
           name: "客厅", nameEn: "Living Room", icon: "🛋️",
-          windows: [{ wall: "S", pos: 200, len: 240 }] },
+          // 门窗修复：旧 S 窗落在内隔墙上（南侧是卧室区），移到北外墙 + 补西外墙一扇
+          windows: [{ wall: "N", pos: 190, len: 240 }, { wall: "W", pos: 120, len: 180 }] },
         { room: "kitchen",  x: 620, y: 0,   width: 380, depth: 300,
           name: "厨房", nameEn: "Kitchen", icon: "🍳" },
         { room: "dining",   x: 620, y: 300, width: 380, depth: 180,
           name: "餐厅", nameEn: "Dining Room", icon: "🍽️" },
         { room: "master",   x: 0,   y: 480, width: 500, depth: 320,
-          name: "主卧", nameEn: "Master Bedroom", icon: "🛏️" },
+          name: "主卧", nameEn: "Master Bedroom", icon: "🛏️",
+          windows: [{ wall: "S", pos: 125, len: 200 }] },
         { room: "bathroom", x: 500, y: 480, width: 220, depth: 320,
           name: "卫生间", nameEn: "Bathroom", icon: "🚿" },
         { room: "bedroom",  x: 720, y: 480, width: 280, depth: 320,
-          name: "次卧", nameEn: "Bedroom", icon: "🛏️" },
+          name: "次卧", nameEn: "Bedroom", icon: "🛏️",
+          windows: [{ wall: "S", pos: 70, len: 110 }] },
       ],
     },
   ],
@@ -2012,7 +2015,9 @@ const RURAL_HALL_SET: ProjectTemplate = {
           name: "堂屋", nameEn: "Main Hall", icon: "🏮",
           doors: [{ wall: "S", pos: 270, len: 160, style: "wood_panel", h: 210 }],
           windows: [
-            { wall: "E", pos: 180, len: 200, style: "wooden", h: 150, sill: 90 },
+            // 门窗修复：旧 E 窗会与卧房默认西门撞在同一隔墙（180–380 vs 308–388），
+            // 移到北外墙正中（神龛上方透光）
+            { wall: "N", pos: 210, len: 280, style: "wooden", h: 150, sill: 90 },
             { wall: "W", pos: 180, len: 200, style: "wooden", h: 150, sill: 90 },
           ],
           wallDecor: [
@@ -2025,7 +2030,9 @@ const RURAL_HALL_SET: ProjectTemplate = {
         { room: "kitchen",  x: 700, y: 0,   width: 500, depth: 280,
           name: "厨房", nameEn: "Kitchen", icon: "🍳", exteriorStyle: "concrete" },
         { room: "bedroom",  x: 700, y: 280, width: 500, depth: 280,
-          name: "卧房", nameEn: "Bedroom", icon: "🛏️" },
+          name: "卧房", nameEn: "Bedroom", icon: "🛏️",
+          // 门窗修复：卧房原无窗，南外墙补木窗（门由默认重算开向堂屋）
+          windows: [{ wall: "S", pos: 125, len: 200, style: "wooden", h: 150, sill: 90 }] },
         // 院子：走廊语义；全墙隐藏成露天院子（咖啡馆沿街座位区同款做法）。
         { room: "hallway",  x: 0,   y: 560, width: 1200, depth: 340,
           name: "院子", nameEn: "Courtyard", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
@@ -2196,7 +2203,9 @@ const MING_HALL_SET: ProjectTemplate = {
           name: "正厅", nameEn: "Main Hall", icon: "🏛️",
           doors: [{ wall: "S", pos: 370, len: 160, style: "wood_panel", h: 210 }],
           windows: [
-            { wall: "E", pos: 180, len: 200, style: "wooden", h: 150, sill: 90 },
+            // 门窗修复：旧 E 窗与内室 W 门开在同一隔墙同一位置（180–380 vs 230–330），
+            // 移到北外墙正中（避开两侧对联/挂画，案台上方透光）
+            { wall: "N", pos: 330, len: 240, style: "wooden", h: 150, sill: 90 },
             { wall: "W", pos: 180, len: 200, style: "wooden", h: 150, sill: 90 },
           ],
           wallDecor: [
@@ -2207,7 +2216,12 @@ const MING_HALL_SET: ProjectTemplate = {
           ] },
         { room: "master",   x: 900, y: 0,   width: 500, depth: 560,
           name: "内室", nameEn: "Inner Chamber", icon: "🛏️",
-          doors: [{ wall: "W", pos: 230, len: 100, style: "wood_panel", h: 200 }] },
+          doors: [{ wall: "W", pos: 230, len: 100, style: "wood_panel", h: 200 }],
+          // 门窗修复：内室原无窗，补北/东两面外墙木窗
+          windows: [
+            { wall: "N", pos: 125, len: 200, style: "wooden", h: 150, sill: 90 },
+            { wall: "E", pos: 180, len: 200, style: "wooden", h: 150, sill: 90 },
+          ] },
         { room: "hallway",  x: 0,   y: 560, width: 1400, depth: 240,
           name: "前廊", nameEn: "Front Porch", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
       ],
@@ -2312,6 +2326,9 @@ const MING_HALL_SET: ProjectTemplate = {
         { furnitureId: "proc-outdoor-bench", x: 700, z: 60,  rotation: 0 },
         { furnitureId: "proc-rockery",      x: 1300, z: 200, rotation: 0 },
         { furnitureId: "proc-ground-stone", x: 700,  z: 120, rotation: 0, scaleW: 1.4, scaleD: 0.24 },
+      // ── 门窗修复 fix (c)：独立门/窗道具（无墙场景）──
+      { furnitureId: "proc-shoji", x: 300, z: 120, rotation: 0 },
+      { furnitureId: "proc-shoji", x: 1050, z: 120, rotation: 0 },
       ],
     },
   ],
@@ -2364,18 +2381,27 @@ const QING_SANXITANG_SET: ProjectTemplate = {
         { room: "study",   x: 0,   y: 0,   width: 420, depth: 360,
           name: "三希堂", nameEn: "Sanxitang Study", icon: "📜",
           doors: [{ wall: "S", pos: 170, len: 80, style: "wood_panel", h: 200 }],
-          windows: [{ wall: "E", pos: 100, len: 120, style: "wooden", h: 120, sill: 100 }],
+          // 门窗修复：旧 E 窗与外间 W 门开在同一隔墙同一位置（100–220 vs 140–220），
+          // 移到北外墙（炕沿北墙，窗台 100 高于炕面）
+          windows: [{ wall: "N", pos: 105, len: 170, style: "wooden", h: 120, sill: 100 }],
           wallDecor: [
             { furnitureId: "wall-lamp-lantern", wall: "S", u: 0.3, v: 0.7 },
             { furnitureId: "wall-lamp-lantern", wall: "S", u: 0.7, v: 0.7 },
           ] },
         { room: "hallway", x: 420, y: 0,   width: 480, depth: 360,
           name: "外间", nameEn: "Antechamber", icon: "🚪",
-          doors: [{ wall: "W", pos: 140, len: 80, style: "wood_panel", h: 200 }] },
+          doors: [{ wall: "W", pos: 140, len: 80, style: "wood_panel", h: 200 }],
+          // 门窗修复：外间原无窗，补北外墙木窗
+          windows: [{ wall: "N", pos: 120, len: 190, style: "wooden", h: 120, sill: 100 }] },
         { room: "study2",  x: 0,   y: 360, width: 420, depth: 240,
-          name: "藏书间", nameEn: "Book Room", icon: "📚" },
+          name: "藏书间", nameEn: "Book Room", icon: "📚",
+          // 门窗修复：藏书间原无门窗，西外墙补木窗（北墙留给书架）
+          windows: [{ wall: "W", pos: 60, len: 100, style: "wooden", h: 120, sill: 100 }] },
         { room: "bedroom", x: 420, y: 360, width: 480, depth: 240,
-          name: "耳房", nameEn: "Side Room", icon: "🛏️" },
+          name: "耳房", nameEn: "Side Room", icon: "🛏️",
+          // 门窗修复：耳房原无门窗，南外墙补木窗 + 北墙居中木门（通外间）
+          doors: [{ wall: "N", pos: 170, len: 80, style: "wood_panel", h: 200 }],
+          windows: [{ wall: "S", pos: 120, len: 190, style: "wooden", h: 120, sill: 100 }] },
       ],
     },
   ],
@@ -2520,7 +2546,9 @@ const TANG_PALACE_SET: ProjectTemplate = {
           name: "宴会厅", nameEn: "Banquet Hall", icon: "🏮",
           doors: [{ wall: "S", pos: 350, len: 200, style: "wood_panel", h: 210 }],
           windows: [
-            { wall: "E", pos: 180, len: 240, style: "wooden", h: 150, sill: 90 },
+            // 门窗修复：旧 E 窗与偏厅 W 门开在同一隔墙同一位置（180–420 vs 250–350），
+            // 移到北外墙正中
+            { wall: "N", pos: 270, len: 360, style: "wooden", h: 150, sill: 90 },
             { wall: "W", pos: 180, len: 240, style: "wooden", h: 150, sill: 90 },
           ],
           wallDecor: [
@@ -2529,7 +2557,9 @@ const TANG_PALACE_SET: ProjectTemplate = {
           ] },
         { room: "dining",   x: 900, y: 0,   width: 500, depth: 600,
           name: "偏厅", nameEn: "Side Hall", icon: "🍽️",
-          doors: [{ wall: "W", pos: 250, len: 100, style: "wood_panel", h: 200 }] },
+          doors: [{ wall: "W", pos: 250, len: 100, style: "wood_panel", h: 200 }],
+          // 门窗修复：偏厅原无窗，补北外墙木窗（东外墙由默认重算补）
+          windows: [{ wall: "N", pos: 125, len: 200, style: "wooden", h: 150, sill: 90 }] },
         { room: "hallway",  x: 0,   y: 600, width: 1400, depth: 300,
           name: "前廊", nameEn: "Front Porch", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
       ],
@@ -2704,13 +2734,17 @@ const SONG_STUDY_SET: ProjectTemplate = {
           name: "书斋", nameEn: "Study", icon: "📖",
           doors: [{ wall: "S", pos: 250, len: 100, style: "wood_panel", h: 200 }],
           windows: [
-            { wall: "E", pos: 130, len: 160, style: "wooden", h: 140, sill: 90 },
+            // 门窗修复：旧 E 窗与内室 W 门开在同一隔墙同一位置（130–290 vs 160–250），
+            // 移到北外墙正中（书案上方）
+            { wall: "N", pos: 180, len: 240, style: "wooden", h: 140, sill: 90 },
             { wall: "W", pos: 130, len: 160, style: "wooden", h: 140, sill: 90 },
           ],
           wallDecor: [{ furnitureId: "mural-inkwash", wall: "S", u: 0.5, v: 0.55 }] },
         { room: "master",  x: 600, y: 0,   width: 400, depth: 420,
           name: "内室", nameEn: "Inner Chamber", icon: "🛏️",
-          doors: [{ wall: "W", pos: 160, len: 90, style: "wood_panel", h: 200 }] },
+          doors: [{ wall: "W", pos: 160, len: 90, style: "wood_panel", h: 200 }],
+          // 门窗修复：内室原无窗，补北外墙木窗（东外墙由默认重算补）
+          windows: [{ wall: "N", pos: 100, len: 160, style: "wooden", h: 140, sill: 90 }] },
         { room: "hallway", x: 0,   y: 420, width: 1000, depth: 280,
           name: "庭院", nameEn: "Garden", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
       ],
@@ -2864,7 +2898,9 @@ const SHIKUMEN_SET: ProjectTemplate = {
           name: "天井", nameEn: "Lightwell", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
         { room: "master",  x: 600, y: 440, width: 400, depth: 360,
           name: "卧房", nameEn: "Bedroom", icon: "🛏️",
-          doors: [{ wall: "W", pos: 60, len: 90, style: "wood_panel", h: 200 }] },
+          doors: [{ wall: "W", pos: 60, len: 90, style: "wood_panel", h: 200 }],
+          // 门窗修复：卧房原无窗，南外墙补木窗（东外墙由默认重算补）
+          windows: [{ wall: "S", pos: 100, len: 160, style: "wooden", h: 140, sill: 90 }] },
         { room: "custom1", x: 0,   y: 600, width: 600, depth: 200,
           name: "后天井", nameEn: "Rear Lightwell", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
       ],
@@ -2942,6 +2978,8 @@ const SHIKUMEN_SET: ProjectTemplate = {
         { furnitureId: "decor-trash-bin",     x: 30,  z: 130, rotation: 0 },
         { furnitureId: "plant-sansevieria", x: 570, z: 130, rotation: 0 },
         { furnitureId: "proc-rock",         x: 380, z: 130, rotation: 0 },
+      // ── 门窗修复 fix (c)：独立门/窗道具（无墙场景）──
+      { furnitureId: "proc-shoji", x: 150, z: 80, rotation: 0 },
       ],
       study2: [
         { furnitureId: "desk-study",            x: 200, z: 100, rotation: 0 },
@@ -3009,6 +3047,8 @@ const SHIKUMEN_SET: ProjectTemplate = {
         { furnitureId: "decor-trash-bin",   x: 580, z: 150, rotation: 0 },
         { furnitureId: "chicken",           x: 350, z: 60,  rotation: 0 },
         { furnitureId: "plant-sansevieria", x: 150, z: 180, rotation: 0 },
+      // ── 门窗修复 fix (c)：独立门/窗道具（无墙场景）──
+      { furnitureId: "proc-shoji", x: 450, z: 100, rotation: 0 },
       ],
     },
   ],
@@ -9110,6 +9150,9 @@ const FOREST_SET: ProjectTemplate = {
     {
     yard: [
       { furnitureId: "proc-ground-grass", x: 2000, z: 1500, rotation: 0, scaleW: 3.8, scaleD: 2.8 },
+      // ── 门窗修复 fix (c)：独立门/窗道具（无墙场景）──
+      { furnitureId: "proc-door-frame-wood", x: 2000, z: 1550, rotation: 0 },
+      { furnitureId: "proc-lattice-window", x: 1500, z: 1500, rotation: 90 },
       { furnitureId: "proc-tree-oak", x: 498, z: 999, rotation: 145, scaleW: 0.9, scaleD: 1.03, scaleH: 1.25 },
       { furnitureId: "proc-tree-oak", x: 831, z: 1825, rotation: 348, scaleW: 1.25, scaleD: 1.06, scaleH: 1.26 },
       { furnitureId: "proc-tree-oak", x: 899, z: 1026, rotation: 347, scaleW: 0.86, scaleD: 1.05, scaleH: 0.92 },
@@ -10442,6 +10485,9 @@ const PEACH_SET: ProjectTemplate = {
     {
     yard: [
       { furnitureId: "proc-ground-grass", x: 1800, z: 1200, rotation: 0, scaleW: 3.4, scaleD: 2.2 },
+      // ── 门窗修复 fix (c)：独立门/窗道具（无墙场景）──
+      { furnitureId: "proc-moon-gate", x: 1800, z: 1600, rotation: 0 },
+      { furnitureId: "proc-lattice-window", x: 1200, z: 1200, rotation: 90 },
       { furnitureId: "proc-tree-peach", x: 1115, z: 923, rotation: 349, scaleW: 1.2, scaleD: 1.12, scaleH: 1.13 },
       { furnitureId: "proc-tree-peach", x: 714, z: 518, rotation: 205, scaleW: 1.12, scaleD: 1.1, scaleH: 1.04 },
       { furnitureId: "proc-tree-peach", x: 795, z: 1123, rotation: 340, scaleW: 1.07, scaleD: 1.21, scaleH: 1.19 },
@@ -10562,6 +10608,9 @@ const GARDEN_SET: ProjectTemplate = {
     {
     yard: [
       { furnitureId: "proc-ground-grass", x: 1800, z: 1200, rotation: 0, scaleW: 3.4, scaleD: 2.2 },
+      // ── 门窗修复 fix (c)：独立门/窗道具（无墙场景）──
+      { furnitureId: "proc-moon-gate", x: 1800, z: 600, rotation: 0 },
+      { furnitureId: "proc-lattice-window", x: 1200, z: 1200, rotation: 90 },
       { furnitureId: "proc-water-plane", x: 1800, z: 600, rotation: 0, scaleW: 1.6, scaleD: 1.0 },
       { furnitureId: "proc-arch-bridge", x: 1800, z: 600, rotation: 90, scaleW: 1.0, scaleD: 1.0 },
       { furnitureId: "proc-rockery", x: 1050, z: 1050, rotation: 125, scaleH: 1.24 },
@@ -11222,6 +11271,9 @@ const STREET_SET: ProjectTemplate = {
     {
     yard: [
       { furnitureId: "proc-ground-stone", x: 2000, z: 1200, rotation: 0, scaleW: 3.8, scaleD: 2.2 },
+      // ── 门窗修复 fix (c)：独立门/窗道具（无墙场景）──
+      { furnitureId: "proc-door-frame-wood", x: 2000, z: 1200, rotation: 0 },
+      { furnitureId: "proc-lattice-window", x: 2900, z: 1200, rotation: 90 },
       { furnitureId: "proc-shop-facade", x: 350, z: 400, rotation: 90, scaleW: 1.0 },
       { furnitureId: "proc-shop-facade", x: 350, z: 950, rotation: 90, scaleW: 1.2 },
       { furnitureId: "proc-shop-facade", x: 350, z: 1500, rotation: 90, scaleW: 1.0 },
@@ -11667,6 +11719,9 @@ const ANCIENT_STREET_SET: ProjectTemplate = {
     {
     yard: [
       { furnitureId: "proc-ground-stone", x: 2000, z: 1200, rotation: 0, scaleW: 3.8, scaleD: 2.2 },
+      // ── 门窗修复 fix (c)：独立门/窗道具（无墙场景）──
+      { furnitureId: "proc-door-frame-wood", x: 2000, z: 1600, rotation: 0 },
+      { furnitureId: "proc-lattice-window", x: 1500, z: 1100, rotation: 90 },
       { furnitureId: "proc-timber-facade", x: 700, z: 500, rotation: 90 },
       { furnitureId: "proc-timber-facade", x: 3300, z: 500, rotation: 270 },
       { furnitureId: "proc-timber-facade", x: 700, z: 1100, rotation: 90 },
@@ -11769,6 +11824,9 @@ const MARKET_SET: ProjectTemplate = {
     {
     yard: [
       { furnitureId: "proc-ground-stone", x: 1800, z: 1200, rotation: 0, scaleW: 3.4, scaleD: 2.2 },
+      // ── 门窗修复 fix (c)：独立门/窗道具（无墙场景）──
+      { furnitureId: "proc-door-frame-wood", x: 1800, z: 1000, rotation: 0 },
+      { furnitureId: "proc-lattice-window", x: 1150, z: 1500, rotation: 90 },
       { furnitureId: "proc-market-stall", x: 1450, z: 600, rotation: 90 },
       { furnitureId: "proc-market-stall", x: 2150, z: 600, rotation: 270 },
       { furnitureId: "proc-market-stall", x: 1450, z: 1200, rotation: 90 },
@@ -11869,6 +11927,9 @@ const BATTLEFIELD_SET: ProjectTemplate = {
     {
     yard: [
       { furnitureId: "proc-ground-dry", x: 2400, z: 1500, rotation: 0, scaleW: 4.6, scaleD: 2.8 },
+      // ── 门窗修复 fix (c)：独立门/窗道具（无墙场景）──
+      { furnitureId: "proc-door-frame-wood", x: 2800, z: 1500, rotation: 0 },
+      { furnitureId: "proc-lattice-window", x: 2000, z: 1500, rotation: 90 },
       { furnitureId: "proc-tent", x: 1500, z: 1300, rotation: 180 },
       { furnitureId: "proc-tent", x: 3300, z: 1300, rotation: 180 },
       { furnitureId: "proc-banner", x: 1200, z: 1150, rotation: 251 },

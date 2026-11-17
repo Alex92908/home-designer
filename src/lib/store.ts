@@ -2317,7 +2317,8 @@ export const useDesignerStore = create<DesignerStore>()(
           const hiddenMap = { ...(existing.roomWallsHidden ?? {}) };
           // 门窗数据**按模板从头生成**，不继承上一个方案（用户实拍：从别墅切到咖啡馆时，
           // 别墅那扇位置离谱、还横跨幕墙与实墙的窗被带了过来；30 个房间的 legacy 门字段
-          // 同理）。没有任何项目模板定义 windows，全部靠下面按房间尺寸/立面重新算。
+          // 同理）。下面按本层实际拼贴 + 房间实际尺寸重算默认门窗（2026-11-17 门窗修复，
+          // 之前这里只清空不重算，全部片场都没有窗、门全挤在 S 墙上）。
           // 这才是「一键加载模板 = 替换所有平面图」该有的行为。
           const winMap: Record<string, WindowConfig[]> = {};
           const dWallMap = { ...DEFAULT_ROOM_DOOR_WALL };
@@ -2327,6 +2328,57 @@ export const useDesignerStore = create<DesignerStore>()(
           // 不排除的话走廊会凭空长出一扇门（用户：走廊你放个门吃屎啊）。
           dHasMap.hallway = false;
           dHasMap.stair = false;
+          // ── 默认门窗重算的拼贴几何（本层）：某面墙算「朝外」，当且仅当没有
+          // 带墙的邻房贴着它 —— 全墙隐藏的开放空间（前廊/庭院/室外 yard）不算
+          // 邻房；大房间包含另一房间的边也算贴着（如办公室大厅包着茶水间）。
+          // 窗只开在朝外的墙上（先取 ROOM_DEFS 的 windowWall，不朝外就按
+          // N→E→W→S 找第一面朝外的墙；「朝外」只认贴边邻房，见 windowOpenSide）；
+          // 门开向枢纽房（客厅/餐厅/走廊），枢纽房自己的门开向室外（S 优先，
+          // 传统正门朝南）。中式/日式风格模板的片场默认木窗（wooden），其余沿用
+          // 默认款式（渲染时 sliding/awning）。
+          const SIDES: WallSide[] = ["N", "S", "E", "W"];
+          const hiddenSidesOf = (rr: (typeof layout.rooms)[number]) =>
+            new Set((rr.wallsHidden ?? []) as WallSide[]);
+          const allWallsHidden = (rr: (typeof layout.rooms)[number]) =>
+            SIDES.every(sd => hiddenSidesOf(rr).has(sd));
+          const overlap = (a0: number, a1: number, b0: number, b1: number) =>
+            Math.min(a1, b1) - Math.max(a0, b0);
+          const neighborOn = (rr: (typeof layout.rooms)[number], side: WallSide) => {
+            for (const q of layout.rooms) {
+              if (q === rr) continue;
+              if (side === "N" && overlap(q.x, q.x + q.width, rr.x, rr.x + rr.width) > 0
+                && (q.y + q.depth === rr.y || (q.y < rr.y && q.y + q.depth > rr.y))) return q;
+              if (side === "S" && overlap(q.x, q.x + q.width, rr.x, rr.x + rr.width) > 0
+                && (q.y === rr.y + rr.depth || (q.y < rr.y + rr.depth && q.y + q.depth > rr.y + rr.depth))) return q;
+              if (side === "W" && overlap(q.y, q.y + q.depth, rr.y, rr.y + rr.depth) > 0
+                && (q.x + q.width === rr.x || (q.x < rr.x && q.x + q.width > rr.x))) return q;
+              if (side === "E" && overlap(q.y, q.y + q.depth, rr.y, rr.y + rr.depth) > 0
+                && (q.x === rr.x + rr.width || (q.x < rr.x + rr.width && q.x + q.width > rr.x + rr.width))) return q;
+            }
+            return undefined;
+          };
+          const openSide = (rr: (typeof layout.rooms)[number], side: WallSide) => {
+            const q = neighborOn(rr, side);
+            // 没有邻房，或邻房本身全墙隐藏（开放空间）→ 该面朝外
+            return !q || allWallsHidden(q);
+          };
+          // 窗用的「朝外」：只认贴边邻房，不认包容 —— 大房间包着小房间时（如办公
+          // 室大厅包着茶水间），小房间的墙面朝大厅敞开，仍可开内窗（室内玻璃隔断
+          // 式）；贴边邻房才是真正的内隔墙，窗不能开在上面。门仍用 openSide（含包容，
+          // 这样被包着的房间门才能朝向包着它的枢纽房）。
+          const windowOpenSide = (rr: (typeof layout.rooms)[number], side: WallSide) => {
+            for (const q of layout.rooms) {
+              if (q === rr) continue;
+              if (side === "N" && q.y + q.depth === rr.y && overlap(q.x, q.x + q.width, rr.x, rr.x + rr.width) > 0) return allWallsHidden(q);
+              if (side === "S" && q.y === rr.y + rr.depth && overlap(q.x, q.x + q.width, rr.x, rr.x + rr.width) > 0) return allWallsHidden(q);
+              if (side === "W" && q.x + q.width === rr.x && overlap(q.y, q.y + q.depth, rr.y, rr.y + rr.depth) > 0) return allWallsHidden(q);
+              if (side === "E" && q.x === rr.x + rr.width && overlap(q.y, q.y + q.depth, rr.y, rr.y + rr.depth) > 0) return allWallsHidden(q);
+            }
+            return true;
+          };
+          const HUB_ROOMS: ReadonlySet<string> = new Set(["living", "dining", "hallway", "stair"]);
+          const isHub = (rr: (typeof layout.rooms)[number]) => HUB_ROOMS.has(rr.room);
+          const woodenDefaultWin = tpl.styleTemplateId === "chinese" || tpl.styleTemplateId === "japanese";
           for (const r of layout.rooms) {
             layoutMap[r.room] = { x: r.x, y: r.y };
             dimsMap[r.room]   = { width: r.width, depth: r.depth };
@@ -2342,7 +2394,60 @@ export const useDesignerStore = create<DesignerStore>()(
             const oldPos = existing.roomLayout?.[r.room];
             const sameFootprint = oldDim?.width === r.width && oldDim?.depth === r.depth
               && oldPos?.x === r.x && oldPos?.y === r.y;
-            if (exWin && sameFootprint) winMap[r.room] = exWin;
+            if (exWin && sameFootprint) {
+              winMap[r.room] = exWin;
+            } else if (!allWallsHidden(r)) {
+              // 默认窗（与 applyAiDesign 同款换算，但按本房间实际尺寸 + 朝外的墙）：
+              // 玻璃幕墙房间不给窗（整面墙本身就是窗）；ROOM_DEFS 不开窗的房间
+              // （卫生间/衣帽间/影音室等）也不给。显式声明的窗在 step 3.5 覆盖这里。
+              const wdef = ROOM_DEFS[r.room];
+              const hidden = hiddenSidesOf(r);
+              if (r.exteriorStyle !== "glass" && wdef?.hasWindow && wdef.windowWall !== "none") {
+                let wWall = wdef.windowWall as WallSide;
+                if (!windowOpenSide(r, wWall) || hidden.has(wWall)) {
+                  const alt = (["N", "E", "W", "S"] as WallSide[])
+                    .find(sd => windowOpenSide(r, sd) && !hidden.has(sd));
+                  if (alt) wWall = alt; else wWall = "" as WallSide;
+                }
+                if (wWall) {
+                  const wallLen = (wWall === "N" || wWall === "S") ? r.width : r.depth;
+                  winMap[r.room] = [{
+                    id: `def_win_${r.room}`, wall: wWall,
+                    pos: Math.round(wallLen * 0.25), len: Math.round(wallLen * 0.45),
+                    ...(woodenDefaultWin ? { style: "wooden" as const } : {}),
+                  }];
+                }
+              }
+              // 默认门（legacy 单门字段，位置按本房间实际墙长算，不再用
+              // ROOM_DEFS 默认尺寸的 10%）：非枢纽房开向枢纽房，枢纽房开向室外，
+              // 选中墙被隐藏就顺延到下一候选，全都不可用则不要门。显式声明的门
+              // 在 step 3.5（roomDoors）覆盖这里。
+              if (r.room !== "hallway" && r.room !== "stair") {
+                const hubOrder: WallSide[] = ["S", "W", "E", "N"];
+                const openOrder: WallSide[] = ["S", "E", "W", "N"];
+                const hubSide = hubOrder.find(sd => {
+                  const q = neighborOn(r, sd);
+                  return !!q && HUB_ROOMS.has(q.room);
+                });
+                const cands = isHub(r)
+                  ? [...openOrder.filter(sd => openSide(r, sd)), ...(hubSide ? [hubSide] : []), "S" as WallSide]
+                  : [...(hubSide ? [hubSide] : []), ...openOrder.filter(sd => openSide(r, sd)), "S" as WallSide];
+                const dWall = cands.find(sd => !hidden.has(sd));
+                if (dWall) {
+                  const wallLen = (dWall === "N" || dWall === "S") ? r.width : r.depth;
+                  let dPos = Math.round(wallLen * 0.1);
+                  if (dPos + 80 > wallLen - 5) dPos = Math.max(5, wallLen - 85);
+                  dWallMap[r.room] = dWall;
+                  dPosMap[r.room] = dPos;
+                } else {
+                  dHasMap[r.room] = false;
+                }
+              }
+            } else {
+              // 全墙隐藏的房间（室外 yard / 露天前廊 / 露天座）没有墙可挂门窗：
+              // 门不要（由 fix (c) 的独立门框/月洞门道具代替），窗也不给。
+              dHasMap[r.room] = false;
+            }
             // 模板声明了非矩形轮廓就应用；没声明则清掉旧项目残留的自定义形状
             if (r.shape) shapesMap[r.room] = r.shape; else delete shapesMap[r.room];
             // 模板声明了隐藏墙（开放式/骑楼）就应用；没声明则清掉残留
@@ -2367,8 +2472,8 @@ export const useDesignerStore = create<DesignerStore>()(
             roomDimensions: dimsMap,
             roomShapes: shapesMap,
             roomWallsHidden: hiddenMap,
-            // 门窗从头生成，不继承旧方案（见上）。legacy 单门字段回到全局默认，
-            // 让 getRoomDoors 走"每房一扇 S 墙门"，而不是继承别墅 30 房间的旧值。
+            // 门窗从头生成，不继承旧方案（见上）。legacy 单门字段按本层拼贴重算
+            // （门朝枢纽房/室外、pos 按实际墙长），默认窗按实际尺寸开在外墙上。
             roomWindows: winMap,
             roomDoorWall: dWallMap,
             roomDoorPos: dPosMap,

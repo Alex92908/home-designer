@@ -1669,6 +1669,72 @@ function buildPailou(g: THREE.Group, w: number, d: number, h: number, c: string)
   box(g, w * 0.72, 0.1, 0.15, 0, 4.37, 0, tile); // 正脊
 }
 
+/** 独立木门框（门窗修复 fix (c)）：双柱 + 过梁 + 门槛 + 半掩木门扇。
+ *  给无墙场景（森林/街道/战场等）的门 —— 没有墙可开洞，就立一扇门。
+ *  门扇绕左柱铰链张开 30°，摆幅计入进深（目录 depth 70cm 含摆幅，见下）。 */
+function buildDoorFrameWood(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c || "#5A3A22", 0.7);
+  const leafMat = std("#6B4A2F", 0.7);
+  const panelMat = std("#7A5230", 0.7);
+  const postW = 0.12;
+  const postX = w / 2 - postW / 2;
+  box(g, postW, h, 0.14, -postX, 0, 0, wood); // 左柱
+  box(g, postW, h, 0.14, postX, 0, 0, wood); // 右柱
+  box(g, w, 0.14, 0.14, 0, h - 0.14, 0, wood); // 过梁
+  box(g, w, 0.06, 0.16, 0, 0, 0, std("#8A8A80", 0.9)); // 门槛石
+  // 半掩门扇：铰链在左柱内侧，绕 Y 轴张开 30°
+  const leafW = w - postW * 2 - 0.04;
+  const leafH = h - 0.14 - 0.06 - 0.02;
+  const leaf = new THREE.Group();
+  box(leaf, leafW, leafH, 0.05, leafW / 2, 0.06, 0, leafMat);
+  box(leaf, leafW * 0.8, 0.7, 0.02, leafW / 2, 0.35, 0.035, panelMat); // 下嵌板
+  box(leaf, leafW * 0.8, 0.7, 0.02, leafW / 2, 1.25, 0.035, panelMat); // 上嵌板
+  leaf.position.set(-w / 2 + postW + 0.02, 0, 0);
+  leaf.rotation.y = -Math.PI / 6;
+  g.add(leaf);
+}
+
+/** 月洞门（门窗修复 fix (c)）：白墙段 + 圆形洞口（八角近似）+ 压顶。
+ *  给庭院/桃园类无墙场景的门。洞口中心高 1.5m、直径 2.2m。 */
+function buildMoonGate(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wall = std(c || "#EDE6D6", 0.85);
+  const tile = std("#3A2A1A", 0.7);
+  const wallD = 0.4;
+  // 两侧墩（洞口宽 2.2，两墩各 0.5）
+  box(g, 0.5, 3.0, wallD, -1.35, 0, 0, wall);
+  box(g, 0.5, 3.0, wallD, 1.35, 0, 0, wall);
+  // 洞口下槛 + 上梁
+  box(g, 2.2, 0.4, wallD, 0, 0, 0, wall);
+  box(g, 2.2, 0.4, wallD, 0, 2.6, 0, wall);
+  // 四角填块（绕 Z 转 45° 的方块）→ 洞口近似圆形（八角）
+  for (const sx of [-1, 1]) for (const sy of [0.62, 2.38]) {
+    const corner = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, wallD), wall);
+    corner.position.set(sx * 0.82, sy, 0);
+    corner.rotation.z = Math.PI / 4;
+    add(g, corner);
+  }
+  // 压顶 + 正脊（不超出声明尺寸）
+  box(g, w, 0.12, 0.5, 0, 2.98, 0, tile);
+  box(g, 2.4, 0.08, 0.3, 0, 3.1, 0, tile);
+}
+
+/** 独立花格窗（门窗修复 fix (c)）：双腿支架 + 镂空木格窗扇（无玻璃/无纸，
+ *  通透）。给无墙场景（集市/街道/庭院）与露天廊下的窗。 */
+function buildLatticeWindow(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const wood = std(c || "#6B4A2F", 0.75);
+  const legX = w / 2 - 0.04;
+  box(g, 0.08, 0.35, 0.1, -legX, 0, 0, wood); // 左腿
+  box(g, 0.08, 0.35, 0.1, legX, 0, 0, wood); // 右腿
+  box(g, w, 0.08, 0.1, 0, 0.35, 0, wood); // 下框
+  box(g, w, 0.08, 0.1, 0, h - 0.08, 0, wood); // 上框
+  box(g, 0.08, h - 0.43, 0.1, -legX, 0.43, 0, wood); // 左梃
+  box(g, 0.08, h - 0.43, 0.1, legX, 0.43, 0, wood); // 右梃
+  box(g, w - 0.16, 0.05, 0.1, 0, 0.69, 0, wood); // 横棂 ×2
+  box(g, w - 0.16, 0.05, 0.1, 0, 0.95, 0, wood);
+  box(g, 0.05, h - 0.43, 0.1, -0.27, 0.43, 0, wood); // 竖棂 ×2
+  box(g, 0.05, h - 0.43, 0.1, 0.27, 0.43, 0, wood);
+}
+
 /** 石井：石环 + 井口 + 双柱小顶。 */
 function buildStoneWell(g: THREE.Group, w: number, d: number, h: number, c: string): void {
   const stone = std(c || "#9A9488", 0.95);
@@ -2267,6 +2333,10 @@ const PROCEDURAL_BUILDERS: Record<string, Builder> = {
   "proc-roman-column": buildRomanColumn,
   "proc-fallen-column": buildFallenColumn,
   "proc-pailou": buildPailou,
+  // ── 门窗修复 fix (c)：无墙场景的独立门/窗道具 ──
+  "proc-door-frame-wood": buildDoorFrameWood,
+  "proc-moon-gate": buildMoonGate,
+  "proc-lattice-window": buildLatticeWindow,
   "proc-stone-well": buildStoneWell,
   "proc-burnt-beam": buildBurntBeam,
   "proc-dead-tree": buildDeadTree,
