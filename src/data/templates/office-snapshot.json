@@ -2283,6 +2283,240 @@
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
+            },
+            {
+              "furnitureId": "proc-reception-desk",
+              "x": 950.0,
+              "z": 385.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "plant-monstera",
+              "x": 887.5,
+              "z": 387.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "plant-monstera",
+              "x": 1247.5,
+              "z": 387.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "proc-whiteboard",
+              "x": 1500.0,
+              "z": 27.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "sofa-modular-green",
+              "x": 545.0,
+              "z": 400.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "coffee-marble-rect",
+              "x": 640.0,
+              "z": 587.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "decor-books-pile",
+              "x": 671.0,
+              "z": 609.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 45
+            },
+            {
+              "furnitureId": "decor-coffee-mug",
+              "x": 711.0,
+              "z": 613.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 45
+            },
+            {
+              "furnitureId": "plant-rubber-tree",
+              "x": 872.5,
+              "z": 474.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "lamp-arc-gold",
+              "x": 827.5,
+              "z": 627.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "elec-monitor",
+              "x": 163.0,
+              "z": 191.0,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "elec-monitor",
+              "x": 235.0,
+              "z": 191.0,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "elec-monitor",
+              "x": 163.0,
+              "z": 351.0,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "elec-monitor",
+              "x": 235.0,
+              "z": 351.0,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "lamp-desk-arm",
+              "x": 143.0,
+              "z": 511.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "lamp-desk-arm",
+              "x": 215.0,
+              "z": 511.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "lamp-desk-arm",
+              "x": 143.0,
+              "z": 671.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "decor-tissue-box",
+              "x": 284.0,
+              "z": 664.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "decor-tissue-box",
+              "x": 212.0,
+              "z": 784.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "decor-globe",
+              "x": 278.5,
+              "z": 772.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "toy-teddy",
+              "x": 1896.94,
+              "z": 854.02,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "rug-modern-gray",
+              "x": 540,
+              "z": 470,
+              "rotation": 0,
+              "scaleW": 1.6,
+              "scaleD": 1.2,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "elec-keyboard",
+              "x": 171.5,
+              "z": 217.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "elec-keyboard",
+              "x": 243.5,
+              "z": 217.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "elec-keyboard",
+              "x": 171.5,
+              "z": 377.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
+            },
+            {
+              "furnitureId": "elec-keyboard",
+              "x": 243.5,
+              "z": 377.5,
+              "rotation": 90,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 65
             }
           ],
           "exteriorDecor": []
@@ -2623,8 +2857,8 @@
             {
               "instanceId": "pi_p6sz3sa",
               "furnitureId": "dining_table-cafe-small",
-              "x": 92.04071969696972,
-              "z": 129.25880331088663,
+              "x": 100,
+              "z": 80,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2671,6 +2905,32 @@
               "scaleD": 1,
               "scaleH": 1,
               "elevationY": 0
+            },
+            {
+              "furnitureId": "proc-pantry-counter",
+              "x": 5.0,
+              "z": 200.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "decor-coffee-cups",
+              "x": 45.0,
+              "z": 224.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 125
+            },
+            {
+              "furnitureId": "decor-tulip",
+              "x": 107.0,
+              "z": 217.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 125
             }
           ],
           "exteriorDecor": []
@@ -3009,6 +3269,23 @@
               "scaleW": 1,
               "scaleD": 0.4,
               "scaleH": 1
+            },
+            {
+              "furnitureId": "decor-tissue-box",
+              "x": -27.0,
+              "z": 524.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 82
+            },
+            {
+              "furnitureId": "plant-sansevieria",
+              "x": 106.5,
+              "z": 405.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
             }
           ],
           "exteriorDecor": [
@@ -3249,6 +3526,23 @@
               "scaleD": 1,
               "scaleH": 1,
               "mountCeiling": true
+            },
+            {
+              "furnitureId": "decor-tissue-box",
+              "x": 183.0,
+              "z": 524.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 82
+            },
+            {
+              "furnitureId": "plant-sansevieria",
+              "x": 106.5,
+              "z": 415.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
             }
           ],
           "exteriorDecor": [
@@ -3311,9 +3605,9 @@
           "placedItems": [
             {
               "instanceId": "tpl_set-office_dining_0_table-conference",
-              "furnitureId": "table-conference",
-              "x": 80,
-              "z": 70,
+              "furnitureId": "proc-meeting-table",
+              "x": 20,
+              "z": 60,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -3472,6 +3766,50 @@
               "scaleD": 1,
               "scaleH": 1,
               "mountCeiling": true
+            },
+            {
+              "furnitureId": "chair-ergonomic",
+              "x": 332.5,
+              "z": 87.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "proc-whiteboard",
+              "x": 100.0,
+              "z": 7.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "decor-tissue-box",
+              "x": 188.0,
+              "z": 109.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 80
+            },
+            {
+              "furnitureId": "decor-coffee-mug",
+              "x": 111.0,
+              "z": 123.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 80
+            },
+            {
+              "furnitureId": "decor-coffee-mug",
+              "x": 271.0,
+              "z": 103.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 80
             }
           ]
         },
@@ -3643,87 +3981,6 @@
               "scaleH": 1
             },
             {
-              "instanceId": "tpl_set-office_custom2_1_table-conference",
-              "furnitureId": "table-conference",
-              "x": 65,
-              "z": 100,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
-              "instanceId": "tpl_set-office_custom2_2_chair-modern-gray",
-              "furnitureId": "chair-modern-gray",
-              "x": 87.5,
-              "z": 47,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
-              "instanceId": "tpl_set-office_custom2_3_chair-modern-gray",
-              "furnitureId": "chair-modern-gray",
-              "x": 162.5,
-              "z": 47,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
-              "instanceId": "tpl_set-office_custom2_4_chair-modern-gray",
-              "furnitureId": "chair-modern-gray",
-              "x": 237.5,
-              "z": 47,
-              "rotation": 0,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
-              "instanceId": "tpl_set-office_custom2_5_chair-modern-gray",
-              "furnitureId": "chair-modern-gray",
-              "x": 87.6359375,
-              "z": 203,
-              "rotation": 180,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
-              "instanceId": "tpl_set-office_custom2_6_chair-modern-gray",
-              "furnitureId": "chair-modern-gray",
-              "x": 162.5,
-              "z": 203,
-              "rotation": 180,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
-              "instanceId": "tpl_set-office_custom2_7_chair-modern-gray",
-              "furnitureId": "chair-modern-gray",
-              "x": 237.5,
-              "z": 203,
-              "rotation": 180,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1
-            },
-            {
-              "instanceId": "tpl_set-office_custom2_8_elec-tv-flat",
-              "furnitureId": "elec-tv-flat",
-              "x": 295.95859375000003,
-              "z": 135.21440972222223,
-              "rotation": 270,
-              "scaleW": 1,
-              "scaleD": 1,
-              "scaleH": 1,
-              "elevationY": 120
-            },
-            {
               "instanceId": "tpl_set-office_custom2_9_plant-monstera",
               "furnitureId": "plant-monstera",
               "x": 302.5,
@@ -3743,6 +4000,93 @@
               "scaleD": 1,
               "scaleH": 1,
               "mountCeiling": true
+            },
+            {
+              "furnitureId": "proc-ceo-desk",
+              "x": 75.0,
+              "z": 40.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "chair-ergonomic",
+              "x": 152.5,
+              "z": 142.5,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "coffee-marble-rect",
+              "x": 245,
+              "z": 222.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "decor-books-vintage",
+              "x": 275,
+              "z": 245,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 45
+            },
+            {
+              "furnitureId": "decor-globe",
+              "x": 102.5,
+              "z": 67.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 78
+            },
+            {
+              "furnitureId": "lamp-desk-arm",
+              "x": 239.0,
+              "z": 76.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 78
+            },
+            {
+              "furnitureId": "mural-inkwash",
+              "x": 145.0,
+              "z": 9.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "bookshelf-with-books",
+              "x": 295.0,
+              "z": 72.5,
+              "rotation": 270,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "decor-books-set",
+              "x": 315.0,
+              "z": 83.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1,
+              "elevationY": 200
+            },
+            {
+              "furnitureId": "sofa-armchair",
+              "x": 247.5,
+              "z": 147.5,
+              "rotation": 180,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
             }
           ]
         },
@@ -3806,6 +4150,46 @@
               "scaleD": 1,
               "scaleH": 1,
               "mountCeiling": true
+            },
+            {
+              "furnitureId": "plant-rubber-tree",
+              "x": 272.5,
+              "z": 44.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "plant-rubber-tree",
+              "x": 772.5,
+              "z": 44.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "artwork-hokusai",
+              "x": 500.0,
+              "z": 7.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "decor-umbrella-stand",
+              "x": 137.5,
+              "z": 61.5,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "decor-bin-black",
+              "x": 935.0,
+              "z": 55.0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
             }
           ]
         },
