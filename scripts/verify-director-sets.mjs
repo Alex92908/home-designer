@@ -96,7 +96,10 @@ const PAIRS = [
 // 墙挂/悬置件：正下方无承托物是设计如此（黑板/设备带挂墙；漆碗在干栏
 // 长屋架空地板上，地板本身不是一件家具；白板/案情板/KTV 屏挂墙；
 // 侧吸油烟机挂墙在灶台上方；蛛网挂墙角）。
-const SUSPENDED_ALLOWLIST = new Set(["proc-blackboard", "proc-med-strip", "proc-lacquer-bowl", "proc-whiteboard", "proc-evidence-board", "proc-ktv-screen", "hood-side-black", "proc-cobweb"]);
+const SUSPENDED_ALLOWLIST = new Set(["proc-blackboard", "proc-med-strip", "proc-lacquer-bowl", "proc-whiteboard", "proc-evidence-board", "proc-ktv-screen", "hood-side-black", "proc-cobweb",
+  // Group B 壁挂件（挂钟/壁画/店招/壁灯/花洒/厕所标识/壁挂吹风机）：挂墙是设计如此，正下方无承托物。
+  "decor-victorian-clock", "mural-inkwash", "sign-shop-fascia", "lamp-wall-sconce",
+  "shower-head", "sign-restroom-men", "sign-restroom-women", "appliance-hairdryer"]);
 
 let failures = 0;
 let checks = 0;
