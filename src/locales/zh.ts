@@ -57,6 +57,8 @@ export const zh = {
   wholeHouseApplied: "已应用",
   wholeHouseAppliedTotal: "整屋总价（含人工）",
   wholeHouseViewDetail: "查看明细",
+  wholeHousePerRoomLaborNote: "分房间明细不含人工费；各房 + 人工费 = 整屋总价",
+  wholeHouseNoMaterialsNote: "材料/布线/人工费在应用装修风格后计入",
   scoreTitle: "📊 方案评分",
   scoreStyle: "风格协调",
   scoreSpace: "空间感",

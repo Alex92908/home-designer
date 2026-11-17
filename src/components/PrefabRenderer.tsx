@@ -19,15 +19,40 @@
  *   3. Add a case to <PrefabMesh> here.
  */
 
-import { useMemo, Suspense } from "react";
+import { useMemo, Suspense, Component, type ReactNode } from "react";
 import { shrinkSceneTexturesForMobile } from "@/lib/device";
 import * as THREE from "three";
 import { useGLTF } from "@/lib/drei";
+import { useDesignerStore } from "@/lib/store";
 import type { YardPrefab, PrefabKind } from "@/lib/types";
 import { getPrefabDef, resolveParams } from "@/lib/outdoorPrefabs";
 import { getOutdoorTexture, outdoorTileSize } from "@/lib/textures";
 import { poissonRect } from "@/lib/poissonDisc";
 import { GlbPrefabMesh } from "./GlbPrefabMesh";
+
+/** Catches a single GLB load failure (404 / truncated .bin / network
+ *  error) so one broken model renders nothing instead of crashing the
+ *  whole Canvas. Reports the failed path to the store so the 3D view
+ *  can show a "some models failed to load" badge with a retry.
+ *  Must sit OUTSIDE <Suspense> — Suspense only catches the loading
+ *  (pending) state, not the rejection. */
+export class GlbErrorBoundary extends Component<
+  { src: string; fallback?: ReactNode; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err: Error) {
+    console.warn(`[GlbErrorBoundary] Skipping broken model ${this.props.src}: ${err.message}`);
+    try {
+      useDesignerStore.getState().reportGlbFailure(this.props.src);
+    } catch { /* store unavailable (tests) — the warn above is enough */ }
+  }
+  render() {
+    if (this.state.failed) return this.props.fallback ?? null;
+    return this.props.children;
+  }
+}
 // 院子结构件用真实 GLB 渲染：按包围盒把模型缩放到目标 footprint（米），
 // 并落地（base→y=0）、水平居中。比手搓几何真实得多。
 function GlbStructure({ src, sizeM, sizeW, sizeD, alignTop }: { src: string; sizeM?: number; sizeW?: number; sizeD?: number; alignTop?: boolean }) {
@@ -92,10 +117,10 @@ function PoolFurniture() {
     <group position={[0, -0.47, 0]}>
       {dz.map((z, i) => (
         <group key={i}>
-          <group position={[3.6, 0, z]}>  <GlbFurniture src={LOUNGER_GLB} targetH={0.9} rotY={-Math.PI / 2} /></group>
-          <group position={[-3.6, 0, z]}> <GlbFurniture src={LOUNGER_GLB} targetH={0.9} rotY={Math.PI / 2} /></group>
-          <group position={[4.8, 0, z]}>  <GlbFurniture src={PARASOL_GLB} targetH={1.7} /></group>
-          <group position={[-4.8, 0, z]}> <GlbFurniture src={PARASOL_GLB} targetH={1.7} /></group>
+          <group position={[3.6, 0, z]}>  <GlbErrorBoundary src={LOUNGER_GLB}><GlbFurniture src={LOUNGER_GLB} targetH={0.9} rotY={-Math.PI / 2} /></GlbErrorBoundary></group>
+          <group position={[-3.6, 0, z]}> <GlbErrorBoundary src={LOUNGER_GLB}><GlbFurniture src={LOUNGER_GLB} targetH={0.9} rotY={Math.PI / 2} /></GlbErrorBoundary></group>
+          <group position={[4.8, 0, z]}>  <GlbErrorBoundary src={PARASOL_GLB}><GlbFurniture src={PARASOL_GLB} targetH={1.7} /></GlbErrorBoundary></group>
+          <group position={[-4.8, 0, z]}> <GlbErrorBoundary src={PARASOL_GLB}><GlbFurniture src={PARASOL_GLB} targetH={1.7} /></GlbErrorBoundary></group>
         </group>
       ))}
     </group>
@@ -653,10 +678,12 @@ export function PrefabMesh({ prefab }: { prefab: YardPrefab }) {
     const scale = prefab.scale ?? 1;
     return (
       <group position={[wx, -0.5, wz]} rotation={[0, rot, 0]} scale={[scale, scale, scale]}>
-        <GlbPrefabMesh
-          src={prefab.glbSrc}
-          partColor={prefab.partColor}
-        />
+        <GlbErrorBoundary src={prefab.glbSrc}>
+          <GlbPrefabMesh
+            src={prefab.glbSrc}
+            partColor={prefab.partColor}
+          />
+        </GlbErrorBoundary>
       </group>
     );
   }
@@ -671,10 +698,10 @@ export function PrefabMesh({ prefab }: { prefab: YardPrefab }) {
     return (
       <group position={[wx, 0, wz]} rotation={[0, rot, 0]}>
         <group scale={[scaleX, 1, scaleZ]}>
-          {prefab.prefabKind === "pool"            && <group position={[0, -0.47, 0]}><GlbStructure src={POOL_GLB} sizeW={11} sizeD={15} alignTop /></group>}
-          {prefab.prefabKind === "pergola_classic" && <GlbStructure src={PERGOLA_GLB} sizeM={5} />}
-          {prefab.prefabKind === "outdoor_kitchen" && <GlbStructure src={GRILL_GLB} sizeM={2.2} />}
-          {prefab.prefabKind === "fountain"        && <GlbStructure src={FOUNTAIN_GLB} sizeM={2.6} />}
+          {prefab.prefabKind === "pool"            && <group position={[0, -0.47, 0]}><GlbErrorBoundary src={POOL_GLB}><GlbStructure src={POOL_GLB} sizeW={11} sizeD={15} alignTop /></GlbErrorBoundary></group>}
+          {prefab.prefabKind === "pergola_classic" && <GlbErrorBoundary src={PERGOLA_GLB}><GlbStructure src={PERGOLA_GLB} sizeM={5} /></GlbErrorBoundary>}
+          {prefab.prefabKind === "outdoor_kitchen" && <GlbErrorBoundary src={GRILL_GLB}><GlbStructure src={GRILL_GLB} sizeM={2.2} /></GlbErrorBoundary>}
+          {prefab.prefabKind === "fountain"        && <GlbErrorBoundary src={FOUNTAIN_GLB}><GlbStructure src={FOUNTAIN_GLB} sizeM={2.6} /></GlbErrorBoundary>}
         </group>
         {/* Furniture rides OUTSIDE the footprint-scale group (so it never
             stretches) but INSIDE the rotation group, so it follows rotation. */}

@@ -1025,6 +1025,13 @@ interface DesignerStore {
    *  point the user can adjust — NOT a verified market rate. */
   laborRate: number;
   setLaborRate: (rate: number) => void;
+  /** GLB models that failed to load this session (paths). Session-only
+   *  (NOT in partialize — never persisted) — drives the "some models
+   *  failed to load" badge in the 3D view. Populated by GlbErrorBoundary
+   *  via reportGlbFailure. */
+  failedGlbModels: string[];
+  reportGlbFailure: (src: string) => void;
+  clearGlbFailures: () => void;
   /** Cost breakdown for one room on one floor (materials / furniture /
    *  wiring / total), using the same math as totalCost(). */
   roomCostBreakdown: (floorIndex: number, room: RoomType) => RoomCostBreakdown;
@@ -1246,6 +1253,16 @@ export const useDesignerStore = create<DesignerStore>()(
        *  midpoint of the 30–50% range documented in exportPdf.ts. */
       laborRate: 0.4,
       setLaborRate: (rate) => set({ laborRate: Math.max(0.3, Math.min(0.5, rate)) }),
+      /** GLB load failures this session (paths). Session-only — NOT in
+       *  partialize, so it never persists. A failed model is recorded
+       *  once; the 3D view shows a badge with a retry (page reload). */
+      failedGlbModels: [],
+      reportGlbFailure: (src) => {
+        const cur = get().failedGlbModels;
+        if (cur.includes(src)) return;
+        set({ failedGlbModels: [...cur, src] });
+      },
+      clearGlbFailures: () => set({ failedGlbModels: [] }),
       furnitureHistory: [],
       clipboard: [],
       roomClipboard: null,

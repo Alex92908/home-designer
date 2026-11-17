@@ -165,6 +165,14 @@ export default function RightPanel() {
             </div>
           ))}
         </div>
+        {/* No template applied yet: materials/wiring/labor are all ¥0 because
+            the sample project only carries furniture prices. Say so plainly
+            instead of showing three unexplained ¥0 rows. */}
+        {mounted && wholeHouse.materials === 0 && (
+          <div className="text-[9px] mt-1.5" style={{ color: "var(--ds-text-3)" }}>
+            {t.wholeHouseNoMaterialsNote}
+          </div>
+        )}
         {/* Labor rate — default 40% (midpoint of the 30–50% range in the
             quote footnote), user-adjustable. */}
         <div className="mt-2">
@@ -204,6 +212,16 @@ export default function RightPanel() {
                     </div>
                   );
                 })}
+                {/* Labor row — per-room rows cover furniture/materials/wiring
+                    only. Adding labor here makes the list sum to the
+                    whole-house total instead of looking ¥9,170 short. */}
+                <div className="flex items-center justify-between text-[10px]" style={{ color: "var(--ds-text-2)" }}>
+                  <span>{t.wholeHouseLabor} · {Math.round((mounted ? laborRateRaw : 0.4) * 100)}%</span>
+                  <span className="font-bold" style={{ color: "var(--ds-text)" }}>{formatPrice(mounted ? wholeHouse.labor : 0, locale)}</span>
+                </div>
+                <div className="text-[9px] mt-0.5" style={{ color: "var(--ds-text-3)" }}>
+                  {t.wholeHousePerRoomLaborNote}
+                </div>
               </div>
             )}
           </div>

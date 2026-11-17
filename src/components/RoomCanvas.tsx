@@ -63,6 +63,29 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: string |
   }
 }
 
+// ─── GLB fallback boundary ────────────────────────────────────
+// Like ErrorBoundary but renders a caller-supplied fallback instead of
+// an error message — so one failed GLB (e.g. a curtain) degrades to its
+// procedural mesh instead of killing the whole canvas. (The curtain GLB
+// failure was the one that killed the canvas in testing: a failed curtain
+// propagated to the top-level boundary and unmounted the entire room.)
+class GlbFallbackBoundary extends Component<
+  { src?: string; fallback: ReactNode; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(e: Error) {
+    console.warn("[GlbFallbackBoundary] GLB failed, using procedural fallback:", this.props.src ?? "(unknown)", e.message);
+    if (this.props.src) {
+      try { useDesignerStore.getState().reportGlbFailure(this.props.src); } catch { /* store unavailable — fallback still renders */ }
+    }
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
 // ─── Helpers ───────────────────────────────────────────────
 function shade(hex: string, pct: number): string {
   const c = hex.replace("#", "");
@@ -3254,7 +3277,17 @@ function CurtainInstance({
     >
       <group ref={innerRef}>
         <Suspense fallback={<FurnitureMesh item={item} w={w} d={d} h={h} instanceId={instanceId} />}>
-          <CurtainGltf item={item} w={w} d={d} h={h} />
+          {/* GlbFallbackBoundary: a failed curtain GLB must degrade to the
+              procedural mesh, NOT kill the whole room canvas (that is what
+              happened before — the error reached the top-level boundary and
+              unmounted the Canvas). src is reported to the store so the
+              GlbFailureBadge can show it. */}
+          <GlbFallbackBoundary
+            src={item.model3d?.url}
+            fallback={<FurnitureMesh item={item} w={w} d={d} h={h} instanceId={instanceId} />}
+          >
+            <CurtainGltf item={item} w={w} d={d} h={h} />
+          </GlbFallbackBoundary>
         </Suspense>
       </group>
     </group>

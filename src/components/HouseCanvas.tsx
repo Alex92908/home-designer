@@ -117,7 +117,7 @@ import { getRoomDoors } from "@/lib/roomDoors";
 import { getFurnitureById } from "@/lib/furniture";
 import { getOutdoorAssetByKind } from "@/lib/outdoorAssets";
 import { DetailedDecor } from "./DetailedDecor";
-import { PrefabMesh } from "./PrefabRenderer";
+import { PrefabMesh, GlbErrorBoundary } from "./PrefabRenderer";
 import { ZoneMesh } from "./ZoneRenderer";
 import FloorPlanBuilding from "./FloorPlanExterior";
 import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
@@ -3663,15 +3663,29 @@ function GlbVillaBuilding({ W, D }: { W: number; D: number }) {
     );
   }
   return (
-    <Suspense fallback={
-      // While GLB loads, show a simple placeholder so the scene isn't blank
-      <mesh position={[0, 3, 0]}>
-        <boxGeometry args={[W * 1.5, 6, D]} />
-        <meshStandardMaterial color="#F0EDE8" roughness={0.7} wireframe />
-      </mesh>
-    }>
-      <GlbVillaMesh W={W} D={D} />
-    </Suspense>
+    // GlbErrorBoundary sits OUTSIDE Suspense (same pattern as
+    // PbrErrorBoundary): Suspense only catches the loading state, not
+    // the rejection. On failure the procedural box stays as the visible
+    // fallback instead of the error killing the whole Canvas.
+    <GlbErrorBoundary
+      src="/models/villa_pbr.glb"
+      fallback={
+        <mesh position={[0, 3, 0]}>
+          <boxGeometry args={[W * 1.5, 6, D]} />
+          <meshStandardMaterial color="#EDEAE3" roughness={0.85} />
+        </mesh>
+      }
+    >
+      <Suspense fallback={
+        // While GLB loads, show a simple placeholder so the scene isn't blank
+        <mesh position={[0, 3, 0]}>
+          <boxGeometry args={[W * 1.5, 6, D]} />
+          <meshStandardMaterial color="#F0EDE8" roughness={0.7} wireframe />
+        </mesh>
+      }>
+        <GlbVillaMesh W={W} D={D} />
+      </Suspense>
+    </GlbErrorBoundary>
   );
 }
 
@@ -6031,6 +6045,37 @@ const TimeOfDaySlider = memo(function TimeOfDaySlider({
   );
 });
 
+// ─── GLB load-failure badge ─────────────────────────────────────────
+// User-visible notice when one or more 3D models failed to load this
+// session (recorded by GlbErrorBoundary in the store). Sits outside the
+// Canvas in the HTML overlay. Retry reloads the page (re-fetches the
+// models); ✕ dismisses the badge (the failed models stay hidden).
+function GlbFailureBadge({ locale }: { locale: string }) {
+  const failed = useDesignerStore((s) => s.failedGlbModels);
+  const clear = useDesignerStore((s) => s.clearGlbFailures);
+  if (failed.length === 0) return null;
+  return (
+    <div
+      className="absolute top-3 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg"
+      style={{ background: "#FEF3C7", color: "#92400E", border: "1px solid #FDE68A" }}
+    >
+      <span>
+        {locale === "en"
+          ? `⚠️ ${failed.length} model${failed.length > 1 ? "s" : ""} failed to load`
+          : `⚠️ ${failed.length} 个模型加载失败`}
+      </span>
+      <button
+        onClick={() => window.location.reload()}
+        className="px-2 py-0.5 rounded-full font-bold"
+        style={{ background: "#92400E", color: "#FFF" }}
+      >
+        {locale === "en" ? "Retry" : "重试"}
+      </button>
+      <button onClick={clear} className="font-bold" aria-label="dismiss">✕</button>
+    </div>
+  );
+}
+
 // ─── Main export ────────────────────────────────────────────
 export default function HouseCanvas() {
   const locale        = useLocale();
@@ -7444,6 +7489,8 @@ export default function HouseCanvas() {
         dataStyles={{ color: "#fff", fontSize: 13, marginTop: 14, fontFamily: "inherit" }}
         dataInterpolation={(p) => locale === "en" ? `Loading models ${p.toFixed(0)}%` : `加载模型 ${p.toFixed(0)}%`}
       />
+      {/* GLB load failures — badge with retry (see GlbFailureBadge above). */}
+      <GlbFailureBadge locale={locale} />
     </div>
   );
 }

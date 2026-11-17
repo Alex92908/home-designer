@@ -57,6 +57,8 @@ export const en: Translations = {
   wholeHouseApplied: "Applied",
   wholeHouseAppliedTotal: "Whole-house total (incl. labor)",
   wholeHouseViewDetail: "View breakdown",
+  wholeHousePerRoomLaborNote: "Per-room rows exclude labor; rooms + labor = whole-house total",
+  wholeHouseNoMaterialsNote: "Materials, wiring and labor are counted after applying a decoration style",
   scoreTitle: "📊 Design Score",
   scoreStyle: "Style Match",
   scoreSpace: "Space Feel",
