@@ -22,8 +22,8 @@
       },
       {
         "furnitureId": "plant-rubber-tree",
-        "x": 1790,
-        "z": 945
+        "x": 1480,
+        "z": 990
       },
       {
         "furnitureId": "lamp-pendant-modern",
@@ -234,7 +234,7 @@
         "mountCeiling": true
       },
       {
-        "furnitureId": "dining_table-cafe-rustic",
+        "furnitureId": "dining-marble-round",
         "x": 1560,
         "z": 580
       },
@@ -434,7 +434,7 @@
         "mountCeiling": true
       },
       {
-        "furnitureId": "dining_table-cafe-rustic",
+        "furnitureId": "dining-marble-round",
         "x": 2000,
         "z": 900
       },
@@ -633,6 +633,358 @@
         "x": 2500,
         "z": 760,
         "mountCeiling": true
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 1513,
+        "z": 533,
+        "rotation": 45
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 1607,
+        "z": 627,
+        "rotation": 225
+      },
+      {
+        "furnitureId": "appliance-cooktop",
+        "x": 1560,
+        "z": 580,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "decor-copper-pots",
+        "x": 1585,
+        "z": 595,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "decor-dinnerware",
+        "x": 1535,
+        "z": 595,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "decor-utensils",
+        "x": 1585,
+        "z": 565,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 1953,
+        "z": 853,
+        "rotation": 45
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 2047,
+        "z": 947,
+        "rotation": 225
+      },
+      {
+        "furnitureId": "appliance-cooktop",
+        "x": 2000,
+        "z": 900,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "decor-copper-pots",
+        "x": 2025,
+        "z": 915,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "decor-dinnerware",
+        "x": 1975,
+        "z": 915,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "decor-utensils",
+        "x": 2025,
+        "z": 885,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "decor-tea-set",
+        "x": 325,
+        "z": 600,
+        "elevationY": 76
+      },
+      {
+        "furnitureId": "decor-tea-set",
+        "x": 1165,
+        "z": 600,
+        "elevationY": 76
+      },
+      {
+        "furnitureId": "decor-tea-set",
+        "x": 745,
+        "z": 920,
+        "elevationY": 76
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 745,
+        "z": 595,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-fruit-bowl",
+        "x": 275,
+        "z": 912,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 325,
+        "z": 888,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-fruit-bowl",
+        "x": 2415,
+        "z": 632,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 2465,
+        "z": 608,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-fruit-bowl",
+        "x": 2415,
+        "z": 912,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-cappuccino",
+        "x": 2465,
+        "z": 888,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "seat-diner-booth",
+        "x": 100,
+        "z": 510,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 100,
+        "z": 510,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "seat-diner-booth",
+        "x": 100,
+        "z": 920,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 100,
+        "z": 920,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "seat-diner-booth",
+        "x": 2940,
+        "z": 540,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 2940,
+        "z": 540,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "seat-diner-booth",
+        "x": 2200,
+        "z": 520,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 2200,
+        "z": 520,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "dining_table-cafe-small",
+        "x": 2200,
+        "z": 650
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 2200,
+        "z": 650,
+        "elevationY": 96
+      },
+      {
+        "furnitureId": "counter-bar-straight",
+        "x": 1850,
+        "z": 930
+      },
+      {
+        "furnitureId": "counter-back-bar-bottles",
+        "x": 1620,
+        "z": 995
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 1500,
+        "z": 860
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 1620,
+        "z": 860
+      },
+      {
+        "furnitureId": "seat-bar-stool",
+        "x": 1740,
+        "z": 860
+      },
+      {
+        "furnitureId": "decor-cocktail",
+        "x": 1560,
+        "z": 930,
+        "elevationY": 115
+      },
+      {
+        "furnitureId": "decor-cocktail",
+        "x": 1680,
+        "z": 930,
+        "elevationY": 115
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 1620,
+        "z": 950,
+        "elevationY": 115
+      },
+      {
+        "furnitureId": "sofa-modular-green",
+        "x": 1100,
+        "z": 920,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "coffee-marble-rect",
+        "x": 1100,
+        "z": 790
+      },
+      {
+        "furnitureId": "decor-books-pile",
+        "x": 1080,
+        "z": 790,
+        "elevationY": 45
+      },
+      {
+        "furnitureId": "decor-coffee-mug",
+        "x": 1120,
+        "z": 790,
+        "elevationY": 45
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 1300,
+        "z": 990
+      },
+      {
+        "furnitureId": "decor-menu-chalkboard",
+        "x": 1250,
+        "z": 1000,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "artwork-vangogh",
+        "x": 1000,
+        "z": 1010,
+        "rotation": 180,
+        "elevationY": 150
+      },
+      {
+        "furnitureId": "lamp-pendant-saturno",
+        "x": 1100,
+        "z": 900
+      },
+      {
+        "furnitureId": "lamp-arc-gold",
+        "x": 1300,
+        "z": 900
+      },
+      {
+        "furnitureId": "mural-red-fuji",
+        "x": 800,
+        "z": 14
+      },
+      {
+        "furnitureId": "decor-restaurant-sign",
+        "x": 1700,
+        "z": 1010,
+        "rotation": 180,
+        "elevationY": 150
+      },
+      {
+        "furnitureId": "plant-hanging-pothos",
+        "x": 600,
+        "z": 740
+      },
+      {
+        "furnitureId": "plant-hanging-pothos",
+        "x": 2000,
+        "z": 740
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 1900,
+        "z": 980
+      },
+      {
+        "furnitureId": "rug-persian",
+        "x": 1500,
+        "z": 750
+      },
+      {
+        "furnitureId": "rug-modern-gray",
+        "x": 300,
+        "z": 580
+      },
+      {
+        "furnitureId": "rug-modern-gray",
+        "x": 1140,
+        "z": 580
+      },
+      {
+        "furnitureId": "rug-modern-gray",
+        "x": 1980,
+        "z": 580
+      },
+      {
+        "furnitureId": "rug-modern-gray",
+        "x": 720,
+        "z": 900
+      },
+      {
+        "furnitureId": "proc-lantern-pole",
+        "x": 900,
+        "z": 950
+      },
+      {
+        "furnitureId": "proc-lantern-pole",
+        "x": 1400,
+        "z": 950
+      },
+      {
+        "furnitureId": "storage-crate",
+        "x": 2050,
+        "z": 980
       }
     ],
     "kitchen": [
@@ -735,6 +1087,65 @@
         "x": 560,
         "z": 220,
         "mountCeiling": true
+      },
+      {
+        "furnitureId": "decor-pots-pans",
+        "x": 380,
+        "z": 120,
+        "elevationY": 90
+      },
+      {
+        "furnitureId": "decor-spice-rack",
+        "x": 400,
+        "z": 400,
+        "elevationY": 110
+      },
+      {
+        "furnitureId": "decor-utensils",
+        "x": 420,
+        "z": 400,
+        "elevationY": 110
+      },
+      {
+        "furnitureId": "appliance-dishwasher",
+        "x": 700,
+        "z": 180
+      },
+      {
+        "furnitureId": "appliance-microwave",
+        "x": 360,
+        "z": 260,
+        "elevationY": 90
+      },
+      {
+        "furnitureId": "decor-trash-bin",
+        "x": 30,
+        "z": 400
+      },
+      {
+        "furnitureId": "decor-trash-bin",
+        "x": 750,
+        "z": 400
+      },
+      {
+        "furnitureId": "storage-shelving-2",
+        "x": 45,
+        "z": 180
+      },
+      {
+        "furnitureId": "proc-basin",
+        "x": 650,
+        "z": 200
+      },
+      {
+        "furnitureId": "decor-wet-floor-sign",
+        "x": 400,
+        "z": 300
+      },
+      {
+        "furnitureId": "lamp-ceiling-long",
+        "x": 400,
+        "z": 220
       }
     ],
     "dining": [
@@ -793,7 +1204,7 @@
       },
       {
         "furnitureId": "plant-monstera",
-        "x": 310,
+        "x": 30,
         "z": 390
       },
       {
@@ -801,6 +1212,75 @@
         "x": 180,
         "z": 170,
         "mountCeiling": true
+      },
+      {
+        "furnitureId": "decor-dinnerware",
+        "x": 155,
+        "z": 150,
+        "elevationY": 76
+      },
+      {
+        "furnitureId": "decor-fruit-bowl",
+        "x": 205,
+        "z": 190,
+        "elevationY": 76
+      },
+      {
+        "furnitureId": "decor-copper-pots",
+        "x": 205,
+        "z": 150,
+        "elevationY": 76
+      },
+      {
+        "furnitureId": "sideboard-walnut",
+        "x": 310,
+        "z": 60,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "decor-vase-single",
+        "x": 300,
+        "z": 55,
+        "elevationY": 85
+      },
+      {
+        "furnitureId": "decor-books-vintage",
+        "x": 320,
+        "z": 70,
+        "elevationY": 85
+      },
+      {
+        "furnitureId": "artwork-inkwash",
+        "x": 120,
+        "z": 14
+      },
+      {
+        "furnitureId": "mural-inkwash",
+        "x": 260,
+        "z": 14
+      },
+      {
+        "furnitureId": "sofa-armchair",
+        "x": 150,
+        "z": 360,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "sofa-armchair",
+        "x": 300,
+        "z": 360,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "coffee-oak-round",
+        "x": 230,
+        "z": 360
+      },
+      {
+        "furnitureId": "decor-tea-set",
+        "x": 230,
+        "z": 360,
+        "elevationY": 30
       }
     ],
     "master": [
@@ -852,7 +1332,7 @@
       },
       {
         "furnitureId": "plant-rubber-tree",
-        "x": 310,
+        "x": 30,
         "z": 390
       },
       {
@@ -860,6 +1340,69 @@
         "x": 180,
         "z": 190,
         "mountCeiling": true
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 108,
+        "z": 120,
+        "rotation": 0
+      },
+      {
+        "furnitureId": "chair-modern-gray",
+        "x": 252,
+        "z": 260,
+        "rotation": 180
+      },
+      {
+        "furnitureId": "decor-dinnerware",
+        "x": 155,
+        "z": 170,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "decor-tea-set",
+        "x": 205,
+        "z": 210,
+        "elevationY": 74
+      },
+      {
+        "furnitureId": "sideboard-euro",
+        "x": 310,
+        "z": 100,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "decor-vase-royal",
+        "x": 310,
+        "z": 200
+      },
+      {
+        "furnitureId": "artwork-impression",
+        "x": 180,
+        "z": 14
+      },
+      {
+        "furnitureId": "sofa-armchair",
+        "x": 130,
+        "z": 360,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "sofa-armchair",
+        "x": 300,
+        "z": 360,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "coffee-oak-round",
+        "x": 215,
+        "z": 360
+      },
+      {
+        "furnitureId": "decor-tea-set",
+        "x": 215,
+        "z": 360,
+        "elevationY": 30
       }
     ],
     "study": [
@@ -923,12 +1466,6 @@
         "elevationY": 76
       },
       {
-        "furnitureId": "elec-tv-flat",
-        "x": 230,
-        "z": 16,
-        "elevationY": 130
-      },
-      {
         "furnitureId": "sideboard-euro",
         "x": 490,
         "z": 120,
@@ -942,14 +1479,89 @@
       },
       {
         "furnitureId": "plant-monstera",
-        "x": 490,
-        "z": 390
+        "x": 520,
+        "z": 40
       },
       {
         "furnitureId": "lamp-pendant-saturno",
         "x": 230,
         "z": 205,
         "mountCeiling": true
+      },
+      {
+        "furnitureId": "proc-ktv-screen",
+        "x": 545,
+        "z": 220,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "mural-inkwash",
+        "x": 230,
+        "z": 14
+      },
+      {
+        "furnitureId": "decor-dinner-set-elegant",
+        "x": 205,
+        "z": 185,
+        "elevationY": 76
+      },
+      {
+        "furnitureId": "decor-cocktail",
+        "x": 255,
+        "z": 225,
+        "elevationY": 76
+      },
+      {
+        "furnitureId": "decor-cocktail",
+        "x": 205,
+        "z": 230,
+        "elevationY": 76
+      },
+      {
+        "furnitureId": "proc-bogujia",
+        "x": 40,
+        "z": 300,
+        "rotation": 90
+      },
+      {
+        "furnitureId": "proc-celadon-vase",
+        "x": 40,
+        "z": 300,
+        "elevationY": 92
+      },
+      {
+        "furnitureId": "decor-vase-single",
+        "x": 40,
+        "z": 300,
+        "elevationY": 44
+      },
+      {
+        "furnitureId": "decor-books-vintage",
+        "x": 40,
+        "z": 300,
+        "elevationY": 128
+      },
+      {
+        "furnitureId": "sofa-leather-brown",
+        "x": 450,
+        "z": 340,
+        "rotation": 270
+      },
+      {
+        "furnitureId": "coffee-marble-rect",
+        "x": 340,
+        "z": 340
+      },
+      {
+        "furnitureId": "decor-tea-set",
+        "x": 340,
+        "z": 340,
+        "elevationY": 45
+      },
+      {
+        "furnitureId": "rug-persian",
+        "x": 230,
+        "z": 205
       }
     ],
     "bedroom": [
@@ -998,6 +1610,12 @@
         "x": 440,
         "z": 100,
         "mountCeiling": true
+      },
+      {
+        "furnitureId": "decor-tissue-box",
+        "x": 250,
+        "z": 30,
+        "elevationY": 82
       }
     ],
     "bathroom": [
@@ -1023,6 +1641,16 @@
         "x": 170,
         "z": 130,
         "mountCeiling": true
+      },
+      {
+        "furnitureId": "decor-tissue-box",
+        "x": 170,
+        "z": 130
+      },
+      {
+        "furnitureId": "bath_accessory-towel-rack",
+        "x": 170,
+        "z": 12
       }
     ],
     "bathroom2": [
@@ -1048,6 +1676,16 @@
         "x": 170,
         "z": 130,
         "mountCeiling": true
+      },
+      {
+        "furnitureId": "decor-tissue-box",
+        "x": 170,
+        "z": 130
+      },
+      {
+        "furnitureId": "bath_accessory-towel-rack",
+        "x": 170,
+        "z": 12
       }
     ],
     "hallway": [
@@ -1087,23 +1725,6 @@
       },
       {
         "furnitureId": "dining_table-cafe-marble",
-        "x": 1260,
-        "z": 100
-      },
-      {
-        "furnitureId": "chair-modern-gray",
-        "x": 1200,
-        "z": 100,
-        "rotation": 90
-      },
-      {
-        "furnitureId": "chair-modern-gray",
-        "x": 1320,
-        "z": 100,
-        "rotation": 270
-      },
-      {
-        "furnitureId": "dining_table-cafe-marble",
         "x": 1740,
         "z": 100
       },
@@ -1116,23 +1737,6 @@
       {
         "furnitureId": "chair-modern-gray",
         "x": 1800,
-        "z": 100,
-        "rotation": 270
-      },
-      {
-        "furnitureId": "dining_table-cafe-marble",
-        "x": 2220,
-        "z": 100
-      },
-      {
-        "furnitureId": "chair-modern-gray",
-        "x": 2160,
-        "z": 100,
-        "rotation": 90
-      },
-      {
-        "furnitureId": "chair-modern-gray",
-        "x": 2280,
         "z": 100,
         "rotation": 270
       },
@@ -1154,23 +1758,6 @@
         "rotation": 270
       },
       {
-        "furnitureId": "dining_table-cafe-marble",
-        "x": 2860,
-        "z": 100
-      },
-      {
-        "furnitureId": "chair-modern-gray",
-        "x": 2800,
-        "z": 100,
-        "rotation": 90
-      },
-      {
-        "furnitureId": "chair-modern-gray",
-        "x": 2920,
-        "z": 100,
-        "rotation": 270
-      },
-      {
         "furnitureId": "plant-rubber-tree",
         "x": 70,
         "z": 100
@@ -1179,6 +1766,80 @@
         "furnitureId": "plant-rubber-tree",
         "x": 2960,
         "z": 100
+      },
+      {
+        "furnitureId": "outdoor-patio-set",
+        "x": 1260,
+        "z": 100,
+        "scaleW": 0.8,
+        "scaleD": 0.8
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 1260,
+        "z": 100,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "outdoor-patio-set",
+        "x": 2220,
+        "z": 100,
+        "scaleW": 0.8,
+        "scaleD": 0.8
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 2220,
+        "z": 100,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "outdoor-patio-set",
+        "x": 2860,
+        "z": 100,
+        "scaleW": 0.8,
+        "scaleD": 0.8
+      },
+      {
+        "furnitureId": "decor-tulip",
+        "x": 2860,
+        "z": 100,
+        "elevationY": 75
+      },
+      {
+        "furnitureId": "proc-street-lamp",
+        "x": 600,
+        "z": 150
+      },
+      {
+        "furnitureId": "proc-street-lamp",
+        "x": 2400,
+        "z": 150
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 600,
+        "z": 50
+      },
+      {
+        "furnitureId": "plant-rubber-tree",
+        "x": 1800,
+        "z": 50
+      },
+      {
+        "furnitureId": "decor-menu-chalkboard",
+        "x": 1500,
+        "z": 50
+      },
+      {
+        "furnitureId": "decor-welcome-sign",
+        "x": 100,
+        "z": 50
+      },
+      {
+        "furnitureId": "decor-bin-black",
+        "x": 2900,
+        "z": 150
       }
     ]
   }
