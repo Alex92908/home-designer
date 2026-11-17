@@ -787,7 +787,8 @@
       {
         "furnitureId": "lamp-pendant-ikea4",
         "x": 1055,
-        "z": 70
+        "z": 70,
+        "mountCeiling": true
       },
       {
         "furnitureId": "appliance-espresso",
@@ -859,6 +860,43 @@
         "x": 560,
         "z": 150,
         "elevationY": 110
+      },
+      {
+        "furnitureId": "appliance-ac-indoor",
+        "x": 200,
+        "z": 15
+      },
+      {
+        "furnitureId": "appliance-ac-indoor",
+        "x": 980,
+        "z": 15
+      },
+      {
+        "furnitureId": "lamp-ceiling-chandelier",
+        "x": 590,
+        "z": 180,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "lamp-ceiling-chandelier",
+        "x": 300,
+        "z": 250,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "plant-monstera",
+        "x": 560,
+        "z": 560
+      },
+      {
+        "furnitureId": "plant-monstera",
+        "x": 640,
+        "z": 560
+      },
+      {
+        "furnitureId": "rug-persian",
+        "x": 590,
+        "z": 450
       }
     ],
     "hallway": [

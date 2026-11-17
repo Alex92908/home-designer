@@ -1868,7 +1868,8 @@ const APARTMENT_SET: ProjectTemplate = {
         { furnitureId: "lamp-arc-gold",      x: 60,  z: 280, rotation: 0 },
         { furnitureId: "plant-monstera",     x: 580, z: 440, rotation: 0 },
         // ── Group A redesign: 窗帘 / 电视墙 / 沙发组 / 茶几小物 / 灯 / 前景 ──
-        { furnitureId: "curtain-modern-gray", x: 320, z: 468, rotation: 0 },
+        // thinfix-a: 南窗窗帘已移除——默认机位在南墙外看进来，落地窗帘正挡在
+        // 沙发/电视/茶几的中轴视线上（且该窗帘 GLB 是已知的画布杀手）；窗户本身保留。
         { furnitureId: "sideboard-modern-black", x: 180, z: 25, rotation: 0 },
         { furnitureId: "sideboard-modern-black", x: 440, z: 25, rotation: 0 },
         { furnitureId: "decor-vase-single",   x: 180, z: 25, rotation: 0, elevationY: 65 },
@@ -1894,6 +1895,12 @@ const APARTMENT_SET: ProjectTemplate = {
         { furnitureId: "decor-shoe-box",      x: 60,  z: 450, rotation: 0, elevationY: 110 },
         { furnitureId: "appliance-robot-vacuum", x: 550, z: 450, rotation: 0 },
         { furnitureId: "decor-mirror-full",   x: 612, z: 200, rotation: 270 },
+        // ── thinfix-a: 客厅顶灯（无 yOffset，可吸顶）/ 空调挂机（yOffset 2.1
+        // 自带挂高，不吸顶不抬升）/ 西墙高柜 / 西墙绿植 ──
+        { furnitureId: "lamp-ceiling-chandelier", x: 310, z: 240, rotation: 0, mountCeiling: true },
+        { furnitureId: "appliance-ac-indoor", x: 450, z: 15, rotation: 0 },
+        { furnitureId: "bookshelf-solid-walnut", x: 25, z: 250, rotation: 90 },
+        { furnitureId: "plant-rubber-tree",   x: 40,  z: 350, rotation: 0 },
       ],
       dining: [
         { furnitureId: "dining-oak-rect", x: 190, z: 90, rotation: 0 },
@@ -1904,7 +1911,9 @@ const APARTMENT_SET: ProjectTemplate = {
         { furnitureId: "plant-rubber-tree", x: 350, z: 150, rotation: 0 },
         // ── Group A redesign: 餐桌小物 / 吊灯 / 地毯 / 墙面 ──
         { furnitureId: "rug-modern-gray",     x: 190, z: 90,  rotation: 0 },
-        { furnitureId: "lamp-pendant-modern", x: 190, z: 90,  rotation: 0, mountCeiling: true },
+        // thinfix-a: lamp-pendant-modern 自带 yOffset 2.0，吸顶会双重抬升到
+        // 天花板之上（约 4.2m，不可见）；去掉 mountCeiling 即挂在 2m 高。
+        { furnitureId: "lamp-pendant-modern", x: 190, z: 90,  rotation: 0 },
         { furnitureId: "decor-tableware-full", x: 165, z: 75, rotation: 0, elevationY: 75 },
         { furnitureId: "decor-fruit-bowl",    x: 215, z: 75,  rotation: 0, elevationY: 75 },
         { furnitureId: "decor-cocktail",      x: 190, z: 115, rotation: 0, elevationY: 75 },
@@ -2089,11 +2098,17 @@ const RURAL_HALL_SET: ProjectTemplate = {
         { furnitureId: "decor-utensils",    x: 6,   z: 280, rotation: 0 },
         { furnitureId: "proc-basin",        x: 60,  z: 450, rotation: 0 },
         { furnitureId: "artwork-inkwash",   x: 694, z: 200, rotation: 270 },
-        { furnitureId: "artwork-inkwash",   x: 6,   z: 450, rotation: 90 },
+        { furnitureId: "artwork-inkwash",   x: 6,   z: 450, rotation: 90, elevationY: 120 },
         { furnitureId: "lamp-ceiling-chandelier", x: 350, z: 280, rotation: 0, mountCeiling: true },
         { furnitureId: "nightstand-oak",    x: 480, z: 490, rotation: 0 },
         { furnitureId: "lamp-table-rust",   x: 480, z: 490, rotation: 0, elevationY: 60 },
         { furnitureId: "plant-sansevieria", x: 40,  z: 60,  rotation: 0 },
+        // ── thinfix-a: 北墙神龛两侧挂画（上半墙空白）/ 东墙南端高柜 /
+        // 沙发区上方补一盏吊灯 / 西墙画挂起（原先立在地面）──
+        { furnitureId: "mural-inkwash",     x: 150, z: 15,  rotation: 0, elevationY: 150 },
+        { furnitureId: "mural-inkwash",     x: 550, z: 15,  rotation: 0, elevationY: 150 },
+        { furnitureId: "wardrobe-solid-walnut", x: 670, z: 430, rotation: 270 },
+        { furnitureId: "lamp-ceiling-chandelier", x: 350, z: 450, rotation: 0, mountCeiling: true },
       ],
       kitchen: [
         { furnitureId: "kitchen_cabinet-full",   x: 250, z: 35, rotation: 0 },
@@ -2211,8 +2226,7 @@ const MING_HALL_SET: ProjectTemplate = {
           wallDecor: [
             { furnitureId: "couplet-spring", wall: "N", u: 0.32, v: 0.55, scaleH: 1.1 },
             { furnitureId: "couplet-prosperity", wall: "N", u: 0.68, v: 0.55, scaleH: 1.1 },
-            { furnitureId: "wall-lamp-lantern", wall: "S", u: 0.3, v: 0.7 },
-            { furnitureId: "wall-lamp-lantern", wall: "S", u: 0.7, v: 0.7 },
+            // thinfix-a: 南墙灯笼已移除——南墙默认隐藏，挂在南墙的壁灯会悬空。
           ] },
         { room: "master",   x: 900, y: 0,   width: 500, depth: 560,
           name: "内室", nameEn: "Inner Chamber", icon: "🛏️",
@@ -2255,8 +2269,8 @@ const MING_HALL_SET: ProjectTemplate = {
         { furnitureId: "sofa-armchair",     x: 300, z: 290, rotation: 90 },
         { furnitureId: "sofa-armchair",     x: 600, z: 290, rotation: 270 },
         // 挂画（北墙）+ 落地花瓶 + 狮子（南门两侧）
-        { furnitureId: "artwork-inkwash",   x: 150, z: 6,   rotation: 0 },
-        { furnitureId: "artwork-inkwash",   x: 750, z: 6,   rotation: 0 },
+        { furnitureId: "artwork-inkwash",   x: 150, z: 6,   rotation: 0, elevationY: 120 },
+        { furnitureId: "artwork-inkwash",   x: 750, z: 6,   rotation: 0, elevationY: 120 },
         { furnitureId: "decor-vase-royal",  x: 60,  z: 60,  rotation: 0 },
         { furnitureId: "decor-vase-royal",  x: 840, z: 60,  rotation: 0 },
         { furnitureId: "decor-statue-lion", x: 80,  z: 510, rotation: 0 },
@@ -2272,27 +2286,39 @@ const MING_HALL_SET: ProjectTemplate = {
         { furnitureId: "decor-pillows",     x: 450, z: 105, rotation: 0, elevationY: 45 },
         { furnitureId: "proc-wood-stool",   x: 375, z: 150, rotation: 0 },
         { furnitureId: "proc-wood-stool",   x: 525, z: 150, rotation: 0 },
-        { furnitureId: "rug-persian",       x: 450, z: 220, rotation: 0 },
-        { furnitureId: "mural-inkwash",     x: 450, z: 6,   rotation: 0 },
+        { furnitureId: "rug-persian",       x: 450, z: 220, rotation: 0, scaleW: 1.3, scaleD: 1.3 },
+        { furnitureId: "mural-inkwash",     x: 450, z: 6,   rotation: 0, elevationY: 120 },
         { furnitureId: "proc-bogujia",      x: 40,  z: 280, rotation: 90 },
         { furnitureId: "proc-bogujia",      x: 860, z: 280, rotation: 270 },
         { furnitureId: "decor-vase-single", x: 40,  z: 280, rotation: 0, elevationY: 92 },
         { furnitureId: "decor-books-vintage", x: 40, z: 280, rotation: 0, elevationY: 44 },
         { furnitureId: "proc-celadon-vase", x: 860, z: 280, rotation: 0, elevationY: 92 },
         { furnitureId: "decor-statue-rooster", x: 860, z: 280, rotation: 0, elevationY: 44 },
-        { furnitureId: "artwork-inkwash",   x: 40,  z: 180, rotation: 90 },
-        { furnitureId: "artwork-inkwash",   x: 860, z: 180, rotation: 270 },
+        { furnitureId: "artwork-inkwash",   x: 40,  z: 180, rotation: 90, elevationY: 120 },
+        { furnitureId: "artwork-inkwash",   x: 860, z: 180, rotation: 270, elevationY: 120 },
         { furnitureId: "proc-oil-lamp",     x: 330, z: 60,  rotation: 0 },
         { furnitureId: "proc-oil-lamp",     x: 570, z: 60,  rotation: 0 },
         { furnitureId: "lamp-wall-sconce",  x: 8,   z: 280, rotation: 0, elevationY: 150 },
         { furnitureId: "lamp-wall-sconce",  x: 892, z: 280, rotation: 0, elevationY: 150 },
-        { furnitureId: "proc-bamboo-clump", x: 180, z: 470, rotation: 0 },
-        { furnitureId: "proc-bamboo-clump", x: 720, z: 470, rotation: 0 },
+        // thinfix-a: 南缘两丛竹子已移除（见下方 plant-rubber-tree 替换）
         // ── Reference brief: 入口屏风 / 宫灯 ──
         { furnitureId: "proc-shoji",        x: 200, z: 520, rotation: 0 },
         { furnitureId: "proc-shoji",        x: 700, z: 520, rotation: 0 },
         { furnitureId: "proc-lantern-pole", x: 120, z: 90,  rotation: 0 },
         { furnitureId: "proc-lantern-pole", x: 780, z: 90,  rotation: 0 },
+        // ── thinfix-a: 南缘竹丛（4.5m 高，顶穿天花板、探出墙头）换成室内
+        // 盆栽树；北墙案两侧加边柜；中轴加两盏烛台吊灯（无 yOffset，可吸顶）；
+        // 东西墙南端加高柜 ──
+        { furnitureId: "plant-monstera", x: 180, z: 470, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 720, z: 470, rotation: 0 },
+        { furnitureId: "lamp-chandelier-antique", x: 250, z: 300, rotation: 0, mountCeiling: true },
+        { furnitureId: "lamp-chandelier-antique", x: 650, z: 300, rotation: 0, mountCeiling: true },
+        { furnitureId: "sideboard-walnut",  x: 250, z: 28,  rotation: 0 },
+        { furnitureId: "sideboard-walnut",  x: 650, z: 28,  rotation: 0 },
+        { furnitureId: "decor-vase-single", x: 250, z: 28,  rotation: 0, elevationY: 85 },
+        { furnitureId: "decor-vase-single", x: 650, z: 28,  rotation: 0, elevationY: 85 },
+        { furnitureId: "wardrobe-solid-walnut", x: 40, z: 420, rotation: 90 },
+        { furnitureId: "wardrobe-solid-walnut", x: 860, z: 420, rotation: 270 },
       ],
       master: [
         { furnitureId: "bed-wood-nordic",       x: 250, z: 220, rotation: 0 },
@@ -2416,13 +2442,16 @@ const QING_SANXITANG_SET: ProjectTemplate = {
         { furnitureId: "decor-pillows",         x: 130, z: 90,  rotation: 0, elevationY: 70 },
         { furnitureId: "decor-book-stack",      x: 280, z: 90,  rotation: 0, elevationY: 70 },
         // 小紫檀书案（炕前）：学习桌缩至 70×31×38；座钟+茶具在案上
-        { furnitureId: "desk-study",           x: 210, z: 200, rotation: 0, scaleW: 0.58, scaleD: 0.52, scaleH: 0.5 },
-        { furnitureId: "decor-victorian-clock", x: 195, z: 200, rotation: 0, elevationY: 38 },
-        { furnitureId: "decor-tea-set",         x: 230, z: 200, rotation: 0, elevationY: 38 },
-        { furnitureId: "proc-boshanlu",         x: 210, z: 212, rotation: 0, elevationY: 38 },
-        { furnitureId: "decor-pen",             x: 222, z: 188, rotation: 0, elevationY: 38 },
-        { furnitureId: "decor-books-vintage",   x: 192, z: 212, rotation: 0, elevationY: 38 },
-        { furnitureId: "proc-oil-lamp",         x: 245, z: 200, rotation: 0, elevationY: 38 },
+        // thinfix-a: 书案是三希堂的主角，原缩放 0.58/0.52/0.5 只有 70cm 宽，
+        // 在镜头里像张边桌；放大到 0.85/0.8/0.8（约 102×48×60），案头小件
+        // 离地高度 38 → 60 跟着抬到新桌面。
+        { furnitureId: "desk-study",           x: 210, z: 200, rotation: 0, scaleW: 0.85, scaleD: 0.8, scaleH: 0.8 },
+        { furnitureId: "decor-victorian-clock", x: 195, z: 200, rotation: 0, elevationY: 60 },
+        { furnitureId: "decor-tea-set",         x: 230, z: 200, rotation: 0, elevationY: 60 },
+        { furnitureId: "proc-boshanlu",         x: 210, z: 212, rotation: 0, elevationY: 60 },
+        { furnitureId: "decor-pen",             x: 222, z: 188, rotation: 0, elevationY: 60 },
+        { furnitureId: "decor-books-vintage",   x: 192, z: 212, rotation: 0, elevationY: 60 },
+        { furnitureId: "proc-oil-lamp",         x: 245, z: 200, rotation: 0, elevationY: 60 },
         // 太师椅（朝北向案）
         { furnitureId: "sofa-armchair",         x: 210, z: 290, rotation: 180 },
         { furnitureId: "proc-wood-stool",       x: 140, z: 290, rotation: 0 },
@@ -2442,9 +2471,14 @@ const QING_SANXITANG_SET: ProjectTemplate = {
         { furnitureId: "proc-bluewhite-vase", x: 30, z: 200, rotation: 0, elevationY: 92 },
         { furnitureId: "proc-celadon-vase", x: 30,  z: 200, rotation: 0, elevationY: 44 },
         { furnitureId: "decor-books-vintage", x: 30, z: 200, rotation: 0, elevationY: 128 },
-        { furnitureId: "rug-persian",       x: 210, z: 270, rotation: 0 },
+        { furnitureId: "rug-persian",       x: 210, z: 270, rotation: 0, scaleW: 1.25, scaleD: 1.25 },
         { furnitureId: "curtain-brown-sheer", x: 408, z: 140, rotation: 90 },
         { furnitureId: "proc-bamboo-clump", x: 350, z: 290, rotation: 0 },
+        // ── thinfix-a: 西北角高柜（贴炕西端）/ 东西墙壁灯 / 西南角龟背竹 ──
+        { furnitureId: "wardrobe-solid-walnut", x: 30, z: 60, rotation: 90 },
+        { furnitureId: "lamp-wall-sconce",  x: 412, z: 100, rotation: 270, elevationY: 150 },
+        { furnitureId: "lamp-wall-sconce",  x: 8, z: 100, rotation: 90, elevationY: 150 },
+        { furnitureId: "plant-monstera",    x: 35, z: 330, rotation: 0 },
       ],
       hallway: [
         { furnitureId: "sofa-armchair",         x: 120, z: 120, rotation: 90 },
@@ -2626,7 +2660,8 @@ const TANG_PALACE_SET: ProjectTemplate = {
         { furnitureId: "decor-spoons-golden", x: 35, z: 290, rotation: 0, elevationY: 85 },
         { furnitureId: "proc-lacquer-bowl", x: 45,  z: 310, rotation: 0, elevationY: 85 },
         { furnitureId: "decor-vase-royal",  x: 40,  z: 280, rotation: 0, elevationY: 85 },
-        { furnitureId: "mural-inkwash",     x: 450, z: 6,   rotation: 0 },
+        // ── thinfix-a: 北墙中堂原先立在地面上；挂到视线高度 ──
+        { furnitureId: "mural-inkwash",     x: 450, z: 6,   rotation: 0, elevationY: 120 },
         { furnitureId: "proc-celadon-vase", x: 200, z: 40,  rotation: 0 },
         { furnitureId: "proc-celadon-vase", x: 700, z: 40,  rotation: 0 },
         { furnitureId: "proc-tatami",       x: 200, z: 520, rotation: 0 },
@@ -2636,8 +2671,14 @@ const TANG_PALACE_SET: ProjectTemplate = {
         { furnitureId: "proc-lantern-pole", x: 760, z: 80,  rotation: 0 },
         { furnitureId: "proc-lantern-pole", x: 80,  z: 520, rotation: 0 },
         { furnitureId: "proc-lantern-pole", x: 760, z: 520, rotation: 0 },
-        { furnitureId: "proc-bamboo-clump", x: 840, z: 480, rotation: 0 },
-        { furnitureId: "proc-pine",         x: 70,  z: 430, rotation: 0 },
+        // ── thinfix-a: 室内竹丛/松树（4.5/5.6m，穿透屋顶）换室内绿植；
+        // 东/西墙加博古架；中央加水晶吊灯 ──
+        { furnitureId: "plant-monstera", x: 840, z: 480, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 870, z: 430, rotation: 0 },
+        { furnitureId: "plant-monstera", x: 70,  z: 430, rotation: 0 },
+        { furnitureId: "proc-bogujia",   x: 40,  z: 100, rotation: 90 },
+        { furnitureId: "proc-bogujia",   x: 860, z: 100, rotation: 270 },
+        { furnitureId: "proc-chandelier-crystal", x: 450, z: 300, rotation: 0, mountCeiling: true },
         { furnitureId: "decor-garden-urn",  x: 860, z: 150, rotation: 0 },
         // 挂画 + 落地花瓶 + 烛台吊灯 ×2
         { furnitureId: "artwork-inkwash",       x: 100, z: 6,   rotation: 0 },
@@ -2769,9 +2810,13 @@ const SONG_STUDY_SET: ProjectTemplate = {
         // 书架（东西墙）+ 三轴挂画（北墙，仅三轴）
         { furnitureId: "bookshelf-solid-walnut", x: 40,  z: 60,  rotation: 90 },
         { furnitureId: "bookshelf-solid-walnut", x: 560, z: 60,  rotation: 270 },
-        { furnitureId: "artwork-inkwash",       x: 150, z: 6,   rotation: 0 },
-        { furnitureId: "artwork-inkwash",       x: 300, z: 6,   rotation: 0 },
-        { furnitureId: "artwork-inkwash",       x: 450, z: 6,   rotation: 0 },
+        // ── thinfix-a: 三轴挂画原先无 elevationY，立在地面上；挂到视线高度 ──
+        { furnitureId: "artwork-inkwash",       x: 150, z: 6,   rotation: 0, elevationY: 120 },
+        { furnitureId: "artwork-inkwash",       x: 300, z: 6,   rotation: 0, elevationY: 120 },
+        { furnitureId: "artwork-inkwash",       x: 450, z: 6,   rotation: 0, elevationY: 120 },
+        // ── thinfix-a: 西墙茶角上方补一轴挂画；南侧中央补高绿植 ──
+        { furnitureId: "artwork-inkwash",       x: 8,   z: 350, rotation: 90, elevationY: 150 },
+        { furnitureId: "plant-monstera",         x: 300, z: 390, rotation: 0 },
         // 插花（圆几花架 + 花瓶）+ 烛台吊灯
         { furnitureId: "sideboard-round-stand", x: 520, z: 350, rotation: 0 },
         { furnitureId: "decor-vase-single",     x: 520, z: 350, rotation: 0, elevationY: 75 },
@@ -2964,6 +3009,12 @@ const SHIKUMEN_SET: ProjectTemplate = {
         { furnitureId: "lamp-wall-sconce",      x: 10,  z: 220, rotation: 0, elevationY: 150 },
         { furnitureId: "lamp-wall-sconce",      x: 590, z: 220, rotation: 0, elevationY: 150 },
         { furnitureId: "plant-rubber-tree",     x: 40,  z: 400, rotation: 0 },
+        // ── thinfix-a: 西墙书架（博古架与绿植之间的空档）/ 东墙高柜 /
+        // 东侧落地灯 / 东南角绿植 ──
+        { furnitureId: "bookshelf-solid-walnut", x: 25, z: 332, rotation: 90 },
+        { furnitureId: "wardrobe-solid-walnut", x: 575, z: 200, rotation: 270 },
+        { furnitureId: "floor_lamp-modern",    x: 520, z: 300, rotation: 0 },
+        { furnitureId: "plant-rubber-tree",     x: 570, z: 340, rotation: 0 },
       ],
       hallway: [
         { furnitureId: "plant-tropic-flowers",  x: 100, z: 80,  rotation: 0 },

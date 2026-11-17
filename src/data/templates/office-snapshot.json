@@ -100,8 +100,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "instanceId": "tpl_set-office_living_5_plant-monstera",
@@ -201,8 +200,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "instanceId": "tpl_set-office_living_15_bookshelf-open-white",
@@ -232,8 +230,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "instanceId": "tpl_set-office_living_18_lamp-ceiling-long",
@@ -243,8 +240,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "instanceId": "tpl_set-office_living_19_plant-rubber-tree",
@@ -274,8 +270,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "instanceId": "tpl_set-office_living_22_lamp-ceiling-long",
@@ -285,8 +280,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "instanceId": "tpl_set-office_living_23_desk-standing",
@@ -2286,8 +2280,8 @@
             },
             {
               "furnitureId": "proc-reception-desk",
-              "x": 950.0,
-              "z": 385.0,
+              "x": 950,
+              "z": 385,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -2310,7 +2304,7 @@
             },
             {
               "furnitureId": "proc-whiteboard",
-              "x": 1500.0,
+              "x": 1500,
               "z": 27.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -2318,15 +2312,15 @@
             },
             {
               "furnitureId": "sofa-modular-green",
-              "x": 545.0,
-              "z": 400.0,
+              "x": 545,
+              "z": 400,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
             },
             {
               "furnitureId": "coffee-marble-rect",
-              "x": 640.0,
+              "x": 640,
               "z": 587.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -2334,8 +2328,8 @@
             },
             {
               "furnitureId": "decor-books-pile",
-              "x": 671.0,
-              "z": 609.0,
+              "x": 671,
+              "z": 609,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -2343,8 +2337,8 @@
             },
             {
               "furnitureId": "decor-coffee-mug",
-              "x": 711.0,
-              "z": 613.0,
+              "x": 711,
+              "z": 613,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -2353,7 +2347,7 @@
             {
               "furnitureId": "plant-rubber-tree",
               "x": 872.5,
-              "z": 474.0,
+              "z": 474,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -2368,8 +2362,8 @@
             },
             {
               "furnitureId": "elec-monitor",
-              "x": 163.0,
-              "z": 191.0,
+              "x": 163,
+              "z": 191,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -2378,8 +2372,8 @@
             },
             {
               "furnitureId": "elec-monitor",
-              "x": 235.0,
-              "z": 191.0,
+              "x": 235,
+              "z": 191,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -2388,8 +2382,8 @@
             },
             {
               "furnitureId": "elec-monitor",
-              "x": 163.0,
-              "z": 351.0,
+              "x": 163,
+              "z": 351,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -2398,8 +2392,8 @@
             },
             {
               "furnitureId": "elec-monitor",
-              "x": 235.0,
-              "z": 351.0,
+              "x": 235,
+              "z": 351,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -2408,7 +2402,7 @@
             },
             {
               "furnitureId": "lamp-desk-arm",
-              "x": 143.0,
+              "x": 143,
               "z": 511.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -2417,7 +2411,7 @@
             },
             {
               "furnitureId": "lamp-desk-arm",
-              "x": 215.0,
+              "x": 215,
               "z": 511.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -2426,7 +2420,7 @@
             },
             {
               "furnitureId": "lamp-desk-arm",
-              "x": 143.0,
+              "x": 143,
               "z": 671.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -2435,8 +2429,8 @@
             },
             {
               "furnitureId": "decor-tissue-box",
-              "x": 284.0,
-              "z": 664.0,
+              "x": 284,
+              "z": 664,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -2444,8 +2438,8 @@
             },
             {
               "furnitureId": "decor-tissue-box",
-              "x": 212.0,
-              "z": 784.0,
+              "x": 212,
+              "z": 784,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -2517,6 +2511,69 @@
               "scaleD": 1,
               "scaleH": 1,
               "elevationY": 65
+            },
+            {
+              "furnitureId": "appliance-ac-indoor",
+              "x": 455,
+              "z": 0,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "appliance-ac-indoor",
+              "x": 1550,
+              "z": 0,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "bookshelf-solid-walnut",
+              "x": 600,
+              "z": 0,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "bookshelf-solid-walnut",
+              "x": 700,
+              "z": 0,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "plant-rubber-tree",
+              "x": 972,
+              "z": 1394,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "plant-rubber-tree",
+              "x": 1322,
+              "z": 1394,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
+            },
+            {
+              "furnitureId": "sideboard-walnut",
+              "x": 950,
+              "z": 1440,
+              "rotation": 0,
+              "scaleW": 1,
+              "scaleD": 1,
+              "scaleH": 1
             }
           ],
           "exteriorDecor": []
@@ -2607,8 +2664,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "instanceId": "tpl_set-office_master_4_elec-personal-computer",
@@ -2872,8 +2928,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "instanceId": "pi_2_8xgvv",
@@ -2908,15 +2963,15 @@
             },
             {
               "furnitureId": "proc-pantry-counter",
-              "x": 5.0,
-              "z": 200.0,
+              "x": 5,
+              "z": 200,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
             },
             {
               "furnitureId": "decor-coffee-cups",
-              "x": 45.0,
+              "x": 45,
               "z": 224.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -2925,8 +2980,8 @@
             },
             {
               "furnitureId": "decor-tulip",
-              "x": 107.0,
-              "z": 217.0,
+              "x": 107,
+              "z": 217,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -3226,8 +3281,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "instanceId": "tpl_set-office_bathroom_26_lamp-ceiling-modern",
@@ -3237,8 +3291,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "instanceId": "tpl_set-office_bathroom_27_urinal-wall",
@@ -3272,8 +3325,8 @@
             },
             {
               "furnitureId": "decor-tissue-box",
-              "x": -27.0,
-              "z": 524.0,
+              "x": -27,
+              "z": 524,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -3282,7 +3335,7 @@
             {
               "furnitureId": "plant-sansevieria",
               "x": 106.5,
-              "z": 405.0,
+              "z": 405,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -3513,8 +3566,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "instanceId": "tpl_set-office_bathroom2_21_lamp-ceiling-modern",
@@ -3524,13 +3576,12 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "furnitureId": "decor-tissue-box",
-              "x": 183.0,
-              "z": 524.0,
+              "x": 183,
+              "z": 524,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -3539,7 +3590,7 @@
             {
               "furnitureId": "plant-sansevieria",
               "x": 106.5,
-              "z": 415.0,
+              "z": 415,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -3764,8 +3815,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "furnitureId": "chair-ergonomic",
@@ -3778,7 +3828,7 @@
             },
             {
               "furnitureId": "proc-whiteboard",
-              "x": 100.0,
+              "x": 100,
               "z": 7.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -3786,8 +3836,8 @@
             },
             {
               "furnitureId": "decor-tissue-box",
-              "x": 188.0,
-              "z": 109.0,
+              "x": 188,
+              "z": 109,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -3795,8 +3845,8 @@
             },
             {
               "furnitureId": "decor-coffee-mug",
-              "x": 111.0,
-              "z": 123.0,
+              "x": 111,
+              "z": 123,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -3804,8 +3854,8 @@
             },
             {
               "furnitureId": "decor-coffee-mug",
-              "x": 271.0,
-              "z": 103.0,
+              "x": 271,
+              "z": 103,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -3933,8 +3983,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             }
           ],
           "exteriorDecor": []
@@ -3998,13 +4047,12 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "furnitureId": "proc-ceo-desk",
-              "x": 75.0,
-              "z": 40.0,
+              "x": 75,
+              "z": 40,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -4046,7 +4094,7 @@
             },
             {
               "furnitureId": "lamp-desk-arm",
-              "x": 239.0,
+              "x": 239,
               "z": 76.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -4055,7 +4103,7 @@
             },
             {
               "furnitureId": "mural-inkwash",
-              "x": 145.0,
+              "x": 145,
               "z": 9.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -4063,7 +4111,7 @@
             },
             {
               "furnitureId": "bookshelf-with-books",
-              "x": 295.0,
+              "x": 295,
               "z": 72.5,
               "rotation": 270,
               "scaleW": 1,
@@ -4072,7 +4120,7 @@
             },
             {
               "furnitureId": "decor-books-set",
-              "x": 315.0,
+              "x": 315,
               "z": 83.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -4137,8 +4185,7 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "instanceId": "tpl_set-office_hallway_3_lamp-ceiling-led",
@@ -4148,13 +4195,12 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1,
-              "mountCeiling": true
+              "scaleH": 1
             },
             {
               "furnitureId": "plant-rubber-tree",
               "x": 272.5,
-              "z": 44.0,
+              "z": 44,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -4162,14 +4208,14 @@
             {
               "furnitureId": "plant-rubber-tree",
               "x": 772.5,
-              "z": 44.0,
+              "z": 44,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
             },
             {
               "furnitureId": "artwork-hokusai",
-              "x": 500.0,
+              "x": 500,
               "z": 7.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -4185,8 +4231,8 @@
             },
             {
               "furnitureId": "decor-bin-black",
-              "x": 935.0,
-              "z": 55.0,
+              "x": 935,
+              "z": 55,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1

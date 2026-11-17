@@ -28,8 +28,7 @@
       {
         "furnitureId": "lamp-pendant-modern",
         "x": 1620,
-        "z": 930,
-        "mountCeiling": true
+        "z": 930
       },
       {
         "furnitureId": "counter-bar-wood",
@@ -65,8 +64,7 @@
       {
         "furnitureId": "lamp-pendant-modern",
         "x": 50,
-        "z": 700,
-        "mountCeiling": true
+        "z": 700
       },
       {
         "furnitureId": "dining_table-mahogany",
@@ -589,7 +587,8 @@
       {
         "furnitureId": "mural-inkwash",
         "x": 2200,
-        "z": 14
+        "z": 14,
+        "elevationY": 120
       },
       {
         "furnitureId": "plant-rubber-tree",
@@ -922,7 +921,8 @@
       {
         "furnitureId": "mural-red-fuji",
         "x": 800,
-        "z": 14
+        "z": 14,
+        "elevationY": 120
       },
       {
         "furnitureId": "decor-restaurant-sign",
@@ -985,6 +985,28 @@
         "furnitureId": "storage-crate",
         "x": 2050,
         "z": 980
+      },
+      {
+        "furnitureId": "proc-chandelier-crystal",
+        "x": 1100,
+        "z": 760,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "proc-chandelier-crystal",
+        "x": 2200,
+        "z": 760,
+        "mountCeiling": true
+      },
+      {
+        "furnitureId": "plant-monstera",
+        "x": 200,
+        "z": 960
+      },
+      {
+        "furnitureId": "plant-monstera",
+        "x": 2700,
+        "z": 960
       }
     ],
     "kitchen": [
@@ -1079,14 +1101,12 @@
       {
         "furnitureId": "lamp-ceiling-led",
         "x": 250,
-        "z": 220,
-        "mountCeiling": true
+        "z": 220
       },
       {
         "furnitureId": "lamp-ceiling-led",
         "x": 560,
-        "z": 220,
-        "mountCeiling": true
+        "z": 220
       },
       {
         "furnitureId": "decor-pots-pans",
@@ -1210,8 +1230,7 @@
       {
         "furnitureId": "lamp-pendant-modern",
         "x": 180,
-        "z": 170,
-        "mountCeiling": true
+        "z": 170
       },
       {
         "furnitureId": "decor-dinnerware",
@@ -1338,8 +1357,7 @@
       {
         "furnitureId": "lamp-pendant-modern",
         "x": 180,
-        "z": 190,
-        "mountCeiling": true
+        "z": 190
       },
       {
         "furnitureId": "chair-modern-gray",
@@ -1602,14 +1620,12 @@
       {
         "furnitureId": "lamp-ceiling-led",
         "x": 180,
-        "z": 100,
-        "mountCeiling": true
+        "z": 100
       },
       {
         "furnitureId": "lamp-ceiling-led",
         "x": 440,
-        "z": 100,
-        "mountCeiling": true
+        "z": 100
       },
       {
         "furnitureId": "decor-tissue-box",
@@ -1639,8 +1655,7 @@
       {
         "furnitureId": "lamp-ceiling-modern",
         "x": 170,
-        "z": 130,
-        "mountCeiling": true
+        "z": 130
       },
       {
         "furnitureId": "decor-tissue-box",
@@ -1674,8 +1689,7 @@
       {
         "furnitureId": "lamp-ceiling-modern",
         "x": 170,
-        "z": 130,
-        "mountCeiling": true
+        "z": 130
       },
       {
         "furnitureId": "decor-tissue-box",
