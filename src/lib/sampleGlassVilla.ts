@@ -82,16 +82,16 @@ const livingState: RoomState = {
   },
   placedItems: [
     // 沙发组 —— 面朝北墙电视
-    item("sofa-leather-brown",    290, 270, 0),       // L形主沙发，中央
-    item("coffee-marble-rect",    290, 190, 0),       // 大理石茶几
-    item("rug-modern-gray",       290, 235, 0),       // 地毯
+    item("sofa-leather-brown",    290, 270, 180),       // L形主沙发，中央
+    item("coffee-marble-rect",    290, 130, 0),       // 大理石茶几
+    item("rug-modern-gray",       290, 165, 0),       // 地毯
     // 电视柜 + 画 —— 北墙
     item("tvunit-float-white",    420,  30, 0),       // 悬浮电视柜
     item("artwork-abstract",      420,   5, 0,  { elevationY: 155 }),  // 北墙装饰画
     // 侧柜 + 植物
     item("sideboard-walnut",      830,  30, 0),       // 东侧边柜
     item("plant-monstera",        830, 360,  0),      // 龟背竹
-    item("plant-rubber-tree",      50, 380,  0),      // 橡皮树
+    item("plant-rubber-tree",      50, 300,  0),      // 橡皮树
     item("plant-sansevieria",      50,  60,  0),      // 虎尾兰
     // 落地灯
     item("lamp-arc-gold",         580, 170,  0),      // 弧形金落地灯
@@ -261,15 +261,15 @@ const bedroom2State: RoomState = {
     floor: mat("floor", "#C8A882", "浅色橡木地板"),
   },
   placedItems: [
-    item("bed-fabric-beige",      220,  85, 0),       // 布艺床
-    item("nightstand-white",       90,  85, 0),
-    item("nightstand-white",      350,  85, 0),
-    item("wardrobe-open-rack",    490, 175, 90),      // 东墙
+    item("bed-fabric-beige",      220, 110, 0),       // 布艺床
+    item("nightstand-white",       90, 110, 0),
+    item("nightstand-white",      350, 110, 0),
+    item("wardrobe-open-rack",    521, 175, 270),      // 东墙
     item("rug-nordic-geo",        220, 200,  0),
     item("artwork-vangogh",       220,   5,  0, { elevationY: 90 }),
     item("curtain-modern-gray",   220, 340,  0),      // 南面遮光帘
-    item("plant-monstera",        480, 290,  0),
-    item("lamp-arc-gold",          70, 180,  0),
+    item("plant-monstera",        480,  60,  0),
+    item("lamp-arc-gold",         420, 280,  0),
   ],
 };
 

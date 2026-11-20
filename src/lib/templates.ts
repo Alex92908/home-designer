@@ -27,6 +27,12 @@ export interface EmbeddedRoom {
     x: number; z: number;   // cm center coordinates in base dims
     rotation: number;
     scaleW?: number; scaleD?: number;
+    /** Height above the floor (cm). Preserved by buildEmbeddedRoomState;
+     *  needed for wall-hung pieces (range hood hangs at ~147cm — the
+     *  renderer auto-anchors it, but the clearance checker must see the
+     *  same height or it flags a phantom floor-level clash with the sink). */
+    elevationY?: number;
+    scaleH?: number;
   }>;
   /** Windows to place on this room's walls. Coordinates stay in cm
    *  relative to the room's base dimensions; loadTemplate scales them
@@ -121,14 +127,32 @@ export function buildEmbeddedRoomState(
     const rotatedSideways = rot === 90 || rot === 270;
     const halfX = (rotatedSideways ? f.depth * sd : f.width  * sw) / 2;
     const halfZ = (rotatedSideways ? f.width  * sw : f.depth * sd) / 2;
-    const px = Math.max(halfX + 4, Math.min(userW - halfX - 4, item.x * sx));
-    const pz = Math.max(halfZ + 4, Math.min(userD - halfZ - 4, item.z * sz));
+    const clampX = Math.max(halfX + 4, Math.min(userW - halfX - 4, item.x * sx));
+    const clampZ = Math.max(halfZ + 4, Math.min(userD - halfZ - 4, item.z * sz));
+    // Wall-hugging snap: positions scale with the room but item sizes
+    // don't, so a piece designed flush to a wall drifts off it in a
+    // deeper/wider room (e.g. a bed drawn 0cm off its headboard wall ends
+    // up 25cm off it → hugWall warning). If the design put the item
+    // within 15cm of a wall, keep that offset after scaling instead of
+    // the scaled position — it preserves the designer's intent at any
+    // room size. The 4cm floor keeps the existing clamp margin.
+    const snapAxis = (p: number, half: number, base: number, user: number, basePos: number) => {
+      const dMin = basePos - half;          // base offset to the min-side wall
+      const dMax = base - (basePos + half); // base offset to the max-side wall
+      if (dMin <= 15 && dMin <= dMax) return Math.max(half + 4, half + Math.max(0, dMin));
+      if (dMax <= 15 && dMax < dMin) return Math.min(user - half - 4, user - half - Math.max(0, dMax));
+      return p;
+    };
+    const px = snapAxis(clampX, halfX, embedded.baseW, userW, item.x);
+    const pz = snapAxis(clampZ, halfZ, embedded.baseD, userD, item.z);
     return [{
       instanceId: `emb_${roomId}_${seq++}_${item.furnitureId}`,
       furnitureId: item.furnitureId,
       x: px, z: pz,
       rotation: item.rotation,
       scaleW: sw, scaleD: sd,
+      ...(item.elevationY !== undefined ? { elevationY: item.elevationY } : {}),
+      ...(item.scaleH !== undefined ? { scaleH: item.scaleH } : {}),
     }];
   });
 
@@ -246,9 +270,14 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
       materialIds: { wall:"wall-white", floor:"floor-oak", light:"light-linear-pendant" },
       items: [
         { furnitureId:"tvunit-float-white", x:250, z:19,  rotation:0   },
-        { furnitureId:"sofa-nordic-blue",   x:250, z:235, rotation:180 },
-        { furnitureId:"coffee-oak-round",   x:250, z:140, rotation:0   },
-        { furnitureId:"rug-nordic-geo",     x:250, z:165, rotation:0   },
+        // Sofa 235→253 / table 140→112: the old 21cm sofa↔table gap sat
+        // inside the sofa's 40cm front aisle + 10cm halo (clearance
+        // warning) and 229cm TV distance was under the 250cm viewing
+        // minimum. New gap 56cm, TV distance ~251cm. Door 80→70 so the
+        // (width-scaled) swing zone stays clear of the sofa's south edge.
+        { furnitureId:"sofa-nordic-blue",   x:250, z:258, rotation:180 },
+        { furnitureId:"coffee-oak-round",   x:250, z:112, rotation:0   },
+        { furnitureId:"rug-nordic-geo",     x:250, z:145, rotation:0   },
         { furnitureId:"lamp-arc-gold",      x:55,  z:215, rotation:0   },
         { furnitureId:"plant-monstera",     x:465, z:385, rotation:0   },
         { furnitureId:"curtain-modern-gray", x:485, z:200, rotation:270 },
@@ -258,7 +287,7 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
       ],
       doorStyle: "wood_panel",
       // Door centered on front wall so the wall lamps flank it symmetrically.
-      doorWall: "S", doorPos: 210, doorLen: 80,
+      doorWall: "S", doorPos: 210, doorLen: 70,
       exteriorDecor: [
         // Door spans u≈0.42-0.58; wall lamps safely outside that on each side.
         { furnitureId:"wall-lamp-modern", wall:"S", u:0.25, v:0.72 },
@@ -282,7 +311,9 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
         { wall:"E", pos:80, len:200, h:180, sill:90, style:"sliding" },
       ],
       doorStyle: "wood_panel",
-      doorWall: "S", doorPos: 160, doorLen: 80,
+      // Door moved to the east end of the south wall: the 240cm wardrobe
+      // on the south wall blocked the old centered door's swing zone.
+      doorWall: "S", doorPos: 320, doorLen: 80,
     },
     bedroom: {
       baseW: 320, baseD: 300,
@@ -312,18 +343,26 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
         // 0-4: appliances
         { furnitureId:"cabinet-lower-white", x:65,  z:28, rotation:0 },
         { furnitureId:"cabinet-upper-white", x:65,  z:17, rotation:0 },
-        { furnitureId:"sink-double-steel",   x:175, z:22, rotation:0 },
-        { furnitureId:"hood-side-black",     x:175, z:16, rotation:0 },
-        { furnitureId:"fridge-french-door",  x:310, z:35, rotation:0 },
+        { furnitureId:"sink-double-steel",   x:80,  z:22, rotation:0 },
+        { furnitureId:"hood-side-black",     x:200, z:16, rotation:0, elevationY:147 },
+        { furnitureId:"fridge-french-door",  x:370, z:150, rotation:270 },
         // 5-12: water/electrical points
-        { furnitureId:"water-supply-cold",   x:160, z:8,  rotation:0 },  // 5
-        { furnitureId:"water-supply-hot",    x:190, z:8,  rotation:0 },  // 6
-        { furnitureId:"drain-point",         x:175, z:50, rotation:0 },  // 7
-        { furnitureId:"exhaust-vent",        x:240, z:8,  rotation:0 },  // 8
+        { furnitureId:"water-supply-cold",   x:65,  z:8,  rotation:0 },  // 5
+        { furnitureId:"water-supply-hot",    x:95,  z:8,  rotation:0 },  // 6
+        { furnitureId:"drain-point",         x:80,  z:50, rotation:0 },  // 7
+        { furnitureId:"exhaust-vent",        x:210, z:8,  rotation:0, elevationY:150 },  // 8
         { furnitureId:"outlet-2pin",         x:240, z:80, rotation:0 },  // 9 (counter outlet)
         { furnitureId:"outlet-2pin",         x:280, z:8,  rotation:0 },  // 10 (fridge outlet)
         { furnitureId:"breaker-panel",       x:330, z:250, rotation:0 }, // 11 (panel)
         { furnitureId:"switch-single",       x:30,  z:260, rotation:0 }, // 12 (entry switch)
+      ],
+      // Window moved to the east end of the north wall (was: the sample's
+      // centered N window, x 80-320): the range hood hangs on this wall
+      // at y 147-207cm, directly in front of that window — a hood in
+      // front of a window blocks light and looks wrong. Same sill/height
+      // as the sample window, just clear of the hood + vent.
+      windows: [
+        { wall:"N", pos:270, len:90, h:100, sill:100, style:"sliding" },
       ],
       connections: [
         // Water supply to sink
@@ -343,10 +382,12 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
       baseW: 260, baseD: 220,
       materialIds: { wall:"wall-tile-metro", floor:"floor-white-tile" },
       items: [
-        // 0-2: fixtures
+        // 0-2: fixtures — shower moved north (165→135): it blocked the
+        // south door's swing zone and its 60cm front aisle poked past
+        // the south wall.
         { furnitureId:"vanity-single-white", x:40,  z:25,  rotation:0 },
         { furnitureId:"toilet-smart",        x:220, z:28,  rotation:0 },
-        { furnitureId:"shower-enclosed",     x:100, z:165, rotation:0 },
+        { furnitureId:"shower-enclosed",     x:80,  z:135, rotation:0 },
         // 3-10: water/electrical
         { furnitureId:"water-supply-cold",   x:25,  z:8,   rotation:0 }, // 3 (vanity cold)
         { furnitureId:"water-supply-hot",    x:55,  z:8,   rotation:0 }, // 4 (vanity hot)
@@ -387,7 +428,7 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
       baseW: 300, baseD: 240,
       materialIds: { wall:"wall-white", floor:"floor-oak" },
       items: [
-        { furnitureId:"wardrobe-open-rack",   x:75,  z:30, rotation:0 },
+        { furnitureId:"wardrobe-open-rack",   x:60,  z:30, rotation:0 },
         { furnitureId:"closet-system-white",  x:215, z:30, rotation:0 },
       ],
     },
@@ -447,9 +488,9 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
       },
       items: [
         { furnitureId:"tvunit-float-white", x:250, z:19,  rotation:0   },
-        { furnitureId:"sofa-nordic-blue",   x:250, z:210, rotation:180 },
-        { furnitureId:"coffee-marble-rect", x:250, z:120, rotation:0   },
-        { furnitureId:"rug-nordic-geo",     x:250, z:150, rotation:0   },
+        { furnitureId:"sofa-nordic-blue",   x:250, z:258, rotation:180 },
+        { furnitureId:"coffee-marble-rect", x:250, z:110, rotation:0   },
+        { furnitureId:"rug-nordic-geo",     x:250, z:160, rotation:0   },
         { furnitureId:"sideboard-walnut",   x:430, z:19,  rotation:0   },
         { furnitureId:"lamp-arc-gold",      x:35,  z:180, rotation:0   },
         { furnitureId:"plant-monstera",     x:467, z:387, rotation:0   },
@@ -461,7 +502,7 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
         { wall:"E", pos:60, len:280, h:200, sill:60, style:"fixed" },
       ],
       doorStyle: "french_double",
-      doorWall: "S", doorPos: 210, doorLen: 80,
+      doorWall: "S", doorPos: 210, doorLen: 70,
       exteriorDecor: [
         // Door spans u≈0.42-0.58. Mural placed well left of door.
         { furnitureId:"mural-great-wave", wall:"S", u:0.22, v:0.55, scaleW:1.0, scaleH:1.0 },
@@ -482,8 +523,8 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
         { furnitureId:"bed-fabric-beige",      x:200, z:110, rotation:0   },
         { furnitureId:"nightstand-oak",        x:75,  z:21,  rotation:0   },
         { furnitureId:"nightstand-oak",        x:325, z:21,  rotation:0   },
-        { furnitureId:"wardrobe-solid-walnut", x:200, z:330, rotation:180 },
-        { furnitureId:"dresser-nordic-white",  x:350, z:130, rotation:270 },
+        { furnitureId:"wardrobe-solid-walnut", x:90, z:330, rotation:180 },
+        { furnitureId:"dresser-nordic-white",  x:372, z:130, rotation:270 },
         { furnitureId:"rug-modern-gray",       x:200, z:165, rotation:0   },
         { furnitureId:"lamp-arc-gold",         x:28,  z:180, rotation:0   },
         { furnitureId:"plant-sansevieria",     x:382, z:15,  rotation:0   },
@@ -507,10 +548,11 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
         { furnitureId:"bed-wood-nordic",      x:160, z:105, rotation:0   },
         { furnitureId:"nightstand-white",     x:35,  z:20,  rotation:0   },
         { furnitureId:"nightstand-white",     x:285, z:20,  rotation:0   },
-        { furnitureId:"wardrobe-slide-white", x:160, z:270, rotation:180 },
-        { furnitureId:"desk-nordic-oak",      x:250, z:182, rotation:270 },
-        { furnitureId:"chair-ergonomic",      x:220, z:182, rotation:270 },
-        { furnitureId:"bookshelf-open-white", x:50,  z:255, rotation:180 },
+        { furnitureId:"wardrobe-slide-white", x:200, z:270, rotation:180 },
+        // Desk/chair/bookshelf removed (2026-11-20): a 400x450 room cannot hold
+        // bed + 240cm wardrobe + a desk set under the 60cm bed halo and the
+        // 75cm wardrobe front aisle (13 clearance violations). The template's
+        // declared furnitureIds already list only bed/nightstand/wardrobe.
         { furnitureId:"plant-sansevieria",    x:15,  z:15,  rotation:0   },
       ],
     },
@@ -543,11 +585,17 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
       },
       items: [
         { furnitureId:"cabinet-lower-gray",  x:130, z:30,  rotation:0 },
-        { furnitureId:"fridge-french-door",  x:315, z:35,  rotation:0 },
+        { furnitureId:"fridge-french-door",  x:370, z:150, rotation:270 },
         { furnitureId:"sink-double-steel",   x:80,  z:22,  rotation:0 },
-        { furnitureId:"hood-side-black",     x:175, z:26,  rotation:0 },
+        { furnitureId:"hood-side-black",     x:200, z:26,  rotation:0, elevationY:147 },
         { furnitureId:"cabinet-upper-white", x:60,  z:17,  rotation:0 },
         { furnitureId:"plant-sansevieria",   x:335, z:250, rotation:0 },
+      ],
+      // Window moved to the east end of the north wall (see nordic
+      // kitchen): the range hood hangs on this wall in front of the
+      // sample's centered window.
+      windows: [
+        { wall:"N", pos:270, len:90, h:100, sill:100, style:"sliding" },
       ],
     },
     bathroom: {
@@ -560,7 +608,7 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
       items: [
         { furnitureId:"vanity-single-white", x:40,  z:25,  rotation:0 },
         { furnitureId:"toilet-wallhung",     x:220, z:27,  rotation:0 },
-        { furnitureId:"shower-walkin",       x:90,  z:170, rotation:0 },
+        { furnitureId:"shower-walkin",       x:90,  z:135, rotation:0 },
         { furnitureId:"plant-sansevieria",   x:240, z:190, rotation:0 },
       ],
     },
@@ -575,9 +623,9 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
         { furnitureId:"desk-standing",         x:160, z:36,  rotation:0   },
         { furnitureId:"chair-ergonomic",        x:160, z:140, rotation:180 },
         { furnitureId:"bookshelf-solid-walnut", x:15,  z:120, rotation:90  },
-        { furnitureId:"bookshelf-open-white",   x:305, z:100, rotation:270 },
-        { furnitureId:"lamp-arc-gold",          x:293, z:140, rotation:0   },
-        { furnitureId:"plant-rubber-tree",      x:33,  z:262, rotation:0   },
+        { furnitureId:"bookshelf-open-white",   x:220, z:270, rotation:180 },
+        { furnitureId:"lamp-arc-gold",          x:240, z:140, rotation:0   },
+        { furnitureId:"plant-rubber-tree",      x:170, z:180, rotation:0   },
         { furnitureId:"artwork-inkwash",        x:160, z:2,   rotation:0   },
       ],
     },
@@ -842,9 +890,9 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
       materialIds: { wall:"wall-wood-panel", floor:"floor-bamboo" },
       items: [
         { furnitureId:"cabinet-lower-white", x:80,  z:28, rotation:0 },
-        { furnitureId:"sink-double-steel",   x:185, z:22, rotation:0 },
-        { furnitureId:"hood-side-black",     x:185, z:16, rotation:0 },
-        { furnitureId:"fridge-single-white", x:315, z:35, rotation:0 },
+        { furnitureId:"sink-double-steel",   x:80, z:22, rotation:0 },
+        { furnitureId:"hood-side-black",     x:195, z:16, rotation:0, elevationY:147 },
+        { furnitureId:"fridge-single-white", x:370, z:150, rotation:270 },
       ],
     },
     bathroom: {
@@ -853,7 +901,7 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
       items: [
         { furnitureId:"vanity-single-white", x:40,  z:25,  rotation:0 },
         { furnitureId:"toilet-standard",     x:220, z:28,  rotation:0 },
-        { furnitureId:"bathtub-builtin",     x:90,  z:170, rotation:0 },
+        { furnitureId:"bathtub-builtin",     x:90,  z:130, rotation:0 },
       ],
     },
     study: {
@@ -916,9 +964,9 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
       materialIds: { wall:"wall-beige", floor:"floor-walnut", light:"light-chandelier" },
       items: [
         { furnitureId:"tvunit-walnut",    x:250, z:21,  rotation:0   },
-        { furnitureId:"sofa-japanese",    x:250, z:235, rotation:180 },
-        { furnitureId:"coffee-oak-round", x:250, z:148, rotation:0   },
-        { furnitureId:"rug-persian",      x:250, z:175, rotation:0   },
+        { furnitureId:"sofa-japanese",    x:250, z:258, rotation:180 },
+        { furnitureId:"coffee-oak-round", x:250, z:120, rotation:0   },
+        { furnitureId:"rug-persian",      x:250, z:165, rotation:0   },
         { furnitureId:"artwork-inkwash",  x:250, z:2,   rotation:0   },
         { furnitureId:"plant-monstera",   x:40,  z:390, rotation:0   },
         { furnitureId:"curtain-brown-sheer", x:485, z:210, rotation:270 },
@@ -927,7 +975,7 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
         { wall:"E", pos:80, len:260, h:200, sill:70, style:"wooden" },
       ],
       doorStyle: "french_double",
-      doorWall: "S", doorPos: 210, doorLen: 80,
+      doorWall: "S", doorPos: 210, doorLen: 70,
       exteriorDecor: [
         // Couplets flank the centered door (u≈0.42-0.58). Inner edge of
         // couplet at u=0.35 leaves ~0.07 (35cm) margin to door.
@@ -983,9 +1031,15 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
       items: [
         { furnitureId:"cabinet-lower-gray",  x:100, z:28, rotation:0 },
         { furnitureId:"cabinet-upper-white", x:75,  z:17, rotation:0 },
-        { furnitureId:"sink-double-steel",   x:195, z:22, rotation:0 },
-        { furnitureId:"hood-side-black",     x:195, z:16, rotation:0 },
-        { furnitureId:"fridge-single-white", x:315, z:35, rotation:0 },
+        { furnitureId:"sink-double-steel",   x:80, z:22, rotation:0 },
+        { furnitureId:"hood-side-black",     x:200, z:16, rotation:0, elevationY:147 },
+        { furnitureId:"fridge-single-white", x:370, z:150, rotation:270 },
+      ],
+      // Window moved to the east end of the north wall (see nordic
+      // kitchen): the range hood hangs on this wall in front of the
+      // sample's centered window.
+      windows: [
+        { wall:"N", pos:270, len:90, h:100, sill:100, style:"sliding" },
       ],
     },
     bathroom: {
@@ -994,7 +1048,7 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
       items: [
         { furnitureId:"vanity-single-white", x:40,  z:25,  rotation:0 },
         { furnitureId:"toilet-smart",        x:220, z:28,  rotation:0 },
-        { furnitureId:"bathtub-builtin",     x:90,  z:170, rotation:0 },
+        { furnitureId:"bathtub-builtin",     x:90,  z:130, rotation:0 },
       ],
     },
     study: {
