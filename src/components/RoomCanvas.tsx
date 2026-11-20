@@ -110,14 +110,97 @@ function ExposureController() {
   return null;
 }
 
+// 室内装修默认机位：取房间里最空的那个角（眼高 1.5m，看向房间中心）。
+// 默认东南角，但小房间的东南角常被大家具占了——浴室的淋浴房就在东南
+// 角，固定东南角机位会直接钻进淋浴房里（花洒糊满整帧）。只看“又高
+// 又宽”的落地件（高 ≥120cm 且最小边 ≥60cm）：矮件（床/沙发/浴室柜）
+// 在眼高视线以下不挡 view；窄件（落地灯/绿植）只占画面一角，不挡房
+// 间；窗帘不算（南墙的在精装视图已隐藏，窗墙的贴墙边不挡路）。
+// 评分 = min(角点到最近挡件的距离，角点→中心视线到最近挡件的距离）。
+// 选角规则：东南角够空（≥30cm）就用东南角——房间布局本来就是按
+// 东南角取景排的（沙发/床朝北墙，门在南墙），换角会丢构图；东南角
+// 真被挡住时，在够空的角里选“挡件最偏离视线中轴”的那个（挡件在
+// 正中会糊满画面，偏到一侧就只是前景）。
+function pickCornerCamPos(Wm: number, Dm: number, placed: PlacedItem[]): [number, number, number] {
+  const inset = Math.min(0.7, Math.max(0.3, Math.min(Wm, Dm) * 0.15));
+  const blockers = (placed ?? []).filter(p => (p.elevationY ?? 0) === 0).map(p => {
+    const it = getFurnitureById(p.furnitureId);
+    if (!it || it.category === "curtain") return null;
+    // 绿植/小摆件/挂画是软前景，不挡视线（龟背竹 65×65×130 曾把东南角
+    // 误判为“被挡”，机位跳去西北角，构图反而变差）；只有实心大家具才算挡件。
+    if (it.category === "plant" || it.category === "decor" || it.category === "artwork") return null;
+    if ((it.height ?? 0) < 120) return null;
+    if (Math.min(it.width ?? 0, it.depth ?? 0) < 60) return null;
+    const rot90 = (((p.rotation ?? 0) % 180) + 180) % 180 === 90;
+    const w = (rot90 ? it.depth : it.width) / 100;
+    const d = (rot90 ? it.width : it.depth) / 100;
+    return { cx: (p.x - (Wm * 100) / 2) / 100, cz: (p.z - (Dm * 100) / 2) / 100, hw: w / 2, hd: d / 2 };
+  }).filter((b): b is NonNullable<typeof b> => b !== null);
+  const distToRect = (px: number, pz: number, b: { cx: number; cz: number; hw: number; hd: number }) => {
+    const dx = Math.max(Math.abs(px - b.cx) - b.hw, 0);
+    const dz = Math.max(Math.abs(pz - b.cz) - b.hd, 0);
+    const inside = Math.abs(px - b.cx) <= b.hw && Math.abs(pz - b.cz) <= b.hd;
+    return Math.hypot(dx, dz) - (inside ? 1 : 0);
+  };
+  const corners: Array<{ sx: 1 | -1; sz: 1 | -1 }> = [
+    { sx: 1, sz: 1 }, { sx: -1, sz: 1 }, { sx: 1, sz: -1 }, { sx: -1, sz: -1 },
+  ];
+  // 每角：净空分 + 挡件离视线中轴的最小夹角（越大越偏，越好）
+  const scored = corners.map(c => {
+    const px = c.sx * (Wm / 2 - inset);
+    const pz = c.sz * (Dm / 2 - inset);
+    let score = Infinity;
+    for (const b of blockers) {
+      score = Math.min(score, distToRect(px, pz, b));
+      // 视线：角点→中心连线，9 个采样点到挡件的最近距离
+      for (let i = 1; i <= 9; i++) {
+        const t = i / 10;
+        score = Math.min(score, distToRect(px * (1 - t), pz * (1 - t), b));
+      }
+    }
+    // 视线方向（角点→中心）与角点→挡件方向的夹角；无挡件时为 180°
+    let minAngle = Math.PI;
+    for (const b of blockers) {
+      const toCenter = Math.atan2(-pz, -px);
+      const toBlocker = Math.atan2(b.cz - pz, b.cx - px);
+      let d = Math.abs(toCenter - toBlocker);
+      if (d > Math.PI) d = 2 * Math.PI - d;
+      minAngle = Math.min(minAngle, d);
+    }
+    return { c, px, pz, score, minAngle };
+  });
+  // 东南角够空就用东南角（默认构图）；否则在够空的角里选挡件最偏的；
+  // 都不够空就选净空分最高的（最不坏的那个）。
+  const CLEAR = 0.3;
+  if (scored[0].score >= CLEAR) return [scored[0].px, 1.5, scored[0].pz];
+  const adequate = scored.filter(s => s.score >= CLEAR);
+  const pool = adequate.length > 0 ? adequate : scored;
+  let best = pool[0];
+  for (const s of pool) {
+    if (adequate.length > 0) {
+      if (s.minAngle > best.minAngle + 1e-9) best = s;
+    } else if (s.score > best.score + 1e-9) {
+      best = s;
+    }
+  }
+  return [best.px, 1.5, best.pz];
+}
+
 function CameraController({ W, D, H }: { W: number; D: number; H: number }) {
   const { camera } = useThree();
+  const placed = useDesignerStore(s => s.floorPlans[s.activeFloor]?.rooms[s.activeRoom]?.placedItems ?? EMPTY_PLACED);
+  const corner = useMemo(() => pickCornerCamPos(W, D, placed), [W, D, placed]);
   useEffect(() => {
-    const camZ = D / 2 + Math.max(W, D) * 1.05;
-    const camY = H * 0.48;
-    camera.position.set(0, camY, camZ);
-    (camera as THREE.PerspectiveCamera).lookAt(0, H * 0.3, 0);
-  }, [W, D, H, camera]);
+    // 室内装修默认机位：房间最空的角内侧、眼高 1.5m，看向房间中心偏下。
+    // 旧机位在南墙外 (D/2 + max(W,D)*1.05，客厅约 11.7m) 拍整面立面：
+    // 9m 宽、2.8m 高的房间在 58° 视野里只占画面中间一条带，上下全是
+    // 灰底虚空，南墙的门和落地窗帘还正好挡在相机和房间之间。角落内拍
+    // 是室内摄影的常规拍法——墙面/地面/家具直接撑满画面，门和窗帘落
+    // 在相机身后。Batch 2 试过“按宽高双向适配”的外机位：3.76m 处窗帘
+    // 糊满整帧，已回滚；本方案不再用外机位。
+    camera.position.set(...corner);
+    (camera as THREE.PerspectiveCamera).lookAt(0, Math.min(1.15, H * 0.42), 0);
+  }, [W, D, H, camera, corner]);
   return null;
 }
 
@@ -272,6 +355,7 @@ function RoomShell({
   wallsHidden,
   curtainGlassWalls,
   curtainMullion,
+  firstPerson,
 }: {
   W: number; D: number; H: number;
   wallColor: string; floorColor: string;
@@ -300,6 +384,9 @@ function RoomShell({
   ceilingOpacity: number;
   /** Per-side hide flags. true = skip rendering that wall entirely. */
   wallsHidden?: Partial<Record<WallSide, boolean>>;
+  /** 漫游模式：南墙的门要保留（人要在房间里走、穿门）；非漫游的轨道
+   *  视图里南墙本身被隐藏，门会浮在半空挡画面，见 hideSouthDoor。 */
+  firstPerson?: boolean;
   /** Glass curtain faces → per-face 玻璃透明度(0..1, 1=最通透)。用 Map 携带
    *  per-face opacity，与外观图同口径渲染玻璃通透度。 */
   curtainGlassWalls?: Map<WallSide, number>;
@@ -312,6 +399,14 @@ function RoomShell({
   // 在窗户上)。只有墙裙**在视觉上确实不同**(id 或颜色不同)才当作有墙裙。
   const hasWainscot = !!wallLower && !(wallLower.id === wallId && wallLower.color === wallColor);
   const splitH = hasWainscot ? Math.max(0.2, Math.min(H - 0.2, (wallSplitCm ?? 110) / 100)) : 0;
+
+  // 南墙隐藏时，南墙上的门在轨道视图里会浮在半空（墙没了、门还在），
+  // 正好挡在画面中央。漫游模式保留（人要穿门），南墙显示时也保留
+  // （门嵌在实墙洞里是正确的）。只在“轨道视图 + 南墙隐藏”时藏门；
+  // 门的数据（roomDoors / roomDoorWall）一点不动，全屋 3D、平面图、
+  // 漫游、报价都不受影响。
+  const southWallVisible = southWallOpacity > 0 && !wallsHidden?.S;
+  const hideSouthDoor = !firstPerson && !southWallVisible;
 
   // ── Floor textures ─────────────────────────────────────────────────
   const floorTex = useMemo(() => {
@@ -732,7 +827,7 @@ function RoomShell({
           同逻辑(FloorPlanExterior _doorOnGlassFace)——强制通透玻璃门(用户指定了
           glass_slide/glass_swing 就用其一，否则默认 glass_swing)，使同一道幕墙门
           三视图门型一致；其余面按用户 doorStyle。 */}
-      {hasDoor && (
+      {hasDoor && !(hideSouthDoor && doorWall === "S") && (
         <RoomDoor3D
           W={W} D={D} H={H}
           doorWall={doorWall}
@@ -746,8 +841,9 @@ function RoomShell({
         />
       )}
       {/* 额外门（多门房间：如车库的人行门 + 卷帘大门）——此前只渲染
-          allDoors[0]，其余门在室内视图整扇消失。 */}
-      {(extraDoors ?? []).map((d, i) => (
+          allDoors[0]，其余门在室内视图整扇消失。南墙上的额外门同样在
+          轨道视图 + 南墙隐藏时隐藏（同上，防浮空挡画面）。 */}
+      {(extraDoors ?? []).filter((d) => !(hideSouthDoor && d.wall === "S")).map((d, i) => (
         <RoomDoor3D
           key={`xdoor-${i}`}
           W={W} D={D} H={H}
@@ -2766,7 +2862,7 @@ function SignboardMesh({ w, d, h, color, label }: { w: number; d: number; h: num
   );
 }
 
-export function PlacedItemMesh({ placed, def, roomW, roomD, room, wallClearance = false }: { placed: PlacedItem; def: RoomDef; roomW: number; roomD: number; room?: RoomType; wallClearance?: boolean }) {
+export function PlacedItemMesh({ placed, def, roomW, roomD, room, wallClearance = false, hideSouthCurtain = false }: { placed: PlacedItem; def: RoomDef; roomW: number; roomD: number; room?: RoomType; wallClearance?: boolean; /** 室内装修轨道视图 + 南墙隐藏时，藏起挂在南墙上的窗帘（墙没了、帘会浮空挡画面）；漫游/外观/南墙显示时保留。 */ hideSouthCurtain?: boolean }) {
   // 内置家具走静态 FURNITURE（getFurnitureById）；用户导入的家具改为
   // 响应式订阅 store.customFurniture —— 它是持久化状态，刷新后随 store
   // rehydrate 立即可用，且变化会触发重渲染。之前只查模块级 _customItems
@@ -3115,6 +3211,10 @@ export function PlacedItemMesh({ placed, def, roomW, roomD, room, wallClearance 
       });
 
       const best = ranked[0];
+      // 南墙隐藏的轨道视图里，挂在南墙上的窗帘会浮在半空、正对相机挡住
+      // 整个房间（墙没了、帘还在）。只藏南墙这一面；其他墙的窗帘、漫游
+      // 模式、南墙显示时都保留。窗帘数据本身不动。
+      if (hideSouthCurtain && best.name === "S") return null;
       let { cx, cz } = best;
       const autoRotY = best.ry;
 
@@ -3856,6 +3956,9 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
   const ceilingOpacity = useDesignerStore((s) => s.ceilingOpacity);
   const lightPos = useDesignerStore((s) => s.lightPosByRoom[s.activeRoom]);
   const wallsHiddenForActive = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomWallsHidden?.[activeRoom]);
+  // 轨道视图 + 南墙隐藏时，藏南墙上的窗帘（防浮空挡画面）；漫游模式保留。
+  // 与 RoomShell 里的 southWallVisible / hideSouthDoor 同口径。
+  const hideSouthCurtain = !firstPerson && (southWallOpacity === 0 || !!wallsHiddenForActive?.S);
   const roomShape = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomShapes?.[activeRoom]);
   const exteriorFacadeSystem = useDesignerStore((s) => s.exterior?.facadeSystem);
   const exteriorFacadeGlass  = useDesignerStore((s) => s.exterior?.facadeGlass);
@@ -4037,6 +4140,7 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
           wallsHidden={wallsHiddenForActive}
           curtainGlassWalls={curtainGlassWalls}
           curtainMullion={{ bay: exMullionBay ?? 1.5, structW: exMullionStructW ?? 0.085, mullionW: exMullionWidth ?? 0.07 }}
+          firstPerson={firstPerson}
         />
       )}
 
@@ -4051,18 +4155,23 @@ function Scene({ isIOS, firstPerson }: { isIOS: boolean; firstPerson?: boolean }
 
       {/* Placed furniture */}
       {roomState.placedItems.map((placed) => (
-        <PlacedItemMesh key={placed.instanceId} placed={placed} def={def} roomW={W} roomD={D} />
+        <PlacedItemMesh key={placed.instanceId} placed={placed} def={def} roomW={W} roomD={D} hideSouthCurtain={hideSouthCurtain} />
       ))}
 
       {/* Exterior decor on the OUTSIDE faces of this room's walls.
           Skip in first-person — these are wall-mounted exterior items
           (sconces, plant boxes, MEP routing) that live outside the room,
           and in walkthrough mode they show through the wall as the user
-          walks close, producing the streak / ghost-painting artifacts. */}
+          walks close, producing the streak / ghost-painting artifacts.
+          NOTE: the MEP RoutingLinesLayer is deliberately NOT rendered
+          here anymore — red/yellow/blue pipes run as exposed surface
+          tubes in the furnished interior view (the "exposed pipes" in
+          the bathroom). Pipe data, the 2D plan and the wiring quote are
+          untouched; the component is kept below for a future dedicated
+          MEP/wiring view. */}
       {!firstPerson && (
         <>
           <RoomExteriorDecorLayer room={activeRoom} W={W} D={D} H={H} />
-          <RoutingLinesLayer room={activeRoom} W={W} D={D} H={H} />
         </>
       )}
 
@@ -4751,6 +4860,17 @@ export default function RoomCanvas() {
 
   const exitFirstPerson = useCallback(() => setFirstPerson(false), []);
 
+  // 室内装修默认机位（与 CameraController 同口径）：最空的角内侧、眼高 1.5m。
+  // Canvas 首帧就用这个机位，避免先以旧机位渲染一帧再跳变。
+  const placedForCam = useDesignerStore(s => s.floorPlans[s.activeFloor]?.rooms[activeRoom]?.placedItems ?? EMPTY_PLACED);
+  const cornerCam: [number, number, number] = useMemo(
+    () => pickCornerCamPos(roomWMeters, roomDMeters, placedForCam),
+    [roomWMeters, roomDMeters, placedForCam],
+  );
+  // OrbitControls 的 target 必须和 CameraController 的 lookAt 一致，否则
+  // 第一次拖拽时视角会跳变。
+  const orbitTargetY = Math.min(1.15, ((ROOM_DEFS[activeRoom]?.height ?? 280) / 100) * 0.42);
+
   return (
     <div className="w-full h-full relative">
       {firstPerson && (
@@ -4817,9 +4937,10 @@ export default function RoomCanvas() {
           }}
           dpr={canvasDpr()}  // 移动端封顶 1.5，防 iOS 内存杀页
           shadows={{ type: THREE.PCFSoftShadowMap }}
-          // z 6→4.8 / y 1.4→1.55：老机位太远，房间只占画面中间一小块、四周
-          // 大片灰背景（录屏构图差）。拉近让房间撑满视野。
-          camera={{ position: [0, 1.55, 4.8], fov: 58, near: 0.1, far: 80 }}
+          // 室内角落机位（见 CameraController）：东南角内侧、眼高 1.5m。
+          // 旧机位 [0, 1.55, 4.8] 仍是南墙外的立面机位，房间只占画面
+          // 中间一条带、上下大片灰底。
+          camera={{ position: cornerCam, fov: 58, near: 0.1, far: 80 }}
           style={{
             // 柔和中灰蓝：既不让白墙融进去（原来的 #E9EEF3），也不让
             // 白墙显得刺眼（上一版 #525B6A 太暗，墙看起来像纸片）。
@@ -4838,7 +4959,7 @@ export default function RoomCanvas() {
               minDistance={1.5}
               maxDistance={18}
               maxPolarAngle={Math.PI * 0.52}
-              target={[0, 0.6, 0]}
+              target={[0, orbitTargetY, 0]}
             />
           )}
           {/* First-person walkthrough (W/A/S/D + mouse look) */}
