@@ -1947,6 +1947,9 @@ const APARTMENT_SET: ProjectTemplate = {
         { furnitureId: "decor-mirror-bedroom", x: 250, z: 8,   rotation: 0 },
         { furnitureId: "plant-sansevieria",   x: 40,  z: 280, rotation: 0 },
         { furnitureId: "wardrobe-clothes-rack", x: 430, z: 280, rotation: 0 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "artwork-impression", x: 250, z: 7.5, rotation: 0, elevationY: 150 },
       ],
       bedroom: [
         { furnitureId: "bed-single-white",    x: 140, z: 150, rotation: 0 },
@@ -1959,6 +1962,10 @@ const APARTMENT_SET: ProjectTemplate = {
         { furnitureId: "plant-sansevieria",   x: 30,  z: 280, rotation: 0 },
         { furnitureId: "decor-books-pile",    x: 220, z: 40,  rotation: 0, elevationY: 44 },
         { furnitureId: "rug-boho",            x: 140, z: 150, rotation: 0 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "artwork-impression", x: 140, z: 7.5, rotation: 0, elevationY: 150 },
+        { furnitureId: "lamp-arc-gold", x: 243.5, z: 283.5, rotation: 0 },
       ],
       bathroom: [
         { furnitureId: "vanity-double-marble", x: 110, z: 30,  rotation: 0 },
@@ -2498,6 +2505,9 @@ const QING_SANXITANG_SET: ProjectTemplate = {
         { furnitureId: "lamp-wall-sconce",      x: 474, z: 100, rotation: 0, elevationY: 150 },
         { furnitureId: "lamp-wall-sconce",      x: 474, z: 260, rotation: 0, elevationY: 150 },
         { furnitureId: "rug-persian-wool",      x: 240, z: 180, rotation: 0 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "decor-pillows", x: 100, z: 120, rotation: 90, elevationY: 45 },
       ],
       study2: [
         { furnitureId: "bookshelf-with-books",  x: 100, z: 60,  rotation: 0 },
@@ -2528,6 +2538,9 @@ const QING_SANXITANG_SET: ProjectTemplate = {
         { furnitureId: "proc-oil-lamp",       x: 270, z: 40,  rotation: 0, elevationY: 60 },
         { furnitureId: "proc-wood-chest",     x: 350, z: 215, rotation: 0 },
         { furnitureId: "decor-mirror-full",   x: 240, z: 6,   rotation: 0 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "artwork-inkwash", x: 350, z: 7.5, rotation: 0, elevationY: 150 },
       ],
     },
   ],
@@ -2687,6 +2700,9 @@ const TANG_PALACE_SET: ProjectTemplate = {
         { furnitureId: "decor-vase-royal",      x: 840, z: 60,  rotation: 0 },
         { furnitureId: "lamp-chandelier-antique", x: 300, z: 300, rotation: 0, mountCeiling: true },
         { furnitureId: "lamp-chandelier-antique", x: 600, z: 300, rotation: 0, mountCeiling: true },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "decor-pillows", x: 423, z: 370, rotation: 0, elevationY: 45 },
       ],
       dining: [
         { furnitureId: "dining-marble-round",   x: 250, z: 200, rotation: 0 },
@@ -3286,6 +3302,9 @@ const VILLA_SUBURBAN_SET: ProjectTemplate = {
         { furnitureId: "bookshelf-with-books", x: 815, z: 434, rotation: 270 },
         { furnitureId: "appliance-ac-indoor", x: 648, z: 14, rotation: 0 },
         { furnitureId: "curtain-modern-gray", x: 18, z: 350, rotation: 90 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "artwork-impression", x: 450, z: 692.5, rotation: 180, elevationY: 150 },
 ],
       dining: [
         { furnitureId: "dining-marble-round", x: 275, z: 300, rotation: 0 },
@@ -3397,6 +3416,9 @@ const VILLA_SUBURBAN_SET: ProjectTemplate = {
         { furnitureId: "lamp-arc-gold", x: 126, z: 615, rotation: 0 },
         { furnitureId: "appliance-ac-indoor", x: 648, z: 14, rotation: 0 },
         { furnitureId: "curtain-modern-gray", x: 18, z: 350, rotation: 90 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "artwork-impression", x: 450, z: 7.5, rotation: 0, elevationY: 150 },
 ],
       bedroom: [
         { furnitureId: "bed-single-white", x: 275, z: 350, rotation: 0 },
@@ -3415,6 +3437,9 @@ const VILLA_SUBURBAN_SET: ProjectTemplate = {
         { furnitureId: "plant-monstera", x: 193, z: 615, rotation: 0, scaleW: 1.8, scaleD: 1.8, scaleH: 1.7 },
         { furnitureId: "appliance-ac-indoor", x: 396, z: 14, rotation: 0 },
         { furnitureId: "curtain-modern-gray", x: 18, z: 350, rotation: 90 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "artwork-impression", x: 275, z: 7.5, rotation: 0, elevationY: 150 },
 ],
       study2: [
         { furnitureId: "desk-study", x: 275, z: 150, rotation: 0 },
@@ -3450,6 +3475,12 @@ const VILLA_SUBURBAN_SET: ProjectTemplate = {
         { furnitureId: "bookshelf-with-books", x: 86, z: 170, rotation: 90 },
         { furnitureId: "bookshelf-with-books", x: 615, z: 190, rotation: 270 },
         { furnitureId: "lamp-arc-gold", x: 98, z: 415, rotation: 0 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "artwork-impression", x: 350, z: 492.5, rotation: 180, elevationY: 150 },
+        { furnitureId: "decor-books-pile", x: 525, z: 350, rotation: 0 },
+        { furnitureId: "decor-tulip", x: 575, z: 350, rotation: 0, elevationY: 30 },
+        { furnitureId: "plant-sansevieria", x: 672.5, z: 471, rotation: 0 },
 ],
       gym: [
         { furnitureId: "decor-treadmill", x: 325, z: 200, rotation: 0 },
@@ -3724,6 +3755,9 @@ const HOSPITAL_SET: ProjectTemplate = {
         { furnitureId: "wardrobe-slide-white", x: 762, z: 403, rotation: 270 },
         { furnitureId: "lamp-arc-gold", x: 112, z: 565, rotation: 0 },
         { furnitureId: "appliance-ac-indoor", x: 576, z: 14, rotation: 0 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "decor-blanket", x: 140, z: 112, rotation: 0, elevationY: 50 },
       ],
       study2: [
         { furnitureId: "desk-study",           x: 250, z: 150, rotation: 0 },
@@ -3888,6 +3922,11 @@ const QINHAN_SET: ProjectTemplate = {
         { furnitureId: "artwork-inkwash", x: 270, z: 12, rotation: 0, scaleW: 1.5, scaleH: 1.5 },
         { furnitureId: "proc-bluewhite-vase", x: 162, z: 325, rotation: 0, scaleW: 2.2, scaleD: 2.2, scaleH: 2.2 },
         { furnitureId: "proc-bluewhite-vase", x: 738, z: 325, rotation: 0, scaleW: 2.2, scaleD: 2.2, scaleH: 2.2 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "decor-blanket", x: 450, z: 142, rotation: 0, elevationY: 50 },
+        { furnitureId: "plant-sansevieria", x: 27.5, z: 621, rotation: 0 },
+        { furnitureId: "lamp-arc-gold", x: 863.5, z: 613.5, rotation: 0 },
       ],
       master: [
         { furnitureId: "proc-han-ta",        x: 300, z: 220, rotation: 0 },
@@ -3906,6 +3945,10 @@ const QINHAN_SET: ProjectTemplate = {
         { furnitureId: "proc-bogujia", x: 512, z: 247, rotation: 270 },
         { furnitureId: "plant-monstera", x: 390, z: 565, rotation: 0, scaleW: 1.8, scaleD: 1.8, scaleH: 1.7 },
         { furnitureId: "artwork-inkwash", x: 180, z: 12, rotation: 0, scaleW: 1.25, scaleH: 1.25 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "decor-blanket", x: 300, z: 252, rotation: 0, elevationY: 50 },
+        { furnitureId: "lamp-arc-gold", x: 563.5, z: 36.5, rotation: 0 },
       ],
       hallway: [
         { furnitureId: "stone-path",         x: 750, z: 175, rotation: 90 },
@@ -4019,6 +4062,10 @@ const WEIJIN_SET: ProjectTemplate = {
         { furnitureId: "proc-bogujia", x: 562, z: 434, rotation: 270 },
         { furnitureId: "plant-monstera", x: 559, z: 615, rotation: 0, scaleW: 1.8, scaleD: 1.8, scaleH: 1.7 },
         { furnitureId: "artwork-inkwash", x: 195, z: 12, rotation: 0, scaleW: 1.25, scaleH: 1.25 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "decor-blanket", x: 325, z: 162, rotation: 0, elevationY: 50 },
+        { furnitureId: "lamp-arc-gold", x: 36.5, z: 663.5, rotation: 0 },
       ],
       living: [
         // 清谈：矮几居中，四方凳环坐，漆碗在几上
@@ -4188,6 +4235,10 @@ const YUAN_SET: ProjectTemplate = {
         { furnitureId: "artwork-inkwash", x: 270, z: 12, rotation: 0, scaleW: 1.5, scaleH: 1.5 },
         { furnitureId: "proc-bluewhite-vase", x: 162, z: 570, rotation: 0, scaleW: 2.2, scaleD: 2.2, scaleH: 2.2 },
         { furnitureId: "proc-bluewhite-vase", x: 738, z: 350, rotation: 0, scaleW: 2.2, scaleD: 2.2, scaleH: 2.2 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "decor-blanket", x: 450, z: 612, rotation: 0, elevationY: 50 },
+        { furnitureId: "plant-sansevieria", x: 872.5, z: 29, rotation: 0 },
       ],
     },
   ],
@@ -4537,6 +4588,9 @@ const RURAL_REPUBLICAN_SET: ProjectTemplate = {
         { furnitureId: "wardrobe-solid-walnut", x: 38, z: 358, rotation: 90 },
         { furnitureId: "wardrobe-solid-walnut", x: 302, z: 247, rotation: 270 },
         { furnitureId: "artwork-inkwash", x: 120, z: 12, rotation: 0, scaleW: 1.25, scaleH: 1.25 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "plant-sansevieria", x: 27.5, z: 621, rotation: 0 },
       ],
       bedroom2: [
         // 东暗间（小夫妻房）：炕脚折叠被褥，箱上脸盆，墙边行李箱；用煤油灯
@@ -4554,6 +4608,9 @@ const RURAL_REPUBLICAN_SET: ProjectTemplate = {
         { furnitureId: "wardrobe-solid-walnut", x: 38, z: 358, rotation: 90 },
         { furnitureId: "wardrobe-solid-walnut", x: 302, z: 247, rotation: 270 },
         { furnitureId: "artwork-inkwash", x: 120, z: 12, rotation: 0, scaleW: 1.25, scaleH: 1.25 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "plant-sansevieria", x: 27.5, z: 621, rotation: 0 },
       ],
       hallway: [
         // 院子成第二间屋：南缘木围栏、东角草垛、门边洗衣篮、西角鸡舍
@@ -4869,6 +4926,10 @@ const WASHITSU_SET: ProjectTemplate = {
         { furnitureId: "proc-shoji",          x: 180, z: 350, rotation: 0 },
         { furnitureId: "proc-tokonoma", x: 31, z: 198, rotation: 90 },
         { furnitureId: "proc-shoji", x: 350, z: 137, rotation: 270 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "artwork-hokusai", x: 290, z: 7.5, rotation: 0, elevationY: 150 },
+        { furnitureId: "decor-blanket", x: 290, z: 358, rotation: 0, elevationY: 50 },
       ],
       hallway: [
         // REDESIGN-C：缘侧坪庭——石灯笼 + 岩石 + 灌木 + 东端竹丛
@@ -4987,6 +5048,9 @@ const HANOK_SET: ProjectTemplate = {
         { furnitureId: "lamp-arc-gold", x: 84, z: 565, rotation: 0 },
         { furnitureId: "plant-monstera", x: 516, z: 565, rotation: 0, scaleW: 1.8, scaleD: 1.8, scaleH: 1.7 },
         { furnitureId: "artwork-inkwash", x: 180, z: 12, rotation: 0, scaleW: 1.25, scaleH: 1.25 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "decor-blanket", x: 130, z: 133, rotation: 0, elevationY: 50 },
       ],
       master: [
         // 大厅去复制化：撤矮桌 + 四坐垫，只留两垫分坐 + 箱上书堆 + 北墙水墨
@@ -7910,6 +7974,9 @@ const SONG_BIANJING_PROSPEROUS_SET: ProjectTemplate = {
         { furnitureId: "artwork-inkwash", x: 270, z: 12, rotation: 0, scaleW: 1.5, scaleH: 1.5 },
         { furnitureId: "proc-bluewhite-vase", x: 162, z: 370, rotation: 0, scaleW: 2.2, scaleD: 2.2, scaleH: 2.2 },
         { furnitureId: "proc-bluewhite-vase", x: 738, z: 370, rotation: 0, scaleW: 2.2, scaleD: 2.2, scaleH: 2.2 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "lamp-arc-gold", x: 36.5, z: 463.5, rotation: 0 },
       ],
       dining: [
         { furnitureId: "desk-study", x: 250, z: 200, rotation: 0 },
@@ -7937,6 +8004,9 @@ const SONG_BIANJING_PROSPEROUS_SET: ProjectTemplate = {
         { furnitureId: "artwork-inkwash", x: 270, z: 12, rotation: 0, scaleW: 1.5, scaleH: 1.5 },
         { furnitureId: "proc-bluewhite-vase", x: 270, z: 370, rotation: 0, scaleW: 2.2, scaleD: 2.2, scaleH: 2.2 },
         { furnitureId: "proc-bluewhite-vase", x: 738, z: 370, rotation: 0, scaleW: 2.2, scaleD: 2.2, scaleH: 2.2 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "lamp-arc-gold", x: 863.5, z: 463.5, rotation: 0 },
 ],
     },
   ],
@@ -8102,6 +8172,9 @@ const QING_GARDEN_PROSPEROUS_SET: ProjectTemplate = {
         { furnitureId: "proc-bamboo-clump", x: 55, z: 300, rotation: 0 },
         { furnitureId: "rug-modern-gray", x: 300, z: 500, rotation: 0 },
         { furnitureId: "artwork-inkwash", x: 180, z: 12, rotation: 0, scaleW: 1.25, scaleH: 1.25 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "lamp-arc-gold", x: 563.5, z: 36.5, rotation: 0 },
       ],
       yard: [
         { furnitureId: "fountain", x: 800, z: 200, rotation: 0 },
@@ -8835,6 +8908,10 @@ const LOULAN_PROSPEROUS_SET: ProjectTemplate = {
         { furnitureId: "proc-stone-lantern", x: 176, z: 329, rotation: 0 },
         { furnitureId: "proc-bogujia", x: 88, z: 220, rotation: 90 },
         { furnitureId: "bookshelf-with-books", x: 775, z: 248, rotation: 270 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "artwork-inkwash", x: 400, z: 7.5, rotation: 0, elevationY: 150 },
+        { furnitureId: "decor-blanket", x: 400, z: 373, rotation: 0, elevationY: 50 },
 ],
       dining: [
         { furnitureId: "proc-market-stall", x: 400, z: 200, rotation: 0 },
@@ -9527,6 +9604,9 @@ const VILLAGE_PROSPEROUS_SET: ProjectTemplate = {
         { furnitureId: "proc-bogujia", x: 88, z: 170, rotation: 90 },
         { furnitureId: "bookshelf-with-books", x: 815, z: 310, rotation: 270 },
         { furnitureId: "artwork-kandinsky", x: 270, z: 12, rotation: 0, scaleW: 1.5, scaleH: 1.5 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-b.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId: "decor-blanket", x: 450, z: 203, rotation: 0, elevationY: 50 },
 ],
       dining: [
         { furnitureId: "proc-wood-chest", x: 450, z: 100, rotation: 0 },
