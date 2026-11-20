@@ -48,6 +48,11 @@ export default function RightPanelAll() {
   const setViewMode    = useDesignerStore(s => s.setViewMode);
 
   const budget = mounted ? budgetRaw : 150000;
+  // Whole-house cost split (furniture / materials / wiring / labor) —
+  // fills the dead white space between the room list and the export
+  // buttons with the same numbers RightPanel shows per room.
+  const wholeHouse = useDesignerStore(s => s.wholeHouseBreakdown());
+  const laborRateRaw = useDesignerStore(s => s.laborRate);
 
   // Per-room costs for current floor (for display)
   const roomCosts = enabledRooms.map(r => {
@@ -131,8 +136,10 @@ export default function RightPanelAll() {
         </div>
       </div>
 
-      {/* Room accordion list */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Room accordion list — no flex-1 stretch: the list used to leave a
+          large empty white gap above the export buttons when short. The
+          panel now ends right after its content (the aside scrolls). */}
+      <div className="shrink-0">
         {configuredRooms.length === 0 ? (
           <div className="flex-1 flex items-center justify-center text-xs px-4 py-8 text-center" style={{ color: "var(--ds-text-3)" }}>
             {t.emptyState}
@@ -257,6 +264,38 @@ export default function RightPanelAll() {
               </div>
             );
           })
+        )}
+      </div>
+
+      {/* Cost breakdown — same four lines as RightPanel's 整屋总价, so the
+          space below the room list carries real numbers instead of a
+          white void. Labor = materials × laborRate (¥0 until materials
+          are applied, e.g. via a style template). */}
+      <div className="px-4 py-3 shrink-0" style={{ borderTop: "1px solid var(--ds-border-soft)", background: "var(--ds-surface-muted)" }}>
+        <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--ds-text-3)" }}>
+          {locale === "en" ? "Cost breakdown" : "费用构成"}
+        </div>
+        <div className="flex flex-col gap-1">
+          {[
+            { label: t.wholeHouseFurniture, val: wholeHouse.furniture },
+            { label: t.wholeHouseMaterials, val: wholeHouse.materials },
+            { label: t.wholeHouseWiring,    val: wholeHouse.wiring },
+            { label: `${t.wholeHouseLabor} · ${Math.round((mounted ? laborRateRaw : 0.4) * 100)}%`, val: wholeHouse.labor },
+          ].map(({ label, val }) => (
+            <div key={label} className="flex items-center justify-between text-[11px]" style={{ color: "var(--ds-text-2)" }}>
+              <span>{label}</span>
+              <span className="font-bold" style={{ color: "var(--ds-text)" }}>{formatPrice(mounted ? val : 0, locale)}</span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between text-[11px] pt-1 mt-0.5" style={{ borderTop: "1px solid var(--ds-border-soft)", color: "var(--ds-text)" }}>
+            <span className="font-bold">{locale === "en" ? "Total incl. labor" : "含人工总价"}</span>
+            <span className="font-black" style={{ color: "#007AFF" }}>{formatPrice(mounted ? wholeHouse.total : 0, locale)}</span>
+          </div>
+        </div>
+        {mounted && wholeHouse.materials === 0 && (
+          <div className="text-[9px] mt-1.5" style={{ color: "var(--ds-text-3)" }}>
+            {t.wholeHouseNoMaterialsNote}
+          </div>
         )}
       </div>
 

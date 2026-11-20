@@ -287,7 +287,9 @@ export default function TopBar() {
                 }
               >
                 <span>{t.viewIcons[mode]}</span>
-                <span className="hidden sm:block">{t.viewModes[mode]}</span>
+                {/* Mobile shows icons only — except the ACTIVE view, whose
+                    label stays visible so users can tell where they are. */}
+                <span className={isActive ? "block" : "hidden sm:block"}>{t.viewModes[mode]}</span>
               </button>
               {i < arr.length - 1 && (
                 <span className="text-[9px] px-0.5 select-none" style={{ color: "var(--ds-text-3)", opacity: 0.5 }}>›</span>

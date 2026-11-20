@@ -44,8 +44,10 @@ function MatCard({ item }: { item: MaterialItem }) {
             }
       }
     >
+      {/* Material swatch — taller so the texture (gradient) reads; falls
+          back to the flat color when the material has no texture. */}
       <div
-        className="w-full h-9 rounded-lg"
+        className="w-full h-12 rounded-lg"
         style={{ background: item.texture ?? item.color }}
       />
       <span className="text-[11px] font-semibold leading-tight line-clamp-1" style={{ color: "var(--ds-text)" }}>
@@ -100,12 +102,23 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
       }
       title={displayName}
     >
-      {thumb && (
+      {/* Thumbnail: real GLB render when available, otherwise a consistent
+          neutral placeholder (icon on --ds-surface-2) so the grid stays
+          uniform instead of mixing tall thumbs with bare text cards. */}
+      {thumb ? (
         <div
-          className="w-full h-9 rounded-lg overflow-hidden"
+          className="w-full h-16 rounded-lg overflow-hidden"
           style={{ background: "var(--ds-surface-2)" }}
         >
           <img src={thumb} alt="" className="w-full h-full object-contain" draggable={false} />
+        </div>
+      ) : (
+        <div
+          className="w-full h-16 rounded-lg flex items-center justify-center"
+          style={{ background: "var(--ds-surface-2)" }}
+          aria-hidden
+        >
+          <span className="text-[26px] leading-none" style={{ opacity: 0.75 }}>{item.icon}</span>
         </div>
       )}
       <span className="text-[11px] font-semibold leading-tight line-clamp-1" style={{ color: "var(--ds-text)" }}>
@@ -181,7 +194,7 @@ function WallMatCard({ item, target }: { item: MaterialItem; target: WallTarget 
           : { border: "2px solid transparent", background: "var(--ds-surface)", boxShadow: "var(--ds-shadow-sm)" }
       }
     >
-      <div className="w-full h-9 rounded-lg" style={{ background: item.texture ?? item.color }} />
+      <div className="w-full h-12 rounded-lg" style={{ background: item.texture ?? item.color }} />
       <span className="text-[11px] font-semibold leading-tight line-clamp-1" style={{ color: "var(--ds-text)" }}>
         {displayName}
       </span>

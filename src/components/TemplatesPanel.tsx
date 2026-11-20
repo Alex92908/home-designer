@@ -38,6 +38,23 @@ function getSwatches(tpl: StyleTemplate): string[] {
   return colors;
 }
 
+/** Real-material preview colors for a style card: the living room's actual
+ *  wall color (top band), floor color (bottom band) and light color, so the
+ *  card shows what the style looks like instead of an emoji + 3 dots. */
+function getPreviewColors(tpl: StyleTemplate): { wall: string; floor: string; light: string } {
+  const living = tpl.rooms.living;
+  const colorOf = (key: "wall" | "floor" | "light"): string | undefined => {
+    const id = living?.materialIds[key];
+    if (!id) return undefined;
+    return MATERIALS.find(m => m.id === id)?.color;
+  };
+  return {
+    wall:  colorOf("wall")  ?? tpl.accent,
+    floor: colorOf("floor") ?? "#C8A882",
+    light: colorOf("light") ?? "#FFF2D0",
+  };
+}
+
 export default function TemplatesPanel({ onLoaded }: Props) {
   const loadTemplate         = useDesignerStore(s => s.loadTemplate);
   const applyProjectTemplate = useDesignerStore(s => s.applyProjectTemplate);
@@ -155,16 +172,26 @@ export default function TemplatesPanel({ onLoaded }: Props) {
                       : { background: "var(--ds-surface)", border: "1px solid var(--ds-border)", opacity: isLoading ? 0.6 : 1 }
                   }
                 >
-                  {/* 3-tone palette strip */}
-                  <div className="w-9 h-9 rounded-xl shrink-0 overflow-hidden flex mt-0.5 border border-black/10">
+                  {/* Composed preview — wall on top, accent strip, roof
+                      below (palette = [wall, roof, accent]); the emoji
+                      sits on top so the card still reads at a glance. */}
+                  <div
+                    className="w-14 h-14 rounded-xl shrink-0 overflow-hidden relative mt-0.5 border border-black/10 flex flex-col"
+                    title={locale === "en" ? `Wall ${c0} · Roof ${c1} · Accent ${c2}` : `墙面 ${c0} · 屋顶 ${c1} · 点缀 ${c2}`}
+                  >
                     <div className="flex-1" style={{ background: c0 }} />
-                    <div className="flex-1" style={{ background: c1 }} />
-                    <div className="flex-1" style={{ background: c2 }} />
+                    <div className="h-[3px] shrink-0" style={{ background: c2 }} />
+                    <div className="h-[38%] shrink-0" style={{ background: c1 }} />
+                    <span
+                      className="absolute inset-0 flex items-center justify-center text-xl leading-none"
+                      style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.45))" }}
+                    >
+                      {tpl.emoji}
+                    </span>
                   </div>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="text-base leading-none">{tpl.emoji}</span>
                       <span className="text-[12px] font-bold truncate" style={{ color: isConfirming ? "#fff" : "var(--ds-text)" }}>
                         {locale === "en" ? tpl.nameEn : tpl.name}
                       </span>
@@ -227,6 +254,7 @@ export default function TemplatesPanel({ onLoaded }: Props) {
             const isActive     = activeTemplateId === tpl.id && !isConfirming && !isLoading;
             const coveredRooms = enabledRooms.filter(r => tpl.rooms[r]);
             const swatches     = getSwatches(tpl);
+            const preview      = getPreviewColors(tpl);
 
             return (
               <div key={tpl.id}>
@@ -242,16 +270,28 @@ export default function TemplatesPanel({ onLoaded }: Props) {
                       : { background: "var(--ds-surface)", border: "1px solid var(--ds-border)", opacity: isLoading ? 0.6 : 1 }
                   }
                 >
-                  {/* Emoji icon */}
+                  {/* Composed preview — the template's REAL materials:
+                      wall color on top, accent strip, floor color below,
+                      with the style emoji on top. Users see the palette
+                      instead of applying blind. */}
                   <div
-                    className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-xl mt-0.5"
+                    className="w-14 h-14 rounded-xl shrink-0 overflow-hidden relative mt-0.5 border flex flex-col"
                     style={
                       isConfirming
                         ? { background: "rgba(255,255,255,0.25)", border: "1.5px solid rgba(255,255,255,0.5)" }
-                        : { background: tpl.accent + "28", border: `1.5px solid ${tpl.accent}50` }
+                        : { border: `1.5px solid ${tpl.accent}50` }
                     }
+                    title={locale === "en" ? `Wall ${preview.wall} · Floor ${preview.floor}` : `墙面 ${preview.wall} · 地面 ${preview.floor}`}
                   >
-                    {tpl.emoji}
+                    <div className="flex-1" style={{ background: preview.wall }} />
+                    <div className="h-[3px] shrink-0" style={{ background: tpl.accent }} />
+                    <div className="h-[38%] shrink-0" style={{ background: preview.floor }} />
+                    <span
+                      className="absolute inset-0 flex items-center justify-center text-xl leading-none"
+                      style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.45))" }}
+                    >
+                      {tpl.emoji}
+                    </span>
                   </div>
 
                   <div className="min-w-0 flex-1">

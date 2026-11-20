@@ -600,7 +600,11 @@ export default function FloorPlanAll() {
   }
   // Page-level zoom for the overview canvas. Same UX as FloorPlan: − / % / +
   // / reset, plus Ctrl/Cmd-wheel pinch zoom on the canvas wrapper.
-  const [zoomLevel, setZoomLevel] = useState(1.0);
+  // Default zoom: on narrow (phone) screens the plan at 100% occupies
+  // only the top ~1/3 of the viewport with empty grey below, so start
+  // zoomed in (the container scrolls to pan). Desktop keeps 1.0.
+  const [zoomLevel, setZoomLevel] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth < 768 ? 1.7 : 1.0);
 
   // In-app replacement for window.prompt/confirm/alert (blocked in some
   // Next.js runtime contexts). `dialog` holds the currently open dialog
@@ -1081,10 +1085,16 @@ export default function FloorPlanAll() {
       {/* Main area — left sidebar (RoomPanel) is now rendered by page.tsx
           in a collapsible container, matching 效果图 / 平面图 UX. */}
       <div className="flex-1 flex flex-col overflow-hidden bg-gray-100">
-        {/* Subheader */}
-        <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-100 shrink-0">
-          <span className="text-xs font-bold text-gray-800">{t.allTitle}</span>
-          <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+        {/* Subheader — horizontally scrollable on narrow screens (same
+            pattern as the TopBar): without this the row squeezes, the
+            title wraps into a vertical stack and 上传图纸 is clipped
+            off-screen on phones. */}
+        <div
+          className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-100 shrink-0 overflow-x-auto whitespace-nowrap"
+          style={{ scrollbarWidth: "none" }}
+        >
+          <span className="text-xs font-bold text-gray-800 shrink-0">{t.allTitle}</span>
+          <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">
             {configuredCount}/{ALL_ROOMS.length} {t.allConfigured}
           </span>
           <span className="text-[10px] text-gray-400 hidden lg:block">{t.allHint}</span>
@@ -1373,7 +1383,10 @@ export default function FloorPlanAll() {
             ref={svgRef}
             viewBox={viewBox}
             style={{
-              width: "100%", maxWidth: 580, display: "block", flexShrink: 0, touchAction: "none",
+              // No fixed 580 cap any more: the plan was rendering small
+              // with wide grey margins. It now fills the available width
+              // (up to 980px on very wide screens).
+              width: "100%", maxWidth: 980, display: "block", flexShrink: 0, touchAction: "none",
               cursor: tool === "ruler" || tool === "draw" || tool === "select" ? "crosshair" : "default",
             }}
             preserveAspectRatio="xMidYMin meet"
@@ -1833,21 +1846,27 @@ export default function FloorPlanAll() {
                     );
                   })}
 
-                  {/* Labels */}
-                  <text x={cx} y={cy - nameFs*1.2}
+                  {/* Labels — white halo (paint-order stroke) so the text
+                      stays legible over furniture glyphs and dimension
+                      lines instead of colliding with them; name/dims
+                      spacing widened so the two lines can't touch. */}
+                  <text x={cx} y={cy - nameFs*1.35}
                     textAnchor="middle" dominantBaseline="middle"
-                    fontSize={iconFs} style={{ pointerEvents: "none", userSelect: "none" }}>{roomIcon}</text>
+                    fontSize={iconFs} paintOrder="stroke" stroke="rgba(255,255,255,0.9)" strokeWidth={iconFs*0.22}
+                    style={{ pointerEvents: "none", userSelect: "none" }}>{roomIcon}</text>
                   <text x={cx} y={cy + nameFs*0.4}
                     textAnchor="middle" dominantBaseline="middle"
                     fontSize={nameFs} fontWeight={isActive ? "900" : "700"}
                     fill={isActive ? "#1D4ED8" : "#1F2937"}
                     fontFamily="system-ui, sans-serif"
+                    paintOrder="stroke" stroke="rgba(255,255,255,0.9)" strokeWidth={nameFs*0.22}
                     style={{ pointerEvents: "none", userSelect: "none" }}
                   >{roomName}</text>
-                  <text x={cx} y={cy + nameFs*2}
+                  <text x={cx} y={cy + nameFs*2.2}
                     textAnchor="middle" dominantBaseline="middle"
                     fontSize={dimFs} fill={isActive ? "#3B82F6" : "#6B7280"}
                     fontFamily="system-ui, sans-serif"
+                    paintOrder="stroke" stroke="rgba(255,255,255,0.9)" strokeWidth={dimFs*0.22}
                     style={{ pointerEvents: "none", userSelect: "none" }}
                   >{(w/100).toFixed(1)}×{(d/100).toFixed(1)}m</text>
 

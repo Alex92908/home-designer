@@ -215,6 +215,10 @@ export default function DesignerTool() {
   // React warning.
   const [leftOpen,  setLeftOpen]  = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
+  // Mobile (<768px): side panels render as overlay drawers over the canvas
+  // instead of squeezing it to ~100px wide (the budget panel was
+  // effectively unreachable on phones).
+  const [isMobile, setIsMobile] = useState(false);
   const [showAiRender,  setShowAiRender]  = useState(false);
   const [showImport,    setShowImport]    = useState(false);
   // zustand persist 在客户端水合时会用 localStorage 里的值覆盖 initial
@@ -241,6 +245,7 @@ export default function DesignerTool() {
     }
     setMounted(true);
     if (window.innerWidth < 768) {
+      setIsMobile(true);
       setLeftOpen(false);
       setRightOpen(false);
     }
@@ -419,17 +424,28 @@ export default function DesignerTool() {
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
       <TopBar />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+
+        {/* Mobile drawer scrim — tap outside an open panel to close it */}
+        {isMobile && (leftOpen || rightOpen) && (
+          <div
+            className="absolute inset-0 z-30"
+            style={{ background: "rgba(0,0,0,0.3)" }}
+            onClick={() => { setLeftOpen(false); setRightOpen(false); }}
+          />
+        )}
 
         {/* Room sidebar — always visible in room/2d views */}
         {showRoomSidebar && <RoomSidebar />}
 
         {/* Left panel with collapse — used by all views that have a left panel
-            (LeftPanel in 3D/2D, FloorPlanAll's RoomPanel in 全局). */}
+            (LeftPanel in 3D/2D, FloorPlanAll's RoomPanel in 全局).
+            Mobile: overlay drawer (absolute, capped at 86vw) instead of
+            squeezing the canvas. */}
         {hasLeftPanel && (
           <div
-            className="shrink-0 h-full overflow-hidden transition-all duration-300"
-            style={{ width: leftOpen ? leftPanelWidth : 0 }}
+            className={`h-full overflow-hidden transition-all duration-300 ${isMobile ? "absolute left-0 top-0 bottom-0 z-40 shadow-2xl" : "shrink-0"}`}
+            style={{ width: leftOpen ? Math.min(leftPanelWidth, isMobile ? 335 : leftPanelWidth) : 0 }}
           >
             {leftPanel}
           </div>
@@ -500,11 +516,12 @@ export default function DesignerTool() {
         </main>
 
         {/* Right panel with collapse — used by 3D/2D (RightPanel), 全局
-            (RightPanelAll), and 外观 (ExteriorPanel). */}
+            (RightPanelAll), and 外观 (ExteriorPanel).
+            Mobile: overlay drawer, same as the left panel. */}
         {hasRightPanel && (
           <div
-            className="shrink-0 h-full overflow-hidden transition-all duration-300"
-            style={{ width: rightOpen ? rightPanelWidth : 0 }}
+            className={`h-full overflow-hidden transition-all duration-300 ${isMobile ? "absolute right-0 top-0 bottom-0 z-40 shadow-2xl" : "shrink-0"}`}
+            style={{ width: rightOpen ? Math.min(rightPanelWidth, isMobile ? 335 : rightPanelWidth) : 0 }}
           >
             {rightPanel}
           </div>

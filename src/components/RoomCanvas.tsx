@@ -2003,29 +2003,44 @@ function Bookshelf({ color, w, d, h }: MeshProps) {
 }
 
 function Plant({ color, w, d, h }: MeshProps) {
-  const potH = h * 0.28;
+  // Taller pot + a foliage CLUSTER instead of one perfect sphere: the old
+  // single ball read as a "floating green blob" in the dollhouse view
+  // whenever the pot was occluded by a cut-away wall (the GLB is still
+  // loading then — this mesh is the Suspense fallback). An irregular
+  // 3-ball cluster with a visible trunk reads as foliage from any angle.
+  const potH = h * 0.32;
   const potColor = "#8B7355";
+  const leafDark = new THREE.Color(color).offsetHSL(0, 0.02, -0.07).getStyle();
+  const leafLight = new THREE.Color(color).offsetHSL(0, -0.02, 0.07).getStyle();
   return (
     <group>
-      {/* Pot */}
+      {/* Pot — taller/wider so it stays visible above the floor line */}
       <mesh position={[0, potH / 2, 0]} castShadow>
-        <cylinderGeometry args={[w * 0.35, w * 0.28, potH, 10]} />
+        <cylinderGeometry args={[w * 0.38, w * 0.30, potH, 12]} />
         <meshStandardMaterial color={potColor} roughness={0.7} />
       </mesh>
       {/* Soil */}
       <mesh position={[0, potH, 0]}>
-        <cylinderGeometry args={[w * 0.34, w * 0.34, 0.04, 10]} />
+        <cylinderGeometry args={[w * 0.36, w * 0.36, 0.04, 12]} />
         <meshStandardMaterial color="#3A2A1A" roughness={0.9} />
       </mesh>
-      {/* Leaves */}
-      <mesh position={[0, potH + h * 0.36, 0]} castShadow>
-        <sphereGeometry args={[w * 0.46, 10, 8]} />
+      {/* Trunk — thick enough to see between pot and leaves */}
+      <mesh position={[0, potH + h * 0.22, 0]} castShadow>
+        <cylinderGeometry args={[0.03, 0.035, h * 0.44, 8]} />
+        <meshStandardMaterial color="#4A6A30" roughness={0.8} />
+      </mesh>
+      {/* Foliage cluster — main ball + two offset satellites */}
+      <mesh position={[0, potH + h * 0.40, 0]} castShadow>
+        <sphereGeometry args={[w * 0.40, 12, 10]} />
         <meshStandardMaterial color={color} roughness={0.85} />
       </mesh>
-      {/* Stem */}
-      <mesh position={[0, potH + h * 0.2, 0]}>
-        <cylinderGeometry args={[0.02, 0.025, h * 0.42, 6]} />
-        <meshStandardMaterial color="#4A6A30" roughness={0.8} />
+      <mesh position={[w * 0.26, potH + h * 0.26, w * 0.10]} castShadow>
+        <sphereGeometry args={[w * 0.26, 10, 8]} />
+        <meshStandardMaterial color={leafDark} roughness={0.85} />
+      </mesh>
+      <mesh position={[-w * 0.24, potH + h * 0.28, -w * 0.12]} castShadow>
+        <sphereGeometry args={[w * 0.24, 10, 8]} />
+        <meshStandardMaterial color={leafLight} roughness={0.85} />
       </mesh>
     </group>
   );
