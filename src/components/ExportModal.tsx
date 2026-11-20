@@ -11,6 +11,7 @@ import { generatePdf, generateAllRoomsPdf } from "@/lib/exportPdf";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 import { formatPrice } from "@/lib/currency";
+import { materialSwatchBackground } from "@/lib/materialTextures";
 import {
   generateRoomPrompt,
   generateBatchWorkflow,
@@ -563,7 +564,7 @@ export default function ExportModal() {
                               <td className="py-2.5">
                                 <div className="flex items-center gap-2">
                                   <div className="w-4 h-4 rounded shrink-0 border border-gray-200"
-                                    style={{ background: item.texture ?? item.color }} />
+                                    style={{ background: materialSwatchBackground(item) }} />
                                   <div className="text-xs font-medium text-gray-800">{displayName}</div>
                                 </div>
                               </td>

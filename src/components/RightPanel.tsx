@@ -13,6 +13,7 @@ const EMPTY_WINDOWS: never[] = [];
 import { RoomState } from "@/lib/store";
 const EMPTY_ROOM_STATE: RoomState = { materials: {}, placedItems: [] };
 import { formatPrice } from "@/lib/currency";
+import { materialSwatchBackground } from "@/lib/materialTextures";
 import { evaluateRoom } from "@/lib/clearance";
 
 
@@ -370,7 +371,7 @@ export default function RightPanel() {
                   <div className="flex items-center gap-2 min-w-0">
                     <div
                       className="w-5 h-5 rounded-md shrink-0"
-                      style={{ background: item.texture ?? item.color, border: "1px solid var(--ds-border)" }}
+                      style={{ background: materialSwatchBackground(item), border: "1px solid var(--ds-border)" }}
                     />
                     <div className="min-w-0">
                       <div className="text-[11px] font-medium truncate" style={{ color: "var(--ds-text)" }}>{locale === "en" ? (getMaterialNameEn(item.id) ?? item.name) : item.name}</div>

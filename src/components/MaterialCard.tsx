@@ -7,6 +7,7 @@ const EMPTY_MATS = {} as const;
 import { useDesignerStore } from "@/lib/store";
 import { useLocale } from "@/lib/i18n";
 import { getMaterialNameEn, getLocalizedUnit } from "@/locales/itemNames";
+import { materialSwatchBackground } from "@/lib/materialTextures";
 
 export default function MaterialCard({ item }: { item: MaterialItem }) {
   const setMaterial = useDesignerStore((s) => s.setMaterial);
@@ -29,7 +30,7 @@ export default function MaterialCard({ item }: { item: MaterialItem }) {
         }
       `}
     >
-      <div className="w-full h-10 rounded-lg" style={{ background: item.texture ?? item.color }} />
+      <div className="w-full h-10 rounded-lg" style={{ background: materialSwatchBackground(item) }} />
       <span className="text-xs font-semibold text-gray-800 leading-tight line-clamp-1">{displayName}</span>
       <div className="flex items-center justify-between gap-1">
         <span className="text-[10px] text-gray-400">{item.brand}</span>

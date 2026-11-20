@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useDesignerStore } from "@/lib/store";
 import ModelImportCard from "./ModelImportCard";
 
@@ -14,7 +14,9 @@ import { MaterialItem, FurnitureItem, StyleTag } from "@/lib/types";
 import { useT, useLocale } from "@/lib/i18n";
 import { getFurnitureNameEn, getMaterialNameEn, getBrandNameEn } from "@/locales/itemNames";
 import { formatUnitPrice, formatPrice } from "@/lib/currency";
-import { useCatalogThumbnail } from "@/lib/catalogThumbnails";
+import { useItemThumbnail } from "@/lib/catalogThumbnails";
+import { itemSilhouetteDataUri } from "@/lib/itemSilhouette";
+import { materialSwatchBackground } from "@/lib/materialTextures";
 
 // ─── Material card ─────────────────────────────────────────
 function MatCard({ item }: { item: MaterialItem }) {
@@ -44,11 +46,11 @@ function MatCard({ item }: { item: MaterialItem }) {
             }
       }
     >
-      {/* Material swatch — taller so the texture (gradient) reads; falls
-          back to the flat color when the material has no texture. */}
+      {/* Material swatch — 程序化纹理（木纹/石纹/砖缝/织纹/光泽），见
+          materialSwatchBackground；没有纹理的材料也不再是纯色块。 */}
       <div
         className="w-full h-12 rounded-lg"
-        style={{ background: item.texture ?? item.color }}
+        style={{ background: materialSwatchBackground(item) }}
       />
       <span className="text-[11px] font-semibold leading-tight line-clamp-1" style={{ color: "var(--ds-text)" }}>
         {displayName}
@@ -80,8 +82,13 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
   const locale = useLocale();
   const displayName = locale === "en" ? (getFurnitureNameEn(item.id) ?? item.name) : item.name;
   const displayBrand = locale === "en" ? getBrandNameEn(item.brand) : item.brand;
-  // 只在有真实 3D 预览图时显示缩略图块；没有的（emoji 占位）不再渲染色块。
-  const thumb = useCatalogThumbnail(item.model3d?.url, item.model3d?.recolor);
+  // 缩略图四档：GLB 真烤图 / 程序化真烤图 / 实拍图 / 类别 SVG 剪影。
+  // 烤图未完成前先显示剪影占位——卡片永远有图，不再有 emoji/纯文字卡。
+  const thumb = useItemThumbnail(item);
+  const silhouette = useMemo(
+    () => itemSilhouetteDataUri(item),
+    [item.id, item.color, item.category],
+  );
 
   return (
     <button
@@ -102,25 +109,14 @@ function FurnitureCard({ item }: { item: typeof FURNITURE[0] }) {
       }
       title={displayName}
     >
-      {/* Thumbnail: real GLB render when available, otherwise a consistent
-          neutral placeholder (icon on --ds-surface-2) so the grid stays
-          uniform instead of mixing tall thumbs with bare text cards. */}
-      {thumb ? (
-        <div
-          className="w-full h-16 rounded-lg overflow-hidden"
-          style={{ background: "var(--ds-surface-2)" }}
-        >
-          <img src={thumb} alt="" className="w-full h-full object-contain" draggable={false} />
-        </div>
-      ) : (
-        <div
-          className="w-full h-16 rounded-lg flex items-center justify-center"
-          style={{ background: "var(--ds-surface-2)" }}
-          aria-hidden
-        >
-          <span className="text-[26px] leading-none" style={{ opacity: 0.75 }}>{item.icon}</span>
-        </div>
-      )}
+      {/* Thumbnail: 烤好的真 3D 图（GLB/程序化）或实拍图；未烤好时先显示
+          类别 SVG 剪影——每张卡永远有图，不再有 emoji/纯文字卡。 */}
+      <div
+        className="w-full h-16 rounded-lg overflow-hidden"
+        style={{ background: "var(--ds-surface-2)" }}
+      >
+        <img src={thumb ?? silhouette} alt="" className="w-full h-full object-contain" draggable={false} />
+      </div>
       <span className="text-[11px] font-semibold leading-tight line-clamp-1" style={{ color: "var(--ds-text)" }}>
         {displayName}
       </span>
@@ -194,7 +190,7 @@ function WallMatCard({ item, target }: { item: MaterialItem; target: WallTarget 
           : { border: "2px solid transparent", background: "var(--ds-surface)", boxShadow: "var(--ds-shadow-sm)" }
       }
     >
-      <div className="w-full h-12 rounded-lg" style={{ background: item.texture ?? item.color }} />
+      <div className="w-full h-12 rounded-lg" style={{ background: materialSwatchBackground(item) }} />
       <span className="text-[11px] font-semibold leading-tight line-clamp-1" style={{ color: "var(--ds-text)" }}>
         {displayName}
       </span>

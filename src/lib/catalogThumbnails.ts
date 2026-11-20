@@ -1,50 +1,72 @@
 "use client";
 
 /**
- * catalogThumbnails — 给目录里每件「有 GLB 的家具」离屏烤一张预览缩略图，
- * 替掉侧边栏卡片上的 emoji 占位图。
+ * catalogThumbnails — 目录里每件家具的卡片缩略图。
  *
- * 复用 makeGlbThumbnail（自建离屏 renderer + draco 解码 + 取景 + toDataURL）。
- * 关键是「别一次性烤几十个」：
+ * 四档来源（按优先级）：
+ *   1. 有 GLB → 离屏烤真 3D 图（makeGlbThumbnail，工作室成片）；
+ *   2. 程序化家具（proc-，140 件）→ 用同一 builder 离屏烤真 3D 图
+ *      （makeProceduralThumbnail，与摆进房间的几何同一来源）；
+ *   3. 有 imageUrl 的（装饰画/壁画/对联等 24 件）→ 直接用实拍图；
+ *   4. 其余（99 件）→ 类别 SVG 剪影（itemSilhouetteDataUri，同步生成，
+ *      颜色取家具本身）。
+ * 目标：目录里不再有纯文字卡片。
+ *
+ * 复用 makeGlbThumbnail 的策略：
  *   • 单条串行队列（concurrency=1）——逐个烤，避免同时开几十个 WebGL 上下文；
  *   • 三层缓存：内存 Map → localStorage（跨会话）→ 失败集合（不重试坏模型）；
- *   • useCatalogThumbnail(url) 订阅，烤好即重渲染对应卡片。
+ *   • useItemThumbnail(item) 订阅，烤好即重渲染对应卡片。
  *
- * 缓存键 = GLB url，故换了模型文件路径会自动重烤；同一文件全目录共享一张图。
+ * 缓存键 = 来源 + 标识；缓存前缀 v2——Batch 3 换了工作室成片，
+ * 旧版 v1 的灰底小图要重烤。
  */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { FurnitureItem } from "./types";
 import { makeGlbThumbnail } from "./glbThumbnail";
+import { makeProceduralThumbnail } from "./proceduralThumbnail";
+import { itemSilhouetteDataUri } from "./itemSilhouette";
+import { isProceduralFurnitureId } from "./proceduralFurniture";
 
-const THUMB_SIZE = 96;
-const LS_PREFIX = "glbthumb:v1:";
+const THUMB_SIZE = 128;
+const LS_PREFIX = "glbthumb:v2:";
 
 const mem = new Map<string, string>();        // key → dataURL
 const failed = new Set<string>();             // key 烤失败，不再重试
 const queued = new Set<string>();             // 已入队/在烤
 const subs = new Map<string, Set<() => void>>(); // key → 重渲染回调
-const queue: Array<{ key: string; url: string; recolor?: string }> = [];
+const queue: Array<{ key: string; kind: "glb" | "proc"; item: FurnitureItem }> = [];
 let running = false;
 
-// 缓存键 = url(+recolor)：换了模型路径或重涂色都会重烤。
-const keyOf = (url: string, recolor?: string) => (recolor ? `${url}|${recolor}` : url);
+// 缓存键：GLB 按 url(+recolor)，程序化按 id(+color)，换了模型/颜色会重烤。
+const keyOf = (item: FurnitureItem): { key: string; kind: "glb" | "proc" } | null => {
+  if (item.model3d?.url) {
+    return { key: `glb:${item.model3d.url}${item.model3d.recolor ? `|${item.model3d.recolor}` : ""}`, kind: "glb" };
+  }
+  if (isProceduralFurnitureId(item.id)) {
+    return { key: `proc:${item.id}|${item.color ?? ""}|${item.secondaryColor ?? ""}`, kind: "proc" };
+  }
+  return null;
+};
 
-function lsGet(url: string): string | null {
-  try { return localStorage.getItem(LS_PREFIX + url); } catch { return null; }
+function lsGet(key: string): string | null {
+  try { return localStorage.getItem(LS_PREFIX + key); } catch { return null; }
 }
-function lsSet(url: string, data: string): void {
-  try { localStorage.setItem(LS_PREFIX + url, data); } catch { /* 配额满：内存里留着就行 */ }
+function lsSet(key: string, data: string): void {
+  try { localStorage.setItem(LS_PREFIX + key, data); } catch { /* 配额满：内存里留着就行 */ }
 }
-function notify(url: string): void {
-  subs.get(url)?.forEach((fn) => fn());
+function notify(key: string): void {
+  subs.get(key)?.forEach((fn) => fn());
 }
 
 async function pump(): Promise<void> {
   if (running) return;
   running = true;
   while (queue.length) {
-    const { key, url, recolor } = queue.shift()!;
+    const { key, kind, item } = queue.shift()!;
     if (mem.has(key) || failed.has(key)) continue;
-    const data = await makeGlbThumbnail(url, THUMB_SIZE, recolor);
+    const data = kind === "glb"
+      ? await makeGlbThumbnail(item.model3d!.url, THUMB_SIZE, item.model3d!.recolor)
+      : await makeProceduralThumbnail(item, THUMB_SIZE);
     if (data) {
       mem.set(key, data);
       lsSet(key, data);
@@ -58,14 +80,21 @@ async function pump(): Promise<void> {
   running = false;
 }
 
-/** 取某个 GLB 的缩略图 dataURL；没有则返回 null（卡片回退到 emoji）。
- *  首次会把它排进串行队列后台烤，烤好后触发重渲染。 */
-export function useCatalogThumbnail(url?: string, recolor?: string): string | null {
+/**
+ * 取一件家具的卡片缩略图。
+ * imageUrl / SVG 剪影是同步的（立即返回）；GLB / 程序化是后台烤，
+ * 首次返回 null（卡片先显示 SVG 剪影占位——见 LeftPanel），烤好后重渲染。
+ * 注意：返回 null 时调用方应显示 itemSilhouetteDataUri(item) 作占位，
+ * 而不是空白或 emoji。
+ */
+export function useItemThumbnail(item: FurnitureItem): string | null {
   const [, force] = useState(0);
-  const key = url ? keyOf(url, recolor) : "";
+  const baked = useMemo(() => keyOf(item), [item.id, item.model3d?.url, item.model3d?.recolor, item.color, item.secondaryColor]);
+  const key = baked?.key ?? "";
 
   useEffect(() => {
-    if (!url || mem.has(key) || failed.has(key)) return;
+    if (!baked) return;
+    if (mem.has(key) || failed.has(key)) return;
     // 先看 localStorage 有没有上次烤好的
     const cached = lsGet(key);
     if (cached) {
@@ -80,12 +109,18 @@ export function useCatalogThumbnail(url?: string, recolor?: string): string | nu
     set.add(fn);
     if (!queued.has(key)) {
       queued.add(key);
-      queue.push({ key, url, recolor });
+      queue.push({ key, kind: baked.kind, item });
       void pump();
     }
     return () => { set!.delete(fn); };
-  }, [key, url, recolor]);
+  }, [key, baked]);
 
-  if (!url) return null;
+  // 实拍图只用于没有可烤来源的家具（装饰画/壁画/对联等）。
+  // 带 GLB 的电视柜也有 imageUrl（那是电视屏幕画，不是柜子本身），
+  // 必须烤 GLB，不能直接拿画当柜子缩略图。
+  if (!baked) {
+    if (item.imageUrl) return item.imageUrl;
+    return null;
+  }
   return mem.get(key) ?? null;
 }
