@@ -314,6 +314,11 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
         { furnitureId:"wardrobe-slide-white",  x:200, z:328, rotation:180 },
         { furnitureId:"plant-sansevieria",     x:375, z:15,  rotation:0   },
         { furnitureId:"curtain-modern-gray",   x:385, z:180, rotation:270 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"artwork-impression", x:200, z:7.5, rotation:0, elevationY:150   },
+        { furnitureId:"decor-blanket", x:200, z:185, rotation:0, elevationY:50   },
+        { furnitureId:"lamp-arc-gold", x:36.5, z:323.5, rotation:0   },
       ],
       windows: [
         { wall:"E", pos:80, len:200, h:180, sill:90, style:"sliding" },
@@ -330,6 +335,12 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
         { furnitureId:"bed-single-white",     x:160, z:100, rotation:0   },
         { furnitureId:"nightstand-white",     x:265, z:20,  rotation:0   },
         { furnitureId:"bookshelf-open-white", x:15,  z:130, rotation:90  },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"artwork-impression", x:160, z:7.5, rotation:0, elevationY:150   },
+        { furnitureId:"decor-blanket", x:160, z:163, rotation:0, elevationY:50   },
+        { furnitureId:"plant-sansevieria", x:27.5, z:271, rotation:0   },
+        { furnitureId:"lamp-arc-gold", x:283.5, z:263.5, rotation:0   },
       ],
     },
     dining: {
@@ -342,6 +353,9 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
         { furnitureId:"chair-nordic-oak", x:103, z:155, rotation:90  },
         { furnitureId:"chair-nordic-oak", x:277, z:155, rotation:270 },
         { furnitureId:"plant-rubber-tree",x:350, z:25,  rotation:0   },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-vase-set", x:190, z:155, rotation:0, elevationY:75   },
       ],
     },
     kitchen: {
@@ -430,6 +444,10 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
         { furnitureId:"desk-nordic-oak",      x:160, z:33,  rotation:0   },
         { furnitureId:"chair-ergonomic",      x:160, z:128, rotation:180 },
         { furnitureId:"bookshelf-open-white", x:15,  z:130, rotation:90  },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-books-pile", x:120, z:33, rotation:0, elevationY:44   },
+        { furnitureId:"lamp-arc-gold", x:283.5, z:253.5, rotation:0   },
       ],
     },
     closet: {
@@ -551,6 +569,9 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
         { furnitureId:"plant-sansevieria",     x:382, z:15,  rotation:0   },
         { furnitureId:"artwork-abstract",      x:200, z:2,   rotation:0   },
         { furnitureId:"curtain-brown-sheer",   x:385, z:170, rotation:270 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-blanket", x:200, z:187, rotation:0, elevationY:50   },
       ],
       windows: [
         { wall:"E", pos:60, len:220, h:200, sill:60, style:"fixed" },
@@ -575,6 +596,11 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
         // 75cm wardrobe front aisle (13 clearance violations). The template's
         // declared furnitureIds already list only bed/nightstand/wardrobe.
         { furnitureId:"plant-sansevieria",    x:15,  z:15,  rotation:0   },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"artwork-vermeer", x:160, z:7.5, rotation:0, elevationY:150   },
+        { furnitureId:"decor-blanket", x:160, z:179, rotation:0, elevationY:50   },
+        { furnitureId:"lamp-arc-gold", x:36.5, z:263.5, rotation:0   },
       ],
     },
     dining: {
@@ -595,6 +621,9 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
         { furnitureId:"sideboard-walnut",    x:60,  z:19,  rotation:0   },
         { furnitureId:"plant-rubber-tree",   x:343, z:27,  rotation:0   },
         { furnitureId:"artwork-abstract",    x:190, z:2,   rotation:0   },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-vase-set", x:190, z:150, rotation:0, elevationY:75   },
       ],
     },
     kitchen: {
@@ -648,6 +677,9 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
         { furnitureId:"lamp-arc-gold",          x:240, z:140, rotation:0   },
         { furnitureId:"plant-rubber-tree",      x:170, z:180, rotation:0   },
         { furnitureId:"artwork-inkwash",        x:160, z:2,   rotation:0   },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-books-pile", x:120, z:36, rotation:0, elevationY:65   },
       ],
     },
     balcony: {
@@ -660,6 +692,11 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
       items: [
         { furnitureId:"sofa-japanese",  x:210, z:42, rotation:180 },
         { furnitureId:"plant-monstera", x:387, z:35, rotation:0   },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"artwork-vermeer", x:210, z:152.5, rotation:180, elevationY:150   },
+        { furnitureId:"decor-pillows", x:183, z:42, rotation:180, elevationY:45   },
+        { furnitureId:"lamp-arc-gold", x:36.5, z:123.5, rotation:0   },
       ],
     },
   },
@@ -714,10 +751,16 @@ export const TEMPLATE_INDUSTRIAL: StyleTemplate = {
       items: [
         { furnitureId:"tvunit-black-stone",   x:250, z:23,  rotation:0   },
         { furnitureId:"artwork-inkwash",      x:250, z:2,   rotation:0   },
-        { furnitureId:"sofa-fabric-gray",     x:250, z:240, rotation:180 },
+        { furnitureId:"sofa-fabric-gray",     x:250, z:275, rotation:180 }, // 电视距 252cm（≥2.5m），与茶几留 55cm 前厅；原 240cm 触发电视太近+沙发/茶几冲突
         { furnitureId:"coffee-glass-black",   x:250, z:140, rotation:0   },
-        { furnitureId:"rug-modern-gray",      x:250, z:178, rotation:0   },
+        { furnitureId:"rug-modern-gray",      x:250, z:184, rotation:0   }, // 随沙发南移，居中于茶几与沙发之间
         { furnitureId:"lamp-industrial-black",x:445, z:220, rotation:0   },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-pillows", x:190, z:275, rotation:180, elevationY:45   }, // 随沙发南移
+        { furnitureId:"decor-books-pile", x:230, z:140, rotation:0   },
+        { furnitureId:"decor-tulip", x:270, z:140, rotation:0, elevationY:45   },
+        { furnitureId:"plant-sansevieria", x:27.5, z:391, rotation:0   },
       ],
       windows: [
         { wall:"E", pos:100, len:200, h:150, sill:90, style:"security" },
@@ -741,6 +784,12 @@ export const TEMPLATE_INDUSTRIAL: StyleTemplate = {
         { furnitureId:"nightstand-oak",        x:75,  z:21,  rotation:0   },
         { furnitureId:"nightstand-oak",        x:325, z:21,  rotation:0   },
         { furnitureId:"wardrobe-solid-walnut", x:30,  z:200, rotation:90  },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"artwork-abstract", x:200, z:7.5, rotation:0, elevationY:150   },
+        { furnitureId:"decor-blanket", x:200, z:173, rotation:0, elevationY:50   },
+        { furnitureId:"plant-sansevieria", x:372.5, z:331, rotation:0   },
+        { furnitureId:"lamp-arc-gold", x:36.5, z:323.5, rotation:0   },
       ],
       windows: [
         { wall:"E", pos:80, len:180, h:150, sill:90, style:"security" },
@@ -755,6 +804,12 @@ export const TEMPLATE_INDUSTRIAL: StyleTemplate = {
         { furnitureId:"bed-single-white",       x:160, z:100, rotation:0   },
         { furnitureId:"nightstand-white",       x:265, z:20,  rotation:0   },
         { furnitureId:"bookshelf-solid-walnut", x:18,  z:150, rotation:90  },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"artwork-abstract", x:160, z:7.5, rotation:0, elevationY:150   },
+        { furnitureId:"decor-blanket", x:160, z:163, rotation:0, elevationY:50   },
+        { furnitureId:"plant-sansevieria", x:292.5, z:271, rotation:0   },
+        { furnitureId:"lamp-arc-gold", x:36.5, z:263.5, rotation:0   },
       ],
     },
     dining: {
@@ -766,6 +821,10 @@ export const TEMPLATE_INDUSTRIAL: StyleTemplate = {
         { furnitureId:"chair-industrial-black",  x:190, z:242, rotation:180 },
         { furnitureId:"chair-industrial-black",  x:103, z:155, rotation:90  },
         { furnitureId:"chair-industrial-black",  x:277, z:155, rotation:270 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-vase-set", x:190, z:155, rotation:0, elevationY:75   },
+        { furnitureId:"plant-sansevieria", x:27.5, z:291, rotation:0   },
       ],
     },
     kitchen: {
@@ -796,6 +855,9 @@ export const TEMPLATE_INDUSTRIAL: StyleTemplate = {
         { furnitureId:"chair-ergonomic",         x:160, z:140, rotation:180 },
         { furnitureId:"bookshelf-solid-walnut",  x:18,  z:130, rotation:90  },
         { furnitureId:"lamp-industrial-black",   x:295, z:155, rotation:0   },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-books-pile", x:120, z:38, rotation:0, elevationY:65   },
       ],
     },
   },
@@ -849,12 +911,18 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
       materialIds: { wall:"wall-beige", floor:"floor-bamboo", light:"light-japanese-paper" },
       items: [
         { furnitureId:"sofa-japanese",    x:250, z:235, rotation:180 },
-        { furnitureId:"coffee-oak-round", x:250, z:148, rotation:0   },
-        { furnitureId:"rug-nordic-geo",   x:250, z:175, rotation:0   },
+        { furnitureId:"coffee-oak-round", x:250, z:115, rotation:0   }, // 北移 33cm：与榻榻米沙发留 61cm 前厅（原 28cm 冲突）
+        { furnitureId:"rug-nordic-geo",   x:250, z:155, rotation:0   }, // 随茶几北移，居中于茶几与沙发之间
         { furnitureId:"artwork-inkwash",  x:250, z:2,   rotation:0   },
         { furnitureId:"plant-monstera",   x:40,  z:390, rotation:0   },
         { furnitureId:"plant-rubber-tree",x:465, z:390, rotation:0   },
         { furnitureId:"curtain-modern-gray", x:485, z:200, rotation:270 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-pillows", x:223, z:235, rotation:180, elevationY:45   },
+        { furnitureId:"decor-books-pile", x:225, z:115, rotation:0   }, // 随茶几北移
+        { furnitureId:"decor-tulip", x:275, z:115, rotation:0, elevationY:30   }, // 随茶几北移
+        { furnitureId:"lamp-arc-gold", x:36.5, z:36.5, rotation:0   },
       ],
       windows: [
         { wall:"E", pos:80, len:240, h:180, sill:50, style:"wooden" },
@@ -879,6 +947,11 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
         { furnitureId:"wardrobe-solid-walnut", x:30,  z:200, rotation:90  },
         { furnitureId:"plant-sansevieria",     x:375, z:15,  rotation:0   },
         { furnitureId:"curtain-modern-gray",   x:385, z:180, rotation:270 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"artwork-hokusai", x:200, z:7.5, rotation:0, elevationY:150   },
+        { furnitureId:"decor-blanket", x:200, z:184, rotation:0, elevationY:50   },
+        { furnitureId:"lamp-arc-gold", x:36.5, z:36.5, rotation:0   },
       ],
       windows: [
         { wall:"E", pos:80, len:200, h:180, sill:50, style:"wooden" },
@@ -892,6 +965,12 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
       items: [
         { furnitureId:"bed-tatami",    x:160, z:110, rotation:0 },
         { furnitureId:"nightstand-oak",x:275, z:21,  rotation:0 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"artwork-hokusai", x:160, z:7.5, rotation:0, elevationY:150   },
+        { furnitureId:"decor-blanket", x:160, z:184, rotation:0, elevationY:50   },
+        { furnitureId:"plant-sansevieria", x:27.5, z:271, rotation:0   },
+        { furnitureId:"lamp-arc-gold", x:283.5, z:263.5, rotation:0   },
       ],
     },
     dining: {
@@ -904,6 +983,9 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
         { furnitureId:"chair-nordic-oak", x:103, z:155, rotation:90  },
         { furnitureId:"chair-nordic-oak", x:277, z:155, rotation:270 },
         { furnitureId:"plant-rubber-tree",x:350, z:25,  rotation:0   },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-tea-set", x:190, z:155, rotation:0, elevationY:75   },
       ],
     },
     kitchen: {
@@ -932,6 +1014,10 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
         { furnitureId:"desk-nordic-oak",    x:160, z:33,  rotation:0   },
         { furnitureId:"chair-simple-fabric",x:160, z:120, rotation:180 },
         { furnitureId:"plant-monstera",     x:290, z:260, rotation:0   },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-books-pile", x:120, z:33, rotation:0, elevationY:44   },
+        { furnitureId:"lamp-arc-gold", x:36.5, z:253.5, rotation:0   },
       ],
     },
   },
@@ -997,6 +1083,10 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
         // 茶几上只放茶具一套（中式客厅的点睛物，自动落到台面）
         { furnitureId:"decor-tea-set",    x:250, z:120, rotation:0   },
         { furnitureId:"curtain-brown-sheer", x:485, z:210, rotation:270 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-pillows", x:223, z:258, rotation:180, elevationY:45   },
+        { furnitureId:"lamp-arc-gold", x:36.5, z:36.5, rotation:0   },
       ],
       windows: [
         { wall:"E", pos:80, len:260, h:200, sill:70, style:"wooden" },
@@ -1024,6 +1114,11 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
         { furnitureId:"wardrobe-solid-walnut", x:30,  z:200, rotation:90  },
         { furnitureId:"plant-sansevieria",     x:375, z:15,  rotation:0   },
         { furnitureId:"curtain-brown-sheer",   x:385, z:180, rotation:270 },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"artwork-inkwash", x:200, z:7.5, rotation:0, elevationY:150   },
+        { furnitureId:"decor-blanket", x:200, z:184, rotation:0, elevationY:50   },
+        { furnitureId:"lamp-arc-gold", x:36.5, z:323.5, rotation:0   },
       ],
       windows: [
         { wall:"E", pos:80, len:200, h:180, sill:70, style:"wooden" },
@@ -1038,6 +1133,12 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
         { furnitureId:"bed-fabric-beige",       x:160, z:108, rotation:0   },
         { furnitureId:"nightstand-oak",         x:265, z:21,  rotation:0   },
         { furnitureId:"bookshelf-solid-walnut", x:18,  z:150, rotation:90  },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"artwork-inkwash", x:160, z:7.5, rotation:0, elevationY:150   },
+        { furnitureId:"decor-blanket", x:160, z:185, rotation:0, elevationY:50   },
+        { furnitureId:"plant-sansevieria", x:27.5, z:271, rotation:0   },
+        { furnitureId:"lamp-arc-gold", x:283.5, z:263.5, rotation:0   },
       ],
     },
     dining: {
@@ -1050,6 +1151,9 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
         { furnitureId:"chair-nordic-oak",    x:113, z:155, rotation:90  },
         { furnitureId:"chair-nordic-oak",    x:267, z:155, rotation:270 },
         { furnitureId:"plant-rubber-tree",   x:350, z:25,  rotation:0   },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-tea-set", x:190, z:155, rotation:0, elevationY:75   },
       ],
     },
     kitchen: {
@@ -1087,6 +1191,10 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
         { furnitureId:"bookshelf-solid-walnut",  x:18,  z:130, rotation:90  },
         { furnitureId:"plant-rubber-tree",       x:290, z:260, rotation:0   },
         { furnitureId:"artwork-inkwash",         x:160, z:2,   rotation:0   },
+        // ── 室内设计补配饰（2026-11-20）：画/毯/枕/摆件/植物/灯，
+        //    位置由 id-design-a2.js 按空闲角落+台面高算出，已做碰撞检查。
+        { furnitureId:"decor-books-pile", x:120, z:33, rotation:0, elevationY:44   },
+        { furnitureId:"lamp-arc-gold", x:283.5, z:36.5, rotation:0   },
       ],
     },
   },
