@@ -233,7 +233,7 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
   rooms: {
     living: {
       materialIds: { wall: "wall-white", floor: "floor-oak", light: "light-linear-pendant" },
-      furnitureIds: ["sofa-nordic-blue","coffee-oak-round","tvunit-float-white","lamp-arc-gold","rug-nordic-geo","plant-monstera"],
+      furnitureIds: ["sofa-nordic-blue","coffee-oak-round","tvunit-float-white","lamp-arc-gold","rug-nordic-geo","plant-monstera","artwork-impression","decor-books-pile","decor-tulip","decor-pillows"],
     },
     master: {
       materialIds: { wall: "wall-beige", floor: "floor-oak", light: "light-linear-pendant" },
@@ -281,6 +281,14 @@ export const TEMPLATE_NORDIC: StyleTemplate = {
         { furnitureId:"lamp-arc-gold",      x:55,  z:215, rotation:0   },
         { furnitureId:"plant-monstera",     x:465, z:385, rotation:0   },
         { furnitureId:"curtain-modern-gray", x:485, z:200, rotation:270 },
+        // 西墙挂画（北段，避开弧形灯）：原来整面西墙全空
+        { furnitureId:"artwork-impression", x:5, z:100, rotation:90, elevationY:150 },
+        // 茶几小件：郁金香显式抬高到台面高（30cm），尺寸校验才认它是
+        // “台面件”（不写时校验把它当 31cm 高的地面障碍物，与茶几 30cm
+        // 绕行区冲突）。书堆矮（≤15cm）不用写。
+        { furnitureId:"decor-books-pile",   x:230, z:112, rotation:0   },
+        { furnitureId:"decor-tulip",        x:272, z:112, rotation:0,   elevationY:30 },
+        { furnitureId:"decor-pillows",      x:200, z:258, rotation:180, elevationY:45 },
       ],
       windows: [
         { wall:"E", pos:80, len:240, h:180, sill:90, style:"sliding" },
@@ -450,7 +458,7 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
   rooms: {
     living: {
       materialIds: { wall: "wall-beige", floor: "floor-walnut", light: "light-chandelier" },
-      furnitureIds: ["sofa-leather-brown","coffee-marble-rect","tvunit-walnut","rug-persian","lamp-arc-gold","artwork-abstract"],
+      furnitureIds: ["sofa-leather-brown","coffee-marble-rect","tvunit-walnut","rug-persian","lamp-arc-gold","artwork-abstract","artwork-vermeer","decor-vase-set","decor-books-pile","decor-tulip","decor-pillows"],
     },
     master: {
       materialIds: { wall: "wall-warm-pink", floor: "floor-walnut", light: "light-chandelier" },
@@ -495,7 +503,20 @@ export const TEMPLATE_LUXURY: StyleTemplate = {
         { furnitureId:"lamp-arc-gold",      x:35,  z:180, rotation:0   },
         { furnitureId:"plant-monstera",     x:467, z:387, rotation:0   },
         { furnitureId:"plant-rubber-tree",  x:33,  z:393, rotation:0   },
+        // 挂画原来没给 elevationY —— 但挂画缺省就是墙高 52% 的画廊高度
+        // （约 1.45m 中心高），并不在地板上；之前看不见只是被南墙门挡住。
+        // 门藏起来后蒙德里安自然露出来，这里不动它。边柜上方再挂一幅
+        // 维米尔肖像 + 摆花瓶组，北墙两组画形成画廊墙。
         { furnitureId:"artwork-abstract",   x:250, z:2,   rotation:0   },
+        { furnitureId:"artwork-vermeer",    x:430, z:5,   rotation:0,   elevationY:150 },
+        { furnitureId:"decor-vase-set",     x:430, z:19,  rotation:0,   elevationY:85 },
+        // （边柜高 85cm；花瓶组显式抬高到柜顶，尺寸校验才认它是“台面件”）
+        // 茶几小件：郁金香显式抬高到台面高（45cm），尺寸校验才认它是
+        // “台面件”（不写时校验把它当 31cm 高的地面障碍物，与茶几 30cm
+        // 绕行区冲突）。书堆矮（≤15cm）不用写。
+        { furnitureId:"decor-books-pile",   x:215, z:110, rotation:0   },
+        { furnitureId:"decor-tulip",        x:285, z:110, rotation:0,   elevationY:45 },
+        { furnitureId:"decor-pillows",      x:200, z:258, rotation:180, elevationY:45 },
         { furnitureId:"curtain-brown-sheer", x:485, z:200, rotation:270 },
       ],
       windows: [
@@ -931,7 +952,7 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
   rooms: {
     living: {
       materialIds: { wall: "wall-beige", floor: "floor-walnut", light: "light-chandelier" },
-      furnitureIds: ["sofa-japanese", "coffee-oak-round", "tvunit-walnut", "rug-persian", "plant-monstera", "artwork-inkwash"],
+      furnitureIds: ["sofa-japanese", "coffee-oak-round", "tvunit-walnut", "rug-persian", "plant-monstera", "artwork-inkwash", "artwork-hokusai", "decor-tea-set"],
     },
     master: {
       materialIds: { wall: "wall-beige", floor: "floor-walnut" },
@@ -967,8 +988,14 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
         { furnitureId:"sofa-japanese",    x:250, z:258, rotation:180 },
         { furnitureId:"coffee-oak-round", x:250, z:120, rotation:0   },
         { furnitureId:"rug-persian",      x:250, z:165, rotation:0   },
+        // 水墨画原来没给 elevationY —— 但挂画缺省就是墙高 52% 的画廊高度，
+        // 并不在地板上；之前看不见只是被南墙门挡住。西墙再挂一幅赤富士
+        // 做一点朱红点缀。
         { furnitureId:"artwork-inkwash",  x:250, z:2,   rotation:0   },
+        { furnitureId:"artwork-hokusai",  x:5,   z:200, rotation:90,  elevationY:150 },
         { furnitureId:"plant-monstera",   x:40,  z:390, rotation:0   },
+        // 茶几上只放茶具一套（中式客厅的点睛物，自动落到台面）
+        { furnitureId:"decor-tea-set",    x:250, z:120, rotation:0   },
         { furnitureId:"curtain-brown-sheer", x:485, z:210, rotation:270 },
       ],
       windows: [
@@ -1091,19 +1118,19 @@ export const TEMPLATE_MODERN_VILLA: StyleTemplate = {
   rooms: {
     living: {
       materialIds: { wall: "wall-white", floor: "floor-oak", light: "light-chandelier" },
-      furnitureIds: ["sofa-modular-gray","coffee-marble-rect","tvunit-float-white","rug-nordic-geo","lamp-arc-gold","plant-monstera","artwork-abstract"],
+      furnitureIds: ["sofa-modular-gray","coffee-marble-rect","tvunit-float-white","rug-nordic-geo","lamp-arc-gold","plant-monstera","artwork-abstract","sideboard-walnut","decor-pillows","decor-books-pile","decor-tulip"],
     },
     master: {
       materialIds: { wall: "wall-white", floor: "floor-oak", light: "light-chandelier" },
-      furnitureIds: ["bed-platform-white","nightstand-white","nightstand-white","wardrobe-slide-white","dresser-nordic-white"],
+      furnitureIds: ["bed-platform-white","nightstand-white","nightstand-white","wardrobe-slide-white","dresser-nordic-white","artwork-impression","decor-blanket","plant-sansevieria","lamp-arc-gold","decor-tulip"],
     },
     bedroom: {
       materialIds: { wall: "wall-white", floor: "floor-oak" },
-      furnitureIds: ["bed-fabric-beige","nightstand-white","wardrobe-slide-white"],
+      furnitureIds: ["bed-fabric-beige","nightstand-white","wardrobe-slide-white","artwork-impression","decor-blanket","plant-sansevieria","lamp-arc-gold","decor-tulip"],
     },
     dining: {
       materialIds: { wall: "wall-white", floor: "floor-oak", light: "light-chandelier" },
-      furnitureIds: ["dining-marble-round","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray"],
+      furnitureIds: ["dining-marble-round","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray","plant-sansevieria","artwork-impression","decor-vase-set"],
     },
     kitchen: {
       materialIds: { wall: "wall-tile-white", floor: "floor-white-tile" },
@@ -1115,7 +1142,7 @@ export const TEMPLATE_MODERN_VILLA: StyleTemplate = {
     },
     study: {
       materialIds: { wall: "wall-white", floor: "floor-oak" },
-      furnitureIds: ["desk-l-shape-white","chair-ergonomic","bookshelf-solid-walnut"],
+      furnitureIds: ["desk-l-shape-white","chair-ergonomic","bookshelf-solid-walnut","lamp-arc-gold","plant-sansevieria","artwork-impression","decor-books-pile"],
     },
   },
 };
@@ -1146,19 +1173,19 @@ export const TEMPLATE_WALNUT_VILLA: StyleTemplate = {
   rooms: {
     living: {
       materialIds: { wall: "wall-white", floor: "floor-walnut", light: "light-chandelier" },
-      furnitureIds: ["sofa-modular-gray","coffee-marble-rect","tvunit-float-white","rug-nordic-geo","lamp-arc-gold","plant-monstera"],
+      furnitureIds: ["sofa-modular-gray","coffee-marble-rect","tvunit-float-white","rug-nordic-geo","lamp-arc-gold","plant-monstera","artwork-abstract","sideboard-walnut","decor-pillows","decor-books-pile","decor-tulip"],
     },
     master: {
       materialIds: { wall: "wall-white", floor: "floor-walnut", light: "light-chandelier" },
-      furnitureIds: ["bed-platform-white","nightstand-white","nightstand-white","wardrobe-slide-white"],
+      furnitureIds: ["bed-platform-white","nightstand-white","nightstand-white","wardrobe-slide-white","dresser-nordic-white","artwork-impression","decor-blanket","plant-sansevieria","lamp-arc-gold","decor-tulip"],
     },
     bedroom: {
       materialIds: { wall: "wall-white", floor: "floor-walnut" },
-      furnitureIds: ["bed-fabric-beige","nightstand-white","wardrobe-slide-white"],
+      furnitureIds: ["bed-fabric-beige","nightstand-white","wardrobe-slide-white","artwork-impression","decor-blanket","plant-sansevieria","lamp-arc-gold","decor-tulip"],
     },
     dining: {
       materialIds: { wall: "wall-white", floor: "floor-walnut", light: "light-chandelier" },
-      furnitureIds: ["dining-marble-round","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray"],
+      furnitureIds: ["dining-marble-round","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray","plant-sansevieria","artwork-impression","decor-vase-set"],
     },
     kitchen: {
       materialIds: { wall: "wall-tile-white", floor: "floor-white-tile" },
@@ -1170,7 +1197,7 @@ export const TEMPLATE_WALNUT_VILLA: StyleTemplate = {
     },
     study: {
       materialIds: { wall: "wall-white", floor: "floor-walnut" },
-      furnitureIds: ["desk-l-shape-white","chair-ergonomic","bookshelf-solid-walnut"],
+      furnitureIds: ["desk-l-shape-white","chair-ergonomic","bookshelf-solid-walnut","lamp-arc-gold","plant-sansevieria","artwork-impression","decor-books-pile"],
     },
   },
 };
@@ -1201,19 +1228,19 @@ export const TEMPLATE_STONE_VILLA: StyleTemplate = {
   rooms: {
     living: {
       materialIds: { wall: "wall-beige", floor: "floor-walnut", light: "light-chandelier" },
-      furnitureIds: ["sofa-leather-brown","coffee-marble-rect","tvunit-walnut","rug-persian","lamp-arc-gold","plant-monstera"],
+      furnitureIds: ["sofa-leather-brown","coffee-marble-rect","tvunit-walnut","rug-persian","lamp-arc-gold","plant-monstera","artwork-abstract","sideboard-walnut","decor-pillows","decor-books-pile","decor-tulip"],
     },
     master: {
       materialIds: { wall: "wall-beige", floor: "floor-walnut", light: "light-chandelier" },
-      furnitureIds: ["bed-leather-dark","nightstand-oak","nightstand-oak","wardrobe-solid-walnut"],
+      furnitureIds: ["bed-leather-dark","nightstand-oak","nightstand-oak","wardrobe-solid-walnut","dresser-nordic-white","artwork-impression","decor-blanket","plant-sansevieria","lamp-arc-gold","decor-tulip"],
     },
     bedroom: {
       materialIds: { wall: "wall-beige", floor: "floor-walnut" },
-      furnitureIds: ["bed-fabric-beige","nightstand-white","wardrobe-slide-white"],
+      furnitureIds: ["bed-fabric-beige","nightstand-white","wardrobe-slide-white","artwork-impression","decor-blanket","plant-sansevieria","lamp-arc-gold","decor-tulip"],
     },
     dining: {
       materialIds: { wall: "wall-beige", floor: "floor-walnut", light: "light-chandelier" },
-      furnitureIds: ["dining-marble-round","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray"],
+      furnitureIds: ["dining-marble-round","chair-modern-gray","chair-modern-gray","chair-modern-gray","chair-modern-gray","plant-sansevieria","artwork-impression","decor-vase-set"],
     },
     kitchen: {
       materialIds: { wall: "wall-tile-white", floor: "floor-white-tile" },
@@ -1225,7 +1252,7 @@ export const TEMPLATE_STONE_VILLA: StyleTemplate = {
     },
     study: {
       materialIds: { wall: "wall-beige", floor: "floor-walnut" },
-      furnitureIds: ["desk-l-shape-white","chair-ergonomic","bookshelf-solid-walnut"],
+      furnitureIds: ["desk-l-shape-white","chair-ergonomic","bookshelf-solid-walnut","lamp-arc-gold","plant-sansevieria","artwork-impression","decor-books-pile"],
     },
   },
 };
@@ -1277,7 +1304,15 @@ export function buildTemplateRoomState(
     return (rot % 180 !== 0) ? item!.width : item!.depth;
   }
 
-  function place(fid: string, x: number, z: number, rotation = 0) {
+  // elevationY: explicit height above the floor (cm). Needed for tabletop
+  // dressing (books / vase / tulip on a table) and for textiles on a bed or
+  // sofa: the clearance checker only treats a small item as "on a table"
+  // when elevationY >= 25, otherwise it flags it as a floor obstacle in the
+  // carrier's clearance zone. Sofa/bed are NOT auto-climb carriers, so
+  // pillows/blanket always need an explicit elevationY (seat ~45 / mattress
+  // ~50). The renderer snaps an elevated small item to the carrier surface
+  // below it. (Indoor-design pass 2026-11-20.)
+  function place(fid: string, x: number, z: number, rotation = 0, elevationY?: number) {
     const f = getFurnitureById(fid);
     if (!f) return;
     const hw = ew(f, rotation) / 2, hd = ed(f, rotation) / 2;
@@ -1288,6 +1323,7 @@ export function buildTemplateRoomState(
       furnitureId: fid,
       x: px, z: pz, rotation,
       scaleW: 1, scaleD: 1,
+      ...(elevationY != null ? { elevationY } : {}),
     });
   }
 
@@ -1344,6 +1380,28 @@ export function buildTemplateRoomState(
     // Sideboard: left wall, door faces room (+X) → rot=90
     byCat.get("sideboard")?.forEach(f => place(f.id, f.depth / 2 + 8, roomD / 2, 90));
 
+    // ── Dressing (indoor-design pass 2026-11-20) ────────────────────────
+    // Pillows on the sofa seat, books + tulip on the coffee table, vase on
+    // the sideboard. All need an explicit elevationY = the carrier top (see
+    // place() note); the two coffee-table pieces are offset ±28cm so they
+    // don't stack on each other.
+    {
+      const coffee = byCat.get("coffee_table")?.[0];
+      const coffeeZ = coffee ? (sofa0 ? sofaZ - sofa0.depth / 2 - coffee.depth / 2 - 18 : roomD * 0.42) : roomD * 0.42;
+      const sideboard = byCat.get("sideboard")?.[0];
+      byCat.get("decor")?.forEach(f => {
+        if (f.id === "decor-pillows" && sofa0) {
+          place(f.id, roomW / 2, sofaZ, 180, 45);
+        } else if (f.id === "decor-books-pile" && coffee) {
+          place(f.id, roomW / 2 - 28, coffeeZ, 0, coffee.height);
+        } else if (f.id === "decor-tulip" && coffee) {
+          place(f.id, roomW / 2 + 28, coffeeZ, 0, coffee.height);
+        } else if (f.id === "decor-vase-set" && sideboard) {
+          place(f.id, sideboard.depth / 2 + 8, roomD / 2, 90, sideboard.height);
+        }
+      });
+    }
+
   } else if (roomId === "master" || roomId === "bedroom") {
     const bed = byCat.get("bed")?.[0];
     const bedX = roomW / 2;
@@ -1375,13 +1433,35 @@ export function buildTemplateRoomState(
       place(f.id, f.depth / 2 + 8, roomD * 0.3 + i * (f.width + 8), 90);
     });
 
-    // Floor lamp + plant: front corners
+    // Floor lamp + plant: front corners. Lamp goes front-RIGHT; plant goes
+    // front-LEFT — they were both placed at the same front-right spot, so a
+    // room with both (e.g. modern-villa master) stacked them on each other.
+    // (Indoor-design pass 2026-11-20.)
     byCat.get("floor_lamp")?.forEach(f =>
       place(f.id, roomW - f.width / 2 - 14, roomD - f.depth / 2 - 14)
     );
     byCat.get("plant")?.forEach(f =>
-      place(f.id, roomW - f.width / 2 - 14, roomD - f.depth / 2 - 14)
+      place(f.id, f.width / 2 + 14, roomD - f.depth / 2 - 14)
     );
+
+    // ── Dressing (indoor-design pass 2026-11-20) ────────────────────────
+    // Artwork on the back wall, centered above the bed headboard (the
+    // renderer hangs artwork at gallery height by default — no elevationY
+    // needed). Blanket on the mattress toward the bed foot (elevationY 50 =
+    // mattress top; bed is not an auto-climb carrier). Tulip on the first
+    // nightstand (elevationY = nightstand top).
+    byCat.get("artwork")?.forEach(f => place(f.id, bedX, f.depth / 2 + 5));
+    byCat.get("decor")?.forEach(f => {
+      if (f.id === "decor-blanket" && bed) {
+        place(f.id, bedX, bedZ + (bed.depth ?? 210) * 0.35, 0, 50);
+      } else if (f.id === "decor-tulip") {
+        const ns = byCat.get("nightstand")?.[0];
+        if (ns) {
+          const bw = bed?.width ?? 180;
+          place(f.id, bedX - (bw / 2 + ns.width / 2 + 6), bedZ, 0, ns.height);
+        }
+      }
+    });
 
   } else if (roomId === "dining") {
     const tbl = byCat.get("dining_table")?.[0];
@@ -1408,6 +1488,14 @@ export function buildTemplateRoomState(
       place(f.id, i === 0 ? f.width / 2 + 14 : roomW - f.width / 2 - 14, f.depth / 2 + 14)
     );
     byCat.get("artwork")?.forEach(f => place(f.id, roomW / 2, f.depth / 2 + 5));
+
+    // ── Dressing (indoor-design pass 2026-11-20) ────────────────────────
+    // Centerpiece on the dining table (elevationY = table top).
+    byCat.get("decor")?.forEach(f => {
+      if ((f.id === "decor-vase-set" || f.id === "decor-tea-set") && tbl) {
+        place(f.id, tblX, tblZ, 0, tbl.height);
+      }
+    });
 
   } else if (roomId === "kitchen") {
     // Cabinets (lower + upper) along back wall; fridge in corner; sink & hood near cabinets
@@ -1466,6 +1554,16 @@ export function buildTemplateRoomState(
     byCat.get("dining_chair")?.forEach(f => {
       const dz = deskZ + (desk?.depth ?? 65) / 2 + f.depth / 2 + 8;
       place(f.id, roomW / 2, dz, 180);
+    });
+
+    // ── Dressing (indoor-design pass 2026-11-20) ────────────────────────
+    // Artwork on the back wall above the desk; books on the desk
+    // (elevationY = desk top, offset left so they sit clear of the chair).
+    byCat.get("artwork")?.forEach(f => place(f.id, roomW / 2, f.depth / 2 + 5));
+    byCat.get("decor")?.forEach(f => {
+      if (f.id === "decor-books-pile" && desk) {
+        place(f.id, roomW / 2 - 40, deskZ, 0, desk.height);
+      }
     });
 
   } else if (roomId === "closet") {

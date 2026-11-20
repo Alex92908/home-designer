@@ -81,20 +81,35 @@ const livingState: RoomState = {
     floor: mat("floor", "#C8A882", "橡木地板"),
   },
   placedItems: [
-    // 沙发组 —— 面朝北墙电视
-    item("sofa-leather-brown",    290, 270, 180),       // L形主沙发，中央
-    item("coffee-marble-rect",    290, 130, 0),       // 大理石茶几
-    item("rug-modern-gray",       290, 165, 0),       // 地毯
-    // 电视柜 + 画 —— 北墙
-    item("tvunit-float-white",    420,  30, 0),       // 悬浮电视柜
-    item("artwork-abstract",      420,   5, 0,  { elevationY: 155 }),  // 北墙装饰画
+    // 沙发组 —— 面朝北墙电视。电视柜/画与沙发同轴（x=290）：原来电视柜
+    // 在 x=420，比沙发中心偏东 130cm，看电视要斜着看。沙发退到 z=285，
+    // 电视离沙发 255cm（≥2.5m 观影距离；同轴后对角线不再“借”130cm）。
+    item("sofa-leather-brown",    290, 285, 180),       // L形主沙发，中央
+    item("coffee-marble-rect",    290, 140, 0),       // 大理石茶几
+    item("rug-modern-gray",       290, 170, 0),       // 地毯
+    // 电视柜 + 画 —— 北墙，画挂在电视上方（挂画的 elevationY 是中心高；
+    // 原来 155cm 中心高就是画廊高度，没错，不动它）。
+    item("tvunit-float-white",    290,  30, 0),       // 悬浮电视柜
+    item("artwork-abstract",      290,   5, 0,  { elevationY: 155 }),  // 北墙装饰画
     // 侧柜 + 植物
     item("sideboard-walnut",      830,  30, 0),       // 东侧边柜
+    item("artwork-impression",    830,   5, 0,  { elevationY: 150 }),  // 边柜上方挂画
+    item("decor-vase-set",        830,  30, 0,  { elevationY: 85 }),  // 边柜上花瓶组
+    // （边柜高 85cm；显式抬高让它落在柜顶，尺寸校验才认它是“台面件”
+    // 而不是挡在 60cm 开抽屉区里的障碍物）
     item("plant-monstera",        830, 360,  0),      // 龟背竹
     item("plant-rubber-tree",      50, 300,  0),      // 橡皮树
     item("plant-sansevieria",      50,  60,  0),      // 虎尾兰
-    // 落地灯
-    item("lamp-arc-gold",         580, 170,  0),      // 弧形金落地灯
+    // 落地灯 —— 移到东侧 (700,200)：原来在 (580,170)，正好挡在东南角
+    // 相机看北墙电视画的视线上，蒙德里安被灯罩遮掉一半
+    item("lamp-arc-gold",         700, 200,  0),      // 弧形金落地灯
+    // 茶几小件：郁金香显式抬高到台面高（45cm），尺寸校验才认它是
+    // “台面件”——不写 elevationY 时校验把它当 31cm 高的地面障碍物，
+    // 与茶几 30cm 绕行区冲突。书堆矮（≤15cm）不用写。
+    item("decor-books-pile",      260, 140, 0),       // 茶几书堆
+    item("decor-tulip",           320, 140, 0,  { elevationY: 45 }),  // 茶几花瓶
+    // 沙发抱枕（座面高约 45cm，显式抬高；沙发不是台面承托件，不自动爬）
+    item("decor-pillows",         200, 285, 180, { elevationY: 45 }),  // 沙发抱枕组
     // 窗帘 —— 南侧玻璃幕墙
     item("curtain-modern-gray",   450, 440, 0),       // 宽幅窗帘
   ],
@@ -147,6 +162,10 @@ const bathroomState: RoomState = {
     item("toilet-smart",          210,  40, 0),
     item("shower-enclosed",       210, 255, 0),
     item("mirror-cabinet",         65,   5, 0, { elevationY: 100 }),
+    // 台面小件（自动落到台面）；外露管线由效果图隐藏，不再是满墙
+    // 红黄管子（见 RoomCanvas：管线层不在精装视图渲染）。卫生间太小
+    // （2.8×3.5m），试过在西南角放虎尾兰，挡了门开合区——不放绿植。
+    item("decor-tissue-box",       65,  40, 0),       // 台盆上纸巾盒
   ],
 };
 
@@ -181,13 +200,34 @@ const masterState: RoomState = {
     item("bed-leather-dark",      250,  95, 0),       // 真皮大床 (200×220)
     item("nightstand-oak",        105,  95, 0),       // 左床头柜
     item("nightstand-oak",        395,  95, 0),       // 右床头柜
-    item("wardrobe-solid-walnut", 540, 225, 90),      // 东墙大衣柜
-    item("dresser-nordic-white",   60, 350,  0),      // 南区梳妆台
-    item("lamp-arc-gold",          80, 195,  0),      // 弧形落地灯
+    // 衣柜原来在 (540,225) 朝东（rotation 90）：柜门冲着东墙，75cm 开门
+    // 区穿墙而出（“超出房间 45cm”），东边离墙 30cm 又不贴墙。挪到贴东墙
+    // (565) 并转朝西 (270)：柜门朝室内，75cm 开门区落在室内。
+    item("wardrobe-solid-walnut", 565, 225, 270),     // 东墙大衣柜
+    // 梳妆台原来在 (60,350) 朝南（rotation 0）：镜面冲着南墙（照墙），又
+    // 挡着衣帽间北门（开进主卧，x 60–130）的开合区。东移到 (180,350) 让
+    // 出门扇后，校验又报“建议贴墙”——梳妆台离南墙 78cm。索性贴南墙
+    // (180,410) 并转朝北 (180)：镜面朝室内、后背贴墙（南沿 432，离墙
+    // 18cm ≤ 20cm），75cm 前区落在室内。台上郁金香显式抬高到台面高
+    // （54cm），尺寸校验才认它是“台面件”。
+    item("dresser-nordic-white",  180, 410, 180),     // 南墙梳妆台
+    // 弧形灯原来在 (80,195)，与床西侧 60cm 预留过道冲突；挪到 (60,245)
+    // ——光往西挪（x≤68）才能让出床的 60cm halo，只往南挪没用。
+    item("lamp-arc-gold",          60, 245,  0),      // 弧形落地灯
     item("rug-modern-gray",       270, 250,  0),      // 地毯
-    item("artwork-klimt-kiss",    250,   5,  0, { elevationY: 100 }),  // 北墙挂画
+    item("artwork-klimt-kiss",    5,  150, 90, { elevationY: 100 }),  // 西墙挂画
+    // 原来挂在北墙床头正上方 (250,5)，但北墙是 440cm 宽的大窗，窗帘
+    // 按“有窗的墙优先”贴到北墙，正好把画盖住一半；挪到西墙，床边
+    // 侧墙，整幅可见，仍是主卧的视觉焦点
     item("curtain-modern-gray",   300, 440,  0),      // 南侧遮光窗帘
     item("plant-sansevieria",     550,  50,  0),      // 虎尾兰
+    // 梳妆台 + 床头柜小件：显式抬高到台面高（梳妆台 54cm / 床头柜 60cm），
+    // 尺寸校验才认它们是“台面件”——不写时校验把 31cm 高的花瓶当成
+    // 地面障碍物，与床/梳妆台的预留区冲突。
+    item("decor-tulip",           180, 410,  0, { elevationY: 54 }),  // 梳妆台郁金香花瓶
+    item("decor-tulip",           105,  95,  0, { elevationY: 60 }),  // 左床头柜花瓶
+    // 床尾搭毯（床面高约 50cm，显式抬高；床不是台面承托件，不自动爬）
+    item("decor-blanket",         250, 150,  0, { elevationY: 50 }),  // 床尾毛毯抱枕
   ],
 };
 
