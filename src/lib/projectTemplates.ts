@@ -2442,50 +2442,45 @@ const QING_SANXITANG_SET: ProjectTemplate = {
 
   furnitureOverrides: [
     {
-      study: [
-        // 火炕（Group A: 榻榻米矮床拼搭 → proc-kang 真件；沿北墙横放）
-        { furnitureId: "proc-kang",             x: 210, z: 90,  rotation: 0 },
-        { furnitureId: "decor-blanket",         x: 210, z: 110, rotation: 0, elevationY: 70 },
-        { furnitureId: "decor-pillows",         x: 130, z: 90,  rotation: 0, elevationY: 70 },
-        { furnitureId: "decor-book-stack",      x: 280, z: 90,  rotation: 0, elevationY: 70 },
-        // 小紫檀书案（炕前）：学习桌缩至 70×31×38；座钟+茶具在案上
-        // thinfix-a: 书案是三希堂的主角，原缩放 0.58/0.52/0.5 只有 70cm 宽，
-        // 在镜头里像张边桌；放大到 0.85/0.8/0.8（约 102×48×60），案头小件
-        // 离地高度 38 → 60 跟着抬到新桌面。
-        { furnitureId: "desk-study",           x: 210, z: 200, rotation: 0, scaleW: 0.85, scaleD: 0.8, scaleH: 0.8 },
-        { furnitureId: "decor-victorian-clock", x: 195, z: 200, rotation: 0, elevationY: 60 },
-        { furnitureId: "decor-tea-set",         x: 230, z: 200, rotation: 0, elevationY: 60 },
-        { furnitureId: "proc-boshanlu",         x: 210, z: 212, rotation: 0, elevationY: 60 },
-        { furnitureId: "decor-pen",             x: 222, z: 188, rotation: 0, elevationY: 60 },
-        { furnitureId: "decor-books-vintage",   x: 192, z: 212, rotation: 0, elevationY: 60 },
-        { furnitureId: "proc-oil-lamp",         x: 245, z: 200, rotation: 0, elevationY: 60 },
-        // 太师椅（朝北向案）
-        { furnitureId: "sofa-armchair",         x: 210, z: 290, rotation: 180 },
-        { furnitureId: "proc-wood-stool",       x: 135, z: 246, rotation: 0 },
-        // 炕上旧书册 + 边柜青花 + 书架 + 挂画
-        { furnitureId: "decor-books-vintage",   x: 130, z: 60,  rotation: 0, elevationY: 70 },
-        { furnitureId: "sideboard-walnut",      x: 110, z: 345,  rotation: 180 },
-        { furnitureId: "decor-vase-kangxi",     x: 110, z: 345,  rotation: 0, elevationY: 85 },
-        { furnitureId: "decor-fruit-bowl",      x: 98, z: 345,  rotation: 0, elevationY: 85 },
-        { furnitureId: "proc-oil-lamp",         x: 122, z: 345,  rotation: 0, elevationY: 85 },
-        { furnitureId: "bookshelf-solid-walnut", x: 390, z: 170, rotation: 270 },
+            study: [
+        // ── 三希堂书斋重设计（2026-11-21）：火炕 300×150 → 200×120（scaleW 0.667 / scaleD 0.8），
+        //    书案东移至东侧、太师椅正对书案且让出南门摆动区；多宝格改作进门玄关屏风（独立摆放，
+        //    hugWall 残留——与秦汉博古架同类）；玄关柜/竹丛/龟背竹/木凳无合法落点，已移出本间。
+        //    真门基准：15 → 1（仅多宝格 hugWall 残留）。
+        // 火炕（沿北墙西段）+ 炕上什物
+        { furnitureId: "proc-kang",             x: 120, z: 80,  rotation: 0, scaleW: 0.667, scaleD: 0.8 },
+        { furnitureId: "decor-blanket",         x: 120, z: 100, rotation: 0, elevationY: 70 },
+        { furnitureId: "decor-pillows",         x: 50,  z: 80,  rotation: 0, elevationY: 70 },
+        { furnitureId: "decor-book-stack",      x: 190, z: 80,  rotation: 0, elevationY: 70 },
+        // 小紫檀书案（东侧）：学习桌 102×48；座钟+茶具在案上
+        { furnitureId: "desk-study",           x: 345, z: 120, rotation: 0, scaleW: 0.85, scaleD: 0.8, scaleH: 0.8 },
+        { furnitureId: "decor-victorian-clock", x: 330, z: 120, rotation: 0, elevationY: 60 },
+        { furnitureId: "decor-tea-set",         x: 360, z: 120, rotation: 0, elevationY: 60 },
+        { furnitureId: "proc-boshanlu",         x: 345, z: 132, rotation: 0, elevationY: 60 },
+        { furnitureId: "decor-pen",             x: 352, z: 108, rotation: 0, elevationY: 60 },
+        { furnitureId: "decor-books-vintage",   x: 322, z: 132, rotation: 0, elevationY: 60 },
+        { furnitureId: "proc-oil-lamp",         x: 375, z: 120, rotation: 0, elevationY: 60 },
+        // 太师椅（朝北向案，正对书案，离南门摆动区 55cm）
+        { furnitureId: "sofa-armchair",         x: 345, z: 270, rotation: 180 },
+        // 炕上旧书册
+        { furnitureId: "decor-books-vintage",   x: 40,  z: 50,  rotation: 0, elevationY: 70 },
+        // 书架（东墙北段）+ 挂画（北墙）+ 壁画（东墙）+ 吊灯（书案上方）
+        { furnitureId: "bookshelf-solid-walnut", x: 390, z: 45,  rotation: 270 },
         { furnitureId: "artwork-inkwash",       x: 60,  z: 8,   rotation: 0 },
-        { furnitureId: "mural-inkwash",         x: 210, z: 8,   rotation: 0 },
-        { furnitureId: "artwork-inkwash",       x: 360, z: 8,   rotation: 0 },
-        { furnitureId: "lamp-chandelier-antique", x: 210, z: 180, rotation: 0, mountCeiling: true },
-        // ── Group A redesign: 多宝格 / 地毯 / 纱帘 / 竹 ──
-        { furnitureId: "proc-bogujia",      x: 30,  z: 200, rotation: 90 },
-        { furnitureId: "proc-bluewhite-vase", x: 30, z: 200, rotation: 0, elevationY: 92 },
-        { furnitureId: "proc-celadon-vase", x: 30,  z: 200, rotation: 0, elevationY: 44 },
-        { furnitureId: "decor-books-vintage", x: 30, z: 200, rotation: 0, elevationY: 128 },
+        { furnitureId: "mural-inkwash",         x: 417, z: 200, rotation: 270 },
+        { furnitureId: "artwork-inkwash",       x: 320, z: 8,   rotation: 0 },
+        { furnitureId: "lamp-chandelier-antique", x: 345, z: 120, rotation: 0, mountCeiling: true },
+        // 多宝格（进门玄关屏风，独立摆放）+ 格上青花/青瓷/旧书
+        { furnitureId: "proc-bogujia",      x: 205, z: 250, rotation: 0 },
+        { furnitureId: "proc-bluewhite-vase", x: 205, z: 250, rotation: 0, elevationY: 92 },
+        { furnitureId: "proc-celadon-vase", x: 205, z: 250, rotation: 0, elevationY: 44 },
+        { furnitureId: "decor-books-vintage", x: 205, z: 250, rotation: 0, elevationY: 128 },
         { furnitureId: "rug-persian",       x: 210, z: 270, rotation: 0, scaleW: 1.25, scaleD: 1.25 },
         { furnitureId: "curtain-brown-sheer", x: 408, z: 140, rotation: 90 },
-        { furnitureId: "proc-bamboo-clump", x: 350, z: 290, rotation: 0 },
-        // ── thinfix-a: 西北角高柜（贴炕西端）/ 东西墙壁灯 / 西南角龟背竹 ──
-        { furnitureId: "wardrobe-solid-walnut", x: 30, z: 60, rotation: 90 },
+        // 高柜（南墙西段）+ 东西墙壁灯
+        { furnitureId: "wardrobe-solid-walnut", x: 55, z: 330, rotation: 180 },
         { furnitureId: "lamp-wall-sconce",  x: 412, z: 100, rotation: 270, elevationY: 150 },
         { furnitureId: "lamp-wall-sconce",  x: 8, z: 100, rotation: 90, elevationY: 150 },
-        { furnitureId: "plant-monstera",    x: 35, z: 330, rotation: 0 },
       ],
       hallway: [
         { furnitureId: "sofa-armchair",         x: 100, z: 120, rotation: 90 },
