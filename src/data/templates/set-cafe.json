@@ -15,13 +15,15 @@
       },
       {
         "furnitureId": "storage-shelving",
-        "x": 188,
-        "z": 20
+        "x": 81,
+        "z": 90,
+        "rotation": 90
       },
       {
         "furnitureId": "decor-trash-bin",
-        "x": 180,
-        "z": 248
+        "x": 14,
+        "z": 200,
+        "rotation": 90
       },
       {
         "furnitureId": "appliance-dishwasher",
@@ -82,8 +84,9 @@
       },
       {
         "furnitureId": "storage-shelving-2",
-        "x": 140,
-        "z": 20
+        "x": 81,
+        "z": 150,
+        "rotation": 90
       }
     ],
     "living": [
@@ -135,7 +138,7 @@
       {
         "furnitureId": "counter-cake-display",
         "x": 1064,
-        "z": 181
+        "z": 172
       },
       {
         "furnitureId": "electronics-pos",
@@ -164,7 +167,7 @@
       },
       {
         "furnitureId": "seat-bar-stool",
-        "x": 341,
+        "x": 360,
         "z": 507
       },
       {
@@ -194,14 +197,14 @@
       },
       {
         "furnitureId": "sideboard-euro",
-        "x": 906,
-        "z": 146,
-        "rotation": 270
+        "x": 75,
+        "z": 27,
+        "rotation": 0
       },
       {
         "furnitureId": "plant-monstera",
         "x": 950,
-        "z": 42
+        "z": 160
       },
       {
         "furnitureId": "plant-monstera",
@@ -237,86 +240,86 @@
       },
       {
         "furnitureId": "dining_table-cafe-rustic",
-        "x": 375,
-        "z": 300
+        "x": 448,
+        "z": 346
       },
       {
         "furnitureId": "chair-nordic-oak",
-        "x": 375,
-        "z": 234
+        "x": 448,
+        "z": 280
       },
       {
         "furnitureId": "chair-nordic-oak",
-        "x": 375,
-        "z": 366,
+        "x": 448,
+        "z": 412,
         "rotation": 180
       },
       {
         "furnitureId": "chair-nordic-oak",
-        "x": 309,
-        "z": 300,
+        "x": 382,
+        "z": 346,
         "rotation": 90
       },
       {
         "furnitureId": "chair-nordic-oak",
-        "x": 441,
-        "z": 300,
+        "x": 514,
+        "z": 346,
         "rotation": 270
       },
       {
         "furnitureId": "dining_table-cafe-rustic",
         "x": 855,
-        "z": 300
+        "z": 346
       },
       {
         "furnitureId": "chair-industrial-black",
         "x": 855,
-        "z": 234
+        "z": 280
       },
       {
         "furnitureId": "chair-industrial-black",
         "x": 855,
-        "z": 366,
+        "z": 412,
         "rotation": 180
       },
       {
         "furnitureId": "chair-industrial-black",
         "x": 789,
-        "z": 300,
+        "z": 346,
         "rotation": 90
       },
       {
         "furnitureId": "chair-industrial-black",
         "x": 921,
-        "z": 300,
+        "z": 346,
         "rotation": 270
       },
       {
         "furnitureId": "dining_table-cafe-rustic",
         "x": 616,
-        "z": 330
+        "z": 346
       },
       {
         "furnitureId": "chair-modern-gray",
         "x": 616,
-        "z": 264
+        "z": 280
       },
       {
         "furnitureId": "chair-modern-gray",
         "x": 616,
-        "z": 396,
+        "z": 412,
         "rotation": 180
       },
       {
         "furnitureId": "chair-modern-gray",
         "x": 550,
-        "z": 330,
+        "z": 346,
         "rotation": 90
       },
       {
         "furnitureId": "chair-modern-gray",
         "x": 682,
-        "z": 330,
+        "z": 346,
         "rotation": 270
       },
       {
@@ -377,75 +380,75 @@
       },
       {
         "furnitureId": "decor-tulip",
-        "x": 375,
-        "z": 300,
+        "x": 448,
+        "z": 346,
         "elevationY": 74
       },
       {
         "furnitureId": "decor-cappuccino",
-        "x": 351,
-        "z": 290,
+        "x": 424,
+        "z": 336,
         "rotation": 20,
         "elevationY": 74
       },
       {
         "furnitureId": "decor-coffee-mug",
-        "x": 399,
-        "z": 292,
+        "x": 472,
+        "z": 338,
         "rotation": 200,
         "elevationY": 74
       },
       {
         "furnitureId": "decor-cappuccino",
-        "x": 377,
-        "z": 326,
+        "x": 450,
+        "z": 372,
         "rotation": 90,
         "elevationY": 74
       },
       {
         "furnitureId": "decor-tulip",
         "x": 855,
-        "z": 300,
+        "z": 346,
         "elevationY": 74
       },
       {
         "furnitureId": "decor-cappuccino",
         "x": 831,
-        "z": 290,
+        "z": 336,
         "rotation": 20,
         "elevationY": 74
       },
       {
         "furnitureId": "decor-coffee-mug",
         "x": 879,
-        "z": 292,
+        "z": 338,
         "rotation": 200,
         "elevationY": 74
       },
       {
         "furnitureId": "decor-cappuccino",
         "x": 857,
-        "z": 326,
+        "z": 372,
         "rotation": 90,
         "elevationY": 74
       },
       {
         "furnitureId": "decor-tulip",
         "x": 616,
-        "z": 330,
+        "z": 346,
         "elevationY": 74
       },
       {
         "furnitureId": "decor-cappuccino",
         "x": 592,
-        "z": 320,
+        "z": 336,
         "rotation": 20,
         "elevationY": 74
       },
       {
         "furnitureId": "decor-coffee-mug",
         "x": 640,
-        "z": 322,
+        "z": 338,
         "rotation": 200,
         "elevationY": 74
       },
@@ -505,65 +508,66 @@
       },
       {
         "furnitureId": "bookshelf-with-books",
-        "x": 202,
-        "z": 282
+        "x": 45,
+        "z": 574,
+        "rotation": 180
       },
       {
         "furnitureId": "decor-radio-vintage",
-        "x": 222,
-        "z": 271,
+        "x": 65,
+        "z": 563,
         "rotation": 180,
         "elevationY": 75
       },
       {
         "furnitureId": "plant-monstera",
         "x": 45,
-        "z": 330
+        "z": 195
       },
       {
         "furnitureId": "dining_table-cafe-rustic",
-        "x": 1055,
+        "x": 1035,
         "z": 330
       },
       {
         "furnitureId": "chair-industrial-black",
-        "x": 1055,
+        "x": 1035,
         "z": 264
       },
       {
         "furnitureId": "chair-industrial-black",
-        "x": 1055,
+        "x": 1035,
         "z": 396,
         "rotation": 180
       },
       {
         "furnitureId": "chair-industrial-black",
-        "x": 989,
+        "x": 969,
         "z": 330,
         "rotation": 90
       },
       {
         "furnitureId": "chair-industrial-black",
-        "x": 1121,
+        "x": 1101,
         "z": 330,
         "rotation": 270
       },
       {
         "furnitureId": "decor-tulip",
-        "x": 1055,
+        "x": 1035,
         "z": 330,
         "elevationY": 74
       },
       {
         "furnitureId": "decor-coffee-mug",
-        "x": 1079,
+        "x": 1059,
         "z": 322,
         "rotation": 200,
         "elevationY": 74
       },
       {
         "furnitureId": "lamp-pendant-ikea4",
-        "x": 1055,
+        "x": 1035,
         "z": 330,
         "mountCeiling": true
       },
@@ -640,20 +644,20 @@
       },
       {
         "furnitureId": "lamp-pendant-ikea4",
-        "x": 375,
-        "z": 300,
+        "x": 448,
+        "z": 346,
         "mountCeiling": true
       },
       {
         "furnitureId": "lamp-pendant-ikea4",
         "x": 855,
-        "z": 300,
+        "z": 346,
         "mountCeiling": true
       },
       {
         "furnitureId": "lamp-pendant-ikea4",
         "x": 616,
-        "z": 330,
+        "z": 346,
         "mountCeiling": true
       },
       {
@@ -713,12 +717,12 @@
       {
         "furnitureId": "decor-books-vintage",
         "x": 618,
-        "z": 356,
+        "z": 372,
         "elevationY": 74
       },
       {
         "furnitureId": "decor-coffee-for-two",
-        "x": 1031,
+        "x": 1011,
         "z": 320,
         "elevationY": 74
       },
@@ -731,36 +735,36 @@
       {
         "furnitureId": "sofa-modular-green",
         "x": 170,
-        "z": 470,
-        "rotation": 0
+        "z": 380,
+        "rotation": 180
       },
       {
         "furnitureId": "coffee-marble-rect",
         "x": 170,
-        "z": 360
+        "z": 195
       },
       {
         "furnitureId": "decor-books-pile",
         "x": 155,
-        "z": 360,
+        "z": 195,
         "elevationY": 45
       },
       {
         "furnitureId": "decor-coffee-mug",
         "x": 185,
-        "z": 360,
+        "z": 195,
         "elevationY": 45
       },
       {
         "furnitureId": "decor-coffee-mug",
         "x": 170,
-        "z": 375,
+        "z": 210,
         "elevationY": 45
       },
       {
         "furnitureId": "rug-boho",
         "x": 170,
-        "z": 440
+        "z": 350
       },
       {
         "furnitureId": "lamp-arc-gold",
@@ -851,9 +855,9 @@
       },
       {
         "furnitureId": "bookshelf-with-books",
-        "x": 930,
-        "z": 380,
-        "rotation": 90
+        "x": 882,
+        "z": 25,
+        "rotation": 0
       },
       {
         "furnitureId": "decor-coffee-cups",
