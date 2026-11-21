@@ -2742,7 +2742,7 @@
               "instanceId": "tpl_set-office_master_11_decor-trash-bin-3",
               "furnitureId": "decor-trash-bin-3",
               "x": 312,
-              "z": 210,
+              "z": 230,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2751,9 +2751,9 @@
             {
               "instanceId": "tpl_set-office_master_12_decor-whiteboard",
               "furnitureId": "decor-whiteboard",
-              "x": 259,
-              "z": 100,
-              "rotation": 90,
+              "x": 143,
+              "z": 214,
+              "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -2792,8 +2792,8 @@
             {
               "instanceId": "tpl_set-office_master_16_elec-display-stand",
               "furnitureId": "elec-display-stand",
-              "x": -23.5,
-              "z": 147.5,
+              "x": 261.5,
+              "z": 120.5,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -2850,7 +2850,7 @@
             {
               "instanceId": "pi_z4p6iwa",
               "furnitureId": "cabinet-lower-white",
-              "x": 4.085156250000011,
+              "x": 1.08515625,
               "z": 3.899218750000003,
               "rotation": 0,
               "scaleW": 1,
@@ -2860,9 +2860,9 @@
             {
               "instanceId": "pi_t5y5dwu",
               "furnitureId": "cabinet-upper-white",
-              "x": 90,
-              "z": 1.5,
-              "rotation": 0,
+              "x": -53,
+              "z": 193.5,
+              "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -2871,7 +2871,7 @@
             {
               "instanceId": "pi_9kgdp7o",
               "furnitureId": "appliance-microwave",
-              "x": 125.11781250000001,
+              "x": 122.1178125,
               "z": 11,
               "rotation": 270,
               "scaleW": 1,
@@ -2882,7 +2882,7 @@
             {
               "instanceId": "pi_arkt6t7",
               "furnitureId": "appliance-coffee-machine",
-              "x": 200,
+              "x": 197,
               "z": 12.5,
               "rotation": 0,
               "scaleW": 1,
@@ -2913,7 +2913,7 @@
             {
               "instanceId": "pi_p6sz3sa",
               "furnitureId": "dining_table-cafe-small",
-              "x": 100,
+              "x": 115,
               "z": 80,
               "rotation": 0,
               "scaleW": 1,
@@ -2943,7 +2943,7 @@
             {
               "instanceId": "pi_4_jtvk6",
               "furnitureId": "decor-tissue-box",
-              "x": 237.76025707975612,
+              "x": 234.7602570798,
               "z": 15.7687792355458,
               "rotation": 0,
               "scaleW": 1,
@@ -2953,7 +2953,7 @@
             {
               "instanceId": "pi_t2iuhhd",
               "furnitureId": "kitchen_sink-real",
-              "x": 6.68055555555555,
+              "x": 3.6805555556,
               "z": 6.44392361111111,
               "rotation": 0,
               "scaleW": 1,
@@ -3116,7 +3116,7 @@
             {
               "instanceId": "tpl_set-office_bathroom_9_toilet-standard",
               "furnitureId": "toilet-standard",
-              "x": 30,
+              "x": 10,
               "z": 26,
               "rotation": 90,
               "scaleW": 1,
@@ -3126,7 +3126,7 @@
             {
               "instanceId": "tpl_set-office_bathroom_10_toilet-standard",
               "furnitureId": "toilet-standard",
-              "x": 30,
+              "x": 10,
               "z": 116,
               "rotation": 90,
               "scaleW": 1,
@@ -3136,7 +3136,7 @@
             {
               "instanceId": "tpl_set-office_bathroom_11_toilet-standard",
               "furnitureId": "toilet-standard",
-              "x": 30,
+              "x": 10,
               "z": 206,
               "rotation": 90,
               "scaleW": 1,
@@ -3146,7 +3146,7 @@
             {
               "instanceId": "tpl_set-office_bathroom_12_toilet-standard",
               "furnitureId": "toilet-standard",
-              "x": 30,
+              "x": 10,
               "z": 296,
               "rotation": 90,
               "scaleW": 1,
@@ -3156,7 +3156,7 @@
             {
               "instanceId": "tpl_set-office_bathroom_13_decor-trash-bin",
               "furnitureId": "decor-trash-bin",
-              "x": 80,
+              "x": 120,
               "z": 46,
               "rotation": 0,
               "scaleW": 1,
@@ -3166,7 +3166,7 @@
             {
               "instanceId": "tpl_set-office_bathroom_14_decor-trash-bin",
               "furnitureId": "decor-trash-bin",
-              "x": 80,
+              "x": 120,
               "z": 136,
               "rotation": 0,
               "scaleW": 1,
@@ -3176,7 +3176,7 @@
             {
               "instanceId": "tpl_set-office_bathroom_15_decor-trash-bin",
               "furnitureId": "decor-trash-bin",
-              "x": 80,
+              "x": 120,
               "z": 226,
               "rotation": 0,
               "scaleW": 1,
@@ -3186,7 +3186,7 @@
             {
               "instanceId": "tpl_set-office_bathroom_16_decor-trash-bin",
               "furnitureId": "decor-trash-bin",
-              "x": 80,
+              "x": 120,
               "z": 316,
               "rotation": 0,
               "scaleW": 1,
@@ -3198,7 +3198,7 @@
               "furnitureId": "urinal-wall",
               "x": 236,
               "z": 34,
-              "rotation": 90,
+              "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -3208,7 +3208,7 @@
               "furnitureId": "urinal-wall",
               "x": 234,
               "z": 117,
-              "rotation": 90,
+              "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -3218,7 +3218,7 @@
               "furnitureId": "urinal-wall",
               "x": 235,
               "z": 207,
-              "rotation": 90,
+              "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -3246,7 +3246,7 @@
             {
               "instanceId": "tpl_set-office_bathroom_22_plant-rubber-tree",
               "furnitureId": "plant-rubber-tree",
-              "x": 56.5,
+              "x": 142.5,
               "z": 381,
               "rotation": 0,
               "scaleW": 1,
@@ -3256,8 +3256,8 @@
             {
               "instanceId": "tpl_set-office_bathroom_23_vanity-double-marble",
               "furnitureId": "vanity-double-marble",
-              "x": -45,
-              "z": 509.5,
+              "x": -50,
+              "z": 441.5,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -3266,8 +3266,8 @@
             {
               "instanceId": "tpl_set-office_bathroom_24_decor-trash-bin-3",
               "furnitureId": "decor-trash-bin-3",
-              "x": 10,
-              "z": 388,
+              "x": 125,
+              "z": 345,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -3298,7 +3298,7 @@
               "furnitureId": "urinal-wall",
               "x": 229,
               "z": 294,
-              "rotation": 90,
+              "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -3334,8 +3334,8 @@
             },
             {
               "furnitureId": "plant-sansevieria",
-              "x": 106.5,
-              "z": 405,
+              "x": 136.5,
+              "z": 465,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -3451,7 +3451,7 @@
             {
               "instanceId": "tpl_set-office_bathroom2_9_toilet-standard",
               "furnitureId": "toilet-standard",
-              "x": 205,
+              "x": 225,
               "z": 26,
               "rotation": 270,
               "scaleW": 1,
@@ -3461,7 +3461,7 @@
             {
               "instanceId": "tpl_set-office_bathroom2_10_toilet-standard",
               "furnitureId": "toilet-standard",
-              "x": 205,
+              "x": 225,
               "z": 116,
               "rotation": 270,
               "scaleW": 1,
@@ -3471,7 +3471,7 @@
             {
               "instanceId": "tpl_set-office_bathroom2_11_toilet-standard",
               "furnitureId": "toilet-standard",
-              "x": 205,
+              "x": 225,
               "z": 206,
               "rotation": 270,
               "scaleW": 1,
@@ -3481,7 +3481,7 @@
             {
               "instanceId": "tpl_set-office_bathroom2_12_toilet-standard",
               "furnitureId": "toilet-standard",
-              "x": 205,
+              "x": 225,
               "z": 296,
               "rotation": 270,
               "scaleW": 1,
@@ -3491,7 +3491,7 @@
             {
               "instanceId": "tpl_set-office_bathroom2_13_decor-trash-bin",
               "furnitureId": "decor-trash-bin",
-              "x": 165,
+              "x": 125,
               "z": 46,
               "rotation": 0,
               "scaleW": 1,
@@ -3501,7 +3501,7 @@
             {
               "instanceId": "tpl_set-office_bathroom2_14_decor-trash-bin",
               "furnitureId": "decor-trash-bin",
-              "x": 165,
+              "x": 125,
               "z": 136,
               "rotation": 0,
               "scaleW": 1,
@@ -3511,7 +3511,7 @@
             {
               "instanceId": "tpl_set-office_bathroom2_15_decor-trash-bin",
               "furnitureId": "decor-trash-bin",
-              "x": 165,
+              "x": 125,
               "z": 226,
               "rotation": 0,
               "scaleW": 1,
@@ -3521,7 +3521,7 @@
             {
               "instanceId": "tpl_set-office_bathroom2_16_decor-trash-bin",
               "furnitureId": "decor-trash-bin",
-              "x": 165,
+              "x": 125,
               "z": 316,
               "rotation": 0,
               "scaleW": 1,
@@ -3708,7 +3708,7 @@
               "instanceId": "tpl_set-office_dining_5_chair-modern-gray",
               "furnitureId": "chair-modern-gray",
               "x": 77.5,
-              "z": 163,
+              "z": 127,
               "rotation": 180,
               "scaleW": 1,
               "scaleD": 1,
@@ -3878,7 +3878,7 @@
               "instanceId": "pi_agxr5d3",
               "furnitureId": "rug-nordic-geo",
               "x": 35.28125,
-              "z": 124.74921875000001,
+              "z": 94.74921875,
               "rotation": 0,
               "scaleW": 1.3,
               "scaleD": 1,
@@ -3888,7 +3888,7 @@
               "instanceId": "pi_58sp3lt",
               "furnitureId": "table-conference",
               "x": 45.28125,
-              "z": 144.74921875,
+              "z": 114.74921875,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -3898,7 +3898,7 @@
               "instanceId": "pi_rd9nk1n",
               "furnitureId": "chair-modern-gray",
               "x": 216.28125,
-              "z": 93.24921874999998,
+              "z": 63.24921875,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -3908,7 +3908,7 @@
               "instanceId": "pi_ya0hfhu",
               "furnitureId": "chair-modern-gray",
               "x": 144.28125,
-              "z": 93.24921874999998,
+              "z": 63.24921875,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -3918,7 +3918,7 @@
               "instanceId": "pi_i96x8z4",
               "furnitureId": "chair-modern-gray",
               "x": 69.28125,
-              "z": 93.24921874999998,
+              "z": 63.24921875,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -3928,7 +3928,7 @@
               "instanceId": "pi_d5zw4cp",
               "furnitureId": "chair-modern-gray",
               "x": 216.84884005232942,
-              "z": 246.11426726902658,
+              "z": 216.114267269,
               "rotation": 180,
               "scaleW": 1,
               "scaleD": 1,
@@ -3938,7 +3938,7 @@
               "instanceId": "pi_so33dt2",
               "furnitureId": "chair-modern-gray",
               "x": 141.84884005232942,
-              "z": 246.11426726902658,
+              "z": 216.114267269,
               "rotation": 180,
               "scaleW": 1,
               "scaleD": 1,
@@ -3947,9 +3947,9 @@
             {
               "instanceId": "pi_r8pkwq6",
               "furnitureId": "chair-modern-gray",
-              "x": 69.84884005232942,
-              "z": 246.11426726902658,
-              "rotation": 180,
+              "x": 25.5,
+              "z": 165,
+              "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -3979,7 +3979,7 @@
               "instanceId": "pi_7v03xvy",
               "furnitureId": "lamp-ceiling-modern",
               "x": 135.28125,
-              "z": 166.74921875,
+              "z": 136.74921875,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -4022,7 +4022,7 @@
             {
               "instanceId": "tpl_set-office_custom2_0_rug-nordic-geo",
               "furnitureId": "rug-nordic-geo",
-              "x": 55,
+              "x": -5,
               "z": 80,
               "rotation": 0,
               "scaleW": 1.3,
@@ -4032,7 +4032,7 @@
             {
               "instanceId": "tpl_set-office_custom2_9_plant-monstera",
               "furnitureId": "plant-monstera",
-              "x": 302.5,
+              "x": 122.5,
               "z": 229.5,
               "rotation": 0,
               "scaleW": 1,
@@ -4051,7 +4051,7 @@
             },
             {
               "furnitureId": "proc-ceo-desk",
-              "x": 75,
+              "x": 15,
               "z": 40,
               "scaleW": 1,
               "scaleD": 1,
@@ -4059,7 +4059,7 @@
             },
             {
               "furnitureId": "chair-ergonomic",
-              "x": 152.5,
+              "x": 92.5,
               "z": 142.5,
               "rotation": 180,
               "scaleW": 1,
@@ -4069,7 +4069,7 @@
             {
               "furnitureId": "coffee-marble-rect",
               "x": 245,
-              "z": 222.5,
+              "z": 235,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -4077,7 +4077,7 @@
             {
               "furnitureId": "decor-books-vintage",
               "x": 275,
-              "z": 245,
+              "z": 257.5,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -4085,7 +4085,7 @@
             },
             {
               "furnitureId": "decor-globe",
-              "x": 102.5,
+              "x": 42.5,
               "z": 67.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -4094,7 +4094,7 @@
             },
             {
               "furnitureId": "lamp-desk-arm",
-              "x": 239,
+              "x": 179,
               "z": 76.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -4103,7 +4103,7 @@
             },
             {
               "furnitureId": "mural-inkwash",
-              "x": 145,
+              "x": 85,
               "z": 9.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -4301,8 +4301,8 @@
             {
               "instanceId": "pi_6_18lhu",
               "furnitureId": "elec-server-rack",
-              "x": 12.08996277151644,
-              "z": 216.21964179796848,
+              "x": 157.042663323,
+              "z": 67.5,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
