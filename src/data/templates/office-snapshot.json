@@ -115,7 +115,7 @@
             {
               "instanceId": "tpl_set-office_living_6_plant-rubber-tree",
               "furnitureId": "plant-rubber-tree",
-              "x": 2063.5,
+              "x": 1372.5,
               "z": 1189,
               "rotation": 0,
               "scaleW": 1,
@@ -125,7 +125,7 @@
             {
               "instanceId": "tpl_set-office_living_7_mural-inkwash",
               "furnitureId": "mural-inkwash",
-              "x": 1060,
+              "x": 950,
               "z": 11.5,
               "rotation": 0,
               "scaleW": 1,
@@ -186,7 +186,7 @@
               "instanceId": "tpl_set-office_living_13_plant-monstera",
               "furnitureId": "plant-monstera",
               "x": 647.5,
-              "z": 97.5,
+              "z": 107.5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -206,8 +206,8 @@
               "instanceId": "tpl_set-office_living_15_bookshelf-open-white",
               "furnitureId": "bookshelf-open-white",
               "x": 1367,
-              "z": 40,
-              "rotation": 180,
+              "z": 10,
+              "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -215,8 +215,8 @@
             {
               "instanceId": "tpl_set-office_living_16_plant-rubber-tree",
               "furnitureId": "plant-rubber-tree",
-              "x": 247.5,
-              "z": 274,
+              "x": 412.5,
+              "z": 204,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -245,8 +245,8 @@
             {
               "instanceId": "tpl_set-office_living_19_plant-rubber-tree",
               "furnitureId": "plant-rubber-tree",
-              "x": 1810.439732142857,
-              "z": 788.015625,
+              "x": 1810.439732143,
+              "z": 744,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -285,7 +285,7 @@
             {
               "instanceId": "tpl_set-office_living_23_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 126,
+              "x": 122,
               "z": 164,
               "rotation": 270,
               "scaleW": 1,
@@ -295,7 +295,7 @@
             {
               "instanceId": "tpl_set-office_living_24_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 89.5,
+              "x": 85.5,
               "z": 167.5,
               "rotation": 90,
               "scaleW": 1,
@@ -305,7 +305,7 @@
             {
               "instanceId": "tpl_set-office_living_25_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 165,
+              "x": 161,
               "z": 181.5,
               "rotation": 270,
               "scaleW": 1,
@@ -316,7 +316,7 @@
             {
               "instanceId": "tpl_set-office_living_26_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 169,
+              "x": 165,
               "z": 153,
               "rotation": 0,
               "scaleW": 1,
@@ -327,7 +327,7 @@
             {
               "instanceId": "tpl_set-office_living_27_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 198,
+              "x": 202,
               "z": 164,
               "rotation": 90,
               "scaleW": 1,
@@ -337,7 +337,7 @@
             {
               "instanceId": "tpl_set-office_living_28_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 305.5,
+              "x": 309.5,
               "z": 167.5,
               "rotation": 270,
               "scaleW": 1,
@@ -347,7 +347,7 @@
             {
               "instanceId": "tpl_set-office_living_29_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 237,
+              "x": 241,
               "z": 181.5,
               "rotation": 90,
               "scaleW": 1,
@@ -358,7 +358,7 @@
             {
               "instanceId": "tpl_set-office_living_30_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 273,
+              "x": 277,
               "z": 153,
               "rotation": 0,
               "scaleW": 1,
@@ -369,7 +369,7 @@
             {
               "instanceId": "tpl_set-office_living_31_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 126,
+              "x": 122,
               "z": 324,
               "rotation": 270,
               "scaleW": 1,
@@ -379,7 +379,7 @@
             {
               "instanceId": "tpl_set-office_living_32_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 89.5,
+              "x": 85.5,
               "z": 327.5,
               "rotation": 90,
               "scaleW": 1,
@@ -389,7 +389,7 @@
             {
               "instanceId": "tpl_set-office_living_33_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 165,
+              "x": 161,
               "z": 341.5,
               "rotation": 270,
               "scaleW": 1,
@@ -400,7 +400,7 @@
             {
               "instanceId": "tpl_set-office_living_34_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 169,
+              "x": 165,
               "z": 313,
               "rotation": 0,
               "scaleW": 1,
@@ -411,7 +411,7 @@
             {
               "instanceId": "tpl_set-office_living_35_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 198,
+              "x": 202,
               "z": 324,
               "rotation": 90,
               "scaleW": 1,
@@ -421,7 +421,7 @@
             {
               "instanceId": "tpl_set-office_living_36_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 305.5,
+              "x": 309.5,
               "z": 327.5,
               "rotation": 270,
               "scaleW": 1,
@@ -431,7 +431,7 @@
             {
               "instanceId": "tpl_set-office_living_37_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 237,
+              "x": 241,
               "z": 341.5,
               "rotation": 90,
               "scaleW": 1,
@@ -442,7 +442,7 @@
             {
               "instanceId": "tpl_set-office_living_38_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 273,
+              "x": 277,
               "z": 313,
               "rotation": 0,
               "scaleW": 1,
@@ -453,7 +453,7 @@
             {
               "instanceId": "tpl_set-office_living_39_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 126,
+              "x": 122,
               "z": 484,
               "rotation": 270,
               "scaleW": 1,
@@ -463,7 +463,7 @@
             {
               "instanceId": "tpl_set-office_living_40_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 89.5,
+              "x": 85.5,
               "z": 487.5,
               "rotation": 90,
               "scaleW": 1,
@@ -473,7 +473,7 @@
             {
               "instanceId": "tpl_set-office_living_41_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 165,
+              "x": 161,
               "z": 501.5,
               "rotation": 270,
               "scaleW": 1,
@@ -484,7 +484,7 @@
             {
               "instanceId": "tpl_set-office_living_42_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 169,
+              "x": 165,
               "z": 473,
               "rotation": 0,
               "scaleW": 1,
@@ -495,7 +495,7 @@
             {
               "instanceId": "tpl_set-office_living_43_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 198,
+              "x": 202,
               "z": 484,
               "rotation": 90,
               "scaleW": 1,
@@ -505,7 +505,7 @@
             {
               "instanceId": "tpl_set-office_living_44_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 305.5,
+              "x": 309.5,
               "z": 487.5,
               "rotation": 270,
               "scaleW": 1,
@@ -515,7 +515,7 @@
             {
               "instanceId": "tpl_set-office_living_45_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 237,
+              "x": 241,
               "z": 501.5,
               "rotation": 90,
               "scaleW": 1,
@@ -526,7 +526,7 @@
             {
               "instanceId": "tpl_set-office_living_46_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 273,
+              "x": 277,
               "z": 473,
               "rotation": 0,
               "scaleW": 1,
@@ -537,8 +537,8 @@
             {
               "instanceId": "tpl_set-office_living_47_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 126,
-              "z": 644,
+              "x": 122,
+              "z": 629,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -547,8 +547,8 @@
             {
               "instanceId": "tpl_set-office_living_48_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 89.5,
-              "z": 647.5,
+              "x": 85.5,
+              "z": 632.5,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -557,8 +557,8 @@
             {
               "instanceId": "tpl_set-office_living_49_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 165,
-              "z": 661.5,
+              "x": 161,
+              "z": 646.5,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -568,8 +568,8 @@
             {
               "instanceId": "tpl_set-office_living_50_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 169,
-              "z": 633,
+              "x": 165,
+              "z": 618,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -579,8 +579,8 @@
             {
               "instanceId": "tpl_set-office_living_51_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 198,
-              "z": 644,
+              "x": 202,
+              "z": 629,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -589,8 +589,8 @@
             {
               "instanceId": "tpl_set-office_living_52_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 305.5,
-              "z": 647.5,
+              "x": 309.5,
+              "z": 632.5,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -599,8 +599,8 @@
             {
               "instanceId": "tpl_set-office_living_53_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 237,
-              "z": 661.5,
+              "x": 241,
+              "z": 646.5,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -610,8 +610,8 @@
             {
               "instanceId": "tpl_set-office_living_54_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 273,
-              "z": 633,
+              "x": 277,
+              "z": 618,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -621,8 +621,8 @@
             {
               "instanceId": "tpl_set-office_living_55_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 126,
-              "z": 764,
+              "x": 122,
+              "z": 779,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -631,8 +631,8 @@
             {
               "instanceId": "tpl_set-office_living_56_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 89.5,
-              "z": 767.5,
+              "x": 85.5,
+              "z": 782.5,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -641,8 +641,8 @@
             {
               "instanceId": "tpl_set-office_living_57_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 165,
-              "z": 781.5,
+              "x": 161,
+              "z": 796.5,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -652,8 +652,8 @@
             {
               "instanceId": "tpl_set-office_living_58_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 169,
-              "z": 753,
+              "x": 165,
+              "z": 768,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -663,8 +663,8 @@
             {
               "instanceId": "tpl_set-office_living_59_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 198,
-              "z": 764,
+              "x": 202,
+              "z": 779,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -673,8 +673,8 @@
             {
               "instanceId": "tpl_set-office_living_60_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 305.5,
-              "z": 767.5,
+              "x": 309.5,
+              "z": 782.5,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -683,8 +683,8 @@
             {
               "instanceId": "tpl_set-office_living_61_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 237,
-              "z": 781.5,
+              "x": 241,
+              "z": 796.5,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -694,8 +694,8 @@
             {
               "instanceId": "tpl_set-office_living_62_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 273,
-              "z": 753,
+              "x": 277,
+              "z": 768,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -705,7 +705,7 @@
             {
               "instanceId": "tpl_set-office_living_63_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 126,
+              "x": 122,
               "z": 924,
               "rotation": 270,
               "scaleW": 1,
@@ -715,7 +715,7 @@
             {
               "instanceId": "tpl_set-office_living_64_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 89.5,
+              "x": 85.5,
               "z": 927.5,
               "rotation": 90,
               "scaleW": 1,
@@ -725,7 +725,7 @@
             {
               "instanceId": "tpl_set-office_living_65_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 165,
+              "x": 161,
               "z": 941.5,
               "rotation": 270,
               "scaleW": 1,
@@ -736,7 +736,7 @@
             {
               "instanceId": "tpl_set-office_living_66_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 169,
+              "x": 165,
               "z": 913,
               "rotation": 0,
               "scaleW": 1,
@@ -747,7 +747,7 @@
             {
               "instanceId": "tpl_set-office_living_67_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 198,
+              "x": 202,
               "z": 924,
               "rotation": 90,
               "scaleW": 1,
@@ -757,7 +757,7 @@
             {
               "instanceId": "tpl_set-office_living_68_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 305.5,
+              "x": 309.5,
               "z": 927.5,
               "rotation": 270,
               "scaleW": 1,
@@ -767,7 +767,7 @@
             {
               "instanceId": "tpl_set-office_living_69_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 237,
+              "x": 241,
               "z": 941.5,
               "rotation": 90,
               "scaleW": 1,
@@ -778,7 +778,7 @@
             {
               "instanceId": "tpl_set-office_living_70_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 273,
+              "x": 277,
               "z": 913,
               "rotation": 0,
               "scaleW": 1,
@@ -789,7 +789,7 @@
             {
               "instanceId": "tpl_set-office_living_71_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 126,
+              "x": 122,
               "z": 1084,
               "rotation": 270,
               "scaleW": 1,
@@ -799,7 +799,7 @@
             {
               "instanceId": "tpl_set-office_living_72_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 89.5,
+              "x": 85.5,
               "z": 1087.5,
               "rotation": 90,
               "scaleW": 1,
@@ -809,7 +809,7 @@
             {
               "instanceId": "tpl_set-office_living_73_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 165,
+              "x": 161,
               "z": 1101.5,
               "rotation": 270,
               "scaleW": 1,
@@ -820,7 +820,7 @@
             {
               "instanceId": "tpl_set-office_living_74_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 169,
+              "x": 165,
               "z": 1073,
               "rotation": 0,
               "scaleW": 1,
@@ -831,7 +831,7 @@
             {
               "instanceId": "tpl_set-office_living_75_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 198,
+              "x": 202,
               "z": 1084,
               "rotation": 90,
               "scaleW": 1,
@@ -841,7 +841,7 @@
             {
               "instanceId": "tpl_set-office_living_76_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 305.5,
+              "x": 309.5,
               "z": 1087.5,
               "rotation": 270,
               "scaleW": 1,
@@ -851,7 +851,7 @@
             {
               "instanceId": "tpl_set-office_living_77_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 237,
+              "x": 241,
               "z": 1101.5,
               "rotation": 90,
               "scaleW": 1,
@@ -862,7 +862,7 @@
             {
               "instanceId": "tpl_set-office_living_78_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 273,
+              "x": 277,
               "z": 1073,
               "rotation": 0,
               "scaleW": 1,
@@ -873,7 +873,7 @@
             {
               "instanceId": "tpl_set-office_living_79_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 126,
+              "x": 122,
               "z": 1244,
               "rotation": 270,
               "scaleW": 1,
@@ -883,7 +883,7 @@
             {
               "instanceId": "tpl_set-office_living_80_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 89.5,
+              "x": 85.5,
               "z": 1247.5,
               "rotation": 90,
               "scaleW": 1,
@@ -893,7 +893,7 @@
             {
               "instanceId": "tpl_set-office_living_81_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 165,
+              "x": 161,
               "z": 1261.5,
               "rotation": 270,
               "scaleW": 1,
@@ -904,7 +904,7 @@
             {
               "instanceId": "tpl_set-office_living_82_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 169,
+              "x": 165,
               "z": 1233,
               "rotation": 0,
               "scaleW": 1,
@@ -915,7 +915,7 @@
             {
               "instanceId": "tpl_set-office_living_83_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 198,
+              "x": 202,
               "z": 1244,
               "rotation": 90,
               "scaleW": 1,
@@ -925,7 +925,7 @@
             {
               "instanceId": "tpl_set-office_living_84_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 305.5,
+              "x": 309.5,
               "z": 1247.5,
               "rotation": 270,
               "scaleW": 1,
@@ -935,7 +935,7 @@
             {
               "instanceId": "tpl_set-office_living_85_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 237,
+              "x": 241,
               "z": 1261.5,
               "rotation": 90,
               "scaleW": 1,
@@ -946,7 +946,7 @@
             {
               "instanceId": "tpl_set-office_living_86_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 273,
+              "x": 277,
               "z": 1233,
               "rotation": 0,
               "scaleW": 1,
@@ -957,7 +957,7 @@
             {
               "instanceId": "tpl_set-office_living_87_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 1813.939732142857,
+              "x": 1809.939732143,
               "z": 838.015625,
               "rotation": 270,
               "scaleW": 1,
@@ -967,7 +967,7 @@
             {
               "instanceId": "tpl_set-office_living_88_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 1777.439732142857,
+              "x": 1773.439732143,
               "z": 841.515625,
               "rotation": 90,
               "scaleW": 1,
@@ -977,7 +977,7 @@
             {
               "instanceId": "tpl_set-office_living_89_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 1852.939732142857,
+              "x": 1848.939732143,
               "z": 855.515625,
               "rotation": 270,
               "scaleW": 1,
@@ -988,7 +988,7 @@
             {
               "instanceId": "tpl_set-office_living_90_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 1856.939732142857,
+              "x": 1852.939732143,
               "z": 827.015625,
               "rotation": 0,
               "scaleW": 1,
@@ -999,7 +999,7 @@
             {
               "instanceId": "tpl_set-office_living_91_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 1885.939732142857,
+              "x": 1889.939732143,
               "z": 838.015625,
               "rotation": 90,
               "scaleW": 1,
@@ -1009,7 +1009,7 @@
             {
               "instanceId": "tpl_set-office_living_92_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 1993.439732142857,
+              "x": 1997.439732143,
               "z": 841.515625,
               "rotation": 270,
               "scaleW": 1,
@@ -1019,7 +1019,7 @@
             {
               "instanceId": "tpl_set-office_living_93_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 1924.939732142857,
+              "x": 1928.939732143,
               "z": 855.515625,
               "rotation": 90,
               "scaleW": 1,
@@ -1030,7 +1030,7 @@
             {
               "instanceId": "tpl_set-office_living_94_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 1960.939732142857,
+              "x": 1964.939732143,
               "z": 827.015625,
               "rotation": 0,
               "scaleW": 1,
@@ -1041,7 +1041,7 @@
             {
               "instanceId": "tpl_set-office_living_95_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 1813.939732142857,
+              "x": 1809.939732143,
               "z": 998.015625,
               "rotation": 270,
               "scaleW": 1,
@@ -1051,7 +1051,7 @@
             {
               "instanceId": "tpl_set-office_living_96_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 1777.439732142857,
+              "x": 1773.439732143,
               "z": 1001.515625,
               "rotation": 90,
               "scaleW": 1,
@@ -1061,7 +1061,7 @@
             {
               "instanceId": "tpl_set-office_living_97_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 1852.939732142857,
+              "x": 1848.939732143,
               "z": 1015.515625,
               "rotation": 270,
               "scaleW": 1,
@@ -1072,7 +1072,7 @@
             {
               "instanceId": "tpl_set-office_living_98_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 1856.939732142857,
+              "x": 1852.939732143,
               "z": 987.015625,
               "rotation": 0,
               "scaleW": 1,
@@ -1083,7 +1083,7 @@
             {
               "instanceId": "tpl_set-office_living_99_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 1885.939732142857,
+              "x": 1889.939732143,
               "z": 998.015625,
               "rotation": 90,
               "scaleW": 1,
@@ -1093,7 +1093,7 @@
             {
               "instanceId": "tpl_set-office_living_100_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 1993.439732142857,
+              "x": 1997.439732143,
               "z": 1001.515625,
               "rotation": 270,
               "scaleW": 1,
@@ -1103,7 +1103,7 @@
             {
               "instanceId": "tpl_set-office_living_101_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 1924.939732142857,
+              "x": 1928.939732143,
               "z": 1015.515625,
               "rotation": 90,
               "scaleW": 1,
@@ -1114,7 +1114,7 @@
             {
               "instanceId": "tpl_set-office_living_102_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 1960.939732142857,
+              "x": 1964.939732143,
               "z": 987.015625,
               "rotation": 0,
               "scaleW": 1,
@@ -1145,7 +1145,7 @@
             {
               "instanceId": "tpl_set-office_living_105_decor-whiteboard",
               "furnitureId": "decor-whiteboard",
-              "x": 293,
+              "x": 123,
               "z": 17,
               "rotation": 180,
               "scaleW": 1,
@@ -1155,8 +1155,8 @@
             {
               "instanceId": "tpl_set-office_living_106_bookshelf-with-books",
               "furnitureId": "bookshelf-with-books",
-              "x": 2065,
-              "z": 762.5,
+              "x": 2122.5,
+              "z": 397.5,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -1165,8 +1165,8 @@
             {
               "instanceId": "tpl_set-office_living_107_bookshelf-with-books",
               "furnitureId": "bookshelf-with-books",
-              "x": 2065,
-              "z": 882.5,
+              "x": 2122.5,
+              "z": 497.5,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -1225,7 +1225,7 @@
             {
               "instanceId": "tpl_set-office_living_113_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 30,
+              "x": 400,
               "z": 480,
               "rotation": 0,
               "scaleW": 1,
@@ -1235,8 +1235,8 @@
             {
               "instanceId": "tpl_set-office_living_114_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 0,
-              "z": 981,
+              "x": 400,
+              "z": 980,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1266,7 +1266,7 @@
               "instanceId": "tpl_set-office_living_117_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
               "x": 1560,
-              "z": 1330,
+              "z": 1460,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1275,7 +1275,7 @@
             {
               "instanceId": "tpl_set-office_living_118_sofa-armchair",
               "furnitureId": "sofa-armchair",
-              "x": 463,
+              "x": 440,
               "z": 1315,
               "rotation": 45,
               "scaleW": 1,
@@ -1285,7 +1285,7 @@
             {
               "instanceId": "tpl_set-office_living_119_sofa-armchair",
               "furnitureId": "sofa-armchair",
-              "x": 661,
+              "x": 690,
               "z": 1316,
               "rotation": 315,
               "scaleW": 1,
@@ -1305,8 +1305,8 @@
             {
               "instanceId": "tpl_set-office_living_121_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 1824.6908482142856,
-              "z": 1173.3214285714284,
+              "x": 1820.690848214,
+              "z": 1173.321428571,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -1315,8 +1315,8 @@
             {
               "instanceId": "tpl_set-office_living_122_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 1788.1908482142856,
-              "z": 1176.8214285714284,
+              "x": 1784.190848214,
+              "z": 1176.821428571,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -1325,8 +1325,8 @@
             {
               "instanceId": "tpl_set-office_living_123_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 1863.6908482142856,
-              "z": 1190.8214285714284,
+              "x": 1859.690848214,
+              "z": 1190.821428571,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -1336,8 +1336,8 @@
             {
               "instanceId": "tpl_set-office_living_124_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 1867.6908482142856,
-              "z": 1162.3214285714284,
+              "x": 1863.690848214,
+              "z": 1162.321428571,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1347,8 +1347,8 @@
             {
               "instanceId": "tpl_set-office_living_125_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 1896.6908482142856,
-              "z": 1173.3214285714284,
+              "x": 1900.690848214,
+              "z": 1173.321428571,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -1357,8 +1357,8 @@
             {
               "instanceId": "tpl_set-office_living_126_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 2004.1908482142856,
-              "z": 1176.8214285714284,
+              "x": 2008.190848214,
+              "z": 1176.821428571,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -1367,8 +1367,8 @@
             {
               "instanceId": "tpl_set-office_living_127_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 1935.6908482142856,
-              "z": 1190.8214285714284,
+              "x": 1939.690848214,
+              "z": 1190.821428571,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -1378,8 +1378,8 @@
             {
               "instanceId": "tpl_set-office_living_128_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 1971.6908482142856,
-              "z": 1162.3214285714284,
+              "x": 1975.690848214,
+              "z": 1162.321428571,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1389,8 +1389,8 @@
             {
               "instanceId": "tpl_set-office_living_129_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 1821.8426339285713,
-              "z": 1340.6529017857142,
+              "x": 1817.842633929,
+              "z": 1340.652901786,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -1399,8 +1399,8 @@
             {
               "instanceId": "tpl_set-office_living_130_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 1785.3426339285713,
-              "z": 1344.1529017857142,
+              "x": 1781.342633929,
+              "z": 1344.152901786,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -1409,8 +1409,8 @@
             {
               "instanceId": "tpl_set-office_living_131_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 1860.8426339285713,
-              "z": 1358.1529017857142,
+              "x": 1856.842633929,
+              "z": 1358.152901786,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -1420,8 +1420,8 @@
             {
               "instanceId": "tpl_set-office_living_132_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 1864.8426339285713,
-              "z": 1329.6529017857142,
+              "x": 1860.842633929,
+              "z": 1329.652901786,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1431,8 +1431,8 @@
             {
               "instanceId": "tpl_set-office_living_133_desk-standing",
               "furnitureId": "desk-standing",
-              "x": 1893.8426339285713,
-              "z": 1340.6529017857142,
+              "x": 1897.842633929,
+              "z": 1340.652901786,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -1441,8 +1441,8 @@
             {
               "instanceId": "tpl_set-office_living_134_chair-ergonomic",
               "furnitureId": "chair-ergonomic",
-              "x": 2001.3426339285713,
-              "z": 1344.1529017857142,
+              "x": 2005.342633929,
+              "z": 1344.152901786,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -1451,8 +1451,8 @@
             {
               "instanceId": "tpl_set-office_living_135_elec-personal-computer",
               "furnitureId": "elec-personal-computer",
-              "x": 1932.8426339285713,
-              "z": 1358.1529017857142,
+              "x": 1936.842633929,
+              "z": 1358.152901786,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -1462,8 +1462,8 @@
             {
               "instanceId": "tpl_set-office_living_136_decor-coffee-mug",
               "furnitureId": "decor-coffee-mug",
-              "x": 1968.8426339285713,
-              "z": 1329.6529017857142,
+              "x": 1972.842633929,
+              "z": 1329.652901786,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1473,7 +1473,7 @@
             {
               "instanceId": "tpl_set-office_living_137_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 194,
+              "x": 190,
               "z": 241,
               "rotation": 0,
               "scaleW": 0.35,
@@ -1484,7 +1484,7 @@
             {
               "instanceId": "tpl_set-office_living_138_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 169,
+              "x": 165,
               "z": 235,
               "rotation": 0,
               "scaleW": 1,
@@ -1495,7 +1495,7 @@
             {
               "instanceId": "tpl_set-office_living_139_decor-tulip",
               "furnitureId": "decor-tulip",
-              "x": 267,
+              "x": 271,
               "z": 235,
               "rotation": 0,
               "scaleW": 1,
@@ -1506,7 +1506,7 @@
             {
               "instanceId": "tpl_set-office_living_140_decor-books-set",
               "furnitureId": "decor-books-set",
-              "x": 225,
+              "x": 229,
               "z": 239.5,
               "rotation": 0,
               "scaleW": 1,
@@ -1517,7 +1517,7 @@
             {
               "instanceId": "tpl_set-office_living_141_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 194,
+              "x": 190,
               "z": 401,
               "rotation": 0,
               "scaleW": 0.35,
@@ -1528,7 +1528,7 @@
             {
               "instanceId": "tpl_set-office_living_142_decor-books-vintage",
               "furnitureId": "decor-books-vintage",
-              "x": 158,
+              "x": 154,
               "z": 391,
               "rotation": 0,
               "scaleW": 1,
@@ -1539,7 +1539,7 @@
             {
               "instanceId": "tpl_set-office_living_143_decor-tulip",
               "furnitureId": "decor-tulip",
-              "x": 267,
+              "x": 271,
               "z": 395,
               "rotation": 0,
               "scaleW": 1,
@@ -1550,7 +1550,7 @@
             {
               "instanceId": "tpl_set-office_living_144_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 241,
+              "x": 245,
               "z": 395,
               "rotation": 0,
               "scaleW": 1,
@@ -1561,7 +1561,7 @@
             {
               "instanceId": "tpl_set-office_living_145_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 194,
+              "x": 190,
               "z": 561,
               "rotation": 0,
               "scaleW": 0.35,
@@ -1572,7 +1572,7 @@
             {
               "instanceId": "tpl_set-office_living_146_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 169,
+              "x": 165,
               "z": 555,
               "rotation": 0,
               "scaleW": 1,
@@ -1583,7 +1583,7 @@
             {
               "instanceId": "tpl_set-office_living_147_decor-tulip",
               "furnitureId": "decor-tulip",
-              "x": 267,
+              "x": 271,
               "z": 555,
               "rotation": 0,
               "scaleW": 1,
@@ -1594,7 +1594,7 @@
             {
               "instanceId": "tpl_set-office_living_148_decor-books-set",
               "furnitureId": "decor-books-set",
-              "x": 225,
+              "x": 229,
               "z": 559.5,
               "rotation": 0,
               "scaleW": 1,
@@ -1605,8 +1605,8 @@
             {
               "instanceId": "tpl_set-office_living_149_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 194,
-              "z": 721,
+              "x": 190,
+              "z": 706,
               "rotation": 0,
               "scaleW": 0.35,
               "scaleD": 0.35,
@@ -1616,8 +1616,8 @@
             {
               "instanceId": "tpl_set-office_living_150_decor-books-vintage",
               "furnitureId": "decor-books-vintage",
-              "x": 158,
-              "z": 711,
+              "x": 154,
+              "z": 696,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1627,8 +1627,8 @@
             {
               "instanceId": "tpl_set-office_living_151_decor-tulip",
               "furnitureId": "decor-tulip",
-              "x": 267,
-              "z": 715,
+              "x": 271,
+              "z": 700,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1638,8 +1638,8 @@
             {
               "instanceId": "tpl_set-office_living_152_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 241,
-              "z": 715,
+              "x": 245,
+              "z": 700,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1649,8 +1649,8 @@
             {
               "instanceId": "tpl_set-office_living_153_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 194,
-              "z": 841,
+              "x": 190,
+              "z": 856,
               "rotation": 0,
               "scaleW": 0.35,
               "scaleD": 0.35,
@@ -1660,8 +1660,8 @@
             {
               "instanceId": "tpl_set-office_living_154_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 169,
-              "z": 835,
+              "x": 165,
+              "z": 850,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1671,8 +1671,8 @@
             {
               "instanceId": "tpl_set-office_living_155_decor-tulip",
               "furnitureId": "decor-tulip",
-              "x": 267,
-              "z": 835,
+              "x": 271,
+              "z": 850,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1682,8 +1682,8 @@
             {
               "instanceId": "tpl_set-office_living_156_decor-books-set",
               "furnitureId": "decor-books-set",
-              "x": 225,
-              "z": 839.5,
+              "x": 229,
+              "z": 854.5,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1693,7 +1693,7 @@
             {
               "instanceId": "tpl_set-office_living_157_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 194,
+              "x": 190,
               "z": 1001,
               "rotation": 0,
               "scaleW": 0.35,
@@ -1704,7 +1704,7 @@
             {
               "instanceId": "tpl_set-office_living_158_decor-books-vintage",
               "furnitureId": "decor-books-vintage",
-              "x": 158,
+              "x": 154,
               "z": 991,
               "rotation": 0,
               "scaleW": 1,
@@ -1715,7 +1715,7 @@
             {
               "instanceId": "tpl_set-office_living_159_decor-tulip",
               "furnitureId": "decor-tulip",
-              "x": 267,
+              "x": 271,
               "z": 995,
               "rotation": 0,
               "scaleW": 1,
@@ -1726,7 +1726,7 @@
             {
               "instanceId": "tpl_set-office_living_160_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 241,
+              "x": 245,
               "z": 995,
               "rotation": 0,
               "scaleW": 1,
@@ -1737,7 +1737,7 @@
             {
               "instanceId": "tpl_set-office_living_161_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 194,
+              "x": 190,
               "z": 1161,
               "rotation": 0,
               "scaleW": 0.35,
@@ -1748,7 +1748,7 @@
             {
               "instanceId": "tpl_set-office_living_162_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 169,
+              "x": 165,
               "z": 1155,
               "rotation": 0,
               "scaleW": 1,
@@ -1759,7 +1759,7 @@
             {
               "instanceId": "tpl_set-office_living_163_decor-tulip",
               "furnitureId": "decor-tulip",
-              "x": 267,
+              "x": 271,
               "z": 1155,
               "rotation": 0,
               "scaleW": 1,
@@ -1770,7 +1770,7 @@
             {
               "instanceId": "tpl_set-office_living_164_decor-books-set",
               "furnitureId": "decor-books-set",
-              "x": 225,
+              "x": 229,
               "z": 1159.5,
               "rotation": 0,
               "scaleW": 1,
@@ -1781,7 +1781,7 @@
             {
               "instanceId": "tpl_set-office_living_165_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 194,
+              "x": 190,
               "z": 1321,
               "rotation": 0,
               "scaleW": 0.35,
@@ -1792,7 +1792,7 @@
             {
               "instanceId": "tpl_set-office_living_166_decor-books-vintage",
               "furnitureId": "decor-books-vintage",
-              "x": 158,
+              "x": 154,
               "z": 1311,
               "rotation": 0,
               "scaleW": 1,
@@ -1803,7 +1803,7 @@
             {
               "instanceId": "tpl_set-office_living_167_decor-tulip",
               "furnitureId": "decor-tulip",
-              "x": 267,
+              "x": 271,
               "z": 1315,
               "rotation": 0,
               "scaleW": 1,
@@ -1814,7 +1814,7 @@
             {
               "instanceId": "tpl_set-office_living_168_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 241,
+              "x": 245,
               "z": 1315,
               "rotation": 0,
               "scaleW": 1,
@@ -1825,7 +1825,7 @@
             {
               "instanceId": "tpl_set-office_living_169_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 1881.939732142857,
+              "x": 1877.939732143,
               "z": 915.015625,
               "rotation": 0,
               "scaleW": 0.35,
@@ -1836,7 +1836,7 @@
             {
               "instanceId": "tpl_set-office_living_170_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 1856.939732142857,
+              "x": 1852.939732143,
               "z": 909.015625,
               "rotation": 0,
               "scaleW": 1,
@@ -1847,7 +1847,7 @@
             {
               "instanceId": "tpl_set-office_living_171_decor-tulip",
               "furnitureId": "decor-tulip",
-              "x": 1954.939732142857,
+              "x": 1958.939732143,
               "z": 909.015625,
               "rotation": 0,
               "scaleW": 1,
@@ -1858,7 +1858,7 @@
             {
               "instanceId": "tpl_set-office_living_172_decor-books-set",
               "furnitureId": "decor-books-set",
-              "x": 1912.939732142857,
+              "x": 1916.939732143,
               "z": 913.515625,
               "rotation": 0,
               "scaleW": 1,
@@ -1869,7 +1869,7 @@
             {
               "instanceId": "tpl_set-office_living_173_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 1881.939732142857,
+              "x": 1877.939732143,
               "z": 1075.015625,
               "rotation": 0,
               "scaleW": 0.35,
@@ -1880,7 +1880,7 @@
             {
               "instanceId": "tpl_set-office_living_174_decor-books-vintage",
               "furnitureId": "decor-books-vintage",
-              "x": 1845.939732142857,
+              "x": 1841.939732143,
               "z": 1065.015625,
               "rotation": 0,
               "scaleW": 1,
@@ -1891,7 +1891,7 @@
             {
               "instanceId": "tpl_set-office_living_175_decor-tulip",
               "furnitureId": "decor-tulip",
-              "x": 1954.939732142857,
+              "x": 1958.939732143,
               "z": 1069.015625,
               "rotation": 0,
               "scaleW": 1,
@@ -1902,7 +1902,7 @@
             {
               "instanceId": "tpl_set-office_living_176_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 1928.939732142857,
+              "x": 1932.939732143,
               "z": 1069.015625,
               "rotation": 0,
               "scaleW": 1,
@@ -1913,8 +1913,8 @@
             {
               "instanceId": "tpl_set-office_living_177_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 1889.8426339285713,
-              "z": 1217.6529017857142,
+              "x": 1885.842633929,
+              "z": 1217.652901786,
               "rotation": 0,
               "scaleW": 0.35,
               "scaleD": 0.35,
@@ -1924,8 +1924,8 @@
             {
               "instanceId": "tpl_set-office_living_178_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 1864.8426339285713,
-              "z": 1211.6529017857142,
+              "x": 1860.842633929,
+              "z": 1211.652901786,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1935,8 +1935,8 @@
             {
               "instanceId": "tpl_set-office_living_179_decor-tulip",
               "furnitureId": "decor-tulip",
-              "x": 1962.8426339285713,
-              "z": 1211.6529017857142,
+              "x": 1966.842633929,
+              "z": 1211.652901786,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1946,8 +1946,8 @@
             {
               "instanceId": "tpl_set-office_living_180_decor-books-set",
               "furnitureId": "decor-books-set",
-              "x": 1920.8426339285713,
-              "z": 1216.1529017857142,
+              "x": 1924.842633929,
+              "z": 1216.152901786,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -1957,7 +1957,7 @@
             {
               "instanceId": "tpl_set-office_living_181_plant-potted-pack",
               "furnitureId": "plant-potted-pack",
-              "x": 1864,
+              "x": 1860,
               "z": 1391,
               "rotation": 0,
               "scaleW": 0.35,
@@ -1968,7 +1968,7 @@
             {
               "instanceId": "tpl_set-office_living_182_decor-books-vintage",
               "furnitureId": "decor-books-vintage",
-              "x": 1828,
+              "x": 1824,
               "z": 1381,
               "rotation": 0,
               "scaleW": 1,
@@ -1979,7 +1979,7 @@
             {
               "instanceId": "tpl_set-office_living_183_decor-tulip",
               "furnitureId": "decor-tulip",
-              "x": 1937,
+              "x": 1941,
               "z": 1385,
               "rotation": 0,
               "scaleW": 1,
@@ -1990,7 +1990,7 @@
             {
               "instanceId": "tpl_set-office_living_184_decor-books-pile",
               "furnitureId": "decor-books-pile",
-              "x": 1911,
+              "x": 1915,
               "z": 1385,
               "rotation": 0,
               "scaleW": 1,
@@ -2011,8 +2011,8 @@
             {
               "instanceId": "pi_1_e4rje",
               "furnitureId": "plant-rubber-tree",
-              "x": 1503.3604910714287,
-              "z": 1123.4419642857142,
+              "x": 1503.360491071,
+              "z": 1074,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2041,8 +2041,8 @@
             {
               "instanceId": "pi_4_kifse",
               "furnitureId": "desk-standing",
-              "x": 1506.8604910714287,
-              "z": 1173.4419642857142,
+              "x": 1502.860491071,
+              "z": 1173.441964286,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -2051,8 +2051,8 @@
             {
               "instanceId": "pi_5_zmo0a",
               "furnitureId": "chair-ergonomic",
-              "x": 1470.3604910714287,
-              "z": 1176.9419642857142,
+              "x": 1466.360491071,
+              "z": 1176.941964286,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -2061,8 +2061,8 @@
             {
               "instanceId": "pi_6_dvc0w",
               "furnitureId": "elec-personal-computer",
-              "x": 1545.8604910714287,
-              "z": 1190.9419642857142,
+              "x": 1541.860491071,
+              "z": 1190.941964286,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -2071,8 +2071,8 @@
             {
               "instanceId": "pi_7_rd8q9",
               "furnitureId": "decor-coffee-mug",
-              "x": 1549.8604910714287,
-              "z": 1162.4419642857142,
+              "x": 1545.860491071,
+              "z": 1162.441964286,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2081,8 +2081,8 @@
             {
               "instanceId": "pi_8_9oooy",
               "furnitureId": "desk-standing",
-              "x": 1578.8604910714287,
-              "z": 1173.4419642857142,
+              "x": 1582.860491071,
+              "z": 1173.441964286,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -2091,8 +2091,8 @@
             {
               "instanceId": "pi_9_zatj5",
               "furnitureId": "chair-ergonomic",
-              "x": 1686.3604910714287,
-              "z": 1176.9419642857142,
+              "x": 1690.360491071,
+              "z": 1176.941964286,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -2101,8 +2101,8 @@
             {
               "instanceId": "pi_10_fi0t2",
               "furnitureId": "elec-personal-computer",
-              "x": 1617.8604910714287,
-              "z": 1190.9419642857142,
+              "x": 1621.860491071,
+              "z": 1190.941964286,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -2111,8 +2111,8 @@
             {
               "instanceId": "pi_11_s1pwu",
               "furnitureId": "decor-coffee-mug",
-              "x": 1653.8604910714287,
-              "z": 1162.4419642857142,
+              "x": 1657.860491071,
+              "z": 1162.441964286,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2121,8 +2121,8 @@
             {
               "instanceId": "pi_12_bxi54",
               "furnitureId": "desk-standing",
-              "x": 1506.8604910714287,
-              "z": 1333.4419642857142,
+              "x": 1502.860491071,
+              "z": 1333.441964286,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -2131,8 +2131,8 @@
             {
               "instanceId": "pi_13_xf2pp",
               "furnitureId": "chair-ergonomic",
-              "x": 1470.3604910714287,
-              "z": 1336.9419642857142,
+              "x": 1466.360491071,
+              "z": 1336.941964286,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -2141,8 +2141,8 @@
             {
               "instanceId": "pi_14_3f0lo",
               "furnitureId": "elec-personal-computer",
-              "x": 1545.8604910714287,
-              "z": 1350.9419642857142,
+              "x": 1541.860491071,
+              "z": 1350.941964286,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -2151,8 +2151,8 @@
             {
               "instanceId": "pi_15_yapzk",
               "furnitureId": "decor-coffee-mug",
-              "x": 1549.8604910714287,
-              "z": 1322.4419642857142,
+              "x": 1545.860491071,
+              "z": 1322.441964286,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2161,8 +2161,8 @@
             {
               "instanceId": "pi_16_j31dv",
               "furnitureId": "desk-standing",
-              "x": 1578.8604910714287,
-              "z": 1333.4419642857142,
+              "x": 1582.860491071,
+              "z": 1333.441964286,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -2171,8 +2171,8 @@
             {
               "instanceId": "pi_17_qpyti",
               "furnitureId": "chair-ergonomic",
-              "x": 1686.3604910714287,
-              "z": 1336.9419642857142,
+              "x": 1690.360491071,
+              "z": 1336.941964286,
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
@@ -2181,8 +2181,8 @@
             {
               "instanceId": "pi_18_n06ze",
               "furnitureId": "elec-personal-computer",
-              "x": 1617.8604910714287,
-              "z": 1350.9419642857142,
+              "x": 1621.860491071,
+              "z": 1350.941964286,
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
@@ -2191,8 +2191,8 @@
             {
               "instanceId": "pi_19_ycr27",
               "furnitureId": "decor-coffee-mug",
-              "x": 1653.8604910714287,
-              "z": 1322.4419642857142,
+              "x": 1657.860491071,
+              "z": 1322.441964286,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2201,8 +2201,8 @@
             {
               "instanceId": "pi_20_emydt",
               "furnitureId": "plant-potted-pack",
-              "x": 1574.8604910714287,
-              "z": 1250.4419642857142,
+              "x": 1570.860491071,
+              "z": 1250.441964286,
               "rotation": 0,
               "scaleW": 0.35,
               "scaleD": 0.35,
@@ -2211,8 +2211,8 @@
             {
               "instanceId": "pi_21_ho1y3",
               "furnitureId": "decor-books-pile",
-              "x": 1549.8604910714287,
-              "z": 1244.4419642857142,
+              "x": 1545.860491071,
+              "z": 1244.441964286,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2221,8 +2221,8 @@
             {
               "instanceId": "pi_22_dxk70",
               "furnitureId": "decor-tulip",
-              "x": 1647.8604910714287,
-              "z": 1244.4419642857142,
+              "x": 1651.860491071,
+              "z": 1244.441964286,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2231,8 +2231,8 @@
             {
               "instanceId": "pi_23_4t1xc",
               "furnitureId": "decor-books-set",
-              "x": 1605.8604910714287,
-              "z": 1248.9419642857142,
+              "x": 1609.860491071,
+              "z": 1248.941964286,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2241,8 +2241,8 @@
             {
               "instanceId": "pi_24_xtqpj",
               "furnitureId": "plant-potted-pack",
-              "x": 1574.8604910714287,
-              "z": 1410.4419642857142,
+              "x": 1570.860491071,
+              "z": 1410.441964286,
               "rotation": 0,
               "scaleW": 0.35,
               "scaleD": 0.35,
@@ -2251,8 +2251,8 @@
             {
               "instanceId": "pi_25_taxc0",
               "furnitureId": "decor-books-vintage",
-              "x": 1538.8604910714287,
-              "z": 1400.4419642857142,
+              "x": 1534.860491071,
+              "z": 1400.441964286,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2261,8 +2261,8 @@
             {
               "instanceId": "pi_26_o65uo",
               "furnitureId": "decor-tulip",
-              "x": 1647.8604910714287,
-              "z": 1404.4419642857142,
+              "x": 1651.860491071,
+              "z": 1404.441964286,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2271,8 +2271,8 @@
             {
               "instanceId": "pi_27_sqxq0",
               "furnitureId": "decor-books-pile",
-              "x": 1621.8604910714287,
-              "z": 1404.4419642857142,
+              "x": 1625.860491071,
+              "z": 1404.441964286,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2288,7 +2288,7 @@
             },
             {
               "furnitureId": "plant-monstera",
-              "x": 887.5,
+              "x": 872.5,
               "z": 387.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -2296,7 +2296,7 @@
             },
             {
               "furnitureId": "plant-monstera",
-              "x": 1247.5,
+              "x": 1262.5,
               "z": 387.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -2321,7 +2321,7 @@
             {
               "furnitureId": "coffee-marble-rect",
               "x": 640,
-              "z": 587.5,
+              "z": 657.5,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
@@ -2354,7 +2354,7 @@
             },
             {
               "furnitureId": "lamp-arc-gold",
-              "x": 827.5,
+              "x": 872.5,
               "z": 627.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -2362,7 +2362,7 @@
             },
             {
               "furnitureId": "elec-monitor",
-              "x": 163,
+              "x": 159,
               "z": 191,
               "rotation": 270,
               "scaleW": 1,
@@ -2372,7 +2372,7 @@
             },
             {
               "furnitureId": "elec-monitor",
-              "x": 235,
+              "x": 239,
               "z": 191,
               "rotation": 90,
               "scaleW": 1,
@@ -2382,7 +2382,7 @@
             },
             {
               "furnitureId": "elec-monitor",
-              "x": 163,
+              "x": 159,
               "z": 351,
               "rotation": 270,
               "scaleW": 1,
@@ -2392,7 +2392,7 @@
             },
             {
               "furnitureId": "elec-monitor",
-              "x": 235,
+              "x": 239,
               "z": 351,
               "rotation": 90,
               "scaleW": 1,
@@ -2402,7 +2402,7 @@
             },
             {
               "furnitureId": "lamp-desk-arm",
-              "x": 143,
+              "x": 139,
               "z": 511.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -2411,7 +2411,7 @@
             },
             {
               "furnitureId": "lamp-desk-arm",
-              "x": 215,
+              "x": 219,
               "z": 511.5,
               "scaleW": 1,
               "scaleD": 1,
@@ -2420,8 +2420,8 @@
             },
             {
               "furnitureId": "lamp-desk-arm",
-              "x": 143,
-              "z": 671.5,
+              "x": 139,
+              "z": 656.5,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -2429,8 +2429,8 @@
             },
             {
               "furnitureId": "decor-tissue-box",
-              "x": 284,
-              "z": 664,
+              "x": 288,
+              "z": 649,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -2438,8 +2438,8 @@
             },
             {
               "furnitureId": "decor-tissue-box",
-              "x": 212,
-              "z": 784,
+              "x": 208,
+              "z": 799,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -2447,8 +2447,8 @@
             },
             {
               "furnitureId": "decor-globe",
-              "x": 278.5,
-              "z": 772.5,
+              "x": 282.5,
+              "z": 787.5,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1,
@@ -2456,7 +2456,7 @@
             },
             {
               "furnitureId": "toy-teddy",
-              "x": 1896.94,
+              "x": 1892.94,
               "z": 854.02,
               "scaleW": 1,
               "scaleD": 1,
@@ -2474,7 +2474,7 @@
             },
             {
               "furnitureId": "elec-keyboard",
-              "x": 171.5,
+              "x": 167.5,
               "z": 217.5,
               "rotation": 270,
               "scaleW": 1,
@@ -2484,7 +2484,7 @@
             },
             {
               "furnitureId": "elec-keyboard",
-              "x": 243.5,
+              "x": 247.5,
               "z": 217.5,
               "rotation": 90,
               "scaleW": 1,
@@ -2494,7 +2494,7 @@
             },
             {
               "furnitureId": "elec-keyboard",
-              "x": 171.5,
+              "x": 167.5,
               "z": 377.5,
               "rotation": 270,
               "scaleW": 1,
@@ -2504,7 +2504,7 @@
             },
             {
               "furnitureId": "elec-keyboard",
-              "x": 243.5,
+              "x": 247.5,
               "z": 377.5,
               "rotation": 90,
               "scaleW": 1,
@@ -2551,7 +2551,7 @@
             {
               "furnitureId": "plant-rubber-tree",
               "x": 972,
-              "z": 1394,
+              "z": 1334,
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
@@ -2569,8 +2569,8 @@
             {
               "furnitureId": "sideboard-walnut",
               "x": 950,
-              "z": 1440,
-              "rotation": 0,
+              "z": 1457.5,
+              "rotation": 180,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
