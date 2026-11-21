@@ -15,6 +15,7 @@ const EMPTY_ROOM_STATE: RoomState = { materials: {}, placedItems: [] };
 import { formatPrice } from "@/lib/currency";
 import { materialSwatchBackground } from "@/lib/materialTextures";
 import { evaluateRoom } from "@/lib/clearance";
+import { getRoomDoors } from "@/lib/roomDoors";
 
 
 function ScoreBar({ score, color }: { score: number; color: string }) {
@@ -65,11 +66,27 @@ export default function RightPanel() {
   const roomDims = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDimensions?.[activeRoom]);
   const roomW = roomDims?.width ?? def.width;
   const roomD = roomDims?.depth ?? def.depth;
-  const hasDoor   = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomHasDoor?.[activeRoom] ?? true);
-  const doorWall  = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorWall?.[activeRoom] ?? "S");
-  const doorPosCm = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorPos?.[activeRoom] ?? 0);
-  const doorLenCm = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorLen?.[activeRoom] ?? 80);
-  const doorStyle = useDesignerStore((s) => s.floorPlans[s.activeFloor]?.roomDoorStyle?.[activeRoom]);
+  // 门开合校验用**真门**（getRoomDoors 唯一真源，取首扇），与 FloorPlan / 渲染视图
+  // 一致；不再读遗留单门字段 roomDoorWall/Pos/Len/Style —— 否则北门/西门房间
+  // 会按一个不存在的默认南门算开合弧。
+  const fpForDoors = useDesignerStore((s) => s.floorPlans[s.activeFloor]);
+  const doorHDefault = useDesignerStore((s) => s.exterior?.interiorDoorHeightCm ?? 240);
+  const curtainWall = useDesignerStore((s) =>
+    s.exterior?.facadeSystem === "curtain-wall" ||
+    (s.exterior?.facadeSystem == null && (s.exterior?.facadeGlass ?? false)));
+  const allDoors = useMemo(
+    () => getRoomDoors(fpForDoors, activeRoom, {
+      interiorDoorHeightCm: doorHDefault,
+      curtainWall,
+    }),
+    [fpForDoors, activeRoom, doorHDefault, curtainWall],
+  );
+  const d0 = allDoors[0];
+  const hasDoor = !!d0;
+  const doorWall = d0?.wall ?? "S";
+  const doorPosCm = d0?.pos ?? 0;
+  const doorLenCm = d0?.len ?? 80;
+  const doorStyle = d0?.style;
   const roomWindows = useDesignerStore((s) => s.floorPlans[s.activeFloor].roomWindows[activeRoom] ?? EMPTY_WINDOWS);
   const evaluation = useMemo(
     () => evaluateRoom(

@@ -2066,7 +2066,8 @@
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 65
             },
             {
               "instanceId": "pi_7_rd8q9",
@@ -2106,7 +2107,8 @@
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 65
             },
             {
               "instanceId": "pi_11_s1pwu",
@@ -2146,7 +2148,8 @@
               "rotation": 270,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 65
             },
             {
               "instanceId": "pi_15_yapzk",
@@ -2186,7 +2189,8 @@
               "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 65
             },
             {
               "instanceId": "pi_19_ycr27",
@@ -2206,7 +2210,8 @@
               "rotation": 0,
               "scaleW": 0.35,
               "scaleD": 0.35,
-              "scaleH": 0.55
+              "scaleH": 0.55,
+              "elevationY": 65
             },
             {
               "instanceId": "pi_21_ho1y3",
@@ -2226,7 +2231,8 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 65
             },
             {
               "instanceId": "pi_23_4t1xc",
@@ -2246,7 +2252,8 @@
               "rotation": 0,
               "scaleW": 0.35,
               "scaleD": 0.35,
-              "scaleH": 0.55
+              "scaleH": 0.55,
+              "elevationY": 65
             },
             {
               "instanceId": "pi_25_taxc0",
@@ -2256,7 +2263,8 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 65
             },
             {
               "instanceId": "pi_26_o65uo",
@@ -2266,7 +2274,8 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 65
             },
             {
               "instanceId": "pi_27_sqxq0",
@@ -2716,7 +2725,8 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 65
             },
             {
               "instanceId": "tpl_set-office_master_9_decor-tulip",
@@ -2726,7 +2736,8 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 65
             },
             {
               "instanceId": "tpl_set-office_master_10_decor-globe",
@@ -2736,7 +2747,8 @@
               "rotation": 0,
               "scaleW": 1,
               "scaleD": 1,
-              "scaleH": 1
+              "scaleH": 1,
+              "elevationY": 65
             },
             {
               "instanceId": "tpl_set-office_master_11_decor-trash-bin-3",
