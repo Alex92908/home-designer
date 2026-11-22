@@ -88,6 +88,41 @@ export default function HomePage() {
           <p className="mt-3 text-xs text-gray-400">无需注册 · 打开即用 · 手机电脑都支持</p>
         </section>
 
+        {/* 出短片 featured — 云横店一键出片（首页醒目位置） */}
+        <section className="max-w-5xl mx-auto px-6 pb-10">
+          <div
+            className="rounded-3xl overflow-hidden text-white shadow-xl"
+            style={{ background: "linear-gradient(135deg,#0B1220 0%,#1D2B4F 55%,#0B3D91 100%)" }}
+          >
+            <div className="px-6 py-10 sm:px-10 sm:py-12">
+              <div className="text-5xl mb-4">🎬</div>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-3">一键出短片</h2>
+              <p className="text-base sm:text-lg text-white/80 leading-relaxed max-w-2xl mb-6">
+                机位预设 → 录短片 + 首尾帧，一键导出喂 AI 视频模型，片场直接变短片。
+                50 种导演风格、分镜故事板，整套控制包一次拿走。
+              </p>
+              <div className="flex flex-wrap gap-2 mb-8">
+                <span className="text-xs px-2.5 py-1 rounded-full bg-white/10 text-white/85">50 种导演风格</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-white/10 text-white/85">分镜故事板</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-white/10 text-white/85">首尾帧控制包</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-white/10 text-white/85">喂 AI 视频 / ComfyUI</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+                <a
+                  href="/?shortfilm=1"
+                  className="inline-block px-8 py-4 rounded-xl text-base font-bold text-white shadow-lg"
+                  style={{ background: "#007AFF" }}
+                >
+                  🎬 一键出短片 →
+                </a>
+                <a href="/showcase" className="text-sm text-white/75 underline hover:text-white">
+                  先去样板间挑个片场 →
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Features */}
         <section className="max-w-5xl mx-auto px-6 py-10">
           <h2 className="text-2xl font-bold mb-6">核心功能</h2>

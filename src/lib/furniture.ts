@@ -1747,7 +1747,6 @@ export const FURNITURE: FurnitureItem[] = [
   { id:"proc-pine", name:"松树", brand:"程序化复刻", price:680, unit:"元/件", category:"outdoor_plant", roomTypes:["yard"], color:"#1E5022", width:120, depth:120, height:600, tags:[], description:"松树：树干+三层锥形树冠", icon:"🌲" },
   { id:"proc-pine-snow", name:"雪松", brand:"程序化复刻", price:680, unit:"元/件", category:"outdoor_plant", roomTypes:["yard"], color:"#E8F0F0", width:120, depth:120, height:600, tags:[], description:"雪松：覆雪松树（白色树冠）", icon:"🌲" },
   { id:"proc-palm", name:"棕榈树", brand:"程序化复刻", price:880, unit:"元/件", category:"outdoor_plant", roomTypes:["yard"], color:"#3D7A2A", width:200, depth:200, height:500, tags:[], description:"棕榈树：微倾树干+放射叶丛", icon:"🌴" },
-  { id:"proc-bamboo-clump", name:"竹丛", brand:"程序化复刻", price:320, unit:"元/件", category:"outdoor_plant", roomTypes:["yard"], color:"#3A8A3A", width:120, depth:120, height:450, tags:[], description:"竹丛：五竿细竹+叶簇", icon:"🎋" },
   { id:"proc-rock", name:"岩石", brand:"程序化复刻", price:200, unit:"元/件", category:"outdoor_hardscape", roomTypes:["yard"], color:"#8A8A80", width:150, depth:150, height:100, tags:[], description:"岩石：低多面体巨石", icon:"🪨" },
   { id:"proc-rock-big", name:"巨石", brand:"程序化复刻", price:600, unit:"元/件", category:"outdoor_hardscape", roomTypes:["yard"], color:"#7A7A72", width:300, depth:300, height:200, tags:[], description:"巨石：大型低多面体岩石", icon:"🪨" },
   { id:"proc-bush", name:"灌木丛", brand:"程序化复刻", price:120, unit:"元/件", category:"outdoor_plant", roomTypes:["yard"], color:"#3A6A2A", width:100, depth:100, height:80, tags:[], description:"灌木丛：三球交叠叶丛", icon:"🌿" },

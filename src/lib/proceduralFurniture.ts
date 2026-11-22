@@ -2563,21 +2563,6 @@ function buildPalm(g: THREE.Group, w: number, d: number, h: number, c: string): 
   }
 }
 
-/** 竹丛：五竿细竹（微倾）+ 竿顶叶簇。 */
-function buildBambooClump(g: THREE.Group, w: number, d: number, h: number, c: string): void {
-  const culm = std("#4A8A3A", 0.7);
-  const leaf = std(c || "#3A8A3A", 0.9);
-  const spots: Array<[number, number, number]> = [
-    [-0.28, -0.22, 0.95], [0.24, -0.28, 1.0], [0.0, 0.05, 0.88],
-    [-0.22, 0.26, 0.92], [0.28, 0.24, 0.98],
-  ];
-  for (const [fx, fz, fh] of spots) {
-    const m = cyl(g, 0.03, 0.035, h * fh, fx * w, 0, fz * d, culm, 10);
-    m.rotation.z = fx * 0.08;
-    sphere(g, 0.12, fx * w, h * fh * 0.96, fz * d, leaf);
-  }
-}
-
 /** 岩石：低多面体（十二面体压扁），颜色 = 目录色。 */
 function buildRock(g: THREE.Group, w: number, d: number, h: number, c: string): void {
   const mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), std(c || "#8A8A80", 0.95));
@@ -2987,7 +2972,6 @@ const PROCEDURAL_BUILDERS: Record<string, Builder> = {
   "proc-pine": buildPine,
   "proc-pine-snow": buildPine,
   "proc-palm": buildPalm,
-  "proc-bamboo-clump": buildBambooClump,
   "proc-rock": buildRock,
   "proc-rock-big": buildRock,
   "proc-bush": buildBush,

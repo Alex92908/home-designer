@@ -229,6 +229,20 @@ export default function ShowcaseViewer({
     window.location.href = "/";
   };
 
+  // 「用这个片场出短片」：同 openInDesigner 把模板据为己有，但跳到设计器时
+  // 带 ?shortfilm=1——设计器启动后切到外观 3D 并打开出短片面板。会替换
+  // 用户当前设计，故先确认。出短片面板在 HouseCanvas（外观 3D）里，所以
+  // 视图固定切 exterior，不走移动端轻量 2D。
+  const openShortFilm = () => {
+    const msg = en
+      ? "Make a short film with this set? It will replace your current design and open the short-film panel."
+      : "用这个片场出短片？这会替换你当前的设计，并打开出短片面板。";
+    if (!window.confirm(msg)) return;
+    backup.current = null; // 不还原 → 模板成为用户的新工作设计
+    useDesignerStore.setState({ viewMode: "exterior" as never, activeFloor: 0 });
+    window.location.href = "/?shortfilm=1";
+  };
+
   return (
     // 用 100dvh 而非 h-screen：dvh 是「可见视口」，随 Safari 上下工具栏
     // 收缩，底部控件不会被浏览器工具栏挡住（用户：挡住东西了）。
@@ -271,7 +285,8 @@ export default function ShowcaseViewer({
         //   CinematicDirector 与 HouseCanvas);日照时间条在移动端不显示,无需留位。
         // 桌面(sm:pb-[76px]):日照时间条仍在 bottom-4、约 40px 高,必须留出,
         //   否则主按钮直接压在 10:30 / SHADOW 上(用户实拍)。
-        className="absolute inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 px-3 pointer-events-none
+        // 底部现为两个主按钮（出短片 + 打开此方案）：移动端上下叠放、桌面并排。
+        className="absolute inset-x-0 bottom-0 z-50 flex flex-col sm:flex-row items-center sm:justify-center gap-2 px-3 pointer-events-none
                    pb-[calc(env(safe-area-inset-bottom,0px)+12px)] sm:pb-[76px]"
       >
         {/* 逐房间家具开关已弃用：移动端外观改为「逐间渐进自动加载」全屋家具
@@ -304,9 +319,16 @@ export default function ShowcaseViewer({
           </div>
         )}
         <button
-          onClick={openInDesigner}
+          onClick={openShortFilm}
           className="pointer-events-auto w-full sm:w-auto px-6 py-3.5 sm:py-3 rounded-2xl sm:rounded-xl text-sm font-semibold text-white shadow-xl active:scale-[0.99] transition-transform"
           style={{ background: "#007AFF" }}
+        >
+          {en ? "🎬 Make a short film →" : "🎬 用这个片场出短片 →"}
+        </button>
+        <button
+          onClick={openInDesigner}
+          className="pointer-events-auto w-full sm:w-auto px-6 py-3.5 sm:py-3 rounded-2xl sm:rounded-xl text-sm font-semibold text-white shadow-xl active:scale-[0.99] transition-transform"
+          style={{ background: "rgba(20,22,32,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}
         >
           {en ? "Open in the editor →" : "在设计器中打开此方案 →"}
         </button>

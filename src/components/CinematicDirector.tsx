@@ -2151,8 +2151,9 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
   return (
     <>
     {show916 && <Frame916Overlay />}
-    {/* 移动端抬高一层:样板间底部是整条主按钮「在设计器中打开此方案」,贴 bottom-5 会重叠。 */}
-    <div className="absolute bottom-20 sm:bottom-5 left-4 z-50 flex flex-col items-start gap-2">
+    {/* 移动端抬高:样板间底部现为两条主按钮「出短片 + 打开此方案」上下叠放,
+        贴 bottom-5 / bottom-20 都会重叠，抬到 bottom-40 才让得开。 */}
+    <div className="absolute bottom-40 sm:bottom-5 left-4 z-50 flex flex-col items-start gap-2">
       {menuOpen && (
         <div
           className="flex flex-col gap-1 p-2 rounded-xl shadow-xl text-xs text-white w-[256px] max-h-[62vh] overflow-y-auto"

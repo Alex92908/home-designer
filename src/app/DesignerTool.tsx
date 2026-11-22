@@ -31,6 +31,7 @@ import YardPlan, { YardPlanLibrary, YardPlanInspector } from "@/components/YardP
 import AiRenderModal from "@/components/AiRenderModal";
 import ImageImportModal from "@/components/ImageImportModal";
 import CommandPalette from "@/components/CommandPalette";
+import { useCineStore } from "@/components/CinematicDirector";
 import { useDesignerStore } from "@/lib/store";
 import { useT, useLocale, useLocaleStore } from "@/lib/i18n";
 import { decodeShare } from "@/lib/share";
@@ -403,6 +404,21 @@ export default function DesignerTool() {
       url.searchParams.delete("loadView");
       window.history.replaceState({}, "", url.toString());
     }).catch(() => { /* ignore bad params */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Open the short-film panel from ?shortfilm=1 (homepage featured card /
+  // showcase viewer "出短片" entry). Runs once after hydration. The
+  // CinematicPanel lives inside HouseCanvas, which only mounts in the
+  // exterior view — so switch to it first, then open the panel.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get("shortfilm")) return;
+    useDesignerStore.getState().setViewMode("exterior");
+    useCineStore.getState().setMenuOpen(true);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("shortfilm");
+    window.history.replaceState({}, "", url.toString());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
