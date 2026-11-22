@@ -471,6 +471,13 @@ export function evaluateRoom(
   // 窗帘贴墙悬空——都不构成通行/开门障碍，既不参与别人的预留空间冲突，
   // 也不算阻挡门开合。不排除会导致"茶几与地毯冲突""地毯挡门"式误报。
   const FLAT_DECOR = new Set<string>(["rug", "artwork", "curtain"]);
+  // 地面铺面（干草/草/沙/雪/石，5cm 平铺）与地毯同理：门扇在上方开合，
+  // 平铺地面不构成开门障碍。只豁免门区检查（窗区本就够不着）；按 id 豁免
+  // 而不用 outdoor_hardscape 类别——该类别还含围栏/凉亭/烧烤台等立体件。
+  const FLAT_GROUND_IDS = new Set<string>([
+    "proc-ground-grass", "proc-ground-sand", "proc-ground-snow",
+    "proc-ground-stone", "proc-ground-dry",
+  ]);
 
   const evaluated: EvaluatedItem[] = items.map(it => {
     const violations: Violation[] = [];
@@ -479,7 +486,7 @@ export function evaluateRoom(
     // 架高件（elevationY ≥40：挂墙柜、以及搁在沙发/台面上的毯子摆件——
     // 它们坐在别的家具上，不独立构成开门障碍）不参与门区检查。
     const hangsHigh = (it.placed.elevationY ?? 0) >= 40 || !!it.placed.mountCeiling;
-    if (swing && !FLAT_DECOR.has(it.f.category) && !hangsHigh && overlaps(swing.bbox, it.bbox, 1)) {
+    if (swing && !FLAT_DECOR.has(it.f.category) && !FLAT_GROUND_IDS.has(it.f.id) && !hangsHigh && overlaps(swing.bbox, it.bbox, 1)) {
       violations.push({
         instanceId: it.placed.instanceId,
         furnitureName: it.f.name,

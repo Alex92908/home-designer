@@ -2374,6 +2374,73 @@ function buildShikumenGate(g: THREE.Group, w: number, d: number, h: number, c: s
   }
 }
 
+/** 隔扇屏门（proc-screen-door）：四扇推拉屏门——红漆木框 + 上半镂空
+ *  花格（方格）+ 糊纸 + 下半实木裙板。GLB 优先，本 builder 是加载
+ *  失败时的程序化回退（与 3DAssets 免费模型同尺寸 4.4×3.08m）。 */
+function buildScreenDoor(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  void w; void d; void h;
+  const red = std(c || "#A03028", 0.8);
+  const paper = std("#F2E8C8", 0.95);
+  const dark = std("#5A2A18", 0.85);
+  const W = 4.4, H = 3.08;
+  // 外框：双边柱 + 上楣 + 下槛
+  box(g, 0.08, H, 0.3, -W / 2 + 0.04, 0, 0, red);
+  box(g, 0.08, H, 0.3, W / 2 - 0.04, 0, 0, red);
+  box(g, W, 0.1, 0.3, 0, H - 0.1, 0, red);
+  box(g, W, 0.15, 0.3, 0, 0, 0, red);
+  // 四扇：每扇 1.06 宽 × 2.83 高（0.15–2.98）
+  const leafW = (W - 0.16) / 4;
+  for (let i = 0; i < 4; i++) {
+    const cx = -W / 2 + 0.08 + leafW * (i + 0.5);
+    box(g, 0.06, 2.83, 0.3, cx - leafW / 2 + 0.03, 0.15, 0, red); // 左梃
+    box(g, 0.06, 2.83, 0.3, cx + leafW / 2 - 0.03, 0.15, 0, red); // 右梃
+    box(g, leafW, 0.08, 0.3, cx, 2.9, 0, red); // 上冒
+    box(g, leafW, 0.08, 0.3, cx, 1.05, 0, red); // 中横（格心/裙板分界）
+    box(g, leafW, 0.12, 0.3, cx, 0.15, 0, red); // 下冒
+    box(g, leafW - 0.12, 0.78, 0.06, cx, 0.27, 0, dark); // 实木下裙板
+    box(g, leafW - 0.12, 1.69, 0.01, cx, 1.13, -0.08, paper); // 糊纸（格心背后）
+    buildLatticePanel(g, cx - leafW / 2 + 0.06, 1.13, cx + leafW / 2 - 0.06, 2.9, 0.06, red, "square_grid", 0.04, 0);
+  }
+}
+
+/** 宫门楼（proc-gate-tower）：石基券洞 + 围栏露台 + 红漆重檐门楼 +
+ *  黄琉璃瓦顶 + 钟鼓。GLB 优先，本 builder 是加载失败时的程序化
+ *  回退（与 3DAssets 免费模型同尺寸 11.2×7.2×9.98m，简化版）。 */
+function buildGateTower(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  void w; void d; void h;
+  const stone = std("#9A9488", 0.95);
+  const red = std("#A03028", 0.8);
+  const tile = std("#D8A020", 0.7);
+  const dark = std("#1A1A1A", 0.6);
+  const bronze = std("#8A6A2A", 0.4, 0.9);
+  // 石基：左右两墩 + 顶板，留 2.0m 宽券洞通道（前后通）
+  box(g, 4.6, 3.0, 7.2, -3.3, 0, 0, stone);
+  box(g, 4.6, 3.0, 7.2, 3.3, 0, 0, stone);
+  box(g, 11.2, 0.6, 7.2, 0, 3.0, 0, stone);
+  // 露台：薄板 + 前后围栏（立柱 + 横栏）
+  box(g, 11.2, 0.15, 7.2, 0, 3.6, 0, stone);
+  for (const sz of [-1, 1]) {
+    for (let x = -5.2; x <= 5.21; x += 1.04) box(g, 0.06, 0.5, 0.06, x, 3.75, sz * 3.5, stone);
+    box(g, 11.2, 0.06, 0.06, 0, 4.19, sz * 3.5, stone);
+  }
+  // 门楼：红漆楼身 8.0×3.2×5.0， front 面开三窗一门（暗色嵌板）
+  box(g, 8.0, 3.2, 5.0, 0, 3.75, 0, red);
+  for (const wx of [-2.4, 0, 2.4]) box(g, 1.2, 1.6, 0.05, wx, 4.9, 2.52, dark);
+  box(g, 1.4, 2.2, 0.05, 0, 3.75, 2.52, dark);
+  // 黄琉璃瓦顶：四棱锥（9.0×6.0 足迹，2.5 高）+ 正脊
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(4.5, 2.5, 4), tile);
+  roof.scale.set(1, 1, 6 / 9);
+  roof.rotation.y = Math.PI / 4;
+  roof.position.set(0, 6.95 + 1.25, 0);
+  add(g, roof);
+  box(g, 9.0, 0.12, 0.5, 0, 6.95, 0, tile);
+  // 钟鼓：露台两侧各一（钟左鼓右）
+  const bell = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.6, 12), bronze);
+  bell.position.set(-4.7, 4.05, 0);
+  add(g, bell);
+  cyl(g, 0.4, 0.4, 0.6, 4.7, 3.75, 0, red, 16);
+}
+
 /** 石井：石环 + 井口 + 双柱小顶。 */
 function buildStoneWell(g: THREE.Group, w: number, d: number, h: number, c: string): void {
   const stone = std(c || "#9A9488", 0.95);
@@ -2984,6 +3051,10 @@ const PROCEDURAL_BUILDERS: Record<string, Builder> = {
   "proc-suiqiang-gate": buildSuiqiangGate,
   "proc-fan-window": buildFanWindow,
   "proc-shikumen-gate": buildShikumenGate,
+  // ── 门窗 Phase C：免费 GLB（3DAssets / Hitree）+ 程序化回退 ──
+  "proc-screen-door": buildScreenDoor,
+  "proc-gate-tower": buildGateTower,
+  "proc-lattice-window-4leaf": buildLatticeWindow,
   "proc-stone-well": buildStoneWell,
   "proc-burnt-beam": buildBurntBeam,
   "proc-dead-tree": buildDeadTree,

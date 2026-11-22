@@ -29,6 +29,9 @@ const HOT_URLS = [
   "/models/_arch_door/door_with_frame/door_with_frame.glb",
   "/models/_garden_gates/gourd-gate.glb",
   "/models/_garden_gates/octagon-gate.glb",
+  "/models/_garden_gates/moon-gate.glb",
+  "/models/_garden_gates/screen-door.glb",
+  "/models/_garden_gates/gate-tower.glb",
 ];
 
 // All client-only side effects. Gate on window so SSR / hydration pass
