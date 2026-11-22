@@ -2763,9 +2763,9 @@
             {
               "instanceId": "tpl_set-office_master_12_decor-whiteboard",
               "furnitureId": "decor-whiteboard",
-              "x": 143,
-              "z": 214,
-              "rotation": 0,
+              "x": -44,
+              "z": 77,
+              "rotation": 90,
               "scaleW": 1,
               "scaleD": 1,
               "scaleH": 1
