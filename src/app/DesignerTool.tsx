@@ -255,8 +255,24 @@ export default function DesignerTool() {
     // We use direct DOM injection (not React state) because zustand's
     // useSyncExternalStore triggers synchronous re-renders that race with
     // useState updates. Direct DOM manipulation is immune to this.
+    // ⚠️ 只在「没有任何已存设计」时灌样板：已存设计可能来自别的页面——
+    // 比如样板间查看器刚把某个片场灌进 store 并持久化了，而本页是该
+    // 浏览器档案里第一次挂载 DesignerTool（_VISITED_KEY 还没写）。不
+    // 检查就直接灌样板，会把用户刚选的片场冲掉（showcase → designer
+    // 交接丢片场的根因：localStorage 在设计器启动 ~1s 内被样板覆盖）。
+    const hasPersistedDesign = (() => {
+      try {
+        const raw = localStorage.getItem("home-designer-v2");
+        if (!raw) return false;
+        const parsed = JSON.parse(raw) as { state?: { floorPlans?: unknown[] }; floorPlans?: unknown[] };
+        const fps = parsed?.state?.floorPlans ?? parsed?.floorPlans;
+        return Array.isArray(fps) && fps.length > 0;
+      } catch {
+        return false;
+      }
+    })();
     const isFirstVisit = !localStorage.getItem(_VISITED_KEY);
-    if (isFirstVisit && !_sampleLoadedThisSession) {
+    if (isFirstVisit && !_sampleLoadedThisSession && !hasPersistedDesign) {
       _sampleLoadedThisSession = true;
       localStorage.setItem(_VISITED_KEY, "1");
       useDesignerStore.setState(s => ({
@@ -404,6 +420,23 @@ export default function DesignerTool() {
       url.searchParams.delete("loadView");
       window.history.replaceState({}, "", url.toString());
     }).catch(() => { /* ignore bad params */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Apply a template id passed in the URL (?template=set-cafe) — the
+  // showcase "用这个片场出短片" / "在设计器中打开此方案" handoff. Runs
+  // once after hydration, so it wins over whatever rehydration produced
+  // (including a first-visit sample load). Unknown ids are ignored by
+  // applyProjectTemplate. Consumed immediately so a later refresh doesn't
+  // wipe edits the user made to the set afterwards.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const templateId = params.get("template");
+    if (!templateId) return;
+    useDesignerStore.getState().applyProjectTemplate(templateId);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("template");
+    window.history.replaceState({}, "", url.toString());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

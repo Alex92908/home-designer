@@ -217,7 +217,8 @@ export default function ShowcaseViewer({
 
   // 「在设计器中打开此方案」：把当前查看的模板据为己有 —— 清掉备份（卸载时
   // 不再还原），让模板数据留在 store + localStorage，跳到设计器编辑。会替换
-  // 用户当前设计，故先确认。
+  // 用户当前设计，故先确认。片场类把模板 id 写进 URL（?template=…）——
+  // 设计器启动后按 id 再灌一次，交接不依赖 localStorage 在硬导航中存活。
   const openInDesigner = () => {
     const msg = en
       ? "Open this design in the editor? It will replace your current design."
@@ -226,13 +227,16 @@ export default function ShowcaseViewer({
     backup.current = null; // 不还原 → 模板成为用户的新工作设计
     // 移动端进设计器落地轻量 2D（page.tsx 也会兜底降级），桌面进 3D。
     useDesignerStore.setState({ viewMode: (isMobile ? "2d" : "3d") as never, activeFloor: 0 });
-    window.location.href = "/";
+    window.location.href = t?.projectTemplateId
+      ? `/?template=${encodeURIComponent(t.projectTemplateId)}`
+      : "/";
   };
 
   // 「用这个片场出短片」：同 openInDesigner 把模板据为己有，但跳到设计器时
   // 带 ?shortfilm=1——设计器启动后切到外观 3D 并打开出短片面板。会替换
   // 用户当前设计，故先确认。出短片面板在 HouseCanvas（外观 3D）里，所以
-  // 视图固定切 exterior，不走移动端轻量 2D。
+  // 视图固定切 exterior，不走移动端轻量 2D。片场类同样把模板 id 写进 URL
+  //（?template=…），见 openInDesigner 的注释。
   const openShortFilm = () => {
     const msg = en
       ? "Make a short film with this set? It will replace your current design and open the short-film panel."
@@ -240,7 +244,9 @@ export default function ShowcaseViewer({
     if (!window.confirm(msg)) return;
     backup.current = null; // 不还原 → 模板成为用户的新工作设计
     useDesignerStore.setState({ viewMode: "exterior" as never, activeFloor: 0 });
-    window.location.href = "/?shortfilm=1";
+    window.location.href = t?.projectTemplateId
+      ? `/?shortfilm=1&template=${encodeURIComponent(t.projectTemplateId)}`
+      : "/?shortfilm=1";
   };
 
   return (
