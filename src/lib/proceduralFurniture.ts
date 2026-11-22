@@ -2563,6 +2563,53 @@ function buildPalm(g: THREE.Group, w: number, d: number, h: number, c: string): 
   }
 }
 
+/** 竹丛（程序化回退）：七竿节竹——分节竹竿+节环+顶部叶簇。GLB 失败时用；主模型是 3DAssets 免费竹丛 GLB。 */
+function buildBamboo(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  const culm = std("#8FAE6B", 0.85);
+  const node = std("#C5D9A0", 0.85);
+  const leaf = std(c || "#4E7A3A", 0.9);
+  const s = Math.min(w, d) / 1.7;
+  // 七竿：[x, z, 高占比, 倾斜量, 倾斜方向]（米/弧度，固定布局，渲染稳定）
+  const culms: Array<[number, number, number, number, number]> = [
+    [0, 0, 1.0, 0.10, 0.6],
+    [0.32, 0.18, 0.91, 0.14, 2.2],
+    [-0.30, 0.22, 0.93, 0.12, 4.0],
+    [0.18, -0.30, 0.81, 0.16, 5.2],
+    [-0.22, -0.28, 0.86, 0.11, 1.2],
+    [0.45, -0.05, 0.74, 0.18, 3.4],
+    [-0.42, 0.02, 0.77, 0.15, 5.8],
+  ];
+  const segN = 4;
+  for (const [bx, bz, hf, lean, dir] of culms) {
+    const H = h * hf;
+    const segH = H / segN;
+    const dx = Math.cos(dir) * lean;
+    const dz = Math.sin(dir) * lean;
+    for (let i = 0; i < segN; i++) {
+      const t0 = i / segN;
+      const t1 = (i + 1) / segN;
+      const r0 = 0.05 - (0.05 - 0.028) * t0;
+      const r1 = 0.05 - (0.05 - 0.028) * t1;
+      // 竹竿分节：半径向上渐细，节间微向外倾
+      cyl(g, r1, r0, segH, (bx + dx * (i + 0.5) / segN) * s, i * segH, (bz + dz * (i + 0.5) / segN) * s, culm, 10);
+      // 节环：节处略粗一圈（竹节）
+      if (i < segN - 1) {
+        cyl(g, r1 * 1.3, r1 * 1.3, 0.025, (bx + dx * (i + 1) / segN) * s, (i + 1) * segH - 0.012, (bz + dz * (i + 1) / segN) * s, node, 10);
+      }
+    }
+    // 顶部叶簇：五片窄长竹叶，向外下垂
+    const topX = (bx + dx) * s;
+    const topZ = (bz + dz) * s;
+    for (let k = 0; k < 5; k++) {
+      const yaw = (k * Math.PI * 2) / 5 + dir;
+      const leafMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.012, 0.06), leaf);
+      leafMesh.position.set(topX + Math.cos(yaw) * 0.2, H - 0.08, topZ + Math.sin(yaw) * 0.2);
+      leafMesh.rotation.set(0, -yaw, -0.55);
+      add(g, leafMesh);
+    }
+  }
+}
+
 /** 岩石：低多面体（十二面体压扁），颜色 = 目录色。 */
 function buildRock(g: THREE.Group, w: number, d: number, h: number, c: string): void {
   const mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), std(c || "#8A8A80", 0.95));
@@ -2971,6 +3018,7 @@ const PROCEDURAL_BUILDERS: Record<string, Builder> = {
   "proc-tree-peach": buildTree,
   "proc-pine": buildPine,
   "proc-pine-snow": buildPine,
+  "bamboo": buildBamboo,
   "proc-palm": buildPalm,
   "proc-rock": buildRock,
   "proc-rock-big": buildRock,
