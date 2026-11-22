@@ -1803,6 +1803,17 @@ export const FURNITURE: FurnitureItem[] = [
   // 尺寸单位 cm；depth 70 含半掩门扇摆幅（见 proceduralFurniture.ts）。
   { id:"proc-door-frame-wood", name:"木门框（独立）", brand:"程序化复刻", price:1200, unit:"元/件", category:"outdoor_structure", roomTypes:["living","hallway","yard"], color:"#5A3A22", width:130, depth:70, height:240, tags:[], description:"独立木门框：双柱+过梁+门槛+半掩木门扇（无墙场景的门）", icon:"🚪" },
   { id:"proc-moon-gate", name:"月洞门", brand:"程序化复刻", price:5800, unit:"元/件", category:"outdoor_structure", roomTypes:["living","hallway","yard"], color:"#EDE6D6", width:320, depth:50, height:320, tags:[], description:"月洞门：白墙段+圆形洞口+压顶（庭院/桃园的门）", icon:"🌕" },
+  // 门窗 Phase D：垂花门（明清四合院内外院之间的门，双柱+斗拱+垂莲柱+小青瓦顶+实木对开门）。
+  // 只建 builder + 目录，暂不放入任何场景——点位由后一轮布局评估定。
+  { id:"proc-chuihua-gate", name:"垂花门", brand:"程序化复刻", price:7800, unit:"元/件", category:"outdoor_structure", roomTypes:["living","hallway","yard"], color:"#A03028", width:360, depth:120, height:400, tags:[], description:"垂花门：双柱+斗拱+垂莲柱+小青瓦顶+实木对开门（一扇半掩），明清四合院内外院之间的门（未放入任何场景）", icon:"🚪" },
+  // 门窗 Phase D（扩围）：葫芦/八角洞门（Blender GLB 优先，程序化回退；未放入任何场景）。
+  { id:"proc-gourd-gate", name:"葫芦洞门", brand:"程序化复刻", price:6800, unit:"元/件", category:"outdoor_structure", roomTypes:["living","hallway","yard"], color:"#EDE6D6", width:320, depth:50, height:320, tags:[], description:"葫芦洞门：白墙+葫芦形通洞+石 rim+门槛+压顶（苏州园林，未放入任何场景）", icon:"🏺", model3d:{ url:"/models/_garden_gates/gourd-gate.glb", fit:"contain" } },
+  { id:"proc-octagon-gate", name:"八角洞门", brand:"程序化复刻", price:6200, unit:"元/件", category:"outdoor_structure", roomTypes:["living","hallway","yard"], color:"#EDE6D6", width:320, depth:50, height:320, tags:[], description:"八角洞门：白墙+八角通洞+石 rim+门槛+压顶（苏州园林，未放入任何场景）", icon:"🔶", model3d:{ url:"/models/_garden_gates/octagon-gate.glb", fit:"contain" } },
+  // 随墙门（纯程序化；未放入任何场景）——园林图里没照片的一件，按文字描述 + 月洞门同款做法补上。
+  { id:"proc-suiqiang-gate", name:"随墙门", brand:"程序化复刻", price:2800, unit:"元/件", category:"outdoor_structure", roomTypes:["living","hallway","yard"], color:"#EDE6D6", width:240, depth:50, height:260, tags:[], description:"随墙门：白墙+圆拱通洞+石 rim+门槛，无檐无柱，苏州园林最素的边门/侧门（未放入任何场景）", icon:"🚪" },
+  // 扇窗 / 石库门（纯程序化；未放入任何场景）。
+  { id:"proc-fan-window", name:"扇窗", brand:"程序化复刻", price:1500, unit:"元/件", category:"decor", roomTypes:["living","hallway","yard"], color:"#6B4A2F", width:160, depth:12, height:130, tags:[], description:"扇窗：半圆扇形窗，扇框+放射扇骨+弧棂，通透无玻璃（未放入任何场景）", icon:"🪭" },
+  { id:"proc-shikumen-gate", name:"石库门", brand:"程序化复刻", price:9800, unit:"元/件", category:"outdoor_structure", roomTypes:["living","hallway","yard"], color:"#8A8A80", width:320, depth:110, height:360, tags:[], description:"石库门：花岗岩石墙+圆拱洞口+红砖拱环+黑漆对开门（一扇半掩）+铜环门钹（未放入任何场景）", icon:"🧱" },
   { id:"proc-lattice-window", name:"花格窗（独立）", brand:"程序化复刻", price:900, unit:"元/件", category:"decor", roomTypes:["living","hallway","yard"], color:"#6B4A2F", width:160, depth:12, height:130, tags:[], description:"独立花格窗：双腿支架+镂空木格窗扇，通透无玻璃（无墙场景的窗）", icon:"🪟" },
   { id:"proc-stone-well", name:"石井", brand:"程序化复刻", price:1500, unit:"元/件", category:"decor", roomTypes:["living","yard"], color:"#9A9488", width:120, depth:120, height:180, tags:[], description:"石井：石环+井口+双柱小顶", icon:"🪨" },
   { id:"proc-burnt-beam", name:"焦黑断梁", brand:"程序化复刻", price:200, unit:"元/件", category:"decor", roomTypes:["living","dining","hallway","yard"], color:"#1A1512", width:300, depth:40, height:40, tags:[], description:"焦黑断梁：横倒焦木主梁+碎木（火烧后）", icon:"🪵" },

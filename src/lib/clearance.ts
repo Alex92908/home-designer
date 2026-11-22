@@ -462,7 +462,7 @@ export function evaluateRoom(
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  const NO_SWING_DOORS = new Set(["roller_shutter", "sliding_barn", "glass_slide"]);
+  const NO_SWING_DOORS = new Set(["roller_shutter", "sliding_barn", "glass_slide", "shoji_slide"]);
   const swing = door && door.hasDoor && !NO_SWING_DOORS.has(door.style ?? "")
     ? doorSwingZone(door.wall, door.posCm, door.lenCm, roomW, roomD)
     : null;

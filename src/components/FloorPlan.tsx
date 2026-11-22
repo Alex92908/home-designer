@@ -2382,6 +2382,9 @@ export default function FloorPlan() {
                     { key: "glass_swing",   label: t.fpDoorStyleGlassSwing },
                     { key: "glass_slide",   label: t.fpDoorStyleGlassSlide },
                     { key: "roller_shutter", label: t.fpDoorStyleRoller ?? "卷帘门" },
+                    { key: "lattice_door",  label: t.fpDoorStyleLattice ?? "隔扇门" },
+                    { key: "shoji_slide",   label: t.fpDoorStyleShoji ?? "障子推拉门" },
+                    { key: "plank_studded", label: t.fpDoorStylePlank ?? "镶钉板门" },
                   ] as const).map(s => {
                     const active = dStyle === s.key;
                     return (
@@ -2482,6 +2485,8 @@ export default function FloorPlan() {
                   { key: "louvered", label: t.fpWindowStyleLouvered },
                   { key: "security", label: t.fpWindowStyleSecurity },
                   { key: "wooden",   label: t.fpWindowStyleWooden },
+                  { key: "leaky_lattice", label: t.fpWindowStyleLeaky ?? "漏窗" },
+                  { key: "sill_lattice",  label: t.fpWindowStyleSill ?? "槛窗" },
                 ] as const).map(s => {
                   const active = (selectedWin.style ?? "sliding") === s.key;
                   return (

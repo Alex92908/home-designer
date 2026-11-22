@@ -1735,6 +1735,645 @@ function buildLatticeWindow(g: THREE.Group, w: number, d: number, h: number, c: 
   box(g, 0.05, h - 0.43, 0.1, 0.27, 0.43, 0, wood);
 }
 
+// ─── 门窗 Phase D：镂空花格（真实几何）+ 垂花门 + 墙洞框 ──────────────
+// 背景：REPORT.md §5 Phase D（10–13）。外购模型覆盖不了的缺口由程序化补：
+//   · 垂花门——全网无 web-ready 来源（Cults #13 只是 STL 打印微缩件），
+//     按 part2-references.md §1D（Chuihuamen.JPG）+ #13 零件分解重建；
+//   · 具名漏窗纹样——冰裂/万字/海棠等是园林文化的本体，外购件未必对得上
+//     明清/唐宋各朝的纹样，程序化花格是保底；
+//   · 墙洞框——外购开间多为 4m 固定模块，落进真实房洞仍需程序化收边。
+// 六规则（REPORT.md §5 末）：(1) 洞口先行——花格是洞里的条，不是贴墙的画；
+// (2) 隔扇/对开门必有一扇半掩；(3) 同一园子漏窗不重样——10 种纹样按墙轮换；
+// (4) 花格=真洞：所有条都是实几何、条间是空的（网师园检验：花格须能在
+// 地面投出光影——本文件 add() 给每条都开 castShadow/receiveShadow）；
+// (5) 框有进深、槛有门槛石；(6) 时代门：月洞/漏窗只进苏州式园林，唐=直棂+
+// 宏大尺度，秦汉=实木板门无格，石库门/民国=石门框+法式窗，西式=法式/拱窗。
+// 注意：Phase A+B 工人在 RoomDoor3D / StyledWindow 里也在平行实现花格纹样，
+// 两套实现目前重复——日后合并且以本文件的 buildLatticePanel 为准（见 BUILD-D.md）。
+// 本节只加 builder + 导出 helper，不动任何已有 builder，不放任何场景。
+
+/** 确定性伪随机（种子固定 → 同一纹样每次渲染一致，不用 Math.random）。 */
+function seededRand(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+/** 斜撑条：中心 (cx,cy)、长 len、截面 th×depth，绕 Z 转 rotZ。 */
+function strut(
+  g: THREE.Group, len: number, th: number, depth: number,
+  cx: number, cy: number, cz: number, rotZ: number, m: Mat,
+): THREE.Mesh {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, th, depth), m);
+  mesh.position.set(cx, cy, cz);
+  mesh.rotation.z = rotZ;
+  return add(g, mesh);
+}
+
+/** 两点之间的条（冰裂纹/海棠瓣用）：端点 (x0,y0)→(x1,y1)。 */
+function barBetween(
+  g: THREE.Group, x0: number, y0: number, x1: number, y1: number,
+  th: number, depth: number, cz: number, m: Mat,
+): THREE.Mesh {
+  const dx = x1 - x0, dy = y1 - y0;
+  return strut(g, Math.hypot(dx, dy), th, depth, (x0 + x1) / 2, (y0 + y1) / 2, cz, Math.atan2(dy, dx), m);
+}
+
+/**
+ * 过 (cx,cy)、方向角 ang 的直线裁剪到矩形 [x0,x1]×[y0,y1] 内，
+ * 返回可放的条段（中心 + 长度），裁不进矩形返回 null。
+ * 平行线族（菱形/六角/渔网）用它逐条裁剪，条端永不出框。
+ */
+function clipLineToRect(
+  cx: number, cy: number, ang: number,
+  x0: number, y0: number, x1: number, y1: number,
+): { mx: number; my: number; len: number } | null {
+  const dx = Math.cos(ang), dy = Math.sin(ang);
+  // Liang–Barsky：每轴算进/出参数 t，取交集 [tEnter, tExit]。
+  let tEnter = -Infinity, tExit = Infinity;
+  const axes: Array<[number, number, number, number]> = [
+    [dx, cx, x0, x1], [dy, cy, y0, y1],
+  ];
+  for (const [d, c, lo, hi] of axes) {
+    if (Math.abs(d) < 1e-9) {
+      if (c < lo || c > hi) return null; // 直线平行于该轴且在矩形外
+      continue;
+    }
+    const ta = (lo - c) / d, tb = (hi - c) / d;
+    const tLo = Math.min(ta, tb), tHi = Math.max(ta, tb);
+    if (tLo > tEnter) tEnter = tLo;
+    if (tHi < tExit) tExit = tHi;
+    if (tEnter > tExit) return null;
+  }
+  if (tExit - tEnter < 1e-6) return null;
+  const mx = cx + dx * (tEnter + tExit) / 2, my = cy + dy * (tEnter + tExit) / 2;
+  return { mx, my, len: tExit - tEnter };
+}
+
+/** 一组平行线：方向角 ang、法线间距 spacing，逐条裁剪进矩形。 */
+function parallelLines(
+  g: THREE.Group, ang: number, spacing: number,
+  x0: number, y0: number, x1: number, y1: number,
+  th: number, depth: number, cz: number, m: Mat,
+): void {
+  const nx = -Math.sin(ang), ny = Math.cos(ang); // 法线
+  const ccx = (x0 + x1) / 2, ccy = (y0 + y1) / 2;
+  const corners = [x0, x1].flatMap(x => [y0, y1].map(y => nx * (x - ccx) + ny * (y - ccy)));
+  const tMin = Math.min(...corners), tMax = Math.max(...corners);
+  for (let t = Math.ceil(tMin / spacing) * spacing; t <= tMax; t += spacing) {
+    const seg = clipLineToRect(ccx + nx * t, ccy + ny * t, ang, x0, y0, x1, y1);
+    if (seg && seg.len > th * 2) strut(g, seg.len, th, depth, seg.mx, seg.my, cz, ang, m);
+  }
+}
+
+/** 花格纹样名（10 种 ≥ REPORT 要求的 8 种；同园按墙轮换，见 latticePatternForIndex）。 */
+export type LatticePattern =
+  | "cracked_ice"   // 冰裂纹：不规则多边形碎片（抖动网格 + 随机对角）
+  | "fret"          // 万字纹：连续直角回纹（卍单元平铺）
+  | "diamond"       // 菱形：±45° 斜线网格
+  | "hexagon"       // 六角：三向线族构成的六角格（0°/±60°）
+  | "begonia"       // 海棠：四瓣花 outline（四出海棠）
+  | "cross_begonia" // 十字海棠：十字骨架 + 四臂海棠瓣
+  | "square_grid"   // 方格：明式素格（宋斋/明厅素面）
+  | "straight"      // 直棂：竖条 + 横枋（唐宫宏大尺度）
+  | "fishnet"       // 渔网：细密菱形网（网师园得名之窗）
+  | "ruyi";         // 如意：云头卷草（顶部卷云 + 下部竖条，风格化）
+
+export const LATTICE_PATTERNS: LatticePattern[] = [
+  "cracked_ice", "fret", "diamond", "hexagon", "begonia",
+  "cross_begonia", "square_grid", "straight", "fishnet", "ruyi",
+];
+
+/** 同园不重样：按墙序号轮换纹样（沧浪亭 108 式、拙政园复廊 25 式之规则）。 */
+export function latticePatternForIndex(i: number): LatticePattern {
+  return LATTICE_PATTERNS[((i % LATTICE_PATTERNS.length) + LATTICE_PATTERNS.length) % LATTICE_PATTERNS.length];
+}
+
+/**
+ * 镂空花格板：矩形 [x0,x1]×[y0,y1]（米）、进深 depth，XY 平面、z=cz。
+ * 先立边框，再按纹样填实几何条——条间全是空的，可透光/透色。
+ * 供 Phase B 的 leaky_lattice / sill_lattice / lattice_door 渲染器复用，
+ * 也供将来外购花格缺失时的程序化补位。barTh 为条厚（渔网用细条）。
+ */
+export function buildLatticePanel(
+  g: THREE.Group, x0: number, y0: number, x1: number, y1: number,
+  depth: number, mat: Mat, pattern: LatticePattern, barTh = 0.04, cz = 0,
+): void {
+  const w = x1 - x0, h = y1 - y0;
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const th = barTh;
+  // 边框（四边）
+  box(g, w, th, depth, cx, y1 - th, cz, mat);
+  box(g, w, th, depth, cx, y0, cz, mat);
+  box(g, th, h - th * 2, depth, x0 + th / 2, y0 + th, cz, mat);
+  box(g, th, h - th * 2, depth, x1 - th / 2, y0 + th, cz, mat);
+  const ix0 = x0 + th, iy0 = y0 + th, ix1 = x1 - th, iy1 = y1 - th;
+  const iw = ix1 - ix0, ih = iy1 - iy0;
+  if (iw <= 0 || ih <= 0) return;
+
+  switch (pattern) {
+    case "straight": { // 直棂：竖条 + 两道横枋（唐宫）
+      const step = 0.18;
+      for (let x = ix0 + step; x < ix1 - 0.02; x += step) box(g, th, ih, depth, x, iy0, cz, mat);
+      for (const fy of [iy0 + ih / 3, iy0 + (2 * ih) / 3]) box(g, iw, th, depth, cx, fy - th / 2, cz, mat);
+      break;
+    }
+    case "square_grid": { // 方格
+      const step = 0.22;
+      for (let x = ix0 + step; x < ix1 - 0.02; x += step) box(g, th, ih, depth, x, iy0, cz, mat);
+      for (let y = iy0 + step; y < iy1 - 0.02; y += step) box(g, iw, th, depth, cx, y - th / 2, cz, mat);
+      break;
+    }
+    case "diamond": // 菱形：±45° 两向平行线
+      parallelLines(g, Math.PI / 4, 0.3, ix0, iy0, ix1, iy1, th, depth, cz, mat);
+      parallelLines(g, -Math.PI / 4, 0.3, ix0, iy0, ix1, iy1, th, depth, cz, mat);
+      break;
+    case "fishnet": { // 渔网：细密菱形网
+      const fth = Math.min(th, 0.025);
+      parallelLines(g, Math.PI / 4, 0.12, ix0, iy0, ix1, iy1, fth, depth, cz, mat);
+      parallelLines(g, -Math.PI / 4, 0.12, ix0, iy0, ix1, iy1, fth, depth, cz, mat);
+      break;
+    }
+    case "hexagon": // 六角：水平 + ±60° 三向线族
+      parallelLines(g, 0, 0.26, ix0, iy0, ix1, iy1, th, depth, cz, mat);
+      parallelLines(g, Math.PI / 3, 0.3, ix0, iy0, ix1, iy1, th, depth, cz, mat);
+      parallelLines(g, -Math.PI / 3, 0.3, ix0, iy0, ix1, iy1, th, depth, cz, mat);
+      break;
+    case "fret": { // 万字纹：卍单元平铺（单元 0.3m，6 条/单元）
+      const s = 0.3;
+      const nx = Math.max(1, Math.floor(iw / s)), ny = Math.max(1, Math.floor(ih / s));
+      const ox = ix0 + (iw - nx * s) / 2, oy = iy0 + (ih - ny * s) / 2;
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+        const ux = ox + i * s + s / 2, uy = oy + j * s + s / 2;
+        barBetween(g, ux, uy - s / 2, ux, uy + s / 2, th, depth, cz, mat); // 竖
+        barBetween(g, ux - s / 2, uy, ux + s / 2, uy, th, depth, cz, mat); // 横
+        barBetween(g, ux, uy + s / 2, ux + s / 2, uy + s / 2, th, depth, cz, mat); // 上臂→右
+        barBetween(g, ux + s / 2, uy, ux + s / 2, uy - s / 2, th, depth, cz, mat); // 右臂→下
+        barBetween(g, ux, uy - s / 2, ux - s / 2, uy - s / 2, th, depth, cz, mat); // 下臂→左
+        barBetween(g, ux - s / 2, uy, ux - s / 2, uy + s / 2, th, depth, cz, mat); // 左臂→上
+      }
+      break;
+    }
+    case "cracked_ice": { // 冰裂纹：抖动网格点 + 右/下/随机对角连线（无悬空条）
+      const nx = 4, ny = 5;
+      const rnd = seededRand(Math.round(w * 100) + Math.round(h * 37) + 11);
+      const pts: Array<Array<[number, number]>> = [];
+      for (let j = 0; j <= ny; j++) {
+        const row: Array<[number, number]> = [];
+        for (let i = 0; i <= nx; i++) {
+          const jx = (i === 0 || i === nx) ? 0 : (rnd() - 0.5) * (iw / nx) * 0.5;
+          const jy = (j === 0 || j === ny) ? 0 : (rnd() - 0.5) * (ih / ny) * 0.5;
+          row.push([ix0 + (i * iw) / nx + jx, iy0 + (j * ih) / ny + jy]);
+        }
+        pts.push(row);
+      }
+      for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
+        const [px, py] = pts[j][i];
+        if (i < nx) barBetween(g, px, py, pts[j][i + 1][0], pts[j][i + 1][1], th, depth, cz, mat);
+        if (j < ny) barBetween(g, px, py, pts[j + 1][i][0], pts[j + 1][i][1], th, depth, cz, mat);
+        if (i < nx && j < ny && rnd() < 0.5) {
+          barBetween(g, px, py, pts[j + 1][i + 1][0], pts[j + 1][i + 1][1], th, depth, cz, mat);
+        }
+      }
+      break;
+    }
+    case "begonia":
+    case "cross_begonia": {
+      // 海棠：中心四瓣花（每瓣 3 条：尖→两底角 + 底边）；十字海棠再加十字骨架 + 四臂小瓣。
+      const r = Math.min(iw, ih) * 0.3;
+      const petal = (tipX: number, tipY: number, dirX: number, dirY: number, pr: number): void => {
+        const px = -dirY, py = dirX; // 垂直方向
+        const bx = tipX - dirX * pr * 0.55, by = tipY - dirY * pr * 0.55;
+        barBetween(g, tipX, tipY, bx + px * pr * 0.38, by + py * pr * 0.38, th, depth, cz, mat);
+        barBetween(g, tipX, tipY, bx - px * pr * 0.38, by - py * pr * 0.38, th, depth, cz, mat);
+        barBetween(g, bx + px * pr * 0.38, by + py * pr * 0.38, bx - px * pr * 0.38, by - py * pr * 0.38, th, depth, cz, mat);
+      };
+      if (pattern === "cross_begonia") {
+        box(g, th, ih, depth, cx, iy0, cz, mat);
+        box(g, iw, th, depth, cx, cy - th / 2, cz, mat);
+        const arm = Math.min(iw, ih) * 0.38, pr = Math.min(iw, ih) * 0.16;
+        petal(cx + arm, cy, 1, 0, pr); petal(cx - arm, cy, -1, 0, pr);
+        petal(cx, cy + arm, 0, 1, pr); petal(cx, cy - arm, 0, -1, pr);
+      } else {
+        const dirs: Array<[number, number]> = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        for (const [dx, dy] of dirs) petal(cx + dx * r, cy + dy * r, dx, dy, r);
+        // 中心小菱形
+        const cr = r * 0.3;
+        barBetween(g, cx - cr, cy, cx, cy + cr, th, depth, cz, mat);
+        barBetween(g, cx, cy + cr, cx + cr, cy, th, depth, cz, mat);
+        barBetween(g, cx + cr, cy, cx, cy - cr, th, depth, cz, mat);
+        barBetween(g, cx, cy - cr, cx - cr, cy, th, depth, cz, mat);
+      }
+      break;
+    }
+    case "ruyi": { // 如意：顶部卷云带（3 个方钩卷头）+ 下部竖条
+      const bandH = Math.min(ih * 0.28, 0.3);
+      const bandY = iy1 - bandH;
+      box(g, iw, th, depth, cx, bandY - th / 2, cz, mat);
+      for (let k = 0; k < 3; k++) {
+        const sx = ix0 + ((k + 0.5) * iw) / 3 - 0.09;
+        const topY = iy1 - th - 0.02;
+        box(g, 0.18, th, depth, sx + 0.09, topY - th, cz, mat); // 卷头横
+        barBetween(g, sx + 0.18, topY - th / 2, sx + 0.24, topY - bandH + th * 2, th, depth, cz, mat); // 斜钩
+        box(g, 0.09, th, depth, sx + 0.2, topY - bandH + th, cz, mat); // 回钩横
+      }
+      const step = 0.2;
+      for (let x = ix0 + step; x < ix1 - 0.02; x += step) box(g, th, bandY - iy0 - th, depth, x, iy0, cz, mat);
+      break;
+    }
+  }
+}
+
+/**
+ * 垂花门（门窗 Phase D，proc-chuihua-gate）：明清四合院内外院之间的门。
+ * 按 part2 §1D（Chuihuamen.JPG）+ part3 #13 Cults 零件分解重建：
+ * 双柱（红漆）+ 柱础石 + 门鼓石 + 额枋 + 斗拱 + 垂莲柱（梁下垂挂、莲苞收尾）
+ * + 小青瓦顶（双坡 + 正脊）+ 实木对开门（左扇半掩 30°，规则 2）。
+ * 洞口是真通道：左扇半掩露出院内，右扇关闭；门槛石 0.06m 可迈过。
+ * 尺寸按目录 360×120×400cm 设计（w=3.6m 时柱距 ±1.35m）；
+ * 时代门：只用于明清四合院/庭院序列（set-qing-sanxitang 庭院等），
+ * 不进唐/秦汉/西式场景。——只建 builder + 目录，不放任何场景（后一轮
+ * 布局评估后再定点位）。
+ */
+function buildChuihuaGate(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  void d; void h;
+  const red = std(c || "#A03028", 0.6);
+  const darkWood = std("#5A3A22", 0.7);
+  const doorMat = std("#7A2A20", 0.65);
+  const gold = std("#C8A24A", 0.4, 0.8);
+  const tile = std("#3A2A1A", 0.7);
+  const stone = std("#8A8A80", 0.9);
+  const colX = w / 2 - 0.45; // 柱中心 ±1.35（w=3.6）
+  const colW = 0.28;
+  const doorTop = 2.6, beamY = 2.9, beamH = 0.3;
+  // 柱础石 + 红漆柱
+  for (const sx of [-1, 1]) {
+    box(g, 0.44, 0.25, 0.44, sx * colX, 0, 0, stone); // 柱础石
+    box(g, colW, 2.95, colW, sx * colX, 0.25, 0, red); // 柱
+  }
+  // 门鼓石（柱外侧、前移）：石墩 + 横置石鼓
+  for (const sx of [-1, 1]) {
+    const dx = sx * (colX + 0.23);
+    box(g, 0.3, 0.18, 0.3, dx, 0, 0.18, stone); // 鼓墩
+    const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.16, 18), stone);
+    drum.position.set(dx, 0.18 + 0.19, 0.18);
+    drum.rotation.z = Math.PI / 2; // 鼓轴沿 X
+    add(g, drum);
+  }
+  // 门槛石（可迈过的低槛，规则 5）
+  box(g, 2.7, 0.06, 0.3, 0, 0, 0, stone);
+  // 门框边柱 + 门楣
+  const innerX = colX - colW / 2 - 0.05; // ±1.16，门洞净宽 2.32
+  for (const sx of [-1, 1]) box(g, 0.1, doorTop, 0.12, sx * innerX, 0.06, 0, darkWood);
+  box(g, innerX * 2 + 0.1, 0.12, 0.12, 0, doorTop, 0, darkWood); // 门楣
+  // 实木对开门：单扇宽 1.13、高 2.54；右扇关闭，左扇绕左铰链半掩 30°（规则 2）
+  const leafW = 1.13, leafH = 2.54;
+  const stud = (grp: THREE.Group, lz: number): void => {
+    for (const sx of [0.22, 0.565, 0.91]) for (const sy of [0.45, 1.05, 1.65, 2.25]) {
+      sphere(grp, 0.035, sx, sy, lz, gold); // 门钉 3×4 / 扇
+    }
+  };
+  // 右扇（关闭）
+  box(g, leafW, leafH, 0.06, leafW / 2 + 0.03, 0.06, 0, doorMat);
+  for (const sx of [0.25, 0.595, 0.94]) for (const sy of [0.51, 1.11, 1.71, 2.31]) {
+    sphere(g, 0.035, sx, sy, 0.045, gold);
+  }
+  cyl(g, 0.02, 0.02, 0.18, 0.14, 1.2, 0.05, gold, 8); // 右扇拉手
+  // 左扇（半掩）
+  const leftLeaf = new THREE.Group();
+  box(leftLeaf, leafW, leafH, 0.06, leafW / 2, 0, 0, doorMat);
+  stud(leftLeaf, 0.045);
+  cyl(leftLeaf, 0.02, 0.02, 0.18, leafW - 0.14, 1.2, 0.05, gold, 8);
+  leftLeaf.position.set(-innerX, 0.06, 0);
+  leftLeaf.rotation.y = -Math.PI / 6; // 30° 半掩
+  g.add(leftLeaf);
+  // 额枋 + 金线 + 挂落雕花板
+  box(g, w - 0.62, beamH, 0.26, 0, beamY, 0, red); // 额枋（2.98）
+  box(g, w - 0.62, 0.05, 0.28, 0, beamY, 0, gold); // 枋下金线
+  box(g, 1.5, 0.22, 0.04, 0, beamY - 0.24, 0.14, darkWood); // 挂落板
+  for (const px of [-0.4, 0, 0.4]) box(g, 0.04, 0.22, 0.05, px, beamY - 0.24, 0.14, gold);
+  // 垂莲柱（梁下垂挂 ×2）：柱身 + 莲苞 + 尖坠，位于门扇前方 z=0.16
+  for (const sx of [-1, 1]) {
+    cyl(g, 0.06, 0.08, 0.5, sx * 0.65, 2.35, 0.16, red, 12); // 柱身 2.35–2.85
+    sphere(g, 0.09, sx * 0.65, 2.3, 0.16, gold); // 莲苞
+    cone(g, 0.05, 0.12, sx * 0.65, 2.12, 0.16, gold, 10); // 尖坠
+  }
+  // 斗拱（三攒：柱头 ×2 + 枋中 ×1，逐层向外出挑）
+  for (const bx of [-colX, 0, colX]) {
+    box(g, 0.5, 0.09, 0.18, bx, 3.2, 0, red);
+    box(g, 0.4, 0.09, 0.28, bx, 3.29, 0.03, red);
+    box(g, 0.3, 0.09, 0.38, bx, 3.38, 0.06, red);
+  }
+  // 小青瓦顶：双坡 + 正脊 + 脊端
+  for (const sz of [-1, 1]) {
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, 0.7), tile);
+    slab.position.set(0, 3.62, sz * 0.26);
+    slab.rotation.x = sz * 0.42;
+    add(g, slab);
+  }
+  box(g, 3.3, 0.1, 0.2, 0, 3.82, 0, tile); // 正脊
+  for (const sx of [-1, 1]) box(g, 0.12, 0.18, 0.12, sx * 1.68, 3.8, 0, tile); // 脊端
+  for (const sz of [-1, 1]) box(g, w, 0.05, 0.08, 0, 3.42, sz * 0.58, tile); // 檐口
+}
+
+// ─── 通用墙洞框（Phase D-8）────────────────────────────────────────────
+// 外购开间（Jinlan 4m 模块 / Hitree 固定尺寸）落进 ZhuyaHome 真实房洞时
+// 的收边件：按给定洞口宽/高（米）生成——与洞口同宽的框，不是固定尺寸件。
+// 坐标约定与本文件一致：group 原点 = 洞口底边中心、y=0 为地面/洞底；
+// 框的进深 = 墙厚 wallDepth（规则 5：框有进深，洞口见墙厚）。
+export interface OpeningFrameOptions {
+  jambWidth?: number;      // 边框宽（米），默认 0.1
+  headHeight?: number;     // 上楣高（米），默认 0.12
+  sillHeight?: number;     // 门槛石高（米），默认 0.06（可迈过的低槛）
+  thresholdProtrude?: number; // 门槛石每侧外伸（米），默认 0.06
+  trimWidth?: number;      // 正面线脚宽（米），默认 0.06；0 = 不做线脚
+}
+export function buildWallOpeningFrame(
+  g: THREE.Group, openingW: number, openingH: number, wallDepth: number,
+  wood: Mat, stone: Mat, opts: OpeningFrameOptions = {},
+): void {
+  const jambW = opts.jambWidth ?? 0.1;
+  const headH = opts.headHeight ?? 0.12;
+  const sillH = opts.sillHeight ?? 0.06;
+  const protrude = opts.thresholdProtrude ?? 0.06;
+  const trimW = opts.trimWidth ?? 0.06;
+  // 两侧边框（通高，含墙厚进深）
+  for (const sx of [-1, 1]) box(g, jambW, openingH, wallDepth, sx * (openingW / 2 + jambW / 2), 0, 0, wood);
+  // 上楣
+  box(g, openingW + jambW * 2, headH, wallDepth, 0, openingH, 0, wood);
+  // 门槛石（洞底，略宽于洞口、略厚于墙，规则 5）
+  box(g, openingW + jambW * 2 + protrude * 2, sillH, wallDepth + 0.08, 0, 0, 0, stone);
+  // 正面线脚（洞口四周，贴墙面一圈）
+  if (trimW > 0) {
+    const z = wallDepth / 2 + 0.011;
+    box(g, openingW + (jambW + trimW) * 2, trimW, 0.02, 0, openingH + headH, z, wood);
+    for (const sx of [-1, 1]) box(g, trimW, openingH + headH, 0.02, sx * (openingW / 2 + jambW + trimW / 2), 0, z, wood);
+  }
+}
+
+/**
+ * 外购开间适配：把一个固定尺寸的开间（bayW×bayH，如 Jinlan 4m 模块）
+ * 等比缩放到真实墙洞（openingW×openingH）内。返回统一缩放 + 居中偏移
+ * （米，相对洞口底边中心）。调用方按 scale 缩放 GLB group、按 offset
+ * 平移即可，不改模型本身。
+ */
+export function fitBayToOpening(
+  bayW: number, bayH: number, openingW: number, openingH: number,
+): { scale: number; offsetX: number; offsetY: number } {
+  const scale = Math.min(openingW / bayW, openingH / bayH);
+  return { scale, offsetX: (openingW - bayW * scale) / 2, offsetY: (openingH - bayH * scale) / 2 };
+}
+
+// ─── 门窗 Phase D（扩围）：葫芦/八角洞门 + 扇窗 + 石库门 ───────────────
+// 2026-11-21 用户扩围：无免费来源的 6 件全部进入生成范围（three.js 程序化
+// 优先，Blender 只在明显更好时用）。本节是 three.js 侧：
+//   · 葫芦洞门 / 八角洞门——Shape + Extrude（贝塞尔葫芦腰 / 八角洞口），
+//     是 Blender GLB 版的程序化回退（目录 model3d 指向 GLB，加载失败时
+//     GltfFurnitureWithFallback → FurnitureMesh → 这里的 builder）；
+//   · 扇窗 / 石库门——纯程序化（方/直线几何已够好，不上 Blender）。
+// 垂花门仍用上节的程序化版（已建成；斗拱盒子叠层在房间距离可读，全量
+// Blender 重建 60+ 零件会吃掉本轮，见 BUILD-D.md）。
+// 全部只建 builder + 目录，不放任何场景。
+
+/** 带洞口的墙体：外框矩形（已扣掉倒角外扩）+ 洞口路径，挤出 wallDepth，
+ *  居中于 z=0。洞口是真空洞（规则 1）；bevel 给石质洞口一个倒角边。 */
+function extrudedWallWithHole(
+  g: THREE.Group, outerW: number, outerH: number, wallDepth: number,
+  hole: THREE.Path, mat: Mat, bevel = 0.02,
+): THREE.Mesh {
+  const shape = new THREE.Shape();
+  const hw = outerW / 2 - bevel, hh = outerH - bevel;
+  shape.moveTo(-hw, 0);
+  shape.lineTo(hw, 0);
+  shape.lineTo(hw, hh);
+  shape.lineTo(-hw, hh);
+  shape.closePath();
+  shape.holes.push(hole);
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: wallDepth, bevelEnabled: bevel > 0,
+    bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 24,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  // 倒角会向外扩 bevel：底部抬 bevel 使墙根落在 y=0，顶只多出 bevel（< 目录高）。
+  mesh.position.set(0, bevel, -wallDepth / 2);
+  return add(g, mesh);
+}
+
+/** 葫芦洞口（part2 §1A）：下葫芦鼓 → 腰收 → 上葫芦鼓 → 顶收；腰是特征。 */
+function gourdHolePath(cx: number, baseY: number, halfW: number, height: number): THREE.Path {
+  const waist = halfW * 0.65;
+  const x = (f: number): number => cx + f;
+  const p = new THREE.Path();
+  p.moveTo(x(-halfW * 0.86), baseY);
+  p.lineTo(x(halfW * 0.86), baseY);
+  p.bezierCurveTo(x(halfW * 1.02), baseY + height * 0.15, x(halfW * 1.02), baseY + height * 0.32, x(waist), baseY + height * 0.5);
+  p.bezierCurveTo(x(waist), baseY + height * 0.6, x(halfW * 0.98), baseY + height * 0.68, x(halfW * 0.95), baseY + height * 0.82);
+  p.bezierCurveTo(x(halfW * 0.93), baseY + height * 0.93, x(halfW * 0.85), baseY + height, x(halfW * 0.72), baseY + height);
+  p.lineTo(x(-halfW * 0.72), baseY + height);
+  p.bezierCurveTo(x(-halfW * 0.85), baseY + height, x(-halfW * 0.93), baseY + height * 0.93, x(-halfW * 0.95), baseY + height * 0.82);
+  p.bezierCurveTo(x(-halfW * 0.98), baseY + height * 0.68, x(-waist), baseY + height * 0.6, x(-waist), baseY + height * 0.5);
+  p.bezierCurveTo(x(-halfW * 1.02), baseY + height * 0.32, x(-halfW * 1.02), baseY + height * 0.15, x(-halfW * 0.86), baseY);
+  p.closePath();
+  return p;
+}
+
+/** 八角洞口：平顶/平底的正八角（22.5° 起点），留园廊门同款。 */
+function octagonHolePath(cx: number, cy: number, r: number): THREE.Path {
+  const p = new THREE.Path();
+  for (let k = 0; k < 8; k++) {
+    const a = Math.PI / 8 + (k * Math.PI) / 4;
+    const px = cx + r * Math.cos(a), py = cy + r * Math.sin(a);
+    if (k === 0) p.moveTo(px, py); else p.lineTo(px, py);
+  }
+  p.closePath();
+  return p;
+}
+
+/** 圆拱洞口：矩形直部 + 上半圆拱顶（石库门）。 */
+function archHolePath(cx: number, baseY: number, halfW: number, rectH: number): THREE.Path {
+  const p = new THREE.Path();
+  p.moveTo(cx - halfW, baseY);
+  p.lineTo(cx + halfW, baseY);
+  p.lineTo(cx + halfW, baseY + rectH);
+  p.absarc(cx, baseY + rectH, halfW, 0, Math.PI, false);
+  p.lineTo(cx - halfW, baseY);
+  p.closePath();
+  return p;
+}
+
+/** 洞口石 rim：一圈楔形石（voussoir）沿洞口轮廓按弧长排布（每 0.30m 一块、
+ *  每块 0.32m 长，微叠成连续石环），半嵌墙、半露洞口。底边（y<0.15）不放：
+ *  底边是门槛石的地盘，rim 石会与门槛石前脸共面闪烁。 */
+function rimVoussoirs(g: THREE.Group, hole: THREE.Path, wallDepth: number, mat: Mat): void {
+  const pts = hole.getPoints(64);
+  if (pts.length < 8) return;
+  if (pts[0].distanceTo(pts[pts.length - 1]) < 1e-6) pts.pop();
+  const n = pts.length;
+  const stepLen = 0.3;
+  let dist = 0, target = stepLen / 2;
+  for (let i = 0; i < n; i++) {
+    const a = pts[i], b = pts[(i + 1) % n];
+    const seg = a.distanceTo(b);
+    while (target <= dist + seg) {
+      const t = seg > 0 ? (target - dist) / seg : 0;
+      const px = a.x + (b.x - a.x) * t, py = a.y + (b.y - a.y) * t;
+      if (py >= 0.15) {
+        strut(g, 0.32, 0.16, wallDepth + 0.06, px, py, 0, Math.atan2(b.y - a.y, b.x - a.x), mat);
+      }
+      target += stepLen;
+    }
+    dist += seg;
+  }
+}
+
+/** 墙头压顶 + 正脊（与月洞门同款）。 */
+function gateCoping(g: THREE.Group, w: number, y: number, tile: Mat): void {
+  box(g, w, 0.12, 0.5, 0, y, 0, tile);
+  box(g, w * 0.75, 0.08, 0.3, 0, y + 0.12, 0, tile);
+}
+
+/** 葫芦洞门（proc-gourd-gate）：白墙 + 葫芦形通洞 + 石 rim + 门槛 + 压顶。
+ *  与 Blender GLB 版同尺寸（3.2×3.0m 墙、洞 2.2×2.4m）；GLB 优先，
+ *  本 builder 是加载失败时的程序化回退。时代门：只进苏州式园林。 */
+function buildGourdGate(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  void w; void d; void h;
+  const wall = std(c || "#EDE6D6", 0.85);
+  const stone = std("#6A655C", 0.9);
+  const tile = std("#3A2A1A", 0.7);
+  const wallD = 0.4;
+  const hole = gourdHolePath(0, 0, 1.1, 2.4);
+  extrudedWallWithHole(g, 3.2, 3.0, wallD, hole, wall);
+  rimVoussoirs(g, hole, wallD, stone);
+  box(g, 2.4, 0.12, 0.46, 0, 0, 0, stone); // 门槛石（可迈过）
+  gateCoping(g, 3.2, 2.98, tile);
+}
+
+/** 八角洞门（proc-octagon-gate）：白墙 + 八角通洞 + 石 rim + 门槛 + 压顶。
+ *  与 Blender GLB 版同尺寸；GLB 优先，本 builder 是回退。时代门：苏州式园林。 */
+function buildOctagonalGate(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  void w; void d; void h;
+  const wall = std(c || "#EDE6D6", 0.85);
+  const stone = std("#6A655C", 0.9);
+  const tile = std("#3A2A1A", 0.7);
+  const wallD = 0.4;
+  const hole = octagonHolePath(0, 1.2, 1.15);
+  extrudedWallWithHole(g, 3.2, 3.0, wallD, hole, wall);
+  rimVoussoirs(g, hole, wallD, stone);
+  box(g, 2.4, 0.12, 0.46, 0, 0, 0, stone); // 门槛石
+  gateCoping(g, 3.2, 2.98, tile);
+}
+
+/** 随墙门（proc-suiqiang-gate）：沿墙而建的素门——白墙 + 圆拱通洞 + 石 rim + 门槛，
+ *  无挑檐、无柱、无门扇，是苏州园林里最素的边门/侧门（part2 §1E：洞就是洞，
+ *  只是一堵墙上的洞）。圆拱洞 1.6×2.2m 真通洞。时代门：苏州式园林/江南民居。 */
+function buildSuiqiangGate(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  void w; void d; void h;
+  const wall = std(c || "#EDE6D6", 0.85);
+  const stone = std("#6A655C", 0.9);
+  const wallD = 0.4;
+  const hole = archHolePath(0, 0, 0.8, 1.4);
+  extrudedWallWithHole(g, 2.4, 2.6, wallD, hole, wall);
+  rimVoussoirs(g, hole, wallD, stone);
+  box(g, 1.8, 0.12, 0.46, 0, 0, 0, stone); // 门槛石
+}
+
+/** 扇窗（proc-fan-window）：半圆扇形窗，扇框 + 5 根放射扇骨 + 两道弧棂
+ *  + 扇心圆钮，下有底框双腿（与 proc-lattice-window 同款独立式）。
+ *  扇形是真空洞：骨间全是空的，可透光。园林/中式厅堂用。 */
+function buildFanWindow(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  void w; void d; void h;
+  const wood = std(c || "#6B4A2F", 0.75);
+  const R = 0.8;
+  const legH = 0.35;
+  const hubY = legH + 0.07;
+  // 扇框：半圆环（挤出 0.08）
+  const ring = new THREE.Shape();
+  ring.absarc(0, 0, R, 0, Math.PI, false);
+  ring.absarc(0, 0, R - 0.07, Math.PI, 0, true);
+  ring.closePath();
+  const ringMesh = new THREE.Mesh(
+    new THREE.ExtrudeGeometry(ring, { depth: 0.08, bevelEnabled: false, curveSegments: 32 }), wood,
+  );
+  ringMesh.position.set(0, hubY, -0.04);
+  add(g, ringMesh);
+  box(g, R * 2, 0.07, 0.1, 0, legH, 0, wood); // 底框
+  box(g, 0.08, legH, 0.1, -R + 0.04, 0, 0, wood); // 腿
+  box(g, 0.08, legH, 0.1, R - 0.04, 0, 0, wood);
+  // 扇骨：5 根放射条（30°/60°/90°/120°/150°）
+  for (let k = 1; k <= 5; k++) {
+    const a = (k * Math.PI) / 6;
+    const len = R - 0.07;
+    strut(g, len, 0.04, 0.08, (Math.cos(a) * len) / 2, hubY + (Math.sin(a) * len) / 2, 0, a, wood);
+  }
+  // 两道弧棂（同心半圆）
+  for (const rr of [R * 0.45, R * 0.7]) {
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(rr, 0.02, 8, 32, Math.PI), wood);
+    arc.position.set(0, hubY, 0);
+    add(g, arc);
+  }
+  // 扇心圆钮（朝前的短圆柱）
+  const boss = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.1, 12), wood);
+  boss.position.set(0, hubY, 0);
+  boss.rotation.x = Math.PI / 2;
+  add(g, boss);
+}
+
+/** 石库门（proc-shikumen-gate）：花岗岩石墙 + 圆拱洞口 + 红砖拱环 +
+ *  黑漆厚木对开门（左扇半掩 30°，规则 2）+ 铜环门钹 + 门槛石。
+ *  拱顶扇形区留空（两根放射条作扇形格），透进天井光。时代门：只进
+ *  石库门/民国里弄场景，绝不进中式园林/唐宋厅堂。 */
+function buildShikumenGate(g: THREE.Group, w: number, d: number, h: number, c: string): void {
+  void w; void d; void h;
+  const stone = std("#8A8A80", 0.9);
+  const brick = std("#8A3A28", 0.85);
+  const doorMat = std("#1A1A1A", 0.6);
+  const plankMat = std("#0A0A0A", 0.65);
+  const bronze = std("#8A6A2A", 0.4, 0.9);
+  const wallD = 0.6;
+  const hole = archHolePath(0, 0, 1.0, 2.2);
+  extrudedWallWithHole(g, 3.0, 3.4, wallD, hole, stone);
+  // 红砖拱环：沿拱顶每 15° 一块砖（半嵌洞口边）
+  for (let k = 0; k <= 12; k++) {
+    const a = (k * Math.PI) / 12;
+    const px = Math.cos(a) * 1.0, py = 2.2 + Math.sin(a) * 1.0;
+    strut(g, 0.2, 0.14, wallD + 0.02, px, py, 0, a + Math.PI / 2, brick);
+  }
+  box(g, 0.22, 0.3, 0.1, 0, 3.02, wallD / 2 + 0.02, stone); // 拱顶石（keystone）
+  box(g, 3.0, 0.1, 0.66, 0, 3.4, 0, stone); // 墙顶石檐
+  box(g, 2.2, 0.08, 0.7, 0, 0, 0, stone); // 门槛石
+  // 黑漆对开门：单扇 0.98×2.14m；右扇关，左扇半掩 30°
+  const leafW = 0.98, leafH = 2.14;
+  box(g, leafW, leafH, 0.08, leafW / 2 + 0.02, 0.08, 0, doorMat);
+  for (const px of [0.3, 0.62, 0.94]) box(g, 0.02, leafH - 0.1, 0.085, px, 0.13, 0, plankMat); // 右扇板缝
+  const ringR = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.015, 8, 20), bronze);
+  ringR.position.set(0.55, 1.3, 0.06);
+  add(g, ringR);
+  const bossR = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 10), bronze);
+  bossR.position.set(0.55, 1.39, 0.03);
+  bossR.rotation.x = Math.PI / 2; // 环首座：连门面与铜环顶
+  add(g, bossR);
+  const leftLeaf = new THREE.Group();
+  box(leftLeaf, leafW, leafH, 0.08, leafW / 2, 0, 0, doorMat);
+  for (const px of [0.3, 0.62, 0.94]) box(leftLeaf, 0.02, leafH - 0.1, 0.085, px, 0.05, 0, plankMat);
+  const ringL = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.015, 8, 20), bronze);
+  ringL.position.set(leafW - 0.43, 1.22, 0.06);
+  add(leftLeaf, ringL);
+  const bossL = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 10), bronze);
+  bossL.position.set(leafW - 0.43, 1.31, 0.03);
+  bossL.rotation.x = Math.PI / 2;
+  add(leftLeaf, bossL);
+  leftLeaf.position.set(-1.0, 0.08, 0);
+  leftLeaf.rotation.y = -Math.PI / 6; // 30° 半掩
+  g.add(leftLeaf);
+  // 拱顶扇形格：3 根放射条（45°/90°/135°），其余留空透光
+  for (const a of [Math.PI / 4, Math.PI / 2, (3 * Math.PI) / 4]) {
+    const len = 0.95;
+    strut(g, len, 0.04, 0.06, (Math.cos(a) * len) / 2, 2.2 + (Math.sin(a) * len) / 2, 0, a, plankMat);
+  }
+}
+
 /** 石井：石环 + 井口 + 双柱小顶。 */
 function buildStoneWell(g: THREE.Group, w: number, d: number, h: number, c: string): void {
   const stone = std(c || "#9A9488", 0.95);
@@ -2337,6 +2976,14 @@ const PROCEDURAL_BUILDERS: Record<string, Builder> = {
   "proc-door-frame-wood": buildDoorFrameWood,
   "proc-moon-gate": buildMoonGate,
   "proc-lattice-window": buildLatticeWindow,
+  // ── 门窗 Phase D：垂花门（程序化重建，全网无 web-ready 来源）──
+  "proc-chuihua-gate": buildChuihuaGate,
+  // ── 门窗 Phase D（扩围）：葫芦/八角洞门（Blender GLB 优先 + 程序化回退）、扇窗、石库门 ──
+  "proc-gourd-gate": buildGourdGate,
+  "proc-octagon-gate": buildOctagonalGate,
+  "proc-suiqiang-gate": buildSuiqiangGate,
+  "proc-fan-window": buildFanWindow,
+  "proc-shikumen-gate": buildShikumenGate,
   "proc-stone-well": buildStoneWell,
   "proc-burnt-beam": buildBurntBeam,
   "proc-dead-tree": buildDeadTree,

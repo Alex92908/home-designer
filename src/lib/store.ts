@@ -1036,17 +1036,20 @@ interface DesignerStore {
    *  wiring / total), using the same math as totalCost(). */
   roomCostBreakdown: (floorIndex: number, room: RoomType) => RoomCostBreakdown;
   /** Whole-house quote: sums every enabled room on every floor, plus a
-   *  labor line (laborRate × materials). Returns the four lines, the
-   *  overall total, and a per-room breakdown. */
+   *  labor line (laborRate × materials) and a doors/windows line
+   *  (per-style prices, see calcDoorsWindowsCost). Returns the five lines,
+   *  the overall total, and a per-room breakdown. Labor is still charged
+   *  on materials only — doors/windows do NOT enter the labor base. */
   wholeHouseBreakdown: () => {
     furniture: number;
     materials: number;
     wiring: number;
+    doorsWindows: number;
     labor: number;
     total: number;
-    rooms: Array<{ floor: number; room: RoomType; furniture: number; materials: number; wiring: number; total: number }>;
+    rooms: Array<{ floor: number; room: RoomType; furniture: number; materials: number; wiring: number; doorsWindows: number; doorCount: number; windowCount: number; total: number }>;
   };
-  /** Whole-house overall total (materials + furniture + wiring + labor). */
+  /** Whole-house overall total (materials + furniture + wiring + doors/windows + labor). */
   totalCostAll: () => number;
 
   // Camera-move-and-capture (ephemeral — registered by RoomCanvas, called by AiRenderModal)
@@ -1144,6 +1147,85 @@ export const DEFAULT_PROJECT_VERSION = 1;
 // 用初始 state，已有存档的老用户会被 rehydrate 覆盖，不受影响。模块加载时
 // 取一份深拷贝即可（整轮会话只用这一份引用）。
 const __defaultProject = makeDefaultProject();
+
+// ─── 门窗计价（Phase D）────────────────────────────────────────────
+// roomDoors / roomWindows 以前没有价格、从不计入报价；这里按款式给每扇
+// 门/窗一个含安装参考价，由 wholeHouseBreakdown() 按房间汇总进全屋报价
+// （exportPdf.ts 也用 calcDoorsWindowsCost 画门窗明细）。
+// 定价锚点：现有程序化门窗道具（木门框 ¥1,200、月洞门 ¥5,800、花格窗
+// ¥900）+ 常规市场价位——标准实木门 ¥1,800、法式对开 ¥4,200（双扇+玻璃）、
+// 隔扇门 ¥4,800（手工榫卯+花格）、卷帘门 ¥5,200（车库大尺寸）、漏窗 ¥2,400
+// （镂空做工）。含 Phase B 新款式（lattice_door / shoji_slide /
+// plank_studded / leaky_lattice / sill_lattice，types.ts 由另一工人在加）
+// ——表用 string 键，types 未加新款式时也能编译；未知款式 fallback
+// 门 ¥1,500 / 窗 ¥1,000。人工费基数不变：labor 仍只按材料费算。
+const DOOR_STYLE_PRICE: Record<string, number> = {
+  wood_panel: 1800, frosted_glass: 2200, sliding_barn: 2600,
+  french_double: 4200, glass_swing: 3200, glass_slide: 3800,
+  roller_shutter: 5200, lattice_door: 4800, shoji_slide: 2600,
+  plank_studded: 3600,
+};
+const WINDOW_STYLE_PRICE: Record<string, number> = {
+  sliding: 900, casement: 1200, awning: 1100, fixed: 1500,
+  louvered: 1300, security: 1600, wooden: 1800,
+  leaky_lattice: 2400, sill_lattice: 2200,
+};
+export const DOOR_STYLE_LABEL_ZH: Record<string, string> = {
+  wood_panel: "实木门", frosted_glass: "磨砂玻璃门", sliding_barn: "谷仓推拉门",
+  french_double: "法式对开玻璃门", glass_swing: "玻璃平开门", glass_slide: "玻璃推拉门",
+  roller_shutter: "卷帘门", lattice_door: "隔扇门", shoji_slide: "障子推拉门",
+  plank_studded: "钉头木板门",
+};
+export const WINDOW_STYLE_LABEL_ZH: Record<string, string> = {
+  sliding: "推拉窗", casement: "平开窗", awning: "上悬窗", fixed: "固定观景窗",
+  louvered: "百叶窗", security: "防盗窗", wooden: "木窗",
+  leaky_lattice: "漏窗", sill_lattice: "槛窗",
+};
+
+export interface DoorsWindowsLine {
+  kind: "door" | "window";
+  style: string;
+  label: string;
+  size: string; // "宽×高cm"
+  price: number;
+}
+export interface DoorsWindowsCost {
+  doors: DoorsWindowsLine[];
+  windows: DoorsWindowsLine[];
+  doorCount: number;
+  windowCount: number;
+  subtotal: number;
+}
+
+/** 某房间全部门窗的计价明细（与各视图同一真源 getRoomDoors /
+ *  getRoomWindows）。注意：只计显式数组 + 旧版单门字段；外观图 autoDoor
+ *  推导的门（如幕墙玻璃门）不计入——极少数，见 BUILD-D。 */
+export function calcDoorsWindowsCost(fp: FloorPlan, room: RoomType): DoorsWindowsCost {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { getRoomDoors } = require("./roomDoors") as typeof import("./roomDoors");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { getRoomWindows } = require("./roomWindows") as typeof import("./roomWindows");
+  const doors: DoorsWindowsLine[] = getRoomDoors(fp, room).map((d) => {
+    const style = d.style ?? "wood_panel";
+    return {
+      kind: "door" as const, style,
+      label: DOOR_STYLE_LABEL_ZH[style] ?? style,
+      size: `${d.len ?? 80}×${d.h ?? 240}cm`,
+      price: DOOR_STYLE_PRICE[style] ?? 1500,
+    };
+  });
+  const windows: DoorsWindowsLine[] = getRoomWindows(fp, room).map((w) => {
+    const style = w.style ?? "sliding";
+    return {
+      kind: "window" as const, style,
+      label: WINDOW_STYLE_LABEL_ZH[style] ?? style,
+      size: `${w.len ?? 120}×${w.h ?? 150}cm`,
+      price: WINDOW_STYLE_PRICE[style] ?? 1000,
+    };
+  });
+  const subtotal = [...doors, ...windows].reduce((s, l) => s + l.price, 0);
+  return { doors, windows, doorCount: doors.length, windowCount: windows.length, subtotal };
+}
 
 // ─── wholeHouseBreakdown memo ──────────────────────────────────
 // RightPanel subscribes to wholeHouseBreakdown() via useDesignerStore.
@@ -4007,22 +4089,25 @@ export const useDesignerStore = create<DesignerStore>()(
         let furniture = 0;
         let materials = 0;
         let wiring = 0;
-        const rooms: Array<{ floor: number; room: RoomType; furniture: number; materials: number; wiring: number; total: number }> = [];
+        let doorsWindows = 0;
+        const rooms: Array<{ floor: number; room: RoomType; furniture: number; materials: number; wiring: number; doorsWindows: number; doorCount: number; windowCount: number; total: number }> = [];
         s.floorPlans.forEach((fp, floorIndex) => {
           const enabled = fp.enabledRooms ?? [];
           for (const room of enabled) {
             const roomState = fp.rooms[room];
             if (!roomState) continue;
             const b = calcRoomCost(roomState, getRoomArea(room));
+            const dw = calcDoorsWindowsCost(fp, room);
             furniture += b.furniture;
             materials += b.materials;
             wiring += b.wiring;
-            rooms.push({ floor: floorIndex, room, furniture: b.furniture, materials: b.materials, wiring: b.wiring, total: b.total });
+            doorsWindows += dw.subtotal;
+            rooms.push({ floor: floorIndex, room, furniture: b.furniture, materials: b.materials, wiring: b.wiring, doorsWindows: dw.subtotal, doorCount: dw.doorCount, windowCount: dw.windowCount, total: b.total + dw.subtotal });
           }
         });
         const labor = Math.round(materials * laborRate);
-        const total = furniture + materials + wiring + labor;
-        const result = { furniture, materials, wiring, labor, total, rooms };
+        const total = furniture + materials + wiring + doorsWindows + labor;
+        const result = { furniture, materials, wiring, doorsWindows, labor, total, rooms };
         _wholeHouseCache = { floorPlans: s.floorPlans, laborRate, result };
         return result;
       },

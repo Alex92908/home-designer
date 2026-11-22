@@ -2029,7 +2029,7 @@ const RURAL_HALL_SET: ProjectTemplate = {
       rooms: [
         { room: "living",   x: 0,   y: 0,   width: 700, depth: 560,
           name: "堂屋", nameEn: "Main Hall", icon: "🏮",
-          doors: [{ wall: "S", pos: 270, len: 160, style: "wood_panel", h: 210 }],
+          doors: [{ wall: "S", pos: 270, len: 160, style: "lattice_door", h: 210 }],
           windows: [
             // 门窗修复：旧 E 窗会与卧房默认西门撞在同一隔墙（180–380 vs 308–388），
             // 移到北外墙正中（神龛上方透光）
@@ -2223,7 +2223,7 @@ const MING_HALL_SET: ProjectTemplate = {
       rooms: [
         { room: "living",   x: 0,   y: 0,   width: 900, depth: 560,
           name: "正厅", nameEn: "Main Hall", icon: "🏛️",
-          doors: [{ wall: "S", pos: 370, len: 160, style: "wood_panel", h: 210 }],
+          doors: [{ wall: "S", pos: 370, len: 160, style: "lattice_door", h: 210 }],
           windows: [
             // 门窗修复：旧 E 窗与内室 W 门开在同一隔墙同一位置（180–380 vs 230–330），
             // 移到北外墙正中（避开两侧对联/挂画，案台上方透光）
@@ -2237,7 +2237,7 @@ const MING_HALL_SET: ProjectTemplate = {
           ] },
         { room: "master",   x: 900, y: 0,   width: 500, depth: 560,
           name: "内室", nameEn: "Inner Chamber", icon: "🛏️",
-          doors: [{ wall: "W", pos: 230, len: 100, style: "wood_panel", h: 200 }],
+          doors: [{ wall: "W", pos: 230, len: 100, style: "lattice_door", h: 200 }],
           // 门窗修复：内室原无窗，补北/东两面外墙木窗
           windows: [
             { wall: "N", pos: 125, len: 200, style: "wooden", h: 150, sill: 90 },
@@ -2413,7 +2413,7 @@ const QING_SANXITANG_SET: ProjectTemplate = {
       rooms: [
         { room: "study",   x: 0,   y: 0,   width: 420, depth: 360,
           name: "三希堂", nameEn: "Sanxitang Study", icon: "📜",
-          doors: [{ wall: "S", pos: 170, len: 80, style: "wood_panel", h: 200 }],
+          doors: [{ wall: "S", pos: 170, len: 80, style: "lattice_door", h: 200 }],
           // 门窗修复：旧 E 窗与外间 W 门开在同一隔墙同一位置（100–220 vs 140–220），
           // 移到北外墙（炕沿北墙，窗台 100 高于炕面）
           windows: [{ wall: "N", pos: 105, len: 170, style: "wooden", h: 120, sill: 100 }],
@@ -2423,7 +2423,7 @@ const QING_SANXITANG_SET: ProjectTemplate = {
           ] },
         { room: "hallway", x: 420, y: 0,   width: 480, depth: 360,
           name: "外间", nameEn: "Antechamber", icon: "🚪",
-          doors: [{ wall: "W", pos: 140, len: 80, style: "wood_panel", h: 200 }],
+          doors: [{ wall: "W", pos: 140, len: 80, style: "lattice_door", h: 200 }],
           // 门窗修复：外间原无窗，补北外墙木窗
           windows: [{ wall: "N", pos: 120, len: 190, style: "wooden", h: 120, sill: 100 }] },
         { room: "study2",  x: 0,   y: 360, width: 420, depth: 240,
@@ -2433,7 +2433,7 @@ const QING_SANXITANG_SET: ProjectTemplate = {
         { room: "bedroom", x: 420, y: 360, width: 480, depth: 240,
           name: "耳房", nameEn: "Side Room", icon: "🛏️",
           // 门窗修复：耳房原无门窗，南外墙补木窗 + 北墙居中木门（通外间）
-          doors: [{ wall: "N", pos: 170, len: 80, style: "wood_panel", h: 200 }],
+          doors: [{ wall: "N", pos: 170, len: 80, style: "lattice_door", h: 200 }],
           windows: [{ wall: "S", pos: 120, len: 190, style: "wooden", h: 120, sill: 100 }] },
       ],
     },
@@ -2586,7 +2586,7 @@ const TANG_PALACE_SET: ProjectTemplate = {
       rooms: [
         { room: "living",   x: 0,   y: 0,   width: 900, depth: 600,
           name: "宴会厅", nameEn: "Banquet Hall", icon: "🏮",
-          doors: [{ wall: "S", pos: 350, len: 200, style: "wood_panel", h: 210 }],
+          doors: [{ wall: "S", pos: 350, len: 200, style: "plank_studded", h: 210 }],
           windows: [
             // 门窗修复：旧 E 窗与偏厅 W 门开在同一隔墙同一位置（180–420 vs 250–350），
             // 移到北外墙正中
@@ -2599,7 +2599,7 @@ const TANG_PALACE_SET: ProjectTemplate = {
           ] },
         { room: "dining",   x: 900, y: 0,   width: 500, depth: 600,
           name: "偏厅", nameEn: "Side Hall", icon: "🍽️",
-          doors: [{ wall: "W", pos: 250, len: 100, style: "wood_panel", h: 200 }],
+          doors: [{ wall: "W", pos: 250, len: 100, style: "plank_studded", h: 200 }],
           // 门窗修复：偏厅原无窗，补北外墙木窗（东外墙由默认重算补）
           windows: [{ wall: "N", pos: 125, len: 200, style: "wooden", h: 150, sill: 90 }] },
         { room: "hallway",  x: 0,   y: 600, width: 1400, depth: 300,
@@ -2784,7 +2784,7 @@ const SONG_STUDY_SET: ProjectTemplate = {
       rooms: [
         { room: "study",   x: 0,   y: 0,   width: 600, depth: 420,
           name: "书斋", nameEn: "Study", icon: "📖",
-          doors: [{ wall: "S", pos: 250, len: 100, style: "wood_panel", h: 200 }],
+          doors: [{ wall: "S", pos: 250, len: 100, style: "lattice_door", h: 200 }],
           windows: [
             // 门窗修复：旧 E 窗与内室 W 门开在同一隔墙同一位置（130–290 vs 160–250），
             // 移到北外墙正中（书案上方）
@@ -2794,7 +2794,7 @@ const SONG_STUDY_SET: ProjectTemplate = {
           wallDecor: [{ furnitureId: "mural-inkwash", wall: "S", u: 0.5, v: 0.55 }] },
         { room: "master",  x: 600, y: 0,   width: 400, depth: 420,
           name: "内室", nameEn: "Inner Chamber", icon: "🛏️",
-          doors: [{ wall: "W", pos: 160, len: 90, style: "wood_panel", h: 200 }],
+          doors: [{ wall: "W", pos: 160, len: 90, style: "lattice_door", h: 200 }],
           // 门窗修复：内室原无窗，补北外墙木窗（东外墙由默认重算补）
           windows: [{ wall: "N", pos: 100, len: 160, style: "wooden", h: 140, sill: 90 }] },
         { room: "hallway", x: 0,   y: 420, width: 1000, depth: 280,
@@ -2943,18 +2943,18 @@ const SHIKUMEN_SET: ProjectTemplate = {
       rooms: [
         { room: "living",   x: 0,   y: 0,   width: 600, depth: 440,
           name: "客堂间", nameEn: "Main Room", icon: "🏠",
-          doors: [{ wall: "S", pos: 240, len: 120, style: "wood_panel", h: 200 }],
+          doors: [{ wall: "S", pos: 240, len: 120, style: "plank_studded", h: 200 }],
           windows: [{ wall: "N", pos: 200, len: 200, style: "wooden", h: 140, sill: 90 }] },
         { room: "study2",  x: 600, y: 0,   width: 400, depth: 280,
           name: "亭子间", nameEn: "Mezzanine Room", icon: "✒️",
-          doors: [{ wall: "S", pos: 150, len: 80, style: "wood_panel", h: 190 }] },
+          doors: [{ wall: "S", pos: 150, len: 80, style: "plank_studded", h: 190 }] },
         { room: "kitchen", x: 600, y: 280, width: 400, depth: 160,
           name: "灶间", nameEn: "Kitchen", icon: "🍳", exteriorStyle: "concrete" },
         { room: "hallway", x: 0,   y: 440, width: 600, depth: 160,
           name: "天井", nameEn: "Lightwell", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
         { room: "master",  x: 600, y: 440, width: 400, depth: 360,
           name: "卧房", nameEn: "Bedroom", icon: "🛏️",
-          doors: [{ wall: "W", pos: 60, len: 90, style: "wood_panel", h: 200 }],
+          doors: [{ wall: "W", pos: 60, len: 90, style: "plank_studded", h: 200 }],
           // 门窗修复：卧房原无窗，南外墙补木窗（东外墙由默认重算补）
           windows: [{ wall: "S", pos: 100, len: 160, style: "wooden", h: 140, sill: 90 }] },
         { room: "custom1", x: 0,   y: 600, width: 600, depth: 200,
@@ -3852,7 +3852,7 @@ const QINHAN_SET: ProjectTemplate = {
       rooms: [
         { room: "living",   x: 0,   y: 0,   width: 900, depth: 650,
           name: "正厅", nameEn: "Main Hall", icon: "🏺",
-          doors: [{ wall: "S", pos: 370, len: 160, style: "wood_panel", h: 210 }],
+          doors: [{ wall: "S", pos: 370, len: 160, style: "plank_studded", h: 210 }],
           windows: [
             { wall: "E", pos: 200, len: 200, style: "wooden", h: 150, sill: 90 },
             { wall: "W", pos: 200, len: 200, style: "wooden", h: 150, sill: 90 },
@@ -3861,7 +3861,7 @@ const QINHAN_SET: ProjectTemplate = {
           wallDecor: [{ furnitureId: "mural-inkwash", wall: "N", u: 0.5, v: 0.55 }] },
         { room: "master",   x: 900, y: 0,   width: 600, depth: 650,
           name: "内室", nameEn: "Inner Chamber", icon: "🛏️",
-          doors: [{ wall: "W", pos: 280, len: 100, style: "wood_panel", h: 200 }] },
+          doors: [{ wall: "W", pos: 280, len: 100, style: "plank_studded", h: 200 }] },
         { room: "hallway",  x: 0,   y: 650, width: 1500, depth: 350,
           name: "前廊", nameEn: "Front Porch", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
       ],
@@ -4007,7 +4007,7 @@ const WEIJIN_SET: ProjectTemplate = {
       rooms: [
         { room: "study",   x: 0,   y: 0,   width: 650, depth: 700,
           name: "书斋", nameEn: "Study", icon: "📖",
-          doors: [{ wall: "S", pos: 280, len: 100, style: "wood_panel", h: 200 }],
+          doors: [{ wall: "S", pos: 280, len: 100, style: "plank_studded", h: 200 }],
           windows: [
             { wall: "E", pos: 200, len: 200, style: "wooden", h: 140, sill: 90 },
             { wall: "W", pos: 200, len: 200, style: "wooden", h: 140, sill: 90 },
@@ -4016,7 +4016,7 @@ const WEIJIN_SET: ProjectTemplate = {
           wallDecor: [{ furnitureId: "mural-inkwash", wall: "N", u: 0.5, v: 0.55 }] },
         { room: "living",  x: 650, y: 0,   width: 450, depth: 700,
           name: "清谈室", nameEn: "Discussion Room", icon: "🧘",
-          doors: [{ wall: "W", pos: 300, len: 100, style: "wood_panel", h: 200 }] },
+          doors: [{ wall: "W", pos: 300, len: 100, style: "plank_studded", h: 200 }] },
         { room: "hallway", x: 0,   y: 700, width: 1100, depth: 300,
           name: "庭院", nameEn: "Garden", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
       ],
@@ -4147,7 +4147,7 @@ const YUAN_SET: ProjectTemplate = {
           name: "蒙古包", nameEn: "Yurt Camp", icon: "⛺", wallsHidden: ["N", "S", "E", "W"] },
         { room: "master",  x: 1100, y: 0,   width: 900, depth: 700,
           name: "汉式宫殿", nameEn: "Han Palace Hall", icon: "🏯",
-          doors: [{ wall: "W", pos: 300, len: 140, style: "wood_panel", h: 210 }],
+          doors: [{ wall: "W", pos: 300, len: 140, style: "lattice_door", h: 210 }],
           windows: [{ wall: "E", pos: 250, len: 240, style: "wooden", h: 150, sill: 90 }],
           // REDESIGN-C: 北墙水墨（赵孟頫一路）为本组最站得住的权宜
           wallDecor: [{ furnitureId: "artwork-inkwash", wall: "N", u: 0.5, v: 0.55 }] },
@@ -4285,7 +4285,7 @@ const BANPO_SET: ProjectTemplate = {
       rooms: [
         { room: "living",   x: 0,    y: 0,   width: 1600, depth: 1000,
           name: "大房子", nameEn: "Communal House", icon: "🏺",
-          doors: [{ wall: "S", pos: 720, len: 160, style: "wood_panel", h: 200 }] },
+          doors: [{ wall: "S", pos: 720, len: 160, style: "plank_studded", h: 200 }] },
         { room: "hallway",  x: 1600, y: 0,   width: 400, depth: 1000,
           name: "半地穴屋", nameEn: "Semi-subterranean House", icon: "🏠", wallsHidden: ["N", "S", "E", "W"] },
       ],
@@ -4514,7 +4514,7 @@ const RURAL_REPUBLICAN_SET: ProjectTemplate = {
       rooms: [
         { room: "living",   x: 0,   y: 0,   width: 400, depth: 650,
           name: "明间", nameEn: "Main Room", icon: "🏮",
-          doors: [{ wall: "S", pos: 150, len: 100, style: "wood_panel", h: 200 }],
+          doors: [{ wall: "S", pos: 150, len: 100, style: "plank_studded", h: 200 }],
           windows: [{ wall: "E", pos: 200, len: 160, style: "wooden", h: 140, sill: 90 }],
           // REDESIGN-C: 门楣两侧春联（农家唯一墙饰，贴于门外——wallDecor
           // 正是外墙面机制）；不挂水墨（农家不挂文人画）
@@ -4524,10 +4524,10 @@ const RURAL_REPUBLICAN_SET: ProjectTemplate = {
           ] },
         { room: "bedroom",  x: 400, y: 0,   width: 400, depth: 650,
           name: "暗间西", nameEn: "West Side Room", icon: "🛏️",
-          doors: [{ wall: "W", pos: 280, len: 90, style: "wood_panel", h: 200 }] },
+          doors: [{ wall: "W", pos: 280, len: 90, style: "plank_studded", h: 200 }] },
         { room: "bedroom2", x: 800, y: 0,   width: 400, depth: 650,
           name: "暗间东", nameEn: "East Side Room", icon: "🛏️",
-          doors: [{ wall: "W", pos: 280, len: 90, style: "wood_panel", h: 200 }] },
+          doors: [{ wall: "W", pos: 280, len: 90, style: "plank_studded", h: 200 }] },
         { room: "hallway",  x: 0,   y: 650, width: 1200, depth: 350,
           name: "院子", nameEn: "Courtyard", icon: "🌿", wallsHidden: ["N", "S", "E", "W"] },
       ],
@@ -7692,10 +7692,10 @@ function tangChanganLayout(): FloorplanLayout {
         wallsHidden: ["N", "S", "E", "W"] },
       { room: "living", x: 0, y: 700, width: 900, depth: 500,
         name: "东市", nameEn: "East Market", icon: "🏪",
-        doors: [{ wall: "N", pos: 450, len: 150, style: "wood_panel", h: 210 }] },
+        doors: [{ wall: "N", pos: 450, len: 150, style: "plank_studded", h: 210 }] },
       { room: "dining", x: 900, y: 700, width: 900, depth: 500,
         name: "西市", nameEn: "West Market", icon: "🏪",
-        doors: [{ wall: "N", pos: 450, len: 150, style: "wood_panel", h: 210 }] },
+        doors: [{ wall: "N", pos: 450, len: 150, style: "plank_studded", h: 210 }] },
     ],
   };
 }
@@ -7893,10 +7893,10 @@ function songBianjingLayout(): FloorplanLayout {
         wallsHidden: ["N", "S", "E", "W"] },
       { room: "living", x: 0, y: 700, width: 900, depth: 500,
         name: "樊楼酒肆", nameEn: "Fanlou Tavern", icon: "🍶",
-        doors: [{ wall: "N", pos: 450, len: 150, style: "wood_panel", h: 210 }] },
+        doors: [{ wall: "N", pos: 450, len: 150, style: "lattice_door", h: 210 }] },
       { room: "dining", x: 900, y: 700, width: 900, depth: 500,
         name: "茶肆书场", nameEn: "Teahouse & Storytelling", icon: "🍵",
-        doors: [{ wall: "N", pos: 450, len: 150, style: "wood_panel", h: 210 }] },
+        doors: [{ wall: "N", pos: 450, len: 150, style: "lattice_door", h: 210 }] },
     ],
   };
 }
@@ -8099,10 +8099,10 @@ function qingGardenLayout(): FloorplanLayout {
     rooms: [
       { room: "living", x: 0, y: 0, width: 1000, depth: 600,
         name: "正大光明殿", nameEn: "Hall of Rectitude", icon: "🏯",
-        doors: [{ wall: "S", pos: 500, len: 150, style: "wood_panel", h: 210 }] },
+        doors: [{ wall: "S", pos: 500, len: 150, style: "lattice_door", h: 210 }] },
       { room: "dining", x: 1000, y: 0, width: 600, depth: 600,
         name: "长春园书房", nameEn: "Changchun Garden Study", icon: "📖",
-        doors: [{ wall: "W", pos: 300, len: 100, style: "wood_panel", h: 200 }] },
+        doors: [{ wall: "W", pos: 300, len: 100, style: "lattice_door", h: 200 }] },
       { room: "yard", x: 0, y: 600, width: 1600, depth: 400,
         name: "后湖园林", nameEn: "Back Lake Garden", icon: "🌿",
         wallsHidden: ["N", "S", "E", "W"] },
@@ -8284,10 +8284,10 @@ function mingPalaceLayout(): FloorplanLayout {
     rooms: [
       { room: "living", x: 0, y: 0, width: 900, depth: 600,
         name: "含元殿", nameEn: "Hanyuan Hall", icon: "🏯",
-        doors: [{ wall: "S", pos: 450, len: 150, style: "wood_panel", h: 210 }] },
+        doors: [{ wall: "S", pos: 450, len: 150, style: "lattice_door", h: 210 }] },
       { room: "dining", x: 900, y: 0, width: 500, depth: 600,
         name: "宣政殿偏殿", nameEn: "Xuanzheng Side Hall", icon: "🍽️",
-        doors: [{ wall: "W", pos: 300, len: 100, style: "wood_panel", h: 200 }] },
+        doors: [{ wall: "W", pos: 300, len: 100, style: "lattice_door", h: 200 }] },
       { room: "hallway", x: 0, y: 600, width: 1400, depth: 300,
         name: "丹凤门前廊", nameEn: "Danfeng Gate Porch", icon: "🌿",
         wallsHidden: ["N", "S", "E", "W"] },
@@ -8833,10 +8833,10 @@ function loulanLayout(): FloorplanLayout {
         wallsHidden: ["N", "S", "E", "W"] },
       { room: "living", x: 0, y: 600, width: 800, depth: 400,
         name: "客栈驼队院", nameEn: "Caravanserai Courtyard", icon: "🏠",
-        doors: [{ wall: "N", pos: 400, len: 150, style: "wood_panel", h: 210 }] },
+        doors: [{ wall: "N", pos: 400, len: 150, style: "plank_studded", h: 210 }] },
       { room: "dining", x: 800, y: 600, width: 800, depth: 400,
         name: "胡商铺面", nameEn: "Merchant Shopfront", icon: "🏪",
-        doors: [{ wall: "N", pos: 400, len: 150, style: "wood_panel", h: 210 }] },
+        doors: [{ wall: "N", pos: 400, len: 150, style: "plank_studded", h: 210 }] },
     ],
   };
 }

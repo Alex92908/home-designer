@@ -8400,6 +8400,11 @@ export default function FloorPlanBuilding({
               // 幕墙通风扇)、非幕墙默认推拉——与窗户检查器的默认同源。
               const winStyle: import("@/lib/types").WindowStyle =
                 win.style ?? (curtainWall ? "awning" : "sliding");
+              // 漏窗图案：同一面墙的漏窗按序号轮换，绝不重复（与 RoomCanvas /
+              // GlobalCanvas 同方案：wall key "room|wall" + 同墙漏窗序号）。
+              const leakyIndex = win.style === "leaky_lattice"
+                ? Math.max(0, windows.filter(w => w.wall === win.wall && w.style === "leaky_lattice").findIndex(w => w.id === win.id))
+                : 0;
               // 玻璃参数两套：
               // · 室内漫游（insideBuilding）：高通透（transmission 0.85 /
               //   opacity 0.35），便于透窗看院子，从里看本就对比强。
@@ -8453,6 +8458,8 @@ export default function FloorPlanBuilding({
                     style={winStyle}
                     isOpen={winOpen}
                     onToggle={() => toggleOpen(winKey)}
+                    latticeSeed={`${room}|${win.wall}`}
+                    latticeIndex={leakyIndex}
                     frameColor={frameCol}
                     glassColor={wGColor}
                     glassTransmission={wGTrans}

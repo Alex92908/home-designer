@@ -1166,6 +1166,9 @@ export default function ExteriorPanel() {
                 <option value="frosted_glass">{en ? "Frosted glass door" : "磨砂玻璃门"}</option>
                 <option value="wood_panel">{en ? "Solid wood door" : "实木门"}</option>
                 <option value="sliding_barn">{en ? "Sliding barn door" : "谷仓推拉门"}</option>
+                <option value="lattice_door">{en ? "Lattice door (Chinese panelled)" : "隔扇门"}</option>
+                <option value="shoji_slide">{en ? "Shoji sliding door" : "障子推拉门"}</option>
+                <option value="plank_studded">{en ? "Studded plank door" : "镶钉板门"}</option>
               </select>
               <div className="text-[9px] text-gray-400">{en ? "Applies to the auto-generated front door of the ground-floor living room" : "作用于一层客厅自动生成的大门"}</div>
             </div>

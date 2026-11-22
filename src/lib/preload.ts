@@ -27,6 +27,8 @@ const HOT_URLS = [
   // Windows/doors (highest-reuse assets — every room typically has one)
   "/models/_arch_window/modern_window_archviz/scene.glb",
   "/models/_arch_door/door_with_frame/door_with_frame.glb",
+  "/models/_garden_gates/gourd-gate.glb",
+  "/models/_garden_gates/octagon-gate.glb",
 ];
 
 // All client-only side effects. Gate on window so SSR / hydration pass

@@ -4,8 +4,9 @@
  * no font-embedding needed.
  */
 
-import { MaterialItem, RoomType, getRoomArea, ROOM_DEFS, PlacedItem } from "./types";
+import { MaterialItem, RoomType, getRoomArea, ROOM_DEFS, PlacedItem, FloorPlan } from "./types";
 import { getFurnitureById } from "./furniture";
+import { useDesignerStore, calcDoorsWindowsCost, DOOR_STYLE_LABEL_ZH, WINDOW_STYLE_LABEL_ZH, type DoorsWindowsLine } from "./store";
 import { getMaterialNameEn, getBrandNameEn, getFurnitureNameEn } from "@/locales/itemNames";
 import { formatPrice } from "./currency";
 import { getLocalizedRoomName } from "./i18n";
@@ -36,6 +37,43 @@ function catLabel(cat: string, locale: string): string {
 }
 function fmtPrice(v: number, locale: string): string {
   return formatPrice(v, locale);
+}
+
+// ─── 门窗明细（Phase D）────────────────────────────────────────
+// 与 store.ts 的价目表同一真源（calcDoorsWindowsCost）；英文名只做展示。
+const DOOR_STYLE_LABEL_EN: Record<string, string> = {
+  wood_panel: "Wood panel door", frosted_glass: "Frosted glass door", sliding_barn: "Barn sliding door",
+  french_double: "French double door", glass_swing: "Glass swing door", glass_slide: "Glass sliding door",
+  roller_shutter: "Roller shutter", lattice_door: "Lattice partition door", shoji_slide: "Shoji sliding door",
+  plank_studded: "Studded plank door",
+};
+const WINDOW_STYLE_LABEL_EN: Record<string, string> = {
+  sliding: "Sliding window", casement: "Casement window", awning: "Awning window", fixed: "Picture window",
+  louvered: "Louvered window", security: "Security-bar window", wooden: "Wooden window",
+  leaky_lattice: "Leaky lattice window", sill_lattice: "Sill lattice window",
+};
+function dwLabel(l: DoorsWindowsLine, locale: string): string {
+  if (locale === "en") return (l.kind === "door" ? DOOR_STYLE_LABEL_EN : WINDOW_STYLE_LABEL_EN)[l.style] ?? l.label;
+  return (l.kind === "door" ? DOOR_STYLE_LABEL_ZH : WINDOW_STYLE_LABEL_ZH)[l.style] ?? l.label;
+}
+/** 一组门窗明细行（6 列，与房间明细表同形）：图标 / 品名 / 门窗 / 单价 / 规格 / 小计。 */
+function dwRowsHtml(lines: DoorsWindowsLine[], locale: string): string {
+  const isEn = locale === "en";
+  return lines.map(l => `<tr>
+    <td>${l.kind === "door" ? "🚪" : "🪟"}</td>
+    <td>${dwLabel(l, locale)}</td>
+    <td>${isEn ? "Doors & Windows" : "门窗"}</td>
+    <td>${fmtPrice(l.price, locale)}</td>
+    <td>${l.size}</td>
+    <td><b>${fmtPrice(l.price, locale)}</b></td>
+  </tr>`).join("");
+}
+/** 从当前 store 状态取某楼层某房间的门窗计价（PDF 导出时直接读 live 状态，
+ *  不改 ExportModal 的调用参数）。 */
+function doorsWindowsFor(floorIndex: number, room: RoomType): ReturnType<typeof calcDoorsWindowsCost> {
+  const fp: FloorPlan | undefined = useDesignerStore.getState().floorPlans[floorIndex];
+  const empty = { doors: [], windows: [], doorCount: 0, windowCount: 0, subtotal: 0 };
+  return fp ? calcDoorsWindowsCost(fp, room) : empty;
 }
 
 // ─── Shared print window opener ───────────────────────────────
@@ -139,6 +177,10 @@ export function generatePdf(data: ExportData): void {
   const date = new Date().toLocaleDateString(isEn ? "en-US" : "zh-CN");
   const title = isEn ? "Decoration Quote" : "装修报价单";
   const rName = roomName(room, locale);
+  // 门窗明细（Phase D）：单价按 store 价目表；小计并入本单合计。
+  const dw = doorsWindowsFor(useDesignerStore.getState().activeFloor, room);
+  const dwLines = [...dw.doors, ...dw.windows];
+  const roomTotal = totalCost + dw.subtotal;
 
   // Materials rows
   let matRows = "";
@@ -218,7 +260,7 @@ export function generatePdf(data: ExportData): void {
           <div class="meta">${isEn?"Contact":"联系人"}: ${phone || "N/A"}</div>
         </div>
         <div style="text-align:right">
-          <div class="total">${fmtPrice(totalCost, locale)}</div>
+          <div class="total">${fmtPrice(roomTotal, locale)}</div>
           <div class="total-label">${isEn?"Total Estimate":"合计估价"}</div>
         </div>
       </div>
@@ -250,13 +292,26 @@ export function generatePdf(data: ExportData): void {
           </tr></thead>
           <tbody>${furRows}</tbody>
         </table>` : ""}
+      ${dwLines.length > 0 ? `
+        <div class="section-title">${isEn?"Doors & Windows":"门窗明细"} (${dw.doorCount}${isEn?" doors":" 扇门"} · ${dw.windowCount}${isEn?" windows":" 扇窗"})</div>
+        <table>
+          <thead><tr>
+            <th></th>
+            <th>${isEn?"Item":"品名"}</th>
+            <th>${isEn?"Category":"类别"}</th>
+            <th>${isEn?"Unit Price":"单价"}</th>
+            <th>${isEn?"Size":"规格"}</th>
+            <th>${isEn?"Subtotal":"小计"}</th>
+          </tr></thead>
+          <tbody>${dwRowsHtml(dwLines, locale)}</tbody>
+        </table>` : ""}
       <div class="total-row">
         <span class="label">${rName} ${isEn?"Total":"合计"}</span>
-        <span class="amount">${fmtPrice(totalCost, locale)}</span>
+        <span class="amount">${fmtPrice(roomTotal, locale)}</span>
       </div>
       <div class="notes">
-        <p>* ${isEn?"This quote covers materials and furniture only. Labor costs are estimated at 30–50% of materials."
-                  :"本报价仅包含材料及家具费用，人工费约为材料费的30–50%。"}</p>
+        <p>* ${isEn?"This quote covers materials, furniture, and doors/windows. Labor costs are estimated at 30–50% of materials."
+                  :"本报价包含材料、家具及门窗费用，人工费约为材料费的30–50%。"}</p>
         <p>* ${isEn?"Prices may vary by region and supplier. Final quote to be confirmed with contractor."
                   :"实际价格因地区和供应商不同而异，最终报价以施工方确认为准。"}</p>
       </div>
@@ -295,8 +350,17 @@ export function generateAllRoomsPdf(data: AllRoomsExportData, groupBy: "room" | 
   const isMultiFloor = roomDetails.some(r => (r.floorIndex ?? 0) > 0);
   const date = new Date().toLocaleDateString(isEn ? "en-US" : "zh-CN");
   const configured = roomDetails.filter(r => r.cost > 0);
-  const overBudget = totalCost > budget;
-  const budgetPct = Math.min(100, (totalCost / budget) * 100);
+  // 门窗明细（Phase D）：按楼层+房间汇总，小计并入全屋合计与预算对比。
+  const dwByRoom = new Map<string, ReturnType<typeof calcDoorsWindowsCost>>();
+  let dwTotal = 0;
+  roomDetails.forEach(rd => {
+    const dw = doorsWindowsFor(rd.floorIndex ?? 0, rd.room);
+    dwByRoom.set(`${rd.floorIndex ?? 0}:${rd.room}`, dw);
+    dwTotal += dw.subtotal;
+  });
+  const grandTotal = totalCost + dwTotal;
+  const overBudget = grandTotal > budget;
+  const budgetPct = Math.min(100, (grandTotal / budget) * 100);
 
   const headerHtml = `
     <div class="header">
@@ -307,7 +371,7 @@ export function generateAllRoomsPdf(data: AllRoomsExportData, groupBy: "room" | 
           <div class="meta">${isEn?"Contact":"联系人"}: ${phone || (isEn?"N/A":"访客")}</div>
         </div>
         <div style="text-align:right">
-          <div class="total">${fmtPrice(totalCost, locale)}</div>
+          <div class="total">${fmtPrice(grandTotal, locale)}</div>
           <div class="total-label">${isEn?"Total Estimate":"全屋合计"}</div>
         </div>
       </div>
@@ -325,11 +389,14 @@ export function generateAllRoomsPdf(data: AllRoomsExportData, groupBy: "room" | 
     </div>`;
 
   // ── By-room view ──
-  function renderRoomBlock({ room, cost, materials, placedItems }: RoomDetail): string {
+  function renderRoomBlock({ room, cost, materials, placedItems, floorIndex }: RoomDetail): string {
     const area = getRoomArea(room);
     const rn = roomName(room, locale);
     const def = ROOM_DEFS[room];
-    const pct = Math.round((cost / totalCost) * 100);
+    const dw = dwByRoom.get(`${floorIndex ?? 0}:${room}`) ?? { doors: [], windows: [], doorCount: 0, windowCount: 0, subtotal: 0 };
+    const dwLines = [...dw.doors, ...dw.windows];
+    const roomGrand = cost + dw.subtotal;
+    const pct = Math.round((roomGrand / grandTotal) * 100);
 
     let rows = "";
     materials.forEach(item => {
@@ -359,11 +426,12 @@ export function generateAllRoomsPdf(data: AllRoomsExportData, groupBy: "room" | 
         <td><b>${fmtPrice(f.price, locale)}</b></td>
       </tr>`;
     });
+    rows += dwRowsHtml(dwLines, locale);
 
     return `
       <div class="room-header">
         ${def.icon} ${rn}
-        <span style="font-size:11px;font-weight:400;color:#6e6e73;margin-left:8px">${pct}% · ${fmtPrice(cost, locale)}</span>
+        <span style="font-size:11px;font-weight:400;color:#6e6e73;margin-left:8px">${pct}% · ${fmtPrice(roomGrand, locale)}</span>
       </div>
       ${rows ? `<table>
         <thead><tr>
@@ -476,6 +544,42 @@ export function generateAllRoomsPdf(data: AllRoomsExportData, groupBy: "room" | 
     byMatHtml += `</tbody></table>`;
   }
 
+  // Doors & windows summary (Phase D) — grouped by style across rooms
+  if (dwTotal > 0) {
+    const dwAgg = new Map<string, { kind: "door" | "window"; style: string; count: number; rooms: string[]; total: number }>();
+    configured.forEach(({ room, floorIndex }) => {
+      const dw = dwByRoom.get(`${floorIndex ?? 0}:${room}`);
+      if (!dw) return;
+      const rn = roomName(room, locale);
+      [...dw.doors, ...dw.windows].forEach(l => {
+        const key = `${l.kind}:${l.style}`;
+        if (!dwAgg.has(key)) dwAgg.set(key, { kind: l.kind, style: l.style, count: 0, rooms: [], total: 0 });
+        const e = dwAgg.get(key)!;
+        e.count++;
+        e.total += l.price;
+        if (!e.rooms.includes(rn)) e.rooms.push(rn);
+      });
+    });
+    byMatHtml += `<div class="section-title">${isEn?"Doors & Windows":"门窗汇总"}</div><table>
+      <thead><tr>
+        <th></th><th>${isEn?"Item":"品名"}</th><th>${isEn?"Rooms":"房间"}</th>
+        <th>${isEn?"Qty":"数量"}</th><th>${isEn?"Unit":"单价"}</th><th>${isEn?"Total":"合计"}</th>
+      </tr></thead><tbody>`;
+    [...dwAgg.values()].forEach(({ kind, style, count, rooms, total }) => {
+      const line: DoorsWindowsLine = { kind, style, label: "", size: "", price: 0 };
+      const unit = total / count;
+      byMatHtml += `<tr>
+        <td style="font-size:15px">${kind === "door" ? "🚪" : "🪟"}</td>
+        <td>${dwLabel(line, locale)}</td>
+        <td style="font-size:10px;color:#6e6e73">${rooms.join("、")}</td>
+        <td>×${count}</td>
+        <td>${fmtPrice(unit, locale)}</td>
+        <td><b>${fmtPrice(total, locale)}</b></td>
+      </tr>`;
+    });
+    byMatHtml += `</tbody></table>`;
+  }
+
   const html = `<!DOCTYPE html><html><head>
     <meta charset="utf-8">
     <title>${isEn?"Whole House Quote":"全屋报价单"}</title>
@@ -516,11 +620,11 @@ export function generateAllRoomsPdf(data: AllRoomsExportData, groupBy: "room" | 
 
       <div class="total-row">
         <span class="label">${isEn?"Grand Total":"全屋合计"}</span>
-        <span class="amount">${fmtPrice(totalCost, locale)}</span>
+        <span class="amount">${fmtPrice(grandTotal, locale)}</span>
       </div>
       <div class="notes">
-        <p>* ${isEn?"This quote covers materials and furniture only. Labor costs are estimated at 30–50% of materials."
-                  :"本报价仅包含材料及家具费用，人工费约为材料费的30–50%。"}</p>
+        <p>* ${isEn?"This quote covers materials, furniture, and doors/windows. Labor costs are estimated at 30–50% of materials."
+                  :"本报价包含材料、家具及门窗费用，人工费约为材料费的30–50%。"}</p>
         <p>* ${isEn?"Prices may vary by region and supplier."
                   :"实际价格因地区和供应商不同而异，最终以施工方报价为准。"}</p>
       </div>

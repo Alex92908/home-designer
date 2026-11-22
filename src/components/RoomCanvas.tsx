@@ -977,6 +977,13 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
   const winY = Math.max(0.05, Math.min(H - winH - 0.05, sill)) + winH / 2;
   const isOpen = useDesignerStore(s => !!s.windowOpenByWinId[win.id]);
   const toggleWinOpen = useDesignerStore(s => s.toggleWindowOpen);
+  // 漏窗图案：同一面墙的漏窗按序号轮换，绝不重复（沧浪亭规则）。序号就地
+  // 从 store 的 roomWindows 算（与渲染列表同源，按 id 定位）。
+  const activeRoom = useDesignerStore(s => s.activeRoom);
+  const roomWins = useDesignerStore(s => s.floorPlans[s.activeFloor]?.roomWindows?.[activeRoom] ?? []);
+  const leakyIndex = win.style === "leaky_lattice"
+    ? Math.max(0, roomWins.filter(w => w.wall === win.wall && w.style === "leaky_lattice").findIndex(w => w.id === win.id))
+    : 0;
   // All window geometry + open/close animation now lives in the shared
   // <StyledWindow> (src/components/shared/StyledWindow.tsx) so the 效果图
   // (this view) and the 外观漫游 render byte-identical windows from the same
@@ -992,6 +999,8 @@ function RoomWindow({ win, W, D, H }: { win: WindowConfig; W: number; D: number;
       style={style}
       isOpen={isOpen}
       onToggle={() => toggleWinOpen(win.id)}
+      latticeSeed={`${activeRoom}|${win.wall}`}
+      latticeIndex={leakyIndex}
     />
   );
 
@@ -1133,6 +1142,9 @@ function RoomDoor3D({
       doorStyle={doorStyle}
       isOpen={isOpen}
       onToggle={() => toggleDoorOpen(activeRoom)}
+      // 效果图门默认半掩（Phase A）：首次点击前左扇 30° 半掩，见
+      // WalkthroughDoor3D 的 defaultAjar 注释。
+      defaultAjar
       wallInset={0.02}
       frameT={0.04}
       frameColor={isGlassCurtainDoor ? "#1B1E24" : "#F0EEEA"}
@@ -3577,7 +3589,12 @@ function PolygonShell({
       wx: number; wz: number; angle: number;   // hole-start position
       lenM: number; sillM: number; hM: number;
       style: import("@/lib/types").WindowStyle;
+      /** 漏窗在同一条边上的序号（0 起），同一面墙不重复图案用。 */
+      latticeIndex?: number;
     }> = [];
+    // 同一条边上第 n 扇漏窗 → 图案序号 n（与 leakyLatticePatternFor 的
+    // (hash(墙键) + 序号) % 8 对应，同一面墙绝不重复）。
+    const leakyOrdinalByEdge = new Map<number, number>();
     for (const w of windows) {
       const hit = findEdgeForWall(points, w.wall, w.pos, w.len, bbox, w.edgeIndex);
       if (!hit) continue;
@@ -3595,6 +3612,8 @@ function PolygonShell({
       const wx2 = e.x2 / 100 - W / 2, wz2 = e.z2 / 100 - D / 2;
       const eLenM = Math.hypot(wx2 - wx1, wz2 - wz1);
       const t0 = startM / eLenM;
+      const latticeIndex = w.style === "leaky_lattice" ? (leakyOrdinalByEdge.get(hit.edgeIndex) ?? 0) : 0;
+      if (w.style === "leaky_lattice") leakyOrdinalByEdge.set(hit.edgeIndex, latticeIndex + 1);
       winPlacements.push({
         winId: w.id, edgeIndex: hit.edgeIndex,
         wx: wx1 + (wx2 - wx1) * t0,
@@ -3602,6 +3621,7 @@ function PolygonShell({
         angle: Math.atan2(-(wz2 - wz1), wx2 - wx1),
         lenM, sillM, hM,
         style: w.style ?? "sliding",
+        latticeIndex,
       });
     }
 
@@ -3722,6 +3742,8 @@ function PolygonShell({
           wx={w.wx} wz={w.wz} angle={w.angle}
           lenM={w.lenM} sillM={w.sillM} hM={w.hM}
           winId={w.winId} style={w.style}
+          latticeSeed={`${activeRoom}|edge-${w.edgeIndex}`}
+          latticeIndex={w.latticeIndex ?? 0}
         />
       ))}
 
@@ -3746,12 +3768,15 @@ function PolygonShell({
 /** 多边形房间的窗：把共享的 <StyledWindow>(与矩形路径/外观图同款窗框+竖挺+玻璃)
  *  摆到洞口中心。开关状态按 win.id 存 store，与矩形窗/外观图同源。 */
 function PolygonWindowPane({
-  wx, wz, angle, lenM, sillM, hM, winId, style,
+  wx, wz, angle, lenM, sillM, hM, winId, style, latticeSeed, latticeIndex = 0,
 }: {
   wx: number; wz: number; angle: number;   // hole-start world position + edge angle
   lenM: number; sillM: number; hM: number;
   winId: string;
   style: import("@/lib/types").WindowStyle;
+  /** 漏窗图案墙键 + 墙上序号（同一面墙不重复），见 RoomWindow 同注。 */
+  latticeSeed?: string;
+  latticeIndex?: number;
 }) {
   const isOpen = useDesignerStore(s => !!s.windowOpenByWinId[winId]);
   const toggleWinOpen = useDesignerStore(s => s.toggleWindowOpen);
@@ -3767,6 +3792,8 @@ function PolygonWindowPane({
         style={style}
         isOpen={isOpen}
         onToggle={() => toggleWinOpen(winId)}
+        latticeSeed={latticeSeed}
+        latticeIndex={latticeIndex}
       />
     </group>
   );
@@ -3775,8 +3802,9 @@ function PolygonWindowPane({
 /** Minimal hinged door panel rendered inside a polygon-shell door hole.
  *  Hinge is at the "start" end of the opening; swings inward by ~90°.
  *  按 DoorStyle 分型渲染（与矩形路径 RoomDoor3D 同款材质参数），
- *  glass_swing / french_double 双扇对开、glass_slide 沿墙平移，
- *  其余门型保持原木板单扇。 */
+ *  glass_swing / french_double / lattice_door / plank_studded 双扇对开、
+ *  glass_slide / shoji_slide 沿墙平移，其余门型保持原木板单扇。
+ *  半掩（Phase A）：首次点击前左扇 30° 半掩（滑门 35%），与矩形路径一致。 */
 function PolygonDoorPanel({
   wx, wz, angle, lenM, hM, room, style,
 }: {
@@ -3789,26 +3817,44 @@ function PolygonDoorPanel({
   const toggleDoorOpen = useDesignerStore(s => s.toggleDoorOpen);
   const panelRef = useRef<THREE.Group>(null);
   const panelRightRef = useRef<THREE.Group>(null); // 对开门右扇（反向摆动）
-  const animRef = useRef(0);
-  const isSlide  = style === "glass_slide";
-  const isDouble = style === "glass_swing" || style === "french_double";
+  // 半掩（Phase A）：与矩形路径一致——首次点击前左扇 30° 半掩（滑门 35%），
+  // 点击后进入正常开/合切换；双开门半掩只开左扇，右扇保持关闭。
+  const [touched, setTouched] = useState(false);
+  const isSlide  = style === "glass_slide" || style === "shoji_slide";
+  const isDouble = style === "glass_swing" || style === "french_double" || style === "lattice_door" || style === "plank_studded";
+  const fullOpen = isSlide ? -lenM : -Math.PI / 2;
+  const ajarOpen = isSlide ? -lenM * 0.35 : -Math.PI / 6;
+  const leftTarget = isOpen ? fullOpen : (!touched ? ajarOpen : 0);
+  const rightTarget = isDouble && isOpen ? Math.PI / 2 : 0;
+  const animRef = useRef(leftTarget);
+  const animRef2 = useRef(rightTarget);
   useFrame((_, delta) => {
     // 滑门：anim 为沿墙平移距离(0 → -lenM)；其余：铰链转角(0 → -π/2)。
-    const target = isOpen ? (isSlide ? -lenM : -Math.PI / 2) : 0;
     const speed = isSlide ? 2.4 : 5.5;
-    const diff = target - animRef.current;
+    const diff = leftTarget - animRef.current;
     if (Math.abs(diff) > 0.002) {
       animRef.current += Math.sign(diff) * Math.min(Math.abs(diff), speed * delta);
-      if (panelRef.current) {
-        if (isSlide) panelRef.current.position.x = animRef.current;
-        else panelRef.current.rotation.y = animRef.current;
-      }
-      if (isDouble && panelRightRef.current) {
-        panelRightRef.current.rotation.y = -animRef.current;
+    } else if (animRef.current !== leftTarget) {
+      animRef.current = leftTarget;
+    }
+    if (isDouble) {
+      const diff2 = rightTarget - animRef2.current;
+      if (Math.abs(diff2) > 0.002) {
+        animRef2.current += Math.sign(diff2) * Math.min(Math.abs(diff2), speed * delta);
+      } else if (animRef2.current !== rightTarget) {
+        animRef2.current = rightTarget;
       }
     }
+    // 每帧写回（含首帧，初始半掩角靠这一写落到门扇上）。
+    if (panelRef.current) {
+      if (isSlide) panelRef.current.position.x = animRef.current;
+      else panelRef.current.rotation.y = animRef.current;
+    }
+    if (isDouble && panelRightRef.current) {
+      panelRightRef.current.rotation.y = animRef2.current;
+    }
   });
-  const onClick = (e: { stopPropagation: () => void }) => { e.stopPropagation(); toggleDoorOpen(room); };
+  const onClick = (e: { stopPropagation: () => void }) => { e.stopPropagation(); setTouched(true); toggleDoorOpen(room); };
   // Place a group at the hinge (edge-start, on the wall inner face).
   // Inside the group the panel extends in local +X (along edge direction)
   // and rotation-Y swings it into the room.
@@ -3824,6 +3870,80 @@ function PolygonDoorPanel({
           const barH = Math.min(1.15, hM * 0.42); const cy = hM * 0.46;
           const Leaf = ({ mirror }: { mirror: boolean }) => {
             const sx = mirror ? -1 : 1; // 右扇沿 -X 展开
+            // 厚木板对开门（Phase B）：整扇深红漆厚木板 + 拼缝 + 铜钉阵 + 铜环，无格栅。
+            if (style === "plank_studded") {
+              return (
+                <group onClick={onClick}>
+                  <mesh position={[sx * lw / 2, hM / 2, 0]} castShadow receiveShadow>
+                    <boxGeometry args={[lw - 0.01, hM - 0.01, 0.04]} />
+                    <meshStandardMaterial color="#6E2418" roughness={0.6} />
+                  </mesh>
+                  {[1 / 3, 2 / 3].map((f, i) => (
+                    <mesh key={i} position={[sx * lw * f, hM / 2, 0.022]}>
+                      <boxGeometry args={[0.012, hM - 0.04, 0.006]} />
+                      <meshStandardMaterial color="#4A160E" roughness={0.7} />
+                    </mesh>
+                  ))}
+                  {[0.25, 0.5, 0.75].map((fx) => [0.2, 0.4, 0.6, 0.8].map((fy) => (
+                    <mesh key={`${fx}|${fy}`} position={[sx * lw * fx, hM * fy, 0.025]}>
+                      <sphereGeometry args={[0.018, 10, 8]} />
+                      <meshStandardMaterial color="#C9A227" metalness={0.9} roughness={0.25} />
+                    </mesh>
+                  )))}
+                  <mesh position={[sx * (lw - 0.08), hM * 0.45, 0.035]}>
+                    <torusGeometry args={[0.045, 0.008, 8, 20]} />
+                    <meshStandardMaterial color="#C9A227" metalness={0.9} roughness={0.25} />
+                  </mesh>
+                </group>
+              );
+            }
+            // 隔扇门（Phase B）：漆红框 + 上半镂空方格（真空洞）+ 下半实心雕花板。
+            if (style === "lattice_door") {
+              const y0 = hM * 0.5, y1 = hM - 0.05;
+              const cyL = (y0 + y1) / 2, chL = y1 - y0;
+              return (
+                <group onClick={onClick}>
+                  <mesh position={[sx * 0.02, hM / 2, 0]} castShadow>
+                    <boxGeometry args={[0.04, hM - 0.02, 0.035]} />
+                    <meshStandardMaterial color="#7C2A1E" roughness={0.5} />
+                  </mesh>
+                  <mesh position={[sx * (lw - 0.02), hM / 2, 0]} castShadow>
+                    <boxGeometry args={[0.04, hM - 0.02, 0.035]} />
+                    <meshStandardMaterial color="#7C2A1E" roughness={0.5} />
+                  </mesh>
+                  {[0.02, hM * 0.475, hM - 0.03].map((y, i) => (
+                    <mesh key={i} position={[sx * lw / 2, y, 0]}>
+                      <boxGeometry args={[lw - 0.012, i === 1 ? 0.05 : 0.04, 0.035]} />
+                      <meshStandardMaterial color="#7C2A1E" roughness={0.5} />
+                    </mesh>
+                  ))}
+                  {[0.25, 0.5, 0.75].map((f, i) => (
+                    <mesh key={`v${i}`} position={[sx * lw * f, cyL, 0]}>
+                      <boxGeometry args={[0.02, chL, 0.025]} />
+                      <meshStandardMaterial color="#7C2A1E" roughness={0.55} />
+                    </mesh>
+                  ))}
+                  {[1 / 3, 2 / 3].map((f, i) => (
+                    <mesh key={`h${i}`} position={[sx * lw / 2, y0 + chL * f, 0]}>
+                      <boxGeometry args={[lw - 0.04, 0.02, 0.025]} />
+                      <meshStandardMaterial color="#7C2A1E" roughness={0.55} />
+                    </mesh>
+                  ))}
+                  <mesh position={[sx * lw / 2, hM * 0.225, 0]} castShadow>
+                    <boxGeometry args={[lw - 0.02, hM * 0.45 - 0.02, 0.03]} />
+                    <meshStandardMaterial color="#7C2A1E" roughness={0.55} />
+                  </mesh>
+                  <mesh position={[sx * lw / 2, hM * 0.225, 0.02]}>
+                    <boxGeometry args={[lw - 0.12, hM * 0.32, 0.015]} />
+                    <meshStandardMaterial color="#8E3325" roughness={0.5} />
+                  </mesh>
+                  <mesh position={[sx * (lw - 0.06), hM * 0.45, 0.03]}>
+                    <sphereGeometry args={[0.02, 10, 10]} />
+                    <meshStandardMaterial color="#B8A060" metalness={0.85} roughness={0.2} />
+                  </mesh>
+                </group>
+              );
+            }
             return (
               <group onClick={onClick}>
                 <mesh position={[sx * lw / 2, hM / 2, 0]}>
@@ -3877,15 +3997,47 @@ function PolygonDoorPanel({
           </mesh>
           <group ref={panelRef}>
             <group onClick={onClick}>
-              <mesh position={[lenM / 2, hM / 2, 0]} castShadow receiveShadow>
-                <boxGeometry args={[lenM - 0.02, hM - 0.03, 0.012]} />
-                <meshPhysicalMaterial color="#C8D8E5" transmission={0.86} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={0.34} side={THREE.DoubleSide} />
-              </mesh>
-              {/* 竖向拉手 */}
-              <mesh position={[lenM - 0.12, hM * 0.45, 0.09]}>
-                <boxGeometry args={[0.03, Math.min(0.9, hM * 0.42), 0.03]} />
-                <meshStandardMaterial color="#2A2A2A" metalness={0.95} roughness={0.20} />
-              </mesh>
+              {style === "shoji_slide" ? (<>
+                {/* 障子滑门（Phase B）：木格 + 半透和纸（与 proc-shoji 同色同格） */}
+                <mesh position={[lenM / 2, hM / 2, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[lenM - 0.02, hM - 0.03, 0.012]} />
+                  <meshStandardMaterial color="#F5EFDC" roughness={0.9} metalness={0} transparent opacity={0.65} side={THREE.DoubleSide} />
+                </mesh>
+                <mesh position={[lenM / 2, hM - 0.015, 0.008]}>
+                  <boxGeometry args={[lenM - 0.02, 0.035, 0.02]} />
+                  <meshStandardMaterial color="#8A6A42" roughness={0.75} />
+                </mesh>
+                <mesh position={[lenM / 2, 0.015, 0.008]}>
+                  <boxGeometry args={[lenM - 0.02, 0.035, 0.02]} />
+                  <meshStandardMaterial color="#8A6A42" roughness={0.75} />
+                </mesh>
+                {[0.25, 0.5, 0.75].map((r, i) => (
+                  <mesh key={i} position={[lenM / 2, hM * r, 0.01]}>
+                    <boxGeometry args={[lenM - 0.04, 0.025, 0.018]} />
+                    <meshStandardMaterial color="#8A6A42" roughness={0.75} />
+                  </mesh>
+                ))}
+                {[-0.17, 0.17].map((fx, i) => (
+                  <mesh key={i} position={[lenM / 2 + fx * lenM, hM / 2, 0.01]}>
+                    <boxGeometry args={[0.025, hM - 0.06, 0.018]} />
+                    <meshStandardMaterial color="#8A6A42" roughness={0.75} />
+                  </mesh>
+                ))}
+                <mesh position={[lenM - 0.12, hM * 0.45, 0.03]}>
+                  <boxGeometry args={[0.03, Math.min(0.3, hM * 0.2), 0.02]} />
+                  <meshStandardMaterial color="#8A6A42" roughness={0.7} />
+                </mesh>
+              </>) : (<>
+                <mesh position={[lenM / 2, hM / 2, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[lenM - 0.02, hM - 0.03, 0.012]} />
+                  <meshPhysicalMaterial color="#C8D8E5" transmission={0.86} roughness={0.05} thickness={0.02} metalness={0} transparent opacity={0.34} side={THREE.DoubleSide} />
+                </mesh>
+                {/* 竖向拉手 */}
+                <mesh position={[lenM - 0.12, hM * 0.45, 0.09]}>
+                  <boxGeometry args={[0.03, Math.min(0.9, hM * 0.42), 0.03]} />
+                  <meshStandardMaterial color="#2A2A2A" metalness={0.95} roughness={0.20} />
+                </mesh>
+              </>)}
             </group>
           </group>
         </>

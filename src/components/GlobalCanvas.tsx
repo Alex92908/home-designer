@@ -24,12 +24,14 @@ import { Ktx2Detect } from "@/lib/gltfKtx2";
 import { MobileTextureShrink } from "@/lib/mobileTexShrink";
 import { SceneDiag, SceneDiagHUD } from "@/lib/sceneDiag";
 import { RoomState } from "@/lib/store";
-import { ROOM_DEFS, RoomType } from "@/lib/types";
+import { ROOM_DEFS, RoomType, type DoorStyle } from "@/lib/types";
 import { getRoomDoors } from "@/lib/roomDoors";
+import { getRoomWindows } from "@/lib/roomWindows";
 import { ALL_POSSIBLE_ROOMS } from "@/lib/store";
 const EMPTY_ROOM_STATE_GC: RoomState = { materials: {}, placedItems: [] };
 import { PlacedItemMesh, LightFixtureInner } from "./RoomCanvas";
 import { WalkthroughDoor3D } from "./walkthrough/WalkthroughDoor3D";
+import { StyledWindow } from "@/components/shared/StyledWindow";
 import { useT, useLocale , customRoomDisplayName} from "@/lib/i18n";
 import SceneVeil, { FirstFrameNotifier } from "./SceneVeil";
 import type { RoofStyle } from "@/lib/types";
@@ -78,6 +80,36 @@ function GlobalRoomLight({ room, H, color, lightId }: { room: RoomType; H: numbe
         decay={2}
       />
     </group>
+  );
+}
+
+
+function DollhouseDoor({
+  W, D, H, doorWall, doorPosCm, doorLenCm, doorHCm, doorStyle, wallInset,
+}: {
+  W: number; D: number; H: number;
+  doorWall: "N" | "S" | "W" | "E";
+  doorPosCm: number; doorLenCm: number; doorHCm: number;
+  doorStyle: DoorStyle;
+  wallInset: number;
+}) {
+  // 全屋 3D 每扇门独立的开合状态（之前是 isOpen={false} + 空 toggle，门永远
+  // 关着）。默认半掩（defaultAjar），点击切换开/合。必须是独立组件——
+  // useState 不能放在 doorList.map 的回调里。
+  const [open, setOpen] = useState(false);
+  return (
+    <WalkthroughDoor3D
+      W={W} D={D} H={H}
+      doorWall={doorWall}
+      doorPosCm={doorPosCm}
+      doorLenCm={doorLenCm}
+      doorHCm={doorHCm}
+      doorStyle={doorStyle}
+      isOpen={open}
+      onToggle={() => setOpen(o => !o)}
+      defaultAjar
+      wallInset={wallInset}
+    />
   );
 }
 
@@ -211,6 +243,32 @@ function RoomGroup({
     return m;
   }, [doorList]);
 
+  // 全屋 3D 原来一扇窗都不画（GlobalCanvas 无任何窗渲染）。取共享真源
+  // getRoomWindows，与效果图/漫游/外观同一 pos 约定；短墙按 WALL_H/H 等比
+  // 压低窗台/窗高，窗体用共享 StyledWindow（Phase A）。
+  const winList = useMemo(
+    () => getRoomWindows(fpForDoors, room, {
+      widthCm: Math.round(W / CM), depthCm: Math.round(D / CM),
+    }),
+    [fpForDoors, room, W, D],
+  );
+  const winsByCardinal = useMemo(() => {
+    const m: Partial<Record<"N" | "S" | "W" | "E", typeof winList>> = {};
+    for (const w of winList) {
+      if (w.wall === "N" || w.wall === "S" || w.wall === "E" || w.wall === "W") {
+        (m[w.wall] ??= [] as typeof winList).push(w);
+      }
+    }
+    return m;
+  }, [winList]);
+  // 短墙窗的竖向缩放：窗台/窗高按 WALL_H/H 等比压缩（否则 150cm 窗高
+  // 顶出 112cm 短墙）；钳制到墙内，留 2cm 顶沿。
+  const dollWinSpan = (w: { sill?: number; h?: number }) => {
+    const sillD = Math.min((w.sill ?? 90) * CM * (WALL_H / H), WALL_H * 0.5);
+    const hD = Math.max(0.15, Math.min((w.h ?? 150) * CM * (WALL_H / H), WALL_H - sillD - 0.02));
+    return { sillD, hD };
+  };
+
   // Center of the room's bounding box, in world coords
   const cx = originX + W / 2;
   const cz = originZ + D / 2;
@@ -251,36 +309,55 @@ function RoomGroup({
           (w.cardinal && wallsHidden?.[w.cardinal] === true) ||
           (wallsHidden?.[`edge-${w.edgeIdx}`] === true);
         if (hidden) return null;
-        // 有门的 cardinal 墙：沿墙拆成「门洞之间」的实心段留出洞（短墙、门满高、无门楣）。
+        // 有门/窗的 cardinal 墙：沿墙拆成实心段留出洞。门洞满高（短墙、门满高、
+        // 无门楣）；窗洞只掏中间一段，洞下留窗台、洞上留窗楣（与 RoomCanvas
+        // 的 splitWallAroundHoles 同思路，短墙等比压缩）。
         const doors = w.cardinal ? (doorsByCardinal[w.cardinal] ?? []) : [];
-        if (w.cardinal && doors.length) {
+        const wins = w.cardinal ? (winsByCardinal[w.cardinal] ?? []) : [];
+        if (w.cardinal && (doors.length || wins.length)) {
           const wall = w.cardinal;
           const halfAlong = (wall === "N" || wall === "S") ? W / 2 : D / 2;
-          const gaps = doors.map(d => {
-            const lenM = Math.max(0.4, (d.len ?? 90) * CM);
-            const c = (d.pos ?? 0) * CM + lenM / 2 - halfAlong; // 门中心（沿墙）
-            return [c - lenM / 2, c + lenM / 2] as [number, number];
-          }).sort((a, b) => a[0] - b[0]);
-          const segs: [number, number][] = [];
+          type Gap = { a: number; b: number; sillD?: number; hD?: number };
+          const gaps: Gap[] = [
+            ...doors.map(d => {
+              const lenM = Math.max(0.4, (d.len ?? 90) * CM);
+              const c = (d.pos ?? 0) * CM + lenM / 2 - halfAlong; // 门中心（沿墙）
+              return { a: c - lenM / 2, b: c + lenM / 2 };
+            }),
+            ...wins.map(wn => {
+              const lenM = Math.max(0.4, (wn.len ?? 120) * CM);
+              const c = (wn.pos ?? 0) * CM + lenM / 2 - halfAlong; // 窗中心（沿墙）
+              const { sillD, hD } = dollWinSpan(wn);
+              return { a: c - lenM / 2, b: c + lenM / 2, sillD, hD };
+            }),
+          ].sort((x, y) => x.a - y.a);
+          // 实心段：洞与洞之间满高；窗洞处另补窗台段 + 窗楣段。
+          const pieces: Array<{ a: number; b: number; y0: number; y1: number }> = [];
           let cursor = -halfAlong;
-          for (const [g0, g1] of gaps) {
-            if (g0 > cursor) segs.push([cursor, g0]);
-            cursor = Math.max(cursor, g1);
+          for (const g of gaps) {
+            if (g.a > cursor) pieces.push({ a: cursor, b: g.a, y0: 0, y1: WALL_H });
+            if (g.sillD !== undefined && g.hD !== undefined) {
+              if (g.sillD > 0.01) pieces.push({ a: g.a, b: g.b, y0: 0, y1: g.sillD });
+              const top = g.sillD + g.hD;
+              if (top < WALL_H - 0.01) pieces.push({ a: g.a, b: g.b, y0: top, y1: WALL_H });
+            }
+            cursor = Math.max(cursor, g.b);
           }
-          if (cursor < halfAlong) segs.push([cursor, halfAlong]);
+          if (cursor < halfAlong) pieces.push({ a: cursor, b: halfAlong, y0: 0, y1: WALL_H });
           return (
             <group key={i}>
-              {segs.map(([a, b], si) => {
+              {pieces.map(({ a, b, y0, y1 }, si) => {
                 const center = (a + b) / 2;
                 const len = b - a;
-                if (len < 0.01) return null;
+                const h = y1 - y0;
+                if (len < 0.01 || h < 0.01) return null;
                 const pos: [number, number, number] =
-                  wall === "N" ? [center, WALL_H / 2, -D / 2]
-                  : wall === "S" ? [center, WALL_H / 2, D / 2]
-                  : wall === "W" ? [-W / 2, WALL_H / 2, center]
-                  : [W / 2, WALL_H / 2, center];
+                  wall === "N" ? [center, (y0 + y1) / 2, -D / 2]
+                  : wall === "S" ? [center, (y0 + y1) / 2, D / 2]
+                  : wall === "W" ? [-W / 2, (y0 + y1) / 2, center]
+                  : [W / 2, (y0 + y1) / 2, center];
                 const size: [number, number, number] =
-                  (wall === "N" || wall === "S") ? [len, WALL_H, WALL] : [WALL, WALL_H, len];
+                  (wall === "N" || wall === "S") ? [len, h, WALL] : [WALL, h, len];
                 return (
                   <mesh key={si} position={pos} castShadow receiveShadow>
                     <boxGeometry args={size} />
@@ -300,13 +377,14 @@ function RoomGroup({
       })}
 
       {/* 门：共享 styled 门组件（与效果图/漫游/外观同一套）；高度 clamp 到短墙 WALL_H，
-          wallInset=WALL/2 让门坐在洞的内面。全屋3D 概览不需要开合交互，isOpen 固定 false。 */}
+          wallInset=WALL/2 让门坐在洞的内面。每扇门独立开合状态（DollhouseDoor），
+          默认半掩，点击切换开/合——之前是 isOpen 固定 false + 空 toggle，门永远关着。 */}
       {doorList.map((d, di) => {
         const wall = d.wall;
         if (wall !== "N" && wall !== "S" && wall !== "E" && wall !== "W") return null;
         if (wallsHidden?.[wall] === true) return null;
         return (
-          <WalkthroughDoor3D
+          <DollhouseDoor
             key={`door-${di}`}
             W={W} D={D} H={WALL_H}
             doorWall={wall}
@@ -314,10 +392,49 @@ function RoomGroup({
             doorLenCm={d.len ?? 90}
             doorHCm={Math.min(d.h ?? 200, Math.round(WALL_H / CM))}
             doorStyle={d.style ?? "wood_panel"}
-            isOpen={false}
-            onToggle={() => {}}
             wallInset={WALL / 2}
           />
+        );
+      })}
+
+      {/* 窗（Phase A）：共享 StyledWindow，与效果图/漫游/外观同一套；窗台/窗高
+          按短墙等比压缩（dollWinSpan），位置/朝向与 RoomCanvas.RoomWindow 同约定。
+          之前全屋 3D 一扇窗都不画，每间房都读作无窗。环形房间（走廊/阳台/露天）
+          本来就不画墙，窗也不画，免得浮空。 */}
+      {!isCirculationRoom && winList.map((wn, wi) => {
+        const wall = wn.wall;
+        if (wall !== "N" && wall !== "S" && wall !== "E" && wall !== "W") return null;
+        if (wallsHidden?.[wall] === true) return null;
+        const lenM = Math.max(0.4, (wn.len ?? 120) * CM);
+        const { sillD, hD } = dollWinSpan(wn);
+        const along = (wn.pos ?? 0) * CM + lenM / 2; // 窗中心（沿墙，自墙端量）
+        const winY = sillD + hD / 2;
+        const pos: [number, number, number] =
+          wall === "N" ? [along - W / 2, winY, -D / 2]
+          : wall === "S" ? [along - W / 2, winY, D / 2]
+          : wall === "W" ? [-W / 2, winY, along - D / 2]
+          : [W / 2, winY, along - D / 2];
+        const rot: [number, number, number] =
+          wall === "N" ? [0, 0, 0]
+          : wall === "S" ? [0, Math.PI, 0]
+          : wall === "W" ? [0, Math.PI / 2, 0]
+          : [0, -Math.PI / 2, 0];
+        // 漏窗图案：同一面墙按序号轮换，绝不重复。
+        const leakyIndex = wn.style === "leaky_lattice"
+          ? Math.max(0, winList.filter(w => w.wall === wall && w.style === "leaky_lattice").findIndex(w => w.id === wn.id))
+          : 0;
+        return (
+          <group key={`win-${wi}`} position={pos} rotation={rot}>
+            <StyledWindow
+              winLen={lenM}
+              winH={hD}
+              style={wn.style ?? "sliding"}
+              isOpen={false}
+              onToggle={() => {}}
+              latticeSeed={`${room}|${wall}`}
+              latticeIndex={leakyIndex}
+            />
+          </group>
         );
       })}
 

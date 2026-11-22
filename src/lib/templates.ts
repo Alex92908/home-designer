@@ -928,7 +928,7 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
         { wall:"E", pos:80, len:240, h:180, sill:50, style:"wooden" },
         { wall:"N",  pos:50, len:120, h:100, sill:120, style:"louvered" },
       ],
-      doorStyle: "sliding_barn",
+      doorStyle: "shoji_slide",
       doorWall: "S", doorPos: 210, doorLen: 80,
       exteriorDecor: [
         // Lanterns flank centered door at u=0.5.
@@ -956,7 +956,7 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
       windows: [
         { wall:"E", pos:80, len:200, h:180, sill:50, style:"wooden" },
       ],
-      doorStyle: "sliding_barn",
+      doorStyle: "shoji_slide",
       doorWall: "S", doorPos: 160, doorLen: 80,
     },
     bedroom: {
@@ -1026,6 +1026,15 @@ export const TEMPLATE_JAPANESE: StyleTemplate = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Template 5: 新中式
 // ─────────────────────────────────────────────────────────────────────────────
+// 门窗（2026-11-21，doors/windows Phase B）：客厅/主卧门由法式对开玻璃门
+// （french_double，假玻璃）改为隔扇门 lattice_door，窗由木窗 GLB 改为槛窗
+// sill_lattice（与同屋隔扇门同格同色）。本模板由 34 个中式片场共用；
+// 秦汉/唐宫/石库门等另有时代门的片场，须在 projectTemplates.ts 里用
+// floorLayouts 的显式 doors 覆盖（见 BUILD-A-B.md 的跟进补丁表）：
+// 秦汉/唐宫/魏晋/石库门/民国 → plank_studded，明清/宋 → lattice_door。
+// 注意：floorLayouts 的显式 doors/windows（store 3.5 步）在风格模板之后
+// 应用，会覆盖这里的值——例如 set-qinhan 客厅显式 wood_panel 门仍是木门，
+// 直到补丁把它改成 plank_studded。
 export const TEMPLATE_CHINESE: StyleTemplate = {
   id: "chinese",
   name: "新中式",
@@ -1089,9 +1098,9 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
         { furnitureId:"lamp-arc-gold", x:36.5, z:36.5, rotation:0   },
       ],
       windows: [
-        { wall:"E", pos:80, len:260, h:200, sill:70, style:"wooden" },
+        { wall:"E", pos:80, len:260, h:200, sill:70, style:"sill_lattice" },
       ],
-      doorStyle: "french_double",
+      doorStyle: "lattice_door",
       doorWall: "S", doorPos: 210, doorLen: 70,
       exteriorDecor: [
         // Couplets flank the centered door (u≈0.42-0.58). Inner edge of
@@ -1121,9 +1130,9 @@ export const TEMPLATE_CHINESE: StyleTemplate = {
         { furnitureId:"lamp-arc-gold", x:36.5, z:323.5, rotation:0   },
       ],
       windows: [
-        { wall:"E", pos:80, len:200, h:180, sill:70, style:"wooden" },
+        { wall:"E", pos:80, len:200, h:180, sill:70, style:"sill_lattice" },
       ],
-      doorStyle: "french_double",
+      doorStyle: "lattice_door",
       doorWall: "S", doorPos: 160, doorLen: 80,
     },
     bedroom: {

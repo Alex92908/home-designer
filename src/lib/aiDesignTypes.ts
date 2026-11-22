@@ -48,6 +48,8 @@ export interface AiDesignWindow {
    *  - "louvered" 百叶窗
    *  - "security" 防盗窗（铁艺栏栅）
    *  - "wooden"   木窗（复古/中式/乡村）
+   *  - "leaky_lattice" 漏窗（园林镂空花窗，无玻璃）
+   *  - "sill_lattice"  槛窗（中式镂空格栅，与同屋隔扇门同格）
    *  缺省=推拉窗。服务端宽容解析（中文/近义词也认）。 */
   style?: string;
 }
@@ -62,7 +64,7 @@ export interface AiDesignDoor {
   len?: number;
   /** 门高（cm），缺省 200 */
   h?: number;
-  /** 门款式，同 AiDesignRoom.door 四选一，宽容解析 */
+  /** 门款式，同 AiDesignRoom.door（七选一），宽容解析 */
   style?: string;
 }
 
@@ -125,6 +127,9 @@ export interface AiDesignRoom {
    *  - "frosted_glass" 磨砂玻璃木框门
    *  - "sliding_barn"  谷仓推拉门
    *  - "french_double" 法式对开玻璃门
+   *  - "lattice_door"  隔扇门（明清/宋中式对开）
+   *  - "shoji_slide"   障子推拉门（日式）
+   *  - "plank_studded" 镶钉板门（秦汉/唐/石库门）
    *  缺省=不动现有门款。服务端宽容解析（中文/近义词也认）。 */
   door?: string;
   /** 门在哪面墙：N=北/后 S=南/前 W=西/左 E=东/右。缺省=不动。 */

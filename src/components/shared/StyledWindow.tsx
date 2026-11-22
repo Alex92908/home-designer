@@ -17,7 +17,7 @@
 // pixel-identical after it is refactored onto this component; the walkthrough
 // overrides glass transmission/opacity for see-through navigation.
 
-import { useRef, useMemo, Component, ReactNode, Suspense } from "react";
+import { useRef, useMemo, useEffect, Component, ReactNode, Suspense } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@/lib/drei";
 import * as THREE from "three";
@@ -27,6 +27,7 @@ import {
   WINDOW_FRAME_COLOR,
   WINDOW_MULLION_COLOR,
 } from "@/lib/roomVisuals";
+import { leakyLatticePatternFor, buildLeakyLatticeGeometry, type LeakyLatticePattern } from "@/lib/roomWindows";
 
 // ─── glTF arch-window assets ─────────────────────────────────
 const ENABLE_GLTF_WINDOW = true;
@@ -54,6 +55,9 @@ export function gltfSpecForStyle(style: WindowStyle): GltfWindowSpec | null {
       return { url: IRON_BAR_WINDOW_URL };
     case "wooden":
       return { url: WOODEN_WINDOW_URL };
+    case "leaky_lattice":
+    case "sill_lattice":
+      return null;   // 漏窗/槛窗：程序化镂空格栅（真空洞），不走 glTF
     case "casement":
     case "awning":
       return null;   // 平开/上悬都用程序化扇(带开关动画),不走 glTF
@@ -134,6 +138,16 @@ class ArchWindowFallback extends Component<
   }
 }
 
+// ─── 漏窗镂空图案（Phase B）────────────────────────────────────
+// 8 种图案全部是 ExtrudeGeometry 上的真孔洞（Lattice = holes, not
+// texture）——光线与颜色从孔里漏过去，网师园测试（光斑落到地上）成立。
+// 约束：孔与孔不重叠、孔离板边 ≥0.06m，否则 earcut 三角化失败或板边断裂。
+// Phase D worker 在 proceduralFurniture 里另建 lattice helper；两份实现
+// 形态不同（这里是“整板打孔”，那边是“条栅拼装”），合并时以图案名录
+// （lib/roomWindows.ts LEAKY_LATTICE_PATTERNS）为准，几何实现二选一。
+/** 与隔扇门同色的漆木色——槛窗格栅与隔扇门上格同格同色。 */
+const LATTICE_LACQUER = "#7C2A1E";
+
 export type StyledWindowProps = {
   /** Window opening size in metres. */
   winLen: number;
@@ -164,6 +178,13 @@ export type StyledWindowProps = {
    *  叶片是浅色、背后没玻璃，透出墙体显得发白「像没渲染」。加 tinted 玻璃背板
    *  后百叶窗就和推拉窗一样是个清晰的有色窗面。Default false。 */
   glassBehindLouver?: boolean;
+  /** 漏窗图案种子（Phase B）：调用方传墙键 `"房间|墙"`（如 `living|E`），
+   *  并用 `latticeIndex` 传该窗在同一面墙的漏窗中的序号（0 起）——
+   *  同一面墙上序号不同则图案必不同（沧浪亭规则）。不传则固定用
+   *  该墙的第 0 个图案。仅 leaky_lattice 用。 */
+  latticeSeed?: string;
+  /** 同上：该漏窗在同一面墙的漏窗中的序号（0 起）。默认 0。 */
+  latticeIndex?: number;
 };
 
 /**
@@ -187,6 +208,8 @@ export function StyledWindow({
   enableGltf = ENABLE_GLTF_WINDOW,
   glassBehindLouver = false,
   frameWidth,
+  latticeSeed,
+  latticeIndex = 0,
 }: StyledWindowProps) {
   // Animation refs (mirror RoomCanvas RoomWindow):
   //  - sashRef: sliding (translate) / casement + wooden (rotate around hinge)
@@ -241,6 +264,15 @@ export function StyledWindow({
 
   const FRAME_THIN = frameWidth ?? 0.025;
   const WALL_OFFSET = wallOffset;
+
+  // 漏窗镂空板：按墙键 + 墙上序号确定性选图案，尺寸变化时重建。
+  const leakyPattern = style === "leaky_lattice" ? leakyLatticePatternFor(latticeSeed ?? "", latticeIndex) : null;
+  const leakySeedStr = `${latticeSeed ?? ""}|${latticeIndex}`;
+  const leakyGeo = useMemo(
+    () => (leakyPattern ? buildLeakyLatticeGeometry(leakyPattern, winLen, winH, leakySeedStr) : null),
+    [leakyPattern, winLen, winH, leakySeedStr],
+  );
+  useEffect(() => () => { leakyGeo?.dispose(); }, [leakyGeo]);
 
   const frameBars = (
     <>
@@ -343,9 +375,73 @@ export function StyledWindow({
   const proceduralWindow = (
     <>
       {/* 上悬扇自带一圈 sash 粗框,不再叠外框(frameBars),否则「框中框」过粗、接缝大
-          (用户:粗细不合理 / 接缝太大)。其余窗型保留外框。 */}
-      {style !== "awning" && frameBars}
-      {style === "sliding" ? (
+          (用户:粗细不合理 / 接缝太大)。漏窗/槛窗自带石框/漆框，也不再叠外框。
+          其余窗型保留外框。 */}
+      {style !== "awning" && style !== "leaky_lattice" && style !== "sill_lattice" && frameBars}
+      {style === "leaky_lattice" ? (
+        // 漏窗：石质外框 + 3cm 厚镂空板（真孔洞，无玻璃）+ 出挑窗台石。
+        // 固定不开启；图案由 latticeSeed 确定（同一面墙不重复）。
+        <group onClick={(e) => { e.stopPropagation(); onToggle(); }}>
+          {([0, 1, 2, 3] as const).map((i) => {
+            const horizontal = i < 2;
+            const pos: [number, number, number] = horizontal
+              ? [0, i === 0 ? winH / 2 - 0.025 : -winH / 2 + 0.025, WALL_OFFSET]
+              : [i === 2 ? -winLen / 2 + 0.025 : winLen / 2 - 0.025, 0, WALL_OFFSET];
+            const size: [number, number, number] = horizontal
+              ? [winLen, 0.05, 0.04] : [0.05, winH - 0.1, 0.04];
+            return (
+              <mesh key={i} position={pos} castShadow>
+                <boxGeometry args={size} />
+                <meshStandardMaterial color="#CFC8B8" roughness={0.9} />
+              </mesh>
+            );
+          })}
+          {leakyGeo && (
+            <mesh geometry={leakyGeo} position={[0, 0, WALL_OFFSET]}>
+              <meshStandardMaterial color="#8A6A42" roughness={0.85} side={THREE.DoubleSide} />
+            </mesh>
+          )}
+          {/* 出挑窗台石：框有进深、台有出挑，窗洞不是平面贴图 */}
+          <mesh position={[0, -winH / 2 - 0.02, WALL_OFFSET + 0.02]} castShadow>
+            <boxGeometry args={[winLen + 0.1, 0.04, 0.09]} />
+            <meshStandardMaterial color="#CFC8B8" roughness={0.9} />
+          </mesh>
+        </group>
+      ) : style === "sill_lattice" ? (
+        // 槛窗：与隔扇门同格同色的方格镂空（无玻璃、真通透）+ 漆木框 + 出挑窗台。
+        // 固定不开启；格栅间距与 lattice_door 上格一致（约 20cm）。
+        (() => {
+          const vCount = Math.max(3, Math.round(winLen / 0.2));
+          const hCount = Math.max(2, Math.round(winH / 0.24));
+          const bar = (w: number, h: number, x: number, y: number) => (
+            <mesh key={`${x.toFixed(2)}|${y.toFixed(2)}`} position={[x, y, WALL_OFFSET + 0.008]} castShadow>
+              <boxGeometry args={[w, h, 0.025]} />
+              <meshStandardMaterial color={LATTICE_LACQUER} roughness={0.55} />
+            </mesh>
+          );
+          return (
+            <group onClick={(e) => { e.stopPropagation(); onToggle(); }}>
+              {/* 漆木外框 */}
+              {bar(winLen, 0.05, 0, winH / 2 - 0.025)}
+              {bar(winLen, 0.05, 0, -winH / 2 + 0.025)}
+              {bar(0.05, winH - 0.1, -winLen / 2 + 0.025, 0)}
+              {bar(0.05, winH - 0.1, winLen / 2 - 0.025, 0)}
+              {/* 方格栅：竖条 + 横条，条间是真空洞 */}
+              {Array.from({ length: vCount - 1 }).map((_, i) =>
+                bar(0.022, winH - 0.1, -winLen / 2 + (winLen / vCount) * (i + 1), 0),
+              )}
+              {Array.from({ length: hCount - 1 }).map((_, i) =>
+                bar(winLen - 0.1, 0.022, 0, -winH / 2 + (winH / hCount) * (i + 1)),
+              )}
+              {/* 出挑木窗台 */}
+              <mesh position={[0, -winH / 2 - 0.02, WALL_OFFSET + 0.02]} castShadow>
+                <boxGeometry args={[winLen + 0.08, 0.04, 0.08]} />
+                <meshStandardMaterial color={LATTICE_LACQUER} roughness={0.6} />
+              </mesh>
+            </group>
+          );
+        })()
+      ) : style === "sliding" ? (
         <>
           {/* Fixed right panel */}
           <group

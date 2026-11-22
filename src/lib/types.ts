@@ -931,7 +931,14 @@ export interface DoorConfig {
   edgeIndex?: number;
 }
 
-/** Window visual styles. */
+/** Window visual styles.
+ *  `leaky_lattice` / `sill_lattice` (2026-11-21, doors/windows Phases A+B):
+ *  procedural pierced-lattice windows — real holes, no glass. The 8
+ *  leaky patterns live in `leakyLatticePatternFor` (lib/roomWindows.ts)
+ *  and are built as ShapeGeometry-with-holes in shared/StyledWindow.tsx.
+ *  GLB SWAP NOTE: a future sourced lattice-window GLB replaces only the
+ *  procedural branch in StyledWindow.tsx (gltfSpecForStyle); the style
+ *  value, the templates and every caller stay unchanged. */
 export type WindowStyle =
   | "sliding"   // 推拉窗（中间一条竖轨，国内最常见）
   | "casement"  // 平开窗（单整块玻璃，向外开）
@@ -939,7 +946,9 @@ export type WindowStyle =
   | "fixed"     // 固定观景窗（无分隔）
   | "louvered"  // 百叶窗（水平条）
   | "security"  // 防盗窗（铁艺栏栅，不可开启）
-  | "wooden";   // 木窗（复古/中式/乡村风）
+  | "wooden"    // 木窗（复古/中式/乡村风）
+  | "leaky_lattice" // 漏窗（镂空花窗，无玻璃，≥8 图案，园林墙用）
+  | "sill_lattice"; // 槛窗（与同屋隔扇门同格的镂空格栅，明清厅堂用）
 
 export interface PlacedItem {
   instanceId: string;
@@ -1253,7 +1262,16 @@ export function isExteriorWallSide(
 }
 
 /** Interior-door visual styles. Each variant is rendered differently by
- *  RoomDoor3D and listed in the door style picker (2D edit mode). */
+ *  RoomDoor3D and listed in the door style picker (2D edit mode).
+ *  `lattice_door` / `shoji_slide` / `plank_studded` (2026-11-21,
+ *  doors/windows Phases A+B) are procedural and built to ship as the
+ *  fallback if no free sourced model turns up — NOT placeholders.
+ *  GLB SWAP NOTE: the style → renderer mapping is single-sourced in the
+ *  two door renderers (shared/RoomDoor3D.tsx + walkthrough/
+ *  WalkthroughDoor3D.tsx, which must stay mirrored). A future sourced GLB
+ *  for one of these styles replaces only its procedural branch in those
+ *  two files; the style value, templates.ts, roomDoors.ts and every caller
+ *  stay unchanged. Do NOT add a third renderer for a door style. */
 export type DoorStyle =
   | "wood_panel"     // 实木门板（默认，带面板线条）
   | "frosted_glass"  // 磨砂玻璃木框门
@@ -1261,7 +1279,10 @@ export type DoorStyle =
   | "french_double"  // 法式对开玻璃门
   | "glass_swing"    // 通透玻璃平开门（细框大玻璃 + 竖把手，幕墙别墅用）
   | "glass_slide"    // 通透玻璃推拉门（细框大玻璃 + 顶轨竖把手，左右滑动）
-  | "roller_shutter"; // 真实卷帘门 GLB（车库门，向上卷起开启）
+  | "roller_shutter" // 真实卷帘门 GLB（车库门，向上卷起开启）
+  | "lattice_door"   // 隔扇门（上镂空方格 + 下实心雕花板，对开，左扇半掩）
+  | "shoji_slide"    // 障子推拉门（木格 + 半透和纸，和室/韩屋用，替 sliding_barn）
+  | "plank_studded"; // 厚木板对开门 + 铜钉/铜环（秦汉/唐宫/石库门，禁格栅）
 
 /** A distinct building on the same plot.
  *  buildings[0] is always the "main house" at (x=0, z=0).

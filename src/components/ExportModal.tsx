@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useDesignerStore, PERSIST_VERSION } from "@/lib/store";
+import { useDesignerStore, PERSIST_VERSION, calcDoorsWindowsCost } from "@/lib/store";
 import ModelImportCard from "./ModelImportCard";
 import { getCurrentScene } from "@/lib/sceneRegistry";
 import { exportScene, EXPORT_FORMATS, type ExportFormat } from "@/lib/exportModel";
@@ -91,6 +91,7 @@ export default function ExportModal() {
   };
 
   const activeRoom      = useDesignerStore(s => s.activeRoom);
+  const activeFloor     = useDesignerStore(s => s.activeFloor);
   const floorPlans      = useDesignerStore(s => s.floorPlans);
   const rooms           = useDesignerStore(s => s.floorPlans[s.activeFloor]?.rooms ?? {} as typeof s.floorPlans[0]["rooms"]);
   const enabledRooms    = useDesignerStore(s => s.floorPlans[s.activeFloor]?.enabledRooms ?? []);
@@ -127,7 +128,8 @@ export default function ExportModal() {
     if (rs.materials.tile)    c += rs.materials.tile.price * a.floor;
     if (rs.materials.light)   c += rs.materials.light.price * (rs.materials.light.id === "light-spot" ? 8 : 1);
     for (const p of rs.placedItems) { const f = getFurnitureById(p.furnitureId); if (f) c += f.price; }
-    return { room: r, cost: c };
+    const dw = calcDoorsWindowsCost(floorPlans[activeFloor], r).subtotal;
+    return { room: r, cost: c, costWithDW: c + dw };
   });
   // Sum across ALL floors for totals
   const totalAllCost = floorPlans.reduce((sum, fp) =>
@@ -144,7 +146,14 @@ export default function ExportModal() {
       return s2 + c;
     }, 0)
   , 0);
+  // On-screen totals include doors/windows; the PDFs add them internally
+  // (generatePdf / generateAllRoomsPdf), so totalAllCost stays
+  // materials+furniture-only for the PDF calls below.
+  const totalDWCost = floorPlans.reduce((sum, fp) =>
+    sum + fp.enabledRooms.reduce((s2, r) => s2 + calcDoorsWindowsCost(fp, r).subtotal, 0), 0);
+  const totalAllCostWithDW = totalAllCost + totalDWCost;
   const currentRoomCost = roomCosts.find(r => r.room === activeRoom)?.cost ?? 0;
+  const currentRoomCostWithDW = roomCosts.find(r => r.room === activeRoom)?.costWithDW ?? 0;
 
   useEffect(() => {
     const handler = () => setOpen(true);
@@ -491,7 +500,7 @@ export default function ExportModal() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-black">{formatPrice(totalAllCost, locale)}</div>
+              <div className="text-3xl font-black">{formatPrice(totalAllCostWithDW, locale)}</div>
               <div className="text-xs text-blue-200">{t.exportTotal}</div>
             </div>
           </div>
@@ -608,7 +617,7 @@ export default function ExportModal() {
 
                   <div className="flex justify-between items-center py-2 border-t border-gray-200 mb-4">
                     <span className="text-sm font-bold text-gray-700">{t.roomNames[activeRoom] ?? def.name}{t.exportRoomTotal}</span>
-                    <span className="text-xl font-black text-[#007AFF]">{formatPrice(currentRoomCost, locale)}</span>
+                    <span className="text-xl font-black text-[#007AFF]">{formatPrice(currentRoomCostWithDW, locale)}</span>
                   </div>
 
                   {/* Lead capture */}
@@ -666,13 +675,13 @@ export default function ExportModal() {
               <div className="mb-4">
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-gray-500">{t.exportBudgetLabel} {formatPrice(budget, locale)}</span>
-                  <span className={totalAllCost > budget ? "text-red-500 font-bold" : "text-green-600 font-bold"}>
-                    {totalAllCost > budget ? t.exportOverBudget : t.exportUnderBudget}
+                  <span className={totalAllCostWithDW > budget ? "text-red-500 font-bold" : "text-green-600 font-bold"}>
+                    {totalAllCostWithDW > budget ? t.exportOverBudget : t.exportUnderBudget}
                   </span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all ${totalAllCost > budget ? "bg-red-500" : "bg-green-500"}`}
-                    style={{ width: `${Math.min(100, (totalAllCost / budget) * 100)}%` }} />
+                  <div className={`h-full rounded-full transition-all ${totalAllCostWithDW > budget ? "bg-red-500" : "bg-green-500"}`}
+                    style={{ width: `${Math.min(100, (totalAllCostWithDW / budget) * 100)}%` }} />
                 </div>
               </div>
 
@@ -684,7 +693,7 @@ export default function ExportModal() {
                   </tr>
                 </thead>
                 <tbody>
-                  {roomCosts.map(r => <RoomCostRow key={r.room} room={r.room} cost={r.cost} />)}
+                  {roomCosts.map(r => <RoomCostRow key={r.room} room={r.room} cost={r.costWithDW} />)}
                 </tbody>
               </table>
 
@@ -694,7 +703,7 @@ export default function ExportModal() {
 
               <div className="flex justify-between items-center py-2 border-t border-gray-200">
                 <span className="text-sm font-bold text-gray-700">{t.exportAllTotal}</span>
-                <span className="text-xl font-black text-[#007AFF]">{formatPrice(totalAllCost, locale)}</span>
+                <span className="text-xl font-black text-[#007AFF]">{formatPrice(totalAllCostWithDW, locale)}</span>
               </div>
 
               {/* Export all-rooms PDF */}

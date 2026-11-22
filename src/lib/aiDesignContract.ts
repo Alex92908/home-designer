@@ -87,9 +87,9 @@ SCHEMA:
           "floor": "<material id, category floor — 可选, 改地板才给>",
           "light": "<material id, category light — 可选, 改灯/吊灯才给>",
           "tile": "<material id, category tile — 可选, 改瓷砖才给>",
-          "windows": [ { "wall": "<N|S|W|E>", "pos": <cm 沿墙偏移>, "len": <cm 窗宽>, "h": <可选,cm 窗高>, "sill": <可选,cm 窗台离地>, "style": "<可选 sliding|casement|fixed|louvered|security|wooden>" } ],
+          "windows": [ { "wall": "<N|S|W|E>", "pos": <cm 沿墙偏移>, "len": <cm 窗宽>, "h": <可选,cm 窗高>, "sill": <可选,cm 窗台离地>, "style": "<可选 sliding|casement|fixed|louvered|security|wooden|leaky_lattice|sill_lattice>" } ],
           "openWalls": [ "<N|S|W|E>" ],
-          "door": "<wood_panel|frosted_glass|sliding_barn|french_double — 可选, 改房门款式才给>",
+          "door": "<wood_panel|frosted_glass|sliding_barn|french_double|lattice_door|shoji_slide|plank_studded — 可选, 改房门款式才给>",
           "doorWall": "<N|S|W|E — 可选, 改门朝向才给>",
           "doorPos": <可选,cm 门沿墙偏移>,
           "doorLen": <可选,cm 门宽,默认80>,
@@ -203,9 +203,11 @@ WINDOW RULES (开窗/改窗 — "windows"):
   (N/S wall length = widthCm, W/E wall length = depthCm). Typical len 120-220.
 - "南面开大窗/落地窗" → wall "S", big len, sill 低(如 10); 普通窗 sill≈90, h≈150。
 - "style" 改窗户款式（可选，不改就省略）：sliding(推拉窗,默认) / casement(平开窗) /
-  fixed(固定观景窗,落地窗常用) / louvered(百叶窗) / security(防盗窗) / wooden(木窗)。
+  fixed(固定观景窗,落地窗常用) / louvered(百叶窗) / security(防盗窗) / wooden(木窗) /
+  leaky_lattice(漏窗,园林镂空花窗,无玻璃) / sill_lattice(槛窗,中式镂空格栅)。
   「换成落地观景窗」→ style "fixed" 且 sill 低; 「装防盗窗」→ style "security";
-  「百叶窗」→ "louvered"; 「中式木窗」→ "wooden"。改款式时同样要照抄该房间其它窗户。
+  「百叶窗」→ "louvered"; 「中式木窗」→ "wooden"; 「漏窗/花窗」→ "leaky_lattice";
+  「槛窗」→ "sill_lattice"。改款式时同样要照抄该房间其它窗户。
 
 OPEN-PLAN RULES (开放式/打通/拆墙 — "openWalls"):
 - "openWalls" lists the room walls to REMOVE so two spaces merge (开放式). Present
@@ -215,10 +217,14 @@ OPEN-PLAN RULES (开放式/打通/拆墙 — "openWalls"):
 
 DOOR RULES (房门 — "door"/"doorWall"/"doorPos"/"doorLen"/"hasDoor"，每个房间一扇门):
 - 只有用户明确要改某房间的"门"时才给这些字段，否则省略（不要顺手改）。
-- "door" 款式四选一：wood_panel(实木门板) / frosted_glass(磨砂玻璃木框门) /
-  sliding_barn(谷仓推拉门) / french_double(法式对开玻璃门)。
+- "door" 款式七选一：wood_panel(实木门板) / frosted_glass(磨砂玻璃木框门) /
+  sliding_barn(谷仓推拉门) / french_double(法式对开玻璃门) /
+  lattice_door(隔扇门,明清/宋中式对开) / shoji_slide(障子推拉门,日式) /
+  plank_studded(镶钉板门,秦汉/唐/石库门)。
   「磨砂玻璃门/玻璃门」→ frosted_glass；「谷仓门/推拉门/移门」→ sliding_barn；
-  「法式门/对开门」→ french_double；「实木门/木门」→ wood_panel。
+  「法式门/对开门」→ french_double；「实木门/木门」→ wood_panel；
+  「隔扇门/中式对开」→ lattice_door；「障子/日式推拉」→ shoji_slide；
+  「钉板门/唐门」→ plank_studded。
 - "doorWall" 改门在哪面墙（N=北/后 S=南/前 W=西/左 E=东/右），"doorPos" 沿墙
   偏移(cm)，"doorLen" 门宽(cm,默认80)。「主卧门改到东墙」→ "doorWall": "E"。
 - "hasDoor": false = 这间不要门（开放门洞）。「储物间不装门」→ false。
