@@ -50,6 +50,18 @@ export interface SceneEnvelope {
   D: number;
   /** 层数 */
   floors: number;
+  /** 演员当前所在房间（可选，世界坐标米，原点居中）——有它时室内机位
+   *  钳进该房间而非整套包络；由 CinematicDirector 的 roomRectForPoint
+   *  从 designer store 的 floorPlans 现算传入 */
+  room?: RoomRect;
+}
+
+/** 房间矩形（世界坐标，米，原点居中） */
+export interface RoomRect {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
 }
 
 const FLOOR_H = 2.8;
@@ -71,6 +83,43 @@ export interface ActorTarget {
   /** 目标身高（米），缺省 1.7——仅作注视点高度参考 */
   height?: number;
   at?: (t: number) => { x: number; z: number; y?: number; facing: number };
+}
+
+/** 室内机位钳制：相机位置钳进演员当前房间（留 0.4m 墙边距），
+ *  拿不到房间时退回建筑包络级钳制。
+ *  小多房间套里只钳包络不够——三希堂（9×6，4 间房）修包络钳制后，
+ *  相机仍会落到隔壁房间或贴在门上，拍到的还是墙面（红隔扇门特写、
+ *  看不到演员）。房间级钳制只保证相机在演员当前房里，不保证
+ *  房内无遮挡（L 形房的包围盒缺口、房内高大家具仍可能挡镜）。
+ *  env 必须是真包络（W/D = 实际跨度）；env 退化（W/D ≤ 0，
+ *  如越轴判断用的占位包络）时不钳，保持旧行为。 */
+function clampIndoorCamera(pos: [number, number, number], env: SceneEnvelope): [number, number, number] {
+  const { W, D, room } = env;
+  if (!W || !D || W <= 0 || D <= 0) return pos;
+  const M = 0.4;
+  // 房间级优先：房太窄（宽/深 ≤ 2M）时该维不留边距，只钳进房本身；
+  // 房矩形退化时退回包络级钳制。
+  if (room && room.minX < room.maxX && room.minZ < room.maxZ) {
+    const rx0 = room.maxX - room.minX > 2 * M ? room.minX + M : room.minX;
+    const rx1 = room.maxX - room.minX > 2 * M ? room.maxX - M : room.maxX;
+    const rz0 = room.maxZ - room.minZ > 2 * M ? room.minZ + M : room.minZ;
+    const rz1 = room.maxZ - room.minZ > 2 * M ? room.maxZ - M : room.maxZ;
+    if (rx0 <= rx1 && rz0 <= rz1) {
+      return [
+        Math.max(rx0, Math.min(rx1, pos[0])),
+        pos[1],
+        Math.max(rz0, Math.min(rz1, pos[2])),
+      ];
+    }
+  }
+  const hx = W / 2 - M;
+  const hz = D / 2 - M;
+  if (hx <= 0 || hz <= 0) return pos;
+  return [
+    Math.max(-hx, Math.min(hx, pos[0])),
+    pos[1],
+    Math.max(-hz, Math.min(hz, pos[2])),
+  ];
 }
 
 /** 室内机位：随 t 跟住目标（at 优先，否则 from→to 平滑插值），返回目标位置 + 高度 + 朝向 */
@@ -156,12 +205,12 @@ export const CINE_PRESETS: CinePreset[] = [
     nameEn: "Indoor Wide",
     duration: 8,
     indoor: true,
-    sample: (t, _env, target) => {
+    sample: (t, env, target) => {
       const s = trackTarget(t, target);
       const a = s.facing + (t - 0.5) * 0.12; // 缓慢弧移，有呼吸感
       const d = 5;
       return {
-        pos: [s.x - Math.sin(a) * d, 1.8 + s.y, s.z - Math.cos(a) * d],
+        pos: clampIndoorCamera([s.x - Math.sin(a) * d, 1.8 + s.y, s.z - Math.cos(a) * d], env),
         lookAt: [s.x, 1.2 + s.y, s.z],
         fov: 50,
       };
@@ -173,12 +222,12 @@ export const CINE_PRESETS: CinePreset[] = [
     nameEn: "Indoor Medium",
     duration: 8,
     indoor: true,
-    sample: (t, _env, target) => {
+    sample: (t, env, target) => {
       const s = trackTarget(t, target);
       const a = s.facing + (t - 0.5) * 0.08;
       const d = 2.8;
       return {
-        pos: [s.x - Math.sin(a) * d, 1.5 + s.y, s.z - Math.cos(a) * d],
+        pos: clampIndoorCamera([s.x - Math.sin(a) * d, 1.5 + s.y, s.z - Math.cos(a) * d], env),
         lookAt: [s.x, 1.4 + s.y, s.z],
         fov: 45,
       };
@@ -190,11 +239,11 @@ export const CINE_PRESETS: CinePreset[] = [
     nameEn: "Indoor Close-up",
     duration: 5,
     indoor: true,
-    sample: (t, _env, target) => {
+    sample: (t, env, target) => {
       const s = trackTarget(t, target);
       const d = 1.3;
       return {
-        pos: [s.x - Math.sin(s.facing) * d, 1.55 + s.y, s.z - Math.cos(s.facing) * d],
+        pos: clampIndoorCamera([s.x - Math.sin(s.facing) * d, 1.55 + s.y, s.z - Math.cos(s.facing) * d], env),
         lookAt: [s.x, 1.5 + s.y, s.z],
         fov: 40,
       };
@@ -206,11 +255,11 @@ export const CINE_PRESETS: CinePreset[] = [
     nameEn: "Over the Shoulder",
     duration: 8,
     indoor: true,
-    sample: (t, _env, target) => {
+    sample: (t, env, target) => {
       const s = trackTarget(t, target);
       const d = 1.2; // 站在人后 1.2m
       return {
-        pos: [s.x + Math.sin(s.facing) * d, 1.6 + s.y, s.z + Math.cos(s.facing) * d],
+        pos: clampIndoorCamera([s.x + Math.sin(s.facing) * d, 1.6 + s.y, s.z + Math.cos(s.facing) * d], env),
         lookAt: [s.x + Math.sin(s.facing) * 2, 1.4 + s.y, s.z + Math.cos(s.facing) * 2],
         fov: 45,
       };

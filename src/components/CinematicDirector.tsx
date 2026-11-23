@@ -43,7 +43,7 @@ import { Line } from "@react-three/drei";
 import {
   CINE_PRESETS, RENDER_STYLES, getCinePreset, makeShot, makeActor,
   actorDisplayName, actorFacing, actorAction, actorTargetAt, shotCrossesAxis,
-  type Shot, type Actor, type ActorAction, type RenderStyle, type SceneEnvelope,
+  type Shot, type Actor, type ActorAction, type RenderStyle, type SceneEnvelope, type RoomRect,
 } from "@/lib/cinematic";
 import {
   DIRECTOR_STYLES, DIRECTOR_STYLE_GENRES, getDirectorStyle, directorStyleDefaults,
@@ -140,7 +140,10 @@ export function shotMusicInput(
 /** 场景包络（SimPlayer 用）：从 designer store 的 floorPlans 现算 */
 export function envelopeFromStore(): SceneEnvelope {
   const fps = useDesignerStore.getState().floorPlans ?? [];
-  let W = 12, D = 10;
+  // 下限 4×3 与 HouseCanvas 的 useFootprint 同款——必须是真跨度：
+  // 拍摄模拟的室内机位钳制和放置钳制都用它。旧的 12×10 下限会把
+  // 小片场虚报（三希堂 9×6 → 12×10），钳制跟着放错位置。
+  let W = 4, D = 3;
   for (const fp of fps) {
     const rooms = fp.enabledRooms ?? [];
     const xs: number[] = [], zs: number[] = [];
@@ -156,6 +159,63 @@ export function envelopeFromStore(): SceneEnvelope {
     }
   }
   return { W, D, floors: Math.max(1, fps.length) };
+}
+
+/** 房间级机位：找出世界坐标点 (x, z) 所在的房间矩形（世界坐标，米，
+ *  原点居中——与 HouseCanvas 的房间渲染同款换算：每层按本层启用房间
+ *  的包围盒居中，roomLayout/roomDimensions（厘米）→ 世界米）。
+ *  点在房里时返回该房；在门洞/墙缝等无房处时退而求其次取 1.0m 内
+ *  最近的房；都找不到返回 undefined，调用方退回包络级钳制。
+ *  演员没有楼层字段——多层套里按楼层顺序取第一个命中的房
+ *  （模拟机位高度只在首层有效）。 */
+export function roomRectForPoint(x: number, z: number): RoomRect | undefined {
+  const fps = useDesignerStore.getState().floorPlans ?? [];
+  let best: RoomRect | undefined;
+  let bestDist = 1.0; // 最近房的边距阈值（米）
+  for (const fp of fps) {
+    const rooms = fp.enabledRooms ?? [];
+    const xs: number[] = [], zs: number[] = [];
+    for (const r of rooms) {
+      const lay = fp.roomLayout?.[r], dims = fp.roomDimensions?.[r];
+      if (!lay || !dims) continue;
+      xs.push(lay.x, lay.x + dims.width);
+      zs.push(lay.y, lay.y + dims.depth);
+    }
+    if (!xs.length) continue;
+    const minX = Math.min(...xs), minZ = Math.min(...zs);
+    const planW = (Math.max(...xs) - minX) / 100;
+    const planD = (Math.max(...zs) - minZ) / 100;
+    for (const r of rooms) {
+      const lay = fp.roomLayout?.[r], dims = fp.roomDimensions?.[r];
+      if (!lay || !dims) continue;
+      const rect: RoomRect = {
+        minX: (lay.x - minX) / 100 - planW / 2,
+        maxX: (lay.x + dims.width - minX) / 100 - planW / 2,
+        minZ: (lay.y - minZ) / 100 - planD / 2,
+        maxZ: (lay.y + dims.depth - minZ) / 100 - planD / 2,
+      };
+      if (x >= rect.minX && x <= rect.maxX && z >= rect.minZ && z <= rect.maxZ) return rect;
+      // 最近房：到矩形边的距离（点在矩形内时为 0，上面已返回）
+      const dx = Math.max(rect.minX - x, 0, x - rect.maxX);
+      const dz = Math.max(rect.minZ - z, 0, z - rect.maxZ);
+      const d = Math.hypot(dx, dz);
+      if (d < bestDist) { bestDist = d; best = rect; }
+    }
+  }
+  return best;
+}
+
+/** 放置钳制：把地面点钳进建筑包络（留 0.3m 墙边距），
+ *  世界坐标以建筑中心为原点（与 HouseCanvas 同款）。
+ *  返回钳后的点 + 是否越界——越界时调用方应提示用户。 */
+export function clampPointToFootprint(p: [number, number]): { point: [number, number]; clamped: boolean } {
+  const { W, D } = envelopeFromStore();
+  const M = 0.3;
+  const hx = Math.max(0, W / 2 - M);
+  const hz = Math.max(0, D / 2 - M);
+  const x = Math.max(-hx, Math.min(hx, p[0]));
+  const z = Math.max(-hz, Math.min(hz, p[1]));
+  return { point: [x, z], clamped: x !== p[0] || z !== p[1] };
 }
 
 interface QueueItem { shot: Shot; style: RenderStyle; }
@@ -205,6 +265,9 @@ interface CineState {
   pendingFrom: [number, number] | null;
   /** 重设走位中（点两下改该演员的起点→终点，名字/角色/动作保留） */
   replaceActorId: string | null;
+  /** 放置越界提示（瞬态，不持久化）：点落在房子外面被钳到墙边时提示用户 */
+  placeWarning: string | null;
+  setPlaceWarning: (w: string | null) => void;
   beginAddActor: () => void;
   beginReplaceActor: (id: string) => void;
   placePoint: (p: [number, number]) => void;
@@ -346,16 +409,23 @@ export const useCineStore = create<CineState>()(
       addActorMode: false,
       pendingFrom: null,
       replaceActorId: null,
-      beginAddActor: () => set({ addActorMode: true, pendingFrom: null, replaceActorId: null }),
-      beginReplaceActor: (id) => set({ addActorMode: true, pendingFrom: null, replaceActorId: id }),
+      placeWarning: null,
+      setPlaceWarning: (w) => set({ placeWarning: w }),
+      beginAddActor: () => set({ addActorMode: true, pendingFrom: null, replaceActorId: null, placeWarning: null }),
+      beginReplaceActor: (id) => set({ addActorMode: true, pendingFrom: null, replaceActorId: id, placeWarning: null }),
       placePoint: (p) => {
         const { addActorMode, pendingFrom, actors, replaceActorId } = get();
         if (!addActorMode) return;
-        if (!pendingFrom) { set({ pendingFrom: p }); return; }
+        // 越界钳制：点落在房子外面时移到墙边，并提示用户（不是悄悄吃掉点击）
+        const { point, clamped } = clampPointToFootprint(p);
+        if (clamped) {
+          set({ placeWarning: `点 (${p[0].toFixed(1)}, ${p[1].toFixed(1)}) 在房子外面，已移到墙边 (${point[0].toFixed(1)}, ${point[1].toFixed(1)})` });
+        }
+        if (!pendingFrom) { set({ pendingFrom: point }); return; }
         if (replaceActorId) {
           // 重设走位：只改 from/to，名字/角色/动作/朝向保留
           set({
-            actors: actors.map((a) => (a.id === replaceActorId ? { ...a, from: pendingFrom, to: p } : a)),
+            actors: actors.map((a) => (a.id === replaceActorId ? { ...a, from: pendingFrom, to: point } : a)),
             pendingFrom: null, addActorMode: false, replaceActorId: null,
           });
           return;
@@ -364,11 +434,11 @@ export const useCineStore = create<CineState>()(
         let n = actors.length + 1;
         while (actors.some((a) => a.name === `演员${n}`)) n++;
         set({
-          actors: [...actors, makeActor(pendingFrom, p, { name: `演员${n}` })],
+          actors: [...actors, makeActor(pendingFrom, point, { name: `演员${n}` })],
           pendingFrom: null, addActorMode: false,
         });
       },
-      cancelAddActor: () => set({ addActorMode: false, pendingFrom: null, replaceActorId: null }),
+      cancelAddActor: () => set({ addActorMode: false, pendingFrom: null, replaceActorId: null, placeWarning: null }),
       removeActor: (id) => set({
         actors: get().actors.filter((a) => a.id !== id),
         // 该演员参与的打斗：把他从攻/守方里摘掉；没人了的打斗删掉
@@ -385,11 +455,16 @@ export const useCineStore = create<CineState>()(
 
       // ── 动态走位 ──
       waypointMode: null,
-      beginWaypointMode: (actorId) => set({ waypointMode: actorId, addActorMode: false, propPlaceKind: null }),
+      beginWaypointMode: (actorId) => set({ waypointMode: actorId, addActorMode: false, propPlaceKind: null, placeWarning: null }),
       cancelWaypointMode: () => set({ waypointMode: null }),
       addWaypoint: (actorId, p) => {
         const a = get().actors.find((x) => x.id === actorId);
         if (!a) return;
+        // 越界钳制：路点落在房子外面时移到墙边，并提示用户
+        const { point, clamped } = clampPointToFootprint(p);
+        if (clamped) {
+          set({ placeWarning: `路点 (${p[0].toFixed(1)}, ${p[1].toFixed(1)}) 在房子外面，已移到墙边 (${point[0].toFixed(1)}, ${point[1].toFixed(1)})` });
+        }
         const wps = (a.waypoints ?? []).slice().sort((x, y) => x.t - y.t);
         // 首个路点：若演员还没有走位时间轴，先以 from→to 建两个点（t=0 / t=镜长）
         let base = wps;
@@ -401,7 +476,7 @@ export const useCineStore = create<CineState>()(
           ];
         }
         const t = base.length ? base[base.length - 1].t + 2 : 0;
-        const next = [...base, makeWaypoint(p[0], p[1], t)];
+        const next = [...base, makeWaypoint(point[0], point[1], t)];
         get().updateActor(actorId, { waypoints: next });
       },
       updateWaypoint: (actorId, idx, patch) => {
@@ -763,7 +838,15 @@ function applyShotCamera(cam: THREE.PerspectiveCamera, shot: Shot, timeSec: numb
   const actor = st.actors.find((a) => a.id === shot.targetActorId) ?? st.actors[0];
   const target = actor ? actorTargetAt(actor, shot.duration) : undefined;
   const t = Math.min(1, Math.max(0, timeSec / Math.max(0.1, shot.duration)));
-  let s = preset.sample(t, env, target);
+  // 房间级机位：按演员当前位置取房，室内预设钳进该房；
+  // 取不到房（门洞/墙缝/无演员）时退回包络级钳制。
+  let envForShot = env;
+  if (target?.at) {
+    const p = target.at(t);
+    const room = roomRectForPoint(p.x, p.z);
+    if (room) envForShot = { ...env, room };
+  }
+  let s = preset.sample(t, envForShot, target);
   const fight = st.fights.find((f) => f.shotId === shot.id);
   if (fight && actor) {
     const atk = st.actors.find((a) => a.id === fight.attackerId);
@@ -1506,15 +1589,13 @@ export function ActorsLayer() {
             const dx = e.point.x - d.start[0];
             const dz = e.point.z - d.start[1];
             if (d.kind === "actor") {
-              useCineStore.getState().updateActor(d.id, {
-                from: [d.origFrom[0] + dx, d.origFrom[1] + dz],
-                to: [d.origTo[0] + dx, d.origTo[1] + dz],
-              });
+              // 拖拽也钳在房子里（无声钳制：标牌贴墙停住即是反馈）
+              const from = clampPointToFootprint([d.origFrom[0] + dx, d.origFrom[1] + dz]).point;
+              const to = clampPointToFootprint([d.origTo[0] + dx, d.origTo[1] + dz]).point;
+              useCineStore.getState().updateActor(d.id, { from, to });
             } else if (d.kind === "waypoint" && d.origWp && d.wpIdx !== undefined) {
-              useCineStore.getState().updateWaypoint(d.id, d.wpIdx, {
-                x: d.origWp.x + dx,
-                z: d.origWp.z + dz,
-              });
+              const pt = clampPointToFootprint([d.origWp.x + dx, d.origWp.z + dz]).point;
+              useCineStore.getState().updateWaypoint(d.id, d.wpIdx, { x: pt[0], z: pt[1] });
             }
             invalidate();
           }}
@@ -1731,7 +1812,6 @@ const ACTION_CATEGORY_EN: Record<string, string> = { move: "Move", pose: "Pose",
  *  取最近的其他演员并面向他；姿态动作有目标且离得远时先走过去再做。
  *  缺的特技道具自动补一个（放在目标位置）。返回给人看的一句话。 */
 function applyParsedInstructions(instructions: ParsedInstruction[]): string {
-  const st = useCineStore.getState();
   const done: string[] = [];
   const endState = (a: Actor): { time: number; pos: [number, number]; elev: number; facing: number } => {
     const segEnd = (a.timeline ?? []).reduce((m, s) => Math.max(m, s.start + s.duration), 0);
@@ -1743,7 +1823,12 @@ function applyParsedInstructions(instructions: ParsedInstruction[]): string {
   const isMove = (action: ActionId): boolean =>
     ["walk", "run", "jump", "climb", "leap", "flySword", "flyBroom", "wireFly", "rappel", "swim"].includes(action);
   for (const ins of instructions) {
-    const a = st.actors.find((x) => x.id === ins.actorId);
+    // 关键：每条指令都重读 store——上条指令刚加的时间轴段必须对下条可见。
+    // 旧代码用函数开头快照的 st：处理"坐下"时 endState 还看不到"走到窗边"
+    // 刚加的 walk 段，以为演员还在起点，于是又补一段一模一样的 walk
+    // （"男主走到窗边坐下" → [walk, walk, sit] 的根因）。
+    const cur = useCineStore.getState();
+    const a = cur.actors.find((x) => x.id === ins.actorId);
     if (!a) continue;
     const end = endState(a);
     // 1) 特技道具：缺的自动补一个；飞行载具随人走，已有同类就挂上去
@@ -1751,9 +1836,9 @@ function applyParsedInstructions(instructions: ParsedInstruction[]): string {
     if (ins.needProp) {
       const px = ins.targetPos?.[0] ?? end.pos[0] + 1.5;
       const pz = ins.targetPos?.[1] ?? end.pos[1];
-      propId = st.addStuntProp(ins.needProp, px, pz).id;
+      propId = cur.addStuntProp(ins.needProp, px, pz).id;
     } else if (ins.propKind) {
-      propId = st.stuntProps.find((p) => p.kind === ins.propKind)?.id;
+      propId = cur.stuntProps.find((p) => p.kind === ins.propKind)?.id;
     }
     // 2) 目标：飞行类无目标 → 朝当前朝向飞 4 米、升到 2.5 米
     let targetPos = ins.targetPos;
@@ -1767,7 +1852,7 @@ function applyParsedInstructions(instructions: ParsedInstruction[]): string {
     let facing = ins.facing;
     if ((ins.action === "punch" || ins.action === "kick") && !targetActorId) {
       let best: Actor | null = null, bd = Infinity;
-      for (const o of st.actors) {
+      for (const o of cur.actors) {
         if (o.id === a.id) continue;
         const os = endState(o);
         const d = (os.pos[0] - end.pos[0]) ** 2 + (os.pos[1] - end.pos[1]) ** 2;
@@ -1817,7 +1902,7 @@ function applyParsedInstructions(instructions: ParsedInstruction[]): string {
         }));
       }
     }
-    for (const s of segs) st.addTimelineSegment(a.id, s);
+    for (const s of segs) cur.addTimelineSegment(a.id, s);
     done.push(`${ins.actorName}${actionDef(ins.action).nameZh}`);
   }
   return done.length ? `已加入时间轴：${done.join("、")}` : "没有可加的动作";
@@ -1831,7 +1916,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
     directorStyleId, setDirectorStyleId,
     soundOn, setSoundOn,
     styles, toggleStyle,
-    actors, addActorMode, pendingFrom, beginAddActor, beginReplaceActor, cancelAddActor, removeActor, updateActor,
+    actors, addActorMode, pendingFrom, beginAddActor, beginReplaceActor, cancelAddActor, removeActor, updateActor, placeWarning, setPlaceWarning,
     waypointMode, beginWaypointMode, cancelWaypointMode, updateWaypoint, removeWaypoint,
     addTimelineSegment, updateTimelineSegment, removeTimelineSegment,
     fights, addFight, removeFight, updateFight, addPhrase, removePhrase, addBeat, updateBeat, removeBeat,
@@ -2022,6 +2107,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
               ? (en ? "Click the ground: end point" : "在地面点击：终点")
               : (en ? "Click the ground: start point" : "在地面点击：起点")}
           </span>
+          {placeWarning && <span className="text-amber-300">⚠️ {placeWarning}</span>}
           <button onClick={cancelAddActor} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10">
             {en ? "Cancel" : "取消"}
           </button>
@@ -2077,6 +2163,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
               ? (en ? `Click the ground: add waypoint for ${wpActor ? actorDisplayName(wpActor, actors.indexOf(wpActor)) : ""} (drag a marker to move it)` : `在地面点击：给${wpActor ? actorDisplayName(wpActor, actors.indexOf(wpActor)) : "演员"}加路点（拖标牌可移动）`)
               : (en ? `Click the ground: place ${stuntPropDef(propPlaceKind!)?.nameEn ?? propPlaceKind}` : `在地面点击：放${stuntPropDef(propPlaceKind!)?.nameZh ?? propPlaceKind}`)}
           </span>
+          {placeWarning && <span className="text-amber-300">⚠️ {placeWarning}</span>}
           <button onClick={() => { cancelWaypointMode(); cancelPropPlace(); }} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10">
             {en ? "Cancel" : "取消"}
           </button>
@@ -2593,6 +2680,12 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
           <div className="px-1 pt-2 text-[10px] tracking-widest text-white/40 border-t border-white/10 mt-1">
             {en ? "ACTORS" : "演员走位"}
           </div>
+          {placeWarning && (
+            <div className="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-300 text-[11px] leading-relaxed flex items-start gap-1.5">
+              <span className="flex-1">⚠️ {placeWarning}</span>
+              <button onClick={() => setPlaceWarning(null)} className="px-1 rounded hover:bg-white/10" title={en ? "Dismiss" : "知道了"}>✕</button>
+            </div>
+          )}
           {actors.map((a, i) => {
             const facingDeg = Math.round(((actorFacing(a) * 180) / Math.PI) % 360 + 360) % 360;
             return (
