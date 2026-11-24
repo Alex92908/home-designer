@@ -92,8 +92,9 @@ export interface ActorTarget {
  *  看不到演员）。房间级钳制只保证相机在演员当前房里，不保证
  *  房内无遮挡（L 形房的包围盒缺口、房内高大家具仍可能挡镜）。
  *  env 必须是真包络（W/D = 实际跨度）；env 退化（W/D ≤ 0，
- *  如越轴判断用的占位包络）时不钳，保持旧行为。 */
-function clampIndoorCamera(pos: [number, number, number], env: SceneEnvelope): [number, number, number] {
+ *  如越轴判断用的占位包络）时不钳，保持旧行为。
+ *  视线遮挡的候选机位（losCandidates）也复用它重钳回房间。 */
+export function clampIndoorCamera(pos: [number, number, number], env: SceneEnvelope): [number, number, number] {
   const { W, D, room } = env;
   if (!W || !D || W <= 0 || D <= 0) return pos;
   const M = 0.4;
@@ -120,6 +121,53 @@ function clampIndoorCamera(pos: [number, number, number], env: SceneEnvelope): [
     pos[1],
     Math.max(-hz, Math.min(hz, pos[2])),
   ];
+}
+
+/** 视线遮挡候选机位（Option B 的纯数学部分，可单测）：
+ *  相机→演员视线被挡时，按顺序试的候选位置：横挪 0.5/1/1.5/2m
+ *  （有轴线时优先保持机位在轴线同侧，避免假越轴；同侧判不出来
+ *  时按 +侧先），最后抬高到 2.4m。候选位置都经 clampIndoorCamera
+ *  重钳回房间；与原机位重合（已贴墙边、挪不动）的候选跳过。
+ *  调用方（CinematicDirector 的 resolveCameraLOS）用射线逐个验证，
+ *  首个通的胜出，全不通回原机位——永远不比原来差。 */
+export function losCandidates(
+  pos: [number, number, number],
+  head: [number, number, number],
+  env: SceneEnvelope,
+  axis?: { a: [number, number]; b: [number, number] },
+): Array<[number, number, number]> {
+  const dx = head[0] - pos[0], dz = head[2] - pos[2];
+  const len = Math.hypot(dx, dz);
+  if (len < 0.6) return [];
+  // 视线方向（XZ）及其左法向
+  const fx = dx / len, fz = dz / len;
+  const lx = -fz, lz = fx;
+  const origSide = axis ? sideOfLine(pos[0], pos[2], axis.a[0], axis.a[1], axis.b[0], axis.b[1]) : 0;
+  const out: Array<[number, number, number]> = [];
+  const seen = new Set<string>();
+  const push = (p: [number, number, number]) => {
+    // 与原机位重合（钳制后挪不动）的候选跳过
+    if (Math.hypot(p[0] - pos[0], p[1] - pos[1], p[2] - pos[2]) < 0.05) return;
+    const k = `${p[0].toFixed(2)},${p[1].toFixed(2)},${p[2].toFixed(2)}`;
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(p);
+  };
+  for (const d of [0.5, 1.0, 1.5, 2.0]) {
+    const plus: [number, number, number] = clampIndoorCamera([pos[0] + lx * d, pos[1], pos[2] + lz * d], env);
+    const minus: [number, number, number] = clampIndoorCamera([pos[0] - lx * d, pos[1], pos[2] - lz * d], env);
+    const plusSide = axis ? sideOfLine(plus[0], plus[2], axis.a[0], axis.a[1], axis.b[0], axis.b[1]) : 0;
+    const minusSide = axis ? sideOfLine(minus[0], minus[2], axis.a[0], axis.a[1], axis.b[0], axis.b[1]) : 0;
+    const plusKeeps = origSide === 0 || plusSide === origSide || plusSide === 0;
+    const minusKeeps = origSide === 0 || minusSide === origSide || minusSide === 0;
+    if (plusKeeps && !minusKeeps) { push(plus); push(minus); }
+    else if (minusKeeps && !plusKeeps) { push(minus); push(plus); }
+    else { push(plus); push(minus); }
+  }
+  // 抬高：最后手段（2.2m 柜面前，视线从 2.4m 到 1.55m 仍可能穿柜，
+  // 故只作保底；x/z 不动）
+  if (pos[1] < 2.4) push([pos[0], 2.4, pos[2]]);
+  return out;
 }
 
 /** 室内机位：随 t 跟住目标（at 优先，否则 from→to 平滑插值），返回目标位置 + 高度 + 朝向 */

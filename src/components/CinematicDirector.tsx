@@ -43,13 +43,15 @@ import { Line } from "@react-three/drei";
 import {
   CINE_PRESETS, RENDER_STYLES, getCinePreset, makeShot, makeActor,
   actorDisplayName, actorFacing, actorAction, actorTargetAt, shotCrossesAxis,
+  losCandidates,
   type Shot, type Actor, type ActorAction, type RenderStyle, type SceneEnvelope, type RoomRect,
+  type CameraSample,
 } from "@/lib/cinematic";
 import {
   DIRECTOR_STYLES, DIRECTOR_STYLE_GENRES, getDirectorStyle, directorStyleDefaults,
 } from "@/lib/directorStyles";
 import {
-  ACTION_REGISTRY, actionDef, actorStateAt, makeSegment, makeWaypoint,
+  ACTION_REGISTRY, actionDef, actorStateAt, actorPositionAt, makeSegment, makeWaypoint,
   segmentAt, type ActionId, type ActionSegment, type Waypoint,
 } from "@/lib/actions";
 import {
@@ -828,10 +830,167 @@ const GEN_PHASE_ZH: Record<string, string> = {
   done: "完成", error: "失败", idle: "—",
 };
 
+/** ── 视线遮挡射线检测（Option B）────────────────────────────
+ *  室内机位钳进房间后，相机→演员的视线仍可能被高大家具 / 结构柱
+ *  挡住（贴墙走位最常见：视线沿墙走，正好穿过贴墙高柜）。
+ *  applyShotCamera 是 sim 预览、录制、故事板导出共用的 choke 点，
+ *  在此检测一次，三处同修。
+ *  节流：每镜按 t 分桶（20 桶）+ 房签缓存已解算的机位；换镜或场景
+ *  顶层节点数变化（GLB 加载进场）时清空缓存。未加载的 GLB 没有网
+ *  格，射线会判"通"——残留的假通只存在于模型加载中的极短窗口，
+ *  且换镜/节点变化会重新解算；接受并记录，不另做加载等待。 */
+const losRaycaster = new THREE.Raycaster();
+const losCache = new Map<string, CameraSample>();
+let losCacheShotId: string | null = null;
+let losCacheSceneSize = -1;
+
+/** 射线命中的对象是否可见（three 的 Raycaster 不检查 visible，
+ *  须自己沿父链查；藏起来的载具/占位网格不应挡镜）。 */
+function losHitVisible(o: THREE.Object3D): boolean {
+  let cur: THREE.Object3D | null = o;
+  while (cur) {
+    if (!cur.visible) return false;
+    cur = cur.parent;
+  }
+  return true;
+}
+
+/** 视线是否被挡：相机→演员头（只射正向）。
+ *  曾试过第二条反向射线（演员头外 0.45m 射回相机，抓相机嵌进家具）
+ *  ——实测误杀：贴墙走位的演员离高柜只有十几厘米，反向起点直接落在
+ *  柜体里（书架纵深 2m），于是所有候选机位都被判挡，nudge 从未生效
+ *  （school 实测 22 次全 fallback）。已删；正向是遮挡检测本身，机位
+ *  嵌进家具的罕见情形不比今天更差，留待以后再处理。
+ *  只认 Mesh 命中（Line2 路径线 / Sprite 标牌不计入；raycaster.camera
+ *  须设好，否则 drei 的 Line2 射线在读 camera.near 时抛错——与
+ *  HouseCanvas 的 roam 射线是两把不同的 Raycaster，此处不碰那处代码）。 */
+function losBlocked(scene: THREE.Scene, cam: THREE.PerspectiveCamera, from: THREE.Vector3, head: THREE.Vector3): boolean {
+  const dir = new THREE.Vector3().subVectors(head, from);
+  const dist = dir.length();
+  if (dist < 0.6) return false;
+  dir.normalize();
+  losRaycaster.camera = cam;
+  losRaycaster.near = 0.05;
+  // 正向：相机 → 演员头前 0.3m（留出演员自己的头/身，不把演员当遮挡）
+  losRaycaster.set(from, dir);
+  losRaycaster.far = dist - 0.3;
+  let hits: THREE.Intersection[] = [];
+  try {
+    hits = losRaycaster.intersectObjects(scene.children, true);
+  } catch {
+    // 场景里个别对象（如未初始化的 Line2）射线抛错时 fail-open：
+    // 判"通"，回落旧行为，绝不因此断了模拟/录制。
+    return false;
+  }
+  for (const h of hits) {
+    const o = h.object as THREE.Mesh;
+    if (o.isMesh && losHitVisible(o)) return true;
+  }
+  return false;
+}
+
+/** 演员双肩点：头点左右各 0.25m（素体约 0.5m 宽）、高 1.45m。
+ *  宽隔断（博古架 2m）后常出现"头通、身挡"：单点头射线说通，画面里
+ *  演员半身仍在柜后。肩点沿视线在 XZ 面的垂线取，与演员朝向无关。 */
+function losShoulderPoints(head: THREE.Vector3, from: THREE.Vector3): THREE.Vector3[] {
+  const d = new THREE.Vector3().subVectors(head, from);
+  d.y = 0;
+  if (d.lengthSq() < 1e-6) return [];
+  d.normalize();
+  const lat = new THREE.Vector3(-d.z, 0, d.x);
+  return [-0.25, 0.25].map((s) => new THREE.Vector3(head.x + lat.x * s, 1.45, head.z + lat.z * s));
+}
+
+/** 对一镜采样做视线解算（带缓存）：通则原样返回；被挡则按
+ *  losCandidates 的顺序逐个试射，首个通的胜出；全不通回原机位。
+ *  触发：头被挡，或头通但肩被挡（矮柜挡身不挡头时头射线是通的）。
+ *  头被挡时两档：优先三点全通（头 + 双肩——宽隔断后只头通不够），
+ *  没有则退到只头通的候选；头通肩挡时只接受三点全通，否则原样。 */
+function resolveCameraLOS(
+  scene: THREE.Scene,
+  cam: THREE.PerspectiveCamera,
+  sample: CameraSample,
+  shot: Shot,
+  t: number,
+  head: [number, number, number],
+  env: SceneEnvelope,
+  actors: Actor[],
+): CameraSample {
+  // 换镜或场景节点数变化（GLB 加载进场）时缓存失效
+  const sceneSize = scene.children.length;
+  if (losCacheShotId !== shot.id || losCacheSceneSize !== sceneSize) {
+    losCache.clear();
+    losCacheShotId = shot.id;
+    losCacheSceneSize = sceneSize;
+  }
+  const room = env.room;
+  const roomSig = room
+    ? `${room.minX.toFixed(1)},${room.maxX.toFixed(1)},${room.minZ.toFixed(1)},${room.maxZ.toFixed(1)}`
+    : "env";
+  const key = `${shot.id}|${Math.round(t * 20)}|${roomSig}`;
+  const cached = losCache.get(key);
+  if (cached) return cached;
+  if (losCache.size > 400) losCache.clear();
+
+  const from = new THREE.Vector3(...sample.pos);
+  const headV = new THREE.Vector3(...head);
+  const shoulders = losShoulderPoints(headV, from);
+  // 触发条件：头被挡，或头通但肩被挡（如 1.5m 展柜挡身不挡头——
+  // 头射线从柜顶上方掠过说"通"，画面里演员却只剩一个头）。
+  const headBlocked = losBlocked(scene, cam, from, headV);
+  const shouldersBlocked = !headBlocked && shoulders.some((t) => losBlocked(scene, cam, from, t));
+  if (!headBlocked && !shouldersBlocked) {
+    losCache.set(key, sample);
+    return sample;
+  }
+  let resolved = sample;
+  {
+    // 轴线（前两位演员镜中点连线）：候选优先保持机位在轴线同侧
+    let axis: { a: [number, number]; b: [number, number] } | undefined;
+    if (actors.length >= 2) {
+      const a = actorPositionAt(actors[0], shot.duration / 2, shot.duration);
+      const b = actorPositionAt(actors[1], shot.duration / 2, shot.duration);
+      if (a[0] !== b[0] || a[1] !== b[1]) axis = { a, b };
+    }
+    const cands = losCandidates(sample.pos, head, env, axis);
+    if (headBlocked) {
+      // 两档：优先三点全通（头 + 双肩——宽隔断后只头通不够）；没有则退到
+      // 只头通的候选（至少把头露出来）；都没有则原样，永不比今天差。
+      let headOnly: [number, number, number] | null = null;
+      for (const cand of cands) {
+        const candFrom = new THREE.Vector3(...cand);
+        if (losBlocked(scene, cam, candFrom, headV)) continue;
+        if (!headOnly) headOnly = cand;
+        // 三点全通才是最优解；只头通的先记下作退路，继续找更大的位移
+        if (shoulders.every((t) => !losBlocked(scene, cam, candFrom, t))) {
+          resolved = { ...sample, pos: cand };
+          headOnly = null;
+          break;
+        }
+      }
+      if (headOnly) resolved = { ...sample, pos: headOnly };
+    } else {
+      // 头已通、肩被挡：只接受三点全通的候选，否则原样不动机位
+      // （头本来就是通的，为一个修不好的肩膀挪机位只会坏构图）。
+      for (const cand of cands) {
+        const candFrom = new THREE.Vector3(...cand);
+        if (!losBlocked(scene, cam, candFrom, headV) && shoulders.every((t) => !losBlocked(scene, cam, candFrom, t))) {
+          resolved = { ...sample, pos: cand };
+          break;
+        }
+      }
+    }
+  }
+  losCache.set(key, resolved);
+  return resolved;
+}
+
 /** 一镜的机位采样（录制与拍摄模拟共用）：预设机位框住 target 演员
  *  （走位时间轴 + 动作时间轴 + 高度）；本镜有打斗编舞且正在播时，
- *  beat 的机位（默认 punch-axis cheat）覆盖预设机位。 */
-function applyShotCamera(cam: THREE.PerspectiveCamera, shot: Shot, timeSec: number, env: SceneEnvelope) {
+ *  beat 的机位（默认 punch-axis cheat）覆盖预设机位。
+ *  scene 传入时室内镜加做视线遮挡射线检测（Option B）；不传时跳过，
+ *  保持旧行为。 */
+function applyShotCamera(cam: THREE.PerspectiveCamera, shot: Shot, timeSec: number, env: SceneEnvelope, scene?: THREE.Scene) {
   const preset = getCinePreset(shot.presetId);
   if (!preset) return;
   const st = useCineStore.getState();
@@ -841,8 +1000,10 @@ function applyShotCamera(cam: THREE.PerspectiveCamera, shot: Shot, timeSec: numb
   // 房间级机位：按演员当前位置取房，室内预设钳进该房；
   // 取不到房（门洞/墙缝/无演员）时退回包络级钳制。
   let envForShot = env;
+  let actorPos: { x: number; z: number; y?: number } | undefined;
   if (target?.at) {
     const p = target.at(t);
+    actorPos = p;
     const room = roomRectForPoint(p.x, p.z);
     if (room) envForShot = { ...env, room };
   }
@@ -863,6 +1024,14 @@ function applyShotCamera(cam: THREE.PerspectiveCamera, shot: Shot, timeSec: numb
         }
       }
     }
+  }
+  // 视线遮挡（Option B）：只看室内镜；演员头 = 演员位置 + 1.55m
+  // （方块人头顶约 1.52m），无演员时退回注视点 + 0.35m。
+  if (preset.indoor && scene) {
+    const head: [number, number, number] = actorPos
+      ? [actorPos.x, (actorPos.y ?? 0) + 1.55, actorPos.z]
+      : [s.lookAt[0], s.lookAt[1] + 0.35, s.lookAt[2]];
+    s = resolveCameraLOS(scene, cam, s, shot, t, head, envForShot, st.actors);
   }
   cam.position.set(...s.pos);
   cam.lookAt(...s.lookAt);
@@ -922,7 +1091,7 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
 
     const applySample = (t: number) => {
       const timeSec = t * item.shot.duration;
-      applyShotCamera(cam, item.shot, timeSec, envRef.current);
+      applyShotCamera(cam, item.shot, timeSec, envRef.current, scene);
       cinePlayhead.t = t;
       cinePlayhead.timeSec = timeSec;
       cinePlayhead.shotDuration = item.shot.duration;
@@ -1185,7 +1354,7 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
  *  开始时备份用户视角并禁用轨道控制，停止时还原。 */
 export function SimPlayer() {
   const sim = useCineStore((s) => s.sim);
-  const { camera, controls, invalidate } = useThree();
+  const { camera, controls, invalidate, scene } = useThree();
   const savedRef = useRef<{
     pos: THREE.Vector3; quat: THREE.Quaternion; fov: number; target: THREE.Vector3 | null;
   } | null>(null);
@@ -1277,7 +1446,7 @@ export function SimPlayer() {
     }
     const shot = st.shots[simClock.shotIdx];
     if (shot) {
-      applyShotCamera(camera as THREE.PerspectiveCamera, shot, simClock.timeSec, envRef.current);
+      applyShotCamera(camera as THREE.PerspectiveCamera, shot, simClock.timeSec, envRef.current, scene);
       invalidate();
     }
   });
@@ -1430,6 +1599,13 @@ function CostumeAccessoryMesh({ costume }: { costume: CostumeDef }) {
  *  按当前段切换。路点模式点地面加路点，拖路点标牌移动它。 */
 export function ActorsLayer() {
   const actors = useCineStore((s) => s.actors);
+  const cineQueue = useCineStore((s) => s.queue);
+  const cineSim = useCineStore((s) => s.sim);
+  // 编辑器覆盖层（轴线、走位路径、路点编号标牌）只在编辑时显示：
+  // 录制/导出与拍摄模拟是成片，所见即所得——标牌是 depthTest=false
+  // 的精灵，会穿透家具画在画面正中（路点 "5" 曾污染故事板首帧）。
+  // 队列/模拟进行时拖拽本来就不可用，藏起来没有功能损失。
+  const hideOverlays = !!cineQueue || !!cineSim?.active;
   const addMode = useCineStore((s) => s.addActorMode);
   const pendingFrom = useCineStore((s) => s.pendingFrom);
   const waypointMode = useCineStore((s) => s.waypointMode);
@@ -1613,7 +1789,7 @@ export function ActorsLayer() {
         </mesh>
       )}
       {/* 180 度轴线：前两位演员起点连线 + 标牌（分镜越轴警告的基准） */}
-      {actors.length >= 2 && (
+      {actors.length >= 2 && !hideOverlays && (
         <group>
           <Line
             points={[[actors[0].from[0], 0.06, actors[0].from[1]], [actors[1].from[0], 0.06, actors[1].from[1]]]}
@@ -1645,7 +1821,7 @@ export function ActorsLayer() {
         return (
           <group key={a.id}>
             {/* 走位路径：有路点画路点连线 + 编号标牌；没有则画旧的 from→to 虚线 + 终点环 */}
-            {hasWps ? (
+            {!hideOverlays && (hasWps ? (
               <group>
                 <Line
                   points={wps.map((w) => [w.x, (w.y ?? 0) + 0.05, w.z] as [number, number, number])}
@@ -1687,7 +1863,7 @@ export function ActorsLayer() {
                   <meshBasicMaterial color="#2dd4bf" side={THREE.DoubleSide} />
                 </mesh>
               </group>
-            )}
+            ))}
             {/* 方块人：胶囊身 + 球头 + 双臂（肩部为支点）+ 服装裙摆/配件 +
                 飞行载具/威亚。颜色与配件由服装库驱动（见 characters.ts）。
                 按住可拖动调整走位（from/to 一起平移）。 */}
