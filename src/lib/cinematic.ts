@@ -38,6 +38,9 @@ export interface CinePreset {
   duration: number;
   /** 室内机位（在房间里框人，不围建筑转）——越轴警告只看室内镜 */
   indoor?: boolean;
+  /** 群体机位：框住整组演员（重心 + 包络），而非单个目标演员。
+   *  为真时 sample 收到的是 groupTargetAt 的目标（含 group 成员）。 */
+  group?: boolean;
   /** 按建筑包络采样：t∈[0,1] → 相机状态。target 供室内机位框人；
    *  室外预设忽略它（保持向后兼容）。 */
   sample: (t: number, env: SceneEnvelope, target?: ActorTarget) => CameraSample;
@@ -54,6 +57,9 @@ export interface SceneEnvelope {
    *  钳进该房间而非整套包络；由 CinematicDirector 的 roomRectForPoint
    *  从 designer store 的 floorPlans 现算传入 */
   room?: RoomRect;
+  /** 画布宽高比（透视相机 aspect，applyShotCamera 从相机现取）——群体
+   *  镜头据此算横向包络；缺省 1.6（横向半角按纵向 50° 折算）。 */
+  aspect?: number;
 }
 
 /** 房间矩形（世界坐标，米，原点居中） */
@@ -83,6 +89,10 @@ export interface ActorTarget {
   /** 目标身高（米），缺省 1.7——仅作注视点高度参考 */
   height?: number;
   at?: (t: number) => { x: number; z: number; y?: number; facing: number };
+  /** 群体目标：全体成员的各自目标（groupTargetAt 填充）。有它时 at 返回
+   *  群体重心（位置 + 圆均朝向）；群体机位预设用它算包络（最远成员离
+   *  重心的距离）和机位方位。 */
+  group?: ActorTarget[];
 }
 
 /** 室内机位钳制：相机位置钳进演员当前房间（留 0.4m 墙边距），
@@ -309,6 +319,67 @@ export const CINE_PRESETS: CinePreset[] = [
       };
     },
   },
+  // ── 群体镜头：框住整组演员（不是跟拍一个人）。机位站在大家脸朝
+  // 的一侧（圆均朝向；朝向散开时退到"房间中心→重心"的反方向、再散
+  // 默认朝南），距离按横向半宽算（画布宽高比决定横向半角——导出帧
+  // 常是竖幅，横向比纵向紧得多）；被墙钳近时放宽 fov 补包络（上限
+  // 75°，群像广角可接受）。单人预设是跟拍（机位在演员身后）；群体
+  // 镜头拍脸——一屏几人数的是正脸，不是后脑勺。
+  {
+    id: "group-wide",
+    nameZh: "群体镜头",
+    nameEn: "Group Wide",
+    duration: 8,
+    indoor: true,
+    group: true,
+    sample: (t, env, target) => {
+      const members = target?.group?.length
+        ? target.group.map((m) => (m.at ? m.at(t) : { x: m.from[0], z: m.from[1], y: 0, facing: m.facing ?? 0 }))
+        : [trackTarget(t, target)];
+      const n = members.length;
+      let cx = 0, cz = 0, cy = 0;
+      for (const m of members) { cx += m.x; cz += m.z; cy += m.y ?? 0; }
+      cx /= n; cz /= n; cy /= n;
+      // 横向半宽：最远成员离重心的 |x| + 半身宽（纵向 1.7m 人身高在
+      // 任何画幅下都不是约束，横向才是）
+      let HW = 0;
+      for (const m of members) HW = Math.max(HW, Math.abs(m.x - cx));
+      HW += 0.3;
+      // 机位方位：圆均朝向；散开（|均| < 0.35）时退到房间中心→重心的反方向
+      let fx = 0, fz = 0;
+      for (const m of members) { fx += Math.sin(m.facing); fz += Math.cos(m.facing); }
+      const fLen = Math.hypot(fx, fz);
+      let az: number;
+      if (fLen / n >= 0.35) {
+        az = Math.atan2(fx, fz);
+      } else if (env.room) {
+        const rcx = (env.room.minX + env.room.maxX) / 2;
+        const rcz = (env.room.minZ + env.room.maxZ) / 2;
+        const dx = cx - rcx, dz = cz - rcz;
+        az = Math.hypot(dx, dz) > 0.5 ? Math.atan2(dx, dz) : 0;
+      } else {
+        az = 0;
+      }
+      az += (t - 0.5) * 0.08; // 缓慢弧移，有呼吸感
+      // 距离：横向包住整组（画布宽高比决定横向半角；缺省 1.6）
+      const aspect = Math.max(0.5, Math.min(3, env.aspect ?? 1.6));
+      const TAN_H = Math.tan((25 * Math.PI) / 180) * aspect;
+      const want = Math.min(12, Math.max(2.2, (HW + 0.3) / TAN_H));
+      const pos = clampIndoorCamera([cx + Math.sin(az) * want, 1.8 + cy, cz + Math.cos(az) * want], env);
+      // 被墙钳近时放宽 fov 补包络（上限 75°，群像广角可接受）
+      const dAct = Math.max(0.8, Math.hypot(pos[0] - cx, pos[2] - cz));
+      let fov = 50;
+      if (dAct < want) {
+        const needVert = Math.atan(Math.tan(Math.atan((HW + 0.3) / dAct)) / aspect);
+        fov = Math.min(75, Math.max(50, (needVert * 180) / Math.PI * 2));
+      }
+      return {
+        pos,
+        lookAt: [cx, 1.2 + cy, cz],
+        fov,
+      };
+    },
+  },
   {
     id: "indoor-closeup",
     nameZh: "室内特写",
@@ -450,6 +521,39 @@ export function actorTargetAt(a: Actor, shotDuration: number): ActorTarget {
   };
 }
 
+/** 群体目标：全体演员的重心 + 各自目标（群体机位预设用）。
+ *  from/to 为重心起止；facing 为圆均朝向；at(t) 返回 t 时刻的重心
+ *  （位置 + 圆均朝向 + 平均高度）；group 为每个成员的 actorTargetAt，
+ *  供预设算包络（最远成员离重心的距离）。空组时返回零点目标（不抛错，
+ *  调用方按无演员处理）。 */
+export function groupTargetAt(actors: Actor[], shotDuration: number): ActorTarget {
+  const members = actors.map((a) => actorTargetAt(a, shotDuration));
+  if (!members.length) {
+    return { from: [0, 0], to: [0, 0], facing: 0, group: [] };
+  }
+  const mean = (xs: number[]): number => xs.reduce((s, v) => s + v, 0) / xs.length;
+  const meanFacing = (fs: number[]): number => {
+    let sx = 0, sz = 0;
+    for (const f of fs) { sx += Math.sin(f); sz += Math.cos(f); }
+    return Math.hypot(sx, sz) < 1e-6 ? 0 : Math.atan2(sx, sz);
+  };
+  return {
+    from: [mean(actors.map((a) => a.from[0])), mean(actors.map((a) => a.from[1]))],
+    to: [mean(actors.map((a) => a.to[0])), mean(actors.map((a) => a.to[1]))],
+    facing: meanFacing(actors.map((a) => actorFacing(a))),
+    at: (tNorm: number) => {
+      const ps = members.map((m) => m.at!(tNorm));
+      return {
+        x: mean(ps.map((p) => p.x)),
+        z: mean(ps.map((p) => p.z)),
+        y: mean(ps.map((p) => p.y ?? 0)),
+        facing: meanFacing(ps.map((p) => p.facing)),
+      };
+    },
+    group: members,
+  };
+}
+
 /** 分镜里的一个镜头（Shot——产品的原子单位，见云横店蓝图 §三） */
 export interface Shot {
   id: string;
@@ -522,8 +626,8 @@ export function shotCrossesAxis(shot: Shot, prevShot: Shot, actors: Actor[]): bo
   const axisB = actorPositionAt(actors[1], shot.duration / 2, shot.duration);
   if (axisA[0] === axisB[0] && axisA[1] === axisB[1]) return false;
   const env: SceneEnvelope = { W: 0, D: 0, floors: 1 };
-  const cam = preset.sample(0.5, env, actorTargetAt(target, shot.duration));
-  const prevCam = prevPreset.sample(0.5, env, actorTargetAt(prevTarget, prevShot.duration));
+  const cam = preset.sample(0.5, env, preset.group ? groupTargetAt(actors, shot.duration) : actorTargetAt(target, shot.duration));
+  const prevCam = prevPreset.sample(0.5, env, prevPreset.group ? groupTargetAt(actors, prevShot.duration) : actorTargetAt(prevTarget, prevShot.duration));
   const s1 = sideOfLine(cam.pos[0], cam.pos[2], axisA[0], axisA[1], axisB[0], axisB[1]);
   const s2 = sideOfLine(prevCam.pos[0], prevCam.pos[2], axisA[0], axisA[1], axisB[0], axisB[1]);
   return s1 !== 0 && s2 !== 0 && s1 !== s2;

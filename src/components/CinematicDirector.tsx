@@ -42,7 +42,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
 import {
   CINE_PRESETS, RENDER_STYLES, getCinePreset, makeShot, makeActor,
-  actorDisplayName, actorFacing, actorAction, actorTargetAt, shotCrossesAxis,
+  actorDisplayName, actorFacing, actorAction, actorTargetAt, groupTargetAt, shotCrossesAxis,
   losCandidates, tooCloseCandidates,
   type Shot, type Actor, type ActorAction, type RenderStyle, type SceneEnvelope, type RoomRect,
   type CameraSample,
@@ -380,9 +380,11 @@ export const useCineStore = create<CineState>()(
       setSoundOn: (v) => set({ soundOn: v }),
       addShot: (presetId) => {
         const first = get().actors[0];
+        const preset = getCinePreset(presetId);
         // 新镜继承场景默认灯光（显式存下，之后改默认不影响已有镜；
         // 想跟随默认的镜在面板里选「跟随场景」即可）
-        set({ shots: [...get().shots, makeShot(presetId, { ...(first ? { targetActorId: first.id } : {}), lightingId: get().sceneLightingId })] });
+        // 群体镜头不框单个演员——targetActorId 留空（applyShotCamera 用整组）。
+        set({ shots: [...get().shots, makeShot(presetId, { ...(preset?.group ? {} : first ? { targetActorId: first.id } : {}), lightingId: get().sceneLightingId })] });
       },
       removeShot: (id) => set({
         shots: get().shots.filter((s) => s.id !== id),
@@ -1045,8 +1047,12 @@ function applyShotCamera(cam: THREE.PerspectiveCamera, shot: Shot, timeSec: numb
   const preset = getCinePreset(shot.presetId);
   if (!preset) return;
   const st = useCineStore.getState();
+  // 群体镜头框整组（重心 + 包络），不用单个目标演员；其余预设跟拍
+  // targetActorId 指定的演员（缺省第一个）。
   const actor = st.actors.find((a) => a.id === shot.targetActorId) ?? st.actors[0];
-  const target = actor ? actorTargetAt(actor, shot.duration) : undefined;
+  const target = preset.group
+    ? (st.actors.length ? groupTargetAt(st.actors, shot.duration) : undefined)
+    : (actor ? actorTargetAt(actor, shot.duration) : undefined);
   const t = Math.min(1, Math.max(0, timeSec / Math.max(0.1, shot.duration)));
   // 房间级机位：按演员当前位置取房，室内预设钳进该房；
   // 取不到房（门洞/墙缝/无演员）时退回包络级钳制。
@@ -1058,6 +1064,8 @@ function applyShotCamera(cam: THREE.PerspectiveCamera, shot: Shot, timeSec: numb
     const room = roomRectForPoint(p.x, p.z);
     if (room) envForShot = { ...env, room };
   }
+  // 画布宽高比进包络：群体镜头据此算横向包络（竖幅导出帧横向紧得多）
+  if (cam.aspect > 0) envForShot = { ...envForShot, aspect: cam.aspect };
   let s = preset.sample(t, envForShot, target);
   const fight = st.fights.find((f) => f.shotId === shot.id);
   if (fight && actor) {
@@ -1314,8 +1322,8 @@ export function CameraPathPlayer({ env }: { env: SceneEnvelope }) {
                   ...(m.exampleTrack ? { exampleTrack: `${m.exampleTrack.title} — ${m.exampleTrack.artist}` } : {}),
                 };
               })(),
-              targetActorId: target?.id ?? null,
-              targetActorName: target ? actorDisplayName(target, targetIdx >= 0 ? targetIdx : 0) : null,
+              targetActorId: p.group ? null : target?.id ?? null,
+              targetActorName: p.group ? "全部演员" : (target ? actorDisplayName(target, targetIdx >= 0 ? targetIdx : 0) : null),
               // 本镜在场的角色（MVP：场景里全部演员都在场，镜头框住 target）
               characters: st.actors.map((a, ai) => ({
                 id: a.id,
@@ -2764,21 +2772,25 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
                     className="px-1 rounded hover:bg-white/10 disabled:opacity-25">↓</button>
                   <button onClick={() => removeShot(s.id)} className="px-1 rounded hover:bg-white/10 text-white/60">✕</button>
                 </div>
-                {/* 本镜框住的角色（室内镜跟拍用；缺省第一个演员） */}
+                {/* 本镜框住的角色（室内镜跟拍用；缺省第一个演员；群体镜头框整组） */}
                 <div className="flex items-center gap-1.5">
                   <span className="text-white/40 whitespace-nowrap">{en ? "Frames" : "框住"}</span>
-                  <select
-                    value={s.targetActorId ?? actors[0]?.id ?? ""}
-                    onChange={(e) => updateShot(s.id, { targetActorId: e.target.value || undefined })}
-                    className="flex-1 min-w-0 bg-white/10 rounded px-1 py-1 outline-none"
-                    style={{ colorScheme: "dark" }}
-                    disabled={!actors.length}
-                  >
-                    {!actors.length && <option value="">{en ? "No actors yet" : "还没有演员"}</option>}
-                    {actors.map((a, ai) => (
-                      <option key={a.id} value={a.id}>{actorDisplayName(a, ai)}{a.role ? `（${a.role}）` : ""}</option>
-                    ))}
-                  </select>
+                  {p?.group ? (
+                    <span className="flex-1 min-w-0 px-1 py-1 text-white/70">{en ? "All actors" : "全部演员"}</span>
+                  ) : (
+                    <select
+                      value={s.targetActorId ?? actors[0]?.id ?? ""}
+                      onChange={(e) => updateShot(s.id, { targetActorId: e.target.value || undefined })}
+                      className="flex-1 min-w-0 bg-white/10 rounded px-1 py-1 outline-none"
+                      style={{ colorScheme: "dark" }}
+                      disabled={!actors.length}
+                    >
+                      {!actors.length && <option value="">{en ? "No actors yet" : "还没有演员"}</option>}
+                      {actors.map((a, ai) => (
+                        <option key={a.id} value={a.id}>{actorDisplayName(a, ai)}{a.role ? `（${a.role}）` : ""}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 {/* 本镜灯光：缺省 = 跟随场景；点选即在画布上预览 */}
                 <div className="flex items-center gap-1.5">
