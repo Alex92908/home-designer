@@ -39,7 +39,8 @@ export default function ShowcasePage() {
       <ShowcaseShell />
 
       {/* ── SEO 内容区（服务端渲染）：给搜索引擎 / AI 提供可索引的真实中文内容 ── */}
-      <section className="px-6 pb-16 pt-10 max-w-5xl mx-auto bg-gray-900 text-gray-100">
+      <section className="bg-gray-900 text-gray-100">
+        <div className="px-6 pb-16 pt-10 max-w-5xl mx-auto">
         <h1 className="text-2xl font-bold mb-3">
           筑雅 ZHUYA —— 免费在线 AI 家装设计工具
         </h1>
@@ -81,6 +82,7 @@ export default function ShowcasePage() {
           <span className="mx-2">·</span>
           <span>© 筑雅 ZHUYA</span>
         </footer>
+        </div>
       </section>
     </>
   );

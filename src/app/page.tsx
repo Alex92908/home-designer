@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import DesignerTool from "./DesignerTool";
 import { ALL_TEMPLATES } from "@/lib/templates";
 import { SHOWCASE_META } from "@/lib/showcaseMeta";
+import { FILM_SET_META } from "@/lib/filmSetMeta";
 
 export const metadata: Metadata = {
   title: "ZHUYA 筑雅 | 免费 AI 家装设计 — AI 文生户型 + 3D 装修",
@@ -119,6 +120,33 @@ export default function HomePage() {
                   先去样板间挑个片场 →
                 </a>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 全部片场 — 首页醒目位置：63 个片场完整列表 */}
+        <section className="bg-gray-900 text-gray-100">
+          <div className="max-w-5xl mx-auto px-6 py-10">
+            <h2 className="text-2xl font-bold mb-2">🎬 全部片场 · {FILM_SET_META.length} 个</h2>
+            <p className="text-sm text-gray-400 mb-6">
+              每一个都是真实 3D 场景：点「打开片场」进设计器漫游改装，点「出短片」直接开拍。
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {FILM_SET_META.map((s) => (
+                <div key={s.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-2xl mb-1">{s.emoji}</div>
+                  <div className="font-semibold">{s.name}</div>
+                  <p className="text-sm text-gray-400 leading-relaxed mt-1">{s.desc}</p>
+                  <div className="mt-3 flex gap-4 text-sm font-semibold">
+                    <a href={`/?template=${s.id}`} style={{ color: "#4DA3FF" }}>
+                      打开片场 →
+                    </a>
+                    <a href={`/?shortfilm=1&template=${s.id}`} className="text-white/85 underline">
+                      🎬 出短片
+                    </a>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
