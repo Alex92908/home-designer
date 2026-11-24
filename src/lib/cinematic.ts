@@ -170,6 +170,34 @@ export function losCandidates(
   return out;
 }
 
+/** 机位太近（<1m）时的候选机位：视线方向已退化（相机贴在演员脸上，
+ *  losCandidates 的方向算不出来），改沿 4 个正方向（±X/±Z）各试
+ *  0.5/1/1.5/2m——贴墙的方向会被钳制原地不动（自动跳过），沿墙的
+ *  方向拉开距离。最后抬高到 2.4m。候选都经 clampIndoorCamera 重钳回房间。
+ *  调用方（resolveCameraLOS）用射线逐个验证距离 + 视线，选最远的通路。 */
+export function tooCloseCandidates(
+  pos: [number, number, number],
+  env: SceneEnvelope,
+): Array<[number, number, number]> {
+  const out: Array<[number, number, number]> = [];
+  const seen = new Set<string>();
+  const push = (p: [number, number, number]) => {
+    if (Math.hypot(p[0] - pos[0], p[1] - pos[1], p[2] - pos[2]) < 0.05) return;
+    const k = `${p[0].toFixed(2)},${p[1].toFixed(2)},${p[2].toFixed(2)}`;
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(p);
+  };
+  for (const d of [0.5, 1.0, 1.5, 2.0]) {
+    push(clampIndoorCamera([pos[0] + d, pos[1], pos[2]], env));
+    push(clampIndoorCamera([pos[0] - d, pos[1], pos[2]], env));
+    push(clampIndoorCamera([pos[0], pos[1], pos[2] + d], env));
+    push(clampIndoorCamera([pos[0], pos[1], pos[2] - d], env));
+  }
+  if (pos[1] < 2.4) push([pos[0], 2.4, pos[2]]);
+  return out;
+}
+
 /** 室内机位：随 t 跟住目标（at 优先，否则 from→to 平滑插值），返回目标位置 + 高度 + 朝向 */
 function trackTarget(t: number, target?: ActorTarget): { x: number; y: number; z: number; facing: number } {
   if (target?.at) {

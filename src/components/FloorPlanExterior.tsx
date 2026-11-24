@@ -2333,6 +2333,59 @@ function RooftopDecorations({
 }
 
 
+/** 院子家具 —— 单独渲染层（只渲染家具，不碰墙/地板/天花板/屋顶）。
+ *  `yard` 房间在 ROOM_DEFS 里是 isOutdoor，interiorRooms 会把它过滤掉，
+ *  所以单院子套系（湖中岛屿、古代军营、夜市、水乡、沙漠绿洲、雪山木屋、
+ *  天台等）的 placedItems 在 3D 里一直不可见，只剩一块默认草地/地砖 ——
+ *  6 个院子长得一模一样就是这个原因。
+ *  这里只渲染 yard 房间的家具（全精度 PlacedItemMesh，露天可见不走低 LOD
+ *  彩色 box，与 RooftopDecorations 同款），院子保持露天、无顶、无地板，
+ *  仍是原来的空地 + 默认地面。不能把 yard 放进 interiorRooms：屋顶
+ *  （FlatRoof）会按顶层房间轮廓出板，把整个院子盖住。 */
+function YardFurniture({
+  W, D, planOffset, floorPlansOverride,
+}: {
+  W: number; D: number; planOffset: PlanOffset;
+  /** 多楼栋：渲染副楼时传入该楼 floorPlans，缺省读 store(激活楼栋)。 */
+  floorPlansOverride?: import("@/lib/types").FloorPlan[];
+}) {
+  const storeFloorPlans = useDesignerStore(s => s.floorPlans);
+  const floorPlans = floorPlansOverride ?? storeFloorPlans;
+  const glbRoom = useDesignerStore(s => s.mobileGlbRoom);
+  const mobileReadyItemIds = useDesignerStore(s => s.mobileReadyItemIds);
+  return (
+    <group>
+      {floorPlans.map((fp, fi) => {
+        if (!fp) return null;
+        if (!(fp.enabledRooms ?? []).includes("yard")) return null;
+        const pos = fp.roomLayout?.["yard"];
+        const dims = fp.roomDimensions?.["yard"];
+        if (!pos || !dims) return null;
+        const items = fp.rooms?.["yard"]?.placedItems ?? [];
+        if (!items.length) return null;
+        const cx = (pos.x + dims.width / 2 - planOffset.minX) * CM - W / 2;
+        const cz = (pos.y + dims.depth / 2 - planOffset.minY) * CM - D / 2;
+        const rWm = dims.width * CM;
+        const rDm = dims.depth * CM;
+        const yBase = fi * (FLOOR_H + SLAB_T);
+        return (
+          <group key={`yard-${fi}`} position={[cx, yBase, cz]}>
+            {items.map((p) => (
+              (mobileFurnitureGlbAllowed("yard", glbRoom) || mobileReadyItemIds.includes(p.instanceId)) ? (
+                <Suspense key={p.instanceId} fallback={null}>
+                  <OnLoadPing id={p.instanceId} />
+                  <PlacedItemMesh placed={p} def={ROOM_DEFS["yard"]} roomW={rWm} roomD={rDm} room={"yard"} wallClearance />
+                </Suspense>
+              ) : null
+            ))}
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+
 /** 由外轮廓 pts + 可选内洞 holes 建 THREE.Shape（用于地板/天花板抠回字形洞）。
  *  坐标：以房间中心为原点的米。holes 每条 ≥3 点才算数。 */
 function makeShapeWithHoles(
@@ -6189,6 +6242,15 @@ export default function FloorPlanBuilding({
           floorPlansOverride={floorPlansOverride}
         />
       )}
+
+      {/* ── 院子家具 ── yard 房间是 isOutdoor，不进 interiorRooms，
+           否则单院子片场的家具在 3D 里永远不可见（只剩默认草地）。
+           只渲染家具，院子本身保持露天。 */}
+      <YardFurniture
+        W={W} D={D}
+        planOffset={planOffset}
+        floorPlansOverride={floorPlansOverride}
+      />
 
       {/* ── 5a-conservatory. 北侧温室 / 冬季花园（glass conservatory, north facade）──
            A Victorian-style steel-and-glass conservatory attached to the north wall.

@@ -43,7 +43,7 @@ import { Line } from "@react-three/drei";
 import {
   CINE_PRESETS, RENDER_STYLES, getCinePreset, makeShot, makeActor,
   actorDisplayName, actorFacing, actorAction, actorTargetAt, shotCrossesAxis,
-  losCandidates,
+  losCandidates, tooCloseCandidates,
   type Shot, type Actor, type ActorAction, type RenderStyle, type SceneEnvelope, type RoomRect,
   type CameraSample,
 } from "@/lib/cinematic";
@@ -218,6 +218,18 @@ export function clampPointToFootprint(p: [number, number]): { point: [number, nu
   const x = Math.max(-hx, Math.min(hx, p[0]));
   const z = Math.max(-hz, Math.min(hz, p[1]));
   return { point: [x, z], clamped: x !== p[0] || z !== p[1] };
+}
+
+/** 径向投影：沿“中心→点击”的射线把点投到包络边上（保留点击的方向）。
+ *  只用于 placePoint 的“两点重合”兜底，不改变 clampPointToFootprint 的贴边语义。 */
+export function radialProjectToFootprint(p: [number, number]): [number, number] {
+  const { W, D } = envelopeFromStore();
+  const M = 0.3;
+  const hx = Math.max(0, W / 2 - M);
+  const hz = Math.max(0, D / 2 - M);
+  if (p[0] === 0 && p[1] === 0) return [0, 0];
+  const t = Math.min(hx / Math.abs(p[0] || 1e-9), hz / Math.abs(p[1] || 1e-9));
+  return [p[0] * t, p[1] * t];
 }
 
 interface QueueItem { shot: Shot; style: RenderStyle; }
@@ -420,14 +432,21 @@ export const useCineStore = create<CineState>()(
         if (!addActorMode) return;
         // 越界钳制：点落在房子外面时移到墙边，并提示用户（不是悄悄吃掉点击）
         const { point, clamped } = clampPointToFootprint(p);
-        if (clamped) {
-          set({ placeWarning: `点 (${p[0].toFixed(1)}, ${p[1].toFixed(1)}) 在房子外面，已移到墙边 (${point[0].toFixed(1)}, ${point[1].toFixed(1)})` });
+        let finalPoint = point;
+        if (clamped && pendingFrom && Math.hypot(point[0] - pendingFrom[0], point[1] - pendingFrom[1]) < 0.05) {
+          // 两点重合：逐轴钳制把角落区的两次点击吸到同一个角，演员走位退化为 0，
+          // 镜头贴到演员脸上出空白帧（停车场）。改沿第二次点击的方向径向投影，
+          // 保住一条有效走位；只在重合时触发，其他放置行为不变。
+          finalPoint = radialProjectToFootprint(p);
         }
-        if (!pendingFrom) { set({ pendingFrom: point }); return; }
+        if (clamped) {
+          set({ placeWarning: `点 (${p[0].toFixed(1)}, ${p[1].toFixed(1)}) 在房子外面，已移到墙边 (${finalPoint[0].toFixed(1)}, ${finalPoint[1].toFixed(1)})` });
+        }
+        if (!pendingFrom) { set({ pendingFrom: finalPoint }); return; }
         if (replaceActorId) {
           // 重设走位：只改 from/to，名字/角色/动作/朝向保留
           set({
-            actors: actors.map((a) => (a.id === replaceActorId ? { ...a, from: pendingFrom, to: point } : a)),
+            actors: actors.map((a) => (a.id === replaceActorId ? { ...a, from: pendingFrom, to: finalPoint } : a)),
             pendingFrom: null, addActorMode: false, replaceActorId: null,
           });
           return;
@@ -436,7 +455,7 @@ export const useCineStore = create<CineState>()(
         let n = actors.length + 1;
         while (actors.some((a) => a.name === `演员${n}`)) n++;
         set({
-          actors: [...actors, makeActor(pendingFrom, point, { name: `演员${n}` })],
+          actors: [...actors, makeActor(pendingFrom, finalPoint, { name: `演员${n}` })],
           pendingFrom: null, addActorMode: false,
         });
       },
@@ -939,7 +958,12 @@ function resolveCameraLOS(
   // 头射线从柜顶上方掠过说"通"，画面里演员却只剩一个头）。
   const headBlocked = losBlocked(scene, cam, from, headV);
   const shouldersBlocked = !headBlocked && shoulders.some((t) => losBlocked(scene, cam, from, t));
-  if (!headBlocked && !shouldersBlocked) {
+  // 太近：机位被房间钳制到离演员不足 1m（演员贴墙角开场时，全景/中景
+  // 的 5m/2.8m 机位会被墙压到演员脸上，画面只剩半张脸——停车场）。
+  // 与遮挡同等处理：挪机位，永不比今天差。
+  const MIN_CAM_DIST = 1.0;
+  const tooClose = from.distanceTo(headV) < MIN_CAM_DIST;
+  if (!headBlocked && !shouldersBlocked && !tooClose) {
     losCache.set(key, sample);
     return sample;
   }
@@ -953,6 +977,33 @@ function resolveCameraLOS(
       if (a[0] !== b[0] || a[1] !== b[1]) axis = { a, b };
     }
     const cands = losCandidates(sample.pos, head, env, axis);
+    // 太近时：在三点全通且距离够的候选里选离演员最远的（尽量回到
+    // 预设的景别）；没有则沿用下面的遮挡逻辑（或原样）。
+    // 注意：太近时视线方向已退化，losCandidates 算不出候选（len<0.6
+    // 直接返回 []），改用沿正方向试的 tooCloseCandidates。
+    if (tooClose) {
+      let best: [number, number, number] | null = null;
+      let bestDist = MIN_CAM_DIST;
+      for (const cand of tooCloseCandidates(sample.pos, env)) {
+        const candFrom = new THREE.Vector3(...cand);
+        if (candFrom.distanceTo(headV) < MIN_CAM_DIST) continue;
+        if (losBlocked(scene, cam, candFrom, headV)) continue;
+        if (!shoulders.every((t) => !losBlocked(scene, cam, candFrom, t))) continue;
+        const d = candFrom.distanceTo(headV);
+        if (d > bestDist) { bestDist = d; best = cand; }
+      }
+      if (best) {
+        resolved = { ...sample, pos: best };
+        losCache.set(key, resolved);
+        return resolved;
+      }
+      // 没有够远又通的候选：若同时没遮挡就原样（已是最好的了）；
+      // 若有遮挡，继续走下面的遮挡逻辑找能露头的候选。
+      if (!headBlocked && !shouldersBlocked) {
+        losCache.set(key, sample);
+        return sample;
+      }
+    }
     if (headBlocked) {
       // 两档：优先三点全通（头 + 双肩——宽隔断后只头通不够）；没有则退到
       // 只头通的候选（至少把头露出来）；都没有则原样，永不比今天差。

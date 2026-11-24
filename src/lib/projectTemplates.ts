@@ -14693,9 +14693,9 @@ const PRISON_SET: ProjectTemplate = {
   furnitureOverrides: [
     {
     custom1: [
-      { furnitureId: "bed-bunk", x: 200, z: 71, rotation: 0 },
-      { furnitureId: "bed-bunk", x: 600, z: 71, rotation: 0 },
-      { furnitureId: "bed-bunk", x: 1000, z: 71, rotation: 0 },
+      { furnitureId: "bed-bunk", x: 200, z: 150, rotation: 0 },
+      { furnitureId: "bed-bunk", x: 600, z: 150, rotation: 0 },
+      { furnitureId: "bed-bunk", x: 1000, z: 150, rotation: 0 },
       { furnitureId: "bed-bunk", x: 200, z: 529, rotation: 180 },
       { furnitureId: "bed-bunk", x: 600, z: 529, rotation: 180 },
       { furnitureId: "bed-bunk", x: 1000, z: 529, rotation: 180 },
@@ -14704,9 +14704,9 @@ const PRISON_SET: ProjectTemplate = {
       { furnitureId: "proc-wood-chest", x: 800, z: 570, rotation: 180 },
     ],
     custom2: [
-      { furnitureId: "bed-bunk", x: 200, z: 71, rotation: 0 },
-      { furnitureId: "bed-bunk", x: 600, z: 71, rotation: 0 },
-      { furnitureId: "bed-bunk", x: 1000, z: 71, rotation: 0 },
+      { furnitureId: "bed-bunk", x: 200, z: 150, rotation: 0 },
+      { furnitureId: "bed-bunk", x: 600, z: 150, rotation: 0 },
+      { furnitureId: "bed-bunk", x: 1000, z: 150, rotation: 0 },
       { furnitureId: "bed-bunk", x: 200, z: 529, rotation: 180 },
       { furnitureId: "bed-bunk", x: 600, z: 529, rotation: 180 },
       { furnitureId: "bed-bunk", x: 1000, z: 529, rotation: 180 },
