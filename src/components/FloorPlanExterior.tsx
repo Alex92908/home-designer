@@ -2707,28 +2707,39 @@ export default function FloorPlanBuilding({
     furnitureSeq.reset();
     setMobileReadyItemIds([]);
 
-    // 定时器逐拍推进,每拍**最多揭 1 件**,且 setState 在计时器回调里(脱离 React 提交
-    // 级联)—— 这是不触发 "Maximum update depth"(#185)的关键。
+    // 定时器逐拍推进,每拍**最多补满 3 件在途**,且 setState 在计时器回调里
+    // (脱离 React 提交级联)—— 这是不触发 "Maximum update depth"(#185)的关键。
+    // 并发 3(原为 1):外观 200+ 件时串行 1 件要 60–120s 才填满,是手机上
+    // 「外观出不来」的主因;3 件并行解码仍在 Draco worker 池(4)内,且
+    // TEX_CAP 真实纹理预算闸 + 看门狗都在,超预算照样停揭、保证不崩。
     const id = setInterval(() => {
       if (frontier >= order.length) { clearInterval(id); return; }
       // 关键:等 KTX2 用真实渲染器探好压缩格式再开揭 —— 否则首批家具会在探测完成前转码、
       // 退回 RGBA 未压。isKtx2Ready 由 <Ktx2Detect/> 在 Canvas 挂载时置真。
       if (!isKtx2Ready()) return;
-      // 已揭开的都必须加载完(哨兵 ping);否则等 —— 但防网络挂死加看门狗:连续多拍无
-      // 进展就强制把队首标记完成推进(出错件走 GltfFurnitureWithFallback 回退,正常会 ping)。
-      let allLoaded = true;
+      // 在途件数(已揭开但哨兵未 ping 回)。满 3 件就等 —— 但防网络挂死加
+      // 看门狗:连续多拍无进展就强制把最老的一件标记完成推进(出错件走
+      // GltfFurnitureWithFallback 回退,正常会 ping)。
+      let inFlight = 0;
+      let oldestStuck = -1;
       for (let k = 0; k < frontier; k++) {
-        if (!furnitureSeq.loaded.has(order[k])) { allLoaded = false; break; }
+        if (!furnitureSeq.loaded.has(order[k])) {
+          inFlight += 1;
+          if (oldestStuck < 0) oldestStuck = k;
+        }
       }
-      if (!allLoaded) {
+      if (inFlight >= 3) {
         stallTicks += 1;
         if (stallTicks < 18) return;        // ~2.5s 宽限
-        if (frontier > 0) furnitureSeq.loaded.add(order[frontier - 1]); // 强制解卡
+        if (oldestStuck >= 0) furnitureSeq.loaded.add(order[oldestStuck]); // 强制解卡
+        stallTicks = 0;
+        return; // 下一拍再揭,让出事件循环
       }
       stallTicks = 0;
       const texN = (glForBudget?.info?.memory?.textures as number | undefined) ?? 0;
       if (texN >= TEX_CAP) { clearInterval(id); return; } // 到真实纹理预算,停止揭开,保证不崩
-      frontier += 1;
+      // 一拍补满 3 件在途:空管时一次揭 3 件,满管时 0 件。
+      frontier += Math.min(3 - inFlight, order.length - frontier);
       setMobileReadyItemIds(order.slice(0, frontier));
     }, 140);
 

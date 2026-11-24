@@ -11,7 +11,7 @@ import "@/lib/preload";
 const _VISITED_KEY = "home-designer-visited";
 let _sampleLoadedThisSession = false;
 import dynamic from "next/dynamic";
-import { Component, useEffect, useState, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
 import LeftPanel from "@/components/LeftPanel";
 import RightPanel from "@/components/RightPanel";
 import ExteriorPanel from "@/components/ExteriorPanel";
@@ -38,6 +38,7 @@ import { decodeShare } from "@/lib/share";
 import { decodeSnapshot } from "@/lib/shareUrl";
 import { getSampleGlassVillaFloorPlans, SAMPLE_GLASS_VILLA_EXTERIOR } from "@/lib/sampleGlassVilla";
 import { isMobileDevice } from "@/lib/device";
+import { collectRoomGlbUrls, preloadGlbUrls } from "@/lib/roomPreload";
 
 function CanvasLoading({ bg, msgKey }: { bg: string; msgKey: "loading3dScene" | "loadingExteriorScene" | "global3dLoading" }) {
   const t = useT();
@@ -227,6 +228,20 @@ export default function DesignerTool() {
   // 默认值不一致 → React 报 hydration mismatch（移动端 Chrome 尤其
   // 敏感）。等第一次 useEffect 跑完再渲染真正依赖 store 的内容。
   const [mounted, setMounted] = useState(false);
+
+  // 预载当前房间的 GLB(桌面端):用户在 2D 里选房/改布局时就把该房间的
+  // 模型下好解好,切「室内装修」直接命中缓存。签名变化才触发(换房/增减
+  // 家具);已预载过的 URL 由 roomPreload 内去重。400ms 延迟让 2D 首帧
+  // 先画出来。移动端不做(内存紧张,按需加载)。
+  const roomGlbUrls = useMemo(
+    () => collectRoomGlbUrls(floorPlans[activeFloor]?.rooms?.[activeRoom]?.placedItems),
+    [floorPlans, activeFloor, activeRoom],
+  );
+  useEffect(() => {
+    if (!roomGlbUrls.length) return;
+    const t = setTimeout(() => preloadGlbUrls(roomGlbUrls), 400);
+    return () => clearTimeout(t);
+  }, [roomGlbUrls]);
 
   // After mount, collapse panels on mobile viewports + flip mounted flag.
   // On first-ever visit (no persisted state), load the glass-villa sample so

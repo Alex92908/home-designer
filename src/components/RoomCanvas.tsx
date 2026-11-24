@@ -2625,6 +2625,16 @@ function climbToSurface(roomPrefix: string, selfKey: string, x: number, z: numbe
   return best;
 }
 
+/** GLB 原生包围盒缓存:同一模型的实测尺寸只算一次。
+ *  测量只取决于 (URL, 预旋转, 剔除集),与 w/d/h/fit/scale/recolor 无关;
+ *  同一模型在多房间/多实例间反复出现(门窗几十次),旧代码每实例都
+ *  skeletonClone + 全量 prep + Box3.setFromObject 两次,是 3D 首帧的
+ *  主线程大头。缓存后每实例只剩 1 次 clone + 1 次 prep,Box3 归零
+ *  (buildUniform/fill 改用缓存盒 × 缩放比推导,数学上等价,见下)。
+ *  只缓存数字,不缓存 Object3D(各实例仍需独立 clone 做 transform)。 */
+type GlbNativeBox = { sx: number; sy: number; sz: number; cx: number; cy: number; cz: number };
+const GLB_NATIVE_BOX = new Map<string, GlbNativeBox>();
+
 function GltfFurniture({
   url, scale, rotation, yOffset, recolor, w, d, h, fit, preRotX, preRotZ, dropMeshNames, selfLit, onMeasured,
 }: { url: string; scale?: number; rotation?: number; yOffset?: number; recolor?: string; w: number; d: number; h: number; fit?: "contain" | "fill" | "tile"; preRotX?: number; preRotZ?: number; dropMeshNames?: string[]; selfLit?: number; onMeasured?: (m: { topY: number; w: number; d: number }) => void }) {
@@ -2702,43 +2712,66 @@ function GltfFurniture({
         for (const o of toRemove) o.removeFromParent();
       }
     };
-    // Scale a fresh clone uniformly by `s`, then recenter footprint on the
-    // X/Z origin and drop its base to Y=0 (matches procedural-box convention).
-    const buildUniform = (s: number) => {
+    // 原生包围盒:只在首次遇到 (url, 预旋转, 剔除集) 时实测并缓存,之后
+    // 的实例直接复用。测量与 w/d/h/fit/scale/recolor 无关(见文件头注释)。
+    const measureKey = `${url}|${preRX.toFixed(4)}|${preRZ.toFixed(4)}|${[...dropSet].sort().join(",")}`;
+    let native = GLB_NATIVE_BOX.get(measureKey);
+    // 测量用 clone 只在缓存未命中时创建;命中时不建,fill/零尺寸路径
+    // 才按需另建(见下)。
+    let base: THREE.Object3D | null = null;
+    if (!native) {
+      base = skeletonClone(scene);
+      prep(base);
+      // 预旋转扶正后再测量原生尺寸（size 变为扶正朝向）→ contain/fit 按正确朝向缩放。
+      if (preRX) base.rotation.x = preRX;
+      if (preRZ) base.rotation.z = preRZ;
+      if (preRX || preRZ) base.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(base);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      native = { sx: size.x, sy: size.y, sz: size.z, cx: center.x, cy: center.y, cz: center.z };
+      GLB_NATIVE_BOX.set(measureKey, native);
+      // eslint-disable-next-line no-console
+      console.log(`[GltfFurniture] ${url} fit=${fit ?? "contain"} native=${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m target=${w.toFixed(2)}×${h.toFixed(2)}×${d.toFixed(2)}m center=(${center.x.toFixed(2)},${center.y.toFixed(2)},${center.z.toFixed(2)})`);
+    }
+    const size = new THREE.Vector3(native.sx, native.sy, native.sz);
+
+    // 渲染用 clone:测量 clone(base)可直接当第一个渲染实例(见下),
+    // 缓存命中时才另建。
+    const freshClone = () => {
       const c = skeletonClone(scene);
       prep(c);
       if (preRX) c.rotation.x = preRX;
       if (preRZ) c.rotation.z = preRZ;
-      c.scale.setScalar(s);   // 均匀缩放与旋转可交换，扶正后 contain 缩放正确
-      c.updateMatrixWorld(true);
-      const b = new THREE.Box3().setFromObject(c);
-      c.position.x -= (b.min.x + b.max.x) / 2;
-      c.position.z -= (b.min.z + b.max.z) / 2;
-      c.position.y -= b.min.y;
-      return { obj: c, box: b };
+      return c;
     };
 
-    // Measure the asset's native bounding box from a prepped clone so we can
-    // scale to our declared furniture size (width/depth/height in meters).
-    const base = skeletonClone(scene);
-    prep(base);
-    // 预旋转扶正后再测量原生尺寸（size 变为扶正朝向）→ contain/fit 按正确朝向缩放。
-    // fill 模型不设 preRot，故此处不影响既有 fill 资产。
-    if (preRX) base.rotation.x = preRX;
-    if (preRZ) base.rotation.z = preRZ;
-    if (preRX || preRZ) base.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(base);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-    // eslint-disable-next-line no-console
-    console.log(`[GltfFurniture] ${url} fit=${fit ?? "contain"} native=${size.x.toFixed(2)}×${size.y.toFixed(2)}×${size.z.toFixed(2)}m target=${w.toFixed(2)}×${h.toFixed(2)}×${d.toFixed(2)}m center=(${center.x.toFixed(2)},${center.y.toFixed(2)},${center.z.toFixed(2)})`);
+    // Scale a clone uniformly by `s`, then recenter footprint on the
+    // X/Z origin and drop its base to Y=0 (matches procedural-box convention).
+    // 均匀缩放与旋转可交换:缩放后的包围盒 = 原生盒 × s,无需再 Box3 测一次。
+    // 测量 clone(base)可直接当第一个渲染实例(已 prep+扶正),不必再克隆一次。
+    const buildUniformFrom = (c: THREE.Object3D, s: number) => {
+      c.scale.setScalar(s);   // 均匀缩放与旋转可交换，扶正后 contain 缩放正确
+      c.updateMatrixWorld(true);
+      c.position.x -= native.cx * s;
+      c.position.z -= native.cz * s;
+      c.position.y -= (native.cy - native.sy / 2) * s;
+      // 调用方只用 box 的 x 跨度(tile 算 moduleW);返回推导盒即可。
+      const box = new THREE.Box3(
+        new THREE.Vector3((native.cx - native.sx / 2) * s, (native.cy - native.sy / 2) * s, (native.cz - native.sz / 2) * s),
+        new THREE.Vector3((native.cx + native.sx / 2) * s, (native.cy + native.sy / 2) * s, (native.cz + native.sz / 2) * s),
+      );
+      return { obj: c, box };
+    };
+    const buildUniform = (s: number) => buildUniformFrom(freshClone(), s);
 
     // Safety: if any dim is zero (broken model), skip auto-scale.
     if (!(size.x > 0 && size.y > 0 && size.z > 0)) {
-      if (scale) base.scale.setScalar(scale);
-      return { list: [{ obj: base, x: 0 }], measured: { topY: h, w, d } };
+      const obj = base ?? freshClone();
+      if (scale) obj.scale.setScalar(scale);
+      return { list: [{ obj, x: 0 }], measured: { topY: h, w, d } };
     }
 
     const mode = fit ?? "contain";
@@ -2755,20 +2788,32 @@ function GltfFurniture({
       // Non-uniform: exactly fill W×D×H. Best for boxy appliances whose
       // declared size IS the real product size (fridge/sink/range hood).
       // 换轴模型：本地 X 轴要填的是世界 D（旋转后转到 Z），反之亦然。
-      base.scale.set(((swapXZ ? d : w) / size.x) * trim, (h / size.y) * trim, ((swapXZ ? w : d) / size.z) * trim);
-      base.updateMatrixWorld(true);
-      const b2 = new THREE.Box3().setFromObject(base);
-      base.position.x -= (b2.min.x + b2.max.x) / 2;
-      base.position.z -= (b2.min.z + b2.max.z) / 2;
-      base.position.y -= b2.min.y;
-      return { list: [{ obj: base, x: 0 }], measured: { topY: h, w, d } };
+      // fill 模型不设 preRot,故原生盒按轴缩放即为新包围盒,无需 Box3;
+      // 万一某天 fill 资产带上 preRot,回退到实测以保正确。
+      const obj = base ?? freshClone();
+      const kx = ((swapXZ ? d : w) / size.x) * trim;
+      const ky = (h / size.y) * trim;
+      const kz = ((swapXZ ? w : d) / size.z) * trim;
+      obj.scale.set(kx, ky, kz);
+      obj.updateMatrixWorld(true);
+      if (preRX || preRZ) {
+        const b2 = new THREE.Box3().setFromObject(obj);
+        obj.position.x -= (b2.min.x + b2.max.x) / 2;
+        obj.position.z -= (b2.min.z + b2.max.z) / 2;
+        obj.position.y -= b2.min.y;
+      } else {
+        obj.position.x -= native.cx * kx;
+        obj.position.z -= native.cz * kz;
+        obj.position.y -= (native.cy - native.sy / 2) * ky;
+      }
+      return { list: [{ obj, x: 0 }], measured: { topY: h, w, d } };
     }
 
     if (mode === "tile") {
       // Fit a single module by depth+height (its real cabinet cross-section),
       // keep the module's own width, then repeat it along the run to fill `w`.
       const s = Math.min(h / size.y, d / nz) * trim;
-      const first = buildUniform(s);
+      const first = base ? buildUniformFrom(base, s) : buildUniform(s);
       const moduleW = first.box.max.x - first.box.min.x;
       const count = Math.max(1, Math.round(w / Math.max(moduleW, 1e-3)));
       const out: { obj: THREE.Object3D; x: number }[] = [];
@@ -2784,7 +2829,7 @@ function GltfFurniture({
     // model keeps its real proportions and never bursts past the box. Best
     // for organic/proportioned items (plants, sofas, chairs, lamps).
     const s = Math.min(w / nx, h / size.y, d / nz) * trim;
-    const only = buildUniform(s);
+    const only = base ? buildUniformFrom(base, s) : buildUniform(s);
     return { list: [{ obj: only.obj, x: 0 }], measured: { topY: size.y * s, w: nx * s, d: nz * s } };
   }, [scene, w, d, h, scale, recolor, fit, rotation, preRX, preRZ, dropSet, selfLit]);
 

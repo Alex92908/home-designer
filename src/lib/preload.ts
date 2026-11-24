@@ -71,6 +71,20 @@ if (typeof window !== "undefined") {
   const isMobile = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent)
     || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
+  // 移动端只预热解码器,不批量预载:首次进 3D 前 Draco WASM + KTX2
+  // 转码器都是冷的,第一件模型要现取 WASM、起 worker、初始化模块
+  // (手机上约 0.5–1.5s),之后每件还都要等。只预载 1 个通用小模型
+  // (每间房都有的门,206KB):走同一条 useGLTF 路径,顺带把 drei 的
+  // Draco 单例 + 共享 KTX2Loader + worker 池都热起来,代价一个文件。
+  if (isMobile) setTimeout(() => {
+    try {
+      const p = useGLTF.preload("/models/_arch_door/door_with_frame/door_with_frame.glb") as unknown as Promise<unknown> | undefined;
+      if (p && typeof (p as Promise<unknown>).catch === "function") {
+        (p as Promise<unknown>).catch(() => { /* best-effort */ });
+      }
+    } catch { /* best-effort */ }
+  }, 150);
+
   // Small defer so the initial document/CSS get priority on the network
   // queue. 150ms ≈ one LCP frame on mid-range hardware.
   if (!isMobile) setTimeout(() => {
