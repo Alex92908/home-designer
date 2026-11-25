@@ -13,6 +13,13 @@
  *   apply_design           — 应用设计 JSON（merge=true 增量微调 / false 整套重建）
  *   get_design_state       — 当前画布完整设计快照（浏览器每 2s 推送）
  *   open_preview           — 预览地址与查看指引
+ *   film_*                 — 出短片编排：片场/演员/走位/动作时间轴/分镜/模拟/导出
+ *     （film_list_sets / film_open_set / film_get_state / film_list_actions /
+ *      film_list_costumes / film_add_actor / film_set_actor / film_move_actor /
+ *      film_remove_actor / film_add_waypoint / film_move_waypoint /
+ *      film_remove_waypoint / film_set_actor_waypoints / film_set_group_action /
+ *      film_add_shot / film_update_shot / film_remove_shot / film_start_sim /
+ *      film_stop_sim / film_export_storyboard；实现见 ./tools.ts）
  *
  * 命令经内存桥入队，浏览器轮询 /api/mcp/sync 拉取并应用后回执；tools/call 等到
  * 回执才答复，CLI 拿到的是浏览器真实结果（成功/失败/未连接）。

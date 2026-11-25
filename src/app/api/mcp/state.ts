@@ -10,9 +10,17 @@
  * 进程重启即清空（MVP 设计如此）。多标签页同开会都拉命令——本地单用户场景可接受。
  */
 
+export type McpCommandType =
+  | "apply_template" | "apply_design" | "check_layout" | "auto_fix_layout" | "yard_auto"
+  // ── 出短片（film_*）：与设计命令同一条桥，浏览器侧由 useMcpBridge 落进 useCineStore。
+  | "film_add_actor" | "film_set_actor" | "film_move_actor" | "film_remove_actor"
+  | "film_add_waypoint" | "film_move_waypoint" | "film_remove_waypoint" | "film_set_actor_waypoints"
+  | "film_set_group_action" | "film_add_shot" | "film_update_shot" | "film_remove_shot"
+  | "film_start_sim" | "film_stop_sim" | "film_start_storyboard";
+
 export interface McpCommand {
   id: string;
-  type: "apply_template" | "apply_design" | "check_layout" | "auto_fix_layout" | "yard_auto";
+  type: McpCommandType;
   payload: Record<string, unknown>;
   enqueuedAt: number;
 }
@@ -29,6 +37,10 @@ interface Bridge {
   designAt: number;
   /** 院子只读摘要(分区/小径/导入模型等 apply 契约覆盖不到的部分)。 */
   yardSummary: string;
+  /** 出短片快照（useMcpBridge.serializeFilm 的输出）——与 design 同构：同一次
+   *  心跳一起推，film_get_state 读它。 */
+  film: unknown | null;
+  filmAt: number;
   queue: McpCommand[];
   results: Map<string, CommandResult>;
   /** 桥租约：同一时刻只有一个标签页是「执行者」（推快照+拉命令）。多标签同开时
@@ -44,7 +56,7 @@ interface Bridge {
 // 无人拉取超时）。globalThis 单例让所有 route bundle 共享同一座桥（prisma 同款模式）。
 const g = globalThis as unknown as { __zhuyaMcpBridge?: Bridge };
 const bridge: Bridge = g.__zhuyaMcpBridge
-  ?? (g.__zhuyaMcpBridge = { design: null, designAt: 0, yardSummary: "", queue: [], results: new Map(), leaseTabId: null, leaseAt: 0 });
+  ?? (g.__zhuyaMcpBridge = { design: null, designAt: 0, yardSummary: "", film: null, filmAt: 0, queue: [], results: new Map(), leaseTabId: null, leaseAt: 0 });
 
 /** 租约有效期：超过没心跳就允许易主（标签页关闭/切走后新标签接管）。 */
 const LEASE_MS = 6_000;
@@ -88,6 +100,21 @@ export function getDesign(): { design: unknown | null; ageMs: number; connected:
 
 export function isConnected(): boolean {
   return getDesign().connected;
+}
+
+/** 出短片快照：与 pushDesign/getDesign 同构（同一次心跳一起推）。 */
+export function pushFilm(film: unknown): void {
+  bridge.film = film;
+  bridge.filmAt = Date.now();
+}
+
+export function getFilm(): { film: unknown | null; ageMs: number; connected: boolean } {
+  const ageMs = bridge.filmAt ? Date.now() - bridge.filmAt : Infinity;
+  return { film: bridge.film, ageMs, connected: ageMs < CONNECTED_MS };
+}
+
+export function isFilmConnected(): boolean {
+  return getFilm().connected;
 }
 
 export function enqueue(type: McpCommand["type"], payload: Record<string, unknown>): string {

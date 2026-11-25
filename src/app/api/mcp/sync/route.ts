@@ -7,12 +7,14 @@
  *   响应.commands — 取走待执行的 MCP 命令（apply_template / apply_design）
  */
 import { NextRequest, NextResponse } from "next/server";
-import { pushDesign, drainCommands, ack, acquireLease } from "../state";
+import { pushDesign, pushFilm, drainCommands, ack, acquireLease } from "../state";
 
 export async function POST(req: NextRequest) {
   let body: {
     tabId?: string;
     design?: unknown;
+    /** 出短片快照（useMcpBridge.serializeFilm 的输出）——与 design 同一次心跳一起推。 */
+    film?: unknown;
     /** 院子只读摘要:分区/小径/导入模型不在 apply 契约里,单独回传给 agent 看现状。 */
     yardSummary?: string;
     ack?: { id: string; ok: boolean; message?: string } | Array<{ id: string; ok: boolean; message?: string }>;
@@ -32,5 +34,6 @@ export async function POST(req: NextRequest) {
   }
   if (!leader) return NextResponse.json({ ok: true, leader: false, commands: [] });
   if (body.design !== undefined) pushDesign(body.design, typeof body.yardSummary === "string" ? body.yardSummary : undefined);
+  if (body.film !== undefined) pushFilm(body.film);
   return NextResponse.json({ ok: true, leader: true, commands: drainCommands() });
 }

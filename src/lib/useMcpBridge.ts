@@ -21,11 +21,287 @@ import { autoGenerateYardPaths, houseHalfExtentsCm } from "./yardAutoLayout";
 import { evaluateYardPlan } from "./outdoorClearance";
 
 import { getFurnitureById } from "./furniture";
+import { useCineStore, simClock } from "../components/CinematicDirector";
+import { makeSegment, makeWaypoint } from "./actions";
+import type { Waypoint } from "./actions";
+import type { Actor, ActorAction, Shot } from "./cinematic";
 
 interface BridgeCommand {
   id: string;
-  type: "apply_template" | "apply_design" | "check_layout" | "auto_fix_layout" | "yard_auto";
+  type: "apply_template" | "apply_design" | "check_layout" | "auto_fix_layout" | "yard_auto"
+    | "film_add_actor" | "film_set_actor" | "film_move_actor" | "film_remove_actor"
+    | "film_add_waypoint" | "film_move_waypoint" | "film_remove_waypoint" | "film_set_actor_waypoints"
+    | "film_set_group_action" | "film_add_shot" | "film_update_shot" | "film_remove_shot"
+    | "film_start_sim" | "film_stop_sim" | "film_start_storyboard";
   payload: Record<string, unknown>;
+}
+
+/** 出短片快照 —— film_get_state 读它：全量演员 + 分镜 + 模拟/导出进度，
+ *  让 AI 一次看清整个场面再编排 N 个演员，而不是逐个盲调。
+ *  sim 读逐帧时钟 simClock（真值），不是 UI 的节流镜像 cine.sim。 */
+function serializeFilm() {
+  const c = useCineStore.getState();
+  return {
+    actors: c.actors.map(a => ({
+      id: a.id,
+      name: a.name ?? null,
+      role: a.role ?? null,
+      action: a.action ?? "walk",
+      costumeId: a.costumeId ?? null,
+      archetypeId: a.archetypeId ?? null,
+      from: a.from,
+      to: a.to,
+      facing: a.facing ?? null,
+      waypoints: a.waypoints ?? [],
+      timeline: a.timeline ?? [],
+    })),
+    shots: c.shots.map(s => ({
+      id: s.id, presetId: s.presetId, duration: s.duration,
+      targetActorId: s.targetActorId ?? null, prompt: s.prompt ?? "", dialogue: s.dialogue ?? "",
+    })),
+    sim: {
+      active: simClock.active,
+      playing: simClock.playing,
+      shotIdx: simClock.shotIdx,
+      timeSec: Math.round(simClock.timeSec * 10) / 10,
+    },
+    queue: {
+      active: c.queue !== null,
+      progress: c.progress,
+      queueIdx: c.queueIdx,
+      total: c.queue?.length ?? 0,
+      batch: c.batch,
+    },
+    styles: c.styles,
+  };
+}
+
+function numPair(v: unknown): [number, number] | null {
+  if (!Array.isArray(v) || v.length !== 2) return null;
+  const x = Number(v[0]), z = Number(v[1]);
+  return Number.isFinite(x) && Number.isFinite(z) ? [x, z] : null;
+}
+
+/** 出短片命令：落进 useCineStore。返回回执 message（写明实际改了什么）。
+ *  抛错 = 回执 ok:false（服务端把 message 原样带回给 agent）。
+ *
+ *  film_add_actor 走面板自己的两点放置（beginAddActor + placePoint ×2），
+ *  所以自动配色（挑一件没人穿的、时代合身的服装）照常生效；placePoint 的
+ *  越界钳制也照常（回执里带 placeWarning，不悄悄吃掉坐标）。 */
+function runFilmCommand(cmd: BridgeCommand): string {
+  const cine = () => useCineStore.getState();
+  const p = cmd.payload;
+  const actorOrThrow = (actorId: string) => {
+    const a = cine().actors.find(x => x.id === actorId);
+    if (!a) throw new Error(`Unknown actorId "${actorId}".`);
+    return a;
+  };
+  switch (cmd.type) {
+    case "film_add_actor": {
+      const from = numPair(p.from);
+      const to = numPair(p.to);
+      if (!from || !to) throw new Error("film_add_actor needs from/to as [x, z] with finite numbers.");
+      const before = new Set(cine().actors.map(a => a.id));
+      cine().beginAddActor();
+      cine().placePoint(from);
+      cine().placePoint(to);
+      const after = cine();
+      const created = after.actors.find(a => !before.has(a.id));
+      if (!created) throw new Error("Actor was not created (placePoint did not complete the two-click add).");
+      const patch: Partial<Actor> = {};
+      if (typeof p.name === "string") patch.name = p.name;
+      if (typeof p.role === "string") patch.role = p.role;
+      if (typeof p.action === "string") patch.action = p.action as ActorAction;
+      if (typeof p.costumeId === "string") patch.costumeId = p.costumeId;
+      if (typeof p.archetypeId === "string") patch.archetypeId = p.archetypeId;
+      if (typeof p.facing === "number") patch.facing = p.facing;
+      if (Object.keys(patch).length) cine().updateActor(created.id, patch);
+      const fin = cine().actors.find(a => a.id === created.id);
+      const warn = cine().placeWarning;
+      return `Added actor ${created.id} ("${fin?.name ?? "?"}") from (${from[0]}, ${from[1]}) to (${to[0]}, ${to[1]}), costume ${fin?.costumeId ?? "?"}. Total actors: ${cine().actors.length}.${warn ? ` Note: ${warn}` : ""}`;
+    }
+    case "film_set_actor": {
+      const actorId = String(p.actorId ?? "");
+      const actor = actorOrThrow(actorId);
+      const raw = (p.patch ?? {}) as Record<string, unknown>;
+      const patch: Partial<Actor> = {};
+      if (typeof raw.name === "string") patch.name = raw.name;
+      if (typeof raw.role === "string") patch.role = raw.role;
+      if (typeof raw.facing === "number") patch.facing = raw.facing;
+      if (typeof raw.action === "string") patch.action = raw.action as ActorAction;
+      if (typeof raw.archetypeId === "string") patch.archetypeId = raw.archetypeId;
+      if (typeof raw.costumeId === "string") patch.costumeId = raw.costumeId;
+      if (raw.from !== undefined) {
+        const v = numPair(raw.from);
+        if (!v) throw new Error("patch.from must be [x, z] with finite numbers.");
+        patch.from = v;
+      }
+      if (raw.to !== undefined) {
+        const v = numPair(raw.to);
+        if (!v) throw new Error("patch.to must be [x, z] with finite numbers.");
+        patch.to = v;
+      }
+      cine().updateActor(actorId, patch);
+      return `Updated actor ${actorId} ("${actor.name ?? "?"}"): ${Object.keys(patch).join(", ") || "no fields"}.`;
+    }
+    case "film_move_actor": {
+      const actorId = String(p.actorId ?? "");
+      const actor = actorOrThrow(actorId);
+      const patch: Partial<Actor> = {};
+      if (p.from !== undefined) {
+        const v = numPair(p.from);
+        if (!v) throw new Error("from must be [x, z] with finite numbers.");
+        patch.from = v;
+      }
+      if (p.to !== undefined) {
+        const v = numPair(p.to);
+        if (!v) throw new Error("to must be [x, z] with finite numbers.");
+        patch.to = v;
+      }
+      cine().updateActor(actorId, patch);
+      const fin = cine().actors.find(a => a.id === actorId) ?? actor;
+      return `Moved actor ${actorId} ("${fin.name ?? "?"}") to from (${fin.from[0]}, ${fin.from[1]}), to (${fin.to[0]}, ${fin.to[1]}).`;
+    }
+    case "film_remove_actor": {
+      const actorId = String(p.actorId ?? "");
+      const actor = actorOrThrow(actorId);
+      cine().removeActor(actorId);
+      return `Removed actor ${actorId} ("${actor.name ?? "?"}"). Remaining actors: ${cine().actors.length}.`;
+    }
+    case "film_add_waypoint": {
+      const actorId = String(p.actorId ?? "");
+      actorOrThrow(actorId);
+      const x = Number(p.x), z = Number(p.z);
+      if (!Number.isFinite(x) || !Number.isFinite(z)) throw new Error("x/z must be finite numbers.");
+      cine().addWaypoint(actorId, [x, z]);
+      const n = cine().actors.find(a => a.id === actorId)?.waypoints?.length ?? 0;
+      return `Added waypoint (${x}, ${z}) to actor ${actorId}; now ${n} waypoint(s).`;
+    }
+    case "film_move_waypoint": {
+      const actorId = String(p.actorId ?? "");
+      const actor = actorOrThrow(actorId);
+      const wps = actor.waypoints ?? [];
+      const idx = Number(p.index);
+      if (!Number.isInteger(idx) || idx < 0 || idx >= wps.length) {
+        throw new Error(`Waypoint index ${String(p.index)} out of range (actor ${actorId} has ${wps.length}).`);
+      }
+      const raw = (p.patch ?? {}) as Record<string, unknown>;
+      const wpPatch: Partial<Waypoint> = {};
+      for (const k of ["x", "z", "t", "y", "facing"] as const) {
+        if (typeof raw[k] === "number") wpPatch[k] = raw[k];
+      }
+      cine().updateWaypoint(actorId, idx, wpPatch);
+      return `Updated waypoint ${idx} of actor ${actorId}.`;
+    }
+    case "film_remove_waypoint": {
+      const actorId = String(p.actorId ?? "");
+      const actor = actorOrThrow(actorId);
+      const wps = actor.waypoints ?? [];
+      const idx = Number(p.index);
+      if (!Number.isInteger(idx) || idx < 0 || idx >= wps.length) {
+        throw new Error(`Waypoint index ${String(p.index)} out of range (actor ${actorId} has ${wps.length}).`);
+      }
+      cine().removeWaypoint(actorId, idx);
+      const n = cine().actors.find(a => a.id === actorId)?.waypoints?.length ?? 0;
+      return `Removed waypoint ${idx} of actor ${actorId}; now ${n} waypoint(s).`;
+    }
+    case "film_set_actor_waypoints": {
+      const actorId = String(p.actorId ?? "");
+      actorOrThrow(actorId);
+      if (!Array.isArray(p.waypoints)) throw new Error("waypoints must be [[x, z, t], ...].");
+      const wps = (p.waypoints as unknown[]).map(w => {
+        const arr = w as unknown[];
+        if (!Array.isArray(arr) || arr.length < 3) throw new Error("Each waypoint must be [x, z, t].");
+        const x = Number(arr[0]), z = Number(arr[1]), t = Number(arr[2]);
+        if (![x, z, t].every(Number.isFinite) || t < 0) throw new Error(`Bad waypoint ${JSON.stringify(w)}: x/z/t must be finite numbers and t >= 0.`);
+        return makeWaypoint(x, z, t);
+      });
+      cine().updateActor(actorId, { waypoints: wps });
+      return `Set ${wps.length} waypoint(s) on actor ${actorId} (replaced previous path).`;
+    }
+    case "film_set_group_action": {
+      // 全量校验先行（服务端也验过，这里是最后一道防线）：任何一个演员
+      // 不存在，整单不执行 —— 不允许一半演员动起来、一半没动。
+      const actorIds = p.actorIds as string[];
+      const action = String(p.action ?? "");
+      const start = Number(p.start);
+      const duration = p.duration === undefined ? undefined : Number(p.duration);
+      if (!Array.isArray(actorIds) || !actorIds.length) throw new Error("actorIds must be a non-empty array.");
+      const missing = actorIds.filter(id => !cine().actors.some(a => a.id === id));
+      if (missing.length) throw new Error(`Unknown actorId(s): ${missing.join(", ")} — nothing applied.`);
+      if (!Number.isFinite(start) || start < 0) throw new Error("start must be a finite number >= 0.");
+      if (duration !== undefined && (!Number.isFinite(duration) || duration <= 0)) throw new Error("duration must be > 0.");
+      const targetPos = p.targetPos === undefined ? undefined : numPair(p.targetPos);
+      if (p.targetPos !== undefined && !targetPos) throw new Error("targetPos must be [x, z] with finite numbers.");
+      const pairs: string[] = [];
+      for (const id of actorIds) {
+        const seg = makeSegment(action, start, {
+          ...(duration !== undefined ? { duration } : {}),
+          ...(targetPos ? { targetPos } : {}),
+          ...(typeof p.targetY === "number" ? { targetY: p.targetY } : {}),
+          ...(typeof p.facing === "number" ? { facing: p.facing } : {}),
+          ...(typeof p.targetActorId === "string" ? { targetActorId: p.targetActorId } : {}),
+          ...(typeof p.safety === "string" ? { safety: p.safety } : {}),
+          ...(typeof p.propKind === "string" ? { propKind: p.propKind } : {}),
+        });
+        cine().addTimelineSegment(id, seg);
+        pairs.push(`${id}=${seg.id}`);
+      }
+      return `Added "${action}" segment (start ${start}s${duration !== undefined ? `, ${duration}s` : ""}) to ${actorIds.length} actor(s) on the shared clock: ${pairs.join(", ")}.`;
+    }
+    case "film_add_shot": {
+      const presetId = String(p.presetId ?? "");
+      const before = new Set(cine().shots.map(s => s.id));
+      cine().addShot(presetId);
+      const created = cine().shots.find(s => !before.has(s.id));
+      if (!created) throw new Error("Shot was not created.");
+      const patch: Partial<Pick<Shot, "duration" | "prompt" | "dialogue" | "targetActorId" | "lightingId" | "musicMood">> = {};
+      if (typeof p.duration === "number") patch.duration = p.duration;
+      if (typeof p.prompt === "string") patch.prompt = p.prompt;
+      if (typeof p.dialogue === "string") patch.dialogue = p.dialogue;
+      if (typeof p.targetActorId === "string") patch.targetActorId = p.targetActorId;
+      if (Object.keys(patch).length) cine().updateShot(created.id, patch);
+      const fin = cine().shots.find(s => s.id === created.id) ?? created;
+      return `Added shot ${created.id} (preset ${presetId}, ${fin.duration}s). Total shots: ${cine().shots.length}.`;
+    }
+    case "film_update_shot": {
+      const shotId = String(p.shotId ?? "");
+      const shot = cine().shots.find(s => s.id === shotId);
+      if (!shot) throw new Error(`Unknown shotId "${shotId}".`);
+      const raw = (p.patch ?? {}) as Record<string, unknown>;
+      const patch: Partial<Pick<Shot, "duration" | "prompt" | "dialogue" | "targetActorId" | "lightingId" | "musicMood">> = {};
+      for (const k of ["duration", "prompt", "dialogue", "targetActorId", "lightingId", "musicMood"] as const) {
+        if (raw[k] !== undefined) (patch as Record<string, unknown>)[k] = raw[k];
+      }
+      cine().updateShot(shotId, patch);
+      return `Updated shot ${shotId} (${shot.presetId}): ${Object.keys(patch).join(", ") || "no fields"}.`;
+    }
+    case "film_remove_shot": {
+      const shotId = String(p.shotId ?? "");
+      const shot = cine().shots.find(s => s.id === shotId);
+      if (!shot) throw new Error(`Unknown shotId "${shotId}".`);
+      cine().removeShot(shotId);
+      return `Removed shot ${shotId} (${shot.presetId}). Remaining shots: ${cine().shots.length}.`;
+    }
+    case "film_start_sim": {
+      if (!cine().shots.length) throw new Error("No shots yet — add one with film_add_shot first.");
+      cine().startSim();
+      return `Simulation started: ${cine().shots.length} shot(s), all actors on the shared clock from shot 1.`;
+    }
+    case "film_stop_sim": {
+      cine().stopSim();
+      return "Simulation stopped.";
+    }
+    case "film_start_storyboard": {
+      const shots = cine().shots.length;
+      if (!shots) throw new Error("No shots yet — add one with film_add_shot first.");
+      const styles = cine().styles.length;
+      cine().startStoryboard();
+      return `Storyboard export STARTED: ${shots} shot(s) × ${styles} style(s) = ${shots * styles} frame(s) queued. Files (storyboard.json + video) download in the browser when the batch finishes — not yet.`;
+    }
+    default:
+      throw new Error(`Unknown film command type ${cmd.type}`);
+  }
 }
 
 /** 院子的**只读**摘要 —— 补 serializeCurrentDesign 的盲区。
@@ -365,10 +641,11 @@ export function useMcpBridge() {
         const s = useDesignerStore.getState();
         const design = serializeCurrentDesign(s.floorPlans, s.exterior, s.yardPlan);
         const yardSummary = summarizeYard(s.yardPlan, s.floorPlans[0]);
+        const film = serializeFilm();
         const res = await fetch("/api/mcp/sync", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ tabId, design, yardSummary, ack: acks }),
+          body: JSON.stringify({ tabId, design, yardSummary, film, ack: acks }),
         });
         acks = [];
         const data = (await res.json()) as { commands?: BridgeCommand[] };
@@ -396,6 +673,9 @@ export function useMcpBridge() {
             } else if (cmd.type === "check_layout") {
               const report = runLayoutCheck();
               acks.push({ id: cmd.id, ok: report.startsWith("OK:"), message: report });
+            } else if (cmd.type.startsWith("film_")) {
+              const message = runFilmCommand(cmd);
+              acks.push({ id: cmd.id, ok: true, message });
             } else {
               acks.push({ id: cmd.id, ok: false, message: `Unknown command type ${cmd.type}` });
             }
@@ -416,6 +696,7 @@ export function useMcpBridge() {
               tabId,
               design: serializeCurrentDesign(s2.floorPlans, s2.exterior, s2.yardPlan),
               yardSummary: summarizeYard(s2.yardPlan, s2.floorPlans[0]),
+              film: serializeFilm(),
               ack: acks,
             }),
           });
