@@ -277,6 +277,54 @@ export function resolveActorCostume(a: { archetypeId?: string | null; costumeId?
   return DEFAULT_COSTUME;
 }
 
+function hexRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  const n = (i: number) => parseInt(h.slice(i, i + 2), 16) || 0;
+  return [n(0), n(2), n(4)];
+}
+
+/** 两件服装主色的反差（RGB 欧氏距离；越大越一眼可分）。 */
+function torsoColorDistance(a: string, b: string): number {
+  const [r1, g1, b1] = hexRgb(a);
+  const [r2, g2, b2] = hexRgb(b);
+  return Math.hypot(r1 - r2, g1 - g2, b1 - b2);
+}
+
+/**
+ * 新演员自动配色：挑一件当前场景没人穿的服装。
+ *  - 时代合身的优先（片场有时代记录时；无记录则不按时代筛）；
+ *  - 再挑与已用主色反差最大的一件（多人站一起一眼可分）；
+ *  - 31 套全用完就循环（不再回落默认素体——素体只作显式选择，
+ *    即原型选"未选原型"时，UI 与旧存档行为不变）。
+ *  返回原型 + 服装（渲染层按 costumeId 查色；原型缺失时 UI 的服装
+ *  下拉框仍可用，因为 resolveActorCostume 优先认 costumeId）。
+ */
+export function suggestCostumeForNewActor(
+  usedCostumeIds: string[],
+  setId?: string | null,
+): { archetypeId: string; costumeId: string } {
+  const used = new Set(usedCostumeIds);
+  const all = Object.values(COSTUMES);
+  let pool = all.filter((c) => !used.has(c.id));
+  if (pool.length === 0) pool = all; // 全用完：循环
+  const era = setEra(setId);
+  const eraFit = era ? pool.filter((c) => costumeEraMatches(c.era, era)) : [];
+  const candidates = eraFit.length > 0 ? eraFit : pool;
+  const usedColors = usedCostumeIds
+    .map((id) => resolveCostume(id))
+    .filter((c) => c.id !== "default")
+    .map((c) => c.colors.torso);
+  let best = candidates[0];
+  let bestD = -1;
+  for (const c of candidates) {
+    const d = usedColors.length
+      ? Math.min(...usedColors.map((u) => torsoColorDistance(c.colors.torso, u)))
+      : Infinity;
+    if (d > bestD) { bestD = d; best = c; }
+  }
+  return { archetypeId: best.archetypeId ?? "", costumeId: best.id };
+}
+
 /** 演员的原型：未知 id 返回 undefined（UI 显示"未选原型"）。 */
 export function resolveActorArchetype(a: { archetypeId?: string | null }): ArchetypeDef | undefined {
   return resolveArchetype(a.archetypeId);

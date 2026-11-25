@@ -51,8 +51,8 @@ import {
   DIRECTOR_STYLES, DIRECTOR_STYLE_GENRES, getDirectorStyle, directorStyleDefaults,
 } from "@/lib/directorStyles";
 import {
-  ACTION_REGISTRY, actionDef, actorStateAt, actorPositionAt, makeSegment, makeWaypoint,
-  segmentAt, type ActionId, type ActionSegment, type Waypoint,
+  ACTION_REGISTRY, ACTION_LIST, actionDef, actorStateAt, actorPositionAt, makeSegment, makeWaypoint,
+  poseFor, segmentAt, type ActionDef, type ActionId, type ActionSegment, type Waypoint,
 } from "@/lib/actions";
 import {
   makeFight, makeBeat, makePhrase, validateFight, fightDuration,
@@ -69,7 +69,7 @@ import {
 } from "@/lib/stuntProps";
 import {
   ARCHETYPES, costumesForArchetype, defaultCostumeForArchetype, eraWarningFor,
-  resolveActorCostume, resolveActorArchetype, resolveCostume,
+  resolveActorCostume, resolveActorArchetype, resolveCostume, suggestCostumeForNewActor,
   type CostumeDef,
 } from "@/lib/characters";
 import {
@@ -288,6 +288,9 @@ interface CineState {
   cancelAddActor: () => void;
   removeActor: (id: string) => void;
   updateActor: (id: string, patch: Partial<Actor>) => void;
+  /** 当前片场 id（面板同步进来，供新演员自动配色按时代选服装；易失，不持久化） */
+  cineSetId: string | null;
+  setCineSetId: (id: string | null) => void;
 
   /** 动态走位：点选加路点（持久化在 actor.waypoints 里） */
   waypointMode: string | null; // 正在编路点的演员 id
@@ -456,8 +459,18 @@ export const useCineStore = create<CineState>()(
         // 新演员默认名：演员N（跳过已占用的号）
         let n = actors.length + 1;
         while (actors.some((a) => a.name === `演员${n}`)) n++;
+        // 新演员自动配色：挑一件没人穿的、时代合身的服装（与已用主色反差最大）。
+        // 默认素体不再是自动默认——只作显式选择（原型选"未选原型"时）。
+        const suggested = suggestCostumeForNewActor(
+          actors.map((a) => resolveActorCostume(a).id),
+          get().cineSetId,
+        );
         set({
-          actors: [...actors, makeActor(pendingFrom, finalPoint, { name: `演员${n}` })],
+          actors: [...actors, makeActor(pendingFrom, finalPoint, {
+            name: `演员${n}`,
+            archetypeId: suggested.archetypeId || undefined,
+            costumeId: suggested.costumeId,
+          })],
           pendingFrom: null, addActorMode: false,
         });
       },
@@ -475,6 +488,8 @@ export const useCineStore = create<CineState>()(
       }),
       updateActor: (id, patch) =>
         set({ actors: get().actors.map((a) => (a.id === id ? { ...a, ...patch } : a)) }),
+      cineSetId: null,
+      setCineSetId: (id) => set({ cineSetId: id }),
 
       // ── 动态走位 ──
       waypointMode: null,
@@ -1769,14 +1784,22 @@ export function ActorsLayer() {
       if (!g) continue;
       const fs = fightStates.get(a.id);
       const state = fs ?? actorStateAt(a, timeSec, shotDuration);
+      // 编辑器静止预览：单次姿态（坐/蹲/躺/躲藏…）在 t=0 时还是起始态，
+      // 点了姿势按钮也看不出变化；静止时取末态，点了立刻可见。
+      // 模拟/播放/导出走真实时间，不受影响（poseFor 本身不动）。
+      let pose = state.pose;
+      if (!fs && !simClock.active && !cinePlayhead.active && !actionDef(state.action).loop) {
+        const d = actionDef(state.action).duration;
+        pose = poseFor(state.action, d, d);
+      }
       // 高度 = 走位/跳跃/飞行高度 + 姿态偏移（坐下/蹲/躺是负偏移）
-      g.position.set(state.x, state.elev + state.pose.y, state.z);
-      g.rotation.set(state.pose.rotX, state.facing, state.pose.rotZ);
+      g.position.set(state.x, state.elev + pose.y, state.z);
+      g.rotation.set(pose.rotX, state.facing, pose.rotZ);
       // 手臂（肩部为支点）
       const arms = armRefs.current.get(a.id);
       if (arms) {
-        if (arms.l) arms.l.rotation.set(state.pose.armL[0], 0, state.pose.armL[1]);
-        if (arms.r) arms.r.rotation.set(state.pose.armR[0], 0, state.pose.armR[1]);
+        if (arms.l) arms.l.rotation.set(pose.armL[0], 0, pose.armL[1]);
+        if (arms.r) arms.r.rotation.set(pose.armR[0], 0, pose.armR[1]);
       }
       // 飞行载具 / 威亚：按当前段的道具切换（静止时按默认动作）
       const seg = segmentAt(a, timeSec);
@@ -2041,6 +2064,13 @@ function Frame916Overlay() {
 const ACTION_CATEGORY_ORDER = ["move", "pose", "gesture", "fight", "stunt"] as const;
 const ACTION_CATEGORY_ZH: Record<string, string> = { move: "移动", pose: "姿态", gesture: "手势", fight: "打斗", stunt: "特技" };
 const ACTION_CATEGORY_EN: Record<string, string> = { move: "Move", pose: "Pose", gesture: "Gesture", fight: "Fight", stunt: "Stunt" };
+
+/** 姿势面板：姿态类动作 + 手势类前三（挥手/指/鞠躬），由注册表驱动——
+ *  注册表加新姿态/手势，这里自动出现，不用改 UI。 */
+const POSE_PANEL_ACTIONS: ActionDef[] = [
+  ...ACTION_LIST.filter((d) => d.category === "pose"),
+  ...ACTION_LIST.filter((d) => d.category === "gesture").slice(0, 3),
+];
 
 /** 文字解析结果 → 时间轴：按演员现有时间轴的末尾续接。
  *  飞行类无目标时朝当前朝向飞 4 米、升到 2.5 米；打/踢没点名对手时
@@ -2324,6 +2354,9 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
   // 未加载任何模板时为 null → 时代锁不警告。
   const activeTemplateId = useDesignerStore((s) => s.activeTemplateId);
   const currentSetId = appliedSetId ?? activeTemplateId;
+  // 新演员自动配色需要当前片场 id（时代合身用）；面板是唯一知道它的地方。
+  const setCineSetId = useCineStore((s) => s.setCineSetId);
+  useEffect(() => { setCineSetId(currentSetId); }, [currentSetId, setCineSetId]);
   // 当前选中的导演风格预设（null = 无预设）；下拉框可扩展到 30+ 套，不硬编码按钮。
   const directorStyle = getDirectorStyle(directorStyleId);
 
@@ -3018,6 +3051,24 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
                     title={en ? "Facing direction (degrees)" : "朝向（度）"}
                   />
                   <span className="text-white/50 tabular-nums w-9 text-right">{facingDeg}°</span>
+                </div>
+                {/* 姿势：点一下换姿势（与动作下拉框写同一字段，模拟/故事板/控制包都认） */}
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-white/40 whitespace-nowrap">{en ? "Pose" : "姿势"}</span>
+                  {POSE_PANEL_ACTIONS.map((d) => {
+                    const on = actorAction(a) === d.id;
+                    return (
+                      <button
+                        key={d.id}
+                        onClick={() => updateActor(a.id, { action: d.id })}
+                        className="px-1.5 py-0.5 rounded text-[11px] whitespace-nowrap"
+                        style={{ background: on ? "rgba(45,212,191,0.25)" : "rgba(255,255,255,0.05)", border: on ? "1px solid rgba(45,212,191,0.6)" : "1px solid transparent", color: on ? "#5eead4" : undefined }}
+                        title={en ? d.nameEn : d.nameZh}
+                      >
+                        {en ? d.nameEn : d.nameZh}
+                      </button>
+                    );
+                  })}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="flex-1 text-white/50 tabular-nums truncate">
