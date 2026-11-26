@@ -10,7 +10,7 @@
 
 import type { Locale } from "./i18n";
 
-export type BackendKind = "comfyui-local" | "comfyui-http" | "runninghub";
+export type BackendKind = "comfyui-local" | "comfyui-http" | "runninghub" | "gemini-image" | "openai-image";
 
 export interface RenderBackend {
   id: string;
@@ -56,14 +56,21 @@ export const DEFAULT_BACKEND_NAMES: Record<BackendKind, { zh: string; en: string
   "comfyui-local": { zh: "本地 ComfyUI",  en: "Local ComfyUI" },
   "comfyui-http":  { zh: "自建 ComfyUI",  en: "Self-hosted ComfyUI" },
   "runninghub":    { zh: "RunningHub 云", en: "RunningHub Cloud" },
+  "gemini-image":  { zh: "Google Gemini 生图（Nano Banana / 2.5 Flash Image）", en: "Google Gemini Image (Nano Banana)" },
+  "openai-image":  { zh: "OpenAI GPT-Image-1（旗舰图形精修）", en: "OpenAI GPT-Image-1" },
 };
 
 export const DEFAULT_CONFIG: AiRenderConfig = {
   backends: [
+    { id: "gemini-img", name: DEFAULT_BACKEND_NAMES["gemini-image"].zh,  kind: "gemini-image",  baseUrl: "https://generativelanguage.googleapis.com", apiKey: "" },
+    { id: "openai-img", name: DEFAULT_BACKEND_NAMES["openai-image"].zh,  kind: "openai-image",  baseUrl: "https://api.openai.com", apiKey: "" },
     { id: "local",      name: DEFAULT_BACKEND_NAMES["comfyui-local"].zh, kind: "comfyui-local", baseUrl: "http://localhost:8188" },
     { id: "runninghub", name: DEFAULT_BACKEND_NAMES.runninghub.zh,       kind: "runninghub",    baseUrl: "https://www.runninghub.ai", apiKey: "" },
   ],
-  workflows: [],
+  workflows: [
+    { id: "wf_gemini_nano_banana", name: "🎨 Gemini 2.5 Flash Image 实景精修（Nano Banana）", backendId: "gemini-img", needsImage: true, mapping: {}, workflowId: "gemini-2.5-flash-image", category: "云端旗舰直出" },
+    { id: "wf_openai_gpt_image_1", name: "🎨 OpenAI GPT-Image-1 建筑精修", backendId: "openai-img", needsImage: true, mapping: {}, workflowId: "gpt-image-1", category: "云端旗舰直出" },
+  ],
 };
 
 /** 显示时本地化后端名：用户没改过名（仍等于默认中文名）则按 locale 翻译，否则原样显示用户自定义名 */
@@ -110,6 +117,8 @@ export function defaultBaseUrl(kind: BackendKind): string {
   switch (kind) {
     case "comfyui-local": return "http://localhost:8188";
     case "runninghub":    return "https://www.runninghub.ai";
+    case "gemini-image":  return "https://generativelanguage.googleapis.com";
+    case "openai-image":  return "https://api.openai.com";
     default:              return "";
   }
 }
@@ -120,6 +129,7 @@ export function hasUsableWorkflow(config: AiRenderConfig): boolean {
     const b = getBackend(config, w.backendId);
     if (!b) return false;
     if (b.kind === "runninghub") return Boolean(b.apiKey?.trim() && w.workflowId?.trim());
+    if (b.kind === "gemini-image" || b.kind === "openai-image") return Boolean(b.apiKey?.trim());
     return Boolean(w.workflowJson?.trim() || w.presetPath); // comfyui 系：要有工作流 JSON 或预设
   });
 }

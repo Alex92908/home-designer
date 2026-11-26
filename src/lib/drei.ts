@@ -9,7 +9,8 @@ import { useGLTF as _u } from "@react-three/drei";
 import { extendKtx2 } from "./gltfKtx2";
 import { isMobileDevice } from "./device";
 
-const withKtx2 = (extra?: (l: any) => void) => (loader: any) => { extendKtx2(loader); extra?.(loader); };
+const defaultWithKtx2 = (loader: any) => { extendKtx2(loader); };
+const withKtx2 = (extra?: (l: any) => void) => extra ? (loader: any) => { extendKtx2(loader); extra(loader); } : defaultWithKtx2;
 
 // 记录所有加载过的 GLB URL —— 供「释放过 CPU 贴图副本后清缓存」用(见 texCpuRelease)。
 // drei/suspend-react 的缓存跨画布共用同一批 THREE.Texture;一旦我们释放了它们的 CPU

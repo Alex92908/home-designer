@@ -34,7 +34,7 @@ const SYSTEM_PROMPT = `你是建筑户型图分析专家。识别图中每一个
 [{"name":"客厅","bbox":[120,240,600,480],"shape":"rect"},{"name":"主卧","bbox":[720,0,400,320],"shape":"rect"}]`;
 
 export async function POST(req: Request) {
-  let body: { image?: string; apiKey?: string; provider?: string };
+  let body: { image?: string; apiKey?: string; provider?: string; model?: string };
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "invalid_body" }, { status: 400 }); }
   const { image, apiKey, provider: providerId } = body;
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
         "Authorization": `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: provider.visionModel,
+        model: (typeof body.model === "string" && body.model.trim()) ? body.model.trim() : provider.visionModel,
         messages: [{
           role: "user",
           content: [

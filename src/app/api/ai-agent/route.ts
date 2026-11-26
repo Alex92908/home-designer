@@ -103,12 +103,14 @@ export async function POST(req: NextRequest) {
   let history: Array<{ role: string; content: string }> = [];
   let apiKey = "";
   let providerId = "";
+  let modelOverride = "";
   let tabId = "";
   try {
     const body = await req.json();
     history = Array.isArray(body.messages) ? body.messages : [];
     apiKey = (body.apiKey ?? "").trim();
     providerId = body.provider ?? "";
+    modelOverride = typeof body.model === "string" ? body.model.trim() : "";
     // 发起 agent 的标签 id —— 用它把命令定向到用户眼前这一页(见 forceLease)。
     tabId = typeof body.tabId === "string" ? body.tabId : "";
   } catch {
@@ -150,7 +152,7 @@ export async function POST(req: NextRequest) {
             method: "POST",
             headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
             body: JSON.stringify({
-              model: agentModelOf(provider),
+              model: modelOverride || agentModelOf(provider),
               messages,
               // 最后一轮不再给工具,逼模型用文字收尾,避免卡在工具循环里
               ...(last ? {} : { tools: toolsForOpenAI(), tool_choice: "auto" }),

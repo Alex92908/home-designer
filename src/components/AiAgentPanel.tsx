@@ -12,7 +12,7 @@
  * 密钥复用既有的 aiKeys(localStorage,只存本机),用户不用重复配置。
  */
 import { useEffect, useRef, useState } from "react";
-import { getAiKey, setAiKey, getSelectedProvider, setSelectedProvider } from "@/lib/aiKeys";
+import { getAiKey, setAiKey, getSelectedProvider, setSelectedProvider, getSelectedModel } from "@/lib/aiKeys";
 import ApiKeyPromptModal from "./ApiKeyPromptModal";
 import { getAiProvider, supportsAgent, agentModelOf } from "@/lib/aiProviders";
 import { useLocale } from "@/lib/i18n";
@@ -108,6 +108,7 @@ export default function AiAgentPanel({ onClose }: { onClose: () => void }) {
       }),
       provider: provider.id,
       apiKey: getAiKey(provider.id),
+      model: getSelectedModel(provider.id) || undefined,
       // 带上本标签的桥身份:让工具命令落到**用户眼前这一页**,而不是碰巧持有租约的别的标签
       tabId: getBridgeTabId(),
     };
@@ -196,7 +197,7 @@ export default function AiAgentPanel({ onClose }: { onClose: () => void }) {
             ✨ {en ? "Design agent" : "设计 agent"}
           </span>
           <span className="text-[10px] truncate" style={{ color: "var(--ds-text-3, #9ca3af)" }}>
-            {provider.label} · {agentModelOf(provider)}
+            {provider.label} · {getSelectedModel(provider.id) || agentModelOf(provider)}
           </span>
         </div>
         <div className="flex items-center gap-1 shrink-0">

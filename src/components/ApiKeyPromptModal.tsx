@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AI_PROVIDER_LIST, AiProviderId, getAiProvider } from "@/lib/aiProviders";
+import { getSelectedModel, setSelectedModel } from "@/lib/aiKeys";
 import { useT, useLocale } from "@/lib/i18n";
 
 // ─── 通用 BYOK 密钥填写弹窗 ─────────────────────────────────────────────────
@@ -27,6 +28,7 @@ export default function ApiKeyPromptModal({ initialProvider, getSavedKey, onSave
   const en = useLocale() === "en";
   const [provider, setProvider] = useState<AiProviderId>(initialProvider);
   const [val, setVal] = useState(() => getSavedKey(initialProvider));
+  const [modelVal, setModelVal] = useState(() => getSelectedModel(initialProvider));
   const meta = getAiProvider(provider);
   // 当前平台是否有已存密钥（清掉后会随 setVal("") 重渲染，按钮自动隐藏）
   const hasSavedKey = getSavedKey(provider).trim().length > 0;
@@ -39,10 +41,12 @@ export default function ApiKeyPromptModal({ initialProvider, getSavedKey, onSave
   const switchProvider = (id: AiProviderId) => {
     setProvider(id);
     setVal(getSavedKey(id));   // 事件里 setState，非 effect
+    setModelVal(getSelectedModel(id));
   };
 
   const save = () => {
     if (!val.trim()) return;
+    setSelectedModel(provider, modelVal);
     onSave(provider, val.trim());
   };
 
@@ -72,6 +76,36 @@ export default function ApiKeyPromptModal({ initialProvider, getSavedKey, onSave
                 <option key={p.id} value={p.id}>{p.label}</option>
               ))}
             </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ds-text-3, #9ca3af)" }}>
+              {en ? "Model Version (Preset or Custom)" : "模型版本（可选旗舰视觉/生图/推理模型，或手填自定义 ID）"}
+            </span>
+            <select
+              value={meta.models.some((m) => m.id === modelVal) ? modelVal : (modelVal ? "__custom__" : "")}
+              onChange={(e) => {
+                if (e.target.value !== "__custom__") setModelVal(e.target.value);
+              }}
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              style={{ border: "1px solid var(--ds-border, #d1d5db)", background: "var(--ds-surface-2, #f9fafb)", color: "var(--ds-text, #111)" }}
+            >
+              <option value="">{en ? `Default (${meta.visionModel} / ${meta.textModel})` : `默认推荐（视觉 ${meta.visionModel} / 文本 ${meta.textModel}）`}</option>
+              {meta.models.map((m) => (
+                <option key={m.id} value={m.id}>{m.label} — {m.id}</option>
+              ))}
+              {modelVal && !meta.models.some((m) => m.id === modelVal) && (
+                <option value="__custom__">{en ? `Custom: ${modelVal}` : `自定义：${modelVal}`}</option>
+              )}
+            </select>
+            <input
+              type="text"
+              value={modelVal}
+              onChange={(e) => setModelVal(e.target.value)}
+              placeholder={en ? "Optional custom model ID (e.g. gemini-3-pro-preview)" : "可手填任意最新模型 ID（留空则按上方选择）"}
+              className="w-full px-3 py-1.5 rounded-lg text-xs outline-none mt-1"
+              style={{ border: "1px solid var(--ds-border, #d1d5db)", background: "var(--ds-surface-2, #f9fafb)", color: "var(--ds-text, #111)" }}
+            />
           </label>
 
           <input

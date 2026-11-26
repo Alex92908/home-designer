@@ -42,6 +42,8 @@ export default function AiRenderSettingsModal({ open, onClose }: Props) {
     "comfyui-local": tr.kindLocal,
     "comfyui-http": tr.kindHttp,
     runninghub: tr.kindCloud,
+    "gemini-image": locale === "en" ? "Google Gemini Image (Nano Banana)" : "Google Gemini 生图（Nano Banana）",
+    "openai-image": "OpenAI GPT-Image-1",
   };
   const [config, setConfig] = useState<AiRenderConfig>(() => getAiRenderConfig());
   const [saved, setSaved] = useState(false);

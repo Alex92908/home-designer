@@ -15,7 +15,7 @@ import { isUiGraph, uiGraphToApiPrompt } from "@/lib/comfyGraphConvert";
 
 export const maxDuration = 60;
 
-type Kind = "comfyui-local" | "comfyui-http" | "runninghub";
+type Kind = "comfyui-local" | "comfyui-http" | "runninghub" | "gemini-image" | "openai-image";
 
 interface NodeMapping {
   promptNodeId?: string;
@@ -25,7 +25,7 @@ interface NodeMapping {
 }
 
 interface Body {
-  action: "upload" | "submit" | "status" | "outputs";
+  action: "upload" | "submit" | "status" | "outputs" | "generate";
   kind: Kind;
   baseUrl?: string;
   apiKey?: string;
@@ -65,6 +65,71 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // ════════════════════════════ DIRECT CLOUD IMAGE-GEN (Gemini / OpenAI) ════════════════════════════
+    if (action === "generate" && (kind === "gemini-image" || kind === "openai-image")) {
+      const apiKey = body.apiKey?.trim();
+      if (!apiKey) return NextResponse.json({ error: "missing_api_key", detail: "请先在设置里填写 API Key" }, { status: 400 });
+      const prompt = body.prompt?.trim() || "Photorealistic architectural interior render, soft daylight, ultra detailed PBR materials";
+      if (kind === "gemini-image") {
+        const model = body.workflowId?.trim() || "gemini-2.5-flash-image";
+        const parts: Array<Record<string, unknown>> = [{ text: prompt }];
+        if (body.image) {
+          const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(body.image);
+          if (m) parts.push({ inline_data: { mime_type: m[1], data: m[2] } });
+        }
+        const url = `${base}/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const r = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts }],
+            generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+          }),
+          signal: AbortSignal.timeout(55000),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) return NextResponse.json({ error: "gemini_image_failed", detail: data?.error?.message ?? `HTTP ${r.status}` }, { status: 502 });
+        const images: string[] = [];
+        for (const cand of data?.candidates ?? []) {
+          for (const part of cand?.content?.parts ?? []) {
+            const inline = part?.inlineData ?? part?.inline_data;
+            if (inline?.data) images.push(`data:${inline.mimeType ?? inline.mime_type ?? "image/png"};base64,${inline.data}`);
+          }
+        }
+        if (!images.length) return NextResponse.json({ error: "no_image_returned", detail: "Gemini 未返回图像，请确认模型支持图像输出" }, { status: 502 });
+        return NextResponse.json({ images });
+      }
+      const model = body.workflowId?.trim() || "gpt-image-1";
+      let r: Response;
+      if (body.image) {
+        const buf = Buffer.from(body.image.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, ""), "base64");
+        const form = new FormData();
+        form.append("model", model);
+        form.append("prompt", prompt);
+        form.append("size", "1024x1024");
+        form.append("image", new Blob([buf], { type: "image/png" }), "scene.png");
+        r = await fetch(`${base}/v1/images/edits`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}` },
+          body: form,
+          signal: AbortSignal.timeout(55000),
+        });
+      } else {
+        r = await fetch(`${base}/v1/images/generations`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({ model, prompt, size: "1024x1024" }),
+          signal: AbortSignal.timeout(55000),
+        });
+      }
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) return NextResponse.json({ error: "openai_image_failed", detail: data?.error?.message ?? `HTTP ${r.status}` }, { status: 502 });
+      const images: string[] = (data?.data ?? [])
+        .map((d: { b64_json?: string; url?: string }) => d.b64_json ? `data:image/png;base64,${d.b64_json}` : d.url)
+        .filter(Boolean);
+      return NextResponse.json({ images });
+    }
+
     // ════════════════════════════ UPLOAD ════════════════════════════
     if (action === "upload") {
       if (!body.image) return NextResponse.json({ error: "missing_image" }, { status: 400 });

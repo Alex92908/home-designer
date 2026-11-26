@@ -722,22 +722,19 @@ function Scene({ floorVisible, showRoof, showStairs, stairPos, setStairPos }: Sc
   // 超顶)。renderer.info.memory.textures = 已上传 GPU 的纹理数(iOS 无直接显存 API,
   // 用它近似);每 ~0.6s 评估:低于预算就放行下一间,到预算就停(远处房间留空),
   // 内存封顶不崩。0.6s 间隔留给上一批纹理上传完再判断,避免一次冲过头。
-  const { gl: glBudget } = useThree();
-  const waveAcc = useRef(0);
-  useFrame((_s, delta) => {
+  const { gl: glBudget, invalidate: invBudget } = useThree();
+  useEffect(() => {
     if (!isMobileDevice()) return;
-    waveAcc.current += delta;
-    if (waveAcc.current < 0.6) return;
-    waveAcc.current = 0;
-    setFurnitureWave((w) => {
-      if (w >= totalFurnRooms) return w;
-      const tex = (glBudget.info?.memory?.textures as number | undefined) ?? 0;
-      // 预算放宽到 400:原来的 150 是「CPU 侧贴图副本没释放」时代的保守值(那时每件家具
-      // 真实代价极高)。加上 texCpuRelease(CPU 残留 546MB→44MB)+ 贴图缩放后,同样件数
-      // 便宜一大截,外观视图已在真机验证 400 不崩。150 是全局3D「很多房间没家具」的原因。
-      return tex < 400 ? w + 1 : w;
-    });
-  });
+    const id = setInterval(() => {
+      setFurnitureWave((w) => {
+        if (w >= totalFurnRooms) return w;
+        const tex = (glBudget.info?.memory?.textures as number | undefined) ?? 0;
+        if (tex < 400) { invBudget(); return w + 1; }
+        return w;
+      });
+    }, 650);
+    return () => clearInterval(id);
+  }, [glBudget, invBudget, totalFurnRooms]);
 
   // Bounding box from the active floor's layout (all floors share the
   // same footprint, so this centres the stacked view correctly).
@@ -1437,12 +1434,14 @@ export default function GlobalCanvas({ floorVisible: extVisible, onToggleFloor }
       {/* 加载幕布：盖住场景构建/GLB 解码期间的灰屏（详见 SceneVeil）。 */}
       <SceneVeil ready={sceneReady} label={locale === "en" ? "Building house 3D" : "正在构建全屋 3D"} />
       <Canvas
-        // 移动端关阴影 + dpr 锁 1：全屋 3D 是重型场景，阴影贴图和高分帧缓冲
-        // 都是 iOS 杀页大头。
-        shadows={!mobileLiteScene()}
+        // 全屋 3D 俯瞰视图：开启 frameloop="demand"（静置 0 GPU 占用，拖拽/缩放/切层按需渲染），
+        // 关闭 500 万面多房间实时阴影贴图（每房间已有独立灯光与明暗分层），并将 DPR 封顶 1.5，
+        // 拖拽旋转帧率直接拉满顺滑！
+        frameloop="demand"
+        shadows={false}
         camera={{ position: [12, initY, 12], fov: 45 }}
-        dpr={canvasDprHeavy()}
-        gl={{ antialias: !isMobileDevice(), alpha: true, toneMappingExposure: exposureBoost(), toneMapping: toneMappingFor(THREE.ACESFilmicToneMapping) }}
+        dpr={isMobileDevice() ? 1 : [1, 1.5]}
+        gl={{ antialias: !isMobileDevice(), alpha: true, powerPreference: "high-performance", toneMappingExposure: exposureBoost(), toneMapping: toneMappingFor(THREE.ACESFilmicToneMapping) }}
       >
         <SceneRegistrar view="global3d" />
         <Ktx2Detect />

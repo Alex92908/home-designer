@@ -39,7 +39,7 @@ const FALLBACK: AnalysisResult = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { image, apiKey, provider: providerId } = await req.json() as { image: string; apiKey?: string; provider?: string };
+    const { image, apiKey, provider: providerId, model: modelOverride } = await req.json() as { image: string; apiKey?: string; provider?: string; model?: string };
 
     if (!image) {
       return NextResponse.json({ error: "missing_image" }, { status: 400 });
@@ -136,7 +136,7 @@ Be precise about colors — extract the actual dominant colors you see. Output O
           "Authorization": `Bearer ${providerKey}`,
         },
         body: JSON.stringify({
-          model: provider.visionModel,
+          model: modelOverride?.trim() || provider.visionModel,
           messages: [{
             role: "user",
             content: [
