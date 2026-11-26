@@ -26,7 +26,9 @@
  * 分工红线：我们锁 blocking（空间/构图/机位/走位时机），表演细节归下游 AI。
  *
  * 结构（跨 Canvas 内外，本文件内的 zustand store 通信）：
- *   <CinematicPanel/>       DOM：🎬 按钮 + 快拍 + 分镜 + 风格 + 演员 + 进度
+ *   <CinematicPanel/>       DOM：🎬 按钮 + 一键开拍 + 快拍 + 分镜 + 风格 + 演员 + 进度
+ *   一键开拍：零设置开拍——没演员自动在房间正中放一位、没镜自动加一镜
+ *   群体镜头，直接进模拟；面板置顶常驻快拍条，模拟条可切镜/加演员。
  *   <CameraPathPlayer env/> Canvas 内：队列驱动相机 + 风格覆盖 + 录制下载
  *   <ActorsLayer/>          Canvas 内：演员放置（地面点选）+ 渲染 + 行走
  *
@@ -2495,8 +2497,52 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
   // 新演员自动配色需要当前片场 id（时代合身用）；面板是唯一知道它的地方。
   const setCineSetId = useCineStore((s) => s.setCineSetId);
   useEffect(() => { setCineSetId(currentSetId); }, [currentSetId, setCineSetId]);
+  // ── 一键开拍：零设置就跑起来 ──
+  // 没演员 → 在当前房间正中自动放一位（横穿房间中线走 2–3m）；
+  // 没镜 → 加一镜群体镜头（框全部演员，有 group-wide 保框）；
+  // 然后直接开始模拟拍摄。1 点即拍；已有演员/分镜时只补缺的，不动已有的。
+  // 演员走面板自己的两点放置（beginAddActor + placePoint ×2）：自动配色、
+  // 越界拒绝/钳制照常；放不下（点被拒）时不建镜、不开模拟，提示条会说明原因。
+  const quickShoot = () => {
+    const st0 = useCineStore.getState();
+    if (sim?.active || st0.queue) return; // 已在拍/录：别重复开
+    if (!st0.actors.length) {
+      const env = envelopeFromStore();
+      const room = roomRectForPoint(0, 0);
+      let from: [number, number], to: [number, number];
+      if (room) {
+        const cx = (room.minX + room.maxX) / 2;
+        const cz = (room.minZ + room.maxZ) / 2;
+        const half = Math.max(0.5, Math.min((room.maxX - room.minX) / 2 - 0.4, 1.5));
+        from = [cx - half, cz];
+        to = [cx + half, cz];
+      } else {
+        const half = Math.max(0.5, Math.min(env.W / 4, 1.5));
+        from = [-half, 0];
+        to = [half, 0];
+      }
+      st0.beginAddActor();
+      st0.placePoint(from);
+      st0.placePoint(to);
+      if (!useCineStore.getState().actors.length) return;
+    }
+    if (!useCineStore.getState().shots.length) {
+      useCineStore.getState().addShot("group-wide");
+    }
+    useCineStore.getState().startSim();
+  };
+  // 模拟中切镜：‹ 上一镜 / 下一镜 ›（循环），音效游标跟着清掉
+  const jumpShot = (dir: -1 | 1) => {
+    if (!sim || !shots.length) return;
+    const next = (sim.shotIdx + dir + shots.length) % shots.length;
+    resetSimSfxCursor();
+    setSim({ shotIdx: next, timeSec: 0 });
+  };
   // 当前选中的导演风格预设（null = 无预设）；下拉框可扩展到 30+ 套，不硬编码按钮。
   const directorStyle = getDirectorStyle(directorStyleId);
+  // 片场列表默认收起：63 个片场按钮占满首屏是翻面板最长的路；收起后只露一行当前片场。
+  const [setListOpen, setSetListOpen] = useState(false);
+  const appliedSet = appliedSetId ? getSceneSet(appliedSetId) : undefined;
 
   // ── 演员放置提示（独立于菜单，放置时始终可见）──
   if (addActorMode) {
@@ -2516,7 +2562,12 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
                 : (en ? "Click the ground: start point" : "在地面点击：起点")}
           </span>
           {placeWarning && <span className="text-amber-300">⚠️ {placeWarning}</span>}
-          <button onClick={cancelAddActor} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10">
+          <button onClick={() => {
+            // 第一位演员放好、还没镜：顺手加一镜群体镜头——点「完成」后
+            // 直接就能点模拟拍摄，不用再去翻分镜区找「＋机位」。
+            if (actors.length && !shots.length) addShot("group-wide");
+            cancelAddActor();
+          }} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10">
             {actors.length ? (en ? "Done" : "完成") : (en ? "Cancel" : "取消")}
           </button>
         </div>
@@ -2596,7 +2647,23 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
           >
             {sim.playing ? "⏸" : "▶"}
           </button>
+          <button
+            onClick={() => jumpShot(-1)}
+            disabled={shots.length < 2}
+            className="px-1.5 py-1 rounded-md hover:bg-white/10 disabled:opacity-25"
+            title={en ? "Previous shot" : "上一镜"}
+          >
+            ‹
+          </button>
           <span className="tabular-nums whitespace-nowrap">Shot {sim.shotIdx + 1}/{shots.length}</span>
+          <button
+            onClick={() => jumpShot(1)}
+            disabled={shots.length < 2}
+            className="px-1.5 py-1 rounded-md hover:bg-white/10 disabled:opacity-25"
+            title={en ? "Next shot" : "下一镜"}
+          >
+            ›
+          </button>
           {/* 本镜灯光：模拟播放时画布正按此预设打光 */}
           {(() => {
             const cur = shots[sim.shotIdx];
@@ -2634,6 +2701,14 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
             title={en ? "Scrub the shoot" : "拖动跳转到任意镜/时间"}
           />
           <span className="tabular-nums whitespace-nowrap">{simAbs.toFixed(1)}s / {simTotal.toFixed(0)}s</span>
+          {/* 拍着也能加人：停模拟 → 进加演员模式（不用先找停止再翻面板） */}
+          <button
+            onClick={() => { stopSim(); beginAddActor(); }}
+            className="ml-1 px-2 py-1 rounded-md hover:bg-white/10 whitespace-nowrap"
+            title={en ? "Stop and add an actor" : "停下来，加一位演员"}
+          >
+            ＋{en ? "Actor" : "演员"}
+          </button>
           <button onClick={stopSim} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10" title={en ? "Stop simulation" : "停止模拟"}>
             ✕
           </button>
@@ -2654,8 +2729,42 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
           className="flex flex-col gap-1 p-2 rounded-xl shadow-xl text-xs text-white w-[256px] max-h-[62vh] overflow-y-auto"
           style={{ background: "rgba(20,22,32,0.92)", border: "1px solid rgba(255,255,255,0.18)" }}
         >
-          {/* 一键搭片场：点选片场即加载；或输一句描述匹配最合适的片场 */}
-          <div className="px-1 pt-1 text-[10px] tracking-widest text-white/40">{en ? "SET" : "片场"}</div>
+          {/* 置顶快拍条：滚动时一直可见——开拍/预演不用翻到底才找得到 */}
+          <div
+            className="sticky top-0 -mx-2 -mt-2 px-2 pt-2 pb-2 z-10 flex items-center gap-1.5"
+            style={{ background: "rgba(20,22,32,0.97)" }}
+          >
+            <button
+              onClick={quickShoot}
+              className="flex-1 px-2 py-2 rounded-lg font-semibold text-center whitespace-nowrap"
+              style={{ background: "#0d9488" }}
+              title={en ? "No setup needed: auto-place an actor if needed, add a group-wide shot if needed, start the shoot sim" : "不用设置：缺演员自动放一位，缺镜自动加一镜群体镜头，直接开始模拟拍摄"}
+            >
+              ▶ {en ? "Quick shoot" : "一键开拍"}
+            </button>
+            <button
+              onClick={() => { startSim(); }}
+              disabled={!shots.length}
+              className="flex-1 px-2 py-2 rounded-lg bg-white/10 hover:bg-white/20 font-semibold text-center whitespace-nowrap disabled:opacity-30"
+              title={en ? "Preview the shoot in order" : "按分镜顺序预演"}
+            >
+              ▶ {en ? `Simulate (${shots.length})` : `模拟拍摄（${shots.length} 镜）`}
+            </button>
+          </div>
+          {/* 一键搭片场：默认收起（63 个片场按钮占满首屏是翻面板最长的路）；
+              点一行展开点选，或输一句描述匹配最合适的片场 */}
+          <button
+            onClick={() => setSetListOpen(!setListOpen)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/10 text-left w-full"
+            title={en ? "Pick a set (or describe one below)" : "换片场（或在下面描述匹配）"}
+          >
+            <span>{setListOpen ? "▾" : "▸"}</span>
+            <span className="text-white/40 text-[10px] tracking-widest">{en ? "SET" : "片场"}</span>
+            <span className="flex-1 truncate">{appliedSet ? (en ? appliedSet.nameEn : appliedSet.name) : (en ? `${SCENE_SETS.length} sets` : `${SCENE_SETS.length} 个片场`)}</span>
+            {appliedSetId && <span className="text-teal-300">✓</span>}
+          </button>
+          {setListOpen && (
+            <>
           {SCENE_SETS.map((s) => (
             <button
               key={s.id}
@@ -2686,6 +2795,8 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
             </button>
           </div>
           {setMatchMsg && <div className="px-2 text-[10px] leading-relaxed text-teal-300/90">{setMatchMsg}</div>}
+            </>
+          )}
 
           {/* 导演风格预设：选一位导演的整套拍法当默认值（机位/灯光/片场/服装/
               动作建议）。只改场景默认灯光 + 展示建议，不动已有分镜/演员/走位；
@@ -3749,14 +3860,25 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
           </div>
         </div>
       )}
-      <button
-        onClick={() => setMenuOpen(!menuOpen)}
-        className="px-3 py-2 rounded-xl text-sm font-semibold text-white shadow-lg"
-        style={{ background: menuOpen ? "#007AFF" : "rgba(20,22,32,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}
-        title={en ? "Cinematic shots" : "分镜出片"}
-      >
-        🎬 {en ? "Shots" : "出短片"}
-      </button>
+      <div className="flex items-stretch gap-2">
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="px-3 py-2 rounded-xl text-sm font-semibold text-white shadow-lg"
+          style={{ background: menuOpen ? "#007AFF" : "rgba(20,22,32,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}
+          title={en ? "Cinematic shots" : "分镜出片"}
+        >
+          🎬 {en ? "Shots" : "出短片"}
+        </button>
+        {/* 一键开拍（常驻入口，不用开面板）：缺演员自动放一位，缺镜自动加一镜群体镜头，直接模拟 */}
+        <button
+          onClick={quickShoot}
+          className="px-3 py-2 rounded-xl text-sm font-semibold text-white shadow-lg whitespace-nowrap"
+          style={{ background: "#0d9488", border: "1px solid rgba(255,255,255,0.18)" }}
+          title={en ? "No setup: auto-place an actor, add a group-wide shot, start shooting" : "不用设置：自动放一位演员、加一镜群体镜头，直接开拍"}
+        >
+          ▶ {en ? "Quick shoot" : "一键开拍"}
+        </button>
+      </div>
     </div>
     </>
   );
