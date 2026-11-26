@@ -54,4 +54,12 @@ useGLTFk.preload = (path: any, useDraco: any = true, useMeshopt: any = true, ext
 useGLTFk.clear = (...a: any[]) => (_u as any).clear(...a);
 useGLTFk.setDecoderPath = (...a: any[]) => (_u as any).setDecoderPath(...a);
 
+// Draco 解码器走自托管 /draco/（不走 drei 默认的 gstatic CDN，国内慢/偶发被墙）。
+// 放这里而不是 preload.ts：每个用到 useGLTF 的 chunk（RoomCanvas、HouseCanvas、
+// preload）在模块求值时就设好，任何 GLB 加载之前已生效；preload.ts 现在是
+// idle 后才动态 import，不能再承担“抢先设路径”的职责。
+try {
+  if (typeof window !== "undefined") (useGLTFk as any).setDecoderPath("/draco/");
+} catch { /* best-effort */ }
+
 export const useGLTF = useGLTFk as unknown as typeof _u;

@@ -1,9 +1,8 @@
 "use client";
 
-// Side-effect import: kicks off preload of the most common 3D assets
-// 150ms after mount, so by the time the user opens 3D/全局/外观 views
-// many GLTFs are already warm in the HTTP cache.
-import "@/lib/preload";
+// 注意：@/lib/preload（热门 GLB 预载）不要在这里静态 import——它会把
+// three/drei 拉进首屏包。预载改由根 layout 的 ClientBoot 在 idle 后动态
+// import；本文件只在需要时动态加载 roomPreload（见下方 effect）。
 
 // Module-level flag: tracks whether we've triggered the sample-load this
 // browser session. Survives React Strict Mode's double-invocation of effects
@@ -11,7 +10,7 @@ import "@/lib/preload";
 const _VISITED_KEY = "home-designer-visited";
 let _sampleLoadedThisSession = false;
 import dynamic from "next/dynamic";
-import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Component, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import LeftPanel from "@/components/LeftPanel";
 import RightPanel from "@/components/RightPanel";
 import ExteriorPanel from "@/components/ExteriorPanel";
@@ -19,26 +18,85 @@ import ExteriorRoomList from "@/components/ExteriorRoomList";
 import TopBar from "@/components/TopBar";
 import RoomSidebar from "@/components/RoomSidebar";
 import RightPanelAll from "@/components/RightPanelAll";
-import ExportModal from "@/components/ExportModal";
-import ShareModal from "@/components/ShareModal";
 import FloorPlan from "@/components/FloorPlan";
 import AiEntryMenu from "@/components/AiEntryMenu";
-import AiDesignDialog from "@/components/AiDesignDialog";
-import { AiAgentPanelHost } from "@/components/AiAgentPanel";
 import FloorPlanAll, { RoomPanel as FloorPlanAllRoomPanel } from "@/components/FloorPlanAll";
 import YardPlan, { YardPlanLibrary, YardPlanInspector } from "@/components/YardPlan";
 // import OnboardingOverlay from "@/components/OnboardingOverlay";  // TODO: enable when ready
-import AiRenderModal from "@/components/AiRenderModal";
-import ImageImportModal from "@/components/ImageImportModal";
-import CommandPalette from "@/components/CommandPalette";
-import { useCineStore } from "@/components/CinematicDirector";
 import { useDesignerStore } from "@/lib/store";
 import { useT, useLocale, useLocaleStore } from "@/lib/i18n";
 import { decodeShare } from "@/lib/share";
 import { decodeSnapshot } from "@/lib/shareUrl";
 import { getSampleGlassVillaFloorPlans, SAMPLE_GLASS_VILLA_EXTERIOR } from "@/lib/sampleGlassVilla";
 import { isMobileDevice } from "@/lib/device";
-import { collectRoomGlbUrls, preloadGlbUrls } from "@/lib/roomPreload";
+
+// ─── 首屏不加载的重型弹窗（事件/按键触发才挂载）─────────────────────────
+// ExportModal / ShareModal / AiDesignDialog / AiAgentPanelHost 平时只返回
+// null（等 window 事件才打开），却因静态 import 把 exportPdf、AI 设计、
+// agent 面板等代码打进首屏包；CommandPalette 同理（等 Cmd+K）。改成事件
+// 到达时才加载 chunk：壳子先监听事件，加载完挂载弹窗，再重发一次事件，
+// 让弹窗自身的监听器打开它。挂载后壳子撒手，弹窗自己接管后续开关。
+// AiRenderModal / ImageImportModal 由本地 state（showAiRender/showImport）
+// 控制开关，同样只在打开时才挂载（AiRenderModal 关时本来就会重置全部状态，
+// 卸载重挂与开关等价）。
+type AnyComp = ComponentType<Record<string, never>>;
+
+const loadExportModal = () => import("@/components/ExportModal");
+const loadShareModal = () => import("@/components/ShareModal");
+const loadAiDesignDialog = () => import("@/components/AiDesignDialog");
+const loadAiAgentPanelHost = () =>
+  import("@/components/AiAgentPanel").then((m) => ({ default: m.AiAgentPanelHost }));
+const loadCommandPalette = () => import("@/components/CommandPalette");
+
+function useEventGatedModal(eventName: string, load: () => Promise<{ default: AnyComp }>): AnyComp | null {
+  const [Comp, setComp] = useState<AnyComp | null>(null);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    let dead = false;
+    const onOpen = () => {
+      if (mountedRef.current) return; // 已挂载：弹窗自己的监听器会处理
+      void load().then((m) => {
+        if (dead) return;
+        mountedRef.current = true;
+        setComp(() => m.default);
+        // 弹窗在挂载 effect 里注册 open 事件监听；重发让本次点击直接打开。
+        setTimeout(() => window.dispatchEvent(new Event(eventName)), 60);
+      });
+    };
+    window.addEventListener(eventName, onOpen);
+    return () => { dead = true; window.removeEventListener(eventName, onOpen); };
+  }, [eventName, load]);
+  return Comp;
+}
+
+function useKeyGatedCommandPalette(): AnyComp | null {
+  const [Comp, setComp] = useState<AnyComp | null>(null);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    let dead = false;
+    const onKey = (e: KeyboardEvent) => {
+      if (mountedRef.current) return; // 已挂载：面板自己接管 Cmd+K 开关
+      if (!((e.metaKey || e.ctrlKey) && e.key === "k")) return;
+      e.preventDefault();
+      void loadCommandPalette().then((m) => {
+        if (dead) return;
+        mountedRef.current = true;
+        setComp(() => m.default);
+        // 面板挂载后重发一次同样的按键，让它自己的 keydown 监听打开。
+        setTimeout(
+          () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: e.metaKey, ctrlKey: e.ctrlKey, bubbles: true, cancelable: true })),
+          60,
+        );
+      });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => { dead = true; window.removeEventListener("keydown", onKey); };
+  }, []);
+  return Comp;
+}
+
+const AiRenderModal = dynamic(() => import("@/components/AiRenderModal"), { ssr: false });
+const ImageImportModal = dynamic(() => import("@/components/ImageImportModal"), { ssr: false });
 
 function CanvasLoading({ bg, msgKey }: { bg: string; msgKey: "loading3dScene" | "loadingExteriorScene" | "global3dLoading" }) {
   const t = useT();
@@ -223,6 +281,13 @@ export default function DesignerTool() {
   const [isMobile, setIsMobile] = useState(false);
   const [showAiRender,  setShowAiRender]  = useState(false);
   const [showImport,    setShowImport]    = useState(false);
+
+  // 事件/按键触发才挂载的重型弹窗（首屏不加载其 chunk，见文件顶部说明）。
+  const ExportModalLazy = useEventGatedModal("openExport", loadExportModal);
+  const ShareModalLazy = useEventGatedModal("openShare", loadShareModal);
+  const AiDesignDialogLazy = useEventGatedModal("openAiDesign", loadAiDesignDialog);
+  const AiAgentPanelHostLazy = useEventGatedModal("openAiAgent", loadAiAgentPanelHost);
+  const CommandPaletteLazy = useKeyGatedCommandPalette();
   // zustand persist 在客户端水合时会用 localStorage 里的值覆盖 initial
   // state（比如 activeRoom / viewMode / floorPlans），和 SSR 渲出来的
   // 默认值不一致 → React 报 hydration mismatch（移动端 Chrome 尤其
@@ -230,18 +295,23 @@ export default function DesignerTool() {
   const [mounted, setMounted] = useState(false);
 
   // 预载当前房间的 GLB(桌面端):用户在 2D 里选房/改布局时就把该房间的
-  // 模型下好解好,切「室内装修」直接命中缓存。签名变化才触发(换房/增减
-  // 家具);已预载过的 URL 由 roomPreload 内去重。400ms 延迟让 2D 首帧
-  // 先画出来。移动端不做(内存紧张,按需加载)。
-  const roomGlbUrls = useMemo(
-    () => collectRoomGlbUrls(floorPlans[activeFloor]?.rooms?.[activeRoom]?.placedItems),
-    [floorPlans, activeFloor, activeRoom],
-  );
+  // 模型下好解好,切「室内装修」直接命中缓存。已预载过的 URL 由 roomPreload
+  // 内去重。400ms 延迟让 2D 首帧先画出来。移动端不做(内存紧张,按需加载)。
+  // roomPreload 拉入 three/drei，首屏不静态 import，400ms 内动态加载。
   useEffect(() => {
-    if (!roomGlbUrls.length) return;
-    const t = setTimeout(() => preloadGlbUrls(roomGlbUrls), 400);
-    return () => clearTimeout(t);
-  }, [roomGlbUrls]);
+    const placedItems = floorPlans[activeFloor]?.rooms?.[activeRoom]?.placedItems;
+    if (!placedItems?.length) return;
+    let cancelled = false;
+    // 先启动 chunk 加载（与 400ms 等待并行），不要把 import 串在定时器之后。
+    const modPromise = import("@/lib/roomPreload");
+    const t = setTimeout(() => {
+      void modPromise.then((m) => {
+        if (cancelled) return;
+        m.preloadGlbUrls(m.collectRoomGlbUrls(placedItems));
+      });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [floorPlans, activeFloor, activeRoom]);
 
   // After mount, collapse panels on mobile viewports + flip mounted flag.
   // On first-ever visit (no persisted state), load the glass-villa sample so
@@ -463,7 +533,12 @@ export default function DesignerTool() {
     const params = new URLSearchParams(window.location.search);
     if (!params.get("shortfilm")) return;
     useDesignerStore.getState().setViewMode("exterior");
-    useCineStore.getState().setMenuOpen(true);
+    // CinematicDirector（film/director 代码，含 three/fiber/sceneSets）平时
+    // 不进首屏包；只有 ?shortfilm=1 才动态加载，加载完再打开面板（store
+    // 在模块求值时创建，与 HouseCanvas 里的同一实例）。
+    void import("@/components/CinematicDirector").then((m) => {
+      m.useCineStore.getState().setMenuOpen(true);
+    });
     const url = new URL(window.location.href);
     url.searchParams.delete("shortfilm");
     window.history.replaceState({}, "", url.toString());
@@ -538,9 +613,9 @@ export default function DesignerTool() {
               就整体被压下去 → 弹层被小地图挡住。把容器抬到 40 让整棵子树都在上面。 */}
           {/* 竖屏手机同样抬到 Safari 底栏之上(与左下角两个开关齐平),横屏/桌面保持原位。 */}
           <div className="absolute bottom-24 sm:bottom-4 right-4 z-40 flex flex-col gap-2 items-end transition-opacity duration-200 opacity-100">
-            <AiDesignDialog />
+            {AiDesignDialogLazy && <AiDesignDialogLazy />}
             {/* 对话式设计 agent(多轮工具调用改画布)—— 由 AI 助手菜单的 openAiAgent 事件打开 */}
-            <AiAgentPanelHost />
+            {AiAgentPanelHostLazy && <AiAgentPanelHostLazy />}
             <AiEntryMenu />
           </div>
 
@@ -591,12 +666,12 @@ export default function DesignerTool() {
           </div>
         )}
       </div>
-      <ExportModal />
-      <ShareModal />
-      <ImageImportModal open={showImport}   onClose={() => setShowImport(false)} />
-      <AiRenderModal    open={showAiRender} onClose={() => setShowAiRender(false)} />
+      {ExportModalLazy && <ExportModalLazy />}
+      {ShareModalLazy && <ShareModalLazy />}
+      {showImport && <ImageImportModal open={showImport}   onClose={() => setShowImport(false)} />}
+      {showAiRender && <AiRenderModal    open={showAiRender} onClose={() => setShowAiRender(false)} />}
       {/* Command Palette — Cmd+K / Ctrl+K (borrowed from pascal editor) */}
-      <CommandPalette />
+      {CommandPaletteLazy && <CommandPaletteLazy />}
       {/* <OnboardingOverlay /> */}
       <footer className="h-6 bg-white border-t border-gray-100 flex items-center justify-center shrink-0" style={{ pointerEvents: "none" }}>
         <span className="text-[10px] text-gray-400">{t.disclaimer}</span>

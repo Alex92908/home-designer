@@ -1,11 +1,17 @@
 /**
- * Preload the most commonly used GLTF assets as soon as the app mounts.
- * This kicks off the network fetch immediately (instead of waiting for
- * Suspense to trigger when the Canvas renders), so by the time the user
- * switches to the 3D / 外观 / 全局 3D view, many assets are already
- * cached and the scene fills in quickly.
+ * Preload the most commonly used GLTF assets once the page is idle.
+ * This kicks off the network fetch after first paint / hydration (instead
+ * of racing the critical JS chunks and the current room's GLBs), so by the
+ * time the user switches to the 3D / 外观 / 全局 3D view, many assets are
+ * already cached and the scene fills in quickly.
  *
- * Triggered from app/layout.tsx via a side-effectful import.
+ * Loaded lazily: ClientBoot dynamic-imports this module on idle, so the
+ * three/drei graph it pulls in stays OUT of the initial JS bundle (on
+ * mobile the first screen is a 2D plan — no canvas mounts at startup, so
+ * nothing here is needed before first interaction). The crypto.randomUUID
+ * polyfill and the Draco decoder path used to live here; they moved to
+ * @/lib/cryptoPolyfill (static, tiny) and @/lib/drei (module-level) so
+ * this module no longer has to load early to set them up.
  */
 import { useGLTF } from "@/lib/drei";
 
@@ -38,32 +44,50 @@ const HOT_URLS = [
 // All client-only side effects. Gate on window so SSR / hydration pass
 // doesn't trigger drei internals that might touch browser-only APIs.
 if (typeof window !== "undefined") {
-  // ── crypto.randomUUID 兜底(治真机崩溃)──────────────────────────────
-  // crypto.randomUUID 只在「安全上下文」(HTTPS 或 localhost)存在。通过明文
-  // http + 局域网 IP(如 http://192.168.x.x:3000)访问时它是 undefined，代码里
-  // 十几处直接调用会抛 "crypto.randomUUID is not a function" → 整页错误边界。
-  // 用不安全上下文也有的 getRandomValues 补一个 RFC4122 v4 实现。放最前，早于
-  // 任何 useEffect/事件里的调用。(线上 HTTPS 有原生实现，guard 会跳过。)
-  try {
-    const c = globalThis.crypto as (Crypto & { randomUUID?: () => string }) | undefined;
-    if (c && typeof c.randomUUID !== "function" && typeof c.getRandomValues === "function") {
-      (c as { randomUUID: () => string }).randomUUID = function randomUUID() {
-        const b = c.getRandomValues(new Uint8Array(16));
-        b[6] = (b[6] & 0x0f) | 0x40;
-        b[8] = (b[8] & 0x3f) | 0x80;
-        const h: string[] = [];
-        for (let i = 0; i < 16; i++) h.push(b[i].toString(16).padStart(2, "0"));
-        return `${h[0]}${h[1]}${h[2]}${h[3]}-${h[4]}${h[5]}-${h[6]}${h[7]}-${h[8]}${h[9]}-${h[10]}${h[11]}${h[12]}${h[13]}${h[14]}${h[15]}`;
-      };
-    }
-  } catch { /* ignore */ }
+  // 等首屏 HTML/CSS/JS 与当前房间 GLB 让出带宽与主线程后再预载：load 事件
+  // 后 + requestIdleCallback（主线程空闲，5s 超时兜底）；Safari 无 rIC
+  // 时用 3s 定时兜底。之前是模块求值后 150ms 就冲 17 个 GLB，正好撞上
+  // 首屏 JS 解析与房间 GLB 加载，手机上尤其挤。
+  const onIdle = (fn: () => void) => {
+    const run = () => {
+      const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback;
+      if (typeof ric === "function") ric(fn, { timeout: 5000 });
+      else setTimeout(fn, 3000);
+    };
+    if (document.readyState === "complete") run();
+    else window.addEventListener("load", run, { once: true });
+  };
 
-  // 全分辨率不再靠「解码降分」——纹理走 KTX2(GPU 压缩、压缩态常驻显存),
-  // 全分辨率也装得下。见 gltfKtx2.ts。
+  const preloadOne = (url: string) => {
+    try {
+      // useGLTF.preload returns a thenable that rejects on 404 etc.
+      // Chain .catch so it doesn't surface as unhandled rejection.
+      const p = useGLTF.preload(url) as unknown as Promise<unknown> | undefined;
+      if (p && typeof (p as Promise<unknown>).catch === "function") {
+        (p as Promise<unknown>).catch(() => { /* best-effort */ });
+      }
+    } catch { /* best-effort */ }
+  };
 
-  // Point DRACOLoader at self-hosted decoder files (public/draco/*).
-  // drei default = gstatic CDN, sometimes slow/blocked from mainland China.
-  try { useGLTF.setDecoderPath("/draco/"); } catch { /* noop */ }
+  // 顺序预载（最多 2 并发）：17 个 GLB 一起冲会挤占当前房间 GLB 与关键
+  // JS 的带宽；排队下完仍能在用户切视图前命中缓存。
+  const preloadSequential = (urls: string[]) => {
+    let i = 0;
+    let inFlight = 0;
+    const pump = () => {
+      while (inFlight < 2 && i < urls.length) {
+        const url = urls[i++];
+        inFlight++;
+        try {
+          const p = useGLTF.preload(url) as unknown as Promise<unknown> | undefined;
+          const done = () => { inFlight--; pump(); };
+          if (p && typeof (p as Promise<unknown>).then === "function") (p as Promise<unknown>).then(done, done);
+          else done();
+        } catch { inFlight--; }
+      }
+    };
+    pump();
+  };
 
   // 移动端跳过批量预载：手机带宽/内存都紧张，10 个 GLB 预载会挤占
   // 关键 JS chunk 的下载（样板间卡"渲染外形图…"的帮凶），且解码后的
@@ -71,34 +95,13 @@ if (typeof window !== "undefined") {
   const isMobile = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent)
     || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-  // 移动端只预热解码器,不批量预载:首次进 3D 前 Draco WASM + KTX2
-  // 转码器都是冷的,第一件模型要现取 WASM、起 worker、初始化模块
-  // (手机上约 0.5–1.5s),之后每件还都要等。只预载 1 个通用小模型
-  // (每间房都有的门,206KB):走同一条 useGLTF 路径,顺带把 drei 的
-  // Draco 单例 + 共享 KTX2Loader + worker 池都热起来,代价一个文件。
-  if (isMobile) setTimeout(() => {
-    try {
-      const p = useGLTF.preload("/models/_arch_door/door_with_frame/door_with_frame.glb") as unknown as Promise<unknown> | undefined;
-      if (p && typeof (p as Promise<unknown>).catch === "function") {
-        (p as Promise<unknown>).catch(() => { /* best-effort */ });
-      }
-    } catch { /* best-effort */ }
-  }, 150);
-
-  // Small defer so the initial document/CSS get priority on the network
-  // queue. 150ms ≈ one LCP frame on mid-range hardware.
-  if (!isMobile) setTimeout(() => {
-    for (const url of HOT_URLS) {
-      try {
-        // useGLTF.preload returns a thenable that rejects on 404 etc.
-        // Chain .catch so it doesn't surface as unhandled rejection.
-        const p = useGLTF.preload(url) as unknown as Promise<unknown> | undefined;
-        if (p && typeof (p as Promise<unknown>).catch === "function") {
-          (p as Promise<unknown>).catch(() => { /* best-effort */ });
-        }
-      } catch { /* best-effort */ }
-    }
-  }, 150);
+  // 移动端只预热解码器，不批量预载：首次进 3D 前 Draco WASM + KTX2
+  // 转码器都是冷的，第一件模型要现取 WASM、起 worker、初始化模块
+  // （手机上约 0.5–1.5s），之后每件还都要等。只预载 1 个通用小模型
+  // （每间房都有的门，206KB）：走同一条 useGLTF 路径，顺带把 drei 的
+  // Draco 单例 + 共享 KTX2Loader + worker 池都热起来，代价一个文件。
+  if (isMobile) onIdle(() => setTimeout(() => preloadOne("/models/_arch_door/door_with_frame/door_with_frame.glb"), 150));
+  else onIdle(() => preloadSequential(HOT_URLS));
 }
 
 export {};
