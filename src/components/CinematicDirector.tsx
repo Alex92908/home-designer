@@ -43,7 +43,7 @@ import { Line } from "@react-three/drei";
 import {
   CINE_PRESETS, RENDER_STYLES, getCinePreset, makeShot, makeActor,
   actorDisplayName, actorFacing, actorAction, actorTargetAt, groupTargetAt, shotCrossesAxis,
-  losCandidates, tooCloseCandidates,
+  losCandidates, tooCloseCandidates, clampIndoorCamera,
   type Shot, type Actor, type ActorAction, type RenderStyle, type SceneEnvelope, type RoomRect,
   type CameraSample,
 } from "@/lib/cinematic";
@@ -218,6 +218,17 @@ export function clampPointToFootprint(p: [number, number]): { point: [number, nu
   const x = Math.max(-hx, Math.min(hx, p[0]));
   const z = Math.max(-hz, Math.min(hz, p[1]));
   return { point: [x, z], clamped: x !== p[0] || z !== p[1] };
+}
+
+/** 放置点击分类：落在房子外面不远（≤1m）时钳到墙边（旧行为）；
+ *  离房子太远（>1m——放置地面是 500×500 的大平面，随便点到院外/
+ *  空地上都会落进来）时拒绝：不落点、不改 pendingFrom、不吞状态，
+ *  下一次点击仍有效，只在提示里明说。调用方据此决定落点还是报错。
+ *  （导出供单测；行为与面板共用同一实现。） */
+export function classifyPlaceClick(p: [number, number]): { ok: boolean; point: [number, number]; clamped: boolean } {
+  const { point, clamped } = clampPointToFootprint(p);
+  const ok = !clamped || Math.hypot(p[0] - point[0], p[1] - point[1]) <= 1.0;
+  return { ok, point, clamped };
 }
 
 /** 径向投影：沿“中心→点击”的射线把点投到包络边上（保留点击的方向）。
@@ -435,8 +446,16 @@ export const useCineStore = create<CineState>()(
       placePoint: (p) => {
         const { addActorMode, pendingFrom, actors, replaceActorId } = get();
         if (!addActorMode) return;
-        // 越界钳制：点落在房子外面时移到墙边，并提示用户（不是悄悄吃掉点击）
-        const { point, clamped } = clampPointToFootprint(p);
+        // 离房子太远的点击直接拒绝：不落点、不改 pendingFrom、不吞状态，
+        // 下一次点击仍是有效的起点/终点（之前是钳到墙边悄悄吃掉，起点
+        // 会莫名其妙落在墙角，下一对点击跟着错位）。
+        const c = classifyPlaceClick(p);
+        if (!c.ok) {
+          set({ placeWarning: `点 (${p[0].toFixed(1)}, ${p[1].toFixed(1)}) 在房子外面，请点房子里面${pendingFrom ? "选终点" : "选起点"}` });
+          return;
+        }
+        // 近处越界钳到墙边（旧行为），并提示用户（不是悄悄吃掉点击）
+        const point = c.point, clamped = c.clamped;
         let finalPoint = point;
         if (clamped && pendingFrom && Math.hypot(point[0] - pendingFrom[0], point[1] - pendingFrom[1]) < 0.05) {
           // 两点重合：逐轴钳制把角落区的两次点击吸到同一个角，演员走位退化为 0，
@@ -446,13 +465,21 @@ export const useCineStore = create<CineState>()(
         }
         if (clamped) {
           set({ placeWarning: `点 (${p[0].toFixed(1)}, ${p[1].toFixed(1)}) 在房子外面，已移到墙边 (${finalPoint[0].toFixed(1)}, ${finalPoint[1].toFixed(1)})` });
+        } else if (!pendingFrom) {
+          set({ placeWarning: null });
         }
         if (!pendingFrom) { set({ pendingFrom: finalPoint }); return; }
+        // 第二点离起点太近（<0.15m）不算放好：保留起点，提示换个更远的
+        // 终点——之前会造出零长走位的演员，朝向/机位跟着退化。
+        if (Math.hypot(finalPoint[0] - pendingFrom[0], finalPoint[1] - pendingFrom[1]) < 0.15) {
+          set({ placeWarning: "起点和终点太近了（<0.15m），请点一个更远的位置当终点" });
+          return;
+        }
         if (replaceActorId) {
           // 重设走位：只改 from/to，名字/角色/动作/朝向保留
           set({
             actors: actors.map((a) => (a.id === replaceActorId ? { ...a, from: pendingFrom, to: finalPoint } : a)),
-            pendingFrom: null, addActorMode: false, replaceActorId: null,
+            pendingFrom: null, addActorMode: false, replaceActorId: null, placeWarning: null,
           });
           return;
         }
@@ -465,13 +492,15 @@ export const useCineStore = create<CineState>()(
           actors.map((a) => resolveActorCostume(a).id),
           get().cineSetId,
         );
+        // 放好一位后留在加演员模式：下一对点击直接放下一位，不用重开面板；
+        // 点提示条的「完成」或按 Esc 退出（pendingFrom 已清，不会残留半个起点）。
         set({
           actors: [...actors, makeActor(pendingFrom, finalPoint, {
             name: `演员${n}`,
             archetypeId: suggested.archetypeId || undefined,
             costumeId: suggested.costumeId,
           })],
-          pendingFrom: null, addActorMode: false,
+          pendingFrom: null, placeWarning: null,
         });
       },
       cancelAddActor: () => set({ addActorMode: false, pendingFrom: null, replaceActorId: null, placeWarning: null }),
@@ -493,13 +522,19 @@ export const useCineStore = create<CineState>()(
 
       // ── 动态走位 ──
       waypointMode: null,
-      beginWaypointMode: (actorId) => set({ waypointMode: actorId, addActorMode: false, propPlaceKind: null, placeWarning: null }),
+      beginWaypointMode: (actorId) => set({ waypointMode: actorId, addActorMode: false, pendingFrom: null, replaceActorId: null, propPlaceKind: null, placeWarning: null }),
       cancelWaypointMode: () => set({ waypointMode: null }),
       addWaypoint: (actorId, p) => {
         const a = get().actors.find((x) => x.id === actorId);
         if (!a) return;
+        // 离房子太远的点击拒绝加路点（不吞状态：下一次点击仍有效）
+        const c = classifyPlaceClick(p);
+        if (!c.ok) {
+          set({ placeWarning: `路点 (${p[0].toFixed(1)}, ${p[1].toFixed(1)}) 在房子外面，请点房子里面` });
+          return;
+        }
         // 越界钳制：路点落在房子外面时移到墙边，并提示用户
-        const { point, clamped } = clampPointToFootprint(p);
+        const point = c.point, clamped = c.clamped;
         if (clamped) {
           set({ placeWarning: `路点 (${p[0].toFixed(1)}, ${p[1].toFixed(1)}) 在房子外面，已移到墙边 (${point[0].toFixed(1)}, ${point[1].toFixed(1)})` });
         }
@@ -600,7 +635,7 @@ export const useCineStore = create<CineState>()(
       // ── 特技道具 ──
       stuntProps: [],
       propPlaceKind: null,
-      beginPropPlace: (kind) => set({ propPlaceKind: kind, addActorMode: false, waypointMode: null }),
+      beginPropPlace: (kind) => set({ propPlaceKind: kind, addActorMode: false, pendingFrom: null, replaceActorId: null, waypointMode: null }),
       cancelPropPlace: () => set({ propPlaceKind: null }),
       placeStuntProp: (p) => {
         const kind = get().propPlaceKind;
@@ -620,6 +655,8 @@ export const useCineStore = create<CineState>()(
       startSim: () => {
         const st = get();
         if (!st.shots.length) return;
+        // 模拟接管画布：先退出一切放置模式（残留的 pendingFrom 起点标
+        // 记、放置地面都不该带进模拟里；暂停后拖演员走另一条路）。
         // 用户手势里建 AudioContext：浏览器只允许手势后出声；
         // 建失败也不影响模拟（playSoundEffect 会静默）。
         ensureAudioContext();
@@ -632,7 +669,7 @@ export const useCineStore = create<CineState>()(
         // 音效游标从头开始（上一轮的 fired 记录清掉）
         resetSimSfxCursor();
         // 模拟接管灯光：每镜按自己的 lightingId 切，面板预览即刻失效
-        set({ sim: { active: true, playing: true, shotIdx: 0, timeSec: 0 }, previewLightingId: null });
+        set({ sim: { active: true, playing: true, shotIdx: 0, timeSec: 0 }, previewLightingId: null, addActorMode: false, pendingFrom: null, replaceActorId: null, waypointMode: null, propPlaceKind: null });
       },
       stopSim: () => {
         simClock.active = false;
@@ -677,14 +714,14 @@ export const useCineStore = create<CineState>()(
       progress: 0,
       menuOpen: false,
       startQuick: (presetId) =>
-        set({ queue: [{ shot: makeShot(presetId, { lightingId: get().sceneLightingId }), style: "beauty" }], queueIdx: 0, batch: false, progress: 0, menuOpen: false }),
+        set({ queue: [{ shot: makeShot(presetId, { lightingId: get().sceneLightingId }), style: "beauty" }], queueIdx: 0, batch: false, progress: 0, menuOpen: false, addActorMode: false, pendingFrom: null, replaceActorId: null, waypointMode: null, propPlaceKind: null }),
       startStoryboard: () => {
         const { shots, styles } = get();
         if (!shots.length) return;
         // 镜头为主序、风格为次序：01-实景 → 01-白模 → 02-实景 → …
         const queue: QueueItem[] = [];
         for (const shot of shots) for (const style of styles) queue.push({ shot, style });
-        set({ queue, queueIdx: 0, batch: true, progress: 0, menuOpen: false });
+        set({ queue, queueIdx: 0, batch: true, progress: 0, menuOpen: false, addActorMode: false, pendingFrom: null, replaceActorId: null, waypointMode: null, propPlaceKind: null });
       },
       cancel: () => set({ queue: null, queueIdx: 0, progress: 0 }),
       setMenuOpen: (open) => set({ menuOpen: open }),
@@ -1053,6 +1090,87 @@ function resolveCameraLOS(
   return resolved;
 }
 
+/** 群体镜头保框（只动 group 预设，单人镜原样）────────────────────
+ *  症状：LOS 挪机位 / 房间钳制会把机位推到墙边，整组只剩一两个人
+ *  在画里，收尾帧常常只剩一面暗墙。预设本身按重心 + 世界 X 向半宽
+ *  算距离，朝向一转（机位在东侧时横向其实是世界 Z）就框不全。
+ *  做法：LOS 挪完后拿“挪前/挪后”两个采样逐人验框——挪后丢人就回
+ *  挪前；再放宽 fov（≤75°）、沿视线后拉机位（≤3m，仍钳在房里）
+ *  兜底；实在框不全也返回框住人数最多的那个，永不比原来差。
+ *  只做纯数学（不射线），每帧一次，开销可忽略。
+ *  （导出供单测；行为与 applyShotCamera 共用同一实现。） */
+export function groupFitCount(
+  sample: CameraSample,
+  heads: Array<[number, number, number]>,
+  aspect: number,
+): number {
+  const fwd = new THREE.Vector3(sample.lookAt[0] - sample.pos[0], sample.lookAt[1] - sample.pos[1], sample.lookAt[2] - sample.pos[2]);
+  if (fwd.lengthSq() < 1e-6) return 0;
+  fwd.normalize();
+  const hHalf = Math.atan(Math.tan((sample.fov * Math.PI) / 360) * Math.max(0.5, aspect));
+  const vHalf = (sample.fov * Math.PI) / 360;
+  // 6% 画幅边距：人不贴边
+  const hLim = hHalf * 0.94, vLim = vHalf * 0.94;
+  const fwdYaw = Math.atan2(fwd.x, fwd.z);
+  const fwdPitch = Math.atan2(fwd.y, Math.hypot(fwd.x, fwd.z));
+  let n = 0;
+  for (const h of heads) {
+    const d = new THREE.Vector3(h[0] - sample.pos[0], h[1] - sample.pos[1], h[2] - sample.pos[2]);
+    const dist = d.length();
+    if (dist < 0.3) continue; // 机位贴到人脸上，算丢
+    const yaw = Math.atan2(d.x, d.z) - fwdYaw;
+    const pitch = Math.atan2(d.y, Math.hypot(d.x, d.z)) - fwdPitch;
+    // yaw 绕一圈归一化到 [-π, π]
+    const yawN = Math.atan2(Math.sin(yaw), Math.cos(yaw));
+    if (Math.abs(yawN) <= hLim && Math.abs(pitch) <= vLim) n++;
+  }
+  return n;
+}
+
+export function ensureGroupFraming(
+  preLos: CameraSample,
+  postLos: CameraSample,
+  heads: Array<[number, number, number]>,
+  env: SceneEnvelope,
+  aspect: number,
+): CameraSample {
+  const total = heads.length;
+  if (!total) return postLos;
+  // 挪后仍框全组：LOS 的修补保住了，直接用
+  if (groupFitCount(postLos, heads, aspect) >= total) return postLos;
+  // 挪后丢人、挪前框全：回挪前（取景优先于遮挡修补）
+  if (groupFitCount(preLos, heads, aspect) >= total) return preLos;
+  // 两个都不全：挑框住人数多的那个，再放宽 fov / 后拉机位兜底
+  const preN = groupFitCount(preLos, heads, aspect);
+  const postN = groupFitCount(postLos, heads, aspect);
+  let best = postN > preN ? postLos : preLos;
+  let bestN = Math.max(preN, postN);
+  for (const fov of [60, 65, 70, 75]) {
+    if (best.fov >= fov) continue;
+    const widened: CameraSample = { ...best, fov };
+    const n = groupFitCount(widened, heads, aspect);
+    if (n > bestN) { best = widened; bestN = n; }
+    if (n >= total) return widened;
+  }
+  // 后拉：沿视线反方向退，仍钳在房里；退不动（已贴墙）就停
+  const fwd = new THREE.Vector3(best.lookAt[0] - best.pos[0], best.lookAt[1] - best.pos[1], best.lookAt[2] - best.pos[2]).normalize();
+  for (const back of [0.5, 1.0, 1.5, 2.0, 2.5, 3.0]) {
+    const pulled: CameraSample = {
+      ...best,
+      fov: Math.max(best.fov, 70),
+      pos: clampIndoorCamera(
+        [best.pos[0] - fwd.x * back, best.pos[1], best.pos[2] - fwd.z * back],
+        env,
+      ),
+    };
+    if (Math.hypot(pulled.pos[0] - best.pos[0], pulled.pos[2] - best.pos[2]) < 0.05) break;
+    const n = groupFitCount(pulled, heads, aspect);
+    if (n > bestN) { best = pulled; bestN = n; }
+    if (n >= total) return pulled;
+  }
+  return best;
+}
+
 /** 一镜的机位采样（录制与拍摄模拟共用）：预设机位框住 target 演员
  *  （走位时间轴 + 动作时间轴 + 高度）；本镜有打斗编舞且正在播时，
  *  beat 的机位（默认 punch-axis cheat）覆盖预设机位。
@@ -1101,11 +1219,22 @@ function applyShotCamera(cam: THREE.PerspectiveCamera, shot: Shot, timeSec: numb
   }
   // 视线遮挡（Option B）：只看室内镜；演员头 = 演员位置 + 1.55m
   // （方块人头顶约 1.52m），无演员时退回注视点 + 0.35m。
+  let preLos = s;
   if (preset.indoor && scene) {
     const head: [number, number, number] = actorPos
       ? [actorPos.x, (actorPos.y ?? 0) + 1.55, actorPos.z]
       : [s.lookAt[0], s.lookAt[1] + 0.35, s.lookAt[2]];
     s = resolveCameraLOS(scene, cam, s, shot, t, head, envForShot, st.actors);
+  }
+  // 群体镜头保框：LOS 挪机位/房间钳制可能把整组推出画外（收尾只剩
+  // 暗墙）——拿挪前/挪后两个采样逐人验框，丢人就回挪前，再放宽 fov、
+  // 后拉机位兜底。单人镜不走这条路。
+  if (preset.group && st.actors.length) {
+    const heads = st.actors.map((a) => {
+      const p = actorPositionAt(a, timeSec, shot.duration);
+      return [p[0], 1.45, p[1]] as [number, number, number];
+    });
+    s = ensureGroupFraming(preLos, s, heads, envForShot, Math.max(0.5, cam.aspect || 1.6));
   }
   cam.position.set(...s.pos);
   cam.lookAt(...s.lookAt);
@@ -1678,8 +1807,9 @@ export function ActorsLayer() {
   // 编辑器覆盖层（轴线、走位路径、路点编号标牌）只在编辑时显示：
   // 录制/导出与拍摄模拟是成片，所见即所得——标牌是 depthTest=false
   // 的精灵，会穿透家具画在画面正中（路点 "5" 曾污染故事板首帧）。
-  // 队列/模拟进行时拖拽本来就不可用，藏起来没有功能损失。
-  const hideOverlays = !!cineQueue || !!cineSim?.active;
+  // 队列/模拟播放中拖拽不可用，藏起来没有功能损失；模拟暂停时是
+  // 编辑态——路径和标牌要留着，演员/路点就是这时候拖的。
+  const hideOverlays = !!cineQueue || (cineSim?.active && cineSim.playing);
   const addMode = useCineStore((s) => s.addActorMode);
   const pendingFrom = useCineStore((s) => s.pendingFrom);
   const waypointMode = useCineStore((s) => s.waypointMode);
@@ -1915,7 +2045,11 @@ export function ActorsLayer() {
                     position={[w.x, (w.y ?? 0) + 0.9, w.z]}
                     scale={[0.55, 0.55, 1]}
                     onPointerDown={(e) => {
-                      if (waypointMode !== a.id) return;
+                      // 路点标牌：编路点模式里可拖；模拟暂停时也可以拖
+                      // （不用先停掉整场模拟）；播放中/录制中不许拖。
+                      const st = useCineStore.getState();
+                      if (st.queue || (st.sim?.active && st.sim.playing)) return;
+                      if (waypointMode !== a.id && !(st.sim?.active && !st.sim.playing)) return;
                       e.stopPropagation();
                       setControlsEnabled(false);
                       dragRef.current = {
@@ -1954,6 +2088,10 @@ export function ActorsLayer() {
               position={[a.from[0], 0, a.from[1]]}
               onPointerDown={(e) => {
                 if (addMode) return;
+                // 模拟播放中 / 录制中不许拖（机位和演员都在动，拖了也对不上）；
+                // 模拟暂停时可以拖——调走位不用先停掉整场模拟。
+                const st = useCineStore.getState();
+                if (st.queue || (st.sim?.active && st.sim.playing)) return;
                 e.stopPropagation();
                 setControlsEnabled(false);
                 dragRef.current = {
@@ -2373,11 +2511,13 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
           <span>
             {pendingFrom
               ? (en ? "Click the ground: end point" : "在地面点击：终点")
-              : (en ? "Click the ground: start point" : "在地面点击：起点")}
+              : actors.length
+                ? (en ? `Placed ${actors.length} — click twice for the next actor, or Done to finish` : `已放 ${actors.length} 位演员 — 继续点两下放下一位，或点「完成」结束`)
+                : (en ? "Click the ground: start point" : "在地面点击：起点")}
           </span>
           {placeWarning && <span className="text-amber-300">⚠️ {placeWarning}</span>}
           <button onClick={cancelAddActor} className="ml-1 px-2 py-1 rounded-md hover:bg-white/10">
-            {en ? "Cancel" : "取消"}
+            {actors.length ? (en ? "Done" : "完成") : (en ? "Cancel" : "取消")}
           </button>
         </div>
       </>
@@ -3075,7 +3215,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
                     ({a.from[0].toFixed(1)},{a.from[1].toFixed(1)})→({a.to[0].toFixed(1)},{a.to[1].toFixed(1)})
                   </span>
                   <button
-                    onClick={() => { beginReplaceActor(a.id); setMenuOpen(false); }}
+                    onClick={() => { beginReplaceActor(a.id); }}
                     className="px-1.5 py-0.5 rounded hover:bg-white/10 text-white/70 whitespace-nowrap"
                     title={en ? "Click ground twice to reset this actor's path" : "地面点两下，重设该演员的起点→终点"}
                   >
@@ -3087,7 +3227,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
                   <div className="flex items-center gap-1.5">
                     <span className="text-white/40 whitespace-nowrap">{en ? "Waypoints" : "走位时间轴"}</span>
                     <button
-                      onClick={() => { beginWaypointMode(a.id); setMenuOpen(false); }}
+                      onClick={() => { beginWaypointMode(a.id); }}
                       className="px-1.5 py-0.5 rounded hover:bg-white/10 text-white/70 whitespace-nowrap"
                     >
                       {en ? "＋ Click ground to add" : "＋地面点选加路点"}
@@ -3168,7 +3308,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
             );
           })}
           <button
-            onClick={() => { beginAddActor(); setMenuOpen(false); }}
+            onClick={() => { beginAddActor(); }}
             className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-left"
           >
             🚶 {en ? "+ Add actor (click ground: start → end)" : "＋加演员（地面点两下：起点→终点）"}
@@ -3184,7 +3324,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
             {en ? "SHOOT SIMULATION" : "拍摄模拟"}
           </div>
           <button
-            onClick={() => { startSim(); setMenuOpen(false); }}
+            onClick={() => { startSim(); }}
             disabled={!shots.length}
             className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-left disabled:opacity-30"
             title={en ? "Preview the shoot in order: camera moves to each shot, actors perform blocking + actions + fights" : "按分镜顺序预演：机位移到每镜，演员走走位+动作+打斗，播完切下一镜"}
@@ -3494,7 +3634,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
               ))}
             </select>
             <button
-              onClick={() => { beginPropPlace(propKind); setMenuOpen(false); }}
+              onClick={() => { beginPropPlace(propKind); }}
               className="px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 whitespace-nowrap"
             >
               {en ? "Place on ground" : "地面点选放置"}
