@@ -20,7 +20,7 @@ let _ktx2: KTX2Loader | null = null;
 let _detected = false;
 
 export function getKtx2Loader(): KTX2Loader {
-  if (!_ktx2) _ktx2 = new KTX2Loader().setTranscoderPath("/basis/");
+  if (!_ktx2) _ktx2 = new KTX2Loader().setTranscoderPath("/basis/").setWorkerLimit(2);
   return _ktx2;
 }
 

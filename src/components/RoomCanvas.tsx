@@ -2655,7 +2655,10 @@ function GltfFurniture({
       root.traverse((obj) => {
         const mesh = obj as THREE.Mesh;
         if (!mesh.isMesh) return;
-        mesh.castShadow = true;
+        const vertCount = mesh.geometry?.attributes?.position?.count ?? 0;
+        const firstMat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+        const isTransparent = Boolean((firstMat as THREE.MeshStandardMaterial | undefined)?.transparent);
+        mesh.castShadow = !isTransparent && vertCount <= 15000;
         mesh.receiveShadow = true;
         // Repaint when the source GLB has a wrong/placeholder base color.
         // Skip clearly-glass materials (transmissive / very transparent) so

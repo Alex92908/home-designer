@@ -139,10 +139,18 @@ class CanvasBoundary extends Component<{ children: ReactNode }, { failed: boolea
   }
 }
 
-const RoomCanvas = dynamic(() => import("@/components/RoomCanvas"), {
+const loadRoomCanvas = () => import("@/components/RoomCanvas");
+const RoomCanvas = dynamic(loadRoomCanvas, {
   ssr: false,
   loading: () => <CanvasLoading bg="bg-gray-900" msgKey="loading3dScene" />,
 });
+// Prefetch the 3D RoomCanvas JS chunk during idle time so switching from 2D -> 3D is instant
+if (typeof window !== "undefined") {
+  const warm3d = () => { void loadRoomCanvas().catch(() => {}); };
+  const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback;
+  if (typeof ric === "function") ric(warm3d, { timeout: 2500 });
+  else setTimeout(warm3d, 900);
+}
 
 const HouseCanvas = dynamic(() => import("@/components/HouseCanvas"), {
   ssr: false,

@@ -33,12 +33,6 @@ const HOT_URLS = [
   // Windows/doors (highest-reuse assets — every room typically has one)
   "/models/_arch_window/modern_window_archviz/scene.glb",
   "/models/_arch_door/door_with_frame/door_with_frame.glb",
-  "/models/_garden_gates/gourd-gate.glb",
-  "/models/_garden_gates/octagon-gate.glb",
-  "/models/_garden_gates/moon-gate.glb",
-  "/models/_garden_gates/screen-door.glb",
-  "/models/_garden_gates/gate-tower.glb",
-  "/models/_garden_gates/bamboo-clump.glb",
 ];
 
 // All client-only side effects. Gate on window so SSR / hydration pass
@@ -75,7 +69,7 @@ if (typeof window !== "undefined") {
     let i = 0;
     let inFlight = 0;
     const pump = () => {
-      while (inFlight < 2 && i < urls.length) {
+      while (inFlight < 4 && i < urls.length) {
         const url = urls[i++];
         inFlight++;
         try {

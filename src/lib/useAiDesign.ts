@@ -14,7 +14,7 @@
  */
 import { useRef, useState } from "react";
 import { useDesignerStore } from "./store";
-import { getAiKey, setAiKey, getSelectedProvider, setSelectedProvider } from "./aiKeys";
+import { getAiKey, setAiKey, getSelectedProvider, setSelectedProvider, getSelectedModel } from "./aiKeys";
 import type { AiProviderId } from "./aiProviders";
 import { serializeCurrentDesign } from "./aiDesignSerialize";
 import { matchProjectTemplate } from "./matchProjectTemplate";
@@ -102,7 +102,7 @@ export function useAiDesign(opts?: { onApplied?: () => void }): UseAiDesign {
         ? (en ? "AI is fine-tuning the design…" : "AI 正在微调设计…")
         : (en ? "AI is generating the design…" : "AI 正在生成设计…");
     try {
-      const body: Record<string, unknown> = { description: desc, provider, apiKey: key, mode };
+      const body: Record<string, unknown> = { description: desc, provider, apiKey: key, mode, model: getSelectedModel(provider) || undefined };
       if (aiImage) body.image = aiImage;
       // 「模板底子 + AI 增量」：从零生成前先看描述是否命中精修模板（咖啡馆/餐厅/
       // 办公/各风格别墅）。命中 → 秒套模板当底子，再序列化成 current 转 edit 模式，

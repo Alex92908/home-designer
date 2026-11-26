@@ -39,6 +39,8 @@ export interface AiProvider {
   /** 视觉模型的 max_tokens 上限（照片复刻房间用）。视觉档往往比文本档更紧：
    *  glm-4v-flash 限 [1,1024]。缺省回落到 maxTokens。 */
   visionMaxTokens?: number;
+  /** 可选具体模型版本清单（用户可在设置弹窗中自由切换，也支持手填任意模型 ID） */
+  models: Array<{ id: string; label: string; vision?: boolean; imageGen?: boolean }>;
 }
 
 export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
@@ -59,6 +61,13 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     visionMaxTokens: 1024,
     // agent 要多轮 function calling:glm-4-flash 工具能力弱,换 glm-4-plus。
     agentModel: "glm-4-plus",
+    models: [
+      { id: "glm-4.5v", label: "GLM-4.5V（最新视觉旗舰 · 强图形理解）", vision: true },
+      { id: "glm-4v-plus", label: "GLM-4V-Plus（高清视觉主力）", vision: true },
+      { id: "glm-4-plus", label: "GLM-4-Plus（旗舰文本 / Agent）" },
+      { id: "glm-4v-flash", label: "GLM-4V-Flash（免费视觉）", vision: true },
+      { id: "glm-4-flash", label: "GLM-4-Flash（免费文本）" },
+    ],
   },
   openai: {
     id: "openai",
@@ -70,6 +79,13 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     helpUrl: "https://platform.openai.com/api-keys",
     output: "native",
     agentModel: "gpt-4o",
+    models: [
+      { id: "gpt-4.1", label: "GPT-4.1（旗舰全能 · 强视觉）", vision: true },
+      { id: "gpt-4o", label: "GPT-4o（多模态主力）", vision: true },
+      { id: "o4-mini", label: "o4-mini（深度空间推理 · 视觉）", vision: true },
+      { id: "gpt-4o-mini", label: "GPT-4o-mini（高速经济）", vision: true },
+      { id: "gpt-image-1", label: "GPT-Image-1（旗舰图形渲染/编辑）", imageGen: true },
+    ],
   },
   qwen: {
     id: "qwen",
@@ -81,6 +97,12 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     helpUrl: "https://bailian.console.aliyun.com/?apiKey=1#/api-key",
     output: "native",
     agentModel: "qwen-plus",
+    models: [
+      { id: "qwen-vl-max", label: "Qwen-VL-Max（最强视觉解析）", vision: true },
+      { id: "qwen2.5-vl-72b-instruct", label: "Qwen2.5-VL-72B（高精度空间视觉）", vision: true },
+      { id: "qwen3-max", label: "Qwen3-Max（最新文本旗舰）" },
+      { id: "qwen-plus", label: "Qwen-Plus（均衡主力）" },
+    ],
   },
   moonshot: {
     id: "moonshot",
@@ -94,6 +116,11 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     helpUrl: "https://platform.moonshot.cn/console/api-keys",
     output: "native",
     agentModel: "moonshot-v1-32k",
+    models: [
+      { id: "kimi-k2-0711-preview", label: "Kimi K2（最新旗舰）" },
+      { id: "moonshot-v1-32k", label: "Moonshot-v1-32k（长上下文设计）" },
+      { id: "moonshot-v1-8k-vision-preview", label: "Moonshot Vision（视觉解析）", vision: true },
+    ],
   },
   gemini: {
     id: "gemini",
@@ -105,6 +132,13 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     keyHint: "在 Google AI Studio 创建 API key。",
     helpUrl: "https://aistudio.google.com/apikey",
     output: "json",
+    agentModel: "gemini-2.5-pro",
+    models: [
+      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro（旗舰多模态 · 强视觉推理）", vision: true },
+      { id: "gemini-3-pro-preview", label: "Gemini 3 Pro Preview（新一代前沿旗舰）", vision: true },
+      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash（极速多模态）", vision: true },
+      { id: "gemini-2.5-flash-image", label: "Gemini 2.5 Flash Image（Nano Banana 旗舰生图/改图）", vision: true, imageGen: true },
+    ],
   },
   grok: {
     id: "grok",
@@ -115,6 +149,11 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     keyHint: "在 xAI 控制台「API Keys」创建。",
     helpUrl: "https://console.x.ai",
     output: "native",
+    agentModel: "grok-3",
+    models: [
+      { id: "grok-3", label: "Grok 3（旗舰推理）" },
+      { id: "grok-2-vision-1212", label: "Grok 2 Vision（视觉解析）", vision: true },
+    ],
   },
   claude: {
     id: "claude",
@@ -127,6 +166,11 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     helpUrl: "https://console.anthropic.com/settings/keys",
     output: "native",
     agentModel: "claude-sonnet-4-5",
+    models: [
+      { id: "claude-opus-4-5", label: "Claude Opus 4.5（顶级旗舰 · 强视觉）", vision: true },
+      { id: "claude-sonnet-4-5", label: "Claude Sonnet 4.5（高速主力 · 强视觉）", vision: true },
+      { id: "claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet（稳定版）", vision: true },
+    ],
   },
   deepseek: {
     id: "deepseek",
@@ -140,6 +184,10 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
     helpUrl: "https://platform.deepseek.com/api_keys",
     output: "native",
     agentModel: "deepseek-chat",
+    models: [
+      { id: "deepseek-reasoner", label: "DeepSeek-R1 Reasoner（深度空间推理）" },
+      { id: "deepseek-chat", label: "DeepSeek-V3 Chat（高速主力）" },
+    ],
   },
 };
 

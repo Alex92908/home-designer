@@ -41,18 +41,26 @@ const _thumbCache = new Map<string, string>();
 // Serialise generation so we never run two THREE.WebGLRenderer instances at once
 let _thumbQueue = Promise.resolve();
 
-async function _renderGltfThumb(gltfPath: string): Promise<string> {
+let _sharedThumb: {
+  THREE: typeof import("three");
+  renderer: import("three").WebGLRenderer;
+  scene: import("three").Scene;
+  camera: import("three").PerspectiveCamera;
+  loader: import("three-stdlib").GLTFLoader;
+} | null = null;
+
+async function _getSharedThumbCtx() {
+  if (_sharedThumb) return _sharedThumb;
   const THREE = await import("three");
   const { GLTFLoader, DRACOLoader } = await import("three-stdlib");
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath("/draco/");
-
+  dracoLoader.setWorkerLimit(2);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   renderer.setSize(128, 128);
   renderer.setPixelRatio(1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setClearColor(0x1a1d26);
-
   const scene = new THREE.Scene();
   scene.add(new THREE.AmbientLight(0xffffff, 0.6));
   const sun = new THREE.DirectionalLight(0xffffff, 1.6);
@@ -61,40 +69,35 @@ async function _renderGltfThumb(gltfPath: string): Promise<string> {
   const fill = new THREE.DirectionalLight(0xffffff, 0.4);
   fill.position.set(-2, 2, -2);
   scene.add(fill);
-
   const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 200);
+  camera.position.set(1.8, 1.4, 2.2);
+  camera.lookAt(0, 0.4, 0);
+  const loader = new GLTFLoader();
+  loader.setDRACOLoader(dracoLoader);
+  const { extendKtx2 } = await import("@/lib/gltfKtx2");
+  extendKtx2(loader);
+  _sharedThumb = { THREE, renderer, scene, camera, loader };
+  return _sharedThumb;
+}
 
+async function _renderGltfThumb(gltfPath: string): Promise<string> {
+  const { THREE, renderer, scene, camera, loader } = await _getSharedThumbCtx();
+  const gltf = await new Promise<{ scene: import("three").Group }>((res, rej) =>
+    loader.load(gltfPath, res as (g: unknown) => void, undefined, rej),
+  );
+  const box = new THREE.Box3().setFromObject(gltf.scene);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  const s = 1.6 / maxDim;
+  gltf.scene.scale.setScalar(s);
+  gltf.scene.position.set(-center.x * s, -box.min.y * s, -center.z * s);
+  scene.add(gltf.scene);
   try {
-    const loader = new GLTFLoader();
-    loader.setDRACOLoader(dracoLoader);
-    // 同 glbThumbnail:模型是 KTX2,不挂 KTX2Loader 缩略图烤不出来。
-    const { extendKtx2 } = await import("@/lib/gltfKtx2");
-    extendKtx2(loader);
-    const gltf = await new Promise<{ scene: import("three").Group }>((res, rej) =>
-      loader.load(gltfPath, res as (g: unknown) => void, undefined, rej),
-    );
-
-    const box = new THREE.Box3().setFromObject(gltf.scene);
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z) || 1;
-
-    // Normalise to ~1.6 units tall, stand on y=0
-    const s = 1.6 / maxDim;
-    gltf.scene.scale.setScalar(s);
-    gltf.scene.position.set(-center.x * s, -box.min.y * s, -center.z * s);
-    scene.add(gltf.scene);
-
-    // 3/4 front view from slightly above
-    camera.position.set(1.8, 1.4, 2.2);
-    camera.lookAt(0, 0.4, 0);
-
     renderer.render(scene, camera);
-    const dataUrl = renderer.domElement.toDataURL("image/jpeg", 0.88);
-    return dataUrl;
+    return renderer.domElement.toDataURL("image/jpeg", 0.86);
   } finally {
-    dracoLoader.dispose();
-    renderer.dispose();
+    scene.remove(gltf.scene);
   }
 }
 
@@ -497,6 +500,50 @@ export function YardPlanLibrary() {
     });
   };
 
+  /** 一键拼装庭院功能块（像搭乐高一样自动贴合房屋外框，绝不压进客厅） */
+  const stampYardModule = (kind: "pool" | "bbq" | "tea" | "trees") => {
+    const fp0 = useDesignerStore.getState().floorPlans[0];
+    const { hw, hd } = houseHalfExtentsCm(fp0);
+    const stamp = crypto.randomUUID().slice(0, 6);
+    const items: YardItem[] = [];
+    if (kind === "pool") {
+      const cx = Math.round(hw * 0.35), cz = Math.round(hd + 340);
+      items.push(
+        { id: `mod-pool-${stamp}-0`, type: "singleton", kind: "pool", x: cx, z: cz, rot: 0, scale: 1 } as YardItem,
+        { id: `mod-pool-${stamp}-1`, type: "singleton", kind: "lounge_chair", x: cx - 220, z: cz - 70, rot: Math.PI / 2, scale: 1 } as YardItem,
+        { id: `mod-pool-${stamp}-2`, type: "singleton", kind: "lounge_chair", x: cx - 220, z: cz + 70, rot: Math.PI / 2, scale: 1 } as YardItem,
+        { id: `mod-pool-${stamp}-3`, type: "singleton", kind: "parasol", x: cx - 220, z: cz, rot: 0, scale: 1 } as YardItem,
+      );
+    } else if (kind === "bbq") {
+      const cx = Math.round(hw + 320), cz = Math.round(-hd * 0.15);
+      items.push(
+        { id: `mod-bbq-${stamp}-0`, type: "singleton", kind: "pergola", x: cx, z: cz, rot: 0, scale: 1 } as YardItem,
+        { id: `mod-bbq-${stamp}-1`, type: "singleton", kind: "outdoor_table", x: cx, z: cz, rot: 0, scale: 1 } as YardItem,
+        { id: `mod-bbq-${stamp}-2`, type: "singleton", kind: "grill", x: cx + 190, z: cz - 120, rot: -Math.PI / 2, scale: 1 } as YardItem,
+      );
+    } else if (kind === "tea") {
+      const cx = Math.round(-hw - 310), cz = Math.round(hd * 0.15);
+      items.push(
+        { id: `mod-tea-${stamp}-0`, type: "singleton", kind: "outdoor_sofa", x: cx, z: cz - 110, rot: 0, scale: 1 } as YardItem,
+        { id: `mod-tea-${stamp}-1`, type: "singleton", kind: "garden_table", x: cx, z: cz + 20, rot: 0, scale: 1 } as YardItem,
+        { id: `mod-tea-${stamp}-2`, type: "singleton", kind: "fountain", x: cx, z: cz + 220, rot: 0, scale: 1 } as YardItem,
+      );
+    } else if (kind === "trees") {
+      const pts: Array<[number, number, string]> = [
+        [-hw - 260, -hd - 220, "olive_tree"],
+        [hw + 260, -hd - 220, "maple_tree"],
+        [-hw - 280, hd + 220, "maple_tree"],
+        [hw + 280, hd + 220, "olive_tree"],
+        [0, -hd - 260, "cypress_tree"],
+      ];
+      pts.forEach(([x, z, k], idx) => {
+        items.push({ id: `mod-tree-${stamp}-${idx}`, type: "singleton", kind: k, x: Math.round(x), z: Math.round(z), rot: idx * 1.1, scale: 1 } as YardItem);
+      });
+    }
+    const cleared = clearYardItemsOfHouse(items, hw, hd);
+    cleared.forEach((it) => addYardItem(it));
+  };
+
   // 手动导入 .glb/.gltf：落成 public/models/imported/ 真实文件（与内置家具
   // 同一套「URL 即资产」机制），store 里只存 URL；只读环境自动退 IndexedDB。
   // 统一导入卡（ModelImportCard：压缩可选 + 本机路径），导入后放进院子
@@ -558,9 +605,34 @@ export function YardPlanLibrary() {
         </div>
       </div>
 
-      {/* Templates grid — light cards on white sidebar */}
+      {/* Templates grid + 1-click LEGO functional zone stamps */}
       {tab === "template" && (
-        <div className="flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-2">
+        <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-3">
+          <div>
+            <div className="text-[10px] font-bold text-gray-500 px-1 mb-1.5">
+              {locale === "en" ? "⚡ 1-Click Zone Stamps (Auto-fit around house)" : "⚡ 一键拼装庭院功能块（自动贴合房屋外框）"}
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { id: "pool" as const, icon: "🏊", zh: "+ 泳池躺椅区", en: "+ Pool Deck" },
+                { id: "bbq" as const, icon: "🍖", zh: "+ 烧烤凉亭区", en: "+ BBQ Pergola" },
+                { id: "tea" as const, icon: "🍵", zh: "+ 庭院茶座区", en: "+ Tea Lounge" },
+                { id: "trees" as const, icon: "🌳", zh: "+ 四周遮阴树", en: "+ Shade Trees" },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => stampYardModule(m.id)}
+                  className="px-2 py-2 rounded-lg text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition text-left"
+                >
+                  {m.icon} {locale === "en" ? m.en : m.zh}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="text-[10px] font-bold text-gray-500 px-1">
+            {locale === "en" ? "🏡 Full-Villa Yard Templates" : "🏡 整院风格模板（一键替换）"}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
           {YARD_PRESETS.map(p => (
             <button key={p.id}
               onClick={() => applyPreset(p)}
@@ -572,6 +644,7 @@ export function YardPlanLibrary() {
               <span className="text-[9px] leading-tight text-gray-400 px-0.5">{locale === "en" ? p.descEn : p.desc}</span>
             </button>
           ))}
+          </div>
         </div>
       )}
 

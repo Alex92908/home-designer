@@ -107,6 +107,7 @@ export async function POST(req: NextRequest) {
   let floors = 0;
   let apiKey = "";
   let providerId = "";
+  let modelOverride = "";
   let mode: "create" | "edit" = "create";
   let current: unknown = null;
   let image = "";
@@ -116,6 +117,7 @@ export async function POST(req: NextRequest) {
     floors = Number(body.floors) || 0;
     apiKey = (body.apiKey ?? "").trim();
     providerId = body.provider ?? "";
+    modelOverride = typeof body.model === "string" ? body.model.trim() : "";
     mode = body.mode === "edit" ? "edit" : "create";
     current = body.current ?? null;
     // 参考房间照片（data URL，base64）。给了就走视觉模型按图复刻房间。
@@ -228,7 +230,7 @@ export async function POST(req: NextRequest) {
       // 带照片走视觉模型（户型/外观解析同款），纯文字走文本模型。
       // 视觉档的 max_tokens 上限往往更紧（glm-4v-flash 限 1024），单独取。
       body: JSON.stringify(buildProviderBody(
-        image ? provider.visionModel : provider.textModel,
+        modelOverride || (image ? provider.visionModel : provider.textModel),
         SYSTEM_PROMPT, userMessage, mode,
         image ? (provider.visionMaxTokens ?? provider.maxTokens) : provider.maxTokens,
       )),

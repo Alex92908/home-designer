@@ -89,9 +89,26 @@ export async function runRender(
     return { error: en ? "This workflow isn't bound to a valid backend. Check the settings."
                        : "该工作流未绑定有效后端，请在设置里检查。" };
   }
-  if (backend.kind === "runninghub" && !backend.apiKey?.trim()) {
-    return { error: en ? "The RunningHub backend is missing an API key. Add it in settings first."
-                       : "RunningHub 后端缺少 API Key，请先在设置里填写。" };
+  if ((backend.kind === "runninghub" || backend.kind === "gemini-image" || backend.kind === "openai-image") && !backend.apiKey?.trim()) {
+    return { error: en ? `${backend.name} requires an API key in settings first.`
+                       : `${backend.name} 需要先在设置里填写 API Key。` };
+  }
+  if (backend.kind === "gemini-image" || backend.kind === "openai-image") {
+    onPhase?.("rendering");
+    const gen = await callProxy<{ images: string[] }>({
+      kind: backend.kind,
+      baseUrl: backend.baseUrl,
+      apiKey: backend.apiKey,
+      action: "generate",
+      workflowId: args.workflow.workflowId,
+      prompt: args.prompt,
+      image: args.image,
+    });
+    if (cancelRef?.current) return null;
+    if (!gen.ok || !gen.data?.images?.length) {
+      return { error: gen.error ?? (en ? "Cloud image generation failed" : "云端图像生成失败") };
+    }
+    return { images: gen.data.images };
   }
 
   const base = {

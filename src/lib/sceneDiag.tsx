@@ -15,6 +15,7 @@ import { estimateSceneMemoryMB } from "@/lib/sceneMemory";
 import { useDesignerStore } from "@/lib/store";
 
 type Diag = {
+  fps?: number;
   texN?: number; geoN?: number; calls?: number; tris?: number; programs?: number;
   geoMB: number; texMB: number; totalMB: number;
   astc: number; rgba: number; sample: string[];
@@ -74,6 +75,21 @@ export function SceneDiag(): null {
   //    → 面板数值会一直是 0。定时器不依赖帧循环,四个画布通用。收起时不注册,零开销。
   useEffect(() => {
     if (!open) return;
+    let frames = 0;
+    let lastFpsAt = performance.now();
+    let liveFps = 0;
+    let rafId = 0;
+    const tick = () => {
+      frames++;
+      const now = performance.now();
+      if (now - lastFpsAt >= 500) {
+        liveFps = Math.round((frames * 1000) / (now - lastFpsAt));
+        frames = 0;
+        lastFpsAt = now;
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
     const scan = () => {
     const m = estimateSceneMemoryMB(scene);
     const cv = gl.domElement as HTMLCanvasElement;
@@ -85,6 +101,7 @@ export function SceneDiag(): null {
     const net = scanNetwork();
     const grand = m.totalMB + m.cpuTexMB + fbMB + net.netMB;
     _diag = {
+      fps: liveFps,
       texN: gl.info.memory?.textures, geoN: gl.info.memory?.geometries,
       calls: gl.info.render?.calls, tris: gl.info.render?.triangles,
       programs: gl.info.programs?.length,
@@ -101,7 +118,7 @@ export function SceneDiag(): null {
     };
     scan();
     const id = setInterval(scan, 800);
-    return () => clearInterval(id);
+    return () => { clearInterval(id); cancelAnimationFrame(rafId); };
   }, [open, gl, scene]);
   return null;
 }
@@ -129,7 +146,7 @@ export function SceneDiagHUD(): React.ReactElement {
           padding: "5px 7px", borderRadius: 5, pointerEvents: "none", whiteSpace: "pre",
           maxWidth: "calc(100vw - 8px)", overflow: "hidden",
         }}>
-          {`【合计 ${d.grand} MB】= GPU ${d.totalMB} + CPU贴图 ${d.cpuTexMB} + 帧缓冲 ${d.fbMB ?? "-"} + 已下载 ${d.netMB}
+          {`【FPS ${d.fps ?? "-"} | 合计 ${d.grand} MB】= GPU ${d.totalMB} + CPU贴图 ${d.cpuTexMB} + 帧缓冲 ${d.fbMB ?? "-"} + 已下载 ${d.netMB}
 GPU 纹理 ${d.texMB}MB   几何 ${d.geoMB}MB (CPU+GPU各一份)
   压缩ASTC ${d.astc} / RGBA未压 ${d.rgba}
 CPU残留贴图 ${d.cpuTexMB}MB (${d.cpuTexN}张未释放)

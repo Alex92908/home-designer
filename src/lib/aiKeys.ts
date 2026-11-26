@@ -11,6 +11,7 @@ import { AiProviderId, DEFAULT_AI_PROVIDER } from "./aiProviders";
 
 const KEYS_STORAGE     = "home-designer-ai-keys";
 const PROVIDER_STORAGE = "home-designer-ai-provider";
+const MODELS_STORAGE   = "home-designer-ai-models";
 
 type KeyMap = Partial<Record<AiProviderId, string>>;
 
@@ -50,4 +51,29 @@ export function getSelectedProvider(): AiProviderId {
 export function setSelectedProvider(provider: AiProviderId): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(PROVIDER_STORAGE, provider);
+}
+
+/** 读取某平台用户指定的具体模型版本（空串 = 使用平台默认档位） */
+export function getSelectedModel(provider: AiProviderId): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const raw = window.localStorage.getItem(MODELS_STORAGE);
+    const map = raw ? (JSON.parse(raw) as Partial<Record<AiProviderId, string>>) : {};
+    return map[provider]?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** 保存某平台用户指定的具体模型版本（空串 = 恢复默认） */
+export function setSelectedModel(provider: AiProviderId, model: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(MODELS_STORAGE);
+    const map = raw ? (JSON.parse(raw) as Partial<Record<AiProviderId, string>>) : {};
+    const trimmed = model.trim();
+    if (trimmed) map[provider] = trimmed;
+    else delete map[provider];
+    window.localStorage.setItem(MODELS_STORAGE, JSON.stringify(map));
+  } catch { /* ignore */ }
 }

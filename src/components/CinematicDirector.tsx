@@ -286,6 +286,9 @@ interface CineState {
 
   /** 演员（持久化） */
   actors: Actor[];
+  /** 当前选中的演员 id（瞬态，供 3D 高亮光圈 + 快捷键 + 底部悬浮条操控） */
+  selectedActorId: string | null;
+  selectActor: (id: string | null) => void;
   addActorMode: boolean;
   pendingFrom: [number, number] | null;
   /** 重设走位中（点两下改该演员的起点→终点，名字/角色/动作保留） */
@@ -436,6 +439,8 @@ export const useCineStore = create<CineState>()(
       },
 
       actors: [],
+      selectedActorId: null,
+      selectActor: (id) => set({ selectedActorId: id }),
       addActorMode: false,
       pendingFrom: null,
       replaceActorId: null,
@@ -1827,9 +1832,10 @@ export function ActorsLayer() {
     const ctl = controlsRef.current as unknown as { enabled: boolean } | null;
     if (ctl) ctl.enabled = v;
   };
+  const selectedActorId = useCineStore((s) => s.selectedActorId);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const dragRef = useRef<{
-    kind: "actor" | "waypoint";
+    kind: "actor" | "actorTo" | "waypoint";
     id: string;
     wpIdx?: number;
     start: [number, number];
@@ -1878,6 +1884,61 @@ export function ActorsLayer() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [addMode]);
+
+  // 选中演员高效快捷键：方向键微调位置、Q/E 旋转朝向、1-5 切姿势、Delete 删除、Esc 取消选中
+  useEffect(() => {
+    if (!selectedActorId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable=true]")) return;
+      const st = useCineStore.getState();
+      if (st.queue || (st.sim?.active && st.sim.playing)) return;
+      const actor = st.actors.find((x) => x.id === selectedActorId);
+      if (!actor) return;
+      const key = e.key.toLowerCase();
+      if (key === "escape") { st.selectActor(null); return; }
+      if (key === "delete" || key === "backspace") {
+        e.preventDefault();
+        st.removeActor(actor.id);
+        st.selectActor(null);
+        invalidate();
+        return;
+      }
+      const step = e.shiftKey ? 0.6 : 0.25;
+      let dx = 0, dz = 0;
+      if (e.key === "ArrowUp") dz = -step;
+      else if (e.key === "ArrowDown") dz = step;
+      else if (e.key === "ArrowLeft") dx = -step;
+      else if (e.key === "ArrowRight") dx = step;
+      if (dx !== 0 || dz !== 0) {
+        e.preventDefault();
+        const from = clampPointToFootprint([actor.from[0] + dx, actor.from[1] + dz]).point;
+        const to = clampPointToFootprint([actor.to[0] + dx, actor.to[1] + dz]).point;
+        st.updateActor(actor.id, { from, to });
+        invalidate();
+        return;
+      }
+      if (key === "q" || key === "e") {
+        e.preventDefault();
+        const ang = (key === "q" ? 1 : -1) * (Math.PI / 4);
+        const vx = actor.to[0] - actor.from[0];
+        const vz = actor.to[1] - actor.from[1];
+        const len = Math.hypot(vx, vz) < 0.15 ? 1.5 : Math.hypot(vx, vz);
+        const baseAng = Math.hypot(vx, vz) < 0.15 ? 0 : Math.atan2(vz, vx);
+        const nextAng = baseAng + ang;
+        const to = clampPointToFootprint([actor.from[0] + Math.cos(nextAng) * len, actor.from[1] + Math.sin(nextAng) * len]).point;
+        st.updateActor(actor.id, { to });
+        invalidate();
+        return;
+      }
+      const quickPoses: Record<string, ActionId> = { "1": "idle", "2": "walk", "3": "sit", "4": "wave", "5": "fight" };
+      if (quickPoses[key]) {
+        st.updateActor(actor.id, { action: quickPoses[key] });
+        invalidate();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedActorId, invalidate]);
 
   // 动作系统：每帧按镜内时间算每个演员的状态（走位时间轴 + 动作时间轴 +
   // 高度 + 姿态），本镜有打斗编舞时参与者改用编舞状态。
@@ -1981,6 +2042,9 @@ export function ActorsLayer() {
               const from = clampPointToFootprint([d.origFrom[0] + dx, d.origFrom[1] + dz]).point;
               const to = clampPointToFootprint([d.origTo[0] + dx, d.origTo[1] + dz]).point;
               useCineStore.getState().updateActor(d.id, { from, to });
+            } else if (d.kind === "actorTo") {
+              const to = clampPointToFootprint([d.origTo[0] + dx, d.origTo[1] + dz]).point;
+              useCineStore.getState().updateActor(d.id, { to });
             } else if (d.kind === "waypoint" && d.origWp && d.wpIdx !== undefined) {
               const pt = clampPointToFootprint([d.origWp.x + dx, d.origWp.z + dz]).point;
               useCineStore.getState().updateWaypoint(d.id, d.wpIdx, { x: pt[0], z: pt[1] });
@@ -2004,6 +2068,7 @@ export function ActorsLayer() {
       {actors.length >= 2 && !hideOverlays && (
         <group>
           <Line
+            raycast={() => null}
             points={[[actors[0].from[0], 0.06, actors[0].from[1]], [actors[1].from[0], 0.06, actors[1].from[1]]]}
             color="#f59e0b" dashed dashSize={0.3} gapSize={0.2} lineWidth={1.5}
           />
@@ -2036,6 +2101,7 @@ export function ActorsLayer() {
             {!hideOverlays && (hasWps ? (
               <group>
                 <Line
+            raycast={() => null}
                   points={wps.map((w) => [w.x, (w.y ?? 0) + 0.05, w.z] as [number, number, number])}
                   color="#2dd4bf" dashed dashSize={0.35} gapSize={0.22} lineWidth={1.5}
                 />
@@ -2049,7 +2115,8 @@ export function ActorsLayer() {
                       // （不用先停掉整场模拟）；播放中/录制中不许拖。
                       const st = useCineStore.getState();
                       if (st.queue || (st.sim?.active && st.sim.playing)) return;
-                      if (waypointMode !== a.id && !(st.sim?.active && !st.sim.playing)) return;
+                      // 任何非播放/非录制状态下都能直接拖拽路点，不必先切编路点模式
+                      st.selectActor(a.id);
                       e.stopPropagation();
                       setControlsEnabled(false);
                       dragRef.current = {
@@ -2071,12 +2138,32 @@ export function ActorsLayer() {
             ) : (
               <group>
                 <Line
+            raycast={() => null}
                   points={[[a.from[0], 0.05, a.from[1]], [a.to[0], 0.05, a.to[1]]]}
                   color="#2dd4bf" dashed dashSize={0.35} gapSize={0.22} lineWidth={1.5}
                 />
-                <mesh position={[a.to[0], 0.04, a.to[1]]} rotation={[-Math.PI / 2, 0, 0]}>
-                  <ringGeometry args={[0.2, 0.32, 20]} />
-                  <meshBasicMaterial color="#2dd4bf" side={THREE.DoubleSide} />
+                <mesh
+                  position={[a.to[0], 0.05, a.to[1]]}
+                  rotation={[-Math.PI / 2, 0, 0]}
+                  onPointerDown={(e) => {
+                    if (addMode) return;
+                    const st = useCineStore.getState();
+                    if (st.queue || (st.sim?.active && st.sim.playing)) return;
+                    e.stopPropagation();
+                    st.selectActor(a.id);
+                    setControlsEnabled(false);
+                    dragRef.current = {
+                      kind: "actorTo",
+                      id: a.id,
+                      start: [e.point.x, e.point.z],
+                      origFrom: [...a.from],
+                      origTo: [...a.to],
+                    };
+                    setDraggingId(`${a.id}:to`);
+                  }}
+                >
+                  <ringGeometry args={[0.18, 0.38, 24]} />
+                  <meshBasicMaterial color={selectedActorId === a.id ? "#fbbf24" : "#2dd4bf"} side={THREE.DoubleSide} />
                 </mesh>
               </group>
             ))}
@@ -2088,11 +2175,10 @@ export function ActorsLayer() {
               position={[a.from[0], 0, a.from[1]]}
               onPointerDown={(e) => {
                 if (addMode) return;
-                // 模拟播放中 / 录制中不许拖（机位和演员都在动，拖了也对不上）；
-                // 模拟暂停时可以拖——调走位不用先停掉整场模拟。
                 const st = useCineStore.getState();
                 if (st.queue || (st.sim?.active && st.sim.playing)) return;
                 e.stopPropagation();
+                st.selectActor(a.id);
                 setControlsEnabled(false);
                 dragRef.current = {
                   kind: "actor",
@@ -2104,6 +2190,18 @@ export function ActorsLayer() {
                 setDraggingId(a.id);
               }}
             >
+              {/* 宽容透明点击代理：比细胶囊体更容易在 3D 视角中一把抓中 */}
+              <mesh position={[0, 0.88, 0]}>
+                <cylinderGeometry args={[0.46, 0.46, 1.76, 12]} />
+                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+              </mesh>
+              {/* 选中高亮光圈 */}
+              {selectedActorId === a.id && !hideOverlays && (
+                <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <ringGeometry args={[0.38, 0.52, 28]} />
+                  <meshBasicMaterial color="#fbbf24" side={THREE.DoubleSide} />
+                </mesh>
+              )}
               <mesh position={[0, 0.75, 0]} castShadow>
                 <capsuleGeometry args={[0.22, 0.8, 4, 12]} />
                 <meshStandardMaterial color={torsoColor} roughness={0.85} />
@@ -2648,7 +2746,7 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
     {show916 && <Frame916Overlay />}
     {/* 移动端抬高:样板间底部现为两条主按钮「出短片 + 打开此方案」上下叠放,
         贴 bottom-5 / bottom-20 都会重叠，抬到 bottom-40 才让得开。 */}
-    <div className="absolute bottom-40 sm:bottom-5 left-4 z-50 flex flex-col items-start gap-2">
+    <div className="absolute bottom-40 sm:bottom-5 left-4 z-20 flex flex-col items-start gap-2">
       {menuOpen && (
         <div
           className="flex flex-col gap-1 p-2 rounded-xl shadow-xl text-xs text-white w-[256px] max-h-[62vh] overflow-y-auto"
@@ -3758,6 +3856,80 @@ export function CinematicPanel({ locale = "zh" }: { locale?: string }) {
         🎬 {en ? "Shots" : "出短片"}
       </button>
     </div>
+    <SelectedActorQuickBar en={en} />
     </>
+  );
+}
+
+
+/** 选中演员时的底部居中悬浮快捷控制台（云横店高效导演条） */
+function SelectedActorQuickBar({ en }: { en: boolean }) {
+  const selectedActorId = useCineStore((s) => s.selectedActorId);
+  const actors = useCineStore((s) => s.actors);
+  const waypointMode = useCineStore((s) => s.waypointMode);
+  const queue = useCineStore((s) => s.queue);
+  const sim = useCineStore((s) => s.sim);
+  if (!selectedActorId || queue || (sim?.active && sim.playing)) return null;
+  const actor = actors.find((a) => a.id === selectedActorId);
+  if (!actor) return null;
+  const st = useCineStore.getState();
+  const curAction = actorAction(actor);
+  const rotateFacing = (deltaRad: number) => {
+    const vx = actor.to[0] - actor.from[0];
+    const vz = actor.to[1] - actor.from[1];
+    const len = Math.hypot(vx, vz) < 0.15 ? 1.5 : Math.hypot(vx, vz);
+    const base = Math.hypot(vx, vz) < 0.15 ? 0 : Math.atan2(vz, vx);
+    const next = base + deltaRad;
+    const to = clampPointToFootprint([actor.from[0] + Math.cos(next) * len, actor.from[1] + Math.sin(next) * len]).point;
+    st.updateActor(actor.id, { to });
+  };
+  const poses: Array<{ id: ActionId; label: string }> = [
+    { id: "idle", label: en ? "Stand" : "🧍站" },
+    { id: "walk", label: en ? "Walk" : "🚶走" },
+    { id: "sit", label: en ? "Sit" : "🪑坐" },
+    { id: "wave", label: en ? "Wave" : "👋挥手" },
+    { id: "fight", label: en ? "Fight" : "⚔️打" },
+  ];
+  return (
+    <div
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 px-3 py-2 rounded-2xl text-xs text-white shadow-2xl flex flex-col items-center gap-1.5 backdrop-blur-md"
+      style={{ background: "rgba(18,22,34,0.92)", border: "1px solid rgba(251,191,36,0.45)" }}
+    >
+      <div className="flex items-center gap-1.5 flex-wrap justify-center">
+        <span className="font-bold text-amber-300 pr-1">🎭 {actorDisplayName(actor, actors.indexOf(actor))}</span>
+        {poses.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => st.updateActor(actor.id, { action: p.id })}
+            className={`px-2 py-1 rounded-lg font-medium transition ${
+              curAction === p.id ? "bg-amber-400 text-slate-950" : "bg-white/10 hover:bg-white/20 text-white"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+        <button onClick={() => rotateFacing(Math.PI / 4)} className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20" title="Q">↺</button>
+        <button onClick={() => rotateFacing(-Math.PI / 4)} className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20" title="E">↻</button>
+        <button
+          onClick={() => waypointMode === actor.id ? st.cancelWaypointMode() : st.beginWaypointMode(actor.id)}
+          className={`px-2 py-1 rounded-lg ${waypointMode === actor.id ? "bg-teal-400 text-slate-950 font-semibold" : "bg-white/10 hover:bg-white/20"}`}
+        >
+          {en ? "📍 Path" : "📍 加路点"}
+        </button>
+        <button
+          onClick={() => { st.removeActor(actor.id); st.selectActor(null); }}
+          className="px-2 py-1 rounded-lg bg-red-500/80 hover:bg-red-500 text-white"
+          title="Delete"
+        >
+          🗑️
+        </button>
+        <button onClick={() => st.selectActor(null)} className="px-1.5 py-1 rounded-lg bg-white/10 hover:bg-white/20" title="Esc">✕</button>
+      </div>
+      <div className="text-[10px] text-white/55">
+        {en
+          ? "Drag actor to move · Drag ring to set target · Arrows nudge · Q/E turn · 1-5 pose"
+          : "直接拖人物移位 · 拖绿环改终点 · 方向键微调 · Q/E 转向 · 1-5 换姿势"}
+      </div>
+    </div>
   );
 }
