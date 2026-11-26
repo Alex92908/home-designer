@@ -23,12 +23,9 @@
  */
 import * as THREE from "three";
 
-/** 程序化家具 id 前缀（目录 id、模板引用、渲染分流共用）。 */
-export const PROCEDURAL_PREFIX = "proc-";
-
-export function isProceduralFurnitureId(id: string): boolean {
-  return id.startsWith(PROCEDURAL_PREFIX);
-}
+// id 标识逻辑在 ./proceduralFurnitureIds（纯模块，不依赖 three）；
+// 这里重导出，旧 import 路径不断。
+export { PROCEDURAL_PREFIX, isProceduralFurnitureId } from "./proceduralFurnitureIds";
 
 // ─── 小工具 ────────────────────────────────────────────────────────────────
 

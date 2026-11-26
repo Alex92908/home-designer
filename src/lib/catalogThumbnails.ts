@@ -23,9 +23,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FurnitureItem } from "./types";
 import { makeGlbThumbnail } from "./glbThumbnail";
-import { makeProceduralThumbnail } from "./proceduralThumbnail";
-import { itemSilhouetteDataUri } from "./itemSilhouette";
-import { isProceduralFurnitureId } from "./proceduralFurniture";
+import { isProceduralFurnitureId } from "./proceduralFurnitureIds";
 
 const THUMB_SIZE = 128;
 const LS_PREFIX = "glbthumb:v2:";
@@ -66,7 +64,7 @@ async function pump(): Promise<void> {
     if (mem.has(key) || failed.has(key)) continue;
     const data = kind === "glb"
       ? await makeGlbThumbnail(item.model3d!.url, THUMB_SIZE, item.model3d!.recolor)
-      : await makeProceduralThumbnail(item, THUMB_SIZE);
+      : await (await import("./proceduralThumbnail")).makeProceduralThumbnail(item, THUMB_SIZE);
     if (data) {
       mem.set(key, data);
       lsSet(key, data);

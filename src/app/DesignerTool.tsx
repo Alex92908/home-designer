@@ -599,7 +599,16 @@ export default function DesignerTool() {
             <PanelToggle side="right" open={rightOpen} onClick={() => setRightOpen(v => !v)} />
           )}
 
-          {viewMode === "3d"  && <CanvasBoundary><RoomCanvas /></CanvasBoundary>}
+          {/* 室内画布在 3D/2D 间保持挂载（2D 时 display:none + frameloop="never"，见 RoomCanvas hidden）：
+              2D↔3D 是最高频的切换；每次卸载都会触发移动端清 GLTF 缓存
+              （MobileTextureShrink 卸载清理），再进 3D 要重下重解全部 GLB。
+              保持挂载则 WebGL context 与解析缓存都在，切回来零等待；
+              离开去 all/全屋3D/外观/院子时仍照常卸载、释放显存。 */}
+          {(viewMode === "3d" || viewMode === "2d") && (
+            <div className="absolute inset-0" style={viewMode === "3d" ? undefined : { display: "none" }}>
+              <CanvasBoundary><RoomCanvas hidden={viewMode !== "3d"} /></CanvasBoundary>
+            </div>
+          )}
           {viewMode === "2d"  && <FloorPlan />}
           {isAll      && <FloorPlanAll />}
           {isGlobal3d && <CanvasBoundary><GlobalCanvas /></CanvasBoundary>}

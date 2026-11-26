@@ -8,7 +8,7 @@ import { useT, useLocaleStore , customRoomDisplayName} from "@/lib/i18n";
 import { ROOM_DEFS } from "@/lib/types";
 import ShareButton from "./ShareButton";
 import { useMcpBridge } from "@/lib/useMcpBridge";
-import { useMemHudOpen, setMemHudOpen } from "@/lib/sceneDiag";
+import { useMemHudOpen, setMemHudOpen } from "@/lib/memHudState";
 
 const FLOOR_COLORS = ["#2563EB", "#7C3AED", "#059669", "#D97706", "#0891B2", "#BE185D"];
 

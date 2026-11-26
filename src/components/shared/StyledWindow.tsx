@@ -27,7 +27,8 @@ import {
   WINDOW_FRAME_COLOR,
   WINDOW_MULLION_COLOR,
 } from "@/lib/roomVisuals";
-import { leakyLatticePatternFor, buildLeakyLatticeGeometry, type LeakyLatticePattern } from "@/lib/roomWindows";
+import { leakyLatticePatternFor, type LeakyLatticePattern } from "@/lib/roomWindows";
+import { buildLeakyLatticeGeometry } from "@/lib/roomWindowsGeometry";
 
 // ─── glTF arch-window assets ─────────────────────────────────
 const ENABLE_GLTF_WINDOW = true;

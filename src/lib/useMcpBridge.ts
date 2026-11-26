@@ -21,10 +21,29 @@ import { autoGenerateYardPaths, houseHalfExtentsCm } from "./yardAutoLayout";
 import { evaluateYardPlan } from "./outdoorClearance";
 
 import { getFurnitureById } from "./furniture";
-import { useCineStore, simClock } from "../components/CinematicDirector";
 import { makeSegment, makeWaypoint } from "./actions";
 import type { Waypoint } from "./actions";
 import type { Actor, ActorAction, Shot } from "./cinematic";
+
+// ── CinematicDirector 按需加载 ──────────────────────────────────
+// 它（含 three/fiber/场景集）平时不进首屏包：TopBar 常驻的
+// useMcpBridge 若静态 import 它，整条 film 栈都会被打进初始 JS。
+// serializeFilm 在模块未加载时返回与默认 store 完全一致的空快照；
+// film_* 命令到达时先加载模块再执行；本地已有持久化片场
+// （zhuya-cine-shots-v1）时在首个心跳加载一次，让 MCP 读到真实快照。
+type CineModule = typeof import("../components/CinematicDirector");
+let _cineMod: CineModule | null = null;
+let _cinePromise: Promise<CineModule> | null = null;
+function loadCine(): Promise<CineModule> {
+  if (_cineMod) return Promise.resolve(_cineMod);
+  if (!_cinePromise) {
+    _cinePromise = import("../components/CinematicDirector").then((m) => {
+      _cineMod = m;
+      return m;
+    });
+  }
+  return _cinePromise;
+}
 
 interface BridgeCommand {
   id: string;
@@ -40,7 +59,19 @@ interface BridgeCommand {
  *  让 AI 一次看清整个场面再编排 N 个演员，而不是逐个盲调。
  *  sim 读逐帧时钟 simClock（真值），不是 UI 的节流镜像 cine.sim。 */
 function serializeFilm() {
-  const c = useCineStore.getState();
+  // 模块未加载 = 本会话没开过片场面板且无持久化片场：默认 store
+  // 就是空演员/空分镜/静止时钟，直接返回等价快照，不为此加载模块。
+  if (!_cineMod) {
+    return {
+      actors: [],
+      shots: [],
+      sim: { active: false, playing: false, shotIdx: 0, timeSec: 0 },
+      queue: { active: false, progress: 0, queueIdx: 0, total: 0, batch: false },
+      styles: ["beauty"],
+    };
+  }
+  const c = _cineMod.useCineStore.getState();
+  const simClock = _cineMod.simClock;
   return {
     actors: c.actors.map(a => ({
       id: a.id,
@@ -88,8 +119,11 @@ function numPair(v: unknown): [number, number] | null {
  *  film_add_actor 走面板自己的两点放置（beginAddActor + placePoint ×2），
  *  所以自动配色（挑一件没人穿的、时代合身的服装）照常生效；placePoint 的
  *  越界钳制也照常（回执里带 placeWarning，不悄悄吃掉坐标）。 */
-function runFilmCommand(cmd: BridgeCommand): string {
-  const cine = () => useCineStore.getState();
+async function runFilmCommand(cmd: BridgeCommand): Promise<string> {
+  // film 命令到达时才加载模块（首个 film 命令会多一次 chunk 加载，
+  // 之后常驻；无 film 命令的会话永不加载）。
+  await loadCine();
+  const cine = () => _cineMod!.useCineStore.getState();
   const p = cmd.payload;
   const actorOrThrow = (actorId: string) => {
     const a = cine().actors.find(x => x.id === actorId);
@@ -635,6 +669,13 @@ export function useMcpBridge() {
     const tabId = crypto.randomUUID();
     currentTabId = tabId;
 
+    // 本地已有持久化片场时加载一次 film 模块（store 在模块求值时从
+    // localStorage 恢复），让后续心跳的 film 快照是真实数据；没有
+    // 片场时模块永不加载，首屏不为此付 three/fiber 的账。
+    try {
+      if (localStorage.getItem("zhuya-cine-shots-v1")) void loadCine();
+    } catch { /* ignore */ }
+
     const tick = async () => {
       if (stopped) return;
       try {
@@ -674,7 +715,7 @@ export function useMcpBridge() {
               const report = runLayoutCheck();
               acks.push({ id: cmd.id, ok: report.startsWith("OK:"), message: report });
             } else if (cmd.type.startsWith("film_")) {
-              const message = runFilmCommand(cmd);
+              const message = await runFilmCommand(cmd);
               acks.push({ id: cmd.id, ok: true, message });
             } else {
               acks.push({ id: cmd.id, ok: false, message: `Unknown command type ${cmd.type}` });

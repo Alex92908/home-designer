@@ -13,6 +13,11 @@ import { useThree } from "@react-three/fiber";
 import { useEffect, useSyncExternalStore } from "react";
 import { estimateSceneMemoryMB } from "@/lib/sceneMemory";
 import { useDesignerStore } from "@/lib/store";
+import { useMemHudOpen } from "@/lib/memHudState";
+
+// 开关状态在 ./memHudState（纯模块，顶栏可直接 import 不拉 fiber）；
+// 这里重导出，旧 import 路径不断。
+export { setMemHudOpen, useMemHudOpen } from "@/lib/memHudState";
 
 type Diag = {
   texN?: number; geoN?: number; calls?: number; tris?: number; programs?: number;
@@ -30,25 +35,6 @@ let _diag: Diag = {
 };
 const _subs = new Set<() => void>();
 
-// ── HUD 开关(按钮控制,localStorage 持久化;关掉时连扫描都不跑,零开销)──────
-let _open = (() => {
-  try { return localStorage.getItem("zy_memhud") === "1"; } catch { return false; }
-})();
-const _openSubs = new Set<() => void>();
-/** 由顶栏 ⚙ 设置菜单调用,开关内存面板。 */
-export function setMemHudOpen(v: boolean) {
-  _open = v;
-  try { localStorage.setItem("zy_memhud", v ? "1" : "0"); } catch { /* ignore */ }
-  _openSubs.forEach((f) => f());
-}
-/** 内存面板当前是否展开(顶栏菜单读它显示勾选态)。 */
-export function useMemHudOpen(): boolean {
-  return useSyncExternalStore(
-    (cb) => { _openSubs.add(cb); return () => { _openSubs.delete(cb); }; },
-    () => _open,
-    () => false,
-  );
-}
 const useOpen = useMemHudOpen;
 
 /** 已下载并解码的资源字节(GLB/贴图)—— loader 缓存持有的源数据量,iOS 也能读。 */

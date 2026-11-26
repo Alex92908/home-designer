@@ -38,7 +38,7 @@ import { DetailedDecor } from "./DetailedDecor";
 import { StallDoor3D } from "./StallDoor3D";
 import { ProceduralFurnitureMesh } from "./ProceduralFurnitureMesh";
 import { DecorMesh, LampMesh, ElectronicsMesh, ApplianceMesh } from "./FallbackMeshes";
-import { isProceduralFurnitureId } from "@/lib/proceduralFurniture";
+import { isProceduralFurnitureId } from "@/lib/proceduralFurnitureIds";
 import { FirstPersonControls, TouchJoystick } from "./FirstPersonControls";
 import { getFloorTexture, getWallTexture, getRugTexture, floorTileSize, wallTileSize } from "@/lib/textures";
 import { fabricMap, fabricNormal, woodMap, brushedMetalMap, marbleMap, paintAlbedo, paintNormal, defaultFloorPlanks } from "@/lib/furnitureTextures";
@@ -5043,7 +5043,7 @@ function detectIOS(): boolean {
   );
 }
 
-export default function RoomCanvas() {
+export default function RoomCanvas({ hidden = false }: { hidden?: boolean } = {}) {
   const isIOS = detectIOS();
   const locale = useLocale();
   const [firstPerson, setFirstPerson] = useState(false);
@@ -5138,6 +5138,11 @@ export default function RoomCanvas() {
             powerPreference: "default",
           }}
           dpr={canvasDpr()}  // 移动端封顶 1.5，防 iOS 内存杀页
+          // 2D 时画布保持挂载但停帧（见 DesignerTool）：frameloop="never"
+          // 让渲染循环停在当前帧，WebGL context 与 GLTF 解析缓存都不
+          // 丢，切回 3D 改回 "always" 即续跑，不用重下重解全部 GLB。
+          // r3f 会在 prop 变化时调 setFrameloop（无需重挂 Canvas）。
+          frameloop={hidden ? "never" : "always"}
           shadows={{ type: THREE.PCFSoftShadowMap }}
           // 室内角落机位（见 CameraController）：东南角内侧、眼高 1.5m。
           // 旧机位 [0, 1.55, 4.8] 仍是南墙外的立面机位，房间只占画面

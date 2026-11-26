@@ -1,8 +1,10 @@
 // @react-three/drei 的 useGLTF 包装:给每个 GLTFLoader 实例挂 KTX2Loader(通过
 // extendLoader 作用于实例,鸭子类型 —— 规避 pnpm 多副本 three-stdlib 的类身份问题)。
-// 其余 drei 导出原样透传。用到 useGLTF 的文件从 "@/lib/drei" 导入即可。
+// 注意：这里**不**再 `export * from "@react-three/drei"`——整库透传会把
+// drei 全部模块（Html/OrbitControls/Environment/Instances…）打进每一个
+// import 本文件的 chunk，包括 idle 预载 chunk；全仓实际只用 useGLTF，
+// 其余 drei 组件由各画布直接从 "@react-three/drei" 按需 import。
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export * from "@react-three/drei";
 import { useGLTF as _u } from "@react-three/drei";
 import { extendKtx2 } from "./gltfKtx2";
 import { isMobileDevice } from "./device";
